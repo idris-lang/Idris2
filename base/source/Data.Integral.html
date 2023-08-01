@@ -1,0 +1,133 @@
+<!DOCTYPE html><html lang="en">
+
+<head><title>Data.Integral</title>
+  <meta charset="utf-8">
+  <style>
+  .IdrisData {
+  color: darkred
+}
+.IdrisType {
+  color: blue
+}
+.IdrisBound {
+  color: black
+}
+.IdrisFunction {
+  color: darkgreen
+}
+.IdrisKeyword {
+  text-decoration: underline;
+}
+.IdrisComment {
+  color: #b22222
+}
+.IdrisNamespace {
+  font-style: italic;
+  color: black
+}
+.IdrisPostulate {
+  font-weight: bold;
+  color: red
+}
+.IdrisModule {
+  font-style: italic;
+  color: black
+}
+
+  .IdrisLineNumber {
+    text-decoration: none;
+    color: lightgrey;
+    user-select: none;
+  }
+  .IdrisLineNumber:hover {
+    color: darkgray;
+  }
+  .IdrisLineNumber:target {
+    color: gray;
+  }
+  .IdrisHighlight {
+    background-color: yellow;
+  }
+  </style>
+  <script>
+    function initialize() {
+      function handleHash(ev) {
+          if (!location.hash) return
+          let m = location.hash.match(/#(line\d+)(?:-(line\d+))?/)
+          if (m) {
+              let start = document.getElementById(m[1])
+              let end = document.getElementById(m[2])
+              if (start) {
+                  if (end && end.compareDocumentPosition(start) === 4) {
+                      ([start, end] = [end, start])
+                  }
+                  // Only on page load
+                  if (!ev) start.scrollIntoView()
+                  let parent = start.parentElement
+                  let lines = parent.children
+                  let className = ''
+                  for (let n = 0; n < lines.length; n++) {
+                      let el = lines[n]
+                      if (el === start) className = 'IdrisHighlight'
+                      el.className = className
+                      if (el === end || className && !end) className = ''
+                  }
+              }
+          }
+      }
+      let startLine
+      let endLine
+      function handlePointerMove(ev) {
+          if (startLine) {
+              for (let el = document.elementFromPoint(ev.clientX, ev.clientY); el; el = el.parentElement) {
+                  if (el.parentElement === startLine.parentElement) {
+                      if (endLine !== el) {
+                          endLine = el
+                          update()
+                      }
+                      break
+                  }
+              }
+          }
+      }
+      function update(ev) {
+          window.location.hash = startLine === endLine ? startLine.id : startLine.id + '-' + endLine.id
+      }
+      function handlePointerDown(ev) {
+          let target = ev.target
+          if (target.className === 'IdrisLineNumber') {
+              startLine = endLine = target.parentElement
+              window.addEventListener('pointermove', handlePointerMove)
+              update()
+              ev.preventDefault()
+          }
+      }
+      function handlePointerUp(ev) {
+          if (startLine) {
+              update()
+              window.removeEventListener('pointermove', handlePointerMove)
+              startLine = endLine = null
+          }
+      }
+      window.addEventListener('hashchange', handleHash)
+      window.addEventListener('pointerdown', handlePointerDown)
+      window.addEventListener('pointerup', handlePointerUp)
+      handleHash()
+  }
+  </script>
+</head>
+<body onload="initialize()">
+<code class="IdrisCode">
+<div id="line0"><a href="#line0" class="IdrisLineNumber"> 0 | </a><span class="IdrisKeyword">module</span>&nbsp;<span class="IdrisModule">Data.Integral</span></div>
+<div id="line1"><a href="#line1" class="IdrisLineNumber"> 1 | </a></div>
+<div id="line2"><a href="#line2" class="IdrisLineNumber"> 2 | </a><span class="IdrisKeyword">export</span></div>
+<div id="line3"><a href="#line3" class="IdrisLineNumber"> 3 | </a><span class="IdrisFunction">even</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Integral</span>&nbsp;<span class="IdrisBound">n</span>&nbsp;<span class="IdrisKeyword">=&gt;</span>&nbsp;<span class="IdrisType">Eq</span>&nbsp;<span class="IdrisBound">n</span>&nbsp;<span class="IdrisKeyword">=&gt;</span>&nbsp;<span class="IdrisBound">n</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Bool</span></div>
+<div id="line4"><a href="#line4" class="IdrisLineNumber"> 4 | </a><span class="IdrisFunction">even</span>&nbsp;<span class="IdrisBound">n</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisBound">n</span>&nbsp;<span class="IdrisFunction">`mod`</span>&nbsp;<span class="IdrisData">2</span>&nbsp;<span class="IdrisFunction">==</span>&nbsp;<span class="IdrisData">0</span></div>
+<div id="line5"><a href="#line5" class="IdrisLineNumber"> 5 | </a></div>
+<div id="line6"><a href="#line6" class="IdrisLineNumber"> 6 | </a><span class="IdrisKeyword">export</span></div>
+<div id="line7"><a href="#line7" class="IdrisLineNumber"> 7 | </a><span class="IdrisFunction">odd</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Integral</span>&nbsp;<span class="IdrisBound">n</span>&nbsp;<span class="IdrisKeyword">=&gt;</span>&nbsp;<span class="IdrisType">Eq</span>&nbsp;<span class="IdrisBound">n</span>&nbsp;<span class="IdrisKeyword">=&gt;</span>&nbsp;<span class="IdrisBound">n</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Bool</span></div>
+<div id="line8"><a href="#line8" class="IdrisLineNumber"> 8 | </a><span class="IdrisFunction">odd</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">not</span>&nbsp;<span class="IdrisFunction">.</span>&nbsp;<span class="IdrisFunction">even</span></div>
+<div id="line9"><a href="#line9" class="IdrisLineNumber"> 9 | </a></div>
+</code>
+</body>
+</html>
