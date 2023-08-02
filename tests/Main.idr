@@ -250,7 +250,7 @@ idrisTestsReflection = MkTestPool "Quotation and Reflection" [] Nothing
        "reflection005", "reflection006", "reflection007", "reflection008",
        "reflection009", "reflection010", "reflection011", "reflection012",
        "reflection013", "reflection014", "reflection015", "reflection016",
-       "reflection017", "reflection018", "reflection019"]
+       "reflection017", "reflection018", "reflection019", "reflection020"]
 
 idrisTestsWith : TestPool
 idrisTestsWith = MkTestPool "With abstraction" [] Nothing
@@ -272,7 +272,7 @@ idrisTests = MkTestPool "Misc" [] Nothing
        "eta001",
        -- Modules and imports
        "import001", "import002", "import003", "import004", "import005", "import006",
-       "import007", "import008",
+       "import007", "import008", "import009",
        -- Implicit laziness, lazy evaluation
        "lazy001", "lazy002", "lazy003",
        -- Namespace blocks

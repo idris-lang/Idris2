@@ -29,7 +29,7 @@ import public Libraries.Utils.Binary
 ||| version number if you're changing the version more than once in the same day.
 export
 ttcVersion : Int
-ttcVersion = 20230331 * 100 + 0
+ttcVersion = 20230414 * 100 + 0
 
 export
 checkTTCVersion : String -> Int -> Int -> Core ()
@@ -125,8 +125,14 @@ HasNames e => HasNames (TTCFile e) where
           = pure $ Just $ MkRewriteNs !(full gam e) !(full gam r)
 
       fullPrim : Context -> PrimNames -> Core PrimNames
-      fullPrim gam (MkPrimNs mi ms mc md)
-          = [| MkPrimNs (full gam mi) (full gam ms) (full gam mc) (full gam md) |]
+      fullPrim gam (MkPrimNs mi ms mc md mt mn mdl)
+          = [| MkPrimNs (full gam mi)
+                        (full gam ms)
+                        (full gam mc)
+                        (full gam md)
+                        (full gam mt)
+                        (full gam mn)
+                        (full gam mdl) |]
 
 
   -- I don't think we ever actually want to call this, because after we read
@@ -164,11 +170,14 @@ HasNames e => HasNames (TTCFile e) where
           = pure $ Just $ MkRewriteNs !(resolved gam e) !(resolved gam r)
 
       resolvedPrim : Context -> PrimNames -> Core PrimNames
-      resolvedPrim gam (MkPrimNs mi ms mc md)
+      resolvedPrim gam (MkPrimNs mi ms mc md mt mn mdl)
           = pure $ MkPrimNs !(resolved gam mi)
                             !(resolved gam ms)
                             !(resolved gam mc)
                             !(resolved gam md)
+                            !(resolved gam mt)
+                            !(resolved gam mn)
+                            !(resolved gam mdl)
 
 -- NOTE: TTC files are only compatible if the version number is the same,
 -- *and* the 'annot/extra' type are the same, or there are no holes/constraints
@@ -224,7 +233,7 @@ readTTCFile readall file as b
                                    incData [] [] [] [] []
                                    0 (mkNamespace "") [] Nothing
                                    Nothing
-                                   (MkPrimNs Nothing Nothing Nothing Nothing)
+                                   (MkPrimNs Nothing Nothing Nothing Nothing Nothing Nothing Nothing)
                                    [] [] [] [] ex)
               else do
                  defs <- fromBuf b
@@ -374,7 +383,10 @@ updatePrimNames p
     = { fromIntegerName $= (p.fromIntegerName <+>),
         fromStringName  $= (p.fromStringName  <+>),
         fromCharName    $= (p.fromCharName    <+>),
-        fromDoubleName  $= (p.fromDoubleName  <+>)
+        fromDoubleName  $= (p.fromDoubleName  <+>),
+        fromTTImpName   $= (p.fromTTImpName   <+>),
+        fromNameName    $= (p.fromNameName    <+>),
+        fromDeclsName   $= (p.fromDeclsName   <+>)
       }
 
 export

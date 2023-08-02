@@ -1,0 +1,6 @@
+rm -rf build
+
+$1 --no-color --console-width 0 --no-banner --check Test.idr
+$1 --no-color --console-width 0 --no-banner --check Import.idr
+
+$1 --no-color --console-width 0 --no-banner --check Resugar.idr

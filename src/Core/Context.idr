@@ -2309,6 +2309,21 @@ setFromDouble : {auto c : Ref Ctxt Defs} ->
 setFromDouble n = update Ctxt { options $= setFromDouble n }
 
 export
+setFromTTImp : {auto c : Ref Ctxt Defs} ->
+               Name -> Core ()
+setFromTTImp n = update Ctxt { options $= setFromTTImp n }
+
+export
+setFromName : {auto c : Ref Ctxt Defs} ->
+              Name -> Core ()
+setFromName n = update Ctxt { options $= setFromName n }
+
+export
+setFromDecls : {auto c : Ref Ctxt Defs} ->
+               Name -> Core ()
+setFromDecls n = update Ctxt { options $= setFromDecls n }
+
+export
 addNameDirective : {auto c : Ref Ctxt Defs} ->
                    FC -> Name -> List String -> Core ()
 addNameDirective fc n ns
@@ -2385,8 +2400,35 @@ fromDoubleName
          pure $ fromDoubleName (primnames (options defs))
 
 export
+fromTTImpName : {auto c : Ref Ctxt Defs} ->
+                Core (Maybe Name)
+fromTTImpName
+    = do defs <- get Ctxt
+         pure $ fromTTImpName (primnames (options defs))
+
+export
+fromNameName : {auto c : Ref Ctxt Defs} ->
+               Core (Maybe Name)
+fromNameName
+    = do defs <- get Ctxt
+         pure $ fromNameName (primnames (options defs))
+
+export
+fromDeclsName : {auto c : Ref Ctxt Defs} ->
+                Core (Maybe Name)
+fromDeclsName
+    = do defs <- get Ctxt
+         pure $ fromDeclsName (primnames (options defs))
+
+export
 getPrimNames : {auto c : Ref Ctxt Defs} -> Core PrimNames
-getPrimNames = [| MkPrimNs fromIntegerName fromStringName fromCharName fromDoubleName |]
+getPrimNames = [| MkPrimNs fromIntegerName
+                           fromStringName
+                           fromCharName
+                           fromDoubleName
+                           fromTTImpName
+                           fromNameName
+                           fromDeclsName |]
 
 export
 getPrimitiveNames : {auto c : Ref Ctxt Defs} -> Core (List Name)
