@@ -16,14 +16,18 @@ void idris2_setupTerm() {
 
 int idris2_getTermCols() {
   CONSOLE_SCREEN_BUFFER_INFO csbi;
-  GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
-  return (int)csbi.srWindow.Right - csbi.srWindow.Left + 1;
+  if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
+    return (int)csbi.srWindow.Right - csbi.srWindow.Left + 1;
+  }
+  return 0;
 }
 
 int idris2_getTermLines() {
   CONSOLE_SCREEN_BUFFER_INFO csbi;
-  GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
-  return (int)csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+  if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi)) {
+    return (int)csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+  }
+  return 0;
 }
 
 #else
