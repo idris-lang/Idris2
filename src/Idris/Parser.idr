@@ -946,16 +946,20 @@ mutual
   lazy : OriginDesc -> IndentInfo -> Rule PTerm
   lazy fname indents
       = do tm <- bounds (decorate fname Typ (exactIdent "Lazy")
-                         *> simpleExpr fname indents)
+                         *> simpleExpr fname indents
+                         <* mustFailBecause "Lazy only takes one argument" (continue indents >> simpleExpr fname indents))
            pure (PDelayed (boundToFC fname tm) LLazy tm.val)
     <|> do tm <- bounds (decorate fname Typ (exactIdent "Inf")
-                         *> simpleExpr fname indents)
+                         *> simpleExpr fname indents
+                         <* mustFailBecause "Inf only takes one argument" (continue indents >> simpleExpr fname indents))
            pure (PDelayed (boundToFC fname tm) LInf tm.val)
     <|> do tm <- bounds (decorate fname Data (exactIdent "Delay")
-                         *> simpleExpr fname indents)
+                         *> simpleExpr fname indents
+                         <* mustFailBecause "Delay only takes one argument" (continue indents >> simpleExpr fname indents))
            pure (PDelay (boundToFC fname tm) tm.val)
     <|> do tm <- bounds (decorate fname Data (exactIdent "Force")
-                         *> simpleExpr fname indents)
+                         *> simpleExpr fname indents
+                         <* mustFailBecause "Force only takes one argument" (continue indents >> simpleExpr fname indents))
            pure (PForce (boundToFC fname tm) tm.val)
 
   binder : OriginDesc -> IndentInfo -> Rule PTerm
