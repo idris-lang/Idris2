@@ -99,6 +99,8 @@
 * Fixed a bug that caused holes to appear unexpectedly during quotation of
   dependent pairs.
 
+* Fixed a bug that caused `f` to sometimes be replaced by `fx` after matching `fx = f x`.
+
 ### Library changes
 
 #### Prelude
