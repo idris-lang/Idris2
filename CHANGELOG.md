@@ -101,6 +101,9 @@
 
 * Fixed a bug that caused `f` to sometimes be replaced by `fx` after matching `fx = f x`.
 
+* Fixed a bug in the totality checker that missed indirect references to
+  partial data.
+
 ### Library changes
 
 #### Prelude

@@ -14,6 +14,26 @@ Issue1771-1:4:3--4:8
  4 |   MkFix : f (Fix f) -> Fix f
        ^^^^^
 
+Error: argh is not total, possibly not terminating due to function Main.MkFix being reachable via Main.yesF -> Main.MkFix
+
+Issue1771-1:15:1--15:12
+ 11 | 
+ 12 | notF : Not F
+ 13 | notF (MkFix f) = f (yesF f)
+ 14 | 
+ 15 | argh : Void
+      ^^^^^^^^^^^
+
+Error: notF is not total, possibly not terminating due to call to Main.yesF
+
+Issue1771-1:12:1--12:13
+ 08 | 
+ 09 | yesF : Not F -> F
+ 10 | yesF nf = MkFix nf
+ 11 | 
+ 12 | notF : Not F
+      ^^^^^^^^^^^^
+
 Error: yesF is not total, possibly not terminating due to call to Main.MkFix
 
 Issue1771-1:9:1--9:18
@@ -39,6 +59,26 @@ Issue1771-2:4:3--4:8
  3 | data F : Type where
  4 |   MkFix : ((0 g : Type -> Type) -> g === Not -> g F) -> F
        ^^^^^
+
+Error: argh is not total, possibly not terminating due to function Main.MkFix being reachable via Main.yesF -> Main.MkFix
+
+Issue1771-2:14:1--14:12
+ 10 | notF (MkFix f) =
+ 11 |   let g = f Not Refl in
+ 12 |   g (yesF g)
+ 13 | 
+ 14 | argh : Void
+      ^^^^^^^^^^^
+
+Error: notF is not total, possibly not terminating due to call to Main.yesF
+
+Issue1771-2:9:1--9:13
+ 5 | 
+ 6 | yesF : Not F -> F
+ 7 | yesF nf = MkFix (\ g, Refl => nf)
+ 8 | 
+ 9 | notF : Not F
+     ^^^^^^^^^^^^
 
 Error: yesF is not total, possibly not terminating due to call to Main.MkFix
 
@@ -67,7 +107,17 @@ Issue1771-3:10:3--10:6
  10 |   MkF : Wrap (Not F) -> F
         ^^^
 
-Error: notF is not total, possibly not terminating due to call to Main.F
+Error: argh is not total, possibly not terminating due to function Main.MkF being reachable via Main.yesF -> Main.MkF
+
+Issue1771-3:18:1--18:12
+ 14 | 
+ 15 | notF : Not F
+ 16 | notF (MkF f) = unwrap f (yesF $ unwrap f)
+ 17 | 
+ 18 | argh : Void
+      ^^^^^^^^^^^
+
+Error: notF is not total, possibly not terminating due to calls to Main.F, Main.yesF
 
 Issue1771-3:15:1--15:13
  11 | 
@@ -77,7 +127,7 @@ Issue1771-3:15:1--15:13
  15 | notF : Not F
       ^^^^^^^^^^^^
 
-Error: yesF is not total, possibly not terminating due to calls to Main.F, Main.MkF
+Error: yesF is not total, possibly not terminating due to call to Main.MkF
 
 Issue1771-3:12:1--12:18
  08 | 
