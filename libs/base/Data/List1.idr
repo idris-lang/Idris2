@@ -47,7 +47,7 @@ init (x ::: xs) = loop x xs where
   loop x [] = []
   loop x (y :: xs) = x :: loop y xs
 
-export
+public export
 foldr1By : (func : a -> b -> b) -> (map : a -> b) -> (l : List1 a) -> b
 foldr1By f map (x ::: xs) = loop x xs where
   loop : a -> List a -> b
@@ -58,7 +58,7 @@ public export
 foldl1By : (func : b -> a -> b) -> (map : a -> b) -> (l : List1 a) -> b
 foldl1By f map (x ::: xs) = foldl f (map x) xs
 
-export
+public export
 foldr1 : (func : a -> a -> a) -> (l : List1 a) -> a
 foldr1 f = foldr1By f id
 

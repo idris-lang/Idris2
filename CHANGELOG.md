@@ -183,6 +183,8 @@
 * Adds `getTermCols` and `getTermLines` to the base library. They return the
   size of the terminal if either stdin or stdout is a tty.
 
+* The `Data.List1` functions `foldr1` and `foldr1By` are now `public export`.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
