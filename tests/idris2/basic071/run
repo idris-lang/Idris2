@@ -1,0 +1,10 @@
+rm -rf build
+
+$1 --no-color --console-width 0 --no-banner --check Simple.idr
+
+# Set the same time for the source file and TTC files
+touch *.idr build/ttc/*/*.tt*
+
+# No rebuild should happen
+echo "-- this should be the last line of output --"
+$1 --no-color --console-width 0 --no-banner --check Simple.idr
