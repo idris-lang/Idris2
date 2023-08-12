@@ -20,6 +20,11 @@
 * New fromTTImp, fromName, and fromDecls names for custom TTImp, Name, and Decls
   literals.
 
+### Package Management
+
+* `--mkdoc` now builds documentation in `${buildir}/docs/<package name>`.
+  Typically this will be `build/docs/<package name>`.
+
 ### REPL changes
 
 * Adds documentation for unquotes `~( )`.

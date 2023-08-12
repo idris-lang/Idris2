@@ -20,7 +20,7 @@ rm tmp
 find "$prefix"/* -maxdepth 0 -type d >tmp
 while IFS= read -r libdirectory; do
     libname=$(echo "$libdirectory" | sed "s|$prefix/||")
-    cp -r "$prefix"/"$libname"/build/docs/* html/"$libname"
+    cp -r "$prefix"/"$libname"/build/docs/"$libname"/* html/"$libname"
     find html/"$libname"/docs/ -name "*.html" >tmp2
     while IFS= read -r file; do
         filename=$(basename "$file" ".html")
