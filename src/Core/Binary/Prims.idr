@@ -441,15 +441,18 @@ TTC Nat where
 
 ||| Get a file's modified time. If it doesn't exist, return 0 (UNIX Epoch)
 export
-modTime : String -> Core Int
+modTime : String -> Core (Int, Int)
 modTime fname
   = do Right f <- coreLift $ openFile fname Read
-         | Left err => pure 0 -- Beginning of Time :)
-       Right t <- coreLift $ fileModifiedTime f
+         | Left err => pure (0, 0) -- Beginning of Time :)
+       Right s <- coreLift $ fileModifiedTime f
          | Left err => do coreLift $ closeFile f
-                          pure 0
+                          pure (0, 0)
+       Right ns <- coreLift $ fileModifiedTimeNs f
+         | Left err => do coreLift $ closeFile f
+                          pure (0, 0)
        coreLift $ closeFile f
-       pure t
+       pure (s, ns)
 
 export
 hashFileWith : Maybe String -> String -> Core (Maybe String)

@@ -1,0 +1,16 @@
+rm -rf build
+$1 --no-color --console-width 0 --no-banner --check B.idr
+
+# Set very close time for A and B TTC files
+touch A.idr
+sync A.idr
+touch B.idr
+sync B.idr
+touch build/ttc/*/A.tt*
+sync build/ttc/*/A.tt*
+touch build/ttc/*/B.tt*
+sync build/ttc/*/B.tt*
+
+echo "-- this should be the last line of output --"
+
+$1 --no-color --console-width 0 --no-banner --check B.idr
