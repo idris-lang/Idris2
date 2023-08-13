@@ -12,6 +12,7 @@ import Data.String
 import Data.Vect
 
 import Libraries.Data.PosMap
+import Libraries.System.File.Meta as L -- Remove after release 0.7.0
 import public Libraries.Utils.Binary
 import public Libraries.Utils.String
 
@@ -448,7 +449,7 @@ modTime fname
        Right s <- coreLift $ fileModifiedTime f
          | Left err => do coreLift $ closeFile f
                           pure (0, 0)
-       Right ns <- coreLift $ fileModifiedTimeNs f
+       Right ns <- coreLift $ L.fileModifiedTimeNs f
          | Left err => do coreLift $ closeFile f
                           pure (0, 0)
        coreLift $ closeFile f

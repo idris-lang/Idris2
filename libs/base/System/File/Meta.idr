@@ -71,7 +71,6 @@ fileAccessTimeNs (FHandle f)
             then ok res
             else returnError
 
-
 ||| Get the File's mtime.
 export
 fileModifiedTime : HasIO io => (h : File) -> io (Either FileError Int)
