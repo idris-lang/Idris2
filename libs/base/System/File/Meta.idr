@@ -17,12 +17,22 @@ prim__fPoll : FilePtr -> PrimIO Int
 %foreign supportC "idris2_fileAccessTime"
 prim__fileAccessTime : FilePtr -> PrimIO Int
 
+%foreign supportC "idris2_fileAccessTimeNs"
+prim__fileAccessTimeNs : FilePtr -> PrimIO Int
+
 %foreign supportC "idris2_fileModifiedTime"
          "node:lambda:fp=>require('fs').fstatSync(fp.fd).mtimeMs / 1000"
 prim__fileModifiedTime : FilePtr -> PrimIO Int
 
+%foreign supportC "idris2_fileModifiedTimeNs"
+         "node:lambda:fp=>require('fs').fstatSync(fp.fd).mtimeMs * 1000000 % 1000000000"
+prim__fileModifiedTimeNs : FilePtr -> PrimIO Int
+
 %foreign supportC "idris2_fileStatusTime"
 prim__fileStatusTime : FilePtr -> PrimIO Int
+
+%foreign supportC "idris2_fileStatusTimeNs"
+prim__fileStatusTimeNs : FilePtr -> PrimIO Int
 
 %foreign supportC "idris2_fileIsTTY"
          "node:lambda:fp=>Number(require('tty').isatty(fp.fd))"
@@ -52,6 +62,16 @@ fileAccessTime (FHandle f)
             then ok res
             else returnError
 
+||| Get the nanosecond part of File's atime.
+export
+fileAccessTimeNs : HasIO io => (h : File) -> io (Either FileError Int)
+fileAccessTimeNs (FHandle f)
+    = do res <- primIO (prim__fileAccessTimeNs f)
+         if res > 0
+            then ok res
+            else returnError
+
+
 ||| Get the File's mtime.
 export
 fileModifiedTime : HasIO io => (h : File) -> io (Either FileError Int)
@@ -61,11 +81,29 @@ fileModifiedTime (FHandle f)
             then ok res
             else returnError
 
+||| Get the nanosecond part of File's mtime.
+export
+fileModifiedTimeNs : HasIO io => (h : File) -> io (Either FileError Int)
+fileModifiedTimeNs (FHandle f)
+    = do res <- primIO (prim__fileModifiedTimeNs f)
+         if res > 0
+            then ok res
+            else returnError
+
 ||| Get the File's ctime.
 export
 fileStatusTime : HasIO io => (h : File) -> io (Either FileError Int)
 fileStatusTime (FHandle f)
     = do res <- primIO (prim__fileStatusTime f)
+         if res > 0
+            then ok res
+            else returnError
+
+||| Get the nanosecond part of File's ctime.
+export
+fileStatusTimeNs : HasIO io => (h : File) -> io (Either FileError Int)
+fileStatusTimeNs (FHandle f)
+    = do res <- primIO (prim__fileStatusTimeNs f)
          if res > 0
             then ok res
             else returnError

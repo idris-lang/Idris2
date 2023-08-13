@@ -165,4 +165,67 @@ long win32_getNProcessors() {
 
 int win32_getFileNo(FILE *f) { return _fileno(f); }
 
+int win32_getFileAccessTime(FILE *f, int64_t *sec, int64_t *nsec) {
+  HANDLE wh = (HANDLE)_get_osfhandle(_fileno(f));
+  if (wh == INVALID_HANDLE_VALUE) {
+    return -1;
+  }
+
+  FILETIME ft;
+  if (GetFileTime(wh, NULL, &ft, NULL)) {
+    ULARGE_INTEGER t;
+    t.HighPart = ft.dwHighDateTime;
+    t.LowPart = ft.dwLowDateTime;
+
+    *nsec = (t.QuadPart % 10000000) * 100;
+    *sec = t.QuadPart / 10000000;
+    *sec -= 11644473600; // LDAP epoch to Unix epoch
+    return 0;
+  } else {
+    return -1;
+  }
+}
+
+int win32_getFileModifiedTime(FILE *f, int64_t *sec, int64_t *nsec) {
+  HANDLE wh = (HANDLE)_get_osfhandle(_fileno(f));
+  if (wh == INVALID_HANDLE_VALUE) {
+    return -1;
+  }
+
+  FILETIME ft;
+  if (GetFileTime(wh, NULL, NULL, &ft)) {
+    ULARGE_INTEGER t;
+    t.HighPart = ft.dwHighDateTime;
+    t.LowPart = ft.dwLowDateTime;
+
+    *nsec = (t.QuadPart % 10000000) * 100;
+    *sec = t.QuadPart / 10000000;
+    *sec -= 11644473600; // LDAP epoch to Unix epoch
+    return 0;
+  } else {
+    return -1;
+  }
+}
+
+int win32_getFileStatusTime(FILE *f, int64_t *sec, int64_t *nsec) {
+  HANDLE wh = (HANDLE)_get_osfhandle(_fileno(f));
+  if (wh == INVALID_HANDLE_VALUE) {
+    return -1;
+  }
+
+  FILETIME ft;
+  if (GetFileTime(wh, &ft, NULL, NULL)) {
+    ULARGE_INTEGER t;
+    t.HighPart = ft.dwHighDateTime;
+    t.LowPart = ft.dwLowDateTime;
+
+    *nsec = (t.QuadPart % 10000000) * 100;
+    *sec = t.QuadPart / 10000000;
+    *sec -= 11644473600; // LDAP epoch to Unix epoch
+    return 0;
+  } else {
+    return -1;
+  }
+}
+
 int win32_isTTY(int fd) { return _isatty(fd); }

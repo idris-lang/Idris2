@@ -40,8 +40,11 @@ size_t idris2_writeBufferData(FILE *h, const char *buffer, size_t loc,
 
 int idris2_eof(FILE *f);
 int idris2_fileAccessTime(FILE *f);
+int idris2_fileAccessTimeNs(FILE *f);
 int idris2_fileModifiedTime(FILE *f);
+int idris2_fileModifiedTimeNs(FILE *f);
 int idris2_fileStatusTime(FILE *f);
+int idris2_fileStatusTimeNs(FILE *f);
 int idris2_fileIsTTY(FILE *f);
 
 FILE *idris2_stdin();

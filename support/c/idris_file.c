@@ -188,6 +188,31 @@ int idris2_fileAccessTime(FILE *f) {
   }
 }
 
+int idris2_fileAccessTimeNs(FILE *f) {
+#ifdef _WIN32
+  int64_t sec, nsec;
+  if (win32_getFileAccessTime(f, &sec, &nsec)) {
+    return -1;
+  }
+  return nsec;
+#else
+  int fd = idris2_getFileNo(f);
+
+  struct stat buf;
+  if (fstat(fd, &buf) == 0) {
+#if defined(__MACH__) || defined(__APPLE__)
+    return buf.st_atimespec.tv_nsec;
+#elif (_POSIX_VERSION >= 200809L) || defined(__FreeBSD__)
+    return buf.st_atim.tv_nsec;
+#else
+    return 0;
+#endif
+  } else {
+    return -1;
+  }
+#endif
+}
+
 int idris2_fileModifiedTime(FILE *f) {
   int fd = idris2_getFileNo(f);
 
@@ -199,6 +224,31 @@ int idris2_fileModifiedTime(FILE *f) {
   }
 }
 
+int idris2_fileModifiedTimeNs(FILE *f) {
+#ifdef _WIN32
+  int64_t sec, nsec;
+  if (win32_getFileModifiedTime(f, &sec, &nsec)) {
+    return -1;
+  }
+  return nsec;
+#else
+  int fd = idris2_getFileNo(f);
+
+  struct stat buf;
+  if (fstat(fd, &buf) == 0) {
+#if defined(__MACH__) || defined(__APPLE__)
+    return buf.st_mtimespec.tv_nsec;
+#elif (_POSIX_VERSION >= 200809L) || defined(__FreeBSD__)
+    return buf.st_mtim.tv_nsec;
+#else
+    return 0;
+#endif
+  } else {
+    return -1;
+  }
+#endif
+}
+
 int idris2_fileStatusTime(FILE *f) {
   int fd = idris2_getFileNo(f);
 
@@ -208,6 +258,31 @@ int idris2_fileStatusTime(FILE *f) {
   } else {
     return -1;
   }
+}
+
+int idris2_fileStatusTimeNs(FILE *f) {
+#ifdef _WIN32
+  int64_t sec, nsec;
+  if (win32_getFileStatusTime(f, &sec, &nsec)) {
+    return -1;
+  }
+  return nsec;
+#else
+  int fd = idris2_getFileNo(f);
+
+  struct stat buf;
+  if (fstat(fd, &buf) == 0) {
+#if defined(__MACH__) || defined(__APPLE__)
+    return buf.st_ctimespec.tv_nsec;
+#elif (_POSIX_VERSION >= 200809L) || defined(__FreeBSD__)
+    return buf.st_ctim.tv_nsec;
+#else
+    return 0;
+#endif
+  } else {
+    return -1;
+  }
+#endif
 }
 
 int idris2_fileIsTTY(FILE *f) {
