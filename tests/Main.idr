@@ -233,7 +233,7 @@ idrisTestsTotality = MkTestPool "Totality checking" [] Nothing
        "total001", "total002", "total003", "total004", "total005",
        "total006", "total007", "total008", "total009", "total010",
        "total011", "total012", "total013", "total014", "total015",
-       "total016", "total017", "total018", "total019"
+       "total016", "total017", "total018", "total019", "total020"
       ]
 
 -- This will only work with an Idris compiled via Chez or Racket, but at
