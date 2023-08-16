@@ -6,6 +6,10 @@ import Prelude.Ops
 
 %default total
 
+
+||| `Not x` is an alias for `x -> Void`, indicating that any term of type `x`
+||| leads to a contradiction. It can be used in conjunction with `void` or
+||| `absurd`.
 public export
 Not : Type -> Type
 Not x = x -> Void
