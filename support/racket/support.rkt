@@ -328,6 +328,39 @@
       (blodwen-error-quit "Exception in mutexRelease: thread does not own mutex")
       (semaphore-post sema)))
 
+;; TCP
+
+(define (blodwen-tcp-listen port)
+  ;; return nil on exception, for example when port in use
+  (with-handlers ([exn:fail:network? (lambda (x) '())])
+    (tcp-listen port)
+  )
+)
+
+(define (blodwen-tcp-accept listener)
+  (let-values
+    ;; Racket doesn't allow treating the multiple returned
+    ;; values a pair to unpack later. So we make it a list.
+    ([(in-port out-port) (tcp-accept listener)]
+    )
+    (list in-port out-port)
+  )
+)
+
+(define (blodwen-tcp-connect hostname port)
+  ;; return nil on exception, for example when connection rejected
+  (with-handlers ([exn:fail:network? (lambda (x) '())])
+    (let-values
+      ([(in-port out-port) (tcp-connect hostname port)]
+      )
+      (list in-port out-port)
+    )
+  )
+)
+
+(define blodwen-input-port car)
+(define (blodwen-output-port list-elems) (car (cdr list-elems)))
+
 ;; Condition Variables
 ;; As per p.5 of the MS paper
 ;; https://www.microsoft.com/en-us/research/wp-content/uploads/2004/12/ImplementingCVs.pdf
@@ -547,6 +580,9 @@
 
 (define (blodwen-is-box obj)
   (if (box? obj) 1 0))
+
+(define (blodwen-is-eof obj)
+  (if (eof-object? obj) 1 0))
 
 (define (blodwen-make-symbol str)
   (string->symbol str))

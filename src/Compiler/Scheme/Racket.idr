@@ -46,6 +46,8 @@ schHeader prof libs = fromString """
   #lang racket/base
   ;; \{ generatedString "Racket" }
   (require racket/async-channel)         ; for asynchronous channels
+  (require racket/tcp)                   ; for tcp
+  (require racket/port)                  ; for read-bytes-evt, necessary for tcp
   (require racket/future)                ; for parallelism/concurrency
   (require racket/math)                  ; for math ops
   (require racket/system)                ; for system
