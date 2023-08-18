@@ -338,6 +338,7 @@ racketTests = MkTestPool "Racket backend" [] (Just Racket)
     , "conditions005"
 --    , "conditions006"
 --    , "conditions007"
+    , "ffi001"
     ]
 
 nodeTests : TestPool
