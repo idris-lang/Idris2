@@ -237,6 +237,8 @@
 * Fixes an error in the `Makefile` where setting `IDRIS2_PREFIX` caused
   bootstrapping to fail.
 * Updates the docs for `envvars` to match the changes introduced in #2649.
+* Both `make install` and `idris2 --install...` now respect `DESTDIR` which
+  can be set to install into a staging directory for distro packaging.
 
 ## v0.6.0
 
