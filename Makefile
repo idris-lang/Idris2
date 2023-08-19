@@ -192,13 +192,13 @@ install-with-src-api: src/IdrisPaths.idr
 	${IDRIS2_BOOT} --install-with-src ${IDRIS2_LIB_IPKG}
 
 install-idris2:
-	mkdir -p ${PREFIX}/bin/
-	install ${TARGET} ${PREFIX}/bin
+	mkdir -p ${DESTDIR}${PREFIX}/bin/
+	install ${TARGET} ${DESTDIR}${PREFIX}/bin
 ifeq ($(OS), windows)
-	-install ${TARGET}.cmd ${PREFIX}/bin
+	-install ${TARGET}.cmd ${DESTDIR}${PREFIX}/bin
 endif
-	mkdir -p ${PREFIX}/bin/${NAME}_app
-	install ${TARGETDIR}/${NAME}_app/* ${PREFIX}/bin/${NAME}_app
+	mkdir -p ${DESTDIR}${PREFIX}/bin/${NAME}_app
+	install ${TARGETDIR}/${NAME}_app/* ${DESTDIR}${PREFIX}/bin/${NAME}_app
 
 install-support:
 	@${MAKE} -C support install
@@ -222,19 +222,19 @@ install-with-src-libs:
 	${MAKE} -C libs/linear install-with-src  IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH} IDRIS2_INC_CGS=${IDRIS2_CG}
 
 install-libdocs: libdocs
-	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/prelude
-	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/base
-	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/contrib
-	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/network
-	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/test
-	mkdir -p ${PREFIX}/${NAME_VERSION}/docs/linear
-	cp -r libs/prelude/build/docs/* ${PREFIX}/${NAME_VERSION}/docs/prelude
-	cp -r libs/base/build/docs/*    ${PREFIX}/${NAME_VERSION}/docs/base
-	cp -r libs/contrib/build/docs/* ${PREFIX}/${NAME_VERSION}/docs/contrib
-	cp -r libs/network/build/docs/* ${PREFIX}/${NAME_VERSION}/docs/network
-	cp -r libs/test/build/docs/*    ${PREFIX}/${NAME_VERSION}/docs/test
-	cp -r libs/linear/build/docs/*  ${PREFIX}/${NAME_VERSION}/docs/linear
-	install -m 644 support/docs/*   ${PREFIX}/${NAME_VERSION}/docs
+	mkdir -p ${DESTDIR}${PREFIX}/${NAME_VERSION}/docs/prelude
+	mkdir -p ${DESTDIR}${PREFIX}/${NAME_VERSION}/docs/base
+	mkdir -p ${DESTDIR}${PREFIX}/${NAME_VERSION}/docs/contrib
+	mkdir -p ${DESTDIR}${PREFIX}/${NAME_VERSION}/docs/network
+	mkdir -p ${DESTDIR}${PREFIX}/${NAME_VERSION}/docs/test
+	mkdir -p ${DESTDIR}${PREFIX}/${NAME_VERSION}/docs/linear
+	cp -r libs/prelude/build/docs/* ${DESTDIR}${PREFIX}/${NAME_VERSION}/docs/prelude
+	cp -r libs/base/build/docs/*    ${DESTDIR}${PREFIX}/${NAME_VERSION}/docs/base
+	cp -r libs/contrib/build/docs/* ${DESTDIR}${PREFIX}/${NAME_VERSION}/docs/contrib
+	cp -r libs/network/build/docs/* ${DESTDIR}${PREFIX}/${NAME_VERSION}/docs/network
+	cp -r libs/test/build/docs/*    ${DESTDIR}${PREFIX}/${NAME_VERSION}/docs/test
+	cp -r libs/linear/build/docs/*  ${DESTDIR}${PREFIX}/${NAME_VERSION}/docs/linear
+	install -m 644 support/docs/*   ${DESTDIR}${PREFIX}/${NAME_VERSION}/docs
 
 
 .PHONY: bootstrap bootstrap-build bootstrap-racket bootstrap-racket-build bootstrap-test bootstrap-clean
