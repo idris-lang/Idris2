@@ -248,17 +248,17 @@ getConstraintHint : {vars : _} ->
                     Name -> Name ->
                     (constraints : List Name) ->
                     (allmeths : List Name) ->
-                    (params : List Name) ->
+                    (params : List (Name, (RigCount, RawImp))) ->
                     (Name, RawImp) -> Core (Name, List ImpDecl)
 getConstraintHint {vars} fc env vis iname cname constraints meths params (cn, con)
-    = do let ity = apply (IVar fc iname) (map (IVar fc) params)
+    = do let ity = apply (IVar fc iname) (map (IVar fc . fst) params)
          let fty = IPi fc top Explicit Nothing ity con
          ty_imp <- bindTypeNames fc [] (meths ++ vars) fty
          let hintname = DN ("Constraint " ++ show con)
                           (UN (Basic $ "__" ++ show iname ++ "_" ++ show con))
 
          let tydecl = IClaim fc top vis [Inline, Hint False]
-                          (MkImpTy EmptyFC EmptyFC hintname ty_imp)
+                          (MkImpTy EmptyFC EmptyFC hintname (bindPs params ty_imp))
 
          let conapp = apply (impsBind (IVar fc cname) (map bindName constraints))
                               (map (const (Implicit fc True)) meths)
@@ -281,6 +281,10 @@ getConstraintHint {vars} fc env vis iname cname constraints meths params (cn, co
     impsBind fn (n :: ns)
         = impsBind (IAutoApp fc fn (IBindVar fc n)) ns
 
+    bindPs : List (Name, (RigCount, RawImp)) -> RawImp -> RawImp
+    bindPs [] ty = ty
+    bindPs ((n, (rig, pty)) :: ps) ty
+        = IPi (getFC pty) rig Implicit (Just n) pty (bindPs ps ty)
 
 getDefault : ImpDecl -> Maybe (FC, List FnOpt, Name, List ImpClause)
 getDefault (IDef fc n cs) = Just (fc, [], n, cs)
@@ -519,7 +523,7 @@ elabInterface {vars} ifc vis env nest constraints iname params dets mcon body
              chints <- traverse (getConstraintHint vfc env vis iname conName
                                                  (map fst nconstraints)
                                                  meth_names
-                                                 paramNames) nconstraints
+                                                 params) nconstraints
              log "elab.interface" 5 $ "Constraint hints from " ++ show constraints ++ ": " ++ show chints
              traverse_ (processDecl [] nest env) (concatMap snd chints)
              traverse_ (\n => do mn <- inCurrentNS n

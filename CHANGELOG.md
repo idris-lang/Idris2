@@ -101,6 +101,8 @@
 
 * Fixed a bug that caused `f` to sometimes be replaced by `fx` after matching `fx = f x`.
 
+* Fixed elaboration of interfaces when `%unbound_implicits` is turned off.
+
 ### Library changes
 
 #### Prelude
