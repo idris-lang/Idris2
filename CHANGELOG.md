@@ -40,6 +40,12 @@
 * Non-recursive top-level constants are compiled to eagerly evaluated
   constants in Chez Scheme.
 
+#### Racket
+
+* FFI declarations can now specify which `require` to perform, i.e. which
+  library to load before executing the FFI.
+  The syntax is `scheme,racket:my-function,my-library`.
+
 #### Node.js/Browser
 
 * Generated JavaScript files now include a shebang when using the Node.js backend
