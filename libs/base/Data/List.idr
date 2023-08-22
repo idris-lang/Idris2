@@ -561,17 +561,21 @@ init [] impossible
 init [x] = []
 init (x :: xs@(_::_)) = x :: init xs
 
+||| Attempt to deconstruct the list into a head and a tail.
+public export
+uncons' : List a -> Maybe (a, List a)
+uncons' []        = Nothing
+uncons' (x :: xs) = Just (x, xs)
+
 ||| Attempt to get the head of a list. If the list is empty, return `Nothing`.
 public export
 head' : List a -> Maybe a
-head' []      = Nothing
-head' (x::_) = Just x
+head' = map fst . uncons'
 
 ||| Attempt to get the tail of a list. If the list is empty, return `Nothing`.
 export
 tail' : List a -> Maybe (List a)
-tail' []      = Nothing
-tail' (_::xs) = Just xs
+tail' = map snd . uncons'
 
 ||| Attempt to retrieve the last element of a non-empty list.
 |||
