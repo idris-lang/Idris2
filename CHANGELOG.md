@@ -191,6 +191,8 @@
 
 * The `Data.List1` functions `foldr1` and `foldr1By` are now `public export`.
 
+* Added `uncons' : List a -> Maybe (a, List a)` to `base`.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
