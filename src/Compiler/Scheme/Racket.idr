@@ -280,6 +280,9 @@ useCC appdir fc ccs args ret
            Just ("scheme,racket", [sfn]) =>
                do let body = schemeCall fc sfn (map fst args) ret
                   pure ("", body)
+           Just ("scheme,racket", [sfn, racketlib]) =>
+               do let body = schemeCall fc sfn (map fst args) ret
+                  pure (fromString $ "(require " ++ racketlib ++ ")", body)
            Just ("scheme", [sfn]) =>
                do let body = schemeCall fc sfn (map fst args) ret
                   pure ("", body)
