@@ -229,11 +229,15 @@ mutual
   unelabTy' umode nest env (Meta fc n i args)
       = do defs <- get Ctxt
            let mkn = nameRoot n
+           def <- lookupDefExact (Resolved i) (gamma defs)
+           let term = case def of
+                              (Just (BySearch _ d _)) => ISearch fc d
+                              _ => IHole fc mkn
            Just ty <- lookupTyExact (Resolved i) (gamma defs)
                | Nothing => case umode of
                                  ImplicitHoles => pure (Implicit fc True, gErased fc)
-                                 _ => pure (IHole fc mkn, gErased fc)
-           pure (IHole fc mkn, gnf env (embed ty))
+                                 _ => pure (term, gErased fc)
+           pure (term, gnf env (embed ty))
   unelabTy' umode nest env (Bind fc x b sc)
       = do (sc', scty) <- unelabTy umode nest (b :: env) sc
            case umode of
