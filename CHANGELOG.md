@@ -193,6 +193,8 @@
 
 * Added `uncons' : List a -> Maybe (a, List a)` to `base`.
 
+* Adds `infixOfBy` and `isInfixOfBy` into `Data.List`.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
