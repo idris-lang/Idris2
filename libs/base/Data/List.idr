@@ -830,6 +830,27 @@ public export
 isSuffixOf : Eq a => List a -> List a -> Bool
 isSuffixOf = isSuffixOfBy (==)
 
+||| Check whether the `left` list is an infix of the `right` one, according to
+||| `match`. Returns the shortest unmatched prefix, matched infix and the leftover suffix.
+public export
+infixOfBy : (match : a -> b -> Maybe m) ->
+            (left : List a) -> (right : List b) ->
+            Maybe (List b, List m, List b)
+infixOfBy _ []          right = Just ([], [], right)
+infixOfBy p left@(_::_) right = go [<] right where
+  go : (acc : SnocList b) -> List b -> Maybe (List b, List m, List b)
+  go _   []             = Nothing
+  go pre curr@(c::rest) = case prefixOfBy p left curr of
+    Just (inf, post) => Just (pre <>> [], inf, post)
+    Nothing          => go (pre:<c) rest
+
+||| Check whether the `left` is an infix of the `right` one, using the provided
+||| equality function to compare elements.
+public export
+isInfixOfBy : (eq : a -> b -> Bool) ->
+              (left : List a) -> (right : List b) -> Bool
+isInfixOfBy p n h = any (isPrefixOfBy p n) (tails h)
+
 ||| The isInfixOf function takes two lists and returns True iff the first list
 ||| is contained, wholly and intact, anywhere within the second.
 |||
@@ -842,7 +863,7 @@ isSuffixOf = isSuffixOfBy (==)
 |||
 public export
 isInfixOf : Eq a => List a -> List a -> Bool
-isInfixOf n h = any (isPrefixOf n) (tails h)
+isInfixOf = isInfixOfBy (==)
 
 ||| Transposes rows and columns of a list of lists.
 |||
