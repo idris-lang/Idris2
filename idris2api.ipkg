@@ -224,6 +224,7 @@ modules =
     Parser.Package,
     Parser.Source,
     Parser.Support,
+    Parser.Support.Escaping,
     Parser.Unlit,
 
     Parser.Lexer.Common,
