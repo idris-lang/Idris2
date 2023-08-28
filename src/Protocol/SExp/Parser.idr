@@ -8,6 +8,9 @@ import Parser.Lexer.Common
 import Libraries.Text.Token
 import Libraries.Text.Lexer.Tokenizer
 import Libraries.Text.Parser
+import Libraries.Text.PrettyPrint.Prettyprinter.Symbols
+import Libraries.Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Text.PrettyPrint.Prettyprinter.Doc
 
 import Parser.Support.Escaping
 
@@ -27,6 +30,33 @@ data SExpToken
   | StringBegin Nat
   | StringEnd
   | EndInput
+
+export
+Show SExpToken where
+  -- Literals
+  show (IntegerLit x) = "literal " ++ show x
+  -- String
+  show (StringBegin hashtag) = "string begin"
+  show StringEnd = "string end"
+  show (StringLit x) = "string " ++ show x
+  -- Identifiers
+  show (Ident x) = "identifier " ++ x
+  show (Symbol x) = "symbol " ++ x
+  show EndInput = "end of input"
+
+export
+Pretty Void SExpToken where
+  -- Literals
+  pretty (IntegerLit x) = pretty "literal" <++> pretty (show x)
+  -- String
+  pretty (StringBegin hashtag) = reflow "string begin"
+  pretty StringEnd = reflow "string end"
+  pretty (StringLit x) = pretty "string" <++> dquotes (pretty x)
+  -- Identifiers
+  pretty (Ident x) = pretty "identifier" <++> pretty x
+  pretty (Symbol x) = pretty "symbol" <++> pretty x
+  -- Special
+  pretty EndInput = reflow "end of input"
 
 SExpRule : Type -> Type
 SExpRule = Grammar () SExpToken True

@@ -18,6 +18,7 @@ modules
   , Libraries.Data.String.Extra
   , Libraries.Text.PrettyPrint.Prettyprinter.Doc
   , Libraries.Text.PrettyPrint.Prettyprinter.Symbols
+  , Libraries.Text.PrettyPrint.Prettyprinter.Util
   , Libraries.Text.PrettyPrint.Prettyprinter
   , Libraries.Text.Lexer.Tokenizer
   , Libraries.Text.Parser.Core
