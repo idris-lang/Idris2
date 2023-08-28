@@ -8,38 +8,11 @@ name: Build External Libraries
 ######################################################################
 
 on:
-  # Copied from the ci-idris2.yml file
-  push:
-    branches:
-      - '*'
-    tags:
-      - '*'
-    paths-ignore:
-      - 'docs/**'
-      - 'icons/**'
-      - 'Release/**'
-      - '**.md'
-      - 'CONTRIBUTORS'
-      - 'LICENSE'
-      - 'CHANGELOG.md'
-      - '.github/workflows/ci-bootstrap.yml'
-      - '.github/workflows/ci-lint.yml'
-      - '.github/workflows/ci-sphinx.yml'
-      - '.github/workflows/ci-super-linter.yml'
-  pull_request:
-    branches:
-      - main
-    paths-ignore:
-      - 'docs/**'
-      - 'icons/**'
-      - 'Release/**'
-      - '**.md'
-      - 'CONTRIBUTORS'
-      - 'LICENSE'
-      - '.github/workflows/ci-bootstrap.yml'
-      - '.github/workflows/ci-lint.yml'
-      - '.github/workflows/ci-sphinx.yml'
-      - '.github/workflows/ci-super-linter.yml'
+  # Only run this workflow when the Idris2 workflow has completed
+  workflow_run:
+    workflows: ["Idris2"]
+    types:
+      - completed
 
 concurrency:
   group: ${{ github.ref }}
@@ -266,4 +239,3 @@ jobs:
           branch: gh-pages
           folder: .github/scripts/html/
           git-config-name: Github Actions
-
