@@ -107,6 +107,9 @@
 
 * Fixed a bug that caused `f` to sometimes be replaced by `fx` after matching `fx = f x`.
 
+* Refactor the idris2protocols package to depend on fewer Idris2 modules.
+  We can now export the package independently.
+
 ### Library changes
 
 #### Prelude
