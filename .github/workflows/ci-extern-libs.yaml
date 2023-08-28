@@ -1,0 +1,269 @@
+name: Build External Libraries
+
+######################################################################
+# Ubuntu testing some libraries.
+# We are particularly interested in libraries that are heavily using
+# dependent types, that are prone to find bugs and regressions in the
+# compiler.
+######################################################################
+
+on:
+  # Copied from the ci-idris2.yml file
+  push:
+    branches:
+      - '*'
+    tags:
+      - '*'
+    paths-ignore:
+      - 'docs/**'
+      - 'icons/**'
+      - 'Release/**'
+      - '**.md'
+      - 'CONTRIBUTORS'
+      - 'LICENSE'
+      - 'CHANGELOG.md'
+      - '.github/workflows/ci-bootstrap.yml'
+      - '.github/workflows/ci-lint.yml'
+      - '.github/workflows/ci-sphinx.yml'
+      - '.github/workflows/ci-super-linter.yml'
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - 'docs/**'
+      - 'icons/**'
+      - 'Release/**'
+      - '**.md'
+      - 'CONTRIBUTORS'
+      - 'LICENSE'
+      - '.github/workflows/ci-bootstrap.yml'
+      - '.github/workflows/ci-lint.yml'
+      - '.github/workflows/ci-sphinx.yml'
+      - '.github/workflows/ci-super-linter.yml'
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IDRIS2_MINIMUM_COMPAT_VERSION: 0.6.0
+
+jobs:
+
+  initialise:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Project
+        uses: actions/checkout@v3
+        with:
+          # for pull_request so we can do HEAD^2
+          fetch-depth: 2
+
+      - name: Get commit message
+        id: get_commit_message
+        run: |
+          if   [[ '${{ github.event_name }}' == 'push' ]]; then
+            echo "commit_message=$(git log --format=%B -n 1 HEAD | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+          elif [[ '${{ github.event_name }}' == 'pull_request' ]]; then
+            echo "commit_message=$(git log --format=%B -n 1 HEAD^2 | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Download Idris2 Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ubuntu-installed-idris2-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}-chez
+          path: ~/.idris2/
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chezscheme
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
+      - name: Build self-hosted from previous version
+        run: make all IDRIS2_BOOT="idris2 -Werror" && make install
+
+
+  ########################################################################
+  # Test that we can build Collie
+  ########################################################################
+
+  ubuntu-test-collie:
+    needs: [initialise]
+    runs-on: ubuntu-latest
+    if: |
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: libs]')
+    env:
+      IDRIS2_CG: chez
+    steps:
+      - name: Download Idris2 Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: idris2-nightly-chez
+          path: ~/.idris2/
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chezscheme
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          repository: 'ohad/collie'
+      - name: Build Collie
+        run: |
+          make
+
+  ########################################################################
+  # Test that we can build Frex
+  ########################################################################
+
+  ubuntu-test-frex:
+    needs: [initialise]
+    runs-on: ubuntu-latest
+    if: |
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: libs]')
+    env:
+      IDRIS2_CG: chez
+    steps:
+      - name: Download Idris2 Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: idris2-nightly-chez
+          path: ~/.idris2/
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chezscheme
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          repository: 'frex-project/idris-frex'
+      - name: Build Frex
+        run: |
+          make
+          make test
+
+  ######################################################################
+  # Test that we can build Stefan Höck's elab-util
+  ######################################################################
+
+  ubuntu-test-elab:
+    needs: [initialise]
+    runs-on: ubuntu-latest
+    if: |
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: libs]')
+    env:
+      IDRIS2_CG: chez
+    steps:
+      - name: Download Idris2 Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: idris2-nightly-chez
+          path: ~/.idris2/
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chezscheme
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          repository: 'stefan-hoeck/idris2-elab-util'
+      - name: Build idris2-elab-util
+        run: |
+          make all
+
+  ######################################################################
+  # Ubuntu using katla to build html doc of the libs
+  ######################################################################
+
+  ubuntu-katla:
+    needs: [initialise, ubuntu-test-collie]
+    runs-on: ubuntu-latest
+    if: |
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: html]')
+    env:
+      IDRIS2_CG: chez
+    steps:
+
+      - name: Initialise DEPLOY variable
+        run: |
+          if [[ '${{ github.ref }}' == 'refs/heads/main' ]]; then
+             echo "IDRIS2_DEPLOY=true" >> "$GITHUB_ENV"
+          fi
+
+      - name: Download Idris2 Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: idris2-nightly-chez
+          path: ~/.idris2/
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chezscheme markdown
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
+      - name: Checkout idris2
+        uses: actions/checkout@v3
+      - name: Build API
+        run: make install-api
+        shell: bash
+      - name: Checkout collie
+        uses: actions/checkout@v3
+        with:
+          repository: 'ohad/collie'
+      - name: Build and install Collie
+        run: |
+          make install
+      - name: Checkout idrall
+        uses: actions/checkout@v3
+        with:
+          repository: 'alexhumphreys/idrall'
+      - name: Build and install idrall
+        run: |
+          make install
+      - name: Checkout katla
+        uses: actions/checkout@v3
+        with:
+          repository: 'idris-community/katla'
+      - name: Build and install katla
+        run: |
+          make
+          mkdir -p "${HOME}"/.local/bin/
+          cp -r build/exec/* "${HOME}"/.local/bin/
+          echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
+      - name: Checkout idris2
+        uses: actions/checkout@v3
+      - name: Build html doc & landing page
+        run: |
+          make -C libs/prelude/ install docs IDRIS2=idris2
+          make -C libs/base/ install docs IDRIS2=idris2
+          make -C libs/contrib/ install docs IDRIS2=idris2
+          make -C libs/network/ install docs IDRIS2=idris2
+          make -C libs/linear/ install docs IDRIS2=idris2
+          make -C libs/test/ install docs IDRIS2=idris2
+          make -C libs/papers/ install docs IDRIS2=idris2
+
+          cd .github/scripts
+          ./katla.sh
+          cd -
+          cd www/
+          ./katla.sh
+          cd -
+          cp -r www/html/* .github/scripts/html/
+      - name: Deploy HTML
+        uses: JamesIves/github-pages-deploy-action@4.1.3
+        if: ${{ success() && env.IDRIS2_DEPLOY }}
+
+        with:
+          branch: gh-pages
+          folder: .github/scripts/html/
+          git-config-name: Github Actions
+
