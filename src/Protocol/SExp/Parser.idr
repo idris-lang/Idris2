@@ -29,6 +29,7 @@ data SExpToken
   | Ident String
   | StringBegin Nat
   | StringEnd
+  | Whitespace
   | EndInput
 
 export
@@ -42,6 +43,7 @@ Show SExpToken where
   -- Identifiers
   show (Ident x) = "identifier " ++ x
   show (Symbol x) = "symbol " ++ x
+  show Whitespace = " "
   show EndInput = "end of input"
 
 export
@@ -56,6 +58,7 @@ Pretty Void SExpToken where
   pretty (Ident x) = pretty "identifier" <++> pretty x
   pretty (Symbol x) = pretty "symbol" <++> pretty x
   -- Special
+  pretty Whitespace = pretty "space"
   pretty EndInput = reflow "end of input"
 
 SExpRule : Type -> Type
@@ -72,6 +75,12 @@ symbol req
     = terminal ("Expected '" ++ req ++ "'") $
                \case
                  Symbol s => guard (s == req)
+                 _ => Nothing
+
+space : SExpRule ()
+space = terminal ("Expected a space") $
+               \case
+                 Whitespace => Just ()
                  _ => Nothing
 
 exactIdent : String -> SExpRule ()
@@ -100,7 +109,6 @@ strEnd = terminal "Expected string end" $
                     StringEnd => Just ()
                     _ => Nothing
 
-
 simpleStr : SExpRule String
 simpleStr = strBegin *> commit *> (option "" simpleStrLit) <* strEnd
 
@@ -118,7 +126,13 @@ ideTokens =
               (const stringTokens)
               (const $ is '"')
               (const StringEnd)
+  <|> match (some $ pred isSpace) (const Whitespace)
   <|> match identAllowDashes Ident
+
+notWhitespace : WithBounds SExpToken -> Bool
+notWhitespace btok = case btok.val of
+  Whitespace => False
+  _ => True
 
 idelex : String ->
   Either (StopReason, Int, Int, String)
@@ -126,7 +140,7 @@ idelex : String ->
 idelex str = case lex ideTokens str of
   -- Add the EndInput token so that we'll have a line and column
   -- number to read when storing spans in the file
-  (tok, (EndInput, l, c, _)) => Right (tok ++
+  (tok, (EndInput, l, c, _)) => Right (filter notWhitespace tok ++
                                       [MkBounded EndInput False (MkBounds l c l c)])
   (_, fail) => Left fail
 
@@ -167,7 +181,7 @@ sexp
   <|> do symbol ":"; x <- identifierSExp
          pure (SymbolAtom x)
   <|> do Parser.symbol "("
-         xs <- Parser.many sexp
+         xs <- many sexp
          symbol ")"
          pure (SExpList xs)
 
