@@ -146,8 +146,8 @@ checkTerm rig elabinfo nest env (ILam fc r p Nothing argTy scope) exp
          checkLambda rig elabinfo nest env fc r p n argTy scope exp
 checkTerm rig elabinfo nest env (ILet fc lhsFC r n nTy nVal scope) exp
     = checkLet rig elabinfo nest env fc lhsFC r n nTy nVal scope exp
-checkTerm rig elabinfo nest env (ICase fc scr scrty alts) exp
-    = checkCase rig elabinfo nest env fc scr scrty alts exp
+checkTerm rig elabinfo nest env (ICase fc opts scr scrty alts) exp
+    = checkCase rig elabinfo nest env fc opts scr scrty alts exp
 checkTerm rig elabinfo nest env (ILocal fc nested scope) exp
     = checkLocal rig elabinfo nest env fc nested scope exp
 checkTerm rig elabinfo nest env (ICaseLocal fc uname iname args scope) exp

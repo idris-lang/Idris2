@@ -68,7 +68,7 @@ mutual
        ILet : FC -> (lhsFC : FC) -> RigCount -> Name ->
               (nTy : RawImp' nm) -> (nVal : RawImp' nm) ->
               (scope : RawImp' nm) -> RawImp' nm
-       ICase : FC -> RawImp' nm -> (ty : RawImp' nm) ->
+       ICase : FC -> List (FnOpt' nm) -> RawImp' nm -> (ty : RawImp' nm) ->
                List (ImpClause' nm) -> RawImp' nm
        ILocal : FC -> List (ImpDecl' nm) -> RawImp' nm -> RawImp' nm
        -- Local definitions made elsewhere, but that we're pushing
@@ -163,7 +163,7 @@ mutual
       show (ILet fc lhsFC c n ty val sc)
          = "(%let " ++ show c ++ " " ++ " " ++ show n ++ " " ++ show ty ++
            " " ++ show val ++ " " ++ show sc ++ ")"
-      show (ICase _ scr scrty alts)
+      show (ICase _ _ scr scrty alts)
          = "(%case (" ++ show scr ++ " : " ++ show scrty ++ ") " ++ show alts ++ ")"
       show (ILocal _ def scope)
          = "(%local (" ++ show def ++ ") " ++ show scope ++ ")"
@@ -844,7 +844,7 @@ getFC (IVar x _) = x
 getFC (IPi x _ _ _ _ _) = x
 getFC (ILam x _ _ _ _ _) = x
 getFC (ILet x _ _ _ _ _ _) = x
-getFC (ICase x _ _ _) = x
+getFC (ICase x _ _ _ _) = x
 getFC (ILocal x _ _) = x
 getFC (ICaseLocal x _ _ _ _) = x
 getFC (IUpdate x _ _) = x

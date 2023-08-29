@@ -36,8 +36,9 @@ mapPTermM f = goPTerm where
                 <*> goPTerm scope
                 <*> goPClauses alts
       >>= f
-    goPTerm (PCase fc x xs) =
-      PCase fc <$> goPTerm x
+    goPTerm (PCase fc opts x xs) =
+      PCase fc <$> goPFnOpts opts
+               <*> goPTerm x
                <*> goPClauses xs
       >>= f
     goPTerm (PLocal fc xs scope) =
@@ -395,8 +396,8 @@ mapPTerm f = goPTerm where
       = f $ PLam fc x (goPiInfo info) z (goPTerm argTy) (goPTerm scope)
     goPTerm (PLet fc x pat nTy nVal scope alts)
       = f $ PLet fc x (goPTerm pat) (goPTerm nTy) (goPTerm nVal) (goPTerm scope) (goPClause <$> alts)
-    goPTerm (PCase fc x xs)
-      = f $ PCase fc (goPTerm x) (goPClause <$> xs)
+    goPTerm (PCase fc opts x xs)
+      = f $ PCase fc (goPFnOpt <$>  opts) (goPTerm x) (goPClause <$> xs)
     goPTerm (PLocal fc xs scope)
       = f $ PLocal fc (goPDecl <$> xs) (goPTerm scope)
     goPTerm (PUpdate fc xs)
@@ -596,7 +597,7 @@ substFC fc = mapPTerm $ \case
   PPi _ x y z argTy retTy => PPi fc x y z argTy retTy
   PLam _ x y pat argTy scope => PLam fc x y pat argTy scope
   PLet _ x pat nTy nVal scope alts => PLet fc x pat nTy nVal scope alts
-  PCase _ x xs => PCase fc x xs
+  PCase _ opts x xs => PCase fc opts x xs
   PLocal _ xs scope => PLocal fc xs scope
   PUpdate _ xs => PUpdate fc xs
   PApp _ x y => PApp fc x y
