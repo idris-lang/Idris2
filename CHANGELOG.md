@@ -19,6 +19,9 @@
 * Fixity declarations can now be kept private with export modifiers.
 * New fromTTImp, fromName, and fromDecls names for custom TTImp, Name, and Decls
   literals.
+* Forward-declarations whose visibility differ from their
+  actual definition now emit a warning, unless the definition
+  has no specified visibility (addressing Issue [#1236](https://github.com/idris-lang/Idris2/issues/1236)).
 
 ### REPL changes
 
@@ -112,6 +115,9 @@
   To avoid confusing tooling about which `.ipkg` to use, the
   package file is under the newly added `ipkg` sub-directory.
 
+* Added `Libraries.Data.WithDefault` to facilitate consistent use
+  of a default-if-unspecified value, currently for `private` visibility.
+
 ### Library changes
 
 #### Prelude
@@ -199,6 +205,8 @@
 * Added `uncons' : List a -> Maybe (a, List a)` to `base`.
 
 * Adds `infixOfBy` and `isInfixOfBy` into `Data.List`.
+
+* Adds `WithDefault` into `Language.Reflection.TTImp`, mirroring compiler addition.
 
 #### System
 

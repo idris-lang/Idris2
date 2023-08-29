@@ -179,16 +179,22 @@ mutual
   %name Clause cl
 
   public export
+  data WithDefault : (a : Type) -> (def : a) -> Type where
+       Default : WithDefault a def
+       Value   : a -> WithDefault a def
+
+  public export
   data Decl : Type where
        IClaim : FC -> Count -> Visibility -> List FnOpt ->
                 ITy -> Decl
-       IData : FC -> Visibility -> Maybe TotalReq -> Data -> Decl
+       IData : FC -> WithDefault Visibility Private -> Maybe TotalReq -> Data -> Decl
        IDef : FC -> Name -> (cls : List Clause) -> Decl
        IParameters : FC -> (params : List (Name, Count, PiInfo TTImp, TTImp)) ->
                      (decls : List Decl) -> Decl
        IRecord : FC ->
                  Maybe String -> -- nested namespace
-                 Visibility -> Maybe TotalReq -> Record -> Decl
+                 WithDefault Visibility Private ->
+                 Maybe TotalReq -> Record -> Decl
        INamespace : FC -> Namespace -> (decls : List Decl) -> Decl
        ITransform : FC -> Name -> TTImp -> TTImp -> Decl
        IRunElabDecl : FC -> TTImp -> Decl
@@ -299,6 +305,18 @@ Eq DataOpt where
   External == External = True
   NoNewtype == NoNewtype = True
   _ == _ = False
+
+public export
+Eq a => Eq (WithDefault a def) where
+  Default == Default = True
+  Default == Value _ = False
+  Value _ == Default = False
+  Value x == Value y = x == y
+
+public export
+{def : a} -> (Show a) => Show (WithDefault a def) where
+  show (Value x) = show x
+  show Default = show def
 
 public export
 Eq a => Eq (PiInfo a) where
