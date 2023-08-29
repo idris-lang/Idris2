@@ -39,7 +39,7 @@ mutual
        ILet : FC -> (lhsFC : FC) -> Count -> Name ->
               (nTy : TTImp) -> (nVal : TTImp) ->
               (scope : TTImp) -> TTImp
-       ICase : FC -> TTImp -> (ty : TTImp) ->
+       ICase : FC -> List FnOpt -> TTImp -> (ty : TTImp) ->
                List Clause -> TTImp
        ILocal : FC -> List Decl -> TTImp -> TTImp
        IUpdate : FC -> List IFieldUpdate -> TTImp -> TTImp
@@ -203,7 +203,7 @@ getFC (IVar fc _)                = fc
 getFC (IPi fc _ _ _ _ _)         = fc
 getFC (ILam fc _ _ _ _ _)        = fc
 getFC (ILet fc _ _ _ _ _ _)      = fc
-getFC (ICase fc _ _ _)           = fc
+getFC (ICase fc _ _ _ _)         = fc
 getFC (ILocal fc _ _)            = fc
 getFC (IUpdate fc _ _)           = fc
 getFC (IApp fc _ _)              = fc
@@ -236,7 +236,7 @@ mapTopmostFC fcf $ IVar fc a                = IVar (fcf fc) a
 mapTopmostFC fcf $ IPi fc a b c d e         = IPi (fcf fc) a b c d e
 mapTopmostFC fcf $ ILam fc a b c d e        = ILam (fcf fc) a b c d e
 mapTopmostFC fcf $ ILet fc a b c d e f      = ILet (fcf fc) a b c d e f
-mapTopmostFC fcf $ ICase fc a b c           = ICase (fcf fc) a b c
+mapTopmostFC fcf $ ICase fc opts a b c      = ICase (fcf fc) opts a b c
 mapTopmostFC fcf $ ILocal fc a b            = ILocal (fcf fc) a b
 mapTopmostFC fcf $ IUpdate fc a b           = IUpdate (fcf fc) a b
 mapTopmostFC fcf $ IApp fc a b              = IApp (fcf fc) a b
@@ -403,7 +403,7 @@ Eq TTImp where
     c == c' && (assert_total $ i == i') && n == n' && a == a' && r == r'
   ILet _ _ c n ty val s == ILet _ _ c' n' ty' val' s' =
     c == c' && n == n' && ty == ty' && val == val' && s == s'
-  ICase _ t ty cs == ICase _ t' ty' cs'
+  ICase _ _ t ty cs == ICase _ _ t' ty' cs'
     = t == t' && ty == ty' && (assert_total $ cs == cs')
   ILocal _ ds e == ILocal _ ds' e' =
     (assert_total $ ds == ds') && e == e'
@@ -573,7 +573,7 @@ mutual
     showPrec d (ILet fc lhsFC rig nm nTy nVal scope)
       = showParens (d > Open) $
           "let \{showCount rig (show nm)} : \{show nTy} = \{show nVal} in \{show scope}"
-    showPrec d (ICase fc s ty xs)
+    showPrec d (ICase fc _ s ty xs)
       = showParens (d > Open) $
           unwords $ [ "case", show s ] ++ typeFor ty ++ [ "of", "{"
                     , joinBy "; " (assert_total $ map (showClause InCase) xs)
@@ -783,8 +783,8 @@ parameters (f : TTImp -> TTImp)
     = f $ ILam fc rig (mapPiInfo pinfo) x (mapTTImp argTy) (mapTTImp lamTy)
   mapTTImp (ILet fc lhsFC rig n nTy nVal scope)
     = f $ ILet fc lhsFC rig n (mapTTImp nTy) (mapTTImp nVal) (mapTTImp scope)
-  mapTTImp (ICase fc t ty cls)
-    = f $ ICase fc (mapTTImp t) (mapTTImp ty) (assert_total $ map mapClause cls)
+  mapTTImp (ICase fc opts t ty cls)
+    = f $ ICase fc opts (mapTTImp t) (mapTTImp ty) (assert_total $ map mapClause cls)
   mapTTImp (ILocal fc xs t)
     = f $ ILocal fc (assert_total $ map mapDecl xs) (mapTTImp t)
   mapTTImp (IUpdate fc upds t) = f $ IUpdate fc (assert_total map mapIFieldUpdate upds) (mapTTImp t)
@@ -909,8 +909,8 @@ parameters {0 m : Type -> Type} {auto mon : Monad m} (f : TTImp -> m TTImp)
     = f =<< ILam fc rig <$> mapMPiInfo pinfo <*> pure x <*> mapMTTImp argTy <*> mapMTTImp lamTy
   mapMTTImp (ILet fc lhsFC rig n nTy nVal scope)
     = f =<< ILet fc lhsFC rig n <$> mapMTTImp nTy <*> mapMTTImp nVal <*> mapMTTImp scope
-  mapMTTImp (ICase fc t ty cls)
-    = f =<< ICase fc <$> mapMTTImp t <*> mapMTTImp ty <*> assert_total (traverse mapMClause cls)
+  mapMTTImp (ICase fc opts t ty cls)
+    = f =<< ICase fc opts <$> mapMTTImp t <*> mapMTTImp ty <*> assert_total (traverse mapMClause cls)
   mapMTTImp (ILocal fc xs t)
     = f =<< ILocal fc <$> assert_total (traverse mapMDecl xs) <*> mapMTTImp t
   mapMTTImp (IUpdate fc upds t)
