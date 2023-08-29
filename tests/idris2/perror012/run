@@ -1,4 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --check LamParseError.idr
-$1 --no-color --console-width 0 --check CaseParseError.idr
+check LamParseError.idr
+check CaseParseError.idr

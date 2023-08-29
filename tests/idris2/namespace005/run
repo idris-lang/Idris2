@@ -1,20 +1,18 @@
-rm -rf ./build
+. ../../testutils.sh
 
+check Main0.idr
+check Main1.idr
+check MainFail.idr
+check Main3.idr
 
-$1 --no-color --console-width 0 --check Main0.idr
-$1 --no-color --console-width 0 --check Main1.idr
-$1 --no-color --console-width 0 --check MainFail.idr
-$1 --no-color --console-width 0 --check Main3.idr
+run Main0.idr
+run Main1.idr
 
-$1 --no-color --console-width 0 --exec main Main0.idr
-$1 --no-color --console-width 0 --exec main Main1.idr
+check MainPre0.idr
+check MainPre1.idr
 
-$1 --no-color --console-width 0 --check MainPre0.idr
-$1 --no-color --console-width 0 --check MainPre1.idr
+run MainPre0.idr
+run MainPre1.idr
 
-$1 --no-color --console-width 0 --exec main MainPre0.idr
-$1 --no-color --console-width 0 --exec main MainPre1.idr
-
-$1 --no-color --console-width 0 --check MainConflict.idr
-$1 --no-color --console-width 0 --exec exec MainConflict.idr
-
+check MainConflict.idr
+idris2 --exec exec MainConflict.idr

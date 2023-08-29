@@ -1,6 +1,6 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --check Issue1345.idr || true
-$1 --no-color --console-width 0 --check Issue1496-1.idr || true
-$1 --no-color --console-width 0 --check Issue1496-2.idr || true
-$1 --build foo.ipkg
+check Issue1345.idr || true
+check Issue1496-1.idr || true
+check Issue1496-2.idr || true
+idris2 --build foo.ipkg

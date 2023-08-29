@@ -1,13 +1,13 @@
-rm -rf build
+. ../../testutils.sh
 
 # observe that errors are correctly reported as zero.
-$1 --exec main TermSize.idr </dev/null
+run TermSize.idr </dev/null
 
 # The following should report True True, but the ci scripts don't
 # provide a terminal
-# $1 --exec main TermSize.idr
+# run TermSize.idr
 
 # The following should also report True True if the output is a terminal,
 # but the testing framework redirects output.
 
-# idris2 --exec main tests/allschemes/scheme002/TermSize.idr </dev/null
+# run tests/allschemes/scheme002/TermSize.idr </dev/null

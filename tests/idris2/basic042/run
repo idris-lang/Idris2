@@ -1,5 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-banner --no-color --console-width 0 LiteralsString.idr < input
-$1 --no-banner --no-color --console-width 0 LiteralsInteger.idr < input2
-
+idris2 LiteralsString.idr < input
+idris2 LiteralsInteger.idr < input2

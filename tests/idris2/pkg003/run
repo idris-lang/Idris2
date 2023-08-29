@@ -1,9 +1,11 @@
-$1 --build testpkg.ipkg
+. ../../testutils.sh
+
+idris2 --build testpkg.ipkg
 rm -rf  build/
-$1 --build testpkg.ipkg --quiet
-$1 --build testpkg.ipkg --verbose
-$1 --build testpkg.ipkg --codegen gambit
-$1 --build testpkg.ipkg --ide-mode
-$1 --build malformed-package-name
-$1 --build non-existent-package.ipkg
+idris2 --build testpkg.ipkg --quiet
+idris2 --build testpkg.ipkg --verbose
+idris2 --build testpkg.ipkg --codegen gambit
+idris2 --build testpkg.ipkg --ide-mode
+idris2 --build malformed-package-name
+idris2 --build non-existent-package.ipkg
 rm -rf  build/

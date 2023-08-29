@@ -1,6 +1,5 @@
-rm -rf build
+. ../../testutils.sh
 
 cd src/Top
-$1 --find-ipkg --check Dummy.idr
+check --find-ipkg Dummy.idr
 cd ../..
-

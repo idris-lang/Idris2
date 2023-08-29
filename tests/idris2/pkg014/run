@@ -1,3 +1,5 @@
+. ../../testutils.sh
+
 if [ "$OS" = "windows" ]; then
     MY_PWD="$(cygpath -m "$(pwd)")\\\\"
 else
@@ -6,4 +8,4 @@ fi
 
 MY_PWD="${MY_PWD}" ./gen_expected.sh
 
-$1 --build test.ipkg --log package.depends:10
+idris2 --build test.ipkg --log package.depends:10

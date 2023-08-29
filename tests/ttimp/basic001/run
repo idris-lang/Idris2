@@ -1,4 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --yaffle Interp.yaff < input
-$1 --yaffle build/ttc/*/Interp.ttc < input
+idris2 --yaffle Interp.yaff < input
+idris2 --yaffle build/ttc/*/Interp.ttc < input

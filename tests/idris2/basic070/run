@@ -1,6 +1,6 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --no-banner --check Issue3016.idr
-$1 --no-color --console-width 0 --no-banner --check Issue2782.idr
-$1 --no-color --console-width 0 --no-banner --check Issue2592.idr
-$1 --no-color --console-width 0 --no-banner --check Issue2593.idr
+check Issue3016.idr
+check Issue2782.idr
+check Issue2592.idr
+check Issue2593.idr

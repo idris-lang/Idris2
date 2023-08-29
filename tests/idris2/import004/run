@@ -1,5 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --no-banner Cycle1.idr
-$1 --no-color --console-width 0 --no-banner Loop.idr
-
+idris2 Cycle1.idr
+idris2 Loop.idr

@@ -1,4 +1,3 @@
-rm -rf build
+. ../../testutils.sh
 
-echo ":q" | $1 --no-color --console-width 0 --no-banner Default.idr
-
+echo ":q" | idris2 Default.idr

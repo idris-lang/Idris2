@@ -1,4 +1,3 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 Issue735.idr --check
-
+check Issue735.idr

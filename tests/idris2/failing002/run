@@ -1,8 +1,8 @@
-rm -rf build
-$1 --no-color --console-width 0 --check FailingBug.idr
+. ../../testutils.sh
+check FailingBug.idr
 
-rm -rf build
-$1 --no-color --console-width 20 --check FailingBug.idr
+. ../../testutils.sh
+check --console-width 20 FailingBug.idr
 
-rm -rf build
-$1 --no-color --console-width 80 --check FailingBug.idr
+. ../../testutils.sh
+check --console-width 80 FailingBug.idr

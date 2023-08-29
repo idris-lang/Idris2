@@ -1,7 +1,7 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --check NotFake.idr
+check NotFake.idr
 
 echo "TT2This Is A Fake TTC" > build/ttc/$(ls build/ttc)/Fake.ttc
 
-$1 --no-color --console-width 0 --check TestFake.idr
+check TestFake.idr

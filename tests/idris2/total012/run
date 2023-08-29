@@ -1,12 +1,12 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 Issue1828.idr --check
-$1 --no-color --console-width 0 Issue1828.idr --check --total --log totality.requirement:20 | sed -r "s/.([0-9]){10}//g"
+check Issue1828.idr
+check Issue1828.idr --total --log totality.requirement:20 | sed -r "s/.([0-9]){10}//g"
 
-$1 --no-color --console-width 0 Issue1828.idr --check
-$1 --no-color --console-width 0 Issue1828.idr --check --log totality.requirement:20 | sed -r "s/.([0-9]){10}//g"
+check Issue1828.idr
+check Issue1828.idr --log totality.requirement:20 | sed -r "s/.([0-9]){10}//g"
 
 
-$1 --no-color --console-width 0 TotallyTotal.idr --check
-$1 --no-color --console-width 0 TotallyTotal.idr --check --log totality.requirement:20 | sed -r "s/.([0-9]){10}//g"
-$1 --no-color --console-width 0 TotallyTotal.idr --check --total --log totality.requirement:20 | sed -r "s/.([0-9]){10}//g"
+check TotallyTotal.idr
+check TotallyTotal.idr --log totality.requirement:20 | sed -r "s/.([0-9]){10}//g"
+check TotallyTotal.idr --total --log totality.requirement:20 | sed -r "s/.([0-9]){10}//g"

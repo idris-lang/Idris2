@@ -1,10 +1,9 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --check Lambda.idr
+check Lambda.idr
 
-$1 --no-color --console-width 0 --check Bad1.idr
+check Bad1.idr
 
-$1 --no-color --console-width 0 --check Bad2.idr
+check Bad2.idr
 
-$1 --no-color --console-width 0 --check Bad3.idr
-
+check Bad3.idr

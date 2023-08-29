@@ -1,3 +1,3 @@
-$1 --no-color --console-width 0 --no-banner --check Issue1861.idr
+. ../../testutils.sh
 
-rm -r build
+check Issue1861.idr

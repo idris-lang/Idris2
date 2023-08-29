@@ -1,6 +1,6 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --check EmptyFailing.idr || true
-$1 --no-color --console-width 0 --check EmptyMutual.idr || true
-$1 --no-color --console-width 0 --check EmptyUsing.idr || true
-$1 --no-color --console-width 0 --check EmptyParameters.idr || true
+check EmptyFailing.idr || true
+check EmptyMutual.idr || true
+check EmptyUsing.idr || true
+check EmptyParameters.idr || true

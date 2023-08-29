@@ -1,4 +1,3 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 -p contrib --cg node --no-banner --no-color --console-width 0 Fix1795.idr < input
-
+idris2 -p contrib --cg node Fix1795.idr < input

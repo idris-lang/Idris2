@@ -1,15 +1,14 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --check StrError1.idr || true
-$1 --no-color --console-width 0 --check StrError2.idr || true
-$1 --no-color --console-width 0 --check StrError3.idr || true
-$1 --no-color --console-width 0 --check StrError4.idr || true
-$1 --no-color --console-width 0 --check StrError5.idr || true
-$1 --no-color --console-width 0 --check StrError6.idr || true
-$1 --no-color --console-width 0 --check StrError7.idr || true
-$1 --no-color --console-width 0 --check StrError8.idr || true
-$1 --no-color --console-width 0 --check StrError9.idr || true
-$1 --no-color --console-width 0 --check StrError10.idr || true
-$1 --no-color --console-width 0 --check StrError11.idr || true
-$1 --no-color --console-width 0 --check StrError12.idr || true
-
+check StrError1.idr || true
+check StrError2.idr || true
+check StrError3.idr || true
+check StrError4.idr || true
+check StrError5.idr || true
+check StrError6.idr || true
+check StrError7.idr || true
+check StrError8.idr || true
+check StrError9.idr || true
+check StrError10.idr || true
+check StrError11.idr || true
+check StrError12.idr || true

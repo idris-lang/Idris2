@@ -1,7 +1,7 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --check NamedReturn1.idr || true
-$1 --no-color --console-width 0 --check NamedReturn2.idr || true
-$1 --no-color --console-width 0 --check NamedReturn3.idr || true
-$1 --no-color --console-width 0 --check NamedReturn4.idr || true
-$1 --no-color --console-width 0 --no-banner TrailingLam.idr < input
+check NamedReturn1.idr || true
+check NamedReturn2.idr || true
+check NamedReturn3.idr || true
+check NamedReturn4.idr || true
+idris2 TrailingLam.idr < input

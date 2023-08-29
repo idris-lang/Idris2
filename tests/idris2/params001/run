@@ -1,5 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --no-banner --check param.idr
-$1 --no-color --console-width 0 --no-banner --check parambad.idr
-
+check param.idr
+check parambad.idr

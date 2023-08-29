@@ -1,2 +1,5 @@
-$1 --no-color --console-width 0 --cg node --no-banner Buffer.idr < input
-rm -rf build test.buf
+. ../../testutils.sh
+
+rm test.buf
+
+idris2 --cg node Buffer.idr < input

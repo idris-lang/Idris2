@@ -1,5 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 -c Fact.idr -o fact
+idris2 -c Fact.idr -o fact
 ./build/exec/fact
-

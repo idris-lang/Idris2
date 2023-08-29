@@ -1,5 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --no-banner B.idr < input
-$1 --no-color --console-width 0 --no-banner C.idr < input
-
+idris2 B.idr < input
+idris2 C.idr < input

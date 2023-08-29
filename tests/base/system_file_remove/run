@@ -1,11 +1,11 @@
-rm -rf build
+. ../../testutils.sh
 
 # @removeFile@ uses primitive functions with definitions for both
 # C (supported by most backends) and Node.
-$1 --cg chez -o test Test.idr
+idris2 --cg chez -o test Test.idr
 ./build/exec/test
 
-rm -rf ./build
+. ../../testutils.sh
 
-$1 --cg node -o test.js Test.idr
+idris2 --cg node -o test.js Test.idr
 node ./build/exec/test.js

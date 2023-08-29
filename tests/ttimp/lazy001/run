@@ -1,5 +1,5 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --yaffle Lazy.yaff < input
-$1 --yaffle LazyInf.yaff < input
-$1 --yaffle build/ttc/*/LazyInf.ttc < input
+idris2 --yaffle Lazy.yaff < input
+idris2 --yaffle LazyInf.yaff < input
+idris2 --yaffle build/ttc/*/LazyInf.ttc < input

@@ -1,4 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --cg node --no-banner --no-color --console-width 0 OS.idr < input
-$1 --cg javascript --no-banner --no-color --console-width 0 -o os.js OS.idr
+idris2 --cg node OS.idr < input
+idris2 --cg javascript -o os.js OS.idr

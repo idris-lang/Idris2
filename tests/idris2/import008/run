@@ -1,9 +1,11 @@
+. ../../testutils.sh
+
 rm -rf Exe/build
 rm -rf Lib/build
 
 cd Lib
-$1 --build
+idris2 --build
 cd ..
 cd Exe
-$1 --no-color --console-width 0 --no-banner --check --find-ipkg Mod.idr
-$1 --no-color --console-width 0 --no-banner --exec main --find-ipkg Mod.idr
+check --find-ipkg Mod.idr
+run --find-ipkg Mod.idr

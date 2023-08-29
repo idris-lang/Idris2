@@ -1,3 +1,3 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --no-banner Issue1328A.idr < input
+idris2 Issue1328A.idr < input

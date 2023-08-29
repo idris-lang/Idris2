@@ -1,6 +1,5 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --check Dots1.idr
-$1 --no-color --console-width 0 --check Dots2.idr
-$1 --no-color --console-width 0 --check Dots3.idr
-
+check Dots1.idr
+check Dots2.idr
+check Dots3.idr

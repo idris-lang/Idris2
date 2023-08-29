@@ -1,8 +1,7 @@
-rm -rf ./build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --build deprecated.ipkg
-$1 --no-color --no-banner --console-width 0 Foo.idr <<EOF
+idris2 --build deprecated.ipkg
+idris2 Foo.idr <<EOF
 :module Foo
 :doc dep1
 EOF
-

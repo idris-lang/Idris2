@@ -1,6 +1,6 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --no-banner Issue35.idr < input
-$1 --no-color --console-width 0 --no-banner --check Issue35-2.idr || true
-$1 --no-color --console-width 0 --no-banner --show-machine-names --check Issue35-2.idr || true
-$1 --no-color --console-width 0 --no-banner --show-namespaces --show-machine-names --check Issue35-2.idr || true
+idris2 Issue35.idr < input
+check Issue35-2.idr || true
+check --show-machine-names Issue35-2.idr || true
+check --show-namespaces --show-machine-names Issue35-2.idr || true

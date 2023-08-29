@@ -1,5 +1,5 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --check ParseRecord.idr || true
-$1 --no-color --console-width 0 --check ParseRecord2.idr || true
-$1 --no-color --console-width 0 --check ParseRecord3.idr || true
+check ParseRecord.idr || true
+check ParseRecord2.idr || true
+check ParseRecord3.idr || true
