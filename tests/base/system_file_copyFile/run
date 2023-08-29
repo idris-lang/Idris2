@@ -1,6 +1,6 @@
 . ../../testutils.sh
 
-idris2 CopyFile.idr < input
+run CopyFile.idr
 base64 -i dest.bin
 
 rm dest.bin

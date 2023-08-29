@@ -11,5 +11,5 @@ case $(uname -s) in
 esac
 
 ${MAKE} all > /dev/null
-idris2 CB.idr < input
+run CB.idr
 ${MAKE} clean > /dev/null

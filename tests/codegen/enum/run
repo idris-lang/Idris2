@@ -1,4 +1,4 @@
 . ../../testutils.sh
 
 idris2 --quiet -o enum Enum.idr
-idris2 Check.idr < input
+run Check.idr

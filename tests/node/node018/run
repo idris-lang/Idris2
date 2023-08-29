@@ -2,4 +2,4 @@
 
 rm testout.txt
 
-idris2 --cg node File.idr < input
+run --cg node File.idr

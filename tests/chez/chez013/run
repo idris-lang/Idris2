@@ -11,5 +11,5 @@ case $(uname -s) in
 esac
 
 ${MAKE} all > /dev/null
-idris2 Struct.idr < input
+run Struct.idr
 ${MAKE} clean > /dev/null

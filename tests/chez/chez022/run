@@ -11,6 +11,6 @@ case $(uname -s) in
 esac
 
 ${MAKE} all > /dev/null
-idris2 usealloc.idr < input
+run usealloc.idr
 . ../../testutils.sh
 ${MAKE} clean > /dev/null

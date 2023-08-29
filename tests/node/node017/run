@@ -3,5 +3,5 @@
 rm -rf testdir
 
 ./gen_expected.sh
-idris2 --cg node dir.idr < input
+run --cg node dir.idr
 cat testdir/test.txt

@@ -1,6 +1,6 @@
 . ../../testutils.sh
 
 ./gen_expected.sh
-idris2 dir.idr < input
+run dir.idr
 cat testdir/test.txt
 rm -rf testdir

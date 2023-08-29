@@ -1,5 +1,5 @@
 . ../../testutils.sh
 
-idris2 File.idr < input
+run File.idr
 
 rm -rf build testout.txt

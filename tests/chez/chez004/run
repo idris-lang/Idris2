@@ -1,4 +1,4 @@
 . ../../testutils.sh
 
-idris2 -p contrib Buffer.idr < input
+run -p contrib Buffer.idr
 rm -rf build test.buf

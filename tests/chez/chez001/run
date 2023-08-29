@@ -1,3 +1,3 @@
 . ../../testutils.sh
 
-idris2 Total.idr < input
+run Total.idr
