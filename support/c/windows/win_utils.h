@@ -16,7 +16,6 @@ int win32_getPID();
 long win32_getNProcessors();
 
 int win32_getFileNo(FILE *);
-int win32_getFileAccessTime(FILE *f, int64_t *sec, int64_t *nsec);
-int win32_getFileModifiedTime(FILE *f, int64_t *sec, int64_t *nsec);
-int win32_getFileStatusTime(FILE *f, int64_t *sec, int64_t *nsec);
+int win32_getFileTime(FILE *f, int *atime_sec, int *atime_nsec, int *mtime_sec,
+                      int *mtime_nsec, int *ctime_sec, int *ctime_nsec);
 int win32_isTTY(int fd);
