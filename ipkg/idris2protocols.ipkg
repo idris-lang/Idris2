@@ -37,4 +37,4 @@ modules
 
 --depends =
 
-sourcedir = "src"
+sourcedir = "../src"
