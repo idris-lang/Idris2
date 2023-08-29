@@ -1,3 +1,3 @@
 . ../../testutils.sh
 
-idris2 --cg node Span.idr < input
+run --cg node Span.idr

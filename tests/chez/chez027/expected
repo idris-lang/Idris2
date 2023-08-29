@@ -1,5 +1,4 @@
-1/1: Building StringParser (StringParser.idr)
-Main> hiya
+hiya
 2
 Parse failed at position 0-0: could not satisfy predicate
 Parse failed at position 0-0: Not good
@@ -18,4 +17,3 @@ False
 ['a', 'b', 'c', 'd']
 ()
 Parse failed at position 0-0: Purposefully changed OK to Fail
-Main> Bye for now!

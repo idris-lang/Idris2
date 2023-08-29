@@ -1,3 +1,3 @@
 . ../../testutils.sh
 
-idris2 DefaultSignal.idr < input 2> /dev/null
+run DefaultSignal.idr 2> /dev/null

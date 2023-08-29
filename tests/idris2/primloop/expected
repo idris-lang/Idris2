@@ -1,5 +1,4 @@
-1/1: Building PrimLoop (PrimLoop.idr)
-PrimLoop> 10
+10
 9
 8
 7
@@ -9,4 +8,3 @@ PrimLoop> 10
 3
 2
 1
-PrimLoop> Bye for now!

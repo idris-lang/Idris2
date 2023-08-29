@@ -2,4 +2,4 @@
 
 cd "folder with spaces" || exit
 
-idris2 Main.idr < ../input
+run Main.idr

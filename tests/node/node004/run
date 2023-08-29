@@ -2,4 +2,4 @@
 
 rm test.buf
 
-idris2 --cg node Buffer.idr < input
+run --cg node Buffer.idr
