@@ -222,8 +222,10 @@ jobs:
           make test
 
   ######################################################################
-  # Test that we can build Stefan Höck's elab-util
+  # Test that we can build Stefan Höck's elab-util and pack
   ######################################################################
+
+  # ELAB
 
   ubuntu-test-elab:
     needs: ubuntu-self-host-previous-version
@@ -253,8 +255,79 @@ jobs:
         run: |
           make all
 
+  # PACK
+
+  ubuntu-test-pack:
+    needs: ubuntu-self-host-previous-version
+    runs-on: ubuntu-latest
+    if: |
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: libs]')
+    env:
+      IDRIS2_CG: chez
+      PACK_DIR: /root/.pack
+    strategy:
+      fail-fast: false
+    # instead of bootstrapping pack, load the dockerimage where it is already
+    # we'll then use pack to build pack with this job's idris2 sources
+    container: ghcr.io/stefan-hoeck/idris2-pack:latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          repository: 'stefan-hoeck/idris2-pack'
+      # by default, pack uses the main idris2 head, not the current job's one
+      - name: Toml setup
+        run: |
+          echo "[idris2]" > pack.toml
+          echo "url = \"https://github.com/idris-lang/Idris2\"" >> pack.toml
+          echo "commit = \"$GITHUB_REF\"" >> pack.toml
+          echo "bootstrap  = true" >> pack.toml
+      - name: Build idris2-pack
+        run: |
+          pack install pack
+
   ######################################################################
-  # Ubuntu using katla to build html doc of the libs
+  # Test that we can build the LSP
+  ######################################################################
+
+  ubuntu-test-lsp:
+    needs: ubuntu-self-host-previous-version
+    runs-on: ubuntu-latest
+    if: |
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: libs]')
+    env:
+      IDRIS2_CG: chez
+    steps:
+      - name: Download Idris2 Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: idris2-nightly-chez
+          path: ~/.idris2/
+      - name: Install chezscheme
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chezscheme
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          repository: 'idris-community/idris2-lsp'
+      - name: Install libs and API
+        run: |
+          git submodule update --init Idris2
+          cd Idris2
+          make all
+          make install-with-src-libs
+          make install-with-src-api
+      - name: Build idris2-lsp
+        run: |
+          make all
+
+  ######################################################################
+  # Test that we can use Katla to build html doc of the libs
   ######################################################################
 
   ubuntu-katla:
