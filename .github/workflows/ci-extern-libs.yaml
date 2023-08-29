@@ -41,7 +41,7 @@ on:
       - '.github/workflows/ci-super-linter.yml'
 
 concurrency:
-  group: ${{ github.ref }}
+  group: extlibs-${{ github.ref }}
   cancel-in-progress: true
 
 env:
