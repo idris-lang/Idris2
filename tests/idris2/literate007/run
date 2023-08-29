@@ -1,5 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --no-banner IEdit.lidr < input
-$1 --no-color --console-width 0 --no-banner IEditOrg.org < input2
-
+idris2 IEdit.lidr < input
+idris2 IEditOrg.org < input2

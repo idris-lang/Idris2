@@ -1,2 +1,4 @@
-$1 --no-color --console-width 0 -p contrib --no-banner Buffer.idr < input
+. ../../testutils.sh
+
+idris2 -p contrib Buffer.idr < input
 rm -rf build test.buf

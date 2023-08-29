@@ -1,4 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --no-banner DocImpl.idr < input
-$1 --no-color --console-width 0 --no-banner --no-prelude List.idr < input2
+idris2 DocImpl.idr < input
+idris2 --no-prelude List.idr < input2

@@ -1,6 +1,6 @@
-rm -rf ./build
+. ../../testutils.sh
 
 
-$1 --no-color --console-width 0 --check Main1.idr
+check Main1.idr
 
-$1 --no-color --console-width 0 --exec main Main1.idr
+run Main1.idr

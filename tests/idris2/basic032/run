@@ -1,5 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --no-banner Idiom.idr < input
-$1 --no-color --console-width 0 --no-banner Idiom2.idr --check
-
+idris2 Idiom.idr < input
+check Idiom2.idr

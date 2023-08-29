@@ -1,4 +1,3 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-banner --no-color --console-width 0 TupleSections.idr < input
-
+idris2 TupleSections.idr < input

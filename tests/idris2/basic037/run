@@ -1,5 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-echo ':q' | $1 --no-color --console-width 0 --no-banner --no-prelude Comments.idr
-echo ':q' | $1 --no-color --console-width 0 --no-banner Issue279.idr
-
+echo ':q' | idris2 --no-prelude Comments.idr
+echo ':q' | idris2 Issue279.idr

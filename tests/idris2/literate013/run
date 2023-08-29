@@ -1,4 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --no-banner --check Lit.lidr
-$1 --no-color --console-width 0 --no-banner --check LitTeX.tex
+check Lit.lidr
+check LitTeX.tex

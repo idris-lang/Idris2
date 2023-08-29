@@ -1,6 +1,6 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --no-banner CopyFile.idr < input
+idris2 CopyFile.idr < input
 base64 -i dest.bin
 
 rm dest.bin

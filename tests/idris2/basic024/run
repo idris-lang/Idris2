@@ -1,4 +1,3 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --no-banner PatLam.idr < input
-
+idris2 PatLam.idr < input

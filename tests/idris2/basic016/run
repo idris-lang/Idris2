@@ -1,5 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --check Eta.idr
-$1 --no-color --console-width 0 --check Eta2.idr
-
+check Eta.idr
+check Eta2.idr

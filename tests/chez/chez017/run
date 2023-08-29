@@ -1,4 +1,6 @@
+. ../../testutils.sh
+
 ./gen_expected.sh
-$1 --no-color --console-width 0 --no-banner dir.idr < input
+idris2 dir.idr < input
 cat testdir/test.txt
-rm -rf build testdir
+rm -rf testdir

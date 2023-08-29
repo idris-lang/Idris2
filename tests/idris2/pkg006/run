@@ -1,8 +1,7 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --build test1.ipkg
-$1 --no-color --build test2.ipkg
-$1 --no-color --build test3.ipkg
-$1 --no-color --build test4.ipkg
-$1 --no-color --build test5.ipkg
-
+idris2 --build test1.ipkg
+idris2 --build test2.ipkg
+idris2 --build test3.ipkg
+idris2 --build test4.ipkg
+idris2 --build test5.ipkg

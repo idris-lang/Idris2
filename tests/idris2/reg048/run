@@ -1,2 +1,2 @@
-rm -rf build
-$1 --no-banner --no-color --console-width 0 inferror.idr --check -p contrib
+. ../../testutils.sh
+check inferror.idr -p contrib

@@ -1,4 +1,3 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --no-banner --check --alt-error-count 10 IfThenElse.idr
-
+check --alt-error-count 10 IfThenElse.idr

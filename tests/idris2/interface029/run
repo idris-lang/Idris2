@@ -1,5 +1,5 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-banner --no-color --console-width 0 -x main ForwardImpl1.idr
-$1 --no-banner --no-color --console-width 0 --check ForwardImpl2.idr
-$1 --no-banner --no-color --console-width 0 --check ForwardImpl3.idr
+run ForwardImpl1.idr
+check ForwardImpl2.idr
+check ForwardImpl3.idr

@@ -1,4 +1,5 @@
-cd "folder with spaces" || exit
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --no-banner Main.idr < ../input
+cd "folder with spaces" || exit
+
+idris2 Main.idr < ../input

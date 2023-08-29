@@ -1,3 +1,3 @@
-rm -rf  ./build/
+. ../../testutils.sh
 
-$1 --build testpkg.ipkg
+idris2 --build testpkg.ipkg

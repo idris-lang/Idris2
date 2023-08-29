@@ -1,2 +1,2 @@
-rm -rf build
-$1 --no-banner --no-color --console-width 0 BigFins.idr --check
+. ../../testutils.sh
+check BigFins.idr

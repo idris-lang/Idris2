@@ -1,4 +1,6 @@
-rm -rf build project-output.ipkg
+. ../../testutils.sh
 
-$1 --init project-output.ipkg < input
+rm project-output.ipkg
+
+idris2 --init project-output.ipkg < input
 diff project-output.ipkg project-expected.ipkg

@@ -1,5 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --no-banner --no-prelude IFace.idr < input
-$1 --no-color --console-width 0 --no-banner --no-prelude IFace1.idr < input1
-
+idris2 --no-prelude IFace.idr < input
+idris2 --no-prelude IFace1.idr < input1

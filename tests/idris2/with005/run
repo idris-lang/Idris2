@@ -1,5 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --no-banner --check WithProof.idr
-$1 --no-color --console-width 0 --no-banner --check Issue893.idr
-
+check WithProof.idr
+check Issue893.idr

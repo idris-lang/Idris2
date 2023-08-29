@@ -1,6 +1,5 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --no-banner --console-width 0 Sized.idr < input
-$1 --no-color --console-width 0 Sized2.idr --check
-$1 --no-color --console-width 0 Sized3.idr --check
-
+idris2 Sized.idr < input
+check Sized2.idr
+check Sized3.idr

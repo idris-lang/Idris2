@@ -1,3 +1,3 @@
-$1 --no-color --console-width 0 --check withparams.idr
+. ../../testutils.sh
 
-rm -rf build
+check withparams.idr

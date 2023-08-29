@@ -1,6 +1,5 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --no-banner Vect.idr < input
-$1 --no-color --console-width 0 --no-banner -c Vect2.idr
-$1 --no-color --console-width 0 --no-banner -c Vect3.idr
-
+idris2 Vect.idr < input
+idris2 -c Vect2.idr
+idris2 -c Vect3.idr

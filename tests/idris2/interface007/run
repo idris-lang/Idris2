@@ -1,4 +1,3 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --debug-elab-check --check A.idr
-
+check --debug-elab-check A.idr

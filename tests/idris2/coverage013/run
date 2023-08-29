@@ -1,5 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --check Issue1022.idr
-$1 --no-color --console-width 0 --check Issue1022-Refl.idr
-
+check Issue1022.idr
+check Issue1022-Refl.idr

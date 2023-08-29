@@ -1,5 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 Test1.idr --check
-$1 --no-color --console-width 0 Test2.idr --check
-
+check Test1.idr
+check Test2.idr

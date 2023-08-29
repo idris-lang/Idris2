@@ -1,3 +1,5 @@
+. ../../testutils.sh
+
 case $(uname -s) in
     OpenBSD | FreeBSD | NetBSD)
         MAKE=gmake
@@ -9,6 +11,5 @@ case $(uname -s) in
 esac
 
 ${MAKE} all > /dev/null
-$1 --no-color --console-width 0 --no-banner CB.idr < input
-rm -rf build
+idris2 CB.idr < input
 ${MAKE} clean > /dev/null

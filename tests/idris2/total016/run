@@ -1,4 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --no-banner --check AssertPositivity.idr
-$1 --no-color --console-width 0 --no-banner --check LazyPositivityCheck.idr
+check AssertPositivity.idr
+check LazyPositivityCheck.idr

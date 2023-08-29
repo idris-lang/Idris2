@@ -1,8 +1,6 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --build hello.ipkg
-$1 --build test.ipkg
+idris2 --build hello.ipkg
+idris2 --build test.ipkg
 
 ./build/exec/runtests ../build/exec/hello --no-colour
-
-

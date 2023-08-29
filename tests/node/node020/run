@@ -1,4 +1,3 @@
-rm -rf build
+. ../../testutils.sh
 
-POPEN_CMD="$1 --version" $1 --no-color --console-width 0 --cg node --no-banner Popen.idr < input
-
+POPEN_CMD="$idris2 --version" idris2 --cg node Popen.idr < input

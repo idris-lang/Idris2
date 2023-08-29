@@ -1,2 +1,3 @@
-$1 --build foo.ipkg --build bar.ipkg
-rm -rf  build/
+. ../../testutils.sh
+
+idris2 --build foo.ipkg --build bar.ipkg

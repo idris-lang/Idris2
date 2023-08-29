@@ -1,4 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --no-banner LocalArgs.idr --check
-$1 --no-color --console-width 0 --no-banner PiMatch.idr --check
+check LocalArgs.idr
+check PiMatch.idr

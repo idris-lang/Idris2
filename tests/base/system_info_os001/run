@@ -1,4 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
 case "$(uname)" in
   Linux*) EXPECTED_OS=unix ;;
@@ -12,5 +12,4 @@ case "$(uname)" in
 esac
 export EXPECTED_OS
 
-$1 --no-banner --no-color --console-width 0 Os.idr --exec main
-
+run Os.idr

@@ -1,5 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --check PError.idr
-$1 --no-color --console-width 0 --check PError2.idr
-
+check PError.idr
+check PError2.idr
