@@ -33,6 +33,8 @@ Eq Warning where
   ParserWarning fc1 x1 == ParserWarning fc2 x2 = fc1 == fc2 && x1 == x2
   UnreachableClause fc1 rho1 s1 == UnreachableClause fc2 rho2 s2 = fc1 == fc2
   ShadowingGlobalDefs fc1 xs1 == ShadowingGlobalDefs fc2 xs2 = fc1 == fc2 && xs1 == xs2
+  IncompatibleVisibility fc1 x1 y1 n1 == IncompatibleVisibility fc2 x2 y2 n2
+    = fc1 == fc2 && x1 == x2 && y1 == y2 && n1 == n2
   Deprecated fc1 x1 y1 == Deprecated fc2 x2 y2 = fc1 == fc2 && x1 == x2 && y1 == y2
   GenericWarn fc1 x1 == GenericWarn fc2 x2 = fc1 == fc2 && x1 == x2
   _ == _ = False
@@ -273,6 +275,13 @@ pwarningRaw (ShadowingGlobalDefs fc ns)
                            pretty0 n
                         :: reflow "is shadowing"
                         :: punctuate comma (map pretty0 (forget ns))
+
+pwarningRaw (IncompatibleVisibility fc vx vy n)
+    = pure $ warning (code (pretty0 (sugarName n))
+        <++> reflow "has been forward-declared with"
+        <++> keyword (pretty0 vx) <++> reflow "visibility, cannot change to"
+        <++> keyword (pretty0 vy) <+> reflow ". This will be an error in a later release.")
+        <+> line <+> !(ploc fc)
 
 pwarningRaw (ShadowingLocalBindings fc ns)
     = pure $ vcat

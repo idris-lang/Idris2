@@ -15,6 +15,7 @@ import Libraries.Data.PosMap
 import public Libraries.System.File.Meta as L -- Remove after release 0.7.0
 import public Libraries.Utils.Binary
 import public Libraries.Utils.String
+import public Libraries.Data.WithDefault
 
 import System.Info
 import System.File
@@ -280,6 +281,21 @@ TTC a => TTC (Maybe a) where
             1 => do val <- fromBuf b
                     pure (Just val)
             _ => corrupt "Maybe"
+
+export
+TTC a => TTC (WithDefault a def) where
+  toBuf b Default
+     = tag 0
+  toBuf b (Value val)
+     = do tag 1
+          toBuf b val
+
+  fromBuf b
+     = case !getTag of
+            0 => pure Default
+            1 => do val <- fromBuf b
+                    pure (Value val)
+            _ => corrupt "WithDefault"
 
 export
 (TTC a, TTC b) => TTC (Either a b) where

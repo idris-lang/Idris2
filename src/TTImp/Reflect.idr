@@ -8,6 +8,7 @@ import Core.TT
 import Core.Value
 
 import TTImp.TTImp
+import Libraries.Data.WithDefault
 
 %default covering
 

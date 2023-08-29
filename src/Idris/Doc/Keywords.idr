@@ -137,6 +137,11 @@ visibility = vcat $
     * `private` means that neither the declaration nor the definition will be
       exported. This is the default and is the ideal setting for auxiliary
       definitions.
+    """, "",
+    """
+    If a name has a forward declaration associated with it, the actual definition
+    either has to match the same visibility or leave it off, in which case the
+    forward declaration's visibility applies.
     """]
 
 ifthenelse : Doc IdrisDocAnn
