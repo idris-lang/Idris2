@@ -1,19 +1,10 @@
 . ../../testutils.sh
 
-if [ "$OS" = "windows" ]; then
-    MY_PWD="$(cygpath -m "$(pwd)")\\\\"
-else
-    MY_PWD="$(pwd)/"
-fi
-
-MY_PWD="${MY_PWD}" ./gen_expected.sh
-
 export IDRIS2_PACKAGE_PATH=$IDRIS2_PREFIX/$NAME_VERSION
-export IDRIS2_PREFIX=${MY_PWD}currently/nonexistent/dir/
+export IDRIS2_PREFIX=$test_dir/currently/nonexistent/dir/
 
 export IDRIS2_INC_CGS=
 
-idris2 --install ./testpkg.ipkg | sed -r "s/.([0-9]){10}//g"
+idris2 --install ./testpkg.ipkg | sed -r "s/.([0-9]){10}//g" | filter_test_dir
 
-# ../ is there for some extra safety for using rm -rf
-rm -rf ../pkg010/build ../pkg010/currently
+rm -rf currently

@@ -2,6 +2,5 @@
 
 rm -rf testdir
 
-./gen_expected.sh
-run --cg node dir.idr
+run --cg node dir.idr | filter_test_dir
 cat testdir/test.txt

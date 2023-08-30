@@ -1,6 +1,6 @@
 . ../../testutils.sh
 
-./gen_expected.sh
-run dir.idr
+run dir.idr | filter_test_dir
+
 cat testdir/test.txt
 rm -rf testdir

@@ -1,20 +1,12 @@
 . ../../testutils.sh
 
-if [ "$OS" = "windows" ]; then
-    MY_PWD="$(cygpath -m "$(pwd)")\\\\"
-else
-    MY_PWD="$(pwd)/"
-fi
-
-MY_PWD="${MY_PWD}" ./gen_expected.sh
-
 mkdir prefix
 
-IDRIS2_PREFIX="${MY_PWD}/prefix" idris2 --install-with-src a1/a1.ipkg > /dev/null
-IDRIS2_PREFIX="${MY_PWD}/prefix" idris2 --install-with-src a2/a2.ipkg > /dev/null
+IDRIS2_PREFIX="$test_dir/prefix" idris2 --install-with-src a1/a1.ipkg > /dev/null
+IDRIS2_PREFIX="$test_dir/prefix" idris2 --install-with-src a2/a2.ipkg > /dev/null
 
-IDRIS2_PREFIX="${MY_PWD}/prefix" idris2 --no-prelude --ide-mode  < input1 | grep -v ":highlight-source" | cut -c 7-
-IDRIS2_PREFIX="${MY_PWD}/prefix" idris2 --no-prelude --ide-mode  < input2 | grep -v ":highlight-source" | cut -c 7-
+IDRIS2_PREFIX="$test_dir/prefix" idris2 --no-prelude --ide-mode  < input1 | grep -v ":highlight-source" | cut -c 7- | filter_test_dir
+IDRIS2_PREFIX="$test_dir/prefix" idris2 --no-prelude --ide-mode  < input2 | grep -v ":highlight-source" | cut -c 7- | filter_test_dir
 
 rm -r a1/build a2/build b1/build b2/build
 rm -rf prefix
