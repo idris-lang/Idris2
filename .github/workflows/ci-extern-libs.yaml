@@ -285,6 +285,7 @@ jobs:
           echo "bootstrap  = true" >> pack.toml
       - name: Build idris2-pack
         run: |
+          git config --global --add safe.directory "${PWD}"
           git fetch "https://github.com/${GITHUB_REPOSITORY}" "${GITHUB_REF}:${GITHUB_REF_NAME}"
           pack install pack
 
