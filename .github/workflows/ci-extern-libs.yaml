@@ -281,7 +281,7 @@ jobs:
         run: |
           echo "[idris2]" > pack.toml
           echo "url = \"https://github.com/$GITHUB_REPOSITORY\"" >> pack.toml
-          echo "commit = \"${GITHUB_REF_NAME}\"" >> pack.toml
+          echo "commit = \"${GITHUB_REF}:${GITHUB_REF_NAME}\"" >> pack.toml
           echo "bootstrap  = true" >> pack.toml
       - name: Build idris2-pack
         run: |
