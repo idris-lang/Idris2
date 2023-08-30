@@ -1,11 +1,3 @@
 . ../../testutils.sh
 
-if [ "$OS" = "windows" ]; then
-    MY_PWD="$(cygpath -m "$(pwd)")\\\\"
-else
-    MY_PWD="$(pwd)/"
-fi
-
-MY_PWD="${MY_PWD}" ./gen_expected.sh
-
-idris2 --build test.ipkg --log package.depends:10
+idris2 --build test.ipkg --log package.depends:10 | filter_test_dir
