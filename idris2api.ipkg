@@ -192,6 +192,7 @@ modules =
 
     Libraries.System.File,
     Libraries.System.File.Buffer,
+    Libraries.System.File.Meta,
     Libraries.System.Directory.Tree,
 
     Libraries.Text.Bounded,

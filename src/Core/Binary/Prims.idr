@@ -12,6 +12,7 @@ import Data.String
 import Data.Vect
 
 import Libraries.Data.PosMap
+import public Libraries.System.File.Meta as L -- Remove after release 0.7.0
 import public Libraries.Utils.Binary
 import public Libraries.Utils.String
 
@@ -441,15 +442,15 @@ TTC Nat where
 
 ||| Get a file's modified time. If it doesn't exist, return 0 (UNIX Epoch)
 export
-modTime : String -> Core Int
+modTime : String -> Core L.Timestamp
 modTime fname
   = do Right f <- coreLift $ openFile fname Read
-         | Left err => pure 0 -- Beginning of Time :)
-       Right t <- coreLift $ fileModifiedTime f
+         | Left err => pure $ MkTimestamp 0 0 -- Beginning of Time :)
+       Right t <- coreLift $ L.fileTime f
          | Left err => do coreLift $ closeFile f
-                          pure 0
+                          pure $ MkTimestamp 0 0
        coreLift $ closeFile f
-       pure t
+       pure $ t.mtime
 
 export
 hashFileWith : Maybe String -> String -> Core (Maybe String)

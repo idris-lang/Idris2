@@ -43,6 +43,7 @@ idrisTestsBasic = MkTestPool "Fundamental language features" [] Nothing
        "basic056", "basic057", "basic058", "basic059", "basic060",
        "basic061", "basic062", "basic063", "basic064", "basic065",
        "basic066", "basic067", "basic068", "basic069", "basic070",
+       "basic071",
        "idiom001",
        "literals001",
        "dotted001",
