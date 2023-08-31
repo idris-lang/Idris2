@@ -299,20 +299,21 @@ export
 Reify a => Reify (WithDefault a def) where
   reify defs val@(NDCon _ n _ _ args)
       = case (dropAllNS !(full (gamma defs) n), args) of
-             (UN (Basic "Default"), _) => pure Default
+             (UN (Basic "Default"), _) => pure defaultValue
              (UN (Basic "Value"), [_, _, (_, x)])
                   => do x' <- reify defs !(evalClosure defs x)
-                        pure (Value x')
+                        pure (value x')
              _ => cantReify val "WithDefault"
   reify defs val = cantReify val "WithDefault"
 
 export
 Reflect a => Reflect (WithDefault a def) where
-  reflect fc defs lhs env Default
-    = appCon fc defs (preludetypes "Default") [Erased fc Placeholder, Erased fc Placeholder]
-  reflect fc defs lhs env (Value x)
-      = do x' <- reflect fc defs lhs env x
-           appCon fc defs (preludetypes "Value") [Erased fc Placeholder, Erased fc Placeholder, x']
+  reflect fc defs lhs env def
+    = onWithDefault
+        (appCon fc defs (reflectionttimp "Default") [Erased fc Placeholder, Erased fc Placeholder])
+        (\x => do x' <- reflect fc defs lhs env x
+                  appCon fc defs (reflectionttimp "Value") [Erased fc Placeholder, Erased fc Placeholder, x'])
+        def
 
 export
 (Reify a, Reify b) => Reify (a, b) where

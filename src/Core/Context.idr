@@ -1121,13 +1121,13 @@ getFieldNames ctxt recNS
 -- Find similar looking names in the context
 export
 getSimilarNames : {auto c : Ref Ctxt Defs} ->
-                   Name -> Core (Maybe (String, List (Name, WithDefault Visibility Private, Nat)))
+                   Name -> Core (Maybe (String, List (Name, Visibility, Nat)))
 getSimilarNames nm = case show <$> userNameRoot nm of
   Nothing => pure Nothing
   Just str => if length str <= 1 then pure (Just (str, [])) else
     do defs <- get Ctxt
        let threshold : Nat := max 1 (assert_total (divNat (length str) 3))
-       let test : Name -> Core (Maybe (WithDefault Visibility Private, Nat)) := \ nm => do
+       let test : Name -> Core (Maybe (Visibility, Nat)) := \ nm => do
                let (Just str') = show <$> userNameRoot nm
                    | _ => pure Nothing
                dist <- coreLift $ Levenshtein.compute str str'
@@ -1135,18 +1135,18 @@ getSimilarNames nm = case show <$> userNameRoot nm of
                    | False => pure Nothing
                Just def <- lookupCtxtExact nm (gamma defs)
                    | Nothing => pure Nothing -- should be impossible
-               pure (Just (visibility def, dist))
+               pure (Just (collapseDefault $ visibility def, dist))
        kept <- NameMap.mapMaybeM @{CORE} test (resolvedAs (gamma defs))
        pure $ Just (str, toList kept)
 
 export
 showSimilarNames : Namespace -> Name -> String ->
-                   List (Name, WithDefault Visibility Private, Nat) -> List String
+                   List (Name, Visibility, Nat) -> List String
 showSimilarNames ns nm str kept
   = let (loc, priv) := partitionEithers $ kept <&> \ (nm', vis, n) =>
                          let False = fst (splitNS nm') `isParentOf` ns
                                | _ => Left (nm', n)
-                             Private = collapseDefault vis
+                             Private = vis
                                | _ => Left (nm', n)
                          in Right (nm', n)
         sorted      := sortBy (compare `on` snd)
@@ -1332,7 +1332,7 @@ addBuiltin n ty tot op
          , inferrable = []
          , multiplicity = top
          , localVars = []
-         , visibility = Value Public
+         , visibility = value Public
          , totality = tot
          , isEscapeHatch = False
          , flags = [Inline]
@@ -1502,15 +1502,13 @@ lookupDefTyExact = lookupExactBy (\g => (definition g, type g))
 -- is the current namespace (or an outer one)
 -- that is: the namespace of 'n' is a parent of nspace
 export
-visibleIn : Namespace -> Name -> WithDefault Visibility Private -> Bool
-visibleIn nspace (NS ns n) def_vis = case collapseDefault def_vis of
-  Private => isParentOf ns nspace
-  _       => True
+visibleIn : Namespace -> Name -> Visibility -> Bool
+visibleIn nspace (NS ns n) Private = isParentOf ns nspace
 -- Public and Export names are always visible
 visibleIn nspace n _ = True
 
 export
-visibleInAny : List Namespace -> Name -> WithDefault Visibility Private -> Bool
+visibleInAny : List Namespace -> Name -> Visibility -> Bool
 visibleInAny nss n vis = any (\ns => visibleIn ns n vis) nss
 
 reducibleIn : Namespace -> Name -> Visibility -> Bool
@@ -1664,12 +1662,12 @@ getSizeChange loc n
 
 export
 setVisibility : {auto c : Ref Ctxt Defs} ->
-                FC -> Name -> WithDefault Visibility Private -> Core ()
+                FC -> Name -> Visibility -> Core ()
 setVisibility fc n vis
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
               | Nothing => undefinedName fc n
-         ignore $ addDef n ({ visibility := vis } def)
+         ignore $ addDef n ({ visibility := value vis } def)
 
 public export
 record SearchData where

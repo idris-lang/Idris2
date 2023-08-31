@@ -79,8 +79,8 @@ visOption
 
 visibility : EmptyRule (WithDefault Visibility Private)
 visibility
-    = (Value <$> visOption)
-  <|> pure Default
+    = (value <$> visOption)
+  <|> pure defaultValue
 
 totalityOpt : Rule TotalReq
 totalityOpt
@@ -93,9 +93,9 @@ totalityOpt
 
 dataVisOpt : EmptyRule (WithDefault Visibility Private, Maybe TotalReq)
 dataVisOpt
-    = do { vis <- visOption   ; mbtot <- optional totalityOpt ; pure (Value vis, mbtot) }
+    = do { vis <- visOption   ; mbtot <- optional totalityOpt ; pure (value vis, mbtot) }
   <|> do { tot <- totalityOpt ; vis <- visibility ; pure (vis, Just tot) }
-  <|> pure (Default, Nothing)
+  <|> pure (defaultValue, Nothing)
 
 fnOpt : Rule FnOpt
 fnOpt = do x <- totalityOpt

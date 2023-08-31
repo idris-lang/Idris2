@@ -56,7 +56,7 @@ inlineHeuristics fn = do
     -- intervention by this function.
     -- We could lift this public restriction if we checked that the source def was _either
     -- public OR the destination was the same module as the source_.
-    let Value Public = gdef.visibility
+    let Public = collapseDefault $ gdef.visibility
         | _ => pure ()
     unless (NoInline `elem` gdef.flags) $ do
       log "compiler.inline.heuristic" 25 $ "inlining heuristic decided to inline: " ++ show fn

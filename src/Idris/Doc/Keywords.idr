@@ -139,9 +139,9 @@ visibility = vcat $
       definitions.
     """, "",
     """
-    If a name has a forward declaration associated with it, the actual definition
-    either has to match the same visibility or leave it off, in which case the
-    forward declaration's visibility applies.
+    If a forward-declaration for a definition exists, they cannot declare
+    incompatible visibility modifiers - they either have to match up or at most
+    one of the two can declare visibility.
     """]
 
 ifthenelse : Doc IdrisDocAnn

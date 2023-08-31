@@ -461,7 +461,7 @@ checkClause : {vars : _} ->
               {auto u : Ref UST UState} ->
               {auto s : Ref Syn SyntaxInfo} ->
               {auto o : Ref ROpts REPLOpts} ->
-              (mult : RigCount) -> (vis : WithDefault Visibility Private) ->
+              (mult : RigCount) -> (vis : Visibility) ->
               (totreq : TotalReq) -> (hashit : Bool) ->
               Int -> List ElabOpt -> NestedNames vars -> Env Term vars ->
               ImpClause -> Core (Either RawImp Clause)
@@ -588,7 +588,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
          wname <- genWithName !(prettyName !(toFullNames (Resolved n)))
          widx <- addDef wname ({flags $= (SetTotal totreq ::)}
                                     (newDef vfc wname (if isErased mult then erased else top)
-                                      vars wtype vis None))
+                                      vars wtype (value vis) None))
 
          let toWarg : Maybe (PiInfo RawImp, Name) -> List (Maybe Name, RawImp)
                := flip maybe (\pn => [(Nothing, IVar vfc (snd pn))]) $
@@ -1000,7 +1000,7 @@ processDef opts nest env fc n_in cs_in
          log "declare.def" 5 $ "Traversing clauses of " ++ show n ++ " with mult " ++ show mult
          let treq = fromMaybe !getDefaultTotalityOption (findSetTotal (flags gdef))
          cs <- withTotality treq $
-               traverse (checkClause mult (visibility gdef) treq
+               traverse (checkClause mult (collapseDefault $ visibility gdef) treq
                                      hashit nidx opts nest env) cs_in
 
          let pats = map toPats (rights cs)

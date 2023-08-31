@@ -27,7 +27,6 @@ import TTImp.Utils
 import Data.List
 
 import Libraries.Data.Tap
-import Libraries.Data.WithDefault
 
 %default covering
 
@@ -64,7 +63,7 @@ expandClause : {auto c : Ref Ctxt Defs} ->
                Core (Search (List ImpClause))
 expandClause loc opts n c
     = do c <- uniqueRHS c
-         Right clause <- checkClause linear (Value Private) PartialOK False n [] (MkNested []) [] c
+         Right clause <- checkClause linear Private PartialOK False n [] (MkNested []) [] c
             | Left err => noResult -- TODO: impossible clause, do something
                                    -- appropriate
 

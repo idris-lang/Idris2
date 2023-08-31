@@ -178,7 +178,7 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc nameFC n_in ty_ra
                 ({ eraseArgs := erased,
                    safeErase := dterased,
                    inferrable := infargs }
-                 (newDef fc n rig vars fullty (Value vis) def))
+                 (newDef fc n rig vars fullty (value vis) def))
          -- Flag it as checked, because we're going to check the clauses
          -- from the top level.
          -- But, if it's a case block, it'll be checked as part of the top

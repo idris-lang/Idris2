@@ -192,7 +192,7 @@ caseBlock {vars} rigc elabinfo fc nest env opts scr scrtm scrty caseRig alts exp
          let env = updateMults (linearUsed est) env
          defs <- get Ctxt
          parentDef <- lookupCtxtExact (Resolved (defining est)) (gamma defs)
-         let vis = Value $ case parentDef of
+         let vis = value $ case parentDef of
                         Just gdef =>
                              if collapseDefault (visibility gdef) == Public
                                 then Public

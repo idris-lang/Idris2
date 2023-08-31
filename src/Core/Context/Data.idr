@@ -104,7 +104,7 @@ addData vars vis tidx (MkData (MkCon dfc tyn arity tycon) datacons)
          log "declare.data.parameters" 20 $
             "Positions of parameters for datatype" ++ show tyn ++
             ": [" ++ showSep ", " (map show paramPositions) ++ "]"
-         let tydef = newDef dfc tyn top vars tycon (Value vis)
+         let tydef = newDef dfc tyn top vars tycon (value vis)
                             (TCon tag arity
                                   paramPositions
                                   allPos
@@ -126,7 +126,7 @@ addData vars vis tidx (MkData (MkCon dfc tyn arity tycon) datacons)
                           Context -> Core Context
     addDataConstructors tag [] gam = pure gam
     addDataConstructors tag (MkCon fc n a ty :: cs) gam
-        = do let condef = newDef fc n top vars ty (Value $ conVisibility vis) (DCon tag a Nothing)
+        = do let condef = newDef fc n top vars ty (value $ conVisibility vis) (DCon tag a Nothing)
              -- Check 'n' is undefined
              Nothing <- lookupCtxtExact n gam
                  | Just gdef => throw (AlreadyDefined fc n)

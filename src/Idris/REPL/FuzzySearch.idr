@@ -17,6 +17,7 @@ import Data.Maybe
 import Data.String
 import Libraries.Data.List.Extra
 import Libraries.Data.String.Extra
+import Libraries.Data.WithDefault
 
 %default covering
 
@@ -49,7 +50,7 @@ fuzzySearch expr = do
        defs    <- traverse (flip lookupCtxtExact ctxt) names
        let defs = flip mapMaybe defs $ \ md =>
                       do d <- md
-                         guard (visibleIn curr (fullname d) (visibility d))
+                         guard (visibleIn curr (fullname d) (collapseDefault $ visibility d))
                          guard (isJust $ userNameRoot (fullname d))
                          pure d
        allDefs <- traverse (resolved ctxt) defs

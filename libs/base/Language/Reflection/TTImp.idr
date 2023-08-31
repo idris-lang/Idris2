@@ -178,10 +178,23 @@ mutual
 
   %name Clause cl
 
-  public export
+  export
   data WithDefault : (a : Type) -> (def : a) -> Type where
        Default : WithDefault a def
        Value   : a -> WithDefault a def
+
+  export
+  value : a -> WithDefault a def
+  value = Value
+
+  export
+  defaultValue : WithDefault a def
+  defaultValue = Default
+
+  export
+  collapseDefault : {def : a} -> WithDefault a def -> a
+  collapseDefault Default = def
+  collapseDefault (Value a) = a
 
   public export
   data Decl : Type where

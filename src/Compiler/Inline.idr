@@ -14,12 +14,11 @@ import Core.Hash
 import Core.Options
 import Core.TT
 
-import Libraries.Data.LengthMatch
 import Data.Maybe
-import Libraries.Data.NameMap
 import Data.List
 import Data.Vect
-
+import Libraries.Data.LengthMatch
+import Libraries.Data.NameMap
 import Libraries.Data.WithDefault
 
 %default covering

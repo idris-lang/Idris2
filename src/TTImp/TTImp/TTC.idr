@@ -8,6 +8,8 @@ import Core.Context.TTC
 
 import TTImp.TTImp
 
+import Libraries.Data.WithDefault
+
 %default covering
 
 mutual

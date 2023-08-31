@@ -899,7 +899,7 @@ process (Eval itm)
                  let norm = replEval emode
                  evalResultName <- DN "it" <$> genName "evalResult"
                  ignore $ addDef evalResultName
-                   $ newDef replFC evalResultName top [] ty Default
+                   $ newDef replFC evalResultName top [] ty defaultValue
                    $ PMDef defaultPI [] (STerm 0 ntm) (STerm 0 ntm) []
                  addToSave evalResultName
                  put ROpts ({ evalResultName := Just evalResultName } opts)
@@ -990,7 +990,7 @@ process (TypeSearch searchTerm)
               defs    <- traverse (flip lookupCtxtExact ctxt) names
               let defs = flip mapMaybe defs $ \ md =>
                              do d <- md
-                                guard (visibleIn curr (fullname d) (visibility d))
+                                guard (visibleIn curr (fullname d) (collapseDefault $ visibility d))
                                 guard (isJust $ userNameRoot (fullname d))
                                 pure d
               allDefs <- traverse (resolved ctxt) defs
