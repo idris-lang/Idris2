@@ -11,6 +11,7 @@ import Core.Termination.References
 import Data.String
 
 import Libraries.Data.NameMap
+import Libraries.Data.WithDefault
 
 %default covering
 
@@ -151,9 +152,9 @@ blockingAssertTotal loc ma
        let at = NS builtinNS (UN $ Basic "assert_total")
        Just _ <- lookupCtxtExact at (gamma defs)
          | Nothing => ma
-       setVisibility loc at Private
+       setVisibility loc at (Value Private)
        a <- ma
-       setVisibility loc at Public
+       setVisibility loc at (Value Public)
        pure a
 
 -- Calculate whether a type satisfies the strict positivity condition, and

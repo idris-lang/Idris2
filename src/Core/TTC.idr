@@ -1149,7 +1149,7 @@ TTC GlobalDef where
                                         mul vars vis
                                         tot hatch fl refs refsR inv c True def cdef Nothing sc Nothing)
               else pure (MkGlobalDef loc name (Erased loc Placeholder) [] [] [] []
-                                     mul [] Public unchecked False [] refs refsR
+                                     mul [] (Value Public) unchecked False [] refs refsR
                                      False False True def cdef Nothing [] Nothing)
 
 export

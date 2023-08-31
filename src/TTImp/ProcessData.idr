@@ -425,7 +425,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpLater dfc n_in ty_raw)
          arity <- getArity defs [] fullty
 
          -- Add the type constructor as a placeholder
-         tidx <- addDef n (newDef fc n linear vars fullty (collapseDefault def_vis)
+         tidx <- addDef n (newDef fc n linear vars fullty def_vis
                           (TCon 0 arity [] [] defaultFlags [] [] Nothing))
          addMutData (Resolved tidx)
          defs <- get Ctxt
@@ -435,7 +435,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpLater dfc n_in ty_raw)
          addToSave n
          log "declare.data" 10 $ "Saving from " ++ show n ++ ": " ++ show (keys (getMetas ty))
 
-         case (collapseDefault def_vis) of
+         case collapseDefault def_vis of
               Private => pure ()
               _ => do addHashWithNames n
                       addHashWithNames fullty
@@ -473,14 +473,12 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
                     Nothing => throw (GenericMsg fc "Missing telescope for data definition \{show n_in}")
                     Just fullty => pure ([], collapseDefault def_vis, fullty)
                   Just ndef => do
-                    vis <- the (Core Visibility) $ case def_vis of
-                      Default => pure ndef.visibility
-                      Value newVis =>
-                        if newVis == ndef.visibility
-                        then pure newVis
+                    vis <- the (Core Visibility) $ case collapseDefaults ndef.visibility def_vis of
+                      Right finalVis => pure finalVis
+                      Left (oldVis, newVis) => do
                         -- TODO : In a later release, replace this with an error.
-                        else do recordWarning (IncompatibleVisibility fc ndef.visibility newVis n)
-                                pure (max ndef.visibility newVis)
+                        recordWarning (IncompatibleVisibility fc oldVis newVis n)
+                        pure (max oldVis newVis)
 
                     case definition ndef of
                       TCon _ _ _ _ _ mw [] _ => case mfullty of
@@ -499,7 +497,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
 
          -- Add the type constructor as a placeholder while checking
          -- data constructors
-         tidx <- addDef n (newDef fc n linear vars fullty vis
+         tidx <- addDef n (newDef fc n linear vars fullty (Value vis)
                           (TCon 0 arity [] [] defaultFlags [] [] Nothing))
          case vis of
               Private => pure ()

@@ -20,10 +20,12 @@ import TTImp.TTImp
 import Data.List
 import Data.Maybe
 
+import Libraries.Data.WithDefault
+
 %default covering
 
 checkVisibleNS : {auto c : Ref Ctxt Defs} ->
-                 FC -> Name -> Visibility -> Core ()
+                 FC -> Name -> WithDefault Visibility Private -> Core ()
 checkVisibleNS fc (NS ns x) vis
     = if !(isVisible ns)
          then if !isAllPublic

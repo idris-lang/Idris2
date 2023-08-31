@@ -20,6 +20,8 @@ import Libraries.Data.NameMap
 import Data.List
 import Data.Vect
 
+import Libraries.Data.WithDefault
+
 %default covering
 
 data EEnv : List Name -> List Name -> Type where
@@ -561,7 +563,7 @@ addArityHash n
          Just def <- lookupCtxtExact n (gamma defs) | Nothing => pure ()
          let Just cexpr =  compexpr def             | Nothing => pure ()
          let MkFun args _ = cexpr                   | _ => pure ()
-         case visibility def of
+         case collapseDefault $ visibility def of
               Private => pure ()
               _ => addHash (n, length args)
 

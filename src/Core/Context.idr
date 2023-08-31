@@ -28,6 +28,7 @@ import Data.Nat
 import Libraries.Data.NameMap
 import Libraries.Data.StringMap
 import Libraries.Data.UserNameMap
+import Libraries.Data.WithDefault
 import Libraries.Text.Distance.Levenshtein
 
 import System.Clock
@@ -319,11 +320,11 @@ commitCtxt ctxt
 ||| @rig  quantity annotation
 ||| @vars local variables
 ||| @ty   (closed) type
-||| @vis  Visibility
+||| @vis  Visibility, defaulting to private
 ||| @def  actual definition
 export
 newDef : (fc : FC) -> (n : Name) -> (rig : RigCount) -> (vars : List Name) ->
-         (ty : ClosedTerm) -> (vis : Visibility) -> (def : Def) -> GlobalDef
+         (ty : ClosedTerm) -> (vis : WithDefault Visibility Private) -> (def : Def) -> GlobalDef
 newDef fc n rig vars ty vis def
     = MkGlobalDef
         { location = fc
@@ -1120,13 +1121,13 @@ getFieldNames ctxt recNS
 -- Find similar looking names in the context
 export
 getSimilarNames : {auto c : Ref Ctxt Defs} ->
-                   Name -> Core (Maybe (String, List (Name, Visibility, Nat)))
+                   Name -> Core (Maybe (String, List (Name, WithDefault Visibility Private, Nat)))
 getSimilarNames nm = case show <$> userNameRoot nm of
   Nothing => pure Nothing
   Just str => if length str <= 1 then pure (Just (str, [])) else
     do defs <- get Ctxt
        let threshold : Nat := max 1 (assert_total (divNat (length str) 3))
-       let test : Name -> Core (Maybe (Visibility, Nat)) := \ nm => do
+       let test : Name -> Core (Maybe (WithDefault Visibility Private, Nat)) := \ nm => do
                let (Just str') = show <$> userNameRoot nm
                    | _ => pure Nothing
                dist <- coreLift $ Levenshtein.compute str str'
@@ -1140,12 +1141,12 @@ getSimilarNames nm = case show <$> userNameRoot nm of
 
 export
 showSimilarNames : Namespace -> Name -> String ->
-                   List (Name, Visibility, Nat) -> List String
+                   List (Name, WithDefault Visibility Private, Nat) -> List String
 showSimilarNames ns nm str kept
   = let (loc, priv) := partitionEithers $ kept <&> \ (nm', vis, n) =>
                          let False = fst (splitNS nm') `isParentOf` ns
                                | _ => Left (nm', n)
-                             Private = vis
+                             Private = collapseDefault vis
                                | _ => Left (nm', n)
                          in Right (nm', n)
         sorted      := sortBy (compare `on` snd)
@@ -1168,7 +1169,7 @@ showSimilarNames ns nm str kept
 
 
 getVisibility : {auto c : Ref Ctxt Defs} ->
-                FC -> Name -> Core Visibility
+                FC -> Name -> Core (WithDefault Visibility Private)
 getVisibility fc n
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
@@ -1203,7 +1204,7 @@ ambiguousName : {auto c : Ref Ctxt Defs} -> FC
              -> Name -> List Name
              -> Core a
 ambiguousName fc n ns = do
-  ns <- filterM (\x => pure $ !(getVisibility fc x) /= Private) ns
+  ns <- filterM (\x => pure $ !(collapseDefault <$> getVisibility fc x) /= Private) ns
   case ns of
     [] =>         undefinedName fc n
     ns => throw $ AmbiguousName fc ns
@@ -1331,7 +1332,7 @@ addBuiltin n ty tot op
          , inferrable = []
          , multiplicity = top
          , localVars = []
-         , visibility = Public
+         , visibility = Value Public
          , totality = tot
          , isEscapeHatch = False
          , flags = [Inline]
@@ -1501,13 +1502,15 @@ lookupDefTyExact = lookupExactBy (\g => (definition g, type g))
 -- is the current namespace (or an outer one)
 -- that is: the namespace of 'n' is a parent of nspace
 export
-visibleIn : Namespace -> Name -> Visibility -> Bool
-visibleIn nspace (NS ns n) Private = isParentOf ns nspace
+visibleIn : Namespace -> Name -> WithDefault Visibility Private -> Bool
+visibleIn nspace (NS ns n) def_vis = case collapseDefault def_vis of
+  Private => isParentOf ns nspace
+  _       => True
 -- Public and Export names are always visible
 visibleIn nspace n _ = True
 
 export
-visibleInAny : List Namespace -> Name -> Visibility -> Bool
+visibleInAny : List Namespace -> Name -> WithDefault Visibility Private -> Bool
 visibleInAny nss n vis = any (\ns => visibleIn ns n vis) nss
 
 reducibleIn : Namespace -> Name -> Visibility -> Bool
@@ -1661,7 +1664,7 @@ getSizeChange loc n
 
 export
 setVisibility : {auto c : Ref Ctxt Defs} ->
-                FC -> Name -> Visibility -> Core ()
+                FC -> Name -> WithDefault Visibility Private -> Core ()
 setVisibility fc n vis
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)

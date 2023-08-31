@@ -22,6 +22,7 @@ import Libraries.Utils.Scheme
 import Data.List
 import Data.List1
 import Libraries.Data.NameMap
+import Libraries.Data.WithDefault
 import Data.String as String
 
 import Idris.Syntax
@@ -151,7 +152,7 @@ getMinimalDef (Coded ns bin)
          name <- fromBuf b
          let def
              = MkGlobalDef fc name (Erased fc Placeholder) [] [] [] [] mul
-                           [] Public (MkTotality Unchecked IsCovering) False
+                           [] (Value Public) (MkTotality Unchecked IsCovering) False
                            [] Nothing refsR False False True
                            None cdef Nothing [] Nothing
          pure (def, Just (ns, bin))

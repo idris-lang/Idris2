@@ -22,6 +22,19 @@ collapseDefault Default = def
 collapseDefault (Value a) = a
 
 export
+collapseDefaults : Eq a =>
+                   {def : a} ->
+                   WithDefault a def ->
+                   WithDefault a def ->
+                   Either (a, a) a
+collapseDefaults (Value x) (Value y)   = if x /= y
+                                         then Left (x, y)
+                                         else Right x
+collapseDefaults (Value x) Default     = Right x
+collapseDefaults Default (Value y)     = Right y
+collapseDefaults {def} Default Default = Right def
+
+export
 isDefault : WithDefault a def -> Bool
 isDefault Default = True
 isDefault _ = False

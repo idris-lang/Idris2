@@ -37,7 +37,7 @@ localHelper {vars} nest env nestdecls_in func
          let f = defining est
          defs <- get Ctxt
          gdef <- lookupCtxtExact (Resolved (defining est)) (gamma defs)
-         let vis  = maybe Public visibility gdef
+         let vis  = maybe Public (collapseDefault . visibility) gdef
          let mult = maybe linear GlobalDef.multiplicity gdef
 
          -- If the parent function is public, the nested definitions need

@@ -1,20 +1,24 @@
 module Issue1236
 
-public export
-data Foo : Type
 private
-data Foo : Type where
-
-data Bar : Type
+data Mismatched1 : Type
 export
-data Bar : Type where
+data Mismatched1 : Type where
 
 public export
-data Baz : Type
-data Baz : Type where
+data Mismatched2 : Type
+export
+data Mismatched2 : Type where
 
 export
-data Quux : Type
+data Aligned : Type
 export
-data Quux : Type where
+data Aligned : Type where
 
+public export
+data SpecifyOnce1 : Type
+data SpecifyOnce1 : Type where
+
+data SpecifyOnce2 : Type
+public export
+data SpecifyOnce2 : Type where
