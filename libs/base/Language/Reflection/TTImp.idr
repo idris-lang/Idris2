@@ -333,6 +333,13 @@ Eq a => Eq (WithDefault a def) where
   Value x == Value y = x == y
 
 public export
+Ord a => Ord (WithDefault a def) where
+  compare Default   Default   = EQ
+  compare Default   (Value _) = LT
+  compare (Value _) Default   = GT
+  compare (Value x) (Value y) = compare x y
+
+public export
 {def : a} -> (Show a) => Show (WithDefault a def) where
   show (Value x) = show x
   show Default = show def
