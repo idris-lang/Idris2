@@ -1,3 +1,0 @@
-. ../../testutils.sh
-
-echo ":q" | idris2 Default.idr

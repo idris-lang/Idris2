@@ -1,7 +1,0 @@
-. ../../testutils.sh
-
-check Issue539.idr
-check Issue621.idr
-check Issue1401.idr
-check PR1407.idr
-check Holes.idr

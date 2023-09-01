@@ -1,5 +1,0 @@
-. ../../testutils.sh
-
-check Issue1771-1.idr || true
-check Issue1771-2.idr || true
-check Issue1771-3.idr || true

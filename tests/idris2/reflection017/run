@@ -1,4 +1,0 @@
-. ../../testutils.sh
-
-check CanElabType.idr
-check StillCantEscape.idr

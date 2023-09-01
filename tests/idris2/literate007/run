@@ -1,4 +1,0 @@
-. ../../testutils.sh
-
-idris2 IEdit.lidr < input
-idris2 IEditOrg.org < input2

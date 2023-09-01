@@ -1,4 +1,0 @@
-. ../../testutils.sh
-
-check Issue962.idr
-check Issue962-case.idr

@@ -1,3 +1,0 @@
-. ../../testutils.sh
-
-idris2 Odd.idr < input

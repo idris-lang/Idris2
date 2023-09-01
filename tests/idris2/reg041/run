@@ -1,3 +1,0 @@
-. ../../testutils.sh
-
-check tuple.idr

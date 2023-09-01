@@ -1,5 +1,0 @@
-. ../../testutils.sh
-
-check Dots1.idr
-check Dots2.idr
-check Dots3.idr

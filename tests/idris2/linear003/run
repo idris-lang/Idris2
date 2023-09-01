@@ -1,3 +1,0 @@
-. ../../testutils.sh
-
-idris2 --no-prelude Linear.idr < input

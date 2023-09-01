@@ -1,4 +1,0 @@
-. ../../testutils.sh
-
-idris2 B.idr < input
-idris2 C.idr < input

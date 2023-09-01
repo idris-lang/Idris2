@@ -1,4 +1,0 @@
-. ../../testutils.sh
-
-idris2 LiteralsString.idr < input
-idris2 LiteralsInteger.idr < input2

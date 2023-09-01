@@ -1,8 +1,0 @@
-. ../../testutils.sh
-check FailingBug.idr
-
-. ../../testutils.sh
-check --console-width 20 FailingBug.idr
-
-. ../../testutils.sh
-check --console-width 80 FailingBug.idr

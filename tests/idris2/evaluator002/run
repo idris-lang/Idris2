@@ -1,3 +1,0 @@
-. ../../testutils.sh
-
-idris2 --log eval.stuck:5 Main.idr < input

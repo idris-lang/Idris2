@@ -1,0 +1,4 @@
+. ../../../testutils.sh
+
+check Issue2895.idr
+check Issue2895_2.idr

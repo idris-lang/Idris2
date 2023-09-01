@@ -1,0 +1,5 @@
+. ../../../testutils.sh
+
+check ParseRecord.idr || true
+check ParseRecord2.idr || true
+check ParseRecord3.idr || true

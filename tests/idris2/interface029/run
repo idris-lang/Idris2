@@ -1,5 +1,0 @@
-. ../../testutils.sh
-
-run ForwardImpl1.idr
-check ForwardImpl2.idr
-check ForwardImpl3.idr

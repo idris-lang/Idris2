@@ -1,3 +1,0 @@
-. ../../testutils.sh
-
-idris2 --build foo.ipkg --build bar.ipkg

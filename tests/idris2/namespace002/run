@@ -1,3 +1,0 @@
-. ../../testutils.sh
-
-check Issue1313.idr || true

@@ -1,3 +1,0 @@
-. ../../testutils.sh
-
-echo ':q' | idris2 --no-prelude Door.idr

@@ -1,4 +1,0 @@
-. ../../testutils.sh
-
-check Error1.idr
-check Error2.idr

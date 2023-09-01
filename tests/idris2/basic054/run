@@ -1,3 +1,0 @@
-. ../../testutils.sh
-
-run Issue1023.idr

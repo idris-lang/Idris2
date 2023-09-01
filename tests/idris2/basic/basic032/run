@@ -1,0 +1,4 @@
+. ../../../testutils.sh
+
+idris2 Idiom.idr < input
+check Idiom2.idr

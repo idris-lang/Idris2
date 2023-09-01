@@ -1,4 +1,0 @@
-. ../../testutils.sh
-
-check LocalArgs.idr
-check PiMatch.idr
