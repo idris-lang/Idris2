@@ -196,6 +196,12 @@ mutual
   collapseDefault Default = def
   collapseDefault (Value a) = a
 
+  export
+  onWithDefault : (defHandler : Lazy b) -> (valHandler : a -> b) ->
+                  WithDefault a def -> b
+  onWithDefault defHandler _ Default = defHandler
+  onWithDefault _ valHandler (Value v) = valHandler v
+
   public export
   data Decl : Type where
        IClaim : FC -> Count -> Visibility -> List FnOpt ->
