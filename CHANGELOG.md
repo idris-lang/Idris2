@@ -107,6 +107,11 @@
 
 * Fixed a bug that caused `f` to sometimes be replaced by `fx` after matching `fx = f x`.
 
+* Refactor the idris2protocols package to depend on fewer Idris2 modules.
+  We can now export the package independently.
+  To avoid confusing tooling about which `.ipkg` to use, the
+  package file is under the newly added `ipkg` sub-directory.
+
 ### Library changes
 
 #### Prelude
@@ -192,6 +197,8 @@
 * The `Data.List1` functions `foldr1` and `foldr1By` are now `public export`.
 
 * Added `uncons' : List a -> Maybe (a, List a)` to `base`.
+
+* Adds `infixOfBy` and `isInfixOfBy` into `Data.List`.
 
 #### System
 

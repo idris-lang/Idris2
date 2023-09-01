@@ -315,20 +315,22 @@ mutual
            sc' <- toPTerm startPrec sc
            let var = PRef lhsFC (MkKindedName (Just Bound) n n)
            bracket p startPrec (PLet fc rig var ty' val' sc' [])
-  toPTerm p (ICase fc sc scty [PatClause _ lhs rhs])
+  toPTerm p (ICase fc _ sc scty [PatClause _ lhs rhs])
       = do sc' <- toPTerm startPrec sc
            lhs' <- toPTerm startPrec lhs
            rhs' <- toPTerm startPrec rhs
            bracket p startPrec
                    (PLet fc top lhs' (PImplicit fc) sc' rhs' [])
-  toPTerm p (ICase fc sc scty alts)
-      = do sc' <- toPTerm startPrec sc
+  toPTerm p (ICase fc opts sc scty alts)
+      = do opts' <- traverse toPFnOpt opts
+           sc' <- toPTerm startPrec sc
            alts' <- traverse toPClause alts
-           bracket p startPrec (mkIf (PCase fc sc' alts'))
+           bracket p startPrec (mkIf (PCase fc opts' sc' alts'))
     where
       mkIf : IPTerm -> IPTerm
-      mkIf tm@(PCase loc sc [MkPatClause _ (PRef _ tval) t [],
-                             MkPatClause _ (PRef _ fval) f []])
+      mkIf tm@(PCase loc opts sc
+                 [ MkPatClause _ (PRef _ tval) t []
+                 , MkPatClause _ (PRef _ fval) f []])
          = if dropNS (rawName tval) == UN (Basic "True")
            && dropNS (rawName fval) == UN (Basic "False")
               then PIfThenElse loc sc t f

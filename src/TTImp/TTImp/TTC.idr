@@ -23,8 +23,8 @@ mutual
     toBuf b (ILet fc lhsFC r n nTy nVal scope)
         = do tag 3; toBuf b fc; toBuf b lhsFC; toBuf b r; toBuf b n;
              toBuf b nTy; toBuf b nVal; toBuf b scope
-    toBuf b (ICase fc y ty xs)
-        = do tag 4; toBuf b fc; toBuf b y; toBuf b ty; toBuf b xs
+    toBuf b (ICase fc opts y ty xs)
+        = do tag 4; toBuf b fc; toBuf b opts; toBuf b y; toBuf b ty; toBuf b xs
     toBuf b (ILocal fc xs sc)
         = do tag 5; toBuf b fc; toBuf b xs; toBuf b sc
     toBuf b (ICaseLocal fc _ _ _ sc)
@@ -109,9 +109,9 @@ mutual
                        nTy <- fromBuf b; nVal <- fromBuf b
                        scope <- fromBuf b
                        pure (ILet fc lhsFC r n nTy nVal scope)
-               4 => do fc <- fromBuf b; y <- fromBuf b;
+               4 => do fc <- fromBuf b; opts <- fromBuf b; y <- fromBuf b;
                        ty <- fromBuf b; xs <- fromBuf b
-                       pure (ICase fc y ty xs)
+                       pure (ICase fc opts y ty xs)
                5 => do fc <- fromBuf b;
                        xs <- fromBuf b; sc <- fromBuf b
                        pure (ILocal fc xs sc)
