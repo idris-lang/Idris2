@@ -37,7 +37,7 @@ genEq typeName = do
       finalClause = PatClause pos `(_) `(False)
   clauses <- traverse makeClause constrs
   let allClauses = clauses ++ [finalClause]
-      caseExpr = ICase pos `(MkPair x y) (Implicit pos True) allClauses
+      caseExpr = ICase pos [] `(MkPair x y) (Implicit pos True) allClauses
       result = `(\x, y => ~(caseExpr))
   check result
 %logging 0

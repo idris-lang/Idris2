@@ -257,6 +257,7 @@ modules =
     TTImp.ProcessDecls,
     TTImp.ProcessDecls.Totality,
     TTImp.ProcessDef,
+    TTImp.ProcessFnOpt,
     TTImp.ProcessParams,
     TTImp.ProcessRecord,
     TTImp.ProcessRunElab,
