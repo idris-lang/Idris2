@@ -1,5 +1,0 @@
-. ../../testutils.sh
-
-idris2 --clean foo.ipkg
-idris2 --repl foo.ipkg < input
-idris2 --repl foo.ipkg < input

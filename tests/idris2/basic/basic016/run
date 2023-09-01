@@ -1,0 +1,4 @@
+. ../../../testutils.sh
+
+check Eta.idr
+check Eta2.idr

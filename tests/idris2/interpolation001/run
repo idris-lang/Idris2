@@ -1,3 +1,0 @@
-. ../../testutils.sh
-
-check --alt-error-count 10 IfThenElse.idr

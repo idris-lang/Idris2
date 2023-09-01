@@ -1,7 +1,0 @@
-. ../../testutils.sh
-
-idris2 --build test1.ipkg
-idris2 --build test2.ipkg
-idris2 --build test3.ipkg
-idris2 --build test4.ipkg
-idris2 --build test5.ipkg

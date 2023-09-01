@@ -1,0 +1,6 @@
+. ../../../testutils.sh
+
+check Test.idr
+check Import.idr
+
+check Resugar.idr

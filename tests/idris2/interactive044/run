@@ -1,9 +1,0 @@
-. ../../testutils.sh
-rm -f SplitShadowGen.idr
-
-cp SplitShadow.idr SplitShadowGen.idr
-sleep 1
-
-idris2 SplitShadowGen.idr < input
-
-rm SplitShadowGen.idr

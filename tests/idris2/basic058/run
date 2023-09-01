@@ -1,4 +1,0 @@
-. ../../testutils.sh
-
-check DataTypeOp.idr
-check DataTypeProj.idr

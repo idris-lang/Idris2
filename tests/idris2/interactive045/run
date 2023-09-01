@@ -1,9 +1,0 @@
-. ../../testutils.sh
-rm -f Issue1742Gen.idr
-
-cp Issue1742.idr Issue1742Gen.idr
-sleep 1
-
-idris2 Issue1742Gen.idr < input
-
-rm Issue1742Gen.idr

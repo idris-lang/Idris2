@@ -11,206 +11,74 @@ import Test.Golden
 ------------------------------------------------------------------------
 -- Test cases
 
-ttimpTests : TestPool
-ttimpTests = MkTestPool "TTImp" [] Nothing
-     [ "basic001", "basic002", "basic003", "basic004", "basic005"
-     , "basic006"
-     , "coverage002"
-     , "dot001"
-     , "eta001"
-     , "lazy001"
-     , "nest001", "nest002"
-     , "perf001", "perf002", "perf003"
-     , "record001", "record002", "record003", "record004"
-     , "qtt001", "qtt003"
-     , "total001", "total002", "total003"
-     ]
+ttimpTests : IO TestPool
+ttimpTests = testsInDir "ttimp" (const True) "TTImp" [] Nothing
 
-idrisTestsBasic : TestPool
-idrisTestsBasic = MkTestPool "Fundamental language features" [] Nothing
-      -- Fundamental language features
-      ["basic001", "basic002", "basic003", "basic004", "basic005",
-       "basic006", "basic007", "basic008", "basic009", "basic010",
-       "basic011", "basic012", "basic013", "basic014", "basic015",
-       "basic016", "basic017", "basic018", "basic019", "basic020",
-       "basic021", "basic022", "basic023", "basic024", "basic025",
-       "basic026", "basic027", "basic028", "basic029", "basic030",
-       "basic031", "basic032", "basic033", "basic034", "basic035",
-       "basic036", "basic037", "basic038", "basic039", "basic040",
-       "basic041", "basic042", "basic043", "basic044", "basic045",
-       "basic046", "basic047",             "basic049", "basic050",
-       "basic051", "basic052", "basic053", "basic054", "basic055",
-       "basic056", "basic057", "basic058", "basic059", "basic060",
-       "basic061", "basic062", "basic063", "basic064", "basic065",
-       "basic066", "basic067", "basic068", "basic069", "basic070",
-       "basic071",
-       "idiom001",
-       "literals001",
-       "dotted001",
-       "case001",
-       "rewrite001",
-       "interpolation001", "interpolation002", "interpolation003",
-       "interpolation004"]
+idrisTestsBasic : IO TestPool
+idrisTestsBasic = testsInDir "idris2/basic" (const True) "Fundamental language features" [] Nothing
 
-idrisTestsDebug : TestPool
-idrisTestsDebug = MkTestPool "Debug features" [] Nothing
-      ["debug001"]
+idrisTestsDebug : IO TestPool
+idrisTestsDebug = testsInDir "idris2/debug" (const True) "Debug features" [] Nothing
 
-idrisTestsCoverage : TestPool
-idrisTestsCoverage = MkTestPool "Coverage checking" [] Nothing
-       -- Coverage checking
-      ["coverage001", "coverage002", "coverage003", "coverage004",
-       "coverage005", "coverage006", "coverage007", "coverage008",
-       "coverage009", "coverage010", "coverage011", "coverage012",
-       "coverage013", "coverage014", "coverage015", "coverage016",
-       "coverage017", "coverage018", "coverage019"]
+idrisTestsCoverage : IO TestPool
+idrisTestsCoverage = testsInDir "idris2/coverage" (const True) "Coverage checking" [] Nothing
 
-idrisTestsTermination : TestPool
-idrisTestsTermination = MkTestPool "Termination checking" [] Nothing
-       -- Termination checking
-      ["termination001"]
+idrisTestsTermination : IO TestPool
+idrisTestsTermination = testsInDir "idris2/termination" (const True) "Termination checking" [] Nothing
 
-idrisTestsCasetree : TestPool
-idrisTestsCasetree = MkTestPool "Case tree building" [] Nothing
-       -- Case tree building
-      ["casetree001", "casetree002", "casetree003", "casetree004"]
+idrisTestsCasetree : IO TestPool
+idrisTestsCasetree = testsInDir "idris2/casetree" (const True) "Case tree building" [] Nothing
 
-idrisTestsWarning : TestPool
-idrisTestsWarning = MkTestPool "Warnings" [] Nothing
-      ["warning001", "warning002", "warning003", "warning004"]
+idrisTestsWarning : IO TestPool
+idrisTestsWarning = testsInDir "idris2/warning" (const True) "Warnings" [] Nothing
 
-idrisTestsFailing : TestPool
-idrisTestsFailing = MkTestPool "Failing blocks" [] Nothing
-      ["failing001", "failing002", "failing003", "failing004"
-      ]
+idrisTestsFailing : IO TestPool
+idrisTestsFailing = testsInDir "idris2/failing" (const True) "Failing blocks" [] Nothing
 
-idrisTestsError : TestPool
-idrisTestsError = MkTestPool "Error messages" [] Nothing
-       -- Error messages
-      ["error001", "error002", "error003", "error004", "error005",
-       "error006", "error007", "error008", "error009", "error010",
-       "error011", "error012", "error013", "error014", "error015",
-       "error016", "error017", "error018", "error019", "error020",
-       "error021", "error022", "error023", "error024", "error025",
-       "error026", "error027",
-       -- Parse errors
-       "perror001", "perror002", "perror003", "perror004", "perror005",
-       "perror006", "perror007", "perror008", "perror009", "perror010",
-       "perror011", "perror012", "perror013", "perror014", "perror015",
-       "perror016", "perror017", "perror018", "perror019", "perror020",
-       "perror021", "perror022", "perror023", "perror024", "perror025",
-       "perror026", "perror027", "perror028", "perror029"]
+||| Error messages, including parse errors ("perror")
+idrisTestsError : IO TestPool
+idrisTestsError = testsInDir "idris2/error" (const True) "Error messages" [] Nothing
 
-idrisTestsInteractive : TestPool
-idrisTestsInteractive = MkTestPool "Interactive editing" [] Nothing
-       -- Interactive editing support
-      ["interactive001", "interactive002", "interactive003", "interactive004",
-       "interactive005", "interactive006", "interactive007", "interactive008",
-       "interactive009", "interactive010", "interactive011", "interactive012",
-       "interactive013", "interactive014", "interactive015", "interactive016",
-       "interactive017", "interactive018", "interactive019", "interactive020",
-       "interactive021", "interactive022", "interactive023", "interactive024",
-       "interactive025", "interactive026", "interactive027", "interactive028",
-       "interactive029", "interactive030", "interactive031", "interactive032",
-       "interactive033", "interactive034", "interactive035", "interactive036",
-       "interactive037", "interactive038", "interactive039", "interactive040",
-       "interactive041", "interactive042", "interactive043", "interactive044",
-       "interactive045", "interactive046"
-       ]
+idrisTestsInteractive : IO TestPool
+idrisTestsInteractive = testsInDir "idris2/interactive" (const True) "Interactive editing" [] Nothing
 
-idrisTestsInterface : TestPool
-idrisTestsInterface = MkTestPool "Interface" [] Nothing
-       -- Interfaces
-      ["interface001", "interface002", "interface003", "interface004",
-       "interface005", "interface006", "interface007", "interface008",
-       "interface009", "interface010", "interface011", "interface012",
-       "interface013", "interface014", "interface015", "interface016",
-       "interface017", "interface018", "interface019", "interface020",
-       "interface021", "interface022", "interface023", "interface024",
-       "interface025", "interface026", "interface027", "interface028",
-       "interface029"]
+idrisTestsInterface : IO TestPool
+idrisTestsInterface = testsInDir "idris2/interface" (const True) "Interface" [] Nothing
 
-idrisTestsLinear : TestPool
-idrisTestsLinear = MkTestPool "Quantities" [] Nothing
-       -- QTT and linearity related
-       ["linear001", "linear002", "linear003", -- "linear004" -- disabled due to requiring linearity subtyping
-        "linear005", "linear006", "linear007", "linear008",
-        "linear009", "linear010", "linear011", "linear012",
-        "linear013", "linear014", "linear015", "linear016",
-        "linear017"]
+||| QTT and linearity related
+idrisTestsLinear : IO TestPool
+idrisTestsLinear = testsInDir "idris2/linear" (const True) "Quantities" [] Nothing
 
-idrisTestsLiterate : TestPool
-idrisTestsLiterate = MkTestPool "Literate programming" [] Nothing
-       -- Literate
-      ["literate001", "literate002", "literate003", "literate004",
-       "literate005", "literate006", "literate007", "literate008",
-       "literate009", "literate010", "literate011", "literate012",
-       "literate013", "literate014", "literate015", "literate016",
-       "literate017"]
+idrisTestsLiterate : IO TestPool
+idrisTestsLiterate = testsInDir "idris2/literate" (const True) "Literate programming" [] Nothing
 
-idrisTestsPerformance : TestPool
-idrisTestsPerformance = MkTestPool "Performance" [] Nothing
-       -- Performance: things which have been slow in the past, or which
-       -- pose interesting challenges for the elaborator
-      ["perf001", "perf002", "perf003", "perf004", "perf005",
-       "perf007", "perf008", "perf009", "perf010", "perf011",
-       "perf012",
-       "perf2202"]
+||| Performance: things which have been slow in the past, or which
+||| pose interesting challenges for the elaborator
+idrisTestsPerformance : IO TestPool
+idrisTestsPerformance = testsInDir "idris2/perf" (const True) "Performance" [] Nothing
 
-idrisTestsRegression : TestPool
-idrisTestsRegression = MkTestPool "Various regressions" [] Nothing
-       -- Miscellaneous regressions
-      ["reg001", "reg002", "reg003", "reg004", "reg005", "reg006", "reg007",
-       "reg008", "reg009", "reg010", "reg011", "reg012", "reg013", "reg014",
-       "reg015", "reg016", "reg017", "reg018", "reg019", "reg020", "reg021",
-       "reg022", "reg023", "reg024", "reg025", "reg026", "reg027", "reg028",
-       "reg029", "reg030", "reg031", "reg032", "reg033", "reg034", "reg035",
-       "reg036", "reg037", "reg038", "reg039", "reg040", "reg041", "reg042",
-       "reg043", "reg044", "reg045", "reg046", "reg047", "reg048", "reg049",
-       "reg050", "reg051", "reg052"]
+idrisTestsRegression : IO TestPool
+idrisTestsRegression = testsInDir "idris2/reg" (const True) "Various regressions" [] Nothing
 
-idrisTestsData : TestPool
-idrisTestsData = MkTestPool "Data and record types" [] Nothing
-      [-- Data types
-       "data001", "data002",
-       -- Records, access and dependent update
-       "record001", "record002", "record003", "record004", "record005",
-       "record006", "record007", "record008", "record009", "record010",
-       "record011", "record012", "record013", "record014", "record015",
-       "record016", "record017", "record018", "record019" ]
+||| Data types, including records
+idrisTestsData : IO TestPool
+idrisTestsData = testsInDir "idris2/data" (const True) "Data and record types" [] Nothing
 
-idrisTestsBuiltin : TestPool
-idrisTestsBuiltin = MkTestPool "Builtin types and functions" [] Nothing
-      -- %builtin related tests for the frontend (type-checking)
-      ["builtin001", "builtin002", "builtin003", "builtin004", "builtin005",
-       "builtin006", "builtin007", "builtin008", "builtin009", "builtin010",
-       "builtin011"]
+||| %builtin related tests for the frontend (type-checking)
+idrisTestsBuiltin : IO TestPool
+idrisTestsBuiltin = testsInDir "idris2/builtin" (const True) "Builtin types and functions" [] Nothing
 
-idrisTestsEvaluator : TestPool
-idrisTestsEvaluator = MkTestPool "Evaluation" [] Nothing
-      [ -- Evaluator
-       "evaluator001", "evaluator002", "evaluator003", "evaluator004",
-       -- Miscellaneous REPL
-       "interpreter001", "interpreter002", "interpreter003", "interpreter004",
-       "interpreter005", "interpreter006", "interpreter007", "interpreter008",
-       -- Specialisation
-       "spec001"
-      ]
+||| Evaluator, REPL, specialisation
+idrisTestsEvaluator : IO TestPool
+idrisTestsEvaluator = testsInDir "idris2/evaluator" (const True) "Evaluation" [] Nothing
 
-idrisTestsREPL : TestPool
-idrisTestsREPL = MkTestPool "REPL commands and help" [] Nothing
-      [ "repl001", "repl002", "repl003", "repl004", "repl005"
-      , "repl006"
-      ]
+idrisTestsREPL : IO TestPool
+idrisTestsREPL = testsInDir "idris2/repl" (const True) "REPL commands and help" [] Nothing
 
-idrisTestsAllSchemes : Requirement -> TestPool
-idrisTestsAllSchemes cg = MkTestPool
+idrisTestsAllSchemes : Requirement -> IO TestPool
+idrisTestsAllSchemes cg = testsInDir "allschemes" (const True)
       ("Test across all scheme backends: " ++ show cg ++ " instance")
       [] (Just cg)
-      [ "scheme001", "scheme002"
-      , "channels001", "channels002", "channels003", "channels004", "channels005"
-      , "channels006"
-      ]
 
 idrisTestsAllBackends : Requirement -> TestPool
 idrisTestsAllBackends cg = MkTestPool
@@ -228,45 +96,24 @@ idrisTestsAllBackends cg = MkTestPool
        "basic048",
        "perf006"]
 
-idrisTestsTotality : TestPool
-idrisTestsTotality = MkTestPool "Totality checking" [] Nothing
-       -- Positivity checking
-      ["positivity001", "positivity002", "positivity003", "positivity004",
-       -- Totality checking
-       "total001", "total002", "total003", "total004", "total005",
-       "total006", "total007", "total008", "total009", "total010",
-       "total011", "total012", "total013", "total014", "total015",
-       "total016", "total017", "total018", "total019", "total020"
-      ]
+||| Totality checking, including positivity
+idrisTestsTotality : IO TestPool
+idrisTestsTotality = testsInDir "idris2/total" (const True) "Totality checking" [] Nothing
 
 -- This will only work with an Idris compiled via Chez or Racket, but at
 -- least for the moment we're not officially supporting self hosting any
 -- other way. If we do, we'll need to have a way to disable these.
-idrisTestsSchemeEval : TestPool
-idrisTestsSchemeEval = MkTestPool "Scheme Evaluator" [] Nothing
-      ["schemeeval001", "schemeeval002", "schemeeval003", "schemeeval004",
-       "schemeeval005", "schemeeval006"]
+idrisTestsSchemeEval : IO TestPool
+idrisTestsSchemeEval = testsInDir "idris2/schemeeval" (const True) "Scheme Evaluator" [] Nothing
 
-idrisTestsReflection : TestPool
-idrisTestsReflection = MkTestPool "Quotation and Reflection" [] Nothing
-      ["reflection001", "reflection002", "reflection003", "reflection004",
-       "reflection005", "reflection006", "reflection007", "reflection008",
-       "reflection009", "reflection010", "reflection011", "reflection012",
-       "reflection013", "reflection014", "reflection015", "reflection016",
-       "reflection017", "reflection018", "reflection019", "reflection020",
-       "reflection021"]
+idrisTestsReflection : IO TestPool
+idrisTestsReflection = testsInDir "idris2/reflection" (const True) "Quotation and Reflection" [] Nothing
 
-idrisTestsWith : TestPool
-idrisTestsWith = MkTestPool "With abstraction" [] Nothing
-      [ "with001", "with002", "with004", "with005", "with006", "with007",
-        "with008", "with009", "with010", "with011"
-      ]
+idrisTestsWith : IO TestPool
+idrisTestsWith = testsInDir "idris2/with" (const True) "With abstraction" [] Nothing
 
-idrisTestsIPKG : TestPool
-idrisTestsIPKG = MkTestPool "Package and .ipkg files" [] Nothing
-      ["pkg001", "pkg002", "pkg003", "pkg004", "pkg005", "pkg006", "pkg007",
-       "pkg008", "pkg009", "pkg010", "pkg011", "pkg012", "pkg013", "pkg014",
-       "pkg015", "pkg016", "pkg017" ]
+idrisTestsIPKG : IO TestPool
+idrisTestsIPKG = testsInDir "idris2/pkg" (const True) "Package and .ipkg files" [] Nothing
 
 idrisTests : TestPool
 idrisTests = MkTestPool "Misc" [] Nothing
@@ -305,73 +152,17 @@ idrisTests = MkTestPool "Misc" [] Nothing
 typeddTests : IO TestPool
 typeddTests = testsInDir "typedd-book" (const True) "Type Driven Development" [] Nothing
 
-chezTests : TestPool
-chezTests = MkTestPool "Chez backend" [] (Just Chez)
-    [ "chez001", "chez002", "chez003", "chez004", "chez005", "chez006"
-    , "chez007", "chez008", "chez009", "chez010", "chez011", "chez012"
-    , "chez013", "chez014", "chez015", "chez016", "chez017", "chez018"
-    , "chez019", "chez020", "chez021", "chez022", "chez023", "chez024"
-    , "chez025", "chez026", "chez027", "chez028", "chez029", "chez030"
-    , "chez031", "chez032", "chez033", "chez034", "chez035", "chez036"
-    , "futures001"
-    , "bitops"
-    , "casts"
-    , "constfold", "constfold2", "constfold3"
-    , "memo"
-    , "newints"
-    , "integers"
-    , "nat2fin"
-    , "inlineiobind"
-    , "semaphores001"
-    , "semaphores002"
-    , "perf001"
-    , "reg001"
-    , "buffer001"
-    ]
+chezTests : IO TestPool
+chezTests = testsInDir "chez" (const True) "Chez backend" [] (Just Chez)
 
 refcTests : IO TestPool
 refcTests = testsInDir "refc" (const True) "Reference counting C backend" [] (Just C)
 
-racketTests : TestPool
-racketTests = MkTestPool "Racket backend" [] (Just Racket)
-    [ "forkjoin001"
-    , "semaphores001", "semaphores002"
-    , "futures001"
-    , "mutex001", "mutex002", "mutex003", "mutex004", "mutex005"
-    , "conditions001" , "conditions002" , "conditions003" , "conditions004"
-    , "conditions005"
---    , "conditions006"
---    , "conditions007"
-    , "ffi001"
-    ]
+racketTests : IO TestPool
+racketTests = testsInDir "racket" (const True) "Racket backend" [] (Just Racket)
 
-nodeTests : TestPool
-nodeTests = MkTestPool "Node backend" [] (Just Node)
-    [ "node001", "node002", "node003", "node004", "node005", "node006"
-    , "node007", "node008", "node009", "node011", "node012", "node015"
-    , "node017", "node018", "node019", "node020", "node021", "node022"
-    , "node023", "node024", "node025", "node026", "node027"
-    , "perf001"
-    -- , "node14"
-    , "args"
-    , "bitops"
-    , "casts"
-    , "memo"
-    , "fastConcat"
-    , "newints"
-    , "reg001", "reg002"
-    , "stringcast"
-    , "syntax001"
-    , "tailrec001"
-    , "tailrec002"
-    , "idiom001"
-    , "integers"
-    , "doubles"
-    , "fix1839"
-    , "tailrec_libs"
-    , "nomangle001", "nomangle002"
-    , "integer_array"
-    ]
+nodeTests : IO TestPool
+nodeTests = testsInDir "node" (const True) "Node backend" [] (Just Node)
 
 vmcodeInterpTests : IO TestPool
 vmcodeInterpTests = testsInDir "vmcode" (const True) "VMCode interpreter" [] Nothing
@@ -402,45 +193,45 @@ codegenTests = testsInDir "codegen" (const True) "Code generation" [] Nothing
 
 main : IO ()
 main = runner $
-  [ testPaths "ttimp" ttimpTests
-  , testPaths "idris2" idrisTestsBasic
-  , testPaths "idris2" idrisTestsCoverage
-  , testPaths "idris2" idrisTestsTermination
-  , testPaths "idris2" idrisTestsCasetree
-  , testPaths "idris2" idrisTestsError
-  , testPaths "idris2" idrisTestsFailing
-  , testPaths "idris2" idrisTestsWarning
-  , testPaths "idris2" idrisTestsInteractive
-  , testPaths "idris2" idrisTestsInterface
-  , testPaths "idris2" idrisTestsLiterate
-  , testPaths "idris2" idrisTestsLinear
-  , testPaths "idris2" idrisTestsPerformance
-  , testPaths "idris2" idrisTestsRegression
-  , testPaths "idris2" idrisTestsData
-  , testPaths "idris2" idrisTestsBuiltin
-  , testPaths "idris2" idrisTestsEvaluator
-  , testPaths "idris2" idrisTestsREPL
-  , testPaths "idris2" idrisTestsTotality
-  , testPaths "idris2" idrisTestsSchemeEval
-  , testPaths "idris2" idrisTestsReflection
-  , testPaths "idris2" idrisTestsWith
-  , testPaths "idris2" idrisTestsDebug
-  , testPaths "idris2" idrisTestsIPKG
-  , testPaths "idris2" idrisTests
+  [ !ttimpTests
+  , !idrisTestsBasic
+  , !idrisTestsCoverage
+  , !idrisTestsTermination
+  , !idrisTestsCasetree
+  , !idrisTestsError
+  , !idrisTestsFailing
+  , !idrisTestsWarning
+  , !idrisTestsInteractive
+  , !idrisTestsInterface
+  , !idrisTestsLiterate
+  , !idrisTestsLinear
+  , !idrisTestsPerformance
+  , !idrisTestsRegression
+  , !idrisTestsData
+  , !idrisTestsBuiltin
+  , !idrisTestsEvaluator
+  , !idrisTestsREPL
+  , !idrisTestsTotality
+  , !idrisTestsSchemeEval
+  , !idrisTestsReflection
+  , !idrisTestsWith
+  , !idrisTestsDebug
+  , !idrisTestsIPKG
+  , testPaths "idris2/misc" idrisTests
   , !typeddTests
   , !ideModeTests
   , !preludeTests
   , !baseLibraryTests
   , !contribLibraryTests
-  , testPaths "chez" chezTests
+  , !chezTests
   , !refcTests
-  , testPaths "racket" racketTests
-  , testPaths "node" nodeTests
+  , !racketTests
+  , !nodeTests
   , !vmcodeInterpTests
   , !templateTests
   , !codegenTests
   ]
-  ++ map (testPaths "allschemes" . idrisTestsAllSchemes) [Chez, Racket]
+  ++ !(traverse idrisTestsAllSchemes [Chez, Racket])
   ++ map (testPaths "allbackends" . idrisTestsAllBackends) [Chez, Node, Racket, C]
 
 

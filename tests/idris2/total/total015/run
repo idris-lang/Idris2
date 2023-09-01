@@ -1,0 +1,3 @@
+. ../../../testutils.sh
+
+check CoveringData.idr

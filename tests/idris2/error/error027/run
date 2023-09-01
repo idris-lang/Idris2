@@ -1,0 +1,3 @@
+. ../../../testutils.sh
+
+run Issue2950.idr

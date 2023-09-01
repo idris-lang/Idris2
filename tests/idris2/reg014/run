@@ -1,3 +1,0 @@
-. ../../testutils.sh
-
-check casecase.idr --debug-elab-check

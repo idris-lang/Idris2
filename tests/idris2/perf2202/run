@@ -1,4 +1,0 @@
-. ../../testutils.sh
-
-check many10000.idr
-check Church.idr

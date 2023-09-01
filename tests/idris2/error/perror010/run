@@ -1,0 +1,7 @@
+. ../../../testutils.sh
+
+check NamedReturn1.idr || true
+check NamedReturn2.idr || true
+check NamedReturn3.idr || true
+check NamedReturn4.idr || true
+idris2 TrailingLam.idr < input

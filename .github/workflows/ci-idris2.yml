@@ -483,7 +483,7 @@ jobs:
         run: make install-api
         shell: bash
       - name: Test API
-        run: cd tests/idris2/api001 && ./run idris2
+        run: cd tests/idris2/api/api001 && ./run "$HOME/.idris2/bin/idris2"
         shell: bash
 
   ######################################################################

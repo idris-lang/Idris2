@@ -1,6 +1,0 @@
-. ../../testutils.sh
-
-rm project-output.ipkg
-
-idris2 --init project-output.ipkg < input
-diff project-output.ipkg project-expected.ipkg

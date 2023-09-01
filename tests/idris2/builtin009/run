@@ -1,3 +1,0 @@
-. ../../testutils.sh
-
-run Test.idr

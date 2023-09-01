@@ -1,4 +1,0 @@
-. ../../testutils.sh
-
-check Issue899.idr
-check Issue484.idr

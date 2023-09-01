@@ -1,3 +1,0 @@
-. ../../testutils.sh
-
-run --cg node -p network Echo.idr

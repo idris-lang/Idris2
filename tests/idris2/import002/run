@@ -1,3 +1,0 @@
-. ../../testutils.sh
-
-check --no-prelude Test.idr

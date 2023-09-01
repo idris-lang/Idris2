@@ -1,3 +1,0 @@
-. ../../testutils.sh
-
-check --debug-elab-check A.idr

@@ -1,0 +1,3 @@
+. ../../../testutils.sh
+
+check -Werror Error1.idr

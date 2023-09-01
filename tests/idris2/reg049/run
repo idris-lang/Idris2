@@ -1,2 +1,0 @@
-. ../../testutils.sh
-check lettype.idr -p contrib

@@ -1,0 +1,4 @@
+. ../../../testutils.sh
+
+check Store.idr
+check StoreL.idr

@@ -1,4 +1,0 @@
-. ../../testutils.sh
-
-check Issue1022.idr
-check Issue1022-Refl.idr

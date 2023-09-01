@@ -1,3 +1,0 @@
-. ../../testutils.sh
-
-check EH.idr -p contrib
