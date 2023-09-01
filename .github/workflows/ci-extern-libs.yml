@@ -160,7 +160,7 @@ jobs:
   # Test that we can build Collie
   ########################################################################
 
-  ubuntu-test-collie:
+  test-collie:
     needs: ubuntu-self-host-previous-version
     runs-on: ubuntu-latest
     if: |
@@ -192,7 +192,7 @@ jobs:
   # Test that we can build Frex
   ########################################################################
 
-  ubuntu-test-frex:
+  test-frex:
     needs: ubuntu-self-host-previous-version
     runs-on: ubuntu-latest
     if: |
@@ -227,7 +227,7 @@ jobs:
 
   # ELAB
 
-  ubuntu-test-elab:
+  test-elab-util:
     needs: ubuntu-self-host-previous-version
     runs-on: ubuntu-latest
     if: |
@@ -257,7 +257,7 @@ jobs:
 
   # PACK
 
-  ubuntu-test-pack:
+  test-pack:
     needs: ubuntu-self-host-previous-version
     runs-on: ubuntu-latest
     if: |
@@ -289,51 +289,47 @@ jobs:
           git fetch "https://github.com/${GITHUB_REPOSITORY}" "${GITHUB_REF}:${GITHUB_REF_NAME}"
           pack install pack
 
-# FIXME: use pack instead, once it's working; otherwise the Idris version is wrong
-#  ######################################################################
-#  # Test that we can build the LSP
-#  ######################################################################
-#
-#  ubuntu-test-lsp:
-#    needs: ubuntu-self-host-previous-version
-#    runs-on: ubuntu-latest
-#    if: |
-#      !contains(needs.initialise.outputs.commit_message, '[ci:')
-#      || contains(needs.initialise.outputs.commit_message, '[ci: libs]')
-#    env:
-#      IDRIS2_CG: chez
-#    steps:
-#      - name: Download Idris2 Artifact
-#        uses: actions/download-artifact@v3
-#        with:
-#          name: idris2-nightly-chez
-#          path: ~/.idris2/
-#      - name: Install chezscheme
-#        run: |
-#          sudo apt-get update
-#          sudo apt-get install -y chezscheme
-#          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
-#          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
-#      - name: Checkout
-#        uses: actions/checkout@v3
-#        with:
-#          repository: 'idris-community/idris2-lsp'
-#      - name: Install libs and API
-#        run: |
-#          git submodule update --init Idris2
-#          cd Idris2
-#          make all
-#          make install-with-src-libs
-#          make install-with-src-api
-#      - name: Build idris2-lsp
-#        run: |
-#          make all
+  ######################################################################
+  # Test that we can build the LSP
+  ######################################################################
+
+  test-lsp-pack:
+    needs: ubuntu-self-host-previous-version
+    runs-on: ubuntu-latest
+    if: |
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: libs]')
+    env:
+      IDRIS2_CG: chez
+      PACK_DIR: /root/.pack
+    container: ghcr.io/stefan-hoeck/idris2-pack:latest
+    strategy:
+      fail-fast: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          repository: 'idris-community/idris2-lsp'
+      - name: Toml setup
+        run: |
+          echo "[idris2]" > pack.toml
+          echo "url = \"https://github.com/${GITHUB_REPOSITORY}\"" >> pack.toml
+          echo "commit = \"latest:${GITHUB_REF_NAME}\"" >> pack.toml
+          echo "bootstrap  = true" >> pack.toml
+      - name: Build pack with PR-Idris
+        run: |
+          git config --global --add safe.directory "${PWD}"
+          git fetch "https://github.com/${GITHUB_REPOSITORY}" "${GITHUB_REF}:${GITHUB_REF_NAME}"
+          pack install pack
+      - name: Build+install idris2-lsp
+        run: |
+          pack install-app idris2-lsp
 
   ######################################################################
   # Test that we can use Katla to build html doc of the libs
   ######################################################################
 
-  ubuntu-katla:
+  test-katla-and-html:
     needs: ubuntu-self-host-previous-version
     runs-on: ubuntu-latest
     if: |
