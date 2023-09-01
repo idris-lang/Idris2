@@ -323,7 +323,7 @@ jobs:
           pack install pack
       - name: Build+install idris2-lsp
         run: |
-          pack install-app idris2-lsp
+          pack --no-prompt install-app idris2-lsp
 
   ######################################################################
   # Test that we can use Katla to build html doc of the libs
