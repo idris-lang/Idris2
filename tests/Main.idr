@@ -12,73 +12,73 @@ import Test.Golden
 -- Test cases
 
 ttimpTests : IO TestPool
-ttimpTests = testsInDir "ttimp" (const True) "TTImp" [] Nothing
+ttimpTests = testsInDir "ttimp" "TTImp"
 
 idrisTestsBasic : IO TestPool
-idrisTestsBasic = testsInDir "idris2/basic" (const True) "Fundamental language features" [] Nothing
+idrisTestsBasic = testsInDir "idris2/basic" "Fundamental language features"
 
 idrisTestsDebug : IO TestPool
-idrisTestsDebug = testsInDir "idris2/debug" (const True) "Debug features" [] Nothing
+idrisTestsDebug = testsInDir "idris2/debug" "Debug features"
 
 idrisTestsCoverage : IO TestPool
-idrisTestsCoverage = testsInDir "idris2/coverage" (const True) "Coverage checking" [] Nothing
+idrisTestsCoverage = testsInDir "idris2/coverage" "Coverage checking"
 
 idrisTestsTermination : IO TestPool
-idrisTestsTermination = testsInDir "idris2/termination" (const True) "Termination checking" [] Nothing
+idrisTestsTermination = testsInDir "idris2/termination" "Termination checking"
 
 idrisTestsCasetree : IO TestPool
-idrisTestsCasetree = testsInDir "idris2/casetree" (const True) "Case tree building" [] Nothing
+idrisTestsCasetree = testsInDir "idris2/casetree" "Case tree building"
 
 idrisTestsWarning : IO TestPool
-idrisTestsWarning = testsInDir "idris2/warning" (const True) "Warnings" [] Nothing
+idrisTestsWarning = testsInDir "idris2/warning" "Warnings"
 
 idrisTestsFailing : IO TestPool
-idrisTestsFailing = testsInDir "idris2/failing" (const True) "Failing blocks" [] Nothing
+idrisTestsFailing = testsInDir "idris2/failing" "Failing blocks"
 
 ||| Error messages, including parse errors ("perror")
 idrisTestsError : IO TestPool
-idrisTestsError = testsInDir "idris2/error" (const True) "Error messages" [] Nothing
+idrisTestsError = testsInDir "idris2/error" "Error messages"
 
 idrisTestsInteractive : IO TestPool
-idrisTestsInteractive = testsInDir "idris2/interactive" (const True) "Interactive editing" [] Nothing
+idrisTestsInteractive = testsInDir "idris2/interactive" "Interactive editing"
 
 idrisTestsInterface : IO TestPool
-idrisTestsInterface = testsInDir "idris2/interface" (const True) "Interface" [] Nothing
+idrisTestsInterface = testsInDir "idris2/interface" "Interface"
 
 ||| QTT and linearity related
 idrisTestsLinear : IO TestPool
-idrisTestsLinear = testsInDir "idris2/linear" (const True) "Quantities" [] Nothing
+idrisTestsLinear = testsInDir "idris2/linear" "Quantities"
 
 idrisTestsLiterate : IO TestPool
-idrisTestsLiterate = testsInDir "idris2/literate" (const True) "Literate programming" [] Nothing
+idrisTestsLiterate = testsInDir "idris2/literate" "Literate programming"
 
 ||| Performance: things which have been slow in the past, or which
 ||| pose interesting challenges for the elaborator
 idrisTestsPerformance : IO TestPool
-idrisTestsPerformance = testsInDir "idris2/perf" (const True) "Performance" [] Nothing
+idrisTestsPerformance = testsInDir "idris2/perf" "Performance"
 
 idrisTestsRegression : IO TestPool
-idrisTestsRegression = testsInDir "idris2/reg" (const True) "Various regressions" [] Nothing
+idrisTestsRegression = testsInDir "idris2/reg" "Various regressions"
 
 ||| Data types, including records
 idrisTestsData : IO TestPool
-idrisTestsData = testsInDir "idris2/data" (const True) "Data and record types" [] Nothing
+idrisTestsData = testsInDir "idris2/data" "Data and record types"
 
 ||| %builtin related tests for the frontend (type-checking)
 idrisTestsBuiltin : IO TestPool
-idrisTestsBuiltin = testsInDir "idris2/builtin" (const True) "Builtin types and functions" [] Nothing
+idrisTestsBuiltin = testsInDir "idris2/builtin" "Builtin types and functions"
 
 ||| Evaluator, REPL, specialisation
 idrisTestsEvaluator : IO TestPool
-idrisTestsEvaluator = testsInDir "idris2/evaluator" (const True) "Evaluation" [] Nothing
+idrisTestsEvaluator = testsInDir "idris2/evaluator" "Evaluation"
 
 idrisTestsREPL : IO TestPool
-idrisTestsREPL = testsInDir "idris2/repl" (const True) "REPL commands and help" [] Nothing
+idrisTestsREPL = testsInDir "idris2/repl" "REPL commands and help"
 
 idrisTestsAllSchemes : Requirement -> IO TestPool
-idrisTestsAllSchemes cg = testsInDir "allschemes" (const True)
+idrisTestsAllSchemes cg = testsInDir "allschemes"
       ("Test across all scheme backends: " ++ show cg ++ " instance")
-      [] (Just cg)
+      {codegen = Just cg}
 
 idrisTestsAllBackends : Requirement -> TestPool
 idrisTestsAllBackends cg = MkTestPool
@@ -98,22 +98,22 @@ idrisTestsAllBackends cg = MkTestPool
 
 ||| Totality checking, including positivity
 idrisTestsTotality : IO TestPool
-idrisTestsTotality = testsInDir "idris2/total" (const True) "Totality checking" [] Nothing
+idrisTestsTotality = testsInDir "idris2/total" "Totality checking"
 
 -- This will only work with an Idris compiled via Chez or Racket, but at
 -- least for the moment we're not officially supporting self hosting any
 -- other way. If we do, we'll need to have a way to disable these.
 idrisTestsSchemeEval : IO TestPool
-idrisTestsSchemeEval = testsInDir "idris2/schemeeval" (const True) "Scheme Evaluator" [] Nothing
+idrisTestsSchemeEval = testsInDir "idris2/schemeeval" "Scheme Evaluator"
 
 idrisTestsReflection : IO TestPool
-idrisTestsReflection = testsInDir "idris2/reflection" (const True) "Quotation and Reflection" [] Nothing
+idrisTestsReflection = testsInDir "idris2/reflection" "Quotation and Reflection"
 
 idrisTestsWith : IO TestPool
-idrisTestsWith = testsInDir "idris2/with" (const True) "With abstraction" [] Nothing
+idrisTestsWith = testsInDir "idris2/with" "With abstraction"
 
 idrisTestsIPKG : IO TestPool
-idrisTestsIPKG = testsInDir "idris2/pkg" (const True) "Package and .ipkg files" [] Nothing
+idrisTestsIPKG = testsInDir "idris2/pkg" "Package and .ipkg files"
 
 idrisTests : TestPool
 idrisTests = MkTestPool "Misc" [] Nothing
@@ -150,31 +150,31 @@ idrisTests = MkTestPool "Misc" [] Nothing
        ]
 
 typeddTests : IO TestPool
-typeddTests = testsInDir "typedd-book" (const True) "Type Driven Development" [] Nothing
+typeddTests = testsInDir "typedd-book" "Type Driven Development"
 
 chezTests : IO TestPool
-chezTests = testsInDir "chez" (const True) "Chez backend" [] (Just Chez)
+chezTests = testsInDir "chez" "Chez backend" {codegen = Just Chez}
 
 refcTests : IO TestPool
-refcTests = testsInDir "refc" (const True) "Reference counting C backend" [] (Just C)
+refcTests = testsInDir "refc" "Reference counting C backend" {codegen = Just C}
 
 racketTests : IO TestPool
-racketTests = testsInDir "racket" (const True) "Racket backend" [] (Just Racket)
+racketTests = testsInDir "racket" "Racket backend" {codegen = Just Racket}
 
 nodeTests : IO TestPool
-nodeTests = testsInDir "node" (const True) "Node backend" [] (Just Node)
+nodeTests = testsInDir "node" "Node backend" {codegen = Just Node}
 
 vmcodeInterpTests : IO TestPool
-vmcodeInterpTests = testsInDir "vmcode" (const True) "VMCode interpreter" [] Nothing
+vmcodeInterpTests = testsInDir "vmcode" "VMCode interpreter"
 
 ideModeTests : IO TestPool
-ideModeTests = testsInDir "ideMode" (const True) "IDE mode" [] Nothing
+ideModeTests = testsInDir "ideMode" "IDE mode"
 
 preludeTests : IO TestPool
-preludeTests = testsInDir "prelude" (const True) "Prelude library" [] Nothing
+preludeTests = testsInDir "prelude" "Prelude library"
 
 templateTests : IO TestPool
-templateTests = testsInDir "templates" (const True) "Test templates" [] Nothing
+templateTests = testsInDir "templates" "Test templates"
 
 -- base library tests are run against
 -- each codegen supported and to keep
@@ -182,14 +182,14 @@ templateTests = testsInDir "templates" (const True) "Test templates" [] Nothing
 -- that only runs if all backends are
 -- available.
 baseLibraryTests : IO TestPool
-baseLibraryTests = testsInDir "base" (const True) "Base library" [Chez, Node] Nothing
+baseLibraryTests = testsInDir "base" "Base library" {requirements = [Chez, Node]}
 
 -- same behavior as `baseLibraryTests`
 contribLibraryTests : IO TestPool
-contribLibraryTests = testsInDir "contrib" (const True) "Contrib library" [Chez, Node] Nothing
+contribLibraryTests = testsInDir "contrib" "Contrib library" {requirements = [Chez, Node]}
 
 codegenTests : IO TestPool
-codegenTests = testsInDir "codegen" (const True) "Code generation" [] Nothing
+codegenTests = testsInDir "codegen" "Code generation"
 
 main : IO ()
 main = runner $
