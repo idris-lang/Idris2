@@ -216,7 +216,7 @@ mbPathToNS wdir sdir fname =
     sdir = fromMaybe "" sdir
     base = if isAbsolute fname then wdir </> sdir else sdir
   in
-    unsafeFoldModuleIdent . reverse . splitPath . Path.dropExtension
+    unsafeFoldModuleIdent . reverse . splitPath . Path.dropExtensions
       <$> (Path.dropBase `on` cleanPath) base fname
 
 export

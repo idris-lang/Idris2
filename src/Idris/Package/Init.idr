@@ -54,7 +54,7 @@ findModules start = do
     go acc ((path, (root ** iot)) :: iots) = do
       t <- liftIO iot
       let mods = flip map t.files $ \ entry =>
-                   let fname = fst (splitFileName (fileName entry)) in
+                   let fname = fst (splitExtensions (fileName entry)) in
                    let mod = unsafeFoldModuleIdent (fname :: path) in
                    let fp  = toFilePath entry in
                    (mod, fp)

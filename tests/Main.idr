@@ -146,7 +146,7 @@ idrisTestsLiterate = MkTestPool "Literate programming" [] Nothing
        "literate005", "literate006", "literate007", "literate008",
        "literate009", "literate010", "literate011", "literate012",
        "literate013", "literate014", "literate015", "literate016",
-       "literate017"]
+       "literate017", "literate018"]
 
 idrisTestsPerformance : TestPool
 idrisTestsPerformance = MkTestPool "Performance" [] Nothing

@@ -21,6 +21,7 @@ import System.File
 
 infixl 5 </>, />
 infixr 7 <.>
+infixr 7 <..>
 
 
 ||| The character that separates directories in the path.
@@ -595,10 +596,42 @@ export
           show $ setFileName' (stem ++ ext) path'
       Nothing => path
 
+||| Appends a extension to the path, replacing multiple extensions.
+|||
+||| If there is no file name, the path will not change;
+||| if the path has no extension, the extension will be appended;
+||| if the given extension is empty, all of the extensions of the path will be dropped;
+||| otherwise, the extensions will be replaced.
+|||
+||| ```idris example
+||| "/tmp/Foo.lidr.md" <.> "idr" == "/tmp/Foo.idr"
+||| ```
+export
+(<..>) : String -> (extension : String) -> String
+(<..>) path ext =
+  let
+    path' = parse path
+    ext = pack $ dropWhile (\char => char == '.' || isSpace char) (unpack ext)
+    ext = if ext == "" then "" else "." ++ ext
+  in
+    case fileName' path' of
+      Just name =>
+        let (stem, _) = splitExtensions name in
+          show $ setFileName' (stem ++ ext) path'
+      Nothing => path
+
+
 ||| Drops the extension of the path.
 export
 dropExtension : String -> String
 dropExtension path = path <.> ""
+
+||| Drops all of the extensions of a path.
+||| ```idris example
+||| "/tmp/Foo.lidr.md" == "/tmp/Foo"
+export
+dropExtensions : String -> String
+dropExtensions path = path <..> ""
 
 ||| Looks up an executable from a list of candidate names in the PATH
 export
