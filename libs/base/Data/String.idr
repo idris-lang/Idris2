@@ -4,16 +4,105 @@ import public Data.List
 import Data.List1
 import public Data.SnocList
 
+import Control.Function
+
 %default total
+
+export
+Biinjective Prelude.strCons where
+  biinjective prf = strConsBiinjective prf
+
+export
+Injective Prelude.strUncons where
+  injective prf = strUnconsInjective prf
+
+export
+packUnpack : (str : String) -> pack (unpack str) = str
+packUnpack = strInduction Refl $ \c, s, prev => rewrite strUnconsCons c s in cong (strCons c) prev
+
+export
+unpackPack : (cs : List Char) -> unpack (pack cs) = cs
+unpackPack [] = Refl
+unpackPack (c :: cs) = rewrite strUnconsCons c (pack cs) in cong (c ::) $ unpackPack cs
+
+export
+lengthPackIsLength : (cs : List Char) -> length (pack cs) = length cs
+lengthPackIsLength [] = Refl
+lengthPackIsLength (c :: cs) = rewrite strUnconsCons c (pack cs) in cong S $ lengthPackIsLength cs
+
+export
+strConsAppendCommute : (c : Char) -> (s1 : String) -> (s2 : String) -> strCons c s1 ++ s2 = strCons c (s1 ++ s2)
+strConsAppendCommute c s1 s2 = rewrite strUnconsCons c s1 in cong (strCons c) Refl
+
+export
+strAppendEmptyLeftNeutral : (s : String) -> "" ++ s = s
+strAppendEmptyLeftNeutral s = Refl
+
+export
+strAppendEmptyRightNeutral : (s : String) -> s ++ "" = s
+strAppendEmptyRightNeutral s = strInduction
+  {p = \s => s ++ "" = s}
+  Refl
+  (\c, s, prf => rewrite strUnconsCons c s in cong (strCons c) prf)
+  s
+
+export
+strAppendAssociative : (l : String) -> (m : String) -> (r : String) -> l ++ (m ++ r) = (l ++ m) ++ r
+strAppendAssociative l m r = strInduction
+  {p = \l => l ++ (m ++ r) = (l ++ m) ++ r}
+  Refl
+  (\c, s, prf =>
+    rewrite strUnconsCons c s in
+    rewrite strUnconsCons c (s ++ m) in
+    cong (strCons c) prf)
+  l
+
+export
+strAppendLeftCancel : (l : String) -> (r : String) -> (r' : String) -> l ++ r = l ++ r' -> r = r'
+strAppendLeftCancel l r r' = strInduction {p = \l => l ++ r = l ++ r' -> r = r'} id step l
+  where
+    step : (c : Char) -> (s : String) -> (s ++ r = s ++ r' -> r = r') -> (strCons c s) ++ r = (strCons c s) ++ r' -> r = r'
+    step c s prev prf =
+      let prf' = the (strCons c (s ++ r) = strCons c (s ++ r')) $
+        trans (sym $ strConsAppendCommute c s r) $
+        trans prf $
+        rewrite strUnconsCons c s in Refl in
+      prev $ snd $ strConsBiinjective prf'
+
+export
+strAppendLengthCommute : (s1 : String) -> (s2 : String) -> length (s1 ++ s2) = length s1 + length s2
+strAppendLengthCommute s1 s2 = strInduction
+  {p = \s => length (s ++ s2) = length s + length s2}
+  Refl
+  (\c, s, prf =>
+    rewrite strUnconsCons c s in
+    rewrite strUnconsCons c (s ++ s2) in
+    cong S prf)
+  s1
+
+export
+reverseInvolutive : (s : String) -> reverse (reverse s) = s
+reverseInvolutive s =
+  rewrite unpackPack (reverse $ unpack s) in
+  rewrite List.reverseInvolutive (unpack s) in
+  packUnpack s
 
 public export
 singleton : Char -> String
 singleton c = strCons c ""
 
+export
+singletonLength1 : (0 c : Char) -> length (String.singleton c) = 1
+singletonLength1 c = rewrite strUnconsCons c "" in Refl
+
 ||| Create a string by using n copies of a character
 public export
 replicate : Nat -> Char -> String
 replicate n c = pack (replicate n c)
+
+export
+replicateLengthN : (0 n : Nat) -> length (String.replicate n c) = n
+replicateLengthN n = irrelevantEq $ trans (lengthPackIsLength (replicate n c)) (lengthReplicate n)
 
 ||| Indent a given string by `n` spaces.
 public export
