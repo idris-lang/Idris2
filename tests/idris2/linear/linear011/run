@@ -1,0 +1,3 @@
+. ../../../testutils.sh
+
+idris2 Network.idr -p linear -p network < input

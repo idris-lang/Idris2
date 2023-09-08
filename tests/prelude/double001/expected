@@ -1,5 +1,4 @@
-1/1: Building Types (Types.idr)
-Main> 0.0
+0.0
 0.0
 0.0
 1.0
@@ -71,4 +70,3 @@ Main> 0.0
 +nan.0
 +nan.0
 +nan.0
-Main> Bye for now!

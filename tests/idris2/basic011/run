@@ -1,6 +1,0 @@
-rm -rf build
-
-$1 --no-color --console-width 0 --check Dots1.idr
-$1 --no-color --console-width 0 --check Dots2.idr
-$1 --no-color --console-width 0 --check Dots3.idr
-

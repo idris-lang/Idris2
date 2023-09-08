@@ -1,5 +1,3 @@
-1/1: Building Popen (Popen.idr)
-Main> "Hello, world"
+"Hello, world"
 "Hello, $PATH"
 17
-Main> Bye for now!

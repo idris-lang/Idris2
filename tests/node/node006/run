@@ -1,5 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --cg node --no-banner TypeCase.idr < input
-$1 --no-color --console-width 0 --cg node --no-banner TypeCase2.idr --check
-
+idris2 --cg node TypeCase.idr < input
+check --cg node TypeCase2.idr

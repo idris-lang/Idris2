@@ -1,0 +1,4 @@
+. ../../../testutils.sh
+
+check DefaultCases.idr
+check Issue1079.idr

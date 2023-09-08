@@ -1,0 +1,3 @@
+. ../../../testutils.sh
+
+check With0.idr

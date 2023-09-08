@@ -1,4 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --yaffle Hole.yaff < input
-$1 --yaffle build/ttc/*/Hole.ttc < input
+idris2 --yaffle Hole.yaff < input
+idris2 --yaffle build/ttc/*/Hole.ttc < input

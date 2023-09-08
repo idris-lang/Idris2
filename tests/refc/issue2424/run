@@ -1,5 +1,5 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-banner --no-color --console-width 0 --cg refc -o test ControlAppMonadTest.idr > /dev/null
+idris2 --cg refc -o test ControlAppMonadTest.idr > /dev/null
 
 ./build/exec/test

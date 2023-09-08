@@ -1,0 +1,4 @@
+. ../../../testutils.sh
+
+check AssertPositivity.idr
+check LazyPositivityCheck.idr

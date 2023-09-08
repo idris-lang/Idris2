@@ -1,4 +1,3 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --cg node tailrec.idr -x main
-
+run --cg node tailrec.idr

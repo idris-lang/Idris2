@@ -1,0 +1,6 @@
+. ../../../testutils.sh
+
+idris2 --build hello.ipkg
+idris2 --build test.ipkg
+
+./build/exec/runtests ../build/exec/hello --no-colour

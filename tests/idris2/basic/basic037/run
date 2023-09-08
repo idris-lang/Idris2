@@ -1,0 +1,4 @@
+. ../../../testutils.sh
+
+echo ':q' | idris2 --no-prelude Comments.idr
+echo ':q' | idris2 Issue279.idr

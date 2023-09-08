@@ -1,0 +1,14 @@
+########################
+########################
+## LaTeX Linter rules ##
+########################
+########################
+
+CmdLine {
+    # Command terminated with space.
+    --nowarn 1
+
+    # You ought to remove spaces in front of punctuation.
+    # This gets confused in code blocks, failing on eg. `x : Nat`
+    --nowarn 26
+}

@@ -107,6 +107,9 @@
 
 * Fixed a bug that caused `f` to sometimes be replaced by `fx` after matching `fx = f x`.
 
+* Fixed a bug in the totality checker that missed indirect references to
+  partial data.
+
 * Refactor the idris2protocols package to depend on fewer Idris2 modules.
   We can now export the package independently.
   To avoid confusing tooling about which `.ipkg` to use, the
