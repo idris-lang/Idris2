@@ -1,4 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
 rm -f expected
 
@@ -9,5 +9,4 @@ fi
 
 echo "$NProcs processors" > expected
 
-$1 --no-banner --no-color --console-width 0 NumProcessors.idr --exec main
-
+run NumProcessors.idr

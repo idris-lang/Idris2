@@ -1,0 +1,5 @@
+. ../../../testutils.sh
+
+idris2 Sized.idr < input
+check Sized2.idr
+check Sized3.idr

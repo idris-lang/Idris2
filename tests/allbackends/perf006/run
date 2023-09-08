@@ -1,4 +1,3 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --exec main Issue775.idr
-
+run Issue775.idr

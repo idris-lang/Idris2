@@ -1,0 +1,18 @@
+. ../../../testutils.sh
+
+check Main0.idr
+check Main1.idr
+check MainFail.idr
+check Main3.idr
+
+run Main0.idr
+run Main1.idr
+
+check MainPre0.idr
+check MainPre1.idr
+
+run MainPre0.idr
+run MainPre1.idr
+
+check MainConflict.idr
+idris2 --exec exec MainConflict.idr

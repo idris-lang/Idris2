@@ -1,5 +1,0 @@
-rm -rf build
-
-echo ':q' | $1 --no-color --console-width 0 --no-banner --no-prelude Ambig1.idr
-echo ':q' | $1 --no-color --console-width 0 --no-banner --no-prelude Ambig2.idr
-

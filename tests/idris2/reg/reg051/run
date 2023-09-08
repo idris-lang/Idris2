@@ -1,0 +1,2 @@
+. ../../../testutils.sh
+check BigFins.idr

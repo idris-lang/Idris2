@@ -1,4 +1,0 @@
-rm -rf build
-
-$1 --no-color --console-width 0 --cg node --no-banner -p network Echo.idr < input
-

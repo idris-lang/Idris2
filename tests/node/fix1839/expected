@@ -1,4 +1,2 @@
-1/1: Building OS (OS.idr)
-Main> True
-Main> Bye for now!
+True
 Error: INTERNAL ERROR: prim not implemented: prim__os

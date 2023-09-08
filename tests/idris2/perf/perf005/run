@@ -1,0 +1,9 @@
+. ../../../testutils.sh
+
+check Lambda.idr
+
+check Bad1.idr
+
+check Bad2.idr
+
+check Bad3.idr

@@ -1,3 +1,3 @@
-$1 --no-banner --no-color --console-width 0 -c StringReduce.idr
+. ../../testutils.sh
 
-rm -rf build
+check StringReduce.idr

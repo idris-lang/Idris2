@@ -1,7 +1,7 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 nomangle.idr --no-color --no-banner --console-width 0 -o test1 --cg node
-$1 nomangle.idr --no-color --no-banner --console-width 0 -o test2 --cg node --directive minimal
+idris2 nomangle.idr -o test1 --cg node
+idris2 nomangle.idr -o test2 --cg node --directive minimal
 
 cat build/exec/test1 | grep -e foo -e baz -e another_name
 cat build/exec/test2 | grep -e foo -e baz -e another_name

@@ -1,0 +1,3 @@
+. ../../testutils.sh
+
+run --cg racket RacketLib.idr

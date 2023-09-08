@@ -1,5 +1,0 @@
-rm -rf build
-
-$1 --no-color --console-width 0 --check ParseRecord.idr || true
-$1 --no-color --console-width 0 --check ParseRecord2.idr || true
-$1 --no-color --console-width 0 --check ParseRecord3.idr || true

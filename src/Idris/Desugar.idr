@@ -245,7 +245,7 @@ mutual
                                     !(desugar AnyExpr (n :: ps) scope)
            else pure $ ILam EmptyFC rig !(traverse (desugar AnyExpr ps) p)
                    (Just (MN "lamc" 0)) !(desugarB AnyExpr ps argTy) $
-                 ICase fc (IVar EmptyFC (MN "lamc" 0)) (Implicit fc False)
+                 ICase fc [] (IVar EmptyFC (MN "lamc" 0)) (Implicit fc False)
                      [snd !(desugarClause ps True (MkPatClause fc pat scope []))]
   desugarB side ps (PLam fc rig p (PRef _ n@(MN _ _)) argTy scope)
       = pure $ ILam fc rig !(traverse (desugar AnyExpr ps) p)
@@ -258,7 +258,7 @@ mutual
   desugarB side ps (PLam fc rig p pat argTy scope)
       = pure $ ILam EmptyFC rig !(traverse (desugar AnyExpr ps) p)
                    (Just (MN "lamc" 0)) !(desugarB AnyExpr ps argTy) $
-                 ICase fc (IVar EmptyFC (MN "lamc" 0)) (Implicit fc False)
+                 ICase fc [] (IVar EmptyFC (MN "lamc" 0)) (Implicit fc False)
                      [snd !(desugarClause ps True (MkPatClause fc pat scope []))]
   desugarB side ps (PLet fc rig (PRef prefFC n) nTy nVal scope [])
       = do whenJust (isConcreteFC prefFC) $ \nfc =>
@@ -266,13 +266,15 @@ mutual
            pure $ ILet fc prefFC rig n !(desugarB side ps nTy) !(desugarB side ps nVal)
                                        !(desugar side (n :: ps) scope)
   desugarB side ps (PLet fc rig pat nTy nVal scope alts)
-      = pure $ ICase fc !(desugarB side ps nVal) !(desugarB side ps nTy)
+      = pure $ ICase fc [] !(desugarB side ps nVal) !(desugarB side ps nTy)
                         !(traverse (map snd . desugarClause ps True)
                             (MkPatClause fc pat scope [] :: alts))
-  desugarB side ps (PCase fc x xs)
-      = pure $ ICase fc !(desugarB side ps x)
-                        (Implicit (virtualiseFC fc) False)
-                        !(traverse (map snd . desugarClause ps True) xs)
+  desugarB side ps (PCase fc opts scr cls)
+      = do opts <- traverse (desugarFnOpt ps) opts
+           scr <- desugarB side ps scr
+           let scrty = Implicit (virtualiseFC fc) False
+           cls <- traverse (map snd . desugarClause ps True) cls
+           pure $ ICase fc opts scr scrty cls
   desugarB side ps (PLocal fc xs scope)
       = let ps' = definedIn xs ++ ps in
             pure $ ILocal fc (concat !(traverse (desugarDecl ps') xs))
@@ -454,7 +456,7 @@ mutual
                 IVar fc (UN $ Basic "MkUnit")]
   desugarB side ps (PIfThenElse fc x t e)
       = let fc = virtualiseFC fc in
-        pure $ ICase fc !(desugarB side ps x) (IVar fc (UN $ Basic "Bool"))
+        pure $ ICase fc [] !(desugarB side ps x) (IVar fc (UN $ Basic "Bool"))
                    [PatClause fc (IVar fc (UN $ Basic "True")) !(desugar side ps t),
                     PatClause fc (IVar fc (UN $ Basic "False")) !(desugar side ps e)]
   desugarB side ps (PComprehension fc ret conds) = do
@@ -674,7 +676,7 @@ mutual
            pure $ bindFun fc ns exp'
                 $ ILam EmptyFC top Explicit (Just (MN "_" 0))
                           (Implicit fc False)
-                          (ICase fc (IVar patFC (MN "_" 0))
+                          (ICase fc [] (IVar patFC (MN "_" 0))
                                (Implicit fc False)
                                (PatClause fcOriginal bpat rest'
                                   :: alts'))
@@ -700,7 +702,7 @@ mutual
            bd <- get Bang
            let fc = virtualiseFC fc
            pure $ bindBangs (bangNames bd) ns $
-                    ICase fc tm' ty'
+                    ICase fc [] tm' ty'
                        (PatClause fc bpat rest'
                                   :: alts')
   expandDo side ps topfc ns (DoLetLocal fc decls :: rest)

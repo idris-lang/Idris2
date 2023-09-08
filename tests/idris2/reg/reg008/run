@@ -1,0 +1,3 @@
+. ../../../testutils.sh
+
+idris2 Vending.idr --debug-elab-check < input

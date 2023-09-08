@@ -1,7 +1,5 @@
-1/1: Building File (File.idr)
-Main> Hello 
+Hello 
 'I'
 dris!
 
 No exceptions occurred
-Main> Bye for now!

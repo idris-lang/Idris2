@@ -376,13 +376,14 @@ mutual
   case_ : OriginDesc -> IndentInfo -> Rule RawImp
   case_ fname indents
       = do start <- location
+           opts <- many fnOpt
            keyword "case"
            scr <- expr fname indents
            keyword "of"
            alts <- block (caseAlt fname)
            end <- location
            pure (let fc = MkFC fname start end in
-                     ICase fc scr (Implicit fc False) alts)
+                     ICase fc opts scr (Implicit fc False) alts)
 
   caseAlt : OriginDesc -> IndentInfo -> Rule ImpClause
   caseAlt fname indents

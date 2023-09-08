@@ -1,5 +1,5 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-banner --no-color --console-width 0 --check fromInteger.idr
-$1 --no-banner --no-color --console-width 0 Num.idr -x main
-$1 --no-banner --no-color --console-width 0 performance.idr -x main
+check fromInteger.idr
+run Num.idr
+run performance.idr

@@ -1,5 +1,3 @@
-1/1: Building TypeCase (TypeCase.idr)
-Main> "Function from Nat to Nat"
+"Function from Nat to Nat"
 "Function from Nat to Vector of 0 Int"
 "Function on Type"
-Main> Bye for now!

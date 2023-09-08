@@ -1,4 +1,0 @@
-rm -rf build
-
-$1 --check Slooow.idr
-
