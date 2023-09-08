@@ -59,6 +59,7 @@ record REPLOpts where
 litStyle : Maybe String -> Maybe LiterateStyle
 litStyle = join . map isLitFile
 
+covering
 export
 defaultOpts : Maybe String -> OutputMode -> List (String, Codegen) -> REPLOpts
 defaultOpts fname outmode cgs
@@ -108,6 +109,7 @@ setMainFile : {auto o : Ref ROpts REPLOpts} ->
 setMainFile src = update ROpts { mainfile      := src,
                                  literateStyle := litStyle src }
 
+covering
 export
 resetProofState : {auto o : Ref ROpts REPLOpts} -> Core ()
 resetProofState = update ROpts { psResult := Nothing,

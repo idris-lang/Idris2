@@ -22,6 +22,7 @@ Compiled: \ {arg:0} => case {arg:0} of
   }
 Refers to: Prelude.Basics.True, Prelude.Basics.False
 Flags: allguarded, covering
+Size change: Prelude.Basics.True: [], Prelude.Basics.False: []
 Issue1831_1> 
 Bye for now!
 1/1: Building Issue1831_2 (Issue1831_2.idr)
@@ -48,5 +49,6 @@ Compiled: \ {arg:0} => case {arg:0} of
   }
 Refers to: Prelude.Basics.True, Prelude.Basics.False
 Flags: allguarded, covering
+Size change: Prelude.Basics.True: [], Prelude.Basics.False: []
 Issue1831_2> 
 Bye for now!

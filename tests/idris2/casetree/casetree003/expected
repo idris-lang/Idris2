@@ -14,6 +14,6 @@ Compiled: \ {arg:1}, {arg:2} => case {arg:2} of
 Refers to: Main.view, Main.idL, Prelude.Basics.Nil, Prelude.Basics.(::)
 Refers to (runtime): Main.view, Main.idL, Main.Nil, Main.(::), Prelude.Basics.Nil, Prelude.Basics.(::)
 Flags: covering
-Size change: Main.idL: [Just (0, Same), Just (2, Smaller), Nothing]
+Size change: Prelude.Basics.Nil: [Just (0, Same)], Prelude.Basics.(::): [Just (0, Same), Just (2, Smaller), Nothing], Main.idL: [Just (0, Same), Just (2, Smaller), Nothing]
 Main> 
 Bye for now!
