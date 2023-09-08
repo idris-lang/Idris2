@@ -1,4 +1,3 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --build dummy.ipkg
-
+idris2 --build dummy.ipkg

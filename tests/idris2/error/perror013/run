@@ -1,0 +1,6 @@
+. ../../../testutils.sh
+
+check EmptyFailing.idr || true
+check EmptyMutual.idr || true
+check EmptyUsing.idr || true
+check EmptyParameters.idr || true

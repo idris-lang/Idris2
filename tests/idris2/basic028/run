@@ -1,6 +1,0 @@
-rm -rf build
-
-unset IDRIS2_PATH
-
-$1 --no-color --console-width 0 --no-banner --no-prelude < input
-

@@ -1,0 +1,10 @@
+. ../../../testutils.sh
+
+export IDRIS2_PACKAGE_PATH=$IDRIS2_PREFIX/$NAME_VERSION
+export IDRIS2_PREFIX=$test_dir/currently/nonexistent/dir/
+
+export IDRIS2_INC_CGS=
+
+idris2 --install ./testpkg.ipkg | sed -r "s/.([0-9]){10}//g" | filter_test_dir
+
+rm -rf currently

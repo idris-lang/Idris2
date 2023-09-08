@@ -1,3 +1,3 @@
-$1 --no-banner --no-color --console-width 0 -p contrib -x main Test.idr
+. ../../testutils.sh
 
-rm -rf build
+run -p contrib Test.idr

@@ -1,8 +1,0 @@
-rm -rf build
-
-$1 --no-color --build test1.ipkg
-$1 --no-color --build test2.ipkg
-$1 --no-color --build test3.ipkg
-$1 --no-color --build test4.ipkg
-$1 --no-color --build test5.ipkg
-

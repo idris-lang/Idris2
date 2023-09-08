@@ -1,8 +1,0 @@
-rm -rf build
-
-$1 --no-color --console-width 0 --check Issue539.idr
-$1 --no-color --console-width 0 --check Issue621.idr
-$1 --no-color --console-width 0 --check Issue1401.idr
-$1 --no-color --console-width 0 --check PR1407.idr
-$1 --no-color --console-width 0 --check Holes.idr
-

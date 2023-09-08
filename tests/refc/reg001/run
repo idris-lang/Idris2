@@ -1,5 +1,5 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --cg refc Issue1843.idr -o test
+idris2 --cg refc Issue1843.idr -o test
 
 ./build/exec/test

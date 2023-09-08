@@ -1,4 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 nomangle1.idr --no-color --no-banner --console-width 0 -o test --cg node
-$1 nomangle2.idr --no-color --no-banner --console-width 0 -o test --cg node
+idris2 nomangle1.idr -o test --cg node
+idris2 nomangle2.idr -o test --cg node

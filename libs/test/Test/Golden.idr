@@ -421,15 +421,21 @@ record TestPool where
 
 ||| Find all the test in the given directory.
 export
-testsInDir : (dirName : String) -> (testNameFilter : String -> Bool) -> (poolName : String) -> List Requirement -> Codegen -> IO TestPool
-testsInDir dirName testNameFilter poolName reqs cg = do
+testsInDir :
+  (dirName : String) ->
+  {default (const True) pred : String -> Bool} ->
+  (poolName : String) ->
+  {default [] requirements : List Requirement} ->
+  {default Nothing codegen : Codegen} ->
+  IO TestPool
+testsInDir dirName poolName = do
   Right names <- listDir dirName
     | Left e => die $ "failed to list " ++ dirName ++ ": " ++ show e
-  let names = [n | n <- names, testNameFilter n]
+  let names = [n | n <- names, pred n]
   let testNames = [dirName ++ "/" ++ n | n <- names]
   testNames <- filter testNames
   when (length testNames == 0) $ die $ "no tests found in " ++ dirName
-  pure $ MkTestPool poolName reqs cg testNames
+  pure $ MkTestPool poolName requirements codegen testNames
     where
       -- Directory without `run` file is not a test
       isTest : (path : String) -> IO Bool

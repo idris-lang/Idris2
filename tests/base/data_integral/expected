@@ -1,5 +1,4 @@
-1/1: Building Integral (Integral.idr)
-Main> "Nat Even"
+"Nat Even"
 [True, True, True, True, True]
 "Nat Odd"
 [True, True, True, True, True]
@@ -7,4 +6,3 @@ Main> "Nat Even"
 [True, True, True, True, True]
 "Integral Odd"
 [True, True, True, True, True, True]
-Main> Bye for now!

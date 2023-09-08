@@ -1,0 +1,6 @@
+. ../../../testutils.sh
+
+check Issue1345.idr || true
+check Issue1496-1.idr || true
+check Issue1496-2.idr || true
+idris2 --build foo.ipkg

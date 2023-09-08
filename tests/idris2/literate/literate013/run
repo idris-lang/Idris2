@@ -1,0 +1,4 @@
+. ../../../testutils.sh
+
+check Lit.lidr
+check LitTeX.tex
