@@ -1,8 +1,6 @@
-1/1: Building Unlines (Unlines.idr)
-Main> "<>"
+"<>"
 "<ab\n>"
 "<a\nb\n>"
 "<>"
 "<ab\n>"
 "<a\nb\n>"
-Main> Bye for now!

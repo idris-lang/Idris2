@@ -1,60 +1,60 @@
-rm -rf build
+. ../../testutils.sh
 
 rm -f output*
 
-$1 --no-color --console-width 0 --ide-mode < input1 > output1
+idris2 --ide-mode < input1 > output1
 diff expected1 output1 >> output
 
-$1 --no-color --console-width 0 --ide-mode < input2 > output2
+idris2 --ide-mode < input2 > output2
 diff expected2 output2 >> output
 
-$1 --no-color --console-width 0 --ide-mode < input3 > output3
+idris2 --ide-mode < input3 > output3
 diff expected3 output3 >> output
 
-$1 --no-color --console-width 0 --ide-mode < input4 > output4
+idris2 --ide-mode < input4 > output4
 diff expected4 output4 >> output
 
-$1 --no-color --console-width 0 --ide-mode < input5 > output5
+idris2 --ide-mode < input5 > output5
 diff expected5 output5 >> output
 
-$1 --no-color --console-width 0 --ide-mode < input6 > output6
+idris2 --ide-mode < input6 > output6
 diff expected6 output6 >> output
 
-$1 --no-color --console-width 0 --ide-mode < input7 > output7
+idris2 --ide-mode < input7 > output7
 diff expected7 output7 >> output
 
-$1 --no-color --console-width 0 --ide-mode < input8 > output8
+idris2 --ide-mode < input8 > output8
 diff expected8 output8 >> output
 
-$1 --no-color --console-width 0 --ide-mode < input9 > output9
+idris2 --ide-mode < input9 > output9
 diff expected9 output9 >> output
 
-$1 --no-color --console-width 0 --ide-mode < inputA > outputA
+idris2 --ide-mode < inputA > outputA
 diff expectedA outputA >> output
 
-$1 --no-color --console-width 0 --ide-mode < inputB > outputB
+idris2 --ide-mode < inputB > outputB
 diff expectedB outputB >> output
 
-$1 --no-color --console-width 0 --ide-mode < inputC > outputC
+idris2 --ide-mode < inputC > outputC
 diff expectedC outputC >> output
 
-$1 --no-color --console-width 0 --ide-mode < inputD > outputD
+idris2 --ide-mode < inputD > outputD
 diff expectedD outputD >> output
 
-$1 --no-color --console-width 0 --ide-mode < inputE > outputE
+idris2 --ide-mode < inputE > outputE
 diff expectedE outputE >> output
 
-$1 --no-color --console-width 0 --ide-mode < inputF > outputF
+idris2 --ide-mode < inputF > outputF
 diff expectedF outputF >> output
 
-$1 --no-color --console-width 0 --ide-mode < inputG > outputG
+idris2 --ide-mode < inputG > outputG
 diff expectedG outputG >> output
 
-$1 --no-color --console-width 0 --ide-mode < inputH > outputH
+idris2 --ide-mode < inputH > outputH
 diff expectedH outputH >> output
 
-$1 --no-color --console-width 0 --ide-mode < inputI > outputI
+idris2 --ide-mode < inputI > outputI
 diff expectedI outputI >> output
 
-$1 --no-color --console-width 0 --ide-mode < inputJ > outputJ
+idris2 --ide-mode < inputJ > outputJ
 diff expectedJ outputJ >> output

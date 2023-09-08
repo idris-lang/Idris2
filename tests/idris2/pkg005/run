@@ -1,6 +1,0 @@
-rm -rf build
-
-$1 --clean foo.ipkg
-$1 --repl foo.ipkg < input
-$1 --repl foo.ipkg < input
-

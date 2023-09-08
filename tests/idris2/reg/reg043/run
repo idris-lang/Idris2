@@ -1,0 +1,7 @@
+. ../../../testutils.sh
+
+check NotFake.idr
+
+echo "TT2This Is A Fake TTC" > build/ttc/$(ls build/ttc)/Fake.ttc
+
+check TestFake.idr

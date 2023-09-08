@@ -1,4 +1,3 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --check fixity.idr
-
+check fixity.idr

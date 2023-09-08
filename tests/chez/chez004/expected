@@ -1,5 +1,4 @@
-1/1: Building Buffer (Buffer.idr)
-Main> 100
+100
 94
 94.42
 bytes: 27
@@ -21,4 +20,3 @@ total size = 20
 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00         ................
 
 total size = 80
-Main> Bye for now!

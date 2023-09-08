@@ -1,4 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --yaffle Record.yaff < input
-$1 --yaffle build/ttc/*/Record.ttc < input
+idris2 --yaffle Record.yaff < input
+idris2 --yaffle build/ttc/*/Record.ttc < input
