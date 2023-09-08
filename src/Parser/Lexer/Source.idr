@@ -150,10 +150,11 @@ mutual
   toEndComment : (k : Nat) -> Recognise (k /= 0)
   toEndComment Z = empty
   toEndComment (S k)
-               = some (pred (\c => c /= '-' && c /= '{' && c /= '"'))
+               = some (pred (\c => c /= '-' && c /= '{' && c /= '"' && c /= '\''))
                         <+> (eof <|> toEndComment (S k))
              <|> is '{' <+> singleBrace k
              <|> is '-' <+> singleDash k
+             <|> (charLit <|> pred (== '\'')) <+> toEndComment (S k)
              <|> stringLit <+> toEndComment (S k)
 
   ||| After reading a single brace, we may either finish reading an

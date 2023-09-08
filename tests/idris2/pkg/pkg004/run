@@ -1,0 +1,3 @@
+. ../../../testutils.sh
+
+idris2 --repl dummy.ipkg < input

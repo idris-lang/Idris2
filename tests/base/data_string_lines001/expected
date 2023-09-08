@@ -1,5 +1,4 @@
-1/1: Building Lines (Lines.idr)
-Main> []
+[]
 ["ab"]
 ["ab"]
 ["ab", "cd"]
@@ -7,4 +6,3 @@ Main> []
 ["a", "b"]
 ["a", "b"]
 ["", "", ""]
-Main> Bye for now!

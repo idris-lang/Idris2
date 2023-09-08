@@ -251,8 +251,8 @@ withRHS fc drop wname wargnames tm toplhs
           = pure $ ILam fc c p n !(wrhs ty) !(wrhs sc)
       wrhs (ILet fc lhsFC c n ty val sc)
           = pure $ ILet fc lhsFC c n !(wrhs ty) !(wrhs val) !(wrhs sc)
-      wrhs (ICase fc sc ty clauses)
-          = pure $ ICase fc !(wrhs sc) !(wrhs ty) !(traverse wrhsC clauses)
+      wrhs (ICase fc opts sc ty clauses)
+          = pure $ ICase fc opts !(wrhs sc) !(wrhs ty) !(traverse wrhsC clauses)
       wrhs (ILocal fc decls sc)
           = pure $ ILocal fc decls !(wrhs sc) -- TODO!
       wrhs (IUpdate fc upds tm)

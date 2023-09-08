@@ -1,0 +1,3 @@
+. ../../../testutils.sh
+
+idris2 Test.idr < input

@@ -1,6 +1,5 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --no-banner -c SearchReader.idr
-$1 --no-color --console-width 0 --no-banner -c SearchWriter.idr
-$1 --no-color --console-width 0 --no-banner -c SearchState.idr
-
+check SearchReader.idr
+check SearchWriter.idr
+check SearchState.idr

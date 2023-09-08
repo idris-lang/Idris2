@@ -1,3 +1,5 @@
-$1 --no-color --console-width 0 --no-banner partial.idr < input
+. ../../testutils.sh
+
+idris2 partial.idr < input
 
 rm -rf build testout.txt

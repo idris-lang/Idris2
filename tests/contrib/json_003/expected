@@ -1,3 +1,1 @@
-1/1: Building CastJSON (CastJSON.idr)
-Main> {"a":null,"b":true,"c":1.0,"d":"Hello, world","e":["Lorem","ipsum"]}
-Main> Bye for now!
+{"a":null,"b":true,"c":1.0,"d":"Hello, world","e":["Lorem","ipsum"]}

@@ -40,6 +40,12 @@
 * Non-recursive top-level constants are compiled to eagerly evaluated
   constants in Chez Scheme.
 
+#### Racket
+
+* FFI declarations can now specify which `require` to perform, i.e. which
+  library to load before executing the FFI.
+  The syntax is `scheme,racket:my-function,my-library`.
+
 #### Node.js/Browser
 
 * Generated JavaScript files now include a shebang when using the Node.js backend
@@ -102,6 +108,11 @@
 * Fixed a bug that caused `f` to sometimes be replaced by `fx` after matching `fx = f x`.
 
 * Fixed elaboration of interfaces when `%unbound_implicits` is turned off.
+
+* Refactor the idris2protocols package to depend on fewer Idris2 modules.
+  We can now export the package independently.
+  To avoid confusing tooling about which `.ipkg` to use, the
+  package file is under the newly added `ipkg` sub-directory.
 
 ### Library changes
 
@@ -187,6 +198,10 @@
 
 * The `Data.List1` functions `foldr1` and `foldr1By` are now `public export`.
 
+* Added `uncons' : List a -> Maybe (a, List a)` to `base`.
+
+* Adds `infixOfBy` and `isInfixOfBy` into `Data.List`.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
@@ -239,6 +254,8 @@
 * Fixes an error in the `Makefile` where setting `IDRIS2_PREFIX` caused
   bootstrapping to fail.
 * Updates the docs for `envvars` to match the changes introduced in #2649.
+* Both `make install` and `idris2 --install...` now respect `DESTDIR` which
+  can be set to install into a staging directory for distro packaging.
 
 ## v0.6.0
 

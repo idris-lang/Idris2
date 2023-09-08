@@ -1,5 +1,0 @@
-rm -rf build
-
-$1 --no-color --console-width 0 --no-banner B.idr < input
-$1 --no-color --console-width 0 --no-banner C.idr < input
-

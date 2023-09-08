@@ -165,4 +165,41 @@ long win32_getNProcessors() {
 
 int win32_getFileNo(FILE *f) { return _fileno(f); }
 
+int win32_getFileTime(FILE *f, int *atime_sec, int *atime_nsec, int *mtime_sec,
+                      int *mtime_nsec, int *ctime_sec, int *ctime_nsec) {
+  HANDLE wh = (HANDLE)_get_osfhandle(_fileno(f));
+  if (wh == INVALID_HANDLE_VALUE) {
+    return -1;
+  }
+
+  FILETIME atime, mtime, ctime;
+
+  if (GetFileTime(wh, &ctime, &atime, &mtime)) {
+    ULARGE_INTEGER at, mt, ct;
+
+    at.HighPart = atime.dwHighDateTime;
+    at.LowPart = atime.dwLowDateTime;
+    mt.HighPart = mtime.dwHighDateTime;
+    mt.LowPart = mtime.dwLowDateTime;
+    ct.HighPart = ctime.dwHighDateTime;
+    ct.LowPart = ctime.dwLowDateTime;
+
+    *atime_sec = at.QuadPart / 10000000;
+    *atime_sec -= 11644473600;
+    *atime_nsec = (at.QuadPart % 10000000) * 100;
+
+    *mtime_sec = mt.QuadPart / 10000000;
+    *mtime_sec -= 11644473600;
+    *mtime_nsec = (mt.QuadPart % 10000000) * 100;
+
+    *ctime_sec = ct.QuadPart / 10000000;
+    *ctime_sec -= 11644473600;
+    *ctime_nsec = (ct.QuadPart % 10000000) * 100;
+
+    return 0;
+  } else {
+    return -1;
+  }
+}
+
 int win32_isTTY(int fd) { return _isatty(fd); }

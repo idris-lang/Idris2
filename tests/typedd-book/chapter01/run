@@ -1,5 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 All.idr --check
-$1 --no-color --console-width 0 --no-banner HoleFix.idr < input
-
+check All.idr
+idris2 HoleFix.idr < input
