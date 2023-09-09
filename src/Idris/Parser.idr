@@ -1930,31 +1930,24 @@ import_ fname indents
          pure (MkImport (boundToFC fname b) reexp ns nsAs)
 
 export
-prog : OriginDesc -> EmptyRule Module
-prog fname
+progHdr : OriginDesc -> EmptyRule Module
+progHdr fname
     = do b <- bounds (do doc    <- optDocumentation fname
                          nspace <- option (nsAsModuleIdent mainNS)
                                      (do decoratedKeyword fname "module"
                                          decorate fname Module $ mustWork moduleIdent)
                          imports <- block (import_ fname)
                          pure (doc, nspace, imports))
-         ds      <- block (topDecl fname)
-         (doc, nspace, imports) <- pure b.val
-         pure (MkModule (boundToFC fname b)
-                        nspace imports doc (collectDefs (concat ds)))
-
-export
-progHdr : OriginDesc -> EmptyRule Module
-progHdr fname
-    = do b <- bounds (do doc    <- optDocumentation fname
-                         nspace <- option (nsAsModuleIdent mainNS)
-                                     (do decoratedKeyword fname "module"
-                                         mustWork moduleIdent)
-                         imports <- block (import_ fname)
-                         pure (doc, nspace, imports))
          (doc, nspace, imports) <- pure b.val
          pure (MkModule (boundToFC fname b)
                         nspace imports doc [])
+
+export
+prog : OriginDesc -> EmptyRule Module
+prog fname
+    = do mod <- progHdr fname
+         ds <- block (topDecl fname)
+         pure $ { decls := collectDefs (concat ds)} mod
 
 parseMode : Rule REPLEval
 parseMode
