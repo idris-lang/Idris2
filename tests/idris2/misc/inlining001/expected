@@ -19,22 +19,26 @@ Compile time tree: 10
 Compiled: 10
 Refers to: Prelude.Types.Z, Prelude.Types.S
 Flags: allguarded, covering, noinline
+Size change: Prelude.Types.S: [Nothing], Prelude.Types.Z: []
 Main> Main.heuristicPublicInline
 Arguments []
 Compile time tree: 2
 Compiled: 2
 Refers to: Prelude.Types.Z, Prelude.Types.S
 Flags: inline, allguarded, covering
+Size change: Prelude.Types.S: [Nothing], Prelude.Types.Z: []
 Main> Main.exportedForced
 Arguments []
 Compile time tree: 33
 Compiled: 33
 Refers to: Prelude.Types.Z, Prelude.Types.S
 Flags: allguarded, covering, inline
+Size change: Prelude.Types.S: [Nothing], Prelude.Types.Z: []
 Main> Main.exportedUnforced
 Arguments []
 Compile time tree: 66
 Compiled: 66
 Refers to: Prelude.Types.Z, Prelude.Types.S
 Flags: allguarded, covering
+Size change: Prelude.Types.S: [Nothing], Prelude.Types.Z: []
 Main> Bye for now!

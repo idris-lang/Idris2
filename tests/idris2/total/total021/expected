@@ -1,0 +1,27 @@
+1/1: Building Issue-3030 (Issue-3030.idr)
+Error: boom is not total, possibly not terminating due to function Main.MkOops being reachable via Main.oops -> Main.MkOops
+
+Issue-3030:16:1--17:12
+ 16 | total
+ 17 | boom : Void
+
+Error: boom2 is not total, possibly not terminating due to function Main.MkFoo being reachable via Main.foo -> Main.MkFoo
+
+Issue-3030:31:1--32:13
+ 31 | total
+ 32 | boom2 : Void
+
+1/1: Building Issue-3030b (Issue-3030b.idr)
+Error: boom is not total, possibly not terminating due to function Main.MkOops being reachable via Main.oops -> Main.MkOops
+
+Issue-3030b:16:1--17:12
+ 16 | total
+ 17 | boom : Void
+
+1/1: Building Issue-524 (Issue-524.idr)
+Error: ohno is not total, possibly not terminating due to function Main.MkBad being reachable via Main.bad -> Main.MkBad
+
+Issue-524:12:1--13:12
+ 12 | total
+ 13 | ohno : Void
+
