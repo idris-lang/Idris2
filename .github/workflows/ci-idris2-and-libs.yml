@@ -619,10 +619,11 @@ jobs:
       # by default, pack uses the main idris2 head, not the current job's one
       - name: Toml setup
         run: |
-          echo "[idris2]" > pack.toml
-          echo "url = \"https://github.com/${GITHUB_REPOSITORY}\"" >> pack.toml
-          echo "commit = \"latest:${GITHUB_REF_NAME}\"" >> pack.toml
-          echo "bootstrap  = true" >> pack.toml
+          { echo "[idris2]"
+            echo "url = \"https://github.com/${GITHUB_REPOSITORY}\""
+            echo "commit = \"latest:${GITHUB_REF_NAME}\""
+            echo "bootstrap  = true"
+          } > pack.toml
       - name: Build idris2-pack
         run: |
           git config --global --add safe.directory "${PWD}"
@@ -653,10 +654,11 @@ jobs:
           repository: 'idris-community/idris2-lsp'
       - name: Toml setup
         run: |
-          echo "[idris2]" > pack.toml
-          echo "url = \"https://github.com/${GITHUB_REPOSITORY}\"" >> pack.toml
-          echo "commit = \"latest:${GITHUB_REF_NAME}\"" >> pack.toml
-          echo "bootstrap  = true" >> pack.toml
+          { echo "[idris2]"
+            echo "url = \"https://github.com/${GITHUB_REPOSITORY}\""
+            echo "commit = \"latest:${GITHUB_REF_NAME}\""
+            echo "bootstrap  = true"
+          } > pack.toml
       # make sure pack is running the PR's Idris2 before building LSP
       - name: Build pack with PR-Idris
         run: |
