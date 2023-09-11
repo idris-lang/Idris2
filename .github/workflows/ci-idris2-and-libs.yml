@@ -499,7 +499,7 @@ jobs:
   ######################################################################
 
   ub-test-collie:
-    needs: ubuntu-self-host-previous-version
+    needs: [initialise, ubuntu-self-host-previous-version]
     runs-on: ubuntu-latest
     if: |
       !contains(needs.initialise.outputs.commit_message, '[ci:')
@@ -531,7 +531,7 @@ jobs:
   ########################################################################
 
   ub-test-frex:
-    needs: ubuntu-self-host-previous-version
+    needs: [initialise, ubuntu-self-host-previous-version]
     runs-on: ubuntu-latest
     if: |
       !contains(needs.initialise.outputs.commit_message, '[ci:')
@@ -566,7 +566,7 @@ jobs:
   # ELAB-UTIL
 
   ub-test-elab-util:
-    needs: ubuntu-self-host-previous-version
+    needs: [initialise, ubuntu-self-host-previous-version]
     runs-on: ubuntu-latest
     if: |
       !contains(needs.initialise.outputs.commit_message, '[ci:')
@@ -599,7 +599,7 @@ jobs:
   # already, and then use pack to rebuild pack with this job's idris2 sources
 
   ub-pack-test-pack:
-    needs: ubuntu-self-host-previous-version
+    needs: [initialise, ubuntu-self-host-previous-version]
     runs-on: ubuntu-latest
     if: |
       !contains(needs.initialise.outputs.commit_message, '[ci:')
@@ -634,7 +634,7 @@ jobs:
   ######################################################################
 
   ub-pack-test-lsp:
-    needs: ubuntu-self-host-previous-version
+    needs: [initialise, ubuntu-self-host-previous-version]
     runs-on: ubuntu-latest
     if: |
       !contains(needs.initialise.outputs.commit_message, '[ci:')
@@ -672,7 +672,7 @@ jobs:
   ######################################################################
 
   ub-test-katla-and-html:
-    needs: ubuntu-self-host-previous-version
+    needs: [initialise, ubuntu-self-host-previous-version]
     runs-on: ubuntu-latest
     if: |
       !contains(needs.initialise.outputs.commit_message, '[ci:')
