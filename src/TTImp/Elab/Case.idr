@@ -460,9 +460,10 @@ checkCase rig elabinfo nest env fc opts scr scrty_in alts exp
         = case getFn x of
                IVar _ n =>
                   do defs <- get Ctxt
-                     [(n', (_, ty))] <- do nested <- maybe (pure []) (\n => lookupTyName n (gamma defs))
-                                                      (join $ Builtin.fst <$> List.lookup n nest.names)
-                                           (nested ++) <$> lookupTyName n (gamma defs)
+                     let n' = case lookup n (names nest) of
+                                Just (Just n', _) => n'
+                                _ => n
+                     [(_, (_, ty))] <- lookupTyName n' (gamma defs)
                          | _ => guessScrType xs
                      Just (tyn, tyty) <- getRetTy defs !(nf defs [] ty)
                          | _ => guessScrType xs
