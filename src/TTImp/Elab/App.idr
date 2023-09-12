@@ -836,9 +836,7 @@ checkApp rig elabinfo nest env fc (IVar fc' n) expargs autoargs namedargs exp
                           " to " ++ show expargs ++ "\n\tFunction type " ++
                           (show !(toFullNames fnty)) ++ "\n\tExpected app type "
                                 ++ show exptyt))
-        let fn = case lookup n (names nest) of
-                      Just (Just n', _) => n'
-                      _ => n
+        let fn = mapNestedName nest n
         normalisePrims prims env
            !(checkAppWith rig elabinfo nest env fc ntm nty (Just fn, arglen) expargs autoargs namedargs False exp)
   where

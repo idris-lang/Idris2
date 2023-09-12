@@ -13,6 +13,7 @@ import Core.Value
 import Idris.Syntax
 import Idris.REPL.Opts
 
+import TTImp.Elab.App
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.Elab.ImplicitBind
@@ -460,10 +461,7 @@ checkCase rig elabinfo nest env fc opts scr scrty_in alts exp
         = case getFn x of
                IVar _ n =>
                   do defs <- get Ctxt
-                     let n' = case lookup n (names nest) of
-                                Just (Just n', _) => n'
-                                _ => n
-                     [(_, (_, ty))] <- lookupTyName n' (gamma defs)
+                     [(_, (_, ty))] <- lookupTyName (mapNestedName nest n) (gamma defs)
                          | _ => guessScrType xs
                      Just (tyn, tyty) <- getRetTy defs !(nf defs [] ty)
                          | _ => guessScrType xs
