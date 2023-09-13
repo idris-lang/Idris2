@@ -560,7 +560,7 @@ mutual
         emit EmptyFC $ "  {"
         increaseIndentation
         varBindLines (varName sc) args Z
-        (shouldDrop, actualReuseMap) <- addReuseConstructor env.reuseMap conArgs usedCons shouldDrop actualReuseMap
+        (shouldDrop, actualReuseMap) <- addReuseConstructor env.reuseMap (varName <$> conArgs) usedCons shouldDrop actualReuseMap
         removeVars shouldDrop
         removeReuseConstructors dropReuseCons
         locally ({owned := actualOwned, reuseMap := actualReuseMap} env) $ do
@@ -573,7 +573,7 @@ mutual
     where
         -- if the constructor is unique use it, otherwise add it to should drop vars and create null constructor
         addReuseConstructor : ReuseMap
-                            -> List AVar
+                            -> List String
                             -> SortedSet Name
                             -> List String
                             -> SortedMap Name String
@@ -596,14 +596,15 @@ mutual
                 -- Otherwise, delete and duplicate constructor variables
                 emit EmptyFC "else {"
                 increaseIndentation
-                dupVars (varName <$> conArgs)
+                -- remove dup and remove if they are executed for the same argument
+                dupVars (conArgs \\ shouldDrop)
                 removeVars [varName sc]
                 decreaseIndentation
                 emit EmptyFC "}"
-                pure (delete (varName sc) shouldDrop, insert conName constr actualReuseConsts)
+                pure (shouldDrop \\ (varName sc :: conArgs), insert conName constr actualReuseConsts)
             else do
-                dupVars (varName <$> conArgs)
-                pure (shouldDrop, actualReuseConsts)
+                dupVars $ conArgs \\ shouldDrop
+                pure (shouldDrop \\ conArgs, actualReuseConsts)
 
         varBindLines : String -> (args : List Int) -> Nat -> Core ()
         varBindLines _ [] _ = pure ()
