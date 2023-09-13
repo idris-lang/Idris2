@@ -63,9 +63,9 @@ data Infer : Scoped where
   -- This is fairly unconventional: in order to support overloaded
   -- data constructors disambiguated in a type-direct manner, we would
   -- typically put zero, suc, & friends in `Check`.
-  ||| The zero constructor is inferable
+  ||| The zero constructor is inferrable
   Zro : Infer f g
-  ||| The successor constructor is inferable
+  ||| The successor constructor is inferrable
   Suc : Check f g -> Infer f g
   ||| Pi is inferrable
   Pi : (a : Check f g) -> (b : Abs Check f g) -> Infer f g
@@ -82,7 +82,7 @@ infixl 3 `App`
 
 total
 data Check : Scoped where
-  ||| Inferable terms are trivially checkable
+  ||| Inferrable terms are trivially checkable
   Emb : Infer f g -> Check f g
   ||| A function binding its argument
   Lam : Abs Check f g -> Check f g

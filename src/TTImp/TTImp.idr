@@ -13,6 +13,8 @@ import Data.List
 import Data.List1
 import Data.Maybe
 
+import Libraries.Data.SortedSet
+
 %default covering
 
 -- Information about names in nested blocks
@@ -66,7 +68,7 @@ mutual
        ILet : FC -> (lhsFC : FC) -> RigCount -> Name ->
               (nTy : RawImp' nm) -> (nVal : RawImp' nm) ->
               (scope : RawImp' nm) -> RawImp' nm
-       ICase : FC -> RawImp' nm -> (ty : RawImp' nm) ->
+       ICase : FC -> List (FnOpt' nm) -> RawImp' nm -> (ty : RawImp' nm) ->
                List (ImpClause' nm) -> RawImp' nm
        ILocal : FC -> List (ImpDecl' nm) -> RawImp' nm -> RawImp' nm
        -- Local definitions made elsewhere, but that we're pushing
@@ -161,7 +163,7 @@ mutual
       show (ILet fc lhsFC c n ty val sc)
          = "(%let " ++ show c ++ " " ++ " " ++ show n ++ " " ++ show ty ++
            " " ++ show val ++ " " ++ show sc ++ ")"
-      show (ICase _ scr scrty alts)
+      show (ICase _ _ scr scrty alts)
          = "(%case (" ++ show scr ++ " : " ++ show scrty ++ ") " ++ show alts ++ ")"
       show (ILocal _ def scope)
          = "(%local (" ++ show def ++ ") " ++ show scope ++ ")"
@@ -772,7 +774,7 @@ export
 definedInBlock : Namespace -> -- namespace to resolve names
                  List ImpDecl -> List Name
 definedInBlock ns decls =
-    concatMap (defName ns) decls
+    SortedSet.toList $ foldl (defName ns) empty decls
   where
     getName : ImpTy -> Name
     getName (MkImpTy _ _ n _) = n
@@ -788,16 +790,17 @@ definedInBlock ns decls =
            DN _ _ => NS ns n
            _ => n
 
-    defName : Namespace -> ImpDecl -> List Name
-    defName ns (IClaim _ _ _ _ ty) = [expandNS ns (getName ty)]
-    defName ns (IData _ _ _ (MkImpData _ n _ _ cons))
-        = expandNS ns n :: map (expandNS ns) (map getName cons)
-    defName ns (IData _ _ _ (MkImpLater _ n _)) = [expandNS ns n]
-    defName ns (IParameters _ _ pds) = concatMap (defName ns) pds
-    defName ns (IFail _ _ nds) = concatMap (defName ns) nds
-    defName ns (INamespace _ n nds) = concatMap (defName (ns <.> n)) nds
-    defName ns (IRecord _ fldns _ _ (MkImpRecord _ n _ opts con flds))
-        = expandNS ns con :: all
+    defName : Namespace -> SortedSet Name -> ImpDecl -> SortedSet Name
+    defName ns acc (IClaim _ _ _ _ ty) = insert (expandNS ns (getName ty)) acc
+    defName ns acc (IDef _ nm _) = insert (expandNS ns nm) acc
+    defName ns acc (IData _ _ _ (MkImpData _ n _ _ cons))
+        = foldl (flip insert) acc $ expandNS ns n :: map (expandNS ns . getName) cons
+    defName ns acc (IData _ _ _ (MkImpLater _ n _)) = insert (expandNS ns n) acc
+    defName ns acc (IParameters _ _ pds) = foldl (defName ns) acc pds
+    defName ns acc (IFail _ _ nds) = foldl (defName ns) acc nds
+    defName ns acc (INamespace _ n nds) = foldl (defName (ns <.> n)) acc nds
+    defName ns acc (IRecord _ fldns _ _ (MkImpRecord _ n _ opts con flds))
+        = foldl (flip insert) acc $ expandNS ns con :: all
       where
         fldns' : Namespace
         fldns' = maybe ns (\ f => ns <.> mkNamespace f) fldns
@@ -822,8 +825,8 @@ definedInBlock ns decls =
         all : List Name
         all = expandNS ns n :: map (expandNS fldns') (fnsRF ++ fnsUN)
 
-    defName ns (IPragma _ pns _) = map (expandNS ns) pns
-    defName _ _ = []
+    defName ns acc (IPragma _ pns _) = foldl (flip insert) acc $ map (expandNS ns) pns
+    defName _ acc _ = acc
 
 export
 isIVar : RawImp' nm -> Maybe (FC, nm)
@@ -841,7 +844,7 @@ getFC (IVar x _) = x
 getFC (IPi x _ _ _ _ _) = x
 getFC (ILam x _ _ _ _ _) = x
 getFC (ILet x _ _ _ _ _ _) = x
-getFC (ICase x _ _ _) = x
+getFC (ICase x _ _ _ _) = x
 getFC (ILocal x _ _) = x
 getFC (ICaseLocal x _ _ _ _) = x
 getFC (IUpdate x _ _) = x

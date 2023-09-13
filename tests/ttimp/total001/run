@@ -1,4 +1,3 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --yaffle Vect.yaff < input
-
+idris2 --yaffle Vect.yaff < input

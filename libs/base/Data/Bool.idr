@@ -71,6 +71,17 @@ orNotTrue : (x : Bool) -> x || not x = True
 orNotTrue False = Refl
 orNotTrue True = Refl
 
+export
+orBothFalse : {0 x, y : Bool} -> (0 prf : x || y = False) -> (x = False, y = False)
+orBothFalse prf = unerase $ orBothFalse' prf
+  where
+    unerase : (0 prf : (x = False, y = False)) -> (x = False, y = False)
+    unerase (p, q) = (irrelevantEq p, irrelevantEq q)
+
+    orBothFalse' : {x, y : Bool} -> x || y = False -> (x = False, y = False)
+    orBothFalse' {x = False} yFalse = (Refl, yFalse)
+    orBothFalse' {x = True} trueFalse = absurd trueFalse
+
 -- interaction & De Morgan's laws
 
 export

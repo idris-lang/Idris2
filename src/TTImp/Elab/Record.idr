@@ -196,7 +196,7 @@ recUpdate rigc elabinfo iloc nest env flds rec grecty
            fldn <- genFieldName "__fld"
            sides <- getAllSides iloc flds rectyn rec
                                 (Field Nothing fldn (IVar vloc (UN $ Basic fldn)))
-           pure $ ICase vloc rec (Implicit vloc False) [mkClause sides]
+           pure $ ICase vloc [] rec (Implicit vloc False) [mkClause sides]
   where
     vloc : FC
     vloc = virtualiseFC iloc

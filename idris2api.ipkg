@@ -192,6 +192,7 @@ modules =
 
     Libraries.System.File,
     Libraries.System.File.Buffer,
+    Libraries.System.File.Meta,
     Libraries.System.Directory.Tree,
 
     Libraries.Text.Bounded,
@@ -224,6 +225,7 @@ modules =
     Parser.Package,
     Parser.Source,
     Parser.Support,
+    Parser.Support.Escaping,
     Parser.Unlit,
 
     Parser.Lexer.Common,
@@ -255,6 +257,7 @@ modules =
     TTImp.ProcessDecls,
     TTImp.ProcessDecls.Totality,
     TTImp.ProcessDef,
+    TTImp.ProcessFnOpt,
     TTImp.ProcessParams,
     TTImp.ProcessRecord,
     TTImp.ProcessRunElab,

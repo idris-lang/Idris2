@@ -53,7 +53,7 @@ public export
 public export
 [BiinjFromComp] {f : a -> b -> c} -> {g : c -> d} ->
   Biinjective (g .: f) => Biinjective f where
-    biinjective = biinjective {f = (g .: f)} . cong g
+    biinjective prf = biinjective {f = (g .: f)} $ cong g prf
 
 public export
 [FlipBiinjective] {f : a -> b -> c} ->

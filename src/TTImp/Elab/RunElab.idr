@@ -80,6 +80,11 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
         = do defs <- get Ctxt
              nfOpts withAll defs env !(reflect fc defs False env tm)
 
+    reifyFC : Defs -> Closure vars -> Core FC
+    reifyFC defs mbfc = pure $ case !(evalClosure defs mbfc >>= reify defs) of
+      EmptyFC => fc
+      x       => x
+
     elabCon : Defs -> String -> List (Closure vars) -> Core (NF vars)
     elabCon defs "Pure" [_,val]
         = do empty <- clearDefs defs
@@ -99,10 +104,11 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
              elabScript rig fc nest env r exp
     elabCon defs "Fail" [_, mbfc, msg]
         = do msg' <- evalClosure defs msg
-             let customFC = case !(evalClosure defs mbfc >>= reify defs) of
-                               EmptyFC => fc
-                               x       => x
-             throw $ RunElabFail $ GenericMsg customFC !(reify defs msg')
+             throw $ RunElabFail $ GenericMsg !(reifyFC defs mbfc) !(reify defs msg')
+    elabCon defs "Warn" [mbfc, msg]
+        = do msg' <- evalClosure defs msg
+             recordWarning $ GenericWarn !(reifyFC defs mbfc) !(reify defs msg')
+             scriptRet ()
     elabCon defs "Try" [_, elab1, elab2]
         = tryUnify (do constart <- getNextEntry
                        res <- elabScript rig fc nest env !(evalClosure defs elab1) exp

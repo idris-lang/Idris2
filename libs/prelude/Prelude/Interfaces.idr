@@ -87,7 +87,7 @@ interface Functor f where
 ||| in a parameterised type.
 ||| @ f the parameterised type
 ||| @ func the function to apply
-%inline public export
+%inline %tcinline public export
 (<$>) : Functor f => (func : a -> b) -> f a -> f b
 (<$>) func x = map func x
 
@@ -95,22 +95,22 @@ interface Functor f where
 ||| everything of type 'a' in a parameterised type.
 ||| @ f the parameterised type
 ||| @ func the function to apply
-%inline public export
+%inline %tcinline public export
 (<&>) : Functor f => f a -> (func : a -> b) -> f b
 (<&>) x func = map func x
 
 ||| Run something for effects, replacing the return value with a given parameter.
-%inline public export
+%inline %tcinline public export
 (<$) : Functor f => b -> f a -> f b
 (<$) b = map (const b)
 
 ||| Flipped version of `<$`.
-%inline public export
+%inline %tcinline public export
 ($>) : Functor f => f a -> b -> f b
 ($>) fa b = map (const b) fa
 
 ||| Run something for effects, throwing away the return value.
-%inline public export
+%inline %tcinline public export
 ignore : Functor f => f a -> f ()
 ignore = map (const ())
 
@@ -156,7 +156,7 @@ interface Bifunctor f where
   mapSnd : (b -> d) -> f a b -> f a d
   mapSnd = bimap id
 
-public export
+public export %tcinline
 mapHom : Bifunctor f => (a -> b) -> f a a -> f b b
 mapHom f = bimap f f
 
@@ -175,11 +175,11 @@ interface Functor f => Applicative f where
   pure : a -> f a
   (<*>) : f (a -> b) -> f a -> f b
 
-public export
+public export %tcinline
 (<*) : Applicative f => f a -> f b -> f a
 a <* b = map const a <*> b
 
-public export
+public export %tcinline
 (*>) : Applicative f => f a -> f b -> f b
 a *> b = map (const id) a <*> b
 
@@ -225,22 +225,22 @@ interface Applicative m => Monad m where
 %allow_overloads (>>=)
 
 ||| Right-to-left monadic bind, flipped version of `>>=`.
-%inline public export
+%inline %tcinline public export
 (=<<) : Monad m => (a -> m b) -> m a -> m b
 (=<<) = flip (>>=)
 
 ||| Sequencing of effectful composition
-%inline public export
+%inline %tcinline public export
 (>>) : Monad m => m () -> Lazy (m b) -> m b
 a >> b = a >>= \_ => b
 
 ||| Left-to-right Kleisli composition of monads.
-public export
+public export %tcinline
 (>=>) : Monad m => (a -> m b) -> (b -> m c) -> (a -> m c)
 (>=>) f g = \x => f x >>= g
 
 ||| Right-to-left Kleisli composition of monads, flipped version of `>=>`.
-public export
+public export %tcinline
 (<=<) : Monad m => (b -> m c) -> (a -> m b) -> (a -> m c)
 (<=<) = flip (>=>)
 
@@ -256,7 +256,7 @@ when True f = f
 when False f = pure ()
 
 ||| Execute an applicative expression unless the boolean is true.
-%inline public export
+%inline %tcinline public export
 unless : Applicative f => Bool -> Lazy (f ()) -> f ()
 unless = when . not
 
@@ -310,13 +310,13 @@ interface Foldable t where
   foldMap f = foldr ((<+>) . f) neutral
 
 ||| Combine each element of a structure into a monoid.
-%inline public export
+%inline %tcinline public export
 concat : Monoid a => Foldable t => t a -> a
 concat = foldMap id
 
 ||| Combine into a monoid the collective results of applying a function to each
 ||| element of a structure.
-%inline public export
+%inline %tcinline public export
 concatMap : Monoid m => Foldable t => (a -> m) -> t a -> m
 concatMap = foldMap
 
@@ -342,14 +342,14 @@ namespace Bool.Lazy
 ||| The conjunction of all elements of a structure containing lazy boolean
 ||| values.  `and` short-circuits from left to right, evaluating until either an
 ||| element is `False` or no elements remain.
-public export
+public export %tcinline
 and : Foldable t => t (Lazy Bool) -> Bool
 and = force . concat @{All}
 
 ||| The disjunction of all elements of a structure containing lazy boolean
 ||| values.  `or` short-circuits from left to right, evaluating either until an
 ||| element is `True` or no elements remain.
-public export
+public export %tcinline
 or : Foldable t => t (Lazy Bool) -> Bool
 or = force . concat @{Any}
 
@@ -374,13 +374,13 @@ namespace Bool
 
 ||| The disjunction of the collective results of applying a predicate to all
 ||| elements of a structure.  `any` short-circuits from left to right.
-%inline public export
+%inline %tcinline public export
 any : Foldable t => (a -> Bool) -> t a -> Bool
 any = foldMap @{%search} @{Any}
 
 ||| The conjunction of the collective results of applying a predicate to all
 ||| elements of a structure.  `all` short-circuits from left to right.
-%inline public export
+%inline %tcinline public export
 all : Foldable t => (a -> Bool) -> t a -> Bool
 all = foldMap @{%search} @{All}
 
@@ -404,40 +404,40 @@ namespace Num
       neutral = 1
 
 ||| Add together all the elements of a structure.
-public export
+public export %tcinline
 sum : Num a => Foldable t => t a -> a
 sum = concat @{Additive}
 
 ||| Add together all the elements of a structure.
 ||| Same as `sum` but tail recursive.
-export
+export %tcinline
 sum' : Num a => Foldable t => t a -> a
 sum' = sum
 
 ||| Multiply together all elements of a structure.
-public export
+public export %tcinline
 product : Num a => Foldable t => t a -> a
 product = concat @{Multiplicative}
 
 ||| Multiply together all elements of a structure.
 ||| Same as `product` but tail recursive.
-export
+export %tcinline
 product' : Num a => Foldable t => t a -> a
 product' = product
 
 ||| Map each element of a structure to a computation, evaluate those
 ||| computations and discard the results.
-public export
+public export %tcinline
 traverse_ : Applicative f => Foldable t => (a -> f b) -> t a -> f ()
 traverse_ f = foldr ((*>) . f) (pure ())
 
 ||| Evaluate each computation in a structure and discard the results.
-public export
+public export %tcinline
 sequence_ : Applicative f => Foldable t => t (f a) -> f ()
 sequence_ = foldr (*>) (pure ())
 
 ||| Like `traverse_` but with the arguments flipped.
-public export
+public export %tcinline
 for_ : Applicative f => Foldable t => t a -> (a -> f b) -> f ()
 for_ = flip traverse_
 
@@ -486,18 +486,18 @@ public export
 ||| ```
 |||
 ||| Note: In Haskell, `choice` is called `asum`.
-%inline public export
+%inline %tcinline public export
 choice : Alternative f => Foldable t => t (Lazy (f a)) -> f a
 choice = force . concat @{Lazy.MonoidAlternative}
 
 ||| A fused version of `choice` and `map`.
-%inline public export
+%inline %tcinline public export
 choiceMap : Alternative f => Foldable t => (a -> f b) -> t a -> f b
 choiceMap = foldMap @{%search} @{MonoidAlternative}
 
 namespace Foldable
   ||| Composition of foldables is foldable.
-  public export
+  public export %tcinline
   [Compose] (l : Foldable t) => (r : Foldable f) => Foldable (t . f) where
     foldr = foldr . flip . foldr
     foldl = foldl . foldl
@@ -520,19 +520,19 @@ interface Bifoldable p where
   binull t = bifoldr {acc = Lazy Bool} (\ _,_ => False) (\ _,_ => False) True t
 
 ||| Analogous to `foldMap` but for `Bifoldable` structures
-public export
+public export %tcinline
 bifoldMap : Monoid acc => Bifoldable p => (a -> acc) -> (b -> acc) -> p a b -> acc
 bifoldMap f g = bifoldr ((<+>) . f) ((<+>) . g) neutral
 
 ||| Like Bifunctor's `mapFst` but for `Bifoldable` structures
-public export
+public export %tcinline
 bifoldMapFst : Monoid acc => Bifoldable p => (a -> acc) -> p a b -> acc
 bifoldMapFst f = bifoldMap f (const neutral)
 
 namespace Bifoldable
 
   ||| Composition of a bifoldable and a foldable is bifoldable.
-  public export
+  public export %tcinline
   [Compose] (l : Foldable f) => (r : Bifoldable p) => Bifoldable (f .: p) where
     bifoldr = foldr .: flip .: bifoldr
     bifoldl = foldl .: bifoldl
@@ -546,12 +546,12 @@ interface (Functor t, Foldable t) => Traversable t where
   traverse : Applicative f => (a -> f b) -> t a -> f (t b)
 
 ||| Evaluate each computation in a structure and collect the results.
-public export
+public export %tcinline
 sequence : Applicative f => Traversable t => t (f a) -> f (t a)
 sequence = traverse id
 
 ||| Like `traverse` but with the arguments flipped.
-%inline public export
+%inline %tcinline public export
 for : Applicative f => Traversable t => t a -> (a -> f b) -> f (t b)
 for = flip traverse
 
@@ -563,12 +563,12 @@ interface (Bifunctor p, Bifoldable p) => Bitraversable p where
   bitraverse : Applicative f => (a -> f c) -> (b -> f d) -> p a b -> f (p c d)
 
 ||| Evaluate each computation in a structure and collect the results.
-public export
+public export %tcinline
 bisequence : Applicative f => Bitraversable p => p (f a) (f b) -> f (p a b)
 bisequence = bitraverse id id
 
 ||| Like `bitraverse` but with the arguments flipped.
-public export
+public export %tcinline
 bifor :  Applicative f => Bitraversable p
       => p a b
       -> (a -> f c)
@@ -578,7 +578,7 @@ bifor t f g = bitraverse f g t
 
 namespace Traversable
   ||| Composition of traversables is traversable.
-  public export
+  public export %tcinline
   [Compose] (l : Traversable t) => (r : Traversable f) => Traversable (t . f)
     using Foldable.Compose Functor.Compose where
       traverse = traverse . traverse
@@ -586,14 +586,14 @@ namespace Traversable
 namespace Bitraveresable
 
   ||| Composition of a bitraversable and a traversable is bitraversable.
-  public export
+  public export %tcinline
   [Compose] (l : Traversable t) => (r : Bitraversable p) => Bitraversable (t .: p)
     using Bifoldable.Compose Bifunctor.Compose where
       bitraverse = traverse .: bitraverse
 
 namespace Monad
   ||| Composition of a traversable monad and a monad is a monad.
-  public export
+  public export %tcinline
   [Compose] (l : Monad m) => (r : Monad t) => (tr : Traversable t) => Monad (m . t)
     using Applicative.Compose where
       a >>= f = a >>= map join . traverse f

@@ -72,7 +72,7 @@ literals the characters ``\\`` and ``"`` must be escaped, for multiline strings 
 escaped
 sequence in order to avoid having to escape those very common sets of characters. For this, use
 ``#"`` as starting delimiter and ``"#`` as closing delimiter. The number of ``#`` symbols can be
-increased in order to accomodate for edge cases where ``"#`` would be a valid symbol.
+increased in order to accommodate for edge cases where ``"#`` would be a valid symbol.
 In the following example we are able to match on ``\{`` by using half as many ``\\`` characters
 as if we didn't use raw string literals:
 

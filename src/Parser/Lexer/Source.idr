@@ -150,10 +150,11 @@ mutual
   toEndComment : (k : Nat) -> Recognise (k /= 0)
   toEndComment Z = empty
   toEndComment (S k)
-               = some (pred (\c => c /= '-' && c /= '{' && c /= '"'))
+               = some (pred (\c => c /= '-' && c /= '{' && c /= '"' && c /= '\''))
                         <+> (eof <|> toEndComment (S k))
              <|> is '{' <+> singleBrace k
              <|> is '-' <+> singleDash k
+             <|> (charLit <|> pred (== '\'')) <+> toEndComment (S k)
              <|> stringLit <+> toEndComment (S k)
 
   ||| After reading a single brace, we may either finish reading an
@@ -232,6 +233,10 @@ cgDirective
 mkDirective : String -> Token
 mkDirective str = CGDirective (trim (substr 3 (length str) str))
 
+public export
+fixityKeywords : List String
+fixityKeywords = ["infixl", "infixr", "infix", "prefix"]
+
 -- Reserved words
 -- NB: if you add a new keyword, please add the corresponding documentation in
 --     Idris.Doc.String
@@ -242,9 +247,9 @@ keywords = ["data", "module", "where", "let", "in", "do", "record",
             "parameters", "with", "proof", "impossible", "case", "of",
             "if", "then", "else", "forall", "rewrite",
             "using", "interface", "implementation", "open", "import",
-            "public", "export", "private",
-            "infixl", "infixr", "infix", "prefix",
-            "total", "partial", "covering"]
+            "public", "export", "private"] ++
+            fixityKeywords ++
+            ["total", "partial", "covering"]
 
 public export
 debugInfo : List (String, DebugInfo)

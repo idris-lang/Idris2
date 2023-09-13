@@ -1,8 +1,8 @@
 Dumping case trees to Main.cases
 Prelude.Basics.Nil = Constructor tag Just 0 arity 0
-Prelude.Basics.:: = Constructor tag Just 1 arity 2
+Prelude.Basics.(::) = Constructor tag Just 1 arity 2
 Builtin.MkPair = Constructor tag Just 0 arity 2
-Prelude.Types.Stream.:: = Constructor tag Just 0 arity 2
+Prelude.Types.Stream.(::) = Constructor tag Just 0 arity 2
 Prelude.Num.MkNum = Constructor tag Just 0 arity 3
 Prelude.Num.MkNeg = Constructor tag Just 0 arity 3
 Prelude.Num.MkIntegral = Constructor tag Just 0 arity 3

@@ -259,7 +259,7 @@ replaceAtDiffIndexPreserves : (xs : Vect n a) -> (i, j : Fin n) -> Not (i = j) -
 replaceAtDiffIndexPreserves (_::_) FZ     FZ     co _ = absurd $ co Refl
 replaceAtDiffIndexPreserves (_::_) FZ     (FS _) _  _ = Refl
 replaceAtDiffIndexPreserves (_::_) (FS _) FZ     _  _ = Refl
-replaceAtDiffIndexPreserves (_::_) (FS z) (FS w) co y = replaceAtDiffIndexPreserves _ z w (co . cong FS) y
+replaceAtDiffIndexPreserves (_::_) (FS z) (FS w) co y = replaceAtDiffIndexPreserves _ z w (\zw => co $ cong FS zw) y
 
 --------------------------------------------------------------------------------
 -- Transformations

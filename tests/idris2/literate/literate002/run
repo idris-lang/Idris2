@@ -1,0 +1,4 @@
+. ../../../testutils.sh
+
+idris2 IEdit.lidr < input
+idris2 IEdit2.lidr < input2

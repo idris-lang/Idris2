@@ -1,0 +1,14 @@
+1/1: Building ElabScriptWarning (ElabScriptWarning.idr)
+Warning: The first argument worth a warning
+
+ElabScriptWarning:19:27--19:39
+ 15 | 
+ 16 | 
+ 17 | 
+ 18 | x : Nat
+ 19 | x = %runElab showsWarning "Suspicious" 15
+                                ^^^^^^^^^^^^
+
+ElabScriptWarning> ElabScriptWarning.x : Nat
+ElabScriptWarning> 15
+ElabScriptWarning> Bye for now!

@@ -191,7 +191,7 @@ and rely on a ``C`` support file. The FFI interface is documented elsewhere so w
 here. Once you do have a support file written in ``C``, you can build an ``so`` file using your
 package's post-build hook. Then, install (copy) that ``so`` file into the ``lib`` subfolder where
 Idris has installed your package in your post-install hook. When an executable depends on your package,
-Idris will copy shared object files from the ``lib`` directory into the build folder for the exectuable.
+Idris will copy shared object files from the ``lib`` directory into the build folder for the executable.
 
 Data files
 ----------

@@ -210,7 +210,7 @@ Handling JavaScript events
 
 
 In this example shows how to attach an event handler to a particular DOM element. Values of events
-are also associated with ``AnyPtr`` on the Idris side. To seperate ``DomNode`` form ``DomEvent``
+are also associated with ``AnyPtr`` on the Idris side. To separate ``DomNode`` form ``DomEvent``
 we create two different types. Also it demonstrates how a simple callback function defined in
 Idris can be used on the JavaScript side.
 

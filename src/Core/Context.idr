@@ -796,6 +796,8 @@ HasNames Error where
   full gam (TTCError x) = pure (TTCError x)
   full gam (FileErr x y) = pure (FileErr x y)
   full gam (CantFindPackage x) = pure (CantFindPackage x)
+  full gam (LazyImplicitFunction fc) = pure (LazyImplicitFunction fc)
+  full gam (LazyPatternVar fc) = pure (LazyPatternVar fc)
   full gam (LitFail fc) = pure (LitFail fc)
   full gam (LexFail fc x) = pure (LexFail fc x)
   full gam (ParseFail xs) = pure (ParseFail xs)
@@ -885,6 +887,8 @@ HasNames Error where
   resolved gam (TTCError x) = pure (TTCError x)
   resolved gam (FileErr x y) = pure (FileErr x y)
   resolved gam (CantFindPackage x) = pure (CantFindPackage x)
+  resolved gam (LazyImplicitFunction fc) = pure (LazyImplicitFunction fc)
+  resolved gam (LazyPatternVar fc) = pure (LazyPatternVar fc)
   resolved gam (LitFail fc) = pure (LitFail fc)
   resolved gam (LexFail fc x) = pure (LexFail fc x)
   resolved gam (ParseFail xs) = pure (ParseFail xs)
@@ -2305,6 +2309,21 @@ setFromDouble : {auto c : Ref Ctxt Defs} ->
 setFromDouble n = update Ctxt { options $= setFromDouble n }
 
 export
+setFromTTImp : {auto c : Ref Ctxt Defs} ->
+               Name -> Core ()
+setFromTTImp n = update Ctxt { options $= setFromTTImp n }
+
+export
+setFromName : {auto c : Ref Ctxt Defs} ->
+              Name -> Core ()
+setFromName n = update Ctxt { options $= setFromName n }
+
+export
+setFromDecls : {auto c : Ref Ctxt Defs} ->
+               Name -> Core ()
+setFromDecls n = update Ctxt { options $= setFromDecls n }
+
+export
 addNameDirective : {auto c : Ref Ctxt Defs} ->
                    FC -> Name -> List String -> Core ()
 addNameDirective fc n ns
@@ -2381,8 +2400,35 @@ fromDoubleName
          pure $ fromDoubleName (primnames (options defs))
 
 export
+fromTTImpName : {auto c : Ref Ctxt Defs} ->
+                Core (Maybe Name)
+fromTTImpName
+    = do defs <- get Ctxt
+         pure $ fromTTImpName (primnames (options defs))
+
+export
+fromNameName : {auto c : Ref Ctxt Defs} ->
+               Core (Maybe Name)
+fromNameName
+    = do defs <- get Ctxt
+         pure $ fromNameName (primnames (options defs))
+
+export
+fromDeclsName : {auto c : Ref Ctxt Defs} ->
+                Core (Maybe Name)
+fromDeclsName
+    = do defs <- get Ctxt
+         pure $ fromDeclsName (primnames (options defs))
+
+export
 getPrimNames : {auto c : Ref Ctxt Defs} -> Core PrimNames
-getPrimNames = [| MkPrimNs fromIntegerName fromStringName fromCharName fromDoubleName |]
+getPrimNames = [| MkPrimNs fromIntegerName
+                           fromStringName
+                           fromCharName
+                           fromDoubleName
+                           fromTTImpName
+                           fromNameName
+                           fromDeclsName |]
 
 export
 getPrimitiveNames : {auto c : Ref Ctxt Defs} -> Core (List Name)

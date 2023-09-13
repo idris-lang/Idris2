@@ -74,7 +74,7 @@ namespace Section2
 
   -- Raw terms are neither scopechecked nor typecked
 
-  ||| Inferable terms know what their type is
+  ||| Inferrable terms know what their type is
   data Infer : Type
 
   ||| Checkable terms need to be checked against a type
@@ -97,7 +97,7 @@ namespace Section2
 
   total
   data Check : Type where
-    ||| Inferable terms are trivially checkable
+    ||| Inferrable terms are trivially checkable
     Emb : Infer -> Check
     ||| A function binding its argument
     Lam : Abs Check -> Check
@@ -365,7 +365,7 @@ namespace Section3
 
   total
   data Check : Type where
-    ||| Inferable terms are trivially checkable
+    ||| Inferrable terms are trivially checkable
     Emb : Infer -> Check
     ||| A function binding its argument
     Lam : Abs Check -> Check
@@ -587,9 +587,9 @@ namespace Section4
     --   ps : Abs (Abs Check)
     --   n : Check
     Rec : (pred, pz, ps : Check) -> (n : Check) -> Infer
-    ||| The zero constructor is inferable
+    ||| The zero constructor is inferrable
     Zro : Infer
-    ||| The successor constructor is inferable
+    ||| The successor constructor is inferrable
     Suc : Check -> Infer
     ||| Pi is inferrable
     Pi : (a : Check) -> (b : Abs Check) -> Infer
@@ -606,7 +606,7 @@ namespace Section4
 
   total
   data Check : Type where
-    ||| Inferable terms are trivially checkable
+    ||| Inferrable terms are trivially checkable
     Emb : Infer -> Check
     ||| A function binding its argument
     Lam : Abs Check -> Check

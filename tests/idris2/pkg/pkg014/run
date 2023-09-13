@@ -1,0 +1,3 @@
+. ../../../testutils.sh
+
+idris2 --build test.ipkg --log package.depends:10 | filter_test_dir

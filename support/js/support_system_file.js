@@ -167,3 +167,17 @@ function support_system_file_pclose (file_ptr) {
   support_system_file_removeFile(name)
   return exit_code
 }
+
+function support_system_file_filetime(file_ptr) {
+  const {fd, name, exit_code} = file_ptr
+  const st = support_system_file_fs.fstatSync(fd)
+  const ft = {
+    atime_sec : _truncInt32(Math.trunc(st.atimeMs / 1000)),
+    atime_nsec : st.atimeMs * 1000000 % 1000000000,
+    mtime_sec : _truncInt32(Math.trunc(st.mtimeMs / 1000)),
+    mtime_nsec : st.mtimeMs * 1000000 % 1000000000,
+    ctime_sec : _truncInt32(Math.trunc(st.ctimeMs / 1000)),
+    ctime_nsec : st.mtimeMs * 1000000 % 1000000000
+  };
+  return ft
+}

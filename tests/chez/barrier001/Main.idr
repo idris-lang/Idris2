@@ -10,6 +10,6 @@ main = do
         putStrLn "Hello"
         barrierWait barrier
         putStrLn "Goodbye"
-    for threadIDs $ \threadID =>
+    for_ threadIDs $ \threadID =>
         threadWait threadID
     sleep 1

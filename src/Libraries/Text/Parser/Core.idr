@@ -278,6 +278,13 @@ export %inline
 bounds : Grammar state tok c ty -> Grammar state tok c (WithBounds ty)
 bounds = Bounds
 
+export
+mustFailBecause :
+  String ->
+  Grammar state tok True ty -> Grammar state tok False Unit
+mustFailBecause msg p
+  = (bounds p >>= \res => fatalLoc {c=False} res.bounds msg) <|> pure ()
+
 export %inline
 position : Grammar state tok False Bounds
 position = Position

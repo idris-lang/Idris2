@@ -1,0 +1,158 @@
+1/1: Building Term (Term.idr)
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG declare.type:1: Processing Term.Typ
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG declare.data:1: Processing Term.Bdr
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.meta:5: Adding new meta ({P:cut:N}, (Term:L:C--L:C, Rig0))
+LOG unify.meta:5: Adding new meta ({P:vars:N}, (Term:L:C--L:C, Rig0))
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.meta:5: Adding new meta ({P:cut:N}, (Term:L:C--L:C, Rig0))
+LOG unify.meta:5: Adding new meta ({P:vars:N}, (Term:L:C--L:C, Rig0))
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG declare.data:1: Processing Term.Chk
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.meta:5: Adding new meta ({P:cut:N}, (Term:L:C--L:C, Rig0))
+LOG unify.meta:5: Adding new meta ({P:vars:N}, (Term:L:C--L:C, Rig0))
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.meta:5: Adding new meta ({P:cut:N}, (Term:L:C--L:C, Rig0))
+LOG unify.meta:5: Adding new meta ({P:vars:N}, (Term:L:C--L:C, Rig0))
+LOG unify.meta:5: Adding new meta ({P:n:N}, (Term:L:C--L:C, Rig0))
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG declare.data:1: Processing Term.Syn
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.meta:5: Adding new meta ({P:vars:N}, (Term:L:C--L:C, Rig0))
+LOG unify.meta:5: Adding new meta ({P:cut:N}, (Term:L:C--L:C, Rig0))
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.meta:5: Adding new meta ({P:cut:N}, (Term:L:C--L:C, Rig0))
+LOG unify.meta:5: Adding new meta ({P:vars:N}, (Term:L:C--L:C, Rig0))
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.meta:5: Adding new meta ({P:vars:N}, (Term:L:C--L:C, Rig0))
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG declare.def.lhs:3: LHS term: Term.Typ
+LOG unify.equal:10: Skipped unification (equal already): (vars : $resolvedN) -> Type and (vars : $resolvedN) -> Type
+LOG declare.def.clause:3: RHS term: Term.Chk
+LOG declare.def:2: Case tree for Term.Typ: [0] Term.Chk
+LOG declare.def:3: Working from [0] Term.Chk
+LOG declare.def:3: Catch all case in N
+LOG declare.def:3: Initially missing in Term.Typ:
+
+LOG declare.type:1: Processing Term.Term
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG declare.def.lhs:3: LHS term: Term.Term
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG declare.def.clause:3: RHS term: (Term.Chk Prelude.Basics.True)
+LOG declare.def:2: Case tree for Term.Term: [0] (Term.Chk Prelude.Basics.True)
+LOG declare.def:3: Working from [0] (Term.Chk Prelude.Basics.True)
+LOG declare.def:3: Catch all case in N
+LOG declare.def:3: Initially missing in Term.Term:
+
+LOG declare.type:1: Processing Term.NF
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG declare.def.lhs:3: LHS term: Term.NF
+LOG unify.equal:10: Skipped unification (equal already): Type and Type
+LOG declare.def.clause:3: RHS term: (Term.Chk Prelude.Basics.False)
+LOG declare.def:2: Case tree for Term.NF: [0] (Term.Chk Prelude.Basics.False)
+LOG declare.def:3: Working from [0] (Term.Chk Prelude.Basics.False)
+LOG declare.def:3: Catch all case in N
+LOG declare.def:3: Initially missing in Term.NF:
+
+Term> Bye for now!
+1/1: Building Vec (Vec.idr)
+LOG declare.type:1: Processing Vec.Vec
+LOG declare.def:2: Case tree for Vec.Vec: [0] ({arg:N} : (Data.Fin.Fin {arg:N}[1])) -> {arg:N}[1]
+LOG declare.type:1: Processing Vec.Nil
+LOG declare.def:2: Case tree for Vec.Nil: [0] (Prelude.Uninhabited.absurd {arg:N}[0] (Data.Fin.Fin Prelude.Types.Z) Data.Fin.Uninhabited implementation at Data.Fin:L:C--L:C)
+LOG declare.type:1: Processing Vec.(::)
+LOG declare.def:2: Case tree for Vec.(::): case {arg:N}[4] : (Data.Fin.Fin (Prelude.Types.S {arg:N}[0])) of
+ { Data.Fin.FZ {e:N} => [0] {arg:N}[3]
+ | Data.Fin.FS {e:N} {e:N} => [1] ({arg:N}[5] {e:N}[1])
+ }
+LOG declare.type:1: Processing Vec.test
+LOG elab.ambiguous:5: Ambiguous elaboration at Vec:L:C--L:C:
+  ($resolvedN 2)
+  ($resolvedN 2)
+With default. Target type : Prelude.Types.Nat
+LOG elab.ambiguous:5: Ambiguous elaboration (kept 3 out of 3 candidates) (not delayed) at Vec:L:C--L:C:
+(($resolvedN Nil) ((:: ((:: (fromInteger 0)) Nil)) Nil))
+(($resolvedN Nil) ((:: ((:: (fromInteger 0)) Nil)) Nil))
+(($resolvedN Nil) ((:: ((:: (fromInteger 0)) Nil)) Nil))
+Target type : ({arg:N} : (Data.Fin.Fin (Prelude.Types.S (Prelude.Types.S Prelude.Types.Z)))) -> (Prelude.Basics.List Prelude.Types.Nat)
+LOG elab.ambiguous:5: Ambiguous elaboration (kept 2 out of 2 candidates) (not delayed) at Vec:L:C--L:C:
+$resolvedN
+$resolvedN
+Target type : ?Vec.{a:N}_[]
+LOG elab.ambiguous:5: Ambiguous elaboration (kept 3 out of 3 candidates) (not delayed) at Vec:L:C--L:C:
+(($resolvedN ((:: (fromInteger 0)) Nil)) Nil)
+(($resolvedN ((:: (fromInteger 0)) Nil)) Nil)
+(($resolvedN ((:: (fromInteger 0)) Nil)) Nil)
+Target type : (Vec.Vec ?Vec.{a:N}_[] ?Vec.{n:N}_[])
+LOG elab.ambiguous:5: Ambiguous elaboration (kept 3 out of 3 candidates) (not delayed) at Vec:L:C--L:C:
+(($resolvedN (fromInteger 0)) Nil)
+(($resolvedN (fromInteger 0)) Nil)
+(($resolvedN (fromInteger 0)) Nil)
+Target type : ?Vec.{a:N}_[]
+LOG elab.ambiguous:5: Ambiguous elaboration at Vec:L:C--L:C:
+  ($resolvedN 0)
+  ($resolvedN 0)
+With default. Target type : ?Vec.{a:N}_[]
+LOG elab.ambiguous:5: Ambiguous elaboration (kept 2 out of 2 candidates) (not delayed) at Vec:L:C--L:C:
+$resolvedN
+$resolvedN
+Target type : (Vec.Vec ?Vec.{a:N}_[] ?Vec.{n:N}_[])
+LOG elab.ambiguous:5: Ambiguous elaboration at Vec:L:C--L:C:
+  ($resolvedN 0)
+  ($resolvedN 0)
+With default. Target type : ?Vec.{a:N}_[]
+LOG elab.ambiguous:5: Ambiguous elaboration (kept 2 out of 2 candidates) (not delayed) at Vec:L:C--L:C:
+$resolvedN
+$resolvedN
+Target type : (Vec.Vec ?Vec.{a:N}_[] ?Vec.{n:N}_[])
+LOG elab.ambiguous:5: Ambiguous elaboration (kept 1 out of 3 candidates) (delayed) at Vec:L:C--L:C:
+(($resolvedN (fromInteger 0)) Nil)
+Target type : (Prelude.Basics.List Prelude.Types.Nat)
+LOG elab.ambiguous:5: Ambiguous elaboration at Vec:L:C--L:C:
+  ($resolvedN 0)
+  ($resolvedN 0)
+With default. Target type : Prelude.Types.Nat
+LOG elab.ambiguous:5: Ambiguous elaboration (kept 1 out of 2 candidates) (delayed) at Vec:L:C--L:C:
+$resolvedN
+Target type : (Prelude.Basics.List Prelude.Types.Nat)
+LOG declare.def:2: Case tree for Vec.test: [0] (Vec.(::) (Prelude.Types.S Prelude.Types.Z) (Prelude.Basics.List Prelude.Types.Nat) (Prelude.Basics.Nil Prelude.Types.Nat) (Vec.(::) Prelude.Types.Z (Prelude.Basics.List Prelude.Types.Nat) (Prelude.Basics.(::) Prelude.Types.Nat Prelude.Types.Z (Prelude.Basics.Nil Prelude.Types.Nat)) (Vec.Nil (Prelude.Basics.List Prelude.Types.Nat))))
+Vec> Bye for now!

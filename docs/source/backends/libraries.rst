@@ -22,7 +22,7 @@ for the idris name and name that appears in the compiled code, e.g.
     baz : Int
     baz = 42
 
-You can also specificy different names for different backends, in a similar way to %foreign
+You can also specify different names for different backends, in a similar way to %foreign
 
 .. code-block:: idris
 

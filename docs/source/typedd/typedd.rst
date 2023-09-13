@@ -78,7 +78,7 @@ Chapter 5
 ---------
 
 Although there is a ``Cast`` instance from ``String`` to ``Nat``, its
-behaviour of returing Z if the ``String`` is not numeric is now thought to be
+behaviour of returning Z if the ``String`` is not numeric is now thought to be
 confusing and potentially error prone. Instead, there is ``stringToNatOrZ`` in
 ``Data.String`` which at least has a clearer name. So:
 

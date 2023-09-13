@@ -1,6 +1,0 @@
-rm -rf build
-
-cd src/Top
-$1 --find-ipkg --check Dummy.idr
-cd ../..
-

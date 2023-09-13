@@ -46,6 +46,26 @@ Eq Fixity where
   Prefix == Prefix = True
   _ == _ = False
 
+-- A record to hold all the information about a fixity
+public export
+record FixityInfo where
+  constructor MkFixityInfo
+  fc : FC
+  vis : Visibility
+  fix : Fixity
+  precedence : Nat
+
+export
+Show FixityInfo where
+  show fx = "fc: \{show fx.fc}, visibility: \{show fx.vis}, fixity: \{show fx.fix}, precedence: \{show fx.precedence}"
+
+export
+Eq FixityInfo where
+  x == y = x.fc == y.fc
+        && x.vis == y.vis
+        && x.fix == y.fix
+        && x.precedence == y.precedence
+
 public export
 OpStr' : Type -> Type
 OpStr' nm = nm
@@ -53,6 +73,10 @@ OpStr' nm = nm
 public export
 OpStr : Type
 OpStr = OpStr' Name
+
+public export
+data HidingDirective = HideName Name
+                     | HideFixity Fixity Name
 
 mutual
 
@@ -83,7 +107,7 @@ mutual
        PLet : FC -> RigCount -> (pat : PTerm' nm) ->
               (nTy : PTerm' nm) -> (nVal : PTerm' nm) -> (scope : PTerm' nm) ->
               (alts : List (PClause' nm)) -> PTerm' nm
-       PCase : FC -> PTerm' nm -> List (PClause' nm) -> PTerm' nm
+       PCase : FC -> List (PFnOpt' nm) -> PTerm' nm -> List (PClause' nm) -> PTerm' nm
        PLocal : FC -> List (PDecl' nm) -> (scope : PTerm' nm) -> PTerm' nm
        PUpdate : FC -> List (PFieldUpdate' nm) -> PTerm' nm
        PApp : FC -> PTerm' nm -> PTerm' nm -> PTerm' nm
@@ -154,7 +178,7 @@ mutual
   getPTermLoc (PPi fc _ _ _ _ _) = fc
   getPTermLoc (PLam fc _ _ _ _ _) = fc
   getPTermLoc (PLet fc _ _ _ _ _ _) = fc
-  getPTermLoc (PCase fc _ _) = fc
+  getPTermLoc (PCase fc _ _ _) = fc
   getPTermLoc (PLocal fc _ _) = fc
   getPTermLoc (PUpdate fc _) = fc
   getPTermLoc (PApp fc _ _) = fc
@@ -331,7 +355,7 @@ mutual
 
   public export
   data Directive : Type where
-       Hide : Name -> Directive
+       Hide : HidingDirective -> Directive
        Unhide : Name -> Directive
        Logging : Maybe LogLevel -> Directive
        LazyOn : Bool -> Directive
@@ -343,6 +367,9 @@ mutual
        PrimString : Name -> Directive
        PrimChar : Name -> Directive
        PrimDouble : Name -> Directive
+       PrimTTImp : Name -> Directive
+       PrimName : Name -> Directive
+       PrimDecls : Name -> Directive
        CGAction : String -> String -> Directive
        Names : Name -> List String -> Directive
        StartExpr : PTerm' nm -> Directive
@@ -441,7 +468,7 @@ mutual
        PFail : FC -> Maybe String -> List (PDecl' nm) -> PDecl' nm
 
        PMutual : FC -> List (PDecl' nm) -> PDecl' nm
-       PFixity : FC -> Fixity -> Nat -> OpStr -> PDecl' nm
+       PFixity : FC -> Visibility -> Fixity -> Nat -> OpStr -> PDecl' nm
        PNamespace : FC -> Namespace -> List (PDecl' nm) -> PDecl' nm
        PTransform : FC -> String -> PTerm' nm -> PTerm' nm -> PDecl' nm
        PRunElabDecl : FC -> PTerm' nm -> PDecl' nm
@@ -461,7 +488,7 @@ mutual
   getPDeclLoc (PRecord fc _ _ _ _) = fc
   getPDeclLoc (PMutual fc _) = fc
   getPDeclLoc (PFail fc _ _) = fc
-  getPDeclLoc (PFixity fc _ _ _) = fc
+  getPDeclLoc (PFixity fc _ _ _ _) = fc
   getPDeclLoc (PNamespace fc _ _) = fc
   getPDeclLoc (PTransform fc _ _ _) = fc
   getPDeclLoc (PRunElabDecl fc _) = fc
@@ -728,7 +755,7 @@ parameters {0 nm : Type} (toName : nm -> Name)
         = "let " ++ showCount rig ++ showPTermPrec d n ++ " : " ++ showPTermPrec d ty ++ " = "
                  ++ showPTermPrec d val ++ concatMap showAlt alts ++
                  " in " ++ showPTermPrec d sc
-  showPTermPrec _ (PCase _ tm cs)
+  showPTermPrec _ (PCase _ _ tm cs)
         = "case " ++ showPTerm tm ++ " of { " ++
             showSep " ; " (map showCase cs) ++ " }"
       where
@@ -878,14 +905,9 @@ record IFaceInfo where
 public export
 record SyntaxInfo where
   constructor MkSyntax
-  -- Keep infix/prefix, then we can define operators which are both
-  -- (most obviously, -)
-  ||| Infix operators as a map from their names to their fixity,
+  ||| Operators fixities as a map from their names to their fixity,
   ||| precedence, and the file context where that fixity was defined.
-  infixes : StringMap (FC, Fixity, Nat)
-  ||| Prefix operators as a map from their names to their precedence
-  ||| and the file context where their fixity was defined.
-  prefixes : StringMap (FC, Nat)
+  fixities : ANameMap FixityInfo
   -- info about modules
   saveMod : List ModuleIdent -- current module name
   modDocstrings : SortedMap ModuleIdent String
@@ -902,6 +924,22 @@ record SyntaxInfo where
   usingImpl : List (Maybe Name, RawImp)
   startExpr : RawImp
   holeNames : List String -- hole names in the file
+
+export
+prefixes : SyntaxInfo -> ANameMap (FC, Nat)
+prefixes = fromList
+    . map (\(name, fx)=> (name, fx.fc, fx.precedence))
+    . filter ((== Prefix) . fix . snd)
+    . toList
+    . fixities
+
+export
+infixes : SyntaxInfo -> ANameMap (FC, Fixity, Nat)
+infixes = fromList
+    . map (\(nm, fx) => (nm, fx.fc, fx.fix, fx.precedence))
+    . filter ((/= Prefix) . fix . snd)
+    . toList
+    . fixities
 
 HasNames IFaceInfo where
   full gam iface
@@ -942,8 +980,7 @@ HasNames SyntaxInfo where
 export
 initSyntax : SyntaxInfo
 initSyntax
-    = MkSyntax initInfix
-               initPrefix
+    = MkSyntax initFixities
                []
                empty
                empty
@@ -958,13 +995,12 @@ initSyntax
 
   where
 
-    initInfix : StringMap (FC, Fixity, Nat)
-    initInfix = insert "=" (EmptyFC, Infix, 0) empty
 
-    initPrefix : StringMap (FC, Nat)
-    initPrefix = fromList
-      [ ("-", (EmptyFC, 10))
-      , ("negate", (EmptyFC, 10)) -- for documentation purposes
+    initFixities : ANameMap FixityInfo
+    initFixities = fromList
+      [ (UN $ Basic "-", MkFixityInfo EmptyFC Export Prefix 10)
+      , (UN $ Basic "negate", MkFixityInfo EmptyFC Export Prefix 10) -- for documentation purposes
+      , (UN $ Basic "=", MkFixityInfo EmptyFC Export Infix 0)
       ]
 
     initDocStrings : ANameMap String
@@ -990,6 +1026,12 @@ addModDocInfo mi doc reexpts
     = update Syn { saveMod $= (mi ::)
                  , modDocexports $= insert mi reexpts
                  , modDocstrings $= insert mi doc }
+
+-- remove a fixity from the context
+export
+removeFixity :
+    {auto s : Ref Syn SyntaxInfo} -> Fixity -> Name -> Core ()
+removeFixity _ key = update Syn ({fixities $= removeExact key })
 
 export
 covering

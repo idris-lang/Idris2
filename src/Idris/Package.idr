@@ -595,9 +595,11 @@ install pkg opts installSrc -- not used but might be in the future
     = do defs <- get Ctxt
          build <- ttcBuildDirectory
          let lib = installDir pkg
-         libTargetDir <- libInstallDirectory lib
-         ttcTargetDir <- ttcInstallDirectory lib
-         srcTargetDir <- srcInstallDirectory lib
+         mdestdir <- coreLift $ getEnv "DESTDIR"
+         let destdir = fromMaybe "" mdestdir
+         libTargetDir <- (destdir ++) <$> libInstallDirectory lib
+         ttcTargetDir <- (destdir ++) <$> ttcInstallDirectory lib
+         srcTargetDir <- (destdir ++) <$> srcInstallDirectory lib
 
          let src = source_dir (dirs (options defs))
          runScript (preinstall pkg)

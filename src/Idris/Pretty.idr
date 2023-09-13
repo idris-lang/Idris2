@@ -281,7 +281,7 @@ mutual
              ; _ => hardline <+> indent 4 (vsep (prettyAlt <$> alts)) <+> hardline <+> in_
              }
         <+> group (align $ hang 2 $ pretty sc)
-    prettyPrec d (PCase _ tm cs) =
+    prettyPrec d (PCase _ _ tm cs) =
       parenthesise (d > startPrec) $
         case_ <++> pretty tm <++> of_ <+> nest 2 (
         let punctuation = lcurly :: (semi <$ fromMaybe [] (tail' [1..length cs])) in

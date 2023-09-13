@@ -1,0 +1,5 @@
+. ../../testutils.sh
+
+run Crash.idr
+run Crash2.idr
+run Crash3.idr

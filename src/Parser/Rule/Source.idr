@@ -10,6 +10,10 @@ import Data.List1
 import Data.SnocList
 import Data.String
 import Libraries.Data.List.Extra
+import Idris.Syntax
+
+%hide Core.Core.(>>)
+%hide Core.Core.(>>=)
 
 %default total
 
@@ -305,11 +309,10 @@ isCapitalisedIdent str =
   let val = str.val
       loc = str.bounds
       err : EmptyRule ()
-          = failLoc loc ("Expected a capitalised identifier, got: " ++ val)
+          = failLoc loc ("Expected a capitalised identifier, got: \{val}")
   in case strM val of
        StrNil => err
        StrCons c _ => if (isUpper c || c > chr 160) then pure () else err
-
 
 export
 namespaceId : Rule Namespace
@@ -401,6 +404,24 @@ nameWithCapital b = opNonNS <|> do
     n <- (operator <|> postfixProj)
     symbol ")"
     pure (NS ns n)
+
+export
+fixityNS : Rule HidingDirective
+fixityNS = do
+  namespacePrefix <- bounds namespacedIdent
+  let nsVal = namespacePrefix.val
+  fx <- checkFixity (snd nsVal) namespacePrefix.bounds
+  symbol ".("
+  n <- unqualifiedOperatorName
+  symbol ")"
+  pure (HideFixity fx (NS (uncurry mkNestedNamespace nsVal) $ UN $ Basic n))
+  where
+    checkFixity : String -> Bounds -> EmptyRule Fixity
+    checkFixity "infixl" _ = pure InfixL
+    checkFixity "infixr" _ = pure InfixR
+    checkFixity "infix"  _ = pure Infix
+    checkFixity "prefix" _ = pure Prefix
+    checkFixity _ loc =  failLoc loc ""
 
 export
 name : Rule Name

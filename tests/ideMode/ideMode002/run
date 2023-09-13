@@ -1,5 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-color --console-width 0 --version | awk '{print $4}' | ./gen_expected.sh
-$1 --no-color --console-width 0 --ide-mode < input
-
+idris2 --version | awk '{print $4}' | ./gen_expected.sh
+idris2 --ide-mode < input

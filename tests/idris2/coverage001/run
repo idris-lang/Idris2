@@ -1,6 +1,0 @@
-rm -rf build
-
-$1 --no-color --console-width 0 --no-banner Vect.idr < input
-$1 --no-color --console-width 0 --no-banner -c Vect2.idr
-$1 --no-color --console-width 0 --no-banner -c Vect3.idr
-
