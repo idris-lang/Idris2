@@ -1,4 +1,4 @@
-name: Idris2
+name: Idris2 and External Libs
 
 on:
   push:
@@ -487,13 +487,18 @@ jobs:
         shell: bash
 
   ######################################################################
-  # Ubuntu testing some libraries.
+  # Testing some libraries on Ubuntu and pack.
+  #
   # We are particularly interested in libraries that are heavily using
   # dependent types, that are prone to find bugs and regressions in the
   # compiler.
   ######################################################################
 
-  ubuntu-test-collie:
+  ######################################################################
+  # Test that we can build Collie
+  ######################################################################
+
+  ub-test-collie:
     needs: [initialise, ubuntu-self-host-previous-version]
     runs-on: ubuntu-latest
     if: |
@@ -521,7 +526,11 @@ jobs:
         run: |
           make
 
-  ubuntu-test-frex:
+  ########################################################################
+  # Test that we can build Frex
+  ########################################################################
+
+  ub-test-frex:
     needs: [initialise, ubuntu-self-host-previous-version]
     runs-on: ubuntu-latest
     if: |
@@ -550,7 +559,13 @@ jobs:
           make
           make test
 
-  ubuntu-test-elab:
+  ######################################################################
+  # Test that we can build Stefan Höck's elab-util and pack
+  ######################################################################
+
+  # ELAB-UTIL
+
+  ub-test-elab-util:
     needs: [initialise, ubuntu-self-host-previous-version]
     runs-on: ubuntu-latest
     if: |
@@ -578,12 +593,88 @@ jobs:
         run: |
           make all
 
+  # PACK
+  #
+  # N.B. instead of bootstrapping pack, we use the dockerimage where it is
+  # already, and then use pack to rebuild pack with this job's idris2 sources
+
+  ub-pack-test-pack:
+    needs: [initialise, ubuntu-self-host-previous-version]
+    runs-on: ubuntu-latest
+    if: |
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: libs]')
+    env:
+      IDRIS2_CG: chez
+      PACK_DIR: /root/.pack
+    strategy:
+      fail-fast: false
+    # N.B.:
+    container: ghcr.io/stefan-hoeck/idris2-pack:latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          repository: 'stefan-hoeck/idris2-pack'
+      # by default, pack uses the main idris2 head, not the current job's one
+      - name: Toml setup
+        run: |
+          { echo "[idris2]"
+            echo "url = \"https://github.com/${GITHUB_REPOSITORY}\""
+            echo "commit = \"latest:${GITHUB_REF_NAME}\""
+            echo "bootstrap  = true"
+          } > pack.toml
+      - name: Build idris2-pack
+        run: |
+          git config --global --add safe.directory "${PWD}"
+          git fetch "https://github.com/${GITHUB_REPOSITORY}" "${GITHUB_REF}:${GITHUB_REF_NAME}"
+          pack install pack
+
   ######################################################################
-  # Ubuntu using katla to build html doc of the libs
+  # Test that we can build the LSP
   ######################################################################
 
-  ubuntu-katla:
-    needs: [initialise, ubuntu-test-collie]
+  ub-pack-test-lsp:
+    needs: [initialise, ubuntu-self-host-previous-version]
+    runs-on: ubuntu-latest
+    if: |
+      !contains(needs.initialise.outputs.commit_message, '[ci:')
+      || contains(needs.initialise.outputs.commit_message, '[ci: libs]')
+    env:
+      IDRIS2_CG: chez
+      PACK_DIR: /root/.pack
+    # LSP is vastly easier to build using pack, so do that
+    container: ghcr.io/stefan-hoeck/idris2-pack:latest
+    strategy:
+      fail-fast: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          repository: 'idris-community/idris2-lsp'
+      - name: Toml setup
+        run: |
+          { echo "[idris2]"
+            echo "url = \"https://github.com/${GITHUB_REPOSITORY}\""
+            echo "commit = \"latest:${GITHUB_REF_NAME}\""
+            echo "bootstrap  = true"
+          } > pack.toml
+      # make sure pack is running the PR's Idris2 before building LSP
+      - name: Build pack with PR-Idris
+        run: |
+          git config --global --add safe.directory "${PWD}"
+          git fetch "https://github.com/${GITHUB_REPOSITORY}" "${GITHUB_REF}:${GITHUB_REF_NAME}"
+          pack install pack
+      - name: Build+install idris2-lsp
+        run: |
+          pack --no-prompt install-app idris2-lsp
+
+  ######################################################################
+  # Test that we can use Katla to build html doc of the libs
+  ######################################################################
+
+  ub-test-katla-and-html:
+    needs: [initialise, ubuntu-self-host-previous-version]
     runs-on: ubuntu-latest
     if: |
       !contains(needs.initialise.outputs.commit_message, '[ci:')
