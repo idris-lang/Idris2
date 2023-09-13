@@ -156,10 +156,10 @@ chezTests : IO TestPool
 chezTests = testsInDir "chez" "Chez backend" {codegen = Just Chez}
 
 refcTests : IO TestPool
-refcTests = testsInDir "refc" (const True) "Reference counting C backend" [] (Just C)
+refcTests = testsInDir "refc" "Reference counting C backend" {codegen = Just C}
 
 refcMemoryLeakTests : IO TestPool
-refcMemoryLeakTests = testsInDir "refc-memory" (const True) "Reference counting C backend: memory leak test" [Valgrind] (Just C)
+refcMemoryLeakTests = testsInDir "refc-memory" "Reference counting C backend: memory leak test" {requirements = [Valgrind]} {codegen = Just C}
 
 racketTests : IO TestPool
 racketTests = testsInDir "racket" "Racket backend" {codegen = Just Racket}
