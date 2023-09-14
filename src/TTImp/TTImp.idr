@@ -38,6 +38,13 @@ Weaken NestedNames where
       wknName (n, (mn, vars, rep))
           = (n, (mn, map weaken vars, \fc, nt => weaken (rep fc nt)))
 
+-- replace nested name with full name
+export
+mapNestedName : NestedNames vars -> Name -> Name
+mapNestedName nest n = case lookup n (names nest) of
+                               (Just (Just n', _)) => n'
+                               _ => n
+
 -- Unchecked terms, with implicit arguments
 -- This is the raw, elaboratable form.
 -- Higher level expressions (e.g. case, pattern matching let, where blocks,

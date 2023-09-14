@@ -128,9 +128,7 @@ elabImplementation : {vars : _} ->
 elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named impName_in nusing mbody
     = do -- let impName_in = maybe (mkImplName fc iname ps) id impln
          -- If we're in a nested block, update the name
-         let impName_nest = case lookup impName_in (names nest) of
-                                 Just (Just n', _) => n'
-                                 _ => impName_in
+         let impName_nest = mapNestedName nest impName_in
          impName <- inCurrentNS impName_nest
          -- The interface name might be qualified, so check if it's an
          -- alias for something
