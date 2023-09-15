@@ -627,7 +627,14 @@ jobs:
       - name: Build idris2-pack
         run: |
           git config --global --add safe.directory "${PWD}"
-          git fetch "https://github.com/${GITHUB_REPOSITORY}" "${GITHUB_REF}:${GITHUB_REF_NAME}"
+
+          # only fetch to a new branch if we're not on main (otherwise, git complains)
+          if [[ $(git branch --show-current) != 'main' ]]
+          then git fetch "https://github.com/${GITHUB_REPOSITORY}" "${GITHUB_REF}:${GITHUB_REF_NAME}"
+          else git pull origin main
+          fi
+
+          # rebuild pack with the fetched Idris2
           pack install pack
 
   ######################################################################
@@ -663,7 +670,13 @@ jobs:
       - name: Build pack with PR-Idris
         run: |
           git config --global --add safe.directory "${PWD}"
-          git fetch "https://github.com/${GITHUB_REPOSITORY}" "${GITHUB_REF}:${GITHUB_REF_NAME}"
+
+          # only fetch to a new branch if we're not on main (otherwise, git complains)
+          if [[ $(git branch --show-current) != 'main' ]]
+          then git fetch "https://github.com/${GITHUB_REPOSITORY}" "${GITHUB_REF}:${GITHUB_REF_NAME}"
+          else git pull origin main
+          fi
+
           pack install pack
       - name: Build+install idris2-lsp
         run: |
