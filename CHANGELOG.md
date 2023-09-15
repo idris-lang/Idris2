@@ -228,6 +228,10 @@
   about the modulo operator's upper bound, which can be useful when working with
   indices (for example).
 
+* Existing specialised variants of functions from the `Traversable` for `LazyList`
+  were made to be indeed lazy by the effect, but their requirements were strengthened
+  from `Applicative` to `Monad`.
+
 #### Papers
 
 * In `Control.DivideAndConquer`: a port of the paper
