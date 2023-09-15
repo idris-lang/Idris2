@@ -124,16 +124,16 @@ Monad LazyList where
 -- The result of a traversal will be a non-lazy list in general
 -- (you can't delay the "effect" of an applicative functor).
 public export
-traverse : Applicative f => (a -> f b) -> LazyList a -> f (List b)
+traverse : Monad f => (a -> f b) -> LazyList a -> f (List b)
 traverse g [] = pure []
-traverse g (x :: xs) = [| g x :: traverse g xs |]
+traverse g (x::xs) = pure $ !(g x) :: !(traverse g xs)
 
 public export %inline
-for : Applicative f => LazyList a -> (a -> f b) -> f (List b)
+for : Monad f => LazyList a -> (a -> f b) -> f (List b)
 for = flip traverse
 
 public export %inline
-sequence : Applicative f => LazyList (f a) -> f (List a)
+sequence : Monad f => LazyList (f a) -> f (List a)
 sequence = traverse id
 
 -- Traverse a lazy list with lazy effect lazily

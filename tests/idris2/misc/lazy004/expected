@@ -1,0 +1,11 @@
+1/1: Building LazyFor (LazyFor.idr)
+Main> xs: 1
+xs: 2
+xs: 3
+Nothing
+Main> xs': 1
+xs': 2
+xs': 3
+Nothing
+Main> 
+Bye for now!
