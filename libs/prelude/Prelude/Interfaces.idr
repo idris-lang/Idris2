@@ -583,8 +583,7 @@ namespace Traversable
     using Foldable.Compose Functor.Compose where
       traverse = traverse . traverse
 
-namespace Bitraveresable
-
+namespace Bitraversable
   ||| Composition of a bitraversable and a traversable is bitraversable.
   public export %tcinline
   [Compose] (l : Traversable t) => (r : Bitraversable p) => Bitraversable (t .: p)
