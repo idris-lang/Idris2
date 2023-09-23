@@ -203,6 +203,8 @@
 
 * Adds `infixOfBy` and `isInfixOfBy` into `Data.List`.
 
+* Adds updating functions to `SortedMap` and `SortedDMap`.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than

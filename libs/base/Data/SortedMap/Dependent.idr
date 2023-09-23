@@ -254,6 +254,28 @@ delete k (M (S n) t) =
     Left t' => (M _ t')
     Right t' => (M _ t')
 
+||| Updates or deletes a value based on the decision function
+|||
+||| The decision function takes information about the presence of the value,
+||| and the value itself, if it is present.
+||| It returns a new value or the fact that there should be no value as the result.
+|||
+||| The current implementation performs up to two traversals of the original map
+export
+update : DecEq k => (x : k) -> (Maybe (v x) -> Maybe (v x)) -> SortedDMap k v -> SortedDMap k v
+update k f m = case f $ lookupPrecise k m of
+  Just v  => insert k v m
+  Nothing => delete k m
+
+||| Updates existing value, if it is present, and does nothing otherwise
+|||
+||| The current implementation performs up to two traversals of the original map
+export
+updateExisting : DecEq k => (x : k) -> (v x -> v x) -> SortedDMap k v -> SortedDMap k v
+updateExisting k f m = case lookupPrecise k m of
+  Just v  => insert k (f v) m
+  Nothing => m
+
 export
 fromList : Ord k => List (x : k ** v x) -> SortedDMap k v
 fromList = foldl (flip (uncurry insert)) empty
