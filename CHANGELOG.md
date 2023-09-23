@@ -251,6 +251,9 @@
 
 * Adds `Data.Vect.foldrImplGoLemma`.
 
+* `Ref` interface from `Data.Ref` inherits `Monad` and was extended by a function
+  for value modification implemented through reading and writing by default.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
