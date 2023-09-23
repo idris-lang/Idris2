@@ -37,6 +37,28 @@ export
 delete : k -> SortedMap k v -> SortedMap k v
 delete k = M . delete k . unM
 
+||| Updates or deletes a value based on the decision function
+|||
+||| The decision function takes information about the presence of the value,
+||| and the value itself, if it is present.
+||| It returns a new value or the fact that there should be no value as the result.
+|||
+||| The current implementation performs up to two traversals of the original map
+export
+update : (Maybe v -> Maybe v) -> k -> SortedMap k v -> SortedMap k v
+update f k m = case f $ lookup k m of
+  Just v  => insert k v m
+  Nothing => delete k m
+
+||| Updates existing value, if it is present, and does nothing otherwise
+|||
+||| The current implementation performs up to two traversals of the original map
+export
+updateExisting : (v -> v) -> k -> SortedMap k v -> SortedMap k v
+updateExisting f k m = case lookup k m of
+  Just v  => insert k (f v) m
+  Nothing => m
+
 export
 fromList : Ord k => List (k, v) -> SortedMap k v
 fromList = flip insertFrom empty
