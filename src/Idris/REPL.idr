@@ -1083,7 +1083,7 @@ process (ImportPackage package) = do
   tree <- coreLift $ explore packageDirPath
   fentries <- coreLift $ toPaths (toRelative tree)
   errs <- for fentries $ \entry => do
-    let entry' = dropExtension entry
+    let entry' = dropExtensions entry
     let sp = forget $ split (== dirSeparator) entry'
     let ns = concat $ intersperse "." sp
     let ns' = mkNamespace ns
