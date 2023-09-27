@@ -207,3 +207,7 @@ public export
 implementation {n : Nat} -> Applicative (Seq n) where
   pure = replicate n
   (<*>) = zipWith ($)
+
+public export
+implementation Sized (Seq n a) where
+  size (MkSeq s) = size s

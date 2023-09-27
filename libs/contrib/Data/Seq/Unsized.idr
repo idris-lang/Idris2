@@ -218,3 +218,7 @@ public export
 public export
 implementation Monad Seq where
   xs >>= f = foldMap f xs
+
+public export
+implementation Sized (Seq a) where
+  size (MkSeq s) = size s
