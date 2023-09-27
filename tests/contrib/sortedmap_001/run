@@ -1,3 +1,0 @@
-. ../../testutils.sh
-
-run -p contrib SortedMapTest.idr
