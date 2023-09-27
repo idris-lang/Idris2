@@ -441,10 +441,9 @@ export
 split : Nat -> FingerTree (Elem a) -> (FingerTree (Elem a), FingerTree (Elem a))
 split _ Empty = (Empty, Empty)
 split i xs =
-  let MkSplit l x r = splitTree i xs
-  in if size xs > i
-    then (l, x `consTree` r)
-    else (xs, Empty)
+  if size xs > i
+   then let MkSplit l x r = splitTree i xs in (l, x `consTree` r)
+   else (xs, Empty)
 
 
 -- Concatenation
