@@ -232,6 +232,8 @@
   were made to be indeed lazy by the effect, but their requirements were strengthened
   from `Applicative` to `Monad`.
 
+* Implements `Sized` for `Data.Seq.Sized` and `Data.Seq.Unsized`.
+
 #### Papers
 
 * In `Control.DivideAndConquer`: a port of the paper
