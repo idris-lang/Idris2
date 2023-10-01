@@ -339,6 +339,10 @@
 <div id="line218"><a href="#line218" class="IdrisLineNumber"> 218 | </a><span class="IdrisKeyword">implementation</span>&nbsp;<span class="IdrisType">Monad</span>&nbsp;<span class="IdrisType">Seq</span>&nbsp;<span class="IdrisKeyword">where</span></div>
 <div id="line219"><a href="#line219" class="IdrisLineNumber"> 219 | </a>&nbsp;&nbsp;<span class="IdrisBound">xs</span>&nbsp;<span class="IdrisFunction">&gt;&gt;=</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">foldMap</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisBound">xs</span></div>
 <div id="line220"><a href="#line220" class="IdrisLineNumber"> 220 | </a></div>
+<div id="line221"><a href="#line221" class="IdrisLineNumber"> 221 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line222"><a href="#line222" class="IdrisLineNumber"> 222 | </a><span class="IdrisKeyword">implementation</span>&nbsp;<span class="IdrisType">Sized</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisType">Seq</span>&nbsp;<span class="IdrisBound">a</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">where</span></div>
+<div id="line223"><a href="#line223" class="IdrisLineNumber"> 223 | </a>&nbsp;&nbsp;<span class="IdrisFunction">size</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisData">MkSeq</span>&nbsp;<span class="IdrisBound">s</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">size</span>&nbsp;<span class="IdrisBound">s</span></div>
+<div id="line224"><a href="#line224" class="IdrisLineNumber"> 224 | </a></div>
 </code>
 </body>
 </html>
