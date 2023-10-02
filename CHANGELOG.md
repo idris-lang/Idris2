@@ -59,6 +59,7 @@ This CHANGELOG describes the history of already-released versions. Please see [C
 
 * `Lazy` and `Inf` values are *weakly* memoised. That is, once accessed, they are allowed
   to be not re-evaluated until garbage collector wipes them.
+  This change requires Chez with version >= 9.5.9, because of fixed bug in Chez GC.
 
 #### Racket
 
