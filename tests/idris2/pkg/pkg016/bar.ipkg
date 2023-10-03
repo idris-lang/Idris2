@@ -1,4 +1,4 @@
-package bar
+package two
 sourcedir = "bar"
 modules = Bar
-depends = foo
+depends = one

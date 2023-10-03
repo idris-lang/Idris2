@@ -1,4 +1,4 @@
-package baz
+package three
 sourcedir = "baz"
 modules = Baz
-depends = bar
+depends = two

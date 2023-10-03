@@ -1,6 +1,6 @@
 package test
 sourcedir = "src"
 modules = Test
-depends = baz
+depends = three
 main = Test
 executable = test
