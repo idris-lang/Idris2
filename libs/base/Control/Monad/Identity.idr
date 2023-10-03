@@ -4,6 +4,19 @@ import Data.Bits
 
 %default total
 
+public export
+Functor Prelude.id where
+    map f x = f x
+
+public export
+Applicative Prelude.id where
+    pure x = x
+    f <*> x = f x
+
+public export
+Monad Prelude.id where
+    x >>= f = f x
+
 ||| The identity monad. This monad provides no abilities other than pure
 ||| computation.
 public export
