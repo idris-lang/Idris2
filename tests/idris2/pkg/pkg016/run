@@ -6,7 +6,3 @@ idris2 --install baz.ipkg > /dev/null
 idris2 --build test.ipkg
 
 build/exec/test
-
-rm -r "${IDRIS2_PREFIX}"/idris2-*/foo-0
-rm -r "${IDRIS2_PREFIX}"/idris2-*/bar-0
-rm -r "${IDRIS2_PREFIX}"/idris2-*/baz-0
