@@ -205,6 +205,8 @@
 
 * Adds updating functions to `SortedMap` and `SortedDMap`.
 
+* Implements `Ord` for `Count` from `Language.Reflection`.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
