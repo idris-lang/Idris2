@@ -26,6 +26,10 @@ getRecordType : Env Term vars -> NF vars -> Maybe Name
 getRecordType env (NTCon _ n _ _ _) = Just n
 getRecordType env _ = Nothing
 
+isType : NF vars -> Bool
+isType (NType {}) = True
+isType _ = False
+
 data Rec : Type where
      Field : Maybe Name -> -- implicit argument name, if any
              String -> RawImp -> Rec -- field name on left, value on right
@@ -67,19 +71,20 @@ findConName defs tyn
 
 findFields : {auto c : Ref Ctxt Defs} ->
              Defs -> Name ->
-             Core (Maybe (List (String, Maybe Name, Maybe Name)))
+             Core (Maybe (List (String, Maybe (Name, Bool), Maybe Name)))
 findFields defs con
     = case !(lookupTyExact con (gamma defs)) of
            Just t => pure (Just !(getExpNames !(nf defs [] t)))
            _ => pure Nothing
   where
-    getExpNames : NF [] -> Core (List (String, Maybe Name, Maybe Name))
+    getExpNames : NF [] -> Core (List (String, Maybe (Name, Bool), Maybe Name))
     getExpNames (NBind fc x (Pi _ _ p ty) sc)
         = do rest <- getExpNames !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder)))
              let imp = case p of
                             Explicit => Nothing
                             _ => Just x
-             pure $ (nameRoot x, imp, getRecordType [] !(evalClosure defs ty)) :: rest
+             nfty <- evalClosure defs ty
+             pure $ (nameRoot x, (, isType nfty) <$> imp, getRecordType [] nfty) :: rest
     getExpNames _ = pure []
 
 genFieldName : {auto u : Ref UST UState} ->
@@ -119,17 +124,17 @@ findPath loc (p :: ps) full (Just tyn) val (Field mn n v)
         let rec' = Constr mn con args
         findPath loc (p :: ps) full (Just tyn) val rec'
   where
-    mkArgs : List (String, Maybe Name, Maybe Name) ->
+    mkArgs : List (String, Maybe (Name, Bool), Maybe Name) ->
              Core (List (String, Rec))
     mkArgs [] = pure []
     mkArgs ((p, imp, _) :: ps)
         = do fldn <- genFieldName p
              args' <- mkArgs ps
-             -- If it's an implicit argument, leave it as _ by default
-             let arg = maybe (IVar (virtualiseFC loc) (UN $ Basic fldn))
-                             (const (Implicit loc False))
-                             imp
-             pure ((p, Field imp fldn arg) :: args')
+             -- If it's an implicit type argument, leave it as _ by default
+             let arg = case snd <$> imp of
+                  Just True => Implicit loc False
+                  _ => IVar (virtualiseFC loc) (UN $ Basic fldn)
+             pure ((p, Field (fst <$> imp) fldn arg) :: args')
 
 findPath loc (p :: ps) full tyn val (Constr mn con args)
    = do let Just prec = lookup p args
