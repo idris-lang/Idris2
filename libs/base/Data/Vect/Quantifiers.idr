@@ -61,6 +61,12 @@ namespace Any
   toExists (Here prf)  = Evidence _ prf
   toExists (There prf) = toExists prf
 
+  ||| Get the bounded numeric position of the element satisfying the predicate
+  public export
+  anyToFin : {0 xs : Vect n a} -> Any p xs -> Fin n
+  anyToFin (Here _) = FZ
+  anyToFin (There later) = FS (anyToFin later)
+
 namespace All
   ||| A proof that all elements of a vector satisfy a property. It is a list of
   ||| proofs, corresponding element-wise to the `Vect`.

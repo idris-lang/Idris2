@@ -186,6 +186,9 @@
 
 * Add `zipPropertyWith` to `Data.Vect.Quantifiers.All.All`.
 
+* Add `anyToFin` to `Data.Vect.Quantifiers.Any`,
+  converting the `Any` witness to the index into the corresponding element.
+
 * Implemented `Ord` for `Language.Reflection.TT.Name`, `Language.Reflection.TT.Namespace`
   and `Language.Reflection.TT.UserName`.
 
