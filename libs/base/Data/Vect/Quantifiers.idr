@@ -67,6 +67,14 @@ namespace Any
   anyToFin (Here _) = FZ
   anyToFin (There later) = FS (anyToFin later)
 
+  ||| `anyToFin`'s return type satisfies the predicate
+  export
+  anyToFinCorrect : {0 xs : Vect n a} ->
+                    (witness : Any p xs) ->
+                    p (anyToFin witness `index` xs)
+  anyToFinCorrect (Here prf) = prf
+  anyToFinCorrect (There later) = anyToFinCorrect later
+
 namespace All
   ||| A proof that all elements of a vector satisfy a property. It is a list of
   ||| proofs, corresponding element-wise to the `Vect`.
