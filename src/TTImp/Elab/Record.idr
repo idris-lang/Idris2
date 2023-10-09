@@ -83,7 +83,7 @@ findFieldsAndTypeArgs defs con
              pure $ ((nameRoot x, imp, getRecordType [] nfty) :: rest, tyArgs)
     getExpNames (NTCon _ _ _ _ args)
         = do eargs <- traverse (evalClosure defs . snd) args
-             pure $ ([], foldl (\acc => \arg => 
+             pure $ ([], foldl (\acc => \arg =>
                 case arg of
                   NType _ n => n :: acc
                   _ => acc) [] eargs)
