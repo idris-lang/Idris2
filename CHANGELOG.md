@@ -213,6 +213,9 @@
 
 * Implements `Ord` for `Count` from `Language.Reflection`.
 
+* Implements `MonadState` for `Data.Ref` with a named implementation requiring
+  a particular reference.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
