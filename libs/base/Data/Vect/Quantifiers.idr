@@ -136,10 +136,24 @@ namespace All
   imapProperty _ _              []      = []
   imapProperty i f @{ix :: ixs} (x::xs) = f @{ix} x :: imapProperty i f @{ixs} xs
 
+  ||| If `All` witnesses a property that does not depend on the vector `xs`
+  ||| it's indexed by, then it is really a `Vect`.
   public export
   forget : All (const p) {n} xs -> Vect n p
   forget []      = []
   forget (x::xs) = x :: forget xs
+
+  ||| Any `Vect` can be lifted to become an `All`
+  ||| witnessing the presence of elements of the `Vect`'s type.
+  public export
+  remember : (xs : Vect n ty) -> All (const ty) xs
+  remember [] = []
+  remember (x :: xs) = x :: remember xs
+
+  export
+  forgetRememberId : (xs : Vect n ty) -> forget (remember xs) = xs
+  forgetRememberId [] = Refl
+  forgetRememberId (x :: xs) = cong (x ::) (forgetRememberId xs)
 
   export
   zipPropertyWith : (f : {0 x : a} -> p x -> q x -> r x) ->
