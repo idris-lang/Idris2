@@ -1,0 +1,77 @@
+. ../../../testutils.sh
+
+echo "--- Print dirs with ipkg ---"
+check --find-ipkg src/Inside/PrintDirs.idr | filter_test_dir
+
+##############################
+
+echo
+. ../../../testutils.sh
+
+(
+cd src
+echo "--- Print dirs with ipkg (with changed pwd) ---"
+check --find-ipkg Inside/PrintDirs.idr | filter_test_dir
+)
+
+##############################
+
+echo
+
+(
+cd src
+. ../../../../testutils.sh # this is here because we will pollute with `build` dir here
+echo "--- Print dirs without ipkg (with changed pwd) ---"
+check Inside/PrintDirs.idr | filter_test_dir
+)
+
+##############################
+
+echo
+. ../../../testutils.sh
+
+echo "--- Simple reads and writes ---"
+
+rm -rf src/nonExistent*
+echo "non-overwritten existent to write" > src/existentToWrite
+
+check --find-ipkg src/SimpleRW.idr
+
+cat src/existentToRead
+cat src/nonExistentToRead 2>&1
+cat src/existentToWrite
+cat src/nonExistentToWrite 2>&1
+
+rm -rf src/nonExistent*
+echo "non-overwritten existent to write" > src/existentToWrite
+
+##############################
+
+echo
+. ../../../testutils.sh
+
+echo "--- A little but less simple reads and writes ---"
+
+rm -rf src/nonExistent*
+rm -f src/..a-dot-named-file
+
+check --find-ipkg src/LessSimpleRW.idr
+
+cat src/nonExistentOriginally/a-generated-file 2>&1
+cat src/..a-dot-named-file 2>&1
+
+rm -rf src/nonExistent*
+rm -f src/..a-dot-named-file
+
+##############################
+
+echo
+. ../../../testutils.sh
+
+echo "--- Type providers ---"
+rm -rf src/another-fancy-record.json
+check --find-ipkg src/TypeProviders.idr
+
+echo "Derived:"
+cat src/another-fancy-record.json
+echo
