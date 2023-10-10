@@ -911,6 +911,15 @@ mutual
       = do tms' <- traverse (desugar AnyExpr ps) tms
            pure (ForeignExport tms')
 
+  %inline
+  mapDesugarPiInfo : {auto s : Ref Syn SyntaxInfo} ->
+                     {auto c : Ref Ctxt Defs} ->
+                     {auto u : Ref UST UState} ->
+                     {auto m : Ref MD Metadata} ->
+                     {auto o : Ref ROpts REPLOpts} ->
+                     List Name -> PiInfo PTerm -> Core (PiInfo RawImp)
+  mapDesugarPiInfo ps = PiInfo.traverse (desugar AnyExpr ps)
+
   -- Given a high level declaration, return a list of TTImp declarations
   -- which process it, and update any necessary state on the way.
   export
@@ -1019,9 +1028,10 @@ mutual
 
   desugarDecl ps (PImplementation fc vis fnopts pass is cons tn params impln nusing body)
       = do opts <- traverse (desugarFnOpt ps) fnopts
-           is' <- for is $ \ (fc, c,n,tm) =>
+           is' <- for is $ \ (fc, c, n, pi, tm) =>
                      do tm' <- desugar AnyExpr ps tm
-                        pure (fc, c, n, tm')
+                        pi' <- mapDesugarPiInfo ps pi
+                        pure (fc, c, n, pi', tm')
            cons' <- for cons $ \ (n, tm) =>
                      do tm' <- desugar AnyExpr ps tm
                         pure (n, tm')
@@ -1034,13 +1044,13 @@ mutual
              $ findUniqueBindableNames fc True ps []
 
            let paramsb = map (doBind bnames) params'
-           let isb = map (\ (info, r, n, tm) => (info, r, n, doBind bnames tm)) is'
+           let isb = map (\ (info, r, n, p, tm) => (info, r, n, p, doBind bnames tm)) is'
            let consb = map (\(n, tm) => (n, doBind bnames tm)) cons'
 
            body' <- maybe (pure Nothing)
                           (\b => do b' <- traverse (desugarDecl ps) b
                                     pure (Just (concat b'))) body
-           -- calculate the name of the interface, if it's not explicitly
+           -- calculate the name of the implementation, if it's not explicitly
            -- given.
            let impname = maybe (mkImplName fc tn paramsb) id impln
 
@@ -1101,9 +1111,6 @@ mutual
         = let str = displayUserName n in
           NS ns (DN str (MN ("__mk" ++ str) 0))
       mkConName n = DN (show n) (MN ("__mk" ++ show n) 0)
-
-      mapDesugarPiInfo : List Name -> PiInfo PTerm -> Core (PiInfo RawImp)
-      mapDesugarPiInfo ps = traverse (desugar AnyExpr ps)
 
   desugarDecl ps (PFixity fc vis fix prec opName)
       = do ctx <- get Ctxt

@@ -1594,6 +1594,16 @@ recordConstructor fname
        n <- mustWork $ decoratedDataConstructorName fname
        pure (doc, n)
 
+autoImplicitField : OriginDesc -> IndentInfo -> Rule (PiInfo t)
+autoImplicitField fname _ = AutoImplicit <$ decoratedKeyword fname "auto"
+
+defImplicitField : OriginDesc -> IndentInfo -> Rule (PiInfo PTerm)
+defImplicitField fname indents = do
+  decoratedKeyword fname "default"
+  commit
+  t <- simpleExpr fname indents
+  pure (DefImplicit t)
+
 constraints : OriginDesc -> IndentInfo -> EmptyRule (List (Maybe Name, PTerm))
 constraints fname indents
     = do tm <- appExpr pdef fname indents
@@ -1610,15 +1620,22 @@ constraints fname indents
          pure ((Just n, tm) :: more)
   <|> pure []
 
-implBinds : OriginDesc -> IndentInfo -> EmptyRule (List (FC, RigCount, Name, PTerm))
-implBinds fname indents = concatMap (map adjust) <$> go where
+implBinds : OriginDesc -> IndentInfo -> (namedImpl : Bool) -> EmptyRule (List (FC, RigCount, Name, PiInfo PTerm, PTerm))
+implBinds fname indents namedImpl = concatMap (map adjust) <$> go where
 
-  adjust : (RigCount, WithBounds Name, PTerm) -> (FC, RigCount, Name, PTerm)
+  adjust : (RigCount, WithBounds Name, a) -> (FC, RigCount, Name, a)
   adjust (r, wn, ty) = (virtualiseFC (boundToFC fname wn), r, wn.val, ty)
 
-  go : EmptyRule (List (List (RigCount, WithBounds Name, PTerm)))
+  isDefaultImplicit : PiInfo a -> Bool
+  isDefaultImplicit (DefImplicit _) = True
+  isDefaultImplicit _               = False
+
+  go : EmptyRule (List (List (RigCount, WithBounds Name, PiInfo PTerm, PTerm)))
   go = do decoratedSymbol fname "{"
-          ns <- pibindListName fname indents
+          piInfo <- bounds $ option Implicit $ defImplicitField fname indents
+          when (not namedImpl && isDefaultImplicit piInfo.val) $
+            fatalLoc piInfo.bounds "Default implicits are allowed only for named implementations"
+          ns <- map @{Compose} (\(rc, wb, n) => (rc, wb, piInfo.val, n)) $ pibindListName fname indents
           commitSymbol fname "}"
           commitSymbol fname "->"
           more <- go
@@ -1667,7 +1684,7 @@ implDecl fname indents
                          iname  <- optional $ decoratedSymbol fname "["
                                            *> decorate fname Function name
                                            <* decoratedSymbol fname "]"
-                         impls  <- implBinds fname indents
+                         impls  <- implBinds fname indents (isJust iname)
                          cons   <- constraints fname indents
                          n      <- decorate fname Typ name
                          params <- many (continue indents *> simpleExpr fname indents)
@@ -1685,7 +1702,7 @@ fieldDecl fname indents
       = do doc <- optDocumentation fname
            decoratedSymbol fname "{"
            commit
-           impl <- option Implicit (autoImplicitField <|> defImplicitField)
+           impl <- option Implicit (autoImplicitField fname indents <|> defImplicitField fname indents)
            fs <- fieldBody doc impl
            decoratedSymbol fname "}"
            atEnd indents
@@ -1695,16 +1712,6 @@ fieldDecl fname indents
            atEnd indents
            pure fs
   where
-    autoImplicitField : Rule (PiInfo t)
-    autoImplicitField = AutoImplicit <$ decoratedKeyword fname "auto"
-
-    defImplicitField : Rule (PiInfo PTerm)
-    defImplicitField = do
-      decoratedKeyword fname "default"
-      commit
-      t <- simpleExpr fname indents
-      pure (DefImplicit t)
-
     fieldBody : String -> PiInfo PTerm -> Rule (List PField)
     fieldBody doc p = do
       b <- bounds (do

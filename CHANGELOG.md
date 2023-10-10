@@ -20,6 +20,7 @@
 * New `fromTTImp`, `fromName`, and `fromDecls` names for custom `TTImp`,
   `Name`, and `Decls` literals.
 * Call to `%macro`-functions do not require the `ElabReflection` extension.
+* Default implicits are supported for named implementations.
 
 ### REPL changes
 
