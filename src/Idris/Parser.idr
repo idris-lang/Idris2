@@ -1848,6 +1848,8 @@ topDecl fname indents
          pure [d]
   <|> do ds <- claims fname indents
          pure (forget ds)
+  <|> do d <- directiveDecl fname indents
+         pure [d]
   <|> do d <- implDecl fname indents
          pure [d]
   <|> do d <- definition fname indents
@@ -1872,8 +1874,6 @@ topDecl fname indents
   <|> do d <- runElabDecl fname indents
          pure [d]
   <|> do d <- transformDecl fname indents
-         pure [d]
-  <|> do d <- directiveDecl fname indents
          pure [d]
   <|> do dstr <- bounds (terminal "Expected CG directive"
                           (\case
