@@ -20,6 +20,8 @@
 * New `fromTTImp`, `fromName`, and `fromDecls` names for custom `TTImp`,
   `Name`, and `Decls` literals.
 * Call to `%macro`-functions do not require the `ElabReflection` extension.
+* Elaborator scripts were made to be able to access project files,
+  allowing the support for type providers and similar stuff.
 
 ### REPL changes
 

@@ -3,6 +3,7 @@ module TTImp.Elab.RunElab
 import Core.Context
 import Core.Context.Log
 import Core.Core
+import Core.Directory
 import Core.Env
 import Core.Metadata
 import Core.Normalise
@@ -16,12 +17,16 @@ import Idris.Resugar
 import Idris.REPL.Opts
 import Idris.Syntax
 
+import Libraries.Utils.Path
+
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.Reflect
 import TTImp.TTImp
 import TTImp.TTImp.Functor
 import TTImp.Unelab
+
+import System.File.Meta
 
 %default covering
 
@@ -84,6 +89,47 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
     reifyFC defs mbfc = pure $ case !(evalClosure defs mbfc >>= reify defs) of
       EmptyFC => fc
       x       => x
+
+    -- parses and resolves `Language.Reflection.LookupDir`
+    lookupDir : Defs -> NF vars -> Core String
+    lookupDir defs (NDCon _ conName _ _ [])
+        = do defs <- get Ctxt
+             NS ns (UN (Basic n)) <- toFullNames conName
+               | fnm => failWith defs $ "bad lookup dir fullnames " ++ show fnm
+             let True = ns == reflectionNS
+               | False => failWith defs $ "bad lookup dir namespace " ++ show ns
+             let wd = defs.options.dirs.working_dir
+             let sd = maybe wd (\sd => joinPath [wd, sd]) defs.options.dirs.source_dir
+             let modDir : Bool -> Core String := \doParent => do
+                            syn <- get Syn
+                            let parentIfNeeded = if doParent then parent else pure
+                            let moduleSuffix = toList $ (head' syn.saveMod >>= parentIfNeeded) <&> toPath
+                            pure $ joinPath $ sd :: moduleSuffix
+             case n of
+               "ProjectDir"       => pure wd
+               "SourceDir"        => pure sd
+               "CurrentModuleDir" => modDir True
+               "SubmodulesDir"    => modDir False
+               "BuildDir"         => pure $ joinPath [wd, defs.options.dirs.build_dir]
+               _ => failWith defs $ "bad lookup dir value"
+    lookupDir defs lk
+        = do defs <- get Ctxt
+             empty <- clearDefs defs
+             throw (BadRunElab fc env !(quote empty env lk) "lookup dir is not a data value")
+
+    validatePath : Defs -> String -> Core ()
+    validatePath defs path = do
+      let True = isRelative path
+        | False => failWith defs $ "path must be relative"
+      let True = pathDoesNotEscape 0 $ splitPath path
+        | False => failWith defs $ "path must not escape the directory"
+      pure ()
+      where
+        pathDoesNotEscape : (depth : Nat) -> List String -> Bool
+        pathDoesNotEscape _     []           = True
+        pathDoesNotEscape Z     (".."::rest) = False
+        pathDoesNotEscape (S n) (".."::rest) = pathDoesNotEscape n rest
+        pathDoesNotEscape n     (_   ::rest) = pathDoesNotEscape (S n) rest
 
     elabCon : Defs -> String -> List (Closure vars) -> Core (NF vars)
     elabCon defs "Pure" [_,val]
@@ -228,6 +274,26 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
              decls <- reify defs d'
              traverse_ (processDecl [] (MkNested []) []) decls
              scriptRet ()
+    elabCon defs "ReadFile" [lk, pth]
+        = do pathPrefix <- lookupDir defs !(evalClosure defs lk)
+             path <- reify defs !(evalClosure defs pth)
+             validatePath defs path
+             let fullPath = joinPath [pathPrefix, path]
+             True <- coreLift $ exists fullPath
+               | False => scriptRet $ Nothing {ty=String}
+             contents <- readFile fullPath
+             scriptRet $ Just contents
+    elabCon defs "WriteFile" [lk, pth, contents]
+        = do pathPrefix <- lookupDir defs !(evalClosure defs lk)
+             path <- reify defs !(evalClosure defs pth)
+             validatePath defs path
+             contents <- reify defs !(evalClosure defs contents)
+             let fullPath = joinPath [pathPrefix, path]
+             whenJust (parent fullPath) ensureDirectoryExists
+             writeFile fullPath contents
+             scriptRet ()
+    elabCon defs "IdrisDir" [lk]
+        = do evalClosure defs lk >>= lookupDir defs >>= scriptRet
     elabCon defs n args = failWith defs $ "unexpected Elab constructor " ++ n ++
                                           ", or incorrect count of arguments: " ++ show (length args)
 elabScript rig fc nest env script exp
