@@ -26,6 +26,23 @@ getRecordType : Env Term vars -> NF vars -> Maybe Name
 getRecordType env (NTCon _ n _ _ _) = Just n
 getRecordType env _ = Nothing
 
+getNames : {auto c : Ref Ctxt Defs} -> Defs -> NF [] -> Core $ SortedSet Name
+getNames defs (NApp _ hd args)
+    = do eargs <- traverse (evalClosure defs . snd) args
+         pure $ nheadNames hd `union` concat !(traverse (getNames defs) eargs)
+  where
+    nheadNames : NHead [] -> SortedSet Name
+    nheadNames (NRef Bound n) = singleton n
+    nheadNames _ = empty
+getNames defs (NDCon _ _ _ _ args)
+    = do eargs <- traverse (evalClosure defs . snd) args
+         pure $ concat !(traverse (getNames defs) eargs)
+getNames defs (NTCon _ _ _ _ args)
+  = do eargs <- traverse (evalClosure defs . snd) args
+       pure $ concat !(traverse (getNames defs) eargs)
+getNames defs (NDelayed _ _ tm) = getNames defs tm
+getNames {} = pure empty
+
 data Rec : Type where
      Field : Maybe Name -> -- implicit argument name, if any
              String -> RawImp -> Rec -- field name on left, value on right
@@ -66,28 +83,26 @@ findConName defs tyn
            _ => pure Nothing
 
 findFieldsAndTypeArgs : {auto c : Ref Ctxt Defs} ->
-             Defs -> Name ->
-             Core $ Maybe (List (String, Maybe Name, Maybe Name), List Name)
+                        Defs -> Name ->
+                        Core $ Maybe (List (String, Maybe Name, Maybe Name), SortedSet Name)
 findFieldsAndTypeArgs defs con
     = case !(lookupTyExact con (gamma defs)) of
-           Just t => pure (Just !(getExpNames !(nf defs [] t)))
+           Just t => pure (Just !(getExpNames empty [] !(nf defs [] t)))
            _ => pure Nothing
   where
-    getExpNames : NF [] -> Core (List (String, Maybe Name, Maybe Name), List Name)
-    getExpNames (NBind fc x (Pi _ _ p ty) sc)
-        = do (rest, tyArgs) <- getExpNames !(sc defs (toClosure defaultOpts [] (TType fc x)))
-             let imp = case p of
+    getExpNames : SortedSet Name ->
+                  List (String, Maybe Name, Maybe Name) ->
+                  NF [] ->
+                  Core (List (String, Maybe Name, Maybe Name), SortedSet Name)
+    getExpNames names expNames (NBind fc x (Pi _ _ p ty) sc)
+        = do let imp = case p of
                             Explicit => Nothing
                             _ => Just x
              nfty <- evalClosure defs ty
-             pure $ ((nameRoot x, imp, getRecordType [] nfty) :: rest, tyArgs)
-    getExpNames (NTCon _ _ _ _ args)
-        = do eargs <- traverse (evalClosure defs . snd) args
-             pure $ ([], foldl (\acc => \arg =>
-                case arg of
-                  NType _ n => n :: acc
-                  _ => acc) [] eargs)
-    getExpNames _ = pure ([], [])
+             let names = !(getNames defs nfty) `union` names
+             let expNames = (nameRoot x, imp, getRecordType [] nfty) :: expNames
+             getExpNames names expNames !(sc defs (toClosure defaultOpts [] (Ref fc Bound x)))
+    getExpNames names expNames nfty = pure (reverse expNames, (!(getNames defs nfty) `union` names))
 
 genFieldName : {auto u : Ref UST UState} ->
                String -> Core String
@@ -127,14 +142,14 @@ findPath loc (p :: ps) full (Just tyn) val (Field mn n v)
         findPath loc (p :: ps) full (Just tyn) val rec'
   where
     mkArgs : List (String, Maybe Name, Maybe Name) ->
-             List Name ->
+             SortedSet Name ->
              Core (List (String, Rec))
     mkArgs [] _ = pure []
     mkArgs ((p, imp, _) :: ps) tyArgs
         = do fldn <- genFieldName p
              args' <- mkArgs ps tyArgs
-             -- If it's an implicit argument found in the type constructor, leave it as _ by default
-             let arg = case (\impn => isJust $ find (== impn) tyArgs) <$> imp of
+             -- If other types depend on that implicit argument, leave it as _ by default
+             let arg = case (flip contains tyArgs) <$> imp of
                   Just True => Implicit loc False
                   _ => IVar (virtualiseFC loc) (UN $ Basic fldn)
              pure ((p, Field imp fldn arg) :: args')
