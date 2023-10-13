@@ -925,6 +925,24 @@ public export
 groupAllWith : Ord b => (a -> b) -> List a -> List (List1 a)
 groupAllWith f = groupWith f . sortBy (comparing f)
 
+||| Partitions a list into fixed sized sublists.
+|||
+||| Note: The last list in the result might be shorter than the rest if
+|||       the input cannot evenly be split into groups of the same size.
+|||
+||| ```idris example
+||| grouped 3 [1..10] === [[1,2,3],[4,5,6],[7,8,9],[10]]
+||| ```
+public export
+grouped : (n : Nat) -> {auto 0 p : IsSucc n} -> List a -> List (List a)
+grouped _     []      = []
+grouped (S m) (x::xs) = go [<] [<x] m xs
+  where
+    go : SnocList (List a) -> SnocList a -> Nat -> List a -> List (List a)
+    go sxs sx c     []        = sxs <>> [sx <>> []]
+    go sxs sx 0     (x :: xs) = go (sxs :< (sx <>> [])) [<x] m xs
+    go sxs sx (S k) (x :: xs) = go sxs (sx :< x) k xs
+
 --------------------------------------------------------------------------------
 -- Properties
 --------------------------------------------------------------------------------

@@ -211,6 +211,8 @@
 
 * Adds updating functions to `SortedMap` and `SortedDMap`.
 
+* Adds `grouped` function to `Data.List` for splitting a list into equal-sized slices.
+
 * Implements `Ord` for `Count` from `Language.Reflection`.
 
 * Implements `MonadState` for `Data.Ref` with a named implementation requiring
