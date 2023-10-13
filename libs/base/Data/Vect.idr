@@ -49,6 +49,11 @@ Biinjective Vect.(::) where
 -- Indexing into vectors
 --------------------------------------------------------------------------------
 
+export
+invertVectZ : (xs : Vect Z a) -> xs === []
+invertVectZ [] = Refl
+
+
 ||| All but the first element of the vector
 |||
 ||| ```idris example
@@ -66,6 +71,10 @@ tail (_::xs) = xs
 public export
 head : Vect (S len) elem -> elem
 head (x::_) = x
+
+export
+invertVectS : (xs : Vect (S n) a) -> xs === head xs :: tail xs
+invertVectS (_ :: _) = Refl
 
 ||| The last element of the vector
 |||

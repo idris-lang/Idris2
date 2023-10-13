@@ -155,6 +155,17 @@ namespace All
   forgetRememberId [] = Refl
   forgetRememberId (x :: xs) = cong (x ::) (forgetRememberId xs)
 
+  public export
+  castAllConst : {0 xs, ys : Vect n a} -> All (const ty) xs -> All (const ty) ys
+  castAllConst [] = rewrite invertVectZ ys in []
+  castAllConst (x :: xs) = rewrite invertVectS ys in x :: castAllConst xs
+
+  export
+  rememberForgetId : (vs : All (const ty) xs) ->
+    castAllConst (remember (forget vs)) === vs
+  rememberForgetId [] = Refl
+  rememberForgetId (x :: xs) = cong (x ::) (rememberForgetId xs)
+
   export
   zipPropertyWith : (f : {0 x : a} -> p x -> q x -> r x) ->
                     All p xs -> All q xs -> All r xs
@@ -232,4 +243,3 @@ namespace All
   drop' 0 ys = rewrite minusZeroRight k in ys
   drop' (S k) [] = []
   drop' (S k) (y :: ys) = drop' k ys
-
