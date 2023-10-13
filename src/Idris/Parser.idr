@@ -1828,10 +1828,8 @@ fixDecl fname indents
 
 directiveDecl : OriginDesc -> IndentInfo -> Rule PDecl
 directiveDecl fname indents
-    = do b <- bounds (do d <- directive fname indents
-                         pure (\fc : FC => PDirective fc d))
-
-         pure (b.val (boundToFC fname b))
+    = do b <- bounds (directive fname indents)
+         pure (PDirective (boundToFC fname b) b.val)
 
 -- Declared at the top
 -- topDecl : OriginDesc -> IndentInfo -> Rule (List PDecl)
