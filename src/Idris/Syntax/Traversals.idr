@@ -327,11 +327,11 @@ mapPTermM f = goPTerm where
       (::) . (\ c => (a, b, c)) <$> goPTerm t
                                 <*> go3TupledPTerms ts
 
-    goImplicits : List (x, y, z, PTerm' nm) ->
-                      Core (List (x, y, z, PTerm' nm))
+    goImplicits : List (x, y, z, PiInfo (PTerm' nm), PTerm' nm) ->
+                      Core (List (x, y, z, PiInfo (PTerm' nm), PTerm' nm))
     goImplicits [] = pure []
-    goImplicits ((a, b, c, t) :: ts) =
-      ((::) . (a,b,c,)) <$> goPTerm t
+    goImplicits ((a, b, c, p, t) :: ts) =
+      ((::) . (a,b,c,)) <$> ((,) <$> goPiInfo p <*> goPTerm t)
                         <*> goImplicits ts
 
     go4TupledPTerms : List (x, y, PiInfo (PTerm' nm), PTerm' nm) ->
@@ -576,9 +576,9 @@ mapPTerm f = goPTerm where
     go3TupledPTerms [] = []
     go3TupledPTerms ((a, b, t) :: ts) = (a, b, goPTerm t) :: go3TupledPTerms ts
 
-    goImplicits : List (x, y, z, PTerm' nm) -> List (x, y, z, PTerm' nm)
+    goImplicits : List (x, y, z, PiInfo (PTerm' nm), PTerm' nm) -> List (x, y, z, PiInfo (PTerm' nm), PTerm' nm)
     goImplicits [] = []
-    goImplicits ((a, b, c, t) :: ts) = (a,b,c, goPTerm t) :: goImplicits ts
+    goImplicits ((a, b, c, p, t) :: ts) = (a,b,c, goPiInfo p, goPTerm t) :: goImplicits ts
 
     go4TupledPTerms : List (x, y, PiInfo (PTerm' nm), PTerm' nm) ->
                       List (x, y, PiInfo (PTerm' nm), PTerm' nm)

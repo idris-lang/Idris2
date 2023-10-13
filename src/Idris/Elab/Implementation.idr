@@ -47,10 +47,10 @@ bindConstraints fc p [] ty = ty
 bindConstraints fc p ((n, ty) :: rest) sc
     = IPi fc top p n ty (bindConstraints fc p rest sc)
 
-bindImpls : List (FC, RigCount, Name, RawImp) -> RawImp -> RawImp
+bindImpls : List (FC, RigCount, Name, PiInfo RawImp, RawImp) -> RawImp -> RawImp
 bindImpls [] ty = ty
-bindImpls ((fc, r, n, ty) :: rest) sc
-    = IPi fc r Implicit (Just n) ty (bindImpls rest sc)
+bindImpls ((fc, r, n, p, ty) :: rest) sc
+    = IPi fc r p (Just n) ty (bindImpls rest sc)
 
 addDefaults : FC -> Name ->
               (params : List (Name, RawImp)) -> -- parameters have been specialised, use them!
@@ -99,11 +99,16 @@ addDefaults fc impName params allms defs body
 getMethImps : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               Env Term vars -> Term vars ->
-              Core (List (Name, RigCount, RawImp))
+              Core (List (Name, RigCount, Maybe RawImp, RawImp))
 getMethImps env (Bind fc x (Pi fc' c Implicit ty) sc)
     = do rty <- map (map rawName) $ unelabNoSugar env ty
          ts <- getMethImps (Pi fc' c Implicit ty :: env) sc
-         pure ((x, c, rty) :: ts)
+         pure ((x, c, Nothing, rty) :: ts)
+getMethImps env (Bind fc x (Pi fc' c (DefImplicit def) ty) sc)
+    = do rty <- map (map rawName) $ unelabNoSugar env ty
+         rdef <- map (map rawName) $ unelabNoSugar env def
+         ts <- getMethImps (Pi fc' c (DefImplicit def) ty :: env) sc
+         pure ((x, c, Just rdef, rty) :: ts)
 getMethImps env tm = pure []
 
 export
@@ -115,7 +120,7 @@ elabImplementation : {vars : _} ->
                      {auto o : Ref ROpts REPLOpts} ->
                      FC -> Visibility -> List FnOpt -> Pass ->
                      Env Term vars -> NestedNames vars ->
-                     (implicits : List (FC, RigCount, Name, RawImp)) ->
+                     (implicits : List (FC, RigCount, Name, PiInfo RawImp, RawImp)) ->
                      (constraints : List (Maybe Name, RawImp)) ->
                      Name ->
                      (ps : List RawImp) ->
@@ -346,7 +351,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
     -- When applying the method in the field for the record, eta expand
     -- the expected arguments based on the field type, so that implicits get
     -- inserted in the right place
-    mkMethField : List (Name, RigCount, RawImp) ->
+    mkMethField : List (Name, a) ->
                   List (Name, List (Name, RigCount, PiInfo RawImp)) ->
                   (Name, Name, List (String, String), RigCount, Maybe TotalReq, RawImp) -> RawImp
     mkMethField methImps fldTys (topn, n, upds, c, treq, ty)
@@ -378,16 +383,18 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
         = do mn <- inCurrentNS (methName n)
              pure (dropNS n, IVar vfc mn)
 
-    bindImps : List (Name, RigCount, RawImp) -> RawImp -> RawImp
+    bindImps : List (Name, RigCount, Maybe RawImp, RawImp) -> RawImp -> RawImp
     bindImps [] ty = ty
-    bindImps ((n, c, t) :: ts) ty
+    bindImps ((n, c, Just def, t) :: ts) ty
+        = IPi vfc c (DefImplicit def) (Just n) t (bindImps ts ty)
+    bindImps ((n, c, Nothing, t) :: ts) ty
         = IPi vfc c Implicit (Just n) t (bindImps ts ty)
 
     -- Return method name, specialised method name, implicit name updates,
     -- and method type. Also return how the method name should be updated
     -- in later method types (specifically, putting implicits in)
     topMethType : List (Name, RawImp) ->
-                  Name -> List (Name, RigCount, RawImp) ->
+                  Name -> List (Name, RigCount, Maybe RawImp, RawImp) ->
                   List String -> List Name -> List Name -> List Name ->
                   Method ->
                   Core ((Name, Name, List (String, String), RigCount, Maybe TotalReq, RawImp),
@@ -445,7 +452,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
              pure ((meth.name, n, upds, meth.count, meth.totalReq, mty), methupds')
 
     topMethTypes : List (Name, RawImp) ->
-                   Name -> List (Name, RigCount, RawImp) ->
+                   Name -> List (Name, RigCount, Maybe RawImp, RawImp) ->
                    List String ->
                    List Name -> List Name -> List Name ->
                    List Method ->
