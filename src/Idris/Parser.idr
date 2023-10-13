@@ -1835,14 +1835,8 @@ fixDecl fname indents
 
 directiveDecl : OriginDesc -> IndentInfo -> Rule PDecl
 directiveDecl fname indents
-    = do b <- bounds ((do d <- directive fname indents
-                          pure (\fc : FC => PDirective fc d))
-                     <|>
-                      (do decoratedPragma fname "runElab"
-                          tm <- expr pdef fname indents
-                          atEnd indents
-                          pure (\fc : FC => PReflect fc tm)))
-         pure (b.val (boundToFC fname b))
+    = do b <- bounds (directive fname indents)
+         pure (PDirective (boundToFC fname b) b.val)
 
 -- Declared at the top
 -- topDecl : OriginDesc -> IndentInfo -> Rule (List PDecl)
@@ -1855,6 +1849,8 @@ topDecl fname indents
          pure [d]
   <|> do ds <- claims fname indents
          pure (forget ds)
+  <|> do d <- directiveDecl fname indents
+         pure [d]
   <|> do d <- implDecl fname indents
          pure [d]
   <|> do d <- definition fname indents
@@ -1879,8 +1875,6 @@ topDecl fname indents
   <|> do d <- runElabDecl fname indents
          pure [d]
   <|> do d <- transformDecl fname indents
-         pure [d]
-  <|> do d <- directiveDecl fname indents
          pure [d]
   <|> do dstr <- bounds (terminal "Expected CG directive"
                           (\case

@@ -979,9 +979,6 @@ mutual
            uds' <- traverse (desugarDecl ps) uds
            update Syn { usingImpl := oldu }
            pure (concat uds')
-  desugarDecl ps (PReflect fc tm)
-      = throw (GenericMsg fc "Reflection not implemented yet")
---       pure [IReflect fc !(desugar AnyExpr ps tm)]
   desugarDecl ps (PInterface fc vis cons_in tn doc params det conname body)
       = do addDocString tn doc
            let paramNames = map fst params

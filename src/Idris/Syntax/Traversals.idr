@@ -240,7 +240,6 @@ mapPTermM f = goPTerm where
     goPDecl (PUsing fc mnts ps) =
       PUsing fc <$> goPairedPTerms mnts
                 <*> goPDecls ps
-    goPDecl (PReflect fc t) = PReflect fc <$> goPTerm t
     goPDecl (PInterface fc v mnts n doc nrts ns mn ps) =
       PInterface fc v <$> goPairedPTerms mnts
                       <*> pure n
@@ -523,7 +522,6 @@ mapPTerm f = goPTerm where
       = PParameters fc (go4TupledPTerms nts) (goPDecl <$> ps)
     goPDecl (PUsing fc mnts ps)
       = PUsing fc (goPairedPTerms mnts) (goPDecl <$> ps)
-    goPDecl (PReflect fc t) = PReflect fc $ goPTerm t
     goPDecl (PInterface fc v mnts n doc nrts ns mn ps)
       = PInterface fc v (goPairedPTerms mnts) n doc (go3TupledPTerms nrts) ns mn (goPDecl <$> ps)
     goPDecl (PImplementation fc v opts p is cs n ts mn ns mps)
