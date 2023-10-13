@@ -187,7 +187,7 @@
 * Generalized `imapProperty` in `Data.List.Quantifiers.All.All`
   and `Data.Vect.Quantifiers.All.All`.
 
-* Add `zipPropertyWith` to `Data.Vect.Quantifiers.All.All`.
+* Add `zipPropertyWith` and `remember` to `Data.Vect.Quantifiers.All.All`.
 
 * Add `anyToFin` to `Data.Vect.Quantifiers.Any`,
   converting the `Any` witness to the index into the corresponding element.

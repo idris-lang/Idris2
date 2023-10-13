@@ -136,10 +136,35 @@ namespace All
   imapProperty _ _              []      = []
   imapProperty i f @{ix :: ixs} (x::xs) = f @{ix} x :: imapProperty i f @{ixs} xs
 
+  ||| If `All` witnesses a property that does not depend on the vector `xs`
+  ||| it's indexed by, then it is really a `Vect`.
   public export
   forget : All (const p) {n} xs -> Vect n p
   forget []      = []
   forget (x::xs) = x :: forget xs
+
+  ||| Any `Vect` can be lifted to become an `All`
+  ||| witnessing the presence of elements of the `Vect`'s type.
+  public export
+  remember : (xs : Vect n ty) -> All (const ty) xs
+  remember [] = []
+  remember (x :: xs) = x :: remember xs
+
+  export
+  forgetRememberId : (xs : Vect n ty) -> forget (remember xs) = xs
+  forgetRememberId [] = Refl
+  forgetRememberId (x :: xs) = cong (x ::) (forgetRememberId xs)
+
+  public export
+  castAllConst : {0 xs, ys : Vect n a} -> All (const ty) xs -> All (const ty) ys
+  castAllConst [] = rewrite invertVectZ ys in []
+  castAllConst (x :: xs) = rewrite invertVectS ys in x :: castAllConst xs
+
+  export
+  rememberForgetId : (vs : All (const ty) xs) ->
+    castAllConst (remember (forget vs)) === vs
+  rememberForgetId [] = Refl
+  rememberForgetId (x :: xs) = cong (x ::) (rememberForgetId xs)
 
   export
   zipPropertyWith : (f : {0 x : a} -> p x -> q x -> r x) ->
@@ -218,4 +243,3 @@ namespace All
   drop' 0 ys = rewrite minusZeroRight k in ys
   drop' (S k) [] = []
   drop' (S k) (y :: ys) = drop' k ys
-
