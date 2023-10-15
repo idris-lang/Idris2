@@ -173,6 +173,28 @@ namespace All
   zipPropertyWith f (px :: pxs) (qx :: qxs)
     = f px qx :: zipPropertyWith f pxs qxs
 
+  ||| A `Traversable`'s `traverse` for `All`,
+  ||| for traversals that don't care about the values of the associated `Vect`.
+  export
+  traverseProperty : Applicative f =>
+                     {0 xs : Vect n a} ->
+                     (forall x. p x -> f (q x)) ->
+                     All p xs ->
+                     f (All q xs)
+  traverseProperty f [] = pure []
+  traverseProperty f (x :: xs) = [| f x :: traverseProperty f xs |]
+
+  ||| A `Traversable`'s `traverse` for `All`,
+  ||| in case the elements of the `Vect` that the `All` is proving `p` about are also needed.
+  export
+  traversePropertyRelevant : Applicative f =>
+                             {xs : Vect n a} ->
+                             ((x : a) -> p x -> f (q x)) ->
+                             All p xs ->
+                             f (All q xs)
+  traversePropertyRelevant f [] = pure []
+  traversePropertyRelevant f (x :: xs) = [| f _ x :: traversePropertyRelevant f xs |]
+
   export
   All (Show . p) xs => Show (All p xs) where
     show pxs = "[" ++ show' "" pxs ++ "]"
