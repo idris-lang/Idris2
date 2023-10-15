@@ -129,6 +129,7 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
         pathDoesNotEscape _     []           = True
         pathDoesNotEscape Z     (".."::rest) = False
         pathDoesNotEscape (S n) (".."::rest) = pathDoesNotEscape n rest
+        pathDoesNotEscape n     ("." ::rest) = pathDoesNotEscape n rest
         pathDoesNotEscape n     (_   ::rest) = pathDoesNotEscape (S n) rest
 
     elabCon : Defs -> String -> List (Closure vars) -> Core (NF vars)

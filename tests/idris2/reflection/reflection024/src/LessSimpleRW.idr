@@ -35,3 +35,8 @@ failing "path must not escape the directory"
 
   -- Check a slightly more complicated case of escaping
   %runElab readAndLog "nonExistentOriginally/../../whatever"
+
+failing "path must not escape the directory"
+
+  -- Check that '.' does not allow escaping
+  %runElab readAndLog "./../whatever"
