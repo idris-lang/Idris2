@@ -196,23 +196,9 @@ Applicative Colist1 where
 
   (f ::: fs) <*> (a ::: as) = f a ::: (fs <*> as)
 
-public export
-Zippable Colist1 where
-  zipWith f (x ::: xs) (y ::: ys) = f x y ::: zipWith f xs ys
-
-  zipWith3 f (x ::: xs) (y ::: ys) (z ::: zs) =
-    f x y z ::: zipWith3 f xs ys zs
-
-  unzip xs = (map fst xs, map snd xs)
-
-  unzip3 xs = ( map (\(a,_,_) => a) xs
-              , map (\(_,b,_) => b) xs
-              , map (\(_,_,c) => c) xs
-              )
-
-  unzipWith f = unzip . map f
-
-  unzipWith3 f = unzip3 . map f
+public export %hint %inline
+ZippableColist1 : Zippable Colist1
+ZippableColist1 = FromApplicative
 
 --------------------------------------------------------------------------------
 -- Interleavings
