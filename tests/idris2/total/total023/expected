@@ -1,0 +1,27 @@
+1/1: Building Abel2002 (Abel2002.idr)
+Main> Main.addord
+Arguments [{arg:0}, {arg:1}]
+Compile time tree: case {arg:0} of
+  O => {arg:1}
+  S {e:0} => S (addord {e:0} {arg:1})
+  Lim {e:1} => addord_lim {e:1} {arg:1}
+Compiled: \ {arg:0}, {arg:1} => case {arg:0} of
+  { Main.O {tag = 0} => {arg:1}
+  ; Main.S {tag = 1} {e:0} => Main.S {tag = 1} (Main.addord {e:0} {arg:1})
+  ; Main.Lim {tag = 2} {e:1} => Main.addord_lim {e:1} {arg:1}
+  }
+Refers to: Main.addord_lim, Main.addord, Main.S
+Refers to (runtime): Main.addord_lim, Main.addord, Main.S, Main.O, Main.Lim
+Flags: total
+Size change:
+  Main.S:
+      0
+  Main.addord:
+      0   1
+  0   <
+  1       =
+  Main.addord_lim:
+      0   1
+  0   <
+  1       =
+Main> Bye for now!
