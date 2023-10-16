@@ -73,7 +73,7 @@ public export
 ||| This implementation is lazy during unzipping.
 ||| Caution! It may repeat the whole original work, each time the unzipped elements are used.
 |||
-||| Please be aware that for every `Applicative` has the same semantics as `Zippable`.
+||| Please be aware that not every `Applicative` has the same semantics as `Zippable`.
 ||| Consider `List` as a simple example.
 ||| However, this implementation is applicable for lazy data types or deferred computations.
 public export
