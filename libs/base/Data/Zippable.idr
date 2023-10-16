@@ -55,3 +55,42 @@ interface Zippable z where
   ||| @ z the parameterised type
   unzip3 : z (a, b, c) -> (z a, z b, z c)
   unzip3 = unzipWith3 id
+
+public export
+[Compose] Zippable f => Zippable g => Zippable (f . g) where
+  zipWith f = zipWith $ zipWith f
+  zipWith3 f = zipWith3 $ zipWith3 f
+  unzipWith f = unzipWith $ unzipWith f
+  unzipWith3 f = unzipWith3 $ unzipWith3 f
+
+  zip = zipWith zip
+  zip3 = zipWith3 zip3
+  unzip = unzipWith unzip
+  unzip3 = unzipWith3 unzip3
+
+||| Variant of composing and decomposing using existing `Applicative` implementation.
+|||
+||| This implementation is lazy during unzipping.
+||| Caution! It may repeat the whole original work, each time the unzipped elements are used.
+|||
+||| Please be aware that for every `Applicative` has the same semantics as `Zippable`.
+||| Consider `List` as a simple example.
+||| However, this implementation is applicable for lazy data types or deferred computations.
+public export
+[FromApplicative] Applicative f => Zippable f where
+  zipWith f x y = [| f x y |]
+  zipWith3 f x y z = [| f x y z |]
+
+  unzip u = (map fst u, map snd u)
+  unzip3 u = (map fst u, map (fst . snd) u, map (snd . snd) u)
+  unzipWith f = unzip . map f
+  unzipWith3 f = unzip3 . map f
+
+ -- To be moved appropriately as soon as we have some module like `Data.Pair`, like other prelude types have.
+public export
+Semigroup a => Zippable (Pair a) where
+  zipWith f (l, x) (r, y) = (l <+> r, f x y)
+  zipWith3 f (l, x) (m, y) (r, z) = (l <+> m <+> r, f x y z)
+
+  unzipWith f (l, x) = bimap (l,) (l,) (f x)
+  unzipWith3 f (l, x) = bimap (l,) (bimap (l,) (l,)) (f x)

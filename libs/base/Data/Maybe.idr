@@ -2,6 +2,8 @@ module Data.Maybe
 
 import Control.Function
 
+import Data.Zippable
+
 %default total
 
 public export
@@ -84,3 +86,14 @@ namespace Monoid
   public export
   [Deep] Semigroup a => Monoid (Maybe a) using Semigroup.Deep where
     neutral = Nothing
+
+public export
+Zippable Maybe where
+  zipWith f x y = [| f x y |]
+  zipWith3 f x y z = [| f x y z |]
+
+  unzipWith f Nothing  = (Nothing, Nothing)
+  unzipWith f (Just x) = let (a, b) = f x in (Just a, Just b)
+
+  unzipWith3 f Nothing  = (Nothing, Nothing, Nothing)
+  unzipWith3 f (Just x) = let (a, b, c) = f x in (Just a, Just b, Just c)

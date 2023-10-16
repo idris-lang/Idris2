@@ -220,6 +220,10 @@
 * Implements `MonadState` for `Data.Ref` with a named implementation requiring
   a particular reference.
 
+* Adds implementations of `Zippable` to `Either`, `Pair`, `Maybe`, `SortedMap`.
+
+* Adds a `Compose` and `FromApplicative` named implementations for `Zippable`.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
