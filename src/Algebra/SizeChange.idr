@@ -32,12 +32,18 @@ Eq SizeChange where
   Unknown == Unknown = True
   _ == _ = False
 
+-- information order
 export
 Ord SizeChange where
-  compare Smaller Smaller = EQ
-  compare Smaller _ = LT
-  compare _ Smaller = GT
+  compare Unknown Unknown = EQ
+  compare Unknown _ = LT
+  compare _ Unknown = GT
   compare Same Same = EQ
   compare Same _ = LT
   compare _ Same = GT
-  compare Unknown Unknown = EQ
+  compare Smaller Smaller = EQ
+
+  max Unknown y = y
+  max Same Unknown = Same
+  max Same y = y
+  max Smaller y = Smaller -- holds definitionally!
