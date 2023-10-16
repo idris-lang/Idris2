@@ -1,5 +1,5 @@
 . ../../testutils.sh
 
-rm test.buf
+[ -e test.buf ] && rm test.buf
 
 run --cg node Buffer.idr
