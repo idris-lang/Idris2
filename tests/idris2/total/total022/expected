@@ -1,0 +1,49 @@
+1/1: Building Dot (Dot.idr)
+Main> Main.f
+Arguments [{arg:0}, {arg:1}, {arg:2}, {arg:3}]
+Compile time tree: case {arg:0} of
+  Nil {e:4} => case {arg:3} of
+    Nothing {e:8} => ()
+    _ => case {arg:3} of
+      Just {e:0} {e:1} => case {e:1} of
+        Refl {e:2} {e:3} => f {arg:2} {arg:1} {arg:2} Nothing
+  (::) {e:5} {e:6} {e:7} => case {arg:3} of
+    Nothing {e:9} => f {e:7} {arg:1} {arg:2} Nothing
+    _ => case {arg:3} of
+      Just {e:0} {e:1} => case {e:1} of
+        Refl {e:2} {e:3} => f {arg:2} {arg:1} {arg:2} Nothing
+  _ => case {arg:3} of
+    Just {e:0} {e:1} => case {e:1} of
+      Refl {e:2} {e:3} => f {arg:2} {arg:1} {arg:2} Nothing
+Compiled: \ {arg:0}, {arg:1}, {arg:2}, {arg:3} => case {arg:0} of
+  { Prelude.Basics.Nil {tag = 0} [nil] => case {arg:3} of  { Prelude.Types.Nothing {tag = 0} [nothing] => Builtin.MkUnit {tag = 0} [unit]; _ => case {arg:3} of  { Prelude.Types.Just {tag = 1} [just] {e:1} => Main.f {arg:2} {arg:1} {arg:2} (Prelude.Types.Nothing {tag = 0} [nothing])}}
+  ; Prelude.Basics.(::) {tag = 1} [cons] {e:6} {e:7} => case {arg:3} of  { Prelude.Types.Nothing {tag = 0} [nothing] => Main.f {e:7} {arg:1} {arg:2} (Prelude.Types.Nothing {tag = 0} [nothing]); _ => case {arg:3} of  { Prelude.Types.Just {tag = 1} [just] {e:1} => Main.f {arg:2} {arg:1} {arg:2} (Prelude.Types.Nothing {tag = 0} [nothing])}}
+  ; _ => case {arg:3} of
+           { Prelude.Types.Just {tag = 1} [just] {e:1} => Main.f {arg:2} {arg:1} {arg:2} (Prelude.Types.Nothing {tag = 0} [nothing])
+           }
+  }
+Refers to: Main.f, Prelude.Basics.List, Prelude.Basics.(::), Builtin.MkUnit, Builtin.(===), Prelude.Types.Nothing
+Refers to (runtime): Main.f, Prelude.Basics.Nil, Prelude.Basics.(::), Builtin.MkUnit, Prelude.Types.Nothing, Prelude.Types.Just
+Flags: total
+Size change:
+  Builtin.MkUnit:
+      0
+  Main.f:
+      0   1   2
+  0   <
+  1       =
+  2           =
+  Builtin.(===):
+      0
+  1   <
+  Main.f:
+      0   1   2   3
+  0   <       =   <
+  1   <   =       <
+  2   <       =   <
+  Builtin.(===):
+      0   1   2   3
+  0               <
+  1   <       =   <
+  2   =           <
+Main> Bye for now!
