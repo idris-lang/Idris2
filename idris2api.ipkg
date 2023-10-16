@@ -5,6 +5,7 @@ modules =
     Algebra,
     Algebra.Preorder,
     Algebra.Semiring,
+    Algebra.SizeChange,
     Algebra.ZeroOneOmega,
 
     Compiler.ANF,
