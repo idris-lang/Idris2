@@ -22,5 +22,10 @@ Compiled: \ {arg:0} => let f = Force Lazy (Main.switch {arg:0}) in
 Refers to: Main.case block in switch3, Main.{_:985}, Main.switch, Builtin.Pair, Prelude.Types.Nat
 Refers to (runtime): Main.switch, Builtin.MkPair
 Flags: covering
-Size change: Main.switch: [Just (0, Same)], Builtin.MkPair: [Nothing, Nothing, Nothing, Nothing]
+Size change:
+  Main.switch:
+      0
+  0   =
+  Builtin.MkPair:
+      0
 Main> Bye for now!

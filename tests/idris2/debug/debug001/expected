@@ -11,7 +11,11 @@ Compiled: \ {arg:0} => case {arg:0} of
 Refers to: Prelude.Basics.True, Prelude.Basics.False
 Refers to (runtime): Prelude.Types.Nat
 Flags: allguarded, covering
-Size change: Prelude.Basics.True: [], Prelude.Basics.False: []
+Size change:
+  Prelude.Basics.True:
+      0
+  Prelude.Basics.False:
+      0
 Main> Main.isInt32
 Arguments [{arg:0}]
 Compile time tree: case {arg:0} of
@@ -24,7 +28,11 @@ Compiled: \ {arg:0} => case {arg:0} of
 Refers to: Prelude.Basics.True, Prelude.Basics.False
 Refers to (runtime): Int32
 Flags: allguarded, covering
-Size change: Prelude.Basics.True: [], Prelude.Basics.False: []
+Size change:
+  Prelude.Basics.True:
+      0
+  Prelude.Basics.False:
+      0
 Main> Prelude.Types.plus
 Arguments [{arg:0}, {arg:1}]
 Compile time tree: case {arg:0} of
@@ -37,7 +45,13 @@ Compiled: \ {arg:0}, {arg:1} => case {arg:0} of
   }
 Refers to: Prelude.Types.plus, Prelude.Types.S
 Flags: total
-Size change: Prelude.Types.S: [Nothing], Prelude.Types.plus: [Just (0, Smaller), Just (1, Same)]
+Size change:
+  Prelude.Types.S:
+      0
+  Prelude.Types.plus:
+      0   1
+  0   <
+  1       =
 Main> Prelude.Types.minus
 Arguments [{arg:0}, {arg:1}]
 Compile time tree: case {arg:0} of
@@ -65,7 +79,13 @@ Compiled: \ {arg:0}, {arg:1} => case {arg:0} of
 Refers to: Prelude.Types.minus, Prelude.Types.Z
 Refers to (runtime): Prelude.Types.prim__integerToNat
 Flags: total
-Size change: Prelude.Types.Z: [], Prelude.Types.minus: [Just (0, Smaller), Just (1, Smaller)]
+Size change:
+  Prelude.Types.Z:
+      0
+  Prelude.Types.minus:
+      0   1
+  0   <
+  1       <
 Main> Prelude.Types.SnocList.filter
 Arguments [{arg:0}, {arg:1}, {arg:2}]
 Compile time tree: case {arg:2} of
@@ -80,6 +100,18 @@ Compiled: \ {arg:1}, {arg:2} => case {arg:2} of
 Refers to: Prelude.Basics.SnocList, Prelude.Basics.Lin, Prelude.Types.SnocList.case block in filter, Prelude.Types.SnocList.filter
 Refers to (runtime): Prelude.Basics.Lin, Prelude.Basics.(:<), Prelude.Types.SnocList.filter
 Flags: total
-Size change: Prelude.Basics.Lin: [Just (0, Same)], Prelude.Types.SnocList.filter: [Just (0, Same), Just (1, Same), Just (2, Smaller)], Prelude.Basics.(:<): [Just (0, Same), Nothing, Just (2, Smaller)]
+Size change:
+  Prelude.Basics.Lin:
+      0   1   2
+  0   =       <
+  Prelude.Types.SnocList.filter:
+      0   1   2
+  0   =       <
+  1       =
+  2           <
+  Prelude.Basics.(:<):
+      0   1   2
+  0   =       <
+  2           <
 Main> 
 Bye for now!
