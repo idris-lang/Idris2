@@ -11,12 +11,14 @@ import public Algebra.SizeChange
 
 import Data.IORef
 import Data.String
+import Data.List1
 
 import Libraries.Data.IntMap
 import Libraries.Data.IOArray
 import Libraries.Data.NameMap
 import Libraries.Data.UserNameMap
 import Libraries.Data.WithDefault
+import Libraries.Data.SparseMatrix
 import Libraries.Utils.Binary
 import Libraries.Utils.Scheme
 
@@ -266,7 +268,7 @@ public export
 record SCCall where
      constructor MkSCCall
      fnCall : Name -- Function called
-     fnArgs : List (Maybe (Nat, SizeChange))
+     fnArgs : Matrix SizeChange
         -- relationship to arguments of calling function; argument position
         -- (in the calling function), and how its size changed in the call.
         -- 'Nothing' if it's not related to any of the calling function's

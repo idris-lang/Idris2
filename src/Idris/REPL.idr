@@ -69,6 +69,7 @@ import Libraries.Data.PosMap
 import Data.Stream
 import Data.String
 import Libraries.Data.List.Extra
+import Libraries.Data.SparseMatrix
 import Libraries.Data.String.Extra
 import Libraries.Data.Tap
 import Libraries.Data.WithDefault
@@ -132,7 +133,7 @@ prettyInfo (n, idx, d)
            , (\ nms  => header "Refers to" <++> enum pretty0 nms) <$> ifNotNull referCT
            , (\ nms  => header "Refers to (runtime)" <++> enum pretty0 nms) <$> ifNotNull referRT
            , (\ flgs => header "Flags" <++> enum byShow flgs) <$> ifNotNull (flags d)
-           , (\ sz   => header "Size change" <++> displayChg sz) <$> ifNotNull schanges
+           , (\ sz   => header "Size change" <+> hardline <+> indent 2 (displayChg sz)) <$> ifNotNull schanges
            ]
 
   where
@@ -142,10 +143,13 @@ prettyInfo (n, idx, d)
     enum : (a -> Doc IdrisDocAnn) -> List a -> Doc IdrisDocAnn
     enum p xs = hsep $ punctuate "," $ p <$> xs
 
+    enumLine : (a -> Doc IdrisDocAnn) -> List a -> Doc IdrisDocAnn
+    enumLine p xs = hcat $ punctuate hardline $ p <$> xs
+
     displayChg : List SCCall -> Doc IdrisDocAnn
     displayChg sz =
-      let scinfo = \s => pretty0 (fnCall s) <+> ":" <++> pretty0 (show $ fnArgs s) in
-      enum scinfo sz
+      let scinfo = \s => pretty0 (fnCall s) <+> ":" <+> hardline <+> cast (prettyTable 1 (fnArgs s)) in
+      enumLine scinfo sz
 
 getEnvTerm : {vars : _} ->
              List Name -> Env Term vars -> Term vars ->
