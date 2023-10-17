@@ -48,16 +48,16 @@ wording Func = "a function name"
 wording (DataCon tag arity) = "a data constructor"
 wording (TyCon tag arity) = "a type constructor"
 
-isTypeCon : Elaboration m => Name -> m (List (Name, TTImp))
-isTypeCon ty = do
+isTypeCon : Elaboration m => FC -> Name -> m (List (Name, TTImp))
+isTypeCon fc ty = do
     [(_, MkNameInfo (TyCon _ _))] <- getInfo ty
-      | [] => fail "\{show ty} out of scope"
-      | [(_, MkNameInfo nt)] => fail "\{show ty} is \{wording nt} rather than a type constructor"
-      | _ => fail "\{show ty} is ambiguous"
+      | [] => failAt fc "\{show ty} out of scope"
+      | [(_, MkNameInfo nt)] => failAt fc "\{show ty} is \{wording nt} rather than a type constructor"
+      | _ => failAt fc "\{show ty} is ambiguous"
     cs <- getCons ty
     for cs $ \ n => do
       [(_, ty)] <- getType n
-         | _ => fail "\{show n} is ambiguous"
+         | _ => failAt fc "\{show n} is ambiguous"
       pure (n, ty)
 
 export
@@ -65,7 +65,7 @@ isType : Elaboration m => TTImp -> m IsType
 isType = go Z [] where
 
   go : Nat -> List (Argument Name, Nat) -> TTImp -> m IsType
-  go idx acc (IVar _ n) = MkIsType n (map (map (minus idx . S)) acc) <$> isTypeCon n
+  go idx acc (IVar fc n) = MkIsType n (map (map (minus idx . S)) acc) <$> isTypeCon fc n
   go idx acc (IApp _ t (IVar _ nm)) = case nm of
     -- Unqualified: that's a local variable
     UN (Basic _) => go (S idx) ((Arg emptyFC nm, idx) :: acc) t
@@ -78,7 +78,7 @@ isType = go Z [] where
     -- Unqualified: that's a local variable
     UN (Basic _) => go (S idx) ((AutoArg emptyFC nm, idx) :: acc) t
     _ => go (S idx) acc t
-  go idx acc t = fail "Expected a type constructor, got: \{show t}"
+  go idx acc t = failAt (getFC t) "Expected a type constructor, got: \{show t}"
 
 ------------------------------------------------------------------------------
 -- Being a (data) constructor with a parameter
