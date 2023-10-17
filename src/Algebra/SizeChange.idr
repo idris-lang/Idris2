@@ -154,3 +154,9 @@ scMultPlusDist a Same Same =
 scMultPlusDist Smaller Same Smaller = Refl
 scMultPlusDist Smaller Smaller Same = Refl
 scMultPlusDist Smaller Smaller Smaller = Refl
+
+export
+Pretty Void SizeChange where
+  pretty Smaller = pretty "<"
+  pretty Same = pretty "="
+  pretty Unknown = neutral
