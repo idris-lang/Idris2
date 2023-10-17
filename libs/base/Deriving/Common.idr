@@ -18,7 +18,7 @@ data IsFreeOf : (x : Name) -> (ty : TTImp) -> Type where
   TrustMeFO : IsFreeOf a x
 
 ||| We may need to manufacture proofs and so we provide the `assert` escape hatch.
-export
+export -- %unsafe -- uncomment as soon as 0.7.0 is released
 assert_IsFreeOf : IsFreeOf x ty
 assert_IsFreeOf = TrustMeFO
 
@@ -165,7 +165,7 @@ data HasImplementation : (intf : a -> Type) -> TTImp -> Type where
   TrustMeHI : HasImplementation intf t
 
 ||| We may need to manufacture proofs and so we provide the `assert` escape hatch.
-export
+export -- %unsafe -- uncomment as soon as 0.7.0 is released
 assert_hasImplementation : HasImplementation intf t
 assert_hasImplementation = TrustMeHI
 
