@@ -224,6 +224,8 @@
 
 * Adds a `Compose` and `FromApplicative` named implementations for `Zippable`.
 
+* Constructor view in `Deriving.Common` supports implicit and auto arguments.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than

@@ -143,7 +143,7 @@ parameters
   {auto error : MonadError Error m}
   {auto cs : MonadState Parameters m}
   (t : Name)
-  (ps : List (Name, Nat))
+  (ps : List (Argument Name, Nat))
   (x : Name)
 
   ||| When analysing the type of a constructor for the type family t,
@@ -187,7 +187,7 @@ parameters
           Yes Refl => pure $ Left (FIRec prf sp)
           No diff => case !(hasImplementation Foldable f) of
             Just prf => pure (Left (FIFold isFO prf sp))
-            Nothing => case lookup hd ps of
+            Nothing => case lookupBy (flip $ (==) . unArg) hd ps of
               Just n => do
                 -- record that the nth parameter should be functorial
                 ns <- gets asFoldables
@@ -220,7 +220,7 @@ parameters
           Nothing => do
             let Just (MkAppView (_, hd) ts prf) = appView f
                | _ => throwError (NotAnApplication f)
-            case lookup hd ps of
+            case lookupBy (flip $ (==) . unArg) hd ps of
               Just n => do
                 -- record that the nth parameter should be bifoldable
                 ns <- gets asBifoldables
@@ -344,7 +344,7 @@ namespace Foldable
                  $ zipWith (<$) [1..length args] (map snd args)
         recs <- for (zip vars args) $ \ (v, (rig, arg)) => do
                   res <- withError (WhenCheckingArg (mapTTImp cleanup (unArg arg))) $ do
-                           res <- typeView f paras para (unArg arg)
+                           res <- typeView f paras (unArg para) (unArg arg)
                            case res of
                              Left _ => case rig of
                                MW => pure ()

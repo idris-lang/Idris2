@@ -150,7 +150,7 @@ parameters
   {auto error : MonadError Error m}
   {auto cs : MonadState Parameters m}
   (t : Name)
-  (ps : List (Name, Nat))
+  (ps : List (Argument Name, Nat))
 
   ||| Hoping to observe that ty can be shown
   export
@@ -168,7 +168,7 @@ parameters
     let No _ = decEq hd t
       | Yes Refl => pure (ISRec prf)
     Just (hdty ** hT) <- hasType hd
-      | _ => case lookup hd ps <* guard (null ts) of
+      | _ => case lookupBy (flip $ (==) . unArg) hd ps <* guard (null ts) of
                Just n => do
                  -- record that the nth parameter should be showable
                  ns <- gets asShowables

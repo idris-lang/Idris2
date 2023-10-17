@@ -87,8 +87,12 @@ isType = go Z [] where
 public export
 record ConstructorView where
   constructor MkConstructorView
-  params      : SnocList (Name, Nat)
+  params      : SnocList (Argument Name, Nat)
   conArgTypes : List (Count, Argument TTImp)
+
+getIVar : TTImp -> Maybe Name
+getIVar (IVar _ nm) = Just nm
+getIVar _           = Nothing
 
 export
 constructorView : TTImp -> Maybe ConstructorView
@@ -101,9 +105,7 @@ constructorView (IPi fc rig pinfo x a b) = do
 constructorView f = do
   MkAppView _ ts _ <- appView f
   let range = [<] <>< [0..minus (length ts) 1]
-  let ps = flip mapMaybe (zip ts range) $ \ t => the (Maybe (Name, Nat)) $ case t of
-             (Arg _ (IVar _ nm), n) => Just (nm, n)
-             _ => Nothing
+  let ps = flip mapMaybe (zip ts range) $ flip bitraverse pure $ traverse getIVar
   pure (MkConstructorView ps [])
 
 ------------------------------------------------------------------------------

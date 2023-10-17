@@ -132,7 +132,7 @@ parameters
   {auto error : MonadError Error m}
   {auto cs : MonadState Parameters m}
   (t : Name)
-  (ps : List (Name, Nat))
+  (ps : List (Argument Name, Nat))
   (x : Name)
 
   ||| When analysing the type of a constructor for the type family t,
@@ -178,7 +178,7 @@ parameters
             Negative => throwError (NegativeOccurrence t (IApp fc f arg))
           No diff => case !(hasImplementation Functor f) of
             Just prf => pure (Left (FIFun isFO prf sp))
-            Nothing => case lookup hd ps of
+            Nothing => case lookupBy (flip $ (==) . unArg) hd ps of
               Just n => do
                 -- record that the nth parameter should be functorial
                 ns <- gets asFunctors
@@ -222,7 +222,7 @@ parameters
           Nothing => do
             let Just (MkAppView (_, hd) ts prf) = appView f
                | _ => throwError (NotAnApplication f)
-            case lookup hd ps of
+            case lookupBy (flip $ (==) . unArg) hd ps of
               Just n => do
                 -- record that the nth parameter should be bifunctorial
                 ns <- gets asBifunctors
@@ -358,7 +358,7 @@ namespace Functor
         --  2. explicit
         recs <- for (zip vars args) $ \ (v, (rig, arg)) => do
                   res <- withError (WhenCheckingArg (mapTTImp cleanup $ unArg arg)) $
-                           typeView {pol = Positive} f paras para (unArg arg)
+                           typeView {pol = Positive} f paras (unArg para) (unArg arg)
                   pure $ case res of
                     Left sp => -- do not bother with assert_total if you're generating
                                -- a covering/partial definition
