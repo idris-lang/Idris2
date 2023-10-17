@@ -6,6 +6,8 @@ import Core.Env
 import Core.Normalise
 import Core.Value
 
+import Libraries.Data.SparseMatrix
+
 import Data.String
 
 %default covering
@@ -18,24 +20,26 @@ Show Guardedness where
   show Guarded = "Guarded"
   show InDelay = "InDelay"
 
--- Equal for the purposes of size change means, ignoring as patterns, all
--- non-metavariable positions are equal
-scEq : Term vars -> Term vars -> Bool
-scEq (Local _ _ idx _) (Local _ _ idx' _) = idx == idx'
-scEq (Ref _ _ n) (Ref _ _ n') = n == n'
-scEq (Meta _ _ i args) _ = True
-scEq _ (Meta _ _ i args) = True
-scEq (Bind _ _ b sc) (Bind _ _ b' sc') = False -- not checkable
-scEq (App _ f a) (App _ f' a') = scEq f f' && scEq a a'
-scEq (As _ _ a p) p' = scEq p p'
-scEq p (As _ _ a p') = scEq p p'
-scEq (TDelayed _ _ t) (TDelayed _ _ t') = scEq t t'
-scEq (TDelay _ _ t x) (TDelay _ _ t' x') = scEq t t' && scEq x x'
-scEq (TForce _ _ t) (TForce _ _ t') = scEq t t'
-scEq (PrimVal _ c) (PrimVal _ c') = c == c'
-scEq (Erased _ _) (Erased _ _) = True
-scEq (TType _ _) (TType _ _) = True
-scEq _ _ = False
+sizeEq : Term vars -> -- RHS
+     Term vars -> -- LHS: may contain dot-patterns, try both sides of as patterns
+     Bool
+sizeEq (Local _ _ idx _) (Local _ _ idx' _) = idx == idx'
+sizeEq (Ref _ _ n) (Ref _ _ n') = n == n'
+sizeEq (Meta _ _ i args) (Meta _ _ i' args')
+    = i == i' && assert_total (all (uncurry sizeEq) (zip args args'))
+sizeEq (Bind _ _ b sc) (Bind _ _ b' sc') = eqBinderBy sizeEq b b' && sizeEq sc (believe_me sc')
+sizeEq (App _ f a) (App _ f' a') = sizeEq f f' && sizeEq a a'
+sizeEq (As _ _ a p) p' = sizeEq p p'
+sizeEq p (As _ _ a p') = sizeEq p a || sizeEq p p'
+sizeEq (TDelayed _ _ t) (TDelayed _ _ t') = sizeEq t t'
+sizeEq (TDelay _ _ t x) (TDelay _ _ t' x') = sizeEq t t' && sizeEq x x'
+sizeEq (TForce _ _ t) (TForce _ _ t') = sizeEq t t'
+sizeEq (PrimVal _ c) (PrimVal _ c') = c == c'
+-- traverse dotted LHS terms
+sizeEq t (Erased _ (Dotted t')) = sizeEq t t'
+sizeEq (Erased _ i) (Erased _ i') = i == i'
+sizeEq (TType _ _) (TType _ _) = True
+sizeEq _ _ = False
 
 -- Remove all force and delay annotations which are nothing to do with
 -- coinduction meaning that all Delays left guard coinductive calls.
@@ -66,13 +70,13 @@ mutual
   findSC : {vars : _} ->
            {auto c : Ref Ctxt Defs} ->
            Defs -> Env Term vars -> Guardedness ->
-           List (Nat, Term vars) -> -- LHS args and their position
-           Term vars -> -- Right hand side
+           List (Term vars) -> -- LHS args
+           Term vars -> -- RHS
            Core (List SCCall)
   findSC {vars} defs env g pats (Bind fc n b sc)
        = pure $
             !(findSCbinder b) ++
-            !(findSC defs (b :: env) g (map (\ (p, tm) => (p, weaken tm)) pats) sc)
+            !(findSC defs (b :: env) g (map weaken pats) sc)
     where
       findSCbinder : Binder (Term vars) -> Core (List SCCall)
       findSCbinder (Let _ c val ty) = findSC defs env g pats val
@@ -104,25 +108,22 @@ mutual
                  do Just ty <- lookupTyExact cn (gamma defs)
                          | Nothing => do
                               log "totality" 50 $ "Lookup failed"
-                              findSCcall defs env Guarded pats fc cn 0 args
-                    arity <- getArity defs [] ty
-                    findSCcall defs env Guarded pats fc cn arity args
+                              findSCcall defs env Guarded pats fc cn args
+                    findSCcall defs env Guarded pats fc cn args
              (Toplevel, Ref fc (DataCon _ _) cn, args) =>
                  do Just ty <- lookupTyExact cn (gamma defs)
                          | Nothing => do
                               log "totality" 50 $ "Lookup failed"
-                              findSCcall defs env Guarded pats fc cn 0 args
-                    arity <- getArity defs [] ty
-                    findSCcall defs env Guarded pats fc cn arity args
+                              findSCcall defs env Guarded pats fc cn args
+                    findSCcall defs env Guarded pats fc cn args
              (_, Ref fc Func fn, args) =>
                  do logC "totality" 50 $
                        pure $ "Looking up type of " ++ show !(toFullNames fn)
                     Just ty <- lookupTyExact fn (gamma defs)
                          | Nothing => do
                               log "totality" 50 $ "Lookup failed"
-                              findSCcall defs env Unguarded pats fc fn 0 args
-                    arity <- getArity defs [] ty
-                    findSCcall defs env Unguarded pats fc fn arity args
+                              findSCcall defs env Unguarded pats fc fn args
+                    findSCcall defs env Unguarded pats fc fn args
              (_, f, args) =>
                  do scs <- traverse (findSC defs env Unguarded pats) args
                     pure (concat scs)
@@ -131,7 +132,7 @@ mutual
         handleCase (Ref fc nt n) args
             = do n' <- toFullNames n
                  if caseFn n'
-                    then Just <$> findSCcall defs env g pats fc n 4 args
+                    then Just <$> findSCcall defs env g pats fc n args
                     else pure Nothing
         handleCase _ _ = pure Nothing
 
@@ -145,49 +146,56 @@ mutual
                     else pure $ Ref fc Func n
         conIfGuarded tm = pure tm
 
-  -- Expand the size change argument list with 'Nothing' to match the given
-  -- arity (i.e. the arity of the function we're calling) to ensure that
-  -- it's noted that we don't know the size change relationship with the
-  -- extra arguments.
-  expandToArity : Nat -> List (Maybe (Nat, SizeChange)) ->
-                  List (Maybe (Nat, SizeChange))
-  expandToArity Z xs = xs
-  expandToArity (S k) (x :: xs) = x :: expandToArity k xs
-  expandToArity (S k) [] = Nothing :: expandToArity k []
+  knownOr : SizeChange -> Lazy SizeChange -> SizeChange
+  knownOr Unknown y = y
+  knownOr x _ = x
+
+  plusLazy : SizeChange -> Lazy SizeChange -> SizeChange
+  plusLazy Smaller _ = Smaller
+  plusLazy x y = x |+| y
 
   -- Return whether first argument is structurally smaller than the second.
-  smaller : Bool -> -- Have we gone under a constructor yet?
-            Defs ->
-            Maybe (Term vars) -> -- Asserted bigger thing
-            Term vars -> -- Term we're checking
-            Term vars -> -- Argument it might be smaller than
-            Bool
-  smaller inc defs big _ (Erased _ _) = False -- Never smaller than an erased thing!
+  sizeCompare : Term vars -> -- RHS: term we're checking
+                Term vars -> -- LHS: argument it might be smaller than
+                SizeChange
+
+  sizeCompareCon : Term vars -> Term vars -> Bool
+  sizeCompareConArgs : Term vars -> List (Term vars) -> Bool
+  sizeCompareApp : Term vars -> Term vars -> SizeChange
+
+  sizeCompare s (Erased _ (Dotted t)) = sizeCompare s t
+  sizeCompare _ (Erased _ _) = Unknown -- incomparable!
   -- for an as pattern, it's smaller if it's smaller than either part
-  smaller inc defs big s (As _ _ p t)
-      = smaller inc defs big s p || smaller inc defs big s t
-  smaller True defs big s t
-      = s == t || smallerArg True defs big s t
-  smaller inc defs big s t = smallerArg inc defs big s t
+  sizeCompare s (As _ _ p t)
+      = knownOr (sizeCompare s p) (sizeCompare s t)
+  sizeCompare (As _ _ p s) t
+      = knownOr (sizeCompare p t) (sizeCompare s t)
+  sizeCompare s t
+     = if sizeCompareCon s t
+          then Smaller
+          else knownOr (sizeCompareApp s t) (if sizeEq s t then Same else Unknown)
 
-  assertedSmaller : Maybe (Term vars) -> Term vars -> Bool
-  assertedSmaller (Just b) a = scEq b a
-  assertedSmaller _ _ = False
+  sizeCompareCon s t
+      = let (f, args) = getFnArgs t in
+        case f of
+             Ref _ (DataCon t a) cn => sizeCompareConArgs s args
+             _ => False
 
-  smallerArg : Bool -> Defs ->
-               Maybe (Term vars) -> Term vars -> Term vars -> Bool
-  smallerArg inc defs big (As _ _ _ s) tm = smallerArg inc defs big s tm
-  smallerArg inc defs big s tm
-        -- If we hit a pattern that is equal to a thing we've asserted_smaller,
-        -- the argument must be smaller
-      = assertedSmaller big tm ||
-                case getFnArgs tm of
-                     (Ref _ (DataCon t a) cn, args)
-                         => any (smaller True defs big s) args
-                     _ => case s of
-                               App _ f _ => smaller inc defs big f tm
-                                            -- Higher order recursive argument
-                               _ => False
+  sizeCompareConArgs s [] = False
+  sizeCompareConArgs s (t :: ts)
+      = case sizeCompare s t of
+          Unknown => sizeCompareConArgs s ts
+          _ => True
+
+  sizeCompareApp (App _ f _) t = sizeCompare f t
+  sizeCompareApp _ t = Unknown
+
+  sizeCompareAsserted : Maybe (Term vars) -> Term vars -> SizeChange
+  sizeCompareAsserted (Just s) t
+      = case sizeCompare s t of
+          Unknown => Unknown
+          _ => Smaller
+  sizeCompareAsserted Nothing _ = Unknown
 
   -- if the argument is an 'assert_smaller', return the thing it's smaller than
   asserted : Name -> Term vars -> Maybe (Term vars)
@@ -204,16 +212,11 @@ mutual
   -- in 'pats'; the position in 'pats' and the size change.
   -- Nothing if there is no relation with any of them.
   mkChange : Defs -> Name ->
-             (pats : List (Nat, Term vars)) ->
+             (pats : List (Term vars)) ->
              (arg : Term vars) ->
-             Maybe (Nat, SizeChange)
-  mkChange defs aSmaller [] arg = Nothing
-  mkChange defs aSmaller ((i, As _ _ p parg) :: pats) arg
-      = mkChange defs aSmaller ((i, p) :: (i, parg) :: pats) arg
-  mkChange defs aSmaller ((i, parg) :: pats) arg
-      = cond [(scEq arg parg, Just (i, Same)),
-              (smaller False defs (asserted aSmaller arg) arg parg, Just (i, Smaller))]
-          (mkChange defs aSmaller pats arg)
+             List SizeChange
+  mkChange defs aSmaller pats arg
+    = map (\p => plusLazy (sizeCompareAsserted (asserted aSmaller arg) p) (sizeCompare arg p)) pats
 
   -- Given a name of a case function, and a list of the arguments being
   -- passed to it, update the pattern list so that it's referring to the LHS
@@ -222,10 +225,11 @@ mutual
   -- rather than treating the definitions separately.
   getCasePats : {auto c : Ref Ctxt Defs} ->
                 {vars : _} ->
-                Defs -> Name -> List (Nat, Term vars) ->
+                Defs -> Name -> List (Term vars) ->
                 List (Term vars) ->
                 Core (Maybe (List (vs ** (Env Term vs,
-                                         List (Nat, Term vs), Term vs))))
+                                         List (Term vs), Term vs))))
+
   getCasePats {vars} defs n pats args
       = do Just (PMDef _ _ _ _ pdefs) <- lookupDefExact n (gamma defs)
              | _ => pure Nothing
@@ -238,7 +242,7 @@ mutual
                        rhs <- toFullNames rhs
                        pure $ "    " ++ show lhs ++ " => " ++ show rhs
               new <- for pdefs' $ \ (_ ** (_, lhs, rhs)) => do
-                       lhs <- traverse (toFullNames . snd) lhs
+                       lhs <- traverse toFullNames lhs
                        rhs <- toFullNames rhs
                        pure $ "    " ++ show lhs ++ " => " ++ show rhs
               pure $ unlines $ "Updated" :: old ++ "  to:" :: new
@@ -288,11 +292,11 @@ mutual
                    else lookupTm tm tms
 
       updatePat : {vs, vs' : _} ->
-                  List (Term vs, Term vs') -> (Nat, Term vs) -> (Nat, Term vs')
-      updatePat ms (n, tm) = (n, updateRHS ms tm)
+                  List (Term vs, Term vs') -> Term vs -> Term vs'
+      updatePat ms tm = updateRHS ms tm
 
       matchArgs : (vs ** (Env Term vs, Term vs, Term vs)) ->
-                  (vs ** (Env Term vs, List (Nat, Term vs), Term vs))
+                  (vs ** (Env Term vs, List (Term vs), Term vs))
       matchArgs (_ ** (env', lhs, rhs))
          = let patMatch = reverse (zip args (getArgs lhs)) in
                (_ ** (env', map (updatePat patMatch) pats, rhs))
@@ -300,10 +304,10 @@ mutual
   findSCcall : {vars : _} ->
                {auto c : Ref Ctxt Defs} ->
                Defs -> Env Term vars -> Guardedness ->
-               List (Nat, Term vars) ->
-               FC -> Name -> Nat -> List (Term vars) ->
+               List (Term vars) ->
+               FC -> Name -> List (Term vars) ->
                Core (List SCCall)
-  findSCcall defs env g pats fc fn_in arity args
+  findSCcall defs env g pats fc fn_in args
         -- Under 'assert_total' we assume that all calls are fine, so leave
         -- the size change list empty
       = do fn <- getFullName fn_in
@@ -318,18 +322,18 @@ mutual
               ]
               (do scs <- traverse (findSC defs env g pats) args
                   pure ([MkSCCall fn
-                           (expandToArity arity
+                           (fromListList
                                 (map (mkChange defs aSmaller pats) args))
                            fc]
                            ++ concat scs))
 
   findInCase : {auto c : Ref Ctxt Defs} ->
                Defs -> Guardedness ->
-               (vs ** (Env Term vs, List (Nat, Term vs), Term vs)) ->
+               (vs ** (Env Term vs, List (Term vs), Term vs)) ->
                Core (List SCCall)
   findInCase defs g (_ ** (env, pats, tm))
      = do logC "totality" 10 $
-                   do ps <- traverse toFullNames (map snd pats)
+                   do ps <- traverse toFullNames pats
                       pure ("Looking in case args " ++ show ps)
           logTermNF "totality" 10 "        =" env tm
           rhs <- normaliseOpts tcOnly defs env tm
@@ -341,8 +345,7 @@ findCalls : {auto c : Ref Ctxt Defs} ->
 findCalls defs (_ ** (env, lhs, rhs_in))
    = do let pargs = getArgs (delazy defs lhs)
         rhs <- normaliseOpts tcOnly defs env rhs_in
-        findSC defs env Toplevel
-               (zip (take (length pargs) [0..]) pargs) (delazy defs rhs)
+        findSC defs env Toplevel pargs (delazy defs rhs)
 
 getSC : {auto c : Ref Ctxt Defs} ->
         Defs -> Def -> Core (List SCCall)
