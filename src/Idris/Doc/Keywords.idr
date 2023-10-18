@@ -458,6 +458,27 @@ namespaceblock = vcat $
     You can use `export` or `public export` to control whether a function
     declared in a namespace is available outside of it.
     """]
+autobindDoc : Doc IdrisDocAnn
+autobindDoc = """
+  Autobind
+
+    `autobind` is a modifier for operator precedence and fixity declaration.
+    It tells the parser that this operator behaves like a binding operator,
+    allowing you to give a name to the left-hand-side of the operator and
+    use it on the right-hand-side.
+
+    A typical example of an autobind operator is `(**)` the type constructor
+    for dependent pairs. It is used like this: `(x : Nat ** Vect x String)`
+
+    If you declare a new operator to be autobind you can use it the same
+    way.
+
+    Start by defining `autobind infixr 1 =@`, and then you can use it
+    like so: `(n : Nat =@ f n)`.
+
+    `autobind` only applies to `infixr` operators and cannot be used as
+    operator sections.
+  """
 
 rewriteeq : Doc IdrisDocAnn
 rewriteeq = vcat $
@@ -487,8 +508,7 @@ withabstraction = vcat $
     If we additionally need to remember that the link between the patterns and
     the intermediate computation we can use the `proof` keyword to retain an
     equality proof.
-    """, "",
-    """
+
     In the following example we want to implement a `filter` function that not
     only returns values that satisfy the input predicate but also proofs that
     they do. The `with (p x)` construct introduces a value of type `Bool`
@@ -564,6 +584,7 @@ keywordsDoc =
   :: "else" ::= ifthenelse
   :: "forall" ::= forallquantifier
   :: "rewrite" ::= rewriteeq
+  :: "autobind" ::= autobindDoc
   :: "using" ::= ""
   :: "interface" ::= interfacemechanism
   :: "implementation" ::= interfacemechanism
