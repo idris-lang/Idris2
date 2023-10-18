@@ -86,14 +86,16 @@ TTC FixityInfo where
   toBuf b fx
       = do toBuf b fx.fc
            toBuf b fx.vis
+           toBuf b fx.isAutobind
            toBuf b fx.fix
            toBuf b fx.precedence
   fromBuf b
       = do fc <- fromBuf b
            vis <- fromBuf b
+           isAutobind <- fromBuf b
            fix <- fromBuf b
            prec <- fromBuf b
-           pure $ MkFixityInfo fc vis fix prec
+           pure $ MkFixityInfo fc vis isAutobind fix prec
 
 
 export

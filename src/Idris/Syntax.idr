@@ -53,17 +53,19 @@ record FixityInfo where
   constructor MkFixityInfo
   fc : FC
   vis : Visibility
+  isAutobind : Bool
   fix : Fixity
   precedence : Nat
 
 export
 Show FixityInfo where
-  show fx = "fc: \{show fx.fc}, visibility: \{show fx.vis}, fixity: \{show fx.fix}, precedence: \{show fx.precedence}"
+  show fx = "fc: \{show fx.fc}, visibility: \{show fx.vis}, isAutobind: \{show fx.isAutobind}, fixity: \{show fx.fix}, precedence: \{show fx.precedence}"
 
 export
 Eq FixityInfo where
   x == y = x.fc == y.fc
         && x.vis == y.vis
+        && x.isAutobind == y.isAutobind
         && x.fix == y.fix
         && x.precedence == y.precedence
 
@@ -470,7 +472,7 @@ mutual
        PFail : FC -> Maybe String -> List (PDecl' nm) -> PDecl' nm
 
        PMutual : FC -> List (PDecl' nm) -> PDecl' nm
-       PFixity : FC -> Visibility -> Fixity -> Nat -> OpStr -> PDecl' nm
+       PFixity : FC -> Visibility -> (isAutobind : Bool) -> Fixity -> Nat -> OpStr -> PDecl' nm
        PNamespace : FC -> Namespace -> List (PDecl' nm) -> PDecl' nm
        PTransform : FC -> String -> PTerm' nm -> PTerm' nm -> PDecl' nm
        PRunElabDecl : FC -> PTerm' nm -> PDecl' nm
@@ -489,7 +491,7 @@ mutual
   getPDeclLoc (PRecord fc _ _ _ _) = fc
   getPDeclLoc (PMutual fc _) = fc
   getPDeclLoc (PFail fc _ _) = fc
-  getPDeclLoc (PFixity fc _ _ _ _) = fc
+  getPDeclLoc (PFixity fc _ _ _ _ _) = fc
   getPDeclLoc (PNamespace fc _ _) = fc
   getPDeclLoc (PTransform fc _ _ _) = fc
   getPDeclLoc (PRunElabDecl fc _) = fc
@@ -999,9 +1001,9 @@ initSyntax
 
     initFixities : ANameMap FixityInfo
     initFixities = fromList
-      [ (UN $ Basic "-", MkFixityInfo EmptyFC Export Prefix 10)
-      , (UN $ Basic "negate", MkFixityInfo EmptyFC Export Prefix 10) -- for documentation purposes
-      , (UN $ Basic "=", MkFixityInfo EmptyFC Export Infix 0)
+      [ (UN $ Basic "-", MkFixityInfo EmptyFC Export False Prefix 10)
+      , (UN $ Basic "negate", MkFixityInfo EmptyFC Export False Prefix 10) -- for documentation purposes
+      , (UN $ Basic "=", MkFixityInfo EmptyFC Export False Infix 0)
       ]
 
     initDocStrings : ANameMap String

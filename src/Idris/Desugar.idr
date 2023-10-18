@@ -1109,7 +1109,7 @@ mutual
           NS ns (DN str (MN ("__mk" ++ str) 0))
       mkConName n = DN (show n) (MN ("__mk" ++ show n) 0)
 
-  desugarDecl ps (PFixity fc vis fix prec opName)
+  desugarDecl ps (PFixity fc vis binding fix prec opName)
       = do ctx <- get Ctxt
            -- We update the context of fixities by adding a namespaced fixity
            -- given by the current namespace and its fixity name.
@@ -1118,7 +1118,7 @@ mutual
            let updatedNS = NS (mkNestedNamespace (Just ctx.currentNS) (show fix))
                               (UN $ Basic $ nameRoot opName)
 
-           update Syn { fixities $= addName updatedNS (MkFixityInfo fc vis fix prec) }
+           update Syn { fixities $= addName updatedNS (MkFixityInfo fc vis binding fix prec) }
            pure []
   desugarDecl ps d@(PFail fc mmsg ds)
       = do -- save the state: the content of a failing block should be discarded

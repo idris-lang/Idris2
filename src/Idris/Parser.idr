@@ -1828,13 +1828,14 @@ definition fname indents
 fixDecl : OriginDesc -> IndentInfo -> Rule (List PDecl)
 fixDecl fname indents
     = do vis <- exportVisibility fname
+         binding <- map isJust (optional (keyword "autobind"))
          b <- bounds (do fixity <- decorate fname Keyword $ fix
                          commit
                          prec <- decorate fname Keyword $ intLit
                          ops <- sepBy1 (decoratedSymbol fname ",") iOperator
                          pure (fixity, prec, ops))
          (fixity, prec, ops) <- pure b.val
-         pure (map (PFixity (boundToFC fname b) vis fixity (fromInteger prec)) (forget ops))
+         pure (map (PFixity (boundToFC fname b) vis binding fixity (fromInteger prec)) (forget ops))
 
 directiveDecl : OriginDesc -> IndentInfo -> Rule PDecl
 directiveDecl fname indents
