@@ -265,7 +265,7 @@ mapPTermM f = goPTerm where
       pure $ PRecord fc doc v tot (MkPRecordLater n !(go4TupledPTerms nts))
     goPDecl (PFail fc msg ps) = PFail fc msg <$> goPDecls ps
     goPDecl (PMutual fc ps) = PMutual fc <$> goPDecls ps
-    goPDecl p@(PFixity _ _ _ _ _) = pure p
+    goPDecl p@(PFixity _ _ _ _ _ _) = pure p
     goPDecl (PNamespace fc strs ps) = PNamespace fc strs <$> goPDecls ps
     goPDecl (PTransform fc n a b) = PTransform fc n <$> goPTerm a <*> goPTerm b
     goPDecl (PRunElabDecl fc a) = PRunElabDecl fc <$> goPTerm a
@@ -533,7 +533,7 @@ mapPTerm f = goPTerm where
       = PRecord fc doc v tot (MkPRecordLater n (go4TupledPTerms nts))
     goPDecl (PFail fc msg ps) = PFail fc msg $ goPDecl <$> ps
     goPDecl (PMutual fc ps) = PMutual fc $ goPDecl <$> ps
-    goPDecl p@(PFixity _ _ _ _ _) = p
+    goPDecl p@(PFixity _ _ _ _ _ _) = p
     goPDecl (PNamespace fc strs ps) = PNamespace fc strs $ goPDecl <$> ps
     goPDecl (PTransform fc n a b) = PTransform fc n (goPTerm a) (goPTerm b)
     goPDecl (PRunElabDecl fc a) = PRunElabDecl fc $ goPTerm a
