@@ -1,0 +1,8 @@
+-- we need to exec to get the prim__* functions to disappear
+:exec printLn divZeroZero
+:exec printLn nanPlus
+:exec printLn nanSub
+:exec printLn nanMult
+:exec printLn nanDiv
+:exec printLn negNaN
+:exec printLn nansNotEq
