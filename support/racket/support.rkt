@@ -37,6 +37,12 @@
       (if (> b 0) (+ r b) (- r b))
       r)))
 
+(define (blodwen-flonumEpsilon)
+  epsilon.0)
+
+(define (blodwen-calcFlonumRoundingUnit)
+  (fl/ (blodwen-flonumEpsilon) 2.0))
+
 (define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
 (define bu- (lambda (x y bits) (blodwen-toUnsignedInt (- x y) bits)))
 (define bu* (lambda (x y bits) (blodwen-toUnsignedInt (* x y) bits)))
