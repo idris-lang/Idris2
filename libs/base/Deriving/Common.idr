@@ -70,10 +70,12 @@ isType = go Z [] where
     -- Unqualified: that's a local variable
     UN (Basic _) => go (S idx) ((Arg emptyFC nm, idx) :: acc) t
     _ => go (S idx) acc t
+  go idx acc (INamedApp _ t nm (IHole _ _)) = go (S idx) acc t
   go idx acc (INamedApp _ t nm (IVar _ nm')) = case nm' of
     -- Unqualified: that's a local variable
     UN (Basic _) => go (S idx) ((NamedArg emptyFC nm nm', idx) :: acc) t
     _ => go (S idx) acc t
+  go idx acc (IAutoApp _ t (IHole _ _)) = go (S idx) acc t
   go idx acc (IAutoApp _ t (IVar _ nm)) = case nm of
     -- Unqualified: that's a local variable
     UN (Basic _) => go (S idx) ((AutoArg emptyFC nm, idx) :: acc) t

@@ -664,6 +664,12 @@ Traversable Argument where
   traverse f (NamedArg fc nm x) = NamedArg fc nm <$> f x
   traverse f (AutoArg fc x)     = AutoArg fc <$> f x
 
+export
+Show a => Show (Argument a) where
+  showPrec d (Arg fc x)         = showPrec d x
+  showPrec _ (NamedArg fc nm x) = "{\{show nm} = \{show x}}"
+  showPrec _ (AutoArg fc x)     = "@{\show x}"
+
 public export
 iApp : TTImp -> Argument TTImp -> TTImp
 iApp f (Arg fc t) = IApp fc f t

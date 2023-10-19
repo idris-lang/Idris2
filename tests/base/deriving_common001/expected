@@ -1,0 +1,21 @@
+1/1: Building ConView (ConView.idr)
+LOG elab:0: the type ConView.X
+LOG elab:0: - constructor ConView.MkX1
+LOG elab:0:   - param (arg #0): {n = {n:3537}}
+LOG elab:0:   - param (arg #1): fn
+LOG elab:0: - constructor ConView.MkX2
+LOG elab:0:   - param (arg #0): {n = n}
+LOG elab:0:   - param (arg #1): fn
+LOG elab:0: - constructor ConView.MkX3
+LOG elab:0:   - param (arg #0): {n = n}
+LOG elab:0:   - param (arg #1): fn
+Error: Unsolved holes:
+ConView.{n:3773} introduced at: 
+ConView:29:21--29:22
+ 25 |     logMsg "elab" 0 "- constructor \{show conName}"
+ 26 |     for_ conView.params $ \(conParam, conIdx) => do
+ 27 |       logMsg "elab" 0 "  - param (arg #\{show conIdx}): \{show conParam}"
+ 28 | 
+ 29 | %runElab consParams X
+                          ^
+
