@@ -54,6 +54,9 @@
 (define (blodwen-flonumNaN)
   +nan.0)
 
+(define (blodwen-flonumInf)
+  +inf.0)
+
 ; Bits
 
 (define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))

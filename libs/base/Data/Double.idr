@@ -1,8 +1,7 @@
-||| Various floating-point number constants
+||| Various IEEE floating-point number constants
 module Data.Double
 
 -- TODO:
---   * inf
 --   * docstrings
 --   * update changelog
 
@@ -22,4 +21,10 @@ epsilon : Double
          "node:lambda:()=>Number.NaN"
 export
 nan : Double
+
+
+%foreign "scheme:blodwen-flonumInf"
+         "node:lambda:()=>Infinity"
+export
+inf : Double
 
