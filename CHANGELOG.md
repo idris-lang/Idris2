@@ -207,6 +207,9 @@
 
 * Implements `Ord` for `Count` from `Language.Reflection`.
 
+* Adds bindings for IEEE floating point constants NaN and (+/-) Inf, as well as
+  machine epsilon and unit roundoff. Speeds vary depending on backend.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than

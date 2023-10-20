@@ -1,9 +1,6 @@
 ||| Various IEEE floating-point number constants
 module Data.Double
 
--- TODO:
---   * update changelog
-
 %foreign "scheme:blodwen-calcFlonumUnitRoundoff"
          "node:lambda:()=>Number.EPSILON / 2"
 ||| Largest number that can be added to a floating-point number without changing
