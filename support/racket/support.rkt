@@ -42,7 +42,7 @@
 (define (blodwen-flonumEpsilon)
   epsilon.0)
 
-(define (blodwen-calcFlonumRoundingUnit)
+(define (blodwen-calcFlonumUnitRoundoff)
   (fl/ (blodwen-flonumEpsilon) 2.0))
 
 (define (blodwen-flonumNaN)

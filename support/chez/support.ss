@@ -42,14 +42,14 @@
 
 ; flonum constants
 
-(define (blodwen-calcFlonumRoundingUnit)
-  (let loop [(ru 1.0)]
-    (if (fl= 1.0 (fl+ 1.0 ru))
-      ru
-      (loop (fl/ ru 2.0)))))
+(define (blodwen-calcFlonumUnitRoundoff)
+  (let loop [(uro 1.0)]
+    (if (fl= 1.0 (fl+ 1.0 uro))
+      uro
+      (loop (fl/ uro 2.0)))))
 
 (define (blodwen-calcFlonumEpsilon)
-  (fl* (blodwen-calcFlonumRoundingUnit) 2.0))
+  (fl* (blodwen-calcFlonumUnitRoundoff) 2.0))
 
 (define (blodwen-flonumNaN)
   +nan.0)

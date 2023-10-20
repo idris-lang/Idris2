@@ -1,3 +1,3 @@
 . ../../testutils.sh
 
-idris2 RUandEpsilon.idr < input
+idris2 URandEpsilon.idr < input

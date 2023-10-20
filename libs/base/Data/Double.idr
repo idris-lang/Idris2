@@ -5,10 +5,10 @@ module Data.Double
 --   * docstrings
 --   * update changelog
 
-%foreign "scheme:blodwen-calcFlonumRoundingUnit"
+%foreign "scheme:blodwen-calcFlonumUnitRoundoff"
          "node:lambda:()=>Number.EPSILON / 2"
 export
-roundingUnit : Double
+unitRoundoff : Double
 
 %foreign "scheme,chez:blodwen-calcFlonumEpsilon"
          "scheme,racket:blodwen-flonumEpsilon"
