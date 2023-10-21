@@ -26,7 +26,8 @@ getFnArgs embed fts = go fts [] where
   go (PAutoApp fc f t) = go f . (Auto fc t ::)
   go (PNamedApp fc f n t) = go f . (Named fc n t ::)
   go (PBracketed fc f) = go f
-  go (POp fc opFC op l r) = (PRef opFC op,) . (Explicit fc l ::) . (Explicit fc r ::)
+  -- we don't care about the binder info here
+  go (POp fc opFC _ op l r) = (PRef opFC op,) . (Explicit fc l ::) . (Explicit fc r ::)
   go (PEq fc l r) = (PRef fc $ embed eqName,) . (Explicit fc l ::) . (Explicit fc r ::)
   -- ambiguous, picking the type constructor here
   go (PPair fc l r) = (PRef fc $ embed pairname,) . (Explicit fc l ::) . (Explicit fc r ::)
