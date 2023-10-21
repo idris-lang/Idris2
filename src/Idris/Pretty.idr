@@ -332,11 +332,19 @@ mutual
     prettyPrec d (PDotted _ p) = dot <+> prettyPrec d p
     prettyPrec d (PImplicit _) = "_"
     prettyPrec d (PInfer _) = annotate Hole $ "?"
-    prettyPrec d (POp _ _ (Just ab) op left right) =
-        group $ parens (pretty ab <++> ":" <++> pretty left)
+    prettyPrec d (POp _ _ (BindType nm left) op right) =
+        group $ parens (pretty nm <++> ":" <++> pretty left)
            <++> prettyOp op
            <++> pretty right
-    prettyPrec d (POp _ _ Nothing op x y) =
+    prettyPrec d (POp _ _ (BindExpr nm left) op right) =
+        group $ parens (pretty nm <++> ":=" <++> pretty left)
+           <++> prettyOp op
+           <++> pretty right
+    prettyPrec d (POp _ _ (BindExplicitType nm ty left) op right) =
+        group $ parens (pretty nm <++> ":" <++> pretty ty <++> ":=" <++> pretty left)
+           <++> prettyOp op
+           <++> pretty right
+    prettyPrec d (POp _ _ (NotAutobind x) op y) =
       parenthesise (d >= App) $
         group $ pretty x
            <++> prettyOp op

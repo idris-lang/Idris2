@@ -160,7 +160,7 @@ checkConflictingFixities isPrefix exprFC opn
 toTokList : {auto s : Ref Syn SyntaxInfo} ->
             {auto c : Ref Ctxt Defs} ->
             PTerm -> Core (List (Tok OpStr PTerm))
-toTokList (POp fc opFC _ opn l r)
+toTokList (POp fc opFC (NotAutobind l) opn r)
     = do precInfo <- checkConflictingFixities False fc opn
          rtoks <- toTokList r
          pure (Expr l :: Op fc opFC opn precInfo :: rtoks)
@@ -308,16 +308,20 @@ mutual
                      [apply (IVar fc (UN $ Basic "===")) [l', r'],
                       apply (IVar fc (UN $ Basic "~=~")) [l', r']]
   desugarB side ps (PBracketed fc e) = desugarB side ps e
-  -- desugarB side ps (PDPair fc opFC (PRef namefc n@(UN _)) ty r)
-  --     = do ty' <- desugarB side ps ty
-  --          r' <- desugarB side ps r
-  --          pure $ apply (IVar opFC dpairname)
-  --                       [ty', ILam namefc top Explicit (Just n) ty' r']
-  desugarB side ps (POp fc opFC (Just nm) op l r)
-      = desugarB side ps (POp fc opFC Nothing op l
-                         $ PLam (virtualiseFC opFC) top Explicit nm (PImplicit opFC) r)
-  desugarB side ps (POp fc opFC Nothing op l r)
-      = do ts <- toTokList (POp fc opFC Nothing op l r)
+  -- a bindtype operator desugars (x : a ** b x) into ((**) a (\x : a => b x))
+  desugarB side ps (POp fc opFC (BindType nm l) op r)
+      = desugarB side ps (POp fc opFC (NotAutobind l) op
+                         $ PLam (virtualiseFC opFC) top Explicit nm l r)
+  -- a bindexpr operator desugars (x := a ** b x) into ((**) a (\x : ? => b x))
+  desugarB side ps (POp fc opFC (BindExpr nm l) op r)
+      = desugarB side ps (POp fc opFC (NotAutobind l) op
+                         $ PLam (virtualiseFC opFC) top Explicit nm (PImplicit $ virtualiseFC opFC) r)
+  -- an explicit bind operator desugars (x : ty := a ** b x) into ((**) a (\x : ty => b x))
+  desugarB side ps (POp fc opFC (BindExplicitType nm ty l) op r)
+      = desugarB side ps (POp fc opFC (NotAutobind l) op
+                         $ PLam (virtualiseFC opFC) top Explicit nm ty r)
+  desugarB side ps (POp fc opFC (NotAutobind l) op r)
+      = do ts <- toTokList (POp fc opFC (NotAutobind l) op r)
            desugarTree side ps !(parseOps ts)
   desugarB side ps (PPrefixOp fc opFC op arg)
       = do ts <- toTokList (PPrefixOp fc opFC op arg)
@@ -330,12 +334,12 @@ mutual
                 [] =>
                     desugarB side ps
                         (PLam fc top Explicit (PRef fc (MN "arg" 0)) (PImplicit fc)
-                            (POp fc opFC Nothing op (PRef fc (MN "arg" 0)) arg))
+                            (POp fc opFC (NotAutobind (PRef fc (MN "arg" 0))) op arg))
                 (prec :: _) => desugarB side ps (PPrefixOp fc opFC op arg)
   desugarB side ps (PSectionR fc opFC arg op)
       = desugarB side ps
           (PLam fc top Explicit (PRef fc (MN "arg" 0)) (PImplicit fc)
-              (POp fc opFC Nothing op arg (PRef fc (MN "arg" 0))))
+              (POp fc opFC (NotAutobind arg) op (PRef fc (MN "arg" 0))))
   desugarB side ps (PSearch fc depth) = pure $ ISearch fc depth
   desugarB side ps (PPrimVal fc (BI x))
       = case !fromIntegerName of
