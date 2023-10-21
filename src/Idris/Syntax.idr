@@ -47,25 +47,42 @@ Eq Fixity where
   Prefix == Prefix = True
   _ == _ = False
 
+
+public export
+data BindingModifier = NotBinding | Autobind | Typebind
+
+export
+Eq BindingModifier where
+  NotBinding == NotBinding = True
+  Autobind == Autobind = True
+  Typebind == Typebind = True
+  _ == _ = False
+
+export
+Show BindingModifier where
+  show NotBinding = "not binding"
+  show Typebind = "typebind"
+  show Autobind = "autobind"
+
 -- A record to hold all the information about a fixity
 public export
 record FixityInfo where
   constructor MkFixityInfo
   fc : FC
   vis : Visibility
-  isAutobind : Bool
+  bindingInfo : BindingModifier
   fix : Fixity
   precedence : Nat
 
 export
 Show FixityInfo where
-  show fx = "fc: \{show fx.fc}, visibility: \{show fx.vis}, isAutobind: \{show fx.isAutobind}, fixity: \{show fx.fix}, precedence: \{show fx.precedence}"
+  show fx = "fc: \{show fx.fc}, visibility: \{show fx.vis}, binding: \{show fx.bindingInfo}, fixity: \{show fx.fix}, precedence: \{show fx.precedence}"
 
 export
 Eq FixityInfo where
   x == y = x.fc == y.fc
         && x.vis == y.vis
-        && x.isAutobind == y.isAutobind
+        && x.bindingInfo == y.bindingInfo
         && x.fix == y.fix
         && x.precedence == y.precedence
 
@@ -507,7 +524,7 @@ mutual
        PFail : FC -> Maybe String -> List (PDecl' nm) -> PDecl' nm
 
        PMutual : FC -> List (PDecl' nm) -> PDecl' nm
-       PFixity : FC -> Visibility -> (isAutobind : Bool) -> Fixity -> Nat -> OpStr -> PDecl' nm
+       PFixity : FC -> Visibility -> BindingModifier -> Fixity -> Nat -> OpStr -> PDecl' nm
        PNamespace : FC -> Namespace -> List (PDecl' nm) -> PDecl' nm
        PTransform : FC -> String -> PTerm' nm -> PTerm' nm -> PDecl' nm
        PRunElabDecl : FC -> PTerm' nm -> PDecl' nm
@@ -1043,9 +1060,9 @@ initSyntax
 
     initFixities : ANameMap FixityInfo
     initFixities = fromList
-      [ (UN $ Basic "-", MkFixityInfo EmptyFC Export False Prefix 10)
-      , (UN $ Basic "negate", MkFixityInfo EmptyFC Export False Prefix 10) -- for documentation purposes
-      , (UN $ Basic "=", MkFixityInfo EmptyFC Export False Infix 0)
+      [ (UN $ Basic "-", MkFixityInfo EmptyFC Export NotBinding Prefix 10)
+      , (UN $ Basic "negate", MkFixityInfo EmptyFC Export NotBinding Prefix 10) -- for documentation purposes
+      , (UN $ Basic "=", MkFixityInfo EmptyFC Export NotBinding Infix 0)
       ]
 
     initDocStrings : ANameMap String

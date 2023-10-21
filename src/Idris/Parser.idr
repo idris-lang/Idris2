@@ -331,15 +331,15 @@ mutual
   opBinderTypes fname indents boundName =
            do decoratedSymbol fname ":"
               ty <- typeExpr pdef fname indents
-              pure (BindType boundName ty)
+              decoratedSymbol fname ":="
+              exp <- expr pdef fname indents
+              pure (BindExplicitType boundName ty exp)
        <|> do decoratedSymbol fname ":="
               exp <- expr pdef fname indents
               pure (BindExpr boundName exp)
        <|> do decoratedSymbol fname ":"
               ty <- typeExpr pdef fname indents
-              decoratedSymbol fname ":="
-              exp <- expr pdef fname indents
-              pure (BindExplicitType boundName ty exp)
+              pure (BindType boundName ty)
 
   opBinder : OriginDesc -> IndentInfo -> Rule (OperatorLHSInfo PTerm)
   opBinder fname indents
@@ -1866,10 +1866,16 @@ definition fname indents
     = do nd <- bounds (clause 0 Nothing fname indents)
          pure (PDef (boundToFC fname nd) [nd.val])
 
+operatorBindingKeyword : EmptyRule BindingModifier
+operatorBindingKeyword
+  =   (keyword "autobind" >> pure Autobind)
+  <|> (keyword "typebind" >> pure Typebind)
+  <|> pure NotBinding
+
 fixDecl : OriginDesc -> IndentInfo -> Rule (List PDecl)
 fixDecl fname indents
     = do vis <- exportVisibility fname
-         binding <- map isJust (optional (keyword "autobind"))
+         binding <- operatorBindingKeyword
          b <- bounds (do fixity <- decorate fname Keyword $ fix
                          commit
                          prec <- decorate fname Keyword $ intLit

@@ -82,20 +82,32 @@ TTC Import where
          pure (MkImport loc reexport path nameAs)
 
 export
+TTC BindingModifier where
+  toBuf b NotBinding = tag 0
+  toBuf b Typebind = tag 1
+  toBuf b Autobind = tag 2
+  fromBuf b
+      = case !getTag of
+             0 => pure NotBinding
+             1 => pure Typebind
+             2 => pure Autobind
+             _ => corrupt "binding"
+
+export
 TTC FixityInfo where
   toBuf b fx
       = do toBuf b fx.fc
            toBuf b fx.vis
-           toBuf b fx.isAutobind
+           toBuf b fx.bindingInfo
            toBuf b fx.fix
            toBuf b fx.precedence
   fromBuf b
       = do fc <- fromBuf b
            vis <- fromBuf b
-           isAutobind <- fromBuf b
+           binding <- fromBuf b
            fix <- fromBuf b
            prec <- fromBuf b
-           pure $ MkFixityInfo fc vis isAutobind fix prec
+           pure $ MkFixityInfo fc vis binding fix prec
 
 
 export
