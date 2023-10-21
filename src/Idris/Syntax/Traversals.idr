@@ -99,9 +99,12 @@ mapPTermM f = goPTerm where
       >>= f
     goPTerm t@(PImplicit _) = f t
     goPTerm t@(PInfer _) = f t
-    goPTerm (POp fc opFC x y z) =
-      POp fc opFC x <$> goPTerm y
-                    <*> goPTerm z
+    goPTerm (POp fc opFC autobindInfo x y z) =
+      POp fc opFC
+          <$> traverseOpt f autobindInfo
+          <*> pure x
+          <*> goPTerm y
+          <*> goPTerm z
       >>= f
     goPTerm (PPrefixOp fc opFC x y) =
       PPrefixOp fc opFC x <$> goPTerm y
@@ -434,8 +437,8 @@ mapPTerm f = goPTerm where
       = f $ PDotted fc $ goPTerm x
     goPTerm t@(PImplicit _) = f t
     goPTerm t@(PInfer _) = f t
-    goPTerm (POp fc opFC x y z)
-      = f $ POp fc opFC x (goPTerm y) (goPTerm z)
+    goPTerm (POp fc opFC autoBindInfo opName y z)
+      = f $ POp fc opFC (map f autoBindInfo) opName (goPTerm y) (goPTerm z)
     goPTerm (PPrefixOp fc opFC x y)
       = f $ PPrefixOp fc opFC x $ goPTerm y
     goPTerm (PSectionL fc opFC x y)
@@ -618,7 +621,7 @@ substFC fc = mapPTerm $ \case
   PDotted _ x => PDotted fc x
   PImplicit _ => PImplicit fc
   PInfer _ => PInfer fc
-  POp _ _ x y z => POp fc fc x y z
+  POp _ _ ab nm l r => POp fc fc ab nm l r
   PPrefixOp _ _ x y => PPrefixOp fc fc x y
   PSectionL _ _ x y => PSectionL fc fc x y
   PSectionR _ _ x y => PSectionR fc fc x y
