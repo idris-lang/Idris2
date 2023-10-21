@@ -245,7 +245,7 @@ keywords : List String
 keywords = ["data", "module", "where", "let", "in", "do", "record",
             "auto", "default", "implicit", "failing", "mutual", "namespace",
             "parameters", "with", "proof", "impossible", "case", "of",
-            "if", "then", "else", "forall", "rewrite", "autobind",
+            "if", "then", "else", "forall", "rewrite", "typebind", "autobind",
             "using", "interface", "implementation", "open", "import",
             "public", "export", "private"] ++
             fixityKeywords ++

@@ -10,8 +10,6 @@ typebind infixr 0 =@
 
 data S : {ty : Type} -> (x : ty) -> Type where
   MkS : (x : ty) =@ S x
-  -- same as
-  -- MkS : (1 x : ty) -> S x
 
 typebind infixr 0 *>
 
