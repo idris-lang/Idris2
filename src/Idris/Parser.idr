@@ -325,28 +325,38 @@ mutual
         decoratedSymbol fname "]"
         pure (map (\ n => (boundToFC fname n, n.val)) $ forget ns)
 
-  opBinder : OriginDesc -> IndentInfo -> Rule (PTerm, PTerm)
-  opBinder fname indents
-      = do loc <- bounds (do x <- UN . Basic <$> decoratedSimpleBinderName fname
-                             decoratedSymbol fname ":"
-                             ty <- typeExpr pdef fname indents
-                             pure (x, ty))
-           (nm, ty) <- pure loc.val
-           pure (PRef (boundToFC fname loc) nm, ty)
+  -- The different kinds of operator bindings `x : ty` for typebind
+  -- x := e and x : ty := e for autobind
+  opBinderTypes : OriginDesc -> IndentInfo -> PTerm -> Rule (OperatorLHSInfo PTerm)
+  opBinderTypes fname indents boundName =
+           do decoratedSymbol fname ":"
+              ty <- typeExpr pdef fname indents
+              pure (BindType boundName ty)
+       <|> do decoratedSymbol fname ":="
+              exp <- expr pdef fname indents
+              pure (BindExpr boundName exp)
+       <|> do decoratedSymbol fname ":"
+              ty <- typeExpr pdef fname indents
+              decoratedSymbol fname ":="
+              exp <- expr pdef fname indents
+              pure (BindExplicitType boundName ty exp)
 
+  opBinder : OriginDesc -> IndentInfo -> Rule (OperatorLHSInfo PTerm)
+  opBinder fname indents
+      = do x <- bounds (UN . Basic <$> decoratedSimpleBinderName fname)
+           let boundName = PRef (boundToFC fname x) x.val
+           opBinderTypes fname indents boundName
 
   autobindOp : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
   autobindOp q fname indents
-      = do bindRes <- bounds $ parens fname (opBinder fname indents)
-           (bindName, bindExpr) <- pure $ bindRes.val
+      = do binder <- bounds $ parens fname (opBinder fname indents)
            continue indents
            op <- bounds iOperator
            e <- bounds (expr q fname indents)
-           pure (POp (boundToFC fname $ mergeBounds bindRes e)
+           pure (POp (boundToFC fname $ mergeBounds binder e)
                      (boundToFC fname op)
-                     (Just $ bindName)
+                     binder.val
                      op.val
-                     bindExpr
                      e.val)
 
   opExprBase : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
@@ -359,7 +369,7 @@ mutual
                        pure $
                          let fc = boundToFC fname (mergeBounds l r)
                              opFC = virtualiseFC fc -- already been highlighted: we don't care
-                         in POp fc opFC Nothing (UN $ Basic "=") l.val r.val
+                         in POp fc opFC (NotAutobind l.val) (UN $ Basic "=") r.val
                else fail "= not allowed")
              <|>
              (do b <- bounds $ do
@@ -372,7 +382,7 @@ mutual
                  (op, r) <- pure b.val
                  let fc = boundToFC fname (mergeBounds l b)
                  let opFC = boundToFC fname op
-                 pure (POp fc opFC Nothing op.val l.val r))
+                 pure (POp fc opFC (NotAutobind l.val) op.val r))
                <|> pure l.val
 
   opExpr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
