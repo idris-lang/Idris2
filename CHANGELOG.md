@@ -17,8 +17,12 @@
   [#1066](https://github.com/idris-lang/idris2/issues/1066)).
 * `%hide` directives can now hide conflicting fixities from other modules.
 * Fixity declarations can now be kept private with export modifiers.
-* New fromTTImp, fromName, and fromDecls names for custom TTImp, Name, and Decls
-  literals.
+* New `fromTTImp`, `fromName`, and `fromDecls` names for custom `TTImp`,
+  `Name`, and `Decls` literals.
+* Call to `%macro`-functions do not require the `ElabReflection` extension.
+* Default implicits are supported for named implementations.
+* Elaborator scripts were made to be able to access project files,
+  allowing the support for type providers and similar stuff.
 
 ### REPL changes
 
@@ -184,7 +188,11 @@
 * Generalized `imapProperty` in `Data.List.Quantifiers.All.All`
   and `Data.Vect.Quantifiers.All.All`.
 
-* Add `zipPropertyWith` to `Data.Vect.Quantifiers.All.All`.
+* Add `zipPropertyWith`, `traverseProperty`, `traversePropertyRelevant` and `remember`
+  to `Data.Vect.Quantifiers.All.All`.
+
+* Add `anyToFin` to `Data.Vect.Quantifiers.Any`,
+  converting the `Any` witness to the index into the corresponding element.
 
 * Implemented `Ord` for `Language.Reflection.TT.Name`, `Language.Reflection.TT.Namespace`
   and `Language.Reflection.TT.UserName`.
@@ -205,7 +213,16 @@
 
 * Adds updating functions to `SortedMap` and `SortedDMap`.
 
+* Adds `grouped` function to `Data.List` for splitting a list into equal-sized slices.
+
 * Implements `Ord` for `Count` from `Language.Reflection`.
+
+* Implements `MonadState` for `Data.Ref` with a named implementation requiring
+  a particular reference.
+
+* Adds implementations of `Zippable` to `Either`, `Pair`, `Maybe`, `SortedMap`.
+
+* Adds a `Compose` and `FromApplicative` named implementations for `Zippable`.
 
 * Adds bindings for IEEE floating point constants NaN and (+/-) Inf, as well as
   machine epsilon and unit roundoff. Speeds vary depending on backend.

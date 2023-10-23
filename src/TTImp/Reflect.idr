@@ -607,7 +607,7 @@ mutual
         = pure (Ref tfc Bound t)
     reflect fc defs lhs env (IUnquote tfc t)
         = throw (InternalError "Can't reflect an unquote: escapes should be lifted out")
-    reflect fc defs lhs env (IRunElab tfc t)
+    reflect fc defs lhs env (IRunElab tfc _ t)
         = throw (InternalError "Can't reflect a %runElab")
     reflect fc defs lhs env (IPrimVal tfc t)
         = do fc' <- reflect fc defs lhs env tfc

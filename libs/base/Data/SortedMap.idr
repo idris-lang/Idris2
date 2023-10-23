@@ -1,6 +1,7 @@
 module Data.SortedMap
 
 import Data.SortedMap.Dependent
+import Data.Zippable
 
 %hide Prelude.toList
 
@@ -93,6 +94,13 @@ implementation Foldable (SortedMap k) where
 export
 implementation Traversable (SortedMap k) where
   traverse f = map M . traverse f . unM
+
+export
+implementation Ord k => Zippable (SortedMap k) where
+  zipWith f mx my = fromList $ mapMaybe (\(k, x) => (k,) . f x <$> lookup k my) $ toList mx
+  zipWith3 f mx my mz = fromList $ mapMaybe (\(k, x) => (k,) .: f x <$> lookup k my <*> lookup k mz) $ toList mx
+  unzipWith f m = let m' = map f m in (map fst m', map snd m')
+  unzipWith3 f m = let m' = map f m in (map fst m', map (fst . snd) m', map (snd . snd) m')
 
 ||| Merge two maps. When encountering duplicate keys, using a function to combine the values.
 ||| Uses the ordering of the first map given.

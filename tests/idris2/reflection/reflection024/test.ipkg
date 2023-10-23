@@ -1,0 +1,5 @@
+package a-test
+
+sourcedir = "src"
+
+depends = contrib
