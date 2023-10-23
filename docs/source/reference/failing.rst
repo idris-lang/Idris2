@@ -9,6 +9,7 @@ elaboration. Their simplest form is using the keyword ``failing`` followed by
 some indented Idris code:
 
 .. code-block:: idris
+
     failing
       trueNotFalse : True === False
       trueNotFalse = Refl
@@ -26,6 +27,7 @@ make sure that Idris rejects a proof that the character ``'a'`` is equal to
 ``'b'`` by throwing an error when unifying them:
 
 .. code-block:: idris
+
     failing "When unifying"
       noteq : 'a' === 'b'
       noteq = Refl
@@ -36,6 +38,7 @@ helper functions can be used as long as at least one statement in the block
 fails (it does not have to be the first or last statement!):
 
 .. code-block:: idris
+
     failing "Mismatch between: Integer and Double"
       record Point where
         constructor MkPoint
@@ -55,6 +58,7 @@ Should the failing block not fail, i.e. the code inside is accepted during
 elaboration, the compiler will report an error:
 
 .. code-block:: idris
+
     failing
       validRefl : 1 === 1
       validRefl = Refl
@@ -83,6 +87,7 @@ single block can lead to unexpected results. The following example passes, since
 the second statement fails:
 
 .. code-block:: idris
+
     failing
       stmt1 : True === True
       stmt1 = Refl
@@ -97,6 +102,7 @@ the second statement fails:
 Instead, separate the statements out into separate failing blocks:
 
 .. code-block:: idris
+
     failing
       stmt1 : True === True
       stmt1 = Refl
