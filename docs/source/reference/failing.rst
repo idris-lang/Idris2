@@ -61,13 +61,15 @@ elaboration, the compiler will report an error:
 
 Checking the above gives:
 
-.. code-block::
+::
+
     Error: Failing block did not fail.
 
 Similarly, if an expected error (sub)string is given but the error output does
 not match, we get:
 
-.. code-block::
+::
+
     Error: Failing block failed with the wrong error.
 
 Followed by the given expected error string and the actual error output,
