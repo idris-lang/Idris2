@@ -1,0 +1,4 @@
+. ../../../testutils.sh
+
+idris2 Cycle1.idr
+idris2 Loop.idr

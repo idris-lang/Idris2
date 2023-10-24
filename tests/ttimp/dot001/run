@@ -1,7 +1,6 @@
-rm -rf build
+. ../../testutils.sh
 
-echo ':q' | $1 --yaffle Dot.yaff
-echo ':q' | $1 --yaffle Dot2.yaff
-echo ':q' | $1 --yaffle Dot3.yaff
-echo ':q' | $1 --yaffle Dot4.yaff
-
+echo ':q' | idris2 --yaffle Dot.yaff
+echo ':q' | idris2 --yaffle Dot2.yaff
+echo ':q' | idris2 --yaffle Dot3.yaff
+echo ':q' | idris2 --yaffle Dot4.yaff

@@ -1,4 +1,0 @@
-rm -rf build
-
-$1 --no-banner --no-color --check EH.idr -p contrib
-

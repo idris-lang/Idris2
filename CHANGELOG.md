@@ -17,11 +17,16 @@
   [#1066](https://github.com/idris-lang/idris2/issues/1066)).
 * `%hide` directives can now hide conflicting fixities from other modules.
 * Fixity declarations can now be kept private with export modifiers.
-* New fromTTImp, fromName, and fromDecls names for custom TTImp, Name, and Decls
-  literals.
 * Forward-declarations whose visibility differ from their
   actual definition now emit a warning, unless the definition
-  has no specified visibility (addressing Issue [#1236](https://github.com/idris-lang/Idris2/issues/1236)).
+  has no specified visibility
+  (addressing Issue [#1236](https://github.com/idris-lang/Idris2/issues/1236)).
+* New `fromTTImp`, `fromName`, and `fromDecls` names for custom `TTImp`,
+  `Name`, and `Decls` literals.
+* Call to `%macro`-functions do not require the `ElabReflection` extension.
+* Default implicits are supported for named implementations.
+* Elaborator scripts were made to be able to access project files,
+  allowing the support for type providers and similar stuff.
 
 ### REPL changes
 
@@ -110,6 +115,9 @@
 
 * Fixed a bug that caused `f` to sometimes be replaced by `fx` after matching `fx = f x`.
 
+* Fixed a bug in the totality checker that missed indirect references to
+  partial data.
+
 * Refactor the idris2protocols package to depend on fewer Idris2 modules.
   We can now export the package independently.
   To avoid confusing tooling about which `.ipkg` to use, the
@@ -187,7 +195,11 @@
 * Generalized `imapProperty` in `Data.List.Quantifiers.All.All`
   and `Data.Vect.Quantifiers.All.All`.
 
-* Add `zipPropertyWith` to `Data.Vect.Quantifiers.All.All`.
+* Add `zipPropertyWith`, `traverseProperty`, `traversePropertyRelevant` and `remember`
+  to `Data.Vect.Quantifiers.All.All`.
+
+* Add `anyToFin` to `Data.Vect.Quantifiers.Any`,
+  converting the `Any` witness to the index into the corresponding element.
 
 * Implemented `Ord` for `Language.Reflection.TT.Name`, `Language.Reflection.TT.Namespace`
   and `Language.Reflection.TT.UserName`.
@@ -207,6 +219,19 @@
 * Adds `infixOfBy` and `isInfixOfBy` into `Data.List`.
 
 * Adds `WithDefault` into `Language.Reflection.TTImp`, mirroring compiler addition.
+
+* Adds updating functions to `SortedMap` and `SortedDMap`.
+
+* Adds `grouped` function to `Data.List` for splitting a list into equal-sized slices.
+
+* Implements `Ord` for `Count` from `Language.Reflection`.
+
+* Implements `MonadState` for `Data.Ref` with a named implementation requiring
+  a particular reference.
+
+* Adds implementations of `Zippable` to `Either`, `Pair`, `Maybe`, `SortedMap`.
+
+* Adds a `Compose` and `FromApplicative` named implementations for `Zippable`.
 
 #### System
 
@@ -230,6 +255,12 @@
 * Adds `modFin` and `strengthenMod` to `Data.Fin.Extra`. These functions reason
   about the modulo operator's upper bound, which can be useful when working with
   indices (for example).
+
+* Existing specialised variants of functions from the `Traversable` for `LazyList`
+  were made to be indeed lazy by the effect, but their requirements were strengthened
+  from `Applicative` to `Monad`.
+
+* Implements `Sized` for `Data.Seq.Sized` and `Data.Seq.Unsized`.
 
 #### Papers
 

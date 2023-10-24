@@ -269,7 +269,7 @@ directive:
 
 .. code-block:: idris
 
-    %auto_implicits off
+    %unbound_implicits off
 
 In this case, you can bind ``n`` and ``m`` as implicits, but not ``ty``,
 as follows:

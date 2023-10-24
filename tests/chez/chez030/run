@@ -1,5 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-banner --no-color --console-width 0 --directive extraRuntime=extensions.scm -o chez030 ExtraRuntime.idr
+idris2 --directive extraRuntime=extensions.scm -o chez030 ExtraRuntime.idr
 ./build/exec/chez030
-

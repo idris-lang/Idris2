@@ -1,5 +1,4 @@
-1/1: Building ShowJSON (ShowJSON.idr)
-Main> {"a":null,"b":true,"c":1.0,"d":"Hello, world","e":[null,"Lorem ipsum"],"f":{"key":"value"}}
+{"a":null,"b":true,"c":1.0,"d":"Hello, world","e":[null,"Lorem ipsum"],"f":{"key":"value"}}
 JObject [("a", JNull), ("b", JBoolean True), ("c", JNumber 1.0), ("d", JString "Hello, world"), ("e", JArray [JNull, JString "Lorem ipsum"]), ("f", JObject [("key", JString "value")])]
 {
     "a": null,
@@ -14,4 +13,3 @@ JObject [("a", JNull), ("b", JBoolean True), ("c", JNumber 1.0), ("d", JString "
         "key": "value"
     }
 }
-Main> Bye for now!

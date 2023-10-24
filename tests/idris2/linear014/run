@@ -1,3 +1,0 @@
-$1 --no-color --console-width 0 --no-banner --check Issue55.idr
-
-rm -r build

@@ -1,4 +1,0 @@
-rm -rf build
-
-$1 --repl dummy.ipkg < input
-

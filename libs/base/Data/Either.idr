@@ -106,6 +106,17 @@ mirror : Either a b -> Either b a
 mirror (Left  x) = Right x
 mirror (Right x) = Left x
 
+public export
+Zippable (Either a) where
+  zipWith f x y = [| f x y |]
+  zipWith3 f x y z = [| f x y z |]
+
+  unzipWith f (Left e) = (Left e, Left e)
+  unzipWith f (Right xy) = let (x, y) = f xy in (Right x, Right y)
+
+  unzipWith3 f (Left e) = (Left e, Left e, Left e)
+  unzipWith3 f (Right xyz) = let (x, y, z) = f xyz in (Right x, Right y, Right z)
+
 --------------------------------------------------------------------------------
 -- Bifunctor
 

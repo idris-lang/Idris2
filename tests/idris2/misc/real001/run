@@ -1,0 +1,4 @@
+. ../../../testutils.sh
+
+check TestProto.idr
+#check MakeChans.idr

@@ -436,7 +436,6 @@ mutual
                      List (PDecl' nm) -> PDecl' nm
        PUsing : FC -> List (Maybe Name, PTerm' nm) ->
                 List (PDecl' nm) -> PDecl' nm
-       PReflect : FC -> PTerm' nm -> PDecl' nm
        PInterface : FC ->
                     WithDefault Visibility Private ->
                     (constraints : List (Maybe Name, PTerm' nm)) ->
@@ -449,7 +448,7 @@ mutual
                     PDecl' nm
        PImplementation : FC ->
                          Visibility -> List PFnOpt -> Pass ->
-                         (implicits : List (FC, RigCount, Name, PTerm' nm)) ->
+                         (implicits : List (FC, RigCount, Name, PiInfo (PTerm' nm), PTerm' nm)) ->
                          (constraints : List (Maybe Name, PTerm' nm)) ->
                          Name ->
                          (params : List (PTerm' nm)) ->
@@ -485,7 +484,6 @@ mutual
   getPDeclLoc (PData fc _ _ _ _) = fc
   getPDeclLoc (PParameters fc _ _) = fc
   getPDeclLoc (PUsing fc _ _) = fc
-  getPDeclLoc (PReflect fc _) = fc
   getPDeclLoc (PInterface fc _ _ _ _ _ _ _ _) = fc
   getPDeclLoc (PImplementation fc _ _ _ _ _ _ _ _ _ _) = fc
   getPDeclLoc (PRecord fc _ _ _ _) = fc
@@ -1058,7 +1056,6 @@ Show PDecl where
   show (PData{}) = "PData"
   show (PParameters{}) = "PParameters"
   show (PUsing{}) = "PUsing"
-  show (PReflect{}) = "PReflect"
   show (PInterface{}) = "PInterface"
   show (PImplementation{}) = "PImplementation"
   show (PRecord{}) = "PRecord"

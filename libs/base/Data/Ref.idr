@@ -2,6 +2,7 @@ module Data.Ref
 
 import public Data.IORef
 import public Control.Monad.ST
+import Control.Monad.State.Interface
 
 %default total
 
@@ -22,3 +23,13 @@ Ref (ST s) (STRef s) where
   newRef = newSTRef
   readRef = readSTRef
   writeRef = writeSTRef
+
+namespace MonadState
+
+  export
+  ForRef : Ref m r => Monad m => r a -> MonadState a m
+  ForRef ref = MS where
+    %inline
+    [MS] MonadState a m where
+      get = readRef ref
+      put = writeRef ref

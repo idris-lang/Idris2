@@ -124,6 +124,11 @@ namespace ModuleIdent
   toPath : ModuleIdent -> String
   toPath = joinPath . reverse . unsafeUnfoldModuleIdent
 
+  export
+  parent : ModuleIdent -> Maybe ModuleIdent
+  parent (MkMI (_::rest)) = Just $ MkMI rest
+  parent _ = Nothing
+
 -------------------------------------------------------------------------------------
 -- HIERARCHICAL STRUCTURE
 -------------------------------------------------------------------------------------

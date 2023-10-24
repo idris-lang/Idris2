@@ -389,7 +389,7 @@ mutual
       = do ds' <- traverse toPDecl ds
            pure $ PQuoteDecl fc (catMaybes ds')
   toPTerm p (IUnquote fc tm) = pure (PUnquote fc !(toPTerm argPrec tm))
-  toPTerm p (IRunElab fc tm) = pure (PRunElab fc !(toPTerm argPrec tm))
+  toPTerm p (IRunElab fc _ tm) = pure (PRunElab fc !(toPTerm argPrec tm))
 
   toPTerm p (IUnifyLog fc _ tm) = toPTerm p tm
   toPTerm p (Implicit fc True) = pure (PImplicit fc)

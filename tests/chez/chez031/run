@@ -1,6 +1,5 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-banner --no-color --console-width 0 --cg chez Specifiers.idr --exec main
-$1 --no-banner --no-color --console-width 0 --cg chez Specifiers.idr -o build/foo
-$1 --no-banner --no-color --console-width 0 --cg chez < input
-
+run --cg chez Specifiers.idr
+idris2 --cg chez Specifiers.idr -o build/foo
+idris2 --cg chez < input

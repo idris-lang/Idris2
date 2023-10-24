@@ -1,5 +1,4 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-banner --no-color --console-width 0 Issue735.idr < input
-$1 --exec main Issue735.idr
-
+idris2 Issue735.idr < input
+run Issue735.idr

@@ -1,0 +1,3 @@
+. ../../../testutils.sh
+
+idris2 Postpone.idr < input

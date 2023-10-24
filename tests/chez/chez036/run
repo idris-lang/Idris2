@@ -1,5 +1,5 @@
-$1 --no-banner --no-color --console-width 0 --exec main Crash.idr
-$1 --no-banner --no-color --console-width 0 --exec main Crash2.idr
-$1 --no-banner --no-color --console-width 0 --exec main Crash3.idr
+. ../../testutils.sh
 
-rm -rf build
+run Crash.idr
+run Crash2.idr
+run Crash3.idr

@@ -1,6 +1,5 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-banner --no-color --console-width 0 "Module'.idr" < input
-$1 --exec main "Module'.idr"
-EDITOR=true $1 --no-banner --no-color --console-width 0 "Module'.idr" < input-ed
-
+idris2 "Module'.idr" < input
+run "Module'.idr"
+EDITOR=true idris2 "Module'.idr" < input-ed

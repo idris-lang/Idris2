@@ -208,7 +208,9 @@ mutual
     export
     covering
     some : Monad m => ParseT m a -> ParseT m (List a)
-    some p = [| p :: many p |]
+    some p = do r <- p
+                rs <- many p
+                pure $ r :: rs
 
     ||| Always succeeds, will accumulate the results of `p` in a list until it fails.
     export

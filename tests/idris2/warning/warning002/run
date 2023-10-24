@@ -1,0 +1,7 @@
+. ../../../testutils.sh
+
+idris2 --build deprecated.ipkg
+idris2 Foo.idr <<EOF
+:module Foo
+:doc dep1
+EOF

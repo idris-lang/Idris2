@@ -61,6 +61,20 @@ namespace Any
   toExists (Here prf)  = Evidence _ prf
   toExists (There prf) = toExists prf
 
+  ||| Get the bounded numeric position of the element satisfying the predicate
+  public export
+  anyToFin : {0 xs : Vect n a} -> Any p xs -> Fin n
+  anyToFin (Here _) = FZ
+  anyToFin (There later) = FS (anyToFin later)
+
+  ||| `anyToFin`'s return type satisfies the predicate
+  export
+  anyToFinCorrect : {0 xs : Vect n a} ->
+                    (witness : Any p xs) ->
+                    p (anyToFin witness `index` xs)
+  anyToFinCorrect (Here prf) = prf
+  anyToFinCorrect (There later) = anyToFinCorrect later
+
 namespace All
   ||| A proof that all elements of a vector satisfy a property. It is a list of
   ||| proofs, corresponding element-wise to the `Vect`.
@@ -122,10 +136,35 @@ namespace All
   imapProperty _ _              []      = []
   imapProperty i f @{ix :: ixs} (x::xs) = f @{ix} x :: imapProperty i f @{ixs} xs
 
+  ||| If `All` witnesses a property that does not depend on the vector `xs`
+  ||| it's indexed by, then it is really a `Vect`.
   public export
   forget : All (const p) {n} xs -> Vect n p
   forget []      = []
   forget (x::xs) = x :: forget xs
+
+  ||| Any `Vect` can be lifted to become an `All`
+  ||| witnessing the presence of elements of the `Vect`'s type.
+  public export
+  remember : (xs : Vect n ty) -> All (const ty) xs
+  remember [] = []
+  remember (x :: xs) = x :: remember xs
+
+  export
+  forgetRememberId : (xs : Vect n ty) -> forget (remember xs) = xs
+  forgetRememberId [] = Refl
+  forgetRememberId (x :: xs) = cong (x ::) (forgetRememberId xs)
+
+  public export
+  castAllConst : {0 xs, ys : Vect n a} -> All (const ty) xs -> All (const ty) ys
+  castAllConst [] = rewrite invertVectZ ys in []
+  castAllConst (x :: xs) = rewrite invertVectS ys in x :: castAllConst xs
+
+  export
+  rememberForgetId : (vs : All (const ty) xs) ->
+    castAllConst (remember (forget vs)) === vs
+  rememberForgetId [] = Refl
+  rememberForgetId (x :: xs) = cong (x ::) (rememberForgetId xs)
 
   export
   zipPropertyWith : (f : {0 x : a} -> p x -> q x -> r x) ->
@@ -133,6 +172,28 @@ namespace All
   zipPropertyWith f [] [] = []
   zipPropertyWith f (px :: pxs) (qx :: qxs)
     = f px qx :: zipPropertyWith f pxs qxs
+
+  ||| A `Traversable`'s `traverse` for `All`,
+  ||| for traversals that don't care about the values of the associated `Vect`.
+  export
+  traverseProperty : Applicative f =>
+                     {0 xs : Vect n a} ->
+                     (forall x. p x -> f (q x)) ->
+                     All p xs ->
+                     f (All q xs)
+  traverseProperty f [] = pure []
+  traverseProperty f (x :: xs) = [| f x :: traverseProperty f xs |]
+
+  ||| A `Traversable`'s `traverse` for `All`,
+  ||| in case the elements of the `Vect` that the `All` is proving `p` about are also needed.
+  export
+  traversePropertyRelevant : Applicative f =>
+                             {xs : Vect n a} ->
+                             ((x : a) -> p x -> f (q x)) ->
+                             All p xs ->
+                             f (All q xs)
+  traversePropertyRelevant f [] = pure []
+  traversePropertyRelevant f (x :: xs) = [| f _ x :: traversePropertyRelevant f xs |]
 
   export
   All (Show . p) xs => Show (All p xs) where
@@ -204,4 +265,3 @@ namespace All
   drop' 0 ys = rewrite minusZeroRight k in ys
   drop' (S k) [] = []
   drop' (S k) (y :: ys) = drop' k ys
-

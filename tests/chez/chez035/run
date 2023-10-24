@@ -1,10 +1,10 @@
+. ../../testutils.sh
+
 export IDRIS2_INC_CGS=
-$1 --no-banner --no-color --console-width 0 --check Mod1.idr < input
+check Mod1.idr < input
 
 export IDRIS2_INC_CGS=chez
-$1 --no-banner --no-color --console-width 0 -o test Mod2.idr < input
+idris2 -o test Mod2.idr < input
 ./build/exec/test
 
 ls build/ttc/*/Mod1.so | sed -r "s/.([0-9]){10}//g"
-
-rm -rf build
