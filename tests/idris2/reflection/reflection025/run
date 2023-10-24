@@ -1,3 +1,9 @@
 . ../../../testutils.sh
 
 check RefDefs.idr
+echo ------------
+check CurrFn.idr
+echo ------------
+check RefDefsDeep.idr
+echo ------------
+check InspectRec.idr

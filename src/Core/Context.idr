@@ -1044,6 +1044,7 @@ record Defs where
   foreignExports : NameMap (List (String, String))
        -- ^ For functions which are callable from a foreign language. This
        -- maps names to a pair of the back end and the exported function name
+  defsStack : SnocList Name -- stack of the definition names being processed
 
 -- Label for context references
 export
@@ -1093,6 +1094,7 @@ initDefs
            , warnings = []
            , schemeEvalLoaded = False
            , foreignExports = empty
+           , defsStack = [<]
            }
 
 -- Reset the context, except for the options
@@ -1668,6 +1670,15 @@ setVisibility fc n vis
          Just def <- lookupCtxtExact n (gamma defs)
               | Nothing => undefinedName fc n
          ignore $ addDef n ({ visibility := specified vis } def)
+
+export
+withDefStacked : {auto c : Ref Ctxt Defs} ->
+                 Name -> Core a -> Core a
+withDefStacked n act
+    = do defs <- get Ctxt
+         let ds = defs.defsStack
+         put Ctxt $ {defsStack $= (:< n)} defs
+         act <* update Ctxt {defsStack := ds}
 
 public export
 record SearchData where

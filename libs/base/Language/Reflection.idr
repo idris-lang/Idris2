@@ -89,6 +89,8 @@ data Elab : Type -> Type where
      GetCons : Name -> Elab (List Name)
      -- Get all function definition names referred in a definition. The name must be fully resolved.
      GetReferredFns : Name -> Elab (List Name)
+     -- Get the name of the current and outer functions, if it is applicable
+     GetCurrentFn : Elab (SnocList Name)
      -- Check a group of top level declarations
      Declare : List Decl -> Elab ()
 
@@ -186,6 +188,9 @@ interface Monad m => Elaboration m where
   ||| Get all the name of function definitions that a given definition refers to (transitively)
   getReferredFns : Name -> m (List Name)
 
+  ||| Get the name of the current and outer functions, if we are in a function
+  getCurrentFn : m (SnocList Name)
+
   ||| Make some top level declarations
   declare : List Decl -> m ()
 
@@ -233,6 +238,7 @@ Elaboration Elab where
   getLocalType   = GetLocalType
   getCons        = GetCons
   getReferredFns = GetReferredFns
+  getCurrentFn   = GetCurrentFn
   declare        = Declare
   readFile       = ReadFile
   writeFile      = WriteFile
@@ -258,6 +264,7 @@ Elaboration m => MonadTrans t => Monad (t m) => Elaboration (t m) where
   getLocalType        = lift . getLocalType
   getCons             = lift . getCons
   getReferredFns      = lift . getReferredFns
+  getCurrentFn        = lift getCurrentFn
   declare             = lift . declare
   readFile            = lift .: readFile
   writeFile d         = lift .: writeFile d

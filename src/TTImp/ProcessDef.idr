@@ -978,7 +978,8 @@ processDef : {vars : _} ->
              List ElabOpt -> NestedNames vars -> Env Term vars -> FC ->
              Name -> List ImpClause -> Core ()
 processDef opts nest env fc n_in cs_in
-    = do n <- inCurrentNS n_in
+  = do n <- inCurrentNS n_in
+       withDefStacked n $ do
          defs <- get Ctxt
          Just gdef <- lookupOrAddAlias opts nest env fc n cs_in
            | Nothing => noDeclaration fc n
