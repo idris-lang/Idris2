@@ -1128,8 +1128,8 @@ visOption fname
 
 visibility : OriginDesc -> EmptyRule (WithDefault Visibility Private)
 visibility fname
-    = (value <$> visOption fname)
-  <|> pure defaultValue
+    = (specified <$> visOption fname)
+  <|> pure defaulted
 
 exportVisibility : OriginDesc -> EmptyRule Visibility
 exportVisibility fname
@@ -1331,9 +1331,9 @@ dataDeclBody fname indents
 -- a data declaration can have a visibility and an optional totality (#1404)
 dataVisOpt : OriginDesc -> EmptyRule (WithDefault Visibility Private, Maybe TotalReq)
 dataVisOpt fname
-    = do { vis <- visOption   fname ; mbtot <- optional (totalityOpt fname) ; pure (value vis, mbtot) }
+    = do { vis <- visOption   fname ; mbtot <- optional (totalityOpt fname) ; pure (specified vis, mbtot) }
   <|> do { tot <- totalityOpt fname ; vis <- visibility fname ; pure (vis, Just tot) }
-  <|> pure (defaultValue, Nothing)
+  <|> pure (defaulted, Nothing)
 
 dataDecl : OriginDesc -> IndentInfo -> Rule PDecl
 dataDecl fname indents

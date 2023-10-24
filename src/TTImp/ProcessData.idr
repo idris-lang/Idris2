@@ -497,7 +497,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
 
          -- Add the type constructor as a placeholder while checking
          -- data constructors
-         tidx <- addDef n (newDef fc n linear vars fullty (value vis)
+         tidx <- addDef n (newDef fc n linear vars fullty (specified vis)
                           (TCon 0 arity [] [] defaultFlags [] [] Nothing))
          case vis of
               Private => pure ()

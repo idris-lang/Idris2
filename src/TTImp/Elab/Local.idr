@@ -144,8 +144,8 @@ localHelper {vars} nest env nestdecls_in func
 
     setPublic : ImpDecl -> ImpDecl
     setPublic (IClaim fc c _ opts ty) = IClaim fc c Public opts ty
-    setPublic (IData fc _ mbt d) = IData fc (value Public) mbt d
-    setPublic (IRecord fc c _ mbt r) = IRecord fc c (value Public) mbt r
+    setPublic (IData fc _ mbt d) = IData fc (specified Public) mbt d
+    setPublic (IRecord fc c _ mbt r) = IRecord fc c (specified Public) mbt r
     setPublic (IParameters fc ps decls)
         = IParameters fc ps (map setPublic decls)
     setPublic (INamespace fc ps decls)

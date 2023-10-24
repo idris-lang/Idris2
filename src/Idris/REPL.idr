@@ -899,7 +899,7 @@ process (Eval itm)
                  let norm = replEval emode
                  evalResultName <- DN "it" <$> genName "evalResult"
                  ignore $ addDef evalResultName
-                   $ newDef replFC evalResultName top [] ty defaultValue
+                   $ newDef replFC evalResultName top [] ty defaulted
                    $ PMDef defaultPI [] (STerm 0 ntm) (STerm 0 ntm) []
                  addToSave evalResultName
                  put ROpts ({ evalResultName := Just evalResultName } opts)

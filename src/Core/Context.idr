@@ -1332,7 +1332,7 @@ addBuiltin n ty tot op
          , inferrable = []
          , multiplicity = top
          , localVars = []
-         , visibility = value Public
+         , visibility = specified Public
          , totality = tot
          , isEscapeHatch = False
          , flags = [Inline]
@@ -1667,7 +1667,7 @@ setVisibility fc n vis
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
               | Nothing => undefinedName fc n
-         ignore $ addDef n ({ visibility := value vis } def)
+         ignore $ addDef n ({ visibility := specified vis } def)
 
 public export
 record SearchData where

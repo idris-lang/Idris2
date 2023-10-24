@@ -180,27 +180,27 @@ mutual
 
   export
   data WithDefault : (a : Type) -> (def : a) -> Type where
-       Default : WithDefault a def
-       Value   : a -> WithDefault a def
+       DefaultedValue : WithDefault a def
+       SpecifiedValue : a -> WithDefault a def
 
   export
-  value : a -> WithDefault a def
-  value = Value
+  specified : a -> WithDefault a def
+  specified = SpecifiedValue
 
   export
-  defaultValue : WithDefault a def
-  defaultValue = Default
+  defaulted : WithDefault a def
+  defaulted = DefaultedValue
 
   export
   collapseDefault : {def : a} -> WithDefault a def -> a
-  collapseDefault Default = def
-  collapseDefault (Value a) = a
+  collapseDefault DefaultedValue     = def
+  collapseDefault (SpecifiedValue a) = a
 
   export
   onWithDefault : (defHandler : Lazy b) -> (valHandler : a -> b) ->
                   WithDefault a def -> b
-  onWithDefault defHandler _ Default = defHandler
-  onWithDefault _ valHandler (Value v) = valHandler v
+  onWithDefault defHandler _ DefaultedValue     = defHandler
+  onWithDefault _ valHandler (SpecifiedValue v) = valHandler v
 
   public export
   data Decl : Type where
@@ -327,22 +327,22 @@ Eq DataOpt where
 
 public export
 Eq a => Eq (WithDefault a def) where
-  Default == Default = True
-  Default == Value _ = False
-  Value _ == Default = False
-  Value x == Value y = x == y
+  DefaultedValue   == DefaultedValue   = True
+  DefaultedValue   == SpecifiedValue _ = False
+  SpecifiedValue _ == DefaultedValue   = False
+  SpecifiedValue x == SpecifiedValue y = x == y
 
 public export
 Ord a => Ord (WithDefault a def) where
-  compare Default   Default   = EQ
-  compare Default   (Value _) = LT
-  compare (Value _) Default   = GT
-  compare (Value x) (Value y) = compare x y
+  compare DefaultedValue   DefaultedValue       = EQ
+  compare DefaultedValue   (SpecifiedValue _)   = LT
+  compare (SpecifiedValue _) DefaultedValue     = GT
+  compare (SpecifiedValue x) (SpecifiedValue y) = compare x y
 
 public export
 {def : a} -> (Show a) => Show (WithDefault a def) where
-  show (Value x) = show x
-  show Default = show def
+  show (SpecifiedValue x) = show x
+  show DefaultedValue     = show def
 
 public export
 Eq a => Eq (PiInfo a) where

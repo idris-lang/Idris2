@@ -292,9 +292,9 @@ TTC a => TTC (WithDefault a def) where
 
   fromBuf b
      = case !getTag of
-            0 => pure defaultValue
+            0 => pure defaulted
             1 => do val <- fromBuf b
-                    pure (value val)
+                    pure (specified val)
             _ => corrupt "WithDefault"
 
 export

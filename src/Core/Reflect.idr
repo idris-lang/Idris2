@@ -299,10 +299,10 @@ export
 Reify a => Reify (WithDefault a def) where
   reify defs val@(NDCon _ n _ _ args)
       = case (dropAllNS !(full (gamma defs) n), args) of
-             (UN (Basic "Default"), _) => pure defaultValue
-             (UN (Basic "Value"), [_, _, (_, x)])
+             (UN (Basic "DefaultedValue"), _) => pure defaulted
+             (UN (Basic "SpecifiedValue"), [_, _, (_, x)])
                   => do x' <- reify defs !(evalClosure defs x)
-                        pure (value x')
+                        pure (specified x')
              _ => cantReify val "WithDefault"
   reify defs val = cantReify val "WithDefault"
 

@@ -2,40 +2,39 @@ module Libraries.Data.WithDefault
 
 export
 data WithDefault : (0 a : Type) -> (0 def : a) -> Type where
-  Default : WithDefault a def
-  Value   : a -> WithDefault a def
+  DefaultedValue : WithDefault a def
+  SpecifiedValue : a -> WithDefault a def
 
 export
-value : a -> WithDefault a def
-value = Value
+specified : a -> WithDefault a def
+specified = SpecifiedValue
 
 export
-defaultValue : WithDefault a def
-defaultValue = Default
+defaulted : WithDefault a def
+defaulted = DefaultedValue
 
 export
-setDefault : a -> WithDefault a def -> WithDefault a def
-setDefault v Default = Value v
-setDefault _ v       = v
+specifyValue : a -> WithDefault a def -> WithDefault a def
+specifyValue v DefaultedValue = SpecifiedValue v
+specifyValue _ v              = v
 
 export
-replaceDefault : WithDefault a def -> WithDefault a def'
-replaceDefault Default = Default
-replaceDefault (Value v) = Value v
+replaceSpecified : WithDefault a def -> WithDefault a def'
+replaceSpecified DefaultedValue     = DefaultedValue
+replaceSpecified (SpecifiedValue v) = SpecifiedValue v
 
 export
-collapseDefault : {def : a} ->
-                  WithDefault a def -> a
-collapseDefault Default = def
-collapseDefault (Value v) = v
+collapseDefault : {def : a} -> WithDefault a def -> a
+collapseDefault DefaultedValue     = def
+collapseDefault (SpecifiedValue v) = v
 
 export
 onWithDefault : (defHandler : Lazy b) ->
                 (valHandler : a -> b) ->
                 WithDefault a def ->
                 b
-onWithDefault defHandler _ Default = defHandler
-onWithDefault _ valHandler (Value v) = valHandler v
+onWithDefault defHandler _ DefaultedValue     = defHandler
+onWithDefault _ valHandler (SpecifiedValue v) = valHandler v
 
 export
 collapseDefaults : Eq a =>
@@ -43,33 +42,33 @@ collapseDefaults : Eq a =>
                    WithDefault a def ->
                    WithDefault a def ->
                    Either (a, a) a
-collapseDefaults (Value x) (Value y) = if x /= y
-                                       then Left (x, y)
-                                       else Right x
-collapseDefaults (Value x) Default   = Right x
-collapseDefaults Default   (Value y) = Right y
-collapseDefaults Default   Default   = Right def
+collapseDefaults (SpecifiedValue x) (SpecifiedValue y) = if x /= y
+                                                         then Left (x, y)
+                                                         else Right x
+collapseDefaults (SpecifiedValue x) DefaultedValue   = Right x
+collapseDefaults DefaultedValue   (SpecifiedValue y) = Right y
+collapseDefaults DefaultedValue   DefaultedValue     = Right def
 
 export
-isDefault : WithDefault a def -> Bool
-isDefault Default = True
-isDefault _ = False
+isDefaulted : WithDefault a def -> Bool
+isDefaulted DefaultedValue = True
+isDefaulted _              = False
 
 export
-isValue : WithDefault a def -> Bool
-isValue Default = False
-isValue (Value _) = True
+isSpecified : WithDefault a def -> Bool
+isSpecified DefaultedValue = False
+isSpecified _              = True
 
 public export
 Eq a => Eq (WithDefault a def) where
-  Default == Default = True
-  Default == Value _ = False
-  Value _ == Default = False
-  Value x == Value y = x == y
+  DefaultedValue   == DefaultedValue   = True
+  DefaultedValue   == SpecifiedValue _ = False
+  SpecifiedValue _ == DefaultedValue   = False
+  SpecifiedValue x == SpecifiedValue y = x == y
 
 public export
 Ord a => Ord (WithDefault a def) where
-  compare Default   Default   = EQ
-  compare Default   (Value _) = LT
-  compare (Value _) Default   = GT
-  compare (Value x) (Value y) = compare x y
+  compare DefaultedValue   DefaultedValue       = EQ
+  compare DefaultedValue   (SpecifiedValue _)   = LT
+  compare (SpecifiedValue _) DefaultedValue     = GT
+  compare (SpecifiedValue x) (SpecifiedValue y) = compare x y

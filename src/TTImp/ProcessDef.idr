@@ -588,7 +588,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
          wname <- genWithName !(prettyName !(toFullNames (Resolved n)))
          widx <- addDef wname ({flags $= (SetTotal totreq ::)}
                                     (newDef vfc wname (if isErased mult then erased else top)
-                                      vars wtype (value vis) None))
+                                      vars wtype (specified vis) None))
 
          let toWarg : Maybe (PiInfo RawImp, Name) -> List (Maybe Name, RawImp)
                := flip maybe (\pn => [(Nothing, IVar vfc (snd pn))]) $
