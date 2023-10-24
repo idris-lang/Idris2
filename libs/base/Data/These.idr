@@ -26,10 +26,22 @@ fromThat (That b) = Just b
 fromThat (Both _ b) = Just b
 
 public export
+fromBoth : (defaultL : Lazy a) -> (defaultR : Lazy b) -> These a b -> (a, b)
+fromBoth _ y (This x)   = (x, y)
+fromBoth x _ (That y)   = (x, y)
+fromBoth _ _ (Both x y) = (x, y)
+
+public export
 these : (a -> c) -> (b -> c) -> (a -> b -> c) -> These a b -> c
 these l r lr (This a)   = l a
 these l r lr (That b)   = r b
 these l r lr (Both a b) = lr a b
+
+public export
+these' : (defualtL : Lazy a) -> (defaultR : Lazy b) -> (a -> b -> c) -> These a b -> c
+these' _ y f (This x)   = f x y
+these' x _ f (That y)   = f x y
+these' _ _ f (Both x y) = f x y
 
 public export
 swap : These a b -> These b a
