@@ -17,6 +17,7 @@ import Idris.Resugar
 import Idris.REPL.Opts
 import Idris.Syntax
 
+import Libraries.Data.NameMap
 import Libraries.Utils.Path
 
 import TTImp.Elab.Check
@@ -50,6 +51,28 @@ Reflect NameInfo where
   reflect fc defs lhs env inf
       = do nt <- reflect fc defs lhs env (nametype inf)
            appCon fc defs (reflectiontt "MkNameInfo") [nt]
+
+deepRefersTo : {auto c : Ref Ctxt Defs} ->
+               GlobalDef -> Core (List Name)
+deepRefersTo def = do
+  defs <- get Ctxt
+  map nub $ clos empty defs $ refs' defs def
+  -- we don't start with `[defs.fullname]` to distinguish between recursive and non-recursive definitions
+  where
+    refs' : Defs -> GlobalDef -> List Name
+    refs' defs def = keys (refersTo def)
+
+    refs : Defs -> Name -> Core (List Name)
+    refs defs n = maybe [] (refs' defs) <$> lookupCtxtExact n (gamma defs)
+
+    clos : NameMap () -> Defs -> List Name -> Core (List Name)
+    clos all _    []      = pure (keys all)
+    clos all defs (n::ns) = case lookup n all of
+      Just _  => clos all defs ns
+      Nothing => do
+        let all' = insert n () all
+        let ns' = !(refs defs n) ++ ns
+        clos all' defs ns'
 
 export
 elabScript : {vars : _} ->
@@ -270,6 +293,12 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
                      lookupDefExact cn (gamma defs)
                  | _ => failWith defs $ show cn ++ " is not a type"
              scriptRet cons
+    elabCon defs "GetReferredFns" [n]
+        = do dn <- reify defs !(evalClosure defs n)
+             Just def <- lookupCtxtExact dn (gamma defs)
+                 | Nothing => failWith defs $ show dn ++ " is not a definition"
+             ns <- deepRefersTo def
+             scriptRet ns
     elabCon defs "Declare" [d]
         = do d' <- evalClosure defs d
              decls <- reify defs d'
