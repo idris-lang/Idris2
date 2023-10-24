@@ -126,12 +126,14 @@ checkConflictingFixities isPrefix exprFC opn
                               then throw (GenericMsg exprFC "Unknown operator '\{op}'")
                               else pure (NonAssoc 1) -- Backticks are non associative by default
 
+            --
             (True, ((fxName, fx) :: _), _) => do
                 -- in the prefix case, remove conflicts with infix (-)
                 let extraFixities = pre ++ (filter (\(nm, _) => not $ nameRoot nm == "-") inf)
                 unless (isCompatible fx extraFixities) $ warnConflict fxName extraFixities
                 pure (mkPrec fx.fix fx.precedence)
-            -- Could not find any prefix operator fixities, there may be infix ones
+            -- Could not find any prefix operator fixities, there may still be conflicts with
+            -- the infix ones.
             (True, [] , _) => throw (GenericMsg exprFC $ "'\{op}' is not a prefix operator")
 
             (False, _, ((fxName, fx) :: _)) => do
@@ -145,7 +147,9 @@ checkConflictingFixities isPrefix exprFC opn
     -- Fixities are compatible with all others of the same name that share the same fixity and precedence
     isCompatible :  FixityInfo -> (fixities : List (Name, FixityInfo)) -> Bool
     isCompatible fx
-      = all (\fx' => fx.fix == fx'.fix && fx.precedence == fx'.precedence) . map snd
+      = all (\fx' => fx.fix == fx'.fix
+                  && fx.precedence == fx'.precedence
+                  && fx.bindingInfo == fx'.bindingInfo  ) . map snd
 
     -- Emits a warning using the fixity that we picked and the list of all conflicting fixities
     warnConflict : (picked : Name) -> (conflicts : List (Name, FixityInfo)) -> Core ()
@@ -157,17 +161,30 @@ checkConflictingFixities isPrefix exprFC opn
                    For example: %hide \{show fxName}
                    """
 
+
 toTokList : {auto s : Ref Syn SyntaxInfo} ->
             {auto c : Ref Ctxt Defs} ->
-            PTerm -> Core (List (Tok OpStr PTerm))
-toTokList (POp fc opFC (NotAutobind l) opn r)
+            PTerm -> Core (List (Tok (OpStr, OperatorLHSInfo PTerm) PTerm))
+  -- -- a bindtype operator desugars (x : a ** b x) into ((**) a (\x : a => b x))
+-- toTokList (POp fc opFC (BindType nm l) opn r)
+  --     = desugarB side ps (POp fc opFC (NotAutobind l) op
+  --                        $ PLam (virtualiseFC opFC) top Explicit nm l r)
+  -- -- a bindexpr operator desugars (x := a ** b x) into ((**) a (\x : ? => b x))
+  -- desugarB side ps (POp fc opFC (BindExpr nm l) op r)
+  --     = desugarB side ps (POp fc opFC (NotAutobind l) op
+  --                        $ PLam (virtualiseFC opFC) top Explicit nm (PImplicit $ virtualiseFC opFC) r)
+  -- -- an explicit bind operator desugars (x : ty := a ** b x) into ((**) a (\x : ty => b x))
+  -- desugarB side ps (POp fc opFC (BindExplicitType nm ty l) op r)
+  --     = desugarB side ps (POp fc opFC (NotAutobind l) op
+  --                        $ PLam (virtualiseFC opFC) top Explicit nm ty r)
+toTokList (POp fc opFC (l) opn r)
     = do precInfo <- checkConflictingFixities False fc opn
          rtoks <- toTokList r
-         pure (Expr l :: Op fc opFC opn precInfo :: rtoks)
+         pure (Expr l.getLhs :: Op fc opFC (opn, l) precInfo :: rtoks)
 toTokList (PPrefixOp fc opFC opn arg)
     = do precInfo <- checkConflictingFixities True fc opn
          rtoks <- toTokList arg
-         pure (Op fc opFC opn precInfo :: rtoks)
+         pure (Op fc opFC (opn, ?bidningForPrefix) precInfo :: rtoks)
 toTokList t = pure [Expr t]
 
 record BangData where
@@ -308,20 +325,8 @@ mutual
                      [apply (IVar fc (UN $ Basic "===")) [l', r'],
                       apply (IVar fc (UN $ Basic "~=~")) [l', r']]
   desugarB side ps (PBracketed fc e) = desugarB side ps e
-  -- a bindtype operator desugars (x : a ** b x) into ((**) a (\x : a => b x))
-  desugarB side ps (POp fc opFC (BindType nm l) op r)
-      = desugarB side ps (POp fc opFC (NotAutobind l) op
-                         $ PLam (virtualiseFC opFC) top Explicit nm l r)
-  -- a bindexpr operator desugars (x := a ** b x) into ((**) a (\x : ? => b x))
-  desugarB side ps (POp fc opFC (BindExpr nm l) op r)
-      = desugarB side ps (POp fc opFC (NotAutobind l) op
-                         $ PLam (virtualiseFC opFC) top Explicit nm (PImplicit $ virtualiseFC opFC) r)
-  -- an explicit bind operator desugars (x : ty := a ** b x) into ((**) a (\x : ty => b x))
-  desugarB side ps (POp fc opFC (BindExplicitType nm ty l) op r)
-      = desugarB side ps (POp fc opFC (NotAutobind l) op
-                         $ PLam (virtualiseFC opFC) top Explicit nm ty r)
-  desugarB side ps (POp fc opFC (NotAutobind l) op r)
-      = do ts <- toTokList (POp fc opFC (NotAutobind l) op r)
+  desugarB side ps (POp fc opFC (l) op r)
+      = do ts <- toTokList (POp fc opFC (l) op r)
            desugarTree side ps !(parseOps ts)
   desugarB side ps (PPrefixOp fc opFC op arg)
       = do ts <- toTokList (PPrefixOp fc opFC op arg)
@@ -726,27 +731,57 @@ mutual
            rule' <- desugarDo side ps ns rule
            pure $ IRewrite fc rule' rest'
 
+  -- Handle special cases for operator overloads
+  -- Maybe overloading ** should be in here
   desugarTree : {auto s : Ref Syn SyntaxInfo} ->
                 {auto b : Ref Bang BangData} ->
                 {auto c : Ref Ctxt Defs} ->
                 {auto u : Ref UST UState} ->
                 {auto m : Ref MD Metadata} ->
                 {auto o : Ref ROpts REPLOpts} ->
-                Side -> List Name -> Tree OpStr PTerm -> Core RawImp
-  desugarTree side ps (Infix loc eqFC (UN $ Basic "=") l r) -- special case since '=' is special syntax
+                Side -> List Name -> Tree (OpStr, OperatorLHSInfo PTerm) PTerm -> Core RawImp
+  desugarTree side ps (Infix loc eqFC (UN $ Basic "=", _) l r) -- special case since '=' is special syntax
       = do l' <- desugarTree side ps l
            r' <- desugarTree side ps r
            pure (IAlternative loc FirstSuccess
                      [apply (IVar eqFC eqName) [l', r'],
                       apply (IVar eqFC heqName) [l', r']])
-  desugarTree side ps (Infix loc _ (UN $ Basic "$") l r) -- special case since '$' is special syntax
+  desugarTree side ps (Infix loc _ (UN $ Basic "$", _) l r) -- special case since '$' is special syntax
       = do l' <- desugarTree side ps l
            r' <- desugarTree side ps r
            pure (IApp loc l' r')
-  desugarTree side ps (Infix loc opFC op l r)
+  desugarTree side ps (Infix loc opFC (op, NotAutobind lhs) l r)
       = do l' <- desugarTree side ps l
            r' <- desugarTree side ps r
            pure (IApp loc (IApp loc (IVar opFC op) l') r')
+  -- -- a bindtype operator desugars (x : a ** b x) into ((**) a (\x : a => b x))
+  -- desugarB side ps (POp fc opFC (BindType nm l) op r)
+  --     = desugarB side ps (POp fc opFC (NotAutobind l) op
+  --                        $ PLam (virtualiseFC opFC) top Explicit nm l r)
+  -- -- a bindexpr operator desugars (x := a ** b x) into ((**) a (\x : ? => b x))
+  -- desugarB side ps (POp fc opFC (BindExpr nm l) op r)
+  --     = desugarB side ps (POp fc opFC (NotAutobind l) op
+  --                        $ PLam (virtualiseFC opFC) top Explicit nm (PImplicit $ virtualiseFC opFC) r)
+  -- -- an explicit bind operator desugars (x : ty := a ** b x) into ((**) a (\x : ty => b x))
+  -- desugarB side ps (POp fc opFC (BindExplicitType nm ty l) op r)
+  --     = desugarB side ps (POp fc opFC (NotAutobind l) op
+  --                        $ PLam (virtualiseFC opFC) top Explicit nm ty r)
+  desugarTree side ps (Infix loc opFC (op, BindType name lhs) l r)
+      = do desugaredLHS <- desugarB side ps lhs
+           desugaredRHS <- desugarTree side ps r
+           pure $ IApp loc (IApp loc (IVar opFC op) desugaredLHS)
+                           (ILam loc top Explicit (Just name) desugaredLHS desugaredRHS)
+  desugarTree side ps (Infix loc opFC (op, BindExpr name lhs) l r)
+      = do desugaredLHS <- desugarB side ps lhs
+           desugaredRHS <- desugarTree side ps r
+           pure $ IApp loc (IApp loc (IVar opFC op) desugaredLHS)
+                           (ILam loc top Explicit (Just name) (Implicit opFC False) desugaredRHS)
+  desugarTree side ps (Infix loc opFC (op, BindExplicitType name ty expr) l r)
+      = do desugaredLHS <- desugarB side ps expr
+           desugaredType <- desugarB side ps ty
+           desugaredRHS <- desugarTree side ps r
+           pure $ IApp loc (IApp loc (IVar opFC op) desugaredLHS)
+                           (ILam loc top Explicit (Just name) desugaredType desugaredRHS)
 
   -- negation is a special case, since we can't have an operator with
   -- two meanings otherwise
@@ -754,7 +789,7 @@ mutual
   -- Note: In case of negated signed integer literals, we apply the
   -- negation directly. Otherwise, the literal might be
   -- truncated to 0 before being passed on to `negate`.
-  desugarTree side ps (Pre loc opFC (UN $ Basic "-") $ Leaf $ PPrimVal fc c)
+  desugarTree side ps (Pre loc opFC (UN $ Basic "-", _) $ Leaf $ PPrimVal fc c)
     = let newFC    = fromMaybe EmptyFC (mergeFC loc fc)
           continue = desugarTree side ps . Leaf . PPrimVal newFC
        in case c of
@@ -770,11 +805,11 @@ mutual
             _     => do arg' <- desugarTree side ps (Leaf $ PPrimVal fc c)
                         pure (IApp loc (IVar opFC (UN $ Basic "negate")) arg')
 
-  desugarTree side ps (Pre loc opFC (UN $ Basic "-") arg)
+  desugarTree side ps (Pre loc opFC (UN $ Basic "-", _) arg)
     = do arg' <- desugarTree side ps arg
          pure (IApp loc (IVar opFC (UN $ Basic "negate")) arg')
 
-  desugarTree side ps (Pre loc opFC op arg)
+  desugarTree side ps (Pre loc opFC (op, _) arg)
       = do arg' <- desugarTree side ps arg
            pure (IApp loc (IVar opFC op) arg')
   desugarTree side ps (Leaf t) = desugarB side ps t
@@ -1242,4 +1277,5 @@ mutual
             {auto u : Ref UST UState} ->
             {auto o : Ref ROpts REPLOpts} ->
             Side -> List Name -> PTerm -> Core RawImp
+
   desugar s ps tm = desugarDo s ps Nothing tm

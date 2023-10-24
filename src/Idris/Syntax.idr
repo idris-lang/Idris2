@@ -111,18 +111,27 @@ data OperatorLHSInfo : tm -> Type where
   -- Traditional operator wihtout binding, carries the lhs
   NotAutobind : (lhs : tm) -> OperatorLHSInfo tm
   -- (nm : ty) ** fn x
-  BindType : (name, ty : tm) -> OperatorLHSInfo tm
+  BindType : (name : Name) -> (ty : tm) -> OperatorLHSInfo tm
   -- (nm := exp) ** fn nm
-  BindExpr : (name, expr : tm) -> OperatorLHSInfo tm
+  BindExpr : (name : Name) -> (expr : tm) -> OperatorLHSInfo tm
   -- (nm : ty := exp) ** fn nm
-  BindExplicitType : (name, type, expr : tm) -> OperatorLHSInfo tm
+  BindExplicitType : (name : Name) ->  (type, expr : tm) -> OperatorLHSInfo tm
+
+export
+Show (OperatorLHSInfo tm) where
+  show (NotAutobind lhs)                 = "Regular operator"
+  show (BindType name ty)                = "Type-binding operator"
+  show (BindExpr name expr)              = "Automatically-binding operator"
+  show (BindExplicitType name type expr) = "Automatically-binding operator (explicit)"
+
+%name OperatorLHSInfo opInfo
 
 export
 Functor OperatorLHSInfo where
   map f (NotAutobind lhs) = NotAutobind $ f lhs
-  map f (BindType nm lhs) = BindType (f nm) (f lhs)
-  map f (BindExpr nm lhs) = BindExpr (f nm) (f lhs)
-  map f (BindExplicitType nm ty lhs) = BindExplicitType (f nm) (f ty) (f lhs)
+  map f (BindType nm lhs) = BindType nm (f lhs)
+  map f (BindExpr nm lhs) = BindExpr nm (f lhs)
+  map f (BindExplicitType nm ty lhs) = BindExplicitType nm (f ty) (f lhs)
 
 export
 (.getLhs) : OperatorLHSInfo tm -> tm
@@ -863,11 +872,11 @@ parameters {0 nm : Type} (toName : nm -> Name)
   showPTermPrec d (POp _ _ (NotAutobind left) op right)
         = showPTermPrec d left ++ " " ++ showOpPrec d op ++ " " ++ showPTermPrec d right
   showPTermPrec d (POp _ _ (BindType nm left) op right)
-        = "(" ++ showPTermPrec d nm ++ " : " ++ showPTermPrec d left ++ " " ++ showOpPrec d op ++ " " ++ showPTermPrec d right ++ ")"
+        = "(" ++ show nm ++ " : " ++ showPTermPrec d left ++ " " ++ showOpPrec d op ++ " " ++ showPTermPrec d right ++ ")"
   showPTermPrec d (POp _ _ (BindExpr nm left) op right)
-        = "(" ++ showPTermPrec d nm ++ " := " ++ showPTermPrec d left ++ " " ++ showOpPrec d op ++ " " ++ showPTermPrec d right ++ ")"
+        = "(" ++ show nm ++ " := " ++ showPTermPrec d left ++ " " ++ showOpPrec d op ++ " " ++ showPTermPrec d right ++ ")"
   showPTermPrec d (POp _ _ (BindExplicitType nm ty left) op right)
-        = "(" ++ showPTermPrec d nm ++ " : " ++ showPTermPrec d ty ++ ":=" ++ showPTermPrec d left ++ " " ++ showOpPrec d op ++ " " ++ showPTermPrec d right ++ ")"
+        = "(" ++ show nm ++ " : " ++ showPTermPrec d ty ++ ":=" ++ showPTermPrec d left ++ " " ++ showOpPrec d op ++ " " ++ showPTermPrec d right ++ ")"
   showPTermPrec d (PPrefixOp _ _ op x) = showOpPrec d op ++ showPTermPrec d x
   showPTermPrec d (PSectionL _ _ op x) = "(" ++ showOpPrec d op ++ " " ++ showPTermPrec d x ++ ")"
   showPTermPrec d (PSectionR _ _ x op) = "(" ++ showPTermPrec d x ++ " " ++ showOpPrec d op ++ ")"
