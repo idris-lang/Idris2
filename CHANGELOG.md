@@ -27,6 +27,8 @@
 * Default implicits are supported for named implementations.
 * Elaborator scripts were made to be able to access project files,
   allowing the support for type providers and similar stuff.
+* Elaborator scripts were made to be able to inspect which definitions are
+  referred to by another definitions.
 
 ### REPL changes
 

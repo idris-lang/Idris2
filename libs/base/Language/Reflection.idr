@@ -87,6 +87,8 @@ data Elab : Type -> Type where
      GetLocalType : Name -> Elab TTImp
      -- Get the constructors of a data type. The name must be fully resolved.
      GetCons : Name -> Elab (List Name)
+     -- Get all function definition names referred in a definition. The name must be fully resolved.
+     GetReferredFns : Name -> Elab (List Name)
      -- Check a group of top level declarations
      Declare : List Decl -> Elab ()
 
@@ -181,6 +183,9 @@ interface Monad m => Elaboration m where
   ||| Get the constructors of a fully qualified data type name
   getCons : Name -> m (List Name)
 
+  ||| Get all the name of function definitions that a given definition refers to (transitively)
+  getReferredFns : Name -> m (List Name)
+
   ||| Make some top level declarations
   declare : List Decl -> m ()
 
@@ -227,6 +232,7 @@ Elaboration Elab where
   getInfo        = GetInfo
   getLocalType   = GetLocalType
   getCons        = GetCons
+  getReferredFns = GetReferredFns
   declare        = Declare
   readFile       = ReadFile
   writeFile      = WriteFile
@@ -251,6 +257,7 @@ Elaboration m => MonadTrans t => Monad (t m) => Elaboration (t m) where
   getInfo             = lift . getInfo
   getLocalType        = lift . getLocalType
   getCons             = lift . getCons
+  getReferredFns      = lift . getReferredFns
   declare             = lift . declare
   readFile            = lift .: readFile
   writeFile d         = lift .: writeFile d
