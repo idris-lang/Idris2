@@ -7,6 +7,7 @@ module System.Console.GetOpt
 import Data.List
 import Data.List1
 import Data.String
+import Data.These
 
 %default total
 
@@ -244,3 +245,41 @@ getOpt ordering descs (arg::args)   =
            (EndOfOpts, Permute)         => MkResult [] rest [] []
            (EndOfOpts, ReturnInOrder f) => MkResult (map f rest) [] [] []
            (OptErr e, _)                => {errors $= (e::)} res
+
+||| Parse the command-line like `getOpt`, but allow each option parser to do
+||| additional work in some `Applicative`.
+|||
+||| This allows, in particular, to fail shortly with `Maybe` or `Either`,
+||| or so record data during parsing using `MonadWriter`.
+|||
+||| Place, notice that options parsing is done first, i.e. if you use
+||| applicatives like `Maybe` or `Either`, you will lose all errors reported
+||| inside the `Result` type in case of any option parsing fails.
+||| See `getOptE` in case can't afford losing any type of errors.
+export
+getOpt' :  Applicative f
+        => ArgOrder (f a)
+        -> List (OptDescr $ f a)
+        -> (args : List String)
+        -> f $ Result a
+getOpt' ao os args = do
+  let MkResult opts nonOpts unrec errs = getOpt ao os args
+  sequence opts <&> \opts' => MkResult opts' nonOpts unrec errs
+
+||| Process the command-line, when each option parsing function can return
+||| with an error result
+|||
+||| Returns the best it could parse as `Result a` and a list of parse errors
+||| `List e`. If no parse errors, the list would be empty.
+||| Notice, that empty parse errors list does not mean that `errors` field
+||| inside the `Result` record would be empty; those are another type of
+||| errors, related to options themselves.
+export
+getOptE :  ArgOrder (Either e a)
+        -> List (OptDescr $ Either e a)
+        -> (args : List String)
+        -> (List e, Result a)
+getOptE ao os args = do
+  let MkResult opts nonOpts unrec errs = getOpt ao os args
+  these' [] [] (\es, os => (es, MkResult os nonOpts unrec errs)) $
+    traverse (fromEither . mapFst pure) opts
