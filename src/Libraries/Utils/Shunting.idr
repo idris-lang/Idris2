@@ -22,10 +22,9 @@ data OpPrec
 -- Tokens are either operators or already parsed expressions in some
 -- higher level language
 public export
-data Tok op a
-  = ||| The second FC is for the operator alone
-    Op FC FC op OpPrec
-  | Expr a
+data Tok : (op, a : Type) ->  Type where
+    Op : (expressionLoc : FC) -> (operatorLoc : FC) -> (operatorInfo : op) -> OpPrec -> Tok op a
+    Expr : a -> Tok op a
 
 -- The result of shunting is a parse tree with the precedences made explicit
 -- in the tree.

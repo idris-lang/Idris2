@@ -327,7 +327,7 @@ mutual
 
   -- The different kinds of operator bindings `x : ty` for typebind
   -- x := e and x : ty := e for autobind
-  opBinderTypes : OriginDesc -> IndentInfo -> PTerm -> Rule (OperatorLHSInfo PTerm)
+  opBinderTypes : OriginDesc -> IndentInfo -> Name -> Rule (OperatorLHSInfo PTerm)
   opBinderTypes fname indents boundName =
            do decoratedSymbol fname ":"
               ty <- typeExpr pdef fname indents
@@ -343,8 +343,7 @@ mutual
 
   opBinder : OriginDesc -> IndentInfo -> Rule (OperatorLHSInfo PTerm)
   opBinder fname indents
-      = do x <- bounds (UN . Basic <$> decoratedSimpleBinderName fname)
-           let boundName = PRef (boundToFC fname x) x.val
+      = do boundName <- (UN . Basic <$> decoratedSimpleBinderName fname)
            opBinderTypes fname indents boundName
 
   autobindOp : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
