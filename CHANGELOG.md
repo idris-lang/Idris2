@@ -28,7 +28,9 @@
 * Elaborator scripts were made to be able to access project files,
   allowing the support for type providers and similar stuff.
 * Elaborator scripts were made to be able to inspect which definitions are
-  referred to by another definitions.
+  referred to by another definitions, and in which function currently elaborator is.
+  These features together give an ability to inspect whether particular expressions
+  are recursive (including mutual recursion).
 
 ### REPL changes
 

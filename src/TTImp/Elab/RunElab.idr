@@ -299,6 +299,9 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
                  | Nothing => failWith defs $ show dn ++ " is not a definition"
              ns <- deepRefersTo def
              scriptRet ns
+    elabCon defs "GetCurrentFn" []
+        = do defs <- get Ctxt
+             scriptRet defs.defsStack
     elabCon defs "Declare" [d]
         = do d' <- evalClosure defs d
              decls <- reify defs d'

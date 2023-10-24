@@ -22,6 +22,7 @@ mutRec1 (S n) = mutRec2 n
 mutRec2 Z = Z
 mutRec2 (S n) = mutRec1 n
 
+export
 printRefDefs : Name -> Elab ()
 printRefDefs name = do
   [(name, _)] <- getInfo name
