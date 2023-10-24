@@ -113,7 +113,7 @@ mkPrec Prefix = Prefix
 checkConflictingFixities : {auto s : Ref Syn SyntaxInfo} ->
                            {auto c : Ref Ctxt Defs} ->
                            (isPrefix : Bool) ->
-                           FC -> Name -> Core OpPrec
+                           FC -> Name -> Core (OpPrec, BindingModifier)
 checkConflictingFixities isPrefix exprFC opn
   = do syn <- get Syn
        let op = nameRoot opn
@@ -124,14 +124,14 @@ checkConflictingFixities isPrefix exprFC opn
             -- characters, if not, it must be a backticked expression.
             (_, [], []) => if any isOpChar (fastUnpack op)
                               then throw (GenericMsg exprFC "Unknown operator '\{op}'")
-                              else pure (NonAssoc 1) -- Backticks are non associative by default
+                              else pure (NonAssoc 1, NotBinding) -- Backticks are non associative by default
 
             --
             (True, ((fxName, fx) :: _), _) => do
                 -- in the prefix case, remove conflicts with infix (-)
                 let extraFixities = pre ++ (filter (\(nm, _) => not $ nameRoot nm == "-") inf)
                 unless (isCompatible fx extraFixities) $ warnConflict fxName extraFixities
-                pure (mkPrec fx.fix fx.precedence)
+                pure (mkPrec fx.fix fx.precedence, NotBinding)
             -- Could not find any prefix operator fixities, there may still be conflicts with
             -- the infix ones.
             (True, [] , _) => throw (GenericMsg exprFC $ "'\{op}' is not a prefix operator")
@@ -140,16 +140,17 @@ checkConflictingFixities isPrefix exprFC opn
                 -- In the infix case, remove conflicts with prefix (-)
                 let extraFixities = (filter (\(nm, _) => not $ nm == UN (Basic "-")) pre) ++ inf
                 unless (isCompatible fx extraFixities) $ warnConflict fxName extraFixities
-                pure (mkPrec fx.fix fx.precedence)
+                pure (mkPrec fx.fix fx.precedence, fx.bindingInfo)
             -- Could not find any infix operator fixities, there may be prefix ones
             (False, _, []) => throw (GenericMsg exprFC $ "'\{op}' is not an infix operator")
   where
-    -- Fixities are compatible with all others of the same name that share the same fixity and precedence
+    -- Fixities are compatible with all others of the same name that share the same
+    -- fixity, precedence, and binding information
     isCompatible :  FixityInfo -> (fixities : List (Name, FixityInfo)) -> Bool
     isCompatible fx
       = all (\fx' => fx.fix == fx'.fix
                   && fx.precedence == fx'.precedence
-                  && fx.bindingInfo == fx'.bindingInfo  ) . map snd
+                  && fx.bindingInfo == fx'.bindingInfo) . map snd
 
     -- Emits a warning using the fixity that we picked and the list of all conflicting fixities
     warnConflict : (picked : Name) -> (conflicts : List (Name, FixityInfo)) -> Core ()
@@ -161,28 +162,38 @@ checkConflictingFixities isPrefix exprFC opn
                    For example: %hide \{show fxName}
                    """
 
+checkConflictingBinding : FC -> (foundFixity : BindingModifier) -> (usage : OperatorLHSInfo a) -> Core ()
+checkConflictingBinding fc NotBinding (NotAutobind lhs) = pure ()
+checkConflictingBinding fc NotBinding (BindType name ty)
+    = throw $ GenericMsg fc "Operator \{show name} is regular but is used in a type-binding position"
+checkConflictingBinding fc NotBinding (BindExpr name expr)
+    = throw $ GenericMsg fc "Operator \{show name} is regular but is used in an automatically-binding position"
+checkConflictingBinding fc NotBinding (BindExplicitType name type expr)
+    = throw $ GenericMsg fc "Operator \{show name} is regular but is used in an automatically-binding position"
+checkConflictingBinding fc Autobind (NotAutobind lhs)
+    = throw $ GenericMsg fc "Operator is automatically-binding but is used as a regular operator"
+checkConflictingBinding fc Autobind (BindType name ty)
+    = throw $ GenericMsg fc "Operator is automatically-binding but is used in a type-binding position"
+checkConflictingBinding fc Autobind (BindExpr name expr) = pure ()
+checkConflictingBinding fc Autobind (BindExplicitType name type expr) = pure ()
+checkConflictingBinding fc Typebind (NotAutobind lhs)
+    = throw $ GenericMsg fc "Operator is type-binding but is used in as a regular operator"
+checkConflictingBinding fc Typebind (BindType name ty) = pure()
+checkConflictingBinding fc Typebind (BindExpr name expr)
+    = throw $ GenericMsg fc "Operator is type-binding but is used in an automatically-binding position"
+checkConflictingBinding fc Typebind (BindExplicitType name type expr)
+    = throw $ GenericMsg fc "Operator is type-binding but is used in an automatically-binding position"
 
 toTokList : {auto s : Ref Syn SyntaxInfo} ->
             {auto c : Ref Ctxt Defs} ->
             PTerm -> Core (List (Tok (OpStr, Maybe (OperatorLHSInfo PTerm)) PTerm))
-  -- -- a bindtype operator desugars (x : a ** b x) into ((**) a (\x : a => b x))
--- toTokList (POp fc opFC (BindType nm l) opn r)
-  --     = desugarB side ps (POp fc opFC (NotAutobind l) op
-  --                        $ PLam (virtualiseFC opFC) top Explicit nm l r)
-  -- -- a bindexpr operator desugars (x := a ** b x) into ((**) a (\x : ? => b x))
-  -- desugarB side ps (POp fc opFC (BindExpr nm l) op r)
-  --     = desugarB side ps (POp fc opFC (NotAutobind l) op
-  --                        $ PLam (virtualiseFC opFC) top Explicit nm (PImplicit $ virtualiseFC opFC) r)
-  -- -- an explicit bind operator desugars (x : ty := a ** b x) into ((**) a (\x : ty => b x))
-  -- desugarB side ps (POp fc opFC (BindExplicitType nm ty l) op r)
-  --     = desugarB side ps (POp fc opFC (NotAutobind l) op
-  --                        $ PLam (virtualiseFC opFC) top Explicit nm ty r)
 toTokList (POp fc opFC l opn r)
-    = do precInfo <- checkConflictingFixities False fc opn
+    = do (precInfo, bindInfo) <- checkConflictingFixities False fc opn
+         checkConflictingBinding opFC bindInfo l
          rtoks <- toTokList r
          pure (Expr l.getLhs :: Op fc opFC (opn, Just l) precInfo :: rtoks)
 toTokList (PPrefixOp fc opFC opn arg)
-    = do precInfo <- checkConflictingFixities True fc opn
+    = do (precInfo, _) <- checkConflictingFixities True fc opn
          rtoks <- toTokList arg
          pure (Op fc opFC (opn, Nothing) precInfo :: rtoks)
 toTokList t = pure [Expr t]
@@ -325,8 +336,8 @@ mutual
                      [apply (IVar fc (UN $ Basic "===")) [l', r'],
                       apply (IVar fc (UN $ Basic "~=~")) [l', r']]
   desugarB side ps (PBracketed fc e) = desugarB side ps e
-  desugarB side ps (POp fc opFC (l) op r)
-      = do ts <- toTokList (POp fc opFC (l) op r)
+  desugarB side ps (POp fc opFC l op r)
+      = do ts <- toTokList (POp fc opFC l op r)
            desugarTree side ps !(parseOps ts)
   desugarB side ps (PPrefixOp fc opFC op arg)
       = do ts <- toTokList (PPrefixOp fc opFC op arg)
@@ -750,20 +761,24 @@ mutual
       = do l' <- desugarTree side ps l
            r' <- desugarTree side ps r
            pure (IApp loc l' r')
+  -- normal operators
   desugarTree side ps (Infix loc opFC (op, Just (NotAutobind lhs)) l r)
       = do l' <- desugarTree side ps l
            r' <- desugarTree side ps r
            pure (IApp loc (IApp loc (IVar opFC op) l') r')
+  -- (x : ty ** f x) ==>> (**) exp (\x : ty => f x)
   desugarTree side ps (Infix loc opFC (op, Just (BindType name lhs)) _ r)
       = do desugaredLHS <- desugarB side ps lhs
            desugaredRHS <- desugarTree side ps r
            pure $ IApp loc (IApp loc (IVar opFC op) desugaredLHS)
                            (ILam loc top Explicit (Just name) desugaredLHS desugaredRHS)
+  -- (x := exp ** f x) ==>> (**) exp (\x : ? => f x)
   desugarTree side ps (Infix loc opFC (op, Just (BindExpr name lhs)) _ r)
       = do desugaredLHS <- desugarB side ps lhs
            desugaredRHS <- desugarTree side ps r
            pure $ IApp loc (IApp loc (IVar opFC op) desugaredLHS)
                            (ILam loc top Explicit (Just name) (Implicit opFC False) desugaredRHS)
+  -- (x : ty := exp ** f x) ==>> (**) exp (\x : ty => f x)
   desugarTree side ps (Infix loc opFC (op, Just (BindExplicitType name ty expr)) _ r)
       = do desugaredLHS <- desugarB side ps expr
            desugaredType <- desugarB side ps ty
