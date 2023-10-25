@@ -1,0 +1,28 @@
+1/1: Building Errors (Errors.idr)
+Operator (=@) is a type-binding operator but is used in
+automatically binding position.
+Either:
+- Write (x : ty) =@ S x to use the operator as type-binding
+- Change the fixity defined at Errors:(2:1) : autobind infixr 0 =@
+- Import a module with an autobind fixity
+1/1: Building Errors2 (Errors2.idr)
+Operator (=@) is an automatically binding operator (autobind) but is used
+as regular operator.
+Either:
+- Change the fixity defined at Errors2:(2:1) to : infixr 0 =@
+- Remove the fixity and import a module that exports a compatible fixity
+1/1: Building Errors3 (Errors3.idr)
+Operator (=@) is a type-binding operator but is used as a regular operator.
+Either:
+- Change the fixity defined at Errors3:(2:1) to : typebind infixr 0 =@
+- Remove the fixity and import a module that exports a compatible fixity
+1/1: Building Errors4 (Errors4.idr)
+Operator (=@) is regular but is used in a type-binding position.
+Either:
+- Change the fixity defined at Errors4:(2:1) to : typebind infixr 0 =@
+- Remove the fixity and import a module that exports a compatible fixity
+1/1: Building Errors5 (Errors5.idr)
+Operator (=@) is regular but is used in an automatically-binding position.
+Either:
+- Change the fixity defined at Errors4:(2:1) to : autobind infixr 0 =@
+- Remove the fixity and import a module that exports a compatible fixity
