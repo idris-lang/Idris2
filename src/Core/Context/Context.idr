@@ -14,6 +14,7 @@ import Libraries.Data.IntMap
 import Libraries.Data.IOArray
 import Libraries.Data.NameMap
 import Libraries.Data.UserNameMap
+import Libraries.Data.WithDefault
 import Libraries.Utils.Binary
 import Libraries.Utils.Scheme
 
@@ -342,7 +343,7 @@ record GlobalDef where
   inferrable : List Nat -- arguments which can be inferred from elsewhere in the type
   multiplicity : RigCount
   localVars : List Name -- environment name is defined in
-  visibility : Visibility
+  visibility : WithDefault Visibility Private
   totality : Totality
   isEscapeHatch : Bool
   flags : List DefFlag

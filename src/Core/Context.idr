@@ -28,6 +28,7 @@ import Data.Nat
 import Libraries.Data.NameMap
 import Libraries.Data.StringMap
 import Libraries.Data.UserNameMap
+import Libraries.Data.WithDefault
 import Libraries.Text.Distance.Levenshtein
 
 import System.Clock
@@ -319,11 +320,11 @@ commitCtxt ctxt
 ||| @rig  quantity annotation
 ||| @vars local variables
 ||| @ty   (closed) type
-||| @vis  Visibility
+||| @vis  Visibility, defaulting to private
 ||| @def  actual definition
 export
 newDef : (fc : FC) -> (n : Name) -> (rig : RigCount) -> (vars : List Name) ->
-         (ty : ClosedTerm) -> (vis : Visibility) -> (def : Def) -> GlobalDef
+         (ty : ClosedTerm) -> (vis : WithDefault Visibility Private) -> (def : Def) -> GlobalDef
 newDef fc n rig vars ty vis def
     = MkGlobalDef
         { location = fc
@@ -713,6 +714,7 @@ HasNames Warning where
   full gam (UnreachableClause fc rho s) = UnreachableClause fc <$> full gam rho <*> full gam s
   full gam (ShadowingGlobalDefs fc xs)
     = ShadowingGlobalDefs fc <$> traverseList1 (traversePair (traverseList1 (full gam))) xs
+  full gam (IncompatibleVisibility fc x y n) = IncompatibleVisibility fc x y <$> full gam n
   full gam w@(ShadowingLocalBindings _ _) = pure w
   full gam (Deprecated fc x y) = Deprecated fc x <$> traverseOpt (traversePair (full gam)) y
   full gam (GenericWarn fc x) = pure (GenericWarn fc x)
@@ -721,6 +723,7 @@ HasNames Warning where
   resolved gam (UnreachableClause fc rho s) = UnreachableClause fc <$> resolved gam rho <*> resolved gam s
   resolved gam (ShadowingGlobalDefs fc xs)
     = ShadowingGlobalDefs fc <$> traverseList1 (traversePair (traverseList1 (resolved gam))) xs
+  resolved gam (IncompatibleVisibility fc x y n) = IncompatibleVisibility fc x y <$> resolved gam n
   resolved gam w@(ShadowingLocalBindings _ _) = pure w
   resolved gam (Deprecated fc x y) = Deprecated fc x <$> traverseOpt (traversePair (resolved gam)) y
   resolved gam (GenericWarn fc x) = pure (GenericWarn fc x)
@@ -1132,7 +1135,7 @@ getSimilarNames nm = case show <$> userNameRoot nm of
                    | False => pure Nothing
                Just def <- lookupCtxtExact nm (gamma defs)
                    | Nothing => pure Nothing -- should be impossible
-               pure (Just (visibility def, dist))
+               pure (Just (collapseDefault $ visibility def, dist))
        kept <- NameMap.mapMaybeM @{CORE} test (resolvedAs (gamma defs))
        pure $ Just (str, toList kept)
 
@@ -1166,7 +1169,7 @@ showSimilarNames ns nm str kept
 
 
 getVisibility : {auto c : Ref Ctxt Defs} ->
-                FC -> Name -> Core Visibility
+                FC -> Name -> Core (WithDefault Visibility Private)
 getVisibility fc n
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
@@ -1201,7 +1204,7 @@ ambiguousName : {auto c : Ref Ctxt Defs} -> FC
              -> Name -> List Name
              -> Core a
 ambiguousName fc n ns = do
-  ns <- filterM (\x => pure $ !(getVisibility fc x) /= Private) ns
+  ns <- filterM (\x => pure $ !(collapseDefault <$> getVisibility fc x) /= Private) ns
   case ns of
     [] =>         undefinedName fc n
     ns => throw $ AmbiguousName fc ns
@@ -1329,7 +1332,7 @@ addBuiltin n ty tot op
          , inferrable = []
          , multiplicity = top
          , localVars = []
-         , visibility = Public
+         , visibility = specified Public
          , totality = tot
          , isEscapeHatch = False
          , flags = [Inline]
@@ -1664,7 +1667,7 @@ setVisibility fc n vis
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
               | Nothing => undefinedName fc n
-         ignore $ addDef n ({ visibility := vis } def)
+         ignore $ addDef n ({ visibility := specified vis } def)
 
 public export
 record SearchData where

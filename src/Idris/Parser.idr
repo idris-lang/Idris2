@@ -19,6 +19,7 @@ import Data.Nat
 import Data.SnocList
 import Data.String
 import Libraries.Utils.String
+import Libraries.Data.WithDefault
 
 import Idris.Parser.Let
 
@@ -1125,11 +1126,12 @@ visOption fname
   <|> (decoratedKeyword fname "private" $> Private)
 
 
-exportVisibility, visibility : OriginDesc -> EmptyRule Visibility
+visibility : OriginDesc -> EmptyRule (WithDefault Visibility Private)
 visibility fname
-    = visOption fname
-  <|> pure Private
+    = (specified <$> visOption fname)
+  <|> pure defaulted
 
+exportVisibility : OriginDesc -> EmptyRule Visibility
 exportVisibility fname
     = visOption fname
   <|> pure Export
@@ -1327,11 +1329,11 @@ dataDeclBody fname indents
          simpleData fname b n indents <|> gadtData fname col b n indents
 
 -- a data declaration can have a visibility and an optional totality (#1404)
-dataVisOpt : OriginDesc -> EmptyRule (Visibility, Maybe TotalReq)
+dataVisOpt : OriginDesc -> EmptyRule (WithDefault Visibility Private, Maybe TotalReq)
 dataVisOpt fname
-    = do { vis <- visOption   fname ; mbtot <- optional (totalityOpt fname) ; pure (vis, mbtot) }
+    = do { vis <- visOption   fname ; mbtot <- optional (totalityOpt fname) ; pure (specified vis, mbtot) }
   <|> do { tot <- totalityOpt fname ; vis <- visibility fname ; pure (vis, Just tot) }
-  <|> pure (Private, Nothing)
+  <|> pure (defaulted, Nothing)
 
 dataDecl : OriginDesc -> IndentInfo -> Rule PDecl
 dataDecl fname indents
@@ -1747,7 +1749,8 @@ recordParam fname indents
 
 -- A record without a where is a forward declaration
 recordBody : OriginDesc -> IndentInfo ->
-             String -> Visibility -> Maybe TotalReq ->
+             String -> WithDefault Visibility Private ->
+             Maybe TotalReq ->
              Int ->
              Name ->
              List (Name, RigCount, PiInfo PTerm, PTerm) ->

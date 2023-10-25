@@ -36,9 +36,10 @@ import TTImp.WithClause
 
 import Data.Either
 import Data.List
-import Libraries.Data.NameMap
 import Data.String
 import Data.Maybe
+import Libraries.Data.NameMap
+import Libraries.Data.WithDefault
 import Libraries.Text.PrettyPrint.Prettyprinter
 
 %default covering
@@ -587,7 +588,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
          wname <- genWithName !(prettyName !(toFullNames (Resolved n)))
          widx <- addDef wname ({flags $= (SetTotal totreq ::)}
                                     (newDef vfc wname (if isErased mult then erased else top)
-                                      vars wtype vis None))
+                                      vars wtype (specified vis) None))
 
          let toWarg : Maybe (PiInfo RawImp, Name) -> List (Maybe Name, RawImp)
                := flip maybe (\pn => [(Nothing, IVar vfc (snd pn))]) $
@@ -940,12 +941,12 @@ lookupOrAddAlias eopts nest env fc n [cl@(PatClause _ lhs _)]
                 Just (str, kept) <- getSimilarNames n
                    | Nothing => pure []
                 -- only keep the ones that haven't been defined yet
-                decls <- for kept $ \ (cand, weight) => do
+                decls <- for kept $ \ (cand, vis, weight) => do
                     Just gdef <- lookupCtxtExact cand (gamma defs)
                       | Nothing => pure Nothing -- should be impossible
                     let None = definition gdef
                       | _ => pure Nothing
-                    pure (Just (cand, weight))
+                    pure (Just (cand, vis, weight))
                 pure $ showSimilarNames (currentNS defs) n str $ catMaybes decls
           | (x :: xs) => throw (MaybeMisspelling (NoDeclaration fc n) (x ::: xs))
        --   3) declare an alias
@@ -988,7 +989,7 @@ processDef opts nest env fc n_in cs_in
          -- should include the definition (RHS) of anything that is public (available
          -- at compile time for elaboration) _or_ inlined (dropped into destination definitions
          -- during compilation).
-         let hashit = visibility gdef == Public || (Inline `elem` gdef.flags)
+         let hashit = (collapseDefault $ visibility gdef) == Public || (Inline `elem` gdef.flags)
          let mult = if isErased (multiplicity gdef)
                        then erased
                        else linear
@@ -999,7 +1000,7 @@ processDef opts nest env fc n_in cs_in
          log "declare.def" 5 $ "Traversing clauses of " ++ show n ++ " with mult " ++ show mult
          let treq = fromMaybe !getDefaultTotalityOption (findSetTotal (flags gdef))
          cs <- withTotality treq $
-               traverse (checkClause mult (visibility gdef) treq
+               traverse (checkClause mult (collapseDefault $ visibility gdef) treq
                                      hashit nidx opts nest env) cs_in
 
          let pats = map toPats (rights cs)
@@ -1026,11 +1027,11 @@ processDef opts nest env fc n_in cs_in
                   ({ definition := PMDef pi cargs tree_ct tree_ct pats
                    } gdef)
 
-         when (visibility gdef == Public) $
+         when (collapseDefault (visibility gdef) == Public) $
              do let rmetas = getMetas tree_ct
                 log "declare.def" 10 $ "Saving from " ++ show n ++ ": " ++ show (keys rmetas)
                 traverse_ addToSave (keys rmetas)
-         when (isUserName n && visibility gdef /= Private) $
+         when (isUserName n && collapseDefault (visibility gdef) /= Private) $
              do let tymetas = getMetas (type gdef)
                 traverse_ addToSave (keys tymetas)
          addToSave n

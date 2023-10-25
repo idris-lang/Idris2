@@ -15,6 +15,7 @@ import Core.Value
 import Data.List
 import Libraries.Data.IntMap
 import Libraries.Data.NameMap
+import Libraries.Data.WithDefault
 
 %default covering
 
@@ -425,7 +426,7 @@ newMetaLets {vars} fc rig env n ty def nocyc lets
     = do let hty = if lets then abstractFullEnvType fc env ty
                            else abstractEnvType fc env ty
          let hole = { noCycles := nocyc }
-                           (newDef fc n rig [] hty Public def)
+                           (newDef fc n rig [] hty (specified Public) def)
          log "unify.meta" 5 $ "Adding new meta " ++ show (n, fc, rig)
          logTerm "unify.meta" 10 ("New meta type " ++ show n) hty
          idx <- addDef n hole
@@ -470,7 +471,7 @@ newConstant {vars} fc rig env tm ty constrs
     = do let def = mkConstant fc env tm
          let defty = abstractFullEnvType fc env ty
          cn <- genName "postpone"
-         let guess = newDef fc cn rig [] defty Public
+         let guess = newDef fc cn rig [] defty (specified Public)
                             (Guess def (length env) constrs)
          log "unify.constant" 5 $ "Adding new constant " ++ show (cn, fc, rig)
          logTerm "unify.constant" 10 ("New constant type " ++ show cn) defty
@@ -493,7 +494,7 @@ newSearch : {vars : _} ->
             Env Term vars -> Name -> Term vars -> Core (Int, Term vars)
 newSearch {vars} fc rig depth def env n ty
     = do let hty = abstractEnvType fc env ty
-         let hole = newDef fc n rig [] hty Public (BySearch rig depth def)
+         let hole = newDef fc n rig [] hty (specified Public) (BySearch rig depth def)
          log "unify.search" 10 $ "Adding new search " ++ show fc ++ " " ++ show n
          logTermNF "unify.search" 10 "New search type" [] hty
          idx <- addDef n hole
@@ -514,7 +515,7 @@ newDelayed : {vars : _} ->
              (ty : Term vars) -> Core (Int, Term vars)
 newDelayed {vars} fc rig env n ty
     = do let hty = abstractEnvType fc env ty
-         let hole = newDef fc n rig [] hty Public Delayed
+         let hole = newDef fc n rig [] hty (specified Public) Delayed
          idx <- addDef n hole
          log "unify.delay" 10 $ "Added delayed elaborator " ++ show (n, idx)
          addHoleName fc n idx

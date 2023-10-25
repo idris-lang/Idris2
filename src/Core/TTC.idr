@@ -11,10 +11,11 @@ import Core.Name
 import Core.Options
 import Core.TT
 
-import Libraries.Data.NameMap
 
-import Libraries.Data.IOArray
 import Data.Vect
+import Libraries.Data.NameMap
+import Libraries.Data.IOArray
+import Libraries.Data.WithDefault
 
 import Libraries.Utils.Binary
 import Libraries.Utils.Scheme
@@ -1149,7 +1150,7 @@ TTC GlobalDef where
                                         mul vars vis
                                         tot hatch fl refs refsR inv c True def cdef Nothing sc Nothing)
               else pure (MkGlobalDef loc name (Erased loc Placeholder) [] [] [] []
-                                     mul [] Public unchecked False [] refs refsR
+                                     mul [] (specified Public) unchecked False [] refs refsR
                                      False False True def cdef Nothing [] Nothing)
 
 export

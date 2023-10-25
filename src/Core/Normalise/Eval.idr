@@ -15,6 +15,8 @@ import Data.Nat
 import Data.String
 import Data.Vect
 
+import Libraries.Data.WithDefault
+
 %default covering
 
 -- A pair of a term and its normal form. This could be constructed either
@@ -291,7 +293,7 @@ parameters (defs : Defs, topopts : EvalOpts)
              let redok1 = evalAll topopts
              let redok2 = reducibleInAny (currentNS defs :: nestedNS defs)
                                          (fullname res)
-                                         (visibility res)
+                                         (collapseDefault $ visibility res)
              -- want to shortcut that second check, if we're evaluating
              -- everything, so don't let bind unless we need that log!
              let redok = redok1 || redok2

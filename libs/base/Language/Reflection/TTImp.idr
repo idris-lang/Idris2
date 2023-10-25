@@ -179,16 +179,41 @@ mutual
   %name Clause cl
 
   public export
+  data WithDefault : (a : Type) -> (def : a) -> Type where
+       DefaultedValue : WithDefault a def
+       SpecifiedValue : a -> WithDefault a def
+
+  export
+  specified : a -> WithDefault a def
+  specified = SpecifiedValue
+
+  export
+  defaulted : WithDefault a def
+  defaulted = DefaultedValue
+
+  export
+  collapseDefault : {def : a} -> WithDefault a def -> a
+  collapseDefault DefaultedValue     = def
+  collapseDefault (SpecifiedValue a) = a
+
+  export
+  onWithDefault : (defHandler : Lazy b) -> (valHandler : a -> b) ->
+                  WithDefault a def -> b
+  onWithDefault defHandler _ DefaultedValue     = defHandler
+  onWithDefault _ valHandler (SpecifiedValue v) = valHandler v
+
+  public export
   data Decl : Type where
        IClaim : FC -> Count -> Visibility -> List FnOpt ->
                 ITy -> Decl
-       IData : FC -> Visibility -> Maybe TotalReq -> Data -> Decl
+       IData : FC -> WithDefault Visibility Private -> Maybe TotalReq -> Data -> Decl
        IDef : FC -> Name -> (cls : List Clause) -> Decl
        IParameters : FC -> (params : List (Name, Count, PiInfo TTImp, TTImp)) ->
                      (decls : List Decl) -> Decl
        IRecord : FC ->
                  Maybe String -> -- nested namespace
-                 Visibility -> Maybe TotalReq -> Record -> Decl
+                 WithDefault Visibility Private ->
+                 Maybe TotalReq -> Record -> Decl
        INamespace : FC -> Namespace -> (decls : List Decl) -> Decl
        ITransform : FC -> Name -> TTImp -> TTImp -> Decl
        IRunElabDecl : FC -> TTImp -> Decl
@@ -299,6 +324,25 @@ Eq DataOpt where
   External == External = True
   NoNewtype == NoNewtype = True
   _ == _ = False
+
+public export
+Eq a => Eq (WithDefault a def) where
+  DefaultedValue   == DefaultedValue   = True
+  DefaultedValue   == SpecifiedValue _ = False
+  SpecifiedValue _ == DefaultedValue   = False
+  SpecifiedValue x == SpecifiedValue y = x == y
+
+public export
+Ord a => Ord (WithDefault a def) where
+  compare DefaultedValue   DefaultedValue       = EQ
+  compare DefaultedValue   (SpecifiedValue _)   = LT
+  compare (SpecifiedValue _) DefaultedValue     = GT
+  compare (SpecifiedValue x) (SpecifiedValue y) = compare x y
+
+public export
+{def : a} -> (Show a) => Show (WithDefault a def) where
+  show (SpecifiedValue x) = show x
+  show DefaultedValue     = show def
 
 public export
 Eq a => Eq (PiInfo a) where

@@ -22,6 +22,7 @@ import Libraries.Data.NameMap
 import Libraries.Data.SortedMap
 import Libraries.Data.String.Extra
 import Libraries.Data.StringMap
+import Libraries.Data.WithDefault
 import Libraries.Text.PrettyPrint.Prettyprinter
 
 import Parser.Lexer.Source
@@ -428,14 +429,15 @@ mutual
   data PDecl' : Type -> Type where
        PClaim : FC -> RigCount -> Visibility -> List (PFnOpt' nm) -> PTypeDecl' nm -> PDecl' nm
        PDef : FC -> List (PClause' nm) -> PDecl' nm
-       PData : FC -> (doc : String) -> Visibility -> Maybe TotalReq -> PDataDecl' nm -> PDecl' nm
+       PData : FC -> (doc : String) -> WithDefault Visibility Private ->
+               Maybe TotalReq -> PDataDecl' nm -> PDecl' nm
        PParameters : FC ->
                      List (Name, RigCount, PiInfo (PTerm' nm), PTerm' nm) ->
                      List (PDecl' nm) -> PDecl' nm
        PUsing : FC -> List (Maybe Name, PTerm' nm) ->
                 List (PDecl' nm) -> PDecl' nm
        PInterface : FC ->
-                    Visibility ->
+                    WithDefault Visibility Private ->
                     (constraints : List (Maybe Name, PTerm' nm)) ->
                     Name ->
                     (doc : String) ->
@@ -456,7 +458,8 @@ mutual
                          PDecl' nm
        PRecord : FC ->
                  (doc : String) ->
-                 Visibility -> Maybe TotalReq ->
+                 WithDefault Visibility Private ->
+                 Maybe TotalReq ->
                  PRecordDecl' nm ->
                  PDecl' nm
 

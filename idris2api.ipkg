@@ -189,6 +189,7 @@ modules =
     Libraries.Data.Tap,
     Libraries.Data.UserNameMap,
     Libraries.Data.Version,
+    Libraries.Data.WithDefault,
 
     Libraries.System.File,
     Libraries.System.File.Buffer,

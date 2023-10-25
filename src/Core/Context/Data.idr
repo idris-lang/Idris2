@@ -9,6 +9,8 @@ import Core.Normalise
 import Data.List
 import Data.Maybe
 
+import Libraries.Data.WithDefault
+
 %default covering
 
 -- If a name appears more than once in an argument list, only the first is
@@ -102,7 +104,7 @@ addData vars vis tidx (MkData (MkCon dfc tyn arity tycon) datacons)
          log "declare.data.parameters" 20 $
             "Positions of parameters for datatype" ++ show tyn ++
             ": [" ++ showSep ", " (map show paramPositions) ++ "]"
-         let tydef = newDef dfc tyn top vars tycon vis
+         let tydef = newDef dfc tyn top vars tycon (specified vis)
                             (TCon tag arity
                                   paramPositions
                                   allPos
@@ -124,7 +126,7 @@ addData vars vis tidx (MkData (MkCon dfc tyn arity tycon) datacons)
                           Context -> Core Context
     addDataConstructors tag [] gam = pure gam
     addDataConstructors tag (MkCon fc n a ty :: cs) gam
-        = do let condef = newDef fc n top vars ty (conVisibility vis) (DCon tag a Nothing)
+        = do let condef = newDef fc n top vars ty (specified $ conVisibility vis) (DCon tag a Nothing)
              -- Check 'n' is undefined
              Nothing <- lookupCtxtExact n gam
                  | Just gdef => throw (AlreadyDefined fc n)

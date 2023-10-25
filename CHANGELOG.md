@@ -17,6 +17,10 @@
   [#1066](https://github.com/idris-lang/idris2/issues/1066)).
 * `%hide` directives can now hide conflicting fixities from other modules.
 * Fixity declarations can now be kept private with export modifiers.
+* Forward-declarations whose visibility differ from their
+  actual definition now emit a warning, unless the definition
+  has no specified visibility
+  (addressing Issue [#1236](https://github.com/idris-lang/Idris2/issues/1236)).
 * New `fromTTImp`, `fromName`, and `fromDecls` names for custom `TTImp`,
   `Name`, and `Decls` literals.
 * Call to `%macro`-functions do not require the `ElabReflection` extension.
@@ -119,6 +123,9 @@
   To avoid confusing tooling about which `.ipkg` to use, the
   package file is under the newly added `ipkg` sub-directory.
 
+* Added `Libraries.Data.WithDefault` to facilitate consistent use
+  of a default-if-unspecified value, currently for `private` visibility.
+
 ### Library changes
 
 #### Prelude
@@ -210,6 +217,8 @@
 * Added `uncons' : List a -> Maybe (a, List a)` to `base`.
 
 * Adds `infixOfBy` and `isInfixOfBy` into `Data.List`.
+
+* Adds `WithDefault` into `Language.Reflection.TTImp`, mirroring compiler addition.
 
 * Adds updating functions to `SortedMap` and `SortedDMap`.
 

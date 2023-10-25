@@ -1,0 +1,13 @@
+1/1: Building Issue1236 (Issue1236.idr)
+Warning: Issue1236.Mismatched1 has been forward-declared with private visibility, cannot change to export. This will be an error in a later release.
+
+Issue1236:5:1--6:30
+ 5 | export
+ 6 | data Mismatched1 : Type where
+
+Warning: Issue1236.Mismatched2 has been forward-declared with public export visibility, cannot change to export. This will be an error in a later release.
+
+Issue1236:10:1--11:30
+ 10 | export
+ 11 | data Mismatched2 : Type where
+
