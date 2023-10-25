@@ -1,0 +1,8 @@
+. ../../../testutils.sh
+
+check Errors.idr
+check Errors2.idr
+check Errors3.idr
+check Errors4.idr
+check Errors5.idr
+
