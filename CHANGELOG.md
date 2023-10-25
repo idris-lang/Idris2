@@ -224,6 +224,8 @@
 
 * Adds a `Compose` and `FromApplicative` named implementations for `Zippable`.
 
+* Adds `Semigroup`, `Applicative`, `Traversable` and `Zippable` for `Data.These`.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
