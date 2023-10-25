@@ -178,7 +178,7 @@ mutual
 
   %name Clause cl
 
-  export
+  public export
   data WithDefault : (a : Type) -> (def : a) -> Type where
        DefaultedValue : WithDefault a def
        SpecifiedValue : a -> WithDefault a def
