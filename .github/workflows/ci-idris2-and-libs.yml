@@ -761,6 +761,7 @@ jobs:
           ./katla.sh
           cd -
           cp -r www/html/* .github/scripts/html/
+          cp www/source/idris-logo-base.png .github/scripts/html/
       - name: Deploy HTML
         uses: JamesIves/github-pages-deploy-action@v4.4.3
         if: ${{ success() && env.IDRIS2_DEPLOY }}
