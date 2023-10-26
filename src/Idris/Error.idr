@@ -619,6 +619,73 @@ perrorRaw (BadRunElab fc env script desc)
 perrorRaw (RunElabFail e)
     = pure $ reflow "Error during reflection" <+> colon <++> !(perrorRaw e)
 perrorRaw (GenericMsg fc str) = pure $ pretty0 str <+> line <+> !(ploc fc)
+perrorRaw (OperatorBindingMismatch fc {print=p} expected actual opName rhs)
+    = pure $ "Operator" <++> pretty0 !(getFullName opName) <++> "is"
+       <++> printBindingInfo expected
+       <++> "operator, but is used as" <++> printBindingModifier actual.getBinder
+       <++> "operator."
+       <+> line <+> !(ploc fc)
+       <+> "Explanation: regular, typebind and autobind operators all use a slightly different"
+       <++> "syntax, typebind looks like this: '(name : type)" <++> pretty0 opName
+       <++> "expr', autobind looks like this: '(name := expr)" <++> pretty0 opName
+       <++> "expr'."
+       <+> line <+> line
+       <+> "Possible solutions:" <+> line
+       <+> indent 1 (vsep (map ("-" <++>)
+           (expressionDiagnositc ++ [fixityDiagnostic, moduleDiagnostic])))
+    where
+      moduleDiagnostic : Doc IdrisAnn
+      moduleDiagnostic = case expected of
+                              Nothing => "Import a module that exports a suitable fixity."
+                              (Just a) => "Hide or remove the fixity at" <++> byShow a.fc
+                                     <++> "and import a module that exports a compatible fixity."
+      infixOpName : Doc IdrisAnn
+      infixOpName = case expected of
+                         Nothing => enclose "`" "`" (byShow opName)
+                         _ => byShow opName
+
+      displayFixityInfo : FixityInfo -> BindingModifier -> Doc IdrisAnn
+      displayFixityInfo (MkFixityInfo fc1 vis _ fix precedence) NotBinding
+        = byShow vis <++> byShow fix <++> byShow precedence <++> pretty0 opName
+      displayFixityInfo (MkFixityInfo _ vis _ fix precedence) usedBinder
+        = byShow vis <++> byShow usedBinder <++> byShow fix <++> byShow precedence <++> pretty0 opName
+      expressionDiagnositc : List (Doc IdrisAnn)
+      expressionDiagnositc = case expected of
+          Nothing => []
+          (Just e) => let sentence = "Write the expression using" <++> byShow e.bindingInfo <++> "syntax:"
+                   in pure $ sentence <++> enclose "'" "'" (case e.bindingInfo of
+                           NotBinding =>
+                              reAnnotate (const Code) (p actual.getLhs)
+                              <++> infixOpName <++> reAnnotate (const Code) (p rhs)
+                           Autobind =>
+                              parens (maybe "_" pretty0 actual.getBoundName <++> ":="
+                              <++> reAnnotate (const Code) (p actual.getLhs))
+                              <++> infixOpName <++> reAnnotate (const Code) (p rhs)
+                           Typebind =>
+                              parens (maybe "_" pretty0 actual.getBoundName <++> ":"
+                              <++> reAnnotate (const Code) (p actual.getLhs))
+                              <++> infixOpName <++> reAnnotate (const Code) (p rhs)
+                           ) <+> dot
+
+
+      fixityDiagnostic : Doc IdrisAnn
+      fixityDiagnostic = case expected of
+          Nothing => "Define a new fixity:" <++> "infixr 0" <++> infixOpName
+          (Just fix) =>
+            "Change the fixity defined at" <++> pretty0 fix.fc <++> "to"
+            <++> enclose "'" "'" (displayFixityInfo fix actual.getBinder)
+            <+> dot
+
+      printBindingModifier : BindingModifier -> Doc IdrisAnn
+      printBindingModifier NotBinding = "a regular"
+      printBindingModifier Typebind = "a type-binding (typebind)"
+      printBindingModifier Autobind = "an automatically-binding (autobind)"
+
+      printBindingInfo : Maybe FixityInfo -> Doc IdrisAnn
+      printBindingInfo Nothing = "a regular"
+      printBindingInfo (Just x) = printBindingModifier x.bindingInfo
+
+
 perrorRaw (TTCError msg)
     = pure $ errorDesc (reflow "Error in TTC file" <+> colon <++> byShow msg)
         <++> parens "the most likely case is that the ./build directory in your current project contains files from a previous build of idris2 or the idris2 executable is from a different build than the installed .ttc files"

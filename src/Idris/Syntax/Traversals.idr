@@ -99,9 +99,9 @@ mapPTermM f = goPTerm where
       >>= f
     goPTerm t@(PImplicit _) = f t
     goPTerm t@(PInfer _) = f t
-    goPTerm (POp fc opFC (NotAutobind left) op right) =
+    goPTerm (POp fc opFC (NoBinder left) op right) =
       POp fc opFC
-          <$> (NotAutobind <$> goPTerm left)
+          <$> (NoBinder <$> goPTerm left)
           <*> pure op
           <*> goPTerm right
       >>= f

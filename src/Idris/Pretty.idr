@@ -344,7 +344,7 @@ mutual
         group $ parens (prettyBinder nm <++> ":" <++> pretty ty <++> ":=" <++> pretty left)
            <++> prettyOp op
            <++> pretty right
-    prettyPrec d (POp _ _ (NotAutobind x) op y) =
+    prettyPrec d (POp _ _ (NoBinder x) op y) =
       parenthesise (d >= App) $
         group $ pretty x
            <++> prettyOp op
