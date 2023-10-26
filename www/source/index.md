@@ -81,7 +81,7 @@ you will need to pass `-p linear` to `idris2` to use modules defined in it.
 #### [Network](https://idris-lang.github.io/Idris2/network)
 
 `network` is the add-on to `base` you'll need for programs using sockets.
-Similarly to `contrib` and `linear `, you will need to pass `-p network`
+Similarly to `contrib` and `linear`, you will need to pass `-p network`
 to `idris2` to use modules defined in it.
 
 #### [Papers](https://idris-lang.github.io/Idris2/papers)
