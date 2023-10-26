@@ -20,7 +20,7 @@ data LVect : Nat -> Type -> Type where
 export
 lookup : Fin (S n) -@ LVect (S n) a -@ LPair a (LVect n a)
 lookup FZ     (v :: vs) = (v # vs)
-lookup (FS k) (v :: vs@(_ :: _)) = bimap id (v ::) (lookup k vs)
+lookup (FS k) (v :: vs@(_ :: _)) = mapSnd (v ::) (lookup k vs)
 
 export
 (<$>) : (f : a -@ b) -> LVect n a -@ LVect n b

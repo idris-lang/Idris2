@@ -11,3 +11,11 @@ import Data.Linear.Notation
 export
 bimap : (a -@ x) -@ (b -@ y) -@ (LPair a b) -@ (LPair x y)
 bimap f g (a # b) = f a # g b
+
+export
+mapFst : (a -@ x) -@ LPair a b -@ LPair x b
+mapFst f = bimap f id
+
+export
+mapSnd : (b -@ y) -@ LPair a b -@ LPair a y
+mapSnd = bimap id
