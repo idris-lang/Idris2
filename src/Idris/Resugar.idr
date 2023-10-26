@@ -46,7 +46,7 @@ mkOp tm@(PApp fc (PApp _ (PRef opFC kn) x) y)
        -- to know if the name is an operator or not, it's enough to check
        -- that the fixity context contains the name `(++)`
        let rootName = UN (Basic (nameRoot raw))
-       let asOp = POp fc opFC (NotAutobind (unbracketApp x)) kn (unbracketApp y)
+       let asOp = POp fc opFC (NoBinder (unbracketApp x)) kn (unbracketApp y)
        if not (null (lookupName rootName (infixes syn)))
          then pure asOp
          else case dropNS raw of

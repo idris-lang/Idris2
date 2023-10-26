@@ -368,7 +368,7 @@ mutual
                        pure $
                          let fc = boundToFC fname (mergeBounds l r)
                              opFC = virtualiseFC fc -- already been highlighted: we don't care
-                         in POp fc opFC (NotAutobind l.val) (UN $ Basic "=") r.val
+                         in POp fc opFC (NoBinder l.val) (UN $ Basic "=") r.val
                else fail "= not allowed")
              <|>
              (do b <- bounds $ do
@@ -381,7 +381,7 @@ mutual
                  (op, r) <- pure b.val
                  let fc = boundToFC fname (mergeBounds l b)
                  let opFC = boundToFC fname op
-                 pure (POp fc opFC (NotAutobind l.val) op.val r))
+                 pure (POp fc opFC (NoBinder l.val) op.val r))
                <|> pure l.val
 
   opExpr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm

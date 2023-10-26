@@ -113,7 +113,7 @@ mkPrec Prefix = Prefix
 checkConflictingFixities : {auto s : Ref Syn SyntaxInfo} ->
                            {auto c : Ref Ctxt Defs} ->
                            (isPrefix : Bool) ->
-                           FC -> Name -> Core (OpPrec, BindingModifier)
+                           FC -> Name -> Core (OpPrec, Maybe FixityInfo)
 checkConflictingFixities isPrefix exprFC opn
   = do syn <- get Syn
        let op = nameRoot opn
@@ -124,14 +124,14 @@ checkConflictingFixities isPrefix exprFC opn
             -- characters, if not, it must be a backticked expression.
             (_, [], []) => if any isOpChar (fastUnpack op)
                               then throw (GenericMsg exprFC "Unknown operator '\{op}'")
-                              else pure (NonAssoc 1, NotBinding) -- Backticks are non associative by default
+                              else pure (NonAssoc 1, Nothing) -- Backticks are non associative by default
 
             --
             (True, ((fxName, fx) :: _), _) => do
                 -- in the prefix case, remove conflicts with infix (-)
                 let extraFixities = pre ++ (filter (\(nm, _) => not $ nameRoot nm == "-") inf)
                 unless (isCompatible fx extraFixities) $ warnConflict fxName extraFixities
-                pure (mkPrec fx.fix fx.precedence, NotBinding)
+                pure (mkPrec fx.fix fx.precedence, Just fx)
             -- Could not find any prefix operator fixities, there may still be conflicts with
             -- the infix ones.
             (True, [] , _) => throw (GenericMsg exprFC $ "'\{op}' is not a prefix operator")
@@ -140,7 +140,7 @@ checkConflictingFixities isPrefix exprFC opn
                 -- In the infix case, remove conflicts with prefix (-)
                 let extraFixities = (filter (\(nm, _) => not $ nm == UN (Basic "-")) pre) ++ inf
                 unless (isCompatible fx extraFixities) $ warnConflict fxName extraFixities
-                pure (mkPrec fx.fix fx.precedence, fx.bindingInfo)
+                pure (mkPrec fx.fix fx.precedence, Just fx)
             -- Could not find any infix operator fixities, there may be prefix ones
             (False, _, []) => throw (GenericMsg exprFC $ "'\{op}' is not an infix operator")
   where
@@ -162,34 +162,27 @@ checkConflictingFixities isPrefix exprFC opn
                    For example: %hide \{show fxName}
                    """
 
-checkConflictingBinding : FC -> (foundFixity : BindingModifier) -> (usage : OperatorLHSInfo a) -> Core ()
-checkConflictingBinding fc NotBinding (NotAutobind lhs) = pure ()
-checkConflictingBinding fc NotBinding (BindType name ty)
-    = throw $ GenericMsg fc "Operator \{show name} is regular but is used in a type-binding position"
-checkConflictingBinding fc NotBinding (BindExpr name expr)
-    = throw $ GenericMsg fc "Operator \{show name} is regular but is used in an automatically-binding position"
-checkConflictingBinding fc NotBinding (BindExplicitType name type expr)
-    = throw $ GenericMsg fc "Operator \{show name} is regular but is used in an automatically-binding position"
-checkConflictingBinding fc Autobind (NotAutobind lhs)
-    = throw $ GenericMsg fc "Operator is automatically-binding but is used as a regular operator"
-checkConflictingBinding fc Autobind (BindType name ty)
-    = throw $ GenericMsg fc "Operator is automatically-binding but is used in a type-binding position"
-checkConflictingBinding fc Autobind (BindExpr name expr) = pure ()
-checkConflictingBinding fc Autobind (BindExplicitType name type expr) = pure ()
-checkConflictingBinding fc Typebind (NotAutobind lhs)
-    = throw $ GenericMsg fc "Operator is type-binding but is used in as a regular operator"
-checkConflictingBinding fc Typebind (BindType name ty) = pure()
-checkConflictingBinding fc Typebind (BindExpr name expr)
-    = throw $ GenericMsg fc "Operator is type-binding but is used in an automatically-binding position"
-checkConflictingBinding fc Typebind (BindExplicitType name type expr)
-    = throw $ GenericMsg fc "Operator is type-binding but is used in an automatically-binding position"
+checkConflictingBinding : FC -> Name -> (foundFixity : Maybe FixityInfo) -> (usage : OperatorLHSInfo PTerm) -> (rhs : PTerm) -> Core ()
+checkConflictingBinding fc opName foundFixity use_site rhs
+    = if isCompatible foundFixity use_site
+         then pure ()
+         else throw $ OperatorBindingMismatch {print=byShow} fc foundFixity use_site opName rhs
+    where
+      isCompatible : Maybe FixityInfo -> OperatorLHSInfo PTerm -> Bool
+      isCompatible Nothing (NoBinder lhs) = True
+      isCompatible Nothing _ = False
+      isCompatible (Just fixInfo) (NoBinder lhs) = fixInfo.bindingInfo == NotBinding
+      isCompatible (Just fixInfo) (BindType name ty) = fixInfo.bindingInfo == Typebind
+      isCompatible (Just fixInfo) (BindExpr name expr) = fixInfo.bindingInfo == Autobind
+      isCompatible (Just fixInfo) (BindExplicitType name type expr)
+          = fixInfo.bindingInfo == Autobind
 
 toTokList : {auto s : Ref Syn SyntaxInfo} ->
             {auto c : Ref Ctxt Defs} ->
             PTerm -> Core (List (Tok (OpStr, Maybe (OperatorLHSInfo PTerm)) PTerm))
 toTokList (POp fc opFC l opn r)
-    = do (precInfo, bindInfo) <- checkConflictingFixities False fc opn
-         checkConflictingBinding opFC bindInfo l
+    = do (precInfo, fixInfo) <- checkConflictingFixities False fc opn
+         checkConflictingBinding opFC opn fixInfo l r
          rtoks <- toTokList r
          pure (Expr l.getLhs :: Op fc opFC (opn, Just l) precInfo :: rtoks)
 toTokList (PPrefixOp fc opFC opn arg)
@@ -350,12 +343,12 @@ mutual
                 [] =>
                     desugarB side ps
                         (PLam fc top Explicit (PRef fc (MN "arg" 0)) (PImplicit fc)
-                            (POp fc opFC (NotAutobind (PRef fc (MN "arg" 0))) op arg))
+                            (POp fc opFC (NoBinder (PRef fc (MN "arg" 0))) op arg))
                 (prec :: _) => desugarB side ps (PPrefixOp fc opFC op arg)
   desugarB side ps (PSectionR fc opFC arg op)
       = desugarB side ps
           (PLam fc top Explicit (PRef fc (MN "arg" 0)) (PImplicit fc)
-              (POp fc opFC (NotAutobind arg) op (PRef fc (MN "arg" 0))))
+              (POp fc opFC (NoBinder arg) op (PRef fc (MN "arg" 0))))
   desugarB side ps (PSearch fc depth) = pure $ ISearch fc depth
   desugarB side ps (PPrimVal fc (BI x))
       = case !fromIntegerName of
@@ -762,7 +755,7 @@ mutual
            r' <- desugarTree side ps r
            pure (IApp loc l' r')
   -- normal operators
-  desugarTree side ps (Infix loc opFC (op, Just (NotAutobind lhs)) l r)
+  desugarTree side ps (Infix loc opFC (op, Just (NoBinder lhs)) l r)
       = do l' <- desugarTree side ps l
            r' <- desugarTree side ps r
            pure (IApp loc (IApp loc (IVar opFC op) l') r')

@@ -30,63 +30,6 @@ import Parser.Lexer.Source
 %default covering
 
 public export
-data Fixity = InfixL | InfixR | Infix | Prefix
-
-export
-Show Fixity where
-  show InfixL = "infixl"
-  show InfixR = "infixr"
-  show Infix  = "infix"
-  show Prefix = "prefix"
-
-export
-Eq Fixity where
-  InfixL == InfixL = True
-  InfixR == InfixR = True
-  Infix == Infix = True
-  Prefix == Prefix = True
-  _ == _ = False
-
-
-public export
-data BindingModifier = NotBinding | Autobind | Typebind
-
-export
-Eq BindingModifier where
-  NotBinding == NotBinding = True
-  Autobind == Autobind = True
-  Typebind == Typebind = True
-  _ == _ = False
-
-export
-Show BindingModifier where
-  show NotBinding = "not binding"
-  show Typebind = "typebind"
-  show Autobind = "autobind"
-
--- A record to hold all the information about a fixity
-public export
-record FixityInfo where
-  constructor MkFixityInfo
-  fc : FC
-  vis : Visibility
-  bindingInfo : BindingModifier
-  fix : Fixity
-  precedence : Nat
-
-export
-Show FixityInfo where
-  show fx = "fc: \{show fx.fc}, visibility: \{show fx.vis}, binding: \{show fx.bindingInfo}, fixity: \{show fx.fix}, precedence: \{show fx.precedence}"
-
-export
-Eq FixityInfo where
-  x == y = x.fc == y.fc
-        && x.vis == y.vis
-        && x.bindingInfo == y.bindingInfo
-        && x.fix == y.fix
-        && x.precedence == y.precedence
-
-public export
 OpStr' : Type -> Type
 OpStr' nm = nm
 
@@ -97,48 +40,6 @@ OpStr = OpStr' Name
 public export
 data HidingDirective = HideName Name
                      | HideFixity Fixity Name
-
--- Left-hand-side information for operators, carries autobind information
--- an operator can either be
--- - not autobind, a regular operator
--- - binding types, such that (nm : ty ** fn nm) desugars into (ty ** \(nm : ty) => fn nm)
--- - binding expressing with an inferred type such that
---   (nm := exp ** fn nm) desugars into (exp ** \(nm : ?) => fn nm)
--- - binding both types and expression such that
---   (nm : ty := exp ** fn nm) desugars into (exp ** \(nm : ty) => fn nm)
-public export
-data OperatorLHSInfo : tm -> Type where
-  -- Traditional operator wihtout binding, carries the lhs
-  NotAutobind : (lhs : tm) -> OperatorLHSInfo tm
-  -- (nm : ty) ** fn x
-  BindType : (name : Name) -> (ty : tm) -> OperatorLHSInfo tm
-  -- (nm := exp) ** fn nm
-  BindExpr : (name : Name) -> (expr : tm) -> OperatorLHSInfo tm
-  -- (nm : ty := exp) ** fn nm
-  BindExplicitType : (name : Name) ->  (type, expr : tm) -> OperatorLHSInfo tm
-
-export
-Show (OperatorLHSInfo tm) where
-  show (NotAutobind lhs)                 = "Regular operator"
-  show (BindType name ty)                = "Type-binding operator"
-  show (BindExpr name expr)              = "Automatically-binding operator"
-  show (BindExplicitType name type expr) = "Automatically-binding operator (explicit)"
-
-%name OperatorLHSInfo opInfo
-
-export
-Functor OperatorLHSInfo where
-  map f (NotAutobind lhs) = NotAutobind $ f lhs
-  map f (BindType nm lhs) = BindType nm (f lhs)
-  map f (BindExpr nm lhs) = BindExpr nm (f lhs)
-  map f (BindExplicitType nm ty lhs) = BindExplicitType nm (f ty) (f lhs)
-
-export
-(.getLhs) : OperatorLHSInfo tm -> tm
-(.getLhs) (NotAutobind lhs) = lhs
-(.getLhs) (BindExpr _ lhs) = lhs
-(.getLhs) (BindType _ lhs) = lhs
-(.getLhs) (BindExplicitType _ _ lhs) = lhs
 
 mutual
 
@@ -869,7 +770,7 @@ parameters {0 nm : Type} (toName : nm -> Name)
   showPTermPrec d (PDotted _ p) = "." ++ showPTermPrec d p
   showPTermPrec _ (PImplicit _) = "_"
   showPTermPrec _ (PInfer _) = "?"
-  showPTermPrec d (POp _ _ (NotAutobind left) op right)
+  showPTermPrec d (POp _ _ (NoBinder left) op right)
         = showPTermPrec d left ++ " " ++ showOpPrec d op ++ " " ++ showPTermPrec d right
   showPTermPrec d (POp _ _ (BindType nm left) op right)
         = "(" ++ show nm ++ " : " ++ showPTermPrec d left ++ " " ++ showOpPrec d op ++ " " ++ showPTermPrec d right ++ ")"
