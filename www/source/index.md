@@ -1,6 +1,3 @@
-Welcome to Idris2!
-==================
-
 <style>
 body {
   width: 80%;
@@ -14,6 +11,10 @@ pre code {
   display: block;
 }
 </style>
+
+<img src="idris-logo-base.png" style="float:right" alt="Idris 2 logo"/>
+Welcome to Idris2!
+==================
 
 [Idris](https://www.idris-lang.org/) is a programming language designed to encourage
 _Type-Driven Development_.
@@ -76,6 +77,12 @@ can pass the `-p contrib` option to `idris2`.
 
 `linear` is the add-on to `base` you'll need for programs using linearity. Similarly to `contrib`,
 you will need to pass `-p linear` to `idris2` to use modules defined in it.
+
+#### [Network](https://idris-lang.github.io/Idris2/network)
+
+`network` is the add-on to `base` you'll need for programs using sockets.
+Similarly to `contrib` and `linear`, you will need to pass `-p network`
+to `idris2` to use modules defined in it.
 
 #### [Papers](https://idris-lang.github.io/Idris2/papers)
 
