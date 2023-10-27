@@ -19,30 +19,39 @@ data ArgOrder a =
   ||| freely intersperse options and non-options
   Permute                     |
   ||| wrap non-options into options
-  ReturnInOrder (String -> a)
+  ReturnInOrder (String -> a) |
+  ||| wrap non-options into options (or fail, if can't)
+  ReturnInOrder' (String -> Either String a)
 
 export
 Functor ArgOrder where
-  map _ RequireOrder      = RequireOrder
-  map _ Permute           = Permute
-  map f (ReturnInOrder g) = ReturnInOrder (f . g)
+  map _ RequireOrder       = RequireOrder
+  map _ Permute            = Permute
+  map f (ReturnInOrder g)  = ReturnInOrder (f . g)
+  map f (ReturnInOrder' g) = ReturnInOrder' (map f . g)
 
 ||| Describes whether an option takes an argument or not, and if so
 ||| how the argument is injected into a value of type `a`.
 public export
 data ArgDescr a =
    ||| no argument expected
-   NoArg                   a         |
+   NoArg                    a                       |
    ||| option requires argument
-   ReqArg (String       -> a) String |
+   ReqArg  (String       -> a) String               |
+   ||| option requires argument and may fail during parsing
+   ReqArg' (String       -> Either String a) String |
    ||| optional argument
-   OptArg (Maybe String -> a) String
+   OptArg  (Maybe String -> a) String               |
+   ||| optional argument and may fail during parsing
+   OptArg' (Maybe String -> Either String a) String
 
 export
 Functor ArgDescr where
-  map f (NoArg x)    = NoArg (f x)
-  map f (ReqArg g x) = ReqArg (f . g) x
-  map f (OptArg g x) = OptArg (f . g) x
+  map f (NoArg x)     = NoArg (f x)
+  map f (ReqArg g x)  = ReqArg (f . g) x
+  map f (ReqArg' g x) = ReqArg' (map f . g) x
+  map f (OptArg g x)  = OptArg (f . g) x
+  map f (OptArg' g x) = OptArg' (map f . g) x
 
 ||| Each `OptDescr` describes a single option.
 |||
@@ -76,19 +85,26 @@ data OptKind a
    | EndOfOpts                  --    end-of-options marker (i.e. "--")
    | OptErr    String           --    something went wrong...
 
+optOrErr : Either String a -> OptKind a
+optOrErr = either OptErr Opt
+
 --------------------------------------------------------------------------------
 --          Printing Usage Info
 --------------------------------------------------------------------------------
 
 fmtShort : ArgDescr a -> Char -> String
-fmtShort (NoArg  _   ) so = "-" ++ singleton so
-fmtShort (ReqArg _ ad) so = "-" ++ singleton so ++ " " ++ ad
-fmtShort (OptArg _ ad) so = "-" ++ singleton so ++ "[" ++ ad ++ "]"
+fmtShort (NoArg   _   ) so = "-" ++ singleton so
+fmtShort (ReqArg  _ ad) so = "-" ++ singleton so ++ " " ++ ad
+fmtShort (ReqArg' _ ad) so = "-" ++ singleton so ++ " " ++ ad
+fmtShort (OptArg  _ ad) so = "-" ++ singleton so ++ "[" ++ ad ++ "]"
+fmtShort (OptArg' _ ad) so = "-" ++ singleton so ++ "[" ++ ad ++ "]"
 
 fmtLong : ArgDescr a -> String -> String
-fmtLong (NoArg  _   ) lo = "--" ++ lo
-fmtLong (ReqArg _ ad) lo = "--" ++ lo ++ "=" ++ ad
-fmtLong (OptArg _ ad) lo = "--" ++ lo ++ "[=" ++ ad ++ "]"
+fmtLong (NoArg   _   ) lo = "--" ++ lo
+fmtLong (ReqArg  _ ad) lo = "--" ++ lo ++ "=" ++ ad
+fmtLong (ReqArg' _ ad) lo = "--" ++ lo ++ "=" ++ ad
+fmtLong (OptArg  _ ad) lo = "--" ++ lo ++ "[=" ++ ad ++ "]"
+fmtLong (OptArg' _ ad) lo = "--" ++ lo ++ "[=" ++ ad ++ "]"
 
 fmtOpt : OptDescr a -> List (String,String,String)
 fmtOpt (MkOpt sos los ad descr) =
@@ -174,7 +190,7 @@ longOpt ls rs descs =
       options   = if null exact then getWith isPrefixOf else exact
       ads       = map argDescr options
       os        = "--" ++ opt
-   in case (ads,unpack arg,rs) of
+   in case (ads, unpack arg, rs) of
            (_ :: _ :: _ , _      ,  r        ) => (errAmbig options os, r)
            ([NoArg  a  ], []     ,  r        ) => (Opt a, r)
            ([NoArg  a  ], c :: _ ,  r        ) => (errNoArg os,r)
@@ -185,9 +201,18 @@ longOpt ls rs descs =
            ([ReqArg f _], c :: xs,  r        ) => (Opt $ f (pack xs),r)
 --                        ^ this is known (but not proven) to be '='
 
+           ([ReqArg' _ d], []     ,  []       ) => (errReq d os,[])
+           ([ReqArg' f _], []     ,  (r::rest)) => (optOrErr $ f r, rest)
+           ([ReqArg' f _], c :: xs,  r        ) => (optOrErr $ f (pack xs) ,r)
+--                         ^ this is known (but not proven) to be '='
+
            ([OptArg f _], []     ,  r        ) => (Opt $ f Nothing,r)
            ([OptArg f _], c :: xs,  r        ) => (Opt . f . Just $ pack xs,r)
 --                        ^ this is known (but not proven) to be '='
+
+           ([OptArg' f _], []     ,  r        ) => (optOrErr $ f Nothing, r)
+           ([OptArg' f _], c :: xs,  r        ) => (optOrErr . f . Just $ pack xs, r)
+--                         ^ this is known (but not proven) to be '='
 
            ([]          , _      ,  r        ) => (UnreqOpt $ "--" ++ ls,r)
 
@@ -198,16 +223,21 @@ shortOpt y ys rs descs =
       mkOs    = strCons '-'
       os      = mkOs (singleton y)
    in case (ads,ys,rs) of
-           (_ :: _ :: _ , _ ,  r        ) => (errAmbig options os, r)
-           ([NoArg  a  ], "",  r        ) => (Opt a,r)
-           ([NoArg  a  ], s ,  r        ) => (Opt a, mkOs s :: r)
-           ([ReqArg _ d], "",  []       ) => (errReq d os, [])
-           ([ReqArg f _], "",  (r::rest)) => (Opt $ f r, rest)
-           ([ReqArg f _], s ,  r        ) => (Opt $ f s, r)
-           ([OptArg f _], "",  r        ) => (Opt $ f Nothing, r)
-           ([OptArg f _], s ,  r        ) => (Opt . f $ Just s, r)
-           ([]          , "",  r        ) => (UnreqOpt os, r)
-           ([]          , s ,  r        ) => (UnreqOpt os, mkOs s :: r)
+           (_ :: _ :: _  , _ ,  r        ) => (errAmbig options os, r)
+           ([NoArg   a  ], "",  r        ) => (Opt a,r)
+           ([NoArg   a  ], s ,  r        ) => (Opt a, mkOs s :: r)
+           ([ReqArg  _ d], "",  []       ) => (errReq d os, [])
+           ([ReqArg  f _], "",  (r::rest)) => (Opt $ f r, rest)
+           ([ReqArg  f _], s ,  r        ) => (Opt $ f s, r)
+           ([ReqArg' _ d], "",  []       ) => (errReq d os, [])
+           ([ReqArg' f _], "",  (r::rest)) => (optOrErr $ f r, rest)
+           ([ReqArg' f _], s ,  r        ) => (optOrErr $ f s, r)
+           ([OptArg  f _], "",  r        ) => (Opt $ f Nothing, r)
+           ([OptArg  f _], s ,  r        ) => (Opt . f $ Just s, r)
+           ([OptArg' f _], "",  r        ) => (optOrErr $ f Nothing, r)
+           ([OptArg' f _], s ,  r        ) => (optOrErr . f $ Just s, r)
+           ([]           , "",  r        ) => (UnreqOpt os, r)
+           ([]           , s ,  r        ) => (UnreqOpt os, mkOs s :: r)
 
 
 -- take a look at the next cmd line arg and decide what to do with it
@@ -236,26 +266,33 @@ getOpt ordering descs (arg::args)   =
   let (opt,rest) = getNext (unpack arg) args descs
       res        = getOpt ordering descs (assert_smaller args rest)
    in case (opt,ordering) of
-           (Opt x, _)                   => {options $= (x::)} res
-           (UnreqOpt x, _)              => {unrecognized $= (x::)} res
-           (NonOpt x, RequireOrder)     => MkResult [] (x::rest) [] []
-           (NonOpt x, Permute)          => {nonOptions $= (x::)} res
-           (NonOpt x, ReturnInOrder f)  => {options $= (f x::)} res
-           (EndOfOpts, RequireOrder)    => MkResult [] rest [] []
-           (EndOfOpts, Permute)         => MkResult [] rest [] []
-           (EndOfOpts, ReturnInOrder f) => MkResult (map f rest) [] [] []
-           (OptErr e, _)                => {errors $= (e::)} res
+           (Opt x, _)                    => {options $= (x::)} res
+           (UnreqOpt x, _)               => {unrecognized $= (x::)} res
+           (NonOpt x, RequireOrder)      => MkResult [] (x::rest) [] []
+           (NonOpt x, Permute)           => {nonOptions $= (x::)} res
+           (NonOpt x, ReturnInOrder f)   => {options $= (f x::)} res
+           (NonOpt x, ReturnInOrder' f)  => updOptOrErr (f x) res
+           (EndOfOpts, RequireOrder)     => MkResult [] rest [] []
+           (EndOfOpts, Permute)          => MkResult [] rest [] []
+           (EndOfOpts, ReturnInOrder f)  => MkResult (map f rest) [] [] []
+           (EndOfOpts, ReturnInOrder' f) => parseRest f rest
+           (OptErr e, _)                 => {errors $= (e::)} res
+  where
+    updOptOrErr : Either String a -> Result a -> Result a
+    updOptOrErr (Left e)  = {errors $= (e::)}
+    updOptOrErr (Right o) = {options $= (o::)}
+
+    parseRest : (String -> Either String a) -> (rest : List String) -> Result a
+    parseRest f rest =
+      these' [] [] (\es, os => MkResult os [] [] es) $
+        for rest $ fromEither . mapFst pure . f
 
 ||| Parse the command-line like `getOpt`, but allow each option parser to do
 ||| additional work in some `Applicative`.
 |||
-||| This allows, in particular, to fail shortly with `Maybe` or `Either`,
-||| or so record data during parsing using `MonadWriter`.
-|||
 ||| Place, notice that options parsing is done first, i.e. if you use
-||| applicatives like `Maybe` or `Either`, you will lose all errors reported
-||| inside the `Result` type in case of any option parsing fails.
-||| See `getOptE` in case can't afford losing any type of errors.
+||| applicatives that can have a failure semantics, you will lose all errors
+||| reported inside the `Result` type in case of any option parsing fails.
 export
 getOpt' :  Applicative f
         => ArgOrder (f a)
@@ -265,21 +302,3 @@ getOpt' :  Applicative f
 getOpt' ao os args = do
   let MkResult opts nonOpts unrec errs = getOpt ao os args
   sequence opts <&> \opts' => MkResult opts' nonOpts unrec errs
-
-||| Process the command-line, when each option parsing function can return
-||| with an error result
-|||
-||| Returns the best it could parse as `Result a` and a list of parse errors
-||| `List e`. If no parse errors, the list would be empty.
-||| Notice, that empty parse errors list does not mean that `errors` field
-||| inside the `Result` record would be empty; those are another type of
-||| errors, related to options themselves.
-export
-getOptE :  ArgOrder (Either e a)
-        -> List (OptDescr $ Either e a)
-        -> (args : List String)
-        -> (List e, Result a)
-getOptE ao os args = do
-  let MkResult opts nonOpts unrec errs = getOpt ao os args
-  these' [] [] (\es, os => (es, MkResult os nonOpts unrec errs)) $
-    traverse (fromEither . mapFst pure) opts

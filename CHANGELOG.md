@@ -20,6 +20,9 @@
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
 
+* Existing `System.Console.GetOpt` was extended to support errors during options
+  parsing in a backward-compatible way.
+
 ## v0.7.0
 
 ### Language changes
