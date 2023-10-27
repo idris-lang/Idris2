@@ -1,5 +1,8 @@
 #!/bin/sh
 
+set -eu
+set -o pipefail
+
 prefix="../../libs"
 
 find "$prefix" -name "*.idr" >tmp
