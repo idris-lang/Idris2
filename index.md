@@ -120,6 +120,12 @@ you will need to pass `-p linear` to `idris2` to use modules defined in it.
 Similarly to `contrib` and `linear`, you will need to pass `-p network`
 to `idris2` to use modules defined in it.
 
+#### [Test](https://idris-lang.github.io/Idris2/test)
+
+`test` is the add-on to `base` you'll need to write test suites.
+Similarly to other add-ons, you will need to pass `-p test` to
+`idris2` to use modules defined in it.
+
 #### [Papers](https://idris-lang.github.io/Idris2/papers)
 
 `papers` is not installed by default.
