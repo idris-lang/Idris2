@@ -1,4 +1,7 @@
-#!/bin/sh
+#!/bin/bash
+
+set -eu
+set -o pipefail
 
 prefix="../../libs"
 
