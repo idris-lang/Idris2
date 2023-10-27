@@ -35,6 +35,8 @@ modules = Control.ANSI,
 
           Data.Int.Order,
 
+          Data.IOMatrix,
+
           Data.Late,
 
           Data.Linear.Array,
