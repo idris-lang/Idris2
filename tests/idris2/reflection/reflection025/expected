@@ -43,7 +43,7 @@ LOG elab:0: current fn: [< CurrFn.f]
 LOG elab:0: current fn: [< CurrFn.f']
 LOG elab:0: current fn: [< CurrFn.f'']
 LOG elab:0: current fn: [< CurrFn.f''', CurrFn.case block in "f'''"]
-LOG elab:0: current fn: [< CurrFn.n, CurrFn.4799:2662:f]
+LOG elab:0: current fn: [< CurrFn.n, CurrFn.4800:2662:f]
 LOG elab:0: current fn: [< CurrFn.w, CurrFn.with block in "w"]
 LOG elab:0: current fn: [< CurrFn.w, CurrFn.with block in "w"]
 ------------
@@ -53,7 +53,7 @@ LOG elab:0: === current fn: [< RefDefsDeep.f] ===
 LOG elab:0: === current fn: [< RefDefsDeep.f'] ===
 LOG elab:0: === current fn: [< RefDefsDeep.f''] ===
 LOG elab:0: === current fn: [< RefDefsDeep.f''', RefDefsDeep.case block in "f'''"] ===
-LOG elab:0: === current fn: [< RefDefsDeep.n, RefDefsDeep.4813:2927:f] ===
+LOG elab:0: === current fn: [< RefDefsDeep.n, RefDefsDeep.4814:2927:f] ===
 LOG elab:0: === current fn: [< RefDefsDeep.w, RefDefsDeep.with block in "w"] ===
 LOG elab:0: === current fn: [< RefDefsDeep.w, RefDefsDeep.with block in "w"] ===
 LOG elab:0: Names `RefDefsDeep.f` refers to:
@@ -174,7 +174,7 @@ LOG elab:0:   - Prelude.Basics.True
 LOG elab:0:   - Prelude.Basics.False
 LOG elab:0:   - Builtin.assert_total
 LOG elab:0:   - Builtin.MkUnit
-LOG elab:0:   - RefDefsDeep.4813:2927:f
+LOG elab:0:   - RefDefsDeep.4814:2927:f
 LOG elab:0:   - RefDefsDeep.case block in "n,f"
 LOG elab:0: 
 LOG elab:0: Names `RefDefsDeep.w` refers to:
