@@ -245,6 +245,8 @@ namespace Show
                   let MW = rig
                     | _ => throwError (NotAnUnconstrainedValue rig)
 
+                  -- try to reduce the type before analysis
+                  ty <- try (check {expected=Type} ty >>= \x => quote x) (pure ty)
                   res <- withError (WhenCheckingArg (mapTTImp cleanup ty)) $ do
                            typeView f (paraz <>> []) ty
                   pure $ Just (showPrecFun fc mutualWith res v)
