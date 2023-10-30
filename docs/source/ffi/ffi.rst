@@ -402,8 +402,12 @@ We can define a type for accessing ``point`` in Idris by importing
     freePoint : Point -> IO ()
     freePoint p = primIO $ prim__freePoint p
 
-The ``Point`` type in Idris now corresponds to ``point*`` in C. Fields can
-be read and written using the following, also from ``System.FFI``:
+The ``Point`` type in Idris now corresponds to ``point*`` in C.
+
+**Important**: ``Struct`` types must define all fields of the C ``struct``.
+Partial definitions will fail with memory access errors.
+
+Fields can be read and written using the following, also from ``System.FFI``:
 
 .. code-block:: idris
 
