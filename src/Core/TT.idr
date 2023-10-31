@@ -2,8 +2,11 @@ module Core.TT
 
 import public Core.FC
 import public Core.Name
-import public Core.TT.Var
+import public Core.Name.Scoped
+import public Core.TT.Binder
 import public Core.TT.Primitive
+import public Core.TT.Var
+import public Core.TT.Term
 
 import Idris.Pretty.Annotations
 
@@ -18,7 +21,12 @@ import Libraries.Data.String.Extra
 
 import public Algebra
 
+import public Libraries.Data.SnocList.SizeOf
+
 %default covering
+
+------------------------------------------------------------------------
+-- Kinded names (used for unelaboration and pretty printing)
 
 public export
 record KindedName where
@@ -46,12 +54,9 @@ covering
   showPrec d (MkKindedName nm fn rn) =
     showCon d "MkKindedName" $ showArg nm ++ showArg @{Raw} fn ++ showArg @{Raw} rn
 
-namespace CList
-  -- A list correspoding to another list
-  public export
-  data CList : List a -> Type -> Type where
-       Nil : CList [] ty
-       (::) : (x : ty) -> CList cs ty -> CList (c :: cs) ty
+
+------------------------------------------------------------------------
+-- Visibility
 
 public export
 data Visibility = Private | Export | Public
@@ -176,7 +181,7 @@ Pretty Void Terminating where
 public export
 data Covering
        = IsCovering
-       | MissingCases (List (Term [<]))
+       | MissingCases (List ClosedTerm)
        | NonCoveringCall (List Name)
 
 export
@@ -236,277 +241,6 @@ isTotal = MkTotality Unchecked IsCovering
 export
 notCovering : Totality
 notCovering = MkTotality Unchecked (MissingCases [])
-
-export
-insertNames : SizeOf outer -> SizeOf ns ->
-              Term (outer ++ inner) ->
-              Term (outer ++ (ns ++ inner))
-insertNames out ns (Local fc r idx prf)
-   = let MkNVar prf' = insertNVarNames out ns (MkNVar prf) in
-     Local fc r _ prf'
-insertNames out ns (Ref fc nt name) = Ref fc nt name
-insertNames out ns (Meta fc name idx args)
-    = Meta fc name idx (map (insertNames out ns) args)
-insertNames out ns (Bind fc x b scope)
-    = Bind fc x (assert_total (map (insertNames out ns) b))
-           (insertNames (suc out) ns scope)
-insertNames out ns (App fc fn arg)
-    = App fc (insertNames out ns fn) (insertNames out ns arg)
-insertNames out ns (As fc s as tm)
-    = As fc s (insertNames out ns as) (insertNames out ns tm)
-insertNames out ns (TDelayed fc r ty) = TDelayed fc r (insertNames out ns ty)
-insertNames out ns (TDelay fc r ty tm)
-    = TDelay fc r (insertNames out ns ty) (insertNames out ns tm)
-insertNames out ns (TForce fc r tm) = TForce fc r (insertNames out ns tm)
-insertNames out ns (PrimVal fc c) = PrimVal fc c
-insertNames out ns (Erased fc Impossible) = Erased fc Impossible
-insertNames out ns (Erased fc Placeholder) = Erased fc Placeholder
-insertNames out ns (Erased fc (Dotted t)) = Erased fc (Dotted (insertNames out ns t))
-insertNames out ns (TType fc u) = TType fc u
-
-export
-Weaken Term where
-  weakenNs p tm = insertNames zero p tm
-
-export
-Weaken Var where
-  weaken = later
-
-export
-varExtend : IsVar x idx xs -> IsVar x idx (xs ++ ys)
--- What Could Possibly Go Wrong?
--- This relies on the runtime representation of the term being the same
--- after embedding! It is just an identity function at run time, though, and
--- we don't need its definition at compile time, so let's do it...
-varExtend p = believe_me p
-
-export
-embed : Term vars -> Term (vars ++ more)
-embed tm = believe_me tm
-
-public export
-ClosedTerm : Type
-ClosedTerm = Term []
-
-export
-apply : FC -> Term vars -> List (Term vars) -> Term vars
-apply loc fn [] = fn
-apply loc fn (a :: args) = apply loc (App loc fn a) args
-
--- Creates a chain of `App` nodes, each with its own file context
-export
-applyWithFC : Term vars -> List (FC, Term vars) -> Term vars
-applyWithFC fn [] = fn
-applyWithFC fn ((fc, arg) :: args) = applyWithFC (App fc fn arg) args
-
--- Build a simple function type
-export
-fnType : {vars : _} -> FC -> Term vars -> Term vars -> Term vars
-fnType fc arg scope = Bind emptyFC (MN "_" 0) (Pi fc top Explicit arg) (weaken scope)
-
-export
-linFnType : {vars : _} -> FC -> Term vars -> Term vars -> Term vars
-linFnType fc arg scope = Bind emptyFC (MN "_" 0) (Pi fc linear Explicit arg) (weaken scope)
-
-export
-getFnArgs : Term vars -> (Term vars, List (Term vars))
-getFnArgs tm = getFA [] tm
-  where
-    getFA : List (Term vars) -> Term vars ->
-            (Term vars, List (Term vars))
-    getFA args (App _ f a) = getFA (a :: args) f
-    getFA args tm = (tm, args)
-
-export
-getFn : Term vars -> Term vars
-getFn (App _ f a) = getFn f
-getFn tm = tm
-
-export
-getArgs : Term vars -> (List (Term vars))
-getArgs = snd . getFnArgs
-
-public export
-data CompatibleVars : List Name -> List Name -> Type where
-     CompatPre : CompatibleVars xs xs
-     CompatExt : CompatibleVars xs ys -> CompatibleVars (n :: xs) (m :: ys)
-
-export
-areVarsCompatible : (xs : List Name) -> (ys : List Name) ->
-                    Maybe (CompatibleVars xs ys)
-areVarsCompatible [] [] = pure CompatPre
-areVarsCompatible (x :: xs) (y :: ys)
-    = do compat <- areVarsCompatible xs ys
-         pure (CompatExt compat)
-areVarsCompatible _ _ = Nothing
-
-extendCompats : (args : List Name) ->
-                CompatibleVars xs ys ->
-                CompatibleVars (args ++ xs) (args ++ ys)
-extendCompats [] prf = prf
-extendCompats (x :: xs) prf = CompatExt (extendCompats xs prf)
-
-renameLocalRef : CompatibleVars xs ys ->
-                 {idx : Nat} ->
-                 (0 p : IsVar name idx xs) ->
-                 Var ys
-renameLocalRef prf p = believe_me (MkVar p)
--- renameLocalRef CompatPre First = (MkVar First)
--- renameLocalRef (CompatExt x) First = (MkVar First)
--- renameLocalRef CompatPre (Later p) = (MkVar (Later p))
--- renameLocalRef (CompatExt y) (Later p)
---     = let (MkVar p') = renameLocalRef y p in MkVar (Later p')
-
-renameVarList : CompatibleVars xs ys -> Var xs -> Var ys
-renameVarList prf (MkVar p) = renameLocalRef prf p
-
-export
-renameVars : CompatibleVars xs ys -> Term xs -> Term ys
-renameVars compat tm = believe_me tm -- no names in term, so it's identity
--- This is how we would define it:
--- renameVars CompatPre tm = tm
--- renameVars prf (Local fc r idx vprf)
---     = let MkVar vprf' = renameLocalRef prf vprf in
---           Local fc r _ vprf'
--- renameVars prf (Ref fc x name) = Ref fc x name
--- renameVars prf (Meta fc n i args)
---     = Meta fc n i (map (renameVars prf) args)
--- renameVars prf (Bind fc x b scope)
---     = Bind fc x (map (renameVars prf) b) (renameVars (CompatExt prf) scope)
--- renameVars prf (App fc fn arg)
---     = App fc (renameVars prf fn) (renameVars prf arg)
--- renameVars prf (As fc s as tm)
---     = As fc s (renameVars prf as) (renameVars prf tm)
--- renameVars prf (TDelayed fc r ty) = TDelayed fc r (renameVars prf ty)
--- renameVars prf (TDelay fc r ty tm)
---     = TDelay fc r (renameVars prf ty) (renameVars prf tm)
--- renameVars prf (TForce fc r x) = TForce fc r (renameVars prf x)
--- renameVars prf (PrimVal fc c) = PrimVal fc c
--- renameVars prf (Erased fc i) = Erased fc i
--- renameVars prf (TType fc) = TType fc
-
-export
-renameTop : (m : Name) -> Term (n :: vars) -> Term (m :: vars)
-renameTop m tm = renameVars (CompatExt CompatPre) tm
-
-public export
-data SubVars : List Name -> List Name -> Type where
-     SubRefl  : SubVars xs xs
-     DropCons : SubVars xs ys -> SubVars xs (y :: ys)
-     KeepCons : SubVars xs ys -> SubVars (x :: xs) (x :: ys)
-
-export
-subElem : {idx : Nat} -> (0 p : IsVar name idx xs) ->
-          SubVars ys xs -> Maybe (Var ys)
-subElem prf SubRefl = Just (MkVar prf)
-subElem First (DropCons p) = Nothing
-subElem (Later x) (DropCons p)
-    = do MkVar prf' <- subElem x p
-         Just (MkVar prf')
-subElem First (KeepCons p) = Just (MkVar First)
-subElem (Later x) (KeepCons p)
-    = do MkVar prf' <- subElem x p
-         Just (MkVar (Later prf'))
-
-export
-subExtend : (ns : List Name) -> SubVars xs ys -> SubVars (ns ++ xs) (ns ++ ys)
-subExtend [] sub = sub
-subExtend (x :: xs) sub = KeepCons (subExtend xs sub)
-
-export
-subInclude : (ns : List Name) -> SubVars xs ys -> SubVars (xs ++ ns) (ys ++ ns)
-subInclude ns SubRefl = SubRefl
-subInclude ns (DropCons p) = DropCons (subInclude ns p)
-subInclude ns (KeepCons p) = KeepCons (subInclude ns p)
-
-mutual
-  export
-  shrinkPi : PiInfo (Term vars) -> SubVars newvars vars ->
-             Maybe (PiInfo (Term newvars))
-  shrinkPi Explicit prf = pure Explicit
-  shrinkPi Implicit prf = pure Implicit
-  shrinkPi AutoImplicit prf = pure AutoImplicit
-  shrinkPi (DefImplicit t) prf = pure (DefImplicit !(shrinkTerm t prf))
-
-  export
-  shrinkBinder : Binder (Term vars) -> SubVars newvars vars ->
-                 Maybe (Binder (Term newvars))
-  shrinkBinder (Lam fc c p ty) prf
-      = Just (Lam fc c !(shrinkPi p prf) !(shrinkTerm ty prf))
-  shrinkBinder (Let fc c val ty) prf
-      = Just (Let fc c !(shrinkTerm val prf) !(shrinkTerm ty prf))
-  shrinkBinder (Pi fc c p ty) prf
-      = Just (Pi fc c !(shrinkPi p prf) !(shrinkTerm ty prf))
-  shrinkBinder (PVar fc c p ty) prf
-      = Just (PVar fc c !(shrinkPi p prf) !(shrinkTerm ty prf))
-  shrinkBinder (PLet fc c val ty) prf
-      = Just (PLet fc c !(shrinkTerm val prf) !(shrinkTerm ty prf))
-  shrinkBinder (PVTy fc c ty) prf
-      = Just (PVTy fc c !(shrinkTerm ty prf))
-
-  export
-  shrinkVar : Var vars -> SubVars newvars vars -> Maybe (Var newvars)
-  shrinkVar (MkVar x) prf = subElem x prf
-
-  export
-  shrinkTerm : Term vars -> SubVars newvars vars -> Maybe (Term newvars)
-  shrinkTerm (Local fc r idx loc) prf = (\(MkVar loc') => Local fc r _ loc') <$> subElem loc prf
-  shrinkTerm (Ref fc x name) prf = Just (Ref fc x name)
-  shrinkTerm (Meta fc x y xs) prf
-     = do xs' <- traverse (\x => shrinkTerm x prf) xs
-          Just (Meta fc x y xs')
-  shrinkTerm (Bind fc x b scope) prf
-     = Just (Bind fc x !(shrinkBinder b prf) !(shrinkTerm scope (KeepCons prf)))
-  shrinkTerm (App fc fn arg) prf
-     = Just (App fc !(shrinkTerm fn prf) !(shrinkTerm arg prf))
-  shrinkTerm (As fc s as tm) prf
-     = Just (As fc s !(shrinkTerm as prf) !(shrinkTerm tm prf))
-  shrinkTerm (TDelayed fc x y) prf
-     = Just (TDelayed fc x !(shrinkTerm y prf))
-  shrinkTerm (TDelay fc x t y) prf
-     = Just (TDelay fc x !(shrinkTerm t prf) !(shrinkTerm y prf))
-  shrinkTerm (TForce fc r x) prf
-     = Just (TForce fc r !(shrinkTerm x prf))
-  shrinkTerm (PrimVal fc c) prf = Just (PrimVal fc c)
-  shrinkTerm (Erased fc Placeholder) prf = Just (Erased fc Placeholder)
-  shrinkTerm (Erased fc Impossible) prf = Just (Erased fc Impossible)
-  shrinkTerm (Erased fc (Dotted t)) prf = Erased fc . Dotted <$> shrinkTerm t prf
-  shrinkTerm (TType fc u) prf = Just (TType fc u)
-
-varEmbedSub : SubVars small vars ->
-              {idx : Nat} -> (0 p : IsVar n idx small) ->
-              Var vars
-varEmbedSub SubRefl y = MkVar y
-varEmbedSub (DropCons prf) y
-    = let MkVar y' = varEmbedSub prf y in
-          MkVar (Later y')
-varEmbedSub (KeepCons prf) First = MkVar First
-varEmbedSub (KeepCons prf) (Later p)
-    = let MkVar p' = varEmbedSub prf p in
-          MkVar (Later p')
-
-export
-embedSub : SubVars small vars -> Term small -> Term vars
-embedSub sub (Local fc x idx y)
-    = let MkVar y' = varEmbedSub sub y in Local fc x _ y'
-embedSub sub (Ref fc x name) = Ref fc x name
-embedSub sub (Meta fc x y xs)
-    = Meta fc x y (map (embedSub sub) xs)
-embedSub sub (Bind fc x b scope)
-    = Bind fc x (map (embedSub sub) b) (embedSub (KeepCons sub) scope)
-embedSub sub (App fc fn arg)
-    = App fc (embedSub sub fn) (embedSub sub arg)
-embedSub sub (As fc s nm pat)
-    = As fc s (embedSub sub nm) (embedSub sub pat)
-embedSub sub (TDelayed fc x y) = TDelayed fc x (embedSub sub y)
-embedSub sub (TDelay fc x t y)
-    = TDelay fc x (embedSub sub t) (embedSub sub y)
-embedSub sub (TForce fc r x) = TForce fc r (embedSub sub x)
-embedSub sub (PrimVal fc c) = PrimVal fc c
-embedSub sub (Erased fc Impossible) = Erased fc Impossible
-embedSub sub (Erased fc Placeholder) = Erased fc Placeholder
-embedSub sub (Erased fc (Dotted t)) = Erased fc (Dotted (embedSub sub t))
-embedSub sub (TType fc u) = TType fc u
 
 namespace Bounds
   public export
@@ -769,11 +503,6 @@ export
 getRefs : (aTotal : Name) -> Term vars -> NameMap Bool
 getRefs at tm = addRefs False at empty tm
 
-
-export
-nameAt : {vars : _} -> {idx : Nat} -> (0 p : IsVar n idx vars) -> Name
-nameAt {vars = n :: ns} First     = n
-nameAt {vars = n :: ns} (Later p) = nameAt p
 
 export
 withPiInfo : Show t => PiInfo t -> String -> String

@@ -5,11 +5,14 @@ import Algebra
 import Core.FC
 
 import Core.Name
+import Core.Name.Scoped
 import Core.TT.Binder
-import Core.TT.Var
 import Core.TT.Primitive
+import Core.TT.Var
 
 import Data.List
+
+import Libraries.Data.SnocList.SizeOf
 
 %default total
 
@@ -87,8 +90,12 @@ Traversable WhyErased where
   traverse f Impossible = pure Impossible
   traverse f (Dotted x) = Dotted <$> f x
 
+
+------------------------------------------------------------------------
+-- Core Terms
+
 public export
-data Term : SnocList Name -> Type where
+data Term : Scoped where
      Local : FC -> (isLet : Maybe Bool) ->
              (idx : Nat) -> (0 p : IsVar name idx vars) -> Term vars
      Ref : FC -> NameType -> (name : Name) -> Term vars
@@ -118,6 +125,203 @@ data Term : SnocList Name -> Type where
 
 %name Term t, u
 
+public export
+ClosedTerm : Type
+ClosedTerm = Term [<]
+
+------------------------------------------------------------------------
+-- Weakening
+
+export covering
+insertNames : SizeOf inner -> SizeOf ns ->
+              Term (outer ++ inner) ->
+              Term ((outer ++ ns) ++ inner)
+insertNames out ns (Local fc r idx prf)
+   = let MkNVar prf' = insertNVarNames out ns (MkNVar prf) in
+     Local fc r _ prf'
+insertNames out ns (Ref fc nt name) = Ref fc nt name
+insertNames out ns (Meta fc name idx args)
+    = Meta fc name idx (map (insertNames out ns) args)
+insertNames out ns (Bind fc x b scope)
+    = Bind fc x (assert_total (map (insertNames out ns) b))
+           (insertNames (suc out) ns scope)
+insertNames out ns (App fc fn arg)
+    = App fc (insertNames out ns fn) (insertNames out ns arg)
+insertNames out ns (As fc s as tm)
+    = As fc s (insertNames out ns as) (insertNames out ns tm)
+insertNames out ns (TDelayed fc r ty) = TDelayed fc r (insertNames out ns ty)
+insertNames out ns (TDelay fc r ty tm)
+    = TDelay fc r (insertNames out ns ty) (insertNames out ns tm)
+insertNames out ns (TForce fc r tm) = TForce fc r (insertNames out ns tm)
+insertNames out ns (PrimVal fc c) = PrimVal fc c
+insertNames out ns (Erased fc Impossible) = Erased fc Impossible
+insertNames out ns (Erased fc Placeholder) = Erased fc Placeholder
+insertNames out ns (Erased fc (Dotted t)) = Erased fc (Dotted (insertNames out ns t))
+insertNames out ns (TType fc u) = TType fc u
+
+export
+compatTerm : CompatibleVars xs ys -> Term xs -> Term ys
+compatTerm compat tm = believe_me tm -- no names in term, so it's identity
+-- This is how we would define it:
+-- compatTerm CompatPre tm = tm
+-- compatTerm prf (Local fc r idx vprf)
+--     = let MkVar vprf' = compatIsVar prf vprf in
+--           Local fc r _ vprf'
+-- compatTerm prf (Ref fc x name) = Ref fc x name
+-- compatTerm prf (Meta fc n i args)
+--     = Meta fc n i (map (compatTerm prf) args)
+-- compatTerm prf (Bind fc x b scope)
+--     = Bind fc x (map (compatTerm prf) b) (compatTerm (CompatExt prf) scope)
+-- compatTerm prf (App fc fn arg)
+--     = App fc (compatTerm prf fn) (compatTerm prf arg)
+-- compatTerm prf (As fc s as tm)
+--     = As fc s (compatTerm prf as) (compatTerm prf tm)
+-- compatTerm prf (TDelayed fc r ty) = TDelayed fc r (compatTerm prf ty)
+-- compatTerm prf (TDelay fc r ty tm)
+--     = TDelay fc r (compatTerm prf ty) (compatTerm prf tm)
+-- compatTerm prf (TForce fc r x) = TForce fc r (compatTerm prf x)
+-- compatTerm prf (PrimVal fc c) = PrimVal fc c
+-- compatTerm prf (Erased fc i) = Erased fc i
+-- compatTerm prf (TType fc) = TType fc
+
+
+mutual
+  export
+  strengthenPi : Strengthenable (PiInfo . Term)
+  strengthenPi pinfo th
+    = assert_total
+    $ traverse (\ t => strengthenTerm t th) pinfo
+
+  export
+  strengthenBinder : Strengthenable (Binder . Term)
+  strengthenBinder binder th
+    = assert_total
+    $ traverse (\ t => strengthenTerm t th) binder
+
+  export
+  strengthenTerms : Strengthenable (List . Term)
+  strengthenTerms ts th
+    = assert_total
+    $ traverse (\ t => strengthenTerm t th) ts
+
+  strengthenTerm : Strengthenable Term
+  strengthenTerm (Local fc r idx loc) prf
+    = do MkVar loc' <- strengthenIsVar loc prf
+         pure (Local fc r _ loc')
+  strengthenTerm (Ref fc x name) prf = Just (Ref fc x name)
+  strengthenTerm (Meta fc x y xs) prf
+     = do Just (Meta fc x y !(strengthenTerms xs prf))
+  strengthenTerm (Bind fc x b scope) prf
+     = Just (Bind fc x !(strengthenBinder b prf) !(strengthenTerm scope (keep prf)))
+  strengthenTerm (App fc fn arg) prf
+     = Just (App fc !(strengthenTerm fn prf) !(strengthenTerm arg prf))
+  strengthenTerm (As fc s as tm) prf
+     = Just (As fc s !(strengthenTerm as prf) !(strengthenTerm tm prf))
+  strengthenTerm (TDelayed fc x y) prf
+     = Just (TDelayed fc x !(strengthenTerm y prf))
+  strengthenTerm (TDelay fc x t y) prf
+     = Just (TDelay fc x !(strengthenTerm t prf) !(strengthenTerm y prf))
+  strengthenTerm (TForce fc r x) prf
+     = Just (TForce fc r !(strengthenTerm x prf))
+  strengthenTerm (PrimVal fc c) prf = Just (PrimVal fc c)
+  strengthenTerm (Erased fc Placeholder) prf = Just (Erased fc Placeholder)
+  strengthenTerm (Erased fc Impossible) prf = Just (Erased fc Impossible)
+  strengthenTerm (Erased fc (Dotted t)) prf = Erased fc . Dotted <$> strengthenTerm t prf
+  strengthenTerm (TType fc u) prf = Just (TType fc u)
+
+
+mutual
+  export
+  thinPi : Thinnable (PiInfo . Term)
+  thinPi pinfo th = assert_total $ map (\ t => thinTerm t th) pinfo
+
+  export
+  thinBinder : Thinnable (Binder . Term)
+  thinBinder binder th = assert_total $ map (\ t => thinTerm t th) binder
+
+  export
+  thinTerms : Thinnable (List . Term)
+  thinTerms ts th = assert_total $ map (\ t => thinTerm t th) ts
+
+  thinTerm : Thinnable Term
+  thinTerm (Local fc x idx y) th
+      = let MkVar y' = thinIsVar y th in Local fc x _ y'
+  thinTerm (Ref fc x name) th = Ref fc x name
+  thinTerm (Meta fc x y xs) th
+      = Meta fc x y (thinTerms xs th)
+  thinTerm (Bind fc x b scope) th
+      = Bind fc x (thinBinder b th) (thinTerm scope (Keep th))
+  thinTerm (App fc fn arg) th
+      = App fc (thinTerm fn th) (thinTerm arg th)
+  thinTerm (As fc s nm pat) th
+      = As fc s (thinTerm nm th) (thinTerm pat th)
+  thinTerm (TDelayed fc x y) th = TDelayed fc x (thinTerm y th)
+  thinTerm (TDelay fc x t y) th
+      = TDelay fc x (thinTerm t th) (thinTerm y th)
+  thinTerm (TForce fc r x) th = TForce fc r (thinTerm x th)
+  thinTerm (PrimVal fc c) th = PrimVal fc c
+  thinTerm (Erased fc Impossible) th = Erased fc Impossible
+  thinTerm (Erased fc Placeholder) th = Erased fc Placeholder
+  thinTerm (Erased fc (Dotted t)) th = Erased fc (Dotted (thinTerm t th))
+  thinTerm (TType fc u) th = TType fc u
+
+export
+embedTerm : Term vars -> Term (outer ++ vars)
+embedTerm tm = believe_me tm
+
+export
+IsScoped Term where
+  strengthen = strengthenTerm
+  thin = thinTerm
+
+  weakenNs p tm = assert_total $ insertNames zero p tm
+  compatNs = compatTerm
+  embedNs _ = embedTerm
+
+------------------------------------------------------------------------
+-- Smart constructors
+
+export
+apply : FC -> Term vars -> List (Term vars) -> Term vars
+apply loc fn [] = fn
+apply loc fn (a :: args) = apply loc (App loc fn a) args
+
+-- Creates a chain of `App` nodes, each with its own file context
+export
+applyWithFC : Term vars -> List (FC, Term vars) -> Term vars
+applyWithFC fn [] = fn
+applyWithFC fn ((fc, arg) :: args) = applyWithFC (App fc fn arg) args
+
+-- Build a simple function type
+export
+fnType : {vars : _} -> FC -> Term vars -> Term vars -> Term vars
+fnType fc arg scope = Bind emptyFC (MN "_" 0) (Pi fc top Explicit arg) (weaken scope)
+
+export
+linFnType : {vars : _} -> FC -> Term vars -> Term vars -> Term vars
+linFnType fc arg scope = Bind emptyFC (MN "_" 0) (Pi fc linear Explicit arg) (weaken scope)
+
+export
+getFnArgs : Term vars -> (Term vars, List (Term vars))
+getFnArgs tm = getFA [] tm
+  where
+    getFA : List (Term vars) -> Term vars ->
+            (Term vars, List (Term vars))
+    getFA args (App _ f a) = getFA (a :: args) f
+    getFA args tm = (tm, args)
+
+export
+getFn : Term vars -> Term vars
+getFn (App _ f a) = getFn f
+getFn tm = tm
+
+export
+getArgs : Term vars -> (List (Term vars))
+getArgs = snd . getFnArgs
+
+
+------------------------------------------------------------------------
+-- Namespace manipulations
 
 -- Remove/restore the given namespace from all Refs. This is to allow
 -- writing terms and case trees to disk without repeating the same namespace
@@ -127,12 +331,24 @@ interface StripNamespace a where
   trimNS : Namespace -> a -> a
   restoreNS : Namespace -> a -> a
 
+export
+StripNamespace Name where
+  trimNS ns nm@(NS tns n)
+    = if ns == tns then NS emptyNS n else nm
+      -- ^ A blank namespace, rather than a UN, so we don't catch primitive
+      -- names which are represented as UN.
+  trimNS ns nm = nm
+
+  restoreNS ns nm@(NS tns n)
+      = if isNil (unsafeUnfoldNamespace tns)
+            then NS ns n
+            else nm
+  restoreNS ns nm = nm
+
 export covering
 StripNamespace (Term vars) where
-  trimNS ns tm@(Ref fc x (NS tns n))
-      = if ns == tns then Ref fc x (NS emptyNS n) else tm
-        -- ^ A blank namespace, rather than a UN, so we don't catch primitive
-        -- names which are represented as UN.
+  trimNS ns (Ref fc x nm)
+      = Ref fc x (trimNS ns nm)
   trimNS ns (Meta fc x y xs)
       = Meta fc x y (map (trimNS ns) xs)
   trimNS ns (Bind fc x b scope)
@@ -149,10 +365,8 @@ StripNamespace (Term vars) where
       = TForce fc r (trimNS ns y)
   trimNS ns tm = tm
 
-  restoreNS ns tm@(Ref fc x (NS tmns n))
-      = if isNil (unsafeUnfoldNamespace tmns)
-            then Ref fc x (NS ns n)
-            else tm
+  restoreNS ns (Ref fc x nm)
+      = Ref fc x (restoreNS ns nm)
   restoreNS ns (Meta fc x y xs)
       = Meta fc x y (map (restoreNS ns) xs)
   restoreNS ns (Bind fc x b scope)
