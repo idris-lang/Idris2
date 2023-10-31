@@ -494,3 +494,91 @@ eqWhyErased Impossible Impossible = True
 eqWhyErased Placeholder Placeholder = True
 eqWhyErased (Dotted t) (Dotted u)  = eqTerm t u
 eqWhyErased _ _ = False
+
+------------------------------------------------------------------------
+-- Scope checking
+
+mutual
+
+  resolveNamesBinder : (vars : SnocList Name) -> Binder (Term vars) -> Binder (Term vars)
+  resolveNamesBinder vars b = assert_total $ map (resolveNames vars) b
+
+  resolveNamesTerms : (vars : SnocList Name) -> List (Term vars) -> List (Term vars)
+  resolveNamesTerms vars ts = assert_total $ map (resolveNames vars) ts
+
+  -- Replace any Ref Bound in a type with appropriate local
+  export
+  resolveNames : (vars : SnocList Name) -> Term vars -> Term vars
+  resolveNames vars (Ref fc Bound name)
+      = case isNVar name vars of
+             Just (MkNVar prf) => Local fc (Just False) _ prf
+             _ => Ref fc Bound name
+  resolveNames vars (Meta fc n i xs)
+      = Meta fc n i (resolveNamesTerms vars xs)
+  resolveNames vars (Bind fc x b scope)
+      = Bind fc x (resolveNamesBinder vars b) (resolveNames (vars :< x) scope)
+  resolveNames vars (App fc fn arg)
+      = App fc (resolveNames vars fn) (resolveNames vars arg)
+  resolveNames vars (As fc s as pat)
+      = As fc s (resolveNames vars as) (resolveNames vars pat)
+  resolveNames vars (TDelayed fc x y)
+      = TDelayed fc x (resolveNames vars y)
+  resolveNames vars (TDelay fc x t y)
+      = TDelay fc x (resolveNames vars t) (resolveNames vars y)
+  resolveNames vars (TForce fc r x)
+      = TForce fc r (resolveNames vars x)
+  resolveNames vars tm = tm
+
+------------------------------------------------------------------------
+-- Showing
+
+export
+withPiInfo : Show t => PiInfo t -> String -> String
+withPiInfo Explicit tm = "(" ++ tm ++ ")"
+withPiInfo Implicit tm = "{" ++ tm ++ "}"
+withPiInfo AutoImplicit tm = "{auto " ++ tm ++ "}"
+withPiInfo (DefImplicit t) tm = "{default " ++ show t ++ " " ++ tm ++ "}"
+
+export
+covering
+{vars : _} -> Show (Term vars) where
+  show tm = let (fn, args) = getFnArgs tm in showApp fn args
+    where
+      showApp : {vars : _} -> Term vars -> List (Term vars) -> String
+      showApp (Local _ c idx p) []
+         = show (nameAt p) ++ "[" ++ show idx ++ "]"
+
+      showApp (Ref _ _ n) [] = show n
+      showApp (Meta _ n _ args) []
+          = "?" ++ show n ++ "_" ++ show args
+      showApp (Bind _ x (Lam _ c info ty) sc) []
+          = "\\" ++ withPiInfo info (showCount c ++ show x ++ " : " ++ show ty) ++
+            " => " ++ show sc
+      showApp (Bind _ x (Let _ c val ty) sc) []
+          = "let " ++ showCount c ++ show x ++ " : " ++ show ty ++
+            " = " ++ show val ++ " in " ++ show sc
+      showApp (Bind _ x (Pi _ c info ty) sc) []
+          = withPiInfo info (showCount c ++ show x ++ " : " ++ show ty) ++
+            " -> " ++ show sc
+      showApp (Bind _ x (PVar _ c info ty) sc) []
+          = withPiInfo info ("pat " ++ showCount c ++ show x ++ " : " ++ show ty) ++
+            " => " ++ show sc
+      showApp (Bind _ x (PLet _ c val ty) sc) []
+          = "plet " ++ showCount c ++ show x ++ " : " ++ show ty ++
+            " = " ++ show val ++ " in " ++ show sc
+      showApp (Bind _ x (PVTy _ c ty) sc) []
+          = "pty " ++ showCount c ++ show x ++ " : " ++ show ty ++
+            " => " ++ show sc
+      showApp (App _ _ _) [] = "[can't happen]"
+      showApp (As _ _ n tm) [] = show n ++ "@" ++ show tm
+      showApp (TDelayed _ _ tm) [] = "%Delayed " ++ show tm
+      showApp (TDelay _ _ _ tm) [] = "%Delay " ++ show tm
+      showApp (TForce _ _ tm) [] = "%Force " ++ show tm
+      showApp (PrimVal _ c) [] = show c
+      showApp (Erased _ (Dotted t)) [] = ".(" ++ show t ++ ")"
+      showApp (Erased _ _) [] = "[__]"
+      showApp (TType _ u) [] = "Type"
+      showApp _ [] = "???"
+      showApp f args = "(" ++ assert_total (show f) ++ " " ++
+                        assert_total (showSep " " (map show args))
+                     ++ ")"

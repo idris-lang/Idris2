@@ -121,6 +121,22 @@ namespace NVar
   later : NVar nm ns -> NVar nm (ns :< n)
   later (MkNVar p) = MkNVar (Later p)
 
+------------------------------------------------------------------------
+-- Scope checking
+
+export
+isNVar : (n : Name) -> (ns : SnocList Name) -> Maybe (NVar n ns)
+isNVar n [<] = Nothing
+isNVar n (ms :< m)
+    = case nameEq n m of
+           Nothing   => map later (isNVar n ms)
+           Just Refl => pure (MkNVar First)
+
+export
+isVar : (n : Name) -> (ns : SnocList Name) -> Maybe (Var ns)
+isVar n ns = do
+  MkNVar v <- isNVar n ns
+  pure (MkVar v)
 
 ------------------------------------------------------------------------
 -- Weakening

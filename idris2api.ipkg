@@ -91,6 +91,7 @@ modules =
     Core.Transform,
     Core.TT,
     Core.TT.Binder,
+    Core.TT.Directive,
     Core.TT.Primitive,
     Core.TT.Term,
     Core.TT.Var,
