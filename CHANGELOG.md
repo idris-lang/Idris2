@@ -242,6 +242,9 @@
 * Adds bindings for IEEE floating point constants NaN and (+/-) Inf, as well as
   machine epsilon and unit roundoff. Speeds vary depending on backend.
 
+* A more generalised way of applicative mapping of `TTImp` expression was added,
+  called `mapATTImp`; the original `mapMTTimp` was implemented through the new one.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
