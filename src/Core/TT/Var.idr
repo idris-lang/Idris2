@@ -265,8 +265,11 @@ Weaken (Var {a = Name}) where
   weakenNs = weakenVar
 
 export
-IsScoped (Var {a = Name}) where
+FreelyEmbeddable (Var {a = Name}) where
   embed (MkVar p) = MkVar (embedIsVar p)
+
+export
+IsScoped (Var {a = Name}) where
   compatNs = compatVar
 
   thin (MkVar p) = thinIsVar p

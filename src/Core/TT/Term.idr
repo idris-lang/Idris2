@@ -268,6 +268,9 @@ Weaken Term where
   weakenNs p tm = assert_total $ insertNames zero p tm
 
 export
+FreelyEmbeddable Term where
+
+export
 IsScoped Term where
   shrink = shrinkTerm
   thin = thinTerm

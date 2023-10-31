@@ -2,6 +2,16 @@ module Libraries.Data.SnocList.HasLength
 
 import Data.Nat
 
+---------------------------------------
+-- horrible hack
+import Libraries.Data.List.HasLength as L
+
+public export
+LHasLength : Nat -> List a -> Type
+LHasLength = L.HasLength
+%hide L.HasLength
+---------------------------------------
+
 public export
 data HasLength : Nat -> SnocList a -> Type where
   Z : HasLength Z [<]
@@ -16,6 +26,11 @@ export
 hlAppend : HasLength m sx -> HasLength n sy -> HasLength (n + m) (sx ++ sy)
 hlAppend sx Z = sx
 hlAppend sx (S sy) = S (hlAppend sx sy)
+
+export
+hlFish : HasLength m sx -> LHasLength n ys -> HasLength (n + m) (sx <>< ys)
+hlFish x Z = x
+hlFish {n = S n} x (S y) = rewrite plusSuccRightSucc n m in hlFish (S x) y
 
 export
 mkHasLength : (sx : SnocList a) -> HasLength (length sx) sx

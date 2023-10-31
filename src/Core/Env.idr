@@ -1,52 +1,55 @@
 module Core.Env
 
+import Data.SnocList
 import Core.TT
-import Data.List
+
+import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
 
 %default total
 
--- Environment containing types and values of local variables
+||| Environment containing types and values of local variables
 public export
-data Env : (tm : List Name -> Type) -> List Name -> Type where
-     Nil : Env tm []
-     (::) : Binder (tm vars) -> Env tm vars -> Env tm (x :: vars)
+data Env : Scoped -> Scoped where
+  Lin : Env tm [<]
+  (:<) : Env tm vars -> Binder (tm vars) -> Env tm (vars :< x)
 
 %name Env rho
 
 export
-extend : (x : Name) -> Binder (tm vars) -> Env tm vars -> Env tm (x :: vars)
-extend x = (::) {x}
+extend : (x : Name) -> Binder (tm vars) -> Env tm vars -> Env tm (vars :< x)
+extend x = flip ((:<) {x})
 
 export
-(++) : {ns : _} -> Env Term ns -> Env Term vars -> Env Term (ns ++ vars)
-(++) (b :: bs) e = extend _ (map embed b) (bs ++ e)
-(++) [] e = e
+(++) : FreelyEmbeddable tm => Env tm ns -> Env tm vars -> Env tm (ns ++ vars)
+vs ++ [<] = vs
+vs ++ (rho :< bd) = (vs ++ rho) :< map embed bd
 
 export
 length : Env tm xs -> Nat
-length [] = 0
-length (_ :: xs) = S (length xs)
+length [<] = 0
+length (xs :< _) = S (length xs)
 
 export
 lengthNoLet : Env tm xs -> Nat
-lengthNoLet [] = 0
-lengthNoLet (Let _ _ _ _ :: xs) = lengthNoLet xs
-lengthNoLet (_ :: xs) = S (lengthNoLet xs)
+lengthNoLet [<] = 0
+lengthNoLet (xs :< Let _  _ _ _) = lengthNoLet xs
+lengthNoLet (xs :< _) = S (lengthNoLet xs)
 
 export
 lengthExplicitPi : Env tm xs -> Nat
-lengthExplicitPi [] = 0
-lengthExplicitPi (Pi _ _ Explicit _ :: rho) = S (lengthExplicitPi rho)
-lengthExplicitPi (_ :: rho) = lengthExplicitPi rho
+lengthExplicitPi [<] = 0
+lengthExplicitPi (rho :< Pi _ _ Explicit _) = S (lengthExplicitPi rho)
+lengthExplicitPi (rho :< _) = lengthExplicitPi rho
 
 export
-namesNoLet : {xs : _} -> Env tm xs -> List Name
-namesNoLet [] = []
-namesNoLet (Let _ _ _ _ :: xs) = namesNoLet xs
-namesNoLet {xs = x :: _} (_ :: env) = x :: namesNoLet env
+namesNoLet : {xs : _} -> Env tm xs -> SnocList Name
+namesNoLet [<] = [<]
+namesNoLet (xs :< Let _ _ _ _) = namesNoLet xs
+namesNoLet {xs = _ :< x} (env :< _) = namesNoLet env :< x
 
 public export
-data IsDefined : Name -> List Name -> Type where
+data IsDefined : Name -> Scoped where
   MkIsDefined : {idx : Nat} -> RigCount -> (0 p : IsVar n idx vars) ->
                 IsDefined n vars
 
@@ -54,8 +57,8 @@ export
 defined : {vars : _} ->
           (n : Name) -> Env Term vars ->
           Maybe (IsDefined n vars)
-defined n [] = Nothing
-defined {vars = x :: xs} n (b :: env)
+defined n [<] = Nothing
+defined {vars = xs :< x} n (env :< b)
     = case nameEq n x of
            Nothing => do MkIsDefined rig prf <- defined n env
                          pure (MkIsDefined rig (Later prf))
@@ -65,28 +68,12 @@ defined {vars = x :: xs} n (b :: env)
 -- outer environment
 export
 bindEnv : {vars : _} -> FC -> Env Term vars -> (tm : Term vars) -> ClosedTerm
-bindEnv loc [] tm = tm
-bindEnv loc (b :: env) tm
+bindEnv loc [<] tm = tm
+bindEnv loc (env :< b) tm
     = bindEnv loc env (Bind loc _ (PVar (binderLoc b)
                                         (multiplicity b)
                                         Explicit
                                         (binderType b)) tm)
-
-revOnto : (xs, vs : List a) -> reverseOnto xs vs = reverse vs ++ xs
-revOnto xs [] = Refl
-revOnto xs (v :: vs)
-    = rewrite revOnto (v :: xs) vs in
-        rewrite appendAssociative (reverse vs) [v] xs in
-          rewrite revOnto [v] vs in Refl
-
-revNs : (vs, ns : List a) -> reverse ns ++ reverse vs = reverse (vs ++ ns)
-revNs [] ns = rewrite appendNilRightNeutral (reverse ns) in Refl
-revNs (v :: vs) ns
-    = rewrite revOnto [v] vs in
-        rewrite revOnto [v] (vs ++ ns) in
-          rewrite sym (revNs vs ns) in
-            rewrite appendAssociative (reverse ns) (reverse vs) [v] in
-              Refl
 
 -- Weaken by all the names at once at the end, to save multiple traversals
 -- in big environments
@@ -96,10 +83,10 @@ getBinderUnder : Weaken tm =>
                  {vars : _} -> {idx : Nat} ->
                  (ns : List Name) ->
                  (0 p : IsVar x idx vars) -> Env tm vars ->
-                 Binder (tm (reverseOnto vars ns))
-getBinderUnder {idx = Z} {vars = v :: vs} ns First (b :: env)
-    = rewrite revOnto vs (v :: ns) in map (weakenNs (reverse (mkSizeOf (v :: ns)))) b
-getBinderUnder {idx = S k} {vars = v :: vs} ns (Later lp) (b :: env)
+                 Binder (tm (vars <>< ns))
+getBinderUnder {idx = Z} {vars = vs :< v} ns First (env :< b)
+    = map (rewrite fishAsSnocAppend vs (v :: ns) in weakenNs (suc zero <>< mkSizeOf ns)) b
+getBinderUnder {idx = S k} {vars = vs :< v} ns (Later lp) (env :< b)
     = getBinderUnder (v :: ns) lp env
 
 export
@@ -112,8 +99,8 @@ getBinder el env = getBinderUnder [] el env
 -- needlessly weaken stuff;
 export
 getBinderLoc : {vars : _} -> {idx : Nat} -> (0 p : IsVar x idx vars) -> Env tm vars -> FC
-getBinderLoc {idx = Z}   First     (b :: _)   = binderLoc b
-getBinderLoc {idx = S k} (Later p) (_ :: env) = getBinderLoc p env
+getBinderLoc {idx = Z}  First (_ :< b)   = binderLoc b
+getBinderLoc {idx = S k} (Later p) (env :< _) = getBinderLoc p env
 
 -- Make a type which abstracts over an environment
 -- Don't include 'let' bindings, since they have a concrete value and
@@ -121,12 +108,12 @@ getBinderLoc {idx = S k} (Later p) (_ :: env) = getBinderLoc p env
 export
 abstractEnvType : {vars : _} ->
                   FC -> Env Term vars -> (tm : Term vars) -> ClosedTerm
-abstractEnvType fc [] tm = tm
-abstractEnvType fc (Let fc' c val ty :: env) tm
+abstractEnvType fc [<] tm = tm
+abstractEnvType fc (env :< Let fc' c val ty) tm
     = abstractEnvType fc env (Bind fc _ (Let fc' c val ty) tm)
-abstractEnvType fc (Pi fc' c e ty :: env) tm
+abstractEnvType fc (env :< Pi fc' c e ty) tm
     = abstractEnvType fc env (Bind fc _ (Pi fc' c e ty) tm)
-abstractEnvType fc (b :: env) tm
+abstractEnvType fc (env :< b) tm
     = let bnd = Pi (binderLoc b) (multiplicity b) Explicit (binderType b)
        in abstractEnvType fc env (Bind fc _ bnd tm)
 
@@ -134,10 +121,10 @@ abstractEnvType fc (b :: env) tm
 export
 abstractEnv : {vars : _} ->
               FC -> Env Term vars -> (tm : Term vars) -> ClosedTerm
-abstractEnv fc [] tm = tm
-abstractEnv fc (Let fc' c val ty :: env) tm
+abstractEnv fc [<] tm = tm
+abstractEnv fc (env :< Let fc' c val ty) tm
     = abstractEnv fc env (Bind fc _ (Let fc' c val ty) tm)
-abstractEnv fc (b :: env) tm
+abstractEnv fc (env :< b) tm
     = let bnd = Lam (binderLoc b) (multiplicity b) Explicit (binderType b)
       in abstractEnv fc env (Bind fc _ bnd tm)
 
@@ -145,19 +132,20 @@ abstractEnv fc (b :: env) tm
 export
 abstractFullEnvType : {vars : _} ->
                       FC -> Env Term vars -> (tm : Term vars) -> ClosedTerm
-abstractFullEnvType fc [] tm = tm
-abstractFullEnvType fc (Pi fc' c e ty :: env) tm
+abstractFullEnvType fc [<] tm = tm
+abstractFullEnvType fc (env :< Pi fc' c e ty) tm
     = abstractFullEnvType fc env (Bind fc _ (Pi fc' c e ty) tm)
-abstractFullEnvType fc (b :: env) tm
+abstractFullEnvType fc (env :< b) tm
     = let bnd = Pi fc (multiplicity b) Explicit (binderType b)
       in abstractFullEnvType fc env (Bind fc _ bnd tm)
 
 export
 letToLam : Env Term vars -> Env Term vars
-letToLam [] = []
-letToLam (Let fc c val ty :: env) = Lam fc c Explicit ty :: letToLam env
-letToLam (b :: env) = b :: letToLam env
+letToLam [<] = [<]
+letToLam (env :< Let fc c val ty) = letToLam env :< Lam fc c Explicit ty
+letToLam (env :< b) = letToLam env :< b
 
+{-
 mutual
   -- Quicker, if less safe, to store variables as a Nat, for quick comparison
   findUsed : {vars : _} ->
@@ -325,3 +313,4 @@ allVarsNoLet : {vars : _} -> Env Term vars -> List (Var vars)
 allVarsNoLet [] = []
 allVarsNoLet (Let _ _ _ _ :: vs) = map weaken (allVars vs)
 allVarsNoLet (v :: vs) = MkVar First :: map weaken (allVars vs)
+-}

@@ -115,12 +115,14 @@ interface Weaken (0 tm : Scoped) where
   weaken = weakenNs (suc zero)
 
 public export
-interface Weaken tm => IsScoped (0 tm : Scoped) where
-  -- methods
+interface FreelyEmbeddable (0 tm : Scoped) where
   -- this is free for nameless representations
   embed : Embeddable tm
   embed = believe_me
 
+public export
+interface Weaken tm => IsScoped (0 tm : Scoped) where
+  -- methods
   compat : tm (xs :< m) -> tm (xs :< n)
   compatNs : CompatibleVars xs ys -> tm xs -> tm ys
 

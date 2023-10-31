@@ -1,7 +1,19 @@
 module Libraries.Data.SnocList.SizeOf
 
 import Data.SnocList
+import Libraries.Data.List.HasLength
 import Libraries.Data.SnocList.HasLength
+
+---------------------------------------
+-- horrible hack
+import Libraries.Data.List.SizeOf as L
+
+public export
+0 LSizeOf : {0 a : Type} -> List a -> Type
+LSizeOf xs = L.SizeOf xs
+
+%hide L.SizeOf
+---------------------------------------
 
 %default total
 
@@ -29,7 +41,11 @@ sucL : SizeOf as -> SizeOf ([<a] ++ as)
 sucL (MkSizeOf n p) = MkSizeOf (S n) (sucL p)
 
 export
-(+) : SizeOf sx -> SizeOf ys -> SizeOf (sx ++ ys)
+(<><) : SizeOf {a} sx -> LSizeOf {a} ys -> SizeOf (sx <>< ys)
+MkSizeOf m p <>< MkSizeOf n q = MkSizeOf (n + m) (hlFish p q)
+
+export
+(+) : SizeOf sx -> SizeOf sy -> SizeOf (sx ++ sy)
 MkSizeOf m p + MkSizeOf n q = MkSizeOf (n + m) (hlAppend p q)
 
 export
