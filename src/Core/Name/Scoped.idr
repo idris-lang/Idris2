@@ -59,7 +59,7 @@ areCompatibleVars _ _ = Nothing
 -- Thinnings
 
 public export
-data Thin : SnocList Name -> SnocList Name -> Type where
+data Thin : SnocList a -> SnocList a -> Type where
   Refl : Thin xs xs
   Drop : Thin xs ys -> Thin xs (ys :< y)
   Keep : Thin xs ys -> Thin (xs :< x) (ys :< y)
@@ -69,40 +69,51 @@ keep : Thin xs ys -> Thin (xs :< x) (ys :< x)
 keep Refl = Refl
 keep p = Keep p
 
-public export
-0 Thinnable : Scoped -> Type
-Thinnable tm = {0 xs, ys : _} -> tm xs -> Thin xs ys -> tm ys
+export
+keeps : (args : SnocList a) -> Thin xs ys -> Thin (xs ++ args) (ys ++ args)
+keeps [<] th = th
+keeps (sx :< x) th = keep (keeps sx th)
 
 public export
-0 Strengthenable : Scoped -> Type
-Strengthenable tm = {0 xs, ys : _} -> tm xs -> Thin ys xs -> Maybe (tm ys)
+0 Thinnable : Scoped -> Type
+Thinnable tm = {0 xs, ys : Scope} -> tm xs -> Thin xs ys -> tm ys
+
+public export
+0 Shrinkable : Scoped -> Type
+Shrinkable tm = {0 xs, ys : Scope} -> tm xs -> Thin ys xs -> Maybe (tm ys)
+
+public export
+0 Embeddable : Scoped -> Type
+Embeddable tm = {0 outer, vars : Scope} -> tm vars -> tm (outer ++ vars)
 
 ------------------------------------------------------------------------
 -- IsScoped interface
 
 public export
-interface IsScoped (0 tm : Scoped) where
-
+interface Weaken (0 tm : Scoped) where
   -- methods
-
-  -- this is free for nameless representations
-  embedNs : Lazy (SizeOf outer) -> tm vars -> tm (outer ++ vars)
-
   weaken : tm vars -> tm (vars :< nm)
   weakenNs : SizeOf inner -> tm vars -> tm (vars ++ inner)
 
-  compat : tm (xs :< m) -> tm (xs :< n)
-  compatNs : CompatibleVars xs ys -> tm xs -> tm ys
-
-  thin : Thinnable tm
-  strengthen : Strengthenable tm
-
   -- default implementations
-
   weakenNs p t = case sizedView p of
     Z   => t
     S p => weaken (weakenNs p t)
 
   weaken = weakenNs (suc zero)
 
+public export
+interface Weaken tm => IsScoped (0 tm : Scoped) where
+  -- methods
+  -- this is free for nameless representations
+  embed : Embeddable tm
+  embed = believe_me
+
+  compat : tm (xs :< m) -> tm (xs :< n)
+  compatNs : CompatibleVars xs ys -> tm xs -> tm ys
+
+  thin : Thinnable tm
+  shrink : Shrinkable tm
+
+  -- default implementations
   compat = compatNs (Ext Pre)

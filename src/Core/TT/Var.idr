@@ -247,27 +247,30 @@ thinIsVar First (Keep th) = MkVar First
 thinIsVar (Later p) (Keep th) = later (thinIsVar p th)
 
 export
-strengthenIsVar : {idx : Nat} -> (0 p : IsVar name idx xs) ->
+shrinkIsVar : {idx : Nat} -> (0 p : IsVar name idx xs) ->
   Thin ys xs -> Maybe (Var ys)
-strengthenIsVar prf Refl = Just (MkVar prf)
-strengthenIsVar First (Drop p) = Nothing
-strengthenIsVar (Later x) (Drop p)
-    = do MkVar prf' <- strengthenIsVar x p
+shrinkIsVar prf Refl = Just (MkVar prf)
+shrinkIsVar First (Drop p) = Nothing
+shrinkIsVar (Later x) (Drop p)
+    = do MkVar prf' <- shrinkIsVar x p
          Just (MkVar prf')
-strengthenIsVar First (Keep p) = Just (MkVar First)
-strengthenIsVar (Later x) (Keep p)
-    = do MkVar prf' <- strengthenIsVar x p
+shrinkIsVar First (Keep p) = Just (MkVar First)
+shrinkIsVar (Later x) (Keep p)
+    = do MkVar prf' <- shrinkIsVar x p
          Just (MkVar (Later prf'))
 
 ------------------------------------------------------------------------
 -- Putting it all together
 
 export
-IsScoped (Var {a = Name}) where
-  embedNs _ (MkVar p) = MkVar (embedIsVar p)
+Weaken (Var {a = Name}) where
   weaken = later
   weakenNs = weakenVar
+
+export
+IsScoped (Var {a = Name}) where
+  embed (MkVar p) = MkVar (embedIsVar p)
   compatNs = compatVar
 
   thin (MkVar p) = thinIsVar p
-  strengthen (MkVar p) = strengthenIsVar p
+  shrink (MkVar p) = shrinkIsVar p

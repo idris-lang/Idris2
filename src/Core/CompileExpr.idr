@@ -6,7 +6,7 @@ import Core.FC
 import Core.Name
 import Core.TT
 
-import Data.List
+import Data.SnocList
 import Data.Vect
 
 %default covering
@@ -69,15 +69,15 @@ Eq InlineOk where
 mutual
   ||| CExp - an expression ready for compiling.
   public export
-  data CExp : List Name -> Type where
+  data CExp : Scoped where
        CLocal : {idx : Nat} -> FC -> (0 p : IsVar x idx vars) -> CExp vars
        CRef : FC -> Name -> CExp vars
        -- Lambda expression
-       CLam : FC -> (x : Name) -> CExp (x :: vars) -> CExp vars
+       CLam : FC -> (x : Name) -> CExp (vars :< x) -> CExp vars
        -- Let bindings
        CLet : FC -> (x : Name) ->
               InlineOk -> -- Don't inline if set
-              CExp vars -> CExp (x :: vars) -> CExp vars
+              CExp vars -> CExp (vars :< x) -> CExp vars
        -- Application of a defined function. The length of the argument list is
        -- exactly the same length as expected by its definition (so saturate with
        -- lambdas if necessary, or overapply with additional CApps)
@@ -107,14 +107,14 @@ mutual
        CCrash : FC -> String -> CExp vars
 
   public export
-  data CConAlt : List Name -> Type where
+  data CConAlt : Scoped where
        -- If no tag, then match by constructor name. Back ends might want to
        -- convert names to a unique integer for performance.
-       MkConAlt : Name -> ConInfo -> (tag : Maybe Int) -> (args : List Name) ->
-                  CExp (args ++ vars) -> CConAlt vars
+       MkConAlt : Name -> ConInfo -> (tag : Maybe Int) -> (args : SnocList Name) ->
+                  CExp (vars ++ args) -> CConAlt vars
 
   public export
-  data CConstAlt : List Name -> Type where
+  data CConstAlt : Scoped where
        MkConstAlt : Constant -> CExp vars -> CConstAlt vars
 
 mutual
@@ -160,7 +160,7 @@ mutual
 
   public export
   data NamedConAlt : Type where
-       MkNConAlt : Name -> ConInfo -> (tag : Maybe Int) -> (args : List Name) ->
+       MkNConAlt : Name -> ConInfo -> (tag : Maybe Int) -> (args : SnocList Name) ->
                    NamedCExp -> NamedConAlt
 
   public export
@@ -197,7 +197,7 @@ data CFType : Type where
 public export
 data CDef : Type where
      -- Normal function definition
-     MkFun : (args : List Name) -> CExp args -> CDef
+     MkFun : (args : SnocList Name) -> CExp args -> CDef
      -- Constructor
      MkCon : (tag : Maybe Int) -> (arity : Nat) -> (nt : Maybe Nat) -> CDef
      -- Foreign definition
@@ -207,12 +207,12 @@ data CDef : Type where
                  CDef
      -- A function which will fail at runtime (usually due to being a hole) so needs
      -- to run, discarding arguments, no matter how many arguments are passed
-     MkError : CExp [] -> CDef
+     MkError : CExp [<] -> CDef
 
 public export
 data NamedDef : Type where
      -- Normal function definition
-     MkNmFun : (args : List Name) -> NamedCExp -> NamedDef
+     MkNmFun : (args : SnocList Name) -> NamedCExp -> NamedDef
      -- Constructor
      MkNmCon : (tag : Maybe Int) -> (arity : Nat) -> (nt : Maybe Nat) -> NamedDef
      -- Foreign definition
@@ -257,7 +257,7 @@ mutual
   Show NamedConAlt where
     show (MkNConAlt x ci tag args exp)
          = "(%concase " ++ showFlag ci ++ show x ++ " " ++ show tag ++ " " ++
-             show args ++ " " ++ show exp ++ ")"
+             show (args <>> []) ++ " " ++ show exp ++ ")"
       where
         showFlag : ConInfo -> String
         showFlag DATACON = ""
@@ -268,14 +268,15 @@ mutual
     show (MkNConstAlt x exp)
          = "(%constcase " ++ show x ++ " " ++ show exp ++ ")"
 
+
 export
-data Names : List Name -> Type where
-     Nil : Names []
-     (::) : Name -> Names xs -> Names (x :: xs)
+data Names : SnocList Name -> Type where
+  Lin : Names [<]
+  (:<) : Names xs -> Name -> Names (xs :< x)
 
 elem : Name -> Names xs -> Bool
-elem n [] = False
-elem n (x :: xs) = n == x || elem n xs
+elem n [<] = False
+elem n (xs :< x) = n == x || elem n xs
 
 tryNext : Name -> Name
 tryNext (UN n) = MN (displayUserName n) 0
@@ -290,29 +291,30 @@ uniqueName s ns =
 
 export
 getLocName : (idx : Nat) -> Names vars -> (0 p : IsVar name idx vars) -> Name
-getLocName Z (x :: xs) First = x
-getLocName (S k) (x :: xs) (Later p) = getLocName k xs p
+getLocName Z (_ :< x) First = x
+getLocName (S k) (xs :< _) (Later p) = getLocName k xs p
 
 export
-addLocs : (args : List Name) -> Names vars -> Names (args ++ vars)
-addLocs [] ns = ns
-addLocs (x :: xs) ns
+addLocs : (args : SnocList Name) -> Names vars -> Names (vars ++ args)
+addLocs [<] ns = ns
+addLocs (xs :< x) ns
     = let rec = addLocs xs ns in
-          uniqueName x rec :: rec
+          rec :< uniqueName x rec
 
-conArgs : (args : List Name) -> Names (args ++ vars) -> List Name
-conArgs [] ns = []
-conArgs (a :: as) (n :: ns) = n :: conArgs as ns
+conArgs : (args : SnocList Name) -> Names (vars ++ args) -> SnocList Name
+conArgs [<] ns = [<]
+conArgs (as :< a) (ns :< n) = conArgs as ns :< n
 
 mutual
+
   forgetExp : Names vars -> CExp vars -> NamedCExp
   forgetExp locs (CLocal fc p) = NmLocal fc (getLocName _ locs p)
   forgetExp locs (CRef fc n) = NmRef fc n
   forgetExp locs (CLam fc x sc)
-      = let locs' = addLocs [x] locs in
+      = let locs' = addLocs [<x] locs in
             NmLam fc (getLocName _ locs' First) (forgetExp locs' sc)
   forgetExp locs (CLet fc x _ val sc)
-      = let locs' = addLocs [x] locs in
+      = let locs' = addLocs [<x] locs in
             NmLet fc (getLocName _ locs' First)
                      (forgetExp locs val)
                      (forgetExp locs' sc)
@@ -350,14 +352,14 @@ mutual
 export
 forget : {vars : _} -> CExp vars -> NamedCExp
 forget {vars} exp
-    = forgetExp (addLocs vars [])
-                (rewrite appendNilRightNeutral vars in exp)
+    = forgetExp (addLocs vars [<])
+                (rewrite appendLinLeftNeutral vars in exp)
 
 export
 forgetDef : CDef -> NamedDef
 forgetDef (MkFun args def)
-    = let ns = addLocs args []
-          args' = conArgs {vars = []} args ns in
+    = let ns = addLocs args [<]
+          args' = conArgs {vars = [<]} args ns in
           MkNmFun args' (forget def)
 forgetDef (MkCon t a nt) = MkNmCon t a nt
 forgetDef (MkForeign ccs fargs ty) = MkNmForeign ccs fargs ty
@@ -398,7 +400,7 @@ Show CFType where
 export
 covering
 Show CDef where
-  show (MkFun args exp) = show args ++ ": " ++ show exp
+  show (MkFun args exp) = show (args <>> []) ++ ": " ++ show exp
   show (MkCon tag arity pos)
       = "Constructor tag " ++ show tag ++ " arity " ++ show arity ++
         maybe "" (\n => " (newtype by " ++ show n ++ ")") pos
@@ -410,7 +412,7 @@ Show CDef where
 export
 covering
 Show NamedDef where
-  show (MkNmFun args exp) = show args ++ ": " ++ show exp
+  show (MkNmFun args exp) = show (args <>> []) ++ ": " ++ show exp
   show (MkNmCon tag arity pos)
       = "Constructor tag " ++ show tag ++ " arity " ++ show arity ++
         maybe "" (\n => " (newtype by " ++ show n ++ ")") pos
@@ -421,10 +423,10 @@ Show NamedDef where
 
 mutual
   export
-  insertNames : SizeOf outer ->
+  insertNames : SizeOf local ->
                 SizeOf ns ->
-                CExp (outer ++ inner) ->
-                CExp (outer ++ (ns ++ inner))
+                CExp (outer ++ local) ->
+                CExp ((outer ++ ns) ++ local)
   insertNames outer ns (CLocal fc prf)
       = let MkNVar var' = insertNVarNames outer ns (MkNVar prf) in
             CLocal fc var'
@@ -455,26 +457,26 @@ mutual
   insertNames _ _ (CErased fc) = CErased fc
   insertNames _ _ (CCrash fc x) = CCrash fc x
 
-  insertNamesConAlt : SizeOf outer ->
+  insertNamesConAlt : SizeOf local ->
                       SizeOf ns ->
-                      CConAlt (outer ++ inner) ->
-                      CConAlt (outer ++ (ns ++ inner))
+                      CConAlt (outer ++ local) ->
+                      CConAlt ((outer ++ ns) ++ local)
   insertNamesConAlt {outer} {ns} p q (MkConAlt x ci tag args sc)
-        = let sc' : CExp ((args ++ outer) ++ inner)
-                  = rewrite sym (appendAssociative args outer inner) in sc in
+        = let sc' : CExp (outer ++ (local ++ args))
+                  = rewrite appendAssociative outer local args in sc in
               MkConAlt x ci tag args
-               (rewrite appendAssociative args outer (ns ++ inner) in
-                        insertNames (mkSizeOf args + p) q sc')
+               (rewrite sym $ appendAssociative (outer ++ ns) local args in
+                        insertNames (p + mkSizeOf args) q sc')
 
-  insertNamesConstAlt : SizeOf outer ->
+  insertNamesConstAlt : SizeOf local ->
                         SizeOf ns ->
-                        CConstAlt (outer ++ inner) ->
-                        CConstAlt (outer ++ (ns ++ inner))
+                        CConstAlt (outer ++ local) ->
+                        CConstAlt ((outer ++ ns) ++ local)
   insertNamesConstAlt outer ns (MkConstAlt x sc) = MkConstAlt x (insertNames outer ns sc)
 
 mutual
   export
-  embed : CExp args -> CExp (args ++ vars)
+  embed : CExp args -> CExp (outer ++ args)
   embed cexp = believe_me cexp
   -- It is identity at run time, but it would be implemented as below
   -- (not sure theere's much performance benefit, mind...)
@@ -508,20 +510,22 @@ mutual
   -}
 
 mutual
+
   -- Shrink the scope of a compiled expression, replacing any variables not
-  -- in the remaining set with Erased
+  -- in the remaining set with Erased. This does not quite fit in the IsScoped
+  -- interface where shrink is partial
   export
-  shrinkCExp : SubVars newvars vars -> CExp vars -> CExp newvars
+  shrinkCExp : Thin newvars vars -> CExp vars -> CExp newvars
   shrinkCExp sub (CLocal fc prf)
-      = case subElem prf sub of
+      = case shrinkIsVar prf sub of
              Nothing => CErased fc
              Just (MkVar prf') => CLocal fc prf'
   shrinkCExp _ (CRef fc x) = CRef fc x
   shrinkCExp sub (CLam fc x sc)
-      = let sc' = shrinkCExp (KeepCons sub) sc in
+      = let sc' = shrinkCExp (Keep sub) sc in
             CLam fc x sc'
   shrinkCExp sub (CLet fc x inl val sc)
-      = let sc' = shrinkCExp (KeepCons sub) sc in
+      = let sc' = shrinkCExp (Keep sub) sc in
             CLet fc x inl (shrinkCExp sub val) sc'
   shrinkCExp sub (CApp fc x xs)
       = CApp fc (shrinkCExp sub x) (assert_total (map (shrinkCExp sub) xs))
@@ -545,11 +549,11 @@ mutual
   shrinkCExp _ (CErased fc) = CErased fc
   shrinkCExp _ (CCrash fc x) = CCrash fc x
 
-  shrinkConAlt : SubVars newvars vars -> CConAlt vars -> CConAlt newvars
+  shrinkConAlt : Thin newvars vars -> CConAlt vars -> CConAlt newvars
   shrinkConAlt sub (MkConAlt x ci tag args sc)
-        = MkConAlt x ci tag args (shrinkCExp (subExtend args sub) sc)
+        = MkConAlt x ci tag args (shrinkCExp (keeps args sub) sc)
 
-  shrinkConstAlt : SubVars newvars vars -> CConstAlt vars -> CConstAlt newvars
+  shrinkConstAlt : Thin newvars vars -> CConstAlt vars -> CConstAlt newvars
   shrinkConstAlt sub (MkConstAlt x sc) = MkConstAlt x (shrinkCExp sub sc)
 
 export
@@ -560,91 +564,92 @@ export
 Weaken CConAlt where
   weakenNs ns tm = insertNamesConAlt zero ns tm
 
--- Substitute some explicit terms for names in a term, and remove those
+export
+Weaken CConstAlt where
+  weakenNs ns tm = insertNamesConstAlt zero ns tm
+
+-- CSubstitute some explicit terms for names in a term, and remove those
 -- names from the scope
-namespace SubstCEnv
+namespace CSubst
   public export
-  data SubstCEnv : List Name -> List Name -> Type where
-       Nil : SubstCEnv [] vars
-       (::) : CExp vars ->
-              SubstCEnv ds vars -> SubstCEnv (d :: ds) vars
+  data CSubst : Scope -> Scoped where
+    Lin : CSubst [<] vars
+    (:<) : CSubst ds vars -> CExp vars -> CSubst (ds :< d) vars
 
-findDrop : FC -> Var (dropped ++ vars) ->
-           SubstCEnv dropped vars -> CExp vars
-findDrop fc (MkVar p) [] = CLocal fc p
-findDrop fc (MkVar First) (tm :: env) = tm
-findDrop fc (MkVar (Later p)) (tm :: env) = findDrop fc (MkVar p) env
+lookup : FC -> Var (vars ++ target) ->
+  CSubst target vars -> CExp vars
+lookup fc (MkVar p) [<] = CLocal fc p
+lookup fc (MkVar First) (_ :< tm) = tm
+lookup fc (MkVar (Later p)) (env :< _) = lookup fc (MkVar p) env
 
-find : FC ->
-       SizeOf outer ->
-       Var (outer ++ (dropped ++ vars)) ->
-       SubstCEnv dropped vars ->
-       CExp (outer ++ vars)
-find fc outer var env = case sizedView outer of
-  Z       => findDrop fc var env
-  S outer => case var of
-    MkVar First     => CLocal fc First
-    MkVar (Later p) => weaken (find fc outer (MkVar p) env)
-    -- TODO: refactor to weaken only once?
+substLocal :
+  SizeOf local -> CSubst target outer ->
+  FC -> Var ((outer ++ target) ++ local) ->
+  CExp (outer ++ local)
+substLocal local env fc var = case locateVar local var of
+  Right (MkVar p) => CLocal fc (embedIsVar p)
+  Left v => weakenNs local $ lookup fc v env
+
+||| What it means for a type to have a substitution action
+||| Note the generalised type working under an arbitrary scope
+||| of locally bound variables.
+public export
+0 CSubstable : (tm : Scoped) -> Type
+CSubstable tm = {0 local, target, outer : Scope} ->
+  SizeOf local -> CSubst target outer ->
+  tm ((outer ++ target) ++ local) -> tm (outer ++ local)
+
+
 
 mutual
-  substEnv : SizeOf outer ->
-             SubstCEnv dropped vars ->
-             CExp (outer ++ (dropped ++ vars)) ->
-             CExp (outer ++ vars)
-  substEnv outer env (CLocal fc prf)
-      = find fc outer (MkVar prf) env
-  substEnv _ _ (CRef fc x) = CRef fc x
-  substEnv outer env (CLam fc x sc)
-      = let sc' = substEnv (suc outer) env sc in
+  substCExp : CSubstable CExp
+  substCExp outer env (CLocal fc prf)
+      = substLocal outer env fc (MkVar prf)
+  substCExp _ _ (CRef fc x) = CRef fc x
+  substCExp outer env (CLam fc x sc)
+      = let sc' = substCExp (suc outer) env sc in
             CLam fc x sc'
-  substEnv outer env (CLet fc x inl val sc)
-      = let sc' = substEnv (suc outer) env sc in
-            CLet fc x inl (substEnv outer env val) sc'
-  substEnv outer env (CApp fc x xs)
-      = CApp fc (substEnv outer env x) (assert_total (map (substEnv outer env) xs))
-  substEnv outer env (CCon fc x ci tag xs)
-      = CCon fc x ci tag (assert_total (map (substEnv outer env) xs))
-  substEnv outer env (COp fc x xs)
-      = COp fc x (assert_total (map (substEnv outer env) xs))
-  substEnv outer env (CExtPrim fc p xs)
-      = CExtPrim fc p (assert_total (map (substEnv outer env) xs))
-  substEnv outer env (CForce fc lr x) = CForce fc lr (substEnv outer env x)
-  substEnv outer env (CDelay fc lr x) = CDelay fc lr (substEnv outer env x)
-  substEnv outer env (CConCase fc sc xs def)
-      = CConCase fc (substEnv outer env sc)
+  substCExp outer env (CLet fc x inl val sc)
+      = let sc' = substCExp (suc outer) env sc in
+            CLet fc x inl (substCExp outer env val) sc'
+  substCExp outer env (CApp fc x xs)
+      = CApp fc (substCExp outer env x) (assert_total (map (substCExp outer env) xs))
+  substCExp outer env (CCon fc x ci tag xs)
+      = CCon fc x ci tag (assert_total (map (substCExp outer env) xs))
+  substCExp outer env (COp fc x xs)
+      = COp fc x (assert_total (map (substCExp outer env) xs))
+  substCExp outer env (CExtPrim fc p xs)
+      = CExtPrim fc p (assert_total (map (substCExp outer env) xs))
+  substCExp outer env (CForce fc lr x) = CForce fc lr (substCExp outer env x)
+  substCExp outer env (CDelay fc lr x) = CDelay fc lr (substCExp outer env x)
+  substCExp outer env (CConCase fc sc xs def)
+      = CConCase fc (substCExp outer env sc)
                  (assert_total (map (substConAlt outer env) xs))
-                 (assert_total (map (substEnv outer env) def))
-  substEnv outer env (CConstCase fc sc xs def)
-      = CConstCase fc (substEnv outer env sc)
+                 (assert_total (map (substCExp outer env) def))
+  substCExp outer env (CConstCase fc sc xs def)
+      = CConstCase fc (substCExp outer env sc)
                    (assert_total (map (substConstAlt outer env) xs))
-                   (assert_total (map (substEnv outer env) def))
-  substEnv _ _ (CPrimVal fc x) = CPrimVal fc x
-  substEnv _ _ (CErased fc) = CErased fc
-  substEnv _ _ (CCrash fc x) = CCrash fc x
+                   (assert_total (map (substCExp outer env) def))
+  substCExp _ _ (CPrimVal fc x) = CPrimVal fc x
+  substCExp _ _ (CErased fc) = CErased fc
+  substCExp _ _ (CCrash fc x) = CCrash fc x
 
-  substConAlt : SizeOf outer ->
-                SubstCEnv dropped vars ->
-                CConAlt (outer ++ (dropped ++ vars)) ->
-                CConAlt (outer ++ vars)
-  substConAlt {vars} {outer} {dropped} p env (MkConAlt x ci tag args sc)
+  substConAlt : CSubstable CConAlt
+  substConAlt p env (MkConAlt x ci tag args sc)
       = MkConAlt x ci tag args
-           (rewrite appendAssociative args outer vars in
-                    substEnv (mkSizeOf args + p) env
-                      (rewrite sym (appendAssociative args outer (dropped ++ vars)) in
-                               sc))
+      $ rewrite sym $ appendAssociative outer local args in
+        substCExp (p + mkSizeOf args) env
+      $ rewrite appendAssociative (outer ++ target) local args in sc
 
-  substConstAlt : SizeOf outer ->
-                  SubstCEnv dropped vars ->
-                  CConstAlt (outer ++ (dropped ++ vars)) ->
-                  CConstAlt (outer ++ vars)
-  substConstAlt outer env (MkConstAlt x sc) = MkConstAlt x (substEnv outer env sc)
+  substConstAlt : CSubstable CConstAlt
+  substConstAlt outer env (MkConstAlt x sc) = MkConstAlt x (substCExp outer env sc)
+
 
 export
-substs : {dropped, vars : _} ->
-         SubstCEnv dropped vars -> CExp (dropped ++ vars) -> CExp vars
-substs env tm = substEnv zero env tm
+substs : CSubst target outer -> CExp (outer ++ target) -> CExp outer
+substs env tm = substCExp zero env tm
 
+{-
 resolveRef : SizeOf outer ->
              SizeOf done ->
              Bounds bound -> FC -> Name ->
@@ -719,6 +724,7 @@ export
 refsToLocals : Bounds bound -> CExp vars -> CExp (bound ++ vars)
 refsToLocals None tm = tm
 refsToLocals bs y = mkLocals zero bs y
+-}
 
 export
 getFC : CExp args -> FC

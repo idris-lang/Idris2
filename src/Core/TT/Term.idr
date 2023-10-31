@@ -187,47 +187,47 @@ compatTerm compat tm = believe_me tm -- no names in term, so it's identity
 
 mutual
   export
-  strengthenPi : Strengthenable (PiInfo . Term)
-  strengthenPi pinfo th
+  shrinkPi : Shrinkable (PiInfo . Term)
+  shrinkPi pinfo th
     = assert_total
-    $ traverse (\ t => strengthenTerm t th) pinfo
+    $ traverse (\ t => shrinkTerm t th) pinfo
 
   export
-  strengthenBinder : Strengthenable (Binder . Term)
-  strengthenBinder binder th
+  shrinkBinder : Shrinkable (Binder . Term)
+  shrinkBinder binder th
     = assert_total
-    $ traverse (\ t => strengthenTerm t th) binder
+    $ traverse (\ t => shrinkTerm t th) binder
 
   export
-  strengthenTerms : Strengthenable (List . Term)
-  strengthenTerms ts th
+  shrinkTerms : Shrinkable (List . Term)
+  shrinkTerms ts th
     = assert_total
-    $ traverse (\ t => strengthenTerm t th) ts
+    $ traverse (\ t => shrinkTerm t th) ts
 
-  strengthenTerm : Strengthenable Term
-  strengthenTerm (Local fc r idx loc) prf
-    = do MkVar loc' <- strengthenIsVar loc prf
+  shrinkTerm : Shrinkable Term
+  shrinkTerm (Local fc r idx loc) prf
+    = do MkVar loc' <- shrinkIsVar loc prf
          pure (Local fc r _ loc')
-  strengthenTerm (Ref fc x name) prf = Just (Ref fc x name)
-  strengthenTerm (Meta fc x y xs) prf
-     = do Just (Meta fc x y !(strengthenTerms xs prf))
-  strengthenTerm (Bind fc x b scope) prf
-     = Just (Bind fc x !(strengthenBinder b prf) !(strengthenTerm scope (keep prf)))
-  strengthenTerm (App fc fn arg) prf
-     = Just (App fc !(strengthenTerm fn prf) !(strengthenTerm arg prf))
-  strengthenTerm (As fc s as tm) prf
-     = Just (As fc s !(strengthenTerm as prf) !(strengthenTerm tm prf))
-  strengthenTerm (TDelayed fc x y) prf
-     = Just (TDelayed fc x !(strengthenTerm y prf))
-  strengthenTerm (TDelay fc x t y) prf
-     = Just (TDelay fc x !(strengthenTerm t prf) !(strengthenTerm y prf))
-  strengthenTerm (TForce fc r x) prf
-     = Just (TForce fc r !(strengthenTerm x prf))
-  strengthenTerm (PrimVal fc c) prf = Just (PrimVal fc c)
-  strengthenTerm (Erased fc Placeholder) prf = Just (Erased fc Placeholder)
-  strengthenTerm (Erased fc Impossible) prf = Just (Erased fc Impossible)
-  strengthenTerm (Erased fc (Dotted t)) prf = Erased fc . Dotted <$> strengthenTerm t prf
-  strengthenTerm (TType fc u) prf = Just (TType fc u)
+  shrinkTerm (Ref fc x name) prf = Just (Ref fc x name)
+  shrinkTerm (Meta fc x y xs) prf
+     = do Just (Meta fc x y !(shrinkTerms xs prf))
+  shrinkTerm (Bind fc x b scope) prf
+     = Just (Bind fc x !(shrinkBinder b prf) !(shrinkTerm scope (keep prf)))
+  shrinkTerm (App fc fn arg) prf
+     = Just (App fc !(shrinkTerm fn prf) !(shrinkTerm arg prf))
+  shrinkTerm (As fc s as tm) prf
+     = Just (As fc s !(shrinkTerm as prf) !(shrinkTerm tm prf))
+  shrinkTerm (TDelayed fc x y) prf
+     = Just (TDelayed fc x !(shrinkTerm y prf))
+  shrinkTerm (TDelay fc x t y) prf
+     = Just (TDelay fc x !(shrinkTerm t prf) !(shrinkTerm y prf))
+  shrinkTerm (TForce fc r x) prf
+     = Just (TForce fc r !(shrinkTerm x prf))
+  shrinkTerm (PrimVal fc c) prf = Just (PrimVal fc c)
+  shrinkTerm (Erased fc Placeholder) prf = Just (Erased fc Placeholder)
+  shrinkTerm (Erased fc Impossible) prf = Just (Erased fc Impossible)
+  shrinkTerm (Erased fc (Dotted t)) prf = Erased fc . Dotted <$> shrinkTerm t prf
+  shrinkTerm (TType fc u) prf = Just (TType fc u)
 
 
 mutual
@@ -266,17 +266,14 @@ mutual
   thinTerm (TType fc u) th = TType fc u
 
 export
-embedTerm : Term vars -> Term (outer ++ vars)
-embedTerm tm = believe_me tm
+Weaken Term where
+  weakenNs p tm = assert_total $ insertNames zero p tm
 
 export
 IsScoped Term where
-  strengthen = strengthenTerm
+  shrink = shrinkTerm
   thin = thinTerm
-
-  weakenNs p tm = assert_total $ insertNames zero p tm
   compatNs = compatTerm
-  embedNs _ = embedTerm
 
 ------------------------------------------------------------------------
 -- Smart constructors
