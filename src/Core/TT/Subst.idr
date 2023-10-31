@@ -3,8 +3,9 @@ module Core.TT.Subst
 import Core.FC
 import Core.Name
 import Core.Name.Scoped
-import Core.TT.Var
+import Core.TT.Binder
 import Core.TT.Term
+import Core.TT.Var
 
 import Libraries.Data.SnocList.HasLength
 import Libraries.Data.SnocList.SizeOf
@@ -28,72 +29,105 @@ lookup fc r (MkVar (Later idx)) (env :< _) = lookup fc r (MkVar idx) env
 -- Substitute some explicit terms for names in a term, and remove those
 -- names from the scope
 substLocal :
-  FC -> Maybe Bool ->
-  SizeOf local ->
-  Var ((outer ++ target) ++ local) ->
-  Subst target outer ->
+  SizeOf local -> Subst target outer ->
+  FC -> Maybe Bool -> Var ((outer ++ target) ++ local) ->
   Term (outer ++ local)
-substLocal fc r local var env = case locateVar local var of
+substLocal local env fc r var = case locateVar local var of
   Right (MkVar p) => Local fc r _ (embedIsVar p)
   Left v => weakenNs local $ lookup fc r v env
 
-{-
 
-  substSubst : SizeOf outer ->
-             SubstSubst dropped vars ->
-             Term (outer ++ (dropped ++ vars)) ->
-             Term (outer ++ vars)
-  substSubst outer env (Local fc r _ prf)
-      = find fc r outer (MkVar prf) env
-  substSubst outer env (Ref fc x name) = Ref fc x name
-  substSubst outer env (Meta fc n i xs)
-      = Meta fc n i (map (substSubst outer env) xs)
-  substSubst outer env (Bind fc x b scope)
-      = Bind fc x (map (substSubst outer env) b)
-                  (substSubst (suc outer) env scope)
-  substSubst outer env (App fc fn arg)
-      = App fc (substSubst outer env fn) (substSubst outer env arg)
-  substSubst outer env (As fc s as pat)
-      = As fc s (substSubst outer env as) (substSubst outer env pat)
-  substSubst outer env (TDelayed fc x y) = TDelayed fc x (substSubst outer env y)
-  substSubst outer env (TDelay fc x t y)
-      = TDelay fc x (substSubst outer env t) (substSubst outer env y)
-  substSubst outer env (TForce fc r x) = TForce fc r (substSubst outer env x)
-  substSubst outer env (PrimVal fc c) = PrimVal fc c
-  substSubst outer env (Erased fc Impossible) = Erased fc Impossible
-  substSubst outer env (Erased fc Placeholder) = Erased fc Placeholder
-  substSubst outer env (Erased fc (Dotted t)) = Erased fc (Dotted (substSubst outer env t))
-  substSubst outer env (TType fc u) = TType fc u
+||| What it means for a type to have a substitution action
+||| Note the generalised type working under an arbitrary scope
+||| of locally bound variables.
+public export
+0 Substable : (tm : Scoped) -> Type
+Substable tm = {0 local, target, outer : Scope} ->
+  SizeOf local -> Subst target outer ->
+  tm ((outer ++ target) ++ local) -> tm (outer ++ local)
+
+mutual
+
+  substBinder : Substable (Binder . Term)
+  substBinder local env b = assert_total $ map (substTerm local env) b
+
+  substTerms : Substable (List . Term)
+  substTerms local env xs = assert_total $ map (substTerm local env) xs
 
   export
-  substs : SubstSubst dropped vars -> Term (dropped ++ vars) -> Term vars
-  substs env tm = substSubst zero env tm
+  substTerm : Substable Term
+  substTerm local env (Local fc r _ prf)
+      = substLocal local env fc r (MkVar prf)
+  substTerm local env (Ref fc x name) = Ref fc x name
+  substTerm local env (Meta fc n i xs)
+      = Meta fc n i (substTerms local env xs)
+  substTerm local env (Bind fc x b scope)
+      = Bind fc x (substBinder local env b)
+                  (substTerm (suc local) env scope)
+  substTerm local env (App fc fn arg)
+      = App fc (substTerm local env fn) (substTerm local env arg)
+  substTerm local env (As fc s as pat)
+      = As fc s (substTerm local env as) (substTerm local env pat)
+  substTerm local env (TDelayed fc x y) = TDelayed fc x (substTerm local env y)
+  substTerm local env (TDelay fc x t y)
+      = TDelay fc x (substTerm local env t) (substTerm local env y)
+  substTerm local env (TForce fc r x) = TForce fc r (substTerm local env x)
+  substTerm local env (PrimVal fc c) = PrimVal fc c
+  substTerm local env (Erased fc Impossible) = Erased fc Impossible
+  substTerm local env (Erased fc Placeholder) = Erased fc Placeholder
+  substTerm local env (Erased fc (Dotted t)) = Erased fc (Dotted (substTerm local env t))
+  substTerm local env (TType fc u) = TType fc u
 
-  export
-  subst : Term vars -> Term (x :: vars) -> Term vars
-  subst val tm = substs [val] tm
 
--- Replace an explicit name with a term
+||| Parallel substitution
 export
-substName : Name -> Term vars -> Term vars -> Term vars
-substName x new (Ref fc nt name)
-    = case nameEq x name of
-           Nothing => Ref fc nt name
-           Just Refl => new
-substName x new (Meta fc n i xs)
-    = Meta fc n i (map (substName x new) xs)
--- ASSUMPTION: When we substitute under binders, the name has always been
--- resolved to a Local, so no need to check that x isn't shadowing
-substName x new (Bind fc y b scope)
-    = Bind fc y (map (substName x new) b) (substName x (weaken new) scope)
-substName x new (App fc fn arg)
-    = App fc (substName x new fn) (substName x new arg)
-substName x new (As fc s as pat)
-    = As fc s as (substName x new pat)
-substName x new (TDelayed fc y z)
-    = TDelayed fc y (substName x new z)
-substName x new (TDelay fc y t z)
-    = TDelay fc y (substName x new t) (substName x new z)
-substName x new (TForce fc r y)
-    = TForce fc r (substName x new y)
-substName x new tm = tm
+substs : Subst target outer -> Term (outer ++ target) -> Term outer
+substs env tm = substTerm zero env tm
+
+||| Substitution for the most local variable
+export
+subst : Term vars -> Term (vars :< x) -> Term vars
+subst val tm = substs [<val] tm
+
+
+public export
+0 SubstRef : Scoped -> Type
+SubstRef tm = {0 vars, local : Scope} -> SizeOf local -> Name -> Term vars ->
+    tm (vars ++ local) -> tm (vars ++ local)
+
+mutual
+
+  substRefBinder : SubstRef (Binder . Term)
+  substRefBinder s x new b = assert_total $ map (substRefTerm s x new) b
+
+  substRefTerms : SubstRef (List . Term)
+  substRefTerms s x new xs = assert_total $ map (substRefTerm s x new) xs
+
+  ||| Replace a global name with a term
+  export
+  substRefTerm : SubstRef Term
+  substRefTerm s x new (Ref fc nt name)
+      = case nameEq x name of
+             Nothing => Ref fc nt name
+             Just Refl => weakenNs s new
+  substRefTerm s x new (Meta fc n i xs)
+      = Meta fc n i (substRefTerms s x new xs)
+  -- ASSUMPTION: When we substitute under binders, the name has always been
+  -- resolved to a Local, so no need to check that x isn't shadowing
+  substRefTerm s x new (Bind fc y b scope)
+      = Bind fc y (substRefBinder s x new b) (substRefTerm (suc s) x new scope)
+  substRefTerm s x new (App fc fn arg)
+      = App fc (substRefTerm s x new fn) (substRefTerm s x new arg)
+  substRefTerm s x new (As fc use as pat)
+      = As fc use as (substRefTerm s x new pat)
+  substRefTerm s x new (TDelayed fc y z)
+      = TDelayed fc y (substRefTerm s x new z)
+  substRefTerm s x new (TDelay fc y t z)
+      = TDelay fc y (substRefTerm s x new t) (substRefTerm s x new z)
+  substRefTerm s x new (TForce fc r y)
+      = TForce fc r (substRefTerm s x new y)
+  substRefTerm s x new tm = tm
+
+export
+substRef : Name -> Term vars -> Term vars -> Term vars
+substRef = substRefTerm zero
