@@ -133,9 +133,7 @@ ClosedTerm = Term [<]
 -- Weakening
 
 export covering
-insertNames : SizeOf inner -> SizeOf ns ->
-              Term (outer ++ inner) ->
-              Term ((outer ++ ns) ++ inner)
+insertNames : GenWeakenable Term
 insertNames out ns (Local fc r idx prf)
    = let MkNVar prf' = insertNVarNames out ns (MkNVar prf) in
      Local fc r _ prf'

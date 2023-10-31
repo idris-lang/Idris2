@@ -74,6 +74,18 @@ keeps : (args : SnocList a) -> Thin xs ys -> Thin (xs ++ args) (ys ++ args)
 keeps [<] th = th
 keeps (sx :< x) th = keep (keeps sx th)
 
+------------------------------------------------------------------------
+-- Concepts
+
+public export
+0 Weakenable : Scoped -> Type
+Weakenable tm = {0 vars, ns : Scope} -> SizeOf ns -> tm vars -> tm (vars ++ ns)
+
+public export
+0 GenWeakenable : Scoped -> Type
+GenWeakenable tm = {0 outer, ns, local : Scope} ->
+  SizeOf local -> SizeOf ns -> tm (outer ++ local) -> tm ((outer ++ ns) ++ local)
+
 public export
 0 Thinnable : Scoped -> Type
 Thinnable tm = {0 xs, ys : Scope} -> tm xs -> Thin xs ys -> tm ys
@@ -93,7 +105,7 @@ public export
 interface Weaken (0 tm : Scoped) where
   -- methods
   weaken : tm vars -> tm (vars :< nm)
-  weakenNs : SizeOf inner -> tm vars -> tm (vars ++ inner)
+  weakenNs : Weakenable tm
 
   -- default implementations
   weakenNs p t = case sizedView p of

@@ -423,10 +423,7 @@ Show NamedDef where
 
 mutual
   export
-  insertNames : SizeOf local ->
-                SizeOf ns ->
-                CExp (outer ++ local) ->
-                CExp ((outer ++ ns) ++ local)
+  insertNames : GenWeakenable CExp
   insertNames outer ns (CLocal fc prf)
       = let MkNVar var' = insertNVarNames outer ns (MkNVar prf) in
             CLocal fc var'
@@ -457,10 +454,7 @@ mutual
   insertNames _ _ (CErased fc) = CErased fc
   insertNames _ _ (CCrash fc x) = CCrash fc x
 
-  insertNamesConAlt : SizeOf local ->
-                      SizeOf ns ->
-                      CConAlt (outer ++ local) ->
-                      CConAlt ((outer ++ ns) ++ local)
+  insertNamesConAlt : GenWeakenable CConAlt
   insertNamesConAlt {outer} {ns} p q (MkConAlt x ci tag args sc)
         = let sc' : CExp (outer ++ (local ++ args))
                   = rewrite appendAssociative outer local args in sc in
@@ -468,15 +462,12 @@ mutual
                (rewrite sym $ appendAssociative (outer ++ ns) local args in
                         insertNames (p + mkSizeOf args) q sc')
 
-  insertNamesConstAlt : SizeOf local ->
-                        SizeOf ns ->
-                        CConstAlt (outer ++ local) ->
-                        CConstAlt ((outer ++ ns) ++ local)
+  insertNamesConstAlt : GenWeakenable CConstAlt
   insertNamesConstAlt outer ns (MkConstAlt x sc) = MkConstAlt x (insertNames outer ns sc)
 
 mutual
   export
-  embed : CExp args -> CExp (outer ++ args)
+  embed : Embeddable CExp
   embed cexp = believe_me cexp
   -- It is identity at run time, but it would be implemented as below
   -- (not sure theere's much performance benefit, mind...)
@@ -515,7 +506,7 @@ mutual
   -- in the remaining set with Erased. This does not quite fit in the IsScoped
   -- interface where shrink is partial
   export
-  shrinkCExp : Thin newvars vars -> CExp vars -> CExp newvars
+shrinkCExp : Thin newvars vars -> CExp vars -> CExp newvars
   shrinkCExp sub (CLocal fc prf)
       = case shrinkIsVar prf sub of
              Nothing => CErased fc

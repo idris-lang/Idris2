@@ -2,6 +2,7 @@ module Core.TT.Var
 
 import Data.Nat
 import Data.So
+import Data.SnocList
 
 import Core.Name
 import Core.Name.Scoped
@@ -119,19 +120,6 @@ export
 Show (Var ns) where
   show v = show (varIdx v)
 
-||| The (partial) inverse to insertVar
-export
-removeVar : SizeOf local ->
-            Var        (outer :< x ++ local) ->
-            Maybe (Var (outer      ++ local))
-removeVar out var = case sizedView out of
-  Z => case var of
-          MkVar First     => Nothing
-          MkVar (Later p) => Just (MkVar p)
-  S out' => case var of
-              MkVar First     => Just (MkVar First)
-              MkVar (Later p) => later <$> removeVar out' (MkVar p)
-
 ------------------------------------------------------------------------
 -- Named variable in scope
 
@@ -145,6 +133,13 @@ namespace NVar
   export
   later : NVar nm ns -> NVar nm (ns :< n)
   later (MkNVar p) = MkNVar (Later p)
+
+export
+locateNVar : SizeOf local -> NVar nm (outer ++ local) ->
+             Either (NVar nm outer) (NVar nm local)
+locateNVar s (MkNVar {nvarIdx} p) = case choose (nvarIdx < size s) of
+  Left so => Right (MkNVar (locateIsVarLT s so p))
+  Right so => Left (MkNVar (locateIsVarGE s so p))
 
 ------------------------------------------------------------------------
 -- Scope checking
@@ -188,21 +183,15 @@ export
 insertNVar : SizeOf local ->
              NVar nm (outer ++ local) ->
              NVar nm (outer :< n ++ local)
-insertNVar p v = case sizedView p of
-  Z     => later v
-  (S p) => case v of
-    MkNVar First     => MkNVar First
-    MkNVar (Later v) => later (insertNVar p (MkNVar v))
+insertNVar p v = case locateNVar p v of
+  Left v => weakenNVar p (later v)
+  Right (MkNVar p) => MkNVar (embedIsVar p)
 
 export
-insertNVarNames : SizeOf local -> SizeOf ns ->
-                  NVar name (outer         ++ local) ->
-                  NVar name ((outer ++ ns) ++ local)
-insertNVarNames p q v = case sizedView p of
-  Z     => weakenNVar q v
-  (S p) => case v of
-    MkNVar First      => MkNVar First
-    MkNVar (Later v') => later (insertNVarNames p q (MkNVar v'))
+insertNVarNames : GenWeakenable (NVar name)
+insertNVarNames p q v = case locateNVar p v of
+  Left v => rewrite sym $ appendAssociative outer ns local in weakenNVar (q + p) v
+  Right (MkNVar p) => MkNVar (embedIsVar p)
 
 export
 insertVar : SizeOf local ->
@@ -213,10 +202,18 @@ insertVar p (MkVar v) = let MkNVar v' = insertNVar p (MkNVar v) in MkVar v'
 weakenVar : SizeOf ns -> Var outer -> Var (outer ++ ns)
 weakenVar p (MkVar v) = let MkNVar v' = weakenNVar p (MkNVar v) in MkVar v'
 
-insertVarNames : SizeOf local -> SizeOf ns ->
-                 Var (outer         ++ local) ->
-                 Var ((outer ++ ns) ++ local)
+insertVarNames : GenWeakenable Var
 insertVarNames p q (MkVar v) = let MkNVar v' = insertNVarNames p q (MkNVar v) in MkVar v'
+
+||| The (partial) inverse to insertVar
+export
+removeVar : SizeOf local ->
+            Var        (outer :< x ++ local) ->
+            Maybe (Var (outer      ++ local))
+removeVar out var = case locateVar out var of
+  Left (MkVar {varIdx = 0} _) => Nothing
+  Left (MkVar {varIdx = S k} p) => pure (weakenVar out $ MkVar (dropLater p))
+  Right (MkVar p) => pure (MkVar (embedIsVar p))
 
 ------------------------------------------------------------------------
 -- Reindexing
