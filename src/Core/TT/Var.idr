@@ -1,5 +1,8 @@
 module Core.TT.Var
 
+import Data.Nat
+import Data.So
+
 import Core.Name
 import Core.Name.Scoped
 
@@ -50,6 +53,7 @@ dropVar (xs :< n) (Later p) = dropVar xs p :< n
 ||| Throw in extra variables on the outer side of the context
 ||| This is essentially the identity function
 ||| This is slow so we ensure it's only used in a runtime irrelevant manner
+export
 0 embedIsVar : IsVar x idx xs -> IsVar x idx (outer ++ xs)
 embedIsVar First = First
 embedIsVar (Later p) = Later (embedIsVar p)
@@ -59,6 +63,27 @@ embedIsVar (Later p) = Later (embedIsVar p)
 0 weakenIsVar : (s : SizeOf ns) -> IsVar x idx xs -> IsVar x (size s + idx) (xs ++ ns)
 weakenIsVar (MkSizeOf Z Z) p =  p
 weakenIsVar (MkSizeOf (S k) (S l)) p =  Later (weakenIsVar (MkSizeOf k l) p)
+
+0 locateIsVarLT :
+  (s : SizeOf local) ->
+  So (idx < size s) ->
+  IsVar x idx (outer ++ local) ->
+  IsVar x idx local
+locateIsVarLT (MkSizeOf Z Z) so v = case v of
+  First impossible
+  Later v impossible
+locateIsVarLT (MkSizeOf (S k) (S l)) so v = case v of
+  First => First
+  Later v => Later (locateIsVarLT (MkSizeOf k l) so v)
+
+0 locateIsVarGE :
+  (s : SizeOf local) ->
+  So (idx >= size s) ->
+  IsVar x idx (outer ++ local) ->
+  IsVar x (idx `minus` size s) outer
+locateIsVarGE (MkSizeOf Z Z) so v = rewrite minusZeroRight idx in v
+locateIsVarGE (MkSizeOf (S k) (S l)) so v = case v of
+  Later v => locateIsVarGE (MkSizeOf k l) so v
 
 ------------------------------------------------------------------------
 -- Variable in scope
@@ -137,6 +162,13 @@ isVar : (n : Name) -> (ns : SnocList Name) -> Maybe (Var ns)
 isVar n ns = do
   MkNVar v <- isNVar n ns
   pure (MkVar v)
+
+export
+locateVar : SizeOf local -> Var (outer ++ local) ->
+            Either (Var outer) (Var local)
+locateVar s (MkVar {varIdx} p) = case choose (varIdx < size s) of
+  Left so => Right (MkVar (locateIsVarLT s so p))
+  Right so => Left (MkVar (locateIsVarGE s so p))
 
 ------------------------------------------------------------------------
 -- Weakening
