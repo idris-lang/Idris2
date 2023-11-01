@@ -299,6 +299,8 @@
 * Updates the docs for `envvars` to match the changes introduced in #2649.
 * Both `make install` and `idris2 --install...` now respect `DESTDIR` which
   can be set to install into a staging directory for distro packaging.
+* Updates the docs for `envvars` to categorise when environment variables are
+  used (runtime, build-time, or both).
 
 ## v0.6.0
 
