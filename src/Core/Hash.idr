@@ -76,7 +76,7 @@ Hashable Char where
 export
 Hashable a => Hashable (Vect n a) where
   hashWithSalt h [] = abs h
-  hashWithSalt h (x :: xs) = hashWithSalt (h * 33 + hash x) xs
+  hashWithSalt h (x :: xs) = hashWithSalt (h * 33 + hash x) x
 
 export
 Hashable a => Hashable (List a) where
@@ -86,6 +86,11 @@ Hashable a => Hashable (List a) where
 export
 Hashable a => Hashable (List1 a) where
   hashWithSalt h xxs = hashWithSalt (h * 33 + hash (head xxs)) (tail xxs)
+
+export
+Hashable a => Hashable (SnocList a) where
+  hashWithSalt h [<] = abs h
+  hashWithSalt h (xs :< x) = hashWithSalt (h * 33 + hash x) xs
 
 export
 Hashable a => Hashable (Maybe a) where
@@ -146,7 +151,7 @@ Hashable ty => Hashable (Binder ty) where
       = h `hashWithSalt` 5 `hashWithSalt` c `hashWithSalt` ty
 
 Hashable (Var vars) where
-  hashWithSalt h (MkVar {i} _) = hashWithSalt h i
+  hashWithSalt h (MkVar {varIdx = i} _) = hashWithSalt h i
 
 mutual
   export

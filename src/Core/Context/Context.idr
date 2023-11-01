@@ -66,7 +66,7 @@ public export
 data Def : Type where
     None : Def -- Not yet defined
     PMDef : (pminfo : PMDefInfo) ->
-            (args : List Name) ->
+            (args : Scope) ->
             (treeCT : CaseTree args) ->
             (treeRT : CaseTree args) ->
             (pats : List (vs ** (Env Term vs, Term vs, Term vs))) ->

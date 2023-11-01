@@ -428,6 +428,11 @@ HasNames UConstraint where
            pure (ULE x' y')
 
 export
+HasNames t => HasNames (Binder t) where
+  full gam = traverse (full gam)
+  resolved gam = traverse (resolved gam)
+
+export
 HasNames (Term vars) where
   full gam (Ref fc x (Resolved i))
       = do Just gdef <- lookupCtxtExact (Resolved i) gam
@@ -439,7 +444,7 @@ HasNames (Term vars) where
              Nothing => Meta fc x i xs
              Just gdef => Meta fc (fullname gdef) i xs
   full gam (Bind fc x b scope)
-      = pure (Bind fc x !(traverse (full gam) b) !(full gam scope))
+      = pure (Bind fc x !(full gam b) !(full gam scope))
   full gam (App fc fn arg)
       = pure (App fc !(full gam fn) !(full gam arg))
   full gam (As fc s p tm)
@@ -466,7 +471,7 @@ HasNames (Term vars) where
                | Nothing => pure (Meta fc x y xs')
            pure (Meta fc x i xs')
   resolved gam (Bind fc x b scope)
-      = pure (Bind fc x !(traverse (resolved gam) b) !(resolved gam scope))
+      = pure (Bind fc x !(resolved gam b) !(resolved gam scope))
   resolved gam (App fc fn arg)
       = pure (App fc !(resolved gam fn) !(resolved gam arg))
   resolved gam (As fc s p tm)
@@ -556,13 +561,13 @@ mutual
 
 export
 HasNames (Env Term vars) where
-  full gam [] = pure []
-  full gam (b :: bs)
-      = pure $ !(traverse (full gam) b) :: !(full gam bs)
+  full gam [<] = pure [<]
+  full gam (bs :< b)
+      = pure $ !(full gam bs) :< !(full gam b)
 
-  resolved gam [] = pure []
-  resolved gam (b :: bs)
-      = pure $ !(traverse (resolved gam) b) :: !(resolved gam bs)
+  resolved gam [<] = pure [<]
+  resolved gam (bs :< b)
+      = pure $ !(resolved gam bs) :< !(resolved gam b)
 
 export
 HasNames Clause where
