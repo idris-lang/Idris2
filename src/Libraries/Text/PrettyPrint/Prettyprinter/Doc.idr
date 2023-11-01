@@ -11,8 +11,12 @@ import Libraries.Data.String.Extra
 %default total
 
 export
+textReplicateChar : Int -> Char -> String
+textReplicateChar n = String.replicate (integerToNat $ cast n)
+
+export
 textSpaces : Int -> String
-textSpaces n = String.replicate (integerToNat $ cast n) ' '
+textSpaces n = textReplicateChar n ' '
 
 ||| Maximum number of characters that fit in one line.
 public export
@@ -104,14 +108,20 @@ export
 hang : Int -> Doc ann -> Doc ann
 hang i d = align (nest i d)
 
+||| Repeat character `n` times.
+export
+replicateChar : (n : Int) -> Char -> Doc ann
+replicateChar n c =
+  if n <= 0
+     then Empty
+     else if n == 1
+             then Chara c
+             else Text n (textReplicateChar n c)
+
 ||| Insert a number of spaces.
 export
 spaces : Int -> Doc ann
-spaces n = if n <= 0
-              then Empty
-              else if n == 1
-                      then Chara ' '
-                      else Text n (textSpaces n)
+spaces n = replicateChar n ' '
 
 ||| Indents a document with `i` spaces, starting from the current cursor position.
 export
