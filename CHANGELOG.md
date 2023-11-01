@@ -17,12 +17,20 @@
   [#1066](https://github.com/idris-lang/idris2/issues/1066)).
 * `%hide` directives can now hide conflicting fixities from other modules.
 * Fixity declarations can now be kept private with export modifiers.
+* Forward-declarations whose visibility differ from their
+  actual definition now emit a warning, unless the definition
+  has no specified visibility
+  (addressing Issue [#1236](https://github.com/idris-lang/Idris2/issues/1236)).
 * New `fromTTImp`, `fromName`, and `fromDecls` names for custom `TTImp`,
   `Name`, and `Decls` literals.
 * Call to `%macro`-functions do not require the `ElabReflection` extension.
 * Default implicits are supported for named implementations.
 * Elaborator scripts were made to be able to access project files,
   allowing the support for type providers and similar stuff.
+* Elaborator scripts were made to be able to inspect which definitions are
+  referred to by another definitions, and in which function currently elaborator is.
+  These features together give an ability to inspect whether particular expressions
+  are recursive (including mutual recursion).
 
 ### REPL changes
 
@@ -119,6 +127,9 @@
   To avoid confusing tooling about which `.ipkg` to use, the
   package file is under the newly added `ipkg` sub-directory.
 
+* Added `Libraries.Data.WithDefault` to facilitate consistent use
+  of a default-if-unspecified value, currently for `private` visibility.
+
 ### Library changes
 
 #### Prelude
@@ -211,6 +222,8 @@
 
 * Adds `infixOfBy` and `isInfixOfBy` into `Data.List`.
 
+* Adds `WithDefault` into `Language.Reflection.TTImp`, mirroring compiler addition.
+
 * Adds updating functions to `SortedMap` and `SortedDMap`.
 
 * Adds `grouped` function to `Data.List` for splitting a list into equal-sized slices.
@@ -223,6 +236,8 @@
 * Adds implementations of `Zippable` to `Either`, `Pair`, `Maybe`, `SortedMap`.
 
 * Adds a `Compose` and `FromApplicative` named implementations for `Zippable`.
+
+* Adds `Semigroup`, `Applicative`, `Traversable` and `Zippable` for `Data.These`.
 
 * Adds bindings for IEEE floating point constants NaN and (+/-) Inf, as well as
   machine epsilon and unit roundoff. Speeds vary depending on backend.
@@ -287,6 +302,8 @@
 * Updates the docs for `envvars` to match the changes introduced in #2649.
 * Both `make install` and `idris2 --install...` now respect `DESTDIR` which
   can be set to install into a staging directory for distro packaging.
+* Updates the docs for `envvars` to categorise when environment variables are
+  used (runtime, build-time, or both).
 
 ## v0.6.0
 

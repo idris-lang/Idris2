@@ -23,6 +23,7 @@ import Protocol.Hex
 
 import Data.List
 import Libraries.Data.NameMap
+import Libraries.Data.WithDefault
 
 %default covering
 
@@ -281,7 +282,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
            log "specialise.flags" 20 "Defining \{show pename} with flags: \{show defflags}"
            peidx <- addDef pename
                   $ the (GlobalDef -> GlobalDef) { flags := defflags }
-                  $ newDef fc pename top [] sty Public None
+                  $ newDef fc pename top [] sty (specified Public) None
            addToSave (Resolved peidx)
 
            -- Reduce the function to be specialised, and reduce any name in

@@ -26,6 +26,7 @@ import System.File
 import Libraries.Data.SortedMap
 import Libraries.Data.StringMap
 import Libraries.Data.StringTrie
+import Libraries.Data.WithDefault
 import Libraries.Text.Parser
 import Libraries.Utils.Path
 import Libraries.Text.PrettyPrint.Prettyprinter.Render.String
@@ -756,7 +757,7 @@ makeDoc pkg opts =
     visible : GlobalDef -> Bool
     visible def = case definition def of
       (DCon _ _ _) => False
-      _ => (visibility def /= Private)
+      _ => (collapseDefault (visibility def) /= Private)
 
     fileError : String -> FileError -> Core (List Error)
     fileError filename err = pure [FileErr filename err]

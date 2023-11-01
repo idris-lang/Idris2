@@ -26,6 +26,7 @@ import Data.List
 import Data.Maybe
 import Data.String
 import Libraries.Data.NameMap
+import Libraries.Data.WithDefault
 
 %default covering
 
@@ -192,9 +193,9 @@ caseBlock {vars} rigc elabinfo fc nest env opts scr scrtm scrty caseRig alts exp
          let env = updateMults (linearUsed est) env
          defs <- get Ctxt
          parentDef <- lookupCtxtExact (Resolved (defining est)) (gamma defs)
-         let vis = case parentDef of
+         let vis = specified $ case parentDef of
                         Just gdef =>
-                             if visibility gdef == Public
+                             if collapseDefault (visibility gdef) == Public
                                 then Public
                                 else Private
                         Nothing => Public

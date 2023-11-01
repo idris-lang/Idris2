@@ -13,6 +13,8 @@ import Data.Either
 import Data.List
 import Data.Maybe
 
+import Libraries.Data.WithDefault
+
 %default covering
 
 SearchEnv : List Name -> Type
@@ -365,7 +367,7 @@ searchName : {vars : _} ->
 searchName fc rigc defaults trying depth def top env target (n, ndef)
     = do defs <- get Ctxt
          when (not (visibleInAny (!getNS :: !getNestedNS)
-                                 (fullname ndef) (visibility ndef))) $
+                                 (fullname ndef) (collapseDefault $ visibility ndef))) $
             throw (CantSolveGoal fc (gamma defs) [] top Nothing)
          when (BlockedHint `elem` flags ndef) $
             throw (CantSolveGoal fc (gamma defs) [] top Nothing)
@@ -416,7 +418,7 @@ searchNames fc rigc defaults trying depth defining topty env ambig (n :: ns) tar
     visible gam nspace n
         = do Just def <- lookupCtxtExact n gam
                   | Nothing => pure Nothing
-             if visibleInAny nspace n (visibility def)
+             if visibleInAny nspace n (collapseDefault $ visibility def)
                 then pure $ Just (n, def)
                 else pure $ Nothing
 

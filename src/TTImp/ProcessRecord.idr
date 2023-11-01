@@ -18,6 +18,8 @@ import TTImp.TTImp.Traversals
 import TTImp.Unelab
 import TTImp.Utils
 
+import Libraries.Data.WithDefault
+
 import Data.List
 import Data.String
 
@@ -43,13 +45,14 @@ elabRecord : {vars : _} ->
              {auto o : Ref ROpts REPLOpts} ->
              List ElabOpt -> FC -> Env Term vars ->
              NestedNames vars -> Maybe String ->
-             Visibility -> Maybe TotalReq -> Name ->
+             WithDefault Visibility Private ->
+             Maybe TotalReq -> Name ->
              (params : List (Name, RigCount, PiInfo RawImp, RawImp)) ->
              (opts : List DataOpt) ->
              (conName : Name) ->
              List IField ->
              Core ()
-elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params0 opts conName_in fields
+elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conName_in fields
     = do tn <- inCurrentNS tn_in
          conName <- inCurrentNS conName_in
          params <- preElabAsData tn
@@ -145,7 +148,7 @@ elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params0 opts conName_i
              -- we don't use MkImpLater because users may have already declared the record ahead of time
              let dt = MkImpData fc tn (Just dataTy) opts []
              log "declare.record" 10 $ "Pre-declare record data type: \{show dt}"
-             processDecl [] nest env (IData fc vis mbtot dt)
+             processDecl [] nest env (IData fc def_vis mbtot dt)
              defs <- get Ctxt
              Just ty <- lookupTyExact tn (gamma defs)
                | Nothing => throw (InternalError "Missing data type \{show tn}, despite having just declared it!")
@@ -221,7 +224,7 @@ elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params0 opts conName_i
                        !(bindTypeNames fc [] boundNames conty)
              let dt = MkImpData fc tn Nothing opts [con]
              log "declare.record" 5 $ "Record data type " ++ show dt
-             processDecl [] nest env (IData fc vis mbtot dt)
+             processDecl [] nest env (IData fc def_vis mbtot dt)
 
     countExp : Term vs -> Nat
     countExp (Bind _ _ (Pi _ _ Explicit _) sc) = S (countExp sc)
@@ -245,7 +248,7 @@ elabRecord {vars} eopts fc env nest newns vis mbtot tn_in params0 opts conName_i
                   Core ()
     elabGetters tn con params done upds tyenv (Bind bfc n b@(Pi _ rc imp ty_chk) sc)
         = let rig = if isErased rc then erased else top
-              isVis = projVis vis
+              isVis = projVis (collapseDefault def_vis)
           in if (n `elem` map fst params) || (n `elem` vars)
              then elabGetters tn con params
                               (if imp == Explicit && not (n `elem` vars)
@@ -339,7 +342,7 @@ processRecord : {vars : _} ->
                 {auto o : Ref ROpts REPLOpts} ->
                 List ElabOpt -> NestedNames vars ->
                 Env Term vars -> Maybe String ->
-                Visibility -> Maybe TotalReq ->
+                WithDefault Visibility Private -> Maybe TotalReq ->
                 ImpRecord -> Core ()
-processRecord eopts nest env newns vis mbtot (MkImpRecord fc n ps opts cons fs)
-    = do elabRecord eopts fc env nest newns vis mbtot n ps opts cons fs
+processRecord eopts nest env newns def_vis mbtot (MkImpRecord fc n ps opts cons fs)
+    = do elabRecord eopts fc env nest newns def_vis mbtot n ps opts cons fs

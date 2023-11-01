@@ -110,7 +110,7 @@ tokenise reject tokenizer line col acc str
             | _ => Nothing
           line' = line + cast (countNLs token)
           col' = getCols token col
-          tokenStr = fastPack $ reverse token
+          tokenStr = pack $ reverse token
        in pure (tokenStr, line', col', rest)
 
     getFirstMatch : Tokenizer a -> List Char ->
@@ -149,8 +149,8 @@ lexTo : Lexer ->
         (List (WithBounds a), (StopReason, Int, Int, String))
 lexTo reject tokenizer str
     = let (ts, reason, (l, c, str')) =
-              tokenise reject tokenizer 0 0 [] (fastUnpack str) in
-          (ts, reason, (l, c, fastPack str'))
+              tokenise reject tokenizer 0 0 [] (unpack str) in
+          (ts, reason, (l, c, pack str'))
 
 ||| Given a tokenizer and an input string, return a list of recognised tokens,
 ||| and the line, column, and remainder of the input at the first point in the string

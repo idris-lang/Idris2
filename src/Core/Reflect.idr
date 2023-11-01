@@ -8,6 +8,8 @@ import Core.Normalise
 import Core.TT
 import Core.Value
 
+import Libraries.Data.WithDefault
+
 %default covering
 
 public export
@@ -275,6 +277,26 @@ Reflect a => Reflect (List1 a) where
                   (UN $ Basic ":::")) [Erased fc Placeholder, x', xs']
 
 export
+Reify a => Reify (SnocList a) where
+  reify defs val@(NDCon _ n _ _ args)
+      = case (dropAllNS !(full (gamma defs) n), args) of
+             (UN (Basic "Lin"), _) => pure [<]
+             (UN (Basic ":<"), [_, (_, sx), (_, x)])
+                  => do sx' <- reify defs !(evalClosure defs sx)
+                        x' <- reify defs !(evalClosure defs x)
+                        pure (sx' :< x')
+             _ => cantReify val "SnocList"
+  reify defs val = cantReify val "SnocList"
+
+export
+Reflect a => Reflect (SnocList a) where
+  reflect fc defs lhs env [<] = appCon fc defs (basics "Lin") [Erased fc Placeholder]
+  reflect fc defs lhs env (sx :< x)
+      = do sx' <- reflect fc defs lhs env sx
+           x' <- reflect fc defs lhs env x
+           appCon fc defs (basics ":<") [Erased fc Placeholder, sx', x']
+
+export
 Reify a => Reify (Maybe a) where
   reify defs val@(NDCon _ n _ _ args)
       = case (dropAllNS !(full (gamma defs) n), args) of
@@ -291,6 +313,27 @@ Reflect a => Reflect (Maybe a) where
   reflect fc defs lhs env (Just x)
       = do x' <- reflect fc defs lhs env x
            appCon fc defs (preludetypes "Just") [Erased fc Placeholder, x']
+
+
+export
+Reify a => Reify (WithDefault a def) where
+  reify defs val@(NDCon _ n _ _ args)
+      = case (dropAllNS !(full (gamma defs) n), args) of
+             (UN (Basic "DefaultedValue"), _) => pure defaulted
+             (UN (Basic "SpecifiedValue"), [_, _, (_, x)])
+                  => do x' <- reify defs !(evalClosure defs x)
+                        pure (specified x')
+             _ => cantReify val "WithDefault"
+  reify defs val = cantReify val "WithDefault"
+
+export
+Reflect a => Reflect (WithDefault a def) where
+  reflect fc defs lhs env def
+    = onWithDefault
+        (appCon fc defs (reflectionttimp "Default") [Erased fc Placeholder, Erased fc Placeholder])
+        (\x => do x' <- reflect fc defs lhs env x
+                  appCon fc defs (reflectionttimp "Value") [Erased fc Placeholder, Erased fc Placeholder, x'])
+        def
 
 export
 (Reify a, Reify b) => Reify (a, b) where

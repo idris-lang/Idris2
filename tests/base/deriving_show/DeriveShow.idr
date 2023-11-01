@@ -192,3 +192,17 @@ namespace EqMap
 
   eqMap : (eq : Eq key) => Show key => Show val => Show (EqMap key @{eq} val)
   eqMap = %runElab derive
+
+namespace Reducible
+
+  Y : Bool -> Type
+  Y True  = Bool
+  Y False = Nat
+
+  data X : Type where
+    X0 : X
+    X1 : Bool -> X
+    X2 : Y True -> Y False -> X
+
+  x : Show X
+  x = %runElab derive

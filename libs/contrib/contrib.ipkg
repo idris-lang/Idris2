@@ -35,6 +35,8 @@ modules = Control.ANSI,
 
           Data.Int.Order,
 
+          Data.IOMatrix,
+
           Data.Late,
 
           Data.Linear.Array,
@@ -118,6 +120,7 @@ modules = Control.ANSI,
 
           Debug.Buffer,
 
+          Decidable.Finite.Fin,
           Decidable.Order.Strict,
           Decidable.Decidable.Extra,
 
@@ -140,6 +143,7 @@ modules = Control.ANSI,
           System.Path,
 
           Text.Bounded,
+          Text.Distance.Levenshtein,
           Text.Lexer,
           Text.Lexer.Core,
           Text.Lexer.Tokenizer,

@@ -83,6 +83,11 @@ LOG derive.show.assumption:10: I am assuming that the parameter val can be shown
 LOG derive.show.clauses:1: 
   showPrecEqMap : {0 key : _} -> Show key => {0 eq, val : _} -> Show val => Prec -> EqMap key {{conArg:5125} = eq} val -> String
   showPrecEqMap d (MkEqMap x0) = showCon d "MkEqMap" (showArg x0)
+LOG derive.show.clauses:1: 
+  showPrecX : Prec -> X -> String
+  showPrecX d X0 = "X0"
+  showPrecX d (X1 x0) = showCon d "X1" (showArg x0)
+  showPrecX d (X2 x0 x1) = showCon d "X2" (concat ((showArg x0) :: ((showArg x1) :: Nil)))
 DeriveShow> "Lam (Call Add ((::) (Var Nothing) ((::) (Var (Just ())) Nil)))"
 DeriveShow> 
 Bye for now!

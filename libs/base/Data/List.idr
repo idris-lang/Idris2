@@ -561,6 +561,11 @@ init [] impossible
 init [x] = []
 init (x :: xs@(_::_)) = x :: init xs
 
+||| Computes the minimum of a non-empty list
+public export
+minimum : Ord a => (xs : List a) -> {auto 0 _ : NonEmpty xs} -> a
+minimum (x :: xs) = foldl min x xs
+
 ||| Attempt to deconstruct the list into a head and a tail.
 public export
 uncons' : List a -> Maybe (a, List a)

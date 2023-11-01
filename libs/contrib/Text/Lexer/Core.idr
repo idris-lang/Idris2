@@ -159,7 +159,7 @@ tokenise pred line col acc tmap str
                Just (tok, rest) =>
                  let line' = line + cast (countNLs tok)
                      col' = getCols tok col in
-                     Just (MkBounded (fn (fastPack (reverse tok))) False (MkBounds line col line' col'),
+                     Just (MkBounded (fn (pack (reverse tok))) False (MkBounds line col line' col'),
                            line', col', rest)
                Nothing => getFirstToken ts str
 
@@ -171,11 +171,11 @@ export
 lex : TokenMap a -> String -> (List (WithBounds a), (Int, Int, String))
 lex tmap str
     = let (ts, (l, c, str')) = tokenise (const False) 0 0 [] tmap (unpack str) in
-          (ts, (l, c, fastPack str'))
+          (ts, (l, c, pack str'))
 
 export
 lexTo : (a -> Bool) ->
         TokenMap a -> String -> (List (WithBounds a), (Int, Int, String))
 lexTo pred tmap str
     = let (ts, (l, c, str')) = tokenise pred 0 0 [] tmap (unpack str) in
-          (ts, (l, c, fastPack str'))
+          (ts, (l, c, pack str'))

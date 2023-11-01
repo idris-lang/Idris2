@@ -66,6 +66,11 @@ data Warning : Type where
      UnreachableClause : {vars : _} ->
                          FC -> Env Term vars -> Term vars -> Warning
      ShadowingGlobalDefs : FC -> List1 (String, List1 Name) -> Warning
+     ||| Soft-breaking change, make an error later.
+     ||| @ original Originally declared visibility on forward decl
+     ||| @ new      Incompatible new visibility on actual declaration.
+     IncompatibleVisibility : FC -> (original : Visibility) ->
+                              (new : Visibility) -> Name -> Warning
      ||| First FC is type
      ||| @ shadowed list of names which are shadowed,
      |||   where they originally appear
@@ -204,6 +209,7 @@ Show Warning where
     show (ParserWarning fc msg) = show fc ++ msg
     show (UnreachableClause fc _ _) = show fc ++ ":Unreachable clause"
     show (ShadowingGlobalDefs fc _) = show fc ++ ":Shadowing names"
+    show (IncompatibleVisibility fc _ _ _) = show fc ++ ":Incompatible Visibility"
     show (ShadowingLocalBindings fc _) = show fc ++ ":Shadowing names"
     show (Deprecated fc name _) = show fc ++ ":Deprecated " ++ name
     show (GenericWarn fc msg) = show fc ++ msg
@@ -395,6 +401,7 @@ getWarningLoc : Warning -> FC
 getWarningLoc (ParserWarning fc _) = fc
 getWarningLoc (UnreachableClause fc _ _) = fc
 getWarningLoc (ShadowingGlobalDefs fc _) = fc
+getWarningLoc (IncompatibleVisibility loc _ _ _) = loc
 getWarningLoc (ShadowingLocalBindings fc _) = fc
 getWarningLoc (Deprecated fc _ fcAndName) = fromMaybe fc (fst <$> fcAndName)
 getWarningLoc (GenericWarn fc _) = fc
@@ -483,6 +490,7 @@ killWarningLoc : Warning -> Warning
 killWarningLoc (ParserWarning fc x) = ParserWarning emptyFC x
 killWarningLoc (UnreachableClause fc x y) = UnreachableClause emptyFC x y
 killWarningLoc (ShadowingGlobalDefs fc xs) = ShadowingGlobalDefs emptyFC xs
+killWarningLoc (IncompatibleVisibility fc x y z) = IncompatibleVisibility emptyFC x y z
 killWarningLoc (ShadowingLocalBindings fc xs) =
     ShadowingLocalBindings emptyFC $ (\(n, _, _) => (n, emptyFC, emptyFC)) <$> xs
 killWarningLoc (Deprecated fc x y) = Deprecated emptyFC x (map ((emptyFC,) . snd) y)

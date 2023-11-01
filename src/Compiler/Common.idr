@@ -16,13 +16,14 @@ import Core.Directory
 import Core.Options
 import Core.TT
 import Core.TTC
-import Libraries.Data.IOArray
-import Libraries.Utils.Scheme
 
 import Data.List
 import Data.List1
-import Libraries.Data.NameMap
 import Data.String as String
+import Libraries.Data.NameMap
+import Libraries.Data.IOArray
+import Libraries.Data.WithDefault
+import Libraries.Utils.Scheme
 
 import Idris.Syntax
 import Idris.Env
@@ -151,7 +152,7 @@ getMinimalDef (Coded ns bin)
          name <- fromBuf b
          let def
              = MkGlobalDef fc name (Erased fc Placeholder) [] [] [] [] mul
-                           [] Public (MkTotality Unchecked IsCovering) False
+                           [] (specified Public) (MkTotality Unchecked IsCovering) False
                            [] Nothing refsR False False True
                            None cdef Nothing [] Nothing
          pure (def, Just (ns, bin))

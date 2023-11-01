@@ -4,6 +4,7 @@ import Compiler.CompileExpr
 import Core.Context
 import Core.Context.Log
 import Data.Vect
+import Libraries.Data.WithDefault
 
 parameters (fn : Name)
     isVar : CExp vars -> Bool
@@ -55,7 +56,7 @@ inlineHeuristics fn = do
     -- intervention by this function.
     -- We could lift this public restriction if we checked that the source def was _either
     -- public OR the destination was the same module as the source_.
-    let Public = gdef.visibility
+    let Public = collapseDefault $ gdef.visibility
         | _ => pure ()
     unless (NoInline `elem` gdef.flags) $ do
       log "compiler.inline.heuristic" 25 $ "inlining heuristic decided to inline: " ++ show fn

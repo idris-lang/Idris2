@@ -9,6 +9,8 @@ import Idris.Parser
 
 import Data.String
 
+import Libraries.Data.WithDefault
+
 ||| Completion tasks are varied:
 ||| are we trying to fill in a name, a REPL command, a pragma?
 data Task
@@ -55,7 +57,7 @@ nameCompletion pref = do
     -- and it better be visible
     Just def <- lookupCtxtExact nsn (gamma defs)
       | Nothing => pure Nothing
-    let True = visibleIn cns nsn (visibility def)
+    let True = visibleIn cns nsn (collapseDefault $ visibility def)
       | False => pure Nothing
     pure (Just n)
   pure (map show $ nub nms)
