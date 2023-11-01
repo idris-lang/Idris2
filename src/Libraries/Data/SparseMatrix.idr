@@ -184,40 +184,57 @@ namespace Pretty
           EQ => pretty y :: go i' ys'
           GT => go i ys'
 
-
-  export
-  row1 : Pretty ann a => Vector1 a -> List (Doc ann)
-  row1 ys = row (toList ys)
-
-  columnSeparator : Doc ann
-  columnSeparator = spaces 3
+  -- space between columns
+  columnSpacing : Int
+  columnSpacing = 1
 
   columnSep : List (Doc ann) -> Doc ann
-  columnSep = concatWith (\x, y => x <+> columnSeparator <+> y)
+  columnSep = concatWith (\x, y => x <+> spaces columnSpacing <+> y)
 
   export
-  prettyRow1 : Pretty ann a => (index : Doc ann) -> (columnWidth : Int) -> Vector1 a -> Doc ann
-  prettyRow1 index columnWidth ys = columnSep $ map (fill columnWidth) (index :: row1 ys)
+  row1 : Pretty ann a => (columnWidth : Int) -> Vector1 a -> List (Doc ann)
+  row1 columnWidth ys = map (fill columnWidth) (row (toList ys))
 
   hardlineSep : List (Doc ann) -> Doc ann
   hardlineSep = concatWith (\x, y => x <+> hardline <+> y)
 
+  ||| Renders a matrix as an ASCII table of the following shape:
+  |||
+  ||| ```
+  |||                columnSpacing
+  |||                      __
+  |||         columnDesc  0  1  ...
+  ||| rowDesc +--------------------
+  ||| 0       |           a  b
+  ||| 1       |           c  d
+  ||| ...     |           ...
+  |||```
+  |||
+  ||| Note: everything is sadly left-aligned.
+  |||
+  ||| @ maxWidthA Maximal length rendering something of type `a` might reach.
   export
-  prettyTable : Pretty ann a => (maxWidthA : Nat) -> Matrix a -> Doc ann
-  prettyTable maxWidthA m = hardlineSep $
+  prettyTable : Pretty ann a => (rowDesc, columnDesc : String) -> (maxWidthA : Nat) -> Matrix a -> Doc ann
+  prettyTable rowDesc columnDesc maxWidthA m = hardlineSep $
       -- header
-      columnSep (spaces widthJ :: header widthI (maxI + 1))
+      (spaces rowLabelWidth <++> columnSep (pretty0 columnDesc :: header columnWidth (maxJ + 1)))
+      -- separator
+        :: (fill rowLabelWidth (pretty0 rowDesc) <++> Chara intersectionLabelSep <+> replicateChar rowLength columnLabelSep)
       -- content
-        :: map (\(j, r) => prettyRow1 (fill widthJ (byShow j)) widthI r) m
+        :: map (\(j, r) => fill rowLabelWidth (byShow j) <++> columnSep (fill (cast (length columnDesc)) (Chara rowLabelSep) :: row1 columnWidth r)) m
     where
-      maxI : Nat
-      maxI = maxIndexInner m
+      rowLabelSep, columnLabelSep, intersectionLabelSep : Char
+      rowLabelSep = '|'
+      columnLabelSep = '-'
+      intersectionLabelSep = '+'
 
-      maxJ : Nat
-      maxJ = maxIndex m
+      maxI, maxJ : Nat
+      maxI = maxIndex m
+      maxJ = maxIndexInner m
 
-      widthI : Int
-      widthI = cast $ max (length (show maxI)) maxWidthA
+      columnWidth, rowLabelWidth : Int
+      columnWidth = cast $ max (length (show maxJ)) maxWidthA
+      rowLabelWidth = cast $ max (length (show maxI)) (length rowDesc)
 
-      widthJ : Int
-      widthJ = cast $ length (show maxJ)
+      rowLength : Int
+      rowLength = cast (minus (length columnDesc) 1) + (columnWidth + columnSpacing) * cast (maxJ + 1)
