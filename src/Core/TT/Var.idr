@@ -7,6 +7,8 @@ import Data.SnocList
 import Core.Name
 import Core.Name.Scoped
 
+import Libraries.Data.List.HasLength
+import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.HasLength
 import Libraries.Data.SnocList.SizeOf
 
@@ -36,6 +38,19 @@ nameAt (Later p) = nameAt p
 export
 dropLater : IsVar nm (S idx) (vs :< v) -> IsVar nm idx vs
 dropLater (Later p) = p
+
+export
+appendIsVar : HasLength m inner -> IsVar nm m (outer :< nm ++ inner)
+appendIsVar Z = First
+appendIsVar (S x) = Later (appendIsVar x)
+
+export
+fishyIsVar : HasLength m inner -> IsVar nm m (outer :< nm <>< inner)
+fishyIsVar hl
+  = rewrite fishAsSnocAppend (outer :< nm) inner in
+    appendIsVar
+  $ rewrite sym $ plusZeroRightNeutral m in
+    hlFish Z hl
 
 export
 mkVar : (wkns : SnocList a) -> IsVar nm (length wkns) (outer :< nm ++ wkns)
@@ -106,6 +121,14 @@ namespace Var
   later (MkVar p) = MkVar (Later p)
 
 export
+appendVar : SizeOf inner -> Var (outer :< nm ++ inner)
+appendVar (MkSizeOf s p) = MkVar (appendIsVar p)
+
+export
+fishyVar : SizeOf inner -> Var (outer :< nm <>< inner)
+fishyVar (MkSizeOf s p) = MkVar (fishyIsVar p)
+
+export
 Eq (Var xs) where
   v == w = varIdx v == varIdx w
 
@@ -115,6 +138,19 @@ dropFirst : List (Var (vs :< n)) -> List (Var vs)
 dropFirst [] = []
 dropFirst (MkVar First :: vs) = dropFirst vs
 dropFirst (MkVar (Later p) :: vs) = MkVar p :: dropFirst vs
+
+||| Manufacturing a thinning from a list of variables to keep
+export
+thinFromVars :
+  (vars : _) -> List (Var vars) ->
+  (newvars ** Thin newvars vars)
+thinFromVars [<] els
+    = (_ ** Refl)
+thinFromVars (xs :< x) els
+    = let (_ ** subRest) = thinFromVars xs (dropFirst els) in
+      if MkVar First `elem` els
+        then (_ ** keep subRest)
+        else (_ ** Drop subRest)
 
 export
 Show (Var ns) where
@@ -135,6 +171,14 @@ namespace NVar
   later (MkNVar p) = MkNVar (Later p)
 
 export
+appendNVar : SizeOf inner -> NVar nm (outer :< nm ++ inner)
+appendNVar (MkSizeOf s p) = MkNVar (appendIsVar p)
+
+export
+fishyNVar : SizeOf inner -> NVar nm (outer :< nm <>< inner)
+fishyNVar (MkSizeOf s p) = MkNVar (fishyIsVar p)
+
+export
 locateNVar : SizeOf local -> NVar nm (outer ++ local) ->
              Either (NVar nm outer) (NVar nm local)
 locateNVar s (MkNVar {nvarIdx} p) = case choose (nvarIdx < size s) of
@@ -143,6 +187,14 @@ locateNVar s (MkNVar {nvarIdx} p) = case choose (nvarIdx < size s) of
 
 ------------------------------------------------------------------------
 -- Scope checking
+
+export
+isDeBruijn : Nat -> (vars : SnocList Name) -> Maybe (Var vars)
+isDeBruijn Z (vs :< v) = Just (MkVar First)
+isDeBruijn (S k) (vs :< _)
+   = do MkVar prf <- isDeBruijn k vs
+        Just (MkVar (Later prf))
+isDeBruijn _ _ = Nothing
 
 export
 isNVar : (n : Name) -> (ns : SnocList Name) -> Maybe (NVar n ns)

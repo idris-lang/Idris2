@@ -64,6 +64,8 @@ data Thin : SnocList a -> SnocList a -> Type where
   Drop : Thin xs ys -> Thin xs (ys :< y)
   Keep : Thin xs ys -> Thin (xs :< x) (ys :< y)
 
+||| Smart constructor. We should use this to maximise the length
+||| of the Refl segment thus getting more short-circuiting behaviours
 export
 keep : Thin xs ys -> Thin (xs :< x) (ys :< x)
 keep Refl = Refl
