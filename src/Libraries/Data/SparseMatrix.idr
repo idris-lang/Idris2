@@ -30,6 +30,13 @@ lookupOrd1 i ((k, x) ::: xs) =
     GT => lookupOrd i xs
 
 namespace Vector
+  ||| A sparse vector is a list of pairs consisting of an index and its
+  ||| corresponding element.
+  |||
+  ||| Invariants:
+  ||| - indices must appear in order and should to be duplicate-free,
+  ||| - elements must be non-neutral,
+  ||| - missing entries are assumed to be neutral.
   public export
   Vector : Type -> Type
   Vector a = List (Nat, a)
@@ -38,6 +45,8 @@ namespace Vector
   Vector1 : Type -> Type
   Vector1 a = List1 (Nat, a)
 
+  ||| Turns a list into a sparse vector, discarding neutral elements in
+  ||| the process.
   fromList : (Eq a, Semiring a) => List a -> Vector a
   fromList = go Z
     where
@@ -51,7 +60,9 @@ namespace Vector
   fromList1 : (Eq a, Semiring a) => List a -> Maybe (Vector1 a)
   fromList1 = Data.List1.fromList . fromList
 
-  insert : Nat -> a -> Vector a -> Vector a
+  ||| Insert `x` at index `i`. Ignore if the `i`th element already
+  ||| exists.
+  insert : (i : Nat) -> (x : a) -> Vector a -> Vector a
   insert i x [] = [(i,x)]
   insert i x ys@((j, y) :: ys') =
     case compare i j of
@@ -84,6 +95,7 @@ rowFromList = fromList . go Z
           then go (S i) xs
           else (i, x) :: go (S i) xs
 
+||| A sparse matrix is a sparse vector of (non-empty) sparse vectors.
 public export
 Matrix : Type -> Type
 Matrix a = Vector (Vector1 a)
@@ -126,11 +138,12 @@ multRow ((i, xs) :: xss) ys =
   else
     (i, z) :: multRow xss ys
 
-multTranspose : (Eq a, Semiring a) => Matrix a -> Matrix a -> Matrix a
+||| Given matrices `xss` and `yss`, computes `xss^T * yss`.
+multTranspose : (Eq a, Semiring a) => (xss : Matrix a) -> (yss : Matrix a) -> Matrix a
 multTranspose xss [] = []
 multTranspose xss ((j, ys) :: yss) =
   case multRow xss ys of
-    [] => multTranspose xss yss
+    [] => multTranspose xss yss -- discard empty rows
     y' :: ys' => (j, y' ::: ys') :: multTranspose xss yss
 
 export
@@ -140,6 +153,7 @@ mult = multTranspose . transpose
 maxIndex1 : Vector1 a -> Nat
 maxIndex1 ((i, x) ::: xs) = maybe i fst (last' xs)
 
+||| Find largest column index.
 maxIndexInner : Matrix a -> Nat
 maxIndexInner = foldMap @{%search} @{MkMonoid @{MkSemigroup max} 0} (maxIndex1 . snd)
 
