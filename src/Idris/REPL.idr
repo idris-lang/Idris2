@@ -148,7 +148,7 @@ prettyInfo (n, idx, d)
 
     displayChg : List SCCall -> Doc IdrisDocAnn
     displayChg sz =
-      let scinfo = \s => pretty0 (fnCall s) <+> ":" <+> hardline <+> cast (prettyTable 1 (fnArgs s)) in
+      let scinfo = \s => pretty0 (fnCall s) <+> ":" <+> hardline <+> cast (prettyTable "r" "l" 1 (fnArgs s)) in
       enumLine scinfo sz
 
 getEnvTerm : {vars : _} ->
