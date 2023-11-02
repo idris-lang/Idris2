@@ -1,5 +1,6 @@
 module Libraries.Data.SnocList.SizeOf
 
+import Data.List
 import Data.SnocList
 import Libraries.Data.List.HasLength
 import Libraries.Data.SnocList.HasLength
@@ -43,6 +44,10 @@ sucL (MkSizeOf n p) = MkSizeOf (S n) (sucL p)
 export
 (<><) : SizeOf {a} sx -> LSizeOf {a} ys -> SizeOf (sx <>< ys)
 MkSizeOf m p <>< MkSizeOf n q = MkSizeOf (n + m) (hlFish p q)
+
+export
+cast : LSizeOf {a} xs -> SizeOf {a} (cast xs)
+cast = (zero <><)
 
 export
 (+) : SizeOf sx -> SizeOf sy -> SizeOf (sx ++ sy)

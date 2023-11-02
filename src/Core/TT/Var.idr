@@ -14,6 +14,7 @@ import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.HasLength
 import Libraries.Data.SnocList.SizeOf
 
+import Libraries.Data.Erased
 import Libraries.Data.SnocList.Extra
 
 %default total
@@ -113,6 +114,14 @@ locateIsVarGE (MkSizeOf Z Z) so v = rewrite minusZeroRight idx in v
 locateIsVarGE (MkSizeOf (S k) (S l)) so v = case v of
   Later v => locateIsVarGE (MkSizeOf k l) so v
 
+locateIsVar : {idx : Nat} -> (s : SizeOf local) ->
+  (0 p : IsVar x idx (outer ++ local)) ->
+  Either (Erased (IsVar x (idx `minus` size s) outer))
+         (Erased (IsVar x idx local))
+locateIsVar s p = case choose (idx < size s) of
+  Left so => Right (MkErased (locateIsVarLT s so p))
+  Right so => Left (MkErased (locateIsVarGE s so p))
+
 ------------------------------------------------------------------------
 -- Variable in scope
 
@@ -197,9 +206,9 @@ fishyNVar (MkSizeOf s p) = MkNVar (fishyIsVar p)
 export
 locateNVar : SizeOf local -> NVar nm (outer ++ local) ->
              Either (NVar nm outer) (NVar nm local)
-locateNVar s (MkNVar {nvarIdx} p) = case choose (nvarIdx < size s) of
-  Left so => Right (MkNVar (locateIsVarLT s so p))
-  Right so => Left (MkNVar (locateIsVarGE s so p))
+locateNVar s (MkNVar p) = case locateIsVar s p of
+  Left p => Left (MkNVar (runErased p))
+  Right p => Right (MkNVar (runErased p))
 
 ------------------------------------------------------------------------
 -- Scope checking
@@ -280,6 +289,29 @@ removeVar out var = case locateVar out var of
   Right (MkVar p) => pure (MkVar (embedIsVar p))
 
 ------------------------------------------------------------------------
+-- Strengthening
+
+export
+strengthenIsVar : {n : Nat} -> (s : SizeOf inner) ->
+  (0 p : IsVar x n (vars ++ inner)) ->
+  Maybe (Erased (IsVar x (n `minus` size s) vars))
+strengthenIsVar s p = case locateIsVar s p of
+  Left p => pure p
+  Right _ => Nothing
+
+strengthenVar : SizeOf inner ->
+  Var (vars ++ inner) -> Maybe (Var vars)
+strengthenVar s (MkVar p)
+  = do MkErased p <- strengthenIsVar s p
+       pure (MkVar p)
+
+strengthenNVar : SizeOf inner ->
+  NVar x (vars ++ inner) -> Maybe (NVar x vars)
+strengthenNVar s (MkNVar p)
+  = do MkErased p <- strengthenIsVar s p
+       pure (MkNVar p)
+
+------------------------------------------------------------------------
 -- Reindexing
 
 compatIsVar : CompatibleVars xs ys ->
@@ -330,6 +362,10 @@ Weaken (Var {a = Name}) where
   weakenNs = weakenVar
 
 export
+Strengthen (Var {a = Name}) where
+  strengthenNs = strengthenVar
+
+export
 FreelyEmbeddable (Var {a = Name}) where
   embed (MkVar p) = MkVar (embedIsVar p)
 
@@ -344,6 +380,10 @@ export
 Weaken (NVar {a = Name} nm) where
   weaken = later
   weakenNs = weakenNVar
+
+export
+Strengthen (NVar {a = Name} nm) where
+  strengthenNs = strengthenNVar
 
 export
 FreelyEmbeddable (NVar {a = Name} nm) where

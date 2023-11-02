@@ -14,14 +14,55 @@ import Data.List
 
 %default covering
 
+------------------------------------------------------------------------
+-- Auxiliary definitions
+
+weakenP : {0 args, args' : Scope} ->
+          (Var args, Var args') ->
+          (Var (args :< c), Var (args' :< c'))
+weakenP (v, vs) = (weaken v, weaken vs)
+
+extend : (cs, cs' : Scope) ->
+         (List (Var args, Var args')) ->
+         Maybe (List (Var (args ++ cs), Var (args' ++ cs')))
+extend = go zero zero where
+
+  go : SizeOf inner -> SizeOf inner' ->
+       (cs, cs' : Scope) ->
+       (List (Var args, Var args')) ->
+       Maybe (List (Var (args ++ (cs <>< inner)), Var (args' ++ (cs' <>< inner'))))
+  go s s' [<] [<] ms
+    = pure (map (bimap (weakenNs (zero <>< s)) (weakenNs (zero <>< s'))) ms)
+  go s s' (cs :< c) (cs' :< c') ms
+    = do rest <- go (suc s) (suc s') cs cs' ms
+         pure ((embed (fishyVar s), embed (fishyVar s')) :: rest)
+  go _ _ _ _ _ = Nothing
+
+findIdx : List (Var vars, Var vars') -> Nat -> Maybe (Var vars')
+findIdx [] _ = Nothing
+findIdx ((MkVar {varIdx = i} _, v) :: ps) n
+    = if i == n then Just v else findIdx ps n
+
+dropP : (cs : Scope) -> (cs' : Scope) ->
+        (Var (args ++ cs), Var (args' ++ cs')) ->
+        Maybe (Var args, Var args')
+dropP cs cs' (x, y)
+  = do x' <- strengthenNs (mkSizeOf cs) x
+       y' <- strengthenNs (mkSizeOf cs') y
+       pure (x', y')
+
+
+------------------------------------------------------------------------
+-- Actual content
+
 public export
 interface Convert tm where
   convert : {auto c : Ref Ctxt Defs} ->
-            {vars : List Name} ->
+            {vars : Scope} ->
             Defs -> Env Term vars ->
             tm vars -> tm vars -> Core Bool
   convertInf : {auto c : Ref Ctxt Defs} ->
-               {vars : List Name} ->
+               {vars : Scope} ->
                Defs -> Env Term vars ->
                tm vars -> tm vars -> Core Bool
 
@@ -41,46 +82,43 @@ interface Convert tm where
       = do q <- newRef QVar 0
            convGen q True defs env tm tm'
 
-tryUpdate : {vars, vars' : _} ->
-            List (Var vars, Var vars') ->
-            Term vars -> Maybe (Term vars')
-tryUpdate ms (Local fc l idx p)
-    = do MkVar p' <- findIdx ms idx
-         pure $ Local fc l _ p'
-  where
-    findIdx : List (Var vars, Var vars') -> Nat -> Maybe (Var vars')
-    findIdx [] _ = Nothing
-    findIdx ((MkVar {i} _, v) :: ps) n
-        = if i == n then Just v else findIdx ps n
-tryUpdate ms (Ref fc nt n) = pure $ Ref fc nt n
-tryUpdate ms (Meta fc n i args) = pure $ Meta fc n i !(traverse (tryUpdate ms) args)
-tryUpdate ms (Bind fc x b sc)
-    = do b' <- tryUpdateB b
-         pure $ Bind fc x b' !(tryUpdate (map weakenP ms) sc)
-  where
-    tryUpdatePi : PiInfo (Term vars) -> Maybe (PiInfo (Term vars'))
-    tryUpdatePi Explicit = pure Explicit
-    tryUpdatePi Implicit = pure Implicit
-    tryUpdatePi AutoImplicit = pure AutoImplicit
-    tryUpdatePi (DefImplicit t) = pure $ DefImplicit !(tryUpdate ms t)
+0 Updatable : Scoped -> Type
+Updatable tm = {0 vars, vars' : Scope} ->
+  List (Var vars, Var vars') ->
+  tm vars -> Maybe (tm vars')
 
-    tryUpdateB : Binder (Term vars) -> Maybe (Binder (Term vars'))
-    tryUpdateB (Lam fc r p t) = pure $ Lam fc r !(tryUpdatePi p) !(tryUpdate ms t)
-    tryUpdateB (Let fc r v t) = pure $ Let fc r !(tryUpdate ms v) !(tryUpdate ms t)
-    tryUpdateB (Pi fc r p t) = pure $ Pi fc r !(tryUpdatePi p) !(tryUpdate ms t)
-    tryUpdateB _ = Nothing
+mutual
 
-    weakenP : {n : _} -> (Var vars, Var vars') ->
-              (Var (n :: vars), Var (n :: vars'))
-    weakenP (v, vs) = (weaken v, weaken vs)
-tryUpdate ms (App fc f a) = pure $ App fc !(tryUpdate ms f) !(tryUpdate ms a)
-tryUpdate ms (As fc s a p) = pure $ As fc s !(tryUpdate ms a) !(tryUpdate ms p)
-tryUpdate ms (TDelayed fc r tm) = pure $ TDelayed fc r !(tryUpdate ms tm)
-tryUpdate ms (TDelay fc r ty tm) = pure $ TDelay fc r !(tryUpdate ms ty) !(tryUpdate ms tm)
-tryUpdate ms (TForce fc r tm) = pure $ TForce fc r !(tryUpdate ms tm)
-tryUpdate ms (PrimVal fc c) = pure $ PrimVal fc c
-tryUpdate ms (Erased fc a) = Erased fc <$> traverse (tryUpdate ms) a
-tryUpdate ms (TType fc u) = pure $ TType fc u
+  tryUpdate : Updatable Term
+  tryUpdate ms (Local fc l idx p)
+      = do MkVar p' <- findIdx ms idx
+           pure $ Local fc l _ p'
+  tryUpdate ms (Ref fc nt n) = pure $ Ref fc nt n
+  tryUpdate ms (Meta fc n i args) = pure $ Meta fc n i !(traverse (tryUpdate ms) args)
+  tryUpdate ms (Bind fc x b sc)
+      = do b' <- tryUpdateB ms b
+           pure $ Bind fc x b' !(tryUpdate (map weakenP ms) sc)
+
+  tryUpdate ms (App fc f a) = pure $ App fc !(tryUpdate ms f) !(tryUpdate ms a)
+  tryUpdate ms (As fc s a p) = pure $ As fc s !(tryUpdate ms a) !(tryUpdate ms p)
+  tryUpdate ms (TDelayed fc r tm) = pure $ TDelayed fc r !(tryUpdate ms tm)
+  tryUpdate ms (TDelay fc r ty tm) = pure $ TDelay fc r !(tryUpdate ms ty) !(tryUpdate ms tm)
+  tryUpdate ms (TForce fc r tm) = pure $ TForce fc r !(tryUpdate ms tm)
+  tryUpdate ms (PrimVal fc c) = pure $ PrimVal fc c
+  tryUpdate ms (Erased fc a) = Erased fc <$> traverse (tryUpdate ms) a
+  tryUpdate ms (TType fc u) = pure $ TType fc u
+
+  tryUpdatePi : Updatable (PiInfo . Term)
+  tryUpdatePi ms Explicit = pure Explicit
+  tryUpdatePi ms Implicit = pure Implicit
+  tryUpdatePi ms AutoImplicit = pure AutoImplicit
+  tryUpdatePi ms (DefImplicit t) = pure $ DefImplicit !(tryUpdate ms t)
+
+  tryUpdateB : Updatable (Binder . Term)
+  tryUpdateB ms (Lam fc r p t) = pure $ Lam fc r !(tryUpdatePi ms p) !(tryUpdate ms t)
+  tryUpdateB ms (Let fc r v t) = pure $ Let fc r !(tryUpdate ms v) !(tryUpdate ms t)
+  tryUpdateB ms (Pi fc r p t) = pure $ Pi fc r !(tryUpdatePi ms p) !(tryUpdate ms t)
+  tryUpdateB _ _ = Nothing
 
 mutual
   allConvNF : {auto c : Ref Ctxt Defs} ->
@@ -153,33 +191,6 @@ mutual
                    -- be in the caller
                    pure (Just (mapMaybe (dropP cargs cargs') ms))
            else pure Nothing
-    where
-      weakenP : {c, c', args, args' : _} ->
-                (Var args, Var args') ->
-                (Var (c :: args), Var (c' :: args'))
-      weakenP (v, vs) = (weaken v, weaken vs)
-
-      extend : (cs : List Name) -> (cs' : List Name) ->
-               (List (Var args, Var args')) ->
-               Maybe (List (Var (cs ++ args), Var (cs' ++ args')))
-      extend [] [] ms = pure ms
-      extend (c :: cs) (c' :: cs') ms
-          = do rest <- extend cs cs' ms
-               pure ((MkVar First, MkVar First) :: map weakenP rest)
-      extend _ _ _ = Nothing
-
-      dropV : forall args .
-              (cs : List Name) -> Var (cs ++ args) -> Maybe (Var args)
-      dropV [] v = Just v
-      dropV (c :: cs) (MkVar First) = Nothing
-      dropV (c :: cs) (MkVar (Later x))
-          = dropV cs (MkVar x)
-
-      dropP : (cs : List Name) -> (cs' : List Name) ->
-              (Var (cs ++ args), Var (cs' ++ args')) ->
-              Maybe (Var args, Var args')
-      dropP cs cs' (x, y) = pure (!(dropV cs x), !(dropV cs' y))
-
   getMatchingVarAlt defs ms (ConstCase c t) (ConstCase c' t')
       = if c == c'
            then getMatchingVars defs ms t t'
@@ -244,11 +255,10 @@ mutual
        getArgPos Z (c :: cs) = pure c
        getArgPos (S k) (c :: cs) = getArgPos k cs
 
-       convertMatches : {vs, vs' : _} ->
-                        List (Var vs, Var vs') ->
+       convertMatches : List (Var vs, Var vs') ->
                         Core Bool
        convertMatches [] = pure True
-       convertMatches ((MkVar {i=ix} p, MkVar {i=iy} p') :: vs)
+       convertMatches ((MkVar {varIdx=ix} p, MkVar {varIdx=iy} p') :: vs)
           = do let Just varg = getArgPos ix nargs
                    | Nothing => pure False
                let Just varg' = getArgPos iy nargs'
@@ -341,7 +351,7 @@ mutual
   Convert NF where
     convGen q i defs env (NBind fc x b sc) (NBind _ x' b' sc')
         = do var <- genName "conv"
-             let c = MkClosure defaultOpts [] env (Ref fc Bound var)
+             let c = MkClosure defaultOpts [<] env (Ref fc Bound var)
              bok <- convBinders q i defs env b b'
              if bok
                 then do bsc <- sc defs c

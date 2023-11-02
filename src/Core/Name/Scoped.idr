@@ -81,7 +81,13 @@ keeps (sx :< x) th = keep (keeps sx th)
 
 public export
 0 Weakenable : Scoped -> Type
-Weakenable tm = {0 vars, ns : Scope} -> SizeOf ns -> tm vars -> tm (vars ++ ns)
+Weakenable tm = {0 vars, ns : Scope} ->
+  SizeOf ns -> tm vars -> tm (vars ++ ns)
+
+public export
+0 Strengthenable : Scoped -> Type
+Strengthenable tm = {0 vars, ns : Scope} ->
+  SizeOf ns -> tm (vars ++ ns) -> Maybe (tm vars)
 
 public export
 0 GenWeakenable : Scoped -> Type
@@ -116,6 +122,20 @@ interface Weaken (0 tm : Scoped) where
     S p => weaken (weakenNs p t)
 
   weaken = weakenNs (suc zero)
+
+public export
+interface Strengthen (0 tm : Scoped) where
+  constructor MkStrengthen
+  -- methods
+  strengthen : tm (vars :< nm) -> Maybe (tm vars)
+  strengthenNs : Strengthenable tm
+
+  -- default implementations
+  strengthenNs p t = case sizedView p of
+    Z   => pure t
+    S p' => strengthenNs p' =<< strengthen t
+
+  strengthen = strengthenNs (suc zero)
 
 public export
 interface FreelyEmbeddable (0 tm : Scoped) where

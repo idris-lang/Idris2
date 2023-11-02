@@ -170,6 +170,7 @@ modules =
 
     Libraries.Data.ANameMap,
     Libraries.Data.DList,
+    Libraries.Data.Erased,
     Libraries.Data.Fin,
     Libraries.Data.Graph,
     Libraries.Data.IMaybe,
