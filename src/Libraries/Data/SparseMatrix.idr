@@ -31,7 +31,7 @@ namespace Vector
   |||
   ||| Invariants:
   ||| - indices must appear in order and should to be duplicate-free,
-  ||| - elements must be non-neutral,
+  ||| - elements must be additively non-neutral,
   ||| - missing entries are assumed to be neutral.
   public export
   Vector : Type -> Type
@@ -60,6 +60,9 @@ namespace Vector
 
   ||| Insert `x` at index `i`. Ignore if the `i`th element already
   ||| exists.
+  |||
+  ||| @ x must not be neutral
+  export
   insert : (i : Nat) -> (x : a) -> Vector a -> Vector a
   insert i x [] = [(i,x)]
   insert i x ys@((j, y) :: ys') =
