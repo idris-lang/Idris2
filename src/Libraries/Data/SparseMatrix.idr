@@ -2,8 +2,9 @@ module Libraries.Data.SparseMatrix
 
 import Algebra.Semiring
 
-import Data.String
 import Data.List1
+import Data.Maybe
+import Data.String
 
 import Libraries.Text.PrettyPrint.Prettyprinter
 
@@ -57,8 +58,12 @@ namespace Vector
       GT => lookupOrd i xs
 
   export
-  maxIndex : Vector a -> Nat
-  maxIndex xs = maybe 0 fst (last' xs)
+  maxIndex : Vector a -> Maybe Nat
+  maxIndex xs = map fst (last' xs)
+
+  export
+  length : Vector a -> Nat
+  length = maybe 0 ((+) 1) . maxIndex
 
   export
   dot : Semiring a => Vector a -> Vector a -> a
@@ -151,18 +156,18 @@ mult : (Eq a, Semiring a) => Matrix a -> Matrix a -> Matrix a
 mult = multTranspose . transpose
 
 ||| Find largest column index.
-maxIndexInner : Matrix a -> Nat
-maxIndexInner = foldMap @{%search} @{MkMonoid @{MkSemigroup max} 0} (maxIndex . snd)
+maxColumnIndex : Matrix a -> Maybe Nat
+maxColumnIndex = foldMap @{%search} @{Monoid.Deep @{MkSemigroup max}} (Just . maxIndex . snd)
 
 namespace Pretty
-  header : (columnWidth : Int) -> (rowLength : Nat) -> List (Doc ann)
-  header columnWidth rowLength = map (fill columnWidth . byShow) (take rowLength [0..])
+  header : (columnWidth : Int) -> (length : Nat) -> List (Doc ann)
+  header columnWidth length = map (fill columnWidth . byShow) (take length [0..])
 
   row : Pretty ann a => Vector a -> List (Doc ann)
   row xs = go rowLength xs
     where
       rowLength : Nat
-      rowLength = maxIndex xs + 1
+      rowLength = Vector.length xs
 
       prettyNeutral : Doc ann
       prettyNeutral = space
@@ -208,9 +213,9 @@ namespace Pretty
   prettyTable : Pretty ann a => (rowDesc, columnDesc : String) -> (maxWidthA : Nat) -> Matrix a -> Doc ann
   prettyTable rowDesc columnDesc maxWidthA m = hardlineSep $
       -- header
-      (spaces rowLabelWidth <++> columnSep (pretty0 columnDesc :: header columnWidth (maxJ + 1)))
+      (spaces rowLabelWidth <++> columnSep (pretty0 columnDesc :: header columnWidth columnCount))
       -- separator
-        :: (fill rowLabelWidth (pretty0 rowDesc) <++> Chara intersectionLabelSep <+> replicateChar rowLength columnLabelSep)
+        :: (fill rowLabelWidth (pretty0 rowDesc) <++> Chara intersectionLabelSep <+> replicateChar columnLabelSepLength columnLabelSep)
       -- content
         :: map (\(j, r) => fill rowLabelWidth (byShow j) <++> columnSep (fill (cast (length columnDesc)) (Chara rowLabelSep) :: row1 columnWidth r)) m
     where
@@ -219,13 +224,24 @@ namespace Pretty
       columnLabelSep = '-'
       intersectionLabelSep = '+'
 
-      maxI, maxJ : Nat
-      maxI = maxIndex m
-      maxJ = maxIndexInner m
+      rowMax, columnMax : Maybe Nat
+      rowMax = maxIndex m
+      columnMax = maxColumnIndex m
 
-      columnWidth, rowLabelWidth : Int
-      columnWidth = cast $ max (length (show maxJ)) maxWidthA
-      rowLabelWidth = cast $ max (length (show maxI)) (length rowDesc)
+      rowMaxIndexWidth, columnMaxIndexWidth : Nat
+      rowMaxIndexWidth = maybe 0 (length . show) rowMax
+      columnMaxIndexWidth = maybe 0 (length . show) columnMax
 
-      rowLength : Int
-      rowLength = cast (minus (length columnDesc) 1) + (columnWidth + columnSpacing) * cast (maxJ + 1)
+      rowLabelWidth : Int
+      rowLabelWidth = cast $ max rowMaxIndexWidth (length rowDesc)
+
+      columnWidth : Int
+      columnWidth = cast $ max columnMaxIndexWidth maxWidthA
+
+      columnCount : Nat
+      columnCount = maybe 0 ((+) 1) columnMax
+
+      columnLabelSepLength : Int
+      columnLabelSepLength =
+        cast (minus (length columnDesc) 1) -- columnDesc overlaps with *LabelSep
+        + (columnWidth + columnSpacing) * cast columnCount
