@@ -23,6 +23,7 @@ import Libraries.Data.String.Extra
 
 import public Algebra
 
+import public Libraries.Data.List.SizeOf
 import public Libraries.Data.SnocList.SizeOf
 
 %default covering
@@ -56,13 +57,12 @@ covering
   showPrec d (MkKindedName nm fn rn) =
     showCon d "MkKindedName" $ showArg nm ++ showArg @{Raw} fn ++ showArg @{Raw} rn
 
-
-{-
+-- TODO: refactor this, Used, AVars, etc?
 namespace Bounds
   public export
-  data Bounds : List Name -> Type where
-       None : Bounds []
-       Add : (x : Name) -> Name -> Bounds xs -> Bounds (x :: xs)
+  data Bounds : Scoped where
+       None : Bounds [<]
+       Add : (x : Name) -> Name -> Bounds xs -> Bounds (xs :< x)
 
   export
   sizeOf : Bounds xs -> SizeOf xs
@@ -70,24 +70,31 @@ namespace Bounds
   sizeOf (Add _ _ b) = suc (sizeOf b)
 
 export
-addVars : SizeOf outer -> Bounds bound ->
-          NVar name (outer ++ vars) ->
-          NVar name (outer ++ (bound ++ vars))
+addVars : SizeOf local -> Bounds bound ->
+          NVar name (vars ++ local) ->
+          NVar name ((vars ++ bound) ++ local)
 addVars p = insertNVarNames p . sizeOf
 
-resolveRef : SizeOf outer -> SizeOf done -> Bounds bound -> FC -> Name ->
-             Maybe (Term (outer ++ (done ++ bound ++ vars)))
-resolveRef p q None fc n = Nothing
-resolveRef {outer} {done} p q (Add {xs} new old bs) fc n
-    = if n == old
-         then rewrite appendAssociative outer done (new :: xs ++ vars) in
-              let MkNVar p = weakenNVar (p + q) (MkNVar First) in
-                     Just (Local fc Nothing _ p)
-         else rewrite appendAssociative done [new] (xs ++ vars)
-                in resolveRef p (sucR q) bs fc n
+isBound : Name -> Bounds bound -> Maybe (Var bound)
+isBound n = go zero where
 
-mkLocals : SizeOf outer -> Bounds bound ->
-           Term (outer ++ vars) -> Term (outer ++ (bound ++ vars))
+  go : SizeOf inner -> Bounds bd -> Maybe (Var (bd <>< inner))
+  go s None = Nothing
+  go s (Add new old bs)
+    = if n == old
+        then pure (fishyVar s)
+        else go (suc s) bs
+
+export
+resolveRef : SizeOf local -> SizeOf done -> Bounds bound -> FC -> Name ->
+             Maybe (Term ((vars ++ bound ++ done) ++ local))
+resolveRef p q bd fc nm = do
+  MkVar v <- weakenNs p . embed . weakenNs q <$> isBound nm bd
+  pure (Local fc Nothing _ v)
+
+
+mkLocals : SizeOf local -> Bounds bound ->
+           Term (vars ++ local) -> Term ((vars ++ bound) ++ local)
 mkLocals outer bs (Local fc r idx p)
     = let MkNVar p' = addVars outer bs (MkNVar p) in Local fc r _ p'
 mkLocals outer bs (Ref fc Bound name)
@@ -117,15 +124,14 @@ mkLocals outer bs (Erased fc (Dotted t)) = Erased fc (Dotted (mkLocals outer bs 
 mkLocals outer bs (TType fc u) = TType fc u
 
 export
-refsToLocals : Bounds bound -> Term vars -> Term (bound ++ vars)
+refsToLocals : Bounds bound -> Term vars -> Term (vars ++ bound)
 refsToLocals None y = y
 refsToLocals bs y = mkLocals zero  bs y
 
 -- Replace any reference to 'x' with a locally bound name 'new'
 export
-refToLocal : (x : Name) -> (new : Name) -> Term vars -> Term (new :: vars)
+refToLocal : (x : Name) -> (new : Name) -> Term vars -> Term (vars :< new)
 refToLocal x new tm = refsToLocals (Add new x None) tm
--}
 
 ------------------------------------------------------------------------
 -- Collecting info about terms

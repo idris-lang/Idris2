@@ -87,6 +87,7 @@ embedIsVar (Later p) = Later (embedIsVar p)
 
 ||| Throw in extra variables on the local end of the context.
 ||| This is slow so we ensure it's only used in a runtime irrelevant manner
+export
 0 weakenIsVar : (s : SizeOf ns) -> IsVar x idx xs -> IsVar x (size s + idx) (xs ++ ns)
 weakenIsVar (MkSizeOf Z Z) p =  p
 weakenIsVar (MkSizeOf (S k) (S l)) p =  Later (weakenIsVar (MkSizeOf k l) p)
@@ -317,6 +318,11 @@ shrinkIsVar (Later x) (Keep p) = later <$> shrinkIsVar x p
 
 ------------------------------------------------------------------------
 -- Putting it all together
+
+export
+%hint
+0 FreelyEmbeddableIsVar : FreelyEmbeddable (IsVar x k)
+FreelyEmbeddableIsVar = MkFreelyEmbeddable embedIsVar
 
 export
 Weaken (Var {a = Name}) where

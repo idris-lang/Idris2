@@ -532,7 +532,7 @@ doubleTy : ClosedTerm
 doubleTy = predTy DoubleType DoubleType
 
 pi : (x : String) -> RigCount -> PiInfo (Term xs) -> Term xs ->
-     Term (UN (Basic x) :: xs) -> Term xs
+     Term (xs :< UN (Basic x)) -> Term xs
 pi x rig plic ty sc = Bind emptyFC (UN (Basic x)) (Pi emptyFC rig plic ty) sc
 
 believeMeTy : ClosedTerm
@@ -566,7 +566,7 @@ castTo WorldType = const Nothing
 
 export
 getOp : {0 arity : Nat} -> PrimFn arity ->
-        {vars : List Name} -> Vect arity (NF vars) -> Maybe (NF vars)
+        {vars : Scope} -> Vect arity (NF vars) -> Maybe (NF vars)
 getOp (Add ty) = binOp add
 getOp (Sub ty) = binOp sub
 getOp (Mul ty) = binOp mul

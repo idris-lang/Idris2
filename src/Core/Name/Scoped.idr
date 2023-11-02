@@ -105,6 +105,7 @@ Embeddable tm = {0 outer, vars : Scope} -> tm vars -> tm (outer ++ vars)
 
 public export
 interface Weaken (0 tm : Scoped) where
+  constructor MkWeaken
   -- methods
   weaken : tm vars -> tm (vars :< nm)
   weakenNs : Weakenable tm
@@ -118,6 +119,7 @@ interface Weaken (0 tm : Scoped) where
 
 public export
 interface FreelyEmbeddable (0 tm : Scoped) where
+  constructor MkFreelyEmbeddable
   -- this is free for nameless representations
   embed : Embeddable tm
   embed = believe_me
