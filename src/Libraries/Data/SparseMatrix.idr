@@ -99,13 +99,6 @@ namespace Vector1
   maxIndex1 : Vector1 a -> Nat
   maxIndex1 ((i, x) ::: xs) = maybe i fst (last' xs)
 
-vectorFromList : List a -> Vector a
-vectorFromList = go Z
-  where
-    go : Nat -> List a -> Vector a
-    go i [] = []
-    go i (x :: xs) = (i, x) :: go (S i) xs
-
 ||| A sparse matrix is a sparse vector of (non-empty) sparse vectors.
 public export
 Matrix : Type -> Type
@@ -113,7 +106,15 @@ Matrix a = Vector (Vector1 a)
 
 export
 fromListList : (Eq a, Semiring a) => List (List a) -> Matrix a
-fromListList = mapMaybe (\(i, xs) => map (i,) (fromList1 xs)) . vectorFromList
+fromListList = mapMaybe (\(i, xs) => map (i,) (fromList1 xs)) . withIndex
+  where
+    -- may contain empty lists
+    withIndex : List (List a) -> List (Nat, List a)
+    withIndex = go Z
+      where
+        go : Nat -> List (List a) -> List (Nat, List a)
+        go i [] = []
+        go i (x :: xs) = (i, x) :: go (S i) xs
 
 export
 transpose : Matrix a -> Matrix a
