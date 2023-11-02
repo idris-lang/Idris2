@@ -76,28 +76,28 @@ namespace Vector1
   Vector1 a = List1 (Nat, a)
 
   export
-  fromList1 : (Eq a, Semiring a) => List a -> Maybe (Vector1 a)
-  fromList1 = Data.List1.fromList . Vector.fromList
+  fromList : (Eq a, Semiring a) => List a -> Maybe (Vector1 a)
+  fromList = Data.List1.fromList . Vector.fromList
 
   export
-  insert1 : Nat -> a -> Vector1 a -> Vector1 a
-  insert1 i x ys@((j, y) ::: ys') =
+  insert : Nat -> a -> Vector1 a -> Vector1 a
+  insert i x ys@((j, y) ::: ys') =
     case compare i j of
       LT => (i, x) ::: (j, y) :: ys'
       EQ => ys -- keep
       GT => (j, y) ::: insert i x ys'
 
   export
-  lookupOrd1 : Ord k => k -> List1 (k, a) -> Maybe a
-  lookupOrd1 i ((k, x) ::: xs) =
+  lookupOrd : Ord k => k -> List1 (k, a) -> Maybe a
+  lookupOrd i ((k, x) ::: xs) =
     case compare i k of
       LT => Nothing
       EQ => Just x
       GT => lookupOrd i xs
 
   export
-  maxIndex1 : Vector1 a -> Nat
-  maxIndex1 ((i, x) ::: xs) = maybe i fst (last' xs)
+  maxIndex : Vector1 a -> Nat
+  maxIndex ((i, x) ::: xs) = maybe i fst (last' xs)
 
 ||| A sparse matrix is a sparse vector of (non-empty) sparse vectors.
 public export
@@ -106,7 +106,7 @@ Matrix a = Vector (Vector1 a)
 
 export
 fromListList : (Eq a, Semiring a) => List (List a) -> Matrix a
-fromListList = mapMaybe (\(i, xs) => map (i,) (fromList1 xs)) . withIndex
+fromListList = mapMaybe (\(i, xs) => map (i,) (Vector1.fromList xs)) . withIndex
   where
     -- may contain empty lists
     withIndex : List (List a) -> List (Nat, List a)
@@ -126,7 +126,7 @@ transpose ((i, xs) :: xss) = spreadHeads i (toList xs) (transpose xss) where
   spreadHeads i xs@((j, x) :: xs') yss@((j', ys) :: yss') =
     case compare j j' of
       LT => (j, singleton (i,x)) :: spreadHeads i xs' yss
-      EQ => (j', insert1 i x ys) :: spreadHeads i xs' yss'
+      EQ => (j', insert i x ys) :: spreadHeads i xs' yss'
       GT => (j', ys) :: spreadHeads i xs yss'
 
 multRow : (Eq a, Semiring a) => Matrix a -> Vector1 a -> Vector a
@@ -152,7 +152,7 @@ mult = multTranspose . transpose
 
 ||| Find largest column index.
 maxIndexInner : Matrix a -> Nat
-maxIndexInner = foldMap @{%search} @{MkMonoid @{MkSemigroup max} 0} (maxIndex1 . snd)
+maxIndexInner = foldMap @{%search} @{MkMonoid @{MkSemigroup max} 0} (maxIndex . snd)
 
 namespace Pretty
   header : (columnWidth : Int) -> (rowLength : Nat) -> List (Doc ann)

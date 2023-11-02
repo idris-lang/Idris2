@@ -217,7 +217,7 @@ checkNonDesc : Graph -> Maybe Graph
 checkNonDesc a = if any selfDecArc a.change then Nothing else Just a
   where
     selfDecArc : (Nat, Vector1 SizeChange) -> Bool
-    selfDecArc (i, xs) = lookupOrd1 i xs == Just Smaller
+    selfDecArc (i, xs) = lookupOrd i xs == Just Smaller
 
 ||| Finding non-terminating loops
 findLoops : SCSet ->
