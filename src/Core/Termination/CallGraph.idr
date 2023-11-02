@@ -207,10 +207,8 @@ mutual
                          else Nothing
               _ => Nothing
 
-  -- Calculate the size change for the given argument.
-  -- i.e., return the size relationship of the given argument with an entry
-  -- in 'pats'; the position in 'pats' and the size change.
-  -- Nothing if there is no relation with any of them.
+  -- Calculate the size change for the given argument.  i.e., return the
+  -- relative size of the given argument to each entry in 'pats'.
   mkChange : Defs -> Name ->
              (pats : List (Term vars)) ->
              (arg : Term vars) ->
@@ -221,6 +219,7 @@ mutual
   -- Given a name of a case function, and a list of the arguments being
   -- passed to it, update the pattern list so that it's referring to the LHS
   -- of the case block function and return the corresponding RHS.
+
   -- This way, we can build case blocks directly into the size change graph
   -- rather than treating the definitions separately.
   getCasePats : {auto c : Ref Ctxt Defs} ->
