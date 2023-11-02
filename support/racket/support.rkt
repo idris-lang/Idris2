@@ -39,11 +39,20 @@
 
 ; flonum constants
 
-(define (blodwen-flonumEpsilon)
-  epsilon.0)
+;; /!\ this code is cursed for some reason?...
+;;
+;; (define (blodwen-flonumEpsilon)
+;;   epsilon.0)
 
 (define (blodwen-calcFlonumUnitRoundoff)
-  (fl/ (blodwen-flonumEpsilon) 2.0))
+;;  (fl/ (blodwen-flonumEpsilon) 2.0))
+  (let loop [(uro 1.0)]
+    (if (fl= 1.0 (fl+ 1.0 uro))
+      uro
+      (loop (fl/ uro 2.0)))))
+
+(define (blodwen-calcFlonumEpsilon)
+  (fl* (blodwen-calcFlonumUnitRoundoff) 2.0))
 
 (define (blodwen-flonumNaN)
   +nan.0)
