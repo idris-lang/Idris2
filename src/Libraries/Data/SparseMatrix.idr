@@ -2,14 +2,10 @@ module Libraries.Data.SparseMatrix
 
 import Algebra.Semiring
 
-import Libraries.Data.String.Builder
 import Data.String
-
 import Data.List1
-import Data.Nat
 
 import Libraries.Text.PrettyPrint.Prettyprinter
-import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 %default total
 
@@ -47,6 +43,7 @@ namespace Vector
 
   ||| Turns a list into a sparse vector, discarding neutral elements in
   ||| the process.
+  export
   fromList : (Eq a, Semiring a) => List a -> Vector a
   fromList = go Z
     where
@@ -57,6 +54,7 @@ namespace Vector
                then go (S i) xs
                else (i, x) :: go (S i) xs
 
+  export
   fromList1 : (Eq a, Semiring a) => List a -> Maybe (Vector1 a)
   fromList1 = Data.List1.fromList . fromList
 
@@ -85,16 +83,6 @@ vectorFromList = go Z
     go i [] = []
     go i (x :: xs) = (i, x) :: go (S i) xs
 
-rowFromList : (Eq a, Semiring a) => List a -> Maybe (Vector1 a)
-rowFromList = fromList . go Z
-  where
-    go : Nat -> List a -> Vector a
-    go i [] = []
-    go i (x :: xs)
-      = if x == plusNeutral
-          then go (S i) xs
-          else (i, x) :: go (S i) xs
-
 ||| A sparse matrix is a sparse vector of (non-empty) sparse vectors.
 public export
 Matrix : Type -> Type
@@ -102,11 +90,7 @@ Matrix a = Vector (Vector1 a)
 
 export
 fromListList : (Eq a, Semiring a) => List (List a) -> Matrix a
-fromListList = mapMaybe (\(i, xs) => map (i,) (rowFromList xs)) . vectorFromList
-
-export
-fromListVector : List (Vector a) -> Matrix a
-fromListVector = mapMaybe (\(i, xs) => map (i,) (fromList xs)) . vectorFromList
+fromListList = mapMaybe (\(i, xs) => map (i,) (fromList1 xs)) . vectorFromList
 
 transpose : Matrix a -> Matrix a
 transpose [] = []
@@ -191,7 +175,6 @@ namespace Pretty
   columnSep : List (Doc ann) -> Doc ann
   columnSep = concatWith (\x, y => x <+> spaces columnSpacing <+> y)
 
-  export
   row1 : Pretty ann a => (columnWidth : Int) -> Vector1 a -> List (Doc ann)
   row1 columnWidth ys = map (fill columnWidth) (row (toList ys))
 
