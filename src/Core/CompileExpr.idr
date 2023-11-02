@@ -614,26 +614,26 @@ export
 substs : CSubst target outer -> CExp (outer ++ target) -> CExp outer
 substs env tm = substCExp zero env tm
 
-{-
-resolveRef : SizeOf outer ->
-             SizeOf done ->
-             Bounds bound -> FC -> Name ->
-             Maybe (CExp (outer ++ (done ++ bound ++ vars)))
-resolveRef _ _ None _ _ = Nothing
-resolveRef {outer} {vars} {done} p q (Add {xs} new old bs) fc n
-    = if n == old
-         then rewrite appendAssociative outer done (new :: xs ++ vars) in
-              let MkNVar p = weakenNVar (p + q) (MkNVar First) in
-                    Just (CLocal fc p)
-         else rewrite appendAssociative done [new] (xs ++ vars)
-                in resolveRef p (sucR q) bs fc n
+export
+resolveRef : SizeOf local -> SizeOf done -> Bounds bound -> FC -> Name ->
+             Maybe (CExp ((vars ++ bound ++ done) ++ local))
+resolveRef p q bd fc nm = do
+  MkVar v <- weakenNs p . embed . weakenNs q <$> isBound nm bd
+  pure (CLocal fc v)
+
+-- TODO: what is a good name for this?
+public export
+0 MkLocalable : Scoped -> Type
+MkLocalable tm =
+  {0 outer, bound, local : Scope} ->
+  SizeOf local ->
+  Bounds bound ->
+  tm (outer ++ local) ->
+  tm ((outer ++ bound) ++ local)
 
 mutual
   export
-  mkLocals : SizeOf outer ->
-             Bounds bound ->
-             CExp (outer ++ vars) ->
-             CExp (outer ++ (bound ++ vars))
+  mkLocals : MkLocalable CExp
   mkLocals later bs (CLocal {idx} {x} fc p)
       = let MkNVar p' = addVars later bs (MkNVar p) in CLocal {x} fc p'
   mkLocals later bs (CRef fc var)
@@ -668,28 +668,21 @@ mutual
   mkLocals later bs (CErased fc) = CErased fc
   mkLocals later bs (CCrash fc x) = CCrash fc x
 
-  mkLocalsConAlt : SizeOf outer ->
-                   Bounds bound ->
-                   CConAlt (outer ++ vars) ->
-                   CConAlt (outer ++ (bound ++ vars))
-  mkLocalsConAlt {bound} {outer} {vars} p bs (MkConAlt x ci tag args sc)
-        = let sc' : CExp ((args ++ outer) ++ vars)
-                  = rewrite sym (appendAssociative args outer vars) in sc in
+  mkLocalsConAlt : MkLocalable CConAlt
+  mkLocalsConAlt p bs (MkConAlt x ci tag args sc)
+        = let sc' : CExp (outer ++ (local ++ args))
+                  = rewrite appendAssociative outer local args in sc in
               MkConAlt x ci tag args
-               (rewrite appendAssociative args outer (bound ++ vars) in
-                        mkLocals (mkSizeOf args + p) bs sc')
+               (rewrite sym $ appendAssociative (outer ++ bound) local args in
+                        mkLocals (p + mkSizeOf args) bs sc')
 
-  mkLocalsConstAlt : SizeOf outer ->
-                     Bounds bound ->
-                     CConstAlt (outer ++ vars) ->
-                     CConstAlt (outer ++ (bound ++ vars))
+  mkLocalsConstAlt : MkLocalable CConstAlt
   mkLocalsConstAlt later bs (MkConstAlt x sc) = MkConstAlt x (mkLocals later bs sc)
 
 export
-refsToLocals : Bounds bound -> CExp vars -> CExp (bound ++ vars)
+refsToLocals : Bounds bound -> CExp vars -> CExp (vars ++ bound)
 refsToLocals None tm = tm
 refsToLocals bs y = mkLocals zero bs y
--}
 
 export
 getFC : CExp args -> FC

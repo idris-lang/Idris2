@@ -70,11 +70,17 @@ namespace Bounds
   sizeOf (Add _ _ b) = suc (sizeOf b)
 
 export
+mkBounds : (xs : _) -> Bounds xs
+mkBounds [<] = None
+mkBounds (xs :< x) = Add x x (mkBounds xs)
+
+export
 addVars : SizeOf local -> Bounds bound ->
           NVar name (vars ++ local) ->
           NVar name ((vars ++ bound) ++ local)
 addVars p = insertNVarNames p . sizeOf
 
+export
 isBound : Name -> Bounds bound -> Maybe (Var bound)
 isBound n = go zero where
 
