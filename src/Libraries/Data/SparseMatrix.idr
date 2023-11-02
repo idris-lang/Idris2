@@ -9,22 +9,6 @@ import Libraries.Text.PrettyPrint.Prettyprinter
 
 %default total
 
-lookupOrd : Ord k => k -> List (k, a) -> Maybe a
-lookupOrd i [] = Nothing
-lookupOrd i ((k, x) :: xs) =
-  case compare i k of
-    LT => Nothing
-    EQ => Just x
-    GT => lookupOrd i xs
-
-export
-lookupOrd1 : Ord k => k -> List1 (k, a) -> Maybe a
-lookupOrd1 i ((k, x) ::: xs) =
-  case compare i k of
-    LT => Nothing
-    EQ => Just x
-    GT => lookupOrd i xs
-
 namespace Vector
   ||| A sparse vector is a list of pairs consisting of an index and its
   ||| corresponding element.
@@ -36,10 +20,6 @@ namespace Vector
   public export
   Vector : Type -> Type
   Vector a = List (Nat, a)
-
-  public export
-  Vector1 : Type -> Type
-  Vector1 a = List1 (Nat, a)
 
   ||| Turns a list into a sparse vector, discarding neutral elements in
   ||| the process.
@@ -53,10 +33,6 @@ namespace Vector
           = if x == plusNeutral
                then go (S i) xs
                else (i, x) :: go (S i) xs
-
-  export
-  fromList1 : (Eq a, Semiring a) => List a -> Maybe (Vector1 a)
-  fromList1 = Data.List1.fromList . fromList
 
   ||| Insert `x` at index `i`. Ignore if the `i`th element already
   ||| exists.
@@ -72,12 +48,56 @@ namespace Vector
       GT => (j, y) :: insert i x ys'
 
   export
+  lookupOrd : Ord k => k -> List (k, a) -> Maybe a
+  lookupOrd i [] = Nothing
+  lookupOrd i ((k, x) :: xs) =
+    case compare i k of
+      LT => Nothing
+      EQ => Just x
+      GT => lookupOrd i xs
+
+  export
+  maxIndex : Vector a -> Nat
+  maxIndex xs = maybe 0 fst (last' xs)
+
+  export
+  dot : Semiring a => Vector a -> Vector a -> a
+  dot [] _ = plusNeutral
+  dot _ [] = plusNeutral
+  dot xs@((k, x) :: xs') ys@((k', y) :: ys') =
+    case compare k k' of
+      LT => dot xs' ys
+      EQ => (x |*| y) |+| dot xs' ys'
+      GT => dot xs ys'
+
+namespace Vector1
+  public export
+  Vector1 : Type -> Type
+  Vector1 a = List1 (Nat, a)
+
+  export
+  fromList1 : (Eq a, Semiring a) => List a -> Maybe (Vector1 a)
+  fromList1 = Data.List1.fromList . Vector.fromList
+
+  export
   insert1 : Nat -> a -> Vector1 a -> Vector1 a
   insert1 i x ys@((j, y) ::: ys') =
     case compare i j of
       LT => (i, x) ::: (j, y) :: ys'
       EQ => ys -- keep
       GT => (j, y) ::: insert i x ys'
+
+  export
+  lookupOrd1 : Ord k => k -> List1 (k, a) -> Maybe a
+  lookupOrd1 i ((k, x) ::: xs) =
+    case compare i k of
+      LT => Nothing
+      EQ => Just x
+      GT => lookupOrd i xs
+
+  export
+  maxIndex1 : Vector1 a -> Nat
+  maxIndex1 ((i, x) ::: xs) = maybe i fst (last' xs)
 
 vectorFromList : List a -> Vector a
 vectorFromList = go Z
@@ -95,6 +115,7 @@ export
 fromListList : (Eq a, Semiring a) => List (List a) -> Matrix a
 fromListList = mapMaybe (\(i, xs) => map (i,) (fromList1 xs)) . vectorFromList
 
+export
 transpose : Matrix a -> Matrix a
 transpose [] = []
 transpose ((i, xs) :: xss) = spreadHeads i (toList xs) (transpose xss) where
@@ -106,15 +127,6 @@ transpose ((i, xs) :: xss) = spreadHeads i (toList xs) (transpose xss) where
       LT => (j, singleton (i,x)) :: spreadHeads i xs' yss
       EQ => (j', insert1 i x ys) :: spreadHeads i xs' yss'
       GT => (j', ys) :: spreadHeads i xs yss'
-
-dot : Semiring a => Vector a -> Vector a -> a
-dot [] _ = plusNeutral
-dot _ [] = plusNeutral
-dot xs@((k, x) :: xs') ys@((k', y) :: ys') =
-  case compare k k' of
-    LT => dot xs' ys
-    EQ => (x |*| y) |+| dot xs' ys'
-    GT => dot xs ys'
 
 multRow : (Eq a, Semiring a) => Matrix a -> Vector1 a -> Vector a
 multRow [] ys = []
@@ -137,9 +149,6 @@ export
 mult : (Eq a, Semiring a) => Matrix a -> Matrix a -> Matrix a
 mult = multTranspose . transpose
 
-maxIndex1 : Vector1 a -> Nat
-maxIndex1 ((i, x) ::: xs) = maybe i fst (last' xs)
-
 ||| Find largest column index.
 maxIndexInner : Matrix a -> Nat
 maxIndexInner = foldMap @{%search} @{MkMonoid @{MkSemigroup max} 0} (maxIndex1 . snd)
@@ -148,11 +157,6 @@ namespace Pretty
   header : (columnWidth : Int) -> (rowLength : Nat) -> List (Doc ann)
   header columnWidth rowLength = map (fill columnWidth . byShow) (take rowLength [0..])
 
-  export
-  maxIndex : Vector a -> Nat
-  maxIndex xs = maybe 0 fst (last' xs)
-
-  export
   row : Pretty ann a => Vector a -> List (Doc ann)
   row xs = go rowLength xs
     where
