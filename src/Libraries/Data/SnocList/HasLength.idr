@@ -18,6 +18,11 @@ data HasLength : Nat -> SnocList a -> Type where
   S : HasLength n sa -> HasLength (S n) (sa :< a)
 
 export
+hasLength : HasLength n sx -> length sx === n
+hasLength Z = Refl
+hasLength (S p) = cong S (hasLength p)
+
+export
 sucL : HasLength n sx -> HasLength (S n) ([<x] ++ sx)
 sucL Z     = S Z
 sucL (S n) = S (sucL n)

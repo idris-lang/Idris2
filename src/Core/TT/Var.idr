@@ -1,8 +1,10 @@
 module Core.TT.Var
 
+import Data.Fin
 import Data.Nat
 import Data.So
 import Data.SnocList
+import Data.Vect
 
 import Core.Name
 import Core.Name.Scoped
@@ -11,6 +13,8 @@ import Libraries.Data.List.HasLength
 import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.HasLength
 import Libraries.Data.SnocList.SizeOf
+
+import Libraries.Data.SnocList.Extra
 
 %default total
 
@@ -27,6 +31,13 @@ data IsVar : a -> Nat -> SnocList a -> Type where
      Later : IsVar n i ns -> IsVar n (S i) (ns :< m)
 
 %name IsVar idx
+
+export
+finIdx : {idx : _} -> (0 prf : IsVar x idx vars) ->
+         Fin (length vars)
+finIdx First = FZ
+finIdx (Later l) = FS (finIdx l)
+
 
 ||| Recover the value pointed at by an IsVar proof
 export
@@ -171,6 +182,10 @@ namespace NVar
   later (MkNVar p) = MkNVar (Later p)
 
 export
+forgetName : NVar nm vars -> Var vars
+forgetName (MkNVar p) = MkVar p
+
+export
 appendNVar : SizeOf inner -> NVar nm (outer :< nm ++ inner)
 appendNVar (MkSizeOf s p) = MkNVar (appendIsVar p)
 
@@ -190,10 +205,8 @@ locateNVar s (MkNVar {nvarIdx} p) = case choose (nvarIdx < size s) of
 
 export
 isDeBruijn : Nat -> (vars : SnocList Name) -> Maybe (Var vars)
-isDeBruijn Z (vs :< v) = Just (MkVar First)
-isDeBruijn (S k) (vs :< _)
-   = do MkVar prf <- isDeBruijn k vs
-        Just (MkVar (Later prf))
+isDeBruijn Z (vs :< v) = pure (MkVar First)
+isDeBruijn (S k) (vs :< _) = later <$> isDeBruijn k vs
 isDeBruijn _ _ = Nothing
 
 export
@@ -206,9 +219,7 @@ isNVar n (ms :< m)
 
 export
 isVar : (n : Name) -> (ns : SnocList Name) -> Maybe (Var ns)
-isVar n ns = do
-  MkNVar v <- isNVar n ns
-  pure (MkVar v)
+isVar n ns = forgetName <$> isNVar n ns
 
 export
 locateVar : SizeOf local -> Var (outer ++ local) ->
@@ -249,13 +260,13 @@ export
 insertVar : SizeOf local ->
             Var (outer ++ local) ->
             Var (outer :< n ++ local)
-insertVar p (MkVar v) = let MkNVar v' = insertNVar p (MkNVar v) in MkVar v'
+insertVar p (MkVar v) = forgetName $ insertNVar p (MkNVar v)
 
 weakenVar : SizeOf ns -> Var outer -> Var (outer ++ ns)
-weakenVar p (MkVar v) = let MkNVar v' = weakenNVar p (MkNVar v) in MkVar v'
+weakenVar p (MkVar v) = forgetName $ weakenNVar p (MkNVar v)
 
 insertVarNames : GenWeakenable Var
-insertVarNames p q (MkVar v) = let MkNVar v' = insertNVarNames p q (MkNVar v) in MkVar v'
+insertVarNames p q (MkVar v) = forgetName $ insertNVarNames p q (MkNVar v)
 
 ||| The (partial) inverse to insertVar
 export
@@ -300,13 +311,9 @@ shrinkIsVar : {idx : Nat} -> (0 p : IsVar name idx xs) ->
   Thin ys xs -> Maybe (Var ys)
 shrinkIsVar prf Refl = Just (MkVar prf)
 shrinkIsVar First (Drop p) = Nothing
-shrinkIsVar (Later x) (Drop p)
-    = do MkVar prf' <- shrinkIsVar x p
-         Just (MkVar prf')
+shrinkIsVar (Later x) (Drop p) = shrinkIsVar x p
 shrinkIsVar First (Keep p) = Just (MkVar First)
-shrinkIsVar (Later x) (Keep p)
-    = do MkVar prf' <- shrinkIsVar x p
-         Just (MkVar (Later prf'))
+shrinkIsVar (Later x) (Keep p) = later <$> shrinkIsVar x p
 
 ------------------------------------------------------------------------
 -- Putting it all together
@@ -326,3 +333,100 @@ IsScoped (Var {a = Name}) where
 
   thin (MkVar p) = thinIsVar p
   shrink (MkVar p) = shrinkIsVar p
+
+export
+Weaken (NVar {a = Name} nm) where
+  weaken = later
+  weakenNs = weakenNVar
+
+export
+FreelyEmbeddable (NVar {a = Name} nm) where
+  embed (MkNVar p) = MkNVar (embedIsVar p)
+
+------------------------------------------------------------------------
+-- Used variables
+
+||| This used to be a (Vect (length vars) Bool) which meant
+||| we needed to keep a lot of `vars` around to be able to
+||| pattern-match on it without first fording `length vars`
+||| out. It was very annoying so it's now a hand-rolled type
+||| even though that means we cannot use e.g. Vect's `replicate`.
+export
+data Used : Scoped where
+  Lin : Used [<]
+  (:<) : Used vars -> Bool -> Used (vars :< x)
+
+%name Used bs, us
+
+export
+initUsed : {vars : Scope} -> Used vars
+initUsed {vars = [<]} = [<]
+initUsed {vars = (sx :< x)} = initUsed :< False
+
+export
+Weaken Used where
+  weaken xs = xs :< False
+
+export
+tail : Used (vars :< x) -> Used vars
+tail (xs :< _) = xs
+
+export
+drop : SizeOf local -> Used (vars ++ local) -> Used vars
+drop s bs = case sizedView s of
+  Z => bs
+  S k => drop k (tail bs)
+
+export
+markUsed : {idx : _} -> (0 prf : IsVar x idx vars) ->
+  Used vars -> Used vars
+markUsed First (bs :< _) = bs :< True
+markUsed (Later p) (bs :< b) = markUsed p bs :< b
+
+||| Only retain the variables that are actually used
+export
+used : {vars : Scope} -> Used vars -> Scope
+used {vars = [<]} [<] = [<]
+used {vars = vars :< v} (bs :< b)
+    = ifThenElse b (:< v) id
+    $ used bs
+
+export
+allUsed : Used vars -> List (Var vars)
+allUsed = go zero where
+
+  go : SizeOf inner -> Used vs -> List (Var (vs <>< inner))
+  go s [<] = []
+  go s (bs :< b) = fishyVar s :: go (suc s) bs
+
+export
+usedIsVar :
+  (us : Used vars) ->
+  {idx : Nat} -> (0 p : IsVar nm idx vars) ->
+  NVar nm (used us)
+usedIsVar (bs :< False) First = assert_total $
+  idris_crash "INTERNAL ERROR: Referenced variable marked as unused"
+usedIsVar (bs :< True) First = MkNVar First
+usedIsVar (bs :< False) (Later p) = usedIsVar (bs) p
+usedIsVar (bs :< True) (Later p) = later (usedIsVar (bs) p)
+
+export
+usedNVar : (us : Used vars) -> NVar nm vars -> NVar nm (used us)
+usedNVar us (MkNVar p) = usedIsVar us p
+
+export
+usedVar : (us : Used vars) -> Var vars -> Var (used us)
+usedVar us (MkVar p) = forgetName $ usedIsVar us p
+
+-- this is a terrible name
+export
+usedNVarContextual : SizeOf inner -> (us : Used vars) ->
+  NVar nm (vars ++ inner) -> NVar nm (used us ++ inner)
+usedNVarContextual s us v = case locateNVar s v of
+  Left v => weakenNs s (usedNVar us v)
+  Right v => embed v
+
+export
+usedVarContextual : SizeOf inner -> (us : Used vars) ->
+  Var (vars ++ inner) -> Var (used us ++ inner)
+usedVarContextual s us (MkVar p) = forgetName (usedNVarContextual s us (MkNVar p))
