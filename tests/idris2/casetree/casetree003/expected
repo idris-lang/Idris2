@@ -16,15 +16,18 @@ Refers to (runtime): Main.view, Main.idL, Main.Nil, Main.(::), Prelude.Basics.Ni
 Flags: covering
 Size change:
   Prelude.Basics.Nil:
-      0   1   2
-  0   =   <   <
+    l 0 1 2
+  r +------
+  0 | = < <
   Prelude.Basics.(::):
-      0   1   2
-  0   =   <   <
-  1       <   <
+    l 0 1 2
+  r +------
+  0 | = < <
+  1 |   < <
   Main.idL:
-      0   1   2
-  0   =   <   <
-  1       <   <
+    l 0 1 2
+  r +------
+  0 | = < <
+  1 |   < <
 Main> 
 Bye for now!
