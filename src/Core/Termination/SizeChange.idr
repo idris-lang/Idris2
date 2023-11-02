@@ -211,9 +211,9 @@ prefixCallSeq pred g = go g []
           else
             go f ((l, g) :: seq)
 
--- returns `Just a.seq` iff there is no self-decreasing arc,
--- i.e. there is no argument `n` with `index n a.change === (n, Smaller)`
-checkNonDesc : Graph -> Maybe Graph
+-- returns `Just a` iff there is no self-decreasing arc,
+-- i.e. there is no argument `n` with `a.change_{n,n} === Smaller`
+checkNonDesc : (a : Graph) -> Maybe Graph
 checkNonDesc a = if any selfDecArc a.change then Nothing else Just a
   where
     selfDecArc : (Nat, Vector1 SizeChange) -> Bool
@@ -223,12 +223,11 @@ checkNonDesc a = if any selfDecArc a.change then Nothing else Just a
 findLoops : SCSet ->
             NameMap {- $ \ f => -} (Maybe (Graph {- f f -} ))
 findLoops s
-    = -- Comparing (f x₀ ⋯ xₙ) with (f xᵧ₍₀₎ ⋯ xᵧ₍ₙ₎) for size changes only makes
-      -- sense if the position for we can say something are stable under γ.
-      -- Hence the following filter:
-      let loops = filterEndos (\a => composeChange a.change a.change == a.change) s
-          terms = map (foldMap checkNonDesc) loops in
-      terms
+    = -- An `SCSet` is non-terminating iff it contains a size graph that is
+      -- idempotent, i.e. stable under self-composition,
+      let loops = filterEndos (\a => composeChange a.change a.change == a.change) s in
+      -- and has no self-decreasing arcs.
+      map (foldMap checkNonDesc) loops
     where
       filterEndos : (Graph -> Bool) -> SCSet -> NameMap (List Graph)
       filterEndos p = mapWithKey (\f, m => filter p (Data.SortedSet.toList (lookupSet f m)))
