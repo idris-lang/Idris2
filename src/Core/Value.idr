@@ -57,22 +57,22 @@ cbv = { strategy := CBV } defaultOpts
 
 mutual
   public export
-  data LocalEnv : List Name -> List Name -> Type where
-       Nil  : LocalEnv free []
-       (::) : Closure free -> LocalEnv free vars -> LocalEnv free (x :: vars)
+  data LocalEnv : Scope -> Scoped where
+    Lin  : LocalEnv free [<]
+    (:<) : LocalEnv free vars -> Closure free -> LocalEnv free (vars :< x)
 
   public export
-  data Closure : List Name -> Type where
+  data Closure : Scoped where
        MkClosure : {vars : _} ->
                    (opts : EvalOpts) ->
                    LocalEnv free vars ->
                    Env Term free ->
-                   Term (vars ++ free) -> Closure free
+                   Term (free ++ vars) -> Closure free
        MkNFClosure : EvalOpts -> Env Term free -> NF free -> Closure free
 
   -- The head of a value: things you can apply arguments to
   public export
-  data NHead : List Name -> Type where
+  data NHead : Scoped where
        NLocal : Maybe Bool -> (idx : Nat) -> (0 p : IsVar nm idx vars) ->
                 NHead vars
        NRef   : NameType -> Name -> NHead vars
@@ -82,7 +82,7 @@ mutual
   -- Values themselves. 'Closure' is an unevaluated thunk, which means
   -- we can wait until necessary to reduce constructor arguments
   public export
-  data NF : List Name -> Type where
+  data NF : Scoped where
        NBind    : FC -> (x : Name) -> Binder (Closure vars) ->
                   (Defs -> Closure vars -> Core (NF vars)) -> NF vars
        -- Each closure is associated with the file context of the App node that
