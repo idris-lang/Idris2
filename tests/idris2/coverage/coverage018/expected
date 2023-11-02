@@ -24,9 +24,11 @@ Refers to: Prelude.Basics.True, Prelude.Basics.False
 Flags: allguarded, covering
 Size change:
   Prelude.Basics.True:
-      0
+    l
+  r +
   Prelude.Basics.False:
-      0
+    l
+  r +
 Issue1831_1> 
 Bye for now!
 1/1: Building Issue1831_2 (Issue1831_2.idr)
@@ -55,8 +57,10 @@ Refers to: Prelude.Basics.True, Prelude.Basics.False
 Flags: allguarded, covering
 Size change:
   Prelude.Basics.True:
-      0
+    l
+  r +
   Prelude.Basics.False:
-      0
+    l
+  r +
 Issue1831_2> 
 Bye for now!

@@ -24,8 +24,10 @@ Refers to (runtime): Main.switch, Builtin.MkPair
 Flags: covering
 Size change:
   Main.switch:
-      0
-  0   =
+    l 0
+  r +--
+  0 | =
   Builtin.MkPair:
-      0
+    l
+  r +
 Main> Bye for now!

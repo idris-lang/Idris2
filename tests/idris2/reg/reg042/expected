@@ -7,9 +7,10 @@ Refers to: Prelude.Types.plus
 Flags: covering
 Size change:
   Prelude.Types.plus:
-      0   1
-  0   =
-  1       =
+    l 0 1
+  r +----
+  0 | =
+  1 |   =
 Main> Main.doMinus
 Arguments [{arg:0}, {arg:1}]
 Compile time tree: minus {arg:0} {arg:1}
@@ -19,9 +20,10 @@ Refers to (runtime): Prelude.Types.prim__integerToNat
 Flags: covering
 Size change:
   Prelude.Types.minus:
-      0   1
-  0   =
-  1       =
+    l 0 1
+  r +----
+  0 | =
+  1 |   =
 Main> Main.doMult
 Arguments [{arg:0}, {arg:1}]
 Compile time tree: mult {arg:0} {arg:1}
@@ -30,9 +32,10 @@ Refers to: Prelude.Types.mult
 Flags: covering
 Size change:
   Prelude.Types.mult:
-      0   1
-  0   =
-  1       =
+    l 0 1
+  r +----
+  0 | =
+  1 |   =
 Main> Main.doCompare
 Arguments [{arg:0}, {arg:1}]
 Compile time tree: compareNat {arg:0} {arg:1}
@@ -42,9 +45,10 @@ Refers to (runtime): Prelude.EqOrd.compare
 Flags: covering
 Size change:
   Prelude.Types.compareNat:
-      0   1
-  0   =
-  1       =
+    l 0 1
+  r +----
+  0 | =
+  1 |   =
 Main> Main.doEqual
 Arguments [{arg:0}, {arg:1}]
 Compile time tree: equalNat {arg:0} {arg:1}
@@ -53,7 +57,8 @@ Refers to: Prelude.Types.equalNat
 Flags: covering
 Size change:
   Prelude.Types.equalNat:
-      0   1
-  0   =
-  1       =
+    l 0 1
+  r +----
+  0 | =
+  1 |   =
 Main> Bye for now!

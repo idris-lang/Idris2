@@ -13,9 +13,11 @@ Refers to (runtime): Prelude.Types.Nat
 Flags: allguarded, covering
 Size change:
   Prelude.Basics.True:
-      0
+    l
+  r +
   Prelude.Basics.False:
-      0
+    l
+  r +
 Main> Main.isInt32
 Arguments [{arg:0}]
 Compile time tree: case {arg:0} of
@@ -30,9 +32,11 @@ Refers to (runtime): Int32
 Flags: allguarded, covering
 Size change:
   Prelude.Basics.True:
-      0
+    l
+  r +
   Prelude.Basics.False:
-      0
+    l
+  r +
 Main> Prelude.Types.plus
 Arguments [{arg:0}, {arg:1}]
 Compile time tree: case {arg:0} of
@@ -47,11 +51,13 @@ Refers to: Prelude.Types.plus, Prelude.Types.S
 Flags: total
 Size change:
   Prelude.Types.S:
-      0
+    l
+  r +
   Prelude.Types.plus:
-      0   1
-  0   <
-  1       =
+    l 0 1
+  r +----
+  0 | <
+  1 |   =
 Main> Prelude.Types.minus
 Arguments [{arg:0}, {arg:1}]
 Compile time tree: case {arg:0} of
@@ -81,11 +87,13 @@ Refers to (runtime): Prelude.Types.prim__integerToNat
 Flags: total
 Size change:
   Prelude.Types.Z:
-      0
+    l
+  r +
   Prelude.Types.minus:
-      0   1
-  0   <
-  1       <
+    l 0 1
+  r +----
+  0 | <
+  1 |   <
 Main> Prelude.Types.SnocList.filter
 Arguments [{arg:0}, {arg:1}, {arg:2}]
 Compile time tree: case {arg:2} of
@@ -102,16 +110,19 @@ Refers to (runtime): Prelude.Basics.Lin, Prelude.Basics.(:<), Prelude.Types.Snoc
 Flags: total
 Size change:
   Prelude.Basics.Lin:
-      0   1   2
-  0   =       <
+    l 0 1 2
+  r +------
+  0 | =   <
   Prelude.Types.SnocList.filter:
-      0   1   2
-  0   =       <
-  1       =
-  2           <
+    l 0 1 2
+  r +------
+  0 | =   <
+  1 |   =
+  2 |     <
   Prelude.Basics.(:<):
-      0   1   2
-  0   =       <
-  2           <
+    l 0 1 2
+  r +------
+  0 | =   <
+  2 |     <
 Main> 
 Bye for now!

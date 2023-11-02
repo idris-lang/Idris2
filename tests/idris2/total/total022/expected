@@ -27,23 +27,28 @@ Refers to (runtime): Main.f, Prelude.Basics.Nil, Prelude.Basics.(::), Builtin.Mk
 Flags: total
 Size change:
   Builtin.MkUnit:
-      0
+    l
+  r +
   Main.f:
-      0   1   2
-  0   <
-  1       =
-  2           =
+    l 0 1 2
+  r +------
+  0 | <
+  1 |   =
+  2 |     =
   Builtin.(===):
-      0
-  1   <
+    l 0
+  r +--
+  1 | <
   Main.f:
-      0   1   2   3
-  0   <       =   <
-  1   <   =       <
-  2   <       =   <
+    l 0 1 2 3
+  r +--------
+  0 | <   = <
+  1 | < =   <
+  2 | <   = <
   Builtin.(===):
-      0   1   2   3
-  0               <
-  1   <       =   <
-  2   =           <
+    l 0 1 2 3
+  r +--------
+  0 |       <
+  1 | <   = <
+  2 | =     <
 Main> Bye for now!

@@ -7,8 +7,9 @@ Refers to: Prelude.Types.String.(++)
 Flags: covering
 Size change:
   Prelude.Types.String.(++):
-      0
-  0   =
+    l 0
+  r +--
+  0 | =
 Main> Main.forceInline
 Arguments [{arg:0}]
 Compile time tree: {arg:0} + 10
@@ -17,10 +18,12 @@ Refers to: Prelude.Types.Num implementation at Prelude.Types:66:1--71:33, Prelud
 Flags: covering, inline
 Size change:
   Prelude.Num.(+):
-      0
-  2   =
+    l 0
+  r +--
+  2 | =
   Prelude.Types.Num implementation at Prelude.Types:66:1--71:33:
-      0
+    l
+  r +
 Main> Main.forceNoInline
 Arguments []
 Compile time tree: 10
@@ -29,9 +32,11 @@ Refers to: Prelude.Types.Z, Prelude.Types.S
 Flags: allguarded, covering, noinline
 Size change:
   Prelude.Types.S:
-      0
+    l
+  r +
   Prelude.Types.Z:
-      0
+    l
+  r +
 Main> Main.heuristicPublicInline
 Arguments []
 Compile time tree: 2
@@ -40,9 +45,11 @@ Refers to: Prelude.Types.Z, Prelude.Types.S
 Flags: inline, allguarded, covering
 Size change:
   Prelude.Types.S:
-      0
+    l
+  r +
   Prelude.Types.Z:
-      0
+    l
+  r +
 Main> Main.exportedForced
 Arguments []
 Compile time tree: 33
@@ -51,9 +58,11 @@ Refers to: Prelude.Types.Z, Prelude.Types.S
 Flags: allguarded, covering, inline
 Size change:
   Prelude.Types.S:
-      0
+    l
+  r +
   Prelude.Types.Z:
-      0
+    l
+  r +
 Main> Main.exportedUnforced
 Arguments []
 Compile time tree: 66
@@ -62,7 +71,9 @@ Refers to: Prelude.Types.Z, Prelude.Types.S
 Flags: allguarded, covering
 Size change:
   Prelude.Types.S:
-      0
+    l
+  r +
   Prelude.Types.Z:
-      0
+    l
+  r +
 Main> Bye for now!

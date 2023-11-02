@@ -15,13 +15,16 @@ Refers to (runtime): Main.addord_lim, Main.addord, Main.S, Main.O, Main.Lim
 Flags: total
 Size change:
   Main.S:
-      0
+    l
+  r +
   Main.addord:
-      0   1
-  0   <
-  1       =
+    l 0 1
+  r +----
+  0 | <
+  1 |   =
   Main.addord_lim:
-      0   1
-  0   <
-  1       =
+    l 0 1
+  r +----
+  0 | <
+  1 |   =
 Main> Bye for now!
