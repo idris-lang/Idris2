@@ -18,7 +18,7 @@ import Core.Value
 -- reduce
 export
 normalisePis : {auto c : Ref Ctxt Defs} ->
-               {vars : List Name} ->
+               {vars : Scope} ->
                Defs -> Env Term vars -> Term vars -> Core (Term vars)
 normalisePis defs env tm
     = do tmnf <- nf defs env tm
@@ -71,7 +71,7 @@ normaliseLHS : {auto c : Ref Ctxt Defs} ->
                {free : _} ->
                Defs -> Env Term free -> Term free -> Core (Term free)
 normaliseLHS defs env (Bind fc n b sc)
-    = pure $ Bind fc n b !(normaliseLHS defs (b :: env) sc)
+    = pure $ Bind fc n b !(normaliseLHS defs (env :< b) sc)
 normaliseLHS defs env tm
     = quote defs env !(nfOpts onLHS defs env tm)
 
@@ -118,7 +118,7 @@ normaliseScope : {auto c : Ref Ctxt Defs} ->
                  {free : _} ->
                  Defs -> Env Term free -> Term free -> Core (Term free)
 normaliseScope defs env (Bind fc n b sc)
-    = pure $ Bind fc n b !(normaliseScope defs (b :: env) sc)
+    = pure $ Bind fc n b !(normaliseScope defs (env :< b) sc)
 normaliseScope defs env tm = normalise defs env tm
 
 export
@@ -141,7 +141,7 @@ etaContract tm = do
       case tm of
         (Bind _ x (Lam _ _ _ _) (App _ fn (Local _ _ Z _))) => do
           logTerm "eval.eta" 10 "  Shrinking candidate" fn
-          let shrunk = shrinkTerm fn (DropCons SubRefl)
+          let shrunk = shrink fn (Drop Refl)
           case shrunk of
             Nothing => do
               log "eval.eta" 10 "  Failure!"
@@ -239,18 +239,18 @@ logEnv str n msg env
            dumpEnv env
 
   where
-
-    dumpEnv : {vs : List Name} -> Env Term vs -> Core ()
-    dumpEnv [] = pure ()
-    dumpEnv {vs = x :: _} (Let _ c val ty :: bs)
+    dumpEnv : {vs : Scope} -> Env Term vs -> Core ()
+    dumpEnv [<] = pure ()
+    dumpEnv {vs = _ :< x} (bs :< Let _ c val ty)
         = do logTermNF' str n (msg ++ ": let " ++ show x) bs val
              logTermNF' str n (msg ++ ":" ++ show c ++ " " ++ show x) bs ty
              dumpEnv bs
-    dumpEnv {vs = x :: _} (b :: bs)
+    dumpEnv {vs = _ :< x} (bs :< b)
         = do logTermNF' str n (msg ++ ":" ++ show (multiplicity b) ++ " " ++
                            show (piInfo b) ++ " " ++
                            show x) bs (binderType b)
              dumpEnv bs
+
 replace' : {auto c : Ref Ctxt Defs} ->
            {vars : _} ->
            Int -> Defs -> Env Term vars ->
