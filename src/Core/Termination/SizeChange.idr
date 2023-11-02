@@ -259,12 +259,10 @@ addFunctions : {auto c : Ref Ctxt Defs} ->
 addFunctions defs [] pred work
     = pure $ Right (work, pred)
 addFunctions defs (d1 :: ds) pred work
-    = do logC "totality.termination.calc" 8 $ do pure "Adding function: \{show d1.fullname}"
-         calls <- foldlC resolveCall [] d1.sizeChange
+    = do calls <- foldlC resolveCall [] d1.sizeChange
          let Nothing = find isNonTerminating calls
             | Just (d2, l, _) =>
               do let g = d2.fullname
-                 logC "totality.termination.calc" 7 $ do pure "Non-terminating function call: \{show g}"
                  let init = prefixCallSeq pred d1.fullname ++ [(l, g)]
                  setPrefixTerminating init g
                  pure $ Left (NotTerminating (BadPath init g))
