@@ -45,7 +45,7 @@ import Libraries.Data.SortedMap
 ||| occurences in toplevel definitions.
 public export
 UsageMap : Type
-UsageMap = SortedMap (Integer, CExp []) (Name, Integer)
+UsageMap = SortedMap (Integer, CExp [<]) (Name, Integer)
 
 ||| Number of appearances of a closed expression.
 |||
@@ -72,7 +72,7 @@ Show Count where
 ||| the expression appears only in one place.
 public export
 ReplaceMap : Type
-ReplaceMap = SortedMap Name (CExp [], Count)
+ReplaceMap = SortedMap Name (CExp [<], Count)
 
 toReplaceMap : UsageMap -> ReplaceMap
 toReplaceMap = SortedMap.fromList
@@ -94,7 +94,7 @@ record St where
 -- returning a new machine generated name to be used
 -- if the expression should be lifted to the toplevel.
 -- Very small expressions are being ignored.
-store : Ref Sts St => Integer -> CExp [] -> Core (Maybe Name)
+store : Ref Sts St => Integer -> CExp [<] -> Core (Maybe Name)
 store sz exp =
   if sz < 5
      then pure Nothing
@@ -113,22 +113,30 @@ store sz exp =
 --          Strengthening of Expressions
 --------------------------------------------------------------------------------
 
-dropVar :  (pre : List Name)
+
+
+dropVar :  (pre : Scope)
         -> (n : Nat)
-        -> (0 p : IsVar x n (pre ++ ns))
+        -> (0 p : IsVar x n (ns ++ pre))
         -> Maybe (IsVar x n pre)
-dropVar [] _ _        = Nothing
-dropVar (y :: xs) 0 First = Just First
-dropVar (y :: xs) (S k) (Later p) =
+dropVar [<] _ _        = Nothing
+dropVar (xs :< _) 0 First = Just First
+dropVar (xs :< _) (S k) (Later p) =
   case dropVar xs k p of
     Just p' => Just $ Later p'
     Nothing => Nothing
+
+public export
+0 OuterStrengthenable : Scoped -> Type
+OuterStrengthenable tm =
+  {pre : Scope} -> {0 ns : Scope} ->
+  tm (ns ++ pre) -> Maybe (tm pre)
 
 mutual
   -- tries to 'strengthen' an expression by removing
   -- a prefix of bound variables. typically, this is invoked
   -- with `{pre = []}`.
-  dropEnv : {pre : List Name} -> CExp (pre ++ ns) -> Maybe (CExp pre)
+  dropEnv : OuterStrengthenable CExp
   dropEnv (CLocal {idx} fc p) = (\q => CLocal fc q) <$> dropVar pre idx p
   dropEnv (CRef fc x) = Just (CRef fc x)
   dropEnv (CLam fc x y) = CLam fc x <$> dropEnv y
@@ -156,15 +164,11 @@ mutual
   dropEnv (CErased fc) = Just $ CErased fc
   dropEnv (CCrash fc x) = Just $ CCrash fc x
 
-  dropConAlt :  {pre : List Name}
-             -> CConAlt (pre ++ ns)
-             -> Maybe (CConAlt pre)
+  dropConAlt : OuterStrengthenable CConAlt
   dropConAlt (MkConAlt x y tag args z) =
     MkConAlt x y tag args . embed <$> dropEnv z
 
-  dropConstAlt :  {pre : List Name}
-               -> CConstAlt (pre ++ ns)
-               -> Maybe (CConstAlt pre)
+  dropConstAlt : OuterStrengthenable CConstAlt
   dropConstAlt (MkConstAlt x y) = MkConstAlt x <$> dropEnv y
 
 --------------------------------------------------------------------------------
@@ -199,7 +203,7 @@ mutual
 
   analyze exp = do
     (sze, exp') <- analyzeSubExp exp
-    case dropEnv {pre = []} exp' of
+    case dropEnv {pre = [<]} exp' of
       Just e0 => do
         Just nm <- store sze e0
           | Nothing => pure (sze, exp')
@@ -455,11 +459,11 @@ replaceDef (n, fc, d@(MkError _))       = pure (n, fc, d)
 
 newToplevelDefs : ReplaceMap -> List (Name, FC, CDef)
 newToplevelDefs rm = mapMaybe toDef $ SortedMap.toList rm
-  where toDef : (Name,(CExp[],Count)) -> Maybe (Name, FC, CDef)
-        toDef (nm,(exp,Many)) = Just (nm, EmptyFC, MkFun [] exp)
+  where toDef : (Name,(CExp[<],Count)) -> Maybe (Name, FC, CDef)
+        toDef (nm,(exp,Many)) = Just (nm, EmptyFC, MkFun [<] exp)
         toDef _               = Nothing
 
-undefinedCount : (Name, (CExp [], Count)) -> Bool
+undefinedCount : (Name, (CExp [<], Count)) -> Bool
 undefinedCount (_, _, Once) = False
 undefinedCount (_, _, Many) = False
 undefinedCount (_, _, C x)  = True
