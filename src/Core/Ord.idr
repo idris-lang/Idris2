@@ -181,14 +181,6 @@ export
 Ord LazyReason where
     compare l1 l2 = compare (lrTag l1) (lrTag l2)
 
-export
-Eq (Var vars) where
-    MkVar {i=i1} _ == MkVar {i=i2} _ = i1 == i2
-
-export
-Ord (Var vars) where
-    MkVar {i=i1} _ `compare` MkVar {i=i2} _ = compare i1 i2
-
 mutual
     export
     covering
@@ -219,7 +211,7 @@ mutual
     export
     covering
     Eq (CConAlt vars) where
-        MkConAlt n1 _ t1 a1 e1 == MkConAlt n2 _ t2 a2 e2 = t1 == t2 && n1 == n2 && case namesEq a1 a2 of
+        MkConAlt n1 _ t1 a1 e1 == MkConAlt n2 _ t2 a2 e2 = t1 == t2 && n1 == n2 && case scopeEq a1 a2 of
             Just Refl => e1 == e2
             Nothing => False
 
@@ -276,7 +268,7 @@ mutual
     covering
     Ord (CConAlt vars) where
         MkConAlt n1 _ t1 a1 e1 `compare` MkConAlt n2 _ t2 a2 e2 =
-            compare t1 t2 `thenCmp` compare n1 n2 `thenCmp` case namesEq a1 a2 of
+            compare t1 t2 `thenCmp` compare n1 n2 `thenCmp` case scopeEq a1 a2 of
                 Just Refl => compare e1 e2
                 Nothing => compare a1 a2
 

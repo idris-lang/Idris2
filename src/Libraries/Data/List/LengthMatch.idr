@@ -1,4 +1,4 @@
-module Libraries.Data.LengthMatch
+module Libraries.Data.List.LengthMatch
 
 %default total
 
@@ -19,4 +19,3 @@ export
 lengthsMatch : LengthMatch xs ys -> (length xs) = (length ys)
 lengthsMatch NilMatch = Refl
 lengthsMatch (ConsMatch x) = cong (S) (lengthsMatch x)
-

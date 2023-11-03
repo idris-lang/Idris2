@@ -28,11 +28,11 @@ export
 0 theList : SizeOf {a} sx -> SnocList a
 theList _ = sx
 
-export
+public export
 zero : SizeOf [<]
 zero = MkSizeOf Z Z
 
-export
+public export
 suc : SizeOf as -> SizeOf (as :< a)
 suc (MkSizeOf n p) = MkSizeOf (S n) (S p)
 
@@ -41,7 +41,7 @@ export
 sucL : SizeOf as -> SizeOf ([<a] ++ as)
 sucL (MkSizeOf n p) = MkSizeOf (S n) (sucL p)
 
-export
+public export
 (<><) : SizeOf {a} sx -> LSizeOf {a} ys -> SizeOf (sx <>< ys)
 MkSizeOf m p <>< MkSizeOf n q = MkSizeOf (n + m) (hlFish p q)
 

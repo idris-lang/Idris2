@@ -15,11 +15,11 @@ export
 0 theList : SizeOf {a} xs -> List a
 theList _ = xs
 
-export
+public export
 zero : SizeOf []
 zero = MkSizeOf Z Z
 
-export
+public export
 suc : SizeOf as -> SizeOf (a :: as)
 suc (MkSizeOf n p) = MkSizeOf (S n) (S p)
 

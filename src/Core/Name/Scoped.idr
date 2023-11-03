@@ -1,6 +1,7 @@
 module Core.Name.Scoped
 
 import Core.Name
+import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.HasLength
 import Libraries.Data.SnocList.SizeOf
 
@@ -16,6 +17,18 @@ Scope = SnocList Name
 public export
 Scoped : Type
 Scoped = Scope -> Type
+
+------------------------------------------------------------------------
+-- Semi-decidable equality
+
+export
+scopeEq : (xs, ys : Scope) -> Maybe (xs = ys)
+scopeEq [<] [<] = Just Refl
+scopeEq (xs :< x) (ys :< y)
+    = do Refl <- nameEq x y
+         Refl <- scopeEq xs ys
+         Just Refl
+scopeEq _ _ = Nothing
 
 ------------------------------------------------------------------------
 -- Compatible variables
