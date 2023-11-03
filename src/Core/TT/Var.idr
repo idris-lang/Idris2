@@ -114,6 +114,7 @@ locateIsVarGE (MkSizeOf Z Z) so v = rewrite minusZeroRight idx in v
 locateIsVarGE (MkSizeOf (S k) (S l)) so v = case v of
   Later v => locateIsVarGE (MkSizeOf k l) so v
 
+export
 locateIsVar : {idx : Nat} -> (s : SizeOf local) ->
   (0 p : IsVar x idx (outer ++ local)) ->
   Either (Erased (IsVar x (idx `minus` size s) outer))
