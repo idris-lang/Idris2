@@ -144,6 +144,10 @@ interface FreelyEmbeddable (0 tm : Scoped) where
   embed : Embeddable tm
   embed = believe_me
 
+export
+ListFreelyEmbeddable : FreelyEmbeddable tm => FreelyEmbeddable (List . tm)
+ListFreelyEmbeddable = MkFreelyEmbeddable believe_me
+
 public export
 interface Weaken tm => IsScoped (0 tm : Scoped) where
   -- methods

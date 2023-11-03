@@ -6,8 +6,13 @@ import Core.Context.Log
 import Core.Primitives
 import Core.Value
 import Core.Name
-import Data.List
+import Data.SnocList
 import Data.Vect
+
+import Libraries.Data.SnocList.HasLength
+import Libraries.Data.SnocList.SizeOf
+
+%hide Core.TT.Subst.Subst
 
 findConstAlt : Constant -> List (CConstAlt vars) ->
                Maybe (CExp vars) -> Maybe (CExp vars)
@@ -24,29 +29,29 @@ foldableOp (Cast from to)   = isJust (intKind from) && isJust (intKind to)
 foldableOp _                = True
 
 
-data Subst : List Name -> List Name -> Type where
-  Nil  : Subst [] vars
-  (::) : CExp vars -> Subst ds vars -> Subst (d :: ds) vars
-  Wk   : SizeOf ws -> Subst ds vars -> Subst (ws ++ ds) (ws ++ vars)
+data Subst : Scope -> Scoped where
+  Lin  : Subst [<] vars
+  (:<) : Subst ds vars -> CExp vars -> Subst (ds :< d) vars
+  Wk   : SizeOf ws -> Subst ds vars -> Subst (ds ++ ws) (vars ++ ws)
 
-initSubst : (vars : List Name) -> Subst vars vars
+initSubst : (vars : Scope) -> Subst vars vars
 initSubst vars
-  = rewrite sym $ appendNilRightNeutral vars in
-    Wk (mkSizeOf vars) []
+  = rewrite sym $ appendLinLeftNeutral vars in
+    Wk (mkSizeOf vars) [<]
 
 
-wk : SizeOf out -> Subst ds vars -> Subst (out ++ ds) (out ++ vars)
+wk : SizeOf out -> Subst ds vars -> Subst (ds ++ out) (vars ++ out)
 wk sout (Wk {ws, ds, vars} sws rho)
-  = rewrite appendAssociative out ws ds in
-    rewrite appendAssociative out ws vars in
-    Wk (sout + sws) rho
+  = rewrite sym $ appendAssociative ds ws out  in
+    rewrite sym $ appendAssociative vars ws out in
+    Wk (sws + sout) rho
 wk ws rho = Wk ws rho
 
-record WkCExp (vars : List Name) where
+record WkCExp (vars : Scope) where
   constructor MkWkCExp
-  {0 outer, supp : List Name}
+  {0 outer, supp : Scope}
   size : SizeOf outer
-  0 prf : vars === outer ++ supp
+  0 prf : vars === supp ++ outer
   expr : CExp supp
 
 Weaken WkCExp where
@@ -61,8 +66,8 @@ lookup fc (MkVar p) rho = case go p rho of
 
   go : {i : Nat} -> {0 ds, vars : _} -> (0 _ : IsVar n i ds) ->
        Subst ds vars -> Either (Var vars) (WkCExp vars)
-  go First     (val :: rho) = Right (MkWkCExp zero Refl val)
-  go (Later p) (val :: rho) = go p rho
+  go First     (rho :< val) = Right (MkWkCExp zero Refl val)
+  go (Later p) (rho :< val) = go p rho
   go p         (Wk ws  rho) = case sizedView ws of
     Z => go p rho
     S ws' => case i of
@@ -85,12 +90,12 @@ constFold : {vars' : _} ->
 constFold rho (CLocal fc p) = lookup fc (MkVar p) rho
 constFold rho e@(CRef fc x) = CRef fc x
 constFold rho (CLam fc x y)
-  = CLam fc x $ constFold (wk (mkSizeOf [x]) rho) y
+  = CLam fc x $ constFold (wk (mkSizeOf [<x]) rho) y
 constFold rho (CLet fc x inl y z) =
     let val = constFold rho y
      in if replace val
-          then constFold (val :: rho) z
-          else CLet fc x inl val (constFold (wk (mkSizeOf [x]) rho) z)
+          then constFold (rho :< val) z
+          else CLet fc x inl val (constFold (wk (mkSizeOf [<x]) rho) z)
 constFold rho (CApp fc (CRef fc2 n) [x]) =
   if n == NS typesNS (UN $ Basic "prim__integerToNat")
      then case constFold rho x of

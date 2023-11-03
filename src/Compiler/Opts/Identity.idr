@@ -6,18 +6,14 @@ import Core.Context.Log
 import Data.List
 import Data.Vect
 
-makeArgs : (args : List Name) -> List (Var (args ++ vars))
-makeArgs args = makeArgs' args id
-  where
-    makeArgs' : (args : List Name) -> (Var (args ++ vars) -> a) -> List a
-    makeArgs' [] f = []
-    makeArgs' (x :: xs) f = f (MkVar First) :: makeArgs' xs (f . weaken)
+makeArgs : (args : Scope) -> List (Var (vars ++ args))
+makeArgs args = embed @{ListFreelyEmbeddable} (allVars args)
 
 parameters (fn1 : Name) (idIdx : Nat)
   mutual
     -- special case for matching on 'Nat'-shaped things
-    isUnsucc : Var vars -> CExp vars -> Maybe (Constant, Var (x :: vars))
-    isUnsucc (MkVar {i} _) (COp _ (Sub _) [CLocal {idx} _ _, CPrimVal _ c]) =
+    isUnsucc : Var vars -> CExp vars -> Maybe (Constant, Var (vars :< x))
+    isUnsucc (MkVar {varIdx = i} _) (COp _ (Sub _) [CLocal {idx} _ _, CPrimVal _ c]) =
         if i == idx
             then Just (c, MkVar First)
             else Nothing
@@ -29,7 +25,7 @@ parameters (fn1 : Name) (idIdx : Nat)
 
     -- does the CExp evaluate to the var, the constructor or the constant?
     cexpIdentity : Var vars -> Maybe (Name, List (Var vars)) -> Maybe Constant -> CExp vars -> Bool
-    cexpIdentity (MkVar {i} _) _ _ (CLocal {idx} fc p) = idx == i
+    cexpIdentity (MkVar {varIdx = i} _) _ _ (CLocal {idx} fc p) = idx == i
     cexpIdentity var _ _ (CRef _ _) = False
     cexpIdentity var _ _ (CLam _ _ _) = False
     cexpIdentity var con const (CLet _ _ NotInline val sc) = False
@@ -113,13 +109,14 @@ checkIdentity fn (v :: vs) exp idx = if cexpIdentity fn idx v Nothing Nothing ex
     else checkIdentity fn vs exp (S idx)
 
 calcIdentity : (fullName : Name) -> CDef -> Maybe Nat
-calcIdentity fn (MkFun args exp) = checkIdentity fn (makeArgs {vars=[]} args) (rewrite appendNilRightNeutral args in exp) Z
+calcIdentity fn (MkFun args exp)
+  = checkIdentity fn (allVars args) exp Z
 calcIdentity _ _ = Nothing
 
-getArg : FC -> Nat -> (args : List Name) -> Maybe (CExp args)
-getArg _ _ [] = Nothing
-getArg fc Z (a :: _) = Just $ CLocal fc First
-getArg fc (S k) (_ :: as) = weaken <$> getArg fc k as
+getArg : FC -> Nat -> (args : Scope) -> Maybe (CExp args)
+getArg fc n args
+  = do MkVar p <- isDeBruijn n args
+       pure $ CLocal fc p
 
 idCDef : Nat -> CDef -> Maybe CDef
 idCDef idx (MkFun args exp) = MkFun args <$> getArg (getFC exp) idx args

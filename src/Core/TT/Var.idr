@@ -150,6 +150,16 @@ export
 fishyVar : SizeOf inner -> Var (outer :< nm <>< inner)
 fishyVar (MkSizeOf s p) = MkVar (fishyIsVar p)
 
+||| Generate all variables
+export
+allVars : (vars : Scope) -> List (Var vars)
+allVars = go zero where
+
+  go : SizeOf local -> (vs : Scope) -> List (Var (vs <>< local))
+  go s [<] = []
+  go s (vs :< v) = fishyVar s :: go (suc s) vs
+
+
 export
 Eq (Var xs) where
   v == w = varIdx v == varIdx w
