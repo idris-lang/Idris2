@@ -1,6 +1,6 @@
 1/1: Building StrError1 (StrError1.idr)
 Error: Couldn't parse any alternatives:
-1: Expected '('.
+1: Expected 'case', 'if', 'do', application or operator expression.
 
 StrError1:2:24--2:25
  1 | foo : String
@@ -9,7 +9,7 @@ StrError1:2:24--2:25
 ... (42 others)
 1/1: Building StrError2 (StrError2.idr)
 Error: Couldn't parse any alternatives:
-1: Expected '('.
+1: Expected 'case', 'if', 'do', application or operator expression.
 
 StrError2:2:19--2:20
  1 | foo : String
@@ -18,7 +18,7 @@ StrError2:2:19--2:20
 ... (31 others)
 1/1: Building StrError3 (StrError3.idr)
 Error: Couldn't parse any alternatives:
-1: Expected '('.
+1: Expected 'case', 'if', 'do', application or operator expression.
 
 StrError3:2:7--2:8
  1 | foo : String

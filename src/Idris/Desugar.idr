@@ -766,20 +766,20 @@ mutual
       = do desugaredLHS <- desugarB side ps lhs
            desugaredRHS <- desugarTree side ps r
            pure $ IApp loc (IApp loc (IVar opFC op) desugaredLHS)
-                           (ILam loc top Explicit (Just name) desugaredLHS desugaredRHS)
+                           (ILam loc top Explicit (Just name.val) desugaredLHS desugaredRHS)
   -- (x := exp ** f x) ==>> (**) exp (\x : ? => f x)
   desugarTree side ps (Infix loc opFC (op, Just (BindExpr name lhs)) _ r)
       = do desugaredLHS <- desugarB side ps lhs
            desugaredRHS <- desugarTree side ps r
            pure $ IApp loc (IApp loc (IVar opFC op) desugaredLHS)
-                           (ILam loc top Explicit (Just name) (Implicit opFC False) desugaredRHS)
+                           (ILam loc top Explicit (Just name.val) (Implicit opFC False) desugaredRHS)
   -- (x : ty := exp ** f x) ==>> (**) exp (\x : ty => f x)
   desugarTree side ps (Infix loc opFC (op, Just (BindExplicitType name ty expr)) _ r)
       = do desugaredLHS <- desugarB side ps expr
            desugaredType <- desugarB side ps ty
            desugaredRHS <- desugarTree side ps r
            pure $ IApp loc (IApp loc (IVar opFC op) desugaredLHS)
-                           (ILam loc top Explicit (Just name) desugaredType desugaredRHS)
+                           (ILam loc top Explicit (Just name.val) desugaredType desugaredRHS)
   desugarTree side ps (Infix loc opFC (op, Nothing) _ r)
       = throw $ InternalError "illegal fixity: Parsed as infix but no binding information"
 
