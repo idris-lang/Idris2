@@ -17,6 +17,7 @@ import Libraries.Data.NameMap
 import Libraries.Data.Primitives
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Text.Bounded
 import Libraries.Data.String.Extra
 
 import Libraries.Data.SnocList.SizeOf
@@ -174,11 +175,11 @@ data OperatorLHSInfo : tm -> Type where
   -- Traditional operator wihtout binding, carries the lhs
   NoBinder : (lhs : tm) -> OperatorLHSInfo tm
   -- (nm : ty) ** fn x
-  BindType : (name : Name) -> (ty : tm) -> OperatorLHSInfo tm
+  BindType : (name : WithBounds Name) -> (ty : tm) -> OperatorLHSInfo tm
   -- (nm := exp) ** fn nm
-  BindExpr : (name : Name) -> (expr : tm) -> OperatorLHSInfo tm
+  BindExpr : (name : WithBounds Name) -> (expr : tm) -> OperatorLHSInfo tm
   -- (nm : ty := exp) ** fn nm
-  BindExplicitType : (name : Name) ->  (type, expr : tm) -> OperatorLHSInfo tm
+  BindExplicitType : (name : WithBounds Name) ->  (type, expr : tm) -> OperatorLHSInfo tm
 
 export
 Show (OperatorLHSInfo tm) where
@@ -206,9 +207,9 @@ export
 export
 (.getBoundName) : OperatorLHSInfo tm -> Maybe Name
 (.getBoundName) (NoBinder lhs) = Nothing
-(.getBoundName) (BindType name ty) = Just name
-(.getBoundName) (BindExpr name expr) = Just name
-(.getBoundName) (BindExplicitType name type expr) = Just name
+(.getBoundName) (BindType name ty) = Just name.val
+(.getBoundName) (BindExpr name expr) = Just name.val
+(.getBoundName) (BindExplicitType name type expr) = Just name.val
 
 export
 (.getBinder) : OperatorLHSInfo tm -> BindingModifier

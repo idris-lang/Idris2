@@ -1,9 +1,9 @@
 Main> Couldn't parse any alternatives:
-1: Expected name.
+1: Expected 'case', 'if', 'do', application or operator expression.
 
-(Interactive):1:5--1:6
+(Interactive):1:4--1:5
  1 | :t (3 : Nat)
-         ^
+        ^
 ... (54 others)
 Main> Expected string begin.
 
