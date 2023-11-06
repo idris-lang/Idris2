@@ -161,6 +161,21 @@ export
 ListFreelyEmbeddable : FreelyEmbeddable tm => FreelyEmbeddable (List . tm)
 ListFreelyEmbeddable = MkFreelyEmbeddable believe_me
 
+export
+FunctorWeaken : Functor f => Weaken tm => Weaken (f . tm)
+FunctorWeaken = MkWeaken (go (suc zero)) go where
+
+  go : Weakenable (f . tm)
+  go s = map (weakenNs s)
+
+export
+ListWeaken : Weaken tm => Weaken (List . tm)
+ListWeaken = FunctorWeaken
+
+export
+MaybeWeaken : Weaken tm => Weaken (Maybe . tm)
+MaybeWeaken = FunctorWeaken
+
 public export
 interface Weaken tm => IsScoped (0 tm : Scoped) where
   -- methods

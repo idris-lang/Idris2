@@ -115,13 +115,10 @@ mutual
           = TForce fc r (substVars xs y)
       substVars xs tm = tm
 
-      embedVar : Var vs -> Var (vs ++ more)
-      embedVar (MkVar p) = MkVar (varExtend p)
-
-      substArgs : SizeOf vs -> List (List (Var vs), Term vars) -> Term vs -> Term (vs ++ vars)
+      substArgs : SizeOf vs -> List (List (Var vs), Term vars) -> Term vs -> Term (vars ++ vs)
       substArgs p substs tm =
         let
-          substs' = map (bimap (map $ embedVar {more = vars}) (weakenNs p)) substs
+          substs' = map (bimap (embed @{ListFreelyEmbeddable}) (weakenNs p)) substs
           tm' = embed tm
         in
           substVars substs' tm'
@@ -145,7 +142,7 @@ mutual
                lhs' <- unelabTy Full nest clauseEnv pat
                logTerm "unelab.case.clause" 20 "Unelaborating RHS" rhs
                logEnv "unelab.case.clause" 20 "In Env" clauseEnv
-               rhs' <- unelabTy Full nest (clauseEnv ++ env) rhs
+               rhs' <- unelabTy Full nest (env ++ clauseEnv) rhs
                pure $ Just $ (PatClause fc (fst lhs') (fst rhs'))
 
       ||| mkCase looks up the value passed as the scrutinee of the case-block.
@@ -240,7 +237,7 @@ mutual
                                  _ => pure (term, gErased fc)
            pure (term, gnf env (embed ty))
   unelabTy' umode nest env (Bind fc x b sc)
-      = do (sc', scty) <- unelabTy umode nest (b :: env) sc
+      = do (sc', scty) <- unelabTy umode nest (env :< b) sc
            case umode of
                 NoSugar True =>
                    let x' = uniqueLocal vars x in
@@ -332,8 +329,8 @@ mutual
                  (umode : UnelabMode) ->
                  (nest : List (Name, Nat)) ->
                  FC -> Env Term vars -> (x : Name) ->
-                 Binder (Term vars) -> Term (x :: vars) ->
-                 IRawImp -> Term (x :: vars) ->
+                 Binder (Term vars) -> Term (vars :< x) ->
+                 IRawImp -> Term (vars :< x) ->
                  Core (IRawImp, Glued vars)
   unelabBinder umode nest fc env x (Lam fc' rig p ty) sctm sc scty
       = do (ty', _) <- unelabTy umode nest env ty
