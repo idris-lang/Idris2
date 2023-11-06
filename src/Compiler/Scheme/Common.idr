@@ -281,8 +281,8 @@ schCaseDef Nothing = ""
 schCaseDef (Just tm) = "(else " ++ tm ++ ")"
 
 export
-schArglist : List Name -> Builder
-schArglist xs = sepBy " " $ map schName xs
+schArglist : Scope -> Builder
+schArglist xs = sepBy " " $ map schName (reverse $ xs <>> []) -- Horrible
 -- schArglist [] = ""
 -- schArglist [x] = schName x
 -- schArglist (x :: xs) = schName x ++ " " ++ schArglist xs
@@ -334,9 +334,10 @@ parameters (constants : SortedSet Name,
     ||| @ i the index to start at (1 for a regular data type, 0 for a record)
     ||| @ ns the names to bind in order
     ||| @ body the body of the alternative
-    bindArgs : (target : Builder) -> (sc : NamedCExp) -> (i : Nat) -> (ns : List Name) -> (body : Builder) -> Builder
-    bindArgs target sc i [] body = body
-    bindArgs target sc i (n :: ns) body
+    bindArgs : (target : Builder) -> (sc : NamedCExp) -> (i : Nat) ->
+               (ns : Scope) -> (body : Builder) -> Builder
+    bindArgs target sc i [<] body = body
+    bindArgs target sc i (ns :< n) body
         = if used n sc
                 then "(let ((" ++ schName n ++ " " ++ "(vector-ref " ++ target ++ " " ++ showB i ++ "))) "
                 ++ bindArgs target sc (i + 1) ns body ++ ")"
@@ -462,7 +463,7 @@ parameters (constants : SortedSet Name,
 
         getConsCode : Builder -> List NamedConAlt -> Core (Maybe Builder)
         getConsCode n [] = pure Nothing
-        getConsCode n (MkNConAlt _ CONS _ [x,xs] sc :: _)
+        getConsCode n (MkNConAlt _ CONS _ [<xs,x] sc :: _) -- HORRIBLE
             = do sc' <- schExp (i + 1) sc
                  pure $ Just $ bindArgs [(x, "car"), (xs, "cdr")] sc'
           where
@@ -512,7 +513,7 @@ parameters (constants : SortedSet Name,
 
         getJustCode : Builder -> List NamedConAlt -> Core (Maybe Builder)
         getJustCode n [] = pure Nothing
-        getJustCode n (MkNConAlt _ JUST _ [x] sc :: _)
+        getJustCode n (MkNConAlt _ JUST _ [<x] sc :: _)
             = do sc' <- schExp (i + 1) sc
                  pure $ Just $ bindArg x sc'
           where
@@ -652,7 +653,7 @@ parameters (constants : SortedSet Name,
 
   schDef : {auto c : Ref Ctxt Defs} ->
            Name -> NamedDef -> Core Builder
-  schDef n (MkNmFun [] exp)
+  schDef n (MkNmFun [<] exp)
      = if contains n constants
           then pure $ "(define " ++ schName !(getFullName n) ++ " " ++ !(schExp 0 exp) ++ ")\n"
           else pure $ "(define " ++ schName !(getFullName n) ++ " (lambda () " ++ !(schExp 0 exp) ++ "))\n"
