@@ -13,6 +13,7 @@ import Data.List
 import Data.List1
 import Data.Maybe
 
+import Libraries.Data.SnocList.HasLength
 import Libraries.Data.SortedSet
 import Libraries.Data.WithDefault
 
@@ -20,7 +21,7 @@ import Libraries.Data.WithDefault
 
 -- Information about names in nested blocks
 public export
-record NestedNames (vars : List Name) where
+record NestedNames (vars : Scope) where
   constructor MkNested
   -- A map from names to the decorated version of the name, and the new name
   -- applied to its enclosing environment
@@ -32,12 +33,12 @@ record NestedNames (vars : List Name) where
 
 export
 Weaken NestedNames where
-  weaken (MkNested ns) = MkNested (map wknName ns)
+  weakenNs {ns = wkns} s (MkNested ns) = MkNested (map wknName ns)
     where
       wknName : (Name, (Maybe Name, List (Var vars), FC -> NameType -> Term vars)) ->
-                (Name, (Maybe Name, List (Var (n :: vars)), FC -> NameType -> Term (n :: vars)))
+                (Name, (Maybe Name, List (Var (vars ++ wkns)), FC -> NameType -> Term (vars ++ wkns)))
       wknName (n, (mn, vars, rep))
-          = (n, (mn, map weaken vars, \fc, nt => weaken (rep fc nt)))
+          = (n, (mn, map (weakenNs s) vars, \fc, nt => weakenNs s (rep fc nt)))
 
 -- replace nested name with full name
 export
@@ -693,7 +694,7 @@ implicitsAs n defs ns tm
                     "Could not find variable " ++ show n
                   pure $ IVar loc nm
             Just ty =>
-               do ty' <- nf defs [] ty
+               do ty' <- nf defs [<] ty
                   implicits <- findImps is es ns ty'
                   log "declare.def.lhs.implicits" 30 $
                     "\n  In the type of " ++ show n ++ ": " ++ show ty ++
@@ -722,19 +723,19 @@ implicitsAs n defs ns tm
         -- in the lhs: this is used to determine when to stop searching for further
         -- implicits to add.
         findImps : List (Maybe Name) -> List (Maybe Name) ->
-                   List Name -> NF [] ->
+                   List Name -> NF [<] ->
                    Core (List (Name, PiInfo RawImp))
         -- #834 When we are in a local definition, we have an explicit telescope
         -- corresponding to the variables bound in the parent function.
         -- So we first peel off all of the explicit quantifiers corresponding
         -- to these variables.
         findImps ns es (_ :: locals) (NBind fc x (Pi _ _ Explicit _) sc)
-          = do body <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
+          = do body <- sc defs (toClosure defaultOpts [<] (Erased fc Placeholder))
                findImps ns es locals body
                -- ^ TODO? check that name of the pi matches name of local?
         -- don't add implicits coming after explicits that aren't given
         findImps ns es [] (NBind fc x (Pi _ _ Explicit _) sc)
-            = do body <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
+            = do body <- sc defs (toClosure defaultOpts [<] (Erased fc Placeholder))
                  case es of
                    -- Explicits were skipped, therefore all explicits are given anyway
                    Just (UN Underscore) :: _ => findImps ns es [] body
@@ -744,13 +745,13 @@ implicitsAs n defs ns tm
                           Just es' => findImps ns es' [] body
         -- if the implicit was given, skip it
         findImps ns es [] (NBind fc x (Pi _ _ AutoImplicit _) sc)
-            = do body <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
+            = do body <- sc defs (toClosure defaultOpts [<] (Erased fc Placeholder))
                  case updateNs x ns of
                    Nothing => -- didn't find explicit call
                       pure $ (x, AutoImplicit) :: !(findImps ns es [] body)
                    Just ns' => findImps ns' es [] body
         findImps ns es [] (NBind fc x (Pi _ _ p _) sc)
-            = do body <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
+            = do body <- sc defs (toClosure defaultOpts [<] (Erased fc Placeholder))
                  if Just x `elem` ns
                    then findImps ns es [] body
                    else pure $ (x, forgetDef p) :: !(findImps ns es [] body)
