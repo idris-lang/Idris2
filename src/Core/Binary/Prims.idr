@@ -341,6 +341,11 @@ TTC a => TTC (List a) where
                readElems (val :: xs) k
 
 export
+TTC a => TTC (SnocList a) where
+  toBuf b xs = toBuf b {a = List a} (cast xs)
+  fromBuf b = cast <$> fromBuf {a = List a} b
+
+export
 TTC a => TTC (List1 a) where
   toBuf b xxs
      = do toBuf b (head xxs)

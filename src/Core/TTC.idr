@@ -15,6 +15,7 @@ import Core.TT
 import Data.Vect
 import Libraries.Data.NameMap
 import Libraries.Data.IOArray
+import Libraries.Data.SnocList.Extra
 import Libraries.Data.WithDefault
 
 import Libraries.Utils.Binary
@@ -259,13 +260,8 @@ TTC NameType where
 -- (Indeed, we're expecting the whole IsVar proof to be erased because
 -- we have the idx...)
 mkPrf : (idx : Nat) -> IsVar n idx ns
-mkPrf {n} {ns} Z = believe_me (First {n} {ns = n :: ns})
+mkPrf {n} {ns} Z = believe_me (First {n} {ns = ns :< n})
 mkPrf {n} {ns} (S k) = believe_me (Later {m=n} (mkPrf {n} {ns} k))
-
-getName : (idx : Nat) -> List Name -> Maybe Name
-getName Z (x :: xs) = Just x
-getName (S k) (x :: xs) = getName k xs
-getName _ [] = Nothing
 
 mutual
   export
@@ -352,7 +348,7 @@ mutual
                0 => do c <- fromBuf b
                        idx <- fromBuf b
                        name <- maybe (corrupt "Term") pure
-                                     (getName idx vars)
+                                     (index' vars idx)
                        pure (Local {name} emptyFC c idx (mkPrf idx))
                1 => do nt <- fromBuf b; name <- fromBuf b
                        pure (Ref emptyFC nt name)
@@ -383,7 +379,7 @@ mutual
                         pure (apply emptyFC fn args)
                idxp => do c <- fromBuf b
                           let idx : Nat = fromInteger (cast (idxp - 13))
-                          let Just name = getName idx vars
+                          let Just name = index' vars idx
                               | Nothing => corrupt "Term"
                           pure (Local {name} emptyFC c idx (mkPrf idx))
 
@@ -482,16 +478,16 @@ mutual
 
 export
 {vars : _} -> TTC (Env Term vars) where
-  toBuf b [] = pure ()
-  toBuf b ((::) bnd env)
+  toBuf b [<] = pure ()
+  toBuf b ((:<) env bnd)
       = do toBuf b bnd; toBuf b env
 
   -- Length has to correspond to length of 'vars'
-  fromBuf {vars = []} b = pure Nil
-  fromBuf {vars = x :: xs} b
+  fromBuf {vars = [<]} b = pure [<]
+  fromBuf {vars = xs :< x} b
       = do bnd <- fromBuf b
            env <- fromBuf b
-           pure (bnd :: env)
+           pure (env :< bnd)
 
 export
 TTC Visibility where
@@ -725,7 +721,7 @@ mutual
         = assert_total $ case !getTag of
                0 => do fc <- fromBuf b
                        idx <- fromBuf b
-                       let Just x = getName idx vars
+                       let Just x = index' vars idx
                            | Nothing => corrupt "CExp"
                        pure (CLocal {x} fc (mkPrf idx))
                1 => do fc <- fromBuf b
