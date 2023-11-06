@@ -1,6 +1,7 @@
 module Core.Name.Scoped
 
 import Core.Name
+import Data.SnocList
 import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.HasLength
 import Libraries.Data.SnocList.SizeOf
@@ -29,6 +30,17 @@ scopeEq (xs :< x) (ys :< y)
          Refl <- scopeEq xs ys
          Just Refl
 scopeEq _ _ = Nothing
+
+------------------------------------------------------------------------
+-- Generate a fresh name (for a given scope)
+
+export
+uniqueLocal : Scope -> Name -> Name
+uniqueLocal vs n
+  = if n `elem` vs
+    then assert_total $ uniqueLocal vs (next n)
+    else n
+
 
 ------------------------------------------------------------------------
 -- Compatible variables

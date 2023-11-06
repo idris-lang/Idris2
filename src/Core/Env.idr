@@ -237,36 +237,19 @@ export
 uniqifyEnv : {vars : _} ->
              Env Term vars ->
              (vars' ** (Env Term vars', CompatibleVars vars vars'))
-uniqifyEnv env = uenv [] env
+uniqifyEnv env = uenv [<] env
   where
-    next : Name -> Name
-    next (MN n i) = MN n (i + 1)
-    next (UN n) = MN (displayUserName n) 0
-    next (NS ns n) = NS ns (next n)
-    next n = MN (show n) 0
-
-    uniqueLocal : List Name -> Name -> Name
-    uniqueLocal vs n
-       = if n `elem` vs
-                 -- we'll find a new name eventualy since the list of names
-                 -- is empty, and next generates something new. But next has
-                 -- to be correct... an exercise for someone: this could
-                 -- probebly be done without an assertion by making a stream of
-                 -- possible names...
-            then assert_total (uniqueLocal vs (next n))
-            else n
-
     uenv : {vars : _} ->
-           List Name -> Env Term vars ->
+           Scope -> Env Term vars ->
            (vars' ** (Env Term vars', CompatibleVars vars vars'))
     uenv used [<] = ([<] ** ([<], Pre))
     uenv used {vars = vs :< v} (bs :< b)
         = if v `elem` used
              then let v' = uniqueLocal used v
-                      (vs' ** (env', ren)) = uenv (v' :: used) bs
+                      (vs' ** (env', ren)) = uenv (used :< v') bs
                       b' = map (compatNs ren) b in
                   (vs' :< v' ** (env' :< b', Ext ren))
-             else let (vs' ** (env', ren)) = uenv (v :: used) bs
+             else let (vs' ** (env', ren)) = uenv (used :< v) bs
                       b' = map (compatNs ren) b in
                   (vs' :< v ** (env' :< b', Ext ren))
 

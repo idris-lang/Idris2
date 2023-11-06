@@ -245,18 +245,7 @@ mutual
                                     (renameVars (CompatExt CompatPre) sc) sc'
                                     (renameVars (CompatExt CompatPre) !(getTerm scty))
                 _ => unelabBinder umode nest fc env x b sc sc' !(getTerm scty)
-    where
-      next : Name -> Name
-      next (MN n i) = MN n (i + 1)
-      next (UN n) = MN (show n) 0
-      next (NS ns n) = NS ns (next n)
-      next n = MN (show n) 0
 
-      uniqueLocal : List Name -> Name -> Name
-      uniqueLocal vs n
-         = if n `elem` vs
-              then uniqueLocal vs (next n)
-              else n
   unelabTy' umode nest env tm@(App fc fn arg)
       = do (fn', gfnty) <- unelabTy umode nest env fn
            (arg', gargty) <- unelabTy umode nest env arg

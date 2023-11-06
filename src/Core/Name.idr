@@ -456,3 +456,11 @@ namesEq (x :: xs) (y :: ys)
          Refl <- namesEq xs ys
          Just Refl
 namesEq _ _ = Nothing
+
+||| Generate the next machine name
+export
+next : Name -> Name
+next (MN n i) = MN n (i + 1)
+next (UN n) = MN (show n) 0
+next (NS ns n) = NS ns (next n)
+next n = MN (show n) 0
