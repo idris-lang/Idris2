@@ -115,7 +115,7 @@ sortDef n = do
   checkCrash t
 
 isConstant : (recursiveFunctions : SortedSet Name) -> (Name,FC,NamedDef) -> Bool
-isConstant rec (n, _, MkNmFun [<] _) = not $ contains n rec
+isConstant rec (n, _, MkNmFun [] _) = not $ contains n rec
 isConstant _   _                  = False
 
 export

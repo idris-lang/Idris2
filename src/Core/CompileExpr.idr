@@ -214,7 +214,7 @@ data CDef : Type where
 public export
 data NamedDef : Type where
      -- Normal function definition
-     MkNmFun : (args : SnocList Name) -> NamedCExp -> NamedDef
+     MkNmFun : (args : List Name) -> NamedCExp -> NamedDef
      -- Constructor
      MkNmCon : (tag : Maybe Int) -> (arity : Nat) -> (nt : Maybe Nat) -> NamedDef
      -- Foreign definition
@@ -380,7 +380,7 @@ forgetDef : CDef -> NamedDef
 forgetDef (MkFun args def)
     = let ns = addLocz args [<]
           args' = conArgz {vars = [<]} args ns in
-          MkNmFun args' (forget def)
+          MkNmFun (cast args') (forget def)
 forgetDef (MkCon t a nt) = MkNmCon t a nt
 forgetDef (MkForeign ccs fargs ty) = MkNmForeign ccs fargs ty
 forgetDef (MkError err) = MkNmError (forget err)
@@ -432,7 +432,7 @@ Show CDef where
 export
 covering
 Show NamedDef where
-  show (MkNmFun args exp) = show (args <>> []) ++ ": " ++ show exp
+  show (MkNmFun args exp) = show args ++ ": " ++ show exp
   show (MkNmCon tag arity pos)
       = "Constructor tag " ++ show tag ++ " arity " ++ show arity ++
         maybe "" (\n => " (newtype by " ++ show n ++ ")") pos

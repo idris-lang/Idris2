@@ -223,7 +223,7 @@ mutual
     -- We map the list of args to the corresponding
     -- data projections (field accessors). They'll
     -- be then properly inlined when converting `x`.
-    projections sc (reverse $ args <>> []) -- HORRIBLE
+    projections sc args
     MkEConAlt (tag n tg) ci <$> stmt e x
 
   -- a single branch in a pattern match on a constant
