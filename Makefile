@@ -59,7 +59,9 @@ export SCHEME
 
 .PHONY: all idris2-exec libdocs testenv testenv-clean support clean-support clean FORCE
 
-all: ${TARGET} libs
+all:
+	${MAKE} ${TARGET}
+	${MAKE} libs
 
 idris2-exec: ${TARGET}
 
