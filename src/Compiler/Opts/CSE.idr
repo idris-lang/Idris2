@@ -34,11 +34,12 @@ import Core.Name
 import Core.TT
 
 import Core.Ord
-import Data.List
 import Data.String
 import Data.Vect
 import Libraries.Data.SortedSet
 import Libraries.Data.SortedMap
+
+import Libraries.Data.SnocList.Extra
 
 ||| Maping from a pairing of closed terms together with
 ||| their size (for efficiency) to the number of
@@ -165,8 +166,9 @@ mutual
   dropEnv (CCrash fc x) = Just $ CCrash fc x
 
   dropConAlt : OuterStrengthenable CConAlt
-  dropConAlt (MkConAlt x y tag args z) =
-    MkConAlt x y tag args . embed <$> dropEnv z
+  dropConAlt (MkConAlt x y tag args z)
+    = do z <- dropEnv {ns} (rewrite sym $ snocAppendFishAssociative ns pre args in z)
+         pure $ MkConAlt x y tag args z
 
   dropConstAlt : OuterStrengthenable CConstAlt
   dropConstAlt (MkConstAlt x y) = MkConstAlt x <$> dropEnv y

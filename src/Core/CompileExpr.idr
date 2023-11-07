@@ -705,7 +705,8 @@ refsToLocalz bs y = mkLocals zero bs y
 
 export
 refsToLocals : Bounds bound -> CExp vars -> CExp (vars <>< bound)
-refsToLocals bds = rewrite fishAsSnocAppend vars bound in refsToLocalz ?A
+refsToLocals bds = rewrite fishAsSnocAppend vars bound in
+  refsToLocalz (None <>< bds)
 
 export
 getFC : CExp args -> FC

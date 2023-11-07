@@ -82,16 +82,20 @@ data Def : Type where
                                 -- e.g "C:printf,libc,stdlib.h", "scheme:display", ...
                  Def
     Builtin : {arity : Nat} -> PrimFn arity -> Def
+
+    ||| Data constructor
+    |||
+    ||| If it's the only constructor, and there is only one argument that is
+    ||| non-Rig0, then flag it in (newtypeArg : Maybe (Bool, Nat)).
+    ||| * The Nat is the unerased argument position.
+    ||| * The Bool is 'True' if there is no %World token in the structure,
+    |||   which means it is safe to completely erase when pattern matching
+    |||   (otherwise we still have to ensure that the value is inspected,
+    |||   to make sure external effects happen)
+    -- TODO: introduce type synonym
     DCon : (tag : Int) -> (arity : Nat) ->
            (newtypeArg : Maybe (Bool, Nat)) ->
-               -- if only constructor, and only one argument is non-Rig0,
-               -- flag it here. The Nat is the unerased argument position.
-               -- The Bool is 'True' if there is no %World token in the
-               -- structure, which means it is safe to completely erase
-               -- when pattern matching (otherwise we still have to ensure
-               -- that the value is inspected, to make sure external effects
-               -- happen)
-           Def -- data constructor
+           Def
     TCon : (tag : Int) -> (arity : Nat) ->
            (parampos : List Nat) -> -- parameters
            (detpos : List Nat) -> -- determining arguments

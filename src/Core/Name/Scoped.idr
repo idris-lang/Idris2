@@ -11,10 +11,37 @@ import Libraries.Data.SnocList.SizeOf
 ------------------------------------------------------------------------
 -- Basic type definitions
 
+||| A scope is a left-nested list of names. E.g. in the following
+||| rule, the scope Γ is extended with x when going under the λx.
+||| binder:
+|||
+|||    Γ, x ⊢ t : B
+|||  -----------------------------
+|||    Γ    ⊢ λx. t : A → B
 public export
 Scope : Type
 Scope = SnocList Name
 
+
+||| A local scope extension corresponds to a non-empty list of
+||| binders brought into scope; typically in a case branch.
+||| If the constructor C takes n arguments, the branch b of
+||| a case alternative matching on it and binding its n arguments
+||| will be typed under a local extension [x1, ..., xn].
+|||
+|||     Γ, x1, ..., xn ⊢ b   (...)
+||| ---------------------------------------------------
+|||     Γ              ⊢ case x of C x1 ... xn => b
+|||
+||| The result scope is written Γ, x1, ..., xn informally and
+||| (Γ <>< xs) in Idris.
+
+public export
+Local : Type
+Local = List Name
+
+
+||| A scoped definition is one indexed by a scope
 public export
 Scoped : Type
 Scoped = Scope -> Type
@@ -30,6 +57,15 @@ scopeEq (xs :< x) (ys :< y)
          Refl <- scopeEq xs ys
          Just Refl
 scopeEq _ _ = Nothing
+
+export
+localEq : (xs, ys : Local) -> Maybe (xs = ys)
+localEq [] [] = Just Refl
+localEq (x :: xs) (y :: ys)
+    = do Refl <- nameEq x y
+         Refl <- localEq xs ys
+         Just Refl
+localEq _ _ = Nothing
 
 ------------------------------------------------------------------------
 -- Generate a fresh name (for a given scope)

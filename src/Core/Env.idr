@@ -217,11 +217,11 @@ shrinkEnv (env :< b) (Keep p)
          pure (env' :< b')
 
 export
-mkEnvOnto : FC -> (local : Scope) -> Env Term ys -> Env Term (ys ++ local)
-mkEnvOnto fc [<] vs = vs
-mkEnvOnto fc (ns :< n) vs
-   = mkEnvOnto fc ns vs
-   :< PVar fc top Explicit (Erased fc Placeholder)
+mkEnvOnto : FC -> (local : Local) -> Env Term ys -> Env Term (ys <>< local)
+mkEnvOnto fc [] vs = vs
+mkEnvOnto fc (n :: ns) vs
+   = let pv = PVar fc top Explicit (Erased fc Placeholder) in
+     mkEnvOnto fc ns (vs :< pv)
 
 -- Make a dummy environment, if we genuinely don't care about the values
 -- and types of the contents.

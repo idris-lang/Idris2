@@ -449,34 +449,37 @@ mutual
 -- I'm (edwinb) keeping it visible here because I plan to put it back in
 -- more or less this form once case inlining works better and the whole thing
 -- works in a nice principled way.
-                     if noworld -- just substitute the scrutinee into
-                                -- the RHS
-                        then
-                             let env : CSubst args vars
-                                     = mkSubst 0 scr pos args in
-                              do log "compiler.newtype.world" 50 "Inlining case on \{show n} (no world)"
-                                 pure $ Just (substs env !(toCExpTree n sc))
-                        else -- let bind the scrutinee, and substitute the
-                             -- name into the RHS
-                             let env : CSubst args (vars :< MN "eff" 0)
-                                     = mkSubst 0 (CLocal fc First) pos args in
-                             do sc' <- toCExpTree n sc
-                                let scope = insertNames {local=args}
-                                                        {outer=vars}
-                                                        {ns = [<MN "eff" 0]}
-                                                        (mkSizeOf _) (mkSizeOf _) sc'
-                                let tm = CLet fc (MN "eff" 0) NotInline scr (substs env scope)
-                                log "compiler.newtype.world" 50 "Kept the scrutinee \{show tm}"
-                                pure (Just tm)
+                     if noworld
+                        then -- just substitute the scrutinee into the RHS
+                          do sc <- toCExpTree n sc
+                             let sc : CExp (vars ++ cast args)
+                               := rewrite sym $ fishAsSnocAppend vars args in sc
+                             let env : CSubst (cast args) vars
+                               := mkSubst 0 scr pos args [<]
+                             log "compiler.newtype.world" 50 "Inlining case on \{show n} (no world)"
+                             pure $ Just (substs env sc)
+                        else -- let bind the scrutinee, and substitute the name into the RHS
+                          do sc <- toCExpTree n sc
+                             let sc : CExp (vars ++ cast args)
+                               := rewrite sym $ fishAsSnocAppend vars args in sc
+                             let env : CSubst (cast args) (vars :< MN "eff" 0)
+                               := mkSubst 0 (CLocal fc First) pos args [<]
+                             let scope = insertNames {outer=vars}
+                                                     {ns = [<MN "eff" 0]}
+                                                     (mkSizeOf _) (mkSizeOf _) sc
+                             let tm = CLet fc (MN "eff" 0) NotInline scr (substs env scope)
+                             log "compiler.newtype.world" 50 "Kept the scrutinee \{show tm}"
+                             pure (Just tm)
                 _ => pure Nothing -- there's a normal match to do
     where
       mkSubst : Nat -> CExp vs ->
-                Nat -> (args : Scope) -> CSubst args vs
-      mkSubst _ _ _ [<] = [<]
-      mkSubst i scr pos (as :< a)
+                Nat -> (args : List Name) ->
+                CSubst outer vs -> CSubst (outer <>< args) vs
+      mkSubst _ _ _ [] acc = acc
+      mkSubst i scr pos (a :: as) acc
           = if i == pos
-               then mkSubst (1 + i) scr pos as :< scr
-               else mkSubst (1 + i) scr pos as :< CErased fc
+               then mkSubst (1 + i) scr pos as (acc :< scr)
+               else mkSubst (1 + i) scr pos as (acc :< CErased fc)
   getNewType fc scr n (_ :: ns) = getNewType fc scr n ns
 
   getDef : {vars : _} ->
@@ -540,7 +543,6 @@ mutual
   toCExpTree' n Impossible
       = pure $ CCrash emptyFC ("Impossible case encountered in " ++ show n)
 
-{-
 -- Need this for ensuring that argument list matches up to operator arity for
 -- builtins
 data ArgList : Nat -> Scope -> Type where
@@ -705,7 +707,7 @@ lamRHS ns tm
     = let env = lamRHSenv 0 (getFC tm) ns
           tmExp = substs env (rewrite appendLinLeftNeutral ns in tm)
           newArgs = reverse $ getNewArgs env
-          bounds = mkBounds newArgs
+          bounds = mkBoundz newArgs
           expLocs = mkLocals zero {outer = [<]} bounds tmExp in
           lamBind (getFC tm) _ expLocs
   where
