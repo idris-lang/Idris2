@@ -10,7 +10,8 @@ import Core.Env
 import Core.TT
 import Core.Value
 
-import Data.List
+import Data.SnocList
+import Libraries.Data.List.SizeOf
 
 %default covering
 
@@ -22,33 +23,28 @@ weakenP : {0 args, args' : Scope} ->
           (Var (args :< c), Var (args' :< c'))
 weakenP (v, vs) = (weaken v, weaken vs)
 
-extend : (cs, cs' : Scope) ->
-         (List (Var args, Var args')) ->
-         Maybe (List (Var (args ++ cs), Var (args' ++ cs')))
-extend = go zero zero where
-
-  go : SizeOf inner -> SizeOf inner' ->
-       (cs, cs' : Scope) ->
-       (List (Var args, Var args')) ->
-       Maybe (List (Var (args ++ (cs <>< inner)), Var (args' ++ (cs' <>< inner'))))
-  go s s' [<] [<] ms
-    = pure (map (bimap (weakenNs (zero <>< s)) (weakenNs (zero <>< s'))) ms)
-  go s s' (cs :< c) (cs' :< c') ms
-    = do rest <- go (suc s) (suc s') cs cs' ms
-         pure ((embed (fishyVar s), embed (fishyVar s')) :: rest)
-  go _ _ _ _ _ = Nothing
+extend : {args, args' : List Name} ->
+         SizeOf args -> SizeOf args' ->
+         (List (Var vars, Var vars')) ->
+         Maybe (List (Var (vars <>< args), Var (vars' <>< args')))
+extend s s' ms
+  = do guard (size s == size s')
+       let vs  = embedFishily @{ListFreelyEmbeddable} (Var.allVars (cast args))
+       let vs' = embedFishily @{ListFreelyEmbeddable} (Var.allVars (cast args'))
+       pure $ zip vs vs' ++ map (bimap (weakensN s) (weakensN s')) ms
 
 findIdx : List (Var vars, Var vars') -> Nat -> Maybe (Var vars')
 findIdx [] _ = Nothing
 findIdx ((MkVar {varIdx = i} _, v) :: ps) n
     = if i == n then Just v else findIdx ps n
 
-dropP : (cs : Scope) -> (cs' : Scope) ->
-        (Var (args ++ cs), Var (args' ++ cs')) ->
-        Maybe (Var args, Var args')
-dropP cs cs' (x, y)
-  = do x' <- strengthenNs (mkSizeOf cs) x
-       y' <- strengthenNs (mkSizeOf cs') y
+dropP : {0 args, args' : List Name} ->
+  SizeOf args -> SizeOf args' ->
+  (Var (vars <>< args), Var (vars' <>< args')) ->
+  Maybe (Var vars, Var vars')
+dropP s s' (x, y)
+  = do x' <- strengthensN s x
+       y' <- strengthensN s' y
        pure (x', y')
 
 
@@ -183,13 +179,15 @@ mutual
                       Core (Maybe (List (Var args, Var args')))
   getMatchingVarAlt defs ms (ConCase n tag cargs t) (ConCase n' tag' cargs' t')
       = if n == n'
-           then do let Just ms' = extend cargs cargs' ms
+           then do let s = mkSizeOf cargs
+                   let s' = mkSizeOf cargs'
+                   let Just ms' = extend s s' ms
                         | Nothing => pure Nothing
                    Just ms <- getMatchingVars defs ms' t t'
                         | Nothing => pure Nothing
                    -- drop the prefix from cargs/cargs' since they won't
                    -- be in the caller
-                   pure (Just (mapMaybe (dropP cargs cargs') ms))
+                   pure (Just (mapMaybe (dropP s s') ms))
            else pure Nothing
   getMatchingVarAlt defs ms (ConstCase c t) (ConstCase c' t')
       = if c == c'

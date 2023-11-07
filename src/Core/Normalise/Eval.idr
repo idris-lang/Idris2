@@ -318,13 +318,13 @@ parameters (defs : Defs, topopts : EvalOpts)
                 else pure def
 
     getCaseBound : List (Closure free) ->
-                   (args : Scope) ->
+                   (args : List Name) ->
                    LocalEnv free more ->
-                   Maybe (LocalEnv free (more ++ args))
-    getCaseBound []            [<]       loc = Just loc
-    getCaseBound []            (_ :< _)  loc = Nothing -- mismatched arg length
-    getCaseBound (arg :: args) [<]       loc = Nothing -- mismatched arg length
-    getCaseBound (arg :: args) (ns :< n) loc = (:< arg) <$> getCaseBound args ns loc
+                   Maybe (LocalEnv free (more <>< args))
+    getCaseBound []            []        loc = Just loc
+    getCaseBound []            (_ :: _)  loc = Nothing -- mismatched arg length
+    getCaseBound (arg :: args) []        loc = Nothing -- mismatched arg length
+    getCaseBound (arg :: args) (n :: ns) loc = getCaseBound args ns (loc :< arg)
 
     -- Returns the case term from the matched pattern with the LocalEnv (arguments from constructor pattern ConCase)
     evalConAlt : {auto c : Ref Ctxt Defs} ->
@@ -332,9 +332,9 @@ parameters (defs : Defs, topopts : EvalOpts)
                  Env Term free ->
                  LocalEnv free more -> EvalOpts -> FC ->
                  Stack free ->
-                 (args : Scope) ->
+                 (args : List Name) ->
                  List (Closure free) ->
-                 CaseTree (more ++ args) ->
+                 CaseTree (more <>< args) ->
                  Core (CaseResult (TermWithEnv free))
     evalConAlt env loc opts fc stk args args' sc
          = do let Just bound = getCaseBound args' args loc
@@ -363,17 +363,17 @@ parameters (defs : Defs, topopts : EvalOpts)
     -- Primitive type matching, in typecase
     tryAlt env loc opts fc stk (NPrimVal _ c) (ConCase nm tag args sc)
          = case args of -- can't just test for it in the `if` for typing reasons
-             [<] => if UN (Basic $ show c) == nm
+             [] => if UN (Basic $ show c) == nm
                     then evalTree env loc opts fc stk sc
                     else pure NoMatch
              _ => pure NoMatch
     -- Type of type matching, in typecase
-    tryAlt env loc opts fc stk (NType _ _) (ConCase (UN (Basic "Type")) tag [<] sc)
+    tryAlt env loc opts fc stk (NType _ _) (ConCase (UN (Basic "Type")) tag [] sc)
          = evalTree env loc opts fc stk sc
     -- Arrow matching, in typecase
     tryAlt {more}
-           env loc opts fc stk (NBind pfc x (Pi fc' r e aty) scty) (ConCase (UN (Basic "->")) tag [<s,t] sc)
-       = evalConAlt {more} env loc opts fc stk [<s,t]
+           env loc opts fc stk (NBind pfc x (Pi fc' r e aty) scty) (ConCase (UN (Basic "->")) tag [s,t] sc)
+       = evalConAlt {more} env loc opts fc stk [s,t]
                   [aty,
                    MkNFClosure opts env (NBind pfc x (Lam fc' r e aty) scty)]
                   sc

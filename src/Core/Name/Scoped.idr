@@ -101,6 +101,38 @@ keeps : (args : SnocList a) -> Thin xs ys -> Thin (xs ++ args) (ys ++ args)
 keeps [<] th = th
 keeps (sx :< x) th = keep (keeps sx th)
 
+export
+keepz : (args : List a) -> Thin xs ys -> Thin (xs <>< args) (ys <>< args)
+keepz [] th = th
+keepz (x :: xs) th = keepz xs (keep th)
+
+namespace Thin
+  -- At runtime, Thin's `Refl` does not carry any additional
+  -- information. So this is safe!
+  export
+  embed : Thin xs ys -> Thin (outer ++ xs) (outer ++ ys)
+  embed = believe_me
+
+||| Compute the thinning getting rid of the listed de Bruijn indices.
+-- TODO: is the list of erased arguments guaranteed to be sorted?
+-- Should it?
+export
+removeByIndices :
+  (erasedArgs : List Nat) ->
+  (args : Scope) ->
+  (args' ** Thin args' args)
+removeByIndices es = go 0 where
+
+  go : (currentIdx : Nat) -> (args : Scope) ->
+    (args' ** Thin args' args)
+  go idx [<] = ([<] ** Refl)
+  go idx (xs :< x) =
+    let (vs ** th) = go (S idx) xs in
+    if idx `elem` es
+      then (vs ** Drop th)
+      else (vs :< x ** Keep th)
+
+
 ------------------------------------------------------------------------
 -- Concepts
 
@@ -148,6 +180,14 @@ interface Weaken (0 tm : Scoped) where
 
   weaken = weakenNs (suc zero)
 
+export
+weakensN : Weaken tm =>
+  {0 vars : Scope} -> {0 ns : List Name} ->
+  SizeOf ns -> tm vars -> tm (vars <>< ns)
+weakensN s t
+  = rewrite fishAsSnocAppend vars ns in
+    weakenNs (zero <>< s) t
+
 public export
 interface Strengthen (0 tm : Scoped) where
   constructor MkStrengthen
@@ -162,12 +202,24 @@ interface Strengthen (0 tm : Scoped) where
 
   strengthen = strengthenNs (suc zero)
 
+export
+strengthensN :
+  Strengthen tm => SizeOf ns ->
+  tm (vars <>< ns) -> Maybe (tm vars)
+strengthensN s t
+  = strengthenNs (zero <>< s)
+  $ rewrite sym $ fishAsSnocAppend vars ns in t
+
 public export
 interface FreelyEmbeddable (0 tm : Scoped) where
   constructor MkFreelyEmbeddable
   -- this is free for nameless representations
   embed : Embeddable tm
   embed = believe_me
+
+export
+embedFishily : FreelyEmbeddable tm => tm (cast ns) -> tm (vars <>< ns)
+embedFishily t = rewrite fishAsSnocAppend vars ns in embed t
 
 export
 ListFreelyEmbeddable : FreelyEmbeddable tm => FreelyEmbeddable (List . tm)

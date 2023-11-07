@@ -6,6 +6,7 @@ import Data.SnocList
 import Data.String
 import Idris.Pretty.Annotations
 
+import Libraries.Data.SnocList.Extra
 import Libraries.Data.NameMap
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Data.String.Extra -- needed for boostrapping
@@ -37,11 +38,11 @@ mutual
   public export
   data CaseAlt : Scoped where
        ||| Constructor for a data type; bind the arguments and subterms.
-       ConCase : Name -> (tag : Int) -> (args : SnocList Name) ->
-                 CaseTree (vars ++ args) -> CaseAlt vars
+       ConCase : Name -> (tag : Int) -> (args : List Name) ->
+                 CaseTree (vars <>< args) -> CaseAlt vars
        ||| Lazy match for the Delay type use for codata types
        DelayCase : (ty : Name) -> (arg : Name) ->
-                   CaseTree (vars :< arg :< ty) -> CaseAlt vars
+                   CaseTree (vars :< ty :< arg) -> CaseAlt vars
        ||| Match against a literal
        ConstCase : Constant -> CaseTree vars -> CaseAlt vars
        ||| Catch-all case
@@ -124,7 +125,7 @@ showCT indent (Unmatched msg) = "Error: " ++ show msg
 showCT indent Impossible = "Impossible"
 
 showCA indent (ConCase n tag args sc)
-        = showSep " " (map show (n :: (args <>> []))) ++ " => " ++
+        = showSep " " (map show (n :: args)) ++ " => " ++
           showCT indent sc
 showCA indent (DelayCase _ arg sc)
         = "Delay " ++ show arg ++ " => " ++ showCT indent sc
@@ -205,9 +206,9 @@ mutual
   insertCaseAltNames : GenWeakenable CaseAlt
   insertCaseAltNames p q (ConCase x tag args ct)
       = ConCase x tag args
-      $ rewrite sym $ appendAssociative (outer ++ ns) local args in
-        insertCaseNames (p + mkSizeOf args) q
-      $ replace {p = CaseTree} (sym $ appendAssociative outer local args) ct
+      $ rewrite snocAppendFishAssociative (outer ++ ns) local args in
+        insertCaseNames (p <>< mkSizeOf args) q
+      $ replace {p = CaseTree} (snocAppendFishAssociative outer local args) ct
   insertCaseAltNames outer ns (DelayCase tyn valn ct)
       = DelayCase tyn valn
                   (insertCaseNames (suc (suc outer)) ns ct)

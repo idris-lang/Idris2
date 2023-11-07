@@ -11,7 +11,7 @@ import Core.Options
 import Core.TT
 import Core.Value
 
-import Data.List
+import Libraries.Data.SnocList.Extra
 import Data.SnocList
 import Data.Maybe
 import Data.Vect
@@ -129,16 +129,16 @@ eraseConArgs arity epos fn args
              then dropPos epos fn' -- fn' might be lambdas, after eta expansion
              else fn'
 
-mkDropSubst : Nat -> List Nat ->
-              (rest : Scope) ->
-              (vars : Scope) ->
-              (vars' ** Thin (rest ++ vars') (rest ++ vars))
-mkDropSubst i es rest [<] = ([<] ** Refl)
-mkDropSubst i es rest (xs :< x)
-    = let (vs ** sub) = mkDropSubst (1 + i) es rest xs in
-          if i `elem` es
-             then (vs ** Drop sub)
-             else (vs :< x ** Keep sub)
+||| Compute the thinning dropping the erased arguments
+mkDropSubst : (erasedArgs : List Nat) ->
+  (args : List Name) ->
+  (args' ** Thin (vars <>< args') (vars <>< args))
+mkDropSubst es args
+  = let (vs ** th) = removeByIndices es (cast args) in
+    MkDPair (cast vs)
+  $ rewrite sym $ snocAppendAsFish vars vs in
+    rewrite fishAsSnocAppend vars args in
+    embed th
 
 -- Rewrite applications of Nat-like constructors and functions to more optimal
 -- versions using Integer
@@ -394,7 +394,7 @@ mutual
                 DCon _ arity (Just pos) => conCases n ns -- skip it
                 _ => do xn <- getFullName x
                         let (args' ** sub)
-                            = mkDropSubst 0 (eraseArgs gdef) vars args
+                            = mkDropSubst (eraseArgs gdef) args
                         sc' <- toCExpTree n sc
                         ns' <- conCases n ns
                         if dcon (definition gdef)
@@ -540,6 +540,7 @@ mutual
   toCExpTree' n Impossible
       = pure $ CCrash emptyFC ("Impossible case encountered in " ++ show n)
 
+{-
 -- Need this for ensuring that argument list matches up to operator arity for
 -- builtins
 data ArgList : Nat -> Scope -> Type where
