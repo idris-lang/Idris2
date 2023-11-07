@@ -123,7 +123,7 @@ public export
 data Thin : SnocList a -> SnocList a -> Type where
   Refl : Thin xs xs
   Drop : Thin xs ys -> Thin xs (ys :< y)
-  Keep : Thin xs ys -> Thin (xs :< x) (ys :< y)
+  Keep : Thin xs ys -> Thin (xs :< x) (ys :< x)
 
 ||| Smart constructor. We should use this to maximise the length
 ||| of the Refl segment thus getting more short-circuiting behaviours

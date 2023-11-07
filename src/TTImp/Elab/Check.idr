@@ -62,7 +62,7 @@ Eq ElabOpt where
 -- Descriptions of implicit name bindings. They're either just the name,
 -- or a binding of an @-pattern which has an associated pattern.
 public export
-data ImplBinding : List Name -> Type where
+data ImplBinding : Scoped where
      NameBinding : {vars : _} ->
                    RigCount -> PiInfo (Term vars) -> (elabAs : Term vars) -> (expTy : Term vars) ->
                    ImplBinding vars
@@ -112,16 +112,16 @@ bindingPiInfo (AsBinding _ p _ _ _) = p
 
 -- Current elaboration state (preserved/updated throughout elaboration)
 public export
-record EState (vars : List Name) where
+record EState (vars : Scope) where
   constructor MkEState
-  {outer : List Name}
+  {outer : Scope}
   -- The function/constructor name we're currently working on (resolved id)
   defining : Int
   -- The outer environment in which we're running the elaborator. Things here should
   -- be considered parametric as far as case expression elaboration goes, and are
   -- the only things that unbound implicits can depend on
   outerEnv : Env Term outer
-  subEnv : SubVars outer vars
+  subEnv : Thin outer vars
   boundNames : List (Name, ImplBinding vars)
                   -- implicit pattern/type variable bindings and the
                   -- term/type they elaborated to
@@ -132,7 +132,7 @@ record EState (vars : List Name) where
                   -- the RHS)
   bindIfUnsolved : List (Name, RigCount,
                           (vars' ** (Env Term vars', PiInfo (Term vars'),
-                                     Term vars', Term vars', SubVars outer vars')))
+                                     Term vars', Term vars', Thin outer vars')))
                   -- names to add as unbound implicits if they are still holes
                   -- when unbound implicits are added
   lhsPatVars : List Name
@@ -160,7 +160,7 @@ data EST : Type where
 
 export
 initEStateSub : {outer : _} ->
-                Int -> Env Term outer -> SubVars outer vars -> EState vars
+                Int -> Env Term outer -> Thin outer vars -> EState vars
 initEStateSub n env sub = MkEState
     { defining = n
     , outerEnv = env
@@ -180,7 +180,7 @@ initEStateSub n env sub = MkEState
 export
 initEState : {vars : _} ->
              Int -> Env Term vars -> EState vars
-initEState n env = initEStateSub n env SubRefl
+initEState n env = initEStateSub n env Refl
 
 export
 saveHole : {auto e : Ref EST (EState vars)} ->
@@ -189,11 +189,11 @@ saveHole n = update EST { saveHoles $= insert n () }
 
 weakenedEState : {n, vars : _} ->
                  {auto e : Ref EST (EState vars)} ->
-                 Core (Ref EST (EState (n :: vars)))
+                 Core (Ref EST (EState (vars :< n)))
 weakenedEState {e}
     = do est <- get EST
          eref <- newRef EST $
-                   { subEnv $= DropCons
+                   { subEnv $= Drop
                    , boundNames $= map wknTms
                    , toBind $= map wknTms
                    , linearUsed $= map weaken
@@ -202,7 +202,7 @@ weakenedEState {e}
          pure eref
   where
     wknTms : (Name, ImplBinding vs) ->
-             (Name, ImplBinding (n :: vs))
+             (Name, ImplBinding (vs :< n))
     wknTms (f, NameBinding c p x y)
         = (f, NameBinding c (map weaken p) (weaken x) (weaken y))
     wknTms (f, AsBinding c p x y z)
@@ -210,8 +210,8 @@ weakenedEState {e}
 
 strengthenedEState : {n, vars : _} ->
                      Ref Ctxt Defs ->
-                     Ref EST (EState (n :: vars)) ->
-                     FC -> Env Term (n :: vars) ->
+                     Ref EST (EState (vars :< n)) ->
+                     FC -> Env Term (vars :< n) ->
                      Core (EState vars)
 strengthenedEState {n} {vars} c e fc env
     = do est <- get EST
@@ -222,13 +222,13 @@ strengthenedEState {n} {vars} c e fc env
          pure $ { subEnv := svs
                 , boundNames := bns
                 , toBind := todo
-                , linearUsed $= mapMaybe dropTop
+                , linearUsed $= dropFirst
                 , polyMetavars := [] -- no binders on LHS
                 } est
 
   where
-    dropSub : SubVars xs (y :: ys) -> Core (SubVars xs ys)
-    dropSub (DropCons sub) = pure sub
+    dropSub : Thin xs (ys :< y) -> Core (Thin xs ys)
+    dropSub (Drop sub) = pure sub
     dropSub _ = throw (InternalError "Badly formed weakened environment")
 
     -- Remove any instance of the top level local variable from an
@@ -238,7 +238,7 @@ strengthenedEState {n} {vars} c e fc env
     -- never actualy *use* that hole - this process is only to ensure that the
     -- unbound implicit doesn't depend on any variables it doesn't have
     -- in scope.
-    removeArgVars : List (Term (n :: vs)) -> Maybe (List (Term vs))
+    removeArgVars : List (Term (vs :< n)) -> Maybe (List (Term vs))
     removeArgVars [] = pure []
     removeArgVars (Local fc r (S k) p :: args)
         = do args' <- removeArgVars args
@@ -246,26 +246,26 @@ strengthenedEState {n} {vars} c e fc env
     removeArgVars (Local fc r Z p :: args)
         = removeArgVars args
     removeArgVars (a :: args)
-        = do a' <- shrinkTerm a (DropCons SubRefl)
+        = do a' <- shrink a (Drop Refl)
              args' <- removeArgVars args
              pure (a' :: args')
 
-    removeArg : Term (n :: vs) -> Maybe (Term vs)
+    removeArg : Term (vs :< n) -> Maybe (Term vs)
     removeArg tm
         = case getFnArgs tm of
                (f, args) =>
                    do args' <- removeArgVars args
-                      f' <- shrinkTerm f (DropCons SubRefl)
+                      f' <- shrink f (Drop Refl)
                       pure (apply (getLoc f) f' args')
 
-    strTms : Defs -> (Name, ImplBinding (n :: vars)) ->
+    strTms : Defs -> (Name, ImplBinding (vars :< n)) ->
              Core (Name, ImplBinding vars)
     strTms defs (f, NameBinding c p x y)
         = do xnf <- normaliseHoles defs env x
              ynf <- normaliseHoles defs env y
-             case (shrinkPi p (DropCons SubRefl),
+             case (shrinkPi p (Drop Refl),
                    removeArg xnf,
-                   shrinkTerm ynf (DropCons SubRefl)) of
+                   shrink ynf (Drop Refl)) of
                (Just p', Just x', Just y') =>
                     pure (f, NameBinding c p' x' y')
                _ => throw (BadUnboundImplicit fc env f y)
@@ -273,24 +273,20 @@ strengthenedEState {n} {vars} c e fc env
         = do xnf <- normaliseHoles defs env x
              ynf <- normaliseHoles defs env y
              znf <- normaliseHoles defs env z
-             case (shrinkPi p (DropCons SubRefl),
-                   shrinkTerm xnf (DropCons SubRefl),
-                   shrinkTerm ynf (DropCons SubRefl),
-                   shrinkTerm znf (DropCons SubRefl)) of
+             case (shrinkPi p (Drop Refl),
+                   shrink xnf (Drop Refl),
+                   shrink ynf (Drop Refl),
+                   shrink znf (Drop Refl)) of
                (Just p', Just x', Just y', Just z') =>
                     pure (f, AsBinding c p' x' y' z')
                _ => throw (BadUnboundImplicit fc env f y)
-
-    dropTop : (Var (n :: vs)) -> Maybe (Var vs)
-    dropTop (MkVar First) = Nothing
-    dropTop (MkVar (Later p)) = Just (MkVar p)
 
 export
 inScope : {n, vars : _} ->
           {auto c : Ref Ctxt Defs} ->
           {auto e : Ref EST (EState vars)} ->
-          FC -> Env Term (n :: vars) ->
-          (Ref EST (EState (n :: vars)) -> Core a) ->
+          FC -> Env Term (vars :< n) ->
+          (Ref EST (EState (vars :< n)) -> Core a) ->
           Core a
 inScope {c} {e} fc env elab
     = do e' <- weakenedEState
@@ -321,10 +317,10 @@ concrete defs env _ = pure False
 
 export
 updateEnv : {new : _} ->
-            Env Term new -> SubVars new vars ->
+            Env Term new -> Thin new vars ->
             List (Name, RigCount,
                    (vars' ** (Env Term vars', PiInfo (Term vars'),
-                              Term vars', Term vars', SubVars new vars'))) ->
+                              Term vars', Term vars', Thin new vars'))) ->
             EState vars -> EState vars
 updateEnv env sub bif st
     = { outerEnv := env
@@ -451,8 +447,8 @@ searchVar fc rig depth def env nest n ty
                                          else find x xs
 
     envHints : List Name -> Env Term vars ->
-               Core (vars' ** (Term (vars' ++ vars) -> Term vars, Env Term (vars' ++ vars)))
-    envHints [] env = pure ([] ** (id, env))
+               Core (vars' ** (Term (vars ++ vars') -> Term vars, Env Term (vars ++ vars')))
+    envHints [] env = pure ([<] ** (id, env))
     envHints (n :: ns) env
         = do (vs ** (f, env')) <- envHints ns env
              let Just (nestn, argns, tmf) = find !(toFullNames n) (names nest)
@@ -467,9 +463,9 @@ searchVar fc rig depth def env nest n ty
              let binder = Let fc top (weakenNs (mkSizeOf vs) app)
                                      (weakenNs (mkSizeOf vs) tyenv)
              varn <- toFullNames n'
-             pure ((varn :: vs) **
+             pure ((vs :< varn) **
                     (\t => f (Bind fc varn binder t),
-                       binder :: env'))
+                       env' :< binder))
 
 -- Elaboration info (passed to recursive calls)
 public export

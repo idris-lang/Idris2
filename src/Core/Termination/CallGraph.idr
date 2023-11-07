@@ -72,7 +72,7 @@ mutual
   findSC {vars} defs env g pats (Bind fc n b sc)
        = pure $
             !(findSCbinder b) ++
-            !(findSC defs (b :: env) g (map (\ (p, tm) => (p, weaken tm)) pats) sc)
+            !(findSC defs (env :< b) g (map (\ (p, tm) => (p, weaken tm)) pats) sc)
     where
       findSCbinder : Binder (Term vars) -> Core (List SCCall)
       findSCbinder (Let _ c val ty) = findSC defs env g pats val
@@ -105,14 +105,14 @@ mutual
                          | Nothing => do
                               log "totality" 50 $ "Lookup failed"
                               findSCcall defs env Guarded pats fc cn 0 args
-                    arity <- getArity defs [] ty
+                    arity <- getArity defs [<] ty
                     findSCcall defs env Guarded pats fc cn arity args
              (Toplevel, Ref fc (DataCon _ _) cn, args) =>
                  do Just ty <- lookupTyExact cn (gamma defs)
                          | Nothing => do
                               log "totality" 50 $ "Lookup failed"
                               findSCcall defs env Guarded pats fc cn 0 args
-                    arity <- getArity defs [] ty
+                    arity <- getArity defs [<] ty
                     findSCcall defs env Guarded pats fc cn arity args
              (_, Ref fc Func fn, args) =>
                  do logC "totality" 50 $
@@ -121,7 +121,7 @@ mutual
                          | Nothing => do
                               log "totality" 50 $ "Lookup failed"
                               findSCcall defs env Unguarded pats fc fn 0 args
-                    arity <- getArity defs [] ty
+                    arity <- getArity defs [<] ty
                     findSCcall defs env Unguarded pats fc fn arity args
              (_, f, args) =>
                  do scs <- traverse (findSC defs env Unguarded pats) args
