@@ -60,7 +60,7 @@ genName n
 mutual
   quoteArg : {auto c : Ref Ctxt Defs} ->
              {bound, free : _} ->
-             Ref QVar Int -> QuoteOpts -> Defs -> Bounds bound ->
+             Ref QVar Int -> QuoteOpts -> Defs -> Boundz bound ->
              Env Term free -> Closure free ->
              Core (Term (free ++ bound))
   quoteArg q opts defs bounds env a
@@ -68,7 +68,7 @@ mutual
 
   quoteArgWithFC : {auto c : Ref Ctxt Defs} ->
                    {bound, free : _} ->
-                   Ref QVar Int -> QuoteOpts -> Defs -> Bounds bound ->
+                   Ref QVar Int -> QuoteOpts -> Defs -> Boundz bound ->
                    Env Term free -> (FC, Closure free) ->
                    Core ((FC, Term (free ++ bound)))
   quoteArgWithFC q opts defs bounds env
@@ -76,14 +76,14 @@ mutual
 
   quoteArgs : {auto c : Ref Ctxt Defs} ->
               {bound, free : _} ->
-              Ref QVar Int -> QuoteOpts -> Defs -> Bounds bound ->
+              Ref QVar Int -> QuoteOpts -> Defs -> Boundz bound ->
               Env Term free -> List (Closure free) ->
               Core (List (Term (free ++ bound)))
   quoteArgs q opts defs bounds env = traverse (quoteArg q opts defs bounds env)
 
   quoteArgsWithFC : {auto c : Ref Ctxt Defs} ->
                     {bound, free : _} ->
-                    Ref QVar Int -> QuoteOpts -> Defs -> Bounds bound ->
+                    Ref QVar Int -> QuoteOpts -> Defs -> Boundz bound ->
                     Env Term free -> List (FC, Closure free) ->
                     Core (List (FC, Term (free ++ bound)))
   quoteArgsWithFC q opts defs bounds env
@@ -92,7 +92,7 @@ mutual
   quoteHead : {auto c : Ref Ctxt Defs} ->
               {bound, free : _} ->
               Ref QVar Int -> QuoteOpts -> Defs ->
-              FC -> Bounds bound -> Env Term free -> NHead free ->
+              FC -> Boundz bound -> Env Term free -> NHead free ->
               Core (Term (free ++ bound))
   quoteHead {bound} q opts defs fc bounds env (NLocal mrig _ prf)
       = let MkVar prf' = weakenNs (mkSizeOf bound) (MkVar prf) in
@@ -102,7 +102,7 @@ mutual
              Just (MkVar p) => Local fc Nothing _ (embed p)
              Nothing => Ref fc Bound (MN n i)
     where
-      findName : Bounds bound' -> Maybe (Var bound')
+      findName : Boundz bound' -> Maybe (Var bound')
       findName None = Nothing
       findName (Add x (MN n' i') ns)
           = if i == i' -- this uniquely identifies it, given how we
@@ -120,7 +120,7 @@ mutual
 
   quotePi : {auto c : Ref Ctxt Defs} ->
             {bound, free : _} ->
-            Ref QVar Int -> QuoteOpts -> Defs -> Bounds bound ->
+            Ref QVar Int -> QuoteOpts -> Defs -> Boundz bound ->
             Env Term free -> PiInfo (Closure free) ->
             Core (PiInfo (Term (free ++ bound)))
   quotePi q opts defs bounds env Explicit = pure Explicit
@@ -132,7 +132,7 @@ mutual
 
   quoteBinder : {auto c : Ref Ctxt Defs} ->
                 {bound, free : _} ->
-                Ref QVar Int -> QuoteOpts -> Defs -> Bounds bound ->
+                Ref QVar Int -> QuoteOpts -> Defs -> Boundz bound ->
                 Env Term free -> Binder (Closure free) ->
                 Core (Binder (Term (free ++ bound)))
   quoteBinder q opts defs bounds env (Lam fc r p ty)
@@ -162,7 +162,7 @@ mutual
   quoteGenNF : {auto c : Ref Ctxt Defs} ->
                {bound, vars : _} ->
                Ref QVar Int -> QuoteOpts ->
-               Defs -> Bounds bound ->
+               Defs -> Boundz bound ->
                Env Term vars -> NF vars -> Core (Term (vars ++ bound))
   quoteGenNF q opts defs bound env (NBind fc n b sc)
       = do var <- genName "qv"
@@ -239,7 +239,7 @@ Quote Closure where
 
 quoteWithPiGen : {auto _ : Ref Ctxt Defs} ->
                  {bound, vars : _} ->
-                 Ref QVar Int -> QuoteOpts -> Defs -> Bounds bound ->
+                 Ref QVar Int -> QuoteOpts -> Defs -> Boundz bound ->
                  Env Term vars -> NF vars -> Core (Term (vars ++ bound))
 quoteWithPiGen q opts defs bound env (NBind fc n (Pi bfc c p ty) sc)
     = do var <- genName "qv"

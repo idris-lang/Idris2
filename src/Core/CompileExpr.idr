@@ -699,6 +699,15 @@ mutual
   mkLocalsConstAlt later bs (MkConstAlt x sc) = MkConstAlt x (mkLocals later bs sc)
 
 export
+refsToLocalz : Boundz bound -> CExp vars -> CExp (vars ++ bound)
+refsToLocalz None tm = tm
+refsToLocalz bs y = mkLocals zero bs y
+
+export
+refsToLocals : Bounds bound -> CExp vars -> CExp (vars <>< bound)
+refsToLocals bds = rewrite fishAsSnocAppend vars bound in refsToLocalz ?A
+
+export
 getFC : CExp args -> FC
 getFC (CLocal fc _) = fc
 getFC (CRef fc _) = fc

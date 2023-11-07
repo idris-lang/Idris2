@@ -17,6 +17,7 @@ import Core.TT
 import Data.Maybe
 import Data.SnocList
 import Data.Vect
+import Libraries.Data.SnocList.Extra
 import Libraries.Data.SnocList.LengthMatch
 import Libraries.Data.NameMap
 import Libraries.Data.WithDefault
@@ -30,11 +31,13 @@ data EEnv : Scope -> Scoped where
      Lin : EEnv free [<]
      (:<) : EEnv free vars -> CExp free -> EEnv free (vars :< x)
 
-extend : EEnv free vars -> (args : SnocList (CExp free)) -> (args' : Scope) ->
-         LengthMatch args args' -> EEnv free (vars ++ args')
-extend env [<] [<] LinMatch = env
-extend env (xs :< a) (ns :< n) (SnocMatch w)
-    = extend env xs ns w :< a
+extend : EEnv free vars ->
+         (args : List Name) ->
+         (argsVal : List (CExp free)) ->
+         Maybe (EEnv free (vars <>< args))
+extend env [] [] = pure env
+extend env (_ :: ns) (v :: vs) = extend (env :< v) ns vs
+extend _ _ _ = Nothing
 
 Stack : Scope -> Type
 Stack vars = List (CExp vars)
@@ -270,11 +273,10 @@ mutual
   extendLoc : {auto l : Ref LVar Int} ->
               FC -> EEnv free vars -> (args' : List Name) ->
               Core (Bounds args', EEnv free (vars <>< args'))
-  extendLoc fc env [<] = pure (None, env)
-  extendLoc fc env (ns :< n)
+  extendLoc fc env [] = pure (None, env)
+  extendLoc fc env (n :: ns)
       = do xn <- genName "cv"
-           (bs', env') <- extendLoc fc env ns
-           pure (Add n xn bs', env' :< CRef fc xn)
+           mapFst (Add n xn ) <$> extendLoc fc (env :< CRef fc xn) ns
 
   evalAlt : {vars, free : _} ->
             {auto c : Ref Ctxt Defs} ->
@@ -284,7 +286,7 @@ mutual
   evalAlt {free} {vars} fc rec env stk (MkConAlt n ci t args sc)
       = do (bs, env') <- extendLoc fc env args
            scEval <- eval rec env' stk
-                          (rewrite appendAssociative free vars args in sc)
+                          (rewrite sym $ snocAppendFishAssociative free vars args in sc)
            pure $ MkConAlt n ci t args (refsToLocals bs scEval)
 
   evalConstAlt : {vars, free : _} ->
@@ -306,15 +308,10 @@ mutual
       = traverseOpt (eval rec env stk) def
   pickAlt {vars} {free} rec env stk con@(CCon fc n ci t args) (MkConAlt n' _ t' args' sc :: alts) def
       = if matches n t n' t'
-           then let args = [<] <>< args in
-                case checkLengthMatch args args' of
-                     Nothing => pure Nothing
-                     Just m =>
-                         do let env' : EEnv free (vars ++ args')
-                                   = extend env args args' m
-                            pure $ Just !(eval rec env' stk
-                                    (rewrite appendAssociative free vars args' in
-                                             sc))
+           then do let Just env' = extend env args' args
+                         | Nothing => pure Nothing
+                   pure $ Just !(eval rec env' stk
+                           (rewrite sym $ snocAppendFishAssociative free vars args' in sc))
            else pickAlt rec env stk con alts def
     where
       matches : Name -> Maybe Int -> Name -> Maybe Int -> Bool
@@ -438,7 +435,7 @@ mergeLambdas args (CLam fc x sc)
     = let (args' ** (env, exp')) = getLams 0 [<] (CLam fc x sc)
           expNs = substs env exp'
           newArgs = reverse $ getNewArgs env
-          expLocs = mkLocals (mkSizeOf args) {outer = [<]} (mkBounds newArgs)
+          expLocs = mkLocals (mkSizeOf args) {outer = [<]} (mkBoundz newArgs)
                              (rewrite appendLinLeftNeutral args in expNs) in
           (_ ** expLocs)
 mergeLambdas args exp = (args ** exp)

@@ -81,6 +81,10 @@ namespace Boundz
   sizeOf None        = zero
   sizeOf (Add _ _ b) = suc (sizeOf b)
 
+  (<><) : Boundz sx -> Bounds ys -> Boundz (sx <>< ys)
+  bdz <>< None = bdz
+  bdz <>< (Add x n ys) = (Add x n bdz) <>< ys
+
 export
 mkBoundz : (xs : _) -> Boundz xs
 mkBoundz [<] = None
