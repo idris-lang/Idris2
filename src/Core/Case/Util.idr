@@ -4,6 +4,8 @@ import Core.Case.CaseTree
 import Core.Context
 import Core.Value
 
+import Libraries.Data.List.SizeOf
+
 public export
 record DataCon where
   constructor MkDataCon
@@ -50,7 +52,7 @@ mkAlt : {vars : _} ->
         FC -> CaseTree vars -> DataCon -> CaseAlt vars
 mkAlt fc sc (MkDataCon cn t ar)
     = ConCase cn t (map (MN "m") (take ar [0..]))
-              (weakenNs (map take) (emptyRHS fc sc))
+    $ weakensN (map take) (emptyRHS fc sc)
 
 export
 tagIs : Int -> CaseAlt vars -> Bool
