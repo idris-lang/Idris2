@@ -306,7 +306,9 @@ addLocz (xs :< x) ns
 
 export
 initLocs : (vars : Scope) -> Names vars
-initLocs vars = rewrite sym $ appendLinLeftNeutral vars in ?a
+initLocs vars
+  = rewrite sym $ appendLinLeftNeutral vars in
+    addLocz vars [<]
 
 export
 addLocs : (args : List Name) -> Names vars -> Names (vars <>< args)
@@ -632,7 +634,7 @@ substs : CSubst target outer -> CExp (outer ++ target) -> CExp outer
 substs env tm = substCExp zero env tm
 
 export
-resolveRef : SizeOf local -> SizeOf done -> Bounds bound -> FC -> Name ->
+resolveRef : SizeOf local -> SizeOf done -> Boundz bound -> FC -> Name ->
              Maybe (CExp ((vars ++ bound ++ done) ++ local))
 resolveRef p q bd fc nm = do
   MkVar v <- weakenNs p . embed . weakenNs q <$> isBound nm bd
@@ -644,7 +646,7 @@ public export
 MkLocalable tm =
   {0 outer, bound, local : Scope} ->
   SizeOf local ->
-  Bounds bound ->
+  Boundz bound ->
   tm (outer ++ local) ->
   tm ((outer ++ bound) ++ local)
 
@@ -695,11 +697,6 @@ mutual
 
   mkLocalsConstAlt : MkLocalable CConstAlt
   mkLocalsConstAlt later bs (MkConstAlt x sc) = MkConstAlt x (mkLocals later bs sc)
-
-export
-refsToLocals : Bounds bound -> CExp vars -> CExp (vars ++ bound)
-refsToLocals None tm = tm
-refsToLocals bs y = mkLocals zero bs y
 
 export
 getFC : CExp args -> FC

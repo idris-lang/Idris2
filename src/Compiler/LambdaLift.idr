@@ -189,7 +189,7 @@ mutual
        ||| @ body is the expression that is evaluated as the consequence of
        |||   this branch matching.
        MkLConAlt : (n : Name) -> (info : ConInfo) -> (tag : Maybe Int) ->
-                   (args : Scope) -> (body : Lifted (vars ++ args)) ->
+                   (args : List Name) -> (body : Lifted (vars <>< args)) ->
                    LiftedConAlt vars
 
   ||| A branch of an "LConst" (constant expression) case statement.
@@ -300,7 +300,7 @@ mutual
   {vs : _} -> Show (LiftedConAlt vs) where
     show (MkLConAlt n _ t args sc)
         = "%conalt " ++ show n ++
-             "(" ++ showSep ", " (map show (args <>> [])) ++ ") => " ++ show sc
+             "(" ++ showSep ", " (map show args) ++ ") => " ++ show sc
 
   export
   covering
@@ -364,7 +364,7 @@ mutual
            -- Find out which variables aren't used in the new definition, and
            -- do not abstract over them in the new definition.
            let s = mkSizeOf bound
-           let us = drop s $ usedVars initUsed scl
+           let us = dropNs s $ usedVars initUsed scl
            let scl' = dropUnused s us scl
            let scl'' = rewrite sym $ snocAppendAsFish (used us) bound in scl'
            n <- genName
@@ -438,7 +438,7 @@ mutual
   usedVars used (LApp fc lazy c arg) =
     usedVars (usedVars used arg) c
   usedVars used (LLet fc x val sc) =
-    let innerUsed = drop (suc zero) $ usedVars (weaken used) sc in
+    let innerUsed = dropNs (suc zero) $ usedVars (weaken used) sc in
         usedVars innerUsed val
   usedVars used (LCon fc n ci tag args) =
     foldl (usedVars {vars}) used args
@@ -451,19 +451,18 @@ mutual
           scDefUsed = usedVars defUsed sc in
           foldl usedConAlt scDefUsed alts
     where
-      usedConAlt : {default Nothing lazy : Maybe LazyReason} ->
-                   Used vars -> LiftedConAlt vars -> Used vars
+      usedConAlt : Used vars -> LiftedConAlt vars -> Used vars
       usedConAlt used (MkLConAlt n ci tag args sc) =
         let s = mkSizeOf args in
-        drop s (usedVars (weakenNs s used) sc)
+        let rec = usedVars (weakensN s used) sc in
+        dropsN s rec
 
   usedVars used (LConstCase fc sc alts def) =
       let defUsed = maybe used (usedVars used {vars}) def
           scDefUsed = usedVars defUsed sc in
           foldl usedConstAlt scDefUsed alts
     where
-      usedConstAlt : {default Nothing lazy : Maybe LazyReason} ->
-                     Used vars -> LiftedConstAlt vars -> Used vars
+      usedConstAlt : Used vars -> LiftedConstAlt vars -> Used vars
       usedConstAlt used (MkLConstAlt c sc) = usedVars used sc
   usedVars used (LPrimVal _ _) = used
   usedVars used (LErased _) = used
@@ -519,10 +518,10 @@ mutual
     LiftedConAlt (vars ++ local) ->
     LiftedConAlt (used us ++ local)
   dropConCase s us (MkLConAlt n ci t args sc)
-    = let sc' : Lifted (vars ++ local ++ args)
-            := rewrite appendAssociative vars local args in sc
-          droppedSc' = dropUnused (s + mkSizeOf args) us sc'
-          droppedSc = rewrite sym $ appendAssociative (used us) local args in droppedSc'
+    = let sc' : Lifted (vars ++ local <>< args)
+            := rewrite sym $ snocAppendFishAssociative vars local args in sc
+          droppedSc' = dropUnused (s <>< mkSizeOf args) us sc'
+          droppedSc = rewrite snocAppendFishAssociative (used us) local args in droppedSc'
       in MkLConAlt n ci t args droppedSc
 
 export

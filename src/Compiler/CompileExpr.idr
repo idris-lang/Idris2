@@ -224,12 +224,12 @@ natBranch (MkConAlt n SUCC _ _ _) = True
 natBranch _ = False
 
 trySBranch : CExp vars -> CConAlt vars -> Maybe (CExp vars)
-trySBranch n (MkConAlt nm SUCC _ [<arg] sc)
+trySBranch n (MkConAlt nm SUCC _ [arg] sc)
     = Just (CLet (getFC n) arg YesInline (magic__natUnsuc (getFC n) (getFC n) [n]) sc)
 trySBranch _ _ = Nothing
 
 tryZBranch : CConAlt vars -> Maybe (CExp vars)
-tryZBranch (MkConAlt n ZERO _ [<] sc) = Just sc
+tryZBranch (MkConAlt n ZERO _ [] sc) = Just sc
 tryZBranch _ = Nothing
 
 getSBranch : CExp vars -> List (CConAlt vars) -> Maybe (CExp vars)
@@ -269,7 +269,7 @@ enumTree (CConCase fc sc alts def)
          CConstCase fc sc alts' def
   where
     toEnum : CConAlt vars -> Maybe (CConstAlt vars)
-    toEnum (MkConAlt nm (ENUM n) (Just tag) [<] sc)
+    toEnum (MkConAlt nm (ENUM n) (Just tag) [] sc)
         = pure $ MkConstAlt (enumTag n tag) sc
     toEnum _ = Nothing
 enumTree t = t
@@ -277,7 +277,7 @@ enumTree t = t
 -- remove pattern matches on unit
 unitTree : {auto u : Ref NextMN Int} -> CExp vars -> Core (CExp vars)
 unitTree exp@(CConCase fc sc alts def) = fromMaybe (pure exp)
-    $ do let [MkConAlt _ UNIT _ [<] e] = alts
+    $ do let [MkConAlt _ UNIT _ [] e] = alts
              | _ => Nothing
          Just $ case sc of -- TODO: Check scrutinee has no effect, and skip let binding
                      CLocal _ _ => pure e
@@ -499,9 +499,9 @@ mutual
   toCExpTree n alts@(Case _ x scTy (DelayCase ty arg sc :: rest))
       = let fc = getLoc scTy in
             pure $
-              CLet fc arg YesInline (CForce fc LInf (CLocal (getLoc scTy) x)) $
-              CLet fc ty YesInline (CErased fc)
-                   !(toCExpTree n sc)
+              CLet fc ty YesInline (CErased fc) $
+              CLet fc arg YesInline (CForce fc LInf (CLocal fc (Later x))) $
+              !(toCExpTree n sc)
   toCExpTree n alts
       = toCExpTree' n alts
 

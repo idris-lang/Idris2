@@ -60,31 +60,43 @@ covering
 -- TODO: refactor this, Used, AVars, etc?
 namespace Bounds
   public export
-  data Bounds : Scoped where
-       None : Bounds [<]
-       Add : (x : Name) -> Name -> Bounds xs -> Bounds (xs :< x)
+  data Bounds : List Name -> Type where
+       None : Bounds []
+       Add : (x : Name) -> Name -> Bounds xs -> Bounds (x :: xs)
 
   export
   sizeOf : Bounds xs -> SizeOf xs
   sizeOf None        = zero
   sizeOf (Add _ _ b) = suc (sizeOf b)
 
-export
-mkBounds : (xs : _) -> Bounds xs
-mkBounds [<] = None
-mkBounds (xs :< x) = Add x x (mkBounds xs)
+-- TODO: refactor this, Used, AVars, etc?
+namespace Boundz
+  public export
+  data Boundz : Scoped where
+       None : Boundz [<]
+       Add : (x : Name) -> Name -> Boundz xs -> Boundz (xs :< x)
+
+  export
+  sizeOf : Boundz xs -> SizeOf xs
+  sizeOf None        = zero
+  sizeOf (Add _ _ b) = suc (sizeOf b)
 
 export
-addVars : SizeOf local -> Bounds bound ->
+mkBoundz : (xs : _) -> Boundz xs
+mkBoundz [<] = None
+mkBoundz (xs :< x) = Add x x (mkBoundz xs)
+
+export
+addVars : SizeOf local -> Boundz bound ->
           NVar name (vars ++ local) ->
           NVar name ((vars ++ bound) ++ local)
 addVars p = insertNVarNames p . sizeOf
 
 export
-isBound : Name -> Bounds bound -> Maybe (Var bound)
+isBound : Name -> Boundz bound -> Maybe (Var bound)
 isBound n = go zero where
 
-  go : SizeOf inner -> Bounds bd -> Maybe (Var (bd <>< inner))
+  go : SizeOf inner -> Boundz bd -> Maybe (Var (bd <>< inner))
   go s None = Nothing
   go s (Add new old bs)
     = if n == old
@@ -92,14 +104,14 @@ isBound n = go zero where
         else go (suc s) bs
 
 export
-resolveRef : SizeOf local -> SizeOf done -> Bounds bound -> FC -> Name ->
+resolveRef : SizeOf local -> SizeOf done -> Boundz bound -> FC -> Name ->
              Maybe (Term ((vars ++ bound ++ done) ++ local))
 resolveRef p q bd fc nm = do
   MkVar v <- weakenNs p . embed . weakenNs q <$> isBound nm bd
   pure (Local fc Nothing _ v)
 
 
-mkLocals : SizeOf local -> Bounds bound ->
+mkLocals : SizeOf local -> Boundz bound ->
            Term (vars ++ local) -> Term ((vars ++ bound) ++ local)
 mkLocals outer bs (Local fc r idx p)
     = let MkNVar p' = addVars outer bs (MkNVar p) in Local fc r _ p'
@@ -130,7 +142,7 @@ mkLocals outer bs (Erased fc (Dotted t)) = Erased fc (Dotted (mkLocals outer bs 
 mkLocals outer bs (TType fc u) = TType fc u
 
 export
-refsToLocals : Bounds bound -> Term vars -> Term (vars ++ bound)
+refsToLocals : Boundz bound -> Term vars -> Term (vars ++ bound)
 refsToLocals None y = y
 refsToLocals bs y = mkLocals zero  bs y
 

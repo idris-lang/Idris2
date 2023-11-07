@@ -176,13 +176,12 @@ mlet fc val sc
 
 bindAsFresh :
   {auto v : Ref Next Int} ->
-  (args : Scope) -> AVars vars' ->
-  Core (List Int, AVars (vars' ++ args))
-bindAsFresh [<] vs = pure ([], vs)
-bindAsFresh (ns :< n) vs
+  (args : List Name) -> AVars vars' ->
+  Core (List Int, AVars (vars' <>< args))
+bindAsFresh [] vs = pure ([], vs)
+bindAsFresh (n :: ns) vs
     = do i <- nextVar
-         (is, vs') <- bindAsFresh ns vs
-         pure (i :: is, vs' :< i)
+         mapFst (i ::) <$> bindAsFresh ns (vs :< i)
 
 mutual
   anfArgs : {vars : _} ->
@@ -250,10 +249,12 @@ export
 toANF : LiftedDef -> Core ANFDef
 toANF (MkLFun args scope sc)
     = do v <- newRef Next (the Int 0)
-         (iargs, vsNil) <- bindAsFresh args [<]
-         let vs : AVars args = rewrite sym $ appendLinLeftNeutral args in vsNil
-         (iargs', vs) <- bindAsFresh ([<] <>< scope) vs
-         sc' <- anf vs $ rewrite sym $ fishAsSnocAppend args scope in sc
+         (iargs, vsNil) <- bindAsFresh (args <>> []) [<]
+         let vs : AVars args
+           := rewrite sym $ appendLinLeftNeutral args in
+              rewrite snocAppendAsFish [<] args in vsNil
+         (iargs', vs) <- bindAsFresh scope vs
+         sc' <- anf vs sc
          pure $ MkAFun (iargs ++ reverse iargs') sc'
 toANF (MkLCon t a ns) = pure $ MkACon t a ns
 toANF (MkLForeign ccs fargs t) = pure $ MkAForeign ccs fargs t

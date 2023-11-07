@@ -9,8 +9,11 @@ import Core.Name
 import Data.SnocList
 import Data.Vect
 
+import Libraries.Data.SnocList.Extra
+
 import Libraries.Data.SnocList.HasLength
 import Libraries.Data.SnocList.SizeOf
+import Libraries.Data.List.SizeOf
 
 %hide Core.TT.Subst.Subst
 
@@ -32,7 +35,8 @@ foldableOp _                = True
 data Subst : Scope -> Scoped where
   Lin  : Subst [<] vars
   (:<) : Subst ds vars -> CExp vars -> Subst (ds :< d) vars
-  Wk   : SizeOf ws -> Subst ds vars -> Subst (ds ++ ws) (vars ++ ws)
+  Wk   : {0 ws : Scope} -> SizeOf ws ->
+         Subst ds vars -> Subst (ds ++ ws) (vars ++ ws)
 
 initSubst : (vars : Scope) -> Subst vars vars
 initSubst vars
@@ -40,12 +44,18 @@ initSubst vars
     Wk (mkSizeOf vars) [<]
 
 
-wk : SizeOf out -> Subst ds vars -> Subst (ds ++ out) (vars ++ out)
-wk sout (Wk {ws, ds, vars} sws rho)
-  = rewrite sym $ appendAssociative ds ws out  in
+wkNs : SizeOf out -> Subst ds vars -> Subst (ds ++ out) (vars ++ out)
+wkNs sout (Wk {ws, ds, vars} sws rho)
+  = rewrite sym $ appendAssociative ds ws out in
     rewrite sym $ appendAssociative vars ws out in
     Wk (sws + sout) rho
-wk ws rho = Wk ws rho
+wkNs ws rho = Wk ws rho
+
+wksN : SizeOf out -> Subst ds vars -> Subst (ds <>< out) (vars <>< out)
+wksN s
+  = rewrite fishAsSnocAppend ds out in
+    rewrite fishAsSnocAppend vars out in
+    wkNs (zero <>< s)
 
 record WkCExp (vars : Scope) where
   constructor MkWkCExp
@@ -90,12 +100,12 @@ constFold : {vars' : _} ->
 constFold rho (CLocal fc p) = lookup fc (MkVar p) rho
 constFold rho e@(CRef fc x) = CRef fc x
 constFold rho (CLam fc x y)
-  = CLam fc x $ constFold (wk (mkSizeOf [<x]) rho) y
+  = CLam fc x $ constFold (wkNs (mkSizeOf [<x]) rho) y
 constFold rho (CLet fc x inl y z) =
     let val = constFold rho y
      in if replace val
           then constFold (rho :< val) z
-          else CLet fc x inl val (constFold (wk (mkSizeOf [<x]) rho) z)
+          else CLet fc x inl val (constFold (wkNs (mkSizeOf [<x]) rho) z)
 constFold rho (CApp fc (CRef fc2 n) [x]) =
   if n == NS typesNS (UN $ Basic "prim__integerToNat")
      then case constFold rho x of
@@ -151,7 +161,7 @@ constFold rho (CConCase fc sc xs x)
   where
     foldAlt : CConAlt vars -> CConAlt vars'
     foldAlt (MkConAlt n ci t xs e)
-      = MkConAlt n ci t xs $ constFold (wk (mkSizeOf xs) rho) e
+      = MkConAlt n ci t xs $ constFold (wksN (mkSizeOf xs) rho) e
 
 constFold rho (CConstCase fc sc xs x) =
     let sc' = constFold rho sc

@@ -3,11 +3,18 @@ module Compiler.Opts.Identity
 import Compiler.CompileExpr
 import Core.Context
 import Core.Context.Log
-import Data.List
 import Data.Vect
+
+import Data.SnocList
+import Libraries.Data.SnocList.Extra
 
 makeArgs : (args : Scope) -> List (Var (vars ++ args))
 makeArgs args = embed @{ListFreelyEmbeddable} (allVars args)
+
+makeArgz : (args : List Name) -> List (Var (vars <>< args))
+makeArgz args
+  = embedFishily @{ListFreelyEmbeddable}
+  $ allVars ([<] <>< args)
 
 parameters (fn1 : Name) (idIdx : Nat)
   mutual
@@ -81,8 +88,8 @@ parameters (fn1 : Name) (idIdx : Nat)
         altEq : CConAlt vars -> Bool
         altEq (MkConAlt y _ _ args exp) =
             cexpIdentity
-                (weakenNs (mkSizeOf args) var)
-                (Just (y, makeArgs args))
+                (weakensN (mkSizeOf args) var)
+                (Just (y, makeArgz args))
                 const
                 exp
     cexpIdentity var con const (CConstCase fc sc xs x) =

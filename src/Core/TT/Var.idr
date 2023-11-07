@@ -123,6 +123,7 @@ locateIsVar s p = case choose (idx < size s) of
   Left so => Right (MkErased (locateIsVarLT s so p))
   Right so => Left (MkErased (locateIsVarGE s so p))
 
+
 ------------------------------------------------------------------------
 -- Variable in scope
 
@@ -272,6 +273,15 @@ insertNVar p v = case locateNVar p v of
   Right (MkNVar p) => MkNVar (embedIsVar p)
 
 export
+insertNVarFishy : SizeOf local ->
+             NVar nm (outer <>< local) ->
+             NVar nm (outer :< n <>< local)
+insertNVarFishy p v
+  = rewrite fishAsSnocAppend (outer :< n) local in
+    insertNVar (zero <>< p)
+  $ replace {p = NVar nm} (fishAsSnocAppend outer local) v
+
+export
 insertNVarNames : GenWeakenable (NVar name)
 insertNVarNames p q v = case locateNVar p v of
   Left v => rewrite sym $ appendAssociative outer ns local in weakenNVar (q + p) v
@@ -401,6 +411,28 @@ FreelyEmbeddable (NVar {a = Name} nm) where
   embed (MkNVar p) = MkNVar (embedIsVar p)
 
 ------------------------------------------------------------------------
+-- Corollaries
+
+||| Moving the zeroth variable under a set number of variables
+export
+shiftUnderNs : SizeOf {a = Name} args ->
+               {idx : _} ->
+               (0 p : IsVar n idx (vars ++ args :< x)) ->
+               NVar n (vars :< x ++ args)
+shiftUnderNs s First = weakenNs s (MkNVar First)
+shiftUnderNs s (Later p) = insertNVar s (MkNVar p)
+
+||| Moving the zeroth variable under a set number of variables
+||| Fishy version (cf. shiftUnderNs for the append one)
+export
+shiftUndersN : SizeOf {a = Name} args ->
+               {idx : _} ->
+               (0 p : IsVar n idx (vars <>< args :< x)) ->
+               NVar n (vars :< x <>< args)
+shiftUndersN s First = weakensN s (MkNVar First)
+shiftUndersN s (Later p) = insertNVarFishy s (MkNVar p)
+
+------------------------------------------------------------------------
 -- Used variables
 
 ||| This used to be a (Vect (length vars) Bool) which meant
@@ -429,10 +461,16 @@ tail : Used (vars :< x) -> Used vars
 tail (xs :< _) = xs
 
 export
-drop : SizeOf local -> Used (vars ++ local) -> Used vars
-drop s bs = case sizedView s of
+dropNs : SizeOf local -> Used (vars ++ local) -> Used vars
+dropNs s bs = case sizedView s of
   Z => bs
-  S k => drop k (tail bs)
+  S k => dropNs k (tail bs)
+
+export
+dropsN : SizeOf local -> Used (vars <>< local) -> Used vars
+dropsN s bs = case sizedView s of
+  Z => bs
+  S k => tail (dropsN k bs)
 
 export
 markUsed : {idx : _} -> (0 prf : IsVar x idx vars) ->

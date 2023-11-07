@@ -108,7 +108,7 @@ mutual
   usedCon : {free : _} ->
             {idx : Nat} -> (0 p : IsVar n idx free) -> CConAlt free -> Int
   usedCon n (MkConAlt _ _ _ args sc)
-      = let MkVar n' = weakenNs (mkSizeOf args) (MkVar n) in
+      = let MkVar n' = weakensN (mkSizeOf args) (MkVar n) in
             used n' sc
 
   usedConst : {free : _} ->
@@ -268,8 +268,8 @@ mutual
   eval rec env stk (CCrash fc str) = pure $ unload stk $ CCrash fc str
 
   extendLoc : {auto l : Ref LVar Int} ->
-              FC -> EEnv free vars -> (args' : Scope) ->
-              Core (Bounds args', EEnv free (vars ++ args'))
+              FC -> EEnv free vars -> (args' : List Name) ->
+              Core (Bounds args', EEnv free (vars <>< args'))
   extendLoc fc env [<] = pure (None, env)
   extendLoc fc env (ns :< n)
       = do xn <- genName "cv"
