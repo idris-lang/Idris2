@@ -301,6 +301,7 @@
   can be set to install into a staging directory for distro packaging.
 * Updates the docs for `envvars` to categorise when environment variables are
   used (runtime, build-time, or both).
+* Fixed build failure occuring when `make -j` is in effect.
 
 ## v0.6.0
 
