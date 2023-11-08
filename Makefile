@@ -59,7 +59,9 @@ export SCHEME
 
 .PHONY: all idris2-exec libdocs testenv testenv-clean support clean-support clean FORCE
 
-all: ${TARGET} libs
+all:
+	${MAKE} ${TARGET}
+	${MAKE} libs
 
 idris2-exec: ${TARGET}
 
@@ -91,7 +93,7 @@ contrib: base
 test-lib: contrib
 	${MAKE} -C libs/test IDRIS2=${TARGET} IDRIS2_INC_CGS=${IDRIS2_CG} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
-linear: prelude
+linear: prelude base
 	${MAKE} -C libs/linear IDRIS2=${TARGET} IDRIS2_INC_CGS=${IDRIS2_CG} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
 papers: contrib linear
