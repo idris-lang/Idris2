@@ -311,7 +311,7 @@ mkStruct (CFStruct n flds)
     showFld : (String, CFType) -> Core Builder
     showFld (n, ty) = pure $ "[" ++ fromString n ++ " " ++ !(cftySpec emptyFC ty) ++ "]"
 mkStruct (CFIORes t) = mkStruct t
-mkStruct (CFFun a b) = do ignore (mkStruct a); mkStruct b
+mkStruct (CFFun a b) = [| mkStruct a ++ mkStruct b |]
 mkStruct _ = pure ""
 
 schFgnDef : {auto f : Ref Done (List String) } ->
