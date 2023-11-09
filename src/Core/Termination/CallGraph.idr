@@ -20,14 +20,15 @@ Show Guardedness where
   show Guarded = "Guarded"
   show InDelay = "InDelay"
 
-sizeEq : Term vars -> -- RHS
-     Term vars -> -- LHS: may contain dot-patterns, try both sides of as patterns
-     Bool
+sizeEq : {auto 0 cv : CompatibleVars rhsVars lhsVars} ->
+         Term rhsVars -> -- RHS
+         Term lhsVars -> -- LHS: may contain dot-patterns, try both sides of as patterns
+         Bool
 sizeEq (Local _ _ idx _) (Local _ _ idx' _) = idx == idx'
 sizeEq (Ref _ _ n) (Ref _ _ n') = n == n'
 sizeEq (Meta _ _ i args) (Meta _ _ i' args')
     = i == i' && assert_total (all (uncurry sizeEq) (zip args args'))
-sizeEq (Bind _ _ b sc) (Bind _ _ b' sc') = eqBinderBy sizeEq b b' && sizeEq sc (believe_me sc')
+sizeEq (Bind _ _ b sc) (Bind _ _ b' sc') = eqBinderBy sizeEq b b' && sizeEq sc sc'
 sizeEq (App _ f a) (App _ f' a') = sizeEq f f' && sizeEq a a'
 sizeEq (As _ _ a p) p' = sizeEq p p'
 sizeEq p (As _ _ a p') = sizeEq p a || sizeEq p p'
@@ -36,8 +37,7 @@ sizeEq (TDelay _ _ t x) (TDelay _ _ t' x') = sizeEq t t' && sizeEq x x'
 sizeEq (TForce _ _ t) (TForce _ _ t') = sizeEq t t'
 sizeEq (PrimVal _ c) (PrimVal _ c') = c == c'
 -- traverse dotted LHS terms
-sizeEq t (Erased _ (Dotted t')) = sizeEq t t'
-sizeEq (Erased _ i) (Erased _ i') = i == i'
+sizeEq t (Erased _ (Dotted t')) = believe_me t == t' -- t' is no longer a pattern
 sizeEq (TType _ _) (TType _ _) = True
 sizeEq _ _ = False
 
