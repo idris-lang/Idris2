@@ -12,7 +12,7 @@
 
 You can install Idris 2 with any one of a number of package managers.
 
-### Install with [Pack](https://github.com/stefan-hoeck/idris2-pack/blob/main/INSTALL.md)
+### Install with [Pack](https://github.com/stefan-hoeck/idris2-pack)
 Pack comes with an installation of Idris 2, so you just need to install Pack. See [the installation instructions](https://github.com/stefan-hoeck/idris2-pack/blob/main/INSTALL.md) on GitHub.
 ### Install with [Homebrew](https://brew.sh/)
 ```sh
