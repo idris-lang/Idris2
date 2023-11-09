@@ -1,0 +1,158 @@
+<!DOCTYPE html><html lang="en">
+
+<head><title>Data.Double</title>
+  <meta charset="utf-8">
+  <style>
+  .IdrisData {
+  color: darkred
+}
+.IdrisType {
+  color: blue
+}
+.IdrisBound {
+  color: black
+}
+.IdrisFunction {
+  color: darkgreen
+}
+.IdrisKeyword {
+  text-decoration: underline;
+}
+.IdrisComment {
+  color: #b22222
+}
+.IdrisNamespace {
+  font-style: italic;
+  color: black
+}
+.IdrisPostulate {
+  font-weight: bold;
+  color: red
+}
+.IdrisModule {
+  font-style: italic;
+  color: black
+}
+
+  .IdrisLineNumber {
+    text-decoration: none;
+    color: lightgrey;
+    user-select: none;
+  }
+  .IdrisLineNumber:hover {
+    color: darkgray;
+  }
+  .IdrisLineNumber:target {
+    color: gray;
+  }
+  .IdrisHighlight {
+    background-color: yellow;
+  }
+  </style>
+  <script>
+    function initialize() {
+      function handleHash(ev) {
+          if (!location.hash) return
+          let m = location.hash.match(/#(line\d+)(?:-(line\d+))?/)
+          if (m) {
+              let start = document.getElementById(m[1])
+              let end = document.getElementById(m[2])
+              if (start) {
+                  if (end && end.compareDocumentPosition(start) === 4) {
+                      ([start, end] = [end, start])
+                  }
+                  // Only on page load
+                  if (!ev) start.scrollIntoView()
+                  let parent = start.parentElement
+                  let lines = parent.children
+                  let className = ''
+                  for (let n = 0; n < lines.length; n++) {
+                      let el = lines[n]
+                      if (el === start) className = 'IdrisHighlight'
+                      el.className = className
+                      if (el === end || className && !end) className = ''
+                  }
+              }
+          }
+      }
+      let startLine
+      let endLine
+      function handlePointerMove(ev) {
+          if (startLine) {
+              for (let el = document.elementFromPoint(ev.clientX, ev.clientY); el; el = el.parentElement) {
+                  if (el.parentElement === startLine.parentElement) {
+                      if (endLine !== el) {
+                          endLine = el
+                          update()
+                      }
+                      break
+                  }
+              }
+          }
+      }
+      function update(ev) {
+          window.location.hash = startLine === endLine ? startLine.id : startLine.id + '-' + endLine.id
+      }
+      function handlePointerDown(ev) {
+          let target = ev.target
+          if (target.className === 'IdrisLineNumber') {
+              startLine = endLine = target.parentElement
+              window.addEventListener('pointermove', handlePointerMove)
+              update()
+              ev.preventDefault()
+          }
+      }
+      function handlePointerUp(ev) {
+          if (startLine) {
+              update()
+              window.removeEventListener('pointermove', handlePointerMove)
+              startLine = endLine = null
+          }
+      }
+      window.addEventListener('hashchange', handleHash)
+      window.addEventListener('pointerdown', handlePointerDown)
+      window.addEventListener('pointerup', handlePointerUp)
+      handleHash()
+  }
+  </script>
+</head>
+<body onload="initialize()">
+<code class="IdrisCode">
+<div id="line0"><a href="#line0" class="IdrisLineNumber"> &nbsp;0 | </a><span class="IdrisComment">|||&nbsp;Various&nbsp;IEEE&nbsp;floating-point&nbsp;number&nbsp;constants</span></div>
+<div id="line1"><a href="#line1" class="IdrisLineNumber"> &nbsp;1 | </a><span class="IdrisKeyword">module</span>&nbsp;<span class="IdrisModule">Data.Double</span></div>
+<div id="line2"><a href="#line2" class="IdrisLineNumber"> &nbsp;2 | </a></div>
+<div id="line3"><a href="#line3" class="IdrisLineNumber"> &nbsp;3 | </a><span class="IdrisComment">|||&nbsp;Largest&nbsp;number&nbsp;that&nbsp;can&nbsp;be&nbsp;added&nbsp;to&nbsp;a&nbsp;floating-point&nbsp;number&nbsp;without&nbsp;changing</span></div>
+<div id="line4"><a href="#line4" class="IdrisLineNumber"> &nbsp;4 | </a><span class="IdrisComment">|||&nbsp;its&nbsp;value,&nbsp;i.e.&nbsp;`1.0&nbsp;+&nbsp;unitRoundoff&nbsp;==&nbsp;1.0`.</span></div>
+<div id="line5"><a href="#line5" class="IdrisLineNumber"> &nbsp;5 | </a><span class="IdrisKeyword">%foreign</span>&nbsp;<span class="IdrisData">&quot;scheme:blodwen-calcFlonumUnitRoundoff&quot;</span></div>
+<div id="line6"><a href="#line6" class="IdrisLineNumber"> &nbsp;6 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">&quot;node:lambda:()=&gt;Number.EPSILON&nbsp;/&nbsp;2&quot;</span></div>
+<div id="line7"><a href="#line7" class="IdrisLineNumber"> &nbsp;7 | </a><span class="IdrisKeyword">export</span></div>
+<div id="line8"><a href="#line8" class="IdrisLineNumber"> &nbsp;8 | </a><span class="IdrisFunction">unitRoundoff</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Double</span></div>
+<div id="line9"><a href="#line9" class="IdrisLineNumber"> &nbsp;9 | </a></div>
+<div id="line10"><a href="#line10" class="IdrisLineNumber"> 10 | </a><span class="IdrisComment">|||&nbsp;Machine&nbsp;epsilon&nbsp;is&nbsp;the&nbsp;smallest&nbsp;floating-point&nbsp;number&nbsp;that&nbsp;distinguishes&nbsp;two</span></div>
+<div id="line11"><a href="#line11" class="IdrisLineNumber"> 11 | </a><span class="IdrisComment">|||&nbsp;floating-point&nbsp;numbers;&nbsp;the&nbsp;step&nbsp;size&nbsp;on&nbsp;the&nbsp;floating-point&nbsp;number&nbsp;line.</span></div>
+<div id="line12"><a href="#line12" class="IdrisLineNumber"> 12 | </a><span class="IdrisComment">--&nbsp;/!\&nbsp;See&nbsp;`support/racket/support.rkt:42-45`</span></div>
+<div id="line13"><a href="#line13" class="IdrisLineNumber"> 13 | </a><span class="IdrisComment">--&nbsp;%foreign&nbsp;&quot;scheme,chez:blodwen-calcFlonumEpsilon&quot;</span></div>
+<div id="line14"><a href="#line14" class="IdrisLineNumber"> 14 | </a><span class="IdrisComment">--&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&quot;scheme,racket:blodwen-flonumEpsilon&quot;</span></div>
+<div id="line15"><a href="#line15" class="IdrisLineNumber"> 15 | </a><span class="IdrisKeyword">%foreign</span>&nbsp;<span class="IdrisData">&quot;scheme:blodwen-calcFlonumEpsilon&quot;</span></div>
+<div id="line16"><a href="#line16" class="IdrisLineNumber"> 16 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">&quot;node:lambda:()=&gt;Number.EPSILON&quot;</span></div>
+<div id="line17"><a href="#line17" class="IdrisLineNumber"> 17 | </a><span class="IdrisKeyword">export</span></div>
+<div id="line18"><a href="#line18" class="IdrisLineNumber"> 18 | </a><span class="IdrisFunction">epsilon</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Double</span></div>
+<div id="line19"><a href="#line19" class="IdrisLineNumber"> 19 | </a></div>
+<div id="line20"><a href="#line20" class="IdrisLineNumber"> 20 | </a></div>
+<div id="line21"><a href="#line21" class="IdrisLineNumber"> 21 | </a><span class="IdrisComment">|||&nbsp;Not&nbsp;a&nbsp;number,&nbsp;e.g.&nbsp;`0.0&nbsp;/&nbsp;0.0`.&nbsp;Never&nbsp;equal&nbsp;to&nbsp;anything,&nbsp;including&nbsp;itself.</span></div>
+<div id="line22"><a href="#line22" class="IdrisLineNumber"> 22 | </a><span class="IdrisKeyword">%foreign</span>&nbsp;<span class="IdrisData">&quot;scheme:blodwen-flonumNaN&quot;</span></div>
+<div id="line23"><a href="#line23" class="IdrisLineNumber"> 23 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">&quot;node:lambda:()=&gt;Number.NaN&quot;</span></div>
+<div id="line24"><a href="#line24" class="IdrisLineNumber"> 24 | </a><span class="IdrisKeyword">export</span></div>
+<div id="line25"><a href="#line25" class="IdrisLineNumber"> 25 | </a><span class="IdrisFunction">nan</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Double</span></div>
+<div id="line26"><a href="#line26" class="IdrisLineNumber"> 26 | </a></div>
+<div id="line27"><a href="#line27" class="IdrisLineNumber"> 27 | </a></div>
+<div id="line28"><a href="#line28" class="IdrisLineNumber"> 28 | </a><span class="IdrisComment">|||&nbsp;Positive&nbsp;Infinity.&nbsp;Can&nbsp;be&nbsp;negated&nbsp;to&nbsp;obtain&nbsp;Negative&nbsp;Infinity.</span></div>
+<div id="line29"><a href="#line29" class="IdrisLineNumber"> 29 | </a><span class="IdrisKeyword">%foreign</span>&nbsp;<span class="IdrisData">&quot;scheme:blodwen-flonumInf&quot;</span></div>
+<div id="line30"><a href="#line30" class="IdrisLineNumber"> 30 | </a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="IdrisData">&quot;node:lambda:()=&gt;Infinity&quot;</span></div>
+<div id="line31"><a href="#line31" class="IdrisLineNumber"> 31 | </a><span class="IdrisKeyword">export</span></div>
+<div id="line32"><a href="#line32" class="IdrisLineNumber"> 32 | </a><span class="IdrisFunction">inf</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Double</span></div>
+<div id="line33"><a href="#line33" class="IdrisLineNumber"> 33 | </a></div>
+<div id="line34"><a href="#line34" class="IdrisLineNumber"> 34 | </a></div>
+</code>
+</body>
+</html>
