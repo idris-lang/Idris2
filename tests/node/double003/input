@@ -1,0 +1,13 @@
+-- we need to exec to get the prim__* functions to disappear
+:exec printLn negInf
+:exec printLn divNZbyZero
+:exec printLn addPosInfs
+:exec printLn subNegInfs
+:exec printLn subPosInf
+:exec printLn addNegInf
+:exec printLn squareNegInfIsPosInf
+:exec printLn squarePosInfIsPosInf
+:exec printLn multInfSignFlip
+:exec printLn posInfIsPosInf
+:exec printLn negInfIsNegInf
+:exec printLn posInfEqNegInf

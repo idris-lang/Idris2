@@ -1,0 +1,15 @@
+1/1: Building Inf (Inf.idr)
+Main> Main> -Infinity
+Main> True
+Main> True
+Main> True
+Main> NaN
+Main> NaN
+Main> True
+Main> True
+Main> True
+Main> True
+Main> True
+Main> False
+Main> 
+Bye for now!

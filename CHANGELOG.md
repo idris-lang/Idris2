@@ -239,6 +239,9 @@
 
 * Adds `Semigroup`, `Applicative`, `Traversable` and `Zippable` for `Data.These`.
 
+* Adds bindings for IEEE floating point constants NaN and (+/-) Inf, as well as
+  machine epsilon and unit roundoff. Speeds vary depending on backend.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
