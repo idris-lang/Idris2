@@ -13,12 +13,7 @@
 You can install Idris 2 with any one of a number of package managers.
 
 ### Install with [Pack](https://github.com/stefan-hoeck/idris2-pack/blob/main/INSTALL.md)
-Pack comes with an installation of Idris 2 so you just need to install Pack.
-Assuming you have already installed Chez Scheme, run
-  ```sh
-  bash -c "$(curl -fsSL https://raw.githubusercontent.com/stefan-hoeck/idris2-pack/main/install.bash)"
-  ```
-  then add `$HOME/.pack/bin` to your `$PATH` variable.
+Pack comes with an installation of Idris 2, so you just need to install Pack. See [the installation instructions](https://github.com/stefan-hoeck/idris2-pack/blob/main/INSTALL.md) on GitHub.
 ### Install with [Homebrew](https://brew.sh/)
 ```sh
 brew install idris2
