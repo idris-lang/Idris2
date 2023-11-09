@@ -378,9 +378,13 @@ export
 FreelyEmbeddableIsVar = MkFreelyEmbeddable embedIsVar
 
 export
-Weaken (Var {a = Name}) where
-  weaken = later
-  weakenNs = weakenVar
+GenWeaken (Var {a = Name}) where
+  genWeakenNs = insertVarNames
+
+%hint
+export
+WeakenVar : Weaken (Var {a = Name})
+WeakenVar = GenWeakenWeakens
 
 export
 Strengthen (Var {a = Name}) where
@@ -398,9 +402,13 @@ IsScoped (Var {a = Name}) where
   shrink (MkVar p) = shrinkIsVar p
 
 export
-Weaken (NVar {a = Name} nm) where
-  weaken = later
-  weakenNs = weakenNVar
+GenWeaken (NVar {a = Name} nm) where
+  genWeakenNs = insertNVarNames
+
+%hint
+export
+WeakenNVar : Weaken (NVar {a = Name} nm)
+WeakenNVar = GenWeakenWeakens
 
 export
 Strengthen (NVar {a = Name} nm) where
@@ -454,7 +462,16 @@ initUsed {vars = (sx :< x)} = initUsed :< False
 
 export
 Weaken Used where
-  weaken xs = xs :< False
+  weaken = (:< False)
+  weakenNs s t = case sizedView s of
+    Z => t
+    S k => weaken (weakenNs k t)
+
+export
+GenWeaken Used where
+  genWeakenNs l s xs = case sizedView l of
+    Z => weakenNs s xs
+    S k => case xs of xs :< x => genWeakenNs k s xs :< x
 
 export
 tail : Used (vars :< x) -> Used vars

@@ -208,13 +208,14 @@ interface Weaken (0 tm : Scoped) where
   -- methods
   weaken : tm vars -> tm (vars :< nm)
   weakenNs : Weakenable tm
-
   -- default implementations
-  weakenNs p t = case sizedView p of
-    Z   => t
-    S p => weaken (weakenNs p t)
-
   weaken = weakenNs (suc zero)
+
+-- This cannot be merged with Weaken because of WkCExp
+public export
+interface GenWeaken (0 tm : Scoped) where
+  constructor MkGenWeaken
+  genWeakenNs : GenWeakenable tm
 
 export
 weakensN : Weaken tm =>
@@ -260,6 +261,14 @@ embedFishily t = rewrite fishAsSnocAppend vars ns in embed t
 export
 ListFreelyEmbeddable : FreelyEmbeddable tm => FreelyEmbeddable (List . tm)
 ListFreelyEmbeddable = MkFreelyEmbeddable believe_me
+
+export
+GenWeakenWeakens : GenWeaken tm => Weaken tm
+GenWeakenWeakens = MkWeaken (genWeakenNs zero (suc zero)) (genWeakenNs zero)
+
+export
+FunctorGenWeaken : Functor f => GenWeaken tm => GenWeaken (f . tm)
+FunctorGenWeaken = MkGenWeaken (\ l, s => map (genWeakenNs l s))
 
 export
 FunctorWeaken : Functor f => Weaken tm => Weaken (f . tm)

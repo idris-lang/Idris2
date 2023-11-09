@@ -218,8 +218,13 @@ mutual
       = DefaultCase (insertCaseNames outer ns ct)
 
 export
-Weaken CaseTree where
-  weakenNs ns t = insertCaseNames zero ns t
+GenWeaken CaseTree where
+  genWeakenNs = insertCaseNames
+
+%hint
+export
+WeakenCaseTree : Weaken CaseTree
+WeakenCaseTree = GenWeakenWeakens
 
 total
 getNames : (forall vs . NameMap Bool -> Term vs -> NameMap Bool) ->

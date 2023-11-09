@@ -264,8 +264,13 @@ mutual
   thinTerm (TType fc u) th = TType fc u
 
 export
-Weaken Term where
-  weakenNs p tm = assert_total $ insertNames zero p tm
+GenWeaken Term where
+  genWeakenNs = assert_total $ insertNames
+
+export
+%hint
+WeakenTerm : Weaken Term
+WeakenTerm = GenWeakenWeakens
 
 export
 FreelyEmbeddable Term where

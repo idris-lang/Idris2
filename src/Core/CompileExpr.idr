@@ -542,16 +542,31 @@ shrinkCExp : Thin newvars vars -> CExp vars -> CExp newvars
   shrinkConstAlt sub (MkConstAlt x sc) = MkConstAlt x (shrinkCExp sub sc)
 
 export
-Weaken CExp where
-  weakenNs ns tm = insertNames zero ns tm
+GenWeaken CExp where
+  genWeakenNs = insertNames
+
+%hint
+export
+WeakenCExp : Weaken CExp
+WeakenCExp = GenWeakenWeakens
 
 export
-Weaken CConAlt where
-  weakenNs ns tm = insertNamesConAlt zero ns tm
+GenWeaken CConAlt where
+  genWeakenNs = insertNamesConAlt
+
+%hint
+export
+WeakenCConAlt : Weaken CConAlt
+WeakenCConAlt = GenWeakenWeakens
 
 export
-Weaken CConstAlt where
-  weakenNs ns tm = insertNamesConstAlt zero ns tm
+GenWeaken CConstAlt where
+  genWeakenNs = insertNamesConstAlt
+
+%hint
+export
+WeakenCConstAlt : Weaken CConstAlt
+WeakenCConstAlt = GenWeakenWeakens
 
 -- CSubstitute some explicit terms for names in a term, and remove those
 -- names from the scope
