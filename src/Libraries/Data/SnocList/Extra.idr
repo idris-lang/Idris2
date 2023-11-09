@@ -29,3 +29,9 @@ snocAppendFishAssociative :
 snocAppendFishAssociative sx sy [] = Refl
 snocAppendFishAssociative sx sy (z :: zs)
   = snocAppendFishAssociative sx (sy :< z) zs
+
+export
+lookup : Eq a => a -> SnocList (a, b) -> Maybe b
+lookup k [<] = Nothing
+lookup k (xs :< (x, v))
+  = ifThenElse (k == x) (Just v) (lookup k xs)
