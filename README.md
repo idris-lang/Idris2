@@ -21,4 +21,8 @@ The [wiki](https://github.com/idris-lang/Idris2/wiki) lists a number of useful r
 
 ## Contributions wanted
 
-If you want to learn more about Idris, contributing to the compiler could be one way to do so. The [contribution guidelines](CONTRIBUTING.md) outline the process. Having read that, choose a [good first issue](https://github.com/idris-lang/Idris2/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22) or have a look at the [contributions wanted](https://github.com/idris-lang/Idris2/wiki/What-Contributions-are-Needed) for something more involved. See [the wiki page](https://github.com/idris-lang/Idris2/wiki/Getting-Started-with-Compiler-Development) for more details.
+If you want to learn more about Idris, contributing to the compiler could be one way to do so. The [contribution guidelines](CONTRIBUTING.md) outline the process. Having read that, choose a [good first issue][1] or have a look at the [contributions wanted][2] for something more involved. See [the wiki page][3] for more details.
+
+[1]: <https://github.com/idris-lang/Idris2/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22>
+[2]: <https://github.com/idris-lang/Idris2/wiki/What-Contributions-are-Needed>
+[3]: <https://github.com/idris-lang/Idris2/wiki/Getting-Started-with-Compiler-Development>
