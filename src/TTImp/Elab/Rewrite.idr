@@ -135,7 +135,7 @@ checkRewrite {vars} rigc elabinfo nest env ifc rule tm (Just expected)
            let pbind = Let vfc erased lemma.pred lemma.predTy
            let rbind = Let vfc erased (weaken rulev) (weaken rulet)
 
-           let env' = rbind :: pbind :: env
+           let env' = env :< pbind :< rbind
 
            -- Nothing we do in this last part will affect the EState,
            -- we're only doing the application this way to make sure the
@@ -143,9 +143,9 @@ checkRewrite {vars} rigc elabinfo nest env ifc rule tm (Just expected)
            -- we still need the right type for the EState, so weaken it once
            -- for each of the let bindings above.
            (rwtm, grwty) <-
-              inScope vfc (pbind :: env) $ \e' =>
+              inScope vfc (env :< pbind) $ \e' =>
                 inScope {e=e'} vfc env' $ \e'' =>
-                  let offset = mkSizeOf [rname, pname] in
+                  let offset = mkSizeOf [<pname, rname] in
                   check {e = e''} rigc elabinfo (weakenNs offset nest) env'
                     (apply (IVar vfc lemma.name)
                       [ IVar vfc pname

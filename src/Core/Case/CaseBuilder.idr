@@ -35,7 +35,7 @@ Eq Phase where
   RunTime == RunTime = True
   _ == _ = False
 
-data ArgType : List Name -> Type where
+data ArgType : Scope -> Type where
      Known : RigCount -> (ty : Term vars) -> ArgType vars -- arg has type 'ty'
      Stuck : (fty : Term vars) -> ArgType vars
          -- ^ arg will have argument type of 'fty' when we know enough to
@@ -59,7 +59,7 @@ covering
   show (Stuck t) = "Stuck " ++ show t
   show Unknown = "Unknown"
 
-record PatInfo (pvar : Name) (vars : List Name) where
+record PatInfo (pvar : Name) (vars : Scope) where
   constructor MkInfo
   {idx : Nat}
   {name : Name}
@@ -94,47 +94,47 @@ NamedPats always have the same 'Elem' proof, though this isn't expressed in
 a type anywhere.
 -}
 
-data NamedPats : List Name -> -- pattern variables still to process
-                 List Name -> -- the pattern variables still to process,
-                              -- in order
+data NamedPats : Scope -> -- pattern variables still to process
+                 Scope ->
                  Type where
-     Nil : NamedPats vars []
-     (::) : PatInfo pvar vars ->
+     Lin : NamedPats [<] vars
+     (:<) : NamedPats ns vars ->
+            PatInfo pvar vars ->
             -- ^ a pattern, where its variable appears in the vars list,
             -- and its type. The type has no variable names; any names it
             -- refers to are explicit
-            NamedPats vars ns -> NamedPats vars (pvar :: ns)
+            NamedPats (ns :< pvar) vars
 
-getPatInfo : NamedPats vars todo -> List Pat
-getPatInfo [] = []
-getPatInfo (x :: xs) = pat x :: getPatInfo xs
+getPatInfo : NamedPats todo vars -> List Pat
+getPatInfo [<] = []
+getPatInfo (xs :< x) = pat x :: getPatInfo xs
 
 updatePats : {vars, todo : _} ->
              {auto c : Ref Ctxt Defs} ->
              Env Term vars ->
-             NF vars -> NamedPats vars todo -> Core (NamedPats vars todo)
-updatePats env nf [] = pure []
-updatePats {todo = pvar :: ns} env (NBind fc _ (Pi _ c _ farg) fsc) (p :: ps)
+             NF vars -> NamedPats todo vars -> Core (NamedPats todo vars)
+updatePats env nf [<] = pure [<]
+updatePats {todo = ns :< pvar} env (NBind fc _ (Pi _ c _ farg) fsc) (ps :< p)
   = case argType p of
          Unknown =>
             do defs <- get Ctxt
                empty <- clearDefs defs
-               pure ({ argType := Known c !(quote empty env farg) } p
-                          :: !(updatePats env !(fsc defs (toClosure defaultOpts env (Ref fc Bound pvar))) ps))
-         _ => pure (p :: ps)
-updatePats env nf (p :: ps)
+               pure (!(updatePats env !(fsc defs (toClosure defaultOpts env (Ref fc Bound pvar))) ps)
+                    :< { argType := Known c !(quote empty env farg) } p)
+         _ => pure (ps :< p)
+updatePats env nf (ps :< p)
   = case argType p of
          Unknown =>
             do defs <- get Ctxt
                empty <- clearDefs defs
-               pure ({ argType := Stuck !(quote empty env nf) } p :: ps)
-         _ => pure (p :: ps)
+               pure (ps :< { argType := Stuck !(quote empty env nf) } p)
+         _ => pure (ps :< p)
 
 substInPatInfo : {pvar, vars, todo : _} ->
                  {auto c : Ref Ctxt Defs} ->
                  FC -> Name -> Term vars -> PatInfo pvar vars ->
-                 NamedPats vars todo ->
-                 Core (PatInfo pvar vars, NamedPats vars todo)
+                 NamedPats todo vars ->
+                 Core (PatInfo pvar vars, NamedPats todo vars)
 substInPatInfo {pvar} {vars} fc n tm p ps
     = case argType p of
            Known c ty =>
@@ -142,14 +142,14 @@ substInPatInfo {pvar} {vars} fc n tm p ps
                    tynf <- nf defs (mkEnv fc _) ty
                    case tynf of
                         NApp _ _ _ =>
-                           pure ({ argType := Known c (substName n tm ty) } p, ps)
+                           pure ({ argType := Known c (substRef n tm ty) } p, ps)
                         -- Got a concrete type, and that's all we need, so stop
                         _ => pure (p, ps)
            Stuck fty =>
              do defs <- get Ctxt
                 empty <- clearDefs defs
                 let env = mkEnv fc vars
-                case !(nf defs env (substName n tm fty)) of
+                case !(nf defs env (substRef n tm fty)) of
                      NBind pfc _ (Pi _ c _ farg) fsc =>
                        pure ({ argType := Known c !(quote empty env farg) } p,
                                  !(updatePats env
@@ -162,18 +162,19 @@ substInPatInfo {pvar} {vars} fc n tm p ps
 -- (this aims to resolve any 'Stuck' pattern types)
 substInPats : {vars, todo : _} ->
               {auto c : Ref Ctxt Defs} ->
-              FC -> Name -> Term vars -> NamedPats vars todo ->
-              Core (NamedPats vars todo)
-substInPats fc n tm [] = pure []
-substInPats fc n tm (p :: ps)
+              FC -> Name -> Term vars -> NamedPats todo vars ->
+              Core (NamedPats todo vars)
+substInPats fc n tm [<] = pure [<]
+substInPats fc n tm (ps :< p)
     = do (p', ps') <- substInPatInfo fc n tm p ps
-         pure (p' :: !(substInPats fc n tm ps'))
+         pure (!(substInPats fc n tm ps') :< p')
 
 getPat : {idx : Nat} ->
-         (0 el : IsVar nm idx ps) -> NamedPats ns ps -> PatInfo nm ns
-getPat First (x :: xs) = x
-getPat (Later p) (x :: xs) = getPat p xs
+         (0 el : IsVar nm idx ps) -> NamedPats ps vars -> PatInfo nm vars
+getPat First (_ :< x) = x
+getPat (Later p) (xs :< _) = getPat p xs
 
+{-
 dropPat : {idx : Nat} ->
           (0 el : IsVar nm idx ps) ->
           NamedPats ns ps -> NamedPats ns (dropVar ps el)
@@ -218,17 +219,19 @@ Weaken ArgType where
   weakenNs s Unknown = Unknown
 
 Weaken (PatInfo p) where
-  weaken (MkInfo p el fty) = MkInfo p (Later el) (weaken fty)
+  weakenNs s (MkInfo p el fty)
+    = let MkNVar el = weakenNs s (MkNVar el) in
+      MkInfo p el (weakenNs s fty)
 
 -- FIXME: perhaps 'vars' should be second argument so we can use Weaken interface
 weaken : {x, vars : _} ->
-         NamedPats vars todo -> NamedPats (x :: vars) todo
+         NamedPats vars todo -> NamedPats (vars :< x) todo
 weaken [] = []
 weaken (p :: ps) = weaken p :: weaken ps
 
 weakenNs : SizeOf ns ->
            NamedPats vars todo ->
-           NamedPats (ns ++ vars) todo
+           NamedPats (vars ++ ns) todo
 weakenNs ns [] = []
 weakenNs ns (p :: ps)
     = weakenNs ns p :: weakenNs ns ps
@@ -244,7 +247,7 @@ take : (as : List Name) -> NamedPats vars (as ++ bs) -> NamedPats vars as
 take [] ps = []
 take (x :: xs) (p :: ps) = p :: take xs ps
 
-data PatClause : (vars : List Name) -> (todo : List Name) -> Type where
+data PatClause : (vars : Scope) -> (todo : List Name) -> Type where
      MkPatClause : List Name -> -- names matched so far (from original lhs)
                    NamedPats vars todo ->
                    Int -> (rhs : Term vars) -> PatClause vars todo
@@ -636,7 +639,7 @@ groupCons fc fn pvars cs
     -- In 'As' replace the name on the RHS with a reference to the
     -- variable we're doing the case split on
     addGroup (PAs fc n p) pprf pats pid rhs acc
-         = addGroup p pprf pats pid (substName n (Local fc (Just True) _ pprf) rhs) acc
+         = addGroup p pprf pats pid (substRef n (Local fc (Just True) _ pprf) rhs) acc
     addGroup (PCon cfc n t a pargs) pprf pats pid rhs acc
          = if a == length pargs
               then addConG n t pargs pats pid rhs acc
@@ -1057,12 +1060,12 @@ mutual
       updateVar (MkPatClause pvars (MkInfo (PLoc pfc n) prf fty :: pats) pid rhs)
           = pure $ MkPatClause (n :: pvars)
                         !(substInPats fc a (Local pfc (Just False) _ prf) pats)
-                        pid (substName n (Local pfc (Just False) _ prf) rhs)
+                        pid (substRef n (Local pfc (Just False) _ prf) rhs)
       -- If it's an as pattern, replace the name with the relevant variable on
       -- the rhs then continue with the inner pattern
       updateVar (MkPatClause pvars (MkInfo (PAs pfc n pat) prf fty :: pats) pid rhs)
           = do pats' <- substInPats fc a (mkTerm _ pat) pats
-               let rhs' = substName n (Local pfc (Just True) _ prf) rhs
+               let rhs' = substRef n (Local pfc (Just True) _ prf) rhs
                updateVar (MkPatClause pvars (MkInfo pat prf fty :: pats') pid rhs')
       -- match anything, name won't appear in rhs but need to update
       -- LHS pattern types based on what we've learned
@@ -1154,7 +1157,7 @@ mkPatClause fc fn args ty pid (ps, rhs)
             (checkLengthMatch args ps)
   where
     mkNames : (vars : List Name) -> (ps : List Pat) ->
-              LengthMatch vars ps -> Maybe (NF []) ->
+              LengthMatch vars ps -> Maybe (NF [<]) ->
               Core (NamedPats vars vars)
     mkNames [] [] NilMatch fty = pure []
     mkNames (arg :: args) (p :: ps) (ConsMatch eq) fty
@@ -1345,7 +1348,7 @@ getPMDef fc phase fn ty []
          defs <- get Ctxt
          pure (!(getArgs 0 !(nf defs [] ty)) ** (Unmatched "No clauses", []))
   where
-    getArgs : Int -> NF [] -> Core (List Name)
+    getArgs : Int -> NF [<] -> Core (List Name)
     getArgs i (NBind fc x (Pi _ _ _ _) sc)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))

@@ -346,7 +346,7 @@ record GlobalDef where
   specArgs : List Nat -- arguments to specialise by
   inferrable : List Nat -- arguments which can be inferred from elsewhere in the type
   multiplicity : RigCount
-  localVars : List Name -- environment name is defined in
+  localVars : Scope -- environment name is defined in
   visibility : WithDefault Visibility Private
   totality : Totality
   isEscapeHatch : Bool

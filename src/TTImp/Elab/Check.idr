@@ -408,7 +408,7 @@ uniVar : {auto c : Ref Ctxt Defs} ->
          FC -> Core Name
 uniVar fc
     = do n <- genName "u"
-         idx <- addDef n (newDef fc n erased [] (Erased fc Placeholder) (specified Public) None)
+         idx <- addDef n (newDef fc n erased [<] (Erased fc Placeholder) (specified Public) None)
          pure (Resolved idx)
 
 export

@@ -45,7 +45,7 @@ doPLetRenames ns drops (Bind fc n b sc)
     = case lookup n ns of
            Just (c, n') =>
              Bind fc n' (setMultiplicity b (c `lub` (multiplicity b)))
-                     (doPLetRenames ns (n' :: drops) (renameTop n' sc))
+                     (doPLetRenames ns (n' :: drops) (compat sc))
            Nothing => Bind fc n b (doPLetRenames ns drops sc)
 doPLetRenames ns drops sc = sc
 
@@ -69,8 +69,8 @@ normaliseHoleTypes
   where
     updateType : Defs -> Int -> GlobalDef -> Core ()
     updateType defs i def
-        = do ty' <- catch (tryNormaliseSizeLimit defs 10 [] (type def))
-                          (\err => normaliseHoles defs [] (type def))
+        = do ty' <- catch (tryNormaliseSizeLimit defs 10 [<] (type def))
+                          (\err => normaliseHoles defs [<] (type def))
              ignore $ addDef (Resolved i) ({ type := ty' } def)
 
     normaliseH : Defs -> Int -> Core ()
@@ -100,7 +100,7 @@ elabTermSub : {inner, vars : _} ->
               {auto o : Ref ROpts REPLOpts} ->
               Int -> ElabMode -> List ElabOpt ->
               NestedNames vars -> Env Term vars ->
-              Env Term inner -> SubVars inner vars ->
+              Env Term inner -> Thin inner vars ->
               RawImp -> Maybe (Glued vars) ->
               Core (Term vars, Glued vars)
 elabTermSub {vars} defining mode opts nest env env' sub tm ty
@@ -222,7 +222,7 @@ elabTerm : {vars : _} ->
            RawImp -> Maybe (Glued vars) ->
            Core (Term vars, Glued vars)
 elabTerm defining mode opts nest env tm ty
-    = elabTermSub defining mode opts nest env env SubRefl tm ty
+    = elabTermSub defining mode opts nest env env Refl tm ty
 
 export
 checkTermSub : {inner, vars : _} ->
@@ -233,7 +233,7 @@ checkTermSub : {inner, vars : _} ->
                {auto o : Ref ROpts REPLOpts} ->
                Int -> ElabMode -> List ElabOpt ->
                NestedNames vars -> Env Term vars ->
-               Env Term inner -> SubVars inner vars ->
+               Env Term inner -> Thin inner vars ->
                RawImp -> Glued vars ->
                Core (Term vars)
 checkTermSub defining mode opts nest env env' sub tm ty
@@ -290,4 +290,4 @@ checkTerm : {vars : _} ->
             RawImp -> Glued vars ->
             Core (Term vars)
 checkTerm defining mode opts nest env tm ty
-    = checkTermSub defining mode opts nest env env SubRefl tm ty
+    = checkTermSub defining mode opts nest env env Refl tm ty

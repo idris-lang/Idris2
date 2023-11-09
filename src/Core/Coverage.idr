@@ -77,13 +77,13 @@ conflict defs env nfty n
               | Nothing => pure False
          case (definition gdef, type gdef) of
               (DCon t arity _, dty)
-                  => do Nothing <- conflictNF 0 nfty !(nf defs [] dty)
+                  => do Nothing <- conflictNF 0 nfty !(nf defs [<] dty)
                             | Just ms => pure $ conflictMatch ms
                         pure True
               _ => pure False
   where
     mutual
-      conflictArgs : Int -> List (Closure vars) -> List (Closure []) ->
+      conflictArgs : Int -> List (Closure vars) -> List (Closure [<]) ->
                      Core (Maybe (List (Name, Term vars)))
       conflictArgs _ [] [] = pure (Just [])
       conflictArgs i (c :: cs) (c' :: cs')
@@ -96,13 +96,13 @@ conflict defs env nfty n
                pure (Just (ms ++ ms'))
       conflictArgs _ _ _ = pure (Just [])
 
-      -- If the constructor type (the NF []) matches the variable type,
+      -- If the constructor type (the NF [<]) matches the variable type,
       -- then there may be a way to construct it, so return the matches in
       -- the indices.
       -- If any of those matches clash, the constructor is not valid
       -- e.g, Eq x x matches Eq Z (S Z), with x = Z and x = S Z
       -- conflictNF returns the list of matches, for checking
-      conflictNF : Int -> NF vars -> NF [] ->
+      conflictNF : Int -> NF vars -> NF [<] ->
                    Core (Maybe (List (Name, Term vars)))
       conflictNF i t (NBind fc x b sc)
           -- invent a fresh name, in case a user has bound the same name
@@ -110,7 +110,7 @@ conflict defs env nfty n
           -- put posslbe
           = let x' = MN (show x) i in
                 conflictNF (i + 1) t
-                       !(sc defs (toClosure defaultOpts [] (Ref fc Bound x')))
+                       !(sc defs (toClosure defaultOpts [<] (Ref fc Bound x')))
       conflictNF i nf (NApp _ (NRef Bound n) [])
           = do empty <- clearDefs defs
                pure (Just [(n, !(quote empty env nf))])
@@ -189,31 +189,34 @@ getMissingAlts fc defs nfty alts
     noneOf alts c = not $ any (altMatch c) alts
 
 -- Mapping of variable to constructor tag already matched for it
-KnownVars : List Name -> Type -> Type
+KnownVars : Scope -> Type -> Type
 KnownVars vars a = List (Var vars, a)
-
-getName : {idx : Nat} -> {vars : List Name} -> (0 p : IsVar n idx vars) -> Name
-getName {vars = v :: _} First = v
-getName (Later p) = getName p
 
 showK : {ns : _} ->
         Show a => KnownVars ns a -> String
 showK {a} xs = show (map aString xs)
   where
-    aString : {vars : _} ->
+    aString : {vars : Scope} ->
               (Var vars, a) -> (Name, a)
-    aString (MkVar v, t) = (getName v, t)
+    aString (MkVar v, t) = (nameAt v, t)
 
-weakenNs : SizeOf args -> KnownVars vars a -> KnownVars (args ++ vars) a
+
+
+weakenNs : SizeOf args -> KnownVars vars a -> KnownVars (vars ++ args) a
 weakenNs args [] = []
 weakenNs args ((v, t) :: xs)
   = (weakenNs args v, t) :: weakenNs args xs
+
+weakensN : SizeOf args -> KnownVars vars a -> KnownVars (vars <>< args) a
+weakensN args [] = []
+weakensN args ((v, t) :: xs)
+  = (weakensN args v, t) :: weakensN args xs
 
 findTag : {idx, vars : _} ->
           (0 p : IsVar n idx vars) -> KnownVars vars a -> Maybe a
 findTag v [] = Nothing
 findTag v ((v', t) :: xs)
-    = if sameVar (MkVar v) v'
+    = if MkVar v == v'
          then Just t
          else findTag v xs
 
@@ -222,7 +225,7 @@ addNot : {idx, vars : _} ->
          KnownVars vars (List Int)
 addNot v t [] = [(MkVar v, [t])]
 addNot v t ((v', ts) :: xs)
-    = if sameVar (MkVar v) v'
+    = if MkVar v == v'
          then ((v', t :: ts) :: xs)
          else ((v', ts) :: addNot v t xs)
 
@@ -293,20 +296,20 @@ buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
     buildArgAlt not' (ConCase n t args sc)
         = do let l = mkSizeOf args
              let con = Ref fc (DataCon t (size l)) n
-             let ps' = map (substName var
+             let ps' = map (substRef var
                              (apply fc
                                     con (map (Ref fc Bound) args))) ps
-             buildArgs fc defs (weakenNs l ((MkVar el, t) :: known))
-                               (weakenNs l not') ps' sc
+             buildArgs fc defs (weakensN l ((MkVar el, t) :: known))
+                               (weakensN l not') ps' sc
     buildArgAlt not' (DelayCase t a sc)
         = let l = mkSizeOf [t, a]
-              ps' = map (substName var (TDelay fc LUnknown
+              ps' = map (substRef var (TDelay fc LUnknown
                                              (Ref fc Bound t)
                                              (Ref fc Bound a))) ps in
-              buildArgs fc defs (weakenNs l known) (weakenNs l not')
+              buildArgs fc defs (weakensN l known) (weakensN l not')
                                 ps' sc
     buildArgAlt not' (ConstCase c sc)
-        = do let ps' = map (substName var (PrimVal fc c)) ps
+        = do let ps' = map (substRef var (PrimVal fc c)) ps
              buildArgs fc defs known not' ps' sc
     buildArgAlt not' (DefaultCase sc)
         = buildArgs fc defs known not' ps sc
@@ -338,7 +341,7 @@ getMissing : {vars : _} ->
              Core (List ClosedTerm)
 getMissing fc n ctree
    = do defs <- get Ctxt
-        let psIn = map (Ref fc Bound) vars
+        let psIn = map (Ref fc Bound) (vars <>> [])
         patss <- buildArgs fc defs [] [] psIn ctree
         let pats = concat patss
         unless (null pats) $
@@ -439,17 +442,17 @@ clauseMatches env tm trylhs
     = let lhs = !(eraseApps (close (getLoc tm) env tm)) in
           pure $ match !(toResolvedNames lhs) !(toResolvedNames trylhs)
   where
-    mkSubstEnv : {vars : _} ->
-                 FC -> Int -> Env Term vars -> SubstEnv vars []
-    mkSubstEnv fc i [] = Nil
-    mkSubstEnv fc i (v :: vs)
-       = Ref fc Bound (MN "cov" i) :: mkSubstEnv fc (i + 1) vs
+    mkSubst : {vars : _} ->
+                 FC -> Int -> Env Term vars -> Subst vars [<]
+    mkSubst fc i [<] = [<]
+    mkSubst fc i (vs :< v)
+       = mkSubst fc (i + 1) vs :< Ref fc Bound (MN "cov" i)
 
     close : {vars : _} ->
             FC -> Env Term vars -> Term vars -> ClosedTerm
     close {vars} fc env tm
-        = substs (mkSubstEnv fc 0 env)
-              (rewrite appendNilRightNeutral vars in tm)
+        = substs (mkSubst fc 0 env)
+              (rewrite appendLinLeftNeutral vars in tm)
 
 export
 checkMatched : {auto c : Ref Ctxt Defs} ->
@@ -467,7 +470,7 @@ checkMatched cs ulhs
   where
     tryClauses : List Clause -> ClosedTerm -> Core (Maybe ClosedTerm)
     tryClauses [] ulhs
-        = do logTermNF "coverage" 10 "Nothing matches" [] ulhs
+        = do logTermNF "coverage" 10 "Nothing matches" [<] ulhs
              pure $ Just ulhs
     tryClauses (MkClause env lhs _ :: cs) ulhs
         = if !(clauseMatches env lhs ulhs)

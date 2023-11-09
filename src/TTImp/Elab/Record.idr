@@ -70,16 +70,16 @@ findFields : {auto c : Ref Ctxt Defs} ->
              Core (Maybe (List (String, Maybe Name, Maybe Name)))
 findFields defs con
     = case !(lookupTyExact con (gamma defs)) of
-           Just t => pure (Just !(getExpNames !(nf defs [] t)))
+           Just t => pure (Just !(getExpNames !(nf defs [<] t)))
            _ => pure Nothing
   where
-    getExpNames : NF [] -> Core (List (String, Maybe Name, Maybe Name))
+    getExpNames : NF [<] -> Core (List (String, Maybe Name, Maybe Name))
     getExpNames (NBind fc x (Pi _ _ p ty) sc)
-        = do rest <- getExpNames !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder)))
+        = do rest <- getExpNames !(sc defs (toClosure defaultOpts [<] (Erased fc Placeholder)))
              let imp = case p of
                             Explicit => Nothing
                             _ => Just x
-             pure $ (nameRoot x, imp, getRecordType [] !(evalClosure defs ty)) :: rest
+             pure $ (nameRoot x, imp, getRecordType [<] !(evalClosure defs ty)) :: rest
     getExpNames _ = pure []
 
 genFieldName : {auto u : Ref UST UState} ->

@@ -172,7 +172,7 @@ addUsing uimpls tm
 export
 bindTypeNames : {auto c : Ref Ctxt Defs} ->
                 FC -> List (Maybe Name, RawImp) ->
-                List Name -> RawImp-> Core RawImp
+                Scope -> RawImp-> Core RawImp
 bindTypeNames fc uimpls env tm
     = if !isUnboundImplicits
              then do ns <- findUniqueBindableNames fc True env [] tm
@@ -182,7 +182,7 @@ bindTypeNames fc uimpls env tm
 
 export
 bindTypeNamesUsed : {auto c : Ref Ctxt Defs} ->
-                    FC -> List String -> List Name -> RawImp -> Core RawImp
+                    FC -> List String -> Scope -> RawImp -> Core RawImp
 bindTypeNamesUsed fc used env tm
     = if !isUnboundImplicits
          then do ns <- findUniqueBindableNames fc True env used tm
@@ -191,7 +191,7 @@ bindTypeNamesUsed fc used env tm
 
 export
 piBindNames : {auto c : Ref Ctxt Defs} ->
-              FC -> List Name -> RawImp -> Core RawImp
+              FC -> Scope -> RawImp -> Core RawImp
 piBindNames loc env tm
     = do ns <- findUniqueBindableNames loc True env [] tm
          pure $ piBind (map fst ns) tm

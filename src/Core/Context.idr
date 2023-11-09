@@ -323,7 +323,7 @@ commitCtxt ctxt
 ||| @vis  Visibility, defaulting to private
 ||| @def  actual definition
 export
-newDef : (fc : FC) -> (n : Name) -> (rig : RigCount) -> (vars : List Name) ->
+newDef : (fc : FC) -> (n : Name) -> (rig : RigCount) -> (vars : Scope) ->
          (ty : ClosedTerm) -> (vis : WithDefault Visibility Private) -> (def : Def) -> GlobalDef
 newDef fc n rig vars ty vis def
     = MkGlobalDef
@@ -1338,7 +1338,7 @@ addBuiltin n ty tot op
          , specArgs = []
          , inferrable = []
          , multiplicity = top
-         , localVars = []
+         , localVars = [<]
          , visibility = specified Public
          , totality = tot
          , isEscapeHatch = False

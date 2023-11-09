@@ -192,10 +192,10 @@ findBindableNamesQuot env used (IRunElab fc _ x) = []
 export
 findUniqueBindableNames :
   {auto c : Ref Ctxt Defs} ->
-  FC -> (arg : Bool) -> (env : List Name) -> (used : List String) ->
+  FC -> (arg : Bool) -> (env : Scope) -> (used : List String) ->
   RawImp -> Core (List (String, String))
 findUniqueBindableNames fc arg env used t
-  = do let assoc = nub (findBindableNames arg env used t)
+  = do let assoc = nub (findBindableNames arg (env <>> []) used t)
        when (showShadowingWarning !getSession) $
          do defs <- get Ctxt
             let ctxt = gamma defs
