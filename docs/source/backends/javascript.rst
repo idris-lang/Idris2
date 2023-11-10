@@ -8,6 +8,7 @@ output an HTML file will also generate a basic HTML document with the
 generated code inside a ``<script>`` tag; the other distinction is on the ffi
 that will be explained below.
 
+**Note**: The JavaScript codegen uses the new BigInt, hence Node.js 10.4 or higher is required.
 
 Javascript FFI Specifiers
 =========================
