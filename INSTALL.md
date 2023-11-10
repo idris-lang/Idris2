@@ -1,33 +1,33 @@
 # Installation
 
-- [Install with a package manager](#install-with-a-package-manager)
-  - [Install with Pack](#install-with-pack)
-  - [Install with Homebrew](#install-with-homebrew)
-  - [Install with Nix](#install-with-nix)
-  - [Install with Nix Flakes](#install-with-nix-flakes)
-- [Install from source](#install-from-source)
-- [Install Chez Scheme on Apple Silicon](#install-chez-scheme-on-apple-silicon)
+- [Installing with a package manager](#install-with-a-package-manager)
+  - [Installing with Pack](#install-with-pack)
+  - [Installing with Homebrew](#install-with-homebrew)
+  - [Installing with Nix](#install-with-nix)
+  - [Installing with Nix Flakes](#install-with-nix-flakes)
+- [Installing from source](#install-from-source)
+- [Installing Chez Scheme on Apple Silicon](#install-chez-scheme-on-apple-silicon)
 
-## Install with a package manager
+## Installing with a package manager
 
 You can install Idris 2 with any one of a number of package managers.
 
-### Install with [Pack](https://github.com/stefan-hoeck/idris2-pack)
+### Installing with [Pack](https://github.com/stefan-hoeck/idris2-pack)
 Pack comes with an installation of Idris 2, so you just need to install Pack. See [the installation instructions](https://github.com/stefan-hoeck/idris2-pack/blob/main/INSTALL.md) on GitHub.
-### Install with [Homebrew](https://brew.sh/)
+### Installing with [Homebrew](https://brew.sh/)
 ```sh
 brew install idris2
 ```
-### Install with [Nix](https://nixos.org/features.html)
+### Installing with [Nix](https://nixos.org/features.html)
 ```sh
 nix-env -i idris2
 ```
-### Install with [Nix Flakes](https://nixos.wiki/wiki/Flakes)
+### Installing with [Nix Flakes](https://nixos.wiki/wiki/Flakes)
 ```sh
 nix profile install github:idris-lang/Idris2
 ```
 
-## Install from source
+## Installing from source
 
 The easiest way to install from source is via the existing generated Scheme
 code. The requirements are:
@@ -186,7 +186,7 @@ Idris 2 in emacs by running the following command:
 nix run github:idris-lang/Idris2#emacs-with-idris idrisCode.idr
 ```
 
-## Install Chez Scheme on Apple Silicon
+## Installing Chez Scheme on Apple Silicon
 
 The official version of chez scheme does not yet support Apple Silicon. So, on
 macOS with Apple Silicon (e.g. M1 and M2 macs), you will need to build and install
