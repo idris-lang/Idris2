@@ -92,6 +92,7 @@ modules =
     Core.TT,
     Core.TT.Binder,
     Core.TT.Directive,
+    Core.TT.Level,
     Core.TT.Primitive,
     Core.TT.Subst,
     Core.TT.Term,

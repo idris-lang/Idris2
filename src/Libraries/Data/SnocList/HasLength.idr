@@ -42,6 +42,13 @@ mkHasLength : (sx : SnocList a) -> HasLength (length sx) sx
 mkHasLength [<] = Z
 mkHasLength (sx :< _) = S (mkHasLength sx)
 
+export
+hlChips : HasLength m sx -> LHasLength n ys -> LHasLength (m + n) (sx <>> ys)
+hlChips Z y = y
+hlChips {m = S m} {n} (S x) y
+  = rewrite plusSuccRightSucc m n in
+    hlChips x (S y)
+
 {-
 export
 take : (n : Nat) -> (sx : Stream a) -> HasLength n (take n sx)

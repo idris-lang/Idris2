@@ -1,5 +1,6 @@
 module Libraries.Data.SnocList.Extra
 
+import Data.Nat
 import Data.SnocList
 
 export
@@ -35,3 +36,17 @@ lookup : Eq a => a -> SnocList (a, b) -> Maybe b
 lookup k [<] = Nothing
 lookup k (xs :< (x, v))
   = ifThenElse (k == x) (Just v) (lookup k xs)
+
+export
+lengthFish : (sx : SnocList a) -> (xs : List a) ->
+  length (sx <>< xs) === length sx + length xs
+lengthFish sx [] = sym $ plusZeroRightNeutral (length sx)
+lengthFish sx (x :: xs)
+  = transitive
+      (lengthFish (sx :< x) xs)
+      (plusSuccRightSucc (length sx) (length xs))
+
+export
+lengthCast : (xs : List a) ->
+  SnocList.length {a} (cast xs) === List.length xs
+lengthCast = lengthFish [<]

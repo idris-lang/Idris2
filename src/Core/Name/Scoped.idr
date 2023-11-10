@@ -218,6 +218,19 @@ interface GenWeaken (0 tm : Scoped) where
   genWeakenNs : GenWeakenable tm
 
 export
+genWeaken : GenWeaken tm =>
+  SizeOf local -> tm (outer ++ local) -> tm (outer :< n ++ local)
+genWeaken l = genWeakenNs l (suc zero)
+
+export
+genWeakenFishily : GenWeaken tm =>
+  SizeOf local -> tm (outer <>< local) -> tm (outer :< n <>< local)
+genWeakenFishily l
+  = rewrite fishAsSnocAppend outer local in
+    rewrite fishAsSnocAppend (outer :< n) local in
+    genWeakenNs (zero <>< l) (suc zero)
+
+export
 weakensN : Weaken tm =>
   {0 vars : Scope} -> {0 ns : List Name} ->
   SizeOf ns -> tm vars -> tm (vars <>< ns)

@@ -9,6 +9,7 @@ import Core.Env
 import Core.Normalise
 import Core.Options
 import Core.TT
+import Core.TT.Level
 import Core.Value
 
 import Idris.Pretty.Annotations
@@ -18,7 +19,9 @@ import Data.String
 import Data.Vect
 import Libraries.Data.SnocList.Extra
 import Libraries.Data.List.LengthMatch
+import Libraries.Data.List.HasLength
 import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
 import Libraries.Data.SortedSet
 
 import Decidable.Equality
@@ -173,18 +176,16 @@ substInPats fc n tm (p :: ps)
          ps' <- substInPats fc n tm ps'
          pure (p' :: ps')
 
-{-
-getPat : {idx : Nat} ->
-         (0 el : IsVar nm idx ps) -> NamedPats ps vars -> PatInfo nm vars
-getPat First (_ :< x) = x
-getPat (Later p) (xs :< _) = getPat p xs
+extractPat : (lvl : NLevel nm ps) ->
+  NamedPats ps vars ->
+  (PatInfo nm vars, NamedPats (dropNLevel lvl) vars)
+extractPat (MkNLevel p) = go p where
 
-dropPat : {idx : Nat} ->
-          (0 el : IsVar nm idx ps) ->
-          NamedPats ps vars -> NamedPats (dropVar ps el) vars
-dropPat First (xs :< x) = xs
-dropPat (Later p) (xs :< x) = dropPat p xs :< x
--}
+  go : {0 ps : _} -> {idx : Nat} -> (0 lvl : IsLevel nm idx ps) ->
+    NamedPats ps vars ->
+    (PatInfo nm vars, NamedPats (dropIsLevel ps lvl) vars)
+  go First (p :: ps) = (p, ps)
+  go (Later k) (p :: ps) = mapSnd (p ::) $ go k ps
 
 HasNames (NamedPats todo vars) where
   full gam [] = pure []
@@ -214,19 +215,37 @@ covering
           = parens (pretty0 t <++> equals <++> pretty (pat p))
           :: prettyAll ps
 
-Weaken ArgType where
-  weakenNs s (Known c ty) = Known c (weakenNs s ty)
-  weakenNs s (Stuck fty) = Stuck (weakenNs s fty)
-  weakenNs s Unknown = Unknown
+GenWeaken ArgType where
+  genWeakenNs l s (Known c ty) = Known c (genWeakenNs l s ty)
+  genWeakenNs l s (Stuck fty) = Stuck (genWeakenNs l s fty)
+  genWeakenNs l s Unknown = Unknown
 
-Weaken (PatInfo p) where
-  weakenNs s (MkInfo p el fty)
-    = let MkNVar el = weakenNs s (MkNVar el) in
-      MkInfo p el (weakenNs s fty)
+%hint
+WeakenArgType : Weaken ArgType
+WeakenArgType = GenWeakenWeakens
 
-Weaken (NamedPats todo) where
-  weakenNs s [] = []
-  weakenNs s (p :: ps) = weakenNs s p :: weakenNs s ps
+FreelyEmbeddable ArgType where
+
+GenWeaken (PatInfo p) where
+  genWeakenNs l s (MkInfo p el fty)
+    = let MkNVar el = genWeakenNs l s (MkNVar el) in
+      MkInfo p el (genWeakenNs l s fty)
+
+%hint
+WeakenPatInfo : Weaken (PatInfo p)
+WeakenPatInfo = GenWeakenWeakens
+
+FreelyEmbeddable (PatInfo p) where
+
+GenWeaken (NamedPats todo) where
+  genWeakenNs l s [] = []
+  genWeakenNs l s (p :: ps) = genWeakenNs l s p :: genWeakenNs l s ps
+
+%hint
+WeakenNamedPats : Weaken (NamedPats todo)
+WeakenNamedPats = GenWeakenWeakens
+
+FreelyEmbeddable (NamedPats todo) where
 
 (++) : NamedPats ms vars -> NamedPats ns vars -> NamedPats (ms ++ ns) vars
 [] ++ ys = ys
@@ -390,7 +409,7 @@ data Group : Local -> -- pattern variables still to process
                 List (PatClause (newargs ++ todo) (vars <>< newargs)) ->
                 Group todo vars
      DelayGroup : {tyarg, valarg : _} ->
-                  List (PatClause (valarg :: tyarg :: todo)
+                  List (PatClause (tyarg :: valarg :: todo)
                                   (vars :< tyarg :< valarg)) ->
                   Group todo vars
      ConstGroup : Constant -> List (PatClause todo vars) ->
@@ -442,13 +461,23 @@ nextName root
 
 record NextNames (vars : Scope) where
   constructor MkNextNames
-  {0 support : Local}
+  {support : Local}
   supportSize : SizeOf support
   namedPats : NamedPats support (vars <>< support)
 
-pushNextName : (ns : NextNames vars) -> PatInfo nm (vars :< nm <>< support ns) -> NextNames vars
+initNextNames : NextNames vars
+initNextNames = MkNextNames zero []
+
+pushNextName : {nm : Name} ->
+  (ns : NextNames vars) ->
+  PatInfo nm (vars :< nm <>< support ns) ->
+  NextNames vars
 pushNextName (MkNextNames {support} s n) p
-  = MkNextNames {support = nm :: support} (suc s) (p :: ?a)
+  = MkNextNames {support = nm :: support}
+    (suc s)
+    (p :: genWeakenFishily s n)
+    -- TODO: find a formulation of nextNames (see below)
+    -- that does not require a weakening at every step?
 
 nextNames : {vars : _} ->
             {auto i : Ref PName Int} ->
@@ -479,19 +508,18 @@ nextNames {vars} fc root (p :: pats) fty acc
           nextNames {vars} fc root pats (fst fa_tys)
             $ pushNextName acc (MkInfo p argPos argTy)
 
-{-
 -- replace the prefix of patterns with 'pargs'
 newPats : (pargs : List Pat) -> LengthMatch pargs ns ->
-          NamedPats (todo ++ ns) vars ->
+          NamedPats (ns ++ todo) vars ->
           NamedPats ns vars
-newPats [<] LinMatch rest = [<]
-newPats (xs :< newpat) (SnocMatch w) (rest :< pi)
-  = newPats xs w rest :< { pat := newpat} pi
+newPats [] NilMatch rest = []
+newPats (p :: ps) (ConsMatch w) (pi :: rest)
+  = { pat := p } pi :: newPats ps w rest
 
 NameUpdate : Type
-NameUpdate = SnocList (Name, Name)
+NameUpdate = List (Name, Name)
 
-updateNames : SnocList (Name, Pat) -> NameUpdate
+updateNames : List (Name, Pat) -> NameUpdate
 updateNames = mapMaybe update
   where
     update : (Name, Pat) -> Maybe (Name, Name)
@@ -499,9 +527,9 @@ updateNames = mapMaybe update
     update _ = Nothing
 
 updatePatNames : NameUpdate -> NamedPats todo vars -> NamedPats todo vars
-updatePatNames _ [<] = [<]
-updatePatNames ns (ps :< p)
-    = updatePatNames ns ps :< { pat $= update } p
+updatePatNames _ [] = []
+updatePatNames ns (p :: ps)
+    = { pat $= update } p :: updatePatNames ns ps
   where
     update : Pat -> Pat
     update (PAs fc n p)
@@ -523,7 +551,7 @@ groupCons : {a, vars, todo : _} ->
             {auto ct : Ref Ctxt Defs} ->
             FC -> Name ->
             Local ->
-            List (PatClause (todo :< a) vars) ->
+            List (PatClause (a :: todo) vars) ->
             Core (List (Group todo vars))
 groupCons fc fn pvars cs
      = gc [] cs
@@ -547,15 +575,15 @@ groupCons fc fn pvars cs
                               Just t <- lookupTyExact n (gamma defs)
                                    | Nothing => pure (NErased fc Placeholder)
                               nf defs (mkEnv fc vars') (embed t)
-             (patnames ** (l, newargs)) <- nextNames {vars=vars'} fc "e" pargs (Just cty)
+             (MkNextNames {support = patnames} l newargs) <- nextNames {vars=vars'} fc "e" pargs (Just cty) initNextNames
              -- Update non-linear names in remaining patterns (to keep
              -- explicit dependencies in types accurate)
              let pats' = updatePatNames (updateNames (zip patnames pargs))
-                                        (weakenNs ?agG pats)
-             let clause = MkPatClause {todo = todo' ++ patnames}
+                                        (weakensN l pats)
+             let clause = MkPatClause {todo = patnames ++ todo'}
                               pvars
-                              (pats' ++ newargs)
-                              pid (weakenNs l rhs)
+                              (newargs ++ pats')
+                              pid (weakensN l rhs)
              pure [ConGroup n tag [clause]]
     addConG {vars'} {todo'} n tag pargs pats pid rhs (g :: gs) with (checkGroupMatch (CName n tag) pargs g)
       addConG {vars'} {todo'} n tag pargs pats pid rhs
@@ -564,12 +592,12 @@ groupCons fc fn pvars cs
         = do let newps = newPats pargs lprf ps
              let l = mkSizeOf newargs
              let pats' = updatePatNames (updateNames (zip newargs pargs))
-                                        (weakenNs l pats)
-             let newclause : PatClause (todo' ++ newargs) (vars' ++ newargs)
+                                        (weakensN l pats)
+             let newclause : PatClause (newargs ++ todo') (vars' <>< newargs)
                    = MkPatClause pvars
-                                 (pats' ++ newps)
+                                 (newps ++ pats')
                                  pid
-                                 (weakenNs l rhs)
+                                 (weakensN l rhs)
              -- put the new clause at the end of the group, since we
              -- match the clauses top to bottom.
              pure ((ConGroup n tag (MkPatClause pvars ps tid tm :: rest ++ [newclause]))
@@ -593,29 +621,29 @@ groupCons fc fn pvars cs
                             do a' <- evalClosure d a
                                pure (NBind fc (MN "x" 0) (Pi fc top Explicit a)
                                        (\dv, av => pure (NDelayed fc LUnknown a'))))
-             ([<tyname, argname] ** (l, newargs)) <- nextNames {vars=vars'} fc "e" [<pty, parg]
-                                                  (Just dty)
+             (MkNextNames {support = [tyname, argname]} l newargs) <-
+                 nextNames {vars=vars'} fc "e" [pty, parg] (Just dty) initNextNames
                 | _ => throw (InternalError "Error compiling Delay pattern match")
-             let pats' = updatePatNames (updateNames [<(tyname, pty),
+             let pats' = updatePatNames (updateNames [(tyname, pty),
                                                       (argname, parg)])
-                                        (weakenNs l pats)
-             let clause = MkPatClause {todo = todo' :< tyname :< argname}
-                             pvars (pats' ++ newargs)
-                                   pid (weakenNs l rhs)
+                                        (weakensN l pats)
+             let clause = MkPatClause {todo = tyname :: argname :: todo'}
+                             pvars (newargs ++ pats')
+                                   pid (weakensN l rhs)
              pure [DelayGroup [clause]]
-    addDelayG {vars'} {todo'} pty parg pats pid rhs (g :: gs) with (checkGroupMatch CDelay [<] g)
+    addDelayG {vars'} {todo'} pty parg pats pid rhs (g :: gs) with (checkGroupMatch CDelay [] g)
       addDelayG {vars'} {todo'} pty parg pats pid rhs
           ((DelayGroup {tyarg} {valarg} ((MkPatClause pvars ps tid tm) :: rest)) :: gs)
                  | (DelayMatch {tyarg} {valarg})
-         = do let l = mkSizeOf [<tyarg, valarg]
-              let newps = newPats [<pty, parg] (SnocMatch (SnocMatch LinMatch)) ps
-              let pats' = updatePatNames (updateNames [<(tyarg, pty),
+         = do let l = mkSizeOf [tyarg, valarg]
+              let newps = newPats [pty, parg] (ConsMatch (ConsMatch NilMatch)) ps
+              let pats' = updatePatNames (updateNames [(tyarg, pty),
                                                        (valarg, parg)])
-                                         (weakenNs l pats)
-              let newclause : PatClause (todo' :< tyarg :< valarg)
+                                         (weakensN l pats)
+              let newclause : PatClause (tyarg :: valarg :: todo')
                                         (vars' :< tyarg :< valarg)
-                    = MkPatClause pvars (pats' ++ newps) pid
-                                        (weakenNs l rhs)
+                    = MkPatClause pvars (newps ++ pats') pid
+                                        (weakensN l rhs)
               pure ((DelayGroup (MkPatClause pvars ps tid tm :: rest ++ [newclause]))
                          :: gs)
       addDelayG pty parg pats pid rhs (g :: gs) | NoMatch
@@ -629,7 +657,7 @@ groupCons fc fn pvars cs
                 Core (List (Group todo' vars'))
     addConstG c pats pid rhs []
         = pure [ConstGroup c [MkPatClause pvars pats pid rhs]]
-    addConstG {todo'} {vars'} c pats pid rhs (g :: gs) with (checkGroupMatch (CConst c) [<] g)
+    addConstG {todo'} {vars'} c pats pid rhs (g :: gs) with (checkGroupMatch (CConst c) [] g)
       addConstG {todo'} {vars'} c pats pid rhs
               ((ConstGroup c ((MkPatClause pvars ps tid tm) :: rest)) :: gs) | ConstMatch
           = let newclause : PatClause todo' vars'
@@ -669,64 +697,56 @@ groupCons fc fn pvars cs
 --         -- FIXME: Is this possible to rule out with a type? Probably.
 
     gc : {a, vars, todo : _} ->
-         List (Group vars todo) ->
-         List (PatClause vars (a :: todo)) ->
-         Core (List (Group vars todo))
+         List (Group todo vars) ->
+         List (PatClause (a :: todo) vars) ->
+         Core (List (Group todo vars))
     gc acc [] = pure acc
     gc {a} acc ((MkPatClause pvars (MkInfo pat pprf fty :: pats) pid rhs) :: cs)
         = do acc' <- addGroup pat pprf pats pid rhs acc
              gc acc' cs
 
-{-
-
-getFirstArgType : NamedPats ns (p :: ps) -> ArgType ns
-getFirstArgType (p :: _) = argType p
-
 ||| Store scores alongside rows of named patterns. These scores are used to determine
 ||| which column of patterns to switch on first. One score per column.
-data ScoredPats : List Name -> List Name -> Type where
- Scored : List (NamedPats ns (p :: ps)) -> Vect (length (p :: ps)) Int -> ScoredPats ns (p :: ps)
+data ScoredPats : List Name -> Scoped where
+ Scored :
+   List (NamedPats (p :: ps) vars) ->
+   Vect (length (p :: ps)) Int ->
+   ScoredPats (p :: ps) vars
 
-{ps : _} -> Show (ScoredPats ns ps) where
-  show (Scored xs ys) = (show ps) ++ "//" ++ (show ys)
+{ps : _} -> Show (ScoredPats ps vars) where
+  show (Scored xs ys) = "\{show ps}//\{show ys}"
 
-zeroedScore : {ps : _} -> List (NamedPats ns (p :: ps)) -> ScoredPats ns (p :: ps)
+zeroedScore : {ps : _} -> List (NamedPats (p :: ps) vars) -> ScoredPats (p :: ps) vars
 zeroedScore nps = Scored nps (replicate (S $ length ps) 0)
-
-||| Proof that a value `v` inserted in the middle of a list with
-||| prefix `ps` and suffix `qs` can equivalently be snoced with
-||| `ps` or consed with `qs` before appending `qs` to `ps`.
-elemInsertedMiddle : (v : a) -> (ps,qs : List a) -> (ps ++ (v :: qs)) = ((ps `snoc` v) ++ qs)
-elemInsertedMiddle v [] qs = Refl
-elemInsertedMiddle v (x :: xs) qs = rewrite elemInsertedMiddle v xs qs in Refl
 
 ||| Helper to find a single highest scoring name (or none at all) while
 ||| retaining the context of all names processed.
-highScore : {prev : List Name} ->
-            (names : List Name) ->
+highScore : SizeOf prev ->
+            (names : Local) ->
             (scores : Vect (length names) Int) ->
             (highVal : Int) ->
-            (highIdx : (n ** NVar n (prev ++ names))) ->
+            (highIdx : (nm ** NLevel nm (prev <>> names))) ->
             (duped : Bool) ->
-            Maybe (n ** NVar n (prev ++ names))
-highScore [] [] high idx True = Nothing
-highScore [] [] high idx False = Just idx
-highScore (x :: xs) (y :: ys) high idx duped =
-  let next = highScore {prev = prev `snoc` x} xs ys
-      prf = elemInsertedMiddle x prev xs
-  in  rewrite prf in
-        case compare y high of
-             LT => next high (rewrite sym $ prf in idx) duped
-             EQ => next high (rewrite sym $ prf in idx) True
-             GT => next y (x ** rewrite sym $ prf in weakenNVar (mkSizeOf prev) (MkNVar First)) False
+            Maybe (nm ** NLevel nm (prev <>> names))
+highScore s [] [] high idx True = Nothing
+highScore s [] [] high idx False = Just idx
+highScore s (x :: xs) (y :: ys) high idx duped =
+  let next = highScore (suc s) xs ys in
+  case compare y high of
+    LT => next high idx duped
+    EQ => next high idx True
+    GT => next y (_ ** chippyNLevel s) False
 
 ||| Get the index of the highest scoring column if there is one.
 ||| If no column has a higher score than all other columns then
 ||| the result is Nothing indicating we need to apply more scoring
 ||| to break the tie.
 ||| Suggested heuristic application order: f, b, a.
-highScoreIdx : {p : _} -> {ps : _} -> ScoredPats ns (p :: ps) -> Maybe (n ** NVar n (p :: ps))
-highScoreIdx (Scored xs (y :: ys)) = highScore {prev = []} (p :: ps) (y :: ys) (y - 1) (p ** MkNVar First) False
+highScoreIdx : {ps : _} ->
+  ScoredPats ps vars ->
+  Maybe (nm ** NLevel nm ps)
+highScoreIdx (Scored xs ys@(y :: _))
+  = highScore zero ps ys (y - 1) (_ ** MkNLevel First) False
 
 ||| Apply the penalty function to the head constructor's
 ||| arity. Produces 0 for all non-head-constructors.
@@ -742,7 +762,8 @@ headConsPenalty _ (PUnmatchable _ _) = 0
 
 ||| Apply the given function that scores a pattern to all patterns and then
 ||| sum up the column scores and add to the ScoredPats passed in.
-consScoreHeuristic : {ps : _} -> (scorePat : Pat -> Int) -> ScoredPats ns ps -> ScoredPats ns ps
+consScoreHeuristic : {ps : _} -> (scorePat : Pat -> Int) ->
+  ScoredPats ps vars -> ScoredPats ps vars
 consScoreHeuristic _ sps@(Scored [] _) = sps -- can't update scores without any patterns
 consScoreHeuristic scorePat (Scored xs ys) =
   let columnScores = sum <$> scoreColumns xs
@@ -751,13 +772,16 @@ consScoreHeuristic scorePat (Scored xs ys) =
   where
     -- also returns NamePats of remaining columns while its in there
     -- scoring the first column.
-    scoreFirstColumn : (nps : List (NamedPats ns (p' :: ps'))) -> (res : List (NamedPats ns ps') ** (LengthMatch nps res, Vect (length nps) Int))
+    scoreFirstColumn :
+      (nps : List (NamedPats (p' :: ps') vars)) ->
+      (res : List (NamedPats ps' vars) ** (LengthMatch nps res, Vect (length nps) Int))
     scoreFirstColumn [] = ([] ** (NilMatch, []))
     scoreFirstColumn ((w :: ws) :: nps) =
       let (ws' ** (prf, scores)) = scoreFirstColumn nps
       in  (ws :: ws' ** (ConsMatch prf, scorePat (pat w) :: scores))
 
-    scoreColumns : {ps' : _} -> (nps : List (NamedPats ns ps')) -> Vect (length ps') (Vect (length nps) Int)
+    scoreColumns : {ps' : _} -> (nps : List (NamedPats ps' vars)) ->
+      Vect (length ps') (Vect (length nps) Int)
     scoreColumns {ps' = []} nps = []
     scoreColumns {ps' = (w :: ws)} nps =
       let (rest ** (prf, firstColScore)) = scoreFirstColumn nps
@@ -765,7 +789,7 @@ consScoreHeuristic scorePat (Scored xs ys) =
 
 ||| Add 1 to each non-default pat in the first row.
 ||| This favors constructive matching first and reduces tree depth on average.
-heuristicF : {ps : _} -> ScoredPats ns (p :: ps) -> ScoredPats ns (p :: ps)
+heuristicF : {ps : _} -> ScoredPats (p :: ps) vars -> ScoredPats (p :: ps) vars
 heuristicF sps@(Scored [] _) = sps
 heuristicF (Scored (x :: xs) ys) =
   let columnScores = scores x
@@ -776,25 +800,24 @@ heuristicF (Scored (x :: xs) ys) =
     isBlank (PLoc _ _) = True
     isBlank _ = False
 
-    scores : NamedPats ns' ps' -> Vect (length ps') Int
+    scores : NamedPats ps' vars' -> Vect (length ps') Int
     scores [] = []
     scores (y :: ys) = let score : Int = if isBlank (pat y) then 0 else 1
                        in  score :: scores ys
 
 ||| Subtract 1 from each column for each pat that represents a head constructor.
 ||| This favors pats that produce less branching.
-heuristicB : {ps : _} -> ScoredPats ns ps -> ScoredPats ns ps
+heuristicB : {ps : _} -> ScoredPats ps vars -> ScoredPats ps vars
 heuristicB = consScoreHeuristic (headConsPenalty (\arity => if arity == 0 then 0 else -1))
 
 ||| Subtract the sum of the arities of constructors in each column.
-heuristicA : {ps : _} -> ScoredPats ns ps -> ScoredPats ns ps
+heuristicA : {ps : _} -> ScoredPats ps vars -> ScoredPats ps vars
 heuristicA = consScoreHeuristic (headConsPenalty (negate . cast))
 
-applyHeuristics : {p : _} ->
-                  {ps : _} ->
-                  ScoredPats ns (p :: ps) ->
-                  List (ScoredPats ns (p :: ps) -> ScoredPats ns (p :: ps)) ->
-                  Maybe (n ** NVar n (p :: ps))
+applyHeuristics : {ps : _} ->
+                  ScoredPats ps vars ->
+                  List (ScoredPats ps vars -> ScoredPats ps vars) ->
+                  Maybe (nm ** NLevel nm ps)
 applyHeuristics x [] = highScoreIdx x
 applyHeuristics x (f :: fs) = highScoreIdx x <|> applyHeuristics (f x) fs
 
@@ -803,40 +826,39 @@ applyHeuristics x (f :: fs) = highScoreIdx x <|> applyHeuristics (f x) fs
 |||
 ||| The scoring is inspired by results from the paper:
 ||| http://moscova.inria.fr/~maranget/papers/ml05e-maranget.pdf
-nextIdxByScore : {p : _} ->
-                 {ps : _} ->
+nextIdxByScore : {p, ps : _} ->
                  (useHeuristics : Bool) ->
                  Phase ->
-                 List (NamedPats ns (p :: ps)) ->
-                 (n ** NVar n (p :: ps))
-nextIdxByScore False _ _            = (_ ** (MkNVar First))
-nextIdxByScore _ (CompileTime _) _  = (_ ** (MkNVar First))
+                 List (NamedPats (p :: ps) vars) ->
+                 (nm ** NLevel nm (p :: ps))
+nextIdxByScore False _ _            = (_ ** MkNLevel First)
+nextIdxByScore _ (CompileTime _) _  = (_ ** MkNLevel First)
 nextIdxByScore True RunTime xs      =
-  fromMaybe (_ ** (MkNVar First)) $
+  fromMaybe (_ ** MkNLevel First) $
     applyHeuristics (zeroedScore xs) [heuristicF, heuristicB, heuristicA]
 
 -- Check whether all the initial patterns have the same concrete, known
 -- and matchable type, which is multiplicity > 0.
 -- If so, it's okay to match on it
-sameType : {ns : _} ->
+sameType : {vars : _} ->
            {auto i : Ref PName Int} ->
            {auto c : Ref Ctxt Defs} ->
            FC -> Phase -> Name ->
-           Env Term ns -> List (NamedPats ns (p :: ps)) ->
+           Env Term vars -> List (NamedPats (p :: ps) vars) ->
            Core ()
 sameType fc phase fn env [] = pure ()
-sameType {ns} fc phase fn env (p :: xs)
+sameType fc phase fn env (p :: xs)
     = do defs <- get Ctxt
-         case getFirstArgType p of
+         case argType (head p) of
               Known _ t => sameTypeAs phase
                                       !(nf defs env t)
-                                      (map getFirstArgType xs)
+                                      (map (argType . head) xs)
               ty => throw (CaseCompile fc fn DifferingTypes)
   where
-    firstPat : NamedPats ns (np :: nps) -> Pat
+    firstPat : NamedPats (np :: nps) vars -> Pat
     firstPat (pinf :: _) = pat pinf
 
-    headEq : NF ns -> NF ns -> Phase -> Bool
+    headEq : NF vars -> NF vars -> Phase -> Bool
     headEq (NBind _ _ (Pi _ _ _ _) _) (NBind _ _ (Pi _ _ _ _) _) _ = True
     headEq (NTCon _ n _ _ _) (NTCon _ n' _ _ _) _ = n == n'
     headEq (NPrimVal _ c) (NPrimVal _ c') _ = c == c'
@@ -846,7 +868,7 @@ sameType {ns} fc phase fn env (p :: xs)
     headEq _ (NErased _ _) RunTime = True
     headEq _ _ _ = False
 
-    sameTypeAs : Phase -> NF ns -> List (ArgType ns) -> Core ()
+    sameTypeAs : Phase -> NF vars -> List (ArgType vars) -> Core ()
     sameTypeAs _ ty [] = pure ()
     sameTypeAs ph ty (Known r t :: xs) =
          do defs <- get Ctxt
@@ -857,11 +879,11 @@ sameType {ns} fc phase fn env (p :: xs)
 
 -- Check whether all the initial patterns are the same, or are all a variable.
 -- If so, we'll match it to refine later types and move on
-samePat : List (NamedPats ns (p :: ps)) -> Bool
+samePat : List (NamedPats (p :: ps) vars) -> Bool
 samePat [] = True
 samePat (pi :: xs)
-    = samePatAs (dropAs (getFirstPat pi))
-                        (map (dropAs . getFirstPat) xs)
+    = samePatAs (dropAs (pat $ head pi))
+                        (map (dropAs . pat . head) xs)
   where
     dropAs : Pat -> Pat
     dropAs (PAs _ _ p) = p
@@ -882,12 +904,10 @@ samePat (pi :: xs)
     samePatAs (PLoc fc n) (PLoc _ _ :: ps) = samePatAs (PLoc fc n) ps
     samePatAs x y = False
 
-getFirstCon : NamedPats ns (p :: ps) -> Pat
-getFirstCon (p :: _) = pat p
 
 -- Count the number of distinct constructors in the initial pattern
-countDiff : List (NamedPats ns (p :: ps)) -> Nat
-countDiff xs = length (distinct [] (map getFirstCon xs))
+countDiff : List (NamedPats (p :: ps) vars) -> Nat
+countDiff xs = length (distinct [] (map (pat . head) xs))
   where
     isVar : Pat -> Bool
     isVar (PAs _ _ p) = isVar p
@@ -916,14 +936,14 @@ countDiff xs = length (distinct [] (map getFirstCon xs))
             then distinct acc ps
             else distinct (p :: acc) ps
 
-getScore : {ns : _} ->
+getScore : {vars : _} ->
            {auto i : Ref PName Int} ->
            {auto c : Ref Ctxt Defs} ->
            FC -> Phase -> Name ->
-           List (NamedPats ns (p :: ps)) ->
+           List (NamedPats (p :: ps) vars) ->
            Core (Either CaseError ())
 getScore fc phase name npss
-    = do catch (do sameType fc phase name (mkEnv fc ns) npss
+    = do catch (do sameType fc phase name (mkEnv fc vars) npss
                    pure (Right ()))
                $ \case
                  CaseCompile _ _ err => pure $ Left err
@@ -934,32 +954,33 @@ getScore fc phase name npss
 pickNextViable : {p, ns, ps : _} ->
            {auto i : Ref PName Int} ->
            {auto c : Ref Ctxt Defs} ->
-           FC -> Phase -> Name -> List (NamedPats ns (p :: ps)) ->
-           Core (n ** NVar n (p :: ps))
+           FC -> Phase -> Name -> List (NamedPats (p :: ps) ns) ->
+           Core (nm ** NLevel nm (p :: ps))
 -- last possible variable
 pickNextViable {ps = []} fc phase fn npss
     = if samePat npss
-         then pure (_ ** MkNVar First)
+         then pure (_ ** MkNLevel First)
          else do Right () <- getScore fc phase fn npss
                        | Left err => throw (CaseCompile fc fn err)
-                 pure (_ ** MkNVar First)
+                 pure (_ ** MkNLevel First)
 pickNextViable {ps = q :: qs} fc phase fn npss
     = if samePat npss
-         then pure (_ ** MkNVar First)
-         else  case !(getScore fc phase fn npss) of
-                    Right () => pure (_ ** MkNVar First)
-                    _ => do (_ ** MkNVar var) <- pickNextViable fc phase fn (map tail npss)
-                            pure (_ ** MkNVar (Later var))
+         then pure (_ ** MkNLevel First)
+         else case !(getScore fc phase fn npss) of
+                Right () => pure (_ ** MkNLevel First)
+                _ => do (nm ** nlvl) <- pickNextViable fc phase fn (map tail npss)
+                        pure (nm ** later nlvl)
 
-moveFirst : {idx : Nat} -> (0 el : IsVar nm idx ps) -> NamedPats ns ps ->
-            NamedPats ns (nm :: dropVar ps el)
-moveFirst el nps = getPat el nps :: dropPat el nps
+moveFirst : (lvl : NLevel nm ps) -> NamedPats ps vars ->
+            NamedPats (nm :: dropNLevel lvl) vars
+moveFirst lvl nps = let (p, ps) = extractPat lvl nps in p :: ps
 
-shuffleVars : {idx : Nat} -> (0 el : IsVar nm idx todo) -> PatClause vars todo ->
-              PatClause vars (nm :: dropVar todo el)
-shuffleVars First orig@(MkPatClause pvars lhs pid rhs) = orig -- no-op
-shuffleVars el (MkPatClause pvars lhs pid rhs)
-    = MkPatClause pvars (moveFirst el lhs) pid rhs
+shuffleVars :
+  (lvl : NLevel nm todo) ->
+  PatClause todo vars ->
+  PatClause (nm :: dropNLevel lvl) vars
+shuffleVars lvl (MkPatClause pvars lhs pid rhs)
+  = MkPatClause pvars (moveFirst lvl lhs) pid rhs
 
 mutual
   {- 'PatClause' contains a list of patterns still to process (that's the
@@ -972,17 +993,17 @@ mutual
           {auto i : Ref PName Int} ->
           {auto c : Ref Ctxt Defs} ->
           FC -> Name -> Phase ->
-          List (PatClause vars todo) -> (err : Maybe (CaseTree vars)) ->
+          List (PatClause todo vars) -> (err : Maybe (CaseTree vars)) ->
           Core (CaseTree vars)
   -- Before 'partition', reorder the arguments so that the one we
   -- inspect next has a concrete type that is the same in all cases, and
   -- has the most distinct constructors (via pickNextViable)
-  match {todo = (_ :: _)} fc fn phase clauses err
+  match {todo = _ :: _} fc fn phase clauses err
       = do let nps = getNPs <$> clauses
-           let (_ ** (MkNVar next)) = nextIdxByScore (caseTreeHeuristics !getSession) phase nps
+           let (_ ** next) = nextIdxByScore (caseTreeHeuristics !getSession) phase nps
            let prioritizedClauses = shuffleVars next <$> clauses
-           (n ** MkNVar next') <- pickNextViable fc phase fn (getNPs <$> prioritizedClauses)
-           log "compile.casetree.pick" 25 $ "Picked " ++ show n ++ " as the next split"
+           (n ** next') <- pickNextViable fc phase fn (getNPs <$> prioritizedClauses)
+           log "compile.casetree.pick" 25 $ "Picked " ++ show (nameAt next') ++ " as the next split"
            let clauses' = shuffleVars next' <$> prioritizedClauses
            log "compile.casetree.clauses" 25 $
              unlines ("Using clauses:" :: map (("  " ++) . show) clauses')
@@ -1009,22 +1030,22 @@ mutual
                {auto c : Ref Ctxt Defs} ->
                FC -> Name -> Phase ->
                {idx : Nat} -> (0 p : IsVar pvar idx vars) -> Term vars ->
-               List (Group vars todo) -> Maybe (CaseTree vars) ->
+               List (Group todo vars) -> Maybe (CaseTree vars) ->
                Core (CaseTree vars)
   caseGroups {vars} fc fn phase el ty gs errorCase
       = do g <- altGroups gs
            pure (Case _ el (resolveNames vars ty) g)
     where
-      altGroups : List (Group vars todo) -> Core (List (CaseAlt vars))
+      altGroups : List (Group todo vars) -> Core (List (CaseAlt vars))
       altGroups [] = maybe (pure [])
                            (\e => pure [DefaultCase e])
                            errorCase
       altGroups (ConGroup {newargs} cn tag rest :: cs)
-          = do crest <- match fc fn phase rest (map (weakenNs (mkSizeOf newargs)) errorCase)
+          = do crest <- match fc fn phase rest (map (weakensN (mkSizeOf newargs)) errorCase)
                cs' <- altGroups cs
                pure (ConCase cn tag newargs crest :: cs')
       altGroups (DelayGroup {tyarg} {valarg} rest :: cs)
-          = do crest <- match fc fn phase rest (map (weakenNs (mkSizeOf [tyarg, valarg])) errorCase)
+          = do crest <- match fc fn phase rest (map (weakensN (mkSizeOf [tyarg, valarg])) errorCase)
                cs' <- altGroups cs
                pure (DelayCase tyarg valarg crest :: cs')
       altGroups (ConstGroup c rest :: cs)
@@ -1036,7 +1057,7 @@ mutual
             {auto i : Ref PName Int} ->
             {auto c : Ref Ctxt Defs} ->
             FC -> Name -> Phase ->
-            List (PatClause vars (a :: todo)) ->
+            List (PatClause (a :: todo) vars) ->
             Maybe (CaseTree vars) ->
             Core (CaseTree vars)
   conRule fc fn phase [] err = maybe (pure (Unmatched "No constructor clauses")) pure err
@@ -1056,14 +1077,14 @@ mutual
             {auto i : Ref PName Int} ->
             {auto c : Ref Ctxt Defs} ->
             FC -> Name -> Phase ->
-            List (PatClause vars (a :: todo)) ->
+            List (PatClause (a :: todo) vars) ->
             Maybe (CaseTree vars) ->
             Core (CaseTree vars)
   varRule {vars} {a} fc fn phase cs err
       = do alts' <- traverse updateVar cs
            match fc fn phase alts' err
     where
-      updateVar : PatClause vars (a :: todo) -> Core (PatClause vars todo)
+      updateVar : PatClause (a :: todo) vars -> Core (PatClause todo vars)
       -- replace the name with the relevant variable on the rhs
       updateVar (MkPatClause pvars (MkInfo (PLoc pfc n) prf fty :: pats) pid rhs)
           = pure $ MkPatClause (n :: pvars)
@@ -1084,7 +1105,7 @@ mutual
   mixture : {a, vars, todo : _} ->
             {auto i : Ref PName Int} ->
             {auto c : Ref Ctxt Defs} ->
-            {ps : List (PatClause vars (a :: todo))} ->
+            {ps : List (PatClause (a :: todo) vars)} ->
             FC -> Name -> Phase ->
             Partitions ps ->
             Maybe (CaseTree vars) ->
@@ -1105,7 +1126,7 @@ mkPat args orig (Ref fc (DataCon t a) n) = pure $ PCon fc n t a args
 mkPat args orig (Ref fc (TyCon t a) n) = pure $ PTyCon fc n a args
 mkPat args orig (Ref fc Func n)
   = do prims <- getPrimitiveNames
-       mtm <- normalisePrims (const True) isPConst True prims n args orig []
+       mtm <- normalisePrims (const True) isPConst True prims n args orig [<]
        case mtm of
          Just tm => if tm /= orig -- check we made progress; if there's an
                                   -- unresolved interface, we might be stuck
@@ -1144,56 +1165,55 @@ export
 argToPat : {auto c : Ref Ctxt Defs} -> ClosedTerm -> Core Pat
 argToPat tm = mkPat [] tm tm
 
-
 mkPatClause : {auto c : Ref Ctxt Defs} ->
               FC -> Name ->
               (args : List Name) -> ClosedTerm ->
               Int -> (List Pat, ClosedTerm) ->
-              Core (PatClause args args)
+              Core (PatClause args ([<] <>< args))
 mkPatClause fc fn args ty pid (ps, rhs)
     = maybe (throw (CaseCompile fc fn DifferingArgNumbers))
             (\eq =>
                do defs <- get Ctxt
-                  nty <- nf defs [] ty
+                  nty <- nf defs [<] ty
                   ns <- mkNames args ps eq (Just nty)
                   log "compile.casetree" 20 $
                     "Make pat clause for names " ++ show ns
                      ++ " in LHS " ++ show ps
-                  pure (MkPatClause [] ns pid
-                          (rewrite sym (appendNilRightNeutral args) in
-                                   (weakenNs (mkSizeOf args) rhs))))
+                  pure (MkPatClause [] ns pid (weakensN (mkSizeOf args) rhs)))
             (checkLengthMatch args ps)
   where
     mkNames : (vars : List Name) -> (ps : List Pat) ->
               LengthMatch vars ps -> Maybe (NF [<]) ->
-              Core (NamedPats vars vars)
+              Core (NamedPats vars (cast vars))
     mkNames [] [] NilMatch fty = pure []
     mkNames (arg :: args) (p :: ps) (ConsMatch eq) fty
         = do defs <- get Ctxt
              empty <- clearDefs defs
-             fa_tys <- the (Core (Maybe _, ArgType _)) $
+             fa_tys <- the (Core (Maybe (NF _), ArgType _)) $
                 case fty of
                      Nothing => pure (Nothing, CaseBuilder.Unknown)
                      Just (NBind pfc _ (Pi _ c _ farg) fsc) =>
-                        pure (Just !(fsc defs (toClosure defaultOpts [] (Ref pfc Bound arg))),
-                                Known c (embed {more = arg :: args}
-                                          !(quote empty [] farg)))
+                        do dom <- quote empty [<] farg
+                           cod <- fsc defs (toClosure defaultOpts [<] (Ref pfc Bound arg))
+                           pure (Just cod, Known c (embed dom))
                      Just t =>
-                        pure (Nothing,
-                                Stuck (embed {more = arg :: args}
-                                        !(quote empty [] t)))
-             pure (MkInfo p First (Builtin.snd fa_tys)
-                      :: weaken !(mkNames args ps eq (Builtin.fst fa_tys)))
+                        do ty <- quote empty [<] t
+                           pure (Nothing, Stuck (embed ty))
+             nms <- mkNames args ps eq (Builtin.fst fa_tys)
+             pure $ MkInfo p (fishyIsVar (mkHasLength args)) (Builtin.snd fa_tys)
+                  :: replace {p = NamedPats args}
+                       (sym $ snocAppendFishAssociative [<arg] [<] args)
+                       (embed nms)
 
 export
 patCompile : {auto c : Ref Ctxt Defs} ->
              FC -> Name -> Phase ->
              ClosedTerm -> List (List Pat, ClosedTerm) ->
-             Maybe (CaseTree []) ->
+             Maybe (CaseTree [<]) ->
              Core (args ** CaseTree args)
 patCompile fc fn phase ty [] def
-    = maybe (pure ([] ** Unmatched "No definition"))
-            (\e => pure ([] ** e))
+    = maybe (pure ([<] ** Unmatched "No definition"))
+            (\e => pure ([<] ** e))
             def
 patCompile fc fn phase ty (p :: ps) def
     = do let (ns ** n) = getNames 0 (fst p)
@@ -1206,14 +1226,12 @@ patCompile fc fn phase ty (p :: ps) def
          -- higher verbosity: dump the raw data structure
          log "compile.casetree" 10 $ show pats
          i <- newRef PName (the Int 0)
-         cases <- match fc fn phase pats
-                        (rewrite sym (appendNilRightNeutral ns) in
-                                 map (TT.weakenNs n) def)
+         cases <- match fc fn phase pats (map (weakensN n) def)
          pure (_ ** cases)
   where
     mkPatClausesFrom : Int -> (args : List Name) ->
                        List (List Pat, ClosedTerm) ->
-                       Core (List (PatClause args args))
+                       Core (List (PatClause args (cast args)))
     mkPatClausesFrom i ns [] = pure []
     mkPatClausesFrom i ns (p :: ps)
         = do p' <- mkPatClause fc fn ns ty i p
@@ -1245,7 +1263,7 @@ toPatClause fc n (lhs, rhs)
 -- the names of the top level variables we created are returned in 'args'
 export
 simpleCase : {auto c : Ref Ctxt Defs} ->
-             FC -> Phase -> Name -> ClosedTerm -> (def : Maybe (CaseTree [])) ->
+             FC -> Phase -> Name -> ClosedTerm -> (def : Maybe (CaseTree [<])) ->
              (clauses : List (ClosedTerm, ClosedTerm)) ->
              Core (args ** CaseTree args)
 simpleCase fc phase fn ty def clauses
@@ -1354,12 +1372,12 @@ getPMDef : {auto c : Ref Ctxt Defs} ->
 getPMDef fc phase fn ty []
     = do log "compile.casetree.getpmdef" 20 "getPMDef: No clauses!"
          defs <- get Ctxt
-         pure (!(getArgs 0 !(nf defs [] ty)) ** (Unmatched "No clauses", []))
+         pure (cast !(getArgs 0 !(nf defs [<] ty)) ** (Unmatched "No clauses", []))
   where
     getArgs : Int -> NF [<] -> Core (List Name)
     getArgs i (NBind fc x (Pi _ _ _ _) sc)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
+             sc' <- sc defs (toClosure defaultOpts [<] (Erased fc Placeholder))
              pure (MN "arg" i :: !(getArgs i sc'))
     getArgs i _ = pure []
 getPMDef fc phase fn ty clauses
@@ -1386,16 +1404,16 @@ getPMDef fc phase fn ty clauses
     labelPat i [] = []
     labelPat i (x :: xs) = ("pat" ++ show i ++ ":", x) :: labelPat (i + 1) xs
 
-    mkSubstEnv : Int -> String -> Env Term vars -> SubstEnv vars []
-    mkSubstEnv i pname [] = Nil
-    mkSubstEnv i pname (v :: vs)
-       = Ref fc Bound (MN pname i) :: mkSubstEnv (i + 1) pname vs
+    mkSubstEnv : Int -> String -> Env Term vars -> Subst vars [<]
+    mkSubstEnv i pname [<] = [<]
+    mkSubstEnv i pname (vs :< v)
+       = mkSubstEnv (i + 1) pname vs :< Ref fc Bound (MN pname i)
 
     close : {vars : _} ->
             Env Term vars -> String -> Term vars -> ClosedTerm
     close {vars} env pname tm
         = substs (mkSubstEnv 0 pname env)
-              (rewrite appendNilRightNeutral vars in tm)
+        $ rewrite appendLinLeftNeutral vars in tm
 
     toClosed : Defs -> (String, Clause) -> (ClosedTerm, ClosedTerm)
     toClosed defs (pname, MkClause env lhs rhs)
