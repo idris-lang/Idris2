@@ -17,26 +17,26 @@ import Libraries.Data.String.Extra
 %hide Vect.catMaybes
 %hide Vect.(++)
 
-%hide HasLength.cast
+-- %hide HasLength.cast
 
-%hide SizeOf.map
+-- %hide SizeOf.map
 
 %hide Core.Name.prettyOp
 
-%hide Core.TT.Bound
-%hide Core.TT.App
+-- %hide Core.TT.Bound
+-- %hide Core.TT.App
 
-%hide CompileExpr.(::)
-%hide CompileExpr.Nil
+-- %hide CompileExpr.(::)
+-- %hide CompileExpr.Nil
 %hide String.(::)
 %hide String.Nil
 %hide Doc.Nil
-%hide SubstEnv.(::)
-%hide SubstEnv.Nil
-%hide SubstCEnv.(::)
-%hide SubstCEnv.Nil
-%hide CList.(::)
-%hide CList.Nil
+-- %hide SubstEnv.(::)
+-- %hide SubstEnv.Nil
+-- %hide CSubst.(::)
+-- %hide CSubst.Nil
+-- %hide CList.(::)
+-- %hide CList.Nil
 %hide Stream.(::)
 %hide Symbols.equals
 %hide Fin.fromInteger
@@ -127,9 +127,9 @@ prettyCExp : {args : _} -> CExp args -> Doc IdrisSyntax
 prettyCExp = prettyNamedCExp . forget
 
 prettyCDef : CDef -> Doc IdrisDocAnn
-prettyCDef (MkFun [] exp) = reAnnotate Syntax $ prettyCExp exp
+prettyCDef (MkFun [<] exp) = reAnnotate Syntax $ prettyCExp exp
 prettyCDef (MkFun args exp) = reAnnotate Syntax $
-  keyword "\\" <++> concatWith (\ x, y => x <+> keyword "," <++> y) (map prettyName args)
+  keyword "\\" <++> concatWith (\ x, y => x <+> keyword "," <++> y) (map prettyName (cast args))
        <++> fatArrow <++> prettyCExp exp
 prettyCDef (MkCon mtag arity nt)
   = vcat $ header (maybe "Data" (const "Type") mtag <++> "Constructor") :: map (indent 2)

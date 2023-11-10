@@ -66,12 +66,6 @@ toRig0 : {idx : Nat} -> (0 p : IsVar nm idx vs) -> Env Term vs -> Env Term vs
 toRig0 First (env :< b) = env :< setMultiplicity b erased
 toRig0 (Later p) (env :< b) = toRig0 p env :< b
 
--- When we abstract over the evironment, pi needs to be explicit
-explicitPi : Env Term vs -> Env Term vs
-explicitPi (env :< Pi fc c _ ty) = explicitPi env :< Pi fc c Explicit ty
-explicitPi (env :< b) = explicitPi env :< b
-explicitPi [<] = [<]
-
 allow : Maybe (Var vs) -> Env Term vs -> Env Term vs
 allow Nothing env = env
 allow (Just (MkVar p)) env = toRig1 p env
@@ -211,7 +205,7 @@ caseBlock {vars} rigc elabinfo fc nest env opts scr scrtm scrty caseRig alts exp
          (caseretty, _) <- bindImplicits fc (implicitMode elabinfo) defs env
                                          fullImps caseretty_in (TType fc u)
          let casefnty
-               = abstractFullEnvType fc (allow splitOn (explicitPi env))
+               = abstractFullEnvType fc (allow splitOn (mkExplicit env))
                             (maybe (Bind fc scrn (Pi fc caseRig Explicit scrty)
                                        (weaken caseretty))
                                    (const caseretty) splitOn)

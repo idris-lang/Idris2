@@ -10,18 +10,18 @@ import Core.TT
 mutual
   quoteArgs : {auto c : Ref Ctxt Defs} ->
               {bound, free : _} ->
-              Ref Sym Integer -> Bounds bound ->
+              Ref Sym Integer -> Boundz bound ->
               Env Term free -> List (Core (SNF free)) ->
-              Core (List (Term (bound ++ free)))
+              Core (List (Term (free ++ bound)))
   quoteArgs q bound env args
       = traverse (\arg => do arg' <- arg
                              quoteGen q bound env arg') args
 
   quotePi : {auto c : Ref Ctxt Defs} ->
             {bound, free : _} ->
-            Ref Sym Integer -> Bounds bound ->
+            Ref Sym Integer -> Boundz bound ->
             Env Term free -> PiInfo (SNF free) ->
-            Core (PiInfo (Term (bound ++ free)))
+            Core (PiInfo (Term (free ++ bound)))
   quotePi q bound env Explicit = pure Explicit
   quotePi q bound env Implicit = pure Implicit
   quotePi q bound env AutoImplicit = pure AutoImplicit
@@ -31,9 +31,9 @@ mutual
 
   quoteBinder : {auto c : Ref Ctxt Defs} ->
                 {bound, free : _} ->
-                Ref Sym Integer -> Bounds bound ->
+                Ref Sym Integer -> Boundz bound ->
                 Env Term free -> Binder (SNF free) ->
-                Core (Binder (Term (bound ++ free)))
+                Core (Binder (Term (free ++ bound)))
   quoteBinder q bound env (Lam fc r p ty)
      = do ty' <- quoteGen q bound env ty
           p' <- quotePi q bound env p
@@ -61,25 +61,17 @@ mutual
   quoteHead : {auto c : Ref Ctxt Defs} ->
               {bound, free : _} ->
               Ref Sym Integer ->
-              FC -> Bounds bound -> Env Term free -> SHead free ->
-              Core (Term (bound ++ free))
+              FC -> Boundz bound -> Env Term free -> SHead free ->
+              Core (Term (free ++ bound))
   quoteHead {bound} q fc bounds env (SLocal idx prf)
-      = let MkVar prf' = addLater bound prf in
+      = let MkVar prf' = weakenNs (mkSizeOf bound) (MkVar prf) in
             pure (Local fc Nothing _ prf')
-    where
-      addLater : {idx : _} ->
-                 (ys : List Name) -> (0 p : IsVar n idx xs) ->
-                 Var (ys ++ xs)
-      addLater [] isv = MkVar isv
-      addLater (x :: xs) isv
-          = let MkVar isv' = addLater xs isv in
-                MkVar (Later isv')
   quoteHead q fc bounds env (SRef nt n)
       = pure $ case findName bounds of
-             Just (MkVar p) => Local fc Nothing _ (varExtend p)
+             Just (MkVar p) => Local fc Nothing _ (embed p)
              Nothing => Ref fc nt n
     where
-      findName : Bounds bound' -> Maybe (Var bound')
+      findName : Boundz bound' -> Maybe (Var bound')
       findName None = Nothing
       findName (Add x n' ns)
           = if n == n'
@@ -91,9 +83,9 @@ mutual
            pure $ Meta fc n i args'
 
   quoteGen : {auto c : Ref Ctxt Defs} ->
-             {bound, vars : _} ->
-             Ref Sym Integer -> Bounds bound ->
-             Env Term vars -> SNF vars -> Core (Term (bound ++ vars))
+             {bound, free : _} ->
+             Ref Sym Integer -> Boundz bound ->
+             Env Term free -> SNF free -> Core (Term (free ++ bound))
   quoteGen q bound env (SBind fc n b sc)
       = do i <- nextName
            let var = UN (Basic ("b-" ++ show (fromInteger i)))

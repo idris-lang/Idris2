@@ -661,12 +661,12 @@ findImplicits tm = []
 export
 implicitsAs : {auto c : Ref Ctxt Defs} ->
               Int -> Defs ->
-              (vars : List Name) ->
+              (vars : Scope) ->
               RawImp -> Core RawImp
 implicitsAs n defs ns tm
   = do let implicits = findIBinds tm
        log "declare.def.lhs.implicits" 30 $ "Found implicits: " ++ show implicits
-       setAs (map Just (ns ++ map (UN . Basic) implicits)) [] tm
+       setAs (map Just (ns <>> map (UN . Basic) implicits)) [] tm
   where
     -- Takes the function application expression which is the lhs of a clause
     -- and decomposes it into the underlying function symbol and the variables
@@ -698,7 +698,7 @@ implicitsAs n defs ns tm
                   implicits <- findImps is es ns ty'
                   log "declare.def.lhs.implicits" 30 $
                     "\n  In the type of " ++ show n ++ ": " ++ show ty ++
-                    "\n  Using locals: " ++ show ns ++
+                    "\n  Using locals: " ++ show (ns <>> []) ++
                     "\n  Found implicits: " ++ show implicits
                   pure $ impAs (virtualiseFC loc) implicits (IVar loc nm)
       where
@@ -723,41 +723,41 @@ implicitsAs n defs ns tm
         -- in the lhs: this is used to determine when to stop searching for further
         -- implicits to add.
         findImps : List (Maybe Name) -> List (Maybe Name) ->
-                   List Name -> NF [<] ->
+                   Scope -> NF [<] ->
                    Core (List (Name, PiInfo RawImp))
         -- #834 When we are in a local definition, we have an explicit telescope
         -- corresponding to the variables bound in the parent function.
         -- So we first peel off all of the explicit quantifiers corresponding
         -- to these variables.
-        findImps ns es (_ :: locals) (NBind fc x (Pi _ _ Explicit _) sc)
+        findImps ns es (locals :< _) (NBind fc x (Pi _ _ Explicit _) sc)
           = do body <- sc defs (toClosure defaultOpts [<] (Erased fc Placeholder))
                findImps ns es locals body
                -- ^ TODO? check that name of the pi matches name of local?
         -- don't add implicits coming after explicits that aren't given
-        findImps ns es [] (NBind fc x (Pi _ _ Explicit _) sc)
+        findImps ns es [<] (NBind fc x (Pi _ _ Explicit _) sc)
             = do body <- sc defs (toClosure defaultOpts [<] (Erased fc Placeholder))
                  case es of
                    -- Explicits were skipped, therefore all explicits are given anyway
-                   Just (UN Underscore) :: _ => findImps ns es [] body
+                   Just (UN Underscore) :: _ => findImps ns es [<] body
                    -- Explicits weren't skipped, so we need to check
                    _ => case updateNs x es of
                           Nothing => pure [] -- explicit wasn't given
-                          Just es' => findImps ns es' [] body
+                          Just es' => findImps ns es' [<] body
         -- if the implicit was given, skip it
-        findImps ns es [] (NBind fc x (Pi _ _ AutoImplicit _) sc)
+        findImps ns es [<] (NBind fc x (Pi _ _ AutoImplicit _) sc)
             = do body <- sc defs (toClosure defaultOpts [<] (Erased fc Placeholder))
                  case updateNs x ns of
                    Nothing => -- didn't find explicit call
-                      pure $ (x, AutoImplicit) :: !(findImps ns es [] body)
-                   Just ns' => findImps ns' es [] body
-        findImps ns es [] (NBind fc x (Pi _ _ p _) sc)
+                      pure $ (x, AutoImplicit) :: !(findImps ns es [<] body)
+                   Just ns' => findImps ns' es [<] body
+        findImps ns es [<] (NBind fc x (Pi _ _ p _) sc)
             = do body <- sc defs (toClosure defaultOpts [<] (Erased fc Placeholder))
                  if Just x `elem` ns
-                   then findImps ns es [] body
-                   else pure $ (x, forgetDef p) :: !(findImps ns es [] body)
+                   then findImps ns es [<] body
+                   else pure $ (x, forgetDef p) :: !(findImps ns es [<] body)
         findImps _ _ locals _
           = do log "declare.def.lhs.implicits" 50 $
-                  "Giving up with the following locals left: " ++ show locals
+                  "Giving up with the following locals left: " ++ show (locals <>> [])
                pure []
 
         impAs : FC -> List (Name, PiInfo RawImp) -> RawImp -> RawImp

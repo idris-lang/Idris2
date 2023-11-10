@@ -42,12 +42,12 @@ Show a => Show (ArgMode' a) where
   show Dynamic = "Dynamic"
 
 
-getStatic : ArgMode -> Maybe (Term [])
+getStatic : ArgMode -> Maybe ClosedTerm
 getStatic Dynamic = Nothing
 getStatic (Static t) = Just t
 
 specialiseTy : {vars : _} ->
-               Nat -> List (Nat, Term []) -> Term vars -> Term vars
+               Nat -> List (Nat, ClosedTerm) -> Term vars -> Term vars
 specialiseTy i specs (Bind fc x (Pi fc' c p ty) sc)
     = case lookup i specs of
            Nothing => Bind fc x (Pi fc' c p ty) $ -- easier later if everything explicit
@@ -75,7 +75,7 @@ substLocs : {vs : _} ->
 substLocs [] tm = tm
 substLocs ((i, tm') :: subs) tm = substLocs subs (substLoc i tm' tm)
 
-mkSubsts : Nat -> List (Nat, Term []) ->
+mkSubsts : Nat -> List (Nat, ClosedTerm) ->
            List (Term vs) -> Term vs -> Maybe (List (Nat, Term vs))
 mkSubsts i specs [] rhs = Just []
 mkSubsts i specs (arg :: args) rhs
@@ -93,7 +93,7 @@ mkSubsts i specs (arg :: args) rhs
 
 -- In the case where all the specialised positions are variables on the LHS,
 -- substitute the term in on the RHS
-specPatByVar : List (Nat, Term []) ->
+specPatByVar : List (Nat, ClosedTerm) ->
                 (vs ** (Env Term vs, Term vs, Term vs)) ->
                 Maybe (vs ** (Env Term vs, Term vs, Term vs))
 specPatByVar specs (vs ** (env, lhs, rhs))
@@ -102,7 +102,7 @@ specPatByVar specs (vs ** (env, lhs, rhs))
          let lhs' = apply (getLoc fn) fn args
          pure (vs ** (env, substLocs psubs lhs', substLocs psubs rhs))
 
-specByVar : List (Nat, Term []) ->
+specByVar : List (Nat, ClosedTerm) ->
             List (vs ** (Env Term vs, Term vs, Term vs)) ->
             Maybe (List (vs ** (Env Term vs, Term vs, Term vs)))
 specByVar specs [] = pure []
@@ -111,7 +111,7 @@ specByVar specs (p :: ps)
          ps' <- specByVar specs ps
          pure (p' :: ps')
 
-dropSpec : Nat -> List (Nat, Term []) -> List a -> List a
+dropSpec : Nat -> List (Nat, ClosedTerm) -> List a -> List a
 dropSpec i sargs [] = []
 dropSpec i sargs (x :: xs)
     = case lookup i sargs of
@@ -121,9 +121,9 @@ dropSpec i sargs (x :: xs)
 getSpecPats : {auto c : Ref Ctxt Defs} ->
               FC -> Name ->
               (fn : Name) -> (stk : List (FC, Term vars)) ->
-              NF [] -> -- Type of 'fn'
+              NF [<] -> -- Type of 'fn'
               List (Nat, ArgMode) -> -- All the arguments
-              List (Nat, Term []) -> -- Just the static ones
+              List (Nat, ClosedTerm) -> -- Just the static ones
               List (vs ** (Env Term vs, Term vs, Term vs)) ->
               Core (Maybe (List ImpClause))
 getSpecPats fc pename fn stk fnty args sargs pats
@@ -150,30 +150,30 @@ getSpecPats fc pename fn stk fnty args sargs pats
     -- Build a RHS from the type of the function to be specialised, the
     -- dynamic argument names, and the list of given arguments. We assume
     -- the latter two correspond appropriately.
-    mkRHSargs : NF [] -> RawImp -> List String -> List (Nat, ArgMode) ->
+    mkRHSargs : NF [<] -> RawImp -> List String -> List (Nat, ArgMode) ->
                 Core RawImp
     mkRHSargs (NBind _ x (Pi _ _ Explicit _) sc) app (a :: as) ((_, Dynamic) :: ds)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
+             sc' <- sc defs (toClosure defaultOpts [<] (Erased fc Placeholder))
              mkRHSargs sc' (IApp fc app (IVar fc (UN $ Basic a))) as ds
     mkRHSargs (NBind _ x (Pi _ _ _ _) sc) app (a :: as) ((_, Dynamic) :: ds)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
+             sc' <- sc defs (toClosure defaultOpts [<] (Erased fc Placeholder))
              mkRHSargs sc' (INamedApp fc app x (IVar fc (UN $ Basic a))) as ds
     mkRHSargs (NBind _ x (Pi _ _ Explicit _) sc) app as ((_, Static tm) :: ds)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
-             tm' <- unelabNoSugar [] tm
+             sc' <- sc defs (toClosure defaultOpts [<] (Erased fc Placeholder))
+             tm' <- unelabNoSugar [<] tm
              mkRHSargs sc' (IApp fc app (map rawName tm')) as ds
     mkRHSargs (NBind _ x (Pi _ _ Implicit _) sc) app as ((_, Static tm) :: ds)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
-             tm' <- unelabNoSugar [] tm
+             sc' <- sc defs (toClosure defaultOpts [<] (Erased fc Placeholder))
+             tm' <- unelabNoSugar [<] tm
              mkRHSargs sc' (INamedApp fc app x (map rawName tm')) as ds
     mkRHSargs (NBind _ _ (Pi _ _ AutoImplicit _) sc) app as ((_, Static tm) :: ds)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
-             tm' <- unelabNoSugar [] tm
+             sc' <- sc defs (toClosure defaultOpts [<] (Erased fc Placeholder))
+             tm' <- unelabNoSugar [<] tm
              mkRHSargs sc' (IAutoApp fc app (map rawName tm')) as ds
     -- Type will depend on the value here (we assume a variadic function) but
     -- the argument names are still needed
@@ -273,7 +273,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
                              " (" ++ show fn ++ ") -> \{show pename} by " ++
                              showSep ", " args'
            let sty = specialiseTy 0 staticargs (type gdef)
-           logTermNF "specialise" 3 ("Specialised type " ++ show pename) [] sty
+           logTermNF "specialise" 3 ("Specialised type " ++ show pename) [<] sty
 
            -- Add as RigW - if it's something else, we don't need it at
            -- runtime anyway so this is wasted effort, therefore a failure
@@ -282,7 +282,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
            log "specialise.flags" 20 "Defining \{show pename} with flags: \{show defflags}"
            peidx <- addDef pename
                   $ the (GlobalDef -> GlobalDef) { flags := defflags }
-                  $ newDef fc pename top [] sty (specified Public) None
+                  $ newDef fc pename top [<] sty (specified Public) None
            addToSave (Resolved peidx)
 
            -- Reduce the function to be specialised, and reduce any name in
@@ -303,12 +303,12 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
                       pure $ "Attempting to specialise:\n" ++
                              showSep "\n" (map showPat inpats)
 
-           Just newpats <- getSpecPats fc pename fn stk !(nf defs [] (type gdef))
+           Just newpats <- getSpecPats fc pename fn stk !(nf defs [<] (type gdef))
                                        sargs staticargs pats
                 | Nothing => pure (applyWithFC (Ref fc Func fn) stk)
            log "specialise" 5 $ "New patterns for " ++ show pename ++ ":\n" ++
                     showSep "\n" (map showPat newpats)
-           processDecl [InPartialEval] (MkNested []) []
+           processDecl [InPartialEval] (MkNested []) [<]
                        (IDef fc (Resolved peidx) newpats)
            setAllPublic False
            pure peapp)
@@ -408,12 +408,12 @@ specialise {vars} fc env gdef fn stk
         specs =>
             do fnfull <- toFullNames fn
                -- If all the arguments are concrete (meaning, no local variables
-               -- or holes in them, so they can be a Term []) we can specialise
+               -- or holes in them, so they can be a ClosedTerm) we can specialise
                Just sargs <- getSpecArgs 0 specs stk
                    | Nothing => pure Nothing
                defs <- get Ctxt
                sargs <- for sargs $ traversePair $ traverseArgMode $ \ tm =>
-                          normalise defs [] tm
+                          normalise defs [<] tm
                let nhash = hash !(traverse toFullNames $ mapMaybe getStatic $ map snd sargs)
                               `hashWithSalt` fnfull -- add function name to hash to avoid namespace clashes
                let pename = NS partialEvalNS
@@ -423,13 +423,9 @@ specialise {vars} fc env gdef fn stk
                     Nothing => Just <$> mkSpecDef fc gdef pename sargs fn stk
                     Just _ => pure Nothing
   where
-    dropAll : {vs : _} -> SubVars [] vs
-    dropAll {vs = []} = SubRefl
-    dropAll {vs = v :: vs} = DropCons dropAll
-
     concrete : {vars : _} ->
-               Term vars -> Maybe (Term [])
-    concrete tm = shrinkTerm tm dropAll
+               Term vars -> Maybe ClosedTerm
+    concrete tm = shrink tm none
 
     getSpecArgs : Nat -> List Nat -> List (FC, Term vars) ->
                   Core (Maybe (List (Nat, ArgMode)))
@@ -466,7 +462,7 @@ findSpecs env stk (Meta fc n i args)
          pure $ applyWithFC (Meta fc n i args') stk
 findSpecs env stk (Bind fc x b sc)
     = do b' <- traverse (findSpecs env []) b
-         sc' <- findSpecs (b' :: env) [] sc
+         sc' <- findSpecs (env :< b') [] sc
          pure $ applyWithFC (Bind fc x b' sc') stk
 findSpecs env stk (App fc fn arg)
     = do arg' <- findSpecs env [] arg
@@ -502,9 +498,9 @@ mutual
               {auto u : Ref UST UState} ->
               {auto s : Ref Syn SyntaxInfo} ->
               {auto o : Ref ROpts REPLOpts} ->
-              Ref QVar Int -> Defs -> Bounds bound ->
+              Ref QVar Int -> Defs -> Boundz bound ->
               Env Term free -> List (Closure free) ->
-              Core (List (Term (bound ++ free)))
+              Core (List (Term (free ++ bound)))
   quoteArgs q defs bounds env [] = pure []
   quoteArgs q defs bounds env (a :: args)
       = pure $ (!(quoteGenNF q defs bounds env !(evalClosure defs a)) ::
@@ -516,9 +512,9 @@ mutual
                     {auto s : Ref Syn SyntaxInfo} ->
                     {auto o : Ref ROpts REPLOpts} ->
                     {bound, free : _} ->
-                    Ref QVar Int -> Defs -> Bounds bound ->
+                    Ref QVar Int -> Defs -> Boundz bound ->
                     Env Term free -> List (FC, Closure free) ->
-                    Core (List (FC, Term (bound ++ free)))
+                    Core (List (FC, Term (free ++ bound)))
   quoteArgsWithFC q defs bounds env terms
       = pure $ zip (map fst terms) !(quoteArgs q defs bounds env (map snd terms))
 
@@ -529,24 +525,17 @@ mutual
               {auto s : Ref Syn SyntaxInfo} ->
               {auto o : Ref ROpts REPLOpts} ->
               Ref QVar Int -> Defs ->
-              FC -> Bounds bound -> Env Term free -> NHead free ->
-              Core (Term (bound ++ free))
+              FC -> Boundz bound -> Env Term free -> NHead free ->
+              Core (Term (free ++ bound))
   quoteHead {bound} q defs fc bounds env (NLocal mrig _ prf)
-      = let MkVar prf' = addLater bound prf in
+      = let MkVar prf' = weakenNs (mkSizeOf bound) (MkVar prf) in
             pure $ Local fc mrig _ prf'
-    where
-      addLater : {idx : _} -> (ys : List Name) -> (0 p : IsVar n idx xs) ->
-                 Var (ys ++ xs)
-      addLater [] isv = MkVar isv
-      addLater (x :: xs) isv
-          = let MkVar isv' = addLater xs isv in
-                MkVar (Later isv')
   quoteHead q defs fc bounds env (NRef Bound (MN n i))
       = case findName bounds of
-             Just (MkVar p) => pure $ Local fc Nothing _ (varExtend p)
+             Just (MkVar p) => pure $ Local fc Nothing _ (embed p)
              Nothing => pure $ Ref fc Bound (MN n i)
     where
-      findName : Bounds bound' -> Maybe (Var bound')
+      findName : Boundz bound' -> Maybe (Var bound')
       findName None = Nothing
       findName (Add x (MN n' i') ns)
           = if i == i' -- this uniquely identifies it, given how we
@@ -568,9 +557,9 @@ mutual
             {auto u : Ref UST UState} ->
             {auto s : Ref Syn SyntaxInfo} ->
             {auto o : Ref ROpts REPLOpts} ->
-            Ref QVar Int -> Defs -> Bounds bound ->
+            Ref QVar Int -> Defs -> Boundz bound ->
             Env Term free -> PiInfo (Closure free) ->
-            Core (PiInfo (Term (bound ++ free)))
+            Core (PiInfo (Term (free ++ bound)))
   quotePi q defs bounds env Explicit = pure Explicit
   quotePi q defs bounds env Implicit = pure Implicit
   quotePi q defs bounds env AutoImplicit = pure AutoImplicit
@@ -584,9 +573,9 @@ mutual
                 {auto u : Ref UST UState} ->
                 {auto s : Ref Syn SyntaxInfo} ->
                 {auto o : Ref ROpts REPLOpts} ->
-                Ref QVar Int -> Defs -> Bounds bound ->
+                Ref QVar Int -> Defs -> Boundz bound ->
                 Env Term free -> Binder (Closure free) ->
-                Core (Binder (Term (bound ++ free)))
+                Core (Binder (Term (free ++ bound)))
   quoteBinder q defs bounds env (Lam fc r p ty)
       = do ty' <- quoteGenNF q defs bounds env !(evalClosure defs ty)
            p' <- quotePi q defs bounds env p
@@ -618,8 +607,8 @@ mutual
                {auto s : Ref Syn SyntaxInfo} ->
                {auto o : Ref ROpts REPLOpts} ->
                Ref QVar Int ->
-               Defs -> Bounds bound ->
-               Env Term vars -> NF vars -> Core (Term (bound ++ vars))
+               Defs -> Boundz bound ->
+               Env Term vars -> NF vars -> Core (Term (vars ++ bound))
   quoteGenNF q defs bound env (NBind fc n b sc)
       = do var <- bName "qv"
            sc' <- quoteGenNF q defs (Add n var bound) env
@@ -646,12 +635,12 @@ mutual
                                      pure $ applyWithFC (Ref fc Func fn) args'
                         pure r
      where
-       extendEnv : Bounds bs -> Env Term vs -> Env Term (bs ++ vs)
+       extendEnv : Boundz bs -> Env Term vs -> Env Term (vs ++ bs)
        extendEnv None env = env
        extendEnv (Add x n bs) env
            -- We're just using this to evaluate holes in the right scope, so
            -- a placeholder binder is fine
-           = Lam fc top Explicit (Erased fc Placeholder) :: extendEnv bs env
+           = extendEnv bs env :< Lam fc top Explicit (Erased fc Placeholder)
   quoteGenNF q defs bound env (NApp fc f args)
       = do f' <- quoteHead q defs fc bound env f
            args' <- quoteArgsWithFC q defs bound env args

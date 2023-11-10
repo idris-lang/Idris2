@@ -21,7 +21,7 @@ import TTImp.Unelab
 import TTImp.Utils
 
 import Control.Monad.State
-import Data.List
+import Data.SnocList
 import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
 
@@ -102,12 +102,12 @@ getMethImps : {vars : _} ->
               Core (List (Name, RigCount, Maybe RawImp, RawImp))
 getMethImps env (Bind fc x (Pi fc' c Implicit ty) sc)
     = do rty <- map (map rawName) $ unelabNoSugar env ty
-         ts <- getMethImps (Pi fc' c Implicit ty :: env) sc
+         ts <- getMethImps (env :< Pi fc' c Implicit ty) sc
          pure ((x, c, Nothing, rty) :: ts)
 getMethImps env (Bind fc x (Pi fc' c (DefImplicit def) ty) sc)
     = do rty <- map (map rawName) $ unelabNoSugar env ty
          rdef <- map (map rawName) $ unelabNoSugar env def
-         ts <- getMethImps (Pi fc' c (DefImplicit def) ty :: env) sc
+         ts <- getMethImps (env :< Pi fc' c (DefImplicit def) ty) sc
          pure ((x, c, Just rdef, rty) :: ts)
 getMethImps env tm = pure []
 
@@ -177,7 +177,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
          let initTy = bindImpls is $ bindConstraints vfc AutoImplicit cons
                          (apply (IVar vfc iname) ps)
          let paramBinds = if !isUnboundImplicits
-                          then findBindableNames True vars [] initTy
+                          then findBindableNames True (cast vars) [] initTy
                           else []
          let impTy = doBind paramBinds initTy
 
@@ -200,10 +200,10 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
                                       (IBindHere vfc (PI erased) impTy)
                                       (Just (gType vfc u))
                    let fullty = abstractFullEnvType vfc env ty
-                   ok <- convert defs [] fullty (type gdef)
-                   unless ok $ do logTermNF "elab.implementation" 1 "Previous" [] (type gdef)
-                                  logTermNF "elab.implementation" 1 "Now" [] fullty
-                                  throw (CantConvert (getFC impTy) (gamma defs) [] fullty (type gdef))
+                   ok <- convert defs [<] fullty (type gdef)
+                   unless ok $ do logTermNF "elab.implementation" 1 "Previous" [<] (type gdef)
+                                  logTermNF "elab.implementation" 1 "Now" [<] fullty
+                                  throw (CantConvert (getFC impTy) (gamma defs) [<] fullty (type gdef))
 
          -- If the body is empty, we're done for now (just declaring that
          -- the implementation exists and define it later)
@@ -212,7 +212,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
                defs <- get Ctxt
                Just impTyc <- lookupTyExact impName (gamma defs)
                     | Nothing => throw (InternalError ("Can't happen, can't find type of " ++ show impName))
-               methImps <- getMethImps [] impTyc
+               methImps <- getMethImps [<] impTyc
                log "elab.implementation" 3 $ "Bind implicits to each method: " ++ show methImps
 
                -- 1.5. Lookup default definitions and add them to the body
@@ -252,7 +252,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
                -- RHS is the constructor applied to a search for the necessary
                -- parent constraints, then the method implementations
                defs <- get Ctxt
-               let fldTys = getFieldArgs !(normaliseHoles defs [] conty)
+               let fldTys = getFieldArgs !(normaliseHoles defs [<] conty)
                log "elab.implementation" 5 $ "Field types " ++ show fldTys
                let irhs = apply (autoImpsApply (IVar vfc con) $ map (const (ISearch vfc 500)) (parents cdata))
                                   (map (mkMethField methImps fldTys) fns)
@@ -408,21 +408,21 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
              -- renaming IBindVars in the method types which appear in the
              -- parameters
              let upds' = !(traverse (applyCon impName) allmeths)
-             let mty_in = substNames vars upds' meth.type
+             let mty_in = substNames (cast vars) upds' meth.type
              let (upds, mty_in) = runState Prelude.Nil (renameIBinds impsp (findImplicits mty_in) mty_in)
              -- Finally update the method type so that implicits from the
              -- parameters are passed through to any earlier methods which
              -- appear in the type
-             let mty_in = substNames vars methupds mty_in
+             let mty_in = substNames (cast vars) methupds mty_in
 
              -- Substitute _ in for the implicit parameters, then
              -- substitute in the explicit parameters.
              let mty_iparams
-                   = substBindVars vars
+                   = substBindVars (cast vars)
                                 (map (\n => (n, Implicit vfc False)) imppnames)
                                 mty_in
              let mty_params
-                   = substNames vars (zip pnames ps) mty_iparams
+                   = substNames (cast vars) (zip pnames ps) mty_iparams
              log "elab.implementation" 5 $ "Substitute implicits " ++ show imppnames ++
                      " parameters " ++ show (zip pnames ps) ++
                      " "  ++ show mty_in ++ " is " ++

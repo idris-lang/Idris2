@@ -260,7 +260,7 @@ mutual
            when (not erase) $
                checkUsageOK used ((multiplicity b) |*| rig)
            defs <- get Ctxt
-           discharge defs env fc nm b' bt sc' sct (usedb ++ ?a)
+           discharge defs env fc nm b' bt sc' sct (usedb ++ dropFirst usedsc)
     where
       rig : RigCount
       rig = case b of

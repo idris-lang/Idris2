@@ -341,7 +341,7 @@ getCompileDataWith exports doLazyAnnots phase_in tm_in
                          else pure []
 
          let lifted = (mainname, MkLFun [<] [] liftedtm) ::
-                      ?ldefs ++ concat lifted_in
+                      ldefs ++ concat lifted_in
 
          anf <- if phase >= ANF
                    then logTime 2 "Get ANF" $ traverse (\ (n, d) => pure (n, !(toANF d))) lifted

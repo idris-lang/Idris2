@@ -125,6 +125,11 @@ data Thin : SnocList a -> SnocList a -> Type where
   Drop : Thin xs ys -> Thin xs (ys :< y)
   Keep : Thin xs ys -> Thin (xs :< x) (ys :< x)
 
+export
+none : {sx : SnocList a} -> Thin [<] sx
+none {sx = [<]} = Refl
+none {sx = _ :< _} = Drop none
+
 ||| Smart constructor. We should use this to maximise the length
 ||| of the Refl segment thus getting more short-circuiting behaviours
 export

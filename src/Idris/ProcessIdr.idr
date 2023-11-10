@@ -86,8 +86,8 @@ processDecl (PMutual fc ps)
       processDecls (tys ++ defs)
 
 processDecl decl
-    = catch (do impdecls <- desugarDecl [] decl
-                traverse_ (Check.processDecl [] (MkNested []) []) impdecls
+    = catch (do impdecls <- desugarDecl [<] decl
+                traverse_ (Check.processDecl [] (MkNested []) [<]) impdecls
                 pure [])
             (\err => do giveUpConstraints -- or we'll keep trying...
                         pure [err])

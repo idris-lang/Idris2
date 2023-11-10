@@ -3,6 +3,7 @@ module Core.Context.Pretty
 import Core.Context
 import Core.Env
 
+import Data.SnocList
 import Data.String
 import Idris.Doc.Annotations
 
@@ -15,15 +16,15 @@ import Core.Context.Context
 
 import Libraries.Data.String.Extra
 
-%hide Env.(::)
-%hide Env.Nil
+-- %hide Env.(::)
+-- %hide Env.Nil
 %hide String.(::)
 %hide String.Nil
 %hide Doc.Nil
-%hide SubstEnv.(::)
-%hide SubstEnv.Nil
-%hide CList.(::)
-%hide CList.Nil
+-- %hide SubstEnv.(::)
+-- %hide SubstEnv.Nil
+-- %hide CList.(::)
+-- %hide CList.Nil
 %hide Stream.(::)
 %hide Symbols.equals
 %hide String.indent
@@ -43,7 +44,7 @@ namespace Raw
   prettyDef (PMDef _ args ct _ pats) =
        let ct = prettyTree ct in
        vcat
-        [ "Arguments" <++> cast (prettyList args)
+        [ "Arguments" <++> cast (prettyList $ cast {to = List Name} args)
         , header "Compile time tree" <++> reAnnotate Syntax ct
         ]
   prettyDef (DCon tag arity nt) =
@@ -95,7 +96,7 @@ namespace Resugared
   prettyDef (PMDef _ args ct _ pats) = do
       ct <- prettyTree (mkEnv emptyFC _) ct
       pure $ vcat
-        [ "Arguments" <++> cast (prettyList args)
+        [ "Arguments" <++> cast (prettyList $ cast {to = List Name} args)
         , header "Compile time tree" <++> reAnnotate Syntax ct
         ]
   prettyDef (DCon tag arity nt) = pure $

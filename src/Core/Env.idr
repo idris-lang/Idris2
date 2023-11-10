@@ -26,6 +26,12 @@ vs ++ [<] = vs
 vs ++ (rho :< bd) = (vs ++ rho) :< map embed bd
 
 export
+mkExplicit : Env Term vs -> Env Term vs
+mkExplicit [<] = [<]
+mkExplicit (env :< Pi fc c _ ty) = mkExplicit env :< Pi fc c Explicit ty
+mkExplicit (env :< b) = mkExplicit env :< b
+
+export
 length : Env tm xs -> Nat
 length [<] = 0
 length (xs :< _) = S (length xs)
