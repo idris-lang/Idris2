@@ -1,12 +1,8 @@
 # Installation
 
-- [Installing with a package manager](#install-with-a-package-manager)
-  - [Installing with Pack](#install-with-pack)
-  - [Installing with Homebrew](#install-with-homebrew)
-  - [Installing with Nix](#install-with-nix)
-  - [Installing with Nix Flakes](#install-with-nix-flakes)
-- [Installing from source](#install-from-source)
-- [Installing Chez Scheme on Apple Silicon](#install-chez-scheme-on-apple-silicon)
+- [Installing with a package manager](#installing-with-a-package-manager)
+- [Installing from source](#installing-from-source)
+- [Installing Chez Scheme on Apple Silicon](#installing-chez-scheme-on-apple-silicon)
 
 ## Installing with a package manager
 
