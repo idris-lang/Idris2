@@ -201,7 +201,8 @@
 * Generalized `imapProperty` in `Data.List.Quantifiers.All.All`
   and `Data.Vect.Quantifiers.All.All`.
 
-* Add `zipPropertyWith`, `traverseProperty`, `traversePropertyRelevant` and `remember`
+* Add `zipPropertyWith`, `traverseProperty`, `traversePropertyRelevant`,
+  `mapPropertyRelevant`, `(++)`, `tabulate` and `remember`
   to `Data.Vect.Quantifiers.All.All`.
 
 * Add `anyToFin` to `Data.Vect.Quantifiers.Any`,
