@@ -1,9 +1,9 @@
-# Idris 2
+# ![Idris icon](./icons/idris2-512x512.png) Idris 2
 
 [![Documentation Status](https://readthedocs.org/projects/idris2/badge/?version=latest)](https://idris2.readthedocs.io/en/latest/?badge=latest)
 [![Build Status](https://github.com/idris-lang/Idris2/actions/workflows/ci-idris2-and-libs.yml/badge.svg?branch=main)](https://github.com/idris-lang/Idris2/actions/workflows/ci-idris2-and-libs.yml?query=branch%3Amain)
 
-![Idris icon](icons/idris2-512x512.png) [Idris 2](https://idris-lang.org/) is a purely functional programming language
+[Idris 2](https://idris-lang.org/) is a purely functional programming language
 with first class types.
 
 For installation instructions, see [INSTALL.md](INSTALL.md).
