@@ -162,8 +162,9 @@ checkConflictingFixities isPrefix exprFC opn
                    For example: %hide \{show fxName}
                    """
 
-checkConflictingBinding : FC -> Name -> (foundFixity : Maybe FixityInfo) -> (usage : OperatorLHSInfo PTerm) -> (rhs : PTerm) -> Core ()
-checkConflictingBinding fc opName foundFixity use_site rhs
+checkConflictingBinding : Side -> FC -> Name -> (foundFixity : Maybe FixityInfo) -> (usage : OperatorLHSInfo PTerm) -> (rhs : PTerm) -> Core ()
+checkConflictingBinding LHS fc opName foundFixity use_site rhs = pure () -- don't check if we're on the LHS
+checkConflictingBinding side fc opName foundFixity use_site rhs
     = if isCompatible foundFixity use_site
          then pure ()
          else throw $ OperatorBindingMismatch {print=byShow} fc foundFixity use_site opName rhs
@@ -177,19 +178,20 @@ checkConflictingBinding fc opName foundFixity use_site rhs
       isCompatible (Just fixInfo) (BindExplicitType name type expr)
           = fixInfo.bindingInfo == Autobind
 
-toTokList : {auto s : Ref Syn SyntaxInfo} ->
-            {auto c : Ref Ctxt Defs} ->
-            PTerm -> Core (List (Tok (OpStr, Maybe (OperatorLHSInfo PTerm)) PTerm))
-toTokList (POp fc opFC l opn r)
-    = do (precInfo, fixInfo) <- checkConflictingFixities False fc opn
-         checkConflictingBinding opFC opn fixInfo l r
-         rtoks <- toTokList r
-         pure (Expr l.getLhs :: Op fc opFC (opn, Just l) precInfo :: rtoks)
-toTokList (PPrefixOp fc opFC opn arg)
-    = do (precInfo, _) <- checkConflictingFixities True fc opn
-         rtoks <- toTokList arg
-         pure (Op fc opFC (opn, Nothing) precInfo :: rtoks)
-toTokList t = pure [Expr t]
+parameters (side : Side)
+  toTokList : {auto s : Ref Syn SyntaxInfo} ->
+              {auto c : Ref Ctxt Defs} ->
+              PTerm -> Core (List (Tok (OpStr, Maybe (OperatorLHSInfo PTerm)) PTerm))
+  toTokList (POp fc opFC l opn r)
+      = do (precInfo, fixInfo) <- checkConflictingFixities False fc opn
+           checkConflictingBinding side opFC opn fixInfo l r
+           rtoks <- toTokList r
+           pure (Expr l.getLhs :: Op fc opFC (opn, Just l) precInfo :: rtoks)
+  toTokList (PPrefixOp fc opFC opn arg)
+      = do (precInfo, _) <- checkConflictingFixities True fc opn
+           rtoks <- toTokList arg
+           pure (Op fc opFC (opn, Nothing) precInfo :: rtoks)
+  toTokList t = pure [Expr t]
 
 record BangData where
   constructor MkBangData
@@ -330,10 +332,10 @@ mutual
                       apply (IVar fc (UN $ Basic "~=~")) [l', r']]
   desugarB side ps (PBracketed fc e) = desugarB side ps e
   desugarB side ps (POp fc opFC l op r)
-      = do ts <- toTokList (POp fc opFC l op r)
+      = do ts <- toTokList side (POp fc opFC l op r)
            desugarTree side ps !(parseOps ts)
   desugarB side ps (PPrefixOp fc opFC op arg)
-      = do ts <- toTokList (PPrefixOp fc opFC op arg)
+      = do ts <- toTokList side (PPrefixOp fc opFC op arg)
            desugarTree side ps !(parseOps ts)
   desugarB side ps (PSectionL fc opFC op arg)
       = do syn <- get Syn
