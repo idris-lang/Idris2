@@ -56,3 +56,24 @@ program = (n := 3) `MyLet` 2 + n
 
 program2 : Nat
 program2 = (n : Nat := 3) `MyLet` 2 + n
+
+typebind infixr 6 |>
+
+record Container where
+  constructor (|>)
+  shape : Type
+  position : shape -> Type
+
+typebind infixr 7 @@
+
+record (@@) (x : Type) (y : x -> Type) where
+  constructor PairUp
+  fst : x
+  snd : y fst
+
+compose : Container -> Container -> Container
+compose (a |> a') (b |> b') =
+  (x : (y : a) @@ a' y -> b) |>
+       (y : a' x.fst) @@
+            b' (x.snd y)
+

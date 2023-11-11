@@ -105,14 +105,14 @@ pnoeq = { eqOK := False }
 
 export
 pdef : ParseOpts
-pdef = MkParseOpts True True
+pdef = MkParseOpts {eqOK = True, withOK = True}
 
 pnowith : ParseOpts
-pnowith = MkParseOpts True False
+pnowith = MkParseOpts {eqOK = True, withOK = False}
 
 export
 plhs : ParseOpts
-plhs = MkParseOpts False False
+plhs = MkParseOpts {eqOK = False, withOK = False}
 
 %hide Prelude.(>>)
 %hide Prelude.(>>=)
@@ -385,8 +385,8 @@ mutual
                <|> pure l.val
 
   opExpr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
-  opExpr q fname indents = opExprBase q fname indents
-                       <|> autobindOp q fname indents
+  opExpr q fname indents = autobindOp q fname indents <|> opExprBase q fname indents
+
 
   dpairType : OriginDesc -> WithBounds t -> IndentInfo -> Rule PTerm
   dpairType fname start indents
