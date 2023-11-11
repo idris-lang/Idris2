@@ -1,0 +1,14 @@
+Uncaught error: Error: Unrecognised property "depend".
+
+"bad.ipkg":2:1--2:7
+ 1 | package bad
+ 2 | depend = contrib
+     ^^^^^^
+
+Uncaught error: Error: Expected string.
+
+"bad2.ipkg":2:13--2:16
+ 1 | package bad
+ 2 | sourcedir = src
+                 ^^^
+

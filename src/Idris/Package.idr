@@ -34,6 +34,7 @@ import Libraries.Text.PrettyPrint.Prettyprinter.Render.String
 import Idris.CommandLine
 import Idris.Doc.HTML
 import Idris.Doc.String
+import Idris.Error
 import Idris.ModTree
 import Idris.Pretty
 import Idris.ProcessIdr
@@ -104,43 +105,52 @@ field fname
     <|> strField PPostclean "postclean"
     <|> do start <- location
            ignore $ exactProperty "version"
-           equals
-           vs <- sepBy1 dot' integerLit
-           end <- location
-           pure (PVersion (MkFC (PhysicalPkgSrc fname) start end)
-                          (MkPkgVersion (fromInteger <$> vs)))
+           mustWork $ do
+             equals
+             vs <- choose stringLit (sepBy1 dot' integerLit)
+             end <- location
+             the (EmptyRule _) $ case vs of
+                Left v   => pure (PVersionDep (MkFC (PhysicalPkgSrc fname) start end) v)
+                Right vs => pure (PVersion (MkFC (PhysicalPkgSrc fname) start end)
+                                    (MkPkgVersion (fromInteger <$> vs)))
     <|> do start <- location
            ignore $ exactProperty "langversion"
-           lvs <- langversions
-           end <- location
-           pure (PLangVersions (MkFC (PhysicalPkgSrc fname) start end) lvs)
+           mustWork $ do
+             lvs <- langversions
+             end <- location
+             pure (PLangVersions (MkFC (PhysicalPkgSrc fname) start end) lvs)
     <|> do start <- location
            ignore $ exactProperty "version"
-           equals
-           v <- stringLit
-           end <- location
-           pure (PVersionDep (MkFC (PhysicalPkgSrc fname) start end) v)
+           mustWork $ do
+             equals
+             v <- stringLit
+             end <- location
+             pure (PVersionDep (MkFC (PhysicalPkgSrc fname) start end) v)
     <|> do ignore $ exactProperty "depends"
-           equals
-           ds <- sep depends
-           pure (PDepends ds)
+           mustWork $ do
+             equals
+             ds <- sep depends
+             pure (PDepends ds)
     <|> do ignore $ exactProperty "modules"
-           equals
-           ms <- sep (do start <- location
-                         m <- moduleIdent
-                         end <- location
-                         pure (MkFC (PhysicalPkgSrc fname) start end, m))
-           pure (PModules ms)
+           mustWork $ do
+             equals
+             ms <- sep (do start <- location
+                           m <- moduleIdent
+                           end <- location
+                           pure (MkFC (PhysicalPkgSrc fname) start end, m))
+             pure (PModules ms)
     <|> do ignore $ exactProperty "main"
-           equals
-           start <- location
-           m <- moduleIdent
-           end <- location
-           pure (PMainMod (MkFC (PhysicalPkgSrc fname) start end) m)
+           mustWork $ do
+             equals
+             start <- location
+             m <- moduleIdent
+             end <- location
+             pure (PMainMod (MkFC (PhysicalPkgSrc fname) start end) m)
     <|> do ignore $ exactProperty "executable"
-           equals
-           e <- (stringLit <|> packageName)
-           pure (PExec e)
+           mustWork $ do
+             equals
+             e <- (stringLit <|> packageName)
+             pure (PExec e)
   where
     data Bound = LT PkgVersion Bool | GT PkgVersion Bool
 
@@ -191,16 +201,20 @@ field fname
     strField fieldConstructor fieldName
         = do start <- location
              ignore $ exactProperty fieldName
-             equals
-             str <- stringLit
-             end <- location
-             pure $ fieldConstructor (MkFC (PhysicalPkgSrc fname) start end) str
+             mustWork $ do
+               equals
+               str <- stringLit
+               end <- location
+               pure $ fieldConstructor (MkFC (PhysicalPkgSrc fname) start end) str
 
 parsePkgDesc : String -> Rule (String, List DescField)
 parsePkgDesc fname
     = do ignore $ exactProperty "package"
          name <- packageName
          fields <- many (field fname)
+         EndOfInput <- peek
+            | DotSepIdent _ name => fail "Unrecognised property \{show name}"
+            | tok => fail "Expected end of file"
          pure (name, fields)
 
 data ParsedMods : Type where
@@ -284,8 +298,14 @@ parsePkgFile : {auto c : Ref Ctxt Defs} ->
                (setSrc : Bool) -> -- parse package file as a dependency
                String -> Core PkgDesc
 parsePkgFile setSrc file = do
-    Right (pname, fs) <- coreLift $ parseFile file $ parsePkgDesc file <* eoi
-        | Left err => throw err
+    Right (pname, fs) <- coreLift $ parseFile file $ parsePkgDesc file
+        | Left err => do
+              Right res <- coreLift (readFile file)
+                | _ => throw err
+              setCurrentElabSource res
+              doc <- perror err
+              msg <- render doc
+              throw (UserError msg)
     addFields setSrc fs (initPkgDesc pname)
 
 --------------------------------------------------------------------------------
