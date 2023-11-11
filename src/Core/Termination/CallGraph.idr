@@ -37,7 +37,7 @@ sizeEq (TDelay _ _ t x) (TDelay _ _ t' x') = sizeEq t t' && sizeEq x x'
 sizeEq (TForce _ _ t) (TForce _ _ t') = sizeEq t t'
 sizeEq (PrimVal _ c) (PrimVal _ c') = c == c'
 -- traverse dotted LHS terms
-sizeEq t (Erased _ (Dotted t')) = believe_me t == t' -- t' is no longer a pattern
+sizeEq t (Erased _ (Dotted t')) = eqTerm t t' -- t' is no longer a pattern
 sizeEq (TType _ _) (TType _ _) = True
 sizeEq _ _ = False
 
