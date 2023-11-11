@@ -8,10 +8,12 @@ with first class types.
 
 For installation instructions, see [INSTALL.md](INSTALL.md).
 
-The [wiki](https://github.com/idris-lang/Idris2/wiki) lists a number of useful resources, in particular
+The [wiki](https://github.com/idris-lang/Idris2/wiki) lists a number of useful
+resources, in particular
 
 + [What's changed since Idris 1](https://idris2.readthedocs.io/en/latest/updates/updates.html)
-+ [Resources for learning Idris](https://github.com/idris-lang/Idris2/wiki/Resources), including [videos](https://github.com/idris-lang/Idris2/wiki/Resources#official-talks) that showcase its capabilities
++ [Resources for learning Idris](https://github.com/idris-lang/Idris2/wiki/Resources),
+  including [videos](https://github.com/idris-lang/Idris2/wiki/Resources#official-talks) that showcase its capabilities
 + [Editor support](https://github.com/idris-lang/Idris2/wiki/Editor-Support)
 
 ## Things still missing
