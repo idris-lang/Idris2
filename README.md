@@ -25,5 +25,5 @@ If you want to learn more about Idris, contributing to the compiler could be one
 
 [1]: <https://github.com/idris-lang/Idris2/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22>
 [2]: <https://github.com/idris-lang/Idris2/wiki/What-Contributions-are-Needed>
-[3]: <(https://github.com/idris-lang/Idris2/wiki/Map-of-the-Source-Code)>
+[3]: <https://github.com/idris-lang/Idris2/wiki/Map-of-the-Source-Code>
 [4]: <https://github.com/idris-lang/Idris2/wiki/Getting-Started-with-Compiler-Development>
