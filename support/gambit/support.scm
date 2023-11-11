@@ -2,10 +2,10 @@
 ;; https://github.com/gambit/gambit/blob/master/gsc/_t-x86.scm#L1106 #L1160
 (define (blodwen-os)
   (cond
-    [(memq (cadr (system-type)) '(apple)) "darwin"]
-    [(memq (caddr (system-type)) '(linux-gnu)) "unix"]
-    [(memq (caddr (system-type)) '(mingw32 mingw64)) "windows"]
-    [else "unknown"]))
+    ((memq (cadr (system-type)) '(apple)) "darwin")
+    ((memq (caddr (system-type)) '(linux-gnu)) "unix")
+    ((memq (caddr (system-type)) '(mingw32 mingw64)) "windows")
+    (else "unknown")))
 
 ;; TODO Convert to macro
 (define (blodwen-read-args desc)
@@ -16,7 +16,7 @@
 
 (define blodwen-lazy
   (lambda (f)
-    (let ([evaluated #f] [res void])
+    (let ((evaluated #f) (res void))
       (lambda ()
         (if (not evaluated)
             (begin (set! evaluated #t)
@@ -132,20 +132,12 @@
 (define-macro (cast-string-int x)
   `(exact-truncate (cast-string-double ,x)))
 
-(define (from-idris-list xs)
-  (if (= (vector-ref xs 0) 0)
-    '()
-    (cons (vector-ref xs 1) (from-idris-list (vector-ref xs 2)))))
-
 (define-macro (string-pack xs)
-  `(apply string (from-idris-list ,xs)))
-(define (to-idris-list-rev acc xs)
-  (if (null? xs)
-    acc
-    (to-idris-list-rev (vector 1 (car xs) acc) (cdr xs))))
-(define (string-unpack s) (to-idris-list-rev (vector 0) (reverse (string->list s))))
+  `(apply string ,xs))
+
+(define (string-unpack s) (string->list s))
 (define-macro (string-concat xs)
-  `(apply string-append (from-idris-list ,xs)))
+  `(apply string-append ,xs))
 
 (define-macro (string-cons x y)
   `(string-append (string ,x) ,y))
