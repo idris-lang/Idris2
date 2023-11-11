@@ -9,7 +9,8 @@
 You can install Idris 2 with any one of a number of package managers.
 
 ### Installing with [Pack](https://github.com/stefan-hoeck/idris2-pack)
-Pack comes with an installation of Idris 2, so you just need to install Pack. See [the installation instructions](https://github.com/stefan-hoeck/idris2-pack/blob/main/INSTALL.md) on GitHub.
+Pack comes with an installation of Idris 2, so you just need to install Pack.
+See [the installation instructions](https://github.com/stefan-hoeck/idris2-pack/blob/main/INSTALL.md) on GitHub.
 ### Installing with [Homebrew](https://brew.sh/)
 ```sh
 brew install idris2
@@ -35,12 +36,12 @@ code. The requirements are:
   `brew install coreutils gmp` and on OpenBSD, with the `pkg_add coreutils
   bash gmake gmp` command. You specifically need the dev GMP library, which
   means on some systems the package you need to install will be named
-  something more like `libgmp3-dev`. macOS ships with `clang` whereas `gcc` is more
-  common for other \*nix distributions.
+  something more like `libgmp3-dev`. macOS ships with `clang` whereas `gcc` is
+  more common for other \*nix distributions.
 
 On Windows, it has been reported that installing via `MSYS2` works
-[MSYS2](https://www.msys2.org/). On Windows older than Windows 8, you may need to
-set an environment variable `OLD_WIN=1` or modify it in `config.mk`.
+[MSYS2](https://www.msys2.org/). On Windows older than Windows 8, you may need
+to set an environment variable `OLD_WIN=1` or modify it in `config.mk`.
 
 On Raspberry Pi, you can bootstrap via Racket.
 
