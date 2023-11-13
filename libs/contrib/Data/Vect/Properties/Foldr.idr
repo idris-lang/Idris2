@@ -1,13 +1,13 @@
 |||
 |||
-||| foldr is the unique solution to the equation:
+||| foldrTR is the unique solution to the equation:
 |||
 |||   h f e [] = e
-|||   h f e (x :: xs) = x `h` (foldr f e xs)
+|||   h f e (x :: xs) = x `h` (foldrTR f e xs)
 |||
 ||| (This fact is called 'the universal property of foldr'.)
 |||
-||| Since the prelude defines foldr tail-recursively, this fact isn't immediate
+||| Since the prelude defines foldrTR tail-recursively, this fact isn't immediate
 ||| and we need some lemmata to prove it.
 module Data.Vect.Properties.Foldr
 
@@ -19,10 +19,10 @@ import Data.Nat
 import Syntax.PreorderReasoning
 import Syntax.PreorderReasoning.Generic
 
-||| Sum implemented with foldr
+||| Sum implemented with the tail-recursive foldr
 public export
-sumR : Num a => Foldable f => f a -> a
-sumR = foldr (+) 0
+sumR : Num a => Vect n a -> a
+sumR = foldrTR (+) 0
 
 %transform "sumR/sum" sumR = sum
 
@@ -71,24 +71,24 @@ foldrImplNaturality : (f : a -> b -> b) -> (e : b) -> (xs : Vect n a) -> (go1, g
 foldrImplNaturality f e    []     go1 go2 = Refl
 foldrImplNaturality f e (x :: xs) go1 go2 = foldrImplNaturality f e xs go1 (go2 . (f x))
 
-||| Our tail-recursive foldr preserves the vector structure
+||| Our tail-recursive foldrTR preserves the vector structure
 export
-foldrVectHomomorphism : VectHomomorphismProperty f e (foldr f e)
+foldrVectHomomorphism : VectHomomorphismProperty f e (foldrTR f e)
 foldrVectHomomorphism = ShowVectHomomorphismProperty
   { nil  = Refl
   , cons = \x, xs => Calc $
-    |~ foldr f e (x :: xs)
+    |~ foldrTR f e (x :: xs)
     ~~ foldrImpl f e (id . (f x)) xs ...(Refl)
     ~~ foldrImpl f e ((f x) . id) xs ...(foldrImplExtensional f e _ _ (\y => Refl) xs)
     ~~ f x (foldrImpl f e id xs)     ...(foldrImplNaturality f e xs (f x) _)
-    ~~ f x (foldr f e xs)            ...(Refl)
+    ~~ f x (foldrTR f e xs)          ...(Refl)
   }
 
-||| foldr is the unique function preserving the vector structure
+||| foldrTR is the unique function preserving the vector structure
 export
-foldrUniqueness : (h : forall n . Vect n a -> b) -> VectHomomorphismProperty f e h -> (xs : Vect n a) -> h xs = foldr f e xs
+foldrUniqueness : (h : forall n . Vect n a -> b) -> VectHomomorphismProperty f e h -> (xs : Vect n a) -> h xs = foldrTR f e xs
 foldrUniqueness {f} h prf xs = irrelevantEq $
-  nilConsInitiality f e h (foldr f e) prf foldrVectHomomorphism xs
+  nilConsInitiality f e h (foldrTR f e) prf foldrVectHomomorphism xs
 
 
 ||| Each summand is `LTE` the sum
