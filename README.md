@@ -13,7 +13,7 @@ resources, in particular
 
 + [What's changed since Idris 1](https://idris2.readthedocs.io/en/latest/updates/updates.html)
 + [Resources for learning Idris](https://github.com/idris-lang/Idris2/wiki/Resources),
-  including [videos](https://github.com/idris-lang/Idris2/wiki/Resources#official-talks)
+  including [official talks](https://github.com/idris-lang/Idris2/wiki/Resources#official-talks)
   that showcase its capabilities
 + [Editor support](https://github.com/idris-lang/Idris2/wiki/Editor-Support)
 
