@@ -291,7 +291,10 @@ substInClause : {a, vars, todo : _} ->
                 FC -> PatClause (a :: todo) vars ->
                 Core (PatClause (a :: todo) vars)
 substInClause {vars} {a} fc (MkPatClause pvars (MkInfo pat pprf fty :: pats) pid rhs)
-    = do pats' <- substInPats fc a (mkTerm vars pat) pats
+    = do let tm = mkTerm vars pat
+         log "compile.casetree.subst" 50
+           "Substituting \{show tm} for \{show a} in \{show pat}"
+         pats' <- substInPats fc a tm pats
          pure (MkPatClause pvars (MkInfo pat pprf fty :: pats') pid rhs)
 
 data Partitions : List (PatClause todo vars) -> Type where
@@ -503,7 +506,7 @@ nextNames {vars} fc root (p :: pats) fty acc
                                       Known c !(quote empty env farg))
                    Just t =>
                       pure (Nothing, Stuck !(quote empty env t))
-          let 0 argPos = fishyIsVar {nm} (hasLength $ supportSize acc)
+          let MkNVar argPos = fishyNVar {nm} (supportSize acc)
           let argTy = weakensN (suc (supportSize acc)) (snd fa_tys)
           nextNames {vars} fc root pats (fst fa_tys)
             $ pushNextName acc (MkInfo p argPos argTy)
@@ -575,15 +578,20 @@ groupCons fc fn pvars cs
                               Just t <- lookupTyExact n (gamma defs)
                                    | Nothing => pure (NErased fc Placeholder)
                               nf defs (mkEnv fc vars') (embed t)
-             (MkNextNames {support = patnames} l newargs) <- nextNames {vars=vars'} fc "e" pargs (Just cty) initNextNames
+             (MkNextNames {support} l newargs) <-
+               nextNames {vars=vars'} fc "e" pargs (Just cty) initNextNames
              -- Update non-linear names in remaining patterns (to keep
              -- explicit dependencies in types accurate)
-             let pats' = updatePatNames (updateNames (zip patnames pargs))
+             let nameupdate = zip support pargs
+             log "compile.casetree.nameupdate" 40 $
+               "Deploying name update:\n   \{show nameupdate}\n  on: \{show pats}"
+             let pats' = updatePatNames (updateNames nameupdate)
                                         (weakensN l pats)
-             let clause = MkPatClause {todo = patnames ++ todo'}
-                              pvars
-                              (newargs ++ pats')
-                              pid (weakensN l rhs)
+             let clause : PatClause (support ++ todo') (vars' <>< support)
+                   = MkPatClause pvars
+                                 (newargs ++ pats')
+                                 pid
+                                 (weakensN l rhs)
              pure [ConGroup n tag [clause]]
     addConG {vars'} {todo'} n tag pargs pats pid rhs (g :: gs) with (checkGroupMatch (CName n tag) pargs g)
       addConG {vars'} {todo'} n tag pargs pats pid rhs
@@ -591,7 +599,10 @@ groupCons fc fn pvars cs
                    | (ConMatch {newargs} lprf)
         = do let newps = newPats pargs lprf ps
              let l = mkSizeOf newargs
-             let pats' = updatePatNames (updateNames (zip newargs pargs))
+             let nameupdate = zip newargs pargs
+             log "compile.casetree.nameupdate" 40
+               "Deploying name update:\n   \{show nameupdate}\n  on: \{show pats}"
+             let pats' = updatePatNames (updateNames nameupdate)
                                         (weakensN l pats)
              let newclause : PatClause (newargs ++ todo') (vars' <>< newargs)
                    = MkPatClause pvars
@@ -624,9 +635,10 @@ groupCons fc fn pvars cs
              (MkNextNames {support = [tyname, argname]} l newargs) <-
                  nextNames {vars=vars'} fc "e" [pty, parg] (Just dty) initNextNames
                 | _ => throw (InternalError "Error compiling Delay pattern match")
-             let pats' = updatePatNames (updateNames [(tyname, pty),
-                                                      (argname, parg)])
-                                        (weakensN l pats)
+             let nameupdate = [(tyname, pty), (argname, parg)]
+             log "compile.casetree.nameupdate" 40 $
+               "Deploying name update:\n   \{show nameupdate}\n  on: \{show pats}"
+             let pats' = updatePatNames (updateNames nameupdate) (weakensN l pats)
              let clause = MkPatClause {todo = tyname :: argname :: todo'}
                              pvars (newargs ++ pats')
                                    pid (weakensN l rhs)
@@ -1086,8 +1098,10 @@ mutual
     where
       updateVar : PatClause (a :: todo) vars -> Core (PatClause todo vars)
       -- replace the name with the relevant variable on the rhs
-      updateVar (MkPatClause pvars (MkInfo (PLoc pfc n) prf fty :: pats) pid rhs)
-          = pure $ MkPatClause (n :: pvars)
+      updateVar (MkPatClause pvars (MkInfo {idx} {name} (PLoc pfc n) prf fty :: pats) pid rhs)
+          = do log "compile.casetree.updateVar" 50
+                  "Replacing \{show n} with \{show name}[\{show idx}] in \{show rhs}"
+               pure $ MkPatClause (n :: pvars)
                         !(substInPats fc a (Local pfc (Just False) _ prf) pats)
                         pid (substRef n (Local pfc (Just False) _ prf) rhs)
       -- If it's an as pattern, replace the name with the relevant variable on
