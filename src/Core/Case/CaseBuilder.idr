@@ -196,15 +196,13 @@ HasNames (NamedPats todo vars) where
 
 covering
 {todo, vars : _} -> Show (NamedPats todo vars) where
-  show xs = "[" ++ showAll xs ++ "]"
+  show xs = "[" ++ joinBy ", " (showAll xs) ++ "]"
     where
-      showAll : {vs, ts : _} -> NamedPats ts vs -> String
-      showAll [] = ""
-      showAll {ts = t :: _} [p]
-          = "\{show t} \{show (pat p)} [\{show (argType p)}]"
+      showAll : {vs, ts : _} -> NamedPats ts vs -> List String
+      showAll [] = []
       showAll {ts = t :: _} (p :: ps)
-          = "\{show t} \{show (pat p)} [\{show (argType p)}], \{showAll ps}"
-
+          = "\{show t} = \{show (pat p)}[\{show (idx p)}] : \{show (argType p)}"
+          :: showAll ps
 
 {todo, vars : _} -> Pretty IdrisSyntax (NamedPats vars todo) where
   pretty xs = hsep $ prettyAll xs
@@ -212,7 +210,7 @@ covering
       prettyAll : {vs, ts : _} -> NamedPats ts vs -> List (Doc IdrisSyntax)
       prettyAll [] = []
       prettyAll {ts = t :: _} (p :: ps)
-          = parens (pretty0 t <++> equals <++> pretty (pat p))
+          = parens (pretty0 t <++> equals <++> pretty (pat p) <+> "[" <+> pretty0 (show $ idx p) <+> "]")
           :: prettyAll ps
 
 GenWeaken ArgType where
@@ -1197,7 +1195,7 @@ mkPatClause fc fn args ty pid (ps, rhs)
             (checkLengthMatch args ps)
   where
     mkNames : (vars : List Name) -> (ps : List Pat) ->
-              LengthMatch vars ps -> Maybe (NF [<]) ->
+              (0 _ : LengthMatch vars ps) -> Maybe (NF [<]) ->
               Core (NamedPats vars (cast vars))
     mkNames [] [] NilMatch fty = pure []
     mkNames (arg :: args) (p :: ps) (ConsMatch eq) fty
@@ -1272,9 +1270,9 @@ toPatClause fc n (lhs, rhs)
                        else throw (GenericMsg ffc ("Wrong function name in pattern LHS " ++ show (n, fn)))
            (f, args) => throw (GenericMsg fc "Not a function name in pattern LHS")
 
--- Assumption (given 'ClosedTerm') is that the pattern variables are
--- explicitly named. We'll assign de Bruijn indices when we're done, and
--- the names of the top level variables we created are returned in 'args'
+||| The assumption (given 'ClosedTerm') is that the pattern variables are
+||| explicitly named. We'll assign de Bruijn indices when we're done, and
+||| the names of the top level variables we created are returned in 'args'
 export
 simpleCase : {auto c : Ref Ctxt Defs} ->
              FC -> Phase -> Name -> ClosedTerm -> (def : Maybe (CaseTree [<])) ->
