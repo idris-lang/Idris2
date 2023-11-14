@@ -87,9 +87,9 @@ namespace Resugared
     pure $ hsep (annotate (DCon (Just n)) con ::  map pretty0 args)
      <++> fatArrow
       <+> Union (spaces 1 <+> sc) (nest 2 (hardline <+> sc))
-  prettyAlt env (DelayCase _ arg sc) = do
-    sc <- prettyTree (mkEnvOnto emptyFC [_,_] env) sc
-    pure $ keyword "Delay" <++> pretty0 arg
+  prettyAlt env (DelayCase tyarg valarg sc) = do
+    sc <- prettyTree (mkEnvOnto emptyFC [tyarg, valarg] env) sc
+    pure $ keyword "Delay" <++> pretty0 valarg
         <++> fatArrow
         <+> Union (spaces 1 <+> sc) (nest 2 (hardline <+> sc))
   prettyAlt env (ConstCase c sc) = do
