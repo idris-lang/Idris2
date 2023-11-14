@@ -1044,12 +1044,13 @@ appendAssociative []      c r = Refl
 appendAssociative (_::xs) c r = rewrite appendAssociative xs c r in Refl
 
 ||| `reverseOnto` reverses the list and prepends it to the "onto" argument
+export
 revOnto : (xs, vs : List a) -> reverseOnto xs vs = reverse vs ++ xs
 revOnto _ [] = Refl
 revOnto xs (v :: vs)
     = rewrite revOnto (v :: xs) vs in
         rewrite appendAssociative (reverse vs) [v] xs in
-                                  rewrite revOnto [v] vs in Refl
+          rewrite revOnto [v] vs in Refl
 
 ||| `reverse` is distributive
 export
