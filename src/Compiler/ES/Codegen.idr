@@ -666,7 +666,7 @@ mutual
 
   exp (ECon tag ci xs) = applyCon ci tag <$> traverse exp xs
 
-  exp (EOp x xs) = traverseVect exp xs >>= jsOp x
+  exp (EOp x xs) = traverse exp xs >>= jsOp x
   exp (EExtPrim x xs) = traverse exp xs >>= jsPrim x
   exp (EPrimVal x) = pure . Text $ jsConstant x
   exp EErased = pure "undefined"

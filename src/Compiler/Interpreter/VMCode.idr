@@ -208,7 +208,7 @@ parameters {auto c : Ref Ctxt Defs}
         res <- callFunc stk fn argObjs
         setReg stk target res
     step stk (OP target fn args) = do
-        argObjs <- traverseVect (getReg stk) args
+        argObjs <- traverse (getReg stk) args
         res <- callPrim stk fn argObjs
         setReg stk target res
     step stk (EXTPRIM target fn args) = case lookup fn knownExtern of
@@ -216,7 +216,7 @@ parameters {auto c : Ref Ctxt Defs}
         Just (ar ** op) => case toVect ar args of
             Nothing => interpError stk $ "EXTPRIM: Wrong number of arguments, found: " ++ show (length args) ++ ", expected: " ++ show ar
             Just argsVect => do
-                argObjs <- traverseVect (getReg stk) argsVect
+                argObjs <- traverse (getReg stk) argsVect
                 res <- op stk argObjs
                 setReg stk target res
     step stk (CASE sc alts def) = do

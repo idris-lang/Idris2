@@ -755,22 +755,28 @@ export
 for : List a -> (a -> Core b) -> Core (List b)
 for = flip traverse
 
-export
-traverseList1 : (a -> Core b) -> List1 a -> Core (List1 b)
-traverseList1 f xxs
-    = let x = head xxs
-          xs = tail xxs in
-          [| f x ::: traverse f xs |]
+namespace List1
 
-export
-traverseSnocList : (a -> Core b) -> SnocList a -> Core (SnocList b)
-traverseSnocList f [<] = pure [<]
-traverseSnocList f (as :< a) = (:<) <$> traverseSnocList f as <*> f a
+  export
+  traverse : (a -> Core b) -> List1 a -> Core (List1 b)
+  traverse f xxs
+      = let x = head xxs
+            xs = tail xxs in
+            [| f x ::: traverse f xs |]
 
-export
-traverseVect : (a -> Core b) -> Vect n a -> Core (Vect n b)
-traverseVect f [] = pure []
-traverseVect f (x :: xs) = [| f x :: traverseVect f xs |]
+namespace SnocList
+
+  export
+  traverse : (a -> Core b) -> SnocList a -> Core (SnocList b)
+  traverse f [<] = pure [<]
+  traverse f (as :< a) = (:<) <$> traverse f as <*> f a
+
+namespace Vect
+
+  export
+  traverse : (a -> Core b) -> Vect n a -> Core (Vect n b)
+  traverse f [] = pure []
+  traverse f (x :: xs) = [| f x :: traverse f xs |]
 
 %inline
 export

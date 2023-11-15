@@ -219,7 +219,7 @@ mapPTermM f = goPTerm where
                      <*> goPDecls wh
     goPClause (MkWithClause fc lhs wps flags cls) =
       MkWithClause fc <$> goPTerm lhs
-                      <*> traverseList1 goPWithProblem wps
+                      <*> traverse goPWithProblem wps
                       <*> pure flags
                       <*> goPClauses cls
     goPClause (MkImpossible fc lhs) = MkImpossible fc <$> goPTerm lhs

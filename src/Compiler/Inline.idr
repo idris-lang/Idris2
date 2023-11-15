@@ -229,7 +229,7 @@ mutual
   eval rec env stk (CCon fc n ci t args)
       = pure $ unload stk $ CCon fc n ci t !(traverse (eval rec env []) args)
   eval rec env stk (COp fc p args)
-      = pure $ unload stk $ COp fc p !(traverseVect (eval rec env []) args)
+      = pure $ unload stk $ COp fc p !(traverse (eval rec env []) args)
   eval rec env stk (CExtPrim fc p args)
       = pure $ unload stk $ CExtPrim fc p !(traverse (eval rec env []) args)
   eval rec env stk (CForce fc lr e)

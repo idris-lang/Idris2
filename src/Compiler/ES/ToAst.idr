@@ -90,7 +90,7 @@ mutual
                -> Vect n NamedCExp
                -> Core (List (Stmt Nothing), Vect n Exp)
   liftArgsVect xs = do
-    ps <- traverseVect liftArg xs
+    ps <- traverse liftArg xs
     pure (concatMap fst ps, map snd ps)
 
   -- Convert and lift (if necessary, see comment for `liftArg`)

@@ -718,7 +718,7 @@ HasNames Warning where
   full gam (ParserWarning fc x) = pure (ParserWarning fc x)
   full gam (UnreachableClause fc rho s) = UnreachableClause fc <$> full gam rho <*> full gam s
   full gam (ShadowingGlobalDefs fc xs)
-    = ShadowingGlobalDefs fc <$> traverseList1 (traversePair (traverseList1 (full gam))) xs
+    = ShadowingGlobalDefs fc <$> traverse (traversePair (traverse (full gam))) xs
   full gam (IncompatibleVisibility fc x y n) = IncompatibleVisibility fc x y <$> full gam n
   full gam w@(ShadowingLocalBindings _ _) = pure w
   full gam (Deprecated fc x y) = Deprecated fc x <$> traverseOpt (traversePair (full gam)) y
@@ -727,7 +727,7 @@ HasNames Warning where
   resolved gam (ParserWarning fc x) = pure (ParserWarning fc x)
   resolved gam (UnreachableClause fc rho s) = UnreachableClause fc <$> resolved gam rho <*> resolved gam s
   resolved gam (ShadowingGlobalDefs fc xs)
-    = ShadowingGlobalDefs fc <$> traverseList1 (traversePair (traverseList1 (resolved gam))) xs
+    = ShadowingGlobalDefs fc <$> traverse (traversePair (traverse (resolved gam))) xs
   resolved gam (IncompatibleVisibility fc x y n) = IncompatibleVisibility fc x y <$> resolved gam n
   resolved gam w@(ShadowingLocalBindings _ _) = pure w
   resolved gam (Deprecated fc x y) = Deprecated fc x <$> traverseOpt (traversePair (resolved gam)) y
@@ -818,7 +818,7 @@ HasNames Error where
   full gam (BadMultiline fc x) = pure (BadMultiline fc x)
   full gam (Timeout x) = pure (Timeout x)
   full gam (FailingDidNotFail fc) = pure (FailingDidNotFail fc)
-  full gam (FailingWrongError fc x err) = FailingWrongError fc x <$> traverseList1 (full gam) err
+  full gam (FailingWrongError fc x err) = FailingWrongError fc x <$> traverse (full gam) err
   full gam (InType fc n err) = InType fc <$> full gam n <*> full gam err
   full gam (InCon fc n err) = InCon fc <$> full gam n <*> full gam err
   full gam (InLHS fc n err) = InLHS fc <$> full gam n <*> full gam err
@@ -909,7 +909,7 @@ HasNames Error where
   resolved gam (BadMultiline fc x) = pure (BadMultiline fc x)
   resolved gam (Timeout x) = pure (Timeout x)
   resolved gam (FailingDidNotFail fc) = pure (FailingDidNotFail fc)
-  resolved gam (FailingWrongError fc x err) = FailingWrongError fc x <$> traverseList1 (resolved gam) err
+  resolved gam (FailingWrongError fc x err) = FailingWrongError fc x <$> traverse (resolved gam) err
   resolved gam (InType fc n err) = InType fc <$> resolved gam n <*> resolved gam err
   resolved gam (InCon fc n err) = InCon fc <$> resolved gam n <*> resolved gam err
   resolved gam (InLHS fc n err) = InLHS fc <$> resolved gam n <*> resolved gam err

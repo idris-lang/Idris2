@@ -223,7 +223,7 @@ mutual
   caseLam (CCon fc n ci t args)
       = CCon fc n ci t <$> traverse caseLam args
   caseLam (COp fc op args)
-      = COp fc op <$> traverseVect caseLam args
+      = COp fc op <$> traverse caseLam args
   caseLam (CExtPrim fc p args)
       = CExtPrim fc p <$> traverse caseLam args
   caseLam (CForce fc r x)

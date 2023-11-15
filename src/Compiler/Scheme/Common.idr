@@ -358,7 +358,7 @@ parameters (constants : SortedSet Name,
 
     -- oops, no traverse for Vect in Core
     schArgs : Nat -> Vect n NamedCExp -> Core (Vect n Builder)
-    schArgs i xs = traverseVect (schExp i) xs
+    schArgs i xs = traverse (schExp i) xs
     -- schArgs i [] = pure []
     -- schArgs i (arg :: args) = pure $ !(schExp i arg) :: !(schArgs i args)
 

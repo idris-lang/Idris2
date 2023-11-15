@@ -225,7 +225,7 @@ mutual
 
   analyzeVect : Ref Sts St => Vect n (CExp ns) -> Core (Integer, Vect n (CExp ns))
   analyzeVect es = do
-    (sizes, exps) <- unzip <$> traverseVect analyze es
+    (sizes, exps) <- unzip <$> traverse analyze es
     pure (sum sizes, exps)
 
 
@@ -410,7 +410,7 @@ mutual
   replaceExp pc (CCon f n c t xs) =
     CCon f n c t <$> traverse (replaceExp pc) xs
   replaceExp pc (COp f n xs) =
-    COp f n <$> traverseVect (replaceExp pc) xs
+    COp f n <$> traverse (replaceExp pc) xs
   replaceExp pc (CExtPrim f n xs) =
     CExtPrim f n <$> traverse (replaceExp pc) xs
   replaceExp pc (CForce f r y) =
