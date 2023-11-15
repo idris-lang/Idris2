@@ -1,12 +1,34 @@
-# Installing
+# Installation
 
+- [Installing with a package manager](#installing-with-a-package-manager)
 - [Installing from source](#installing-from-source)
-- [Installing from a package manager](#installing-from-a-package-manager)
+- [Installing Chez Scheme on Apple Silicon](#installing-chez-scheme-on-apple-silicon)
+
+## Installing with a package manager
+
+You can install Idris 2 with any one of a number of package managers.
+
+### Installing with [Pack](https://github.com/stefan-hoeck/idris2-pack)
+Pack comes with an installation of Idris 2, so you just need to install Pack.
+See [the installation instructions](https://github.com/stefan-hoeck/idris2-pack/blob/main/INSTALL.md)
+on GitHub.
+### Installing with [Homebrew](https://brew.sh/)
+```sh
+brew install idris2
+```
+### Installing with [Nix](https://nixos.org/features.html)
+```sh
+nix-env -i idris2
+```
+### Installing with [Nix Flakes](https://nixos.wiki/wiki/Flakes)
+```sh
+nix profile install github:idris-lang/Idris2
+```
 
 ## Installing from source
 
-The easiest way to install is via the existing generated Scheme code.
-The requirements are:
+The easiest way to install from source is via the existing generated Scheme
+code. The requirements are:
 
 - A Scheme compiler; either Chez Scheme (default), or Racket.
 - `bash`, `GNU make`, `gcc` or `clang`, `sha256sum` and `GMP`.  On Linux, you probably already
@@ -15,12 +37,12 @@ The requirements are:
   `brew install coreutils gmp` and on OpenBSD, with the `pkg_add coreutils
   bash gmake gmp` command. You specifically need the dev GMP library, which
   means on some systems the package you need to install will be named
-  something more like `libgmp3-dev`. macOS ships with `clang` whereas `gcc` is more
-  common for other \*nix distributions.
+  something more like `libgmp3-dev`. macOS ships with `clang` whereas `gcc` is
+  more common for other \*nix distributions.
 
 On Windows, it has been reported that installing via `MSYS2` works
-[MSYS2](https://www.msys2.org/). On Windows older than Windows 8, you may need to
-set an environment variable `OLD_WIN=1` or modify it in `config.mk`.
+[MSYS2](https://www.msys2.org/). On Windows older than Windows 8, you may need
+to set an environment variable `OLD_WIN=1` or modify it in `config.mk`.
 
 On Raspberry Pi, you can bootstrap via Racket.
 
@@ -151,35 +173,6 @@ bootstrapping via Chez Scheme, or while running the tests when bootstrapping via
 Racket, then your copy of Chez Scheme was built without thread support. Pass
 `--threads` to `./configure` while building Chez Scheme to correct the issue.
 
-## Installing from a package manager
-
-### Installing using Homebrew
-
-If you are Homebrew user you can install Idris 2 together with all the requirements
-by running the following command:
-
-```sh
-brew install idris2
-```
-
-### Installing from nix
-
-If you are a [nix](https://nixos.org/features.html) user you can install Idris
-2 together with all the requirements by running the following command:
-
-```sh
-nix-env -i idris2
-```
-
-### Install from nix flakes
-
-If you are a [nix flakes](https://nixos.wiki/wiki/Flakes) user you can install
-Idris 2 together with all the requirements by running the following command:
-
-```sh
-nix profile install github:idris-lang/Idris2
-```
-
 ## Running in text editor
 
 ### Run on emacs using nix flakes
@@ -191,7 +184,7 @@ Idris 2 in emacs by running the following command:
 nix run github:idris-lang/Idris2#emacs-with-idris idrisCode.idr
 ```
 
-### Installing Chez Scheme on Apple Silicon
+## Installing Chez Scheme on Apple Silicon
 
 The official version of chez scheme does not yet support Apple Silicon. So, on
 macOS with Apple Silicon (e.g. M1 and M2 macs), you will need to build and install
@@ -209,4 +202,3 @@ make ${arch}.bootquick
 make
 sudo make install
 ```
-
