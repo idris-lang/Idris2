@@ -97,8 +97,8 @@ public export
 data Pat : Type where
      PAs : FC -> Name -> Pat -> Pat
      PCon : FC -> Name -> (tag : Int) -> (arity : Nat) ->
-            List Pat -> Pat
-     PTyCon : FC -> Name -> (arity : Nat) -> List Pat -> Pat
+            SnocList Pat -> Pat
+     PTyCon : FC -> Name -> (arity : Nat) -> SnocList Pat -> Pat
      PConst : FC -> (c : Constant) -> Pat
      PArrow : FC -> (x : Name) -> Pat -> Pat -> Pat
      PDelay : FC -> LazyReason -> Pat -> Pat -> Pat
@@ -183,9 +183,9 @@ export
 Pretty IdrisSyntax Pat where
   prettyPrec d (PAs _ n p) = pretty0 n <++> keyword "@" <+> parens (pretty p)
   prettyPrec d (PCon _ n _ _ args) =
-    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) args)
+    parenthesise (d > Open) $ hsep (pretty0 n :: cast (map (prettyPrec App) args))
   prettyPrec d (PTyCon _ n _ args) =
-    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) args)
+    parenthesise (d > Open) $ hsep (pretty0 n :: cast (map (prettyPrec App) args))
   prettyPrec d (PConst _ c) = pretty c
   prettyPrec d (PArrow _ _ p q) =
     parenthesise (d > Open) $ pretty p <++> arrow <++> pretty q
@@ -265,10 +265,10 @@ mkTerm : (vars : Scope) -> Pat -> Term vars
 mkTerm vars (PAs fc x y) = mkTerm vars y
 mkTerm vars (PCon fc x tag arity xs)
     = apply fc (Ref fc (DataCon tag arity) x)
-               (map (mkTerm vars) xs)
+               (cast $ map (mkTerm vars) xs) -- TODO: use applySpine instead?
 mkTerm vars (PTyCon fc x arity xs)
     = apply fc (Ref fc (TyCon 0 arity) x)
-               (map (mkTerm vars) xs)
+               (cast $ map (mkTerm vars) xs) -- TODO: use applySpine instead?
 mkTerm vars (PConst fc c) = PrimVal fc c
 mkTerm vars (PArrow fc x s t)
     = Bind fc x (Pi fc top Explicit (mkTerm vars s)) (mkTerm (vars :< x) t)

@@ -22,6 +22,7 @@ import Data.Fin
 import Libraries.Data.IOArray
 import Libraries.Data.IntMap
 import Data.List
+import Data.SnocList
 import Data.List1
 import Data.Maybe
 import Data.Nat

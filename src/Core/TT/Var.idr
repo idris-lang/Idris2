@@ -71,12 +71,12 @@ mkVar (ws :< w) = Later (mkVar ws)
 
 ||| Compute the remaining scope once the target variable has been removed
 public export
-dropVar :
+dropIsVar :
   (ns : SnocList a) ->
   {idx : Nat} -> (0 p : IsVar name idx ns) ->
   SnocList a
-dropVar (xs :< n) First = xs
-dropVar (xs :< n) (Later p) = dropVar xs p :< n
+dropIsVar (xs :< n) First = xs
+dropIsVar (xs :< n) (Later p) = dropIsVar xs p :< n
 
 ||| Throw in extra variables on the outer side of the context
 ||| This is essentially the identity function
@@ -221,6 +221,10 @@ locateNVar : SizeOf local -> NVar nm (outer ++ local) ->
 locateNVar s (MkNVar p) = case locateIsVar s p of
   Left p => Left (MkNVar (runErased p))
   Right p => Right (MkNVar (runErased p))
+
+public export
+dropNVar : {ns : SnocList a} -> NVar nm ns -> SnocList a
+dropNVar (MkNVar p) = dropIsVar ns p
 
 ------------------------------------------------------------------------
 -- Scope checking

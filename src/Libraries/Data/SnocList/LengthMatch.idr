@@ -20,3 +20,13 @@ export
 lengthsMatch : LengthMatch xs ys -> (length xs) = (length ys)
 lengthsMatch LinMatch = Refl
 lengthsMatch (SnocMatch x) = cong S (lengthsMatch x)
+
+export
+reverseOnto : LengthMatch sx sy -> LengthMatch sx' sy' ->
+  LengthMatch (reverseOnto sx sx') (reverseOnto sy sy')
+reverseOnto p LinMatch = p
+reverseOnto p (SnocMatch x) = reverseOnto (SnocMatch p) x
+
+export
+reverse : LengthMatch sx sy -> LengthMatch (reverse sx) (reverse sy)
+reverse = reverseOnto LinMatch
