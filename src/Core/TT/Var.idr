@@ -131,7 +131,7 @@ locateIsVar s p = case choose (idx < size s) of
 ||| and a proof that the name is at that position in the scope.
 ||| Everything but the De Bruijn index is erased.
 public export
-record Var (vars : SnocList a) where
+record Var {0 a : Type} (vars : SnocList a) where
   constructor MkVar
   {varIdx : Nat}
   {0 varNm : a}
@@ -193,7 +193,7 @@ Show (Var ns) where
 -- Named variable in scope
 
 public export
-record NVar (nm : a) (vars : SnocList a) where
+record NVar {0 a : Type} (nm : a) (vars : SnocList a) where
   constructor MkNVar
   {nvarIdx : Nat}
   0 nvarPrf : IsVar nm nvarIdx vars

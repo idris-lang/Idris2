@@ -8,6 +8,7 @@ import Decidable.Equality
 import Idris.Pretty.Annotations
 
 import Libraries.Data.Primitives
+import Libraries.Data.String.Extra
 
 import Libraries.Text.PrettyPrint.Prettyprinter
 

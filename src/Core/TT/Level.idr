@@ -84,7 +84,7 @@ dropIsLevel (n :: xs) (Later p) = n :: dropIsLevel xs p
 ||| and a proof that the name is at that position in the Local.
 ||| Everything but the De Bruijn index is erased.
 public export
-record Level (vars : List a) where
+record Level {0 a : Type} (vars : List a) where
   constructor MkLevel
   {levelIdx : Nat}
   {0 levelNm : a}
@@ -117,7 +117,7 @@ dropLevel (MkLevel p) = dropIsLevel ns p
 -- Named level in scope
 
 public export
-record NLevel (nm : a) (vars : List a) where
+record NLevel {0 a : Type} (nm : a) (vars : List a) where
   constructor MkNLevel
   {nlevelIdx : Nat}
   0 nlevelPrf : IsLevel nm nlevelIdx vars
