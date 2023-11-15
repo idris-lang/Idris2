@@ -26,6 +26,7 @@ import Libraries.Data.SortedSet
 
 import Decidable.Equality
 
+import Libraries.Data.String.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter
 
 %default covering
