@@ -178,7 +178,8 @@ getMissingAlts fc defs (NType _ _) alts
                    pure []
            else pure [DefaultCase (Unmatched "Coverage check")]
 getMissingAlts fc defs nfty alts
-    = do log "coverage.missing" 50 $ "Getting constructors for: " ++ show nfty
+    = do log "coverage.missing" 50 $
+          "Getting constructors for: " ++ show nfty ++ "with alts \{show alts}"
          logNF "coverage.missing" 20 "Getting constructors for" (mkEnv fc _) nfty
          allCons <- getCons defs nfty
          pure (filter (noneOf alts)
@@ -274,14 +275,15 @@ buildArgs : {auto c : Ref Ctxt Defs} ->
             KnownVars vars Int -> -- Things which have definitely match
             KnownVars vars (List Int) -> -- Things an argument *can't* be
                                     -- (because a previous case matches)
-            List ClosedTerm -> -- ^ arguments, with explicit names
-            CaseTree vars -> Core (List (List ClosedTerm))
-buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
+            SnocList ClosedTerm -> -- ^ arguments, with explicit names
+            CaseTree vars -> Core (List (SnocList ClosedTerm))
+buildArgs fc defs known not ps cs@(Case {name} idx el ty altsIn)
   -- If we've already matched on 'el' in this branch, restrict the alternatives
   -- to the tag we already know. Otherwise, add missing cases and filter out
   -- the ones it can't possibly be (the 'not') because a previous case
   -- has matched.
-    = do let fenv = mkEnv fc _
+    = do log "coverage.missing" 30 $ "Case split on \{show name}"
+         let fenv = mkEnv fc _
          nfty <- nf defs fenv ty
          alts <- replaceDefaults fc defs nfty altsIn
          let alts' = alts ++ !(getMissingAlts fc defs nfty alts)
@@ -292,30 +294,31 @@ buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
          buildArgsAlt not altsN
   where
     buildArgAlt : KnownVars vars (List Int) ->
-                  CaseAlt vars -> Core (List (List ClosedTerm))
+                  CaseAlt vars -> Core (List (SnocList ClosedTerm))
     buildArgAlt not' (ConCase n t args sc)
-        = do let l = mkSizeOf args
+        = do let known' = (MkVar el, t) :: known
+             let l = mkSizeOf args
              let con = Ref fc (DataCon t (size l)) n
-             let ps' = map (substRef var
+             let ps' = map (substRef name
                              (apply fc
                                     con (map (Ref fc Bound) args))) ps
-             buildArgs fc defs (weakensN l ((MkVar el, t) :: known))
+             buildArgs fc defs (weakensN l known')
                                (weakensN l not') ps' sc
     buildArgAlt not' (DelayCase t a sc)
         = let l = mkSizeOf [t, a]
-              ps' = map (substRef var (TDelay fc LUnknown
+              ps' = map (substRef name (TDelay fc LUnknown
                                              (Ref fc Bound t)
                                              (Ref fc Bound a))) ps in
               buildArgs fc defs (weakensN l known) (weakensN l not')
                                 ps' sc
     buildArgAlt not' (ConstCase c sc)
-        = do let ps' = map (substRef var (PrimVal fc c)) ps
+        = do let ps' = map (substRef name (PrimVal fc c)) ps
              buildArgs fc defs known not' ps' sc
     buildArgAlt not' (DefaultCase sc)
         = buildArgs fc defs known not' ps sc
 
     buildArgsAlt : KnownVars vars (List Int) -> List (CaseAlt vars) ->
-                   Core (List (List ClosedTerm))
+                   Core (List (SnocList ClosedTerm))
     buildArgsAlt not' [] = pure []
     buildArgsAlt not' (c@(ConCase _ t _ _) :: cs)
         = pure $ !(buildArgAlt not' c) ++
@@ -341,14 +344,14 @@ getMissing : {vars : _} ->
              Core (List ClosedTerm)
 getMissing fc n ctree
    = do defs <- get Ctxt
-        let psIn = map (Ref fc Bound) (vars <>> [])
+        let psIn = map (Ref fc Bound) vars
         patss <- buildArgs fc defs [] [] psIn ctree
         let pats = concat patss
-        unless (null pats) $
-          logC "coverage.missing" 20 $ map (join "\n") $
-            flip traverse pats $ \ pat =>
-              show <$> toFullNames pat
-        pure (map (apply fc (Ref fc Func n)) patss)
+        unless (null pats) $ logC "coverage.missing" 20 $
+          do cname <- toFullNames n
+             pats <- flip SnocList.traverse pats (Core.map show . toFullNames)
+             pure (join "\n" ("Missing patterns for \{show cname}:" :: cast pats))
+        pure (map (apply fc (Ref fc Func n) . cast) patss)
 
 -- For the given name, get the names it refers to which are not themselves
 -- covering.

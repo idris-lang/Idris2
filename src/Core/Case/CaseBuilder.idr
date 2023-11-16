@@ -27,6 +27,7 @@ import Libraries.Data.SortedSet
 
 import Decidable.Equality
 
+import Libraries.Data.Erased
 import Libraries.Data.String.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter
 
@@ -510,6 +511,37 @@ record NextNames (f : Scope -> Scope) (vars : Scope) where
   supportSize : SizeOf support
   supportNPs : NamedPats (f support) (vars ++ support)
 
+
+
+getArgTys : {vars : _} ->
+            {auto c : Ref Ctxt Defs} ->
+            Env Term vars ->
+            Local -> Maybe (NF vars) -> Core (List (ArgType vars))
+getArgTys env (n :: ns) (Just (NBind pfc _ (Pi _ c _ fargc) fsc))
+    = do defs <- get Ctxt
+         empty <- clearDefs defs
+         argty <- case !(evalClosure defs fargc) of
+           NErased _ _ => pure Unknown
+           farg => Known c <$> quote empty env farg
+         scty <- fsc defs (toClosure defaultOpts env (Ref pfc Bound n))
+         rest <- getArgTys env ns (Just scty)
+         pure (argty :: rest)
+getArgTys env (n :: ns) (Just t)
+    = do empty <- clearDefs =<< get Ctxt
+         pure [Stuck !(quote empty env t)]
+getArgTys _ _ _ = pure []
+
+
+mkNames : {auto i : Ref PName Int} ->
+  (root : String) ->
+  (vars : SnocList a) ->
+  Core (ns : Scope ** Erased (LengthMatch vars ns))
+mkNames root [<] = pure ([<] ** MkErased LinMatch)
+mkNames root (xs :< _)
+  = do n <- nextName root
+       (ns ** p) <- mkNames root xs
+       pure (ns :< n ** SnocMatch <$> p)
+
 nextNames : {vars : _} ->
             {auto i : Ref PName Int} ->
             {auto c : Ref Ctxt Defs} ->
@@ -518,31 +550,27 @@ nextNames : {vars : _} ->
             Maybe (NF vars) ->
             Core (NextNames SnocList.reverse vars)
 nextNames fc root pats ty
-  = do MkNextNames args l nps <- go pats ty
-       pure $ MkNextNames args l (reverse nps)
+  = do (args ** MkErased lprf) <- mkNames root pats
+       let env = mkEnv fc vars
+       argTys <- getArgTys env (cast args) ty
+       MkNextNames args l nps <- go pats args lprf (cast argTys)
+       pure (MkNextNames args l (reverse nps))
 
   where
 
-  go : SnocList Pat -> Maybe (NF vars) -> Core (NextNames Prelude.id vars)
-  go [<] fty = pure (MkNextNames [<] zero [])
-  go (pats :< p) fty
-    = do defs <- get Ctxt
-         empty <- clearDefs defs
-         n <- nextName root
-         let env = mkEnv fc vars
-         (scTy, argTy) <- the (Core (Maybe (NF vars), ArgType vars)) $
-           case fty of
-             Nothing => pure (Nothing, Unknown)
-             Just (NBind pfc _ (Pi _ c _ fargc) fsc) =>
-               do farg <- evalClosure defs fargc
-                  scty <- fsc defs (toClosure defaultOpts env (Ref pfc Bound n))
-                  case farg of
-                    NErased _ _ => pure (Just scty, Unknown)
-                    _ => pure (Just scty, Known c !(quote empty env farg))
-             Just t => pure (Nothing, Stuck !(quote empty env t))
-         MkNextNames args l ps <- go pats scTy
+  go : (pats : SnocList Pat) ->
+       (args : SnocList Name) ->
+       (0 _ : LengthMatch pats args) ->
+       SnocList (ArgType vars) ->
+       Core (NextNames Prelude.id vars)
+  go [<] _ _ _ = pure (MkNextNames [<] zero [])
+  go (pats :< p) (ns :< n) (SnocMatch eq) argTys
+    = do let (argTys, argTy) = case argTys of
+                                 argTys :< argTy => (argTys, argTy)
+                                 _ => (argTys, Unknown)
+         MkNextNames args l ps <- go pats ns eq argTys
          let argTy' : ArgType ((vars ++ args) :< n)
-             = weakenNs (mkSizeOf (args :< n)) argTy
+             = weakenNs (suc l) argTy
          pure $ MkNextNames (args :< n) (suc l)
               $ MkInfo p First argTy' :: weaken ps
 
