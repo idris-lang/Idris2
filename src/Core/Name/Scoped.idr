@@ -277,8 +277,16 @@ embedFishily : FreelyEmbeddable tm => tm (cast ns) -> tm (vars <>< ns)
 embedFishily t = rewrite fishAsSnocAppend vars ns in embed t
 
 export
+FunctorFreelyEmbeddable : Functor f => FreelyEmbeddable tm => FreelyEmbeddable (f . tm)
+FunctorFreelyEmbeddable = MkFreelyEmbeddable believe_me
+
+export
 ListFreelyEmbeddable : FreelyEmbeddable tm => FreelyEmbeddable (List . tm)
-ListFreelyEmbeddable = MkFreelyEmbeddable believe_me
+ListFreelyEmbeddable = FunctorFreelyEmbeddable
+
+export
+MaybeFreelyEmbeddable : FreelyEmbeddable tm => FreelyEmbeddable (Maybe . tm)
+MaybeFreelyEmbeddable = FunctorFreelyEmbeddable
 
 export
 GenWeakenWeakens : GenWeaken tm => Weaken tm

@@ -38,7 +38,7 @@ mutual
   public export
   data CaseAlt : Scoped where
        ||| Constructor for a data type; bind the arguments and subterms.
-       ConCase : Name -> (tag : Int) -> (args : List Name) ->
+       ConCase : Name -> (tag : Int) -> (args : Local) ->
                  CaseTree (vars <>< args) -> CaseAlt vars
        ||| Lazy match for the Delay type use for codata types
        DelayCase : (ty : Name) -> (arg : Name) ->
@@ -47,6 +47,12 @@ mutual
        ConstCase : Constant -> CaseTree vars -> CaseAlt vars
        ||| Catch-all case
        DefaultCase : CaseTree vars -> CaseAlt vars
+
+export
+FreelyEmbeddable CaseTree where
+
+export
+FreelyEmbeddable CaseAlt where
 
 mutual
   public export
