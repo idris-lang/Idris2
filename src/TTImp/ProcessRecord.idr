@@ -197,7 +197,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
         addMissingNames (nms :< nm) (tele :< (_, rest)) acc
           = addMissingNames nms tele ((nm, rest) :: acc)
         addMissingNames [<] tele acc
-          = do tele <- flip Core.traverseSnocList tele $ \ (mnm, rest) =>
+          = do tele <- flip SnocList.traverse tele $ \ (mnm, rest) =>
                          case mnm of
                            Nothing => throw (InternalError "Some names have disappeared?! \{show rest}")
                            Just nm => pure (nm, rest)

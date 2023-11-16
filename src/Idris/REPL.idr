@@ -501,7 +501,7 @@ processEdit (Intro upd line hole)
 
          (iintrod :: iintrods) <- intro hidx hole env htyInLhsCtxt
            | [] => pure $ EditError "Don't know what to do."
-         pintrods <- traverseList1 pterm (iintrod ::: iintrods)
+         pintrods <- traverse pterm (iintrod ::: iintrods)
          syn <- get Syn
          let brack = elemBy (\x, y => dropNS x == dropNS y) hole (bracketholes syn)
          let introds = map (show . pretty . ifThenElse brack (addBracket replFC) id) pintrods

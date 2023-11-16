@@ -848,7 +848,7 @@ mutual
   desugarClause ps arg (MkWithClause fc lhs wps flags cs)
       = do cs' <- traverse (map snd . desugarClause ps arg) cs
            (nm, bound, lhs') <- desugarLHS ps arg lhs
-           wps' <- traverseList1 (desugarWithProblem (ps <>< bound)) wps
+           wps' <- traverse (desugarWithProblem (ps <>< bound)) wps
            pure (nm, mkWithClause fc lhs' wps' flags cs')
 
   desugarClause ps arg (MkImpossible fc lhs)
