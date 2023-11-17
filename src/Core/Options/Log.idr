@@ -52,6 +52,7 @@ knownTopics = [
     ("compile.casetree.measure", Just "Log the node counts of each runtime case tree."),
     ("compile.casetree.missing", Just "Log when we add an error case for uncovered branches."),
     ("compile.casetree.nameupdate", Just "Log the name updates"),
+    ("compile.casetree.nextnames", Nothing),
     ("compile.casetree.partition", Nothing),
     ("compile.casetree.pick", Nothing),
     ("compile.casetree.subst", Nothing),

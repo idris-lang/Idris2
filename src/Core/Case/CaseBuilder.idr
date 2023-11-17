@@ -512,7 +512,6 @@ record NextNames (f : Scope -> Scope) (vars : Scope) where
   supportNPs : NamedPats (f support) (vars ++ support)
 
 
-
 getArgTys : {vars : _} ->
             {auto c : Ref Ctxt Defs} ->
             Env Term vars ->
@@ -554,7 +553,9 @@ nextNames fc root pats ty
        let env = mkEnv fc vars
        argTys <- getArgTys env (cast args) ty
        MkNextNames args l nps <- go pats args lprf (cast argTys)
-       pure (MkNextNames args l (reverse nps))
+       let res = MkNextNames args l (reverse nps)
+       log "compile.casetree.nextnames" 50 $ "Generating next names: \{show (supportNPs res)}"
+       pure res
 
   where
 
@@ -1265,27 +1266,22 @@ mkPatClause fc fn args ty pid (ps, rhs)
     mkNames : (vars : Scope) -> (ps : SnocList Pat) ->
               (0 _ : LengthMatch vars ps) -> Maybe (NF [<]) ->
               Core (NamedPats (reverse vars) vars)
-    mkNames args ps eqs ty = reverse <$> go zero args ps eqs ty where
+    mkNames args ps eqs ty
+      = do argTys <- getArgTys [<] (cast args) ty
+           reverse <$> go zero args ps eqs (cast argTys) where
 
       go : SizeOf inner -> (vars : Scope) -> (ps : SnocList Pat) ->
-           (0 _ : LengthMatch vars ps) -> Maybe (NF [<]) ->
+           (0 _ : LengthMatch vars ps) -> SnocList (ArgType [<]) ->
            Core (NamedPats vars (vars <>< inner))
-      go s [<] [<] LinMatch fty = pure []
-      go s (args :< arg) (ps :< p) (SnocMatch eq) fty
-        = do defs <- get Ctxt
-             empty <- clearDefs defs
-             fa_tys <- the (Core (Maybe (NF _), ArgType _)) $
-                case fty of
-                     Nothing => pure (Nothing, CaseBuilder.Unknown)
-                     Just (NBind pfc _ (Pi _ c _ farg) fsc) =>
-                        do dom <- quote empty [<] farg
-                           cod <- fsc defs (toClosure defaultOpts [<] (Ref pfc Bound arg))
-                           pure (Just cod, Known c (embed dom))
-                     Just t =>
-                        do ty <- quote empty [<] t
-                           pure (Nothing, Stuck (embed ty))
-             nms <- go (suc s) args ps eq (Builtin.fst fa_tys)
-             pure $ MkInfo p (fishyIsVar (hasLength s)) (Builtin.snd fa_tys)
+      go s [<] [<] LinMatch _ = pure []
+      go s (args :< arg) (ps :< p) (SnocMatch eq) argTys
+        = do let (argTys, argTy)
+                   = the (SnocList (ArgType [<]), ArgType [<])
+                   $ case argTys of
+                       argTys :< argTy => (argTys, argTy)
+                       _ => (argTys, Unknown)
+             nms <- go (suc s) args ps eq argTys
+             pure $ MkInfo p (fishyIsVar (hasLength s)) (embed argTy)
                   :: nms
 
 export
