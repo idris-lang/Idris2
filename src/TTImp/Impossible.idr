@@ -157,6 +157,8 @@ mutual
            Core ClosedTerm
   mkTerm (IVar fc n) mty exps autos named
      = buildApp fc n mty exps autos named
+  mkTerm (IAs fc fc' u n pat) mty exps autos named
+     = mkTerm pat mty exps autos named
   mkTerm (IApp fc fn arg) mty exps autos named
      = mkTerm fn mty (arg :: exps) autos named
   mkTerm (IAutoApp fc fn arg) mty exps autos named
