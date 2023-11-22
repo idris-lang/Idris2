@@ -1,3 +1,5 @@
+.. _ffi-overview:
+
 ************
 FFI Overview
 ************

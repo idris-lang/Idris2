@@ -182,6 +182,8 @@ custom back-end and diverging from the Idris representation is not a good idea.
 The best approach here is to build a conversion layer between the string
 representation of the custom back-end and the runtime.
 
+.. _sect-world:
+
 **World**
 
 In pure functional programming, causality needs to be represented whenever we

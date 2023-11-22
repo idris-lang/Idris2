@@ -10,6 +10,7 @@ The compiler has the ``--timing`` flag to dump timing information collected duri
 The output documents, in reverse chronological order, the cumulative time taken for the operation (and sub operations) to complete.
 Sub levels are indicated by successive repetitions of ``+``.
 
+.. _sect-logging:
 
 Logging
 =======
