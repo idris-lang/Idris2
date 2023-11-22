@@ -245,6 +245,8 @@ in the prelude in:
 Smaller Changes
 ===============
 
+.. _ambiguous-name-resolution:
+
 Ambiguous Name Resolution
 -------------------------
 
@@ -359,6 +361,8 @@ below.
 
 Also, an alternative syntax ``let x := val in e`` is available.
 See Section :ref:`sect-let-bindings` for more info.
+
+.. _auto-implicits:
 
 ``auto``-implicits and Interfaces
 ---------------------------------
