@@ -1419,27 +1419,6 @@ retry mode c
                       (\err => do defs <- get Ctxt
                                   empty <- clearDefs defs
                                   throw (WhenUnifying loc (gamma defs) env !(quote empty env x) !(quote empty env y) err))
-              Just (MkSeqConstraint loc env xsold ysold)
-                  => do defs <- get Ctxt
-                        xs <- traverse (continueNF defs env) xsold
-                        ys <- traverse (continueNF defs env) ysold
-                        cs <- unifyArgs mode loc env xs ys
-                        case constraints cs of
-                             [] => do deleteConstraint c
-                                      pure cs
-                             _ => pure cs
-  where
-    definedN : Name -> Core Bool
-    definedN n@(NS _ (MN _ _)) -- a metavar will only ever be a MN
-        = do defs <- get Ctxt
-             Just gdef <- lookupCtxtExact n (gamma defs)
-                  | _ => pure False
-             case definition gdef of
-                  Hole _ _ => pure (invertible gdef)
-                  BySearch _ _ _ => pure False
-                  Guess _ _ _ => pure False
-                  _ => pure True
-    definedN _ = pure True
 
 delayMeta : {vars : _} ->
             LazyReason -> Nat -> Term vars -> Term vars -> Term vars
