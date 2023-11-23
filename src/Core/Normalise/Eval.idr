@@ -40,10 +40,6 @@ export
 getNF : {auto c : Ref Ctxt Defs} -> Glued vars -> Core (NF vars)
 getNF {c} (MkGlue _ _ nf) = nf c
 
-public export
-Stack : Scoped
-Stack vars = List (FC, Closure vars)
-
 evalWithOpts : {auto c : Ref Ctxt Defs} ->
                {free, vars : _} ->
                Defs -> EvalOpts ->
@@ -100,16 +96,15 @@ parameters (defs : Defs, topopts : EvalOpts)
     eval env locs (Local fc mrig idx prf) stk
         = evalLocal env fc mrig idx prf stk locs
     eval env locs (Ref fc nt fn) stk
-        = evalRef env False fc nt fn stk (NApp fc (NRef nt fn) stk)
+        = evalRef env False fc nt fn stk (NApp fc (NRef nt fn) (cast stk))
     eval {vars} {free} env locs (Meta fc name idx args) stk
-        = evalMeta env fc name idx (closeArgs args) stk
+        = evalMeta env fc name idx (closeArgs (cast args)) stk
       where
         -- Yes, it's just a map, but specialising it by hand since we
         -- use this a *lot* and it saves the run time overhead of making
         -- a closure and calling APPLY.
-        closeArgs : List (Term (free ++ vars)) -> List (Closure free)
-        closeArgs [] = []
-        closeArgs (t :: ts) = MkClosure topopts locs env t :: closeArgs ts
+        closeArgs : SnocList (Term (free ++ vars)) -> Spine free
+        closeArgs = map ((emptyFC,) . MkClosure topopts locs env)
     eval env locs (Bind fc x (Lam _ r _ ty) scope) (thunk :: stk)
         = eval env (locs :< snd thunk) scope stk
     eval env locs (Bind fc x b@(Let _ r val ty) scope) stk
@@ -125,10 +120,11 @@ parameters (defs : Defs, topopts : EvalOpts)
                       (\defs', arg => evalWithOpts defs' topopts
                                               env (locs :< arg) scope stk)
     eval env locs (App fc fn arg) stk
-        = case strategy topopts of
-               CBV => do arg' <- eval env locs arg []
-                         eval env locs fn ((fc, MkNFClosure topopts env arg') :: stk)
-               CBN => eval env locs fn ((fc, MkClosure topopts locs env arg) :: stk)
+        = do arg <- case strategy topopts of
+               CBV => MkNFClosure topopts env <$> eval env locs arg []
+               CBN => pure $ MkClosure topopts locs env arg
+             log "eval.app" 50 $ "Pushing (closure \{show @{CLOSURE} arg}) on the stack"
+             eval env locs fn ((fc,  arg) :: stk)
     eval env locs (As fc s n tm) stk
         = if removeAs topopts
              then eval env locs tm stk
@@ -146,7 +142,7 @@ parameters (defs : Defs, topopts : EvalOpts)
              case tm' of
                   NDelay fc r _ arg =>
                       eval env (locs :< arg) (Local {name = UN (Basic "fvar")} fc Nothing _ First) stk
-                  _ => pure (NForce fc r tm' stk)
+                  _ => pure (NForce fc r tm' (cast stk))
     eval env locs (PrimVal fc c) stk = pure $ NPrimVal fc c
     eval env locs (Erased fc a) stk
       = NErased fc <$> traverse @{%search} @{CORE} (\ t => eval env locs t stk) a
@@ -171,16 +167,16 @@ parameters (defs : Defs, topopts : EvalOpts)
         = pure (NBind fc x b
                       (\defs', arg => applyToStack env !(sc defs' arg) stk))
     applyToStack env (NApp fc (NRef nt fn) args) stk
-        = evalRef env False fc nt fn (args ++ stk)
-                  (NApp fc (NRef nt fn) (args ++ stk))
+        = evalRef env False fc nt fn (args <>> stk)
+                  (NApp fc (NRef nt fn) (args <>< stk))
     applyToStack env (NApp fc (NLocal mrig idx p) args) stk
-        = evalLocal env fc mrig _ p (args ++ stk) [<]
+        = evalLocal env fc mrig _ p (args <>> stk) [<]
     applyToStack env (NApp fc (NMeta n i args) args') stk
-        = evalMeta env fc n i args (args' ++ stk)
+        = evalMeta env fc n i args (args' <>> stk)
     applyToStack env (NDCon fc n t a args) stk
-        = pure $ NDCon fc n t a (args ++ stk)
+        = pure $ NDCon fc n t a (args <>< stk)
     applyToStack env (NTCon fc n t a args) stk
-        = pure $ NTCon fc n t a (args ++ stk)
+        = pure $ NTCon fc n t a (args <>< stk)
     applyToStack env (NAs fc s p t) stk
        = if removeAs topopts
             then applyToStack env t stk
@@ -197,7 +193,7 @@ parameters (defs : Defs, topopts : EvalOpts)
             case tm' of
                  NDelay fc r _ arg =>
                     eval env [<arg] (Local {name = UN (Basic "fvar")} fc Nothing _ First) stk
-                 _ => pure (NForce fc r tm' (args ++ stk))
+                 _ => pure (NForce fc r tm' (args <>< stk))
     applyToStack env nf@(NPrimVal fc _) _ = pure nf
     applyToStack env (NErased fc a) stk
       = NErased fc <$> traverse @{%search} @{CORE} (\ t => applyToStack env t stk) a
@@ -232,12 +228,11 @@ parameters (defs : Defs, topopts : EvalOpts)
              then
                case getBinder prf env of
                     Let _ _ val _ => eval env [<] val stk
-                    _ => pure $ NApp fc (NLocal mrig idx prf) stk
-             else pure $ NApp fc (NLocal mrig idx prf) stk
+                    _ => pure $ NApp fc (NLocal mrig idx prf) (cast stk)
+             else pure $ NApp fc (NLocal mrig idx prf) (cast stk)
     evalLocal env fc mrig Z First stk (locs :< x)
         = evalLocClosure env fc mrig stk x
-    evalLocal
-              env fc mrig (S idx) (Later p) stk (locs :< _)
+    evalLocal env fc mrig (S idx) (Later p) stk (locs :< _)
         = evalLocal env fc mrig idx p stk locs
 
     -- TODO: this is just a vector update
@@ -255,14 +250,12 @@ parameters (defs : Defs, topopts : EvalOpts)
     evalMeta : {auto c : Ref Ctxt Defs} ->
                {free : _} ->
                Env Term free ->
-               FC -> Name -> Int -> List (Closure free) ->
+               FC -> Name -> Int -> Spine free ->
                Stack free -> Core (NF free)
     evalMeta env fc nm i args stk
-        = let args' = if isNil stk then map (EmptyFC,) args
-                         else map (EmptyFC,) args ++ stk
-                        in
+        = let args' = args <>> stk in
               evalRef env True fc Func (Resolved i) args'
-                          (NApp fc (NMeta nm i args) stk)
+                          (NApp fc (NMeta nm i args) (cast stk))
 
     -- The commented out logging here might still be useful one day, but
     -- evalRef is used a lot and even these tiny checks turn out to be
@@ -276,11 +269,11 @@ parameters (defs : Defs, topopts : EvalOpts)
     evalRef env meta fc (DataCon tag arity) fn stk def
         = do -- logC "eval.ref.data" 50 $ do fn' <- toFullNames fn -- Can't use ! here, it gets lifted too far
              --                             pure $ "Found data constructor: " ++ show fn'
-             pure $ NDCon fc fn tag arity stk
+             pure $ NDCon fc fn tag arity (cast stk)
     evalRef env meta fc (TyCon tag arity) fn stk def
         = do -- logC "eval.ref.type" 50 $ do fn' <- toFullNames fn
              --                             pure $ "Found type constructor: " ++ show fn'
-             pure $ ntCon fc fn tag arity stk
+             pure $ ntCon fc fn tag arity (cast stk)
     evalRef env meta fc Bound fn stk def
         = do -- logC "eval.ref.bound" 50 $ do fn' <- toFullNames fn
              --                              pure $ "Found bound variable: " ++ show fn'
@@ -317,14 +310,14 @@ parameters (defs : Defs, topopts : EvalOpts)
                    pure nf
                 else pure def
 
-    getCaseBound : List (Closure free) ->
-                   (args : List Name) ->
+    getCaseBound : SnocList (Closure free) ->
+                   (args : SnocList Name) ->
                    LocalEnv free more ->
-                   Maybe (LocalEnv free (more <>< args))
-    getCaseBound []            []        loc = Just loc
-    getCaseBound []            (_ :: _)  loc = Nothing -- mismatched arg length
-    getCaseBound (arg :: args) []        loc = Nothing -- mismatched arg length
-    getCaseBound (arg :: args) (n :: ns) loc = getCaseBound args ns (loc :< arg)
+                   Maybe (LocalEnv free (more ++ args))
+    getCaseBound [<]            [<]      loc = Just loc
+    getCaseBound [<]            (_ :< _) loc = Nothing -- mismatched arg length
+    getCaseBound (args :< arg) [<]       loc = Nothing -- mismatched arg length
+    getCaseBound (args :< arg) (ns :< n) loc = pure $ !(getCaseBound args ns loc) :< arg
 
     -- Returns the case term from the matched pattern with the LocalEnv (arguments from constructor pattern ConCase)
     evalConAlt : {auto c : Ref Ctxt Defs} ->
@@ -333,13 +326,14 @@ parameters (defs : Defs, topopts : EvalOpts)
                  LocalEnv free more -> EvalOpts -> FC ->
                  Stack free ->
                  (args : List Name) ->
-                 List (Closure free) ->
+                 SnocList (Closure free) ->
                  CaseTree (more <>< args) ->
                  Core (CaseResult (TermWithEnv free))
     evalConAlt env loc opts fc stk args args' sc
-         = do let Just bound = getCaseBound args' args loc
+         = do let Just bound = getCaseBound args' (cast args) loc
                    | Nothing => pure GotStuck
-              evalTree env bound opts fc stk sc
+              evalTree env bound opts fc stk $
+                rewrite sym $ fishAsSnocAppend more args in sc
 
     tryAlt : {auto c : Ref Ctxt Defs} ->
              {free, more : _} ->
@@ -374,12 +368,11 @@ parameters (defs : Defs, topopts : EvalOpts)
     tryAlt {more}
            env loc opts fc stk (NBind pfc x (Pi fc' r e aty) scty) (ConCase (UN (Basic "->")) tag [s,t] sc)
        = evalConAlt {more} env loc opts fc stk [s,t]
-                  [aty,
-                   MkNFClosure opts env (NBind pfc x (Lam fc' r e aty) scty)]
+                  [<aty, MkNFClosure opts env (NBind pfc x (Lam fc' r e aty) scty)]
                   sc
     -- Delay matching
     tryAlt env loc opts fc stk (NDelay _ _ ty arg) (DelayCase tyn argn sc)
-         = evalTree env (loc :< arg :< ty) opts fc stk sc
+         = evalTree env (loc :< ty :< arg) opts fc stk sc
     -- Constant matching
     tryAlt env loc opts fc stk (NPrimVal _ c') (ConstCase c sc)
          = if c == c' then evalTree env loc opts fc stk sc
@@ -431,7 +424,7 @@ parameters (defs : Defs, topopts : EvalOpts)
            -- i.e. only the top-level constructor.
            logC "eval.casetree" 5 $ do
              xval <- toFullNames xval
-             pure "Evaluated \{show name} to \{show xval}"
+             pure "In \{show @{LOCALENV} loc}, evaluated \{show name} to \{show xval}"
            let loc' = updateLocal opts env idx (embed x) loc xval
            findAlt env loc' opts fc stk xval alts
     evalTree env loc opts fc stk (STerm _ tm)

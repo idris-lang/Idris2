@@ -578,8 +578,8 @@ getPArgs : {auto c : Ref Ctxt Defs} ->
 getPArgs defs cl
     = do NDCon fc _ _ _ args <- evalClosure defs cl
              | nf => throw (GenericMsg (getLoc nf) "Badly formed struct type")
-         case reverse (map snd args) of
-              (tydesc :: n :: _) =>
+         case map snd args of
+              (_ :< n :< tydesc) =>
                   do NPrimVal _ (Str n') <- evalClosure defs n
                          | nf => throw (GenericMsg (getLoc nf) "Unknown field name")
                      pure (n', tydesc)
@@ -592,7 +592,7 @@ getFieldArgs defs cl
              | nf => throw (GenericMsg (getLoc nf) "Badly formed struct type")
          case map snd args of
               -- cons
-              [_, t, rest] =>
+              [<rest, t, _] =>
                   do rest' <- getFieldArgs defs rest
                      (n, ty) <- getPArgs defs t
                      pure ((n, ty) :: rest')
@@ -644,7 +644,7 @@ nfToCFType _ True (NBind fc _ _ _)
 nfToCFType _ s (NTCon fc n_in _ _ args)
     = do defs <- get Ctxt
          n <- toFullNames n_in
-         case !(getNArgs defs n $ map snd args) of
+         case !(getNArgs defs n $ cast $ map snd args) of
               User un uargs =>
                 do nargs <- traverse (evalClosure defs) uargs
                    cargs <- traverse (nfToCFType fc s) nargs

@@ -30,6 +30,7 @@ data Constraint : Type where
                     (env : Env Term vars) ->
                     (x : NF vars) -> (y : NF vars) ->
                     Constraint
+{-
      -- An unsolved sequence of constraints, arising from arguments in an
      -- application where solving later constraints relies on solving earlier
      -- ones
@@ -39,6 +40,7 @@ data Constraint : Type where
                        (xs : List (NF vars)) ->
                        (ys : List (NF vars)) ->
                        Constraint
+-}
      -- A resolved constraint
      Resolved : Constraint
 
@@ -585,12 +587,14 @@ checkValidHole base (idx, (fc, n))
                                 xnf <- quote empty env x
                                 ynf <- quote empty env y
                                 throw (CantSolveEq fc (gamma defs) env xnf ynf)
+{-
                           MkSeqConstraint fc env (x :: _) (y :: _) =>
                              do put UST ({ guesses := empty } ust)
                                 empty <- clearDefs defs
                                 xnf <- quote empty env x
                                 ynf <- quote empty env y
                                 throw (CantSolveEq fc (gamma defs) env xnf ynf)
+                                -}
                           _ => pure ()
               _ => traverse_ checkRef !(traverse getFullName
                                         ((keys (getRefs (Resolved (-1)) (type gdef)))))
@@ -701,9 +705,9 @@ dumpHole str n hole
                          "\t    from " ++ show !(toFullNames !(quote empty env x))
                             ++ " =?= " ++ show !(toFullNames !(quote empty env y))
                             ++ if lazy then "\n\t(lazy allowed)" else ""
-                  Just (MkSeqConstraint _ _ xs ys) =>
+{-                  Just (MkSeqConstraint _ _ xs ys) =>
                        logString str n $ "\t\t" ++ show xs ++ " =?= " ++ show ys
-
+-}
 export
 dumpConstraints : {auto u : Ref UST UState} ->
                   {auto c : Ref Ctxt Defs} ->

@@ -273,25 +273,25 @@ replace' {vars} tmpi defs env lhs parg tm
              sc' <- replace' (tmpi + 1) defs env lhs parg
                              !(scfn defs (toClosure defaultOpts env (Ref fc Bound x')))
              pure (Bind fc x b' (refsToLocals (Add x x' None) sc'))
-    repSub (NApp fc hd [])
+    repSub (NApp fc hd [<])
         = do empty <- clearDefs defs
-             quote empty env (NApp fc hd [])
+             quote empty env (NApp fc hd [<])
     repSub (NApp fc hd args)
-        = do args' <- traverse (traversePair repArg) args
-             pure $ applyWithFC
-                        !(replace' tmpi defs env lhs parg (NApp fc hd []))
+        = do args' <- traverse (traverse repArg) args
+             pure $ applySpineWithFC
+                        !(replace' tmpi defs env lhs parg (NApp fc hd [<]))
                         args'
     repSub (NDCon fc n t a args)
-        = do args' <- traverse (traversePair repArg) args
+        = do args' <- traverse (traverse repArg) args
              empty <- clearDefs defs
-             pure $ applyWithFC
-                        !(quote empty env (NDCon fc n t a []))
+             pure $ applySpineWithFC
+                        !(quote empty env (NDCon fc n t a [<]))
                         args'
     repSub (NTCon fc n t a args)
-        = do args' <- traverse (traversePair repArg) args
+        = do args' <- traverse (traverse repArg) args
              empty <- clearDefs defs
-             pure $ applyWithFC
-                        !(quote empty env (NTCon fc n t a []))
+             pure $ applySpineWithFC
+                        !(quote empty env (NTCon fc n t a [<]))
                         args'
     repSub (NAs fc s a p)
         = do a' <- repSub a
@@ -305,9 +305,9 @@ replace' {vars} tmpi defs env lhs parg tm
              tm' <- replace' tmpi defs env lhs parg !(evalClosure defs tm)
              pure (TDelay fc r ty' tm')
     repSub (NForce fc r tm args)
-        = do args' <- traverse (traversePair repArg) args
+        = do args' <- traverse (traverse repArg) args
              tm' <- repSub tm
-             pure $ applyWithFC (TForce fc r tm') args'
+             pure $ applySpineWithFC (TForce fc r tm') args'
     repSub (NErased fc (Dotted t))
         = do t' <- repSub t
              pure (Erased fc (Dotted t'))

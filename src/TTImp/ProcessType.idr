@@ -99,16 +99,16 @@ findInferrable defs ty = fi 0 0 [] [] ty
       -- inferrable if it's guarded by a constructor, or on its own
       findInf : List Nat -> List (Name, Nat) ->
                 NF [<] -> Core (List Nat)
-      findInf acc pos (NApp _ (NRef Bound n) [])
+      findInf acc pos (NApp _ (NRef Bound n) [<])
           = case lookup n pos of
                  Nothing => pure acc
                  Just p => if p `elem` acc then pure acc else pure (p :: acc)
       findInf acc pos (NDCon _ _ _ _ args)
           = do args' <- traverse (evalClosure defs . snd) args
-               findInfs acc pos args'
+               findInfs acc pos (cast args')
       findInf acc pos (NTCon _ _ _ _ args)
           = do args' <- traverse (evalClosure defs . snd) args
-               findInfs acc pos args'
+               findInfs acc pos (cast args')
       findInf acc pos (NDelayed _ _ t) = findInf acc pos t
       findInf acc _ _ = pure acc
 

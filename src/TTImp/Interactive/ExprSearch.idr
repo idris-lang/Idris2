@@ -486,7 +486,7 @@ searchLocalWith {vars} fc nofn rig opts hints env ((p, pty) :: rest) ty topty
     findPos : Defs -> Term vars ->
               (Term vars -> Term vars) ->
               NF vars -> NF vars -> Core (Search (Term vars, ExprDefs))
-    findPos defs prf f x@(NTCon pfc pn _ _ [(fc1, xty), (fc2, yty)]) target
+    findPos defs prf f x@(NTCon pfc pn _ _ [<(fc1, xty), (fc2, yty)]) target
         = getSuccessful fc rig opts False env ty topty
               [findDirect defs prf f x target,
                  (do fname <- maybe (throw (InternalError "No fst"))
@@ -502,14 +502,14 @@ searchLocalWith {vars} fc nofn rig opts hints env ((p, pty) :: rest) ty topty
                                 getSuccessful fc rig opts False env ty topty
                                   [(do xtynf <- evalClosure defs xty
                                        findPos defs prf
-                                         (\arg => applyWithFC (Ref fc Func fname)
+                                         (\arg => applyStackWithFC (Ref fc Func fname)
                                                           [(fc1, xtytm),
                                                            (fc2, ytytm),
                                                            (fc, f arg)])
                                          xtynf target),
                                    (do ytynf <- evalClosure defs yty
                                        findPos defs prf
-                                           (\arg => applyWithFC (Ref fc Func sname)
+                                           (\arg => applyStackWithFC (Ref fc Func sname)
                                                           [(fc1, xtytm),
                                                            (fc2, ytytm),
                                                            (fc, f arg)])

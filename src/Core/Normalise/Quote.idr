@@ -7,6 +7,8 @@ import Core.Normalise.Eval
 import Core.TT
 import Core.Value
 
+import Data.SnocList
+
 %default covering
 
 export
@@ -72,20 +74,20 @@ mutual
                    Env Term free -> (FC, Closure free) ->
                    Core ((FC, Term (free ++ bound)))
   quoteArgWithFC q opts defs bounds env
-       = traversePair (quoteArg q opts defs bounds env)
+       = traverse (quoteArg q opts defs bounds env)
 
   quoteArgs : {auto c : Ref Ctxt Defs} ->
               {bound, free : _} ->
               Ref QVar Int -> QuoteOpts -> Defs -> Boundz bound ->
-              Env Term free -> List (Closure free) ->
-              Core (List (Term (free ++ bound)))
-  quoteArgs q opts defs bounds env = traverse (quoteArg q opts defs bounds env)
+              Env Term free -> Spine free ->
+              Core (SnocList (FC, Term (free ++ bound)))
+  quoteArgs q opts defs bounds env = SnocList.traverse (traverse $ quoteArg q opts defs bounds env)
 
   quoteArgsWithFC : {auto c : Ref Ctxt Defs} ->
                     {bound, free : _} ->
                     Ref QVar Int -> QuoteOpts -> Defs -> Boundz bound ->
-                    Env Term free -> List (FC, Closure free) ->
-                    Core (List (FC, Term (free ++ bound)))
+                    Env Term free -> SnocList (FC, Closure free) ->
+                    Core (SnocList (FC, Term (free ++ bound)))
   quoteArgsWithFC q opts defs bounds env
       = traverse (quoteArgWithFC q opts defs bounds env)
 
@@ -116,7 +118,7 @@ mutual
   quoteHead q opts defs fc bounds env (NRef nt n) = pure $ Ref fc nt n
   quoteHead q opts defs fc bounds env (NMeta n i args)
       = do args' <- quoteArgs q opts defs bounds env args
-           pure $ Meta fc n i args'
+           pure $ Meta fc n i (cast $ map snd args')
 
   quotePi : {auto c : Ref Ctxt Defs} ->
             {bound, free : _} ->
@@ -181,17 +183,17 @@ mutual
                                quoteArgsWithFC q opts' empty bound env args
                                else quoteArgsWithFC q ({ topLevel := False } opts')
                                                     defs bound env args
-           pure $ applyWithFC f' args'
+           pure $ applySpineWithFC f' args'
     where
       isRef : NHead vars -> Bool
       isRef (NRef{}) = True
       isRef _ = False
   quoteGenNF q opts defs bound env (NDCon fc n t ar args)
       = do args' <- quoteArgsWithFC q opts defs bound env args
-           pure $ applyWithFC (Ref fc (DataCon t ar) n) args'
+           pure $ applySpineWithFC (Ref fc (DataCon t ar) n) args'
   quoteGenNF q opts defs bound env (NTCon fc n t ar args)
       = do args' <- quoteArgsWithFC q opts defs bound env args
-           pure $ applyWithFC (Ref fc (TyCon t ar) n) args'
+           pure $ applySpineWithFC (Ref fc (TyCon t ar) n) args'
   quoteGenNF q opts defs bound env (NAs fc s n pat)
       = do n' <- quoteGenNF q opts defs bound env n
            pat' <- quoteGenNF q opts defs bound env pat
@@ -217,9 +219,9 @@ mutual
            case arg of
                 NDelay fc _ _ arg =>
                    do argNF <- evalClosure defs arg
-                      pure $ applyWithFC !(quoteGenNF q opts defs bound env argNF) args'
+                      pure $ applySpineWithFC !(quoteGenNF q opts defs bound env argNF) args'
                 _ => do arg' <- quoteGenNF q opts defs bound env arg
-                        pure $ applyWithFC (TForce fc r arg') args'
+                        pure $ applySpineWithFC (TForce fc r arg') args'
   quoteGenNF q opts defs bound env (NPrimVal fc c) = pure $ PrimVal fc c
   quoteGenNF q opts defs bound env (NErased fc t)
     = Erased fc <$> traverse @{%search} @{CORE} (\ nf => quoteGenNF q opts defs bound env nf) t

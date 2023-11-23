@@ -120,9 +120,9 @@ mutual
   allConvNF : {auto c : Ref Ctxt Defs} ->
               {vars : _} ->
               Ref QVar Int -> Bool -> Defs -> Env Term vars ->
-              List (NF vars) -> List (NF vars) -> Core Bool
-  allConvNF q i defs env [] [] = pure True
-  allConvNF q i defs env (x :: xs) (y :: ys)
+              SnocList (NF vars) -> SnocList (NF vars) -> Core Bool
+  allConvNF q i defs env [<] [<] = pure True
+  allConvNF q i defs env (xs :< x) (ys :< y)
       = do ok <- allConvNF q i defs env xs ys
            if ok then convGen q i defs env x y
                  else pure False
@@ -131,9 +131,9 @@ mutual
   -- return False if anything differs at the head, to quickly find
   -- conversion failures without going deeply into all the arguments.
   -- True means they might still match
-  quickConv : List (NF vars) -> List (NF vars) -> Bool
-  quickConv [] [] = True
-  quickConv (x :: xs) (y :: ys) = quickConvArg x y && quickConv xs ys
+  quickConv : SnocList (NF vars) -> SnocList (NF vars) -> Bool
+  quickConv [<] [<] = True
+  quickConv (xs :< x) (ys :< y) = quickConvArg x y && quickConv xs ys
     where
       quickConvHead : NHead vars -> NHead vars -> Bool
       quickConvHead (NLocal _ _ _) (NLocal _ _ _) = True
@@ -161,10 +161,10 @@ mutual
   allConv : {auto c : Ref Ctxt Defs} ->
             {vars : _} ->
             Ref QVar Int -> Bool -> Defs -> Env Term vars ->
-            List (Closure vars) -> List (Closure vars) -> Core Bool
+            Spine vars -> Spine vars -> Core Bool
   allConv q i defs env xs ys
-      = do xsnf <- traverse (evalClosure defs) xs
-           ysnf <- traverse (evalClosure defs) ys
+      = do xsnf <- traverse (evalClosure defs . snd) xs
+           ysnf <- traverse (evalClosure defs . snd) ys
            if quickConv xsnf ysnf
               then allConvNF q i defs env xsnf ysnf
               else pure False
@@ -232,7 +232,7 @@ mutual
                 {vars : _} ->
                 Ref QVar Int -> Bool -> Defs -> Env Term vars ->
                 Name -> Name ->
-                List (Closure vars) -> List (Closure vars) -> Core Bool
+                Spine vars -> Spine vars -> Core Bool
   chkSameDefs q i defs env n n' nargs nargs'
      = do Just (PMDef _ args ct rt _) <- lookupDefExact n (gamma defs)
                | _ => pure False
@@ -248,18 +248,18 @@ mutual
      where
        -- We've only got the index into the argument list, and the indices
        -- don't match up, which is annoying. But it'll always be there!
-       getArgPos : Nat -> List (Closure vars) -> Maybe (Closure vars)
+       getArgPos : Nat -> List (FC, Closure vars) -> Maybe (Closure vars)
        getArgPos _ [] = Nothing
-       getArgPos Z (c :: cs) = pure c
+       getArgPos Z (c :: cs) = pure (snd c)
        getArgPos (S k) (c :: cs) = getArgPos k cs
 
        convertMatches : List (Var vs, Var vs') ->
                         Core Bool
        convertMatches [] = pure True
        convertMatches ((MkVar {varIdx=ix} p, MkVar {varIdx=iy} p') :: vs)
-          = do let Just varg = getArgPos ix nargs
+          = do let Just varg = getArgPos ix (cast nargs)
                    | Nothing => pure False
-               let Just varg' = getArgPos iy nargs'
+               let Just varg' = getArgPos iy (cast nargs')
                    | Nothing => pure False
                pure $ !(convGen q i defs env varg varg') &&
                       !(convertMatches vs)
@@ -269,8 +269,8 @@ mutual
   chkConvCaseBlock : {auto c : Ref Ctxt Defs} ->
                      {vars : _} ->
                      FC -> Ref QVar Int -> Bool -> Defs -> Env Term vars ->
-                     NHead vars -> List (Closure vars) ->
-                     NHead vars -> List (Closure vars) -> Core Bool
+                     NHead vars -> Spine vars ->
+                     NHead vars -> Spine vars -> Core Bool
   chkConvCaseBlock fc q i defs env (NRef _ n) nargs (NRef _ n') nargs'
       = do NS _ (CaseBlock _ _) <- full (gamma defs) n
               | _ => pure False
@@ -296,9 +296,9 @@ mutual
                 | Nothing => pure False
            let Just scpos' = findArgPos tree'
                 | Nothing => pure False
-           let Just sc = getScrutinee scpos nargs
+           let Just sc = getScrutinee scpos (cast nargs)
                 | Nothing => pure False
-           let Just sc' = getScrutinee scpos' nargs'
+           let Just sc' = getScrutinee scpos' (cast nargs')
                 | Nothing => pure False
            ignore $ convGen q i defs env sc sc'
            pure (location def == location def')
@@ -309,8 +309,8 @@ mutual
       findArgPos (Case idx p _ _) = Just idx
       findArgPos _ = Nothing
 
-      getScrutinee : Nat -> List (Closure vs) -> Maybe (Closure vs)
-      getScrutinee Z (x :: xs) = Just x
+      getScrutinee : Nat -> List (FC, Closure vs) -> Maybe (Closure vs)
+      getScrutinee Z (x :: xs) = Just (snd x)
       getScrutinee (S k) (x :: xs) = getScrutinee k xs
       getScrutinee _ _ = Nothing
   chkConvCaseBlock _ _ _ _ _ _ _ _ _ = pure False
@@ -375,8 +375,10 @@ mutual
     convGen q inf defs env (NApp fc val args) (NApp _ val' args')
         = if !(chkConvHead q inf defs env val val')
              then do i <- getInfPos val
-                     allConv q inf defs env (dropInf 0 i args1) (dropInf 0 i args2)
-             else chkConvCaseBlock fc q inf defs env val args1 val' args2
+                     allConv q inf defs env
+                        (cast {from = List (FC, Closure vars)} $ dropInf 0 i $ cast args) -- TODO: UGH!
+                        (cast {from = List (FC, Closure vars)} $ dropInf 0 i $ cast args')
+             else chkConvCaseBlock fc q inf defs env val args val' args'
         where
           getInfPos : NHead vars -> Core (List Nat)
           getInfPos (NRef _ n)
@@ -395,20 +397,13 @@ mutual
                    then dropInf (S i) ds xs
                    else x :: dropInf (S i) ds xs
 
-          -- Discard file context information irrelevant for conversion checking
-          args1 : List (Closure vars)
-          args1 = map snd args
-
-          args2 : List (Closure vars)
-          args2 = map snd args'
-
     convGen q i defs env (NDCon _ nm tag _ args) (NDCon _ nm' tag' _ args')
         = if tag == tag'
-             then allConv q i defs env (map snd args) (map snd args')
+             then allConv q i defs env args args'
              else pure False
     convGen q i defs env (NTCon _ nm tag _ args) (NTCon _ nm' tag' _ args')
         = if nm == nm'
-             then allConv q i defs env (map snd args) (map snd args')
+             then allConv q i defs env args args'
              else pure False
     convGen q i defs env (NAs _ _ _ tm) (NAs _ _ _ tm')
         = convGen q i defs env tm tm'
@@ -429,7 +424,7 @@ mutual
     convGen q i defs env (NForce _ r arg args) (NForce _ r' arg' args')
         = if compatible r r'
              then if !(convGen q i defs env arg arg')
-                     then allConv q i defs env (map snd args) (map snd args')
+                     then allConv q i defs env args args'
                      else pure False
              else pure False
 

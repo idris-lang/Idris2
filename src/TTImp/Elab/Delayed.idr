@@ -16,6 +16,7 @@ import TTImp.Elab.Check
 import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 import Data.List
+import Data.SnocList
 
 %default covering
 
@@ -163,11 +164,11 @@ mutual
   mismatchNF defs (NTCon _ xn xt _ xargs) (NTCon _ yn yt _ yargs)
       = if xn /= yn
            then pure True
-           else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
+           else anyM (mismatch defs) (cast {to = List (Closure vars, _)} $ zipWith (curry $ mapHom snd) xargs yargs)
   mismatchNF defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
       = if xt /= yt
            then pure True
-           else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
+           else anyM (mismatch defs) (cast {to = List (Closure vars, _)} $ zipWith (curry $ mapHom snd) xargs yargs)
   mismatchNF defs (NPrimVal _ xc) (NPrimVal _ yc) = pure (xc /= yc)
   mismatchNF defs (NDelayed _ _ x) (NDelayed _ _ y) = mismatchNF defs x y
   mismatchNF defs (NDelay _ _ _ x) (NDelay _ _ _ y)
@@ -187,11 +188,11 @@ contra : {auto c : Ref Ctxt Defs} ->
 contra defs (NTCon _ xn xt xa xargs) (NTCon _ yn yt ya yargs)
     = if xn /= yn
          then pure True
-         else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
+         else anyM (mismatch defs) (cast {to = List (Closure vars, _)}  $ zipWith (curry $ mapHom snd) xargs yargs)
 contra defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
     = if xt /= yt
          then pure True
-         else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
+         else anyM (mismatch defs) (cast {to = List (Closure vars, _)} $ zipWith (curry $ mapHom snd) xargs yargs)
 contra defs (NPrimVal _ x) (NPrimVal _ y) = pure (x /= y)
 contra defs (NDCon _ _ _ _ _) (NPrimVal _ _) = pure True
 contra defs (NPrimVal _ _) (NDCon _ _ _ _ _) = pure True

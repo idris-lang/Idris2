@@ -18,6 +18,8 @@ import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.TTImp
 
+import Data.SnocList
+
 %default covering
 
 -- TODO: Later, we'll get the name of the lemma from the type, if it's one
@@ -36,8 +38,8 @@ getRewriteTerms : {vars : _} ->
                   Core (NF vars, NF vars, NF vars)
 getRewriteTerms loc defs (NTCon nfc eq t a args) err
     = if !(isEqualTy eq)
-         then case reverse $ map snd args of
-                   (rhs :: lhs :: rhsty :: lhsty :: _) =>
+         then case map snd args of
+                   (_ :< lhsty :< rhsty :< lhs :< rhs) =>
                         pure (!(evalClosure defs lhs),
                               !(evalClosure defs rhs),
                               !(evalClosure defs lhsty))

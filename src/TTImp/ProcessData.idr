@@ -21,6 +21,7 @@ import TTImp.Elab.Utils
 import TTImp.Elab
 import TTImp.TTImp
 
+import Data.SnocList
 import Data.DPair
 import Data.List
 import Libraries.Data.NameMap
@@ -142,7 +143,7 @@ getIndexPats tm
 
     getPats : Defs -> NF [<] -> Core (List (NF [<]))
     getPats defs (NTCon fc _ _ _ args)
-        = traverse (evalClosure defs . snd) args
+        = cast <$> traverse (evalClosure defs . snd) args
     getPats defs _ = pure [] -- Can't happen if we defined the type successfully!
 
 getDetags : {auto c : Ref Ctxt Defs} ->
@@ -156,10 +157,11 @@ getDetags fc tys
              xs => pure $ Just xs
   where
     mutual
-      disjointArgs : List (NF [<]) -> List (NF [<]) -> Core Bool
-      disjointArgs [] _ = pure False
-      disjointArgs _ [] = pure False
-      disjointArgs (a :: args) (a' :: args')
+      -- TODO: should we error if the lists don't have the same lengths?!
+      disjointArgs : SnocList (NF [<]) -> SnocList (NF [<]) -> Core Bool
+      disjointArgs [<] _ = pure False
+      disjointArgs _ [<] = pure False
+      disjointArgs (args :< a) (args' :< a')
           = if !(disjoint a a')
                then pure True
                else disjointArgs args args'

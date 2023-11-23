@@ -6,6 +6,8 @@ import Core.Env
 import Core.Normalise
 import Core.Value
 
+import Data.SnocList
+
 import TTImp.TTImp
 
 import Libraries.Data.NameMap
@@ -99,10 +101,10 @@ processFnOpt fc _ ndef (SpecArgs ns)
 
     -- Return names the type depends on, and whether it's a parameter
     mutual
-      getDepsArgs : Bool -> List (NF [<]) -> NameMap Bool ->
+      getDepsArgs : Bool -> SnocList (NF [<]) -> NameMap Bool ->
                     Core (NameMap Bool)
-      getDepsArgs inparam [] ns = pure ns
-      getDepsArgs inparam (a :: as) ns
+      getDepsArgs inparam [<] ns = pure ns
+      getDepsArgs inparam (as :< a) ns
           = do ns' <- getDeps inparam a ns
                getDepsArgs inparam as ns'
 
@@ -130,19 +132,19 @@ processFnOpt fc _ ndef (SpecArgs ns)
                params <- case !(lookupDefExact n (gamma defs)) of
                               Just (TCon _ _ ps _ _ _ _ _) => pure ps
                               _ => pure []
-               let (ps, ds) = splitPs 0 params (map snd args)
-               ns' <- getDepsArgs True !(traverse (evalClosure defs) ps) ns
-               getDepsArgs False !(traverse (evalClosure defs) ds) ns'
+               let (ps, ds) = splitPs 0 params (cast args)
+               ns' <- getDepsArgs True !(traverse (evalClosure defs) (cast ps)) ns
+               getDepsArgs False !(traverse (evalClosure defs) (cast ds)) ns'
         where
           -- Split into arguments in parameter position, and others
-          splitPs : Nat -> List Nat -> List (Closure [<]) ->
+          splitPs : Nat -> List Nat -> List (FC, Closure [<]) ->
                     (List (Closure [<]), List (Closure [<]))
           splitPs n params [] = ([], [])
           splitPs n params (x :: xs)
               = let (ps', ds') = splitPs (1 + n) params xs in
                     if n `elem` params
-                       then (x :: ps', ds')
-                       else (ps', x :: ds')
+                       then (snd x :: ps', ds')
+                       else (ps', snd x :: ds')
       getDeps inparam (NDelayed _ _ t) ns = getDeps inparam t ns
       getDeps inparams nf ns = pure ns
 

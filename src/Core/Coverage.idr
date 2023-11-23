@@ -83,12 +83,12 @@ conflict defs env nfty n
               _ => pure False
   where
     mutual
-      conflictArgs : Int -> List (Closure vars) -> List (Closure [<]) ->
+      conflictArgs : Int -> Spine vars -> Spine [<] ->
                      Core (Maybe (List (Name, Term vars)))
-      conflictArgs _ [] [] = pure (Just [])
-      conflictArgs i (c :: cs) (c' :: cs')
-          = do cnf <- evalClosure defs c
-               cnf' <- evalClosure defs c'
+      conflictArgs _ [<] [<] = pure (Just [])
+      conflictArgs i (cs :< c) (cs' :< c')
+          = do cnf <- evalClosure defs (snd c)
+               cnf' <- evalClosure defs (snd c')
                Just ms <- conflictNF i cnf cnf'
                     | Nothing => pure Nothing
                Just ms' <- conflictArgs i cs cs'
@@ -111,16 +111,16 @@ conflict defs env nfty n
           = let x' = MN (show x) i in
                 conflictNF (i + 1) t
                        !(sc defs (toClosure defaultOpts [<] (Ref fc Bound x')))
-      conflictNF i nf (NApp _ (NRef Bound n) [])
+      conflictNF i nf (NApp _ (NRef Bound n) [<])
           = do empty <- clearDefs defs
                pure (Just [(n, !(quote empty env nf))])
       conflictNF i (NDCon _ n t a args) (NDCon _ n' t' a' args')
           = if t == t'
-               then conflictArgs i (map snd args) (map snd args')
+               then conflictArgs i args args'
                else pure Nothing
       conflictNF i (NTCon _ n t a args) (NTCon _ n' t' a' args')
           = if n == n'
-               then conflictArgs i (map snd args) (map snd args')
+               then conflictArgs i args args'
                else pure Nothing
       conflictNF i (NPrimVal _ c) (NPrimVal _ c')
           = if c == c'

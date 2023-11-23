@@ -207,11 +207,11 @@ mutual
   mightMatchArgs : {auto c : Ref Ctxt Defs} ->
                    {vars : _} ->
                    Defs ->
-                   List (Closure vars) -> List (Closure [<]) ->
+                   Spine vars -> Spine [<] ->
                    Core Bool
-  mightMatchArgs defs [] [] = pure True
-  mightMatchArgs defs (x :: xs) (y :: ys)
-      = do amatch <- mightMatchArg defs x y
+  mightMatchArgs defs [<] [<] = pure True
+  mightMatchArgs defs (xs :< x) (ys :< y)
+      = do amatch <- mightMatchArg defs (snd x) (snd y)
            if amatch
               then mightMatchArgs defs xs ys
               else pure False
@@ -225,12 +225,12 @@ mutual
   mightMatch defs (NBind _ _ _ _) (NBind _ _ _ _) = pure Poly -- lambdas might match
   mightMatch defs (NTCon _ n t a args) (NTCon _ n' t' a' args')
       = if n == n'
-           then do amatch <- mightMatchArgs defs (map snd args) (map snd args')
+           then do amatch <- mightMatchArgs defs args args'
                    if amatch then pure Concrete else pure NoMatch
            else pure NoMatch
   mightMatch defs (NDCon _ n t a args) (NDCon _ n' t' a' args')
       = if t == t'
-           then do amatch <- mightMatchArgs defs (map snd args) (map snd args')
+           then do amatch <- mightMatchArgs defs args args'
                    if amatch then pure Concrete else pure NoMatch
            else pure NoMatch
   mightMatch defs (NPrimVal _ x) (NPrimVal _ y)

@@ -125,6 +125,7 @@ knownTopics = [
     ("elab.unify", Nothing),
     ("elab.update", Nothing),
     ("elab.with", Nothing),
+    ("eval.app", Nothing),
     ("eval.casetree", Nothing),
     ("eval.casetree.stuck", Nothing),
     ("eval.def.underapplied", Just "Evaluating definitions (unavailable by default, edit Core.Normalise.Eval & recompile)"),

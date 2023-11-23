@@ -663,13 +663,13 @@ export
 HasNames PartialReason where
   full gam NotStrictlyPositive = pure NotStrictlyPositive
   full gam (BadCall ns) = pure $ BadCall !(traverse (full gam) ns)
-  full gam (BadPath init n) = pure $ BadPath !(traverse (traversePair (full gam)) init) !(full gam n)
-  full gam (RecPath loop) = pure $ RecPath !(traverse (traversePair (full gam)) loop)
+  full gam (BadPath init n) = pure $ BadPath !(traverse (traverse (full gam)) init) !(full gam n)
+  full gam (RecPath loop) = pure $ RecPath !(traverse (traverse (full gam)) loop)
 
   resolved gam NotStrictlyPositive = pure NotStrictlyPositive
   resolved gam (BadCall ns) = pure $ BadCall !(traverse (resolved gam) ns)
-  resolved gam (BadPath init n) = pure $ BadPath !(traverse (traversePair (resolved gam)) init) !(resolved gam n)
-  resolved gam (RecPath loop) = pure $ RecPath !(traverse (traversePair (resolved gam)) loop)
+  resolved gam (BadPath init n) = pure $ BadPath !(traverse (traverse (resolved gam)) init) !(resolved gam n)
+  resolved gam (RecPath loop) = pure $ RecPath !(traverse (traverse (resolved gam)) loop)
 
 export
 HasNames Terminating where
@@ -719,19 +719,19 @@ HasNames Warning where
   full gam (ParserWarning fc x) = pure (ParserWarning fc x)
   full gam (UnreachableClause fc rho s) = UnreachableClause fc <$> full gam rho <*> full gam s
   full gam (ShadowingGlobalDefs fc xs)
-    = ShadowingGlobalDefs fc <$> traverse (traversePair (traverse (full gam))) xs
+    = ShadowingGlobalDefs fc <$> traverse (traverse (traverse (full gam))) xs
   full gam (IncompatibleVisibility fc x y n) = IncompatibleVisibility fc x y <$> full gam n
   full gam w@(ShadowingLocalBindings _ _) = pure w
-  full gam (Deprecated fc x y) = Deprecated fc x <$> traverseOpt (traversePair (full gam)) y
+  full gam (Deprecated fc x y) = Deprecated fc x <$> traverseOpt (traverse (full gam)) y
   full gam (GenericWarn fc x) = pure (GenericWarn fc x)
 
   resolved gam (ParserWarning fc x) = pure (ParserWarning fc x)
   resolved gam (UnreachableClause fc rho s) = UnreachableClause fc <$> resolved gam rho <*> resolved gam s
   resolved gam (ShadowingGlobalDefs fc xs)
-    = ShadowingGlobalDefs fc <$> traverse (traversePair (traverse (resolved gam))) xs
+    = ShadowingGlobalDefs fc <$> traverse (traverse (traverse (resolved gam))) xs
   resolved gam (IncompatibleVisibility fc x y n) = IncompatibleVisibility fc x y <$> resolved gam n
   resolved gam w@(ShadowingLocalBindings _ _) = pure w
-  resolved gam (Deprecated fc x y) = Deprecated fc x <$> traverseOpt (traversePair (resolved gam)) y
+  resolved gam (Deprecated fc x y) = Deprecated fc x <$> traverseOpt (traverse (resolved gam)) y
   resolved gam (GenericWarn fc x) = pure (GenericWarn fc x)
 
 export
@@ -782,7 +782,7 @@ HasNames Error where
     = CantSolveGoal fc gam <$> full gam rho <*> full gam s <*> traverseOpt (full gam) merr
   full gam (DeterminingArg fc n x rho s)
     = DeterminingArg fc <$> full gam n <*> pure x <*> full gam rho <*> full gam s
-  full gam (UnsolvedHoles xs) = UnsolvedHoles <$> traverse (traversePair (full gam)) xs
+  full gam (UnsolvedHoles xs) = UnsolvedHoles <$> traverse (traverse (full gam)) xs
   full gam (CantInferArgType fc rho n n1 s)
     = CantInferArgType fc <$> full gam rho <*> full gam n <*> full gam n1 <*> full gam s
   full gam (SolvedNamedHole fc rho n s) = SolvedNamedHole fc <$> full gam rho <*> full gam n <*> full gam s
@@ -873,7 +873,7 @@ HasNames Error where
     = CantSolveGoal fc gam <$> resolved gam rho <*> resolved gam s <*> traverseOpt (resolved gam) merr
   resolved gam (DeterminingArg fc n x rho s)
     = DeterminingArg fc <$> resolved gam n <*> pure x <*> resolved gam rho <*> resolved gam s
-  resolved gam (UnsolvedHoles xs) = UnsolvedHoles <$> traverse (traversePair (resolved gam)) xs
+  resolved gam (UnsolvedHoles xs) = UnsolvedHoles <$> traverse (traverse (resolved gam)) xs
   resolved gam (CantInferArgType fc rho n n1 s)
     = CantInferArgType fc <$> resolved gam rho <*> resolved gam n <*> resolved gam n1 <*> resolved gam s
   resolved gam (SolvedNamedHole fc rho n s) = SolvedNamedHole fc <$> resolved gam rho <*> resolved gam n <*> resolved gam s

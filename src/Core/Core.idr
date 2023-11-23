@@ -784,9 +784,11 @@ traverseOpt : (a -> Core b) -> Maybe a -> Core (Maybe b)
 traverseOpt f Nothing = pure Nothing
 traverseOpt f (Just x) = map Just (f x)
 
-export
-traversePair : (a -> Core b) -> (w, a) -> Core (w, b)
-traversePair f (w, a) = (w,) <$> f a
+namespace Pair
+
+  export
+  traverse : (a -> Core b) -> (w, a) -> Core (w, b)
+  traverse f (w, a) = (w,) <$> f a
 
 export
 traverse_ : (a -> Core b) -> List a -> Core ()
