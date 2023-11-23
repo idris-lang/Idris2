@@ -20,6 +20,8 @@ omitted when they can be inferred by the type checker [#IdrisType]_, e.g.
 
     index : forall a, n . Fin n -> Vect n a -> a
 
+.. _auto-implicit-arguments:
+
 Auto implicit arguments
 -----------------------
 
