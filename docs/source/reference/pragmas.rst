@@ -29,9 +29,9 @@ Enable language extensions.  Currently, the only extension is ``ElabReflection``
 ``%default``
 --------------------
 
-Set the default totality requirement for functions.  The initial value is `covering`, which
-required case statements to cover, but does not require totality. The other options are
-`total` and `partial`.
+Set the default totality requirement for functions, which can be one of ``total``,
+``covering``, or ``partial``.  The value is initially set to ``covering`` unless the ``--total``
+command line switch is used, which sets it to ``total``.
 
 ``%builtin``
 --------------------
@@ -283,19 +283,21 @@ This pragma is deprecated.  Instead use ``%export`` to expose functions to the b
 ``%hint``
 --------------------
 
-Mark a function to be used for ``auto`` search (see :ref:`auto-implicits` for more).
+Mark a function to be used for ``auto`` search (see :ref:`auto-implicits` and
+:ref:`auto-implicit-arguments` for more).  Hints are used internally for instance
+resolution and non-named instances are automatically tagged with ``%hint``.
 
 
 ``%defaulthint``
 --------------------
 
-Mark a default for functions like ``fromString`` in cases where the compiler cannot
-determine which type the user wants.
+Mark a hint to be tried when no other hints match.
 
 ``%globalhint``
 --------------------
 
-This pragma is similar to ``%defaulthint``.
+A global hint is like a ``%hint``, but it is always tried, while ``%hint`` is only tried if the return
+type matches.
 
 ``%extern``
 --------------------
