@@ -1,5 +1,7 @@
 %default total
 
+--- Functor-related ---
+
 data X : Type -> Type -> Type where
   B : b -> X a b
   R : X a b -> X b c -> X a c
@@ -29,3 +31,13 @@ data X : Type -> Type -> Type where
   foldMap f rlr@(R l r) = do
     let r' = map @{WithFunction} f r
     concat $ assert_smaller rlr r'
+
+--- Show-related ---
+
+data Tree : Type -> Type where
+  Leaf : a -> Tree a
+  Node : a -> (left, right : Tree a) -> Tree a
+
+Show a => Show (Tree a) where
+  showPrec d (Leaf x)     = showCon d "Leaf" $ showArg x
+  showPrec d (Node x l r) = showCon d "Node" $ showArg x ++ showArg l ++ showArg r
