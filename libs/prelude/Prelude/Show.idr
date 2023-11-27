@@ -67,7 +67,7 @@ interface Show ty where
 
 ||| Surround a `String` with parentheses depending on a condition.
 ||| @ b whether to add parentheses
-export
+public export
 showParens : (b : Bool) -> String -> String
 showParens False s = s
 showParens True  s = "(" ++ s ++ ")"
@@ -83,7 +83,7 @@ showParens True  s = "(" ++ s ++ ")"
 ||| Show a => Show (Ann a) where
 |||   showPrec d (MkAnn s x) = showCon d "MkAnn" $ showArg s ++ showArg x
 ||| ```
-export
+public export
 showCon : (d : Prec) -> (conName : String) -> (shownArgs : String) -> String
 showCon d conName shownArgs = showParens (d >= App) (conName ++ shownArgs)
 
@@ -92,7 +92,7 @@ showCon d conName shownArgs = showParens (d >= App) (conName ++ shownArgs)
 |||
 ||| This adds a space to the front so the results can be directly concatenated.
 ||| See `showCon` for details and an example.
-export
+public export %tcinline
 showArg : Show a => (x : a) -> String
 showArg x = " " ++ showPrec App x
 
