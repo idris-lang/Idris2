@@ -424,10 +424,6 @@ mutual
            update Lifts { defs $= ((n, MkLFun (dropped vars unused) bound scl') ::) }
            pure $ LUnderApp fc n (length bound) (allVars fc vars unused)
     where
-        allPrfs : (vs : List Name) -> (unused : Vect (length vs) Bool) -> List (Var vs)
-        allPrfs [] _ = []
-        allPrfs (v :: vs) (False::uvs) = MkVar First :: map weaken (allPrfs vs uvs)
-        allPrfs (v :: vs) (True::uvs) = map weaken (allPrfs vs uvs)
 
         -- apply to all the variables. 'First' will be first in the last, which
         -- is good, because the most recently bound name is the first argument to

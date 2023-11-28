@@ -122,13 +122,6 @@ keeps : (args : List a) -> Thin xs ys -> Thin (args ++ xs) (args ++ ys)
 keeps [] th = th
 keeps (x :: xs) th = Keep (keeps xs th)
 
-namespace Thin
-  -- At runtime, Thin's `Refl` does not carry any additional
-  -- information. So this is safe!
-  export
-  embed : Thin xs ys -> Thin (xs ++ outer) (ys ++ outer)
-  embed = believe_me
-
 ||| Compute the thinning getting rid of the listed de Bruijn indices.
 -- TODO: is the list of erased arguments guaranteed to be sorted?
 -- Should it?
