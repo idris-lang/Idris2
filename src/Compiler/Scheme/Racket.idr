@@ -48,6 +48,7 @@ schHeader prof libs = fromString """
   (require racket/async-channel)         ; for asynchronous channels
   (require racket/future)                ; for parallelism/concurrency
   (require racket/math)                  ; for math ops
+  (require racket/promise)               ; for delay/force in toplevel defs
   (require racket/system)                ; for system
   (require racket/unsafe/ops)            ; for fast fixnum ops
   (require rnrs/bytevectors-6)           ; for buffers

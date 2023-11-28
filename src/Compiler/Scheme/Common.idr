@@ -535,10 +535,11 @@ parameters (constants : SortedSet Name,
        = do val' <- schExp i val
             sc' <- schExp i sc
             pure $ "(let ((" ++ schName x ++ " " ++ val' ++ ")) " ++ sc' ++ ")"
-    schExp i (NmApp fc x@(NmRef _ n) []) =
+    schExp i (NmApp fc x@(NmRef exp n) []) =
       if contains n constants
         then schExp i x
         else pure $ "(" ++ !(schExp i x) ++ ")"
+
     schExp i (NmApp fc x args)
         = pure $ "(" ++ !(schExp i x) ++ " " ++ sepBy " " !(traverse (schExp i) args) ++ ")"
     schExp i (NmCon fc _ NIL tag []) = pure $ "'()"
@@ -562,6 +563,8 @@ parameters (constants : SortedSet Name,
         = schOp op !(schArgs i args)
     schExp i (NmExtPrim fc p args)
         = schExtPrim i (toPrim p) args
+    schExp i (NmForce _ _ (NmApp fc x@(NmRef _ _) []))
+       = pure $ "(force " ++ !(schExp i x) ++ ")" -- Special version for memoized toplevel lazy definitions
     schExp i (NmForce fc lr t) = pure $ "(" ++ !(schExp i t) ++ ")"
     schExp i (NmDelay fc lr t) = pure $ "(lambda () " ++ !(schExp i t) ++ ")"
     schExp i (NmConCase fc sc alts def)
@@ -652,10 +655,16 @@ parameters (constants : SortedSet Name,
 
   schDef : {auto c : Ref Ctxt Defs} ->
            Name -> NamedDef -> Core Builder
+
+  schDef n (MkNmFun [] (NmDelay _ _ exp))
+    = pure $ "(define " ++ schName !(getFullName n) ++ "(delay "
+                     ++ !(schExp 0 exp) ++ "))\n" -- Special version for memoized toplevel lazy definitions
+
   schDef n (MkNmFun [] exp)
      = if contains n constants
           then pure $ "(define " ++ schName !(getFullName n) ++ " " ++ !(schExp 0 exp) ++ ")\n"
           else pure $ "(define " ++ schName !(getFullName n) ++ " (lambda () " ++ !(schExp 0 exp) ++ "))\n"
+
 
   schDef n (MkNmFun args exp)
      = pure $ "(define " ++ schName !(getFullName n) ++ " (lambda (" ++ schArglist args ++ ") "
