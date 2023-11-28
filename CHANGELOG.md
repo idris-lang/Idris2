@@ -32,11 +32,13 @@
   These features together give an ability to inspect whether particular expressions
   are recursive (including mutual recursion).
 
-### REPL changes
+### REPL/CLI changes
 
 * Adds documentation for unquotes `~( )`.
 * Adds documentation for laziness and codata primitives: `Lazy`, `Inf`, `Delay`,
   and `Force`.
+* Adds `--no-cse` command-line option to disable common subexpression elimination
+  for code generation debugging.
 
 ### Backend changes
 

@@ -30,7 +30,9 @@ module Compiler.Opts.CSE
 import Core.CompileExpr
 import Core.Context
 import Core.Context.Log
+import Core.Core
 import Core.Name
+import Core.Options
 import Core.TT
 
 import Core.Ord
@@ -294,11 +296,10 @@ analyzeDef d@(MkCon _ _ _)     = pure d
 analyzeDef d@(MkForeign _ _ _) = pure d
 analyzeDef d@(MkError _)       = pure d
 
-analyzeName :  Ref Sts St
-            => Ref Ctxt Defs
+compileName :  Ref Ctxt Defs
             => Name
             -> Core (Maybe (Name, FC, CDef))
-analyzeName fn = do
+compileName fn = do
     defs <- get Ctxt
     Just def <- lookupCtxtExact fn (gamma defs)
         | Nothing => do log "compile.execute" 50 $ "Couldn't find " ++ show fn
@@ -306,8 +307,7 @@ analyzeName fn = do
     let Just cexp = compexpr def
         | Nothing => do log "compile.execute" 50 $ "Couldn't compile " ++ show fn
                         pure Nothing
-    cexp' <- analyzeDef cexp
-    pure $ Just (fn, location def, cexp')
+    pure $ Just (fn, location def, cexp)
 
 --------------------------------------------------------------------------------
 --          Replacing Expressions
@@ -472,19 +472,24 @@ cse :  Ref Ctxt Defs
     -> (mainExpr        : CExp ns)
     -> Core (List (Name, FC, CDef), CExp ns)
 cse defs me = do
-  log "compiler.cse" 10 $ "Analysing " ++ show (length defs) ++ " names"
-  s            <- newRef Sts $ MkSt empty 0
-  analyzedDefs <- catMaybes <$> traverse analyzeName defs
-  MkSt um _    <- get Sts
-  srep         <- newRef ReplaceMap $ toReplaceMap um
-  replacedDefs <- traverse replaceDef analyzedDefs
-  replacedMain <- replaceExp 1 me
-  replaceMap   <- get ReplaceMap
-  let filtered = SortedMap.toList replaceMap
-  log "compiler.cse" 10 $ unlines $
-    "Found the following unadjusted subexpressions:"
-    ::  map (\(name,(_,cnt)) =>
-                  show name ++ ": count " ++ show cnt
-           ) filtered
-  let newDefs := newToplevelDefs replaceMap ++ replacedDefs
-  pure (newDefs, replacedMain)
+  compilerDefs <- get Ctxt
+  compiledDefs <- catMaybes <$> traverse compileName defs
+  if compilerDefs.options.session.noCSE
+    then pure (compiledDefs, me)
+    else do
+      log "compiler.cse" 10 $ "Analysing " ++ show (length defs) ++ " names"
+      s            <- newRef Sts $ MkSt empty 0
+      analyzedDefs <- traverse (traversePair (traversePair analyzeDef)) compiledDefs
+      MkSt um _    <- get Sts
+      srep         <- newRef ReplaceMap $ toReplaceMap um
+      replacedDefs <- traverse replaceDef analyzedDefs
+      replacedMain <- replaceExp 1 me
+      replaceMap   <- get ReplaceMap
+      let filtered = SortedMap.toList replaceMap
+      log "compiler.cse" 10 $ unlines $
+        "Found the following unadjusted subexpressions:"
+        ::  map (\(name,(_,cnt)) =>
+                      show name ++ ": count " ++ show cnt
+               ) filtered
+      let newDefs := newToplevelDefs replaceMap ++ replacedDefs
+      pure (newDefs, replacedMain)

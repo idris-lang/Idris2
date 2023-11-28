@@ -161,7 +161,9 @@ data CLOpt
    ||| Generate bash completion script
   BashCompletionScript String |
    ||| Turn on %default total globally
-  Total
+  Total |
+   ||| Disable common subexpression elimination
+  NoCSE
 
 ||| Extract the host and port to bind the IDE socket to
 export
@@ -244,6 +246,8 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just $ "Set output directory"),
            MkOpt ["--profile"] [] [Profile]
               (Just "Generate profile data when compiling, if supported"),
+           MkOpt ["--no-cse"] [] [NoCSE]
+              (Just "Disable common subexpression elimination"),
 
            optSeparator,
            MkOpt ["--total"] [] [Total]
