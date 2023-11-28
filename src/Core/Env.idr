@@ -304,16 +304,16 @@ uniqifyEnv env = uenv [] env
     uenv : {vars : _} ->
            List Name -> Env Term vars ->
            (vars' ** (Env Term vars', CompatibleVars vars vars'))
-    uenv used [] = ([] ** ([], CompatPre))
+    uenv used [] = ([] ** ([], Pre))
     uenv used {vars = v :: vs} (b :: bs)
         = if v `elem` used
              then let v' = uniqueLocal used v
                       (vs' ** (env', compat)) = uenv (v' :: used) bs
                       b' = map (renameVars compat) b in
-                  (v' :: vs' ** (b' :: env', CompatExt compat))
+                  (v' :: vs' ** (b' :: env', Ext compat))
              else let (vs' ** (env', compat)) = uenv (v :: used) bs
                       b' = map (renameVars compat) b in
-                  (v :: vs' ** (b' :: env', CompatExt compat))
+                  (v :: vs' ** (b' :: env', Ext compat))
 
 export
 allVars : {vars : _} -> Env Term vars -> List (Var vars)

@@ -447,7 +447,7 @@ nameEq (Resolved x) (Resolved y) with (decEq x y)
 nameEq _ _ = Nothing
 
 export
-namesEq : (xs : List Name) -> (ys : List Name) -> Maybe (xs = ys)
+namesEq : (xs, ys : List Name) -> Maybe (xs = ys)
 namesEq [] [] = Just Refl
 namesEq (x :: xs) (y :: ys)
     = do p <- nameEq x y
@@ -456,3 +456,11 @@ namesEq (x :: xs) (y :: ys)
          rewrite ps
          Just Refl
 namesEq _ _ = Nothing
+
+||| Generate the next machine name
+export
+next : Name -> Name
+next (MN n i) = MN n (i + 1)
+next (UN n) = MN (show n) 0
+next (NS ns n) = NS ns (next n)
+next n = MN (show n) 0

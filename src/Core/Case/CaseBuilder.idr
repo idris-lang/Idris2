@@ -16,7 +16,7 @@ import Idris.Pretty.Annotations
 import Data.List
 import Data.String
 import Data.Vect
-import Libraries.Data.LengthMatch
+import Libraries.Data.List.LengthMatch
 import Libraries.Data.SortedSet
 
 import Decidable.Equality
@@ -219,6 +219,11 @@ Weaken ArgType where
 
 Weaken (PatInfo p) where
   weaken (MkInfo p el fty) = MkInfo p (Later el) (weaken fty)
+
+  -- TODO: get rid of this inefficient implementation
+  weakenNs s t = case sizedView s of
+    Z => t
+    S k => weaken (weakenNs k t)
 
 -- FIXME: perhaps 'vars' should be second argument so we can use Weaken interface
 weaken : {x, vars : _} ->
@@ -1165,11 +1170,11 @@ mkPatClause fc fn args ty pid (ps, rhs)
                      Nothing => pure (Nothing, CaseBuilder.Unknown)
                      Just (NBind pfc _ (Pi _ c _ farg) fsc) =>
                         pure (Just !(fsc defs (toClosure defaultOpts [] (Ref pfc Bound arg))),
-                                Known c (embed {more = arg :: args}
+                                Known c (embed {outer = arg :: args}
                                           !(quote empty [] farg)))
                      Just t =>
                         pure (Nothing,
-                                Stuck (embed {more = arg :: args}
+                                Stuck (embed {outer = arg :: args}
                                         !(quote empty [] t)))
              pure (MkInfo p First (Builtin.snd fa_tys)
                       :: weaken !(mkNames args ps eq (Builtin.fst fa_tys)))
@@ -1197,7 +1202,7 @@ patCompile fc fn phase ty (p :: ps) def
          i <- newRef PName (the Int 0)
          cases <- match fc fn phase pats
                         (rewrite sym (appendNilRightNeutral ns) in
-                                 map (TT.weakenNs n) def)
+                                 map (weakenNs n) def)
          pure (_ ** cases)
   where
     mkPatClausesFrom : Int -> (args : List Name) ->

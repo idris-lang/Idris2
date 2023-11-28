@@ -554,7 +554,7 @@ makeHelper fc rig opts env letty targetty ((locapp, ds) :: next)
          helpern <- inCurrentNS helpern_in
          let env' = Lam fc top Explicit letty :: env
          scopeMeta <- metaVar fc top env' helpern
-                             (weaken {n = intn} targetty)
+                             (weaken targetty)
          let scope = toApp scopeMeta
          updateDef helpern (const (Just None))
          -- Apply the intermediate result to the helper function we're

@@ -17,7 +17,7 @@ import Core.TT
 import Data.Maybe
 import Data.List
 import Data.Vect
-import Libraries.Data.LengthMatch
+import Libraries.Data.List.LengthMatch
 import Libraries.Data.NameMap
 import Libraries.Data.WithDefault
 
@@ -139,7 +139,7 @@ mutual
                | Nothing => pure Nothing
            res <- eval rec env' stk'
                      (rewrite sym (appendAssociative args vars free) in
-                              embed {vars = vars ++ free} exp)
+                              embed {outer = vars ++ free} exp)
            pure (Just res)
   tryApply rec stk env _ = pure Nothing
 

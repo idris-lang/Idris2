@@ -472,40 +472,8 @@ mutual
                         CConstAlt (outer ++ (ns ++ inner))
   insertNamesConstAlt outer ns (MkConstAlt x sc) = MkConstAlt x (insertNames outer ns sc)
 
-mutual
-  export
-  embed : CExp args -> CExp (args ++ vars)
-  embed cexp = believe_me cexp
-  -- It is identity at run time, but it would be implemented as below
-  -- (not sure theere's much performance benefit, mind...)
-  {-
-  embed (CLocal fc prf) = CLocal fc (varExtend prf)
-  embed (CRef fc n) = CRef fc n
-  embed (CLam fc x sc) = CLam fc x (embed sc)
-  embed (CLet fc x inl val sc) = CLet fc x inl (embed val) (embed sc)
-  embed (CApp fc f args) = CApp fc (embed f) (assert_total (map embed args))
-  embed (CCon fc n t args) = CCon fc n t (assert_total (map embed args))
-  embed (COp fc p args) = COp fc p (assert_total (map embed args))
-  embed (CExtPrim fc p args) = CExtPrim fc p (assert_total (map embed args))
-  embed (CForce fc e) = CForce fc (embed e)
-  embed (CDelay fc e) = CDelay fc (embed e)
-  embed (CConCase fc sc alts def)
-      = CConCase fc (embed sc) (assert_total (map embedAlt alts))
-                 (assert_total (map embed def))
-  embed (CConstCase fc sc alts def)
-      = CConstCase fc (embed sc) (assert_total (map embedConstAlt alts))
-                   (assert_total (map embed def))
-  embed (CPrimVal fc c) = CPrimVal fc c
-  embed (CErased fc) = CErased fc
-  embed (CCrash fc msg) = CCrash fc msg
-
-  embedAlt : CConAlt args -> CConAlt (args ++ vars)
-  embedAlt {args} {vars} (MkConAlt n t as sc)
-     = MkConAlt n t as (rewrite appendAssociative as args vars in embed sc)
-
-  embedConstAlt : CConstAlt args -> CConstAlt (args ++ vars)
-  embedConstAlt (MkConstAlt c sc) = MkConstAlt c (embed sc)
-  -}
+export
+FreelyEmbeddable CExp where
 
 mutual
   -- Shrink the scope of a compiled expression, replacing any variables not

@@ -437,9 +437,8 @@ data IVars : List Name -> List Name -> Type where
              IVars (v :: vs) newvars
 
 Weaken (IVars vs) where
-  weaken INil = INil
-  weaken (ICons Nothing ts) = ICons Nothing (weaken ts)
-  weaken (ICons (Just t) ts) = ICons (Just (weaken t)) (weaken ts)
+  weakenNs s INil = INil
+  weakenNs s (ICons t ts) = ICons (weakenNs @{MaybeWeaken} s t) (weakenNs s ts)
 
 getIVars : IVars vs ns -> List (Maybe (Var ns))
 getIVars INil = []

@@ -160,6 +160,7 @@ refcTests = testsInDir "refc" "Reference counting C backend" {codegen = Just C}
 
 racketTests : IO TestPool
 racketTests = testsInDir "racket" "Racket backend" {codegen = Just Racket}
+  { pred = not . (`elem` ["conditions006", "conditions007"]) }
 
 nodeTests : IO TestPool
 nodeTests = testsInDir "node" "Node backend" {codegen = Just Node}

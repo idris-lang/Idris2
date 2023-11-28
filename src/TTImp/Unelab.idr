@@ -245,8 +245,8 @@ mutual
                 NoSugar True =>
                    let x' = uniqueLocal vars x in
                        unelabBinder umode nest fc env x' b
-                                    (renameVars (CompatExt CompatPre) sc) sc'
-                                    (renameVars (CompatExt CompatPre) !(getTerm scty))
+                                    (renameVars (Ext Pre) sc) sc'
+                                    (renameVars (Ext Pre) !(getTerm scty))
                 _ => unelabBinder umode nest fc env x b sc sc' !(getTerm scty)
     where
       next : Name -> Name

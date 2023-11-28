@@ -2,6 +2,8 @@ module Core.TT
 
 import public Core.FC
 import public Core.Name
+import public Core.Name.Scoped
+
 
 import Idris.Pretty.Annotations
 
@@ -16,6 +18,9 @@ import Libraries.Data.Primitives
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 import Libraries.Data.String.Extra
+
+import Libraries.Data.List.HasLength
+import Libraries.Data.List.SizeOf
 
 import public Algebra
 
@@ -719,113 +724,6 @@ export
 Show (Var ns) where
   show (MkVar {i} _) = show i
 
-namespace HasLength
-
-  -- TODO: delete in favor of base lib's List.HasLength once next version _after_ v0.6.0 ships.
-  public export
-  data HasLength : Nat -> List a -> Type where
-    Z : HasLength Z []
-    S : HasLength n as -> HasLength (S n) (a :: as)
-
-  -- TODO: Use List.HasLength.sucR from the base lib instead once next version _after_ v0.6.0 ships.
-  export
-  sucR : HasLength n xs -> HasLength (S n) (xs ++ [x])
-  sucR Z     = S Z
-  sucR (S n) = S (sucR n)
-
-  -- TODO: Use List.HasLength.hasLengthAppend from the base lib instead once next version _after_ v0.6.0 ships.
-  export
-  hlAppend : HasLength m xs -> HasLength n ys -> HasLength (m + n) (xs ++ ys)
-  hlAppend Z ys = ys
-  hlAppend (S xs) ys = S (hlAppend xs ys)
-
-  -- TODO: Use List.HasLength.hasLength from the base lib instead once next version _after_ v0.6.0 ships.
-  export
-  mkHasLength : (xs : List a) -> HasLength (length xs) xs
-  mkHasLength [] = Z
-  mkHasLength (_ :: xs) = S (mkHasLength xs)
-
-  -- TODO: Use List.HasLength.take from the base lib instead once next vresion _after_ v0.6.0 ships.
-  export
-  take : (n : Nat) -> (xs : Stream a) -> HasLength n (take n xs)
-  take Z _ = Z
-  take (S n) (x :: xs) = S (take n xs)
-
-  export
-  cast : {ys : _} -> List.length xs = List.length ys -> HasLength m xs -> HasLength m ys
-  cast {ys = []}      eq Z = Z
-  cast {ys = y :: ys} eq (S p) = S (cast (succInjective _ _ eq) p)
-    where
-    succInjective : (0 l, r : Nat) -> S l = S r -> l = r
-    succInjective _ _ Refl = Refl
-
-  -- TODO: Delete once version _after_ v0.6.0 ships.
-  hlReverseOnto : HasLength m acc -> HasLength n xs -> HasLength (m + n) (reverseOnto acc xs)
-  hlReverseOnto p Z = rewrite plusZeroRightNeutral m in p
-  hlReverseOnto {n = S n} p (S q) = rewrite sym (plusSuccRightSucc m n) in hlReverseOnto (S p) q
-
-  -- TODO: Use List.HasLength.hasLengthReverse from the base lib instead once next version _after_ v0.6.0 ships.
-  export
-  hlReverse : HasLength m acc -> HasLength m (reverse acc)
-  hlReverse = hlReverseOnto Z
-
-public export
-record SizeOf {a : Type} (xs : List a) where
-  constructor MkSizeOf
-  size        : Nat
-  0 hasLength : HasLength size xs
-
-namespace SizeOf
-
-  export
-  0 theList : SizeOf {a} xs -> List a
-  theList _ = xs
-
-  export
-  zero : SizeOf []
-  zero = MkSizeOf Z Z
-
-  export
-  suc : SizeOf as -> SizeOf (a :: as)
-  suc (MkSizeOf n p) = MkSizeOf (S n) (S p)
-
-  -- ||| suc but from the right
-  export
-  sucR : SizeOf as -> SizeOf (as ++ [a])
-  sucR (MkSizeOf n p) = MkSizeOf (S n) (sucR p)
-
-  export
-  (+) : SizeOf xs -> SizeOf ys -> SizeOf (xs ++ ys)
-  MkSizeOf m p + MkSizeOf n q = MkSizeOf (m + n) (hlAppend p q)
-
-  export
-  mkSizeOf : (xs : List a) -> SizeOf xs
-  mkSizeOf xs = MkSizeOf (length xs) (mkHasLength xs)
-
-  export
-  reverse : SizeOf xs -> SizeOf (reverse xs)
-  reverse (MkSizeOf n p) = MkSizeOf n (hlReverse p)
-
-  export
-  map : SizeOf xs -> SizeOf (map f xs)
-  map (MkSizeOf n p) = MkSizeOf n (cast (sym $ lengthMap xs) p)
-
-  export
-  take : {n : Nat} -> {0 xs : Stream a} -> SizeOf (take n xs)
-  take = MkSizeOf n (take n xs)
-
-namespace SizedView
-
-  public export
-  data SizedView : SizeOf as -> Type where
-    Z : SizedView (MkSizeOf Z Z)
-    S : (n : SizeOf as) -> SizedView (suc {a} n)
-
-export
-sizedView : (p : SizeOf as) -> SizedView p
-sizedView (MkSizeOf Z Z)         = Z
-sizedView (MkSizeOf (S n) (S p)) = S (MkSizeOf n p)
-
 namespace CList
   -- A list correspoding to another list
   public export
@@ -1070,17 +968,6 @@ eqWhyErased Impossible Impossible = True
 eqWhyErased Placeholder Placeholder = True
 eqWhyErased (Dotted t) (Dotted u)  = eqTerm t u
 eqWhyErased _ _ = False
-
-public export
-interface Weaken tm where
-  weaken : {0 vars : List Name} -> tm vars -> tm (n :: vars)
-  weakenNs : SizeOf ns -> tm vars -> tm (ns ++ vars)
-
-  weakenNs p t = case sizedView p of
-    Z   => t
-    S p => weaken (weakenNs p t)
-
-  weaken = weakenNs (suc zero)
 
 public export
 data Visibility = Private | Export | Public
@@ -1370,6 +1257,10 @@ Weaken Term where
 export
 Weaken Var where
   weaken = later
+  -- TODO: replace with efficient version
+  weakenNs s v = case sizedView s of
+    Z => v
+    S k => later (weakenNs k v)
 
 export
 varExtend : IsVar x idx xs -> IsVar x idx (xs ++ ys)
@@ -1380,8 +1271,7 @@ varExtend : IsVar x idx xs -> IsVar x idx (xs ++ ys)
 varExtend p = believe_me p
 
 export
-embed : Term vars -> Term (vars ++ more)
-embed tm = believe_me tm
+FreelyEmbeddable Term where
 
 public export
 ClosedTerm : Type
@@ -1425,35 +1315,15 @@ export
 getArgs : Term vars -> (List (Term vars))
 getArgs = snd . getFnArgs
 
-public export
-data CompatibleVars : List Name -> List Name -> Type where
-     CompatPre : CompatibleVars xs xs
-     CompatExt : CompatibleVars xs ys -> CompatibleVars (n :: xs) (m :: ys)
-
-export
-areVarsCompatible : (xs : List Name) -> (ys : List Name) ->
-                    Maybe (CompatibleVars xs ys)
-areVarsCompatible [] [] = pure CompatPre
-areVarsCompatible (x :: xs) (y :: ys)
-    = do compat <- areVarsCompatible xs ys
-         pure (CompatExt compat)
-areVarsCompatible _ _ = Nothing
-
-extendCompats : (args : List Name) ->
-                CompatibleVars xs ys ->
-                CompatibleVars (args ++ xs) (args ++ ys)
-extendCompats [] prf = prf
-extendCompats (x :: xs) prf = CompatExt (extendCompats xs prf)
-
 renameLocalRef : CompatibleVars xs ys ->
                  {idx : Nat} ->
                  (0 p : IsVar name idx xs) ->
                  Var ys
 renameLocalRef prf p = believe_me (MkVar p)
--- renameLocalRef CompatPre First = (MkVar First)
--- renameLocalRef (CompatExt x) First = (MkVar First)
--- renameLocalRef CompatPre (Later p) = (MkVar (Later p))
--- renameLocalRef (CompatExt y) (Later p)
+-- renameLocalRef Pre First = (MkVar First)
+-- renameLocalRef (Ext x) First = (MkVar First)
+-- renameLocalRef Pre (Later p) = (MkVar (Later p))
+-- renameLocalRef (Ext y) (Later p)
 --     = let (MkVar p') = renameLocalRef y p in MkVar (Later p')
 
 renameVarList : CompatibleVars xs ys -> Var xs -> Var ys
@@ -1463,7 +1333,7 @@ export
 renameVars : CompatibleVars xs ys -> Term xs -> Term ys
 renameVars compat tm = believe_me tm -- no names in term, so it's identity
 -- This is how we would define it:
--- renameVars CompatPre tm = tm
+-- renameVars Pre tm = tm
 -- renameVars prf (Local fc r idx vprf)
 --     = let MkVar vprf' = renameLocalRef prf vprf in
 --           Local fc r _ vprf'
@@ -1471,7 +1341,7 @@ renameVars compat tm = believe_me tm -- no names in term, so it's identity
 -- renameVars prf (Meta fc n i args)
 --     = Meta fc n i (map (renameVars prf) args)
 -- renameVars prf (Bind fc x b scope)
---     = Bind fc x (map (renameVars prf) b) (renameVars (CompatExt prf) scope)
+--     = Bind fc x (map (renameVars prf) b) (renameVars (Ext prf) scope)
 -- renameVars prf (App fc fn arg)
 --     = App fc (renameVars prf fn) (renameVars prf arg)
 -- renameVars prf (As fc s as tm)
@@ -1486,7 +1356,7 @@ renameVars compat tm = believe_me tm -- no names in term, so it's identity
 
 export
 renameTop : (m : Name) -> Term (n :: vars) -> Term (m :: vars)
-renameTop m tm = renameVars (CompatExt CompatPre) tm
+renameTop m tm = renameVars (Ext Pre) tm
 
 public export
 data SubVars : List Name -> List Name -> Type where

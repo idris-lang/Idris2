@@ -215,4 +215,3 @@ channelGet chan = primIO (prim__channelGet chan)
 export
 channelPut : HasIO io => (chan : Channel a) -> (val : a) -> io ()
 channelPut chan val = primIO (prim__channelPut chan val)
-
