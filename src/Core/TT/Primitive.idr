@@ -11,6 +11,7 @@ import Idris.Pretty.Annotations
 
 import Libraries.Data.Ordering.Extra
 import Libraries.Data.Primitives
+import Libraries.Data.String.Extra -- compatibility
 import Libraries.Text.PrettyPrint.Prettyprinter
 
 %default total

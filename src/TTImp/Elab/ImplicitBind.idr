@@ -87,6 +87,7 @@ mkPatternHole {vars'} loc rig n topenv imode (Just expty_in)
                            expected,
                            thin exp' sub)
   where
+    -- TODO: generalise and get rid of (map weaken)
     mkArgs : {vs : _} -> Thin newvars vs -> List (Term vs)
     mkArgs Refl = []
     mkArgs (Drop p) = Local loc Nothing 0 First :: map weaken (mkArgs p)
