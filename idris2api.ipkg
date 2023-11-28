@@ -91,6 +91,7 @@ modules =
     Core.Termination,
     Core.Transform,
     Core.TT,
+    Core.TT.Binder,
     Core.TT.Primitive,
     Core.TT.Views,
     Core.TT.Traversals,
