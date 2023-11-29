@@ -15,7 +15,12 @@ jobs:
     name: Sphinx
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: ammaraskar/sphinx-action@master
-      with:
-        docs-folder: "docs/"
+
+    - name: Checkout
+      uses: actions/checkout@v3
+    - name: Build docs
+      run: |
+        sudo apt-get install -y python3-sphinx
+        pip3 install -r docs/requirements.txt
+        cd docs
+        make html
