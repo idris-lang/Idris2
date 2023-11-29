@@ -1,3 +1,7 @@
+-- Disabled for now: no working
+-- conditionWaitTimeout
+-- for racket
+
 -- Idris2
 
 import System
@@ -16,4 +20,3 @@ main =
      sleep 2
      putStrLn "Sorry I'm late child!"
      threadWait t
-
