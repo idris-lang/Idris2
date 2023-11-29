@@ -735,6 +735,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
              newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
              pure (ImpossibleClause ploc newlhs)
 
+-- TODO: remove
 nameListEq : (xs : List Name) -> (ys : List Name) -> Maybe (xs = ys)
 nameListEq [] [] = Just Refl
 nameListEq (x :: xs) (y :: ys) with (nameEq x y)
