@@ -21,6 +21,6 @@ jobs:
     - name: Build docs
       run: |
         sudo apt-get install -y python3-sphinx
-        pip3 install sphinx-rtd-theme
+        pip3 install -r requirements.txt
         cd docs
         make html
