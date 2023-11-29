@@ -1,3 +1,7 @@
+-- Disabled for now: no working
+-- conditionWaitTimeout
+-- for racket
+
 -- Idris2
 
 import System
@@ -31,6 +35,5 @@ main =
 
        sleep m
        putStrLn "Sorry I'm late children! Weren't there more of you?..."
-       for impatients $ \t => threadWait t
+       for_ impatients $ \t => threadWait t
        sleep 1
-
