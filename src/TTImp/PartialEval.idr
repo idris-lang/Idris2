@@ -256,7 +256,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
                  = mapMaybe (\ (x, s) => case s of
                                               Dynamic => Nothing
                                               Static t => Just (x, t)) sargs
-           let peapp = applyWithFC (Ref fc Func pename) (dropSpec 0 staticargs stk)
+           let peapp = applyStackWithFC (Ref fc Func pename) (dropSpec 0 staticargs stk)
            Nothing <- lookupCtxtExact pename (gamma defs)
                | Just _ => -- already specialised
                            do log "specialise" 5 $ "Already specialised " ++ show pename
@@ -297,7 +297,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
            setFlag fc (Resolved peidx) (PartialEval (specLimits ++ toList reds))
 
            let PMDef pminfo pmargs ct tr pats = definition gdef
-               | _ => pure (applyWithFC (Ref fc Func fn) stk)
+               | _ => pure (applyStackWithFC (Ref fc Func fn) stk)
            logC "specialise" 5 $
                    do inpats <- traverse unelabDef pats
                       pure $ "Attempting to specialise:\n" ++
@@ -305,7 +305,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
 
            Just newpats <- getSpecPats fc pename fn stk !(nf defs [] (type gdef))
                                        sargs staticargs pats
-                | Nothing => pure (applyWithFC (Ref fc Func fn) stk)
+                | Nothing => pure (applyStackWithFC (Ref fc Func fn) stk)
            log "specialise" 5 $ "New patterns for " ++ show pename ++ ":\n" ++
                     showSep "\n" (map showPat newpats)
            processDecl [InPartialEval] (MkNested []) []
@@ -321,7 +321,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
                  fn <- toFullNames fn
                  pure "Partial evaluation of \{show fn} failed:\n\{show err}"
               update Ctxt { peFailures $= insert pename () }
-              pure (applyWithFC (Ref fc Func fn) stk))
+              pure (applyStackWithFC (Ref fc Func fn) stk))
   where
 
     identityFlag : List (Nat, ArgMode) -> Nat -> Maybe Nat
@@ -423,13 +423,9 @@ specialise {vars} fc env gdef fn stk
                     Nothing => Just <$> mkSpecDef fc gdef pename sargs fn stk
                     Just _ => pure Nothing
   where
-    dropAll : {vs : _} -> SubVars [] vs
-    dropAll {vs = []} = SubRefl
-    dropAll {vs = v :: vs} = DropCons dropAll
-
     concrete : {vars : _} ->
                Term vars -> Maybe (Term [])
-    concrete tm = shrinkTerm tm dropAll
+    concrete tm = shrink tm none
 
     getSpecArgs : Nat -> List Nat -> List (FC, Term vars) ->
                   Core (Maybe (List (Nat, ArgMode)))
@@ -457,31 +453,31 @@ findSpecs : {vars : _} ->
 findSpecs env stk (Ref fc Func fn)
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact fn (gamma defs)
-              | Nothing => pure (applyWithFC (Ref fc Func fn) stk)
+              | Nothing => pure (applyStackWithFC (Ref fc Func fn) stk)
          Just r <- specialise fc env gdef fn stk
-              | Nothing => pure (applyWithFC (Ref fc Func fn) stk)
+              | Nothing => pure (applyStackWithFC (Ref fc Func fn) stk)
          pure r
 findSpecs env stk (Meta fc n i args)
     = do args' <- traverse (findSpecs env []) args
-         pure $ applyWithFC (Meta fc n i args') stk
+         pure $ applyStackWithFC (Meta fc n i args') stk
 findSpecs env stk (Bind fc x b sc)
     = do b' <- traverse (findSpecs env []) b
          sc' <- findSpecs (b' :: env) [] sc
-         pure $ applyWithFC (Bind fc x b' sc') stk
+         pure $ applyStackWithFC (Bind fc x b' sc') stk
 findSpecs env stk (App fc fn arg)
     = do arg' <- findSpecs env [] arg
          findSpecs env ((fc, arg') :: stk) fn
 findSpecs env stk (TDelayed fc r tm)
     = do tm' <- findSpecs env [] tm
-         pure $ applyWithFC (TDelayed fc r tm') stk
+         pure $ applyStackWithFC (TDelayed fc r tm') stk
 findSpecs env stk (TDelay fc r ty tm)
     = do ty' <- findSpecs env [] ty
          tm' <- findSpecs env [] tm
-         pure $ applyWithFC (TDelay fc r ty' tm') stk
+         pure $ applyStackWithFC (TDelay fc r ty' tm') stk
 findSpecs env stk (TForce fc r tm)
     = do tm' <- findSpecs env [] tm
-         pure $ applyWithFC (TForce fc r tm') stk
-findSpecs env stk tm = pure $ applyWithFC tm stk
+         pure $ applyStackWithFC (TForce fc r tm') stk
+findSpecs env stk tm = pure $ applyStackWithFC tm stk
 
 bName : {auto q : Ref QVar Int} -> String -> Core Name
 bName n
@@ -543,7 +539,7 @@ mutual
                 MkVar (Later isv')
   quoteHead q defs fc bounds env (NRef Bound (MN n i))
       = case findName bounds of
-             Just (MkVar p) => pure $ Local fc Nothing _ (varExtend p)
+             Just (MkVar p) => pure $ Local fc Nothing _ (embedIsVar p)
              Nothing => pure $ Ref fc Bound (MN n i)
     where
       findName : Bounds bound' -> Maybe (Var bound')
@@ -632,10 +628,10 @@ mutual
   quoteGenNF q defs bound env (NApp fc (NRef Func fn) args)
       = do Just gdef <- lookupCtxtExact fn (gamma defs)
                 | Nothing => do args' <- quoteArgsWithFC q defs bound env args
-                                pure $ applyWithFC (Ref fc Func fn) args'
+                                pure $ applyStackWithFC (Ref fc Func fn) args'
            case specArgs gdef of
                 [] => do args' <- quoteArgsWithFC q defs bound env args
-                         pure $ applyWithFC (Ref fc Func fn) args'
+                         pure $ applyStackWithFC (Ref fc Func fn) args'
                 _ => do empty <- clearDefs defs
                         args' <- quoteArgsWithFC q defs bound env args
                         Just r <- specialise fc (extendEnv bound env) gdef fn args'
@@ -643,7 +639,7 @@ mutual
                                   -- can't specialise, keep the arguments
                                   -- unreduced
                                   do args' <- quoteArgsWithFC q empty bound env args
-                                     pure $ applyWithFC (Ref fc Func fn) args'
+                                     pure $ applyStackWithFC (Ref fc Func fn) args'
                         pure r
      where
        extendEnv : Bounds bs -> Env Term vs -> Env Term (bs ++ vs)
@@ -655,13 +651,13 @@ mutual
   quoteGenNF q defs bound env (NApp fc f args)
       = do f' <- quoteHead q defs fc bound env f
            args' <- quoteArgsWithFC q defs bound env args
-           pure $ applyWithFC f' args'
+           pure $ applyStackWithFC f' args'
   quoteGenNF q defs bound env (NDCon fc n t ar args)
       = do args' <- quoteArgsWithFC q defs bound env args
-           pure $ applyWithFC (Ref fc (DataCon t ar) n) args'
+           pure $ applyStackWithFC (Ref fc (DataCon t ar) n) args'
   quoteGenNF q defs bound env (NTCon fc n t ar args)
       = do args' <- quoteArgsWithFC q defs bound env args
-           pure $ applyWithFC (Ref fc (TyCon t ar) n) args'
+           pure $ applyStackWithFC (Ref fc (TyCon t ar) n) args'
   quoteGenNF q defs bound env (NAs fc s n pat)
       = do n' <- quoteGenNF q defs bound env n
            pat' <- quoteGenNF q defs bound env pat
@@ -686,9 +682,9 @@ mutual
            case arg of
                 NDelay fc _ _ arg =>
                    do argNF <- evalClosure defs arg
-                      pure $ applyWithFC !(quoteGenNF q defs bound env argNF) args'
+                      pure $ applyStackWithFC !(quoteGenNF q defs bound env argNF) args'
                 _ => do arg' <- quoteGenNF q defs bound env arg
-                        pure $ applyWithFC (TForce fc r arg') args'
+                        pure $ applyStackWithFC (TForce fc r arg') args'
   quoteGenNF q defs bound env (NPrimVal fc c) = pure $ PrimVal fc c
   quoteGenNF q defs bound env (NErased fc Impossible) = pure $ Erased fc Impossible
   quoteGenNF q defs bound env (NErased fc Placeholder) = pure $ Erased fc Placeholder

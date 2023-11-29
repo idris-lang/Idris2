@@ -23,18 +23,13 @@ import Libraries.Data.String.Extra
 
 %hide Core.Name.prettyOp
 
-%hide Core.TT.Bound
-%hide Core.TT.App
-
 %hide CompileExpr.(::)
 %hide CompileExpr.Nil
 %hide String.(::)
 %hide String.Nil
 %hide Doc.Nil
-%hide SubstEnv.(::)
-%hide SubstEnv.Nil
-%hide SubstCEnv.(::)
-%hide SubstCEnv.Nil
+%hide Subst.(::)
+%hide Subst.Nil
 %hide CList.(::)
 %hide CList.Nil
 %hide Stream.(::)

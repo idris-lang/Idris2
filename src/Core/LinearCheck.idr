@@ -13,6 +13,8 @@ import Core.TT
 
 import Data.List
 
+import Libraries.Data.SnocList.SizeOf
+
 %default covering
 
 -- List of variable usages - we'll count the contents of specific variables
@@ -43,14 +45,8 @@ count p [] = 0
 count p (v :: xs)
     = if p == varIdx v then 1 + count p xs else count p xs
 
-localPrf : {later : _} -> Var (later ++ n :: vars)
-localPrf {later = []} = MkVar First
-localPrf {n} {vars} {later = (x :: xs)}
-    = let MkVar p = localPrf {n} {vars} {later = xs} in
-          MkVar (Later p)
-
 mutual
-  updateHoleUsageArgs : {vars : _} ->
+  updateHoleUsageArgs : {0 vars : _} ->
                         {auto c : Ref Ctxt Defs} ->
                         {auto u : Ref UST UState} ->
                         (useInHole : Bool) ->
@@ -65,7 +61,7 @@ mutual
   -- The assumption here is that hole types are abstracted over the entire
   -- environment, so that they have the appropriate number of function
   -- arguments and there are no lets
-  updateHoleType : {vars : _} ->
+  updateHoleType : {0 vars : _} ->
                    {auto c : Ref Ctxt Defs} ->
                    {auto u : Ref UST UState} ->
                    (useInHole : Bool) ->
@@ -124,7 +120,7 @@ mutual
       findLocal (_ :: els) (S k) = findLocal els k
       findLocal _ _ = Nothing
 
-  updateHoleUsage : {vars : _} ->
+  updateHoleUsage : {0 vars : _} ->
                     {auto c : Ref Ctxt Defs} ->
                     {auto u : Ref UST UState} ->
                     (useInHole : Bool) ->
@@ -526,14 +522,15 @@ mutual
       -- As checkEnvUsage in general, but it's okay for local variables to
       -- remain unused (since in that case, they must be used outside the
       -- case block)
-      checkEnvUsage : {done, vars : _} ->
+      checkEnvUsage : {vars : _} ->
+                      SizeOf done ->
                       RigCount ->
-                      Env Term vars -> Usage (done ++ vars) ->
-                      List (Term (done ++ vars)) ->
-                      Term (done ++ vars) -> Core ()
-      checkEnvUsage rig [] usage args tm = pure ()
-      checkEnvUsage rig {done} {vars = nm :: xs} (b :: env) usage args tm
-          = do let pos = localPrf {later = done}
+                      Env Term vars -> Usage (done <>> vars) ->
+                      List (Term (done <>> vars)) ->
+                      Term (done <>> vars) -> Core ()
+      checkEnvUsage s rig [] usage args tm = pure ()
+      checkEnvUsage s rig {done} {vars = nm :: xs} (b :: env) usage args tm
+          = do let pos = mkVarChiply s
                let used_in = count (varIdx pos) usage
 
                holeFound <- if isLinear (multiplicity b)
@@ -546,10 +543,7 @@ mutual
                checkUsageOK (getLoc (binderType b))
                             used nm (isLocArg pos args)
                                     ((multiplicity b) |*| rig)
-               checkEnvUsage {done = done ++ [nm]} rig env
-                     (rewrite sym (appendAssociative done [nm] xs) in usage)
-                     (rewrite sym (appendAssociative done [nm] xs) in args)
-                     (rewrite sym (appendAssociative done [nm] xs) in tm)
+               checkEnvUsage (s :< nm) rig env usage args tm
 
       getPUsage : ClosedTerm -> (vs ** (Env Term vs, Term vs, Term vs)) ->
                   Core (List (Name, ArgUsage))
@@ -560,7 +554,7 @@ mutual
                (rhs', _, used) <- lcheck rig False penv rhs
                log "quantity" 10 $ "Used: " ++ show used
                let args = getArgs lhs
-               checkEnvUsage {done = []} rig penv used args rhs'
+               checkEnvUsage [<] rig penv used args rhs'
                ause <- getCaseUsage ty penv args used rhs
                log "quantity" 10 $ "Arg usage: " ++ show ause
                pure ause
@@ -652,18 +646,19 @@ mutual
                Name -> Int -> Def -> List (Term vars) ->
                Core (Term vars, Glued vars, Usage vars)
   expandMeta rig erase env n idx (PMDef _ [] (STerm _ fn) _ _) args
-      = do tm <- substMeta (embed fn) args []
+      = do tm <- substMeta (embed fn) args zero []
            lcheck rig erase env tm
     where
       substMeta : {drop, vs : _} ->
-                  Term (drop ++ vs) -> List (Term vs) -> SubstEnv drop vs ->
+                  Term (drop ++ vs) -> List (Term vs) ->
+                  SizeOf drop -> SubstEnv drop vs ->
                   Core (Term vs)
-      substMeta (Bind bfc n (Lam _ c e ty) sc) (a :: as) env
-          = substMeta sc as (a :: env)
-      substMeta (Bind bfc n (Let _ c val ty) sc) as env
-          = substMeta (subst val sc) as env
-      substMeta rhs [] env = pure (substs env rhs)
-      substMeta rhs _ _ = throw (InternalError ("Badly formed metavar solution " ++ show n ++ " " ++ show fn))
+      substMeta (Bind bfc n (Lam _ c e ty) sc) (a :: as) drop env
+          = substMeta sc as (suc drop) (a :: env)
+      substMeta (Bind bfc n (Let _ c val ty) sc) as drop env
+          = substMeta (subst val sc) as drop env
+      substMeta rhs [] drop env = pure (substs drop env rhs)
+      substMeta rhs _ _ _ = throw (InternalError ("Badly formed metavar solution " ++ show n ++ " " ++ show fn))
   expandMeta rig erase env n idx def _
       = throw (InternalError ("Badly formed metavar solution " ++ show n ++ " " ++ show def))
 
@@ -699,16 +694,16 @@ mutual
            pure (Meta fc n idx (reverse chk), glueBack defs env nty, [])
 
 
-checkEnvUsage : {vars, done : _} ->
+checkEnvUsage : {vars : _} ->
                 {auto c : Ref Ctxt Defs} ->
                 {auto u : Ref UST UState} ->
-                FC -> RigCount ->
-                Env Term vars -> Usage (done ++ vars) ->
-                Term (done ++ vars) ->
+                FC -> SizeOf done -> RigCount ->
+                Env Term vars -> Usage (done <>> vars) ->
+                Term (done <>> vars) ->
                 Core ()
-checkEnvUsage fc rig [] usage tm = pure ()
-checkEnvUsage fc rig {done} {vars = nm :: xs} (b :: env) usage tm
-    = do let pos = localPrf {later = done}
+checkEnvUsage fc s rig [] usage tm = pure ()
+checkEnvUsage fc s rig {vars = nm :: xs} (b :: env) usage tm
+    = do let pos = mkVarChiply s
          let used_in = count (varIdx pos) usage
 
          holeFound <- if isLinear (multiplicity b)
@@ -719,9 +714,7 @@ checkEnvUsage fc rig {done} {vars = nm :: xs} (b :: env) usage tm
                        then 1
                        else used_in
          checkUsageOK used ((multiplicity b) |*| rig)
-         checkEnvUsage {done = done ++ [nm]} fc rig env
-               (rewrite sym (appendAssociative done [nm] xs) in usage)
-               (rewrite sym (appendAssociative done [nm] xs) in tm)
+         checkEnvUsage fc (s :< nm) rig env usage tm
   where
     checkUsageOK : Nat -> RigCount -> Core ()
     checkUsageOK used r = when (isLinear r && used /= 1)
@@ -743,5 +736,5 @@ linearCheck fc rig erase env tm
          logEnv "quantity" 5 "In env" env
          (tm', _, used) <- lcheck rig erase env tm
          log "quantity" 5 $ "Used: " ++ show used
-         when (not erase) $ checkEnvUsage {done = []} fc rig env used tm'
+         when (not erase) $ checkEnvUsage fc [<] rig env used tm'
          pure tm'

@@ -39,13 +39,13 @@ mkOuterHole loc rig n topenv (Just expty_in)
     = do est <- get EST
          let sub = subEnv est
          expected <- getTerm expty_in
-         case shrinkTerm expected sub of
+         case shrink expected sub of
               -- Can't shrink so rely on unification with expected type later
               Nothing => mkOuterHole loc rig n topenv Nothing
               Just exp' =>
                   do let env = outerEnv est
                      tm <- implBindVar loc rig env n exp'
-                     pure (embedSub sub tm, embedSub sub exp')
+                     pure (thin tm sub, thin exp' sub)
 mkOuterHole loc rig n topenv Nothing
     = do est <- get EST
          let sub = subEnv est
@@ -54,9 +54,9 @@ mkOuterHole loc rig n topenv Nothing
          u <- uniVar loc
          ty <- metaVar loc erased env nm (TType loc u)
          log "elab.implicits" 10 $ "Made metavariable for type of " ++ show n ++ ": " ++ show nm
-         put EST (addBindIfUnsolved nm rig Explicit topenv (embedSub sub ty) (TType loc u) est)
+         put EST (addBindIfUnsolved nm rig Explicit topenv (thin ty sub) (TType loc u) est)
          tm <- implBindVar loc rig env n ty
-         pure (embedSub sub tm, embedSub sub ty)
+         pure (thin tm sub, thin ty sub)
 
 -- Make a hole standing for the pattern variable, which we'll instantiate
 -- with a bound pattern variable later.
@@ -83,23 +83,24 @@ mkPatternHole {vars'} loc rig n topenv imode (Just expty_in)
               Nothing => mkPatternHole loc rig n topenv imode Nothing
               Just exp' =>
                   do tm <- implBindVar loc rig env n exp'
-                     pure (apply loc (embedSub sub tm) (mkArgs sub),
+                     pure (apply loc (thin tm sub) (mkArgs sub),
                            expected,
-                           embedSub sub exp')
+                           thin exp' sub)
   where
-    mkArgs : {vs : _} -> SubVars newvars vs -> List (Term vs)
-    mkArgs SubRefl = []
-    mkArgs (DropCons p) = Local loc Nothing 0 First :: map weaken (mkArgs p)
+    -- TODO: generalise and get rid of (map weaken)
+    mkArgs : {vs : _} -> Thin newvars vs -> List (Term vs)
+    mkArgs Refl = []
+    mkArgs (Drop p) = Local loc Nothing 0 First :: map weaken (mkArgs p)
     mkArgs _ = []
 
     -- This is for the specific situation where we're pattern matching on
     -- function types, which is realistically the only time we'll legitimately
     -- encounter a type variable under a binder
     bindInner : {vs : _} ->
-                Env Term vs -> Term vs -> SubVars newvars vs ->
+                Env Term vs -> Term vs -> Thin newvars vs ->
                 Maybe (Term newvars)
-    bindInner env ty SubRefl = Just ty
-    bindInner {vs = x :: _} (b :: env) ty (DropCons p)
+    bindInner env ty Refl = Just ty
+    bindInner {vs = x :: _} (b :: env) ty (Drop p)
         = bindInner env (Bind loc x b ty) p
     bindInner _ _ _ = Nothing
 
@@ -136,10 +137,10 @@ bindUnsolved {vars} fc elabmode _
   where
     makeBoundVar : {outer, vs : _} ->
                    Name -> RigCount -> PiInfo (Term vs) -> Env Term outer ->
-                   SubVars outer vs -> SubVars outer vars ->
+                   Thin outer vs -> Thin outer vars ->
                    Term vs -> Core (Term vs)
     makeBoundVar n rig p env sub subvars expected
-        = case shrinkTerm expected sub of
+        = case shrink expected sub of
                Nothing => do tmn <- toFullNames expected
                              throw (GenericMsg fc ("Can't bind implicit " ++ show n ++ " of type " ++ show tmn))
                Just exp' =>
@@ -147,14 +148,14 @@ bindUnsolved {vars} fc elabmode _
                        tm <- metaVar fc rig env impn exp'
                        let p' : PiInfo (Term vars) = forgetDef p
                        update EST { toBind $= ((impn, NameBinding rig p'
-                                                        (embedSub subvars tm)
-                                                        (embedSub subvars exp')) ::) }
-                       pure (embedSub sub tm)
+                                                        (thin tm subvars)
+                                                        (thin exp' subvars)) ::) }
+                       pure (thin tm sub)
 
     mkImplicit : {outer : _} ->
-                 Defs -> Env Term outer -> SubVars outer vars ->
+                 Defs -> Env Term outer -> Thin outer vars ->
                  (Name, RigCount, (vars' **
-                     (Env Term vars', PiInfo (Term vars'), Term vars', Term vars', SubVars outer vars'))) ->
+                     (Env Term vars', PiInfo (Term vars'), Term vars', Term vars', Thin outer vars'))) ->
                  Core ()
     mkImplicit defs outerEnv subEnv (n, rig, (vs ** (env, p, tm, exp, sub)))
         = do Just (Hole _ _) <- lookupDefExact n (gamma defs)
@@ -213,7 +214,7 @@ swapVars (TType fc u) = TType fc u
 push : {vs : _} ->
        FC -> (n : Name) -> Binder (Term vs) -> Term (n :: vs) -> Term vs
 push ofc n b tm@(Bind fc (PV x i) (Pi fc' c Implicit ty) sc) -- only push past 'PV's
-    = case shrinkTerm ty (DropCons SubRefl) of
+    = case shrink ty (Drop Refl) of
            Nothing => -- needs explicit pi, do nothing
                       Bind ofc n b tm
            Just ty' => Bind fc (PV x i) (Pi fc' c Implicit ty')
@@ -549,7 +550,7 @@ checkBindHere rig elabinfo nest env fc bindmode tm exp
          let dontbind = map fst (toBind est)
          -- Set the binding environment in the elab state - unbound
          -- implicits should have access to whatever is in scope here
-         put EST (updateEnv env SubRefl [] est)
+         put EST (updateEnv env Refl [] est)
          constart <- getNextEntry
          (tmv, tmt) <- check rig ({ implicitMode := bindmode,
                                     bindingVars := True }

@@ -17,8 +17,8 @@ parameters (fn1 : Name) (idIdx : Nat)
   mutual
     -- special case for matching on 'Nat'-shaped things
     isUnsucc : Var vars -> CExp vars -> Maybe (Constant, Var (x :: vars))
-    isUnsucc (MkVar {i} _) (COp _ (Sub _) [CLocal {idx} _ _, CPrimVal _ c]) =
-        if i == idx
+    isUnsucc var (COp _ (Sub _) [CLocal _ p, CPrimVal _ c]) =
+        if var == MkVar p
             then Just (c, MkVar First)
             else Nothing
     isUnsucc _ _ = Nothing
@@ -29,7 +29,7 @@ parameters (fn1 : Name) (idIdx : Nat)
 
     -- does the CExp evaluate to the var, the constructor or the constant?
     cexpIdentity : Var vars -> Maybe (Name, List (Var vars)) -> Maybe Constant -> CExp vars -> Bool
-    cexpIdentity (MkVar {i} _) _ _ (CLocal {idx} fc p) = idx == i
+    cexpIdentity var _ _ (CLocal fc p) = var == MkVar p
     cexpIdentity var _ _ (CRef _ _) = False
     cexpIdentity var _ _ (CLam _ _ _) = False
     cexpIdentity var con const (CLet _ _ NotInline val sc) = False

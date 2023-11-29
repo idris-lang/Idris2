@@ -9,6 +9,8 @@ import Core.TT
 import Data.List
 import Data.Vect
 
+import Libraries.Data.SnocList.SizeOf
+
 %default covering
 
 -- Backends might be able to treat some 'shapes' of data type specially,
@@ -472,56 +474,24 @@ mutual
                         CConstAlt (outer ++ (ns ++ inner))
   insertNamesConstAlt outer ns (MkConstAlt x sc) = MkConstAlt x (insertNames outer ns sc)
 
-mutual
-  export
-  embed : CExp args -> CExp (args ++ vars)
-  embed cexp = believe_me cexp
-  -- It is identity at run time, but it would be implemented as below
-  -- (not sure theere's much performance benefit, mind...)
-  {-
-  embed (CLocal fc prf) = CLocal fc (varExtend prf)
-  embed (CRef fc n) = CRef fc n
-  embed (CLam fc x sc) = CLam fc x (embed sc)
-  embed (CLet fc x inl val sc) = CLet fc x inl (embed val) (embed sc)
-  embed (CApp fc f args) = CApp fc (embed f) (assert_total (map embed args))
-  embed (CCon fc n t args) = CCon fc n t (assert_total (map embed args))
-  embed (COp fc p args) = COp fc p (assert_total (map embed args))
-  embed (CExtPrim fc p args) = CExtPrim fc p (assert_total (map embed args))
-  embed (CForce fc e) = CForce fc (embed e)
-  embed (CDelay fc e) = CDelay fc (embed e)
-  embed (CConCase fc sc alts def)
-      = CConCase fc (embed sc) (assert_total (map embedAlt alts))
-                 (assert_total (map embed def))
-  embed (CConstCase fc sc alts def)
-      = CConstCase fc (embed sc) (assert_total (map embedConstAlt alts))
-                   (assert_total (map embed def))
-  embed (CPrimVal fc c) = CPrimVal fc c
-  embed (CErased fc) = CErased fc
-  embed (CCrash fc msg) = CCrash fc msg
-
-  embedAlt : CConAlt args -> CConAlt (args ++ vars)
-  embedAlt {args} {vars} (MkConAlt n t as sc)
-     = MkConAlt n t as (rewrite appendAssociative as args vars in embed sc)
-
-  embedConstAlt : CConstAlt args -> CConstAlt (args ++ vars)
-  embedConstAlt (MkConstAlt c sc) = MkConstAlt c (embed sc)
-  -}
+export
+FreelyEmbeddable CExp where
 
 mutual
   -- Shrink the scope of a compiled expression, replacing any variables not
   -- in the remaining set with Erased
   export
-  shrinkCExp : SubVars newvars vars -> CExp vars -> CExp newvars
+  shrinkCExp : Thin newvars vars -> CExp vars -> CExp newvars
   shrinkCExp sub (CLocal fc prf)
-      = case subElem prf sub of
+      = case shrinkIsVar prf sub of
              Nothing => CErased fc
              Just (MkVar prf') => CLocal fc prf'
   shrinkCExp _ (CRef fc x) = CRef fc x
   shrinkCExp sub (CLam fc x sc)
-      = let sc' = shrinkCExp (KeepCons sub) sc in
+      = let sc' = shrinkCExp (Keep sub) sc in
             CLam fc x sc'
   shrinkCExp sub (CLet fc x inl val sc)
-      = let sc' = shrinkCExp (KeepCons sub) sc in
+      = let sc' = shrinkCExp (Keep sub) sc in
             CLet fc x inl (shrinkCExp sub val) sc'
   shrinkCExp sub (CApp fc x xs)
       = CApp fc (shrinkCExp sub x) (assert_total (map (shrinkCExp sub) xs))
@@ -545,11 +515,11 @@ mutual
   shrinkCExp _ (CErased fc) = CErased fc
   shrinkCExp _ (CCrash fc x) = CCrash fc x
 
-  shrinkConAlt : SubVars newvars vars -> CConAlt vars -> CConAlt newvars
+  shrinkConAlt : Thin newvars vars -> CConAlt vars -> CConAlt newvars
   shrinkConAlt sub (MkConAlt x ci tag args sc)
-        = MkConAlt x ci tag args (shrinkCExp (subExtend args sub) sc)
+        = MkConAlt x ci tag args (shrinkCExp (keeps args sub) sc)
 
-  shrinkConstAlt : SubVars newvars vars -> CConstAlt vars -> CConstAlt newvars
+  shrinkConstAlt : Thin newvars vars -> CConstAlt vars -> CConstAlt newvars
   shrinkConstAlt sub (MkConstAlt x sc) = MkConstAlt x (shrinkCExp sub sc)
 
 export
@@ -560,103 +530,59 @@ export
 Weaken CConAlt where
   weakenNs ns tm = insertNamesConAlt zero ns tm
 
--- Substitute some explicit terms for names in a term, and remove those
--- names from the scope
-namespace SubstCEnv
-  public export
-  data SubstCEnv : List Name -> List Name -> Type where
-       Nil : SubstCEnv [] vars
-       (::) : CExp vars ->
-              SubstCEnv ds vars -> SubstCEnv (d :: ds) vars
-
-findDrop : FC -> Var (dropped ++ vars) ->
-           SubstCEnv dropped vars -> CExp vars
-findDrop fc (MkVar p) [] = CLocal fc p
-findDrop fc (MkVar First) (tm :: env) = tm
-findDrop fc (MkVar (Later p)) (tm :: env) = findDrop fc (MkVar p) env
-
-find : FC ->
-       SizeOf outer ->
-       Var (outer ++ (dropped ++ vars)) ->
-       SubstCEnv dropped vars ->
-       CExp (outer ++ vars)
-find fc outer var env = case sizedView outer of
-  Z       => findDrop fc var env
-  S outer => case var of
-    MkVar First     => CLocal fc First
-    MkVar (Later p) => weaken (find fc outer (MkVar p) env)
-    -- TODO: refactor to weaken only once?
+public export
+SubstCEnv : Scope -> Scoped
+SubstCEnv = Subst CExp
 
 mutual
-  substEnv : SizeOf outer ->
-             SubstCEnv dropped vars ->
-             CExp (outer ++ (dropped ++ vars)) ->
-             CExp (outer ++ vars)
-  substEnv outer env (CLocal fc prf)
-      = find fc outer (MkVar prf) env
-  substEnv _ _ (CRef fc x) = CRef fc x
-  substEnv outer env (CLam fc x sc)
-      = let sc' = substEnv (suc outer) env sc in
+  substEnv : Substitutable CExp CExp
+  substEnv outer dropped env (CLocal fc prf)
+      = find (\ (MkVar p) => CLocal fc p) outer dropped (MkVar prf) env
+  substEnv _ _ _ (CRef fc x) = CRef fc x
+  substEnv outer dropped env (CLam fc x sc)
+      = let sc' = substEnv (suc outer) dropped env sc in
             CLam fc x sc'
-  substEnv outer env (CLet fc x inl val sc)
-      = let sc' = substEnv (suc outer) env sc in
-            CLet fc x inl (substEnv outer env val) sc'
-  substEnv outer env (CApp fc x xs)
-      = CApp fc (substEnv outer env x) (assert_total (map (substEnv outer env) xs))
-  substEnv outer env (CCon fc x ci tag xs)
-      = CCon fc x ci tag (assert_total (map (substEnv outer env) xs))
-  substEnv outer env (COp fc x xs)
-      = COp fc x (assert_total (map (substEnv outer env) xs))
-  substEnv outer env (CExtPrim fc p xs)
-      = CExtPrim fc p (assert_total (map (substEnv outer env) xs))
-  substEnv outer env (CForce fc lr x) = CForce fc lr (substEnv outer env x)
-  substEnv outer env (CDelay fc lr x) = CDelay fc lr (substEnv outer env x)
-  substEnv outer env (CConCase fc sc xs def)
-      = CConCase fc (substEnv outer env sc)
-                 (assert_total (map (substConAlt outer env) xs))
-                 (assert_total (map (substEnv outer env) def))
-  substEnv outer env (CConstCase fc sc xs def)
-      = CConstCase fc (substEnv outer env sc)
-                   (assert_total (map (substConstAlt outer env) xs))
-                   (assert_total (map (substEnv outer env) def))
-  substEnv _ _ (CPrimVal fc x) = CPrimVal fc x
-  substEnv _ _ (CErased fc) = CErased fc
-  substEnv _ _ (CCrash fc x) = CCrash fc x
+  substEnv outer dropped env (CLet fc x inl val sc)
+      = let sc' = substEnv (suc outer) dropped env sc in
+            CLet fc x inl (substEnv outer dropped env val) sc'
+  substEnv outer dropped env (CApp fc x xs)
+      = CApp fc (substEnv outer dropped env x) (assert_total (map (substEnv outer dropped env) xs))
+  substEnv outer dropped env (CCon fc x ci tag xs)
+      = CCon fc x ci tag (assert_total (map (substEnv outer dropped env) xs))
+  substEnv outer dropped env (COp fc x xs)
+      = COp fc x (assert_total (map (substEnv outer dropped env) xs))
+  substEnv outer dropped env (CExtPrim fc p xs)
+      = CExtPrim fc p (assert_total (map (substEnv outer dropped env) xs))
+  substEnv outer dropped env (CForce fc lr x) = CForce fc lr (substEnv outer dropped env x)
+  substEnv outer dropped env (CDelay fc lr x) = CDelay fc lr (substEnv outer dropped env x)
+  substEnv outer dropped env (CConCase fc sc xs def)
+      = CConCase fc (substEnv outer dropped env sc)
+                 (assert_total (map (substConAlt outer dropped env) xs))
+                 (assert_total (map (substEnv outer dropped env) def))
+  substEnv outer dropped env (CConstCase fc sc xs def)
+      = CConstCase fc (substEnv outer dropped env sc)
+                   (assert_total (map (substConstAlt outer dropped env) xs))
+                   (assert_total (map (substEnv outer dropped env) def))
+  substEnv _ _ _ (CPrimVal fc x) = CPrimVal fc x
+  substEnv _ _ _ (CErased fc) = CErased fc
+  substEnv _ _ _ (CCrash fc x) = CCrash fc x
 
-  substConAlt : SizeOf outer ->
-                SubstCEnv dropped vars ->
-                CConAlt (outer ++ (dropped ++ vars)) ->
-                CConAlt (outer ++ vars)
-  substConAlt {vars} {outer} {dropped} p env (MkConAlt x ci tag args sc)
+  substConAlt : Substitutable CExp CConAlt
+  substConAlt {vars} {outer} {dropped} p q env (MkConAlt x ci tag args sc)
       = MkConAlt x ci tag args
            (rewrite appendAssociative args outer vars in
-                    substEnv (mkSizeOf args + p) env
+                    substEnv (mkSizeOf args + p) q env
                       (rewrite sym (appendAssociative args outer (dropped ++ vars)) in
                                sc))
 
-  substConstAlt : SizeOf outer ->
-                  SubstCEnv dropped vars ->
-                  CConstAlt (outer ++ (dropped ++ vars)) ->
-                  CConstAlt (outer ++ vars)
-  substConstAlt outer env (MkConstAlt x sc) = MkConstAlt x (substEnv outer env sc)
+  substConstAlt : Substitutable CExp CConstAlt
+  substConstAlt outer dropped env (MkConstAlt x sc) = MkConstAlt x (substEnv outer dropped env sc)
 
 export
 substs : {dropped, vars : _} ->
+         SizeOf dropped ->
          SubstCEnv dropped vars -> CExp (dropped ++ vars) -> CExp vars
-substs env tm = substEnv zero env tm
-
-resolveRef : SizeOf outer ->
-             SizeOf done ->
-             Bounds bound -> FC -> Name ->
-             Maybe (CExp (outer ++ (done ++ bound ++ vars)))
-resolveRef _ _ None _ _ = Nothing
-resolveRef {outer} {vars} {done} p q (Add {xs} new old bs) fc n
-    = if n == old
-         then rewrite appendAssociative outer done (new :: xs ++ vars) in
-              let MkNVar p = weakenNVar (p + q) (MkNVar First) in
-                    Just (CLocal fc p)
-         else rewrite appendAssociative done [new] (xs ++ vars)
-                in resolveRef p (sucR q) bs fc n
+substs = substEnv zero
 
 mutual
   export
@@ -667,7 +593,9 @@ mutual
   mkLocals later bs (CLocal {idx} {x} fc p)
       = let MkNVar p' = addVars later bs (MkNVar p) in CLocal {x} fc p'
   mkLocals later bs (CRef fc var)
-      = maybe (CRef fc var) id (resolveRef later zero bs fc var)
+      = fromMaybe (CRef fc var) $ do
+          MkVar p <- resolveRef later [<] bs fc var
+          pure (CLocal fc p)
   mkLocals later bs (CLam fc x sc)
       = let sc' = mkLocals (suc later) bs sc in
             CLam fc x sc'

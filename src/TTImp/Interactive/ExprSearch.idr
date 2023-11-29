@@ -151,7 +151,7 @@ getAllEnv : {vars : _} -> FC ->
 getAllEnv fc done [] = []
 getAllEnv {vars = v :: vs} {done} fc p (b :: env)
    = let rest = getAllEnv fc (sucR p) env
-         MkVar var = weakenVar p (MkVar First)
+         0 var = mkIsVar (hasLength p)
          usable = usableName v in
          if usable
             then (Local fc Nothing _ var,
@@ -504,14 +504,14 @@ searchLocalWith {vars} fc nofn rig opts hints env ((p, pty) :: rest) ty topty
                                 getSuccessful fc rig opts False env ty topty
                                   [(do xtynf <- evalClosure defs xty
                                        findPos defs prf
-                                         (\arg => applyWithFC (Ref fc Func fname)
+                                         (\arg => applyStackWithFC (Ref fc Func fname)
                                                           [(fc1, xtytm),
                                                            (fc2, ytytm),
                                                            (fc, f arg)])
                                          xtynf target),
                                    (do ytynf <- evalClosure defs yty
                                        findPos defs prf
-                                           (\arg => applyWithFC (Ref fc Func sname)
+                                           (\arg => applyStackWithFC (Ref fc Func sname)
                                                           [(fc1, xtytm),
                                                            (fc2, ytytm),
                                                            (fc, f arg)])
@@ -554,7 +554,7 @@ makeHelper fc rig opts env letty targetty ((locapp, ds) :: next)
          helpern <- inCurrentNS helpern_in
          let env' = Lam fc top Explicit letty :: env
          scopeMeta <- metaVar fc top env' helpern
-                             (weaken {n = intn} targetty)
+                             (weaken targetty)
          let scope = toApp scopeMeta
          updateDef helpern (const (Just None))
          -- Apply the intermediate result to the helper function we're
@@ -712,7 +712,7 @@ searchType {vars} fc rig opts hints env topty Z (Bind bfc n b@(Pi fc' c info ty)
             (do defs <- get Ctxt
                 let n' = UN $ Basic !(getArgName defs n [] vars !(nf defs env ty))
                 let env' : Env Term (n' :: _) = b :: env
-                let sc' = renameTop n' sc
+                let sc' = compat sc
                 log "interaction.search" 10 $ "Introduced lambda, search for " ++ show sc'
                 scVal <- searchType fc rig opts hints env' topty Z sc'
                 pure (map (\ (sc, ds) =>

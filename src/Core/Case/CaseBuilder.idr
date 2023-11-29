@@ -16,7 +16,7 @@ import Idris.Pretty.Annotations
 import Data.List
 import Data.String
 import Data.Vect
-import Libraries.Data.LengthMatch
+import Libraries.Data.List.LengthMatch
 import Libraries.Data.SortedSet
 
 import Decidable.Equality
@@ -176,7 +176,7 @@ getPat (Later p) (x :: xs) = getPat p xs
 
 dropPat : {idx : Nat} ->
           (0 el : IsVar nm idx ps) ->
-          NamedPats ns ps -> NamedPats ns (dropVar ps el)
+          NamedPats ns ps -> NamedPats ns (dropIsVar ps el)
 dropPat First (x :: xs) = xs
 dropPat (Later p) (x :: xs) = x :: dropPat p xs
 
@@ -218,7 +218,7 @@ Weaken ArgType where
   weakenNs s Unknown = Unknown
 
 Weaken (PatInfo p) where
-  weaken (MkInfo p el fty) = MkInfo p (Later el) (weaken fty)
+  weakenNs s (MkInfo p el fty) = MkInfo p (weakenIsVar s el) (weakenNs s fty)
 
 -- FIXME: perhaps 'vars' should be second argument so we can use Weaken interface
 weaken : {x, vars : _} ->
@@ -941,11 +941,11 @@ pickNextViable {ps = q :: qs} fc phase fn npss
                             pure (_ ** MkNVar (Later var))
 
 moveFirst : {idx : Nat} -> (0 el : IsVar nm idx ps) -> NamedPats ns ps ->
-            NamedPats ns (nm :: dropVar ps el)
+            NamedPats ns (nm :: dropIsVar ps el)
 moveFirst el nps = getPat el nps :: dropPat el nps
 
 shuffleVars : {idx : Nat} -> (0 el : IsVar nm idx todo) -> PatClause vars todo ->
-              PatClause vars (nm :: dropVar todo el)
+              PatClause vars (nm :: dropIsVar todo el)
 shuffleVars First orig@(MkPatClause pvars lhs pid rhs) = orig -- no-op
 shuffleVars el (MkPatClause pvars lhs pid rhs)
     = MkPatClause pvars (moveFirst el lhs) pid rhs
@@ -1165,11 +1165,11 @@ mkPatClause fc fn args ty pid (ps, rhs)
                      Nothing => pure (Nothing, CaseBuilder.Unknown)
                      Just (NBind pfc _ (Pi _ c _ farg) fsc) =>
                         pure (Just !(fsc defs (toClosure defaultOpts [] (Ref pfc Bound arg))),
-                                Known c (embed {more = arg :: args}
+                                Known c (embed {outer = arg :: args}
                                           !(quote empty [] farg)))
                      Just t =>
                         pure (Nothing,
-                                Stuck (embed {more = arg :: args}
+                                Stuck (embed {outer = arg :: args}
                                         !(quote empty [] t)))
              pure (MkInfo p First (Builtin.snd fa_tys)
                       :: weaken !(mkNames args ps eq (Builtin.fst fa_tys)))
@@ -1197,7 +1197,7 @@ patCompile fc fn phase ty (p :: ps) def
          i <- newRef PName (the Int 0)
          cases <- match fc fn phase pats
                         (rewrite sym (appendNilRightNeutral ns) in
-                                 map (TT.weakenNs n) def)
+                                 map (weakenNs n) def)
          pure (_ ** cases)
   where
     mkPatClausesFrom : Int -> (args : List Name) ->
@@ -1375,17 +1375,6 @@ getPMDef fc phase fn ty clauses
     labelPat i [] = []
     labelPat i (x :: xs) = ("pat" ++ show i ++ ":", x) :: labelPat (i + 1) xs
 
-    mkSubstEnv : Int -> String -> Env Term vars -> SubstEnv vars []
-    mkSubstEnv i pname [] = Nil
-    mkSubstEnv i pname (v :: vs)
-       = Ref fc Bound (MN pname i) :: mkSubstEnv (i + 1) pname vs
-
-    close : {vars : _} ->
-            Env Term vars -> String -> Term vars -> ClosedTerm
-    close {vars} env pname tm
-        = substs (mkSubstEnv 0 pname env)
-              (rewrite appendNilRightNeutral vars in tm)
-
     toClosed : Defs -> (String, Clause) -> (ClosedTerm, ClosedTerm)
     toClosed defs (pname, MkClause env lhs rhs)
-          = (close env pname lhs, close env pname rhs)
+          = (close fc pname env lhs, close fc pname env rhs)

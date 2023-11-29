@@ -17,7 +17,7 @@ import Core.TT
 import Data.Maybe
 import Data.List
 import Data.Vect
-import Libraries.Data.LengthMatch
+import Libraries.Data.List.LengthMatch
 import Libraries.Data.NameMap
 import Libraries.Data.WithDefault
 
@@ -139,7 +139,7 @@ mutual
                | Nothing => pure Nothing
            res <- eval rec env' stk'
                      (rewrite sym (appendAssociative args vars free) in
-                              embed {vars = vars ++ free} exp)
+                              embed {outer = vars ++ free} exp)
            pure (Just res)
   tryApply rec stk env _ = pure Nothing
 
@@ -414,12 +414,12 @@ fixArity (MkError exp) = pure $ MkError !(fixArityTm exp [])
 fixArity d = pure d
 
 -- TODO: get rid of this `done` by making the return `args'` runtime irrelevant?
-getLams : {done : _} ->
+getLams : {done : _} -> SizeOf done ->
           Int -> SubstCEnv done args -> CExp (done ++ args) ->
-          (args' ** (SubstCEnv args' args, CExp (args' ++ args)))
-getLams {done} i env (CLam fc x sc)
-    = getLams {done = x :: done} (i + 1) (CRef fc (MN "ext" i) :: env) sc
-getLams {done} i env sc = (done ** (env, sc))
+          (args' ** (SizeOf args', SubstCEnv args' args, CExp (args' ++ args)))
+getLams {done} d i env (CLam fc x sc)
+    = getLams {done = x :: done} (suc d) (i + 1) (CRef fc (MN "ext" i) :: env) sc
+getLams {done} d i env sc = (done ** (d, env, sc))
 
 mkBounds : (xs : _) -> Bounds xs
 mkBounds [] = None
@@ -437,8 +437,8 @@ getNewArgs {done = x :: xs} (_ :: sub) = x :: getNewArgs sub
 -- not the highest, as you'd expect if they were all lambdas).
 mergeLambdas : (args : List Name) -> CExp args -> (args' ** CExp args')
 mergeLambdas args (CLam fc x sc)
-    = let (args' ** (env, exp')) = getLams 0 [] (CLam fc x sc)
-          expNs = substs env exp'
+    = let (args' ** (s, env, exp')) = getLams zero 0 [] (CLam fc x sc)
+          expNs = substs s env exp'
           newArgs = reverse $ getNewArgs env
           expLocs = mkLocals (mkSizeOf args) {vars = []} (mkBounds newArgs)
                              (rewrite appendNilRightNeutral args in expNs) in

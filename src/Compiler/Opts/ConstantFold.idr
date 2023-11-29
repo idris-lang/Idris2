@@ -50,7 +50,8 @@ record WkCExp (vars : List Name) where
   expr : CExp supp
 
 Weaken WkCExp where
-  weaken (MkWkCExp s Refl e) = MkWkCExp (suc s) Refl e
+  weakenNs s' (MkWkCExp {outer, supp} s Refl e)
+    = MkWkCExp (s' + s) (appendAssociative ns outer supp)  e
 
 lookup : FC -> Var ds -> Subst ds vars -> CExp vars
 lookup fc (MkVar p) rho = case go p rho of

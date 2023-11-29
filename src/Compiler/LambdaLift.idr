@@ -31,7 +31,7 @@ mutual
   ||| @ vars is the list of names accessible within the current scope of the
   |||   lambda-lifted code.
   public export
-  data Lifted : (vars : List Name) -> Type where
+  data Lifted : Scoped where
 
        ||| A local variable in the lambda-lifted syntax tree.
        |||
@@ -424,6 +424,7 @@ mutual
            update Lifts { defs $= ((n, MkLFun (dropped vars unused) bound scl') ::) }
            pure $ LUnderApp fc n (length bound) (allVars fc vars unused)
     where
+
         allPrfs : (vs : List Name) -> (unused : Vect (length vs) Bool) -> List (Var vs)
         allPrfs [] _ = []
         allPrfs (v :: vs) (False::uvs) = MkVar First :: map weaken (allPrfs vs uvs)

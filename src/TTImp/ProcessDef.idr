@@ -231,27 +231,27 @@ recoverableErr defs _ = pure False
 -- should check the RHS, the LHS and its type in that environment,
 -- and a function which turns a checked RHS into a
 -- pattern clause
--- The 'SubVars' proof contains a proof that refers to the *inner* environment,
--- so all the outer things are marked as 'DropCons'
+-- The 'Thin' proof contains a proof that refers to the *inner* environment,
+-- so all the outer things are marked as 'Drop'
 extendEnv : {vars : _} ->
-            Env Term vars -> SubVars inner vars ->
+            Env Term vars -> Thin inner vars ->
             NestedNames vars ->
             Term vars -> Term vars ->
             Core (vars' **
-                    (SubVars inner vars',
+                    (Thin inner vars',
                      Env Term vars', NestedNames vars',
                      Term vars', Term vars'))
 extendEnv env p nest (Bind _ n (PVar fc c pi tmty) sc) (Bind _ n' (PVTy _ _ _) tysc) with (nameEq n n')
   extendEnv env p nest (Bind _ n (PVar fc c pi tmty) sc) (Bind _ n' (PVTy _ _ _) tysc) | Nothing
       = throw (InternalError "Can't happen: names don't match in pattern type")
   extendEnv env p nest (Bind _ n (PVar fc c pi tmty) sc) (Bind _ n (PVTy _ _ _) tysc) | (Just Refl)
-      = extendEnv (PVar fc c pi tmty :: env) (DropCons p) (weaken nest) sc tysc
+      = extendEnv (PVar fc c pi tmty :: env) (Drop p) (weaken nest) sc tysc
 extendEnv env p nest (Bind _ n (PLet fc c tmval tmty) sc) (Bind _ n' (PLet _ _ _ _) tysc) with (nameEq n n')
   extendEnv env p nest (Bind _ n (PLet fc c tmval tmty) sc) (Bind _ n' (PLet _ _ _ _) tysc) | Nothing
       = throw (InternalError "Can't happen: names don't match in pattern type")
   -- PLet on the left becomes Let on the right, to give it computational force
   extendEnv env p nest (Bind _ n (PLet fc c tmval tmty) sc) (Bind _ n (PLet _ _ _ _) tysc) | (Just Refl)
-      = extendEnv (Let fc c tmval tmty :: env) (DropCons p) (weaken nest) sc tysc
+      = extendEnv (Let fc c tmval tmty :: env) (Drop p) (weaken nest) sc tysc
 extendEnv env p nest tm ty
       = pure (_ ** (p, env, nest, tm, ty))
 
@@ -368,7 +368,7 @@ checkLHS : {vars : _} ->
            Int -> List ElabOpt -> NestedNames vars -> Env Term vars ->
            FC -> RawImp ->
            Core (RawImp, -- checked LHS with implicits added
-                 (vars' ** (SubVars vars vars',
+                 (vars' ** (Thin vars vars',
                            Env Term vars', NestedNames vars',
                            Term vars', Term vars')))
 checkLHS {vars} trans mult n opts nest env fc lhs_in
@@ -425,7 +425,7 @@ checkLHS {vars} trans mult n opts nest env fc lhs_in
          logTerm "declare.def.lhs" 5 "LHS type" lhsty_lin
          setHoleLHS (bindEnv fc env lhstm_lin)
 
-         ext <- extendEnv env SubRefl nest lhstm_lin lhsty_lin
+         ext <- extendEnv env Refl nest lhstm_lin lhsty_lin
          pure (lhs, ext)
 
 -- Return whether any of the pattern variables are in a trivially empty
@@ -539,9 +539,9 @@ checkClause {vars} mult vis totreq hashit n opts nest env
          logTerm "declare.def.clause.with" 5 "With value type" wvalTy
          log "declare.def.clause.with" 5 $ "Using vars " ++ show wevars
 
-         let Just wval = shrinkTerm wval withSub
+         let Just wval = shrink wval withSub
              | Nothing => throw (InternalError "Impossible happened: With abstraction failure #1")
-         let Just wvalTy = shrinkTerm wvalTy withSub
+         let Just wvalTy = shrink wvalTy withSub
              | Nothing => throw (InternalError "Impossible happened: With abstraction failure #2")
          -- Should the env be normalised too? If the following 'impossible'
          -- error is ever thrown, that might be the cause!
@@ -691,26 +691,26 @@ checkClause {vars} mult vis totreq hashit n opts nest env
 
       pure (wargs ** (scenv, var, binder))
 
-    -- If it's 'KeepCons/SubRefl' in 'outprf', that means it was in the outer
+    -- If it's 'Keep/Refl' in 'outprf', that means it was in the outer
     -- environment so we need to keep it in the same place in the 'with'
-    -- function. Hence, turn it to KeepCons whatever
+    -- function. Hence, turn it to Keep whatever
     keepOldEnv : {0 outer : _} -> {vs : _} ->
-                 (outprf : SubVars outer vs) -> SubVars vs' vs ->
-                 (vs'' : List Name ** SubVars vs'' vs)
-    keepOldEnv {vs} SubRefl p = (vs ** SubRefl)
-    keepOldEnv {vs} p SubRefl = (vs ** SubRefl)
-    keepOldEnv (DropCons p) (DropCons p')
+                 (outprf : Thin outer vs) -> Thin vs' vs ->
+                 (vs'' : List Name ** Thin vs'' vs)
+    keepOldEnv {vs} Refl p = (vs ** Refl)
+    keepOldEnv {vs} p Refl = (vs ** Refl)
+    keepOldEnv (Drop p) (Drop p')
         = let (_ ** rest) = keepOldEnv p p' in
-              (_ ** DropCons rest)
-    keepOldEnv (DropCons p) (KeepCons p')
+              (_ ** Drop rest)
+    keepOldEnv (Drop p) (Keep p')
         = let (_ ** rest) = keepOldEnv p p' in
-              (_ ** KeepCons rest)
-    keepOldEnv (KeepCons p) (DropCons p')
+              (_ ** Keep rest)
+    keepOldEnv (Keep p) (Drop p')
         = let (_ ** rest) = keepOldEnv p p' in
-              (_ ** KeepCons rest)
-    keepOldEnv (KeepCons p) (KeepCons p')
+              (_ ** Keep rest)
+    keepOldEnv (Keep p) (Keep p')
         = let (_ ** rest) = keepOldEnv p p' in
-              (_ ** KeepCons rest)
+              (_ ** Keep rest)
 
     -- Rewrite the clauses in the block to use an updated LHS.
     -- 'drop' is the number of additional with arguments we expect
@@ -735,6 +735,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
              newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
              pure (ImpossibleClause ploc newlhs)
 
+-- TODO: remove
 nameListEq : (xs : List Name) -> (ys : List Name) -> Maybe (xs = ys)
 nameListEq [] [] = Just Refl
 nameListEq (x :: xs) (y :: ys) with (nameEq x y)

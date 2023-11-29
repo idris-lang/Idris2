@@ -32,12 +32,12 @@ record NestedNames (vars : List Name) where
 
 export
 Weaken NestedNames where
-  weaken (MkNested ns) = MkNested (map wknName ns)
+  weakenNs {ns = wkns} s (MkNested ns) = MkNested (map wknName ns)
     where
       wknName : (Name, (Maybe Name, List (Var vars), FC -> NameType -> Term vars)) ->
-                (Name, (Maybe Name, List (Var (n :: vars)), FC -> NameType -> Term (n :: vars)))
+                (Name, (Maybe Name, List (Var (wkns ++ vars)), FC -> NameType -> Term (wkns ++ vars)))
       wknName (n, (mn, vars, rep))
-          = (n, (mn, map weaken vars, \fc, nt => weaken (rep fc nt)))
+          = (n, (mn, map (weakenNs s) vars, \fc, nt => weakenNs s (rep fc nt)))
 
 -- replace nested name with full name
 export

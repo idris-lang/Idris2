@@ -37,15 +37,14 @@ shiftUnder : {args : _} ->
 shiftUnder First = weakenNVar (mkSizeOf args) (MkNVar First)
 shiftUnder (Later p) = insertNVar (mkSizeOf args) (MkNVar p)
 
-shiftVar : {outer, args : _} ->
-           {idx : _} ->
-           (0 p : IsVar n idx (outer ++ (x :: args ++ vars))) ->
+shiftVar : {outer, args : Scope} ->
+           NVar n (outer ++ (x :: args ++ vars)) ->
            NVar n (outer ++ (args ++ x :: vars))
-shiftVar {outer = []} p = shiftUnder p
-shiftVar {outer = (n::xs)} First = MkNVar First
-shiftVar {outer = (y::xs)} (Later p)
-    = case shiftVar p of
-           MkNVar p' => MkNVar (Later p')
+shiftVar nvar
+  = let out = mkSizeOf outer in
+    case locateNVar out nvar of
+      Left nvar => embed nvar
+      Right (MkNVar p) => weakenNs out (shiftUnder p)
 
 mutual
   shiftBinder : {outer, args : _} ->
@@ -53,7 +52,7 @@ mutual
                 CExp (outer ++ old :: (args ++ vars)) ->
                 CExp (outer ++ (args ++ new :: vars))
   shiftBinder new (CLocal fc p)
-      = case shiftVar p of
+      = case shiftVar (MkNVar p) of
              MkNVar p' => CLocal fc (renameVar p')
     where
       renameVar : IsVar x i (outer ++ (args ++ (old :: rest))) ->

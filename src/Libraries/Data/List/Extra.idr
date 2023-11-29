@@ -134,3 +134,11 @@ suffixOfBy : (match : a -> b -> Maybe m) ->
 suffixOfBy match left right
   = do (ms, bs) <- Extra.prefixOfBy match (reverse left) (reverse right)
        pure (reverse bs, reverse ms)
+
+export
+lengthDistributesOverAppend
+  : (xs, ys : List a)
+  -> length (xs ++ ys) = length xs + length ys
+lengthDistributesOverAppend [] ys = Refl
+lengthDistributesOverAppend (x :: xs) ys =
+  cong S $ lengthDistributesOverAppend xs ys

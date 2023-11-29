@@ -795,7 +795,7 @@ execDecls decls = do
     execDecl decl = do
       i <- desugarDecl [] decl
       inidx <- resolveName (UN $ Basic "[defs]")
-      _ <- newRef EST (initEStateSub inidx [] SubRefl)
+      _ <- newRef EST (initEStateSub inidx [] Refl)
       processLocal [] (MkNested []) [] !getItDecls i
 
 export

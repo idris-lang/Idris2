@@ -424,13 +424,13 @@ parameters (defs : Defs, topopts : EvalOpts)
                Stack free -> CaseTree args ->
                Core (CaseResult (TermWithEnv free))
     evalTree env loc opts fc stk (Case {name} idx x _ alts)
-      = do xval <- evalLocal env fc Nothing idx (varExtend x) [] loc
+      = do xval <- evalLocal env fc Nothing idx (embedIsVar x) [] loc
            -- we have not defined quote yet (it depends on eval itself) so we show the NF
            -- i.e. only the top-level constructor.
            logC "eval.casetree" 5 $ do
              xval <- toFullNames xval
              pure "Evaluated \{show name} to \{show xval}"
-           let loc' = updateLocal opts env idx (varExtend x) loc xval
+           let loc' = updateLocal opts env idx (embedIsVar x) loc xval
            findAlt env loc' opts fc stk xval alts
     evalTree env loc opts fc stk (STerm _ tm)
           = pure (Result $ MkTermEnv loc $ embed tm)

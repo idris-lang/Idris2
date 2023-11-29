@@ -115,13 +115,10 @@ mutual
           = TForce fc r (substVars xs y)
       substVars xs tm = tm
 
-      embedVar : Var vs -> Var (vs ++ more)
-      embedVar (MkVar p) = MkVar (varExtend p)
-
       substArgs : SizeOf vs -> List (List (Var vs), Term vars) -> Term vs -> Term (vs ++ vars)
       substArgs p substs tm =
         let
-          substs' = map (bimap (map $ embedVar {more = vars}) (weakenNs p)) substs
+          substs' = map (bimap (map $ embed {outer = vars}) (weakenNs p)) substs
           tm' = embed tm
         in
           substVars substs' tm'
@@ -245,8 +242,8 @@ mutual
                 NoSugar True =>
                    let x' = uniqueLocal vars x in
                        unelabBinder umode nest fc env x' b
-                                    (renameVars (CompatExt CompatPre) sc) sc'
-                                    (renameVars (CompatExt CompatPre) !(getTerm scty))
+                                    (compat sc) sc'
+                                    (compat !(getTerm scty))
                 _ => unelabBinder umode nest fc env x b sc sc' !(getTerm scty)
     where
       next : Name -> Name
