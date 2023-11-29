@@ -454,31 +454,32 @@ mutual
                      if noworld -- just substitute the scrutinee into
                                 -- the RHS
                         then
-                             let env : SubstCEnv args vars
+                             let (s, env) : (SizeOf args, SubstCEnv args vars)
                                      = mkSubst 0 scr pos args in
                               do log "compiler.newtype.world" 50 "Inlining case on \{show n} (no world)"
-                                 pure $ Just (substs env !(toCExpTree n sc))
+                                 pure $ Just (substs s env !(toCExpTree n sc))
                         else -- let bind the scrutinee, and substitute the
                              -- name into the RHS
-                             let env : SubstCEnv args (MN "eff" 0 :: vars)
+                             let (s, env) : (_, SubstCEnv args (MN "eff" 0 :: vars))
                                      = mkSubst 0 (CLocal fc First) pos args in
                              do sc' <- toCExpTree n sc
                                 let scope = insertNames {outer=args}
                                                         {inner=vars}
                                                         {ns = [MN "eff" 0]}
                                                         (mkSizeOf _) (mkSizeOf _) sc'
-                                let tm = CLet fc (MN "eff" 0) NotInline scr (substs env scope)
+                                let tm = CLet fc (MN "eff" 0) NotInline scr (substs s env scope)
                                 log "compiler.newtype.world" 50 "Kept the scrutinee \{show tm}"
                                 pure (Just tm)
                 _ => pure Nothing -- there's a normal match to do
     where
       mkSubst : Nat -> CExp vs ->
-                Nat -> (args : List Name) -> SubstCEnv args vs
-      mkSubst _ _ _ [] = Nil
+                Nat -> (args : List Name) -> (SizeOf args, SubstCEnv args vs)
+      mkSubst _ _ _ [] = (zero, [])
       mkSubst i scr pos (a :: as)
-          = if i == pos
-               then scr :: mkSubst (1 + i) scr pos as
-               else CErased fc :: mkSubst (1 + i) scr pos as
+          = let (s, env) = mkSubst (1 + i) scr pos as in
+            if i == pos
+               then (suc s, scr :: env)
+               else (suc s, CErased fc :: env)
   getNewType fc scr n (_ :: ns) = getNewType fc scr n ns
 
   getDef : {vars : _} ->
@@ -678,10 +679,11 @@ getCFTypes args (NBind fc _ (Pi _ _ _ ty) sc)
 getCFTypes args t
     = pure (reverse args, !(nfToCFType (getLoc t) False t))
 
-lamRHSenv : Int -> FC -> (ns : List Name) -> SubstCEnv ns []
-lamRHSenv i fc [] = []
+lamRHSenv : Int -> FC -> (ns : List Name) -> (SizeOf ns, SubstCEnv ns [])
+lamRHSenv i fc [] = (zero, [])
 lamRHSenv i fc (n :: ns)
-    = CRef fc (MN "x" i) :: lamRHSenv (i + 1) fc ns
+    = let (s, env) = lamRHSenv (i + 1) fc ns in
+      (suc s, CRef fc (MN "x" i) :: env)
 
 mkBounds : (xs : _) -> Bounds xs
 mkBounds [] = None
@@ -699,8 +701,8 @@ getNewArgs {done = x :: xs} (_ :: sub) = x :: getNewArgs sub
 -- function, they had arity 0.
 lamRHS : (ns : List Name) -> CExp ns -> CExp []
 lamRHS ns tm
-    = let env = lamRHSenv 0 (getFC tm) ns
-          tmExp = substs env (rewrite appendNilRightNeutral ns in tm)
+    = let (s, env) = lamRHSenv 0 (getFC tm) ns
+          tmExp = substs s env (rewrite appendNilRightNeutral ns in tm)
           newArgs = reverse $ getNewArgs env
           bounds = mkBounds newArgs
           expLocs = mkLocals zero {vars = []} bounds tmExp in

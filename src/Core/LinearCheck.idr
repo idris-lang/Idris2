@@ -646,18 +646,19 @@ mutual
                Name -> Int -> Def -> List (Term vars) ->
                Core (Term vars, Glued vars, Usage vars)
   expandMeta rig erase env n idx (PMDef _ [] (STerm _ fn) _ _) args
-      = do tm <- substMeta (embed fn) args []
+      = do tm <- substMeta (embed fn) args zero []
            lcheck rig erase env tm
     where
       substMeta : {drop, vs : _} ->
-                  Term (drop ++ vs) -> List (Term vs) -> SubstEnv drop vs ->
+                  Term (drop ++ vs) -> List (Term vs) ->
+                  SizeOf drop -> SubstEnv drop vs ->
                   Core (Term vs)
-      substMeta (Bind bfc n (Lam _ c e ty) sc) (a :: as) env
-          = substMeta sc as (a :: env)
-      substMeta (Bind bfc n (Let _ c val ty) sc) as env
-          = substMeta (subst val sc) as env
-      substMeta rhs [] env = pure (substs env rhs)
-      substMeta rhs _ _ = throw (InternalError ("Badly formed metavar solution " ++ show n ++ " " ++ show fn))
+      substMeta (Bind bfc n (Lam _ c e ty) sc) (a :: as) drop env
+          = substMeta sc as (suc drop) (a :: env)
+      substMeta (Bind bfc n (Let _ c val ty) sc) as drop env
+          = substMeta (subst val sc) as drop env
+      substMeta rhs [] drop env = pure (substs drop env rhs)
+      substMeta rhs _ _ _ = throw (InternalError ("Badly formed metavar solution " ++ show n ++ " " ++ show fn))
   expandMeta rig erase env n idx def _
       = throw (InternalError ("Badly formed metavar solution " ++ show n ++ " " ++ show def))
 

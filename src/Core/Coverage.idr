@@ -436,20 +436,8 @@ clauseMatches : {vars : _} ->
                 Env Term vars -> Term vars ->
                 ClosedTerm -> Core Bool
 clauseMatches env tm trylhs
-    = let lhs = !(eraseApps (close (getLoc tm) env tm)) in
+    = let lhs = !(eraseApps (close (getLoc tm) "cov" env tm)) in
           pure $ match !(toResolvedNames lhs) !(toResolvedNames trylhs)
-  where
-    mkSubstEnv : {vars : _} ->
-                 FC -> Int -> Env Term vars -> SubstEnv vars []
-    mkSubstEnv fc i [] = Nil
-    mkSubstEnv fc i (v :: vs)
-       = Ref fc Bound (MN "cov" i) :: mkSubstEnv fc (i + 1) vs
-
-    close : {vars : _} ->
-            FC -> Env Term vars -> Term vars -> ClosedTerm
-    close {vars} fc env tm
-        = substs (mkSubstEnv fc 0 env)
-              (rewrite appendNilRightNeutral vars in tm)
 
 export
 checkMatched : {auto c : Ref Ctxt Defs} ->

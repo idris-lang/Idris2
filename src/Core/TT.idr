@@ -25,7 +25,9 @@ import public Algebra
 
 import public Core.TT.Binder
 import public Core.TT.Primitive
+import public Core.TT.Subst
 import public Core.TT.Term
+import public Core.TT.Term.Subst
 import public Core.TT.Var
 
 %default covering
@@ -319,70 +321,6 @@ refsToLocals bs y = mkLocals zero  bs y
 export
 refToLocal : (x : Name) -> (new : Name) -> Term vars -> Term (new :: vars)
 refToLocal x new tm = refsToLocals (Add new x None) tm
-
--- Substitute some explicit terms for names in a term, and remove those
--- names from the scope
-namespace SubstEnv
-  public export
-  data SubstEnv : List Name -> List Name -> Type where
-       Nil : SubstEnv [] vars
-       (::) : Term vars ->
-              SubstEnv ds vars -> SubstEnv (d :: ds) vars
-
-  findDrop : FC -> Maybe Bool ->
-             Var (dropped ++ vars) ->
-             SubstEnv dropped vars ->
-             Term vars
-  findDrop fc r (MkVar var) [] = Local fc r _ var
-  findDrop fc r (MkVar First) (tm :: env) = tm
-  findDrop fc r (MkVar (Later p)) (tm :: env)
-      = findDrop fc r (MkVar p) env
-
-  find : FC -> Maybe Bool ->
-         SizeOf outer ->
-         Var (outer ++ (dropped ++ vars)) ->
-         SubstEnv dropped vars ->
-         Term (outer ++ vars)
-  find fc r outer var env = case sizedView outer of
-    Z       => findDrop fc r var env
-    S outer => case var of
-      MkVar First     => Local fc r _ First
-      MkVar (Later p) => weaken (find fc r outer (MkVar p) env)
-       -- TODO: refactor to only weaken once?
-
-  substEnv : SizeOf outer ->
-             SubstEnv dropped vars ->
-             Term (outer ++ (dropped ++ vars)) ->
-             Term (outer ++ vars)
-  substEnv outer env (Local fc r _ prf)
-      = find fc r outer (MkVar prf) env
-  substEnv outer env (Ref fc x name) = Ref fc x name
-  substEnv outer env (Meta fc n i xs)
-      = Meta fc n i (map (substEnv outer env) xs)
-  substEnv outer env (Bind fc x b scope)
-      = Bind fc x (map (substEnv outer env) b)
-                  (substEnv (suc outer) env scope)
-  substEnv outer env (App fc fn arg)
-      = App fc (substEnv outer env fn) (substEnv outer env arg)
-  substEnv outer env (As fc s as pat)
-      = As fc s (substEnv outer env as) (substEnv outer env pat)
-  substEnv outer env (TDelayed fc x y) = TDelayed fc x (substEnv outer env y)
-  substEnv outer env (TDelay fc x t y)
-      = TDelay fc x (substEnv outer env t) (substEnv outer env y)
-  substEnv outer env (TForce fc r x) = TForce fc r (substEnv outer env x)
-  substEnv outer env (PrimVal fc c) = PrimVal fc c
-  substEnv outer env (Erased fc Impossible) = Erased fc Impossible
-  substEnv outer env (Erased fc Placeholder) = Erased fc Placeholder
-  substEnv outer env (Erased fc (Dotted t)) = Erased fc (Dotted (substEnv outer env t))
-  substEnv outer env (TType fc u) = TType fc u
-
-  export
-  substs : SubstEnv dropped vars -> Term (dropped ++ vars) -> Term vars
-  substs env tm = substEnv zero env tm
-
-  export
-  subst : Term vars -> Term (x :: vars) -> Term vars
-  subst val tm = substs [val] tm
 
 -- Replace an explicit name with a term
 export

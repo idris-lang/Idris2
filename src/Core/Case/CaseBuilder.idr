@@ -1375,17 +1375,6 @@ getPMDef fc phase fn ty clauses
     labelPat i [] = []
     labelPat i (x :: xs) = ("pat" ++ show i ++ ":", x) :: labelPat (i + 1) xs
 
-    mkSubstEnv : Int -> String -> Env Term vars -> SubstEnv vars []
-    mkSubstEnv i pname [] = Nil
-    mkSubstEnv i pname (v :: vs)
-       = Ref fc Bound (MN pname i) :: mkSubstEnv (i + 1) pname vs
-
-    close : {vars : _} ->
-            Env Term vars -> String -> Term vars -> ClosedTerm
-    close {vars} env pname tm
-        = substs (mkSubstEnv 0 pname env)
-              (rewrite appendNilRightNeutral vars in tm)
-
     toClosed : Defs -> (String, Clause) -> (ClosedTerm, ClosedTerm)
     toClosed defs (pname, MkClause env lhs rhs)
-          = (close env pname lhs, close env pname rhs)
+          = (close fc pname env lhs, close fc pname env rhs)
