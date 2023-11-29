@@ -18,6 +18,9 @@ import Core.TT
 import Data.List
 import Data.Vect
 
+-- TODO: remove
+%hide Core.TT.Var.Used
+
 %default covering
 
 mutual

@@ -146,7 +146,7 @@ Hashable ty => Hashable (Binder ty) where
       = h `hashWithSalt` 5 `hashWithSalt` c `hashWithSalt` ty
 
 Hashable (Var vars) where
-  hashWithSalt h (MkVar {i} _) = hashWithSalt h i
+  hashWithSalt h (MkVar {varIdx = i} _) = hashWithSalt h i
 
 mutual
   export

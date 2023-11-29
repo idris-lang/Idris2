@@ -23,9 +23,6 @@ import Libraries.Data.String.Extra
 
 %hide Core.Name.prettyOp
 
-%hide Core.TT.Bound
-%hide Core.TT.App
-
 %hide CompileExpr.(::)
 %hide CompileExpr.Nil
 %hide String.(::)

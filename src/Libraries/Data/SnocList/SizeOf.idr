@@ -29,12 +29,12 @@ export
 theList _ = sx
 
 public export
-zero : SizeOf [<]
-zero = MkSizeOf Z Z
+Lin : SizeOf [<]
+Lin = MkSizeOf Z Z
 
 public export
-suc : SizeOf as -> SizeOf (as :< a)
-suc (MkSizeOf n p) = MkSizeOf (S n) (S p)
+(:<) : SizeOf as -> (0 a : _) -> SizeOf (as :< a)
+MkSizeOf n p :< _ = MkSizeOf (S n) (S p)
 
 -- ||| suc but from the left
 export
@@ -45,9 +45,13 @@ public export
 (<><) : SizeOf {a} sx -> LSizeOf {a} ys -> SizeOf (sx <>< ys)
 MkSizeOf m p <>< MkSizeOf n q = MkSizeOf (n + m) (hlFish p q)
 
+public export
+(<>>) : SizeOf {a} sx -> LSizeOf {a} ys -> LSizeOf (sx <>> ys)
+MkSizeOf m p <>> MkSizeOf n q = MkSizeOf (m + n) (hlChips p q)
+
 export
 cast : LSizeOf {a} xs -> SizeOf {a} (cast xs)
-cast = (zero <><)
+cast = ([<] <><)
 
 export
 (+) : SizeOf sx -> SizeOf sy -> SizeOf (sx ++ sy)
@@ -79,8 +83,8 @@ namespace SizedView
 
   public export
   data SizedView : SizeOf as -> Type where
-    Z : SizedView (MkSizeOf Z Z)
-    S : (n : SizeOf as) -> SizedView (suc {a} n)
+    Z : SizedView [<]
+    S : (n : SizeOf as) -> SizedView (n :< a)
 
 export
 sizedView : (p : SizeOf as) -> SizedView p

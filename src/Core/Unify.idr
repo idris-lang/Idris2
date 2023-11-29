@@ -300,18 +300,18 @@ getVars _ (_ :: xs) = Nothing
 -- Make a sublist representing the variables used in the application.
 -- We'll use this to ensure that local variables which appear in a term
 -- are all arguments to a metavariable application for pattern unification
-toSubVars : (vars : List Name) -> List (Var vars) ->
-            (newvars ** SubVars newvars vars)
-toSubVars [] xs = ([] ** SubRefl)
-toSubVars (n :: ns) xs
+toThin : (vars : List Name) -> List (Var vars) ->
+            (newvars ** Thin newvars vars)
+toThin [] xs = ([] ** Refl)
+toThin (n :: ns) xs
      -- If there's a proof 'First' in 'xs', then 'n' should be kept,
      -- otherwise dropped
      -- (Remember: 'n' might be shadowed; looking for 'First' ensures we
      -- get the *right* proof that the name is in scope!)
-     = let (_ ** svs) = toSubVars ns (dropFirst xs) in
+     = let (_ ** svs) = toThin ns (dropFirst xs) in
            if anyFirst xs
-              then (_ ** KeepCons svs)
-              else (_ ** DropCons svs)
+              then (_ ** Keep svs)
+              else (_ ** Drop svs)
   where
     anyFirst : List (Var (n :: ns)) -> Bool
     anyFirst [] = False
@@ -338,7 +338,7 @@ patternEnv : {auto c : Ref Ctxt Defs} ->
              {vars : _} ->
              Env Term vars -> List (Closure vars) ->
              Core (Maybe (newvars ** (List (Var newvars),
-                                     SubVars newvars vars)))
+                                     Thin newvars vars)))
 patternEnv {vars} env args
     = do defs <- get Ctxt
          empty <- clearDefs defs
@@ -347,16 +347,16 @@ patternEnv {vars} env args
            case getVars [] args' of
              Nothing => Nothing
              Just vs =>
-               let (newvars ** svs) = toSubVars _ vs in
+               let (newvars ** svs) = toThin _ vs in
                  Just (newvars ** (updateVars vs svs, svs))
   where
     -- Update the variable list to point into the sub environment
-    -- (All of these will succeed because the SubVars we have comes from
+    -- (All of these will succeed because the Thin we have comes from
     -- the list of variable uses! It's not stated in the type, though.)
-    updateVars : List (Var vars) -> SubVars newvars vars -> List (Var newvars)
+    updateVars : List (Var vars) -> Thin newvars vars -> List (Var newvars)
     updateVars [] svs = []
     updateVars (MkVar p :: ps) svs
-        = case subElem p svs of
+        = case shrinkIsVar p svs of
                Nothing => updateVars ps svs
                Just p' => p' :: updateVars ps svs
 
@@ -374,23 +374,23 @@ patternEnvTm : {auto c : Ref Ctxt Defs} ->
                {vars : _} ->
                Env Term vars -> List (Term vars) ->
                Core (Maybe (newvars ** (List (Var newvars),
-                                       SubVars newvars vars)))
+                                       Thin newvars vars)))
 patternEnvTm {vars} env args
     = do defs <- get Ctxt
          empty <- clearDefs defs
          pure $ case getVarsTm [] args of
            Nothing => Nothing
            Just vs =>
-             let (newvars ** svs) = toSubVars _ vs in
+             let (newvars ** svs) = toThin _ vs in
                  Just (newvars ** (updateVars vs svs, svs))
   where
     -- Update the variable list to point into the sub environment
-    -- (All of these will succeed because the SubVars we have comes from
+    -- (All of these will succeed because the Thin we have comes from
     -- the list of variable uses! It's not stated in the type, though.)
-    updateVars : List (Var vars) -> SubVars newvars vars -> List (Var newvars)
+    updateVars : List (Var vars) -> Thin newvars vars -> List (Var newvars)
     updateVars [] svs = []
     updateVars (MkVar p :: ps) svs
-        = case subElem p svs of
+        = case shrinkIsVar p svs of
                Nothing => updateVars ps svs
                Just p' => p' :: updateVars ps svs
 
@@ -521,23 +521,20 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
     isSimple (App _ f a) = noMeta f 6 && noMeta a 3
     isSimple tm = noMeta tm 0
 
-    updateIVar : {v : Nat} ->
-                 forall vs, newvars . IVars vs newvars -> (0 p : IsVar nm v newvars) ->
+    updateIVar : forall vs, newvars . IVars vs newvars -> Var newvars ->
                  Maybe (Var vs)
-    updateIVar {v} (ICons Nothing rest) prf
-        = do MkVar prf' <- updateIVar rest prf
-             Just (MkVar (Later prf'))
-    updateIVar {v} (ICons (Just (MkVar {i} p)) rest) prf
-        = if v == i
+    updateIVar (ICons Nothing rest) new
+        = later <$> updateIVar rest new
+    updateIVar (ICons (Just old) rest) new
+        = if new == old
              then Just (MkVar First)
-             else do MkVar prf' <- updateIVar rest prf
-                     Just (MkVar (Later prf'))
+             else later <$> updateIVar rest new
     updateIVar _ _ = Nothing
 
     updateIVars : {vs, newvars : _} ->
                   IVars vs newvars -> Term newvars -> Maybe (Term vs)
     updateIVars ivs (Local fc r idx p)
-        = do MkVar p' <- updateIVar ivs p
+        = do MkVar p' <- updateIVar ivs (MkVar p)
              Just (Local fc r _ p')
     updateIVars ivs (Ref fc nt n) = pure $ Ref fc nt n
     updateIVars ivs (Meta fc n i args)
@@ -598,7 +595,7 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
     mkDef vs vars soln (Bind bfc x b@(Let _ c val ty) sc)
        = do mbsc' <- mkDef vs (ICons Nothing vars) soln sc
             flip traverseOpt mbsc' $ \sc' =>
-              case shrinkTerm sc' (DropCons SubRefl) of
+              case shrink sc' (Drop Refl) of
                 Just scs => pure scs
                 Nothing => pure $ Bind bfc x b sc'
     mkDef [] vars soln _
@@ -620,7 +617,7 @@ updateSolution env (Meta fc mname idx args) soln
          case !(patternEnvTm env args) of
               Nothing => pure False
               Just (newvars ** (locs, submv)) =>
-                  case shrinkTerm soln submv of
+                  case shrink soln submv of
                        Nothing => pure False
                        Just stm =>
                           do Just hdef <- lookupCtxtExact (Resolved idx) (gamma defs)
@@ -826,7 +823,7 @@ mutual
               (margs : List (Closure vars)) ->
               (margs' : List (Closure vars)) ->
               List (Var newvars) ->
-              SubVars newvars vars ->
+              Thin newvars vars ->
               (solfull : Term vars) -> -- Original solution
               (soln : Term newvars) -> -- Solution with shrunk environment
               (solnf : NF vars) ->
@@ -917,11 +914,11 @@ mutual
                              postponeS swap loc mode "Can't instantiate" env
                                        (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs') tmnf
 
-                     case shrinkTerm tm submv of
+                     case shrink tm submv of
                           Just stm => solveOrElsePostpone stm
                           Nothing =>
                             do tm' <- quote defs env tmnf
-                               case shrinkTerm tm' submv of
+                               case shrink tm' submv of
                                     Nothing => postponeS swap loc mode "Can't shrink" env
                                                  (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs')
                                                  tmnf

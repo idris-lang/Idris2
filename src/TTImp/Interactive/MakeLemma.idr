@@ -50,10 +50,10 @@ getArgs {vars} env (S k) (Bind _ x b@(Pi _ c _ ty) sc)
     = do defs <- get Ctxt
          ty' <- map (map rawName) $ unelab env !(normalise defs env ty)
          let x' = UN $ Basic !(uniqueBasicName defs (map nameRoot vars) (nameRoot x))
-         (sc', ty) <- getArgs (b :: env) k (renameTop x' sc)
+         (sc', ty) <- getArgs (b :: env) k (compat {n = x'} sc)
          -- Don't need to use the name if it's not used in the scope type
          let mn = if c == top
-                       then case shrinkTerm sc (DropCons SubRefl) of
+                       then case shrink sc (Drop Refl) of
                                     Nothing => Just x'
                                     _ => Nothing
                        else Just x'

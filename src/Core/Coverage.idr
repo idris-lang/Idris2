@@ -200,9 +200,9 @@ showK : {ns : _} ->
         Show a => KnownVars ns a -> String
 showK {a} xs = show (map aString xs)
   where
-    aString : {vars : _} ->
+    aString : {vars : Scope} ->
               (Var vars, a) -> (Name, a)
-    aString (MkVar v, t) = (getName v, t)
+    aString (MkVar v, t) = (nameAt v, t)
 
 weakenNs : SizeOf args -> KnownVars vars a -> KnownVars (args ++ vars) a
 weakenNs args [] = []
@@ -213,7 +213,7 @@ findTag : {idx, vars : _} ->
           (0 p : IsVar n idx vars) -> KnownVars vars a -> Maybe a
 findTag v [] = Nothing
 findTag v ((v', t) :: xs)
-    = if sameVar (MkVar v) v'
+    = if MkVar v == v'
          then Just t
          else findTag v xs
 
@@ -222,7 +222,7 @@ addNot : {idx, vars : _} ->
          KnownVars vars (List Int)
 addNot v t [] = [(MkVar v, [t])]
 addNot v t ((v', ts) :: xs)
-    = if sameVar (MkVar v) v'
+    = if MkVar v == v'
          then ((v', t :: ts) :: xs)
          else ((v', ts) :: addNot v t xs)
 

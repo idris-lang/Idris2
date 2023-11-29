@@ -178,7 +178,7 @@ checkLambda rig_in elabinfo nest env fc rigl info n argTy scope (Just expty_in)
                     (scopev, scopet) <-
                        inScope fc env' (\e' =>
                           check {e=e'} rig elabinfo nest' env' scope
-                                (Just (gnf env' (renameTop n psc))))
+                                (Just (gnf env' (compat psc))))
                     logTermNF "elab.binder" 10 "Lambda type" env exptynf
                     logGlueNF "elab.binder" 10 "Got scope type" env' scopet
 

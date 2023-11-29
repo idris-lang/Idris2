@@ -186,7 +186,7 @@ getUsableEnv fc rigc p [] = []
 getUsableEnv {vars = v :: vs} {done} fc rigc p (b :: env)
    = let rest = getUsableEnv fc rigc (sucR p) env in
          if (multiplicity b == top || isErased rigc)
-            then let MkVar var = weakenVar p (MkVar First) in
+            then let 0 var = mkIsVar (hasLength p) in
                      (Local (binderLoc b) Nothing _ var,
                        rewrite appendAssociative done [v] vs in
                           weakenNs (sucR p) (binderType b)) ::

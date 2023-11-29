@@ -304,6 +304,9 @@ addDot fc env dotarg x reason y
          ynf <- nf defs env y
          update UST { dotConstraints $= ((dotarg, reason, MkConstraint fc False env xnf ynf) ::) }
 
+mkLocal : {wkns : _} -> FC -> Binder (Term vars) -> Term (wkns ++ nm :: (vars ++ done))
+mkLocal fc b = Local fc (Just (isLet b)) _ (mkIsVar (mkHasLength wkns))
+
 export
 addPolyConstraint : {vars : _} ->
                     {auto u : Ref UST UState} ->
@@ -322,51 +325,51 @@ mkConstantAppArgs lets fc [] wkns = []
 mkConstantAppArgs {done} {vars = x :: xs} lets fc (b :: env) wkns
     = let rec = mkConstantAppArgs {done} lets fc env (wkns ++ [x]) in
           if lets || not (isLet b)
-             then Local fc (Just (isLet b)) (length wkns) (mkVar wkns) ::
+             then mkLocal fc b ::
                   rewrite (appendAssociative wkns [x] (xs ++ done)) in rec
              else rewrite (appendAssociative wkns [x] (xs ++ done)) in rec
 
 mkConstantAppArgsSub : {vars : _} ->
                        Bool -> FC -> Env Term vars ->
-                       SubVars smaller vars ->
+                       Thin smaller vars ->
                        (wkns : List Name) ->
                        List (Term (wkns ++ (vars ++ done)))
 mkConstantAppArgsSub lets fc [] p wkns = []
 mkConstantAppArgsSub {done} {vars = x :: xs}
-                        lets fc (b :: env) SubRefl wkns
+                        lets fc (b :: env) Refl wkns
     = rewrite appendAssociative wkns [x] (xs ++ done) in
               mkConstantAppArgs lets fc env (wkns ++ [x])
 mkConstantAppArgsSub {done} {vars = x :: xs}
-                        lets fc (b :: env) (DropCons p) wkns
+                        lets fc (b :: env) (Drop p) wkns
     = rewrite appendAssociative wkns [x] (xs ++ done) in
               mkConstantAppArgsSub lets fc env p (wkns ++ [x])
 mkConstantAppArgsSub {done} {vars = x :: xs}
-                        lets fc (b :: env) (KeepCons p) wkns
+                        lets fc (b :: env) (Keep p) wkns
     = let rec = mkConstantAppArgsSub {done} lets fc env p (wkns ++ [x]) in
           if lets || not (isLet b)
-             then Local fc (Just (isLet b)) (length wkns) (mkVar wkns) ::
+             then mkLocal fc b ::
                   rewrite appendAssociative wkns [x] (xs ++ done) in rec
              else rewrite appendAssociative wkns [x] (xs ++ done) in rec
 
 mkConstantAppArgsOthers : {vars : _} ->
                           Bool -> FC -> Env Term vars ->
-                          SubVars smaller vars ->
+                          Thin smaller vars ->
                           (wkns : List Name) ->
                           List (Term (wkns ++ (vars ++ done)))
 mkConstantAppArgsOthers lets fc [] p wkns = []
 mkConstantAppArgsOthers {done} {vars = x :: xs}
-                        lets fc (b :: env) SubRefl wkns
+                        lets fc (b :: env) Refl wkns
     = rewrite appendAssociative wkns [x] (xs ++ done) in
-              mkConstantAppArgsOthers lets fc env SubRefl (wkns ++ [x])
+              mkConstantAppArgsOthers lets fc env Refl (wkns ++ [x])
 mkConstantAppArgsOthers {done} {vars = x :: xs}
-                        lets fc (b :: env) (KeepCons p) wkns
+                        lets fc (b :: env) (Keep p) wkns
     = rewrite appendAssociative wkns [x] (xs ++ done) in
               mkConstantAppArgsOthers lets fc env p (wkns ++ [x])
 mkConstantAppArgsOthers {done} {vars = x :: xs}
-                        lets fc (b :: env) (DropCons p) wkns
+                        lets fc (b :: env) (Drop p) wkns
     = let rec = mkConstantAppArgsOthers {done} lets fc env p (wkns ++ [x]) in
           if lets || not (isLet b)
-             then Local fc (Just (isLet b)) (length wkns) (mkVar wkns) ::
+             then mkLocal fc b ::
                   rewrite appendAssociative wkns [x] (xs ++ done) in rec
              else rewrite appendAssociative wkns [x] (xs ++ done) in rec
 
@@ -387,7 +390,7 @@ applyToFull fc tm env
 export
 applyToSub : {vars : _} ->
              FC -> Term vars -> Env Term vars ->
-             SubVars smaller vars -> Term vars
+             Thin smaller vars -> Term vars
 applyToSub fc tm env sub
   = let args = reverse (mkConstantAppArgsSub {done = []} True fc env sub []) in
         apply fc tm (rewrite sym (appendNilRightNeutral vars) in args)
@@ -395,7 +398,7 @@ applyToSub fc tm env sub
 export
 applyToOthers : {vars : _} ->
                 FC -> Term vars -> Env Term vars ->
-                SubVars smaller vars -> Term vars
+                Thin smaller vars -> Term vars
 applyToOthers fc tm env sub
   = let args = reverse (mkConstantAppArgsOthers {done = []} True fc env sub []) in
         apply fc tm (rewrite sym (appendNilRightNeutral vars) in args)

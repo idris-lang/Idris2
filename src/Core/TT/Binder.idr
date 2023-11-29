@@ -210,3 +210,21 @@ Traversable Binder where
   traverse f (PVar fc c p ty) = PVar fc c <$> traverse f p <*> f ty
   traverse f (PLet fc c val ty) = PLet fc c <$> f val <*> f ty
   traverse f (PVTy fc c ty) = PVTy fc c <$> f ty
+
+
+export
+eqBinderBy : (t -> u -> Bool) -> (Binder t -> Binder u -> Bool)
+eqBinderBy eqTU = go where
+
+  go : Binder t -> Binder u -> Bool
+  go (Lam _ c p ty) (Lam _ c' p' ty') = c == c' && eqPiInfoBy eqTU p p' && eqTU ty ty'
+  go (Let _ c v ty) (Let _ c' v' ty') = c == c' && eqTU v v' && eqTU ty ty'
+  go (Pi _ c p ty) (Pi _ c' p' ty')   = c == c' && eqPiInfoBy eqTU p p' && eqTU ty ty'
+  go (PVar _ c p ty) (PVar _ c' p' ty') = c == c' && eqPiInfoBy eqTU p p' && eqTU ty ty'
+  go (PLet _ c v ty) (PLet _ c' v' ty') = c == c' && eqTU v v' && eqTU ty ty'
+  go (PVTy _ c ty) (PVTy _ c' ty') = c == c' && eqTU ty ty'
+  go _ _ = False
+
+export
+Eq a => Eq (Binder a) where
+  (==) = eqBinderBy (==)

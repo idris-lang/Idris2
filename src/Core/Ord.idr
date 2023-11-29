@@ -181,14 +181,6 @@ export
 Ord LazyReason where
     compare l1 l2 = compare (lrTag l1) (lrTag l2)
 
-export
-Eq (Var vars) where
-    MkVar {i=i1} _ == MkVar {i=i2} _ = i1 == i2
-
-export
-Ord (Var vars) where
-    MkVar {i=i1} _ `compare` MkVar {i=i2} _ = compare i1 i2
-
 mutual
     export
     covering

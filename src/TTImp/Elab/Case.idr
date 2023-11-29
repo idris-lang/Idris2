@@ -32,8 +32,8 @@ import Libraries.Data.WithDefault
 
 export
 changeVar : (old : Var vs) -> (new : Var vs) -> Term vs -> Term vs
-changeVar (MkVar {i=x} old) (MkVar new) (Local fc r idx p)
-    = if x == idx
+changeVar old (MkVar new) (Local fc r idx p)
+    = if old == MkVar p
          then Local fc r _ new
          else Local fc r _ p
 changeVar old new (Meta fc nm i args)
@@ -105,7 +105,7 @@ merge : {vs : List Name} ->
         List (Var vs) -> List (Var vs) -> List (Var vs)
 merge [] xs = xs
 merge (v :: vs) xs
-    = merge vs (v :: filter (not . sameVar v) xs)
+    = merge vs (v :: filter (v /=) xs)
 
 -- Extend the list of variables we need in the environment so far, removing
 -- duplicates
@@ -118,10 +118,6 @@ extendNeeded (PLet _ _ ty val) env needed
     = merge (findUsedLocs env ty) (merge (findUsedLocs env val) needed)
 extendNeeded b env needed
     = merge (findUsedLocs env (binderType b)) needed
-
-isNeeded : Nat -> List (Var vs) -> Bool
-isNeeded x [] = False
-isNeeded x (MkVar {i} _ :: xs) = x == i || isNeeded x xs
 
 findScrutinee : {vs : _} ->
                 Env Term vs -> RawImp -> Maybe (Var vs)
@@ -151,7 +147,7 @@ bindCaseLocals fc ((n, mn, envns) :: rest) argns rhs
     getArg (x :: xs) (S k) = getArg xs k
 
     getNameFrom : Var vars -> Name
-    getNameFrom (MkVar {i} _)
+    getNameFrom (MkVar {varIdx = i} _)
         = case getArg argns i of
                Nothing => n
                Just n' => n'
@@ -333,7 +329,7 @@ caseBlock {vars} rigc elabinfo fc nest env opts scr scrtm scrty caseRig alts exp
               RawImp -> List RawImp ->
               List RawImp
     mkSplit Nothing lhs args = reverse (lhs :: args)
-    mkSplit (Just (MkVar {i} prf)) lhs args
+    mkSplit (Just (MkVar {varIdx = i} prf)) lhs args
         = reverse (replace i lhs args)
 
     -- Names used in the pattern we're matching on, so don't bind them

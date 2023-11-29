@@ -176,7 +176,7 @@ getPat (Later p) (x :: xs) = getPat p xs
 
 dropPat : {idx : Nat} ->
           (0 el : IsVar nm idx ps) ->
-          NamedPats ns ps -> NamedPats ns (dropVar ps el)
+          NamedPats ns ps -> NamedPats ns (dropIsVar ps el)
 dropPat First (x :: xs) = xs
 dropPat (Later p) (x :: xs) = x :: dropPat p xs
 
@@ -946,11 +946,11 @@ pickNextViable {ps = q :: qs} fc phase fn npss
                             pure (_ ** MkNVar (Later var))
 
 moveFirst : {idx : Nat} -> (0 el : IsVar nm idx ps) -> NamedPats ns ps ->
-            NamedPats ns (nm :: dropVar ps el)
+            NamedPats ns (nm :: dropIsVar ps el)
 moveFirst el nps = getPat el nps :: dropPat el nps
 
 shuffleVars : {idx : Nat} -> (0 el : IsVar nm idx todo) -> PatClause vars todo ->
-              PatClause vars (nm :: dropVar todo el)
+              PatClause vars (nm :: dropIsVar todo el)
 shuffleVars First orig@(MkPatClause pvars lhs pid rhs) = orig -- no-op
 shuffleVars el (MkPatClause pvars lhs pid rhs)
     = MkPatClause pvars (moveFirst el lhs) pid rhs

@@ -39,14 +39,14 @@ numArgs defs (Ref _ _ n)
            _ => pure (Arity 0)
 numArgs _ tm = pure (Arity 0)
 
-mkSub : Nat -> (ns : List Name) -> List Nat -> (ns' ** SubVars ns' ns)
-mkSub i _ [] = (_ ** SubRefl)
-mkSub i [] ns = (_ ** SubRefl)
+mkSub : Nat -> (ns : List Name) -> List Nat -> (ns' ** Thin ns' ns)
+mkSub i _ [] = (_ ** Refl)
+mkSub i [] ns = (_ ** Refl)
 mkSub i (x :: xs) es
     = let (ns' ** p) = mkSub (S i) xs es in
           if i `elem` es
-             then (ns' ** DropCons p)
-             else (x :: ns' ** KeepCons p)
+             then (ns' ** Drop p)
+             else (x :: ns' ** Keep p)
 
 weakenVar : Var ns -> Var (a :: ns)
 weakenVar (MkVar p) = (MkVar (Later p))
@@ -134,13 +134,13 @@ eraseConArgs arity epos fn args
 mkDropSubst : Nat -> List Nat ->
               (rest : List Name) ->
               (vars : List Name) ->
-              (vars' ** SubVars (vars' ++ rest) (vars ++ rest))
-mkDropSubst i es rest [] = ([] ** SubRefl)
+              (vars' ** Thin (vars' ++ rest) (vars ++ rest))
+mkDropSubst i es rest [] = ([] ** Refl)
 mkDropSubst i es rest (x :: xs)
     = let (vs ** sub) = mkDropSubst (1 + i) es rest xs in
           if i `elem` es
-             then (vs ** DropCons sub)
-             else (x :: vs ** KeepCons sub)
+             then (vs ** Drop sub)
+             else (x :: vs ** Keep sub)
 
 -- Rewrite applications of Nat-like constructors and functions to more optimal
 -- versions using Integer
@@ -338,7 +338,7 @@ toCExpTm n (Bind fc x (Lam _ _ _ _) sc)
     = pure $ CLam fc x !(toCExp n sc)
 toCExpTm n (Bind fc x (Let _ rig val _) sc)
     = do sc' <- toCExp n sc
-         pure $ branchZero (shrinkCExp (DropCons SubRefl) sc')
+         pure $ branchZero (shrinkCExp (Drop Refl) sc')
                         (CLet fc x YesInline !(toCExp n val) sc')
                         rig
 toCExpTm n (Bind fc x (Pi _ c e ty) sc)

@@ -227,21 +227,21 @@ isUsed n (v :: vs) = n == varIdx v || isUsed n vs
 
 mkShrinkSub : {n : _} ->
               (vars : _) -> List (Var (n :: vars)) ->
-              (newvars ** SubVars newvars (n :: vars))
+              (newvars ** Thin newvars (n :: vars))
 mkShrinkSub [] els
     = if isUsed 0 els
-         then (_ ** KeepCons SubRefl)
-         else (_ ** DropCons SubRefl)
+         then (_ ** Keep Refl)
+         else (_ ** Drop Refl)
 mkShrinkSub (x :: xs) els
     = let (_ ** subRest) = mkShrinkSub xs (dropFirst els) in
       if isUsed 0 els
-        then (_ ** KeepCons subRest)
-        else (_ ** DropCons subRest)
+        then (_ ** Keep subRest)
+        else (_ ** Drop subRest)
 
 mkShrink : {vars : _} ->
            List (Var vars) ->
-           (newvars ** SubVars newvars vars)
-mkShrink {vars = []} xs = (_ ** SubRefl)
+           (newvars ** Thin newvars vars)
+mkShrink {vars = []} xs = (_ ** Refl)
 mkShrink {vars = v :: vs} xs = mkShrinkSub _ xs
 
 -- Find the smallest subset of the environment which is needed to type check
@@ -249,14 +249,14 @@ mkShrink {vars = v :: vs} xs = mkShrinkSub _ xs
 export
 findSubEnv : {vars : _} ->
              Env Term vars -> Term vars ->
-             (vars' : List Name ** SubVars vars' vars)
+             (vars' : List Name ** Thin vars' vars)
 findSubEnv env tm = mkShrink (findUsedLocs env tm)
 
 export
-shrinkEnv : Env Term vars -> SubVars newvars vars -> Maybe (Env Term newvars)
-shrinkEnv env SubRefl = Just env
-shrinkEnv (b :: env) (DropCons p) = shrinkEnv env p
-shrinkEnv (b :: env) (KeepCons p)
+shrinkEnv : Env Term vars -> Thin newvars vars -> Maybe (Env Term newvars)
+shrinkEnv env Refl = Just env
+shrinkEnv (b :: env) (Drop p) = shrinkEnv env p
+shrinkEnv (b :: env) (Keep p)
     = do env' <- shrinkEnv env p
          b' <- assert_total (shrinkBinder b p)
          pure (b' :: env')
@@ -309,10 +309,10 @@ uniqifyEnv env = uenv [] env
         = if v `elem` used
              then let v' = uniqueLocal used v
                       (vs' ** (env', compat)) = uenv (v' :: used) bs
-                      b' = map (renameVars compat) b in
+                      b' = map (compatNs compat) b in
                   (v' :: vs' ** (b' :: env', Ext compat))
              else let (vs' ** (env', compat)) = uenv (v :: used) bs
-                      b' = map (renameVars compat) b in
+                      b' = map (compatNs compat) b in
                   (v :: vs' ** (b' :: env', Ext compat))
 
 export

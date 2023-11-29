@@ -479,17 +479,17 @@ mutual
   -- Shrink the scope of a compiled expression, replacing any variables not
   -- in the remaining set with Erased
   export
-  shrinkCExp : SubVars newvars vars -> CExp vars -> CExp newvars
+  shrinkCExp : Thin newvars vars -> CExp vars -> CExp newvars
   shrinkCExp sub (CLocal fc prf)
-      = case subElem prf sub of
+      = case shrinkIsVar prf sub of
              Nothing => CErased fc
              Just (MkVar prf') => CLocal fc prf'
   shrinkCExp _ (CRef fc x) = CRef fc x
   shrinkCExp sub (CLam fc x sc)
-      = let sc' = shrinkCExp (KeepCons sub) sc in
+      = let sc' = shrinkCExp (Keep sub) sc in
             CLam fc x sc'
   shrinkCExp sub (CLet fc x inl val sc)
-      = let sc' = shrinkCExp (KeepCons sub) sc in
+      = let sc' = shrinkCExp (Keep sub) sc in
             CLet fc x inl (shrinkCExp sub val) sc'
   shrinkCExp sub (CApp fc x xs)
       = CApp fc (shrinkCExp sub x) (assert_total (map (shrinkCExp sub) xs))
@@ -513,11 +513,11 @@ mutual
   shrinkCExp _ (CErased fc) = CErased fc
   shrinkCExp _ (CCrash fc x) = CCrash fc x
 
-  shrinkConAlt : SubVars newvars vars -> CConAlt vars -> CConAlt newvars
+  shrinkConAlt : Thin newvars vars -> CConAlt vars -> CConAlt newvars
   shrinkConAlt sub (MkConAlt x ci tag args sc)
-        = MkConAlt x ci tag args (shrinkCExp (subExtend args sub) sc)
+        = MkConAlt x ci tag args (shrinkCExp (keeps args sub) sc)
 
-  shrinkConstAlt : SubVars newvars vars -> CConstAlt vars -> CConstAlt newvars
+  shrinkConstAlt : Thin newvars vars -> CConstAlt vars -> CConstAlt newvars
   shrinkConstAlt sub (MkConstAlt x sc) = MkConstAlt x (shrinkCExp sub sc)
 
 export

@@ -141,7 +141,7 @@ etaContract tm = do
       case tm of
         (Bind _ x (Lam _ _ _ _) (App _ fn (Local _ _ Z _))) => do
           logTerm "eval.eta" 10 "  Shrinking candidate" fn
-          let shrunk = shrinkTerm fn (DropCons SubRefl)
+          let shrunk = shrink fn (Drop Refl)
           case shrunk of
             Nothing => do
               log "eval.eta" 10 "  Failure!"
@@ -278,19 +278,19 @@ replace' {vars} tmpi defs env lhs parg tm
              quote empty env (NApp fc hd [])
     repSub (NApp fc hd args)
         = do args' <- traverse (traversePair repArg) args
-             pure $ applyWithFC
+             pure $ applyStackWithFC
                         !(replace' tmpi defs env lhs parg (NApp fc hd []))
                         args'
     repSub (NDCon fc n t a args)
         = do args' <- traverse (traversePair repArg) args
              empty <- clearDefs defs
-             pure $ applyWithFC
+             pure $ applyStackWithFC
                         !(quote empty env (NDCon fc n t a []))
                         args'
     repSub (NTCon fc n t a args)
         = do args' <- traverse (traversePair repArg) args
              empty <- clearDefs defs
-             pure $ applyWithFC
+             pure $ applyStackWithFC
                         !(quote empty env (NTCon fc n t a []))
                         args'
     repSub (NAs fc s a p)
@@ -307,7 +307,7 @@ replace' {vars} tmpi defs env lhs parg tm
     repSub (NForce fc r tm args)
         = do args' <- traverse (traversePair repArg) args
              tm' <- repSub tm
-             pure $ applyWithFC (TForce fc r tm') args'
+             pure $ applyStackWithFC (TForce fc r tm') args'
     repSub (NErased fc (Dotted t))
         = do t' <- repSub t
              pure (Erased fc (Dotted t'))

@@ -19,12 +19,12 @@ import TTImp.TTImp
 %default covering
 
 extend : {extvs : _} ->
-         Env Term extvs -> SubVars vs extvs ->
+         Env Term extvs -> Thin vs extvs ->
          NestedNames extvs ->
          Term extvs ->
-         (vars' ** (SubVars vs vars', Env Term vars', NestedNames vars'))
+         (vars' ** (Thin vs vars', Env Term vars', NestedNames vars'))
 extend env p nest (Bind _ n b@(Pi fc c pi ty) sc)
-    = extend (b :: env) (DropCons p) (weaken nest) sc
+    = extend (b :: env) (Drop p) (weaken nest) sc
 extend env p nest tm = (_ ** (p, env, nest))
 
 export
@@ -48,7 +48,7 @@ processParams {vars} {c} {m} {u} nest env fc ps ds
          u <- uniVar fc
          pty <- checkTerm (-1) InType []
                           nest env pty_imp (gType fc u)
-         let (vs ** (prf, env', nest')) = extend env SubRefl nest pty
+         let (vs ** (prf, env', nest')) = extend env Refl nest pty
          logEnv "declare.param" 5 "Param env" env'
 
          -- Treat the names in the block as 'nested names' so that we expand
