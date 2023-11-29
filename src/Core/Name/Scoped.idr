@@ -5,8 +5,6 @@ import Core.Name
 import public Libraries.Data.List.HasLength
 import public Libraries.Data.List.SizeOf
 
-
-
 %default total
 
 ------------------------------------------------------------------------
@@ -110,17 +108,19 @@ none : {xs : List a} -> Thin [] xs
 none {xs = []} = Refl
 none {xs = _ :: _} = Drop none
 
+{- UNUSED: we actually sometimes want Refl vs. Keep!
 ||| Smart constructor. We should use this to maximise the length
 ||| of the Refl segment thus getting more short-circuiting behaviours
 export
-keep : Thin xs ys -> Thin (x :: xs) (x :: ys)
-keep Refl = Refl
-keep p = Keep p
+Keep : Thin xs ys -> Thin (x :: xs) (x :: ys)
+Keep Refl = Refl
+Keep p = Keep p
+-}
 
 export
 keeps : (args : List a) -> Thin xs ys -> Thin (args ++ xs) (args ++ ys)
 keeps [] th = th
-keeps (x :: xs) th = keep (keeps xs th)
+keeps (x :: xs) th = Keep (keeps xs th)
 
 namespace Thin
   -- At runtime, Thin's `Refl` does not carry any additional
@@ -146,7 +146,7 @@ removeByIndices es = go 0 where
     let (vs ** th) = go (S idx) xs in
     if idx `elem` es
       then (vs ** Drop th)
-      else (x :: vs ** keep th)
+      else (x :: vs ** Keep th)
 
 
 ------------------------------------------------------------------------

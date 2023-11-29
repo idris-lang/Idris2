@@ -176,7 +176,7 @@ thinFromVars [] els
 thinFromVars (x :: xs) els
     = let (vs ** subRest) = thinFromVars xs (dropFirst els) in
       if MkVar First `elem` els
-        then (x :: vs ** keep subRest)
+        then (x :: vs ** Keep subRest)
         else (vs ** Drop subRest)
 
 export
@@ -447,101 +447,3 @@ shiftUnderNs : SizeOf {a = Name} inner ->
                NVar n (inner ++ x :: outer)
 shiftUnderNs s First = weakenNs s (MkNVar First)
 shiftUnderNs s (Later p) = insertNVar s (MkNVar p)
-
-------------------------------------------------------------------------
--- Used variables
-
-||| This used to be a (Vect (length vars) Bool) which meant
-||| we needed to keep a lot of `vars` around to be able to
-||| pattern-match on it without first fording `length vars`
-||| out. It was very annoying so it's now a hand-rolled type
-||| even though that means we cannot use e.g. Vect's `replicate`.
-export
-data Used : Scoped where
-  Nil : Used []
-  (::) : Bool -> Used vars -> Used (x :: vars)
-
-%name Used bs, us
-
-export
-initUsed : {vars : Scope} -> Used vars
-initUsed {vars = []} = []
-initUsed {vars = (x :: xs)} = False :: initUsed
-
-export
-Weaken Used where
-  weaken = (False ::)
-  weakenNs s t = case sizedView s of
-    Z => t
-    S k => weaken (weakenNs k t)
-
-export
-GenWeaken Used where
-  genWeakenNs l s xs = case sizedView l of
-    Z => weakenNs s xs
-    S k => case xs of x :: xs => x :: genWeakenNs k s xs
-
-export
-tail : Used (x :: vars) -> Used vars
-tail (_ :: xs) = xs
-
-export
-dropNs : SizeOf local -> Used (local ++ vars) -> Used vars
-dropNs s bs = case sizedView s of
-  Z => bs
-  S k => dropNs k (tail bs)
-
-export
-markUsed : {idx : _} -> (0 prf : IsVar x idx vars) ->
-  Used vars -> Used vars
-markUsed First (_ :: bs) = True :: bs
-markUsed (Later p) (b :: bs) = b :: markUsed p bs
-
-||| Only retain the variables that are actually used
-export
-used : {vars : Scope} -> Used vars -> Scope
-used {vars = []} [] = []
-used {vars = v :: vars} (b :: bs)
-    = ifThenElse b (v ::) id
-    $ used bs
-
-export
-allUsed : Used vars -> List (Var vars)
-allUsed = go [<] where
-
-  go : SizeOf inner -> Used vs -> List (Var (inner <>> vs))
-  go s [] = []
-  go s (b :: bs) = mkVarChiply s :: go (s :< _) bs
-
-export
-usedIsVar :
-  (us : Used vars) ->
-  {idx : Nat} -> (0 p : IsVar nm idx vars) ->
-  NVar nm (used us)
-usedIsVar (False :: bs) First = assert_total $
-  idris_crash "INTERNAL ERROR: Referenced variable marked as unused"
-usedIsVar (True :: bs) First = MkNVar First
-usedIsVar (False :: bs) (Later p) = usedIsVar (bs) p
-usedIsVar (True :: bs) (Later p) = later (usedIsVar (bs) p)
-
-export
-usedNVar : (us : Used vars) -> NVar nm vars -> NVar nm (used us)
-usedNVar us (MkNVar p) = usedIsVar us p
-
-export
-usedVar : (us : Used vars) -> Var vars -> Var (used us)
-usedVar us (MkVar p) = forgetName $ usedIsVar us p
-
--- this is a terrible name
-export
-usedNVarContextual : SizeOf inner -> (us : Used vars) ->
-  NVar nm (inner ++ vars) -> NVar nm (inner ++ used us)
-usedNVarContextual s us v = case locateNVar s v of
-  Left v => embed v
-  Right v => weakenNs s (usedNVar us v)
-
-export
-usedVarContextual : SizeOf inner -> (us : Used vars) ->
-  Var (inner ++ vars) -> Var (inner ++ used us)
-usedVarContextual s us v
-  = forgetName (usedNVarContextual s us (recoverName v))

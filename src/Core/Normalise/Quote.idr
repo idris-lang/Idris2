@@ -107,7 +107,7 @@ mutual
                 MkVar (Later isv')
   quoteHead q opts defs fc bounds env (NRef Bound (MN n i))
       = pure $ case findName bounds of
-             Just (MkVar p) => Local fc Nothing _ (embed p)
+             Just (MkVar p) => Local fc Nothing _ (embedIsVar p)
              Nothing => Ref fc Bound (MN n i)
     where
       findName : Bounds bound' -> Maybe (Var bound')

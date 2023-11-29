@@ -11,8 +11,6 @@ import Core.Value
 import TTImp.Elab.Check
 import TTImp.TTImp
 
-%hide Core.TT.Var.Used
-
 %default covering
 
 detagSafe : {auto c : Ref Ctxt Defs} ->

@@ -304,9 +304,6 @@ addDot fc env dotarg x reason y
          ynf <- nf defs env y
          update UST { dotConstraints $= ((dotarg, reason, MkConstraint fc False env xnf ynf) ::) }
 
-mkLocal : {wkns : _} -> FC -> Binder (Term vars) -> Term (wkns ++ nm :: (vars ++ done))
-mkLocal fc b = Local fc (Just (isLet b)) _ (mkIsVar (mkHasLength wkns))
-
 export
 addPolyConstraint : {vars : _} ->
                     {auto u : Ref UST UState} ->
@@ -316,6 +313,9 @@ addPolyConstraint fc env arg x@(NApp _ (NMeta _ _ _) _) y
     = update UST { polyConstraints $= ((MkPolyConstraint fc env arg x y) ::) }
 addPolyConstraint fc env arg x y
     = pure ()
+
+mkLocal : {wkns : Scope} -> FC -> Binder (Term vars) -> Term (wkns ++ x :: (vars ++ done))
+mkLocal fc b = Local fc (Just (isLet b)) _ (mkIsVar (mkHasLength wkns))
 
 mkConstantAppArgs : {vars : _} ->
                     Bool -> FC -> Env Term vars ->

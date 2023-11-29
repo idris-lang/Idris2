@@ -154,7 +154,7 @@ mutual
                    pure (Just (mapMaybe (dropP cargs cargs') ms))
            else pure Nothing
     where
-      weakenP : {0c, c' : _} -> {args, args' : Scope} ->
+      weakenP : {0 c, c' : _} -> {0 args, args' : Scope} ->
                 (Var args, Var args') ->
                 (Var (c :: args), Var (c' :: args'))
       weakenP (v, vs) = (weaken v, weaken vs)

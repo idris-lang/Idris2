@@ -208,7 +208,7 @@ mutual
   shrinkTerm (Meta fc x y xs) prf
      = do Just (Meta fc x y !(shrinkTerms xs prf))
   shrinkTerm (Bind fc x b scope) prf
-     = Just (Bind fc x !(shrinkBinder b prf) !(shrinkTerm scope (keep prf)))
+     = Just (Bind fc x !(shrinkBinder b prf) !(shrinkTerm scope (Keep prf)))
   shrinkTerm (App fc fn arg) prf
      = Just (App fc !(shrinkTerm fn prf) !(shrinkTerm arg prf))
   shrinkTerm (As fc s as tm) prf

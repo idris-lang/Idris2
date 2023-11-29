@@ -53,7 +53,7 @@ getPs : {auto _ : Ref Ctxt Defs} -> {vars : _} ->
         Core (Maybe (List (Maybe (Term vars))))
 getPs acc tyn (Bind _ x (Pi _ _ _ ty) sc)
       = do scPs <- getPs (map (map (map weaken)) acc) tyn sc
-           pure $ map (map (>>= \ t => shrink t (Drop Refl))) scPs
+           pure $ map (map (>>= \ tm => shrink tm (Drop Refl))) scPs
 getPs acc tyn tm
     = case getFnArgs tm of
            (Ref _ _ n, args) =>

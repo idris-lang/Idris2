@@ -423,13 +423,9 @@ specialise {vars} fc env gdef fn stk
                     Nothing => Just <$> mkSpecDef fc gdef pename sargs fn stk
                     Just _ => pure Nothing
   where
-    dropAll : {vs : _} -> Thin [] vs
-    dropAll {vs = []} = Refl
-    dropAll {vs = v :: vs} = Drop dropAll
-
     concrete : {vars : _} ->
                Term vars -> Maybe (Term [])
-    concrete tm = shrink tm dropAll
+    concrete tm = shrink tm none
 
     getSpecArgs : Nat -> List Nat -> List (FC, Term vars) ->
                   Core (Maybe (List (Nat, ArgMode)))
@@ -543,7 +539,7 @@ mutual
                 MkVar (Later isv')
   quoteHead q defs fc bounds env (NRef Bound (MN n i))
       = case findName bounds of
-             Just (MkVar p) => pure $ Local fc Nothing _ (embed p)
+             Just (MkVar p) => pure $ Local fc Nothing _ (embedIsVar p)
              Nothing => pure $ Ref fc Bound (MN n i)
     where
       findName : Bounds bound' -> Maybe (Var bound')

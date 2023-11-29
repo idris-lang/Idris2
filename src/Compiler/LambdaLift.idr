@@ -18,9 +18,6 @@ import Core.TT
 import Data.List
 import Data.Vect
 
--- TODO: remove
-%hide Core.TT.Var.Used
-
 %default covering
 
 mutual
@@ -34,7 +31,7 @@ mutual
   ||| @ vars is the list of names accessible within the current scope of the
   |||   lambda-lifted code.
   public export
-  data Lifted : (vars : List Name) -> Type where
+  data Lifted : Scoped where
 
        ||| A local variable in the lambda-lifted syntax tree.
        |||

@@ -318,6 +318,12 @@ toThin (n :: ns) xs
     anyFirst (MkVar First :: xs) = True
     anyFirst (MkVar (Later p) :: xs) = anyFirst xs
 
+-- Update the variable list to point into the sub environment
+-- (All of these will succeed because the Thin we have comes from
+-- the list of variable uses! It's not stated in the type, though.)
+updateVars : List (Var {a = Name} vars) -> Thin newvars vars -> List (Var newvars)
+updateVars vs th = mapMaybe (\ v => shrink v th) vs
+
 {- Applying the pattern unification rule is okay if:
    * Arguments are all distinct local variables
    * The metavariable name doesn't appear in the unifying term
@@ -349,16 +355,6 @@ patternEnv {vars} env args
              Just vs =>
                let (newvars ** svs) = toThin _ vs in
                  Just (newvars ** (updateVars vs svs, svs))
-  where
-    -- Update the variable list to point into the sub environment
-    -- (All of these will succeed because the Thin we have comes from
-    -- the list of variable uses! It's not stated in the type, though.)
-    updateVars : List (Var vars) -> Thin newvars vars -> List (Var newvars)
-    updateVars [] svs = []
-    updateVars (MkVar p :: ps) svs
-        = case shrinkIsVar p svs of
-               Nothing => updateVars ps svs
-               Just p' => p' :: updateVars ps svs
 
 getVarsTm : List Nat -> List (Term vars) -> Maybe (List (Var vars))
 getVarsTm got [] = Just []
@@ -383,16 +379,6 @@ patternEnvTm {vars} env args
            Just vs =>
              let (newvars ** svs) = toThin _ vs in
                  Just (newvars ** (updateVars vs svs, svs))
-  where
-    -- Update the variable list to point into the sub environment
-    -- (All of these will succeed because the Thin we have comes from
-    -- the list of variable uses! It's not stated in the type, though.)
-    updateVars : List (Var vars) -> Thin newvars vars -> List (Var newvars)
-    updateVars [] svs = []
-    updateVars (MkVar p :: ps) svs
-        = case shrinkIsVar p svs of
-               Nothing => updateVars ps svs
-               Just p' => p' :: updateVars ps svs
 
 -- Check that the metavariable name doesn't occur in the solution.
 -- If it does, normalising might help. If it still does, that's an error.

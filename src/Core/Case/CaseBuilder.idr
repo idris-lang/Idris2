@@ -218,12 +218,7 @@ Weaken ArgType where
   weakenNs s Unknown = Unknown
 
 Weaken (PatInfo p) where
-  weaken (MkInfo p el fty) = MkInfo p (Later el) (weaken fty)
-
-  -- TODO: get rid of this inefficient implementation
-  weakenNs s t = case sizedView s of
-    Z => t
-    S k => weaken (weakenNs k t)
+  weakenNs s (MkInfo p el fty) = MkInfo p (weakenIsVar s el) (weakenNs s fty)
 
 -- FIXME: perhaps 'vars' should be second argument so we can use Weaken interface
 weaken : {x, vars : _} ->
