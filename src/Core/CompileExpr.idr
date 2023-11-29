@@ -615,17 +615,6 @@ substs : {dropped, vars : _} ->
          SubstCEnv dropped vars -> CExp (dropped ++ vars) -> CExp vars
 substs env tm = substEnv zero env tm
 
-resolveRef : SizeOf outer ->
-             SizeOf done ->
-             Bounds bound -> FC -> Name ->
-             Maybe (CExp (outer ++ (done <>> bound ++ vars)))
-resolveRef _ _ None _ _ = Nothing
-resolveRef {outer} {vars} {done} p q (Add {xs} new old bs) fc n
-    = if n == old
-         then let MkNVar p = weakenNs p (mkNVarChiply q) in
-                    Just (CLocal fc p)
-         else resolveRef p (q :< new) bs fc n
-
 mutual
   export
   mkLocals : SizeOf outer ->
@@ -635,7 +624,9 @@ mutual
   mkLocals later bs (CLocal {idx} {x} fc p)
       = let MkNVar p' = addVars later bs (MkNVar p) in CLocal {x} fc p'
   mkLocals later bs (CRef fc var)
-      = maybe (CRef fc var) id (resolveRef later [<] bs fc var)
+      = fromMaybe (CRef fc var) $ do
+          MkVar p <- resolveRef later [<] bs fc var
+          pure (CLocal fc p)
   mkLocals later bs (CLam fc x sc)
       = let sc' = mkLocals (suc later) bs sc in
             CLam fc x sc'

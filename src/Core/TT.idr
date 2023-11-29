@@ -19,8 +19,7 @@ import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 import Libraries.Data.String.Extra
 
-import Libraries.Data.List.HasLength
-import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
 
 import public Algebra
 
@@ -267,28 +266,31 @@ addVars : SizeOf outer -> Bounds bound ->
           NVar name (outer ++ (bound ++ vars))
 addVars p = insertNVarNames p . sizeOf
 
-resolveRef : SizeOf outer -> SizeOf done -> Bounds bound -> FC -> Name ->
-             Maybe (Term (outer ++ (done ++ bound ++ vars)))
-resolveRef p q None fc n = Nothing
-resolveRef {outer} {done} p q (Add {xs} new old bs) fc n
+export
+resolveRef : SizeOf outer ->
+             SizeOf done ->
+             Bounds bound -> FC -> Name ->
+             Maybe (Var (outer ++ (done <>> bound ++ vars)))
+resolveRef _ _ None _ _ = Nothing
+resolveRef {outer} {vars} {done} p q (Add {xs} new old bs) fc n
     = if n == old
-         then rewrite appendAssociative outer done (new :: xs ++ vars) in
-              let MkNVar p = weakenNVar (p + q) (MkNVar First) in
-                     Just (Local fc Nothing _ p)
-         else rewrite appendAssociative done [new] (xs ++ vars)
-                in resolveRef p (sucR q) bs fc n
+         then Just (weakenNs p (mkVarChiply q))
+         else resolveRef p (q :< new) bs fc n
 
 mkLocals : SizeOf outer -> Bounds bound ->
            Term (outer ++ vars) -> Term (outer ++ (bound ++ vars))
 mkLocals outer bs (Local fc r idx p)
     = let MkNVar p' = addVars outer bs (MkNVar p) in Local fc r _ p'
 mkLocals outer bs (Ref fc Bound name)
-    = maybe (Ref fc Bound name) id (resolveRef outer zero bs fc name)
+    = fromMaybe (Ref fc Bound name) $ do
+        MkVar p <- resolveRef outer [<] bs fc name
+        pure (Local fc Nothing _ p)
 mkLocals outer bs (Ref fc nt name)
     = Ref fc nt name
 mkLocals outer bs (Meta fc name y xs)
-    = maybe (Meta fc name y (map (mkLocals outer bs) xs))
-            id (resolveRef outer zero bs fc name)
+    = fromMaybe (Meta fc name y (map (mkLocals outer bs) xs)) $ do
+        MkVar p <- resolveRef outer [<] bs fc name
+        pure (Local fc Nothing _ p)
 mkLocals outer bs (Bind fc x b scope)
     = Bind fc x (map (mkLocals outer bs) b)
            (mkLocals (suc outer) bs scope)
