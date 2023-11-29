@@ -9,6 +9,8 @@ import Core.TT
 import Data.List
 import Data.Vect
 
+import Libraries.Data.SnocList.SizeOf
+
 %default covering
 
 -- Backends might be able to treat some 'shapes' of data type specially,
@@ -616,15 +618,13 @@ substs env tm = substEnv zero env tm
 resolveRef : SizeOf outer ->
              SizeOf done ->
              Bounds bound -> FC -> Name ->
-             Maybe (CExp (outer ++ (done ++ bound ++ vars)))
+             Maybe (CExp (outer ++ (done <>> bound ++ vars)))
 resolveRef _ _ None _ _ = Nothing
 resolveRef {outer} {vars} {done} p q (Add {xs} new old bs) fc n
     = if n == old
-         then rewrite appendAssociative outer done (new :: xs ++ vars) in
-              let MkNVar p = weakenNVar (p + q) (MkNVar First) in
+         then let MkNVar p = weakenNs p (mkNVarChiply q) in
                     Just (CLocal fc p)
-         else rewrite appendAssociative done [new] (xs ++ vars)
-                in resolveRef p (sucR q) bs fc n
+         else resolveRef p (q :< new) bs fc n
 
 mutual
   export
@@ -635,7 +635,7 @@ mutual
   mkLocals later bs (CLocal {idx} {x} fc p)
       = let MkNVar p' = addVars later bs (MkNVar p) in CLocal {x} fc p'
   mkLocals later bs (CRef fc var)
-      = maybe (CRef fc var) id (resolveRef later zero bs fc var)
+      = maybe (CRef fc var) id (resolveRef later [<] bs fc var)
   mkLocals later bs (CLam fc x sc)
       = let sc' = mkLocals (suc later) bs sc in
             CLam fc x sc'
