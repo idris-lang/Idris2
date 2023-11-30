@@ -2,6 +2,8 @@
 
 ## [Next version]
 
+## v0.6.9
+
 ### Language changes
 
 * New magic constants `__LOC__`, `__FILE__`, `__LINE__`, `__COL__`
