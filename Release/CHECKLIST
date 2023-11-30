@@ -3,7 +3,7 @@
 [x] Change version numbers in prelude, base, contrib, linear, network, papers, and test ipkgs
 [x] Change version number in idris2api.ipkg
 [x] Change version number in flake.nix
-[x] Change version number in test pkg010 (TODO: make this step unnecessary!)
+[x] Change version number in tests pkg010 and pkg017  (TODO: make this step unnecessary!)
 [x] Make sure INSTALL.md gives the correct minimum Idris version
 [x] Update CHANGELOG.md to refer to the "Next version" changes as the new
     release version, leaving the next "Next version" blank.
