@@ -10,7 +10,7 @@
 
   outputs = { self, nixpkgs, flake-utils, idris-emacs-src }:
     let
-      idris2-version = "0.6.0";
+      idris2-version = "0.6.9";
       lib = import ./nix/lib.nix;
       sys-agnostic = rec {
         templates.pkg = {
