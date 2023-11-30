@@ -154,6 +154,7 @@
   assumption in `setByte` that the value is between 0 and 255.
 
 * Adds RefC support for 16- and 32-bit access in `Data.Buffer`.
+
 * Add `Show` instance to `Data.Vect.Quantifiers.All` and add a few helpers for listy
   computations on the `All` type.
 * Add an alias for `HVect` to `All id` in `Data.Vect.Quantifiers.All`. This is the
@@ -247,6 +248,8 @@
 
 * A more generalised way of applicative mapping of `TTImp` expression was added,
   called `mapATTImp`; the original `mapMTTimp` was implemented through the new one.
+
+* Adds `Data.Vect.foldrImplGoLemma`.
 
 #### System
 
