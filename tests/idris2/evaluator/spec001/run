@@ -7,4 +7,4 @@ awk -v RS= '/\/\* Main.main/' build/exec/mult3.js
 idris2 --log specialise:5 -c Desc.idr
 idris2 --log specialise:5 -c Desc2.idr
 idris2 --log specialise:5 -c Identity.idr
-} | awk -f replace.awk
+} | clean_names
