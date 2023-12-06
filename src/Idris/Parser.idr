@@ -346,9 +346,11 @@ mutual
       = do boundName <- bounds (UN . Basic <$> decoratedSimpleBinderName fname)
            opBinderTypes fname indents boundName
 
-  autobindOp : WithBounds (OperatorLHSInfo PTerm) -> ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
-  autobindOp binder q fname indents
-      = do op <- bounds iOperator
+  autobindOp : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
+  autobindOp q fname indents
+      = do binder <- bounds $ parens fname (opBinder fname indents)
+           continue indents
+           op <- bounds iOperator
            commit
            e <- bounds (expr q fname indents)
            pure (POp (boundToFC fname $ mergeBounds binder e)
@@ -384,7 +386,8 @@ mutual
                <|> pure l.val
 
   opExpr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
-  opExpr q fname indents = autobindOp q fname indents <|> opExprBase q fname indents
+  opExpr q fname indents = autobindOp q fname indents
+                       <|> opExprBase q fname indents
 
   dpairType : OriginDesc -> WithBounds t -> IndentInfo -> Rule PTerm
   dpairType fname start indents
@@ -705,9 +708,10 @@ mutual
       = (decoratedSymbol fname "->" $> Explicit)
     <|> (decoratedSymbol fname "=>" $> AutoImplicit)
 
-  explicitPi : WithBounds PiBindList -> OriginDesc -> IndentInfo -> Rule PTerm
-  explicitPi b fname indents
-      = do exp <- mustWorkBecause b.bounds "Cannot return a named argument"
+  explicitPi : OriginDesc -> IndentInfo -> Rule PTerm
+  explicitPi fname indents
+      = do b <- bounds $ parens fname $ pibindList fname indents
+           exp <- mustWorkBecause b.bounds "Cannot return a named argument"
                     $ bindSymbol fname
            scope <- mustWork $ typeExpr pdef fname indents
            pure (pibindAll fname exp b.val scope)
@@ -724,24 +728,6 @@ mutual
   fromOpInfo : OperatorLHSInfo PTerm -> Maybe PiBindList
   fromOpInfo (BindType name ty) = Just [(top, map Just name, ty)]
   fromOpInfo _ = Nothing
-
-  piOrAutobind : OriginDesc -> IndentInfo -> Rule PTerm
-  piOrAutobind fname indents
-      = ((parens fname (Parser.choose (bounds $ opBinder fname indents) (bounds $ pibindList fname indents)))) >>=
-        \b : (Either (WithBounds (OperatorLHSInfo PTerm)) (WithBounds PiBindList)) =>
-        the (Rule PTerm) $ case b of
-           Left autobind => (autobindOp autobind pdef fname indents)
-                        <|> let Just x = traverse fromOpInfo autobind
-                                | _ => fail "not a binder"
-                             in explicitPi x fname indents
-           Right bindList => (explicitPi bindList fname indents)
-
-  --     = (bounds $ pibindList fname indents) >>= (\bn : WithBounds PiBindList =>
-  --         let t = traverse asOpInfo bn
-  --         in the (Rule PTerm) $ case traverse asOpInfo bn of
-  --                Nothing => explicitPi bn fname indents
-  --                Just opInfo => autobindOp opInfo pdef fname indents
-  --                           <|> explicitPi bn fname indents)
 
   autoImplicitPi : OriginDesc -> IndentInfo -> Rule PTerm
   autoImplicitPi fname indents
@@ -1051,7 +1037,8 @@ mutual
     <|> defaultImplicitPi fname indents
     <|> forall_ fname indents
     <|> implicitPi fname indents
-    <|> piOrAutobind fname indents
+    <|> autobindOp pdef fname indents
+    <|> explicitPi fname indents
     <|> lam fname indents
 
   typeExpr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
