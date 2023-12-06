@@ -34,6 +34,9 @@ This CHANGELOG describes the history of already-released versions. Please see [C
   referred to by another definitions, and in which function currently elaborator is.
   These features together give an ability to inspect whether particular expressions
   are recursive (including mutual recursion).
+* Autobind and Typebind modifier on operators allow the user to
+  customise the syntax of operator to look more like a binder.
+  See [#3113](https://github.com/idris-lang/Idris2/issues/3113).
 
 ### REPL/CLI changes
 
