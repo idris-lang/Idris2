@@ -1145,7 +1145,7 @@ processDef opts nest env fc n_in cs_in
                  getPMDef fc (CompileTime mult) (Resolved n) ty covcs
              logC "declare.def" 3 $ do pure $ "Working from " ++ show !(toFullNames ctree)
              missCase <- if any catchAll covcs
-                            then do log "declare.def" 3 $ "Catch all case in " ++ show n
+                            then do logC "declare.def" 3 $ do pure "Catch all case in \{show !(getFullName (Resolved n))}"
                                     pure []
                             else getMissing fc (Resolved n) ctree
              logC "declare.def" 3 $
