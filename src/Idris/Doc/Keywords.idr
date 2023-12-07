@@ -505,31 +505,66 @@ withabstraction = vcat $
     ```
     """]
 
-letbinding : Doc IdrisDocAnn
-letbinding = vcat $
+-- to keep docs consistent between `:doc let` and `:doc (:=)`
+letBinding : String
+letBinding =
+    """
+    * Let bindings are defined using the `:=` syntax and can be used to bind the
+    result of intermediate computations, as expected. A type annotation can be
+    added but is not required, for example:
+    ```idris
+    power4 : Nat -> Nat
+    power4 n = let square := n * n
+               in square * square
+
+    power4T : Nat -> Nat
+    power4T n = let square : Nat := n * n
+                in square * square
+    ```
+    Here, `square` will only be computed once instead of every time (which might
+    have happened had we used `=` instead of `:=`).
+    Let bindings will not unfold in the type of subsequent terms so may not be
+    appropriate in all cases.
+    """
+
+letKeyword : Doc IdrisDocAnn
+letKeyword = vcat $
     header "Let binding" :: ""
     :: map (indent 2) [
     """
-    The `let` keyword is used for both local definitions and let bindings.
-    Local definitions are just like top-level definitions except that they are
-    defined in whatever extended context is available at the definition site.
+    NOTE: We distinguish between "local let" (local definitions) and let
+    bindings, as well as between function definitions and values.
 
-    Let bindings can be used to bind the result of intermediate computations.
-    They do not necessitate but can have a type annotation. They will not unfold
-    in the type of subsequent terms so may not be appropriate in all cases.
-
-    For instance, in the following definition the let-bound value `square`
-    ensures that `n * n` is only computed once:
+    * Local definitions are effectively lambdas, that is the expression
     ```idris
-    power4 : Nat -> Nat
-    power4 n = let square := n * n in square * square
+    let a = foo in b
+    ```
+    is equivalent to
+    ```idris
+    (\a => b) foo
     ```
 
-    It is also possible to pattern-match on the result of the intermediate
-    computation. The main pattern is written in place of the variable and
-    an alternative list of clauses can be given using the `|` separator.
-    For instance, we can shortcut the `square * square` computation in case
-    the returned value is 0 like so:
+    \{letBinding}
+
+    * Local function definitions allow for more complex computational behaviour,
+    and are defined in a similar manner to local definitions, with the addition
+    of annotating the `let`-expression with a type. For example:
+    ```idris
+    let bar : Nat -> Nat -> Nat
+        bar k n = k * n + k
+    in e
+    ```
+    Local definitions are just like top-level definitions except that they are
+    defined in whatever extended context is available at the definition site.
+    Be careful that if `e` uses `bar` multiple times, and `bar` is an expensive
+    computation, this may lead to `bar` being evaluated every time. Consider
+    using a "proper" let binding (`:=`) instead, if possible.
+
+    * Finally, it is also possible to pattern-match on the result of the
+    intermediate computation. The main pattern is written in place of the
+    variable and an alternative list of clauses can be given using the `|`
+    separator.  For instance, we can shortcut the `square * square` computation
+    in case the returned value is 0 like so:
     ```idris
     power4 : Nat -> Nat
     power4 n = let square@(S _) := n * n
@@ -543,7 +578,7 @@ keywordsDoc =
      "data" ::= datatypes
   :: "module" ::= "Keyword to start a module definition"
   :: "where" ::= whereblock
-  :: "let" ::= letbinding
+  :: "let" ::= letKeyword
   :: "in" ::= "Used by `let` and `rewrite`. See either of them for more details."
   :: "do" ::= doblock
   :: "record" ::= recordtypes
@@ -699,6 +734,24 @@ recordUpdate = vcat $ header "Record updates" :: ""
   """
   ]
 
+letOrRecord : Doc IdrisDocAnn
+letOrRecord = vcat $
+  header "Let binding or record assignment"
+  :: ""
+  :: map (indent 2) [
+    """
+    \{letBinding}
+
+
+    * Record assignment uses `:=` to assign individual fields to a new value.
+    For example, given a record `r` with a field `name` of type `String`, we can
+    reassign the value of the field using `:=` with the following syntax:
+    ```idris
+    r = { name := "Olwyn Griffiths" } r
+    ```
+    """
+    ]
+
 symbolsDoc : All DocFor (Source.symbols ++ Source.reservedInfixSymbols)
 symbolsDoc
   = "," ::= ""
@@ -715,7 +768,7 @@ symbolsDoc
              declares a new toplevel definition `id` of type `a -> a`.
              """
   :: "=" ::= "Definition or equality type"
-  :: ":=" ::= "Let binding or record assignment"
+  :: ":=" ::= letOrRecord -- "Let binding or record assignment"
   :: "$=" ::= recordUpdate
   :: "|" ::= "Additional patterns showing up in a `with` clause"
   :: "|||" ::= "Document string attached to the following definition"

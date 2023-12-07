@@ -314,6 +314,7 @@
 * Updates the docs for `envvars` to categorise when environment variables are
   used (runtime, build-time, or both).
 * Fixed build failure occuring when `make -j` is in effect.
+* Improved the docs for `let` and `:=` to (hopefully) avoid confusion.
 
 ## v0.6.0
 
