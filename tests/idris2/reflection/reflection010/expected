@@ -1,10 +1,10 @@
 1/1: Building Name (Name.idr)
 LOG declare.data:1: Processing Main.Identity
 LOG declare.type:1: Processing Main.nested
-LOG declare.type:1: Processing Main.N:N:foo
+LOG declare.type:1: Processing Main.1:foo
 LOG declare.type:1: Processing Main.cased
 LOG declare.type:1: Processing Main.test
-LOG 1: nested: ((Main.MkIdentity [a = Int]) Main.N:N:foo)
+LOG 1: nested: ((Main.MkIdentity [a = Int]) Main.1:foo)
 LOG 1: True
 LOG 1: cased: (%lam RigW Explicit (Just {lamc:0}) (Main.Identity Int) (Main.case block in cased {lamc:0}))
 LOG 1: 10

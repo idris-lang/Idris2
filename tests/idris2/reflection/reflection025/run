@@ -8,4 +8,4 @@ echo ------------
 check RefDefsDeep.idr
 echo ------------
 check InspectRec.idr
-} | sed -e 's/\.[0-9]*:[0-9]*:/.<nums>:<nums>:/'
+} | clean_names
