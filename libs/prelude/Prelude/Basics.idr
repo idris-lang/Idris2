@@ -126,9 +126,9 @@ public export
 depCong2 : {0 p : a -> Type} ->
            {0 q : (x : a) -> (y : p x) -> Type} ->
            (0 f : (x : a) -> (y : p x) -> q x y) ->
-           {0 x1, x2 : a} -> (prf : x1 = x2) ->
+           {0 x1, x2 : a} -> (prfX : x1 = x2) ->
            {0 y1 : p x1} -> {y2 : p x2} ->
-           (prf : y1 = y2) -> f x1 y1 = f x2 y2
+           (prfY : y1 = y2) -> f x1 y1 = f x2 y2
 depCong2 f Refl Refl = Refl
 
 ||| Irrelevant equalities can always be made relevant
