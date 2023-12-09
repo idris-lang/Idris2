@@ -1,3 +1,8 @@
+main thread: before all
 True
+main thread: before closing subinput
+main thread: before reading suboutput
+main thread: before printing suboutput
 Hello, Idris!
 
+main thread: after all
