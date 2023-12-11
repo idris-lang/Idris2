@@ -5,4 +5,29 @@ main thread: before reading suboutput
 main thread: before printing suboutput
 Hello, Idris!
 
+main thread: before waiting subprocess
+subprocess exit code: 0
+main thread: after all
+------
+main thread: before all
+True
+main thread: before closing subinput
+main thread: before reading suboutput
+main thread: before printing suboutput
+Hello, Idris!
+
+main thread: before waiting subprocess
+subprocess exit code: 4
+main thread: after all
+------
+main thread: before all
+True
+main thread: before closing subinput
+main thread: before reading suboutput
+main thread: before printing suboutput
+Hello, Idris!
+
+Two  spaces
+main thread: before waiting subprocess
+subprocess exit code: 4
 main thread: after all

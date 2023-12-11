@@ -254,6 +254,10 @@
 * `Ref` interface from `Data.Ref` inherits `Monad` and was extended by a function
   for value modification implemented through reading and writing by default.
 
+* A function `popen2Wait` was added to wait for the process started with `popen2`
+  function and clean up all system resources (to not to leave zombie processes in
+  particular).
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
