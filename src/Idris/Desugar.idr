@@ -178,6 +178,25 @@ checkConflictingBinding side fc opName foundFixity use_site rhs
       isCompatible (Just fixInfo) (BindExplicitType name type expr)
           = fixInfo.bindingInfo == Autobind
 
+checkValidFixity : BindingModifier -> Fixity -> Nat -> Bool
+
+-- If the fixity declaration is not binding, there are no restrictions
+checkValidFixity NotBinding _ _ = True
+
+-- If the fixity declaration is not binding, either typebind or autobind
+-- the fixity can only be `infixr` with precedence `0`. We might want
+-- to revisit that in the future, but as of right now we want to be
+-- conservative and avoid abuse.
+-- having multiple precedence levels would mean that if
+-- =@ has higher precedence than -@
+-- the expression (x : a) =@ b -@ (y : List a) =@ List b
+-- would be bracketed as ((x : a) =@ b) -@ (y : List a) =@ List b
+-- instead of (x : a) =@ (b -@ ((y : List a) =@ List b))
+checkValidFixity _ InfixR 0 = True
+
+-- If it's binding but not infixr precedence 0, raise an error
+checkValidFixity _ _ _ = False
+
 parameters (side : Side)
   toTokList : {auto s : Ref Syn SyntaxInfo} ->
               {auto c : Ref Ctxt Defs} ->
@@ -1157,7 +1176,13 @@ mutual
       mkConName n = DN (show n) (MN ("__mk" ++ show n) 0)
 
   desugarDecl ps (PFixity fc vis binding fix prec opName)
-      = do ctx <- get Ctxt
+      = do unless (checkValidFixity binding fix prec)
+             (throw $ GenericMsgSol fc
+                 "invalid fixity, \{binding} operator must be infixr 0."
+                 ["write `\{binding} infixr 0 \{show opName}`"
+                 , "remove the binding keyword `\{fix} \{show prec} \{show opName}`"
+                 ])
+           ctx <- get Ctxt
            -- We update the context of fixities by adding a namespaced fixity
            -- given by the current namespace and its fixity name.
            -- This allows fixities to be stored along with the namespace at their
