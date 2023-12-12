@@ -38,10 +38,12 @@ envs = [
     MkEnvDesc "IDRIS2_CFLAGS"        "RefC backend: C compiler flags.",
     MkEnvDesc "IDRIS2_CPPFLAGS"      "RefC backend: C preprocessor flags.",
     MkEnvDesc "IDRIS2_LDFLAGS"       "RefC backend: C linker flags.",
+    MkEnvDesc "IDRIS2_LDLIBS"        "RefC backend: C linker library names or flags.",
     MkEnvDesc "CC"                   "RefC backend: C compiler executable (IDRIS2_CC takes precedence).",
     MkEnvDesc "CFLAGS"               "RefC backend: C compiler flags (IDRIS2_CFLAGS takes precedence).",
     MkEnvDesc "CPPFLAGS"             "RefC backend: C preprocessor flags (IDRIS2_CPPFLAGS takes precedence).",
     MkEnvDesc "LDFLAGS"              "RefC backend: C linker flags (IDRIS2_LDFLAGS takes precedence).",
+    MkEnvDesc "LDLIBS"               "RefC backend: C linker library names or flags (IDRIS2_LDLIBS takes precedence).",
     MkEnvDesc "NODE"                 "NodeJS backend: NodeJS executable.",
     MkEnvDesc "PATH"                 "PATH variable is used to search for executables in certain codegens.",
     MkEnvDesc "NO_COLOR"             "Instruct Idris not to print color to stdout. Passing the --color/--colour option will supersede this env var."]

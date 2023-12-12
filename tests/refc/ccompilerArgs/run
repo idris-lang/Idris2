@@ -1,0 +1,30 @@
+. ../../testutils.sh
+
+# This test checks to make sure that Idris2's command line handling for the RefC backend is correct.
+# It checks that:
+#   1) Idris2 correctly finds `CFLAGS` and `LDFLAGS` in the environment,
+#   2) The values in `CFLAGS` and `LDFLAGS` are separated correctly to be passed to the compiler
+#
+# (1) is achieved by compiling a c library (`externalc`) in a separate folder, and then explicitly
+# pointing the compiler to the header files (with `-I./library/`) and shared library (with `-L./library`)
+# and requesting that libexternalc.{so,dylib,dll} is linked (with `-lexternalc`). We additionally point the
+# dynamic library loader to the correct location with `DYLD_LIBRARY_PATH`.
+#
+# (2) is achieved by passing multiple options, separated by spaces, in each of `CFLAGS` and `LDFLAGS`.
+# These options are `-O3` for the c flags, and `-Wl,-pie` for the linker flags. They do not change the
+# semantics of the resulting code (`-O3` simply optimises it more, and `-Wl,-pie` emits position
+# independent code in the final executable), but do check that we correctly split up the environment
+# variables when we pass them to the C compiler.
+
+cd ./library/
+    make > /dev/null
+cd ..
+
+export CFLAGS="-I./library/ -O3"
+export LDFLAGS="-L./library/ -Wl,-pie"
+export LDLIBS="-lexternalc"
+export DYLD_LIBRARY_PATH="./library/"
+
+idris2 --cg refc -o cffi Main.idr > /dev/null
+
+./build/exec/cffi

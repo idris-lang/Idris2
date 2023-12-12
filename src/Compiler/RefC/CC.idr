@@ -7,6 +7,8 @@ import Core.Directory
 
 import System
 
+import Data.String
+
 %default total
 
 findCC : IO String
@@ -41,6 +43,14 @@ findLDFLAGS
          | Just ldflags => pure ldflags
        pure ""
 
+findLDLIBS : IO String
+findLDLIBS
+  = do Nothing <- getEnv "IDRIS2_LDLIBS"
+         | Just ldlibs => pure ldlibs
+       Nothing <- getEnv "LDLIBS"
+         | Just ldlibs => pure ldlibs
+       pure ""
+
 clibdirs : List String -> List String
 clibdirs ds = map (\d => "-L" ++ d) ds
 
@@ -68,6 +78,8 @@ compileCObjectFile {asLibrary} sourceFile objectFile =
               "-o", objectFile,
               "-I" ++ refcDir,
               "-I" ++ cDir]
+              ++ (words cppFlags)
+              ++ (words cFlags)
 
      log "compiler.refc.cc" 10 runccobj
      0 <- coreLift $ system runccobj
@@ -85,6 +97,7 @@ compileCFile {asShared} objectFile outFile =
   do cc <- coreLift findCC
      cFlags <- coreLift findCFLAGS
      ldFlags <- coreLift findLDFLAGS
+     ldLibs <- coreLift findLDLIBS
 
      dirs <- getDirs
      refcDir <- findDataFile "refc"
@@ -100,6 +113,9 @@ compileCFile {asShared} objectFile outFile =
               "-L" ++ refcDir
               ] ++ clibdirs (lib_dirs dirs) ++ [
               "-lgmp", "-lm"]
+              ++ (words cFlags)
+              ++ (words ldFlags)
+              ++ (words ldLibs)
 
      log "compiler.refc.cc" 10 runcc
      0 <- coreLift $ system runcc
