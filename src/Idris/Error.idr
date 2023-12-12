@@ -110,6 +110,7 @@ Eq Error where
   BadRunElab fc1 rho1 s1 d1 == BadRunElab fc2 rho2 s2 d2 = fc1 == fc2 && d1 == d2
   RunElabFail e1 == RunElabFail e2 = e1 == e2
   GenericMsg fc1 x1 == GenericMsg fc2 x2 = fc1 == fc2 && x1 == x2
+  GenericMsgSol fc1 x1 y1 == GenericMsgSol fc2 x2 y2 = fc1 == fc2 && x1 == x2 && y1 == y2
   TTCError x1 == TTCError x2 = x1 == x2
   FileErr x1 y1 == FileErr x2 y2 = x1 == x2 && y1 == y2
   CantFindPackage x1 == CantFindPackage x2 = x1 == x2

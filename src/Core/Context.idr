@@ -796,6 +796,7 @@ HasNames Error where
   full gam (BadRunElab fc rho s desc) = BadRunElab fc <$> full gam rho <*> full gam s <*> pure desc
   full gam (RunElabFail e) = RunElabFail <$> full gam e
   full gam (GenericMsg fc x) = pure (GenericMsg fc x)
+  full gam (GenericMsgSol fc x y) = pure (GenericMsgSol fc x y)
   full gam (TTCError x) = pure (TTCError x)
   full gam (FileErr x y) = pure (FileErr x y)
   full gam (CantFindPackage x) = pure (CantFindPackage x)
@@ -889,6 +890,7 @@ HasNames Error where
   resolved gam (BadRunElab fc rho s desc) = BadRunElab fc <$> resolved gam rho <*> resolved gam s <*> pure desc
   resolved gam (RunElabFail e) = RunElabFail <$> resolved gam e
   resolved gam (GenericMsg fc x) = pure (GenericMsg fc x)
+  resolved gam (GenericMsgSol fc x y) = pure (GenericMsgSol fc x y)
   resolved gam (TTCError x) = pure (TTCError x)
   resolved gam (FileErr x y) = pure (FileErr x y)
   resolved gam (CantFindPackage x) = pure (CantFindPackage x)

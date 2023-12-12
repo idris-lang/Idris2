@@ -6,7 +6,7 @@ import Data.Vect
 typebind infixr 0 =@
 infixr 0 -@
 
-typebind infix 1 =@@
+-- typebind infixr 1 =@@
 
 0 (=@) : (a : Type) -> (a -> Type) -> Type
 (=@) a f = (1 x : a) -> f x
@@ -23,7 +23,7 @@ data S : {ty : Type} -> (x : ty) -> Type where
   Mk3 : (x : ty) =@ ty -@ S x
   Mk4 : ty -@ (x : ty) =@ S x
 
-map : (x : a) =@@ b -@ (y : List a) =@ List b
+-- map : (x : a) =@@ b -@ (y : List a) =@ List b
 
 map2 : ((x : a) =@ b) -@ (y : List a) =@ List b
 
@@ -31,10 +31,11 @@ map3 : (x : a) =@ b -@ (y : List a) =@ List b
 
 map4 : (x : a) =@ (b -@ (y : List a) =@ List b)
 
-test : Test.map === Test.map2
-
-failing
-  test2 : Test.map === Test.map3
+-- this could be possible if we allowed binding operatprs with binding operators
+-- with higher precedences
+-- test : Test.map === Test.map2
+-- failing
+--   test2 : Test.map === Test.map3
 
 test3 : Test.map3 === Test.map4
 
@@ -46,7 +47,7 @@ typebind infixr 0 *>
 -- testCompose : (x : Nat) *> (y : Nat) *> Vect (n + m) String
 -- testCompose = (1 ** 2 ** ["hello", "world", "!"])
 
-autobind infixr 7 `MyLet`
+autobind infixr 0 `MyLet`
 
 MyLet : (val) -> (val -> rest) -> rest
 MyLet arg fn = fn arg

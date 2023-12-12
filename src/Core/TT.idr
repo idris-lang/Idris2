@@ -115,6 +115,10 @@ Show Fixity where
   show Prefix = "prefix"
 
 export
+Interpolation Fixity where
+  interpolate = show
+
+export
 Eq Fixity where
   InfixL == InfixL = True
   InfixR == InfixR = True
@@ -138,6 +142,10 @@ Show BindingModifier where
   show NotBinding = "regular"
   show Typebind = "typebind"
   show Autobind = "autobind"
+
+export
+Interpolation BindingModifier where
+  interpolate = show
 
 -- A record to hold all the information about a fixity
 public export
