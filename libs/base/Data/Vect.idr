@@ -6,8 +6,9 @@ import Data.Nat
 import public Data.Fin
 import public Data.Zippable
 
-import Decidable.Equality
 import Control.Function
+import Decidable.Equality
+import Syntax.PreorderReasoning
 
 %default total
 
@@ -412,6 +413,17 @@ public export
 foldrImpl : (t -> acc -> acc) -> acc -> (acc -> acc) -> Vect n t -> acc
 foldrImpl f e go [] = go e
 foldrImpl f e go (x::xs) = foldrImpl f e (go . (f x)) xs
+
+export
+foldrImplGoLemma
+  :  (x : a) -> (xs : Vect n a) -> (f : a -> b -> b) -> (e : b) -> (go : b -> b)
+  -> go (foldrImpl f e (f x) xs) === foldrImpl f e (go . (f x)) xs
+foldrImplGoLemma z []        f e go = Refl
+foldrImplGoLemma z (y :: ys) f e go = Calc $
+  |~ go (foldrImpl f e ((f z) . (f y)) ys)
+  ~~ go ((f z) (foldrImpl f e (f y) ys))   ... (cong go (sym (foldrImplGoLemma y ys f e (f z))))
+  ~~ (go . (f z)) (foldrImpl f e (f y) ys) ... (cong go Refl)
+  ~~ foldrImpl f e (go . (f z) . (f y)) ys ... (foldrImplGoLemma y ys f e (go . (f z)))
 
 public export
 implementation Foldable (Vect n) where

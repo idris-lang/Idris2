@@ -54,6 +54,6 @@ envNames = map (.name) envs
 ||| Query documented environment variable
 public export
 idrisGetEnv : HasIO io => (name : String) ->
-  {auto known : IsJust (find (name ==) Env.envNames)}
+  {auto 0 known : IsJust (find (name ==) Env.envNames)}
   -> io (Maybe String)
 idrisGetEnv name = getEnv name

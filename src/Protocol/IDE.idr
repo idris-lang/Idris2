@@ -13,6 +13,9 @@ import public Protocol.IDE.Holes       as Protocol.IDE
 import public Protocol.IDE.Result      as Protocol.IDE
 import public Protocol.IDE.Highlight   as Protocol.IDE
 
+import Protocol.SExp
+import Protocol.SExp.Parser
+
 %default total
 ------------------------------------------------------------------------
 
@@ -67,16 +70,16 @@ SExpable ReplyPayload where
 -- expected return type in the future
 export
 FromSExpable ReplyPayload where
-  fromSExp (SExpList [SymbolAtom "ok", result])
-    = do pure $ OK !(fromSExp result) []
-  fromSExp (SExpList [SymbolAtom "ok", result, hl])
-    = do pure $ OK !(fromSExp result) !(fromSExp hl)
   fromSExp (SExpList
     [ SymbolAtom "ok"
     , SExpList
       [ SymbolAtom "highlight-source"
       , hls]
     ]) = do pure $ HighlightSource !(fromSExp hls)
+  fromSExp (SExpList [SymbolAtom "ok", result])
+    = do pure $ OK !(fromSExp result) []
+  fromSExp (SExpList [SymbolAtom "ok", result, hl])
+    = do pure $ OK !(fromSExp result) !(fromSExp hl)
   fromSExp (SExpList [SymbolAtom "error", msg])
     = do pure $ Error !(fromSExp msg) []
   fromSExp (SExpList [SymbolAtom "error", msg, hl])
