@@ -1,10 +1,10 @@
 all: libexternalc.so
 
 externalc.o: externalc.c externalc.h
-	cc -c -fPIC $< -o $@
+	$(CC) -c -fPIC $< -o $@
 
 libexternalc.so: externalc.o
-	cc $< -shared -o $@
+	$(CC) $< -shared -o $@
 
 clean:
 	rm -f externalc.o externalc.so

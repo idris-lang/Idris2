@@ -6,6 +6,7 @@ import Core.Options
 import Core.Directory
 
 import System
+import Idris.Env
 
 import Data.String
 
@@ -13,41 +14,41 @@ import Data.String
 
 findCC : IO String
 findCC
-    = do Nothing <- getEnv "IDRIS2_CC"
+    = do Nothing <- idrisGetEnv "IDRIS2_CC"
            | Just cc => pure cc
-         Nothing <- getEnv "CC"
+         Nothing <- idrisGetEnv "CC"
            | Just cc => pure cc
          pure "cc"
 
 findCFLAGS : IO String
 findCFLAGS
-  = do Nothing <- getEnv "IDRIS2_CFLAGS"
+  = do Nothing <- idrisGetEnv "IDRIS2_CFLAGS"
          | Just cflags => pure cflags
-       Nothing <- getEnv "CFLAGS"
+       Nothing <- idrisGetEnv "CFLAGS"
          | Just cflags => pure cflags
        pure ""
 
 findCPPFLAGS : IO String
 findCPPFLAGS
-  = do Nothing <- getEnv "IDRIS2_CPPFLAGS"
+  = do Nothing <- idrisGetEnv "IDRIS2_CPPFLAGS"
          | Just cppflags => pure cppflags
-       Nothing <- getEnv "CPPFLAGS"
+       Nothing <- idrisGetEnv "CPPFLAGS"
          | Just cppflags => pure cppflags
        pure ""
 
 findLDFLAGS : IO String
 findLDFLAGS
-  = do Nothing <- getEnv "IDRIS2_LDFLAGS"
+  = do Nothing <- idrisGetEnv "IDRIS2_LDFLAGS"
          | Just ldflags => pure ldflags
-       Nothing <- getEnv "LDFLAGS"
+       Nothing <- idrisGetEnv "LDFLAGS"
          | Just ldflags => pure ldflags
        pure ""
 
 findLDLIBS : IO String
 findLDLIBS
-  = do Nothing <- getEnv "IDRIS2_LDLIBS"
+  = do Nothing <- idrisGetEnv "IDRIS2_LDLIBS"
          | Just ldlibs => pure ldlibs
-       Nothing <- getEnv "LDLIBS"
+       Nothing <- idrisGetEnv "LDLIBS"
          | Just ldlibs => pure ldlibs
        pure ""
 

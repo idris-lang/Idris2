@@ -23,7 +23,7 @@ cd ..
 export CFLAGS="-I./library/ -O3"
 export LDFLAGS="-L./library/ -Wl,-pie"
 export LDLIBS="-lexternalc"
-export DYLD_LIBRARY_PATH="./library/"
+export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:./library/"
 
 idris2 --cg refc -o cffi Main.idr > /dev/null
 
