@@ -152,6 +152,7 @@ char *idris2_readChars(int num, FILE *f) {
   buffer[len] = '\0';
 
   if (len <= 0) {
+    free(buffer);
     return NULL;
   } else {
     return buffer; // freed by RTS
