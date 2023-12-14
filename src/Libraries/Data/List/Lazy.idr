@@ -1,3 +1,5 @@
+-- This module is to be removed as soon as 0.7.1 (or later) is released, since `Data.List.Lazy` is now in `base`
+
 module Libraries.Data.List.Lazy
 
 %default total

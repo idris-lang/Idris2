@@ -54,9 +54,6 @@ modules = Control.ANSI,
 
           Data.List.Elem.Extra,
 
-          Data.List.Lazy,
-          Data.List.Lazy.Quantifiers,
-
           Data.Logic.Propositional,
 
           Data.Monoid.Exponentiation,
