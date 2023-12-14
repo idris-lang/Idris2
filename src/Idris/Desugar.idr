@@ -1178,9 +1178,9 @@ mutual
   desugarDecl ps (PFixity fc vis binding fix prec opName)
       = do unless (checkValidFixity binding fix prec)
              (throw $ GenericMsgSol fc
-                 "invalid fixity, \{binding} operator must be infixr 0."
-                 ["write `\{binding} infixr 0 \{show opName}`"
-                 , "remove the binding keyword `\{fix} \{show prec} \{show opName}`"
+                 "Invalid fixity, \{binding} operator must be infixr 0."
+                 [ "Make it `infixr 0`: `\{binding} infixr 0 \{show opName}`"
+                 , "Remove the binding keyword: `\{fix} \{show prec} \{show opName}`"
                  ])
            ctx <- get Ctxt
            -- We update the context of fixities by adding a namespaced fixity

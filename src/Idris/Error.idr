@@ -620,6 +620,11 @@ perrorRaw (BadRunElab fc env script desc)
 perrorRaw (RunElabFail e)
     = pure $ reflow "Error during reflection" <+> colon <++> !(perrorRaw e)
 perrorRaw (GenericMsg fc str) = pure $ pretty0 str <+> line <+> !(ploc fc)
+perrorRaw (GenericMsgSol fc header solutions)
+    = pure $ pretty0 header <+> line <+> !(ploc fc)
+       <+> line
+       <+> "Possible solutions:" <+> line
+       <+> indent 1 (vsep (map (\s => "-" <++> pretty0 s) solutions))
 perrorRaw (OperatorBindingMismatch fc {print=p} expected actual opName rhs)
     = pure $ "Operator" <++> pretty0 !(getFullName opName) <++> "is"
        <++> printBindingInfo expected
