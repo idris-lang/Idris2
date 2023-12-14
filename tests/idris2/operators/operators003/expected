@@ -1,8 +1,5 @@
 1/1: Building Error1 (Error1.idr)
-Error: invalid fixity, typebind operator must be infixr 0.
-Possible solutions:
-- write `typebind infixr 0 =@`
-- remove the binding keyword `infixl 0 =@`
+Error: Invalid fixity, typebind operator must be infixr 0.
 
 Error1:3:10--3:21
  1 | module Error1
@@ -10,11 +7,11 @@ Error1:3:10--3:21
  3 | typebind infixl 0 =@
               ^^^^^^^^^^^
 
-1/1: Building Error2 (Error2.idr)
-Error: invalid fixity, typebind operator must be infixr 0.
 Possible solutions:
-- write `typebind infixr 0 =@`
-- remove the binding keyword `infixr 3 =@`
+ - Make it `infixr 0`: `typebind infixr 0 =@`
+ - Remove the binding keyword: `infixl 0 =@`
+1/1: Building Error2 (Error2.idr)
+Error: Invalid fixity, typebind operator must be infixr 0.
 
 Error2:3:10--3:21
  1 | module Error2
@@ -22,11 +19,11 @@ Error2:3:10--3:21
  3 | typebind infixr 3 =@
               ^^^^^^^^^^^
 
-1/1: Building Error3 (Error3.idr)
-Error: invalid fixity, typebind operator must be infixr 0.
 Possible solutions:
-- write `typebind infixr 0 =@`
-- remove the binding keyword `infixl 3 =@`
+ - Make it `infixr 0`: `typebind infixr 0 =@`
+ - Remove the binding keyword: `infixr 3 =@`
+1/1: Building Error3 (Error3.idr)
+Error: Invalid fixity, typebind operator must be infixr 0.
 
 Error3:3:10--3:21
  1 | module Error3
@@ -34,3 +31,6 @@ Error3:3:10--3:21
  3 | typebind infixl 3 =@
               ^^^^^^^^^^^
 
+Possible solutions:
+ - Make it `infixr 0`: `typebind infixr 0 =@`
+ - Remove the binding keyword: `infixl 3 =@`
