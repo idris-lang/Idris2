@@ -12,16 +12,16 @@
 #
 # (2) is achieved by passing multiple options, separated by spaces, in each of `CFLAGS` and `LDFLAGS`.
 # These options are `-O3` for the c flags, and `-Wl,-pie` for the linker flags. They do not change the
-# semantics of the resulting code (`-O3` simply optimises it more, and `-Wl,-pie` emits position
-# independent code in the final executable), but do check that we correctly split up the environment
-# variables when we pass them to the C compiler.
+# semantics of the resulting code (`-O3` simply optimises it more, and `-Wl,-S` removes debugging information
+# from the final  executable), but do check that we correctly split up the environment variables when we
+# pass them to the C compiler.
 
 cd ./library/
     make
 cd ..
 
 export CFLAGS="-I./library/ -O3"
-export LDFLAGS="-L./library/ -Wl,-pie"
+export LDFLAGS="-L./library/ -Wl,-S"
 export LDLIBS="-lexternalc"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:./library/"
 export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:./library/"
