@@ -5,7 +5,6 @@ import Core.Env
 import Core.TT
 
 import Data.List1
-import Data.SnocList -- until 0.6.0
 import Data.Vect
 
 import Libraries.Data.IMaybe
