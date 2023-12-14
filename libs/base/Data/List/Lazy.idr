@@ -18,7 +18,7 @@ data LazyList : Type -> Type where
 --- Truly lazy functions ---
 
 public export
-foldrLazy : (func : elem -> Lazy acc -> acc) -> (init : Lazy acc) -> (input : LazyList elem) -> acc
+foldrLazy : (func : a -> Lazy acc -> acc) -> (init : Lazy acc) -> (input : LazyList a) -> acc
 foldrLazy _  init [] = init
 foldrLazy op init (x::xs) = x `op` foldrLazy op init xs
 

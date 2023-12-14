@@ -2,6 +2,22 @@
 
 ## [Next version]
 
+### Language changes
+
+### Compiler changes
+
+### Library changes
+
+#### Prelude
+
+#### Base
+
+* `Data.List.Lazy` was moved from `contrib` to `base`.
+
+#### Contrib
+
+* `Data.List.Lazy` was moved from `contrib` to `base`.
+
 ## v0.7.0
 
 ### Language changes
