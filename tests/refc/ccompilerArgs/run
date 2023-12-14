@@ -17,7 +17,7 @@
 # pass them to the C compiler.
 
 cd ./library/
-    make
+    make > /dev/null
 cd ..
 
 export CFLAGS="-I./library/ -O3"
@@ -26,6 +26,6 @@ export LDLIBS="-lexternalc"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:./library/"
 export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:./library/"
 
-idris2 --cg refc -o cffi Main.idr
+idris2 --cg refc -o cffi Main.idr > /dev/null
 
 ./build/exec/cffi
