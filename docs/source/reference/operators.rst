@@ -273,7 +273,7 @@ this, simply add the ``typebind`` keyword in front of the fixity declaration.
 
    typebind infixr 0 =@
 
-``typebind`` is a mofidier like ``export`` and both can be used at the same time.
+``typebind`` is a modifier like ``export`` and both can be used at the same time.
 
 
 An operator defined as ``typebind`` cannot be used in regular position anymore,
