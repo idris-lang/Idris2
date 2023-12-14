@@ -165,8 +165,6 @@
   from the contrib library. The type ended up being `HasLength n xs` rather than
   `HasLength xs n`.
 
-* `System`'s `die` now prints the error message on stderr rather than stdout
-
 * Moved `Data.SortedMap` and `Data.SortedSet` from contrib to base.
 
 * Added missing buffer primitives (chezscheme only):
@@ -254,16 +252,21 @@
 * `Ref` interface from `Data.Ref` inherits `Monad` and was extended by a function
   for value modification implemented through reading and writing by default.
 
-* A function `popen2Wait` was added to wait for the process started with `popen2`
-  function and clean up all system resources (to not to leave zombie processes in
-  particular).
-
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
   the number of configured processors.
 
+* `System`'s `die` now prints the error message on stderr rather than stdout
+
 * Adds `popen2` to run a subprocess with bi-directional pipes.
+
+* A function `popen2Wait` was added to wait for the process started with `popen2`
+  function and clean up all system resources (to not to leave zombie processes in
+  particular).
+
+* Function `getStringAndFree` from `System.File.ReadWrite` was given an extra
+  argument of type `File` to return an empty string is no error happened.
 
 ### Contrib
 
