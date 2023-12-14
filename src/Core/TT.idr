@@ -4,7 +4,6 @@ import public Core.FC
 import public Core.Name
 import public Core.Name.Scoped
 
-
 import Idris.Pretty.Annotations
 
 import Data.List
@@ -14,7 +13,6 @@ import Data.Vect
 import Decidable.Equality
 
 import Libraries.Data.NameMap
-import Libraries.Data.Primitives
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 import Libraries.Data.String.Extra
