@@ -679,6 +679,8 @@ mutual
         = do r' <- reflect fc defs lhs env r
              appCon fc defs (reflectionttimp "Totality") [r']
     reflect fc defs lhs env Macro = getCon fc defs (reflectionttimp "Macro")
+    reflect fc defs lhs env Typebind = getCon fc defs (reflectionttimp "Typebind")
+    reflect fc defs lhs env Autobind = getCon fc defs (reflectionttimp "Autobind")
     reflect fc defs lhs env (SpecArgs r)
         = do r' <- reflect fc defs lhs env r
              appCon fc defs (reflectionttimp "SpecArgs") [r']

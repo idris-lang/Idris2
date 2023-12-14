@@ -90,6 +90,13 @@ mutual
        IUpdate : FC -> List (IFieldUpdate' nm) -> RawImp' nm -> RawImp' nm
 
        IApp : FC -> RawImp' nm -> RawImp' nm -> RawImp' nm
+       -- Binding application is eventually converted to regular application, just like `let`
+       -- It is kept separate in TTImp for multiple reasons:
+       -- 1. We need to wait for `processFN` to check if the application is binding or not
+       -- 2. We can reconstruct the intended expression in error messages if it's incorrectly used.
+       -- 3. A function name can be overloaded and one of them could be binding while the other isn't
+       IBindingApp : FC -> (expr : RawImp' nm) -> (name : Name) ->
+                     (bound, body : RawImp' nm) -> RawImp' nm
        IAutoApp : FC -> RawImp' nm -> RawImp' nm -> RawImp' nm
        INamedApp : FC -> RawImp' nm -> Name -> RawImp' nm -> RawImp' nm
        IWithApp : FC -> RawImp' nm -> RawImp' nm -> RawImp' nm
@@ -250,6 +257,8 @@ mutual
        Totality : TotalReq -> FnOpt' nm
        Macro : FnOpt' nm
        SpecArgs : List Name -> FnOpt' nm
+       Typebind : FnOpt' nm
+       Autobind : FnOpt' nm
   %name FnOpt' fopt
 
   public export
@@ -276,6 +285,8 @@ mutual
     show (Totality PartialOK) = "partial"
     show Macro = "%macro"
     show (SpecArgs ns) = "%spec " ++ showSep " " (map show ns)
+    show Typebind = "typebind"
+    show Autobind = "autobind"
 
   export
   Eq FnOpt where
@@ -292,6 +303,8 @@ mutual
     (Totality tot_lhs) == (Totality tot_rhs) = tot_lhs == tot_rhs
     Macro == Macro = True
     (SpecArgs ns) == (SpecArgs ns') = ns == ns'
+    Typebind == Typebind = True
+    Autobind == Autobind = True
     _ == _ = False
 
   public export

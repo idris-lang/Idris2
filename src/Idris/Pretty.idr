@@ -354,6 +354,9 @@ mutual
     prettyPrec d (PSectionR _ _ x op) = parens (pretty x <++> prettyOp op)
     prettyPrec d (PEq fc l r) = parenthesise (d > startPrec) $ prettyPrec Equal l <++> equals <++> prettyPrec Equal r
     prettyPrec d (PBracketed _ tm) = parens (pretty tm)
+    prettyPrec d (PBindingApp _ expr name bound body)
+      = parenthesise (d > startPrec) $ prettyPrec d expr <++>
+        parens (prettyBinder name <++> ":" <++> pretty bound) <++>  "|" <++> prettyPrec d body
     prettyPrec d (PString _ _ xs) = parenthesise (d > startPrec) $ hsep $ punctuate "++" (prettyPStr <$> xs)
     prettyPrec d (PMultiline _ _ indent xs) =
       "multiline" <++>

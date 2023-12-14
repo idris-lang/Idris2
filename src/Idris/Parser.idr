@@ -346,6 +346,15 @@ mutual
       = do boundName <- bounds (UN . Basic <$> decoratedSimpleBinderName fname)
            opBinderTypes fname indents boundName
 
+  bindingExpr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
+  bindingExpr q fname indents
+      = do leader <- expr pdef fname indents
+           binder <- bounds $ parens fname (opBinder fname indents)
+           decoratedSymbol fname "|"
+           body <- expr pdef fname indents
+           ?whui
+    <|> autobindOp q fname indents
+
   autobindOp : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
   autobindOp q fname indents
       = do binder <- bounds $ parens fname (opBinder fname indents)
@@ -415,6 +424,19 @@ mutual
                         l
                         (PImplicit (boundToFC fname (mergeBounds start rest)))
                         rest.val)
+
+--   bindingExpr : OriginDesc -> IndentInfo -> Rule PTerm
+--   bindingExpr fname indents = do
+--     fn <- expr pdef fname indents
+--     bn <- bounds (do symbol "("
+--                      bname <- UN . Basic <$> decoratedSimpleBinderName fname
+--                      symbol ":"
+--                      bexpr <- expr pdef fname indents
+--                      symbol ")"
+--                      pure (bname, bexpr))
+--     decoratedSymbol fname "|"
+--     body <- expr pdef fname indents
+--     ?end
 
   bracketedExpr : OriginDesc -> WithBounds t -> IndentInfo -> Rule PTerm
   bracketedExpr fname s indents
