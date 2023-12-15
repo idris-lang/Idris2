@@ -74,13 +74,13 @@ compileCObjectFile {asLibrary} sourceFile objectFile =
 
      let libraryFlag = if asLibrary then ["-fpic"] else []
 
-     let runccobj = escapeCmd $
+     let runccobj = (escapeCmd $
          [cc, "-Werror", "-c"] ++ libraryFlag ++ [sourceFile,
               "-o", objectFile,
               "-I" ++ refcDir,
-              "-I" ++ cDir]
-              ++ (words cppFlags)
-              ++ (words cFlags)
+              "-I" ++ cDir])
+              ++ " " ++ cppFlags ++ " " ++ cFlags
+
 
      log "compiler.refc.cc" 10 runccobj
      0 <- coreLift $ system runccobj
@@ -106,17 +106,15 @@ compileCFile {asShared} objectFile outFile =
 
      let sharedFlag = if asShared then ["-shared"] else []
 
-     let runcc = escapeCmd $
+     let runcc = (escapeCmd $
          [cc, "-Werror"] ++ sharedFlag ++ [objectFile,
               "-o", outFile,
               supportFile,
               "-lidris2_refc",
               "-L" ++ refcDir
               ] ++ clibdirs (lib_dirs dirs) ++ [
-              "-lgmp", "-lm"]
-              ++ (words cFlags)
-              ++ (words ldFlags)
-              ++ (words ldLibs)
+              "-lgmp", "-lm"])
+              ++ " " ++ (unwords [cFlags, ldFlags, ldLibs])
 
      log "compiler.refc.cc" 10 runcc
      0 <- coreLift $ system runcc
