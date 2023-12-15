@@ -96,6 +96,11 @@ findBindableNames arg env used (IApp fc fn av)
     = findBindableNames False env used fn ++ findBindableNames True env used av
 findBindableNames arg env used (INamedApp fc fn n av)
     = findBindableNames False env used fn ++ findBindableNames True env used av
+findBindableNames arg env used (IBindingApp fc expr nm bound body)
+    = let env' = nm :: env
+       in findBindableNames arg env used expr
+       ++ findBindableNames False env used bound
+       ++ findBindableNames True env' used body
 findBindableNames arg env used (IAutoApp fc fn av)
     = findBindableNames False env used fn ++ findBindableNames True env used av
 findBindableNames arg env used (IWithApp fc fn av)
@@ -145,6 +150,8 @@ findBindableNamesQuot env used (IApp fc x y)
     = findBindableNamesQuot env used ![x, y]
 findBindableNamesQuot env used (INamedApp fc x y z)
     = findBindableNamesQuot env used ![x, z]
+findBindableNamesQuot env used (IBindingApp fc expr nm bound body)
+    = findBindableNamesQuot env used ![expr, bound, body]
 findBindableNamesQuot env used (IAutoApp fc x y)
     = findBindableNamesQuot env used ![x, y]
 findBindableNamesQuot env used (IWithApp fc x y)

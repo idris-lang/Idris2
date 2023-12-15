@@ -26,6 +26,8 @@ mutual
       = IUpdate fc (map (map f) upds) (map f rec)
     map f (IApp fc fn t)
       = IApp fc (map f fn) (map f t)
+    map f (IBindingApp fc expr nm bound body)
+      = IBindingApp fc (map f expr) nm (map f bound) (map f body)
     map f (IAutoApp fc fn t)
       = IAutoApp fc (map f fn) (map f t)
     map f (INamedApp fc fn nm t)

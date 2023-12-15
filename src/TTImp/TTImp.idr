@@ -191,6 +191,8 @@ mutual
          = "(" ++ show f ++ " " ++ show a ++ ")"
       show (INamedApp fc f n a)
          = "(" ++ show f ++ " [" ++ show n ++ " = " ++ show a ++ "])"
+      show (IBindingApp fc expr nm bound body)
+         = show expr ++ " (" ++ show nm ++ " : " ++ show bound ++ ") | " ++ show body
       show (IAutoApp fc f a)
          = "(" ++ show f ++ " [" ++ show a ++ "])"
       show (IWithApp fc f a)
@@ -873,6 +875,7 @@ getFC (ICaseLocal x _ _ _ _) = x
 getFC (IUpdate x _ _) = x
 getFC (IApp x _ _) = x
 getFC (INamedApp x _ _ _) = x
+getFC (IBindingApp x _ _ _ _) = x
 getFC (IAutoApp x _ _) = x
 getFC (IWithApp x _ _) = x
 getFC (ISearch x _) = x

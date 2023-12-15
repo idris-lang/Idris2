@@ -91,6 +91,9 @@ mutual
         = do tag 30; toBuf b ns; toBuf b rhs
     toBuf b (IAutoApp fc fn arg)
         = do tag 31; toBuf b fc; toBuf b fn; toBuf b arg
+    toBuf b (IBindingApp fc fn nm bound scope)
+        = do tag 32; toBuf b fc; toBuf b fn; toBuf b nm
+           ; toBuf b bound ; toBuf b scope
 
     fromBuf b
         = case !getTag of
@@ -185,6 +188,10 @@ mutual
                31 => do fc <- fromBuf b; fn <- fromBuf b
                         arg <- fromBuf b
                         pure (IAutoApp fc fn arg)
+               32 => do fc <- fromBuf b; fn <- fromBuf b
+                        nm <- fromBuf b; bound <- fromBuf b
+                        scope <- fromBuf b
+                        pure (IBindingApp fc fn nm bound scope)
                _ => corrupt "RawImp"
 
   export

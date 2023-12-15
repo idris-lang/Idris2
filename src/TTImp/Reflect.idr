@@ -527,6 +527,8 @@ mutual
              f' <- reflect fc defs lhs env f
              a' <- reflect fc defs lhs env a
              appCon fc defs (reflectionttimp "IApp") [fc', f', a']
+    reflect fc defs lhs env (IBindingApp tfc expr nm bn scope)
+        = ?bindingReflect
     reflect fc defs lhs env (IAutoApp tfc f a)
         = do fc' <- reflect fc defs lhs env tfc
              f' <- reflect fc defs lhs env f
