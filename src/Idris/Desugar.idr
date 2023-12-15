@@ -780,19 +780,19 @@ mutual
       = do l' <- desugarTree side ps l
            r' <- desugarTree side ps r
            pure (IApp loc (IApp loc (IVar opFC op) l') r')
-  -- (x : ty ** f x) ==>> (**) exp (\x : ty => f x)
+  -- (x : ty) =@ f x ==>> (=@) exp (\x : ty => f x)
   desugarTree side ps (Infix loc opFC (op, Just (BindType name lhs)) _ r)
       = do desugaredLHS <- desugarB side ps lhs
            desugaredRHS <- desugarTree side ps r
            pure $ IApp loc (IApp loc (IVar opFC op) desugaredLHS)
                            (ILam loc top Explicit (Just name.val) desugaredLHS desugaredRHS)
-  -- (x := exp ** f x) ==>> (**) exp (\x : ? => f x)
+  -- (x := exp) =@ f x ==>> (=@) exp (\x : ? => f x)
   desugarTree side ps (Infix loc opFC (op, Just (BindExpr name lhs)) _ r)
       = do desugaredLHS <- desugarB side ps lhs
            desugaredRHS <- desugarTree side ps r
            pure $ IApp loc (IApp loc (IVar opFC op) desugaredLHS)
                            (ILam loc top Explicit (Just name.val) (Implicit opFC False) desugaredRHS)
-  -- (x : ty := exp ** f x) ==>> (**) exp (\x : ty => f x)
+  -- (x : ty := exp) =@ f x ==>> (=@) exp (\x : ty => f x)
   desugarTree side ps (Infix loc opFC (op, Just (BindExplicitType name ty expr)) _ r)
       = do desugaredLHS <- desugarB side ps expr
            desugaredType <- desugarB side ps ty

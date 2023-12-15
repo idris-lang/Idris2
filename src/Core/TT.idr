@@ -171,25 +171,25 @@ Eq FixityInfo where
 -- Left-hand-side information for operators, carries autobind information
 -- an operator can either be
 -- - not autobind, a regular operator
--- - binding types, such that (nm : ty ** fn nm) desugars into (ty ** \(nm : ty) => fn nm)
+-- - binding types, such that `(nm : ty) =@ fn nm` desugars into `(=@) ty (\(nm : ty) => fn nm)`
 -- - binding expressing with an inferred type such that
---   (nm := exp ** fn nm) desugars into (exp ** \(nm : ?) => fn nm)
+--   `(nm := exp) =@ fn nm` desugars into `(=@) exp (\(nm : ?) => fn nm)`
 -- - binding both types and expression such that
---   (nm : ty := exp ** fn nm) desugars into (exp ** \(nm : ty) => fn nm)
+--   `(nm : ty := exp) =@ fn nm` desugars into `(=@) exp (\(nm : ty) => fn nm)`
 public export
 data OperatorLHSInfo : tm -> Type where
   -- Traditional operator wihtout binding, carries the lhs
   NoBinder : (lhs : tm) -> OperatorLHSInfo tm
-  -- (nm : ty) ** fn x
+  -- (nm : ty) =@ fn x
   BindType : (name : WithBounds Name) -> (ty : tm) -> OperatorLHSInfo tm
-  -- (nm := exp) ** fn nm
+  -- (nm := exp) =@ fn nm
   BindExpr : (name : WithBounds Name) -> (expr : tm) -> OperatorLHSInfo tm
-  -- (nm : ty := exp) ** fn nm
+  -- (nm : ty := exp) =@ fn nm
   BindExplicitType : (name : WithBounds Name) ->  (type, expr : tm) -> OperatorLHSInfo tm
 
 export
 Show (OperatorLHSInfo tm) where
-  show (NoBinder lhs)                 = "regular"
+  show (NoBinder lhs)                    = "regular"
   show (BindType name ty)                = "type-binding (typebind)"
   show (BindExpr name expr)              = "automatically-binding (autobind)"
   show (BindExplicitType name type expr) = "automatically-binding (autobind)"

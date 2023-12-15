@@ -1882,16 +1882,16 @@ definition fname indents
     = do nd <- bounds (clause 0 Nothing fname indents)
          pure (PDef (boundToFC fname nd) [nd.val])
 
-operatorBindingKeyword : EmptyRule BindingModifier
-operatorBindingKeyword
-  =   (keyword "autobind" >> pure Autobind)
-  <|> (keyword "typebind" >> pure Typebind)
+operatorBindingKeyword : OriginDesc -> EmptyRule BindingModifier
+operatorBindingKeyword fname
+  =   (decoratedKeyword fname "autobind" >> pure Autobind)
+  <|> (decoratedKeyword fname "typebind" >> pure Typebind)
   <|> pure NotBinding
 
 fixDecl : OriginDesc -> IndentInfo -> Rule (List PDecl)
 fixDecl fname indents
     = do vis <- exportVisibility fname
-         binding <- operatorBindingKeyword
+         binding <- operatorBindingKeyword fname
          b <- bounds (do fixity <- decorate fname Keyword $ fix
                          commit
                          prec <- decorate fname Keyword $ intLit
