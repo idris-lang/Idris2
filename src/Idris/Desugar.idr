@@ -431,8 +431,10 @@ mutual
   desugarB side ps (PMultiline fc hashtag indent lines)
       = pure $ maybeIApp fc !fromStringName !(expandString side ps fc hashtag !(trimMultiline fc indent lines))
 
-  desugarB side ps (PBindingApp fc expr name bound body)
-      = ?undefined
+  desugarB side ps (PBindingApp fc expr name bound scope)
+      = pure $ IBindingApp fc !(desugarB side ps expr) name
+                              !(desugarB side ps bound)
+                              !(desugarB side ps scope)
   -- We only add `fromString` if we are looking at a plain string literal.
   -- Interpolated string literals don't have a `fromString` call since they
   -- are always concatenated with other strings and therefore can never use

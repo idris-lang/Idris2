@@ -350,7 +350,9 @@ mutual
            app <- toPTermApp fn [(fc, Nothing, arg')]
            bracket p appPrec app
   toPTerm p (IBindingApp fc expr nm bound scope)
-      = do ?end
+      = pure $ PBindingApp fc !(toPTerm p expr) nm
+                              !(toPTerm p bound)
+                              !(toPTerm p scope)
   toPTerm p (IAutoApp fc fn arg)
       = do arg' <- toPTerm argPrec arg
            app <- toPTermApp fn [(fc, Just Nothing, arg')]
