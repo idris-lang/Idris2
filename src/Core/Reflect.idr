@@ -330,9 +330,9 @@ export
 Reflect a => Reflect (WithDefault a def) where
   reflect fc defs lhs env def
     = onWithDefault
-        (appCon fc defs (reflectionttimp "Default") [Erased fc Placeholder, Erased fc Placeholder])
+        (appCon fc defs (reflectionttimp "DefaultedValue") [Erased fc Placeholder, Erased fc Placeholder])
         (\x => do x' <- reflect fc defs lhs env x
-                  appCon fc defs (reflectionttimp "Value") [Erased fc Placeholder, Erased fc Placeholder, x'])
+                  appCon fc defs (reflectionttimp "SpecifiedValue") [Erased fc Placeholder, Erased fc Placeholder, x'])
         def
 
 export
