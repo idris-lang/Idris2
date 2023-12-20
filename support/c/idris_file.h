@@ -3,9 +3,11 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 
 #ifdef _WIN32
 #include <io.h>
+#include <processthreadsapi.h>
 #endif
 
 FILE *idris2_openFile(char *name, char *mode);
@@ -59,6 +61,11 @@ FILE *idris2_stderr();
 struct child_process;
 
 struct child_process *idris2_popen2(char *cmd);
+
 int idris2_popen2ChildPid(struct child_process *ptr);
+void *idris2_popen2ChildHandler(struct child_process *ptr);
 FILE *idris2_popen2FileIn(struct child_process *ptr);
 FILE *idris2_popen2FileOut(struct child_process *ptr);
+
+int idris2_popen2WaitByHandler(void *hProcess);
+int idris2_popen2WaitByPid(pid_t pid);
