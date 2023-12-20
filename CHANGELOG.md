@@ -44,10 +44,10 @@
 
 #### RefC
 
-* Adds support for `CFLAGS`, `CPPFLAGS`, and `LDFLAGS` to facilitate building on
-  systems with non-standard installation locations of libraries (e.g. GMP).
-  Versions of the flags with the `IDRIS2_` prefix can also be used and take
-  precedence.
+* Adds support for `CFLAGS`, `CPPFLAGS`, `LDFLAGS` and `LDLIBS` to facilitate
+  building on systems with non-standard installation locations of libraries
+  (e.g. GMP). Versions of the flags with the `IDRIS2_` prefix can also be used
+  and take precedence.
 
 #### Chez
 
