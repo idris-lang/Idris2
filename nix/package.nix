@@ -1,7 +1,12 @@
-{ stdenv, lib, chez, clang, gmp, fetchFromGitHub, makeWrapper, idris2-version
+{ stdenv, lib, chez, clang, gmp, fetchFromGitHub, makeWrapper, support, idris2-version
 , srcRev, gambit, nodejs, zsh, idris2Bootstrap ? null }:
 
 # Uses scheme to bootstrap the build of idris2
+let
+  bootstrap = idris2Bootstrap == null;
+  supportLibrariesPath = lib.makeLibraryPath [ support ];
+  supportSharePath = lib.makeSearchPath "share" [ support ];
+in
 stdenv.mkDerivation rec {
   pname = "idris2";
   version = idris2-version;
@@ -11,22 +16,40 @@ stdenv.mkDerivation rec {
   strictDeps = true;
   nativeBuildInputs = [ makeWrapper clang chez ]
     ++ lib.optional stdenv.isDarwin [ zsh ]
-    ++ lib.optional (!(idris2Bootstrap == null)) [ idris2Bootstrap ];
-  buildInputs = [ chez gmp ];
+    ++ lib.optional (! bootstrap) [ idris2Bootstrap ];
+  buildInputs = [ chez gmp support ];
 
   prePatch = ''
     patchShebangs --build tests
     sed 's/$(GIT_SHA1)/${srcRev}/' -i Makefile
   '';
 
-  makeFlags = [ "PREFIX=$(out)" ] ++ lib.optional stdenv.isDarwin "OS=";
+  makeFlags = [ "IDRIS2_SUPPORT_DIR=${supportLibrariesPath}" ]
+    ++ lib.optional stdenv.isDarwin "OS=";
 
   # The name of the main executable of pkgs.chez is `scheme`
-  buildFlags =
-    if idris2Bootstrap == null then [ "bootstrap" "SCHEME=scheme" ] else [ ];
+  buildFlags = [ "PREFIX=$(out)" ] ++
+    lib.optional bootstrap [
+      "bootstrap" "SCHEME=scheme"
+      "IDRIS2_DATA=${supportSharePath}"
+      "IDRIS2_LIBS=${supportLibrariesPath}"
+    ];
 
+  # checks happen against built compiler prior to the postInstall
+  # wrapper below so we must augment some paths to point at prebuilt
+  # support paths regardless of whether we are bootstrapping or not.
   checkInputs = [ gambit nodejs ]; # racket ];
-  checkFlags = [ "INTERACTIVE=" ];
+  checkFlags = [
+    "INTERACTIVE="
+    "IDRIS2_DATA=${supportSharePath}"
+    "IDRIS2_LIBS=${supportLibrariesPath}"
+    "TEST_IDRIS2_DATA=${supportSharePath}"
+    "TEST_IDRIS2_LIBS=${supportLibrariesPath}"
+    "TEST_IDRIS2_SUPPORT_DIR=${supportLibrariesPath}"
+  ];
+
+  installTargets = "install-idris2 install-libs";
+  installFlags = [ "PREFIX=$(out)" ];
 
   # TODO: Move this into its own derivation, such that this can be changed
   #       without having to recompile idris2 every time.
@@ -51,15 +74,13 @@ stdenv.mkDerivation rec {
     # idris2 installs packages with --install into the path given by
     #   IDRIS2_PREFIX. We set that to a default of ~/.idris2, to mirror the
     #   behaviour of the standard Makefile install.
-    # TODO: Make support libraries their own derivation such that
-    #       overriding LD_LIBRARY_PATH is unnecessary
     wrapProgram "$out/bin/idris2" \
       --set-default CHEZ "${chez}/bin/scheme" \
       --run 'export IDRIS2_PREFIX=''${IDRIS2_PREFIX-"$HOME/.idris2"}' \
-      --suffix IDRIS2_LIBS ':' "$out/${name}/lib" \
-      --suffix IDRIS2_DATA ':' "$out/${name}/support" \
+      --suffix IDRIS2_LIBS ':' "${supportLibrariesPath}" \
+      --suffix IDRIS2_DATA ':' "${supportSharePath}" \
       --suffix IDRIS2_PACKAGE_PATH ':' "${globalLibrariesPath}" \
-      --suffix DYLD_LIBRARY_PATH ':' "$out/${name}/lib" \
-      --suffix LD_LIBRARY_PATH ':' "$out/${name}/lib"
+      --suffix LD_LIBRARY_PATH ':' "${supportLibrariesPath}" \
+      --suffix DYLD_LIBRARY_PATH ':' "${supportLibrariesPath}" \
   '';
 }

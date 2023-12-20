@@ -32,13 +32,16 @@
             pkgs.chez
           else
             pkgs.chez-racket; # TODO: Should this always be the default?
+          idris2Support = pkgs.callPackage ./nix/support.nix { inherit idris2-version; };
           idris2Bootstrap = pkgs.callPackage ./nix/package.nix {
             inherit idris2-version chez;
             idris2Bootstrap = null;
+            support = idris2Support;
             srcRev = self.shortRev or "dirty";
           };
           idris2Pkg = pkgs.callPackage ./nix/package.nix {
             inherit idris2-version chez idris2Bootstrap;
+            support = idris2Support;
             srcRev = self.shortRev or "dirty";
           };
           buildIdris = pkgs.callPackage ./nix/buildIdris.nix {
@@ -52,6 +55,7 @@
             idris = self;
           };
           packages = {
+            support = idris2Support;
             idris2 = idris2Pkg;
           } // (import ./nix/text-editor.nix {
             inherit pkgs idris-emacs-src idris2Pkg;
