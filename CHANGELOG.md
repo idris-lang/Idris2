@@ -266,7 +266,7 @@
   particular).
 
 * Function `getStringAndFree` from `System.File.ReadWrite` was given an extra
-  argument of type `File` to return an empty string is no error happened.
+  argument of type `File` to return an empty string if no error happened.
 
 ### Contrib
 
