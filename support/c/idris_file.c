@@ -275,6 +275,9 @@ FILE *idris2_stdout() { return stdout; }
 FILE *idris2_stderr() { return stderr; }
 
 struct child_process {
+#ifdef _WIN32
+  HANDLE hProcess;
+#endif
   pid_t pid;
   FILE *in;
   FILE *out;
@@ -320,10 +323,12 @@ struct child_process *idris2_popen2(char *cmd) {
   int out_fd = _open_osfhandle((intptr_t)pipes[0], _O_RDONLY);
   CloseHandle(pipes[1]);
   CloseHandle(pipes[2]);
-  CloseHandle(pi.hProcess);
+  // We close thread handle to not to store nor leak it, but
+  // we do not close the process handle to be able to get the exit code
   CloseHandle(pi.hThread);
   rval->in = _fdopen(in_fd, "w");
   rval->out = _fdopen(out_fd, "r");
+  rval->hProcess = pi.hProcess;
   rval->pid = pi.dwProcessId;
   return rval;
 #else
@@ -340,6 +345,10 @@ struct child_process *idris2_popen2(char *cmd) {
     close(pipes[1]);
     return NULL;
   }
+  // make sure no buffers left unflushed before forking
+  // to save from double-printing
+  fflush(stdout);
+  fflush(stderr);
   pid_t pid = fork();
   if (pid < 0) {
     perror("fork");
@@ -378,6 +387,17 @@ int idris2_popen2ChildPid(struct child_process *ptr) {
   return ptr->pid;
 }
 
+void *idris2_popen2ChildHandler(struct child_process *ptr) {
+#ifdef _WIN32
+  if (!ptr)
+    return NULL;
+  return ptr->hProcess;
+#else
+  // We don't have special child handler in POSIX systems
+  return NULL;
+#endif
+}
+
 FILE *idris2_popen2FileIn(struct child_process *ptr) {
   if (!ptr)
     return NULL;
@@ -388,4 +408,32 @@ FILE *idris2_popen2FileOut(struct child_process *ptr) {
   if (!ptr)
     return NULL;
   return ptr->out;
+}
+
+int idris2_popen2WaitByHandler(void *hProcess) {
+#ifdef _WIN32
+  DWORD r;
+  DWORD wres = WaitForSingleObject(hProcess, INFINITE);
+  IDRIS2_VERIFY(wres == WAIT_OBJECT_0, "waiting after popen2 failed");
+  int eres = GetExitCodeProcess(hProcess, &r);
+  IDRIS2_VERIFY(eres != 0, "getting exitcode after popen2 failed");
+  CloseHandle(hProcess);
+  return (int)r;
+#else
+  perror("cannot wait by handler in POSIX system");
+  return -1;
+#endif
+}
+
+int idris2_popen2WaitByPid(pid_t pid) {
+#ifdef _WIN32
+  perror("cannot wait by pid in Windows");
+  return -1;
+#else
+  int r = -1;
+  int w = waitpid(pid, &r, 0);
+  IDRIS2_VERIFY(w != -1, "waitpid after popen2 failed");
+  IDRIS2_VERIFY(WIFEXITED(r), "process launched by popen2 didn't exit well");
+  return WEXITSTATUS(r);
+#endif
 }

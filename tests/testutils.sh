@@ -30,6 +30,44 @@ sed_literal() {
     printf '%s\n' "$1" | sed -e 's/[]\/$*.^[]/\\&/g'
 }
 
+# used below to normalise machine names
+# shellcheck disable=SC2016
+_awk_clean_name='
+#!/bin/awk -f
+# consistently replace numbers to make golden tests more stable.  Currently handles:
+#   arg:NNN
+#   conArg:NNN
+#   $resolvedNNN
+#   ttc/NNNNNNNNNN
+#   Foo.Bar:NN:NN--NN:NN
+#   P:xyz:NNNNN
+{
+    out = ""
+    # the last one is FC
+    while (match($0, /(P:[A-z]+:|arg:|conArg:|ttc[\\\/][0-9]+|[$]resolved)[0-9]+|[A-z.]+:[0-9]+:[0-9]+--[0-9]+:[0-9]+|[A-z]+[.][0-9]+:[0-9]+/)) {
+        rs = RSTART
+        rl = RLENGTH
+        m = substr($0, rs, rl - 1)
+        pfx = "XXX"
+        if (match(m,/^(\$resolved|arg:|conArg:|ttc[\\\/]|P:[A-z]+:|[A-z.]+:|[A-z]+[.])/)) { pfx = substr(m, RSTART, RLENGTH) }
+        if (!(m in mapping)) {
+            # scope the count to the prefix so we can add more without breaking tests
+            if (!count[pfx]) { count[pfx] = 1}
+            mapping[m] = count[pfx]
+            count[pfx]++
+        }
+        out = out substr($0, 1, rs - 1) pfx mapping[m]
+        $0 = substr($0, rs + rl)
+    }
+    print out $0
+}
+'
+
+# normalise machine names
+clean_names() {
+    awk "$_awk_clean_name"
+}
+
 # Folder containing the currently running test
 if [ "$OS" = "windows" ]; then
     test_dir="$(cygpath -m "$(pwd)")"

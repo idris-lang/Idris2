@@ -3,4 +3,4 @@ rm Main.cases
 
 idris2 --dumpcases Main.cases -o Main Main.idr
 
-cat Main.cases | sed -E "s/[0-9]+}/N}/g" | sed -E "s/[0-9]+:[0-9]+/L:C/g" | sed '/Constructor/!d'
+cat Main.cases | sed '/Constructor/!d'

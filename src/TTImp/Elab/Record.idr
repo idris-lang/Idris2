@@ -26,6 +26,23 @@ getRecordType : Env Term vars -> NF vars -> Maybe Name
 getRecordType env (NTCon _ n _ _ _) = Just n
 getRecordType env _ = Nothing
 
+getNames : {auto c : Ref Ctxt Defs} -> Defs -> NF [] -> Core $ SortedSet Name
+getNames defs (NApp _ hd args)
+    = do eargs <- traverse (evalClosure defs . snd) args
+         pure $ nheadNames hd `union` concat !(traverse (getNames defs) eargs)
+  where
+    nheadNames : NHead [] -> SortedSet Name
+    nheadNames (NRef Bound n) = singleton n
+    nheadNames _ = empty
+getNames defs (NDCon _ _ _ _ args)
+    = do eargs <- traverse (evalClosure defs . snd) args
+         pure $ concat !(traverse (getNames defs) eargs)
+getNames defs (NTCon _ _ _ _ args)
+  = do eargs <- traverse (evalClosure defs . snd) args
+       pure $ concat !(traverse (getNames defs) eargs)
+getNames defs (NDelayed _ _ tm) = getNames defs tm
+getNames {} = pure empty
+
 data Rec : Type where
      Field : Maybe Name -> -- implicit argument name, if any
              String -> RawImp -> Rec -- field name on left, value on right
@@ -65,22 +82,27 @@ findConName defs tyn
            Just (TCon _ _ _ _ _ _ [con] _) => pure (Just con)
            _ => pure Nothing
 
-findFields : {auto c : Ref Ctxt Defs} ->
-             Defs -> Name ->
-             Core (Maybe (List (String, Maybe Name, Maybe Name)))
-findFields defs con
+findFieldsAndTypeArgs : {auto c : Ref Ctxt Defs} ->
+                        Defs -> Name ->
+                        Core $ Maybe (List (String, Maybe Name, Maybe Name), SortedSet Name)
+findFieldsAndTypeArgs defs con
     = case !(lookupTyExact con (gamma defs)) of
-           Just t => pure (Just !(getExpNames !(nf defs [] t)))
+           Just t => pure (Just !(getExpNames empty [] !(nf defs [] t)))
            _ => pure Nothing
   where
-    getExpNames : NF [] -> Core (List (String, Maybe Name, Maybe Name))
-    getExpNames (NBind fc x (Pi _ _ p ty) sc)
-        = do rest <- getExpNames !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder)))
-             let imp = case p of
+    getExpNames : SortedSet Name ->
+                  List (String, Maybe Name, Maybe Name) ->
+                  NF [] ->
+                  Core (List (String, Maybe Name, Maybe Name), SortedSet Name)
+    getExpNames names expNames (NBind fc x (Pi _ _ p ty) sc)
+        = do let imp = case p of
                             Explicit => Nothing
                             _ => Just x
-             pure $ (nameRoot x, imp, getRecordType [] !(evalClosure defs ty)) :: rest
-    getExpNames _ = pure []
+             nfty <- evalClosure defs ty
+             let names = !(getNames defs nfty) `union` names
+             let expNames = (nameRoot x, imp, getRecordType [] nfty) :: expNames
+             getExpNames names expNames !(sc defs (toClosure defaultOpts [] (Ref fc Bound x)))
+    getExpNames names expNames nfty = pure (reverse expNames, (!(getNames defs nfty) `union` names))
 
 genFieldName : {auto u : Ref UST UState} ->
                String -> Core String
@@ -113,29 +135,30 @@ findPath loc (p :: ps) full (Just tyn) val (Field mn n v)
    = do defs <- get Ctxt
         Just con <- findConName defs tyn
              | Nothing => throw (NotRecordType loc tyn)
-        Just fs <- findFields defs con
+        Just (fs, tyArgs) <- findFieldsAndTypeArgs defs con
              | Nothing => throw (NotRecordType loc tyn)
-        args <- mkArgs fs
+        args <- mkArgs fs tyArgs
         let rec' = Constr mn con args
         findPath loc (p :: ps) full (Just tyn) val rec'
   where
     mkArgs : List (String, Maybe Name, Maybe Name) ->
+             SortedSet Name ->
              Core (List (String, Rec))
-    mkArgs [] = pure []
-    mkArgs ((p, imp, _) :: ps)
+    mkArgs [] _ = pure []
+    mkArgs ((p, imp, _) :: ps) tyArgs
         = do fldn <- genFieldName p
-             args' <- mkArgs ps
-             -- If it's an implicit argument, leave it as _ by default
-             let arg = maybe (IVar (virtualiseFC loc) (UN $ Basic fldn))
-                             (const (Implicit loc False))
-                             imp
+             args' <- mkArgs ps tyArgs
+             -- If other types depend on that implicit argument, leave it as _ by default
+             let arg = case (flip contains tyArgs) <$> imp of
+                  Just True => Implicit loc False
+                  _ => IVar (virtualiseFC loc) (UN $ Basic fldn)
              pure ((p, Field imp fldn arg) :: args')
 
 findPath loc (p :: ps) full tyn val (Constr mn con args)
    = do let Just prec = lookup p args
                  | Nothing => throw (NotRecordField loc p tyn)
         defs <- get Ctxt
-        Just fs <- findFields defs con
+        Just (fs, _) <- findFieldsAndTypeArgs defs con
              | Nothing => pure (Constr mn con args)
         let Just (imp, mfty) = lookup p fs
                  | Nothing => throw (NotRecordField loc p tyn)

@@ -126,6 +126,16 @@ namespace All
   mapProperty f [] = []
   mapProperty f (p::pl) = f p :: mapProperty f pl
 
+  ||| A variant of `mapProperty` that also allows accessing
+  ||| the values of `xs` that the corresponding `ps` prove `p` about.
+  export
+  mapPropertyRelevant : {xs : Vect n a} ->
+                        (f : (x : a) -> p x -> q x) ->
+                        (ps : All p xs) ->
+                        All q xs
+  mapPropertyRelevant f [] = []
+  mapPropertyRelevant f (p :: ps) = f _ p :: mapPropertyRelevant f ps
+
   public export
   imapProperty : {0 a : Type}
               -> {0 p,q : a -> Type}
@@ -194,6 +204,19 @@ namespace All
                              f (All q xs)
   traversePropertyRelevant f [] = pure []
   traversePropertyRelevant f (x :: xs) = [| f _ x :: traversePropertyRelevant f xs |]
+
+  public export
+  tabulate : {n : _} ->
+             {0 xs : Vect n _} ->
+             (f : (ix : Fin n) -> p (ix `index` xs)) ->
+             All p {n} xs
+  tabulate {xs = []} f = []
+  tabulate {xs = _ :: _} f = f FZ :: tabulate (\ix => f (FS ix))
+
+  public export
+  (++) : (axs : All p xs) -> (ays : All p ys) -> All p (xs ++ ys)
+  [] ++ ays = ays
+  (ax :: axs) ++ ays = ax :: (axs ++ ays)
 
   export
   All (Show . p) xs => Show (All p xs) where
