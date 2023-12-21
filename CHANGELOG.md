@@ -2,7 +2,7 @@
 
 ## [Next version]
 
-## v0.6.9
+## v0.7.0
 
 ### Language changes
 
