@@ -13,8 +13,8 @@ TARGET = ${TARGETDIR}/${NAME}
 IDRIS2_CG ?= chez
 
 MAJOR=0
-MINOR=6
-PATCH=9
+MINOR=7
+PATCH=0
 
 GIT_SHA1=
 ifeq ($(shell git status >/dev/null 2>&1; echo $$?), 0)
