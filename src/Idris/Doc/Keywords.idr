@@ -522,12 +522,14 @@ letBinding =
                 in square * square
     ```
     Without the type annotation, `:=` behaves the same as `=` and gets
-    elaborated to the lambda expression `(\square => square * square) n * n`.
+    elaborated to the lambda expression `(\square => square * square) (n * n)`.
+
     With the type annotation, `square` is the value of a computation, not its
     generalisation, and so will only be computed once instead of potentially on
     every reference.
-    Let bindings will not unfold in the type of subsequent terms so may not be
-    appropriate in all cases.
+
+    Note that, unlike functions, let bindings do not reduce to their values so
+    may not be appropriate in all cases.
     """
 
 letKeyword : Doc IdrisDocAnn
