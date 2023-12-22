@@ -18,6 +18,6 @@
 [x] Change `IdrisPaths-yprefix` in the bootstrap sources to be defined as the
     string "__PREFIX__" rather than your local prefix
 [x] Remove __collect_safe from generated chez (to avoid need for chez >9.5)
-[ ] Tag on github with version number (in the form vX.Y.Z)
+[x] Tag on github with version number (in the form vX.Y.Z)
 [ ] Make libdocs and upload to idris-lang.org
 [ ] Run release script
