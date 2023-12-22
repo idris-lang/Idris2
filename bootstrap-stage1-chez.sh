@@ -25,7 +25,7 @@ mkdir -p ../build/exec/idris2_app
 # but with the SCHEME var that we already know at this time
 # baked into it.
 echo '#!/bin/sh' >../build/exec/idris2
-echo "SCHEME=${SCHEME}" >>../build/exec/idris2
+echo "SCHEME=\"${SCHEME}\"" >>../build/exec/idris2
 cat ../bootstrap/idris2-boot.sh >>../build/exec/idris2
 chmod +x ../build/exec/idris2
 
