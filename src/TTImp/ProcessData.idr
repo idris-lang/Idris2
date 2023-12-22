@@ -476,7 +476,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
                     vis <- the (Core Visibility) $ case collapseDefaults ndef.visibility def_vis of
                       Right finalVis => pure finalVis
                       Left (oldVis, newVis) => do
-                        -- TODO : In a later release, replace this with an error.
+                        -- TODO : In a later release, at least after 0.7.0, replace this with an error.
                         recordWarning (IncompatibleVisibility fc oldVis newVis n)
                         pure (max oldVis newVis)
 

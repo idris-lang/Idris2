@@ -60,7 +60,6 @@ import TTImp.Utils
 import TTImp.BindImplicits
 import TTImp.ProcessDecls
 
-import Data.SnocList -- until 0.6.0 release
 import Data.List
 import Data.List1
 import Data.Maybe

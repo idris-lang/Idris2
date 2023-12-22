@@ -189,7 +189,6 @@ modules =
     Libraries.Data.NameMap.Traversable,
     Libraries.Data.Ordering.Extra,
     Libraries.Data.PosMap,
-    Libraries.Data.Primitives,
     Libraries.Data.SnocList.HasLength,
     Libraries.Data.SnocList.LengthMatch,
     Libraries.Data.SnocList.SizeOf,

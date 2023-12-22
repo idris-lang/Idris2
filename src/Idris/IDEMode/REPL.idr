@@ -29,19 +29,14 @@ import Data.String
 import System
 import System.File
 
+import Network.FFI
 import Network.Socket
 import Network.Socket.Data
 import Network.Socket.Raw
 
 import TTImp.Interactive.Completion
 
-import Libraries.Data.String.Extra -- until 0.6.0 release
-
 %default covering
-
-||| TODO: use the version in `Network.FFI` in network after the next release.
-%foreign "C:idrnet_fdopen, libidris2_support, idris_net.h"
-prim__idrnet_fdopen : Int -> String -> PrimIO AnyPtr
 
 export
 socketToFile : Socket -> IO (Either String File)
