@@ -14,7 +14,7 @@
     release version, leaving the next "Next version" blank.
 [x] Update bootstrap chez and racket (built with new version)
     [x] Compile Idris2 with the appropriate CG
-    [x] Copy the resulting files from idris2 to bootstrap/idris2_app/
+    [x] Copy the resulting files from build/ to bootstrap/idris2_app/
 [x] Change `IdrisPaths-yprefix` in the bootstrap sources to be defined as the
     string "__PREFIX__" rather than your local prefix
 [x] Remove __collect_safe from generated chez (to avoid need for chez >9.5)
