@@ -3,7 +3,7 @@ module Libraries.Utils.Binary
 import Data.Buffer
 import Data.List
 
-import Libraries.System.File
+import System.File
 
 -- Serialising data as binary. Provides an interface TTC which allows
 -- reading and writing to chunks of memory, "Binary", which can be written

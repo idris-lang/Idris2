@@ -2,7 +2,7 @@ module Libraries.Data.SnocList.SizeOf
 
 import Data.List
 import Data.SnocList
-import Libraries.Data.List.HasLength
+import Data.List.HasLength
 import Libraries.Data.SnocList.HasLength
 
 ---------------------------------------

@@ -2,7 +2,8 @@ module Core.Name.Scoped
 
 import Core.Name
 
-import public Libraries.Data.List.HasLength
+import public Data.List.HasLength
+
 import public Libraries.Data.List.SizeOf
 
 %default total
