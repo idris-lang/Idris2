@@ -17,8 +17,6 @@ import Libraries.Data.String.Extra
 %hide Vect.catMaybes
 %hide Vect.(++)
 
-%hide HasLength.cast
-
 %hide SizeOf.map
 
 %hide Core.Name.prettyOp

@@ -4,7 +4,7 @@ import Data.Nat
 
 ---------------------------------------
 -- horrible hack
-import Libraries.Data.List.HasLength as L
+import Data.List.HasLength as L
 
 public export
 LHasLength : Nat -> List a -> Type
