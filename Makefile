@@ -43,7 +43,11 @@ else
 	SEP := :
 endif
 
+IDRIS2_SUPPORT_DIR ?= ${IDRIS2_CURDIR}/support/c
+
 TEST_PREFIX ?= ${IDRIS2_CURDIR}/build/env
+
+TEST_IDRIS2_SUPPORT_DIR ?= ${TEST_PREFIX}/${NAME_VERSION}
 
 # Library and data paths for bootstrap-test
 IDRIS2_BOOT_PREFIX := ${IDRIS2_CURDIR}/bootstrap-build
@@ -67,7 +71,7 @@ idris2-exec: ${TARGET}
 
 ${TARGET}: support src/IdrisPaths.idr
 	${IDRIS2_BOOT} --build ${IDRIS2_APP_IPKG}
-	cp ${IDRIS2_CURDIR}/support/c/${IDRIS2_SUPPORT} ${TARGETDIR}/${NAME}_app/${IDRIS2_SUPPORT}
+	cp ${IDRIS2_SUPPORT_DIR}/${IDRIS2_SUPPORT} ${TARGETDIR}/${NAME}_app/${IDRIS2_SUPPORT}
 
 # We use FORCE to always rebuild IdrisPath so that the git SHA1 info is always up to date
 src/IdrisPaths.idr: FORCE
@@ -113,7 +117,6 @@ libdocs:
 
 ifeq ($(OS), windows)
 ${TEST_PREFIX}/${NAME_VERSION} :
-	${MAKE} install-support PREFIX=${TEST_PREFIX}
 	cp -rf ${IDRIS2_CURDIR}/libs/prelude/build/ttc ${TEST_PREFIX}/${NAME_VERSION}/prelude-${IDRIS2_VERSION}
 	cp -rf ${IDRIS2_CURDIR}/libs/base/build/ttc    ${TEST_PREFIX}/${NAME_VERSION}/base-${IDRIS2_VERSION}
 	cp -rf ${IDRIS2_CURDIR}/libs/linear/build/ttc  ${TEST_PREFIX}/${NAME_VERSION}/linear-${IDRIS2_VERSION}
@@ -122,7 +125,6 @@ ${TEST_PREFIX}/${NAME_VERSION} :
 	cp -rf ${IDRIS2_CURDIR}/libs/test/build/ttc    ${TEST_PREFIX}/${NAME_VERSION}/test-${IDRIS2_VERSION}
 else
 ${TEST_PREFIX}/${NAME_VERSION} :
-	${MAKE} install-support PREFIX=${TEST_PREFIX}
 	ln -sf ${IDRIS2_CURDIR}/libs/prelude/build/ttc ${TEST_PREFIX}/${NAME_VERSION}/prelude-${IDRIS2_VERSION}
 	ln -sf ${IDRIS2_CURDIR}/libs/base/build/ttc    ${TEST_PREFIX}/${NAME_VERSION}/base-${IDRIS2_VERSION}
 	ln -sf ${IDRIS2_CURDIR}/libs/linear/build/ttc  ${TEST_PREFIX}/${NAME_VERSION}/linear-${IDRIS2_VERSION}
@@ -133,7 +135,13 @@ endif
 
 .PHONY: ${TEST_PREFIX}/${NAME_VERSION}
 
-testenv:
+${TEST_IDRIS2_SUPPORT_DIR}/${IDRIS2_SUPPORT}:
+	${MAKE} install-support PREFIX=${TEST_PREFIX}
+
+test-support: ${TEST_IDRIS2_SUPPORT_DIR}/${IDRIS2_SUPPORT}
+
+testenv: test-support
+	mkdir -p ${TEST_PREFIX}/${NAME_VERSION}
 	@${MAKE} ${TEST_PREFIX}/${NAME_VERSION}
 	@${MAKE} -C tests testbin IDRIS2=${TARGET} IDRIS2_PREFIX=${TEST_PREFIX}
 
@@ -164,8 +172,10 @@ test-installed:
 	@${MAKE} -C tests testbin      IDRIS2=$(IDRIS2_PREFIX)/bin/idris2 IDRIS2_PREFIX=${IDRIS2_PREFIX}
 	@${MAKE} -C tests only=$(only) IDRIS2=$(IDRIS2_PREFIX)/bin/idris2 IDRIS2_PREFIX=${IDRIS2_PREFIX}
 
-support:
+${IDRIS2_SUPPORT_DIR}/${IDRIS2_SUPPORT}:
 	@${MAKE} -C support
+
+support: ${IDRIS2_SUPPORT_DIR}/${IDRIS2_SUPPORT}
 
 clean-support:
 	@${MAKE} -C support clean
@@ -243,11 +253,15 @@ install-libdocs: libdocs
 .PHONY: bootstrap bootstrap-build bootstrap-racket bootstrap-racket-build bootstrap-test bootstrap-clean
 
 # Bootstrapping using SCHEME
+#
+# If you are bootstrapping using SCHEME _without building support_, support must have been explicitly
+# built previously and you must set the IDRIS2_SUPPORT_DIR and IDRIS2_DATA environment variables to the
+# locations of the lib and support folders (i.e. "/some/location/lib" and "/some/location/support").
 bootstrap: support
 	@if [ "$$(echo '(threaded?)' | $(SCHEME) --quiet)" = "#f" ] ; then \
 		echo "ERROR: Chez is missing threading support" ; exit 1 ; fi
 	mkdir -p bootstrap-build/idris2_app
-	cp support/c/${IDRIS2_SUPPORT} bootstrap-build/idris2_app/
+	cp ${IDRIS2_SUPPORT_DIR}/${IDRIS2_SUPPORT} bootstrap-build/idris2_app/
 	sed 's/libidris2_support.so/${IDRIS2_SUPPORT}/g; s|__PREFIX__|${IDRIS2_BOOT_PREFIX}|g' \
 		bootstrap/idris2_app/idris2.ss \
 		> bootstrap-build/idris2_app/idris2-boot.ss
@@ -257,7 +271,7 @@ bootstrap: support
 # Bootstrapping using racket
 bootstrap-racket: support
 	mkdir -p bootstrap-build/idris2_app
-	cp support/c/${IDRIS2_SUPPORT} bootstrap-build/idris2_app/
+	cp ${IDRIS2_SUPPORT_DIR}/${IDRIS2_SUPPORT} bootstrap-build/idris2_app/
 	sed 's|__PREFIX__|${IDRIS2_BOOT_PREFIX}|g' \
 		bootstrap/idris2_app/idris2.rkt \
 		> bootstrap-build/idris2_app/idris2-boot.rkt

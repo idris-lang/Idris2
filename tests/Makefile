@@ -10,7 +10,7 @@ retest:
 	./build/exec/runtests $(IDRIS2) $(INTERACTIVE) --timing --failure-file failures --threads $(threads) --only-file failures --only $(only) --except $(except)
 
 testbin:
-	${IDRIS2} --build tests.ipkg
+	$(IDRIS2) --build tests.ipkg
 
 clean:
 	$(RM) failures
