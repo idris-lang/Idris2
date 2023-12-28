@@ -25,7 +25,8 @@ void doubleIORef_Storage(IORef_Storage *ior) {
   ior->refs = values;
 }
 
-Value *idris2_Data_IORef_prim__newIORef(Value *erased, Value *input_value, Value *_world) {
+Value *idris2_Data_IORef_prim__newIORef(Value *erased, Value *input_value,
+                                        Value *_world) {
   // if no ioRef Storag exist, start with one
   if (!global_IORef_Storage) {
     global_IORef_Storage = newIORef_Storage(128);
@@ -46,8 +47,8 @@ Value *idris2_Data_IORef_prim__newIORef(Value *erased, Value *input_value, Value
   return (Value *)ioRef;
 }
 
-Value *idris2_Data_IORef_prim__writeIORef(Value *erased, Value *_index, Value *new_value,
-                  Value *_world) {
+Value *idris2_Data_IORef_prim__writeIORef(Value *erased, Value *_index,
+                                          Value *new_value, Value *_world) {
   Value_IORef *index = (Value_IORef *)_index;
   removeReference(global_IORef_Storage->refs[index->index]);
   global_IORef_Storage->refs[index->index] = newReference(new_value);
@@ -64,25 +65,25 @@ Value *idris2_System_Info_prim__os(void) {
   if (osstring == NULL) {
     osstring = (Value *)makeString(
 #ifdef _WIN32
-    "windows"
+        "windows"
 #elif _WIN64
-    "windows"
+        "windows"
 #elif __APPLE__ || __MACH__
-    "macOS"
+        "macOS"
 #elif __linux__
-    "Linux"
+        "Linux"
 #elif __FreeBSD__
-    "FreeBSD"
+        "FreeBSD"
 #elif __OpenBSD__
-    "OpenBSD"
+        "OpenBSD"
 #elif __NetBSD__
-    "NetBSD"
+        "NetBSD"
 #elif __DragonFly__
-    "DragonFly"
+        "DragonFly"
 #elif __unix || __unix__
-    "Unix"
+        "Unix"
 #else
-    "Other"
+        "Other"
 #endif
     );
   }
@@ -96,10 +97,9 @@ static Value *codegenstring = NULL;
 
 Value *idris2_System_Info_prim__codegen(void) {
   if (codegenstring == NULL)
-   codegenstring = (Value *)makeString("refc");
+    codegenstring = (Value *)makeString("refc");
   return newReference(codegenstring);
 }
-
 
 Value *idris2_crash(Value *msg) {
   Value_String *str = (Value_String *)msg;
@@ -114,8 +114,8 @@ Value *idris2_crash(Value *msg) {
 // //         Array operations
 // // -----------------------------------
 
-Value *idris2_Data_IOArray_Prims_prim__newArray(Value *erased, Value *_length, Value *v,
-                                     Value *_word) {
+Value *idris2_Data_IOArray_Prims_prim__newArray(Value *erased, Value *_length,
+                                                Value *v, Value *_word) {
   int length = extractInt(_length);
   Value_Array *a = makeArray(length);
 
@@ -127,7 +127,8 @@ Value *idris2_Data_IOArray_Prims_prim__newArray(Value *erased, Value *_length, V
 }
 
 Value *idris2_Data_IOArray_Prims_prim__arraySet(Value *erased, Value *_array,
-                                     Value *_index, Value *v, Value *_word) {
+                                                Value *_index, Value *v,
+                                                Value *_word) {
   Value_Array *a = (Value_Array *)_array;
   removeReference(a->arr[((Value_Int64 *)_index)->i64]);
   a->arr[((Value_Int64 *)_index)->i64] = newReference(v);
@@ -140,15 +141,6 @@ Value *idris2_Data_IOArray_Prims_prim__arraySet(Value *erased, Value *_array,
 // -----------------------------------
 
 Value *idris2_Prelude_IO_prim__onCollect(Value *_erased, Value *_anyPtr,
-                                      Value *_freeingFunction, Value *_world) {
-  Value_GCPointer *retVal = IDRIS2_NEW_VALUE(Value_GCPointer);
-  retVal->header.tag = GC_POINTER_TAG;
-  retVal->p = (Value_Pointer *)newReference(_anyPtr);
-  retVal->onCollectFct = (Value_Closure *)newReference(_freeingFunction);
-  return (Value *)retVal;
-}
-
-Value *idris2_Prelude_IO_prim__onCollectAny(Value *_anyPtr,
                                          Value *_freeingFunction,
                                          Value *_world) {
   Value_GCPointer *retVal = IDRIS2_NEW_VALUE(Value_GCPointer);
@@ -158,6 +150,15 @@ Value *idris2_Prelude_IO_prim__onCollectAny(Value *_anyPtr,
   return (Value *)retVal;
 }
 
+Value *idris2_Prelude_IO_prim__onCollectAny(Value *_anyPtr,
+                                            Value *_freeingFunction,
+                                            Value *_world) {
+  Value_GCPointer *retVal = IDRIS2_NEW_VALUE(Value_GCPointer);
+  retVal->header.tag = GC_POINTER_TAG;
+  retVal->p = (Value_Pointer *)newReference(_anyPtr);
+  retVal->onCollectFct = (Value_Closure *)newReference(_freeingFunction);
+  return (Value *)retVal;
+}
 
 // Threads
 
