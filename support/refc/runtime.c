@@ -7,14 +7,6 @@ void missing_ffi() {
   exit(1);
 }
 
-void push_Arglist(Value_Arglist *arglist, Value *arg) {
-  IDRIS2_REFC_VERIFY(arglist->filled < arglist->total,
-                     "unable to add more arguments to arglist");
-
-  arglist->args[arglist->filled] = newReference(arg);
-  arglist->filled++;
-}
-
 Value *idris2_dispatch_arglist(Value *(*f)(), Value_Arglist *args) {
   Value **xs = args->args;
 

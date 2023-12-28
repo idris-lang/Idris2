@@ -5,7 +5,6 @@
 void missing_ffi();
 
 Value *apply_closure(Value *, Value *arg);
-void push_Arglist(Value_Arglist *arglist, Value *arg);
 
 int extractInt(Value *);
 Value *trampoline(Value *closure);
