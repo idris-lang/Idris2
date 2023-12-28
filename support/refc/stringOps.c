@@ -178,11 +178,9 @@ Value *stringIteratorNew(char *str) {
   it->pos = 0;
   memcpy(it->str, str, l + 1); // Take a copy of str, in case it gets GCed
 
-  Value_Arglist *arglist = newArglist(2, 2);
-  Value *(*onCollectRaw)(Value_Arglist *) = onCollectStringIterator_arglist;
-  Value_Closure *onCollect = makeClosureFromArglist(onCollectRaw, arglist);
-
-  return (Value *)makeGCPointer(it, onCollect);
+  return (Value *)makeGCPointer(
+      it, makeClosureFromArglist((Value * (*)()) onCollectStringIterator,
+                                 newArglist(2, 2)));
 }
 
 Value *onCollectStringIterator(Value_Pointer *ptr, void *null) {
@@ -190,11 +188,6 @@ Value *onCollectStringIterator(Value_Pointer *ptr, void *null) {
   free(it->str);
   free(it);
   return NULL;
-}
-
-Value *onCollectStringIterator_arglist(Value_Arglist *arglist) {
-  return onCollectStringIterator((Value_Pointer *)arglist->args[0],
-                                 arglist->args[1]);
 }
 
 Value *stringIteratorToString(void *a, char *str, Value *it_p,

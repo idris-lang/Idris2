@@ -15,6 +15,59 @@ void push_Arglist(Value_Arglist *arglist, Value *arg) {
   arglist->filled++;
 }
 
+Value *idris2_dispatch_arglist(Value *(*f)(), Value_Arglist *args) {
+  Value **xs = args->args;
+
+  switch (args->total) {
+  default:
+    fprintf(stderr, "%s: %d params not is suppoted.", __FUNCTION__,
+            args->total);
+    exit(1);
+
+  case 0:
+    return (*f)();
+  case 1:
+    return (*f)(xs[0]);
+  case 2:
+    return (*f)(xs[0], xs[1]);
+  case 3:
+    return (*f)(xs[0], xs[1], xs[2]);
+  case 4:
+    return (*f)(xs[0], xs[1], xs[2], xs[3]);
+  case 5:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4]);
+  case 6:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5]);
+  case 7:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6]);
+  case 8:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7]);
+  case 9:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8]);
+  case 10:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9]);
+  case 11:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9], xs[10]);
+  case 12:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9], xs[10], xs[11]);
+  case 13:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9], xs[10], xs[11], xs[12]);
+  case 14:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9], xs[10], xs[11], xs[12], xs[13]);
+  case 15:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9], xs[10], xs[11], xs[12], xs[13], xs[14]);
+  case 16:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9], xs[10], xs[11], xs[12], xs[13], xs[14], xs[15]);
+  }
+}
+
 Value *apply_closure(Value *_clos, Value *arg) {
   // create a new arg list
   Value_Arglist *oldArgs = ((Value_Closure *)_clos)->arglist;
@@ -30,9 +83,9 @@ Value *apply_closure(Value *_clos, Value *arg) {
 
   // check if enough arguments exist
   if (newArgs->filled >= newArgs->total) {
-    fun_ptr_t f = clos->f;
+    Value *(*f)() = clos->f;
     while (1) {
-      Value *retVal = f(newArgs);
+      Value *retVal = idris2_dispatch_arglist(f, newArgs);
       removeReference((Value *)newArgs);
       if (!retVal || retVal->header.tag != COMPLETE_CLOSURE_TAG) {
         return retVal;
@@ -97,12 +150,12 @@ int extractInt(Value *v) {
 }
 
 Value *trampoline(Value *closure) {
-  fun_ptr_t f = ((Value_Closure *)closure)->f;
+  Value *(*f)() = ((Value_Closure *)closure)->f;
   Value_Arglist *_arglist = ((Value_Closure *)closure)->arglist;
   Value_Arglist *arglist = (Value_Arglist *)newReference((Value *)_arglist);
   removeReference(closure);
   while (1) {
-    Value *retVal = f(arglist);
+    Value *retVal = idris2_dispatch_arglist(f, arglist);
     removeReference((Value *)arglist);
     if (!retVal || retVal->header.tag != COMPLETE_CLOSURE_TAG) {
       return retVal;

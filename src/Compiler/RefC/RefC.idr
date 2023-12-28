@@ -639,13 +639,11 @@ mutual
         emit fc $ ("// start " ++ cName n ++ "(" ++ showSep ", " (map (\v => varName v) args) ++ ")")
         arglist <- makeArglist 0 args
         c <- getNextCounter
-        let f_ptr_name = "fPtr_" ++ show c
-        emit fc $ "Value *(*"++ f_ptr_name ++ ")(Value_Arglist*) = "++  cName n ++ "_arglist;"
         let closure_name = "closure_" ++ show c
         emit fc $ "Value *"
                ++ closure_name
                ++ " = (Value*)makeClosureFromArglist("
-               ++ f_ptr_name
+               ++ "(Value *(*)())" ++ cName n
                ++ ", "
                ++ arglist
                ++ ");"
@@ -653,11 +651,7 @@ mutual
         pure $ MkRS ("trampoline(" ++ closure_name ++ ")") closure_name
     cStatementsFromANF (AUnderApp fc n missing args) _ = do
         arglist <- makeArglist missing args
-        c <- getNextCounter
-        let f_ptr_name = "closure_" ++ show c
-        let f_ptr = "Value *(*"++ f_ptr_name ++ ")(Value_Arglist*) = "++  cName n ++ "_arglist;"
-        emit fc f_ptr
-        let returnLine = "(Value*)makeClosureFromArglist(" ++ f_ptr_name  ++ ", " ++ arglist ++ ")"
+        let returnLine = "(Value*)makeClosureFromArglist((Value *(*)())" ++ cName n ++ ", " ++ arglist ++ ")"
         pure $ MkRS returnLine returnLine
     cStatementsFromANF (AApp fc _ closure arg) _ =
         pure $ MkRS ("apply_closure(" ++ varName closure ++ ", " ++ varName arg ++ ")")
@@ -768,9 +762,6 @@ functionDefSignature n args = do
     let argsStringList = addCommaToList (map (\i =>  "  Value * var_" ++ (show i)) args)
     let fn = (cName !(getFullName n))
     pure $  "\n\nValue *"  ++ fn ++ "\n(\n" ++ (showSep "\n" (argsStringList)) ++ "\n)"
-
-functionDefSignatureArglist : {auto c : Ref Ctxt Defs} -> Name  -> Core String
-functionDefSignatureArglist n = pure $  "Value *"  ++ (cName !(getFullName n)) ++ "_arglist(Value_Arglist* arglist)"
 
 
 getArgsNrList : List ty -> Nat -> List Nat
@@ -900,8 +891,7 @@ createCFunctions : {auto c : Ref Ctxt Defs}
                 -> Core ()
 createCFunctions n (MkAFun args anf) = do
     fn <- functionDefSignature n args
-    fn' <- functionDefSignatureArglist n
-    update FunctionDefinitions $ \otherDefs => (fn ++ ";\n") :: (fn' ++ ";\n") :: otherDefs
+    update FunctionDefinitions $ \otherDefs => (fn ++ ";\n") :: otherDefs
     newTemporaryVariableLevel
     let argsNrs = getArgsNrList args Z
     emit EmptyFC fn
@@ -911,21 +901,6 @@ createCFunctions n (MkAFun args anf) = do
     emit EmptyFC $ "Value *returnValue = " ++ tailCall assignment ++ ";"
     freeTmpVars
     emit EmptyFC $ "return returnValue;"
-    decreaseIndentation
-    emit EmptyFC  "}\n"
-    emit EmptyFC  ""
-    emit EmptyFC fn'
-    emit EmptyFC "{"
-    increaseIndentation
-    emit EmptyFC $ "return " ++ (cName !(getFullName n))
-    increaseIndentation
-    emit EmptyFC $ "("
-    increaseIndentation
-    let commaSepArglist = addCommaToList (map (\a => "arglist->args["++ show a ++"]") argsNrs)
-    traverse_ (emit EmptyFC) commaSepArglist
-    decreaseIndentation
-    emit EmptyFC ");"
-    decreaseIndentation
     decreaseIndentation
     emit EmptyFC  "}\n"
     emit EmptyFC  ""
@@ -952,25 +927,8 @@ createCFunctions n (MkAForeign ccs fargs ret) = do
                       _ => pure ()
              else emit EmptyFC $ additionalFFIStub fctName fargs ret
           let fnDef = "Value *" ++ (cName n) ++ "(" ++ showSep ", " (replicate (length fargs) "Value *") ++ ");"
-          fn_arglist <- functionDefSignatureArglist n
-          update FunctionDefinitions $ \otherDefs => (fnDef ++ "\n") :: (fn_arglist ++ ";\n") :: otherDefs
+          update FunctionDefinitions $ \otherDefs => (fnDef ++ "\n") :: otherDefs
           typeVarNameArgList <- createFFIArgList fargs
-
-          emit EmptyFC fn_arglist
-          emit EmptyFC "{"
-          increaseIndentation
-          emit EmptyFC $ "return " ++ (cName n)
-          increaseIndentation
-          emit EmptyFC $ "("
-          increaseIndentation
-          let commaSepArglist = addCommaToList (map (\a => "arglist->args["++ show a ++"]") (getArgsNrList fargs Z))
-          traverse_ (emit EmptyFC) commaSepArglist
-          decreaseIndentation
-          emit EmptyFC ");"
-          decreaseIndentation
-          decreaseIndentation
-          emit EmptyFC  "}\n"
-          emit EmptyFC  ""
 
           emitFDef n typeVarNameArgList
           emit EmptyFC "{"

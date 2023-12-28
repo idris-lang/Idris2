@@ -32,7 +32,7 @@ Value_Constructor *newConstructor(int total, int tag, const char *name) {
   return retVal;
 }
 
-Value_Closure *makeClosureFromArglist(fun_ptr_t f, Value_Arglist *arglist) {
+Value_Closure *makeClosureFromArglist(Value *(*f)(), Value_Arglist *arglist) {
   Value_Closure *retVal = IDRIS2_NEW_VALUE(Value_Closure);
   retVal->header.tag = CLOSURE_TAG;
   retVal->arglist = arglist; // (Value_Arglist *)newReference((Value*)arglist);

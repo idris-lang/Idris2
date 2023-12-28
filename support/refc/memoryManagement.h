@@ -12,7 +12,7 @@ Value_Arglist *newArglist(int missing, int total);
 Value_Constructor *newConstructor(int total, int tag, const char *name);
 
 // copies arglist, no pointer bending
-Value_Closure *makeClosureFromArglist(fun_ptr_t f, Value_Arglist *);
+Value_Closure *makeClosureFromArglist(Value *(*f)(), Value_Arglist *);
 
 Value_Double *makeDouble(double d);
 Value_Char *makeChar(char d);

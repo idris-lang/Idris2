@@ -126,11 +126,9 @@ typedef struct {
   Value **args;
 } Value_Arglist;
 
-typedef Value *(*fun_ptr_t)(Value_Arglist *);
-
 typedef struct {
   Value_header header;
-  fun_ptr_t f;
+  Value *(*f)();
   Value_Arglist *arglist;
 } Value_Closure;
 
