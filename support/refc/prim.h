@@ -18,18 +18,18 @@ Value *idris2_crash(Value *msg);
 
 // Array
 
-Value *idris2_Data_IOArray_Prims_prim__newArray(Value *, Value *, Value *, Value *);
-#define idrsi2_Data_IOArray_Prims_prim__arrayGet(rased, array, i, word)                   \
+Value *idris2_Data_IOArray_Prims_prim__newArray(Value *, Value *, Value *,
+                                                Value *);
+#define idrsi2_Data_IOArray_Prims_prim__arrayGet(rased, array, i, word)        \
   (newReference(((Value_Array *)(array))->arr[((Value_Int64 *)i)->i64]))
-Value *idris2_Data_IOArray_Prims_prim__arraySet(Value *, Value *, Value *, Value *,
-                                     Value *);
+Value *idris2_Data_IOArray_Prims_prim__arraySet(Value *, Value *, Value *,
+                                                Value *, Value *);
 
 // Pointer
 Value *idris2_Prelude_IO_prim__onCollect(Value *, Value *, Value *, Value *);
 Value *idris2_Prelude_IO_prim__onCollectAny(Value *, Value *, Value *);
 
-#define idris2_Prelude_Uninhabited_prim__void(x, y)     (NULL)
-
+#define idris2_Prelude_Uninhabited_prim__void(x, y) (NULL)
 
 // Threads
 Value *System_Concurrency_Raw_prim__mutexRelease(Value *, Value *);
