@@ -9,7 +9,6 @@ Value *newValue(size_t size) {
   return retVal;
 }
 
-
 Value_Constructor *newConstructor(int total, int tag, const char *name) {
   Value_Constructor *retVal = IDRIS2_NEW_VALUE(Value_Constructor);
   retVal->header.tag = CONSTRUCTOR_TAG;
@@ -24,7 +23,8 @@ Value_Constructor *newConstructor(int total, int tag, const char *name) {
 }
 
 Value_Closure *makeClosure(Value *(*f)(), uint8_t arity, uint8_t filled) {
-  Value_Closure *retVal = (Value_Closure*)newValue(sizeof(Value_Closure) + sizeof(Value*) * filled);
+  Value_Closure *retVal = (Value_Closure *)newValue(sizeof(Value_Closure) +
+                                                    sizeof(Value *) * filled);
   retVal->header.tag = CLOSURE_TAG;
   retVal->f = f;
   retVal->arity = arity;
