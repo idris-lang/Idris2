@@ -9,7 +9,7 @@ AgdaIssue6059:23:3--23:21
  23 |   f : (x : D) -> P x
         ^^^^^^^^^^^^^^^^^^
 
-Error: g is not total, possibly not terminating due to recursive path Main.f -> Main.g
+Error: g is not total, possibly not terminating due to recursive path Main.f -> Main.f -> Main.g
 
 AgdaIssue6059:31:3--31:32
  27 |   -- Base cases:
@@ -29,7 +29,7 @@ AgdaIssue6059:23:3--23:21
  23 |   f : (x : D) -> P x
         ^^^^^^^^^^^^^^^^^^
 
-Error: g is not total, possibly not terminating due to recursive path Main.f -> Main.g
+Error: g is not total, possibly not terminating due to recursive path Main.f -> Main.f -> Main.g
 
 AgdaIssue6059:31:3--31:32
  27 |   -- Base cases:

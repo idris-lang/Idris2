@@ -4,6 +4,24 @@
 
 ### Language changes
 
+### Compiler changes
+
+### Library changes
+
+#### Prelude
+
+#### Base
+
+* `Data.List.Lazy` was moved from `contrib` to `base`.
+
+#### Contrib
+
+* `Data.List.Lazy` was moved from `contrib` to `base`.
+
+## v0.7.0
+
+### Language changes
+
 * New magic constants `__LOC__`, `__FILE__`, `__LINE__`, `__COL__`
   substituted at parsing time with a string corresponding to the
   location, filename, line or column number associated to the
@@ -17,14 +35,28 @@
   [#1066](https://github.com/idris-lang/idris2/issues/1066)).
 * `%hide` directives can now hide conflicting fixities from other modules.
 * Fixity declarations can now be kept private with export modifiers.
-* New fromTTImp, fromName, and fromDecls names for custom TTImp, Name, and Decls
-  literals.
+* Forward-declarations whose visibility differ from their
+  actual definition now emit a warning, unless the definition
+  has no specified visibility
+  (addressing Issue [#1236](https://github.com/idris-lang/Idris2/issues/1236)).
+* New `fromTTImp`, `fromName`, and `fromDecls` names for custom `TTImp`,
+  `Name`, and `Decls` literals.
+* Call to `%macro`-functions do not require the `ElabReflection` extension.
+* Default implicits are supported for named implementations.
+* Elaborator scripts were made to be able to access project files,
+  allowing the support for type providers and similar stuff.
+* Elaborator scripts were made to be able to inspect which definitions are
+  referred to by another definitions, and in which function currently elaborator is.
+  These features together give an ability to inspect whether particular expressions
+  are recursive (including mutual recursion).
 
-### REPL changes
+### REPL/CLI changes
 
 * Adds documentation for unquotes `~( )`.
 * Adds documentation for laziness and codata primitives: `Lazy`, `Inf`, `Delay`,
   and `Force`.
+* Adds `--no-cse` command-line option to disable common subexpression elimination
+  for code generation debugging.
 
 ### Backend changes
 
@@ -118,6 +150,9 @@
   To avoid confusing tooling about which `.ipkg` to use, the
   package file is under the newly added `ipkg` sub-directory.
 
+* Added `Libraries.Data.WithDefault` to facilitate consistent use
+  of a default-if-unspecified value, currently for `private` visibility.
+
 ### Library changes
 
 #### Prelude
@@ -140,6 +175,7 @@
   assumption in `setByte` that the value is between 0 and 255.
 
 * Adds RefC support for 16- and 32-bit access in `Data.Buffer`.
+
 * Add `Show` instance to `Data.Vect.Quantifiers.All` and add a few helpers for listy
   computations on the `All` type.
 * Add an alias for `HVect` to `All id` in `Data.Vect.Quantifiers.All`. This is the
@@ -149,8 +185,6 @@
   adopt the type signature from the compiler codebase and some of the naming
   from the contrib library. The type ended up being `HasLength n xs` rather than
   `HasLength xs n`.
-
-* `System`'s `die` now prints the error message on stderr rather than stdout
 
 * Moved `Data.SortedMap` and `Data.SortedSet` from contrib to base.
 
@@ -187,7 +221,12 @@
 * Generalized `imapProperty` in `Data.List.Quantifiers.All.All`
   and `Data.Vect.Quantifiers.All.All`.
 
-* Add `zipPropertyWith` to `Data.Vect.Quantifiers.All.All`.
+* Add `zipPropertyWith`, `traverseProperty`, `traversePropertyRelevant`,
+  `mapPropertyRelevant`, `(++)`, `tabulate` and `remember`
+  to `Data.Vect.Quantifiers.All.All`.
+
+* Add `anyToFin` to `Data.Vect.Quantifiers.Any`,
+  converting the `Any` witness to the index into the corresponding element.
 
 * Implemented `Ord` for `Language.Reflection.TT.Name`, `Language.Reflection.TT.Namespace`
   and `Language.Reflection.TT.UserName`.
@@ -206,12 +245,51 @@
 
 * Adds `infixOfBy` and `isInfixOfBy` into `Data.List`.
 
+* Adds `WithDefault` into `Language.Reflection.TTImp`, mirroring compiler addition.
+
+* Adds updating functions to `SortedMap` and `SortedDMap`.
+
+* Adds `grouped` function to `Data.List` for splitting a list into equal-sized slices.
+
+* Implements `Ord` for `Count` from `Language.Reflection`.
+
+* Implements `MonadState` for `Data.Ref` with a named implementation requiring
+  a particular reference.
+
+* Adds implementations of `Zippable` to `Either`, `Pair`, `Maybe`, `SortedMap`.
+
+* Adds a `Compose` and `FromApplicative` named implementations for `Zippable`.
+
+* Adds `Semigroup`, `Applicative`, `Traversable` and `Zippable` for `Data.These`.
+
+* Adds bindings for IEEE floating point constants NaN and (+/-) Inf, as well as
+  machine epsilon and unit roundoff. Speeds vary depending on backend.
+
+* A more generalised way of applicative mapping of `TTImp` expression was added,
+  called `mapATTImp`; the original `mapMTTimp` was implemented through the new one.
+
+* Adds `Data.Vect.foldrImplGoLemma`.
+
+* `Ref` interface from `Data.Ref` inherits `Monad` and was extended by a function
+  for value modification implemented through reading and writing by default.
+
+* Added an `Interpolation` implementation for primitive decimal numeric types and `Nat`.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
   the number of configured processors.
 
+* `System`'s `die` now prints the error message on stderr rather than stdout
+
 * Adds `popen2` to run a subprocess with bi-directional pipes.
+
+* A function `popen2Wait` was added to wait for the process started with `popen2`
+  function and clean up all system resources (to not to leave zombie processes in
+  particular).
+
+* Function `getStringAndFree` from `System.File.ReadWrite` was given an extra
+  argument of type `File` to return an empty string if no error happened.
 
 ### Contrib
 
@@ -228,6 +306,12 @@
 * Adds `modFin` and `strengthenMod` to `Data.Fin.Extra`. These functions reason
   about the modulo operator's upper bound, which can be useful when working with
   indices (for example).
+
+* Existing specialised variants of functions from the `Traversable` for `LazyList`
+  were made to be indeed lazy by the effect, but their requirements were strengthened
+  from `Applicative` to `Monad`.
+
+* Implements `Sized` for `Data.Seq.Sized` and `Data.Seq.Unsized`.
 
 #### Papers
 
@@ -260,6 +344,10 @@
 * Updates the docs for `envvars` to match the changes introduced in #2649.
 * Both `make install` and `idris2 --install...` now respect `DESTDIR` which
   can be set to install into a staging directory for distro packaging.
+* Updates the docs for `envvars` to categorise when environment variables are
+  used (runtime, build-time, or both).
+* Fixed build failure occuring when `make -j` is in effect.
+* Add `clean_names` function to `testutils.sh` to normalise machine names
 
 ## v0.6.0
 

@@ -14,6 +14,7 @@ import Data.List1
 import Data.Maybe
 
 import Libraries.Data.SortedSet
+import Libraries.Data.WithDefault
 
 %default covering
 
@@ -31,12 +32,19 @@ record NestedNames (vars : List Name) where
 
 export
 Weaken NestedNames where
-  weaken (MkNested ns) = MkNested (map wknName ns)
+  weakenNs {ns = wkns} s (MkNested ns) = MkNested (map wknName ns)
     where
       wknName : (Name, (Maybe Name, List (Var vars), FC -> NameType -> Term vars)) ->
-                (Name, (Maybe Name, List (Var (n :: vars)), FC -> NameType -> Term (n :: vars)))
+                (Name, (Maybe Name, List (Var (wkns ++ vars)), FC -> NameType -> Term (wkns ++ vars)))
       wknName (n, (mn, vars, rep))
-          = (n, (mn, map weaken vars, \fc, nt => weaken (rep fc nt)))
+          = (n, (mn, map (weakenNs s) vars, \fc, nt => weakenNs s (rep fc nt)))
+
+-- replace nested name with full name
+export
+mapNestedName : NestedNames vars -> Name -> Name
+mapNestedName nest n = case lookup n (names nest) of
+                               (Just (Just n', _)) => n'
+                               _ => n
 
 -- Unchecked terms, with implicit arguments
 -- This is the raw, elaboratable form.
@@ -112,7 +120,7 @@ mutual
        IQuoteName : FC -> Name -> RawImp' nm
        IQuoteDecl : FC -> List (ImpDecl' nm) -> RawImp' nm
        IUnquote : FC -> RawImp' nm -> RawImp' nm
-       IRunElab : FC -> RawImp' nm -> RawImp' nm
+       IRunElab : FC -> (requireExtension : Bool) -> RawImp' nm -> RawImp' nm
 
        IPrimVal : FC -> (c : Constant) -> RawImp' nm
        IType : FC -> RawImp' nm
@@ -200,7 +208,7 @@ mutual
       show (IQuoteName fc tm) = "(%quotename " ++ show tm ++ ")"
       show (IQuoteDecl fc tm) = "(%quotedecl " ++ show tm ++ ")"
       show (IUnquote fc tm) = "(%unquote " ++ show tm ++ ")"
-      show (IRunElab fc tm) = "(%runelab " ++ show tm ++ ")"
+      show (IRunElab fc _ tm) = "(%runelab " ++ show tm ++ ")"
       show (IPrimVal fc c) = show c
       show (IHole _ x) = "?" ++ x
       show (IUnifyLog _ lvl x) = "(%logging " ++ show lvl ++ " " ++ show x ++ ")"
@@ -443,14 +451,16 @@ mutual
   data ImpDecl' : Type -> Type where
        IClaim : FC -> RigCount -> Visibility -> List (FnOpt' nm) ->
                 ImpTy' nm -> ImpDecl' nm
-       IData : FC -> Visibility -> Maybe TotalReq -> ImpData' nm -> ImpDecl' nm
+       IData : FC -> WithDefault Visibility Private ->
+               Maybe TotalReq -> ImpData' nm -> ImpDecl' nm
        IDef : FC -> Name -> List (ImpClause' nm) -> ImpDecl' nm
        IParameters : FC ->
                      List (ImpParameter' nm) ->
                      List (ImpDecl' nm) -> ImpDecl' nm
        IRecord : FC ->
                  Maybe String -> -- nested namespace
-                 Visibility -> Maybe TotalReq ->
+                 WithDefault Visibility Private ->
+                 Maybe TotalReq ->
                  ImpRecord' nm -> ImpDecl' nm
        IFail : FC -> Maybe String -> List (ImpDecl' nm) -> ImpDecl' nm
        INamespace : FC -> Namespace -> List (ImpDecl' nm) -> ImpDecl' nm
@@ -601,7 +611,7 @@ findIBinds (IDelay fc tm) = findIBinds tm
 findIBinds (IForce fc tm) = findIBinds tm
 findIBinds (IQuote fc tm) = findIBinds tm
 findIBinds (IUnquote fc tm) = findIBinds tm
-findIBinds (IRunElab fc tm) = findIBinds tm
+findIBinds (IRunElab fc _ tm) = findIBinds tm
 findIBinds (IBindHere _ _ tm) = findIBinds tm
 findIBinds (IBindVar _ n) = [n]
 findIBinds (IUpdate fc updates tm)
@@ -637,7 +647,7 @@ findImplicits (IDelay fc tm) = findImplicits tm
 findImplicits (IForce fc tm) = findImplicits tm
 findImplicits (IQuote fc tm) = findImplicits tm
 findImplicits (IUnquote fc tm) = findImplicits tm
-findImplicits (IRunElab fc tm) = findImplicits tm
+findImplicits (IRunElab fc _ tm) = findImplicits tm
 findImplicits (IBindVar _ n) = [n]
 findImplicits (IUpdate fc updates tm)
     = findImplicits tm ++ concatMap (findImplicits . getFieldUpdateTerm) updates
@@ -870,7 +880,7 @@ getFC (IQuote x _) = x
 getFC (IQuoteName x _) = x
 getFC (IQuoteDecl x _) = x
 getFC (IUnquote x _) = x
-getFC (IRunElab x _) = x
+getFC (IRunElab x _ _) = x
 getFC (IAs x _ _ _ _) = x
 getFC (Implicit x _) = x
 getFC (IWithUnambigNames x _ _) = x

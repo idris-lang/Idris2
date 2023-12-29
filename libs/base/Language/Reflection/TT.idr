@@ -386,6 +386,16 @@ public export
 Ord Namespace where
     compare (MkNS ms) (MkNS ns) = compare ms ns
 
+public export
+Ord Count where
+  compare M0 M0 = EQ
+  compare M0 _  = LT
+  compare _  M0 = GT
+  compare M1 M1 = EQ
+  compare MW MW = EQ
+  compare MW M1 = GT
+  compare M1 MW = LT
+
 usernameTag : UserName -> Int
 usernameTag (Basic _)  = 0
 usernameTag (Field _)  = 1

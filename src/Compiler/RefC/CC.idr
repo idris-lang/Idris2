@@ -6,39 +6,50 @@ import Core.Options
 import Core.Directory
 
 import System
+import Idris.Env
+
+import Data.String
 
 %default total
 
 findCC : IO String
 findCC
-    = do Nothing <- getEnv "IDRIS2_CC"
+    = do Nothing <- idrisGetEnv "IDRIS2_CC"
            | Just cc => pure cc
-         Nothing <- getEnv "CC"
+         Nothing <- idrisGetEnv "CC"
            | Just cc => pure cc
          pure "cc"
 
 findCFLAGS : IO String
 findCFLAGS
-  = do Nothing <- getEnv "IDRIS2_CFLAGS"
+  = do Nothing <- idrisGetEnv "IDRIS2_CFLAGS"
          | Just cflags => pure cflags
-       Nothing <- getEnv "CFLAGS"
+       Nothing <- idrisGetEnv "CFLAGS"
          | Just cflags => pure cflags
        pure ""
 
 findCPPFLAGS : IO String
 findCPPFLAGS
-  = do Nothing <- getEnv "IDRIS2_CPPFLAGS"
+  = do Nothing <- idrisGetEnv "IDRIS2_CPPFLAGS"
          | Just cppflags => pure cppflags
-       Nothing <- getEnv "CPPFLAGS"
+       Nothing <- idrisGetEnv "CPPFLAGS"
          | Just cppflags => pure cppflags
        pure ""
 
 findLDFLAGS : IO String
 findLDFLAGS
-  = do Nothing <- getEnv "IDRIS2_LDFLAGS"
+  = do Nothing <- idrisGetEnv "IDRIS2_LDFLAGS"
          | Just ldflags => pure ldflags
-       Nothing <- getEnv "LDFLAGS"
+       Nothing <- idrisGetEnv "LDFLAGS"
          | Just ldflags => pure ldflags
+       pure ""
+
+findLDLIBS : IO String
+findLDLIBS
+  = do Nothing <- idrisGetEnv "IDRIS2_LDLIBS"
+         | Just ldlibs => pure ldlibs
+       Nothing <- idrisGetEnv "LDLIBS"
+         | Just ldlibs => pure ldlibs
        pure ""
 
 clibdirs : List String -> List String
@@ -63,11 +74,13 @@ compileCObjectFile {asLibrary} sourceFile objectFile =
 
      let libraryFlag = if asLibrary then ["-fpic"] else []
 
-     let runccobj = escapeCmd $
+     let runccobj = (escapeCmd $
          [cc, "-Werror", "-c"] ++ libraryFlag ++ [sourceFile,
               "-o", objectFile,
               "-I" ++ refcDir,
-              "-I" ++ cDir]
+              "-I" ++ cDir])
+              ++ " " ++ cppFlags ++ " " ++ cFlags
+
 
      log "compiler.refc.cc" 10 runccobj
      0 <- coreLift $ system runccobj
@@ -85,6 +98,7 @@ compileCFile {asShared} objectFile outFile =
   do cc <- coreLift findCC
      cFlags <- coreLift findCFLAGS
      ldFlags <- coreLift findLDFLAGS
+     ldLibs <- coreLift findLDLIBS
 
      dirs <- getDirs
      refcDir <- findDataFile "refc"
@@ -92,14 +106,15 @@ compileCFile {asShared} objectFile outFile =
 
      let sharedFlag = if asShared then ["-shared"] else []
 
-     let runcc = escapeCmd $
+     let runcc = (escapeCmd $
          [cc, "-Werror"] ++ sharedFlag ++ [objectFile,
               "-o", outFile,
               supportFile,
               "-lidris2_refc",
               "-L" ++ refcDir
               ] ++ clibdirs (lib_dirs dirs) ++ [
-              "-lgmp", "-lm"]
+              "-lgmp", "-lm"])
+              ++ " " ++ (unwords [cFlags, ldFlags, ldLibs])
 
      log "compiler.refc.cc" 10 runcc
      0 <- coreLift $ system runcc

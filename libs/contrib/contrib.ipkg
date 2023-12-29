@@ -1,5 +1,5 @@
 package contrib
-version = 0.6.0
+version = 0.7.0
 
 opts = "--ignore-missing-ipkg -Wno-shadowing"
 
@@ -35,6 +35,8 @@ modules = Control.ANSI,
 
           Data.Int.Order,
 
+          Data.IOMatrix,
+
           Data.Late,
 
           Data.Linear.Array,
@@ -51,9 +53,6 @@ modules = Control.ANSI,
           Data.List.Sufficient,
 
           Data.List.Elem.Extra,
-
-          Data.List.Lazy,
-          Data.List.Lazy.Quantifiers,
 
           Data.Logic.Propositional,
 
@@ -118,6 +117,7 @@ modules = Control.ANSI,
 
           Debug.Buffer,
 
+          Decidable.Finite.Fin,
           Decidable.Order.Strict,
           Decidable.Decidable.Extra,
 
@@ -140,6 +140,7 @@ modules = Control.ANSI,
           System.Path,
 
           Text.Bounded,
+          Text.Distance.Levenshtein,
           Text.Lexer,
           Text.Lexer.Core,
           Text.Lexer.Tokenizer,

@@ -15,6 +15,8 @@ import Data.Nat
 import Data.String
 import Data.Vect
 
+import Libraries.Data.WithDefault
+
 %default covering
 
 -- A pair of a term and its normal form. This could be constructed either
@@ -291,7 +293,7 @@ parameters (defs : Defs, topopts : EvalOpts)
              let redok1 = evalAll topopts
              let redok2 = reducibleInAny (currentNS defs :: nestedNS defs)
                                          (fullname res)
-                                         (visibility res)
+                                         (collapseDefault $ visibility res)
              -- want to shortcut that second check, if we're evaluating
              -- everything, so don't let bind unless we need that log!
              let redok = redok1 || redok2
@@ -422,13 +424,13 @@ parameters (defs : Defs, topopts : EvalOpts)
                Stack free -> CaseTree args ->
                Core (CaseResult (TermWithEnv free))
     evalTree env loc opts fc stk (Case {name} idx x _ alts)
-      = do xval <- evalLocal env fc Nothing idx (varExtend x) [] loc
+      = do xval <- evalLocal env fc Nothing idx (embedIsVar x) [] loc
            -- we have not defined quote yet (it depends on eval itself) so we show the NF
            -- i.e. only the top-level constructor.
            logC "eval.casetree" 5 $ do
              xval <- toFullNames xval
              pure "Evaluated \{show name} to \{show xval}"
-           let loc' = updateLocal opts env idx (varExtend x) loc xval
+           let loc' = updateLocal opts env idx (embedIsVar x) loc xval
            findAlt env loc' opts fc stk xval alts
     evalTree env loc opts fc stk (STerm _ tm)
           = pure (Result $ MkTermEnv loc $ embed tm)

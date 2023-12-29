@@ -19,6 +19,7 @@ import Data.Nat
 import Data.SnocList
 import Data.String
 import Libraries.Utils.String
+import Libraries.Data.WithDefault
 
 import Idris.Parser.Let
 
@@ -1125,11 +1126,12 @@ visOption fname
   <|> (decoratedKeyword fname "private" $> Private)
 
 
-exportVisibility, visibility : OriginDesc -> EmptyRule Visibility
+visibility : OriginDesc -> EmptyRule (WithDefault Visibility Private)
 visibility fname
-    = visOption fname
-  <|> pure Private
+    = (specified <$> visOption fname)
+  <|> pure defaulted
 
+exportVisibility : OriginDesc -> EmptyRule Visibility
 exportVisibility fname
     = visOption fname
   <|> pure Export
@@ -1327,11 +1329,11 @@ dataDeclBody fname indents
          simpleData fname b n indents <|> gadtData fname col b n indents
 
 -- a data declaration can have a visibility and an optional totality (#1404)
-dataVisOpt : OriginDesc -> EmptyRule (Visibility, Maybe TotalReq)
+dataVisOpt : OriginDesc -> EmptyRule (WithDefault Visibility Private, Maybe TotalReq)
 dataVisOpt fname
-    = do { vis <- visOption   fname ; mbtot <- optional (totalityOpt fname) ; pure (vis, mbtot) }
+    = do { vis <- visOption   fname ; mbtot <- optional (totalityOpt fname) ; pure (specified vis, mbtot) }
   <|> do { tot <- totalityOpt fname ; vis <- visibility fname ; pure (vis, Just tot) }
-  <|> pure (Private, Nothing)
+  <|> pure (defaulted, Nothing)
 
 dataDecl : OriginDesc -> IndentInfo -> Rule PDecl
 dataDecl fname indents
@@ -1594,6 +1596,16 @@ recordConstructor fname
        n <- mustWork $ decoratedDataConstructorName fname
        pure (doc, n)
 
+autoImplicitField : OriginDesc -> IndentInfo -> Rule (PiInfo t)
+autoImplicitField fname _ = AutoImplicit <$ decoratedKeyword fname "auto"
+
+defImplicitField : OriginDesc -> IndentInfo -> Rule (PiInfo PTerm)
+defImplicitField fname indents = do
+  decoratedKeyword fname "default"
+  commit
+  t <- simpleExpr fname indents
+  pure (DefImplicit t)
+
 constraints : OriginDesc -> IndentInfo -> EmptyRule (List (Maybe Name, PTerm))
 constraints fname indents
     = do tm <- appExpr pdef fname indents
@@ -1610,15 +1622,22 @@ constraints fname indents
          pure ((Just n, tm) :: more)
   <|> pure []
 
-implBinds : OriginDesc -> IndentInfo -> EmptyRule (List (FC, RigCount, Name, PTerm))
-implBinds fname indents = concatMap (map adjust) <$> go where
+implBinds : OriginDesc -> IndentInfo -> (namedImpl : Bool) -> EmptyRule (List (FC, RigCount, Name, PiInfo PTerm, PTerm))
+implBinds fname indents namedImpl = concatMap (map adjust) <$> go where
 
-  adjust : (RigCount, WithBounds Name, PTerm) -> (FC, RigCount, Name, PTerm)
+  adjust : (RigCount, WithBounds Name, a) -> (FC, RigCount, Name, a)
   adjust (r, wn, ty) = (virtualiseFC (boundToFC fname wn), r, wn.val, ty)
 
-  go : EmptyRule (List (List (RigCount, WithBounds Name, PTerm)))
+  isDefaultImplicit : PiInfo a -> Bool
+  isDefaultImplicit (DefImplicit _) = True
+  isDefaultImplicit _               = False
+
+  go : EmptyRule (List (List (RigCount, WithBounds Name, PiInfo PTerm, PTerm)))
   go = do decoratedSymbol fname "{"
-          ns <- pibindListName fname indents
+          piInfo <- bounds $ option Implicit $ defImplicitField fname indents
+          when (not namedImpl && isDefaultImplicit piInfo.val) $
+            fatalLoc piInfo.bounds "Default implicits are allowed only for named implementations"
+          ns <- map @{Compose} (\(rc, wb, n) => (rc, wb, piInfo.val, n)) $ pibindListName fname indents
           commitSymbol fname "}"
           commitSymbol fname "->"
           more <- go
@@ -1667,7 +1686,7 @@ implDecl fname indents
                          iname  <- optional $ decoratedSymbol fname "["
                                            *> decorate fname Function name
                                            <* decoratedSymbol fname "]"
-                         impls  <- implBinds fname indents
+                         impls  <- implBinds fname indents (isJust iname)
                          cons   <- constraints fname indents
                          n      <- decorate fname Typ name
                          params <- many (continue indents *> simpleExpr fname indents)
@@ -1685,7 +1704,7 @@ fieldDecl fname indents
       = do doc <- optDocumentation fname
            decoratedSymbol fname "{"
            commit
-           impl <- option Implicit (autoImplicitField <|> defImplicitField)
+           impl <- option Implicit (autoImplicitField fname indents <|> defImplicitField fname indents)
            fs <- fieldBody doc impl
            decoratedSymbol fname "}"
            atEnd indents
@@ -1695,16 +1714,6 @@ fieldDecl fname indents
            atEnd indents
            pure fs
   where
-    autoImplicitField : Rule (PiInfo t)
-    autoImplicitField = AutoImplicit <$ decoratedKeyword fname "auto"
-
-    defImplicitField : Rule (PiInfo PTerm)
-    defImplicitField = do
-      decoratedKeyword fname "default"
-      commit
-      t <- simpleExpr fname indents
-      pure (DefImplicit t)
-
     fieldBody : String -> PiInfo PTerm -> Rule (List PField)
     fieldBody doc p = do
       b <- bounds (do
@@ -1740,7 +1749,8 @@ recordParam fname indents
 
 -- A record without a where is a forward declaration
 recordBody : OriginDesc -> IndentInfo ->
-             String -> Visibility -> Maybe TotalReq ->
+             String -> WithDefault Visibility Private ->
+             Maybe TotalReq ->
              Int ->
              Name ->
              List (Name, RigCount, PiInfo PTerm, PTerm) ->
@@ -1828,14 +1838,8 @@ fixDecl fname indents
 
 directiveDecl : OriginDesc -> IndentInfo -> Rule PDecl
 directiveDecl fname indents
-    = do b <- bounds ((do d <- directive fname indents
-                          pure (\fc : FC => PDirective fc d))
-                     <|>
-                      (do decoratedPragma fname "runElab"
-                          tm <- expr pdef fname indents
-                          atEnd indents
-                          pure (\fc : FC => PReflect fc tm)))
-         pure (b.val (boundToFC fname b))
+    = do b <- bounds (directive fname indents)
+         pure (PDirective (boundToFC fname b) b.val)
 
 -- Declared at the top
 -- topDecl : OriginDesc -> IndentInfo -> Rule (List PDecl)
@@ -1848,6 +1852,8 @@ topDecl fname indents
          pure [d]
   <|> do ds <- claims fname indents
          pure (forget ds)
+  <|> do d <- directiveDecl fname indents
+         pure [d]
   <|> do d <- implDecl fname indents
          pure [d]
   <|> do d <- definition fname indents
@@ -1872,8 +1878,6 @@ topDecl fname indents
   <|> do d <- runElabDecl fname indents
          pure [d]
   <|> do d <- transformDecl fname indents
-         pure [d]
-  <|> do d <- directiveDecl fname indents
          pure [d]
   <|> do dstr <- bounds (terminal "Expected CG directive"
                           (\case
@@ -1926,31 +1930,24 @@ import_ fname indents
          pure (MkImport (boundToFC fname b) reexp ns nsAs)
 
 export
-prog : OriginDesc -> EmptyRule Module
-prog fname
+progHdr : OriginDesc -> EmptyRule Module
+progHdr fname
     = do b <- bounds (do doc    <- optDocumentation fname
                          nspace <- option (nsAsModuleIdent mainNS)
                                      (do decoratedKeyword fname "module"
                                          decorate fname Module $ mustWork moduleIdent)
                          imports <- block (import_ fname)
                          pure (doc, nspace, imports))
-         ds      <- block (topDecl fname)
-         (doc, nspace, imports) <- pure b.val
-         pure (MkModule (boundToFC fname b)
-                        nspace imports doc (collectDefs (concat ds)))
-
-export
-progHdr : OriginDesc -> EmptyRule Module
-progHdr fname
-    = do b <- bounds (do doc    <- optDocumentation fname
-                         nspace <- option (nsAsModuleIdent mainNS)
-                                     (do decoratedKeyword fname "module"
-                                         mustWork moduleIdent)
-                         imports <- block (import_ fname)
-                         pure (doc, nspace, imports))
          (doc, nspace, imports) <- pure b.val
          pure (MkModule (boundToFC fname b)
                         nspace imports doc [])
+
+export
+prog : OriginDesc -> EmptyRule Module
+prog fname
+    = do mod <- progHdr fname
+         ds <- block (topDecl fname)
+         pure $ { decls := collectDefs (concat ds)} mod
 
 parseMode : Rule REPLEval
 parseMode

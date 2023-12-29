@@ -200,9 +200,9 @@ showK : {ns : _} ->
         Show a => KnownVars ns a -> String
 showK {a} xs = show (map aString xs)
   where
-    aString : {vars : _} ->
+    aString : {vars : Scope} ->
               (Var vars, a) -> (Name, a)
-    aString (MkVar v, t) = (getName v, t)
+    aString (MkVar v, t) = (nameAt v, t)
 
 weakenNs : SizeOf args -> KnownVars vars a -> KnownVars (args ++ vars) a
 weakenNs args [] = []
@@ -213,7 +213,7 @@ findTag : {idx, vars : _} ->
           (0 p : IsVar n idx vars) -> KnownVars vars a -> Maybe a
 findTag v [] = Nothing
 findTag v ((v', t) :: xs)
-    = if sameVar (MkVar v) v'
+    = if MkVar v == v'
          then Just t
          else findTag v xs
 
@@ -222,7 +222,7 @@ addNot : {idx, vars : _} ->
          KnownVars vars (List Int)
 addNot v t [] = [(MkVar v, [t])]
 addNot v t ((v', ts) :: xs)
-    = if sameVar (MkVar v) v'
+    = if MkVar v == v'
          then ((v', t :: ts) :: xs)
          else ((v', ts) :: addNot v t xs)
 
@@ -436,20 +436,8 @@ clauseMatches : {vars : _} ->
                 Env Term vars -> Term vars ->
                 ClosedTerm -> Core Bool
 clauseMatches env tm trylhs
-    = let lhs = !(eraseApps (close (getLoc tm) env tm)) in
+    = let lhs = !(eraseApps (close (getLoc tm) "cov" env tm)) in
           pure $ match !(toResolvedNames lhs) !(toResolvedNames trylhs)
-  where
-    mkSubstEnv : {vars : _} ->
-                 FC -> Int -> Env Term vars -> SubstEnv vars []
-    mkSubstEnv fc i [] = Nil
-    mkSubstEnv fc i (v :: vs)
-       = Ref fc Bound (MN "cov" i) :: mkSubstEnv fc (i + 1) vs
-
-    close : {vars : _} ->
-            FC -> Env Term vars -> Term vars -> ClosedTerm
-    close {vars} fc env tm
-        = substs (mkSubstEnv fc 0 env)
-              (rewrite appendNilRightNeutral vars in tm)
 
 export
 checkMatched : {auto c : Ref Ctxt Defs} ->

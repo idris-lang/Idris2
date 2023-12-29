@@ -1,5 +1,6 @@
-rm -rf build
-$1 --no-color --console-width 0 --no-banner --check B.idr
+. ../../../testutils.sh
+
+check B.idr
 
 # Set very close time for A and B TTC files
 touch A.idr
@@ -13,4 +14,4 @@ sync build/ttc/*/B.tt*
 
 echo "-- this should be the last line of output --"
 
-$1 --no-color --console-width 0 --no-banner --check B.idr
+check B.idr

@@ -47,12 +47,15 @@ styleTeX = MkLitStyle
 export
 listOfExtensionsLiterate : List String
 listOfExtensionsLiterate
-  = concatMap file_extensions
+  = do let exts = concatMap file_extensions
               [ styleBird
               , styleOrg
               , styleCMark
               , styleTeX
               ]
+       pfx <- [ "", ".idr", ".lidr"]
+       ext <- exts
+       pure (pfx ++ ext)
 
 ||| Are we dealing with a valid literate file name, if so return the base name and used extension.
 export
@@ -70,7 +73,7 @@ hasLitFileExt fname =
             | _ => err
           -- check ["org", "lidr"] is a suffix of the files' extensions and get
           -- back (["shared"], ["org", "lidr"])
-          (nm, exts) <- Lib.suffixOfBy (\ v, w => v <$ guard (v == w)) chunks exts
+          (nm, exts) <- suffixOfBy (\ v, w => v <$ guard (v == w)) chunks exts
           -- return the basename extended with the leftover extensions, paired with the match
           -- e.g. ("Cool.shared", ".org.lidr")
           pure (bn ++ toExtension nm, toExtension exts)

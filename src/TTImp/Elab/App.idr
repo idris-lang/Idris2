@@ -20,6 +20,8 @@ import TTImp.TTImp
 import Data.List
 import Data.Maybe
 
+import Libraries.Data.WithDefault
+
 %default covering
 
 checkVisibleNS : {auto c : Ref Ctxt Defs} ->
@@ -71,7 +73,7 @@ getNameType elabMode rigc env fc x
               do defs <- get Ctxt
                  [(pname, i, def)] <- lookupCtxtName x (gamma defs)
                       | ns => ambiguousName fc x (map fst ns)
-                 checkVisibleNS fc (fullname def) (visibility def)
+                 checkVisibleNS fc (fullname def) (collapseDefault $ visibility def)
                  when (not $ onLHS elabMode) $
                    checkDeprecation fc def
                  rigSafe (multiplicity def) rigc
@@ -126,7 +128,7 @@ getVarType elabMode rigc nest env fc x
                              tm = tmf fc nt
                              tyenv = useVars (getArgs tm)
                                              (embed (type ndef)) in
-                             do checkVisibleNS fc (fullname ndef) (visibility ndef)
+                             do checkVisibleNS fc (fullname ndef) (collapseDefault $ visibility ndef)
                                 logTerm "elab" 5 ("Type of " ++ show n') tyenv
                                 logTerm "elab" 5 ("Expands to") tm
                                 log "elab" 5 $ "Arg length " ++ show arglen
@@ -836,9 +838,7 @@ checkApp rig elabinfo nest env fc (IVar fc' n) expargs autoargs namedargs exp
                           " to " ++ show expargs ++ "\n\tFunction type " ++
                           (show !(toFullNames fnty)) ++ "\n\tExpected app type "
                                 ++ show exptyt))
-        let fn = case lookup n (names nest) of
-                      Just (Just n', _) => n'
-                      _ => n
+        let fn = mapNestedName nest n
         normalisePrims prims env
            !(checkAppWith rig elabinfo nest env fc ntm nty (Just fn, arglen) expargs autoargs namedargs False exp)
   where

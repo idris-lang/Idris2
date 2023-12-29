@@ -17,6 +17,7 @@ import TTImp.TTImp
 
 import Libraries.Data.NameMap
 import Data.List
+import Libraries.Data.WithDefault
 
 %default covering
 
@@ -36,7 +37,7 @@ localHelper {vars} nest env nestdecls_in func
          let f = defining est
          defs <- get Ctxt
          gdef <- lookupCtxtExact (Resolved (defining est)) (gamma defs)
-         let vis  = maybe Public visibility gdef
+         let vis  = maybe Public (collapseDefault . visibility) gdef
          let mult = maybe linear GlobalDef.multiplicity gdef
 
          -- If the parent function is public, the nested definitions need
@@ -103,44 +104,38 @@ localHelper {vars} nest env nestdecls_in func
     -- Update the names in the declarations to the new 'nested' names.
     -- When we encounter the names in elaboration, we'll update to an
     -- application of the nested name.
-    newName : NestedNames vars -> Name -> Name
-    newName nest n
-        = case lookup n (names nest) of
-               Just (Just n', _) => n'
-               _ => n
-
     updateTyName : NestedNames vars -> ImpTy -> ImpTy
     updateTyName nest (MkImpTy loc' nameLoc n ty)
-        = MkImpTy loc' nameLoc (newName nest n) ty
+        = MkImpTy loc' nameLoc (mapNestedName nest n) ty
 
     updateDataName : NestedNames vars -> ImpData -> ImpData
     updateDataName nest (MkImpData loc' n tycons dopts dcons)
-        = MkImpData loc' (newName nest n) tycons dopts
+        = MkImpData loc' (mapNestedName nest n) tycons dopts
                          (map (updateTyName nest) dcons)
     updateDataName nest (MkImpLater loc' n tycons)
-        = MkImpLater loc' (newName nest n) tycons
+        = MkImpLater loc' (mapNestedName nest n) tycons
 
     updateFieldName : NestedNames vars -> IField -> IField
     updateFieldName nest (MkIField fc rigc piinfo n rawimp)
-        = MkIField fc rigc piinfo (newName nest n) rawimp
+        = MkIField fc rigc piinfo (mapNestedName nest n) rawimp
 
     updateRecordName : NestedNames vars -> ImpRecord -> ImpRecord
     updateRecordName nest (MkImpRecord fc n params opts conName fields)
-        = MkImpRecord fc (newName nest n)
+        = MkImpRecord fc (mapNestedName nest n)
                          params
                          opts
-                         (newName nest conName)
+                         (mapNestedName nest conName)
                          (map (updateFieldName nest) fields)
 
     updateRecordNS : NestedNames vars -> Maybe String -> Maybe String
     updateRecordNS _    Nothing   = Nothing
-    updateRecordNS nest (Just ns) = Just $ show $ newName nest (UN $ mkUserName ns)
+    updateRecordNS nest (Just ns) = Just $ show $ mapNestedName nest (UN $ mkUserName ns)
 
     updateName : NestedNames vars -> ImpDecl -> ImpDecl
     updateName nest (IClaim loc' r vis fnopts ty)
          = IClaim loc' r vis fnopts (updateTyName nest ty)
     updateName nest (IDef loc' n cs)
-         = IDef loc' (newName nest n) cs
+         = IDef loc' (mapNestedName nest n) cs
     updateName nest (IData loc' vis mbt d)
          = IData loc' vis mbt (updateDataName nest d)
     updateName nest (IRecord loc' ns vis mbt imprecord)
@@ -149,8 +144,8 @@ localHelper {vars} nest env nestdecls_in func
 
     setPublic : ImpDecl -> ImpDecl
     setPublic (IClaim fc c _ opts ty) = IClaim fc c Public opts ty
-    setPublic (IData fc _ mbt d) = IData fc Public mbt d
-    setPublic (IRecord fc c _ mbt r) = IRecord fc c Public mbt r
+    setPublic (IData fc _ mbt d) = IData fc (specified Public) mbt d
+    setPublic (IRecord fc c _ mbt r) = IRecord fc c (specified Public) mbt r
     setPublic (IParameters fc ps decls)
         = IParameters fc ps (map setPublic decls)
     setPublic (INamespace fc ps decls)

@@ -20,7 +20,34 @@ data LVect : Nat -> Type -> Type where
 export
 lookup : Fin (S n) -@ LVect (S n) a -@ LPair a (LVect n a)
 lookup FZ     (v :: vs) = (v # vs)
-lookup (FS k) (v :: vs@(_ :: _)) = bimap id (v ::) (lookup k vs)
+lookup (FS k) (v :: vs@(_ :: _)) = mapSnd (v ::) (lookup k vs)
+
+export
+insertAt : Fin (S n) -@ a -@ LVect n a -@ LVect (S n) a
+insertAt FZ w vs = w :: vs
+insertAt (FS k) w (v :: vs) = v :: insertAt k w vs
+
+export
+uncurry : (a -@ b -@ c) -@ (LPair a b -@ c)
+uncurry f (x # y) = f x y
+
+export
+lookupInsertAtIdentity :
+  (k : Fin (S n)) -> (vs : LVect (S n) a) ->
+  uncurry (insertAt k) (lookup k vs) === vs
+lookupInsertAtIdentity FZ     (v :: xs) = Refl
+lookupInsertAtIdentity (FS k) (v :: w :: ws)
+  with (lookupInsertAtIdentity k (w :: ws)) | (lookup k (w :: ws))
+  _ | prf | (x # xs) = cong (v ::) prf
+
+export
+insertAtLookupIdentity :
+  (k : Fin (S n)) -> (w : a) -> (vs : LVect n a) ->
+  lookup k (insertAt k w vs) === (w # vs)
+insertAtLookupIdentity FZ w vs = Refl
+insertAtLookupIdentity (FS k) w (v :: vs)
+  with (insertAtLookupIdentity k w vs) | (insertAt k w vs)
+  _ | prf | (x :: xs) = cong (\ x => mapSnd (v ::) x) prf
 
 export
 (<$>) : (f : a -@ b) -> LVect n a -@ LVect n b

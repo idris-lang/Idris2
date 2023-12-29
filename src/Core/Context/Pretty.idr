@@ -20,8 +20,8 @@ import Libraries.Data.String.Extra
 %hide String.(::)
 %hide String.Nil
 %hide Doc.Nil
-%hide SubstEnv.(::)
-%hide SubstEnv.Nil
+%hide Subst.(::)
+%hide Subst.Nil
 %hide CList.(::)
 %hide CList.Nil
 %hide Stream.(::)

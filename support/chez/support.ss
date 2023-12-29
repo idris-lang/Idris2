@@ -40,6 +40,25 @@
       (if (> b 0) (+ r b) (- r b))
       r)))
 
+; flonum constants
+
+(define (blodwen-calcFlonumUnitRoundoff)
+  (let loop [(uro 1.0)]
+    (if (fl= 1.0 (fl+ 1.0 uro))
+      uro
+      (loop (fl/ uro 2.0)))))
+
+(define (blodwen-calcFlonumEpsilon)
+  (fl* (blodwen-calcFlonumUnitRoundoff) 2.0))
+
+(define (blodwen-flonumNaN)
+  +nan.0)
+
+(define (blodwen-flonumInf)
+  +inf.0)
+
+; Bits
+
 (define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
 (define bu- (lambda (x y bits) (blodwen-toUnsignedInt (- x y) bits)))
 (define bu* (lambda (x y bits) (blodwen-toUnsignedInt (* x y) bits)))

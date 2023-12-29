@@ -107,7 +107,7 @@ mutual
                 MkVar (Later isv')
   quoteHead q opts defs fc bounds env (NRef Bound (MN n i))
       = pure $ case findName bounds of
-             Just (MkVar p) => Local fc Nothing _ (varExtend p)
+             Just (MkVar p) => Local fc Nothing _ (embedIsVar p)
              Nothing => Ref fc Bound (MN n i)
     where
       findName : Bounds bound' -> Maybe (Var bound')
@@ -189,17 +189,17 @@ mutual
                                quoteArgsWithFC q opts' empty bound env args
                                else quoteArgsWithFC q ({ topLevel := False } opts')
                                                     defs bound env args
-           pure $ applyWithFC f' args'
+           pure $ applyStackWithFC f' args'
     where
       isRef : NHead vars -> Bool
       isRef (NRef{}) = True
       isRef _ = False
   quoteGenNF q opts defs bound env (NDCon fc n t ar args)
       = do args' <- quoteArgsWithFC q opts defs bound env args
-           pure $ applyWithFC (Ref fc (DataCon t ar) n) args'
+           pure $ applyStackWithFC (Ref fc (DataCon t ar) n) args'
   quoteGenNF q opts defs bound env (NTCon fc n t ar args)
       = do args' <- quoteArgsWithFC q opts defs bound env args
-           pure $ applyWithFC (Ref fc (TyCon t ar) n) args'
+           pure $ applyStackWithFC (Ref fc (TyCon t ar) n) args'
   quoteGenNF q opts defs bound env (NAs fc s n pat)
       = do n' <- quoteGenNF q opts defs bound env n
            pat' <- quoteGenNF q opts defs bound env pat
@@ -225,9 +225,9 @@ mutual
            case arg of
                 NDelay fc _ _ arg =>
                    do argNF <- evalClosure defs arg
-                      pure $ applyWithFC !(quoteGenNF q opts defs bound env argNF) args'
+                      pure $ applyStackWithFC !(quoteGenNF q opts defs bound env argNF) args'
                 _ => do arg' <- quoteGenNF q opts defs bound env arg
-                        pure $ applyWithFC (TForce fc r arg') args'
+                        pure $ applyStackWithFC (TForce fc r arg') args'
   quoteGenNF q opts defs bound env (NPrimVal fc c) = pure $ PrimVal fc c
   quoteGenNF q opts defs bound env (NErased fc t)
     = Erased fc <$> traverse @{%search} @{CORE} (\ nf => quoteGenNF q opts defs bound env nf) t

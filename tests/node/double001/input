@@ -1,0 +1,5 @@
+-- we need to exec to get the prim__* functions to disappear
+:exec printLn testOnePlusUR
+:exec printLn testURPlusOne
+:exec printLn testURComm
+:exec printLn testEps2UR

@@ -8,6 +8,7 @@ import TTImp.TTImp
 import public Libraries.Text.Parser
 import Data.List
 import Data.List1
+import Libraries.Data.WithDefault
 
 topDecl : OriginDesc -> IndentInfo -> Rule ImpDecl
 -- All the clauses get parsed as one-clause definitions. Collect any
@@ -76,10 +77,10 @@ visOption
   <|> do keyword "private"
          pure Private
 
-visibility : EmptyRule Visibility
+visibility : EmptyRule (WithDefault Visibility Private)
 visibility
-    = visOption
-  <|> pure Private
+    = (specified <$> visOption)
+  <|> pure defaulted
 
 totalityOpt : Rule TotalReq
 totalityOpt
@@ -90,11 +91,11 @@ totalityOpt
   <|> do keyword "covering"
          pure CoveringOnly
 
-dataVisOpt : EmptyRule (Visibility, Maybe TotalReq)
+dataVisOpt : EmptyRule (WithDefault Visibility Private, Maybe TotalReq)
 dataVisOpt
-    = do { vis <- visOption   ; mbtot <- optional totalityOpt ; pure (vis, mbtot) }
+    = do { vis <- visOption   ; mbtot <- optional totalityOpt ; pure (specified vis, mbtot) }
   <|> do { tot <- totalityOpt ; vis <- visibility ; pure (vis, Just tot) }
-  <|> pure (Private, Nothing)
+  <|> pure (defaulted, Nothing)
 
 fnOpt : Rule FnOpt
 fnOpt = do x <- totalityOpt

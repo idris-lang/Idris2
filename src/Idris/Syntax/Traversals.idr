@@ -240,7 +240,6 @@ mapPTermM f = goPTerm where
     goPDecl (PUsing fc mnts ps) =
       PUsing fc <$> goPairedPTerms mnts
                 <*> goPDecls ps
-    goPDecl (PReflect fc t) = PReflect fc <$> goPTerm t
     goPDecl (PInterface fc v mnts n doc nrts ns mn ps) =
       PInterface fc v <$> goPairedPTerms mnts
                       <*> pure n
@@ -327,11 +326,11 @@ mapPTermM f = goPTerm where
       (::) . (\ c => (a, b, c)) <$> goPTerm t
                                 <*> go3TupledPTerms ts
 
-    goImplicits : List (x, y, z, PTerm' nm) ->
-                      Core (List (x, y, z, PTerm' nm))
+    goImplicits : List (x, y, z, PiInfo (PTerm' nm), PTerm' nm) ->
+                      Core (List (x, y, z, PiInfo (PTerm' nm), PTerm' nm))
     goImplicits [] = pure []
-    goImplicits ((a, b, c, t) :: ts) =
-      ((::) . (a,b,c,)) <$> goPTerm t
+    goImplicits ((a, b, c, p, t) :: ts) =
+      ((::) . (a,b,c,)) <$> ((,) <$> goPiInfo p <*> goPTerm t)
                         <*> goImplicits ts
 
     go4TupledPTerms : List (x, y, PiInfo (PTerm' nm), PTerm' nm) ->
@@ -523,7 +522,6 @@ mapPTerm f = goPTerm where
       = PParameters fc (go4TupledPTerms nts) (goPDecl <$> ps)
     goPDecl (PUsing fc mnts ps)
       = PUsing fc (goPairedPTerms mnts) (goPDecl <$> ps)
-    goPDecl (PReflect fc t) = PReflect fc $ goPTerm t
     goPDecl (PInterface fc v mnts n doc nrts ns mn ps)
       = PInterface fc v (goPairedPTerms mnts) n doc (go3TupledPTerms nrts) ns mn (goPDecl <$> ps)
     goPDecl (PImplementation fc v opts p is cs n ts mn ns mps)
@@ -576,9 +574,9 @@ mapPTerm f = goPTerm where
     go3TupledPTerms [] = []
     go3TupledPTerms ((a, b, t) :: ts) = (a, b, goPTerm t) :: go3TupledPTerms ts
 
-    goImplicits : List (x, y, z, PTerm' nm) -> List (x, y, z, PTerm' nm)
+    goImplicits : List (x, y, z, PiInfo (PTerm' nm), PTerm' nm) -> List (x, y, z, PiInfo (PTerm' nm), PTerm' nm)
     goImplicits [] = []
-    goImplicits ((a, b, c, t) :: ts) = (a,b,c, goPTerm t) :: goImplicits ts
+    goImplicits ((a, b, c, p, t) :: ts) = (a,b,c, goPiInfo p, goPTerm t) :: goImplicits ts
 
     go4TupledPTerms : List (x, y, PiInfo (PTerm' nm), PTerm' nm) ->
                       List (x, y, PiInfo (PTerm' nm), PTerm' nm)

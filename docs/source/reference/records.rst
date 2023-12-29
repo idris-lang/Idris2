@@ -50,6 +50,8 @@ Desugaring rules
 * ``(simpleExpr .field1 .field2 .field3)`` desugars to ``((.field .field2
   .field3) simpleExpr)``
 
+.. _record-elaboration:
+
 Record elaboration
 ------------------
 

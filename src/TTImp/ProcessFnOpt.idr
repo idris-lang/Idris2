@@ -49,7 +49,9 @@ processFnOpt fc _ ndef (Hint d)
          addLocalHint ndef
 processFnOpt fc True ndef (GlobalHint a)
     = addGlobalHint ndef a
-processFnOpt fc _ ndef (GlobalHint a)
+processFnOpt fc _ ndef (GlobalHint True)
+    = throw (GenericMsg fc "%defaulthint is not valid in local definitions")
+processFnOpt fc _ ndef (GlobalHint False)
     = throw (GenericMsg fc "%globalhint is not valid in local definitions")
 processFnOpt fc _ ndef ExternFn
     = setFlag fc ndef Inline -- if externally defined, inline when compiling

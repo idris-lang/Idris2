@@ -60,7 +60,6 @@ import TTImp.Utils
 import TTImp.BindImplicits
 import TTImp.ProcessDecls
 
-import Data.SnocList -- until 0.6.0 release
 import Data.List
 import Data.List1
 import Data.Maybe
@@ -69,8 +68,10 @@ import Libraries.Data.PosMap
 import Data.Stream
 import Data.String
 import Libraries.Data.List.Extra
+import Libraries.Data.SparseMatrix
 import Libraries.Data.String.Extra
 import Libraries.Data.Tap
+import Libraries.Data.WithDefault
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 import Libraries.Utils.Path
 import Libraries.System.Directory.Tree
@@ -131,7 +132,7 @@ prettyInfo (n, idx, d)
            , (\ nms  => header "Refers to" <++> enum pretty0 nms) <$> ifNotNull referCT
            , (\ nms  => header "Refers to (runtime)" <++> enum pretty0 nms) <$> ifNotNull referRT
            , (\ flgs => header "Flags" <++> enum byShow flgs) <$> ifNotNull (flags d)
-           , (\ sz   => header "Size change" <++> displayChg sz) <$> ifNotNull schanges
+           , (\ sz   => header "Size change" <+> hardline <+> indent 2 (displayChg sz)) <$> ifNotNull schanges
            ]
 
   where
@@ -141,10 +142,13 @@ prettyInfo (n, idx, d)
     enum : (a -> Doc IdrisDocAnn) -> List a -> Doc IdrisDocAnn
     enum p xs = hsep $ punctuate "," $ p <$> xs
 
+    enumLine : (a -> Doc IdrisDocAnn) -> List a -> Doc IdrisDocAnn
+    enumLine p xs = hcat $ punctuate hardline $ p <$> xs
+
     displayChg : List SCCall -> Doc IdrisDocAnn
     displayChg sz =
-      let scinfo = \s => pretty0 (fnCall s) <+> ":" <++> pretty0 (show $ fnArgs s) in
-      enum scinfo sz
+      let scinfo = \s => pretty0 (fnCall s) <+> ":" <+> hardline <+> cast (prettyTable "r" "l" 1 (fnArgs s)) in
+      enumLine scinfo sz
 
 getEnvTerm : {vars : _} ->
              List Name -> Env Term vars -> Term vars ->
@@ -790,7 +794,7 @@ execDecls decls = do
     execDecl decl = do
       i <- desugarDecl [] decl
       inidx <- resolveName (UN $ Basic "[defs]")
-      _ <- newRef EST (initEStateSub inidx [] SubRefl)
+      _ <- newRef EST (initEStateSub inidx [] Refl)
       processLocal [] (MkNested []) [] !getItDecls i
 
 export
@@ -898,7 +902,7 @@ process (Eval itm)
                  let norm = replEval emode
                  evalResultName <- DN "it" <$> genName "evalResult"
                  ignore $ addDef evalResultName
-                   $ newDef replFC evalResultName top [] ty Private
+                   $ newDef replFC evalResultName top [] ty defaulted
                    $ PMDef defaultPI [] (STerm 0 ntm) (STerm 0 ntm) []
                  addToSave evalResultName
                  put ROpts ({ evalResultName := Just evalResultName } opts)
@@ -989,7 +993,7 @@ process (TypeSearch searchTerm)
               defs    <- traverse (flip lookupCtxtExact ctxt) names
               let defs = flip mapMaybe defs $ \ md =>
                              do d <- md
-                                guard (visibleIn curr (fullname d) (visibility d))
+                                guard (visibleIn curr (fullname d) (collapseDefault $ visibility d))
                                 guard (isJust $ userNameRoot (fullname d))
                                 pure d
               allDefs <- traverse (resolved ctxt) defs
@@ -1083,7 +1087,7 @@ process (ImportPackage package) = do
   tree <- coreLift $ explore packageDirPath
   fentries <- coreLift $ toPaths (toRelative tree)
   errs <- for fentries $ \entry => do
-    let entry' = dropExtension entry
+    let entry' = dropExtensions entry
     let sp = forget $ split (== dirSeparator) entry'
     let ns = concat $ intersperse "." sp
     let ns' = mkNamespace ns

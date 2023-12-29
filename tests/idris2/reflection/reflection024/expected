@@ -1,0 +1,61 @@
+--- Print dirs with ipkg ---
+1/1: Building Inside.PrintDirs (src/Inside/PrintDirs.idr)
+LOG elab:0: project dir: __TEST_DIR__
+LOG elab:0: source dir: __TEST_DIR__/src
+LOG elab:0: current module dir: __TEST_DIR__/src/Inside
+LOG elab:0: submodules dir: __TEST_DIR__/src/Inside/PrintDirs
+LOG elab:0: build dir: __TEST_DIR__/build
+
+--- Print dirs with ipkg (with changed pwd) ---
+1/1: Building Inside.PrintDirs (src/Inside/PrintDirs.idr)
+LOG elab:0: project dir: __TEST_DIR__
+LOG elab:0: source dir: __TEST_DIR__/src
+LOG elab:0: current module dir: __TEST_DIR__/src/Inside
+LOG elab:0: submodules dir: __TEST_DIR__/src/Inside/PrintDirs
+LOG elab:0: build dir: __TEST_DIR__/build
+
+--- Print dirs without ipkg (with changed pwd) ---
+1/1: Building Inside.PrintDirs (Inside/PrintDirs.idr)
+LOG elab:0: project dir: __TEST_DIR__
+LOG elab:0: source dir: __TEST_DIR__
+LOG elab:0: current module dir: __TEST_DIR__/Inside
+LOG elab:0: submodules dir: __TEST_DIR__/Inside/PrintDirs
+LOG elab:0: build dir: __TEST_DIR__/build
+
+--- Simple reads and writes ---
+1/1: Building SimpleRW (src/SimpleRW.idr)
+LOG elab:0: reading existentToRead:
+LOG elab:0:     contents:
+existent to read
+second line
+
+LOG elab:0: reading nonExistentToRead:
+LOG elab:0:     FILE DOES NOT EXIST
+LOG elab:0: written to existentToWrite
+LOG elab:0: written to nonExistentToWrite
+existent to read
+second line
+cat: src/nonExistentToRead: No such file or directory
+WRITTEN CONTENTS
+LA-LA-LA
+WRITTEN CONTENTS
+LA-LA-LA
+
+--- A little but less simple reads and writes ---
+1/1: Building LessSimpleRW (src/LessSimpleRW.idr)
+LOG elab:0: written to nonExistentOriginally/a-generated-file
+LOG elab:0: reading nonExistentOriginally/../nonExistentOriginally/a-generated-file:
+LOG elab:0:     contents:
+WRITTEN CONTENTS
+LA-LA-LA
+
+LOG elab:0: written to ..a-dot-named-file
+WRITTEN CONTENTS
+LA-LA-LA
+WRITTEN CONTENTS
+LA-LA-LA
+
+--- Type providers ---
+1/1: Building TypeProviders (src/TypeProviders.idr)
+Derived:
+{"veryStringField":"String","veryIntegerField":"Integer","varyNatField":"Prelude.Types.Nat"}

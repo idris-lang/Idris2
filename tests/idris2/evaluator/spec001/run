@@ -1,8 +1,10 @@
 . ../../../testutils.sh
 
+{
 idris2 --log specialise:5 -c Mult3.idr
 idris2 --cg node -o mult3.js -c Mult3.idr
 awk -v RS= '/\/\* Main.main/' build/exec/mult3.js
 idris2 --log specialise:5 -c Desc.idr
 idris2 --log specialise:5 -c Desc2.idr
 idris2 --log specialise:5 -c Identity.idr
+} | clean_names

@@ -24,6 +24,8 @@ import Data.List
 import Libraries.Utils.Scheme
 import System.Info
 
+import Libraries.Data.WithDefault
+
 schString : String -> String
 schString s = concatMap okchar (unpack s)
   where
@@ -567,7 +569,7 @@ compileDef mode n_in
          let redok = mode == EvalAll ||
                        reducibleInAny (currentNS defs :: nestedNS defs)
                                       (fullname def)
-                                      (visibility def)
+                                      (collapseDefault $ visibility def)
          -- 'n' is used in compileBody for generating names for readback,
          -- and reading back resolved names is quicker because it's just
          -- an integer

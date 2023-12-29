@@ -7,13 +7,18 @@ import public Core.Name
 import public Core.Options.Log
 import public Core.TT
 
+import public Algebra.SizeChange
+
 import Data.IORef
 import Data.String
+import Data.List1
 
 import Libraries.Data.IntMap
 import Libraries.Data.IOArray
 import Libraries.Data.NameMap
 import Libraries.Data.UserNameMap
+import Libraries.Data.WithDefault
+import Libraries.Data.SparseMatrix
 import Libraries.Utils.Binary
 import Libraries.Utils.Scheme
 
@@ -260,49 +265,10 @@ Show DefFlag where
   show (Identity x) = "identity " ++ show x
 
 public export
-data SizeChange = Smaller | Same | Unknown
-
-export
-Semigroup SizeChange where
-  -- Unknown is a 0
-  -- Same is a neutral
-  _ <+> Unknown = Unknown
-  Unknown <+> _ = Unknown
-  c <+> Same = c
-  _ <+> Smaller = Smaller
-
-export
-Monoid SizeChange where
-  neutral = Same
-
-export
-Show SizeChange where
-  show Smaller = "Smaller"
-  show Same = "Same"
-  show Unknown = "Unknown"
-
-export
-Eq SizeChange where
-  Smaller == Smaller = True
-  Same == Same = True
-  Unknown == Unknown = True
-  _ == _ = False
-
-export
-Ord SizeChange where
-  compare Smaller Smaller = EQ
-  compare Smaller _ = LT
-  compare _ Smaller = GT
-  compare Same Same = EQ
-  compare Same _ = LT
-  compare _ Same = GT
-  compare Unknown Unknown = EQ
-
-public export
 record SCCall where
      constructor MkSCCall
      fnCall : Name -- Function called
-     fnArgs : List (Maybe (Nat, SizeChange))
+     fnArgs : Matrix SizeChange
         -- relationship to arguments of calling function; argument position
         -- (in the calling function), and how its size changed in the call.
         -- 'Nothing' if it's not related to any of the calling function's
@@ -342,7 +308,7 @@ record GlobalDef where
   inferrable : List Nat -- arguments which can be inferred from elsewhere in the type
   multiplicity : RigCount
   localVars : List Name -- environment name is defined in
-  visibility : Visibility
+  visibility : WithDefault Visibility Private
   totality : Totality
   isEscapeHatch : Bool
   flags : List DefFlag

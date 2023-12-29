@@ -29,6 +29,7 @@ import Libraries.Data.SortedSet
 import Libraries.Data.SortedMap
 import Libraries.Data.StringMap as S
 import Libraries.Data.String.Extra
+import Libraries.Data.WithDefault
 
 import public Libraries.Text.PrettyPrint.Prettyprinter
 import public Libraries.Text.PrettyPrint.Prettyprinter.Util
@@ -417,11 +418,12 @@ getDocsForName fc n config
              | [ifacedata] => (Just "interface",) . pure <$> getIFaceDoc ifacedata
              | _ => pure (Nothing, []) -- shouldn't happen, we've resolved ambiguity by now
          case definition d of
-           PMDef _ _ _ _ _ => pure (Nothing, catMaybes [ showTotal (totality d)
-                                                       , pure (showVisible (visibility d))])
+           PMDef _ _ _ _ _ => pure ( Nothing
+                                   , catMaybes [ showTotal (totality d)
+                                               , pure (showVisible (collapseDefault $ visibility d))])
            TCon _ _ _ _ _ _ cons _ =>
              do let tot = catMaybes [ showTotal (totality d)
-                                    , pure (showVisible (visibility d))]
+                                    , pure (showVisible (collapseDefault $ visibility d))]
                 cdocs <- traverse (getDConDoc <=< toFullNames) cons
                 cdoc <- case cdocs of
                   [] => pure (Just "data", [])
@@ -697,7 +699,7 @@ getContents ns
     visible defs n
         = do Just def <- lookupCtxtExact n (gamma defs)
                   | Nothing => pure False
-             pure (visibility def /= Private)
+             pure (collapseDefault (visibility def) /= Private)
 
     inNS : Name -> Bool
     inNS (NS xns (UN _)) = ns `isParentOf` xns

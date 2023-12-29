@@ -125,7 +125,7 @@ idrisTests = MkTestPool "Misc" [] Nothing
        "import001", "import002", "import003", "import004", "import005", "import006",
        "import007", "import008", "import009",
        -- Implicit laziness, lazy evaluation
-       "lazy001", "lazy002", "lazy003",
+       "lazy001", "lazy002", "lazy003", "lazy004",
        -- Namespace blocks
        "namespace001", "namespace002", "namespace003", "namespace004", "namespace005",
        -- Parameters blocks
@@ -163,6 +163,7 @@ refcMemoryLeakTests = testsInDir "refc-memory" "Reference counting C backend: me
 
 racketTests : IO TestPool
 racketTests = testsInDir "racket" "Racket backend" {codegen = Just Racket}
+  { pred = not . (`elem` ["conditions006", "conditions007"]) }
 
 nodeTests : IO TestPool
 nodeTests = testsInDir "node" "Node backend" {codegen = Just Node}

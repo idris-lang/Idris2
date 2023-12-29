@@ -7,7 +7,7 @@ fc = EmptyFC
 
 mkEnum : (name : String) -> (cons : List String) -> Elab ()
 mkEnum name cons =
-  let enumDecl = IData EmptyFC Public Nothing dat
+  let enumDecl = IData EmptyFC (specified Public) Nothing dat
    in declare [enumDecl]
   where enumName : Name
         enumName = UN $ Basic name

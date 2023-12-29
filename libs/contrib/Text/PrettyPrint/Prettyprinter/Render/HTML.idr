@@ -6,7 +6,7 @@ import Data.String
 
 export
 htmlEscape : String -> String
-htmlEscape s = fastConcat $ reverse $ go [] s
+htmlEscape s = concat $ reverse $ go [] s
   where
     isSafe : Char -> Bool
     isSafe '"' = False

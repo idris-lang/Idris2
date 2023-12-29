@@ -15,6 +15,9 @@ import Core.Value
 import Data.List
 import Libraries.Data.IntMap
 import Libraries.Data.NameMap
+import Libraries.Data.WithDefault
+
+import Libraries.Data.SnocList.HasLength
 
 %default covering
 
@@ -28,15 +31,6 @@ data Constraint : Type where
                     (env : Env Term vars) ->
                     (x : NF vars) -> (y : NF vars) ->
                     Constraint
-     -- An unsolved sequence of constraints, arising from arguments in an
-     -- application where solving later constraints relies on solving earlier
-     -- ones
-     MkSeqConstraint : {vars : _} ->
-                       FC ->
-                       (env : Env Term vars) ->
-                       (xs : List (NF vars)) ->
-                       (ys : List (NF vars)) ->
-                       Constraint
      -- A resolved constraint
      Resolved : Constraint
 
@@ -322,90 +316,86 @@ addPolyConstraint fc env arg x@(NApp _ (NMeta _ _ _) _) y
 addPolyConstraint fc env arg x y
     = pure ()
 
+mkLocal : {wkns : SnocList Name} -> FC -> Binder (Term vars) -> Term (wkns <>> x :: (vars ++ done))
+mkLocal fc b = Local fc (Just (isLet b)) _ (mkIsVarChiply (mkHasLength wkns))
+
 mkConstantAppArgs : {vars : _} ->
                     Bool -> FC -> Env Term vars ->
-                    (wkns : List Name) ->
-                    List (Term (wkns ++ (vars ++ done)))
+                    (wkns : SnocList Name) ->
+                    List (Term (wkns <>> (vars ++ done)))
 mkConstantAppArgs lets fc [] wkns = []
 mkConstantAppArgs {done} {vars = x :: xs} lets fc (b :: env) wkns
-    = let rec = mkConstantAppArgs {done} lets fc env (wkns ++ [x]) in
+    = let rec = mkConstantAppArgs {done} lets fc env (wkns :< x) in
           if lets || not (isLet b)
-             then Local fc (Just (isLet b)) (length wkns) (mkVar wkns) ::
-                  rewrite (appendAssociative wkns [x] (xs ++ done)) in rec
-             else rewrite (appendAssociative wkns [x] (xs ++ done)) in rec
+             then mkLocal fc b :: rec
+             else rec
 
 mkConstantAppArgsSub : {vars : _} ->
                        Bool -> FC -> Env Term vars ->
-                       SubVars smaller vars ->
-                       (wkns : List Name) ->
-                       List (Term (wkns ++ (vars ++ done)))
+                       Thin smaller vars ->
+                       (wkns : SnocList Name) ->
+                       List (Term (wkns <>> (vars ++ done)))
 mkConstantAppArgsSub lets fc [] p wkns = []
 mkConstantAppArgsSub {done} {vars = x :: xs}
-                        lets fc (b :: env) SubRefl wkns
-    = rewrite appendAssociative wkns [x] (xs ++ done) in
-              mkConstantAppArgs lets fc env (wkns ++ [x])
+                        lets fc (b :: env) Refl wkns
+    = mkConstantAppArgs lets fc env (wkns :< x)
 mkConstantAppArgsSub {done} {vars = x :: xs}
-                        lets fc (b :: env) (DropCons p) wkns
-    = rewrite appendAssociative wkns [x] (xs ++ done) in
-              mkConstantAppArgsSub lets fc env p (wkns ++ [x])
+                        lets fc (b :: env) (Drop p) wkns
+    = mkConstantAppArgsSub lets fc env p (wkns :< x)
 mkConstantAppArgsSub {done} {vars = x :: xs}
-                        lets fc (b :: env) (KeepCons p) wkns
-    = let rec = mkConstantAppArgsSub {done} lets fc env p (wkns ++ [x]) in
+                        lets fc (b :: env) (Keep p) wkns
+    = let rec = mkConstantAppArgsSub {done} lets fc env p (wkns :< x) in
           if lets || not (isLet b)
-             then Local fc (Just (isLet b)) (length wkns) (mkVar wkns) ::
-                  rewrite appendAssociative wkns [x] (xs ++ done) in rec
-             else rewrite appendAssociative wkns [x] (xs ++ done) in rec
+             then mkLocal fc b :: rec
+             else rec
 
 mkConstantAppArgsOthers : {vars : _} ->
                           Bool -> FC -> Env Term vars ->
-                          SubVars smaller vars ->
-                          (wkns : List Name) ->
-                          List (Term (wkns ++ (vars ++ done)))
+                          Thin smaller vars ->
+                          (wkns : SnocList Name) ->
+                          List (Term (wkns <>> (vars ++ done)))
 mkConstantAppArgsOthers lets fc [] p wkns = []
 mkConstantAppArgsOthers {done} {vars = x :: xs}
-                        lets fc (b :: env) SubRefl wkns
-    = rewrite appendAssociative wkns [x] (xs ++ done) in
-              mkConstantAppArgsOthers lets fc env SubRefl (wkns ++ [x])
+                        lets fc (b :: env) Refl wkns
+    = mkConstantAppArgsOthers lets fc env Refl (wkns :< x)
 mkConstantAppArgsOthers {done} {vars = x :: xs}
-                        lets fc (b :: env) (KeepCons p) wkns
-    = rewrite appendAssociative wkns [x] (xs ++ done) in
-              mkConstantAppArgsOthers lets fc env p (wkns ++ [x])
+                        lets fc (b :: env) (Keep p) wkns
+    = mkConstantAppArgsOthers lets fc env p (wkns :< x)
 mkConstantAppArgsOthers {done} {vars = x :: xs}
-                        lets fc (b :: env) (DropCons p) wkns
-    = let rec = mkConstantAppArgsOthers {done} lets fc env p (wkns ++ [x]) in
+                        lets fc (b :: env) (Drop p) wkns
+    = let rec = mkConstantAppArgsOthers {done} lets fc env p (wkns :< x) in
           if lets || not (isLet b)
-             then Local fc (Just (isLet b)) (length wkns) (mkVar wkns) ::
-                  rewrite appendAssociative wkns [x] (xs ++ done) in rec
-             else rewrite appendAssociative wkns [x] (xs ++ done) in rec
+             then mkLocal fc b :: rec
+             else rec
 
 export
 applyTo : {vars : _} ->
           FC -> Term vars -> Env Term vars -> Term vars
 applyTo fc tm env
-  = let args = reverse (mkConstantAppArgs {done = []} False fc env []) in
+  = let args = reverse (mkConstantAppArgs {done = []} False fc env [<]) in
         apply fc tm (rewrite sym (appendNilRightNeutral vars) in args)
 
 export
 applyToFull : {vars : _} ->
               FC -> Term vars -> Env Term vars -> Term vars
 applyToFull fc tm env
-  = let args = reverse (mkConstantAppArgs {done = []} True fc env []) in
+  = let args = reverse (mkConstantAppArgs {done = []} True fc env [<]) in
         apply fc tm (rewrite sym (appendNilRightNeutral vars) in args)
 
 export
 applyToSub : {vars : _} ->
              FC -> Term vars -> Env Term vars ->
-             SubVars smaller vars -> Term vars
+             Thin smaller vars -> Term vars
 applyToSub fc tm env sub
-  = let args = reverse (mkConstantAppArgsSub {done = []} True fc env sub []) in
+  = let args = reverse (mkConstantAppArgsSub {done = []} True fc env sub [<]) in
         apply fc tm (rewrite sym (appendNilRightNeutral vars) in args)
 
 export
 applyToOthers : {vars : _} ->
                 FC -> Term vars -> Env Term vars ->
-                SubVars smaller vars -> Term vars
+                Thin smaller vars -> Term vars
 applyToOthers fc tm env sub
-  = let args = reverse (mkConstantAppArgsOthers {done = []} True fc env sub []) in
+  = let args = reverse (mkConstantAppArgsOthers {done = []} True fc env sub [<]) in
         apply fc tm (rewrite sym (appendNilRightNeutral vars) in args)
 
 -- Create a new metavariable with the given name and return type,
@@ -425,7 +415,7 @@ newMetaLets {vars} fc rig env n ty def nocyc lets
     = do let hty = if lets then abstractFullEnvType fc env ty
                            else abstractEnvType fc env ty
          let hole = { noCycles := nocyc }
-                           (newDef fc n rig [] hty Public def)
+                           (newDef fc n rig [] hty (specified Public) def)
          log "unify.meta" 5 $ "Adding new meta " ++ show (n, fc, rig)
          logTerm "unify.meta" 10 ("New meta type " ++ show n) hty
          idx <- addDef n hole
@@ -433,7 +423,7 @@ newMetaLets {vars} fc rig env n ty def nocyc lets
          pure (idx, Meta fc n idx envArgs)
   where
     envArgs : List (Term vars)
-    envArgs = let args = reverse (mkConstantAppArgs {done = []} lets fc env []) in
+    envArgs = let args = reverse (mkConstantAppArgs {done = []} lets fc env [<]) in
                   rewrite sym (appendNilRightNeutral vars) in args
 
 export
@@ -470,7 +460,7 @@ newConstant {vars} fc rig env tm ty constrs
     = do let def = mkConstant fc env tm
          let defty = abstractFullEnvType fc env ty
          cn <- genName "postpone"
-         let guess = newDef fc cn rig [] defty Public
+         let guess = newDef fc cn rig [] defty (specified Public)
                             (Guess def (length env) constrs)
          log "unify.constant" 5 $ "Adding new constant " ++ show (cn, fc, rig)
          logTerm "unify.constant" 10 ("New constant type " ++ show cn) defty
@@ -479,7 +469,7 @@ newConstant {vars} fc rig env tm ty constrs
          pure (Meta fc cn idx envArgs)
   where
     envArgs : List (Term vars)
-    envArgs = let args = reverse (mkConstantAppArgs {done = []} True fc env []) in
+    envArgs = let args = reverse (mkConstantAppArgs {done = []} True fc env [<]) in
                   rewrite sym (appendNilRightNeutral vars) in args
 
 -- Create a new search with the given name and return type,
@@ -493,7 +483,7 @@ newSearch : {vars : _} ->
             Env Term vars -> Name -> Term vars -> Core (Int, Term vars)
 newSearch {vars} fc rig depth def env n ty
     = do let hty = abstractEnvType fc env ty
-         let hole = newDef fc n rig [] hty Public (BySearch rig depth def)
+         let hole = newDef fc n rig [] hty (specified Public) (BySearch rig depth def)
          log "unify.search" 10 $ "Adding new search " ++ show fc ++ " " ++ show n
          logTermNF "unify.search" 10 "New search type" [] hty
          idx <- addDef n hole
@@ -501,7 +491,7 @@ newSearch {vars} fc rig depth def env n ty
          pure (idx, Meta fc n idx envArgs)
   where
     envArgs : List (Term vars)
-    envArgs = let args = reverse (mkConstantAppArgs {done = []} False fc env []) in
+    envArgs = let args = reverse (mkConstantAppArgs {done = []} False fc env [<]) in
                   rewrite sym (appendNilRightNeutral vars) in args
 
 -- Add a hole which stands for a delayed elaborator
@@ -514,14 +504,14 @@ newDelayed : {vars : _} ->
              (ty : Term vars) -> Core (Int, Term vars)
 newDelayed {vars} fc rig env n ty
     = do let hty = abstractEnvType fc env ty
-         let hole = newDef fc n rig [] hty Public Delayed
+         let hole = newDef fc n rig [] hty (specified Public) Delayed
          idx <- addDef n hole
          log "unify.delay" 10 $ "Added delayed elaborator " ++ show (n, idx)
          addHoleName fc n idx
          pure (idx, Meta fc n idx envArgs)
   where
     envArgs : List (Term vars)
-    envArgs = let args = reverse (mkConstantAppArgs {done = []} False fc env []) in
+    envArgs = let args = reverse (mkConstantAppArgs {done = []} False fc env [<]) in
                   rewrite sym (appendNilRightNeutral vars) in args
 
 export
@@ -602,12 +592,6 @@ checkValidHole base (idx, (fc, n))
                           | Nothing => pure ()
                      case c of
                           MkConstraint fc l env x y =>
-                             do put UST ({ guesses := empty } ust)
-                                empty <- clearDefs defs
-                                xnf <- quote empty env x
-                                ynf <- quote empty env y
-                                throw (CantSolveEq fc (gamma defs) env xnf ynf)
-                          MkSeqConstraint fc env (x :: _) (y :: _) =>
                              do put UST ({ guesses := empty } ust)
                                 empty <- clearDefs defs
                                 xnf <- quote empty env x
@@ -723,8 +707,6 @@ dumpHole str n hole
                          "\t    from " ++ show !(toFullNames !(quote empty env x))
                             ++ " =?= " ++ show !(toFullNames !(quote empty env y))
                             ++ if lazy then "\n\t(lazy allowed)" else ""
-                  Just (MkSeqConstraint _ _ xs ys) =>
-                       logString str n $ "\t\t" ++ show xs ++ " =?= " ++ show ys
 
 export
 dumpConstraints : {auto u : Ref UST UState} ->

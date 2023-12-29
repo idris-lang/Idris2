@@ -253,6 +253,8 @@ Once we know what the bound implicits need to be, we bind them in
 gets turned into a local binding (either Pi or Pat as appropriate, or PLet for
 @-patterns).
 
+.. _unbound-implicits:
+
 Unbound Implicits
 -----------------
 

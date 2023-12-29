@@ -31,7 +31,7 @@ import System.Directory
 import System.File.Meta
 import System.File.Virtual
 import Libraries.Utils.Path
-import Libraries.Utils.Term
+import System.Term
 
 import Yaffle.Main
 

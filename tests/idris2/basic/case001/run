@@ -1,4 +1,4 @@
-rm -rf build
+. ../../../testutils.sh
 
-$1 --no-color --console-width 0 --no-banner --codegen chez InlineCase.idr -o inline-case
+idris2 --codegen chez InlineCase.idr -o inline-case
 grep "define InlineCase-product" build/exec/inline-case_app/inline-case.ss

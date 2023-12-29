@@ -54,10 +54,10 @@ fSeekLine (FHandle f)
 
 ||| Get a garbage collected String from a Ptr String and and free the original
 export
-getStringAndFree : HasIO io => Ptr String -> io (Either FileError String)
-getStringAndFree res
+getStringAndFree : HasIO io => File -> Ptr String -> io (Either FileError String)
+getStringAndFree f res
     = if prim__nullPtr res /= 0
-         then returnError
+         then if !(fileError f) then returnError else pure @{Compose} ""
          else do let s = prim__getString res
                  free $ prim__forgetPtr res
                  ok s
@@ -69,9 +69,9 @@ getStringAndFree res
 export
 covering
 fGetLine : HasIO io => (h : File) -> io (Either FileError String)
-fGetLine (FHandle f)
+fGetLine ff@(FHandle f)
     = do res <- primIO (prim__readLine f)
-         getStringAndFree res
+         getStringAndFree ff res
 
 ||| Get a number of characters from the given file handle.
 |||
@@ -79,9 +79,9 @@ fGetLine (FHandle f)
 ||| @ max the number of characters to read
 export
 fGetChars : HasIO io => (h : File) -> (max : Int) -> io (Either FileError String)
-fGetChars (FHandle f) max
+fGetChars ff@(FHandle f) max
     = do res <- primIO (prim__readChars max f)
-         getStringAndFree res
+         getStringAndFree ff res
 
 ||| Get the next character from the given file handle.
 |||

@@ -433,6 +433,9 @@ preOptions (BashCompletionScript fun :: _)
 preOptions (Total :: opts)
     = do updateSession ({ totalReq := Total })
          preOptions opts
+preOptions (NoCSE :: opts)
+    = do updateSession ({ noCSE := True })
+         preOptions opts
 preOptions (_ :: opts) = preOptions opts
 
 -- Options to be processed after type checking. Returns whether execution

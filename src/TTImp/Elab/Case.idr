@@ -13,6 +13,7 @@ import Core.Value
 import Idris.Syntax
 import Idris.REPL.Opts
 
+import TTImp.Elab.App
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.Elab.ImplicitBind
@@ -25,13 +26,14 @@ import Data.List
 import Data.Maybe
 import Data.String
 import Libraries.Data.NameMap
+import Libraries.Data.WithDefault
 
 %default covering
 
 export
 changeVar : (old : Var vs) -> (new : Var vs) -> Term vs -> Term vs
-changeVar (MkVar {i=x} old) (MkVar new) (Local fc r idx p)
-    = if x == idx
+changeVar old (MkVar new) (Local fc r idx p)
+    = if old == MkVar p
          then Local fc r _ new
          else Local fc r _ p
 changeVar old new (Meta fc nm i args)
@@ -103,7 +105,7 @@ merge : {vs : List Name} ->
         List (Var vs) -> List (Var vs) -> List (Var vs)
 merge [] xs = xs
 merge (v :: vs) xs
-    = merge vs (v :: filter (not . sameVar v) xs)
+    = merge vs (v :: filter (v /=) xs)
 
 -- Extend the list of variables we need in the environment so far, removing
 -- duplicates
@@ -116,10 +118,6 @@ extendNeeded (PLet _ _ ty val) env needed
     = merge (findUsedLocs env ty) (merge (findUsedLocs env val) needed)
 extendNeeded b env needed
     = merge (findUsedLocs env (binderType b)) needed
-
-isNeeded : Nat -> List (Var vs) -> Bool
-isNeeded x [] = False
-isNeeded x (MkVar {i} _ :: xs) = x == i || isNeeded x xs
 
 findScrutinee : {vs : _} ->
                 Env Term vs -> RawImp -> Maybe (Var vs)
@@ -149,7 +147,7 @@ bindCaseLocals fc ((n, mn, envns) :: rest) argns rhs
     getArg (x :: xs) (S k) = getArg xs k
 
     getNameFrom : Var vars -> Name
-    getNameFrom (MkVar {i} _)
+    getNameFrom (MkVar {varIdx = i} _)
         = case getArg argns i of
                Nothing => n
                Just n' => n'
@@ -191,9 +189,9 @@ caseBlock {vars} rigc elabinfo fc nest env opts scr scrtm scrty caseRig alts exp
          let env = updateMults (linearUsed est) env
          defs <- get Ctxt
          parentDef <- lookupCtxtExact (Resolved (defining est)) (gamma defs)
-         let vis = case parentDef of
+         let vis = specified $ case parentDef of
                         Just gdef =>
-                             if visibility gdef == Public
+                             if collapseDefault (visibility gdef) == Public
                                 then Public
                                 else Private
                         Nothing => Public
@@ -331,7 +329,7 @@ caseBlock {vars} rigc elabinfo fc nest env opts scr scrtm scrty caseRig alts exp
               RawImp -> List RawImp ->
               List RawImp
     mkSplit Nothing lhs args = reverse (lhs :: args)
-    mkSplit (Just (MkVar {i} prf)) lhs args
+    mkSplit (Just (MkVar {varIdx = i} prf)) lhs args
         = reverse (replace i lhs args)
 
     -- Names used in the pattern we're matching on, so don't bind them
@@ -460,7 +458,7 @@ checkCase rig elabinfo nest env fc opts scr scrty_in alts exp
         = case getFn x of
                IVar _ n =>
                   do defs <- get Ctxt
-                     [(n', (_, ty))] <- lookupTyName n (gamma defs)
+                     [(_, (_, ty))] <- lookupTyName (mapNestedName nest n) (gamma defs)
                          | _ => guessScrType xs
                      Just (tyn, tyty) <- getRetTy defs !(nf defs [] ty)
                          | _ => guessScrType xs

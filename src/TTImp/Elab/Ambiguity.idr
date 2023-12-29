@@ -23,6 +23,7 @@ import Data.String
 import Data.Vect
 
 import Libraries.Data.UserNameMap
+import Libraries.Data.WithDefault
 
 %default covering
 
@@ -85,7 +86,7 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
                  | _ => pure True
              if !(isVisible ns)
                 then pure $ visibleInAny (!getNS :: !getNestedNS) (NS ns x)
-                                         (visibility def)
+                                         (collapseDefault $ visibility def)
                 else pure False
 
     -- If there's multiple alternatives and all else fails, resort to using
@@ -145,7 +146,7 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
         = if (Context.Macro `elem` flags def) && notLHS mode
              then alternativeFirstSuccess $ reverse $
                     allSplits args <&> \(macroArgs, extArgs) =>
-                      (IRunElab fc $ ICoerced fc $ IVar fc n `buildAlt` macroArgs) `buildAlt` extArgs
+                      (IRunElab fc False $ ICoerced fc $ IVar fc n `buildAlt` macroArgs) `buildAlt` extArgs
              else wrapDot prim est mode n (map (snd . snd) args)
                     (definition def) (buildAlt (IVar fc n) args)
       where

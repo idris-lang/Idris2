@@ -45,13 +45,13 @@ tryUpdate : {vars, vars' : _} ->
             List (Var vars, Var vars') ->
             Term vars -> Maybe (Term vars')
 tryUpdate ms (Local fc l idx p)
-    = do MkVar p' <- findIdx ms idx
+    = do MkVar p' <- findIdx ms (MkVar p)
          pure $ Local fc l _ p'
   where
-    findIdx : List (Var vars, Var vars') -> Nat -> Maybe (Var vars')
+    findIdx : List (Var vars, Var vars') -> Var vars -> Maybe (Var vars')
     findIdx [] _ = Nothing
-    findIdx ((MkVar {i} _, v) :: ps) n
-        = if i == n then Just v else findIdx ps n
+    findIdx ((old, v) :: ps) n
+        = if old == n then Just v else findIdx ps n
 tryUpdate ms (Ref fc nt n) = pure $ Ref fc nt n
 tryUpdate ms (Meta fc n i args) = pure $ Meta fc n i !(traverse (tryUpdate ms) args)
 tryUpdate ms (Bind fc x b sc)
@@ -154,7 +154,7 @@ mutual
                    pure (Just (mapMaybe (dropP cargs cargs') ms))
            else pure Nothing
     where
-      weakenP : {c, c', args, args' : _} ->
+      weakenP : {0 c, c' : _} -> {0 args, args' : Scope} ->
                 (Var args, Var args') ->
                 (Var (c :: args), Var (c' :: args'))
       weakenP (v, vs) = (weaken v, weaken vs)
@@ -248,7 +248,7 @@ mutual
                         List (Var vs, Var vs') ->
                         Core Bool
        convertMatches [] = pure True
-       convertMatches ((MkVar {i=ix} p, MkVar {i=iy} p') :: vs)
+       convertMatches ((MkVar {varIdx = ix} p, MkVar {varIdx = iy} p') :: vs)
           = do let Just varg = getArgPos ix nargs
                    | Nothing => pure False
                let Just varg' = getArgPos iy nargs'

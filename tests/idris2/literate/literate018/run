@@ -1,0 +1,3 @@
+. ../../../testutils.sh
+
+check Test.lidr.md
