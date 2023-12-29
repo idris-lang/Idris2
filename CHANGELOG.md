@@ -2,12 +2,29 @@
 
 ## [Next version]
 
+### Language changes
+
+### Compiler changes
+
+### Library changes
+
+#### Prelude
+
+#### Base
+
+* `Data.List.Lazy` was moved from `contrib` to `base`.
+
+#### Contrib
+
+* `Data.List.Lazy` was moved from `contrib` to `base`.
+
 ### Backend changes
 
 #### RefC
 
 * Supress code generation of _arglist wrappers to reduce code size and compilation time.
 * Removed Value_Arglist to reduce Closure's allocation overhead and make code simply.
+
 
 ## v0.7.0
 
