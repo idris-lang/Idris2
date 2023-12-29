@@ -71,10 +71,10 @@ Value *tailcall_apply_closure(Value *_clos, Value *arg) {
 }
 
 Value *trampoline(Value *it) {
-  while (it && it->header.tag == CLOSURE_TAG)
-  {
+  while (it && it->header.tag == CLOSURE_TAG) {
     Value_Closure *clos = (Value_Closure *)it;
-    if (clos->filled < clos->arity) break;
+    if (clos->filled < clos->arity)
+      break;
 
     it = idris2_dispatch_closure(clos);
     removeReference((Value *)clos);
