@@ -384,34 +384,17 @@ addHeader = update HeaderFiles . insert
 
 
 
-makeArglist : {auto a : Ref ArgCounter Nat}
-           -> {auto t : Ref TemporaryVariableTracker (List (List String))}
-           -> {auto oft : Ref OutfileText Output}
-           -> {auto il : Ref IndentLevel Nat}
-           -> Nat
-           -> List AVar
-           -> Core (String)
-makeArglist missing xs = do
-    c <- getNextCounter
-    let arglist = "arglist_" ++ (show c)
-    emit EmptyFC $  "Value_Arglist *"
-                 ++ arglist
-                 ++ " = newArglist(" ++ show missing
-                 ++ "," ++ show (length xs + missing)
-                 ++ ");"
-    pushArgToArglist arglist xs 0
-    pure arglist
-where
-    pushArgToArglist : String
-                    -> List AVar
-                    -> Nat
-                    -> Core ()
-    pushArgToArglist arglist [] k = pure ()
-    pushArgToArglist arglist (arg :: args) k = do
-        emit EmptyFC $ arglist
-                    ++ "->args[" ++ show k ++ "] = "
-                    ++ " newReference(" ++ varName arg ++");"
-        pushArgToArglist arglist args (S k)
+fillClosureArgs : {auto oft : Ref OutfileText Output}
+                -> {auto il : Ref IndentLevel Nat}
+                -> String
+                -> List AVar
+                -> Bits8
+                -> Core ()
+fillClosureArgs clos [] k = pure ()
+fillClosureArgs clos (arg :: args) k = do
+     emit EmptyFC $ clos ++ "->args[" ++ show k ++ "] = newReference(" ++ varName arg ++");"
+     fillClosureArgs clos args (k + 1)
+
 
 fillConstructorArgs : {auto oft : Ref OutfileText Output}
                    -> {auto il : Ref IndentLevel Nat}
@@ -637,21 +620,24 @@ mutual
         pure $ MkRS returnLine returnLine
     cStatementsFromANF (AAppName fc _ n args) _ = do
         emit fc $ ("// start " ++ cName n ++ "(" ++ showSep ", " (map (\v => varName v) args) ++ ")")
-        arglist <- makeArglist 0 args
-        c <- getNextCounter
-        let closure_name = "closure_" ++ show c
-        emit fc $ "Value *"
+        let closure_name = "closure_" ++ show !(getNextCounter)
+        let nargs = length args
+        emit fc $ "Value_Closure *"
                ++ closure_name
-               ++ " = (Value*)makeClosureFromArglist("
-               ++ "(Value *(*)())" ++ cName n
-               ++ ", "
-               ++ arglist
-               ++ ");"
+               ++ " = makeClosure((Value *(*)())" ++ cName n
+               ++ ", " ++ show nargs ++ "," ++ show nargs ++ ");"
+        fillClosureArgs closure_name args 0
         emit fc $ ("// end   " ++ cName n ++ "(" ++ showSep ", " (map (\v => varName v) args) ++ ")")
-        pure $ MkRS ("trampoline(" ++ closure_name ++ ")") closure_name
+        pure $ MkRS ("trampoline((Value *)" ++ closure_name ++ ")") ("((Value *)" ++ closure_name ++ ")")
     cStatementsFromANF (AUnderApp fc n missing args) _ = do
-        arglist <- makeArglist missing args
-        let returnLine = "(Value*)makeClosureFromArglist((Value *(*)())" ++ cName n ++ ", " ++ arglist ++ ")"
+        let closure_name = "closure_" ++ show !(getNextCounter)
+        let nargs = length args
+        emit fc $ "Value_Closure *"
+               ++ closure_name
+               ++ " = makeClosure((Value *(*)())" ++ cName n
+               ++ ", " ++ show (nargs + missing) ++ "," ++ show nargs ++ ");"
+        fillClosureArgs closure_name args 0
+        let returnLine = "((Value *)" ++ closure_name ++ ")"
         pure $ MkRS returnLine returnLine
     cStatementsFromANF (AApp fc _ closure arg) _ =
         pure $ MkRS ("apply_closure(" ++ varName closure ++ ", " ++ varName arg ++ ")")

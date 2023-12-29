@@ -2,6 +2,13 @@
 
 ## [Next version]
 
+### Backend changes
+
+#### RefC
+
+* Supress code generation of _arglist wrappers to reduce code size and compilation time.
+* Removed Value_Arglist to reduce Closure's allocation overhead and make code simply.
+
 ## v0.7.0
 
 ### Language changes

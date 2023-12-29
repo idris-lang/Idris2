@@ -179,8 +179,7 @@ Value *stringIteratorNew(char *str) {
   memcpy(it->str, str, l + 1); // Take a copy of str, in case it gets GCed
 
   return (Value *)makeGCPointer(
-      it, makeClosureFromArglist((Value * (*)()) onCollectStringIterator,
-                                 newArglist(2, 2)));
+      it, makeClosure((Value * (*)()) onCollectStringIterator, 2, 0));
 }
 
 Value *onCollectStringIterator(Value_Pointer *ptr, void *null) {

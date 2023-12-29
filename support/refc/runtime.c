@@ -7,13 +7,13 @@ void missing_ffi() {
   exit(1);
 }
 
-Value *idris2_dispatch_arglist(Value *(*f)(), Value_Arglist *args) {
-  Value **xs = args->args;
+static Value *idris2_dispatch_closure(Value_Closure *clo) {
+  Value ** const xs = clo->args;
+  Value *(* const f)() = clo->f;
 
-  switch (args->total) {
+  switch (clo->arity) {
   default:
-    fprintf(stderr, "%s: %d params not is suppoted.", __FUNCTION__,
-            args->total);
+    fprintf(stderr, "%s: %d params not is suppoted.", __FUNCTION__, clo->arity);
     exit(1);
 
   case 0:
@@ -60,56 +60,32 @@ Value *idris2_dispatch_arglist(Value *(*f)(), Value_Arglist *args) {
   }
 }
 
-Value *apply_closure(Value *_clos, Value *arg) {
-  // create a new arg list
-  Value_Arglist *oldArgs = ((Value_Closure *)_clos)->arglist;
-  Value_Arglist *newArgs = newArglist(0, oldArgs->total);
-  newArgs->filled = oldArgs->filled + 1;
-  // add argument to new arglist
-  for (int i = 0; i < oldArgs->filled; i++) {
-    newArgs->args[i] = newReference(oldArgs->args[i]);
-  }
-  newArgs->args[oldArgs->filled] = newReference(arg);
-
+Value *tailcall_apply_closure(Value *_clos, Value *arg) {
+  // create a new closure and copy args.
   Value_Closure *clos = (Value_Closure *)_clos;
-
-  // check if enough arguments exist
-  if (newArgs->filled >= newArgs->total) {
-    Value *(*f)() = clos->f;
-    while (1) {
-      Value *retVal = idris2_dispatch_arglist(f, newArgs);
-      removeReference((Value *)newArgs);
-      if (!retVal || retVal->header.tag != COMPLETE_CLOSURE_TAG) {
-        return retVal;
-      }
-      f = ((Value_Closure *)retVal)->f;
-      newArgs = ((Value_Closure *)retVal)->arglist;
-      newArgs = (Value_Arglist *)newReference((Value *)newArgs);
-      removeReference(retVal);
-    }
-  }
-
-  return (Value *)makeClosureFromArglist(clos->f, newArgs);
+  Value_Closure *newclos = makeClosure(clos->f, clos->arity, clos->filled + 1);
+  for (int i = 0; i < clos->filled; ++i)
+    newclos->args[i] = newReference(clos->args[i]);
+  newclos->args[clos->filled] = newReference(arg);
+  return (Value *)newclos;
 }
 
-Value *tailcall_apply_closure(Value *_clos, Value *arg) {
-  // create a new arg list
-  Value_Arglist *oldArgs = ((Value_Closure *)_clos)->arglist;
-  Value_Arglist *newArgs = newArglist(0, oldArgs->total);
-  newArgs->filled = oldArgs->filled + 1;
-  // add argument to new arglist
-  for (int i = 0; i < oldArgs->filled; i++) {
-    newArgs->args[i] = newReference(oldArgs->args[i]);
+Value *trampoline(Value *closure) {
+  Value_Closure *clos = (Value_Closure *)closure;
+
+  // dispatch a satisfied closure.
+  while (clos->filled >= clos->arity) {
+    Value *r = idris2_dispatch_closure(clos);
+    removeReference((Value *)clos);
+    if (!r || r->header.tag != CLOSURE_TAG)
+      return r;
+    clos = (Value_Closure *)r;
   }
-  newArgs->args[oldArgs->filled] = newReference(arg);
+  return (Value *)clos;
+}
 
-  Value_Closure *clos = (Value_Closure *)_clos;
-
-  // check if enough arguments exist
-  if (newArgs->filled >= newArgs->total)
-    return (Value *)makeClosureFromArglist(clos->f, newArgs);
-
-  return (Value *)makeClosureFromArglist(clos->f, newArgs);
+Value *apply_closure(Value *_clos, Value *arg) {
+  return trampoline(tailcall_apply_closure(_clos, arg));
 }
 
 int extractInt(Value *v) {
@@ -141,21 +117,3 @@ int extractInt(Value *v) {
   }
 }
 
-Value *trampoline(Value *closure) {
-  Value *(*f)() = ((Value_Closure *)closure)->f;
-  Value_Arglist *_arglist = ((Value_Closure *)closure)->arglist;
-  Value_Arglist *arglist = (Value_Arglist *)newReference((Value *)_arglist);
-  removeReference(closure);
-  while (1) {
-    Value *retVal = idris2_dispatch_arglist(f, arglist);
-    removeReference((Value *)arglist);
-    if (!retVal || retVal->header.tag != COMPLETE_CLOSURE_TAG) {
-      return retVal;
-    }
-    f = ((Value_Closure *)retVal)->f;
-    arglist = ((Value_Closure *)retVal)->arglist;
-    arglist = (Value_Arglist *)newReference((Value *)arglist);
-    removeReference(retVal);
-  }
-  return NULL;
-}

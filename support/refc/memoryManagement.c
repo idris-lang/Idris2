@@ -9,15 +9,6 @@ Value *newValue(size_t size) {
   return retVal;
 }
 
-Value_Arglist *newArglist(int missing, int total) {
-  Value_Arglist *retVal = IDRIS2_NEW_VALUE(Value_Arglist);
-  retVal->header.tag = ARGLIST_TAG;
-  retVal->total = total;
-  retVal->filled = total - missing;
-  retVal->args = (Value **)malloc(sizeof(Value *) * total);
-  memset(retVal->args, 0, sizeof(Value *) * total);
-  return retVal;
-}
 
 Value_Constructor *newConstructor(int total, int tag, const char *name) {
   Value_Constructor *retVal = IDRIS2_NEW_VALUE(Value_Constructor);
@@ -32,15 +23,13 @@ Value_Constructor *newConstructor(int total, int tag, const char *name) {
   return retVal;
 }
 
-Value_Closure *makeClosureFromArglist(Value *(*f)(), Value_Arglist *arglist) {
-  Value_Closure *retVal = IDRIS2_NEW_VALUE(Value_Closure);
+Value_Closure *makeClosure(Value *(*f)(), uint8_t arity, uint8_t filled) {
+  Value_Closure *retVal = (Value_Closure*)newValue(sizeof(Value_Closure) + sizeof(Value*) * filled);
   retVal->header.tag = CLOSURE_TAG;
-  retVal->arglist = arglist; // (Value_Arglist *)newReference((Value*)arglist);
   retVal->f = f;
-  if (retVal->arglist->filled >= retVal->arglist->total) {
-    retVal->header.tag = COMPLETE_CLOSURE_TAG;
-  }
-  return retVal;
+  retVal->arity = arity;
+  retVal->filled = filled;
+  return retVal; // caller must initialize args[].
 }
 
 Value_Double *makeDouble(double d) {
@@ -229,24 +218,11 @@ void removeReference(Value *elem) {
 
     case CLOSURE_TAG: {
       Value_Closure *cl = (Value_Closure *)elem;
-      Value_Arglist *al = cl->arglist;
-      removeReference((Value *)al);
+      for (int i = 0; i < cl->filled; ++i)
+        removeReference(cl->args[i]);
       break;
     }
-    case COMPLETE_CLOSURE_TAG: {
-      Value_Closure *cl = (Value_Closure *)elem;
-      Value_Arglist *al = cl->arglist;
-      removeReference((Value *)al);
-      break;
-    }
-    case ARGLIST_TAG: {
-      Value_Arglist *al = (Value_Arglist *)elem;
-      for (int i = 0; i < al->filled; i++) {
-        removeReference(al->args[i]);
-      }
-      free(al->args);
-      break;
-    }
+
     case CONSTRUCTOR_TAG: {
       Value_Constructor *constr = (Value_Constructor *)elem;
       for (int i = 0; i < constr->total; i++) {
