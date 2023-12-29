@@ -7,7 +7,7 @@ void missing_ffi() {
   exit(1);
 }
 
-static Value *idris2_dispatch_closure(Value_Closure *clo) {
+static inline Value *idris2_dispatch_closure(Value_Closure *clo) {
   Value **const xs = clo->args;
   Value *(*const f)() = clo->f;
 
@@ -70,18 +70,16 @@ Value *tailcall_apply_closure(Value *_clos, Value *arg) {
   return (Value *)newclos;
 }
 
-Value *trampoline(Value *closure) {
-  Value_Closure *clos = (Value_Closure *)closure;
+Value *trampoline(Value *it) {
+  while (it && it->header.tag == CLOSURE_TAG)
+  {
+    Value_Closure *clos = (Value_Closure *)it;
+    if (clos->filled < clos->arity) break;
 
-  // dispatch a satisfied closure.
-  while (clos->filled >= clos->arity) {
-    Value *r = idris2_dispatch_closure(clos);
+    it = idris2_dispatch_closure(clos);
     removeReference((Value *)clos);
-    if (!r || r->header.tag != CLOSURE_TAG)
-      return r;
-    clos = (Value_Closure *)r;
   }
-  return (Value *)clos;
+  return (Value *)it;
 }
 
 Value *apply_closure(Value *_clos, Value *arg) {
