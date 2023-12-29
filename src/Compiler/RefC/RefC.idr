@@ -617,7 +617,7 @@ mutual
                        ++ (concat $ intersperse ", " $ map varName args) ++ "));"
         emit fc $ "// end   " ++ cName n ++ "(" ++ showSep ", " (map (\v => varName v) args) ++ ")"
         pure $ "((Value *)" ++ closure_name ++ ")"
-            
+
     cStatementsFromANF (AUnderApp fc n missing args) _ = do
         let closure_name = "closure_" ++ show !(getNextCounter)
         let nargs = length args
