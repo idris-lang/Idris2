@@ -8,8 +8,8 @@ void missing_ffi() {
 }
 
 static Value *idris2_dispatch_closure(Value_Closure *clo) {
-  Value ** const xs = clo->args;
-  Value *(* const f)() = clo->f;
+  Value **const xs = clo->args;
+  Value *(*const f)() = clo->f;
 
   switch (clo->arity) {
   default:
@@ -116,4 +116,3 @@ int extractInt(Value *v) {
     return -1;
   }
 }
-
