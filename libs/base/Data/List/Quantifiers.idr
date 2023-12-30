@@ -170,7 +170,7 @@ namespace All
   public export
   (++) : All p xs -> All p ys -> All p (xs ++ ys)
   [] ++ pys = pys
-  (px :: pxs) ++ pys = px :: (pxs ++ pys)
+  (px :: pxs) ++ pys = px :: (Quantifiers.(++) pxs pys)
 
   export
   splitAt : (xs : List a) -> All p (xs ++ ys) -> (All p xs, All p ys)
