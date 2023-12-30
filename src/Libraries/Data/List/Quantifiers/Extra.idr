@@ -15,7 +15,7 @@ lookup v (px :: pxs)
       Yes Refl => Just px
 
 -- TODO delete this function once we release the next compiler version
--- (after 0.7.0) as the function has been replicated in base
+-- (after 0.7.0) as it has been replicated in base's Data.List.Quantifiers
 export
 (++) : All p xs -> All p ys -> All p (xs ++ ys)
 [] ++ pys = pys
