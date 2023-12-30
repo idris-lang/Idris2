@@ -1,0 +1,203 @@
+1/1: Building UseGetOpt (UseGetOpt.idr)
+Now compiling the executable: use-get-opt
+======== Good ========
+----------
+raw args: []
+non-options: none
+unrecognised: none
+errors: none
+config: MkConfig Nothing (-1) "" [< ] False False [< ]
+----------
+raw args: ["--field-a", "12"]
+non-options: none
+unrecognised: none
+errors: none
+config: MkConfig (Just 12) (-1) "" [< ] False False [< ]
+----------
+raw args: ["--field-a", "12", "--field-a", "13"]
+non-options: none
+unrecognised: none
+errors: none
+config: MkConfig (Just 13) (-1) "" [< ] False False [< ]
+----------
+raw args: ["--field-a=12", "--field-a", "13"]
+non-options: none
+unrecognised: none
+errors: none
+config: MkConfig (Just 13) (-1) "" [< ] False False [< ]
+----------
+raw args: ["--field-a", "12", "--field-a=13"]
+non-options: none
+unrecognised: none
+errors: none
+config: MkConfig (Just 13) (-1) "" [< ] False False [< ]
+----------
+raw args: ["up"]
+non-options: none
+unrecognised: none
+errors: none
+config: MkConfig Nothing (-1) "" [< ] False False [< Up]
+----------
+raw args: ["up", "down", "right"]
+non-options: none
+unrecognised: none
+errors: none
+config: MkConfig Nothing (-1) "" [< ] False False [< Up, Down, Right]
+----------
+raw args: ["-b", "12", "up"]
+non-options: none
+unrecognised: none
+errors: none
+config: MkConfig Nothing 12 "" [< ] False False [< Up]
+----------
+raw args: ["up", "-c", "12 "]
+non-options: none
+unrecognised: none
+errors: none
+config: MkConfig Nothing (-1) "12 " [< ] False False [< Up]
+----------
+raw args: ["up", "-c", "12 "]
+non-options: none
+unrecognised: none
+errors: none
+config: MkConfig Nothing (-1) "12 " [< ] False False [< Up]
+----------
+raw args: ["up", "-c", "12 ", "-e"]
+non-options: none
+unrecognised: none
+errors: none
+config: MkConfig Nothing (-1) "12 " [< ] True False [< Up]
+----------
+raw args: ["up", "-e", "-c", "12 "]
+non-options: none
+unrecognised: none
+errors: none
+config: MkConfig Nothing (-1) "12 " [< ] True False [< Up]
+----------
+raw args: ["up", "-c12 ", "-e", "true"]
+non-options: none
+unrecognised: none
+errors:
+  - Unknown command `true`
+config: MkConfig Nothing (-1) "12 " [< ] True False [< Up]
+----------
+raw args: ["up", "-c12 ", "-e", "false"]
+non-options: none
+unrecognised: none
+errors:
+  - Unknown command `false`
+config: MkConfig Nothing (-1) "12 " [< ] True False [< Up]
+----------
+raw args: ["up", "-c12 ", "-etrue"]
+non-options: none
+unrecognised: none
+errors: none
+config: MkConfig Nothing (-1) "12 " [< ] True False [< Up]
+----------
+raw args: ["up", "-c12 ", "-efalse"]
+non-options: none
+unrecognised: none
+errors: none
+config: MkConfig Nothing (-1) "12 " [< ] False False [< Up]
+----------
+raw args: ["up", "-f", "-c12 ", "-etrue"]
+non-options: none
+unrecognised: none
+errors: none
+config: MkConfig Nothing (-1) "12 " [< ] True True [< Up]
+----------
+raw args: ["up", "-fc12 ", "-etrue"]
+non-options: none
+unrecognised: none
+errors: none
+config: MkConfig Nothing (-1) "12 " [< ] True True [< Up]
+----------
+raw args: ["-b-15"]
+non-options: none
+unrecognised: none
+errors: none
+config: MkConfig Nothing (-15) "" [< ] False False [< ]
+----------
+======== Bad ========
+----------
+raw args: ["--fled-a"]
+non-options: none
+unrecognised:
+  - --fled-a
+errors: none
+config: MkConfig Nothing (-1) "" [< ] False False [< ]
+----------
+raw args: ["--field-a", "12", "--fled-a", "--field-a", "13"]
+non-options: none
+unrecognised:
+  - --fled-a
+errors: none
+config: MkConfig (Just 13) (-1) "" [< ] False False [< ]
+----------
+raw args: ["--field-a", "12", "--field-a", "--field-a", "13"]
+non-options: none
+unrecognised: none
+errors:
+  - Cannot parse field A with `--field-a`
+  - Unknown command `13`
+config: MkConfig (Just 12) (-1) "" [< ] False False [< ]
+----------
+raw args: ["--field-a", "12", "--field-a", "13", "--field-a"]
+non-options: none
+unrecognised: none
+errors:
+  - option `--field-a' requires an argument <bits-64>
+
+config: MkConfig (Just 13) (-1) "" [< ] False False [< ]
+----------
+raw args: ["--field-c", "12", "--field-b", "13", "--field-a"]
+non-options: none
+unrecognised: none
+errors:
+  - option `--field-a' requires an argument <bits-64>
+
+config: MkConfig Nothing 13 "12" [< ] False False [< ]
+----------
+raw args: ["--field-c", "12", "--field-b", "13", "--field-a="]
+non-options: none
+unrecognised: none
+errors:
+  - Cannot parse field A with ``
+config: MkConfig Nothing 13 "12" [< ] False False [< ]
+----------
+raw args: ["--field-c", "12", "--field-a=", "--field-b", "13"]
+non-options: none
+unrecognised: none
+errors:
+  - Cannot parse field A with ``
+config: MkConfig Nothing 13 "12" [< ] False False [< ]
+----------
+raw args: ["--field-c", "12", "--field-b", "13", "--field-f=16"]
+non-options: none
+unrecognised: none
+errors:
+  - option `--field-f' doesn't allow an argument
+
+config: MkConfig Nothing 13 "12" [< ] False False [< ]
+----------
+raw args: ["--field-a", "12x"]
+non-options: none
+unrecognised: none
+errors:
+  - Cannot parse field A with `12x`
+config: MkConfig Nothing (-1) "" [< ] False False [< ]
+----------
+raw args: ["-b-15f"]
+non-options: none
+unrecognised: none
+errors:
+  - Cannot parse field B with `-15f`
+config: MkConfig Nothing (-1) "" [< ] False False [< ]
+----------
+raw args: ["lefc", "-fe", "up", "rigth"]
+non-options: none
+unrecognised: none
+errors:
+  - Unknown command `lefc`
+  - Unknown command `rigth`
+config: MkConfig Nothing (-1) "" [< ] True True [< Up]

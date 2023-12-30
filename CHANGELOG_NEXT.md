@@ -23,3 +23,5 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
 
+* Existing `System.Console.GetOpt` was extended to support errors during options
+  parsing in a backward-compatible way.
