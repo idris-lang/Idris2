@@ -14,7 +14,7 @@ lookup v (px :: pxs)
       No _ => lookup v pxs
       Yes Refl => Just px
 
--- this function can be deleted once we release the next compiler version
+-- TODO delete this function once we release the next compiler version
 -- (after 0.7.0) as the function has been replicated in base
 export
 (++) : All p xs -> All p ys -> All p (xs ++ ys)
