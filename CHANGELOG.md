@@ -6,6 +6,12 @@
 
 ### Compiler changes
 
+### Backend changes
+
+#### RefC
+
+* Improved efficiency by unboxing small integer types
+
 ### Library changes
 
 #### Prelude
