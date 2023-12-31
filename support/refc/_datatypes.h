@@ -10,17 +10,10 @@
 #include "buffer.h"
 
 #define NO_TAG 0
-#define BITS8_TAG 1
-#define BITS16_TAG 2
-#define BITS32_TAG 3
 #define BITS64_TAG 4
-#define INT8_TAG 5
-#define INT16_TAG 6
-#define INT32_TAG 7
 #define INT64_TAG 8
 #define INTEGER_TAG 9
 #define DOUBLE_TAG 10
-#define CHAR_TAG 11
 #define STRING_TAG 12
 
 #define CLOSURE_TAG 15
@@ -37,7 +30,6 @@
 #define CONDITION_TAG 31
 
 #define COMPLETE_CLOSURE_TAG 98 // for trampoline tail recursion handling
-#define WORLD_TAG 99
 
 typedef struct {
   int refCounter;
@@ -51,40 +43,23 @@ typedef struct {
   // followed by type-specific payload.
 } Value;
 
-typedef struct {
-  Value_header header;
-  uint8_t ui8;
-} Value_Bits8;
-
-typedef struct {
-  Value_header header;
-  uint16_t ui16;
-} Value_Bits16;
-
-typedef struct {
-  Value_header header;
-  uint32_t ui32;
-} Value_Bits32;
+#define idris2_vp_is_unboxed(p) ((uintptr_t)(p)&7)
+#define idris2_vp_to_Bits64(p) (((Value_Bits64 *)(p))->ui64)
+#define idris2_vp_to_Bits32(p) ((uint32_t)((uintptr_t)(p) >> 32))
+#define idris2_vp_to_Bits16(p) ((uint16_t)((uintptr_t)(p) >> 32))
+#define idris2_vp_to_Bits8(p) ((uint8_t)((uintptr_t)(p) >> 32))
+#define idris2_vp_to_Int64(p) (((Value_Int64 *)(p))->i64)
+#define idris2_vp_to_Int32(p) ((int32_t)((uintptr_t)(p) >> 32))
+#define idris2_vp_to_Int16(p) ((int16_t)((uintptr_t)(p) >> 32))
+#define idris2_vp_to_Int8(p) ((int8_t)((uintptr_t)(p) >> 32))
+#define idris2_vp_to_Char(p) ((unsigned char)((uintptr_t)(p) >> 32))
+#define idris2_vp_to_Double(p) (((Value_Double *)(p))->d)
+#define idris2_vp_to_Bool(p) (idris2_vp_to_Int8(p))
 
 typedef struct {
   Value_header header;
   uint64_t ui64;
 } Value_Bits64;
-
-typedef struct {
-  Value_header header;
-  int8_t i8;
-} Value_Int8;
-
-typedef struct {
-  Value_header header;
-  int16_t i16;
-} Value_Int16;
-
-typedef struct {
-  Value_header header;
-  int32_t i32;
-} Value_Int32;
 
 typedef struct {
   Value_header header;
@@ -100,11 +75,6 @@ typedef struct {
   Value_header header;
   double d;
 } Value_Double;
-
-typedef struct {
-  Value_header header;
-  unsigned char c;
-} Value_Char;
 
 typedef struct {
   Value_header header;
@@ -176,8 +146,3 @@ typedef struct {
   int filled;
   int total;
 } IORef_Storage;
-
-typedef struct {
-  Value_header header;
-  IORef_Storage *listIORefs;
-} Value_World;

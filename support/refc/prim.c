@@ -65,29 +65,29 @@ Value *writeIORef(Value *erased, Value *_index, Value *new_value,
 
 Value *sysOS(void) {
 #ifdef _WIN32
-  return (Value *)makeString("windows");
+  return (Value *)idris2_mkString("windows");
 #elif _WIN64
-  return (Value *)makeString("windows");
+  return (Value *)idris2_mkString("windows");
 #elif __APPLE__ || __MACH__
-  return (Value *)makeString("macOS");
+  return (Value *)idris2_mkString("macOS");
 #elif __linux__
-  return (Value *)makeString("Linux");
+  return (Value *)idris2_mkString("Linux");
 #elif __FreeBSD__
-  return (Value *)makeString("FreeBSD");
+  return (Value *)idris2_mkString("FreeBSD");
 #elif __OpenBSD__
-  return (Value *)makeString("OpenBSD");
+  return (Value *)idris2_mkString("OpenBSD");
 #elif __NetBSD__
-  return (Value *)makeString("NetBSD");
+  return (Value *)idris2_mkString("NetBSD");
 #elif __DragonFly__
-  return (Value *)makeString("DragonFly");
+  return (Value *)idris2_mkString("DragonFly");
 #elif __unix || __unix__
-  return (Value *)makeString("Unix");
+  return (Value *)idris2_mkString("Unix");
 #else
-  return (Value *)makeString("Other");
+  return (Value *)idris2_mkString("Other");
 #endif
 }
 
-Value *sysCodegen(void) { return (Value *)makeString("refc"); }
+Value *sysCodegen(void) { return (Value *)idris2_mkString("refc"); }
 
 Value *idris2_crash(Value *msg) {
   Value_String *str = (Value_String *)msg;
@@ -103,7 +103,7 @@ Value *idris2_crash(Value *msg) {
 // // -----------------------------------
 
 Value *newArray(Value *erased, Value *_length, Value *v, Value *_word) {
-  int length = extractInt(_length);
+  int length = idris2_vp_to_Int64(_length); // it sould Int32
   Value_Array *a = makeArray(length);
 
   for (int i = 0; i < length; i++) {

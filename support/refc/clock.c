@@ -5,11 +5,13 @@
 
 Value *clockTimeMonotonic() { return clockTimeUtc(); }
 
-Value *clockTimeUtc() { return (Value *)makeBits64(time(NULL) * NSEC_PER_SEC); }
+Value *clockTimeUtc() {
+  return (Value *)idris2_mkBits64(time(NULL) * NSEC_PER_SEC);
+}
 
 Value *clockTimeProcess() {
   uint64_t time_ns = clock() / CLOCKS_PER_NSEC;
-  return (Value *)makeBits64(time_ns);
+  return (Value *)idris2_mkBits64(time_ns);
 }
 
 Value *clockTimeThread() { return clockTimeProcess(); }
