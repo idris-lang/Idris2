@@ -45,7 +45,6 @@ typedef struct {
   // followed by type-specific payload.
 } Value;
 
-
 /* expcted at least 4bytes for Value_header alignment. */
 #define idris2_vp_is_unboxed(p) ((uintptr_t)(p)&3)
 
