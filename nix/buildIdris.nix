@@ -6,7 +6,7 @@ let
   idrName = "idris2-${idris2-version}";
   libSuffix = "lib/${idrName}";
   lib-dirs =
-    lib.strings.concatMapStringsSep ":" (p: "${p}/${libSuffix}") idrisLibraries;
+    lib.strings.makeSearchPath libSuffix idrisLibraries;
   drvAttrs = builtins.removeAttrs attrs [ "idrisLibraries" ];
 in rec {
   executable = stdenv.mkDerivation (drvAttrs // {
