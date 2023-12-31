@@ -48,6 +48,15 @@
             inherit idris2-version;
             idris2 = idris2Pkg;
           };
+          idris2ApiPkg = buildIdris {
+            src = ./.;
+            projectName = "idris2api";
+            idrisLibraries = [ ];
+            preBuild = ''
+              export IDRIS2_PREFIX=$out/lib
+              make src/IdrisPaths.idr
+            '';
+          };
         in rec {
           checks = import ./nix/test.nix {
             inherit (pkgs) system stdenv runCommand lib;
@@ -57,6 +66,7 @@
           packages = {
             support = idris2Support;
             idris2 = idris2Pkg;
+            idris2-api = idris2ApiPkg.library { withSource = true; };
           } // (import ./nix/text-editor.nix {
             inherit pkgs idris-emacs-src idris2Pkg;
           });
