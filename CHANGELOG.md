@@ -10,7 +10,8 @@
 
 #### RefC
 
-* Improved efficiency by unboxing small integer types
+* Improved efficiency by unboxing small integer types.
+* Rename C function to avoid confliction. But only a part.
 
 ### Library changes
 
