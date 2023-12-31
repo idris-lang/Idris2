@@ -50,10 +50,24 @@ Value *idris2_mkDouble(double d) {
   return (Value *)retVal;
 }
 
+Value *idris2_mkBits32_Boxed(uint32_t i) {
+  Value_Bits32 *retVal = IDRIS2_NEW_VALUE(Value_Bits32);
+  retVal->header.tag = BITS32_TAG;
+  retVal->ui32 = i;
+  return (Value *)retVal;
+}
+
 Value *idris2_mkBits64(uint64_t i) {
   Value_Bits64 *retVal = IDRIS2_NEW_VALUE(Value_Bits64);
   retVal->header.tag = BITS64_TAG;
   retVal->ui64 = i;
+  return (Value *)retVal;
+}
+
+Value *idris2_mkInt32_Boxed(int32_t i) {
+  Value_Int32 *retVal = IDRIS2_NEW_VALUE(Value_Int32);
+  retVal->header.tag = INT32_TAG;
+  retVal->i32 = i;
   return (Value *)retVal;
 }
 
@@ -147,7 +161,9 @@ void removeReference(Value *elem) {
   // recursively remove all references to all children
   {
     switch (elem->header.tag) {
+    case BITS32_TAG:
     case BITS64_TAG:
+    case INT32_TAG:
     case INT64_TAG:
       /* nothing to delete, added for sake of completeness */
       break;

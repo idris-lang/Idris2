@@ -73,8 +73,12 @@ int extractInt(Value *v) {
     return (int)idris2_vp_to_Int32(v);
 
   switch (v->header.tag) {
+  case BITS32_TAG:
+    return (int)((Value_Bits32 *)v)->ui32;
   case BITS64_TAG:
     return (int)((Value_Bits64 *)v)->ui64;
+  case INT32_TAG:
+    return (int)((Value_Int32 *)v)->i32;
   case INT64_TAG:
     return (int)((Value_Int64 *)v)->i64;
   case INTEGER_TAG:
