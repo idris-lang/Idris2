@@ -68,7 +68,7 @@ Value *tailcall_apply_closure(Value *_clos, Value *arg) {
   return (Value *)makeClosureFromArglist(clos->f, newArgs);
 }
 
-int extractInt(Value *v) {
+int idris2_extractInt(Value *v) {
   if (idris2_vp_is_unboxed(v))
     return (int)idris2_vp_to_Int32(v);
 

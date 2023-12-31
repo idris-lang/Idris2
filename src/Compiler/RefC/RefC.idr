@@ -733,7 +733,7 @@ mutual
         emit fc newValueLine
         case integer_switch alts of
             True => do
-                emit fc $ "switch(extractInt(" ++ varName sc ++")){"
+                emit fc $ "switch(idris2_extractInt(" ++ varName sc ++")){"
                 constBlockSwitch alts switchReturnVar 0 tailPosition
                 constDefaultBlock def switchReturnVar tailPosition
                 emit EmptyFC "}"
