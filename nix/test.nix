@@ -38,5 +38,5 @@ let
 in withTests testsTemplate templateBuildDefault
 // withTests testsTemplateWithDeps templateBuildWithDeps // {
   idris2Tests =
-    idris.defaultPackage.${system}.overrideAttrs (a: { doCheck = true; });
+    idris.packages.${system}.default.overrideAttrs (a: { doCheck = true; });
 }
