@@ -1,0 +1,6 @@
+package a-test
+
+depends = contrib
+
+main = UseGetOpt
+executable = use-get-opt

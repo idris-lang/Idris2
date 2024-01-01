@@ -19,6 +19,8 @@
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
+* Existing `System.Console.GetOpt` was extended to support errors during options
+  parsing in a backward-compatible way.
 
 ### Backend changes
 
@@ -26,7 +28,6 @@
 
 * Supress code generation of _arglist wrappers to reduce code size and compilation time.
 * Removed Value_Arglist to reduce Closure's allocation overhead and make code simply.
-
 
 ## v0.7.0
 
