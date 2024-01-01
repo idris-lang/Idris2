@@ -30,17 +30,34 @@ prim__integerToNat i
       then believe_me i
       else Z
 
+||| Convert a non-negative integer to a `Nat`
+public export
+nonNegativeIntegerToNat :
+    (x : Integer) ->
+    {auto 0 prf : (x >= 0) === True} ->
+    Nat
+nonNegativeIntegerToNat 0 = Z
+nonNegativeIntegerToNat x =
+    let -- x >= 0 and x != 0
+        -- so x >= 0 so x - 1 >= 0
+        prf = believe_me Refl
+     in S $ nonNegativeIntegerToNat {prf}
+          $ assert_smaller x $ x - 1
+
 public export
 integerToNat : Integer -> Nat
 integerToNat 0 = Z -- Force evaluation and hence caching of x at compile time
-integerToNat x
-  = if intToBool (prim__lte_Integer x 0)
-       then Z
-       else S (assert_total (integerToNat (prim__sub_Integer x 1)))
+integerToNat x with (x >= 0) proof prf
+  integerToNat x | True = nonNegativeIntegerToNat x {prf}
+  integerToNat x | False = Z
 
--- %builtin IntegerToNatural Prelude.Types.integerToNat
+public export
+natToInteger : Nat -> Integer
+natToInteger Z = 0
+natToInteger (S k) = 1 + natToInteger k
+                         -- integer (+) may be non-linear in second
+                         -- argument
 
--- Define separately so we can spot the name when optimising Nats
 ||| Add two natural numbers.
 ||| @ x the number to case-split on
 ||| @ y the other number
@@ -48,6 +65,8 @@ public export
 plus : (x : Nat) -> (y : Nat) -> Nat
 plus Z y = y
 plus (S k) y = S (plus k y)
+
+%transform "Nat/plus" plus x y = integerToNat $ natToInteger x + natToInteger y
 
 ||| Subtract natural numbers.
 ||| If the second number is larger than the first, return 0.
@@ -57,11 +76,15 @@ minus Z        right     = Z
 minus left     Z         = left
 minus (S left) (S right) = minus left right
 
+%transform "Nat/minus" minus x y = integerToNat $ natToInteger x - natToInteger y
+
 ||| Multiply natural numbers.
 public export
 mult : (x : Nat) -> Nat -> Nat
 mult Z y = Z
 mult (S k) y = plus y (mult k y)
+
+%transform "Nat/mult" mult x y = integerToNat $ natToInteger x * natToInteger y
 
 public export
 Num Nat where
@@ -70,18 +93,18 @@ Num Nat where
 
   fromInteger x = integerToNat x
 
--- used for nat hack
 public export
 equalNat : (m, n : Nat) -> Bool
 equalNat Z Z = True
 equalNat (S j) (S k) = equalNat j k
 equalNat _ _ = False
 
+%transform "Nat/equalNat" equalNat x y = natToInteger x == natToInteger y
+
 public export
 Eq Nat where
   (==) = equalNat
 
--- used for nat hack
 public export
 compareNat : (m, n : Nat) -> Ordering
 compareNat Z Z = EQ
@@ -89,18 +112,11 @@ compareNat Z (S k) = LT
 compareNat (S k) Z = GT
 compareNat (S j) (S k) = compareNat j k
 
+%transform "Nat/compareNat" compareNat x y = compare (natToInteger x) (natToInteger y)
+
 public export
 Ord Nat where
   compare = compareNat
-
-public export
-natToInteger : Nat -> Integer
-natToInteger Z = 0
-natToInteger (S k) = 1 + natToInteger k
-                         -- integer (+) may be non-linear in second
-                         -- argument
-
--- %builtin NaturalToInteger Prelude.Types.natToInteger
 
 ||| Counts the number of elements that satify a predicate.
 public export
