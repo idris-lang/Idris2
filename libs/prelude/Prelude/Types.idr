@@ -39,7 +39,7 @@ nonNegativeIntegerToNat :
 nonNegativeIntegerToNat 0 = Z
 nonNegativeIntegerToNat x =
     let -- x >= 0 and x != 0
-        -- so x >= 0 so x - 1 >= 0
+        -- so x > 0 so x - 1 >= 0
         prf = believe_me Refl
      in S $ nonNegativeIntegerToNat {prf}
           $ assert_smaller x $ x - 1
