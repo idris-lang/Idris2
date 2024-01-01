@@ -14,6 +14,8 @@
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
 
+* Added an `Interpolation` implementation for primitive decimal numeric types and `Nat`.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
