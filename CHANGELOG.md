@@ -1,22 +1,7 @@
+
+This CHANGELOG describes the history of already-released versions. Please see [CHANGELOG_NEXT](./CHANGELOG_NEXT.md) for changes merged into the main branch but not yet released.
+
 # Changelog
-
-## [Next version]
-
-### Language changes
-
-### Compiler changes
-
-### Library changes
-
-#### Prelude
-
-#### Base
-
-* `Data.List.Lazy` was moved from `contrib` to `base`.
-
-#### Contrib
-
-* `Data.List.Lazy` was moved from `contrib` to `base`.
 
 ## v0.7.0
 
@@ -272,8 +257,6 @@
 
 * `Ref` interface from `Data.Ref` inherits `Monad` and was extended by a function
   for value modification implemented through reading and writing by default.
-
-* Added an `Interpolation` implementation for primitive decimal numeric types and `Nat`.
 
 #### System
 

@@ -10,7 +10,7 @@
 [x] Change version number in tests pkg010 and pkg017  (TODO: make this step unnecessary!)
     N.B. There are 2 instances of these: tests/idris2/ and tests/idris2/pkg/
 [x] Make sure INSTALL.md gives the correct minimum Idris version
-[x] Update CHANGELOG.md to refer to the "Next version" changes as the new
+[x] Move CHANGELOG_NEXT.md entries into CHANGELOG.md under a heading for the upcoming release version. Reset CHANGELOG_NEXT.md.
     release version, leaving the next "Next version" blank.
 [x] Update bootstrap chez and racket (built with new version)
     [x] Compile Idris2 with the appropriate CG
