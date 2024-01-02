@@ -1,29 +1,7 @@
+
+This CHANGELOG describes the history of already-released versions. Please see [CHANGELOG_NEXT](./CHANGELOG_NEXT.md) for changes merged into the main branch but not yet released.
+
 # Changelog
-
-## [Next version]
-
-### Language changes
-
-### Compiler changes
-
-### Library changes
-
-#### Prelude
-
-#### Base
-
-* `Data.List.Lazy` was moved from `contrib` to `base`.
-
-* Added an `Interpolation` implementation for primitive decimal numeric types and `Nat`.
-
-* Added append `(++)` for `List` version of `All`.
-
-#### Contrib
-
-* `Data.List.Lazy` was moved from `contrib` to `base`.
-
-* Existing `System.Console.GetOpt` was extended to support errors during options
-  parsing in a backward-compatible way.
 
 ## v0.7.0
 
