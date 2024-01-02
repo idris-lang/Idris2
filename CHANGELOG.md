@@ -1,39 +1,7 @@
+
+This CHANGELOG describes the history of already-released versions. Please see [CHANGELOG_NEXT](./CHANGELOG_NEXT.md) for changes merged into the main branch but not yet released.
+
 # Changelog
-
-## [Next version]
-
-### Building/Packaging changes
-
-* The Nix flake's `buildIdris` function now returns a set with `executable` and
-  `library` attributes. These supersede the now-deprecated `build` and
-  `installLibrary` attributes. `executable` is the same as `build` and `library`
-  is a function that takes an argument determining whether the library should be
-  installed with sourcecode files or not; other than that, `library`
-  functionally replaces `installLibrary`.
-
-* The Nix flake now exposes the Idris2 API package as `idris2-api` and Idris2's
-  C support library as `support`.
-
-### Language changes
-
-### Compiler changes
-
-### Library changes
-
-#### Prelude
-
-#### Base
-
-* `Data.List.Lazy` was moved from `contrib` to `base`.
-
-* Added an `Interpolation` implementation for primitive decimal numeric types and `Nat`.
-
-#### Contrib
-
-* `Data.List.Lazy` was moved from `contrib` to `base`.
-
-* Existing `System.Console.GetOpt` was extended to support errors during options
-  parsing in a backward-compatible way.
 
 ## v0.7.0
 
