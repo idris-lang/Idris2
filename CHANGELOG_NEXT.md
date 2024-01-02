@@ -19,6 +19,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Added an `Interpolation` implementation for primitive decimal numeric types and `Nat`.
 
+* Added append `(++)` for `List` version of `All`.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
