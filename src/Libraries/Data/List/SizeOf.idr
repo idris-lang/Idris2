@@ -1,6 +1,7 @@
 module Libraries.Data.List.SizeOf
 
 import Data.List
+import Data.List.HasLength
 import Libraries.Data.List.HasLength
 
 %default total
@@ -30,15 +31,15 @@ sucR (MkSizeOf n p) = MkSizeOf (S n) (sucR p)
 
 export
 (+) : SizeOf xs -> SizeOf ys -> SizeOf (xs ++ ys)
-MkSizeOf m p + MkSizeOf n q = MkSizeOf (m + n) (hlAppend p q)
+MkSizeOf m p + MkSizeOf n q = MkSizeOf (m + n) (hasLengthAppend p q)
 
 export
 mkSizeOf : (xs : List a) -> SizeOf xs
-mkSizeOf xs = MkSizeOf (length xs) (mkHasLength xs)
+mkSizeOf xs = MkSizeOf (length xs) (hasLength xs)
 
 export
 reverse : SizeOf xs -> SizeOf (reverse xs)
-reverse (MkSizeOf n p) = MkSizeOf n (hlReverse p)
+reverse (MkSizeOf n p) = MkSizeOf n (hasLengthReverse p)
 
 export
 map : SizeOf xs -> SizeOf (map f xs)

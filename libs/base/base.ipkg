@@ -1,5 +1,5 @@
 package base
-version = 0.6.0
+version = 0.7.0
 
 opts = "--ignore-missing-ipkg -Wno-shadowing"
 
@@ -56,6 +56,8 @@ modules = Control.App,
           Data.List,
           Data.List.Elem,
           Data.List.HasLength,
+          Data.List.Lazy,
+          Data.List.Lazy.Quantifiers,
           Data.List.Quantifiers,
           Data.List.Views,
           Data.List1,
@@ -67,6 +69,7 @@ modules = Control.App,
           Data.Nat,
           Data.Nat.Order,
           Data.Nat.Views,
+          Data.Primitives.Interpolation,
           Data.Primitives.Views,
           Data.Ref,
           Data.Rel,

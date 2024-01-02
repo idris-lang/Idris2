@@ -1,0 +1,42 @@
+. ../../testutils.sh
+
+idris2 --build test.ipkg
+
+P="build/exec/use-get-opt"
+
+echo "======== Good ========"
+
+"$P"
+"$P" --field-a 12
+"$P" --field-a 12 --field-a 13
+"$P" --field-a=12 --field-a 13
+"$P" --field-a 12 --field-a=13
+"$P" up
+"$P" up down right
+"$P" -b 12 up
+"$P" up -c "12 "
+"$P" up -c "12 "
+"$P" up -c "12 " -e
+"$P" up -e -c "12 "
+"$P" up -c"12 " -e true
+"$P" up -c"12 " -e false
+"$P" up -c"12 " -etrue
+"$P" up -c"12 " -efalse
+"$P" up -f -c"12 " -etrue
+"$P" up -fc"12 " -etrue
+"$P" -b-15
+
+echo '----------'
+echo '======== Bad ========'
+
+"$P" --fled-a
+"$P" --field-a 12 --fled-a --field-a 13
+"$P" --field-a 12 --field-a --field-a 13
+"$P" --field-a 12 --field-a 13 --field-a
+"$P" --field-c 12 --field-b 13 --field-a
+"$P" --field-c 12 --field-b 13 --field-a=
+"$P" --field-c 12 --field-a= --field-b 13
+"$P" --field-c 12 --field-b 13 --field-f=16
+"$P" --field-a 12x
+"$P" -b-15f
+"$P" lefc -fe up rigth

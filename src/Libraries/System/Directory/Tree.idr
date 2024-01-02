@@ -7,8 +7,6 @@ import Data.Nat
 import System.Directory
 import Libraries.Utils.Path
 
-import Libraries.System.File as LibFile
-
 %default total
 
 ------------------------------------------------------------------------------
@@ -203,7 +201,7 @@ copyDir src target = runEitherT $ do
   where
     copyFile' : (srcDir : Path) -> (targetDir : Path) -> (fileName : String) -> EitherT FileError io ()
     copyFile' srcDir targetDir fileName = MkEitherT $ do
-      Right ok <- LibFile.copyFile (show $ srcDir /> fileName) (show $ targetDir /> fileName)
+      Right ok <- copyFile (show $ srcDir /> fileName) (show $ targetDir /> fileName)
       | Left (err, size) => pure (Left err)
       pure (Right ok)
 

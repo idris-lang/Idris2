@@ -1,0 +1,3 @@
+. ../../../testutils.sh
+
+check Issue3168.idr

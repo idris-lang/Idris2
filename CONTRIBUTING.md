@@ -53,7 +53,7 @@ we haven't been too prescriptive about this. If you're editing a source file,
 try to be consistent with the existing style choices made by previous authors.
 We may need to be more formal about this in future!
 
-Please remember to update `CHANGELOG.md`, and if it's your first contribution
+Please remember to update `CHANGELOG_NEXT.md`, and if it's your first contribution
 you can add yourself to `CONTRIBUTORS`.
 
 In all cases, a pull request must have a short description (one sentence is

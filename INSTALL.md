@@ -96,7 +96,7 @@ If you are building with Racket, you'll need to run `IDRIS2_CG=racket make insta
 ### 3: Installing with an existing Idris 2
 
 If you have the latest *released* version of Idris 2
-(0.5.1 at the time of writing) installed:
+(0.6.0 at the time of writing) installed:
 
 - `make all`
 - `make install`

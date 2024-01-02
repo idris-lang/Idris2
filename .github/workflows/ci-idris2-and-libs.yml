@@ -44,7 +44,7 @@ env:
   # codebase, but an admirable longterm goal is to support building the
   # current version of the compiler with a previous version that is older
   # than its immediate predecessor.
-  IDRIS2_MINIMUM_COMPAT_VERSION: 0.6.0
+  IDRIS2_MINIMUM_COMPAT_VERSION: 0.7.0
 
 jobs:
 
@@ -105,7 +105,7 @@ jobs:
       - name : Build previous version
         if: steps.previous-version-cache.outputs.cache-hit != 'true'
         run: |
-          wget "https://www.idris-lang.org/idris2-src/idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
+          wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
           tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
           cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
           make bootstrap

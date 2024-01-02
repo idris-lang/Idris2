@@ -43,10 +43,12 @@ Both
 * ``IDRIS2_CFLAGS`` - RefC backend: C compiler flags.
 * ``IDRIS2_CPPFLAGS`` - RefC backend: C preprocessor flags.
 * ``IDRIS2_LDFLAGS`` - RefC backend: C linker flags.
+* ``IDRIS2_LDLIBS`` - RefC backend: C linker library names or flags.
 * ``CC`` - RefC backend: C compiler executable (IDRIS2_CC takes precedence).
 * ``CFLAGS`` - RefC backend: C compiler flags (IDRIS2_CFLAGS takes precedence).
 * ``CPPFLAGS`` - RefC backend: C preprocessor flags (IDRIS2_CPPFLAGS takes precedence).
 * ``LDFLAGS`` - RefC backend: C linker flags (IDRIS2_LDFLAGS takes precedence).
+* ``LDLIBS`` - RefC backend: C linker library names or flags.
 * ``NODE`` - NodeJS backend: ``node`` executable.
 * ``PATH`` - PATH variable is used to search for executables in certain
   codegens.

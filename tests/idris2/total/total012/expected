@@ -1,6 +1,6 @@
 1/1: Building Issue1828 (Issue1828.idr)
 LOG totality.requirement:10: Checking totality requirement of Issue1828.idr (main file is Issue1828.idr)
-LOG totality.requirement:20: Reading totalReq from build/ttc/Issue1828.ttc
+LOG totality.requirement:20: Reading totalReq from build/ttc/1/Issue1828.ttc
 LOG totality.requirement:20: Got covering and expected total: we should rebuild
 1/1: Building Issue1828 (Issue1828.idr)
 Error: caseTest is not total, possibly not terminating due to call to Main.dummy
@@ -39,12 +39,12 @@ Issue1828:6:3--6:14
 
 1/1: Building Issue1828 (Issue1828.idr)
 LOG totality.requirement:10: Checking totality requirement of Issue1828.idr (main file is Issue1828.idr)
-LOG totality.requirement:20: Reading totalReq from build/ttc/Issue1828.ttc
+LOG totality.requirement:20: Reading totalReq from build/ttc/1/Issue1828.ttc
 LOG totality.requirement:20: Got covering and expected covering: we shouldn't rebuild
 1/1: Building TotallyTotal (TotallyTotal.idr)
 LOG totality.requirement:10: Checking totality requirement of TotallyTotal.idr (main file is TotallyTotal.idr)
-LOG totality.requirement:20: Reading totalReq from build/ttc/TotallyTotal.ttc
+LOG totality.requirement:20: Reading totalReq from build/ttc/1/TotallyTotal.ttc
 LOG totality.requirement:20: Got total and expected covering: we shouldn't rebuild
 LOG totality.requirement:10: Checking totality requirement of TotallyTotal.idr (main file is TotallyTotal.idr)
-LOG totality.requirement:20: Reading totalReq from build/ttc/TotallyTotal.ttc
+LOG totality.requirement:20: Reading totalReq from build/ttc/1/TotallyTotal.ttc
 LOG totality.requirement:20: Got total and expected total: we shouldn't rebuild

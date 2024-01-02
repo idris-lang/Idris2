@@ -135,13 +135,7 @@ chezNS ns = case showNSWithSep "-" ns of
 -- arbitrarily name the compilation unit
 -- after the alphabetically first namespace contained within
 chezLibraryName : CompilationUnit def -> String
-chezLibraryName cu = chezNS (min1 cu.namespaces)
-  where
-    -- the stdlib of the previous stable version
-    -- has some strange version of List1.foldl1
-    -- so we reimplement it here for compatibility
-    min1 : List1 Namespace -> Namespace
-    min1 (ns ::: nss) = foldl min ns nss
+chezLibraryName cu = chezNS (foldl1 min cu.namespaces)
 
 touch : String -> Core ()
 touch s = coreLift_ $ system ["touch", s]

@@ -1,12 +1,11 @@
 . ../../../testutils.sh
 
 check Issue1828.idr
-check Issue1828.idr --total --log totality.requirement:20 | sed -r "s/.([0-9]){10}//g"
+check Issue1828.idr --total --log totality.requirement:20 | clean_names
 
 check Issue1828.idr
-check Issue1828.idr --log totality.requirement:20 | sed -r "s/.([0-9]){10}//g"
-
+check Issue1828.idr --log totality.requirement:20 | clean_names
 
 check TotallyTotal.idr
-check TotallyTotal.idr --log totality.requirement:20 | sed -r "s/.([0-9]){10}//g"
-check TotallyTotal.idr --total --log totality.requirement:20 | sed -r "s/.([0-9]){10}//g"
+check TotallyTotal.idr --log totality.requirement:20 | clean_names
+check TotallyTotal.idr --total --log totality.requirement:20 | clean_names

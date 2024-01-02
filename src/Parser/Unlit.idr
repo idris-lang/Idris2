@@ -73,7 +73,7 @@ hasLitFileExt fname =
             | _ => err
           -- check ["org", "lidr"] is a suffix of the files' extensions and get
           -- back (["shared"], ["org", "lidr"])
-          (nm, exts) <- Lib.suffixOfBy (\ v, w => v <$ guard (v == w)) chunks exts
+          (nm, exts) <- suffixOfBy (\ v, w => v <$ guard (v == w)) chunks exts
           -- return the basename extended with the leftover extensions, paired with the match
           -- e.g. ("Cool.shared", ".org.lidr")
           pure (bn ++ toExtension nm, toExtension exts)

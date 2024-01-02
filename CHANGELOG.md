@@ -1,6 +1,9 @@
+
+This CHANGELOG describes the history of already-released versions. Please see [CHANGELOG_NEXT](./CHANGELOG_NEXT.md) for changes merged into the main branch but not yet released.
+
 # Changelog
 
-## [Next version]
+## v0.7.0
 
 ### Language changes
 
@@ -44,10 +47,10 @@
 
 #### RefC
 
-* Adds support for `CFLAGS`, `CPPFLAGS`, and `LDFLAGS` to facilitate building on
-  systems with non-standard installation locations of libraries (e.g. GMP).
-  Versions of the flags with the `IDRIS2_` prefix can also be used and take
-  precedence.
+* Adds support for `CFLAGS`, `CPPFLAGS`, `LDFLAGS` and `LDLIBS` to facilitate
+  building on systems with non-standard installation locations of libraries
+  (e.g. GMP). Versions of the flags with the `IDRIS2_` prefix can also be used
+  and take precedence.
 
 #### Chez
 
@@ -165,8 +168,6 @@
   from the contrib library. The type ended up being `HasLength n xs` rather than
   `HasLength xs n`.
 
-* `System`'s `die` now prints the error message on stderr rather than stdout
-
 * Moved `Data.SortedMap` and `Data.SortedSet` from contrib to base.
 
 * Added missing buffer primitives (chezscheme only):
@@ -251,12 +252,24 @@
 
 * Adds `Data.Vect.foldrImplGoLemma`.
 
+* `Ref` interface from `Data.Ref` inherits `Monad` and was extended by a function
+  for value modification implemented through reading and writing by default.
+
 #### System
 
 * Changes `getNProcessors` to return the number of online processors rather than
   the number of configured processors.
 
+* `System`'s `die` now prints the error message on stderr rather than stdout
+
 * Adds `popen2` to run a subprocess with bi-directional pipes.
+
+* A function `popen2Wait` was added to wait for the process started with `popen2`
+  function and clean up all system resources (to not to leave zombie processes in
+  particular).
+
+* Function `getStringAndFree` from `System.File.ReadWrite` was given an extra
+  argument of type `File` to return an empty string if no error happened.
 
 ### Contrib
 
@@ -314,7 +327,7 @@
 * Updates the docs for `envvars` to categorise when environment variables are
   used (runtime, build-time, or both).
 * Fixed build failure occuring when `make -j` is in effect.
-* Improved the docs for `let` and `:=` to (hopefully) avoid confusion.
+* Add `clean_names` function to `testutils.sh` to normalise machine names
 
 ## v0.6.0
 

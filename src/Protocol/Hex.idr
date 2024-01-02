@@ -3,11 +3,6 @@ module Protocol.Hex
 import Data.Bits
 import Data.List
 
--- Those three imports are for compatibility and should be removed after release of 0.6.0
-import Data.DPair
-import Data.Nat
-import Data.Fin
-
 %default total
 
 hexDigit : Bits64 -> Char
@@ -29,16 +24,6 @@ hexDigit 14 = 'e'
 hexDigit 15 = 'f'
 hexDigit _ = 'X' -- TMP HACK: Ideally we'd have a bounds proof, generated below
 
--- `i4` is to be replaced with a `4` literal after release of 0.6.0
-namespace Old
-  export
-  i4 : Subset Nat (`LT` 64)
-  i4 = Element (the Nat 4) %search
-namespace New
-  export
-  i4 : Fin 64
-  i4 = 4
-
 ||| Convert a Bits64 value into a list of (lower case) hexadecimal characters
 export
 asHex : Bits64 -> String
@@ -47,7 +32,7 @@ asHex n = pack $ asHex' n []
   where
     asHex' : Bits64 -> List Char -> List Char
     asHex' 0 hex = hex
-    asHex' n hex = asHex' (assert_smaller n (n `shiftR` i4)) (hexDigit (n .&. 0xf) :: hex)
+    asHex' n hex = asHex' (assert_smaller n (n `shiftR` 4)) (hexDigit (n .&. 0xf) :: hex)
 
 export
 leftPad : Char -> Nat -> String -> String

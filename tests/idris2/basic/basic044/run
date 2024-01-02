@@ -1,8 +1,4 @@
 . ../../../testutils.sh
 
-echo ":q" | idris2 --log unify.equal:10 --log unify:5 Term.idr \
-  | sed -E "s/[0-9]+}/N}/g" | sed -E "s/resolved([0-9]+)/resolvedN/g" \
-  | sed -E "s/case in ([0-9]+)/case in N/g" | sed -E "s/[0-9]+:[0-9]+/L:C/g"
-echo ":q" | idris2 --log unify:3 --log elab.ambiguous:5 Vec.idr \
-  | sed -E "s/[0-9]+}/N}/g" | sed -E "s/resolved([0-9]+)/resolvedN/g" \
-  | sed -E "s/case in ([0-9]+)/case in N/g" | sed -E "s/[0-9]+:[0-9]+/L:C/g"
+echo ":q" | idris2 --log unify.equal:10 --log unify:5 Term.idr | clean_names
+echo ":q" | idris2 --log unify:3 --log elab.ambiguous:5 Vec.idr | clean_names

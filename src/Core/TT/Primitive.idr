@@ -10,7 +10,6 @@ import Decidable.Equality
 import Idris.Pretty.Annotations
 
 import Libraries.Data.Ordering.Extra
-import Libraries.Data.Primitives
 import Libraries.Data.String.Extra -- compatibility
 import Libraries.Text.PrettyPrint.Prettyprinter
 
@@ -94,35 +93,33 @@ primTypeEq DoubleType DoubleType = Just Refl
 primTypeEq WorldType WorldType = Just Refl
 primTypeEq _ _ = Nothing
 
--- TODO : The `TempXY` instances can be removed after the next release
---        (see also `Libraries.Data.Primitives`)
 export
 constantEq : (x, y : Constant) -> Maybe (x = y)
 constantEq (I x) (I y) = case decEq x y of
                               Yes Refl => Just Refl
                               No contra => Nothing
-constantEq (I8 x) (I8 y) = case decEq @{TempI8} x y of
+constantEq (I8 x) (I8 y) = case decEq x y of
                                   Yes Refl => Just Refl
                                   No contra => Nothing
-constantEq (I16 x) (I16 y) = case decEq @{TempI16} x y of
+constantEq (I16 x) (I16 y) = case decEq x y of
                                   Yes Refl => Just Refl
                                   No contra => Nothing
-constantEq (I32 x) (I32 y) = case decEq @{TempI32} x y of
+constantEq (I32 x) (I32 y) = case decEq x y of
                                   Yes Refl => Just Refl
                                   No contra => Nothing
-constantEq (I64 x) (I64 y) = case decEq @{TempI64} x y of
+constantEq (I64 x) (I64 y) = case decEq x y of
                                   Yes Refl => Just Refl
                                   No contra => Nothing
-constantEq (B8 x) (B8 y) = case decEq @{TempB8} x y of
+constantEq (B8 x) (B8 y) = case decEq x y of
                                   Yes Refl => Just Refl
                                   No contra => Nothing
-constantEq (B16 x) (B16 y) = case decEq @{TempB16} x y of
+constantEq (B16 x) (B16 y) = case decEq x y of
                                   Yes Refl => Just Refl
                                   No contra => Nothing
-constantEq (B32 x) (B32 y) = case decEq @{TempB32} x y of
+constantEq (B32 x) (B32 y) = case decEq x y of
                                   Yes Refl => Just Refl
                                   No contra => Nothing
-constantEq (B64 x) (B64 y) = case decEq @{TempB64} x y of
+constantEq (B64 x) (B64 y) = case decEq x y of
                                   Yes Refl => Just Refl
                                   No contra => Nothing
 constantEq (BI x) (BI y) = case decEq x y of
