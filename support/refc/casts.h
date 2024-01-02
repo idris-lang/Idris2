@@ -8,8 +8,8 @@
 #define cast_Int8_to_Bits16(x) (x)
 #define cast_Int8_to_Bits32(x) (x)
 #define cast_Int8_to_Bits64(x) (idris2_mkBits64((uint64_t)idris2_vp_to_Int8(x)))
-#define cast_Int8_to_Int8(x) (idris2_mkInt16((int16_t)idris2_vp_to_Int8(x)))
-#define cast_Int8_to_Int16(x) (idris2_mkInt32((int32_t)idris2_vp_to_Int8(x)))
+#define cast_Int8_to_Int16(x) (idris2_mkInt16((int16_t)idris2_vp_to_Int8(x)))
+#define cast_Int8_to_Int32(x) (idris2_mkInt32((int32_t)idris2_vp_to_Int8(x)))
 #define cast_Int8_to_Int64(x) (idris2_mkInt64((int64_t)idris2_vp_to_Int8(x)))
 Value *cast_Int8_to_Integer(Value *);
 #define cast_Int8_to_Double(x) (idris2_mkDouble((double)idris2_vp_to_Int8(x)))
