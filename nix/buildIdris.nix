@@ -42,6 +42,6 @@ in rec {
       '';
     });
   # deprecated aliases:
-  build = builtins.trace "Warning: 'build' is a deprecated alias for 'executable'." executable;
-  installLibrary = builtins.trace "Warning: 'installLibrary' is a deprecated alias for 'library { }'." (library { });
+  build = lib.warn "build is a deprecated alias for 'executable'." executable;
+  installLibrary = lib.warn "installLibrary is a deprecated alias for 'library { }'." (library { });
 }
