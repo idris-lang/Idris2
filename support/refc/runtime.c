@@ -57,6 +57,71 @@ static inline Value *idris2_dispatch_closure(Value_Closure *clo) {
   case 16:
     return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
                 xs[9], xs[10], xs[11], xs[12], xs[13], xs[14], xs[15]);
+  case 17:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9], xs[10], xs[11], xs[12], xs[13], xs[14], xs[15], xs[16]);
+  case 18:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9], xs[10], xs[11], xs[12], xs[13], xs[14], xs[15], xs[16],
+                xs[17]);
+  case 19:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9], xs[10], xs[11], xs[12], xs[13], xs[14], xs[15], xs[16],
+                xs[17], xs[18]);
+  case 20:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9], xs[10], xs[11], xs[12], xs[13], xs[14], xs[15], xs[16],
+                xs[17], xs[18], xs[19]);
+  case 21:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9], xs[10], xs[11], xs[12], xs[13], xs[14], xs[15], xs[16],
+                xs[17], xs[18], xs[19], xs[20]);
+  case 22:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9], xs[10], xs[11], xs[12], xs[13], xs[14], xs[15], xs[16],
+                xs[17], xs[18], xs[19], xs[20], xs[21]);
+  case 23:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9], xs[10], xs[11], xs[12], xs[13], xs[14], xs[15], xs[16],
+                xs[17], xs[18], xs[19], xs[20], xs[21], xs[22]);
+  case 24:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9], xs[10], xs[11], xs[12], xs[13], xs[14], xs[15], xs[16],
+                xs[17], xs[18], xs[19], xs[20], xs[21], xs[22], xs[23]);
+  case 25:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9], xs[10], xs[11], xs[12], xs[13], xs[14], xs[15], xs[16],
+                xs[17], xs[18], xs[19], xs[20], xs[21], xs[22], xs[23], xs[24]);
+  case 26:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9], xs[10], xs[11], xs[12], xs[13], xs[14], xs[15], xs[16],
+                xs[17], xs[18], xs[19], xs[20], xs[21], xs[22], xs[23], xs[24],
+                xs[25]);
+  case 27:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9], xs[10], xs[11], xs[12], xs[13], xs[14], xs[15], xs[16],
+                xs[17], xs[18], xs[19], xs[20], xs[21], xs[22], xs[23], xs[24],
+                xs[25], xs[26]);
+  case 28:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9], xs[10], xs[11], xs[12], xs[13], xs[14], xs[15], xs[16],
+                xs[17], xs[18], xs[19], xs[20], xs[21], xs[22], xs[23], xs[24],
+                xs[25], xs[26], xs[27]);
+  case 29:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9], xs[10], xs[11], xs[12], xs[13], xs[14], xs[15], xs[16],
+                xs[17], xs[18], xs[19], xs[20], xs[21], xs[22], xs[23], xs[24],
+                xs[25], xs[26], xs[27], xs[28]);
+  case 30:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9], xs[10], xs[11], xs[12], xs[13], xs[14], xs[15], xs[16],
+                xs[17], xs[18], xs[19], xs[20], xs[21], xs[22], xs[23], xs[24],
+                xs[25], xs[26], xs[27], xs[28], xs[29]);
+  case 31:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9], xs[10], xs[11], xs[12], xs[13], xs[14], xs[15], xs[16],
+                xs[17], xs[18], xs[19], xs[20], xs[21], xs[22], xs[23], xs[24],
+                xs[25], xs[26], xs[27], xs[28], xs[29], xs[30]);
   }
 }
 
