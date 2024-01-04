@@ -658,7 +658,7 @@ incCompile c s sourceFile
                version <- coreLift $ chezVersion chez
                fgndefs <- traverse (getFgnCall version) ndefs
                (sortedDefs, constants) <- sortDefs ndefs
-               compdefs <- traverse (getScheme constants (chezExtPrim constants) chezString) sortedDefs
+               compdefs <- traverse (getScheme empty (chezExtPrim empty) chezString) sortedDefs
                let code = concat $ map snd fgndefs ++ compdefs
                Right () <- coreLift $ writeFile ssFile $ build code
                   | Left err => throw (FileErr ssFile err)
