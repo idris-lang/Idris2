@@ -17,6 +17,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Removed Value_Arglist to reduce Closure's allocation overhead and make code simply.
 
+* Switch calling conventions based on the number of arguments to avoid limits on the number of arguments and to reduce stack usage.
+
 ### Library changes
 
 #### Prelude

@@ -439,6 +439,12 @@ const2Integer c i =
 
 data TailPositionStatus = InTailPosition | NotInTailPosition
 
+-- When changing this number, also change idris2_dispatch_closure in runtime.c.
+-- Increasing this number will worsen stack consumption and increase the codesize of idris2_dispatch_closure.
+-- In C89, the maximum number of arguments is 31, so it should not be larger than 31. 127 is safe in C99, but I do not recommend it.
+MaxExtractFunArgs : Nat
+MaxExtractFunArgs = 16
+
 
 mutual
     copyConstructors : {auto a : Ref ArgCounter Nat}
@@ -578,7 +584,6 @@ mutual
     checkTags ((MkAConAlt n _ Nothing args sc) :: xs) = pure False
     checkTags _ = pure True
 
-
     cStatementsFromANF : {auto a : Ref ArgCounter Nat}
                       -> {auto t : Ref TemporaryVariableTracker (List (List String))}
                       -> {auto oft : Ref OutfileText Output}
@@ -599,9 +604,23 @@ mutual
                        ++ ", " ++ show nargs ++ ", " ++ show nargs ++ ");"
                 fillConstructorArgs closure_name args 0
             NotInTailPosition => do
-              emit fc $ "Value *" ++ closure_name
-                       ++ " = trampoline(" ++ cName n ++ "("
-                       ++ (concat $ intersperse ", " $ map varName args) ++ "));"
+                let arity = length args
+                if arity > MaxExtractFunArgs
+                    then do
+                        emit fc "Value *\{closure_name};"
+                        emit fc "{"
+                        increaseIndentation
+                        emit fc "Value *local_arglist[\{show arity}];"
+                        _ <- foldlC (\i, n => do
+                                emit fc "local_arglist[\{show i}] = \{varName n};"
+                                pure (i + 1)) 0 args
+                        emit fc "\{closure_name} = trampoline(\{cName n}(local_arglist));"
+                        decreaseIndentation
+                        emit fc "}"
+                    else
+                        emit fc $ "Value *" ++ closure_name
+                             ++ " = trampoline(" ++ cName n ++ "("
+                             ++ (concat $ intersperse ", " $ map varName args) ++ "));"
         emit fc $ "// end   " ++ cName n ++ "(" ++ showSep ", " (map (\v => varName v) args) ++ ")"
         pure $ "((Value *)" ++ closure_name ++ ")"
 
@@ -706,15 +725,6 @@ mutual
 addCommaToList : List String -> List String
 addCommaToList [] = []
 addCommaToList (x :: xs) = ("  " ++ x) :: map (", " ++) xs
-
-functionDefSignature : {auto c : Ref Ctxt Defs} -> Name -> (args:List Int) -> Core String
-functionDefSignature n [] = do
-    let fn = (cName !(getFullName n))
-    pure $  "\n\nValue *"  ++ fn ++ "(void)"
-functionDefSignature n args = do
-    let argsStringList = addCommaToList (map (\i =>  "  Value * var_" ++ (show i)) args)
-    let fn = (cName !(getFullName n))
-    pure $  "\n\nValue *"  ++ fn ++ "\n(\n" ++ (showSep "\n" (argsStringList)) ++ "\n)"
 
 
 getArgsNrList : List ty -> Nat -> List Nat
@@ -843,13 +853,23 @@ createCFunctions : {auto c : Ref Ctxt Defs}
                 -> ANFDef
                 -> Core ()
 createCFunctions n (MkAFun args anf) = do
-    fn <- functionDefSignature n args
+    let nargs = length args
+    let fn = "Value *\{cName !(getFullName n)}"
+            ++ (if nargs == 0 then "(void)"
+               else if nargs > MaxExtractFunArgs then "(Value *var_arglist[\{show nargs}])"
+               else ("\n(\n" ++ (showSep "\n" $ addCommaToList (map (\i =>  "  Value * var_" ++ (show i)) args))) ++ "\n)")
     update FunctionDefinitions $ \otherDefs => (fn ++ ";\n") :: otherDefs
     newTemporaryVariableLevel
-    let argsNrs = getArgsNrList args Z
     emit EmptyFC fn
     emit EmptyFC "{"
     increaseIndentation
+    when (nargs > MaxExtractFunArgs) $ do
+        -- What a strange code, but I believe the C compiler will erase the aliasing.
+        -- Please, don't create a new copy on the stack!
+        _ <- foldlC (\i, j => do
+           emit EmptyFC "Value *var_\{show j} = var_arglist[\{show i}];"
+           pure (i + 1)) 0 args
+        pure ()
     assignment <- cStatementsFromANF anf InTailPosition
     emit EmptyFC $ "Value *returnValue = " ++ assignment ++ ";"
     freeTmpVars
