@@ -595,26 +595,35 @@ mutual
     cStatementsFromANF (AAppName fc _ n args) tailstatus = do
         emit fc $ ("// start " ++ cName n ++ "(" ++ showSep ", " (map (\v => varName v) args) ++ ")")
         let closure_name = "closure_" ++ show !(getNextCounter)
+        let nargs = length args
         case tailstatus of
             InTailPosition    => do
-                let nargs = length args
                 emit fc $ "Value_Closure *"
                        ++ closure_name
                        ++ " = makeClosure((Value *(*)())" ++ cName n
                        ++ ", " ++ show nargs ++ ", " ++ show nargs ++ ");"
                 fillConstructorArgs closure_name args 0
             NotInTailPosition => do
-                let arity = length args
-                if arity > MaxExtractFunArgs
+                if nargs > MaxExtractFunArgs
                     then do
                         emit fc "Value *\{closure_name};"
                         emit fc "{"
                         increaseIndentation
-                        emit fc "Value *local_arglist[\{show arity}];"
-                        _ <- foldlC (\i, n => do
-                                emit fc "local_arglist[\{show i}] = \{varName n};"
-                                pure (i + 1)) 0 args
-                        emit fc "\{closure_name} = trampoline(\{cName n}(local_arglist));"
+                        if nargs > 256
+                            then do
+                                emit fc "Value **local_arglist = malloc(sizeof(Value *) * \{show nargs});"
+                                _ <- foldlC (\i, n => do
+                                        emit fc "local_arglist[\{show i}] = \{varName n};"
+                                        pure (i + 1)) 0 args
+                                emit fc "\{closure_name} = \{cName n}(local_arglist);"
+                                emit fc "free(local_arglist);"
+                                emit fc "\{closure_name} = trampoline(\{closure_name}};"
+                            else do
+                                emit fc "Value *local_arglist[\{show nargs}];"
+                                _ <- foldlC (\i, n => do
+                                        emit fc "local_arglist[\{show i}] = \{varName n};"
+                                        pure (i + 1)) 0 args
+                                emit fc "\{closure_name} = trampoline(\{cName n}(local_arglist));"
                         decreaseIndentation
                         emit fc "}"
                     else
