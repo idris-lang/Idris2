@@ -511,7 +511,7 @@ letBinding =
     """
     * Let bindings are defined using the `:=` syntax and can be used to bind the
     result of intermediate computations. A type annotation can be added but is
-    not required, for example:
+    not required. However, this results in different behaviours, for example:
     ```idris
     power4 : Nat -> Nat
     power4 n = let square := n * n
@@ -521,12 +521,12 @@ letBinding =
     power4T n = let square : Nat := n * n
                 in square * square
     ```
-    Without the type annotation, `:=` behaves the same as `=` and gets
+    In the first example, the type annotation is omitted and so `:=` gets
     elaborated to the lambda expression `(\square => square * square) (n * n)`.
 
-    With the type annotation, `square` is the value of a computation, not its
-    generalisation, and so will only be computed once instead of potentially on
-    every reference.
+    The second example does have a type annotation and as a result, `square`
+    gets computed rather than lambda-abstracted, meaning the result will be
+    reused on reference, instead of potentially being recomputed every time.
 
     Note that, unlike functions, let bindings do not reduce to their values so
     may not be appropriate in all cases.
