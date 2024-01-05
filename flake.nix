@@ -48,20 +48,30 @@
             inherit idris2-version;
             idris2 = idris2Pkg;
           };
-        in rec {
+          idris2ApiPkg = buildIdris {
+            src = ./.;
+            projectName = "idris2api";
+            idrisLibraries = [ ];
+            preBuild = ''
+              export IDRIS2_PREFIX=$out/lib
+              make src/IdrisPaths.idr
+            '';
+          };
+        in {
           checks = import ./nix/test.nix {
             inherit (pkgs) system stdenv runCommand lib;
             inherit nixpkgs flake-utils;
             idris = self;
           };
-          packages = {
+          packages = rec {
             support = idris2Support;
             idris2 = idris2Pkg;
+            idris2-api = idris2ApiPkg.library { withSource = true; };
+            default = idris2;
           } // (import ./nix/text-editor.nix {
             inherit pkgs idris-emacs-src idris2Pkg;
           });
           inherit buildIdris;
-          defaultPackage = packages.idris2;
         };
     in lib.mkOvrOptsFlake
     (opts: flake-utils.lib.eachDefaultSystem (per-system opts) // sys-agnostic);

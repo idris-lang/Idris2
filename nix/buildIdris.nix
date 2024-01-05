@@ -6,10 +6,10 @@ let
   idrName = "idris2-${idris2-version}";
   libSuffix = "lib/${idrName}";
   lib-dirs =
-    lib.strings.concatMapStringsSep ":" (p: "${p}/${libSuffix}") idrisLibraries;
+    lib.strings.makeSearchPath libSuffix idrisLibraries;
   drvAttrs = builtins.removeAttrs attrs [ "idrisLibraries" ];
 in rec {
-  build = stdenv.mkDerivation (drvAttrs // {
+  executable = stdenv.mkDerivation (drvAttrs // {
     name = projectName;
     src = src;
     nativeBuildInputs = [ idris2 ];
@@ -30,12 +30,18 @@ in rec {
       runHook postInstall
     '';
   });
-  installLibrary = build.overrideAttrs (_: {
-    buildPhase = "";
-    installPhase = ''
-      mkdir -p $out/${libSuffix}
-      export IDRIS2_PREFIX=$out/lib
-      idris2 --install ${ipkgName}
-    '';
-  });
+  library = { withSource ? false }:
+    let installCmd = if withSource then "--install-with-src" else "--install";
+    in executable.overrideAttrs (_: {
+      installPhase = ''
+        runHook preInstall
+        mkdir -p $out/${libSuffix}
+        export IDRIS2_PREFIX=$out/lib
+        idris2 ${installCmd} ${ipkgName}
+        runHook postInstall
+      '';
+    });
+  # deprecated aliases:
+  build = lib.warn "build is a deprecated alias for 'executable'." executable;
+  installLibrary = lib.warn "installLibrary is a deprecated alias for 'library { }'." (library { });
 }
