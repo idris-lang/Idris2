@@ -383,29 +383,16 @@ addHeader : {auto h : Ref HeaderFiles (SortedSet String)}
 addHeader = update HeaderFiles . insert
 
 
-
-fillClosureArgs : {auto oft : Ref OutfileText Output}
-                -> {auto il : Ref IndentLevel Nat}
-                -> String
-                -> List AVar
-                -> Bits8
-                -> Core ()
-fillClosureArgs clos [] k = pure ()
-fillClosureArgs clos (arg :: args) k = do
-     emit EmptyFC $ clos ++ "->args[" ++ show k ++ "] = newReference(" ++ varName arg ++");"
-     fillClosureArgs clos args (k + 1)
-
-
 fillConstructorArgs : {auto oft : Ref OutfileText Output}
                    -> {auto il : Ref IndentLevel Nat}
                    -> String
                    -> List AVar
-                   -> Nat
+                   -> Bits8
                    -> Core ()
 fillConstructorArgs _ [] _ = pure ()
 fillConstructorArgs cons (v :: vars) k = do
     emit EmptyFC $ cons ++ "->args["++ show k ++ "] = newReference(" ++ varName v ++");"
-    fillConstructorArgs cons vars (S k)
+    fillConstructorArgs cons vars (k + 1)
 
 
 showTag : Maybe Int -> String
@@ -610,7 +597,7 @@ mutual
                        ++ closure_name
                        ++ " = makeClosure((Value *(*)())" ++ cName n
                        ++ ", " ++ show nargs ++ ", " ++ show nargs ++ ");"
-                fillClosureArgs closure_name args 0
+                fillConstructorArgs closure_name args 0
             NotInTailPosition => do
               emit fc $ "Value *" ++ closure_name
                        ++ " = trampoline(" ++ cName n ++ "("
@@ -625,7 +612,7 @@ mutual
                ++ closure_name
                ++ " = makeClosure((Value *(*)())" ++ cName n
                ++ ", " ++ show (nargs + missing) ++ ", " ++ show nargs ++ ");"
-        fillClosureArgs closure_name args 0
+        fillConstructorArgs closure_name args 0
         pure $ "((Value *)" ++ closure_name ++ ")"
     cStatementsFromANF (AApp fc _ closure arg) tailstatus =
         pure $ case tailstatus of
