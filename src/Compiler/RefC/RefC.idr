@@ -611,12 +611,12 @@ mutual
                         increaseIndentation
                         if nargs > 256
                             then do
-                                emit fc "Value **local_arglist = malloc(sizeof(Value *) * \{show nargs});"
+                                emit fc "Value **local_arglist = idris2_malloc(sizeof(Value *) * \{show nargs});"
                                 _ <- foldlC (\i, n => do
                                         emit fc "local_arglist[\{show i}] = \{varName n};"
                                         pure (i + 1)) 0 args
                                 emit fc "\{closure_name} = \{cName n}(local_arglist);"
-                                emit fc "free(local_arglist);"
+                                emit fc "idris2_free(local_arglist);"
                                 emit fc "\{closure_name} = trampoline(\{closure_name}};"
                             else do
                                 emit fc "Value *local_arglist[\{show nargs}];"
