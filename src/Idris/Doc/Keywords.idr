@@ -741,14 +741,14 @@ recordUpdate = vcat $ header "Record updates" :: ""
 
 letOrRecord : Doc IdrisDocAnn
 letOrRecord = vcat $
-  header "Let binding or record assignment"
+  header "Let binding or record update"
   :: ""
   :: map (indent 2) [
     """
     \{letBinding}
 
 
-    * Record assignment uses `:=` to assign individual fields to a new value.
+    * Record updates use `:=` to set a field's value.
     For example, given a record `r` with a field `name` of type `String`, we can
     reassign the value of the field using `:=` with the following syntax:
     ```idris
