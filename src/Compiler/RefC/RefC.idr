@@ -394,14 +394,9 @@ fillConstructorArgs cons (v :: vars) k = do
     emit EmptyFC $ cons ++ "->args["++ show k ++ "] = newReference(" ++ varName v ++");"
     fillConstructorArgs cons vars (k + 1)
 
-
 showTag : Maybe Int -> String
 showTag Nothing = "-1"
 showTag (Just i) = show i
-
-cArgsVectANF : {0 arity : Nat} -> Vect arity AVar -> Core (Vect arity String)
-cArgsVectANF [] = pure []
-cArgsVectANF (x :: xs) = pure $  (varName x) :: !(cArgsVectANF xs)
 
 integer_switch : List AConstAlt -> Bool
 integer_switch [] = True
@@ -662,13 +657,10 @@ mutual
                 ++ "\"" ++ cName n ++ "\""
                 ++ ");"
         emit fc $ " // constructor " ++ cName n
-
         fillConstructorArgs constr args 0
         pure $ "(Value*)" ++ constr
 
-    cStatementsFromANF (AOp fc _ op args) _ = do
-        argsVec <- cArgsVectANF args
-        pure $ cOp op argsVec
+    cStatementsFromANF (AOp fc _ op args) _ = pure $ cOp op $ map varName args
     cStatementsFromANF (AExtPrim fc _ p args) _ = do
         emit fc $ "// call to external primitive " ++ cName p
         pure $ cCleanString (show (toPrim p)) ++ "("++ showSep ", " (map varName args) ++")"
