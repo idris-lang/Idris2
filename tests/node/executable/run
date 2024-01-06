@@ -2,8 +2,18 @@
 
 idris2 --cg node -o node_executable TestExecutable.idr > /dev/null
 
-# node still executes it
+# node still executes it:
 node ./build/exec/node_executable
 
-# can be executed on its own due to shebang and executable bit
-./build/exec/node_executable
+# it can be executed on its own due to shebang and executable bit:
+# (/usr/bin/env as used in shebang is problematic in edge cases
+#  but still generally a good bet; we will make sure the test works
+#  even when /usr/bin/env cannot be used)
+fallback () {
+  nodejs="$(command -v node)"
+  # cross-platform supported sed-ing (unlike with in-place option)
+  cp ./build/exec/node_executable ./build/exec/node_executable_src
+  sed "s#/usr/bin/env node#$nodejs#" ./build/exec/node_executable_src > ./build/exec/node_executable
+  ./build/exec/node_executable
+}
+./build/exec/node_executable || fallback
