@@ -1,0 +1,9 @@
+. ../../testutils.sh
+
+idris2 --cg node -o node_executable TestExecutable.idr > /dev/null
+
+# node still executes it
+node ./build/exec/node_executable
+
+# can be executed on its own due to shebang and executable bit
+./build/exec/node_executable
