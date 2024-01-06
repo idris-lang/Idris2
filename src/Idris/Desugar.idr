@@ -105,6 +105,10 @@ mkPrec InfixR = AssocR
 mkPrec Infix  = NonAssoc
 mkPrec Prefix = Prefix
 
+-- This is used to print the error message for fixities
+[showFst] Show a => Show (a, b) where
+  show (x, y) = show x
+
 -- Check that an operator does not have any conflicting fixities in scope.
 -- Each operator can have its fixity defined multiple times across multiple
 -- modules as long as the fixities are consistent. If they aren't, the fixity
@@ -352,10 +356,10 @@ mutual
   desugarB side ps (PBracketed fc e) = desugarB side ps e
   desugarB side ps (POp fc opFC l op r)
       = do ts <- toTokList side (POp fc opFC l op r)
-           desugarTree side ps !(parseOps ts)
+           desugarTree side ps !(parseOps @{showFst} ts)
   desugarB side ps (PPrefixOp fc opFC op arg)
       = do ts <- toTokList side (PPrefixOp fc opFC op arg)
-           desugarTree side ps !(parseOps ts)
+           desugarTree side ps !(parseOps @{showFst} ts)
   desugarB side ps (PSectionL fc opFC op arg)
       = do syn <- get Syn
            -- It might actually be a prefix argument rather than a section

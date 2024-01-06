@@ -90,13 +90,13 @@ higher : Show op => FC -> op -> OpPrec -> op -> OpPrec -> Core Bool
 higher loc opx op opy (Prefix p) = pure False
 higher loc opx (NonAssoc x) opy oy
     = if x == getPrec oy
-         then throw (GenericMsg loc ("Operator '" ++ show opx ++
-                                     "' is non-associative"))
+         then throw (GenericMsg loc ("Operator " ++ show opx ++
+                                     " is non-associative"))
          else pure (x > getPrec oy)
 higher loc opx ox opy (NonAssoc y)
     = if getPrec ox == y
-         then throw (GenericMsg loc ("Operator '" ++ show opy ++
-                                     "' is non-associative"))
+         then throw (GenericMsg loc ("Operator " ++ show opy ++
+                                     " is non-associative"))
          else pure (getPrec ox > y)
 higher loc opl l opr r
     = pure $ (getPrec l > getPrec r) ||

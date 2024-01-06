@@ -1,0 +1,11 @@
+1/1: Building Test (Test.idr)
+Error: Operator -:- is non-associative
+
+Test:8:8--8:22
+ 4 | (-:-) : a -> List a -> List a
+ 5 | (-:-) = (::)
+ 6 | 
+ 7 | test : List Nat
+ 8 | test = 4 -:- 3 -:- []
+            ^^^^^^^^^^^^^^
+
