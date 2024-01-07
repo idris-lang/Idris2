@@ -21,6 +21,12 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 ### Compiler changes
 
+#### NodeJS Backend
+
+* The NodeJS executable output to `build/exec/` now has its executable bit set.
+  That file already had a NodeJS shebang at the top, so now it is fully ready to
+  go after compilation.
+
 ### Library changes
 
 #### Prelude
