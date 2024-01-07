@@ -343,7 +343,8 @@ mutual
 
   opBinder : OriginDesc -> IndentInfo -> Rule (OperatorLHSInfo PTerm)
   opBinder fname indents
-      = do boundName <- bounds (UN . Basic <$> decoratedSimpleBinderName fname)
+      = do boundName <- bounds (UN <$> (Basic <$> decoratedSimpleBinderName fname
+                                       <|> symbol "_" $> Underscore))
            opBinderTypes fname indents boundName
 
   autobindOp : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
