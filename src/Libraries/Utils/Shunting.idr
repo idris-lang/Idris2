@@ -40,6 +40,12 @@ data Tree op a = Infix FC FC op (Tree op a) (Tree op a)
                | Pre FC FC op (Tree op a)
                | Leaf a
 
+public export
+Bifunctor Tree where
+  bimap f g (Infix fc fc1 x y z) = Infix fc fc1 (f x) (bimap f g y) (bimap f g z)
+  bimap f g (Pre fc fc1 x y) = Pre fc fc1 (f x) (bimap f g y)
+  bimap f g (Leaf x) = Leaf (g x)
+
 export
 (Show op, Show a) => Show (Tree op a) where
   show (Infix _ _ op l r) = "(" ++ show op ++ " " ++ show l ++ " " ++ show r ++ ")"
@@ -86,23 +92,25 @@ isLAssoc _ = False
 
 -- Return whether the first operator should be applied before the second,
 -- assuming
-higher : Show op => FC -> op -> OpPrec -> op -> OpPrec -> Core Bool
+higher : Interpolation op => (showLoc : Show op) => FC -> op -> OpPrec -> op -> OpPrec -> Core Bool
 higher loc opx op opy (Prefix p) = pure False
 higher loc opx (NonAssoc x) opy oy
     = if x == getPrec oy
-         then throw (GenericMsg loc ("Operator " ++ show opx ++
-                                     " is non-associative"))
+         then throw (GenericMsgSol loc ("Operator \{opx} is non-associative")
+                                       ["Add brackets around \{opy}"
+                                       , "Change the fixity of \{show opy} to `infixl` or `infixr`"])
          else pure (x > getPrec oy)
 higher loc opx ox opy (NonAssoc y)
     = if getPrec ox == y
-         then throw (GenericMsg loc ("Operator " ++ show opy ++
-                                     " is non-associative"))
+         then throw (GenericMsgSol loc ("Operator \{opy} is non-associative")
+                                       ["Add brackets around \{opy}"
+                                       , "Change the fixity of \{show opy} to `infixl` or `infixr`"])
          else pure (getPrec ox > y)
 higher loc opl l opr r
     = pure $ (getPrec l > getPrec r) ||
              ((getPrec l == getPrec r) && isLAssoc l)
 
-processStack : Show op => {auto o : Ref Out (List (Tree op a))} ->
+processStack : Interpolation op => (showLoc : Show op) => {auto o : Ref Out (List (Tree op a))} ->
                List (FC, FC, op, OpPrec) -> op -> OpPrec ->
                Core (List (FC, FC, op, OpPrec))
 processStack [] op prec = pure []
@@ -112,7 +120,7 @@ processStack (x@(loc, opFC, opx, sprec) :: xs) opy prec
                  processStack xs opy prec
          else pure (x :: xs)
 
-shunt : Show op => {auto o : Ref Out (List (Tree op a))} ->
+shunt : Interpolation op => (showLoc : Show op) => {auto o : Ref Out (List (Tree op a))} ->
         (opstk : List (FC, FC, op, OpPrec)) ->
         List (Tok op a) -> Core (Tree op a)
 shunt stk (Expr x :: rest)
@@ -131,7 +139,7 @@ shunt stk []
     mkOp (loc, opFC, op, prec) = Op loc opFC op prec
 
 export
-parseOps : Show op => List (Tok op a) -> Core (Tree op a)
+parseOps : Interpolation op => (showLoc : Show op) => List (Tok op a) -> Core (Tree op a)
 parseOps toks
     = do o <- newRef {t = List (Tree op a)} Out []
          shunt [] toks

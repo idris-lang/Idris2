@@ -168,6 +168,14 @@ Eq FixityInfo where
         && x.fix == y.fix
         && x.precedence == y.precedence
 
+||| Whenever we read an operator from the parser, we don't know if it's a backticked expression with no fixity
+||| declaration, or if it has a fixity declaration. If it does not have a declaration, we represent this state
+||| with `Backticked`.
+||| Note that a backticked expression can have a fixity declaration, in which case it is represented with
+||| `DeclaredFixity`.
+public export
+data BacktickOrOperatorFixity = Backticked | DeclaredFixity FixityInfo
+
 -- Left-hand-side information for operators, carries autobind information
 -- an operator can either be
 -- - not autobind, a regular operator

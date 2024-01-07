@@ -642,12 +642,12 @@ perrorRaw (OperatorBindingMismatch fc {print=p} expected actual opName rhs)
     where
       moduleDiagnostic : Doc IdrisAnn
       moduleDiagnostic = case expected of
-                              Nothing => "Import a module that exports a suitable fixity."
-                              (Just a) => "Hide or remove the fixity at" <++> byShow a.fc
+                              Backticked => "Import a module that exports a suitable fixity."
+                              (DeclaredFixity a) => "Hide or remove the fixity at" <++> byShow a.fc
                                      <++> "and import a module that exports a compatible fixity."
       infixOpName : Doc IdrisAnn
       infixOpName = case expected of
-                         Nothing => enclose "`" "`" (byShow opName)
+                         Backticked => enclose "`" "`" (byShow opName)
                          _ => byShow opName
 
       displayFixityInfo : FixityInfo -> BindingModifier -> Doc IdrisAnn
@@ -657,8 +657,8 @@ perrorRaw (OperatorBindingMismatch fc {print=p} expected actual opName rhs)
         = byShow vis <++> byShow usedBinder <++> byShow fix <++> byShow precedence <++> pretty0 opName
       expressionDiagnositc : List (Doc IdrisAnn)
       expressionDiagnositc = case expected of
-          Nothing => []
-          (Just e) => let sentence = "Write the expression using" <++> byShow e.bindingInfo <++> "syntax:"
+          Backticked => []
+          (DeclaredFixity e) => let sentence = "Write the expression using" <++> byShow e.bindingInfo <++> "syntax:"
                    in pure $ sentence <++> enclose "'" "'" (case e.bindingInfo of
                            NotBinding =>
                               reAnnotate (const Code) (p actual.getLhs)
@@ -676,8 +676,8 @@ perrorRaw (OperatorBindingMismatch fc {print=p} expected actual opName rhs)
 
       fixityDiagnostic : Doc IdrisAnn
       fixityDiagnostic = case expected of
-          Nothing => "Define a new fixity:" <++> "infixr 0" <++> infixOpName
-          (Just fix) =>
+          Backticked => "Define a new fixity:" <++> "infixr 0" <++> infixOpName
+          (DeclaredFixity fix) =>
             "Change the fixity defined at" <++> pretty0 fix.fc <++> "to"
             <++> enclose "'" "'" (displayFixityInfo fix actual.getBinder)
             <+> dot
@@ -687,9 +687,9 @@ perrorRaw (OperatorBindingMismatch fc {print=p} expected actual opName rhs)
       printBindingModifier Typebind = "a type-binding (typebind)"
       printBindingModifier Autobind = "an automatically-binding (autobind)"
 
-      printBindingInfo : Maybe FixityInfo -> Doc IdrisAnn
-      printBindingInfo Nothing = "a regular"
-      printBindingInfo (Just x) = printBindingModifier x.bindingInfo
+      printBindingInfo : BacktickOrOperatorFixity -> Doc IdrisAnn
+      printBindingInfo Backticked = "a regular"
+      printBindingInfo (DeclaredFixity x) = printBindingModifier x.bindingInfo
 
 
 perrorRaw (TTCError msg)

@@ -106,8 +106,12 @@ mkPrec Infix  = NonAssoc
 mkPrec Prefix = Prefix
 
 -- This is used to print the error message for fixities
-[showFst] Show a => Show (a, b) where
-  show (x, y) = show x
+[interpName] Interpolation ((Name, BacktickOrOperatorFixity), b) where
+  interpolate ((x, _), _) = show x
+
+[showWithLoc] Show ((Name, BacktickOrOperatorFixity), b) where
+  show ((x, DeclaredFixity y), _) = show x ++ " at " ++ show y.fc
+  show ((x, Backticked), _) = show x
 
 -- Check that an operator does not have any conflicting fixities in scope.
 -- Each operator can have its fixity defined multiple times across multiple
@@ -117,7 +121,7 @@ mkPrec Prefix = Prefix
 checkConflictingFixities : {auto s : Ref Syn SyntaxInfo} ->
                            {auto c : Ref Ctxt Defs} ->
                            (isPrefix : Bool) ->
-                           FC -> Name -> Core (OpPrec, Maybe FixityInfo)
+                           FC -> Name -> Core (OpPrec, BacktickOrOperatorFixity)
 checkConflictingFixities isPrefix exprFC opn
   = do syn <- get Syn
        let op = nameRoot opn
@@ -128,14 +132,14 @@ checkConflictingFixities isPrefix exprFC opn
             -- characters, if not, it must be a backticked expression.
             (_, [], []) => if any isOpChar (fastUnpack op)
                               then throw (GenericMsg exprFC "Unknown operator '\{op}'")
-                              else pure (NonAssoc 1, Nothing) -- Backticks are non associative by default
+                              else pure (NonAssoc 1, Backticked) -- Backticks are non associative by default
 
             --
             (True, ((fxName, fx) :: _), _) => do
                 -- in the prefix case, remove conflicts with infix (-)
                 let extraFixities = pre ++ (filter (\(nm, _) => not $ nameRoot nm == "-") inf)
                 unless (isCompatible fx extraFixities) $ warnConflict fxName extraFixities
-                pure (mkPrec fx.fix fx.precedence, Just fx)
+                pure (mkPrec fx.fix fx.precedence, DeclaredFixity fx)
             -- Could not find any prefix operator fixities, there may still be conflicts with
             -- the infix ones.
             (True, [] , _) => throw (GenericMsg exprFC $ "'\{op}' is not a prefix operator")
@@ -144,7 +148,7 @@ checkConflictingFixities isPrefix exprFC opn
                 -- In the infix case, remove conflicts with prefix (-)
                 let extraFixities = (filter (\(nm, _) => not $ nm == UN (Basic "-")) pre) ++ inf
                 unless (isCompatible fx extraFixities) $ warnConflict fxName extraFixities
-                pure (mkPrec fx.fix fx.precedence, Just fx)
+                pure (mkPrec fx.fix fx.precedence, DeclaredFixity fx)
             -- Could not find any infix operator fixities, there may be prefix ones
             (False, _, []) => throw (GenericMsg exprFC $ "'\{op}' is not an infix operator")
   where
@@ -166,20 +170,20 @@ checkConflictingFixities isPrefix exprFC opn
                    For example: %hide \{show fxName}
                    """
 
-checkConflictingBinding : Side -> FC -> Name -> (foundFixity : Maybe FixityInfo) -> (usage : OperatorLHSInfo PTerm) -> (rhs : PTerm) -> Core ()
+checkConflictingBinding : Side -> FC -> Name -> (foundFixity : BacktickOrOperatorFixity) -> (usage : OperatorLHSInfo PTerm) -> (rhs : PTerm) -> Core ()
 checkConflictingBinding LHS fc opName foundFixity use_site rhs = pure () -- don't check if we're on the LHS
 checkConflictingBinding side fc opName foundFixity use_site rhs
     = if isCompatible foundFixity use_site
          then pure ()
          else throw $ OperatorBindingMismatch {print=byShow} fc foundFixity use_site opName rhs
     where
-      isCompatible : Maybe FixityInfo -> OperatorLHSInfo PTerm -> Bool
-      isCompatible Nothing (NoBinder lhs) = True
-      isCompatible Nothing _ = False
-      isCompatible (Just fixInfo) (NoBinder lhs) = fixInfo.bindingInfo == NotBinding
-      isCompatible (Just fixInfo) (BindType name ty) = fixInfo.bindingInfo == Typebind
-      isCompatible (Just fixInfo) (BindExpr name expr) = fixInfo.bindingInfo == Autobind
-      isCompatible (Just fixInfo) (BindExplicitType name type expr)
+      isCompatible : BacktickOrOperatorFixity -> OperatorLHSInfo PTerm -> Bool
+      isCompatible Backticked (NoBinder lhs) = True
+      isCompatible Backticked _ = False
+      isCompatible (DeclaredFixity fixInfo) (NoBinder lhs) = fixInfo.bindingInfo == NotBinding
+      isCompatible (DeclaredFixity fixInfo) (BindType name ty) = fixInfo.bindingInfo == Typebind
+      isCompatible (DeclaredFixity fixInfo) (BindExpr name expr) = fixInfo.bindingInfo == Autobind
+      isCompatible (DeclaredFixity fixInfo) (BindExplicitType name type expr)
           = fixInfo.bindingInfo == Autobind
 
 checkValidFixity : BindingModifier -> Fixity -> Nat -> Bool
@@ -204,16 +208,16 @@ checkValidFixity _ _ _ = False
 parameters (side : Side)
   toTokList : {auto s : Ref Syn SyntaxInfo} ->
               {auto c : Ref Ctxt Defs} ->
-              PTerm -> Core (List (Tok (OpStr, Maybe (OperatorLHSInfo PTerm)) PTerm))
+              PTerm -> Core (List (Tok ((OpStr, BacktickOrOperatorFixity), Maybe (OperatorLHSInfo PTerm)) PTerm))
   toTokList (POp fc opFC l opn r)
       = do (precInfo, fixInfo) <- checkConflictingFixities False fc opn
            checkConflictingBinding side opFC opn fixInfo l r
            rtoks <- toTokList r
-           pure (Expr l.getLhs :: Op fc opFC (opn, Just l) precInfo :: rtoks)
+           pure (Expr l.getLhs :: Op fc opFC ((opn, fixInfo), Just l) precInfo :: rtoks)
   toTokList (PPrefixOp fc opFC opn arg)
-      = do (precInfo, _) <- checkConflictingFixities True fc opn
+      = do (precInfo, fixInfo) <- checkConflictingFixities True fc opn
            rtoks <- toTokList arg
-           pure (Op fc opFC (opn, Nothing) precInfo :: rtoks)
+           pure (Op fc opFC ((opn, fixInfo), Nothing) precInfo :: rtoks)
   toTokList t = pure [Expr t]
 
 record BangData where
@@ -356,10 +360,12 @@ mutual
   desugarB side ps (PBracketed fc e) = desugarB side ps e
   desugarB side ps (POp fc opFC l op r)
       = do ts <- toTokList side (POp fc opFC l op r)
-           desugarTree side ps !(parseOps @{showFst} ts)
+           tree <- parseOps @{interpName} @{showWithLoc} ts
+           desugarTree side ps (mapFst (\((x, _), y) => (x, y)) tree)
   desugarB side ps (PPrefixOp fc opFC op arg)
       = do ts <- toTokList side (PPrefixOp fc opFC op arg)
-           desugarTree side ps !(parseOps @{showFst} ts)
+           tree <- parseOps @{interpName} @{showWithLoc} ts
+           desugarTree side ps (mapFst (\((x, _), y) => (x, y)) tree)
   desugarB side ps (PSectionL fc opFC op arg)
       = do syn <- get Syn
            -- It might actually be a prefix argument rather than a section

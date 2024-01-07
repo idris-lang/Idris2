@@ -9,3 +9,6 @@ Test:8:8--8:22
  8 | test = 4 -:- 3 -:- []
             ^^^^^^^^^^^^^^
 
+Possible solutions:
+ - Add brackets around -:-
+ - Change the fixity of -:- at Test:2:1--2:12 to `infixl` or `infixr`
