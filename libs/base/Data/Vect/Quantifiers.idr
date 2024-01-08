@@ -284,12 +284,12 @@ namespace All
   HVect = All id
 
   ||| Take the first element.
-  export
+  public export
   head : All p (x :: xs) -> p x
   head (y :: _) = y
 
   ||| Take all but the first element.
-  export
+  public export
   tail : All p (x :: xs) -> All p xs
   tail (_ :: ys) = ys
 
