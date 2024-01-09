@@ -1,4 +1,4 @@
-{ stdenv, lib, idris2-version, idris2 }:
+{ stdenv, lib, idris2-version, idris2, support, makeWrapper }:
 { src, projectName, idrisLibraries, ... }@attrs:
 
 let
@@ -12,7 +12,8 @@ in rec {
   executable = stdenv.mkDerivation (drvAttrs // {
     name = projectName;
     src = src;
-    nativeBuildInputs = [ idris2 ];
+    buildInputs = idrisLibraries ++ attrs.buildInputs or [];
+    nativeBuildInputs = [ idris2 makeWrapper ] ++ attrs.nativeBuildInputs or [];
     configurePhase = ''
       runHook preConfigure
       export IDRIS2_PACKAGE_PATH=${lib-dirs}
@@ -26,7 +27,20 @@ in rec {
     installPhase = ''
       runHook preInstall
       mkdir -p $out/bin
-      mv build/exec/* $out/bin
+      scheme_app="$(find ./build/exec -name '*_app')"
+      if [ "$scheme_app" = ''' ]; then
+        mv -- build/exec/* $out/bin/
+        chmod +x $out/bin/*
+      else
+        cd build/exec/*_app
+        for file in *.so; do
+          bin_name="''${file%.so}"
+          mv -- "$file" "$out/bin/$bin_name"
+          wrapProgram "$out/bin/$bin_name" \
+            --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ support ]} \
+            --prefix DYLD_LIBRARY_PATH : ${lib.makeLibraryPath [ support ]}
+        done
+      fi
       runHook postInstall
     '';
   });

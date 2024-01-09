@@ -47,6 +47,7 @@
           buildIdris = pkgs.callPackage ./nix/buildIdris.nix {
             inherit idris2-version;
             idris2 = idris2Pkg;
+            support = idris2Support;
           };
           idris2ApiPkg = buildIdris {
             src = ./.;
