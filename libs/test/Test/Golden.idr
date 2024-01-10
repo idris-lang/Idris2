@@ -332,7 +332,7 @@ pathLookup names = do
 ||| Some test may involve Idris' backends and have requirements.
 ||| We define here the ones supported by Idris
 public export
-data Requirement = C | Chez | Node | Racket | Gambit | Valgrind
+data Requirement = C | Chez | Node | Racket | Gambit
 
 export
 Eq Requirement where
@@ -341,7 +341,6 @@ Eq Requirement where
   Node == Node = True
   Racket == Racket = True
   Gambit == Gambit = True
-  Valgrind == Valgrind = True
   _ == _ = False
 
 export
@@ -351,7 +350,6 @@ Show Requirement where
   show Node = "node"
   show Racket = "racket"
   show Gambit = "gambit"
-  show Valgrind = "valgrind"
 
 export
 [CG] Show Requirement where
@@ -360,7 +358,6 @@ export
   show Node = "node"
   show Racket = "racket"
   show Gambit = "gambit"
-  show Valgrind = "valgrind"
 
 export
 checkRequirement : Requirement -> IO (Maybe String)
@@ -372,12 +369,11 @@ checkRequirement req
       else pure Nothing
   where
     requirement : Requirement -> (String, List String)
-    requirement C = ("CC", ["cc"])
+    requirement C = ("CC", ["cc", "valgrind"])
     requirement Chez = ("CHEZ", ["chez", "chezscheme9.5", "chezscheme", "chez-scheme", "scheme"])
     requirement Node = ("NODE", ["node"])
     requirement Racket = ("RACKET", ["racket"])
     requirement Gambit = ("GAMBIT", ["gsc"])
-    requirement Valgrind = ("VALGRIND", ["valgrind"])
     platformSupport : Requirement -> Bool
     platformSupport C = not isWindows
     platformSupport Racket = not isWindows

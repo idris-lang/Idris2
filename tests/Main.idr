@@ -158,9 +158,6 @@ chezTests = testsInDir "chez" "Chez backend" {codegen = Just Chez}
 refcTests : IO TestPool
 refcTests = testsInDir "refc" "Reference counting C backend" {codegen = Just C}
 
-refcMemoryLeakTests : IO TestPool
-refcMemoryLeakTests = testsInDir "refc-memory" "Reference counting C backend: memory leak test" {requirements = [Valgrind]} {codegen = Just C}
-
 racketTests : IO TestPool
 racketTests = testsInDir "racket" "Racket backend" {codegen = Just Racket}
   { pred = not . (`elem` ["conditions006", "conditions007"]) }
@@ -229,7 +226,6 @@ main = runner $
   , !contribLibraryTests
   , !chezTests
   , !refcTests
-  , !refcMemoryLeakTests
   , !racketTests
   , !nodeTests
   , !vmcodeInterpTests
