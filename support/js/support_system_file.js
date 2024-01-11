@@ -132,7 +132,8 @@ function support_system_file_popen (cmd, m) {
     case "r":
       io_setting = ['ignore', write_fd, 2]
       break
-    case "w", "a":
+    case "w": 
+    case "a":
       io_setting = [write_fd, 'ignore', 2]
       break
     default:

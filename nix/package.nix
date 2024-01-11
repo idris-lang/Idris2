@@ -48,7 +48,7 @@ stdenv.mkDerivation rec {
     "TEST_IDRIS2_SUPPORT_DIR=${supportLibrariesPath}"
   ];
 
-  installTargets = "install-idris2 install-libs";
+  installTargets = "install-idris2 install-with-src-libs";
   installFlags = [ "PREFIX=$(out)" ];
 
   # TODO: Move this into its own derivation, such that this can be changed
