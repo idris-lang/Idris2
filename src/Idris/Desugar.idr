@@ -175,7 +175,7 @@ checkConflictingBinding LHS fc opName foundFixity use_site rhs = pure () -- don'
 checkConflictingBinding side fc opName foundFixity use_site rhs
     = if isCompatible foundFixity use_site
          then pure ()
-         else throw $ OperatorBindingMismatch {print=byShow} fc foundFixity use_site opName rhs
+         else throw $ OperatorBindingMismatch {print = byShow} fc foundFixity use_site opName rhs
     where
       isCompatible : BacktickOrOperatorFixity -> OperatorLHSInfo PTerm -> Bool
       isCompatible Backticked (NoBinder lhs) = True
@@ -361,11 +361,13 @@ mutual
   desugarB side ps (POp fc opFC l op r)
       = do ts <- toTokList side (POp fc opFC l op r)
            tree <- parseOps @{interpName} @{showWithLoc} ts
-           desugarTree side ps (mapFst (\((x, _), y) => (x, y)) tree)
+           unop <- desugarTree side ps (mapFst (\((x, _), y) => (x, y)) tree)
+           desugarB side ps unop
   desugarB side ps (PPrefixOp fc opFC op arg)
       = do ts <- toTokList side (PPrefixOp fc opFC op arg)
            tree <- parseOps @{interpName} @{showWithLoc} ts
-           desugarTree side ps (mapFst (\((x, _), y) => (x, y)) tree)
+           unop <- desugarTree side ps (mapFst (\((x, _), y) => (x, y)) tree)
+           desugarB side ps unop
   desugarB side ps (PSectionL fc opFC op arg)
       = do syn <- get Syn
            -- It might actually be a prefix argument rather than a section
@@ -766,49 +768,45 @@ mutual
            rule' <- desugarDo side ps ns rule
            pure $ IRewrite fc rule' rest'
 
-  -- Handle special cases for operator overloads
-  -- Maybe overloading ** should be in here
+  -- Replace all operator by function application
   desugarTree : {auto s : Ref Syn SyntaxInfo} ->
                 {auto b : Ref Bang BangData} ->
                 {auto c : Ref Ctxt Defs} ->
                 {auto u : Ref UST UState} ->
                 {auto m : Ref MD Metadata} ->
                 {auto o : Ref ROpts REPLOpts} ->
-                Side -> List Name -> Tree (OpStr, Maybe $ OperatorLHSInfo PTerm) PTerm -> Core RawImp
+                Side -> List Name -> Tree (OpStr, Maybe $ OperatorLHSInfo PTerm) PTerm ->
+                Core PTerm
   desugarTree side ps (Infix loc eqFC (UN $ Basic "=", _) l r) -- special case since '=' is special syntax
-      = do l' <- desugarTree side ps l
-           r' <- desugarTree side ps r
-           pure (IAlternative loc FirstSuccess
-                     [apply (IVar eqFC eqName) [l', r'],
-                      apply (IVar eqFC heqName) [l', r']])
+      = pure $ PEq  loc !(desugarTree side ps l) !(desugarTree side ps r)
   desugarTree side ps (Infix loc _ (UN $ Basic "$", _) l r) -- special case since '$' is special syntax
       = do l' <- desugarTree side ps l
            r' <- desugarTree side ps r
-           pure (IApp loc l' r')
+           pure (PApp loc l' r')
   -- normal operators
   desugarTree side ps (Infix loc opFC (op, Just (NoBinder lhs)) l r)
       = do l' <- desugarTree side ps l
            r' <- desugarTree side ps r
-           pure (IApp loc (IApp loc (IVar opFC op) l') r')
+           pure (PApp loc (PApp loc (PRef opFC op) l') r')
   -- (x : ty) =@ f x ==>> (=@) exp (\x : ty => f x)
-  desugarTree side ps (Infix loc opFC (op, Just (BindType name lhs)) _ r)
-      = do desugaredLHS <- desugarB side ps lhs
-           desugaredRHS <- desugarTree side ps r
-           pure $ IApp loc (IApp loc (IVar opFC op) desugaredLHS)
-                           (ILam loc top Explicit (Just name.val) desugaredLHS desugaredRHS)
+  desugarTree side ps (Infix loc opFC (op, Just (BindType pat lhs)) l r)
+      = do l' <- desugarTree side ps l
+           body <- desugarTree side ps r
+           pure $ PApp loc (PApp loc (PRef opFC op) l')
+                      (PLam loc top Explicit pat.val l' body)
   -- (x := exp) =@ f x ==>> (=@) exp (\x : ? => f x)
-  desugarTree side ps (Infix loc opFC (op, Just (BindExpr name lhs)) _ r)
-      = do desugaredLHS <- desugarB side ps lhs
-           desugaredRHS <- desugarTree side ps r
-           pure $ IApp loc (IApp loc (IVar opFC op) desugaredLHS)
-                           (ILam loc top Explicit (Just name.val) (Implicit opFC False) desugaredRHS)
+  desugarTree side ps (Infix loc opFC (op, Just (BindExpr pat lhs)) l r)
+      = do l' <- desugarTree side ps l
+           body <- desugarTree side ps r
+           pure $ PApp loc (PApp loc (PRef opFC op) l')
+                      (PLam loc top Explicit pat.val (PInfer opFC) body)
+
   -- (x : ty := exp) =@ f x ==>> (=@) exp (\x : ty => f x)
-  desugarTree side ps (Infix loc opFC (op, Just (BindExplicitType name ty expr)) _ r)
-      = do desugaredLHS <- desugarB side ps expr
-           desugaredType <- desugarB side ps ty
-           desugaredRHS <- desugarTree side ps r
-           pure $ IApp loc (IApp loc (IVar opFC op) desugaredLHS)
-                           (ILam loc top Explicit (Just name.val) desugaredType desugaredRHS)
+  desugarTree side ps (Infix loc opFC (op, Just (BindExplicitType pat ty expr)) l r)
+      = do l' <- desugarTree side ps l
+           body <- desugarTree side ps r
+           pure $ PApp loc (PApp loc (PRef opFC op) l')
+                      (PLam loc top Explicit pat.val ty body)
   desugarTree side ps (Infix loc opFC (op, Nothing) _ r)
       = throw $ InternalError "illegal fixity: Parsed as infix but no binding information"
 
@@ -832,16 +830,16 @@ mutual
             -- not a signed integer literal. proceed by desugaring
             -- and applying to `negate`.
             _     => do arg' <- desugarTree side ps (Leaf $ PPrimVal fc c)
-                        pure (IApp loc (IVar opFC (UN $ Basic "negate")) arg')
+                        pure (PApp loc (PRef opFC (UN $ Basic "negate")) arg')
 
   desugarTree side ps (Pre loc opFC (UN $ Basic "-", _) arg)
     = do arg' <- desugarTree side ps arg
-         pure (IApp loc (IVar opFC (UN $ Basic "negate")) arg')
+         pure (PApp loc (PRef opFC (UN $ Basic "negate")) arg')
 
   desugarTree side ps (Pre loc opFC (op, _) arg)
       = do arg' <- desugarTree side ps arg
-           pure (IApp loc (IVar opFC op) arg')
-  desugarTree side ps (Leaf t) = desugarB side ps t
+           pure (PApp loc (PRef opFC op) arg')
+  desugarTree side ps (Leaf t) = pure t
 
   desugarType : {auto s : Ref Syn SyntaxInfo} ->
                 {auto c : Ref Ctxt Defs} ->

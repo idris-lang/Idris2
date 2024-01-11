@@ -655,22 +655,25 @@ perrorRaw (OperatorBindingMismatch fc {print=p} expected actual opName rhs)
         = byShow vis <++> byShow fix <++> byShow precedence <++> pretty0 opName
       displayFixityInfo (MkFixityInfo _ vis _ fix precedence) usedBinder
         = byShow vis <++> byShow usedBinder <++> byShow fix <++> byShow precedence <++> pretty0 opName
+
+      printE : ? -> Doc IdrisAnn
+      printE x = reAnnotate (const Code) (p x)
+
       expressionDiagnositc : List (Doc IdrisAnn)
       expressionDiagnositc = case expected of
           Backticked => []
           (DeclaredFixity e) => let sentence = "Write the expression using" <++> byShow e.bindingInfo <++> "syntax:"
                    in pure $ sentence <++> enclose "'" "'" (case e.bindingInfo of
                            NotBinding =>
-                              reAnnotate (const Code) (p actual.getLhs)
-                              <++> infixOpName <++> reAnnotate (const Code) (p rhs)
+                              printE actual.getLhs <++> infixOpName <++> printE rhs
                            Autobind =>
-                              parens (maybe "_" pretty0 actual.getBoundName <++> ":="
-                              <++> reAnnotate (const Code) (p actual.getLhs))
-                              <++> infixOpName <++> reAnnotate (const Code) (p rhs)
+                              parens (maybe "_" printE actual.getBoundPat <++> ":="
+                                      <++> printE actual.getLhs)
+                              <++> infixOpName <++> printE rhs
                            Typebind =>
-                              parens (maybe "_" pretty0 actual.getBoundName <++> ":"
-                              <++> reAnnotate (const Code) (p actual.getLhs))
-                              <++> infixOpName <++> reAnnotate (const Code) (p rhs)
+                              parens (maybe "_" printE actual.getBoundPat <++> ":"
+                                      <++> printE actual.getLhs)
+                              <++> infixOpName <++> printE rhs
                            ) <+> dot
 
 

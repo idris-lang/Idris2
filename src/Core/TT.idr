@@ -189,11 +189,11 @@ data OperatorLHSInfo : tm -> Type where
   -- Traditional operator wihtout binding, carries the lhs
   NoBinder : (lhs : tm) -> OperatorLHSInfo tm
   -- (nm : ty) =@ fn x
-  BindType : (name : WithBounds Name) -> (ty : tm) -> OperatorLHSInfo tm
+  BindType : (name : WithBounds tm) -> (ty : tm) -> OperatorLHSInfo tm
   -- (nm := exp) =@ fn nm
-  BindExpr : (name : WithBounds Name) -> (expr : tm) -> OperatorLHSInfo tm
+  BindExpr : (name : WithBounds tm) -> (expr : tm) -> OperatorLHSInfo tm
   -- (nm : ty := exp) =@ fn nm
-  BindExplicitType : (name : WithBounds Name) ->  (type, expr : tm) -> OperatorLHSInfo tm
+  BindExplicitType : (name : WithBounds tm) ->  (type, expr : tm) -> OperatorLHSInfo tm
 
 export
 Show (OperatorLHSInfo tm) where
@@ -207,9 +207,9 @@ Show (OperatorLHSInfo tm) where
 export
 Functor OperatorLHSInfo where
   map f (NoBinder lhs) = NoBinder $ f lhs
-  map f (BindType nm lhs) = BindType nm (f lhs)
-  map f (BindExpr nm lhs) = BindExpr nm (f lhs)
-  map f (BindExplicitType nm ty lhs) = BindExplicitType nm (f ty) (f lhs)
+  map f (BindType nm lhs) = BindType (map f nm) (f lhs)
+  map f (BindExpr nm lhs) = BindExpr (map f nm) (f lhs)
+  map f (BindExplicitType nm ty lhs) = BindExplicitType (map f nm) (f ty) (f lhs)
 
 export
 (.getLhs) : OperatorLHSInfo tm -> tm
@@ -219,11 +219,11 @@ export
 (.getLhs) (BindExplicitType _ _ lhs) = lhs
 
 export
-(.getBoundName) : OperatorLHSInfo tm -> Maybe Name
-(.getBoundName) (NoBinder lhs) = Nothing
-(.getBoundName) (BindType name ty) = Just name.val
-(.getBoundName) (BindExpr name expr) = Just name.val
-(.getBoundName) (BindExplicitType name type expr) = Just name.val
+(.getBoundPat) : OperatorLHSInfo tm -> Maybe tm
+(.getBoundPat) (NoBinder lhs) = Nothing
+(.getBoundPat) (BindType name ty) = Just name.val
+(.getBoundPat) (BindExpr name expr) = Just name.val
+(.getBoundPat) (BindExplicitType name type expr) = Just name.val
 
 export
 (.getBinder) : OperatorLHSInfo tm -> BindingModifier

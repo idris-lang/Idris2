@@ -327,7 +327,7 @@ mutual
 
   -- The different kinds of operator bindings `x : ty` for typebind
   -- x := e and x : ty := e for autobind
-  opBinderTypes : OriginDesc -> IndentInfo -> WithBounds Name -> Rule (OperatorLHSInfo PTerm)
+  opBinderTypes : OriginDesc -> IndentInfo -> WithBounds PTerm -> Rule (OperatorLHSInfo PTerm)
   opBinderTypes fname indents boundName =
            do decoratedSymbol fname ":"
               ty <- typeExpr pdef fname indents
@@ -343,8 +343,7 @@ mutual
 
   opBinder : OriginDesc -> IndentInfo -> Rule (OperatorLHSInfo PTerm)
   opBinder fname indents
-      = do boundName <- bounds (UN <$> (Basic <$> decoratedSimpleBinderName fname
-                                       <|> symbol "_" $> Underscore))
+      = do boundName <- bounds (expr plhs fname indents)
            opBinderTypes fname indents boundName
 
   autobindOp : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
@@ -716,19 +715,6 @@ mutual
                     $ bindSymbol fname
            scope <- mustWork $ typeExpr pdef fname indents
            pure (pibindAll fname exp b.val scope)
-
-  total
-  asOpInfo : PiBindList -> Maybe (OperatorLHSInfo PTerm)
-  asOpInfo [(rig, name, term)] = let True = rig == top
-                                     | _ => Nothing
-                                     Just n = sequence name
-                                     | _ => Nothing
-                                  in Just (BindType n term)
-  asOpInfo _ = Nothing
-
-  fromOpInfo : OperatorLHSInfo PTerm -> Maybe PiBindList
-  fromOpInfo (BindType name ty) = Just [(top, map Just name, ty)]
-  fromOpInfo _ = Nothing
 
   autoImplicitPi : OriginDesc -> IndentInfo -> Rule PTerm
   autoImplicitPi fname indents
