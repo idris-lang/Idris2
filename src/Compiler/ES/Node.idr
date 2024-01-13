@@ -14,17 +14,21 @@ import Core.TT
 import Libraries.Utils.Path
 
 import System
+import System.File.Permissions
 
 import Data.Maybe
 
 %default covering
+
+envNode : String
+envNode = "/usr/bin/env node"
 
 findNode : IO String
 findNode = do
    Nothing <- idrisGetEnv "NODE"
       | Just node => pure node
    path <- pathLookup ["node"]
-   pure $ fromMaybe "/usr/bin/env node" path
+   pure $ fromMaybe envNode path
 
 ||| Compile a TT expression to Node
 compileToNode :
@@ -36,7 +40,7 @@ compileToNode c s tm = do
   pure $ shebang ++ js
   where
     shebang : String
-    shebang = "#!/usr/bin/env node\n"
+    shebang = "#!\{envNode}\n"
 
 ||| Node implementation of the `compileExpr` interface.
 compileExpr :
@@ -51,6 +55,7 @@ compileExpr c s tmpDir outputDir tm outfile =
   do es <- compileToNode c s tm
      let out = outputDir </> outfile
      Core.writeFile out es
+     coreLift_ $ chmodRaw out 0o755
      pure (Just out)
 
 ||| Node implementation of the `executeExpr` interface.

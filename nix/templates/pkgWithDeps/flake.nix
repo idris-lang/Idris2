@@ -1,5 +1,5 @@
 {
-  description = "My Idris 2 package";
+  description = "My Idris 2 program";
 
   inputs.flake-utils.url = "github:numtide/flake-utils";
   inputs.idris = {
@@ -7,6 +7,7 @@
     inputs.nixpkgs.follows = "nixpkgs";
     inputs.flake-utils.follows = "flake-utils";
   };
+  # some package this project depends on:
   inputs.pkg = {
     url = "github:idris-lang/pkg";
     inputs.flake-utils.follows = "flake-utils";
@@ -17,17 +18,17 @@
     flake-utils.lib.eachDefaultSystem (system:
       let
         npkgs = import nixpkgs { inherit system; };
-        my-pkg = pkg.packages.${system}.installLibrary;
+        my-pkg = pkg.packages.${system}.library { };
         idrisPkgs = idris.packages.${system};
         buildIdris = idris.buildIdris.${system};
         pkgs = buildIdris {
           projectName = "pkgWithDeps";
           src = ./.;
-          idrisLibraries = [ pkg ];
+          idrisLibraries = [ my-pkg ];
         };
       in rec {
         packages = pkgs // idrisPkgs;
-        defaultPackage = pkgs.build;
+        defaultPackage = pkgs.executable;
         devShell = npkgs.mkShell {
           buildInputs = [ idrisPkgs.idris2 npkgs.rlwrap ];
           shellHook = ''
