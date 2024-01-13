@@ -337,8 +337,9 @@ What does the name “Idris” mean?
 ================================
 
 British people of a certain age may be familiar with this
-`singing dragon <https://www.youtube.com/watch?v=G5ZMNyscPcg>`_. If
-that doesn’t help, maybe you can invent a suitable acronym :-) .
+`singing dragon
+<https://web.archive.org/web/20160531194307/https://www.youtube.com/watch?v=G5ZMNyscPcg>`_.
+If that doesn’t help, maybe you can invent a suitable acronym :-) .
 
 Where can I find the community standards for the Idris community?
 ==================================================================
