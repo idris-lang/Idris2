@@ -69,6 +69,14 @@ Make sure that:
 
 - `$PREFIX/bin` is in your `PATH`
 
+Further, on Apple silicon Macs (M1/M2), you need to set the following environment
+variables:
+
+``` sh
+export IDRIS2_LIBS=/opt/homebrew/lib
+export CPATH=/opt/homebrew/include:/opt/homebrew/lib
+```
+
 ### 2: Installing without an existing Idris 2
 
 You can build from pre-built Chez Scheme source, as long as you have Chez Scheme
@@ -195,9 +203,8 @@ git clone git@github.com:racket/ChezScheme.git
 cd ChezScheme
 git submodule init
 git submodule update
-arch=tarm64osx
 ./configure --pb
-make ${arch}.bootquick
+make tarm64osx.bootquick
 ./configure --threads
 make
 sudo make install
