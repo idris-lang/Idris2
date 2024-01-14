@@ -4,27 +4,32 @@
 
 // IORef
 
-Value *newIORef(Value *, Value *, Value *);
-Value *readIORef(Value *, Value *, Value *);
-Value *writeIORef(Value *, Value *, Value *, Value *);
+Value *idris2_Data_IORef_prim__newIORef(Value *, Value *, Value *);
+#define idris2_Data_IORef_prim__readIORef(erased, ix, world)                   \
+  (newReference(global_IORef_Storage->refs[((Value_IORef *)ix)->index]))
+
+Value *idris2_Data_IORef_prim__writeIORef(Value *, Value *, Value *, Value *);
 
 // Sys
 
-Value *sysOS(void);
-Value *sysCodegen(void);
+Value *idris2_System_Info_prim__os(void);
+Value *idris2_System_Info_prim__codegen(void);
 Value *idris2_crash(Value *msg);
 
 // Array
 
-Value *newArray(Value *, Value *, Value *, Value *);
-Value *arrayGet(Value *, Value *, Value *, Value *);
-Value *arraySet(Value *, Value *, Value *, Value *, Value *);
+Value *idris2_Data_IOArray_Prims_prim__newArray(Value *, Value *, Value *,
+                                                Value *);
+#define idris2_Data_IOArray_Prims_prim__arrayGet(rased, array, i, word)        \
+  (newReference(((Value_Array *)(array))->arr[((Value_Int64 *)i)->i64]))
+Value *idris2_Data_IOArray_Prims_prim__arraySet(Value *, Value *, Value *,
+                                                Value *, Value *);
 
 // Pointer
-Value *onCollect(Value *, Value *, Value *, Value *);
-Value *onCollectAny(Value *, Value *, Value *);
+Value *idris2_Prelude_IO_prim__onCollect(Value *, Value *, Value *, Value *);
+Value *idris2_Prelude_IO_prim__onCollectAny(Value *, Value *, Value *);
 
-Value *voidElim(Value *, Value *);
+#define idris2_Prelude_Uninhabited_prim__void(x, y) (NULL)
 
 // Threads
 Value *System_Concurrency_Raw_prim__mutexRelease(Value *, Value *);
