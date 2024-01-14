@@ -46,9 +46,7 @@ If you have an existing Idris 2, go to Step 3. Otherwise, read on...
 Make sure that:
 
 - `$PREFIX/bin` is in your `PATH`
-- `$PREFIX/lib` is in your `LD_LIBRARY_PATH` or `DYLD_LIBRARY_PATH` if on
-  `macOS` (so that the system knows where to look for library support code)
-  
+
 Further, on Apple silicon Macs (M1/M2), you need to set the following environment
 variables:
 
@@ -210,7 +208,11 @@ the Racket fork of chez scheme.
 ```sh
 git clone git@github.com:racket/ChezScheme.git
 cd ChezScheme
-./configure
+git submodule init
+git submodule update
+./configure --pb
+make tarm64osx.bootquick
+./configure --threads
 make
 sudo make install
 ```
