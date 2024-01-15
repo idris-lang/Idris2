@@ -74,6 +74,11 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   with the exception of the latter dealing in `Bits8` which is more correct than
   `Int`.
 
+* Added an alternative `TTImp` traversal function `mapATTImp'` taking the original
+  `TTImp` at the input along with already traversed one. Existing `mapATTImp` is
+  implemented through the newly added one. The similar alternative for `mapMTTImp`
+  is added too.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
