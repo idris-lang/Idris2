@@ -1,0 +1,7 @@
+1/1: Building TraverseWithConst (TraverseWithConst.idr)
+LOG elab.test:0: term being analysed: f (a b) (c d)
+LOG elab.test:0: - names: [a, b, c, d, f]
+LOG elab.test:0: term being analysed: id (pure (fromInteger 5))
+LOG elab.test:0: - names: [Prelude.id, Prelude.pure, fromInteger]
+LOG elab.test:0: term being analysed: action1 a b >>= (\x => action2 b x >>= (\y => pure _))
+LOG elab.test:0: - names: [Builtin.MkPair, Builtin.Pair, >>=, a, action1, action2, b, pure, x, y]
