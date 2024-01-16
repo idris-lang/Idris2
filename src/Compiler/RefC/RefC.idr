@@ -309,20 +309,6 @@ newTemporaryVariableLevel : {auto t : Ref TemporaryVariableTracker (List (List S
 newTemporaryVariableLevel = update TemporaryVariableTracker ([] ::)
 
 
-getNewVar : {auto a : Ref ArgCounter Nat} -> {auto t : Ref TemporaryVariableTracker (List (List String))} -> Core String
-getNewVar = do
-    c <- getNextCounter
-    let var = "tmp_" ++ show c
-    registerVariableForAutomaticFreeing var
-    pure var
-
-
-getNewVarThatWillNotBeFreedAtEndOfBlock : {auto a : Ref ArgCounter Nat} -> Core String
-getNewVarThatWillNotBeFreedAtEndOfBlock = do
-    c <- getNextCounter
-    pure $ "tmp_" ++ show c
-
-
 maxLineLengthForComment : Nat
 maxLineLengthForComment = 60
 
@@ -394,10 +380,6 @@ fillConstructorArgs cons (v :: vars) k = do
     emit EmptyFC $ cons ++ "->args["++ show k ++ "] = newReference(" ++ varName v ++");"
     fillConstructorArgs cons vars (k + 1)
 
-showTag : Maybe Int -> String
-showTag Nothing = "-1"
-showTag (Just i) = show i
-
 integer_switch : List AConstAlt -> Bool
 integer_switch [] = True
 integer_switch (MkAConstAlt c _  :: _) =
@@ -442,59 +424,51 @@ MaxExtractFunArgs = 16
 
 
 mutual
-    copyConstructors : {auto a : Ref ArgCounter Nat}
+
+    concaseBody : {auto a : Ref ArgCounter Nat}
+                 -> {auto t : Ref TemporaryVariableTracker (List (List String))}
+                 -> {auto oft : Ref OutfileText Output}
+                 -> {auto il : Ref IndentLevel Nat}
+                 -> String -> String -> List Int -> ANF -> TailPositionStatus
+                 -> Core ()
+    concaseBody returnvar expr args bdy tailstatus = do
+        increaseIndentation
+        newTemporaryVariableLevel
+        _ <- foldlC (\k, arg => do
+            emit emptyFC "Value *var_\{show arg} = ((Value_Constructor*)\{expr})->args[\{show k}];"
+            pure (S k) ) 0 args
+        emit emptyFC $ "\{returnvar} = \{!(cStatementsFromANF bdy tailstatus)};"
+        freeTmpVars
+        decreaseIndentation
+ 
+
+    simpleConCase : {auto a : Ref ArgCounter Nat}
                     -> {auto t : Ref TemporaryVariableTracker (List (List String))}
                     -> {auto oft : Ref OutfileText Output}
                     -> {auto il : Ref IndentLevel Nat}
-                    -> String
-                    -> List AConAlt
-                    -> String
-                    -> String
-                    -> Nat
-                    -> Core $ ()
-    copyConstructors _ [] _ _ _ = pure ()
-    copyConstructors sc ((MkAConAlt n _ mTag args body) :: xs) constrFieldVar retValVar k = do
-        (tag', name') <- getNameTag mTag n
-        emit EmptyFC $ constrFieldVar ++ "[" ++ show k ++ "].tag = " ++ tag' ++ ";"
-        emit EmptyFC $ constrFieldVar ++ "[" ++ show k ++ "].name = " ++ name' ++ ";"
-        copyConstructors sc xs constrFieldVar retValVar (S k)
-    where
-        getNameTag : {auto a : Ref ArgCounter Nat} -> Maybe Int -> Name -> Core (String, String)
-        getNameTag Nothing n = pure ("-1", "\"" ++ cName n ++ "\"")
-        getNameTag (Just t) _ = pure (show t, "NULL")
+                    -> FC -> (expr : AVar) -> Maybe ANF -> Maybe ANF -> (args : List Int)
+                    -> TailPositionStatus
+                    -> Core String
+    simpleConCase fc expr nullcase nonnullcase args tailstatus = do
+        let returnvar = "tmp_\{show !(getNextCounter)}"
+        let expr' = varName expr
+        emit fc $ "Value * \{returnvar} = NULL;"
 
+        sep <- case nullcase of
+            Just bdy => do
+                emit emptyFC $ "if (NULL == \{expr'}) {"
+                concaseBody returnvar expr' [] bdy tailstatus
+                pure "} else {"
+            _ => pure "if (NULL != \{expr'}) {"
 
-    conBlocks : {auto a : Ref ArgCounter Nat}
-             -> {auto t : Ref TemporaryVariableTracker (List (List String))}
-             -> {auto oft : Ref OutfileText Output}
-             -> {auto il : Ref IndentLevel Nat}
-             -> (scrutinee:String)
-             -> List AConAlt
-             -> (returnValueVariable:String)
-             -> (nrConBlock:Nat)
-             -> TailPositionStatus
-             -> Core ()
-    conBlocks _ [] _ _ _ = pure ()
-    conBlocks sc ((MkAConAlt n _ mTag args body) :: xs) retValVar k tailStatus = do
-        emit EmptyFC $ "  case " ++ show k ++ ":"
-        emit EmptyFC $ "  {"
-        increaseIndentation
-        newTemporaryVariableLevel
-        varBindLines sc args Z
-        assignment <- cStatementsFromANF body tailStatus
-        emit EmptyFC $ retValVar ++ " = " ++ assignment ++ ";"
-        freeTmpVars
-        emit EmptyFC $ "break;"
-        decreaseIndentation
-        emit EmptyFC $ "  }"
-        conBlocks sc xs retValVar (S k) tailStatus
-    where
-        varBindLines : String -> (args : List Int) -> Nat -> Core ()
-        varBindLines _ [] _ = pure ()
-        varBindLines sc (target :: xs) source = do
-            emit EmptyFC $  "Value * var_" ++ show target ++ " = ((Value_Constructor*)" ++ sc ++ ")->args[" ++ show source ++ "];"
-            varBindLines sc xs (S source)
-            pure ()
+        case nonnullcase of
+            Just bdy => do
+                emit emptyFC sep
+                concaseBody returnvar expr' args bdy tailstatus
+            _ => pure ()
+
+        emit emptyFC $ "}"
+        pure returnvar
 
 
     constBlockSwitch : {auto a : Ref ArgCounter Nat}
@@ -573,12 +547,6 @@ mutual
         emit EmptyFC $ constantArray ++ "[" ++ show (k-1) ++ "] = " ++ extractConstant constant ++ ";"
         makeNonIntSwitchStatementConst alts (k+1) constantArray compareFct
 
-
-    checkTags : List AConAlt -> Core Bool
-    checkTags [] = pure False
-    checkTags ((MkAConAlt n _ Nothing args sc) :: xs) = pure False
-    checkTags _ = pure True
-
     cStatementsFromANF : {auto a : Ref ArgCounter Nat}
                       -> {auto t : Ref TemporaryVariableTracker (List (List String))}
                       -> {auto oft : Ref OutfileText Output}
@@ -646,59 +614,72 @@ mutual
         emit fc $ "Value * var_" ++ (show var) ++ " = " ++ valueAssignment ++ ";"
         registerVariableForAutomaticFreeing $ "var_" ++ (show var)
         cStatementsFromANF body tailPosition
-    cStatementsFromANF (ACon fc n UNIT tag []) _ = pure "(Value*)NULL"
-    cStatementsFromANF (ACon fc n _ tag args) _ = do
-        c <- getNextCounter
-        let constr = "constructor_" ++ (show c)
-        emit fc $ "Value_Constructor* "
-                ++ constr ++ " = newConstructor("
-                ++ (show (length args))
-                ++ ", "  ++ showTag tag  ++ ", "
-                ++ "\"" ++ cName n ++ "\""
-                ++ ");"
-        emit fc $ " // constructor " ++ cName n
-        fillConstructorArgs constr args 0
-        pure $ "(Value*)" ++ constr
+
+    -- NOTE: the tag should be independent to sizeof Int. Or do your data type has over 2^16 constructors?
+    -- NOTE: oh no...A simple enum types should be translated into primitive types.
+    cStatementsFromANF (ACon fc n UNIT _ []) _ = pure "((Value*)NULL /* ACon \{show fc} \{cName n} UNIT */)"
+    cStatementsFromANF (ACon fc n NIL _ []) _ = pure "((Value*)NULL /* ACon \{show fc} \{cName n} NIL */)"
+    cStatementsFromANF (ACon fc n NOTHING _ []) _ = pure "((Value*)NULL /* ACon \{show fc} \{cName n} NOTHING */)"
+    cStatementsFromANF (ACon fc n ZERO _ []) _ = pure "((Value*)NULL /* ACon \{show fc} \{cName n} ZERO */)"
+    cStatementsFromANF (ACon fc n _ Nothing _) _ = throw $ InternalError "Constructor must have tag."
+    cStatementsFromANF (ACon fc n coninfo (Just tag) args) _ = do
+        let varname = "constructor_\{show !(getNextCounter)}"
+        emit fc $ "Value_Constructor* \{varname} = newConstructor(\{show $ length args}, \{show tag} /* ACon \{cName n} \{show coninfo} */);"
+        fillConstructorArgs varname args 0
+        pure $ "(Value*)\{varname}"
 
     cStatementsFromANF (AOp fc _ op args) _ = pure $ cOp op $ map varName args
     cStatementsFromANF (AExtPrim fc _ p args) _ = do
         emit fc $ "// call to external primitive " ++ cName p
         pure $ cCleanString (show (toPrim p)) ++ "("++ showSep ", " (map varName args) ++")"
+
+    -- Optimizing some special cases of ConCase
+    cStatementsFromANF (AConCase fc sc [] Nothing) _ = throw $ InternalError "empty concase" -- Why the type accept this?
+    cStatementsFromANF (AConCase fc sc [] (Just mDef)) tailstatus = cStatementsFromANF mDef tailstatus -- Why the type accept this?
+    cStatementsFromANF (AConCase fc sc [MkAConAlt _ NIL     _ [] nc] nnc) ts = simpleConCase fc sc (Just nc) nnc [] ts
+    cStatementsFromANF (AConCase fc sc [MkAConAlt _ NOTHING _ [] nc] nnc) ts = simpleConCase fc sc (Just nc) nnc [] ts
+    cStatementsFromANF (AConCase fc sc [MkAConAlt _ ZERO    _ [] nc] nnc) ts = simpleConCase fc sc (Just nc) nnc [] ts
+
+    cStatementsFromANF (AConCase fc sc [MkAConAlt _ CONS _ args nnc] nc) ts = simpleConCase fc sc nc (Just nnc) args ts
+    cStatementsFromANF (AConCase fc sc [MkAConAlt _ JUST _ args nnc] nc) ts = simpleConCase fc sc nc (Just nnc) args ts
+    cStatementsFromANF (AConCase fc sc [MkAConAlt _ SUCC _ args nnc] nc) ts = simpleConCase fc sc nc (Just nnc) args ts
+
     cStatementsFromANF (AConCase fc sc alts mDef) tailPosition = do
-        c <- getNextCounter
-        switchReturnVar <- getNewVarThatWillNotBeFreedAtEndOfBlock
-        let newValueLine = "Value * " ++ switchReturnVar ++ " = NULL;"
-        let constructorField = "constructorField_" ++ show c
-        let constructorFieldLine = "AConAlt * " ++ constructorField
-                                ++ "= newConstructorField(" ++ show (length alts) ++ ");"
-        let switchLine = "switch(compareConstructors("
-                      ++ varName sc
-                      ++ ", "
-                      ++ constructorField
-                      ++ ", "
-                      ++ show (length alts)
-                      ++ ")){"
-        emit fc newValueLine
-        emit fc constructorFieldLine
-        copyConstructors (varName sc) alts constructorField switchReturnVar 0
-        emit fc switchLine
-        conBlocks (varName sc) alts switchReturnVar 0 tailPosition
+        let switchReturnVar = "tmp_\{show !(getNextCounter)}"
+        let sc' = varName sc
+        emit fc $ "Value * \{switchReturnVar} = NULL;"
+
+        _ <- foldlC (\els, alt => do
+            case alt of
+                MkAConAlt _ _ Nothing _ _ => throw $ InternalError "AConCase : MkConAlt has no tag."
+                MkAConAlt _ coninfo (Just tag') args bdy => do
+                    emit emptyFC $ "\{els}if (\{show tag'} == ((Value_Constructor*)(\{sc'}))->tag /* \{show coninfo} */) {"
+                    increaseIndentation
+                    newTemporaryVariableLevel
+                    _ <- foldlC (\k, arg => do
+                        emit emptyFC "Value *var_\{show arg} = ((Value_Constructor*)\{sc'})->args[\{show k}];"
+                        pure (S k)
+                        ) 0 args
+                    emit EmptyFC "\{switchReturnVar} = \{!(cStatementsFromANF bdy tailPosition)};"
+                    freeTmpVars
+                    decreaseIndentation
+                    pure "} else "
+            ) "" alts
+                
         case mDef of
             Nothing => pure ()
-            (Just d) => do
-                emit EmptyFC $ "  default : {"
+            Just bdy => do
+                emit EmptyFC "} else {"
                 increaseIndentation
                 newTemporaryVariableLevel
-                defaultAssignment <- cStatementsFromANF d tailPosition
-                emit EmptyFC $ switchReturnVar ++ " = " ++ defaultAssignment ++ ";"
+                emit EmptyFC "\{switchReturnVar} = \{!(cStatementsFromANF bdy tailPosition)};"
                 freeTmpVars
                 decreaseIndentation
-                emit EmptyFC $ "  }"
         emit EmptyFC $ "}"
-        emit EmptyFC $ "free(" ++ constructorField ++ ");"
         pure switchReturnVar
+
     cStatementsFromANF (AConstCase fc sc alts def) tailPosition = do
-        switchReturnVar <- getNewVarThatWillNotBeFreedAtEndOfBlock
+        let switchReturnVar = "tmp_\{show !(getNextCounter)}"
         let newValueLine = "Value * " ++ switchReturnVar ++ " = NULL;"
         emit fc newValueLine
         case integer_switch alts of

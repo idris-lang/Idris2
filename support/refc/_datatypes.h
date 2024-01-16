@@ -113,8 +113,7 @@ typedef struct {
   Value_header header;
   int32_t total;
   int32_t tag;
-  char *name;
-  Value **args;
+  Value *args[0];
 } Value_Constructor;
 
 typedef struct {

@@ -112,25 +112,25 @@ char *fastPack(Value *charList) {
 
 Value *fastUnpack(char *str) {
   if (str[0] == '\0') {
-    return (Value *)newConstructor(0, 0, "Prelude_Types_Nil");
+    return (Value *)newConstructor(0, 0);
   }
 
   Value_Constructor *retVal =
-      newConstructor(2, 1, "Prelude_Types__colon_colon");
+      newConstructor(2, 1);
   retVal->args[0] = (Value *)makeChar(str[0]);
 
   int i = 1;
   Value_Constructor *current = retVal;
   Value_Constructor *next;
   while (str[i] != '\0') {
-    next = newConstructor(2, 1, "Prelude_Types__colon_colon");
+    next = newConstructor(2, 1);
     next->args[0] = (Value *)makeChar(str[i]);
     current->args[1] = (Value *)next;
 
     i++;
     current = next;
   }
-  current->args[1] = (Value *)newConstructor(0, 0, "Prelude_Types_Nil");
+  current->args[1] = (Value *)newConstructor(0, 0);
 
   return (Value *)retVal;
 }
@@ -200,13 +200,13 @@ Value *stringIteratorNext(char *s, Value *it_p) {
   char c = it->str[it->pos];
 
   if (c == '\0') {
-    return (Value *)newConstructor(0, 0, "Data_String_Iterator_EOF");
+    return (Value *)newConstructor(0, 0);
   }
 
   it->pos++; // Ok to do this as StringIterator linear
 
   Value_Constructor *retVal =
-      newConstructor(2, 1, "Data_String_Iterator_Character");
+      newConstructor(2, 1);
   retVal->args[0] = (Value *)makeChar(c);
   retVal->args[1] = newReference(it_p);
 
