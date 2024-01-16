@@ -540,17 +540,16 @@ mutual
         cStatementsFromANF body tailPosition
 
     -- NOTE: the tag should be independent to sizeof Int. Or do your data type has over 2^16 constructors?
-    -- NOTE: oh no...A simple enum types should be translated into primitive types.
-    cStatementsFromANF (ACon fc n UNIT _ []) _ = pure "((Value*)NULL /* ACon \{show fc} \{cName n} UNIT */)"
-    cStatementsFromANF (ACon fc n NIL _ []) _ = pure "((Value*)NULL /* ACon \{show fc} \{cName n} NIL */)"
-    cStatementsFromANF (ACon fc n NOTHING _ []) _ = pure "((Value*)NULL /* ACon \{show fc} \{cName n} NOTHING */)"
-    cStatementsFromANF (ACon fc n ZERO _ []) _ = pure "((Value*)NULL /* ACon \{show fc} \{cName n} ZERO */)"
-    cStatementsFromANF (ACon fc n _ Nothing _) _ = throw $ InternalError "Constructor must have tag."
-    cStatementsFromANF (ACon fc n coninfo (Just tag) args) _ = do
-        let varname = "constructor_\{show !(getNextCounter)}"
-        emit fc $ "Value_Constructor* \{varname} = newConstructor(\{show $ length args}, \{show tag} /* ACon \{cName n} \{show coninfo} */);"
-        fillConstructorArgs varname args 0
-        pure $ "(Value*)\{varname}"
+    cStatementsFromANF (ACon fc n coninfo tag args) _ =
+        if coninfo == UNIT || coninfo == NIL || coninfo == NOTHING || coninfo == ZERO || coninfo == TYCON
+            then pure "((Value*)NULL /* ACon \{show fc} \{show n} \{show coninfo} */)"
+            else do
+                let Just tag' = tag
+                   | Nothing => throw $ InternalError "[refc] ACon : Constructor must have tag. \{show fc} \{show n} \{show coninfo}"
+                let varname = "constructor_\{show !(getNextCounter)}"
+                emit fc $ "Value_Constructor* \{varname} = newConstructor(\{show $ length args}, \{show tag'} /* ACon \{show n} \{show coninfo} */);"
+                fillConstructorArgs varname args 0
+                pure $ "(Value*)\{varname}"
 
     cStatementsFromANF (AOp fc _ op args) _ = pure $ cOp op $ map varName args
     cStatementsFromANF (AExtPrim fc _ p args) _ = do
@@ -566,8 +565,8 @@ mutual
         pure "idris2_\{cName p}(\{showSep ", " (map varName args)})"
 
     -- Optimizing some special cases of ConCase
-    cStatementsFromANF (AConCase fc sc [] Nothing) _ = throw $ InternalError "empty concase" -- Why the type accept this?
-    cStatementsFromANF (AConCase fc sc [] (Just mDef)) tailstatus = cStatementsFromANF mDef tailstatus -- Why the type accept this?
+    cStatementsFromANF (AConCase fc sc [] Nothing) _ = throw $ InternalError "[refc] AConCase : empty concase"
+    cStatementsFromANF (AConCase fc sc [] (Just mDef)) tailstatus = cStatementsFromANF mDef tailstatus
     cStatementsFromANF (AConCase fc sc alts mDef) tailPosition = do
         let switchReturnVar = "tmp_\{show !(getNextCounter)}"
         let sc' = varName sc
@@ -579,8 +578,8 @@ mutual
                 then emit emptyFC "\{els}if (NULL == \{sc'} /* \{show name} \{show coninfo} */) {"
                 else if coninfo == CONS || coninfo == JUST || coninfo == SUCC
                 then emit emptyFC "\{els}if (NULL != \{sc'} /* \{show name} \{show coninfo} */) {"
-                else let Just tag' = tag | _ => throw $ InternalError "AConCase : MkConAlt has no tag."
-                      in emit emptyFC "\{els}if (\{show tag'} == ((Value_Constructor*)(\{sc'}))->tag /* \\{show name} {show coninfo} */) {"
+                else let Just tag' = tag | _ => throw $ InternalError "[refc] AConCase : MkConAlt has no tag. \{show name} \{show coninfo}"
+                      in emit emptyFC "\{els}if (\{show tag'} == ((Value_Constructor*)\{sc'})->tag /* \{show name} \{show coninfo} */) {"
             concaseBody switchReturnVar sc' args bdy tailPosition
             pure "} else "  ) "" alts
 
