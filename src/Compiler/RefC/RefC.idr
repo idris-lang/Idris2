@@ -624,7 +624,7 @@ mutual
                unless (elem pn prims) $ throw $ InternalError $ "INTERNAL ERROR: Unknown primitive: " ++ cName p
             _ => throw $ InternalError $ "INTERNAL ERROR: Unknown primitive: " ++ cName p
         emit fc $ "// call to external primitive " ++ cName p
-        pure $ cCleanString (show (toPrim p)) ++ "("++ showSep ", " (map varName args) ++")"
+        pure "idris2_\{cName p}(\{showSep ", " (map varName args)})"
 
     cStatementsFromANF (AConCase fc sc alts mDef) tailPosition = do
         c <- getNextCounter
