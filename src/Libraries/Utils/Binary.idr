@@ -43,12 +43,27 @@ export
 incLoc : Integer -> Binary -> Binary
 incLoc i c = { loc $= (+i) } c
 
+-- TODO: remove this function once Idris2 v0.8.0 has been released
+--       and use the version from base instead.
+covering
+bufferData' : HasIO io => Buffer -> io (List Bits8)
+bufferData' buf
+    = do len <- rawSize buf
+         unpackTo [] len
+  where
+    covering
+    unpackTo : List Bits8 -> Int -> io (List Bits8)
+    unpackTo acc 0 = pure acc
+    unpackTo acc offset
+        = do val <- getBits8 buf (offset - 1)
+             unpackTo (val :: acc) (offset - 1)
+
 export
 dumpBin : Binary -> IO ()
 dumpBin chunk
-   = do -- printLn !(traverse bufferData (map buf done))
-        printLn !(bufferData (buf chunk))
-        -- printLn !(traverse bufferData (map buf rest))
+   = do -- printLn !(traverse Binary.bufferData' (map buf done))
+        printLn !(Binary.bufferData' (buf chunk))
+        -- printLn !(traverse Binary.bufferData' (map buf rest))
 
 export
 nonEmptyRev : {xs : _} ->

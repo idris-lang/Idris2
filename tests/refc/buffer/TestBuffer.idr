@@ -38,7 +38,7 @@ main = do
     put $ getDouble buf 16
     put $ getString buf 24 12
 
-    put $ bufferData buf
+    put $ bufferData' buf
 
     Just readBuf <- newBuffer 8
         | Nothing => pure ()
@@ -47,7 +47,7 @@ main = do
     Right 8 <- readBufferData f readBuf 0 8
         | Right size => put $ pure "\{show size} bytes have been read, 8 expected"
         | Left err => put $ pure err
-    put $ bufferData readBuf
+    put $ bufferData' readBuf
 
     Just writeBuf <- newBuffer 8
         | Nothing => pure ()
