@@ -376,110 +376,32 @@ MaxExtractFunArgs : Nat
 MaxExtractFunArgs = 16
 
 
-mutual
-
-    concaseBody : {auto a : Ref ArgCounter Nat}
-                 -> {auto t : Ref TemporaryVariableTracker (List (List String))}
-                 -> {auto oft : Ref OutfileText Output}
-                 -> {auto il : Ref IndentLevel Nat}
-                 -> String -> String -> List Int -> ANF -> TailPositionStatus
-                 -> Core ()
-    concaseBody returnvar expr args bdy tailstatus = do
-        increaseIndentation
-        newTemporaryVariableLevel
-        _ <- foldlC (\k, arg => do
-            emit emptyFC "Value *var_\{show arg} = ((Value_Constructor*)\{expr})->args[\{show k}];"
-            pure (S k) ) 0 args
-        emit emptyFC $ "\{returnvar} = \{!(cStatementsFromANF bdy tailstatus)};"
-        freeTmpVars
-        decreaseIndentation
- 
-
-    constBlockSwitch : {auto a : Ref ArgCounter Nat}
-                       -> {auto t : Ref TemporaryVariableTracker (List (List String))}
-                       -> {auto oft : Ref OutfileText Output}
-                       -> {auto il : Ref IndentLevel Nat}
-                       -> (alts:List AConstAlt)
-                       -> (retValVar:String)
-                       -> (alternativeIntMatcher:Integer)
-                       -> TailPositionStatus
-                       -> Core ()
-    constBlockSwitch [] _ _ _ = pure ()
-    constBlockSwitch ((MkAConstAlt c' caseBody) :: alts) retValVar i tailStatus = do
-        let c = const2Integer c' i
-        emit EmptyFC $ "  case " ++ show c ++ " :"
-        emit EmptyFC "  {"
-        increaseIndentation
-        newTemporaryVariableLevel
-        assignment <- cStatementsFromANF caseBody tailStatus
-        emit EmptyFC $ retValVar ++ " = " ++ assignment ++ ";"
-        freeTmpVars
-        emit EmptyFC "break;"
-        decreaseIndentation
-        emit EmptyFC "  }"
-        constBlockSwitch alts retValVar (i+1) tailStatus
-
-
-
-    constDefaultBlock : {auto a : Ref ArgCounter Nat}
-                     -> {auto t : Ref TemporaryVariableTracker (List (List String))}
-                     -> {auto oft : Ref OutfileText Output}
-                     -> {auto il : Ref IndentLevel Nat}
-                     -> (def:Maybe ANF)
-                     -> (retValVar:String)
-                     -> TailPositionStatus
-                     -> Core ()
-    constDefaultBlock Nothing _ _ = pure ()
-    constDefaultBlock (Just defaultBody) retValVar tailStatus = do
-        emit EmptyFC "  default :"
-        emit EmptyFC "  {"
-        increaseIndentation
-        newTemporaryVariableLevel
-        assignment <- cStatementsFromANF defaultBody tailStatus
-        emit EmptyFC $ retValVar ++ " = " ++ assignment ++ ";"
-        freeTmpVars
-        decreaseIndentation
-        emit EmptyFC "  }"
-
-
-
-    makeNonIntSwitchStatementConst :
-                    {auto a : Ref ArgCounter Nat}
-                 -> {auto t : Ref TemporaryVariableTracker (List (List String))}
-                 -> {auto oft : Ref OutfileText Output}
-                 -> {auto il : Ref IndentLevel Nat}
-                 -> List AConstAlt
-                 -> (k:Int)
-                 -> (constantArray:String)
-                 -> (compareFct:String)
-                 -> Core (String, String)
-    makeNonIntSwitchStatementConst [] _ constantArray compareFct  = pure (constantArray, compareFct)
-    makeNonIntSwitchStatementConst ((MkAConstAlt constant caseBody) :: alts) 0 _ _ = do
-        case constant of
-            (Str s) => do
-                c <- getNextCounter
-                let constantArray = "constantArray_" ++ show c
-                emit EmptyFC $ "char **" ++ constantArray ++ " = (char**)malloc(sizeof(char*) * " ++ show (1+(length alts)) ++");"
-                makeNonIntSwitchStatementConst ((MkAConstAlt constant caseBody) :: alts) 1 constantArray "multiStringCompare"
-            (Db d) => do
-                c <- getNextCounter
-                let constantArray = "constantArray_" ++ show c
-                emit EmptyFC $ "double *" ++ constantArray ++ " = (double*)malloc(sizeof(double) * " ++ show (1+(length alts)) ++");"
-                makeNonIntSwitchStatementConst ((MkAConstAlt constant caseBody) :: alts) 1 constantArray "multiDoubleCompare"
-            _ => pure ("ERROR_NOT_DOUBLE_OR_STRING", "ERROR_NOT_DOUBLE_OR_STRING")
-    makeNonIntSwitchStatementConst ((MkAConstAlt constant caseBody) :: alts) k constantArray compareFct = do
-        emit EmptyFC $ constantArray ++ "[" ++ show (k-1) ++ "] = " ++ extractConstant constant ++ ";"
-        makeNonIntSwitchStatementConst alts (k+1) constantArray compareFct
-
-    cStatementsFromANF : {auto a : Ref ArgCounter Nat}
+cStatementsFromANF : {auto a : Ref ArgCounter Nat}
                       -> {auto t : Ref TemporaryVariableTracker (List (List String))}
                       -> {auto oft : Ref OutfileText Output}
                       -> {auto il : Ref IndentLevel Nat}
                       -> ANF
                       -> TailPositionStatus
                       -> Core String
-    cStatementsFromANF (AV fc x) _ = pure $ "newReference(" ++ varName x  ++ ")"
-    cStatementsFromANF (AAppName fc _ n args) tailstatus = do
+ 
+concaseBody : {auto a : Ref ArgCounter Nat}
+             -> {auto t : Ref TemporaryVariableTracker (List (List String))}
+             -> {auto oft : Ref OutfileText Output}
+             -> {auto il : Ref IndentLevel Nat}
+             -> String -> String -> List Int -> ANF -> TailPositionStatus
+             -> Core ()
+concaseBody returnvar expr args bdy tailstatus = do
+    increaseIndentation
+    newTemporaryVariableLevel
+    _ <- foldlC (\k, arg => do
+        emit emptyFC "Value *var_\{show arg} = ((Value_Constructor*)\{expr})->args[\{show k}];"
+        pure (S k) ) 0 args
+    emit emptyFC $ "\{returnvar} = \{!(cStatementsFromANF bdy tailstatus)};"
+    freeTmpVars
+    decreaseIndentation
+ 
+cStatementsFromANF (AV fc x) _ = pure $ "newReference(" ++ varName x  ++ ")"
+cStatementsFromANF (AAppName fc _ n args) tailstatus = do
         emit fc $ ("// start " ++ cName n ++ "(" ++ showSep ", " (map (\v => varName v) args) ++ ")")
         let closure_name = "closure_" ++ show !(getNextCounter)
         let nargs = length args
@@ -520,7 +442,7 @@ mutual
         emit fc $ "// end   " ++ cName n ++ "(" ++ showSep ", " (map (\v => varName v) args) ++ ")"
         pure $ "((Value *)" ++ closure_name ++ ")"
 
-    cStatementsFromANF (AUnderApp fc n missing args) _ = do
+cStatementsFromANF (AUnderApp fc n missing args) _ = do
         let closure_name = "closure_" ++ show !(getNextCounter)
         let nargs = length args
         emit fc $ "Value_Closure *"
@@ -529,30 +451,32 @@ mutual
                ++ ", " ++ show (nargs + missing) ++ ", " ++ show nargs ++ ");"
         fillConstructorArgs closure_name args 0
         pure $ "((Value *)" ++ closure_name ++ ")"
-    cStatementsFromANF (AApp fc _ closure arg) tailstatus =
+
+cStatementsFromANF (AApp fc _ closure arg) tailstatus =
         pure $ case tailstatus of
           NotInTailPosition => "apply_closure(" ++ varName closure ++ ", " ++ varName arg ++ ")"
           InTailPosition    => "tailcall_apply_closure(" ++ varName closure ++ ", " ++ varName arg ++ ")"
-    cStatementsFromANF (ALet fc var value body) tailPosition = do
+
+cStatementsFromANF (ALet fc var value body) tailPosition = do
         valueAssignment <- cStatementsFromANF value NotInTailPosition
         emit fc $ "Value * var_" ++ (show var) ++ " = " ++ valueAssignment ++ ";"
         registerVariableForAutomaticFreeing $ "var_" ++ (show var)
         cStatementsFromANF body tailPosition
 
-    -- NOTE: the tag should be independent to sizeof Int. Or do your data type has over 2^16 constructors?
-    cStatementsFromANF (ACon fc n coninfo tag args) _ =
-        if coninfo == UNIT || coninfo == NIL || coninfo == NOTHING || coninfo == ZERO || coninfo == TYCON
-            then pure "((Value*)NULL /* ACon \{show fc} \{show n} \{show coninfo} */)"
-            else do
-                let Just tag' = tag
-                   | Nothing => throw $ InternalError "[refc] ACon : Constructor must have tag. \{show fc} \{show n} \{show coninfo}"
-                let varname = "constructor_\{show !(getNextCounter)}"
-                emit fc $ "Value_Constructor* \{varname} = newConstructor(\{show $ length args}, \{show tag'} /* ACon \{show n} \{show coninfo} */);"
-                fillConstructorArgs varname args 0
-                pure $ "(Value*)\{varname}"
+cStatementsFromANF (ACon fc n coninfo tag args) _ =
+    -- maps a special constructor to NULL.
+    if coninfo == UNIT || coninfo == NIL || coninfo == NOTHING || coninfo == ZERO || coninfo == TYCON
+        then pure "((Value*)NULL /* ACon \{show fc} \{show n} \{show coninfo} */)"
+        else do
+            let Just tag' = tag
+                | Nothing => throw $ InternalError "[refc] ACon : Constructor must have tag. \{show fc} \{show n} \{show coninfo}"
+            let varname = "constructor_\{show !(getNextCounter)}"
+            emit fc $ "Value_Constructor* \{varname} = newConstructor(\{show $ length args}, \{show tag'} /* ACon \{show n} \{show coninfo} */);"
+            fillConstructorArgs varname args 0
+            pure $ "(Value*)\{varname}"
 
-    cStatementsFromANF (AOp fc _ op args) _ = pure $ cOp op $ map varName args
-    cStatementsFromANF (AExtPrim fc _ p args) _ = do
+cStatementsFromANF (AOp fc _ op args) _ = pure $ cOp op $ map varName args
+cStatementsFromANF (AExtPrim fc _ p args) _ = do
         let prims : List String =
             ["prim__newIORef", "prim__readIORef", "prim__writeIORef", "prim__newArray",
              "prim__arrayGet", "prim__arraySet", "prim__getField", "prim__setField",
@@ -564,55 +488,70 @@ mutual
         emit fc $ "// call to external primitive " ++ cName p
         pure "idris2_\{cName p}(\{showSep ", " (map varName args)})"
 
-    -- Optimizing some special cases of ConCase
-    cStatementsFromANF (AConCase fc sc [] Nothing) _ = throw $ InternalError "[refc] AConCase : empty concase"
-    cStatementsFromANF (AConCase fc sc [] (Just mDef)) tailstatus = cStatementsFromANF mDef tailstatus
-    cStatementsFromANF (AConCase fc sc alts mDef) tailPosition = do
-        let switchReturnVar = "tmp_\{show !(getNextCounter)}"
-        let sc' = varName sc
+-- Optimizing some special cases of ConCase
+cStatementsFromANF (AConCase fc sc [] Nothing) _ = throw $ InternalError "[refc] AConCase : empty concase"
+cStatementsFromANF (AConCase fc sc [] (Just mDef)) tailstatus = cStatementsFromANF mDef tailstatus
+cStatementsFromANF (AConCase fc sc alts mDef) tailPosition = do
+    let switchReturnVar = "tmp_\{show !(getNextCounter)}"
+    let sc' = varName sc
 
-        emit fc $ "Value * \{switchReturnVar} = NULL;"
-        _ <- foldlC (\els, alt => do
-            let MkAConAlt name coninfo tag args bdy = alt
-            if (coninfo == NIL || coninfo == NOTHING || coninfo == ZERO || coninfo == UNIT) && null args
-                then emit emptyFC "\{els}if (NULL == \{sc'} /* \{show name} \{show coninfo} */) {"
-                else if coninfo == CONS || coninfo == JUST || coninfo == SUCC
-                then emit emptyFC "\{els}if (NULL != \{sc'} /* \{show name} \{show coninfo} */) {"
-                else let Just tag' = tag | _ => throw $ InternalError "[refc] AConCase : MkConAlt has no tag. \{show name} \{show coninfo}"
-                      in emit emptyFC "\{els}if (\{show tag'} == ((Value_Constructor*)\{sc'})->tag /* \{show name} \{show coninfo} */) {"
-            concaseBody switchReturnVar sc' args bdy tailPosition
-            pure "} else "  ) "" alts
+    emit fc $ "Value * \{switchReturnVar} = NULL;"
+    _ <- foldlC (\els, alt => do
+        let MkAConAlt name coninfo tag args bdy = alt
+        if (coninfo == NIL || coninfo == NOTHING || coninfo == ZERO || coninfo == UNIT) && null args
+            then emit emptyFC "\{els}if (NULL == \{sc'} /* \{show name} \{show coninfo} */) {"
+            else if coninfo == CONS || coninfo == JUST || coninfo == SUCC
+            then emit emptyFC "\{els}if (NULL != \{sc'} /* \{show name} \{show coninfo} */) {"
+            else let Just tag' = tag | _ => throw $ InternalError "[refc] AConCase : MkConAlt has no tag. \{show name} \{show coninfo}"
+                  in emit emptyFC "\{els}if (\{show tag'} == ((Value_Constructor*)\{sc'})->tag /* \{show name} \{show coninfo} */) {"
+        concaseBody switchReturnVar sc' args bdy tailPosition
+        pure "} else "  ) "" alts
 
-        case mDef of
-            Nothing => pure ()
-            Just bdy => do
-                emit EmptyFC "} else {"
-                concaseBody switchReturnVar "" [] bdy tailPosition
+    case mDef of
+        Nothing => pure ()
+        Just body => do
+            emit EmptyFC "} else {"
+            concaseBody switchReturnVar "" [] body tailPosition
 
-        emit EmptyFC $ "}"
-        pure switchReturnVar
+    emit EmptyFC $ "}"
+    pure switchReturnVar
 
-    cStatementsFromANF (AConstCase fc sc alts def) tailPosition = do
-        let switchReturnVar = "tmp_\{show !(getNextCounter)}"
-        let newValueLine = "Value * " ++ switchReturnVar ++ " = NULL;"
-        emit fc newValueLine
-        case integer_switch alts of
-            True => do
-                emit fc $ "switch(extractInt(" ++ varName sc ++")){"
-                constBlockSwitch alts switchReturnVar 0 tailPosition
-                constDefaultBlock def switchReturnVar tailPosition
-                emit EmptyFC "}"
-            False => do
-                (compareField, compareFunction) <- makeNonIntSwitchStatementConst alts 0 "" ""
-                emit fc $ "switch("++ compareFunction ++ "(" ++ varName sc ++ ", " ++ show (length alts) ++ ", " ++ compareField ++ ")){"
-                constBlockSwitch alts switchReturnVar 0 tailPosition
-                constDefaultBlock def switchReturnVar tailPosition
-                emit EmptyFC "}"
-                emit EmptyFC $ "free(" ++ compareField ++ ");"
-        pure switchReturnVar
-    cStatementsFromANF (APrimVal fc c) _ = pure $ cConstant c
-    cStatementsFromANF (AErased fc) _ = pure "NULL"
-    cStatementsFromANF (ACrash fc x) _ = emit fc "// CRASH" >> pure "NULL"
+cStatementsFromANF (AConstCase fc sc alts def) tailPosition = do
+    let switchReturnVar = "tmp_\{show !(getNextCounter)}"
+    let sc' = varName sc
+
+    emit fc "Value *\{switchReturnVar} = NULL;"
+    case integer_switch alts of
+        True => do
+            let tmpint = "tmp_\{show !(getNextCounter)}"
+            emit emptyFC "int \{tmpint} = extractInt(\{sc'});"
+            _ <- foldlC (\els, (MkAConstAlt c body) => do
+                    emit emptyFC "\{els}if (\{tmpint} == \{show $ const2Integer c 0}) {"
+                    concaseBody switchReturnVar "" [] body tailPosition
+                    pure "} else ") "" alts
+            pure ()
+        False => do
+            _ <- foldlC (\els, (MkAConstAlt c body) => do
+                    case c of
+                        Str x => emit emptyFC "\{els}if (! strcmp(\{cStringQuoted x}, ((Value_String*)\{sc'})->str)) {"
+                        Db x  => emit emptyFC "\{els}if (((Value_Double*)\{sc'})->d == \{show x}) {"
+                        x => throw $ InternalError "[refc] AConstCast : unsupported type. \{show fc} \{show x}"
+                    concaseBody switchReturnVar "" [] body tailPosition
+                    pure "} else ") "" alts
+            pure ()
+
+    case def of
+        Nothing => pure ()
+        Just body => do
+            emit EmptyFC "} else {"
+            concaseBody switchReturnVar "" [] body tailPosition
+
+    emit EmptyFC $ "}"
+    pure switchReturnVar
+
+cStatementsFromANF (APrimVal fc c) _ = pure $ cConstant c
+cStatementsFromANF (AErased fc) _ = pure "NULL"
+cStatementsFromANF (ACrash fc x) _ = emit fc "// CRASH" >> pure "NULL"
 
 
 
