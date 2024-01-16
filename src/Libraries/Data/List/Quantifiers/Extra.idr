@@ -14,10 +14,12 @@ lookup v (px :: pxs)
       No _ => lookup v pxs
       Yes Refl => Just px
 
+-- TODO: delete this function after 0.7.1 is released
+-- as it now exists in base's Data.List.Quantifiers
 export
 (++) : All p xs -> All p ys -> All p (xs ++ ys)
 [] ++ pys = pys
-(px :: pxs) ++ pys = px :: (pxs ++ pys)
+(px :: pxs) ++ pys = px :: (Extra.(++) pxs pys)
 
 export
 tabulate : ((x : a) -> p x) -> (xs : List a) -> All p xs

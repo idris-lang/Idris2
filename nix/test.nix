@@ -16,12 +16,12 @@ let
       templateBuild = template.packages.${system}.${type};
     in templateBuild;
 
-  templateBuildDefault = createTemplate ./templates/pkg/flake.nix { } "build";
+  templateBuildDefault = createTemplate ./templates/pkg/flake.nix { } "executable";
   templateBuildDefaultLibrary =
-    createTemplate ./templates/pkg/flake.nix { } "installLibrary";
+    createTemplate ./templates/pkg/flake.nix { } "library" { };
   templateBuildWithDeps = createTemplate ./templates/pkgWithDeps/flake.nix {
     pkg = templateBuildDefaultLibrary;
-  } "build";
+  } "executable";
 
   testsTemplate = {
     checkFoo = ''
@@ -38,5 +38,5 @@ let
 in withTests testsTemplate templateBuildDefault
 // withTests testsTemplateWithDeps templateBuildWithDeps // {
   idris2Tests =
-    idris.defaultPackage.${system}.overrideAttrs (a: { doCheck = true; });
+    idris.packages.${system}.default.overrideAttrs (a: { doCheck = true; });
 }

@@ -1,4 +1,4 @@
-{ stdenv, lib, idris2-version, idris2 }:
+{ stdenv, lib, idris2-version, idris2, support, makeWrapper }:
 { src, projectName, idrisLibraries, ... }@attrs:
 
 let
@@ -6,13 +6,14 @@ let
   idrName = "idris2-${idris2-version}";
   libSuffix = "lib/${idrName}";
   lib-dirs =
-    lib.strings.concatMapStringsSep ":" (p: "${p}/${libSuffix}") idrisLibraries;
+    lib.strings.makeSearchPath libSuffix idrisLibraries;
   drvAttrs = builtins.removeAttrs attrs [ "idrisLibraries" ];
 in rec {
-  build = stdenv.mkDerivation (drvAttrs // {
+  executable = stdenv.mkDerivation (drvAttrs // {
     name = projectName;
     src = src;
-    nativeBuildInputs = [ idris2 ];
+    buildInputs = idrisLibraries ++ attrs.buildInputs or [];
+    nativeBuildInputs = [ idris2 makeWrapper ] ++ attrs.nativeBuildInputs or [];
     configurePhase = ''
       runHook preConfigure
       export IDRIS2_PACKAGE_PATH=${lib-dirs}
@@ -26,16 +27,35 @@ in rec {
     installPhase = ''
       runHook preInstall
       mkdir -p $out/bin
-      mv build/exec/* $out/bin
+      scheme_app="$(find ./build/exec -name '*_app')"
+      if [ "$scheme_app" = ''' ]; then
+        mv -- build/exec/* $out/bin/
+        chmod +x $out/bin/*
+      else
+        cd build/exec/*_app
+        for file in *.so; do
+          bin_name="''${file%.so}"
+          mv -- "$file" "$out/bin/$bin_name"
+          wrapProgram "$out/bin/$bin_name" \
+            --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ support ]} \
+            --prefix DYLD_LIBRARY_PATH : ${lib.makeLibraryPath [ support ]}
+        done
+      fi
       runHook postInstall
     '';
   });
-  installLibrary = build.overrideAttrs (_: {
-    buildPhase = "";
-    installPhase = ''
-      mkdir -p $out/${libSuffix}
-      export IDRIS2_PREFIX=$out/lib
-      idris2 --install ${ipkgName}
-    '';
-  });
+  library = { withSource ? false }:
+    let installCmd = if withSource then "--install-with-src" else "--install";
+    in executable.overrideAttrs (_: {
+      installPhase = ''
+        runHook preInstall
+        mkdir -p $out/${libSuffix}
+        export IDRIS2_PREFIX=$out/lib
+        idris2 ${installCmd} ${ipkgName}
+        runHook postInstall
+      '';
+    });
+  # deprecated aliases:
+  build = lib.warn "build is a deprecated alias for 'executable'." executable;
+  installLibrary = lib.warn "installLibrary is a deprecated alias for 'library { }'." (library { });
 }

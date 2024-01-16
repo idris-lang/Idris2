@@ -223,53 +223,6 @@ cOp Crash         [_, msg]  = "idris2_crash(" ++ msg ++ ");"
 cOp fn args = plainOp (show fn) (toList args)
 
 
-data ExtPrim = NewIORef | ReadIORef | WriteIORef
-             | NewArray | ArrayGet | ArraySet
-             | GetField | SetField
-             | VoidElim
-             | SysOS | SysCodegen
-             | OnCollect
-             | OnCollectAny
-             | Unknown Name
-
-export
-Show ExtPrim where
-  show NewIORef = "newIORef"
-  show ReadIORef = "readIORef"
-  show WriteIORef = "writeIORef"
-  show NewArray = "newArray"
-  show ArrayGet = "arrayGet"
-  show ArraySet = "arraySet"
-  show GetField = "getField"
-  show SetField = "setField"
-  show VoidElim = "voidElim"
-  show SysOS = "sysOS"
-  show SysCodegen = "sysCodegen"
-  show OnCollect = "onCollect"
-  show OnCollectAny = "onCollectAny"
-  show (Unknown n) = "Unknown " ++ show n
-
-||| Match on a user given name to get the scheme primitive
-toPrim : Name -> ExtPrim
-toPrim pn@(NS _ n)
-    = cond [(n == UN (Basic "prim__newIORef"), NewIORef),
-            (n == UN (Basic "prim__readIORef"), ReadIORef),
-            (n == UN (Basic "prim__writeIORef"), WriteIORef),
-            (n == UN (Basic "prim__newArray"), NewArray),
-            (n == UN (Basic "prim__arrayGet"), ArrayGet),
-            (n == UN (Basic "prim__arraySet"), ArraySet),
-            (n == UN (Basic "prim__getField"), GetField),
-            (n == UN (Basic "prim__setField"), SetField),
-            (n == UN (Basic "prim__void"), VoidElim),
-            (n == UN (Basic "prim__os"), SysOS),
-            (n == UN (Basic "prim__codegen"), SysCodegen),
-            (n == UN (Basic "prim__onCollect"), OnCollect),
-            (n == UN (Basic "prim__onCollectAny"), OnCollectAny)
-            ]
-           (Unknown pn)
-toPrim pn = assert_total $ idris_crash ("INTERNAL ERROR: Unknown primitive: " ++ cName pn)
--- not really total but this way this internal error does not contaminate everything else
-
 
 varName : AVar -> String
 varName (ALocal i) = "var_" ++ (show i)
@@ -465,8 +418,6 @@ const2Integer c i =
         (B32 x) => cast x
         (B64 x) => cast x
         _ => i
-
-
 
 
 
@@ -688,8 +639,16 @@ mutual
         let opStatement = cOp op argsVec
         pure $ MkRS opStatement opStatement
     cStatementsFromANF (AExtPrim fc _ p args) _ = do
+        let prims : List String =
+            ["prim__newIORef", "prim__readIORef", "prim__writeIORef", "prim__newArray",
+             "prim__arrayGet", "prim__arraySet", "prim__getField", "prim__setField",
+             "prim__void", "prim__os", "prim__codegen", "prim__onCollect", "prim__onCollectAny" ]
+        case p of
+            NS _ (UN (Basic pn)) =>
+               unless (elem pn prims) $ throw $ InternalError $ "INTERNAL ERROR: Unknown primitive: " ++ cName p
+            _ => throw $ InternalError $ "INTERNAL ERROR: Unknown primitive: " ++ cName p
         emit fc $ "// call to external primitive " ++ cName p
-        let returnLine = (cCleanString (show (toPrim p)) ++ "("++ showSep ", " (map varName args) ++")")
+        let returnLine = "idris2_" ++ (cName p) ++ "("++ showSep ", " (map varName args) ++")"
         pure $ MkRS returnLine returnLine
     cStatementsFromANF (AConCase fc sc alts mDef) tailPosition = do
         c <- getNextCounter
