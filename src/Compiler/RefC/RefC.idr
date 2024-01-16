@@ -223,53 +223,6 @@ cOp Crash         [_, msg]  = "idris2_crash(" ++ msg ++ ");"
 cOp fn args = plainOp (show fn) (toList args)
 
 
-data ExtPrim = NewIORef | ReadIORef | WriteIORef
-             | NewArray | ArrayGet | ArraySet
-             | GetField | SetField
-             | VoidElim
-             | SysOS | SysCodegen
-             | OnCollect
-             | OnCollectAny
-             | Unknown Name
-
-export
-Show ExtPrim where
-  show NewIORef = "newIORef"
-  show ReadIORef = "readIORef"
-  show WriteIORef = "writeIORef"
-  show NewArray = "newArray"
-  show ArrayGet = "arrayGet"
-  show ArraySet = "arraySet"
-  show GetField = "getField"
-  show SetField = "setField"
-  show VoidElim = "voidElim"
-  show SysOS = "sysOS"
-  show SysCodegen = "sysCodegen"
-  show OnCollect = "onCollect"
-  show OnCollectAny = "onCollectAny"
-  show (Unknown n) = "Unknown " ++ show n
-
-||| Match on a user given name to get the scheme primitive
-toPrim : Name -> ExtPrim
-toPrim pn@(NS _ n)
-    = cond [(n == UN (Basic "prim__newIORef"), NewIORef),
-            (n == UN (Basic "prim__readIORef"), ReadIORef),
-            (n == UN (Basic "prim__writeIORef"), WriteIORef),
-            (n == UN (Basic "prim__newArray"), NewArray),
-            (n == UN (Basic "prim__arrayGet"), ArrayGet),
-            (n == UN (Basic "prim__arraySet"), ArraySet),
-            (n == UN (Basic "prim__getField"), GetField),
-            (n == UN (Basic "prim__setField"), SetField),
-            (n == UN (Basic "prim__void"), VoidElim),
-            (n == UN (Basic "prim__os"), SysOS),
-            (n == UN (Basic "prim__codegen"), SysCodegen),
-            (n == UN (Basic "prim__onCollect"), OnCollect),
-            (n == UN (Basic "prim__onCollectAny"), OnCollectAny)
-            ]
-           (Unknown pn)
-toPrim pn = assert_total $ idris_crash ("INTERNAL ERROR: Unknown primitive: " ++ cName pn)
--- not really total but this way this internal error does not contaminate everything else
-
 
 varName : AVar -> String
 varName (ALocal i) = "var_" ++ (show i)
@@ -442,35 +395,6 @@ mutual
         decreaseIndentation
  
 
-    simpleConCase : {auto a : Ref ArgCounter Nat}
-                    -> {auto t : Ref TemporaryVariableTracker (List (List String))}
-                    -> {auto oft : Ref OutfileText Output}
-                    -> {auto il : Ref IndentLevel Nat}
-                    -> FC -> (expr : AVar) -> Maybe ANF -> Maybe ANF -> (args : List Int)
-                    -> TailPositionStatus
-                    -> Core String
-    simpleConCase fc expr nullcase nonnullcase args tailstatus = do
-        let returnvar = "tmp_\{show !(getNextCounter)}"
-        let expr' = varName expr
-        emit fc $ "Value * \{returnvar} = NULL;"
-
-        sep <- case nullcase of
-            Just bdy => do
-                emit emptyFC $ "if (NULL == \{expr'}) {"
-                concaseBody returnvar expr' [] bdy tailstatus
-                pure "} else {"
-            _ => pure "if (NULL != \{expr'}) {"
-
-        case nonnullcase of
-            Just bdy => do
-                emit emptyFC sep
-                concaseBody returnvar expr' args bdy tailstatus
-            _ => pure ()
-
-        emit emptyFC $ "}"
-        pure returnvar
-
-
     constBlockSwitch : {auto a : Ref ArgCounter Nat}
                        -> {auto t : Ref TemporaryVariableTracker (List (List String))}
                        -> {auto oft : Ref OutfileText Output}
@@ -630,51 +554,42 @@ mutual
 
     cStatementsFromANF (AOp fc _ op args) _ = pure $ cOp op $ map varName args
     cStatementsFromANF (AExtPrim fc _ p args) _ = do
+        let prims : List String =
+            ["prim__newIORef", "prim__readIORef", "prim__writeIORef", "prim__newArray",
+             "prim__arrayGet", "prim__arraySet", "prim__getField", "prim__setField",
+             "prim__void", "prim__os", "prim__codegen", "prim__onCollect", "prim__onCollectAny" ]
+        case p of
+            NS _ (UN (Basic pn)) =>
+               unless (elem pn prims) $ throw $ InternalError $ "INTERNAL ERROR: Unknown primitive: " ++ cName p
+            _ => throw $ InternalError $ "INTERNAL ERROR: Unknown primitive: " ++ cName p
         emit fc $ "// call to external primitive " ++ cName p
-        pure $ cCleanString (show (toPrim p)) ++ "("++ showSep ", " (map varName args) ++")"
+        pure "idris2_\{cName p}(\{showSep ", " (map varName args)})"
 
     -- Optimizing some special cases of ConCase
     cStatementsFromANF (AConCase fc sc [] Nothing) _ = throw $ InternalError "empty concase" -- Why the type accept this?
     cStatementsFromANF (AConCase fc sc [] (Just mDef)) tailstatus = cStatementsFromANF mDef tailstatus -- Why the type accept this?
-    cStatementsFromANF (AConCase fc sc [MkAConAlt _ NIL     _ [] nc] nnc) ts = simpleConCase fc sc (Just nc) nnc [] ts
-    cStatementsFromANF (AConCase fc sc [MkAConAlt _ NOTHING _ [] nc] nnc) ts = simpleConCase fc sc (Just nc) nnc [] ts
-    cStatementsFromANF (AConCase fc sc [MkAConAlt _ ZERO    _ [] nc] nnc) ts = simpleConCase fc sc (Just nc) nnc [] ts
-
-    cStatementsFromANF (AConCase fc sc [MkAConAlt _ CONS _ args nnc] nc) ts = simpleConCase fc sc nc (Just nnc) args ts
-    cStatementsFromANF (AConCase fc sc [MkAConAlt _ JUST _ args nnc] nc) ts = simpleConCase fc sc nc (Just nnc) args ts
-    cStatementsFromANF (AConCase fc sc [MkAConAlt _ SUCC _ args nnc] nc) ts = simpleConCase fc sc nc (Just nnc) args ts
-
     cStatementsFromANF (AConCase fc sc alts mDef) tailPosition = do
         let switchReturnVar = "tmp_\{show !(getNextCounter)}"
         let sc' = varName sc
-        emit fc $ "Value * \{switchReturnVar} = NULL;"
 
+        emit fc $ "Value * \{switchReturnVar} = NULL;"
         _ <- foldlC (\els, alt => do
-            case alt of
-                MkAConAlt _ _ Nothing _ _ => throw $ InternalError "AConCase : MkConAlt has no tag."
-                MkAConAlt _ coninfo (Just tag') args bdy => do
-                    emit emptyFC $ "\{els}if (\{show tag'} == ((Value_Constructor*)(\{sc'}))->tag /* \{show coninfo} */) {"
-                    increaseIndentation
-                    newTemporaryVariableLevel
-                    _ <- foldlC (\k, arg => do
-                        emit emptyFC "Value *var_\{show arg} = ((Value_Constructor*)\{sc'})->args[\{show k}];"
-                        pure (S k)
-                        ) 0 args
-                    emit EmptyFC "\{switchReturnVar} = \{!(cStatementsFromANF bdy tailPosition)};"
-                    freeTmpVars
-                    decreaseIndentation
-                    pure "} else "
-            ) "" alts
-                
+            let MkAConAlt name coninfo tag args bdy = alt
+            if (coninfo == NIL || coninfo == NOTHING || coninfo == ZERO || coninfo == UNIT) && null args
+                then emit emptyFC "\{els}if (NULL == \{sc'} /* \{show name} \{show coninfo} */) {"
+                else if coninfo == CONS || coninfo == JUST || coninfo == SUCC
+                then emit emptyFC "\{els}if (NULL != \{sc'} /* \{show name} \{show coninfo} */) {"
+                else let Just tag' = tag | _ => throw $ InternalError "AConCase : MkConAlt has no tag."
+                      in emit emptyFC "\{els}if (\{show tag'} == ((Value_Constructor*)(\{sc'}))->tag /* \\{show name} {show coninfo} */) {"
+            concaseBody switchReturnVar sc' args bdy tailPosition
+            pure "} else "  ) "" alts
+
         case mDef of
             Nothing => pure ()
             Just bdy => do
                 emit EmptyFC "} else {"
-                increaseIndentation
-                newTemporaryVariableLevel
-                emit EmptyFC "\{switchReturnVar} = \{!(cStatementsFromANF bdy tailPosition)};"
-                freeTmpVars
-                decreaseIndentation
+                concaseBody switchReturnVar "" [] bdy tailPosition
+
         emit EmptyFC $ "}"
         pure switchReturnVar
 

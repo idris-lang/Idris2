@@ -58,6 +58,10 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Added append `(++)` for `List` version of `All`.
 
+* Deprecate `bufferData` in favor of `bufferData'`. These functions are the same
+  with the exception of the latter dealing in `Bits8` which is more correct than
+  `Int`.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
