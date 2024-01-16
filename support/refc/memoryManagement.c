@@ -10,8 +10,8 @@ Value *newValue(size_t size) {
 }
 
 Value_Constructor *newConstructor(int total, int tag) {
-  Value_Constructor *retVal = (Value_Constructor*)newValue(sizeof(Value_Constructor) +
-  sizeof(Value*) * total);
+  Value_Constructor *retVal = (Value_Constructor *)newValue(
+      sizeof(Value_Constructor) + sizeof(Value *) * total);
   retVal->header.tag = CONSTRUCTOR_TAG;
   retVal->total = total;
   retVal->tag = tag;
