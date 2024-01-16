@@ -61,3 +61,14 @@ testBlock = Op {a=Base Nat} {b=Base Nat} plus (Val 3) (Val 4)
 
 evalBlock : Nat
 evalBlock = eval [] testBlock
+
+namespace Hidden
+  export
+  unreducible : Nat -> Nat -> Nat
+  unreducible x y = y `minus` x
+
+testBlock' : Lang gam (Base Nat)
+testBlock' = Op {a=Base Nat} {b=Base Nat} unreducible (Val 3) (Val 4)
+
+evalBlock' : Nat
+evalBlock' = eval [] testBlock'
