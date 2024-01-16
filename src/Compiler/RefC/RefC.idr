@@ -383,7 +383,7 @@ cStatementsFromANF : {auto a : Ref ArgCounter Nat}
                       -> ANF
                       -> TailPositionStatus
                       -> Core String
- 
+
 concaseBody : {auto a : Ref ArgCounter Nat}
              -> {auto t : Ref TemporaryVariableTracker (List (List String))}
              -> {auto oft : Ref OutfileText Output}
@@ -399,7 +399,7 @@ concaseBody returnvar expr args bdy tailstatus = do
     emit emptyFC $ "\{returnvar} = \{!(cStatementsFromANF bdy tailstatus)};"
     freeTmpVars
     decreaseIndentation
- 
+
 cStatementsFromANF (AV fc x) _ = pure $ "newReference(" ++ varName x  ++ ")"
 cStatementsFromANF (AAppName fc _ n args) tailstatus = do
         emit fc $ ("// start " ++ cName n ++ "(" ++ showSep ", " (map (\v => varName v) args) ++ ")")
