@@ -9,24 +9,24 @@ Value *newValue(size_t size) {
   return retVal;
 }
 
-Value_Constructor *newConstructor(int total, int tag) {
+Value *newConstructor(int total, int tag) {
   Value_Constructor *retVal = (Value_Constructor *)newValue(
       sizeof(Value_Constructor) + sizeof(Value *) * total);
   retVal->header.tag = CONSTRUCTOR_TAG;
   retVal->total = total;
   retVal->tag = tag;
   retVal->tyconName = NULL; // caller must initialize tyconName.
-  return retVal;            // caller must initialize args[]
+  return (Value*)retVal;            // caller must initialize args[]
 }
 
-Value_Closure *makeClosure(Value *(*f)(), uint8_t arity, uint8_t filled) {
+Value *makeClosure(Value *(*f)(), uint8_t arity, uint8_t filled) {
   Value_Closure *retVal = (Value_Closure *)newValue(sizeof(Value_Closure) +
                                                     sizeof(Value *) * filled);
   retVal->header.tag = CLOSURE_TAG;
   retVal->f = f;
   retVal->arity = arity;
   retVal->filled = filled;
-  return retVal; // caller must initialize args[].
+  return (Value*)retVal; // caller must initialize args[].
 }
 
 Value_Double *makeDouble(double d) {
