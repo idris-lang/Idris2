@@ -465,13 +465,12 @@ cStatementsFromANF (ALet fc var value body) tailPosition = do
 
 cStatementsFromANF (ACon fc n coninfo tag args) _ =
     -- maps a special constructor to NULL.
-    if coninfo == UNIT || coninfo == NIL || coninfo == NOTHING || coninfo == ZERO || coninfo == TYCON
+    if coninfo == UNIT || coninfo == NIL || coninfo == NOTHING || coninfo == ZERO
         then pure "((Value*)NULL /* ACon \{show fc} \{show n} \{show coninfo} */)"
         else do
-            let Just tag' = tag
-                | Nothing => throw $ InternalError "[refc] ACon : Constructor must have tag. \{show fc} \{show n} \{show coninfo}"
             let varname = "constructor_\{show !(getNextCounter)}"
-            emit fc $ "Value_Constructor* \{varname} = newConstructor(\{show $ length args}, \{show tag'} /* ACon \{show n} \{show coninfo} */);"
+            emit fc $ "Value_Constructor* \{varname} = newConstructor(\{show $ length args}, \{maybe "0" show tag} /* ACon \{show n} \{show coninfo} */);"
+            when (coninfo == TYCON) $ emit emptyFC "\{varname}->tyconName = \{cStringQuoted $ show n};"
             fillConstructorArgs varname args 0
             pure $ "(Value*)\{varname}"
 
@@ -496,12 +495,13 @@ cStatementsFromANF (AConCase fc sc alts mDef) tailPosition = do
     let sc' = varName sc
 
     emit fc $ "Value * \{switchReturnVar} = NULL;"
-    _ <- foldlC (\els, alt => do
-        let MkAConAlt name coninfo tag args bdy = alt
+    _ <- foldlC (\els, (MkAConAlt name coninfo tag args bdy) => do
         if (coninfo == NIL || coninfo == NOTHING || coninfo == ZERO || coninfo == UNIT) && null args
             then emit emptyFC "\{els}if (NULL == \{sc'} /* \{show name} \{show coninfo} */) {"
             else if coninfo == CONS || coninfo == JUST || coninfo == SUCC
             then emit emptyFC "\{els}if (NULL != \{sc'} /* \{show name} \{show coninfo} */) {"
+            else if coninfo == TYCON
+            then emit emptyFC "\{els}if (! strcmp(((Value_Constructor*)\{sc'})->tyconName, \{cStringQuoted $ show name})) { "
             else let Just tag' = tag | _ => throw $ InternalError "[refc] AConCase : MkConAlt has no tag. \{show name} \{show coninfo}"
                   in emit emptyFC "\{els}if (\{show tag'} == ((Value_Constructor*)\{sc'})->tag /* \{show name} \{show coninfo} */) {"
         concaseBody switchReturnVar sc' args bdy tailPosition

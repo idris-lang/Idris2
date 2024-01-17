@@ -15,6 +15,7 @@ Value_Constructor *newConstructor(int total, int tag) {
   retVal->header.tag = CONSTRUCTOR_TAG;
   retVal->total = total;
   retVal->tag = tag;
+  retVal->tyconName = NULL; // caller must initialize tyconName.
   return retVal; // call must initialize args[]
 }
 
