@@ -33,7 +33,7 @@ in rec {
         chmod +x $out/bin/*
       else
         cd build/exec/*_app
-        rm libidris2_support.so
+        rm -f ./libidris2_support.so
         for file in *.so; do
           bin_name="''${file%.so}"
           mv -- "$file" "$out/bin/$bin_name"
