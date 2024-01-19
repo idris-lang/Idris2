@@ -77,8 +77,8 @@ Value *strSubstr(Value *start, Value *len, Value *s) {
   int l = extractInt(len);
 
   int tailLen = strlen(input);
-  if (tailLen < l) {
-    l = tailLen;
+  if (tailLen - offset < l) {
+    l = tailLen - offset;
   }
 
   Value_String *retVal = makeEmptyString(l + 1);
@@ -114,14 +114,14 @@ Value *fastUnpack(char *str) {
   if (str[0] == '\0')
     return (Value *)NULL;
 
-  Value_Constructor *retVal = newConstructor(2, 0);
+  Value_Constructor *retVal = (Value_Constructor *)newConstructor(2, 0);
   retVal->args[0] = (Value *)makeChar(str[0]);
 
   int i = 1;
-  Value_Constructor *current = retVal;
+  Value_Constructor *current = (Value_Constructor *)retVal;
   Value_Constructor *next;
   while (str[i] != '\0') {
-    next = newConstructor(2, 0);
+    next = (Value_Constructor *)newConstructor(2, 0);
     next->args[0] = (Value *)makeChar(str[i]);
     current->args[1] = (Value *)next;
 
@@ -177,7 +177,7 @@ Value *stringIteratorNew(char *str) {
   memcpy(it->str, str, l + 1); // Take a copy of str, in case it gets GCed
 
   return (Value *)makeGCPointer(
-      it, makeClosure((Value * (*)()) onCollectStringIterator, 2, 0));
+      it, (Value_Closure *)makeClosure((Value * (*)()) onCollectStringIterator, 2, 0));
 }
 
 Value *onCollectStringIterator(Value_Pointer *ptr, void *null) {
@@ -202,7 +202,7 @@ Value *stringIteratorNext(char *s, Value *it_p) {
 
   it->pos++; // Ok to do this as StringIterator linear
 
-  Value_Constructor *retVal = newConstructor(2, 0);
+  Value_Constructor *retVal = (Value_Constructor *)newConstructor(2, 0);
   retVal->args[0] = (Value *)makeChar(c);
   retVal->args[1] = newReference(it_p);
 
