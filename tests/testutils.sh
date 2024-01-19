@@ -28,7 +28,7 @@ check() {
 }
 
 run() {
-    $VALGRIND idris2 --exec main "$@"
+    idris2 --exec main "$@"
 }
 
 # Escape a string as a sed pattern literal

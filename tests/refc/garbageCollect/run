@@ -1,5 +1,5 @@
 . ../../testutils.sh
 
-idris2 --cg refc -o testGC TestGarbageCollect.idr > /dev/null
+idris2 --cg refc -o testGC TestGarbageCollect.idr
 
-./build/exec/testGC
+$VALGRIND ./build/exec/testGC
