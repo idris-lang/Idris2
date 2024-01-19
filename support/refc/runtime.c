@@ -129,10 +129,10 @@ static inline Value *idris2_dispatch_closure(Value_Closure *clo) {
 Value *tailcall_apply_closure(Value *_clos, Value *arg) {
   // create a new closure and copy args.
   Value_Closure *clos = (Value_Closure *)_clos;
-  Value_Closure *newclos = makeClosure(clos->f, clos->arity, clos->filled + 1);
+  Value *newclos = makeClosure(clos->f, clos->arity, clos->filled + 1);
   for (int i = 0; i < clos->filled; ++i)
-    newclos->args[i] = newReference(clos->args[i]);
-  newclos->args[clos->filled] = newReference(arg);
+    ((Value_Closure *)newclos)->args[i] = newReference(clos->args[i]);
+  ((Value_Closure *)newclos)->args[clos->filled] = newReference(arg);
   return (Value *)newclos;
 }
 
