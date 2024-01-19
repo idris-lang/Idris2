@@ -11,6 +11,14 @@ idris2="$1"
 rm -rf build
 rm -rf prefix
 
+if [ "`echo $idris2 | grep refc`" ]; then
+    if type valgrind >/dev/null 2>&1; then
+        VALGRIND="valgrind --leak-check=full -s --log-file=output.valgrind.refc.log"
+    else
+        unset VALGRIND
+    fi;
+fi;
+
 idris2() {
     $idris2 --no-banner --console-width 0 --no-color "$@"
 }
@@ -20,7 +28,7 @@ check() {
 }
 
 run() {
-    idris2 --exec main "$@"
+    $VALGRIND idris2 --exec main "$@"
 }
 
 # Escape a string as a sed pattern literal

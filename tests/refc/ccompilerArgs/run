@@ -28,4 +28,4 @@ export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:./library/"
 
 idris2 --cg refc -o cffi Main.idr > /dev/null
 
-./build/exec/cffi
+$VALGRIND ./build/exec/cffi
