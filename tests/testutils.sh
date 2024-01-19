@@ -28,7 +28,6 @@ check() {
 }
 
 run() {
-    echo $idris2
     idris2 --exec main "$@"
 }
 
