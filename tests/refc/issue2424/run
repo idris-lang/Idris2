@@ -1,5 +1,4 @@
 . ../../testutils.sh
 
-idris2 --cg refc -o test ControlAppMonadTest.idr > /dev/null
-
-./build/exec/test
+idris2 --cg refc -o test ControlAppMonadTest.idr
+$VALGRIND ./build/exec/test

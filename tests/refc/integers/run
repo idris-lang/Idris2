@@ -1,4 +1,4 @@
 . ../../testutils.sh
 
-idris2 --cg refc -o refc_integers TestIntegers.idr > /dev/null
-./build/exec/refc_integers
+idris2 --cg refc -o refc_integers TestIntegers.idr
+$VALGRIND ./build/exec/refc_integers

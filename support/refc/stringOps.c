@@ -77,8 +77,8 @@ Value *strSubstr(Value *start, Value *len, Value *s) {
   int l = extractInt(len);
 
   int tailLen = strlen(input);
-  if (tailLen < l) {
-    l = tailLen;
+  if (tailLen < offset + l) {
+    l = tailLen - offset;
   }
 
   Value_String *retVal = makeEmptyString(l + 1);
