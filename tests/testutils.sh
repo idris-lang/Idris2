@@ -11,7 +11,7 @@ idris2="$1"
 rm -rf build
 rm -rf prefix
 
-if [ "$(echo "$idris2" | grep refc)" ]; then
+if echo "$idris2" | grep -q refc; then
     if type valgrind >/dev/null 2>&1; then
         VALGRIND="valgrind --leak-check=full -s --log-file=output.valgrind.refc.log"
     else
