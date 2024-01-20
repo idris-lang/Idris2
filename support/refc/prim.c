@@ -2,57 +2,34 @@
 #include "refc_util.h"
 #include <string.h>
 #include <unistd.h>
-
-// This is NOT THREAD SAFE in the current implementation
-
-IORef_Storage *newIORef_Storage(int capacity) {
-  IORef_Storage *retVal = (IORef_Storage *)malloc(sizeof(IORef_Storage));
-  IDRIS2_REFC_VERIFY(retVal, "malloc failed");
-  retVal->filled = 0;
-  retVal->total = capacity;
-  retVal->refs = (Value **)malloc(sizeof(Value *) * retVal->total);
-  return retVal;
-}
-
-void doubleIORef_Storage(IORef_Storage *ior) {
-  Value **values = (Value **)malloc(sizeof(Value *) * ior->total * 2);
-  IDRIS2_REFC_VERIFY(values, "malloc failed");
-  ior->total *= 2;
-  for (int i = 0; i < ior->filled; i++) {
-    values[i] = ior->refs[i];
-  }
-  free(ior->refs);
-  ior->refs = values;
-}
+#if !defined(__STDC_NO_ATOMICS__)
+#include <stdatomic.h>
+#endif
 
 Value *idris2_Data_IORef_prim__newIORef(Value *erased, Value *input_value,
                                         Value *_world) {
-  // if no ioRef Storag exist, start with one
-  if (!global_IORef_Storage) {
-    global_IORef_Storage = newIORef_Storage(128);
-  }
-  // expand size of needed
-  if (global_IORef_Storage->filled >= global_IORef_Storage->total) {
-    doubleIORef_Storage(global_IORef_Storage);
-  }
-
-  // store value
   Value_IORef *ioRef = IDRIS2_NEW_VALUE(Value_IORef);
   ioRef->header.tag = IOREF_TAG;
-  ioRef->index = global_IORef_Storage->filled;
-  global_IORef_Storage->refs[global_IORef_Storage->filled] =
-      newReference(input_value);
-  global_IORef_Storage->filled++;
-
+#if !defined(__STDC_NO_ATOMICS__) && ATOMIC_POINTER_LOCK_FREE
+  atomic_store(&ioRef->v, newReference(input_value));
+#else
+  ioRef->v = newReference(input_value);
+#endif
   return (Value *)ioRef;
 }
 
-Value *idris2_Data_IORef_prim__writeIORef(Value *erased, Value *_index,
+Value *idris2_Data_IORef_prim__writeIORef(Value *erased, Value *_ioref,
                                           Value *new_value, Value *_world) {
-  Value_IORef *index = (Value_IORef *)_index;
-  removeReference(global_IORef_Storage->refs[index->index]);
-  global_IORef_Storage->refs[index->index] = newReference(new_value);
-  return newReference(_index);
+  Value_IORef *ioref = (Value_IORef *)_ioref;
+  newReference(new_value);
+#if !defined(__STDC_NO_ATOMICS__) && ATOMIC_POINTER_LOCK_FREE
+  Value *old = atomic_exchange(&ioref->v, new_value);
+#else
+  Value *old = ioref->v;
+  ioref->v = new_value;
+#endif
+  removeReference(old);
+  return NULL;
 }
 
 // -----------------------------------

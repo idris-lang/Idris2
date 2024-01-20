@@ -1,5 +1,8 @@
 #include "refc_util.h"
 #include "runtime.h"
+#if !defined(__STDC_NO_ATOMICS__)
+#include <stdatomic.h>
+#endif
 
 Value *newValue(size_t size) {
   Value *retVal = (Value *)malloc(size);
@@ -259,7 +262,11 @@ void removeReference(Value *elem) {
       break;
     }
     case IOREF_TAG:
-      /* nothing to delete, added for sake of completeness */
+#if !defined(__STDC_NO_ATOMICS__) && ATOMIC_POINTER_LOCK_FREE
+  removeReference(atomic_load(&((Value_IORef*)elem)->v));
+#else
+  removeReference((Value_IORef*)elem)->v);
+#endif
       break;
 
     case BUFFER_TAG: {
