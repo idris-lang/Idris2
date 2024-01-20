@@ -1,0 +1,17 @@
+1/1: Building Test (Test.idr)
+Error: Operator !> is a regular operator, but is used as an automatically-binding (autobind) operator.
+
+Test:11:28--11:30
+ 07 | (>>) : Monad m => m a -> (a -> m b) -> m b
+ 08 | (>>) = (>>=)
+ 09 |
+ 10 | both : Maybe (Nat, Nat) -> Maybe Nat
+ 11 | both m = (MkPair x y := m) !> Just (x + y)
+                                 ^^
+Explanation: regular, typebind and autobind operators all use a slightly different syntax, typebind looks like this: '(name : type) !> expr', autobind looks like this: '(name := expr) !> expr'.
+
+Possible solutions:
+ - Write the expression using regular syntax: 'm !> Just (x + y)'.
+ - Change the fixity defined at Test:5:1--5:12 to 'export autobind infixr 0 !>'.
+ - Hide or remove the fixity at Test:5:1--5:12 and import a module that exports a compatible fixity.
+ - Did you mean '>>' ?

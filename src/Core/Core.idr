@@ -166,7 +166,7 @@ data Error : Type where
      GenericMsgSol : FC -> (message : String) -> (solutions : List String) -> Error
      OperatorBindingMismatch : {a : Type} -> {print : a -> Doc ()} ->
          FC -> (expectedFixity : BacktickOrOperatorFixity) -> (use_site : OperatorLHSInfo a) ->
-         (opName : Name) -> (rhs : a) -> Error
+         (opName : Name) -> (rhs : a) -> (candidates : List String) -> Error
      TTCError : TTCErrorMsg -> Error
      FileErr : String -> FileError -> Error
      CantFindPackage : String -> Error
@@ -400,10 +400,10 @@ Show Error where
            (n ::: []) => ": " ++ n ++ "?"
            _ => " any of: " ++ showSep ", " (map show (forget ns)) ++ "?"
   show (WarningAsError w) = show w
-  show (OperatorBindingMismatch fc (DeclaredFixity expected) actual opName rhs)
+  show (OperatorBindingMismatch fc (DeclaredFixity expected) actual opName rhs _)
        = show fc ++ ": Operator " ++ show opName ++ " is " ++ show expected
        ++ " but used as a " ++ show actual ++ " operator"
-  show (OperatorBindingMismatch fc Backticked actual opName rhs)
+  show (OperatorBindingMismatch fc Backticked actual opName rhs _)
        = show fc ++ ": Operator " ++ show opName ++ " has no declared fixity"
        ++ " but used as a " ++ show actual ++ " operator"
 
@@ -496,7 +496,7 @@ getErrorLoc (InLHS _ _ err) = getErrorLoc err
 getErrorLoc (InRHS _ _ err) = getErrorLoc err
 getErrorLoc (MaybeMisspelling err _) = getErrorLoc err
 getErrorLoc (WarningAsError warn) = Just (getWarningLoc warn)
-getErrorLoc (OperatorBindingMismatch fc _ _ _ _) = Just fc
+getErrorLoc (OperatorBindingMismatch fc _ _ _ _ _) = Just fc
 
 export
 killWarningLoc : Warning -> Warning
@@ -586,8 +586,8 @@ killErrorLoc (InLHS fc x err) = InLHS emptyFC x (killErrorLoc err)
 killErrorLoc (InRHS fc x err) = InRHS emptyFC x (killErrorLoc err)
 killErrorLoc (MaybeMisspelling err xs) = MaybeMisspelling (killErrorLoc err) xs
 killErrorLoc (WarningAsError wrn) = WarningAsError (killWarningLoc wrn)
-killErrorLoc (OperatorBindingMismatch {print} fc expected actual opName rhs)
-             = OperatorBindingMismatch {print} emptyFC expected actual opName rhs
+killErrorLoc (OperatorBindingMismatch {print} fc expected actual opName rhs candidates)
+             = OperatorBindingMismatch {print} emptyFC expected actual opName rhs candidates
 
 
 -- Core is a wrapper around IO that is specialised for efficiency.

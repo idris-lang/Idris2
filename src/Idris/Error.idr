@@ -625,7 +625,7 @@ perrorRaw (GenericMsgSol fc header solutions)
        <+> line
        <+> "Possible solutions:" <+> line
        <+> indent 1 (vsep (map (\s => "-" <++> pretty0 s) solutions))
-perrorRaw (OperatorBindingMismatch fc {print=p} expected actual opName rhs)
+perrorRaw (OperatorBindingMismatch fc {print=p} expected actual opName rhs candidates)
     = pure $ "Operator" <++> pretty0 !(getFullName opName) <++> "is"
        <++> printBindingInfo expected
        <++> "operator, but is used as" <++> printBindingModifier actual.getBinder
@@ -638,8 +638,15 @@ perrorRaw (OperatorBindingMismatch fc {print=p} expected actual opName rhs)
        <+> line <+> line
        <+> "Possible solutions:" <+> line
        <+> indent 1 (vsep (map ("-" <++>)
-           (expressionDiagnositc ++ [fixityDiagnostic, moduleDiagnostic])))
+           (expressionDiagnositc ++ [fixityDiagnostic, moduleDiagnostic] ++ spellingCandidates)))
     where
+      spellingCandidates : List (Doc IdrisAnn)
+      spellingCandidates = if null candidates
+                              then []
+                              else ["did you mean one of:" <++> hcat (punctuate ", "
+                                       (map byShow candidates))]
+
+
       moduleDiagnostic : Doc IdrisAnn
       moduleDiagnostic = case expected of
                               Backticked => "Import a module that exports a suitable fixity."

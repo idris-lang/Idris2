@@ -170,12 +170,15 @@ checkConflictingFixities isPrefix exprFC opn
                    For example: %hide \{show fxName}
                    """
 
-checkConflictingBinding : Side -> FC -> Name -> (foundFixity : BacktickOrOperatorFixity) -> (usage : OperatorLHSInfo PTerm) -> (rhs : PTerm) -> Core ()
+checkConflictingBinding : Ref Ctxt Defs =>
+                          Side -> FC -> Name -> (foundFixity : BacktickOrOperatorFixity) ->
+                          (usage : OperatorLHSInfo PTerm) -> (rhs : PTerm) -> Core ()
 checkConflictingBinding LHS fc opName foundFixity use_site rhs = pure () -- don't check if we're on the LHS
 checkConflictingBinding side fc opName foundFixity use_site rhs
     = if isCompatible foundFixity use_site
          then pure ()
-         else throw $ OperatorBindingMismatch {print = byShow} fc foundFixity use_site opName rhs
+         else throw $ OperatorBindingMismatch
+             {print = byShow} fc foundFixity use_site opName rhs !candidates
     where
       isCompatible : BacktickOrOperatorFixity -> OperatorLHSInfo PTerm -> Bool
       isCompatible Backticked (NoBinder lhs) = True
@@ -185,6 +188,12 @@ checkConflictingBinding side fc opName foundFixity use_site rhs
       isCompatible (DeclaredFixity fixInfo) (BindExpr name expr) = fixInfo.bindingInfo == Autobind
       isCompatible (DeclaredFixity fixInfo) (BindExplicitType name type expr)
           = fixInfo.bindingInfo == Autobind
+
+      candidates : Core (List String)
+      candidates = do Just (nm, cs) <- getSimilarNames opName
+                        | Nothing => pure []
+                      ns <- currentNS <$> get Ctxt
+                      pure (showSimilarNames ns opName nm cs)
 
 checkValidFixity : BindingModifier -> Fixity -> Nat -> Bool
 
