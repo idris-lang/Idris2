@@ -42,6 +42,7 @@ import Data.Maybe
 import Data.List
 import Data.List.Views
 import Data.String
+import Debug.Trace
 
 -- Convert high level Idris declarations (PDecl from Idris.Syntax) into
 -- TTImp, recording any high level syntax info on the way (e.g. infix
@@ -123,9 +124,8 @@ checkConflictingFixities : {auto s : Ref Syn SyntaxInfo} ->
                            (isPrefix : Bool) ->
                            FC -> Name -> Core (OpPrec, BacktickOrOperatorFixity)
 checkConflictingFixities isPrefix exprFC opn
-  = do syn <- get Syn
-       let op = nameRoot opn
-       let foundFixities : List (Name, FixityInfo) = lookupName (UN (Basic op)) (fixities syn)
+  = do let op = nameRoot opn
+       foundFixities <- getFixityInfo op
        let (pre, inf) = partition ((== Prefix) . fix . snd) foundFixities
        case (isPrefix, pre, inf) of
             -- If we do not find any fixity for this operator we check that it uses operator
@@ -171,6 +171,7 @@ checkConflictingFixities isPrefix exprFC opn
                    """
 
 checkConflictingBinding : Ref Ctxt Defs =>
+                          Ref Syn SyntaxInfo =>
                           Side -> FC -> Name -> (foundFixity : BacktickOrOperatorFixity) ->
                           (usage : OperatorLHSInfo PTerm) -> (rhs : PTerm) -> Core ()
 checkConflictingBinding LHS fc opName foundFixity use_site rhs = pure () -- don't check if we're on the LHS
@@ -189,8 +190,17 @@ checkConflictingBinding side fc opName foundFixity use_site rhs
       isCompatible (DeclaredFixity fixInfo) (BindExplicitType name type expr)
           = fixInfo.bindingInfo == Autobind
 
+      keepCompatibleBinding : BindingModifier -> (Name, GlobalDef) -> Core Bool
+      keepCompatibleBinding compatibleBinder (name, def) = do
+        fixities <- getFixityInfo (nameRoot name)
+        let compatible = any (\(_, fx) => fx.bindingInfo == use_site.getBinder) fixities
+        pure compatible
+
       candidates : Core (List String)
-      candidates = do Just (nm, cs) <- getSimilarNames opName
+      candidates = do let DeclaredFixity fxInfo = foundFixity
+                        | _ => pure [] -- if there is no declared fixity we can't know what's
+                                       -- supposed to go there.
+                      Just (nm, cs) <- getSimilarNames {keepPredicate = Just (keepCompatibleBinding fxInfo.bindingInfo)} opName
                         | Nothing => pure []
                       ns <- currentNS <$> get Ctxt
                       pure (showSimilarNames ns opName nm cs)

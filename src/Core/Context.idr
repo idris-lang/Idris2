@@ -1131,7 +1131,10 @@ getFieldNames ctxt recNS
 -- Find similar looking names in the context
 export
 getSimilarNames : {auto c : Ref Ctxt Defs} ->
-                   Name -> Core (Maybe (String, List (Name, Visibility, Nat)))
+                  -- Predicate run to customise the behavior of looking for similar names
+                  -- Sometime we might want to hide names that we know make no sense.
+                  {default Nothing keepPredicate : Maybe ((Name, GlobalDef) -> Core Bool)} ->
+                  Name -> Core (Maybe (String, List (Name, Visibility, Nat)))
 getSimilarNames nm = case show <$> userNameRoot nm of
   Nothing => pure Nothing
   Just str => if length str <= 1 then pure (Just (str, [])) else
@@ -1145,6 +1148,9 @@ getSimilarNames nm = case show <$> userNameRoot nm of
                    | False => pure Nothing
                Just def <- lookupCtxtExact nm (gamma defs)
                    | Nothing => pure Nothing -- should be impossible
+               let predicate = fromMaybe (\_ => pure True) keepPredicate
+               True <- predicate (nm, def)
+                   | False => pure Nothing
                pure (Just (collapseDefault $ visibility def, dist))
        kept <- NameMap.mapMaybeM @{CORE} test (resolvedAs (gamma defs))
        pure $ Just (str, toList kept)

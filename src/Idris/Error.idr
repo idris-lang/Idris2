@@ -641,10 +641,11 @@ perrorRaw (OperatorBindingMismatch fc {print=p} expected actual opName rhs candi
            (expressionDiagnositc ++ [fixityDiagnostic, moduleDiagnostic] ++ spellingCandidates)))
     where
       spellingCandidates : List (Doc IdrisAnn)
-      spellingCandidates = if null candidates
-                              then []
-                              else ["did you mean one of:" <++> hcat (punctuate ", "
-                                       (map byShow candidates))]
+      spellingCandidates = case candidates of
+                              [] => []
+                              [x] => ["Did you mean" <++> enclose "'" "'" (pretty0 x) <++> "?"]
+                              xs => ["Did you mean one of:" <++> hcat (punctuate ", "
+                                       (map (enclose "'" "'" . pretty0) xs)) <++> "?"]
 
 
       moduleDiagnostic : Doc IdrisAnn

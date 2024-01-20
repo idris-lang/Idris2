@@ -1005,6 +1005,13 @@ removeFixity :
     {auto s : Ref Syn SyntaxInfo} -> Fixity -> Name -> Core ()
 removeFixity _ key = update Syn ({fixities $= removeExact key })
 
+||| Return all fixity declarations for an operator name
+export
+getFixityInfo : {auto s : Ref Syn SyntaxInfo} -> String -> Core (List (Name, FixityInfo))
+getFixityInfo nm = do
+  syn <- get Syn
+  pure $ lookupName (UN $ Basic nm) (fixities syn)
+
 export
 covering
 Show PTypeDecl where
