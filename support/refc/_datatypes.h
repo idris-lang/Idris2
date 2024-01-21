@@ -7,10 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if !defined(__STDC_NO_ATOMICS__)
-#include <stdatomic.h>
-#endif
-
 #include "buffer.h"
 
 #define NO_TAG 0
@@ -140,11 +136,7 @@ typedef struct {
 
 typedef struct {
   Value_header header;
-#if !defined(__STDC_NO_ATOMICS__) && ATOMIC_POINTER_LOCK_FREE
-  Value *_Atomic v;
-#else
   Value *v;
-#endif
 } Value_IORef;
 
 typedef struct {

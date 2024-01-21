@@ -2,19 +2,12 @@
 #include "refc_util.h"
 #include <string.h>
 #include <unistd.h>
-#if !defined(__STDC_NO_ATOMICS__)
-#include <stdatomic.h>
-#endif
 
 Value *idris2_Data_IORef_prim__newIORef(Value *erased, Value *input_value,
                                         Value *_world) {
   Value_IORef *ioRef = IDRIS2_NEW_VALUE(Value_IORef);
   ioRef->header.tag = IOREF_TAG;
-#if !defined(__STDC_NO_ATOMICS__) && ATOMIC_POINTER_LOCK_FREE
-  atomic_store(&ioRef->v, newReference(input_value));
-#else
   ioRef->v = newReference(input_value);
-#endif
   return (Value *)ioRef;
 }
 
@@ -22,12 +15,8 @@ Value *idris2_Data_IORef_prim__writeIORef(Value *erased, Value *_ioref,
                                           Value *new_value, Value *_world) {
   Value_IORef *ioref = (Value_IORef *)_ioref;
   newReference(new_value);
-#if !defined(__STDC_NO_ATOMICS__) && ATOMIC_POINTER_LOCK_FREE
-  Value *old = atomic_exchange(&ioref->v, new_value);
-#else
   Value *old = ioref->v;
   ioref->v = new_value;
-#endif
   removeReference(old);
   return NULL;
 }

@@ -1,20 +1,12 @@
 #pragma once
 
 #include "cBackend.h"
-#if !defined(__STDC_NO_ATOMICS__)
-#include <stdatomic.h>
-#endif
 
 // IORef
 
 Value *idris2_Data_IORef_prim__newIORef(Value *, Value *, Value *);
-#if !defined(__STDC_NO_ATOMICS__) && ATOMIC_POINTER_LOCK_FREE
 #define idris2_Data_IORef_prim__readIORef(erased, ioref, world)                \
-  (newReference(atomic_load(&((Value_IORef *)ioref)->v)))
-#else
-#define idris2_Data_IORef_prim__readIORef(erased, ioref, world)                \
-  (newReference(((Value_IORef *)iroef)->v)))
-#endif
+  (newReference(((Value_IORef *)ioref)->v))
 
 Value *idris2_Data_IORef_prim__writeIORef(Value *, Value *, Value *, Value *);
 
