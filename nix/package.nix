@@ -1,4 +1,4 @@
-{ stdenv, lib, chez, clang, gmp, fetchFromGitHub, makeWrapper, support, idris2-version
+{ stdenv, lib, chez, clang, gmp, fetchFromGitHub, makeWrapper, support, idris2Version
 , srcRev, gambit, nodejs, zsh, idris2Bootstrap ? null }:
 
 # Uses scheme to bootstrap the build of idris2
@@ -9,7 +9,7 @@ let
 in
 stdenv.mkDerivation rec {
   pname = "idris2";
-  version = idris2-version;
+  version = idris2Version;
 
   src = ../.;
 
