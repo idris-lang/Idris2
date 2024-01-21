@@ -74,11 +74,17 @@ Value *strAppend(Value *a, Value *b) {
 Value *strSubstr(Value *start, Value *len, Value *s) {
   char *input = ((Value_String *)s)->str;
   int offset = extractInt(start);
-  int l = extractInt(len);
+  if (offset < 0)
+    offset = 0;
 
-  int tailLen = strlen(input);
-  if (tailLen < offset + l) {
-    l = tailLen - offset;
+  int l = extractInt(len);
+  if (l < 0)
+    l = 0;
+
+  int tailLen = strlen(input) - offset;
+
+  if (tailLen < l) {
+    l = tailLen;
   }
 
   Value_String *retVal = makeEmptyString(l + 1);
