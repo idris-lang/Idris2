@@ -13,7 +13,7 @@ rm -rf prefix
 
 if echo "$idris2" | grep -q refc; then
     if type valgrind >/dev/null 2>&1; then
-        VALGRIND="valgrind --leak-check=full -s --log-file=output.valgrind.refc.log"
+        export VALGRIND="valgrind --leak-check=full -s --log-file=output.valgrind.refc.log"
     else
         unset VALGRIND
     fi
