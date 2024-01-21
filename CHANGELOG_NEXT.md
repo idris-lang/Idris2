@@ -33,7 +33,7 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Fix invalid memory read onf strSubStr.
 
 * Fix memory leaks of IORef. Now that IORef holds values by itself,
-  global_IORefStorage is no longer needed.
+  global_IORef_Storage is no longer needed.
 
 #### NodeJS Backend
 
