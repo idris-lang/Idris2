@@ -34,7 +34,11 @@ main = do
     putStrLn $ "\{show $ length overtake0} : \{overtake0}"
     let overtake1 = substr 1 2 ""
     putStrLn $ "\{show $ length overtake1} : \{overtake1}"
-
+    putStrLn $ substr (-10) (1) helloWorld
+    putStrLn $ substr 2 (-2) helloWorld
+    putStrLn $ substr (-5) (-2) helloWorld
+    putStrLn $ substr 1000000 1 helloWorld
+    putStrLn $ substr 5 100000 helloWorld
 
     putStrLn $ show $ assert_total $ strIndex helloWorld 1
 
