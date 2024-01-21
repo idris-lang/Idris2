@@ -1,0 +1,3 @@
+. ../../testutils.sh
+
+run --find-ipkg Memo.idr

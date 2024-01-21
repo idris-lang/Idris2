@@ -28,7 +28,20 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 ### Compiler changes
 
-#### NodeJS Backend
+### Backend changes
+
+#### Chez
+
+* `Lazy` and `Inf` values are *weakly* memoised. That is, once accessed, they are allowed
+  to be not re-evaluated until garbage collector wipes them.
+  This change requires Chez with version >= 9.5.9, because of fixed bug in Chez GC.
+
+#### Racket
+
+* `Lazy` and `Inf` values are *weakly* memoised. That is, once accessed, they are allowed
+  to be not re-evaluated until garbage collector wipes them.
+
+#### NodeJS
 
 * The NodeJS executable output to `build/exec/` now has its executable bit set.
   That file already had a NodeJS shebang at the top, so now it is fully ready to

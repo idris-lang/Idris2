@@ -1,3 +1,5 @@
+#!chezscheme
+
 (define (blodwen-os)
   (case (machine-type)
     [(i3le ti3le a6le ta6le tarm64le) "unix"]  ; GNU/Linux
@@ -18,6 +20,16 @@
                    (set! f void))
             (void))
         res))))
+
+(define (blodwen-delay-lazy f)
+  (weak-cons #!bwp f))
+
+(define (blodwen-force-lazy e)
+  (let ((exval (car e)))
+    (if (bwp-object? exval)
+      (let ((val ((cdr e))))
+        (begin (set-car! e (box val)) val))
+      (unbox exval))))
 
 (define (blodwen-toSignedInt x bits)
   (if (logbit? bits x)
@@ -457,7 +469,7 @@
 (define (blodwen-make-future work)
   (let ([future (make-future-internal #f #f (make-mutex) (make-condition))])
     (fork-thread (lambda ()
-      (let ([result (work)])
+      (let ([result (blodwen-force-lazy work)])
         (with-mutex (future-internal-mutex future)
           (set-future-internal-result! future result)
           (set-future-internal-ready! future #t)
