@@ -163,12 +163,6 @@ Value_Array *makeArray(int length) {
   return a;
 }
 
-Value_World *makeWorld() {
-  Value_World *retVal = IDRIS2_NEW_VALUE(Value_World);
-  retVal->header.tag = WORLD_TAG;
-  return retVal;
-}
-
 Value *newReference(Value *source) {
   // note that we explicitly allow NULL as source (for erased arguments)
   if (source) {
@@ -260,9 +254,6 @@ void removeReference(Value *elem) {
       removeReference((Value *)vPtr->p);
       break;
     }
-    case WORLD_TAG:
-      /* nothing to delete, added for sake of completeness */
-      break;
 
     default:
       break;

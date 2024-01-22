@@ -35,8 +35,6 @@
 #define MUTEX_TAG 30
 #define CONDITION_TAG 31
 
-#define WORLD_TAG 99
-
 typedef struct {
   int refCounter;
   int tag;
@@ -167,8 +165,3 @@ typedef struct {
   int filled;
   int total;
 } IORef_Storage;
-
-typedef struct {
-  Value_header header;
-  IORef_Storage *listIORefs;
-} Value_World;
