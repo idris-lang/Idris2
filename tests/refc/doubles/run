@@ -1,4 +1,4 @@
 . ../../testutils.sh
 
-idris2 --cg refc -o refc_doubles TestDoubles.idr > /dev/null
-./build/exec/refc_doubles
+idris2 --cg refc -o refc_doubles TestDoubles.idr
+$VALGRIND ./build/exec/refc_doubles

@@ -253,7 +253,7 @@ void removeReference(Value *elem) {
       break;
     }
     case IOREF_TAG:
-      /* nothing to delete, added for sake of completeness */
+      removeReference(((Value_IORef *)elem)->v);
       break;
 
     case BUFFER_TAG: {

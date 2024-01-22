@@ -29,8 +29,17 @@ main = do
     putStrLn $ reverse helloWorld
     putStrLn $ reverse ""
     putStrLn $ substr 1 2 helloWorld
-    putStrLn $ substr 10 10 helloWorld
-    putStrLn $ substr 1 2 ""
+
+    let overtake0 = substr 10 10 helloWorld
+    putStrLn $ "\{show $ length overtake0} : \{overtake0}"
+    let overtake1 = substr 1 2 ""
+    putStrLn $ "\{show $ length overtake1} : \{overtake1}"
+    putStrLn $ substr (-10) (1) helloWorld
+    putStrLn $ substr 2 (-2) helloWorld
+    putStrLn $ substr (-5) (-2) helloWorld
+    putStrLn $ substr 1000000 1 helloWorld
+    putStrLn $ substr 5 100000 helloWorld
+
     putStrLn $ show $ assert_total $ strIndex helloWorld 1
 
     putStrLn $ strCons 'a' "bc"

@@ -974,10 +974,6 @@ header = do
       #include <runtime.h>
       /* \{ generatedString "RefC" } */
 
-      /* a global storage for IO References */
-      IORef_Storage * global_IORef_Storage;
-
-
       """
     let headerFiles = Libraries.Data.SortedSet.toList !(get HeaderFiles)
     let headerLines = map (\h => "#include <" ++ h ++ ">\n") headerFiles
@@ -998,7 +994,6 @@ footer = do
                         "idris2_setArgs(argc, argv);"
                         ""
           }
-          global_IORef_Storage = NULL;
           Value *mainExprVal = __mainExpression_0();
           trampoline(mainExprVal);
           return 0; // bye bye

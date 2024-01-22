@@ -28,6 +28,13 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 ### Compiler changes
 
+#### RefC Backend
+
+* Fix invalid memory read onf strSubStr.
+
+* Fix memory leaks of IORef. Now that IORef holds values by itself,
+  global_IORef_Storage is no longer needed.
+
 #### NodeJS Backend
 
 * The NodeJS executable output to `build/exec/` now has its executable bit set.

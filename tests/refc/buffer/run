@@ -1,7 +1,7 @@
 . ../../testutils.sh
 
-idris2 --cg refc -o refc_buffer TestBuffer.idr > /dev/null
-./build/exec/refc_buffer
+idris2 --cg refc -o refc_buffer TestBuffer.idr
+$VALGRIND ./build/exec/refc_buffer
 base64 -i testWrite.buf
 
 rm testWrite.buf
