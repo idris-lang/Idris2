@@ -67,6 +67,14 @@ by running following command::
 
     brew install idris2
 
+Installing Using Yay
+-------------------------
+
+If you are an Arch based distro user, you can install Idris 2 together with all the requirements
+by running following command::
+
+    yay -S idris2
+
 Checking Installation
 =====================
 

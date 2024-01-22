@@ -1,4 +1,4 @@
 . ../../testutils.sh
 
-idris2 --cg refc -p contrib -o refc_strings TestStrings.idr > /dev/null
-./build/exec/refc_strings
+idris2 --cg refc -p contrib -o refc_strings TestStrings.idr
+$VALGRIND ./build/exec/refc_strings

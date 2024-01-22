@@ -139,7 +139,7 @@ cPrimType Bits64Type = "Bits64"
 cPrimType StringType = "string"
 cPrimType CharType = "char"
 cPrimType DoubleType = "double"
-cPrimType WorldType = "f32"
+cPrimType WorldType = "void"
 
 cConstant : Constant -> String
 cConstant (I x) = "(Value*)makeInt64("++ showIntMin x ++")"
@@ -156,7 +156,7 @@ cConstant (Db x) = "(Value*)makeDouble("++ show x ++")"
 cConstant (Ch x) = "(Value*)makeChar("++ escapeChar x ++")"
 cConstant (Str x) = "(Value*)makeString("++ cStringQuoted x ++")"
 cConstant (PrT t) = cPrimType t
-cConstant WorldVal = "(Value*)makeWorld()"
+cConstant WorldVal = "(Value*)NULL"
 
 extractConstant : Constant -> String
 extractConstant (I x) = show x
@@ -223,53 +223,6 @@ cOp BelieveMe     [_, _, x] = "newReference(" ++ x ++ ")"
 cOp Crash         [_, msg]  = "idris2_crash(" ++ msg ++ ");"
 cOp fn args = plainOp (show fn) (toList args)
 
-
-data ExtPrim = NewIORef | ReadIORef | WriteIORef
-             | NewArray | ArrayGet | ArraySet
-             | GetField | SetField
-             | VoidElim
-             | SysOS | SysCodegen
-             | OnCollect
-             | OnCollectAny
-             | Unknown Name
-
-export
-Show ExtPrim where
-  show NewIORef = "newIORef"
-  show ReadIORef = "readIORef"
-  show WriteIORef = "writeIORef"
-  show NewArray = "newArray"
-  show ArrayGet = "arrayGet"
-  show ArraySet = "arraySet"
-  show GetField = "getField"
-  show SetField = "setField"
-  show VoidElim = "voidElim"
-  show SysOS = "sysOS"
-  show SysCodegen = "sysCodegen"
-  show OnCollect = "onCollect"
-  show OnCollectAny = "onCollectAny"
-  show (Unknown n) = "Unknown " ++ show n
-
-||| Match on a user given name to get the scheme primitive
-toPrim : Name -> ExtPrim
-toPrim pn@(NS _ n)
-    = cond [(n == UN (Basic "prim__newIORef"), NewIORef),
-            (n == UN (Basic "prim__readIORef"), ReadIORef),
-            (n == UN (Basic "prim__writeIORef"), WriteIORef),
-            (n == UN (Basic "prim__newArray"), NewArray),
-            (n == UN (Basic "prim__arrayGet"), ArrayGet),
-            (n == UN (Basic "prim__arraySet"), ArraySet),
-            (n == UN (Basic "prim__getField"), GetField),
-            (n == UN (Basic "prim__setField"), SetField),
-            (n == UN (Basic "prim__void"), VoidElim),
-            (n == UN (Basic "prim__os"), SysOS),
-            (n == UN (Basic "prim__codegen"), SysCodegen),
-            (n == UN (Basic "prim__onCollect"), OnCollect),
-            (n == UN (Basic "prim__onCollectAny"), OnCollectAny)
-            ]
-           (Unknown pn)
-toPrim pn = assert_total $ idris_crash ("INTERNAL ERROR: Unknown primitive: " ++ cName pn)
--- not really total but this way this internal error does not contaminate everything else
 
 
 varName : AVar -> String
@@ -471,8 +424,6 @@ const2Integer c i =
         (B32 x) => cast x
         (B64 x) => cast x
         _ => i
-
-
 
 
 
@@ -793,8 +744,16 @@ mutual
         removeVars (foldl (\acc, elem => elem :: acc) [] (map varName args))
         pure $ MkRS resultVar resultVar
     cStatementsFromANF (AExtPrim fc _ p args) _ = do
+        let prims : List String =
+            ["prim__newIORef", "prim__readIORef", "prim__writeIORef", "prim__newArray",
+             "prim__arrayGet", "prim__arraySet", "prim__getField", "prim__setField",
+             "prim__void", "prim__os", "prim__codegen", "prim__onCollect", "prim__onCollectAny" ]
+        case p of
+            NS _ (UN (Basic pn)) =>
+               unless (elem pn prims) $ throw $ InternalError $ "INTERNAL ERROR: Unknown primitive: " ++ cName p
+            _ => throw $ InternalError $ "INTERNAL ERROR: Unknown primitive: " ++ cName p
         emit fc $ "// call to external primitive " ++ cName p
-        let returnLine = (cCleanString (show (toPrim p)) ++ "("++ showSep ", " (map varName args) ++")")
+        let returnLine = "idris2_" ++ (cName p) ++ "("++ showSep ", " (map varName args) ++")"
         pure $ MkRS returnLine returnLine
     cStatementsFromANF (AConCase fc sc alts mDef) tailPosition = do
         c <- getNextCounter
@@ -954,7 +913,7 @@ extractValue _ CFPtr            varName = "((Value_Pointer*)" ++ varName ++ ")->
 extractValue _ CFGCPtr          varName = "((Value_GCPointer*)" ++ varName ++ ")->p->p"
 extractValue CLangC    CFBuffer varName = "((Value_Buffer*)" ++ varName ++ ")->buffer->data"
 extractValue CLangRefC CFBuffer varName = "((Value_Buffer*)" ++ varName ++ ")->buffer"
-extractValue _ CFWorld          varName = "(Value_World*)" ++ varName
+extractValue _ CFWorld          _       = "(Value *)NULL"
 extractValue _ (CFFun x y)      varName = "(Value_Closure*)" ++ varName
 extractValue c (CFIORes x)      varName = extractValue c x varName
 extractValue _ (CFStruct x xs)  varName = assert_total $ idris_crash ("INTERNAL ERROR: Struct access not implemented: " ++ varName)
@@ -979,7 +938,7 @@ packCFType CFChar          varName = "makeChar(" ++ varName ++ ")"
 packCFType CFPtr           varName = "makePointer(" ++ varName ++ ")"
 packCFType CFGCPtr         varName = "makePointer(" ++ varName ++ ")"
 packCFType CFBuffer        varName = "makeBuffer(" ++ varName ++ ")"
-packCFType CFWorld         varName = "makeWorld(" ++ varName ++ ")"
+packCFType CFWorld         _       = "(Value *)NULL"
 packCFType (CFFun x y)     varName = "makeFunction(" ++ varName ++ ")"
 packCFType (CFIORes x)     varName = packCFType x varName
 packCFType (CFStruct x xs) varName = "makeStruct(" ++ varName ++ ")"
@@ -1131,10 +1090,6 @@ header = do
       #include <runtime.h>
       /* \{ generatedString "RefC" } */
 
-      /* a global storage for IO References */
-      IORef_Storage * global_IORef_Storage;
-
-
       """
     let headerFiles = SortedSet.toList !(get HeaderFiles)
     let headerLines = map (\h => "#include <" ++ h ++ ">\n") headerFiles
@@ -1155,7 +1110,6 @@ footer = do
                         "idris2_setArgs(argc, argv);"
                         ""
           }
-          global_IORef_Storage = NULL;
           Value *mainExprVal = __mainExpression_0();
           trampoline(mainExprVal);
           return 0; // bye bye

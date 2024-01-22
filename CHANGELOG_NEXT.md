@@ -21,7 +21,7 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   guaranteed at runtime by the Nix derivation; now it rewraps the output to only
   depend on the directory containing Idris2's runtime support library.
 
-* The Nix flake now exposes the Idris2 API package as `idris2-api` and Idris2's
+* The Nix flake now exposes the Idris2 API package as `idris2Api` and Idris2's
   C support library as `support`.
 
 ### Language changes
@@ -35,6 +35,13 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   optimize memory consumption.
 
 ### Compiler changes
+
+#### RefC Backend
+
+* Fix invalid memory read onf strSubStr.
+
+* Fix memory leaks of IORef. Now that IORef holds values by itself,
+  global_IORef_Storage is no longer needed.
 
 #### NodeJS Backend
 
@@ -53,6 +60,10 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Added an `Interpolation` implementation for primitive decimal numeric types and `Nat`.
 
 * Added append `(++)` for `List` version of `All`.
+
+* Deprecate `bufferData` in favor of `bufferData'`. These functions are the same
+  with the exception of the latter dealing in `Bits8` which is more correct than
+  `Int`.
 
 #### Contrib
 

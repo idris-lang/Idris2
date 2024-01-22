@@ -11,6 +11,12 @@ idris2="$1"
 rm -rf build
 rm -rf prefix
 
+if type valgrind >/dev/null 2>&1; then
+    export VALGRIND="valgrind --leak-check=full -s --log-file=output.valgrind.refc.log"
+else
+    unset VALGRIND
+fi
+
 idris2() {
     $idris2 --no-banner --console-width 0 --no-color "$@"
 }

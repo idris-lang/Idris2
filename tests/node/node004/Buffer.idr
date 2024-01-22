@@ -28,7 +28,7 @@ main
          val <- getBits16 buf 32
          printLn val
 
-         ds <- bufferData buf
+         ds <- bufferData' buf
          printLn ds
 
          Right _ <- writeBufferToFile "test.buf" buf 100
@@ -36,7 +36,7 @@ main
          Right buf2 <- createBufferFromFile "test.buf"
              | Left err => putStrLn "Buffer read fail"
 
-         ds <- bufferData buf2
+         ds <- bufferData' buf2
          printLn ds
 
 -- Put back when the File API is moved to C and these can work again
