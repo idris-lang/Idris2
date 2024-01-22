@@ -45,12 +45,13 @@ On Windows, it has been reported that installing via `MSYS2` works
 to set an environment variable `OLD_WIN=1` or modify it in `config.mk`. The idea is that
 this flag makes programs see paths in the old 8.3 convention. Another way to get Idris2
 built on windows is to create a junction without spaces for the ChezScheme base folder, e.g.
+
 ```sh
 mklink /j C:\Chez "C:\Program Files\Chez Scheme 9.6.4"
 ```
-and then to add `C:\Chez\bin\ta6nt\` to your path. Entering `make bootstrap && make install` 
-in the MSYS2 shell then should work without problems.
 
+and then to add `C:\Chez\bin\ta6nt\` to your path. Entering `make bootstrap && make install`
+in the MSYS2 shell then should work without problems.
 
 On Raspberry Pi, you can bootstrap via Racket.
 
