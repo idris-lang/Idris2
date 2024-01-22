@@ -369,7 +369,7 @@ checkRequirement req
       else pure Nothing
   where
     requirement : Requirement -> (String, List String)
-    requirement C = ("CC", ["cc", "valgrind"])
+    requirement C = ("CC", ["cc"])
     requirement Chez = ("CHEZ", ["chez", "chezscheme9.5", "chezscheme", "chez-scheme", "scheme"])
     requirement Node = ("NODE", ["node"])
     requirement Racket = ("RACKET", ["racket"])

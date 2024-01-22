@@ -1,0 +1,165 @@
+2
+3
+4
+5
+2
+4
+Value *Main_insert
+(
+    Value * var_0
+,   Value * var_1
+,   Value * var_2
+);
+Value *Main_insert_arglist(Value_Arglist* arglist);
+Value *Main_insert
+(
+    Value * var_0
+,   Value * var_1
+,   Value * var_2
+)
+{
+    Value * tmp_91 = NULL;                                   // Main:6:24--6:31
+    AConAlt * constructorField_90= newConstructorField(2);   // Main:6:24--6:31
+    constructorField_90[0].tag = 0;
+    constructorField_90[0].name = NULL;
+    constructorField_90[1].tag = 1;
+    constructorField_90[1].name = NULL;
+    switch(compareConstructors(var_2, constructorField_90, 2)){
+                                                             // Main:6:24--6:31
+      case 0:
+      {
+        Value_Constructor* constructor_92 = NULL;
+        if (isUnique(var_2)) {
+            constructor_92 = (Value_Constructor*)var_2;
+        }
+        else {
+            removeReference(var_2);
+        }
+        removeReference(var_0);
+        if (!constructor_92) {                               // Main:7:22--7:26
+            constructor_92 = newConstructor(0, 0, "Main_Leaf");
+                                                             // Main:7:22--7:26
+        }                                                    // Main:7:22--7:26
+        Value * var_3 = (Value*)constructor_92;              // Main:7:17--7:21
+        Value_Constructor* constructor_93 = newConstructor(0, 0, "Main_Leaf");
+                                                             // Main:7:29--7:33
+         // constructor Main_Leaf                            // Main:7:29--7:33
+        Value * var_4 = (Value*)constructor_93;              // Main:7:17--7:21
+        Value_Constructor* constructor_94 = newConstructor(3, 1, "Main_Node");
+                                                             // Main:7:17--7:21
+         // constructor Main_Node                            // Main:7:17--7:21
+        constructor_94->args[0] = var_3;
+        constructor_94->args[1] = var_1;
+        constructor_94->args[2] = var_4;
+        tmp_91 = (Value*)constructor_94;
+        break;
+      }
+      case 1:
+      {
+        Value * var_5 = ((Value_Constructor*)var_2)->args[0];
+        Value * var_6 = ((Value_Constructor*)var_2)->args[1];
+        Value * var_7 = ((Value_Constructor*)var_2)->args[2];
+        Value_Constructor* constructor_95 = NULL;
+        if (isUnique(var_2)) {
+            constructor_95 = (Value_Constructor*)var_2;
+        }
+        else {
+            newReference(var_5);
+            newReference(var_6);
+            newReference(var_7);
+            removeReference(var_2);
+        }
+        Value * tmp_97 = NULL;                               // Prelude.EqOrd:121:3--121:6
+        AConAlt * constructorField_96= newConstructorField(1);
+                                                             // Prelude.EqOrd:121:3--121:6
+        constructorField_96[0].tag = 0;
+        constructorField_96[0].name = NULL;
+        switch(compareConstructors(var_0, constructorField_96, 1)){
+                                                             // Prelude.EqOrd:121:3--121:6
+          case 0:
+          {
+            Value * var_8 = ((Value_Constructor*)var_0)->args[0];
+            Value * var_9 = ((Value_Constructor*)var_0)->args[1];
+            Value * var_10 = ((Value_Constructor*)var_0)->args[2];
+            Value * var_11 = ((Value_Constructor*)var_0)->args[3];
+            Value * var_12 = ((Value_Constructor*)var_0)->args[4];
+            Value * var_13 = ((Value_Constructor*)var_0)->args[5];
+            Value * var_14 = ((Value_Constructor*)var_0)->args[6];
+            Value * var_15 = ((Value_Constructor*)var_0)->args[7];
+            newReference(var_10);
+            Value * var_16 = apply_closure(var_10, newReference(var_1));
+                                                             // Prelude.EqOrd:121:3--121:6
+            tmp_97 = apply_closure(var_16, newReference(var_6));
+            break;
+          }
+        }
+        free(constructorField_96);
+        Value * var_19 = tmp_97;
+        Value * tmp_98 = NULL;
+        switch(extractInt(var_19)){
+          case 1 :
+          {
+            removeReference(var_19);
+            // start Main_insert(var_0, var_1, var_5)        // Main:8:48--8:54
+            Value_Arglist *arglist_99 = newArglist(0,3);
+            arglist_99->args[0] = var_0;
+            arglist_99->args[1] = var_1;
+            arglist_99->args[2] = var_5;
+            Value *(*fPtr_100)(Value_Arglist*) = Main_insert_arglist;
+                                                             // Main:8:48--8:54
+            Value *closure_100 = (Value*)makeClosureFromArglist(fPtr_100, arglist_99);
+                                                             // Main:8:48--8:54
+            // end   Main_insert(var_0, var_1, var_5)        // Main:8:48--8:54
+            Value * var_17 = trampoline(closure_100);        // Main:8:42--8:46
+            if (!constructor_95) {                           // Main:8:42--8:46
+                constructor_95 = newConstructor(3, 1, "Main_Node");
+                                                             // Main:8:42--8:46
+            }                                                // Main:8:42--8:46
+            constructor_95->args[0] = var_17;
+            constructor_95->args[1] = var_6;
+            constructor_95->args[2] = var_7;
+            tmp_98 = (Value*)constructor_95;
+            break;
+          }
+          case 0 :
+          {
+            removeReference(var_19);
+            // start Main_insert(var_0, var_1, var_7)        // Main:9:52--9:58
+            Value_Arglist *arglist_101 = newArglist(0,3);
+            arglist_101->args[0] = var_0;
+            arglist_101->args[1] = var_1;
+            arglist_101->args[2] = var_7;
+            Value *(*fPtr_102)(Value_Arglist*) = Main_insert_arglist;
+                                                             // Main:9:52--9:58
+            Value *closure_102 = (Value*)makeClosureFromArglist(fPtr_102, arglist_101);
+                                                             // Main:9:52--9:58
+            // end   Main_insert(var_0, var_1, var_7)        // Main:9:52--9:58
+            Value * var_18 = trampoline(closure_102);        // Main:9:42--9:46
+            if (!constructor_95) {                           // Main:9:42--9:46
+                constructor_95 = newConstructor(3, 1, "Main_Node");
+                                                             // Main:9:42--9:46
+            }                                                // Main:9:42--9:46
+            constructor_95->args[0] = var_5;
+            constructor_95->args[1] = var_6;
+            constructor_95->args[2] = var_18;
+            tmp_98 = (Value*)constructor_95;
+            break;
+          }
+        }
+        tmp_91 = tmp_98;
+        break;
+      }
+    }
+    free(constructorField_90);
+    Value *returnValue = tmp_91;
+    return returnValue;
+}
+Value *Main_insert_arglist(Value_Arglist* arglist)
+{
+    return Main_insert
+        (
+              arglist->args[0]
+            , arglist->args[1]
+            , arglist->args[2]
+        );
+}
