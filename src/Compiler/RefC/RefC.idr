@@ -138,7 +138,7 @@ cPrimType Bits64Type = "Bits64"
 cPrimType StringType = "string"
 cPrimType CharType = "char"
 cPrimType DoubleType = "double"
-cPrimType WorldType = "f32"
+cPrimType WorldType = "void"
 
 cConstant : Constant -> String
 cConstant (I x) = "(Value*)makeInt64("++ showIntMin x ++")"
@@ -155,7 +155,7 @@ cConstant (Db x) = "(Value*)makeDouble("++ show x ++")"
 cConstant (Ch x) = "(Value*)makeChar("++ escapeChar x ++")"
 cConstant (Str x) = "(Value*)makeString("++ cStringQuoted x ++")"
 cConstant (PrT t) = cPrimType t
-cConstant WorldVal = "(Value*)makeWorld()"
+cConstant WorldVal = "(Value*)NULL"
 
 extractConstant : Constant -> String
 extractConstant (I x) = show x
@@ -803,7 +803,7 @@ extractValue _ CFPtr            varName = "((Value_Pointer*)" ++ varName ++ ")->
 extractValue _ CFGCPtr          varName = "((Value_GCPointer*)" ++ varName ++ ")->p->p"
 extractValue CLangC    CFBuffer varName = "((Value_Buffer*)" ++ varName ++ ")->buffer->data"
 extractValue CLangRefC CFBuffer varName = "((Value_Buffer*)" ++ varName ++ ")->buffer"
-extractValue _ CFWorld          varName = "(Value_World*)" ++ varName
+extractValue _ CFWorld          _       = "(Value *)NULL"
 extractValue _ (CFFun x y)      varName = "(Value_Closure*)" ++ varName
 extractValue c (CFIORes x)      varName = extractValue c x varName
 extractValue _ (CFStruct x xs)  varName = assert_total $ idris_crash ("INTERNAL ERROR: Struct access not implemented: " ++ varName)
@@ -828,7 +828,7 @@ packCFType CFChar          varName = "makeChar(" ++ varName ++ ")"
 packCFType CFPtr           varName = "makePointer(" ++ varName ++ ")"
 packCFType CFGCPtr         varName = "makePointer(" ++ varName ++ ")"
 packCFType CFBuffer        varName = "makeBuffer(" ++ varName ++ ")"
-packCFType CFWorld         varName = "makeWorld(" ++ varName ++ ")"
+packCFType CFWorld         _       = "(Value *)NULL"
 packCFType (CFFun x y)     varName = "makeFunction(" ++ varName ++ ")"
 packCFType (CFIORes x)     varName = packCFType x varName
 packCFType (CFStruct x xs) varName = "makeStruct(" ++ varName ++ ")"

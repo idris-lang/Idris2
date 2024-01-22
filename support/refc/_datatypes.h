@@ -37,7 +37,6 @@
 #define CONDITION_TAG 31
 
 #define COMPLETE_CLOSURE_TAG 98 // for trampoline tail recursion handling
-#define WORLD_TAG 99
 
 typedef struct {
   int refCounter;
@@ -170,7 +169,3 @@ typedef struct {
   Value_header header;
   pthread_cond_t *cond;
 } Value_Condition;
-
-typedef struct {
-  Value_header header;
-} Value_World;
