@@ -99,7 +99,7 @@ example:
    test = 1 - 3 - 10
 
 This program will raise a warning on the last line of module ``C`` because
-there are two conflicting fixities in scope, should we parse the expression
+there are two conflicting fixities in scope. Should we parse the expression
 as ``(1 - 3) - 10`` or as ``1 - (3 - 10)``? In those cases, you can hide
 the extra fixity you do not wish to use by using ``%hide``:
 
