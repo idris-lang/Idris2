@@ -310,8 +310,8 @@ where the constructor for ``Pi`` takes terms on the left and lambdas on the righ
 
 We would like to use a custom operator to build values using ``VPi``, but its
 signature does not follow the pattern that ``typebind`` uses. Instead, we use
-``autobind`` to tell the compiler that the type of the lambda is not given
-by the first argument. For this we use ``:=`` instead of ``:``:
+``autobind`` to tell the compiler that the type of the lambda must be inferred. 
+For this we use ``:=`` instead of ``:``:
 
 .. code-block:: idris
 
