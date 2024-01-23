@@ -644,7 +644,7 @@ perrorRaw (OperatorBindingMismatch fc {print=p} expected actual opName rhs candi
       spellingCandidates = case candidates of
                               [] => []
                               [x] => ["Did you mean" <++> enclose "'" "'" (pretty0 x) <++> "?"]
-                              xs => ["Did you mean one of:" <++> hcat (punctuate ", "
+                              xs => ["Did you mean either of:" <++> hcat (punctuate ", "
                                        (map (enclose "'" "'" . pretty0) xs)) <++> "?"]
 
 
