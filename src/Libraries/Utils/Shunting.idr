@@ -90,20 +90,20 @@ isLAssoc : OpPrec -> Bool
 isLAssoc (AssocL _) = True
 isLAssoc _ = False
 
--- Return whether the first operator should be applied before the second,
--- assuming
+-- Return whether the first operator should be applied before the second.
+-- Interpolation to show the operator naked, show to print the operator with its location
 higher : Interpolation op => (showLoc : Show op) => FC -> op -> OpPrec -> op -> OpPrec -> Core Bool
 higher loc opx op opy (Prefix p) = pure False
 higher loc opx (NonAssoc x) opy oy
     = if x == getPrec oy
-         then throw (GenericMsgSol loc ("Operator \{opx} is non-associative")
-                                       ["Add brackets around \{opy}"
-                                       , "Change the fixity of \{show opy} to `infixl` or `infixr`"])
+         then throw (GenericMsgSol loc ( "Operator \{opx} is non-associative")
+                                       [ "Add brackets around every use of \{opx}"
+                                       , "Change the fixity of \{show opx} to `infixl` or `infixr`"])
          else pure (x > getPrec oy)
 higher loc opx ox opy (NonAssoc y)
     = if getPrec ox == y
-         then throw (GenericMsgSol loc ("Operator \{opy} is non-associative")
-                                       ["Add brackets around \{opy}"
+         then throw (GenericMsgSol loc ( "Operator \{opy} is non-associative")
+                                       [ "Add brackets around every use of \{opy}"
                                        , "Change the fixity of \{show opy} to `infixl` or `infixr`"])
          else pure (getPrec ox > y)
 higher loc opl l opr r
