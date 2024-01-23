@@ -240,8 +240,8 @@ Typebind Operators
 ==================
 
 In dependently-typed programming, we have the ability define constructors which
-first argument is a type and the second is a lambda using the first argument
-as it's type. A typical example of this is the dependent linear arrow:
+first argument is a type and the second is a type indexed over the first argument. 
+A typical example of this is the dependent linear arrow:
 
  .. code-block:: idris
 
