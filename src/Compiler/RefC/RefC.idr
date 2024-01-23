@@ -568,7 +568,7 @@ mutual
                     case c of
                         Str x => emit emptyFC "\{els}if (! strcmp(\{cStringQuoted x}, ((Value_String *)\{sc'})->str)) {"
                         Db  x => emit emptyFC "\{els}if (((Value_Double *)\{sc'})->d == \{show x}) {"
-                        x => throw $ InternalError "[refc] AConstCast : unsupported type. \{show fc} \{show x}"
+                        x => throw $ InternalError "[refc] AConstCase : unsupported type. \{show fc} \{show x}"
                     concaseBody switchReturnVar "" [] body tailPosition
                     pure "} else " ) "" alts
                 pure ()
