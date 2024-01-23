@@ -55,7 +55,7 @@ in the MSYS2 shell then should work without problems. If you want to automate li
 
 ```sh
 @rd C:\Chez
-@for /f "tokens=1 del=:" %%i in ('dir "%ProgramFiles%\Chez*" /B /O-D') do mklink /j C:\Chez "%ProgramFiles%\%%i"
+@for /f "tokens=1 del=:" %%i in ('dir "%ProgramFiles%\Chez*" /B /O-D') do @mklink /j C:\Chez "%ProgramFiles%\%%i"
 ```
 
 Running it will delete an existing junction and create a new one. If Chez Scheme is not installed it does nothing but display a file not found message. In case there are multiple versions it will use the latest one. If the junction does not exist, it will display an error.
