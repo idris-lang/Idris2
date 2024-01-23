@@ -47,7 +47,7 @@ brackets are mandatory. Here, we chose for ``+`` to be left-associative, hence `
 
 The number after the fixity indicate the *precedence level* of the operator, that is, if it should
 be bracketed before, or after, other operators used in the same expression. For example,
-we want ``*`` to *take precedence* over ``+`` , because of this, we define it like this:
+we want ``*`` to *take precedence* over ``+`` we write:
 
 .. code-block:: idris
 
