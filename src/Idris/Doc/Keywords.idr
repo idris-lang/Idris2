@@ -480,8 +480,8 @@ autobindDoc = """
     operator sections.
 
     `autobind` operators are desugared as a lambda:
-    `(x := expr) =|> fn x` -> `(expr =@ (\x : ? =|> fn x))`
-    `(x : ty := expr) =|> fn x` -> `(expr =@ (\x : ty =|> fn x))`
+    `(x := expr) =|> fn x` -> `(expr =|> (\x : ? => fn x))`
+    `(x : ty := expr) =|> fn x` -> `(expr =|> (\x : ty => fn x))`
   """
 typebindDoc : Doc IdrisDocAnn
 typebindDoc = """
