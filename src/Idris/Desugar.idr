@@ -42,7 +42,6 @@ import Data.Maybe
 import Data.List
 import Data.List.Views
 import Data.String
-import Debug.Trace
 
 -- Convert high level Idris declarations (PDecl from Idris.Syntax) into
 -- TTImp, recording any high level syntax info on the way (e.g. infix
