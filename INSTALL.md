@@ -58,7 +58,7 @@ in the MSYS2 shell then should work without problems. If you want to automate li
 @for /f "tokens=1" %%i in ('dir "%ProgramFiles%\Chez*" /B /O-D') do mklink /j C:\Chez "%ProgramFiles%\%%i"
 ```
 
-Running it will delete an existing junction and create a new one. If Chez Scheme is not installed it does nothing but display a file not found message. In case there are multiple versions it will use the latest one. If the junction does not exist, it will display an error. 
+Running it will delete an existing junction and create a new one. If ChezScheme is not installed it does nothing but display a file not found message. In case there are multiple versions it will use the latest one. If the junction does not exist, it will display an error. 
 Anyway, you need to add `C:\Chez\bin\ta6nt` to your system path only once.
 
 On Raspberry Pi, you can bootstrap via Racket.
