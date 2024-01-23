@@ -31,4 +31,4 @@ Possible solutions:
  - Write the expression using regular syntax: 'm >>= Just (x + y)'.
  - Change the fixity defined at Prelude.Ops:20:1--20:37 to 'export autobind infixl 1 >>='.
  - Hide or remove the fixity at Prelude.Ops:20:1--20:37 and import a module that exports a compatible fixity.
- - Did you mean one of: '>=', '>>' ?
+ - Did you mean either of: '>=', '>>' ?

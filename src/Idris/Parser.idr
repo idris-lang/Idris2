@@ -333,13 +333,13 @@ mutual
               ty <- typeExpr pdef fname indents
               decoratedSymbol fname ":="
               exp <- expr pdef fname indents
-              pure (BindExplicitType boundName ty exp)
+              pure (BindExplicitType boundName.val ty exp)
        <|> do decoratedSymbol fname ":="
               exp <- expr pdef fname indents
-              pure (BindExpr boundName exp)
+              pure (BindExpr boundName.val exp)
        <|> do decoratedSymbol fname ":"
               ty <- typeExpr pdef fname indents
-              pure (BindType boundName ty)
+              pure (BindType boundName.val ty)
 
   opBinder : OriginDesc -> IndentInfo -> Rule (OperatorLHSInfo PTerm)
   opBinder fname indents

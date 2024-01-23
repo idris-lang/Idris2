@@ -107,7 +107,7 @@ mapPTermM f = goPTerm where
       >>= f
     goPTerm (POp fc opFC (BindType nm left) op right) =
       POp fc opFC
-          <$> (BindType nm <$> goPTerm left)
+          <$> (BindType <$> goPTerm nm <*> goPTerm left)
           <*> pure op
           <*> goPTerm right
       >>= f
@@ -119,7 +119,7 @@ mapPTermM f = goPTerm where
       >>= f
     goPTerm (POp fc opFC (BindExplicitType nm ty left) op right) =
       POp fc opFC
-          <$> (BindExplicitType nm <$> goPTerm ty <*> goPTerm left)
+          <$> (BindExplicitType <$> goPTerm nm <*> goPTerm ty <*> goPTerm left)
           <*> pure op
           <*> goPTerm right
       >>= f

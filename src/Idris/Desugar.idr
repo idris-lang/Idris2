@@ -171,10 +171,9 @@ checkConflictingFixities isPrefix exprFC opn
 
 checkConflictingBinding : Ref Ctxt Defs =>
                           Ref Syn SyntaxInfo =>
-                          Side -> FC -> Name -> (foundFixity : BacktickOrOperatorFixity) ->
+                          FC -> Name -> (foundFixity : BacktickOrOperatorFixity) ->
                           (usage : OperatorLHSInfo PTerm) -> (rhs : PTerm) -> Core ()
-checkConflictingBinding LHS fc opName foundFixity use_site rhs = pure () -- don't check if we're on the LHS
-checkConflictingBinding side fc opName foundFixity use_site rhs
+checkConflictingBinding fc opName foundFixity use_site rhs
     = if isCompatible foundFixity use_site
          then pure ()
          else throw $ OperatorBindingMismatch
@@ -229,7 +228,11 @@ parameters (side : Side)
               PTerm -> Core (List (Tok ((OpStr, BacktickOrOperatorFixity), Maybe (OperatorLHSInfo PTerm)) PTerm))
   toTokList (POp fc opFC l opn r)
       = do (precInfo, fixInfo) <- checkConflictingFixities False fc opn
-           checkConflictingBinding side opFC opn fixInfo l r
+           unless (side == LHS) -- do not check for conflicting fixity on the LHS
+                                -- This is because we do not parse binders on the lhs
+                                -- and so, if we check, we will find uses of regular
+                                -- operator when binding is expected.
+                  (checkConflictingBinding opFC opn fixInfo l r)
            rtoks <- toTokList r
            pure (Expr l.getLhs :: Op fc opFC ((opn, fixInfo), Just l) precInfo :: rtoks)
   toTokList (PPrefixOp fc opFC opn arg)
@@ -811,20 +814,20 @@ mutual
       = do l' <- desugarTree side ps l
            body <- desugarTree side ps r
            pure $ PApp loc (PApp loc (PRef opFC op) l')
-                      (PLam loc top Explicit pat.val l' body)
+                      (PLam loc top Explicit pat l' body)
   -- (x := exp) =@ f x ==>> (=@) exp (\x : ? => f x)
   desugarTree side ps (Infix loc opFC (op, Just (BindExpr pat lhs)) l r)
       = do l' <- desugarTree side ps l
            body <- desugarTree side ps r
            pure $ PApp loc (PApp loc (PRef opFC op) l')
-                      (PLam loc top Explicit pat.val (PInfer opFC) body)
+                      (PLam loc top Explicit pat (PInfer opFC) body)
 
   -- (x : ty := exp) =@ f x ==>> (=@) exp (\x : ty => f x)
   desugarTree side ps (Infix loc opFC (op, Just (BindExplicitType pat ty expr)) l r)
       = do l' <- desugarTree side ps l
            body <- desugarTree side ps r
            pure $ PApp loc (PApp loc (PRef opFC op) l')
-                      (PLam loc top Explicit pat.val ty body)
+                      (PLam loc top Explicit pat ty body)
   desugarTree side ps (Infix loc opFC (op, Nothing) _ r)
       = throw $ InternalError "illegal fixity: Parsed as infix but no binding information"
 
