@@ -65,7 +65,7 @@ use any function defined with operator symbols with parenthesis around it:
    (+) n 3
 
 Because fixities are separated from the function definitions, a single operator
-can have 0 or multiple fixity definitions. In the next section we explain how to
+can have 0 or multiple fixity definitions. In the next section, we explain how to
 deal with multiple fixity definitions.
 
 Fixity & Precedence Namespacing
