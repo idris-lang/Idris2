@@ -493,7 +493,7 @@ typebindDoc = """
     use it on the right-hand-side.
 
     A typical example of a typebind operator is `(**)` the type constructor
-    for dependent pairs. It is used like this: `(x : Nat ** Vect x String)`
+    for dependent pairs. It is used like this: `(x : Nat) ** Vect x String`
 
     If you declare a new operator to be typebind you can use it the same
     way.
