@@ -250,8 +250,8 @@ A typical example of this is the dependent linear arrow:
     (=@) x f = (1 v : x) -> f v
 
 
-However, we cannot use as is because the second argument is
-a lambda, and writing out any value using this operator will look a bit awkward:
+However, when trying to use it in infix position, we have to use a lambda to populate the
+second argument:
 
 .. code-block:: idris
 
