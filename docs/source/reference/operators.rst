@@ -239,7 +239,7 @@ right-associative.
 Typebind Operators
 ==================
 
-In dependently-typed programming, we have the ability define types which
+In dependently-typed programming, we have the ability define constructors which
 first argument is a type and the second is a lambda using the first argument
 as it's type. A typical example of this is the dependent linear arrow:
 
