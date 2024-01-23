@@ -498,7 +498,7 @@ typebindDoc = """
     If you declare a new operator to be typebind you can use it the same
     way.
 
-    Start by defining `typebind infixr 1 =@`, and then you can use it
+    Start by defining `typebind infixr 0 =@`, and then you can use it
     like so: `(n : Nat) =@ f n`
 
     `typebind` only applies to `infixr` operators and cannot be used as
