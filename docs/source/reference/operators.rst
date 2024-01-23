@@ -55,7 +55,7 @@ we want ``*`` to *take precedence* over ``+`` we write:
 
 This way, the expression ``n + m * x`` is correctly interpreted as ``n + (m * x)``.
 
-Fixities declarations are optional and only change how a file is parsed, but you can
+Fixity declarations are optional and change how a file is parsed, but you can
 use any function defined with operator symbols with parenthesis around it:
 
 .. code-block:: idris
