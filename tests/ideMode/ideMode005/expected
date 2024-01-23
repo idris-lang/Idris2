@@ -1,6 +1,0 @@
-24a25
-> 0000d2(:output (:ok (:highlight-source ((((:filename "With.idr") (:start 2 40) (:end 2 49)) ((:name "===") (:namespace "Builtin") (:decor :function) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
-49a50
-> 0000dd(:output (:ok (:highlight-source ((((:filename "StringLiterals.idr") (:start 17 7) (:end 17 47)) ((:name "===") (:namespace "Builtin") (:decor :function) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
-40a41
-> 0000d3(:output (:ok (:highlight-source ((((:filename "Holes.idr") (:start 8 27) (:end 8 44)) ((:name "===") (:namespace "Builtin") (:decor :function) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)

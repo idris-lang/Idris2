@@ -799,7 +799,8 @@ mutual
                 Side -> List Name -> Tree (OpStr, Maybe $ OperatorLHSInfo PTerm) PTerm ->
                 Core PTerm
   desugarTree side ps (Infix loc eqFC (UN $ Basic "=", _) l r) -- special case since '=' is special syntax
-      = pure $ PEq loc !(desugarTree side ps l) !(desugarTree side ps r)
+      = pure $ PEq eqFC !(desugarTree side ps l) !(desugarTree side ps r)
+
   desugarTree side ps (Infix loc _ (UN $ Basic "$", _) l r) -- special case since '$' is special syntax
       = do l' <- desugarTree side ps l
            r' <- desugarTree side ps r
