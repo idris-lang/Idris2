@@ -44,7 +44,7 @@ On Windows, it has been reported that installing via `MSYS2` works
 [MSYS2](https://www.msys2.org/). On Windows older than Windows 8, you may need
 to set an environment variable `OLD_WIN=1` or modify it in `config.mk`. The idea is that
 this flag makes programs see paths in the old 8.3 convention. Another way to get Idris2
-built on windows is to create a junction without spaces for the ChezScheme base folder, e.g.
+built on windows is to create a junction without spaces for the Chez Scheme base folder, e.g.
 
 ```sh
 mklink /j C:\Chez "C:\Program Files\Chez Scheme 9.6.4"
@@ -58,7 +58,7 @@ in the MSYS2 shell then should work without problems. If you want to automate li
 @for /f "tokens=1" %%i in ('dir "%ProgramFiles%\Chez*" /B /O-D') do mklink /j C:\Chez "%ProgramFiles%\%%i"
 ```
 
-Running it will delete an existing junction and create a new one. If ChezScheme is not installed it does nothing but display a file not found message. In case there are multiple versions it will use the latest one. If the junction does not exist, it will display an error. 
+Running it will delete an existing junction and create a new one. If Chez Scheme is not installed it does nothing but display a file not found message. In case there are multiple versions it will use the latest one. If the junction does not exist, it will display an error. 
 Anyway, you need to add `C:\Chez\bin\ta6nt` to your system path only once.
 
 On Raspberry Pi, you can bootstrap via Racket.
