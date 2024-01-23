@@ -31,7 +31,7 @@ map3 : (x : a) =@ b -@ (y : List a) =@ List b
 
 map4 : (x : a) =@ (b -@ (y : List a) =@ List b)
 
--- this could be possible if we allowed binding operatprs with binding operators
+-- this could be possible if we allowed binding operators
 -- with higher precedences
 -- test : Test.map === Test.map2
 -- failing
