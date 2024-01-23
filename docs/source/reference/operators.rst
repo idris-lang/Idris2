@@ -289,9 +289,10 @@ only ever be ``infixr`` with precedence 0.
 Autobind Operators
 ==================
 
-Typebind operators allow to bind a *type* on the left side of an operator, but
-sometimes, there is no dependency between the first argument, and the expression
-on the right side of the operator. For those case, we use ``autobind``.
+Typebind operators allow to bind a *type* on the left side of an operator, so that is can
+be used as the index of the second argument. But sometimes, there is no dependency 
+between the first and second argument, yet we still want to use binding sytnax. For those 
+case, we use ``autobind``.
 
 An example of this is a DSL for a dependently-typed programming language
 where the constructor for ``Pi`` takes terms on the left and lambdas on the right:
