@@ -807,7 +807,7 @@ mutual
       = do l' <- desugarTree side ps l
            r' <- desugarTree side ps r
            pure (PApp loc (PApp loc (PRef opFC op) l') r')
-  -- (x : ty) =@ f x ==>> (=@) exp (\x : ty => f x)
+  -- (x : ty) =@ f x ==>> (=@) ty (\x : ty => f x)
   desugarTree side ps (Infix loc opFC (op, Just (BindType pat lhs)) l r)
       = do l' <- desugarTree side ps l
            body <- desugarTree side ps r
