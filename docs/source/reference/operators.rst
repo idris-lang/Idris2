@@ -20,7 +20,7 @@ file namespacing and follow the same rules as other defintions.
 Basics
 ======
 
-Before we jump into the fancy features, let us explain how infix operators work
+Before we jump into the fancy features, let us explain how operators work
 for most users.
 
 When you see an expression
