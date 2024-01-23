@@ -10,38 +10,24 @@ Value *Main_last
 ,   Value * var_1
 )
 {
-    Value * tmp_131 = NULL;                                  // Main:5:8--5:14
-    AConAlt * constructorField_130= newConstructorField(2);  // Main:5:8--5:14
-    constructorField_130[0].tag = 0;
-    constructorField_130[0].name = NULL;
-    constructorField_130[1].tag = 1;
-    constructorField_130[1].name = NULL;
-    switch(compareConstructors(var_0, constructorField_130, 2)){
-                                                             // Main:5:8--5:14
-      case 0:
-      {
-        tmp_131 = newReference(var_1);
-        break;
-      }
-      case 1:
-      {
-        Value * var_2 = ((Value_Constructor*)var_0)->args[0];
-        Value * var_3 = ((Value_Constructor*)var_0)->args[1];
+    Value * tmp_130 = NULL;                                  // Main:5:8--5:14
+    if (((Value_Constructor *)var_0)->tag == 0) {
+        tmp_130 = newReference(var_1);
+    } else if (((Value_Constructor *)var_0)->tag == 1) {
+        Value *var_2 = ((Value_Constructor*)var_0)->args[0];
+        Value *var_3 = ((Value_Constructor*)var_0)->args[1];
         // start Main_last(var_3, var_2)                     // Main:7:20--7:24
-        Value_Arglist *arglist_132 = newArglist(0,2);
-        arglist_132->args[0] =  newReference(var_3);
-        arglist_132->args[1] =  newReference(var_2);
-        Value *(*fPtr_133)(Value_Arglist*) = Main_last_arglist;
+        Value_Arglist *arglist_131 = newArglist(0,2);
+        arglist_131->args[0] =  newReference(var_3);
+        arglist_131->args[1] =  newReference(var_2);
+        Value *(*fPtr_132)(Value_Arglist*) = Main_last_arglist;
                                                              // Main:7:20--7:24
-        Value *closure_133 = (Value*)makeClosureFromArglist(fPtr_133, arglist_132);
+        Value *closure_132 = (Value*)makeClosureFromArglist(fPtr_132, arglist_131);
                                                              // Main:7:20--7:24
         // end   Main_last(var_3, var_2)                     // Main:7:20--7:24
-        tmp_131 = closure_133;
-        break;
-      }
+        tmp_130 = closure_132;
     }
-    free(constructorField_130);
-    Value *returnValue = tmp_131;
+    Value *returnValue = tmp_130;
     return returnValue;
 }
 Value *Main_last_arglist(Value_Arglist* arglist)
