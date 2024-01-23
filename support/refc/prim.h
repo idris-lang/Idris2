@@ -5,8 +5,8 @@
 // IORef
 
 Value *idris2_Data_IORef_prim__newIORef(Value *, Value *, Value *);
-#define idris2_Data_IORef_prim__readIORef(erased, ix, world)                   \
-  (newReference(global_IORef_Storage->refs[((Value_IORef *)ix)->index]))
+#define idris2_Data_IORef_prim__readIORef(erased, ioref, world)                \
+  (newReference(((Value_IORef *)ioref)->v))
 
 Value *idris2_Data_IORef_prim__writeIORef(Value *, Value *, Value *, Value *);
 

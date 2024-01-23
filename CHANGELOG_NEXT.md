@@ -21,7 +21,7 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   guaranteed at runtime by the Nix derivation; now it rewraps the output to only
   depend on the directory containing Idris2's runtime support library.
 
-* The Nix flake now exposes the Idris2 API package as `idris2-api` and Idris2's
+* The Nix flake now exposes the Idris2 API package as `idris2Api` and Idris2's
   C support library as `support`.
 
 ### Language changes
@@ -30,7 +30,12 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 ### Backend changes
 
-#### RefC
+#### RefC Backend
+
+* Fix invalid memory read onf strSubStr.
+
+* Fix memory leaks of IORef. Now that IORef holds values by itself,
+  global_IORef_Storage is no longer needed.
 
 * Supress code generation of _arglist wrappers to reduce code size and compilation time.
 

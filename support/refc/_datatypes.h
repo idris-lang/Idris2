@@ -125,7 +125,7 @@ typedef struct {
 
 typedef struct {
   Value_header header;
-  int32_t index;
+  Value *v;
 } Value_IORef;
 
 typedef struct {
@@ -159,9 +159,3 @@ typedef struct {
   Value_header header;
   pthread_cond_t *cond;
 } Value_Condition;
-
-typedef struct {
-  Value **refs;
-  int filled;
-  int total;
-} IORef_Storage;
