@@ -505,7 +505,7 @@ typebindDoc = """
     operator sections.
 
     `typebind` operators are desugared as a lambda:
-    `(x : ty) =@ fn x` -> `(ty =@ (\x : ty =@ fn x))`
+    `(x : ty) =@ fn x` -> `ty =@ (\x : ty =@ fn x)`
   """
 
 rewriteeq : Doc IdrisDocAnn
