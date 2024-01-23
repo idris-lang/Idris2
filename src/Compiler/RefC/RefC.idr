@@ -535,7 +535,7 @@ mutual
         emit fc "Value * \{switchReturnVar} = NULL;"
         _ <- foldlC (\els, (MkAConAlt name coninfo tag args body) => do
             case tag of
-                Nothing   => emit emptyFC "\{els}if (! strcmp(((Value_Conctructor *)\{sc'})->name, \{cStringQuoted $ cName name})) {"
+                Nothing   => emit emptyFC "\{els}if (! strcmp(((Value_Constructor *)\{sc'})->name, \{cStringQuoted $ cName name})) {"
                 Just tag' => emit emptyFC "\{els}if (((Value_Constructor *)\{sc'})->tag == \{show tag'}) {"
             concaseBody switchReturnVar sc' args body tailPosition
             pure "} else ") "" alts
