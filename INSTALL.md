@@ -51,7 +51,15 @@ mklink /j C:\Chez "C:\Program Files\Chez Scheme 9.6.4"
 ```
 
 and then to add `C:\Chez\bin\ta6nt\` to your path. Entering `make bootstrap && make install`
-in the MSYS2 shell then should work without problems.
+in the MSYS2 shell then should work without problems. If you want to automate link creation, e.g. when you install a new version of Chez Scheme, you can proceed as follows: Copy these two lines to the file mkChezLink.cmd:
+
+```sh 
+@rd C:\Chez
+@for /f "tokens=1" %%i in ('dir "%ProgramFiles%\Chez*" /B /O-D') do mklink /j C:\Chez "%ProgramFiles%\%%i"
+```
+
+Running it will delete an existing junction and create a new one. If Chez Scheme is not installed it does nothing but display a file not found message. In case there are multiple versions it will use the latest one. If the junction does not exist, it will display an error. 
+Anyway, you need to add C:\Chez to the system path only once.
 
 On Raspberry Pi, you can bootstrap via Racket.
 
