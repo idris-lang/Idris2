@@ -51,7 +51,7 @@ mklink /j C:\Chez "C:\Program Files\Chez Scheme 9.6.4"
 ```
 
 and then to add `C:\Chez\bin\ta6nt\` to your path. Entering `make bootstrap && make install`
-in the MSYS2 shell then should work without problems. If you want to automate link creation, e.g. when you install a new version of Chez Scheme, you can proceed as follows: Copy these two lines to the file mkChezLink.cmd:
+in the MSYS2 shell then should work without problems. If you want to automate link recreation, e.g. when you install a new version of Chez Scheme, you can proceed as follows: Copy these two lines to the file mkChezLink.cmd:
 
 ```sh 
 @rd C:\Chez
