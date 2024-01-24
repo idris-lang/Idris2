@@ -42,24 +42,7 @@ code. The requirements are:
 
 On Windows, it has been reported that installing via `MSYS2` works
 [MSYS2](https://www.msys2.org/). On Windows older than Windows 8, you may need
-to set an environment variable `OLD_WIN=1` or modify it in `config.mk`. The idea is that
-this flag makes programs see paths in the old 8.3 convention. Another way to get Idris2
-built on windows is to create a junction without spaces for the Chez Scheme base folder, e.g.
-
-```sh
-mklink /j C:\Chez "C:\Program Files\Chez Scheme 9.6.4"
-```
-
-and then to add `C:\Chez\bin\ta6nt\` to your path. Entering `make bootstrap && make install`
-in the MSYS2 shell then should work without problems. If you want to automate link recreation, e.g. when you install a new version of Chez Scheme, you can proceed as follows: Copy these two lines to the file `mkChezLink.cmd`:
-
-```sh
-@rd C:\Chez
-@for /f "tokens=1 delims=:" %%i in ('dir "%ProgramFiles%\Chez*" /B /O-D') do @mklink /j C:\Chez "%ProgramFiles%\%%i"
-```
-
-Running it will delete an existing junction and create a new one. If Chez Scheme is not installed it does nothing but display a file not found message. In case there are multiple versions it will use the latest one. If the junction does not exist, it will display an error.
-Anyway, you need to add `C:\Chez\bin\ta6nt` to your system path only once.
+to set an environment variable `OLD_WIN=1` or modify it in `config.mk`.
 
 On Raspberry Pi, you can bootstrap via Racket.
 
@@ -190,6 +173,50 @@ eval "$(idris2 --bash-completion-script idris2)"
 ```
 
 You can also add them to your `.zshrc` file.
+
+### 10: Building on Windows Without an Existing Idris 2
+
+As of January 2024, an installation workflow for Window 10 and Windows 11 goes like this:
+Download and install Chez Scheme; you can get it from here: `https://github.com/cisco/ChezScheme/releases/tag/v9.6.4)`. In the Windows Command Shell, create a
+junction like this:
+
+```sh
+mklink /j C:\Chez "<Chez Scheme install_dir>"
+```
+
+(You may replace `C:\Chez` with any other path as long as it does not contain any spaces.) Since the name
+of Chez Scheme's  installation directory contains a version, here is a small script to copy into a `.cmd`
+file, say `mkLink2Chez.cmd`, to get you future-proof:
+
+```sh
+@rd C:\Chez
+@for /f "tokens=1 delims=:" %%i in ('dir "%ProgramFiles%\Chez*" /B /O-D') do @mklink /j C:\Chez  "%ProgramFiles%\%%i"
+```
+
+Running this file will delete an existing junction and create a new one. If Chez Scheme is not installed
+it does nothing but display a file not found message. In case there are multiple versions it will use the
+latest one. If the junction does not exist, it will display an error. Whenever you install a newer version
+of Chez Scheme, you should run this command again.
+
+Add `C:\Chez\bin\ta6nt` to the system path on your machine. (This does not need to be updated for new
+versions of Chez Scheme). Also, add the variable `SCHEME` with the value `scheme` to your
+machine's system environment; it will be used by the build process.
+
+Next, you download MSYS2 from `https://www.msys2.org/`. After successful installation to a location whose
+path does not contain spaces, uncomment `MSYS2_PATH_TYPE=inherit` in the file `mingw64.ini` which can be
+found in the installation directory of MSYS2. This will allow the mingw executable to use the Windows system
+path. Then, add `<MSYS2_install_dir>\ucrt64\bin` to your machine's system path (important). To complete the
+MSYS2 installation, start the Mingw64 shell, enter `pacman -Syuu` and repeat this step until it yields
+something like "there is nothing to do". Finally, enter `pacman -S make mingw-w64-ucrt-x86_64-gcc` to
+install the required tools.
+
+After completion, you are ready to build Idris 2. In the Mingw64 shell, change to the directory where you
+unpacked the Idris 2 sources to. Then enter `make bootstrap && make install` which should create and install
+the executable under `/home/<username>/.idris2`. This virtual directory corresponds to
+`<MSYS2_install_dir>\home\<username>\.idris2\`. When all is done, don't delete the source directory or move
+it elsewhere since it may be referenced by the Idris 2 compiler. Adding `<idris2_install_dir>\bin\` to your
+machine's system path will allow you to directly call the Idris 2 repl from the Windows Command Shell, since
+the file `idris2.cmd` has been added at this location by the build process.
 
 ### Troubleshooting
 
