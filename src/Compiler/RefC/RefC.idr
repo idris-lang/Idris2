@@ -138,7 +138,7 @@ cPrimType Bits64Type = "Bits64"
 cPrimType StringType = "string"
 cPrimType CharType = "Char"
 cPrimType DoubleType = "Double"
-cPrimType WorldType = "f32"
+cPrimType WorldType = "void"
 
 cConstant : Constant -> String
 cConstant (I x) = "idris2_mkInt64("++ showIntMin x ++")"
@@ -155,7 +155,7 @@ cConstant (Db x) = "idris2_mkDouble("++ show x ++")"
 cConstant (Ch x) = "idris2_mkChar("++ escapeChar x ++")"
 cConstant (Str x) = "(Value*)idris2_mkString("++ cStringQuoted x ++")"
 cConstant (PrT t) = cPrimType t
-cConstant WorldVal = "((Value*)NULL)"
+cConstant WorldVal = "(Value*)NULL"
 
 extractConstant : Constant -> String
 extractConstant (I x) = show x
@@ -802,7 +802,7 @@ extractValue _ CFPtr            varName = "((Value_Pointer*)" ++ varName ++ ")->
 extractValue _ CFGCPtr          varName = "((Value_GCPointer*)" ++ varName ++ ")->p->p"
 extractValue CLangC    CFBuffer varName = "((Value_Buffer*)" ++ varName ++ ")->buffer->data"
 extractValue CLangRefC CFBuffer varName = "((Value_Buffer*)" ++ varName ++ ")->buffer"
-extractValue _ CFWorld          varName = "(Value_World*)" ++ varName
+extractValue _ CFWorld          _       = "(Value *)NULL"
 extractValue _ (CFFun x y)      varName = "(Value_Closure*)" ++ varName
 extractValue c (CFIORes x)      varName = extractValue c x varName
 extractValue _ (CFStruct x xs)  varName = assert_total $ idris_crash ("INTERNAL ERROR: Struct access not implemented: " ++ varName)
@@ -827,7 +827,7 @@ packCFType CFChar          varName = "idris2_mkChar(" ++ varName ++ ")"
 packCFType CFPtr           varName = "makePointer(" ++ varName ++ ")"
 packCFType CFGCPtr         varName = "makePointer(" ++ varName ++ ")"
 packCFType CFBuffer        varName = "makeBuffer(" ++ varName ++ ")"
-packCFType CFWorld         varName = "((Value *)NULL)"
+packCFType CFWorld         _       = "(Value *)NULL"
 packCFType (CFFun x y)     varName = "makeFunction(" ++ varName ++ ")"
 packCFType (CFIORes x)     varName = packCFType x varName
 packCFType (CFStruct x xs) varName = "makeStruct(" ++ varName ++ ")"
@@ -973,10 +973,6 @@ header = do
       #include <runtime.h>
       /* \{ generatedString "RefC" } */
 
-      /* a global storage for IO References */
-      IORef_Storage * global_IORef_Storage;
-
-
       """
     let headerFiles = Libraries.Data.SortedSet.toList !(get HeaderFiles)
     let headerLines = map (\h => "#include <" ++ h ++ ">\n") headerFiles
@@ -997,7 +993,6 @@ footer = do
                         "idris2_setArgs(argc, argv);"
                         ""
           }
-          global_IORef_Storage = NULL;
           Value *mainExprVal = __mainExpression_0();
           trampoline(mainExprVal);
           return 0; // bye bye

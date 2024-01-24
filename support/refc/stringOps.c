@@ -61,10 +61,10 @@ Value *strAppend(Value *a, Value *b) {
 
 Value *strSubstr(Value *start, Value *len, Value *s) {
   char *input = ((Value_String *)s)->str;
-  int offset = idris2_vp_to_Int64(start); // it sould Int32
-  int l = idris2_vp_to_Int64(len);        // It sould Int32
+  int offset = extractInt(start); /* start and len is Nat. */
+  int l = extractInt(len);
 
-  int tailLen = strlen(input);
+  int tailLen = strlen(input) - offset;
   if (tailLen < l) {
     l = tailLen;
   }
