@@ -15,8 +15,8 @@ Value *newConstructor(int total, int tag) {
   retVal->header.tag = CONSTRUCTOR_TAG;
   retVal->total = total;
   retVal->tag = tag;
-  retVal->name = NULL;    // caller must initialize tyconName.
-  return (Value *)retVal; // caller must initialize args[]
+  retVal->tyconName = NULL; // caller must initialize tyconName.
+  return (Value *)retVal;   // caller must initialize args[]
 }
 
 Value *makeClosure(Value *(*f)(), uint8_t arity, uint8_t filled) {
