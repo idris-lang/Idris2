@@ -470,9 +470,9 @@ cStatementsFromANF (ACon fc n coninfo tag args) lh _ =
     if coninfo == UNIT || coninfo == NIL || coninfo == NOTHING || coninfo == ZERO
         then emitAssign fc lh "((Value*)NULL /* ACon \{show n} \{show coninfo} */)"
         else do
-            emitAssign fc lh "newConstructor(\{show $ length args}, \{maybe "0" show tag} /* ACon \{show n} \{show coninfo} */)"
+            emitAssign fc lh "newConstructor(\{show $ length args}, \{maybe "-1" show tag} /* ACon \{show n} \{show coninfo} */)"
             let varname = "((Value_Constructor*)\{assignToName lh})"
-            when (coninfo == TYCON) $ emit emptyFC "\{varname}->tyconName = \{cStringQuoted $ show n};"
+            when (Nothing == tag) $ emit emptyFC "\{varname}->name = idris2_constr_\{cName n};"
             fillConstructorArgs varname args 0
 
 cStatementsFromANF (AOp fc _ op args) lh _ = emitAssign fc lh $ cOp op $ map varName args
@@ -499,10 +499,9 @@ cStatementsFromANF (AConCase fc sc alts mDef) lh tailPosition = do
             then emit emptyFC "\{els}if (NULL == \{sc'} /* \{show name} \{show coninfo} */) {"
             else if coninfo == CONS || coninfo == JUST || coninfo == SUCC
             then emit emptyFC "\{els}if (NULL != \{sc'} /* \{show name} \{show coninfo} */) {"
-            else if coninfo == TYCON
-            then emit emptyFC "\{els}if (! strcmp(((Value_Constructor*)\{sc'})->tyconName, \{cStringQuoted $ show name})) { "
-            else let Just tag' = tag | _ => throw $ InternalError "[refc] AConCase : MkConAlt has no tag. \{show name} \{show coninfo}"
-                  in emit emptyFC "\{els}if (\{show tag'} == ((Value_Constructor*)\{sc'})->tag /* \{show name} \{show coninfo} */) {"
+            else case tag of -- FIXME: erase common string literal.
+                Nothing   => emit emptyFC "\{els}if (! strcmp(((Value_Constructor *)\{sc'})->name, idris2_constr_\{cName name})) {"
+                Just tag' => emit emptyFC "\{els}if (((Value_Constructor *)\{sc'})->tag == \{show tag'}) {"
         concaseBody (assignToName lh) sc' args bdy tailPosition
         pure "} else "  ) "" alts
 
@@ -711,9 +710,14 @@ createCFunctions n (MkAFun args anf) = do
     emit EmptyFC  ""
     pure ()
 
+createCFunctions n (MkACon Nothing _ _) = do
+  let n' = cName n
+  update FunctionDefinitions $ \otherDefs => "char const idris2_constr_\{n'}[];" :: otherDefs
+  emit EmptyFC "char const idris2_constr_\{n'}[] = \{cStringQuoted $ show n};"
+  pure ()
 
 createCFunctions n (MkACon tag arity nt) = do
-  emit EmptyFC $ ( "// Constructor tag " ++ show tag ++ " arity " ++ show arity) -- Nothing to compile here
+  emit EmptyFC $ ( "// \{show n} Constructor tag " ++ show tag ++ " arity " ++ show arity) -- Nothing to compile here
 
 
 createCFunctions n (MkAForeign ccs fargs ret) = do
