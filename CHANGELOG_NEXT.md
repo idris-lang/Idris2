@@ -43,11 +43,14 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Switch calling conventions based on the number of arguments to avoid limits on the number of arguments and to reduce stack usage.
 
-* Omit name field from Value_Constructor. ConstCase and ConstCase now generate simple
-  if-elseif statements instead of using helpers. This reduces malloc costs.
+* Pattern matching generates simpler code. This reduces malloc/free and memory
+  consumption. It also makes debugging easier.
 
-* Mapped some special constructors to NULL. This reduces malloc cost and generates simpler
-  code in ConCase.
+* Stopped useless string copying in the constructor to save memory. Also, name
+  generation was stopped for constructors that have tags.
+
+* Special constructors such as Nil and Nothing were eliminated and assigned to
+  NULL.
 
 #### NodeJS Backend
 
