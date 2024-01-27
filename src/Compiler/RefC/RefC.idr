@@ -378,10 +378,6 @@ fillConstructorArgs cons (v :: vars) k = do
     fillConstructorArgs cons vars (S k)
 
 
-showTag : Maybe Int -> String
-showTag Nothing = "-1"
-showTag (Just i) = show i
-
 cArgsVectANF : {0 arity : Nat} -> Vect arity AVar -> Core (Vect arity String)
 cArgsVectANF [] = pure []
 cArgsVectANF (x :: xs) = pure $  (varName x) :: !(cArgsVectANF xs)
@@ -498,21 +494,21 @@ mutual
         registerVariableForAutomaticFreeing $ "var_" ++ (show var)
         bodyAssignment <- cStatementsFromANF body tailPosition
         pure $ bodyAssignment
-    cStatementsFromANF (ACon fc n UNIT tag []) _ = do
-        pure $ MkRS "(Value*)NULL" "(Value*)NULL"
-    cStatementsFromANF (ACon fc n _ tag args) _ = do
-        c <- getNextCounter
-        let constr = "constructor_" ++ (show c)
-        emit fc $ "Value_Constructor* "
-                ++ constr ++ " = newConstructor("
-                ++ (show (length args))
-                ++ ", "  ++ showTag tag  ++ ", "
-                ++ "\"" ++ cName n ++ "\""
-                ++ ");"
-        emit fc $ " // constructor " ++ cName n
 
-        fillConstructorArgs constr args 0
-        pure $ MkRS ("(Value*)" ++ constr) ("(Value*)" ++ constr)
+    cStatementsFromANF (ACon fc n coninfo tag args) _ = do
+        if coninfo == NIL || coninfo == NOTHING || coninfo == ZERO || coninfo == UNIT
+            then pure $ MkRS "(Value*)NULL" "(Value*)NULL"
+            else do
+                c <- getNextCounter
+                let constr = "constructor_" ++ (show c)
+                emit fc $ "Value_Constructor* \{constr} = newConstructor("
+                      ++ (show (length args))
+                      ++ ", "  ++ maybe "-1" show tag  ++ ");"
+                when (Nothing == tag) $ emit fc "\{constr}->name = idris2_constr_\{cName n};"
+                emit fc $ " // constructor " ++ cName n
+                fillConstructorArgs constr args 0
+                pure $ MkRS ("(Value*)" ++ constr) ("(Value*)" ++ constr)
+
     cStatementsFromANF (AOp fc _ op args) _ = do
         argsVec <- cArgsVectANF args
         let opStatement = cOp op argsVec
@@ -534,9 +530,13 @@ mutual
         switchReturnVar <- getNewVarThatWillNotBeFreedAtEndOfBlock
         emit fc "Value * \{switchReturnVar} = NULL;"
         _ <- foldlC (\els, (MkAConAlt name coninfo tag args body) => do
-            case tag of
-                Nothing   => emit emptyFC "\{els}if (! strcmp(((Value_Constructor *)\{sc'})->name, \{cStringQuoted $ cName name})) {"
-                Just tag' => emit emptyFC "\{els}if (((Value_Constructor *)\{sc'})->tag == \{show tag'}) {"
+            if coninfo == NIL || coninfo == NOTHING || coninfo == ZERO || coninfo == UNIT
+                then emit emptyFC "\{els}if (NULL == \{sc'} /* \{show name} \{show coninfo} */) {"
+                else if coninfo == CONS || coninfo == JUST || coninfo == SUCC
+                then emit emptyFC "\{els}if (NULL != \{sc'} /* \{show name} \{show coninfo} */) {"
+                else case tag of -- FIXME: erase common string literal.
+                    Nothing   => emit emptyFC "\{els}if (! strcmp(((Value_Constructor *)\{sc'})->name, idris2_constr_\{cName name})) {"
+                    Just tag' => emit emptyFC "\{els}if (((Value_Constructor *)\{sc'})->tag == \{show tag'}) {"
             concaseBody switchReturnVar sc' args body tailPosition
             pure "} else ") "" alts
 
@@ -767,8 +767,14 @@ createCFunctions n (MkAFun args anf) = do
     pure ()
 
 
+createCFunctions n (MkACon Nothing _ _) = do
+  let n' = cName n
+  update FunctionDefinitions $ \otherDefs => "char const idris2_constr_\{n'}[];" :: otherDefs
+  emit EmptyFC "char const idris2_constr_\{n'}[] = \{cStringQuoted $ show n};"
+  pure ()
+
 createCFunctions n (MkACon tag arity nt) = do
-  emit EmptyFC $ ( "// Constructor tag " ++ show tag ++ " arity " ++ show arity) -- Nothing to compile here
+  emit EmptyFC $ ( "// \{show n} Constructor tag " ++ show tag ++ " arity " ++ show arity) -- Nothing to compile here
 
 
 createCFunctions n (MkAForeign ccs fargs ret) = do

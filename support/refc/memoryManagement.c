@@ -19,16 +19,13 @@ Value_Arglist *newArglist(int missing, int total) {
   return retVal;
 }
 
-Value_Constructor *newConstructor(int total, int tag, const char *name) {
-  Value_Constructor *retVal = IDRIS2_NEW_VALUE(Value_Constructor);
+Value_Constructor *newConstructor(int total, int tag) {
+  Value_Constructor *retVal = (Value_Constructor *)newValue(
+      sizeof(Value_Constructor) + sizeof(Value *) * total);
   retVal->header.tag = CONSTRUCTOR_TAG;
   retVal->total = total;
   retVal->tag = tag;
-  int nameLength = strlen(name);
-  retVal->name = malloc(nameLength + 1);
-  memset(retVal->name, 0, nameLength + 1);
-  memcpy(retVal->name, name, nameLength);
-  retVal->args = (Value **)malloc(sizeof(Value *) * total);
+  retVal->name = NULL;
   return retVal;
 }
 
@@ -246,10 +243,6 @@ void removeReference(Value *elem) {
       for (int i = 0; i < constr->total; i++) {
         removeReference(constr->args[i]);
       }
-      if (constr->name) {
-        free(constr->name);
-      }
-      free(constr->args);
       break;
     }
     case IOREF_TAG:
