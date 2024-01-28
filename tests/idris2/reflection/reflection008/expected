@@ -3,5 +3,7 @@ Main> Main.evalAdd : Nat -> Nat -> Nat
 evalAdd x y = let add = \val, val => plus val val in add x y
 Main> Main.evalBlock : Nat
 evalBlock = plus 3 4
+Main> Main.evalBlock' : Nat
+evalBlock' = unreducible 3 4
 Main> 5
 Main> Bye for now!
