@@ -52,7 +52,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Project
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # for pull_request so we can do HEAD^2
           fetch-depth: 2
@@ -87,7 +87,7 @@ jobs:
       SCHEME: scheme
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Install build dependencies
         run: |
           sudo apt-get update
@@ -98,7 +98,7 @@ jobs:
       # or by rebuilding it if necessary.
       - name: Cache Chez Previous Version
         id: previous-version-cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: Idris2-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}
           key: ${{ runner.os }}-idris2-bootstrapped-chez-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}
@@ -121,7 +121,7 @@ jobs:
         run: |
           make && make install
       - name: Artifact Idris2 from previous version
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ubuntu-installed-idris2-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}-chez
           path: ~/.idris2/
@@ -144,7 +144,7 @@ jobs:
       SCHEME: scheme
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Install build dependencies
         run: |
           sudo apt-get update
@@ -155,7 +155,7 @@ jobs:
       - name: Build from bootstrap
         run: make bootstrap && make install
       - name: Artifact Bootstrapped Idris2
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ubuntu-installed-bootstrapped-idris2-chez
           path: ~/.idris2/
@@ -171,7 +171,7 @@ jobs:
       SCHEME: chez
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Install build dependencies
         run: |
           brew update
@@ -184,7 +184,7 @@ jobs:
         run: make bootstrap && make install
         shell: bash
       - name: Artifact Bootstrapped Idris2
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: macos-installed-bootstrapped-idris2-chez
           path: ~/.idris2/
@@ -207,7 +207,7 @@ jobs:
         run: |
           git config --global core.autocrlf false
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Get Chez Scheme
         run: |
           git clone --depth 1 --branch v9.5.8a https://github.com/cisco/ChezScheme
@@ -234,7 +234,7 @@ jobs:
       - name: Install
         run: c:\msys64\usr\bin\bash -l -c "cd $env:PWD && make install"
       - name: Artifact Idris2 from chez
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: windows-installed-bootstrapped-idris2-chez
           path: ${{ env.IDRIS_PREFIX }}
@@ -247,7 +247,7 @@ jobs:
       || contains(needs.initialise.outputs.commit_message, '[ci: nix]')
       || contains(needs.initialise.outputs.commit_message, '[ci: chez]'))
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
           fetch-depth: 0
     - uses: cachix/install-nix-action@v18
@@ -270,7 +270,7 @@ jobs:
       IDRIS2_CG: racket
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Install build dependencies
         run: |
           sudo apt-get install -y racket
@@ -280,7 +280,7 @@ jobs:
       - name: Build from bootstrap
         run: make bootstrap-racket && make install
       - name: Artifact Bootstrapped Idris2
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ubuntu-installed-bootstrapped-idris2-racket
           path: ~/.idris2/
@@ -299,9 +299,9 @@ jobs:
       SCHEME: scheme
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Download Idris2 Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ubuntu-installed-bootstrapped-idris2-chez
           path: ~/.idris2/
@@ -323,9 +323,9 @@ jobs:
       SCHEME: chez
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Download Idris2 Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: macos-installed-bootstrapped-idris2-chez
           path: ~/.idris2/
@@ -353,9 +353,9 @@ jobs:
       IDRIS2_CG: racket
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Download Idris2 Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ubuntu-installed-bootstrapped-idris2-racket
           path: ~/.idris2/
@@ -380,9 +380,9 @@ jobs:
       IDRIS2_CG: chez
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Download Idris2 Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ubuntu-installed-idris2-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}-chez
           path: ~/.idris2/
@@ -397,7 +397,7 @@ jobs:
       - name: Test self-hosted from previous version
         run: make ci-ubuntu-test INTERACTIVE=''
       - name: Artifact Idris2
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: idris2-nightly-chez
           path: ~/.idris2/
@@ -421,7 +421,7 @@ jobs:
           git config --global core.autocrlf false
           echo "PWD=$(c:\msys64\usr\bin\cygpath -u $(pwd))" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Get Chez Scheme
         run: |
           git clone --depth 1 --branch v9.5.8a https://github.com/cisco/ChezScheme
@@ -439,7 +439,7 @@ jobs:
           echo "IDRIS_PREFIX=$idris" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           echo "PREFIX=$(c:\msys64\usr\bin\cygpath -u $idris)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Download Idris2 Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: windows-installed-bootstrapped-idris2-chez
           path: ${{ env.IDRIS_PREFIX }}
@@ -469,9 +469,9 @@ jobs:
       IDRIS2_CG: chez
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Download Idris2 Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ubuntu-installed-bootstrapped-idris2-chez
           path: ~/.idris2/
@@ -510,7 +510,7 @@ jobs:
       IDRIS2_CG: chez
     steps:
       - name: Download Idris2 Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: idris2-nightly-chez
           path: ~/.idris2/
@@ -521,7 +521,7 @@ jobs:
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
           chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: 'ohad/collie'
       - name: Build Collie
@@ -542,7 +542,7 @@ jobs:
       IDRIS2_CG: chez
     steps:
       - name: Download Idris2 Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: idris2-nightly-chez
           path: ~/.idris2/
@@ -553,7 +553,7 @@ jobs:
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
           chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: 'frex-project/idris-frex'
       - name: Build Frex
@@ -577,7 +577,7 @@ jobs:
       IDRIS2_CG: chez
     steps:
       - name: Download Idris2 Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: idris2-nightly-chez
           path: ~/.idris2/
@@ -588,7 +588,7 @@ jobs:
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
           chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: 'stefan-hoeck/idris2-elab-util'
       - name: Build idris2-elab-util
@@ -615,7 +615,7 @@ jobs:
     container: ghcr.io/stefan-hoeck/idris2-pack:latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: 'stefan-hoeck/idris2-pack'
       # by default, pack uses the main idris2 head, not the current job's one
@@ -658,7 +658,7 @@ jobs:
       fail-fast: false
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: 'idris-community/idris2-lsp'
       - name: Toml setup
@@ -705,7 +705,7 @@ jobs:
           fi
 
       - name: Download Idris2 Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: idris2-nightly-chez
           path: ~/.idris2/
@@ -716,26 +716,26 @@ jobs:
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
           chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Checkout idris2
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Build API
         run: make install-api
         shell: bash
       - name: Checkout collie
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: 'ohad/collie'
       - name: Build and install Collie
         run: |
           make install
       - name: Checkout idrall
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: 'alexhumphreys/idrall'
       - name: Build and install idrall
         run: |
           make install
       - name: Checkout katla
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: 'idris-community/katla'
       - name: Build and install katla
@@ -745,7 +745,7 @@ jobs:
           cp -r build/exec/* "${HOME}"/.local/bin/
           echo "${HOME}/.local/bin" >> "$GITHUB_PATH"
       - name: Checkout idris2
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Build html doc & landing page
         run: |
           make -C libs/prelude/ install docs IDRIS2=idris2

@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout Project
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # for pull_request so we can do HEAD^2
           fetch-depth: 2
@@ -53,7 +53,7 @@ jobs:
       SCHEME: scheme
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Install build dependencies (LTS versions)
         run: |
           sudo apt-get update
