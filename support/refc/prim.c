@@ -243,3 +243,5 @@ char const idris2_constr_Bits32[] = "Bits32";
 char const idris2_constr_Bits64[] = "Bits64";
 char const idris2_constr_Double[] = "Double";
 char const idris2_constr_Integer[] = "Integer";
+char const idris2_constr_Char[] = "Char";
+char const idris2_constr_String[] = "String";
