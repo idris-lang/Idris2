@@ -9,7 +9,6 @@
 #include "buffer.h"
 #include "casts.h"
 #include "clock.h"
-#include "conCaseHelper.h"
 #include "mathFunctions.h"
 #include "memoryManagement.h"
 #include "prim.h"
