@@ -66,3 +66,7 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Existing `System.Console.GetOpt` was extended to support errors during options
   parsing in a backward-compatible way.
+
+### Other Changes
+
+* Improved the docs for `let` and `:=` to (hopefully) avoid confusion.
