@@ -23,7 +23,7 @@ widely usable as we can!
 Where can I find libraries? Is there a package manager?
 =======================================================
 
-Idris doesn't have an official package manager, but there are a number of community-maintained package managers [listed on the wiki](https://github.com/idris-lang/Idris2/wiki/Third-party-Libraries#package-management) ([pack](https://github.com/stefan-hoeck/idris2-pack) is widely used by the Idris community and is actively maintained). On that page you can also find a number of community libraries.
+Idris doesn't have an official package manager, but there are a number of community-maintained package managers [listed on the wiki](https://github.com/idris-lang/Idris2/wiki/Third-party-Libraries#package-management) ([pack](https://github.com/stefan-hoeck/idris2-pack) is widely used and is actively maintained). On that page you can also find a number of community libraries.
 
 Can Idris 2 compile itself?
 ===========================
