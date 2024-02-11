@@ -14,8 +14,8 @@ Many of the answers in this FAQ demonstrate this philosophy, and we always
 bear this in mind when making language and library design decisions.
 
 Idris is primarily a research project, led by Edwin Brady at the University
-of St Andrews, and has benefited from [SICSA](https://www.sicsa.ac.uk) and
-[EPSRC](https://www.epsrc.ac.uk/) funding. This does influence some design
+of St Andrews, and has benefited from `SICSA <https://www.sicsa.ac.uk>`_ and
+`EPSRC <https://www.epsrc.ac.uk/>`_ funding. This does influence some design
 choices and implementation priorities, and means that some things are not
 as polished as we'd like. Nevertheless, we are still trying to make it as
 widely usable as we can!
