@@ -267,8 +267,8 @@ void *idrnet_recv(int sockfd, int len) {
   return (void *)res_struct;
 }
 
-int idrnet_recv_bytes(int sockfd, void *buf, int len) {
-  return recv(sockfd, buf, len, 0);
+int idrnet_recv_bytes(int sockfd, void *buf, int len, int flags) {
+  return recv(sockfd, buf, len, flags);
 }
 
 int idrnet_recv_buf(int sockfd, void *buf, int len) {
