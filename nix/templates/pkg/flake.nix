@@ -15,7 +15,7 @@
         idrisPkgs = idris.packages.${system};
         buildIdris = idris.buildIdris.${system};
         pkgs = buildIdris {
-          projectName = "mypkg";
+          ipkgName = "mypkg";
           src = ./.;
           idrisLibraries = [ ];
         };

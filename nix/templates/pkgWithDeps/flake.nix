@@ -22,7 +22,7 @@
         idrisPkgs = idris.packages.${system};
         buildIdris = idris.buildIdris.${system};
         pkgs = buildIdris {
-          projectName = "pkgWithDeps";
+          ipkgName = "pkgWithDeps";
           src = ./.;
           idrisLibraries = [ my-pkg ];
         };

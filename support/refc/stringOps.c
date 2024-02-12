@@ -73,10 +73,10 @@ Value *strAppend(Value *a, Value *b) {
 
 Value *strSubstr(Value *start, Value *len, Value *s) {
   char *input = ((Value_String *)s)->str;
-  int offset = extractInt(start);
+  int offset = extractInt(start); /* start and len is Nat. */
   int l = extractInt(len);
 
-  int tailLen = strlen(input);
+  int tailLen = strlen(input) - offset;
   if (tailLen < l) {
     l = tailLen;
   }
@@ -200,7 +200,8 @@ Value *onCollectStringIterator_arglist(Value_Arglist *arglist) {
 Value *stringIteratorToString(void *a, char *str, Value *it_p,
                               Value_Closure *f) {
   String_Iterator *it = ((Value_GCPointer *)it_p)->p->p;
-  return apply_closure((Value *)f, (Value *)makeString(it->str + it->pos));
+  Value *strVal = (Value *)makeString(it->str + it->pos);
+  return apply_closure(newReference((Value *)f), strVal);
 }
 
 Value *stringIteratorNext(char *s, Value *it_p) {

@@ -35,7 +35,7 @@ main
          val <- getBits16 buf 32
          printLn val
 
-         ds <- bufferData buf
+         ds <- bufferData' buf
          printLn ds
 
          Right _ <- writeBufferToFile "test.buf" buf 100
@@ -43,13 +43,13 @@ main
          Right buf2 <- createBufferFromFile "test.buf"
              | Left err => putStrLn "Buffer read fail"
 
-         ds <- bufferData buf2
+         ds <- bufferData' buf2
          printLn ds
 
          setBits8 buf2 0 1
          Just ccBuf <- concatBuffers [buf, buf2]
             | Nothing => putStrLn "Buffer concat failed"
-         printLn !(bufferData ccBuf)
+         printLn !(bufferData' ccBuf)
 
          Just (a, b) <- splitBuffer buf 20
             | Nothing => putStrLn "Buffer split failed"

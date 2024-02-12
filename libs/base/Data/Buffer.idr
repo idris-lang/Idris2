@@ -378,6 +378,8 @@ getString : HasIO io => Buffer -> (offset : Int) -> (len : Int) -> io String
 getString buf offset len
     = primIO (prim__getString buf offset len)
 
+||| Use `bufferData'` instead, as its value is correctly limited.
+%deprecate
 export
 covering
 bufferData : HasIO io => Buffer -> io (List Int)
@@ -389,7 +391,23 @@ bufferData buf
     unpackTo : List Int -> Int -> io (List Int)
     unpackTo acc 0 = pure acc
     unpackTo acc offset
-        = do val <- getByte buf (offset - 1)
+        = do val <- getBits8 buf (offset - 1)
+             unpackTo (cast val :: acc) (offset - 1)
+
+||| This function performs the same task as `bufferData` but it
+||| returns `List Bits8` which is more correct than `List Int`.
+export
+covering
+bufferData' : HasIO io => Buffer -> io (List Bits8)
+bufferData' buf
+    = do len <- rawSize buf
+         unpackTo [] len
+  where
+    covering
+    unpackTo : List Bits8 -> Int -> io (List Bits8)
+    unpackTo acc 0 = pure acc
+    unpackTo acc offset
+        = do val <- getBits8 buf (offset - 1)
              unpackTo (val :: acc) (offset - 1)
 
 

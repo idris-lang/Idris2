@@ -15,25 +15,83 @@ void push_Arglist(Value_Arglist *arglist, Value *arg) {
   arglist->filled++;
 }
 
-Value *apply_closure(Value *_clos, Value *arg) {
+int isUnique(Value *value) {
+  if (value) {
+    return value->header.refCounter == 1;
+  }
+  return 0;
+}
+
+// necessary because not every variable passed as arguments is duplicated
+void deconstructArglist(Value_Arglist *arglist) {
+  IDRIS2_REFC_VERIFY(arglist->header.refCounter > 0, "refCounter %lld",
+                     (long long)arglist->header.refCounter);
+  arglist->header.refCounter--;
+  if (arglist->header.refCounter == 0) {
+    free(arglist->args);
+    free(arglist);
+  }
+}
+
+void deconstructClosure(Value_Closure *clos) {
+  IDRIS2_REFC_VERIFY(clos->header.refCounter > 0, "refCounter %lld",
+                     (long long)clos->header.refCounter);
+  clos->header.refCounter--;
+  if (clos->header.refCounter == 0) {
+    deconstructArglist(clos->arglist);
+    free(clos);
+  }
+}
+
+void removeReuseConstructor(Value_Constructor *constr) {
+  if (!constr) {
+    return;
+  }
+  IDRIS2_REFC_VERIFY(constr->header.refCounter > 0, "refCounter %lld",
+                     (long long)constr->header.refCounter);
+  constr->header.refCounter--;
+  if (constr->header.refCounter == 0) {
+    if (constr->name) {
+      free(constr->name);
+    }
+    free(constr->args);
+    free(constr);
+  }
+}
+
+Value_Arglist *makeArglistToApplyClosure(Value *_clos, Value *arg) {
   // create a new arg list
   Value_Arglist *oldArgs = ((Value_Closure *)_clos)->arglist;
   Value_Arglist *newArgs = newArglist(0, oldArgs->total);
   newArgs->filled = oldArgs->filled + 1;
   // add argument to new arglist
   for (int i = 0; i < oldArgs->filled; i++) {
-    newArgs->args[i] = newReference(oldArgs->args[i]);
+    /*
+    if the closure has multiple references, then apply newReference to arguments
+    to avoid premature clearing of arguments
+    */
+    if (_clos->header.refCounter <= 1)
+      newArgs->args[i] = oldArgs->args[i];
+    else
+      newArgs->args[i] = newReference(oldArgs->args[i]);
   }
-  newArgs->args[oldArgs->filled] = newReference(arg);
+  newArgs->args[oldArgs->filled] = arg;
+  return newArgs;
+}
+
+Value *apply_closure(Value *_clos, Value *arg) {
+  Value_Arglist *newArgs = makeArglistToApplyClosure(_clos, arg);
 
   Value_Closure *clos = (Value_Closure *)_clos;
+  fun_ptr_t f = clos->f;
+
+  deconstructClosure(clos);
 
   // check if enough arguments exist
   if (newArgs->filled >= newArgs->total) {
-    fun_ptr_t f = clos->f;
     while (1) {
       Value *retVal = f(newArgs);
-      removeReference((Value *)newArgs);
+      deconstructArglist(newArgs);
       if (!retVal || retVal->header.tag != COMPLETE_CLOSURE_TAG) {
         return retVal;
       }
@@ -44,27 +102,18 @@ Value *apply_closure(Value *_clos, Value *arg) {
     }
   }
 
-  return (Value *)makeClosureFromArglist(clos->f, newArgs);
+  return (Value *)makeClosureFromArglist(f, newArgs);
 }
 
 Value *tailcall_apply_closure(Value *_clos, Value *arg) {
-  // create a new arg list
-  Value_Arglist *oldArgs = ((Value_Closure *)_clos)->arglist;
-  Value_Arglist *newArgs = newArglist(0, oldArgs->total);
-  newArgs->filled = oldArgs->filled + 1;
-  // add argument to new arglist
-  for (int i = 0; i < oldArgs->filled; i++) {
-    newArgs->args[i] = newReference(oldArgs->args[i]);
-  }
-  newArgs->args[oldArgs->filled] = newReference(arg);
+  Value_Arglist *newArgs = makeArglistToApplyClosure(_clos, arg);
 
   Value_Closure *clos = (Value_Closure *)_clos;
+  fun_ptr_t f = ((Value_Closure *)clos)->f;
 
-  // check if enough arguments exist
-  if (newArgs->filled >= newArgs->total)
-    return (Value *)makeClosureFromArglist(clos->f, newArgs);
+  deconstructClosure(clos);
 
-  return (Value *)makeClosureFromArglist(clos->f, newArgs);
+  return (Value *)makeClosureFromArglist(f, newArgs);
 }
 
 int extractInt(Value *v) {
@@ -103,7 +152,7 @@ Value *trampoline(Value *closure) {
   removeReference(closure);
   while (1) {
     Value *retVal = f(arglist);
-    removeReference((Value *)arglist);
+    deconstructArglist(arglist);
     if (!retVal || retVal->header.tag != COMPLETE_CLOSURE_TAG) {
       return retVal;
     }

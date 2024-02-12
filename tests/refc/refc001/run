@@ -1,4 +1,4 @@
 . ../../testutils.sh
 
-idris2 --cg refc -o refc001 Tail.idr > /dev/null
-./build/exec/refc001
+idris2 --cg refc -o refc001 Tail.idr
+$VALGRIND ./build/exec/refc001
