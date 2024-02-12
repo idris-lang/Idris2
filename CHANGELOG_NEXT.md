@@ -89,3 +89,6 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   and removed `Data.HVect` from contrib. See the additional notes in the
   CHANGELOG under the `Library changes`/`Base` section above.
 
+#### Network
+
+* Add a missing function parameter (the flag) in the C implementation of idrnet_recv_bytes

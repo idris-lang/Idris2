@@ -84,7 +84,7 @@ prim__idrnet_recv : (sockfd : SocketDescriptor) -> (len : Int) -> PrimIO AnyPtr
 
 %foreign "C:idrnet_recv_bytes, libidris2_support, idris_net.h"
 export
-prim__idrnet_recv_bytes : (sockfd : SocketDescriptor) -> (content : Buffer) -> (nbytes : Int) -> (flags : Bits32) -> PrimIO Int
+prim__idrnet_recv_bytes : (sockfd : SocketDescriptor) -> (content : Buffer) -> (nbytes : Int) -> (flags : Int) -> PrimIO Int
 
 %foreign "C__collect_safe:idrnet_recv_buf, libidris2_support, idris_net.h"
          "C:idrnet_recv_buf, libidris2_support, idris_net.h"
