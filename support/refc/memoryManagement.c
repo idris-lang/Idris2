@@ -280,8 +280,6 @@ void removeReference(Value *elem) {
       Value *closure1 =
           apply_closure((Value *)vPtr->onCollectFct, (Value *)vPtr->p);
       apply_closure(closure1, NULL);
-      removeReference(closure1);
-      removeReference((Value *)vPtr->onCollectFct);
       removeReference((Value *)vPtr->p);
       break;
     }

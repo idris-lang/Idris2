@@ -26,6 +26,14 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 ### Language changes
 
+### Backend changes
+
+#### RefC
+
+* Compiler can emit precise reference counting instructions where a reference
+  is dropped as soon as possible. This allows you to reuse unique variables and
+  optimize memory consumption.
+
 ### Compiler changes
 
 #### RefC Backend

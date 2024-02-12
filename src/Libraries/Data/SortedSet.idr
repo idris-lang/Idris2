@@ -60,6 +60,18 @@ intersection : (x, y : SortedSet k) -> SortedSet k
 intersection x y = difference x (difference x y)
 
 export
+keySet : SortedMap k v -> SortedSet k
+keySet = SetWrapper . map (const ())
+
+export
+differenceMap : SortedMap k v -> SortedSet k -> SortedMap k v
+differenceMap x y = foldr delete x y
+
+export
+intersectionMap : SortedMap k v -> SortedSet k -> SortedMap k v
+intersectionMap x y = differenceMap x (keySet $ differenceMap x y)
+
+export
 Ord k => Semigroup (SortedSet k) where
   (<+>) = union
 
@@ -70,10 +82,6 @@ Ord k => Monoid (SortedSet k) where
 export
 Show k => Show (SortedSet k) where
   show = show . SortedSet.toList
-
-export
-keySet : SortedMap k v -> SortedSet k
-keySet = SetWrapper . map (const ())
 
 export
 singleton : Ord k => k -> SortedSet k

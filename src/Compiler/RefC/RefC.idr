@@ -17,6 +17,7 @@ import Data.List
 import Libraries.Data.DList
 import Data.Nat
 import Libraries.Data.SortedSet
+import Libraries.Data.SortedMap
 import Data.Vect
 
 import System
@@ -229,10 +230,22 @@ varName (ALocal i) = "var_" ++ (show i)
 varName (ANull)    = "NULL"
 
 data ArgCounter : Type where
+data EnvTracker : Type where
 data FunctionDefinitions : Type where
-data TemporaryVariableTracker : Type where
 data IndentLevel : Type where
 data HeaderFiles : Type where
+
+ReuseMap = SortedMap Name String
+Owned = SortedSet AVar
+
+||| Environment for precise reference counting.
+||| If variable borrowed (that is, it is not in the owned set) when used, call a function newReference.
+||| If variable owned, then use it directly.
+||| Reuse Map contains the name of the reusable constructor and variable
+record Env where
+  constructor MkEnv
+  owned : Owned
+  reuseMap : ReuseMap
 
 ------------------------------------------------------------------------
 -- Output generation: using a difference list for efficient append
@@ -249,26 +262,6 @@ getNextCounter = do
     c <- get ArgCounter
     put ArgCounter (S c)
     pure c
-
-registerVariableForAutomaticFreeing : {auto t : Ref TemporaryVariableTracker (List (List String))}
-                                   -> String
-                                   -> Core ()
-registerVariableForAutomaticFreeing var
-  = update TemporaryVariableTracker $ \case
-      [] => [[var]]
-      (l :: ls) => ((var :: l) :: ls)
-
-newTemporaryVariableLevel : {auto t : Ref TemporaryVariableTracker (List (List String))} -> Core ()
-newTemporaryVariableLevel = update TemporaryVariableTracker ([] ::)
-
-
-getNewVar : {auto a : Ref ArgCounter Nat} -> {auto t : Ref TemporaryVariableTracker (List (List String))} -> Core String
-getNewVar = do
-    c <- getNextCounter
-    let var = "tmp_" ++ show c
-    registerVariableForAutomaticFreeing var
-    pure var
-
 
 getNewVarThatWillNotBeFreedAtEndOfBlock : {auto a : Ref ArgCounter Nat} -> Core String
 getNewVarThatWillNotBeFreedAtEndOfBlock = do
@@ -316,34 +309,52 @@ emit fc line = do
         (Yes _) => flip snoc (lJust indentedLine maxLineLengthForComment ' ' ++ " " ++ comment)
         (No _)  => flip appendR [indentedLine, (lJust ""   maxLineLengthForComment ' ' ++ " " ++ comment)]
 
-
-freeTmpVars : {auto t : Ref TemporaryVariableTracker (List (List String))}
-           -> {auto oft : Ref OutfileText Output}
-           -> {auto il : Ref IndentLevel Nat}
-           -> Core $ ()
-freeTmpVars = do
-    lists <- get TemporaryVariableTracker
-    case lists of
-        (vars :: varss) => do
-            traverse_ (\v => emit EmptyFC $ "removeReference(" ++ v ++ ");" ) vars
-            put TemporaryVariableTracker varss
-        [] => pure ()
-
-
 addHeader : {auto h : Ref HeaderFiles (SortedSet String)}
          -> String
          -> Core ()
 addHeader = update HeaderFiles . insert
 
+applyFunctionToVars : {auto oft : Ref OutfileText Output}
+                    -> {auto il : Ref IndentLevel Nat}
+                    -> String
+                    -> List String
+                    -> Core $ ()
+applyFunctionToVars fun vars = traverse_ (\v => emit EmptyFC $ fun ++ "(" ++ v ++ ");" ) vars
 
+removeVars : {auto oft : Ref OutfileText Output}
+           -> {auto il : Ref IndentLevel Nat}
+           -> List String
+           -> Core $ ()
+removeVars = applyFunctionToVars "removeReference"
+
+dupVars : {auto oft : Ref OutfileText Output}
+           -> {auto il : Ref IndentLevel Nat}
+           -> List String
+           -> Core $ ()
+dupVars = applyFunctionToVars "newReference"
+
+removeReuseConstructors : {auto oft : Ref OutfileText Output}
+                        -> {auto il : Ref IndentLevel Nat}
+                        -> List String
+                        -> Core $ ()
+removeReuseConstructors = applyFunctionToVars "removeReuseConstructor"
+
+avarToC : Env -> AVar -> String
+avarToC env var =
+    if contains var env.owned then varName var
+        -- case when the variable is borrowed
+    else "newReference(" ++ varName var ++ ")"
+
+moveFromOwnedToBorrowed : Env -> SortedSet AVar -> Env
+moveFromOwnedToBorrowed env vars = { owned $= (`difference` vars) } env
 
 makeArglist : {auto a : Ref ArgCounter Nat}
-           -> {auto t : Ref TemporaryVariableTracker (List (List String))}
            -> {auto oft : Ref OutfileText Output}
            -> {auto il : Ref IndentLevel Nat}
+           -> {auto e : Ref EnvTracker Env}
            -> Nat
            -> List AVar
-           -> Core (String)
+           -> Core String
 makeArglist missing xs = do
     c <- getNextCounter
     let arglist = "arglist_" ++ (show c)
@@ -352,39 +363,34 @@ makeArglist missing xs = do
                  ++ " = newArglist(" ++ show missing
                  ++ "," ++ show (length xs + missing)
                  ++ ");"
-    pushArgToArglist arglist xs 0
+    pushArgToArglist !(get EnvTracker) arglist xs 0
     pure arglist
 where
-    pushArgToArglist : String
-                    -> List AVar
-                    -> Nat
-                    -> Core ()
-    pushArgToArglist arglist [] k = pure ()
-    pushArgToArglist arglist (arg :: args) k = do
+    pushArgToArglist : Env -> String -> List AVar -> Nat -> Core ()
+    pushArgToArglist _ arglist [] k = pure ()
+    pushArgToArglist env arglist (arg :: args) k = do
+        let ownedArg = if contains arg env.owned then singleton arg else empty
         emit EmptyFC $ arglist
                     ++ "->args[" ++ show k ++ "] = "
-                    ++ " newReference(" ++ varName arg ++");"
-        pushArgToArglist arglist args (S k)
+                    ++ avarToC env arg ++ ";"
+        pushArgToArglist (moveFromOwnedToBorrowed env ownedArg) arglist args (S k)
 
 fillConstructorArgs : {auto oft : Ref OutfileText Output}
                    -> {auto il : Ref IndentLevel Nat}
+                   -> Env
                    -> String
                    -> List AVar
                    -> Nat
                    -> Core ()
-fillConstructorArgs _ [] _ = pure ()
-fillConstructorArgs cons (v :: vars) k = do
-    emit EmptyFC $ cons ++ "->args["++ show k ++ "] = newReference(" ++ varName v ++");"
-    fillConstructorArgs cons vars (S k)
-
+fillConstructorArgs _ _ [] _ = pure ()
+fillConstructorArgs env cons (v :: vars) k = do
+    let ownedVars = if contains v env.owned then singleton v else empty
+    emit EmptyFC $ cons ++ "->args["++ show k ++ "] = " ++ avarToC env v ++ ";"
+    fillConstructorArgs (moveFromOwnedToBorrowed env ownedVars) cons vars (S k)
 
 showTag : Maybe Int -> String
 showTag Nothing = "-1"
 showTag (Just i) = show i
-
-cArgsVectANF : {0 arity : Nat} -> Vect arity AVar -> Core (Vect arity String)
-cArgsVectANF [] = pure []
-cArgsVectANF (x :: xs) = pure $  (varName x) :: !(cArgsVectANF xs)
 
 integer_switch : List AConstAlt -> Bool
 integer_switch [] = True
@@ -437,40 +443,105 @@ callByPosition : TailPositionStatus -> ReturnStatement -> String
 callByPosition InTailPosition = tailCall
 callByPosition NotInTailPosition = nonTailCall
 
+||| The function takes as arguments the current ReuseMap and the constructors that will be used.
+||| Returns constructor variables to remove and constructors to reuse.
+dropUnusedReuseCons : ReuseMap -> SortedSet Name -> (List String, ReuseMap)
+dropUnusedReuseCons reuseMap usedCons =
+    -- if there is no constructor named by that name, then the reuse constructor is deleted
+    let dropReuseMap = differenceMap reuseMap usedCons in
+    let actualReuseMap = intersectionMap reuseMap usedCons in
+    (values dropReuseMap, actualReuseMap)
+
+||| The function takes as arguments the current owned vars and set vars that will be used.
+||| Returns variables to remove and actual owned vars.
+dropUnusedOwnedVars : Owned -> SortedSet AVar -> (List String, Owned)
+dropUnusedOwnedVars owned usedVars =
+    let actualOwned = intersection owned usedVars in
+    let shouldDrop = difference owned actualOwned in
+    (varName <$> SortedSet.toList shouldDrop, actualOwned)
+
+locally : {auto t : Ref EnvTracker Env} -> Env -> Core () -> Core ()
+locally newEnv act = do
+    oldEnv <- get EnvTracker
+    put EnvTracker newEnv
+    act
+    put EnvTracker oldEnv
+
+-- if the constructor is unique use it, otherwise add it to should drop vars and create null constructor
+addReuseConstructor : {auto a : Ref ArgCounter Nat}
+                    -> {auto oft : Ref OutfileText Output}
+                    -> {auto il : Ref IndentLevel Nat}
+                    -> ReuseMap
+                    -> String
+                    -> Name
+                    -> List String
+                    -> SortedSet Name
+                    -> List String
+                    -> SortedMap Name String
+                    -> Core (List String, SortedMap Name String)
+addReuseConstructor reuseMap sc conName conArgs consts shouldDrop actualReuseConsts =
+    -- to avoid conflicts, we check that there is no constructor with the same name in reuse map
+    -- we also check that the constructor will be used later and that the variable will be deleted
+    if (isNothing $ SortedMap.lookup conName reuseMap)
+       && contains conName consts
+       && (isJust $ find (== sc) shouldDrop) then do
+        c <- getNextCounter
+        let constr = "constructor_" ++ (show c)
+        emit EmptyFC $ "Value_Constructor* " ++ constr ++ " = NULL;"
+        -- If the constructor variable is unique (has 1 reference), then assign it for reuse
+        emit EmptyFC $ "if (isUnique(" ++ sc ++ ")) {"
+        increaseIndentation
+        emit EmptyFC $ constr ++ " = (Value_Constructor*)" ++ sc ++ ";"
+        decreaseIndentation
+        emit EmptyFC "}"
+        -- Otherwise, delete and duplicate constructor variables
+        emit EmptyFC "else {"
+        increaseIndentation
+        -- remove dup and remove if they are executed for the same argument
+        dupVars (conArgs \\ shouldDrop)
+        removeVars [sc]
+        decreaseIndentation
+        emit EmptyFC "}"
+        pure (shouldDrop \\ (sc :: conArgs), insert conName constr actualReuseConsts)
+    else do
+        dupVars $ conArgs \\ shouldDrop
+        pure (shouldDrop \\ conArgs, actualReuseConsts)
+
 mutual
     concaseBody : {auto a : Ref ArgCounter Nat}
-                 -> {auto t : Ref TemporaryVariableTracker (List (List String))}
+                 -> {auto e : Ref EnvTracker Env}
                  -> {auto oft : Ref OutfileText Output}
                  -> {auto il : Ref IndentLevel Nat}
+                 -> List String -> List String
                  -> String -> String -> List Int -> ANF -> TailPositionStatus
                  -> Core ()
-    concaseBody returnvar expr args bdy tailPosition = do
+    concaseBody dropVars dropReuseCons returnvar expr args bdy tailPosition = do
         increaseIndentation
-        newTemporaryVariableLevel
         _ <- foldlC (\k, arg => do
             emit emptyFC "Value *var_\{show arg} = ((Value_Constructor*)\{expr})->args[\{show k}];"
             pure (S k) ) 0 args
+        removeVars dropVars
+        removeReuseConstructors dropReuseCons
         assignment <- cStatementsFromANF bdy tailPosition
         emit emptyFC "\{returnvar} = \{callByPosition tailPosition assignment};"
-        freeTmpVars
         decreaseIndentation
 
     cStatementsFromANF : {auto a : Ref ArgCounter Nat}
-                      -> {auto t : Ref TemporaryVariableTracker (List (List String))}
                       -> {auto oft : Ref OutfileText Output}
                       -> {auto il : Ref IndentLevel Nat}
+                      -> {auto e : Ref EnvTracker Env}
                       -> ANF
                       -> TailPositionStatus
                       -> Core ReturnStatement
     cStatementsFromANF (AV fc x) _ = do
-        let returnLine = "newReference(" ++ varName x  ++ ")"
+        let returnLine = avarToC !(get EnvTracker) x
         pure $ MkRS returnLine returnLine
     cStatementsFromANF (AAppName fc _ n args) _ = do
         emit fc $ ("// start " ++ cName n ++ "(" ++ showSep ", " (map (\v => varName v) args) ++ ")")
         arglist <- makeArglist 0 args
         c <- getNextCounter
         let f_ptr_name = "fPtr_" ++ show c
-        emit fc $ "Value *(*"++ f_ptr_name ++ ")(Value_Arglist*) = "++  cName n ++ "_arglist;"
+        emit fc $ "Value *(*"++ f_ptr_name ++ ")(Value_Arglist*) = " ++ cName n ++ "_arglist;"
         let closure_name = "closure_" ++ show c
         emit fc $ "Value *"
                ++ closure_name
@@ -489,34 +560,59 @@ mutual
         emit fc f_ptr
         let returnLine = "(Value*)makeClosureFromArglist(" ++ f_ptr_name  ++ ", " ++ arglist ++ ")"
         pure $ MkRS returnLine returnLine
-    cStatementsFromANF (AApp fc _ closure arg) _ =
-        pure $ MkRS ("apply_closure(" ++ varName closure ++ ", " ++ varName arg ++ ")")
-                    ("tailcall_apply_closure(" ++ varName closure ++ ", " ++ varName arg ++ ")")
+    cStatementsFromANF (AApp fc _ closure arg) _ = do
+        env <- get EnvTracker
+        pure $ MkRS ("apply_closure(" ++ avarToC env closure ++ ", " ++ avarToC env arg ++ ")")
+                    ("tailcall_apply_closure(" ++ avarToC env closure ++ ", " ++ avarToC env arg ++ ")")
     cStatementsFromANF (ALet fc var value body) tailPosition = do
+        env <- get EnvTracker
+        let usedVars = freeVariables body
+        let borrowVal = intersection env.owned (delete (ALocal var) usedVars)
+        let owned' = if contains (ALocal var) usedVars then insert (ALocal var) borrowVal else borrowVal
+        let usedCons = usedConstructors value
+        -- When translating value into C, we borrow variables that will be used in body
+        let valueEnv = { reuseMap $= (`intersectionMap` usedCons) } (moveFromOwnedToBorrowed env borrowVal)
+        put EnvTracker valueEnv
         valueAssignment <- cStatementsFromANF value NotInTailPosition
         emit fc $ "Value * var_" ++ (show var) ++ " = " ++ nonTailCall valueAssignment ++ ";"
-        registerVariableForAutomaticFreeing $ "var_" ++ (show var)
+        unless (contains (ALocal var) usedVars) $ emit fc $ "removeReference(" ++ "var_" ++ (show var) ++ ");"
+        put EnvTracker ({ owned := owned', reuseMap $= (`differenceMap` usedCons) } env)
         bodyAssignment <- cStatementsFromANF body tailPosition
-        pure $ bodyAssignment
+        pure bodyAssignment
     cStatementsFromANF (ACon fc n UNIT tag []) _ = do
         pure $ MkRS "(Value*)NULL" "(Value*)NULL"
-    cStatementsFromANF (ACon fc n _ tag args) _ = do
-        c <- getNextCounter
-        let constr = "constructor_" ++ (show c)
-        emit fc $ "Value_Constructor* "
-                ++ constr ++ " = newConstructor("
-                ++ (show (length args))
-                ++ ", "  ++ showTag tag  ++ ", "
-                ++ "\"" ++ cName n ++ "\""
-                ++ ");"
-        emit fc $ " // constructor " ++ cName n
-
-        fillConstructorArgs constr args 0
-        pure $ MkRS ("(Value*)" ++ constr) ("(Value*)" ++ constr)
+    cStatementsFromANF (ACon fc n _ mTag args) _ = do
+        env <- get EnvTracker
+        let mConstr = SortedMap.lookup n $ reuseMap env
+        let createNewConstructor = " = newConstructor("
+                        ++ (show (length args))
+                        ++ ", "  ++ showTag mTag  ++ ", "
+                        ++ "\"" ++ cName n ++ "\""
+                        ++ ");"
+        case mConstr of
+            Just constr => do
+                emit fc $ "if (!" ++ constr ++ ") {"
+                increaseIndentation
+                emit fc $ constr ++ createNewConstructor
+                decreaseIndentation
+                emit fc "}"
+                fillConstructorArgs env constr args 0
+                pure $ MkRS ("(Value*)" ++ constr) ("(Value*)" ++ constr)
+            Nothing => do
+                c <- getNextCounter
+                let constr = "constructor_" ++ (show c)
+                emit fc $ "Value_Constructor* " ++ constr ++ createNewConstructor
+                emit fc $ " // constructor " ++ cName n
+                fillConstructorArgs env constr args 0
+                pure $ MkRS ("(Value*)" ++ constr) ("(Value*)" ++ constr)
     cStatementsFromANF (AOp fc _ op args) _ = do
-        argsVec <- cArgsVectANF args
-        let opStatement = cOp op argsVec
-        pure $ MkRS opStatement opStatement
+        c <- getNextCounter
+        let resultVar = "primVar_" ++ (show c)
+        let argsVect = map (avarToC !(get EnvTracker)) args
+        emit fc $ "Value *" ++ resultVar ++ " = " ++ cOp op argsVect ++ ";"
+        -- Removing arguments that apply to primitive functions
+        removeVars (foldl (\acc, elem => elem :: acc) [] (map varName args))
+        pure $ MkRS resultVar resultVar
     cStatementsFromANF (AExtPrim fc _ p args) _ = do
         let prims : List String =
             ["prim__newIORef", "prim__readIORef", "prim__writeIORef", "prim__newArray",
@@ -533,51 +629,81 @@ mutual
         let sc' = varName sc
         switchReturnVar <- getNewVarThatWillNotBeFreedAtEndOfBlock
         emit fc "Value * \{switchReturnVar} = NULL;"
+        env <- get EnvTracker
         _ <- foldlC (\els, (MkAConAlt name coninfo tag args body) => do
+            let conArgs = ALocal <$> args
+            let ownedWithArgs = union (fromList conArgs) env.owned
+            let (shouldDrop, actualOwned) = dropUnusedOwnedVars ownedWithArgs (freeVariables body)
+            let usedCons = usedConstructors body
+            let (dropReuseCons, actualReuseMap) = dropUnusedReuseCons env.reuseMap usedCons
             case tag of
                 Nothing   => emit emptyFC "\{els}if (! strcmp(((Value_Constructor *)\{sc'})->name, \{cStringQuoted $ cName name})) {"
                 Just tag' => emit emptyFC "\{els}if (((Value_Constructor *)\{sc'})->tag == \{show tag'}) {"
-            concaseBody switchReturnVar sc' args body tailPosition
+            increaseIndentation
+            _ <- foldlC (\k, arg => do
+                emit emptyFC "Value *var_\{show arg} = ((Value_Constructor*)\{sc'})->args[\{show k}];"
+                pure (S k) ) 0 args
+            (shouldDrop, actualReuseMap) <- addReuseConstructor env.reuseMap sc' name (varName <$> conArgs) usedCons shouldDrop actualReuseMap
+            removeVars shouldDrop
+            removeReuseConstructors dropReuseCons
+            put EnvTracker ({owned := actualOwned, reuseMap := actualReuseMap} env)
+            assignment <- cStatementsFromANF body tailPosition
+            emit emptyFC "\{switchReturnVar} = \{callByPosition tailPosition assignment};"
+            decreaseIndentation
             pure "} else ") "" alts
-
         case mDef of
             Nothing => pure ()
             Just body => do
+                let (shouldDrop, actualOwned) = dropUnusedOwnedVars env.owned (freeVariables body)
+                let usedCons = usedConstructors body
+                let (dropReuseCons, actualReuseMap) = dropUnusedReuseCons env.reuseMap usedCons
                 emit emptyFC "} else {"
-                concaseBody switchReturnVar "" [] body tailPosition
+                put EnvTracker ({owned := actualOwned, reuseMap := actualReuseMap} env)
+                concaseBody shouldDrop dropReuseCons switchReturnVar "" [] body tailPosition
         emit emptyFC "}"
         pure $ MkRS switchReturnVar switchReturnVar
-
     cStatementsFromANF (AConstCase fc sc alts def) tailPosition = do
         let sc' = varName sc
         switchReturnVar <- getNewVarThatWillNotBeFreedAtEndOfBlock
         emit fc "Value *\{switchReturnVar} = NULL;"
-
+        env <- get EnvTracker
         case integer_switch alts of
             True => do
                 tmpint <- getNewVarThatWillNotBeFreedAtEndOfBlock
                 emit emptyFC "int \{tmpint} = extractInt(\{sc'});"
                 _ <- foldlC (\els, (MkAConstAlt c body) => do
+                    let (shouldDrop, actualOwned) = dropUnusedOwnedVars env.owned (freeVariables body)
+                    let usedCons = usedConstructors body
+                    let (dropReuseCons, actualReuseMap) = dropUnusedReuseCons env.reuseMap usedCons
                     emit emptyFC "\{els}if (\{tmpint} == \{show $ const2Integer c 0}) {"
-                    concaseBody switchReturnVar "" [] body tailPosition
-                    pure "} else " ) "" alts
+                    put EnvTracker ({owned := actualOwned, reuseMap := actualReuseMap} env)
+                    concaseBody shouldDrop dropReuseCons switchReturnVar "" [] body tailPosition
+                    pure "} else ") "" alts
                 pure ()
 
             False => do
                 _ <- foldlC (\els, (MkAConstAlt c body) => do
+                    let (shouldDrop, actualOwned) = dropUnusedOwnedVars env.owned (freeVariables body)
+                    let usedCons = usedConstructors body
+                    let (dropReuseCons, actualReuseMap) = dropUnusedReuseCons env.reuseMap usedCons
                     case c of
                         Str x => emit emptyFC "\{els}if (! strcmp(\{cStringQuoted x}, ((Value_String *)\{sc'})->str)) {"
                         Db  x => emit emptyFC "\{els}if (((Value_Double *)\{sc'})->d == \{show x}) {"
                         x => throw $ InternalError "[refc] AConstCase : unsupported type. \{show fc} \{show x}"
-                    concaseBody switchReturnVar "" [] body tailPosition
-                    pure "} else " ) "" alts
+                    put EnvTracker ({owned := actualOwned, reuseMap := actualReuseMap} env)
+                    concaseBody shouldDrop dropReuseCons switchReturnVar "" [] body tailPosition
+                    pure "} else ") "" alts
                 pure ()
 
         case def of
             Nothing => pure ()
             Just body => do
+                let (shouldDrop, actualOwned) = dropUnusedOwnedVars env.owned (freeVariables body)
+                let usedCons = usedConstructors body
+                let (dropReuseCons, actualReuseMap) = dropUnusedReuseCons env.reuseMap usedCons
                 emit emptyFC "} else {"
-                concaseBody switchReturnVar "" [] body tailPosition
+                put EnvTracker ({owned := actualOwned, reuseMap := actualReuseMap} env)
+                concaseBody shouldDrop dropReuseCons switchReturnVar "" [] body tailPosition
         emit emptyFC "}"
         pure $ MkRS switchReturnVar switchReturnVar
 
@@ -586,10 +712,6 @@ mutual
     cStatementsFromANF (ACrash fc x) _ = do
         emit fc $ "// CRASH"
         pure $ MkRS "NULL" "NULL"
-
-
-
-
 
 addCommaToList : List String -> List String
 addCommaToList [] = []
@@ -725,7 +847,6 @@ additionalFFIStub name argTypes retType =
 createCFunctions : {auto c : Ref Ctxt Defs}
                 -> {auto a : Ref ArgCounter Nat}
                 -> {auto f : Ref FunctionDefinitions (List String)}
-                -> {auto t : Ref TemporaryVariableTracker (List (List String))}
                 -> {auto oft : Ref OutfileText Output}
                 -> {auto il : Ref IndentLevel Nat}
                 -> {auto h : Ref HeaderFiles (SortedSet String)}
@@ -737,14 +858,17 @@ createCFunctions n (MkAFun args anf) = do
     fn <- functionDefSignature n args
     fn' <- functionDefSignatureArglist n
     update FunctionDefinitions $ \otherDefs => (fn ++ ";\n") :: (fn' ++ ";\n") :: otherDefs
-    newTemporaryVariableLevel
+    let argsVars = fromList $ ALocal <$> args
+    let bodyFreeVars = freeVariables anf
+    let shouldDrop = difference argsVars bodyFreeVars
     let argsNrs = getArgsNrList args Z
     emit EmptyFC fn
     emit EmptyFC "{"
     increaseIndentation
+    removeVars (varName <$> SortedSet.toList shouldDrop)
+    _ <- newRef EnvTracker (MkEnv bodyFreeVars empty)
     assignment <- cStatementsFromANF anf InTailPosition
     emit EmptyFC $ "Value *returnValue = " ++ tailCall assignment ++ ";"
-    freeTmpVars
     emit EmptyFC $ "return returnValue;"
     decreaseIndentation
     emit EmptyFC  "}\n"
@@ -811,24 +935,28 @@ createCFunctions n (MkAForeign ccs fargs ret) = do
           emit EmptyFC "{"
           increaseIndentation
           emit EmptyFC $ " // ffi call to " ++ cName fctName
+          let removeVarsArgList = removeVars ((\(_, varName, _) => varName) <$> typeVarNameArgList)
           case ret of
               CFIORes CFUnit => do
                   emit EmptyFC $ cName fctName
                               ++ "("
                               ++ showSep ", " (map (\(_, vn, vt) => extractValue cLang vt vn) (discardLastArgument typeVarNameArgList))
                               ++ ");"
+                  removeVarsArgList
                   emit EmptyFC "return NULL;"
               CFIORes ret => do
                   emit EmptyFC $ cTypeOfCFType ret ++ " retVal = " ++ cName fctName
                               ++ "("
                               ++ showSep ", " (map (\(_, vn, vt) => extractValue cLang vt vn) (discardLastArgument typeVarNameArgList))
                               ++ ");"
+                  removeVarsArgList
                   emit EmptyFC $ "return (Value*)" ++ packCFType ret "retVal" ++ ";"
               _ => do
                   emit EmptyFC $ cTypeOfCFType ret ++ " retVal = " ++ cName fctName
                               ++ "("
                               ++ showSep ", " (map (\(_, vn, vt) => extractValue cLang vt vn) typeVarNameArgList)
                               ++ ");"
+                  removeVarsArgList
                   emit EmptyFC $ "return (Value*)" ++ packCFType ret "retVal" ++ ";"
 
           decreaseIndentation
@@ -851,7 +979,7 @@ header = do
       /* \{ generatedString "RefC" } */
 
       """
-    let headerFiles = Libraries.Data.SortedSet.toList !(get HeaderFiles)
+    let headerFiles = SortedSet.toList !(get HeaderFiles)
     let headerLines = map (\h => "#include <" ++ h ++ ">\n") headerFiles
     fns <- get FunctionDefinitions
     update OutfileText (appendL ([initLines] ++ headerLines ++ ["\n// function definitions"] ++ fns))
@@ -885,7 +1013,6 @@ generateCSourceFile : {auto c : Ref Ctxt Defs}
 generateCSourceFile defs outn =
   do _ <- newRef ArgCounter 0
      _ <- newRef FunctionDefinitions []
-     _ <- newRef TemporaryVariableTracker []
      _ <- newRef OutfileText DList.Nil
      _ <- newRef HeaderFiles empty
      _ <- newRef IndentLevel 0
