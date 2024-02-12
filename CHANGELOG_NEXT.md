@@ -74,3 +74,7 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Existing `System.Console.GetOpt` was extended to support errors during options
   parsing in a backward-compatible way.
+
+#### Network
+
+* Add a missing function parameter (the flag) in the C implementation of idrnet_recv_bytes
