@@ -14,8 +14,8 @@ Many of the answers in this FAQ demonstrate this philosophy, and we always
 bear this in mind when making language and library design decisions.
 
 Idris is primarily a research project, led by Edwin Brady at the University
-of St Andrews, and has benefited from SICSA (https://www.sicsa.ac.uk) and
-EPSRC (https://www.epsrc.ac.uk/) funding. This does influence some design
+of St Andrews, and has benefited from `SICSA <https://www.sicsa.ac.uk>`_ and
+`EPSRC <https://www.epsrc.ac.uk/>`_ funding. This does influence some design
 choices and implementation priorities, and means that some things are not
 as polished as we'd like. Nevertheless, we are still trying to make it as
 widely usable as we can!
@@ -23,15 +23,12 @@ widely usable as we can!
 Where can I find libraries? Is there a package manager?
 =======================================================
 
-We don't yet have a package manager, but you can still find a source of
-libraries on the wiki: https://github.com/idris-lang/Idris2/wiki/1-%5BLanguage%5D-Libraries
-
-Fortunately, the dependencies are currently not that complicated, but we'd
-still like a package manager to help! There isn't an official one yet, but
-two are in development:
-
-* Inigo: https://github.com/idris-community/inigo
-* sae: https://github.com/DoctorRyner/sae
+Idris doesn't have an official package manager, but there are a number of
+community-maintained package managers
+`listed on the wiki <https://github.com/idris-lang/Idris2/wiki/Third-party-Libraries#package-management>`_
+(`pack <https://github.com/stefan-hoeck/idris2-pack>`_ is particularly widely
+used and actively maintained). On that page you can also find a number of
+community libraries.
 
 Can Idris 2 compile itself?
 ===========================

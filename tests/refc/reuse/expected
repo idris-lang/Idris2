@@ -1,0 +1,135 @@
+2
+3
+4
+5
+2
+4
+Value *Main_insert
+(
+    Value * var_0
+,   Value * var_1
+,   Value * var_2
+);
+Value *Main_insert_arglist(Value_Arglist* arglist);
+Value *Main_insert
+(
+    Value * var_0
+,   Value * var_1
+,   Value * var_2
+)
+{
+    Value * tmp_88 = NULL;                                   // Main:6:24--6:31
+    if (((Value_Constructor *)var_2)->tag == 0) {
+        Value_Constructor* constructor_89 = NULL;
+        if (isUnique(var_2)) {
+            constructor_89 = (Value_Constructor*)var_2;
+        }
+        else {
+            removeReference(var_2);
+        }
+        removeReference(var_0);
+        if (!constructor_89) {                               // Main:7:22--7:26
+            constructor_89 = newConstructor(0, 0, "Main_Leaf");
+                                                             // Main:7:22--7:26
+        }                                                    // Main:7:22--7:26
+        Value * var_3 = (Value*)constructor_89;              // Main:7:17--7:21
+        Value_Constructor* constructor_90 = newConstructor(0, 0, "Main_Leaf");
+                                                             // Main:7:29--7:33
+         // constructor Main_Leaf                            // Main:7:29--7:33
+        Value * var_4 = (Value*)constructor_90;              // Main:7:17--7:21
+        Value_Constructor* constructor_91 = newConstructor(3, 1, "Main_Node");
+                                                             // Main:7:17--7:21
+         // constructor Main_Node                            // Main:7:17--7:21
+        constructor_91->args[0] = var_3;
+        constructor_91->args[1] = var_1;
+        constructor_91->args[2] = var_4;
+        tmp_88 = (Value*)constructor_91;
+    } else if (((Value_Constructor *)var_2)->tag == 1) {
+        Value *var_5 = ((Value_Constructor*)var_2)->args[0];
+        Value *var_6 = ((Value_Constructor*)var_2)->args[1];
+        Value *var_7 = ((Value_Constructor*)var_2)->args[2];
+        Value_Constructor* constructor_92 = NULL;
+        if (isUnique(var_2)) {
+            constructor_92 = (Value_Constructor*)var_2;
+        }
+        else {
+            newReference(var_5);
+            newReference(var_6);
+            newReference(var_7);
+            removeReference(var_2);
+        }
+        Value * tmp_93 = NULL;                               // Prelude.EqOrd:121:3--121:6
+        if (((Value_Constructor *)var_0)->tag == 0) {
+            Value *var_8 = ((Value_Constructor*)var_0)->args[0];
+            Value *var_9 = ((Value_Constructor*)var_0)->args[1];
+            Value *var_10 = ((Value_Constructor*)var_0)->args[2];
+            Value *var_11 = ((Value_Constructor*)var_0)->args[3];
+            Value *var_12 = ((Value_Constructor*)var_0)->args[4];
+            Value *var_13 = ((Value_Constructor*)var_0)->args[5];
+            Value *var_14 = ((Value_Constructor*)var_0)->args[6];
+            Value *var_15 = ((Value_Constructor*)var_0)->args[7];
+            newReference(var_10);
+            Value * var_16 = apply_closure(var_10, newReference(var_1));
+                                                             // Prelude.EqOrd:121:3--121:6
+            tmp_93 = apply_closure(var_16, newReference(var_6));
+        }
+        Value * var_19 = tmp_93;
+        Value *tmp_94 = NULL;
+        int tmp_95 = extractInt(var_19);
+        if (tmp_95 == 1) {
+            removeReference(var_19);
+            // start Main_insert(var_0, var_1, var_5)        // Main:8:48--8:54
+            Value_Arglist *arglist_96 = newArglist(0,3);
+            arglist_96->args[0] = var_0;
+            arglist_96->args[1] = var_1;
+            arglist_96->args[2] = var_5;
+            Value *(*fPtr_97)(Value_Arglist*) = Main_insert_arglist;
+                                                             // Main:8:48--8:54
+            Value *closure_97 = (Value*)makeClosureFromArglist(fPtr_97, arglist_96);
+                                                             // Main:8:48--8:54
+            // end   Main_insert(var_0, var_1, var_5)        // Main:8:48--8:54
+            Value * var_17 = trampoline(closure_97);         // Main:8:42--8:46
+            if (!constructor_92) {                           // Main:8:42--8:46
+                constructor_92 = newConstructor(3, 1, "Main_Node");
+                                                             // Main:8:42--8:46
+            }                                                // Main:8:42--8:46
+            constructor_92->args[0] = var_17;
+            constructor_92->args[1] = var_6;
+            constructor_92->args[2] = var_7;
+            tmp_94 = (Value*)constructor_92;
+        } else if (tmp_95 == 0) {
+            removeReference(var_19);
+            // start Main_insert(var_0, var_1, var_7)        // Main:9:52--9:58
+            Value_Arglist *arglist_98 = newArglist(0,3);
+            arglist_98->args[0] = var_0;
+            arglist_98->args[1] = var_1;
+            arglist_98->args[2] = var_7;
+            Value *(*fPtr_99)(Value_Arglist*) = Main_insert_arglist;
+                                                             // Main:9:52--9:58
+            Value *closure_99 = (Value*)makeClosureFromArglist(fPtr_99, arglist_98);
+                                                             // Main:9:52--9:58
+            // end   Main_insert(var_0, var_1, var_7)        // Main:9:52--9:58
+            Value * var_18 = trampoline(closure_99);         // Main:9:42--9:46
+            if (!constructor_92) {                           // Main:9:42--9:46
+                constructor_92 = newConstructor(3, 1, "Main_Node");
+                                                             // Main:9:42--9:46
+            }                                                // Main:9:42--9:46
+            constructor_92->args[0] = var_5;
+            constructor_92->args[1] = var_6;
+            constructor_92->args[2] = var_18;
+            tmp_94 = (Value*)constructor_92;
+        }
+        tmp_88 = tmp_94;
+    }
+    Value *returnValue = tmp_88;
+    return returnValue;
+}
+Value *Main_insert_arglist(Value_Arglist* arglist)
+{
+    return Main_insert
+        (
+              arglist->args[0]
+            , arglist->args[1]
+            , arglist->args[2]
+        );
+}
