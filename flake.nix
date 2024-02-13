@@ -74,6 +74,9 @@
             inherit pkgs idris-emacs-src idris2Pkg;
           });
           inherit buildIdris;
+          devShells.default = pkgs.mkShell {
+            packages = idris2Pkg.buildInputs;
+          };
         };
     in lib.mkOvrOptsFlake
     (opts: flake-utils.lib.eachDefaultSystem (per-system opts) // sys-agnostic);
