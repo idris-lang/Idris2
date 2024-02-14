@@ -582,14 +582,14 @@ mutual
                 decreaseIndentation
                 emit fc "}"
                 fillConstructorArgs env constr args 0
-                pure $ "(Value*)\{constr})"
+                pure $ "(Value*)\{constr}"
             Nothing => do
                 c <- getNextCounter
                 let constr = "constructor_" ++ (show c)
                 emit fc $ "Value_Constructor* " ++ constr ++ createNewConstructor
                 emit fc $ " // constructor " ++ cName n
                 fillConstructorArgs env constr args 0
-                pure $ "(Value*)\{constr})"
+                pure $ "(Value*)\{constr}"
 
     cStatementsFromANF (AOp fc _ op args) _ = do
         c <- getNextCounter
