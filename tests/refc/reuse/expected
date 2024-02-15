@@ -121,8 +121,7 @@ Value *Main_insert
         }
         tmp_88 = tmp_94;
     }
-    Value *returnValue = tmp_88;
-    return returnValue;
+    return tmp_88;
 }
 Value *Main_insert_arglist(Value_Arglist* arglist)
 {

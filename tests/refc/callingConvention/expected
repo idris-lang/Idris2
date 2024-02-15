@@ -32,8 +32,7 @@ Value *Main_last
         // end   Main_last(var_3, var_2)                     // Main:7:20--7:24
         tmp_136 = closure_138;
     }
-    Value *returnValue = tmp_136;
-    return returnValue;
+    return tmp_136;
 }
 Value *Main_last_arglist(Value_Arglist* arglist)
 {
@@ -212,8 +211,7 @@ Value *Main_main(void)
     Value *closure_90 = (Value*)makeClosureFromArglist(fPtr_90, arglist_89);
                                                              // Main:10:8--10:12
     // end   Prelude_Basics_flip(var_8, var_9, var_10)       // Main:10:8--10:12
-    Value *returnValue = closure_90;
-    return returnValue;
+    return closure_90;
 }
 Value *Main_main_arglist(Value_Arglist* arglist)
 {
@@ -245,8 +243,7 @@ Value *Main_main_11
                                                              // Prelude.Types:1121:1--1138:48
     // end   Prelude_Types_rangeFromTo_Range__dollara(var_1, var_2, var_0)
                                                              // Prelude.Types:1121:1--1138:48
-    Value *returnValue = closure_94;
-    return returnValue;
+    return closure_94;
 }
 Value *Main_main_11_arglist(Value_Arglist* arglist)
 {
@@ -294,8 +291,7 @@ Value *Main_main_10
     Value *closure_101 = (Value*)makeClosureFromArglist(fPtr_101, arglist_100);
                                                              // Prelude.IO:98:22--98:34
     // end   Prelude_IO_prim__putStr(var_6, var_0)           // Prelude.IO:98:22--98:34
-    Value *returnValue = closure_101;
-    return returnValue;
+    return closure_101;
 }
 Value *Main_main_10_arglist(Value_Arglist* arglist)
 {
@@ -377,8 +373,7 @@ Value *Main_main_9
                                                              // Main:10:13--10:17
     // end   Prelude_Interfaces_for_(var_11, var_12, var_1, var_0)
                                                              // Main:10:13--10:17
-    Value *returnValue = closure_123;
-    return returnValue;
+    return closure_123;
 }
 Value *Main_main_9_arglist(Value_Arglist* arglist)
 {
@@ -411,8 +406,7 @@ Value *Main_main_8
                                                              // Prelude.Types:656:1--669:59
     // end   Prelude_Types_foldMap_Foldable_List(var_2, var_1, var_0)
                                                              // Prelude.Types:656:1--669:59
-    Value *returnValue = closure_125;
-    return returnValue;
+    return closure_125;
 }
 Value *Main_main_8_arglist(Value_Arglist* arglist)
 {
@@ -432,8 +426,7 @@ Value *Main_main_7
 )
 {
     removeReference(var_1);
-    Value *returnValue = var_0;
-    return returnValue;
+    return var_0;
 }
 Value *Main_main_7_arglist(Value_Arglist* arglist)
 {
@@ -470,8 +463,7 @@ Value *Main_main_6
                                                              // Prelude.Types:656:1--669:59
     // end   Prelude_Types_foldlM_Foldable_List(var_3, var_2, var_1, var_0)
                                                              // Prelude.Types:656:1--669:59
-    Value *returnValue = closure_127;
-    return returnValue;
+    return closure_127;
 }
 Value *Main_main_6_arglist(Value_Arglist* arglist)
 {
@@ -501,8 +493,7 @@ Value *Main_main_5
     Value *closure_129 = (Value*)makeClosureFromArglist(fPtr_129, arglist_128);
                                                              // Prelude.Types:656:1--669:59
     // end   Prelude_Types_null_Foldable_List(var_0)         // Prelude.Types:656:1--669:59
-    Value *returnValue = closure_129;
-    return returnValue;
+    return closure_129;
 }
 Value *Main_main_5_arglist(Value_Arglist* arglist)
 {
@@ -535,8 +526,7 @@ Value *Main_main_4
                                                              // Prelude.Types:656:1--669:59
     // end   Prelude_Types_foldl_Foldable_List(var_2, var_1, var_0)
                                                              // Prelude.Types:656:1--669:59
-    Value *returnValue = closure_131;
-    return returnValue;
+    return closure_131;
 }
 Value *Main_main_4_arglist(Value_Arglist* arglist)
 {
@@ -572,8 +562,7 @@ Value *Main_main_3
                                                              // Prelude.Types:656:1--669:59
     // end   Prelude_Types_foldr_Foldable_List(var_2, var_1, var_0)
                                                              // Prelude.Types:656:1--669:59
-    Value *returnValue = closure_133;
-    return returnValue;
+    return closure_133;
 }
 Value *Main_main_3_arglist(Value_Arglist* arglist)
 {
@@ -600,8 +589,7 @@ Value *Main_main_2
     Value * var_5 = apply_closure(var_2, newReference(var_0));
                                                              // Prelude.IO:24:9--24:16
     Value * var_6 = apply_closure(var_1, var_0);             // Prelude.IO:25:11--25:18
-    Value *returnValue = tailcall_apply_closure(var_5, var_6);
-    return returnValue;
+    return tailcall_apply_closure(var_5, var_6);
 }
 Value *Main_main_2_arglist(Value_Arglist* arglist)
 {
@@ -623,8 +611,7 @@ Value *Main_main_1
 {
     removeReference(var_0);
     removeReference(var_2);
-    Value *returnValue = var_1;
-    return returnValue;
+    return var_1;
 }
 Value *Main_main_1_arglist(Value_Arglist* arglist)
 {
@@ -656,8 +643,7 @@ Value *Main_main_0
     Value *closure_135 = (Value*)makeClosureFromArglist(fPtr_135, arglist_134);
                                                              // Prelude.IO:15:1--17:38
     // end   Prelude_IO_map_Functor_IO(var_2, var_1, var_0)  // Prelude.IO:15:1--17:38
-    Value *returnValue = closure_135;
-    return returnValue;
+    return closure_135;
 }
 Value *Main_main_0_arglist(Value_Arglist* arglist)
 {

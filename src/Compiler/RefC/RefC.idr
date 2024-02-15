@@ -427,21 +427,7 @@ const2Integer c i =
 
 
 
--- we return for each of the ANF a set of statements and two possible return statements
--- The first one for non-tail statements, the second one for tail statements
--- this way, we can deal with tail calls and tail recursion.
--- The higher-level invocation first executes the normal statements and then
--- assign the return value
-record ReturnStatement where
-    constructor MkRS
-    nonTailCall : String
-    tailCall : String
-
 data TailPositionStatus = InTailPosition | NotInTailPosition
-
-callByPosition : TailPositionStatus -> ReturnStatement -> String
-callByPosition InTailPosition = tailCall
-callByPosition NotInTailPosition = nonTailCall
 
 ||| The function takes as arguments the current ReuseMap and the constructors that will be used.
 ||| Returns constructor variables to remove and constructors to reuse.
@@ -522,8 +508,7 @@ mutual
             pure (S k) ) 0 args
         removeVars dropVars
         removeReuseConstructors dropReuseCons
-        assignment <- cStatementsFromANF bdy tailPosition
-        emit emptyFC "\{returnvar} = \{callByPosition tailPosition assignment};"
+        emit emptyFC "\{returnvar} = \{!(cStatementsFromANF bdy tailPosition)};"
         decreaseIndentation
 
     cStatementsFromANF : {auto a : Ref ArgCounter Nat}
@@ -532,11 +517,10 @@ mutual
                       -> {auto e : Ref EnvTracker Env}
                       -> ANF
                       -> TailPositionStatus
-                      -> Core ReturnStatement
-    cStatementsFromANF (AV fc x) _ = do
-        let returnLine = avarToC !(get EnvTracker) x
-        pure $ MkRS returnLine returnLine
-    cStatementsFromANF (AAppName fc _ n args) _ = do
+                      -> Core String
+
+    cStatementsFromANF (AV fc x) _ = pure $ avarToC !(get EnvTracker) x
+    cStatementsFromANF (AAppName fc _ n args) tailPosition = do
         emit fc $ ("// start " ++ cName n ++ "(" ++ showSep ", " (map (\v => varName v) args) ++ ")")
         arglist <- makeArglist 0 args
         c <- getNextCounter
@@ -551,19 +535,23 @@ mutual
                ++ arglist
                ++ ");"
         emit fc $ ("// end   " ++ cName n ++ "(" ++ showSep ", " (map (\v => varName v) args) ++ ")")
-        pure $ MkRS ("trampoline(" ++ closure_name ++ ")") closure_name
+        pure $ case tailPosition of
+           NotInTailPosition => "trampoline(\{closure_name})"
+           InTailPosition => closure_name
     cStatementsFromANF (AUnderApp fc n missing args) _ = do
         arglist <- makeArglist missing args
         c <- getNextCounter
         let f_ptr_name = "closure_" ++ show c
         let f_ptr = "Value *(*"++ f_ptr_name ++ ")(Value_Arglist*) = "++  cName n ++ "_arglist;"
         emit fc f_ptr
-        let returnLine = "(Value*)makeClosureFromArglist(" ++ f_ptr_name  ++ ", " ++ arglist ++ ")"
-        pure $ MkRS returnLine returnLine
-    cStatementsFromANF (AApp fc _ closure arg) _ = do
-        env <- get EnvTracker
-        pure $ MkRS ("apply_closure(" ++ avarToC env closure ++ ", " ++ avarToC env arg ++ ")")
-                    ("tailcall_apply_closure(" ++ avarToC env closure ++ ", " ++ avarToC env arg ++ ")")
+        pure "(Value*)makeClosureFromArglist(\{f_ptr_name}, \{arglist})"
+
+    cStatementsFromANF (AApp fc _ closure arg) tailPosition = do
+       env <- get EnvTracker
+       pure $ (case tailPosition of
+           NotInTailPosition =>          "apply_closure"
+           InTailPosition    => "tailcall_apply_closure") ++ "(\{avarToC env closure}, \{avarToC env arg})"
+
     cStatementsFromANF (ALet fc var value body) tailPosition = do
         env <- get EnvTracker
         let usedVars = freeVariables body
@@ -573,14 +561,11 @@ mutual
         -- When translating value into C, we borrow variables that will be used in body
         let valueEnv = { reuseMap $= (`intersectionMap` usedCons) } (moveFromOwnedToBorrowed env borrowVal)
         put EnvTracker valueEnv
-        valueAssignment <- cStatementsFromANF value NotInTailPosition
-        emit fc $ "Value * var_" ++ (show var) ++ " = " ++ nonTailCall valueAssignment ++ ";"
-        unless (contains (ALocal var) usedVars) $ emit fc $ "removeReference(" ++ "var_" ++ (show var) ++ ");"
+        emit fc $ "Value * var_\{show var} = \{!(cStatementsFromANF value NotInTailPosition)};"
+        unless (contains (ALocal var) usedVars) $ emit fc $ "removeReference(var_\{show var});"
         put EnvTracker ({ owned := owned', reuseMap $= (`differenceMap` usedCons) } env)
-        bodyAssignment <- cStatementsFromANF body tailPosition
-        pure bodyAssignment
-    cStatementsFromANF (ACon fc n UNIT tag []) _ = do
-        pure $ MkRS "(Value*)NULL" "(Value*)NULL"
+        cStatementsFromANF body tailPosition
+    cStatementsFromANF (ACon fc n UNIT tag []) _ = pure "(Value*)NULL"
     cStatementsFromANF (ACon fc n _ mTag args) _ = do
         env <- get EnvTracker
         let mConstr = SortedMap.lookup n $ reuseMap env
@@ -597,14 +582,15 @@ mutual
                 decreaseIndentation
                 emit fc "}"
                 fillConstructorArgs env constr args 0
-                pure $ MkRS ("(Value*)" ++ constr) ("(Value*)" ++ constr)
+                pure $ "(Value*)\{constr}"
             Nothing => do
                 c <- getNextCounter
                 let constr = "constructor_" ++ (show c)
                 emit fc $ "Value_Constructor* " ++ constr ++ createNewConstructor
                 emit fc $ " // constructor " ++ cName n
                 fillConstructorArgs env constr args 0
-                pure $ MkRS ("(Value*)" ++ constr) ("(Value*)" ++ constr)
+                pure $ "(Value*)\{constr}"
+
     cStatementsFromANF (AOp fc _ op args) _ = do
         c <- getNextCounter
         let resultVar = "primVar_" ++ (show c)
@@ -612,7 +598,8 @@ mutual
         emit fc $ "Value *" ++ resultVar ++ " = " ++ cOp op argsVect ++ ";"
         -- Removing arguments that apply to primitive functions
         removeVars (foldl (\acc, elem => elem :: acc) [] (map varName args))
-        pure $ MkRS resultVar resultVar
+        pure resultVar
+
     cStatementsFromANF (AExtPrim fc _ p args) _ = do
         let prims : List String =
             ["prim__newIORef", "prim__readIORef", "prim__writeIORef", "prim__newArray",
@@ -623,8 +610,7 @@ mutual
                unless (elem pn prims) $ throw $ InternalError $ "INTERNAL ERROR: Unknown primitive: " ++ cName p
             _ => throw $ InternalError $ "INTERNAL ERROR: Unknown primitive: " ++ cName p
         emit fc $ "// call to external primitive " ++ cName p
-        let returnLine = "idris2_" ++ (cName p) ++ "("++ showSep ", " (map varName args) ++")"
-        pure $ MkRS returnLine returnLine
+        pure $ "idris2_\{cName p}("++ showSep ", " (map varName args) ++")"
     cStatementsFromANF (AConCase fc sc alts mDef) tailPosition = do
         let sc' = varName sc
         switchReturnVar <- getNewVarThatWillNotBeFreedAtEndOfBlock
@@ -647,8 +633,7 @@ mutual
             removeVars shouldDrop
             removeReuseConstructors dropReuseCons
             put EnvTracker ({owned := actualOwned, reuseMap := actualReuseMap} env)
-            assignment <- cStatementsFromANF body tailPosition
-            emit emptyFC "\{switchReturnVar} = \{callByPosition tailPosition assignment};"
+            emit emptyFC "\{switchReturnVar} = \{!(cStatementsFromANF body tailPosition)};"
             decreaseIndentation
             pure "} else ") "" alts
         case mDef of
@@ -661,7 +646,8 @@ mutual
                 put EnvTracker ({owned := actualOwned, reuseMap := actualReuseMap} env)
                 concaseBody shouldDrop dropReuseCons switchReturnVar "" [] body tailPosition
         emit emptyFC "}"
-        pure $ MkRS switchReturnVar switchReturnVar
+        pure switchReturnVar
+
     cStatementsFromANF (AConstCase fc sc alts def) tailPosition = do
         let sc' = varName sc
         switchReturnVar <- getNewVarThatWillNotBeFreedAtEndOfBlock
@@ -705,13 +691,11 @@ mutual
                 put EnvTracker ({owned := actualOwned, reuseMap := actualReuseMap} env)
                 concaseBody shouldDrop dropReuseCons switchReturnVar "" [] body tailPosition
         emit emptyFC "}"
-        pure $ MkRS switchReturnVar switchReturnVar
+        pure switchReturnVar
 
-    cStatementsFromANF (APrimVal fc c) _ = pure $ MkRS (cConstant c) (cConstant c)
-    cStatementsFromANF (AErased fc) _ = pure $ MkRS "NULL" "NULL"
-    cStatementsFromANF (ACrash fc x) _ = do
-        emit fc $ "// CRASH"
-        pure $ MkRS "NULL" "NULL"
+    cStatementsFromANF (APrimVal fc c) _ = pure $ cConstant c
+    cStatementsFromANF (AErased fc) _ = pure "NULL"
+    cStatementsFromANF (ACrash fc x) _ = pure "(NULL /* CRASH */)"
 
 addCommaToList : List String -> List String
 addCommaToList [] = []
@@ -867,9 +851,7 @@ createCFunctions n (MkAFun args anf) = do
     increaseIndentation
     removeVars (varName <$> SortedSet.toList shouldDrop)
     _ <- newRef EnvTracker (MkEnv bodyFreeVars empty)
-    assignment <- cStatementsFromANF anf InTailPosition
-    emit EmptyFC $ "Value *returnValue = " ++ tailCall assignment ++ ";"
-    emit EmptyFC $ "return returnValue;"
+    emit EmptyFC $ "return \{!(cStatementsFromANF anf InTailPosition)};"
     decreaseIndentation
     emit EmptyFC  "}\n"
     emit EmptyFC  ""
