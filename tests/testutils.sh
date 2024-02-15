@@ -17,6 +17,10 @@ else
     unset VALGRIND
 fi
 
+sort() {
+    LC_ALL=C.UTF-8 /usr/bin/sort
+}
+
 idris2() {
     $idris2 --no-banner --console-width 0 --no-color "$@"
 }
