@@ -17,10 +17,6 @@ else
     unset VALGRIND
 fi
 
-sort() {
-    LC_ALL=C.UTF-8 /usr/bin/sort
-}
-
 idris2() {
     $idris2 --no-banner --console-width 0 --no-color "$@"
 }
@@ -31,6 +27,11 @@ check() {
 
 run() {
     idris2 --exec main "$@"
+}
+
+sort=$(which sort)
+sort() {
+    LC_ALL=C.UTF-8 $sort
 }
 
 # Escape a string as a sed pattern literal
