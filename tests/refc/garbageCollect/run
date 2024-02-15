@@ -1,4 +1,4 @@
 . ../../testutils.sh
 
 idris2 --cg refc -o testGC TestGarbageCollect.idr
-$VALGRIND ./build/exec/testGC | sort
+$VALGRIND ./build/exec/testGC | safesort
