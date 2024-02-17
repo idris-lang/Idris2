@@ -619,8 +619,8 @@ mutual
         emit fc "Value * \{switchReturnVar} = NULL;"
         env <- get EnvTracker
         _ <- foldlC (\els, (MkAConAlt name coninfo tag args body) => do
-            if coninfo == NIL || coninfo == NOTHING || coninfo == ZERO || coninfo == UNIT
-                then emit emptyFC "\{els}if (NULL == \{sc'} /* \{show name} \{show coninfo} */) {"
+            let erased = coninfo == NIL || coninfo == NOTHING || coninfo == ZERO || coninfo == UNIT
+            if erased then emit emptyFC "\{els}if (NULL == \{sc'} /* \{show name} \{show coninfo} */) {"
                 else if coninfo == CONS || coninfo == JUST || coninfo == SUCC
                 then emit emptyFC "\{els}if (NULL != \{sc'} /* \{show name} \{show coninfo} */) {"
                 else do
@@ -629,7 +629,8 @@ mutual
                         Just tag' => emit emptyFC "\{els}if (((Value_Constructor *)\{sc'})->tag == \{show tag'}) {"
 
             let conArgs = ALocal <$> args
-            let ownedWithArgs = union (fromList conArgs) env.owned
+            let owned = if erased then delete sc env.owned else env.owned
+            let ownedWithArgs = union (fromList conArgs) owned
             let (shouldDrop, actualOwned) = dropUnusedOwnedVars ownedWithArgs (freeVariables body)
             let usedCons = usedConstructors body
             let (dropReuseCons, actualReuseMap) = dropUnusedReuseCons env.reuseMap usedCons
