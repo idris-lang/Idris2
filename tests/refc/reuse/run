@@ -1,0 +1,5 @@
+rm -rf build
+
+$1 --no-banner --no-color --console-width 0 --cg refc -o main Main.idr > /dev/null
+$VALGRIND ./build/exec/main
+awk -v RS= '/Value \*Main_insert/' build/exec/main.c

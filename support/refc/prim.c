@@ -112,7 +112,7 @@ Value *idris2_Prelude_IO_prim__onCollect(Value *_erased, Value *_anyPtr,
   Value_GCPointer *retVal = IDRIS2_NEW_VALUE(Value_GCPointer);
   retVal->header.tag = GC_POINTER_TAG;
   retVal->p = (Value_Pointer *)newReference(_anyPtr);
-  retVal->onCollectFct = (Value_Closure *)newReference(_freeingFunction);
+  retVal->onCollectFct = (Value_Closure *)_freeingFunction;
   return (Value *)retVal;
 }
 
@@ -122,7 +122,7 @@ Value *idris2_Prelude_IO_prim__onCollectAny(Value *_anyPtr,
   Value_GCPointer *retVal = IDRIS2_NEW_VALUE(Value_GCPointer);
   retVal->header.tag = GC_POINTER_TAG;
   retVal->p = (Value_Pointer *)newReference(_anyPtr);
-  retVal->onCollectFct = (Value_Closure *)newReference(_freeingFunction);
+  retVal->onCollectFct = (Value_Closure *)_freeingFunction;
   return (Value *)retVal;
 }
 
