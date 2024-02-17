@@ -130,6 +130,18 @@ Set the expression search timeout in milliseconds.  The default is 1000.
 Set the maximum number of stuck applications allowed while unifying a meta. The
 default value is 25.
 
+``%cg``
+--------------------
+
+Codegen directives can be included in source code with the ``%cg`` pragma. For example, instead of
+using ``--directive extraRuntime=mycode.ss`` on the command line for the chez backend, you can write:
+
+.. code-block:: idris
+
+    %cg chez extraRuntime=mycode.ss
+
+See the code generator documentation for available directives.
+
 Pragmas on declarations
 =======================
 
