@@ -626,7 +626,7 @@ mutual
                 else do
                     case tag of
                         Nothing   => emit emptyFC "\{els}if (! strcmp(((Value_Constructor *)\{sc'})->name, idris2_constr_\{cName name})) {"
-                        Just tag' => emit emptyFC "\{els}if (((Value_Constructor *)\{sc'})->tag == \{show tag'}) {"
+                        Just tag' => emit emptyFC "\{els}if (((Value_Constructor *)\{sc'})->tag == \{show tag'} /* \{show name} */) {"
 
             let conArgs = ALocal <$> args
             let owned = if erased then delete sc env.owned else env.owned

@@ -51,10 +51,6 @@ void removeReuseConstructor(Value_Constructor *constr) {
                      (long long)constr->header.refCounter);
   constr->header.refCounter--;
   if (constr->header.refCounter == 0) {
-    if (constr->name) {
-      free(constr->name);
-    }
-    free(constr->args);
     free(constr);
   }
 }
