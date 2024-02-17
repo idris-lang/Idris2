@@ -12,7 +12,6 @@ Value *Main_last
 {
     Value * tmp_134 = NULL;                                  // Main:5:8--5:14
     if (NULL == var_0 /* Prelude.Basics.Nil [nil] */) {
-        removeReference(var_0);
         tmp_134 = var_1;
     } else if (NULL != var_0 /* Prelude.Basics.(::) [cons] */) {
         Value *var_2 = ((Value_Constructor*)var_0)->args[0];
