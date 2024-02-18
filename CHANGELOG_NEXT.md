@@ -26,6 +26,14 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 ### Language changes
 
+### Backend changes
+
+#### RefC
+
+* Compiler can emit precise reference counting instructions where a reference
+  is dropped as soon as possible. This allows you to reuse unique variables and
+  optimize memory consumption.
+
 ### Compiler changes
 
 #### RefC Backend
@@ -34,6 +42,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Fix memory leaks of IORef. Now that IORef holds values by itself,
   global_IORef_Storage is no longer needed.
+
+* Pattern matching generates simpler code. This reduces malloc/free and memory
+  consumption. It also makes debugging easier.
 
 * Unbox Bits32,Bits16,Bits8,Int32,Int16,Int8. These types are now packed into
   Value*.
@@ -68,3 +79,7 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Existing `System.Console.GetOpt` was extended to support errors during options
   parsing in a backward-compatible way.
+
+#### Network
+
+* Add a missing function parameter (the flag) in the C implementation of idrnet_recv_bytes

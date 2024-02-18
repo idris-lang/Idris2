@@ -1,0 +1,4 @@
+. ../../testutils.sh
+
+idris2 --cg refc -o main Main.idr
+$VALGRIND ./build/exec/main

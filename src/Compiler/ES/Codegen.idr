@@ -749,14 +749,14 @@ def (MkFunction n as body) = do
   mde  <- mode <$> get ESs
   b    <- stmt Returns body >>= stmt
   let cmt = comment $ hsep (shown n :: toList ((":" <++>) <$> mty))
-  case args of
+  if null args && n /= mainExpr
     -- zero argument toplevel functions are converted to
-    -- lazily evaluated constants.
-    [] => pure $ printDoc mde $ vcat
+    -- lazily evaluated constants (except the main expression).
+    then pure $ printDoc mde $ vcat
           [ cmt
           , constant (var !(get NoMangleMap) ref)
                ("__lazy(" <+> function neutral [] b <+> ")") ]
-    _  => pure $ printDoc mde $ vcat
+    else pure $ printDoc mde $ vcat
           [ cmt
           , function (var !(get NoMangleMap) ref)
                (map (var !(get NoMangleMap)) args) b ]

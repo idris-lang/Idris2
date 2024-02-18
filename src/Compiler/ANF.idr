@@ -9,6 +9,7 @@ import Core.TT
 
 import Data.List
 import Data.Vect
+import Libraries.Data.SortedSet
 
 %default covering
 
@@ -65,6 +66,19 @@ mutual
   Show AVar where
     show (ALocal i) = "v" ++ show i
     show ANull = "[__]"
+
+  export
+  Eq AVar where
+    (ALocal i1) == (ALocal i2) = i1 == i2
+    ANull == ANull = True
+    _ == _ = False
+
+  export
+  Ord AVar where
+    compare (ALocal i1) (ALocal i2) = compare i1 i2
+    compare (ALocal _) ANull = GT
+    compare ANull (ALocal _) = LT
+    compare ANull ANull = EQ
 
   export
   covering
@@ -267,3 +281,55 @@ toANF (MkLForeign ccs fargs t) = pure $ MkAForeign ccs fargs t
 toANF (MkLError err)
     = do v <- newRef Next (the Int 0)
          pure $ MkAError !(anf [] err)
+
+export
+freeVariables : ANF -> SortedSet AVar
+freeVariables (AV _ x) = singleton x
+freeVariables (AAppName _ _ n args) = fromList args
+freeVariables (AUnderApp _ n _ args) = fromList args
+freeVariables (AApp _ _ closure arg) = fromList [closure, arg]
+freeVariables (ALet _ var value body) =
+    union (freeVariables value) (delete (ALocal var) $ freeVariables body)
+freeVariables (ACon _ _ _ _ args) = fromList args
+freeVariables (AOp _ _ _ args) = fromList $ foldl (\acc, elem => elem :: acc) [] args
+freeVariables (AExtPrim _ _ _ args) = fromList args
+freeVariables (AConCase _ sc alts mDef) =
+    let altsAnf =
+        map (\(MkAConAlt _ _ _ args caseBody) =>
+                difference (freeVariables caseBody) (fromList $ ALocal <$> args)) alts in
+    let vars : List (SortedSet AVar) = case mDef of
+                Just anf => freeVariables anf :: altsAnf
+                Nothing => altsAnf in
+    insert sc $ concat vars
+freeVariables (AConstCase _ sc alts mDef) =
+    let altsAnf = map (\(MkAConstAlt _ caseBody) => caseBody) alts in
+    let anfs : List ANF = case mDef of
+                Just anf => anf :: altsAnf
+                Nothing => altsAnf in
+    insert sc $ foldMap freeVariables anfs
+freeVariables _ = empty
+
+export
+usedConstructors : ANF -> SortedSet Name
+usedConstructors (AV _ x) = empty
+usedConstructors (AAppName _ _ n args) = empty
+usedConstructors (AUnderApp _ n _ args) = empty
+usedConstructors (AApp _ _ closure arg) = empty
+usedConstructors (ALet _ var value body) = union (usedConstructors value) (usedConstructors body)
+usedConstructors (ACon _ n _ _ args) = singleton n
+usedConstructors (AOp _ _ _ args) = empty
+usedConstructors (AExtPrim _ _ _ args) = empty
+usedConstructors (AConCase _ sc alts mDef) =
+    let altsAnf =
+        map (\(MkAConAlt _ _ _ args caseBody) => usedConstructors caseBody) alts in
+    let anfs : List (SortedSet Name) = case mDef of
+                Just anf => usedConstructors anf :: altsAnf
+                Nothing => altsAnf in
+    concat anfs
+usedConstructors (AConstCase _ sc alts mDef) =
+    let altsAnf = map (\(MkAConstAlt _ caseBody) => caseBody) alts in
+    let anfs : List ANF = case mDef of
+                Just anf => anf :: altsAnf
+                Nothing => altsAnf in
+    foldMap usedConstructors anfs
+usedConstructors _ = empty
