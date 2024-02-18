@@ -140,7 +140,16 @@ using ``--directive extraRuntime=mycode.ss`` on the command line for the chez ba
 
     %cg chez extraRuntime=mycode.ss
 
-See the code generator documentation for available directives.
+The ``%cg`` pragma is followed by the name of a codegen and a directive for that codegen, terminated by
+newline.  Directives from imported modules, including transitive imports, will aggregate. All of the
+directives given in the source are stored in the module, but only the directives for the current codegen
+are used at link time.
+
+How directives are treated in aggregate depends on the codegen and directive. For example, the
+``extraRuntime`` directive for the Chez codegen is deduplicated.  And the javascript backend gives
+the ``minimal`` directive priority over the ``compact`` directive if both are present.
+
+See the section for each codegen under :ref:`sect-execs` for available directives.
 
 Pragmas on declarations
 =======================
