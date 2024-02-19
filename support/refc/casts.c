@@ -73,14 +73,14 @@ Value *idris2_cast_Int64_to_string(Value *input) {
   return (Value *)retVal;
 }
 
-Value *cast_Double_to_Integer(Value *input) {
+Value *idris2_cast_Double_to_Integer(Value *input) {
   Value_Integer *retVal = idris2_mkInteger();
   mpz_set_d(retVal->i, idris2_vp_to_Double(input));
 
   return (Value *)retVal;
 }
 
-Value *cast_Double_to_string(Value *input) {
+Value *idris2_cast_Double_to_string(Value *input) {
   double x = idris2_vp_to_Double(input);
 
   int l = snprintf(NULL, 0, "%f", x);
