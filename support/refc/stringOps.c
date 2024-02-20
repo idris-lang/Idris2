@@ -92,7 +92,7 @@ char *fastPack(Value *charList) {
 
   int l = 0;
   current = (Value_Constructor *)charList;
-  while (current->total == 2) {
+  while (current != NULL) {
     l++;
     current = (Value_Constructor *)current->args[1];
   }
@@ -102,7 +102,7 @@ char *fastPack(Value *charList) {
 
   int i = 0;
   current = (Value_Constructor *)charList;
-  while (current->total == 2) {
+  while (current != NULL) {
     retVal[i++] = ((Value_Char *)current->args[0])->c;
     current = (Value_Constructor *)current->args[1];
   }
@@ -112,25 +112,24 @@ char *fastPack(Value *charList) {
 
 Value *fastUnpack(char *str) {
   if (str[0] == '\0') {
-    return (Value *)newConstructor(0, 0, "Prelude_Types_Nil");
+    return (Value *)NULL;
   }
 
-  Value_Constructor *retVal =
-      newConstructor(2, 1, "Prelude_Types__colon_colon");
+  Value_Constructor *retVal = newConstructor(2, 1);
   retVal->args[0] = (Value *)makeChar(str[0]);
 
   int i = 1;
   Value_Constructor *current = retVal;
   Value_Constructor *next;
   while (str[i] != '\0') {
-    next = newConstructor(2, 1, "Prelude_Types__colon_colon");
+    next = newConstructor(2, 1);
     next->args[0] = (Value *)makeChar(str[i]);
     current->args[1] = (Value *)next;
 
     i++;
     current = next;
   }
-  current->args[1] = (Value *)newConstructor(0, 0, "Prelude_Types_Nil");
+  current->args[1] = (Value *)NULL;
 
   return (Value *)retVal;
 }
@@ -140,7 +139,7 @@ char *fastConcat(Value *strList) {
 
   int totalLength = 0;
   current = (Value_Constructor *)strList;
-  while (current->total == 2) {
+  while (current != NULL) {
     totalLength += strlen(((Value_String *)current->args[0])->str);
     current = (Value_Constructor *)current->args[1];
   }
@@ -152,7 +151,7 @@ char *fastConcat(Value *strList) {
   int currentStrLen;
   int offset = 0;
   current = (Value_Constructor *)strList;
-  while (current->total == 2) {
+  while (current != NULL) {
     currentStr = ((Value_String *)current->args[0])->str;
     currentStrLen = strlen(currentStr);
     memcpy(retVal + offset, currentStr, currentStrLen);
@@ -209,13 +208,12 @@ Value *stringIteratorNext(char *s, Value *it_p) {
   char c = it->str[it->pos];
 
   if (c == '\0') {
-    return (Value *)newConstructor(0, 0, "Data_String_Iterator_EOF");
+    return (Value *)NULL;
   }
 
   it->pos++; // Ok to do this as StringIterator linear
 
-  Value_Constructor *retVal =
-      newConstructor(2, 1, "Data_String_Iterator_Character");
+  Value_Constructor *retVal = newConstructor(2, 1);
   retVal->args[0] = (Value *)makeChar(c);
   retVal->args[1] = newReference(it_p);
 

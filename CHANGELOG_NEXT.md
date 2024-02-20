@@ -46,6 +46,12 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Pattern matching generates simpler code. This reduces malloc/free and memory
   consumption. It also makes debugging easier.
 
+* Stopped useless string copying in the constructor to save memory. Also, name
+  generation was stopped for constructors that have tags.
+
+* Special constructors such as Nil and Nothing were eliminated and assigned to
+  NULL.
+
 #### NodeJS Backend
 
 * The NodeJS executable output to `build/exec/` now has its executable bit set.
