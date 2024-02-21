@@ -46,6 +46,12 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Pattern matching generates simpler code. This reduces malloc/free and memory
   consumption. It also makes debugging easier.
 
+* Stopped useless string copying in the constructor to save memory. Also, name
+  generation was stopped for constructors that have tags.
+
+* Special constructors such as Nil and Nothing were eliminated and assigned to
+  NULL.
+
 * Unbox Bits32,Bits16,Bits8,Int32,Int16,Int8. These types are now packed into
   Value*.
 

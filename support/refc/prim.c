@@ -231,3 +231,17 @@ Value *System_Concurrency_Raw_prim__conditionBroadcast(Value *_condition,
   IDRIS2_REFC_VERIFY(!r, "pthread_cond_broadcast failed: %s", strerror(r));
   return NULL;
 }
+
+char const idris2_constr_Int[] = "Int";
+char const idris2_constr_Int8[] = "Int8";
+char const idris2_constr_Int16[] = "Int16";
+char const idris2_constr_Int32[] = "Int32";
+char const idris2_constr_Int64[] = "Int64";
+char const idris2_constr_Bits8[] = "Bits8";
+char const idris2_constr_Bits16[] = "Bits16";
+char const idris2_constr_Bits32[] = "Bits32";
+char const idris2_constr_Bits64[] = "Bits64";
+char const idris2_constr_Double[] = "Double";
+char const idris2_constr_Integer[] = "Integer";
+char const idris2_constr_Char[] = "Char";
+char const idris2_constr_String[] = "String";

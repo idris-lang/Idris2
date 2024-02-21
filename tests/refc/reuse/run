@@ -1,5 +1,5 @@
-rm -rf build
+. ../../testutils.sh
 
-$1 --no-banner --no-color --console-width 0 --cg refc -o main Main.idr > /dev/null
+idris2 --cg refc -o main Main.idr
 $VALGRIND ./build/exec/main
 awk -v RS= '/Value \*Main_insert/' build/exec/main.c
