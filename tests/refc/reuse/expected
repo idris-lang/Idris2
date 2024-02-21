@@ -75,7 +75,7 @@ Value *Main_insert
         }
         Value * var_19 = tmp_93;
         Value *tmp_94 = NULL;
-        int tmp_95 = extractInt(var_19);
+        int tmp_95 = idris2_extractInt(var_19);
         if (tmp_95 == 1) {
             removeReference(var_19);
             // start Main_insert(var_0, var_1, var_5)        // Main:8:48--8:54

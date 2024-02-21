@@ -136,7 +136,7 @@ int idris2_extractInt(Value *v) {
 }
 
 Value *trampoline(Value *closure) {
-  if (idris2_vp_is_unboxed(closure))
+  if (!closure || idris2_vp_is_unboxed(closure))
     return closure;
 
   fun_ptr_t f = ((Value_Closure *)closure)->f;
@@ -146,7 +146,6 @@ Value *trampoline(Value *closure) {
   while (1) {
     Value *retVal = f(arglist);
     deconstructArglist(arglist);
-    removeReference((Value *)arglist);
     if (!retVal || idris2_vp_is_unboxed(retVal) ||
         retVal->header.tag != COMPLETE_CLOSURE_TAG) {
       return retVal;
