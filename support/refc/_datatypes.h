@@ -48,10 +48,12 @@ typedef struct {
 /* expcted at least 4bytes for Value_header alignment. */
 #define idris2_vp_is_unboxed(p) ((uintptr_t)(p)&3)
 
-#define idris2_vp_int_shift ((sizeof(Value *) == 4) ? 16 : 32)
+#define idris2_vp_int_shift                                                    \
+  ((sizeof(uintptr_t) >= 8 && sizeof(Value *) >= 8) ? 32 : 16)
+
 #define idris2_vp_to_Bits64(p) (((Value_Bits64 *)(p))->ui64)
 #define idris2_vp_to_Bits32(p)                                                 \
-  ((sizeof(Value *) == 4)                                                      \
+  ((idris2_vp_int_shift == 16)                                                 \
        ? (((Value_Bits32 *)(p))->ui32)                                         \
        : ((uint32_t)((uintptr_t)(p) >> idris2_vp_int_shift)))
 #define idris2_vp_to_Bits16(p)                                                 \
@@ -59,7 +61,7 @@ typedef struct {
 #define idris2_vp_to_Bits8(p) ((uint8_t)((uintptr_t)(p) >> idris2_vp_int_shift))
 #define idris2_vp_to_Int64(p) (((Value_Int64 *)(p))->i64)
 #define idris2_vp_to_Int32(p)                                                  \
-  ((sizeof(Value *) == 4)                                                      \
+  ((idris2_vp_int_shift == 16)                                                 \
        ? (((Value_Int32 *)(p))->i32)                                           \
        : ((int32_t)((uintptr_t)(p) >> idris2_vp_int_shift)))
 #define idris2_vp_to_Int16(p) ((int16_t)((uintptr_t)(p) >> idris2_vp_int_shift))
