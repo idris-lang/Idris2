@@ -36,8 +36,6 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 ### Compiler changes
 
-### Backend changes
-
 #### RefC Backend
 
 * Fix invalid memory read onf strSubStr.
