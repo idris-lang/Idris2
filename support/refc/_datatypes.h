@@ -111,8 +111,8 @@ typedef struct {
   Value_header header;
   int32_t total;
   int32_t tag;
-  char const *tyconName;
-  Value *args[0];
+  char const *name;
+  Value *args[];
 } Value_Constructor;
 
 typedef struct {
@@ -120,7 +120,7 @@ typedef struct {
   Value *(*f)();
   uint8_t arity;
   uint8_t filled; // length of args.
-  Value *args[0];
+  Value *args[];
 } Value_Closure;
 
 typedef struct {

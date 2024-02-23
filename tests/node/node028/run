@@ -1,0 +1,20 @@
+. ../../testutils.sh
+
+echo '# Top-level constants are lazily evaluated and strongly memoised.'
+echo '# This is implemented by wrapping them to the function called `__lazy`.'
+echo '# The only top-level function that should not be treated so is the expression for `main : IO ()`.'
+echo '# In this test we check this.'
+
+echo '--------------'
+
+echo '# Running an example without any top-level constants...'
+echo '# We expect no usages of `__lazy` to be present, maybe only a definition.'
+run --cg node -o hw.js HelloWorld.idr
+grep '__lazy' build/exec/hw.js
+
+echo '--------------'
+
+echo '# Running an example with some top-level constant...'
+echo '# We expect `__lazy` to be used on the RHS for the top-level constant called `topLevelConst`.'
+run --cg node -o lsth.js LazyIsStillThere.idr
+grep '__lazy' build/exec/lsth.js

@@ -9,24 +9,24 @@ Value *newValue(size_t size) {
   return retVal;
 }
 
-Value *newConstructor(int total, int tag) {
+Value_Constructor *newConstructor(int total, int tag) {
   Value_Constructor *retVal = (Value_Constructor *)newValue(
       sizeof(Value_Constructor) + sizeof(Value *) * total);
   retVal->header.tag = CONSTRUCTOR_TAG;
   retVal->total = total;
   retVal->tag = tag;
-  retVal->tyconName = NULL; // caller must initialize tyconName.
-  return (Value *)retVal;   // caller must initialize args[]
+  retVal->name = NULL;
+  return retVal;
 }
 
-Value *makeClosure(Value *(*f)(), uint8_t arity, uint8_t filled) {
+Value_Closure *makeClosure(Value *(*f)(), uint8_t arity, uint8_t filled) {
   Value_Closure *retVal = (Value_Closure *)newValue(sizeof(Value_Closure) +
                                                     sizeof(Value *) * filled);
   retVal->header.tag = CLOSURE_TAG;
   retVal->f = f;
   retVal->arity = arity;
   retVal->filled = filled;
-  return (Value *)retVal; // caller must initialize args[].
+  return retVal; // caller must initialize args[].
 }
 
 Value_Double *makeDouble(double d) {
@@ -247,10 +247,8 @@ void removeReference(Value *elem) {
       /* maybe here we need to invoke onCollectAny */
       Value_GCPointer *vPtr = (Value_GCPointer *)elem;
       Value *closure1 =
-          apply_closure((Value *)vPtr->onCollectFct, (Value *)vPtr->p);
-      apply_closure(closure1, NULL);
-      removeReference(closure1);
-      removeReference((Value *)vPtr->onCollectFct);
+          idris2_apply_closure((Value *)vPtr->onCollectFct, (Value *)vPtr->p);
+      idris2_apply_closure(closure1, NULL);
       removeReference((Value *)vPtr->p);
       break;
     }

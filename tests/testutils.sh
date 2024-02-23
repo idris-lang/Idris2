@@ -29,6 +29,10 @@ run() {
     idris2 --exec main "$@"
 }
 
+safesort() {
+    LC_ALL=C.UTF-8 sort
+}
+
 # Escape a string as a sed pattern literal
 # Usage: sed -e "s/$(sed_literal 'some\literal/')/some replacement/g"
 sed_literal() {

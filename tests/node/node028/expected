@@ -1,0 +1,15 @@
+# Top-level constants are lazily evaluated and strongly memoised.
+# This is implemented by wrapping them to the function called `__lazy`.
+# The only top-level function that should not be treated so is the expression for `main : IO ()`.
+# In this test we check this.
+--------------
+# Running an example without any top-level constants...
+# We expect no usages of `__lazy` to be present, maybe only a definition.
+Hello, world!
+function __lazy(thunk) {
+--------------
+# Running an example with some top-level constant...
+# We expect `__lazy` to be used on the RHS for the top-level constant called `topLevelConst`.
+Top-level constant: 24
+function __lazy(thunk) {
+const LazyIsStillThere_topLevelConst = __lazy(function () {

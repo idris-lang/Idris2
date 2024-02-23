@@ -26,6 +26,14 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 ### Language changes
 
+### Backend changes
+
+#### RefC
+
+* Compiler can emit precise reference counting instructions where a reference
+  is dropped as soon as possible. This allows you to reuse unique variables and
+  optimize memory consumption.
+
 ### Compiler changes
 
 ### Backend changes
@@ -40,14 +48,19 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Pattern matching generates simpler code. This reduces malloc/free and memory
   consumption. It also makes debugging easier.
 
+* Stopped useless string copying in the constructor to save memory. Also, name
+  generation was stopped for constructors that have tags.
+
+* Special constructors such as Nil and Nothing were eliminated and assigned to
+  NULL.
+
 * Supress code generation of _arglist wrappers to reduce code size and compilation time.
 
 * Removed Value_Arglist to reduce Closure's allocation overhead and make code simply.
 
-* Switch calling conventions based on the number of arguments to avoid limits on the number of arguments and to reduce stack usage.
+* Switch calling conventions based on the number of arguments to avoid limits on
+  the number of arguments and to reduce stack usage.
 
-* Mapped some special constructors to NULL. This reduces malloc cost and generates simpler
-  code in ConCase.
 
 #### NodeJS Backend
 
@@ -77,3 +90,7 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Existing `System.Console.GetOpt` was extended to support errors during options
   parsing in a backward-compatible way.
+
+#### Network
+
+* Add a missing function parameter (the flag) in the C implementation of idrnet_recv_bytes

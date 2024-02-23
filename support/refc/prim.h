@@ -48,3 +48,17 @@ Value *System_Concurrency_Raw_prim__conditionWaitTimeout(Value *, Value *,
 Value *System_Concurrency_Raw_prim__conditionSignal(Value *, Value *);
 
 Value *System_Concurrency_Raw_prim__conditionBroadcast(Value *, Value *);
+
+extern char const idris2_constr_Int[];
+extern char const idris2_constr_Int8[];
+extern char const idris2_constr_Int16[];
+extern char const idris2_constr_Int32[];
+extern char const idris2_constr_Int64[];
+extern char const idris2_constr_Bits8[];
+extern char const idris2_constr_Bits16[];
+extern char const idris2_constr_Bits32[];
+extern char const idris2_constr_Bits64[];
+extern char const idris2_constr_Double[];
+extern char const idris2_constr_Integer[];
+extern char const idris2_constr_Char[];
+extern char const idris2_constr_String[];

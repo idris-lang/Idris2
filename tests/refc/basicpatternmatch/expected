@@ -1,7 +1,4 @@
-Just 8
-Just 16
-Nothing
-Nothing
+[Just 8, Just 16, Just 8, Nothing, Nothing, Nothing, Nothing]
 ["empty", "U", "ZZZ", "L", "L"]
 ["?", "?", "?", "1.0", "?", "?", "2.2"]
 "AbC????"

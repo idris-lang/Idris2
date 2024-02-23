@@ -9,19 +9,23 @@ Value *Main_last
 ,   Value * var_1
 )
 {
-    Value *returnValue = NULL;                               // Main:5:8--5:14
+    Value * tmp_66 = NULL;                                   // Main:5:8--5:14
     if (NULL == var_0 /* Prelude.Basics.Nil [nil] */) {
-        returnValue = newReference(var_1);                   // Main:5:1--5:24
+        tmp_66 = var_1;
     } else if (NULL != var_0 /* Prelude.Basics.(::) [cons] */) {
         Value *var_2 = ((Value_Constructor*)var_0)->args[0];
         Value *var_3 = ((Value_Constructor*)var_0)->args[1];
-        // start Main_last(var_3, var_2)                     // Main:7:20--7:24
-        returnValue = makeClosure((Value *(*)())Main_last, 2, 2);
+        newReference(var_2);
+        newReference(var_3);
+        removeReference(var_0);
+        removeReference(var_1);
+        Value *closure_67 = (Value *)makeClosure((Value *(*)())Main_last, 2, 2);
                                                              // Main:7:20--7:24
-        ((Value_Constructor*)returnValue)->args[0] = newReference(var_3);
-        ((Value_Constructor*)returnValue)->args[1] = newReference(var_2);
+        ((Value_Closure*)closure_67)->args[0] = var_3;
+        ((Value_Closure*)closure_67)->args[1] = var_2;
+        tmp_66 = closure_67;
     }
-    return returnValue;
+    return tmp_66;
 }
 Value *Main_main_0
 (
@@ -106,69 +110,50 @@ Value *Main_main_11
 Value *Main_main(void);
 Value *Main_main(void)
 {
-    Value *var_8 = makeClosure((Value *(*)())Main_main_9, 2, 0);
+    Value *closure_40 = (Value *)makeClosure((Value *(*)())Main_main_9, 2, 0);
                                                              // Main:10:13--10:17
-    Value *var_9 = makeClosure((Value *(*)())Main_main_10, 2, 0);
+    Value * var_8 = closure_40;                              // Main:10:8--10:12
+    Value *closure_41 = (Value *)makeClosure((Value *(*)())Main_main_10, 2, 0);
                                                              // Main:10:27--10:28
-    Value *var_6 = ((Value*)NULL /* ACon Prelude.Basics.Nil [nil] */);
-                                                             // Main:11:8--11:10
-    Value *var_3 = ((Value*)NULL /* ACon Prelude.Basics.Lin [nil] */);
-                                                             // Prelude.Types:605:21--605:24
-    Value *var_4 = makeClosure((Value *(*)())Main_main_11, 1, 0);
+    Value * var_9 = closure_41;                              // Main:10:8--10:12
+    Value * var_6 = (NULL /* Prelude.Basics.Nil */);         // Main:11:11--11:13
+    Value * var_3 = (NULL /* Prelude.Basics.Lin */);         // Prelude.Types:605:11--605:20
+    Value *closure_42 = (Value *)makeClosure((Value *(*)())Main_main_11, 1, 0);
                                                              // Main:11:21--11:22
-    // start csegen_44()
-    Value *var_0 = trampoline(csegen_44());
-    Value *var_1 = (Value*)makeIntegerLiteral("1");          // Main:11:35--11:36
-    Value *var_2 = (Value*)makeIntegerLiteral("5");          // Main:11:38--11:39
-    // start Prelude_Types_rangeFromTo_Range__dollara(var_0, var_1, var_2)
-                                                             // Prelude.Types:1121:1--1138:48
-    Value *var_5 = trampoline(Prelude_Types_rangeFromTo_Range__dollara(var_0, var_1, var_2));
-                                                             // Prelude.Types:1121:1--1138:48
-    // start Prelude_Types_List_mapAppend(var_3, var_4, var_5)
+    Value * var_4 = closure_42;                              // Prelude.Types:605:11--605:20
+    Value * var_0 = idris2_trampoline(csegen_44());          // Prelude.Types:1121:1--1138:48
+    Value * var_1 = (Value*)makeIntegerLiteral("1");         // Prelude.Types:1121:1--1138:48
+    Value * var_2 = (Value*)makeIntegerLiteral("5");         // Prelude.Types:1121:1--1138:48
+    Value * var_5 = idris2_trampoline(Prelude_Types_rangeFromTo_Range__dollara(var_0, var_1, var_2));
                                                              // Prelude.Types:605:11--605:20
-    Value *var_7 = trampoline(Prelude_Types_List_mapAppend(var_3, var_4, var_5));
-                                                             // Prelude.Types:605:11--605:20
-    Value *var_10 = newConstructor(2, 1 /* ACon Prelude.Basics.(::) [cons] */);
+    Value * var_7 = idris2_trampoline(Prelude_Types_List_mapAppend(var_3, var_4, var_5));
                                                              // Main:11:11--11:13
-    ((Value_Constructor*)var_10)->args[0] = newReference(var_6);
-    ((Value_Constructor*)var_10)->args[1] = newReference(var_7);
-    // start Prelude_Basics_flip(var_8, var_9, var_10)       // Main:10:8--10:12
-    Value *returnValue = makeClosure((Value *(*)())Prelude_Basics_flip, 3, 3);
+     // constructor Prelude.Basics.(::)                      // Main:11:11--11:13
+    Value_Constructor* constructor_43 = newConstructor(2, 1);
+                                                             // Main:11:11--11:13
+    constructor_43->args[0] = var_6;
+    constructor_43->args[1] = var_7;
+    Value * var_10 = (Value*)constructor_43;                 // Main:10:8--10:12
+    Value *closure_44 = (Value *)makeClosure((Value *(*)())Prelude_Basics_flip, 3, 3);
                                                              // Main:10:8--10:12
-    ((Value_Constructor*)returnValue)->args[0] = newReference(var_8);
-    ((Value_Constructor*)returnValue)->args[1] = newReference(var_9);
-    ((Value_Constructor*)returnValue)->args[2] = newReference(var_10);
-    removeReference(var_10);
-    removeReference(var_7);
-    removeReference(var_5);
-    removeReference(var_2);
-    removeReference(var_1);
-    removeReference(var_0);
-    removeReference(var_4);
-    removeReference(var_3);
-    removeReference(var_6);
-    removeReference(var_9);
-    removeReference(var_8);
-    return returnValue;
+    ((Value_Closure*)closure_44)->args[0] = var_8;
+    ((Value_Closure*)closure_44)->args[1] = var_9;
+    ((Value_Closure*)closure_44)->args[2] = var_10;
+    return closure_44;
 }
 Value *Main_main_11
 (
     Value * var_0
 )
 {
-    // start csegen_44()
-    Value *var_1 = trampoline(csegen_44());
-    Value *var_2 = (Value*)makeIntegerLiteral("1");          // Main:11:27--11:28
-    // start Prelude_Types_rangeFromTo_Range__dollara(var_1, var_2, var_0)
+    Value * var_1 = idris2_trampoline(csegen_44());          // Prelude.Types:1121:1--1138:48
+    Value * var_2 = (Value*)makeIntegerLiteral("1");         // Prelude.Types:1121:1--1138:48
+    Value *closure_45 = (Value *)makeClosure((Value *(*)())Prelude_Types_rangeFromTo_Range__dollara, 3, 3);
                                                              // Prelude.Types:1121:1--1138:48
-    Value *returnValue = makeClosure((Value *(*)())Prelude_Types_rangeFromTo_Range__dollara, 3, 3);
-                                                             // Prelude.Types:1121:1--1138:48
-    ((Value_Constructor*)returnValue)->args[0] = newReference(var_1);
-    ((Value_Constructor*)returnValue)->args[1] = newReference(var_2);
-    ((Value_Constructor*)returnValue)->args[2] = newReference(var_0);
-    removeReference(var_2);
-    removeReference(var_1);
-    return returnValue;
+    ((Value_Closure*)closure_45)->args[0] = var_1;
+    ((Value_Closure*)closure_45)->args[1] = var_2;
+    ((Value_Closure*)closure_45)->args[2] = var_0;
+    return closure_45;
 }
 Value *Main_main_10
 (
@@ -176,25 +161,20 @@ Value *Main_main_10
 ,   Value * var_0
 )
 {
-    Value *var_2 = (Value*)makeIntegerLiteral("0");          // Main:10:37--10:38
-    // start Main_last(var_1, var_2)                         // Main:10:30--10:36
-    Value *var_3 = trampoline(Main_last(var_1, var_2));      // Main:10:30--10:36
-    // start Prelude_Show_show_Show_Integer(var_3)           // Prelude.Show:110:1--112:50
-    Value *var_4 = trampoline(Prelude_Show_show_Show_Integer(var_3));
+    Value * var_2 = (Value*)makeIntegerLiteral("0");         // Main:10:30--10:36
+    Value * var_3 = idris2_trampoline(Main_last(var_1, var_2));
                                                              // Prelude.Show:110:1--112:50
-    Value *var_5 = (Value*)makeString("\x0a""");             // Prelude.IO:103:45--103:47
-    Value *var_6 = strAppend(var_4, var_5);
-    // start Prelude_IO_prim__putStr(var_6, var_0)           // Prelude.IO:98:22--98:34
-    Value *returnValue = makeClosure((Value *(*)())Prelude_IO_prim__putStr, 2, 2);
-                                                             // Prelude.IO:98:22--98:34
-    ((Value_Constructor*)returnValue)->args[0] = newReference(var_6);
-    ((Value_Constructor*)returnValue)->args[1] = newReference(var_0);
-    removeReference(var_6);
+    Value * var_4 = idris2_trampoline(Prelude_Show_show_Show_Integer(var_3));
+    Value * var_5 = (Value*)makeString("\x0a""");
+    Value *primVar_46 = strAppend(var_4, var_5);
     removeReference(var_5);
     removeReference(var_4);
-    removeReference(var_3);
-    removeReference(var_2);
-    return returnValue;
+    Value * var_6 = primVar_46;                              // Prelude.IO:98:22--98:34
+    Value *closure_47 = (Value *)makeClosure((Value *(*)())Prelude_IO_prim__putStr, 2, 2);
+                                                             // Prelude.IO:98:22--98:34
+    ((Value_Closure*)closure_47)->args[0] = var_6;
+    ((Value_Closure*)closure_47)->args[1] = var_0;
+    return closure_47;
 }
 Value *Main_main_9
 (
@@ -202,48 +182,48 @@ Value *Main_main_9
 ,   Value * var_0
 )
 {
-    Value *var_2 = makeClosure((Value *(*)())Main_main_0, 5, 0);
-    Value *var_3 = makeClosure((Value *(*)())Main_main_1, 3, 0);
-    Value *var_4 = makeClosure((Value *(*)())Main_main_2, 5, 0);
-    Value *var_11 = newConstructor(3, 0 /* ACon Prelude.Interfaces.MkApplicative [record] */);
+    Value *closure_48 = (Value *)makeClosure((Value *(*)())Main_main_0, 5, 0);
+    Value * var_2 = closure_48;                              // Prelude.IO:19:1--26:30
+    Value *closure_49 = (Value *)makeClosure((Value *(*)())Main_main_1, 3, 0);
+    Value * var_3 = closure_49;                              // Prelude.IO:19:1--26:30
+    Value *closure_50 = (Value *)makeClosure((Value *(*)())Main_main_2, 5, 0);
+    Value * var_4 = closure_50;                              // Prelude.IO:19:1--26:30
+     // constructor Prelude.Interfaces.MkApplicative         // Prelude.IO:19:1--26:30
+    Value_Constructor* constructor_51 = newConstructor(3, 0);
                                                              // Prelude.IO:19:1--26:30
-    ((Value_Constructor*)var_11)->args[0] = newReference(var_2);
-    ((Value_Constructor*)var_11)->args[1] = newReference(var_3);
-    ((Value_Constructor*)var_11)->args[2] = newReference(var_4);
-    Value *var_5 = makeClosure((Value *(*)())Main_main_3, 5, 0);
-    Value *var_6 = makeClosure((Value *(*)())Main_main_4, 5, 0);
-    Value *var_7 = makeClosure((Value *(*)())Main_main_5, 2, 0);
-    Value *var_8 = makeClosure((Value *(*)())Main_main_6, 7, 0);
-    Value *var_9 = makeClosure((Value *(*)())Main_main_7, 2, 0);
-    Value *var_10 = makeClosure((Value *(*)())Main_main_8, 5, 0);
-    Value *var_12 = newConstructor(6, 0 /* ACon Prelude.Interfaces.MkFoldable [record] */);
+    constructor_51->args[0] = var_2;
+    constructor_51->args[1] = var_3;
+    constructor_51->args[2] = var_4;
+    Value * var_11 = (Value*)constructor_51;                 // Main:10:13--10:17
+    Value *closure_52 = (Value *)makeClosure((Value *(*)())Main_main_3, 5, 0);
+    Value * var_5 = closure_52;                              // Prelude.Types:656:1--669:59
+    Value *closure_53 = (Value *)makeClosure((Value *(*)())Main_main_4, 5, 0);
+    Value * var_6 = closure_53;                              // Prelude.Types:656:1--669:59
+    Value *closure_54 = (Value *)makeClosure((Value *(*)())Main_main_5, 2, 0);
+    Value * var_7 = closure_54;                              // Prelude.Types:656:1--669:59
+    Value *closure_55 = (Value *)makeClosure((Value *(*)())Main_main_6, 7, 0);
+    Value * var_8 = closure_55;                              // Prelude.Types:656:1--669:59
+    Value *closure_56 = (Value *)makeClosure((Value *(*)())Main_main_7, 2, 0);
+    Value * var_9 = closure_56;                              // Prelude.Types:656:1--669:59
+    Value *closure_57 = (Value *)makeClosure((Value *(*)())Main_main_8, 5, 0);
+    Value * var_10 = closure_57;                             // Prelude.Types:656:1--669:59
+     // constructor Prelude.Interfaces.MkFoldable            // Prelude.Types:656:1--669:59
+    Value_Constructor* constructor_58 = newConstructor(6, 0);
                                                              // Prelude.Types:656:1--669:59
-    ((Value_Constructor*)var_12)->args[0] = newReference(var_5);
-    ((Value_Constructor*)var_12)->args[1] = newReference(var_6);
-    ((Value_Constructor*)var_12)->args[2] = newReference(var_7);
-    ((Value_Constructor*)var_12)->args[3] = newReference(var_8);
-    ((Value_Constructor*)var_12)->args[4] = newReference(var_9);
-    ((Value_Constructor*)var_12)->args[5] = newReference(var_10);
-    // start Prelude_Interfaces_for_(var_11, var_12, var_1, var_0)
+    constructor_58->args[0] = var_5;
+    constructor_58->args[1] = var_6;
+    constructor_58->args[2] = var_7;
+    constructor_58->args[3] = var_8;
+    constructor_58->args[4] = var_9;
+    constructor_58->args[5] = var_10;
+    Value * var_12 = (Value*)constructor_58;                 // Main:10:13--10:17
+    Value *closure_59 = (Value *)makeClosure((Value *(*)())Prelude_Interfaces_for_, 4, 4);
                                                              // Main:10:13--10:17
-    Value *returnValue = makeClosure((Value *(*)())Prelude_Interfaces_for_, 4, 4);
-                                                             // Main:10:13--10:17
-    ((Value_Constructor*)returnValue)->args[0] = newReference(var_11);
-    ((Value_Constructor*)returnValue)->args[1] = newReference(var_12);
-    ((Value_Constructor*)returnValue)->args[2] = newReference(var_1);
-    ((Value_Constructor*)returnValue)->args[3] = newReference(var_0);
-    removeReference(var_12);
-    removeReference(var_10);
-    removeReference(var_9);
-    removeReference(var_8);
-    removeReference(var_7);
-    removeReference(var_6);
-    removeReference(var_5);
-    removeReference(var_11);
-    removeReference(var_4);
-    removeReference(var_3);
-    removeReference(var_2);
-    return returnValue;
+    ((Value_Closure*)closure_59)->args[0] = var_11;
+    ((Value_Closure*)closure_59)->args[1] = var_12;
+    ((Value_Closure*)closure_59)->args[2] = var_1;
+    ((Value_Closure*)closure_59)->args[3] = var_0;
+    return closure_59;
 }
 Value *Main_main_8
 (
@@ -254,14 +234,14 @@ Value *Main_main_8
 ,   Value * var_0
 )
 {
-    // start Prelude_Types_foldMap_Foldable_List(var_2, var_1, var_0)
+    removeReference(var_3);
+    removeReference(var_4);
+    Value *closure_60 = (Value *)makeClosure((Value *(*)())Prelude_Types_foldMap_Foldable_List, 3, 3);
                                                              // Prelude.Types:656:1--669:59
-    Value *returnValue = makeClosure((Value *(*)())Prelude_Types_foldMap_Foldable_List, 3, 3);
-                                                             // Prelude.Types:656:1--669:59
-    ((Value_Constructor*)returnValue)->args[0] = newReference(var_2);
-    ((Value_Constructor*)returnValue)->args[1] = newReference(var_1);
-    ((Value_Constructor*)returnValue)->args[2] = newReference(var_0);
-    return returnValue;
+    ((Value_Closure*)closure_60)->args[0] = var_2;
+    ((Value_Closure*)closure_60)->args[1] = var_1;
+    ((Value_Closure*)closure_60)->args[2] = var_0;
+    return closure_60;
 }
 Value *Main_main_7
 (
@@ -269,8 +249,8 @@ Value *Main_main_7
 ,   Value * var_0
 )
 {
-    Value *returnValue = newReference(var_0);
-    return returnValue;
+    removeReference(var_1);
+    return var_0;
 }
 Value *Main_main_6
 (
@@ -283,15 +263,16 @@ Value *Main_main_6
 ,   Value * var_0
 )
 {
-    // start Prelude_Types_foldlM_Foldable_List(var_3, var_2, var_1, var_0)
+    removeReference(var_4);
+    removeReference(var_5);
+    removeReference(var_6);
+    Value *closure_61 = (Value *)makeClosure((Value *(*)())Prelude_Types_foldlM_Foldable_List, 4, 4);
                                                              // Prelude.Types:656:1--669:59
-    Value *returnValue = makeClosure((Value *(*)())Prelude_Types_foldlM_Foldable_List, 4, 4);
-                                                             // Prelude.Types:656:1--669:59
-    ((Value_Constructor*)returnValue)->args[0] = newReference(var_3);
-    ((Value_Constructor*)returnValue)->args[1] = newReference(var_2);
-    ((Value_Constructor*)returnValue)->args[2] = newReference(var_1);
-    ((Value_Constructor*)returnValue)->args[3] = newReference(var_0);
-    return returnValue;
+    ((Value_Closure*)closure_61)->args[0] = var_3;
+    ((Value_Closure*)closure_61)->args[1] = var_2;
+    ((Value_Closure*)closure_61)->args[2] = var_1;
+    ((Value_Closure*)closure_61)->args[3] = var_0;
+    return closure_61;
 }
 Value *Main_main_5
 (
@@ -299,11 +280,11 @@ Value *Main_main_5
 ,   Value * var_0
 )
 {
-    // start Prelude_Types_null_Foldable_List(var_0)         // Prelude.Types:656:1--669:59
-    Value *returnValue = makeClosure((Value *(*)())Prelude_Types_null_Foldable_List, 1, 1);
+    removeReference(var_1);
+    Value *closure_62 = (Value *)makeClosure((Value *(*)())Prelude_Types_null_Foldable_List, 1, 1);
                                                              // Prelude.Types:656:1--669:59
-    ((Value_Constructor*)returnValue)->args[0] = newReference(var_0);
-    return returnValue;
+    ((Value_Closure*)closure_62)->args[0] = var_0;
+    return closure_62;
 }
 Value *Main_main_4
 (
@@ -314,14 +295,14 @@ Value *Main_main_4
 ,   Value * var_0
 )
 {
-    // start Prelude_Types_foldl_Foldable_List(var_2, var_1, var_0)
+    removeReference(var_3);
+    removeReference(var_4);
+    Value *closure_63 = (Value *)makeClosure((Value *(*)())Prelude_Types_foldl_Foldable_List, 3, 3);
                                                              // Prelude.Types:656:1--669:59
-    Value *returnValue = makeClosure((Value *(*)())Prelude_Types_foldl_Foldable_List, 3, 3);
-                                                             // Prelude.Types:656:1--669:59
-    ((Value_Constructor*)returnValue)->args[0] = newReference(var_2);
-    ((Value_Constructor*)returnValue)->args[1] = newReference(var_1);
-    ((Value_Constructor*)returnValue)->args[2] = newReference(var_0);
-    return returnValue;
+    ((Value_Closure*)closure_63)->args[0] = var_2;
+    ((Value_Closure*)closure_63)->args[1] = var_1;
+    ((Value_Closure*)closure_63)->args[2] = var_0;
+    return closure_63;
 }
 Value *Main_main_3
 (
@@ -332,14 +313,14 @@ Value *Main_main_3
 ,   Value * var_0
 )
 {
-    // start Prelude_Types_foldr_Foldable_List(var_2, var_1, var_0)
+    removeReference(var_3);
+    removeReference(var_4);
+    Value *closure_64 = (Value *)makeClosure((Value *(*)())Prelude_Types_foldr_Foldable_List, 3, 3);
                                                              // Prelude.Types:656:1--669:59
-    Value *returnValue = makeClosure((Value *(*)())Prelude_Types_foldr_Foldable_List, 3, 3);
-                                                             // Prelude.Types:656:1--669:59
-    ((Value_Constructor*)returnValue)->args[0] = newReference(var_2);
-    ((Value_Constructor*)returnValue)->args[1] = newReference(var_1);
-    ((Value_Constructor*)returnValue)->args[2] = newReference(var_0);
-    return returnValue;
+    ((Value_Closure*)closure_64)->args[0] = var_2;
+    ((Value_Closure*)closure_64)->args[1] = var_1;
+    ((Value_Closure*)closure_64)->args[2] = var_0;
+    return closure_64;
 }
 Value *Main_main_2
 (
@@ -350,13 +331,12 @@ Value *Main_main_2
 ,   Value * var_0
 )
 {
-    Value *var_5 = apply_closure(var_2, var_0);
-    Value *var_6 = apply_closure(var_1, var_0);
-    Value *returnValue = tailcall_apply_closure(var_5, var_6);
+    removeReference(var_3);
+    removeReference(var_4);
+    Value * var_5 = idris2_apply_closure(var_2, newReference(var_0));
                                                              // Prelude.IO:24:9--24:16
-    removeReference(var_6);
-    removeReference(var_5);
-    return returnValue;
+    Value * var_6 = idris2_apply_closure(var_1, var_0);      // Prelude.IO:25:11--25:18
+    return idris2_tailcall_apply_closure(var_5, var_6);
 }
 Value *Main_main_1
 (
@@ -365,8 +345,9 @@ Value *Main_main_1
 ,   Value * var_0
 )
 {
-    Value *returnValue = newReference(var_1);
-    return returnValue;
+    removeReference(var_0);
+    removeReference(var_2);
+    return var_1;
 }
 Value *Main_main_0
 (
@@ -377,11 +358,12 @@ Value *Main_main_0
 ,   Value * var_0
 )
 {
-    // start Prelude_IO_map_Functor_IO(var_2, var_1, var_0)  // Prelude.IO:15:1--17:38
-    Value *returnValue = makeClosure((Value *(*)())Prelude_IO_map_Functor_IO, 3, 3);
+    removeReference(var_3);
+    removeReference(var_4);
+    Value *closure_65 = (Value *)makeClosure((Value *(*)())Prelude_IO_map_Functor_IO, 3, 3);
                                                              // Prelude.IO:15:1--17:38
-    ((Value_Constructor*)returnValue)->args[0] = newReference(var_2);
-    ((Value_Constructor*)returnValue)->args[1] = newReference(var_1);
-    ((Value_Constructor*)returnValue)->args[2] = newReference(var_0);
-    return returnValue;
+    ((Value_Closure*)closure_65)->args[0] = var_2;
+    ((Value_Closure*)closure_65)->args[1] = var_1;
+    ((Value_Closure*)closure_65)->args[2] = var_0;
+    return closure_65;
 }

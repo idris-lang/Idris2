@@ -111,17 +111,18 @@ char *fastPack(Value *charList) {
 }
 
 Value *fastUnpack(char *str) {
-  if (str[0] == '\0')
-    return (Value *)NULL;
+  if (str[0] == '\0') {
+    return NULL;
+  }
 
-  Value_Constructor *retVal = (Value_Constructor *)newConstructor(2, 0);
+  Value_Constructor *retVal = newConstructor(2, 1);
   retVal->args[0] = (Value *)makeChar(str[0]);
 
   int i = 1;
   Value_Constructor *current = (Value_Constructor *)retVal;
   Value_Constructor *next;
   while (str[i] != '\0') {
-    next = (Value_Constructor *)newConstructor(2, 0);
+    next = newConstructor(2, 1);
     next->args[0] = (Value *)makeChar(str[i]);
     current->args[1] = (Value *)next;
 
@@ -191,7 +192,8 @@ Value *onCollectStringIterator(Value_Pointer *ptr, void *null) {
 Value *stringIteratorToString(void *a, char *str, Value *it_p,
                               Value_Closure *f) {
   String_Iterator *it = ((Value_GCPointer *)it_p)->p->p;
-  return apply_closure((Value *)f, (Value *)makeString(it->str + it->pos));
+  Value *strVal = (Value *)makeString(it->str + it->pos);
+  return idris2_apply_closure(newReference((Value *)f), strVal);
 }
 
 Value *stringIteratorNext(char *s, Value *it_p) {
