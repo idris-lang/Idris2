@@ -381,7 +381,7 @@ makeClosure : {auto a : Ref ArgCounter Nat}
 makeClosure fc n args missing = do
     let closure = "closure_\{show $ !(getNextCounter)}"
     let nargs = length args
-    emit fc "Value *\{closure} = (Value *)makeClosure((Value *(*)())\{cName n}, \{show $ nargs + missing}, \{show nargs});"
+    emit fc "Value *\{closure} = (Value *)idris2_makeClosure((Value *(*)())\{cName n}, \{show $ nargs + missing}, \{show nargs});"
     fillArgs !(get EnvTracker) "((Value_Closure*)\{closure})->args" args 0
     pure closure
 

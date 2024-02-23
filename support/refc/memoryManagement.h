@@ -9,7 +9,7 @@ void removeReference(Value *source);
 #define IDRIS2_NEW_VALUE(t) ((t *)newValue(sizeof(t)))
 
 Value_Constructor *newConstructor(int total, int tag);
-Value_Closure *makeClosure(Value *(*f)(), uint8_t arity, uint8_t filled);
+Value_Closure *idris2_makeClosure(Value *(*f)(), uint8_t arity, uint8_t filled);
 
 Value_Double *makeDouble(double d);
 Value_Char *makeChar(char d);
