@@ -248,8 +248,8 @@ opts x _ = pure $ if (x `elem` optionFlags)
                      else prefixOnly x optionFlags
 
 -- bash autocompletion script using the given function name
-completionScript : (fun : String) -> String
-completionScript fun = let fun' = "_" ++ fun in """
+bashCompletionScript : (fun : String) -> String
+bashCompletionScript fun = let fun' = "_" ++ fun in """
   \{ fun' }()
   {
     ED=$([ -z $2 ] && echo "--" || echo $2)
@@ -257,6 +257,13 @@ completionScript fun = let fun' = "_" ++ fun in """
   }
 
   complete -F \{ fun' } -o default idris2
+  """
+
+zshCompletionScript : (fun : String) -> String
+zshCompletionScript fun = """
+  autoload -U +X compinit && compinit
+  autoload -U +X bashcompinit && bashcompinit
+  \{ bashCompletionScript fun }
   """
 
 --------------------------------------------------------------------------------
@@ -428,7 +435,10 @@ preOptions (BashCompletion a b :: _)
          coreLift $ putStr $ unlines os
          pure False
 preOptions (BashCompletionScript fun :: _)
-    = do coreLift $ putStrLn $ completionScript fun
+    = do coreLift $ putStrLn $ bashCompletionScript fun
+         pure False
+preOptions (ZshCompletionScript fun :: _)
+    = do coreLift $ putStrLn $ zshCompletionScript fun
          pure False
 preOptions (Total :: opts)
     = do updateSession ({ totalReq := Total })
