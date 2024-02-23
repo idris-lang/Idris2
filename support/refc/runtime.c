@@ -77,7 +77,7 @@ Value *idris2_trampoline(Value *it) {
 Value *idris2_tailcall_apply_closure(Value *_clos, Value *arg) {
   // create a new closure and copy args.
   Value_Closure *clos = (Value_Closure *)_clos;
-  Value_Closure *newclos = makeClosure(
+  Value_Closure *newclos = idris2_makeClosure(
       clos->f, clos->arity, clos->filled + 1 /* expanding a payload */);
 
   if (clos->header.refCounter <= 1) {
