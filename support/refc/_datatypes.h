@@ -52,18 +52,34 @@ typedef struct {
   ((sizeof(uintptr_t) >= 8 && sizeof(Value *) >= 8) ? 32 : 16)
 
 #define idris2_vp_to_Bits64(p) (((Value_Bits64 *)(p))->ui64)
+
+#if !defined(UINTPTR_WIDTH)
 #define idris2_vp_to_Bits32(p)                                                 \
   ((idris2_vp_int_shift == 16)                                                 \
        ? (((Value_Bits32 *)(p))->ui32)                                         \
        : ((uint32_t)((uintptr_t)(p) >> idris2_vp_int_shift)))
-#define idris2_vp_to_Bits16(p)                                                 \
-  ((uint16_t)((uintptr_t)(p) >> idris2_vp_int_shift))
-#define idris2_vp_to_Bits8(p) ((uint8_t)((uintptr_t)(p) >> idris2_vp_int_shift))
-#define idris2_vp_to_Int64(p) (((Value_Int64 *)(p))->i64)
 #define idris2_vp_to_Int32(p)                                                  \
   ((idris2_vp_int_shift == 16)                                                 \
        ? (((Value_Int32 *)(p))->i32)                                           \
        : ((int32_t)((uintptr_t)(p) >> idris2_vp_int_shift)))
+
+#elif UINTPTR_WIDTH >= 64
+#define idris2_vp_to_Bits32(p)                                                 \
+  ((uint32_t)((uintptr_t)(p) >> idris2_vp_int_shift))
+#define idris2_vp_to_Int32(p): ((int32_t)((uintptr_t)(p) >> idris2_vp_int_shift))
+
+#elif UINTPTR_WIDTH >= 32
+#define idris2_vp_to_Bits32(p) (((Value_Bits32 *)(p))->ui32)
+#define idris2_vp_to_Int32(p) (((Value_Int32 *)(p))->i32)
+
+#else
+#error "unsupported uintptr_t width"
+#endif
+
+#define idris2_vp_to_Bits16(p)                                                 \
+  ((uint16_t)((uintptr_t)(p) >> idris2_vp_int_shift))
+#define idris2_vp_to_Bits8(p) ((uint8_t)((uintptr_t)(p) >> idris2_vp_int_shift))
+#define idris2_vp_to_Int64(p) (((Value_Int64 *)(p))->i64)
 #define idris2_vp_to_Int16(p) ((int16_t)((uintptr_t)(p) >> idris2_vp_int_shift))
 #define idris2_vp_to_Int8(p) ((int8_t)((uintptr_t)(p) >> idris2_vp_int_shift))
 #define idris2_vp_to_Char(p)                                                   \

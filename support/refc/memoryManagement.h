@@ -21,18 +21,35 @@ Value *idris2_mkDouble(double d);
   ((Value *)(((uintptr_t)(x) << idris2_vp_int_shift) + 1))
 #define idris2_mkBits16(x)                                                     \
   ((Value *)(((uintptr_t)(x) << idris2_vp_int_shift) + 1))
+
+#if !defined(UINTPTR_WIDTH)
 #define idris2_mkBits32(x)                                                     \
-  ((sizeof(Value *) == 4)                                                      \
+  ((idris2_vp_int_shift == 16)                                                 \
        ? (idris2_mkBits32_Boxed(x))                                            \
        : ((Value *)(((uintptr_t)(x) << idris2_vp_int_shift) + 1)))
+#define idris2_mkInt32(x)                                                      \
+  ((idris2_vp_int_shift == 16)                                                 \
+       ? (idris2_mkInt32_Boxed(x))                                             \
+       : ((Value *)(((uintptr_t)(x) << idris2_vp_int_shift) + 1)))
+
+#elif UINTPTR_WIDTH >= 64
+#define idris2_mkBits32(x)                                                     \
+       : ((Value *)(((uintptr_t)(x) << idris2_vp_int_shift) + 1))
+#define idris2_mkInt32(x)                                                      \
+       : ((Value *)(((uintptr_t)(x) << idris2_vp_int_shift) + 1))
+
+#elif UINTPTR_WIDTH >= 32
+#define idris2_mkBits32(x) (idris2_mkBits32_Boxed(x))
+#define idris2_mkInt32(x) (idris2_mkInt32_Boxed(x)))
+
+#else
+#error "unsupported uintptr_t width"
+#endif
+
 #define idris2_mkInt8(x)                                                       \
   ((Value *)(((uintptr_t)(x) << idris2_vp_int_shift) + 1))
 #define idris2_mkInt16(x)                                                      \
   ((Value *)(((uintptr_t)(x) << idris2_vp_int_shift) + 1))
-#define idris2_mkInt32(x)                                                      \
-  ((sizeof(Value *) == 4)                                                      \
-       ? (idris2_mkInt32_Boxed(x))                                             \
-       : ((Value *)(((uintptr_t)(x) << idris2_vp_int_shift) + 1)))
 #define idris2_mkBool(x) (idris2_mkInt8(x))
 
 Value *idris2_mkBits32_Boxed(uint32_t i);
