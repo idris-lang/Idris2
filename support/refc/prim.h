@@ -21,7 +21,7 @@ Value *idris2_crash(Value *msg);
 Value *idris2_Data_IOArray_Prims_prim__newArray(Value *, Value *, Value *,
                                                 Value *);
 #define idris2_Data_IOArray_Prims_prim__arrayGet(rased, array, i, word)        \
-  (newReference(((Value_Array *)(array))->arr[((Value_Int64 *)i)->i64]))
+  (newReference(((Value_Array *)(array))->arr[idris2_vp_to_Int64(i)]))
 Value *idris2_Data_IOArray_Prims_prim__arraySet(Value *, Value *, Value *,
                                                 Value *, Value *);
 

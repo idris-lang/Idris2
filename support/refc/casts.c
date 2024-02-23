@@ -1,4 +1,5 @@
 #include "casts.h"
+
 #include <inttypes.h>
 
 /*  conversions from Int8  */
@@ -64,11 +65,10 @@ Value *idris2_cast_Int64_to_Integer(Value *input) {
 }
 
 Value *idris2_cast_Int64_to_string(Value *input) {
-  Value_Int64 *from = (Value_Int64 *)input;
-
-  int l = snprintf(NULL, 0, "%" PRId64 "", from->i64);
+  int64_t from = idris2_vp_to_Int64(input);
+  int l = snprintf(NULL, 0, "%" PRId64 "", from);
   Value_String *retVal = idris2_mkEmptyString(l + 1);
-  sprintf(retVal->str, "%" PRId64 "", from->i64);
+  sprintf(retVal->str, "%" PRId64 "", from);
 
   return (Value *)retVal;
 }
@@ -213,7 +213,6 @@ Value *idris2_cast_Bits32_to_string(Value *input) {
 
 /*  conversions from Bits64  */
 Value *idris2_cast_Bits64_to_Integer(Value *input) {
-
   Value_Integer *retVal = idris2_mkInteger();
   mpz_set_ui(retVal->i, idris2_vp_to_Bits64(input));
 

@@ -23,11 +23,9 @@ Value *clockTimeGcReal() { return NULL; }
 int clockValid(Value *clock) { return clock != NULL; }
 
 uint64_t clockSecond(Value *clock) {
-  uint64_t totalNano = ((Value_Bits64 *)clock)->ui64;
-  return totalNano / NSEC_PER_SEC;
+  return idris2_vp_to_Bits64(clock) / NSEC_PER_SEC;
 }
 
 uint64_t clockNanosecond(Value *clock) {
-  uint64_t totalNano = ((Value_Bits64 *)clock)->ui64;
-  return totalNano % NSEC_PER_SEC;
+  return idris2_vp_to_Bits64(clock) % NSEC_PER_SEC;
 }

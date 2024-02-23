@@ -119,17 +119,17 @@ int idris2_extractInt(Value *v) {
 
   switch (v->header.tag) {
   case BITS32_TAG:
-    return (int)((Value_Bits32 *)v)->ui32;
+    return (int)idris2_vp_to_Bits32(v);
   case BITS64_TAG:
-    return (int)((Value_Bits64 *)v)->ui64;
+    return (int)idris2_vp_to_Bits64(v);
   case INT32_TAG:
-    return (int)((Value_Int32 *)v)->i32;
+    return (int)idris2_vp_to_Bits32(v);
   case INT64_TAG:
-    return (int)((Value_Int64 *)v)->i64;
+    return (int)idris2_vp_to_Int64(v);
   case INTEGER_TAG:
     return (int)mpz_get_si(((Value_Integer *)v)->i);
   case DOUBLE_TAG:
-    return (int)((Value_Double *)v)->d;
+    return (int)idris2_vp_to_Double(v);
   default:
     return -1;
   }
