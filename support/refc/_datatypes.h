@@ -45,7 +45,16 @@ typedef struct {
   // followed by type-specific payload.
 } Value;
 
-/* expcted at least 4bytes for Value_header alignment. */
+/*
+We expcted at least 4bytes for Value_header alignment, to use bit0 and bit1 of
+pointer.as flags.
+
+RefC does not have complete static tracking of type information, so types are
+identified at runtime using Value_Header's tag field. However, Int that are
+pretending to be pointers cannot have that tag, so use that flag to identify
+them first. Of course, this flag is not used if it is clear that Value* is
+actually an Int. But places like newReference/removeReference require this flag.
+ */
 #define idris2_vp_is_unboxed(p) ((uintptr_t)(p)&3)
 
 #define idris2_vp_int_shift                                                    \
@@ -64,6 +73,8 @@ typedef struct {
        : ((int32_t)((uintptr_t)(p) >> idris2_vp_int_shift)))
 
 #elif UINTPTR_WIDTH >= 64
+// NOTE: We stole two bits from pointer. So, even if we have 64-bit CPU,
+//  Int64/Bits654 are not unboxable.
 #define idris2_vp_to_Bits32(p)                                                 \
   ((uint32_t)((uintptr_t)(p) >> idris2_vp_int_shift))
 #define idris2_vp_to_Int32(p): ((int32_t)((uintptr_t)(p) >> idris2_vp_int_shift))
