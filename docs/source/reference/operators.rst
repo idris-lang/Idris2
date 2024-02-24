@@ -151,7 +151,7 @@ looks like
    main = do print (a &&& b) -- won't work
              print ((&&&) a b) -- ok
 
-In what follows we have two examples of programs that benefit from
+In what follows, we have two examples of programs that benefit from
 declaring a fixity ``private`` rather than ``export``.
 
 Private record fixity pattern
@@ -181,7 +181,7 @@ as a binary infix operator impossible, since it now has 3 arguments.
    natRel : Nat -> Nat -> Type
    natRel x y = (<@>) lteRel x y
 
-What we really want to write is ``natRel x y = <@> x y`` but
+What we really want to write is ``natRel x y = (<@>) x y`` but
 ``(<@>)`` now has type ``SomeRelation a -> a -> a -> Type``.
 
 The solution is to define a private field with a private fixity
@@ -240,7 +240,7 @@ Typebind Operators
 ==================
 
 In dependently-typed programming, we have the ability define constructors which
-first argument is a type and the second is a type indexed over the first argument. 
+first argument is a type and the second is a type indexed over the first argument.
 A typical example of this is the dependent linear arrow:
 
  .. code-block:: idris
@@ -290,9 +290,9 @@ Autobind Operators
 ==================
 
 Typebind operators allow to bind a *type* on the left side of an operator, so that is can
-be used as the index of the second argument. But sometimes, there is no dependency 
-between the first and second argument, yet we still want to use binding sytnax. For those 
-case, we use ``autobind``.
+be used as the index of the second argument. But sometimes, there is no dependency
+between the first and second argument, yet we still want to use binding syntax. For those
+cases, we use ``autobind``.
 
 An example of this is a DSL for a dependently-typed programming language
 where the constructor for ``Pi`` takes terms on the left and lambdas on the right:
@@ -310,7 +310,7 @@ where the constructor for ``Pi`` takes terms on the left and lambdas on the righ
 
 We would like to use a custom operator to build values using ``VPi``, but its
 signature does not follow the pattern that ``typebind`` uses. Instead, we use
-``autobind`` to tell the compiler that the type of the lambda must be inferred. 
+``autobind`` to tell the compiler that the type of the lambda must be inferred.
 For this we use ``:=`` instead of ``:``:
 
 .. code-block:: idris
@@ -326,7 +326,7 @@ For this we use ``:=`` instead of ``:``:
         (sndTy := (_ := fstTy) =>> VStar) =>>
         (val1 := fstTy) =>>
         (val2 := sndTy `vapp` val1) =>>
-        VSgima fstTy sndTy
+        VSigma fstTy sndTy
 
 This new syntax is much closer to what the code is meant to look like for users
 accustomed to dependently-typed programming languages.
