@@ -337,7 +337,7 @@ removeReuseConstructors : {auto oft : Ref OutfileText Output}
                         -> {auto il : Ref IndentLevel Nat}
                         -> List String
                         -> Core ()
-removeReuseConstructors = applyFunctionToVars "removeReuseConstructor"
+removeReuseConstructors = applyFunctionToVars "idris2_removeReuseConstructor"
 
 avarToC : Env -> AVar -> String
 avarToC env var =
