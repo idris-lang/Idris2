@@ -22,6 +22,7 @@ This is a placeholder, to get set up with readthedocs.
    records
    literate
    overloadedlit
+   operators
    strings
    pragmas
    builtins

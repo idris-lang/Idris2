@@ -10,6 +10,7 @@ import Data.Vect
 import Libraries.Data.IMaybe
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
+import Libraries.Text.PrettyPrint.Prettyprinter.Doc
 import Libraries.Data.Tap
 
 import public Data.IORef
@@ -162,6 +163,10 @@ data Error : Type where
                   FC -> Env Term vars -> Term vars -> (description : String) -> Error
      RunElabFail : Error -> Error
      GenericMsg : FC -> String -> Error
+     GenericMsgSol : FC -> (message : String) -> (solutions : List String) -> Error
+     OperatorBindingMismatch : {a : Type} -> {print : a -> Doc ()} ->
+         FC -> (expectedFixity : BacktickOrOperatorFixity) -> (use_site : OperatorLHSInfo a) ->
+         (opName : Name) -> (rhs : a) -> (candidates : List String) -> Error
      TTCError : TTCErrorMsg -> Error
      FileErr : String -> FileError -> Error
      CantFindPackage : String -> Error
@@ -350,6 +355,7 @@ Show Error where
   show (BadRunElab fc env script desc) = show fc ++ ":Bad elaborator script " ++ show script ++ " (" ++ desc ++ ")"
   show (RunElabFail e) = "Error during reflection: " ++ show e
   show (GenericMsg fc str) = show fc ++ ":" ++ str
+  show (GenericMsgSol fc msg sols) = show fc ++ ":" ++ msg ++ " Solutions: " ++ show sols
   show (TTCError msg) = "Error in TTC file: " ++ show msg
   show (FileErr fname err) = "File error (" ++ fname ++ "): " ++ show err
   show (CantFindPackage fname) = "Can't find package " ++ fname
@@ -390,10 +396,16 @@ Show Error where
          show err
 
   show (MaybeMisspelling err ns)
-     = show err ++ "\nDid you mean" ++ case ns of
-         (n ::: []) => ": " ++ n ++ "?"
-         _ => " any of: " ++ showSep ", " (map show (forget ns)) ++ "?"
+       = show err ++ "\nDid you mean" ++ case ns of
+           (n ::: []) => ": " ++ n ++ "?"
+           _ => " any of: " ++ showSep ", " (map show (forget ns)) ++ "?"
   show (WarningAsError w) = show w
+  show (OperatorBindingMismatch fc (DeclaredFixity expected) actual opName rhs _)
+       = show fc ++ ": Operator " ++ show opName ++ " is " ++ show expected
+       ++ " but used as a " ++ show actual ++ " operator"
+  show (OperatorBindingMismatch fc Backticked actual opName rhs _)
+       = show fc ++ ": Operator " ++ show opName ++ " has no declared fixity"
+       ++ " but used as a " ++ show actual ++ " operator"
 
 export
 getWarningLoc : Warning -> FC
@@ -459,6 +471,7 @@ getErrorLoc (BadImplicit loc _) = Just loc
 getErrorLoc (BadRunElab loc _ _ _) = Just loc
 getErrorLoc (RunElabFail e) = getErrorLoc e
 getErrorLoc (GenericMsg loc _) = Just loc
+getErrorLoc (GenericMsgSol loc _ _) = Just loc
 getErrorLoc (TTCError _) = Nothing
 getErrorLoc (FileErr _ _) = Nothing
 getErrorLoc (CantFindPackage _) = Nothing
@@ -483,6 +496,7 @@ getErrorLoc (InLHS _ _ err) = getErrorLoc err
 getErrorLoc (InRHS _ _ err) = getErrorLoc err
 getErrorLoc (MaybeMisspelling err _) = getErrorLoc err
 getErrorLoc (WarningAsError warn) = Just (getWarningLoc warn)
+getErrorLoc (OperatorBindingMismatch fc _ _ _ _ _) = Just fc
 
 export
 killWarningLoc : Warning -> Warning
@@ -547,6 +561,7 @@ killErrorLoc (BadImplicit fc x) = BadImplicit emptyFC x
 killErrorLoc (BadRunElab fc x y description) = BadRunElab emptyFC x y description
 killErrorLoc (RunElabFail e) = RunElabFail $ killErrorLoc e
 killErrorLoc (GenericMsg fc x) = GenericMsg emptyFC x
+killErrorLoc (GenericMsgSol fc x y) = GenericMsgSol emptyFC x y
 killErrorLoc (TTCError x) = TTCError x
 killErrorLoc (FileErr x y) = FileErr x y
 killErrorLoc (CantFindPackage x) = CantFindPackage x
@@ -571,6 +586,9 @@ killErrorLoc (InLHS fc x err) = InLHS emptyFC x (killErrorLoc err)
 killErrorLoc (InRHS fc x err) = InRHS emptyFC x (killErrorLoc err)
 killErrorLoc (MaybeMisspelling err xs) = MaybeMisspelling (killErrorLoc err) xs
 killErrorLoc (WarningAsError wrn) = WarningAsError (killWarningLoc wrn)
+killErrorLoc (OperatorBindingMismatch {print} fc expected actual opName rhs candidates)
+             = OperatorBindingMismatch {print} emptyFC expected actual opName rhs candidates
+
 
 -- Core is a wrapper around IO that is specialised for efficiency.
 export
