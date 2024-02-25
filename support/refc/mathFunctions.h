@@ -75,9 +75,6 @@ Value *idris2_mod_Int64(Value *x, Value *y);
 Value *idris2_mod_Integer(Value *x, Value *y);
 
 /* shiftl */
-/* shift Op of idris2 has rediculus signature that (<<), (>>): a -> a -> a .
-   stay calm, its should a -> Bits8 -> a ! Did you say intX_t have 2^X bits? no.
-   its just X bits. Or, does your PC have 65536bit processor!? Mr.John Titor? */
 #define idris2_shiftl_Bits8(l, r) (idris2_binop(Bits8, <<, l, r))
 #define idris2_shiftl_Bits16(l, r) (idris2_binop(Bits16, <<, l, r))
 #define idris2_shiftl_Bits32(l, r) (idris2_binop(Bits32, <<, l, r))
