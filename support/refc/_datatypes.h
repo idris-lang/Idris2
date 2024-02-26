@@ -46,8 +46,8 @@ typedef struct {
 } Value;
 
 /*
-We expcted at least 4bytes for Value_header alignment, to use bit0 and bit1 of
-pointer.as flags.
+We expect at least 4 bytes for `Value_header` alignment, to use bit0 and bit1 of
+pointer as flags.
 
 RefC does not have complete static tracking of type information, so types are
 identified at runtime using Value_Header's tag field. However, Int that are
