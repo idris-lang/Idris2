@@ -105,6 +105,14 @@ mkPrec InfixR = AssocR
 mkPrec Infix  = NonAssoc
 mkPrec Prefix = Prefix
 
+-- This is used to print the error message for fixities
+[interpName] Interpolation ((Name, BacktickOrOperatorFixity), b) where
+  interpolate ((x, _), _) = show x
+
+[showWithLoc] Show ((Name, BacktickOrOperatorFixity), b) where
+  show ((x, DeclaredFixity y), _) = show x ++ " at " ++ show y.fc
+  show ((x, Backticked), _) = show x
+
 -- Check that an operator does not have any conflicting fixities in scope.
 -- Each operator can have its fixity defined multiple times across multiple
 -- modules as long as the fixities are consistent. If they aren't, the fixity
@@ -113,39 +121,43 @@ mkPrec Prefix = Prefix
 checkConflictingFixities : {auto s : Ref Syn SyntaxInfo} ->
                            {auto c : Ref Ctxt Defs} ->
                            (isPrefix : Bool) ->
-                           FC -> Name -> Core OpPrec
+                           FC -> Name -> Core (OpPrec, BacktickOrOperatorFixity)
 checkConflictingFixities isPrefix exprFC opn
-  = do syn <- get Syn
-       let op = nameRoot opn
-       let foundFixities : List (Name, FixityInfo) = lookupName (UN (Basic op)) (fixities syn)
+  = do let op = nameRoot opn
+       foundFixities <- getFixityInfo op
        let (pre, inf) = partition ((== Prefix) . fix . snd) foundFixities
        case (isPrefix, pre, inf) of
             -- If we do not find any fixity for this operator we check that it uses operator
             -- characters, if not, it must be a backticked expression.
             (_, [], []) => if any isOpChar (fastUnpack op)
                               then throw (GenericMsg exprFC "Unknown operator '\{op}'")
-                              else pure (NonAssoc 1) -- Backticks are non associative by default
+                              else pure (NonAssoc 1, Backticked) -- Backticks are non associative by default
 
+            --
             (True, ((fxName, fx) :: _), _) => do
                 -- in the prefix case, remove conflicts with infix (-)
                 let extraFixities = pre ++ (filter (\(nm, _) => not $ nameRoot nm == "-") inf)
                 unless (isCompatible fx extraFixities) $ warnConflict fxName extraFixities
-                pure (mkPrec fx.fix fx.precedence)
-            -- Could not find any prefix operator fixities, there may be infix ones
+                pure (mkPrec fx.fix fx.precedence, DeclaredFixity fx)
+            -- Could not find any prefix operator fixities, there may still be conflicts with
+            -- the infix ones.
             (True, [] , _) => throw (GenericMsg exprFC $ "'\{op}' is not a prefix operator")
 
             (False, _, ((fxName, fx) :: _)) => do
                 -- In the infix case, remove conflicts with prefix (-)
                 let extraFixities = (filter (\(nm, _) => not $ nm == UN (Basic "-")) pre) ++ inf
                 unless (isCompatible fx extraFixities) $ warnConflict fxName extraFixities
-                pure (mkPrec fx.fix fx.precedence)
+                pure (mkPrec fx.fix fx.precedence, DeclaredFixity fx)
             -- Could not find any infix operator fixities, there may be prefix ones
             (False, _, []) => throw (GenericMsg exprFC $ "'\{op}' is not an infix operator")
   where
-    -- Fixities are compatible with all others of the same name that share the same fixity and precedence
+    -- Fixities are compatible with all others of the same name that share the same
+    -- fixity, precedence, and binding information
     isCompatible :  FixityInfo -> (fixities : List (Name, FixityInfo)) -> Bool
     isCompatible fx
-      = all (\fx' => fx.fix == fx'.fix && fx.precedence == fx'.precedence) . map snd
+      = all (\fx' => fx.fix == fx'.fix
+                  && fx.precedence == fx'.precedence
+                  && fx.bindingInfo == fx'.bindingInfo) . map snd
 
     -- Emits a warning using the fixity that we picked and the list of all conflicting fixities
     warnConflict : (picked : Name) -> (conflicts : List (Name, FixityInfo)) -> Core ()
@@ -157,18 +169,77 @@ checkConflictingFixities isPrefix exprFC opn
                    For example: %hide \{show fxName}
                    """
 
-toTokList : {auto s : Ref Syn SyntaxInfo} ->
-            {auto c : Ref Ctxt Defs} ->
-            PTerm -> Core (List (Tok OpStr PTerm))
-toTokList (POp fc opFC opn l r)
-    = do precInfo <- checkConflictingFixities False fc opn
-         rtoks <- toTokList r
-         pure (Expr l :: Op fc opFC opn precInfo :: rtoks)
-toTokList (PPrefixOp fc opFC opn arg)
-    = do precInfo <- checkConflictingFixities True fc opn
-         rtoks <- toTokList arg
-         pure (Op fc opFC opn precInfo :: rtoks)
-toTokList t = pure [Expr t]
+checkConflictingBinding : Ref Ctxt Defs =>
+                          Ref Syn SyntaxInfo =>
+                          FC -> Name -> (foundFixity : BacktickOrOperatorFixity) ->
+                          (usage : OperatorLHSInfo PTerm) -> (rhs : PTerm) -> Core ()
+checkConflictingBinding fc opName foundFixity use_site rhs
+    = if isCompatible foundFixity use_site
+         then pure ()
+         else throw $ OperatorBindingMismatch
+             {print = byShow} fc foundFixity use_site opName rhs !candidates
+    where
+      isCompatible : BacktickOrOperatorFixity -> OperatorLHSInfo PTerm -> Bool
+      isCompatible Backticked (NoBinder lhs) = True
+      isCompatible Backticked _ = False
+      isCompatible (DeclaredFixity fixInfo) (NoBinder lhs) = fixInfo.bindingInfo == NotBinding
+      isCompatible (DeclaredFixity fixInfo) (BindType name ty) = fixInfo.bindingInfo == Typebind
+      isCompatible (DeclaredFixity fixInfo) (BindExpr name expr) = fixInfo.bindingInfo == Autobind
+      isCompatible (DeclaredFixity fixInfo) (BindExplicitType name type expr)
+          = fixInfo.bindingInfo == Autobind
+
+      keepCompatibleBinding : BindingModifier -> (Name, GlobalDef) -> Core Bool
+      keepCompatibleBinding compatibleBinder (name, def) = do
+        fixities <- getFixityInfo (nameRoot name)
+        let compatible = any (\(_, fx) => fx.bindingInfo == use_site.getBinder) fixities
+        pure compatible
+
+      candidates : Core (List String)
+      candidates = do let DeclaredFixity fxInfo = foundFixity
+                        | _ => pure [] -- if there is no declared fixity we can't know what's
+                                       -- supposed to go there.
+                      Just (nm, cs) <- getSimilarNames {keepPredicate = Just (keepCompatibleBinding fxInfo.bindingInfo)} opName
+                        | Nothing => pure []
+                      ns <- currentNS <$> get Ctxt
+                      pure (showSimilarNames ns opName nm cs)
+
+checkValidFixity : BindingModifier -> Fixity -> Nat -> Bool
+
+-- If the fixity declaration is not binding, there are no restrictions
+checkValidFixity NotBinding _ _ = True
+
+-- If the fixity declaration is not binding, either typebind or autobind
+-- the fixity can only be `infixr` with precedence `0`. We might want
+-- to revisit that in the future, but as of right now we want to be
+-- conservative and avoid abuse.
+-- having multiple precedence levels would mean that if
+-- =@ has higher precedence than -@
+-- the expression (x : a) =@ b -@ (y : List a) =@ List b
+-- would be bracketed as ((x : a) =@ b) -@ (y : List a) =@ List b
+-- instead of (x : a) =@ (b -@ ((y : List a) =@ List b))
+checkValidFixity _ InfixR 0 = True
+
+-- If it's binding but not infixr precedence 0, raise an error
+checkValidFixity _ _ _ = False
+
+parameters (side : Side)
+  toTokList : {auto s : Ref Syn SyntaxInfo} ->
+              {auto c : Ref Ctxt Defs} ->
+              PTerm -> Core (List (Tok ((OpStr, BacktickOrOperatorFixity), Maybe (OperatorLHSInfo PTerm)) PTerm))
+  toTokList (POp fc opFC l opn r)
+      = do (precInfo, fixInfo) <- checkConflictingFixities False fc opn
+           unless (side == LHS) -- do not check for conflicting fixity on the LHS
+                                -- This is because we do not parse binders on the lhs
+                                -- and so, if we check, we will find uses of regular
+                                -- operator when binding is expected.
+                  (checkConflictingBinding opFC opn fixInfo l r)
+           rtoks <- toTokList r
+           pure (Expr l.getLhs :: Op fc opFC ((opn, fixInfo), Just l) precInfo :: rtoks)
+  toTokList (PPrefixOp fc opFC opn arg)
+      = do (precInfo, fixInfo) <- checkConflictingFixities True fc opn
+           rtoks <- toTokList arg
+           pure (Op fc opFC ((opn, fixInfo), Nothing) precInfo :: rtoks)
+  toTokList t = pure [Expr t]
 
 record BangData where
   constructor MkBangData
@@ -308,12 +379,16 @@ mutual
                      [apply (IVar fc (UN $ Basic "===")) [l', r'],
                       apply (IVar fc (UN $ Basic "~=~")) [l', r']]
   desugarB side ps (PBracketed fc e) = desugarB side ps e
-  desugarB side ps (POp fc opFC op l r)
-      = do ts <- toTokList (POp fc opFC op l r)
-           desugarTree side ps !(parseOps ts)
+  desugarB side ps (POp fc opFC l op r)
+      = do ts <- toTokList side (POp fc opFC l op r)
+           tree <- parseOps @{interpName} @{showWithLoc} ts
+           unop <- desugarTree side ps (mapFst (\((x, _), y) => (x, y)) tree)
+           desugarB side ps unop
   desugarB side ps (PPrefixOp fc opFC op arg)
-      = do ts <- toTokList (PPrefixOp fc opFC op arg)
-           desugarTree side ps !(parseOps ts)
+      = do ts <- toTokList side (PPrefixOp fc opFC op arg)
+           tree <- parseOps @{interpName} @{showWithLoc} ts
+           unop <- desugarTree side ps (mapFst (\((x, _), y) => (x, y)) tree)
+           desugarB side ps unop
   desugarB side ps (PSectionL fc opFC op arg)
       = do syn <- get Syn
            -- It might actually be a prefix argument rather than a section
@@ -322,12 +397,12 @@ mutual
                 [] =>
                     desugarB side ps
                         (PLam fc top Explicit (PRef fc (MN "arg" 0)) (PImplicit fc)
-                            (POp fc opFC op (PRef fc (MN "arg" 0)) arg))
+                            (POp fc opFC (NoBinder (PRef fc (MN "arg" 0))) op arg))
                 (prec :: _) => desugarB side ps (PPrefixOp fc opFC op arg)
   desugarB side ps (PSectionR fc opFC arg op)
       = desugarB side ps
           (PLam fc top Explicit (PRef fc (MN "arg" 0)) (PImplicit fc)
-              (POp fc opFC op arg (PRef fc (MN "arg" 0))))
+              (POp fc opFC (NoBinder arg) op (PRef fc (MN "arg" 0))))
   desugarB side ps (PSearch fc depth) = pure $ ISearch fc depth
   desugarB side ps (PPrimVal fc (BI x))
       = case !fromIntegerName of
@@ -714,27 +789,48 @@ mutual
            rule' <- desugarDo side ps ns rule
            pure $ IRewrite fc rule' rest'
 
+  -- Replace all operator by function application
   desugarTree : {auto s : Ref Syn SyntaxInfo} ->
                 {auto b : Ref Bang BangData} ->
                 {auto c : Ref Ctxt Defs} ->
                 {auto u : Ref UST UState} ->
                 {auto m : Ref MD Metadata} ->
                 {auto o : Ref ROpts REPLOpts} ->
-                Side -> List Name -> Tree OpStr PTerm -> Core RawImp
-  desugarTree side ps (Infix loc eqFC (UN $ Basic "=") l r) -- special case since '=' is special syntax
+                Side -> List Name -> Tree (OpStr, Maybe $ OperatorLHSInfo PTerm) PTerm ->
+                Core PTerm
+  desugarTree side ps (Infix loc eqFC (UN $ Basic "=", _) l r) -- special case since '=' is special syntax
+      = pure $ PEq eqFC !(desugarTree side ps l) !(desugarTree side ps r)
+
+  desugarTree side ps (Infix loc _ (UN $ Basic "$", _) l r) -- special case since '$' is special syntax
       = do l' <- desugarTree side ps l
            r' <- desugarTree side ps r
-           pure (IAlternative loc FirstSuccess
-                     [apply (IVar eqFC eqName) [l', r'],
-                      apply (IVar eqFC heqName) [l', r']])
-  desugarTree side ps (Infix loc _ (UN $ Basic "$") l r) -- special case since '$' is special syntax
+           pure (PApp loc l' r')
+  -- normal operators
+  desugarTree side ps (Infix loc opFC (op, Just (NoBinder lhs)) l r)
       = do l' <- desugarTree side ps l
            r' <- desugarTree side ps r
-           pure (IApp loc l' r')
-  desugarTree side ps (Infix loc opFC op l r)
+           pure (PApp loc (PApp loc (PRef opFC op) l') r')
+  -- (x : ty) =@ f x ==>> (=@) ty (\x : ty => f x)
+  desugarTree side ps (Infix loc opFC (op, Just (BindType pat lhs)) l r)
       = do l' <- desugarTree side ps l
-           r' <- desugarTree side ps r
-           pure (IApp loc (IApp loc (IVar opFC op) l') r')
+           body <- desugarTree side ps r
+           pure $ PApp loc (PApp loc (PRef opFC op) l')
+                      (PLam loc top Explicit pat l' body)
+  -- (x := exp) =@ f x ==>> (=@) exp (\x : ? => f x)
+  desugarTree side ps (Infix loc opFC (op, Just (BindExpr pat lhs)) l r)
+      = do l' <- desugarTree side ps l
+           body <- desugarTree side ps r
+           pure $ PApp loc (PApp loc (PRef opFC op) l')
+                      (PLam loc top Explicit pat (PInfer opFC) body)
+
+  -- (x : ty := exp) =@ f x ==>> (=@) exp (\x : ty => f x)
+  desugarTree side ps (Infix loc opFC (op, Just (BindExplicitType pat ty expr)) l r)
+      = do l' <- desugarTree side ps l
+           body <- desugarTree side ps r
+           pure $ PApp loc (PApp loc (PRef opFC op) l')
+                      (PLam loc top Explicit pat ty body)
+  desugarTree side ps (Infix loc opFC (op, Nothing) _ r)
+      = throw $ InternalError "illegal fixity: Parsed as infix but no binding information"
 
   -- negation is a special case, since we can't have an operator with
   -- two meanings otherwise
@@ -742,7 +838,7 @@ mutual
   -- Note: In case of negated signed integer literals, we apply the
   -- negation directly. Otherwise, the literal might be
   -- truncated to 0 before being passed on to `negate`.
-  desugarTree side ps (Pre loc opFC (UN $ Basic "-") $ Leaf $ PPrimVal fc c)
+  desugarTree side ps (Pre loc opFC (UN $ Basic "-", _) $ Leaf $ PPrimVal fc c)
     = let newFC    = fromMaybe EmptyFC (mergeFC loc fc)
           continue = desugarTree side ps . Leaf . PPrimVal newFC
        in case c of
@@ -756,16 +852,16 @@ mutual
             -- not a signed integer literal. proceed by desugaring
             -- and applying to `negate`.
             _     => do arg' <- desugarTree side ps (Leaf $ PPrimVal fc c)
-                        pure (IApp loc (IVar opFC (UN $ Basic "negate")) arg')
+                        pure (PApp loc (PRef opFC (UN $ Basic "negate")) arg')
 
-  desugarTree side ps (Pre loc opFC (UN $ Basic "-") arg)
+  desugarTree side ps (Pre loc opFC (UN $ Basic "-", _) arg)
     = do arg' <- desugarTree side ps arg
-         pure (IApp loc (IVar opFC (UN $ Basic "negate")) arg')
+         pure (PApp loc (PRef opFC (UN $ Basic "negate")) arg')
 
-  desugarTree side ps (Pre loc opFC op arg)
+  desugarTree side ps (Pre loc opFC (op, _) arg)
       = do arg' <- desugarTree side ps arg
-           pure (IApp loc (IVar opFC op) arg')
-  desugarTree side ps (Leaf t) = desugarB side ps t
+           pure (PApp loc (PRef opFC op) arg')
+  desugarTree side ps (Leaf t) = pure t
 
   desugarType : {auto s : Ref Syn SyntaxInfo} ->
                 {auto c : Ref Ctxt Defs} ->
@@ -1109,8 +1205,14 @@ mutual
           NS ns (DN str (MN ("__mk" ++ str) 0))
       mkConName n = DN (show n) (MN ("__mk" ++ show n) 0)
 
-  desugarDecl ps (PFixity fc vis fix prec opName)
-      = do ctx <- get Ctxt
+  desugarDecl ps (PFixity fc vis binding fix prec opName)
+      = do unless (checkValidFixity binding fix prec)
+             (throw $ GenericMsgSol fc
+                 "Invalid fixity, \{binding} operator must be infixr 0."
+                 [ "Make it `infixr 0`: `\{binding} infixr 0 \{show opName}`"
+                 , "Remove the binding keyword: `\{fix} \{show prec} \{show opName}`"
+                 ])
+           ctx <- get Ctxt
            -- We update the context of fixities by adding a namespaced fixity
            -- given by the current namespace and its fixity name.
            -- This allows fixities to be stored along with the namespace at their
@@ -1118,7 +1220,7 @@ mutual
            let updatedNS = NS (mkNestedNamespace (Just ctx.currentNS) (show fix))
                               (UN $ Basic $ nameRoot opName)
 
-           update Syn { fixities $= addName updatedNS (MkFixityInfo fc vis fix prec) }
+           update Syn { fixities $= addName updatedNS (MkFixityInfo fc vis binding fix prec) }
            pure []
   desugarDecl ps d@(PFail fc mmsg ds)
       = do -- save the state: the content of a failing block should be discarded
@@ -1230,4 +1332,5 @@ mutual
             {auto u : Ref UST UState} ->
             {auto o : Ref ROpts REPLOpts} ->
             Side -> List Name -> PTerm -> Core RawImp
+
   desugar s ps tm = desugarDo s ps Nothing tm

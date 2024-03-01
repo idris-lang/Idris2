@@ -167,10 +167,10 @@ You can also add it to your `.bashrc` file.
 From within ZSH, run the following commands:
 
 ```sh
-autoload -U +X compinit && compinit
-autoload -U +X bashcompinit && bashcompinit
-eval "$(idris2 --bash-completion-script idris2)"
+eval "$(idris2 --zsh-completion-script idris2)"
 ```
+
+ZSH auto-completion is implemented via `bashcompinit`.
 
 You can also add them to your `.zshrc` file.
 

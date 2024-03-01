@@ -458,6 +458,55 @@ namespaceblock = vcat $
     You can use `export` or `public export` to control whether a function
     declared in a namespace is available outside of it.
     """]
+autobindDoc : Doc IdrisDocAnn
+autobindDoc = """
+  Autobind
+
+    `autobind` is a modifier for operator precedence and fixity declaration.
+    It tells the parser that this operator behaves like a binding operator,
+    allowing you to give a name to the left-hand-side of the operator and
+    use it on the right-hand-side.
+
+    `autobind` differs from `typebind` in the syntax it allows and the way
+    it desugars. Delcaring an operator as `autobind infixr 0 =|>` allows
+    you to use it with the syntax `(x := e) =|> f x`, `(x : t := e) =|> f x`.
+
+
+    You will need to use `autobind` instead of `typebind` whenever the
+    type of the lambda of the function called by the operator has a type
+    that is not equal to the argument given on the left side of the operator.
+
+    `autobind` only applies to `infixr` operators and cannot be used as
+    operator sections.
+
+    `autobind` operators are desugared as a lambda:
+    `(x := expr) =|> fn x` -> `(expr =|> (\x : ? => fn x))`
+    `(x : ty := expr) =|> fn x` -> `(expr =|> (\x : ty => fn x))`
+  """
+typebindDoc : Doc IdrisDocAnn
+typebindDoc = """
+  Typebind
+
+    `typebind` is a modifier for operator precedence and fixity declaration.
+    It tells the parser that this operator behaves like a binding operator,
+    allowing you to give a name to the left-hand-side of the operator and
+    use it on the right-hand-side.
+
+    A typical example of a typebind operator is `(**)` the type constructor
+    for dependent pairs. It is used like this: `(x : Nat) ** Vect x String`
+
+    If you declare a new operator to be typebind you can use it the same
+    way.
+
+    Start by defining `typebind infixr 0 =@`, and then you can use it
+    like so: `(n : Nat) =@ f n`
+
+    `typebind` only applies to `infixr` operators and cannot be used as
+    operator sections.
+
+    `typebind` operators are desugared as a lambda:
+    `(x : ty) =@ fn x` -> `ty =@ (\x : ty =@ fn x)`
+  """
 
 rewriteeq : Doc IdrisDocAnn
 rewriteeq = vcat $
@@ -487,8 +536,7 @@ withabstraction = vcat $
     If we additionally need to remember that the link between the patterns and
     the intermediate computation we can use the `proof` keyword to retain an
     equality proof.
-    """, "",
-    """
+
     In the following example we want to implement a `filter` function that not
     only returns values that satisfy the input predicate but also proofs that
     they do. The `with (p x)` construct introduces a value of type `Bool`
@@ -564,6 +612,8 @@ keywordsDoc =
   :: "else" ::= ifthenelse
   :: "forall" ::= forallquantifier
   :: "rewrite" ::= rewriteeq
+  :: "typebind" ::= autobindDoc
+  :: "autobind" ::= autobindDoc
   :: "using" ::= ""
   :: "interface" ::= interfacemechanism
   :: "implementation" ::= interfacemechanism

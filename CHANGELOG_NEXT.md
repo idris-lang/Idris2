@@ -26,7 +26,11 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 ### Language changes
 
-### Compiler changes
+* Autobind and Typebind modifier on operators allow the user to
+  customise the syntax of operator to look more like a binder.
+  See [#3113](https://github.com/idris-lang/Idris2/issues/3113).
+
+### Backend changes
 
 #### RefC Backend
 
@@ -76,6 +80,11 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Deprecate `bufferData` in favor of `bufferData'`. These functions are the same
   with the exception of the latter dealing in `Bits8` which is more correct than
   `Int`.
+
+* Added an alternative `TTImp` traversal function `mapATTImp'` taking the original
+  `TTImp` at the input along with already traversed one. Existing `mapATTImp` is
+  implemented through the newly added one. The similar alternative for `mapMTTImp`
+  is added too.
 
 #### Contrib
 

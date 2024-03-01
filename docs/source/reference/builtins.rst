@@ -47,7 +47,7 @@ To ensure that a type is optimized to an ``Integer``, use ``%builtin Natural`` i
     data MyNat
         = Succ MyNat
         | Zero
-    
+
     %builtin Natural MyNat
 
 Casting between natural numbers and integer
@@ -106,7 +106,7 @@ that a function is correct. It is your responsibility to make sure this is corre
     data ComplexNat
         = Zero
         | Succ ComplexNat
-    
+
     integerToMaybeNat : Integer -> Maybe ComplexNat
     integerToMaybeNat _ = ...
 

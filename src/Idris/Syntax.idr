@@ -30,44 +30,6 @@ import Parser.Lexer.Source
 %default covering
 
 public export
-data Fixity = InfixL | InfixR | Infix | Prefix
-
-export
-Show Fixity where
-  show InfixL = "infixl"
-  show InfixR = "infixr"
-  show Infix  = "infix"
-  show Prefix = "prefix"
-
-export
-Eq Fixity where
-  InfixL == InfixL = True
-  InfixR == InfixR = True
-  Infix == Infix = True
-  Prefix == Prefix = True
-  _ == _ = False
-
--- A record to hold all the information about a fixity
-public export
-record FixityInfo where
-  constructor MkFixityInfo
-  fc : FC
-  vis : Visibility
-  fix : Fixity
-  precedence : Nat
-
-export
-Show FixityInfo where
-  show fx = "fc: \{show fx.fc}, visibility: \{show fx.vis}, fixity: \{show fx.fix}, precedence: \{show fx.precedence}"
-
-export
-Eq FixityInfo where
-  x == y = x.fc == y.fc
-        && x.vis == y.vis
-        && x.fix == y.fix
-        && x.precedence == y.precedence
-
-public export
 OpStr' : Type -> Type
 OpStr' nm = nm
 
@@ -136,7 +98,9 @@ mutual
 
        -- Operators
 
-       POp : (full, opFC : FC) -> OpStr' nm -> PTerm' nm -> PTerm' nm -> PTerm' nm
+       POp : (full, opFC : FC) ->
+             (lhsInfo : OperatorLHSInfo (PTerm' nm)) ->
+             OpStr' nm -> (rhs : PTerm' nm) -> PTerm' nm
        PPrefixOp : (full, opFC : FC) -> OpStr' nm -> PTerm' nm -> PTerm' nm
        PSectionL : (full, opFC : FC) -> OpStr' nm -> PTerm' nm -> PTerm' nm
        PSectionR : (full, opFC : FC) -> PTerm' nm -> OpStr' nm -> PTerm' nm
@@ -470,7 +434,7 @@ mutual
        PFail : FC -> Maybe String -> List (PDecl' nm) -> PDecl' nm
 
        PMutual : FC -> List (PDecl' nm) -> PDecl' nm
-       PFixity : FC -> Visibility -> Fixity -> Nat -> OpStr -> PDecl' nm
+       PFixity : FC -> Visibility -> BindingModifier -> Fixity -> Nat -> OpStr -> PDecl' nm
        PNamespace : FC -> Namespace -> List (PDecl' nm) -> PDecl' nm
        PTransform : FC -> String -> PTerm' nm -> PTerm' nm -> PDecl' nm
        PRunElabDecl : FC -> PTerm' nm -> PDecl' nm
@@ -489,7 +453,7 @@ mutual
   getPDeclLoc (PRecord fc _ _ _ _) = fc
   getPDeclLoc (PMutual fc _) = fc
   getPDeclLoc (PFail fc _ _) = fc
-  getPDeclLoc (PFixity fc _ _ _ _) = fc
+  getPDeclLoc (PFixity fc _ _ _ _ _) = fc
   getPDeclLoc (PNamespace fc _ _) = fc
   getPDeclLoc (PTransform fc _ _ _) = fc
   getPDeclLoc (PRunElabDecl fc _) = fc
@@ -806,7 +770,14 @@ parameters {0 nm : Type} (toName : nm -> Name)
   showPTermPrec d (PDotted _ p) = "." ++ showPTermPrec d p
   showPTermPrec _ (PImplicit _) = "_"
   showPTermPrec _ (PInfer _) = "?"
-  showPTermPrec d (POp _ _ op x y) = showPTermPrec d x ++ " " ++ showOpPrec d op ++ " " ++ showPTermPrec d y
+  showPTermPrec d (POp _ _ (NoBinder left) op right)
+        = showPTermPrec d left ++ " " ++ showOpPrec d op ++ " " ++ showPTermPrec d right
+  showPTermPrec d (POp _ _ (BindType nm left) op right)
+        = "(" ++ showPTermPrec d nm ++ " : " ++ showPTermPrec d left ++ " " ++ showOpPrec d op ++ " " ++ showPTermPrec d right ++ ")"
+  showPTermPrec d (POp _ _ (BindExpr nm left) op right)
+        = "(" ++ showPTermPrec d nm ++ " := " ++ showPTermPrec d left ++ " " ++ showOpPrec d op ++ " " ++ showPTermPrec d right ++ ")"
+  showPTermPrec d (POp _ _ (BindExplicitType nm ty left) op right)
+        = "(" ++ showPTermPrec d nm ++ " : " ++ showPTermPrec d ty ++ ":=" ++ showPTermPrec d left ++ " " ++ showOpPrec d op ++ " " ++ showPTermPrec d right ++ ")"
   showPTermPrec d (PPrefixOp _ _ op x) = showOpPrec d op ++ showPTermPrec d x
   showPTermPrec d (PSectionL _ _ op x) = "(" ++ showOpPrec d op ++ " " ++ showPTermPrec d x ++ ")"
   showPTermPrec d (PSectionR _ _ x op) = "(" ++ showPTermPrec d x ++ " " ++ showOpPrec d op ++ ")"
@@ -999,9 +970,9 @@ initSyntax
 
     initFixities : ANameMap FixityInfo
     initFixities = fromList
-      [ (UN $ Basic "-", MkFixityInfo EmptyFC Export Prefix 10)
-      , (UN $ Basic "negate", MkFixityInfo EmptyFC Export Prefix 10) -- for documentation purposes
-      , (UN $ Basic "=", MkFixityInfo EmptyFC Export Infix 0)
+      [ (UN $ Basic "-", MkFixityInfo EmptyFC Export NotBinding Prefix 10)
+      , (UN $ Basic "negate", MkFixityInfo EmptyFC Export NotBinding Prefix 10) -- for documentation purposes
+      , (UN $ Basic "=", MkFixityInfo EmptyFC Export NotBinding Infix 0)
       ]
 
     initDocStrings : ANameMap String
@@ -1033,6 +1004,13 @@ export
 removeFixity :
     {auto s : Ref Syn SyntaxInfo} -> Fixity -> Name -> Core ()
 removeFixity _ key = update Syn ({fixities $= removeExact key })
+
+||| Return all fixity declarations for an operator name
+export
+getFixityInfo : {auto s : Ref Syn SyntaxInfo} -> String -> Core (List (Name, FixityInfo))
+getFixityInfo nm = do
+  syn <- get Syn
+  pure $ lookupName (UN $ Basic nm) (fixities syn)
 
 export
 covering
