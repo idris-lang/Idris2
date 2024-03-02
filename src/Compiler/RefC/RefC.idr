@@ -142,21 +142,36 @@ cPrimType DoubleType = "double"
 cPrimType WorldType = "void"
 
 cConstant : Constant -> String
-cConstant (I x) = "(Value*)makeInt64("++ showIntMin x ++")"
+cConstant (I x) =
+  if x >= 0 && x < 100
+     then "(Value*)(&idris2_predefined_Int64[\{show x}])"
+     else "(Value*)makeInt64(\{showIntMin x})"
 cConstant (I8 x) = "(Value*)makeInt8(INT8_C("++ show x ++"))"
 cConstant (I16 x) = "(Value*)makeInt16(INT16_C("++ show x ++"))"
 cConstant (I32 x) = "(Value*)makeInt32(INT32_C("++ show x ++"))"
-cConstant (I64 x) = "(Value*)makeInt64("++ showInt64Min x ++")"
-cConstant (BI x) = "(Value*)makeIntegerLiteral(\""++ show x ++"\")"
+cConstant (I64 x) =
+  if x >= 0 && x < 100
+     then "(Value*)(&idris2_predefined_Int64[\{show x}])"
+     else "(Value*)makeInt64(\{showInt64Min x})"
+cConstant (BI x) =
+  if x >= 0 && x < 100
+     then "idris2_getPredefinedInteger(\{show x})"
+     else "(Value*)makeIntegerLiteral(\"\{show x}\")"
 cConstant (B8 x)   = "(Value*)makeBits8(UINT8_C("++ show x ++"))"
 cConstant (B16 x)  = "(Value*)makeBits16(UINT16_C("++ show x ++"))"
 cConstant (B32 x)  = "(Value*)makeBits32(UINT32_C("++ show x ++"))"
-cConstant (B64 x)  = "(Value*)makeBits64(UINT64_C("++ show x ++"))"
+cConstant (B64 x)  =
+  if x >= 0 && x < 100
+     then "(Value*)(&idris2_predefined_Bits64[\{show x}])"
+     else "(Value*)makeBits64(UINT64_C(\{show x}))"
 cConstant (Db x) = "(Value*)makeDouble("++ show x ++")"
 cConstant (Ch x) = "(Value*)makeChar("++ escapeChar x ++")"
-cConstant (Str x) = "(Value*)makeString("++ cStringQuoted x ++")"
+cConstant (Str x) =
+  if length x == 0
+     then "(Value*)(&idris2_predefined_nullstring)"
+     else "(Value*)makeString("++ cStringQuoted x ++")"
 cConstant (PrT t) = cPrimType t
-cConstant WorldVal = "(Value*)NULL"
+cConstant WorldVal = "NULL"
 
 extractConstant : Constant -> String
 extractConstant (I x) = show x

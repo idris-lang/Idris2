@@ -34,3 +34,13 @@ Value_Pointer *makePointer(void *);
 Value_GCPointer *makeGCPointer(void *ptr_Raw, Value_Closure *onCollectFct);
 Value_Buffer *makeBuffer(void *buf);
 Value_Array *makeArray(int length);
+
+extern Value_Int64 idris2_predefined_Int64[100];
+extern Value_Bits64 idris2_predefined_Bits64[100];
+extern Value_Integer idris2_predefined_Integer[100];
+Value *idris2_getPredefinedInteger(int n);
+extern Value_String idris2_predefined_nullstring;
+
+// You need uncomment a debugging code in memoryManagement.c to use this.
+void idris2_dumpMemoryStats(void);
+

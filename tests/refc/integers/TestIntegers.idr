@@ -3,6 +3,9 @@ module TestIntegers
 import Data.Bits
 import Data.List.Quantifiers
 
+%foreign "RefC:idris2_dumpMemoryStats"
+dumpMemoryStats : PrimIO ()
+
 put : Show a => a -> IO ()
 put = putStrLn . show
 
@@ -147,3 +150,6 @@ main = do
     put $ imapProperty NumOrd (<= 1) ints
     put $ imapProperty NumOrd (>= 0) ints
     put $ imapProperty NumOrd (>= 1) ints
+
+    primIO $ dumpMemoryStats
+

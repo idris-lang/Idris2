@@ -39,9 +39,15 @@
 #define COMPLETE_CLOSURE_TAG 98 // for trampoline tail recursion handling
 
 typedef struct {
-  int refCounter;
-  int tag;
+  // Popular objects that reference counter reachs maximum are immortalized.
+  // This is used to prevent to release statically allocated objects.
+#define IDRIS2_VP_REFCOUNTER_MAX UINT16_MAX
+  uint16_t refCounter;
+  uint8_t tag;
+  uint8_t reserved;
 } Value_header;
+#define IDRIS2_STOCKVAL(t)                                                     \
+  { IDRIS2_VP_REFCOUNTER_MAX, t, 0 }
 
 typedef struct {
   Value_header header;
@@ -169,3 +175,6 @@ typedef struct {
   Value_header header;
   pthread_cond_t *cond;
 } Value_Condition;
+
+void idris2_dumpMemoryStats(void);
+

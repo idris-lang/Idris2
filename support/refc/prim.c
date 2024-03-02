@@ -1,7 +1,9 @@
 #include "prim.h"
-#include "refc_util.h"
+
 #include <string.h>
 #include <unistd.h>
+
+#include "refc_util.h"
 
 Value *idris2_Data_IORef_prim__newIORef(Value *erased, Value *input_value,
                                         Value *_world) {
@@ -25,47 +27,35 @@ Value *idris2_Data_IORef_prim__writeIORef(Value *erased, Value *_ioref,
 //       System operations
 // -----------------------------------
 
-static Value *osstring = NULL;
-
-Value *idris2_System_Info_prim__os(void) {
-  if (osstring == NULL) {
-    osstring = (Value *)makeString(
+Value_String idris2_predefined_osstring = {IDRIS2_STOCKVAL(STRING_TAG),
 #ifdef _WIN32
-        "windows"
+                                           "windows"
 #elif _WIN64
-        "windows"
+                                           "windows"
 #elif __APPLE__ || __MACH__
-        "macOS"
+                                           "macOS"
 #elif __linux__
-        "Linux"
+                                           "Linux"
 #elif __FreeBSD__
-        "FreeBSD"
+                                           "FreeBSD"
 #elif __OpenBSD__
-        "OpenBSD"
+                                           "OpenBSD"
 #elif __NetBSD__
-        "NetBSD"
+                                           "NetBSD"
 #elif __DragonFly__
-        "DragonFly"
+                                           "DragonFly"
 #elif __unix || __unix__
-        "Unix"
+                                           "Unix"
 #else
-        "Other"
+                                           "Other"
 #endif
-    );
-  }
-  return newReference(osstring);
-}
+};
 
 // NOTE: The codegen is obviously determined at compile time,
 //       so the backend should optimize it by replacing it with a constant.
 //       It would probably also be useful for conditional compilation.
-static Value *codegenstring = NULL;
-
-Value *idris2_System_Info_prim__codegen(void) {
-  if (codegenstring == NULL)
-    codegenstring = (Value *)makeString("refc");
-  return newReference(codegenstring);
-}
+Value_String idris2_predefined_codegenstring = {IDRIS2_STOCKVAL(STRING_TAG),
+                                                "refc"};
 
 Value *idris2_crash(Value *msg) {
   Value_String *str = (Value_String *)msg;
