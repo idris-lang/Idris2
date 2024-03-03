@@ -388,6 +388,7 @@ Value_String idris2_predefined_nullstring = {IDRIS2_STOCKVAL(STRING_TAG), ""};
 
 static bool idris2_predefined_integer_initialized = false;
 Value_Integer idris2_predefined_Integer[100];
+
 Value *idris2_getPredefinedInteger(int n) {
   IDRIS2_REFC_VERIFY(n >= 0 && n < 100,
                      "invalid range of predefined integers.");
@@ -405,4 +406,3 @@ Value *idris2_getPredefinedInteger(int n) {
   }
   return (Value *)&idris2_predefined_Integer[n];
 }
-

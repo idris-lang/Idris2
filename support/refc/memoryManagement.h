@@ -43,4 +43,3 @@ extern Value_String idris2_predefined_nullstring;
 
 // You need uncomment a debugging code in memoryManagement.c to use this.
 void idris2_dumpMemoryStats(void);
-
