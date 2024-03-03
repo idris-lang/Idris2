@@ -4,7 +4,7 @@
 #include "refc_util.h"
 #include "runtime.h"
 
-#if 1
+#if 0
 struct {
   unsigned int n_newValue;
   unsigned int n_newReference;

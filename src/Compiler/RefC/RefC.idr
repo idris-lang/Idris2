@@ -141,54 +141,6 @@ cPrimType CharType = "char"
 cPrimType DoubleType = "double"
 cPrimType WorldType = "void"
 
-cConstant : Constant -> String
-cConstant (I x) =
-  if x >= 0 && x < 100
-     then "(Value*)(&idris2_predefined_Int64[\{show x}])"
-     else "(Value*)makeInt64(\{showIntMin x})"
-cConstant (I8 x) = "(Value*)makeInt8(INT8_C("++ show x ++"))"
-cConstant (I16 x) = "(Value*)makeInt16(INT16_C("++ show x ++"))"
-cConstant (I32 x) = "(Value*)makeInt32(INT32_C("++ show x ++"))"
-cConstant (I64 x) =
-  if x >= 0 && x < 100
-     then "(Value*)(&idris2_predefined_Int64[\{show x}])"
-     else "(Value*)makeInt64(\{showInt64Min x})"
-cConstant (BI x) =
-  if x >= 0 && x < 100
-     then "idris2_getPredefinedInteger(\{show x})"
-     else "(Value*)makeIntegerLiteral(\"\{show x}\")"
-cConstant (B8 x)   = "(Value*)makeBits8(UINT8_C("++ show x ++"))"
-cConstant (B16 x)  = "(Value*)makeBits16(UINT16_C("++ show x ++"))"
-cConstant (B32 x)  = "(Value*)makeBits32(UINT32_C("++ show x ++"))"
-cConstant (B64 x)  =
-  if x >= 0 && x < 100
-     then "(Value*)(&idris2_predefined_Bits64[\{show x}])"
-     else "(Value*)makeBits64(UINT64_C(\{show x}))"
-cConstant (Db x) = "(Value*)makeDouble("++ show x ++")"
-cConstant (Ch x) = "(Value*)makeChar("++ escapeChar x ++")"
-cConstant (Str x) =
-  if length x == 0
-     then "(Value*)(&idris2_predefined_nullstring)"
-     else "(Value*)makeString("++ cStringQuoted x ++")"
-cConstant (PrT t) = cPrimType t
-cConstant WorldVal = "NULL"
-
-extractConstant : Constant -> String
-extractConstant (I x) = show x
-extractConstant (I8 x) = show x
-extractConstant (I16 x) = show x
-extractConstant (I32 x) = show x
-extractConstant (I64 x) = show x
-extractConstant (BI x) = show x
-extractConstant (Db x) = show x
-extractConstant (Ch x) = show x
-extractConstant (Str x) = cStringQuoted x
-extractConstant (B8 x)  = show x
-extractConstant (B16 x)  = show x
-extractConstant (B32 x)  = show x
-extractConstant (B64 x)  = show x
-extractConstant c = assert_total $ idris_crash ("INTERNAL ERROR: Unable to extract constant: " ++ cConstant c)
--- not really total but this way this internal error does not contaminate everything else
 
 ||| Generate scheme for a plain function.
 plainOp : String -> List String -> String
@@ -244,11 +196,24 @@ varName : AVar -> String
 varName (ALocal i) = "var_" ++ (show i)
 varName (ANull)    = "NULL"
 
+
+constantName : Constant -> Nat -> String
+constantName c n = case c of
+  I x => "((Value*)&idris2_constant_Int64_\{cCleanString $ show x})"
+  I64 x => "((Value*)&idris2_constant_Int64_\{cCleanString $ show x})"
+  B64 x => "((Value*)&idris2_constant_Bits64_\{show x})"
+  Db x => "((Value*)&idris2_constant_Double_\{cCleanString $ show x})"
+  Str x => "((Value*)&idris2_constant_String_\{show n})"
+  _ => ""
+
+
+
 data ArgCounter : Type where
 data EnvTracker : Type where
 data FunctionDefinitions : Type where
 data IndentLevel : Type where
 data HeaderFiles : Type where
+data ConstDef : Type where
 
 ReuseMap = SortedMap Name String
 Owned = SortedSet AVar
@@ -440,8 +405,6 @@ const2Integer c i =
         (B64 x) => cast x
         _ => i
 
-
-
 data TailPositionStatus = InTailPosition | NotInTailPosition
 
 ||| The function takes as arguments the current ReuseMap and the constructors that will be used.
@@ -460,13 +423,6 @@ dropUnusedOwnedVars owned usedVars =
     let actualOwned = intersection owned usedVars in
     let shouldDrop = difference owned actualOwned in
     (varName <$> SortedSet.toList shouldDrop, actualOwned)
-
-locally : {auto t : Ref EnvTracker Env} -> Env -> Core () -> Core ()
-locally newEnv act = do
-    oldEnv <- get EnvTracker
-    put EnvTracker newEnv
-    act
-    put EnvTracker oldEnv
 
 -- if the constructor is unique use it, otherwise add it to should drop vars and create null constructor
 addReuseConstructor : {auto a : Ref ArgCounter Nat}
@@ -513,6 +469,7 @@ mutual
                  -> {auto e : Ref EnvTracker Env}
                  -> {auto oft : Ref OutfileText Output}
                  -> {auto il : Ref IndentLevel Nat}
+                 -> {auto _ : Ref ConstDef (SortedMap Constant Nat)}
                  -> List String -> List String
                  -> String -> String -> List Int -> ANF -> TailPositionStatus
                  -> Core ()
@@ -530,6 +487,7 @@ mutual
                       -> {auto oft : Ref OutfileText Output}
                       -> {auto il : Ref IndentLevel Nat}
                       -> {auto e : Ref EnvTracker Env}
+                      -> {auto _ : Ref ConstDef (SortedMap Constant Nat)}
                       -> ANF
                       -> TailPositionStatus
                       -> Core String
@@ -623,8 +581,8 @@ mutual
              "prim__void", "prim__os", "prim__codegen", "prim__onCollect", "prim__onCollectAny" ]
         case p of
             NS _ (UN (Basic pn)) =>
-               unless (elem pn prims) $ throw $ InternalError $ "INTERNAL ERROR: Unknown primitive: " ++ cName p
-            _ => throw $ InternalError $ "INTERNAL ERROR: Unknown primitive: " ++ cName p
+               unless (elem pn prims) $ coreFail $ InternalError $ "[refc] Unknown primitive: " ++ cName p
+            _ => coreFail $ InternalError $ "[refc] Unknown primitive: " ++ cName p
         emit fc $ "// call to external primitive " ++ cName p
         pure $ "idris2_\{cName p}("++ showSep ", " (map varName args) ++")"
 
@@ -700,7 +658,7 @@ mutual
                     case c of
                         Str x => emit emptyFC "\{els}if (! strcmp(\{cStringQuoted x}, ((Value_String *)\{sc'})->str)) {"
                         Db  x => emit emptyFC "\{els}if (((Value_Double *)\{sc'})->d == \{show x}) {"
-                        x => throw $ InternalError "[refc] AConstCase : unsupported type. \{show fc} \{show x}"
+                        x => coreFail $ InternalError "[refc] AConstCase : unsupported type. \{show fc} \{show x}"
                     put EnvTracker ({owned := actualOwned, reuseMap := actualReuseMap} env)
                     concaseBody shouldDrop dropReuseCons switchReturnVar "" [] body tailPosition
                     pure "} else ") "" alts
@@ -718,7 +676,43 @@ mutual
         emit emptyFC "}"
         pure switchReturnVar
 
-    cStatementsFromANF (APrimVal fc c) _ = pure $ cConstant c
+    cStatementsFromANF (APrimVal fc (I x)) tailPosition = cStatementsFromANF (APrimVal fc (I64 $ cast x)) tailPosition
+    cStatementsFromANF (APrimVal fc c) _ = do
+      constdefs <- get ConstDef
+      case lookup c constdefs of
+           Just constid => pure $ constantName c constid
+           Nothing => case dyngen of
+               Just expr => pure expr
+               Nothing => do
+                  constid <- case c of
+                       Str _ => getNextCounter
+                       _ => pure 0
+                  put ConstDef $ insert c constid constdefs
+                  pure $ constantName c constid
+      where
+        dyngen : Maybe String
+        dyngen = case c of
+            I8 x => Just "(Value*)makeInt8(INT8_C(\{show x}))"
+            I16 x => Just "(Value*)makeInt16(INT16_C(\{show x}))"
+            I32 x => Just "(Value*)makeInt32(INT32_C(\{show x}))"
+            I64 x => if x >= 0 && x < 100
+                then Just "(Value*)(&idris2_predefined_Int64[\{show x}])"
+                else Nothing
+            BI x => if x >= 0 && x < 100
+                then Just "idris2_getPredefinedInteger(\{show x})"
+                else Just "(Value*)makeIntegerLiteral(\"\{show x}\")"
+            B8 x => Just "(Value *)makeBits8(UINT8_C(\{show x}))"
+            B16 x => Just "(Value *)makeBits16(UINT16_C(\{show x}))"
+            B32 x => Just "(Value *)makeBits32(UINT32_C(\{show x}))"
+            B64 x => if x >= 0 && x < 100
+               then Just "(Value*)(&idris2_predefined_Bits64[\{show x}])"
+               else Nothing
+            Db _ => Nothing
+            Ch x => Just "(Value*)makeChar(\{escapeChar x})"
+            Str _ => Nothing
+            PrT t => pure $ cPrimType t
+            _ => Just "NULL"
+
     cStatementsFromANF (AErased fc) _ = pure "NULL"
     cStatementsFromANF (ACrash fc x) _ = pure "(NULL /* CRASH */)"
 
@@ -855,6 +849,7 @@ additionalFFIStub name argTypes retType =
 
 createCFunctions : {auto c : Ref Ctxt Defs}
                 -> {auto a : Ref ArgCounter Nat}
+                -> {auto _ : Ref ConstDef (SortedMap Constant Nat)}
                 -> {auto f : Ref FunctionDefinitions (List String)}
                 -> {auto oft : Ref OutfileText Output}
                 -> {auto il : Ref IndentLevel Nat}
@@ -974,17 +969,34 @@ createCFunctions n (MkAForeign ccs fargs ret) = do
 
           decreaseIndentation
           emit EmptyFC "}"
-      _ => assert_total $ idris_crash ("INTERNAL ERROR: FFI not found for " ++ cName n)
+      _ => coreFail $ InternalError "[refc] FFI not found for \{cName n}"
           -- not really total but this way this internal error does not contaminate everything else
 
-createCFunctions n (MkAError exp) = assert_total $ idris_crash ("INTERNAL ERROR: Error with expression: " ++ show exp)
+createCFunctions n (MkAError exp) = coreFail $ InternalError "[refc] Error with expression: \{show exp}"
 -- not really total but this way this internal error does not contaminate everything else
+
+
+genConstant : Constant -> Nat -> String
+genConstant c n = case c of
+  I x   => let x' = show x in go x' "Int64" "INT64" (showIntMin x)
+  I64 x => let x' = show x in go x' "Int64" "INT64" (showInt64Min x)
+  B64 x => let x' = show x in go x' "Bits64" "BITS64" "UINT64_C(\{x'})"
+  Db x  => let x' = show x in go x' "Double" "DOUBLE" x'
+  Str x => go (show n) "String" "STRING" (cStringQuoted x)
+  _ => "/* bad constant */"
+  where
+    go : String -> String -> String -> String -> String
+    go suffix ty tag v =
+      "static Value_\{ty} idris2_constant_\{ty}_\{cCleanString suffix}"
+        ++ " = { IDRIS2_STOCKVAL(\{tag}_TAG), \{v} };"
+
 
 header : {auto c : Ref Ctxt Defs}
       -> {auto f : Ref FunctionDefinitions (List String)}
       -> {auto o : Ref OutfileText Output}
       -> {auto il : Ref IndentLevel Nat}
       -> {auto h : Ref HeaderFiles (SortedSet String)}
+      -> {auto _ : Ref ConstDef (SortedMap Constant Nat)}
       -> Core ()
 header = do
     let initLines = """
@@ -993,9 +1005,14 @@ header = do
 
       """
     let headerFiles = SortedSet.toList !(get HeaderFiles)
-    let headerLines = map (\h => "#include <" ++ h ++ ">\n") headerFiles
     fns <- get FunctionDefinitions
-    update OutfileText (appendL ([initLines] ++ headerLines ++ ["\n// function definitions"] ++ fns))
+    update OutfileText $ appendL $
+        [initLines] ++
+        map (\h => "#include <\{h}>\n") headerFiles ++
+        ["\n// function definitions"] ++
+        fns ++
+        ["\n// constant value definitions"] ++
+        map (uncurry genConstant) (SortedMap.toList !(get ConstDef))
 
 footer : {auto il : Ref IndentLevel Nat}
       -> {auto f : Ref OutfileText Output}
@@ -1026,6 +1043,7 @@ generateCSourceFile : {auto c : Ref Ctxt Defs}
 generateCSourceFile defs outn =
   do _ <- newRef ArgCounter 0
      _ <- newRef FunctionDefinitions []
+     _ <- newRef ConstDef Data.SortedMap.empty
      _ <- newRef OutfileText DList.Nil
      _ <- newRef HeaderFiles empty
      _ <- newRef IndentLevel 0

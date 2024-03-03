@@ -56,6 +56,17 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Special constructors such as Nil and Nothing were eliminated and assigned to
   NULL.
 
+* Values that reference counter reaches to its limitmaximum are immortalized
+  to avoid overflow the counter. This can cause memory leaks, but they occurs
+  rarely and are a better choice than crashing.
+  Since overflow is no longer a concern, 'Value_Header' was deduces in size to
+  improve memory utilization.
+
+* Commonly seen values such as integers less than 100 are predefined and shared.
+
+* Constant String, Int64, Bits64 and Double values are allocated statically as
+  indestructible and shared.
+
 #### NodeJS Backend
 
 * The NodeJS executable output to `build/exec/` now has its executable bit set.
