@@ -272,8 +272,8 @@ Value *Main_main_10
     Value * var_4 = trampoline(closure_96);
     Value * var_5 = (Value*)idris2_mkString("\x0a""");
     Value *primVar_97 = strAppend(var_4, var_5);
-    removeReference(var_5);
     removeReference(var_4);
+    removeReference(var_5);
     Value * var_6 = primVar_97;                              // Prelude.IO:98:22--98:34
     // start Prelude_IO_prim__putStr(var_6, var_0)           // Prelude.IO:98:22--98:34
     Value_Arglist *arglist_98 = newArglist(0,2);
