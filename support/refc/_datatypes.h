@@ -77,7 +77,7 @@ actually an Int. But places like newReference/removeReference require this flag.
 //  Int64/Bits654 are not unboxable.
 #define idris2_vp_to_Bits32(p)                                                 \
   ((uint32_t)((uintptr_t)(p) >> idris2_vp_int_shift))
-#define idris2_vp_to_Int32(p): ((int32_t)((uintptr_t)(p) >> idris2_vp_int_shift))
+#define idris2_vp_to_Int32(p) ((int32_t)((uintptr_t)(p) >> idris2_vp_int_shift))
 
 #elif UINTPTR_WIDTH >= 32
 #define idris2_vp_to_Bits32(p) (((Value_Bits32 *)(p))->ui32)
