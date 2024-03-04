@@ -8,7 +8,7 @@ SRCS := $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
 DEPS = $(OBJS:.o=.d)
 
-CFLAGS += -O2
+CFLAGS += -O2 -D_POSIX_C_SOURCE=200112L
 
 ifeq ($(OLD_WIN), 1)
 	CPPFLAGS += -D_OLD_WIN
