@@ -11,6 +11,11 @@
 #include <time.h>
 #include <unistd.h>
 
+#if !defined(_SC_NPROCESSORS_ONLN) && defined(_DARWIN_C_SOURCE)
+#include <sys/sysctl.h>
+#include <sys/types.h>
+#endif
+
 int _argc;
 char **_argv;
 
@@ -149,9 +154,25 @@ int idris2_getPID() {
 
 // get the number of processors configured
 long idris2_getNProcessors() {
-#ifdef _WIN32
+#if defined(_WIN32)
   return win32_getNProcessors();
-#else
+#elif defined(_POSIX_VERSION) && _POSIX_VERSION >= 200112L &&                  \
+    defined(_SC_NPROCESSORS_ONLN)
+  // Note: Under MacOS with _POSIX_C_SOURCE, _SC_NPROCESSORS_ONLN never defined.
   return sysconf(_SC_NPROCESSORS_ONLN);
+#elif defined(_DARWIN_C_SOURCE) || defined(_BSD_SOURCE)
+  // Generic way for BSD style system.
+
+#if defined(_DARWIN_C_SOURCE)
+  int xs[] = {CTL_HW, HW_LOGICALCPU};
+#else
+  int xs[] = {CTL_HW, HW_NCPU};
+#endif
+
+  int numcpus = 1;
+  size_t n = sizeof(numcpus);
+  return sysctll(xs, 2, &numcpus, &len, NULL, 0) < 0 ? 1 : numcpus;
+#else
+  return 1
 #endif
 }

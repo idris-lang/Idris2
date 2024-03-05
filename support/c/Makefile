@@ -9,7 +9,7 @@ SRCS := $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
 DEPS = $(OBJS:.o=.d)
 
-CFLAGS += -O2 -D_POSIX_C_SOURCE=200112L
+CFLAGS += -O2
 
 ifeq ($(OS), windows)
 	SRCS += windows/win_utils.c windows/win_hack.c
