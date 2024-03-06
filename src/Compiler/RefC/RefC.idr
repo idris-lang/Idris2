@@ -26,8 +26,6 @@ import System.File
 import Protocol.Hex
 import Libraries.Utils.Path
 
-%default total
-
 showcCleanStringChar : Char -> String -> String
 showcCleanStringChar ' ' = ("_" ++)
 showcCleanStringChar '!' = ("_bang" ++)
@@ -454,7 +452,6 @@ addReuseConstructor reuseMap sc conName conArgs consts shouldDrop actualReuseCon
         pure (shouldDrop \\ conArgs, actualReuseConsts)
 
 mutual
-    covering
     concaseBody : {auto a : Ref ArgCounter Nat}
                  -> {auto e : Ref EnvTracker Env}
                  -> {auto oft : Ref OutfileText Output}
@@ -477,7 +474,6 @@ mutual
         emit emptyFC "\{returnvar} = \{!(cStatementsFromANF body tailPosition)};"
         decreaseIndentation
 
-    covering
     cStatementsFromANF : {auto a : Ref ArgCounter Nat}
                       -> {auto oft : Ref OutfileText Output}
                       -> {auto il : Ref IndentLevel Nat}
@@ -660,7 +656,7 @@ addCommaToList : List String -> List String
 addCommaToList [] = []
 addCommaToList (x :: xs) = ("  " ++ x) :: map (", " ++) xs
 
-covering functionDefSignature : {auto c : Ref Ctxt Defs} -> Name -> (args:List Int) -> Core String
+functionDefSignature : {auto c : Ref Ctxt Defs} -> Name -> (args:List Int) -> Core String
 functionDefSignature n [] = do
     let fn = (cName !(getFullName n))
     pure $  "\n\nValue *"  ++ fn ++ "(void)"
@@ -669,7 +665,7 @@ functionDefSignature n args = do
     let fn = (cName !(getFullName n))
     pure $  "\n\nValue *"  ++ fn ++ "\n(\n" ++ (showSep "\n" (argsStringList)) ++ "\n)"
 
-covering functionDefSignatureArglist : {auto c : Ref Ctxt Defs} -> Name  -> Core String
+functionDefSignatureArglist : {auto c : Ref Ctxt Defs} -> Name  -> Core String
 functionDefSignatureArglist n = pure $  "Value *"  ++ (cName !(getFullName n)) ++ "_arglist(Value_Arglist* arglist)"
 
 
@@ -787,7 +783,6 @@ additionalFFIStub name argTypes retType =
     " (*" ++ cName name ++ ")(" ++
     (concat $ intersperse ", " $ map cTypeOfCFType argTypes) ++ ") = (void*)missing_ffi;\n"
 
-covering
 createCFunctions : {auto c : Ref Ctxt Defs}
                 -> {auto a : Ref ArgCounter Nat}
                 -> {auto f : Ref FunctionDefinitions (List String)}
@@ -952,7 +947,7 @@ footer = do
       }
       """
 
-export covering
+export
 generateCSourceFile : {auto c : Ref Ctxt Defs}
                    -> {default [] additionalFFILangs : List String}
                    -> List (Name, ANFDef)
@@ -973,7 +968,7 @@ generateCSourceFile defs outn =
      coreLift_ $ writeFile outn code
      log "compiler.refc" 10 $ "Generated C file " ++ outn
 
-export covering
+export
 compileExpr : UsePhase
            -> Ref Ctxt Defs
            -> Ref Syn SyntaxInfo
@@ -1000,7 +995,7 @@ compileExpr _ _ _ _ _ _ _ = pure Nothing
 
 
 
-export covering
+export
 executeExpr : Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
               (execDir : String) -> ClosedTerm -> Core ()
 executeExpr c s tmpDir tm = do
@@ -1009,6 +1004,6 @@ executeExpr c s tmpDir tm = do
        | Nothing => do coreLift_ $ putStrLn "Error: failed to compile"
      coreLift_ $ system (tmpDir </> outfile)
 
-export covering
+export
 codegenRefC : Codegen
 codegenRefC = MkCG (compileExpr ANF) executeExpr Nothing Nothing
