@@ -26,6 +26,9 @@ import System.File
 import Protocol.Hex
 import Libraries.Utils.Path
 
+%default covering
+
+
 showcCleanStringChar : Char -> String -> String
 showcCleanStringChar ' ' = ("_" ++)
 showcCleanStringChar '!' = ("_bang" ++)
@@ -589,16 +592,15 @@ mutual
                         Nothing   => emit emptyFC "\{els}if (! strcmp(((Value_Constructor *)\{sc'})->name, idris2_constr_\{cName name})) {"
                         Just tag' => emit emptyFC "\{els}if (((Value_Constructor *)\{sc'})->tag == \{show tag'} /* \{show name} */) {"
 
-            increaseIndentation
-            _ <- foldlC (\k, arg => do
-                emit emptyFC "Value *var_\{show arg} = ((Value_Constructor*)\{sc'})->args[\{show k}];"
-                pure (S k) ) 0 args
-
             let conArgs = ALocal <$> args
             let ownedWithArgs = union (fromList conArgs) $ if erased then delete sc env.owned else env.owned
             let (shouldDrop, actualOwned) = dropUnusedOwnedVars ownedWithArgs (freeVariables body)
             let usedCons = usedConstructors body
             let (dropReuseCons, actualReuseMap) = dropUnusedReuseCons env.reuseMap usedCons
+            increaseIndentation
+            _ <- foldlC (\k, arg => do
+                emit emptyFC "Value *var_\{show arg} = ((Value_Constructor*)\{sc'})->args[\{show k}];"
+                pure (S k) ) 0 args
             (shouldDrop, actualReuseMap) <- addReuseConstructor env.reuseMap sc' name (varName <$> conArgs) usedCons shouldDrop actualReuseMap
             removeVars shouldDrop
             removeReuseConstructors dropReuseCons
