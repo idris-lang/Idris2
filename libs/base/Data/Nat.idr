@@ -179,9 +179,12 @@ fromLteSucc : LTE (S m) (S n) -> LTE m n
 fromLteSucc (LTESucc x) = x
 
 export
-succNotLTEpred : {x : Nat} -> Not $ LTE (S x) x
-succNotLTEpred {x =   0} prf = succNotLTEzero prf
-succNotLTEpred {x = S _} prf = succNotLTEpred $ fromLteSucc prf
+succNotLTEpred : Not $ LTE (S x) x
+succNotLTEpred {x = (S right)} (LTESucc y) = succNotLTEpred y
+
+export
+Uninhabited (LTE (S x) x) where
+  uninhabited = succNotLTEpred
 
 public export
 isLTE : (m, n : Nat) -> Dec (LTE m n)
