@@ -57,7 +57,7 @@ _awk_clean_name='
     while (match($0, /(P:[A-z]+:|arg:|conArg:|ttc[\\\/][0-9]+|[$]resolved)[0-9]+|[A-z.]+:[0-9]+:[0-9]+--[0-9]+:[0-9]+|[A-z]+[.][0-9]+:[0-9]+/)) {
         rs = RSTART
         rl = RLENGTH
-        m = substr($0, rs, rl - 1)
+        m = substr($0, rs, rl)
         pfx = "XXX"
         if (match(m,/^(\$resolved|arg:|conArg:|ttc[\\\/]|P:[A-z]+:|[A-z.]+:|[A-z]+[.])/)) { pfx = substr(m, RSTART, RLENGTH) }
         if (!(m in mapping)) {
