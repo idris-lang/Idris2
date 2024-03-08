@@ -182,10 +182,6 @@ export
 succNotLTEpred : Not $ LTE (S x) x
 succNotLTEpred {x = (S right)} (LTESucc y) = succNotLTEpred y
 
-export
-Uninhabited (LTE (S x) x) where
-  uninhabited = succNotLTEpred
-
 public export
 isLTE : (m, n : Nat) -> Dec (LTE m n)
 isLTE Z n = Yes LTEZero
