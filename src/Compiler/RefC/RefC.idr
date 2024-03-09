@@ -379,21 +379,21 @@ integer_switch (MkAConstAlt c _  :: _) =
         (Ch x) => True
         _ => False
 
-const2Integer : Constant -> Integer -> Integer
+const2Integer : Constant -> Integer -> String
 const2Integer c i =
     case c of
-        (I x) => cast x
-        (I8 x) => cast x
-        (I16 x) => cast x
-        (I32 x) => cast x
-        (I64 x) => cast x
-        (BI x) => cast x
-        (Ch x) => cast x
-        (B8 x) => cast x
-        (B16 x) => cast x
-        (B32 x) => cast x
-        (B64 x) => cast x
-        _ => i
+        (I x) => showIntMin x
+        (I8 x) => "INT8_C(\{show x})"
+        (I16 x) => "INT16_C(\{show x})"
+        (I32 x) => "INT32_C(\{show x})"
+        (I64 x) => showInt64Min x
+        (BI x) => show x
+        (Ch x) => escapeChar x
+        (B8 x) => "UINT8_C(\{show x})"
+        (B16 x) => "UINT16_C(\{show x})"
+        (B32 x) => "UINT32_C(\{show x})"
+        (B64 x) => "UINT64_C(\{show x})"
+        _ => show i
 
 
 data TailPositionStatus = InTailPosition | NotInTailPosition
@@ -625,9 +625,9 @@ mutual
         case integer_switch alts of
             True => do
                 tmpint <- getNewVarThatWillNotBeFreedAtEndOfBlock
-                emit emptyFC "int \{tmpint} = idris2_extractInt(\{sc'});"
+                emit emptyFC "int64_t \{tmpint} = idris2_extractInt(\{sc'});"
                 _ <- foldlC (\els, (MkAConstAlt c body) => do
-                    emit emptyFC "\{els}if (\{tmpint} == \{show $ const2Integer c 0}) {"
+                    emit emptyFC "\{els}if (\{tmpint} == \{const2Integer c 0}) {"
                     concaseBody env switchReturnVar "" [] body tailPosition
                     pure "} else ") "" alts
                 pure ()
