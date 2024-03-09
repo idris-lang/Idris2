@@ -61,8 +61,8 @@ Value *strAppend(Value *a, Value *b) {
 
 Value *strSubstr(Value *start, Value *len, Value *s) {
   char *input = ((Value_String *)s)->str;
-  int offset = idris2_extractInt(start); /* start and len is Nat. */
-  int l = idris2_extractInt(len);
+  int offset = idris2_vp_to_Int64(start); /* start and len was come from Nat. */
+  int l = idris2_vp_to_Int64(len);
 
   int tailLen = strlen(input) - offset;
   if (tailLen < l) {
