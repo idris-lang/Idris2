@@ -62,7 +62,7 @@ updateEnv
          blibs <- coreLift $ idrisGetEnv "IDRIS2_LIBS"
          whenJust blibs $ traverseList1_ addLibDir . splitPaths
          pdirs <- coreLift $ idrisGetEnv "IDRIS2_PACKAGE_PATH"
-         whenJust pdirs $ traverseList1_ addPackageDir . splitPaths
+         whenJust pdirs $ traverseList1_ addPackageSearchPath . splitPaths
          cg <- coreLift $ idrisGetEnv "IDRIS2_CG"
          whenJust cg $ \ e => case getCG (options defs) e of
            Just cg => setCG cg
@@ -76,6 +76,9 @@ updateEnv
          -- for the tests means they test the local version not the installed
          -- version
          defs <- get Ctxt
+         -- add global package path to the package search paths (after those
+         -- added by the user with IDRIS2_PACKAGE_PATH)
+         addPackageSearchPath !pkgGlobalDirectory
          -- These might fail while bootstrapping
          catch (addPkgDir "prelude" anyBounds) (const (pure ()))
          catch (addPkgDir "base" anyBounds) (const (pure ()))

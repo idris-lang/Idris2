@@ -1080,7 +1080,7 @@ process (ImportPackage package) = do
   defs <- get Ctxt
   searchDirs <- extraSearchDirectories
   let Just packageDir = find
-        (\d => isInfixOf package (fromMaybe d (fileName d)))
+        (\d => isInfixOf package (fromMaybe d $ fileName =<< parent d))
         searchDirs
     | _ => pure (REPLError "Package not found in the known search directories")
   let packageDirPath = parse packageDir

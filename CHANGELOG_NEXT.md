@@ -40,6 +40,14 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 ### Compiler changes
 
+* The compiler now differentiates between "package search path" and "package
+  directories." Previously both were combined (as seen in the `idris2 --paths`
+  output for "Package Directories"). Now entries in the search path will be
+  printed under an "Package Search Paths" entry and package directories will
+  continue to be printed under "Package Directories." The `IDRIS2_PACKAGE_PATH`
+  environment variable adds to the "Package Search Paths." Functionally this is
+  not a breaking change.
+
 #### RefC Backend
 
 * Fix invalid memory read onf strSubStr.
