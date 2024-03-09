@@ -1,5 +1,5 @@
 ||| A telescope is the variable context in a dependently typed program.
-||| Dependent types with free varialbes  are really only well-defined in a telescope.
+||| Dependent types with free variables  are really only well-defined in a telescope.
 |||
 ||| A segment of a telescope is a tuple of types in that
 ||| telescope. These are usually implicit in formal developments, but
