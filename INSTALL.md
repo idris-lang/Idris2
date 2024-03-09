@@ -54,9 +54,10 @@ make sure you run `./configure --threads` to build multithreading support in.
 **NOTE**: On FreeBSD, OpenBSD and NetBSD you need to use `gmake` command instead
 of `make` in the following steps.
 
-**NOTE**: If you're running macOS on Apple Silicon (arm64) you will need to
-install the Racket fork of chez scheme as described below.  If you install gmp
-via homebrew, you will also need to `export CPATH=/opt/homebrew/include`.
+**NOTE**: If you're running macOS on Apple Silicon (arm64) you will need to use
+Chez scheme version `10.0.0` or greater. If that is not possible, install the
+Racket fork of chez scheme as described below.  If you install gmp via homebrew,
+you will also need to `export CPATH=/opt/homebrew/include`.
 
 ### 1: Set installation target directory
 
@@ -194,9 +195,10 @@ nix run github:idris-lang/Idris2#emacs-with-idris idrisCode.idr
 
 ## Installing Chez Scheme on Apple Silicon
 
-The official version of chez scheme does not yet support Apple Silicon. So, on
-macOS with Apple Silicon (e.g. M1 and M2 macs), you will need to build and install
-the Racket fork of chez scheme.
+Chez scheme only supports Apple Silicon for versions `10.0.0` or newer.
+
+If you cannot install that new of a version of Chez Scheme, you will need to
+build and install the Racket fork of chez scheme.
 
 ```sh
 git clone git@github.com:racket/ChezScheme.git
