@@ -843,6 +843,11 @@ createCFunctions n (MkAFun args anf) = do
     emit EmptyFC fn
     emit EmptyFC "{"
     increaseIndentation
+    when (nargs > MaxExtractFunArgs) $ do
+      _ <- foldlC (\i, j => do
+         emit EmptyFC "Value *var_\{show j} = var_arglist[\{show i}];"
+         pure $ i + 1) 0 args
+      pure ()
     removeVars (varName <$> SortedSet.toList shouldDrop)
     _ <- newRef EnvTracker (MkEnv bodyFreeVars empty)
     emit EmptyFC $ "return \{!(cStatementsFromANF anf InTailPosition)};"
