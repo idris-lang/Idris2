@@ -2,4 +2,5 @@
 GetVis> GetVis> [(NS (MkNS ["GetVis"]) (UN (Basic "fooPriv")), Private)]
 GetVis> [(NS (MkNS ["GetVis"]) (UN (Basic "fooExp")), Export)]
 GetVis> [(NS (MkNS ["GetVis"]) (UN (Basic "fooPubExp")), Public)]
+GetVis> [(NS (MkNS ["A", "GetVis"]) (UN (Basic "foo")), Private), (NS (MkNS ["B", "GetVis"]) (UN (Basic "foo")), Export), (NS (MkNS ["C", "GetVis"]) (UN (Basic "foo")), Public)]
 GetVis> Bye for now!
