@@ -35,6 +35,7 @@ import TTImp.TTImp
 import TTImp.Utils
 
 import Libraries.Data.IMaybe
+import Libraries.Data.WithDefault
 import Libraries.Utils.Shunting
 import Libraries.Text.PrettyPrint.Prettyprinter
 
@@ -106,12 +107,12 @@ mkPrec Infix  = NonAssoc
 mkPrec Prefix = Prefix
 
 -- This is used to print the error message for fixities
-[interpName] Interpolation ((Name, BacktickOrOperatorFixity), b) where
-  interpolate ((x, _), _) = show x
+[interpName] Interpolation ((OpStr' Name, FixityDeclarationInfo), b) where
+  interpolate ((x, _), _) = show x.toName
 
-[showWithLoc] Show ((Name, BacktickOrOperatorFixity), b) where
+[showWithLoc] Show ((OpStr' Name, FixityDeclarationInfo), b) where
   show ((x, DeclaredFixity y), _) = show x ++ " at " ++ show y.fc
-  show ((x, Backticked), _) = show x
+  show ((x, UndeclaredFixity), _) = show x
 
 -- Check that an operator does not have any conflicting fixities in scope.
 -- Each operator can have its fixity defined multiple times across multiple
@@ -121,19 +122,19 @@ mkPrec Prefix = Prefix
 checkConflictingFixities : {auto s : Ref Syn SyntaxInfo} ->
                            {auto c : Ref Ctxt Defs} ->
                            (isPrefix : Bool) ->
-                           FC -> Name -> Core (OpPrec, BacktickOrOperatorFixity)
+                           FC -> OpStr' Name -> Core (OpPrec, FixityDeclarationInfo)
 checkConflictingFixities isPrefix exprFC opn
-  = do let op = nameRoot opn
+  = do let op = nameRoot opn.toName
        foundFixities <- getFixityInfo op
        let (pre, inf) = partition ((== Prefix) . fix . snd) foundFixities
        case (isPrefix, pre, inf) of
-            -- If we do not find any fixity for this operator we check that it uses operator
-            -- characters, if not, it must be a backticked expression.
-            (_, [], []) => if any isOpChar (fastUnpack op)
-                              then throw (GenericMsg exprFC "Unknown operator '\{op}'")
-                              else pure (NonAssoc 1, Backticked) -- Backticks are non associative by default
+            -- If we do not find any fixity, and it is a backticked operator, then we
+            -- return the default fixity and associativity for backticked operators
+            -- Otherwise, it's an unknown operator.
+            (_, [], []) => case opn of
+                              OpSymbols _ => throw (GenericMsg exprFC "Unknown operator '\{op}'")
+                              Backticked _ =>  pure (NonAssoc 1, UndeclaredFixity) -- Backticks are non associative by default
 
-            --
             (True, ((fxName, fx) :: _), _) => do
                 -- in the prefix case, remove conflicts with infix (-)
                 let extraFixities = pre ++ (filter (\(nm, _) => not $ nameRoot nm == "-") inf)
@@ -171,17 +172,18 @@ checkConflictingFixities isPrefix exprFC opn
 
 checkConflictingBinding : Ref Ctxt Defs =>
                           Ref Syn SyntaxInfo =>
-                          FC -> Name -> (foundFixity : BacktickOrOperatorFixity) ->
+                          FC -> OpStr -> (foundFixity : FixityDeclarationInfo) ->
                           (usage : OperatorLHSInfo PTerm) -> (rhs : PTerm) -> Core ()
 checkConflictingBinding fc opName foundFixity use_site rhs
     = if isCompatible foundFixity use_site
          then pure ()
          else throw $ OperatorBindingMismatch
-             {print = byShow} fc foundFixity use_site opName rhs !candidates
+             {print = byShow} fc foundFixity use_site (opNameToEither opName) rhs !candidates
     where
-      isCompatible : BacktickOrOperatorFixity -> OperatorLHSInfo PTerm -> Bool
-      isCompatible Backticked (NoBinder lhs) = True
-      isCompatible Backticked _ = False
+
+      isCompatible : FixityDeclarationInfo -> OperatorLHSInfo PTerm -> Bool
+      isCompatible UndeclaredFixity (NoBinder lhs) = True
+      isCompatible UndeclaredFixity _ = False
       isCompatible (DeclaredFixity fixInfo) (NoBinder lhs) = fixInfo.bindingInfo == NotBinding
       isCompatible (DeclaredFixity fixInfo) (BindType name ty) = fixInfo.bindingInfo == Typebind
       isCompatible (DeclaredFixity fixInfo) (BindExpr name expr) = fixInfo.bindingInfo == Autobind
@@ -198,10 +200,10 @@ checkConflictingBinding fc opName foundFixity use_site rhs
       candidates = do let DeclaredFixity fxInfo = foundFixity
                         | _ => pure [] -- if there is no declared fixity we can't know what's
                                        -- supposed to go there.
-                      Just (nm, cs) <- getSimilarNames {keepPredicate = Just (keepCompatibleBinding fxInfo.bindingInfo)} opName
+                      Just (nm, cs) <- getSimilarNames {keepPredicate = Just (keepCompatibleBinding fxInfo.bindingInfo)} opName.toName
                         | Nothing => pure []
                       ns <- currentNS <$> get Ctxt
-                      pure (showSimilarNames ns opName nm cs)
+                      pure (showSimilarNames ns opName.toName nm cs)
 
 checkValidFixity : BindingModifier -> Fixity -> Nat -> Bool
 
@@ -225,7 +227,7 @@ checkValidFixity _ _ _ = False
 parameters (side : Side)
   toTokList : {auto s : Ref Syn SyntaxInfo} ->
               {auto c : Ref Ctxt Defs} ->
-              PTerm -> Core (List (Tok ((OpStr, BacktickOrOperatorFixity), Maybe (OperatorLHSInfo PTerm)) PTerm))
+              PTerm -> Core (List (Tok ((OpStr, FixityDeclarationInfo), Maybe (OperatorLHSInfo PTerm)) PTerm))
   toTokList (POp fc opFC l opn r)
       = do (precInfo, fixInfo) <- checkConflictingFixities False fc opn
            unless (side == LHS) -- do not check for conflicting fixity on the LHS
@@ -393,7 +395,7 @@ mutual
       = do syn <- get Syn
            -- It might actually be a prefix argument rather than a section
            -- so check that first, otherwise desugar as a lambda
-           case lookupName op (prefixes syn) of
+           case lookupName op.toName (prefixes syn) of
                 [] =>
                     desugarB side ps
                         (PLam fc top Explicit (PRef fc (MN "arg" 0)) (PImplicit fc)
@@ -798,10 +800,10 @@ mutual
                 {auto o : Ref ROpts REPLOpts} ->
                 Side -> List Name -> Tree (OpStr, Maybe $ OperatorLHSInfo PTerm) PTerm ->
                 Core PTerm
-  desugarTree side ps (Infix loc eqFC (UN $ Basic "=", _) l r) -- special case since '=' is special syntax
+  desugarTree side ps (Infix loc eqFC (OpSymbols $ UN $ Basic "=", _) l r) -- special case since '=' is special syntax
       = pure $ PEq eqFC !(desugarTree side ps l) !(desugarTree side ps r)
 
-  desugarTree side ps (Infix loc _ (UN $ Basic "$", _) l r) -- special case since '$' is special syntax
+  desugarTree side ps (Infix loc _ (OpSymbols $ UN $ Basic "$", _) l r) -- special case since '$' is special syntax
       = do l' <- desugarTree side ps l
            r' <- desugarTree side ps r
            pure (PApp loc l' r')
@@ -809,25 +811,25 @@ mutual
   desugarTree side ps (Infix loc opFC (op, Just (NoBinder lhs)) l r)
       = do l' <- desugarTree side ps l
            r' <- desugarTree side ps r
-           pure (PApp loc (PApp loc (PRef opFC op) l') r')
+           pure (PApp loc (PApp loc (PRef opFC op.toName) l') r')
   -- (x : ty) =@ f x ==>> (=@) ty (\x : ty => f x)
   desugarTree side ps (Infix loc opFC (op, Just (BindType pat lhs)) l r)
       = do l' <- desugarTree side ps l
            body <- desugarTree side ps r
-           pure $ PApp loc (PApp loc (PRef opFC op) l')
+           pure $ PApp loc (PApp loc (PRef opFC op.toName) l')
                       (PLam loc top Explicit pat l' body)
   -- (x := exp) =@ f x ==>> (=@) exp (\x : ? => f x)
   desugarTree side ps (Infix loc opFC (op, Just (BindExpr pat lhs)) l r)
       = do l' <- desugarTree side ps l
            body <- desugarTree side ps r
-           pure $ PApp loc (PApp loc (PRef opFC op) l')
+           pure $ PApp loc (PApp loc (PRef opFC op.toName) l')
                       (PLam loc top Explicit pat (PInfer opFC) body)
 
   -- (x : ty := exp) =@ f x ==>> (=@) exp (\x : ty => f x)
   desugarTree side ps (Infix loc opFC (op, Just (BindExplicitType pat ty expr)) l r)
       = do l' <- desugarTree side ps l
            body <- desugarTree side ps r
-           pure $ PApp loc (PApp loc (PRef opFC op) l')
+           pure $ PApp loc (PApp loc (PRef opFC op.toName) l')
                       (PLam loc top Explicit pat ty body)
   desugarTree side ps (Infix loc opFC (op, Nothing) _ r)
       = throw $ InternalError "illegal fixity: Parsed as infix but no binding information"
@@ -838,7 +840,7 @@ mutual
   -- Note: In case of negated signed integer literals, we apply the
   -- negation directly. Otherwise, the literal might be
   -- truncated to 0 before being passed on to `negate`.
-  desugarTree side ps (Pre loc opFC (UN $ Basic "-", _) $ Leaf $ PPrimVal fc c)
+  desugarTree side ps (Pre loc opFC (OpSymbols $ UN $ Basic "-", _) $ Leaf $ PPrimVal fc c)
     = let newFC    = fromMaybe EmptyFC (mergeFC loc fc)
           continue = desugarTree side ps . Leaf . PPrimVal newFC
        in case c of
@@ -854,13 +856,13 @@ mutual
             _     => do arg' <- desugarTree side ps (Leaf $ PPrimVal fc c)
                         pure (PApp loc (PRef opFC (UN $ Basic "negate")) arg')
 
-  desugarTree side ps (Pre loc opFC (UN $ Basic "-", _) arg)
+  desugarTree side ps (Pre loc opFC (OpSymbols $ UN $ Basic "-", _) arg)
     = do arg' <- desugarTree side ps arg
          pure (PApp loc (PRef opFC (UN $ Basic "negate")) arg')
 
   desugarTree side ps (Pre loc opFC (op, _) arg)
       = do arg' <- desugarTree side ps arg
-           pure (PApp loc (PRef opFC op) arg')
+           pure (PApp loc (PRef opFC op.toName) arg')
   desugarTree side ps (Leaf t) = pure t
 
   desugarType : {auto s : Ref Syn SyntaxInfo} ->
@@ -1015,6 +1017,11 @@ mutual
                      {auto o : Ref ROpts REPLOpts} ->
                      List Name -> PiInfo PTerm -> Core (PiInfo RawImp)
   mapDesugarPiInfo ps = PiInfo.traverse (desugar AnyExpr ps)
+
+  displayFixity : Maybe Visibility -> BindingModifier -> Fixity -> Nat -> OpStr -> String
+  displayFixity Nothing NotBinding fix prec op = "\{show fix} \{show  prec} \{show op}"
+  displayFixity Nothing bind fix prec op = "\{show bind} \{show fix} \{show  prec} \{show op}"
+  displayFixity (Just vis) bind fix prec op = "\{show vis} \{show bind} \{show fix} \{show  prec} \{show op}"
 
   -- Given a high level declaration, return a list of TTImp declarations
   -- which process it, and update any necessary state on the way.
@@ -1205,22 +1212,35 @@ mutual
           NS ns (DN str (MN ("__mk" ++ str) 0))
       mkConName n = DN (show n) (MN ("__mk" ++ show n) 0)
 
-  desugarDecl ps (PFixity fc vis binding fix prec opName)
+  desugarDecl ps fx@(PFixity fc vis binding fix prec opName)
       = do unless (checkValidFixity binding fix prec)
              (throw $ GenericMsgSol fc
                  "Invalid fixity, \{binding} operator must be infixr 0."
                  [ "Make it `infixr 0`: `\{binding} infixr 0 \{show opName}`"
                  , "Remove the binding keyword: `\{fix} \{show prec} \{show opName}`"
                  ])
+           when (isDefaulted vis) $
+             let adjustedExport = displayFixity (Just Export) binding fix prec opName
+                 adjustedPrivate = displayFixity (Just Private) binding fix prec opName
+                 originalFixity = displayFixity Nothing binding fix prec opName
+             in recordWarning $ GenericWarn fc """
+               Fixity declaration '\{originalFixity}' does not have an export modifier, and
+               will become private by default in a future version.
+               To expose it outside of its module, write '\{adjustedExport}'. If you
+               intend to keep it private, write '\{adjustedPrivate}'.
+               """
            ctx <- get Ctxt
            -- We update the context of fixities by adding a namespaced fixity
            -- given by the current namespace and its fixity name.
            -- This allows fixities to be stored along with the namespace at their
            -- declaration site and detect and handle ambiguous fixities
            let updatedNS = NS (mkNestedNamespace (Just ctx.currentNS) (show fix))
-                              (UN $ Basic $ nameRoot opName)
+                              (UN $ Basic $ nameRoot opName.toName)
 
-           update Syn { fixities $= addName updatedNS (MkFixityInfo fc vis binding fix prec) }
+           update Syn
+             { fixities $=
+               addName updatedNS
+                 (MkFixityInfo fc (collapseDefault vis) binding fix prec) }
            pure []
   desugarDecl ps d@(PFail fc mmsg ds)
       = do -- save the state: the content of a failing block should be discarded

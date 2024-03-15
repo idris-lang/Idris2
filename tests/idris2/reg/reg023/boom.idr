@@ -2,7 +2,7 @@ import Data.Vect
 
 %default total
 
-infix 3 .<=.
+private infix 3 .<=.
 (.<=.) : Int -> Int -> Bool
 (.<=.) p q = case (p, q) of
   (0, _) => True

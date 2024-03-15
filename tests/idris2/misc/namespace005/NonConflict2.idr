@@ -1,3 +1,3 @@
 module NonConflict2
 
-infixr 5 &&&
+export infixr 5 &&&

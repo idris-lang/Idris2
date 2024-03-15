@@ -1,3 +1,4 @@
 module Lib2
 
-infixl 5 %%%
+export infixl 5 %%%
+

@@ -1,6 +1,6 @@
-infixl 0  ~~
-prefix 1  |~
-infix  1  ...
+private infixl 0  ~~
+private prefix 1  |~
+private infix  1  ...
 
 public export
 (...) : (x : a) -> (y ~=~ x) -> (z : a ** y ~=~ z)

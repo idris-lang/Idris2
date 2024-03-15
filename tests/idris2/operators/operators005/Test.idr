@@ -1,8 +1,8 @@
 
 import Data.String
 
-typebind infixr 0 :-
-autobind infixr 0 `for`
+private typebind infixr 0 :-
+private autobind infixr 0 `for`
 
 record Container where
   constructor (:-)
