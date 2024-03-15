@@ -30,6 +30,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   customise the syntax of operator to look more like a binder.
   See [#3113](https://github.com/idris-lang/Idris2/issues/3113).
 
+* Elaborator scripts were made to be able to access the visibility modifier of a
+  definition, via `getVis`.
+
 ### Backend changes
 
 #### RefC

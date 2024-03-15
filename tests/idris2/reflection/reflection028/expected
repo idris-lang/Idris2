@@ -1,0 +1,5 @@
+1/1: Building GetVis (GetVis.idr)
+GetVis> GetVis> [(NS (MkNS ["GetVis"]) (UN (Basic "fooPriv")), Private)]
+GetVis> [(NS (MkNS ["GetVis"]) (UN (Basic "fooExp")), Export)]
+GetVis> [(NS (MkNS ["GetVis"]) (UN (Basic "fooPubExp")), Public)]
+GetVis> Bye for now!

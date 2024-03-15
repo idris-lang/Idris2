@@ -1,0 +1,5 @@
+:let %language ElabReflection
+%runElab getVis `{fooPriv}
+%runElab getVis `{fooExp}
+%runElab getVis `{fooPubExp}
+:q
