@@ -5,10 +5,10 @@ import Data.Vect
 
 %default total
 
-infixl 8 `shiftL`, `shiftR`
-infixl 7 .&.
-infixl 6 `xor`
-infixl 5 .|.
+export infixl 8 `shiftL`, `shiftR`
+export infixl 7 .&.
+export infixl 6 `xor`
+export infixl 5 .|.
 
 --------------------------------------------------------------------------------
 --          Interface Bits

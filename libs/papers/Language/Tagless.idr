@@ -9,7 +9,7 @@ import Data.List.Quantifiers
 
 %default total
 
-infixr 0 -#
+export infixr 0 -#
 public export
 (-#) : Type -> Type -> Type
 a -# b = (0 _ : a) -> b

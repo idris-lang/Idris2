@@ -5,7 +5,7 @@ import public Control.Function
 
 %default total
 
-infixr 7 :::
+export infixr 7 :::
 
 ||| Non-empty lists.
 public export

@@ -23,7 +23,7 @@ interface Hashable a where
   hash = hashWithSalt 5381
   hashWithSalt h i = h * 33 + hash i
 
-infixl 5 `hashWithSalt`
+export infixl 5 `hashWithSalt`
 
 export
 Hashable Int where

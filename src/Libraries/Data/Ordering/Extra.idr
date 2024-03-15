@@ -2,7 +2,7 @@ module Libraries.Data.Ordering.Extra
 
 %default total
 
-infixl 5 `thenCmp`
+export infixl 5 `thenCmp`
 
 export
 thenCmp : Ordering -> Lazy Ordering -> Ordering

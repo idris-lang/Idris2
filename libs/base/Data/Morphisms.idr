@@ -9,7 +9,7 @@ record Morphism a b where
   constructor Mor
   applyMor : a -> b
 
-infixr 1 ~>
+export infixr 1 ~>
 
 public export
 (~>) : Type -> Type -> Type
