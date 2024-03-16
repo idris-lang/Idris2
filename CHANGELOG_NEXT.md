@@ -91,8 +91,7 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   implemented through the newly added one. The similar alternative for `mapMTTImp`
   is added too.
 
-* Removed need for the runtime value of the implicit argument in `succNotLTEpred`,
-  and added its result as an `Uninhabited` instance.
+* Removed need for the runtime value of the implicit argument in `succNotLTEpred`.
 
 #### Contrib
 
