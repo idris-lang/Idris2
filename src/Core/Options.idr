@@ -24,7 +24,8 @@ record Dirs where
   output_dir : Maybe String -- output directory, relative to working directory
   prefix_dir : String -- installation prefix, for finding data files (e.g. run time support)
   extra_dirs : List String -- places to look for import files
-  package_dirs : List String -- places to look for packages
+  package_search_paths : List String -- paths at which to look for packages
+  package_dirs : List String -- places where specific needed packages at required versions are located
   lib_dirs : List String -- places to look for libraries (for code generation)
   data_dirs : List String -- places to look for data file
 
@@ -38,7 +39,7 @@ outputDirWithDefault d = fromMaybe (build_dir d </> "exec") (output_dir d)
 
 public export
 toString : Dirs -> String
-toString d@(MkDirs wdir sdir bdir ldir odir dfix edirs pdirs ldirs ddirs) = """
+toString d@(MkDirs wdir sdir bdir ldir odir dfix edirs ppaths pdirs ldirs ddirs) = """
   + Working Directory      :: \{ show wdir }
   + Source Directory       :: \{ show sdir }
   + Build Directory        :: \{ show bdir }
@@ -46,6 +47,7 @@ toString d@(MkDirs wdir sdir bdir ldir odir dfix edirs pdirs ldirs ddirs) = """
   + Output Directory       :: \{ show $ outputDirWithDefault d }
   + Installation Prefix    :: \{ show dfix }
   + Extra Directories      :: \{ show edirs }
+  + Package Search Paths   :: \{ show ppaths }
   + Package Directories    :: \{ show pdirs }
   + CG Library Directories :: \{ show ldirs }
   + Data Directories       :: \{ show ddirs }
@@ -214,7 +216,7 @@ getCG o cg = lookup (toLower cg) (availableCGs o)
 
 defaultDirs : Dirs
 defaultDirs = MkDirs "." Nothing "build" "depends" Nothing
-                     "/usr/local" ["."] [] [] []
+                     "/usr/local" ["."] [] [] [] []
 
 defaultPPrint : PPrinter
 defaultPPrint = MkPPOpts False False True False

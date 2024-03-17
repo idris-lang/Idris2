@@ -30,6 +30,16 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   customise the syntax of operator to look more like a binder.
   See [#3113](https://github.com/idris-lang/Idris2/issues/3113).
 
+### Compiler changes
+
+* The compiler now differentiates between "package search path" and "package
+  directories." Previously both were combined (as seen in the `idris2 --paths`
+  output for "Package Directories"). Now entries in the search path will be
+  printed under an "Package Search Paths" entry and package directories will
+  continue to be printed under "Package Directories." The `IDRIS2_PACKAGE_PATH`
+  environment variable adds to the "Package Search Paths." Functionally this is
+  not a breaking change.
+
 ### Backend changes
 
 #### RefC Backend
@@ -85,6 +95,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   `TTImp` at the input along with already traversed one. Existing `mapATTImp` is
   implemented through the newly added one. The similar alternative for `mapMTTImp`
   is added too.
+
+* Removed need for the runtime value of the implicit argument in `succNotLTEpred`.
 
 #### Contrib
 
