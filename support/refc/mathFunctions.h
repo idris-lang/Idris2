@@ -130,7 +130,7 @@ Value *idris2_or_Integer(Value *x, Value *y);
 Value *idris2_xor_Integer(Value *x, Value *y);
 
 #define idris2_cmpop(ty, op, l, r)                                             \
-  (idris2_mkBool((idris2_vp_to_##ty(l) op idris2_vp_to_##ty(r))))
+  (idris2_mkBool((idris2_vp_to_##ty(l) op idris2_vp_to_##ty(r)) ? 1 : 0))
 
 /* lt */
 #define idris2_lt_Bits8(l, r) (idris2_cmpop(Bits8, <, l, r))
