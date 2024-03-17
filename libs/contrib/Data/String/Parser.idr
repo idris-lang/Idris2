@@ -106,7 +106,7 @@ export
                                 Fail i _ => Fail i msg)
                             (p.runParser s)
 
-infixl 0 <?>
+export infixl 0 <?>
 
 ||| Discards the result of a parser
 export

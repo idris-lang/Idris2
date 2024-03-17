@@ -2,7 +2,7 @@ module Data.Linear.Notation
 
 %default total
 
-infixr 0 -@
+export infixr 0 -@
 ||| Infix notation for linear implication
 public export
 (-@) : Type -> Type -> Type

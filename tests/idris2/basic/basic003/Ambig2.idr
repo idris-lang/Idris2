@@ -1,4 +1,4 @@
-infixr 5 ::
+export infixr 5 ::
 
 export
 data List a = Nil | (::) a (List a)

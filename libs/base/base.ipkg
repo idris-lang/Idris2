@@ -108,6 +108,7 @@ modules = Control.App,
           Language.Reflection.TTImp,
 
           Syntax.PreorderReasoning,
+          Syntax.PreorderReasoning.Ops,
           Syntax.PreorderReasoning.Generic,
 
           System,

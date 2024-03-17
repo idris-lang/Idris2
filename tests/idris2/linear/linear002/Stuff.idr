@@ -43,7 +43,7 @@ plus : Nat -> Nat -> Nat
 plus Z y = y
 plus (S k) y = S (plus k y)
 
-infixr 5 ::
+export infixr 5 ::
 
 public export
 data List a = Nil | (::) a (List a)

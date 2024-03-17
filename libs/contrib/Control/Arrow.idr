@@ -5,11 +5,11 @@ import Data.Either
 import Data.Morphisms
 
 
-infixr 5 <++>
-infixr 3 ***
-infixr 3 &&&
-infixr 2 +++
-infixr 2 \|/
+export infixr 5 <++>
+export infixr 3 ***
+export infixr 3 &&&
+export infixr 2 +++
+export infixr 2 \|/
 
 public export
 interface Category arr => Arrow (0 arr : Type -> Type -> Type) where

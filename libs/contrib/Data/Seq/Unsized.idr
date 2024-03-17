@@ -40,13 +40,13 @@ export
 reverse : Seq a -> Seq a
 reverse (MkSeq tr) = MkSeq (reverseTree id tr)
 
-infixr 5 `cons`
+export infixr 5 `cons`
 ||| O(1). Add an element to the left end of a sequence.
 export
 cons : e -> Seq e -> Seq e
 a `cons` MkSeq tr = MkSeq (MkElem a `consTree` tr)
 
-infixl 5 `snoc`
+export infixl 5 `snoc`
 ||| O(1). Add an element to the right end of a sequence.
 export
 snoc : Seq e -> e -> Seq e

@@ -5,8 +5,8 @@ import Data.String
 
 %default total
 
-infixl 5 +>
-infixr 5 <+
+export infixl 5 +>
+export infixr 5 <+
 
 ||| Adds a character to the end of the specified string.
 |||

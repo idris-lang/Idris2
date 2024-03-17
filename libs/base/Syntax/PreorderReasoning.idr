@@ -2,9 +2,7 @@
 ||| poor-man's equational reasoning
 module Syntax.PreorderReasoning
 
-infixl 0  ~~,~=
-prefix 1  |~
-infix  1  ...,..<,..>,.=.,.=<,.=>
+import public Syntax.PreorderReasoning.Ops
 
 |||Slightly nicer syntax for justifying equations:
 |||```

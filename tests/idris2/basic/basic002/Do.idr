@@ -1,7 +1,7 @@
 data Maybe a = Nothing
              | Just a
 
-infixl 1 >>=
+private infixl 1 >>=
 
 (>>=) : Maybe a -> (a -> Maybe b) -> Maybe b
 (>>=) Nothing k = Nothing

@@ -3,8 +3,8 @@ module Data.List.Alternating
 import Data.Bifoldable
 import Data.List
 
-infixl 5 +>
-infixr 5 <+
+export infixl 5 +>
+export infixr 5 <+
 
 %default total
 

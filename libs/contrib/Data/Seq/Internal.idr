@@ -342,7 +342,7 @@ viewRTree (Deep s pr m (Four w x y z)) =
 
 
 -- Construction
-infixr 5 `consTree`
+export infixr 5 `consTree`
 export
 consTree : Sized e => (r : e) -> FingerTree e -> FingerTree e
 a `consTree` Empty                       = Single a
@@ -352,7 +352,7 @@ a `consTree` Deep s (Two b c) st d2      = Deep (size a + s) (Three a b c) st d2
 a `consTree` Deep s (Three b c d) st d2  = Deep (size a + s) (Four a b c d) st d2
 a `consTree` Deep s (Four b c d f) st d2 = Deep (size a + s) (Two a b) (node3 c d f `consTree` st) d2
 
-infixl 5 `snocTree`
+export infixl 5 `snocTree`
 export
 snocTree : Sized e => FingerTree e -> (r : e) -> FingerTree e
 Empty `snocTree` a                       = Single a

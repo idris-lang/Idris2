@@ -76,7 +76,7 @@ data Infer : Scoped where
   ||| The application of a function to its argument
   App : Infer f g -> Check f g -> Infer f g
 
-infixl 3 `App`
+export infixl 3 `App`
 
 %name Infer e
 
@@ -229,7 +229,7 @@ namespace Value
 vfree : Level nm f -> Value f
 vfree x = VEmb (NVar x)
 
-infixl 5 `vapp`
+export infixl 5 `vapp`
 
 ||| We can easily apply a value standing for a function
 ||| to a value standing for its argument by either deploying

@@ -88,7 +88,7 @@ Memo (Const s prop) x b = (v : s) -> b v
 Memo (d1 * d2) x b = Memo d1 x $ \ v1 => Memo d2 x $ \ v2 => b (v1, v2)
 Memo (d1 + d2) x b = (Memo d1 x (b . Left), Memo d2 x (b . Right))
 
-infixr 0 ~>
+export infixr 0 ~>
 
 ||| A memo trie is a coinductive structure
 export

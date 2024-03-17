@@ -74,7 +74,7 @@ swap (x, y) = (y, x)
 -- This directive tells auto implicit search what to use to look inside pairs
 %pair Pair fst snd
 
-infixr 5 #
+export infixr 5 #
 
 ||| A pair type where each component is linear
 public export
@@ -126,7 +126,7 @@ data Equal : forall a, b . a -> b -> Type where
 
 %name Equal prf
 
-infix 6 ===, ~=~
+export infix 6 ===, ~=~
 
 -- An equality type for when you want to assert that each side of the
 -- equality has the same type, but there's not other evidence available

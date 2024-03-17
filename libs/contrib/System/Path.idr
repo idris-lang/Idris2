@@ -13,8 +13,8 @@ import Text.Quantity
 
 import System.Info
 
-infixl 5 </>, />
-infixr 7 <.>
+export infixl 5 </>, />
+export infixr 7 <.>
 
 
 ||| The character that separates directories in the path.

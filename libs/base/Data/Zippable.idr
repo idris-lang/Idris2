@@ -21,7 +21,7 @@ interface Zippable z where
   zip : z a -> z b -> z (a, b)
   zip = zipWith (,)
 
-  infixr 6 `zip`
+  export infixr 6 `zip`
 
   ||| Combine three parameterised types by applying a function.
   ||| @ z the parameterised type

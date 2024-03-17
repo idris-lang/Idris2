@@ -1,3 +1,3 @@
 module LibPre2
 
-prefix 2 *!
+export prefix 2 *!

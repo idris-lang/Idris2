@@ -122,7 +122,7 @@ export
 fill : Int -> Doc ann -> Doc ann
 fill n doc = width doc (\w => spaces $ n - w)
 
-infixr 6 <++>
+export infixr 6 <++>
 ||| Concatenates two documents with a space in between.
 export
 (<++>) : Doc ann -> Doc ann -> Doc ann

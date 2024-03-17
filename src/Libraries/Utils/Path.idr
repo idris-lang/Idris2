@@ -19,9 +19,9 @@ import System.File
 
 %default total
 
-infixl 5 </>, />
-infixr 7 <.>
-infixr 7 <..>
+export infixl 5 </>, />
+export infixr 7 <.>
+export infixr 7 <..>
 
 
 ||| The character that separates directories in the path.

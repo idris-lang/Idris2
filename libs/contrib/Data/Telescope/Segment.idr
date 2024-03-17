@@ -59,7 +59,7 @@ toTelescope seg = untabulate seg ()
 
 %name Segment delta,delta',delta1,delta2
 
-infixl 3 |++, :++
+export infixl 3 |++, :++
 
 ||| This lemma comes up all the time when mixing induction on Nat with
 ||| indexing modulo addition.  An alternative is to use something like
@@ -141,7 +141,7 @@ projection {n = S n} {delta = ty :: delta} env
                     $ rewrite succLemma n k in env
     in env'
 
-infixl 4 .=
+export infixl 4 .=
 
 public export
 data Environment : (env : Left.Environment gamma)

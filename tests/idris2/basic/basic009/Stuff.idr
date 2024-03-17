@@ -13,7 +13,7 @@ not False = True
 public export
 data Maybe a = Nothing | Just a
 
-infixl 4 &&
+export infixl 4 &&
 
 public export
 (&&) : Bool -> Lazy Bool -> Bool
@@ -43,7 +43,7 @@ plus : Nat -> Nat -> Nat
 plus Z y = y
 plus (S k) y = S (plus k y)
 
-infixr 5 ::
+export infixr 5 ::
 
 public export
 data List a = Nil | (::) a (List a)

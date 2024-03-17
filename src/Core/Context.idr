@@ -821,9 +821,12 @@ HasNames Error where
   full gam (InRHS fc n err) = InRHS fc <$> full gam n <*> full gam err
   full gam (MaybeMisspelling err xs) = MaybeMisspelling <$> full gam err <*> pure xs
   full gam (WarningAsError wrn) = WarningAsError <$> full gam wrn
-  full gam (OperatorBindingMismatch {print} fc expected actual opName rhs candidates)
+  full gam (OperatorBindingMismatch {print} fc expected actual (Left opName) rhs candidates)
       = OperatorBindingMismatch {print} fc expected actual
-          <$> full gam opName <*> pure rhs <*> pure candidates
+          <$> (Left <$> full gam opName) <*> pure rhs <*> pure candidates
+  full gam (OperatorBindingMismatch {print} fc expected actual (Right opName) rhs candidates)
+      = OperatorBindingMismatch {print} fc expected actual
+          <$> (Right <$> full gam opName) <*> pure rhs <*> pure candidates
 
   resolved gam (Fatal err) = Fatal <$> resolved gam err
   resolved _ (CantConvert fc gam rho s t)
@@ -916,9 +919,12 @@ HasNames Error where
   resolved gam (InRHS fc n err) = InRHS fc <$> resolved gam n <*> resolved gam err
   resolved gam (MaybeMisspelling err xs) = MaybeMisspelling <$> resolved gam err <*> pure xs
   resolved gam (WarningAsError wrn) = WarningAsError <$> resolved gam wrn
-  resolved gam (OperatorBindingMismatch {print} fc expected actual opName rhs candidates)
+  resolved gam (OperatorBindingMismatch {print} fc expected actual (Left opName) rhs candidates)
       = OperatorBindingMismatch {print} fc expected actual
-          <$> resolved gam opName <*> pure rhs <*> pure candidates
+          <$> (Left <$> resolved gam opName) <*> pure rhs <*> pure candidates
+  resolved gam (OperatorBindingMismatch {print} fc expected actual (Right opName) rhs candidates)
+      = OperatorBindingMismatch {print} fc expected actual
+          <$> (Right <$> resolved gam opName) <*> pure rhs <*> pure candidates
 
 export
 HasNames Totality where

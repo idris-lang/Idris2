@@ -114,7 +114,7 @@ not : (AnHDec l, Negates na a) => l na -> HDec (Not a)
 not p = [| toNegation (toHDec p) |]
 
 
-infixr 3 ==>
+export infixr 3 ==>
 
 ||| Half deciders are closed under implication
 public export

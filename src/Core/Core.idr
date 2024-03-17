@@ -165,8 +165,9 @@ data Error : Type where
      GenericMsg : FC -> String -> Error
      GenericMsgSol : FC -> (message : String) -> (solutions : List String) -> Error
      OperatorBindingMismatch : {a : Type} -> {print : a -> Doc ()} ->
-         FC -> (expectedFixity : BacktickOrOperatorFixity) -> (use_site : OperatorLHSInfo a) ->
-         (opName : Name) -> (rhs : a) -> (candidates : List String) -> Error
+         FC -> (expectedFixity : FixityDeclarationInfo) -> (use_site : OperatorLHSInfo a) ->
+         -- left: backticked, right: op symbolds
+         (opName : Either Name Name) -> (rhs : a) -> (candidates : List String) -> Error
      TTCError : TTCErrorMsg -> Error
      FileErr : String -> FileError -> Error
      CantFindPackage : String -> Error
@@ -403,7 +404,7 @@ Show Error where
   show (OperatorBindingMismatch fc (DeclaredFixity expected) actual opName rhs _)
        = show fc ++ ": Operator " ++ show opName ++ " is " ++ show expected
        ++ " but used as a " ++ show actual ++ " operator"
-  show (OperatorBindingMismatch fc Backticked actual opName rhs _)
+  show (OperatorBindingMismatch fc UndeclaredFixity actual opName rhs _)
        = show fc ++ ": Operator " ++ show opName ++ " has no declared fixity"
        ++ " but used as a " ++ show actual ++ " operator"
 

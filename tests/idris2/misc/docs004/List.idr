@@ -2,8 +2,8 @@ module List
 
 data List a = Nil | (::) a (List a)
 
-infixr 5 ::
-infixr 5 ++
+export infixr 5 ::
+export infixr 5 ++
 
 interface Monoid ty where
   ||| Users can hand-craft their own monoid implementations

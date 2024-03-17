@@ -1,7 +1,7 @@
 module Issue1328A
 %default total
 
-infix 4 `InCtx`
+private infix 4 `InCtx`
 data InCtx : (a, b : Type) -> Type where
 
 prop0 : a `InCtx` b
@@ -22,7 +22,7 @@ def1 m n = (`div` n) m
 def2 : (m, n : Integer) -> Integer
 def2 m n = (m `div`) n
 
-infix 4 |-
+private infix 4 |-
 data (|-) : (a, b : Type) -> Type where
 
 inProp0 : a |- b

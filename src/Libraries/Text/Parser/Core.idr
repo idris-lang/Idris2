@@ -132,7 +132,7 @@ export %inline
         Grammar state tok (c1 && c2) ty
 (<|>) = Alt
 
-infixr 2 <||>
+export infixr 2 <||>
 ||| Take the tagged disjunction of two grammars. If both consume, the
 ||| combination is guaranteed to consume.
 export

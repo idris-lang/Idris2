@@ -96,7 +96,7 @@ export
 fail : Applicative m => String -> ValidatorT m a b
 fail s = MkValidator $ \_ => left s
 
-infixl 2 >>>
+export infixl 2 >>>
 
 ||| Compose two validators so that the second validates the output of the first.
 export

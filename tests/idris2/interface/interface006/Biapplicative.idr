@@ -2,7 +2,7 @@ module Biapplicative
 
 import Apply
 
-infixl 4 <<*>>, <<*, *>>, <<**>>
+export infixl 4 <<*>>, <<*, *>>, <<**>>
 
 ||| Biapplicatives
 ||| @p the action of the Biapplicative on pairs of objects

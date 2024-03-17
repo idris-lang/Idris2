@@ -2,10 +2,7 @@ module Syntax.PreorderReasoning.Generic
 
 import Control.Relation
 import Control.Order
-infixl 0  ~~, ~=
-infixl 0  <~
-prefix 1  |~
-infix  1  ...,..<,..>,.=.,.=<,.=>
+import public Syntax.PreorderReasoning.Ops
 
 public export
 data Step : (leq : a -> a -> Type) -> a -> a -> Type where

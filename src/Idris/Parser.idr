@@ -176,9 +176,10 @@ continueWith : IndentInfo -> String -> Rule ()
 continueWith indents req
     = mustContinue indents (Just req) *> symbol req
 
-iOperator : Rule Name
+iOperator : Rule OpStr
 iOperator
-    = operator <|> (symbol "`" *> name <* symbol "`")
+    = OpSymbols <$> operator
+  <|> Backticked <$> (symbol "`" *> name <* symbol "`")
 
 data ArgType
     = UnnamedExpArg PTerm
@@ -369,14 +370,14 @@ mutual
                        pure $
                          let fc = boundToFC fname (mergeBounds l r)
                              opFC = virtualiseFC fc -- already been highlighted: we don't care
-                         in POp fc opFC (NoBinder l.val) (UN $ Basic "=") r.val
+                         in POp fc opFC (NoBinder l.val) (OpSymbols $ UN $ Basic "=") r.val
                else fail "= not allowed")
              <|>
              (do b <- bounds $ do
                         continue indents
                         op <- bounds iOperator
                         e <- case op.val of
-                               UN (Basic "$") => typeExpr q fname indents
+                               OpSymbols (UN (Basic "$")) => typeExpr q fname indents
                                _ => expr q fname indents
                         pure (op, e)
                  (op, r) <- pure b.val
@@ -1175,10 +1176,10 @@ visibility fname
     = (specified <$> visOption fname)
   <|> pure defaulted
 
-exportVisibility : OriginDesc -> EmptyRule Visibility
+exportVisibility : OriginDesc -> EmptyRule (WithDefault Visibility Export)
 exportVisibility fname
-    = visOption fname
-  <|> pure Export
+    = (specified <$> visOption fname)
+  <|> pure defaulted
 
 tyDecls : Rule Name -> String -> OriginDesc -> IndentInfo -> Rule (List1 PTypeDecl)
 tyDecls declName predoc fname indents

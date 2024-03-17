@@ -30,6 +30,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   customise the syntax of operator to look more like a binder.
   See [#3113](https://github.com/idris-lang/Idris2/issues/3113).
 
+* Unlabelled fixity declarations now emit a warning.
+
 ### Backend changes
 
 #### RefC
