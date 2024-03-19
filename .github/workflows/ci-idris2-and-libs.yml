@@ -175,6 +175,8 @@ jobs:
       - name: Install build dependencies
         run: |
           brew update
+          brew install --overwrite python@3.12
+          brew install node
           brew install chezscheme
           brew install coreutils
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
@@ -332,7 +334,9 @@ jobs:
       - name: Install build dependencies
         run: |
           brew update
+          brew install --overwrite python@3.12
           brew install chezscheme
+          brew install node
           brew install coreutils
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
           chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*

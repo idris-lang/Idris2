@@ -19,7 +19,7 @@ Value *Main_insert
 )
 {
     Value * tmp_88 = NULL;                                   // Main:6:24--6:31
-    if (((Value_Constructor *)var_2)->tag == 0) {
+    if (((Value_Constructor *)var_2)->tag == 0 /* Main.Leaf */) {
         Value_Constructor* constructor_89 = NULL;
         if (isUnique(var_2)) {
             constructor_89 = (Value_Constructor*)var_2;
@@ -28,23 +28,23 @@ Value *Main_insert
             removeReference(var_2);
         }
         removeReference(var_0);
-        if (!constructor_89) {                               // Main:7:22--7:26
-            constructor_89 = newConstructor(0, 0, "Main_Leaf");
-                                                             // Main:7:22--7:26
+         // constructor Main.Leaf                            // Main:7:22--7:26
+        if (! constructor_89) {                              // Main:7:22--7:26
+            constructor_89 = newConstructor(0, 0);           // Main:7:22--7:26
         }                                                    // Main:7:22--7:26
         Value * var_3 = (Value*)constructor_89;              // Main:7:17--7:21
-        Value_Constructor* constructor_90 = newConstructor(0, 0, "Main_Leaf");
+         // constructor Main.Leaf                            // Main:7:29--7:33
+        Value_Constructor* constructor_90 = newConstructor(0, 0);
                                                              // Main:7:29--7:33
-         // constructor Main_Leaf                            // Main:7:29--7:33
         Value * var_4 = (Value*)constructor_90;              // Main:7:17--7:21
-        Value_Constructor* constructor_91 = newConstructor(3, 1, "Main_Node");
+         // constructor Main.Node                            // Main:7:17--7:21
+        Value_Constructor* constructor_91 = newConstructor(3, 1);
                                                              // Main:7:17--7:21
-         // constructor Main_Node                            // Main:7:17--7:21
         constructor_91->args[0] = var_3;
         constructor_91->args[1] = var_1;
         constructor_91->args[2] = var_4;
         tmp_88 = (Value*)constructor_91;
-    } else if (((Value_Constructor *)var_2)->tag == 1) {
+    } else if (((Value_Constructor *)var_2)->tag == 1 /* Main.Node */) {
         Value *var_5 = ((Value_Constructor*)var_2)->args[0];
         Value *var_6 = ((Value_Constructor*)var_2)->args[1];
         Value *var_7 = ((Value_Constructor*)var_2)->args[2];
@@ -59,7 +59,7 @@ Value *Main_insert
             removeReference(var_2);
         }
         Value * tmp_93 = NULL;                               // Prelude.EqOrd:121:3--121:6
-        if (((Value_Constructor *)var_0)->tag == 0) {
+        if (((Value_Constructor *)var_0)->tag == 0 /* Prelude.EqOrd.MkOrd */) {
             Value *var_8 = ((Value_Constructor*)var_0)->args[0];
             Value *var_9 = ((Value_Constructor*)var_0)->args[1];
             Value *var_10 = ((Value_Constructor*)var_0)->args[2];
@@ -89,9 +89,9 @@ Value *Main_insert
                                                              // Main:8:48--8:54
             // end   Main_insert(var_0, var_1, var_5)        // Main:8:48--8:54
             Value * var_17 = trampoline(closure_97);         // Main:8:42--8:46
-            if (!constructor_92) {                           // Main:8:42--8:46
-                constructor_92 = newConstructor(3, 1, "Main_Node");
-                                                             // Main:8:42--8:46
+             // constructor Main.Node                        // Main:8:42--8:46
+            if (! constructor_92) {                          // Main:8:42--8:46
+                constructor_92 = newConstructor(3, 1);       // Main:8:42--8:46
             }                                                // Main:8:42--8:46
             constructor_92->args[0] = var_17;
             constructor_92->args[1] = var_6;
@@ -110,9 +110,9 @@ Value *Main_insert
                                                              // Main:9:52--9:58
             // end   Main_insert(var_0, var_1, var_7)        // Main:9:52--9:58
             Value * var_18 = trampoline(closure_99);         // Main:9:42--9:46
-            if (!constructor_92) {                           // Main:9:42--9:46
-                constructor_92 = newConstructor(3, 1, "Main_Node");
-                                                             // Main:9:42--9:46
+             // constructor Main.Node                        // Main:9:42--9:46
+            if (! constructor_92) {                          // Main:9:42--9:46
+                constructor_92 = newConstructor(3, 1);       // Main:9:42--9:46
             }                                                // Main:9:42--9:46
             constructor_92->args[0] = var_5;
             constructor_92->args[1] = var_6;

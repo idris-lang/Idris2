@@ -105,14 +105,14 @@ pnoeq = { eqOK := False }
 
 export
 pdef : ParseOpts
-pdef = MkParseOpts True True
+pdef = MkParseOpts {eqOK = True, withOK = True}
 
 pnowith : ParseOpts
-pnowith = MkParseOpts True False
+pnowith = MkParseOpts {eqOK = True, withOK = False}
 
 export
 plhs : ParseOpts
-plhs = MkParseOpts False False
+plhs = MkParseOpts {eqOK = False, withOK = False}
 
 %hide Prelude.(>>)
 %hide Prelude.(>>=)
@@ -325,15 +325,51 @@ mutual
         decoratedSymbol fname "]"
         pure (map (\ n => (boundToFC fname n, n.val)) $ forget ns)
 
-  opExpr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
-  opExpr q fname indents
+  -- The different kinds of operator bindings `x : ty` for typebind
+  -- x := e and x : ty := e for autobind
+  opBinderTypes : OriginDesc -> IndentInfo -> WithBounds PTerm -> Rule (OperatorLHSInfo PTerm)
+  opBinderTypes fname indents boundName =
+           do decoratedSymbol fname ":"
+              ty <- typeExpr pdef fname indents
+              decoratedSymbol fname ":="
+              exp <- expr pdef fname indents
+              pure (BindExplicitType boundName.val ty exp)
+       <|> do decoratedSymbol fname ":="
+              exp <- expr pdef fname indents
+              pure (BindExpr boundName.val exp)
+       <|> do decoratedSymbol fname ":"
+              ty <- typeExpr pdef fname indents
+              pure (BindType boundName.val ty)
+
+  opBinder : OriginDesc -> IndentInfo -> Rule (OperatorLHSInfo PTerm)
+  opBinder fname indents
+      = do boundName <- bounds (expr plhs fname indents)
+           opBinderTypes fname indents boundName
+
+  autobindOp : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
+  autobindOp q fname indents
+      = do binder <- bounds $ parens fname (opBinder fname indents)
+           continue indents
+           op <- bounds iOperator
+           commit
+           e <- bounds (expr q fname indents)
+           pure (POp (boundToFC fname $ mergeBounds binder e)
+                     (boundToFC fname op)
+                     binder.val
+                     op.val
+                     e.val)
+
+  opExprBase : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
+  opExprBase q fname indents
       = do l <- bounds (appExpr q fname indents)
            (if eqOK q
-               then do r <- bounds (continue indents *> decoratedSymbol fname "=" *> opExpr q fname indents)
+               then do r <- bounds (continue indents
+                                *> decoratedSymbol fname "="
+                                *> opExprBase q fname indents)
                        pure $
                          let fc = boundToFC fname (mergeBounds l r)
                              opFC = virtualiseFC fc -- already been highlighted: we don't care
-                         in POp fc opFC (UN $ Basic "=") l.val r.val
+                         in POp fc opFC (NoBinder l.val) (UN $ Basic "=") r.val
                else fail "= not allowed")
              <|>
              (do b <- bounds $ do
@@ -346,8 +382,12 @@ mutual
                  (op, r) <- pure b.val
                  let fc = boundToFC fname (mergeBounds l b)
                  let opFC = boundToFC fname op
-                 pure (POp fc opFC op.val l.val r))
+                 pure (POp fc opFC (NoBinder l.val) op.val r))
                <|> pure l.val
+
+  opExpr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
+  opExpr q fname indents = autobindOp q fname indents
+                       <|> opExprBase q fname indents
 
   dpairType : OriginDesc -> WithBounds t -> IndentInfo -> Rule PTerm
   dpairType fname start indents
@@ -654,8 +694,11 @@ mutual
       binderName = Basic <$> unqualifiedName
                <|> symbol "_" $> Underscore
 
+  PiBindList : Type
+  PiBindList = List (RigCount, WithBounds (Maybe Name), PTerm)
+
   pibindList : OriginDesc -> IndentInfo ->
-               Rule (List (RigCount, WithBounds (Maybe Name), PTerm))
+               Rule PiBindList
   pibindList fname indents
     = do params <- pibindListName fname indents
          pure $ map (\(rig, n, ty) => (rig, map Just n, ty)) params
@@ -981,6 +1024,7 @@ mutual
     <|> defaultImplicitPi fname indents
     <|> forall_ fname indents
     <|> implicitPi fname indents
+    <|> autobindOp pdef fname indents
     <|> explicitPi fname indents
     <|> lam fname indents
 
@@ -1825,16 +1869,23 @@ definition fname indents
     = do nd <- bounds (clause 0 Nothing fname indents)
          pure (PDef (boundToFC fname nd) [nd.val])
 
+operatorBindingKeyword : OriginDesc -> EmptyRule BindingModifier
+operatorBindingKeyword fname
+  =   (decoratedKeyword fname "autobind" >> pure Autobind)
+  <|> (decoratedKeyword fname "typebind" >> pure Typebind)
+  <|> pure NotBinding
+
 fixDecl : OriginDesc -> IndentInfo -> Rule (List PDecl)
 fixDecl fname indents
     = do vis <- exportVisibility fname
+         binding <- operatorBindingKeyword fname
          b <- bounds (do fixity <- decorate fname Keyword $ fix
                          commit
                          prec <- decorate fname Keyword $ intLit
                          ops <- sepBy1 (decoratedSymbol fname ",") iOperator
                          pure (fixity, prec, ops))
          (fixity, prec, ops) <- pure b.val
-         pure (map (PFixity (boundToFC fname b) vis fixity (fromInteger prec)) (forget ops))
+         pure (map (PFixity (boundToFC fname b) vis binding fixity (fromInteger prec)) (forget ops))
 
 directiveDecl : OriginDesc -> IndentInfo -> Rule PDecl
 directiveDecl fname indents

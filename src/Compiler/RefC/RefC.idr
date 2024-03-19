@@ -318,25 +318,25 @@ applyFunctionToVars : {auto oft : Ref OutfileText Output}
                     -> {auto il : Ref IndentLevel Nat}
                     -> String
                     -> List String
-                    -> Core $ ()
+                    -> Core ()
 applyFunctionToVars fun vars = traverse_ (\v => emit EmptyFC $ fun ++ "(" ++ v ++ ");" ) vars
 
 removeVars : {auto oft : Ref OutfileText Output}
            -> {auto il : Ref IndentLevel Nat}
            -> List String
-           -> Core $ ()
+           -> Core ()
 removeVars = applyFunctionToVars "removeReference"
 
 dupVars : {auto oft : Ref OutfileText Output}
            -> {auto il : Ref IndentLevel Nat}
            -> List String
-           -> Core $ ()
+           -> Core ()
 dupVars = applyFunctionToVars "newReference"
 
 removeReuseConstructors : {auto oft : Ref OutfileText Output}
                         -> {auto il : Ref IndentLevel Nat}
                         -> List String
-                        -> Core $ ()
+                        -> Core ()
 removeReuseConstructors = applyFunctionToVars "removeReuseConstructor"
 
 avarToC : Env -> AVar -> String
@@ -388,9 +388,9 @@ fillConstructorArgs env cons (v :: vars) k = do
     emit EmptyFC $ cons ++ "->args["++ show k ++ "] = " ++ avarToC env v ++ ";"
     fillConstructorArgs (moveFromOwnedToBorrowed env ownedVars) cons vars (S k)
 
-showTag : Maybe Int -> String
-showTag Nothing = "-1"
-showTag (Just i) = show i
+cArgsVectANF : {0 arity : Nat} -> Vect arity AVar -> Core (Vect arity String)
+cArgsVectANF [] = pure []
+cArgsVectANF (x :: xs) = pure $  (varName x) :: !(cArgsVectANF xs)
 
 integer_switch : List AConstAlt -> Bool
 integer_switch [] = True
@@ -565,29 +565,30 @@ mutual
         unless (contains (ALocal var) usedVars) $ emit fc $ "removeReference(var_\{show var});"
         put EnvTracker ({ owned := owned', reuseMap $= (`differenceMap` usedCons) } env)
         cStatementsFromANF body tailPosition
-    cStatementsFromANF (ACon fc n UNIT tag []) _ = pure "(Value*)NULL"
-    cStatementsFromANF (ACon fc n _ mTag args) _ = do
-        env <- get EnvTracker
-        let mConstr = SortedMap.lookup n $ reuseMap env
-        let createNewConstructor = " = newConstructor("
-                        ++ (show (length args))
-                        ++ ", "  ++ showTag mTag  ++ ", "
-                        ++ "\"" ++ cName n ++ "\""
-                        ++ ");"
-        case mConstr of
-            Just constr => do
-                emit fc $ "if (!" ++ constr ++ ") {"
-                increaseIndentation
-                emit fc $ constr ++ createNewConstructor
-                decreaseIndentation
-                emit fc "}"
-                fillConstructorArgs env constr args 0
-                pure $ "(Value*)\{constr}"
-            Nothing => do
-                c <- getNextCounter
-                let constr = "constructor_" ++ (show c)
-                emit fc $ "Value_Constructor* " ++ constr ++ createNewConstructor
-                emit fc $ " // constructor " ++ cName n
+
+    cStatementsFromANF (ACon fc n coninfo tag args) _ = do
+        if coninfo == NIL || coninfo == NOTHING || coninfo == ZERO || coninfo == UNIT
+            then pure "(NULL /* \{show n} */)"
+            else do
+                env <- get EnvTracker
+                let createNewConstructor = " = newConstructor("
+                                 ++ (show (length args))
+                                 ++ ", "  ++ maybe "-1" show tag  ++ ");"
+
+                emit fc " // constructor \{show n}"
+                constr <- case SortedMap.lookup n $ reuseMap env of
+                    Just constr => do
+                        emit fc "if (! \{constr}) {"
+                        increaseIndentation
+                        emit fc $ constr ++ createNewConstructor
+                        decreaseIndentation
+                        emit fc "}"
+                        pure constr
+                    Nothing => do
+                        let constr = "constructor_\{show !(getNextCounter)}"
+                        emit fc $ "Value_Constructor* " ++ constr ++ createNewConstructor
+                        when (Nothing == tag) $ emit fc "\{constr}->name = idris2_constr_\{cName n};"
+                        pure constr
                 fillConstructorArgs env constr args 0
                 pure $ "(Value*)\{constr}"
 
@@ -611,20 +612,28 @@ mutual
             _ => throw $ InternalError $ "INTERNAL ERROR: Unknown primitive: " ++ cName p
         emit fc $ "// call to external primitive " ++ cName p
         pure $ "idris2_\{cName p}("++ showSep ", " (map varName args) ++")"
+
     cStatementsFromANF (AConCase fc sc alts mDef) tailPosition = do
         let sc' = varName sc
         switchReturnVar <- getNewVarThatWillNotBeFreedAtEndOfBlock
         emit fc "Value * \{switchReturnVar} = NULL;"
         env <- get EnvTracker
         _ <- foldlC (\els, (MkAConAlt name coninfo tag args body) => do
+            let erased = coninfo == NIL || coninfo == NOTHING || coninfo == ZERO || coninfo == UNIT
+            if erased then emit emptyFC "\{els}if (NULL == \{sc'} /* \{show name} \{show coninfo} */) {"
+                else if coninfo == CONS || coninfo == JUST || coninfo == SUCC
+                then emit emptyFC "\{els}if (NULL != \{sc'} /* \{show name} \{show coninfo} */) {"
+                else do
+                    case tag of
+                        Nothing   => emit emptyFC "\{els}if (! strcmp(((Value_Constructor *)\{sc'})->name, idris2_constr_\{cName name})) {"
+                        Just tag' => emit emptyFC "\{els}if (((Value_Constructor *)\{sc'})->tag == \{show tag'} /* \{show name} */) {"
+
             let conArgs = ALocal <$> args
-            let ownedWithArgs = union (fromList conArgs) env.owned
+            let owned = if erased then delete sc env.owned else env.owned
+            let ownedWithArgs = union (fromList conArgs) owned
             let (shouldDrop, actualOwned) = dropUnusedOwnedVars ownedWithArgs (freeVariables body)
             let usedCons = usedConstructors body
             let (dropReuseCons, actualReuseMap) = dropUnusedReuseCons env.reuseMap usedCons
-            case tag of
-                Nothing   => emit emptyFC "\{els}if (! strcmp(((Value_Constructor *)\{sc'})->name, \{cStringQuoted $ cName name})) {"
-                Just tag' => emit emptyFC "\{els}if (((Value_Constructor *)\{sc'})->tag == \{show tag'}) {"
             increaseIndentation
             _ <- foldlC (\k, arg => do
                 emit emptyFC "Value *var_\{show arg} = ((Value_Constructor*)\{sc'})->args[\{show k}];"
@@ -636,6 +645,7 @@ mutual
             emit emptyFC "\{switchReturnVar} = \{!(cStatementsFromANF body tailPosition)};"
             decreaseIndentation
             pure "} else ") "" alts
+
         case mDef of
             Nothing => pure ()
             Just body => do
@@ -873,8 +883,14 @@ createCFunctions n (MkAFun args anf) = do
     pure ()
 
 
+createCFunctions n (MkACon Nothing _ _) = do
+  let n' = cName n
+  update FunctionDefinitions $ \otherDefs => "char const idris2_constr_\{n'}[];" :: otherDefs
+  emit EmptyFC "char const idris2_constr_\{n'}[] = \{cStringQuoted $ show n};"
+  pure ()
+
 createCFunctions n (MkACon tag arity nt) = do
-  emit EmptyFC $ ( "// Constructor tag " ++ show tag ++ " arity " ++ show arity) -- Nothing to compile here
+  emit EmptyFC $ ( "// \{show n} Constructor tag " ++ show tag ++ " arity " ++ show arity) -- Nothing to compile here
 
 
 createCFunctions n (MkAForeign ccs fargs ret) = do

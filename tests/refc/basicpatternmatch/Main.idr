@@ -7,6 +7,7 @@ bw Bits8 = Just 8
 bw Bits16 = Just 16
 bw Int8 = Just 8
 bw String = Nothing
+bw Char = Just 8
 bw _ = Nothing
 
 data D = D0 | D1 Int | D2 | D3
@@ -19,10 +20,7 @@ Show D where
 
 main : IO ()
 main = do
-  printLn $ bw Int8
-  printLn $ bw Bits16
-  printLn $ bw String
-  printLn $ bw Integer
+  printLn $ map bw [Int8,  Bits16, Char, String, Integer, (), Nat]
   --
   printLn $ map (\case
       "ABCDE" => "U"

@@ -99,9 +99,29 @@ mapPTermM f = goPTerm where
       >>= f
     goPTerm t@(PImplicit _) = f t
     goPTerm t@(PInfer _) = f t
-    goPTerm (POp fc opFC x y z) =
-      POp fc opFC x <$> goPTerm y
-                    <*> goPTerm z
+    goPTerm (POp fc opFC (NoBinder left) op right) =
+      POp fc opFC
+          <$> (NoBinder <$> goPTerm left)
+          <*> pure op
+          <*> goPTerm right
+      >>= f
+    goPTerm (POp fc opFC (BindType nm left) op right) =
+      POp fc opFC
+          <$> (BindType <$> goPTerm nm <*> goPTerm left)
+          <*> pure op
+          <*> goPTerm right
+      >>= f
+    goPTerm (POp fc opFC (BindExpr nm left) op right) =
+      POp fc opFC
+          <$> (BindExpr nm <$> goPTerm left)
+          <*> pure op
+          <*> goPTerm right
+      >>= f
+    goPTerm (POp fc opFC (BindExplicitType nm ty left) op right) =
+      POp fc opFC
+          <$> (BindExplicitType <$> goPTerm nm <*> goPTerm ty <*> goPTerm left)
+          <*> pure op
+          <*> goPTerm right
       >>= f
     goPTerm (PPrefixOp fc opFC x y) =
       PPrefixOp fc opFC x <$> goPTerm y
@@ -265,7 +285,7 @@ mapPTermM f = goPTerm where
       pure $ PRecord fc doc v tot (MkPRecordLater n !(go4TupledPTerms nts))
     goPDecl (PFail fc msg ps) = PFail fc msg <$> goPDecls ps
     goPDecl (PMutual fc ps) = PMutual fc <$> goPDecls ps
-    goPDecl p@(PFixity _ _ _ _ _) = pure p
+    goPDecl p@(PFixity _ _ _ _ _ _) = pure p
     goPDecl (PNamespace fc strs ps) = PNamespace fc strs <$> goPDecls ps
     goPDecl (PTransform fc n a b) = PTransform fc n <$> goPTerm a <*> goPTerm b
     goPDecl (PRunElabDecl fc a) = PRunElabDecl fc <$> goPTerm a
@@ -434,8 +454,8 @@ mapPTerm f = goPTerm where
       = f $ PDotted fc $ goPTerm x
     goPTerm t@(PImplicit _) = f t
     goPTerm t@(PInfer _) = f t
-    goPTerm (POp fc opFC x y z)
-      = f $ POp fc opFC x (goPTerm y) (goPTerm z)
+    goPTerm (POp fc opFC autoBindInfo opName z)
+      = f $ POp fc opFC (map f autoBindInfo) opName (goPTerm z)
     goPTerm (PPrefixOp fc opFC x y)
       = f $ PPrefixOp fc opFC x $ goPTerm y
     goPTerm (PSectionL fc opFC x y)
@@ -533,7 +553,7 @@ mapPTerm f = goPTerm where
       = PRecord fc doc v tot (MkPRecordLater n (go4TupledPTerms nts))
     goPDecl (PFail fc msg ps) = PFail fc msg $ goPDecl <$> ps
     goPDecl (PMutual fc ps) = PMutual fc $ goPDecl <$> ps
-    goPDecl p@(PFixity _ _ _ _ _) = p
+    goPDecl p@(PFixity _ _ _ _ _ _) = p
     goPDecl (PNamespace fc strs ps) = PNamespace fc strs $ goPDecl <$> ps
     goPDecl (PTransform fc n a b) = PTransform fc n (goPTerm a) (goPTerm b)
     goPDecl (PRunElabDecl fc a) = PRunElabDecl fc $ goPTerm a
@@ -618,7 +638,7 @@ substFC fc = mapPTerm $ \case
   PDotted _ x => PDotted fc x
   PImplicit _ => PImplicit fc
   PInfer _ => PInfer fc
-  POp _ _ x y z => POp fc fc x y z
+  POp _ _ ab nm r => POp fc fc ab nm r
   PPrefixOp _ _ x y => PPrefixOp fc fc x y
   PSectionL _ _ x y => PSectionL fc fc x y
   PSectionR _ _ x y => PSectionR fc fc x y
