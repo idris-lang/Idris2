@@ -2,6 +2,9 @@ module Data.Vect.Quantifiers
 
 import Data.DPair
 import Data.Vect
+import Data.Vect.Elem
+
+import Decidable.Equality
 
 %default total
 
@@ -205,6 +208,10 @@ namespace All
   traversePropertyRelevant f [] = pure []
   traversePropertyRelevant f (x :: xs) = [| f _ x :: traversePropertyRelevant f xs |]
 
+  export
+  consInjective : {0 xs, ys: All p ts} -> {0 x, y: p a} -> (x :: xs = y :: ys) -> (x = y, xs = ys)
+  consInjective Refl = (Refl, Refl)
+
   public export
   tabulate : {n : _} ->
              {0 xs : Vect n _} ->
@@ -226,6 +233,18 @@ namespace All
         show' acc @{[]} [] = acc
         show' acc @{[_]} [px] = acc ++ show px
         show' acc @{_ :: _} (px :: pxs) = show' (acc ++ show px ++ ", ") pxs
+
+  export
+  All (DecEq . p) xs => DecEq (All p xs) where
+    decEq [] [] = Yes Refl
+    decEq @{deq :: deqs} (x :: xs) (y :: ys) with (decEq x y)
+      decEq @{deq :: deqs} (x :: xs) (y :: ys) | (Yes prf) with (decEq xs ys)
+        decEq @{deq :: deqs} (x :: xs) (y :: ys) | (Yes prf) | (Yes prf') =
+          Yes (rewrite prf in rewrite prf' in Refl)
+        decEq @{deq :: deqs} (x :: xs) (y :: ys) | (Yes prf) | (No contra) =
+          No (contra . snd . consInjective)
+      decEq @{deq :: deqs} (x :: xs) (y :: ys) | (No contra) =
+        No (contra . fst . consInjective)
 
   export
   All (Eq . p) xs => Eq (All p xs) where
@@ -265,12 +284,12 @@ namespace All
   HVect = All id
 
   ||| Take the first element.
-  export
+  public export
   head : All p (x :: xs) -> p x
   head (y :: _) = y
 
   ||| Take all but the first element.
-  export
+  public export
   tail : All p (x :: xs) -> All p xs
   tail (_ :: ys) = ys
 
@@ -288,3 +307,88 @@ namespace All
   drop' 0 ys = rewrite minusZeroRight k in ys
   drop' (S k) [] = []
   drop' (S k) (y :: ys) = drop' k ys
+
+  ||| Extract an element from an All.
+  |||
+  ||| ```idris example
+  ||| > index 0 (the (HVect _) [1, "string"])
+  ||| 1
+  ||| ```
+  export
+  index : (i : Fin k) -> All p ts -> p (index i ts)
+  index FZ (x :: xs) = x
+  index (FS j) (x :: xs) = index j xs
+
+  ||| Delete an element from an All at the given position.
+  |||
+  ||| ```idris example
+  ||| > deleteAt 0 (the (HVect _) [1, "string"])
+  ||| ["string"]
+  ||| ```
+  export
+  deleteAt : (i : Fin (S l)) -> All p ts -> All p (deleteAt i ts)
+  deleteAt FZ (x :: xs) = xs
+  deleteAt (FS FZ) (x :: (y :: xs)) = x :: xs
+  deleteAt (FS (FS j)) (x :: (y :: xs)) = x :: deleteAt (FS j) (y :: xs)
+
+  ||| Replace an element in an All at the given position.
+  |||
+  ||| ```idris example
+  ||| > replaceAt 0 "firstString" (the (HVect _) [1, "string"])
+  ||| ["firstString", "string"]
+  ||| ```
+  export
+  replaceAt : (i : Fin k) ->
+              (x : p t) ->
+              All p ts ->
+              All p (replaceAt i t ts)
+  replaceAt FZ y (x :: xs) = y :: xs
+  replaceAt (FS j) y (x :: xs) = x :: replaceAt j y xs
+
+  ||| Update an element in an All at the given position.
+  |||
+  ||| ```idris example
+  ||| > updateAt 0 (const True) (the (HVect _) [1, "string"])
+  ||| [True, "string"]
+  ||| ```
+  export
+  updateAt : (i : Fin k) ->
+             (p (index i ts) -> p t) ->
+             All p ts ->
+             All p (replaceAt i t ts)
+  updateAt FZ f (x :: xs) = f x :: xs
+  updateAt (FS j) f (x :: xs) = x :: updateAt j f xs
+
+  ||| Extract an element of an All.
+  |||
+  ||| ```idris example
+  ||| > get [1, "string"] {p = Here}
+  ||| 1
+  ||| ```
+  export
+  get : All p ts -> Elem x ts -> p x
+  get (x :: xs) Here = x
+  get (x :: xs) (There e') = get xs e'
+
+  ||| Replace an element of an All.
+  |||
+  ||| ```idris example
+  ||| > replaceElem 2 [1, "string"]
+  ||| [2, "string"]
+  ||| ```
+  export
+  replaceElem : All p ts -> (e : Elem t ts) -> p t' -> All p (replaceByElem ts e t')
+  replaceElem (x :: xs) Here y = y :: xs
+  replaceElem (x :: xs) (There p') y = x :: replaceElem xs p' y
+
+  ||| Update an element of an All.
+  |||
+  ||| ```idris example
+  ||| > updateElem (const "hello world!") [1, "string"]
+  ||| [1, "hello world!"]
+  ||| ```
+  public export
+  updateElem : {0 p : _} -> (p t -> p t') -> All p ts -> (e : Elem t ts) -> All p (replaceByElem ts e t')
+  updateElem f (x :: xs)  Here = f x :: xs
+  updateElem f (x :: xs) (There p') = x :: updateElem f xs p'
+
