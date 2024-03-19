@@ -85,6 +85,8 @@ data Elab : Type -> Type where
      GetType : Name -> Elab (List (Name, TTImp))
      -- Get the metadata associated with a name
      GetInfo : Name -> Elab (List (Name, NameInfo))
+     -- Get the visibility associated with a name
+     GetVis : Name -> Elab (List (Name, Visibility))
      -- Get the type of a local variable
      GetLocalType : Name -> Elab TTImp
      -- Get the constructors of a data type. The name must be fully resolved.
@@ -181,6 +183,9 @@ interface Monad m => Elaboration m where
   ||| Get the metadata associated with a name. Returns all matching names and their types
   getInfo : Name -> m (List (Name, NameInfo))
 
+  ||| Get the visibility associated with a name. Returns all matching names and their visibilities
+  getVis : Name -> m (List (Name, Visibility))
+
   ||| Get the type of a local variable
   getLocalType : Name -> m TTImp
 
@@ -237,6 +242,7 @@ Elaboration Elab where
   inCurrentNS    = InCurrentNS
   getType        = GetType
   getInfo        = GetInfo
+  getVis         = GetVis
   getLocalType   = GetLocalType
   getCons        = GetCons
   getReferredFns = GetReferredFns
@@ -263,6 +269,7 @@ Elaboration m => MonadTrans t => Monad (t m) => Elaboration (t m) where
   inCurrentNS         = lift . inCurrentNS
   getType             = lift . getType
   getInfo             = lift . getInfo
+  getVis              = lift . getVis
   getLocalType        = lift . getLocalType
   getCons             = lift . getCons
   getReferredFns      = lift . getReferredFns
