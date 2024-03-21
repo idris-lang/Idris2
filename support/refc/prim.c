@@ -29,7 +29,7 @@ static Value *osstring = NULL;
 
 Value *idris2_System_Info_prim__os(void) {
   if (osstring == NULL) {
-    osstring = (Value *)makeString(
+    osstring = (Value *)idris2_mkString(
 #ifdef _WIN32
         "windows"
 #elif _WIN64
@@ -63,7 +63,7 @@ static Value *codegenstring = NULL;
 
 Value *idris2_System_Info_prim__codegen(void) {
   if (codegenstring == NULL)
-    codegenstring = (Value *)makeString("refc");
+    codegenstring = (Value *)idris2_mkString("refc");
   return newReference(codegenstring);
 }
 
@@ -82,7 +82,7 @@ Value *idris2_crash(Value *msg) {
 
 Value *idris2_Data_IOArray_Prims_prim__newArray(Value *erased, Value *_length,
                                                 Value *v, Value *_word) {
-  int length = extractInt(_length);
+  int length = idris2_vp_to_Int64(_length);
   Value_Array *a = makeArray(length);
 
   for (int i = 0; i < length; i++) {
@@ -93,11 +93,11 @@ Value *idris2_Data_IOArray_Prims_prim__newArray(Value *erased, Value *_length,
 }
 
 Value *idris2_Data_IOArray_Prims_prim__arraySet(Value *erased, Value *_array,
-                                                Value *_index, Value *v,
+                                                Value *index, Value *v,
                                                 Value *_word) {
   Value_Array *a = (Value_Array *)_array;
-  removeReference(a->arr[((Value_Int64 *)_index)->i64]);
-  a->arr[((Value_Int64 *)_index)->i64] = newReference(v);
+  removeReference(a->arr[idris2_vp_to_Int64(index)]);
+  a->arr[idris2_vp_to_Int64(index)] = newReference(v);
   return NULL;
 }
 
@@ -201,10 +201,10 @@ Value *System_Concurrency_Raw_prim__conditionWaitTimeout(Value *_condition,
                                                          Value *_world) {
   Value_Condition *cond = (Value_Condition *)_condition;
   Value_Mutex *mutex = (Value_Mutex *)_mutex;
-  Value_Int64 *timeout = (Value_Int64 *)_timeout;
+  int64_t timeout = idris2_vp_to_Int64(_timeout);
   struct timespec t;
-  t.tv_sec = timeout->i64 / 1000000;
-  t.tv_nsec = timeout->i64 % 1000000;
+  t.tv_sec = timeout / 1000000;
+  t.tv_nsec = timeout % 1000000;
   int r = pthread_cond_timedwait(cond->cond, mutex->mutex, &t);
   IDRIS2_REFC_VERIFY(!r, "pthread_cond_timedwait failed: %s", strerror(r));
   return NULL;

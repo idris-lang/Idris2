@@ -28,6 +28,7 @@ import Libraries.Utils.Path
 
 %default covering
 
+
 showcCleanStringChar : Char -> String -> String
 showcCleanStringChar ' ' = ("_" ++)
 showcCleanStringChar '!' = ("_bang" ++)
@@ -137,93 +138,69 @@ cPrimType Bits16Type = "Bits16"
 cPrimType Bits32Type = "Bits32"
 cPrimType Bits64Type = "Bits64"
 cPrimType StringType = "string"
-cPrimType CharType = "char"
-cPrimType DoubleType = "double"
+cPrimType CharType = "Char"
+cPrimType DoubleType = "Double"
 cPrimType WorldType = "void"
 
 cConstant : Constant -> String
-cConstant (I x) = "(Value*)makeInt64("++ showIntMin x ++")"
-cConstant (I8 x) = "(Value*)makeInt8(INT8_C("++ show x ++"))"
-cConstant (I16 x) = "(Value*)makeInt16(INT16_C("++ show x ++"))"
-cConstant (I32 x) = "(Value*)makeInt32(INT32_C("++ show x ++"))"
-cConstant (I64 x) = "(Value*)makeInt64("++ showInt64Min x ++")"
-cConstant (BI x) = "(Value*)makeIntegerLiteral(\""++ show x ++"\")"
-cConstant (B8 x)   = "(Value*)makeBits8(UINT8_C("++ show x ++"))"
-cConstant (B16 x)  = "(Value*)makeBits16(UINT16_C("++ show x ++"))"
-cConstant (B32 x)  = "(Value*)makeBits32(UINT32_C("++ show x ++"))"
-cConstant (B64 x)  = "(Value*)makeBits64(UINT64_C("++ show x ++"))"
-cConstant (Db x) = "(Value*)makeDouble("++ show x ++")"
-cConstant (Ch x) = "(Value*)makeChar("++ escapeChar x ++")"
-cConstant (Str x) = "(Value*)makeString("++ cStringQuoted x ++")"
+cConstant (I x) = "idris2_mkInt64("++ showIntMin x ++")"
+cConstant (I8 x) = "idris2_mkInt8(INT8_C("++ show x ++"))"
+cConstant (I16 x) = "idris2_mkInt16(INT16_C("++ show x ++"))"
+cConstant (I32 x) = "idris2_mkInt32(INT32_C("++ show x ++"))"
+cConstant (I64 x) = "idris2_mkInt64("++ showInt64Min x ++")"
+cConstant (BI x) = "(Value*)idris2_mkIntegerLiteral(\""++ show x ++"\")"
+cConstant (B8 x)   = "idris2_mkBits8(UINT8_C("++ show x ++"))"
+cConstant (B16 x)  = "idris2_mkBits16(UINT16_C("++ show x ++"))"
+cConstant (B32 x)  = "idris2_mkBits32(UINT32_C("++ show x ++"))"
+cConstant (B64 x)  = "idris2_mkBits64(UINT64_C("++ show x ++"))"
+cConstant (Db x) = "idris2_mkDouble("++ show x ++")"
+cConstant (Ch x) = "idris2_mkChar("++ escapeChar x ++")"
+cConstant (Str x) = "(Value*)idris2_mkString("++ cStringQuoted x ++")"
 cConstant (PrT t) = cPrimType t
 cConstant WorldVal = "(Value*)NULL"
 
-extractConstant : Constant -> String
-extractConstant (I x) = show x
-extractConstant (I8 x) = show x
-extractConstant (I16 x) = show x
-extractConstant (I32 x) = show x
-extractConstant (I64 x) = show x
-extractConstant (BI x) = show x
-extractConstant (Db x) = show x
-extractConstant (Ch x) = show x
-extractConstant (Str x) = cStringQuoted x
-extractConstant (B8 x)  = show x
-extractConstant (B16 x)  = show x
-extractConstant (B32 x)  = show x
-extractConstant (B64 x)  = show x
-extractConstant c = assert_total $ idris_crash ("INTERNAL ERROR: Unable to extract constant: " ++ cConstant c)
--- not really total but this way this internal error does not contaminate everything else
-
-||| Generate scheme for a plain function.
-plainOp : String -> List String -> String
-plainOp op args = op ++ "(" ++ (showSep ", " args) ++ ")"
-
-
 ||| Generate scheme for a primitive function.
 cOp : {0 arity : Nat} -> PrimFn arity -> Vect arity String -> String
-cOp (Neg ty)      [x]       = "negate_"  ++  cPrimType ty ++ "(" ++ x ++ ")"
+cOp (Neg ty)      [x]       = "idris2_negate_"  ++  cPrimType ty ++ "(" ++ x ++ ")"
 cOp StrLength     [x]       = "stringLength(" ++ x ++ ")"
 cOp StrHead       [x]       = "head(" ++ x ++ ")"
 cOp StrTail       [x]       = "tail(" ++ x ++ ")"
 cOp StrReverse    [x]       = "reverse(" ++ x ++ ")"
-cOp (Cast i o)    [x]       = "cast_" ++ (cPrimType i) ++ "_to_" ++ (cPrimType o) ++ "(" ++ x ++ ")"
-cOp DoubleExp     [x]       = "(Value*)makeDouble(exp(unpackDouble(" ++ x ++ ")))"
-cOp DoubleLog     [x]       = "(Value*)makeDouble(log(unpackDouble(" ++ x ++ ")))"
-cOp DoublePow     [x, y]    = "(Value*)makeDouble(pow(unpackDouble(" ++ x ++ "), unpackDouble(" ++ y ++ ")))"
-cOp DoubleSin     [x]       = "(Value*)makeDouble(sin(unpackDouble(" ++ x ++ ")))"
-cOp DoubleCos     [x]       = "(Value*)makeDouble(cos(unpackDouble(" ++ x ++ ")))"
-cOp DoubleTan     [x]       = "(Value*)makeDouble(tan(unpackDouble(" ++ x ++ ")))"
-cOp DoubleASin    [x]       = "(Value*)makeDouble(asin(unpackDouble(" ++ x ++ ")))"
-cOp DoubleACos    [x]       = "(Value*)makeDouble(acos(unpackDouble(" ++ x ++ ")))"
-cOp DoubleATan    [x]       = "(Value*)makeDouble(atan(unpackDouble(" ++ x ++ ")))"
-cOp DoubleSqrt    [x]       = "(Value*)makeDouble(sqrt(unpackDouble(" ++ x ++ ")))"
-cOp DoubleFloor   [x]       = "(Value*)makeDouble(floor(unpackDouble(" ++ x ++ ")))"
-cOp DoubleCeiling [x]       = "(Value*)makeDouble(ceil(unpackDouble(" ++ x ++ ")))"
-cOp (Add ty)      [x, y]    = "add_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (Sub ty)      [x, y]    = "sub_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (Mul ty)      [x, y]    = "mul_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (Div ty)      [x, y]    = "div_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (Mod ty)      [x, y]    = "mod_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (ShiftL ty)   [x, y]    = "shiftl_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (ShiftR ty)   [x, y]    = "shiftr_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (BAnd ty)     [x, y]    = "and_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (BOr ty)      [x, y]    = "or_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (BXOr ty)     [x, y]    = "xor_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (LT ty)       [x, y]    = "lt_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (GT ty)       [x, y]    = "gt_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (EQ ty)       [x, y]    = "eq_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (LTE ty)      [x, y]    = "lte_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
-cOp (GTE ty)      [x, y]    = "gte_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (Cast i o)    [x]       = "idris2_cast_" ++ (cPrimType i) ++ "_to_" ++ (cPrimType o) ++ "(" ++ x ++ ")"
+cOp DoubleExp     [x]       = "idris2_mkDouble(exp(idris2_vp_to_Double(" ++ x ++ ")))"
+cOp DoubleLog     [x]       = "idris2_mkDouble(log(idris2_vp_to_Double(" ++ x ++ ")))"
+cOp DoublePow     [x, y]    = "idris2_mkDouble(pow(idris2_vp_to_Double(" ++ x ++ "), idris2_vp_to_Double(" ++ y ++ ")))"
+cOp DoubleSin     [x]       = "idris2_mkDouble(sin(idris2_vp_to_Double(" ++ x ++ ")))"
+cOp DoubleCos     [x]       = "idris2_mkDouble(cos(idris2_vp_to_Double(" ++ x ++ ")))"
+cOp DoubleTan     [x]       = "idris2_mkDouble(tan(idris2_vp_to_Double(" ++ x ++ ")))"
+cOp DoubleASin    [x]       = "idris2_mkDouble(asin(idris2_vp_to_Double(" ++ x ++ ")))"
+cOp DoubleACos    [x]       = "idris2_mkDouble(acos(idris2_vp_to_Double(" ++ x ++ ")))"
+cOp DoubleATan    [x]       = "idris2_mkDouble(atan(idris2_vp_to_Double(" ++ x ++ ")))"
+cOp DoubleSqrt    [x]       = "idris2_mkDouble(sqrt(idris2_vp_to_Double(" ++ x ++ ")))"
+cOp DoubleFloor   [x]       = "idris2_mkDouble(floor(idris2_vp_to_Double(" ++ x ++ ")))"
+cOp DoubleCeiling [x]       = "idris2_mkDouble(ceil(idris2_vp_to_Double(" ++ x ++ ")))"
+cOp (Add ty)      [x, y]    = "idris2_add_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (Sub ty)      [x, y]    = "idris2_sub_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (Mul ty)      [x, y]    = "idris2_mul_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (Div ty)      [x, y]    = "idris2_div_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (Mod ty)      [x, y]    = "idris2_mod_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (ShiftL ty)   [x, y]    = "idris2_shiftl_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (ShiftR ty)   [x, y]    = "idris2_shiftr_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (BAnd ty)     [x, y]    = "idris2_and_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (BOr ty)      [x, y]    = "idris2_or_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (BXOr ty)     [x, y]    = "idris2_xor_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (LT ty)       [x, y]    = "idris2_lt_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (GT ty)       [x, y]    = "idris2_gt_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (EQ ty)       [x, y]    = "idris2_eq_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (LTE ty)      [x, y]    = "idris2_lte_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
+cOp (GTE ty)      [x, y]    = "idris2_gte_" ++ cPrimType ty ++ "(" ++ x ++ ", " ++ y ++ ")"
 cOp StrIndex      [x, i]    = "strIndex(" ++ x ++ ", " ++ i ++ ")"
 cOp StrCons       [x, y]    = "strCons(" ++ x ++ ", " ++ y ++ ")"
 cOp StrAppend     [x, y]    = "strAppend(" ++ x ++ ", " ++ y ++ ")"
-cOp StrSubstr     [x, y, z] =  "strSubstr(" ++ x ++ ", " ++ y  ++ ", " ++ z ++ ")"
+cOp StrSubstr     [x, y, z] = "strSubstr(" ++ x ++ ", " ++ y  ++ ", " ++ z ++ ")"
 cOp BelieveMe     [_, _, x] = "newReference(" ++ x ++ ")"
 cOp Crash         [_, msg]  = "idris2_crash(" ++ msg ++ ");"
-cOp fn args = plainOp (show fn) (toList args)
-
-
+cOp fn args = show fn ++ "(" ++ (showSep ", " $ toList args) ++ ")"
 
 varName : AVar -> String
 varName (ALocal i) = "var_" ++ (show i)
@@ -257,16 +234,15 @@ Output = DList String
 
 ------------------------------------------------------------------------
 
-getNextCounter : {auto a : Ref ArgCounter Nat} -> Core Nat
+getNextCounter : {auto a : Ref ArgCounter Nat} -> Core String
 getNextCounter = do
     c <- get ArgCounter
     put ArgCounter (S c)
-    pure c
+    pure $ show c
 
 getNewVarThatWillNotBeFreedAtEndOfBlock : {auto a : Ref ArgCounter Nat} -> Core String
 getNewVarThatWillNotBeFreedAtEndOfBlock = do
-    c <- getNextCounter
-    pure $ "tmp_" ++ show c
+    pure $ "tmp_" ++ !(getNextCounter)
 
 
 maxLineLengthForComment : Nat
@@ -308,11 +284,6 @@ emit fc line = do
     update OutfileText $ case isLTE (length indentedLine) maxLineLengthForComment of
         (Yes _) => flip snoc (lJust indentedLine maxLineLengthForComment ' ' ++ " " ++ comment)
         (No _)  => flip appendR [indentedLine, (lJust ""   maxLineLengthForComment ' ' ++ " " ++ comment)]
-
-addHeader : {auto h : Ref HeaderFiles (SortedSet String)}
-         -> String
-         -> Core ()
-addHeader = update HeaderFiles . insert
 
 applyFunctionToVars : {auto oft : Ref OutfileText Output}
                     -> {auto il : Ref IndentLevel Nat}
@@ -356,8 +327,7 @@ makeArglist : {auto a : Ref ArgCounter Nat}
            -> List AVar
            -> Core String
 makeArglist missing xs = do
-    c <- getNextCounter
-    let arglist = "arglist_" ++ (show c)
+    let arglist = "arglist_" ++  !(getNextCounter)
     emit EmptyFC $  "Value_Arglist *"
                  ++ arglist
                  ++ " = newArglist(" ++ show missing
@@ -409,22 +379,21 @@ integer_switch (MkAConstAlt c _  :: _) =
         (Ch x) => True
         _ => False
 
-const2Integer : Constant -> Integer -> Integer
+const2Integer : Constant -> Integer -> String
 const2Integer c i =
     case c of
-        (I x) => cast x
-        (I8 x) => cast x
-        (I16 x) => cast x
-        (I32 x) => cast x
-        (I64 x) => cast x
-        (BI x) => cast x
-        (Ch x) => cast x
-        (B8 x) => cast x
-        (B16 x) => cast x
-        (B32 x) => cast x
-        (B64 x) => cast x
-        _ => i
-
+        (I x) => showIntMin x
+        (I8 x) => "INT8_C(\{show x})"
+        (I16 x) => "INT16_C(\{show x})"
+        (I32 x) => "INT32_C(\{show x})"
+        (I64 x) => showInt64Min x
+        (BI x) => show x
+        (Ch x) => escapeChar x
+        (B8 x) => "UINT8_C(\{show x})"
+        (B16 x) => "UINT16_C(\{show x})"
+        (B32 x) => "UINT32_C(\{show x})"
+        (B64 x) => "UINT64_C(\{show x})"
+        _ => show i
 
 
 data TailPositionStatus = InTailPosition | NotInTailPosition
@@ -446,13 +415,6 @@ dropUnusedOwnedVars owned usedVars =
     let shouldDrop = difference owned actualOwned in
     (varName <$> SortedSet.toList shouldDrop, actualOwned)
 
-locally : {auto t : Ref EnvTracker Env} -> Env -> Core () -> Core ()
-locally newEnv act = do
-    oldEnv <- get EnvTracker
-    put EnvTracker newEnv
-    act
-    put EnvTracker oldEnv
-
 -- if the constructor is unique use it, otherwise add it to should drop vars and create null constructor
 addReuseConstructor : {auto a : Ref ArgCounter Nat}
                     -> {auto oft : Ref OutfileText Output}
@@ -471,8 +433,7 @@ addReuseConstructor reuseMap sc conName conArgs consts shouldDrop actualReuseCon
     if (isNothing $ SortedMap.lookup conName reuseMap)
        && contains conName consts
        && (isJust $ find (== sc) shouldDrop) then do
-        c <- getNextCounter
-        let constr = "constructor_" ++ (show c)
+        let constr = "constructor_" ++ !(getNextCounter)
         emit EmptyFC $ "Value_Constructor* " ++ constr ++ " = NULL;"
         -- If the constructor variable is unique (has 1 reference), then assign it for reuse
         emit EmptyFC $ "if (isUnique(" ++ sc ++ ")) {"
@@ -498,17 +459,22 @@ mutual
                  -> {auto e : Ref EnvTracker Env}
                  -> {auto oft : Ref OutfileText Output}
                  -> {auto il : Ref IndentLevel Nat}
-                 -> List String -> List String
+                 -> Env
                  -> String -> String -> List Int -> ANF -> TailPositionStatus
                  -> Core ()
-    concaseBody dropVars dropReuseCons returnvar expr args bdy tailPosition = do
+    concaseBody env returnvar expr args body tailPosition = do
         increaseIndentation
         _ <- foldlC (\k, arg => do
             emit emptyFC "Value *var_\{show arg} = ((Value_Constructor*)\{expr})->args[\{show k}];"
             pure (S k) ) 0 args
-        removeVars dropVars
+
+        let (shouldDrop, actualOwned) = dropUnusedOwnedVars env.owned (freeVariables body)
+        let usedCons = usedConstructors body
+        let (dropReuseCons, actualReuseMap) = dropUnusedReuseCons env.reuseMap usedCons
+        put EnvTracker ({owned := actualOwned, reuseMap := actualReuseMap} env)
+        removeVars shouldDrop
         removeReuseConstructors dropReuseCons
-        emit emptyFC "\{returnvar} = \{!(cStatementsFromANF bdy tailPosition)};"
+        emit emptyFC "\{returnvar} = \{!(cStatementsFromANF body tailPosition)};"
         decreaseIndentation
 
     cStatementsFromANF : {auto a : Ref ArgCounter Nat}
@@ -524,9 +490,9 @@ mutual
         emit fc $ ("// start " ++ cName n ++ "(" ++ showSep ", " (map (\v => varName v) args) ++ ")")
         arglist <- makeArglist 0 args
         c <- getNextCounter
-        let f_ptr_name = "fPtr_" ++ show c
+        let f_ptr_name = "fPtr_" ++ c
         emit fc $ "Value *(*"++ f_ptr_name ++ ")(Value_Arglist*) = " ++ cName n ++ "_arglist;"
-        let closure_name = "closure_" ++ show c
+        let closure_name = "closure_" ++ c
         emit fc $ "Value *"
                ++ closure_name
                ++ " = (Value*)makeClosureFromArglist("
@@ -540,8 +506,7 @@ mutual
            InTailPosition => closure_name
     cStatementsFromANF (AUnderApp fc n missing args) _ = do
         arglist <- makeArglist missing args
-        c <- getNextCounter
-        let f_ptr_name = "closure_" ++ show c
+        let f_ptr_name = "closure_" ++ !(getNextCounter)
         let f_ptr = "Value *(*"++ f_ptr_name ++ ")(Value_Arglist*) = "++  cName n ++ "_arglist;"
         emit fc f_ptr
         pure "(Value*)makeClosureFromArglist(\{f_ptr_name}, \{arglist})"
@@ -585,7 +550,7 @@ mutual
                         emit fc "}"
                         pure constr
                     Nothing => do
-                        let constr = "constructor_\{show !(getNextCounter)}"
+                        let constr = "constructor_\{!(getNextCounter)}"
                         emit fc $ "Value_Constructor* " ++ constr ++ createNewConstructor
                         when (Nothing == tag) $ emit fc "\{constr}->name = idris2_constr_\{cName n};"
                         pure constr
@@ -593,12 +558,11 @@ mutual
                 pure $ "(Value*)\{constr}"
 
     cStatementsFromANF (AOp fc _ op args) _ = do
-        c <- getNextCounter
-        let resultVar = "primVar_" ++ (show c)
+        let resultVar = "primVar_" ++ !(getNextCounter)
         let argsVect = map (avarToC !(get EnvTracker)) args
         emit fc $ "Value *" ++ resultVar ++ " = " ++ cOp op argsVect ++ ";"
         -- Removing arguments that apply to primitive functions
-        removeVars (foldl (\acc, elem => elem :: acc) [] (map varName args))
+        removeVars $ toList $ map varName args
         pure resultVar
 
     cStatementsFromANF (AExtPrim fc _ p args) _ = do
@@ -629,8 +593,7 @@ mutual
                         Just tag' => emit emptyFC "\{els}if (((Value_Constructor *)\{sc'})->tag == \{show tag'} /* \{show name} */) {"
 
             let conArgs = ALocal <$> args
-            let owned = if erased then delete sc env.owned else env.owned
-            let ownedWithArgs = union (fromList conArgs) owned
+            let ownedWithArgs = union (fromList conArgs) $ if erased then delete sc env.owned else env.owned
             let (shouldDrop, actualOwned) = dropUnusedOwnedVars ownedWithArgs (freeVariables body)
             let usedCons = usedConstructors body
             let (dropReuseCons, actualReuseMap) = dropUnusedReuseCons env.reuseMap usedCons
@@ -649,12 +612,8 @@ mutual
         case mDef of
             Nothing => pure ()
             Just body => do
-                let (shouldDrop, actualOwned) = dropUnusedOwnedVars env.owned (freeVariables body)
-                let usedCons = usedConstructors body
-                let (dropReuseCons, actualReuseMap) = dropUnusedReuseCons env.reuseMap usedCons
                 emit emptyFC "} else {"
-                put EnvTracker ({owned := actualOwned, reuseMap := actualReuseMap} env)
-                concaseBody shouldDrop dropReuseCons switchReturnVar "" [] body tailPosition
+                concaseBody env switchReturnVar "" [] body tailPosition
         emit emptyFC "}"
         pure switchReturnVar
 
@@ -666,40 +625,28 @@ mutual
         case integer_switch alts of
             True => do
                 tmpint <- getNewVarThatWillNotBeFreedAtEndOfBlock
-                emit emptyFC "int \{tmpint} = extractInt(\{sc'});"
+                emit emptyFC "int64_t \{tmpint} = idris2_extractInt(\{sc'});"
                 _ <- foldlC (\els, (MkAConstAlt c body) => do
-                    let (shouldDrop, actualOwned) = dropUnusedOwnedVars env.owned (freeVariables body)
-                    let usedCons = usedConstructors body
-                    let (dropReuseCons, actualReuseMap) = dropUnusedReuseCons env.reuseMap usedCons
-                    emit emptyFC "\{els}if (\{tmpint} == \{show $ const2Integer c 0}) {"
-                    put EnvTracker ({owned := actualOwned, reuseMap := actualReuseMap} env)
-                    concaseBody shouldDrop dropReuseCons switchReturnVar "" [] body tailPosition
+                    emit emptyFC "\{els}if (\{tmpint} == \{const2Integer c 0}) {"
+                    concaseBody env switchReturnVar "" [] body tailPosition
                     pure "} else ") "" alts
                 pure ()
 
             False => do
                 _ <- foldlC (\els, (MkAConstAlt c body) => do
-                    let (shouldDrop, actualOwned) = dropUnusedOwnedVars env.owned (freeVariables body)
-                    let usedCons = usedConstructors body
-                    let (dropReuseCons, actualReuseMap) = dropUnusedReuseCons env.reuseMap usedCons
                     case c of
                         Str x => emit emptyFC "\{els}if (! strcmp(\{cStringQuoted x}, ((Value_String *)\{sc'})->str)) {"
                         Db  x => emit emptyFC "\{els}if (((Value_Double *)\{sc'})->d == \{show x}) {"
                         x => throw $ InternalError "[refc] AConstCase : unsupported type. \{show fc} \{show x}"
-                    put EnvTracker ({owned := actualOwned, reuseMap := actualReuseMap} env)
-                    concaseBody shouldDrop dropReuseCons switchReturnVar "" [] body tailPosition
+                    concaseBody env switchReturnVar "" [] body tailPosition
                     pure "} else ") "" alts
                 pure ()
 
         case def of
             Nothing => pure ()
             Just body => do
-                let (shouldDrop, actualOwned) = dropUnusedOwnedVars env.owned (freeVariables body)
-                let usedCons = usedConstructors body
-                let (dropReuseCons, actualReuseMap) = dropUnusedReuseCons env.reuseMap usedCons
                 emit emptyFC "} else {"
-                put EnvTracker ({owned := actualOwned, reuseMap := actualReuseMap} env)
-                concaseBody shouldDrop dropReuseCons switchReturnVar "" [] body tailPosition
+                concaseBody env switchReturnVar "" [] body tailPosition
         emit emptyFC "}"
         pure switchReturnVar
 
@@ -779,18 +726,18 @@ data CLang = CLangC | CLangRefC
 
 extractValue : (cLang : CLang) -> (cfType:CFType) -> (varName:String) -> String
 extractValue _ CFUnit           varName = "NULL"
-extractValue _ CFInt            varName = "((Value_Int64*)" ++ varName ++ ")->i64"
-extractValue _ CFInt8           varName = "((Value_Int8*)" ++ varName ++ ")->i8"
-extractValue _ CFInt16          varName = "((Value_Int16*)" ++ varName ++ ")->i16"
-extractValue _ CFInt32          varName = "((Value_Int32*)" ++ varName ++ ")->i32"
-extractValue _ CFInt64          varName = "((Value_Int64*)" ++ varName ++ ")->i64"
-extractValue _ CFUnsigned8      varName = "((Value_Bits8*)" ++ varName ++ ")->ui8"
-extractValue _ CFUnsigned16     varName = "((Value_Bits16*)" ++ varName ++ ")->ui16"
-extractValue _ CFUnsigned32     varName = "((Value_Bits32*)" ++ varName ++ ")->ui32"
-extractValue _ CFUnsigned64     varName = "((Value_Bits64*)" ++ varName ++ ")->ui64"
+extractValue _ CFInt            varName = "(idris2_vp_to_Int64(" ++ varName ++ "))"
+extractValue _ CFInt8           varName = "(idris2_vp_to_Int8(" ++ varName ++ "))"
+extractValue _ CFInt16          varName = "(idris2_vp_to_Int16(" ++ varName ++ "))"
+extractValue _ CFInt32          varName = "(idris2_vp_to_Int32(" ++ varName ++ "))"
+extractValue _ CFInt64          varName = "(idris2_vp_to_Int64(" ++ varName ++ "))"
+extractValue _ CFUnsigned8      varName = "(idris2_vp_to_Bits8(" ++ varName ++ "))"
+extractValue _ CFUnsigned16     varName = "(idris2_vp_to_Bits16(" ++ varName ++ "))"
+extractValue _ CFUnsigned32     varName = "(idris2_vp_to_Bits32(" ++ varName ++ "))"
+extractValue _ CFUnsigned64     varName = "(idris2_vp_to_Bits64(" ++ varName ++ "))"
 extractValue _ CFString         varName = "((Value_String*)" ++ varName ++ ")->str"
-extractValue _ CFDouble         varName = "((Value_Double*)" ++ varName ++ ")->d"
-extractValue _ CFChar           varName = "((Value_Char*)" ++ varName ++ ")->c"
+extractValue _ CFDouble         varName = "(idris2_vp_to_Double(" ++ varName ++ "))"
+extractValue _ CFChar           varName = "(idris2_vp_to_Char(" ++ varName ++ "))"
 extractValue _ CFPtr            varName = "((Value_Pointer*)" ++ varName ++ ")->p"
 extractValue _ CFGCPtr          varName = "((Value_GCPointer*)" ++ varName ++ ")->p->p"
 extractValue CLangC    CFBuffer varName = "((Value_Buffer*)" ++ varName ++ ")->buffer->data"
@@ -804,19 +751,19 @@ extractValue _ (CFUser x xs)    varName = "(Value*)" ++ varName
 extractValue _ n _ = assert_total $ idris_crash ("INTERNAL ERROR: Unknonw FFI type in C backend: " ++ show n)
 
 packCFType : (cfType:CFType) -> (varName:String) -> String
-packCFType CFUnit          varName = "NULL"
-packCFType CFInt           varName = "makeInt64(" ++ varName ++ ")"
-packCFType CFInt8          varName = "makeInt8(" ++ varName ++ ")"
-packCFType CFInt16         varName = "makeInt16(" ++ varName ++ ")"
-packCFType CFInt32         varName = "makeInt32(" ++ varName ++ ")"
-packCFType CFInt64         varName = "makeInt64(" ++ varName ++ ")"
-packCFType CFUnsigned64    varName = "makeBits64(" ++ varName ++ ")"
-packCFType CFUnsigned32    varName = "makeBits32(" ++ varName ++ ")"
-packCFType CFUnsigned16    varName = "makeBits16(" ++ varName ++ ")"
-packCFType CFUnsigned8     varName = "makeBits8(" ++ varName ++ ")"
-packCFType CFString        varName = "makeString(" ++ varName ++ ")"
-packCFType CFDouble        varName = "makeDouble(" ++ varName ++ ")"
-packCFType CFChar          varName = "makeChar(" ++ varName ++ ")"
+packCFType CFUnit          varName = "((Value *)NULL)"
+packCFType CFInt           varName = "idris2_mkInt64(" ++ varName ++ ")"
+packCFType CFInt8          varName = "idris2_mkInt8(" ++ varName ++ ")"
+packCFType CFInt16         varName = "idris2_mkInt16(" ++ varName ++ ")"
+packCFType CFInt32         varName = "idris2_mkInt32(" ++ varName ++ ")"
+packCFType CFInt64         varName = "idris2_mkInt64(" ++ varName ++ ")"
+packCFType CFUnsigned64    varName = "idris2_mkBits64(" ++ varName ++ ")"
+packCFType CFUnsigned32    varName = "idris2_mkBits32(" ++ varName ++ ")"
+packCFType CFUnsigned16    varName = "idris2_mkBits16(" ++ varName ++ ")"
+packCFType CFUnsigned8     varName = "idris2_mkBits8(" ++ varName ++ ")"
+packCFType CFString        varName = "idris2_mkString(" ++ varName ++ ")"
+packCFType CFDouble        varName = "idris2_mkDouble(" ++ varName ++ ")"
+packCFType CFChar          varName = "idris2_mkChar(" ++ varName ++ ")"
 packCFType CFPtr           varName = "makePointer(" ++ varName ++ ")"
 packCFType CFGCPtr         varName = "makePointer(" ++ varName ++ ")"
 packCFType CFBuffer        varName = "makeBuffer(" ++ varName ++ ")"
@@ -905,7 +852,7 @@ createCFunctions n (MkAForeign ccs fargs ret) = do
                            else NS (mkNamespace lang) n
           if isStandardFFI
              then case extLibOpts of
-                      [lib, header] => addHeader header
+                      [lib, header] => update HeaderFiles $ insert header
                       _ => pure ()
              else emit EmptyFC $ additionalFFIStub fctName fargs ret
           let fnDef = "Value *" ++ (cName n) ++ "(" ++ showSep ", " (replicate (length fargs) "Value *") ++ ");"

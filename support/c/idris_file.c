@@ -211,11 +211,13 @@ struct filetime *idris2_fileTime(FILE *f) {
   ft->mtime_sec = buf.st_mtime;
   ft->ctime_sec = buf.st_ctime;
 
-#if defined(__MACH__) || defined(__APPLE__)
+#if defined(_DARWIN_C_SOURCE) ||                                               \
+    (!defined(_POSIX_C_SOURCE) && (defined(__MACH__) || defined(__APPLE__)))
   ft->atime_nsec = buf.st_atimespec.tv_nsec;
   ft->mtime_nsec = buf.st_mtimespec.tv_nsec;
   ft->ctime_nsec = buf.st_ctimespec.tv_nsec;
-#elif (_POSIX_VERSION >= 200809L) || defined(__FreeBSD__)
+#elif (defined(_POSIX_VERSION) && _POSIX_VERSION >= 200809L) ||                \
+    defined(__FreeBSD__)
   ft->atime_nsec = buf.st_atim.tv_nsec;
   ft->mtime_nsec = buf.st_mtim.tv_nsec;
   ft->ctime_nsec = buf.st_ctim.tv_nsec;

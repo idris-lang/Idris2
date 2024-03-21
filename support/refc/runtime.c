@@ -88,7 +88,8 @@ Value *apply_closure(Value *_clos, Value *arg) {
     while (1) {
       Value *retVal = f(newArgs);
       deconstructArglist(newArgs);
-      if (!retVal || retVal->header.tag != COMPLETE_CLOSURE_TAG) {
+      if (!retVal || idris2_vp_is_unboxed(retVal) ||
+          retVal->header.tag != COMPLETE_CLOSURE_TAG) {
         return retVal;
       }
       f = ((Value_Closure *)retVal)->f;
@@ -112,36 +113,32 @@ Value *tailcall_apply_closure(Value *_clos, Value *arg) {
   return (Value *)makeClosureFromArglist(f, newArgs);
 }
 
-int extractInt(Value *v) {
+int idris2_extractInt(Value *v) {
+  if (idris2_vp_is_unboxed(v))
+    return (int)idris2_vp_to_Int32(v);
+
   switch (v->header.tag) {
-  case BITS8_TAG:
-    return (int)((Value_Bits8 *)v)->ui8;
-  case BITS16_TAG:
-    return (int)((Value_Bits16 *)v)->ui16;
   case BITS32_TAG:
-    return (int)((Value_Bits32 *)v)->ui32;
+    return (int)idris2_vp_to_Bits32(v);
   case BITS64_TAG:
-    return (int)((Value_Bits64 *)v)->ui64;
-  case INT8_TAG:
-    return (int)((Value_Int8 *)v)->i8;
-  case INT16_TAG:
-    return (int)((Value_Int16 *)v)->i16;
+    return (int)idris2_vp_to_Bits64(v);
   case INT32_TAG:
-    return (int)((Value_Int32 *)v)->i32;
+    return (int)idris2_vp_to_Bits32(v);
   case INT64_TAG:
-    return (int)((Value_Int64 *)v)->i64;
+    return (int)idris2_vp_to_Int64(v);
   case INTEGER_TAG:
     return (int)mpz_get_si(((Value_Integer *)v)->i);
   case DOUBLE_TAG:
-    return (int)((Value_Double *)v)->d;
-  case CHAR_TAG:
-    return (int)((Value_Char *)v)->c;
+    return (int)idris2_vp_to_Double(v);
   default:
     return -1;
   }
 }
 
 Value *trampoline(Value *closure) {
+  if (!closure || idris2_vp_is_unboxed(closure))
+    return closure;
+
   fun_ptr_t f = ((Value_Closure *)closure)->f;
   Value_Arglist *_arglist = ((Value_Closure *)closure)->arglist;
   Value_Arglist *arglist = (Value_Arglist *)newReference((Value *)_arglist);
@@ -149,7 +146,8 @@ Value *trampoline(Value *closure) {
   while (1) {
     Value *retVal = f(arglist);
     deconstructArglist(arglist);
-    if (!retVal || retVal->header.tag != COMPLETE_CLOSURE_TAG) {
+    if (!retVal || idris2_vp_is_unboxed(retVal) ||
+        retVal->header.tag != COMPLETE_CLOSURE_TAG) {
       return retVal;
     }
     f = ((Value_Closure *)retVal)->f;
