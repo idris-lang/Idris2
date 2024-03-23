@@ -355,12 +355,6 @@ makeClosure fc n args missing = do
     fillArgs !(get EnvTracker) "((Value_Closure*)\{closure})->args" args 0
     pure closure
 
-
-
-cArgsVectANF : {0 arity : Nat} -> Vect arity AVar -> Core (Vect arity String)
-cArgsVectANF [] = pure []
-cArgsVectANF (x :: xs) = pure $  (varName x) :: !(cArgsVectANF xs)
-
 -- When changing this number, also change idris2_dispatch_closure in runtime.c.
 -- Increasing this number will worsen stack consumption and increase the codesize of idris2_dispatch_closure.
 -- In C89, the maximum number of arguments is 31, so it should not be larger than 31. 127 is safe in C99, but I do not recommend it.
@@ -401,7 +395,6 @@ const2Integer c i =
         _ => show i
 
 data TailPositionStatus = InTailPosition | NotInTailPosition
-data AssignTo = NoYetDcl String | AlreadyDcl String
 
 ||| The function takes as arguments the current ReuseMap and the constructors that will be used.
 ||| Returns constructor variables to remove and constructors to reuse.
