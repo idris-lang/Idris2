@@ -198,7 +198,7 @@ cOp StrIndex      [x, i]    = "strIndex(" ++ x ++ ", " ++ i ++ ")"
 cOp StrCons       [x, y]    = "strCons(" ++ x ++ ", " ++ y ++ ")"
 cOp StrAppend     [x, y]    = "strAppend(" ++ x ++ ", " ++ y ++ ")"
 cOp StrSubstr     [x, y, z] = "strSubstr(" ++ x ++ ", " ++ y  ++ ", " ++ z ++ ")"
-cOp BelieveMe     [_, _, x] = "newReference(" ++ x ++ ")"
+cOp BelieveMe     [_, _, x] = "idris2_newReference(" ++ x ++ ")"
 cOp Crash         [_, msg]  = "idris2_crash(" ++ msg ++ ");"
 cOp fn args = show fn ++ "(" ++ (showSep ", " $ toList args) ++ ")"
 
@@ -295,13 +295,13 @@ removeVars : {auto oft : Ref OutfileText Output}
            -> {auto il : Ref IndentLevel Nat}
            -> List String
            -> Core ()
-removeVars = applyFunctionToVars "removeReference"
+removeVars = applyFunctionToVars "idris2_removeReference"
 
 dupVars : {auto oft : Ref OutfileText Output}
            -> {auto il : Ref IndentLevel Nat}
            -> List String
            -> Core ()
-dupVars = applyFunctionToVars "newReference"
+dupVars = applyFunctionToVars "idris2_newReference"
 
 removeReuseConstructors : {auto oft : Ref OutfileText Output}
                         -> {auto il : Ref IndentLevel Nat}
@@ -313,7 +313,7 @@ avarToC : Env -> AVar -> String
 avarToC env var =
     if contains var env.owned then varName var
         -- case when the variable is borrowed
-    else "newReference(" ++ varName var ++ ")"
+    else "idris2_newReference(" ++ varName var ++ ")"
 
 avarsToC : Owned -> List AVar -> List String
 avarsToC _ [] = []
@@ -321,7 +321,7 @@ avarsToC owned (v::vars) =
   let v' = varName v in
       if contains v owned
           then v'::avarsToC (delete v owned) vars
-          else "newReference(\{v'})"::avarsToC owned vars -- when v is borrowed
+          else "idris2_newReference(\{v'})"::avarsToC owned vars -- when v is borrowed
 
 moveFromOwnedToBorrowed : Env -> SortedSet AVar -> Env
 moveFromOwnedToBorrowed env vars = { owned $= (`difference` vars) } env
@@ -519,7 +519,7 @@ mutual
         let valueEnv = { reuseMap $= (`intersectionMap` usedCons) } (moveFromOwnedToBorrowed env borrowVal)
         put EnvTracker valueEnv
         emit fc $ "Value * var_\{show var} = \{!(cStatementsFromANF value NotInTailPosition)};"
-        unless (contains (ALocal var) usedVars) $ emit fc $ "removeReference(var_\{show var});"
+        unless (contains (ALocal var) usedVars) $ emit fc $ "idris2_removeReference(var_\{show var});"
         put EnvTracker ({ owned := owned', reuseMap $= (`differenceMap` usedCons) } env)
         cStatementsFromANF body tailPosition
 
@@ -528,7 +528,7 @@ mutual
             then pure "(NULL /* \{show n} */)"
             else do
                 env <- get EnvTracker
-                let createNewConstructor = " = newConstructor("
+                let createNewConstructor = " = idris2_newConstructor("
                                  ++ (show (length args))
                                  ++ ", "  ++ maybe "-1" show tag  ++ ");"
 
@@ -763,7 +763,7 @@ additionalFFIStub name argTypes (CFIORes retType) = additionalFFIStub name (disc
 additionalFFIStub name argTypes retType =
     cTypeOfCFType retType ++
     " (*" ++ cName name ++ ")(" ++
-    (concat $ intersperse ", " $ map cTypeOfCFType argTypes) ++ ") = (void*)missing_ffi;\n"
+    (concat $ intersperse ", " $ map cTypeOfCFType argTypes) ++ ") = (void*)idris2_missing_ffi;\n"
 
 createCFunctions : {auto c : Ref Ctxt Defs}
                 -> {auto a : Ref ArgCounter Nat}

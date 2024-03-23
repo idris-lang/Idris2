@@ -2,13 +2,13 @@
 
 #include "cBackend.h"
 
-Value *newValue(size_t size);
-Value *newReference(Value *source);
-void removeReference(Value *source);
+Value *idris2_newValue(size_t size);
+Value *idris2_newReference(Value *source);
+void idris2_removeReference(Value *source);
 
-#define IDRIS2_NEW_VALUE(t) ((t *)newValue(sizeof(t)))
+#define IDRIS2_NEW_VALUE(t) ((t *)idris2_newValue(sizeof(t)))
 
-Value_Constructor *newConstructor(int total, int tag);
+Value_Constructor *idris2_newConstructor(int total, int tag);
 Value_Closure *idris2_mkClosure(Value *(*f)(), uint8_t arity, uint8_t filled);
 
 Value *idris2_mkDouble(double d);

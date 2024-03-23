@@ -1,7 +1,7 @@
 #include "refc_util.h"
 #include "runtime.h"
 
-Value *newValue(size_t size) {
+Value *idris2_newValue(size_t size) {
 #if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) /* C11 */
   Value *retVal = (Value *)aligned_alloc(
       sizeof(void *),
@@ -15,8 +15,8 @@ Value *newValue(size_t size) {
   return retVal;
 }
 
-Value_Constructor *newConstructor(int total, int tag) {
-  Value_Constructor *retVal = (Value_Constructor *)newValue(
+Value_Constructor *idris2_newConstructor(int total, int tag) {
+  Value_Constructor *retVal = (Value_Constructor *)idris2_newValue(
       sizeof(Value_Constructor) + sizeof(Value *) * total);
   retVal->header.tag = CONSTRUCTOR_TAG;
   retVal->total = total;
@@ -26,8 +26,8 @@ Value_Constructor *newConstructor(int total, int tag) {
 }
 
 Value_Closure *idris2_mkClosure(Value *(*f)(), uint8_t arity, uint8_t filled) {
-  Value_Closure *retVal = (Value_Closure *)newValue(sizeof(Value_Closure) +
-                                                    sizeof(Value *) * filled);
+  Value_Closure *retVal = (Value_Closure *)idris2_newValue(
+      sizeof(Value_Closure) + sizeof(Value *) * filled);
   retVal->header.tag = CLOSURE_TAG;
   retVal->f = f;
   retVal->arity = arity;
@@ -132,7 +132,7 @@ Value_Array *makeArray(int length) {
   return a;
 }
 
-Value *newReference(Value *source) {
+Value *idris2_newReference(Value *source) {
   // note that we explicitly allow NULL as source (for erased arguments)
   if (source && !idris2_vp_is_unboxed(source)) {
     source->header.refCounter++;
@@ -140,7 +140,7 @@ Value *newReference(Value *source) {
   return source;
 }
 
-void removeReference(Value *elem) {
+void idris2_removeReference(Value *elem) {
   if (!elem || idris2_vp_is_unboxed(elem)) {
     return;
   }
@@ -173,19 +173,19 @@ void removeReference(Value *elem) {
     case CLOSURE_TAG: {
       Value_Closure *cl = (Value_Closure *)elem;
       for (int i = 0; i < cl->filled; ++i)
-        removeReference(cl->args[i]);
+        idris2_removeReference(cl->args[i]);
       break;
     }
 
     case CONSTRUCTOR_TAG: {
       Value_Constructor *constr = (Value_Constructor *)elem;
       for (int i = 0; i < constr->total; i++) {
-        removeReference(constr->args[i]);
+        idris2_removeReference(constr->args[i]);
       }
       break;
     }
     case IOREF_TAG:
-      removeReference(((Value_IORef *)elem)->v);
+      idris2_removeReference(((Value_IORef *)elem)->v);
       break;
 
     case BUFFER_TAG: {
@@ -197,7 +197,7 @@ void removeReference(Value *elem) {
     case ARRAY_TAG: {
       Value_Array *a = (Value_Array *)elem;
       for (int i = 0; i < a->capacity; i++) {
-        removeReference(a->arr[i]);
+        idris2_removeReference(a->arr[i]);
       }
       free(a->arr);
       break;
@@ -212,7 +212,7 @@ void removeReference(Value *elem) {
       Value *closure1 =
           idris2_apply_closure((Value *)vPtr->onCollectFct, (Value *)vPtr->p);
       idris2_apply_closure(closure1, NULL);
-      removeReference((Value *)vPtr->p);
+      idris2_removeReference((Value *)vPtr->p);
       break;
     }
 

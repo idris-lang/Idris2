@@ -2,7 +2,7 @@
 
 #include "cBackend.h"
 
-void missing_ffi();
+void idris2_missing_ffi();
 
 #define idris2_isUnique(x) ((x)->header.refCounter == 1)
 void idris2_removeReuseConstructor(Value_Constructor *constr);

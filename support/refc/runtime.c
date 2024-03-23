@@ -2,7 +2,7 @@
 #include "_datatypes.h"
 #include "refc_util.h"
 
-void missing_ffi() {
+void idris2_missing_ffi() {
   fprintf(stderr, "Foreign function declared, but not defined.\n"
                   "Cannot call missing FFI - aborting.\n");
   exit(1);
@@ -87,7 +87,7 @@ Value *idris2_tailcall_apply_closure(Value *_clos, Value *arg) {
     // if the closure has multiple references, then apply newReference to
     // arguments to avoid premature clearing of arguments
     for (int i = 0; i < clos->filled; ++i)
-      newclos->args[i] = newReference(clos->args[i]);
+      newclos->args[i] = idris2_newReference(clos->args[i]);
   }
   newclos->args[clos->filled] = arg; // add argument to new arglist
 
