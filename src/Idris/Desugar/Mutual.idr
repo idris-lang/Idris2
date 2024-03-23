@@ -29,7 +29,7 @@ getDecl AsType (PRecord fc doc vis mbtot (MkPRecord n ps _ _ _))
     mkRecType : List (Name, RigCount, PiInfo PTerm, PTerm) -> PTerm
     mkRecType [] = PType fc
     mkRecType ((n, c, p, t) :: ts) = PPi fc c p (Just n) t (mkRecType ts)
-getDecl AsType d@(PFixity _ _ _ _ _) = Just d
+getDecl AsType d@(PFixity _ _ _ _ _ _) = Just d
 getDecl AsType d@(PDirective _ _) = Just d
 getDecl AsType d = Nothing
 
@@ -37,7 +37,7 @@ getDecl AsDef (PClaim _ _ _ _ _) = Nothing
 getDecl AsDef d@(PData _ _ _ _ (MkPLater _ _ _)) = Just d
 getDecl AsDef (PInterface _ _ _ _ _ _ _ _ _) = Nothing
 getDecl AsDef d@(PRecord _ _ _ _ (MkPRecordLater _ _)) = Just d
-getDecl AsDef (PFixity _ _ _ _ _) = Nothing
+getDecl AsDef (PFixity _ _ _ _ _ _) = Nothing
 getDecl AsDef (PDirective _ _) = Nothing
 getDecl AsDef d = Just d
 

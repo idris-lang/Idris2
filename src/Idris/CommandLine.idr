@@ -160,6 +160,8 @@ data CLOpt
   BashCompletion String String |
    ||| Generate bash completion script
   BashCompletionScript String |
+   ||| Generate zsh completion script
+  ZshCompletionScript String |
    ||| Turn on %default total globally
   Total |
    ||| Disable common subexpression elimination
@@ -370,7 +372,12 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            MkOpt ["--bash-completion-script"]
                  [ Required "function name" ]
                  (\n => [BashCompletionScript n])
-                 (Just "Generate a bash script to activate autocompletion for Idris2")
+                 (Just "Generate a bash script to activate autocompletion for Idris2"),
+           -- zsh completion
+           MkOpt ["--zsh-completion-script"]
+                 [ Required "function name" ]
+                 (\n => [ZshCompletionScript n])
+                 (Just "Generate a zsh script (via bashcompinit) to activate autocompletion for Idris2")
            ]
 
 optShow : OptDesc -> (String, Maybe String)

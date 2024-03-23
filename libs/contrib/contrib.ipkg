@@ -113,8 +113,6 @@ modules = Control.ANSI,
 
           Data.Void,
 
-          Data.HVect,
-
           Debug.Buffer,
 
           Decidable.Finite.Fin,

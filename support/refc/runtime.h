@@ -11,4 +11,4 @@ Value *idris2_apply_closure(Value *, Value *arg);
 Value *idris2_tailcall_apply_closure(Value *_clos, Value *arg);
 Value *idris2_trampoline(Value *closure);
 
-int extractInt(Value *);
+int idris2_extractInt(Value *);

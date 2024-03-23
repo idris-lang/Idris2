@@ -26,17 +26,30 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 ### Language changes
 
+* Autobind and Typebind modifier on operators allow the user to
+  customise the syntax of operator to look more like a binder.
+  See [#3113](https://github.com/idris-lang/Idris2/issues/3113).
+
+* Elaborator scripts were made to be able to access the visibility modifier of a
+  definition, via `getVis`.
+
+### Compiler changes
+
+* The compiler now differentiates between "package search path" and "package
+  directories." Previously both were combined (as seen in the `idris2 --paths`
+  output for "Package Directories"). Now entries in the search path will be
+  printed under an "Package Search Paths" entry and package directories will
+  continue to be printed under "Package Directories." The `IDRIS2_PACKAGE_PATH`
+  environment variable adds to the "Package Search Paths." Functionally this is
+  not a breaking change.
+
 ### Backend changes
 
-#### RefC
+#### RefC Backend
 
 * Compiler can emit precise reference counting instructions where a reference
   is dropped as soon as possible. This allows you to reuse unique variables and
   optimize memory consumption.
-
-### Compiler changes
-
-#### RefC Backend
 
 * Fix invalid memory read onf strSubStr.
 
@@ -52,13 +65,19 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Special constructors such as Nil and Nothing were eliminated and assigned to
   NULL.
 
+* Unbox Bits32,Bits16,Bits8,Int32,Int16,Int8. These types are now packed into
+  Value*. Now, RefC backend requires at least 32 bits for pointers.
+  16-bit CPUs are no longer supported. And we expect the address returned by
+  malloc to be aligned with at least 32 bits. Otherwise it cause a runtime error.
+
+* Rename C function to avoid confliction. But only a part.
+
 * Supress code generation of _arglist wrappers to reduce code size and compilation time.
 
 * Removed Value_Arglist to reduce Closure's allocation overhead and make code simply.
 
 * Switch calling conventions based on the number of arguments to avoid limits on
   the number of arguments and to reduce stack usage.
-
 
 #### NodeJS Backend
 
@@ -78,9 +97,26 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Added append `(++)` for `List` version of `All`.
 
+* Moved helpers and theorems from contrib's `Data.HVect` into base's
+  `Data.Vect.Quantifiers.All` namespace. Some functions were renamed and some
+  already existed. Others had quantity changes -- in short, there were some
+  breaking changes here in addition to removing the respective functions from
+  contrib. If you hit a breaking change, please take a look at
+  [the PR](https://github.com/idris-lang/Idris2/pull/3191/files) and determine if you
+  simply need to update a function name or if your use-case requires additional
+  code changes in the base library. If it's the latter, open a bug ticket or
+  start a discussion on the Idris Discord to determine the best path forward.
+
 * Deprecate `bufferData` in favor of `bufferData'`. These functions are the same
   with the exception of the latter dealing in `Bits8` which is more correct than
   `Int`.
+
+* Added an alternative `TTImp` traversal function `mapATTImp'` taking the original
+  `TTImp` at the input along with already traversed one. Existing `mapATTImp` is
+  implemented through the newly added one. The similar alternative for `mapMTTImp`
+  is added too.
+
+* Removed need for the runtime value of the implicit argument in `succNotLTEpred`.
 
 #### Contrib
 
@@ -88,6 +124,10 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Existing `System.Console.GetOpt` was extended to support errors during options
   parsing in a backward-compatible way.
+
+* Moved helpers from `Data.HVect` to base library's `Data.Vect.Quantifiers.All`
+  and removed `Data.HVect` from contrib. See the additional notes in the
+  CHANGELOG under the `Library changes`/`Base` section above.
 
 #### Network
 

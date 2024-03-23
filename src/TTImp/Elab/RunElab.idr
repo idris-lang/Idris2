@@ -18,6 +18,7 @@ import Idris.REPL.Opts
 import Idris.Syntax
 
 import Libraries.Data.NameMap
+import Libraries.Data.WithDefault
 import Libraries.Utils.Path
 
 import TTImp.Elab.Check
@@ -291,6 +292,10 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
         = do n' <- evalClosure defs n
              res <- lookupNameInfo !(reify defs n') (gamma defs)
              scriptRet res
+    elabCon defs "GetVis" [n]
+        = do dn <- reify defs !(evalClosure defs n)
+             ds <- lookupCtxtName dn (gamma defs)
+             scriptRet $ map (\(n,_,d) => (n, collapseDefault $ visibility d)) ds
     elabCon defs "GetLocalType" [n]
         = do n' <- evalClosure defs n
              n <- reify defs n'

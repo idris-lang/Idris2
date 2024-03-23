@@ -1,4 +1,5 @@
 #include "runtime.h"
+#include "_datatypes.h"
 #include "refc_util.h"
 
 void missing_ffi() {
@@ -60,7 +61,7 @@ static inline Value *idris2_dispatch_closure(Value_Closure *clo) {
 }
 
 Value *idris2_trampoline(Value *it) {
-  while (it && it->header.tag == CLOSURE_TAG) {
+  while (it && !idris2_vp_is_unboxed(it) && it->header.tag == CLOSURE_TAG) {
     Value_Closure *clos = (Value_Closure *)it;
     if (clos->filled < clos->arity)
       break;
@@ -77,7 +78,7 @@ Value *idris2_trampoline(Value *it) {
 Value *idris2_tailcall_apply_closure(Value *_clos, Value *arg) {
   // create a new closure and copy args.
   Value_Closure *clos = (Value_Closure *)_clos;
-  Value_Closure *newclos = idris2_makeClosure(
+  Value_Closure *newclos = idris2_mkClosure(
       clos->f, clos->arity, clos->filled + 1 /* expanding a payload */);
 
   if (clos->header.refCounter <= 1) {
@@ -115,30 +116,23 @@ void idris2_removeReuseConstructor(Value_Constructor *constr) {
   }
 }
 
-int extractInt(Value *v) {
+int idris2_extractInt(Value *v) {
+  if (idris2_vp_is_unboxed(v))
+    return (int)idris2_vp_to_Int32(v);
+
   switch (v->header.tag) {
-  case BITS8_TAG:
-    return (int)((Value_Bits8 *)v)->ui8;
-  case BITS16_TAG:
-    return (int)((Value_Bits16 *)v)->ui16;
   case BITS32_TAG:
-    return (int)((Value_Bits32 *)v)->ui32;
+    return (int)idris2_vp_to_Bits32(v);
   case BITS64_TAG:
-    return (int)((Value_Bits64 *)v)->ui64;
-  case INT8_TAG:
-    return (int)((Value_Int8 *)v)->i8;
-  case INT16_TAG:
-    return (int)((Value_Int16 *)v)->i16;
+    return (int)idris2_vp_to_Bits64(v);
   case INT32_TAG:
-    return (int)((Value_Int32 *)v)->i32;
+    return (int)idris2_vp_to_Bits32(v);
   case INT64_TAG:
-    return (int)((Value_Int64 *)v)->i64;
+    return (int)idris2_vp_to_Int64(v);
   case INTEGER_TAG:
     return (int)mpz_get_si(((Value_Integer *)v)->i);
   case DOUBLE_TAG:
-    return (int)((Value_Double *)v)->d;
-  case CHAR_TAG:
-    return (int)((Value_Char *)v)->c;
+    return (int)idris2_vp_to_Double(v);
   default:
     return -1;
   }
