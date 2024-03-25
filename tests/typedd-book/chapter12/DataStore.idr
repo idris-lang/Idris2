@@ -2,7 +2,7 @@ module Main
 
 import Data.Vect
 
-infixr 5 .+.
+private infixr 5 .+.
 
 data Schema = SString | SInt | (.+.) Schema Schema
 
