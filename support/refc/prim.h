@@ -6,7 +6,7 @@
 
 Value *idris2_Data_IORef_prim__newIORef(Value *, Value *, Value *);
 #define idris2_Data_IORef_prim__readIORef(erased, ioref, world)                \
-  (newReference(((Value_IORef *)ioref)->v))
+  (idris2_newReference(((Value_IORef *)ioref)->v))
 
 Value *idris2_Data_IORef_prim__writeIORef(Value *, Value *, Value *, Value *);
 
@@ -21,7 +21,7 @@ Value *idris2_crash(Value *msg);
 Value *idris2_Data_IOArray_Prims_prim__newArray(Value *, Value *, Value *,
                                                 Value *);
 #define idris2_Data_IOArray_Prims_prim__arrayGet(rased, array, i, word)        \
-  (newReference(((Value_Array *)(array))->arr[idris2_vp_to_Int64(i)]))
+  (idris2_newReference(((Value_Array *)(array))->arr[idris2_vp_to_Int64(i)]))
 Value *idris2_Data_IOArray_Prims_prim__arraySet(Value *, Value *, Value *,
                                                 Value *, Value *);
 

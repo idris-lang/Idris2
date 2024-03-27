@@ -1,7 +1,7 @@
 #include "refc_util.h"
 #include "runtime.h"
 
-Value *newValue(size_t size) {
+Value *idris2_newValue(size_t size) {
 #if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) /* C11 */
   Value *retVal = (Value *)aligned_alloc(
       sizeof(void *),
@@ -15,18 +15,8 @@ Value *newValue(size_t size) {
   return retVal;
 }
 
-Value_Arglist *newArglist(int missing, int total) {
-  Value_Arglist *retVal = IDRIS2_NEW_VALUE(Value_Arglist);
-  retVal->header.tag = ARGLIST_TAG;
-  retVal->total = total;
-  retVal->filled = total - missing;
-  retVal->args = (Value **)malloc(sizeof(Value *) * total);
-  memset(retVal->args, 0, sizeof(Value *) * total);
-  return retVal;
-}
-
-Value_Constructor *newConstructor(int total, int tag) {
-  Value_Constructor *retVal = (Value_Constructor *)newValue(
+Value_Constructor *idris2_newConstructor(int total, int tag) {
+  Value_Constructor *retVal = (Value_Constructor *)idris2_newValue(
       sizeof(Value_Constructor) + sizeof(Value *) * total);
   retVal->header.tag = CONSTRUCTOR_TAG;
   retVal->total = total;
@@ -35,15 +25,14 @@ Value_Constructor *newConstructor(int total, int tag) {
   return retVal;
 }
 
-Value_Closure *makeClosureFromArglist(fun_ptr_t f, Value_Arglist *arglist) {
-  Value_Closure *retVal = IDRIS2_NEW_VALUE(Value_Closure);
+Value_Closure *idris2_mkClosure(Value *(*f)(), uint8_t arity, uint8_t filled) {
+  Value_Closure *retVal = (Value_Closure *)idris2_newValue(
+      sizeof(Value_Closure) + sizeof(Value *) * filled);
   retVal->header.tag = CLOSURE_TAG;
-  retVal->arglist = arglist; // (Value_Arglist *)newReference((Value*)arglist);
   retVal->f = f;
-  if (retVal->arglist->filled >= retVal->arglist->total) {
-    retVal->header.tag = COMPLETE_CLOSURE_TAG;
-  }
-  return retVal;
+  retVal->arity = arity;
+  retVal->filled = filled;
+  return retVal; // caller must initialize args[].
 }
 
 Value *idris2_mkDouble(double d) {
@@ -143,7 +132,7 @@ Value_Array *makeArray(int length) {
   return a;
 }
 
-Value *newReference(Value *source) {
+Value *idris2_newReference(Value *source) {
   // note that we explicitly allow NULL as source (for erased arguments)
   if (source && !idris2_vp_is_unboxed(source)) {
     source->header.refCounter++;
@@ -151,7 +140,7 @@ Value *newReference(Value *source) {
   return source;
 }
 
-void removeReference(Value *elem) {
+void idris2_removeReference(Value *elem) {
   if (!elem || idris2_vp_is_unboxed(elem)) {
     return;
   }
@@ -183,33 +172,20 @@ void removeReference(Value *elem) {
 
     case CLOSURE_TAG: {
       Value_Closure *cl = (Value_Closure *)elem;
-      Value_Arglist *al = cl->arglist;
-      removeReference((Value *)al);
+      for (int i = 0; i < cl->filled; ++i)
+        idris2_removeReference(cl->args[i]);
       break;
     }
-    case COMPLETE_CLOSURE_TAG: {
-      Value_Closure *cl = (Value_Closure *)elem;
-      Value_Arglist *al = cl->arglist;
-      removeReference((Value *)al);
-      break;
-    }
-    case ARGLIST_TAG: {
-      Value_Arglist *al = (Value_Arglist *)elem;
-      for (int i = 0; i < al->filled; i++) {
-        removeReference(al->args[i]);
-      }
-      free(al->args);
-      break;
-    }
+
     case CONSTRUCTOR_TAG: {
       Value_Constructor *constr = (Value_Constructor *)elem;
       for (int i = 0; i < constr->total; i++) {
-        removeReference(constr->args[i]);
+        idris2_removeReference(constr->args[i]);
       }
       break;
     }
     case IOREF_TAG:
-      removeReference(((Value_IORef *)elem)->v);
+      idris2_removeReference(((Value_IORef *)elem)->v);
       break;
 
     case BUFFER_TAG: {
@@ -221,7 +197,7 @@ void removeReference(Value *elem) {
     case ARRAY_TAG: {
       Value_Array *a = (Value_Array *)elem;
       for (int i = 0; i < a->capacity; i++) {
-        removeReference(a->arr[i]);
+        idris2_removeReference(a->arr[i]);
       }
       free(a->arr);
       break;
@@ -234,9 +210,9 @@ void removeReference(Value *elem) {
       /* maybe here we need to invoke onCollectAny */
       Value_GCPointer *vPtr = (Value_GCPointer *)elem;
       Value *closure1 =
-          apply_closure((Value *)vPtr->onCollectFct, (Value *)vPtr->p);
-      apply_closure(closure1, NULL);
-      removeReference((Value *)vPtr->p);
+          idris2_apply_closure((Value *)vPtr->onCollectFct, (Value *)vPtr->p);
+      idris2_apply_closure(closure1, NULL);
+      idris2_removeReference((Value *)vPtr->p);
       break;
     }
 

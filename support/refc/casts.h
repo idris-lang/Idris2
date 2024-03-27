@@ -74,7 +74,7 @@ Value *idris2_cast_Int32_to_string(Value *);
   (idris2_mkInt16((int16_t)idris2_vp_to_Int64(x)))
 #define idris2_cast_Int64_to_Int32(x)                                          \
   (idris2_mkInt32((int32_t)idris2_vp_to_Int64(x)))
-#define idris2_cast_Int64_to_Int64(x) (newReference(x))
+#define idris2_cast_Int64_to_Int64(x) (idris2_newReference(x))
 Value *idris2_cast_Int64_to_Integer(Value *);
 #define idris2_cast_Int64_to_Double(x)                                         \
   (idris2_mkDouble((double)idris2_vp_to_Int64(x)))
