@@ -1,5 +1,5 @@
 chars : List Char -> List Char
-chars = the (List Char)
+chars cs = the (List Char) cs
 
 singletonRange : chars ['1'..'1'] = chars ['1']
 singletonRange = Refl
