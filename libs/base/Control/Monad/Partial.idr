@@ -44,7 +44,7 @@ data Total : Partial a -> Type where
     TLater : Total (Force x) -> Total (Later x)
 
 
-||| Extract the value from a partial computation if you have a prove it is
+||| Extract the value from a partial computation if you have a proof it is
 ||| actually total.
 public export
 runPartial : (x : Partial a) -> Total x -> a
