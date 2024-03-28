@@ -80,6 +80,9 @@ candidateDirs dname pkg bounds =
 ||| Find all package directories (plus version) matching
 ||| the given package name and version bounds. Results
 ||| will be sorted with the latest package version first.
+|||
+||| All package _search paths_ will be searched for package
+||| _directories_ that fit the requested critera.
 export
 findPkgDirs :
     Ref Ctxt Defs =>
@@ -87,20 +90,17 @@ findPkgDirs :
     PkgVersionBounds ->
     Core (List (String, Maybe PkgVersion))
 findPkgDirs p bounds = do
-  globaldir <- pkgGlobalDirectory
   localdir <- pkgLocalDirectory
 
-  -- Get candidate directories from the global install location,
-  -- and the local package directory
+  -- Get candidate directories from the local package directory
   locFiles <- coreLift $ candidateDirs localdir p bounds
-  globFiles <- coreLift $ candidateDirs globaldir p bounds
   -- Look in all the package paths too
   d <- getDirs
-  pkgFiles <- coreLift $ traverse (\d => candidateDirs d p bounds) (package_dirs d)
+  pkgFiles <- coreLift $ traverse (\d => candidateDirs d p bounds) d.package_search_paths
 
   -- If there's anything locally, use that and ignore the global ones
   let allFiles = if isNil locFiles
-                    then globFiles ++ concat pkgFiles
+                    then concat pkgFiles
                     else locFiles
   -- Sort in reverse order of version number
   pure $ sortBy (\x, y => compare (snd y) (snd x)) allFiles
@@ -122,6 +122,8 @@ findPkgDir p bounds = do
      then pure Nothing
      else throw (CantFindPackage (p ++ " (" ++ show bounds ++ ")"))
 
+||| Attempt to find and add a package with the given name and bounds
+||| in one of the known package paths.
 export
 addPkgDir : {auto c : Ref Ctxt Defs} ->
             String -> PkgVersionBounds -> Core ()
@@ -143,14 +145,11 @@ visiblePackages dir = filter viable <$> getPackageDirs dir
 
 findPackages : {auto c : Ref Ctxt Defs} -> Core (List PkgDir)
 findPackages
-    = do -- global packages
-         globalPkgs <- coreLift $ visiblePackages !pkgGlobalDirectory
-         -- additional packages in directories specified
-         d <- getDirs
-         additionalPkgs <- coreLift $ traverse (\d => visiblePackages d) (package_dirs d)
+    = do d <- getDirs
+         pkgPathPkgs <- coreLift $ traverse (\d => visiblePackages d) d.package_search_paths
          -- local packages
          localPkgs <- coreLift $ visiblePackages !pkgLocalDirectory
-         pure $ globalPkgs ++ join additionalPkgs ++ localPkgs
+         pure $ localPkgs ++ join pkgPathPkgs
 
 listPackages : {auto c : Ref Ctxt Defs} ->
                {auto o : Ref ROpts REPLOpts} ->

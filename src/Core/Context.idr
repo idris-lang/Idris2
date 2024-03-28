@@ -2145,6 +2145,10 @@ addPackageDir: {auto c : Ref Ctxt Defs} -> String -> Core ()
 addPackageDir dir = update Ctxt { options->dirs->package_dirs $= ((::) dir) . filter (/= dir) }
 
 export
+addPackageSearchPath: {auto c : Ref Ctxt Defs} -> String -> Core ()
+addPackageSearchPath dir = update Ctxt { options->dirs->package_search_paths $= ((::) dir) . filter (/= dir) }
+
+export
 addDataDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
 addDataDir dir = update Ctxt { options->dirs->data_dirs $= (++ [dir]) }
 

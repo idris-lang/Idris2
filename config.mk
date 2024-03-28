@@ -11,7 +11,7 @@ OLD_WIN ?= 0
 RANLIB ?= ranlib
 AR ?= ar
 
-CFLAGS := -Wall $(CFLAGS)
+CFLAGS += -Wall
 CPPFLAGS := $(CPPFLAGS)
 LDFLAGS := $(LDFLAGS)
 

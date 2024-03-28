@@ -17,11 +17,13 @@
 , ... }@attrs:
 
 let
+  propagate = libs: lib.unique (lib.concatMap (nextLib: [nextLib] ++ nextLib.propagatedIdrisLibraries) libs);
   ipkgFileName = ipkgName + ".ipkg";
   idrName = "idris2-${idris2Version}";
   libSuffix = "lib/${idrName}";
+  propagatedIdrisLibraries = propagate idrisLibraries;
   libDirs =
-    lib.strings.makeSearchPath libSuffix idrisLibraries;
+    lib.strings.makeSearchPath libSuffix propagatedIdrisLibraries;
   drvAttrs = builtins.removeAttrs attrs [
     "ipkgName"
     "idrisLibraries"
@@ -32,7 +34,7 @@ let
     inherit version;
     src = src;
     nativeBuildInputs = [ idris2 makeWrapper ] ++ attrs.nativeBuildInputs or [];
-    buildInputs = idrisLibraries ++ attrs.buildInputs or [];
+    buildInputs = propagatedIdrisLibraries ++ attrs.buildInputs or [];
 
     IDRIS2_PACKAGE_PATH = libDirs;
 
@@ -41,6 +43,10 @@ let
       idris2 --build ${ipkgFileName}
       runHook postBuild
     '';
+
+    passthru = {
+      inherit propagatedIdrisLibraries;
+    };
   };
 
 in rec {

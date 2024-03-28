@@ -1,4 +1,4 @@
-{ stdenv, lib, chez, clang, gmp, fetchFromGitHub, makeWrapper, support, idris2Version
+{ stdenv, lib, chez, clang, gmp, fetchFromGitHub, makeWrapper, installShellFiles, support, idris2Version
 , srcRev, gambit, nodejs, zsh, idris2Bootstrap ? null }:
 
 # Uses scheme to bootstrap the build of idris2
@@ -14,9 +14,9 @@ stdenv.mkDerivation rec {
   src = ../.;
 
   strictDeps = true;
-  nativeBuildInputs = [ makeWrapper clang chez ]
+  nativeBuildInputs = [ makeWrapper installShellFiles clang chez ]
     ++ lib.optional stdenv.isDarwin [ zsh ]
-    ++ lib.optional (! bootstrap) [ idris2Bootstrap ];
+    ++ lib.optional (!bootstrap) [ idris2Bootstrap ];
   buildInputs = [ chez gmp support ];
 
   prePatch = ''
@@ -82,5 +82,9 @@ stdenv.mkDerivation rec {
       --suffix IDRIS2_PACKAGE_PATH ':' "${globalLibrariesPath}" \
       --suffix LD_LIBRARY_PATH ':' "${supportLibrariesPath}" \
       --suffix DYLD_LIBRARY_PATH ':' "${supportLibrariesPath}" \
+
+    installShellCompletion --cmd idris2 \
+      --bash <($out/bin/idris2 --bash-completion-script idris2) \
+      --zsh <($out/bin/idris2 --zsh-completion-script idris2) \
   '';
 }

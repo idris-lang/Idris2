@@ -75,8 +75,8 @@ Value *Main_insert
         }
         Value * var_19 = tmp_94;
         Value *tmp_95 = NULL;
-        int tmp_96 = extractInt(var_19);
-        if (tmp_96 == 1) {
+        int64_t tmp_96 = idris2_extractInt(var_19);
+        if (tmp_96 == UINT8_C(1)) {
             removeReference(var_19);
             // start Main_insert(var_0, var_1, var_5)        // Main:8:48--8:54
             Value_Arglist *arglist_97 = newArglist(0,3);
@@ -97,7 +97,7 @@ Value *Main_insert
             constructor_93->args[1] = var_6;
             constructor_93->args[2] = var_7;
             tmp_95 = (Value*)constructor_93;
-        } else if (tmp_96 == 0) {
+        } else if (tmp_96 == UINT8_C(0)) {
             removeReference(var_19);
             // start Main_insert(var_0, var_1, var_7)        // Main:9:52--9:58
             Value_Arglist *arglist_99 = newArglist(0,3);
