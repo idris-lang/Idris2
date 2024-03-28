@@ -1,5 +1,7 @@
 module Control.Monad.Partial
 
+import Data.Nat
+
 %default total
 
 
@@ -40,13 +42,13 @@ never = Later never
 
 public export
 data Total : Partial a -> Type where
-    TNow : Total (Now x)
+    TNow : (x : a) -> Total (Now x)
     TLater : Total (Force x) -> Total (Later x)
 
 
 ||| Extract the value from a partial computation if you have a proof it is
 ||| actually total.
 public export
-runPartial : (x : Partial a) -> Total x -> a
-runPartial (Now v) TNow = v
-runPartial (Later x) (TLater t) = runPartial x t
+runPartial : {x : Partial a} -> (0 _ : Total x) -> a
+runPartial (TNow x) = x
+runPartial (TLater t) = runPartial t
