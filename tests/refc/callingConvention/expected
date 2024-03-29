@@ -160,8 +160,8 @@ Value *Main_main(void)
     Value *closure_81 = (Value*)makeClosureFromArglist(fPtr_81, arglist_80);
     // end   csegen_44()
     Value * var_0 = trampoline(closure_81);                  // Prelude.Types:1121:1--1138:48
-    Value * var_1 = (Value*)makeIntegerLiteral("1");         // Prelude.Types:1121:1--1138:48
-    Value * var_2 = (Value*)makeIntegerLiteral("5");         // Prelude.Types:1121:1--1138:48
+    Value * var_1 = (Value*)idris2_mkIntegerLiteral("1");    // Prelude.Types:1121:1--1138:48
+    Value * var_2 = (Value*)idris2_mkIntegerLiteral("5");    // Prelude.Types:1121:1--1138:48
     // start Prelude_Types_rangeFromTo_Range__dollara(var_0, var_1, var_2)
                                                              // Prelude.Types:1121:1--1138:48
     Value_Arglist *arglist_82 = newArglist(0,3);
@@ -223,7 +223,7 @@ Value *Main_main_11
     Value *closure_90 = (Value*)makeClosureFromArglist(fPtr_90, arglist_89);
     // end   csegen_44()
     Value * var_1 = trampoline(closure_90);                  // Prelude.Types:1121:1--1138:48
-    Value * var_2 = (Value*)makeIntegerLiteral("1");         // Prelude.Types:1121:1--1138:48
+    Value * var_2 = (Value*)idris2_mkIntegerLiteral("1");    // Prelude.Types:1121:1--1138:48
     // start Prelude_Types_rangeFromTo_Range__dollara(var_1, var_2, var_0)
                                                              // Prelude.Types:1121:1--1138:48
     Value_Arglist *arglist_91 = newArglist(0,3);
@@ -251,7 +251,7 @@ Value *Main_main_10
 ,   Value * var_0
 )
 {
-    Value * var_2 = (Value*)makeIntegerLiteral("0");         // Main:10:30--10:36
+    Value * var_2 = (Value*)idris2_mkIntegerLiteral("0");    // Main:10:30--10:36
     // start Main_last(var_1, var_2)                         // Main:10:30--10:36
     Value_Arglist *arglist_93 = newArglist(0,2);
     arglist_93->args[0] = var_1;
@@ -270,10 +270,10 @@ Value *Main_main_10
                                                              // Prelude.Show:110:1--112:50
     // end   Prelude_Show_show_Show_Integer(var_3)           // Prelude.Show:110:1--112:50
     Value * var_4 = trampoline(closure_96);
-    Value * var_5 = (Value*)makeString("\x0a""");
+    Value * var_5 = (Value*)idris2_mkString("\x0a""");
     Value *primVar_97 = strAppend(var_4, var_5);
-    removeReference(var_5);
     removeReference(var_4);
+    removeReference(var_5);
     Value * var_6 = primVar_97;                              // Prelude.IO:98:22--98:34
     // start Prelude_IO_prim__putStr(var_6, var_0)           // Prelude.IO:98:22--98:34
     Value_Arglist *arglist_98 = newArglist(0,2);

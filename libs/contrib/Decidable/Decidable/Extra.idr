@@ -4,7 +4,7 @@ import Data.Rel
 import Data.Rel.Complement
 import Data.Fun
 import Data.Vect
-import Data.HVect
+import Data.Vect.Quantifiers
 import Data.Fun.Extra
 import Decidable.Decidable
 

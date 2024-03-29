@@ -22,7 +22,7 @@ Not x = x -> Void
 ||| @ a the type to assign
 ||| @ x the element to get the type
 public export %inline
-the : (0 a : Type) -> (x : a) -> a
+the : (0 a : Type) -> (1 x : a) -> a
 the _ x = x
 
 ||| Identity function.

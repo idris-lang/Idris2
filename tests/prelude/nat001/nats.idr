@@ -1,5 +1,5 @@
 nats : List Nat -> List Nat
-nats = the (List Nat)
+nats ns = the (List Nat) ns
 
 singletonRange : nats [1..1] = nats [1]
 singletonRange = Refl

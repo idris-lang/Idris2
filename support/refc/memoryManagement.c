@@ -2,8 +2,14 @@
 #include "runtime.h"
 
 Value *newValue(size_t size) {
+#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) /* C11 */
+  Value *retVal = (Value *)aligned_alloc(
+      sizeof(void *),
+      ((size + sizeof(void *) - 1) / sizeof(void *)) * sizeof(void *));
+#else
   Value *retVal = (Value *)malloc(size);
-  IDRIS2_REFC_VERIFY(retVal, "malloc failed");
+#endif
+  IDRIS2_REFC_VERIFY(retVal && !idris2_vp_is_unboxed(retVal), "malloc failed");
   retVal->header.refCounter = 1;
   retVal->header.tag = NO_TAG;
   return retVal;
@@ -40,92 +46,55 @@ Value_Closure *makeClosureFromArglist(fun_ptr_t f, Value_Arglist *arglist) {
   return retVal;
 }
 
-Value_Double *makeDouble(double d) {
+Value *idris2_mkDouble(double d) {
   Value_Double *retVal = IDRIS2_NEW_VALUE(Value_Double);
   retVal->header.tag = DOUBLE_TAG;
   retVal->d = d;
-  return retVal;
+  return (Value *)retVal;
 }
 
-Value_Char *makeChar(char c) {
-  Value_Char *retVal = IDRIS2_NEW_VALUE(Value_Char);
-  retVal->header.tag = CHAR_TAG;
-  retVal->c = c;
-  return retVal;
-}
-
-Value_Bits8 *makeBits8(uint8_t i) {
-  Value_Bits8 *retVal = IDRIS2_NEW_VALUE(Value_Bits8);
-  retVal->header.tag = BITS8_TAG;
-  retVal->ui8 = i;
-  return retVal;
-}
-
-Value_Bits16 *makeBits16(uint16_t i) {
-  Value_Bits16 *retVal = IDRIS2_NEW_VALUE(Value_Bits16);
-  retVal->header.tag = BITS16_TAG;
-  retVal->ui16 = i;
-  return retVal;
-}
-
-Value_Bits32 *makeBits32(uint32_t i) {
+Value *idris2_mkBits32_Boxed(uint32_t i) {
   Value_Bits32 *retVal = IDRIS2_NEW_VALUE(Value_Bits32);
   retVal->header.tag = BITS32_TAG;
   retVal->ui32 = i;
-  return retVal;
+  return (Value *)retVal;
 }
 
-Value_Bits64 *makeBits64(uint64_t i) {
+Value *idris2_mkBits64(uint64_t i) {
   Value_Bits64 *retVal = IDRIS2_NEW_VALUE(Value_Bits64);
   retVal->header.tag = BITS64_TAG;
   retVal->ui64 = i;
-  return retVal;
+  return (Value *)retVal;
 }
 
-Value_Int8 *makeInt8(int8_t i) {
-  Value_Int8 *retVal = IDRIS2_NEW_VALUE(Value_Int8);
-  retVal->header.tag = INT8_TAG;
-  retVal->i8 = i;
-  return retVal;
-}
-
-Value_Int16 *makeInt16(int16_t i) {
-  Value_Int16 *retVal = IDRIS2_NEW_VALUE(Value_Int16);
-  retVal->header.tag = INT16_TAG;
-  retVal->i16 = i;
-  return retVal;
-}
-
-Value_Int32 *makeInt32(int32_t i) {
+Value *idris2_mkInt32_Boxed(int32_t i) {
   Value_Int32 *retVal = IDRIS2_NEW_VALUE(Value_Int32);
   retVal->header.tag = INT32_TAG;
   retVal->i32 = i;
-  return retVal;
+  return (Value *)retVal;
 }
 
-Value_Int64 *makeInt64(int64_t i) {
+Value *idris2_mkInt64(int64_t i) {
   Value_Int64 *retVal = IDRIS2_NEW_VALUE(Value_Int64);
   retVal->header.tag = INT64_TAG;
   retVal->i64 = i;
-  return retVal;
+  return (Value *)retVal;
 }
 
-Value_Int8 *makeBool(int p) { return makeInt8(p ? 1 : 0); }
-
-Value_Integer *makeInteger() {
+Value_Integer *idris2_mkInteger() {
   Value_Integer *retVal = IDRIS2_NEW_VALUE(Value_Integer);
   retVal->header.tag = INTEGER_TAG;
   mpz_init(retVal->i);
   return retVal;
 }
 
-Value_Integer *makeIntegerLiteral(char *i) {
-  Value_Integer *retVal = makeInteger();
+Value_Integer *idris2_mkIntegerLiteral(char *i) {
+  Value_Integer *retVal = idris2_mkInteger();
   mpz_set_str(retVal->i, i, 10);
   return retVal;
 }
 
-Value_String *makeEmptyString(size_t l) {
+Value_String *idris2_mkEmptyString(size_t l) {
   Value_String *retVal = IDRIS2_NEW_VALUE(Value_String);
   retVal->header.tag = STRING_TAG;
   retVal->str = malloc(l);
@@ -133,7 +102,7 @@ Value_String *makeEmptyString(size_t l) {
   return retVal;
 }
 
-Value_String *makeString(char *s) {
+Value_String *idris2_mkString(char *s) {
   Value_String *retVal = IDRIS2_NEW_VALUE(Value_String);
   int l = strlen(s);
   retVal->header.tag = STRING_TAG;
@@ -176,16 +145,17 @@ Value_Array *makeArray(int length) {
 
 Value *newReference(Value *source) {
   // note that we explicitly allow NULL as source (for erased arguments)
-  if (source) {
+  if (source && !idris2_vp_is_unboxed(source)) {
     source->header.refCounter++;
   }
   return source;
 }
 
 void removeReference(Value *elem) {
-  if (!elem) {
+  if (!elem || idris2_vp_is_unboxed(elem)) {
     return;
   }
+
   IDRIS2_REFC_VERIFY(elem->header.refCounter > 0, "refCounter %lld",
                      (long long)elem->header.refCounter);
   // remove reference counter
@@ -194,12 +164,8 @@ void removeReference(Value *elem) {
   // recursively remove all references to all children
   {
     switch (elem->header.tag) {
-    case BITS8_TAG:
-    case BITS16_TAG:
     case BITS32_TAG:
     case BITS64_TAG:
-    case INT8_TAG:
-    case INT16_TAG:
     case INT32_TAG:
     case INT64_TAG:
       /* nothing to delete, added for sake of completeness */
@@ -209,9 +175,6 @@ void removeReference(Value *elem) {
       break;
     }
     case DOUBLE_TAG:
-      /* nothing to delete, added for sake of completeness */
-      break;
-    case CHAR_TAG:
       /* nothing to delete, added for sake of completeness */
       break;
     case STRING_TAG:

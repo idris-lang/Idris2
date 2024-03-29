@@ -291,7 +291,7 @@ freeVariables (AApp _ _ closure arg) = fromList [closure, arg]
 freeVariables (ALet _ var value body) =
     union (freeVariables value) (delete (ALocal var) $ freeVariables body)
 freeVariables (ACon _ _ _ _ args) = fromList args
-freeVariables (AOp _ _ _ args) = fromList $ foldl (\acc, elem => elem :: acc) [] args
+freeVariables (AOp _ _ _ args) = fromList $ toList args
 freeVariables (AExtPrim _ _ _ args) = fromList args
 freeVariables (AConCase _ sc alts mDef) =
     let altsAnf =

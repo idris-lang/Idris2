@@ -2,7 +2,7 @@ module Data.Fun.Extra
 
 import Data.Fun
 import Data.Rel
-import Data.HVect
+import Data.Vect.Quantifiers
 
 %default total
 
