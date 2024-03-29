@@ -6,7 +6,7 @@ import Data.Nat
 
 %default total
 
-infix 1 `Copies`
+export infix 1 `Copies`
 
 ||| Carries multiple linear copies of the same value. Usage: m `Copies` x
 ||| reads as "m copies of value x". This data structure is necessary to implement

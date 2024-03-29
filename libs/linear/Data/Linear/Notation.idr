@@ -18,7 +18,7 @@ public export
 (.) : (b -@ c) -@ (a -@ b) -@ (a -@ c)
 (.) f g v = f (g v)
 
-prefix 5 !*
+export prefix 5 !*
 ||| Prefix notation for the linear unrestricted modality
 public export
 record (!*) (a : Type) where
