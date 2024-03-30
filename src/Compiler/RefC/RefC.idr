@@ -971,7 +971,7 @@ header = do
   where
     go : String -> String -> String -> String -> String
     go suffix ty tag v =
-      "static Value_\{ty} idris2_constant_\{ty}_\{cCleanString suffix}"
+      "static Value_\{ty} const idris2_constant_\{ty}_\{cCleanString suffix}"
         ++ " = { IDRIS2_STOCKVAL(\{tag}_TAG), \{v} };"
     genConstant : Constant -> String -> String
     genConstant c n = case c of

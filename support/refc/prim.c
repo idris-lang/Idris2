@@ -27,35 +27,35 @@ Value *idris2_Data_IORef_prim__writeIORef(Value *erased, Value *_ioref,
 //       System operations
 // -----------------------------------
 
-Value_String idris2_predefined_osstring = {IDRIS2_STOCKVAL(STRING_TAG),
+Value_String const idris2_predefined_osstring = {IDRIS2_STOCKVAL(STRING_TAG),
 #ifdef _WIN32
-                                           "windows"
+                                                 "windows"
 #elif _WIN64
-                                           "windows"
+                                                 "windows"
 #elif __APPLE__ || __MACH__
-                                           "macOS"
+                                                 "macOS"
 #elif __linux__
-                                           "Linux"
+                                                 "Linux"
 #elif __FreeBSD__
-                                           "FreeBSD"
+                                                 "FreeBSD"
 #elif __OpenBSD__
-                                           "OpenBSD"
+                                                 "OpenBSD"
 #elif __NetBSD__
-                                           "NetBSD"
+                                                 "NetBSD"
 #elif __DragonFly__
-                                           "DragonFly"
+                                                 "DragonFly"
 #elif __unix || __unix__
-                                           "Unix"
+                                                 "Unix"
 #else
-                                           "Other"
+                                                 "Other"
 #endif
 };
 
 // NOTE: The codegen is obviously determined at compile time,
 //       so the backend should optimize it by replacing it with a constant.
 //       It would probably also be useful for conditional compilation.
-Value_String idris2_predefined_codegenstring = {IDRIS2_STOCKVAL(STRING_TAG),
-                                                "refc"};
+Value_String const idris2_predefined_codegenstring = {
+    IDRIS2_STOCKVAL(STRING_TAG), "refc"};
 
 Value *idris2_crash(Value *msg) {
   Value_String *str = (Value_String *)msg;

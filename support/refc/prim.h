@@ -12,8 +12,8 @@ Value *idris2_Data_IORef_prim__writeIORef(Value *, Value *, Value *, Value *);
 
 // Sys
 
-extern Value_String idris2_predefined_osstring;
-extern Value_String idris2_predefined_codegenstring;
+extern Value_String const idris2_predefined_osstring;
+extern Value_String const idris2_predefined_codegenstring;
 #define idris2_System_Info_prim__os() ((Value *)&idris2_predefined_osstring)
 #define idris2_System_Info_prim__codegen()                                     \
   ((Value *)&idris2_predefined_codegenstring)

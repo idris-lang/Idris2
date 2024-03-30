@@ -144,7 +144,7 @@ Value *idris2_mkIntegerLiteral(char *i) {
 
 Value_String *idris2_mkEmptyString(size_t l) {
   if (l == 1)
-    return &idris2_predefined_nullstring;
+    return (Value_String *)&idris2_predefined_nullstring;
 
   Value_String *retVal = IDRIS2_NEW_VALUE(Value_String);
   retVal->header.tag = STRING_TAG;
@@ -155,7 +155,7 @@ Value_String *idris2_mkEmptyString(size_t l) {
 
 Value_String *idris2_mkString(char *s) {
   if (s[0] == '\0')
-    return &idris2_predefined_nullstring;
+    return (Value_String *)&idris2_predefined_nullstring;
 
   Value_String *retVal = IDRIS2_NEW_VALUE(Value_String);
   int l = strlen(s);
@@ -319,7 +319,7 @@ void removeReference(Value *elem) {
       {IDRIS2_STOCKVAL(t), (n + 8)}, {                                         \
     IDRIS2_STOCKVAL(t), (n + 9)                                                \
   }
-Value_Int64 idris2_predefined_Int64[100] = {
+Value_Int64 const idris2_predefined_Int64[100] = {
     IDRIS2_MK_PREDEFINED_INT_10(INT64_TAG, 0),
     IDRIS2_MK_PREDEFINED_INT_10(INT64_TAG, 10),
     IDRIS2_MK_PREDEFINED_INT_10(INT64_TAG, 20),
@@ -331,7 +331,7 @@ Value_Int64 idris2_predefined_Int64[100] = {
     IDRIS2_MK_PREDEFINED_INT_10(INT64_TAG, 80),
     IDRIS2_MK_PREDEFINED_INT_10(INT64_TAG, 90)};
 
-Value_Bits64 idris2_predefined_Bits64[100] = {
+Value_Bits64 const idris2_predefined_Bits64[100] = {
     IDRIS2_MK_PREDEFINED_INT_10(BITS64_TAG, 0),
     IDRIS2_MK_PREDEFINED_INT_10(BITS64_TAG, 10),
     IDRIS2_MK_PREDEFINED_INT_10(BITS64_TAG, 20),
@@ -343,7 +343,8 @@ Value_Bits64 idris2_predefined_Bits64[100] = {
     IDRIS2_MK_PREDEFINED_INT_10(BITS64_TAG, 80),
     IDRIS2_MK_PREDEFINED_INT_10(BITS64_TAG, 90)};
 
-Value_String idris2_predefined_nullstring = {IDRIS2_STOCKVAL(STRING_TAG), ""};
+Value_String const idris2_predefined_nullstring = {IDRIS2_STOCKVAL(STRING_TAG),
+                                                   ""};
 
 static bool idris2_predefined_integer_initialized = false;
 Value_Integer idris2_predefined_Integer[100];
