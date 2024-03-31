@@ -71,17 +71,18 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   malloc to be aligned with at least 32 bits. Otherwise it cause a runtime error.
 
 * Rename C function to avoid confliction. But only a part.
->
-* Values that reference counter reaches to its limitmaximum are immortalized
-  to avoid overflow the counter. This can cause memory leaks, but they occurs
-  rarely and are a better choice than crashing.
-  Since overflow is no longer a concern, 'Value_Header' was deduces in size to
-  improve memory utilization.
 
-* Commonly seen values such as integers less than 100 are predefined and shared.
+
+* Values that reference counters reaching their maximum limit are immortalized to
+  prevent counter overflow. This can potentially cause memory leaks, but they
+  occur rarely and are a better choice than crashing. Since overflow is no longer
+  a concern, changing refCounter from int to uint16 reduces the size of 'Value_Header'.
+
+* Values often found at runtime, such as integers less than 100 are generate
+  staticaly and share.
 
 * Constant String, Int64, Bits64 and Double values are allocated statically as
-  indestructible and shared.
+  imortal and shared.
 
 #### NodeJS Backend
 
