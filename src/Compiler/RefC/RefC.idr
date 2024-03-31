@@ -189,7 +189,6 @@ varName : AVar -> String
 varName (ALocal i) = "var_" ++ (show i)
 varName (ANull)    = "NULL"
 
-
 data ArgCounter : Type where
 data EnvTracker : Type where
 data FunctionDefinitions : Type where
@@ -380,6 +379,7 @@ const2Integer c i =
         (B64 x) => "UINT64_C(\{show x})"
         _ => show i
 
+
 data TailPositionStatus = InTailPosition | NotInTailPosition
 
 ||| The function takes as arguments the current ReuseMap and the constructors that will be used.
@@ -558,8 +558,8 @@ mutual
              "prim__void", "prim__os", "prim__codegen", "prim__onCollect", "prim__onCollectAny" ]
         case p of
             NS _ (UN (Basic pn)) =>
-               unless (elem pn prims) $ coreFail $ InternalError $ "[refc] Unknown primitive: " ++ cName p
-            _ => coreFail $ InternalError $ "[refc] Unknown primitive: " ++ cName p
+               unless (elem pn prims) $ throw $ InternalError $ "[refc] Unknown primitive: " ++ cName p
+            _ => throw $ InternalError $ "[refc] Unknown primitive: " ++ cName p
         emit fc $ "// call to external primitive " ++ cName p
         pure $ "idris2_\{cName p}("++ showSep ", " (map varName args) ++")"
 
@@ -939,10 +939,10 @@ createCFunctions n (MkAForeign ccs fargs ret) = do
 
           decreaseIndentation
           emit EmptyFC "}"
-      _ => coreFail $ InternalError "[refc] FFI not found for \{cName n}"
+      _ => throw $ InternalError "[refc] FFI not found for \{cName n}"
           -- not really total but this way this internal error does not contaminate everything else
 
-createCFunctions n (MkAError exp) = coreFail $ InternalError "[refc] Error with expression: \{show exp}"
+createCFunctions n (MkAError exp) = throw $ InternalError "[refc] Error with expression: \{show exp}"
 -- not really total but this way this internal error does not contaminate everything else
 
 
