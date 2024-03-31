@@ -640,17 +640,17 @@ mutual
     cStatementsFromANF (APrimVal fc c) _ = do
       constdefs <- get ConstDef
       case lookup c constdefs of
-           Just constid => pure $ constantName c constid -- the constant already booked.
+           Just constid => constantName c constid -- the constant already booked.
            Nothing => dyngen
      where
-        constantName : Constant -> String -> String
+        constantName : Constant -> String -> Core String
         constantName c n = case c of
-           I x => "((Value*)&idris2_constant_Int64_\{cCleanString $ show x})"
-           I64 x => "((Value*)&idris2_constant_Int64_\{cCleanString $ show x})"
-           B64 x => "((Value*)&idris2_constant_Bits64_\{show x})"
-           Db x => "((Value*)&idris2_constant_Double_\{cCleanString $ show x})"
-           Str x => "((Value*)&idris2_constant_String_\{n})"
-           _ => ""
+           I x   => pure "((Value*)&idris2_constant_Int64_\{cCleanString $ show x})"
+           I64 x => pure "((Value*)&idris2_constant_Int64_\{cCleanString $ show x})"
+           B64 x => pure "((Value*)&idris2_constant_Bits64_\{show x})"
+           Db x  => pure "((Value*)&idris2_constant_Double_\{cCleanString $ show x})"
+           Str x => pure "((Value*)&idris2_constant_String_\{n})"
+           _ => throw $ InternalError "[refc] Unsupported type of constant."
         orStagen : Core String
         orStagen = do
             constdefs <- get ConstDef
@@ -659,10 +659,10 @@ mutual
                  _ => pure ""
             -- booking the constant to generate later
             put ConstDef $ insert c constid constdefs
-            pure $ constantName c constid
+            constantName c constid
         dyngen : Core String
         dyngen = case c of
-            I8 x => pure "idris2_mkInt8(INT8_C(\{show x}))"
+            I8 x  => pure "idris2_mkInt8(INT8_C(\{show x}))"
             I16 x => pure "idris2_mkInt16(INT16_C(\{show x}))"
             I32 x => pure "idris2_mkInt32(INT32_C(\{show x}))"
             I64 x => if x >= 0 && x < 100
@@ -671,14 +671,14 @@ mutual
             BI x => if x >= 0 && x < 100
                 then pure "idris2_getPredefinedInteger(\{show x})"
                 else pure "idris2_mkIntegerLiteral(\"\{show x}\")"
-            B8 x => pure "idris2_mkBits8(UINT8_C(\{show x}))"
+            B8 x  => pure "idris2_mkBits8(UINT8_C(\{show x}))"
             B16 x => pure "idris2_mkBits16(UINT16_C(\{show x}))"
             B32 x => pure "idris2_mkBits32(UINT32_C(\{show x}))"
             B64 x => if x >= 0 && x < 100
                then pure "(Value*)(&idris2_predefined_Bits64[\{show x}])"
                else orStagen
             Db _ => orStagen
-            Ch x => pure "idris2_mkChar(\{escapeChar x})"
+            Ch x  => pure "idris2_mkChar(\{escapeChar x})"
             Str _ => orStagen
             PrT t => pure $ cPrimType t
             _ => pure "NULL"
