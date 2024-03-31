@@ -1,9 +1,7 @@
 #include "prim.h"
-
+#include "refc_util.h"
 #include <string.h>
 #include <unistd.h>
-
-#include "refc_util.h"
 
 Value *idris2_Data_IORef_prim__newIORef(Value *erased, Value *input_value,
                                         Value *_world) {

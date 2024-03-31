@@ -1,5 +1,4 @@
 #include "stringOps.h"
-
 #include "refc_util.h"
 
 Value *tail(Value *input) {
