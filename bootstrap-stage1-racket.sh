@@ -9,7 +9,7 @@ fi
 echo "Bootstrapping IDRIS2_VERSION=$IDRIS2_VERSION"
 
 # Compile the bootstrap scheme
-cd bootstrap-build
+cd "${IDRIS2_BOOT_PREFIX}"
 echo "Building idris2-boot from idris2-boot.rkt"
 raco exe idris2_app/idris2-boot.rkt
 

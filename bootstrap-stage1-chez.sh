@@ -13,7 +13,7 @@ echo "Bootstrapping SCHEME=$SCHEME IDRIS2_VERSION=$IDRIS2_VERSION"
 
 # Compile the bootstrap scheme
 # TODO: Move boot-build to Makefile in bootstrap/Makefile
-cd bootstrap-build
+cd "${IDRIS2_BOOT_PREFIX}"
 echo "Building idris2-boot from idris2-boot.ss"
 ${SCHEME} --script ../bootstrap/compile.ss
 

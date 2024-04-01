@@ -260,23 +260,23 @@ install-libdocs: libdocs
 bootstrap: support
 	@if [ "$$(echo '(threaded?)' | $(SCHEME) --quiet)" = "#f" ] ; then \
 		echo "ERROR: Chez is missing threading support" ; exit 1 ; fi
-	mkdir -p bootstrap-build/idris2_app
-	cp ${IDRIS2_SUPPORT_DIR}/${IDRIS2_SUPPORT} bootstrap-build/idris2_app/
+	mkdir -p "${IDRIS2_BOOT_PREFIX}/idris2_app"
+	cp ${IDRIS2_SUPPORT_DIR}/${IDRIS2_SUPPORT} "${IDRIS2_BOOT_PREFIX}/idris2_app/"
 	sed 's/libidris2_support.so/${IDRIS2_SUPPORT}/g; s|__PREFIX__|${IDRIS2_BOOT_PREFIX}|g' \
 		bootstrap/idris2_app/idris2.ss \
-		> bootstrap-build/idris2_app/idris2-boot.ss
-	$(SHELL) ./bootstrap-stage1-chez.sh
-	IDRIS2_CG="chez" $(SHELL) ./bootstrap-stage2.sh
+		> "${IDRIS2_BOOT_PREFIX}/idris2_app/idris2-boot.ss"
+	IDRIS2_BOOT_PREFIX="${IDRIS2_BOOT_PREFIX}" $(SHELL) ./bootstrap-stage1-chez.sh
+	IDRIS2_CG="chez" IDRIS2_BOOT_PREFIX="${IDRIS2_BOOT_PREFIX}" $(SHELL) ./bootstrap-stage2.sh
 
 # Bootstrapping using racket
 bootstrap-racket: support
-	mkdir -p bootstrap-build/idris2_app
-	cp ${IDRIS2_SUPPORT_DIR}/${IDRIS2_SUPPORT} bootstrap-build/idris2_app/
+	mkdir -p "${IDRIS2_BOOT_PREFIX}/idris2_app"
+	cp ${IDRIS2_SUPPORT_DIR}/${IDRIS2_SUPPORT} "${IDRIS2_BOOT_PREFIX}/idris2_app/"
 	sed 's|__PREFIX__|${IDRIS2_BOOT_PREFIX}|g' \
 		bootstrap/idris2_app/idris2.rkt \
-		> bootstrap-build/idris2_app/idris2-boot.rkt
-	$(SHELL) ./bootstrap-stage1-racket.sh
-	IDRIS2_CG="racket" $(SHELL) ./bootstrap-stage2.sh
+		> "${IDRIS2_BOOT_PREFIX}/idris2_app/idris2-boot.rkt"
+	IDRIS2_BOOT_PREFIX="${IDRIS2_BOOT_PREFIX}" $(SHELL) ./bootstrap-stage1-racket.sh
+	IDRIS2_CG="racket" IDRIS2_BOOT_PREFIX="${IDRIS2_BOOT_PREFIX}" $(SHELL) ./bootstrap-stage2.sh
 
 bootstrap-test:
 	$(MAKE) test INTERACTIVE='' IDRIS2_PREFIX=${IDRIS2_BOOT_PREFIX}
