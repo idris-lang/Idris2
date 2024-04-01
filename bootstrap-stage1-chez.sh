@@ -9,12 +9,12 @@ if [ -z "$SCHEME" ] || [ -z "$IDRIS2_VERSION" ]; then
     fi
     exit 1
 fi
-echo "Bootstrapping SCHEME=$SCHEME IDRIS2_VERSION=$IDRIS2_VERSION"
+echo "[bootstrap] Bootstrapping SCHEME=$SCHEME IDRIS2_VERSION=$IDRIS2_VERSION"
 
 # Compile the bootstrap scheme
 # TODO: Move boot-build to Makefile in bootstrap/Makefile
 cd "${IDRIS2_BOOT_PREFIX}"
-echo "Building idris2-boot from idris2-boot.ss"
+echo "[bootstrap] Building idris2-boot from idris2-boot.ss"
 ${SCHEME} --script ../bootstrap/compile.ss
 
 # Put the result in the usual place where the target goes
@@ -30,4 +30,4 @@ cat ../bootstrap/idris2-boot.sh >>../build/exec/idris2
 chmod +x ../build/exec/idris2
 
 install idris2_app/* ../build/exec/idris2_app
-echo 'bootstrap stage 1 complete'
+echo '[bootstrap] bootstrap stage 1 complete'
