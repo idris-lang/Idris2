@@ -13,7 +13,7 @@
 { src
 , ipkgName
 , version ? "unversioned"
-, idrisLibraries
+, idrisLibraries # Other libraries built with buildIdris
 , ... }@attrs:
 
 let
@@ -29,65 +29,69 @@ let
     "idrisLibraries"
   ];
 
-  sharedAttrs = drvAttrs // {
-    pname = ipkgName;
-    inherit version;
-    src = src;
-    nativeBuildInputs = [ idris2 makeWrapper ] ++ attrs.nativeBuildInputs or [];
-    buildInputs = propagatedIdrisLibraries ++ attrs.buildInputs or [];
+  derivation = stdenv.mkDerivation (finalAttrs:
+    drvAttrs // {
+      pname = ipkgName;
+      inherit version;
+      src = src;
+      nativeBuildInputs = [ idris2 makeWrapper ] ++ attrs.nativeBuildInputs or [];
+      buildInputs = propagatedIdrisLibraries ++ attrs.buildInputs or [];
 
-    IDRIS2_PACKAGE_PATH = libDirs;
+      IDRIS2_PACKAGE_PATH = libDirs;
 
-    buildPhase = ''
-      runHook preBuild
-      idris2 --build ${ipkgFileName}
-      runHook postBuild
-    '';
+      buildPhase = ''
+        runHook preBuild
+        idris2 --build ${ipkgFileName}
+        runHook postBuild
+      '';
 
-    passthru = {
-      inherit propagatedIdrisLibraries;
-    };
-  };
+      passthru = {
+        inherit propagatedIdrisLibraries;
+      };
 
-in rec {
-  executable = stdenv.mkDerivation (sharedAttrs //
-    { installPhase = ''
-        runHook preInstall
-        mkdir -p $out/bin
-        scheme_app="$(find ./build/exec -name '*_app')"
-        if [ "$scheme_app" = ''' ]; then
-          mv -- build/exec/* $out/bin/
-          chmod +x $out/bin/*
-          # ^ remove after Idris2 0.8.0 is released. will be superfluous:
-          # https://github.com/idris-lang/Idris2/pull/3189
-        else
-          cd build/exec/*_app
-          rm -f ./libidris2_support.so
-          for file in *.so; do
-            bin_name="''${file%.so}"
-            mv -- "$file" "$out/bin/$bin_name"
-            wrapProgram "$out/bin/$bin_name" \
-              --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ support ]} \
-              --prefix DYLD_LIBRARY_PATH : ${lib.makeLibraryPath [ support ]}
-          done
-        fi
-        runHook postInstall
+      shellHook = ''
+        export IDRIS2_PACKAGE_PATH="${finalAttrs.IDRIS2_PACKAGE_PATH}"
       '';
     }
   );
 
+in rec {
+  executable = derivation.overrideAttrs {
+    installPhase = ''
+      runHook preInstall
+      mkdir -p $out/bin
+      scheme_app="$(find ./build/exec -name '*_app')"
+      if [ "$scheme_app" = ''' ]; then
+        mv -- build/exec/* $out/bin/
+        chmod +x $out/bin/*
+        # ^ remove after Idris2 0.8.0 is released. will be superfluous:
+        # https://github.com/idris-lang/Idris2/pull/3189
+      else
+        cd build/exec/*_app
+        rm -f ./libidris2_support.so
+        for file in *.so; do
+          bin_name="''${file%.so}"
+          mv -- "$file" "$out/bin/$bin_name"
+          wrapProgram "$out/bin/$bin_name" \
+            --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ support ]} \
+            --prefix DYLD_LIBRARY_PATH : ${lib.makeLibraryPath [ support ]}
+        done
+      fi
+      runHook postInstall
+    '';
+  };
+
   library = { withSource ? false }:
     let installCmd = if withSource then "--install-with-src" else "--install";
-    in stdenv.mkDerivation (sharedAttrs //
-      { installPhase = ''
-          runHook preInstall
-          mkdir -p $out/${libSuffix}
-          export IDRIS2_PREFIX=$out/lib
-          idris2 ${installCmd} ${ipkgFileName}
-          runHook postInstall
-        '';
-      }
-    );
+    in derivation.overrideAttrs {
+      installPhase = ''
+        runHook preInstall
+        mkdir -p $out/${libSuffix}
+        export IDRIS2_PREFIX=$out/lib
+        idris2 ${installCmd} ${ipkgFileName}
+        runHook postInstall
+      '';
+    };
   # deprecated aliases:
   build = lib.warn "build is a deprecated alias for 'executable'." executable;
   installLibrary = lib.warn "installLibrary is a deprecated alias for 'library { }'." (library { });
