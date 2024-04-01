@@ -99,6 +99,8 @@ modules = Control.ANSI,
           Data.Telescope.SimpleFun,
           Data.Telescope.Congruence,
 
+          Data.UUID,
+
           Data.Validated,
 
           Data.Vect.Properties,
