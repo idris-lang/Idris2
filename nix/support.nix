@@ -1,5 +1,8 @@
-{ stdenv, lib, gmp, idris2Version }:
-stdenv.mkDerivation rec {
+{ stdenv, lib, overrideSDK, gmp, idris2Version }:
+let
+  stdenv' = if stdenv.isDarwin then overrideSDK stdenv "11.0" else stdenv;
+in
+stdenv'.mkDerivation rec {
   pname = "libidris2_support";
   version = idris2Version;
 
@@ -10,7 +13,7 @@ stdenv.mkDerivation rec {
 
   makeFlags = [
     "PREFIX=$(out)"
-  ] ++ lib.optional stdenv.isDarwin "OS=";
+  ] ++ lib.optional stdenv'.isDarwin "OS=";
 
   buildFlags = [ "support" ];
 
