@@ -2,8 +2,8 @@ module Main3
 
 import Lib1
 
-prefix 4 %%%
-infixr 8 -
+private prefix 4 %%%
+private infixr 8 -
 
 (%%%) : Nat -> Nat
 (%%%) = S

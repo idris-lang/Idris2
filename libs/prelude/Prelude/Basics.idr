@@ -22,7 +22,7 @@ Not x = x -> Void
 ||| @ a the type to assign
 ||| @ x the element to get the type
 public export %inline
-the : (0 a : Type) -> (x : a) -> a
+the : (0 a : Type) -> (1 x : a) -> a
 the _ x = x
 
 ||| Identity function.
@@ -69,7 +69,7 @@ public export %tcinline
 on : (b -> b -> c) -> (a -> b) -> a -> a -> c
 on f g = \x, y => g x `f` g y
 
-infixl 0 `on`
+export infixl 0 `on`
 
 ||| Takes in the first two arguments in reverse order.
 ||| @ f the function to flip

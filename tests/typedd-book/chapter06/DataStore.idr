@@ -5,7 +5,7 @@ import Data.String
 import Data.Vect
 import System.REPL
 
-infixr 5 .+.
+private infixr 5 .+.
 
 data Schema = SString | SInt | (.+.) Schema Schema
 

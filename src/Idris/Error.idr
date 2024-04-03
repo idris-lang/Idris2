@@ -14,6 +14,7 @@ import Idris.Pretty
 import Parser.Source
 
 import Data.List
+import Data.Either
 import Data.List1
 import Data.String
 
@@ -626,14 +627,14 @@ perrorRaw (GenericMsgSol fc header solutions)
        <+> "Possible solutions:" <+> line
        <+> indent 1 (vsep (map (\s => "-" <++> pretty0 s) solutions))
 perrorRaw (OperatorBindingMismatch fc {print=p} expected actual opName rhs candidates)
-    = pure $ "Operator" <++> pretty0 !(getFullName opName) <++> "is"
-       <++> printBindingInfo expected
+    = pure $ "Operator" <++> pretty0 !(getFullName (fromEither opName)) <++> "is"
+       <++> printBindingInfo expected-- .bindingInfo
        <++> "operator, but is used as" <++> printBindingModifier actual.getBinder
        <++> "operator."
        <+> line <+> !(ploc fc)
        <+> "Explanation: regular, typebind and autobind operators all use a slightly different"
-       <++> "syntax, typebind looks like this: '(name : type)" <++> pretty0 opName
-       <++> "expr', autobind looks like this: '(name := expr)" <++> pretty0 opName
+       <++> "syntax, typebind looks like this: '(name : type)" <++> infixOpName
+       <++> "expr', autobind looks like this: '(name := expr)" <++> infixOpName
        <++> "expr'."
        <+> line <+> line
        <+> "Possible solutions:" <+> line
@@ -650,45 +651,46 @@ perrorRaw (OperatorBindingMismatch fc {print=p} expected actual opName rhs candi
 
       moduleDiagnostic : Doc IdrisAnn
       moduleDiagnostic = case expected of
-                              Backticked => "Import a module that exports a suitable fixity."
-                              (DeclaredFixity a) => "Hide or remove the fixity at" <++> byShow a.fc
-                                     <++> "and import a module that exports a compatible fixity."
+                              UndeclaredFixity => "Import a module that exports a suitable fixity."
+                              (DeclaredFixity e) => "Hide or remove the fixity at" <++> byShow e.fc
+                                  <++> "and import a module that exports a compatible fixity."
+
       infixOpName : Doc IdrisAnn
-      infixOpName = case expected of
-                         Backticked => enclose "`" "`" (byShow opName)
-                         _ => byShow opName
+      infixOpName = case opName of
+                         Left backtickedOp => enclose "`" "`" (byShow backtickedOp)
+                         Right symbolOp => byShow symbolOp
 
       displayFixityInfo : FixityInfo -> BindingModifier -> Doc IdrisAnn
       displayFixityInfo (MkFixityInfo fc1 vis _ fix precedence) NotBinding
-        = byShow vis <++> byShow fix <++> byShow precedence <++> pretty0 opName
+        = byShow vis <++> byShow fix <++> byShow precedence <++> pretty0 (fromEither opName)
       displayFixityInfo (MkFixityInfo _ vis _ fix precedence) usedBinder
-        = byShow vis <++> byShow usedBinder <++> byShow fix <++> byShow precedence <++> pretty0 opName
+        = byShow vis <++> byShow usedBinder <++> byShow fix <++> byShow precedence <++> pretty0 (fromEither opName)
 
       printE : ? -> Doc IdrisAnn
       printE x = reAnnotate (const Code) (p x)
 
       expressionDiagnositc : List (Doc IdrisAnn)
       expressionDiagnositc = case expected of
-          Backticked => []
-          (DeclaredFixity e) => let sentence = "Write the expression using" <++> byShow e.bindingInfo <++> "syntax:"
-                   in pure $ sentence <++> enclose "'" "'" (case e.bindingInfo of
-                           NotBinding =>
-                              printE actual.getLhs <++> infixOpName <++> printE rhs
-                           Autobind =>
-                              parens (maybe "_" printE actual.getBoundPat <++> ":="
-                                      <++> printE actual.getLhs)
-                              <++> infixOpName <++> printE rhs
-                           Typebind =>
-                              parens (maybe "_" printE actual.getBoundPat <++> ":"
-                                      <++> printE actual.getLhs)
-                              <++> infixOpName <++> printE rhs
-                           ) <+> dot
+          UndeclaredFixity => []
+          DeclaredFixity e => let sentence = "Write the expression using" <++> byShow e.bindingInfo <++> "syntax:"
+            in pure $ sentence <++> enclose "'" "'" (case e.bindingInfo of
+                    NotBinding =>
+                       printE actual.getLhs <++> infixOpName <++> printE rhs
+                    Autobind =>
+                       parens (maybe "_" printE actual.getBoundPat <++> ":="
+                               <++> printE actual.getLhs)
+                       <++> infixOpName <++> printE rhs
+                    Typebind =>
+                       parens (maybe "_" printE actual.getBoundPat <++> ":"
+                               <++> printE actual.getLhs)
+                       <++> infixOpName <++> printE rhs
+                    ) <+> dot
 
 
       fixityDiagnostic : Doc IdrisAnn
       fixityDiagnostic = case expected of
-          Backticked => "Define a new fixity:" <++> "infixr 0" <++> infixOpName
-          (DeclaredFixity fix) =>
+           UndeclaredFixity => "Define a new fixity:" <++> "infixr 0" <++> infixOpName
+           (DeclaredFixity fix) =>
             "Change the fixity defined at" <++> pretty0 fix.fc <++> "to"
             <++> enclose "'" "'" (displayFixityInfo fix actual.getBinder)
             <+> dot
@@ -698,8 +700,8 @@ perrorRaw (OperatorBindingMismatch fc {print=p} expected actual opName rhs candi
       printBindingModifier Typebind = "a type-binding (typebind)"
       printBindingModifier Autobind = "an automatically-binding (autobind)"
 
-      printBindingInfo : BacktickOrOperatorFixity -> Doc IdrisAnn
-      printBindingInfo Backticked = "a regular"
+      printBindingInfo : FixityDeclarationInfo -> Doc IdrisAnn
+      printBindingInfo UndeclaredFixity = "a regular"
       printBindingInfo (DeclaredFixity x) = printBindingModifier x.bindingInfo
 
 

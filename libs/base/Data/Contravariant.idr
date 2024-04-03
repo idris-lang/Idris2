@@ -2,7 +2,7 @@ module Data.Contravariant
 
 %default total
 
-infixl 4 >$, >$<, >&<, $<
+export infixl 4 >$, >$<, >&<, $<
 
 ||| Contravariant functors
 public export

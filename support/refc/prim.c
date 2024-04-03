@@ -83,7 +83,7 @@ Value *idris2_crash(Value *msg) {
 Value *idris2_Data_IOArray_Prims_prim__newArray(Value *erased, Value *_length,
                                                 Value *v, Value *_word) {
   int length = idris2_vp_to_Int64(_length);
-  Value_Array *a = makeArray(length);
+  Value_Array *a = idris2_makeArray(length);
 
   for (int i = 0; i < length; i++) {
     a->arr[i] = idris2_newReference(v);

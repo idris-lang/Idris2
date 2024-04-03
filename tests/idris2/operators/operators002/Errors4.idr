@@ -1,5 +1,5 @@
 
-infixr 0 =@
+private infixr 0 =@
 
 0 (=@) : (a : Type) -> (a -> Type) -> Type
 (=@) a f = (1 x : a) -> f x

@@ -165,7 +165,7 @@ Value *stringIteratorNew(char *str) {
   it->pos = 0;
   memcpy(it->str, str, l + 1); // Take a copy of str, in case it gets GCed
 
-  return (Value *)makeGCPointer(
+  return (Value *)idris2_makeGCPointer(
       it, (Value_Closure *)idris2_mkClosure(
               (Value * (*)()) onCollectStringIterator, 2, 0));
 }

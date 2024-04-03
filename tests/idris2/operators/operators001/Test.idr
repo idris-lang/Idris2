@@ -3,8 +3,8 @@ module Test
 
 import Data.Vect
 
-typebind infixr 0 =@
-infixr 0 -@
+private typebind infixr 0 =@
+private infixr 0 -@
 
 -- typebind infixr 1 =@@
 
@@ -39,7 +39,7 @@ map4 : (x : a) =@ (b -@ (y : List a) =@ List b)
 
 test3 : Test.map3 === Test.map4
 
-typebind infixr 0 *>
+private typebind infixr 0 *>
 
 -- (*>) : (ty : Type) -> (ty -> Type) -> Type
 -- (*>) = DPair
@@ -47,7 +47,7 @@ typebind infixr 0 *>
 -- testCompose : (x : Nat) *> (y : Nat) *> Vect (n + m) String
 -- testCompose = (1 ** 2 ** ["hello", "world", "!"])
 
-autobind infixr 0 `MyLet`
+private autobind infixr 0 `MyLet`
 
 MyLet : (val) -> (val -> rest) -> rest
 MyLet arg fn = fn arg
@@ -58,14 +58,14 @@ program = (n := 3) `MyLet` 2 + n
 program2 : Nat
 program2 = (n : Nat := 3) `MyLet` 2 + n
 
-typebind infixr 0 |>
+private typebind infixr 0 |>
 
 record Container where
   constructor (|>)
   shape : Type
   position : shape -> Type
 
-typebind infixr 0 @@
+private typebind infixr 0 @@
 
 record (@@) (x : Type) (y : x -> Type) where
   constructor PairUp

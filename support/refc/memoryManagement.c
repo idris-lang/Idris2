@@ -101,29 +101,30 @@ Value_String *idris2_mkString(char *s) {
   return retVal;
 }
 
-Value_Pointer *makePointer(void *ptr_Raw) {
+Value_Pointer *idris2_makePointer(void *ptr_Raw) {
   Value_Pointer *p = IDRIS2_NEW_VALUE(Value_Pointer);
   p->header.tag = POINTER_TAG;
   p->p = ptr_Raw;
   return p;
 }
 
-Value_GCPointer *makeGCPointer(void *ptr_Raw, Value_Closure *onCollectFct) {
+Value_GCPointer *idris2_makeGCPointer(void *ptr_Raw,
+                                      Value_Closure *onCollectFct) {
   Value_GCPointer *p = IDRIS2_NEW_VALUE(Value_GCPointer);
   p->header.tag = GC_POINTER_TAG;
-  p->p = makePointer(ptr_Raw);
+  p->p = idris2_makePointer(ptr_Raw);
   p->onCollectFct = onCollectFct;
   return p;
 }
 
-Value_Buffer *makeBuffer(void *buf) {
+Value_Buffer *idris2_makeBuffer(void *buf) {
   Value_Buffer *b = IDRIS2_NEW_VALUE(Value_Buffer);
   b->header.tag = BUFFER_TAG;
   b->buffer = buf;
   return b;
 }
 
-Value_Array *makeArray(int length) {
+Value_Array *idris2_makeArray(int length) {
   Value_Array *a = IDRIS2_NEW_VALUE(Value_Array);
   a->header.tag = ARRAY_TAG;
   a->capacity = length;

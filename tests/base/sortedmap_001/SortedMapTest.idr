@@ -3,7 +3,7 @@ import Data.SortedMap
 (&~) : a -> (a -> b) -> b
 (&~) x f = f x
 
-infixl 2 &~
+private infixl 2 &~
 
 testLookupBetween : List (Maybe (Maybe (Int,Int),Maybe (Int,Int)))
 testLookupBetween =

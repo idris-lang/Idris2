@@ -12,8 +12,8 @@ import Data.List
 
 %default total
 
-infixr 5 <|, <:
-infixl 5 |>, :>
+export infixr 5 <|, <:
+export infixl 5 |>, :>
 
 public export
 FileRange : Type

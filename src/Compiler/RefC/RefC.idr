@@ -216,7 +216,7 @@ ReuseMap = SortedMap Name String
 Owned = SortedSet AVar
 
 ||| Environment for precise reference counting.
-||| If variable borrowed (that is, it is not in the owned set) when used, call a function newReference.
+||| If variable borrowed (that is, it is not in the owned set) when used, call a function idris2_newReference.
 ||| If variable owned, then use it directly.
 ||| Reuse Map contains the name of the reusable constructor and variable
 record Env where
@@ -737,9 +737,9 @@ packCFType CFUnsigned8     varName = "idris2_mkBits8(" ++ varName ++ ")"
 packCFType CFString        varName = "idris2_mkString(" ++ varName ++ ")"
 packCFType CFDouble        varName = "idris2_mkDouble(" ++ varName ++ ")"
 packCFType CFChar          varName = "idris2_mkChar(" ++ varName ++ ")"
-packCFType CFPtr           varName = "makePointer(" ++ varName ++ ")"
-packCFType CFGCPtr         varName = "makePointer(" ++ varName ++ ")"
-packCFType CFBuffer        varName = "makeBuffer(" ++ varName ++ ")"
+packCFType CFPtr           varName = "idris2_makePointer(" ++ varName ++ ")"
+packCFType CFGCPtr         varName = "idris2_makePointer(" ++ varName ++ ")"
+packCFType CFBuffer        varName = "idris2_makeBuffer(" ++ varName ++ ")"
 packCFType CFWorld         _       = "(Value *)NULL"
 packCFType (CFFun x y)     varName = "makeFunction(" ++ varName ++ ")"
 packCFType (CFIORes x)     varName = packCFType x varName

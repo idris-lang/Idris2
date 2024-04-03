@@ -1,4 +1,4 @@
-infixr 6 -*
+private infixr 6 -*
 (-*) : Type -> Type -> Type
 (-*) a b = (1 _ : a) -> b
 

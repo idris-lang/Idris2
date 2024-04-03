@@ -1,8 +1,8 @@
 
 import Data.Fin
 
-autobind infixr 0 >>
-autobind infixr 0 >=
+private autobind infixr 0 >>
+private autobind infixr 0 >=
 
 (>>) : Monad m => m a -> (a -> m b) -> m b
 (>>) = (>>=)
