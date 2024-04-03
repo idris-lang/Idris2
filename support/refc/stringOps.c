@@ -103,14 +103,14 @@ Value *fastUnpack(char *str) {
     return (Value *)NULL;
   }
 
-  Value_Constructor *retVal = newConstructor(2, 1);
+  Value_Constructor *retVal = idris2_newConstructor(2, 1);
   retVal->args[0] = idris2_mkChar(str[0]);
 
   int i = 1;
-  Value_Constructor *current = retVal;
+  Value_Constructor *current = (Value_Constructor *)retVal;
   Value_Constructor *next;
   while (str[i] != '\0') {
-    next = newConstructor(2, 1);
+    next = idris2_newConstructor(2, 1);
     next->args[0] = idris2_mkChar(str[i]);
     current->args[1] = (Value *)next;
 
@@ -165,11 +165,12 @@ Value *stringIteratorNew(char *str) {
   it->pos = 0;
   memcpy(it->str, str, l + 1); // Take a copy of str, in case it gets GCed
 
-  Value_Arglist *arglist = newArglist(2, 2);
+  Value_Arglist *arglist = idris2_newArglist(2, 2);
   Value *(*onCollectRaw)(Value_Arglist *) = onCollectStringIterator_arglist;
-  Value_Closure *onCollect = makeClosureFromArglist(onCollectRaw, arglist);
+  Value_Closure *onCollect =
+      idris2_makeClosureFromArglist(onCollectRaw, arglist);
 
-  return (Value *)makeGCPointer(it, onCollect);
+  return (Value *)idris2_makeGCPointer(it, onCollect);
 }
 
 Value *onCollectStringIterator(Value_Pointer *ptr, void *null) {
@@ -187,8 +188,8 @@ Value *onCollectStringIterator_arglist(Value_Arglist *arglist) {
 Value *stringIteratorToString(void *a, char *str, Value *it_p,
                               Value_Closure *f) {
   String_Iterator *it = ((Value_GCPointer *)it_p)->p->p;
-  return apply_closure(newReference((Value *)f),
-                       (Value *)idris2_mkString(it->str + it->pos));
+  return idris2_apply_closure(idris2_newReference((Value *)f),
+                              (Value *)idris2_mkString(it->str + it->pos));
 }
 
 Value *stringIteratorNext(char *s, Value *it_p) {
@@ -201,9 +202,9 @@ Value *stringIteratorNext(char *s, Value *it_p) {
 
   it->pos++; // Ok to do this as StringIterator linear
 
-  Value_Constructor *retVal = newConstructor(2, 1);
+  Value_Constructor *retVal = idris2_newConstructor(2, 1);
   retVal->args[0] = (Value *)idris2_mkChar(c);
-  retVal->args[1] = newReference(it_p);
+  retVal->args[1] = idris2_newReference(it_p);
 
   return (Value *)retVal;
 }
