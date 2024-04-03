@@ -2,7 +2,7 @@ module Data.Linear.Notation
 
 %default total
 
-infixr 0 -@
+export infixr 0 -@
 ||| Infix notation for linear implication
 public export
 (-@) : Type -> Type -> Type
@@ -18,7 +18,7 @@ public export
 (.) : (b -@ c) -@ (a -@ b) -@ (a -@ c)
 (.) f g v = f (g v)
 
-prefix 5 !*
+export prefix 5 !*
 ||| Prefix notation for the linear unrestricted modality
 public export
 record (!*) (a : Type) where

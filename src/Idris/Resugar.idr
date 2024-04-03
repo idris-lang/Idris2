@@ -46,7 +46,7 @@ mkOp tm@(PApp fc (PApp _ (PRef opFC kn) x) y)
        -- to know if the name is an operator or not, it's enough to check
        -- that the fixity context contains the name `(++)`
        let rootName = UN (Basic (nameRoot raw))
-       let asOp = POp fc opFC (NoBinder (unbracketApp x)) kn (unbracketApp y)
+       let asOp = POp fc opFC (NoBinder (unbracketApp x)) (OpSymbols kn) (unbracketApp y)
        if not (null (lookupName rootName (infixes syn)))
          then pure asOp
          else case dropNS raw of
@@ -55,7 +55,7 @@ mkOp tm@(PApp fc (PApp _ (PRef opFC kn) x) y)
 mkOp tm@(PApp fc (PRef opFC kn) x)
   = do syn <- get Syn
        let n = rawName kn
-       let asOp = PSectionR fc opFC (unbracketApp x) kn
+       let asOp = PSectionR fc opFC (unbracketApp x) (OpSymbols kn)
        if not (null $ lookupName (UN $ Basic (nameRoot n)) (infixes syn))
          then pure asOp
          else case dropNS n of
@@ -73,7 +73,7 @@ mkSectionL tm@(PLam fc rig info (PRef _ bd) ty
          | _ => pure tm
        syn <- get Syn
        let n = rawName kn
-       let asOp = PSectionL fc opFC kn (unbracketApp x)
+       let asOp = PSectionL fc opFC (OpSymbols kn) (unbracketApp x)
        if not (null $ lookupName (UN $ Basic (nameRoot n)) (fixities syn))
          then pure asOp
          else case dropNS n of
@@ -591,15 +591,15 @@ cleanPTerm ptm
     cleanNode (PRef fc nm)    =
       PRef fc <$> cleanKindedName nm
     cleanNode (POp fc opFC abi op y) =
-      (\ op => POp fc opFC abi op y) <$> cleanKindedName op
+      (\ op => POp fc opFC abi op y) <$> traverseOp @{Functor.CORE} cleanKindedName op
     cleanNode (PPrefixOp fc opFC op x) =
-      (\ op => PPrefixOp fc opFC op x) <$> cleanKindedName op
+      (\ op => PPrefixOp fc opFC op x) <$> traverseOp @{Functor.CORE} cleanKindedName op
     cleanNode (PSectionL fc opFC op x) =
-      (\ op => PSectionL fc opFC op x) <$> cleanKindedName op
+      (\ op => PSectionL fc opFC op x) <$> traverseOp @{Functor.CORE} cleanKindedName op
     cleanNode (PSectionR fc opFC x op) =
-      PSectionR fc opFC x <$> cleanKindedName op
+      PSectionR fc opFC x <$> traverseOp @{Functor.CORE} cleanKindedName op
     cleanNode (PPi fc rig vis (Just n) arg ret) =
-      (\ n => PPi fc rig vis n arg ret) <$> cleanBinderName vis n
+      (\ n => PPi fc rig vis n arg ret) <$> (cleanBinderName vis n)
     cleanNode tm = pure tm
 
 toCleanPTerm : {auto c : Ref Ctxt Defs} ->

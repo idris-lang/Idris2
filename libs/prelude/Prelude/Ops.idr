@@ -1,30 +1,30 @@
 module Prelude.Ops
 
 -- Numerical operators
-infix 6 ==, /=, <, <=, >, >=
-infixl 8 +, -
-infixl 9 *, /
+export infix 6 ==, /=, <, <=, >, >=
+export infixl 8 +, -
+export infixl 9 *, /
 
 -- Boolean operators
-infixr 5 &&
-infixr 4 ||
+export infixr 5 &&
+export infixr 4 ||
 
 -- List and String operators
-infixr 7 ::, ++
-infixl 7 :<
+export infixr 7 ::, ++
+export infixl 7 :<
 
 -- Equivalence
-infix 0 <=>
+export infix 0 <=>
 
 -- Functor/Applicative/Monad/Algebra operators
-infixl 1 >>=, =<<, >>, >=>, <=<, <&>
-infixr 2 <|>
-infixl 3 <*>, *>, <*
-infixr 4 <$>, $>, <$
-infixl 8 <+>
+export infixl 1 >>=, =<<, >>, >=>, <=<, <&>
+export infixr 2 <|>
+export infixl 3 <*>, *>, <*
+export infixr 4 <$>, $>, <$
+export infixl 8 <+>
 
 -- Utility operators
-infixr 9 ., .:
-infixr 0 $
+export infixr 9 ., .:
+export infixr 0 $
 
-infixl 9 `div`, `mod`
+export infixl 9 `div`, `mod`

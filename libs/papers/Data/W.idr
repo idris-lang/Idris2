@@ -66,12 +66,12 @@ namespace Finitary
   Arr (AUnit nm) r = One nm r
   Arr (d || e) r = (Arr d r, Arr e r)
 
-  infixr 0 ~>
+  export infixr 0 ~>
   record (~>) (d : Fin) (r : Type) where
     constructor MkArr
     runArr : Arr d r
 
-  infix 5 .=
+  export infix 5 .=
   (.=) : (nm : String) -> s -> One nm s
   nm .= v = MkOne v
 
@@ -98,7 +98,7 @@ namespace Finitary
   appArr (d || e) f (Left x) = appArr d (fst f) x
   appArr (d || e) f (Right x) = appArr e (snd f) x
 
-  infixl 0 $$
+  export infixl 0 $$
   ($$) : {d : Fin} -> (d ~> r) -> (Elem d -> r)
   MkArr f $$ x = appArr d f x
 

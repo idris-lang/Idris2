@@ -270,7 +270,7 @@ public export
 deleteFirstsBy : (p : a -> b -> Bool) -> (source : List b) -> (undesirables : List a) -> List b
 deleteFirstsBy p = foldl (flip (deleteBy p))
 
-infix 7 \\
+export infix 7 \\
 
 ||| The non-associative list-difference.
 ||| A specialized form of @deleteFirstsBy@ where the predicate is equality under the @Eq@

@@ -2,7 +2,7 @@ module Bimonad
 
 import Biapplicative
 
-infixl 4 >>==
+export infixl 4 >>==
 
 ||| Bimonads
 ||| @p the action of the first Bifunctor component on pairs of objects

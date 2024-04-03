@@ -2,8 +2,8 @@
 
 import Data.Vect
 
-typebind infixr 0 =@
-infixr 0 -@
+private typebind infixr 0 =@
+private infixr 0 -@
 
 0 (=@) : (a : Type) -> (a -> Type) -> Type
 (=@) a f = (1 x : a) -> f x
@@ -18,7 +18,7 @@ data S : {ty : Type} -> (x : ty) -> Type where
   Mk4 : ty -@ (x : ty) =@ S x
   Chain : (x : ty =@ y : ty =@ S (x, y))
 
-typebind infixr 0 *>
+private typebind infixr 0 *>
 
 -- (*>) : (ty : Type) -> (ty -> Type) -> Type
 -- (*>) = DPair
@@ -26,7 +26,7 @@ typebind infixr 0 *>
 -- testCompose : (x : Nat) *> (y : Nat) *> Vect (n + m) String
 -- testCompose = (1 ** 2 ** ["hello", "world", "!"])
 
-autobind infixr 7 `MyLet`
+private autobind infixr 7 `MyLet`
 
 MyLet : (val) -> (val -> rest) -> rest
 MyLet arg fn = fn arg

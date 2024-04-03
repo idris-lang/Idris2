@@ -4,7 +4,7 @@ import Stuff
 
 %default partial
 
-infixl 5 ==, /=
+private infixl 5 ==, /=
 
 interface Eq b where
   (==) : b -> b -> Bool

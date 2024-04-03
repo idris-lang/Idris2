@@ -2,7 +2,7 @@ module DataStore
 
 import Data.Vect
 
-infixr 5 .+.
+export infixr 5 .+.
 
 public export
 data Schema = SString | SInt | (.+.) Schema Schema

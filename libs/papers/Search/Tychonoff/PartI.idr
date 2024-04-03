@@ -40,7 +40,7 @@ HilbertEpsilon p = (v : x ** (v0 : x) -> p v0 -> p v)
 0 IsSearchable : Type -> Type
 IsSearchable x = (0 p : Pred x) -> Decidable p -> HilbertEpsilon p
 
-infix 0 <->
+private infix 0 <->
 record (<->) (a, b : Type) where
   constructor MkIso
   forwards  : a -> b

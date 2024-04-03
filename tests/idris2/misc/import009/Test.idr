@@ -5,6 +5,7 @@ infixr 5 ~:>
 
 public export
 infixr 5 ~>
+export
 infixl 5 |>
 
 public export

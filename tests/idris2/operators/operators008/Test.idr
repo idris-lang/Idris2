@@ -4,7 +4,7 @@ import Test2
 
 %hide Test2.infixr.(@>)
 
-infixl 9 @>
+private infixl 9 @>
 
 (@>) : a -> b -> (a, b)
 (@>) = MkPair
