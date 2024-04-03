@@ -63,6 +63,7 @@ Value_String *idris2_mkEmptyString(size_t l);
 Value_String *idris2_mkString(char *);
 
 Value_Pointer *idris2_makePointer(void *);
-Value_GCPointer *idris2_makeGCPointer(void *ptr_Raw, Value_Closure *onCollectFct);
+Value_GCPointer *idris2_makeGCPointer(void *ptr_Raw,
+                                      Value_Closure *onCollectFct);
 Value_Buffer *idris2_makeBuffer(void *buf);
 Value_Array *idris2_makeArray(int length);
