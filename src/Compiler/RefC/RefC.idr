@@ -198,7 +198,7 @@ cOp StrIndex      [x, i]    = "strIndex(" ++ x ++ ", " ++ i ++ ")"
 cOp StrCons       [x, y]    = "strCons(" ++ x ++ ", " ++ y ++ ")"
 cOp StrAppend     [x, y]    = "strAppend(" ++ x ++ ", " ++ y ++ ")"
 cOp StrSubstr     [x, y, z] = "strSubstr(" ++ x ++ ", " ++ y  ++ ", " ++ z ++ ")"
-cOp BelieveMe     [_, _, x] = "newReference(" ++ x ++ ")"
+cOp BelieveMe     [_, _, x] = "idris2_newReference(" ++ x ++ ")"
 cOp Crash         [_, msg]  = "idris2_crash(" ++ msg ++ ");"
 cOp fn args = show fn ++ "(" ++ (showSep ", " $ toList args) ++ ")"
 
@@ -216,7 +216,7 @@ ReuseMap = SortedMap Name String
 Owned = SortedSet AVar
 
 ||| Environment for precise reference counting.
-||| If variable borrowed (that is, it is not in the owned set) when used, call a function newReference.
+||| If variable borrowed (that is, it is not in the owned set) when used, call a function idris2_newReference.
 ||| If variable owned, then use it directly.
 ||| Reuse Map contains the name of the reusable constructor and variable
 record Env where
@@ -296,25 +296,25 @@ removeVars : {auto oft : Ref OutfileText Output}
            -> {auto il : Ref IndentLevel Nat}
            -> List String
            -> Core ()
-removeVars = applyFunctionToVars "removeReference"
+removeVars = applyFunctionToVars "idris2_removeReference"
 
 dupVars : {auto oft : Ref OutfileText Output}
            -> {auto il : Ref IndentLevel Nat}
            -> List String
            -> Core ()
-dupVars = applyFunctionToVars "newReference"
+dupVars = applyFunctionToVars "idris2_newReference"
 
 removeReuseConstructors : {auto oft : Ref OutfileText Output}
                         -> {auto il : Ref IndentLevel Nat}
                         -> List String
                         -> Core ()
-removeReuseConstructors = applyFunctionToVars "removeReuseConstructor"
+removeReuseConstructors = applyFunctionToVars "idris2_removeReuseConstructor"
 
 avarToC : Env -> AVar -> String
 avarToC env var =
     if contains var env.owned then varName var
         -- case when the variable is borrowed
-    else "newReference(" ++ varName var ++ ")"
+    else "idris2_newReference(" ++ varName var ++ ")"
 
 moveFromOwnedToBorrowed : Env -> SortedSet AVar -> Env
 moveFromOwnedToBorrowed env vars = { owned $= (`difference` vars) } env
@@ -330,7 +330,7 @@ makeArglist missing xs = do
     let arglist = "arglist_" ++  !(getNextCounter)
     emit EmptyFC $  "Value_Arglist *"
                  ++ arglist
-                 ++ " = newArglist(" ++ show missing
+                 ++ " = idris2_newArglist(" ++ show missing
                  ++ "," ++ show (length xs + missing)
                  ++ ");"
     pushArgToArglist !(get EnvTracker) arglist xs 0
@@ -436,7 +436,7 @@ addReuseConstructor reuseMap sc conName conArgs consts shouldDrop actualReuseCon
         let constr = "constructor_" ++ !(getNextCounter)
         emit EmptyFC $ "Value_Constructor* " ++ constr ++ " = NULL;"
         -- If the constructor variable is unique (has 1 reference), then assign it for reuse
-        emit EmptyFC $ "if (isUnique(" ++ sc ++ ")) {"
+        emit EmptyFC $ "if (idris2_isUnique(" ++ sc ++ ")) {"
         increaseIndentation
         emit EmptyFC $ constr ++ " = (Value_Constructor*)" ++ sc ++ ";"
         decreaseIndentation
@@ -495,27 +495,27 @@ mutual
         let closure_name = "closure_" ++ c
         emit fc $ "Value *"
                ++ closure_name
-               ++ " = (Value*)makeClosureFromArglist("
+               ++ " = (Value*)idris2_makeClosureFromArglist("
                ++ f_ptr_name
                ++ ", "
                ++ arglist
                ++ ");"
         emit fc $ ("// end   " ++ cName n ++ "(" ++ showSep ", " (map (\v => varName v) args) ++ ")")
         pure $ case tailPosition of
-           NotInTailPosition => "trampoline(\{closure_name})"
+           NotInTailPosition => "idris2_trampoline(\{closure_name})"
            InTailPosition => closure_name
     cStatementsFromANF (AUnderApp fc n missing args) _ = do
         arglist <- makeArglist missing args
         let f_ptr_name = "closure_" ++ !(getNextCounter)
         let f_ptr = "Value *(*"++ f_ptr_name ++ ")(Value_Arglist*) = "++  cName n ++ "_arglist;"
         emit fc f_ptr
-        pure "(Value*)makeClosureFromArglist(\{f_ptr_name}, \{arglist})"
+        pure "(Value*)idris2_makeClosureFromArglist(\{f_ptr_name}, \{arglist})"
 
     cStatementsFromANF (AApp fc _ closure arg) tailPosition = do
        env <- get EnvTracker
        pure $ (case tailPosition of
-           NotInTailPosition =>          "apply_closure"
-           InTailPosition    => "tailcall_apply_closure") ++ "(\{avarToC env closure}, \{avarToC env arg})"
+           NotInTailPosition => "idris2_apply_closure"
+           InTailPosition    => "idris2_tailcall_apply_closure") ++ "(\{avarToC env closure}, \{avarToC env arg})"
 
     cStatementsFromANF (ALet fc var value body) tailPosition = do
         env <- get EnvTracker
@@ -527,7 +527,7 @@ mutual
         let valueEnv = { reuseMap $= (`intersectionMap` usedCons) } (moveFromOwnedToBorrowed env borrowVal)
         put EnvTracker valueEnv
         emit fc $ "Value * var_\{show var} = \{!(cStatementsFromANF value NotInTailPosition)};"
-        unless (contains (ALocal var) usedVars) $ emit fc $ "removeReference(var_\{show var});"
+        unless (contains (ALocal var) usedVars) $ emit fc $ "idris2_removeReference(var_\{show var});"
         put EnvTracker ({ owned := owned', reuseMap $= (`differenceMap` usedCons) } env)
         cStatementsFromANF body tailPosition
 
@@ -536,7 +536,7 @@ mutual
             then pure "(NULL /* \{show n} */)"
             else do
                 env <- get EnvTracker
-                let createNewConstructor = " = newConstructor("
+                let createNewConstructor = " = idris2_newConstructor("
                                  ++ (show (length args))
                                  ++ ", "  ++ maybe "-1" show tag  ++ ");"
 
@@ -764,9 +764,9 @@ packCFType CFUnsigned8     varName = "idris2_mkBits8(" ++ varName ++ ")"
 packCFType CFString        varName = "idris2_mkString(" ++ varName ++ ")"
 packCFType CFDouble        varName = "idris2_mkDouble(" ++ varName ++ ")"
 packCFType CFChar          varName = "idris2_mkChar(" ++ varName ++ ")"
-packCFType CFPtr           varName = "makePointer(" ++ varName ++ ")"
-packCFType CFGCPtr         varName = "makePointer(" ++ varName ++ ")"
-packCFType CFBuffer        varName = "makeBuffer(" ++ varName ++ ")"
+packCFType CFPtr           varName = "idris2_makePointer(" ++ varName ++ ")"
+packCFType CFGCPtr         varName = "idris2_makePointer(" ++ varName ++ ")"
+packCFType CFBuffer        varName = "idris2_makeBuffer(" ++ varName ++ ")"
 packCFType CFWorld         _       = "(Value *)NULL"
 packCFType (CFFun x y)     varName = "makeFunction(" ++ varName ++ ")"
 packCFType (CFIORes x)     varName = packCFType x varName
@@ -783,7 +783,7 @@ additionalFFIStub name argTypes (CFIORes retType) = additionalFFIStub name (disc
 additionalFFIStub name argTypes retType =
     cTypeOfCFType retType ++
     " (*" ++ cName name ++ ")(" ++
-    (concat $ intersperse ", " $ map cTypeOfCFType argTypes) ++ ") = (void*)missing_ffi;\n"
+    (concat $ intersperse ", " $ map cTypeOfCFType argTypes) ++ ") = (void*)idris2_missing_ffi;\n"
 
 createCFunctions : {auto c : Ref Ctxt Defs}
                 -> {auto a : Ref ArgCounter Nat}
@@ -944,7 +944,7 @@ footer = do
                         ""
           }
           Value *mainExprVal = __mainExpression_0();
-          trampoline(mainExprVal);
+          idris2_trampoline(mainExprVal);
           return 0; // bye bye
       }
       """

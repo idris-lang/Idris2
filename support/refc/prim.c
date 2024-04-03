@@ -7,17 +7,17 @@ Value *idris2_Data_IORef_prim__newIORef(Value *erased, Value *input_value,
                                         Value *_world) {
   Value_IORef *ioRef = IDRIS2_NEW_VALUE(Value_IORef);
   ioRef->header.tag = IOREF_TAG;
-  ioRef->v = newReference(input_value);
+  ioRef->v = idris2_newReference(input_value);
   return (Value *)ioRef;
 }
 
 Value *idris2_Data_IORef_prim__writeIORef(Value *erased, Value *_ioref,
                                           Value *new_value, Value *_world) {
   Value_IORef *ioref = (Value_IORef *)_ioref;
-  newReference(new_value);
+  idris2_newReference(new_value);
   Value *old = ioref->v;
   ioref->v = new_value;
-  removeReference(old);
+  idris2_removeReference(old);
   return NULL;
 }
 
@@ -53,7 +53,7 @@ Value *idris2_System_Info_prim__os(void) {
 #endif
     );
   }
-  return newReference(osstring);
+  return idris2_newReference(osstring);
 }
 
 // NOTE: The codegen is obviously determined at compile time,
@@ -64,7 +64,7 @@ static Value *codegenstring = NULL;
 Value *idris2_System_Info_prim__codegen(void) {
   if (codegenstring == NULL)
     codegenstring = (Value *)idris2_mkString("refc");
-  return newReference(codegenstring);
+  return idris2_newReference(codegenstring);
 }
 
 Value *idris2_crash(Value *msg) {
@@ -83,10 +83,10 @@ Value *idris2_crash(Value *msg) {
 Value *idris2_Data_IOArray_Prims_prim__newArray(Value *erased, Value *_length,
                                                 Value *v, Value *_word) {
   int length = idris2_vp_to_Int64(_length);
-  Value_Array *a = makeArray(length);
+  Value_Array *a = idris2_makeArray(length);
 
   for (int i = 0; i < length; i++) {
-    a->arr[i] = newReference(v);
+    a->arr[i] = idris2_newReference(v);
   }
 
   return (Value *)a;
@@ -96,8 +96,8 @@ Value *idris2_Data_IOArray_Prims_prim__arraySet(Value *erased, Value *_array,
                                                 Value *index, Value *v,
                                                 Value *_word) {
   Value_Array *a = (Value_Array *)_array;
-  removeReference(a->arr[idris2_vp_to_Int64(index)]);
-  a->arr[idris2_vp_to_Int64(index)] = newReference(v);
+  idris2_removeReference(a->arr[idris2_vp_to_Int64(index)]);
+  a->arr[idris2_vp_to_Int64(index)] = idris2_newReference(v);
   return NULL;
 }
 
@@ -111,7 +111,7 @@ Value *idris2_Prelude_IO_prim__onCollect(Value *_erased, Value *_anyPtr,
                                          Value *_world) {
   Value_GCPointer *retVal = IDRIS2_NEW_VALUE(Value_GCPointer);
   retVal->header.tag = GC_POINTER_TAG;
-  retVal->p = (Value_Pointer *)newReference(_anyPtr);
+  retVal->p = (Value_Pointer *)idris2_newReference(_anyPtr);
   retVal->onCollectFct = (Value_Closure *)_freeingFunction;
   return (Value *)retVal;
 }
@@ -121,7 +121,7 @@ Value *idris2_Prelude_IO_prim__onCollectAny(Value *_anyPtr,
                                             Value *_world) {
   Value_GCPointer *retVal = IDRIS2_NEW_VALUE(Value_GCPointer);
   retVal->header.tag = GC_POINTER_TAG;
-  retVal->p = (Value_Pointer *)newReference(_anyPtr);
+  retVal->p = (Value_Pointer *)idris2_newReference(_anyPtr);
   retVal->onCollectFct = (Value_Closure *)_freeingFunction;
   return (Value *)retVal;
 }
