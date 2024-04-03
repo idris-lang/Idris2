@@ -141,7 +141,8 @@ Value *idris2_trampoline(Value *closure) {
 
   fun_ptr_t f = ((Value_Closure *)closure)->f;
   Value_Arglist *_arglist = ((Value_Closure *)closure)->arglist;
-  Value_Arglist *arglist = (Value_Arglist *)idris2_newReference((Value *)_arglist);
+  Value_Arglist *arglist =
+      (Value_Arglist *)idris2_newReference((Value *)_arglist);
   idris2_removeReference(closure);
   while (1) {
     Value *retVal = f(arglist);

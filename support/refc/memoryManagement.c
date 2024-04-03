@@ -35,7 +35,8 @@ Value_Constructor *idris2_newConstructor(int total, int tag) {
   return retVal;
 }
 
-Value_Closure *idris2_makeClosureFromArglist(fun_ptr_t f, Value_Arglist *arglist) {
+Value_Closure *idris2_makeClosureFromArglist(fun_ptr_t f,
+                                             Value_Arglist *arglist) {
   Value_Closure *retVal = IDRIS2_NEW_VALUE(Value_Closure);
   retVal->header.tag = CLOSURE_TAG;
   retVal->arglist = arglist; // (Value_Arglist *)newReference((Value*)arglist);
@@ -119,7 +120,8 @@ Value_Pointer *idris2_makePointer(void *ptr_Raw) {
   return p;
 }
 
-Value_GCPointer *idris2_makeGCPointer(void *ptr_Raw, Value_Closure *onCollectFct) {
+Value_GCPointer *idris2_makeGCPointer(void *ptr_Raw,
+                                      Value_Closure *onCollectFct) {
   Value_GCPointer *p = IDRIS2_NEW_VALUE(Value_GCPointer);
   p->header.tag = GC_POINTER_TAG;
   p->p = idris2_makePointer(ptr_Raw);

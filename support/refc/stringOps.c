@@ -167,7 +167,8 @@ Value *stringIteratorNew(char *str) {
 
   Value_Arglist *arglist = idris2_newArglist(2, 2);
   Value *(*onCollectRaw)(Value_Arglist *) = onCollectStringIterator_arglist;
-  Value_Closure *onCollect = idris2_makeClosureFromArglist(onCollectRaw, arglist);
+  Value_Closure *onCollect =
+      idris2_makeClosureFromArglist(onCollectRaw, arglist);
 
   return (Value *)idris2_makeGCPointer(it, onCollect);
 }
@@ -188,7 +189,7 @@ Value *stringIteratorToString(void *a, char *str, Value *it_p,
                               Value_Closure *f) {
   String_Iterator *it = ((Value_GCPointer *)it_p)->p->p;
   return idris2_apply_closure(idris2_newReference((Value *)f),
-                       (Value *)idris2_mkString(it->str + it->pos));
+                              (Value *)idris2_mkString(it->str + it->pos));
 }
 
 Value *stringIteratorNext(char *s, Value *it_p) {
