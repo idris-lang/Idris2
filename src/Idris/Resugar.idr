@@ -38,6 +38,7 @@ mkOp : {auto s : Ref Syn SyntaxInfo} ->
 mkOp tm@(PApp fc (PApp _ (PRef opFC kn) x) y)
   = do syn <- get Syn
        let raw = rawName kn
+       let pop = if isOpName raw then OpSymbols else Backticked
        -- to check if the name is an operator we use the root name as a basic
        -- user name. This is because if the name is qualified with the namespace
        -- looking the fixity context will fail. A qualified operator would look
@@ -46,7 +47,7 @@ mkOp tm@(PApp fc (PApp _ (PRef opFC kn) x) y)
        -- to know if the name is an operator or not, it's enough to check
        -- that the fixity context contains the name `(++)`
        let rootName = UN (Basic (nameRoot raw))
-       let asOp = POp fc opFC (NoBinder (unbracketApp x)) (OpSymbols kn) (unbracketApp y)
+       let asOp = POp fc opFC (NoBinder (unbracketApp x)) (pop kn) (unbracketApp y)
        if not (null (lookupName rootName (infixes syn)))
          then pure asOp
          else case dropNS raw of
