@@ -50,7 +50,7 @@ TEST_PREFIX ?= ${IDRIS2_CURDIR}/build/env
 TEST_IDRIS2_SUPPORT_DIR ?= ${TEST_PREFIX}/${NAME_VERSION}
 
 # Library and data paths for bootstrap-test
-IDRIS2_BOOT_PREFIX := ${IDRIS2_CURDIR}/bootstrap-build
+export IDRIS2_BOOT_PREFIX := ${IDRIS2_CURDIR}/bootstrap-build
 
 # These are the library path in the build dir to be used during build
 IDRIS2_LIBRARIES = prelude base linear network contrib test
@@ -265,8 +265,8 @@ bootstrap: support
 	sed 's/libidris2_support.so/${IDRIS2_SUPPORT}/g; s|__PREFIX__|${IDRIS2_BOOT_PREFIX}|g' \
 		bootstrap/idris2_app/idris2.ss \
 		> "${IDRIS2_BOOT_PREFIX}/idris2_app/idris2-boot.ss"
-	IDRIS2_BOOT_PREFIX="${IDRIS2_BOOT_PREFIX}" $(SHELL) ./bootstrap-stage1-chez.sh
-	IDRIS2_CG="chez" IDRIS2_BOOT_PREFIX="${IDRIS2_BOOT_PREFIX}" $(SHELL) ./bootstrap-stage2.sh
+	$(SHELL) ./bootstrap-stage1-chez.sh
+	IDRIS2_CG="chez" $(SHELL) ./bootstrap-stage2.sh
 
 # Bootstrapping using racket
 bootstrap-racket: support
@@ -275,8 +275,8 @@ bootstrap-racket: support
 	sed 's|__PREFIX__|${IDRIS2_BOOT_PREFIX}|g' \
 		bootstrap/idris2_app/idris2.rkt \
 		> "${IDRIS2_BOOT_PREFIX}/idris2_app/idris2-boot.rkt"
-	IDRIS2_BOOT_PREFIX="${IDRIS2_BOOT_PREFIX}" $(SHELL) ./bootstrap-stage1-racket.sh
-	IDRIS2_CG="racket" IDRIS2_BOOT_PREFIX="${IDRIS2_BOOT_PREFIX}" $(SHELL) ./bootstrap-stage2.sh
+	$(SHELL) ./bootstrap-stage1-racket.sh
+	IDRIS2_CG="racket" $(SHELL) ./bootstrap-stage2.sh
 
 bootstrap-test:
 	$(MAKE) test INTERACTIVE='' IDRIS2_PREFIX=${IDRIS2_BOOT_PREFIX}
