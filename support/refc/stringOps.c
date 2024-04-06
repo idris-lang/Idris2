@@ -184,16 +184,19 @@ Value *stringIteratorToString(void *a, char *str, Value *it_p,
   return idris2_apply_closure(idris2_newReference((Value *)f), strVal);
 }
 
+// contrib/Data.String.Iterator.uncons :
+//   (str : String) -> (1 it : StringIterator str) -> UnconsResult str
 Value *stringIteratorNext(char *s, Value *it_p) {
   String_Iterator *it = (String_Iterator *)((Value_GCPointer *)it_p)->p->p;
   char c = it->str[it->pos];
 
   if (c == '\0')
-    return NULL;
+    return NULL; // EOF [nil]
 
   it->pos++; // Ok to do this as StringIterator linear
 
-  Value_Constructor *retVal = (Value_Constructor *)idris2_newConstructor(2, 0);
+  // Character [cons]
+  Value_Constructor *retVal = (Value_Constructor *)idris2_newConstructor(2, 1);
   retVal->args[0] = idris2_mkChar(c);
   retVal->args[1] = idris2_newReference(it_p);
 
