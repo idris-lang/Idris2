@@ -41,7 +41,7 @@ withArgHoles = MkEvalOpts False True False False False Nothing [] CBN
 
 export
 tcOnly : EvalOpts
-tcOnly = { tcInline := True } withArgHoles
+tcOnly = { tcInline := True, fuel := Just 1000 } withArgHoles
 
 export
 onLHS : EvalOpts
