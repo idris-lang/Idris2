@@ -114,6 +114,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Removed need for the runtime value of the implicit argument in `succNotLTEpred`.
 
+* Added utility functions `insertWith`, `insertFromWith` and `fromListWith` for
+  `SortedMap`.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
