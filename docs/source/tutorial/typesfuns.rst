@@ -794,7 +794,7 @@ their type. As syntactic sugar, any implementation of the names
 Similarly, any implementation of the names ``Lin`` and ``:<`` can be
 written in **snoc**-list form:
 
-- ``[<]`` mean ``Lin``
+- ``[<]`` means ``Lin``
 - ``[< 1, 2, 3]`` means ``Lin :< 1 :< 2 :< 3``.
 
 and the prelude includes a pre-defined datatype for snoc-lists:
@@ -1388,7 +1388,7 @@ Idris distinguishes between *total* and *partial* functions.
 A total function is a function that either:
 
 + Terminates for all possible inputs, or
-+ Produces a non-empty, finite, prefix of a possibly infinite result
++ Produces a non-empty, finite prefix of a possibly infinite result
 
 If a function is total, we can consider its type a precise description of what
 that function will do. For example, if we have a function with a return
