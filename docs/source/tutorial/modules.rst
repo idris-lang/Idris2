@@ -74,14 +74,14 @@ The ``with`` keyword in expressions comes in two variants:
 This is particularly useful with ``do`` notation, where it can often improve
 error messages: ``with MyModule.(>>=) do ...``
 
-There is no formal link between the module name and its filename,
-although it is generally advisable to use the same name for each. An
-``import`` statement refers to a filename, using dots to separate
-directories. For example, ``import foo.bar`` would import the file
-``foo/bar.idr``, which would conventionally have the module declaration
-``module foo.bar``. The only requirement for module names is that the
-main module, with the ``main`` function, must be called
-``Main`` — although its filename need not be ``Main.idr``.
+If a file contains a module declaration ``module Foo.Bar.MyModule``, its
+full path must end in ``Foo/Bar/MyModule.idr``. Similarly, an ``import``
+statement also refers to a filepath stripped of its file extension, using dots
+to separate directories. As in the example above, all modules names and
+directories must be capitalised identifiers. The main module, with the ``main``
+function, must be called ``Main`` — although its filename need not be
+``Main.idr``. This is the only case where a filename does not have to match with
+the respective module name.
 
 Export Modifiers
 ================
