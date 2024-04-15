@@ -6,13 +6,11 @@
 incAll : Stream Nat -> Stream Nat
 incAll (x::xs) = S x :: incAll xs
 
--- %tcinline -- uncomment this, your compiler will hang forever
--- still hang after setting fuel
+%tcinline
 incAll' : Stream Nat -> Stream Nat
 incAll' = \(x::xs) => S x :: incAll' xs
 
--- %tcinline -- uncomment this, your compiler will hang forever
--- still hang after setting fuel
+%tcinline
 incAll'' : Stream Nat -> Stream Nat
 incAll'' = \ys => case ys of
     (x :: xs) => S x :: incAll'' xs

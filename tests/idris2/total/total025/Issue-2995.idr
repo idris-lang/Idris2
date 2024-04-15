@@ -2,17 +2,14 @@
 
 %default total
 
--- %tcinline -- uncomment this, your compiler will hang forever
--- terminate after setting fuel
+%tcinline
 zs : Stream Nat
 zs = Z :: zs
 
--- %tcinline -- uncomment this, your compiler will hang forever
--- terminate after setting fuel
+%tcinline
 zs' : Stream Nat -> Stream Nat
 zs' xs = Z :: zs' xs
 
--- %tcinline -- uncomment this, your compiler will hang forever
--- terminate after setting fuel
+%tcinline
 zs'' : Stream Nat -> Stream Nat
 zs'' = \xs => Z :: zs'' xs
