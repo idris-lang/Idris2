@@ -343,7 +343,8 @@ findCalls : {auto c : Ref Ctxt Defs} ->
             Core (List SCCall)
 findCalls defs (_ ** (env, lhs, rhs_in))
    = do let pargs = getArgs (delazy defs lhs)
-        rhs <- normaliseOpts tcOnly defs env rhs_in
+        fuel <- getTcInlineFuel
+        rhs <- normaliseOpts ({fuel := Just fuel} tcOnly) defs env rhs_in
         findSC defs env Toplevel pargs (delazy defs rhs)
 
 getSC : {auto c : Ref Ctxt Defs} ->
