@@ -35,10 +35,8 @@ tryUnifyUnambig left right = tryUnifyUnambig' {preferLeftError} left $ const rig
 
 tryNoDefaultsFirst : {auto c : Ref Ctxt Defs} ->
                      {auto u : Ref UST UState} ->
-                     (defaults : Bool) ->
                      (Bool -> Core a) -> Core a
-tryNoDefaultsFirst False f = f False
-tryNoDefaultsFirst True  f = tryUnifyUnambig {preferLeftError=True} (f False) (f True)
+tryNoDefaultsFirst f = tryUnifyUnambig {preferLeftError=True} (f False) (f True)
 
 SearchEnv : List Name -> Type
 SearchEnv vars = List (NF vars, Closure vars)
@@ -573,7 +571,7 @@ searchType {vars} fc rigc defaults trying depth def checkdets top env target
                             pure ("Search: Trying " ++ show (length gn) ++
                                            " names " ++ show gn))
                  logNF "auto" 5 "For target" env nty
-                 tryNoDefaultsFirst defaults $ \d =>
+                 tryNoDefaultsFirst $ \d =>
                    searchNames fc rigc d (target :: trying) depth def top env ambigok g nty)
              (\err => tryGroups (Just $ fromMaybe err merr) nty gs)
 
