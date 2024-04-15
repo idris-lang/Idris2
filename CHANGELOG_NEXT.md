@@ -46,6 +46,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   environment variable adds to the "Package Search Paths." Functionally this is
   not a breaking change.
 
+* Fixed a bug that caused compiler to hang forever when there is `%tcinline`
+  pragma.
+
 ### Backend changes
 
 #### RefC Backend
