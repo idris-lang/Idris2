@@ -1331,6 +1331,7 @@ mutual
              Overloadable n => pure [IPragma fc [] (\nest, env => setNameFlag fc n Overloadable)]
              Extension e => pure [IPragma fc [] (\nest, env => setExtension e)]
              DefaultTotality tot => pure [IPragma fc [] (\_, _ => setDefaultTotalityOption tot)]
+             TcInlineFuel n => pure [IPragma fc [] (\nest, env => setTcInlineFuel n)]
   desugarDecl ps (PBuiltin fc type name) = pure [IBuiltin fc type name]
 
   export

@@ -1534,6 +1534,10 @@ directive fname indents
          tot <- totalityOpt fname
          atEnd indents
          pure (DefaultTotality tot)
+  <|> do decoratedPragma fname "tcinline_fuel"
+         fuel <- decorate fname Keyword $ intLit
+         atEnd indents
+         pure (TcInlineFuel (fromInteger fuel))
 
 fix : Rule Fixity
 fix

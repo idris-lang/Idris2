@@ -376,6 +376,7 @@ mutual
        AutoImplicitDepth : Nat -> Directive
        NFMetavarThreshold : Nat -> Directive
        SearchTimeout : Integer -> Directive
+       TcInlineFuel : Nat -> Directive
 
   public export
   PField : Type
