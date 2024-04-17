@@ -76,7 +76,7 @@ error messages: ``with MyModule.(>>=) do ...``
 
 If a file contains a module declaration ``module Foo.Bar.MyModule``, its
 path relative to the ``.ipkg`` project file (or the directory you are running
-the Idris from) must be ``./Foo/Bar/MyModule.idr``. Similarly, an ``import``
+Idris from) must be ``./Foo/Bar/MyModule.idr``. Similarly, an ``import``
 statement also refers to such a relative filepath stripped of its file extension,
 using dots to separate directories. As in the example above, all modules names
 and directories must be capitalised identifiers. The main module, with the
