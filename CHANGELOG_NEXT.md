@@ -121,6 +121,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Removed need for the runtime value of the implicit argument in `succNotLTEpred`.
 
+* Implemented `leftMost` and `rightMost` for `SortedSet`.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.

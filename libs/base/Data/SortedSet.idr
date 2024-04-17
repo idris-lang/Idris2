@@ -62,6 +62,16 @@ export
 intersection : (x, y : SortedSet k) -> SortedSet k
 intersection x y = difference x (difference x y)
 
+||| Returns the leftmost (least) value
+export
+leftMost : SortedSet k -> Maybe k
+leftMost (SetWrapper m) = fst <$> leftMost m
+
+||| Returns the rightmost (greatest) value
+export
+rightMost : SortedSet k -> Maybe k
+rightMost (SetWrapper m) = fst <$> rightMost m
+
 export
 Ord k => Semigroup (SortedSet k) where
   (<+>) = union
