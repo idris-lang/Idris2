@@ -75,6 +75,13 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Rename C function to avoid confliction. But only a part.
 
+* Supress code generation of _arglist wrappers to reduce code size and compilation time.
+
+* Removed Value_Arglist to reduce Closure's allocation overhead and make code simply.
+
+* Switch calling conventions based on the number of arguments to avoid limits on
+  the number of arguments and to reduce stack usage.
+
 #### NodeJS Backend
 
 * The NodeJS executable output to `build/exec/` now has its executable bit set.

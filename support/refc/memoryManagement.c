@@ -15,16 +15,6 @@ Value *idris2_newValue(size_t size) {
   return retVal;
 }
 
-Value_Arglist *idris2_newArglist(int missing, int total) {
-  Value_Arglist *retVal = IDRIS2_NEW_VALUE(Value_Arglist);
-  retVal->header.tag = ARGLIST_TAG;
-  retVal->total = total;
-  retVal->filled = total - missing;
-  retVal->args = (Value **)malloc(sizeof(Value *) * total);
-  memset(retVal->args, 0, sizeof(Value *) * total);
-  return retVal;
-}
-
 Value_Constructor *idris2_newConstructor(int total, int tag) {
   Value_Constructor *retVal = (Value_Constructor *)idris2_newValue(
       sizeof(Value_Constructor) + sizeof(Value *) * total);
@@ -35,16 +25,14 @@ Value_Constructor *idris2_newConstructor(int total, int tag) {
   return retVal;
 }
 
-Value_Closure *idris2_makeClosureFromArglist(fun_ptr_t f,
-                                             Value_Arglist *arglist) {
-  Value_Closure *retVal = IDRIS2_NEW_VALUE(Value_Closure);
+Value_Closure *idris2_mkClosure(Value *(*f)(), uint8_t arity, uint8_t filled) {
+  Value_Closure *retVal = (Value_Closure *)idris2_newValue(
+      sizeof(Value_Closure) + sizeof(Value *) * filled);
   retVal->header.tag = CLOSURE_TAG;
-  retVal->arglist = arglist; // (Value_Arglist *)newReference((Value*)arglist);
   retVal->f = f;
-  if (retVal->arglist->filled >= retVal->arglist->total) {
-    retVal->header.tag = COMPLETE_CLOSURE_TAG;
-  }
-  return retVal;
+  retVal->arity = arity;
+  retVal->filled = filled;
+  return retVal; // caller must initialize args[].
 }
 
 Value *idris2_mkDouble(double d) {
@@ -185,24 +173,11 @@ void idris2_removeReference(Value *elem) {
 
     case CLOSURE_TAG: {
       Value_Closure *cl = (Value_Closure *)elem;
-      Value_Arglist *al = cl->arglist;
-      idris2_removeReference((Value *)al);
+      for (int i = 0; i < cl->filled; ++i)
+        idris2_removeReference(cl->args[i]);
       break;
     }
-    case COMPLETE_CLOSURE_TAG: {
-      Value_Closure *cl = (Value_Closure *)elem;
-      Value_Arglist *al = cl->arglist;
-      idris2_removeReference((Value *)al);
-      break;
-    }
-    case ARGLIST_TAG: {
-      Value_Arglist *al = (Value_Arglist *)elem;
-      for (int i = 0; i < al->filled; i++) {
-        idris2_removeReference(al->args[i]);
-      }
-      free(al->args);
-      break;
-    }
+
     case CONSTRUCTOR_TAG: {
       Value_Constructor *constr = (Value_Constructor *)elem;
       for (int i = 0; i < constr->total; i++) {

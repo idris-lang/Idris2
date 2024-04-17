@@ -8,11 +8,8 @@ void idris2_removeReference(Value *source);
 
 #define IDRIS2_NEW_VALUE(t) ((t *)idris2_newValue(sizeof(t)))
 
-Value_Arglist *idris2_newArglist(int missing, int total);
 Value_Constructor *idris2_newConstructor(int total, int tag);
-
-// copies arglist, no pointer bending
-Value_Closure *idris2_makeClosureFromArglist(fun_ptr_t f, Value_Arglist *);
+Value_Closure *idris2_mkClosure(Value *(*f)(), uint8_t arity, uint8_t filled);
 
 Value *idris2_mkDouble(double d);
 #define idris2_mkChar(x)                                                       \
