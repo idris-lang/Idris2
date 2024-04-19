@@ -76,15 +76,13 @@ error messages: ``with MyModule.(>>=) do ...``
 
 If a file contains a module declaration ``module Foo.Bar.MyModule``, its
 path relative to the ``sourcedir`` specified in the ``.ipkg`` project file
-(defaults to `.`) must be ``./Foo/Bar/MyModule.idr``. If you are not using an
+(defaults to ``.``) must be ``./Foo/Bar/MyModule.idr``. If you are not using an
 ``.ipkg`` project file, the path must be relative to the directory you are
 running Idris from. Similarly, an ``import`` statement also refers to such a
 relative filepath stripped of its file extension, using dots to separate
 directories. As in the example above, all modules names and directories must be
-capitalised identifiers. The main module, with the ``main`` function, must be
-called ``Main`` — although its filename need not be ``Main.idr``. This is the
-only case where a filename does not have to match with the respective module
-name.
+capitalised identifiers. If a file does not contain a module declaration, it
+is considered to be a module whose identifier is ``Main``.
 
 Export Modifiers
 ================
