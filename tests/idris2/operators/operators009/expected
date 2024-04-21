@@ -1,8 +1,8 @@
 1/1: Building Test (Test.idr)
 Warning: Fixity declaration 'infixr 0 =@' does not have an export modifier, and
 will become private by default in a future version.
-To expose it outside of its module, write 'export regular infixr 0 =@'. If you
-intend to keep it private, write 'private regular infixr 0 =@'.
+To expose it outside of its module, write 'export infixr 0 =@'. If you
+intend to keep it private, write 'private infixr 0 =@'.
 
 Test:2:1--2:12
  1 | 
