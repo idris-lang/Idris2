@@ -230,8 +230,9 @@ finFromInteger x = natToFinLt (fromInteger x)
 -- even when the function is unused (issue #2032)
 public export
 integerLessThanNat : Integer -> Nat -> Bool
+integerLessThanNat 0 (S m) = True
 integerLessThanNat x n with (x < the Integer 0)
-  integerLessThanNat _ _     | True  = True                            -- if `x < 0` then `x < n` for any `n : Nat`
+  integerLessThanNat _ _     | True  = False                           -- don't support negative literals
   integerLessThanNat x (S m) | False = integerLessThanNat (x-1) m      -- recursive case
   integerLessThanNat x Z     | False = False                           -- `x >= 0` contradicts `x < Z`
 
