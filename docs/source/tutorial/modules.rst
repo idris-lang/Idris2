@@ -74,14 +74,15 @@ The ``with`` keyword in expressions comes in two variants:
 This is particularly useful with ``do`` notation, where it can often improve
 error messages: ``with MyModule.(>>=) do ...``
 
-There is no formal link between the module name and its filename,
-although it is generally advisable to use the same name for each. An
-``import`` statement refers to a filename, using dots to separate
-directories. For example, ``import foo.bar`` would import the file
-``foo/bar.idr``, which would conventionally have the module declaration
-``module foo.bar``. The only requirement for module names is that the
-main module, with the ``main`` function, must be called
-``Main`` — although its filename need not be ``Main.idr``.
+If a file contains a module declaration ``module Foo.Bar.MyModule``, its
+path relative to the ``sourcedir`` specified in the ``.ipkg`` project file
+(defaults to ``.``) must be ``./Foo/Bar/MyModule.idr``. If you are not using an
+``.ipkg`` project file, the path must be relative to the directory you are
+running Idris from. Similarly, an ``import`` statement also refers to such a
+relative filepath stripped of its file extension, using dots to separate
+directories. As in the example above, all modules names and directories must be
+capitalised identifiers. If a file does not contain a module declaration, it
+is considered to be a module whose identifier is ``Main``.
 
 Export Modifiers
 ================
