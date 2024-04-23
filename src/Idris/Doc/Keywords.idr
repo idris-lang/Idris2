@@ -12,7 +12,8 @@ import Libraries.Data.List.Quantifiers.Extra
 import Libraries.Data.String.Extra
 
 
-infix 10 ::=
+private infix 10 ::=
+
 data DocFor : String -> Type where
   (::=) : (0 str : String) -> (doc : Doc IdrisDocAnn) -> DocFor str
 

@@ -15,6 +15,8 @@ import Data.List
 
 %default covering
 
+private infixl 3 `App`
+
 ||| We use this wrapper to mark places where binding occurs.
 ||| This is a major footgun and we hope the type constructor
 ||| forces users to think carefully about what they are doing
@@ -55,7 +57,7 @@ namespace Section2
     Quote m == Quote n = m == n
     _ == _ = False
 
-  infixr 0 ~>
+  private infixr 0 ~>
   total
   data Ty : Type where
     ||| A family of base types
@@ -90,8 +92,6 @@ namespace Section2
     Var : Name -> Infer
     ||| The application of a function to its argument
     App : Infer -> Check -> Infer
-
-  infixl 3 `App`
 
   %name Infer e, f
 
@@ -359,7 +359,6 @@ namespace Section3
     ||| The application of a function to its argument
     App : Infer -> Check -> Infer
 
-  infixl 3 `App`
 
   %name Infer e, f
 
@@ -600,8 +599,6 @@ namespace Section4
     ||| The application of a function to its argument
     App : Infer -> Check -> Infer
 
-  infixl 3 `App`
-
   %name Infer e, f
 
   total
@@ -695,7 +692,7 @@ namespace Section4
   vfree : Name -> Value
   vfree x = VEmb (NVar x)
 
-  infixl 5 `vapp`
+  private infixl 5 `vapp`
 
   ||| We can easily apply a value standing for a function
   ||| to a value standing for its argument by either deploying

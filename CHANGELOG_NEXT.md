@@ -30,6 +30,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   customise the syntax of operator to look more like a binder.
   See [#3113](https://github.com/idris-lang/Idris2/issues/3113).
 
+* Fixity declarations without an export modifier now emit a warning in peparation
+  for a future version where they will become private by default.
+
 * Elaborator scripts were made to be able to access the visibility modifier of a
   definition, via `getVis`.
 
@@ -72,6 +75,12 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Rename C function to avoid confliction. But only a part.
 
+* Supress code generation of _arglist wrappers to reduce code size and compilation time.
+
+* Removed Value_Arglist to reduce Closure's allocation overhead and make code simply.
+
+* Switch calling conventions based on the number of arguments to avoid limits on
+  the number of arguments and to reduce stack usage.
 
 * Values that reference counters reaching their maximum limit are immortalized to
   prevent counter overflow. This can potentially cause memory leaks, but they

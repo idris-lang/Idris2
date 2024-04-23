@@ -35,7 +35,7 @@ Consumable Int where
 
 -- But crucially we don't have `Consumable World` or `Consumable Handle`.
 
-infixr 5 `seq`
+export infixr 5 `seq`
 ||| We can sequentially compose a computation returning a value that is
 ||| consumable with another computation. This is done by first consuming
 ||| the result of the first computation and then returning the second one.

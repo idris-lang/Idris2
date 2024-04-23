@@ -1,7 +1,7 @@
 
-infix 5 -:-
+private infix 5 -:-
 
-infix 5 :-:
+private infix 5 :-:
 
 (-:-) : a -> List a -> List a
 (-:-) = (::)

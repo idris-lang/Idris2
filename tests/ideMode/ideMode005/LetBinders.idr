@@ -1,6 +1,6 @@
 module LetBinders
 
-infix 1 :::
+private infix 1 :::
 record List1 (a : Type) where
   constructor (:::)
   head : a

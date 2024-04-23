@@ -1,7 +1,7 @@
 module Control.Algebra
 
-infixl 6 <->
-infixl 7 <.>
+export infixl 6 <->
+export infixl 7 <.>
 
 public export
 interface Semigroup ty => SemigroupV ty where

@@ -19,9 +19,16 @@ stdenv.mkDerivation rec {
     ++ lib.optional (!bootstrap) [ idris2Bootstrap ];
   buildInputs = [ chez gmp support ];
 
+  # For bootstrap builds the Makefile will try to
+  # rebuild the support library if we don't patch
+  # bootstrap-install.
   prePatch = ''
     patchShebangs --build tests
-    sed 's/$(GIT_SHA1)/${srcRev}/' -i Makefile
+    substituteInPlace Makefile \
+      --replace-fail '$(GIT_SHA1)' '${srcRev}'
+  '' + lib.optionalString bootstrap ''
+    substituteInPlace Makefile \
+      --replace-fail 'bootstrap-install: install-idris2 install-support' 'bootstrap-install: install-idris2'
   '';
 
   makeFlags = [ "IDRIS2_SUPPORT_DIR=${supportLibrariesPath}" ]

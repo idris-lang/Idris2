@@ -1,8 +1,8 @@
 import Syntax.PreorderReasoning
 
 -------- some notation ----------
-infixr 6 .+.,:+:
-infixr 7 .*.,:*:
+private infixr 6 .+.,:+:
+private infixr 7 .*.,:*:
 
 interface Additive a where
   constructor MkAdditive

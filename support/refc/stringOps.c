@@ -96,17 +96,17 @@ char *fastPack(Value *charList) {
 
 Value *fastUnpack(char *str) {
   if (str[0] == '\0') {
-    return (Value *)NULL;
+    return NULL;
   }
 
-  Value_Constructor *retVal = newConstructor(2, 1);
+  Value_Constructor *retVal = idris2_newConstructor(2, 1);
   retVal->args[0] = idris2_mkChar(str[0]);
 
   int i = 1;
-  Value_Constructor *current = retVal;
+  Value_Constructor *current = (Value_Constructor *)retVal;
   Value_Constructor *next;
   while (str[i] != '\0') {
-    next = newConstructor(2, 1);
+    next = idris2_newConstructor(2, 1);
     next->args[0] = idris2_mkChar(str[i]);
     current->args[1] = (Value *)next;
 
@@ -161,11 +161,9 @@ Value *stringIteratorNew(char *str) {
   it->pos = 0;
   memcpy(it->str, str, l + 1); // Take a copy of str, in case it gets GCed
 
-  Value_Arglist *arglist = newArglist(2, 2);
-  Value *(*onCollectRaw)(Value_Arglist *) = onCollectStringIterator_arglist;
-  Value_Closure *onCollect = makeClosureFromArglist(onCollectRaw, arglist);
-
-  return (Value *)makeGCPointer(it, onCollect);
+  return (Value *)idris2_makeGCPointer(
+      it, (Value_Closure *)idris2_mkClosure(
+              (Value * (*)()) onCollectStringIterator, 2, 0));
 }
 
 Value *onCollectStringIterator(Value_Pointer *ptr, void *null) {
@@ -175,31 +173,28 @@ Value *onCollectStringIterator(Value_Pointer *ptr, void *null) {
   return NULL;
 }
 
-Value *onCollectStringIterator_arglist(Value_Arglist *arglist) {
-  return onCollectStringIterator((Value_Pointer *)arglist->args[0],
-                                 arglist->args[1]);
-}
-
 Value *stringIteratorToString(void *a, char *str, Value *it_p,
                               Value_Closure *f) {
   String_Iterator *it = ((Value_GCPointer *)it_p)->p->p;
-  return apply_closure(newReference((Value *)f),
-                       (Value *)idris2_mkString(it->str + it->pos));
+  Value *strVal = (Value *)idris2_mkString(it->str + it->pos);
+  return idris2_apply_closure(idris2_newReference((Value *)f), strVal);
 }
 
+// contrib/Data.String.Iterator.uncons :
+//   (str : String) -> (1 it : StringIterator str) -> UnconsResult str
 Value *stringIteratorNext(char *s, Value *it_p) {
   String_Iterator *it = (String_Iterator *)((Value_GCPointer *)it_p)->p->p;
   char c = it->str[it->pos];
 
-  if (c == '\0') {
-    return (Value *)NULL;
-  }
+  if (c == '\0')
+    return NULL; // EOF [nil]
 
   it->pos++; // Ok to do this as StringIterator linear
 
-  Value_Constructor *retVal = newConstructor(2, 1);
-  retVal->args[0] = (Value *)idris2_mkChar(c);
-  retVal->args[1] = newReference(it_p);
+  // Character [cons]
+  Value_Constructor *retVal = (Value_Constructor *)idris2_newConstructor(2, 1);
+  retVal->args[0] = idris2_mkChar(c);
+  retVal->args[1] = idris2_newReference(it_p);
 
   return (Value *)retVal;
 }

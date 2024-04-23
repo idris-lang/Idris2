@@ -7,7 +7,7 @@ import Language.Reflection
 x : List String
 x = ["a", "b"]
 
-infixl 1 >==>
+private infixl 1 >==>
 
 -- From prelude:
 --(>=>) : Monad m => (a -> m b) -> (b -> m c) -> (a -> m c)

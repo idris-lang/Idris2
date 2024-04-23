@@ -304,7 +304,7 @@ namespace Equality
     FZ : Pointwise FZ FZ
     FS : Pointwise k l -> Pointwise (FS k) (FS l)
 
-  infix 6 ~~~
+  export infix 6 ~~~
   ||| Convenient infix notation for the notion of pointwise equality of Fins
   public export
   (~~~) : Fin m -> Fin n -> Type

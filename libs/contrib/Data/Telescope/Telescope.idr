@@ -30,8 +30,8 @@ plusAccZeroRightNeutral m =
   Refl
 
 
-infixl 4 -.
-infixr 4 .-
+export infixl 4 -.
+export infixr 4 .-
 
 namespace Left
 
@@ -158,7 +158,7 @@ namespace Right
 
 namespace Tree
 
-  infixl 4 ><
+  export infixl 4 ><
 
   mutual
     ||| A tree of dependent types
@@ -189,14 +189,14 @@ namespace Tree
          (transpL env1 ** snd (concat (delta (transpL env1))) env2)
     )
 
-infix 5 <++>
+export infix 5 <++>
 
 public export
 (<++>) : (gamma : Left.Telescope m) -> (Environment gamma -> Right.Telescope n) -> Right.Telescope (plusAcc m n)
 [] <++> delta = delta ()
 (gamma -. sigma ) <++> delta = gamma <++> (\ env => sigma env .- \ v => delta (env ** v))
 
-infix 5 >++<
+export infix 5 >++<
 
 (>++<) : {m, n : Nat} -> (gamma : Right.Telescope m) -> (Environment gamma -> Left.Telescope n) ->
          Left.Telescope (plusAcc m n)

@@ -69,7 +69,7 @@ public export %tcinline
 on : (b -> b -> c) -> (a -> b) -> a -> a -> c
 on f g = \x, y => g x `f` g y
 
-infixl 0 `on`
+export infixl 0 `on`
 
 ||| Takes in the first two arguments in reverse order.
 ||| @ f the function to flip

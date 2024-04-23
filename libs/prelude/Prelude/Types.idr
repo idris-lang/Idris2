@@ -406,8 +406,8 @@ Ord a => Ord (List a) where
 
 namespace SnocList
 
-  infixl 7 <><
-  infixr 6 <>>
+  export infixl 7 <><
+  export infixr 6 <>>
 
   ||| 'fish': Action of lists on snoc-lists
   public export

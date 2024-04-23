@@ -13,7 +13,7 @@ not False = True
 public export
 data Maybe a = Nothing | Just a
 
-infixl 4 &&
+export infixl 4 &&
 
 public export
 (&&) : Bool -> Bool -> Bool
@@ -43,7 +43,7 @@ plus : Nat -> Nat -> Nat
 plus Z y = y
 plus (S k) y = S (plus k y)
 
-infixr 5 ::
+export infixr 5 ::
 
 public export
 data List a = Nil | (::) a (List a)
@@ -52,7 +52,7 @@ public export
 data Equal : a -> b -> Type where
      Refl : {0 x : a} -> Equal x x
 
-infix 9 ===, ~=~
+export infix 9 ===, ~=~
 
 public export
 (===) : (x : a) -> (y : a) -> Type

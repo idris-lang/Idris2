@@ -10,7 +10,6 @@ Value *Main_insert
 ,   Value * var_1
 ,   Value * var_2
 );
-Value *Main_insert_arglist(Value_Arglist* arglist);
 Value *Main_insert
 (
     Value * var_0
@@ -18,47 +17,47 @@ Value *Main_insert
 ,   Value * var_2
 )
 {
-    Value * tmp_89 = NULL;                                   // Main:6:24--6:31
+    Value * tmp_35 = NULL;                                   // Main:6:24--6:31
     if (((Value_Constructor *)var_2)->tag == 0 /* Main.Leaf */) {
-        Value_Constructor* constructor_90 = NULL;
-        if (isUnique(var_2)) {
-            constructor_90 = (Value_Constructor*)var_2;
+        Value_Constructor* constructor_36 = NULL;
+        if (idris2_isUnique(var_2)) {
+            constructor_36 = (Value_Constructor*)var_2;
         }
         else {
-            removeReference(var_2);
+            idris2_removeReference(var_2);
         }
-        removeReference(var_0);
+        idris2_removeReference(var_0);
          // constructor Main.Leaf                            // Main:7:22--7:26
-        if (! constructor_90) {                              // Main:7:22--7:26
-            constructor_90 = newConstructor(0, 0);           // Main:7:22--7:26
+        if (! constructor_36) {                              // Main:7:22--7:26
+            constructor_36 = idris2_newConstructor(0, 0);    // Main:7:22--7:26
         }                                                    // Main:7:22--7:26
-        Value * var_3 = (Value*)constructor_90;              // Main:7:17--7:21
+        Value * var_3 = (Value*)constructor_36;              // Main:7:17--7:21
          // constructor Main.Leaf                            // Main:7:29--7:33
-        Value_Constructor* constructor_91 = newConstructor(0, 0);
+        Value_Constructor* constructor_37 = idris2_newConstructor(0, 0);
                                                              // Main:7:29--7:33
-        Value * var_4 = (Value*)constructor_91;              // Main:7:17--7:21
+        Value * var_4 = (Value*)constructor_37;              // Main:7:17--7:21
          // constructor Main.Node                            // Main:7:17--7:21
-        Value_Constructor* constructor_92 = newConstructor(3, 1);
+        Value_Constructor* constructor_38 = idris2_newConstructor(3, 1);
                                                              // Main:7:17--7:21
-        constructor_92->args[0] = var_3;
-        constructor_92->args[1] = var_1;
-        constructor_92->args[2] = var_4;
-        tmp_89 = (Value*)constructor_92;
+        constructor_38->args[0] = var_3;
+        constructor_38->args[1] = var_1;
+        constructor_38->args[2] = var_4;
+        tmp_35 = (Value*)constructor_38;
     } else if (((Value_Constructor *)var_2)->tag == 1 /* Main.Node */) {
         Value *var_5 = ((Value_Constructor*)var_2)->args[0];
         Value *var_6 = ((Value_Constructor*)var_2)->args[1];
         Value *var_7 = ((Value_Constructor*)var_2)->args[2];
-        Value_Constructor* constructor_93 = NULL;
-        if (isUnique(var_2)) {
-            constructor_93 = (Value_Constructor*)var_2;
+        Value_Constructor* constructor_39 = NULL;
+        if (idris2_isUnique(var_2)) {
+            constructor_39 = (Value_Constructor*)var_2;
         }
         else {
-            newReference(var_5);
-            newReference(var_6);
-            newReference(var_7);
-            removeReference(var_2);
+            idris2_newReference(var_5);
+            idris2_newReference(var_6);
+            idris2_newReference(var_7);
+            idris2_removeReference(var_2);
         }
-        Value * tmp_94 = NULL;                               // Prelude.EqOrd:121:3--121:6
+        Value * tmp_40 = NULL;                               // Prelude.EqOrd:121:3--121:6
         if (((Value_Constructor *)var_0)->tag == 0 /* Prelude.EqOrd.MkOrd */) {
             Value *var_8 = ((Value_Constructor*)var_0)->args[0];
             Value *var_9 = ((Value_Constructor*)var_0)->args[1];
@@ -68,67 +67,42 @@ Value *Main_insert
             Value *var_13 = ((Value_Constructor*)var_0)->args[5];
             Value *var_14 = ((Value_Constructor*)var_0)->args[6];
             Value *var_15 = ((Value_Constructor*)var_0)->args[7];
-            newReference(var_10);
-            Value * var_16 = apply_closure(var_10, newReference(var_1));
+            idris2_newReference(var_10);
+            Value * var_16 = idris2_apply_closure(var_10, idris2_newReference(var_1));
                                                              // Prelude.EqOrd:121:3--121:6
-            tmp_94 = apply_closure(var_16, newReference(var_6));
+            tmp_40 = idris2_apply_closure(var_16, idris2_newReference(var_6));
         }
-        Value * var_19 = tmp_94;
-        Value *tmp_95 = NULL;
-        int64_t tmp_96 = idris2_extractInt(var_19);
-        if (tmp_96 == UINT8_C(1)) {
-            removeReference(var_19);
-            // start Main_insert(var_0, var_1, var_5)        // Main:8:48--8:54
-            Value_Arglist *arglist_97 = newArglist(0,3);
-            arglist_97->args[0] = var_0;
-            arglist_97->args[1] = var_1;
-            arglist_97->args[2] = var_5;
-            Value *(*fPtr_98)(Value_Arglist*) = Main_insert_arglist;
-                                                             // Main:8:48--8:54
-            Value *closure_98 = (Value*)makeClosureFromArglist(fPtr_98, arglist_97);
-                                                             // Main:8:48--8:54
-            // end   Main_insert(var_0, var_1, var_5)        // Main:8:48--8:54
-            Value * var_17 = trampoline(closure_98);         // Main:8:42--8:46
+        Value * var_19 = tmp_40;
+        Value *tmp_41 = NULL;
+        int64_t tmp_42 = idris2_extractInt(var_19);
+        if (tmp_42 == UINT8_C(1)) {
+            idris2_removeReference(var_19);
+            Value * var_17 = idris2_trampoline(Main_insert(var_0, var_1, var_5));
+                                                             // Main:8:42--8:46
              // constructor Main.Node                        // Main:8:42--8:46
-            if (! constructor_93) {                          // Main:8:42--8:46
-                constructor_93 = newConstructor(3, 1);       // Main:8:42--8:46
+            if (! constructor_39) {                          // Main:8:42--8:46
+                constructor_39 = idris2_newConstructor(3, 1);
+                                                             // Main:8:42--8:46
             }                                                // Main:8:42--8:46
-            constructor_93->args[0] = var_17;
-            constructor_93->args[1] = var_6;
-            constructor_93->args[2] = var_7;
-            tmp_95 = (Value*)constructor_93;
-        } else if (tmp_96 == UINT8_C(0)) {
-            removeReference(var_19);
-            // start Main_insert(var_0, var_1, var_7)        // Main:9:52--9:58
-            Value_Arglist *arglist_99 = newArglist(0,3);
-            arglist_99->args[0] = var_0;
-            arglist_99->args[1] = var_1;
-            arglist_99->args[2] = var_7;
-            Value *(*fPtr_100)(Value_Arglist*) = Main_insert_arglist;
-                                                             // Main:9:52--9:58
-            Value *closure_100 = (Value*)makeClosureFromArglist(fPtr_100, arglist_99);
-                                                             // Main:9:52--9:58
-            // end   Main_insert(var_0, var_1, var_7)        // Main:9:52--9:58
-            Value * var_18 = trampoline(closure_100);        // Main:9:42--9:46
+            constructor_39->args[0] = var_17;
+            constructor_39->args[1] = var_6;
+            constructor_39->args[2] = var_7;
+            tmp_41 = (Value*)constructor_39;
+        } else if (tmp_42 == UINT8_C(0)) {
+            idris2_removeReference(var_19);
+            Value * var_18 = idris2_trampoline(Main_insert(var_0, var_1, var_7));
+                                                             // Main:9:42--9:46
              // constructor Main.Node                        // Main:9:42--9:46
-            if (! constructor_93) {                          // Main:9:42--9:46
-                constructor_93 = newConstructor(3, 1);       // Main:9:42--9:46
+            if (! constructor_39) {                          // Main:9:42--9:46
+                constructor_39 = idris2_newConstructor(3, 1);
+                                                             // Main:9:42--9:46
             }                                                // Main:9:42--9:46
-            constructor_93->args[0] = var_5;
-            constructor_93->args[1] = var_6;
-            constructor_93->args[2] = var_18;
-            tmp_95 = (Value*)constructor_93;
+            constructor_39->args[0] = var_5;
+            constructor_39->args[1] = var_6;
+            constructor_39->args[2] = var_18;
+            tmp_41 = (Value*)constructor_39;
         }
-        tmp_89 = tmp_95;
+        tmp_35 = tmp_41;
     }
-    return tmp_89;
-}
-Value *Main_insert_arglist(Value_Arglist* arglist)
-{
-    return Main_insert
-        (
-              arglist->args[0]
-            , arglist->args[1]
-            , arglist->args[2]
-        );
+    return tmp_35;
 }

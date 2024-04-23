@@ -2,17 +2,14 @@
 
 #include "cBackend.h"
 
-Value *newValue(size_t size);
-Value *newReference(Value *source);
-void removeReference(Value *source);
+Value *idris2_newValue(size_t size);
+Value *idris2_newReference(Value *source);
+void idris2_removeReference(Value *source);
 
-#define IDRIS2_NEW_VALUE(t) ((t *)newValue(sizeof(t)))
+#define IDRIS2_NEW_VALUE(t) ((t *)idris2_newValue(sizeof(t)))
 
-Value_Arglist *newArglist(int missing, int total);
-Value_Constructor *newConstructor(int total, int tag);
-
-// copies arglist, no pointer bending
-Value_Closure *makeClosureFromArglist(fun_ptr_t f, Value_Arglist *);
+Value_Constructor *idris2_newConstructor(int total, int tag);
+Value_Closure *idris2_mkClosure(Value *(*f)(), uint8_t arity, uint8_t filled);
 
 Value *idris2_mkDouble(double d);
 #define idris2_mkChar(x)                                                       \
@@ -62,10 +59,11 @@ Value *idris2_mkIntegerLiteral(char *i);
 Value_String *idris2_mkEmptyString(size_t l);
 Value_String *idris2_mkString(char *);
 
-Value_Pointer *makePointer(void *);
-Value_GCPointer *makeGCPointer(void *ptr_Raw, Value_Closure *onCollectFct);
-Value_Buffer *makeBuffer(void *buf);
-Value_Array *makeArray(int length);
+Value_Pointer *idris2_makePointer(void *);
+Value_GCPointer *idris2_makeGCPointer(void *ptr_Raw,
+                                      Value_Closure *onCollectFct);
+Value_Buffer *idris2_makeBuffer(void *buf);
+Value_Array *idris2_makeArray(int length);
 
 extern Value_Int64 const idris2_predefined_Int64[100];
 extern Value_Bits64 const idris2_predefined_Bits64[100];

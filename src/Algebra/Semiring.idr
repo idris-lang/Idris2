@@ -2,8 +2,8 @@ module Algebra.Semiring
 
 %default total
 
-infixl 8 |+|
-infixl 9 |*|
+export infixl 8 |+|
+export infixl 9 |*|
 
 ||| A Semiring has two binary operations and an identity for each
 public export
