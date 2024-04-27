@@ -20,8 +20,8 @@ cd ./library/
     make > /dev/null
 cd ..
 
-export CFLAGS="-I./library/ -O3"
-export LDFLAGS="-L./library/ -Wl,-S"
+export CFLAGS="-I./library/ -O3 ${CFLAGS}"
+export LDFLAGS="-L./library/ -Wl,-S ${LDFLAGS}"
 export LDLIBS="-lexternalc"
 export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:./library/"
 export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:./library/"

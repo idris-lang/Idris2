@@ -631,7 +631,7 @@ mutual
                   decoratedSymbol fname "]"
                   pure ts
            pure (PQuoteDecl (boundToFC fname b) (collectDefs (concat b.val)))
-    <|> do b <- bounds (decoratedSymbol fname "~" *> simpleExpr fname indents)
+    <|> do b <- bounds (decoratedSymbol fname "~" *> simplerExpr fname indents)
            pure (PUnquote (boundToFC fname b) b.val)
     <|> do start <- bounds (symbol "(")
            bracketedExpr fname start indents

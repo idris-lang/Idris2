@@ -49,6 +49,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * The compiler now supports `impossible` in a non-case lambda. You can now
   write `\ Refl impossible`.
 
+* The compiler now parses `~x.fun` as unquoting `x` rather than `x.fun`
+  and `~(f 5).fun` as unquoting `(f 5)` rather than `(f 5).fun`.
+
 ### Backend changes
 
 #### RefC Backend
