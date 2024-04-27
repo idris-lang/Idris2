@@ -37,9 +37,9 @@ else
 endif
 
 # Find homebrew's libgmp on ARM macs
-ifneq (,$(wildcard /opt/homebrew/include/gmp.h))
-	CPPFLAGS += -I/opt/homebrew/include
-	LDFLAGS += -L/opt/homebrew/lib
+ifneq (,$(wildcard ${HOMEBREW_PREFIX}/include/gmp.h))
+	CPPFLAGS += -I${HOMEBREW_PREFIX}/include
+	LDFLAGS += -L${HOMEBREW_PREFIX}/lib
 endif
 
 ifneq (, $(findstring freebsd, $(MACHINE)))
