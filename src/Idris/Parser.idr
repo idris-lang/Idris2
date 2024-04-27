@@ -782,10 +782,21 @@ mutual
            commit
            switch <- optional (bounds $ decoratedKeyword fname "case")
            case switch of
-             Nothing => continueLam
+             Nothing => continueLamImpossible <|> continueLam
              Just r  => continueLamCase r
 
      where
+       continueLamImpossible : Rule PTerm
+       continueLamImpossible = do
+           lhs <- bounds (opExpr plhs fname indents)
+           end <- bounds (decoratedKeyword fname "impossible")
+           pure (
+             let fc = boundToFC fname (mergeBounds lhs end)
+                 alt = (MkImpossible fc lhs.val)
+                 fcCase = boundToFC fname lhs
+                 n = MN "lcase" 0 in
+             (PLam fcCase top Explicit (PRef fcCase n) (PInfer fcCase) $
+                 PCase (virtualiseFC fc) [] (PRef fcCase n) [alt]))
 
        bindAll : List (RigCount, WithBounds PTerm, PTerm) -> PTerm -> PTerm
        bindAll [] scope = scope

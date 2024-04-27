@@ -46,6 +46,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   environment variable adds to the "Package Search Paths." Functionally this is
   not a breaking change.
 
+* The compiler now supports `impossible` in a non-case lambda. You can now
+  write `\ Refl impossible`.
+
 ### Backend changes
 
 #### RefC Backend
