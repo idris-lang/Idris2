@@ -36,6 +36,12 @@ else
 	SHLIB_SUFFIX := .so
 endif
 
+# Find homebrew's libgmp on ARM macs
+ifneq (,$(wildcard /opt/homebrew/include/gmp.h))
+	CPPFLAGS += -I/opt/homebrew/include
+	LDFLAGS += -L/opt/homebrew/lib
+endif
+
 ifneq (, $(findstring freebsd, $(MACHINE)))
 	CFLAGS += -I$(shell /sbin/sysctl -n user.localbase)/include
 	LDFLAGS += -L$(shell /sbin/sysctl -n user.localbase)/lib
