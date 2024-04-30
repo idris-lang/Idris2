@@ -191,4 +191,3 @@ typedef struct {
 } Value_Condition;
 
 void idris2_dumpMemoryStats(void);
-
