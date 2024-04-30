@@ -427,7 +427,7 @@ testsInDir :
   (poolName : String) ->
   {default [] requirements : List Requirement} ->
   {default Nothing codegen : Codegen} ->
-  IO TestPool
+  Lazy (IO TestPool)
 testsInDir dirName poolName = do
   Right names <- listDir dirName
     | Left e => die $ "failed to list " ++ dirName ++ ": " ++ show e
