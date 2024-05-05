@@ -74,7 +74,8 @@ fromMaybeT v x = runMaybeT x >>= maybe v pure
 public export
 %inline
 toMaybeT : Functor m => Bool -> m a -> MaybeT m a
-toMaybeT b m = MkMaybeT $ map (\a => toMaybe b a) m
+toMaybeT True m = MkMaybeT $ map Just m
+toMaybeT False _ = MkMaybeT $ pure Nothing
 
 ||| Map over the underlying computation.
 public export
