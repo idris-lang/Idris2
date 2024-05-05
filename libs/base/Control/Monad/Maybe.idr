@@ -68,7 +68,9 @@ public export
 fromMaybeT : Monad m => m a -> MaybeT m a -> m a
 fromMaybeT v x = runMaybeT x >>= maybe v pure
 
-||| Return a value if a condition is met, or else no value.
+||| Return a value if a condition is met, or else no value. The condition
+||| only affects whether the `Maybe` produces a value; the effect is run
+||| either way.
 |||
 ||| This is a version of `toMaybe` lifted to work with `MaybeT`.
 public export
