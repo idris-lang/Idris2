@@ -867,11 +867,13 @@ fastPack : List Char -> String
 ||| ```
 public export
 unpack : String -> List Char
-unpack str = assert_total $ go [] (length str)
+unpack str = go [] (length str)
   where
-    partial go : List Char -> Nat -> List Char
+    go : List Char -> Nat -> List Char
     go cs 0     = cs
-    go cs (S k) = go (prim__strIndex str (prim__cast_IntegerInt $ natToInteger k) :: cs) k
+    go cs (S k) =
+      let ix := prim__cast_IntegerInt $ natToInteger k
+       in go (assert_total (prim__strIndex str ix) :: cs) k
 
 -- This function runs fast when compiled but won't compute at compile time.
 -- If you need to unpack strings at compile time, use Prelude.unpack.
