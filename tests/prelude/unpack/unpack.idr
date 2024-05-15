@@ -1,3 +1,6 @@
+||| This tests that issue #3280 has been fixed. With the former
+||| implementation of `unpack`, the compiler would not produce
+||| an error in a reasonable amount of time.
 import Data.String
 
 %default total
