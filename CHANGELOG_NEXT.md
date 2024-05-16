@@ -127,6 +127,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Removed need for the runtime value of the implicit argument in `succNotLTEpred`.
 
+* Added `funExt0` and `funExt1`, functions analogous to `funExt` but for functions
+  with quantities 0 and 1 respectively.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
