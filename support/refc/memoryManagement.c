@@ -2,7 +2,8 @@
 #include "runtime.h"
 
 Value *idris2_newValue(size_t size) {
-#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) /* C11 */
+#if !defined(_WIN32) && defined(__STDC_VERSION__) &&                           \
+    (__STDC_VERSION__ >= 201112) /* C11 */
   Value *retVal = (Value *)aligned_alloc(
       sizeof(void *),
       ((size + sizeof(void *) - 1) / sizeof(void *)) * sizeof(void *));
