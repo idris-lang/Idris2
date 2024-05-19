@@ -97,6 +97,26 @@ public export
 ($) : forall a, b . ((x : a) -> b x) -> (x : a) -> b x
 ($) f a = f a
 
+||| Pipeline style function application, useful for chaining
+||| functions into a series of transformations, reading top
+||| to bottom.
+|||
+||| ```idris example
+||| [[1], [2], [3]] |> join |> map (* 2)
+||| ```
+public export
+(|>) : a -> (a -> b) -> b
+a |> f = f a
+
+||| Backwards pipeline style function application, similar to $.
+|||
+||| ```idris example
+||| unpack <| "hello" ++ "world"
+||| ```
+public export
+(<|) : (a -> b) -> a -> b
+f <| a = f a
+
 -------------------
 -- PROOF HELPERS --
 -------------------

@@ -10,6 +10,9 @@ import Core.FC
 
 import Data.List
 
+%hide Prelude.Ops.infixr.(|>)
+%hide Prelude.Ops.infixr.(<|)
+
 %default total
 
 export infixr 5 <|, <:
