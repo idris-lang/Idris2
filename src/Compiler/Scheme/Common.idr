@@ -562,8 +562,8 @@ parameters (constants : SortedSet Name,
         = schExtPrim i (toPrim p) args
     schExp i (NmForce _ _ (NmApp fc x@(NmRef _ _) []))
        = pure $ "(force " ++ !(schExp i x) ++ ")" -- Special version for memoized toplevel lazy definitions
-    schExp i (NmForce fc lr t) = pure $ "(" ++ !(schExp i t) ++ ")"
-    schExp i (NmDelay fc lr t) = pure $ "(lambda () " ++ !(schExp i t) ++ ")"
+    schExp i (NmForce fc lr t) = pure $ "(blodwen-force-lazy " ++ !(schExp i t) ++ ")"
+    schExp i (NmDelay fc lr t) = pure $ "(blodwen-delay-lazy (lambda () " ++ !(schExp i t) ++ "))"
     schExp i (NmConCase fc sc alts def)
         = cond [(recordCase alts, schRecordCase i sc alts def),
                 (maybeCase alts, schMaybeCase i sc alts def),

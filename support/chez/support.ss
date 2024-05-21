@@ -1,3 +1,5 @@
+#!chezscheme
+
 (define (blodwen-os)
   (case (machine-type)
     [(i3le ti3le a6le ta6le tarm64le) "unix"]  ; GNU/Linux
@@ -18,6 +20,16 @@
                    (set! f void))
             (void))
         res))))
+
+(define (blodwen-delay-lazy f)
+  (weak-cons #!bwp f))
+
+(define (blodwen-force-lazy e)
+  (let ((exval (car e)))
+    (if (bwp-object? exval)
+      (let ((val ((cdr e))))
+        (begin (set-car! e val) val))
+      exval)))
 
 (define (blodwen-toSignedInt x bits)
   (if (logbit? bits x)
