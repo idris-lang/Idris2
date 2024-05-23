@@ -94,9 +94,9 @@ mapElem (There e) = There (mapElem e)
 ||| @xs The vector to be removed from
 ||| @p A proof that the element to be removed is in the vector
 public export
-dropElem : {k : _} -> (xs : Vect (S k) t) -> Elem x xs -> Vect k t
-dropElem           (x::ys)  Here         = ys
-dropElem {k = S k} (x::ys) (There later) = x :: dropElem ys later
+dropElem : (xs : Vect (S k) t) -> Elem x xs -> Vect k t
+dropElem (x::ys)         Here         = ys
+dropElem (x::ys@(_::_)) (There later) = x :: dropElem ys later
 
 ||| Erase the indices, returning the bounded numeric position of the element
 public export

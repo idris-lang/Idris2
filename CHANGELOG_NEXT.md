@@ -154,6 +154,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Moved definition of `Data.Vect.nubBy` to the global scope as `nubByImpl` to
   allow compile time proofs on `nubBy` and `nub`.
 
+* Removed need for the runtime value of the implicit length argument in
+  `Data.Vect.Elem.dropElem`.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
