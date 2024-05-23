@@ -662,6 +662,14 @@ filter p (x::xs) =
       else
         (_ ** tail)
 
+public export
+nubByImpl : Vect m elem -> (elem -> elem -> Bool) -> Vect len elem -> (p ** Vect p elem)
+nubByImpl acc p []      = (_ ** [])
+nubByImpl acc p (x::xs) with (elemBy p x acc)
+  nubByImpl acc p (x :: xs) | True  = nubByImpl acc p xs
+  nubByImpl acc p (x :: xs) | False with (nubByImpl (x::acc) p xs)
+    nubByImpl acc p (x :: xs) | False | (_ ** tail) = (_ ** x::tail)
+
 ||| Make the elements of some vector unique by some test
 |||
 ||| ```idris example
@@ -669,14 +677,7 @@ filter p (x::xs) =
 ||| ```
 public export
 nubBy : (elem -> elem -> Bool) -> Vect len elem -> (p ** Vect p elem)
-nubBy = nubBy' []
-  where
-    nubBy' : forall len . Vect m elem -> (elem -> elem -> Bool) -> Vect len elem -> (p ** Vect p elem)
-    nubBy' acc p []      = (_ ** [])
-    nubBy' acc p (x::xs) with (elemBy p x acc)
-      nubBy' acc p (x :: xs) | True  = nubBy' acc p xs
-      nubBy' acc p (x :: xs) | False with (nubBy' (x::acc) p xs)
-        nubBy' acc p (x :: xs) | False | (_ ** tail) = (_ ** x::tail)
+nubBy = nubByImpl []
 
 ||| Make the elements of some vector unique by the default Boolean equality
 |||
