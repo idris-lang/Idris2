@@ -6,6 +6,8 @@ import Data.Vect
 private typebind infixr 0 =@
 private infixr 0 -@
 
+%hide Prelude.Ops.infixr.(|>)
+
 -- typebind infixr 1 =@@
 
 0 (=@) : (a : Type) -> (a -> Type) -> Type
