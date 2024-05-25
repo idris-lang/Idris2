@@ -6,7 +6,7 @@ import Data.Vect
 private typebind infixr 0 =@
 private infixr 0 -@
 
-%hide Prelude.Ops.infixr.(|>)
+%hide Prelude.Ops.infixl.(|>)
 
 -- typebind infixr 1 =@@
 
@@ -79,4 +79,3 @@ compose (a |> a') (b |> b') =
   (x : (y : a) @@ (a' y -> b)) |>
        (y : a' x.fst) @@
             b' (x.snd y)
-

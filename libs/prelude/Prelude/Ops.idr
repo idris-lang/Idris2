@@ -24,7 +24,8 @@ export infixr 4 <$>, $>, <$
 export infixl 8 <+>
 
 -- Utility operators
-export infixr 9 ., .:, |>
+export infixr 9 ., .:
 export infixr 0 $, <|
+export infixl 0 |>
 
 export infixl 9 `div`, `mod`
