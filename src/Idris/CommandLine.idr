@@ -442,8 +442,6 @@ processArgs flag (opt@(RequiredNat _) :: as) [] f =
   Left $ "Missing required argument " ++ show opt ++ " for flag " ++ flag
 processArgs flag (opt@(RequiredLogLevel _) :: as) [] f =
   Left $ "Missing required argument " ++ show opt ++ " for flag " ++ flag
-processArgs flag (Optional a :: as) [] f =
-  processArgs flag as [] (f Nothing)
 processArgs flag (opt@(AutoNat _) :: as) [] f =
   Left $ "Missing required argument " ++ show opt ++ " for flag " ++ flag
 -- Happy cases
@@ -463,6 +461,8 @@ processArgs flag (AutoNat a :: as) (x :: xs) f =
      processArgs flag as xs (f (Just arg))
 processArgs flag (Required a :: as) (x :: xs) f =
   processArgs flag as xs (f x)
+processArgs flag (Optional a :: as) [] f =
+  processArgs flag as [] (f Nothing)
 processArgs flag (Optional a :: as) (x :: xs) f =
   processArgs flag as xs (f $ toMaybe (not (isPrefixOf "-" x)) x)
 
