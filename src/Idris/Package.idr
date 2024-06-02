@@ -47,6 +47,7 @@ import Idris.Version
 
 import public Idris.Package.Types
 import Idris.Package.Init
+import Idris.Package.ToJson
 
 %default covering
 
@@ -943,6 +944,7 @@ processPackage opts (cmd, mfile)
                        | errs => coreLift (exitWith (ExitFailure 1))
                     runRepl (map snd $ mainmod pkg)
                   Init => pure () -- already handled earlier
+                  DumpJson => coreLift . putStrLn $ toJson pkg
 
 record PackageOpts where
   constructor MkPFR

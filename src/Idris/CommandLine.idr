@@ -24,6 +24,7 @@ data PkgCommand
       | Clean
       | REPL
       | Init
+      | DumpJson
 
 export
 Show PkgCommand where
@@ -35,6 +36,7 @@ Show PkgCommand where
   show Clean = "--clean"
   show REPL = "--repl"
   show Init = "--init"
+  show DumpJson = "--dump-ipkg-json"
 
 public export
 data DirCommand
@@ -278,6 +280,9 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            optSeparator,
            MkOpt ["--init"] [Optional "package file"]
               (\ f => [Package Init f])
+              (Just "Interactively initialise a new project"),
+           MkOpt ["--dump-ipkg-json"] [Optional "package file"]
+              (\ f => [Package DumpJson f])
               (Just "Interactively initialise a new project"),
            MkOpt ["--build"] [Optional "package file"]
                (\f => [Package Build f])
