@@ -5,6 +5,7 @@ import Libraries.Data.String.Extra
 import Data.List
 import Core.FC
 import Core.Name.Namespace
+import Data.Maybe
 
 %hide Syntax.PreorderReasoning.Generic.infixl.(~=)
 %hide Syntax.PreorderReasoning.infixl.(~=)
@@ -38,19 +39,17 @@ ToJson a => ToJson (List a) where
 
 ToJson PkgVersionBounds where
   toJson (MkPkgVersionBounds lowerBound lowerInclusive upperBound upperInclusive) =
-    let optionalFields = catMaybes [
-          "lowerBound" ~~= lowerBound
-        , "upperBound" ~~= upperBound
-        ]
-        fields = [
+    let fields = [
           "lowerInclusive" ~= lowerInclusive
+        , "lowerBound"     ~= maybe "*" show lowerBound
         , "upperInclusive" ~= upperInclusive
-        ] ++ optionalFields
+        , "upperBound"     ~= maybe "*" show upperBound
+        ]
     in
       "{\{join "," fields}}"
 
 ToJson Depends where
-  toJson d = "\"\{show d}\""
+  toJson (MkDepends pkgname pkgbounds) = "{\{pkgname ~= pkgbounds}}"
 
 ToJson (ModuleIdent, String) where
   toJson (ident, n) = "\"\{show ident}\""
