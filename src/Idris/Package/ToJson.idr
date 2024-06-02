@@ -7,8 +7,7 @@ import Core.FC
 import Core.Name.Namespace
 import Data.Maybe
 
-%hide Syntax.PreorderReasoning.Generic.infixl.(~=)
-%hide Syntax.PreorderReasoning.infixl.(~=)
+%default total
 
 -- We don't bother with a robust JSON implementation
 -- for this one-off JSON serialization.
@@ -21,6 +20,13 @@ interface ToJson v where
 ToJson String where
   toJson str = "\"\{str}\""
 
+ToJson Bool where
+  toJson False = "false"
+  toJson True = "true"
+
+ToJson a => ToJson (List a) where
+  toJson xs = "[\{join "," $ map toJson xs}]"
+
 (~=) : ToJson v => String -> v -> String
 (~=) field value = "\{toJson field}: \{toJson value}"
 
@@ -30,17 +36,10 @@ ToJson String where
 ToJson PkgVersion where
   toJson v = "\"\{show v}\""
 
-ToJson Bool where
-  toJson False = "false"
-  toJson True = "true"
-
-ToJson a => ToJson (List a) where
-  toJson xs = "[\{join "," $ map toJson xs}]"
-
 ToJson PkgVersionBounds where
   toJson (MkPkgVersionBounds lowerBound lowerInclusive upperBound upperInclusive) =
-    let fields = [
-          "lowerInclusive" ~= lowerInclusive
+    let fields =
+        [ "lowerInclusive" ~= lowerInclusive
         , "lowerBound"     ~= maybe "*" show lowerBound
         , "upperInclusive" ~= upperInclusive
         , "upperBound"     ~= maybe "*" show upperBound
@@ -51,40 +50,40 @@ ToJson PkgVersionBounds where
 ToJson Depends where
   toJson (MkDepends pkgname pkgbounds) = "{\{pkgname ~= pkgbounds}}"
 
-ToJson (ModuleIdent, String) where
-  toJson (ident, n) = "\"\{show ident}\""
+ToJson ModuleIdent where
+  toJson ident = "\"\{show ident}\""
 
 namespace Package
   export
   toJson : PkgDesc -> String
   toJson (MkPkgDesc
-          name
-          version
-          langversion
-          authors
-          maintainers
-          license
-          brief
-          readme
-          homepage
-          sourceloc
-          bugtracker
-          depends
-          modules
-          mainmod
-          executable
-          options
-          sourcedir
-          builddir
-          outputdir
-          prebuild
-          postbuild
-          preinstall
-          postinstall
-          preclean
-          postclean) =
-      let optionalFields = catMaybes [
-            "version"     ~~= version
+            name
+            version
+            langversion
+            authors
+            maintainers
+            license
+            brief
+            readme
+            homepage
+            sourceloc
+            bugtracker
+            depends
+            modules
+            mainmod
+            executable
+            options
+            sourcedir
+            builddir
+            outputdir
+            prebuild
+            postbuild
+            preinstall
+            postinstall
+            preclean
+            postclean) =
+    let optionalFields = catMaybes $
+          [ "version"     ~~= version
           , "langversion" ~~= langversion
           , "authors"     ~~= authors
           , "maintainers" ~~= maintainers
@@ -94,7 +93,7 @@ namespace Package
           , "homepage"    ~~= homepage
           , "sourceloc"   ~~= sourceloc
           , "bugtracker"  ~~= bugtracker
-          , "main"        ~~= mainmod
+          , "main"        ~~= fst <$> mainmod
           , "executable"  ~~= executable
           , "opts"        ~~= snd <$> options
           , "sourcedir"   ~~= sourcedir
@@ -107,11 +106,11 @@ namespace Package
           , "preclean"    ~~= snd <$> preclean
           , "postclean"   ~~= snd <$> postclean
           ]
-          fields = [
-            "name"    ~= name
+        fields =
+          [ "name"    ~= name
           , "depends" ~= depends
-          , "modules" ~= modules
+          , "modules" ~= fst <$> modules
           ] ++ optionalFields
-      in
-        "{\{join "," fields}}"
+    in
+      "{\{join "," fields}}"
 
