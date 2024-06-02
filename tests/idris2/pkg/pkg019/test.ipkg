@@ -1,0 +1,49 @@
+package test
+version = 0.1.0
+authors = "Average Joe"
+maintainers = "Average Joe"
+license = "MIT"
+brief = "A basic test"
+readme = "https://github.com/idris-lang/Idris2/README.md"
+homepage = "https://github.com/idris-lang/Idris2"
+sourceloc = "https://github.com/idris-lang/Idris2"
+bugtracker = "https://github.com/idris-lang/Idris2/issues"
+
+-- the Idris2 version required (e.g. langversion >= 0.5.1)
+langversion >= 0.7.0
+
+-- packages to add to search path
+depends = contrib,
+          idris2 >= 0.7.0
+
+-- modules to install
+modules = And.A.Proof,
+          Yet.Another.Path
+
+-- main file (i.e. file to load at REPL)
+main = Main
+
+-- name of executable
+executable = test-exec
+opts = "--codegen node"
+sourcedir = "src"
+builddir = "build"
+outputdir = "out"
+
+-- script to run before building
+prebuild = "make pre"
+
+-- script to run after building
+postbuild = "make post"
+
+-- script to run after building, before installing
+preinstall = "make pre-install"
+
+-- script to run after installing
+postinstall = "make post-install"
+
+-- script to run before cleaning
+preclean = "make pre-clean"
+
+-- script to run after cleaning
+postclean = "make post-clean"
