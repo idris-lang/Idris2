@@ -12,7 +12,7 @@ import Data.Maybe
 -- We don't bother with a robust JSON implementation
 -- for this one-off JSON serialization.
 
-infixl 0 ~~=
+private infixl 0 ~~=
 
 interface ToJson v where
   toJson : v -> String
