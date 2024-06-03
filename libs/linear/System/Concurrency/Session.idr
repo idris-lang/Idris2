@@ -119,7 +119,7 @@ atSendIndex (Send ty s) accS accAt
     atSendIndex s (Send ty accS) (S accAt)
 
 
-||| A (bidirectional) channel is parametrised by session it must respect.
+||| A (bidirectional) channel is parametrised by a session it must respect.
 |||
 ||| It is implemented in terms of two low-level channels: one for sending
 ||| and one for receiving. This ensures that we never are in a situation
@@ -133,8 +133,8 @@ atSendIndex (Send ty s) accS accAt
 ||| can be sent on the one hand and the ones that can be received on the
 ||| other.
 ||| These union types are tagged unions where if `ty` is at index `k` in
-||| the list of types `tys` then `(k, v)` is a value of `Union m tys`
-||| provided that `v` has type `m ty`.
+||| the list of types `tys` then `(k, v)` is a value of `Union tys` provided
+||| that `v` has type `ty`.
 |||
 ||| `sendStep`, `recvStep`, `seePrefix`, and `seen` encode the fact that
 ||| we have already performed some of the protocol and so the low-level
@@ -150,13 +150,6 @@ record Channel (s : Session) where
 
   sendChan : Threads.Channel (Union (SendTypes (seenPrefix s)))
   recvChan : Threads.Channel (Union (RecvTypes (seenPrefix s)))
-
-||| Linear version of `die`
-export
-die1 : LinearIO io => String -> L1 io a
-die1 err = do
-  x <- die err
-  pure1 x
 
 ||| Consume a linear channel with a `Recv ty` step at the head of the
 ||| session type in order to obtain a value of type `ty` together with

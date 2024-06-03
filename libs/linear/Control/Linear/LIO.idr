@@ -1,6 +1,7 @@
 module Control.Linear.LIO
 
 import Data.Linear.Notation
+import System
 
 ||| Like `Monad`, but the action and continuation must be run exactly once
 ||| to ensure that the computation is linear.
@@ -138,6 +139,9 @@ export %inline
 pure1 : a -@ L io {use=1} a
 pure1 = Pure1
 
+||| Shuffling around linearity annotations: a computation of an
+||| unrestricted value can be seen as a computation of a linear
+||| value that happens to be unrestricted.
 export %inline
 bang : L IO t -@ L1 IO (!* t)
 bang io = io >>= \ a => pure1 (MkBang a)
@@ -149,3 +153,10 @@ export
 public export
 LinearIO : (Type -> Type) -> Type
 LinearIO io = (LinearBind io, HasLinearIO io)
+
+||| Linear version of `die`
+export
+die1 : LinearIO io => String -> L1 io a
+die1 err = do
+  x <- die err
+  pure1 x
