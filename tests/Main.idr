@@ -192,6 +192,10 @@ baseLibraryTests = testsInDir "base" "Base library" {requirements = [Chez, Node]
 contribLibraryTests : IO TestPool
 contribLibraryTests = testsInDir "contrib" "Contrib library" {requirements = [Chez, Node]}
 
+-- same behavior as `baseLibraryTests`
+linearLibraryTests : IO TestPool
+linearLibraryTests = testsInDir "linear" "Linear library" {requirements = [Chez, Node]}
+
 codegenTests : IO TestPool
 codegenTests = testsInDir "codegen" "Code generation"
 
@@ -227,6 +231,7 @@ main = runner $
   , !ideModeTests
   , !preludeTests
   , !baseLibraryTests
+  , !linearLibraryTests
   , !contribLibraryTests
   , !chezTests
   , !refcTests

@@ -1,4 +1,5 @@
 import Control.Linear.LIO
+import Data.Linear.Notation
 
 import Network.Socket
 
