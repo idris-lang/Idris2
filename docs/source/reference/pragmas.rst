@@ -20,7 +20,7 @@ Global pragmas
 ``%language``
 --------------------
 
-Enable language extensions.  Currently, the only extension is ``ElabReflection``.
+Enable language extensions.  Currently, the only extension is [#ElabReflection]_.
 
 .. code-block:: idris
 
@@ -493,3 +493,4 @@ over the value syntactically, rather than by value, and can significantly speed
 up elaboration where large types are involved, at a cost of being less general.
 Try it if "with" is slow.
 
+.. [#ElabReflection] https://github.com/stefan-hoeck/idris2-elab-util/blob/main/src/Doc/Index.md
