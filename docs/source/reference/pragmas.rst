@@ -466,7 +466,7 @@ Pragmas that occur inside expressions.
 ``%runElab``
 --------------------
 
-The ``%runElab`` pragma can be used at the top level or as an expression. It takes the an elaboration
+The ``%runElab`` pragma can be used at the top level or as an expression. It takes an elaborator
 script as an argument which runs in the ``Elab`` monad, has access to Idris' type-checking machinery,
 and can generate code.
 
