@@ -1,6 +1,7 @@
 module Data.SnocList.HasLength
 
 import Data.Nat
+import Data.SnocList
 
 ---------------------------------------
 -- horrible hack
@@ -21,6 +22,11 @@ export
 hasLength : HasLength n sx -> length sx === n
 hasLength Z = Refl
 hasLength (S p) = cong S (hasLength p)
+
+export
+map : (f : a -> b) -> HasLength n xs -> HasLength n (map f xs)
+map f Z = Z
+map f (S hl) = S (map f hl)
 
 export
 sucL : HasLength n sx -> HasLength (S n) ([<x] ++ sx)
