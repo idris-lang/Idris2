@@ -1,8 +1,6 @@
 module System.Concurrency.Linear
 
 import Control.Linear.LIO
-
-import Data.Linear.Notation
 import System.Concurrency
 
 ||| Run two linear computations in parallel and return the results.

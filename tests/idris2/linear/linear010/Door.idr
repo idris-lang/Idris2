@@ -1,5 +1,4 @@
 import Control.Linear.LIO
-import Data.Linear.Notation
 
 foo : LinearIO io => L io ()
 foo = do putStrLn "Hello"

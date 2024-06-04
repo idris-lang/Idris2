@@ -1,6 +1,6 @@
 module Control.Linear.LIO
 
-import Data.Linear.Notation
+import public Data.Linear.Notation
 import System
 
 ||| Like `Monad`, but the action and continuation must be run exactly once

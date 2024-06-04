@@ -1,6 +1,5 @@
 import Control.Linear.LIO
 import System.Concurrency.Session
-import Data.Linear.Notation
 
 main : IO ()
 main = LIO.run $ do

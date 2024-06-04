@@ -2,7 +2,6 @@ module System.Concurrency.Session
 
 import Control.Linear.LIO
 
-import Data.Linear.Notation
 import Data.List.AtIndex
 import Data.Nat
 
