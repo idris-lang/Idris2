@@ -1,10 +1,13 @@
 module Control.Linear.LIO
 
+import public Data.Linear.Notation
+import System
+
 ||| Like `Monad`, but the action and continuation must be run exactly once
 ||| to ensure that the computation is linear.
 public export
 interface LinearBind io where
-  bindL : (1 _ : io a) -> (1 _ : a -> io b) -> io b
+  bindL : io a -@ (a -> io b) -@ io b
 
 export
 LinearBind IO where
@@ -71,7 +74,7 @@ RunCont Unrestricted t b = t -> b
 -- concrete type of the continuation is.
 runK : {use : _} ->
        LinearBind io =>
-       (1 _ : L io {use} a) -> (1 _ : RunCont use a (io b)) -> io b
+       L io {use} a -@ RunCont use a (io b) -@ io b
 runK (Pure0 x) k = k x
 runK (Pure1 x) k = k x
 runK (PureW x) k = k x
@@ -86,7 +89,7 @@ runK (Bind {u_act = Unrestricted} act next) k = runK act (\x => runK (next x) k)
 ||| underlying context
 export
 run : Applicative io => LinearBind io =>
-      (1 _ : L io a) -> io a
+      L io a -@ io a
 run prog = runK prog pure
 
 export
@@ -110,12 +113,12 @@ export
 export %inline
 (>>=) : {u_act : _} ->
         LinearBind io =>
-        (1 _ : L io {use=u_act} a) ->
-        (1 _ : ContType io u_act u_k a b) -> L io {use=u_k} b
+        L io {use=u_act} a -@
+        ContType io u_act u_k a b -@ L io {use=u_k} b
 (>>=) = Bind
 
 export
-delay : {u_act : _} -> (1 _ : L io {use=u_k} b) -> ContType io u_act u_k () b
+delay : {u_act : _} -> L io {use=u_k} b -@ ContType io u_act u_k () b
 delay mb = case u_act of
   None => \ _ => mb
   Linear => \ () => mb
@@ -124,8 +127,8 @@ delay mb = case u_act of
 export %inline
 (>>) : {u_act : _} ->
         LinearBind io =>
-        (1 _ : L io {use=u_act} ()) ->
-        (1 _ : L io {use=u_k} b) -> L io {use=u_k} b
+        L io {use=u_act} () -@
+        L io {use=u_k} b -@ L io {use=u_k} b
 ma >> mb = ma >>= delay mb
 
 export %inline
@@ -133,8 +136,15 @@ pure0 : (0 x : a) -> L io {use=0} a
 pure0 = Pure0
 
 export %inline
-pure1 : (1 x : a) -> L io {use=1} a
+pure1 : a -@ L io {use=1} a
 pure1 = Pure1
+
+||| Shuffling around linearity annotations: a computation of an
+||| unrestricted value can be seen as a computation of a linear
+||| value that happens to be unrestricted.
+export %inline
+bang : L IO t -@ L1 IO (!* t)
+bang io = io >>= \ a => pure1 (MkBang a)
 
 export
 (LinearBind io, HasLinearIO io) => HasLinearIO (L io) where
@@ -143,3 +153,10 @@ export
 public export
 LinearIO : (Type -> Type) -> Type
 LinearIO io = (LinearBind io, HasLinearIO io)
+
+||| Linear version of `die`
+export
+die1 : LinearIO io => String -> L1 io a
+die1 err = do
+  x <- die err
+  pure1 x
