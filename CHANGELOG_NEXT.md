@@ -1,5 +1,7 @@
 
-This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELOG](./CHANGELOG.md) for changes to all previously released versions of Idris2. All new PRs should target this file (`CHANGELOG_NEXT`).
+This CHANGELOG describes the merged but unreleased changes.
+Please see [CHANGELOG](./CHANGELOG.md) for changes to all previously released versions of Idris2.
+All new PRs should target this file (`CHANGELOG_NEXT`).
 
 # Changelog
 
@@ -51,6 +53,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * The compiler now parses `~x.fun` as unquoting `x` rather than `x.fun`
   and `~(f 5).fun` as unquoting `(f 5)` rather than `(f 5).fun`.
+
+* Elaborator script's expression under the `%runElab` is now typechecked in the context
+  of quantity `0`, because it is present and works only at the compile time
 
 ### Backend changes
 

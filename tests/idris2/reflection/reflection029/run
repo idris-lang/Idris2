@@ -1,0 +1,5 @@
+. ../../../testutils.sh
+
+check RunElab0.idr
+check NoEscape.idr
+check NoEscapePar.idr
