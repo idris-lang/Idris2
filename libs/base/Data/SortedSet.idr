@@ -17,13 +17,25 @@ export
 insert : k -> SortedSet k -> SortedSet k
 insert k (SetWrapper m) = SetWrapper (Data.SortedMap.insert k () m)
 
+public export %inline
+insert' : SortedSet k -> k -> SortedSet k
+insert' = flip insert
+
 export
 delete : k -> SortedSet k -> SortedSet k
 delete k (SetWrapper m) = SetWrapper (Data.SortedMap.delete k m)
 
+public export %inline
+delete' : SortedSet k -> k -> SortedSet k
+delete' = flip delete
+
 export
 contains : k -> SortedSet k -> Bool
 contains k (SetWrapper m) = isJust (Data.SortedMap.lookup k m)
+
+public export %inline
+contains' : SortedSet k -> k -> Bool
+contains' = flip contains
 
 export
 fromList : Ord k => List k -> SortedSet k
@@ -100,4 +112,4 @@ namespace Dependent
 
 export
 singleton : Ord k => k -> SortedSet k
-singleton k = insert k empty
+singleton = insert' empty
