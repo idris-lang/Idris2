@@ -20,3 +20,8 @@ eq1 = Refl
 -- and anybody measures the time it takes this test to run...
 addFourMillion : Int -> Int
 addFourMillion x = 4000000 + x
+
+-- issue #3266
+failing
+  fin0 : Fin 0
+  fin0 = (-1)

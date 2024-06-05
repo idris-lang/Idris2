@@ -46,6 +46,12 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   environment variable adds to the "Package Search Paths." Functionally this is
   not a breaking change.
 
+* The compiler now supports `impossible` in a non-case lambda. You can now
+  write `\ Refl impossible`.
+
+* The compiler now parses `~x.fun` as unquoting `x` rather than `x.fun`
+  and `~(f 5).fun` as unquoting `(f 5)` rather than `(f 5).fun`.
+
 ### Backend changes
 
 #### RefC Backend
@@ -81,6 +87,18 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Switch calling conventions based on the number of arguments to avoid limits on
   the number of arguments and to reduce stack usage.
+
+#### Chez
+
+* Fixed CSE soundness bug that caused delayed expressions to sometimes be eagerly
+  evaluated. Now when a delayed expression is lifted by CSE, it is compiled
+  using Scheme's `delay` and `force` to memoize them.
+
+#### Racket
+
+* Fixed CSE soundness bug that caused delayed expressions to sometimes be eagerly
+  evaluated. Now when a delayed expression is lifted by CSE, it is compiled
+  using Scheme's `delay` and `force` to memoize them.
 
 #### NodeJS Backend
 
@@ -122,6 +140,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Removed need for the runtime value of the implicit argument in `succNotLTEpred`.
 
 * Implemented `leftMost` and `rightMost` for `SortedSet`.
+
+* Added `funExt0` and `funExt1`, functions analogous to `funExt` but for functions
+  with quantities 0 and 1 respectively.
 
 #### Contrib
 
