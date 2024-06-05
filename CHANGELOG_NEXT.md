@@ -127,9 +127,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * More efficient `collect-request-handler` is used.
 
-* `Lazy` and `Inf` values are *weakly* memoised. That is, once accessed, they are allowed
-  to be not re-evaluated until garbage collector wipes them.
-  This change requires Chez with version >= 9.5.9, because of fixed bug in Chez GC.
+* Add a codegen directive called `lazy=weakMemo` to make `Lazy` and `Inf` values *weakly*
+  memoised. That is, once accessed, they are allowed to be not re-evaluated until garbage
+  collector wipes them.
 
 #### Racket
 
@@ -137,8 +137,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   evaluated. Now when a delayed expression is lifted by CSE, it is compiled
   using Scheme's `delay` and `force` to memoize them.
 
-* `Lazy` and `Inf` values are *weakly* memoised. That is, once accessed, they are allowed
-  to be not re-evaluated until garbage collector wipes them.
+* Add a codegen directive called `lazy=weakMemo` to make `Lazy` and `Inf` values *weakly*
+  memoised. That is, once accessed, they are allowed to be not re-evaluated until garbage
+  collector wipes them.
 
 #### NodeJS Backend
 

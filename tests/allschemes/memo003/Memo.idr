@@ -3,6 +3,10 @@
 -- will perform 10^20 additions and will therefore not
 -- finish in reasonable time.
 
+-- Turn on weak memoisation
+%cg chez lazy=weakMemo
+%cg racket lazy=weakMemo
+
 -- We return lazy values in a monad to avoid behaviour of common expression elimination
 
 nx : Lazy Nat -> IO $ Lazy Nat

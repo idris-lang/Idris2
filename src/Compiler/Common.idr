@@ -557,6 +557,14 @@ getExtraRuntime directives
     paths : List String
     paths = nub $ mapMaybe getArg $ reverse directives
 
+-- parses `--directive lazy=weakMemo` option for turning on weak memoisation of lazy values
+-- (if supported by a backend).
+-- This particular form of the directive string is chosen to be able to pass different variants
+-- in the future (say, for strong memoisation, or turning laziness off).
+export
+getWeakMemoLazy : List String -> Bool
+getWeakMemoLazy = elem "lazy=weakMemo"
+
 ||| Cast implementations. Values of `ConstantPrimitives` can
 ||| be used in a call to `castInt`, which then determines
 ||| the cast implementation based on the given pair of

@@ -3,6 +3,10 @@ import Data.Stream
 
 import Debug.Trace
 
+-- Turn on weak memoisation
+%cg chez lazy=weakMemo
+%cg racket lazy=weakMemo
+
 S' : (pref : String) -> Nat -> Nat
 S' pref = S . traceValBy (\n => "\{pref} \{show n}")
 

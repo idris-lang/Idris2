@@ -74,35 +74,34 @@ showGambitString (c :: cs) acc = showGambitChar c $ showGambitString cs acc
 gambitString : String -> Builder
 gambitString cs = "\"" ++ showGambitString (unpack cs) "\""
 
-mutual
-  handleRet : CFType -> Builder -> Builder
-  handleRet CFUnit op = op ++ " " ++ mkWorld (schConstructor gambitString (UN $ Basic "") (Just 0) [])
-  handleRet _ op = mkWorld op
+handleRet : CFType -> Builder -> Builder
+handleRet CFUnit op = op ++ " " ++ mkWorld (schConstructor gambitString (UN $ Basic "") (Just 0) [])
+handleRet _ op = mkWorld op
 
-  getFArgs : NamedCExp -> Core (List (NamedCExp, NamedCExp))
-  getFArgs (NmCon fc _ _ (Just 0) _) = pure []
-  getFArgs (NmCon fc _ _ (Just 1) [ty, val, rest]) = pure $ (ty, val) :: !(getFArgs rest)
-  getFArgs arg = throw (GenericMsg (getFC arg) ("Badly formed c call argument list " ++ show arg))
+getFArgs : NamedCExp -> Core (List (NamedCExp, NamedCExp))
+getFArgs (NmCon fc _ _ (Just 0) _) = pure []
+getFArgs (NmCon fc _ _ (Just 1) [ty, val, rest]) = pure $ (ty, val) :: !(getFArgs rest)
+getFArgs arg = throw (GenericMsg (getFC arg) ("Badly formed c call argument list " ++ show arg))
 
-  gambitPrim : SortedSet Name -> Nat -> ExtPrim -> List NamedCExp -> Core Builder
-  gambitPrim cs i GetField [NmPrimVal _ (Str s), _, _, struct,
-                         NmPrimVal _ (Str fld), _]
-      = do structsc <- schExp cs (gambitPrim cs) gambitString 0 struct
-           pure $ "(" ++ fromString s ++ "-" ++ fromString fld ++ " " ++ structsc ++ ")"
-  gambitPrim cs i GetField [_,_,_,_,_,_]
-      = pure "(error \"bad getField\")"
-  gambitPrim cs i SetField [NmPrimVal _ (Str s), _, _, struct,
-                         NmPrimVal _ (Str fld), _, val, world]
-      = do structsc <- schExp cs (gambitPrim cs) gambitString 0 struct
-           valsc <- schExp cs (gambitPrim cs) gambitString 0 val
-           pure $ mkWorld $
-                "(" ++ fromString s ++ "-" ++ fromString fld ++ "-set! " ++ structsc ++ " " ++ valsc ++ ")"
-  gambitPrim cs i SetField [_,_,_,_,_,_,_,_]
-      = pure "(error \"bad setField\")"
-  gambitPrim cs i SysCodegen []
-      = pure $ "\"gambit\""
-  gambitPrim cs i prim args
-      = schExtCommon cs (gambitPrim cs) gambitString i prim args
+gambitPrim : SortedSet Name -> LazyExprProc -> Nat -> ExtPrim -> List NamedCExp -> Core Builder
+gambitPrim cs schLazy i GetField [NmPrimVal _ (Str s), _, _, struct,
+                       NmPrimVal _ (Str fld), _]
+    = do structsc <- schExp cs (gambitPrim cs schLazy) gambitString schLazy 0 struct
+         pure $ "(" ++ fromString s ++ "-" ++ fromString fld ++ " " ++ structsc ++ ")"
+gambitPrim cs schLazy i GetField [_,_,_,_,_,_]
+    = pure "(error \"bad getField\")"
+gambitPrim cs schLazy i SetField [NmPrimVal _ (Str s), _, _, struct,
+                       NmPrimVal _ (Str fld), _, val, world]
+    = do structsc <- schExp cs (gambitPrim cs schLazy) gambitString schLazy 0 struct
+         valsc <- schExp cs (gambitPrim cs schLazy) gambitString schLazy 0 val
+         pure $ mkWorld $
+              "(" ++ fromString s ++ "-" ++ fromString fld ++ "-set! " ++ structsc ++ " " ++ valsc ++ ")"
+gambitPrim cs schLazy i SetField [_,_,_,_,_,_,_,_]
+    = pure "(error \"bad setField\")"
+gambitPrim cs schLazy i SysCodegen []
+    = pure $ "\"gambit\""
+gambitPrim cs schLazy i prim args
+    = schExtCommon cs (gambitPrim cs schLazy) gambitString schLazy i prim args
 
 -- Reference label for keeping track of loaded external libraries
 data Loaded : Type where
@@ -365,16 +364,18 @@ compileToSCM c tm outfile
          -- let tags = nameTags cdata
          let ctm = forget (mainExpr cdata)
 
+         ds <- getDirectives Gambit
+         let schLazy = if getWeakMemoLazy ds then weakMemoLaziness else defaultLaziness
+
          defs <- get Ctxt
          l <- newRef {t = List String} Loaded []
          s <- newRef {t = List String} Structs []
          fgndefs <- traverse getFgnCall ndefs
          (sortedDefs, constants) <- sortDefs ndefs
-         compdefs <- traverse (getScheme constants (gambitPrim constants) gambitString) ndefs
+         compdefs <- traverse (getScheme constants (gambitPrim constants schLazy) gambitString schLazy) ndefs
          let code = concat (map snd fgndefs) ++ concat compdefs
-         main <- schExp constants (gambitPrim constants) gambitString 0 ctm
+         main <- schExp constants (gambitPrim constants schLazy) gambitString schLazy 0 ctm
          support <- readDataFile "gambit/support.scm"
-         ds <- getDirectives Gambit
          extraRuntime <- getExtraRuntime ds
          foreign <- readDataFile "gambit/foreign.scm"
          let scm = sepBy "\n" [schHeader, fromString support, fromString extraRuntime, fromString foreign, code, main]
