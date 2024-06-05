@@ -707,7 +707,7 @@ We can define two different implementations of ``Semigroup`` and
 
 The neutral value for addition is ``0``, but the neutral value for multiplication
 is ``1``. It's important, therefore, that when we define implementations
-of ``Monoid`` they extend the correct ``Semigroup`` implementation. We can
+of ``Monoid`` that they extend the correct ``Semigroup`` implementation. We can
 do this with a ``using`` clause in the implementation as follows:
 
 .. code-block:: idris
