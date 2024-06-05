@@ -283,7 +283,7 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Interactively initialise a new project"),
            MkOpt ["--dump-ipkg-json"] [Optional "package file"]
               (\ f => [Package DumpJson f])
-              (Just "Interactively initialise a new project"),
+              (Just "Dump an Idris2 package file in the JSON format"),
            MkOpt ["--build"] [Optional "package file"]
                (\f => [Package Build f])
               (Just "Build modules/executable for the given package"),
