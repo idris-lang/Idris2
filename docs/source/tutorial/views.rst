@@ -4,10 +4,6 @@
 Views and the “``with``” rule
 *****************************
 
-.. warning::
-
-   NOT UPDATED FOR IDRIS 2 YET
-
 Dependent pattern matching
 ==========================
 
@@ -38,6 +34,11 @@ the fact that matching on a value in a dependently typed language can
 affect what we know about the forms of other values. In its simplest
 form, the ``with`` rule adds another argument to the function being
 defined.
+
+When this intermediate computation additionally appears in the type of the
+function being defined, the ``with`` construct allows us to capture these
+occurrences so that the observations made in the patterns will be reflected
+in the type.
 
 We have already seen a vector filter function. This time, we define it
 using ``with`` as follows:
@@ -85,6 +86,16 @@ that the above ``foo`` can be rewritten as follows:
         _ | 3 = True
         _ | _ = False
       _ | _ = False
+
+Equivalently, multiple expressions separated by ``|`` can be can be deconstructed in one
+``with`` statement:
+
+.. code-block:: idris
+
+    foo : Int -> Int -> Bool
+    foo n m with (n + 1) | (m + 1)
+      _ | 2 | 3 = True
+      _ | _ | _ = False
 
 If the intermediate computation itself has a dependent type, then the
 result can affect the forms of other arguments — we can learn the form

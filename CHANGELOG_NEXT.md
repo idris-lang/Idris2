@@ -139,11 +139,16 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Removed need for the runtime value of the implicit argument in `succNotLTEpred`.
 
+* Implemented `leftMost` and `rightMost` for `SortedSet`.
+
 * Added `funExt0` and `funExt1`, functions analogous to `funExt` but for functions
   with quantities 0 and 1 respectively.
 
 * `SortedSet`, `SortedMap` and `SortedDMap` modules were extended with flipped variants
   of functions like `lookup`, `contains`, `update` and `insert`.
+
+* Moved definition of `Data.Vect.nubBy` to the global scope as `nubByImpl` to
+  allow compile time proofs on `nubBy` and `nub`.
 
 #### Contrib
 

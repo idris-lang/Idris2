@@ -115,7 +115,7 @@ If you have the latest *released* version of Idris 2
 ### 4: (Optional) Installing Idris 2 library documentation
 
 After `make install`, type `make install-libdocs` to install Idris 2 library documentation.  After
-that, the index file can be found here: ``idris2 --libdir`/docs/index.html`.``
+that, the index file can be found here: ``"${BROWSER:-echo}" "$(idris2 --libdir)"/docs/index.html``
 
 ### 5: (Optional) Self-hosting step
 
