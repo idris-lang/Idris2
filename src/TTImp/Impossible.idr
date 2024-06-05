@@ -161,6 +161,8 @@ mutual
      = mkTerm pat mty exps autos named
   mkTerm (IApp fc fn arg) mty exps autos named
      = mkTerm fn mty (arg :: exps) autos named
+  mkTerm (IWithApp fc fn arg) mty exps autos named
+     = mkTerm fn mty (arg :: exps) autos named
   mkTerm (IAutoApp fc fn arg) mty exps autos named
      = mkTerm fn mty exps (arg :: autos) named
   mkTerm (INamedApp fc fn nm arg) mty exps autos named
@@ -198,6 +200,7 @@ getImpossibleTerm env nest tm
     -- the name to the proper one from the nested names map
     applyEnv : RawImp -> RawImp
     applyEnv (IApp fc fn arg) = IApp fc (applyEnv fn) arg
+    applyEnv (IWithApp fc fn arg) = IWithApp fc (applyEnv fn) arg
     applyEnv (IAutoApp fc fn arg) = IAutoApp fc (applyEnv fn) arg
     applyEnv (INamedApp fc fn n arg)
         = INamedApp fc (applyEnv fn) n arg

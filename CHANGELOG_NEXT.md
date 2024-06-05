@@ -52,6 +52,10 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * The compiler now parses `~x.fun` as unquoting `x` rather than `x.fun`
   and `~(f 5).fun` as unquoting `(f 5)` rather than `(f 5).fun`.
 
+* LHS of `with`-applications are parsed as `PWithApp` instead of `PApp`. As a
+  consequence, `IWithApp` appears in `TTImp` values in elaborator scripts instead
+  of `IApp`, as it should have been.
+
 ### Backend changes
 
 #### RefC Backend
@@ -60,7 +64,7 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   is dropped as soon as possible. This allows you to reuse unique variables and
   optimize memory consumption.
 
-* Fix invalid memory read on `strSubStr`.
+* Fix invalid memory read in `strSubStr`.
 
 * Fix memory leaks of `IORef`. Now that `IORef` holds values by itself,
   `global_IORef_Storage` is no longer needed.
