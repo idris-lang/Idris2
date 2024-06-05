@@ -1,0 +1,5 @@
+main: Forking two threads natrando and computer
+natrando: picked the natural 100
+natrando: picked the natural 50
+computer: summing 100 and 50
+main: Threads have finished and returned (100, 50) and 150

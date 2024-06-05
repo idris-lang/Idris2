@@ -1,0 +1,3 @@
+. ../../testutils.sh
+
+run -p linear Main.idr

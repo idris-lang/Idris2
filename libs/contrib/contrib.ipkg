@@ -24,7 +24,6 @@ modules = Control.ANSI,
           Data.Binary,
 
           Data.Bool.Algebra,
-          Data.Bool.Decidable,
 
           Data.Fin.Extra,
 
@@ -48,7 +47,6 @@ modules = Control.ANSI,
           Data.List.Reverse,
           Data.List.Views.Extra,
           Data.List.Palindrome,
-          Data.List.AtIndex,
           Data.List.Alternating,
           Data.List.Sufficient,
 
@@ -69,7 +67,6 @@ modules = Control.ANSI,
           Data.Nat.Factor,
           Data.Nat.Fib,
           Data.Nat.Order.Strict,
-          Data.Nat.Order.Properties,
           Data.Nat.Order.Relation,
           Data.Nat.Properties,
 
@@ -111,8 +108,6 @@ modules = Control.ANSI,
           Data.Vect.Sort,
           Data.Vect.Views.Extra,
 
-          Data.Void,
-
           Debug.Buffer,
 
           Decidable.Finite.Fin,
@@ -128,8 +123,6 @@ modules = Control.ANSI,
           Language.JSON.String.Parser,
           Language.JSON.String.Tokens,
           Language.JSON.Tokens,
-
-          Syntax.WithProof,
 
           System.Console.GetOpt,
           System.Directory.Tree,
