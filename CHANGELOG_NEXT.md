@@ -114,6 +114,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 #### Prelude
 
+* Added pipeline operators `(|>)` and `(<|)`.
+
 #### Base
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
