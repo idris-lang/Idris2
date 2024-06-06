@@ -1235,7 +1235,7 @@ mutual
             mustWorkBecause b'.bounds "Not the end of a block entry, check indentation" $ atEnd indents
             (rhs, ws) <- pure b.val
             let fc = boundToFC fname (mergeBounds start b)
-            pure (MkPatClause fc (uncurry applyArgs lhs) rhs ws)
+            pure (MkPatClause fc (uncurry applyWithArgs lhs) rhs ws)
      <|> do b <- bounds $ do
                    decoratedKeyword fname "with"
                    commit
@@ -1246,11 +1246,11 @@ mutual
                    pure (flags, wps, forget ws)
             (flags, wps, ws) <- pure b.val
             let fc = boundToFC fname (mergeBounds start b)
-            pure (MkWithClause fc (uncurry applyArgs lhs) wps flags ws)
+            pure (MkWithClause fc (uncurry applyWithArgs lhs) wps flags ws)
      <|> do end <- bounds (decoratedKeyword fname "impossible")
             atEnd indents
             pure $ let fc = boundToFC fname (mergeBounds start end) in
-                   MkImpossible fc (uncurry applyArgs lhs)
+                   MkImpossible fc (uncurry applyWithArgs lhs)
 
   clause : (withArgs : Nat) ->
            IMaybe (isSucc withArgs) (PTerm, List (FC, PTerm)) ->

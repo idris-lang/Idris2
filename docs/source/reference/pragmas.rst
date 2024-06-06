@@ -20,7 +20,7 @@ Global pragmas
 ``%language``
 --------------------
 
-Enable language extensions.  Currently, the only extension is ``ElabReflection``.
+Enable language extensions.  Currently, the only extension is [#ElabReflection]_.
 
 .. code-block:: idris
 
@@ -472,7 +472,7 @@ Pragmas that occur inside expressions.
 ``%runElab``
 --------------------
 
-The ``%runElab`` pragma can be used at the top level or as an expression. It takes the an elaboration
+The ``%runElab`` pragma can be used at the top level or as an expression. It takes an elaborator
 script as an argument which runs in the ``Elab`` monad, has access to Idris' type-checking machinery,
 and can generate code.
 
@@ -499,3 +499,4 @@ over the value syntactically, rather than by value, and can significantly speed
 up elaboration where large types are involved, at a cost of being less general.
 Try it if "with" is slow.
 
+.. [#ElabReflection] https://github.com/stefan-hoeck/idris2-elab-util/blob/main/src/Doc/Index.md

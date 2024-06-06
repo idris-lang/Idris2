@@ -883,6 +883,7 @@ mutual
   getClauseFn : RawImp -> Core Name
   getClauseFn (IVar _ n) = pure n
   getClauseFn (IApp _ f _) = getClauseFn f
+  getClauseFn (IWithApp _ f _) = getClauseFn f
   getClauseFn (IAutoApp _ f _) = getClauseFn f
   getClauseFn (INamedApp _ f _ _) = getClauseFn f
   getClauseFn tm = throw $ GenericMsg (getFC tm) "Head term in pattern must be a function name"

@@ -59,6 +59,10 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Fix a bug in `CallGraph.idr` that caused compiler to hang forever even when
   `%tcinline_fuel` is set.
 
+* LHS of `with`-applications are parsed as `PWithApp` instead of `PApp`. As a
+  consequence, `IWithApp` appears in `TTImp` values in elaborator scripts instead
+  of `IApp`, as it should have been.
+
 ### Backend changes
 
 #### RefC Backend
@@ -67,24 +71,24 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   is dropped as soon as possible. This allows you to reuse unique variables and
   optimize memory consumption.
 
-* Fix invalid memory read onf strSubStr.
+* Fix invalid memory read in `strSubStr`.
 
-* Fix memory leaks of IORef. Now that IORef holds values by itself,
-  global_IORef_Storage is no longer needed.
+* Fix memory leaks of `IORef`. Now that `IORef` holds values by itself,
+  `global_IORef_Storage` is no longer needed.
 
-* Pattern matching generates simpler code. This reduces malloc/free and memory
+* Pattern matching generates simpler code. This reduces `malloc`/`free` and memory
   consumption. It also makes debugging easier.
 
 * Stopped useless string copying in the constructor to save memory. Also, name
   generation was stopped for constructors that have tags.
 
-* Special constructors such as Nil and Nothing were eliminated and assigned to
-  NULL.
+* Special constructors such as `Nil` and `Nothing` were eliminated and assigned to
+  `NULL`.
 
-* Unbox Bits32,Bits16,Bits8,Int32,Int16,Int8. These types are now packed into
+* Unbox `Bits32`, `Bits16`, `Bits8`, `Int32`, `Int16`, `Int8`. These types are now packed into
   Value*. Now, RefC backend requires at least 32 bits for pointers.
   16-bit CPUs are no longer supported. And we expect the address returned by
-  malloc to be aligned with at least 32 bits. Otherwise it cause a runtime error.
+  `malloc` to be aligned with at least 32 bits. Otherwise it cause a runtime error.
 
 * Rename C function to avoid confliction. But only a part.
 
@@ -95,6 +99,18 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Switch calling conventions based on the number of arguments to avoid limits on
   the number of arguments and to reduce stack usage.
 
+#### Chez
+
+* Fixed CSE soundness bug that caused delayed expressions to sometimes be eagerly
+  evaluated. Now when a delayed expression is lifted by CSE, it is compiled
+  using Scheme's `delay` and `force` to memoize them.
+
+#### Racket
+
+* Fixed CSE soundness bug that caused delayed expressions to sometimes be eagerly
+  evaluated. Now when a delayed expression is lifted by CSE, it is compiled
+  using Scheme's `delay` and `force` to memoize them.
+
 #### NodeJS Backend
 
 * The NodeJS executable output to `build/exec/` now has its executable bit set.
@@ -104,6 +120,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 ### Library changes
 
 #### Prelude
+
+* Added pipeline operators `(|>)` and `(<|)`.
 
 #### Base
 
@@ -134,6 +152,20 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Removed need for the runtime value of the implicit argument in `succNotLTEpred`.
 
+* Implemented `leftMost` and `rightMost` for `SortedSet`.
+
+* Added `funExt0` and `funExt1`, functions analogous to `funExt` but for functions
+  with quantities 0 and 1 respectively.
+
+* `SortedSet`, `SortedMap` and `SortedDMap` modules were extended with flipped variants
+  of functions like `lookup`, `contains`, `update` and `insert`.
+
+* Moved definition of `Data.Vect.nubBy` to the global scope as `nubByImpl` to
+  allow compile time proofs on `nubBy` and `nub`.
+
+* Removed need for the runtime value of the implicit length argument in
+  `Data.Vect.Elem.dropElem`.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
@@ -147,4 +179,4 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 #### Network
 
-* Add a missing function parameter (the flag) in the C implementation of idrnet_recv_bytes
+* Add a missing function parameter (the flag) in the C implementation of `idrnet_recv_bytes`

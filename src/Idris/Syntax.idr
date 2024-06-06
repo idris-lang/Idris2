@@ -275,6 +275,11 @@ mutual
   applyArgs f [] = f
   applyArgs f ((fc, a) :: args) = applyArgs (PApp fc f a) args
 
+  export
+  applyWithArgs : PTerm' nm -> List (FC, PTerm' nm) -> PTerm' nm
+  applyWithArgs f [] = f
+  applyWithArgs f ((fc, a) :: args) = applyWithArgs (PWithApp fc f a) args
+
   public export
   PTypeDecl : Type
   PTypeDecl = PTypeDecl' Name
