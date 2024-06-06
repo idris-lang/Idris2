@@ -10,8 +10,8 @@ import Core.FC
 
 import Data.List
 
-%hide Prelude.Ops.infixr.(|>)
 %hide Prelude.Ops.infixr.(<|)
+%hide Prelude.Ops.infixl.(|>)
 
 %default total
 
