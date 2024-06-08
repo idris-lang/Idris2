@@ -159,7 +159,8 @@ listPackages
          traverse_ (iputStrLn . pkgDesc) pkgs
   where
     pkgDesc : PkgDir -> Doc IdrisAnn
-    pkgDesc (MkPkgDir _ pkgName version) = pretty0 pkgName <++> parens (byShow version)
+    pkgDesc (MkPkgDir _ pkgName version) =
+      pretty0 pkgName <++> parens (pretty0 $ maybe "unversioned" show version)
 
 dirOption : {auto c : Ref Ctxt Defs} ->
             {auto o : Ref ROpts REPLOpts} ->
