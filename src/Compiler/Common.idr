@@ -242,6 +242,16 @@ nonErased n
               | Nothing => pure True
          pure (multiplicity gdef /= erased)
 
+export
+addForeignImpl : {auto c : Ref Ctxt Defs} ->
+             Name -> Core ()
+addForeignImpl n
+    = do defs <- get Ctxt
+         Just def <- lookupCtxtExact n (gamma defs)        | Nothing => pure ()
+         let Just (MkForeign cs atys retty) = compexpr def | _ => pure ()
+         let xs = map snd $ filter (\x => fst x == n) defs.options.foreignImpl
+         setCompiled n (MkForeign (xs ++ cs) atys retty)
+
 -- Get the names of the functions we're exporting to the given back end, and
 -- the corresponding name it will have when exported.
 getExported : String -> NameMap (List (String, String)) -> List (Name, String)
@@ -325,6 +335,7 @@ getCompileDataWith exports doLazyAnnots phase_in tm_in
 
          logTime 2 "Merge lambda" $ traverse_ mergeLamDef rcns
          logTime 2 "Fix arity" $ traverse_ fixArityDef rcns
+         logTime 2 "Fix foreign bindings" $ traverse_ addForeignImpl rcns
          compiledtm <- fixArityExp !(compileExp tm)
 
          (cseDefs, csetm) <- logTime 2 "CSE" $ cse rcns compiledtm

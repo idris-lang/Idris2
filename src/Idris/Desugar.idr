@@ -2,6 +2,7 @@ module Idris.Desugar
 
 import Core.Context
 import Core.Context.Log
+import Core.CompileExpr
 import Core.Core
 import Core.Env
 import Core.Metadata
@@ -31,6 +32,7 @@ import Parser.Support
 
 import TTImp.BindImplicits
 import TTImp.Parser
+import TTImp.ProcessType
 import TTImp.TTImp
 import TTImp.Utils
 
@@ -1332,6 +1334,19 @@ mutual
              Overloadable n => pure [IPragma fc [] (\nest, env => setNameFlag fc n Overloadable)]
              Extension e => pure [IPragma fc [] (\nest, env => setExtension e)]
              DefaultTotality tot => pure [IPragma fc [] (\_, _ => setDefaultTotalityOption tot)]
+             ForeignImpl n cs => do
+               cs' <- traverse (desugar AnyExpr ps) cs
+               pure [IPragma fc [] (\nest, env => do
+                      defs <- get Ctxt
+                      calls <- traverse getFnString cs'
+                      [(n',_,gdef)] <- lookupCtxtName n (gamma defs)
+                        | [] => throw (UndefinedName fc n)
+                        | xs => throw (AmbiguousName fc (map fst xs))
+                      let ForeignDef arity xs = gdef.definition
+                        | _ => throw (GenericMsg fc "\{show n} is not a foreign definition")
+
+                      update Ctxt { options->foreignImpl $= (map (n',) calls ++) }
+                    )]
   desugarDecl ps (PBuiltin fc type name) = pure [IBuiltin fc type name]
 
   export

@@ -197,6 +197,8 @@ record Options where
   extensions : List LangExt
   additionalCGs : List (String, CG)
   hashFn : Maybe String
+  -- fullName and definition for %foreign_impl
+  foreignImpl : List (Name, String)
 
 export
 availableCGs : Options -> List (String, CG)
@@ -256,7 +258,7 @@ defaults
          -- it to fail gracefully.
          pure $ MkOptions
            defaultDirs defaultPPrint defaultSession defaultElab Nothing Nothing
-           (MkPrimNs Nothing Nothing Nothing Nothing Nothing Nothing Nothing) [] [] Nothing
+           (MkPrimNs Nothing Nothing Nothing Nothing Nothing Nothing Nothing) [] [] Nothing []
 
 -- Reset the options which are set by source files
 export
@@ -264,8 +266,13 @@ clearNames : Options -> Options
 clearNames = { pairnames := Nothing,
                rewritenames := Nothing,
                primnames := MkPrimNs Nothing Nothing Nothing Nothing Nothing Nothing Nothing,
+               foreignImpl := [],
                extensions := []
              }
+
+export
+addForeignImpl : (fullName : Name) -> (def : String) -> Options -> Options
+addForeignImpl fullName def = { foreignImpl $= ((fullName, def) ::) }
 
 export
 setPair : (pairType : Name) -> (fstn : Name) -> (sndn : Name) ->
