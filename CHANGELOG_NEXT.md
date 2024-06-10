@@ -159,6 +159,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Removed need for the runtime value of the implicit length argument in
   `Data.Vect.Elem.dropElem`.
 
+* Some pieces of `Data.Fin.Extra` from `contrib` were moved to `base` to modules
+  `Data.Fin.Properties`, `Data.Fin.Arith` and `Data.Fin.Split`.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
@@ -169,6 +172,12 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Moved helpers from `Data.HVect` to base library's `Data.Vect.Quantifiers.All`
   and removed `Data.HVect` from contrib. See the additional notes in the
   CHANGELOG under the `Library changes`/`Base` section above.
+
+* Some pieces of `Data.Fin.Extra` from `contrib` were moved to `base` to modules
+  `Data.Fin.Properties`, `Data.Fin.Arith` and `Data.Fin.Split`.
+
+* Function `invFin` from `Data.Fin.Extra` was deprecated in favour of
+  `Data.Fin.complement` from `base`.
 
 #### Network
 
