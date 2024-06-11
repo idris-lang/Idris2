@@ -145,6 +145,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Removed need for the runtime value of the implicit argument in `succNotLTEpred`.
 
+* Added utility functions `insertWith`, `insertFromWith` and `fromListWith` for
+  `SortedMap`.
+
 * Implemented `leftMost` and `rightMost` for `SortedSet`.
 
 * Added `funExt0` and `funExt1`, functions analogous to `funExt` but for functions

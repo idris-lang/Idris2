@@ -30,6 +30,15 @@ export
 insert : k -> v -> SortedMap k v -> SortedMap k v
 insert k v = M . insert k v . unM
 
+||| Inserts a key value pair into a map and merges duplicated values
+||| with the given function.
+export
+insertWith : (v -> v -> v) -> k -> v -> SortedMap k v -> SortedMap k v
+insertWith f k v xs =
+  case lookup k xs of
+    Just x  => insert k (f v x) xs
+    Nothing => insert k v xs
+
 public export %inline
 insert' : SortedMap k v -> (k, v) -> SortedMap k v
 insert' = flip $ uncurry insert
@@ -45,6 +54,12 @@ insertFrom = flip $ foldl insert'
 public export %inline
 insertFrom' : Foldable f => SortedMap k v -> f (k, v) -> SortedMap k v
 insertFrom' = flip insertFrom
+
+||| Inserts any foldable of a key value pair into a map and merges duplicated
+||| values with the given function.
+export
+insertFromWith : Foldable f => (v -> v -> v) -> f (k, v) -> SortedMap k v -> SortedMap k v
+insertFromWith f = flip $ foldl $ flip $ uncurry $ insertWith f
 
 export
 delete : k -> SortedMap k v -> SortedMap k v
@@ -87,6 +102,12 @@ updateExisting' m f x = updateExisting f x m
 export
 fromList : Ord k => List (k, v) -> SortedMap k v
 fromList = insertFrom' empty
+
+||| Converts a list of key-value pairs into a map and merges duplicated
+||| values with the given function.
+export
+fromListWith : Ord k => (v -> v -> v) -> List (k, v) -> SortedMap k v
+fromListWith f = flip (insertFromWith f) empty
 
 export
 toList : SortedMap k v -> List (k, v)
