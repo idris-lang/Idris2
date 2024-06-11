@@ -55,6 +55,13 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * The compiler now parses `~x.fun` as unquoting `x` rather than `x.fun`
   and `~(f 5).fun` as unquoting `(f 5)` rather than `(f 5).fun`.
 
+* Add new pragma `%tcinline_fuel` to avoid totality checker from infinitely
+  inlining recursive function with `%tcinline` and hang forever. The default
+  value of `%tcinline_fuel` is `1000`.
+
+* Fix a bug in `CallGraph.idr` that caused compiler to hang forever even when
+  `%tcinline_fuel` is set.
+
 * LHS of `with`-applications are parsed as `PWithApp` instead of `PApp`. As a
   consequence, `IWithApp` appears in `TTImp` values in elaborator scripts instead
   of `IApp`, as it should have been.

@@ -132,6 +132,7 @@ record ElabDirectives where
   -- in addition to postfix (dot) projections
   -- default: yes
   prefixRecordProjections : Bool
+  tcInlineFuel : Nat
 
 public export
 record Session where
@@ -230,7 +231,7 @@ defaultSession = MkSessionOpts False CoveringOnly False False Chez [] 1000 False
 
 export
 defaultElab : ElabDirectives
-defaultElab = MkElabDirectives True True CoveringOnly 3 50 25 True
+defaultElab = MkElabDirectives True True CoveringOnly 3 50 25 True 1000
 
 -- FIXME: This turns out not to be reliably portable, since different systems
 -- may have tools with the same name but different required arugments. We

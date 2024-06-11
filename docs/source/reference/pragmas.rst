@@ -151,6 +151,12 @@ the ``minimal`` directive priority over the ``compact`` directive if both are pr
 
 See the section for each codegen under :ref:`sect-execs` for available directives.
 
+``%tcinline_fuel``
+--------------------
+
+Set fuel to avoid totality checker from infinitely inlining recursive function with `%tcinline` and hang
+forever. The default value is 1000. (See ``%tcinline`` pragma)
+
 Pragmas on declarations
 =======================
 

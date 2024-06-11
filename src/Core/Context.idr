@@ -2263,6 +2263,17 @@ setNFThreshold : {auto c : Ref Ctxt Defs} ->
 setNFThreshold max = update Ctxt { options->elabDirectives->nfThreshold := max }
 
 export
+setTcInlineFuel : {auto c : Ref Ctxt Defs} ->
+                Nat -> Core ()
+setTcInlineFuel fuel = update Ctxt { options->elabDirectives->tcInlineFuel := fuel }
+
+export
+getTcInlineFuel : {auto c : Ref Ctxt Defs} -> Core Nat
+getTcInlineFuel = do
+    defs <- get Ctxt
+    pure (tcInlineFuel (elabDirectives (options defs)))
+
+export
 setSearchTimeout : {auto c : Ref Ctxt Defs} ->
                    Integer -> Core ()
 setSearchTimeout t = update Ctxt { options->session->searchTimeout := t }

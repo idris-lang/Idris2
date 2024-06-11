@@ -70,23 +70,24 @@ mutual
   findSC : {vars : _} ->
            {auto c : Ref Ctxt Defs} ->
            Defs -> Env Term vars -> Guardedness ->
+           List Name -> -- to avoid caseblock looping
            List (Term vars) -> -- LHS args
            Term vars -> -- RHS
            Core (List SCCall)
-  findSC {vars} defs env g pats (Bind fc n b sc)
+  findSC {vars} defs env g cbs pats (Bind fc n b sc)
        = pure $
             !(findSCbinder b) ++
-            !(findSC defs (b :: env) g (map weaken pats) sc)
+            !(findSC defs (b :: env) g cbs (map weaken pats) sc)
     where
       findSCbinder : Binder (Term vars) -> Core (List SCCall)
-      findSCbinder (Let _ c val ty) = findSC defs env g pats val
+      findSCbinder (Let _ c val ty) = findSC defs env g cbs pats val
       findSCbinder b = pure [] -- only types, no need to look
   -- If we're Guarded and find a Delay, continue with the argument as InDelay
-  findSC defs env Guarded pats (TDelay _ _ _ tm)
-      = findSC defs env InDelay pats tm
-  findSC defs env g pats (TDelay _ _ _ tm)
-      = findSC defs env g pats tm
-  findSC defs env g pats tm
+  findSC defs env Guarded cbs pats (TDelay _ _ _ tm)
+      = findSC defs env InDelay cbs pats tm
+  findSC defs env g cbs pats (TDelay _ _ _ tm)
+      = findSC defs env g cbs pats tm
+  findSC defs env g cbs pats tm
       = do let (fn, args) = getFnArgs tm
            -- if it's a 'case' or 'if' just go straight into the arguments
            Nothing <- handleCase fn args
@@ -97,42 +98,42 @@ mutual
     -- If we're InDelay and find a constructor (or a function call which is
     -- guaranteed to return a constructor; AllGuarded set), continue as InDelay
              (InDelay, Ref fc (DataCon _ _) cn, args) =>
-                 do scs <- traverse (findSC defs env InDelay pats) args
+                 do scs <- traverse (findSC defs env InDelay cbs pats) args
                     pure (concat scs)
              -- If we're InDelay otherwise, just check the arguments, the
              -- function call is okay
              (InDelay, _, args) =>
-                 do scs <- traverse (findSC defs env Unguarded pats) args
+                 do scs <- traverse (findSC defs env Unguarded cbs pats) args
                     pure (concat scs)
              (Guarded, Ref fc (DataCon _ _) cn, args) =>
                  do Just ty <- lookupTyExact cn (gamma defs)
                          | Nothing => do
                               log "totality" 50 $ "Lookup failed"
-                              findSCcall defs env Guarded pats fc cn args
-                    findSCcall defs env Guarded pats fc cn args
+                              findSCcall defs env Guarded cbs pats fc cn args
+                    findSCcall defs env Guarded cbs pats fc cn args
              (Toplevel, Ref fc (DataCon _ _) cn, args) =>
                  do Just ty <- lookupTyExact cn (gamma defs)
                          | Nothing => do
                               log "totality" 50 $ "Lookup failed"
-                              findSCcall defs env Guarded pats fc cn args
-                    findSCcall defs env Guarded pats fc cn args
+                              findSCcall defs env Guarded cbs pats fc cn args
+                    findSCcall defs env Guarded cbs pats fc cn args
              (_, Ref fc Func fn, args) =>
                  do logC "totality" 50 $
                        pure $ "Looking up type of " ++ show !(toFullNames fn)
                     Just ty <- lookupTyExact fn (gamma defs)
                          | Nothing => do
                               log "totality" 50 $ "Lookup failed"
-                              findSCcall defs env Unguarded pats fc fn args
-                    findSCcall defs env Unguarded pats fc fn args
+                              findSCcall defs env Unguarded cbs pats fc fn args
+                    findSCcall defs env Unguarded cbs pats fc fn args
              (_, f, args) =>
-                 do scs <- traverse (findSC defs env Unguarded pats) args
+                 do scs <- traverse (findSC defs env Unguarded cbs pats) args
                     pure (concat scs)
       where
         handleCase : Term vars -> List (Term vars) -> Core (Maybe (List SCCall))
         handleCase (Ref fc nt n) args
             = do n' <- toFullNames n
                  if caseFn n'
-                    then Just <$> findSCcall defs env g pats fc n args
+                    then Just <$> findSCcall defs env g cbs pats fc n args
                     else pure Nothing
         handleCase _ _ = pure Nothing
 
@@ -303,23 +304,24 @@ mutual
   findSCcall : {vars : _} ->
                {auto c : Ref Ctxt Defs} ->
                Defs -> Env Term vars -> Guardedness ->
+               List Name -> -- to avoid caseblock looping
                List (Term vars) ->
                FC -> Name -> List (Term vars) ->
                Core (List SCCall)
-  findSCcall defs env g pats fc fn_in args
+  findSCcall defs env g cbs pats fc fn_in args
         -- Under 'assert_total' we assume that all calls are fine, so leave
         -- the size change list empty
       = do fn <- getFullName fn_in
            logC "totality.termination.sizechange" 10 $ do pure $ "Looking under " ++ show !(toFullNames fn)
            aSmaller <- resolved (gamma defs) (NS builtinNS (UN $ Basic "assert_smaller"))
            cond [(fn == NS builtinNS (UN $ Basic "assert_total"), pure [])
-                ,(caseFn fn,
-                    do scs1 <- traverse (findSC defs env g pats) args
+                ,(caseFn fn && not (elem fn cbs),
+                    do scs1 <- traverse (findSC defs env g (fn::cbs) pats) args
                        mps  <- getCasePats defs fn pats args
-                       scs2 <- traverse (findInCase defs g) $ fromMaybe [] mps
+                       scs2 <- traverse (findInCase defs g (fn::cbs)) $ fromMaybe [] mps
                        pure (concat (scs1 ++ scs2)))
               ]
-              (do scs <- traverse (findSC defs env g pats) args
+              (do scs <- traverse (findSC defs env g cbs pats) args
                   pure ([MkSCCall fn
                            (fromListList
                                 (map (mkChange defs aSmaller pats) args))
@@ -328,23 +330,25 @@ mutual
 
   findInCase : {auto c : Ref Ctxt Defs} ->
                Defs -> Guardedness ->
+               List Name -> -- to avoid caseblock looping
                (vs ** (Env Term vs, List (Term vs), Term vs)) ->
                Core (List SCCall)
-  findInCase defs g (_ ** (env, pats, tm))
+  findInCase defs g cbs (_ ** (env, pats, tm))
      = do logC "totality" 10 $
                    do ps <- traverse toFullNames pats
                       pure ("Looking in case args " ++ show ps)
           logTermNF "totality" 10 "        =" env tm
           rhs <- normaliseOpts tcOnly defs env tm
-          findSC defs env g pats (delazy defs rhs)
+          findSC defs env g cbs pats (delazy defs rhs)
 
 findCalls : {auto c : Ref Ctxt Defs} ->
             Defs -> (vars ** (Env Term vars, Term vars, Term vars)) ->
             Core (List SCCall)
 findCalls defs (_ ** (env, lhs, rhs_in))
    = do let pargs = getArgs (delazy defs lhs)
-        rhs <- normaliseOpts tcOnly defs env rhs_in
-        findSC defs env Toplevel pargs (delazy defs rhs)
+        fuel <- getTcInlineFuel
+        rhs <- normaliseOpts ({fuel := Just fuel} tcOnly) defs env rhs_in
+        findSC defs env Toplevel [] pargs (delazy defs rhs)
 
 getSC : {auto c : Ref Ctxt Defs} ->
         Defs -> Def -> Core (List SCCall)
