@@ -287,7 +287,8 @@ that evaluate to strings. See :ref:`ffi-overview` for more details.
 
 Adds an implementation to an existing ``%foreign`` in another file. This pragma can
 be used to fill in an implementation for another backend without changing the original
-file.
+file. In the case of multiple declarations for a given backend, the backend will choose
+the one from the most recently loaded module.
 
 .. code-block:: idris
 
