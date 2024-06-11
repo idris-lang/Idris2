@@ -532,7 +532,7 @@ withabstraction = vcat $
     We often need to match on the result of an intermediate computation.
     When this intermediate computation additionally appears in the type of the
     function being defined, the `with` construct allows us to capture these
-    occurences so that the observations made in the patterns will be reflected
+    occurrences so that the observations made in the patterns will be reflected
     in the type.
     If we additionally need to remember that the link between the patterns and
     the intermediate computation we can use the `proof` keyword to retain an

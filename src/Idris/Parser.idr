@@ -631,7 +631,7 @@ mutual
                   decoratedSymbol fname "]"
                   pure ts
            pure (PQuoteDecl (boundToFC fname b) (collectDefs (concat b.val)))
-    <|> do b <- bounds (decoratedSymbol fname "~" *> simpleExpr fname indents)
+    <|> do b <- bounds (decoratedSymbol fname "~" *> simplerExpr fname indents)
            pure (PUnquote (boundToFC fname b) b.val)
     <|> do start <- bounds (symbol "(")
            bracketedExpr fname start indents
@@ -782,10 +782,21 @@ mutual
            commit
            switch <- optional (bounds $ decoratedKeyword fname "case")
            case switch of
-             Nothing => continueLam
+             Nothing => continueLamImpossible <|> continueLam
              Just r  => continueLamCase r
 
      where
+       continueLamImpossible : Rule PTerm
+       continueLamImpossible = do
+           lhs <- bounds (opExpr plhs fname indents)
+           end <- bounds (decoratedKeyword fname "impossible")
+           pure (
+             let fc = boundToFC fname (mergeBounds lhs end)
+                 alt = (MkImpossible fc lhs.val)
+                 fcCase = boundToFC fname lhs
+                 n = MN "lcase" 0 in
+             (PLam fcCase top Explicit (PRef fcCase n) (PInfer fcCase) $
+                 PCase (virtualiseFC fc) [] (PRef fcCase n) [alt]))
 
        bindAll : List (RigCount, WithBounds PTerm, PTerm) -> PTerm -> PTerm
        bindAll [] scope = scope
@@ -1224,7 +1235,7 @@ mutual
             mustWorkBecause b'.bounds "Not the end of a block entry, check indentation" $ atEnd indents
             (rhs, ws) <- pure b.val
             let fc = boundToFC fname (mergeBounds start b)
-            pure (MkPatClause fc (uncurry applyArgs lhs) rhs ws)
+            pure (MkPatClause fc (uncurry applyWithArgs lhs) rhs ws)
      <|> do b <- bounds $ do
                    decoratedKeyword fname "with"
                    commit
@@ -1235,11 +1246,11 @@ mutual
                    pure (flags, wps, forget ws)
             (flags, wps, ws) <- pure b.val
             let fc = boundToFC fname (mergeBounds start b)
-            pure (MkWithClause fc (uncurry applyArgs lhs) wps flags ws)
+            pure (MkWithClause fc (uncurry applyWithArgs lhs) wps flags ws)
      <|> do end <- bounds (decoratedKeyword fname "impossible")
             atEnd indents
             pure $ let fc = boundToFC fname (mergeBounds start end) in
-                   MkImpossible fc (uncurry applyArgs lhs)
+                   MkImpossible fc (uncurry applyWithArgs lhs)
 
   clause : (withArgs : Nat) ->
            IMaybe (isSucc withArgs) (PTerm, List (FC, PTerm)) ->

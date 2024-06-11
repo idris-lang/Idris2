@@ -1,3 +1,10 @@
+||| Indexing into Lists.
+|||
+||| `Elem` proofs give existential quantification that a given element
+||| *is* in the list, but not where in the list it is!  Here we give a
+||| predicate that presents proof that a given index in a list, given
+||| by a natural number, will return a certain element.
+
 module Data.List.AtIndex
 
 import Data.DPair
@@ -51,25 +58,6 @@ find x (y :: xs) with (decEq x y)
         (Element Z p) => void (neqxy (inverseZ p))
         (Element (S n) prf) => absurd (notInxs (Element n (inverseS prf)))
 
-||| If the equality is not decidable, we may instead rely on interface resolution
-public export
-interface Member (0 t : a) (0 ts : List a) where
-  isMember' : Subset Nat (AtIndex t ts)
-
-public export
-isMember : (0 t : a) -> (0 ts : List a) -> Member t ts =>
-              Subset Nat (AtIndex t ts)
-isMember t ts @{p} = isMember' @{p}
-
-public export
-Member t (t :: ts) where
-  isMember' = Element 0 Z
-
-public export
-Member t ts => Member t (u :: ts) where
-  isMember' = let (Element n prf) = isMember t ts in
-              Element (S n) (S prf)
-
 ||| Given an index, we can decide whether there is a value corresponding to it
 public export
 lookup : (n : Nat) -> (xs : List a) -> Dec (Subset a (\ x => AtIndex x xs n))
@@ -86,18 +74,22 @@ inRange n [] p = void (absurd p)
 inRange Z (x :: xs) p = LTEZero
 inRange (S n) (x :: xs) p = LTESucc (inRange n xs (inverseS p))
 
-|||
+||| An index remains unchanged if we extend the list to the right
 export
 weakenR : AtIndex x xs n -> AtIndex x (xs ++ ys) n
 weakenR Z = Z
 weakenR (S p) = S (weakenR p)
 
+||| An index into `xs` is shifted by `m` if we prepend a list of size `m`
+||| in front of it
 export
 weakenL : (p : Subset Nat (flip HasLength ws)) -> AtIndex x xs n -> AtIndex x (ws ++ xs) (fst p + n)
 weakenL m p with (view m)
   weakenL (Element 0 Z) p | Z = p
   weakenL (Element (S (fst m)) (S (snd m))) p | (S m) = S (weakenL m p)
 
+||| Conversely to `weakenR`, if an index is smaller than the length of
+||| a prefix then it points into that prefix.
 export
 strengthenL : (p : Subset Nat (flip HasLength xs)) ->
               lt n (fst p) === True ->
@@ -106,6 +98,8 @@ strengthenL m lt idx with (view m)
   strengthenL (Element (S (fst m)) (S (snd m))) lt Z | (S m) = Z
   strengthenL (Element (S (fst m)) (S (snd m))) lt (S k) | (S m) = S (strengthenL m lt k)
 
+||| Conversely to `weakenL`, if an index is larger than the length of
+||| a prefix then it points into the suffix.
 export
 strengthenR : (p : Subset Nat (flip HasLength ws)) ->
               lte (fst p) n === True ->
@@ -113,4 +107,3 @@ strengthenR : (p : Subset Nat (flip HasLength ws)) ->
 strengthenR m lt idx with (view m)
   strengthenR (Element 0 Z) lt idx | Z = rewrite minusZeroRight n in idx
   strengthenR (Element (S (fst m)) (S (snd m))) lt (S k) | (S m) = strengthenR m lt k
-

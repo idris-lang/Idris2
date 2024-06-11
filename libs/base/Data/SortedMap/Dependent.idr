@@ -219,12 +219,20 @@ lookup : (x : k) -> SortedDMap k v -> Maybe (y : k ** v y) -- could return also 
 lookup _ Empty = Nothing
 lookup k (M _ t) = treeLookup k t
 
+public export %inline
+lookup' : SortedDMap k v -> (x : k) -> Maybe (y : k ** v y)
+lookup' = flip lookup
+
 export
 lookupPrecise : DecEq k => (x : k) -> SortedDMap k v -> Maybe (v x)
 lookupPrecise x = lookup x >=> \(y ** v) =>
   case decEq x y of
     Yes Refl => Just v
     No _     => Nothing
+
+public export %inline
+lookupPrecise' : DecEq k => SortedDMap k v -> (x : k) -> Maybe (v x)
+lookupPrecise' m x = lookupPrecise x m
 
 export
 insert : (x : k) -> v x -> SortedDMap k v -> SortedDMap k v
@@ -234,13 +242,21 @@ insert k v (M _ t) =
     Left t' => (M _ t')
     Right t' => (M _ t')
 
+public export %inline
+insert' : SortedDMap k v -> (x : k ** v x) -> SortedDMap k v
+insert' m (x ** v) = insert x v m
+
 export
 singleton : Ord k => (x : k) -> v x -> SortedDMap k v
 singleton k v = insert k v empty
 
 export
 insertFrom : Foldable f => f (x : k ** v x) -> SortedDMap k v -> SortedDMap k v
-insertFrom = flip $ foldl $ flip $ uncurry insert
+insertFrom = flip $ foldl insert'
+
+public export %inline
+insertFrom' : Foldable f => SortedDMap k v -> f (x : k ** v x) -> SortedDMap k v
+insertFrom' = flip insertFrom
 
 export
 delete : k -> SortedDMap k v -> SortedDMap k v
@@ -253,6 +269,10 @@ delete k (M (S n) t) =
   case treeDelete (S n) k t of
     Left t' => (M _ t')
     Right t' => (M _ t')
+
+public export %inline
+delete' : SortedDMap k v -> k -> SortedDMap k v
+delete' = flip delete
 
 ||| Updates or deletes a value based on the decision function
 |||
@@ -267,6 +287,10 @@ update k f m = case f $ lookupPrecise k m of
   Just v  => insert k v m
   Nothing => delete k m
 
+public export %inline
+update' : DecEq k => SortedDMap k v -> (x : k ** Maybe (v x) -> Maybe (v x)) -> SortedDMap k v
+update' m (x ** f) = update x f m
+
 ||| Updates existing value, if it is present, and does nothing otherwise
 |||
 ||| The current implementation performs up to two traversals of the original map
@@ -276,9 +300,13 @@ updateExisting k f m = case lookupPrecise k m of
   Just v  => insert k (f v) m
   Nothing => m
 
+public export %inline
+updateExisting' : DecEq k => SortedDMap k v -> (x : k ** v x -> v x) -> SortedDMap k v
+updateExisting' m (x ** f) = updateExisting x f m
+
 export
 fromList : Ord k => List (x : k ** v x) -> SortedDMap k v
-fromList = foldl (flip (uncurry insert)) empty
+fromList = foldl insert' empty
 
 export
 toList : SortedDMap k v -> List (x : k ** v x)
@@ -345,6 +373,10 @@ export
 traverse : Applicative f => ({x : k} -> v x -> f (w x)) -> SortedDMap k v -> f (SortedDMap k w)
 traverse _ Empty = pure Empty
 traverse f (M _ t) = M _ <$> treeTraverse f t
+
+public export %inline
+for : Applicative f => SortedDMap k v -> ({x : k} -> v x -> f (w x)) -> f (SortedDMap k w)
+for = flip traverse
 
 ||| Merge two maps. When encountering duplicate keys, using a function to combine the values.
 ||| Uses the ordering of the first map given.

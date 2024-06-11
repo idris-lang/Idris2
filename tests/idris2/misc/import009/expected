@@ -2,13 +2,13 @@
 2/2: Building Import (Import.idr)
 Error: Unknown operator '~:>'
 
-Import:9:1--9:8
- 5 | (|>) : (s : HasComp x) => {0 a, b, c : x} -> a ~> b -> b ~> c -> a ~> c
- 6 | a |> b = comp s a b
- 7 | 
- 8 | (~:>) : Type -> Type -> Type
- 9 | a ~:> b = Pair a b
-     ^^^^^^^
+Import:11:1--11:8
+ 07 | (|>) : (s : HasComp x) => {0 a, b, c : x} -> a ~> b -> b ~> c -> a ~> c
+ 08 | a |> b = comp s a b
+ 09 | 
+ 10 | (~:>) : Type -> Type -> Type
+ 11 | a ~:> b = Pair a b
+      ^^^^^^^
 
 1/3: Building Prefix (Prefix.idr)
 Error: While processing right hand side of test. When unifying:

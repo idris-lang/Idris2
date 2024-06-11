@@ -883,6 +883,7 @@ mutual
   getClauseFn : RawImp -> Core Name
   getClauseFn (IVar _ n) = pure n
   getClauseFn (IApp _ f _) = getClauseFn f
+  getClauseFn (IWithApp _ f _) = getClauseFn f
   getClauseFn (IAutoApp _ f _) = getClauseFn f
   getClauseFn (INamedApp _ f _ _) = getClauseFn f
   getClauseFn tm = throw $ GenericMsg (getFC tm) "Head term in pattern must be a function name"
@@ -1021,6 +1022,7 @@ mutual
   displayFixity : Maybe Visibility -> BindingModifier -> Fixity -> Nat -> OpStr -> String
   displayFixity Nothing NotBinding fix prec op = "\{show fix} \{show  prec} \{show op}"
   displayFixity Nothing bind fix prec op = "\{show bind} \{show fix} \{show  prec} \{show op}"
+  displayFixity (Just vis) NotBinding fix prec op = "\{show vis} \{show fix} \{show  prec} \{show op}"
   displayFixity (Just vis) bind fix prec op = "\{show vis} \{show bind} \{show fix} \{show  prec} \{show op}"
 
   -- Given a high level declaration, return a list of TTImp declarations

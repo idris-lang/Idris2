@@ -46,6 +46,16 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   environment variable adds to the "Package Search Paths." Functionally this is
   not a breaking change.
 
+* The compiler now supports `impossible` in a non-case lambda. You can now
+  write `\ Refl impossible`.
+
+* The compiler now parses `~x.fun` as unquoting `x` rather than `x.fun`
+  and `~(f 5).fun` as unquoting `(f 5)` rather than `(f 5).fun`.
+
+* LHS of `with`-applications are parsed as `PWithApp` instead of `PApp`. As a
+  consequence, `IWithApp` appears in `TTImp` values in elaborator scripts instead
+  of `IApp`, as it should have been.
+
 ### Backend changes
 
 #### RefC Backend
@@ -54,26 +64,45 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   is dropped as soon as possible. This allows you to reuse unique variables and
   optimize memory consumption.
 
-* Fix invalid memory read onf strSubStr.
+* Fix invalid memory read in `strSubStr`.
 
-* Fix memory leaks of IORef. Now that IORef holds values by itself,
-  global_IORef_Storage is no longer needed.
+* Fix memory leaks of `IORef`. Now that `IORef` holds values by itself,
+  `global_IORef_Storage` is no longer needed.
 
-* Pattern matching generates simpler code. This reduces malloc/free and memory
+* Pattern matching generates simpler code. This reduces `malloc`/`free` and memory
   consumption. It also makes debugging easier.
 
 * Stopped useless string copying in the constructor to save memory. Also, name
   generation was stopped for constructors that have tags.
 
-* Special constructors such as Nil and Nothing were eliminated and assigned to
-  NULL.
+* Special constructors such as `Nil` and `Nothing` were eliminated and assigned to
+  `NULL`.
 
-* Unbox Bits32,Bits16,Bits8,Int32,Int16,Int8. These types are now packed into
+* Unbox `Bits32`, `Bits16`, `Bits8`, `Int32`, `Int16`, `Int8`. These types are now packed into
   Value*. Now, RefC backend requires at least 32 bits for pointers.
   16-bit CPUs are no longer supported. And we expect the address returned by
-  malloc to be aligned with at least 32 bits. Otherwise it cause a runtime error.
+  `malloc` to be aligned with at least 32 bits. Otherwise it cause a runtime error.
 
 * Rename C function to avoid confliction. But only a part.
+
+* Supress code generation of _arglist wrappers to reduce code size and compilation time.
+
+* Removed Value_Arglist to reduce Closure's allocation overhead and make code simply.
+
+* Switch calling conventions based on the number of arguments to avoid limits on
+  the number of arguments and to reduce stack usage.
+
+#### Chez
+
+* Fixed CSE soundness bug that caused delayed expressions to sometimes be eagerly
+  evaluated. Now when a delayed expression is lifted by CSE, it is compiled
+  using Scheme's `delay` and `force` to memoize them.
+
+#### Racket
+
+* Fixed CSE soundness bug that caused delayed expressions to sometimes be eagerly
+  evaluated. Now when a delayed expression is lifted by CSE, it is compiled
+  using Scheme's `delay` and `force` to memoize them.
 
 #### NodeJS Backend
 
@@ -84,6 +113,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 ### Library changes
 
 #### Prelude
+
+* Added pipeline operators `(|>)` and `(<|)`.
 
 #### Base
 
@@ -117,6 +148,23 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Added utility functions `insertWith`, `insertFromWith` and `fromListWith` for
   `SortedMap`.
 
+* Implemented `leftMost` and `rightMost` for `SortedSet`.
+
+* Added `funExt0` and `funExt1`, functions analogous to `funExt` but for functions
+  with quantities 0 and 1 respectively.
+
+* `SortedSet`, `SortedMap` and `SortedDMap` modules were extended with flipped variants
+  of functions like `lookup`, `contains`, `update` and `insert`.
+
+* Moved definition of `Data.Vect.nubBy` to the global scope as `nubByImpl` to
+  allow compile time proofs on `nubBy` and `nub`.
+
+* Removed need for the runtime value of the implicit length argument in
+  `Data.Vect.Elem.dropElem`.
+
+* Some pieces of `Data.Fin.Extra` from `contrib` were moved to `base` to modules
+  `Data.Fin.Properties`, `Data.Fin.Arith` and `Data.Fin.Split`.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
@@ -128,6 +176,12 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   and removed `Data.HVect` from contrib. See the additional notes in the
   CHANGELOG under the `Library changes`/`Base` section above.
 
+* Some pieces of `Data.Fin.Extra` from `contrib` were moved to `base` to modules
+  `Data.Fin.Properties`, `Data.Fin.Arith` and `Data.Fin.Split`.
+
+* Function `invFin` from `Data.Fin.Extra` was deprecated in favour of
+  `Data.Fin.complement` from `base`.
+
 #### Network
 
-* Add a missing function parameter (the flag) in the C implementation of idrnet_recv_bytes
+* Add a missing function parameter (the flag) in the C implementation of `idrnet_recv_bytes`

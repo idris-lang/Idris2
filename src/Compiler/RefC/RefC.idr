@@ -241,8 +241,7 @@ getNextCounter = do
     pure $ show c
 
 getNewVarThatWillNotBeFreedAtEndOfBlock : {auto a : Ref ArgCounter Nat} -> Core String
-getNewVarThatWillNotBeFreedAtEndOfBlock = do
-    pure $ "tmp_" ++ !(getNextCounter)
+getNewVarThatWillNotBeFreedAtEndOfBlock = pure $ "tmp_" ++ !(getNextCounter)
 
 
 maxLineLengthForComment : Nat
@@ -316,51 +315,51 @@ avarToC env var =
         -- case when the variable is borrowed
     else "idris2_newReference(" ++ varName var ++ ")"
 
+avarsToC : Owned -> List AVar -> List String
+avarsToC _ [] = []
+avarsToC owned (v::vars) =
+  let v' = varName v in
+      if contains v owned
+          then v'::avarsToC (delete v owned) vars
+          else "idris2_newReference(\{v'})"::avarsToC owned vars -- when v is borrowed
+
 moveFromOwnedToBorrowed : Env -> SortedSet AVar -> Env
 moveFromOwnedToBorrowed env vars = { owned $= (`difference` vars) } env
 
-makeArglist : {auto a : Ref ArgCounter Nat}
-           -> {auto oft : Ref OutfileText Output}
-           -> {auto il : Ref IndentLevel Nat}
-           -> {auto e : Ref EnvTracker Env}
-           -> Nat
-           -> List AVar
-           -> Core String
-makeArglist missing xs = do
-    let arglist = "arglist_" ++  !(getNextCounter)
-    emit EmptyFC $  "Value_Arglist *"
-                 ++ arglist
-                 ++ " = idris2_newArglist(" ++ show missing
-                 ++ "," ++ show (length xs + missing)
-                 ++ ");"
-    pushArgToArglist !(get EnvTracker) arglist xs 0
-    pure arglist
-where
-    pushArgToArglist : Env -> String -> List AVar -> Nat -> Core ()
-    pushArgToArglist _ arglist [] k = pure ()
-    pushArgToArglist env arglist (arg :: args) k = do
-        let ownedArg = if contains arg env.owned then singleton arg else empty
-        emit EmptyFC $ arglist
-                    ++ "->args[" ++ show k ++ "] = "
-                    ++ avarToC env arg ++ ";"
-        pushArgToArglist (moveFromOwnedToBorrowed env ownedArg) arglist args (S k)
-
-fillConstructorArgs : {auto oft : Ref OutfileText Output}
-                   -> {auto il : Ref IndentLevel Nat}
-                   -> Env
-                   -> String
-                   -> List AVar
-                   -> Nat
-                   -> Core ()
-fillConstructorArgs _ _ [] _ = pure ()
-fillConstructorArgs env cons (v :: vars) k = do
+fillArgs : {auto oft : Ref OutfileText Output}
+         -> {auto il : Ref IndentLevel Nat}
+         -> Env
+         -> String
+         -> List AVar
+         -> Nat
+         -> Core ()
+fillArgs _ _ [] _ = pure ()
+fillArgs env arglist (v :: vars) k = do
     let ownedVars = if contains v env.owned then singleton v else empty
-    emit EmptyFC $ cons ++ "->args["++ show k ++ "] = " ++ avarToC env v ++ ";"
-    fillConstructorArgs (moveFromOwnedToBorrowed env ownedVars) cons vars (S k)
+    emit EmptyFC $ "\{arglist}[\{show k}] = \{avarToC env v};"
+    fillArgs (moveFromOwnedToBorrowed env ownedVars) arglist vars (S k)
 
-cArgsVectANF : {0 arity : Nat} -> Vect arity AVar -> Core (Vect arity String)
-cArgsVectANF [] = pure []
-cArgsVectANF (x :: xs) = pure $  (varName x) :: !(cArgsVectANF xs)
+makeClosure : {auto a : Ref ArgCounter Nat}
+            -> {auto oft : Ref OutfileText Output}
+            -> {auto il : Ref IndentLevel Nat}
+            -> {auto e : Ref EnvTracker Env}
+            -> FC
+            -> Name
+            -> List AVar
+            -> Nat
+            -> Core String
+makeClosure fc n args missing = do
+    let closure = "closure_\{!(getNextCounter)}"
+    let nargs = length args
+    emit fc "Value *\{closure} = (Value *)idris2_mkClosure((Value *(*)())\{cName n}, \{show $ nargs + missing}, \{show nargs});"
+    fillArgs !(get EnvTracker) "((Value_Closure*)\{closure})->args" args 0
+    pure closure
+
+-- When changing this number, also change idris2_dispatch_closure in runtime.c.
+-- Increasing this number will worsen stack consumption and increase the codesize of idris2_dispatch_closure.
+-- In C89, the maximum number of arguments is 31, so it should not be larger than 31. 127 is safe in C99, but I do not recommend it.
+MaxExtractFunArgs : Nat
+MaxExtractFunArgs = 16
 
 integer_switch : List AConstAlt -> Bool
 integer_switch [] = True
@@ -394,7 +393,6 @@ const2Integer c i =
         (B32 x) => "UINT32_C(\{show x})"
         (B64 x) => "UINT64_C(\{show x})"
         _ => show i
-
 
 data TailPositionStatus = InTailPosition | NotInTailPosition
 
@@ -487,34 +485,21 @@ mutual
 
     cStatementsFromANF (AV fc x) _ = pure $ avarToC !(get EnvTracker) x
     cStatementsFromANF (AAppName fc _ n args) tailPosition = do
-        emit fc $ ("// start " ++ cName n ++ "(" ++ showSep ", " (map (\v => varName v) args) ++ ")")
-        arglist <- makeArglist 0 args
-        c <- getNextCounter
-        let f_ptr_name = "fPtr_" ++ c
-        emit fc $ "Value *(*"++ f_ptr_name ++ ")(Value_Arglist*) = " ++ cName n ++ "_arglist;"
-        let closure_name = "closure_" ++ c
-        emit fc $ "Value *"
-               ++ closure_name
-               ++ " = (Value*)idris2_makeClosureFromArglist("
-               ++ f_ptr_name
-               ++ ", "
-               ++ arglist
-               ++ ");"
-        emit fc $ ("// end   " ++ cName n ++ "(" ++ showSep ", " (map (\v => varName v) args) ++ ")")
-        pure $ case tailPosition of
-           NotInTailPosition => "idris2_trampoline(\{closure_name})"
-           InTailPosition => closure_name
-    cStatementsFromANF (AUnderApp fc n missing args) _ = do
-        arglist <- makeArglist missing args
-        let f_ptr_name = "closure_" ++ !(getNextCounter)
-        let f_ptr = "Value *(*"++ f_ptr_name ++ ")(Value_Arglist*) = "++  cName n ++ "_arglist;"
-        emit fc f_ptr
-        pure "(Value*)idris2_makeClosureFromArglist(\{f_ptr_name}, \{arglist})"
+        let nargs = length args
+        case tailPosition of
+            InTailPosition => makeClosure fc n args 0
+            _ => if nargs > MaxExtractFunArgs
+                then pure "idris2_trampoline(\{!(makeClosure fc n args 0)})"
+                else do
+                    env <- get EnvTracker
+                    let args' = avarsToC env.owned args
+                    pure "idris2_trampoline(\{cName n}(\{concat $ intersperse ", " args'}))"
 
+    cStatementsFromANF (AUnderApp fc n missing args) _ = makeClosure fc n args missing
     cStatementsFromANF (AApp fc _ closure arg) tailPosition = do
        env <- get EnvTracker
        pure $ (case tailPosition of
-           NotInTailPosition => "idris2_apply_closure"
+           NotInTailPosition =>          "idris2_apply_closure"
            InTailPosition    => "idris2_tailcall_apply_closure") ++ "(\{avarToC env closure}, \{avarToC env arg})"
 
     cStatementsFromANF (ALet fc var value body) tailPosition = do
@@ -554,8 +539,8 @@ mutual
                         emit fc $ "Value_Constructor* " ++ constr ++ createNewConstructor
                         when (Nothing == tag) $ emit fc "\{constr}->name = idris2_constr_\{cName n};"
                         pure constr
-                fillConstructorArgs env constr args 0
-                pure $ "(Value*)\{constr}"
+                fillArgs env "\{constr}->args" args 0
+                pure "(Value*)\{constr}"
 
     cStatementsFromANF (AOp fc _ op args) _ = do
         let resultVar = "primVar_" ++ !(getNextCounter)
@@ -657,18 +642,6 @@ mutual
 addCommaToList : List String -> List String
 addCommaToList [] = []
 addCommaToList (x :: xs) = ("  " ++ x) :: map (", " ++) xs
-
-functionDefSignature : {auto c : Ref Ctxt Defs} -> Name -> (args:List Int) -> Core String
-functionDefSignature n [] = do
-    let fn = (cName !(getFullName n))
-    pure $  "\n\nValue *"  ++ fn ++ "(void)"
-functionDefSignature n args = do
-    let argsStringList = addCommaToList (map (\i =>  "  Value * var_" ++ (show i)) args)
-    let fn = (cName !(getFullName n))
-    pure $  "\n\nValue *"  ++ fn ++ "\n(\n" ++ (showSep "\n" (argsStringList)) ++ "\n)"
-
-functionDefSignatureArglist : {auto c : Ref Ctxt Defs} -> Name  -> Core String
-functionDefSignatureArglist n = pure $  "Value *"  ++ (cName !(getFullName n)) ++ "_arglist(Value_Arglist* arglist)"
 
 
 getArgsNrList : List ty -> Nat -> List Nat
@@ -796,9 +769,13 @@ createCFunctions : {auto c : Ref Ctxt Defs}
                 -> ANFDef
                 -> Core ()
 createCFunctions n (MkAFun args anf) = do
-    fn <- functionDefSignature n args
-    fn' <- functionDefSignatureArglist n
-    update FunctionDefinitions $ \otherDefs => (fn ++ ";\n") :: (fn' ++ ";\n") :: otherDefs
+    let nargs = length args
+    let fn = "Value *\{cName !(getFullName n)}"
+            ++ (if nargs == 0 then "(void)"
+               else if nargs > MaxExtractFunArgs then "(Value *var_arglist[\{show nargs}])"
+               else ("\n(\n" ++ (showSep "\n" $ addCommaToList (map (\i =>  "  Value * var_" ++ (show i)) args))) ++ "\n)")
+    update FunctionDefinitions $ \otherDefs => (fn ++ ";\n") :: otherDefs
+
     let argsVars = fromList $ ALocal <$> args
     let bodyFreeVars = freeVariables anf
     let shouldDrop = difference argsVars bodyFreeVars
@@ -806,24 +783,14 @@ createCFunctions n (MkAFun args anf) = do
     emit EmptyFC fn
     emit EmptyFC "{"
     increaseIndentation
+    when (nargs > MaxExtractFunArgs) $ do
+      _ <- foldlC (\i, j => do
+         emit EmptyFC "Value *var_\{show j} = var_arglist[\{show i}];"
+         pure $ i + 1) 0 args
+      pure ()
     removeVars (varName <$> SortedSet.toList shouldDrop)
     _ <- newRef EnvTracker (MkEnv bodyFreeVars empty)
     emit EmptyFC $ "return \{!(cStatementsFromANF anf InTailPosition)};"
-    decreaseIndentation
-    emit EmptyFC  "}\n"
-    emit EmptyFC  ""
-    emit EmptyFC fn'
-    emit EmptyFC "{"
-    increaseIndentation
-    emit EmptyFC $ "return " ++ (cName !(getFullName n))
-    increaseIndentation
-    emit EmptyFC $ "("
-    increaseIndentation
-    let commaSepArglist = addCommaToList (map (\a => "arglist->args["++ show a ++"]") argsNrs)
-    traverse_ (emit EmptyFC) commaSepArglist
-    decreaseIndentation
-    emit EmptyFC ");"
-    decreaseIndentation
     decreaseIndentation
     emit EmptyFC  "}\n"
     emit EmptyFC  ""
@@ -856,25 +823,8 @@ createCFunctions n (MkAForeign ccs fargs ret) = do
                       _ => pure ()
              else emit EmptyFC $ additionalFFIStub fctName fargs ret
           let fnDef = "Value *" ++ (cName n) ++ "(" ++ showSep ", " (replicate (length fargs) "Value *") ++ ");"
-          fn_arglist <- functionDefSignatureArglist n
-          update FunctionDefinitions $ \otherDefs => (fnDef ++ "\n") :: (fn_arglist ++ ";\n") :: otherDefs
+          update FunctionDefinitions $ \otherDefs => (fnDef ++ "\n") :: otherDefs
           typeVarNameArgList <- createFFIArgList fargs
-
-          emit EmptyFC fn_arglist
-          emit EmptyFC "{"
-          increaseIndentation
-          emit EmptyFC $ "return " ++ (cName n)
-          increaseIndentation
-          emit EmptyFC $ "("
-          increaseIndentation
-          let commaSepArglist = addCommaToList (map (\a => "arglist->args["++ show a ++"]") (getArgsNrList fargs Z))
-          traverse_ (emit EmptyFC) commaSepArglist
-          decreaseIndentation
-          emit EmptyFC ");"
-          decreaseIndentation
-          decreaseIndentation
-          emit EmptyFC  "}\n"
-          emit EmptyFC  ""
 
           emitFDef n typeVarNameArgList
           emit EmptyFC "{"

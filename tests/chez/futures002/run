@@ -1,0 +1,5 @@
+. ../../testutils.sh
+
+idris2 --cg chez Futures.idr -p contrib --exec main
+
+rm -r build

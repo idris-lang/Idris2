@@ -22,6 +22,7 @@ matchFail loc = throw (GenericMsg loc "With clause does not match parent")
 getHeadLoc : RawImp -> Core FC
 getHeadLoc (IVar fc _) = pure fc
 getHeadLoc (IApp _ f _) = getHeadLoc f
+getHeadLoc (IWithApp _ f _) = getHeadLoc f
 getHeadLoc (IAutoApp _ f _) = getHeadLoc f
 getHeadLoc (INamedApp _ f _ _) = getHeadLoc f
 getHeadLoc t = throw (InternalError $ "Could not find head of LHS: " ++ show t)
@@ -208,6 +209,9 @@ getNewLHS iploc drop nest wname wargnames lhs_raw patlhs
                    Core (RawImp, List RawImp)
     dropWithArgs Z tm = pure (tm, [])
     dropWithArgs (S k) (IApp _ f arg)
+        = do (tm, rest) <- dropWithArgs k f
+             pure (tm, arg :: rest)
+    dropWithArgs (S k) (IWithApp _ f arg)
         = do (tm, rest) <- dropWithArgs k f
              pure (tm, arg :: rest)
     -- Shouldn't happen if parsed correctly, but there's no guarantee that

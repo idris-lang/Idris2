@@ -1,4 +1,5 @@
 #include "runtime.h"
+#include "_datatypes.h"
 #include "refc_util.h"
 
 void idris2_missing_ffi() {
@@ -7,40 +8,100 @@ void idris2_missing_ffi() {
   exit(1);
 }
 
-void idris2_push_Arglist(Value_Arglist *arglist, Value *arg) {
-  IDRIS2_REFC_VERIFY(arglist->filled < arglist->total,
-                     "unable to add more arguments to arglist");
+static inline Value *idris2_dispatch_closure(Value_Closure *clo) {
+  Value **const xs = clo->args;
+  Value *(*const f)() = clo->f;
 
-  arglist->args[arglist->filled] = idris2_newReference(arg);
-  arglist->filled++;
-}
+  switch (clo->arity) {
+  default:
+    return (*f)(xs);
 
-int idris2_isUnique(Value *value) {
-  if (value) {
-    return value->header.refCounter == 1;
+  case 0:
+    return (*f)();
+  case 1:
+    return (*f)(xs[0]);
+  case 2:
+    return (*f)(xs[0], xs[1]);
+  case 3:
+    return (*f)(xs[0], xs[1], xs[2]);
+  case 4:
+    return (*f)(xs[0], xs[1], xs[2], xs[3]);
+  case 5:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4]);
+  case 6:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5]);
+  case 7:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6]);
+  case 8:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7]);
+  case 9:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8]);
+  case 10:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9]);
+  case 11:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9], xs[10]);
+  case 12:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9], xs[10], xs[11]);
+  case 13:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9], xs[10], xs[11], xs[12]);
+  case 14:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9], xs[10], xs[11], xs[12], xs[13]);
+  case 15:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9], xs[10], xs[11], xs[12], xs[13], xs[14]);
+  case 16:
+    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
+                xs[9], xs[10], xs[11], xs[12], xs[13], xs[14], xs[15]);
   }
-  return 0;
 }
 
-// necessary because not every variable passed as arguments is duplicated
-void idris2_deconstructArglist(Value_Arglist *arglist) {
-  IDRIS2_REFC_VERIFY(arglist->header.refCounter > 0, "refCounter %lld",
-                     (long long)arglist->header.refCounter);
-  arglist->header.refCounter--;
-  if (arglist->header.refCounter == 0) {
-    free(arglist->args);
-    free(arglist);
+Value *idris2_trampoline(Value *it) {
+  while (it && !idris2_vp_is_unboxed(it) && it->header.tag == CLOSURE_TAG) {
+    Value_Closure *clos = (Value_Closure *)it;
+    if (clos->filled < clos->arity)
+      break;
+
+    it = idris2_dispatch_closure(clos);
+    if (idris2_isUnique(clos))
+      free(clos);
+    else
+      --clos->header.refCounter;
   }
+  return it;
 }
 
-void idris2_deconstructClosure(Value_Closure *clos) {
-  IDRIS2_REFC_VERIFY(clos->header.refCounter > 0, "refCounter %lld",
-                     (long long)clos->header.refCounter);
-  clos->header.refCounter--;
-  if (clos->header.refCounter == 0) {
-    idris2_deconstructArglist(clos->arglist);
+Value *idris2_tailcall_apply_closure(Value *_clos, Value *arg) {
+  // create a new closure and copy args.
+  Value_Closure *clos = (Value_Closure *)_clos;
+  Value_Closure *newclos = idris2_mkClosure(
+      clos->f, clos->arity, clos->filled + 1 /* expanding a payload */);
+
+  if (clos->header.refCounter <= 1) {
+    memcpy(newclos->args, clos->args, sizeof(Value *) * clos->filled);
+  } else {
+    // if the closure has multiple references, then apply newReference to
+    // arguments to avoid premature clearing of arguments
+    for (int i = 0; i < clos->filled; ++i)
+      newclos->args[i] = idris2_newReference(clos->args[i]);
+  }
+  newclos->args[clos->filled] = arg; // add argument to new arglist
+
+  if (idris2_isUnique(clos)) {
     free(clos);
+  } else {
+    --clos->header.refCounter;
   }
+
+  return (Value *)newclos;
+}
+
+Value *idris2_apply_closure(Value *_clos, Value *arg) {
+  return idris2_trampoline(idris2_tailcall_apply_closure(_clos, arg));
 }
 
 void idris2_removeReuseConstructor(Value_Constructor *constr) {
@@ -53,64 +114,6 @@ void idris2_removeReuseConstructor(Value_Constructor *constr) {
   if (constr->header.refCounter == 0) {
     free(constr);
   }
-}
-
-Value_Arglist *idris2_makeArglistToApplyClosure(Value *_clos, Value *arg) {
-  // create a new arg list
-  Value_Arglist *oldArgs = ((Value_Closure *)_clos)->arglist;
-  Value_Arglist *newArgs = idris2_newArglist(0, oldArgs->total);
-  newArgs->filled = oldArgs->filled + 1;
-  // add argument to new arglist
-  for (int i = 0; i < oldArgs->filled; i++) {
-    /*
-    if the closure has multiple references, then apply newReference to arguments
-    to avoid premature clearing of arguments
-    */
-    if (_clos->header.refCounter <= 1)
-      newArgs->args[i] = oldArgs->args[i];
-    else
-      newArgs->args[i] = idris2_newReference(oldArgs->args[i]);
-  }
-  newArgs->args[oldArgs->filled] = arg;
-  return newArgs;
-}
-
-Value *idris2_apply_closure(Value *_clos, Value *arg) {
-  Value_Arglist *newArgs = idris2_makeArglistToApplyClosure(_clos, arg);
-
-  Value_Closure *clos = (Value_Closure *)_clos;
-  fun_ptr_t f = clos->f;
-
-  idris2_deconstructClosure(clos);
-
-  // check if enough arguments exist
-  if (newArgs->filled >= newArgs->total) {
-    while (1) {
-      Value *retVal = f(newArgs);
-      idris2_deconstructArglist(newArgs);
-      if (!retVal || idris2_vp_is_unboxed(retVal) ||
-          retVal->header.tag != COMPLETE_CLOSURE_TAG) {
-        return retVal;
-      }
-      f = ((Value_Closure *)retVal)->f;
-      newArgs = ((Value_Closure *)retVal)->arglist;
-      newArgs = (Value_Arglist *)idris2_newReference((Value *)newArgs);
-      idris2_removeReference(retVal);
-    }
-  }
-
-  return (Value *)idris2_makeClosureFromArglist(f, newArgs);
-}
-
-Value *idris2_tailcall_apply_closure(Value *_clos, Value *arg) {
-  Value_Arglist *newArgs = idris2_makeArglistToApplyClosure(_clos, arg);
-
-  Value_Closure *clos = (Value_Closure *)_clos;
-  fun_ptr_t f = ((Value_Closure *)clos)->f;
-
-  idris2_deconstructClosure(clos);
-
-  return (Value *)idris2_makeClosureFromArglist(f, newArgs);
 }
 
 int idris2_extractInt(Value *v) {
@@ -133,28 +136,4 @@ int idris2_extractInt(Value *v) {
   default:
     return -1;
   }
-}
-
-Value *idris2_trampoline(Value *closure) {
-  if (!closure || idris2_vp_is_unboxed(closure))
-    return closure;
-
-  fun_ptr_t f = ((Value_Closure *)closure)->f;
-  Value_Arglist *_arglist = ((Value_Closure *)closure)->arglist;
-  Value_Arglist *arglist =
-      (Value_Arglist *)idris2_newReference((Value *)_arglist);
-  idris2_removeReference(closure);
-  while (1) {
-    Value *retVal = f(arglist);
-    idris2_deconstructArglist(arglist);
-    if (!retVal || idris2_vp_is_unboxed(retVal) ||
-        retVal->header.tag != COMPLETE_CLOSURE_TAG) {
-      return retVal;
-    }
-    f = ((Value_Closure *)retVal)->f;
-    arglist = ((Value_Closure *)retVal)->arglist;
-    arglist = (Value_Arglist *)idris2_newReference((Value *)arglist);
-    idris2_removeReference(retVal);
-  }
-  return NULL;
 }

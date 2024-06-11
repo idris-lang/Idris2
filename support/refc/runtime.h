@@ -4,12 +4,11 @@
 
 void idris2_missing_ffi();
 
-int idris2_isUnique(Value *value);
+#define idris2_isUnique(x) ((x)->header.refCounter == 1)
 void idris2_removeReuseConstructor(Value_Constructor *constr);
 
 Value *idris2_apply_closure(Value *, Value *arg);
-void idris2_push_Arglist(Value_Arglist *arglist, Value *arg);
+Value *idris2_tailcall_apply_closure(Value *_clos, Value *arg);
+Value *idris2_trampoline(Value *closure);
 
 int idris2_extractInt(Value *);
-Value *idris2_trampoline(Value *closure);
-Value *idris2_tailcall_apply_closure(Value *_clos, Value *arg);
