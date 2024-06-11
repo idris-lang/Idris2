@@ -232,12 +232,13 @@ opts "--" "--build-dir"  = pure []
 opts "--" "--output-dir" = pure []
 
 -- with package files
-opts x "--build"     = prefixOnlyIfNonEmpty x <$> findIpkg
-opts x "--install"   = prefixOnlyIfNonEmpty x <$> findIpkg
-opts x "--mkdoc"     = prefixOnlyIfNonEmpty x <$> findIpkg
-opts x "--typecheck" = prefixOnlyIfNonEmpty x <$> findIpkg
-opts x "--clean"     = prefixOnlyIfNonEmpty x <$> findIpkg
-opts x "--repl"      = prefixOnlyIfNonEmpty x <$> findIpkg
+opts x "--build"          = prefixOnlyIfNonEmpty x <$> findIpkg
+opts x "--dump-ipkg-json" = prefixOnlyIfNonEmpty x <$> findIpkg
+opts x "--install"        = prefixOnlyIfNonEmpty x <$> findIpkg
+opts x "--mkdoc"          = prefixOnlyIfNonEmpty x <$> findIpkg
+opts x "--typecheck"      = prefixOnlyIfNonEmpty x <$> findIpkg
+opts x "--clean"          = prefixOnlyIfNonEmpty x <$> findIpkg
+opts x "--repl"           = prefixOnlyIfNonEmpty x <$> findIpkg
 
 -- options
 opts x _ = pure $ if (x `elem` optionFlags)

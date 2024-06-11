@@ -24,6 +24,7 @@ data PkgCommand
       | Clean
       | REPL
       | Init
+      | DumpJson
 
 export
 Show PkgCommand where
@@ -35,6 +36,7 @@ Show PkgCommand where
   show Clean = "--clean"
   show REPL = "--repl"
   show Init = "--init"
+  show DumpJson = "--dump-ipkg-json"
 
 public export
 data DirCommand
@@ -279,6 +281,9 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            MkOpt ["--init"] [Optional "package file"]
               (\ f => [Package Init f])
               (Just "Interactively initialise a new project"),
+           MkOpt ["--dump-ipkg-json"] [Optional "package file"]
+              (\ f => [Package DumpJson f])
+              (Just "Dump an Idris2 package file in the JSON format"),
            MkOpt ["--build"] [Optional "package file"]
                (\f => [Package Build f])
               (Just "Build modules/executable for the given package"),

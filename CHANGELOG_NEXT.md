@@ -24,6 +24,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * The Nix flake now exposes the Idris2 API package as `idris2Api` and Idris2's
   C support library as `support`.
 
+* A new `idris2 --dump-ipkg-json` option (requires either `--find-ipkg` or
+  specifying the `.ipkg` file) dumps JSON information about an Idris package.
+
 ### Language changes
 
 * Autobind and Typebind modifier on operators allow the user to

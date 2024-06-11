@@ -128,6 +128,7 @@ modules =
 
     Idris.Package,
     Idris.Package.Init,
+    Idris.Package.ToJson,
     Idris.Package.Types,
 
     Idris.Parser,
