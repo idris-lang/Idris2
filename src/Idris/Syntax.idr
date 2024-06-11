@@ -381,6 +381,8 @@ mutual
        AutoImplicitDepth : Nat -> Directive
        NFMetavarThreshold : Nat -> Directive
        SearchTimeout : Integer -> Directive
+       -- There is no nm on Directive
+       ForeignImpl : Name -> List PTerm -> Directive
 
   public export
   PField : Type

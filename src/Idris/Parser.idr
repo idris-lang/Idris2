@@ -1437,6 +1437,11 @@ directive fname indents
          n <- name
          atEnd indents
          pure (Unhide n)
+  <|> do decoratedPragma fname "foreign_impl"
+         n <- name
+         cs <- block (expr pdef fname)
+         atEnd indents
+         pure (ForeignImpl n cs)
 --   <|> do pragma "hide_export"
 --          n <- name
 --          atEnd indents

@@ -281,6 +281,20 @@ Specialise a function according to a list of arguments.
 Declare a foreign function.  It is followed by an indented block of expressions
 that evaluate to strings. See :ref:`ffi-overview` for more details.
 
+
+``%foreign_impl``
+--------------------
+
+Adds an implementation to an existing ``%foreign`` in another file. This pragma can
+be used to fill in an implementation for another backend without changing the original
+file. In the case of multiple declarations for a given backend, the backend will choose
+the one from the most recently loaded module.
+
+.. code-block:: idris
+
+   %foreign_impl Prelude.IO.prim__fork "javascript:lambda:(proc) => { throw new Error() }"
+
+
 ``%export``
 --------------------
 

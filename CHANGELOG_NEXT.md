@@ -39,6 +39,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Elaborator scripts were made to be able to access the visibility modifier of a
   definition, via `getVis`.
 
+* The language now has a ``%foreign_impl`` pragma to add additional languages
+  to a ``%foreign`` function.
+
 ### Compiler changes
 
 * The compiler now differentiates between "package search path" and "package

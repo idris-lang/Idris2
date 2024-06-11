@@ -2308,6 +2308,13 @@ getAutoImplicitLimit
          pure (autoImplicitLimit (elabDirectives (options defs)))
 
 export
+addForeignImpl : {auto c : Ref Ctxt Defs} ->
+          FC -> (fullName : Name) -> (def : String) -> Core ()
+addForeignImpl fc name def
+   = do name <- toFullNames name
+        update Ctxt { options $= addForeignImpl name def }
+
+export
 setPair : {auto c : Ref Ctxt Defs} ->
           FC -> (pairType : Name) -> (fstn : Name) -> (sndn : Name) ->
           Core ()
