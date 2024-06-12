@@ -19,6 +19,8 @@ necessary changes.
 Chapter 1
 ---------
 
+Instead of entering ``2.1 * 20``, enter ``the Double (2.1 * 20)``.
+
 Instead of entering ``:exec`` to run ``Hello.idr`` in the REPL, enter ``:exec main``.
 
 Chapter 2
