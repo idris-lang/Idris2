@@ -1,0 +1,8 @@
+1/1: Building ImplicitParam (ImplicitParam.idr)
+Main>    {n : Nat}
+ 0 m : Nat
+   xs : Vect m Nat
+------------------------------
+hole : Nat
+Main> Bye for now!
+1/1: Building Issue2444 (Issue2444.idr)

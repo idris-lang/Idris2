@@ -728,7 +728,7 @@ implicitsAs n defs ns tm
         -- corresponding to the variables bound in the parent function.
         -- So we first peel off all of the explicit quantifiers corresponding
         -- to these variables.
-        findImps ns es (_ :: locals) (NBind fc x (Pi _ _ Explicit _) sc)
+        findImps ns es (_ :: locals) (NBind fc x (Pi _ _ _ _) sc)
           = do body <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
                findImps ns es locals body
                -- ^ TODO? check that name of the pi matches name of local?
