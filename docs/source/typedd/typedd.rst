@@ -35,6 +35,7 @@ In ``Average.idr``, add:
 
     import Data.String -- for `words`
     import Data.List -- for `length` on lists
+    import System.REPL -- for `repl`
 
 In ``AveMain.idr`` and ``Reverse.idr`` add:
 
