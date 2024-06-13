@@ -197,7 +197,7 @@ newLHS : {auto c : Ref Ctxt Defs} ->
 newLHS fc envlen allvars var con tm
     = do let (f, args) = getFnArgs tm []
          let keep = map (const (Explicit fc (Implicit fc True)))
-                        (take envlen args)
+                        (mapMaybe isExplicit $ take envlen args)
          let ups = drop envlen args
          ups' <- traverse (update allvars var con) ups
          pure $ apply f (keep ++ ups')

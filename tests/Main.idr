@@ -132,7 +132,7 @@ idrisTests = MkTestPool "Misc" [] Nothing
        -- Namespace blocks
        "namespace001", "namespace002", "namespace003", "namespace004", "namespace005",
        -- Parameters blocks
-       "params001", "params002", "params003",
+       "params001", "params002", "params003", "params004",
        -- Larger programs arising from real usage. Typically things with
        -- interesting interactions between features
        "real001", "real002",

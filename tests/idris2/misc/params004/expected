@@ -1,0 +1,4 @@
+1/1: Building Issue2331 (Issue2331.idr)
+Main>   f 0 = ?a_0
+  f (S k) = ?a_1
+Main> Bye for now!
