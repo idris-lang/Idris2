@@ -37,6 +37,8 @@ In ``Average.idr``, add:
     import Data.List -- for `length` on lists
     import System.REPL -- for `repl`
 
+Instead of entering ``6.0 + 3 * 12``, enter ``the Double (6.0 + 3 * 12)``.
+
 In ``AveMain.idr`` and ``Reverse.idr`` add:
 
 .. code-block:: idris
