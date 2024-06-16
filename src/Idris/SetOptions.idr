@@ -39,6 +39,13 @@ record PkgDir where
   ||| Package version. Example `Just $ MkPkgVersion (0 ::: [3,0])`
   version : Maybe PkgVersion
 
+record QualifiedPkgDir where
+  constructor MkQualifiedPkgDir
+  ||| Path where package directory is located on disk.
+  path : String
+  ||| PkgDir for packages
+  pkgDir : PkgDir
+
 -- dissects a directory name, trying to extract
 -- the corresponding package name and -version
 pkgDir : String -> PkgDir
@@ -132,8 +139,8 @@ addPkgDir p bounds = do
         | Nothing => pure ()
     addPackageDir p
 
-visiblePackages : String -> IO (List PkgDir)
-visiblePackages dir = filter viable <$> getPackageDirs dir
+visiblePackages : String -> IO (List QualifiedPkgDir)
+visiblePackages dir = map (MkQualifiedPkgDir dir) <$> filter viable <$> getPackageDirs dir
   where notHidden : PkgDir -> Bool
         notHidden = not . isPrefixOf "." . pkgName
 
@@ -143,7 +150,7 @@ visiblePackages dir = filter viable <$> getPackageDirs dir
         viable : PkgDir -> Bool
         viable p = notHidden p && notDenylisted p
 
-findPackages : {auto c : Ref Ctxt Defs} -> Core (List PkgDir)
+findPackages : {auto c : Ref Ctxt Defs} -> Core (List QualifiedPkgDir)
 findPackages
     = do d <- getDirs
          pkgPathPkgs <- coreLift $ traverse (\d => visiblePackages d) d.package_search_paths
@@ -155,12 +162,12 @@ listPackages : {auto c : Ref Ctxt Defs} ->
                {auto o : Ref ROpts REPLOpts} ->
                Core ()
 listPackages
-    = do pkgs <- sortBy (compare `on` pkgName) <$> findPackages
+    = do pkgs <- sortBy (compare `on` (pkgName . pkgDir)) <$> findPackages
          traverse_ (iputStrLn . pkgDesc) pkgs
   where
-    pkgDesc : PkgDir -> Doc IdrisAnn
-    pkgDesc (MkPkgDir _ pkgName version) =
-      pretty0 pkgName <++> parens (pretty0 $ maybe "unversioned" show version)
+    pkgDesc : QualifiedPkgDir -> Doc IdrisAnn
+    pkgDesc (MkQualifiedPkgDir path (MkPkgDir _ pkgName version)) =
+      pretty0 path <++> pretty0 pkgName <++> parens (pretty0 $ maybe "unversioned" show version)
 
 dirOption : {auto c : Ref Ctxt Defs} ->
             {auto o : Ref ROpts REPLOpts} ->
@@ -219,8 +226,8 @@ opts x "--cg"      = prefixOnlyIfNonEmpty x <$> codegens
 opts x "--codegen" = prefixOnlyIfNonEmpty x <$> codegens
 
 -- packages
-opts x "-p"        = prefixOnlyIfNonEmpty x . (map pkgName) <$> findPackages
-opts x "--package" = prefixOnlyIfNonEmpty x . (map pkgName) <$> findPackages
+opts x "-p"        = prefixOnlyIfNonEmpty x . (map $ pkgName . pkgDir) <$> findPackages
+opts x "--package" = prefixOnlyIfNonEmpty x . (map $ pkgName . pkgDir) <$> findPackages
 
 -- logging
 opts x "--log"     = pure $ prefixOnlyIfNonEmpty x logLevels
