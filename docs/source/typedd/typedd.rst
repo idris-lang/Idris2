@@ -60,6 +60,12 @@ match on:
     createEmpties : {n : _} -> Vect n (Vect 0 elem)
     transposeMat : {n : _} -> Vect m (Vect n elem) -> Vect n (Vect m elem)
 
+For the same reason, we also need to change the type of ``length`` to:
+
+.. code-block:: idris
+
+    length : {n : _} -> Vect n elem -> Nat
+
 Chapter 4
 ---------
 
