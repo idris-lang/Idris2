@@ -1219,7 +1219,7 @@ mutual
   desugarDecl ps fx@(PFixity fc vis binding fix prec opName)
       = do unless (checkValidFixity binding fix prec)
              (throw $ GenericMsgSol fc
-                 "Invalid fixity, \{binding} operator must be infixr 0."
+                 "Invalid fixity, \{binding} operator must be infixr 0." "Possible solutions"
                  [ "Make it `infixr 0`: `\{binding} infixr 0 \{show opName}`"
                  , "Remove the binding keyword: `\{fix} \{show prec} \{show opName}`"
                  ])
@@ -1306,7 +1306,7 @@ mutual
   desugarDecl ps (PDirective fc d)
       = case d of
              Hide (HideName n) => pure [IPragma fc [] (\nest, env => hide fc n)]
-             Hide (HideFixity fx n) => pure [IPragma fc [] (\_, _ => removeFixity fx n)]
+             Hide (HideFixity fx n) => pure [IPragma fc [] (\_, _ => removeFixity fc fx n)]
              Unhide n => pure [IPragma fc [] (\nest, env => unhide fc n)]
              Logging i => pure [ILog ((\ i => (topics i, verbosity i)) <$> i)]
              LazyOn a => pure [IPragma fc [] (\nest, env => lazyActive a)]
