@@ -30,7 +30,7 @@ Error: While processing right hand side of f. When unifying:
     Either b b
 and:
     Either b b
-Mismatch between: b (implicitly bound at Issue35-2:2:1--2:14) and b.
+Mismatch between: b (implicitly bound at Issue35-2:2:1--2:2) and b.
 
 Issue35-2:2:13--2:14
  1 | f : { a, b : Type } -> Either a b -> Either b a
@@ -42,7 +42,7 @@ Error: While processing right hand side of f. When unifying:
     Either b {b:826}
 and:
     Either {b:826} b
-Mismatch between: {b:826} (implicitly bound at Issue35-2:2:1--2:14) and b.
+Mismatch between: {b:826} (implicitly bound at Issue35-2:2:1--2:2) and b.
 
 Issue35-2:2:13--2:14
  1 | f : { a, b : Type } -> Either a b -> Either b a
@@ -54,7 +54,7 @@ Error: While processing right hand side of f. When unifying:
     Prelude.Either b {b:826}
 and:
     Prelude.Either {b:826} b
-Mismatch between: {b:826} (implicitly bound at Issue35-2:2:1--2:14) and b.
+Mismatch between: {b:826} (implicitly bound at Issue35-2:2:1--2:2) and b.
 
 Issue35-2:2:13--2:14
  1 | f : { a, b : Type } -> Either a b -> Either b a

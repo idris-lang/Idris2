@@ -64,7 +64,8 @@ Eq ElabOpt where
 public export
 data ImplBinding : List Name -> Type where
      NameBinding : {vars : _} ->
-                   RigCount -> PiInfo (Term vars) -> (elabAs : Term vars) -> (expTy : Term vars) ->
+                   FC -> RigCount -> PiInfo (Term vars) ->
+                   (elabAs : Term vars) -> (expTy : Term vars) ->
                    ImplBinding vars
      AsBinding : {vars : _} ->
                  RigCount -> PiInfo (Term vars) -> (elabAs : Term vars) -> (expTy : Term vars) ->
@@ -74,12 +75,12 @@ data ImplBinding : List Name -> Type where
 export
 covering
 Show (ImplBinding vars) where
-  show (NameBinding c p tm ty) = show (tm, ty)
+  show (NameBinding _ c p tm ty) = show (tm, ty)
   show (AsBinding c p tm ty pat) = show (tm, ty) ++ "@" ++ show tm
 
 export
 bindingMetas : ImplBinding vars -> NameMap Bool
-bindingMetas (NameBinding c p tm ty) = getMetas ty
+bindingMetas (NameBinding _ c p tm ty) = getMetas ty
 bindingMetas (AsBinding c p tm ty pat)
     = insertAll (toList (getMetas ty)) (getMetas pat)
   where
@@ -90,24 +91,24 @@ bindingMetas (AsBinding c p tm ty pat)
 -- Get the type of an implicit name binding
 export
 bindingType : ImplBinding vars -> Term vars
-bindingType (NameBinding _ _ _ ty) = ty
+bindingType (NameBinding _ _ _ _ ty) = ty
 bindingType (AsBinding _ _ _ ty _) = ty
 
 -- Get the term (that is, the expanded thing it elaborates to, of the name
 -- applied to the context) from an implicit binding
 export
 bindingTerm : ImplBinding vars -> Term vars
-bindingTerm (NameBinding _ _ tm _) = tm
+bindingTerm (NameBinding _ _ _ tm _) = tm
 bindingTerm (AsBinding _ _ tm _ _) = tm
 
 export
 bindingRig : ImplBinding vars -> RigCount
-bindingRig (NameBinding c _ _ _) = c
+bindingRig (NameBinding _ c _ _ _) = c
 bindingRig (AsBinding c _ _ _ _) = c
 
 export
 bindingPiInfo : ImplBinding vars -> PiInfo (Term vars)
-bindingPiInfo (NameBinding _ p _ _) = p
+bindingPiInfo (NameBinding _ _ p _ _) = p
 bindingPiInfo (AsBinding _ p _ _ _) = p
 
 -- Current elaboration state (preserved/updated throughout elaboration)
@@ -130,7 +131,7 @@ record EState (vars : List Name) where
                   -- bound yet. Record how they're bound (auto-implicit bound
                   -- pattern vars need to be dealt with in with-application on
                   -- the RHS)
-  bindIfUnsolved : List (Name, RigCount,
+  bindIfUnsolved : List (Name, FC, RigCount,
                           (vars' ** (Env Term vars', PiInfo (Term vars'),
                                      Term vars', Term vars', Thin outer vars')))
                   -- names to add as unbound implicits if they are still holes
@@ -203,8 +204,8 @@ weakenedEState {e}
   where
     wknTms : (Name, ImplBinding vs) ->
              (Name, ImplBinding (n :: vs))
-    wknTms (f, NameBinding c p x y)
-        = (f, NameBinding c (map weaken p) (weaken x) (weaken y))
+    wknTms (f, NameBinding fc c p x y)
+        = (f, NameBinding fc c (map weaken p) (weaken x) (weaken y))
     wknTms (f, AsBinding c p x y z)
         = (f, AsBinding c (map weaken p) (weaken x) (weaken y) (weaken z))
 
@@ -260,14 +261,14 @@ strengthenedEState {n} {vars} c e fc env
 
     strTms : Defs -> (Name, ImplBinding (n :: vars)) ->
              Core (Name, ImplBinding vars)
-    strTms defs (f, NameBinding c p x y)
+    strTms defs (f, NameBinding fc c p x y)
         = do xnf <- normaliseHoles defs env x
              ynf <- normaliseHoles defs env y
              case (shrinkPi p (Drop Refl),
                    removeArg xnf,
                    shrink ynf (Drop Refl)) of
                (Just p', Just x', Just y') =>
-                    pure (f, NameBinding c p' x' y')
+                    pure (f, NameBinding fc c p' x' y')
                _ => throw (BadUnboundImplicit fc env f y)
     strTms defs (f, AsBinding c p x y z)
         = do xnf <- normaliseHoles defs env x
@@ -322,7 +323,7 @@ concrete defs env _ = pure False
 export
 updateEnv : {new : _} ->
             Env Term new -> Thin new vars ->
-            List (Name, RigCount,
+            List (Name, FC, RigCount,
                    (vars' ** (Env Term vars', PiInfo (Term vars'),
                               Term vars', Term vars', Thin new vars'))) ->
             EState vars -> EState vars
@@ -334,12 +335,12 @@ updateEnv env sub bif st
 
 export
 addBindIfUnsolved : {vars : _} ->
-                    Name -> RigCount -> PiInfo (Term vars) ->
+                    Name -> FC -> RigCount -> PiInfo (Term vars) ->
                     Env Term vars -> Term vars -> Term vars ->
                     EState vars -> EState vars
-addBindIfUnsolved hn r p env tm ty st
+addBindIfUnsolved hn fc r p env tm ty st
     = { bindIfUnsolved $=
-         ((hn, r, (_ ** (env, p, tm, ty, subEnv st))) ::)} st
+         ((hn, fc, r, (_ ** (env, p, tm, ty, subEnv st))) ::)} st
 
 clearBindIfUnsolved : EState vars -> EState vars
 clearBindIfUnsolved = { bindIfUnsolved := [] }
