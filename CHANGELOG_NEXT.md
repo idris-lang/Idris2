@@ -199,6 +199,23 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Function `invFin` from `Data.Fin.Extra` was deprecated in favour of
   `Data.Fin.complement` from `base`.
 
+* The `Control.Algebra` library from `contrib` has been removed due to being
+    broken, unfixed for years, and on several independent occasions causing
+    confusion with people picking up Idris and trying to use it.
+  - Detailed discussion can be found in
+      [Idris2#72](https://github.com/idris-lang/Idris2/issues/72).
+  - For reasoning about algebraic structures and proofs, please see
+      [Frex](https://github.com/frex-project/idris-frex/) and
+      [idris2-algebra](https://github.com/stefan-hoeck/idris2-algebra/).
+
+* Since they depend on `Control.Algebra`, the following `contrib` libraries have
+    also been removed:
+  - `Control/Monad/Algebra.idr`
+  - `Data/Bool/Algebra.idr`
+  - `Data/List/Algebra.idr`
+  - `Data/Morphisms/Algebra.idr`
+  - `Data/Nat/Algebra.idr`
+
 #### Network
 
 * Add a missing function parameter (the flag) in the C implementation of `idrnet_recv_bytes`
