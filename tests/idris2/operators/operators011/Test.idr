@@ -1,2 +1,2 @@
 
-%hide DoesNotExist.infixl.(+)
+%hide DoesNotExist.infixl.(+-+)

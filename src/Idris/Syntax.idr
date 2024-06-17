@@ -1047,12 +1047,14 @@ removeFixity loc _ key = do
      else -- When the fixity is not found, find close matches
        let fixityNames : List Name = map fst (toList fixityInfo)
            closeNames = !(filterM (coreLift . closeMatch key) fixityNames)
-       in if null closeNames
+           sameName : List Name = fst <$> lookupName (dropAllNS key) fixityInfo
+           similarNamespaces = nub (closeNames ++ sameName)
+       in if null similarNamespaces
              then
                throw $ GenericMsg loc "Fixity \{show key} not found"
              else
-             throw $ GenericMsgSol loc "Fixity \{show key} not found" "Did you mean"
-                 (map printFixityHide closeNames)
+               throw $ GenericMsgSol loc "Fixity \{show key} not found" "Did you mean"
+                 $ map printFixityHide similarNamespaces
   where
     printFixityHide : Name -> String
     printFixityHide nm = "%hide \{show nm}"
