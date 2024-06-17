@@ -224,7 +224,7 @@ checkTerm rig elabinfo nest env (Implicit fc b) (Just gexpty)
          when (b && bindingVars elabinfo) $
             do expty <- getTerm gexpty
                -- Explicit because it's an explicitly given thing!
-               update EST $ addBindIfUnsolved nm rig Explicit env metaval expty
+               update EST $ addBindIfUnsolved nm fc rig Explicit env metaval expty
          pure (metaval, gexpty)
 checkTerm rig elabinfo nest env (Implicit fc b) Nothing
     = do nmty <- genName "implicit_type"
@@ -234,7 +234,7 @@ checkTerm rig elabinfo nest env (Implicit fc b) Nothing
          metaval <- metaVar fc rig env nm ty
          -- Add to 'bindIfUnsolved' if 'b' set
          when (b && bindingVars elabinfo) $
-            update EST $ addBindIfUnsolved nm rig Explicit env metaval ty
+            update EST $ addBindIfUnsolved nm fc rig Explicit env metaval ty
          pure (metaval, gnf env ty)
 checkTerm rig elabinfo nest env (IWithUnambigNames fc ns rhs) exp
     = do -- enter the scope -> add unambiguous names

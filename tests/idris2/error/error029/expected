@@ -1,0 +1,15 @@
+1/1: Building Issue34 (Issue34.idr)
+Error: While processing right hand side of zipWith. Multiple solutions found in search of:
+    Ord a
+
+Issue34:9:5--9:53
+ 5 | zipWith : (a -> a -> a) -> T a -> T a -> T a
+ 6 | zipWith f Leaf _ = Leaf
+ 7 | zipWith f _ Leaf = Leaf
+ 8 | zipWith f (Node x lx rx) (Node y ly ry)
+ 9 |   = Node (f x y) (zipWith f lx ly) (zipWith f rx ry)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Possible correct results:
+    conArg (implicitly bound at Issue34:8:12--8:16)
+    conArg (implicitly bound at Issue34:8:27--8:31)

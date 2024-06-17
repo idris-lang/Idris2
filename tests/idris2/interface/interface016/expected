@@ -10,5 +10,5 @@ TwoNum:4:7--4:8
            ^
 
 Possible correct results:
-    conArg (implicitly bound at TwoNum:4:3--4:8)
-    conArg (implicitly bound at TwoNum:2:1--4:8)
+    conArg (implicitly bound at TwoNum:4:3--4:4)
+    conArg (implicitly bound at TwoNum:2:1--2:2)
