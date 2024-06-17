@@ -1,0 +1,3 @@
+. ../../../testutils.sh
+idris2 ImplicitParam.idr < input
+check Issue2444.idr
