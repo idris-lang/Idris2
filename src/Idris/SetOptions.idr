@@ -91,7 +91,7 @@ candidateDirs dname pkg bounds =
   mapMaybe checkBounds <$> getPackageDirs dname
 
   where checkBounds : PkgDir -> Maybe (String,Maybe PkgVersion)
-        checkBounds (MkPkgDir dirName pkgName ver ttcVersions) =
+        checkBounds (MkPkgDir dirName pkgName ver _) =
           do guard (pkgName == pkg && inBounds ver bounds)
              pure ((dname </> dirName), ver)
 
