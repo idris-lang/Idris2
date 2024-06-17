@@ -142,6 +142,7 @@ anyOne fc env top [elab]
     = catch elab $
          \case
            err@(CantSolveGoal _ _ _ _ _) => throw err
+           err@(AmbiguousSearch _ _ _ _) => throw err
            _ => throw $ CantSolveGoal fc (gamma !(get Ctxt)) [] top Nothing
 anyOne fc env top (elab :: elabs)
     = tryUnify elab (anyOne fc env top elabs)
