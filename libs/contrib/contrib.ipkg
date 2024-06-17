@@ -11,10 +11,6 @@ modules = Control.ANSI,
 
           Control.Monad.Algebra,
 
-          Control.Algebra,
-          Control.Algebra.Laws,
-          Control.Algebra.Implementations,
-
           Control.Arrow,
           Control.Category,
 
