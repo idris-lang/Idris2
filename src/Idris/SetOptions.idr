@@ -165,9 +165,13 @@ listPackages
     = do pkgs <- sortBy (compare `on` (pkgName . pkgDir)) <$> findPackages
          traverse_ (iputStrLn . pkgDesc) pkgs
   where
+    pkgPath : String -> Doc IdrisAnn
+    pkgPath path = line <+> (indent 2 $ pretty0 "↳ \{path}")
+
     pkgDesc : QualifiedPkgDir -> Doc IdrisAnn
     pkgDesc (MkQualifiedPkgDir path (MkPkgDir _ pkgName version)) =
-      pretty0 path <++> pretty0 pkgName <++> parens (pretty0 $ maybe "unversioned" show version)
+      pretty0 pkgName <++> parens (pretty0 $ maybe "unversioned" show version)
+        <+> pkgPath path
 
 dirOption : {auto c : Ref Ctxt Defs} ->
             {auto o : Ref ROpts REPLOpts} ->
