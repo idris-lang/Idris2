@@ -1,0 +1,18 @@
+[True, False, False, False, False, False, False, False, False]
+[False, True, False, False, False, False, False, False, False]
+[False, False, True, False, False, False, False, False, False]
+[False, False, False, True, False, False, False, False, False]
+[False, False, False, False, True, False, False, False, False]
+[False, False, False, False, False, True, False, False, False]
+[False, False, False, False, False, False, True, False, False]
+[False, False, False, False, False, False, False, True, True]
+[False, False, False, False, False, False, False, True, True]
+Just {"x":"foo","y":"bar"}
+Nothing
+Nothing
+{"a":{"x":"foo","y":"bar"},"b":null,"c":"baz","d":["qux"]}
+{"a":{"x":"foo","y":"bar"},"b":1.0,"c":"baz","d":["qux"]}
+{"a":{"x":"foo","y":"bar"},"b":null,"d":["qux"]}
+{"a":{"x":"foo","y":"bar"},"b":null,"c":"baz","d":["qux"],"e":0.0}
+([< "foo", "bar", "baz", "qux"], {"a":{"x":"foo!","y":"bar!"},"b":null,"c":"baz!","d":["qux!"]})
+[< "foo", "bar", "baz", "qux"]
