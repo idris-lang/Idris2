@@ -1,4 +1,4 @@
-{ stdenv, lib, idris2Version, idris2, support, makeWrapper }:
+{ stdenv, lib, idris2Version, idris2, jq, support, makeWrapper }:
 # Usage: let
 #          pkg = idris2Pkg.buildIdris {
 #            src = ...;
@@ -34,7 +34,7 @@ let
       pname = ipkgName;
       inherit version;
       src = src;
-      nativeBuildInputs = [ idris2 makeWrapper ] ++ attrs.nativeBuildInputs or [];
+      nativeBuildInputs = [ idris2 makeWrapper jq ] ++ attrs.nativeBuildInputs or [];
       buildInputs = propagatedIdrisLibraries ++ attrs.buildInputs or [];
 
       IDRIS2_PACKAGE_PATH = libDirs;
@@ -68,13 +68,19 @@ in rec {
         # https://github.com/idris-lang/Idris2/pull/3189
       else
         cd build/exec/*_app
+
         rm -f ./libidris2_support.so
-        for file in *.so; do
-          bin_name="''${file%.so}"
-          mv -- "$file" "$out/bin/$bin_name"
-          wrapProgram "$out/bin/$bin_name" \
-            --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ support ]} \
-            --prefix DYLD_LIBRARY_PATH : ${lib.makeLibraryPath [ support ]}
+
+        executable="$(idris2 --dump-ipkg-json ${ipkgFileName} | jq -r '.executable').so"
+        bin_name="''${executable%.so}"
+        mv -- "$executable" "$out/bin/$bin_name"
+        wrapProgram "$out/bin/$bin_name" \
+          --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ support ]} \
+          --prefix DYLD_LIBRARY_PATH : ${lib.makeLibraryPath [ support ]}
+
+        # remaining .so or .dylib files can be moved to lib directory
+        for file in *{.so,.dylib}; do
+          mv -- "$file" "$out/lib/"
         done
       fi
       runHook postInstall
