@@ -74,14 +74,16 @@ in rec {
         executable="$(idris2 --dump-ipkg-json ${ipkgFileName} | jq -r '.executable').so"
         bin_name="''${executable%.so}"
         mv -- "$executable" "$out/bin/$bin_name"
-        wrapProgram "$out/bin/$bin_name" \
-          --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ support ]} \
-          --prefix DYLD_LIBRARY_PATH : ${lib.makeLibraryPath [ support ]}
 
         # remaining .so or .dylib files can be moved to lib directory
         for file in *{.so,.dylib}; do
           mv -- "$file" "$out/lib/"
         done
+
+        wrapProgram "$out/bin/$bin_name" \
+          --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ support ]}:$out/lib \
+          --prefix DYLD_LIBRARY_PATH : ${lib.makeLibraryPath [ support ]}:$out/lib
+
       fi
       runHook postInstall
     '';
