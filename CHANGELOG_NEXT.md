@@ -5,6 +5,17 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 ## [Next version]
 
+### CLI changes
+
+* The `idris2 --list-packages` command now outputs information about the
+  location and available TTC versions for each package it finds. It also shows
+  the current Idris2 TTC version so you can spot packages that do not have a
+  compatible TTC install. The TTC version tracks breaking changes to the
+  compiled binary format of Idris2 code and it is separate from Idris2's
+  semantic version (e.g. 0.7.0). A library without the correct TTC version
+  installed will be ignored by the compiler when it tries to use that library as
+  a dependency for some other package.
+
 ### Building/Packaging changes
 
 * The Nix flake's `buildIdris` function now returns a set with `executable` and
