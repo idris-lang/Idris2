@@ -8,6 +8,8 @@ import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 import Libraries.Utils.String
 
+import Libraries.Text.Distance.Levenshtein as Distance
+
 import public Core.Name.Namespace
 
 %default total
@@ -464,3 +466,27 @@ next (MN n i) = MN n (i + 1)
 next (UN n) = MN (show n) 0
 next (NS ns n) = NS ns (next n)
 next n = MN (show n) 0
+
+||| levenstein distance that needs to be reached in order for a
+||| namespace path to closely match another one.
+closeNamespaceDistance : Nat
+closeNamespaceDistance = 3
+
+||| Check if two strings are close enough to be similar, using the namespace
+||| distance criteria.
+closeDistance : String -> String -> IO Bool
+closeDistance s1 s2 = pure (!(Distance.compute s1 s2) < closeNamespaceDistance)
+
+||| Check if the test closely match the reference.
+||| We only check for namespaces and user-defined names.
+export
+closeMatch : (test, reference : Name) -> IO Bool
+closeMatch (NS pathTest nameTest) (NS pathRef nameRef)
+  = let extractNameString = toList . (map snd . isUN >=> isBasic)
+        unfoldedTest = unsafeUnfoldNamespace pathTest ++ extractNameString nameTest
+        unfoldedRef = unsafeUnfoldNamespace pathRef ++ extractNameString nameRef
+        tests : IO (List Nat) = traverse (uncurry Distance.compute) (zip unfoldedTest unfoldedRef)
+    in map ((<= closeNamespaceDistance) . sum) tests
+closeMatch (UN (Basic test)) (UN (Basic ref)) = closeDistance test ref
+closeMatch _ _ = pure False
+
