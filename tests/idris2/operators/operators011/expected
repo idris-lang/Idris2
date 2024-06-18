@@ -1,0 +1,54 @@
+1/1: Building Test (Test.idr)
+Error: Fixity DoesNotExist.infixl.(+-+) not found
+
+Test:2:1--2:32
+ 1 | 
+ 2 | %hide DoesNotExist.infixl.(+-+)
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+1/2: Building Module (Module.idr)
+2/2: Building Test1 (Test1.idr)
+Error: Fixity Modul.infixl.(&&++) not found
+
+Test1:3:1--3:26
+ 1 | import Module
+ 2 | 
+ 3 | %hide Modul.infixl.(&&++)
+     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Did you mean:
+ - %hide Module.infixl.(&&++)
+2/2: Building Test2 (Test2.idr)
+Error: Fixity Module.infixr.(&&++) not found
+
+Test2:3:1--3:27
+ 1 | import Module
+ 2 | 
+ 3 | %hide Module.infixr.(&&++)
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Did you mean:
+ - %hide Module.infixl.(&&++)
+2/2: Building Test3 (Test3.idr)
+Error: Fixity Module.infixl.(&&+*) not found
+
+Test3:3:1--3:27
+ 1 | import Module
+ 2 | 
+ 3 | %hide Module.infixl.(&&+*)
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Did you mean:
+ - %hide Module.infixl.(&&++)
+2/2: Building Test4 (Test4.idr)
+Error: Fixity DoesNotExist.infixl.(&&++) not found
+
+Test4:4:1--4:33
+ 1 | 
+ 2 | import Module
+ 3 | 
+ 4 | %hide DoesNotExist.infixl.(&&++)
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Did you mean:
+ - %hide Module.infixl.(&&++)

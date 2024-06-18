@@ -48,6 +48,7 @@ schHeader prof libs = fromString """
   (require racket/async-channel)         ; for asynchronous channels
   (require racket/future)                ; for parallelism/concurrency
   (require racket/math)                  ; for math ops
+  (require racket/promise)               ; for delay/force in toplevel defs
   (require racket/system)                ; for system
   (require racket/unsafe/ops)            ; for fast fixnum ops
   (require rnrs/bytevectors-6)           ; for buffers
@@ -112,8 +113,8 @@ mutual
            c' <- schExp cs (racketPrim cs) racketString 0 c
            pure $ mkWorld $ "(blodwen-register-object " ++ p' ++ " " ++ c' ++ ")"
   racketPrim cs i MakeFuture [_, work]
-      = do work' <- schExp cs (racketPrim cs) racketString 0 work
-           pure $ mkWorld $ "(blodwen-make-future " ++ work' ++ ")"
+      = do work' <- schExp cs (racketPrim cs) racketString 0 $ NmForce EmptyFC LUnknown work
+           pure $ mkWorld $ "(blodwen-make-future (lambda () " ++ work' ++ "))"
   racketPrim cs i prim args
       = schExtCommon cs (racketPrim cs) racketString i prim args
 

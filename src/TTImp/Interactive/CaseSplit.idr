@@ -161,9 +161,12 @@ updateArg allvars var con (IVar fc n)
 updateArg allvars var con (IApp fc f a)
     = pure $ IApp fc !(updateArg allvars var con f)
                      !(updateArg allvars var con a)
+updateArg allvars var con (IWithApp fc f a)
+    = pure $ IWithApp fc !(updateArg allvars var con f)
+                         !(updateArg allvars var con a)
 updateArg allvars var con (IAutoApp fc f a)
     = pure $ IAutoApp fc !(updateArg allvars var con f)
-                     !(updateArg allvars var con a)
+                         !(updateArg allvars var con a)
 updateArg allvars var con (INamedApp fc f n a)
     = pure $ INamedApp fc !(updateArg allvars var con f) n
                           !(updateArg allvars var con a)
@@ -194,7 +197,7 @@ newLHS : {auto c : Ref Ctxt Defs} ->
 newLHS fc envlen allvars var con tm
     = do let (f, args) = getFnArgs tm []
          let keep = map (const (Explicit fc (Implicit fc True)))
-                        (take envlen args)
+                        (mapMaybe isExplicit $ take envlen args)
          let ups = drop envlen args
          ups' <- traverse (update allvars var con) ups
          pure $ apply f (keep ++ ups')

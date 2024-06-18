@@ -275,6 +275,11 @@ mutual
   applyArgs f [] = f
   applyArgs f ((fc, a) :: args) = applyArgs (PApp fc f a) args
 
+  export
+  applyWithArgs : PTerm' nm -> List (FC, PTerm' nm) -> PTerm' nm
+  applyWithArgs f [] = f
+  applyWithArgs f ((fc, a) :: args) = applyWithArgs (PWithApp fc f a) args
+
   public export
   PTypeDecl : Type
   PTypeDecl = PTypeDecl' Name
@@ -376,6 +381,8 @@ mutual
        AutoImplicitDepth : Nat -> Directive
        NFMetavarThreshold : Nat -> Directive
        SearchTimeout : Integer -> Directive
+       -- There is no nm on Directive
+       ForeignImpl : Name -> List PTerm -> Directive
 
   public export
   PField : Type
@@ -1028,11 +1035,29 @@ addModDocInfo mi doc reexpts
                  , modDocexports $= insert mi reexpts
                  , modDocstrings $= insert mi doc }
 
--- remove a fixity from the context
+||| Remove a fixity from the context
 export
 removeFixity :
-    {auto s : Ref Syn SyntaxInfo} -> Fixity -> Name -> Core ()
-removeFixity _ key = update Syn ({fixities $= removeExact key })
+  {auto s : Ref Syn SyntaxInfo} -> FC -> Fixity -> Name -> Core ()
+removeFixity loc _ key = do
+  fixityInfo <- fixities <$> get Syn
+  if isJust $ lookupExact key fixityInfo
+     then -- When the fixity is found, simply remove it
+       update Syn ({ fixities $= removeExact key })
+     else -- When the fixity is not found, find close matches
+       let fixityNames : List Name = map fst (toList fixityInfo)
+           closeNames = !(filterM (coreLift . closeMatch key) fixityNames)
+           sameName : List Name = fst <$> lookupName (dropAllNS key) fixityInfo
+           similarNamespaces = nub (closeNames ++ sameName)
+       in if null similarNamespaces
+             then
+               throw $ GenericMsg loc "Fixity \{show key} not found"
+             else
+               throw $ GenericMsgSol loc "Fixity \{show key} not found" "Did you mean"
+                 $ map printFixityHide similarNamespaces
+  where
+    printFixityHide : Name -> String
+    printFixityHide nm = "%hide \{show nm}"
 
 ||| Return all fixity declarations for an operator name
 export

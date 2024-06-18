@@ -171,8 +171,8 @@ mutual
            c' <- schExp cs (chezExtPrim cs) chezString 0 c
            pure $ mkWorld $ "(blodwen-register-object " ++ p' ++ " " ++ c' ++ ")"
   chezExtPrim cs i MakeFuture [_, work]
-      = do work' <- schExp cs (chezExtPrim cs) chezString 0 work
-           pure $ "(blodwen-make-future " ++ work' ++ ")"
+      = do work' <- schExp cs (chezExtPrim cs) chezString 0 $ NmForce EmptyFC LUnknown work
+           pure $ "(blodwen-make-future (lambda () " ++ work' ++ "))"
   chezExtPrim cs i prim args
       = schExtCommon cs (chezExtPrim cs) chezString i prim args
 

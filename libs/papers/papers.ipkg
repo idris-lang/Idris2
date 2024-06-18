@@ -24,8 +24,6 @@ modules = Control.DivideAndConquer,
           Data.Linear.Diff,
           Data.Linear.Inverse,
 
-          Data.OpenUnion,
-
           Data.ProofDelay,
 
           Data.Recursion.Free,

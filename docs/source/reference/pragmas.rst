@@ -20,7 +20,7 @@ Global pragmas
 ``%language``
 --------------------
 
-Enable language extensions.  Currently, the only extension is ``ElabReflection``.
+Enable language extensions.  Currently, the only extension is [#ElabReflection]_.
 
 .. code-block:: idris
 
@@ -281,6 +281,20 @@ Specialise a function according to a list of arguments.
 Declare a foreign function.  It is followed by an indented block of expressions
 that evaluate to strings. See :ref:`ffi-overview` for more details.
 
+
+``%foreign_impl``
+--------------------
+
+Adds an implementation to an existing ``%foreign`` in another file. This pragma can
+be used to fill in an implementation for another backend without changing the original
+file. In the case of multiple declarations for a given backend, the backend will choose
+the one from the most recently loaded module.
+
+.. code-block:: idris
+
+   %foreign_impl Prelude.IO.prim__fork "javascript:lambda:(proc) => { throw new Error() }"
+
+
 ``%export``
 --------------------
 
@@ -466,7 +480,7 @@ Pragmas that occur inside expressions.
 ``%runElab``
 --------------------
 
-The ``%runElab`` pragma can be used at the top level or as an expression. It takes the an elaboration
+The ``%runElab`` pragma can be used at the top level or as an expression. It takes an elaborator
 script as an argument which runs in the ``Elab`` monad, has access to Idris' type-checking machinery,
 and can generate code.
 
@@ -493,3 +507,4 @@ over the value syntactically, rather than by value, and can significantly speed
 up elaboration where large types are involved, at a cost of being less general.
 Try it if "with" is slow.
 
+.. [#ElabReflection] https://github.com/stefan-hoeck/idris2-elab-util/blob/main/src/Doc/Index.md

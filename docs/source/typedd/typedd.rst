@@ -19,6 +19,8 @@ necessary changes.
 Chapter 1
 ---------
 
+Instead of entering ``2.1 * 20``, enter ``the Double (2.1 * 20)``.
+
 Instead of entering ``:exec`` to run ``Hello.idr`` in the REPL, enter ``:exec main``.
 
 Chapter 2
@@ -33,6 +35,9 @@ In ``Average.idr``, add:
 
     import Data.String -- for `words`
     import Data.List -- for `length` on lists
+    import System.REPL -- for `repl`
+
+Instead of entering ``6.0 + 3 * 12``, enter ``the Double (6.0 + 3 * 12)``.
 
 In ``AveMain.idr`` and ``Reverse.idr`` add:
 
@@ -54,6 +59,12 @@ match on:
 
     createEmpties : {n : _} -> Vect n (Vect 0 elem)
     transposeMat : {n : _} -> Vect m (Vect n elem) -> Vect n (Vect m elem)
+
+For the same reason, we also need to change the type of ``length`` to:
+
+.. code-block:: idris
+
+    length : {n : _} -> Vect n elem -> Nat
 
 Chapter 4
 ---------

@@ -1,0 +1,15 @@
+1/1: Building Issue3313 (Issue3313.idr)
+Error: While processing right hand side of eval. Multiple solutions found in search of:
+    Integral n
+
+Issue3313:5:18--5:23
+ 1 | data Expr : Type -> Type where
+ 2 |     Add : (Integral n) => n -> n -> Expr n
+ 3 | 
+ 4 | eval : (Integral n) => Expr n -> n
+ 5 | eval (Add x y) = x + y
+                      ^^^^^
+
+Possible correct results:
+    conArg (implicitly bound at Issue3313:5:7--5:10)
+    conArg (implicitly bound at Issue3313:5:1--5:5)

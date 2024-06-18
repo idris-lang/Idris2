@@ -726,9 +726,10 @@ implicitsAs n defs ns tm
                    Core (List (Name, PiInfo RawImp))
         -- #834 When we are in a local definition, we have an explicit telescope
         -- corresponding to the variables bound in the parent function.
-        -- So we first peel off all of the explicit quantifiers corresponding
-        -- to these variables.
-        findImps ns es (_ :: locals) (NBind fc x (Pi _ _ Explicit _) sc)
+        -- Parameter blocks also introduce additional telescope of implicit, auto,
+        -- and explicit variables. So we first peel off all of the quantifiers
+        -- corresponding to these variables.
+        findImps ns es (_ :: locals) (NBind fc x (Pi _ _ _ _) sc)
           = do body <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
                findImps ns es locals body
                -- ^ TODO? check that name of the pi matches name of local?

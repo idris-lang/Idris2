@@ -2,6 +2,7 @@ module Idris.SetOptions
 
 import Compiler.Common
 
+import Core.Binary
 import Core.Context
 import Core.Directory
 import Core.Metadata
@@ -38,31 +39,48 @@ record PkgDir where
   pkgName : String
   ||| Package version. Example `Just $ MkPkgVersion (0 ::: [3,0])`
   version : Maybe PkgVersion
+  ||| Versions of binary TTC format supported by library
+  ttcVersions : List Int
+
+record QualifiedPkgDir where
+  constructor MkQualifiedPkgDir
+  ||| Path where package directory is located on disk.
+  path : String
+  ||| PkgDir for packages
+  pkgDir : PkgDir
 
 -- dissects a directory name, trying to extract
 -- the corresponding package name and -version
-pkgDir : String -> PkgDir
-pkgDir str =
+pkgDir : (dirName : String) -> (ttcDirs : List Int) -> PkgDir
+pkgDir dirName ttcDirs =
    -- Split the dir name into parts concatenated by "-"
    -- treating the last part as the version number
    -- and the initial parts as the package name.
    -- For reasons of backwards compatibility, we also
    -- accept hyphenated directory names without a part
    -- corresponding to a version number.
-   case Lib.unsnoc $ split (== '-') str of
-     (Nil, last) => MkPkgDir str last Nothing
+   case Lib.unsnoc $ split (== '-') dirName of
+     (Nil, last) => MkPkgDir dirName last Nothing ttcDirs
      (init,last) =>
        case toVersion last of
-         Just v  => MkPkgDir str (concat $ intersperse "-" init) (Just v)
-         Nothing => MkPkgDir str str Nothing
+         Just v  => MkPkgDir dirName (concat $ intersperse "-" init) (Just v) ttcDirs
+         Nothing => MkPkgDir dirName dirName Nothing ttcDirs
   where
     toVersion : String -> Maybe PkgVersion
     toVersion = map MkPkgVersion
               . traverse parsePositive
               . split (== '.')
 
+listDirOrEmpty : String -> IO (List String)
+listDirOrEmpty dir = either (const []) id <$> listDir dir
+
 getPackageDirs : String -> IO (List PkgDir)
-getPackageDirs dname = map pkgDir . either (const []) id <$> listDir dname
+getPackageDirs dname = do
+  packageDirNames <- listDirOrEmpty dname
+  traverse (\d => pkgDir d <$> ttcVersions d) packageDirNames
+  where
+    ttcVersions : String -> IO (List Int)
+    ttcVersions dir = catMaybes . map parsePositive <$> listDirOrEmpty (dname </> dir)
 
 -- Get a list of all the candidate directories that match a package spec
 -- in a given path. Return an empty list on file error (e.g. path not existing)
@@ -73,7 +91,7 @@ candidateDirs dname pkg bounds =
   mapMaybe checkBounds <$> getPackageDirs dname
 
   where checkBounds : PkgDir -> Maybe (String,Maybe PkgVersion)
-        checkBounds (MkPkgDir dirName pkgName ver) =
+        checkBounds (MkPkgDir dirName pkgName ver _) =
           do guard (pkgName == pkg && inBounds ver bounds)
              pure ((dname </> dirName), ver)
 
@@ -132,8 +150,8 @@ addPkgDir p bounds = do
         | Nothing => pure ()
     addPackageDir p
 
-visiblePackages : String -> IO (List PkgDir)
-visiblePackages dir = filter viable <$> getPackageDirs dir
+visiblePackages : String -> IO (List QualifiedPkgDir)
+visiblePackages dir = map (MkQualifiedPkgDir dir) <$> filter viable <$> getPackageDirs dir
   where notHidden : PkgDir -> Bool
         notHidden = not . isPrefixOf "." . pkgName
 
@@ -143,7 +161,7 @@ visiblePackages dir = filter viable <$> getPackageDirs dir
         viable : PkgDir -> Bool
         viable p = notHidden p && notDenylisted p
 
-findPackages : {auto c : Ref Ctxt Defs} -> Core (List PkgDir)
+findPackages : {auto c : Ref Ctxt Defs} -> Core (List QualifiedPkgDir)
 findPackages
     = do d <- getDirs
          pkgPathPkgs <- coreLift $ traverse (\d => visiblePackages d) d.package_search_paths
@@ -155,11 +173,42 @@ listPackages : {auto c : Ref Ctxt Defs} ->
                {auto o : Ref ROpts REPLOpts} ->
                Core ()
 listPackages
-    = do pkgs <- sortBy (compare `on` pkgName) <$> findPackages
+    = do pkgs <- sortBy (compare `on` (pkgName . pkgDir)) <$> findPackages
+         printIdrisTTCVersion
          traverse_ (iputStrLn . pkgDesc) pkgs
   where
-    pkgDesc : PkgDir -> Doc IdrisAnn
-    pkgDesc (MkPkgDir _ pkgName version) = pretty0 pkgName <++> parens (byShow version)
+    printIdrisTTCVersion : Core ()
+    printIdrisTTCVersion = iputStrLn $
+      pretty0 "Idris2 TTC Version: \{show ttcVersion}" <+> line <+>
+      (replicateChar 5 '─')
+
+    pkgTTCVersions : PkgDir -> Doc IdrisAnn
+    pkgTTCVersions (MkPkgDir _ _ _ ttcVersions) =
+      pretty0 "├ TTC Versions:" <++> prettyTTCVersions
+      where
+        colorize : Int -> Doc IdrisAnn
+        colorize version =
+          if version == ttcVersion
+             then pretty0 $ show version
+             else warning (pretty0 $ show version)
+
+        prettyTTCVersions : Doc IdrisAnn
+        prettyTTCVersions = (concatWith (\x,y => x <+> "," <++> y)) $ colorize <$> sort ttcVersions
+
+    pkgPath : String -> Doc IdrisAnn
+    pkgPath path = pretty0 "└ \{path}"
+
+    extraInfo : QualifiedPkgDir -> Doc IdrisAnn
+    extraInfo (MkQualifiedPkgDir path pkg) =
+      let extra = indent 2 $
+        pkgTTCVersions pkg <+> line <+>
+        pkgPath path
+      in line <+> extra
+
+    pkgDesc : QualifiedPkgDir -> Doc IdrisAnn
+    pkgDesc pkg@(MkQualifiedPkgDir _ (MkPkgDir _ pkgName version _)) =
+      pretty0 pkgName <++> parens (pretty0 $ maybe "unversioned" show version)
+        <+> extraInfo pkg
 
 dirOption : {auto c : Ref Ctxt Defs} ->
             {auto o : Ref ROpts REPLOpts} ->
@@ -218,8 +267,8 @@ opts x "--cg"      = prefixOnlyIfNonEmpty x <$> codegens
 opts x "--codegen" = prefixOnlyIfNonEmpty x <$> codegens
 
 -- packages
-opts x "-p"        = prefixOnlyIfNonEmpty x . (map pkgName) <$> findPackages
-opts x "--package" = prefixOnlyIfNonEmpty x . (map pkgName) <$> findPackages
+opts x "-p"        = prefixOnlyIfNonEmpty x . (map $ pkgName . pkgDir) <$> findPackages
+opts x "--package" = prefixOnlyIfNonEmpty x . (map $ pkgName . pkgDir) <$> findPackages
 
 -- logging
 opts x "--log"     = pure $ prefixOnlyIfNonEmpty x logLevels
@@ -232,12 +281,13 @@ opts "--" "--build-dir"  = pure []
 opts "--" "--output-dir" = pure []
 
 -- with package files
-opts x "--build"     = prefixOnlyIfNonEmpty x <$> findIpkg
-opts x "--install"   = prefixOnlyIfNonEmpty x <$> findIpkg
-opts x "--mkdoc"     = prefixOnlyIfNonEmpty x <$> findIpkg
-opts x "--typecheck" = prefixOnlyIfNonEmpty x <$> findIpkg
-opts x "--clean"     = prefixOnlyIfNonEmpty x <$> findIpkg
-opts x "--repl"      = prefixOnlyIfNonEmpty x <$> findIpkg
+opts x "--build"          = prefixOnlyIfNonEmpty x <$> findIpkg
+opts x "--dump-ipkg-json" = prefixOnlyIfNonEmpty x <$> findIpkg
+opts x "--install"        = prefixOnlyIfNonEmpty x <$> findIpkg
+opts x "--mkdoc"          = prefixOnlyIfNonEmpty x <$> findIpkg
+opts x "--typecheck"      = prefixOnlyIfNonEmpty x <$> findIpkg
+opts x "--clean"          = prefixOnlyIfNonEmpty x <$> findIpkg
+opts x "--repl"           = prefixOnlyIfNonEmpty x <$> findIpkg
 
 -- options
 opts x _ = pure $ if (x `elem` optionFlags)

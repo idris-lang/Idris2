@@ -796,7 +796,7 @@ HasNames Error where
   full gam (BadRunElab fc rho s desc) = BadRunElab fc <$> full gam rho <*> full gam s <*> pure desc
   full gam (RunElabFail e) = RunElabFail <$> full gam e
   full gam (GenericMsg fc x) = pure (GenericMsg fc x)
-  full gam (GenericMsgSol fc x y) = pure (GenericMsgSol fc x y)
+  full gam (GenericMsgSol fc x y z) = pure (GenericMsgSol fc x y z)
   full gam (TTCError x) = pure (TTCError x)
   full gam (FileErr x y) = pure (FileErr x y)
   full gam (CantFindPackage x) = pure (CantFindPackage x)
@@ -894,7 +894,7 @@ HasNames Error where
   resolved gam (BadRunElab fc rho s desc) = BadRunElab fc <$> resolved gam rho <*> resolved gam s <*> pure desc
   resolved gam (RunElabFail e) = RunElabFail <$> resolved gam e
   resolved gam (GenericMsg fc x) = pure (GenericMsg fc x)
-  resolved gam (GenericMsgSol fc x y) = pure (GenericMsgSol fc x y)
+  resolved gam (GenericMsgSol fc x y z) = pure (GenericMsgSol fc x y z)
   resolved gam (TTCError x) = pure (TTCError x)
   resolved gam (FileErr x y) = pure (FileErr x y)
   resolved gam (CantFindPackage x) = pure (CantFindPackage x)
@@ -2306,6 +2306,13 @@ getAutoImplicitLimit : {auto c : Ref Ctxt Defs} ->
 getAutoImplicitLimit
     = do defs <- get Ctxt
          pure (autoImplicitLimit (elabDirectives (options defs)))
+
+export
+addForeignImpl : {auto c : Ref Ctxt Defs} ->
+          FC -> (fullName : Name) -> (def : String) -> Core ()
+addForeignImpl fc name def
+   = do name <- toFullNames name
+        update Ctxt { options $= addForeignImpl name def }
 
 export
 setPair : {auto c : Ref Ctxt Defs} ->

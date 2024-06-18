@@ -1,0 +1,2 @@
+. ../../testutils.sh
+run --cg node Foreign.idr

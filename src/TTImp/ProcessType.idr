@@ -28,7 +28,7 @@ import Libraries.Data.StringMap
 import Libraries.Data.WithDefault
 
 %default covering
-
+export
 getFnString : {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->

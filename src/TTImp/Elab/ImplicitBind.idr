@@ -54,7 +54,7 @@ mkOuterHole loc rig n topenv Nothing
          u <- uniVar loc
          ty <- metaVar loc erased env nm (TType loc u)
          log "elab.implicits" 10 $ "Made metavariable for type of " ++ show n ++ ": " ++ show nm
-         put EST (addBindIfUnsolved nm rig Explicit topenv (thin ty sub) (TType loc u) est)
+         put EST (addBindIfUnsolved nm loc rig Explicit topenv (thin ty sub) (TType loc u) est)
          tm <- implBindVar loc rig env n ty
          pure (thin tm sub, thin ty sub)
 
@@ -133,13 +133,13 @@ bindUnsolved {vars} fc elabmode _
          defs <- get Ctxt
          let bifs = bindIfUnsolved est
          log "elab.implicits" 5 $ "Bindable unsolved implicits: " ++ show (map fst bifs)
-         traverse_ (mkImplicit defs (outerEnv est) (subEnv est)) (bindIfUnsolved est)
+         traverse_ (mkImplicit defs (outerEnv est) (subEnv est)) bifs
   where
     makeBoundVar : {outer, vs : _} ->
-                   Name -> RigCount -> PiInfo (Term vs) -> Env Term outer ->
+                   Name -> FC -> RigCount -> PiInfo (Term vs) -> Env Term outer ->
                    Thin outer vs -> Thin outer vars ->
                    Term vs -> Core (Term vs)
-    makeBoundVar n rig p env sub subvars expected
+    makeBoundVar n loc rig p env sub subvars expected
         = case shrink expected sub of
                Nothing => do tmn <- toFullNames expected
                              throw (GenericMsg fc ("Can't bind implicit " ++ show n ++ " of type " ++ show tmn))
@@ -147,20 +147,20 @@ bindUnsolved {vars} fc elabmode _
                     do impn <- genVarName (nameRoot n)
                        tm <- metaVar fc rig env impn exp'
                        let p' : PiInfo (Term vars) = forgetDef p
-                       update EST { toBind $= ((impn, NameBinding rig p'
+                       update EST { toBind $= ((impn, NameBinding loc rig p'
                                                         (thin tm subvars)
                                                         (thin exp' subvars)) ::) }
                        pure (thin tm sub)
 
     mkImplicit : {outer : _} ->
                  Defs -> Env Term outer -> Thin outer vars ->
-                 (Name, RigCount, (vars' **
+                 (Name, FC, RigCount, (vars' **
                      (Env Term vars', PiInfo (Term vars'), Term vars', Term vars', Thin outer vars'))) ->
                  Core ()
-    mkImplicit defs outerEnv subEnv (n, rig, (vs ** (env, p, tm, exp, sub)))
+    mkImplicit defs outerEnv subEnv (n, loc, rig, (vs ** (env, p, tm, exp, sub)))
         = do Just (Hole _ _) <- lookupDefExact n (gamma defs)
                   | _ => pure ()
-             bindtm <- makeBoundVar n rig p outerEnv
+             bindtm <- makeBoundVar n loc rig p outerEnv
                                     sub subEnv
                                     !(normaliseHoles defs env exp)
              logTerm "elab.implicits" 5 ("Added unbound implicit") bindtm
@@ -261,7 +261,7 @@ bindImplVars {vars} fc mode gam env imps_in scope scty
                Bounds new -> (tm : Term vs) -> (ty : Term vs) ->
                (Term (new ++ vs), Term (new ++ vs))
     getBinds [] bs tm ty = (refsToLocals bs tm, refsToLocals bs ty)
-    getBinds {new} ((n, metan, NameBinding c p _ bty) :: imps) bs tm ty
+    getBinds {new} ((n, metan, NameBinding loc c p _ bty) :: imps) bs tm ty
         = let (tm', ty') = getBinds imps (Add n metan bs) tm ty
               bty' = refsToLocals bs bty in
               case mode of
@@ -269,7 +269,7 @@ bindImplVars {vars} fc mode gam env imps_in scope scty
                       (Bind fc _ (Pi fc c Implicit bty') tm',
                        TType fc (MN "top" 0))
                    _ =>
-                      (Bind fc _ (PVar fc c (map (weakenNs (sizeOf bs)) p) bty') tm',
+                      (Bind fc _ (PVar loc c (map (weakenNs (sizeOf bs)) p) bty') tm',
                        Bind fc _ (PVTy fc c bty') ty')
     getBinds ((n, metan, AsBinding c _ _ bty bpat) :: imps) bs tm ty
         = let (tm', ty') = getBinds imps (Add n metan bs) tm ty
@@ -348,13 +348,13 @@ getToBind {vars} fc elabmode impmode env excepts
          pure res'
   where
     normBindingTy : Defs -> ImplBinding vars -> Core (ImplBinding vars)
-    normBindingTy defs (NameBinding c p tm ty)
+    normBindingTy defs (NameBinding loc c p tm ty)
         = do case impmode of
                   COVERAGE => do tynf <- nf defs env ty
                                  when !(isEmpty defs env tynf) $
                                     throw (InternalError "Empty pattern in coverage check")
                   _ => pure ()
-             pure $ NameBinding c p tm !(normaliseType defs env ty)
+             pure $ NameBinding loc c p tm !(normaliseType defs env ty)
     normBindingTy defs (AsBinding c p tm ty pat)
         = do case impmode of
                   COVERAGE => do tynf <- nf defs env ty
@@ -456,8 +456,8 @@ checkBindVar rig elabinfo nest env fc str topexp
                         PI _ => setInvertible fc n
                         _ => pure ()
                    log "elab.implicits" 5 $ "Added Bound implicit " ++ show (n, (rig, tm, exp, bty))
-                   update EST { boundNames $= ((n, NameBinding rig Explicit tm exp) ::),
-                                toBind $= ((n, NameBinding rig Explicit tm bty) :: ) }
+                   update EST { boundNames $= ((n, NameBinding fc rig Explicit tm exp) ::),
+                                toBind $= ((n, NameBinding fc rig Explicit tm bty) :: ) }
 
                    log "metadata.names" 7 $ "checkBindVar is adding ↓"
                    addNameType fc (UN str) env exp
@@ -483,7 +483,7 @@ checkBindVar rig elabinfo nest env fc str topexp
     updateRig n c ((bn, r) :: bs)
         = if n == bn
              then case r of
-                  NameBinding _ p tm ty => (bn, NameBinding c p tm ty) :: bs
+                  NameBinding loc _ p tm ty => (bn, NameBinding loc c p tm ty) :: bs
                   AsBinding _ p tm ty pat => (bn, AsBinding c p tm ty pat) :: bs
              else (bn, r) :: updateRig n c bs
 

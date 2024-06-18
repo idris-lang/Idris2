@@ -491,6 +491,9 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
     updateApp ns (IApp fc f arg)
         = do f' <- updateApp ns f
              pure (IApp fc f' arg)
+    updateApp ns (IWithApp fc f arg)
+        = do f' <- updateApp ns f
+             pure (IWithApp fc f' arg)
     updateApp ns (IAutoApp fc f arg)
         = do f' <- updateApp ns f
              pure (IAutoApp fc f' arg)

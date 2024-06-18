@@ -22,9 +22,26 @@ export
 lookup : k -> SortedMap k v -> Maybe v
 lookup k = map snd . lookup k . unM
 
+public export %inline
+lookup' : SortedMap k v -> k -> Maybe v
+lookup' = flip lookup
+
 export
 insert : k -> v -> SortedMap k v -> SortedMap k v
 insert k v = M . insert k v . unM
+
+||| Inserts a key value pair into a map and merges duplicated values
+||| with the given function.
+export
+insertWith : (v -> v -> v) -> k -> v -> SortedMap k v -> SortedMap k v
+insertWith f k v xs =
+  case lookup k xs of
+    Just x  => insert k (f v x) xs
+    Nothing => insert k v xs
+
+public export %inline
+insert' : SortedMap k v -> (k, v) -> SortedMap k v
+insert' = flip $ uncurry insert
 
 export
 singleton : Ord k => k -> v -> SortedMap k v
@@ -32,11 +49,25 @@ singleton = M .: singleton
 
 export
 insertFrom : Foldable f => f (k, v) -> SortedMap k v -> SortedMap k v
-insertFrom = flip $ foldl $ flip $ uncurry insert
+insertFrom = flip $ foldl insert'
+
+public export %inline
+insertFrom' : Foldable f => SortedMap k v -> f (k, v) -> SortedMap k v
+insertFrom' = flip insertFrom
+
+||| Inserts any foldable of a key value pair into a map and merges duplicated
+||| values with the given function.
+export
+insertFromWith : Foldable f => (v -> v -> v) -> f (k, v) -> SortedMap k v -> SortedMap k v
+insertFromWith f = flip $ foldl $ flip $ uncurry $ insertWith f
 
 export
 delete : k -> SortedMap k v -> SortedMap k v
 delete k = M . delete k . unM
+
+public export %inline
+delete' : SortedMap k v -> k -> SortedMap k v
+delete' = flip delete
 
 ||| Updates or deletes a value based on the decision function
 |||
@@ -51,6 +82,10 @@ update f k m = case f $ lookup k m of
   Just v  => insert k v m
   Nothing => delete k m
 
+public export %inline
+update' : SortedMap k v -> (Maybe v -> Maybe v) -> k -> SortedMap k v
+update' m f x = update f x m
+
 ||| Updates existing value, if it is present, and does nothing otherwise
 |||
 ||| The current implementation performs up to two traversals of the original map
@@ -60,9 +95,19 @@ updateExisting f k m = case lookup k m of
   Just v  => insert k (f v) m
   Nothing => m
 
+public export %inline
+updateExisting' : SortedMap k v -> (v -> v) -> k -> SortedMap k v
+updateExisting' m f x = updateExisting f x m
+
 export
 fromList : Ord k => List (k, v) -> SortedMap k v
-fromList = flip insertFrom empty
+fromList = insertFrom' empty
+
+||| Converts a list of key-value pairs into a map and merges duplicated
+||| values with the given function.
+export
+fromListWith : Ord k => (v -> v -> v) -> List (k, v) -> SortedMap k v
+fromListWith f = flip (insertFromWith f) empty
 
 export
 toList : SortedMap k v -> List (k, v)

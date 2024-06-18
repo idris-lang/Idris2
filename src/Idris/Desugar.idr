@@ -2,6 +2,7 @@ module Idris.Desugar
 
 import Core.Context
 import Core.Context.Log
+import Core.CompileExpr
 import Core.Core
 import Core.Env
 import Core.Metadata
@@ -31,6 +32,7 @@ import Parser.Support
 
 import TTImp.BindImplicits
 import TTImp.Parser
+import TTImp.ProcessType
 import TTImp.TTImp
 import TTImp.Utils
 
@@ -883,6 +885,7 @@ mutual
   getClauseFn : RawImp -> Core Name
   getClauseFn (IVar _ n) = pure n
   getClauseFn (IApp _ f _) = getClauseFn f
+  getClauseFn (IWithApp _ f _) = getClauseFn f
   getClauseFn (IAutoApp _ f _) = getClauseFn f
   getClauseFn (INamedApp _ f _ _) = getClauseFn f
   getClauseFn tm = throw $ GenericMsg (getFC tm) "Head term in pattern must be a function name"
@@ -1216,7 +1219,7 @@ mutual
   desugarDecl ps fx@(PFixity fc vis binding fix prec opName)
       = do unless (checkValidFixity binding fix prec)
              (throw $ GenericMsgSol fc
-                 "Invalid fixity, \{binding} operator must be infixr 0."
+                 "Invalid fixity, \{binding} operator must be infixr 0." "Possible solutions"
                  [ "Make it `infixr 0`: `\{binding} infixr 0 \{show opName}`"
                  , "Remove the binding keyword: `\{fix} \{show prec} \{show opName}`"
                  ])
@@ -1303,7 +1306,7 @@ mutual
   desugarDecl ps (PDirective fc d)
       = case d of
              Hide (HideName n) => pure [IPragma fc [] (\nest, env => hide fc n)]
-             Hide (HideFixity fx n) => pure [IPragma fc [] (\_, _ => removeFixity fx n)]
+             Hide (HideFixity fx n) => pure [IPragma fc [] (\_, _ => removeFixity fc fx n)]
              Unhide n => pure [IPragma fc [] (\nest, env => unhide fc n)]
              Logging i => pure [ILog ((\ i => (topics i, verbosity i)) <$> i)]
              LazyOn a => pure [IPragma fc [] (\nest, env => lazyActive a)]
@@ -1331,6 +1334,19 @@ mutual
              Overloadable n => pure [IPragma fc [] (\nest, env => setNameFlag fc n Overloadable)]
              Extension e => pure [IPragma fc [] (\nest, env => setExtension e)]
              DefaultTotality tot => pure [IPragma fc [] (\_, _ => setDefaultTotalityOption tot)]
+             ForeignImpl n cs => do
+               cs' <- traverse (desugar AnyExpr ps) cs
+               pure [IPragma fc [] (\nest, env => do
+                      defs <- get Ctxt
+                      calls <- traverse getFnString cs'
+                      [(n',_,gdef)] <- lookupCtxtName n (gamma defs)
+                        | [] => throw (UndefinedName fc n)
+                        | xs => throw (AmbiguousName fc (map fst xs))
+                      let ForeignDef arity xs = gdef.definition
+                        | _ => throw (GenericMsg fc "\{show n} is not a foreign definition")
+
+                      update Ctxt { options->foreignImpl $= (map (n',) calls ++) }
+                    )]
   desugarDecl ps (PBuiltin fc type name) = pure [IBuiltin fc type name]
 
   export

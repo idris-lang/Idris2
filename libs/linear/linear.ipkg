@@ -15,4 +15,7 @@ modules = Control.Linear.LIO,
           Data.Linear.LMaybe,
           Data.Linear.LNat,
           Data.Linear.LVect,
-          Data.Linear.Notation
+          Data.Linear.Notation,
+
+          System.Concurrency.Linear,
+          System.Concurrency.Session

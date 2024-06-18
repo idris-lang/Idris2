@@ -96,13 +96,13 @@ higher : Interpolation op => (showLoc : Show op) => FC -> op -> OpPrec -> op -> 
 higher loc opx op opy (Prefix p) = pure False
 higher loc opx (NonAssoc x) opy oy
     = if x == getPrec oy
-         then throw (GenericMsgSol loc ( "Operator \{opx} is non-associative")
+         then throw (GenericMsgSol loc "Operator \{opx} is non-associative" "Possible solutions"
                                        [ "Add brackets around every use of \{opx}"
                                        , "Change the fixity of \{show opx} to `infixl` or `infixr`"])
          else pure (x > getPrec oy)
 higher loc opx ox opy (NonAssoc y)
     = if getPrec ox == y
-         then throw (GenericMsgSol loc ( "Operator \{opy} is non-associative")
+         then throw (GenericMsgSol loc "Operator \{opy} is non-associative" "Possible solutions"
                                        [ "Add brackets around every use of \{opy}"
                                        , "Change the fixity of \{show opy} to `infixl` or `infixr`"])
          else pure (getPrec ox > y)
