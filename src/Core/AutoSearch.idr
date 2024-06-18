@@ -17,6 +17,27 @@ import Libraries.Data.WithDefault
 
 %default covering
 
+tryUnifyUnambig' : {auto c : Ref Ctxt Defs} ->
+                   {auto u : Ref UST UState} ->
+                   {default False preferLeftError : Bool} ->
+                   Core a -> (Error -> Core a) -> Core a
+tryUnifyUnambig' left right = handleUnify left $ \case
+  e@(AmbiguousSearch {}) => throw e
+  e                      => if preferLeftError
+                              then tryUnify (right e) (throw e)
+                              else right e
+
+tryUnifyUnambig : {auto c : Ref Ctxt Defs} ->
+                  {auto u : Ref UST UState} ->
+                  {default False preferLeftError : Bool} ->
+                  Core a -> Core a -> Core a
+tryUnifyUnambig left right = tryUnifyUnambig' {preferLeftError} left $ const right
+
+tryNoDefaultsFirst : {auto c : Ref Ctxt Defs} ->
+                     {auto u : Ref UST UState} ->
+                     (Bool -> Core a) -> Core a
+tryNoDefaultsFirst f = tryUnifyUnambig {preferLeftError=True} (f False) (f True)
+
 SearchEnv : List Name -> Type
 SearchEnv vars = List (NF vars, Closure vars)
 
@@ -251,10 +272,6 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
          nty <- nf defs env ty
          findPos defs prf id nty target
   where
-    ambig : Error -> Bool
-    ambig (AmbiguousSearch _ _ _ _) = True
-    ambig _ = False
-
     clearEnvType : {idx : Nat} -> (0 p : IsVar nm idx vs) ->
                    FC -> Env Term vs -> Env Term vs
     clearEnvType First fc (b :: env)
@@ -301,8 +318,7 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
               (target : NF vars) ->
               Core (Term vars)
     findPos defs p f nty@(NTCon pfc pn _ _ [(_, xty), (_, yty)]) target
-        = handleUnify (findDirect defs prf f nty target) (\e =>
-           if ambig e then throw e else
+        = tryUnifyUnambig (findDirect defs prf f nty target) $
              do fname <- maybe (throw (CantSolveGoal fc (gamma defs) [] top Nothing))
                                pure
                                !fstName
@@ -328,7 +344,7 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
                                                          ytytm,
                                                          f arg])
                                      ytynf target)]
-                   else throw (CantSolveGoal fc (gamma defs) [] top Nothing))
+                   else throw (CantSolveGoal fc (gamma defs) [] top Nothing)
     findPos defs p f nty target
         = findDirect defs p f nty target
 
@@ -536,19 +552,13 @@ searchType {vars} fc rigc defaults trying depth def checkdets top env target
                                                    (NTCon tfc tyn t a args)
                              if defaults && checkdets
                                 then tryGroups Nothing nty (hintGroups sd)
-                                else handleUnify
+                                else tryUnifyUnambig
                                        (searchLocalVars fc rigc defaults trying' depth def top env nty)
-                                       (\e => if ambig e
-                                                 then throw e
-                                                 else tryGroups Nothing nty (hintGroups sd))
+                                       (tryGroups Nothing nty (hintGroups sd))
                      else throw (CantSolveGoal fc (gamma defs) [] top Nothing)
               _ => do logNF "auto" 10 "Next target: " env nty
                       searchLocalVars fc rigc defaults trying' depth def top env nty
   where
-    ambig : Error -> Bool
-    ambig (AmbiguousSearch _ _ _ _) = True
-    ambig _ = False
-
     -- Take the earliest error message (that's when we look inside pairs,
     -- typically, and it's best to be more precise)
     tryGroups : Maybe Error ->
@@ -556,15 +566,15 @@ searchType {vars} fc rigc defaults trying depth def checkdets top env target
     tryGroups (Just err) nty [] = throw err
     tryGroups Nothing nty [] = throw (CantSolveGoal fc (gamma !(get Ctxt)) [] top Nothing)
     tryGroups merr nty ((ambigok, g) :: gs)
-        = handleUnify
+        = tryUnifyUnambig'
              (do logC "auto" 5
                         (do gn <- traverse getFullName g
                             pure ("Search: Trying " ++ show (length gn) ++
                                            " names " ++ show gn))
                  logNF "auto" 5 "For target" env nty
-                 searchNames fc rigc defaults (target :: trying) depth def top env ambigok g nty)
-             (\err => if ambig err then throw err
-                         else tryGroups (Just $ fromMaybe err merr) nty gs)
+                 tryNoDefaultsFirst $ \d =>
+                   searchNames fc rigc d (target :: trying) depth def top env ambigok g nty)
+             (\err => tryGroups (Just $ fromMaybe err merr) nty gs)
 
 -- Declared in Core.Unify as:
 -- search : {vars : _} ->
