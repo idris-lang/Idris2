@@ -166,7 +166,18 @@ mutual
   sizeCompareCon s t
       = let (f, args) = getFnArgs t in
         case f of
-             Ref _ (DataCon t a) cn => sizeCompareConArgs s args
+             Ref _ (DataCon t a) cn =>
+                -- if s is smaller or equal to an arg, then it is smaller than t
+                if sizeCompareConArgs s args then True
+                else let (g, args') = getFnArgs s in
+                    case g of
+                        Ref _ (DataCon t' a') cn' =>
+                                -- if s is a matching DataCon, applied to same number of args,
+                                -- no Unknown args, and at least one Smaller
+                                if cn == cn' && length args == length args'
+                                  then Smaller == foldl (|*|) Same (zipWith sizeCompare args' args)
+                                  else False
+                        _ => False
              _ => False
 
   sizeCompareConArgs s [] = False
