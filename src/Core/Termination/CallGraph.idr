@@ -105,24 +105,12 @@ mutual
                  do scs <- traverse (findSC defs env Unguarded pats) args
                     pure (concat scs)
              (Guarded, Ref fc (DataCon _ _) cn, args) =>
-                 do Just ty <- lookupTyExact cn (gamma defs)
-                         | Nothing => do
-                              log "totality" 50 $ "Lookup failed"
-                              findSCcall defs env Guarded pats fc cn args
                     findSCcall defs env Guarded pats fc cn args
              (Toplevel, Ref fc (DataCon _ _) cn, args) =>
-                 do Just ty <- lookupTyExact cn (gamma defs)
-                         | Nothing => do
-                              log "totality" 50 $ "Lookup failed"
-                              findSCcall defs env Guarded pats fc cn args
                     findSCcall defs env Guarded pats fc cn args
              (_, Ref fc Func fn, args) =>
                  do logC "totality" 50 $
                        pure $ "Looking up type of " ++ show !(toFullNames fn)
-                    Just ty <- lookupTyExact fn (gamma defs)
-                         | Nothing => do
-                              log "totality" 50 $ "Lookup failed"
-                              findSCcall defs env Unguarded pats fc fn args
                     findSCcall defs env Unguarded pats fc fn args
              (_, f, args) =>
                  do scs <- traverse (findSC defs env Unguarded pats) args
