@@ -12,6 +12,12 @@
 
 #include "idris_util.h"
 
+#if !defined(static_assert) && (defined(__GNUC__) || defined(__clang__)) &&    \
+    defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L &&                \
+    __STDC_VERSION__ <= 201710L
+#define static_assert _Static_assert
+#endif
+
 static_assert(ATOMIC_LONG_LOCK_FREE == 2,
               "when not lock free, atomic functions are not async-signal-safe");
 
