@@ -95,7 +95,7 @@ schHeader chez libs whole
     (case (machine-type)
       [(i3fb ti3fb a6fb ta6fb) #f]
       [(i3le ti3le a6le ta6le tarm64le) (load-shared-object "libc.so.6")]
-      [(i3osx ti3osx a6osx ta6osx tarm64osx) (load-shared-object "libc.dylib")]
+      [(i3osx ti3osx a6osx ta6osx tarm64osx tppc32osx tppc64osx) (load-shared-object "libc.dylib")]
       [(i3nt ti3nt a6nt ta6nt) (load-shared-object "msvcrt.dll")]
       [else (load-shared-object "libc.so")])
 
