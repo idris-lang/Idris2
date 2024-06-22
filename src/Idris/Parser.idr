@@ -1002,14 +1002,12 @@ mutual
            pure [DoRewrite (boundToFC fname b) b.val]
     <|> do e <- bounds (expr plhs fname indents)
            (atEnd indents $> [DoExp (virtualiseFC $ boundToFC fname e) e.val])
-    <|> do rig <- multiplicity fname
-           e <- bounds (expr plhs fname indents)
-           ty <- optional (decoratedSymbol fname ":" *> typeExpr (pnoeq pdef) fname indents)
-           b <- bounds $ decoratedSymbol fname "<-" *> [| (expr pnowith fname indents, block (patAlt fname)) |]
-           atEnd indents
-           let (v, alts) = b.val
-           let fc = virtualiseFC $ boundToFC fname (mergeBounds e b)
-           pure [DoBindPat fc e.val rig ty v alts]
+             <|> (do ty <- optional (decoratedSymbol fname ":" *> typeExpr (pnoeq pdef) fname indents)
+                     b <- bounds $ decoratedSymbol fname "<-" *> [| (expr pnowith fname indents, block (patAlt fname)) |]
+                     atEnd indents
+                     let (v, alts) = b.val
+                     let fc = virtualiseFC $ boundToFC fname (mergeBounds e b)
+                     pure [DoBindPat fc e.val ty v alts])
 
   patAlt : OriginDesc -> IndentInfo -> Rule PClause
   patAlt fname indents

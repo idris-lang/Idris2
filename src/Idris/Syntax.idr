@@ -240,7 +240,7 @@ mutual
   data PDo' : Type -> Type where
        DoExp : FC -> PTerm' nm -> PDo' nm
        DoBind : FC -> (nameFC : FC) -> Name -> RigCount -> Maybe (PTerm' nm) -> PTerm' nm -> PDo' nm
-       DoBindPat : FC -> PTerm' nm -> RigCount -> Maybe (PTerm' nm) -> PTerm' nm -> List (PClause' nm) -> PDo' nm
+       DoBindPat : FC -> PTerm' nm -> Maybe (PTerm' nm) -> PTerm' nm -> List (PClause' nm) -> PDo' nm
        DoLet : FC -> (lhs : FC) -> Name -> RigCount -> PTerm' nm -> PTerm' nm -> PDo' nm
        DoLetPat : FC -> PTerm' nm -> PTerm' nm -> PTerm' nm -> List (PClause' nm) -> PDo' nm
        DoLetLocal : FC -> List (PDecl' nm) -> PDo' nm
@@ -259,7 +259,7 @@ mutual
   getLoc : PDo' nm -> FC
   getLoc (DoExp fc _) = fc
   getLoc (DoBind fc _ _ _ _ _) = fc
-  getLoc (DoBindPat fc _ __  _ _) = fc
+  getLoc (DoBindPat fc _ _ _ _) = fc
   getLoc (DoLet fc _ _ _ _ _) = fc
   getLoc (DoLetPat fc _ _ _ _) = fc
   getLoc (DoLetLocal fc _) = fc
@@ -712,10 +712,10 @@ parameters {0 nm : Type} (toName : nm -> Name)
   showDo (DoExp _ tm) = showPTerm tm
   showDo (DoBind _ _ n rig (Just ty) tm) = showCount rig ++ show n ++ " : " ++ showPTerm ty ++ " <- " ++ showPTerm tm
   showDo (DoBind _ _ n rig _ tm) = showCount rig ++ show n ++ " <- " ++ showPTerm tm
-  showDo (DoBindPat _ l rig (Just ty) tm alts)
-      = showCount rig ++ showPTerm l ++ " : " ++ showPTerm ty ++ " <- " ++ showPTerm tm ++ concatMap showAlt alts
-  showDo (DoBindPat _ l rig _ tm alts)
-      = showCount rig ++ showPTerm l ++ " <- " ++ showPTerm tm ++ concatMap showAlt alts
+  showDo (DoBindPat _ l (Just ty) tm alts)
+      = showPTerm l ++ " : " ++ showPTerm ty ++ " <- " ++ showPTerm tm ++ concatMap showAlt alts
+  showDo (DoBindPat _ l _ tm alts)
+      = showPTerm l ++ " <- " ++ showPTerm tm ++ concatMap showAlt alts
   showDo (DoLet _ _ l rig _ tm) = "let " ++ show l ++ " = " ++ showPTerm tm
   showDo (DoLetPat _ l _ tm alts)
       = "let " ++ showPTerm l ++ " = " ++ showPTerm tm ++ concatMap showAlt alts

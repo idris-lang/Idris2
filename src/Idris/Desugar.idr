@@ -743,7 +743,7 @@ mutual
                         (\ty => desugarDo side ps ns ty) ty
            pure $ bindFun fc ns tm'
                 $ ILam nameFC rig Explicit (Just n) ty' rest'
-  expandDo side ps topfc ns (DoBindPat fc pat rig ty exp alts :: rest)
+  expandDo side ps topfc ns (DoBindPat fc pat ty exp alts :: rest)
       = do pat' <- desugarDo LHS ps ns pat
            (newps, bpat) <- bindNames False pat'
            exp' <- desugarDo side ps ns exp
@@ -756,7 +756,7 @@ mutual
            ty' <- maybe (pure $ Implicit fc False)
                         (\ty => desugarDo side ps ns ty) ty
            pure $ bindFun fc ns exp'
-                $ ILam EmptyFC rig Explicit (Just (MN "_" 0))
+                $ ILam EmptyFC top Explicit (Just (MN "_" 0))
                           ty'
                           (ICase fc [] (IVar patFC (MN "_" 0))
                                (Implicit fc False)
