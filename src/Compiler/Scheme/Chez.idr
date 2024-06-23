@@ -449,6 +449,42 @@ startChezWinSh chez appdir target progType = """
   "\{ chez }" \{ progType } "$DIR/\{ target }" "$@"
   """
 
+-- This handler turned out to be much more effective than the original simple
+-- `(collect-request-handler (lambda () (collect) (blodwen-run-finalisers)))`
+export
+collectRequestHandler : Builder
+collectRequestHandler = """
+  (collect-request-handler
+    (let* ([gc-counter 1]
+           [log-radix 2]
+           [radix-mask (sub1 (bitwise-arithmetic-shift 1 log-radix))]
+           [major-gc-factor 2]
+           [trigger-major-gc-allocated (* major-gc-factor (bytes-allocated))])
+      (lambda ()
+        (cond
+          [(>= (bytes-allocated) trigger-major-gc-allocated)
+           ;; Force a major collection if memory use has doubled
+           (collect (collect-maximum-generation))
+           (blodwen-run-finalisers)
+           (set! trigger-major-gc-allocated (* major-gc-factor (bytes-allocated)))]
+          [else
+           ;; Imitate the built-in rule, but without ever going to a major collection
+           (let ([this-counter gc-counter])
+             (if (> (add1 this-counter)
+                    (bitwise-arithmetic-shift-left 1 (* log-radix (sub1 (collect-maximum-generation)))))
+                 (set! gc-counter 1)
+                 (set! gc-counter (add1 this-counter)))
+             (collect
+              ;; Find the minor generation implied by the counter
+              (let loop ([c this-counter] [gen 0])
+                (cond
+                  [(zero? (bitwise-and c radix-mask))
+                   (loop (bitwise-arithmetic-shift-right c log-radix)
+                         (add1 gen))]
+                  [else
+                   gen]))))]))))
+  """
+
 ||| Compile a TT expression to Chez Scheme
 compileToSS : Ref Ctxt Defs ->
               Bool -> -- profiling
@@ -480,7 +516,7 @@ compileToSS c prof appdir tm outfile
                    , fromString support
                    , fromString extraRuntime
                    , code
-                   , "(collect-request-handler (lambda () (collect) (blodwen-run-finalisers)))\n"
+                   , collectRequestHandler ++ "\n"
                    , main
                    , schFooter prof True
                    ]
@@ -525,7 +561,7 @@ compileToSSInc c mods libs appdir tm outfile
                    fromString support ++
                    concat loadlibs ++
                    concat loadsos ++
-                   "(collect-request-handler (lambda () (collect) (blodwen-run-finalisers)))\n" ++
+                   collectRequestHandler ++ "\n" ++
                    main ++ schFooter False False
 
          Right () <- coreLift $ writeFile outfile $ build scm
