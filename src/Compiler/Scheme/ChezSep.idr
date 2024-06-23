@@ -237,7 +237,7 @@ compileToSS c chez appdir tm = do
   main <- schExp empty (Chez.chezExtPrim empty) Chez.chezString 0 ctm
   Core.writeFile (appdir </> "mainprog.ss") $ build $ sepBy "\n"
     [ schHeader (map snd libs) [lib.name | lib <- chezLibs]
-    , "(collect-request-handler (lambda () (collect) (blodwen-run-finalisers)))"
+    , collectRequestHandler
     , main
     , schFooter
     ]

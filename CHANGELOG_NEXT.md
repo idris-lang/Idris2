@@ -115,6 +115,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   evaluated. Now when a delayed expression is lifted by CSE, it is compiled
   using Scheme's `delay` and `force` to memoize them.
 
+* More efficient `collect-request-handler` is used.
+
 #### Racket
 
 * Fixed CSE soundness bug that caused delayed expressions to sometimes be eagerly
