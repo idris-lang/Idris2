@@ -1,4 +1,4 @@
-{ stdenv, lib, chez, clang, gmp, fetchFromGitHub, makeWrapper, installShellFiles, support, idris2Version
+{ stdenv, lib, chez, clang, gmp, makeWrapper, installShellFiles, support, idris2Version
 , srcRev, gambit, nodejs, zsh, idris2Bootstrap ? null }:
 
 # Uses scheme to bootstrap the build of idris2
@@ -11,7 +11,12 @@ stdenv.mkDerivation rec {
   pname = "idris2";
   version = idris2Version;
 
-  src = ../.;
+  # we don't rebuild Idris when changing the buildIdris nix
+  # function:
+  src = with lib.fileset; toSource {
+    root = ../.;
+    fileset = difference ../. ../nix/buildIdris.nix;
+  };
 
   strictDeps = true;
   nativeBuildInputs = [ makeWrapper installShellFiles clang chez ]
