@@ -38,6 +38,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * A new `idris2 --dump-ipkg-json` option (requires either `--find-ipkg` or
   specifying the `.ipkg` file) dumps JSON information about an Idris package.
 
+* Support for macOS PowerPC added.
+
 ### Language changes
 
 * Autobind and Typebind modifier on operators allow the user to
