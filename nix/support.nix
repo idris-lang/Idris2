@@ -6,7 +6,12 @@ stdenv'.mkDerivation rec {
   pname = "libidris2_support";
   version = idris2Version;
 
-  src = ../.;
+  # we don't rebuild Idris when changing the buildIdris nix
+  # function:
+  src = with lib.fileset; toSource {
+    root = ../.;
+    fileset = difference ../. ../nix/buildIdris.nix;
+  };
 
   strictDeps = true;
   buildInputs = [ gmp ];
