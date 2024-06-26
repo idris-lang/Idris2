@@ -186,6 +186,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Some pieces of `Data.Fin.Extra` from `contrib` were moved to `base` to modules
   `Data.Fin.Properties`, `Data.Fin.Arith` and `Data.Fin.Split`.
 
+* `Decidable.Decidable.decison` is now `public export`.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
