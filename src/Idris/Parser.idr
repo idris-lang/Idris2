@@ -977,16 +977,18 @@ mutual
 
   doAct : OriginDesc -> IndentInfo -> Rule (List PDo)
   doAct fname indents
-      = do b <- bounds (do n <- bounds (name <|> UN Underscore <$ symbol "_")
+      = do b <- bounds (do rig <- multiplicity fname
+                           n <- bounds (name <|> UN Underscore <$ symbol "_")
                            -- If the name doesn't begin with a lower case letter, we should
                            -- treat this as a pattern, so fail
                            validPatternVar n.val
+                           ty <- optional (decoratedSymbol fname ":" *> typeExpr (pnoeq pdef) fname indents)
                            decoratedSymbol fname "<-"
                            val <- expr pdef fname indents
-                           pure (n, val))
+                           pure (n, rig, ty, val))
            atEnd indents
-           let (n, val) = b.val
-           pure [DoBind (boundToFC fname b) (boundToFC fname n) n.val val]
+           let (n, rig, ty, val) = b.val
+           pure [DoBind (boundToFC fname b) (boundToFC fname n) n.val rig ty val]
     <|> do decoratedKeyword fname "let"
            commit
            res <- nonEmptyBlock (letBlock fname)
@@ -1000,11 +1002,12 @@ mutual
            pure [DoRewrite (boundToFC fname b) b.val]
     <|> do e <- bounds (expr plhs fname indents)
            (atEnd indents $> [DoExp (virtualiseFC $ boundToFC fname e) e.val])
-             <|> (do b <- bounds $ decoratedSymbol fname "<-" *> [| (expr pnowith fname indents, block (patAlt fname)) |]
+             <|> (do ty <- optional (decoratedSymbol fname ":" *> typeExpr (pnoeq pdef) fname indents)
+                     b <- bounds $ decoratedSymbol fname "<-" *> [| (expr pnowith fname indents, block (patAlt fname)) |]
                      atEnd indents
                      let (v, alts) = b.val
                      let fc = virtualiseFC $ boundToFC fname (mergeBounds e b)
-                     pure [DoBindPat fc e.val v alts])
+                     pure [DoBindPat fc e.val ty v alts])
 
   patAlt : OriginDesc -> IndentInfo -> Rule PClause
   patAlt fname indents

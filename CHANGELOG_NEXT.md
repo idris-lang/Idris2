@@ -55,6 +55,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * The language now has a ``%foreign_impl`` pragma to add additional languages
   to a ``%foreign`` function.
 
+* Bind expressions in `do` blocks can now have a type ascription.
+  See [#3327](https://github.com/idris-lang/Idris2/issues/3327).
+
 ### Compiler changes
 
 * The compiler now differentiates between "package search path" and "package

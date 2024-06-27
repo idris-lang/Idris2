@@ -216,9 +216,10 @@ mapPTermM f = goPTerm where
 
     goPDo : PDo' nm -> Core (PDo' nm)
     goPDo (DoExp fc t) = DoExp fc <$> goPTerm t
-    goPDo (DoBind fc nameFC n t) = DoBind fc nameFC n <$> goPTerm t
-    goPDo (DoBindPat fc t u cls) =
+    goPDo (DoBind fc nameFC n c ty t) = DoBind fc nameFC n c <$> goMPTerm ty <*> goPTerm t
+    goPDo (DoBindPat fc t ty u cls) =
       DoBindPat fc <$> goPTerm t
+                   <*> goMPTerm ty
                    <*> goPTerm u
                    <*> goPClauses cls
     goPDo (DoLet fc lhsFC n c t scope) =
@@ -513,9 +514,9 @@ mapPTerm f = goPTerm where
 
     goPDo : PDo' nm -> PDo' nm
     goPDo (DoExp fc t) = DoExp fc $ goPTerm t
-    goPDo (DoBind fc nameFC n t) = DoBind fc nameFC n $ goPTerm t
-    goPDo (DoBindPat fc t u cls)
-      = DoBindPat fc (goPTerm t) (goPTerm u) (goPClause <$> cls)
+    goPDo (DoBind fc nameFC n c ty t) = DoBind fc nameFC n c (goPTerm <$> ty) (goPTerm t)
+    goPDo (DoBindPat fc t ty u cls)
+      = DoBindPat fc (goPTerm t) (goPTerm <$> ty) (goPTerm u) (goPClause <$> cls)
     goPDo (DoLet fc lhsFC n c t scope)
       = DoLet fc lhsFC n c (goPTerm t) (goPTerm scope)
     goPDo (DoLetPat fc pat t scope cls)
