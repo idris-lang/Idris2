@@ -191,6 +191,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * `Decidable.Decidable.decison` is now `public export`.
 
+* `Functor` is implemented for `PiInfo` from `Language.Reflection.TT`.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
