@@ -229,6 +229,13 @@ public export
 data PiInfo t = ImplicitArg | ExplicitArg | AutoImplicit | DefImplicit t
 %name PiInfo pinfo
 
+public export
+Functor PiInfo where
+  map f ImplicitArg     = ImplicitArg
+  map f ExplicitArg     = ExplicitArg
+  map f AutoImplicit    = AutoImplicit
+  map f $ DefImplicit x = DefImplicit $ f x
+
 export
 showPiInfo : Show a => {default True wrapExplicit : Bool} -> PiInfo a -> String -> String
 showPiInfo ImplicitArg s = "{\{s}}"
