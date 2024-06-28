@@ -193,6 +193,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * `Functor` is implemented for `PiInfo` from `Language.Reflection.TT`.
 
+* Quantity of the argument for the type being searched in the `search` function
+  from `Language.Reflection` was changed to be zero.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.

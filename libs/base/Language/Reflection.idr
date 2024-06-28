@@ -287,5 +287,5 @@ catch elab = try (Just <$> elab) (pure Nothing)
 ||| Run proof search to attempt to find a value of the input type.
 ||| Useful to check whether a give interface constraint is satisfied.
 export
-search : Elaboration m => (ty : Type) -> m (Maybe ty)
+search : Elaboration m => (0 ty : Type) -> m (Maybe ty)
 search ty = catch $ check {expected = ty} `(%search)
