@@ -368,6 +368,8 @@ parameters (defs : Defs, topopts : EvalOpts)
     -- Type of type matching, in typecase
     tryAlt env loc opts fc stk (NType _ _) (ConCase (UN (Basic "Type")) tag [] sc)
          = evalTree env loc opts fc stk sc
+    tryAlt env loc opts fc stk (NType _ _) (ConCase _ _ _ _)
+         = pure NoMatch
     -- Arrow matching, in typecase
     tryAlt {more}
            env loc opts fc stk (NBind pfc x (Pi fc' r e aty) scty) (ConCase (UN (Basic "->")) tag [s,t] sc)
@@ -375,6 +377,9 @@ parameters (defs : Defs, topopts : EvalOpts)
                   [aty,
                    MkNFClosure opts env (NBind pfc x (Lam fc' r e aty) scty)]
                   sc
+    tryAlt {more}
+           env loc opts fc stk (NBind pfc x (Pi fc' r e aty) scty) (ConCase nm tag args sc)
+       = pure NoMatch
     -- Delay matching
     tryAlt env loc opts fc stk (NDelay _ _ ty arg) (DelayCase tyn argn sc)
          = evalTree env (ty :: arg :: loc) opts fc stk sc
