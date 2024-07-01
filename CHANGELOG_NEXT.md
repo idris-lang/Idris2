@@ -78,6 +78,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   consequence, `IWithApp` appears in `TTImp` values in elaborator scripts instead
   of `IApp`, as it should have been.
 
+* `MakeFuture` primitive is removed.
+
 ### Backend changes
 
 #### RefC Backend
@@ -229,6 +231,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   - `Data/List/Algebra.idr`
   - `Data/Morphisms/Algebra.idr`
   - `Data/Nat/Algebra.idr`
+
+* `prim__makeFuture` from `System.Future` is reimplemented as `%foreign` instead of
+  using now removed `MakeFuture` primitive
 
 #### Network
 

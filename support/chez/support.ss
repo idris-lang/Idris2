@@ -454,10 +454,10 @@
 ;; Future
 
 (define-record future-internal (result ready mutex signal))
-(define (blodwen-make-future work)
+(define (blodwen-make-future ty work)
   (let ([future (make-future-internal #f #f (make-mutex) (make-condition))])
     (fork-thread (lambda ()
-      (let ([result (work)])
+      (let ([result (work '())])
         (with-mutex (future-internal-mutex future)
           (set-future-internal-result! future result)
           (set-future-internal-ready! future #t)
