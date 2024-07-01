@@ -109,6 +109,9 @@ if [ -z "$PREFIX_CHANGED" ] && [ -n "$IDRIS2_PREFIX" ]; then
     export PREFIX_CHANGED=1
 fi
 
+# Set the most neutral locale for reproducibility
+export LC_ALL=C.UTF-8
+
 # Remove test directory from output
 # Useful for consistency of output between machines
 # Usage: run SomeTest.idr | filter_test_dir
