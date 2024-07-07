@@ -328,14 +328,22 @@ pathLookup names = do
                                          y <- extensions]
   firstExists candidates
 
+||| A test requirement. The String value returned from `satsify` witnesses requirement.
+||| Return Nothing to indicate the requirement is not met and tests relying on it
+||| should be skipped.
+public export
+interface Requirement r where
+  constructor MkReq
+  name : r -> String
+  satisfy : r -> IO (Maybe String)
 
 ||| Some test may involve Idris' backends and have requirements.
 ||| We define here the ones supported by Idris
 public export
-data Requirement = C | Chez | Node | Racket | Gambit
+data BackendRequirement = C | Chez | Node | Racket | Gambit
 
 export
-Eq Requirement where
+Eq BackendRequirement where
   C == C = True
   Chez == Chez = True
   Node == Node = True
@@ -344,7 +352,7 @@ Eq Requirement where
   _ == _ = False
 
 export
-Show Requirement where
+Show BackendRequirement where
   show C = "C"
   show Chez = "Chez"
   show Node = "node"
@@ -352,7 +360,7 @@ Show Requirement where
   show Gambit = "gambit"
 
 export
-[CG] Show Requirement where
+[CG] Show BackendRequirement where
   show C = "refc"
   show Chez = "chez"
   show Node = "node"
@@ -360,7 +368,7 @@ export
   show Gambit = "gambit"
 
 export
-checkRequirement : Requirement -> IO (Maybe String)
+checkRequirement : BackendRequirement -> IO (Maybe String)
 checkRequirement req
   = if platformSupport req
       then do let (envvar, paths) = requirement req
@@ -368,16 +376,23 @@ checkRequirement req
               pure (Just exec)
       else pure Nothing
   where
-    requirement : Requirement -> (String, List String)
+    requirement : BackendRequirement -> (String, List String)
     requirement C = ("CC", ["cc"])
     requirement Chez = ("CHEZ", ["chez", "chezscheme9.5", "chezscheme", "chez-scheme", "scheme"])
     requirement Node = ("NODE", ["node"])
     requirement Racket = ("RACKET", ["racket"])
     requirement Gambit = ("GAMBIT", ["gsc"])
-    platformSupport : Requirement -> Bool
+
+    platformSupport : BackendRequirement -> Bool
     platformSupport C = not isWindows
     platformSupport Racket = not isWindows
     platformSupport _ = True
+
+||| Create a Requirement from a BackendRequirement
+export
+Requirement BackendRequirement where
+  name = show
+  satisfy = checkRequirement
 
 export
 findCG : IO (Maybe String)
@@ -399,12 +414,12 @@ data Codegen
     ||| and if nothing was passed guess a sensible default using findCG
     Default
   | ||| Use exactly the given requirement
-    Just Requirement
+    Just BackendRequirement
 
 export
-toList : Codegen -> List Requirement
-toList (Just r) = [r]
-toList _ = []
+codegenRequirement : Codegen -> List BackendRequirement
+codegenRequirement (Just r) = [r]
+codegenRequirement _ = []
 
 ||| A test pool is characterised by
 |||  + a name
@@ -415,27 +430,19 @@ public export
 record TestPool where
   constructor MkTestPool
   poolName : String
-  constraints : List Requirement
+  {default BackendRequirement 0 req : Type}
+  {auto reqPrf : Requirement req}
+  constraints : List req
   codegen : Codegen
   testCases : List String
 
-||| Find all the test in the given directory.
-export
-testsInDir :
-  (dirName : String) ->
-  {default (const True) pred : String -> Bool} ->
-  (poolName : String) ->
-  {default [] requirements : List Requirement} ->
-  {default Nothing codegen : Codegen} ->
-  Lazy (IO TestPool)
-testsInDir dirName poolName = do
+findTests : (String -> Bool) -> Codegen -> String -> String -> IO (List String)
+findTests pred codegen poolName dirName = do
   Right names <- listDir dirName
     | Left e => die $ "failed to list " ++ dirName ++ ": " ++ show e
   let names = [n | n <- names, pred n]
   let testNames = [dirName ++ "/" ++ n | n <- names]
-  testNames <- filter testNames
-  when (length testNames == 0) $ die $ "no tests found in " ++ dirName
-  pure $ MkTestPool poolName requirements codegen testNames
+  filter testNames
     where
       -- Directory without `run` file is not a test
       isTest : (path : String) -> IO Bool
@@ -449,6 +456,35 @@ testsInDir dirName poolName = do
                True  => pure $ p :: rem
                False => pure rem
 
+||| Find all the test in the given directory.
+export
+testsInDir :
+  (dirName : String) ->
+  {default (const True) pred : String -> Bool} ->
+  (poolName : String) ->
+  {default Nothing codegen : Codegen} ->
+  Lazy (IO TestPool)
+testsInDir dirName poolName = do
+  testNames <- findTests pred codegen poolName dirName
+  when (length testNames == 0) $ die $ "no tests found in " ++ dirName
+  pure $ MkTestPool poolName [] codegen testNames
+
+||| Find all the test in the given directory but only run them given the
+||| requirements specified are met.
+export
+testsInDir' :
+  {0 req : Type} ->
+  Requirement req =>
+  (dirName : String) ->
+  {default (const True) pred : String -> Bool} ->
+  (poolName : String) ->
+  (requirements : List req) ->
+  {default Nothing codegen : Codegen} ->
+  Lazy (IO TestPool)
+testsInDir' dirName poolName requirements = do
+  testNames <- findTests pred codegen poolName dirName
+  when (length testNames == 0) $ die $ "no tests found in " ++ dirName
+  pure $ MkTestPool {req} poolName requirements codegen testNames
 
 ||| Only keep the tests that have been asked for
 export
@@ -576,13 +612,10 @@ poolRunner opts pool
        let (_ :: _) = tests
              | [] => pure initSummary
        -- if so make sure the constraints are satisfied
-       cs <- for (toList (codegen pool) ++ constraints pool) $ \ req => do
-          mfp <- checkRequirement req
-          let msg = case mfp of
-                      Nothing => "✗ " ++ show req ++ " not found"
-                      Just fp => "✓ Found " ++ show req ++ " at " ++ fp
-          pure (mfp, msg)
-       let (cs, msgs) = unzip cs
+       let cgReq = codegenRequirement pool.codegen
+       cs1 <- traverse checkReq cgReq
+       cs2 <- traverse (checkReq @{pool.reqPrf}) pool.constraints
+       let (cs, msgs) = unzip (cs1 ++ cs2)
 
        putStrLn (banner msgs)
 
@@ -613,6 +646,14 @@ poolRunner opts pool
        pure acc
 
   where
+
+    checkReq : {0 req : Type} -> Requirement req => req -> IO (Maybe String, String)
+    checkReq req = do
+      mfp <- satisfy req
+      let msg = case mfp of
+                  Nothing => "✗ " ++ (name req) ++ " not found"
+                  Just fp => "✓ Found " ++ (name req) ++ " at " ++ fp
+      pure (mfp, msg)
 
     separator : String
     separator = fastPack $ replicate 72 '-'

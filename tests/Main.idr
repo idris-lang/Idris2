@@ -75,12 +75,12 @@ idrisTestsEvaluator = testsInDir "idris2/evaluator" "Evaluation"
 idrisTestsREPL : IO TestPool
 idrisTestsREPL = testsInDir "idris2/repl" "REPL commands and help"
 
-idrisTestsAllSchemes : Requirement -> IO TestPool
+idrisTestsAllSchemes : BackendRequirement -> IO TestPool
 idrisTestsAllSchemes cg = testsInDir "allschemes"
       ("Test across all scheme backends: " ++ show cg ++ " instance")
       {codegen = Just cg}
 
-idrisTestsAllBackends : Requirement -> TestPool
+idrisTestsAllBackends : BackendRequirement -> TestPool
 idrisTestsAllBackends cg = MkTestPool
       ("Test across all backends: " ++ show cg ++ " instance")
       [] (Just cg)
@@ -186,15 +186,15 @@ templateTests = testsInDir "templates" "Test templates"
 -- that only runs if all backends are
 -- available.
 baseLibraryTests : IO TestPool
-baseLibraryTests = testsInDir "base" "Base library" {requirements = [Chez, Node]}
+baseLibraryTests = testsInDir' "base" "Base library" [Chez, Node]
 
 -- same behavior as `baseLibraryTests`
 contribLibraryTests : IO TestPool
-contribLibraryTests = testsInDir "contrib" "Contrib library" {requirements = [Chez, Node]}
+contribLibraryTests = testsInDir' "contrib" "Contrib library" [Chez, Node]
 
 -- same behavior as `baseLibraryTests`
 linearLibraryTests : IO TestPool
-linearLibraryTests = testsInDir "linear" "Linear library" {requirements = [Chez, Node]}
+linearLibraryTests = testsInDir' "linear" "Linear library" [Chez, Node]
 
 codegenTests : IO TestPool
 codegenTests = testsInDir "codegen" "Code generation"
