@@ -448,7 +448,7 @@ jobs:
           name: windows-installed-bootstrapped-idris2-chez
           path: ${{ env.IDRIS_PREFIX }}
       - name: Install build dependencies
-        uses: Bogdanp/setup-racket@v1.4
+        uses: Bogdanp/setup-racket@v1.11
         with:
           variant: 'CS'
           version: 'stable'
