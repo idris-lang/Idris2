@@ -198,6 +198,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Quantity of the argument for the type being searched in the `search` function
   from `Language.Reflection` was changed to be zero.
 
+* Added `fromRight` and `fromLeft` for extracting values out of `Either`, equivalent to `fromJust` for `Just`.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
