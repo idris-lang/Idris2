@@ -341,6 +341,10 @@ export
 Show Requirement where
   show = name
 
+export
+Eq Requirement where
+  (==) = (==) `on` name
+
 ||| Some test may involve Idris' backends and have requirements.
 ||| We define here the ones supported by Idris
 public export

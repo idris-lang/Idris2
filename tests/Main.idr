@@ -86,8 +86,8 @@ idrisTestsAllBackends cg = MkTestPool
       [] (Just cg)
        -- RefC implements IEEE standard and distinguishes between 0.0 and -0.0
        -- unlike other backends. So turn this test for now.
-      $ ([ "issue2362" ] <* guard (cg.name /= "refc"))
-      ++ ([ "popen2" ] <* guard (cg.name /= "node"))
+      $ ([ "issue2362" ] <* guard (cg /= C))
+      ++ ([ "popen2" ] <* guard (cg /= Node))
       ++ [ -- Evaluator
        "evaluator004",
        -- Unfortunately the behaviour of Double is platform dependent so the
