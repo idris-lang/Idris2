@@ -75,19 +75,19 @@ idrisTestsEvaluator = testsInDir "idris2/evaluator" "Evaluation"
 idrisTestsREPL : IO TestPool
 idrisTestsREPL = testsInDir "idris2/repl" "REPL commands and help"
 
-idrisTestsAllSchemes : BackendRequirement -> IO TestPool
+idrisTestsAllSchemes : Requirement -> IO TestPool
 idrisTestsAllSchemes cg = testsInDir "allschemes"
       ("Test across all scheme backends: " ++ show cg ++ " instance")
       {codegen = Just cg}
 
-idrisTestsAllBackends : BackendRequirement -> TestPool
+idrisTestsAllBackends : Requirement -> TestPool
 idrisTestsAllBackends cg = MkTestPool
       ("Test across all backends: " ++ show cg ++ " instance")
       [] (Just cg)
        -- RefC implements IEEE standard and distinguishes between 0.0 and -0.0
        -- unlike other backends. So turn this test for now.
-      $ ([ "issue2362" ] <* guard (cg /= C))
-      ++ ([ "popen2" ] <* guard (cg /= Node))
+      $ ([ "issue2362" ] <* guard (cg.name /= "refc"))
+      ++ ([ "popen2" ] <* guard (cg.name /= "node"))
       ++ [ -- Evaluator
        "evaluator004",
        -- Unfortunately the behaviour of Double is platform dependent so the
@@ -186,15 +186,15 @@ templateTests = testsInDir "templates" "Test templates"
 -- that only runs if all backends are
 -- available.
 baseLibraryTests : IO TestPool
-baseLibraryTests = testsInDir' "base" "Base library" [Chez, Node]
+baseLibraryTests = testsInDir "base" "Base library" {requirements = [Chez, Node]}
 
 -- same behavior as `baseLibraryTests`
 contribLibraryTests : IO TestPool
-contribLibraryTests = testsInDir' "contrib" "Contrib library" [Chez, Node]
+contribLibraryTests = testsInDir "contrib" "Contrib library" {requirements = [Chez, Node]}
 
 -- same behavior as `baseLibraryTests`
 linearLibraryTests : IO TestPool
-linearLibraryTests = testsInDir' "linear" "Linear library" [Chez, Node]
+linearLibraryTests = testsInDir "linear" "Linear library" {requirements = [Chez, Node]}
 
 codegenTests : IO TestPool
 codegenTests = testsInDir "codegen" "Code generation"
