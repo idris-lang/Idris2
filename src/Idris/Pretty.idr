@@ -313,7 +313,7 @@ mutual
     prettyPrec d (PDelay _ tm) = parenthesise (d > startPrec) $ "Delay" <++> prettyPrec appPrec tm
     prettyPrec d (PForce _ tm) = parenthesise (d > startPrec) $ "Force" <++> prettyPrec appPrec tm
     prettyPrec d (PAutoApp _ f a) =
-    parenthesise (d > startPrec) $ group $ prettyPrec leftAppPrec f <++> "@" <+> braces (pretty a)
+      parenthesise (d > startPrec) $ group $ prettyPrec leftAppPrec f <++> "@" <+> braces (pretty a)
     prettyPrec d (PNamedApp _ f n (PRef _ a)) =
       parenthesise (d > startPrec) $ group $
         if n == rawName a

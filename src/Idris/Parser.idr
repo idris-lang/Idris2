@@ -1231,6 +1231,7 @@ mutual
        = do b <- bounds $ do
                    decoratedSymbol fname "="
                    mustWork $ do
+                     continue indents
                      rhs <- typeExpr pdef fname indents
                      ws <- option [] $ whereBlock fname col
                      pure (rhs, ws)

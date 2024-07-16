@@ -1,0 +1,11 @@
+1/1: Building DeclIndent (DeclIndent.idr)
+Error: Couldn't parse any alternatives:
+1: Unexpected end of expression.
+
+DeclIndent:4:2--4:3
+ 1 | namespace A
+ 2 |   test : (x : Type -> Type) -> Type
+ 3 |   test x =
+ 4 |  x Type
+      ^
+... (2 others)
