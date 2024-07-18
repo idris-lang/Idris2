@@ -242,28 +242,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 #### Test
 
-* Renamed `Requirement` to `BackendRequirement`. A new interface has been
-  introduced with the name `Requirement`, so you should proactively adopt the new
-  `BackendRequirement` name anywhere you've used `Test.Golden.Requirement`
-  previously to avoid potentially difficult to understand compiler errors.
-
-* Both the `TestPool` type and the `testsInDir` helper have been reworked to
-  support a more flexible definition of a "requirement." Any `TestPool` or use
-  of `testsInDir` that does _not_ specify any constraints/requirements need not
-  change at all. A `TestPool` with existing requirements shouldn't need to
-  change, either, unless you'd like to use your own `Requirement` type going
-  forward instead of the default `BackendRequirement`. If you have a
-  `testsInDir` with requirements, it will need to change to a `testsInDir'`;
-  note the tick (apostrophe) in the name. In full, make the following change.
-
-      testsInDir "testdir" "My Tests" {requirements = [C, Node]
-
-  Should be refactored to:
-
-      testsInDir' "testdir" "My Tests" [C, Node]
-
-* The new `Requirement` interface in `Test.Golden` can be implemented for any
-  type you would like to use to specify requirements for a test pool. This makes
-  it quite easy to write test pools that are skipped based on any number of
-  things.
+* Replaced `Requirement` data type with a new record that can be used to create
+  any requirement needed. The constructors for the old `Requirement` type are
+  now functions of the same names that return values of the new record type so
+  in most situations there should be no compatibility issues.
 

@@ -50,11 +50,11 @@ The second argument to `MkTestPool` (empty in the above example) is a list of
 constraints that need to be satisfied to be able to run the tests in the given
 pool. An empty list means no requirements. If your tests required racket to be
 installed, you could for instance specify `[Racket]`.
-See the [`BackendRequirement` type](./Test/Golden.idr#L343) for more.
+See the [`Requirement` type](./Test/Golden.idr#L335) for more.
 
 You may have requirements for a particular `TestPool` that aren't simply "The
-Node Backend can be used." To represent your own requirements, create a type
-that implements the `Requirement` interface and use values of that type instead.
+Node Backend can be used." To represent your own requirements, create your own
+values of the `Requirement` type.
 
 The third argument to `MkTestPool` is an optional backend. In the example we
 did not specify any but if you want to use the reference counting C backend
@@ -103,6 +103,5 @@ test case as the expectation.
 
 If you'd like to make a `TestPool` that automatically picks up all the tests
 from a particular directory, you can use the `testsInDir` helper function from
-the `Test.Golden` module. Note that if you'd like to specify requirements for
-your `TestPool`, use the `testsInDir'` helper instead.
+the `Test.Golden` module.
 
