@@ -634,8 +634,8 @@ poolRunner opts pool
     checkReq req = do
       mfp <- satisfy req
       let msg = case mfp of
-                  Nothing => "✗ " ++ (name req) ++ " not found"
-                  Just fp => "✓ Found " ++ (name req) ++ " at " ++ fp
+                  Nothing => "✗ \{name req}  not found"
+                  Just fp => "✓ Found \{name req} at \{fp}"
       pure (mfp, msg)
 
     separator : String
