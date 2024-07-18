@@ -328,7 +328,7 @@ pathLookup names = do
                                          y <- extensions]
   firstExists candidates
 
-||| A test requirement. The String value returned from `satsify` witnesses requirement.
+||| A test requirement. The String value returned from `satisfy` witnesses requirement.
 ||| Return Nothing to indicate the requirement is not met and tests relying on it
 ||| should be skipped.
 public export
