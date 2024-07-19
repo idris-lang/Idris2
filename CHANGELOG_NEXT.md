@@ -240,3 +240,12 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 #### Network
 
 * Add a missing function parameter (the flag) in the C implementation of `idrnet_recv_bytes`
+
+
+#### Test
+
+* Replaced `Requirement` data type with a new record that can be used to create
+  any requirement needed. The constructors for the old `Requirement` type are
+  now functions of the same names that return values of the new record type so
+  in most situations there should be no compatibility issues.
+

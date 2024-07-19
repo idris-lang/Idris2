@@ -328,39 +328,30 @@ pathLookup names = do
                                          y <- extensions]
   firstExists candidates
 
+||| A test requirement. The String value returned from `satisfy` witnesses requirement.
+||| Return Nothing to indicate the requirement is not met and tests relying on it
+||| should be skipped.
+public export
+record Requirement where
+  constructor MkReq
+  name : String
+  satisfy : IO (Maybe String)
+
+export
+Show Requirement where
+  show = name
+
+export
+Eq Requirement where
+  (==) = (==) `on` name
 
 ||| Some test may involve Idris' backends and have requirements.
 ||| We define here the ones supported by Idris
 public export
-data Requirement = C | Chez | Node | Racket | Gambit
+data BackendRequirement = ReqC | ReqChez | ReqNodeJS | ReqRacket | ReqGambit
 
 export
-Eq Requirement where
-  C == C = True
-  Chez == Chez = True
-  Node == Node = True
-  Racket == Racket = True
-  Gambit == Gambit = True
-  _ == _ = False
-
-export
-Show Requirement where
-  show C = "C"
-  show Chez = "Chez"
-  show Node = "node"
-  show Racket = "racket"
-  show Gambit = "gambit"
-
-export
-[CG] Show Requirement where
-  show C = "refc"
-  show Chez = "chez"
-  show Node = "node"
-  show Racket = "racket"
-  show Gambit = "gambit"
-
-export
-checkRequirement : Requirement -> IO (Maybe String)
+checkRequirement : BackendRequirement -> IO (Maybe String)
 checkRequirement req
   = if platformSupport req
       then do let (envvar, paths) = requirement req
@@ -368,26 +359,47 @@ checkRequirement req
               pure (Just exec)
       else pure Nothing
   where
-    requirement : Requirement -> (String, List String)
-    requirement C = ("CC", ["cc"])
-    requirement Chez = ("CHEZ", ["chez", "chezscheme9.5", "chezscheme", "chez-scheme", "scheme"])
-    requirement Node = ("NODE", ["node"])
-    requirement Racket = ("RACKET", ["racket"])
-    requirement Gambit = ("GAMBIT", ["gsc"])
-    platformSupport : Requirement -> Bool
-    platformSupport C = not isWindows
-    platformSupport Racket = not isWindows
+    requirement : BackendRequirement -> (String, List String)
+    requirement ReqC = ("CC", ["cc"])
+    requirement ReqChez = ("CHEZ", ["chez", "chezscheme9.5", "chezscheme", "chez-scheme", "scheme"])
+    requirement ReqNodeJS = ("NODE", ["node"])
+    requirement ReqRacket = ("RACKET", ["racket"])
+    requirement ReqGambit = ("GAMBIT", ["gsc"])
+
+    platformSupport : BackendRequirement -> Bool
+    platformSupport ReqC = not isWindows
+    platformSupport ReqRacket = not isWindows
     platformSupport _ = True
+
+export
+C : Requirement
+C = MkReq "refc" (checkRequirement ReqC)
+
+export
+Chez : Requirement
+Chez = MkReq "chez" (checkRequirement ReqChez)
+
+export
+Node : Requirement
+Node = MkReq "node" (checkRequirement ReqNodeJS)
+
+export
+Racket : Requirement
+Racket = MkReq "racket" (checkRequirement ReqRacket)
+
+export
+Gambit : Requirement
+Gambit = MkReq "gambit" (checkRequirement ReqGambit)
 
 export
 findCG : IO (Maybe String)
 findCG
   = do Nothing <- getEnv "IDRIS2_TESTS_CG" | p => pure p
-       Nothing <- checkRequirement Chez    | p => pure (Just "chez")
-       Nothing <- checkRequirement Node    | p => pure (Just "node")
-       Nothing <- checkRequirement Racket  | p => pure (Just "racket")
-       Nothing <- checkRequirement Gambit  | p => pure (Just "gsc")
-       Nothing <- checkRequirement C       | p => pure (Just "refc")
+       Nothing <- checkRequirement ReqChez    | p => pure (Just "chez")
+       Nothing <- checkRequirement ReqNodeJS  | p => pure (Just "node")
+       Nothing <- checkRequirement ReqRacket  | p => pure (Just "racket")
+       Nothing <- checkRequirement ReqGambit  | p => pure (Just "gsc")
+       Nothing <- checkRequirement ReqC       | p => pure (Just "refc")
        pure Nothing
 
 ||| A choice of a codegen
@@ -402,9 +414,9 @@ data Codegen
     Just Requirement
 
 export
-toList : Codegen -> List Requirement
-toList (Just r) = [r]
-toList _ = []
+codegenRequirement : Codegen -> List Requirement
+codegenRequirement (Just r) = [r]
+codegenRequirement _ = []
 
 ||| A test pool is characterised by
 |||  + a name
@@ -419,23 +431,13 @@ record TestPool where
   codegen : Codegen
   testCases : List String
 
-||| Find all the test in the given directory.
-export
-testsInDir :
-  (dirName : String) ->
-  {default (const True) pred : String -> Bool} ->
-  (poolName : String) ->
-  {default [] requirements : List Requirement} ->
-  {default Nothing codegen : Codegen} ->
-  Lazy (IO TestPool)
-testsInDir dirName poolName = do
+findTests : (String -> Bool) -> Codegen -> String -> String -> IO (List String)
+findTests pred codegen poolName dirName = do
   Right names <- listDir dirName
     | Left e => die $ "failed to list " ++ dirName ++ ": " ++ show e
   let names = [n | n <- names, pred n]
   let testNames = [dirName ++ "/" ++ n | n <- names]
-  testNames <- filter testNames
-  when (length testNames == 0) $ die $ "no tests found in " ++ dirName
-  pure $ MkTestPool poolName requirements codegen testNames
+  filter testNames
     where
       -- Directory without `run` file is not a test
       isTest : (path : String) -> IO Bool
@@ -449,6 +451,20 @@ testsInDir dirName poolName = do
                True  => pure $ p :: rem
                False => pure rem
 
+||| Find all the test in the given directory but only run them given any
+||| requirements specified are met.
+export
+testsInDir :
+  (dirName : String) ->
+  {default (const True) pred : String -> Bool} ->
+  (poolName : String) ->
+  {default [] requirements : List Requirement} ->
+  {default Nothing codegen : Codegen} ->
+  Lazy (IO TestPool)
+testsInDir dirName poolName = do
+  testNames <- findTests pred codegen poolName dirName
+  when (length testNames == 0) $ die $ "no tests found in " ++ dirName
+  pure $ MkTestPool poolName requirements codegen testNames
 
 ||| Only keep the tests that have been asked for
 export
@@ -576,11 +592,11 @@ poolRunner opts pool
        let (_ :: _) = tests
              | [] => pure initSummary
        -- if so make sure the constraints are satisfied
-       cs <- for (toList (codegen pool) ++ constraints pool) $ \ req => do
-          mfp <- checkRequirement req
+       cs <- for (codegenRequirement pool.codegen ++ pool.constraints) $ \ req => do
+          mfp <- satisfy req
           let msg = case mfp of
-                      Nothing => "✗ " ++ show req ++ " not found"
-                      Just fp => "✓ Found " ++ show req ++ " at " ++ fp
+                      Nothing => "✗ " ++ req.name ++ " not found"
+                      Just fp => "✓ Found " ++ req.name ++ " at " ++ fp
           pure (mfp, msg)
        let (cs, msgs) = unzip cs
 
@@ -590,9 +606,9 @@ poolRunner opts pool
              | Nothing => pure initSummary
 
        -- if the test pool requires a specific codegen then use that
-       let opts = case codegen pool of
+       let opts = case pool.codegen of
                     Nothing => { codegen := Nothing } opts
-                    Just cg => { codegen := Just (show @{CG} cg) } opts
+                    Just cg => { codegen := Just cg.name } opts
                     Default => opts
 
        -- set up the channels
@@ -613,6 +629,14 @@ poolRunner opts pool
        pure acc
 
   where
+
+    checkReq : {0 req : Type} -> Requirement -> IO (Maybe String, String)
+    checkReq req = do
+      mfp <- satisfy req
+      let msg = case mfp of
+                  Nothing => "✗ \{name req}  not found"
+                  Just fp => "✓ Found \{name req} at \{fp}"
+      pure (mfp, msg)
 
     separator : String
     separator = fastPack $ replicate 72 '-'
