@@ -637,8 +637,10 @@ mutual
            bracketedExpr fname start indents
     <|> do start <- bounds (symbol "[<")
            snocListExpr fname start indents
-    <|> do start <- bounds (symbol "[>" <|> symbol "[")
+    <|> do start <- bounds (symbol "[>")
            listExpr fname start indents
+    <|> do start <- bounds (symbol "[")
+           listExpr fname start indents <|> dict fname indents
     <|> do b <- bounds (decoratedSymbol fname "!" *> simpleExpr fname indents)
            pure (PBang (virtualiseFC $ boundToFC fname b) b.val)
     <|> do b <- bounds $ do decoratedPragma fname "logging"
@@ -891,6 +893,19 @@ mutual
            mustWork $ atEnd indents
            (x, t, e) <- pure b.val
            pure (PIfThenElse (boundToFC fname b) x t e)
+
+  dict : OriginDesc -> IndentInfo -> Rule PTerm
+  dict fname indents = do
+    b <- bounds $ do
+      commit
+      fs <- sepBy1 (decoratedSymbol fname ",") $ do
+        l <- expr pdef fname indents
+        ignore (decoratedSymbol fname ":=")
+        r <- expr pdef fname indents
+        pure (l, r)
+      decoratedSymbol fname "]"
+      pure fs
+    pure $ PDict (boundToFC fname b) (List1.forget b.val)
 
   record_ : OriginDesc -> IndentInfo -> Rule PTerm
   record_ fname indents

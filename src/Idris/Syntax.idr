@@ -104,6 +104,7 @@ mutual
        PCase : FC -> List (PFnOpt' nm) -> PTerm' nm -> List (PClause' nm) -> PTerm' nm
        PLocal : FC -> List (PDecl' nm) -> (scope : PTerm' nm) -> PTerm' nm
        PUpdate : FC -> List (PFieldUpdate' nm) -> PTerm' nm
+       PDict : FC -> PDictionary' nm -> PTerm' nm
        PApp : FC -> PTerm' nm -> PTerm' nm -> PTerm' nm
        PWithApp : FC -> PTerm' nm -> PTerm' nm -> PTerm' nm
        PNamedApp : FC -> PTerm' nm -> Name -> PTerm' nm -> PTerm' nm
@@ -176,6 +177,7 @@ mutual
   getPTermLoc (PLet fc _ _ _ _ _ _) = fc
   getPTermLoc (PCase fc _ _ _) = fc
   getPTermLoc (PLocal fc _ _) = fc
+  getPTermLoc (PDict fc _) = fc
   getPTermLoc (PUpdate fc _) = fc
   getPTermLoc (PApp fc _ _) = fc
   getPTermLoc (PWithApp fc _ _) = fc
@@ -231,6 +233,14 @@ mutual
   data PFieldUpdate' : Type -> Type where
        PSetField : (path : List String) -> PTerm' nm -> PFieldUpdate' nm
        PSetFieldApp : (path : List String) -> PTerm' nm -> PFieldUpdate' nm
+
+  public export
+  PDictionary' : Type -> Type
+  PDictionary' nm = List (PTerm' nm, PTerm' nm)
+
+  public export
+  PDictionary : Type
+  PDictionary = List (PTerm, PTerm)
 
   public export
   PDo : Type
@@ -771,6 +781,8 @@ parameters {0 nm : Type} (toName : nm -> Name)
         showCase (MkImpossible _ lhs) = showPTerm lhs ++ " impossible"
   showPTermPrec d (PLocal _ ds sc) -- We'll never see this when displaying a normal form...
         = "let { << definitions >>  } in " ++ showPTermPrec d sc
+  showPTermPrec d (PDict _ fs)
+        = ?hello
   showPTermPrec d (PUpdate _ fs)
         = "record { " ++ showSep ", " (map showUpdate fs) ++ " }"
   showPTermPrec d (PApp _ f a) =

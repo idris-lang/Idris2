@@ -354,6 +354,8 @@ mutual
       = let ps' = definedIn xs ++ ps in
             pure $ ILocal fc (concat !(traverse (desugarDecl ps') xs))
                              !(desugar side ps' scope)
+  desugarB side ps (PDict fc fs)
+      = expandDict side ps emptyFC fs
   desugarB side ps (PApp pfc (PUpdate fc fs) rec)
       = pure $ IUpdate pfc !(traverse (desugarUpdate side ps) fs)
                            !(desugarB side ps rec)
@@ -599,6 +601,18 @@ mutual
   expandList side ps nilFC ((consFC, x) :: xs)
       = pure $ apply (IVar consFC (UN $ Basic "::"))
                 [!(desugarB side ps x), !(expandList side ps nilFC xs)]
+
+  expandDict : {auto s : Ref Syn SyntaxInfo} ->
+               {auto b : Ref Bang BangData} ->
+               {auto c : Ref Ctxt Defs} ->
+               {auto u : Ref UST UState} ->
+               {auto m : Ref MD Metadata} ->
+               {auto o : Ref ROpts REPLOpts} ->
+               Side -> List Name -> (nilFC : FC) -> PDictionary -> Core RawImp
+  expandDict side ps nilFC [] = pure (IVar nilFC (UN $ Basic "Nil"))
+  expandDict side ps nilFC ((k, v) :: xs)
+      = pure $ apply (IVar emptyFC (UN $ Basic "KeyVal"))
+          [!(desugarB side ps k), !(desugarB side ps v), !(expandDict side ps nilFC xs)]
 
   expandSnocList
              : {auto s : Ref Syn SyntaxInfo} ->

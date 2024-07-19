@@ -294,6 +294,8 @@ mutual
     prettyPrec d (PLocal _ ds sc) =
       parenthesise (d > startPrec) $ group $ align $
         let_ <++> braces (angles (angles "definitions")) <+> line <+> in_ <++> pretty sc
+    prettyPrec d (PDict _ fs) =
+      ?render222
     prettyPrec d (PUpdate _ fs) =
       parenthesise (d > startPrec) $ group $
         record_ <++> braces (vsep $ punctuate comma (prettyPFieldUpdate <$> fs))
