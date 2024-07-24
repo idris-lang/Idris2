@@ -241,3 +241,12 @@ body.index .container a:visited {
 body.index .container a:hover {
   color: #04819e;
 }
+
+.index-wrapper {
+  display: flex;
+  justify-content: space-between;
+}
+
+.namespace-indexes {
+   flex-basis: 50%;
+}
