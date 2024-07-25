@@ -245,3 +245,31 @@ body.index .container a:visited {
 body.index .container a:hover {
   color: #04819e;
 }
+
+.index-wrapper {
+  display: flex;
+  flex-direction: row;
+  column-gap: 5%;
+}
+
+.index-namespace-doc {
+  flex: 3;
+}
+
+.index-namespace-url {
+  flex: 1;
+}
+
+@media (max-width: 800px) {
+  .index-wrapper {
+    flex-direction: column;
+  }
+
+  .index-namespace-doc {
+    width: 100%;
+  }
+
+  .index-namespace-url {
+    width: 100%;
+  }
+}
