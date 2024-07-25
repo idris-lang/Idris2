@@ -74,6 +74,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * The compiler now parses `~x.fun` as unquoting `x` rather than `x.fun`
   and `~(f 5).fun` as unquoting `(f 5)` rather than `(f 5).fun`.
 
+* Totality checking will now look under data constructors, so `Just xs` will
+  be considered smaller than `Just (x :: xs)`.
+
 * LHS of `with`-applications are parsed as `PWithApp` instead of `PApp`. As a
   consequence, `IWithApp` appears in `TTImp` values in elaborator scripts instead
   of `IApp`, as it should have been.
