@@ -58,3 +58,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           IGNORE_GENERATED_FILES: true
           NATURAL_LANGUAGE_CONFIG_FILE: '.textlintrc.yml'
+          CSS_FILE_NAME: '.stylelintrc.json'
