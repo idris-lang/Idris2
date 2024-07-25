@@ -1,0 +1,7 @@
+1/1: Building Issue1236 (Issue1236.idr)
+Warning: Main.Foo has been forward-declared with private visibility, cannot change to public export. This will be an error in a later release.
+
+Issue1236:4:1--5:22
+ 4 | public export
+ 5 | data Foo : Type where
+
