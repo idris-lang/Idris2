@@ -217,13 +217,13 @@ renderDocIndex pkg moddocstrs = fastConcat $
                             Nothing          => ""
                             Just cmoddocstr' => cmoddocstr'
             cmoddocstr' = "<div class=\"namespace-indexes\">" ++ cmoddocstr ++ "</div>"
-        in "<div class=\"index-wrapper\"><div><li><a class=\"code\" href=\"docs/" ++
+        in "<li><div class=\"index-wrapper\"><div><a class=\"code\" href=\"docs/" ++
            (show mod)                                                             ++
            ".html\">"                                                             ++
            (show mod)                                                             ++
-           "</a></li></div>"                                                      ++
+           "</a></div>"                                                           ++
            cmoddocstr'                                                            ++
-           "</div>"
+           "</div></li>"
 
 preserveLayout : String -> String
 preserveLayout d = "<pre>" ++ d ++ "</pre>"
