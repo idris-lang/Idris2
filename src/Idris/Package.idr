@@ -844,7 +844,6 @@ clean pkg opts -- `opts` is not used but might be in the future
          maybe (pure ()) (\e => delete (outputdir </> e))
                (executable pkg)
          -- clean out the generated docs
-         defs <- get Ctxt
          let build = build_dir (dirs (options defs))
          let docBase = build </> "docs"
          let docDir = docBase </> "docs"
