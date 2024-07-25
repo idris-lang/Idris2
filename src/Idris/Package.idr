@@ -759,7 +759,8 @@ makeDoc pkg opts =
          )
          | errs => pure errs
 
-       Right () <- coreLift $ writeFile (docBase </> "index.html") $ renderDocIndex pkg
+       Right () <- do syn <- get Syn
+                      coreLift $ writeFile (docBase </> "index.html") $ renderDocIndex pkg (modDocstrings syn)
          | Left err => fileError (docBase </> "index.html") err
 
        errs <- for cssFiles $ \ cssFile => do

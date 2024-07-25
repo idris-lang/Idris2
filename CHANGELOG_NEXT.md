@@ -252,3 +252,6 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   now functions of the same names that return values of the new record type so
   in most situations there should be no compatibility issues.
 
+#### Documentation
+
+* Module docstrings are now displayed for namespace indexes when documentation is built via --mkdoc.

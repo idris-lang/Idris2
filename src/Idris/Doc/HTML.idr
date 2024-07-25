@@ -6,6 +6,7 @@ import Core.Directory
 
 import Data.String
 
+import Libraries.Data.SortedMap
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Render.HTML
 import Libraries.Text.PrettyPrint.Prettyprinter.SimpleDocTree
@@ -200,19 +201,33 @@ htmlFooter : String
 htmlFooter = "</div><footer>Produced by Idris 2 version " ++ (showVersion True version) ++ "</footer></body></html>"
 
 export
-renderDocIndex : PkgDesc -> String
-renderDocIndex pkg = fastConcat $
+renderDocIndex : PkgDesc -> SortedMap ModuleIdent String -> String
+renderDocIndex pkg moddocstrs = fastConcat $
   [ htmlPreamble (name pkg) "" "index"
   , "<h1>Package ", name pkg, " - Namespaces</h1>"
   , "<ul class=\"names\">"] ++
-  (map moduleLink $ modules pkg) ++
+  (map (\x => moduleLink x moddocstrs) $ (modules pkg)) ++
   [ "</ul>"
   , htmlFooter
   ]
     where
-      moduleLink : (ModuleIdent, String) -> String
-      moduleLink (mod, filename) =
-         "<li><a class=\"code\" href=\"docs/" ++ (show mod) ++ ".html\">" ++ (show mod) ++ "</a></li>"
+      moduleLink : (ModuleIdent, String) -> SortedMap ModuleIdent String -> String
+      moduleLink (mod, filename) moddocstrs =
+        let cmoddocstr  = case lookup mod moddocstrs of
+                            Nothing          => ""
+                            Just cmoddocstr' => cmoddocstr'
+        in """
+           <li>
+             <div class="index-wrapper">
+               <div class="index-namespace-url">
+                 <a class="code" href="docs/\{show mod}.html">\{show mod}</a>
+               </div>
+               <div class="index-namespace-doc">
+                 \{cmoddocstr}
+               </div>
+             </div>
+           </li>
+           """
 
 preserveLayout : String -> String
 preserveLayout d = "<pre>" ++ d ++ "</pre>"
