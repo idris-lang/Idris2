@@ -216,14 +216,18 @@ renderDocIndex pkg moddocstrs = fastConcat $
         let cmoddocstr  = case lookup mod moddocstrs of
                             Nothing          => ""
                             Just cmoddocstr' => cmoddocstr'
-            cmoddocstr' = "<div class=\"namespace-indexes\">" ++ cmoddocstr ++ "</div>"
-        in "<li><div class=\"index-wrapper\"><div><a class=\"code\" href=\"docs/" ++
-           (show mod)                                                             ++
-           ".html\">"                                                             ++
-           (show mod)                                                             ++
-           "</a></div>"                                                           ++
-           cmoddocstr'                                                            ++
-           "</div></li>"
+        in """
+           <li>
+             <div class="index-wrapper">
+               <div class="index-namespace-url">
+                 <a class="code" href="docs/\{show mod}.html">\{show mod}</a>
+               </div>
+               <div class="index-namespace-doc">
+                 \{cmoddocstr}
+               </div>
+             </div>
+           </li>
+           """
 
 preserveLayout : String -> String
 preserveLayout d = "<pre>" ++ d ++ "</pre>"

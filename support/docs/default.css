@@ -244,9 +244,25 @@ body.index .container a:hover {
 
 .index-wrapper {
   display: flex;
-  justify-content: space-between;
+  flex-direction: row;
+  column-gap: 5%;
 }
 
-.namespace-indexes {
-  flex-basis: 50%;
+.index-namespace-doc {
+   flex: 3;
+}
+
+.index-namespace-url {
+   flex: 1;
+}
+
+@media (max-width: 800px) {
+  .index-wrapper {
+    flex-direction: column;
+  }
+  .index-namespace-doc {
+    width: 100%;
+  }
+  .index-namespace-url {
+    width: 100%;
 }
