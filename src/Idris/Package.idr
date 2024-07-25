@@ -847,16 +847,16 @@ clean pkg opts -- `opts` is not used but might be in the future
          let build = build_dir (dirs (options defs))
          let docBase = build </> "docs"
          let docDir = docBase </> "docs"
-         Right docfiles' <- coreLift $ listDir docDir
-           | Left err => pure ()
-         Right docfiles'' <- coreLift $ listDir docBase
-           | Left err => pure ()
-         traverse_ (\x => delete $ docDir </> x)
-                   docfiles'
-         traverse_ (\x => delete $ docBase </> x)
-                   docfiles''
-         deleteFolder docDir []
-         deleteFolder docBase []
+         () <- do Right docfiles' <- coreLift $ listDir docDir
+                    | Left err => pure ()
+                  traverse_ (\x => delete $ docDir </> x)
+                            docfiles'
+                  deleteFolder docDir []
+         () <- do Right docfiles'' <- coreLift $ listDir docBase
+                    | Left err => pure ()
+                  traverse_ (\x => delete $ docBase </> x)
+                            docfiles''
+                  deleteFolder docBase []
          runScript (postclean pkg)
   where
     delete : String -> Core ()
