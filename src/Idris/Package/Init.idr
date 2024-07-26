@@ -68,7 +68,6 @@ prompt p = putStr p >> fflush stdout >> getLine
 
 export
 covering
---interactive : IO PkgDesc
 interactive : IO (Either () PkgDesc)
 interactive = do
   pname    <- prompt "Package name: "
