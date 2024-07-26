@@ -186,7 +186,7 @@ end : LinearIO io => Channel End -@ L io ()
 end (MkChannel _ _ _) = do
   pure ()
 
-||| Given a session, create a bidirectional communiaction channel and
+||| Given a session, create a bidirectional communication channel and
 ||| return its two endpoints
 export
 makeChannel :
