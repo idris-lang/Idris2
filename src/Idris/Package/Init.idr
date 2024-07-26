@@ -70,7 +70,7 @@ export
 covering
 interactive : IO (Either () PkgDesc)
 interactive = do
-  pname    <- prompt "Package name: "
+  pname <- prompt "Package name: "
   -- check to ensure that pname is a valid Idris2 identifier.
   case checkPackageName $ fastUnpack pname of 
     False => do () <- putStrLn "Package name is not a valid Idris Identifier."
