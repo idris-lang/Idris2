@@ -72,7 +72,7 @@ interactive : IO (Either () PkgDesc)
 interactive = do
   pname <- prompt "Package name: "
   -- check to ensure that pname is a valid Idris2 identifier.
-  case checkPackageName $ fastUnpack pname of 
+  case checkPackageName $ fastUnpack pname of
     False => do () <- putStrLn "Package name is not a valid Idris Identifier."
                 pure $ Left ()
     True  => do pauthors <- prompt "Package authors: "
@@ -94,13 +94,13 @@ interactive = do
     mstring str = case trim str of
       "" => Nothing
       str => Just str
-   
+
     isIdentStart : Char -> Bool
     isIdentStart '_' = True
     isIdentStart x   = isUpper x ||
                        isAlpha x ||
                        x > chr 160
-    
+
     isIdentTrailing : List Char -> Bool
     isIdentTrailing []      = True
     isIdentTrailing (x::xs) = case isAlphaNum x ||
