@@ -16,6 +16,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   installed will be ignored by the compiler when it tries to use that library as
   a dependency for some other package.
 
+* The `idris2 --help pragma` command now outputs the `%hint` pragma.
+
 ### Building/Packaging changes
 
 * The Nix flake's `buildIdris` function now returns a set with `executable` and
