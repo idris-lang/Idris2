@@ -112,6 +112,6 @@ interactive = do
                                 True  => isIdentTrailing xs
 
     checkPackageName : List Char -> Bool
-    checkPackageName []      = False
+    checkPackageName []      = True
     checkPackageName (x::xs) = isIdentStart x &&
                                isIdentTrailing xs
