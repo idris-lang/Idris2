@@ -12,6 +12,7 @@ import Idris.Package.Types
 import System.Directory
 import Control.App.FileIO
 
+import Libraries.Text.Lexer
 import Libraries.Utils.Path
 import Libraries.System.Directory.Tree
 
@@ -67,21 +68,26 @@ prompt p = putStr p >> fflush stdout >> getLine
 
 export
 covering
-interactive : IO PkgDesc
+--interactive : IO PkgDesc
+interactive : IO (Either () PkgDesc)
 interactive = do
   pname    <- prompt "Package name: "
-  pauthors <- prompt "Package authors: "
-  poptions <- prompt "Package options: "
-  psource  <- prompt "Source directory: "
-  let sourcedir = mstring psource
-  modules  <- findModules sourcedir
-  let pkg : PkgDesc =
-        { authors   := mstring pauthors
-        , options   := (emptyFC,) <$> mstring poptions
-        , modules   := modules
-        , sourcedir := sourcedir
-        } (initPkgDesc (fromMaybe "project" (mstring pname)))
-  pure pkg
+  -- check to ensure that pname is a valid Idris2 identifier.
+  case checkPackageName $ fastUnpack pname of 
+    False => do () <- putStrLn "Package name is not a valid Idris Identifier."
+                pure $ Left ()
+    True  => do pauthors <- prompt "Package authors: "
+                poptions <- prompt "Package options: "
+                psource  <- prompt "Source directory: "
+                let sourcedir = mstring psource
+                modules  <- findModules sourcedir
+                let pkg : PkgDesc =
+                      { authors   := mstring pauthors
+                      , options   := (emptyFC,) <$> mstring poptions
+                      , modules   := modules
+                      , sourcedir := sourcedir
+                      } (initPkgDesc (fromMaybe "project" (mstring pname)))
+                pure $ Right pkg
 
   where
 
@@ -89,3 +95,24 @@ interactive = do
     mstring str = case trim str of
       "" => Nothing
       str => Just str
+   
+    isIdentStart : Char -> Bool
+    isIdentStart '_' = True
+    isIdentStart x   = isUpper x ||
+                       isAlpha x ||
+                       x > chr 160
+    
+    isIdentTrailing : List Char -> Bool
+    isIdentTrailing []      = True
+    isIdentTrailing (x::xs) = case isAlphaNum x ||
+                                   x > chr 160  ||
+                                   x == '-'     ||
+                                   x == '_'     ||
+                                   x == '\'' of
+                                False => False
+                                True  => isIdentTrailing xs
+
+    checkPackageName : List Char -> Bool
+    checkPackageName []      = False
+    checkPackageName (x::xs) = isIdentStart x &&
+                               isIdentTrailing xs
