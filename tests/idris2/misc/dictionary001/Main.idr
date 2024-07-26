@@ -1,10 +1,10 @@
 
 data Dict : Type -> Type -> Type where
-  Nil : Dict key val
-  KeyVal : key -> val -> Dict key val -> Dict key val
+  DNil : Dict key val
+  DCons : key -> val -> Dict key val -> Dict key val
 
 testEmpty : Dict String Nat
-testEmpty = []
+testEmpty = [:=]
 
 test1 : Dict String Nat
 test1 = [ "hello" := 1 ]
@@ -18,7 +18,7 @@ testLet : Dict String Nat
 testLet = let x := [ "a" := 3 , "b" := 4 ] in x
 
 testPat : Dict String Nat -> Nat
-testPat [] = 0
+testPat [:=] = 0
 testPat [ k := v ] = 1
-testPat (KeyVal k v rest) = 1 + testPat rest
+testPat (DCons k v rest) = 1 + testPat rest
 

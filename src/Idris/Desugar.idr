@@ -609,9 +609,9 @@ mutual
                {auto m : Ref MD Metadata} ->
                {auto o : Ref ROpts REPLOpts} ->
                Side -> List Name -> (nilFC : FC) -> PDictionary -> Core RawImp
-  expandDict side ps nilFC [] = pure (IVar nilFC (UN $ Basic "Nil"))
+  expandDict side ps nilFC [] = pure (IVar nilFC (UN $ Basic "DNil"))
   expandDict side ps nilFC ((k, v) :: xs)
-      = pure $ apply (IVar emptyFC (UN $ Basic "KeyVal"))
+      = pure $ apply (IVar emptyFC (UN $ Basic "DCons"))
           [!(desugarB side ps k), !(desugarB side ps v), !(expandDict side ps nilFC xs)]
 
   expandSnocList
