@@ -5,6 +5,7 @@ import Core.Context
 import Core.Context.Log
 import Core.Env
 import Core.Normalise
+import Core.Options
 import Core.Value
 
 import Libraries.Data.IntMap
@@ -144,30 +145,31 @@ mutual
 
   -- Return whether first argument is structurally smaller than the second.
   sizeCompare : {auto defs : Defs} ->
+                Nat -> -- backtracking fuel
                 Term vars -> -- RHS: term we're checking
                 Term vars -> -- LHS: argument it might be smaller than
                 Core SizeChange
 
-  sizeCompareCon : {auto defs : Defs} -> Term vars -> Term vars -> Core Bool
+  sizeCompareCon : {auto defs : Defs} -> Nat -> Term vars -> Term vars -> Core Bool
   sizeCompareTyCon : {auto defs : Defs} -> Term vars -> Term vars -> Bool
-  sizeCompareConArgs : {auto defs : Defs} -> Term vars -> List (Term vars) -> Core Bool
-  sizeCompareApp : {auto defs : Defs} -> Term vars -> Term vars -> Core SizeChange
+  sizeCompareConArgs : {auto defs : Defs} -> Nat -> Term vars -> List (Term vars) -> Core Bool
+  sizeCompareApp : {auto defs : Defs} -> Nat -> Term vars -> Term vars -> Core SizeChange
 
-  sizeCompare s (Erased _ (Dotted t)) = sizeCompare s t
-  sizeCompare _ (Erased _ _) = pure Unknown -- incomparable!
+  sizeCompare fuel s (Erased _ (Dotted t)) = sizeCompare fuel s t
+  sizeCompare fuel _ (Erased _ _) = pure Unknown -- incomparable!
   -- for an as pattern, it's smaller if it's smaller than either part
-  sizeCompare s (As _ _ p t)
-      = knownOr (sizeCompare s p) (sizeCompare s t)
-  sizeCompare (As _ _ p s) t
-      = knownOr (sizeCompare p t) (sizeCompare s t)
+  sizeCompare fuel s (As _ _ p t)
+      = knownOr (sizeCompare fuel s p) (sizeCompare fuel s t)
+  sizeCompare fuel (As _ _ p s) t
+      = knownOr (sizeCompare fuel p t) (sizeCompare fuel s t)
   -- if they're both metas, let sizeEq check if they're the same
-  sizeCompare s@(Meta _ _ _ _) t@(Meta _ _ _ _) = pure (if sizeEq s t then Same else Unknown)
+  sizeCompare fuel s@(Meta _ _ _ _) t@(Meta _ _ _ _) = pure (if sizeEq s t then Same else Unknown)
   -- otherwise try to expand RHS meta
-  sizeCompare s@(Meta n _ i args) t = do
+  sizeCompare fuel s@(Meta n _ i args) t = do
     Just gdef <- lookupCtxtExact (Resolved i) (gamma defs) | _ => pure Unknown
     let (PMDef _ [] (STerm _ tm) _ _) = definition gdef | _ => pure Unknown
     tm <- substMeta (embed tm) args zero []
-    sizeCompare tm t
+    sizeCompare fuel tm t
     where
       substMeta : {0 drop, vs : _} ->
                   Term (drop ++ vs) -> List (Term vs) ->
@@ -180,11 +182,11 @@ mutual
       substMeta rhs [] drop env = pure (substs drop env rhs)
       substMeta rhs _ _ _ = throw (InternalError ("Badly formed metavar solution \{show n}"))
 
-  sizeCompare s t
+  sizeCompare fuel s t
      = if sizeCompareTyCon s t then pure Same
-       else if !(sizeCompareCon s t)
+       else if !(sizeCompareCon fuel s t)
           then pure Smaller
-          else knownOr (sizeCompareApp s t) (pure $ if sizeEq s t then Same else Unknown)
+          else knownOr (sizeCompareApp fuel s t) (pure $ if sizeEq s t then Same else Unknown)
 
   -- consider two types the same size
   sizeCompareTyCon s t =
@@ -196,40 +198,46 @@ mutual
         _ => False
       _ => False
 
-  sizeCompareCon s t
+  sizeCompareProdConArgs : {auto defs : Defs} -> Nat -> List (Term vars) -> List (Term vars) -> Core SizeChange
+  sizeCompareProdConArgs _ [] [] = pure Same
+  sizeCompareProdConArgs fuel (x :: xs) (y :: ys) =
+    case !(sizeCompare fuel x y) of
+      Unknown => pure Unknown
+      t => (t |*|) <$> sizeCompareProdConArgs fuel xs ys
+  sizeCompareProdConArgs _ _ _ = pure Unknown
+
+  sizeCompareCon fuel s t
       = let (f, args) = getFnArgs t in
         case f of
              Ref _ (DataCon t a) cn =>
                 -- if s is smaller or equal to an arg, then it is smaller than t
-                if !(sizeCompareConArgs s args) then pure True
+                if !(sizeCompareConArgs (minus fuel 1) s args) then pure True
                 else let (g, args') = getFnArgs s in
-                    case g of
-                        Ref _ (DataCon t' a') cn' =>
+                    case (fuel, g) of
+                        (S k, Ref _ (DataCon t' a') cn') => do
                                 -- if s is a matching DataCon, applied to same number of args,
                                 -- no Unknown args, and at least one Smaller
                                 if cn == cn' && length args == length args'
-                                  then do
-                                       sizes <- traverse (uncurry sizeCompare) (zip args' args)
-                                       pure $ Smaller == foldl (|*|) Same sizes
+                                  then (Smaller ==) <$> sizeCompareProdConArgs k args' args
                                   else pure False
                         _ => pure $ False
              _ => pure False
 
-  sizeCompareConArgs s [] = pure False
-  sizeCompareConArgs s (t :: ts)
-      = case !(sizeCompare s t) of
-          Unknown => sizeCompareConArgs s ts
+  sizeCompareConArgs _ s [] = pure False
+  sizeCompareConArgs fuel s (t :: ts)
+      = case !(sizeCompare fuel s t) of
+          Unknown => sizeCompareConArgs fuel s ts
           _ => pure True
 
-  sizeCompareApp (App _ f _) t = sizeCompare f t
-  sizeCompareApp _ t = pure Unknown
+  sizeCompareApp fuel (App _ f _) t = sizeCompare fuel f t
+  sizeCompareApp _ _ t = pure Unknown
 
-  sizeCompareAsserted : {auto defs : Defs} -> Maybe (Term vars) -> Term vars -> Core SizeChange
-  sizeCompareAsserted (Just s) t
-      = pure $ case !(sizeCompare s t) of
+  sizeCompareAsserted : {auto defs : Defs} -> Nat -> Maybe (Term vars) -> Term vars -> Core SizeChange
+  sizeCompareAsserted fuel (Just s) t
+      = pure $ case !(sizeCompare fuel s t) of
           Unknown => Unknown
           _ => Smaller
-  sizeCompareAsserted Nothing _ = pure Unknown
+  sizeCompareAsserted _ Nothing _ = pure Unknown
 
   -- if the argument is an 'assert_smaller', return the thing it's smaller than
   asserted : Name -> Term vars -> Maybe (Term vars)
@@ -248,7 +256,8 @@ mutual
              (arg : Term vars) ->
              Core (List SizeChange)
   mkChange defs aSmaller pats arg
-    = traverse (\p => plusLazy (sizeCompareAsserted (asserted aSmaller arg) p) (sizeCompare arg p)) pats
+    = let fuel = defs.options.elabDirectives.totalLimit
+      in traverse (\p => plusLazy (sizeCompareAsserted fuel (asserted aSmaller arg) p) (sizeCompare fuel arg p)) pats
 
   -- Given a name of a case function, and a list of the arguments being
   -- passed to it, update the pattern list so that it's referring to the LHS
