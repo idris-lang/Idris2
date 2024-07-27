@@ -862,7 +862,7 @@ clean pkg opts -- `opts` is not used but might be in the future
         = do let ttFile = builddir </> joinPath ns </> mod
              delete $ ttFile <.> "ttc"
              delete $ ttFile <.> "ttm"
-   
+
     deleteDocBaseFolder : String -> Core ()
     deleteDocBaseFolder build
         = do let docBase = build </> "docs"
