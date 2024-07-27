@@ -36,3 +36,15 @@ failing "not total"
   six (a :: as, bs) = a :: six (bs, as)
   six ([], _) = []
 
+
+failing "not total"
+  -- If we didn't check all of the arguments of MkTuple for
+  -- Same/Smaller, then this would be incorrectly accepted as total
+  first : (List Nat, List Nat) -> Nat
+  second : (List Nat, List Nat) -> Nat
+
+  first (x :: xs, ys) = second (xs, Z :: ys)
+  first _ = Z
+
+  second (xs, y :: ys) = first (1 :: xs, ys)
+  second _ = Z
