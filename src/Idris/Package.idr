@@ -845,18 +845,8 @@ clean pkg opts -- `opts` is not used but might be in the future
                (executable pkg)
          -- clean out the generated docs
          let build = build_dir (dirs (options defs))
-         let docBase = build </> "docs"
-         let docDir = docBase </> "docs"
-         () <- do Right docfiles' <- coreLift $ listDir docDir
-                    | Left err => pure ()
-                  traverse_ (\x => delete $ docDir </> x)
-                            docfiles'
-                  deleteFolder docDir []
-         () <- do Right docfiles'' <- coreLift $ listDir docBase
-                    | Left err => pure ()
-                  traverse_ (\x => delete $ docBase </> x)
-                            docfiles''
-                  deleteFolder docBase []
+         () <- deleteDocDirFolder build
+         () <- deleteDocBaseFolder build
          runScript (postclean pkg)
   where
     delete : String -> Core ()
@@ -872,6 +862,24 @@ clean pkg opts -- `opts` is not used but might be in the future
         = do let ttFile = builddir </> joinPath ns </> mod
              delete $ ttFile <.> "ttc"
              delete $ ttFile <.> "ttm"
+   
+    deleteDocBaseFolder : String -> Core ()
+    deleteDocBaseFolder build
+        = do let docBase = build </> "docs"
+             Right docbasefiles <- coreLift $ listDir docBase
+               | Left err => pure ()
+             traverse_ (\x => delete $ docBase </> x)
+                       docbasefiles
+             deleteFolder docBase []
+
+    deleteDocDirFolder : String -> Core ()
+    deleteDocDirFolder build
+        = do let docDir = build </> "docs" </> "docs"
+             Right docdirfiles <- coreLift $ listDir docDir
+               | Left err => pure ()
+             traverse_ (\x => delete $ docDir </> x)
+                       docdirfiles
+             deleteFolder docDir []
 
 -- Just load the given module, if it exists, which will involve building
 -- it if necessary
