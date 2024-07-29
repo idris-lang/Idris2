@@ -903,8 +903,8 @@ processPackage : {auto c : Ref Ctxt Defs} ->
 processPackage opts (cmd, mfile)
     = withCtxt . withSyn . withROpts $ case cmd of
         Init =>
-          do Right pkg <- coreLift interactive
-               | Left () => coreLift (exitWith (ExitFailure 1))
+          do Just pkg <- coreLift interactive
+               | Nothing => coreLift (exitWith (ExitFailure 1))
              let fp = fromMaybe (pkg.name ++ ".ipkg") mfile
              False <- coreLift (exists fp)
                | _ => throw (GenericMsg emptyFC ("File " ++ fp ++ " already exists"))

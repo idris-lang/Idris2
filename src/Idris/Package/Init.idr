@@ -68,25 +68,23 @@ prompt p = putStr p >> fflush stdout >> getLine
 
 export
 covering
-interactive : IO (Either () PkgDesc)
+interactive : IO (Maybe PkgDesc)
 interactive = do
   pname <- prompt "Package name: "
-  -- check to ensure that pname is a valid Idris2 identifier.
-  case checkPackageName $ fastUnpack pname of
-    False => do () <- putStrLn "Package name is not a valid Idris Identifier."
-                pure $ Left ()
-    True  => do pauthors <- prompt "Package authors: "
-                poptions <- prompt "Package options: "
-                psource  <- prompt "Source directory: "
-                let sourcedir = mstring psource
-                modules  <- findModules sourcedir
-                let pkg : PkgDesc =
-                      { authors   := mstring pauthors
-                      , options   := (emptyFC,) <$> mstring poptions
-                      , modules   := modules
-                      , sourcedir := sourcedir
-                      } (initPkgDesc (fromMaybe "project" (mstring pname)))
-                pure $ Right pkg
+  let True = checkPackageName $ fastUnpack pname
+    | False => pure Nothing
+  pauthors <- prompt "Package authors: "
+  poptions <- prompt "Package options: "
+  psource  <- prompt "Source directory: "
+  let sourcedir = mstring psource
+  modules  <- findModules sourcedir
+  let pkg : PkgDesc =
+        { authors   := mstring pauthors
+        , options   := (emptyFC,) <$> mstring poptions
+        , modules   := modules
+        , sourcedir := sourcedir
+        } (initPkgDesc (fromMaybe "project" (mstring pname)))
+  pure $ Just pkg
 
   where
 
