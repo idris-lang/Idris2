@@ -1,4 +1,0 @@
-. ../../../testutils.sh
-
-idris2 --check Issue3317.idr
-idris2 --check Totality.idr

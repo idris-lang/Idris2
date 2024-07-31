@@ -18,6 +18,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * The `idris2 --help pragma` command now outputs the `%hint` pragma.
 
+* The `idris2 --init` command now ensures that package names are
+  valid Idris2 identifiers.
+
 ### Building/Packaging changes
 
 * The Nix flake's `buildIdris` function now returns a set with `executable` and
@@ -75,9 +78,6 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * The compiler now parses `~x.fun` as unquoting `x` rather than `x.fun`
   and `~(f 5).fun` as unquoting `(f 5)` rather than `(f 5).fun`.
-
-* Totality checking will now look under data constructors, so `Just xs` will
-  be considered smaller than `Just (x :: xs)`.
 
 * LHS of `with`-applications are parsed as `PWithApp` instead of `PApp`. As a
   consequence, `IWithApp` appears in `TTImp` values in elaborator scripts instead

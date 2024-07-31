@@ -2,8 +2,6 @@ import Language.Reflection
 
 %language ElabReflection
 
-%TTImpLit fromTTImp
-
 public export
 data NatExpr : Type where
      Plus : NatExpr -> NatExpr -> NatExpr

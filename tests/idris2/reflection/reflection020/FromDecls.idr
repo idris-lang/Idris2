@@ -6,8 +6,6 @@ import FromTTImp
 
 %language ElabReflection
 
-%declsLit fromDecls
-
 record NatDecl where
     constructor MkNatDecl
     var : String
