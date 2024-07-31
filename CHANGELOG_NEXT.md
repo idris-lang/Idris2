@@ -16,6 +16,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   installed will be ignored by the compiler when it tries to use that library as
   a dependency for some other package.
 
+* The `idris2 --init` command now ensures that package names are
+  valid Idris2 identifiers.
+
 ### Building/Packaging changes
 
 * The Nix flake's `buildIdris` function now returns a set with `executable` and
