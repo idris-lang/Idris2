@@ -1,0 +1,2 @@
+. ../../testutils.sh
+CHEZ=false idris2 -c Hello.idr -o hello
