@@ -29,9 +29,9 @@ map f Z = Z
 map f (S hl) = S (map f hl)
 
 export
-sucL : HasLength n sx -> HasLength (S n) ([<x] ++ sx)
-sucL Z     = S Z
-sucL (S n) = S (sucL n)
+sucR : HasLength n sx -> HasLength (S n) ([<x] ++ sx)
+sucR Z     = S Z
+sucR (S n) = S (sucR n)
 
 export
 hlAppend : HasLength m sx -> HasLength n sy -> HasLength (n + m) (sx ++ sy)

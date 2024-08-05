@@ -15,6 +15,7 @@ import Data.String
 
 import Libraries.Data.NameMap
 import Libraries.Data.String.Extra
+import Libraries.Data.SnocList.SizeOf
 import Libraries.Text.PrettyPrint.Prettyprinter
 
 %default covering
@@ -81,16 +82,16 @@ conflict defs env nfty n
               | Nothing => pure False
          case (definition gdef, type gdef) of
               (DCon t arity _, dty)
-                  => do Nothing <- conflictNF 0 nfty !(nf defs [] dty)
+                  => do Nothing <- conflictNF 0 nfty !(nf defs [<] dty)
                             | Just ms => pure $ conflictMatch ms
                         pure True
               _ => pure False
   where
     mutual
-      conflictArgs : Int -> List (Closure vars) -> List (Closure []) ->
+      conflictArgs : Int -> SnocList (Closure vars) -> SnocList (Closure [<]) ->
                      Core (Maybe (List (Name, Term vars)))
-      conflictArgs _ [] [] = pure (Just [])
-      conflictArgs i (c :: cs) (c' :: cs')
+      conflictArgs _ [<] [<] = pure (Just [])
+      conflictArgs i (cs :< c) (cs' :< c')
           = do cnf <- evalClosure defs c
                cnf' <- evalClosure defs c'
                Just ms <- conflictNF i cnf cnf'
@@ -100,13 +101,13 @@ conflict defs env nfty n
                pure (Just (ms ++ ms'))
       conflictArgs _ _ _ = pure (Just [])
 
-      -- If the constructor type (the NF []) matches the variable type,
+      -- If the constructor type (the NF [<]) matches the variable type,
       -- then there may be a way to construct it, so return the matches in
       -- the indices.
       -- If any of those matches clash, the constructor is not valid
       -- e.g, Eq x x matches Eq Z (S Z), with x = Z and x = S Z
       -- conflictNF returns the list of matches, for checking
-      conflictNF : Int -> NF vars -> NF [] ->
+      conflictNF : Int -> NF vars -> NF [<] ->
                    Core (Maybe (List (Name, Term vars)))
       conflictNF i t (NBind fc x b sc)
           -- invent a fresh name, in case a user has bound the same name
@@ -114,8 +115,8 @@ conflict defs env nfty n
           -- put possible
           = let x' = MN (show x) i in
                 conflictNF (i + 1) t
-                       !(sc defs (toClosure defaultOpts [] (Ref fc Bound x')))
-      conflictNF i nf (NApp _ (NRef Bound n) [])
+                       !(sc defs (toClosure defaultOpts [<] (Ref fc Bound x')))
+      conflictNF i nf (NApp _ (NRef Bound n) [<])
           = pure (Just [(n, !(quote defs env nf))])
       conflictNF i (NDCon _ n t a args) (NDCon _ n' t' a' args')
           = if t == t'
@@ -193,11 +194,11 @@ getMissingAlts fc defs nfty alts
     noneOf alts c = not $ any (altMatch c) alts
 
 -- Mapping of variable to constructor tag already matched for it
-KnownVars : List Name -> Type -> Type
+KnownVars : SnocList Name -> Type -> Type
 KnownVars vars a = List (Var vars, a)
 
-getName : {idx : Nat} -> {vars : List Name} -> (0 p : IsVar n idx vars) -> Name
-getName {vars = v :: _} First = v
+getName : {idx : Nat} -> {vars : SnocList Name} -> (0 p : IsVar n idx vars) -> Name
+getName {vars = _ :< v} First = v
 getName (Later p) = getName p
 
 showK : {ns : _} ->
@@ -208,7 +209,7 @@ showK {a} xs = show (map aString xs)
               (Var vars, a) -> (Name, a)
     aString (MkVar v, t) = (nameAt v, t)
 
-weakenNs : SizeOf args -> KnownVars vars a -> KnownVars (args ++ vars) a
+weakenNs : SizeOf args -> KnownVars vars a -> KnownVars (vars ++ args) a
 weakenNs args [] = []
 weakenNs args ((v, t) :: xs)
   = (weakenNs args v, t) :: weakenNs args xs
@@ -275,8 +276,8 @@ buildArgs : {auto c : Ref Ctxt Defs} ->
             KnownVars vars Int -> -- Things which have definitely match
             KnownVars vars (List Int) -> -- Things an argument *can't* be
                                     -- (because a previous case matches)
-            List ClosedTerm -> -- ^ arguments, with explicit names
-            CaseTree vars -> Core (List (List ClosedTerm))
+            SnocList ClosedTerm -> -- ^ arguments, with explicit names
+            CaseTree vars -> Core (List (SnocList ClosedTerm))
 buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
   -- If we've already matched on 'el' in this branch, restrict the alternatives
   -- to the tag we already know. Otherwise, add missing cases and filter out
@@ -293,17 +294,17 @@ buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
          buildArgsAlt not altsN
   where
     buildArgAlt : KnownVars vars (List Int) ->
-                  CaseAlt vars -> Core (List (List ClosedTerm))
+                  CaseAlt vars -> Core (List (SnocList ClosedTerm))
     buildArgAlt not' (ConCase n t args sc)
         = do let l = mkSizeOf args
              let con = Ref fc (DataCon t (size l)) n
              let ps' = map (substName var
                              (apply fc
-                                    con (map (Ref fc Bound) args))) ps
+                                    con (toList $ map (Ref fc Bound) args))) ps
              buildArgs fc defs (weakenNs l ((MkVar el, t) :: known))
                                (weakenNs l not') ps' sc
     buildArgAlt not' (DelayCase t a sc)
-        = let l = mkSizeOf [t, a]
+        = let l = mkSizeOf [<t, a]
               ps' = map (substName var (TDelay fc LUnknown
                                              (Ref fc Bound t)
                                              (Ref fc Bound a))) ps in
@@ -316,7 +317,7 @@ buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
         = buildArgs fc defs known not' ps sc
 
     buildArgsAlt : KnownVars vars (List Int) -> List (CaseAlt vars) ->
-                   Core (List (List ClosedTerm))
+                   Core (List (SnocList ClosedTerm))
     buildArgsAlt not' [] = pure []
     buildArgsAlt not' (c@(ConCase _ t _ _) :: cs)
         = pure $ !(buildArgAlt not' c) ++
@@ -349,7 +350,7 @@ getMissing fc n ctree
           logC "coverage.missing" 20 $ map (join "\n") $
             flip traverse pats $ \ pat =>
               show <$> toFullNames pat
-        pure (map (apply fc (Ref fc Func n)) patss)
+        pure (map (apply fc (Ref fc Func n) . toList) patss)
 
 -- For the given name, get the names it refers to which are not themselves
 -- covering.
@@ -412,26 +413,26 @@ match _ _ = False
 eraseApps : {auto c : Ref Ctxt Defs} ->
             Term vs -> Core (Term vs)
 eraseApps {vs} tm
-    = case getFnArgs tm of
+    = case getFnArgsSpine tm of
            (Ref fc Bound n, args) =>
-                do args' <- traverse eraseApps args
-                   pure (apply fc (Ref fc Bound n) args')
+                do args' <- traverseSnocList eraseApps args
+                   pure (applySpine fc (Ref fc Bound n) args')
            (Ref fc nt n, args) =>
                 do defs <- get Ctxt
                    mgdef <- lookupCtxtExact n (gamma defs)
                    let eargs = maybe [] eraseArgs mgdef
-                   args' <- traverse eraseApps (dropPos fc 0 eargs args)
-                   pure (apply fc (Ref fc nt n) args')
+                   args' <- traverseSnocList eraseApps (dropPos fc 0 eargs args)
+                   pure (applySpine fc (Ref fc nt n) args')
            (tm, args) =>
-                do args' <- traverse eraseApps args
-                   pure (apply (getLoc tm) tm args')
+                do args' <- traverseSnocList eraseApps args
+                   pure (applySpine (getLoc tm) tm args')
   where
-    dropPos : FC -> Nat -> List Nat -> List (Term vs) -> List (Term vs)
-    dropPos fc i ns [] = []
-    dropPos fc i ns (x :: xs)
+    dropPos : FC -> Nat -> List Nat -> SnocList (Term vs) -> SnocList (Term vs)
+    dropPos fc i ns [<] = [<]
+    dropPos fc i ns (xs :< x)
         = if i `elem` ns
-             then Erased fc Placeholder :: dropPos fc (S i) ns xs
-             else x :: dropPos fc (S i) ns xs
+             then dropPos fc (S i) ns xs :< Erased fc Placeholder
+             else dropPos fc (S i) ns xs :< x
 
 -- if tm would be matched by trylhs, then it's not an impossible case
 -- because we've already got it. Ignore anything in erased position.
@@ -459,7 +460,7 @@ checkMatched cs ulhs
   where
     tryClauses : List Clause -> ClosedTerm -> Core (Maybe ClosedTerm)
     tryClauses [] ulhs
-        = do logTermNF "coverage" 10 "Nothing matches" [] ulhs
+        = do logTermNF "coverage" 10 "Nothing matches" [<] ulhs
              pure $ Just ulhs
     tryClauses (MkClause env lhs _ :: cs) ulhs
         = if !(clauseMatches env lhs ulhs)

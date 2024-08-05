@@ -3,12 +3,14 @@ module Core.Case.CaseTree
 import Core.TT
 
 import Data.List
+import Data.SnocList
 import Data.String
 import Idris.Pretty.Annotations
 
 import Libraries.Data.NameMap
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Data.String.Extra -- needed for boostrapping
+import Libraries.Data.SnocList.SizeOf
 
 %default covering
 
@@ -16,7 +18,7 @@ mutual
   ||| Case trees in A-normal forms
   ||| i.e. we may only dispatch on variables, not expressions
   public export
-  data CaseTree : List Name -> Type where
+  data CaseTree : SnocList Name -> Type where
        ||| case x return scTy of { p1 => e1 ; ... }
        Case : {name : _} ->
               (idx : Nat) ->
@@ -35,13 +37,13 @@ mutual
   ||| Case alternatives. Unlike arbitrary patterns, they can be at most
   ||| one constructor deep.
   public export
-  data CaseAlt : List Name -> Type where
+  data CaseAlt : SnocList Name -> Type where
        ||| Constructor for a data type; bind the arguments and subterms.
-       ConCase : Name -> (tag : Int) -> (args : List Name) ->
-                 CaseTree (args ++ vars) -> CaseAlt vars
+       ConCase : Name -> (tag : Int) -> (args : SnocList Name) ->
+                 CaseTree (vars ++ args) -> CaseAlt vars
        ||| Lazy match for the Delay type use for codata types
        DelayCase : (ty : Name) -> (arg : Name) ->
-                   CaseTree (ty :: arg :: vars) -> CaseAlt vars
+                   CaseTree (vars :< ty :< arg) -> CaseAlt vars
        ||| Match against a literal
        ConstCase : Constant -> CaseTree vars -> CaseAlt vars
        ||| Catch-all case
@@ -96,14 +98,14 @@ public export
 data Pat : Type where
      PAs : FC -> Name -> Pat -> Pat
      PCon : FC -> Name -> (tag : Int) -> (arity : Nat) ->
-            List Pat -> Pat
-     PTyCon : FC -> Name -> (arity : Nat) -> List Pat -> Pat
+            SnocList Pat -> Pat
+     PTyCon : FC -> Name -> (arity : Nat) -> SnocList Pat -> Pat
      PConst : FC -> (c : Constant) -> Pat
      PArrow : FC -> (x : Name) -> Pat -> Pat -> Pat
      PDelay : FC -> LazyReason -> Pat -> Pat -> Pat
      -- TODO: Matching on lazy types
      PLoc : FC -> Name -> Pat
-     PUnmatchable : FC -> Term [] -> Pat
+     PUnmatchable : FC -> Term [<] -> Pat
 
 export
 isPConst : Pat -> Maybe Constant
@@ -117,14 +119,14 @@ showCT indent (Case {name} idx prf ty alts)
   = "case " ++ show name ++ "[" ++ show idx ++ "] : " ++ show ty ++ " of"
   ++ "\n" ++ indent ++ " { "
   ++ showSep ("\n" ++ indent ++ " | ")
-             (assert_total (map (showCA ("  " ++ indent)) alts))
+             (assert_total (toList (map (showCA ("  " ++ indent)) alts)))
   ++ "\n" ++ indent ++ " }"
 showCT indent (STerm i tm) = "[" ++ show i ++ "] " ++ show tm
 showCT indent (Unmatched msg) = "Error: " ++ show msg
 showCT indent Impossible = "Impossible"
 
 showCA indent (ConCase n tag args sc)
-        = showSep " " (map show (n :: args)) ++ " => " ++
+        = showSep " " (reverse $ toList (map show (args :< n))) ++ " => " ++
           showCT indent sc
 showCA indent (DelayCase _ arg sc)
         = "Delay " ++ show arg ++ " => " ++ showCT indent sc
@@ -170,8 +172,8 @@ export
 covering
 Show Pat where
   show (PAs _ n p) = show n ++ "@(" ++ show p ++ ")"
-  show (PCon _ n i _ args) = show n ++ " " ++ show i ++ " " ++ assert_total (show args)
-  show (PTyCon _ n _ args) = "<TyCon>" ++ show n ++ " " ++ assert_total (show args)
+  show (PCon _ n i _ args) = show n ++ " " ++ show i ++ " " ++ assert_total (show $ toList args)
+  show (PTyCon _ n _ args) = "<TyCon>" ++ show n ++ " " ++ assert_total (show $ toList args)
   show (PConst _ c) = show c
   show (PArrow _ x s t) = "(" ++ show s ++ " -> " ++ show t ++ ")"
   show (PDelay _ _ _ p) = "(Delay " ++ show p ++ ")"
@@ -182,9 +184,9 @@ export
 Pretty IdrisSyntax Pat where
   prettyPrec d (PAs _ n p) = pretty0 n <++> keyword "@" <+> parens (pretty p)
   prettyPrec d (PCon _ n _ _ args) =
-    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) args)
+    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) (toList args))
   prettyPrec d (PTyCon _ n _ args) =
-    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) args)
+    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) (toList args))
   prettyPrec d (PConst _ c) = pretty c
   prettyPrec d (PArrow _ _ p q) =
     parenthesise (d > Open) $ pretty p <++> arrow <++> pretty q
@@ -195,8 +197,8 @@ Pretty IdrisSyntax Pat where
 mutual
   insertCaseNames : SizeOf outer ->
                     SizeOf ns ->
-                    CaseTree (outer ++ inner) ->
-                    CaseTree (outer ++ (ns ++ inner))
+                    CaseTree (inner ++ outer) ->
+                    CaseTree (inner ++ ns ++ outer)
   insertCaseNames outer ns (Case idx prf scTy alts)
       = let MkNVar prf' = insertNVarNames outer ns (MkNVar prf) in
             Case _ prf' (insertNames outer ns scTy)
@@ -207,14 +209,24 @@ mutual
 
   insertCaseAltNames : SizeOf outer ->
                        SizeOf ns ->
-                       CaseAlt (outer ++ inner) ->
-                       CaseAlt (outer ++ (ns ++ inner))
+                       CaseAlt (inner ++ outer) ->
+                       CaseAlt (inner ++ ns ++ outer)
   insertCaseAltNames p q (ConCase x tag args ct)
-      = ConCase x tag args
-           (rewrite appendAssociative args outer (ns ++ inner) in
-                    insertCaseNames (mkSizeOf args + p) q {inner}
-                        (rewrite sym (appendAssociative args outer inner) in
-                                 ct))
+        = ConCase x tag args locals'
+      where
+        ct' : CaseTree (inner ++ (outer ++ args))
+        ct' = rewrite (appendAssociative inner outer args) in ct
+
+        locals : CaseTree (inner ++ (ns ++ (outer ++ args)))
+        locals = insertCaseNames (p + mkSizeOf args) q ct'
+
+        locals' : CaseTree ((inner ++ (ns ++ outer)) ++ args)
+        locals' = do
+          rewrite (appendAssociative inner ns outer)
+          rewrite sym (appendAssociative (inner ++ ns) outer args)
+          rewrite sym (appendAssociative inner ns (outer ++ args))
+          locals
+
   insertCaseAltNames outer ns (DelayCase tyn valn ct)
       = DelayCase tyn valn
                   (insertCaseNames (suc (suc outer)) ns ct)
@@ -262,17 +274,17 @@ getMetas : CaseTree vars -> NameMap Bool
 getMetas = getNames (addMetas False) empty
 
 export
-mkTerm : (vars : List Name) -> Pat -> Term vars
+mkTerm : (vars : SnocList Name) -> Pat -> Term vars
 mkTerm vars (PAs fc x y) = mkTerm vars y
 mkTerm vars (PCon fc x tag arity xs)
-    = apply fc (Ref fc (DataCon tag arity) x)
+    = applySpine fc (Ref fc (DataCon tag arity) x)
                (map (mkTerm vars) xs)
 mkTerm vars (PTyCon fc x arity xs)
-    = apply fc (Ref fc (TyCon 0 arity) x)
+    = applySpine fc (Ref fc (TyCon 0 arity) x)
                (map (mkTerm vars) xs)
 mkTerm vars (PConst fc c) = PrimVal fc c
 mkTerm vars (PArrow fc x s t)
-    = Bind fc x (Pi fc top Explicit (mkTerm vars s)) (mkTerm (x :: vars) t)
+    = Bind fc x (Pi fc top Explicit (mkTerm vars s)) (mkTerm (vars :< x) t)
 mkTerm vars (PDelay fc r ty p)
     = TDelay fc r (mkTerm vars ty) (mkTerm vars p)
 mkTerm vars (PLoc fc n)

@@ -20,6 +20,7 @@ import Core.SchemeEval.ToScheme
 import Core.TT
 
 import Data.List
+import Data.SnocList
 
 import Libraries.Utils.Scheme
 import System.Info
@@ -78,9 +79,9 @@ getName (Bound x) = x
 getName (Free x) = x
 
 public export
-data SchVars : List Name -> Type where
-     Nil : SchVars []
-     (::) : SVar -> SchVars ns -> SchVars (n :: ns)
+data SchVars : SnocList Name -> Type where
+     Nil : SchVars [<]
+     (::) : SVar -> SchVars ns -> SchVars (ns :< n)
 
 Show (SchVars ns) where
   show xs = show (toList xs)
@@ -300,10 +301,10 @@ getArgName
          pure (MN "carg" (cast i))
 
 extend : Ref Sym Integer =>
-         (args : List Name) -> SchVars vars ->
-         Core (List Name, SchVars (args ++ vars))
-extend [] svs = pure ([], svs)
-extend (arg :: args) svs
+         (args : SnocList Name) -> SchVars vars ->
+         Core (List Name, SchVars (vars ++ args))
+extend [<] svs = pure ([], svs)
+extend (args :< arg) svs
     = do n <- getArgName
          (args', svs') <- extend args svs
          pure (n :: args', Bound (schVarName n) :: svs')
@@ -361,7 +362,7 @@ compileCase blk svs (Case idx p scTy xs)
                   (Apply (Var "vector-ref") [Var var, IntegerVal (cast i)])
                   (project (i + 1) var ns body)
 
-        bindArgs : String -> (args : List Name) -> CaseTree (args ++ vars) ->
+        bindArgs : String -> (args : SnocList Name) -> CaseTree (vars ++ args) ->
                    Core (SchemeObj Write)
         bindArgs var args sc
             = do (bind, svs') <- extend args svs
@@ -396,7 +397,7 @@ compileCase blk svs (Case idx p scTy xs)
                   (Apply (Var "vector-ref") [Var var, IntegerVal (cast i)])
                   (project (i + 1) var ns body)
 
-        bindArgs : String -> (args : List Name) -> CaseTree (args ++ vars) ->
+        bindArgs : String -> (args : SnocList Name) -> CaseTree (vars ++ args) ->
                    Core (SchemeObj Write)
         bindArgs var args sc
             = do (bind, svs') <- extend args svs
@@ -404,7 +405,7 @@ compileCase blk svs (Case idx p scTy xs)
 
         makeAlt : String -> CaseAlt vars ->
                   Core (Maybe (SchemeObj Write, SchemeObj Write))
-        makeAlt var (ConCase (UN (Basic "->")) t [_, _] sc)
+        makeAlt var (ConCase (UN (Basic "->")) t [<_, _] sc)
             = pure Nothing -- do this in 'addPiMatch' below, since the
                            -- representation is different
         makeAlt var (ConCase n t args sc)
@@ -417,7 +418,7 @@ compileCase blk svs (Case idx p scTy xs)
         -- t is a function type, and conveniently the scope of a pi
         -- binding is represented as a function. Lucky us! So we just need
         -- to extract it then evaluate the scope
-        addPiMatch var (ConCase (UN (Basic "->")) _ [s, t] sc :: _) def
+        addPiMatch var (ConCase (UN (Basic "->")) _ [<t, s] sc :: _) def
             = do sn <- getArgName
                  tn <- getArgName
                  let svs' = Bound (schVarName sn) ::
@@ -477,9 +478,9 @@ varObjs : SchVars ns -> List (SchemeObj Write)
 varObjs [] = []
 varObjs (x :: xs) = Var (show x) :: varObjs xs
 
-mkArgs : (ns : List Name) -> Core (SchVars ns)
-mkArgs [] = pure []
-mkArgs (x :: xs)
+mkArgs : (ns : SnocList Name) -> Core (SchVars ns)
+mkArgs [<] = pure []
+mkArgs (xs :< x)
     = pure $ Bound (schVarName x) :: !(mkArgs xs)
 
 bindArgs : Name ->
@@ -520,12 +521,12 @@ compileBody _ n (DCon tag arity newtypeArg)
          let body
                = Vector (cast tag)
                         (toScheme n :: toScheme emptyFC ::
-                             map (Var . schVarName) args)
+                             map (Var . schVarName) (toList args))
          pure (bindArgs n argvs [] body)
   where
-    mkArgNs : Int -> Nat -> List Name
-    mkArgNs i Z = []
-    mkArgNs i (S k) = MN "arg" i :: mkArgNs (i+1) k
+    mkArgNs : Int -> Nat -> SnocList Name
+    mkArgNs i Z = [<]
+    mkArgNs i (S k) = mkArgNs (i+1) k :< MN "arg" i
 compileBody _ n (TCon tag Z parampos detpos flags mutwith datacons detagabbleBy)
     = pure $ Vector (-1) [IntegerVal (cast tag), StringVal (show n),
                           toScheme n, toScheme emptyFC]
@@ -537,12 +538,12 @@ compileBody _ n (TCon tag arity parampos detpos flags mutwith datacons detagabbl
                         (IntegerVal (cast tag) ::
                          StringVal (show n) ::
                           toScheme n :: toScheme emptyFC ::
-                            map (Var . schVarName) args)
+                            map (Var . schVarName) (toList args))
          pure (bindArgs n argvs [] body)
   where
-    mkArgNs : Int -> Nat -> List Name
-    mkArgNs i Z = []
-    mkArgNs i (S k) = MN "arg" i :: mkArgNs (i+1) k
+    mkArgNs : Int -> Nat -> SnocList Name
+    mkArgNs i Z = [<]
+    mkArgNs i (S k) = mkArgNs (i+1) k :< MN "arg" i
 compileBody _ n (Hole numlocs x) = pure $ blockedMetaApp n
 compileBody _ n (BySearch x maxdepth defining) = pure $ blockedMetaApp n
 compileBody _ n (Guess guess envbind constraints) = pure $ blockedMetaApp n

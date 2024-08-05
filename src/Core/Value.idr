@@ -57,46 +57,52 @@ cbv = { strategy := CBV } defaultOpts
 
 mutual
   public export
-  data LocalEnv : List Name -> List Name -> Type where
-       Nil  : LocalEnv free []
-       (::) : Closure free -> LocalEnv free vars -> LocalEnv free (x :: vars)
+  data LocalEnv : SnocList Name -> SnocList Name -> Type where
+       Lin  : LocalEnv free [<]
+       (:<) : LocalEnv free vars -> Closure free -> LocalEnv free (vars :< x)
 
   public export
-  data Closure : List Name -> Type where
+  data Closure : SnocList Name -> Type where
        MkClosure : {vars : _} ->
                    (opts : EvalOpts) ->
                    LocalEnv free vars ->
                    Env Term free ->
-                   Term (vars ++ free) -> Closure free
+                   Term (free ++ vars) -> Closure free
        MkNFClosure : EvalOpts -> Env Term free -> NF free -> Closure free
 
   -- The head of a value: things you can apply arguments to
   public export
-  data NHead : List Name -> Type where
+  data NHead : SnocList Name -> Type where
        NLocal : Maybe Bool -> (idx : Nat) -> (0 p : IsVar nm idx vars) ->
                 NHead vars
        NRef   : NameType -> Name -> NHead vars
-       NMeta  : Name -> Int -> List (Closure vars) -> NHead vars
+       NMeta  : Name -> Int -> SnocList (FC, Closure vars) -> NHead vars
+       -- [Note] Meta args
+       -- ----------------
+       -- We should use same strategy to process Meta<->NMeta across all occurencies.
+       -- For now direct strategy is used. It means Meta<->NMeta conversion happens
+       -- how lists are traversed. Which means in its own order that `cast` is enough
+       -- but it might be bad by performance.
 
 
   -- Values themselves. 'Closure' is an unevaluated thunk, which means
   -- we can wait until necessary to reduce constructor arguments
   public export
-  data NF : List Name -> Type where
+  data NF : SnocList Name -> Type where
        NBind    : FC -> (x : Name) -> Binder (Closure vars) ->
                   (Defs -> Closure vars -> Core (NF vars)) -> NF vars
        -- Each closure is associated with the file context of the App node that
        -- had it as an argument. It's necessary so as to not lose file context
        -- information when creating the normal form.
-       NApp     : FC -> NHead vars -> List (FC, Closure vars) -> NF vars
+       NApp     : FC -> NHead vars -> SnocList (FC, Closure vars) -> NF vars
        NDCon    : FC -> Name -> (tag : Int) -> (arity : Nat) ->
-                  List (FC, Closure vars) -> NF vars
+                  SnocList (FC, Closure vars) -> NF vars
        NTCon    : FC -> Name -> (tag : Int) -> (arity : Nat) ->
-                  List (FC, Closure vars) -> NF vars
+                  SnocList (FC, Closure vars) -> NF vars
        NAs      : FC -> UseSide -> NF vars -> NF vars -> NF vars
        NDelayed : FC -> LazyReason -> NF vars -> NF vars
        NDelay   : FC -> LazyReason -> Closure vars -> Closure vars -> NF vars
-       NForce   : FC -> LazyReason -> NF vars -> List (FC, Closure vars) -> NF vars
+       NForce   : FC -> LazyReason -> NF vars -> SnocList (FC, Closure vars) -> NF vars
        NPrimVal : FC -> Constant -> NF vars
        NErased  : FC -> WhyErased (NF vars) -> NF vars
        NType    : FC -> Name -> NF vars
@@ -107,14 +113,19 @@ mutual
 %name NF nf
 
 export
-ntCon : FC -> Name -> Int -> Nat -> List (FC, Closure vars) -> NF vars
+ntCon : FC -> Name -> Int -> Nat -> SnocList (FC, Closure vars) -> NF vars
 -- Part of the machinery for matching on types - I believe this won't affect
 -- universe checking so put a dummy name.
-ntCon fc (UN (Basic "Type")) tag Z [] = NType fc (MN "top" 0)
-ntCon fc n tag Z [] = case isConstantType n of
+ntCon fc (UN (Basic "Type")) tag Z [<] = NType fc (MN "top" 0)
+ntCon fc n tag Z [<] = case isConstantType n of
   Just c => NPrimVal fc $ PrT c
-  Nothing => NTCon fc n tag Z []
+  Nothing => NTCon fc n tag Z [<]
 ntCon fc n tag arity args = NTCon fc n tag arity args
+
+export
+cons : LocalEnv free vars -> Closure free -> LocalEnv free ([<v] ++ vars)
+cons [<] p = Lin :< p
+cons (ns :< s) p = cons ns p :< s
 
 export
 getLoc : NF vars -> FC
@@ -129,15 +140,6 @@ getLoc (NForce fc _ _ _) = fc
 getLoc (NPrimVal fc _) = fc
 getLoc (NErased fc i) = fc
 getLoc (NType fc _) = fc
-
-export
-{free : _} -> Show (NHead free) where
-  show (NLocal _ idx p) = show (nameAt p) ++ "[" ++ show idx ++ "]"
-  show (NRef _ n) = show n
-  show (NMeta n _ args) = "?" ++ show n ++ "_[" ++ show (length args) ++ " closures]"
-
-Show (Closure free) where
-  show _ = "[closure]"
 
 export
 HasNames (NHead free) where
@@ -173,34 +175,57 @@ HasNames (NF free) where
   resolved defs (NErased fc imp) = pure $ NErased fc imp
   resolved defs (NType fc n) = pure $ NType fc !(resolved defs n)
 
-export
-covering
-{free : _} -> Show (NF free) where
-  show (NBind _ x (Lam _ c info ty) _)
-    = "\\" ++ withPiInfo info (showCount c ++ show x ++ " : " ++ show ty) ++
-      " => [closure]"
-  show (NBind _ x (Let _ c val ty) _)
-    = "let " ++ showCount c ++ show x ++ " : " ++ show ty ++
-      " = " ++ show val ++ " in [closure]"
-  show (NBind _ x (Pi _ c info ty) _)
-    = withPiInfo info (showCount c ++ show x ++ " : " ++ show ty) ++
-      " -> [closure]"
-  show (NBind _ x (PVar _ c info ty) _)
-    = withPiInfo info ("pat " ++ showCount c ++ show x ++ " : " ++ show ty) ++
-      " => [closure]"
-  show (NBind _ x (PLet _ c val ty) _)
-    = "plet " ++ showCount c ++ show x ++ " : " ++ show ty ++
-      " = " ++ show val ++ " in [closure]"
-  show (NBind _ x (PVTy _ c ty) _)
-    = "pty " ++ showCount c ++ show x ++ " : " ++ show ty ++
-      " => [closure]"
-  show (NApp _ hd args) = show hd ++ " [" ++ show (length args) ++ " closures]"
-  show (NDCon _ n _ _ args) = show n ++ " [" ++ show (length args) ++ " closures]"
-  show (NTCon _ n _ _ args) = show n ++ " [" ++ show (length args) ++ " closures]"
-  show (NAs _ _ n tm) = show n ++ "@" ++ show tm
-  show (NDelayed _ _ tm) = "%Delayed " ++ show tm
-  show (NDelay _ _ _ _) = "%Delay [closure]"
-  show (NForce _ _ tm args) = "%Force " ++ show tm ++ " [" ++ show (length args) ++ " closures]"
-  show (NPrimVal _ c) = show c
-  show (NErased _ _) = "[__]"
-  show (NType _ _) = "Type"
+mutual
+  export
+  covering
+  {free : _} -> Show (NHead free) where
+    show (NLocal _ idx p) = show (nameAt p) ++ "[" ++ show idx ++ "]"
+    show (NRef _ n) = show n
+    show (NMeta n _ args) = "?" ++ show n ++ "_[" ++ show (length args) ++ " closures " ++ showClosureSnocList args ++ "]"
+
+  export
+  covering
+  {free : _} -> Show (Closure free) where
+    show (MkClosure _ _ _ tm) = "[closure] MkClosure: " ++ show tm
+    show (MkNFClosure _ _ tm) = "[closure] MkNFClosure: " ++ show tm
+
+  export
+  covering
+  showClosureSnocList : {free : _} -> SnocList (FC, Closure free) -> String
+  showClosureSnocList xs = concat ("[" :: intersperse ", " (show' [] xs) ++ ["]"])
+    where
+      show' : List String -> SnocList (FC, Closure free) -> List String
+      show' acc Lin       = acc
+      show' acc (xs :< (_, x)) = show' (show x :: acc) xs
+
+  export
+  covering
+  {free : _} -> Show (NF free) where
+    show (NBind _ x (Lam _ c info ty) _)
+      = "\\" ++ withPiInfo info (showCount c ++ show x ++ " : " ++ show ty) ++
+        " => [closure]"
+    show (NBind _ x (Let _ c val ty) _)
+      = "let " ++ showCount c ++ show x ++ " : " ++ show ty ++
+        " = " ++ show val ++ " in [closure]"
+    show (NBind _ x (Pi _ c info ty) _)
+      = withPiInfo info (showCount c ++ show x ++ " : " ++ show ty) ++
+        " -> [closure]"
+    show (NBind _ x (PVar _ c info ty) _)
+      = withPiInfo info ("pat " ++ showCount c ++ show x ++ " : " ++ show ty) ++
+        " => [closure]"
+    show (NBind _ x (PLet _ c val ty) _)
+      = "plet " ++ showCount c ++ show x ++ " : " ++ show ty ++
+        " = " ++ show val ++ " in [closure]"
+    show (NBind _ x (PVTy _ c ty) _)
+      = "pty " ++ showCount c ++ show x ++ " : " ++ show ty ++
+        " => [closure]"
+    show (NApp _ hd args) = show hd ++ " [" ++ show (length args) ++ " closures " ++ showClosureSnocList args ++ "]"
+    show (NDCon _ n _ _ args) = show n ++ " [" ++ show (length args) ++ " closures " ++ showClosureSnocList args ++ "]"
+    show (NTCon _ n _ _ args) = show n ++ " [" ++ show (length args) ++ " closures " ++ showClosureSnocList args ++ "]"
+    show (NAs _ _ n tm) = show n ++ "@" ++ show tm
+    show (NDelayed _ _ tm) = "%Delayed " ++ show tm
+    show (NDelay _ _ _ _) = "%Delay [closure]"
+    show (NForce _ _ tm args) = "%Force " ++ show tm ++ " [" ++ show (length args) ++ " closures " ++ showClosureSnocList args ++ "]"
+    show (NPrimVal _ c) = show c
+    show (NErased _ _) = "[__]"
+    show (NType _ _) = "Type"

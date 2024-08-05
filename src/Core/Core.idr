@@ -5,6 +5,7 @@ import Core.Env
 import Core.TT
 
 import Data.List1
+import Data.SnocList
 import Data.Vect
 
 import Libraries.Data.IMaybe
@@ -256,7 +257,7 @@ Show Error where
             case cov of
                  IsCovering => "Oh yes it is (Internal error!)"
                  MissingCases cs => "Missing cases:\n\t" ++
-                                           showSep "\n\t" (map show cs)
+                                           showSep "\n\t" (toList $ map show cs)
                  NonCoveringCall ns => "Calls non covering function"
                                            ++ (case ns of
                                                    [fn] => " " ++ show fn
@@ -760,6 +761,18 @@ export
 traverse : (a -> Core b) -> List a -> Core (List b)
 traverse f xs = traverse' f xs []
 
+namespace SnocList
+  -- Traversable (specialised)
+  traverse' : (a -> Core b) -> SnocList a -> SnocList b -> Core (SnocList b)
+  traverse' f [<] acc = pure (reverse acc)
+  traverse' f (xs :< x) acc
+      = traverse' f xs (acc :< !(f x))
+
+  %inline
+  export
+  traverse : (a -> Core b) -> SnocList a -> Core (SnocList b)
+  traverse f xs = traverse' f xs [<]
+
 export
 mapMaybeM : (a -> Core (Maybe b)) -> List a -> Core (List b)
 mapMaybeM f = go [<] where
@@ -784,7 +797,7 @@ traverseList1 f xxs
 export
 traverseSnocList : (a -> Core b) -> SnocList a -> Core (SnocList b)
 traverseSnocList f [<] = pure [<]
-traverseSnocList f (as :< a) = (:<) <$> traverseSnocList f as <*> f a
+traverseSnocList f (as :< a) = [| traverseSnocList f as :< f a |]
 
 export
 traverseVect : (a -> Core b) -> Vect n a -> Core (Vect n b)
@@ -829,6 +842,14 @@ traverseList1_ f xxs
          let xs = tail xxs
          ignore (f x)
          traverse_ f xs
+
+namespace SnocList
+  export
+  traverse_ : (a -> Core b) -> SnocList a -> Core ()
+  traverse_ f [<] = pure ()
+  traverse_ f (xs :< x)
+      = Core.do ignore (f x)
+                traverse_ f xs
 
 %inline export
 traverseFC : (a -> Core b) -> WithFC a -> Core (WithFC b)
@@ -879,6 +900,14 @@ anyM f (x :: xs)
     = if !(f x)
          then pure True
          else anyM f xs
+
+export
+anyMScoped : (a -> Core Bool) -> SnocList a -> Core Bool
+anyMScoped f [<] = pure False
+anyMScoped f (xs :< x)
+    = if !(f x)
+         then pure True
+         else anyMScoped f xs
 
 export
 allM : (a -> Core Bool) -> List a -> Core Bool

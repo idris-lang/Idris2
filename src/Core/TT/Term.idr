@@ -6,11 +6,15 @@ import Core.FC
 
 import Core.Name
 import Core.Name.Scoped
+import Core.Name.CompatibleVars
 import Core.TT.Binder
 import Core.TT.Primitive
 import Core.TT.Var
 
 import Data.List
+import Data.SnocList
+
+import Libraries.Data.SnocList.SizeOf
 
 %default total
 
@@ -55,6 +59,11 @@ data LazyReason = LInf | LLazy | LUnknown
 public export
 data UseSide = UseLeft | UseRight
 
+export
+Show UseSide where
+  show UseLeft = "UseLeft"
+  show UseRight = "UseRight"
+
 %name UseSide side
 
 public export
@@ -98,10 +107,11 @@ data Term : Scoped where
              (idx : Nat) -> (0 p : IsVar name idx vars) -> Term vars
      Ref : FC -> NameType -> (name : Name) -> Term vars
      -- Metavariables and the scope they are applied to
+     -- See [Note] Meta args
      Meta : FC -> Name -> Int -> List (Term vars) -> Term vars
      Bind : FC -> (x : Name) ->
             (b : Binder (Term vars)) ->
-            (scope : Term (x :: vars)) -> Term vars
+            (scope : Term (vars :< x)) -> Term vars
      App : FC -> (fn : Term vars) -> (arg : Term vars) -> Term vars
      -- as patterns; since we check LHS patterns as terms before turning
      -- them into patterns, this helps us get it right. When normalising,
@@ -125,7 +135,7 @@ data Term : Scoped where
 
 public export
 ClosedTerm : Type
-ClosedTerm = Term []
+ClosedTerm = Term [<]
 
 ------------------------------------------------------------------------
 -- Weakening
@@ -287,6 +297,11 @@ apply : FC -> Term vars -> List (Term vars) -> Term vars
 apply loc fn [] = fn
 apply loc fn (a :: args) = apply loc (App loc fn a) args
 
+export
+applySpine : FC -> Term vars -> SnocList (Term vars) -> Term vars
+applySpine loc fn [<] = fn
+applySpine loc fn (args :< a) = App loc (applySpine loc fn args) a
+
 -- Creates a chain of `App` nodes, each with its own file context
 export
 applySpineWithFC : Term vars -> SnocList (FC, Term vars) -> Term vars
@@ -316,6 +331,13 @@ getFnArgs tm = getFA [] tm
             (Term vars, List (Term vars))
     getFA args (App _ f a) = getFA (a :: args) f
     getFA args tm = (tm, args)
+
+export
+getFnArgsSpine : Term vars -> (Term vars, SnocList (Term vars))
+getFnArgsSpine (App _ f a)
+    = let (fn, sp) = getFnArgsSpine f in
+          (fn, sp :< a)
+getFnArgsSpine tm = (tm, [<])
 
 export
 getFn : Term vars -> Term vars
@@ -474,15 +496,15 @@ Eq (Term vars) where
 
 mutual
 
-  resolveNamesBinder : (vars : List Name) -> Binder (Term vars) -> Binder (Term vars)
+  resolveNamesBinder : (vars : SnocList Name) -> Binder (Term vars) -> Binder (Term vars)
   resolveNamesBinder vars b = assert_total $ map (resolveNames vars) b
 
-  resolveNamesTerms : (vars : List Name) -> List (Term vars) -> List (Term vars)
+  resolveNamesTerms : (vars : SnocList Name) -> List (Term vars) -> List (Term vars)
   resolveNamesTerms vars ts = assert_total $ map (resolveNames vars) ts
 
   -- Replace any Ref Bound in a type with appropriate local
   export
-  resolveNames : (vars : List Name) -> Term vars -> Term vars
+  resolveNames : (vars : SnocList Name) -> Term vars -> Term vars
   resolveNames vars (Ref fc Bound name)
       = case isNVar name vars of
              Just (MkNVar prf) => Local fc (Just False) _ prf
@@ -490,7 +512,7 @@ mutual
   resolveNames vars (Meta fc n i xs)
       = Meta fc n i (resolveNamesTerms vars xs)
   resolveNames vars (Bind fc x b scope)
-      = Bind fc x (resolveNamesBinder vars b) (resolveNames (x :: vars) scope)
+      = Bind fc x (resolveNamesBinder vars b) (resolveNames (vars :< x) scope)
   resolveNames vars (App fc fn arg)
       = App fc (resolveNames vars fn) (resolveNames vars arg)
   resolveNames vars (As fc s as pat)

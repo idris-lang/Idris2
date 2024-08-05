@@ -18,7 +18,7 @@ import Core.Value
 -- reduce
 export
 normalisePis : {auto c : Ref Ctxt Defs} ->
-               {vars : List Name} ->
+               {vars : SnocList Name} ->
                Defs -> Env Term vars -> Term vars -> Core (Term vars)
 normalisePis defs env tm
     = do tmnf <- nf defs env tm
@@ -71,9 +71,9 @@ normaliseLHS : {auto c : Ref Ctxt Defs} ->
                {free : _} ->
                Defs -> Env Term free -> Term free -> Core (Term free)
 normaliseLHS defs env (Bind fc n b sc)
-    = pure $ Bind fc n b !(normaliseLHS defs (b :: env) sc)
+    = pure $ Bind fc n b !(normaliseLHS defs (env :< b) sc)
 normaliseLHS defs env tm
-    = quote defs env !(nfOpts onLHS defs env tm)
+    = quoteLHS defs env !(nfOpts onLHS defs env tm)
 
 export
 tryNormaliseSizeLimit : {auto c : Ref Ctxt Defs} ->
@@ -118,7 +118,7 @@ normaliseScope : {auto c : Ref Ctxt Defs} ->
                  {free : _} ->
                  Defs -> Env Term free -> Term free -> Core (Term free)
 normaliseScope defs env (Bind fc n b sc)
-    = pure $ Bind fc n b !(normaliseScope defs (b :: env) sc)
+    = pure $ Bind fc n b !(normaliseScope defs (env :< b) sc)
 normaliseScope defs env tm = normalise defs env tm
 
 export
@@ -238,13 +238,13 @@ logEnv s n msg env
 
   where
 
-    dumpEnv : {vs : List Name} -> Env Term vs -> Core ()
-    dumpEnv [] = pure ()
-    dumpEnv {vs = x :: _} (Let _ c val ty :: bs)
+    dumpEnv : {vs : SnocList Name} -> Env Term vs -> Core ()
+    dumpEnv [<] = pure ()
+    dumpEnv {vs = _ :< x} (bs :< Let _ c val ty)
         = do logTermNF' s n (msg ++ ": let " ++ show x) bs val
              logTermNF' s n (msg ++ ":" ++ show c ++ " " ++ show x) bs ty
              dumpEnv bs
-    dumpEnv {vs = x :: _} (b :: bs)
+    dumpEnv {vs = _ :< x} (bs :< b)
         = do logTermNF' s n (msg ++ ":" ++ show (multiplicity b) ++ " " ++
                            show (piInfo b) ++ " " ++
                            show x) bs (binderType b)
@@ -271,25 +271,25 @@ replace' {vars} tmpi defs env lhs parg tm
              sc' <- replace' (tmpi + 1) defs env lhs parg
                              !(scfn defs (toClosure defaultOpts env (Ref fc Bound x')))
              pure (Bind fc x b' (refsToLocals (Add x x' None) sc'))
-    repSub (NApp fc hd [])
+    repSub (NApp fc hd [<])
         = do empty <- clearDefs defs
-             quote empty env (NApp fc hd [])
+             quote empty env (NApp fc hd [<])
     repSub (NApp fc hd args)
         = do args' <- traverse (traversePair repArg) args
-             pure $ applyStackWithFC
-                        !(replace' tmpi defs env lhs parg (NApp fc hd []))
+             pure $ applySpineWithFC
+                        !(replace' tmpi defs env lhs parg (NApp fc hd [<]))
                         args'
     repSub (NDCon fc n t a args)
         = do args' <- traverse (traversePair repArg) args
              empty <- clearDefs defs
-             pure $ applyStackWithFC
-                        !(quote empty env (NDCon fc n t a []))
+             pure $ applySpineWithFC
+                        !(quote empty env (NDCon fc n t a [<]))
                         args'
     repSub (NTCon fc n t a args)
         = do args' <- traverse (traversePair repArg) args
              empty <- clearDefs defs
-             pure $ applyStackWithFC
-                        !(quote empty env (NTCon fc n t a []))
+             pure $ applySpineWithFC
+                        !(quote empty env (NTCon fc n t a [<]))
                         args'
     repSub (NAs fc s a p)
         = do a' <- repSub a
@@ -305,7 +305,7 @@ replace' {vars} tmpi defs env lhs parg tm
     repSub (NForce fc r tm args)
         = do args' <- traverse (traversePair repArg) args
              tm' <- repSub tm
-             pure $ applyStackWithFC (TForce fc r tm') args'
+             pure $ applySpineWithFC (TForce fc r tm') args'
     repSub (NErased fc (Dotted t))
         = do t' <- repSub t
              pure (Erased fc (Dotted t'))
@@ -334,7 +334,7 @@ normalisePrims : {auto c : Ref Ctxt Defs} -> {vs : _} ->
                  List Name ->
                  -- view of the potential redex
                  (n : Name) ->          -- function name
-                 (args : List arg) ->   -- arguments from inside out (arg1, ..., argk)
+                 (args : SnocList arg) ->   -- arguments from inside out (arg1, ..., argk)
                  -- actual term to evaluate if needed
                  (tm : Term vs) ->      -- original term (n arg1 ... argk)
                  Env Term vs ->         -- evaluation environment
@@ -343,7 +343,7 @@ normalisePrims : {auto c : Ref Ctxt Defs} -> {vs : _} ->
 normalisePrims boundSafe viewConstant all prims n args tm env
    = do let True = isPrimName prims !(getFullName n) -- is a primitive
               | _ => pure Nothing
-        let (mc :: _) = reverse args -- with at least one argument
+        let (_ :< mc) = reverse args -- with at least one argument
               | _ => pure Nothing
         let (Just c) = viewConstant mc -- that is a constant
               | _ => pure Nothing

@@ -11,12 +11,6 @@ import Libraries.Data.SortedSet
 %default covering
 
 export
-unBinds : Term vars -> Exists (\ outer => Term (outer <>> vars))
-unBinds (Bind _ x _ scope) = let (Evidence outer t) = unBinds scope in
-                             Evidence (outer :< x) t
-unBinds t = Evidence [<] t
-
-export
 onPRefs : Monoid m =>
           (Name      -> m) ->
           (Term vars -> m)
