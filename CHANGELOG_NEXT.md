@@ -256,4 +256,5 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 #### Documentation
 
-* Module docstrings are now displayed for namespace indexes when documentation is built via --mkdoc.
+* Module docstrings are now displayed for namespace indexes when documentation is built via `--mkdoc`.
+* Generated documentation are now removed via `--clean`.

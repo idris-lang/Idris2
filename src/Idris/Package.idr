@@ -843,6 +843,10 @@ clean pkg opts -- `opts` is not used but might be in the future
          deleteFolder builddir []
          maybe (pure ()) (\e => delete (outputdir </> e))
                (executable pkg)
+         -- clean out the generated docs
+         let build = build_dir (dirs (options defs))
+         deleteDocsFolder $ build </> "docs" </> "docs"
+         deleteDocsFolder $ build </> "docs"
          runScript (postclean pkg)
   where
     delete : String -> Core ()
@@ -858,6 +862,14 @@ clean pkg opts -- `opts` is not used but might be in the future
         = do let ttFile = builddir </> joinPath ns </> mod
              delete $ ttFile <.> "ttc"
              delete $ ttFile <.> "ttm"
+
+    deleteDocsFolder : String -> Core ()
+    deleteDocsFolder dir
+        = do Right docbasefiles <- coreLift $ listDir dir
+               | Left err => pure ()
+             traverse_ (\x => delete $ dir </> x)
+                       docbasefiles
+             deleteFolder dir []
 
 -- Just load the given module, if it exists, which will involve building
 -- it if necessary
