@@ -845,8 +845,8 @@ clean pkg opts -- `opts` is not used but might be in the future
                (executable pkg)
          -- clean out the generated docs
          let build = build_dir (dirs (options defs))
-         () <- deleteDocsFolder $ build </> "docs" </> "docs"
-         () <- deleteDocsFolder $ build </> "docs"
+         deleteDocsFolder $ build </> "docs" </> "docs"
+         deleteDocsFolder $ build </> "docs"
          runScript (postclean pkg)
   where
     delete : String -> Core ()
