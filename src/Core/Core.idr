@@ -3,6 +3,7 @@ module Core.Core
 import Core.Context.Context
 import Core.Env
 import Core.TT
+import Core.Name.ScopedList
 
 import Data.List1
 import Data.Vect
@@ -256,7 +257,7 @@ Show Error where
             case cov of
                  IsCovering => "Oh yes it is (Internal error!)"
                  MissingCases cs => "Missing cases:\n\t" ++
-                                           showSep "\n\t" (map show cs)
+                                           showSep "\n\t" (toList $ map show cs)
                  NonCoveringCall ns => "Calls non covering function"
                                            ++ (case ns of
                                                    [fn] => " " ++ show fn
@@ -760,6 +761,18 @@ export
 traverse : (a -> Core b) -> List a -> Core (List b)
 traverse f xs = traverse' f xs []
 
+namespace ScopedList
+  -- Traversable (specialised)
+  traverse' : (a -> Core b) -> ScopedList a -> ScopedList b -> Core (ScopedList b)
+  traverse' f SLNil acc = pure (reverse acc)
+  traverse' f (x :%: xs) acc
+      = traverse' f xs (!(f x) :%: acc)
+
+  %inline
+  export
+  traverse : (a -> Core b) -> ScopedList a -> Core (ScopedList b)
+  traverse f xs = traverse' f xs SLNil
+
 export
 mapMaybeM : (a -> Core (Maybe b)) -> List a -> Core (List b)
 mapMaybeM f = go [<] where
@@ -830,6 +843,14 @@ traverseList1_ f xxs
          ignore (f x)
          traverse_ f xs
 
+namespace ScopedList
+  export
+  traverse_ : (a -> Core b) -> ScopedList a -> Core ()
+  traverse_ f SLNil = pure ()
+  traverse_ f (x :%: xs)
+      = Core.do ignore (f x)
+                traverse_ f xs
+
 %inline export
 traverseFC : (a -> Core b) -> WithFC a -> Core (WithFC b)
 traverseFC f (MkFCVal fc x) = MkFCVal fc <$> f x
@@ -879,6 +900,14 @@ anyM f (x :: xs)
     = if !(f x)
          then pure True
          else anyM f xs
+
+export
+anyMScoped : (a -> Core Bool) -> ScopedList a -> Core Bool
+anyMScoped f SLNil = pure False
+anyMScoped f (x :%: xs)
+    = if !(f x)
+         then pure True
+         else anyMScoped f xs
 
 export
 allM : (a -> Core Bool) -> List a -> Core Bool

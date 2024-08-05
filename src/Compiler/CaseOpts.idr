@@ -32,14 +32,14 @@ case t of
 
 shiftUnder : {args : _} ->
              {idx : _} ->
-             (0 p : IsVar n idx (x :: args ++ vars)) ->
-             NVar n (args ++ x :: vars)
+             (0 p : IsVar n idx (x :%: args +%+ vars)) ->
+             NVar n (args +%+ x :%: vars)
 shiftUnder First = weakenNVar (mkSizeOf args) (MkNVar First)
 shiftUnder (Later p) = insertNVar (mkSizeOf args) (MkNVar p)
 
 shiftVar : {outer, args : Scope} ->
-           NVar n (outer ++ (x :: args ++ vars)) ->
-           NVar n (outer ++ (args ++ x :: vars))
+           NVar n (outer +%+ (x :%: args +%+ vars)) ->
+           NVar n (outer +%+ (args +%+ x :%: vars))
 shiftVar nvar
   = let out = mkSizeOf outer in
     case locateNVar out nvar of
@@ -49,21 +49,21 @@ shiftVar nvar
 mutual
   shiftBinder : {outer, args : _} ->
                 (new : Name) ->
-                CExp (outer ++ old :: (args ++ vars)) ->
-                CExp (outer ++ (args ++ new :: vars))
+                CExp (outer +%+ old :%: (args +%+ vars)) ->
+                CExp (outer +%+ (args +%+ new :%: vars))
   shiftBinder new (CLocal fc p)
       = case shiftVar (MkNVar p) of
              MkNVar p' => CLocal fc (renameVar p')
     where
-      renameVar : IsVar x i (outer ++ (args ++ (old :: rest))) ->
-                  IsVar x i (outer ++ (args ++ (new :: rest)))
+      renameVar : IsVar x i (outer +%+ (args +%+ (old :%: rest))) ->
+                  IsVar x i (outer +%+ (args +%+ (new :%: rest)))
       renameVar = believe_me -- it's the same index, so just the identity at run time
   shiftBinder new (CRef fc n) = CRef fc n
   shiftBinder {outer} new (CLam fc n sc)
-      = CLam fc n $ shiftBinder {outer = n :: outer} new sc
+      = CLam fc n $ shiftBinder {outer = n :%: outer} new sc
   shiftBinder new (CLet fc n inlineOK val sc)
       = CLet fc n inlineOK (shiftBinder new val)
-                           $ shiftBinder {outer = n :: outer} new sc
+                           $ shiftBinder {outer = n :%: outer} new sc
   shiftBinder new (CApp fc f args)
       = CApp fc (shiftBinder new f) $ map (shiftBinder new) args
   shiftBinder new (CCon fc ci c tag args)
@@ -87,34 +87,34 @@ mutual
 
   shiftBinderConAlt : {outer, args : _} ->
                 (new : Name) ->
-                CConAlt (outer ++ (x :: args ++ vars)) ->
-                CConAlt (outer ++ (args ++ new :: vars))
+                CConAlt (outer +%+ (x :%: args +%+ vars)) ->
+                CConAlt (outer +%+ (args +%+ new :%: vars))
   shiftBinderConAlt new (MkConAlt n ci t args' sc)
-      = let sc' : CExp ((args' ++ outer) ++ (x :: args ++ vars))
-                = rewrite sym (appendAssociative args' outer (x :: args ++ vars)) in sc in
+      = let sc' : CExp ((args' +%+ outer) +%+ (x :%: args +%+ vars))
+                = rewrite sym (appendAssociative args' outer (x :%: args +%+ vars)) in sc in
         MkConAlt n ci t args' $
-           rewrite (appendAssociative args' outer (args ++ new :: vars))
-             in shiftBinder new {outer = args' ++ outer} sc'
+           rewrite (appendAssociative args' outer (args +%+ new :%: vars))
+             in shiftBinder new {outer = args' +%+ outer} sc'
 
   shiftBinderConstAlt : {outer, args : _} ->
                 (new : Name) ->
-                CConstAlt (outer ++ (x :: args ++ vars)) ->
-                CConstAlt (outer ++ (args ++ new :: vars))
+                CConstAlt (outer +%+ (x :%: args +%+ vars)) ->
+                CConstAlt (outer +%+ (args +%+ new :%: vars))
   shiftBinderConstAlt new (MkConstAlt c sc) = MkConstAlt c $ shiftBinder new sc
 
 -- If there's a lambda inside a case, move the variable so that it's bound
 -- outside the case block so that we can bind it just once outside the block
 liftOutLambda : {args : _} ->
                 (new : Name) ->
-                CExp (old :: args ++ vars) ->
-                CExp (args ++ new :: vars)
-liftOutLambda = shiftBinder {outer = []}
+                CExp (old :%: args +%+ vars) ->
+                CExp (args +%+ new :%: vars)
+liftOutLambda = shiftBinder {outer = SLNil}
 
 -- If all the alternatives start with a lambda, we can have a single lambda
 -- binding outside
 tryLiftOut : (new : Name) ->
              List (CConAlt vars) ->
-             Maybe (List (CConAlt (new :: vars)))
+             Maybe (List (CConAlt (new :%: vars)))
 tryLiftOut new [] = Just []
 tryLiftOut new (MkConAlt n ci t args (CLam fc x sc) :: as)
     = do as' <- tryLiftOut new as
@@ -124,20 +124,20 @@ tryLiftOut _ _ = Nothing
 
 tryLiftOutConst : (new : Name) ->
                   List (CConstAlt vars) ->
-                  Maybe (List (CConstAlt (new :: vars)))
+                  Maybe (List (CConstAlt (new :%: vars)))
 tryLiftOutConst new [] = Just []
 tryLiftOutConst new (MkConstAlt c (CLam fc x sc) :: as)
     = do as' <- tryLiftOutConst new as
-         let sc' = liftOutLambda {args = []} new sc
+         let sc' = liftOutLambda {args = SLNil} new sc
          pure (MkConstAlt c sc' :: as')
 tryLiftOutConst _ _ = Nothing
 
 tryLiftDef : (new : Name) ->
              Maybe (CExp vars) ->
-             Maybe (Maybe (CExp (new :: vars)))
+             Maybe (Maybe (CExp (new :%: vars)))
 tryLiftDef new Nothing = Just Nothing
 tryLiftDef new (Just (CLam fc x sc))
-   = let sc' = liftOutLambda {args = []} new sc in
+   = let sc' = liftOutLambda {args = SLNil} new sc in
          pure (Just sc')
 tryLiftDef _ _ = Nothing
 

@@ -6,6 +6,7 @@ import Core.CompileExpr
 import Core.Context
 import Core.Core
 import Core.TT
+import Core.Name.ScopedList
 
 import Data.List
 import Data.Vect
@@ -136,9 +137,9 @@ Show ANFDef where
         show args ++ " -> " ++ show ret
   show (MkAError exp) = "Error: " ++ show exp
 
-data AVars : List Name -> Type where
-     Nil : AVars []
-     (::) : Int -> AVars xs -> AVars (x :: xs)
+data AVars : ScopedList Name -> Type where
+     Nil : AVars SLNil
+     (::) : Int -> AVars xs -> AVars (x :%: xs)
 
 data Next : Type where
 
@@ -194,7 +195,7 @@ mutual
             List (Lifted vars) -> (List AVar -> ANF) -> Core ANF
   anfArgs fc vs args f
       = do args' <- traverse (anf vs) args
-           letBind fc args' f
+           letBind fc (toList args') f
 
   anf : {vars : _} ->
         {auto v : Ref Next Int} ->
@@ -244,10 +245,10 @@ mutual
       = do (is, vs') <- bindArgs args vs
            pure $ MkAConAlt n ci t is !(anf vs' sc)
     where
-      bindArgs : (args : List Name) -> AVars vars' ->
-                 Core (List Int, AVars (args ++ vars'))
-      bindArgs [] vs = pure ([], vs)
-      bindArgs (n :: ns) vs
+      bindArgs : (args : ScopedList Name) -> AVars vars' ->
+                 Core (List Int, AVars (args +%+ vars'))
+      bindArgs SLNil vs = pure ([], vs)
+      bindArgs (n :%: ns) vs
           = do i <- nextVar
                (is, vs') <- bindArgs ns vs
                pure (i :: is, i :: vs')
@@ -269,10 +270,10 @@ toANF (MkLFun args scope sc)
          pure $ MkAFun (iargs ++ reverse iargs') !(anf vs sc)
   where
     bindArgs : {auto v : Ref Next Int} ->
-               (args : List Name) -> AVars vars' ->
-               Core (List Int, AVars (args ++ vars'))
-    bindArgs [] vs = pure ([], vs)
-    bindArgs (n :: ns) vs
+               (args : ScopedList Name) -> AVars vars' ->
+               Core (List Int, AVars (args +%+ vars'))
+    bindArgs SLNil vs = pure ([], vs)
+    bindArgs (n :%: ns) vs
         = do i <- nextVar
              (is, vs') <- bindArgs ns vs
              pure (i :: is, i :: vs')

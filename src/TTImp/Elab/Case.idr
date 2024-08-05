@@ -53,9 +53,9 @@ changeVar old new (TForce fc r p)
     = TForce fc r (changeVar old new p)
 changeVar old new tm = tm
 
-findLater : (x : Name) -> (newer : List Name) -> Var (newer ++ x :: older)
-findLater x [] = MkVar First
-findLater {older} x (_ :: xs)
+findLater : (x : Name) -> (newer : ScopedList Name) -> Var (newer +%+ x :%: older)
+findLater x SLNil = MkVar First
+findLater {older} x (_ :%: xs)
     = let MkVar p = findLater {older} x xs in
           MkVar (Later p)
 
@@ -101,10 +101,10 @@ findImpsIn fc env ns ty
     = when (not (isNil ns)) $
            throw (TryWithImplicits fc env (reverse ns))
 
-merge : {vs : List Name} ->
-        List (Var vs) -> List (Var vs) -> List (Var vs)
-merge [] xs = xs
-merge (v :: vs) xs
+merge : {vs : ScopedList Name} ->
+        ScopedList (Var vs) -> List (Var vs) -> List (Var vs)
+merge SLNil xs = xs
+merge (v :%: vs) xs
     = merge vs (v :: filter (v /=) xs)
 
 -- Extend the list of variables we need in the environment so far, removing
@@ -121,7 +121,7 @@ extendNeeded b env needed
 
 findScrutinee : {vs : _} ->
                 Env Term vs -> RawImp -> Maybe (Var vs)
-findScrutinee {vs = n' :: _} (b :: bs) (IVar loc' n)
+findScrutinee {vs = n' :%: _} (b :: bs) (IVar loc' n)
     = if n' == n && not (isLet b)
          then Just (MkVar First)
          else do MkVar p <- findScrutinee bs (IVar loc' n)
@@ -233,7 +233,7 @@ caseBlock {vars} rigc elabinfo fc nest env opts scr scrtm scrty caseRig alts exp
          when (not (isNil fullImps)) $ findImpsIn fc [] [] casefnty
          cidx <- addDef casen ({ eraseArgs := erasedargs }
                                 (newDef fc casen (if isErased rigc then erased else top)
-                                      [] casefnty vis None))
+                                      SLNil casefnty vis None))
 
          traverse_ (processFnOpt fc False casen) opts
 
@@ -306,7 +306,7 @@ caseBlock {vars} rigc elabinfo fc nest env opts scr scrtm scrty caseRig alts exp
     addEnv : {vs : _} ->
              Int -> Env Term vs -> List Name -> (List (Name, Name), List RawImp)
     addEnv idx [] used = ([], [])
-    addEnv idx {vs = v :: vs} (b :: bs) used
+    addEnv idx {vs = v :%: vs} (b :: bs) used
         = let n = getBindName idx v used
               (ns, rest) = addEnv (idx + 1) bs (snd n :: used)
               ns' = n :: ns in
@@ -431,7 +431,7 @@ checkCase rig elabinfo nest env fc opts scr scrty_in alts exp
         = throw (GenericMsg fc "Can't infer type for case scrutinee")
     checkConcrete _ = pure ()
 
-    applyTo : Defs -> RawImp -> NF [] -> Core RawImp
+    applyTo : Defs -> RawImp -> NF SLNil -> Core RawImp
     applyTo defs ty (NBind fc _ (Pi _ _ Explicit _) sc)
         = applyTo defs (IApp fc ty (Implicit fc False))
                !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder)))
@@ -441,7 +441,7 @@ checkCase rig elabinfo nest env fc opts scr scrty_in alts exp
     applyTo defs ty _ = pure ty
 
     -- Get the name and type of the family the scrutinee is in
-    getRetTy : Defs -> NF [] -> Core (Maybe (Name, NF []))
+    getRetTy : Defs -> NF SLNil -> Core (Maybe (Name, NF SLNil))
     getRetTy defs (NBind fc _ (Pi _ _ _ _) sc)
         = getRetTy defs !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder)))
     getRetTy defs (NTCon _ n _ arity _)
