@@ -1,6 +1,7 @@
 module Core.Case.CaseTree
 
 import Core.TT
+import Core.Name.ScopedList
 
 import Data.List
 import Data.String
@@ -16,12 +17,12 @@ mutual
   ||| Case trees in A-normal forms
   ||| i.e. we may only dispatch on variables, not expressions
   public export
-  data CaseTree : List Name -> Type where
+  data CaseTree : ScopedList Name -> Type where
        ||| case x return scTy of { p1 => e1 ; ... }
        Case : {name : _} ->
               (idx : Nat) ->
               (0 p : IsVar name idx vars) ->
-              (scTy : Term vars) -> List (CaseAlt vars) ->
+              (scTy : Term vars) -> ScopedList (CaseAlt vars) ->
               CaseTree vars
        ||| RHS: no need for further inspection
        ||| The Int is a clause id that allows us to see which of the
@@ -35,13 +36,13 @@ mutual
   ||| Case alternatives. Unlike arbitrary patterns, they can be at most
   ||| one constructor deep.
   public export
-  data CaseAlt : List Name -> Type where
+  data CaseAlt : ScopedList Name -> Type where
        ||| Constructor for a data type; bind the arguments and subterms.
-       ConCase : Name -> (tag : Int) -> (args : List Name) ->
-                 CaseTree (args ++ vars) -> CaseAlt vars
+       ConCase : Name -> (tag : Int) -> (args : ScopedList Name) ->
+                 CaseTree (args +%+ vars) -> CaseAlt vars
        ||| Lazy match for the Delay type use for codata types
        DelayCase : (ty : Name) -> (arg : Name) ->
-                   CaseTree (ty :: arg :: vars) -> CaseAlt vars
+                   CaseTree (ty :%: arg :%: vars) -> CaseAlt vars
        ||| Match against a literal
        ConstCase : Constant -> CaseTree vars -> CaseAlt vars
        ||| Catch-all case
@@ -103,7 +104,7 @@ data Pat : Type where
      PDelay : FC -> LazyReason -> Pat -> Pat -> Pat
      -- TODO: Matching on lazy types
      PLoc : FC -> Name -> Pat
-     PUnmatchable : FC -> Term [] -> Pat
+     PUnmatchable : FC -> Term SLNil -> Pat
 
 export
 isPConst : Pat -> Maybe Constant
@@ -117,14 +118,14 @@ showCT indent (Case {name} idx prf ty alts)
   = "case " ++ show name ++ "[" ++ show idx ++ "] : " ++ show ty ++ " of"
   ++ "\n" ++ indent ++ " { "
   ++ showSep ("\n" ++ indent ++ " | ")
-             (assert_total (map (showCA ("  " ++ indent)) alts))
+             (assert_total (toList (map (showCA ("  " ++ indent)) alts)))
   ++ "\n" ++ indent ++ " }"
 showCT indent (STerm i tm) = "[" ++ show i ++ "] " ++ show tm
 showCT indent (Unmatched msg) = "Error: " ++ show msg
 showCT indent Impossible = "Impossible"
 
 showCA indent (ConCase n tag args sc)
-        = showSep " " (map show (n :: args)) ++ " => " ++
+        = showSep " " (toList (map show (n :%: args))) ++ " => " ++
           showCT indent sc
 showCA indent (DelayCase _ arg sc)
         = "Delay " ++ show arg ++ " => " ++ showCT indent sc
@@ -195,8 +196,8 @@ Pretty IdrisSyntax Pat where
 mutual
   insertCaseNames : SizeOf outer ->
                     SizeOf ns ->
-                    CaseTree (outer ++ inner) ->
-                    CaseTree (outer ++ (ns ++ inner))
+                    CaseTree (outer +%+ inner) ->
+                    CaseTree (outer +%+ (ns +%+ inner))
   insertCaseNames outer ns (Case idx prf scTy alts)
       = let MkNVar prf' = insertNVarNames outer ns (MkNVar prf) in
             Case _ prf' (insertNames outer ns scTy)
@@ -207,11 +208,11 @@ mutual
 
   insertCaseAltNames : SizeOf outer ->
                        SizeOf ns ->
-                       CaseAlt (outer ++ inner) ->
-                       CaseAlt (outer ++ (ns ++ inner))
+                       CaseAlt (outer +%+ inner) ->
+                       CaseAlt (outer +%+ (ns +%+ inner))
   insertCaseAltNames p q (ConCase x tag args ct)
       = ConCase x tag args
-           (rewrite appendAssociative args outer (ns ++ inner) in
+           (rewrite appendAssociative args outer (ns +%+ inner) in
                     insertCaseNames (mkSizeOf args + p) q {inner}
                         (rewrite sym (appendAssociative args outer inner) in
                                  ct))
@@ -239,9 +240,9 @@ getNames add ns sc = getSet ns sc
       getAltSet ns (ConstCase i sc) = getSet ns sc
       getAltSet ns (DefaultCase sc) = getSet ns sc
 
-      getAltSets : NameMap Bool -> List (CaseAlt vs) -> NameMap Bool
-      getAltSets ns [] = ns
-      getAltSets ns (a :: as) = getAltSets (getAltSet ns a) as
+      getAltSets : NameMap Bool -> ScopedList (CaseAlt vs) -> NameMap Bool
+      getAltSets ns SLNil = ns
+      getAltSets ns (a :%: as) = getAltSets (getAltSet ns a) as
 
       getSet : NameMap Bool -> CaseTree vs -> NameMap Bool
       getSet ns (Case _ x ty xs) = getAltSets ns xs
@@ -262,7 +263,7 @@ getMetas : CaseTree vars -> NameMap Bool
 getMetas = getNames (addMetas False) empty
 
 export
-mkTerm : (vars : List Name) -> Pat -> Term vars
+mkTerm : (vars : ScopedList Name) -> Pat -> Term vars
 mkTerm vars (PAs fc x y) = mkTerm vars y
 mkTerm vars (PCon fc x tag arity xs)
     = apply fc (Ref fc (DataCon tag arity) x)
@@ -272,7 +273,7 @@ mkTerm vars (PTyCon fc x arity xs)
                (map (mkTerm vars) xs)
 mkTerm vars (PConst fc c) = PrimVal fc c
 mkTerm vars (PArrow fc x s t)
-    = Bind fc x (Pi fc top Explicit (mkTerm vars s)) (mkTerm (x :: vars) t)
+    = Bind fc x (Pi fc top Explicit (mkTerm vars s)) (mkTerm (x :%: vars) t)
 mkTerm vars (PDelay fc r ty p)
     = TDelay fc r (mkTerm vars ty) (mkTerm vars p)
 mkTerm vars (PLoc fc n)

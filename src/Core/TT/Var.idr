@@ -15,6 +15,10 @@ import Libraries.Data.SnocList.SizeOf
 
 import Libraries.Data.Erased
 
+import Core.Name.ScopedList
+import Core.Name.ScopedList.HasLength
+import Core.Name.ScopedList.SizeOf
+
 %default total
 
 ------------------------------------------------------------------------
@@ -25,9 +29,9 @@ import Libraries.Data.Erased
 ||| is a position k
 ||| in the snoclist ns
 public export
-data IsVar : a -> Nat -> List a -> Type where
-     First : IsVar n Z (n :: ns)
-     Later : IsVar n i ns -> IsVar n (S i) (m :: ns)
+data IsVar : a -> Nat -> ScopedList a -> Type where
+     First : IsVar n Z (n :%: ns)
+     Later : IsVar n i ns -> IsVar n (S i) (m :%: ns)
 
 %name IsVar idx
 
@@ -40,55 +44,57 @@ finIdx (Later l) = FS (finIdx l)
 ||| Recover the value pointed at by an IsVar proof
 ||| O(n) in the size of the index
 export
-nameAt : {vars : List a} -> {idx : Nat} -> (0 p : IsVar n idx vars) -> a
-nameAt {vars = n :: _} First = n
+nameAt : {vars : ScopedList a} -> {idx : Nat} -> (0 p : IsVar n idx vars) -> a
+nameAt {vars = n :%: _} First = n
 nameAt (Later p) = nameAt p
 
 ||| Inversion principle for Later
 export
-dropLater : IsVar nm (S idx) (n :: ns) -> IsVar nm idx ns
+dropLater : IsVar nm (S idx) (n :%: ns) -> IsVar nm idx ns
 dropLater (Later p) = p
 
 export
-0 mkIsVar : HasLength m inner -> IsVar nm m (inner ++ nm :: outer)
+0 mkIsVar : HasLength m inner -> IsVar nm m (inner +%+ nm :%: outer)
 mkIsVar Z = First
 mkIsVar (S x) = Later (mkIsVar x)
 
+-- SLZ = Core.Name.ScopedList.LHasLength.Z
+
 export
-0 mkIsVarChiply : HasLength m inner -> IsVar nm m (inner <>> nm :: outer)
+0 mkIsVarChiply : HasLength m inner -> IsVar nm m (inner <>> nm :%: outer)
 mkIsVarChiply hl
-  = rewrite chipsAsListAppend inner (nm :: outer) in
+  = rewrite chipsAsListAppend inner (nm :%: outer) in
     rewrite sym $ plusZeroRightNeutral m in
     mkIsVar (hlChips hl Z)
 
 ||| Compute the remaining scope once the target variable has been removed
 public export
 dropIsVar :
-  (ns : List a) ->
+  (ns : ScopedList a) ->
   {idx : Nat} -> (0 p : IsVar name idx ns) ->
-  List a
-dropIsVar (_ :: xs) First = xs
-dropIsVar (n :: xs) (Later p) = n :: dropIsVar xs p
+  ScopedList a
+dropIsVar (_ :%: xs) First = xs
+dropIsVar (n :%: xs) (Later p) = n :%: dropIsVar xs p
 
 ||| Throw in extra variables on the outer side of the context
 ||| This is essentially the identity function
 ||| This is slow so we ensure it's only used in a runtime irrelevant manner
 export
-0 embedIsVar : IsVar x idx xs -> IsVar x idx (xs ++ outer)
+0 embedIsVar : IsVar x idx xs -> IsVar x idx (xs +%+ outer)
 embedIsVar First = First
 embedIsVar (Later p) = Later (embedIsVar p)
 
 ||| Throw in extra variables on the local end of the context.
 ||| This is slow so we ensure it's only used in a runtime irrelevant manner
 export
-0 weakenIsVar : (s : SizeOf ns) -> IsVar x idx xs -> IsVar x (size s + idx) (ns ++ xs)
+0 weakenIsVar : (s : SizeOf ns) -> IsVar x idx xs -> IsVar x (size s + idx) (ns +%+ xs)
 weakenIsVar (MkSizeOf Z Z) p =  p
 weakenIsVar (MkSizeOf (S k) (S l)) p =  Later (weakenIsVar (MkSizeOf k l) p)
 
 0 locateIsVarLT :
   (s : SizeOf local) ->
   So (idx < size s) ->
-  IsVar x idx (local ++ outer) ->
+  IsVar x idx (local +%+ outer) ->
   IsVar x idx local
 locateIsVarLT (MkSizeOf Z Z) so v = case v of
   First impossible
@@ -100,7 +106,7 @@ locateIsVarLT (MkSizeOf (S k) (S l)) so v = case v of
 0 locateIsVarGE :
   (s : SizeOf local) ->
   So (idx >= size s) ->
-  IsVar x idx (local ++ outer) ->
+  IsVar x idx (local +%+ outer) ->
   IsVar x (idx `minus` size s) outer
 locateIsVarGE (MkSizeOf Z Z) so v = rewrite minusZeroRight idx in v
 locateIsVarGE (MkSizeOf (S k) (S l)) so v = case v of
@@ -108,7 +114,7 @@ locateIsVarGE (MkSizeOf (S k) (S l)) so v = case v of
 
 export
 locateIsVar : {idx : Nat} -> (s : SizeOf local) ->
-  (0 p : IsVar x idx (local ++ outer)) ->
+  (0 p : IsVar x idx (local +%+ outer)) ->
   Either (Erased (IsVar x idx local))
          (Erased (IsVar x (idx `minus` size s) outer))
 locateIsVar s p = case choose (idx < size s) of
@@ -122,7 +128,7 @@ locateIsVar s p = case choose (idx < size s) of
 ||| and a proof that the name is at that position in the scope.
 ||| Everything but the De Bruijn index is erased.
 public export
-record Var {0 a : Type} (vars : List a) where
+record Var {0 a : Type} (vars : ScopedList a) where
   constructor MkVar
   {varIdx : Nat}
   {0 varNm : a}
@@ -131,52 +137,51 @@ record Var {0 a : Type} (vars : List a) where
 namespace Var
 
   export
-  later : Var ns -> Var (n :: ns)
+  later : Var ns -> Var (n :%: ns)
   later (MkVar p) = MkVar (Later p)
 
   export
-  isLater : Var (n :: vs) -> Maybe (Var vs)
+  isLater : Var (n :%: vs) -> Maybe (Var vs)
   isLater (MkVar First) = Nothing
   isLater (MkVar (Later p)) = Just (MkVar p)
 
 export
-mkVar : SizeOf inner -> Var (inner ++ nm :: outer)
+mkVar : SizeOf inner -> Var (inner +%+ nm :%: outer)
 mkVar (MkSizeOf s p) = MkVar (mkIsVar p)
 
 export
-mkVarChiply : SizeOf inner -> Var (inner <>> nm :: outer)
+mkVarChiply : SizeOf inner -> Var (inner <>> nm :%: outer)
 mkVarChiply (MkSizeOf s p) = MkVar (mkIsVarChiply p)
 
 ||| Generate all variables
 export
-allVars : (vars : Scope) -> List (Var vars)
+allVars : (vars : Scope) -> ScopedList (Var vars)
 allVars = go [<] where
 
-  go : SizeOf local -> (vs : Scope) -> List (Var (local <>> vs))
-  go s [] = []
-  go s (v :: vs) = mkVarChiply s :: go (s :< v) vs
+  go : SizeOf local -> (vs : Scope) -> ScopedList (Var (local <>> vs))
+  go s SLNil = SLNil
+  go s (v :%: vs) = mkVarChiply s :%: go (s :< v) vs
 
 export
 Eq (Var xs) where
   v == w = varIdx v == varIdx w
 
-
 ||| Removing var 0, strengthening all the other ones
 export
-dropFirst : List (Var (n :: vs)) -> List (Var vs)
-dropFirst = List.mapMaybe isLater
+dropFirst : ScopedList (Var (n :%: vs)) -> ScopedList (Var vs)
+dropFirst = ScopedList.mapMaybe isLater
 
 ||| Manufacturing a thinning from a list of variables to keep
 export
 thinFromVars :
-  (vars : _) -> List (Var vars) ->
+  (vars : _) -> ScopedList (Var vars) ->
   (newvars ** Thin newvars vars)
-thinFromVars [] els
+thinFromVars SLNil els
     = (_ ** Refl)
-thinFromVars (x :: xs) els
+thinFromVars (x :%: xs) els
     = let (vs ** subRest) = thinFromVars xs (dropFirst els) in
       if MkVar First `elem` els
-        then (x :: vs ** Keep subRest)
+        then (x :%: vs ** Keep subRest)
         else (vs ** Drop subRest)
 
 export
@@ -187,18 +192,18 @@ Show (Var ns) where
 -- Named variable in scope
 
 public export
-record NVar {0 a : Type} (nm : a) (vars : List a) where
+record NVar {0 a : Type} (nm : a) (vars : ScopedList a) where
   constructor MkNVar
   {nvarIdx : Nat}
   0 nvarPrf : IsVar nm nvarIdx vars
 
 namespace NVar
   export
-  later : NVar nm ns -> NVar nm (n :: ns)
+  later : NVar nm ns -> NVar nm (n :%: ns)
   later (MkNVar p) = MkNVar (Later p)
 
   export
-  isLater : NVar nm (n :: ns) -> Maybe (NVar nm ns)
+  isLater : NVar nm (n :%: ns) -> Maybe (NVar nm ns)
   isLater (MkNVar First) = Nothing
   isLater (MkNVar (Later p)) = Just (MkNVar p)
 
@@ -211,47 +216,47 @@ recoverName : (v : Var vars) -> NVar (varNm v) vars
 recoverName (MkVar p) = MkNVar p
 
 export
-mkNVar : SizeOf inner -> NVar nm (inner ++ nm :: outer)
+mkNVar : SizeOf inner -> NVar nm (inner +%+ nm :%: outer)
 mkNVar (MkSizeOf s p) = MkNVar (mkIsVar p)
 
 export
-mkNVarChiply : SizeOf inner -> NVar nm (inner <>> nm :: outer)
+mkNVarChiply : SizeOf inner -> NVar nm (inner <>> nm :%: outer)
 mkNVarChiply (MkSizeOf s p) = MkNVar (mkIsVarChiply p)
 
 export
-locateNVar : SizeOf local -> NVar nm (local ++ outer) ->
+locateNVar : SizeOf local -> NVar nm (local +%+ outer) ->
              Either (NVar nm local) (NVar nm outer)
 locateNVar s (MkNVar p) = case locateIsVar s p of
   Left p => Left (MkNVar (runErased p))
   Right p => Right (MkNVar (runErased p))
 
 public export
-dropNVar : {ns : List a} -> NVar nm ns -> List a
+dropNVar : {ns : ScopedList a} -> NVar nm ns -> ScopedList a
 dropNVar (MkNVar p) = dropIsVar ns p
 
 ------------------------------------------------------------------------
 -- Scope checking
 
 export
-isDeBruijn : Nat -> (vars : List Name) -> Maybe (Var vars)
-isDeBruijn Z (_ :: _) = pure (MkVar First)
-isDeBruijn (S k) (_ :: vs) = later <$> isDeBruijn k vs
+isDeBruijn : Nat -> (vars : ScopedList Name) -> Maybe (Var vars)
+isDeBruijn Z (_ :%: _) = pure (MkVar First)
+isDeBruijn (S k) (_ :%: vs) = later <$> isDeBruijn k vs
 isDeBruijn _ _ = Nothing
 
 export
-isNVar : (n : Name) -> (ns : List Name) -> Maybe (NVar n ns)
-isNVar n [] = Nothing
-isNVar n (m :: ms)
+isNVar : (n : Name) -> (ns : ScopedList Name) -> Maybe (NVar n ns)
+isNVar n SLNil = Nothing
+isNVar n (m :%: ms)
     = case nameEq n m of
            Nothing   => map later (isNVar n ms)
            Just Refl => pure (MkNVar First)
 
 export
-isVar : (n : Name) -> (ns : List Name) -> Maybe (Var ns)
+isVar : (n : Name) -> (ns : ScopedList Name) -> Maybe (Var ns)
 isVar n ns = forgetName <$> isNVar n ns
 
 export
-locateVar : SizeOf local -> Var (local ++ outer) ->
+locateVar : SizeOf local -> Var (local +%+ outer) ->
             Either (Var local) (Var outer)
 locateVar s v  = bimap forgetName forgetName
   $ locateNVar s (recoverName v)
@@ -260,18 +265,18 @@ locateVar s v  = bimap forgetName forgetName
 -- Weakening
 
 export
-weakenNVar : SizeOf ns -> NVar name outer -> NVar name (ns ++ outer)
+weakenNVar : SizeOf ns -> NVar name outer -> NVar name (ns +%+ outer)
 weakenNVar s (MkNVar {nvarIdx} p)
   = MkNVar {nvarIdx = plus (size s) nvarIdx} (weakenIsVar s p)
 
 export
-embedNVar : NVar name ns -> NVar name (ns ++ outer)
+embedNVar : NVar name ns -> NVar name (ns +%+ outer)
 embedNVar (MkNVar p) = MkNVar (embedIsVar p)
 
 export
 insertNVar : SizeOf local ->
-             NVar nm (local ++ outer) ->
-             NVar nm (local ++ n :: outer)
+             NVar nm (local +%+ outer) ->
+             NVar nm (local +%+ n :%: outer)
 insertNVar p v = case locateNVar p v of
   Left v => embedNVar v
   Right v => weakenNVar p (later v)
@@ -279,9 +284,9 @@ insertNVar p v = case locateNVar p v of
 export
 insertNVarChiply : SizeOf local ->
   NVar nm (local <>> outer) ->
-  NVar nm (local <>> n :: outer)
+  NVar nm (local <>> n :%: outer)
 insertNVarChiply p v
-  = rewrite chipsAsListAppend local (n :: outer) in
+  = rewrite chipsAsListAppend local (n :%: outer) in
     insertNVar (p <>> zero)
   $ replace {p = NVar nm} (chipsAsListAppend local outer) v
 
@@ -296,19 +301,19 @@ insertNVarNames p q v = case locateNVar p v of
 ||| The (partial) inverse to insertNVar
 export
 removeNVar : SizeOf local ->
-         NVar nm (local ++ n :: outer) ->
-  Maybe (NVar nm (local ++      outer))
+         NVar nm (local +%+ n :%: outer) ->
+  Maybe (NVar nm (local +%+      outer))
 removeNVar s var = case locateNVar s var of
   Left v => pure (embedNVar v)
   Right v => weakenNVar s <$> isLater v
 
 export
 insertVar : SizeOf local ->
-  Var (local ++ outer) ->
-  Var (local ++ n :: outer)
+  Var (local +%+ outer) ->
+  Var (local +%+ n :%: outer)
 insertVar p v = forgetName $ insertNVar p (recoverName v)
 
-weakenVar : SizeOf ns -> Var outer -> Var (ns ++ outer)
+weakenVar : SizeOf ns -> Var outer -> Var (ns +%+ outer)
 weakenVar p v = forgetName $ weakenNVar p (recoverName v)
 
 insertVarNames : GenWeakenable Var
@@ -317,8 +322,8 @@ insertVarNames p q v = forgetName $ insertNVarNames p q (recoverName v)
 ||| The (partial) inverse to insertVar
 export
 removeVar : SizeOf local ->
-         Var (local ++ n :: outer) ->
-  Maybe (Var (local ++      outer))
+         Var (local +%+ n :%: outer) ->
+  Maybe (Var (local +%+      outer))
 removeVar s var = forgetName <$> removeNVar s (recoverName var)
 
 ------------------------------------------------------------------------
@@ -326,20 +331,20 @@ removeVar s var = forgetName <$> removeNVar s (recoverName var)
 
 export
 strengthenIsVar : {n : Nat} -> (s : SizeOf inner) ->
-  (0 p : IsVar x n (inner ++ vars)) ->
+  (0 p : IsVar x n (inner +%+ vars)) ->
   Maybe (Erased (IsVar x (n `minus` size s) vars))
 strengthenIsVar s p = case locateIsVar s p of
   Left _ => Nothing
   Right p => pure p
 
 strengthenVar : SizeOf inner ->
-  Var (inner ++ vars) -> Maybe (Var vars)
+  Var (inner +%+ vars) -> Maybe (Var vars)
 strengthenVar s (MkVar p)
   = do MkErased p <- strengthenIsVar s p
        pure (MkVar p)
 
 strengthenNVar : SizeOf inner ->
-  NVar x (inner ++ vars) -> Maybe (NVar x vars)
+  NVar x (inner +%+ vars) -> Maybe (NVar x vars)
 strengthenNVar s (MkNVar p)
   = do MkErased p <- strengthenIsVar s p
        pure (MkNVar p)
@@ -443,7 +448,7 @@ FreelyEmbeddable (NVar {a = Name} nm) where
 export
 shiftUnderNs : SizeOf {a = Name} inner ->
                {idx : _} ->
-               (0 p : IsVar n idx (x :: inner ++ outer)) ->
-               NVar n (inner ++ x :: outer)
+               (0 p : IsVar n idx (x :%: inner +%+ outer)) ->
+               NVar n (inner +%+ x :%: outer)
 shiftUnderNs s First = weakenNs s (MkNVar First)
 shiftUnderNs s (Later p) = insertNVar s (MkNVar p)

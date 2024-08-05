@@ -18,7 +18,7 @@ import Core.Value
 -- reduce
 export
 normalisePis : {auto c : Ref Ctxt Defs} ->
-               {vars : List Name} ->
+               {vars : ScopedList Name} ->
                Defs -> Env Term vars -> Term vars -> Core (Term vars)
 normalisePis defs env tm
     = do tmnf <- nf defs env tm
@@ -240,13 +240,13 @@ logEnv str n msg env
 
   where
 
-    dumpEnv : {vs : List Name} -> Env Term vs -> Core ()
+    dumpEnv : {vs : ScopedList Name} -> Env Term vs -> Core ()
     dumpEnv [] = pure ()
-    dumpEnv {vs = x :: _} (Let _ c val ty :: bs)
+    dumpEnv {vs = x :%: _} (Let _ c val ty :: bs)
         = do logTermNF' str n (msg ++ ": let " ++ show x) bs val
              logTermNF' str n (msg ++ ":" ++ show c ++ " " ++ show x) bs ty
              dumpEnv bs
-    dumpEnv {vs = x :: _} (b :: bs)
+    dumpEnv {vs = x :%: _} (b :: bs)
         = do logTermNF' str n (msg ++ ":" ++ show (multiplicity b) ++ " " ++
                            show (piInfo b) ++ " " ++
                            show x) bs (binderType b)
@@ -273,25 +273,25 @@ replace' {vars} tmpi defs env lhs parg tm
              sc' <- replace' (tmpi + 1) defs env lhs parg
                              !(scfn defs (toClosure defaultOpts env (Ref fc Bound x')))
              pure (Bind fc x b' (refsToLocals (Add x x' None) sc'))
-    repSub (NApp fc hd [])
+    repSub (NApp fc hd SLNil)
         = do empty <- clearDefs defs
-             quote empty env (NApp fc hd [])
+             quote empty env (NApp fc hd SLNil)
     repSub (NApp fc hd args)
         = do args' <- traverse (traversePair repArg) args
              pure $ applyStackWithFC
-                        !(replace' tmpi defs env lhs parg (NApp fc hd []))
+                        !(replace' tmpi defs env lhs parg (NApp fc hd SLNil))
                         args'
     repSub (NDCon fc n t a args)
         = do args' <- traverse (traversePair repArg) args
              empty <- clearDefs defs
              pure $ applyStackWithFC
-                        !(quote empty env (NDCon fc n t a []))
+                        !(quote empty env (NDCon fc n t a SLNil))
                         args'
     repSub (NTCon fc n t a args)
         = do args' <- traverse (traversePair repArg) args
              empty <- clearDefs defs
              pure $ applyStackWithFC
-                        !(quote empty env (NTCon fc n t a []))
+                        !(quote empty env (NTCon fc n t a SLNil))
                         args'
     repSub (NAs fc s a p)
         = do a' <- repSub a
