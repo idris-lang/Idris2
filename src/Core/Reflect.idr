@@ -869,11 +869,11 @@ export
 Reify a => Reify (WithFC a) where
   reify defs val@(NDCon _ n _ _ args)
       = case (dropAllNS !(full (gamma defs) n), map snd args) of
-             (UN (Basic "MkFCVal"), (fcterm :%: nestedVal :%: [<])) => do
+             (UN (Basic "MkFCVal"), [<nestedVal, fcterm]) => do
                  fc <- reify defs !(evalClosure defs fcterm)
                  val <- reify defs !(evalClosure defs nestedVal)
                  pure $ MkFCVal fc val
-             (UN (Basic "MkFCVal"), (_ :%: fc :%: l2 :%: [<])) => do
+             (UN (Basic "MkFCVal"), [<l2, fc, _]) => do
                  fc' <- reify defs !(evalClosure defs fc)
                  val' <- reify defs !(evalClosure defs l2)
                  pure $ MkFCVal fc' val'

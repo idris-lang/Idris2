@@ -433,7 +433,7 @@ mutual
   Reify ImpDecl where
     reify defs val@(NDCon _ n _ _ args)
         = case (dropAllNS !(full (gamma defs) n), map snd args) of
-               (UN (Basic "IClaim"), (v :%: [<]))
+               (UN (Basic "IClaim"), [<v])
                     => do v' <- reify defs !(evalClosure defs v)
                           pure (IClaim v')
                (UN (Basic "IData"), [<w, z, y, x])
