@@ -173,7 +173,7 @@ toVM t res (AConCase fc (ALocal scr) [MkAConAlt n ci mt args code] Nothing) -- e
           used = foldMap collectUsed body
        in projectArgs scr 0 used args ++ body
 toVM t res (AConCase fc (ALocal scr) alts def)
-    = [CASE (Loc scr) (map toVMConAlt alts) (map (toVM t res) def)]
+    = [CASE (Loc scr) (toList $ map toVMConAlt alts) (map (toVM t res) def)]
   where
     toVMConAlt : AConAlt -> (Either Int Name, List VMInst)
     toVMConAlt (MkAConAlt n ci tag args code)
@@ -181,7 +181,7 @@ toVM t res (AConCase fc (ALocal scr) alts def)
              used = foldMap collectUsed body
           in (maybe (Right n) Left tag, projectArgs scr 0 used args ++ body)
 toVM t res (AConstCase fc (ALocal scr) alts def)
-    = [CONSTCASE (Loc scr) (map toVMConstAlt alts) (map (toVM t res) def)]
+    = [CONSTCASE (Loc scr) (toList $ map toVMConstAlt alts) (map (toVM t res) def)]
   where
     toVMConstAlt : AConstAlt -> (Constant, List VMInst)
     toVMConstAlt (MkAConstAlt c code)

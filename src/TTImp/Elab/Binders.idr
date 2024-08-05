@@ -70,7 +70,7 @@ checkPi rig elabinfo nest env fc rigf info n argTy retTy expTy
          (tyv, tyt) <- check pirig elabinfo nest env argTy
                              (Just (gType fc tyu))
          info' <- checkPiInfo rigf elabinfo nest env info (Just (gnf env tyv))
-         let env' : Env Term (n :: _) = Pi fc rigf info' tyv :: env
+         let env' : Env Term (n :%: _) = Pi fc rigf info' tyv :: env
          let nest' = weaken (dropName n nest)
          scu <- uniVar fc
          (scopev, scopet) <-
@@ -115,7 +115,7 @@ inferLambda rig elabinfo nest env fc rigl info n argTy scope expTy
          u <- uniVar fc
          (tyv, tyt) <- check erased elabinfo nest env argTy (Just (gType fc u))
          info' <- checkPiInfo rigl elabinfo nest env info (Just (gnf env tyv))
-         let env' : Env Term (n :: _) = Lam fc rigb info' tyv :: env
+         let env' : Env Term (n :%: _) = Lam fc rigb info' tyv :: env
          let nest' = weaken (dropName n nest)
          (scopev, scopet) <- inScope fc env' (\e' =>
                                 check {e=e'} rig elabinfo
@@ -172,7 +172,7 @@ checkLambda rig_in elabinfo nest env fc rigl info n argTy scope (Just expty_in)
                                         argTy (Just (gType fc u))
                     info' <- checkPiInfo rigl elabinfo nest env info (Just (gnf env tyv))
                     let rigb = rigl `glb` c
-                    let env' : Env Term (n :: _) = Lam fc rigb info' tyv :: env
+                    let env' : Env Term (n :%: _) = Lam fc rigb info' tyv :: env
                     ignore $ convert fc elabinfo env (gnf env tyv) (gnf env pty)
                     let nest' = weaken (dropName n nest)
                     (scopev, scopet) <-
@@ -199,8 +199,8 @@ checkLambda rig_in elabinfo nest env fc rigl info n argTy scope (Just expty_in)
               _ => inferLambda rig elabinfo nest env fc rigl info n argTy scope (Just expty_in)
 
 weakenExp : {x, vars : _} ->
-            Env Term (x :: vars) ->
-            Maybe (Glued vars) -> Core (Maybe (Glued (x :: vars)))
+            Env Term (x :%: vars) ->
+            Maybe (Glued vars) -> Core (Maybe (Glued (x :%: vars)))
 weakenExp env Nothing = pure Nothing
 weakenExp env (Just gtm)
     = do tm <- getTerm gtm
@@ -248,7 +248,7 @@ checkLet rigc_in elabinfo nest env fc lhsFC rigl n nTy nVal scope expty {vars}
                                                elabinfo -- without preciseInf
                                                nest env nVal (Just (gnf env tyv))
                                     pure (fst c, snd c, rigl |*| rigc))
-         let env' : Env Term (n :: _) = Lam fc rigb Explicit tyv :: env
+         let env' : Env Term (n :%: _) = Lam fc rigb Explicit tyv :: env
          let nest' = weaken (dropName n nest)
          expScope <- weakenExp env' expty
          (scopev, gscopet) <-

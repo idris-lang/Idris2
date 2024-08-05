@@ -30,7 +30,7 @@ namespace Raw
   prettyTree Impossible = "Impossible"
 
   prettyAlt (ConCase n tag args sc)
-      = hsep (annotate (DCon (Just n)) (pretty0 n) ::  map pretty0 args)
+      = hsep (annotate (DCon (Just n)) (pretty0 n) ::  map pretty0 (toList args))
         <++> fatArrow
         <+> let sc = prettyTree sc in
             Union (spaces 1 <+> sc) (nest 2 (hardline <+> sc))
@@ -84,11 +84,11 @@ namespace Resugared
   prettyAlt env (ConCase n tag args sc) = do
     con <- prettyName n
     sc <- prettyTree (mkEnvOnto emptyFC args env) sc
-    pure $ hsep (annotate (DCon (Just n)) con ::  map pretty0 args)
+    pure $ hsep (annotate (DCon (Just n)) con ::  map pretty0 (toList args))
      <++> fatArrow
       <+> Union (spaces 1 <+> sc) (nest 2 (hardline <+> sc))
   prettyAlt env (DelayCase _ arg sc) = do
-    sc <- prettyTree (mkEnvOnto emptyFC [_,_] env) sc
+    sc <- prettyTree (mkEnvOnto emptyFC (_ :%: _ :%: SLNil) env) sc
     pure $ keyword "Delay" <++> pretty0 arg
         <++> fatArrow
         <+> Union (spaces 1 <+> sc) (nest 2 (hardline <+> sc))

@@ -3,6 +3,7 @@ module Core.TT
 import public Core.FC
 import public Core.Name
 import public Core.Name.Scoped
+import public Core.Name.ScopedList
 
 import Idris.Pretty.Annotations
 
@@ -319,7 +320,7 @@ Pretty Void Terminating where
 public export
 data Covering
        = IsCovering
-       | MissingCases (List (Term []))
+       | MissingCases (List (Term SLNil))
        | NonCoveringCall (List Name)
 
 export
@@ -387,21 +388,21 @@ namespace Bounds
        Add : (x : Name) -> Name -> Bounds xs -> Bounds (x :: xs)
 
   export
-  sizeOf : Bounds xs -> SizeOf xs
+  sizeOf : Bounds xs -> Libraries.Data.List.SizeOf.SizeOf xs
   sizeOf None        = zero
   sizeOf (Add _ _ b) = suc (sizeOf b)
 
 export
 addVars : SizeOf outer -> Bounds bound ->
-          NVar name (outer ++ vars) ->
-          NVar name (outer ++ (bound ++ vars))
+          NVar name (outer +%+ vars) ->
+          NVar name (outer +%+ (bound +%+ vars))
 addVars p = insertNVarNames p . sizeOf
 
 export
 resolveRef : SizeOf outer ->
              SizeOf done ->
              Bounds bound -> FC -> Name ->
-             Maybe (Var (outer ++ (done <>> bound ++ vars)))
+             Maybe (Var (outer +%+ (done <>> (bound +%+ vars))))
 resolveRef _ _ None _ _ = Nothing
 resolveRef {outer} {vars} {done} p q (Add {xs} new old bs) fc n
     = if n == old
@@ -409,7 +410,7 @@ resolveRef {outer} {vars} {done} p q (Add {xs} new old bs) fc n
          else resolveRef p (q :< new) bs fc n
 
 mkLocals : SizeOf outer -> Bounds bound ->
-           Term (outer ++ vars) -> Term (outer ++ (bound ++ vars))
+           Term (outer +%+ vars) -> Term (outer +%+ (bound +%+ vars))
 mkLocals outer bs (Local fc r idx p)
     = let MkNVar p' = addVars outer bs (MkNVar p) in Local fc r _ p'
 mkLocals outer bs (Ref fc Bound name)
@@ -442,13 +443,13 @@ mkLocals outer bs (Erased fc (Dotted t)) = Erased fc (Dotted (mkLocals outer bs 
 mkLocals outer bs (TType fc u) = TType fc u
 
 export
-refsToLocals : Bounds bound -> Term vars -> Term (bound ++ vars)
+refsToLocals : Bounds bound -> Term vars -> Term (bound +%+ vars)
 refsToLocals None y = y
 refsToLocals bs y = mkLocals zero  bs y
 
 -- Replace any reference to 'x' with a locally bound name 'new'
 export
-refToLocal : (x : Name) -> (new : Name) -> Term vars -> Term (new :: vars)
+refToLocal : (x : Name) -> (new : Name) -> Term vars -> Term (new :%: vars)
 refToLocal x new tm = refsToLocals (Add new x None) tm
 
 -- Replace an explicit name with a term

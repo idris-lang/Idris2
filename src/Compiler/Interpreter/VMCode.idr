@@ -113,7 +113,7 @@ indexMaybe (x :: xs) idx = if idx <= 0 then Just x else indexMaybe xs (idx - 1)
 callPrim : Ref State InterpState => Stack -> PrimFn ar -> Vect ar Object -> Core Object
 callPrim stk BelieveMe [_, _, obj] = pure obj
 callPrim stk fn args = case the (Either Object (Vect ar Constant)) $ traverse getConst args of
-    Right args' => case getOp {vars=[]} fn (NPrimVal EmptyFC <$> args') of
+    Right args' => case getOp {vars=SLNil} fn (NPrimVal EmptyFC <$> args') of
         Just (NPrimVal _ res) => pure $ Const res
         _ => interpError stk $ "OP: Error calling " ++ show (opName fn) ++ " with operands: " ++ show args'
     Left obj => interpError stk $ "OP: Expected Constant, found " ++ showType obj

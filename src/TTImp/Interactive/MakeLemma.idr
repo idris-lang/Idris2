@@ -49,7 +49,7 @@ getArgs : {vars : _} ->
 getArgs {vars} env (S k) (Bind _ x b@(Pi _ c _ ty) sc)
     = do defs <- get Ctxt
          ty' <- map (map rawName) $ unelab env !(normalise defs env ty)
-         let x' = UN $ Basic !(uniqueBasicName defs (map nameRoot vars) (nameRoot x))
+         let x' = UN $ Basic !(uniqueBasicName defs (toList $ map nameRoot vars) (nameRoot x))
          (sc', ty) <- getArgs (b :: env) k (compat {n = x'} sc)
          -- Don't need to use the name if it's not used in the scope type
          let mn = if c == top

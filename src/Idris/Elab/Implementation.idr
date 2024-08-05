@@ -139,6 +139,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
          -- alias for something
          syn <- get Syn
          defs <- get Ctxt
+         let varsList = toList vars
          inames <- lookupCtxtName iname (gamma defs)
          let [cndata] = concatMap (\n => lookupName n (ifaces syn))
                                   (map fst inames)
@@ -177,7 +178,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
          let initTy = bindImpls is $ bindConstraints vfc AutoImplicit cons
                          (apply (IVar vfc iname) ps)
          let paramBinds = if !isUnboundImplicits
-                          then findBindableNames True vars [] initTy
+                          then findBindableNames True varsList [] initTy
                           else []
          let impTy = doBind paramBinds initTy
 
@@ -404,26 +405,27 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
         = do -- Get the specialised type by applying the method to the
              -- parameters
              n <- inCurrentNS (methName meth.name)
+             let varsList = toList vars
 
              -- Avoid any name clashes between parameters and method types by
              -- renaming IBindVars in the method types which appear in the
              -- parameters
              let upds' = !(traverse (applyCon impName) allmeths)
-             let mty_in = substNames vars upds' meth.type
+             let mty_in = substNames varsList upds' meth.type
              let (upds, mty_in) = runState Prelude.Nil (renameIBinds impsp (findImplicits mty_in) mty_in)
              -- Finally update the method type so that implicits from the
              -- parameters are passed through to any earlier methods which
              -- appear in the type
-             let mty_in = substNames vars methupds mty_in
+             let mty_in = substNames varsList methupds mty_in
 
              -- Substitute _ in for the implicit parameters, then
              -- substitute in the explicit parameters.
              let mty_iparams
-                   = substBindVars vars
+                   = substBindVars varsList
                                 (map (\n => (n, Implicit vfc False)) imppnames)
                                 mty_in
              let mty_params
-                   = substNames vars (zip pnames ps) mty_iparams
+                   = substNames varsList (zip pnames ps) mty_iparams
              log "elab.implementation" 5 $ "Substitute implicits " ++ show imppnames ++
                      " parameters " ++ show (zip pnames ps) ++
                      " "  ++ show mty_in ++ " is " ++
@@ -434,7 +436,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
                          mty_params
              let ibound = findImplicits mbase
 
-             mty <- bindTypeNamesUsed ifc ibound vars mbase
+             mty <- bindTypeNamesUsed ifc ibound varsList mbase
 
              log "elab.implementation" 3 $
                      "Method " ++ show meth.name ++ " ==> " ++

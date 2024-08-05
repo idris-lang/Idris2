@@ -3,13 +3,14 @@ module Core.TT.Subst
 import Core.Name
 import Core.Name.Scoped
 import Core.TT.Var
+import Core.Name.ScopedList
 
 %default total
 
 public export
 data Subst : Scoped -> Scope -> Scoped where
-  Nil : Subst tm [] vars
-  (::) : tm vars -> Subst tm ds vars -> Subst tm (d :: ds) vars
+  Nil : Subst tm SLNil vars
+  (::) : tm vars -> Subst tm ds vars -> Subst tm (d :%: ds) vars
 
 namespace Var
 
@@ -23,7 +24,7 @@ export
 findDrop :
   (Var vars -> tm vars) ->
   SizeOf dropped ->
-  Var (dropped ++ vars) ->
+  Var (dropped +%+ vars) ->
   Subst tm dropped vars ->
   tm vars
 findDrop k s var sub = case locateVar s var of
@@ -34,9 +35,9 @@ export
 find : Weaken tm =>
        (forall vars. Var vars -> tm vars) ->
        SizeOf outer -> SizeOf dropped ->
-       Var (outer ++ (dropped ++ vars)) ->
+       Var (outer +%+ (dropped +%+ vars)) ->
        Subst tm dropped vars ->
-       tm (outer ++ vars)
+       tm (outer +%+ vars)
 find k outer dropped var sub = case locateVar outer var of
   Left var => k (embed var)
   Right var => weakenNs outer (findDrop k dropped var sub)
@@ -48,5 +49,5 @@ Substitutable val tm
     SizeOf outer ->
     SizeOf dropped ->
     Subst val dropped vars ->
-    tm (outer ++ (dropped ++ vars)) ->
-    tm (outer ++ vars)
+    tm (outer +%+ (dropped +%+ vars)) ->
+    tm (outer +%+ vars)

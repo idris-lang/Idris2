@@ -59,7 +59,7 @@ parameters
       let pcons = papply replFC (PRef replFC cons) new_holes
       res <- catch
         (do -- We're desugaring it to the corresponding TTImp
-            icons <- desugar AnyExpr lhsCtxt pcons
+            icons <- desugar AnyExpr (toList lhsCtxt) pcons
             ccons <- checkTerm hidx {-is this correct?-} InExpr [] (MkNested []) env icons gty
             newdefs <- get Ctxt
             ncons <- normaliseHoles newdefs env ccons

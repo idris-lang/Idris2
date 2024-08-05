@@ -392,7 +392,7 @@ perrorRaw (NotCovering fc n (MissingCases cs))
     = pure $ errorDesc (code (pretty0 !(prettyName n)) <++> reflow "is not covering.")
         <+> line <+> !(ploc fc) <+> line
         <+> reflow "Missing cases" <+> colon <+> line
-        <+> indent 4 (vsep !(traverse (pshow []) cs)) <+> line
+        <+> indent 4 (vsep !(traverse (pshow []) (toList cs))) <+> line
 perrorRaw (NotCovering fc n (NonCoveringCall ns))
     = pure $ errorDesc (pretty0 !(prettyName n) <++> reflow "is not covering.")
         <+> line <+> !(ploc fc) <+> line

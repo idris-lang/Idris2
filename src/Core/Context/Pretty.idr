@@ -43,7 +43,7 @@ namespace Raw
   prettyDef (PMDef _ args ct _ pats) =
        let ct = prettyTree ct in
        vcat
-        [ "Arguments" <++> cast (prettyList args)
+        [ "Arguments" <++> cast (prettyList $ toList args)
         , header "Compile time tree" <++> reAnnotate Syntax ct
         ]
   prettyDef (DCon tag arity nt) =
@@ -95,7 +95,7 @@ namespace Resugared
   prettyDef (PMDef _ args ct _ pats) = do
       ct <- prettyTree (mkEnv emptyFC _) ct
       pure $ vcat
-        [ "Arguments" <++> cast (prettyList args)
+        [ "Arguments" <++> cast (prettyList $ toList args)
         , header "Compile time tree" <++> reAnnotate Syntax ct
         ]
   prettyDef (DCon tag arity nt) = pure $

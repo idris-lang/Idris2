@@ -38,7 +38,7 @@ tryNoDefaultsFirst : {auto c : Ref Ctxt Defs} ->
                      (Bool -> Core a) -> Core a
 tryNoDefaultsFirst f = tryUnifyUnambig {preferLeftError=True} (f False) (f True)
 
-SearchEnv : List Name -> Type
+SearchEnv : ScopedList Name -> Type
 SearchEnv vars = List (NF vars, Closure vars)
 
 searchType : {vars : _} ->
@@ -52,7 +52,7 @@ searchType : {vars : _} ->
              Env Term vars -> (target : Term vars) -> Core (Term vars)
 
 public export
-record ArgInfo (vars : List Name) where
+record ArgInfo (vars : ScopedList Name) where
   constructor MkArgInfo
   holeID : Int
   argRig : RigCount
@@ -203,17 +203,17 @@ getUsableEnv : {vars : _} ->
                 FC -> RigCount ->
                 SizeOf done ->
                 Env Term vars ->
-                List (Term (done ++ vars), Term (done ++ vars))
+                List (Term (done +%+ vars), Term (done +%+ vars))
 getUsableEnv fc rigc p [] = []
-getUsableEnv {vars = v :: vs} {done} fc rigc p (b :: env)
+getUsableEnv {vars = v :%: vs} {done} fc rigc p (b :: env)
    = let rest = getUsableEnv fc rigc (sucR p) env in
          if (multiplicity b == top || isErased rigc)
             then let 0 var = mkIsVar (hasLength p) in
                      (Local (binderLoc b) Nothing _ var,
-                       rewrite appendAssociative done [v] vs in
+                       rewrite appendAssociative done (v :%: SLNil) vs in
                           weakenNs (sucR p) (binderType b)) ::
-                               rewrite appendAssociative done [v] vs in rest
-            else rewrite appendAssociative done [v] vs in rest
+                               rewrite appendAssociative done (v :%: SLNil) vs in rest
+            else rewrite appendAssociative done (v :%: SLNil) vs in rest
 
 -- A local is usable if it contains no holes in a determining argument position
 usableLocal : {vars : _} ->
@@ -227,7 +227,7 @@ usableLocal loc defaults env (NApp fc (NMeta _ _ _) args)
     = pure False
 usableLocal {vars} loc defaults env (NTCon _ n _ _ args)
     = do sd <- getSearchData loc (not defaults) n
-         usableLocalArg 0 (detArgs sd) (map snd args)
+         usableLocalArg 0 (detArgs sd) (toList $ map snd args)
   -- usable if none of the determining arguments of the local's type are
   -- holes
   where
@@ -318,7 +318,7 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
               NF vars ->  -- local's type
               (target : NF vars) ->
               Core (Term vars)
-    findPos defs f nty@(NTCon pfc pn _ _ [(_, xty), (_, yty)]) target
+    findPos defs f nty@(NTCon pfc pn _ _ ((_, xty) :%: (_, yty) :%: SLNil)) target
         = tryUnifyUnambig (findDirect defs f nty target) $
              do fname <- maybe (throw (CantSolveGoal fc (gamma defs) [] top Nothing))
                                pure
@@ -459,11 +459,11 @@ concreteDets {vars} fc defaults env top pos dets (arg :: args)
            concrete defs argnf True
          concreteDets fc defaults env top (1 + pos) dets args
   where
-    drop : Nat -> List Nat -> List t -> List t
-    drop i ns [] = []
-    drop i ns (x :: xs)
+    drop : Nat -> List Nat -> ScopedList t -> ScopedList t
+    drop i ns SLNil = SLNil
+    drop i ns (x :%: xs)
         = if i `elem` ns
-             then x :: drop (1+i) ns xs
+             then x :%: drop (1+i) ns xs
              else drop (1+i) ns xs
 
     concrete : Defs -> NF vars -> (atTop : Bool) -> Core ()
@@ -501,19 +501,19 @@ checkConcreteDets fc defaults env top (NTCon tfc tyn t a args)
     = do defs <- get Ctxt
          if !(isPairType tyn)
             then case args of
-                      [(_, aty), (_, bty)] =>
+                      ((_, aty) :%: (_, bty) :%: SLNil) =>
                           do anf <- evalClosure defs aty
                              bnf <- evalClosure defs bty
                              checkConcreteDets fc defaults env top anf
                              checkConcreteDets fc defaults env top bnf
                       _ => do sd <- getSearchData fc defaults tyn
-                              concreteDets fc defaults env top 0 (detArgs sd) (map snd args)
+                              concreteDets fc defaults env top 0 (detArgs sd) (toList $ map snd args)
             else
               do sd <- getSearchData fc defaults tyn
                  log "auto.determining" 10 $
                    "Determining arguments for " ++ show !(toFullNames tyn)
                    ++ " " ++ show (detArgs sd)
-                 concreteDets fc defaults env top 0 (detArgs sd) (map snd args)
+                 concreteDets fc defaults env top 0 (detArgs sd) (toList $ map snd args)
 checkConcreteDets fc defaults env top _
     = pure ()
 

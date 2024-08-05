@@ -21,7 +21,7 @@ isAssertTotal (NRef _ fn_in) =
 isAssertTotal _ = pure False
 
 nameIn : {auto c : Ref Ctxt Defs} ->
-         Defs -> List Name -> NF [] -> Core Bool
+         Defs -> List Name -> NF SLNil -> Core Bool
 nameIn defs tyns (NBind fc x b sc)
     = if !(nameIn defs tyns !(evalClosure defs (binderType b)))
          then pure True
@@ -33,25 +33,25 @@ nameIn defs tyns (NApp _ nh args)
     = do False <- isAssertTotal nh
            | True => pure False
          anyM (nameIn defs tyns)
-           !(traverse (evalClosure defs . snd) args)
+           !(traverse (evalClosure defs . snd) (toList args))
 nameIn defs tyns (NTCon _ n _ _ args)
     = if n `elem` tyns
          then pure True
-         else do args' <- traverse (evalClosure defs . snd) args
+         else do args' <- traverse (evalClosure defs . snd) (toList args)
                  anyM (nameIn defs tyns) args'
 nameIn defs tyns (NDCon _ n _ _ args)
     = anyM (nameIn defs tyns)
-           !(traverse (evalClosure defs . snd) args)
+           !(traverse (evalClosure defs . snd) (toList args))
 nameIn defs tyns (NDelayed fc lr ty) = nameIn defs tyns ty
 nameIn defs tyns _ = pure False
 
 -- Check an argument type doesn't contain a negative occurrence of any of
 -- the given type names
 posArg  : {auto c : Ref Ctxt Defs} ->
-          Defs -> List Name -> NF [] -> Core Terminating
+          Defs -> List Name -> NF SLNil -> Core Terminating
 
 posArgs : {auto c : Ref Ctxt Defs} ->
-          Defs -> List Name -> List (Closure []) -> Core Terminating
+          Defs -> List Name -> List (Closure SLNil) -> Core Terminating
 posArgs defs tyn [] = pure IsTerminating
 posArgs defs tyn (x :: xs)
   = do xNF <- evalClosure defs x
@@ -66,18 +66,18 @@ posArg defs tyns nf@(NTCon loc tc _ _ args) =
   do logNF "totality.positivity" 50 "Found a type constructor" [] nf
      testargs <- case !(lookupDefExact tc (gamma defs)) of
                     Just (TCon _ _ params _ _ _ _ _) => do
-                         log "totality.positivity" 50 $
-                           unwords [show tc, "has", show (length params), "parameters"]
-                         pure $ splitParams 0 params (map snd args)
+                         logC "totality.positivity" 50 $
+                           do pure $ unwords [show tc, "has", show (length params), "parameters"]
+                         pure $ splitParams 0 params (map snd (toList args))
                     _ => throw (GenericMsg loc (show tc ++ " not a data type"))
      let (params, indices) = testargs
      False <- anyM (nameIn defs tyns) !(traverse (evalClosure defs) indices)
        | True => pure (NotTerminating NotStrictlyPositive)
      posArgs defs tyns params
   where
-    splitParams : Nat -> List Nat -> List (Closure []) ->
-        ( List (Closure []) -- parameters (to be checked for strict positivity)
-        , List (Closure []) -- indices    (to be checked for no mention at all)
+    splitParams : Nat -> List Nat -> List (Closure SLNil) ->
+        ( List (Closure SLNil) -- parameters (to be checked for strict positivity)
+        , List (Closure SLNil) -- indices    (to be checked for no mention at all)
         )
     splitParams i ps [] = ([], [])
     splitParams i ps (x :: xs)
@@ -98,7 +98,7 @@ posArg defs tyns nf@(NApp fc nh args)
            | True => do logNF "totality.positivity" 50 "Trusting an assertion" [] nf
                         pure IsTerminating
          logNF "totality.positivity" 50 "Found an application" [] nf
-         args <- traverse (evalClosure defs . snd) args
+         args <- traverse (evalClosure defs . snd) (toList args)
          pure $ if !(anyM (nameIn defs tyns) args)
            then NotTerminating NotStrictlyPositive
            else IsTerminating
@@ -108,7 +108,7 @@ posArg defs tyn nf
        pure IsTerminating
 
 checkPosArgs : {auto c : Ref Ctxt Defs} ->
-               Defs -> List Name -> NF [] -> Core Terminating
+               Defs -> List Name -> NF SLNil -> Core Terminating
 checkPosArgs defs tyns (NBind fc x (Pi _ _ e ty) sc)
     = case !(posArg defs tyns !(evalClosure defs ty)) of
            IsTerminating =>
