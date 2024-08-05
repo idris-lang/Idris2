@@ -7,6 +7,7 @@ import Data.Buffer
 import Data.List
 import Data.List.Elem
 import Data.List1
+import Data.SnocList
 import Data.Nat
 import Data.String
 import Data.Vect
@@ -489,3 +490,29 @@ hashFileWith (Just sha256sum) fileName
     osEscape = if isWindows
       then id
       else escapeStringUnix
+
+export
+TTC a => TTC (SnocList a) where
+  toBuf b xs
+      = do toBuf b (TailRec_length xs)
+           traverse_ (toBuf b) xs
+    where
+      ||| Tail-recursive length as buffer sizes can get large
+      |||
+      ||| Once we port to Idris2, can use Data.List.TailRec.length instead
+      length_aux : SnocList a -> Int -> Int
+      length_aux [<] len = len
+      length_aux (xs :< _) len = length_aux xs (1 + len)
+
+      TailRec_length : SnocList a -> Int
+      TailRec_length xs = length_aux xs 0
+
+  fromBuf b
+      = do len <- fromBuf b {a = Int}
+           readElems [<] (integerToNat (cast len))
+    where
+      readElems : SnocList a -> Nat -> Core (SnocList a)
+      readElems xs Z = pure (reverse xs)
+      readElems xs (S k)
+          = do val <- fromBuf b
+               readElems (xs :< val) k
