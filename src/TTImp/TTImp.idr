@@ -20,7 +20,7 @@ import Libraries.Data.WithDefault
 
 -- Information about names in nested blocks
 public export
-record NestedNames (vars : List Name) where
+record NestedNames (vars : ScopedList Name) where
   constructor MkNested
   -- A map from names to the decorated version of the name, and the new name
   -- applied to its enclosing environment
@@ -35,7 +35,7 @@ Weaken NestedNames where
   weakenNs {ns = wkns} s (MkNested ns) = MkNested (map wknName ns)
     where
       wknName : (Name, (Maybe Name, List (Var vars), FC -> NameType -> Term vars)) ->
-                (Name, (Maybe Name, List (Var (wkns ++ vars)), FC -> NameType -> Term (wkns ++ vars)))
+                (Name, (Maybe Name, List (Var (wkns +%+ vars)), FC -> NameType -> Term (wkns +%+ vars)))
       wknName (n, (mn, vars, rep))
           = (n, (mn, map (weakenNs s) vars, \fc, nt => weakenNs s (rep fc nt)))
 
@@ -744,7 +744,7 @@ implicitsAs n defs ns tm
         -- in the lhs: this is used to determine when to stop searching for further
         -- implicits to add.
         findImps : List (Maybe Name) -> List (Maybe Name) ->
-                   List Name -> NF [] ->
+                   List Name -> NF SLNil ->
                    Core (List (Name, PiInfo RawImp))
         -- #834 When we are in a local definition, we have an explicit telescope
         -- corresponding to the variables bound in the parent function.

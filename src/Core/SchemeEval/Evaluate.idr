@@ -12,7 +12,7 @@ import Libraries.Data.NameMap
 import Libraries.Utils.Scheme
 
 public export
-data SObj : List Name -> Type where
+data SObj : ScopedList Name -> Type where
      MkSObj : ForeignObj -> SchVars vars -> SObj vars
 
 -- Values, which we read off evaluated scheme objects.
@@ -22,13 +22,13 @@ data SObj : List Name -> Type where
 -- recording a LocalEnv for example).
 mutual
   public export
-  data SHead : List Name -> Type where
+  data SHead : ScopedList Name -> Type where
        SLocal : (idx : Nat) -> (0 p : IsVar nm idx vars) -> SHead vars
        SRef : NameType -> Name -> SHead vars
        SMeta : Name -> Int -> List (Core (SNF vars)) -> SHead vars
 
   public export
-  data SNF : List Name -> Type where
+  data SNF : ScopedList Name -> Type where
        SBind    : FC -> (x : Name) -> Binder (SNF vars) ->
                   (SObj vars -> Core (SNF vars)) -> SNF vars
        SApp     : FC -> SHead vars -> List (Core (SNF vars)) -> SNF vars
@@ -147,9 +147,9 @@ mutual
   -- Instead, decode the ForeignObj directly, which is uglier but faster.
   quoteVector : Ref Sym Integer =>
                 Ref Ctxt Defs =>
-                SchVars (outer ++ vars) ->
+                SchVars (outer +%+ vars) ->
                 Integer -> List ForeignObj ->
-                Core (Term (outer ++ vars))
+                Core (Term (outer +%+ vars))
   quoteVector svs (-2) [_, fname_in, args_in] -- Blocked app
       = quoteOrInvalid fname_in $ \ fname => do
            let argList = getArgList args_in
@@ -275,9 +275,9 @@ mutual
 
   quotePiInfo : Ref Sym Integer =>
                 Ref Ctxt Defs =>
-                SchVars (outer ++ vars) ->
+                SchVars (outer +%+ vars) ->
                 ForeignObj ->
-                Core (PiInfo (Term (outer ++ vars)))
+                Core (PiInfo (Term (outer +%+ vars)))
   quotePiInfo svs obj
       = if isInteger obj
            then case unsafeGetInteger obj of
@@ -305,49 +305,49 @@ mutual
 
   quoteBinder : Ref Sym Integer =>
                 Ref Ctxt Defs =>
-                SchVars (outer ++ vars) ->
+                SchVars (outer +%+ vars) ->
                 (forall ty . FC -> RigCount -> PiInfo ty -> ty -> Binder ty) ->
                 ForeignObj -> -- body of binder, represented as a function
                 RigCount ->
-                PiInfo (Term (outer ++ vars)) ->
-                Term (outer ++ vars) -> -- decoded type
+                PiInfo (Term (outer +%+ vars)) ->
+                Term (outer +%+ vars) -> -- decoded type
                 Name -> -- bound name
-                Core (Term (outer ++ vars))
+                Core (Term (outer +%+ vars))
   quoteBinder svs binder proc_in r pi ty name
       = do let Procedure proc = decodeObj proc_in
                     | _ => invalid
            i <- nextName
            let n = show name ++ "-" ++ show i
            let sc = unsafeApply proc (makeSymbol n)
-           sc' <- quote' {outer = name :: outer} (Bound n :: svs) sc
+           sc' <- quote' {outer = name :%: outer} (Bound n :: svs) sc
            pure (Bind emptyFC name
                       (binder emptyFC r pi ty)
                       sc')
 
   quotePLet : Ref Sym Integer =>
               Ref Ctxt Defs =>
-              SchVars (outer ++ vars) ->
+              SchVars (outer +%+ vars) ->
               ForeignObj -> -- body of binder, represented as a function
               RigCount ->
-              Term (outer ++ vars) -> -- decoded type
-              Term (outer ++ vars) -> -- decoded value
+              Term (outer +%+ vars) -> -- decoded type
+              Term (outer +%+ vars) -> -- decoded value
               Name -> -- bound name
-              Core (Term (outer ++ vars))
+              Core (Term (outer +%+ vars))
   quotePLet svs proc_in r val ty name
       = do let Procedure proc = decodeObj proc_in
                     | _ => invalid
            i <- nextName
            let n = show name ++ "-" ++ show i
            let sc = unsafeApply proc (makeSymbol n)
-           sc' <- quote' {outer = name :: outer} (Bound n :: svs) sc
+           sc' <- quote' {outer = name :%: outer} (Bound n :: svs) sc
            pure (Bind emptyFC name
                       (PLet emptyFC r val ty)
                       sc')
 
   quote' : Ref Sym Integer =>
            Ref Ctxt Defs =>
-           SchVars (outer ++ vars) -> ForeignObj ->
-           Core (Term (outer ++ vars))
+           SchVars (outer +%+ vars) -> ForeignObj ->
+           Core (Term (outer +%+ vars))
   quote' svs obj
       = if isVector obj
            then quoteVector svs (unsafeGetInteger (unsafeVectorRef obj 0))
@@ -386,7 +386,7 @@ quoteObj : {auto c : Ref Ctxt Defs} ->
            SObj vars -> Core (Term vars)
 quoteObj (MkSObj val schEnv)
     = do i <- newRef Sym 0
-         quote' {outer = []} schEnv val
+         quote' {outer = SLNil} schEnv val
 
 mutual
   snfVector : Ref Ctxt Defs =>

@@ -12,7 +12,7 @@ mutual
               {bound, free : _} ->
               Ref Sym Integer -> Bounds bound ->
               Env Term free -> List (Core (SNF free)) ->
-              Core (List (Term (bound ++ free)))
+              Core (List (Term (bound +%+ free)))
   quoteArgs q bound env args
       = traverse (\arg => do arg' <- arg
                              quoteGen q bound env arg') args
@@ -21,7 +21,7 @@ mutual
             {bound, free : _} ->
             Ref Sym Integer -> Bounds bound ->
             Env Term free -> PiInfo (SNF free) ->
-            Core (PiInfo (Term (bound ++ free)))
+            Core (PiInfo (Term (bound +%+ free)))
   quotePi q bound env Explicit = pure Explicit
   quotePi q bound env Implicit = pure Implicit
   quotePi q bound env AutoImplicit = pure AutoImplicit
@@ -33,7 +33,7 @@ mutual
                 {bound, free : _} ->
                 Ref Sym Integer -> Bounds bound ->
                 Env Term free -> Binder (SNF free) ->
-                Core (Binder (Term (bound ++ free)))
+                Core (Binder (Term (bound +%+ free)))
   quoteBinder q bound env (Lam fc r p ty)
      = do ty' <- quoteGen q bound env ty
           p' <- quotePi q bound env p
@@ -62,16 +62,16 @@ mutual
               {bound, free : _} ->
               Ref Sym Integer ->
               FC -> Bounds bound -> Env Term free -> SHead free ->
-              Core (Term (bound ++ free))
+              Core (Term (bound +%+ free))
   quoteHead {bound} q fc bounds env (SLocal idx prf)
       = let MkVar prf' = addLater bound prf in
             pure (Local fc Nothing _ prf')
     where
       addLater : {idx : _} ->
-                 (ys : List Name) -> (0 p : IsVar n idx xs) ->
-                 Var (ys ++ xs)
-      addLater [] isv = MkVar isv
-      addLater (x :: xs) isv
+                 (ys : ScopedList Name) -> (0 p : IsVar n idx xs) ->
+                 Var (ys +%+ xs)
+      addLater SLNil isv = MkVar isv
+      addLater (x :%: xs) isv
           = let MkVar isv' = addLater xs isv in
                 MkVar (Later isv')
   quoteHead q fc bounds env (SRef nt n)
@@ -93,7 +93,7 @@ mutual
   quoteGen : {auto c : Ref Ctxt Defs} ->
              {bound, vars : _} ->
              Ref Sym Integer -> Bounds bound ->
-             Env Term vars -> SNF vars -> Core (Term (bound ++ vars))
+             Env Term vars -> SNF vars -> Core (Term (bound +%+ vars))
   quoteGen q bound env (SBind fc n b sc)
       = do i <- nextName
            let var = UN (Basic ("b-" ++ show (fromInteger i)))

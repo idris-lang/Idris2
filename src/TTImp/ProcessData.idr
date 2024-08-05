@@ -127,22 +127,22 @@ checkCon {vars} opts nest env vis tn_in tn (MkImpTy fc cn_in ty_raw)
 
 -- Get the indices of the constructor type (with non-constructor parts erased)
 getIndexPats : {auto c : Ref Ctxt Defs} ->
-               ClosedTerm -> Core (List (NF []))
+               ClosedTerm -> Core (List (NF SLNil))
 getIndexPats tm
     = do defs <- get Ctxt
          tmnf <- nf defs [] tm
          ret <- getRetType defs tmnf
          getPats defs ret
   where
-    getRetType : Defs -> NF [] -> Core (NF [])
+    getRetType : Defs -> NF SLNil -> Core (NF SLNil)
     getRetType defs (NBind fc _ (Pi _ _ _ _) sc)
         = do sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
              getRetType defs sc'
     getRetType defs t = pure t
 
-    getPats : Defs -> NF [] -> Core (List (NF []))
+    getPats : Defs -> NF SLNil -> Core (List (NF SLNil))
     getPats defs (NTCon fc _ _ _ args)
-        = traverse (evalClosure defs . snd) args
+        = traverse (evalClosure defs . snd) (toList args)
     getPats defs _ = pure [] -- Can't happen if we defined the type successfully!
 
 getDetags : {auto c : Ref Ctxt Defs} ->
@@ -156,7 +156,7 @@ getDetags fc tys
              xs => pure $ Just xs
   where
     mutual
-      disjointArgs : List (NF []) -> List (NF []) -> Core Bool
+      disjointArgs : List (NF SLNil) -> List (NF SLNil) -> Core Bool
       disjointArgs [] _ = pure False
       disjointArgs _ [] = pure False
       disjointArgs (a :: args) (a' :: args')
@@ -164,25 +164,25 @@ getDetags fc tys
                then pure True
                else disjointArgs args args'
 
-      disjoint : NF [] -> NF [] -> Core Bool
+      disjoint : NF SLNil -> NF SLNil -> Core Bool
       disjoint (NDCon _ _ t _ args) (NDCon _ _ t' _ args')
           = if t /= t'
                then pure True
                else do defs <- get Ctxt
-                       argsnf <- traverse (evalClosure defs . snd) args
-                       args'nf <- traverse (evalClosure defs . snd) args'
+                       argsnf <- traverse (evalClosure defs . snd) (toList args)
+                       args'nf <- traverse (evalClosure defs . snd) (toList args')
                        disjointArgs argsnf args'nf
       disjoint (NTCon _ n _ _ args) (NDCon _ n' _ _ args')
           = if n /= n'
                then pure True
                else do defs <- get Ctxt
-                       argsnf <- traverse (evalClosure defs . snd) args
-                       args'nf <- traverse (evalClosure defs . snd) args'
+                       argsnf <- traverse (evalClosure defs . snd) (toList args)
+                       args'nf <- traverse (evalClosure defs . snd) (toList args')
                        disjointArgs argsnf args'nf
       disjoint (NPrimVal _ c) (NPrimVal _ c') = pure (c /= c')
       disjoint _ _ = pure False
 
-    allDisjointWith : NF [] -> List (NF []) -> Core Bool
+    allDisjointWith : NF SLNil -> List (NF SLNil) -> Core Bool
     allDisjointWith val [] = pure True
     allDisjointWith (NErased _ _) _ = pure False
     allDisjointWith val (nf :: nfs)
@@ -190,7 +190,7 @@ getDetags fc tys
              if ok then allDisjointWith val nfs
                    else pure False
 
-    allDisjoint : List (NF []) -> Core Bool
+    allDisjoint : List (NF SLNil) -> Core Bool
     allDisjoint [] = pure True
     allDisjoint (NErased _ _ :: _) = pure False
     allDisjoint (nf :: nfs)
@@ -199,7 +199,7 @@ getDetags fc tys
                    else pure False
 
     -- Which argument positions have completely disjoint contructors
-    getDisjointPos : Nat -> List (List (NF [])) -> Core (List Nat)
+    getDisjointPos : Nat -> List (List (NF SLNil)) -> Core (List Nat)
     getDisjointPos i [] = pure []
     getDisjointPos i (args :: argss)
         = do rest <- getDisjointPos (1 + i) argss
@@ -209,7 +209,7 @@ getDetags fc tys
 
 -- If exactly one argument is unerased, return its position
 getRelevantArg : {auto c : Ref Ctxt Defs} ->
-                 Defs -> Nat -> Maybe Nat -> Bool -> NF [] ->
+                 Defs -> Nat -> Maybe Nat -> Bool -> NF SLNil ->
                  Core (Maybe (Bool, Nat))
 getRelevantArg defs i rel world (NBind fc _ (Pi _ rig _ val) sc)
     = branchZero (getRelevantArg defs (1 + i) rel world
@@ -405,7 +405,7 @@ processData : {vars : _} ->
               ImpData -> Core ()
 processData {vars} eopts nest env fc def_vis mbtot (MkImpLater dfc n_in ty_raw)
     = do n <- inCurrentNS n_in
-         ty_raw <- bindTypeNames fc [] vars ty_raw
+         ty_raw <- bindTypeNames fc [] (toList vars) ty_raw
 
          defs <- get Ctxt
          -- Check 'n' is undefined
@@ -452,7 +452,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
          defs <- get Ctxt
 
          mmetasfullty <- flip traverseOpt mty_raw $ \ ty_raw => do
-           ty_raw <- bindTypeNames fc [] vars ty_raw
+           ty_raw <- bindTypeNames fc [] (toList vars) ty_raw
 
            u <- uniVar fc
            (ty, _) <-

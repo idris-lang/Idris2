@@ -2,6 +2,7 @@ module Core.TT.Term.Subst
 
 import Core.Name
 import Core.Name.Scoped
+import Core.Name.ScopedList
 
 import Core.TT.Binder
 import Core.TT.Subst
@@ -47,9 +48,9 @@ substBinder outer dropped env b
   = assert_total $ map (substTerm outer dropped env) b
 
 export
-substs : SizeOf dropped -> SubstEnv dropped vars -> Term (dropped ++ vars) -> Term vars
+substs : SizeOf dropped -> SubstEnv dropped vars -> Term (dropped +%+ vars) -> Term vars
 substs dropped env tm = substTerm zero dropped env tm
 
 export
-subst : Term vars -> Term (x :: vars) -> Term vars
+subst : Term vars -> Term (x :%: vars) -> Term vars
 subst val tm = substs (suc zero) [val] tm

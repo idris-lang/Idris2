@@ -26,12 +26,12 @@ getRecordType : Env Term vars -> NF vars -> Maybe Name
 getRecordType env (NTCon _ n _ _ _) = Just n
 getRecordType env _ = Nothing
 
-getNames : {auto c : Ref Ctxt Defs} -> Defs -> NF [] -> Core $ SortedSet Name
+getNames : {auto c : Ref Ctxt Defs} -> Defs -> NF SLNil -> Core $ SortedSet Name
 getNames defs (NApp _ hd args)
     = do eargs <- traverse (evalClosure defs . snd) args
          pure $ nheadNames hd `union` concat !(traverse (getNames defs) eargs)
   where
-    nheadNames : NHead [] -> SortedSet Name
+    nheadNames : NHead SLNil -> SortedSet Name
     nheadNames (NRef Bound n) = singleton n
     nheadNames _ = empty
 getNames defs (NDCon _ _ _ _ args)
@@ -92,7 +92,7 @@ findFieldsAndTypeArgs defs con
   where
     getExpNames : SortedSet Name ->
                   List (String, Maybe Name, Maybe Name) ->
-                  NF [] ->
+                  NF SLNil ->
                   Core (List (String, Maybe Name, Maybe Name), SortedSet Name)
     getExpNames names expNames (NBind fc x (Pi _ _ p ty) sc)
         = do let imp = case p of

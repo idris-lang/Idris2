@@ -19,7 +19,7 @@ import Libraries.Data.SnocList.SizeOf
 
 -- List of variable usages - we'll count the contents of specific variables
 -- when discharging binders, to ensure that linear names are only used once
-data Usage : List Name -> Type where
+data Usage : ScopedList Name -> Type where
      Nil : Usage vars
      (::) : Var vars -> Usage vars -> Usage vars
 
@@ -31,7 +31,7 @@ Show (Usage vars) where
       showAll [el] = show el
       showAll (x :: xs) = show x ++ ", " ++ show xs
 
-doneScope : Usage (n :: vars) -> Usage vars
+doneScope : Usage (n :%: vars) -> Usage vars
 doneScope [] = []
 doneScope (MkVar First :: xs) = doneScope xs
 doneScope (MkVar (Later p) :: xs) = MkVar p :: doneScope xs
@@ -185,9 +185,9 @@ mutual
                when (not erase) $ rigSafe rigb rig
                pure (Local fc x idx prf, gnf env ty, used rig)
     where
-      getName : {idx : _} -> (vs : List Name) -> (0 p : IsVar n idx vs) -> Name
-      getName (x :: _) First = x
-      getName (x :: xs) (Later p) = getName xs p
+      getName : {idx : _} -> (vs : ScopedList Name) -> (0 p : IsVar n idx vs) -> Name
+      getName (x :%: _) First = x
+      getName (x :%: xs) (Later p) = getName xs p
 
       rigSafe : RigCount -> RigCount -> Core ()
       rigSafe l r = when (l < r)
@@ -425,7 +425,7 @@ mutual
   discharge : {vars : _} ->
               Defs -> Env Term vars ->
               FC -> (nm : Name) -> Binder (Term vars) -> Glued vars ->
-              Term (nm :: vars) -> Glued (nm :: vars) -> Usage vars ->
+              Term (nm :%: vars) -> Glued (nm :%: vars) -> Usage vars ->
               Core (Term vars, Glued vars, Usage vars)
   discharge defs env fc nm (Lam fc' c x ty) gbindty scope gscopety used
        = do scty <- getTerm gscopety
@@ -529,7 +529,7 @@ mutual
                       List (Term (done <>> vars)) ->
                       Term (done <>> vars) -> Core ()
       checkEnvUsage s rig [] usage args tm = pure ()
-      checkEnvUsage s rig {done} {vars = nm :: xs} (b :: env) usage args tm
+      checkEnvUsage s rig {done} {vars = nm :%: xs} (b :: env) usage args tm
           = do let pos = mkVarChiply s
                let used_in = count (varIdx pos) usage
 
@@ -645,12 +645,12 @@ mutual
                RigCount -> (erase : Bool) -> Env Term vars ->
                Name -> Int -> Def -> List (Term vars) ->
                Core (Term vars, Glued vars, Usage vars)
-  expandMeta rig erase env n idx (PMDef _ [] (STerm _ fn) _ _) args
+  expandMeta rig erase env n idx (PMDef _ SLNil (STerm _ fn) _ _) args
       = do tm <- substMeta (embed fn) args zero []
            lcheck rig erase env tm
     where
       substMeta : {drop, vs : _} ->
-                  Term (drop ++ vs) -> List (Term vs) ->
+                  Term (drop +%+ vs) -> List (Term vs) ->
                   SizeOf drop -> SubstEnv drop vs ->
                   Core (Term vs)
       substMeta (Bind bfc n (Lam _ c e ty) sc) (a :: as) drop env
@@ -702,7 +702,7 @@ checkEnvUsage : {vars : _} ->
                 Term (done <>> vars) ->
                 Core ()
 checkEnvUsage fc s rig [] usage tm = pure ()
-checkEnvUsage fc s rig {vars = nm :: xs} (b :: env) usage tm
+checkEnvUsage fc s rig {vars = nm :%: xs} (b :: env) usage tm
     = do let pos = mkVarChiply s
          let used_in = count (varIdx pos) usage
 

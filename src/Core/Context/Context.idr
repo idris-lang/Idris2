@@ -4,6 +4,7 @@ import        Core.Case.CaseTree
 import        Core.CompileExpr
 import        Core.Env
 import public Core.Name
+import        Core.Name.ScopedList
 import public Core.Options.Log
 import public Core.TT
 
@@ -70,7 +71,7 @@ public export
 data Def : Type where
     None : Def -- Not yet defined
     PMDef : (pminfo : PMDefInfo) ->
-            (args : List Name) ->
+            (args : ScopedList Name) ->
             (treeCT : CaseTree args) ->
             (treeRT : CaseTree args) ->
             (pats : List (vs ** (Env Term vs, Term vs, Term vs))) ->
@@ -307,7 +308,7 @@ record GlobalDef where
   specArgs : List Nat -- arguments to specialise by
   inferrable : List Nat -- arguments which can be inferred from elsewhere in the type
   multiplicity : RigCount
-  localVars : List Name -- environment name is defined in
+  localVars : ScopedList Name -- environment name is defined in
   visibility : WithDefault Visibility Private
   totality : Totality
   isEscapeHatch : Bool

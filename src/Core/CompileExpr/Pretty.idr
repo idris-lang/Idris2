@@ -17,7 +17,7 @@ import Libraries.Data.String.Extra
 %hide Vect.catMaybes
 %hide Vect.(++)
 
-%hide SizeOf.map
+%hide Libraries.Data.List.SizeOf.map
 
 %hide Core.Name.prettyOp
 
@@ -120,9 +120,9 @@ prettyCExp : {args : _} -> CExp args -> Doc IdrisSyntax
 prettyCExp = prettyNamedCExp . forget
 
 prettyCDef : CDef -> Doc IdrisDocAnn
-prettyCDef (MkFun [] exp) = reAnnotate Syntax $ prettyCExp exp
+prettyCDef (MkFun SLNil exp) = reAnnotate Syntax $ prettyCExp exp
 prettyCDef (MkFun args exp) = reAnnotate Syntax $
-  keyword "\\" <++> concatWith (\ x, y => x <+> keyword "," <++> y) (map prettyName args)
+  keyword "\\" <++> concatWith (\ x, y => x <+> keyword "," <++> y) (map prettyName $ toList args)
        <++> fatArrow <++> prettyCExp exp
 prettyCDef (MkCon mtag arity nt)
   = vcat $ header (maybe "Type" (const "Data") mtag <++> "Constructor") :: map (indent 2)

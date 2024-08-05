@@ -51,11 +51,11 @@ mutual
   mismatchNF defs (NTCon _ xn xt _ xargs) (NTCon _ yn yt _ yargs)
       = if xn /= yn
            then pure True
-           else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
+           else anyMScoped (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
   mismatchNF defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
       = if xt /= yt
            then pure True
-           else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
+           else anyMScoped (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
   mismatchNF defs (NPrimVal _ xc) (NPrimVal _ yc) = pure (xc /= yc)
   mismatchNF defs (NDelayed _ _ x) (NDelayed _ _ y) = mismatchNF defs x y
   mismatchNF defs (NDelay _ _ _ x) (NDelay _ _ _ y)
@@ -99,12 +99,12 @@ impossibleOK : {auto c : Ref Ctxt Defs} ->
 impossibleOK defs (NTCon _ xn xt xa xargs) (NTCon _ yn yt ya yargs)
     = if xn /= yn
          then pure True
-         else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
+         else anyMScoped (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
 -- If it's a data constructor, any mismatch will do
 impossibleOK defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
     = if xt /= yt
          then pure True
-         else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
+         else anyMScoped (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
 impossibleOK defs (NPrimVal _ x) (NPrimVal _ y) = pure (x /= y)
 
 -- NPrimVal is apart from NDCon, NTCon, NBind, and NType
@@ -161,7 +161,7 @@ recoverable : {auto c : Ref Ctxt Defs} ->
 recoverable defs (NTCon _ xn xt xa xargs) (NTCon _ yn yt ya yargs)
     = if xn /= yn
          then pure False
-         else pure $ not !(anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs))
+         else pure $ not !(anyMScoped (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs))
 -- Type constructor vs. primitive type
 recoverable defs (NTCon _ _ _ _ _) (NPrimVal _ _) = pure False
 recoverable defs (NPrimVal _ _) (NTCon _ _ _ _ _) = pure False
@@ -179,7 +179,7 @@ recoverable defs _ (NTCon _ _ _ _ _) = pure True
 recoverable defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
     = if xt /= yt
          then pure False
-         else pure $ not !(anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs))
+         else pure $ not !(anyMScoped (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs))
 -- Data constructor vs. primitive constant
 recoverable defs (NDCon _ _ _ _ _) (NPrimVal _ _) = pure False
 recoverable defs (NPrimVal _ _) (NDCon _ _ _ _ _) = pure False
@@ -286,7 +286,7 @@ findLinear top bound rig tm
       accessible _ r = r
 
       findLinArg : {vars : _} ->
-                   RigCount -> NF [] -> List (Term vars) ->
+                   RigCount -> NF SLNil -> List (Term vars) ->
                    Core (List (Name, RigCount))
       findLinArg rig ty@(NBind _ _ (Pi _ c _ _) _) (As fc u a p :: as)
           = if isLinear c
@@ -389,7 +389,7 @@ checkLHS {vars} trans mult n opts nest env fc lhs_in
 
          lhs <- if trans
                    then pure lhs_bound
-                   else implicitsAs n defs vars lhs_bound
+                   else implicitsAs n defs (toList vars) lhs_bound
 
          logC "declare.def.lhs" 5 $ do pure $ "Checking LHS of " ++ show !(getFullName (Resolved n))
 -- todo: add Pretty RawImp instance
@@ -635,24 +635,24 @@ checkClause {vars} mult vis totreq hashit n opts nest env
     bindWithArgs :
        (rig : RigCount) -> (wvalTy : Term xs) -> Maybe ((RigCount, Name), Term xs) ->
        (wvalEnv : Env Term xs) ->
-       Core (ext : List Name
-         ** ( Env Term (ext ++ xs)
-            , Term (ext ++ xs)
-            , (Term (ext ++ xs) -> Term xs)
+       Core (ext : ScopedList Name
+         ** ( Env Term (ext +%+ xs)
+            , Term (ext +%+ xs)
+            , (Term (ext +%+ xs) -> Term xs)
             ))
     bindWithArgs {xs} rig wvalTy Nothing wvalEnv =
       let wargn : Name
           wargn = MN "warg" 0
-          wargs : List Name
-          wargs = [wargn]
+          wargs : ScopedList Name
+          wargs = (wargn :%: SLNil)
 
-          scenv : Env Term (wargs ++ xs)
+          scenv : Env Term (wargs +%+ xs)
                 := Pi vfc top Explicit wvalTy :: wvalEnv
 
-          var : Term (wargs ++ xs)
+          var : Term (wargs +%+ xs)
               := Local vfc (Just False) Z First
 
-          binder : Term (wargs ++ xs) -> Term xs
+          binder : Term (wargs +%+ xs) -> Term xs
                  := Bind vfc wargn (Pi vfc rig Explicit wvalTy)
 
       in pure (wargs ** (scenv, var, binder))
@@ -667,11 +667,11 @@ checkClause {vars} mult vis totreq hashit n opts nest env
 
       let wargn : Name
           wargn = MN "warg" 0
-          wargs : List Name
-          wargs = [name, wargn]
+          wargs : ScopedList Name
+          wargs = (name :%: wargn :%: SLNil)
 
           wvalTy' := weaken wvalTy
-          eqTy : Term (MN "warg" 0 :: xs)
+          eqTy : Term (MN "warg" 0 :%: xs)
                := apply vfc eqTyCon
                            [ wvalTy'
                            , wvalTy'
@@ -679,15 +679,15 @@ checkClause {vars} mult vis totreq hashit n opts nest env
                            , Local vfc (Just False) Z First
                            ]
 
-          scenv : Env Term (wargs ++ xs)
+          scenv : Env Term (wargs +%+ xs)
                 := Pi vfc top Implicit eqTy
                 :: Pi vfc top Explicit wvalTy
                 :: wvalEnv
 
-          var : Term (wargs ++ xs)
+          var : Term (wargs +%+ xs)
               := Local vfc (Just False) (S Z) (Later First)
 
-          binder : Term (wargs ++ xs) -> Term xs
+          binder : Term (wargs +%+ xs) -> Term xs
                  := \ t => Bind vfc wargn (Pi vfc rig Explicit wvalTy)
                          $ Bind vfc name  (Pi vfc rigPrf Implicit eqTy) t
 
@@ -698,7 +698,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
     -- function. Hence, turn it to Keep whatever
     keepOldEnv : {0 outer : _} -> {vs : _} ->
                  (outprf : Thin outer vs) -> Thin vs' vs ->
-                 (vs'' : List Name ** Thin vs'' vs)
+                 (vs'' : ScopedList Name ** Thin vs'' vs)
     keepOldEnv {vs} Refl p = (vs ** Refl)
     keepOldEnv {vs} p Refl = (vs ** Refl)
     keepOldEnv (Drop p) (Drop p')
@@ -738,13 +738,13 @@ checkClause {vars} mult vis totreq hashit n opts nest env
              pure (ImpossibleClause ploc newlhs)
 
 -- TODO: remove
-nameListEq : (xs : List Name) -> (ys : List Name) -> Maybe (xs = ys)
-nameListEq [] [] = Just Refl
-nameListEq (x :: xs) (y :: ys) with (nameEq x y)
-  nameListEq (x :: xs) (x :: ys) | (Just Refl) with (nameListEq xs ys)
-    nameListEq (x :: xs) (x :: xs) | (Just Refl) | Just Refl= Just Refl
-    nameListEq (x :: xs) (x :: ys) | (Just Refl) | Nothing = Nothing
-  nameListEq (x :: xs) (y :: ys) | Nothing = Nothing
+nameListEq : (xs : ScopedList Name) -> (ys : ScopedList Name) -> Maybe (xs = ys)
+nameListEq SLNil SLNil = Just Refl
+nameListEq (x :%: xs) (y :%: ys) with (nameEq x y)
+  nameListEq (x :%: xs) (x :%: ys) | (Just Refl) with (nameListEq xs ys)
+    nameListEq (x :%: xs) (x :%: xs) | (Just Refl) | Just Refl= Just Refl
+    nameListEq (x :%: xs) (x :%: ys) | (Just Refl) | Nothing = Nothing
+  nameListEq (x :%: xs) (y :%: ys) | Nothing = Nothing
 nameListEq _ _ = Nothing
 
 -- Calculate references for the given name, and recursively if they haven't
@@ -1123,7 +1123,7 @@ processDef opts nest env fc n_in cs_in
                                 pure Nothing
                               else pure (Just tm))
       where
-        closeEnv : Defs -> NF [] -> Core ClosedTerm
+        closeEnv : Defs -> NF SLNil -> Core ClosedTerm
         closeEnv defs (NBind _ x (PVar _ _ _ _) sc)
             = closeEnv defs !(sc defs (toClosure defaultOpts [] (Ref fc Bound x)))
         closeEnv defs nf = quote defs [] nf

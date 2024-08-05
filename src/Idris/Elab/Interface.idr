@@ -120,8 +120,8 @@ mkIfaceData {vars} ifc def_vis env constraints n conName ps dets meths
           conty = mkTy vfc Implicit (map jname ps) $
                   mkTy vfc AutoImplicit (map bhere constraints) $
                   mkTy vfc Explicit (map bname meths) retty
-          con = MkImpTy vfc (NoFC conName) !(bindTypeNames ifc [] (pNames ++ map fst meths ++ vars) conty)
-          bound = pNames ++ map fst meths ++ vars in
+          con = MkImpTy vfc (NoFC conName) !(bindTypeNames ifc [] (pNames ++ map fst meths ++ toList vars) conty)
+          bound = pNames ++ map fst meths ++ toList vars in
 
           pure $ IData vfc def_vis Nothing {- ?? -}
                $ MkImpData vfc n
@@ -148,7 +148,7 @@ getMethDecl : {vars : _} ->
               Core (nm, RigCount, RawImp)
 getMethDecl {vars} env nest params mnames (c, nm, ty)
     = do let paramNames = map fst params
-         ty_imp <- bindTypeNames EmptyFC [] (paramNames ++ mnames ++ vars) ty
+         ty_imp <- bindTypeNames EmptyFC [] (paramNames ++ mnames ++ toList vars) ty
          pure (nm, c, stripParams paramNames ty_imp)
   where
     -- We don't want the parameters to explicitly appear in the method
@@ -182,8 +182,8 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params sig
          -- Make the constraint application explicit for any method names
          -- which appear in other method types
          let ty_constr =
-             substNames vars (map applyCon allmeths) sig.type
-         ty_imp <- bindTypeNames EmptyFC [] vars (bindPs params $ bindIFace vfc ity ty_constr)
+             substNames (toList vars) (map applyCon allmeths) sig.type
+         ty_imp <- bindTypeNames EmptyFC [] (toList vars) (bindPs params $ bindIFace vfc ity ty_constr)
          cn <- traverseFC inCurrentNS sig.name
          let tydecl = IClaim (MkFCVal vfc $ MkIClaimData sig.count vis (if sig.isData then [Inline, Invertible]
                                             else [Inline])
@@ -252,7 +252,7 @@ getConstraintHint {vars} fc env vis iname cname constraints meths params (cn, co
          let ity = apply (IVar fc iname) (map (IVar fc) pNames)
          let fty = mkTy fc Implicit (map jname params) $
                    mkTy fc Explicit [(Nothing, top, ity)] con
-         ty_imp <- bindTypeNames fc [] (pNames ++ meths ++ vars) fty
+         ty_imp <- bindTypeNames fc [] (pNames ++ meths ++ toList vars) fty
          let hintname = DN ("Constraint " ++ show con)
                           (UN (Basic $ "__" ++ show iname ++ "_" ++ show con))
 
@@ -442,9 +442,9 @@ elabInterface {vars} ifc def_vis env nest constraints iname params dets mcon bod
                                tydecls
              let dty = bindPs params      -- bind parameters
                      $ bindIFace vdfc ity -- bind interface (?!)
-                     $ substNames vars methNameMap dty
+                     $ substNames (toList vars) methNameMap dty
 
-             dty_imp <- bindTypeNames dfc [] (map name tydecls ++ vars) dty
+             dty_imp <- bindTypeNames dfc [] (map name tydecls ++ toList vars) dty
              log "elab.interface.default" 5 $ "Default method " ++ show dn ++ " : " ++ show dty_imp
 
              let dtydecl = IClaim $ MkFCVal vdfc
@@ -519,6 +519,6 @@ elabInterface {vars} ifc def_vis env nest constraints iname params dets mcon bod
                                                  meth_names
                                                  params) nconstraints
              log "elab.interface" 5 $ "Constraint hints from " ++ show constraints ++ ": " ++ show chints
-             traverse_ (processDecl [] nest env) (concatMap snd chints)
+             Core.Core.traverse_ (processDecl [] nest env) (concatMap snd chints)
              traverse_ (\n => do mn <- inCurrentNS n
                                  setFlag vfc mn TCInline) (map fst chints)

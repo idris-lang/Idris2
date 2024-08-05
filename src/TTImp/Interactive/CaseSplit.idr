@@ -92,7 +92,7 @@ getDefining tm
 -- For the name on the lhs, return the function name being defined, the
 -- type name, and the possible constructors.
 findCons : {auto c : Ref Ctxt Defs} ->
-           Name -> Term [] -> Core (SplitResult (Name, Name, List Name))
+           Name -> Term SLNil -> Core (SplitResult (Name, Name, List Name))
 findCons n lhs
     = case getDefining lhs of
            Nothing => pure (SplitFail
@@ -123,7 +123,7 @@ findAllVars (Bind _ x (PLet _ _ _ _) sc)
 findAllVars t = toList (dropNS <$> getDefining t)
 
 export
-explicitlyBound : Defs -> NF [] -> Core (List Name)
+explicitlyBound : Defs -> NF SLNil -> Core (List Name)
 explicitlyBound defs (NBind fc x (Pi _ _ _ _) sc)
     = pure $ x :: !(explicitlyBound defs
                     !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder))))
@@ -131,7 +131,7 @@ explicitlyBound defs _ = pure []
 
 export
 getEnvArgNames : {auto c : Ref Ctxt Defs} ->
-                 Defs -> Nat -> NF [] -> Core (List String)
+                 Defs -> Nat -> NF SLNil -> Core (List String)
 getEnvArgNames defs Z sc = getArgNames defs !(explicitlyBound defs sc) [] [] sc
 getEnvArgNames defs (S k) (NBind fc n _ sc)
     = getEnvArgNames defs k !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder)))
