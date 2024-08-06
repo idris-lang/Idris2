@@ -181,7 +181,7 @@ exactlyOne fc env top target [elab]
            _ => throw $ CantSolveGoal fc (gamma !(get Ctxt)) [] top Nothing
 exactlyOne {vars} fc env top target all
     = do elabs <- successful all
-         case rights elabs of
+         case nubBy ((==) `on` fst) $ rights elabs of
               [(res, defs, ust)] =>
                     do put UST ust
                        put Ctxt defs
@@ -333,14 +333,14 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
                            exactlyOne fc env top target
                             [(do xtynf <- evalClosure defs xty
                                  findPos defs
-                                     (\arg => pure $ apply fc (Ref fc Func fname)
+                                     (\arg => normalise defs env $ apply fc (Ref fc Func fname)
                                                         [xtytm,
                                                          ytytm,
                                                          !(f arg)])
                                      xtynf target),
                              (do ytynf <- evalClosure defs yty
                                  findPos defs
-                                     (\arg => pure $ apply fc (Ref fc Func sname)
+                                     (\arg => normalise defs env $ apply fc (Ref fc Func sname)
                                                         [xtytm,
                                                          ytytm,
                                                          !(f arg)])
