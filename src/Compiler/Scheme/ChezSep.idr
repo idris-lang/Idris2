@@ -217,7 +217,7 @@ compileToSS c chez appdir tm = do
       let footer = ")"
 
       fgndefs <- traverse (Chez.getFgnCall version) cu.definitions
-      compdefs <- traverse (getScheme empty (Chez.chezExtPrim empty) Chez.chezString) cu.definitions
+      compdefs <- traverse (getScheme empty (Chez.chezExtPrim empty defaultLaziness) Chez.chezString defaultLaziness) cu.definitions
       loadlibs <- traverse (map fromString . loadLib appdir) (mapMaybe fst fgndefs)
 
       -- write the files
@@ -234,7 +234,7 @@ compileToSS c chez appdir tm = do
     pure (MkChezLib chezLib hashChanged)
 
   -- main module
-  main <- schExp empty (Chez.chezExtPrim empty) Chez.chezString 0 ctm
+  main <- schExp empty (Chez.chezExtPrim empty defaultLaziness) Chez.chezString defaultLaziness 0 ctm
   Core.writeFile (appdir </> "mainprog.ss") $ build $ sepBy "\n"
     [ schHeader (map snd libs) [lib.name | lib <- chezLibs]
     , collectRequestHandler

@@ -129,11 +129,19 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * More efficient `collect-request-handler` is used.
 
+* Add a codegen directive called `lazy=weakMemo` to make `Lazy` and `Inf` values *weakly*
+  memoised. That is, once accessed, they are allowed to be not re-evaluated until garbage
+  collector wipes them.
+
 #### Racket
 
 * Fixed CSE soundness bug that caused delayed expressions to sometimes be eagerly
   evaluated. Now when a delayed expression is lifted by CSE, it is compiled
   using Scheme's `delay` and `force` to memoize them.
+
+* Add a codegen directive called `lazy=weakMemo` to make `Lazy` and `Inf` values *weakly*
+  memoised. That is, once accessed, they are allowed to be not re-evaluated until garbage
+  collector wipes them.
 
 #### NodeJS Backend
 

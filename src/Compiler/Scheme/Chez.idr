@@ -133,45 +133,44 @@ export
 chezString : String -> Builder
 chezString cs = "\"" ++ showChezString (unpack cs) "\""
 
-mutual
-  handleRet : CFType -> Builder -> Builder
-  handleRet CFUnit op = op ++ " " ++ mkWorld (schConstructor chezString (UN Underscore) (Just 0) [])
-  handleRet _ op = mkWorld op
+handleRet : CFType -> Builder -> Builder
+handleRet CFUnit op = op ++ " " ++ mkWorld (schConstructor chezString (UN Underscore) (Just 0) [])
+handleRet _ op = mkWorld op
 
-  getFArgs : NamedCExp -> Core (List (NamedCExp, NamedCExp))
-  getFArgs (NmCon fc _ _ (Just 0) _) = pure []
-  getFArgs (NmCon fc _ _ (Just 1) [ty, val, rest]) = pure $ (ty, val) :: !(getFArgs rest)
-  getFArgs arg = throw (GenericMsg (getFC arg) ("Badly formed c call argument list " ++ show arg))
+getFArgs : NamedCExp -> Core (List (NamedCExp, NamedCExp))
+getFArgs (NmCon fc _ _ (Just 0) _) = pure []
+getFArgs (NmCon fc _ _ (Just 1) [ty, val, rest]) = pure $ (ty, val) :: !(getFArgs rest)
+getFArgs arg = throw (GenericMsg (getFC arg) ("Badly formed c call argument list " ++ show arg))
 
-  export
-  chezExtPrim : SortedSet Name -> Nat -> ExtPrim -> List NamedCExp -> Core Builder
-  chezExtPrim cs i GetField [NmPrimVal _ (Str s), _, _, struct,
-                          NmPrimVal _ (Str fld), _]
-      = do structsc <- schExp cs (chezExtPrim cs) chezString 0 struct
-           pure $ "(ftype-ref " ++ fromString s ++ " (" ++ fromString fld ++ ") " ++ structsc ++ ")"
-  chezExtPrim cs i GetField [_,_,_,_,_,_]
-      = pure "(blodwen-error-quit \"bad getField\")"
-  chezExtPrim cs i SetField [NmPrimVal _ (Str s), _, _, struct,
-                          NmPrimVal _ (Str fld), _, val, world]
-      = do structsc <- schExp cs (chezExtPrim cs) chezString 0 struct
-           valsc <- schExp cs (chezExtPrim cs) chezString 0 val
-           pure $ mkWorld $
-              "(ftype-set! " ++ fromString s ++ " (" ++ fromString fld ++ ") " ++ structsc ++
-              " " ++ valsc ++ ")"
-  chezExtPrim cs i SetField [_,_,_,_,_,_,_,_]
-      = pure "(blodwen-error-quit \"bad setField\")"
-  chezExtPrim cs i SysCodegen []
-      = pure $ "\"chez\""
-  chezExtPrim cs i OnCollect [_, p, c, world]
-      = do p' <- schExp cs (chezExtPrim cs) chezString 0 p
-           c' <- schExp cs (chezExtPrim cs) chezString 0 c
-           pure $ mkWorld $ "(blodwen-register-object " ++ p' ++ " " ++ c' ++ ")"
-  chezExtPrim cs i OnCollectAny [p, c, world]
-      = do p' <- schExp cs (chezExtPrim cs) chezString 0 p
-           c' <- schExp cs (chezExtPrim cs) chezString 0 c
-           pure $ mkWorld $ "(blodwen-register-object " ++ p' ++ " " ++ c' ++ ")"
-  chezExtPrim cs i prim args
-      = schExtCommon cs (chezExtPrim cs) chezString i prim args
+export
+chezExtPrim : SortedSet Name -> LazyExprProc -> Nat -> ExtPrim -> List NamedCExp -> Core Builder
+chezExtPrim cs schLazy i GetField [NmPrimVal _ (Str s), _, _, struct,
+                                   NmPrimVal _ (Str fld), _]
+    = do structsc <- schExp cs (chezExtPrim cs schLazy) chezString schLazy 0 struct
+         pure $ "(ftype-ref " ++ fromString s ++ " (" ++ fromString fld ++ ") " ++ structsc ++ ")"
+chezExtPrim cs schLazy i GetField [_,_,_,_,_,_]
+    = pure "(blodwen-error-quit \"bad getField\")"
+chezExtPrim cs schLazy i SetField [NmPrimVal _ (Str s), _, _, struct,
+                        NmPrimVal _ (Str fld), _, val, world]
+    = do structsc <- schExp cs (chezExtPrim cs schLazy) chezString schLazy 0 struct
+         valsc <- schExp cs (chezExtPrim cs schLazy) chezString schLazy 0 val
+         pure $ mkWorld $
+            "(ftype-set! " ++ fromString s ++ " (" ++ fromString fld ++ ") " ++ structsc ++
+            " " ++ valsc ++ ")"
+chezExtPrim cs schLazy i SetField [_,_,_,_,_,_,_,_]
+    = pure "(blodwen-error-quit \"bad setField\")"
+chezExtPrim cs schLazy i SysCodegen []
+    = pure $ "\"chez\""
+chezExtPrim cs schLazy i OnCollect [_, p, c, world]
+    = do p' <- schExp cs (chezExtPrim cs schLazy) chezString schLazy 0 p
+         c' <- schExp cs (chezExtPrim cs schLazy) chezString schLazy 0 c
+         pure $ mkWorld $ "(blodwen-register-object " ++ p' ++ " " ++ c' ++ ")"
+chezExtPrim cs schLazy i OnCollectAny [p, c, world]
+    = do p' <- schExp cs (chezExtPrim cs schLazy) chezString schLazy 0 p
+         c' <- schExp cs (chezExtPrim cs schLazy) chezString schLazy 0 c
+         pure $ mkWorld $ "(blodwen-register-object " ++ p' ++ " " ++ c' ++ ")"
+chezExtPrim cs schLazy i prim args
+    = schExtCommon cs (chezExtPrim cs schLazy) chezString schLazy i prim args
 
 -- Reference label for keeping track of loaded external libraries
 export
@@ -502,10 +501,12 @@ compileToSS c prof appdir tm outfile
          fgndefs <- traverse (getFgnCall version) ndefs
          loadlibs <- traverse (locateLib appdir) (mapMaybe fst fgndefs)
 
+         let schLazy = if getWeakMemoLazy ds then weakMemoLaziness else defaultLaziness
+
          (sortedDefs, constants) <- sortDefs ndefs
-         compdefs <- logTime 3 "Print as scheme" $ traverse (getScheme constants (chezExtPrim constants) chezString) sortedDefs
+         compdefs <- logTime 3 "Print as scheme" $ traverse (getScheme constants (chezExtPrim constants schLazy) chezString schLazy) sortedDefs
          let code = concat (map snd fgndefs) ++ concat compdefs
-         main <- schExp constants (chezExtPrim constants) chezString 0 ctm
+         main <- schExp constants (chezExtPrim constants schLazy) chezString schLazy 0 ctm
          support <- readDataFile "chez/support.ss"
          extraRuntime <- getExtraRuntime ds
          let scm = concat $ the (List _)
@@ -552,7 +553,7 @@ compileToSSInc c mods libs appdir tm outfile
          loadlibs <- traverse (map fromString . loadLib appdir) (nub libs)
          loadsos <- traverse (map fromString . loadSO appdir) (nub mods)
 
-         main <- schExp empty (chezExtPrim empty) chezString 0 ctm
+         main <- schExp empty (chezExtPrim empty defaultLaziness) chezString defaultLaziness 0 ctm
          support <- readDataFile "chez/support.ss"
 
          let scm = schHeader chez [] False ++
@@ -692,7 +693,7 @@ incCompile c s sourceFile
                version <- coreLift $ chezVersion chez
                fgndefs <- traverse (getFgnCall version) ndefs
                (sortedDefs, constants) <- sortDefs ndefs
-               compdefs <- traverse (getScheme empty (chezExtPrim empty) chezString) sortedDefs
+               compdefs <- traverse (getScheme empty (chezExtPrim empty defaultLaziness) chezString defaultLaziness) sortedDefs
                let code = concat $ map snd fgndefs ++ compdefs
                Right () <- coreLift $ writeFile ssFile $ build code
                   | Left err => throw (FileErr ssFile err)

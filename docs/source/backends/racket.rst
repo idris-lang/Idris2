@@ -69,3 +69,12 @@ Racket Directives
   .. code-block::
 
     $ idris2 --codegen chez --directive extraRuntime=/path/to/extensions.scm -o main Main.idr
+
+* ``--directive lazy=weakMemo``
+
+  Makes all non-toplevel ``Lazy`` and ``Inf`` values to be *weakly* memoised.
+  That is, once this expression is evaluated at runtime, it is allowed to not to be recalculated on later accesses
+  until memoised value is wiped by a garbage collector.
+  Garbage collector is allowed to collect weakly memoised values at its own discretion,
+  so when no free memory is available, weakly memoised values are free to be wiped.
+  That's why it is safer comparing to full memoisation.
