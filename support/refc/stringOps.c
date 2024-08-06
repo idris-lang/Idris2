@@ -6,18 +6,14 @@ Value *tail(Value *input) {
   tailStr->header.tag = STRING_TAG;
   Value_String *s = (Value_String *)input;
   int l = strlen(s->str);
-  if (l != 0) {
-    tailStr->str = malloc(l);
-    IDRIS2_REFC_VERIFY(tailStr->str, "malloc failed");
-    memset(tailStr->str, 0, l);
-    memcpy(tailStr->str, s->str + 1, l - 1);
-    return (Value *)tailStr;
-  } else {
-    tailStr->str = malloc(1);
-    IDRIS2_REFC_VERIFY(tailStr->str, "malloc failed");
-    tailStr->str[0] = '\0';
-    return (Value *)tailStr;
-  }
+  if (l == 0)
+    return (Value *)&idris2_predefined_nullstring;
+
+  tailStr->str = malloc(l);
+  IDRIS2_REFC_VERIFY(tailStr->str, "malloc failed");
+  memset(tailStr->str, 0, l);
+  memcpy(tailStr->str, s->str + 1, l - 1);
+  return (Value *)tailStr;
 }
 
 Value *reverse(Value *str) {
