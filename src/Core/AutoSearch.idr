@@ -270,7 +270,7 @@ searchLocalWith : {vars : _} ->
 searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) target
     = do defs <- get Ctxt
          nty <- nf defs env ty
-         findPos defs id nty target
+         findPos defs pure nty target
   where
     clearEnvType : {idx : Nat} -> (0 p : IsVar nm idx vs) ->
                    FC -> Env Term vs -> Env Term vs
@@ -284,13 +284,14 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
     clearEnv _ env = env
 
     findDirect : Defs ->
-                 (Term vars -> Term vars) ->
+                 (Term vars -> Core (Term vars)) ->
                  NF vars ->  -- local's type
                  (target : NF vars) ->
                  Core (Term vars)
     findDirect defs f ty target
         = do (args, appTy) <- mkArgs fc rigc env ty
-             logTermNF "auto" 10 "Trying" env (f prf)
+             fprf <- f prf
+             logTermNF "auto" 10 "Trying" env fprf
              logNF "auto" 10 "Type" env ty
              logNF "auto" 10 "For target" env target
              ures <- unify inTerm fc env target appTy
@@ -299,7 +300,7 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
              -- We can only use the local if its type is not an unsolved hole
              if !(usableLocal fc defaults env ty)
                 then do
-                   let candidate = apply fc (f prf) (map metaApp args)
+                   let candidate = apply fc fprf (map metaApp args)
                    logTermNF "auto" 10 "Local var candidate " env candidate
                    -- Clear the local from the environment to avoid getting
                    -- into a loop repeatedly applying it
@@ -313,7 +314,7 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
                         throw (CantSolveGoal fc (gamma defs) [] top Nothing)
 
     findPos : Defs ->
-              (Term vars -> Term vars) ->
+              (Term vars -> Core (Term vars)) ->
               NF vars ->  -- local's type
               (target : NF vars) ->
               Core (Term vars)
@@ -332,17 +333,17 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
                            exactlyOne fc env top target
                             [(do xtynf <- evalClosure defs xty
                                  findPos defs
-                                     (\arg => apply fc (Ref fc Func fname)
+                                     (\arg => pure $ apply fc (Ref fc Func fname)
                                                         [xtytm,
                                                          ytytm,
-                                                         f arg])
+                                                         !(f arg)])
                                      xtynf target),
                              (do ytynf <- evalClosure defs yty
                                  findPos defs
-                                     (\arg => apply fc (Ref fc Func sname)
+                                     (\arg => pure $ apply fc (Ref fc Func sname)
                                                         [xtytm,
                                                          ytytm,
-                                                         f arg])
+                                                         !(f arg)])
                                      ytynf target)]
                    else throw (CantSolveGoal fc (gamma defs) [] top Nothing)
     findPos defs f nty target
