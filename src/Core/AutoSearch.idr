@@ -270,7 +270,7 @@ searchLocalWith : {vars : _} ->
 searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) target
     = do defs <- get Ctxt
          nty <- nf defs env ty
-         findPos defs prf id nty target
+         findPos defs id nty target
   where
     clearEnvType : {idx : Nat} -> (0 p : IsVar nm idx vs) ->
                    FC -> Env Term vs -> Env Term vs
@@ -283,12 +283,12 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
         = clearEnvType p fc env
     clearEnv _ env = env
 
-    findDirect : Defs -> Term vars ->
+    findDirect : Defs ->
                  (Term vars -> Term vars) ->
                  NF vars ->  -- local's type
                  (target : NF vars) ->
                  Core (Term vars)
-    findDirect defs p f ty target
+    findDirect defs f ty target
         = do (args, appTy) <- mkArgs fc rigc env ty
              logTermNF "auto" 10 "Trying" env (f prf)
              logNF "auto" 10 "Type" env ty
@@ -312,13 +312,13 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
                 else do logNF "auto" 10 "Can't use " env ty
                         throw (CantSolveGoal fc (gamma defs) [] top Nothing)
 
-    findPos : Defs -> Term vars ->
+    findPos : Defs ->
               (Term vars -> Term vars) ->
               NF vars ->  -- local's type
               (target : NF vars) ->
               Core (Term vars)
-    findPos defs p f nty@(NTCon pfc pn _ _ [(_, xty), (_, yty)]) target
-        = tryUnifyUnambig (findDirect defs prf f nty target) $
+    findPos defs f nty@(NTCon pfc pn _ _ [(_, xty), (_, yty)]) target
+        = tryUnifyUnambig (findDirect defs f nty target) $
              do fname <- maybe (throw (CantSolveGoal fc (gamma defs) [] top Nothing))
                                pure
                                !fstName
@@ -331,22 +331,22 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
                            ytytm <- quote empty env yty
                            exactlyOne fc env top target
                             [(do xtynf <- evalClosure defs xty
-                                 findPos defs p
+                                 findPos defs
                                      (\arg => apply fc (Ref fc Func fname)
                                                         [xtytm,
                                                          ytytm,
                                                          f arg])
                                      xtynf target),
                              (do ytynf <- evalClosure defs yty
-                                 findPos defs p
+                                 findPos defs
                                      (\arg => apply fc (Ref fc Func sname)
                                                         [xtytm,
                                                          ytytm,
                                                          f arg])
                                      ytynf target)]
                    else throw (CantSolveGoal fc (gamma defs) [] top Nothing)
-    findPos defs p f nty target
-        = findDirect defs p f nty target
+    findPos defs f nty target
+        = findDirect defs f nty target
 
 searchLocalVars : {vars : _} ->
                   {auto c : Ref Ctxt Defs} ->
