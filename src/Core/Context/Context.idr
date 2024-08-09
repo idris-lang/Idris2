@@ -4,6 +4,7 @@ import        Core.Case.CaseTree
 import        Core.CompileExpr
 import        Core.Env
 import public Core.Name
+import        Core.Name.ScopedList
 import public Core.Options.Log
 import public Core.TT
 
@@ -70,7 +71,7 @@ public export
 data Def : Type where
     None : Def -- Not yet defined
     PMDef : (pminfo : PMDefInfo) ->
-            (args : List Name) ->
+            (args : ScopedList Name) ->
             (treeCT : CaseTree args) ->
             (treeRT : CaseTree args) ->
             (pats : List (vs ** (Env Term vs, Term vs, Term vs))) ->

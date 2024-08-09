@@ -3,6 +3,7 @@ module Core.Core
 import Core.Context.Context
 import Core.Env
 import Core.TT
+import Core.Name.ScopedList
 
 import Data.List1
 import Data.Vect
@@ -256,7 +257,7 @@ Show Error where
             case cov of
                  IsCovering => "Oh yes it is (Internal error!)"
                  MissingCases cs => "Missing cases:\n\t" ++
-                                           showSep "\n\t" (map show cs)
+                                           showSep "\n\t" (toList $ map show cs)
                  NonCoveringCall ns => "Calls non covering function"
                                            ++ (case ns of
                                                    [fn] => " " ++ show fn
@@ -759,6 +760,18 @@ traverse' f (x :: xs) acc
 export
 traverse : (a -> Core b) -> List a -> Core (List b)
 traverse f xs = traverse' f xs []
+
+namespace ScopedList
+  -- Traversable (specialised)
+  traverse' : (a -> Core b) -> ScopedList a -> ScopedList b -> Core (ScopedList b)
+  traverse' f SLNil acc = pure (reverse acc)
+  traverse' f (x :%: xs) acc
+      = traverse' f xs (!(f x) :%: acc)
+
+  %inline
+  export
+  traverse : (a -> Core b) -> ScopedList a -> Core (ScopedList b)
+  traverse f xs = traverse' f xs SLNil
 
 export
 mapMaybeM : (a -> Core (Maybe b)) -> List a -> Core (List b)

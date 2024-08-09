@@ -6,6 +6,7 @@ import Core.CompileExpr
 import Core.Context
 import Core.Core
 import Core.TT
+import Core.Name.ScopedList
 
 import Data.List
 import Data.Vect
@@ -35,8 +36,8 @@ mutual
         -- ^ we explicitly bind arity here to silence the warning that it shadows
         --   existing functions called arity.
     AExtPrim : FC -> (lazy : Maybe LazyReason) -> Name -> List AVar -> ANF
-    AConCase : FC -> AVar -> List AConAlt -> Maybe ANF -> ANF
-    AConstCase : FC -> AVar -> List AConstAlt -> Maybe ANF -> ANF
+    AConCase : FC -> AVar -> ScopedList AConAlt -> Maybe ANF -> ANF
+    AConstCase : FC -> AVar -> ScopedList AConstAlt -> Maybe ANF -> ANF
     APrimVal : FC -> Constant -> ANF
     AErased : FC -> ANF
     ACrash : FC -> String -> ANF
@@ -101,10 +102,10 @@ mutual
         = "%extprim " ++ show p ++ showLazy lazy ++ "(" ++ showSep ", " (map show args) ++ ")"
     show (AConCase fc sc alts def)
         = "%case " ++ show sc ++ " of { "
-             ++ showSep "| " (map show alts) ++ " " ++ show def ++ " }"
+             ++ showSep "| " (toList $ map show alts) ++ " " ++ show def ++ " }"
     show (AConstCase fc sc alts def)
         = "%case " ++ show sc ++ " of { "
-             ++ showSep "| " (map show alts) ++ " " ++ show def ++ " }"
+             ++ showSep "| " (toList $ map show alts) ++ " " ++ show def ++ " }"
     show (APrimVal _ x) = show x
     show (AErased _) = "___"
     show (ACrash _ x) = "%CRASH(" ++ show x ++ ")"
@@ -136,9 +137,9 @@ Show ANFDef where
         show args ++ " -> " ++ show ret
   show (MkAError exp) = "Error: " ++ show exp
 
-data AVars : List Name -> Type where
-     Nil : AVars []
-     (::) : Int -> AVars xs -> AVars (x :: xs)
+data AVars : ScopedList Name -> Type where
+     Nil : AVars SLNil
+     (::) : Int -> AVars xs -> AVars (x :%: xs)
 
 data Next : Type where
 
@@ -191,10 +192,10 @@ mutual
   anfArgs : {vars : _} ->
             {auto v : Ref Next Int} ->
             FC -> AVars vars ->
-            List (Lifted vars) -> (List AVar -> ANF) -> Core ANF
+            ScopedList (Lifted vars) -> (List AVar -> ANF) -> Core ANF
   anfArgs fc vs args f
       = do args' <- traverse (anf vs) args
-           letBind fc args' f
+           letBind fc (toList args') f
 
   anf : {vars : _} ->
         {auto v : Ref Next Int} ->
@@ -205,7 +206,7 @@ mutual
   anf vs (LUnderApp fc n m args)
       = anfArgs fc vs args (AUnderApp fc n m)
   anf vs (LApp fc lazy f a)
-      = anfArgs fc vs [f, a] $
+      = anfArgs fc vs (f :%: a :%: SLNil) $
                 \case
                   [fvar, avar] => AApp fc lazy fvar avar
                   _ => ACrash fc "Can't happen (AApp)"
@@ -244,10 +245,10 @@ mutual
       = do (is, vs') <- bindArgs args vs
            pure $ MkAConAlt n ci t is !(anf vs' sc)
     where
-      bindArgs : (args : List Name) -> AVars vars' ->
-                 Core (List Int, AVars (args ++ vars'))
-      bindArgs [] vs = pure ([], vs)
-      bindArgs (n :: ns) vs
+      bindArgs : (args : ScopedList Name) -> AVars vars' ->
+                 Core (List Int, AVars (args +%+ vars'))
+      bindArgs SLNil vs = pure ([], vs)
+      bindArgs (n :%: ns) vs
           = do i <- nextVar
                (is, vs') <- bindArgs ns vs
                pure (i :: is, i :: vs')
@@ -269,10 +270,10 @@ toANF (MkLFun args scope sc)
          pure $ MkAFun (iargs ++ reverse iargs') !(anf vs sc)
   where
     bindArgs : {auto v : Ref Next Int} ->
-               (args : List Name) -> AVars vars' ->
-               Core (List Int, AVars (args ++ vars'))
-    bindArgs [] vs = pure ([], vs)
-    bindArgs (n :: ns) vs
+               (args : ScopedList Name) -> AVars vars' ->
+               Core (List Int, AVars (args +%+ vars'))
+    bindArgs SLNil vs = pure ([], vs)
+    bindArgs (n :%: ns) vs
         = do i <- nextVar
              (is, vs') <- bindArgs ns vs
              pure (i :: is, i :: vs')
@@ -297,14 +298,14 @@ freeVariables (AConCase _ sc alts mDef) =
     let altsAnf =
         map (\(MkAConAlt _ _ _ args caseBody) =>
                 difference (freeVariables caseBody) (fromList $ ALocal <$> args)) alts in
-    let vars : List (SortedSet AVar) = case mDef of
-                Just anf => freeVariables anf :: altsAnf
+    let vars : ScopedList (SortedSet AVar) = case mDef of
+                Just anf => freeVariables anf :%: altsAnf
                 Nothing => altsAnf in
     insert sc $ concat vars
 freeVariables (AConstCase _ sc alts mDef) =
     let altsAnf = map (\(MkAConstAlt _ caseBody) => caseBody) alts in
-    let anfs : List ANF = case mDef of
-                Just anf => anf :: altsAnf
+    let anfs : ScopedList ANF = case mDef of
+                Just anf => anf :%: altsAnf
                 Nothing => altsAnf in
     insert sc $ foldMap freeVariables anfs
 freeVariables _ = empty
@@ -322,14 +323,14 @@ usedConstructors (AExtPrim _ _ _ args) = empty
 usedConstructors (AConCase _ sc alts mDef) =
     let altsAnf =
         map (\(MkAConAlt _ _ _ args caseBody) => usedConstructors caseBody) alts in
-    let anfs : List (SortedSet Name) = case mDef of
-                Just anf => usedConstructors anf :: altsAnf
+    let anfs : ScopedList (SortedSet Name) = case mDef of
+                Just anf => usedConstructors anf :%: altsAnf
                 Nothing => altsAnf in
     concat anfs
 usedConstructors (AConstCase _ sc alts mDef) =
     let altsAnf = map (\(MkAConstAlt _ caseBody) => caseBody) alts in
-    let anfs : List ANF = case mDef of
-                Just anf => anf :: altsAnf
+    let anfs : ScopedList ANF = case mDef of
+                Just anf => anf :%: altsAnf
                 Nothing => altsAnf in
     foldMap usedConstructors anfs
 usedConstructors _ = empty
