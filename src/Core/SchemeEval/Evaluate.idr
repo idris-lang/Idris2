@@ -386,7 +386,7 @@ quoteObj : {auto c : Ref Ctxt Defs} ->
            SObj vars -> Core (Term vars)
 quoteObj (MkSObj val schEnv)
     = do i <- newRef Sym 0
-         quote' {outer = SLNil} schEnv val
+         quote' {outer = [<]} schEnv val
 
 mutual
   snfVector : Ref Ctxt Defs =>

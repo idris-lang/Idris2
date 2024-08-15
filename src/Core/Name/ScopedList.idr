@@ -15,24 +15,24 @@ mutual
   export infixr 7 :%:
 
   public export
-  data ScopedList a = SLNil | (:%:) a (ScopedList a)
+  data ScopedList a = Lin | (:%:) a (ScopedList a)
   -- TODO: make that a SnocList
 
 export infixr 7 +%+
 
 public export
 length : ScopedList a -> Nat
-length SLNil        = Z
+length [<]        = Z
 length (x :%: xs) = S (length xs)
 
 public export
 take : (n : Nat) -> (xs : ScopedList a) -> ScopedList a
 take (S k) (x :%: xs) = x :%: take k xs
-take _ _ = SLNil
+take _ _ = [<]
 
 public export
 mapImpl : (a -> b) -> ScopedList a -> ScopedList b
-mapImpl f SLNil = SLNil
+mapImpl f [<] = [<]
 mapImpl f (x :%: xs) = (f x) :%: (mapImpl f xs)
 
 public export %inline
@@ -41,33 +41,33 @@ Functor ScopedList where
 
 export
 lengthMap : (xs : ScopedList a) -> length (mapImpl f xs) = length xs
-lengthMap SLNil = Refl
+lengthMap [<] = Refl
 lengthMap (x :%: xs) = cong S (lengthMap xs)
 
 public export
 Zippable ScopedList where
-  zipWith _ SLNil _ = SLNil
-  zipWith _ _ SLNil = SLNil
+  zipWith _ [<] _ = [<]
+  zipWith _ _ [<] = [<]
   zipWith f (x :%: xs) (y :%: ys) = f x y :%: zipWith f xs ys
 
-  zipWith3 _ SLNil _ _ = SLNil
-  zipWith3 _ _ SLNil _ = SLNil
-  zipWith3 _ _ _ SLNil = SLNil
+  zipWith3 _ [<] _ _ = [<]
+  zipWith3 _ _ [<] _ = [<]
+  zipWith3 _ _ _ [<] = [<]
   zipWith3 f (x :%: xs) (y :%: ys) (z :%: zs) = f x y z :%: zipWith3 f xs ys zs
 
-  unzipWith f SLNil = (SLNil, SLNil)
+  unzipWith f [<] = ([<], [<])
   unzipWith f (x :%: xs) = let (b, c) = f x
                                (bs, cs) = unzipWith f xs in
                                (b :%: bs, c :%: cs)
 
-  unzipWith3 f SLNil = (SLNil, SLNil, SLNil)
+  unzipWith3 f [<] = ([<], [<], [<])
   unzipWith3 f (x :%: xs) = let (b, c, d) = f x
                                 (bs, cs, ds) = unzipWith3 f xs in
                                 (b :%: bs, c :%: cs, d :%: ds)
 
 public export
 (+%+) : (xs, ys : ScopedList a) -> ScopedList a
-(+%+) SLNil ys = ys
+(+%+) [<] ys = ys
 (+%+) (x :%: xs) ys = x :%: ((+%+) xs ys)
 
 public export
@@ -76,20 +76,20 @@ Semigroup (ScopedList a) where
 
 public export
 Monoid (ScopedList a) where
-  neutral = SLNil
+  neutral = [<]
 
 public export
 Foldable ScopedList where
-  foldr c n SLNil = n
+  foldr c n [<] = n
   foldr c n (x :%: xs) = c x (foldr c n xs)
 
-  foldl f q SLNil = q
+  foldl f q [<] = q
   foldl f q (x :%: xs) = foldl f (f q x) xs
 
-  null SLNil = True
+  null [<] = True
   null (_ :%: _) = False
 
-  toList SLNil = []
+  toList [<] = []
   toList (a :%: ax) = a :: toList ax
 
   foldMap f = foldl (\acc, elem => acc <+> f elem) neutral
@@ -97,7 +97,7 @@ Foldable ScopedList where
 ||| Find the first element of the list that satisfies the predicate.
 public export
 fromList : List a -> ScopedList a
-fromList [] = SLNil
+fromList [] = [<]
 fromList (a :: ax) = a :%: fromList ax
 
 public export
@@ -108,13 +108,13 @@ data Thin : ScopedList a -> ScopedList a -> Type where
 
 export
 keeps : (args : ScopedList a) -> Thin xs ys -> Thin (args +%+ xs) (args +%+ ys)
-keeps SLNil th = th
+keeps [<] th = th
 keeps (x :%: xs) th = Keep (keeps xs th)
 
 ||| Ensure that the list's length is the provided natural number
 public export
 data HasLength : Nat -> ScopedList a -> Type where
-  Z : HasLength Z SLNil
+  Z : HasLength Z [<]
   S : HasLength n xs -> HasLength (S n) (x :%: xs)
 
 export
@@ -124,7 +124,7 @@ hasLengthAppend (S xs) ys = S (hasLengthAppend xs ys)
 
 export
 mkHasLength : (xs : ScopedList a) -> HasLength (length xs) xs
-mkHasLength SLNil = Z
+mkHasLength [<] = Z
 mkHasLength (_ :%: xs) = S (mkHasLength xs)
 
 public export
@@ -134,7 +134,7 @@ record SizeOf {a : Type} (xs : ScopedList a) where
   0 hasLength : HasLength size xs
 
 public export
-zero : SizeOf SLNil
+zero : SizeOf [<]
 zero = MkSizeOf Z Z
 
 public export
@@ -143,18 +143,18 @@ suc (MkSizeOf n p) = MkSizeOf (S n) (S p)
 
 public export
 snoc : ScopedList a -> a -> ScopedList a
-snoc xs x = xs +%+ (x :%: SLNil)
+snoc xs x = xs +%+ (x :%: [<])
 
 namespace Stream
   public export
   take : (n : Nat) -> (xs : Stream a) -> ScopedList a
-  take Z xs = SLNil
+  take Z xs = [<]
   take (S k) (x :: xs) = x :%: take k xs
 
 namespace HasLength
   export
   cast : {ys : _} -> (0 _ : Core.Name.ScopedList.length xs = Core.Name.ScopedList.length ys) -> HasLength m xs -> HasLength m ys
-  cast {ys = SLNil}      eq Z = Z
+  cast {ys = [<]}      eq Z = Z
   cast {ys = y :%: ys} eq (S p) = S (cast (injective eq) p)
 
   export
@@ -173,7 +173,7 @@ namespace SizeOf
   take = MkSizeOf n (Core.Name.ScopedList.HasLength.take n sx)
 
   export
-  sucR : SizeOf as -> SizeOf (as +%+ (a :%: SLNil))
+  sucR : SizeOf as -> SizeOf (as +%+ (a :%: [<]))
   sucR (MkSizeOf n p) = MkSizeOf (S n) (sucR p)
 
   export
@@ -200,12 +200,12 @@ Lin       <>> xs = xs
 
 public export
 Cast (SnocList a) (ScopedList a) where
-  cast sx = sx <>> SLNil
+  cast sx = sx <>> [<]
 
 ||| 'fish': Action of lists on snoc-lists
 public export
 (<><) : SnocList a -> ScopedList a -> SnocList a
-sx <>< SLNil = sx
+sx <>< [<] = sx
 sx <>< (x :%: xs) = sx :< x <>< xs
 
 public export
@@ -215,7 +215,7 @@ Cast (ScopedList a) (SnocList a) where
 ||| Appending lists is associative.
 export
 appendAssociative : (l, c, r : ScopedList a) -> l +%+ (c +%+ r) = (l +%+ c) +%+ r
-appendAssociative SLNil      c r = Refl
+appendAssociative [<]      c r = Refl
 appendAssociative (_ :%: xs) c r = rewrite appendAssociative xs c r in Refl
 
 export
@@ -223,13 +223,13 @@ chipsAsListAppend : (xs : SnocList a) -> (ys : ScopedList a) -> xs <>> ys = cast
 chipsAsListAppend [<]       ys = Refl
 chipsAsListAppend (sx :< x) ys = do
   rewrite chipsAsListAppend sx (x :%: ys)
-  rewrite chipsAsListAppend sx (x :%: SLNil)
-  rewrite sym $ appendAssociative (cast sx) (x :%: SLNil) ys
+  rewrite chipsAsListAppend sx (x :%: [<])
+  rewrite sym $ appendAssociative (cast sx) (x :%: [<]) ys
   Refl
 
 public export
 data Bounds : ScopedList Name -> Type where
-      None : Bounds SLNil
+      None : Bounds [<]
       Add : (x : Name) -> Name -> Bounds xs -> Bounds (x :%: xs)
 
 export
@@ -238,8 +238,8 @@ sizeOf None        = zero
 sizeOf (Add _ _ b) = suc (sizeOf b)
 
 export
-appendNilRightNeutral : (l : ScopedList a) -> l +%+ SLNil = l
-appendNilRightNeutral SLNil      = Refl
+appendNilRightNeutral : (l : ScopedList a) -> l +%+ [<] = l
+appendNilRightNeutral [<]      = Refl
 appendNilRightNeutral (_ :%: xs) = rewrite appendNilRightNeutral xs in Refl
 
 export
@@ -247,21 +247,21 @@ Show a => Show (ScopedList a) where
   show xs = "[%>" ++ show' "" xs ++ "<%]"
     where
       show' : String -> ScopedList a -> String
-      show' acc SLNil        = acc
-      show' acc (x :%: SLNil)       = acc ++ show x
+      show' acc [<]        = acc
+      show' acc (x :%: [<])       = acc ++ show x
       show' acc (x :%: xs) = show' (acc ++ show x ++ ", ") xs
 
 
 ||| Reverse the second list, prepending its elements to the first.
 public export
 reverseOnto : ScopedList a -> ScopedList a -> ScopedList a
-reverseOnto acc SLNil = acc
+reverseOnto acc [<] = acc
 reverseOnto acc (x:%:xs) = reverseOnto (x:%:acc) xs
 
 ||| Reverses the given list.
 public export
 reverse : ScopedList a -> ScopedList a
-reverse = reverseOnto SLNil
+reverse = reverseOnto [<]
 
 hasLengthReverseOnto : HasLength m acc -> HasLength n xs -> HasLength (m + n) (reverseOnto acc xs)
 hasLengthReverseOnto p Z = rewrite plusZeroRightNeutral m in p
@@ -274,7 +274,7 @@ hasLengthReverse = hasLengthReverseOnto Z
 ||| Apply a partial function to the elements of a list, keeping the ones at which it is defined.
 public export
 mapMaybe : (a -> Maybe b) -> ScopedList a -> ScopedList b
-mapMaybe f SLNil      = SLNil
+mapMaybe f [<]      = [<]
 mapMaybe f (x:%:xs) =
   case f x of
     Nothing => mapMaybe f xs
@@ -282,40 +282,40 @@ mapMaybe f (x:%:xs) =
 
 public export
 listBindOnto : (a -> ScopedList b) -> ScopedList b -> ScopedList a -> ScopedList b
-listBindOnto f xs SLNil        = reverse xs
+listBindOnto f xs [<]        = reverse xs
 listBindOnto f xs (y :%: ys) = listBindOnto f (reverseOnto xs (f y)) ys
 
 -- tail recursive O(n) implementation of `(>>=)` for `List`
 public export
 listBind : ScopedList a -> (a -> ScopedList b) -> ScopedList b
-listBind as f = listBindOnto f SLNil as
+listBind as f = listBindOnto f [<] as
 
 public export
 Applicative ScopedList where
-  pure x = (x :%: SLNil)
+  pure x = (x :%: [<])
   fs <*> vs = listBind fs (\f => map f vs)
 
 public export
 Traversable ScopedList where
-  traverse f SLNil = pure SLNil
+  traverse f [<] = pure [<]
   traverse f (x:%:xs) = [| f x :%: traverse f xs |]
 
 ||| List.length is distributive over appending.
 export
 lengthDistributesOverAppend : (xs, ys : ScopedList a) -> length (xs +%+ ys) = length xs + length ys
-lengthDistributesOverAppend SLNil ys = Refl
+lengthDistributesOverAppend [<] ys = Refl
 lengthDistributesOverAppend (x :%: xs) ys =
   cong S $ lengthDistributesOverAppend xs ys
 
 ||| Boolean check for whether the list is the empty list.
 public export
 isNil : ScopedList a -> Bool
-isNil SLNil = True
+isNil [<] = True
 isNil _  = False
 
 public export
 toVect : (n : Nat) -> ScopedList a -> Maybe (Vect n a)
-toVect Z SLNil = Just []
+toVect Z [<] = Just []
 toVect (S k) (x :%: xs)
     = do xs' <- toVect k xs
          pure (x :: xs')
@@ -338,24 +338,24 @@ export
 getAt : Nat -> ScopedList a -> Maybe a
 getAt Z     (x :%: xs) = Just x
 getAt (S k) (x :%: xs) = getAt k xs
-getAt _     SLNil        = Nothing
+getAt _     [<]        = Nothing
 
 public export
 drop : (n : Nat) -> (xs : ScopedList a) -> ScopedList a
 drop Z     xs      = xs
-drop (S n) SLNil      = SLNil
+drop (S n) [<]      = [<]
 drop (S n) (_:%:xs) = drop n xs
 
 public export
 data LengthMatch : ScopedList a -> ScopedList b -> Type where
-     NilMatch : LengthMatch SLNil SLNil
+     NilMatch : LengthMatch [<] [<]
      ConsMatch : LengthMatch xs ys -> LengthMatch (x :%: xs) (y :%: ys)
 
 export
 checkLengthMatch : (xs : ScopedList a) -> (ys : ScopedList b) -> Maybe (LengthMatch xs ys)
-checkLengthMatch SLNil SLNil = Just NilMatch
-checkLengthMatch SLNil (x :%: xs) = Nothing
-checkLengthMatch (x :%: xs) SLNil = Nothing
+checkLengthMatch [<] [<] = Just NilMatch
+checkLengthMatch [<] (x :%: xs) = Nothing
+checkLengthMatch (x :%: xs) [<] = Nothing
 checkLengthMatch (x :%: xs) (y :%: ys)
     = Just (ConsMatch !(checkLengthMatch xs ys))
 
@@ -371,15 +371,15 @@ namespace IntMap
 
 public export
 Eq a => Eq (ScopedList a) where
-  SLNil == SLNil = True
+  [<] == [<] = True
   x :%: xs == y :%: ys = x == y && xs == ys
   _ == _ = False
 
 public export
 Ord a => Ord (ScopedList a) where
-  compare SLNil SLNil = EQ
-  compare SLNil (x :%: xs) = LT
-  compare (x :%: xs) SLNil = GT
+  compare [<] [<] = EQ
+  compare [<] (x :%: xs) = LT
+  compare (x :%: xs) [<] = GT
   compare (x :%: xs) (y :%: ys)
      = case compare x y of
             EQ => compare xs ys
@@ -388,10 +388,10 @@ Ord a => Ord (ScopedList a) where
 ||| Find the first element of the list that satisfies the predicate.
 public export
 find : (p : a -> Bool) -> (xs : ScopedList a) -> Maybe a
-find p SLNil = Nothing
+find p [<] = Nothing
 find p (x:%:xs) = if p x then Just x else find p xs
 
 export
-none : {xs : ScopedList a} -> Thin SLNil xs
-none {xs = SLNil} = Refl
+none : {xs : ScopedList a} -> Thin [<] xs
+none {xs = [<]} = Refl
 none {xs = _ :%: _} = Drop none

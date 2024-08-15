@@ -39,7 +39,7 @@ removeByIndices es = go 0 where
 
   go : (currentIdx : Nat) -> (args : Scope) ->
     (args' ** Thin args' args)
-  go idx SLNil = (SLNil ** Refl)
+  go idx [<] = ([<] ** Refl)
   go idx (x :%: xs) =
     let (vs ** th) = go (S idx) xs in
     if idx `elem` es

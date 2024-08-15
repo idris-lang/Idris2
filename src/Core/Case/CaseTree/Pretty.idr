@@ -88,7 +88,7 @@ namespace Resugared
      <++> fatArrow
       <+> Union (spaces 1 <+> sc) (nest 2 (hardline <+> sc))
   prettyAlt env (DelayCase _ arg sc) = do
-    sc <- prettyTree (mkEnvOnto emptyFC (_ :%: _ :%: SLNil) env) sc
+    sc <- prettyTree (mkEnvOnto emptyFC (_ :%: _ :%: [<]) env) sc
     pure $ keyword "Delay" <++> pretty0 arg
         <++> fatArrow
         <+> Union (spaces 1 <+> sc) (nest 2 (hardline <+> sc))

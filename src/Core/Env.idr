@@ -10,7 +10,7 @@ import Data.List
 -- Environment containing types and values of local variables
 public export
 data Env : (tm : ScopedList Name -> Type) -> ScopedList Name -> Type where
-     Nil : Env tm SLNil
+     Nil : Env tm [<]
      (::) : Binder (tm vars) -> Env tm vars -> Env tm (x :%: vars)
 
 %name Env rho
@@ -43,7 +43,7 @@ lengthExplicitPi (_ :: rho) = lengthExplicitPi rho
 
 export
 namesNoLet : {xs : _} -> Env tm xs -> ScopedList Name
-namesNoLet [] = SLNil
+namesNoLet [] = [<]
 namesNoLet (Let _ _ _ _ :: xs) = namesNoLet xs
 namesNoLet {xs = x :%: _} (_ :: env) = x :%: namesNoLet env
 
@@ -75,19 +75,19 @@ bindEnv loc (b :: env) tm
                                         (binderType b)) tm)
 
 revOnto : (xs, vs : ScopedList a) -> reverseOnto xs vs = reverse vs +%+ xs
-revOnto xs SLNil = Refl
+revOnto xs [<] = Refl
 revOnto xs (v :%: vs)
     = rewrite revOnto (v :%: xs) vs in
-        rewrite appendAssociative (reverse vs) (v :%: SLNil) xs in
-          rewrite revOnto (v :%: SLNil) vs in Refl
+        rewrite appendAssociative (reverse vs) (v :%: [<]) xs in
+          rewrite revOnto (v :%: [<]) vs in Refl
 
 revNs : (vs, ns : ScopedList a) -> reverse ns +%+ reverse vs = reverse (vs +%+ ns)
-revNs SLNil ns = rewrite appendNilRightNeutral (reverse ns) in Refl
+revNs [<] ns = rewrite appendNilRightNeutral (reverse ns) in Refl
 revNs (v :%: vs) ns
-    = rewrite revOnto (v :%: SLNil) vs in
-        rewrite revOnto (v :%: SLNil) (vs +%+ ns) in
+    = rewrite revOnto (v :%: [<]) vs in
+        rewrite revOnto (v :%: [<]) (vs +%+ ns) in
           rewrite sym (revNs vs ns) in
-            rewrite appendAssociative (reverse ns) (reverse vs) (v :%: SLNil) in
+            rewrite appendAssociative (reverse ns) (reverse vs) (v :%: [<]) in
               Refl
 
 -- Weaken by all the names at once at the end, to save multiple traversals
@@ -108,7 +108,7 @@ export
 getBinder : Weaken tm =>
             {vars : _} -> {idx : Nat} ->
             (0 p : IsVar x idx vars) -> Env tm vars -> Binder (tm vars)
-getBinder el env = getBinderUnder SLNil el env
+getBinder el env = getBinderUnder [<] el env
 
 -- For getBinderLoc, we are not reusing getBinder because there is no need to
 -- needlessly weaken stuff;
@@ -186,7 +186,7 @@ mutual
                           tm)
     where
       dropS : ScopedList Nat -> ScopedList Nat
-      dropS SLNil = SLNil
+      dropS [<] = [<]
       dropS (Z :%: xs) = dropS xs
       dropS (S p :%: xs) = p :%: dropS xs
   findUsed env used (App fc fn arg)
@@ -221,16 +221,16 @@ export
 findUsedLocs : {vars : _} ->
                Env Term vars -> Term vars -> ScopedList (Var vars)
 findUsedLocs env tm
-    = mapMaybe (toVar _) (findUsed env SLNil tm)
+    = mapMaybe (toVar _) (findUsed env [<] tm)
 
 isUsed : Nat -> ScopedList (Var vars) -> Bool
-isUsed n SLNil = False
+isUsed n [<] = False
 isUsed n (v :%: vs) = n == varIdx v || isUsed n vs
 
 mkShrinkSub : {n : _} ->
               (vars : _) -> ScopedList (Var (n :%: vars)) ->
               (newvars ** Thin newvars (n :%: vars))
-mkShrinkSub SLNil els
+mkShrinkSub [<] els
     = if isUsed 0 els
          then (_ ** Keep Refl)
          else (_ ** Drop Refl)
@@ -243,7 +243,7 @@ mkShrinkSub (x :%: xs) els
 mkShrink : {vars : _} ->
            ScopedList (Var vars) ->
            (newvars ** Thin newvars vars)
-mkShrink {vars = SLNil} xs = (_ ** Refl)
+mkShrink {vars = [<]} xs = (_ ** Refl)
 mkShrink {vars = v :%: vs} xs = mkShrinkSub _ xs
 
 -- Find the smallest subset of the environment which is needed to type check
@@ -265,7 +265,7 @@ shrinkEnv (b :: env) (Keep p)
 
 export
 mkEnvOnto : FC -> (xs : ScopedList Name) -> Env Term ys -> Env Term (xs +%+ ys)
-mkEnvOnto fc SLNil vs = vs
+mkEnvOnto fc [<] vs = vs
 mkEnvOnto fc (n :%: ns) vs
    = PVar fc top Explicit (Erased fc Placeholder)
    :: mkEnvOnto fc ns vs
@@ -275,7 +275,7 @@ mkEnvOnto fc (n :%: ns) vs
 -- We use this when building and comparing case trees.
 export
 mkEnv : FC -> (vs : ScopedList Name) -> Env Term vs
-mkEnv fc SLNil = []
+mkEnv fc [<] = []
 mkEnv fc (n :%: ns) = PVar fc top Explicit (Erased fc Placeholder) :: mkEnv fc ns
 
 -- Update an environment so that all names are guaranteed unique. In the
@@ -284,7 +284,7 @@ export
 uniqifyEnv : {vars : _} ->
              Env Term vars ->
              (vars' ** (Env Term vars', CompatibleVars vars vars'))
-uniqifyEnv env = uenv SLNil env
+uniqifyEnv env = uenv [<] env
   where
     next : Name -> Name
     next (MN n i) = MN n (i + 1)
@@ -306,7 +306,7 @@ uniqifyEnv env = uenv SLNil env
     uenv : {vars : _} ->
            ScopedList Name -> Env Term vars ->
            (vars' ** (Env Term vars', CompatibleVars vars vars'))
-    uenv used [] = (SLNil ** ([], Pre))
+    uenv used [] = ([<] ** ([], Pre))
     uenv used {vars = v :%: vs} (b :: bs)
         = if v `elem` used
              then let v' = uniqueLocal used v
@@ -336,7 +336,7 @@ close fc nm env tm
 
   where
 
-    mkSubstEnv : Int -> Env Term vs -> (SizeOf vs, SubstEnv vs SLNil)
+    mkSubstEnv : Int -> Env Term vs -> (SizeOf vs, SubstEnv vs [<])
     mkSubstEnv i [] = (zero, [])
     mkSubstEnv i (v :: vs)
        = let (s, env) = mkSubstEnv (i + 1) vs in

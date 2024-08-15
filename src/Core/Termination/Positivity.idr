@@ -21,7 +21,7 @@ isAssertTotal (NRef _ fn_in) =
 isAssertTotal _ = pure False
 
 nameIn : {auto c : Ref Ctxt Defs} ->
-         Defs -> List Name -> NF SLNil -> Core Bool
+         Defs -> List Name -> NF [<] -> Core Bool
 nameIn defs tyns (NBind fc x b sc)
     = if !(nameIn defs tyns !(evalClosure defs (binderType b)))
          then pure True
@@ -48,10 +48,10 @@ nameIn defs tyns _ = pure False
 -- Check an argument type doesn't contain a negative occurrence of any of
 -- the given type names
 posArg  : {auto c : Ref Ctxt Defs} ->
-          Defs -> List Name -> NF SLNil -> Core Terminating
+          Defs -> List Name -> NF [<] -> Core Terminating
 
 posArgs : {auto c : Ref Ctxt Defs} ->
-          Defs -> List Name -> List (Closure SLNil) -> Core Terminating
+          Defs -> List Name -> List (Closure [<]) -> Core Terminating
 posArgs defs tyn [] = pure IsTerminating
 posArgs defs tyn (x :: xs)
   = do xNF <- evalClosure defs x
@@ -75,9 +75,9 @@ posArg defs tyns nf@(NTCon loc tc _ _ args) =
        | True => pure (NotTerminating NotStrictlyPositive)
      posArgs defs tyns params
   where
-    splitParams : Nat -> List Nat -> List (Closure SLNil) ->
-        ( List (Closure SLNil) -- parameters (to be checked for strict positivity)
-        , List (Closure SLNil) -- indices    (to be checked for no mention at all)
+    splitParams : Nat -> List Nat -> List (Closure [<]) ->
+        ( List (Closure [<]) -- parameters (to be checked for strict positivity)
+        , List (Closure [<]) -- indices    (to be checked for no mention at all)
         )
     splitParams i ps [] = ([], [])
     splitParams i ps (x :: xs)
@@ -108,7 +108,7 @@ posArg defs tyn nf
        pure IsTerminating
 
 checkPosArgs : {auto c : Ref Ctxt Defs} ->
-               Defs -> List Name -> NF SLNil -> Core Terminating
+               Defs -> List Name -> NF [<] -> Core Terminating
 checkPosArgs defs tyns (NBind fc x (Pi _ _ e ty) sc)
     = case !(posArg defs tyns !(evalClosure defs ty)) of
            IsTerminating =>

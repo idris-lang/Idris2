@@ -83,9 +83,9 @@ conflict defs env nfty n
               _ => pure False
   where
     mutual
-      conflictArgs : Int -> ScopedList (Closure vars) -> ScopedList (Closure SLNil) ->
+      conflictArgs : Int -> ScopedList (Closure vars) -> ScopedList (Closure [<]) ->
                      Core (Maybe (List (Name, Term vars)))
-      conflictArgs _ SLNil SLNil = pure (Just [])
+      conflictArgs _ [<] [<] = pure (Just [])
       conflictArgs i (c :%: cs) (c' :%: cs')
           = do cnf <- evalClosure defs c
                cnf' <- evalClosure defs c'
@@ -96,13 +96,13 @@ conflict defs env nfty n
                pure (Just (ms ++ ms'))
       conflictArgs _ _ _ = pure (Just [])
 
-      -- If the constructor type (the NF SLNil) matches the variable type,
+      -- If the constructor type (the NF [<]) matches the variable type,
       -- then there may be a way to construct it, so return the matches in
       -- the indices.
       -- If any of those matches clash, the constructor is not valid
       -- e.g, Eq x x matches Eq Z (S Z), with x = Z and x = S Z
       -- conflictNF returns the list of matches, for checking
-      conflictNF : Int -> NF vars -> NF SLNil ->
+      conflictNF : Int -> NF vars -> NF [<] ->
                    Core (Maybe (List (Name, Term vars)))
       conflictNF i t (NBind fc x b sc)
           -- invent a fresh name, in case a user has bound the same name
@@ -111,7 +111,7 @@ conflict defs env nfty n
           = let x' = MN (show x) i in
                 conflictNF (i + 1) t
                        !(sc defs (toClosure defaultOpts [] (Ref fc Bound x')))
-      conflictNF i nf (NApp _ (NRef Bound n) SLNil)
+      conflictNF i nf (NApp _ (NRef Bound n) [<])
           = do empty <- clearDefs defs
                pure (Just [(n, !(quote empty env nf))])
       conflictNF i (NDCon _ n t a args) (NDCon _ n' t' a' args')
@@ -299,7 +299,7 @@ buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
              buildArgs fc defs (weakenNs l ((MkVar el, t) :: known))
                                (weakenNs l not') ps' sc
     buildArgAlt not' (DelayCase t a sc)
-        = let l = mkSizeOf (t :%: a :%: SLNil)
+        = let l = mkSizeOf (t :%: a :%: [<])
               ps' = map (substName var (TDelay fc LUnknown
                                              (Ref fc Bound t)
                                              (Ref fc Bound a))) ps in

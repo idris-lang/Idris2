@@ -59,7 +59,7 @@ cbv = { strategy := CBV } defaultOpts
 mutual
   public export
   data LocalEnv : ScopedList Name -> ScopedList Name -> Type where
-       Nil  : LocalEnv free SLNil
+       Nil  : LocalEnv free [<]
        (::) : Closure free -> LocalEnv free vars -> LocalEnv free (x :%: vars)
 
   public export
@@ -111,10 +111,10 @@ export
 ntCon : FC -> Name -> Int -> Nat -> ScopedList (FC, Closure vars) -> NF vars
 -- Part of the machinery for matching on types - I believe this won't affect
 -- universe checking so put a dummy name.
-ntCon fc (UN (Basic "Type")) tag Z SLNil = NType fc (MN "top" 0)
-ntCon fc n tag Z SLNil = case isConstantType n of
+ntCon fc (UN (Basic "Type")) tag Z [<] = NType fc (MN "top" 0)
+ntCon fc n tag Z [<] = case isConstantType n of
   Just c => NPrimVal fc $ PrT c
-  Nothing => NTCon fc n tag Z SLNil
+  Nothing => NTCon fc n tag Z [<]
 ntCon fc n tag arity args = NTCon fc n tag arity args
 
 export

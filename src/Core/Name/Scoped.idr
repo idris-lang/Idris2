@@ -34,7 +34,7 @@ Scoped = Scope -> Type
 
 export
 scopeEq : (xs, ys : Scope) -> Maybe (xs = ys)
-scopeEq SLNil SLNil = Just Refl
+scopeEq [<] [<] = Just Refl
 scopeEq (x :%: xs) (y :%: ys)
     = do Refl <- nameEq x y
          Refl <- scopeEq xs ys

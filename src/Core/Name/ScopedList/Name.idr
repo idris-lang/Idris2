@@ -5,7 +5,7 @@ import Core.Name.ScopedList
 
 export
 namesEq : (xs, ys : ScopedList Name) -> Maybe (xs = ys)
-namesEq SLNil SLNil = Just Refl
+namesEq [<] [<] = Just Refl
 namesEq (x :%: xs) (y :%: ys)
     = do p <- nameEq x y
          ps <- namesEq xs ys

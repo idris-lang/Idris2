@@ -645,7 +645,7 @@ mutual
                RigCount -> (erase : Bool) -> Env Term vars ->
                Name -> Int -> Def -> List (Term vars) ->
                Core (Term vars, Glued vars, Usage vars)
-  expandMeta rig erase env n idx (PMDef _ SLNil (STerm _ fn) _ _) args
+  expandMeta rig erase env n idx (PMDef _ [<] (STerm _ fn) _ _) args
       = do tm <- substMeta (embed fn) args zero []
            lcheck rig erase env tm
     where
