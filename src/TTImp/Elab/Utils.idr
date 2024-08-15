@@ -14,7 +14,7 @@ import TTImp.TTImp
 %default covering
 
 detagSafe : {auto c : Ref Ctxt Defs} ->
-            Defs -> NF SLNil -> Core Bool
+            Defs -> NF [<] -> Core Bool
 detagSafe defs (NTCon _ n _ _ args)
     = do Just (TCon _ _ _ _ _ _ _ (Just detags)) <- lookupDefExact n (gamma defs)
               | _ => pure False
@@ -23,7 +23,7 @@ detagSafe defs (NTCon _ n _ _ args)
   where
     -- if any argument positions are in the detaggable set, and unerased, then
     -- detagging is safe
-    notErased : Nat -> List Nat -> List (NF SLNil) -> Bool
+    notErased : Nat -> List Nat -> List (NF [<]) -> Bool
     notErased i [] _ = True -- Don't need an index available
     notErased i ns [] = False
     notErased i ns (NErased _ Impossible :: rest)
@@ -33,7 +33,7 @@ detagSafe defs (NTCon _ n _ _ args)
 detagSafe defs _ = pure False
 
 findErasedFrom : {auto c : Ref Ctxt Defs} ->
-                 Defs -> Nat -> NF SLNil -> Core (List Nat, List Nat)
+                 Defs -> Nat -> NF [<] -> Core (List Nat, List Nat)
 findErasedFrom defs pos (NBind fc x (Pi _ c _ aty) scf)
     = do -- In the scope, use 'Erased fc Impossible' to mean 'argument is erased'.
          -- It's handy here, because we can use it to tell if a detaggable
@@ -108,7 +108,7 @@ bindReq {vs} fc env Refl ns tm
     = pure (ns, notLets [] _ env, abstractEnvType fc env tm)
   where
     notLets : List Name -> (vars : ScopedList Name) -> Env Term vars -> List Name
-    notLets acc SLNil _ = acc
+    notLets acc [<] _ = acc
     notLets acc (v :%: vs) (b :: env) = if isLet b then notLets acc vs env
                                        else notLets (v :: acc) vs env
 bindReq {vs = n :%: _} fc (b :: env) (Keep p) ns tm
@@ -127,16 +127,16 @@ data ArgUsed = Used1 -- been used
              | LocalVar -- don't care if it's used
 
 data Usage : ScopedList Name -> Type where
-     Nil : Usage SLNil
+     Nil : Usage [<]
      (::) : ArgUsed -> Usage xs -> Usage (x :%: xs)
 
 initUsed : (xs : ScopedList Name) -> Usage xs
-initUsed SLNil = []
+initUsed [<] = []
 initUsed (x :%: xs) = Used0 :: initUsed xs
 
 initUsedCase : (xs : ScopedList Name) -> Usage xs
-initUsedCase SLNil = []
-initUsedCase (x :%: SLNil) = [Used0]
+initUsedCase [<] = []
+initUsedCase (x :%: [<]) = [Used0]
 initUsedCase (x :%: xs) = LocalVar :: initUsedCase xs
 
 setUsedVar : {idx : _} ->
@@ -159,11 +159,11 @@ setUsed : {idx : _} ->
 setUsed p = update Used $ setUsedVar p
 
 extendUsed : ArgUsed -> (new : ScopedList Name) -> Usage vars -> Usage (new +%+ vars)
-extendUsed a SLNil x = x
+extendUsed a [<] x = x
 extendUsed a (y :%: xs) x = a :: extendUsed a xs x
 
 dropUsed : (new : ScopedList Name) -> Usage (new +%+ vars) -> Usage vars
-dropUsed SLNil x = x
+dropUsed [<] x = x
 dropUsed (x :%: xs) (u :: us) = dropUsed xs us
 
 inExtended : ArgUsed -> (new : ScopedList Name) ->
@@ -198,7 +198,7 @@ termInlineSafe (Meta fc x y xs)
 termInlineSafe (Bind fc x b scope)
    = do bok <- binderInlineSafe b
         if bok
-           then inExtended LocalVar (x :%: SLNil) (\u' => termInlineSafe scope)
+           then inExtended LocalVar (x :%: [<]) (\u' => termInlineSafe scope)
            else pure False
   where
     binderInlineSafe : Binder (Term vars) -> Core Bool
@@ -246,7 +246,7 @@ mutual
   caseAltInlineSafe (ConCase x tag args sc)
       = inExtended Used0 args (\u' => caseInlineSafe sc)
   caseAltInlineSafe (DelayCase ty arg sc)
-      = inExtended Used0 (ty :%: arg :%: SLNil) (\u' => caseInlineSafe sc)
+      = inExtended Used0 (ty :%: arg :%: [<]) (\u' => caseInlineSafe sc)
   caseAltInlineSafe (ConstCase x sc) = caseInlineSafe sc
   caseAltInlineSafe (DefaultCase sc) = caseInlineSafe sc
 

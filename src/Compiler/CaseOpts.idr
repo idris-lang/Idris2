@@ -108,7 +108,7 @@ liftOutLambda : {args : _} ->
                 (new : Name) ->
                 CExp (old :%: args +%+ vars) ->
                 CExp (args +%+ new :%: vars)
-liftOutLambda = shiftBinder {outer = SLNil}
+liftOutLambda = shiftBinder {outer = [<]}
 
 -- If all the alternatives start with a lambda, we can have a single lambda
 -- binding outside
@@ -128,7 +128,7 @@ tryLiftOutConst : (new : Name) ->
 tryLiftOutConst new [] = Just []
 tryLiftOutConst new (MkConstAlt c (CLam fc x sc) :: as)
     = do as' <- tryLiftOutConst new as
-         let sc' = liftOutLambda {args = SLNil} new sc
+         let sc' = liftOutLambda {args = [<]} new sc
          pure (MkConstAlt c sc' :: as')
 tryLiftOutConst _ _ = Nothing
 
@@ -137,7 +137,7 @@ tryLiftDef : (new : Name) ->
              Maybe (Maybe (CExp (new :%: vars)))
 tryLiftDef new Nothing = Just Nothing
 tryLiftDef new (Just (CLam fc x sc))
-   = let sc' = liftOutLambda {args = SLNil} new sc in
+   = let sc' = liftOutLambda {args = [<]} new sc in
          pure (Just sc')
 tryLiftDef _ _ = Nothing
 

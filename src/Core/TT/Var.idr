@@ -159,7 +159,7 @@ allVars : (vars : Scope) -> ScopedList (Var vars)
 allVars = go [<] where
 
   go : SizeOf local -> (vs : Scope) -> ScopedList (Var (local <>> vs))
-  go s SLNil = SLNil
+  go s [<] = [<]
   go s (v :%: vs) = mkVarChiply s :%: go (s :< v) vs
 
 export
@@ -176,7 +176,7 @@ export
 thinFromVars :
   (vars : _) -> ScopedList (Var vars) ->
   (newvars ** Thin newvars vars)
-thinFromVars SLNil els
+thinFromVars [<] els
     = (_ ** Refl)
 thinFromVars (x :%: xs) els
     = let (vs ** subRest) = thinFromVars xs (dropFirst els) in
@@ -245,7 +245,7 @@ isDeBruijn _ _ = Nothing
 
 export
 isNVar : (n : Name) -> (ns : ScopedList Name) -> Maybe (NVar n ns)
-isNVar n SLNil = Nothing
+isNVar n [<] = Nothing
 isNVar n (m :%: ms)
     = case nameEq n m of
            Nothing   => map later (isNVar n ms)

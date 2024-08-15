@@ -104,7 +104,7 @@ data Pat : Type where
      PDelay : FC -> LazyReason -> Pat -> Pat -> Pat
      -- TODO: Matching on lazy types
      PLoc : FC -> Name -> Pat
-     PUnmatchable : FC -> Term SLNil -> Pat
+     PUnmatchable : FC -> Term [<] -> Pat
 
 export
 isPConst : Pat -> Maybe Constant

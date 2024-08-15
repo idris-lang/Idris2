@@ -81,7 +81,7 @@ Ord UsePhase where
 public export
 record CompileData where
   constructor MkCompileData
-  mainExpr : CExp SLNil -- main expression to execute. This also appears in
+  mainExpr : CExp [<] -- main expression to execute. This also appears in
                      -- the definitions below as MN "__mainExpression" 0
                      -- For incremental compilation and for compiling exported
                      -- names only, this can be set to 'erased'.
@@ -153,7 +153,7 @@ getMinimalDef (Coded ns bin)
          name <- fromBuf b
          let def
              = MkGlobalDef fc name (Erased fc Placeholder) [] [] [] [] mul
-                           SLNil (specified Public) (MkTotality Unchecked IsCovering) False
+                           [<] (specified Public) (MkTotality Unchecked IsCovering) False
                            [] Nothing refsR False False True
                            None cdef Nothing [] Nothing
          pure (def, Just (ns, bin))
@@ -355,7 +355,7 @@ getCompileDataWith exports doLazyAnnots phase_in tm_in
                               traverse (lambdaLift doLazyAnnots) cseDefs
                          else pure []
 
-         let lifted = (mainname, MkLFun SLNil SLNil liftedtm) ::
+         let lifted = (mainname, MkLFun [<] [<] liftedtm) ::
                       (ldefs ++ concat lifted_in)
 
          anf <- if phase >= ANF
@@ -412,7 +412,7 @@ getCompileData = getCompileDataWith []
 
 export
 compileTerm : {auto c : Ref Ctxt Defs} ->
-              ClosedTerm -> Core (CExp SLNil)
+              ClosedTerm -> Core (CExp [<])
 compileTerm tm_in
     = do tm <- toFullNames tm_in
          fixArityExp !(compileExp tm)

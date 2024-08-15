@@ -286,7 +286,7 @@ findLinear top bound rig tm
       accessible _ r = r
 
       findLinArg : {vars : _} ->
-                   RigCount -> NF SLNil -> List (Term vars) ->
+                   RigCount -> NF [<] -> List (Term vars) ->
                    Core (List (Name, RigCount))
       findLinArg rig ty@(NBind _ _ (Pi _ c _ _) _) (As fc u a p :: as)
           = if isLinear c
@@ -644,7 +644,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
       let wargn : Name
           wargn = MN "warg" 0
           wargs : ScopedList Name
-          wargs = (wargn :%: SLNil)
+          wargs = (wargn :%: [<])
 
           scenv : Env Term (wargs +%+ xs)
                 := Pi vfc top Explicit wvalTy :: wvalEnv
@@ -668,7 +668,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
       let wargn : Name
           wargn = MN "warg" 0
           wargs : ScopedList Name
-          wargs = (name :%: wargn :%: SLNil)
+          wargs = (name :%: wargn :%: [<])
 
           wvalTy' := weaken wvalTy
           eqTy : Term (MN "warg" 0 :%: xs)
@@ -739,7 +739,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
 
 -- TODO: remove
 nameListEq : (xs : ScopedList Name) -> (ys : ScopedList Name) -> Maybe (xs = ys)
-nameListEq SLNil SLNil = Just Refl
+nameListEq [<] [<] = Just Refl
 nameListEq (x :%: xs) (y :%: ys) with (nameEq x y)
   nameListEq (x :%: xs) (x :%: ys) | (Just Refl) with (nameListEq xs ys)
     nameListEq (x :%: xs) (x :%: xs) | (Just Refl) | Just Refl= Just Refl
@@ -1123,7 +1123,7 @@ processDef opts nest env fc n_in cs_in
                                 pure Nothing
                               else pure (Just tm))
       where
-        closeEnv : Defs -> NF SLNil -> Core ClosedTerm
+        closeEnv : Defs -> NF [<] -> Core ClosedTerm
         closeEnv defs (NBind _ x (PVar _ _ _ _) sc)
             = closeEnv defs !(sc defs (toClosure defaultOpts [] (Ref fc Bound x)))
         closeEnv defs nf = quote defs [] nf

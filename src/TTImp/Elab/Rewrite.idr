@@ -145,7 +145,7 @@ checkRewrite {vars} rigc elabinfo nest env ifc rule tm (Just expected)
            (rwtm, grwty) <-
               inScope vfc (pbind :: env) $ \e' =>
                 inScope {e=e'} vfc env' $ \e'' =>
-                  let offset = mkSizeOf (rname :%: pname :%: SLNil) in
+                  let offset = mkSizeOf (rname :%: pname :%: [<]) in
                   check {e = e''} rigc elabinfo (weakenNs offset nest) env'
                     (apply (IVar vfc lemma.name)
                       [ IVar vfc pname

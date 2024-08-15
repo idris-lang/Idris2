@@ -258,7 +258,7 @@ retryDelayed' errmode p acc (d@(_, i, hints, elab) :: ds)
 
                updateDef (Resolved i) (const (Just
                     (PMDef (MkPMDefInfo NotHole True False)
-                           SLNil (STerm 0 tm) (STerm 0 tm) [])))
+                           [<] (STerm 0 tm) (STerm 0 tm) [])))
                logTerm "elab.update" 5 ("Resolved delayed hole " ++ show i) tm
                logTermNF "elab.update" 5 ("Resolved delayed hole NF " ++ show i) [] tm
                removeHole i

@@ -79,7 +79,7 @@ getName (Free x) = x
 
 public export
 data SchVars : ScopedList Name -> Type where
-     Nil : SchVars SLNil
+     Nil : SchVars [<]
      (::) : SVar -> SchVars ns -> SchVars (n :%: ns)
 
 Show (SchVars ns) where
@@ -302,7 +302,7 @@ getArgName
 extend : Ref Sym Integer =>
          (args : ScopedList Name) -> SchVars vars ->
          Core (List Name, SchVars (args +%+ vars))
-extend SLNil svs = pure ([], svs)
+extend [<] svs = pure ([], svs)
 extend (arg :%: args) svs
     = do n <- getArgName
          (args', svs') <- extend args svs
@@ -404,7 +404,7 @@ compileCase blk svs (Case idx p scTy xs)
 
         makeAlt : String -> CaseAlt vars ->
                   Core (Maybe (SchemeObj Write, SchemeObj Write))
-        makeAlt var (ConCase (UN (Basic "->")) t (_ :%: _ :%: SLNil) sc)
+        makeAlt var (ConCase (UN (Basic "->")) t (_ :%: _ :%: [<]) sc)
             = pure Nothing -- do this in 'addPiMatch' below, since the
                            -- representation is different
         makeAlt var (ConCase n t args sc)
@@ -417,7 +417,7 @@ compileCase blk svs (Case idx p scTy xs)
         -- t is a function type, and conveniently the scope of a pi
         -- binding is represented as a function. Lucky us! So we just need
         -- to extract it then evaluate the scope
-        addPiMatch var (ConCase (UN (Basic "->")) _ (s :%: t :%: SLNil) sc :: _) def
+        addPiMatch var (ConCase (UN (Basic "->")) _ (s :%: t :%: [<]) sc :: _) def
             = do sn <- getArgName
                  tn <- getArgName
                  let svs' = Bound (schVarName sn) ::
@@ -478,7 +478,7 @@ varObjs [] = []
 varObjs (x :: xs) = Var (show x) :: varObjs xs
 
 mkArgs : (ns : ScopedList Name) -> Core (SchVars ns)
-mkArgs SLNil = pure []
+mkArgs [<] = pure []
 mkArgs (x :%: xs)
     = pure $ Bound (schVarName x) :: !(mkArgs xs)
 
@@ -524,7 +524,7 @@ compileBody _ n (DCon tag arity newtypeArg)
          pure (bindArgs n argvs [] body)
   where
     mkArgNs : Int -> Nat -> ScopedList Name
-    mkArgNs i Z = SLNil
+    mkArgNs i Z = [<]
     mkArgNs i (S k) = MN "arg" i :%: mkArgNs (i+1) k
 compileBody _ n (TCon tag Z parampos detpos flags mutwith datacons detagabbleBy)
     = pure $ Vector (-1) [IntegerVal (cast tag), StringVal (show n),
@@ -541,7 +541,7 @@ compileBody _ n (TCon tag arity parampos detpos flags mutwith datacons detagabbl
          pure (bindArgs n argvs [] body)
   where
     mkArgNs : Int -> Nat -> ScopedList Name
-    mkArgNs i Z = SLNil
+    mkArgNs i Z = [<]
     mkArgNs i (S k) = MN "arg" i :%: mkArgNs (i+1) k
 compileBody _ n (Hole numlocs x) = pure $ blockedMetaApp n
 compileBody _ n (BySearch x maxdepth defining) = pure $ blockedMetaApp n

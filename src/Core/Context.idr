@@ -1354,7 +1354,7 @@ addBuiltin n ty tot op
          , specArgs = []
          , inferrable = []
          , multiplicity = top
-         , localVars = SLNil
+         , localVars = [<]
          , visibility = specified Public
          , totality = tot
          , isEscapeHatch = False

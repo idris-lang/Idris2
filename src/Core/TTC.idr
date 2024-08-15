@@ -276,7 +276,7 @@ mkPrf {n} {ns} (S k) = believe_me (Later {m=n} (mkPrf {n} {ns} k))
 getName : (idx : Nat) -> ScopedList Name -> Maybe Name
 getName Z (x :%: xs) = Just x
 getName (S k) (x :%: xs) = getName k xs
-getName _ SLNil = Nothing
+getName _ [<] = Nothing
 
 mutual
   export
@@ -498,7 +498,7 @@ export
       = do toBuf b bnd; toBuf b env
 
   -- Length has to correspond to length of 'vars'
-  fromBuf {vars = SLNil} b = pure Nil
+  fromBuf {vars = [<]} b = pure Nil
   fromBuf {vars = x :%: xs} b
       = do bnd <- fromBuf b
            env <- fromBuf b
@@ -1161,7 +1161,7 @@ TTC GlobalDef where
                                         mul vars vis
                                         tot hatch fl refs refsR inv c True def cdef Nothing sc Nothing)
               else pure (MkGlobalDef loc name (Erased loc Placeholder) [] [] [] []
-                                     mul SLNil (specified Public) unchecked False [] refs refsR
+                                     mul [<] (specified Public) unchecked False [] refs refsR
                                      False False True def cdef Nothing [] Nothing)
 
 export

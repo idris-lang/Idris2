@@ -10,7 +10,7 @@ import TTImp.TTImp
 
 import Libraries.Data.NameMap
 
-getRetTy : Defs -> NF SLNil -> Core Name
+getRetTy : Defs -> NF [<] -> Core Name
 getRetTy defs (NBind fc _ (Pi _ _ _ _) sc)
     = getRetTy defs !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder)))
 getRetTy defs (NTCon _ n _ _ _) = pure n
@@ -94,7 +94,7 @@ processFnOpt fc _ ndef (SpecArgs ns)
                               else insertDeps (pos :: acc) ps ns
 
     -- Collect the argument names which the dynamic args depend on
-    collectDDeps : NF SLNil -> Core (List Name)
+    collectDDeps : NF [<] -> Core (List Name)
     collectDDeps (NBind tfc x (Pi _ _ _ nty) sc)
         = do defs <- get Ctxt
              empty <- clearDefs defs
@@ -110,14 +110,14 @@ processFnOpt fc _ ndef (SpecArgs ns)
 
     -- Return names the type depends on, and whether it's a parameter
     mutual
-      getDepsArgs : Bool -> ScopedList (NF SLNil) -> NameMap Bool ->
+      getDepsArgs : Bool -> ScopedList (NF [<]) -> NameMap Bool ->
                     Core (NameMap Bool)
-      getDepsArgs inparam SLNil ns = pure ns
+      getDepsArgs inparam [<] ns = pure ns
       getDepsArgs inparam (a :%: as) ns
           = do ns' <- getDeps inparam a ns
                getDepsArgs inparam as ns'
 
-      getDeps : Bool -> NF SLNil -> NameMap Bool ->
+      getDeps : Bool -> NF [<] -> NameMap Bool ->
                 Core (NameMap Bool)
       getDeps inparam (NBind _ x (Pi _ _ _ pty) sc) ns
           = do defs <- get Ctxt
@@ -146,9 +146,9 @@ processFnOpt fc _ ndef (SpecArgs ns)
                getDepsArgs False !(traverse (evalClosure defs) ds) ns'
         where
           -- Split into arguments in parameter position, and others
-          splitPs : Nat -> List Nat -> List (Closure SLNil) ->
-                    (ScopedList (Closure SLNil), ScopedList (Closure SLNil))
-          splitPs n params [] = (SLNil, SLNil)
+          splitPs : Nat -> List Nat -> List (Closure [<]) ->
+                    (ScopedList (Closure [<]), ScopedList (Closure [<]))
+          splitPs n params [] = ([<], [<])
           splitPs n params (x :: xs)
               = let (ps', ds') = splitPs (1 + n) params xs in
                     if n `elem` params
@@ -164,7 +164,7 @@ processFnOpt fc _ ndef (SpecArgs ns)
                   List Name -> -- things depended on by dynamic args
                                -- We're assuming  it's a short list, so just use
                                -- List and don't worry about duplicates.
-                  List (Name, Nat) -> NF SLNil -> Core (List Nat)
+                  List (Name, Nat) -> NF [<] -> Core (List Nat)
     collectSpec acc ddeps ps (NBind tfc x (Pi _ _ _ nty) sc)
         = do defs <- get Ctxt
              empty <- clearDefs defs
@@ -183,7 +183,7 @@ processFnOpt fc _ ndef (SpecArgs ns)
                 else collectSpec acc ddeps ps sc'
     collectSpec acc ddeps ps _ = pure acc
 
-    getNamePos : Nat -> NF SLNil -> Core (List (Name, Nat))
+    getNamePos : Nat -> NF [<] -> Core (List (Name, Nat))
     getNamePos i (NBind tfc x (Pi _ _ _ _) sc)
         = do defs <- get Ctxt
              ns' <- getNamePos (1 + i) !(sc defs (toClosure defaultOpts [] (Erased tfc Placeholder)))

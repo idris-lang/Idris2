@@ -184,7 +184,7 @@ swapIsVarH (Later p) = swapP p -- it'd be nice to do this all at the top
 swapIsVar : (vs : ScopedList Name) ->
             {idx : Nat} -> (0 p : IsVar nm idx (vs +%+ x :%: y :%: xs)) ->
             Var (vs +%+ y :%: x :%: xs)
-swapIsVar SLNil prf = swapIsVarH prf
+swapIsVar [<] prf = swapIsVarH prf
 swapIsVar (x :%: xs) First = MkVar First
 swapIsVar (x :%: xs) (Later p)
     = let MkVar p' = swapIsVar xs p in MkVar (Later p')
@@ -218,7 +218,7 @@ push ofc n b tm@(Bind fc (PV x i) (Pi fc' c Implicit ty) sc) -- only push past '
            Nothing => -- needs explicit pi, do nothing
                       Bind ofc n b tm
            Just ty' => Bind fc (PV x i) (Pi fc' c Implicit ty')
-                            (push ofc n (map weaken b) (swapVars {vs = SLNil} sc))
+                            (push ofc n (map weaken b) (swapVars {vs = [<]} sc))
 push ofc n b tm = Bind ofc n b tm
 
 -- Move any implicit arguments as far to the left as possible - this helps

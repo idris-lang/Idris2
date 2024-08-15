@@ -154,10 +154,10 @@ getAllEnv {vars = v :%: vs} {done} fc p (b :: env)
          usable = usableName v in
          if usable
             then (Local fc Nothing _ var,
-                     rewrite appendAssociative done (v :%: SLNil) vs in
+                     rewrite appendAssociative done (v :%: [<]) vs in
                         weakenNs (sucR p) (binderType b)) ::
-                             rewrite appendAssociative done (v :%: SLNil) vs in rest
-            else rewrite appendAssociative done (v :%: SLNil) vs in rest
+                             rewrite appendAssociative done (v :%: [<]) vs in rest
+            else rewrite appendAssociative done (v :%: [<]) vs in rest
   where
     usableName : Name -> Bool
     usableName (UN _) = True
@@ -481,7 +481,7 @@ searchLocalWith {vars} fc nofn rig opts hints env ((p, pty) :: rest) ty topty
     findPos : Defs -> Term vars ->
               (Term vars -> Term vars) ->
               NF vars -> NF vars -> Core (Search (Term vars, ExprDefs))
-    findPos defs prf f x@(NTCon pfc pn _ _ ((fc1, xty) :%: (fc2, yty) :%: SLNil)) target
+    findPos defs prf f x@(NTCon pfc pn _ _ ((fc1, xty) :%: (fc2, yty) :%: [<])) target
         = getSuccessful fc rig opts False env ty topty
               [findDirect defs prf f x target,
                  (do fname <- maybe (throw (InternalError "No fst"))
@@ -500,14 +500,14 @@ searchLocalWith {vars} fc nofn rig opts hints env ((p, pty) :: rest) ty topty
                                          (\arg => applyStackWithFC (Ref fc Func fname)
                                                           ((fc1, xtytm) :%:
                                                            (fc2, ytytm) :%:
-                                                           (fc, f arg) :%: SLNil))
+                                                           (fc, f arg) :%: [<]))
                                          xtynf target),
                                    (do ytynf <- evalClosure defs yty
                                        findPos defs prf
                                            (\arg => applyStackWithFC (Ref fc Func sname)
                                                           ((fc1, xtytm) :%:
                                                            (fc2, ytytm) :%:
-                                                           (fc, f arg) :%: SLNil))
+                                                           (fc, f arg) :%: [<]))
                                            ytynf target)]
                          else noResult)]
     findPos defs prf f nty target = findDirect defs prf f nty target
@@ -671,7 +671,7 @@ tryIntermediateRec fc rig opts hints env ty topty (Just rd)
          recsearch <- tryRecursive fc rig opts' hints env letty topty rd
          makeHelper fc rig opts' env letty ty recsearch
   where
-    isSingleCon : Defs -> NF SLNil -> Core Bool
+    isSingleCon : Defs -> NF [<] -> Core Bool
     isSingleCon defs (NBind fc x (Pi _ _ _ _) sc)
         = isSingleCon defs !(sc defs (toClosure defaultOpts []
                                               (Erased fc Placeholder)))
@@ -842,7 +842,7 @@ exprSearchOpts opts fc n_in hints
          -- the REPL does this step, but doing it here too because
          -- expression search might be invoked some other way
          let Hole _ _ = definition gdef
-             | PMDef pi SLNil (STerm _ tm) _ _
+             | PMDef pi [<] (STerm _ tm) _ _
                  => do raw <- unelab [] !(toFullNames !(normaliseHoles defs [] tm))
                        one (map rawName raw)
              | _ => throw (GenericMsg fc "Name is already defined")

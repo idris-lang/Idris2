@@ -86,7 +86,7 @@ Hashable a => Hashable (List a) where
 
 export
 Hashable a => Hashable (ScopedList a) where
-  hashWithSalt h SLNil = abs h
+  hashWithSalt h [<] = abs h
   hashWithSalt h (x :%: xs) = hashWithSalt (h * 33 + hash x) xs
 
 export

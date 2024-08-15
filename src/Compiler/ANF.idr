@@ -138,7 +138,7 @@ Show ANFDef where
   show (MkAError exp) = "Error: " ++ show exp
 
 data AVars : ScopedList Name -> Type where
-     Nil : AVars SLNil
+     Nil : AVars [<]
      (::) : Int -> AVars xs -> AVars (x :%: xs)
 
 data Next : Type where
@@ -247,7 +247,7 @@ mutual
     where
       bindArgs : (args : ScopedList Name) -> AVars vars' ->
                  Core (List Int, AVars (args +%+ vars'))
-      bindArgs SLNil vs = pure ([], vs)
+      bindArgs [<] vs = pure ([], vs)
       bindArgs (n :%: ns) vs
           = do i <- nextVar
                (is, vs') <- bindArgs ns vs
@@ -272,7 +272,7 @@ toANF (MkLFun args scope sc)
     bindArgs : {auto v : Ref Next Int} ->
                (args : ScopedList Name) -> AVars vars' ->
                Core (List Int, AVars (args +%+ vars'))
-    bindArgs SLNil vs = pure ([], vs)
+    bindArgs [<] vs = pure ([], vs)
     bindArgs (n :%: ns) vs
         = do i <- nextVar
              (is, vs') <- bindArgs ns vs

@@ -501,7 +501,7 @@ TTC a => TTC (ScopedList a) where
       |||
       ||| Once we port to Idris2, can use Data.List.TailRec.length instead
       length_aux : ScopedList a -> Int -> Int
-      length_aux SLNil len = len
+      length_aux [<] len = len
       length_aux (_ :%: xs) len = length_aux xs (1 + len)
 
       TailRec_length : ScopedList a -> Int
@@ -509,7 +509,7 @@ TTC a => TTC (ScopedList a) where
 
   fromBuf b
       = do len <- fromBuf b {a = Int}
-           readElems SLNil (integerToNat (cast len))
+           readElems [<] (integerToNat (cast len))
     where
       readElems : ScopedList a -> Nat -> Core (ScopedList a)
       readElems xs Z = pure (reverse xs)

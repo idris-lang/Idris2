@@ -96,7 +96,7 @@ prettyType syn ty = do
 ||| Look up implementations
 getImplDocs : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
-              (keep : Term SLNil -> Core Bool) ->
+              (keep : Term [<] -> Core Bool) ->
               Core (List (Doc IdrisDocAnn))
 getImplDocs keep
     = do defs <- get Ctxt

@@ -632,7 +632,7 @@ processEdit (ExprSearch upd line name hints)
                      if upd
                         then updateFile (proofSearch name (show itm') (integerToNat (cast (line - 1))))
                         else pure $ DisplayEdit (prettyBy Syntax itm')
-              [(n, nidx, PMDef pi SLNil (STerm _ tm) _ _)] =>
+              [(n, nidx, PMDef pi [<] (STerm _ tm) _ _)] =>
                   case holeInfo pi of
                        NotHole => pure $ EditError "Not a searchable hole"
                        SolvedHole locs =>
@@ -858,7 +858,7 @@ inferAndNormalize : {auto c : Ref Ctxt Defs} ->
   {auto o : Ref ROpts REPLOpts} ->
   REPLEval ->
   PTerm ->
-  Core (TermWithType SLNil)
+  Core (TermWithType [<])
 inferAndNormalize emode itm
   = do (tm `WithType` ty) <- inferAndElab (elabMode emode) itm []
        logTerm "repl.eval" 10 "Elaborated input" tm
@@ -906,8 +906,8 @@ process (Eval itm)
                  let norm = replEval emode
                  evalResultName <- DN "it" <$> genName "evalResult"
                  ignore $ addDef evalResultName
-                   $ newDef replFC evalResultName top SLNil ty defaulted
-                   $ PMDef defaultPI SLNil (STerm 0 ntm) (STerm 0 ntm) []
+                   $ newDef replFC evalResultName top [<] ty defaulted
+                   $ PMDef defaultPI [<] (STerm 0 ntm) (STerm 0 ntm) []
                  addToSave evalResultName
                  put ROpts ({ evalResultName := Just evalResultName } opts)
                  if showTypes opts

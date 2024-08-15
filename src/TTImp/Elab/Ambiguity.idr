@@ -190,14 +190,14 @@ Show TypeMatch where
 mutual
   mightMatchD : {auto c : Ref Ctxt Defs} ->
                 {vars : _} ->
-                Defs -> NF vars -> NF SLNil -> Core TypeMatch
+                Defs -> NF vars -> NF [<] -> Core TypeMatch
   mightMatchD defs l r
       = mightMatch defs (stripDelay l) (stripDelay r)
 
   mightMatchArg : {auto c : Ref Ctxt Defs} ->
                   {vars : _} ->
                   Defs ->
-                  Closure vars -> Closure SLNil ->
+                  Closure vars -> Closure [<] ->
                   Core Bool
   mightMatchArg defs l r
       = pure $ case !(mightMatchD defs !(evalClosure defs l) !(evalClosure defs r)) of
@@ -207,9 +207,9 @@ mutual
   mightMatchArgs : {auto c : Ref Ctxt Defs} ->
                    {vars : _} ->
                    Defs ->
-                   ScopedList (Closure vars) -> ScopedList (Closure SLNil) ->
+                   ScopedList (Closure vars) -> ScopedList (Closure [<]) ->
                    Core Bool
-  mightMatchArgs defs SLNil SLNil = pure True
+  mightMatchArgs defs [<] [<] = pure True
   mightMatchArgs defs (x :%: xs) (y :%: ys)
       = do amatch <- mightMatchArg defs x y
            if amatch
@@ -219,7 +219,7 @@ mutual
 
   mightMatch : {auto c : Ref Ctxt Defs} ->
                {vars : _} ->
-               Defs -> NF vars -> NF SLNil -> Core TypeMatch
+               Defs -> NF vars -> NF [<] -> Core TypeMatch
   mightMatch defs target (NBind fc n (Pi _ _ _ _) sc)
       = mightMatchD defs target !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder)))
   mightMatch defs (NBind _ _ _ _) (NBind _ _ _ _) = pure Poly -- lambdas might match

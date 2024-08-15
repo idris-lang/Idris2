@@ -25,12 +25,12 @@ import Libraries.Data.WithDefault
 %default covering
 
 data EEnv : ScopedList Name -> ScopedList Name -> Type where
-     Nil : EEnv free SLNil
+     Nil : EEnv free [<]
      (::) : CExp free -> EEnv free vars -> EEnv free (x :%: vars)
 
 extend : EEnv free vars -> (args : ScopedList (CExp free)) -> (args' : ScopedList Name) ->
          LengthMatch args args' -> EEnv free (args' +%+ vars)
-extend env SLNil SLNil NilMatch = env
+extend env [<] [<] NilMatch = env
 extend env (a :%: xs) (n :%: ns) (ConsMatch w)
     = a :: extend env xs ns w
 
@@ -55,7 +55,7 @@ takeFromStack : EEnv free vars -> Stack free -> (args : ScopedList Name) ->
 takeFromStack env (e :: es) (a :%: as)
   = do (env', stk') <- takeFromStack env es as
        pure (e :: env', stk')
-takeFromStack env stk SLNil = pure (env, stk)
+takeFromStack env stk [<] = pure (env, stk)
 takeFromStack env [] args = Nothing
 
 data LVar : Type where
@@ -121,7 +121,7 @@ mutual
               EEnv free vars ->
               {idx : Nat} -> (0 p : IsVar x idx (vars +%+ free)) ->
               Core (CExp free)
-  evalLocal {vars = SLNil} fc rec stk env p
+  evalLocal {vars = [<]} fc rec stk env p
       = pure $ unload stk (CLocal fc p)
   evalLocal {vars = x :%: xs} fc rec stk (v :: env) First
       = case stk of
@@ -247,7 +247,7 @@ mutual
       updateLoc : {idx, vs : _} ->
                   (0 p : IsVar x idx (vs +%+ free)) ->
                   EEnv free vs -> CExp free -> EEnv free vs
-      updateLoc {vs = SLNil} p env val = env
+      updateLoc {vs = [<]} p env val = env
       updateLoc {vs = (x:%:xs)} First (e :: env) val = val :: env
       updateLoc {vs = (y:%:xs)} (Later p) (e :: env) val = e :: updateLoc p env val
 
@@ -270,7 +270,7 @@ mutual
   extendLoc : {auto l : Ref LVar Int} ->
               FC -> EEnv free vars -> (args' : ScopedList Name) ->
               Core (Bounds args', EEnv free (args' +%+ vars))
-  extendLoc fc env SLNil = pure (None, env)
+  extendLoc fc env [<] = pure (None, env)
   extendLoc fc env (n :%: ns)
       = do xn <- genName "cv"
            (bs', env') <- extendLoc fc env ns
@@ -425,12 +425,12 @@ getLams {done} d i env (CLam fc x sc)
 getLams {done} d i env sc = (done ** (d, env, sc))
 
 mkBounds : (xs : _) -> Core.Name.ScopedList.Bounds xs
-mkBounds SLNil = None
+mkBounds [<] = None
 mkBounds (x :%: xs) = Add x x (mkBounds xs)
 
 getNewArgs : {done : _} ->
              SubstCEnv done args -> ScopedList Name
-getNewArgs [] = SLNil
+getNewArgs [] = [<]
 getNewArgs (CRef _ n :: xs) = n :%: getNewArgs xs
 getNewArgs {done = x :%: xs} (_ :: sub) = x :%: getNewArgs sub
 
@@ -443,7 +443,7 @@ mergeLambdas args (CLam fc x sc)
     = let (args' ** (s, env, exp')) = getLams zero 0 [] (CLam fc x sc)
           expNs = substs s env exp'
           newArgs = reverse $ getNewArgs env
-          expLocs = mkLocals (mkSizeOf args) {vars = SLNil} (mkBounds newArgs)
+          expLocs = mkLocals (mkSizeOf args) {vars = [<]} (mkBounds newArgs)
                              (rewrite appendNilRightNeutral args in expNs) in
           (_ ** expLocs)
 mergeLambdas args exp = (args ** exp)

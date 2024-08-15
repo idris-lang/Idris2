@@ -169,7 +169,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
         -- We'll use the `env` thus obtained to unelab the remaining scope
         dropLeadingPis : {vs : _} -> (vars : ScopedList Name) -> Term vs -> Env Term vs ->
                          Core (vars' ** (Env Term vars', Term vars'))
-        dropLeadingPis SLNil ty env
+        dropLeadingPis [<] ty env
           = do unless (null vars) $
                  logC "declare.record.parameters" 60 $ pure $ unlines
                    [ "We elaborated \{show tn} in a non-empty local context."

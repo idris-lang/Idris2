@@ -22,13 +22,13 @@ import Data.List
 -- they involve resoling interfaces - they'll just become unmatchable patterns.
 
 match : {auto c : Ref Ctxt Defs} ->
-        NF SLNil -> (Name, Int, ClosedTerm) -> Core Bool
+        NF [<] -> (Name, Int, ClosedTerm) -> Core Bool
 match nty (n, i, rty)
     = do defs <- get Ctxt
          rtynf <- nf defs [] rty
          sameRet nty rtynf
   where
-    sameRet : NF SLNil -> NF SLNil -> Core Bool
+    sameRet : NF [<] -> NF [<] -> Core Bool
     sameRet _ (NApp _ _ _) = pure True
     sameRet _ (NErased _ _) = pure True
     sameRet (NApp _ _ _) _ = pure True
@@ -43,7 +43,7 @@ match nty (n, i, rty)
     sameRet _ _ = pure False
 
 dropNoMatch : {auto c : Ref Ctxt Defs} ->
-              Maybe (NF SLNil) -> List (Name, Int, GlobalDef) ->
+              Maybe (NF [<]) -> List (Name, Int, GlobalDef) ->
               Core (List (Name, Int, GlobalDef))
 dropNoMatch Nothing ts = pure ts
 dropNoMatch (Just nty) ts
@@ -51,13 +51,13 @@ dropNoMatch (Just nty) ts
       filterM (match nty . map (map type)) ts
 
 nextVar : {auto q : Ref QVar Int} ->
-          FC -> Core (Term SLNil)
+          FC -> Core (Term [<])
 nextVar fc
     = do i <- get QVar
          put QVar (i + 1)
          pure (Ref fc Bound (MN "imp" i))
 
-badClause : Term SLNil -> List RawImp -> List RawImp -> List (Name, RawImp) -> Core a
+badClause : Term [<] -> List RawImp -> List RawImp -> List (Name, RawImp) -> Core a
 badClause fn exps autos named
    = throw (GenericMsg (getLoc fn)
             ("Badly formed impossible clause "
@@ -66,7 +66,7 @@ badClause fn exps autos named
 mutual
   processArgs : {auto c : Ref Ctxt Defs} ->
                 {auto q : Ref QVar Int} ->
-                Term SLNil -> NF SLNil ->
+                Term [<] -> NF [<] ->
                 (expargs : List RawImp) ->
                 (autoargs : List RawImp) ->
                 (namedargs : List (Name, RawImp)) ->
@@ -120,7 +120,7 @@ mutual
 
   buildApp : {auto c : Ref Ctxt Defs} ->
              {auto q : Ref QVar Int} ->
-             FC -> Name -> Maybe (Closure SLNil) ->
+             FC -> Name -> Maybe (Closure [<]) ->
              (expargs : List RawImp) ->
              (autoargs : List RawImp) ->
              (namedargs : List (Name, RawImp)) ->
@@ -149,7 +149,7 @@ mutual
 
   mkTerm : {auto c : Ref Ctxt Defs} ->
            {auto q : Ref QVar Int} ->
-           RawImp -> Maybe (Closure SLNil) ->
+           RawImp -> Maybe (Closure [<]) ->
            (expargs : List RawImp) ->
            (autoargs : List RawImp) ->
            (namedargs : List (Name, RawImp)) ->

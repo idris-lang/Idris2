@@ -111,7 +111,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
         -- use this a *lot* and it saves the run time overhead of making
         -- a closure and calling APPLY.
         closeArgs : List (Term (vars +%+ free)) -> ScopedList (Closure free)
-        closeArgs [] = SLNil
+        closeArgs [] = [<]
         closeArgs (t :: ts) = MkClosure topopts locs env t :%: closeArgs ts
     eval env locs (Bind fc x (Lam _ r _ ty) scope) (thunk :: stk)
         = eval env (snd thunk :: locs) scope stk
@@ -327,9 +327,9 @@ parameters (defs : Defs) (topopts : EvalOpts)
                    (args : ScopedList Name) ->
                    LocalEnv free more ->
                    Maybe (LocalEnv free (args +%+ more))
-    getCaseBound SLNil            SLNil      loc = Just loc
-    getCaseBound SLNil            (_ :%: _)  loc = Nothing -- mismatched arg length
-    getCaseBound (arg :%: args) SLNil      loc = Nothing -- mismatched arg length
+    getCaseBound [<]            [<]      loc = Just loc
+    getCaseBound [<]            (_ :%: _)  loc = Nothing -- mismatched arg length
+    getCaseBound (arg :%: args) [<]      loc = Nothing -- mismatched arg length
     getCaseBound (arg :%: args) (n :%: ns) loc = (arg ::) <$> (getCaseBound args ns loc)
 
     -- Returns the case term from the matched pattern with the LocalEnv (arguments from constructor pattern ConCase)
@@ -369,20 +369,20 @@ parameters (defs : Defs) (topopts : EvalOpts)
     -- Primitive type matching, in typecase
     tryAlt env loc opts fc stk (NPrimVal _ c) (ConCase nm tag args sc)
          = case args of -- can't just test for it in the `if` for typing reasons
-             SLNil => if UN (Basic $ show c) == nm
+             [<] => if UN (Basic $ show c) == nm
                    then evalTree env loc opts fc stk sc
                    else pure NoMatch
              _ => pure NoMatch
     -- Type of type matching, in typecase
-    tryAlt env loc opts fc stk (NType _ _) (ConCase (UN (Basic "Type")) tag SLNil sc)
+    tryAlt env loc opts fc stk (NType _ _) (ConCase (UN (Basic "Type")) tag [<] sc)
          = evalTree env loc opts fc stk sc
     tryAlt env loc opts fc stk (NType _ _) (ConCase _ _ _ _)
          = pure NoMatch
     -- Arrow matching, in typecase
     tryAlt {more}
-           env loc opts fc stk (NBind pfc x (Pi fc' r e aty) scty) (ConCase (UN (Basic "->")) tag (s :%: t :%: SLNil) sc)
-       = evalConAlt {more} env loc opts fc stk (s :%: t :%: SLNil)
-                  (aty :%: MkNFClosure opts env (NBind pfc x (Lam fc' r e aty) scty) :%: SLNil)
+           env loc opts fc stk (NBind pfc x (Pi fc' r e aty) scty) (ConCase (UN (Basic "->")) tag (s :%: t :%: [<]) sc)
+       = evalConAlt {more} env loc opts fc stk (s :%: t :%: [<])
+                  (aty :%: MkNFClosure opts env (NBind pfc x (Lam fc' r e aty) scty) :%: [<])
                   sc
     tryAlt {more}
            env loc opts fc stk (NBind pfc x (Pi fc' r e aty) scty) (ConCase nm tag args sc)
@@ -459,7 +459,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
                   Maybe (Vect (got + remain) (Closure free), ScopedList (FC, Closure free))
         takeStk {got} Z stk acc = Just (rewrite plusZeroRightNeutral got in
                                     reverse acc, stk)
-        takeStk (S k) SLNil acc = Nothing
+        takeStk (S k) [<] acc = Nothing
         takeStk {got} (S k) (arg :%: stk) acc
            = rewrite sym (plusSuccRightSucc got k) in
                      takeStk k stk (snd arg :: acc)
@@ -467,8 +467,8 @@ parameters (defs : Defs) (topopts : EvalOpts)
     argsFromStack : (args : ScopedList Name) ->
                     ScopedList (FC, Closure free) ->
                     Maybe (LocalEnv free args, ScopedList (FC, Closure free))
-    argsFromStack SLNil stk = Just ([], stk)
-    argsFromStack (n :%: ns) SLNil = Nothing
+    argsFromStack [<] stk = Just ([], stk)
+    argsFromStack (n :%: ns) [<] = Nothing
     argsFromStack (n :%: ns) (arg :%: args)
          = do (loc', stk') <- argsFromStack ns args
               pure (snd arg :: loc', stk')
@@ -481,7 +481,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
     evalOp {arity} fn stk def
         = case takeFromStack arity stk of
                -- Stack must be exactly the right height
-               Just (args, SLNil) =>
+               Just (args, [<]) =>
                   do argsnf <- evalAll args
                      pure $ case fn argsnf of
                           Nothing => def

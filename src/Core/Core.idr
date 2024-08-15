@@ -764,14 +764,14 @@ traverse f xs = traverse' f xs []
 namespace ScopedList
   -- Traversable (specialised)
   traverse' : (a -> Core b) -> ScopedList a -> ScopedList b -> Core (ScopedList b)
-  traverse' f SLNil acc = pure (reverse acc)
+  traverse' f [<] acc = pure (reverse acc)
   traverse' f (x :%: xs) acc
       = traverse' f xs (!(f x) :%: acc)
 
   %inline
   export
   traverse : (a -> Core b) -> ScopedList a -> Core (ScopedList b)
-  traverse f xs = traverse' f xs SLNil
+  traverse f xs = traverse' f xs [<]
 
 export
 mapMaybeM : (a -> Core (Maybe b)) -> List a -> Core (List b)
@@ -846,7 +846,7 @@ traverseList1_ f xxs
 namespace ScopedList
   export
   traverse_ : (a -> Core b) -> ScopedList a -> Core ()
-  traverse_ f SLNil = pure ()
+  traverse_ f [<] = pure ()
   traverse_ f (x :%: xs)
       = Core.do ignore (f x)
                 traverse_ f xs
@@ -903,7 +903,7 @@ anyM f (x :: xs)
 
 export
 anyMScoped : (a -> Core Bool) -> ScopedList a -> Core Bool
-anyMScoped f SLNil = pure False
+anyMScoped f [<] = pure False
 anyMScoped f (x :%: xs)
     = if !(f x)
          then pure True

@@ -43,7 +43,7 @@ numArgs _ tm = pure (Arity 0)
 
 mkSub : Nat -> (ns : ScopedList Name) -> List Nat -> (ns' ** Thin ns' ns)
 mkSub i _ [] = (_ ** Refl)
-mkSub i SLNil ns = (_ ** Refl)
+mkSub i [<] ns = (_ ** Refl)
 mkSub i (x :%: xs) es
     = let (ns' ** p) = mkSub (S i) xs es in
           if i `elem` es
@@ -137,7 +137,7 @@ mkDropSubst : Nat -> List Nat ->
               (rest : ScopedList Name) ->
               (vars : ScopedList Name) ->
               (vars' ** Thin (vars' +%+ rest) (vars +%+ rest))
-mkDropSubst i es rest SLNil = (SLNil ** Refl)
+mkDropSubst i es rest [<] = ([<] ** Refl)
 mkDropSubst i es rest (x :%: xs)
     = let (vs ** sub) = mkDropSubst (1 + i) es rest xs in
           if i `elem` es
@@ -310,7 +310,7 @@ mutual
                              do sc' <- toCExpTree n sc
                                 let scope = insertNames {outer=args}
                                                         {inner=vars}
-                                                        {ns = (MN "eff" 0 :%: SLNil)}
+                                                        {ns = (MN "eff" 0 :%: [<])}
                                                         (mkSizeOf _) (mkSizeOf _) sc'
                                 let tm = CLet fc (MN "eff" 0) NotInline scr (substs s env scope)
                                 log "compiler.newtype.world" 50 "Kept the scrutinee \{show tm}"
@@ -319,7 +319,7 @@ mutual
     where
       mkSubst : Nat -> CExp vs ->
                 Nat -> (args : ScopedList Name) -> (SizeOf args, SubstCEnv args vs)
-      mkSubst _ _ _ SLNil = (zero, [])
+      mkSubst _ _ _ [<] = (zero, [])
       mkSubst i scr pos (a :%: as)
           = let (s, env) = mkSubst (1 + i) scr pos as in
             if i == pos
@@ -387,7 +387,7 @@ mutual
 -- Need this for ensuring that argument list matches up to operator arity for
 -- builtins
 data ArgList : Nat -> ScopedList Name -> Type where
-     NoArgs : ArgList Z SLNil
+     NoArgs : ArgList Z [<]
      ConsArg : (a : Name) -> ArgList k as -> ArgList (S k) (a :%: as)
 
 mkArgList : Int -> (n : Nat) -> (ns ** ArgList n ns)
@@ -397,17 +397,17 @@ mkArgList i (S k)
           (_ ** ConsArg (MN "arg" i) rec)
 
 data NArgs : Type where
-     User : Name -> List (Closure SLNil) -> NArgs
-     Struct : String -> List (String, Closure SLNil) -> NArgs
+     User : Name -> List (Closure [<]) -> NArgs
+     Struct : String -> List (String, Closure [<]) -> NArgs
      NUnit : NArgs
      NPtr : NArgs
      NGCPtr : NArgs
      NBuffer : NArgs
      NForeignObj : NArgs
-     NIORes : Closure SLNil -> NArgs
+     NIORes : Closure [<] -> NArgs
 
 getPArgs : {auto c : Ref Ctxt Defs} ->
-           Defs -> Closure SLNil -> Core (String, Closure SLNil)
+           Defs -> Closure [<] -> Core (String, Closure [<])
 getPArgs defs cl
     = do NDCon fc _ _ _ args <- evalClosure defs cl
              | nf => throw (GenericMsg (getLoc nf) "Badly formed struct type")
@@ -419,13 +419,13 @@ getPArgs defs cl
               _ => throw (GenericMsg fc "Badly formed struct type")
 
 getFieldArgs : {auto c : Ref Ctxt Defs} ->
-               Defs -> Closure SLNil -> Core (List (String, Closure SLNil))
+               Defs -> Closure [<] -> Core (List (String, Closure [<]))
 getFieldArgs defs cl
     = do NDCon fc _ _ _ args <- evalClosure defs cl
              | nf => throw (GenericMsg (getLoc nf) "Badly formed struct type")
          case map snd args of
               -- cons
-              (_ :%: t :%: rest :%: SLNil) =>
+              (_ :%: t :%: rest :%: [<]) =>
                   do rest' <- getFieldArgs defs rest
                      (n, ty) <- getPArgs defs t
                      pure ((n, ty) :: rest')
@@ -433,23 +433,23 @@ getFieldArgs defs cl
               _ => pure []
 
 getNArgs : {auto c : Ref Ctxt Defs} ->
-           Defs -> Name -> ScopedList (Closure SLNil) -> Core NArgs
-getNArgs defs (NS _ (UN $ Basic "IORes")) (arg :%: SLNil) = pure $ NIORes arg
-getNArgs defs (NS _ (UN $ Basic "Ptr")) (arg :%: SLNil) = pure NPtr
-getNArgs defs (NS _ (UN $ Basic "AnyPtr")) SLNil = pure NPtr
-getNArgs defs (NS _ (UN $ Basic "GCPtr")) (arg :%: SLNil) = pure NGCPtr
-getNArgs defs (NS _ (UN $ Basic "GCAnyPtr")) SLNil = pure NGCPtr
-getNArgs defs (NS _ (UN $ Basic "Buffer")) SLNil = pure NBuffer
-getNArgs defs (NS _ (UN $ Basic "ForeignObj")) SLNil = pure NForeignObj
-getNArgs defs (NS _ (UN $ Basic "Unit")) SLNil = pure NUnit
-getNArgs defs (NS _ (UN $ Basic "Struct")) (n :%: args :%: SLNil)
+           Defs -> Name -> ScopedList (Closure [<]) -> Core NArgs
+getNArgs defs (NS _ (UN $ Basic "IORes")) (arg :%: [<]) = pure $ NIORes arg
+getNArgs defs (NS _ (UN $ Basic "Ptr")) (arg :%: [<]) = pure NPtr
+getNArgs defs (NS _ (UN $ Basic "AnyPtr")) [<] = pure NPtr
+getNArgs defs (NS _ (UN $ Basic "GCPtr")) (arg :%: [<]) = pure NGCPtr
+getNArgs defs (NS _ (UN $ Basic "GCAnyPtr")) [<] = pure NGCPtr
+getNArgs defs (NS _ (UN $ Basic "Buffer")) [<] = pure NBuffer
+getNArgs defs (NS _ (UN $ Basic "ForeignObj")) [<] = pure NForeignObj
+getNArgs defs (NS _ (UN $ Basic "Unit")) [<] = pure NUnit
+getNArgs defs (NS _ (UN $ Basic "Struct")) (n :%: args :%: [<])
     = do NPrimVal _ (Str n') <- evalClosure defs n
              | nf => throw (GenericMsg (getLoc nf) "Unknown name for struct")
          pure (Struct n' !(getFieldArgs defs args))
 getNArgs defs n args = pure $ User n (toList args)
 
 nfToCFType : {auto c : Ref Ctxt Defs} ->
-             FC -> (inStruct : Bool) -> NF SLNil -> Core CFType
+             FC -> (inStruct : Bool) -> NF [<] -> Core CFType
 nfToCFType _ _ (NPrimVal _ $ PrT IntType) = pure CFInt
 nfToCFType _ _ (NPrimVal _ $ PrT IntegerType) = pure CFInteger
 nfToCFType _ _ (NPrimVal _ $ PrT Bits8Type) = pure CFUnsigned8
@@ -510,7 +510,7 @@ nfToCFType fc s t
                                       show !(toFullNames ty)))
 
 getCFTypes : {auto c : Ref Ctxt Defs} ->
-             List CFType -> NF SLNil ->
+             List CFType -> NF [<] ->
              Core (List CFType, CFType)
 getCFTypes args (NBind fc _ (Pi _ _ _ ty) sc)
     = do defs <- get Ctxt
@@ -520,19 +520,19 @@ getCFTypes args (NBind fc _ (Pi _ _ _ ty) sc)
 getCFTypes args t
     = pure (reverse args, !(nfToCFType (getLoc t) False t))
 
-lamRHSenv : Int -> FC -> (ns : ScopedList Name) -> (SizeOf ns, SubstCEnv ns SLNil)
-lamRHSenv i fc SLNil = (zero, [])
+lamRHSenv : Int -> FC -> (ns : ScopedList Name) -> (SizeOf ns, SubstCEnv ns [<])
+lamRHSenv i fc [<] = (zero, [])
 lamRHSenv i fc (n :%: ns)
     = let (s, env) = lamRHSenv (i + 1) fc ns in
       (suc s, CRef fc (MN "x" i) :: env)
 
 mkBounds : (xs : _) -> SL.Bounds xs
-mkBounds SLNil = None
+mkBounds [<] = None
 mkBounds (x :%: xs) = Add x x (mkBounds xs)
 
 getNewArgs : {done : _} ->
              SubstCEnv done args -> ScopedList Name
-getNewArgs [] = SLNil
+getNewArgs [] = [<]
 getNewArgs (CRef _ n :: xs) = n :%: getNewArgs xs
 getNewArgs {done = x :%: xs} (_ :: sub) = x :%: getNewArgs sub
 
@@ -540,17 +540,17 @@ getNewArgs {done = x :%: xs} (_ :: sub) = x :%: getNewArgs sub
 -- we have to assume arity 0 for incremental compilation because
 -- we have no idea how it's defined, and when we made calls to the
 -- function, they had arity 0.
-lamRHS : (ns : ScopedList Name) -> CExp ns -> CExp SLNil
+lamRHS : (ns : ScopedList Name) -> CExp ns -> CExp [<]
 lamRHS ns tm
     = let (s, env) = lamRHSenv 0 (getFC tm) ns
           tmExp = substs s env (rewrite appendNilRightNeutral ns in tm)
           newArgs = reverse $ getNewArgs env
           bounds = mkBounds newArgs
-          expLocs = mkLocals zero {vars = SLNil} bounds tmExp in
+          expLocs = mkLocals zero {vars = [<]} bounds tmExp in
           lamBind (getFC tm) _ expLocs
   where
-    lamBind : FC -> (ns : ScopedList Name) -> CExp ns -> CExp SLNil
-    lamBind fc SLNil tm = tm
+    lamBind : FC -> (ns : ScopedList Name) -> CExp ns -> CExp [<]
+    lamBind fc [<] tm = tm
     lamBind fc (n :%: ns) tm = lamBind fc ns (CLam fc n tm)
 
 toCDef : Ref Ctxt Defs => Ref NextMN Int =>
@@ -566,7 +566,7 @@ toCDef n ty erased (PMDef pi args _ tree _)
             else MkFun args' (shrinkCExp p comptree)
   where
     toLam : Bool -> CDef -> CDef
-    toLam True (MkFun args rhs) = MkFun SLNil (lamRHS args rhs)
+    toLam True (MkFun args rhs) = MkFun [<] (lamRHS args rhs)
     toLam _ d = d
 toCDef n ty _ (ExternDef arity)
     = let (ns ** args) = mkArgList 0 arity in
@@ -595,7 +595,7 @@ toCDef n ty _ (Builtin {arity} op)
 toCDef n _ _ (DCon tag arity pos)
     = do let nt = snd <$> pos
          defs <- get Ctxt
-         args <- numArgs {vars = SLNil} defs (Ref EmptyFC (DataCon tag arity) n)
+         args <- numArgs {vars = [<]} defs (Ref EmptyFC (DataCon tag arity) n)
          let arity' = case args of
                  NewTypeBy ar _ => ar
                  EraseArgs ar erased => ar `minus` length erased
@@ -620,7 +620,7 @@ toCDef n ty _ def
 
 export
 compileExp : {auto c : Ref Ctxt Defs} ->
-             ClosedTerm -> Core (CExp SLNil)
+             ClosedTerm -> Core (CExp [<])
 compileExp tm
     = do s <- newRef NextMN 0
          exp <- toCExp (UN $ Basic "main") tm

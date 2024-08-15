@@ -259,7 +259,7 @@ data LiftedDef : Type where
      ||| `LCrash` rather than `prim_crash`.
      |||
      ||| @ expl : an explanation of the error.
-     MkLError : (expl : Lifted SLNil) -> LiftedDef
+     MkLError : (expl : Lifted [<]) -> LiftedDef
 
 showLazy : Maybe LazyReason -> String
 showLazy = maybe "" $ (" " ++) . show
@@ -375,7 +375,7 @@ contractUsed (MkUsed xs) = MkUsed (tail xs)
 contractUsedMany : {remove : _} ->
                    (Used (remove +%+ vars)) ->
                    Used vars
-contractUsedMany {remove=SLNil} x = x
+contractUsedMany {remove=[<]} x = x
 contractUsedMany {remove=(r:%:rs)} x = contractUsedMany {remove=rs} (contractUsed x)
 
 markUsed : {vars : _} ->
@@ -401,7 +401,7 @@ total
 dropped : (vars : ScopedList Name) ->
           (drop : Vect (length vars) Bool) ->
           ScopedList Name
-dropped SLNil _ = SLNil
+dropped [<] _ = [<]
 dropped (x:%:xs) (False::us) = x:%:(dropped xs us)
 dropped (x:%:xs) (True::us) = dropped xs us
 
@@ -419,7 +419,7 @@ usedVars used (LUnderApp fc n miss args) =
 usedVars used (LApp fc lazy c arg) =
   usedVars (usedVars used arg) c
 usedVars used (LLet fc x val sc) =
-  let innerUsed = contractUsed $ usedVars (weakenUsed {outer=(x :%: SLNil)} used) sc in
+  let innerUsed = contractUsed $ usedVars (weakenUsed {outer=(x :%: [<])} used) sc in
       usedVars innerUsed val
 usedVars used (LCon fc n ci tag args) =
   foldl (usedVars {vars}) used args
@@ -455,11 +455,11 @@ dropIdx : {vars : _} ->
           (unused : Vect (length vars) Bool) ->
           (0 p : IsVar x idx (outer +%+ vars)) ->
           Var (outer +%+ (dropped vars unused))
-dropIdx SLNil (False::_) First = MkVar First
-dropIdx SLNil (True::_) First = assert_total $
+dropIdx [<] (False::_) First = MkVar First
+dropIdx [<] (True::_) First = assert_total $
   idris_crash "INTERNAL ERROR: Referenced variable marked as unused"
-dropIdx SLNil (False::rest) (Later p) = Var.later $ dropIdx SLNil rest p
-dropIdx SLNil (True::rest) (Later p) = dropIdx SLNil rest p
+dropIdx [<] (False::rest) (Later p) = Var.later $ dropIdx [<] rest p
+dropIdx [<] (True::rest) (Later p) = dropIdx [<] rest p
 dropIdx (_:%:xs) unused First = MkVar First
 dropIdx (_:%:xs) unused (Later p) = Var.later $ dropIdx xs unused p
 
@@ -537,7 +537,7 @@ mutual
     where
 
         allPrfs : (vs : ScopedList Name) -> (unused : Vect (length vs) Bool) -> List (Var vs)
-        allPrfs SLNil _ = []
+        allPrfs [<] _ = []
         allPrfs (v :%: vs) (False::uvs) = MkVar First :: map weaken (allPrfs vs uvs)
         allPrfs (v :%: vs) (True::uvs) = map weaken (allPrfs vs uvs)
 
@@ -556,7 +556,7 @@ mutual
             CExp vars -> Core (Lifted vars)
   liftExp (CLocal fc prf) = pure $ LLocal fc prf
   liftExp (CRef fc n) = pure $ LAppName fc lazy n [] -- probably shouldn't happen!
-  liftExp (CLam fc x sc) = makeLam {doLazyAnnots} {lazy} fc (x :%: SLNil) sc
+  liftExp (CLam fc x sc) = makeLam {doLazyAnnots} {lazy} fc (x :%: [<]) sc
   liftExp (CLet fc x _ val sc) = pure $ LLet fc x !(liftExp {doLazyAnnots} val) !(liftExp {doLazyAnnots} sc)
   liftExp (CApp fc (CRef _ n) args) -- names are applied exactly in compileExp
       = pure $ LAppName fc lazy n !(traverse (liftExp {doLazyAnnots}) args)
@@ -607,7 +607,7 @@ export
 lambdaLiftDef : (doLazyAnnots : Bool) -> Name -> CDef -> Core (List (Name, LiftedDef))
 lambdaLiftDef doLazyAnnots n (MkFun args exp)
     = do (expl, defs) <- liftBody {doLazyAnnots} n exp
-         pure ((n, MkLFun args SLNil expl) :: defs)
+         pure ((n, MkLFun args [<] expl) :: defs)
 lambdaLiftDef _ n (MkCon t a nt) = pure [(n, MkLCon t a nt)]
 lambdaLiftDef _ n (MkForeign ccs fargs ty) = pure [(n, MkLForeign ccs fargs ty)]
 lambdaLiftDef doLazyAnnots n (MkError exp)

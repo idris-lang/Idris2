@@ -43,12 +43,12 @@ Show a => Show (ArgMode' a) where
   show Dynamic = "Dynamic"
 
 
-getStatic : ArgMode -> Maybe (Term SLNil)
+getStatic : ArgMode -> Maybe (Term [<])
 getStatic Dynamic = Nothing
 getStatic (Static t) = Just t
 
 specialiseTy : {vars : _} ->
-               Nat -> List (Nat, Term SLNil) -> Term vars -> Term vars
+               Nat -> List (Nat, Term [<]) -> Term vars -> Term vars
 specialiseTy i specs (Bind fc x (Pi fc' c p ty) sc)
     = case lookup i specs of
            Nothing => Bind fc x (Pi fc' c p ty) $ -- easier later if everything explicit
@@ -76,7 +76,7 @@ substLocs : {vs : _} ->
 substLocs [] tm = tm
 substLocs ((i, tm') :: subs) tm = substLocs subs (substLoc i tm' tm)
 
-mkSubsts : Nat -> List (Nat, Term SLNil) ->
+mkSubsts : Nat -> List (Nat, Term [<]) ->
            List (Term vs) -> Term vs -> Maybe (List (Nat, Term vs))
 mkSubsts i specs [] rhs = Just []
 mkSubsts i specs (arg :: args) rhs
@@ -94,7 +94,7 @@ mkSubsts i specs (arg :: args) rhs
 
 -- In the case where all the specialised positions are variables on the LHS,
 -- substitute the term in on the RHS
-specPatByVar : List (Nat, Term SLNil) ->
+specPatByVar : List (Nat, Term [<]) ->
                 (vs ** (Env Term vs, Term vs, Term vs)) ->
                 Maybe (vs ** (Env Term vs, Term vs, Term vs))
 specPatByVar specs (vs ** (env, lhs, rhs))
@@ -103,7 +103,7 @@ specPatByVar specs (vs ** (env, lhs, rhs))
          let lhs' = apply (getLoc fn) fn args
          pure (vs ** (env, substLocs psubs lhs', substLocs psubs rhs))
 
-specByVar : List (Nat, Term SLNil) ->
+specByVar : List (Nat, Term [<]) ->
             List (vs ** (Env Term vs, Term vs, Term vs)) ->
             Maybe (List (vs ** (Env Term vs, Term vs, Term vs)))
 specByVar specs [] = pure []
@@ -112,8 +112,8 @@ specByVar specs (p :: ps)
          ps' <- specByVar specs ps
          pure (p' :: ps')
 
-dropSpec : Nat -> List (Nat, Term SLNil) -> ScopedList a -> ScopedList a
-dropSpec i sargs SLNil = SLNil
+dropSpec : Nat -> List (Nat, Term [<]) -> ScopedList a -> ScopedList a
+dropSpec i sargs [<] = [<]
 dropSpec i sargs (x :%: xs)
     = case lookup i sargs of
            Nothing => x :%: dropSpec (1 + i) sargs xs
@@ -122,9 +122,9 @@ dropSpec i sargs (x :%: xs)
 getSpecPats : {auto c : Ref Ctxt Defs} ->
               FC -> Name ->
               (fn : Name) -> (stk : ScopedList (FC, Term vars)) ->
-              NF SLNil -> -- Type of 'fn'
+              NF [<] -> -- Type of 'fn'
               List (Nat, ArgMode) -> -- All the arguments
-              List (Nat, Term SLNil) -> -- Just the static ones
+              List (Nat, Term [<]) -> -- Just the static ones
               List (vs ** (Env Term vs, Term vs, Term vs)) ->
               Core (Maybe (List ImpClause))
 getSpecPats fc pename fn stk fnty args sargs pats
@@ -151,7 +151,7 @@ getSpecPats fc pename fn stk fnty args sargs pats
     -- Build a RHS from the type of the function to be specialised, the
     -- dynamic argument names, and the list of given arguments. We assume
     -- the latter two correspond appropriately.
-    mkRHSargs : NF SLNil -> RawImp -> List String -> List (Nat, ArgMode) ->
+    mkRHSargs : NF [<] -> RawImp -> List String -> List (Nat, ArgMode) ->
                 Core RawImp
     mkRHSargs (NBind _ x (Pi _ _ Explicit _) sc) app (a :: as) ((_, Dynamic) :: ds)
         = do defs <- get Ctxt
@@ -192,7 +192,7 @@ getSpecPats fc pename fn stk fnty args sargs pats
     getRawArgs args tm = args
 
     reapply : RawImp -> ScopedList (Arg' Name) -> RawImp
-    reapply f SLNil = f
+    reapply f [<] = f
     reapply f (Explicit fc arg :%: args) = reapply (IApp fc f arg) args
     reapply f (Named fc n arg :%: args)
         = reapply (INamedApp fc f n arg) args
@@ -200,7 +200,7 @@ getSpecPats fc pename fn stk fnty args sargs pats
         = reapply (IAutoApp fc f arg) args
 
     dropArgs : Name -> RawImp -> RawImp
-    dropArgs pename tm = reapply (IVar fc pename) (dropSpec 0 sargs (getRawArgs SLNil tm))
+    dropArgs pename tm = reapply (IVar fc pename) (dropSpec 0 sargs (getRawArgs [<] tm))
 
     unelabPat : Name -> (vs ** (Env Term vs, Term vs, Term vs)) ->
                 Core ImpClause
@@ -283,7 +283,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
            log "specialise.flags" 20 "Defining \{show pename} with flags: \{show defflags}"
            peidx <- addDef pename
                   $ the (GlobalDef -> GlobalDef) { flags := defflags }
-                  $ newDef fc pename top SLNil sty (specified Public) None
+                  $ newDef fc pename top [<] sty (specified Public) None
            addToSave (Resolved peidx)
 
            -- Reduce the function to be specialised, and reduce any name in
@@ -409,7 +409,7 @@ specialise {vars} fc env gdef fn stk
         specs =>
             do fnfull <- toFullNames fn
                -- If all the arguments are concrete (meaning, no local variables
-               -- or holes in them, so they can be a Term SLNil) we can specialise
+               -- or holes in them, so they can be a Term [<]) we can specialise
                Just sargs <- getSpecArgs 0 specs stk
                    | Nothing => pure Nothing
                defs <- get Ctxt
@@ -425,12 +425,12 @@ specialise {vars} fc env gdef fn stk
                     Just _ => pure Nothing
   where
     concrete : {vars : _} ->
-               Term vars -> Maybe (Term SLNil)
+               Term vars -> Maybe (Term [<])
     concrete tm = shrink tm none
 
     getSpecArgs : Nat -> List Nat -> ScopedList (FC, Term vars) ->
                   Core (Maybe (List (Nat, ArgMode)))
-    getSpecArgs i specs SLNil = pure (Just [])
+    getSpecArgs i specs [<] = pure (Just [])
     getSpecArgs i specs ((_, x) :%: xs)
         = do Just xs' <- getSpecArgs (1 + i) specs xs
                  | Nothing => pure Nothing
@@ -459,24 +459,24 @@ findSpecs env stk (Ref fc Func fn)
               | Nothing => pure (applyStackWithFC (Ref fc Func fn) stk)
          pure r
 findSpecs env stk (Meta fc n i args)
-    = do args' <- traverse (findSpecs env SLNil) args
+    = do args' <- traverse (findSpecs env [<]) args
          pure $ applyStackWithFC (Meta fc n i args') stk
 findSpecs env stk (Bind fc x b sc)
-    = do b' <- traverse (findSpecs env SLNil) b
-         sc' <- findSpecs (b' :: env) SLNil sc
+    = do b' <- traverse (findSpecs env [<]) b
+         sc' <- findSpecs (b' :: env) [<] sc
          pure $ applyStackWithFC (Bind fc x b' sc') stk
 findSpecs env stk (App fc fn arg)
-    = do arg' <- findSpecs env SLNil arg
+    = do arg' <- findSpecs env [<] arg
          findSpecs env ((fc, arg') :%: stk) fn
 findSpecs env stk (TDelayed fc r tm)
-    = do tm' <- findSpecs env SLNil tm
+    = do tm' <- findSpecs env [<] tm
          pure $ applyStackWithFC (TDelayed fc r tm') stk
 findSpecs env stk (TDelay fc r ty tm)
-    = do ty' <- findSpecs env SLNil ty
-         tm' <- findSpecs env SLNil tm
+    = do ty' <- findSpecs env [<] ty
+         tm' <- findSpecs env [<] tm
          pure $ applyStackWithFC (TDelay fc r ty' tm') stk
 findSpecs env stk (TForce fc r tm)
-    = do tm' <- findSpecs env SLNil tm
+    = do tm' <- findSpecs env [<] tm
          pure $ applyStackWithFC (TForce fc r tm') stk
 findSpecs env stk tm = pure $ applyStackWithFC tm stk
 
@@ -502,7 +502,7 @@ mutual
               Ref QVar Int -> Defs -> Bounds bound ->
               Env Term free -> ScopedList (Closure free) ->
               Core (ScopedList (Term (bound +%+ free)))
-  quoteArgs q defs bounds env SLNil = pure SLNil
+  quoteArgs q defs bounds env [<] = pure [<]
   quoteArgs q defs bounds env (a :%: args)
       = pure $ (!(quoteGenNF q defs bounds env !(evalClosure defs a)) :%:
                 !(quoteArgs q defs bounds env args))
@@ -534,7 +534,7 @@ mutual
     where
       addLater : {idx : _} -> (ys : ScopedList Name) -> (0 p : IsVar n idx xs) ->
                  Var (ys +%+ xs)
-      addLater SLNil isv = MkVar isv
+      addLater [<] isv = MkVar isv
       addLater (x :%: xs) isv
           = let MkVar isv' = addLater xs isv in
                 MkVar (Later isv')
@@ -719,7 +719,7 @@ applySpecialise : {vars : _} ->
                   Term vars -> -- initial RHS
                   Core (Term vars)
 applySpecialise env Nothing tm
-    = findSpecs env SLNil tm -- not specialising, just search through RHS
+    = findSpecs env [<] tm -- not specialising, just search through RHS
 applySpecialise env (Just ls) tmin -- specialising, evaluate RHS while looking
                                  -- for names to specialise
     = do defs <- get Ctxt

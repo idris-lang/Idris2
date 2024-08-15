@@ -48,7 +48,7 @@ import Libraries.Data.SortedMap
 ||| whether it was encountered in delayed subexpression.
 public export
 UsageMap : Type
-UsageMap = SortedMap (Integer, CExp SLNil) (Name, Integer, Bool)
+UsageMap = SortedMap (Integer, CExp [<]) (Name, Integer, Bool)
 
 ||| Number of appearances of a closed expression.
 |||
@@ -76,7 +76,7 @@ Show Count where
 ||| some delayed expression.
 public export
 ReplaceMap : Type
-ReplaceMap = SortedMap Name (CExp SLNil, Count, Bool)
+ReplaceMap = SortedMap Name (CExp [<], Count, Bool)
 
 toReplaceMap : UsageMap -> ReplaceMap
 toReplaceMap = SortedMap.fromList
@@ -99,7 +99,7 @@ record St where
 -- returning a new machine generated name to be used
 -- if the expression should be lifted to the toplevel.
 -- Very small expressions are being ignored.
-store : Ref Sts St => Integer -> CExp SLNil -> Core (Maybe Name)
+store : Ref Sts St => Integer -> CExp [<] -> Core (Maybe Name)
 store sz exp =
   if sz < 5
      then pure Nothing
@@ -122,7 +122,7 @@ dropVar :  (pre : ScopedList Name)
         -> (n : Nat)
         -> (0 p : IsVar x n (pre +%+ ns))
         -> Maybe (IsVar x n pre)
-dropVar SLNil _ _        = Nothing
+dropVar [<] _ _        = Nothing
 dropVar (y :%: xs) 0 First = Just First
 dropVar (y :%: xs) (S k) (Later p) =
   case dropVar xs k p of
@@ -204,7 +204,7 @@ mutual
 
   analyze exp = do
     (sze, exp') <- analyzeSubExp exp
-    case dropEnv {pre = SLNil} exp' of
+    case dropEnv {pre = [<]} exp' of
       Just e0 => do
         Just nm <- store sze e0
           | Nothing => pure (sze, exp')
@@ -474,12 +474,12 @@ replaceDef (n, fc, d@(MkError _))       = pure (n, fc, d)
 
 newToplevelDefs : ReplaceMap -> List (Name, FC, CDef)
 newToplevelDefs rm = mapMaybe toDef $ SortedMap.toList rm
-  where toDef : (Name,(CExp SLNil,Count,Bool)) -> Maybe (Name, FC, CDef)
-        toDef (nm,(exp,Many,False)) = Just (nm, EmptyFC, MkFun SLNil exp)
-        toDef (nm,(exp,Many,True)) = Just (nm, EmptyFC, MkFun SLNil (CDelay EmptyFC LLazy exp))
+  where toDef : (Name,(CExp [<],Count,Bool)) -> Maybe (Name, FC, CDef)
+        toDef (nm,(exp,Many,False)) = Just (nm, EmptyFC, MkFun [<] exp)
+        toDef (nm,(exp,Many,True)) = Just (nm, EmptyFC, MkFun [<] (CDelay EmptyFC LLazy exp))
         toDef _               = Nothing
 
-undefinedCount : (Name, (CExp SLNil, Count)) -> Bool
+undefinedCount : (Name, (CExp [<], Count)) -> Bool
 undefinedCount (_, _, Once) = False
 undefinedCount (_, _, Many) = False
 undefinedCount (_, _, C x)  = True

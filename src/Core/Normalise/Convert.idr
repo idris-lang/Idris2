@@ -50,7 +50,7 @@ tryUpdate ms (Local fc l idx p)
          pure $ Local fc l _ p'
   where
     findIdx : ScopedList (Var vars, Var vars') -> Var vars -> Maybe (Var vars')
-    findIdx SLNil _ = Nothing
+    findIdx [<] _ = Nothing
     findIdx ((old, v) :%: ps) n
         = if old == n then Just v else findIdx ps n
 tryUpdate ms (Ref fc nt n) = pure $ Ref fc nt n
@@ -88,7 +88,7 @@ mutual
               {vars : _} ->
               Ref QVar Int -> Bool -> Defs -> Env Term vars ->
               ScopedList (NF vars) -> ScopedList (NF vars) -> Core Bool
-  allConvNF q i defs env SLNil SLNil = pure True
+  allConvNF q i defs env [<] [<] = pure True
   allConvNF q i defs env (x :%: xs) (y :%: ys)
       = do ok <- allConvNF q i defs env xs ys
            if ok then convGen q i defs env x y
@@ -99,7 +99,7 @@ mutual
   -- conversion failures without going deeply into all the arguments.
   -- True means they might still match
   quickConv : ScopedList (NF vars) -> ScopedList (NF vars) -> Bool
-  quickConv SLNil SLNil = True
+  quickConv [<] [<] = True
   quickConv (x :%: xs) (y :%: ys) = quickConvArg x y && quickConv xs ys
     where
       quickConvHead : NHead vars -> NHead vars -> Bool
@@ -163,7 +163,7 @@ mutual
       extend : (cs : ScopedList Name) -> (cs' : ScopedList Name) ->
                (ScopedList (Var args, Var args')) ->
                Maybe (ScopedList (Var (cs +%+ args), Var (cs' +%+ args')))
-      extend SLNil SLNil ms = pure ms
+      extend [<] [<] ms = pure ms
       extend (c :%: cs) (c' :%: cs') ms
           = do rest <- extend cs cs' ms
                pure ((MkVar First, MkVar First) :%: map weakenP rest)
@@ -171,7 +171,7 @@ mutual
 
       dropV : forall args .
               (cs : ScopedList Name) -> Var (cs +%+ args) -> Maybe (Var args)
-      dropV SLNil v = Just v
+      dropV [<] v = Just v
       dropV (c :%: cs) (MkVar First) = Nothing
       dropV (c :%: cs) (MkVar (Later x))
           = dropV cs (MkVar x)
@@ -234,21 +234,21 @@ mutual
           -- If the two case blocks match in structure, get which variables
           -- correspond. If corresponding variables convert, the two case
           -- blocks convert.
-          Just ms <- getMatchingVars defs SLNil ct ct'
+          Just ms <- getMatchingVars defs [<] ct ct'
                | Nothing => pure False
           convertMatches ms
      where
        -- We've only got the index into the argument list, and the indices
        -- don't match up, which is annoying. But it'll always be there!
        getArgPos : Nat -> ScopedList (Closure vars) -> Maybe (Closure vars)
-       getArgPos _ SLNil = Nothing
+       getArgPos _ [<] = Nothing
        getArgPos Z (c :%: cs) = pure c
        getArgPos (S k) (c :%: cs) = getArgPos k cs
 
        convertMatches : {vs, vs' : _} ->
                         ScopedList (Var vs, Var vs') ->
                         Core Bool
-       convertMatches SLNil = pure True
+       convertMatches [<] = pure True
        convertMatches ((MkVar {varIdx = ix} p, MkVar {varIdx = iy} p') :%: vs)
           = do let Just varg = getArgPos ix nargs
                    | Nothing => pure False
@@ -382,7 +382,7 @@ mutual
 
           dropInf : Nat -> List Nat -> ScopedList a -> ScopedList a
           dropInf _ [] xs = xs
-          dropInf _ _ SLNil = SLNil
+          dropInf _ _ [<] = [<]
           dropInf i ds (x :%: xs)
               = if i `elem` ds
                    then dropInf (S i) ds xs
