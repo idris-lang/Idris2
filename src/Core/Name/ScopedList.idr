@@ -18,7 +18,12 @@ mutual
   data ScopedList a = Lin | (:%:) a (ScopedList a)
   -- TODO: make that a SnocList
 
-export infixr 7 +%+
+export infixl 7 :<%:
+
+public export
+(:<%:) : ScopedList as -> as -> ScopedList as
+(:<%:) [<] a = a :%: [<]
+(:<%:) as a = a :%: as
 
 public export
 length : ScopedList a -> Nat
@@ -64,6 +69,8 @@ Zippable ScopedList where
   unzipWith3 f (x :%: xs) = let (b, c, d) = f x
                                 (bs, cs, ds) = unzipWith3 f xs in
                                 (b :%: bs, c :%: cs, d :%: ds)
+
+export infixr 7 +%+
 
 public export
 (+%+) : (xs, ys : ScopedList a) -> ScopedList a
@@ -262,6 +269,12 @@ reverseOnto acc (x:%:xs) = reverseOnto (x:%:acc) xs
 public export
 reverse : ScopedList a -> ScopedList a
 reverse = reverseOnto [<]
+
+export infixl 7 +<%+
+
+public export
+(+<%+) : (xs, ys : ScopedList a) -> ScopedList a
+(+<%+) xs ys = ys +%+ xs
 
 hasLengthReverseOnto : HasLength m acc -> HasLength n xs -> HasLength (m + n) (reverseOnto acc xs)
 hasLengthReverseOnto p Z = rewrite plusZeroRightNeutral m in p
