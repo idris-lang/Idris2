@@ -120,7 +120,7 @@ prettyCExp : {args : _} -> CExp args -> Doc IdrisSyntax
 prettyCExp = prettyNamedCExp . forget
 
 prettyCDef : CDef -> Doc IdrisDocAnn
-prettyCDef (MkFun SLNil exp) = reAnnotate Syntax $ prettyCExp exp
+prettyCDef (MkFun [<] exp) = reAnnotate Syntax $ prettyCExp exp
 prettyCDef (MkFun args exp) = reAnnotate Syntax $
   keyword "\\" <++> concatWith (\ x, y => x <+> keyword "," <++> y) (map prettyName $ toList args)
        <++> fatArrow <++> prettyCExp exp

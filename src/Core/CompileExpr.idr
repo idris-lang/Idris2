@@ -211,7 +211,7 @@ data CDef : Type where
                  CDef
      -- A function which will fail at runtime (usually due to being a hole) so needs
      -- to run, discarding arguments, no matter how many arguments are passed
-     MkError : CExp SLNil -> CDef
+     MkError : CExp [<] -> CDef
 
 public export
 data NamedDef : Type where
@@ -274,7 +274,7 @@ mutual
 
 export
 data Names : ScopedList Name -> Type where
-     Nil : Names SLNil
+     Nil : Names [<]
      (::) : Name -> Names xs -> Names (x :%: xs)
 
 elem : Name -> Names xs -> Bool
@@ -299,13 +299,13 @@ getLocName (S k) (x :: xs) (Later p) = getLocName k xs p
 
 export
 addLocs : (args : ScopedList Name) -> Names vars -> Names (args +%+ vars)
-addLocs SLNil ns = ns
+addLocs [<] ns = ns
 addLocs (x :%: xs) ns
     = let rec = addLocs xs ns in
           uniqueName x rec :: rec
 
 conArgs : (args : ScopedList Name) -> Names (args +%+ vars) -> List Name
-conArgs SLNil ns = []
+conArgs [<] ns = []
 conArgs (a :%: as) (n :: ns) = n :: conArgs as ns
 
 mutual
@@ -313,10 +313,10 @@ mutual
   forgetExp locs (CLocal fc p) = NmLocal fc (getLocName _ locs p)
   forgetExp locs (CRef fc n) = NmRef fc n
   forgetExp locs (CLam fc x sc)
-      = let locs' = addLocs (x :%: SLNil) locs in
+      = let locs' = addLocs (x :%: [<]) locs in
             NmLam fc (getLocName _ locs' First) (forgetExp locs' sc)
   forgetExp locs (CLet fc x _ val sc)
-      = let locs' = addLocs (x :%: SLNil) locs in
+      = let locs' = addLocs (x :%: [<]) locs in
             NmLet fc (getLocName _ locs' First)
                      (forgetExp locs val)
                      (forgetExp locs' sc)
@@ -361,7 +361,7 @@ export
 forgetDef : CDef -> NamedDef
 forgetDef (MkFun args def)
     = let ns = addLocs args []
-          args' = conArgs {vars = SLNil} args ns in
+          args' = conArgs {vars = [<]} args ns in
           MkNmFun args' (forget def)
 forgetDef (MkCon t a nt) = MkNmCon t a nt
 forgetDef (MkForeign ccs fargs ty) = MkNmForeign ccs fargs ty

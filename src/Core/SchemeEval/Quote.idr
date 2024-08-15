@@ -70,7 +70,7 @@ mutual
       addLater : {idx : _} ->
                  (ys : ScopedList Name) -> (0 p : IsVar n idx xs) ->
                  Var (ys +%+ xs)
-      addLater SLNil isv = MkVar isv
+      addLater [<] isv = MkVar isv
       addLater (x :%: xs) isv
           = let MkVar isv' = addLater xs isv in
                 MkVar (Later isv')

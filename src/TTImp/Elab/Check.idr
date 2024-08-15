@@ -413,7 +413,7 @@ uniVar : {auto c : Ref Ctxt Defs} ->
          FC -> Core Name
 uniVar fc
     = do n <- genName "u"
-         idx <- addDef n (newDef fc n erased SLNil (Erased fc Placeholder) (specified Public) None)
+         idx <- addDef n (newDef fc n erased [<] (Erased fc Placeholder) (specified Public) None)
          pure (Resolved idx)
 
 export
@@ -453,7 +453,7 @@ searchVar fc rig depth def env nest n ty
 
     envHints : List Name -> Env Term vars ->
                Core (vars' ** (Term (vars' +%+ vars) -> Term vars, Env Term (vars' +%+ vars)))
-    envHints [] env = pure (SLNil ** (id, env))
+    envHints [] env = pure ([<] ** (id, env))
     envHints (n :: ns) env
         = do (vs ** (f, env')) <- envHints ns env
              let Just (nestn, argns, tmf) = find !(toFullNames n) (names nest)

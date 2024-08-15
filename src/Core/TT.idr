@@ -320,7 +320,7 @@ Pretty Void Terminating where
 public export
 data Covering
        = IsCovering
-       | MissingCases (List (Term SLNil))
+       | MissingCases (List (Term [<]))
        | NonCoveringCall (List Name)
 
 export

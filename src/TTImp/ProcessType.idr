@@ -91,15 +91,15 @@ initDef fc n env ty (_ :: opts) = initDef fc n env ty opts
 -- generalising partially evaluated definitions and (potentially) in interactive
 -- editing
 findInferrable : {auto c : Ref Ctxt Defs} ->
-                 Defs -> NF SLNil -> Core (List Nat)
+                 Defs -> NF [<] -> Core (List Nat)
 findInferrable defs ty = fi 0 0 [] [] ty
   where
     mutual
       -- Add to the inferrable arguments from the given type. An argument is
       -- inferrable if it's guarded by a constructor, or on its own
       findInf : List Nat -> List (Name, Nat) ->
-                NF SLNil -> Core (List Nat)
-      findInf acc pos (NApp _ (NRef Bound n) SLNil)
+                NF [<] -> Core (List Nat)
+      findInf acc pos (NApp _ (NRef Bound n) [<])
           = case lookup n pos of
                  Nothing => pure acc
                  Just p => if p `elem` acc then pure acc else pure (p :: acc)
@@ -112,11 +112,11 @@ findInferrable defs ty = fi 0 0 [] [] ty
       findInf acc pos (NDelayed _ _ t) = findInf acc pos t
       findInf acc _ _ = pure acc
 
-      findInfs : List Nat -> List (Name, Nat) -> List (NF SLNil) -> Core (List Nat)
+      findInfs : List Nat -> List (Name, Nat) -> List (NF [<]) -> Core (List Nat)
       findInfs acc pos [] = pure acc
       findInfs acc pos (n :: ns) = findInf !(findInfs acc pos ns) pos n
 
-    fi : Nat -> Int -> List (Name, Nat) -> List Nat -> NF SLNil -> Core (List Nat)
+    fi : Nat -> Int -> List (Name, Nat) -> List Nat -> NF [<] -> Core (List Nat)
     fi pos i args acc (NBind fc x (Pi _ _ _ aty) sc)
         = do let argn = MN "inf" i
              sc' <- sc defs (toClosure defaultOpts [] (Ref fc Bound argn))

@@ -9,7 +9,7 @@ import Core.Name.ScopedList
 
 public export
 data Subst : Scoped -> Scope -> Scoped where
-  Nil : Subst tm SLNil vars
+  Nil : Subst tm [<] vars
   (::) : tm vars -> Subst tm ds vars -> Subst tm (d :%: ds) vars
 
 namespace Var
