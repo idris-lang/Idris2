@@ -40,6 +40,7 @@ data IDECommand
      | MakeCase Integer String
      | MakeWith Integer String
      | DocsFor String (Maybe DocMode)
+     | DocsForTypeOf String (Maybe DocMode)
      | Directive String
      | Apropos String
      | Metavariables Integer
@@ -56,6 +57,11 @@ data IDECommand
      | Version
      | GetOptions
 
+getDocModeOption : List SExp -> Maybe $ Maybe DocMode
+getDocModeOption [] = Just Nothing
+getDocModeOption [SymbolAtom "overview"] = Just $ Just Overview
+getDocModeOption [SymbolAtom "full"    ] = Just $ Just Full
+getDocModeOption _ = Nothing
 
 getIDECommand : SExp -> Maybe IDECommand
 getIDECommand (SExpList [SymbolAtom "interpret", StringAtom cmd])
@@ -106,14 +112,14 @@ getIDECommand (SExpList [SymbolAtom "make-case", IntegerAtom l, StringAtom n])
     = Just $ MakeCase l n
 getIDECommand (SExpList [SymbolAtom "make-with", IntegerAtom l, StringAtom n])
     = Just $ MakeWith l n
-getIDECommand (SExpList (SymbolAtom "docs-for" ::  StringAtom n :: modeTail))
+getIDECommand (SExpList (SymbolAtom "docs-for" :: StringAtom n :: modeTail))
     = do -- Maybe monad
-         modeOpt <- case modeTail of
-                      []                      => Just Nothing
-                      [SymbolAtom "overview"] => Just $ Just Overview
-                      [SymbolAtom "full"    ] => Just $ Just Full
-                      _ => Nothing
+         modeOpt <- getDocModeOption modeTail
          Just $ DocsFor n modeOpt
+getIDECommand (SExpList (SymbolAtom "docs-for-type-of" :: StringAtom n :: modeTail))
+    = do -- Maybe monad
+         modeOpt <- getDocModeOption modeTail
+         Just $ DocsForTypeOf n modeOpt
 getIDECommand (SExpList [SymbolAtom "apropos", StringAtom n])
     = Just $ Apropos n
 getIDECommand (SExpList [SymbolAtom "directive", StringAtom n])
@@ -148,6 +154,11 @@ export
 FromSExpable IDECommand where
   fromSExp = getIDECommand
 
+getDocModeTail : Maybe DocMode -> List SExp
+getDocModeTail Nothing = []
+getDocModeTail (Just Overview) = [SymbolAtom "overview"]
+getDocModeTail (Just Full) = [SymbolAtom "full"]
+
 putIDECommand : IDECommand -> SExp
 putIDECommand (Interpret cmd)                 = (SExpList [SymbolAtom "interpret", StringAtom cmd])
 putIDECommand (LoadFile fname Nothing)        = (SExpList [SymbolAtom "load-file", StringAtom fname])
@@ -172,11 +183,10 @@ putIDECommand GenerateDefNext                 = SymbolAtom "generate-def-next"
 putIDECommand (MakeLemma line n)              = (SExpList [SymbolAtom "make-lemma", IntegerAtom line, StringAtom n])
 putIDECommand (MakeCase line n)               = (SExpList [SymbolAtom "make-case", IntegerAtom line, StringAtom n])
 putIDECommand (MakeWith line n)               = (SExpList [SymbolAtom "make-with", IntegerAtom line, StringAtom n])
-putIDECommand (DocsFor n modeOpt)             = let modeTail = case modeOpt of
-                                                                 Nothing       => []
-                                                                 Just Overview => [SymbolAtom "overview"]
-                                                                 Just Full     => [SymbolAtom "full"] in
+putIDECommand (DocsFor n modeOpt)             = let modeTail = getDocModeTail modeOpt in
                                                 (SExpList (SymbolAtom "docs-for" ::  StringAtom n :: modeTail))
+putIDECommand (DocsForTypeOf n modeOpt)       = let modeTail = getDocModeTail modeOpt in
+                                                (SExpList (SymbolAtom "docs-for-type-of" :: StringAtom n :: modeTail))
 putIDECommand (Apropos n)                     = (SExpList [SymbolAtom "apropos", StringAtom n])
 putIDECommand (Metavariables n)               = (SExpList [SymbolAtom "metavariables", IntegerAtom n])
 putIDECommand (WhoCalls n)                    = (SExpList [SymbolAtom "who-calls", StringAtom n])

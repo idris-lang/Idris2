@@ -199,6 +199,10 @@ process (MakeWith l n)
     = replWrap $ Idris.REPL.process (Editing (MakeWith False (fromInteger l) (UN $ mkUserName n)))
 process (DocsFor n modeOpt)
     = replWrap $ Idris.REPL.process (Doc $ APTerm (PRef EmptyFC (UN $ mkUserName n)))
+process (DocsForTypeOf n modeOpt)
+    = do (REPL (TermChecked itm ity)) <- Idris.REPL.process $ (Check $ PRef replFC (UN $ mkUserName n))
+           | err => pure $ REPL $ REPLError (pretty0 $ show err)
+         process (DocsFor (prettyBy Syntax ity) modeOpt)
 process (Apropos n)
     = do todoCmd "apropros"
          pure $ REPL $ Printed emptyDoc
@@ -513,5 +517,5 @@ replIDE
          case res of
               REPL _ => printError $ reflow "Running idemode but output isn't"
               IDEMode _ inf outf => do
-                send outf (ProtocolVersion 2 1) -- TODO: Move this info somewhere more central
+                send outf (ProtocolVersion 2 2) -- TODO: Move this info somewhere more central
                 loop
