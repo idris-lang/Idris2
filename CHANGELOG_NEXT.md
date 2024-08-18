@@ -213,6 +213,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Added `fromRight` and `fromLeft` for extracting values out of `Either`, equivalent to `fromJust` for `Just`.
 
+* Export `System.Signal.signalCode` and `System.Signal.toSignal`.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
