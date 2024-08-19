@@ -215,6 +215,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Export `System.Signal.signalCode` and `System.Signal.toSignal`.
 
+* Added implementations of `Foldable` and `Traversable` for `Control.Monad.Identity`
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
