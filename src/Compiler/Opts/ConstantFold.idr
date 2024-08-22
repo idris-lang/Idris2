@@ -73,6 +73,7 @@ lookup fc (MkVar p) rho = case go p rho of
 replace : CExp vars -> Bool
 replace (CLocal _ _)   = True
 replace (CPrimVal _ _) = True
+replace (CErased _)    = True
 replace _              = False
 
 -- constant folding of primitive functions
@@ -140,8 +141,12 @@ constFold rho (COp {arity} fc fn xs) =
     constRight fc fn args = COp fc fn args
 
 constFold rho (CExtPrim fc p xs) = CExtPrim fc p $ constFold rho <$> xs
-constFold rho (CForce fc x y) = CForce fc x $ constFold rho y
-constFold rho (CDelay fc x y) = CDelay fc x $ constFold rho y
+constFold rho (CForce fc x y) =
+  let val = constFold rho y
+   in if replace val then val else CForce fc x val
+constFold rho (CDelay fc x y) =
+  let val = constFold rho y
+   in if replace val then val else CDelay fc x val
 constFold rho (CConCase fc sc xs x)
   = CConCase fc (constFold rho sc) (foldAlt <$> xs) (constFold rho <$> x)
   where
