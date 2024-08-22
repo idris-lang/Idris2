@@ -101,6 +101,8 @@ constFold rho (CApp fc (CRef fc2 n) [x]) =
             v                   => CApp fc (CRef fc2 n) [v]
      else CApp fc (CRef fc2 n) [constFold rho x]
 constFold rho (CApp fc x xs) = CApp fc (constFold rho x) (constFold rho <$> xs)
+constFold rho (CCon fc x UNIT tag []) = CErased fc
+constFold rho (CCon fc x RECORD tag [y]) = constFold rho y
 constFold rho (CCon fc x y tag xs) = CCon fc x y tag $ constFold rho <$> xs
 constFold rho (COp fc BelieveMe [CErased _, CErased _ , x]) = constFold rho x
 constFold rho (COp {arity} fc fn xs) =
