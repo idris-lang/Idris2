@@ -88,6 +88,11 @@ constFold rho (CLocal fc p) = lookup fc (MkVar p) rho
 constFold rho e@(CRef fc x) = CRef fc x
 constFold rho (CLam fc x y)
   = CLam fc x $ constFold (wk (mkSizeOf [x]) rho) y
+
+-- Expressions of the type `let x := y in x` can be introduced
+-- by the compiler when inlining monadic code (for instance, `io_bind`).
+-- They can be replaced by `y`.
+constFold rho (CLet fc x inl y $ CLocal {idx = 0} _ _) = constFold rho y
 constFold rho (CLet fc x inl y z) =
     let val = constFold rho y
      in if replace val
@@ -101,8 +106,9 @@ constFold rho (CApp fc (CRef fc2 n) [x]) =
             v                   => CApp fc (CRef fc2 n) [v]
      else CApp fc (CRef fc2 n) [constFold rho x]
 constFold rho (CApp fc x xs) = CApp fc (constFold rho x) (constFold rho <$> xs)
+-- erase `UNIT` constructors, so they get constant-folded
+-- in `let` bindings (for instance, when optimizing `(>>)` for `IO`
 constFold rho (CCon fc x UNIT tag []) = CErased fc
-constFold rho (CCon fc x RECORD tag [y]) = constFold rho y
 constFold rho (CCon fc x y tag xs) = CCon fc x y tag $ constFold rho <$> xs
 constFold rho (COp fc BelieveMe [CErased _, CErased _ , x]) = constFold rho x
 constFold rho (COp {arity} fc fn xs) =
