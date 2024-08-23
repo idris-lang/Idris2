@@ -23,13 +23,21 @@ setget r1 r2 = do
   pure (x,y)
 
 %noinline
-nestedLet : Nat -> Nat
-nestedLet x =
-  let z := x in let y := z in y
+letNoReplace : Nat -> Nat
+letNoReplace x = let z := x * x in z
 
 %noinline
-nestedLetNoArg : Nat
-nestedLetNoArg =
+letReplace : Nat
+letReplace = let z := 10 * 10 in z
+
+%noinline
+nestedLetNoReplace : Nat -> Nat
+nestedLetNoReplace x =
+  let z := x * x in let y := z in y
+
+%noinline
+nestedLetReplace : Nat
+nestedLetReplace =
   let z := 10 * 10 in let y := z in y
 
 main : IO ()
@@ -38,5 +46,7 @@ main = do
   r2 <- newIORef Z
   p  <- setget r1 r2
   printLn p
-  printLn (nestedLet 10)
-  printLn nestedLetNoArg
+  printLn (letNoReplace 10)
+  printLn letReplace
+  printLn (nestedLetNoReplace 10)
+  printLn nestedLetReplace
