@@ -1,0 +1,6 @@
+. ../../testutils.sh
+
+idris2 --quiet --codegen node -o prog.js Prog.idr
+
+grep "const \$[a-z0-9]\+ = undefined;" build/exec/prog.js
+grep "const \$[a-z0-9]\+ = \$[a-z0-9]\+;" build/exec/prog.js
