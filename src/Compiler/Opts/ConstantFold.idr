@@ -92,12 +92,15 @@ constFold rho (CLam fc x y)
 -- Expressions of the type `let x := y in x` can be introduced
 -- by the compiler when inlining monadic code (for instance, `io_bind`).
 -- They can be replaced by `y`.
-constFold rho (CLet fc x inl y $ CLocal {idx = 0} _ _) = constFold rho y
 constFold rho (CLet fc x inl y z) =
-    let val = constFold rho y
-     in if replace val
-          then constFold (val :: rho) z
-          else CLet fc x inl val (constFold (wk (mkSizeOf [x]) rho) z)
+    let val := constFold rho y
+     in case replace val of
+          True  => case constFold (val::rho) z of
+            CLocal {idx = 0} _ _ => val
+            body                 => body
+          False => case constFold (wk (mkSizeOf [x]) rho) z of
+            CLocal {idx = 0} _ _ => val
+            body                 => CLet fc x inl val body
 constFold rho (CApp fc (CRef fc2 n) [x]) =
   if n == NS typesNS (UN $ Basic "prim__integerToNat")
      then case constFold rho x of
