@@ -22,9 +22,21 @@ setget r1 r2 = do
   y <- readAndRelease r2
   pure (x,y)
 
+%noinline
+nestedLet : Nat -> Nat
+nestedLet x =
+  let z := x in let y := z in y
+
+%noinline
+nestedLetNoArg : Nat
+nestedLetNoArg =
+  let z := 10 * 10 in let y := z in y
+
 main : IO ()
 main = do
   r1 <- newIORef Z
   r2 <- newIORef Z
   p  <- setget r1 r2
   printLn p
+  printLn (nestedLet 10)
+  printLn nestedLetNoArg
