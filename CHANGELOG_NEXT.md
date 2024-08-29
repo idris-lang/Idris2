@@ -217,6 +217,17 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Added implementations of `Foldable` and `Traversable` for `Control.Monad.Identity`
 
+* Multiple functions in `Data.Nat` and `Data.Nat.Order.Properties` (mostly inequality proofs) are now `public export`:
+  - `fromLteSucc`
+  - `lteSuccLeft`, `lteSuccRight`
+  - `lteAddRight`
+  - `divCeilNZ` (it is `total` now as well)
+  - `plusLteMonotoneLeft`, `plusLteMonotoneRight`, `plusLteMonotone`
+  - `minusPos`, `minusLteMonotone`, `minusLtMonotone`
+  - `minusLTE`, `minusPosLT`
+  - `multLteMonotoneLeft`, `multLteMonotoneRight`
+  - `decomposeLte`
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
