@@ -14,3 +14,17 @@ main
          printLn val
          val <- readIORef y
          printLn val
+         z <- newIORef 42
+         val <- readIORef z
+         printLn val
+         tid1 <- fork $ do
+           atomicModifyIORef z (* 2)
+           val <- readIORef z
+           printLn val
+         threadWait tid1
+         tid2 <- fork $ do
+           atomicModifyIORef z (* 2)
+           val <- readIORef z
+           printLn val
+         threadWait tid2
+         pure ()
