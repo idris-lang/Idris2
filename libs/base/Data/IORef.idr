@@ -1,6 +1,6 @@
 module Data.IORef
 
-import System.Concurrency 
+import System.Concurrency
 import System.Info
 
 %default total
