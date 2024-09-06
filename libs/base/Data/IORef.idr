@@ -1,5 +1,8 @@
 module Data.IORef
 
+import System.Concurrency 
+import System.Info
+
 %default total
 
 -- Implemented externally
@@ -40,3 +43,14 @@ modifyIORef : HasIO io => IORef a -> (a -> a) -> io ()
 modifyIORef ref f
     = do val <- readIORef ref
          writeIORef ref (f val)
+
+export
+atomicModifyIORef : HasIO io => IORef a -> (a -> a) -> io ()
+atomicModifyIORef ref f
+    = case codegen of
+        "chez" => do mutex <- makeMutex
+                     ()    <- mutexAcquire mutex
+                     val   <- readIORef ref
+                     ()    <- writeIORef ref (f val)
+                     mutexRelease mutex
+        _      => pure ()
