@@ -56,7 +56,7 @@ modifyIORef ref f
 
 ||| This function atomically runs its argument according to the provided mutex.
 ||| It can for instance be used to modify the contents of an IORef `ref` with a function `f`
-||| in a safe way in a multithreaded program by using `atomically lock (modifyIORef ref f)` 
+||| in a safe way in a multithreaded program by using `atomically lock (modifyIORef ref f)`
 ||| provided that other threads also rely on the same `lock` to modify `ref`.
 export
 atomically : HasIO io => Mutex -> io () -> io ()
