@@ -57,7 +57,6 @@ modifyIORef ref f
 ||| This function atomically modifies the contents of an IORef.
 ||| This function is useful for using IORef in a safe way in a multithreaded program.
 ||| If you only have one IORef, then using atomicModifyIORef to access and modify it will prevent race conditions.
-||| Any backend other than the default (chez) will perform modifyIORef (non-atomic).
 export
 atomicModifyIORef : HasIO io => Mutex -> IORef a -> (a -> a) -> io ()
 atomicModifyIORef lock ref f
