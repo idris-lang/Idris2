@@ -10,11 +10,11 @@ parameters (ref  : IORef Nat)
 
   runFastInc : Nat -> IO ()
   runFastInc 0     = pure ()
-  runFastInc (S k) = atomicModifyIORef lock ref S >> runFastInc k
+  runFastInc (S k) = atomically lock (modifyIORef ref S) >> runFastInc k
 
   runSlowInc : Nat -> IO ()
   runSlowInc 0     = pure ()
-  runSlowInc (S k) = atomicModifyIORef lock ref (slowinc 10000) >> runSlowInc k
+  runSlowInc (S k) = atomically lock (modifyIORef ref (slowinc 10000)) >> runSlowInc k
 
 main : IO ()
 main

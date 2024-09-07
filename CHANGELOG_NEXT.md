@@ -217,7 +217,7 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Added implementations of `Foldable` and `Traversable` for `Control.Monad.Identity`
 
-* Added `Data.IORef.atomicModifyIORef` for the chez backend.
+* Added `Data.IORef.atomically` for the chez backend.
 
 #### Contrib
 
