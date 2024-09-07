@@ -1,4 +1,20 @@
 import Data.IORef
+import System.Concurrency
+
+slowinc : Nat -> Nat -> Nat
+slowinc 0     j = S j
+slowinc (S k) j = slowinc k j
+
+parameters (ref  : IORef Nat)
+           (lock : Mutex)
+
+  runFastInc : Nat -> IO ()
+  runFastInc 0     = pure ()
+  runFastInc (S k) = atomicModifyIORef lock ref S >> runFastInc k
+
+  runSlowInc : Nat -> IO ()
+  runSlowInc 0     = pure ()
+  runSlowInc (S k) = atomicModifyIORef lock ref (slowinc 10000) >> runSlowInc k
 
 main : IO ()
 main
@@ -14,14 +30,13 @@ main
          printLn val
          val <- readIORef y
          printLn val
-         z   <- newIORef 42
-         val <- readIORef z
-         printLn val
-         t1 <- fork $ do
-           atomicModifyIORef z (* 2)
-         t2 <- fork $
-           atomicModifyIORef z (* 2)
+         lock <- makeMutex
+         ref  <- newIORef Z
+         readIORef ref >>= printLn
+         t1  <- fork $
+           runFastInc ref lock 1_000_000
+         t2  <- fork $
+           runSlowInc ref lock 1_0000
          threadWait t1
          threadWait t2
-         val <- readIORef z
-         printLn val
+         readIORef ref >>= printLn

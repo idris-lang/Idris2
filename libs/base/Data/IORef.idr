@@ -59,12 +59,8 @@ modifyIORef ref f
 ||| If you only have one IORef, then using atomicModifyIORef to access and modify it will prevent race conditions.
 ||| Any backend other than the default (chez) will perform modifyIORef (non-atomic).
 export
-atomicModifyIORef : HasIO io => IORef a -> (a -> a) -> io ()
-atomicModifyIORef ref f
-    = case codegen of
-        "chez" => do mutex <- makeMutex
-                     mutexAcquire mutex
-                     val   <- readIORef ref
-                     writeIORef ref (f val)
-                     mutexRelease mutex
-        _      => modifyIORef ref f
+atomicModifyIORef : HasIO io => Mutex -> IORef a -> (a -> a) -> io ()
+atomicModifyIORef lock ref f
+    = do mutexAcquire lock
+         modifyIORef ref f
+         mutexRelease lock
