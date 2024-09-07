@@ -54,12 +54,13 @@ modifyIORef ref f
     = do val <- readIORef ref
          writeIORef ref (f val)
 
-||| This function atomically modifies the contents of an IORef.
-||| This function is useful for using IORef in a safe way in a multithreaded program.
-||| If you only have one IORef, then using atomicModifyIORef to access and modify it will prevent race conditions.
+||| This function atomically runs its argument according to the provided mutex.
+||| It can for instance be used to modify the contents of an IORef `ref` with a function `f`
+||| in a safe way in a multithreaded program by using `atomically lock (modifyIORef ref f)` 
+||| provided that other threads also rely on the same `lock` to modify `ref`.
 export
-atomicModifyIORef : HasIO io => Mutex -> IORef a -> (a -> a) -> io ()
-atomicModifyIORef lock ref f
+atomically : HasIO io => Mutex -> io () -> io ()
+atomically lock act
     = do mutexAcquire lock
-         modifyIORef ref f
+         act
          mutexRelease lock
