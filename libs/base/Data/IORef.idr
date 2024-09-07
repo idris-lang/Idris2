@@ -63,8 +63,8 @@ atomicModifyIORef : HasIO io => IORef a -> (a -> a) -> io ()
 atomicModifyIORef ref f
     = case codegen of
         "chez" => do mutex <- makeMutex
-                     ()    <- mutexAcquire mutex
+                     mutexAcquire mutex
                      val   <- readIORef ref
-                     ()    <- writeIORef ref (f val)
+                     writeIORef ref (f val)
                      mutexRelease mutex
         _      => modifyIORef ref f
