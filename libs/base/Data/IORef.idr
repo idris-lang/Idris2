@@ -47,7 +47,7 @@ writeIORef1 : HasLinearIO io => IORef a -> (1 val : a) -> io ()
 writeIORef1 (MkRef m) val = primIO1 (prim__writeIORef m val)
 
 ||| Mutate the contents of an IORef, combining readIORef and writeIORef.
-||| This is not an atomic update, consider using atomicModifyIORef when operating in a multithreaded environment.
+||| This is not an atomic update, consider using atomically when operating in a multithreaded environment.
 export
 modifyIORef : HasIO io => IORef a -> (a -> a) -> io ()
 modifyIORef ref f
