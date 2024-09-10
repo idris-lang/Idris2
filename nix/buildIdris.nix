@@ -50,7 +50,7 @@ let
       nativeBuildInputs = [ idris2 makeWrapper jq ] ++ attrs.nativeBuildInputs or [];
       buildInputs = propagatedIdrisLibraries ++ attrs.buildInputs or [];
 
-      IDRIS2_PACKAGE_PATH = libDirs;
+      env.IDRIS2_PACKAGE_PATH = libDirs;
 
       buildPhase = ''
         runHook preBuild
@@ -60,10 +60,10 @@ let
 
       passthru = {
         inherit propagatedIdrisLibraries;
-      };
+      } // (attrs.passthru or {});
 
       shellHook = ''
-        export IDRIS2_PACKAGE_PATH="${finalAttrs.IDRIS2_PACKAGE_PATH}"
+        export IDRIS2_PACKAGE_PATH="${finalAttrs.env.IDRIS2_PACKAGE_PATH}"
       '';
     }
   );
@@ -111,6 +111,7 @@ in rec {
         runHook preInstall
         mkdir -p $out/${libSuffix}
         export IDRIS2_PREFIX=$out/lib
+        export IDRIS2_LIBS=./lib
         idris2 ${installCmd} ${ipkgFileName}
         runHook postInstall
       '';
