@@ -604,6 +604,12 @@ installSrcFrom wdir destdir (ns, srcRelPath)
            | Left err => throw $ UserError (show err)
          pure ()
 
+absoluteInstallDir : (relativeInstallDir : String) -> Core String
+absoluteInstallDir relativeInstallDir = do
+  mdestdir <- coreLift $ getEnv "DESTDIR"
+  let destdir = fromMaybe "" mdestdir
+  pure $ destdir ++ relativeInstallDir
+
 -- Install all the built modules in prefix/package/
 -- We've already built and checked for success, so if any don't exist that's
 -- an internal error.
@@ -617,11 +623,9 @@ install pkg opts installSrc -- not used but might be in the future
     = do defs <- get Ctxt
          build <- ttcBuildDirectory
          let lib = installDir pkg
-         mdestdir <- coreLift $ getEnv "DESTDIR"
-         let destdir = fromMaybe "" mdestdir
-         libTargetDir <- (destdir ++) <$> libInstallDirectory lib
-         ttcTargetDir <- (destdir ++) <$> ttcInstallDirectory lib
-         srcTargetDir <- (destdir ++) <$> srcInstallDirectory lib
+         libTargetDir <- absoluteInstallDir =<< libInstallDirectory lib
+         ttcTargetDir <- absoluteInstallDir =<< ttcInstallDirectory lib
+         srcTargetDir <- absoluteInstallDir =<< srcInstallDirectory lib
 
          let src = source_dir (dirs (options defs))
          runScript (preinstall pkg)
@@ -959,6 +963,10 @@ processPackage opts (cmd, mfile)
                     runRepl (map snd $ mainmod pkg)
                   Init => pure () -- already handled earlier
                   DumpJson => coreLift . putStrLn $ toJson pkg
+                  DumpInstallDir => do
+                    libInstallDir <- libInstallDirectory (installDir pkg)
+                    dir <- absoluteInstallDir libInstallDir
+                    coreLift (putStrLn dir)
 
 record PackageOpts where
   constructor MkPFR
