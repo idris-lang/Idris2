@@ -111,7 +111,6 @@ in rec {
         runHook preInstall
         mkdir -p $out/${libSuffix}
         export IDRIS2_PREFIX=$out/lib
-        export IDRIS2_LIBS=./lib
         idris2 ${installCmd} ${ipkgFileName}
         runHook postInstall
       '';
