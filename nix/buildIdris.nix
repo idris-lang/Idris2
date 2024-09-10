@@ -112,6 +112,13 @@ in rec {
         mkdir -p $out/${libSuffix}
         export IDRIS2_PREFIX=$out/lib
         idris2 ${installCmd} ${ipkgFileName}
+        # check if the package has installed any C libs to ./lib
+        # (a practice popularized by the Pack package manager)
+        for file in ./lib/*{.so,.dylib,.h}; do
+          installDir="$(idris2 --dump-installdir "${ipkgFileName}")/lib"
+          mkdir -p "$installDir"
+          mv -- "$file" "$installDir"/
+        done
         runHook postInstall
       '';
     };
