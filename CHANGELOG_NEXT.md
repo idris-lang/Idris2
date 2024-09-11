@@ -217,6 +217,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Added implementations of `Foldable` and `Traversable` for `Control.Monad.Identity`
 
+* Added `Data.IORef.atomically` for the chez backend.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
