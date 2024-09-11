@@ -71,7 +71,7 @@ GTIsnotlte a b prf =
     succNotLTEpred $ transitive prf contra
 
 ||| Subtracting a number gives a smaller number
-export
+public export
 minusLTE : (a,b : Nat) -> (b `minus` a) `LTE` b
 minusLTE a      0    = LTEZero
 minusLTE 0     (S _) = reflexive
@@ -81,15 +81,15 @@ minusLTE (S a) (S b) =
     (lteSuccRight reflexive)
 
 ||| Subtracting a positive number gives a strictly smaller number
-export
+public export
 minusPosLT : (a,b : Nat) -> 0 `LT` a -> a `LTE` b -> (b `minus` a) `LT` b
 minusPosLT 0     b     z_lt_z           a_lte_b impossible
 minusPosLT (S a) 0     z_lt_sa          a_lte_b impossible
 minusPosLT (S a) (S b) z_lt_sa          a_lte_b = LTESucc (minusLTE a b)
 
 -- This is the opposite of the convention in `Data.Nat`, but 'monotone on the left' means the below
-export
-multLteMonotoneRight : (l, a, b : Nat) -> a `LTE` b -> l*a `LTE` l*b
+public export
+multLteMonotoneRight : (l, a, b : Nat) -> a `LTE` b -> (l * a) `LTE` (l * b)
 multLteMonotoneRight  0    a b _ = LTEZero
 multLteMonotoneRight (S k) a b a_lte_b = CalcWith {leq = LTE} $
   |~ (1 + k) * a
@@ -99,8 +99,8 @@ multLteMonotoneRight (S k) a b a_lte_b = CalcWith {leq = LTE} $
                      multLteMonotoneRight k    a     b   a_lte_b)
   ~~ (1 + k) * b ...(Refl)
 
-export
-multLteMonotoneLeft : (a, b, r : Nat) -> a `LTE` b -> a*r `LTE` b*r
+public export
+multLteMonotoneLeft : (a, b, r : Nat) -> a `LTE` b -> (a * r) `LTE` (b * r)
 multLteMonotoneLeft a b r a_lt_b =
   rewrite multCommutative a r in
   rewrite multCommutative b r in
@@ -113,7 +113,7 @@ lteNotLtEq a b a_lte_b not_n_lte_n =
   in antisymmetric a_lte_b b_lte_a
 
 -- Try succ left element LTE. Returns LT if successful, otherwise proof of equality a and b
-export
+public export
 decomposeLte : (a, b : Nat) -> LTE a b -> Either (LT a b) (a = b)
 decomposeLte a b a_lte_b with (isLT a b)
   decomposeLte a b a_lte_b | Yes a_lt_b = Left a_lt_b

@@ -174,7 +174,7 @@ export
 succNotLTEzero : Not (LTE (S m) Z)
 succNotLTEzero LTEZero impossible
 
-export
+public export
 fromLteSucc : LTE (S m) (S n) -> LTE m n
 fromLteSucc (LTESucc x) = x
 
@@ -220,16 +220,16 @@ ltRecall : LT m n -> {p : Nat -> Nat} -> (0 prf : LT (p m) q) -> LT (p m) q
 ltRecall {m} x prf with (lteRecallLeft x)
   ltRecall {m = m} x prf | (S m ** Refl) = irrelevantLte prf
 
-export
+public export
 lteSuccRight : LTE n m -> LTE n (S m)
 lteSuccRight LTEZero     = LTEZero
 lteSuccRight (LTESucc x) = LTESucc (lteSuccRight x)
 
-export
+public export
 lteSuccLeft : LTE (S n) m -> LTE n m
 lteSuccLeft (LTESucc x) = lteSuccRight x
 
-export
+public export
 lteAddRight : (n : Nat) -> LTE n (n + m)
 lteAddRight Z = LTEZero
 lteAddRight (S k) {m} = LTESucc (lteAddRight {m} k)
@@ -374,8 +374,7 @@ export partial
 divNat : Nat -> Nat -> Nat
 divNat left (S right) = divNatNZ left (S right) SIsNonZero
 
-export
-covering
+public export
 divCeilNZ : Nat -> (y: Nat) -> (0 _ : NonZero y) -> Nat
 divCeilNZ x y p = case (modNatNZ x y p) of
   Z   => divNatNZ x y p
@@ -516,8 +515,8 @@ plusLeftLeftRightZero left right p =
   ~~ left     ...(p)
   ~~ left + 0 ..<(plusZeroRightNeutral left)
 
-export
-plusLteMonotoneRight : (p, q, r : Nat) -> q `LTE` r -> (q+p) `LTE` (r+p)
+public export
+plusLteMonotoneRight : (p, q, r : Nat) -> q `LTE` r -> (q + p) `LTE` (r + p)
 plusLteMonotoneRight p  Z     r     LTEZero    = CalcSmart {leq = LTE} $
   |~ 0 + p
   <~ p + r ...(lteAddRight p)
@@ -527,7 +526,7 @@ plusLteMonotoneRight p (S q) (S r) (LTESucc q_lte_r) =
   |~ q + p
   <~ r + p ...(plusLteMonotoneRight p q r q_lte_r)
 
-export
+public export
 plusLteMonotoneLeft : (p, q, r : Nat) -> q `LTE` r -> (p + q) `LTE` (p + r)
 plusLteMonotoneLeft p q r q_lt_r = CalcSmart {leq = LTE} $
   |~ p + q
@@ -536,7 +535,7 @@ plusLteMonotoneLeft p q r q_lt_r = CalcSmart {leq = LTE} $
   <~ p + r .=.(plusCommutative r p)
 
 
-export
+public export
 plusLteMonotone : {m, n, p, q : Nat} -> m `LTE` n -> p `LTE` q ->
                   (m + p) `LTE` (n + q)
 plusLteMonotone left right = CalcSmart {leq = LTE} $
@@ -679,19 +678,19 @@ minusPlusZero : (n, m : Nat) -> minus n (n + m) = Z
 minusPlusZero Z     _ = Refl
 minusPlusZero (S n) m = minusPlusZero n m
 
-export
+public export
 minusPos : m `LT` n -> Z `LT` minus n m
 minusPos lt = case view lt of
   LTZero    => ltZero
   LTSucc lt => minusPos lt
 
-export
+public export
 minusLteMonotone : {p : Nat} -> m `LTE` n -> minus m p `LTE` minus n p
 minusLteMonotone LTEZero = LTEZero
 minusLteMonotone {p = Z} prf@(LTESucc _) = prf
 minusLteMonotone {p = S p} (LTESucc lte) = minusLteMonotone lte
 
-export
+public export
 minusLtMonotone : m `LT` n -> p `LT` n -> minus m p `LT` minus n p
 minusLtMonotone {m} {p} mltn pltn = case view pltn of
     LTZero => ltRecall {p = (`minus` 0)} mltn $ CalcSmart {leq = LT} $
