@@ -116,7 +116,7 @@ Other common fields which may be present in an ``ipkg`` file are:
 Comments
 ---------
 
-Package files support comments using the standard Idris singleline ``--`` and multiline ``{- -}`` format.
+Package files support comments using the standard Idris singleline ``--`` format.
 
 Using Package files
 ===================
