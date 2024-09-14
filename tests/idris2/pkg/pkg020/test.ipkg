@@ -1,0 +1,8 @@
+package test
+version = 0.3.0
+
+-- modules to install
+modules = Stuff
+
+sourcedir = "src"
+
