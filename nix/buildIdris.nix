@@ -80,13 +80,13 @@ in rec {
         # ^ remove after Idris2 0.8.0 is released. will be superfluous:
         # https://github.com/idris-lang/Idris2/pull/3189
       else
-        executable="$(idris2 --dump-ipkg-json ${ipkgFileName} | jq -r '.executable').so"
+        bin_name="$(idris2 --dump-ipkg-json ${ipkgFileName} | jq -r '.executable')"
 
-        cd build/exec/*_app
+        cd build/exec/''${bin_name}_app
 
         rm -f ./libidris2_support.{so,dylib}
 
-        bin_name="''${executable%.so}"
+        executable="''${bin_name}.so"
         mv -- "$executable" "$out/bin/$bin_name"
 
         # remaining .so or .dylib files can be moved to lib directory
