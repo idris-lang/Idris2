@@ -1,0 +1,12 @@
+package test
+{-
+A test of
+multiline
+comments.
+-}
+version = 0.1.0
+authors = "Boyd Stephen Smith Jr."
+main = Main
+executable = "test"
+{- "." is the top-level package directory -}
+sourcedir = "."
