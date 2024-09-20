@@ -463,7 +463,7 @@ mutual
                       CConAlt (inner ++ outer) ->
                       CConAlt ((inner ++ ns) ++ outer)
   insertNamesConAlt {outer} {ns} p q (MkConAlt x ci tag args sc)
-        = let sc' : CExp ((args +%+ outer) +%+ inner)
+        = let sc' : CExp (outer ++ (inner <>< args))
                   = rewrite sym (appendAssociative args outer inner) in sc in
               MkConAlt x ci tag args
                (rewrite appendAssociative args outer (inner ++ ns) in
@@ -632,7 +632,7 @@ mutual
                    CConAlt (vars ++ outer) ->
                    CConAlt ((vars ++ bound) ++ outer)
   mkLocalsConAlt {bound} {outer} {vars} p bs (MkConAlt x ci tag args sc)
-        = let sc' : CExp ((args +%+ outer) +%+ vars)
+        = let sc' : CExp (outer ++ (vars <>< args))
                   = rewrite sym (appendAssociative args outer vars) in sc in
               MkConAlt x ci tag args
                (rewrite appendAssociative args outer (vars ++ bound) in
