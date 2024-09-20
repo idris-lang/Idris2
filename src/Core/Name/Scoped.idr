@@ -2,10 +2,10 @@ module Core.Name.Scoped
 
 import Core.Name
 
-import public Data.List.HasLength
+import public Data.SnocList.HasLength
 import Data.SnocList
 
-import public Libraries.Data.List.SizeOf
+import public Libraries.Data.SnocList.SizeOf
 
 %default total
 
@@ -27,6 +27,53 @@ Scope = SnocList Name
 public export
 Scoped : Type
 Scoped = Scope -> Type
+
+------------------------------------------------------------------------
+-- Thinnings
+
+public export
+data Thin : SnocList a -> SnocList a -> Type where
+  Refl : Thin xs xs
+  Drop : Thin xs ys -> Thin xs (ys :< y)
+  Keep : Thin xs ys -> Thin (xs :< x) (ys :< x)
+
+export
+none : {xs : SnocList a} -> Thin [<] xs
+none {xs = [<]} = Refl
+none {xs = _ :< _} = Drop none
+
+{- UNUSED: we actually sometimes want Refl vs. Keep!
+||| Smart constructor. We should use this to maximise the length
+||| of the Refl segment thus getting more short-circuiting behaviours
+export
+Keep : Thin xs ys -> Thin (xs :< x) (ys :< x)
+Keep Refl = Refl
+Keep p = Keep p
+-}
+
+export
+keeps : (args : SnocList a) -> Thin xs ys -> Thin (xs ++ args) (ys ++ args)
+keeps [<] th = th
+keeps (sx :< x) th = Keep (keeps sx th)
+
+||| Compute the thinning getting rid of the listed de Bruijn indices.
+-- TODO: is the list of erased arguments guaranteed to be sorted?
+-- Should it?
+export
+removeByIndices :
+  (erasedArgs : List Nat) ->
+  (args : Scope) ->
+  (args' ** Thin args' args)
+removeByIndices es = go 0 where
+
+  go : (currentIdx : Nat) -> (args : Scope) ->
+    (args' ** Thin args' args)
+  go idx [<] = ([<] ** Refl)
+  go idx (xs :< x) =
+    let (vs ** th) = go (S idx) xs in
+    if idx `elem` es
+      then (vs ** Drop th)
+      else (vs :< x ** Keep th)
 
 ------------------------------------------------------------------------
 -- Semi-decidable equality
