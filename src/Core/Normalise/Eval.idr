@@ -175,18 +175,17 @@ parameters (defs : Defs) (topopts : EvalOpts)
                       (\defs', arg => applyToStack env !(sc defs' arg) stk))
     applyToStack env (NApp fc (NRef nt fn) args) stk
         =
-            let scoped_list_stack = fromList stk
-                combined_stack = args +%+ scoped_list_stack
+            let combined_stack = args <>< stk
             in evalRef env False fc nt fn combined_stack
                   (NApp fc (NRef nt fn) combined_stack)
     applyToStack env (NApp fc (NLocal mrig idx p) args) stk
-        = evalLocal env fc mrig _ p ((toList args) ++ stk) []
+        = evalLocal env fc mrig _ p (args <>> stk) []
     applyToStack env (NApp fc (NMeta n i args) args') stk
-        = evalMeta env fc n i args ((toList args') ++ stk)
+        = evalMeta env fc n i args (args' <>> stk)
     applyToStack env (NDCon fc n t a args) stk
-        = pure $ NDCon fc n t a (args +%+ fromList stk)
+        = pure $ NDCon fc n t a (args <>< stk)
     applyToStack env (NTCon fc n t a args) stk
-        = pure $ NTCon fc n t a (args +%+ fromList stk)
+        = pure $ NTCon fc n t a (args <>< stk)
     applyToStack env (NAs fc s p t) stk
        = if removeAs topopts
             then applyToStack env t stk
@@ -203,7 +202,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
             case tm' of
                  NDelay fc r _ arg =>
                     eval env [arg] (Local {name = UN (Basic "fvar")} fc Nothing _ First) stk
-                 _ => pure (NForce fc r tm' (args +%+ fromList stk))
+                 _ => pure (NForce fc r tm' (args <>< stk))
     applyToStack env nf@(NPrimVal fc _) _ = pure nf
     applyToStack env (NErased fc a) stk
       = NErased fc <$> traverse @{%search} @{CORE} (\ t => applyToStack env t stk) a
@@ -263,12 +262,11 @@ parameters (defs : Defs) (topopts : EvalOpts)
                Stack free -> Core (NF free)
     evalMeta env fc nm i args stk
         = let
-              scoped_list_stack = fromList stk
               args' = if isNil stk then map (EmptyFC,) args
-                         else (map (EmptyFC,) args) +%+ scoped_list_stack
+                         else (map (EmptyFC,) args) <>< stk
                         in
               evalRef env True fc Func (Resolved i) args'
-                          (NApp fc (NMeta nm i args) scoped_list_stack)
+                          (NApp fc (NMeta nm i args) (fromList scoped_list_stack))
 
     -- The commented out logging here might still be useful one day, but
     -- evalRef is used a lot and even these tiny checks turn out to be
