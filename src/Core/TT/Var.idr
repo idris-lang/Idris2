@@ -444,7 +444,7 @@ FreelyEmbeddable (NVar {a = Name} nm) where
 export
 shiftUnderNs : SizeOf {a = Name} inner ->
                {idx : _} ->
-               (0 p : IsVar n idx (x :%: inner +%+ outer)) ->
+               (0 p : IsVar n idx (outer ++ inner :< x)) ->
                NVar n (outer :< x ++ inner)
 shiftUnderNs s First = weakenNs s (MkNVar First)
 shiftUnderNs s (Later p) = insertNVar s (MkNVar p)
