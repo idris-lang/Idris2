@@ -501,7 +501,7 @@ mutual
               {auto o : Ref ROpts REPLOpts} ->
               Ref QVar Int -> Defs -> Bounds bound ->
               Env Term free -> SnocList (Closure free) ->
-              Core (SnocList (Term (bound +%+ free)))
+              Core (SnocList (Term (free ++ bound)))
   quoteArgs q defs bounds env [<] = pure [<]
   quoteArgs q defs bounds env (a :%: args)
       = pure $ (!(quoteGenNF q defs bounds env !(evalClosure defs a)) :%:
@@ -515,7 +515,7 @@ mutual
                     {bound, free : _} ->
                     Ref QVar Int -> Defs -> Bounds bound ->
                     Env Term free -> SnocList (FC, Closure free) ->
-                    Core (SnocList (FC, Term (bound +%+ free)))
+                    Core (SnocList (FC, Term (free ++ bound)))
   quoteArgsWithFC q defs bounds env terms
       = pure $ zip (map fst terms) !(quoteArgs q defs bounds env (map snd terms))
 
@@ -527,13 +527,13 @@ mutual
               {auto o : Ref ROpts REPLOpts} ->
               Ref QVar Int -> Defs ->
               FC -> Bounds bound -> Env Term free -> NHead free ->
-              Core (Term (bound +%+ free))
+              Core (Term (free ++ bound))
   quoteHead {bound} q defs fc bounds env (NLocal mrig _ prf)
       = let MkVar prf' = addLater bound prf in
             pure $ Local fc mrig _ prf'
     where
       addLater : {idx : _} -> (ys : SnocList Name) -> (0 p : IsVar n idx xs) ->
-                 Var (ys +%+ xs)
+                 Var (xs ++ ys)
       addLater [<] isv = MkVar isv
       addLater (x :%: xs) isv
           = let MkVar isv' = addLater xs isv in
@@ -567,7 +567,7 @@ mutual
             {auto o : Ref ROpts REPLOpts} ->
             Ref QVar Int -> Defs -> Bounds bound ->
             Env Term free -> PiInfo (Closure free) ->
-            Core (PiInfo (Term (bound +%+ free)))
+            Core (PiInfo (Term (free ++ bound)))
   quotePi q defs bounds env Explicit = pure Explicit
   quotePi q defs bounds env Implicit = pure Implicit
   quotePi q defs bounds env AutoImplicit = pure AutoImplicit
@@ -583,7 +583,7 @@ mutual
                 {auto o : Ref ROpts REPLOpts} ->
                 Ref QVar Int -> Defs -> Bounds bound ->
                 Env Term free -> Binder (Closure free) ->
-                Core (Binder (Term (bound +%+ free)))
+                Core (Binder (Term (free ++ bound)))
   quoteBinder q defs bounds env (Lam fc r p ty)
       = do ty' <- quoteGenNF q defs bounds env !(evalClosure defs ty)
            p' <- quotePi q defs bounds env p
@@ -616,7 +616,7 @@ mutual
                {auto o : Ref ROpts REPLOpts} ->
                Ref QVar Int ->
                Defs -> Bounds bound ->
-               Env Term vars -> NF vars -> Core (Term (bound +%+ vars))
+               Env Term vars -> NF vars -> Core (Term (vars ++ bound))
   quoteGenNF q defs bound env (NBind fc n b sc)
       = do var <- bName "qv"
            sc' <- quoteGenNF q defs (Add n var bound) env
@@ -643,7 +643,7 @@ mutual
                                      pure $ applyStackWithFC (Ref fc Func fn) args'
                         pure r
      where
-       extendEnv : Bounds bs -> Env Term vs -> Env Term (bs +%+ vs)
+       extendEnv : Bounds bs -> Env Term vs -> Env Term (vs ++ bs)
        extendEnv None env = env
        extendEnv (Add x n bs) env
            -- We're just using this to evaluate holes in the right scope, so

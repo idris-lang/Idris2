@@ -162,7 +162,7 @@ mutual
 
       extend : (cs : SnocList Name) -> (cs' : SnocList Name) ->
                (SnocList (Var args, Var args')) ->
-               Maybe (SnocList (Var (cs +%+ args), Var (cs' +%+ args')))
+               Maybe (SnocList (Var (args ++ cs), Var (args' ++ cs')))
       extend [<] [<] ms = pure ms
       extend (c :%: cs) (c' :%: cs') ms
           = do rest <- extend cs cs' ms
@@ -170,14 +170,14 @@ mutual
       extend _ _ _ = Nothing
 
       dropV : forall args .
-              (cs : SnocList Name) -> Var (cs +%+ args) -> Maybe (Var args)
+              (cs : SnocList Name) -> Var (args ++ cs) -> Maybe (Var args)
       dropV [<] v = Just v
       dropV (c :%: cs) (MkVar First) = Nothing
       dropV (c :%: cs) (MkVar (Later x))
           = dropV cs (MkVar x)
 
       dropP : (cs : SnocList Name) -> (cs' : SnocList Name) ->
-              (Var (cs +%+ args), Var (cs' +%+ args')) ->
+              (Var (args ++ cs), Var (args' ++ cs')) ->
               Maybe (Var args, Var args')
       dropP cs cs' (x, y) = pure (!(dropV cs x), !(dropV cs' y))
 

@@ -208,7 +208,7 @@ showK {a} xs = show (map aString xs)
               (Var vars, a) -> (Name, a)
     aString (MkVar v, t) = (nameAt v, t)
 
-weakenNs : SizeOf args -> KnownVars vars a -> KnownVars (args +%+ vars) a
+weakenNs : SizeOf args -> KnownVars vars a -> KnownVars (vars ++ args) a
 weakenNs args [] = []
 weakenNs args ((v, t) :: xs)
   = (weakenNs args v, t) :: weakenNs args xs

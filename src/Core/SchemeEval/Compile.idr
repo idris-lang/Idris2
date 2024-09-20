@@ -301,7 +301,7 @@ getArgName
 
 extend : Ref Sym Integer =>
          (args : SnocList Name) -> SchVars vars ->
-         Core (List Name, SchVars (args +%+ vars))
+         Core (List Name, SchVars (vars ++ args))
 extend [<] svs = pure ([], svs)
 extend (arg :%: args) svs
     = do n <- getArgName
@@ -361,7 +361,7 @@ compileCase blk svs (Case idx p scTy xs)
                   (Apply (Var "vector-ref") [Var var, IntegerVal (cast i)])
                   (project (i + 1) var ns body)
 
-        bindArgs : String -> (args : SnocList Name) -> CaseTree (args +%+ vars) ->
+        bindArgs : String -> (args : SnocList Name) -> CaseTree (vars ++ args) ->
                    Core (SchemeObj Write)
         bindArgs var args sc
             = do (bind, svs') <- extend args svs
@@ -396,7 +396,7 @@ compileCase blk svs (Case idx p scTy xs)
                   (Apply (Var "vector-ref") [Var var, IntegerVal (cast i)])
                   (project (i + 1) var ns body)
 
-        bindArgs : String -> (args : SnocList Name) -> CaseTree (args +%+ vars) ->
+        bindArgs : String -> (args : SnocList Name) -> CaseTree (vars ++ args) ->
                    Core (SchemeObj Write)
         bindArgs var args sc
             = do (bind, svs') <- extend args svs

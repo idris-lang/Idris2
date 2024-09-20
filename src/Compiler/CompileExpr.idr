@@ -136,7 +136,7 @@ eraseConArgs arity epos fn args
 mkDropSubst : Nat -> List Nat ->
               (rest : SnocList Name) ->
               (vars : SnocList Name) ->
-              (vars' ** Thin (vars' +%+ rest) (vars +%+ rest))
+              (vars' ** Thin (rest ++ vars') (rest ++ vars))
 mkDropSubst i es rest [<] = ([<] ** Refl)
 mkDropSubst i es rest (x :%: xs)
     = let (vs ** sub) = mkDropSubst (1 + i) es rest xs in

@@ -650,7 +650,7 @@ mutual
            lcheck rig erase env tm
     where
       substMeta : {drop, vs : _} ->
-                  Term (drop +%+ vs) -> List (Term vs) ->
+                  Term (vs ++ drop) -> List (Term vs) ->
                   SizeOf drop -> SubstEnv drop vs ->
                   Core (Term vs)
       substMeta (Bind bfc n (Lam _ c e ty) sc) (a :: as) drop env

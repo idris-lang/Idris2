@@ -259,7 +259,7 @@ bindImplVars {vars} fc mode gam env imps_in scope scty
 
     getBinds : (imps : List (Name, Name, ImplBinding vs)) ->
                Bounds new -> (tm : Term vs) -> (ty : Term vs) ->
-               (Term (new +%+ vs), Term (new +%+ vs))
+               (Term (vs ++ new), Term (vs ++ new))
     getBinds [] bs tm ty = (refsToLocals bs tm, refsToLocals bs ty)
     getBinds {new} ((n, metan, NameBinding loc c p _ bty) :: imps) bs tm ty
         = let (tm', ty') = getBinds imps (Add n metan bs) tm ty

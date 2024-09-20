@@ -147,9 +147,9 @@ mutual
   -- Instead, decode the ForeignObj directly, which is uglier but faster.
   quoteVector : Ref Sym Integer =>
                 Ref Ctxt Defs =>
-                SchVars (outer +%+ vars) ->
+                SchVars (vars ++ outer) ->
                 Integer -> List ForeignObj ->
-                Core (Term (outer +%+ vars))
+                Core (Term (vars ++ outer))
   quoteVector svs (-2) [_, fname_in, args_in] -- Blocked app
       = quoteOrInvalid fname_in $ \ fname => do
            let argList = getArgList args_in
@@ -275,9 +275,9 @@ mutual
 
   quotePiInfo : Ref Sym Integer =>
                 Ref Ctxt Defs =>
-                SchVars (outer +%+ vars) ->
+                SchVars (vars ++ outer) ->
                 ForeignObj ->
-                Core (PiInfo (Term (outer +%+ vars)))
+                Core (PiInfo (Term (vars ++ outer)))
   quotePiInfo svs obj
       = if isInteger obj
            then case unsafeGetInteger obj of
@@ -305,14 +305,14 @@ mutual
 
   quoteBinder : Ref Sym Integer =>
                 Ref Ctxt Defs =>
-                SchVars (outer +%+ vars) ->
+                SchVars (vars ++ outer) ->
                 (forall ty . FC -> RigCount -> PiInfo ty -> ty -> Binder ty) ->
                 ForeignObj -> -- body of binder, represented as a function
                 RigCount ->
-                PiInfo (Term (outer +%+ vars)) ->
-                Term (outer +%+ vars) -> -- decoded type
+                PiInfo (Term (vars ++ outer)) ->
+                Term (vars ++ outer) -> -- decoded type
                 Name -> -- bound name
-                Core (Term (outer +%+ vars))
+                Core (Term (vars ++ outer))
   quoteBinder svs binder proc_in r pi ty name
       = do let Procedure proc = decodeObj proc_in
                     | _ => invalid
@@ -326,13 +326,13 @@ mutual
 
   quotePLet : Ref Sym Integer =>
               Ref Ctxt Defs =>
-              SchVars (outer +%+ vars) ->
+              SchVars (vars ++ outer) ->
               ForeignObj -> -- body of binder, represented as a function
               RigCount ->
-              Term (outer +%+ vars) -> -- decoded type
-              Term (outer +%+ vars) -> -- decoded value
+              Term (vars ++ outer) -> -- decoded type
+              Term (vars ++ outer) -> -- decoded value
               Name -> -- bound name
-              Core (Term (outer +%+ vars))
+              Core (Term (vars ++ outer))
   quotePLet svs proc_in r val ty name
       = do let Procedure proc = decodeObj proc_in
                     | _ => invalid
@@ -346,8 +346,8 @@ mutual
 
   quote' : Ref Sym Integer =>
            Ref Ctxt Defs =>
-           SchVars (outer +%+ vars) -> ForeignObj ->
-           Core (Term (outer +%+ vars))
+           SchVars (vars ++ outer) -> ForeignObj ->
+           Core (Term (vars ++ outer))
   quote' svs obj
       = if isVector obj
            then quoteVector svs (unsafeGetInteger (unsafeVectorRef obj 0))

@@ -49,7 +49,7 @@ evalWithOpts : {auto c : Ref Ctxt Defs} ->
                {free, vars : _} ->
                Defs -> EvalOpts ->
                Env Term free -> LocalEnv free vars ->
-               Term (vars +%+ free) -> Stack free -> Core (NF free)
+               Term (free ++ vars) -> Stack free -> Core (NF free)
 
 export
 evalClosure : {auto c : Ref Ctxt Defs} ->
@@ -90,14 +90,14 @@ record TermWithEnv (free : SnocList Name) where
     constructor MkTermEnv
     { varsEnv : SnocList Name }
     locEnv : LocalEnv free varsEnv
-    term : Term $ varsEnv +%+ free
+    term : Term $ free ++ varsEnv
 
 parameters (defs : Defs) (topopts : EvalOpts)
   mutual
     eval : {auto c : Ref Ctxt Defs} ->
            {free, vars : _} ->
            Env Term free -> LocalEnv free vars ->
-           Term (vars +%+ free) -> Stack free -> Core (NF free)
+           Term (free ++ vars) -> Stack free -> Core (NF free)
     eval env locs (Local fc mrig idx prf) stk
         = logDepth $ evalLocal env fc mrig idx prf stk locs
     eval env locs (Ref fc nt fn) stk
@@ -110,7 +110,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
         -- Yes, it's just a map, but specialising it by hand since we
         -- use this a *lot* and it saves the run time overhead of making
         -- a closure and calling APPLY.
-        closeArgs : List (Term (vars +%+ free)) -> SnocList (Closure free)
+        closeArgs : List (Term (free ++ vars)) -> SnocList (Closure free)
         closeArgs [] = [<]
         closeArgs (t :: ts) = MkClosure topopts locs env t :%: closeArgs ts
     eval env locs (Bind fc x (Lam _ r _ ty) scope) (thunk :: stk)
@@ -225,7 +225,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
                 {free : _} ->
                 Env Term free ->
                 FC -> Maybe Bool ->
-                (idx : Nat) -> (0 p : IsVar nm idx (vars +%+ free)) ->
+                (idx : Nat) -> (0 p : IsVar nm idx (free ++ vars)) ->
                 Stack free ->
                 LocalEnv free vars ->
                 Core (NF free)
@@ -247,7 +247,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
         = evalLocal {vars = xs} env fc mrig idx p stk locs
 
     updateLocal : EvalOpts -> Env Term free ->
-                  (idx : Nat) -> (0 p : IsVar nm idx (vars +%+ free)) ->
+                  (idx : Nat) -> (0 p : IsVar nm idx (free ++ vars)) ->
                   LocalEnv free vars -> NF free ->
                   LocalEnv free vars
     updateLocal opts env Z First (x :: locs) nf
@@ -326,7 +326,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
     getCaseBound : SnocList (Closure free) ->
                    (args : SnocList Name) ->
                    LocalEnv free more ->
-                   Maybe (LocalEnv free (args +%+ more))
+                   Maybe (LocalEnv free (more ++ args))
     getCaseBound [<]            [<]      loc = Just loc
     getCaseBound [<]            (_ :%: _)  loc = Nothing -- mismatched arg length
     getCaseBound (arg :%: args) [<]      loc = Nothing -- mismatched arg length
@@ -340,7 +340,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
                  Stack free ->
                  (args : SnocList Name) ->
                  SnocList (Closure free) ->
-                 CaseTree (args +%+ more) ->
+                 CaseTree (more ++ args) ->
                  Core (CaseResult (TermWithEnv free))
     evalConAlt env loc opts fc stk args args' sc
          = do let Just bound = getCaseBound args' args loc

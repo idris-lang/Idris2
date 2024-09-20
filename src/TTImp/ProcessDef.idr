@@ -636,9 +636,9 @@ checkClause {vars} mult vis totreq hashit n opts nest env
        (rig : RigCount) -> (wvalTy : Term xs) -> Maybe ((RigCount, Name), Term xs) ->
        (wvalEnv : Env Term xs) ->
        Core (ext : SnocList Name
-         ** ( Env Term (ext +%+ xs)
-            , Term (ext +%+ xs)
-            , (Term (ext +%+ xs) -> Term xs)
+         ** ( Env Term (xs ++ ext)
+            , Term (xs ++ ext)
+            , (Term (xs ++ ext) -> Term xs)
             ))
     bindWithArgs {xs} rig wvalTy Nothing wvalEnv =
       let wargn : Name
@@ -646,13 +646,13 @@ checkClause {vars} mult vis totreq hashit n opts nest env
           wargs : SnocList Name
           wargs = (wargn :%: [<])
 
-          scenv : Env Term (wargs +%+ xs)
+          scenv : Env Term (xs ++ wargs)
                 := Pi vfc top Explicit wvalTy :: wvalEnv
 
-          var : Term (wargs +%+ xs)
+          var : Term (xs ++ wargs)
               := Local vfc (Just False) Z First
 
-          binder : Term (wargs +%+ xs) -> Term xs
+          binder : Term (xs ++ wargs) -> Term xs
                  := Bind vfc wargn (Pi vfc rig Explicit wvalTy)
 
       in pure (wargs ** (scenv, var, binder))
@@ -679,15 +679,15 @@ checkClause {vars} mult vis totreq hashit n opts nest env
                            , Local vfc (Just False) Z First
                            ]
 
-          scenv : Env Term (wargs +%+ xs)
+          scenv : Env Term (xs ++ wargs)
                 := Pi vfc top Implicit eqTy
                 :: Pi vfc top Explicit wvalTy
                 :: wvalEnv
 
-          var : Term (wargs +%+ xs)
+          var : Term (xs ++ wargs)
               := Local vfc (Just False) (S Z) (Later First)
 
-          binder : Term (wargs +%+ xs) -> Term xs
+          binder : Term (xs ++ wargs) -> Term xs
                  := \ t => Bind vfc wargn (Pi vfc rig Explicit wvalTy)
                          $ Bind vfc name  (Pi vfc rigPrf Implicit eqTy) t
 

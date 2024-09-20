@@ -158,17 +158,17 @@ setUsed : {idx : _} ->
           (0 _ : IsVar n idx vars) -> Core ()
 setUsed p = update Used $ setUsedVar p
 
-extendUsed : ArgUsed -> (new : SnocList Name) -> Usage vars -> Usage (new +%+ vars)
+extendUsed : ArgUsed -> (new : SnocList Name) -> Usage vars -> Usage (vars ++ new)
 extendUsed a [<] x = x
 extendUsed a (y :%: xs) x = a :: extendUsed a xs x
 
-dropUsed : (new : SnocList Name) -> Usage (new +%+ vars) -> Usage vars
+dropUsed : (new : SnocList Name) -> Usage (vars ++ new) -> Usage vars
 dropUsed [<] x = x
 dropUsed (x :%: xs) (u :: us) = dropUsed xs us
 
 inExtended : ArgUsed -> (new : SnocList Name) ->
              {auto u : Ref Used (Usage vars)} ->
-             (Ref Used (Usage (new +%+ vars)) -> Core a) ->
+             (Ref Used (Usage (vars ++ new)) -> Core a) ->
              Core a
 inExtended a new sc
     = do used <- get Used

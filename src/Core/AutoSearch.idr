@@ -203,7 +203,7 @@ getUsableEnv : {vars : _} ->
                 FC -> RigCount ->
                 SizeOf done ->
                 Env Term vars ->
-                List (Term (done +%+ vars), Term (done +%+ vars))
+                List (Term (vars ++ done), Term (vars ++ done))
 getUsableEnv fc rigc p [] = []
 getUsableEnv {vars = v :%: vs} {done} fc rigc p (b :: env)
    = let rest = getUsableEnv fc rigc (sucR p) env in

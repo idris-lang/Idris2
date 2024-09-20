@@ -7,10 +7,10 @@ import Data.List
 import Data.SnocList
 import Data.Vect
 
-makeArgs : (args : SnocList Name) -> List (Var (args +%+ vars))
+makeArgs : (args : SnocList Name) -> List (Var (vars ++ args))
 makeArgs args = makeArgs' args id
   where
-    makeArgs' : (args : SnocList Name) -> (Var (args +%+ vars) -> a) -> List a
+    makeArgs' : (args : SnocList Name) -> (Var (vars ++ args) -> a) -> List a
     makeArgs' [<] f = []
     makeArgs' (x :%: xs) f = f (MkVar First) :: makeArgs' xs (f . weaken)
 

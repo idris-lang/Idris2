@@ -116,7 +116,7 @@ mutual
           = TForce fc r (substVars xs y)
       substVars xs tm = tm
 
-      substArgs : SizeOf vs -> List (List (Var vs), Term vars) -> Term vs -> Term (vs +%+ vars)
+      substArgs : SizeOf vs -> List (List (Var vs), Term vars) -> Term vs -> Term (vars ++ vs)
       substArgs p substs tm =
         let
           substs' = map (bimap (map $ embed {outer = vars}) (weakenNs p)) substs

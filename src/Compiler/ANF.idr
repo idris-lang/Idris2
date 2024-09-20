@@ -246,7 +246,7 @@ mutual
            pure $ MkAConAlt n ci t is !(anf vs' sc)
     where
       bindArgs : (args : SnocList Name) -> AVars vars' ->
-                 Core (List Int, AVars (args +%+ vars'))
+                 Core (List Int, AVars (vars' ++ args))
       bindArgs [<] vs = pure ([], vs)
       bindArgs (n :%: ns) vs
           = do i <- nextVar
@@ -271,7 +271,7 @@ toANF (MkLFun args scope sc)
   where
     bindArgs : {auto v : Ref Next Int} ->
                (args : SnocList Name) -> AVars vars' ->
-               Core (List Int, AVars (args +%+ vars'))
+               Core (List Int, AVars (vars' ++ args))
     bindArgs [<] vs = pure ([], vs)
     bindArgs (n :%: ns) vs
         = do i <- nextVar

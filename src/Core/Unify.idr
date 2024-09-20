@@ -701,7 +701,7 @@ mutual
            -- argument types match up
            Just vty <- lookupTyExact (Resolved mref) (gamma defs)
                 | Nothing => ufail fc ("No such metavariable " ++ show mname)
-           vargTys <- getArgTypes defs !(nf defs env (embed vty)) (margs +%+ margs')
+           vargTys <- getArgTypes defs !(nf defs env (embed vty)) (margs' ++ margs) -- (cast (margs ++ margs')) ? See https://github.com/idris-lang/Idris2/pull/3128 #4efcf27bbc542bf9991ebaf75415644af7135b5d
            nargTys <- maybe (pure Nothing)
                             (\ty => getArgTypes defs !(nf defs env (embed ty)) $ map snd args')
                             nty
@@ -858,7 +858,7 @@ mutual
   unifyHole swap mode loc env fc mname mref margs margs' tmnf
       = do defs <- get Ctxt
            empty <- clearDefs defs
-           let args = if isNil margs' then margs else margs +%+ margs'
+           let args = if isLin margs then margs' else margs' ++ margs -- margs ++ margs' ? See https://github.com/idris-lang/Idris2/pull/3128 #4efcf27bbc542bf9991ebaf75415644af7135b5d
            logC "unify.hole" 10
                    (do args' <- traverse (evalArg empty) args
                        qargs <- traverse (quote empty env) args'
@@ -994,8 +994,8 @@ mutual
            if xi == yi && (invx || umode mode == InSearch)
                                -- Invertible, (from auto implicit search)
                                -- so we can also unify the arguments.
-              then unifyArgs mode loc env (xargs +%+ map snd xargs')
-                                          (yargs +%+ map snd yargs')
+              then unifyArgs mode loc env (map snd xargs' ++ xargs)
+                                          (map snd yargs' ++ yargs)
               else do xlocs <- localsIn xargs
                       ylocs <- localsIn yargs
                       -- Solve the one with the bigger context, and if they're
