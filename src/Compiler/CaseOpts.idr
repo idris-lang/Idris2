@@ -38,7 +38,7 @@ shiftUnder First = weakenNVar (mkSizeOf args) (MkNVar First)
 shiftUnder (Later p) = insertNVar (mkSizeOf args) (MkNVar p)
 
 shiftVar : {outer, args : Scope} ->
-           NVar n (outer +%+ (x :%: args +%+ vars)) ->
+           NVar n ((vars <>< args :< x) ++ outer) ->
            NVar n ((vars :< x <>< args) ++ outer)
 shiftVar nvar
   = let out = mkSizeOf outer in
@@ -87,7 +87,7 @@ mutual
 
   shiftBinderConAlt : {outer, args : _} ->
                 (new : Name) ->
-                CConAlt (outer +%+ (x :%: args +%+ vars)) ->
+                CConAlt ((vars <>< args :< x) ++ outer) ->
                 CConAlt ((vars :< new <>< args) ++ outer)
   shiftBinderConAlt new (MkConAlt n ci t args' sc)
       = let sc' : CExp ((args' +%+ outer) +%+ (x :%: args +%+ vars))
@@ -98,7 +98,7 @@ mutual
 
   shiftBinderConstAlt : {outer, args : _} ->
                 (new : Name) ->
-                CConstAlt (outer +%+ (x :%: args +%+ vars)) ->
+                CConstAlt ((vars <>< args :< x) ++ outer) ->
                 CConstAlt ((vars :< new <>< args) ++ outer)
   shiftBinderConstAlt new (MkConstAlt c sc) = MkConstAlt c $ shiftBinder new sc
 
