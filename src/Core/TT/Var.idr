@@ -15,10 +15,6 @@ import Libraries.Data.SnocList.SizeOf
 
 import Libraries.Data.Erased
 
-import Core.Name.ScopedList
-import Core.Name.ScopedList.HasLength
-import Core.Name.ScopedList.SizeOf
-
 %default total
 
 ------------------------------------------------------------------------
@@ -29,7 +25,7 @@ import Core.Name.ScopedList.SizeOf
 ||| is a position k
 ||| in the snoclist ns
 public export
-data IsVar : a -> Nat -> ScopedList a -> Type where
+data IsVar : a -> Nat -> SnocList a -> Type where
      First : IsVar n Z (n :%: ns)
      Later : IsVar n i ns -> IsVar n (S i) (m :%: ns)
 
@@ -44,7 +40,7 @@ finIdx (Later l) = FS (finIdx l)
 ||| Recover the value pointed at by an IsVar proof
 ||| O(n) in the size of the index
 export
-nameAt : {vars : ScopedList a} -> {idx : Nat} -> (0 p : IsVar n idx vars) -> a
+nameAt : {vars : SnocList a} -> {idx : Nat} -> (0 p : IsVar n idx vars) -> a
 nameAt {vars = n :%: _} First = n
 nameAt (Later p) = nameAt p
 
@@ -58,7 +54,7 @@ export
 mkIsVar Z = First
 mkIsVar (S x) = Later (mkIsVar x)
 
--- SLZ = Core.Name.ScopedList.LHasLength.Z
+-- SLZ = Core.Name.SnocList.LHasLength.Z
 
 export
 0 mkIsVarChiply : HasLength m inner -> IsVar nm m (inner <>> nm :%: outer)
@@ -70,9 +66,9 @@ mkIsVarChiply hl
 ||| Compute the remaining scope once the target variable has been removed
 public export
 dropIsVar :
-  (ns : ScopedList a) ->
+  (ns : SnocList a) ->
   {idx : Nat} -> (0 p : IsVar name idx ns) ->
-  ScopedList a
+  SnocList a
 dropIsVar (_ :%: xs) First = xs
 dropIsVar (n :%: xs) (Later p) = n :%: dropIsVar xs p
 
@@ -128,7 +124,7 @@ locateIsVar s p = case choose (idx < size s) of
 ||| and a proof that the name is at that position in the scope.
 ||| Everything but the De Bruijn index is erased.
 public export
-record Var {0 a : Type} (vars : ScopedList a) where
+record Var {0 a : Type} (vars : SnocList a) where
   constructor MkVar
   {varIdx : Nat}
   {0 varNm : a}
@@ -155,10 +151,10 @@ mkVarChiply (MkSizeOf s p) = MkVar (mkIsVarChiply p)
 
 ||| Generate all variables
 export
-allVars : (vars : Scope) -> ScopedList (Var vars)
+allVars : (vars : Scope) -> SnocList (Var vars)
 allVars = go [<] where
 
-  go : SizeOf local -> (vs : Scope) -> ScopedList (Var (local <>> vs))
+  go : SizeOf local -> (vs : Scope) -> SnocList (Var (local <>> vs))
   go s [<] = [<]
   go s (v :%: vs) = mkVarChiply s :%: go (s :< v) vs
 
@@ -168,13 +164,13 @@ Eq (Var xs) where
 
 ||| Removing var 0, strengthening all the other ones
 export
-dropFirst : ScopedList (Var (n :%: vs)) -> ScopedList (Var vs)
-dropFirst = ScopedList.mapMaybe isLater
+dropFirst : SnocList (Var (n :%: vs)) -> SnocList (Var vs)
+dropFirst = SnocList.mapMaybe isLater
 
 ||| Manufacturing a thinning from a list of variables to keep
 export
 thinFromVars :
-  (vars : _) -> ScopedList (Var vars) ->
+  (vars : _) -> SnocList (Var vars) ->
   (newvars ** Thin newvars vars)
 thinFromVars [<] els
     = (_ ** Refl)
@@ -192,7 +188,7 @@ Show (Var ns) where
 -- Named variable in scope
 
 public export
-record NVar {0 a : Type} (nm : a) (vars : ScopedList a) where
+record NVar {0 a : Type} (nm : a) (vars : SnocList a) where
   constructor MkNVar
   {nvarIdx : Nat}
   0 nvarPrf : IsVar nm nvarIdx vars
@@ -231,20 +227,20 @@ locateNVar s (MkNVar p) = case locateIsVar s p of
   Right p => Right (MkNVar (runErased p))
 
 public export
-dropNVar : {ns : ScopedList a} -> NVar nm ns -> ScopedList a
+dropNVar : {ns : SnocList a} -> NVar nm ns -> SnocList a
 dropNVar (MkNVar p) = dropIsVar ns p
 
 ------------------------------------------------------------------------
 -- Scope checking
 
 export
-isDeBruijn : Nat -> (vars : ScopedList Name) -> Maybe (Var vars)
+isDeBruijn : Nat -> (vars : SnocList Name) -> Maybe (Var vars)
 isDeBruijn Z (_ :%: _) = pure (MkVar First)
 isDeBruijn (S k) (_ :%: vs) = later <$> isDeBruijn k vs
 isDeBruijn _ _ = Nothing
 
 export
-isNVar : (n : Name) -> (ns : ScopedList Name) -> Maybe (NVar n ns)
+isNVar : (n : Name) -> (ns : SnocList Name) -> Maybe (NVar n ns)
 isNVar n [<] = Nothing
 isNVar n (m :%: ms)
     = case nameEq n m of
@@ -252,7 +248,7 @@ isNVar n (m :%: ms)
            Just Refl => pure (MkNVar First)
 
 export
-isVar : (n : Name) -> (ns : ScopedList Name) -> Maybe (Var ns)
+isVar : (n : Name) -> (ns : SnocList Name) -> Maybe (Var ns)
 isVar n ns = forgetName <$> isNVar n ns
 
 export

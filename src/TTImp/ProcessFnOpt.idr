@@ -110,7 +110,7 @@ processFnOpt fc _ ndef (SpecArgs ns)
 
     -- Return names the type depends on, and whether it's a parameter
     mutual
-      getDepsArgs : Bool -> ScopedList (NF [<]) -> NameMap Bool ->
+      getDepsArgs : Bool -> SnocList (NF [<]) -> NameMap Bool ->
                     Core (NameMap Bool)
       getDepsArgs inparam [<] ns = pure ns
       getDepsArgs inparam (a :%: as) ns
@@ -147,7 +147,7 @@ processFnOpt fc _ ndef (SpecArgs ns)
         where
           -- Split into arguments in parameter position, and others
           splitPs : Nat -> List Nat -> List (Closure [<]) ->
-                    (ScopedList (Closure [<]), ScopedList (Closure [<]))
+                    (SnocList (Closure [<]), SnocList (Closure [<]))
           splitPs n params [] = ([<], [<])
           splitPs n params (x :: xs)
               = let (ps', ds') = splitPs (1 + n) params xs in

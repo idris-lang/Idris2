@@ -118,7 +118,7 @@ store sz exp =
 --          Strengthening of Expressions
 --------------------------------------------------------------------------------
 
-dropVar :  (pre : ScopedList Name)
+dropVar :  (pre : SnocList Name)
         -> (n : Nat)
         -> (0 p : IsVar x n (pre +%+ ns))
         -> Maybe (IsVar x n pre)
@@ -133,7 +133,7 @@ mutual
   -- tries to 'strengthen' an expression by removing
   -- a prefix of bound variables. typically, this is invoked
   -- with `{pre = []}`.
-  dropEnv : {pre : ScopedList Name} -> CExp (pre +%+ ns) -> Maybe (CExp pre)
+  dropEnv : {pre : SnocList Name} -> CExp (pre +%+ ns) -> Maybe (CExp pre)
   dropEnv (CLocal {idx} fc p) = (\q => CLocal fc q) <$> dropVar pre idx p
   dropEnv (CRef fc x) = Just (CRef fc x)
   dropEnv (CLam fc x y) = CLam fc x <$> dropEnv y
@@ -161,13 +161,13 @@ mutual
   dropEnv (CErased fc) = Just $ CErased fc
   dropEnv (CCrash fc x) = Just $ CCrash fc x
 
-  dropConAlt :  {pre : ScopedList Name}
+  dropConAlt :  {pre : SnocList Name}
              -> CConAlt (pre +%+ ns)
              -> Maybe (CConAlt pre)
   dropConAlt (MkConAlt x y tag args z) =
     MkConAlt x y tag args . embed <$> dropEnv z
 
-  dropConstAlt :  {pre : ScopedList Name}
+  dropConstAlt :  {pre : SnocList Name}
                -> CConstAlt (pre +%+ ns)
                -> Maybe (CConstAlt pre)
   dropConstAlt (MkConstAlt x y) = MkConstAlt x <$> dropEnv y

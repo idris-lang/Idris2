@@ -9,12 +9,12 @@ import Core.Env
 import Core.Normalise
 import Core.Options
 import Core.TT
-import Core.Name.ScopedList
 import Core.Value
 
 import Idris.Pretty.Annotations
 
 import Data.List
+import Data.SnocList
 import Data.String
 import Data.Vect
 import Libraries.Data.List.LengthMatch
@@ -36,7 +36,7 @@ Eq Phase where
   RunTime == RunTime = True
   _ == _ = False
 
-data ArgType : ScopedList Name -> Type where
+data ArgType : SnocList Name -> Type where
      Known : RigCount -> (ty : Term vars) -> ArgType vars -- arg has type 'ty'
      Stuck : (fty : Term vars) -> ArgType vars
          -- ^ arg will have argument type of 'fty' when we know enough to
@@ -60,7 +60,7 @@ covering
   show (Stuck t) = "Stuck " ++ show t
   show Unknown = "Unknown"
 
-record PatInfo (pvar : Name) (vars : ScopedList Name) where
+record PatInfo (pvar : Name) (vars : SnocList Name) where
   constructor MkInfo
   {idx : Nat}
   {name : Name}
@@ -95,8 +95,8 @@ NamedPats always have the same 'Elem' proof, though this isn't expressed in
 a type anywhere.
 -}
 
-data NamedPats : ScopedList Name -> -- pattern variables still to process
-                 ScopedList Name -> -- the pattern variables still to process,
+data NamedPats : SnocList Name -> -- pattern variables still to process
+                 SnocList Name -> -- the pattern variables still to process,
                               -- in order
                  Type where
      Nil : NamedPats vars [<]
@@ -241,11 +241,11 @@ weakenNs ns (p :: ps)
 tail : NamedPats vars (p :%: ps) -> NamedPats vars ps
 tail (x :: xs) = xs
 
-take : (as : ScopedList Name) -> NamedPats vars (as +%+ bs) -> NamedPats vars as
+take : (as : SnocList Name) -> NamedPats vars (as +%+ bs) -> NamedPats vars as
 take [<] ps = []
 take (x :%: xs) (p :: ps) = p :: take xs ps
 
-data PatClause : (vars : ScopedList Name) -> (todo : ScopedList Name) -> Type where
+data PatClause : (vars : SnocList Name) -> (todo : SnocList Name) -> Type where
      MkPatClause : List Name -> -- names matched so far (from original lhs)
                    NamedPats vars todo ->
                    Int -> (rhs : Term vars) -> PatClause vars todo
@@ -328,7 +328,7 @@ clauseType phase (MkPatClause pvars (MkInfo arg _ ty :: rest) pid rhs)
   where
     -- used when we are tempted to split on a constructor: is
     -- this actually a fully applied one?
-    splitCon : Nat -> ScopedList Pat -> ClauseType
+    splitCon : Nat -> SnocList Pat -> ClauseType
     splitCon arity xs
       = if arity == length xs then ConClause else VarClause
 
@@ -385,8 +385,8 @@ conTypeEq CDelay CDelay = Just Refl
 conTypeEq (CConst x) (CConst y) = (\xy => cong CConst xy) <$> constantEq x y
 conTypeEq _ _ = Nothing
 
-data Group : ScopedList Name -> -- variables in scope
-             ScopedList Name -> -- pattern variables still to process
+data Group : SnocList Name -> -- variables in scope
+             SnocList Name -> -- pattern variables still to process
              Type where
      ConGroup : {newargs : _} ->
                 Name -> (tag : Int) ->
@@ -405,7 +405,7 @@ covering
   show (DelayGroup cs) = "Delay: " ++ show cs
   show (ConstGroup c cs) = "Const " ++ show c ++ ": " ++ show cs
 
-data GroupMatch : ConType -> ScopedList Pat -> Group vars todo -> Type where
+data GroupMatch : ConType -> SnocList Pat -> Group vars todo -> Type where
   ConMatch : {tag : Int} -> LengthMatch ps newargs ->
              GroupMatch (CName n tag) ps
                (ConGroup {newargs} n tag (MkPatClause pvs pats pid rhs :: rest))
@@ -415,7 +415,7 @@ data GroupMatch : ConType -> ScopedList Pat -> Group vars todo -> Type where
                   (ConstGroup c (MkPatClause pvs pats pid rhs :: rest))
   NoMatch : GroupMatch ct ps g
 
-checkGroupMatch : (c : ConType) -> (ps : ScopedList Pat) -> (g : Group vars todo) ->
+checkGroupMatch : (c : ConType) -> (ps : SnocList Pat) -> (g : Group vars todo) ->
                   GroupMatch c ps g
 checkGroupMatch (CName x tag) ps (ConGroup {newargs} x' tag' (MkPatClause pvs pats pid rhs :: rest))
     = case checkLengthMatch ps newargs of
@@ -444,7 +444,7 @@ nextName root
 nextNames : {vars : _} ->
             {auto i : Ref PName Int} ->
             {auto c : Ref Ctxt Defs} ->
-            FC -> String -> ScopedList Pat -> Maybe (NF vars) ->
+            FC -> String -> SnocList Pat -> Maybe (NF vars) ->
             Core (args ** (SizeOf args, NamedPats (args +%+ vars) args))
 nextNames fc root [<] fty = pure ([<] ** (zero, []))
 nextNames {vars} fc root (p :%: pats) fty
@@ -473,26 +473,26 @@ nextNames {vars} fc root (p :%: pats) fty
           pure (n :%: args ** (suc l, MkInfo p First argTy :: weaken ps))
 
 -- replace the prefix of patterns with 'pargs'
-newPats : (pargs : ScopedList Pat) -> LengthMatch pargs ns ->
+newPats : (pargs : SnocList Pat) -> LengthMatch pargs ns ->
           NamedPats vars (ns +%+ todo) ->
           NamedPats vars ns
 newPats [<] NilMatch rest = []
 newPats (newpat :%: xs) (ConsMatch w) (pi :: rest)
   = { pat := newpat} pi :: newPats xs w rest
 
-updateNames : ScopedList (Name, Pat) -> ScopedList (Name, Name)
+updateNames : SnocList (Name, Pat) -> SnocList (Name, Name)
 updateNames = mapMaybe update
   where
     update : (Name, Pat) -> Maybe (Name, Name)
     update (n, PLoc fc p) = Just (p, n)
     update _ = Nothing
 
-updatePatNames : ScopedList (Name, Name) -> NamedPats vars todo -> NamedPats vars todo
+updatePatNames : SnocList (Name, Name) -> NamedPats vars todo -> NamedPats vars todo
 updatePatNames _ [] = []
 updatePatNames ns (pi :: ps)
     = { pat $= update } pi :: updatePatNames ns ps
   where
-    lookup : Name -> ScopedList (Name, Name) -> Maybe Name
+    lookup : Name -> SnocList (Name, Name) -> Maybe Name
     lookup n [<] = Nothing
     lookup n ((x, n') :%: ns) = if x == n then Just n' else lookup n ns
 
@@ -523,7 +523,7 @@ groupCons fc fn pvars cs
   where
     addConG : {vars', todo' : _} ->
               Name -> (tag : Int) ->
-              ScopedList Pat -> NamedPats vars' todo' ->
+              SnocList Pat -> NamedPats vars' todo' ->
               Int -> (rhs : Term vars') ->
               (acc : List (Group vars' todo')) ->
               Core (List (Group vars' todo'))
@@ -678,7 +678,7 @@ getFirstArgType (p :: _) = argType p
 
 ||| Store scores alongside rows of named patterns. These scores are used to determine
 ||| which column of patterns to switch on first. One score per column.
-data ScoredPats : ScopedList Name -> ScopedList Name -> Type where
+data ScoredPats : SnocList Name -> SnocList Name -> Type where
  Scored : List (NamedPats ns (p :%: ps)) -> Vect (length (p :%: ps)) Int -> ScoredPats ns (p :%: ps)
 
 {ps : _} -> Show (ScoredPats ns ps) where
@@ -690,14 +690,14 @@ zeroedScore nps = Scored nps (replicate (S $ length ps) 0)
 ||| Proof that a value `v` inserted in the middle of a list with
 ||| prefix `ps` and suffix `qs` can equivalently be snoced with
 ||| `ps` or consed with `qs` before appending `qs` to `ps`.
-elemInsertedMiddle : (v : a) -> (ps,qs : ScopedList a) -> (ps +%+ (v :%: qs)) = ((ps `snoc` v) +%+ qs)
+elemInsertedMiddle : (v : a) -> (ps,qs : SnocList a) -> (ps +%+ (v :%: qs)) = ((ps `snoc` v) +%+ qs)
 elemInsertedMiddle v [<] qs = Refl
 elemInsertedMiddle v (x :%: xs) qs = rewrite elemInsertedMiddle v xs qs in Refl
 
 ||| Helper to find a single highest scoring name (or none at all) while
 ||| retaining the context of all names processed.
-highScore : {prev : ScopedList Name} ->
-            (names : ScopedList Name) ->
+highScore : {prev : SnocList Name} ->
+            (names : SnocList Name) ->
             (scores : Vect (length names) Int) ->
             (highVal : Int) ->
             (highIdx : (n ** NVar n (prev +%+ names))) ->
@@ -1090,7 +1090,7 @@ mutual
       = pure err
 
 export
-mkPat : {auto c : Ref Ctxt Defs} -> ScopedList Pat -> ClosedTerm -> ClosedTerm -> Core Pat
+mkPat : {auto c : Ref Ctxt Defs} -> SnocList Pat -> ClosedTerm -> ClosedTerm -> Core Pat
 mkPat [<] orig (Ref fc Bound n) = pure $ PLoc fc n
 mkPat args orig (Ref fc (DataCon t a) n) = pure $ PCon fc n t a args
 mkPat args orig (Ref fc (TyCon t a) n) = pure $ PTyCon fc n a args
@@ -1138,8 +1138,8 @@ argToPat tm = mkPat [<] tm tm
 
 mkPatClause : {auto c : Ref Ctxt Defs} ->
               FC -> Name ->
-              (args : ScopedList Name) -> ClosedTerm ->
-              Int -> (ScopedList Pat, ClosedTerm) ->
+              (args : SnocList Name) -> ClosedTerm ->
+              Int -> (SnocList Pat, ClosedTerm) ->
               Core (PatClause args args)
 mkPatClause fc fn args ty pid (ps, rhs)
     = maybe (throw (CaseCompile fc fn DifferingArgNumbers))
@@ -1155,7 +1155,7 @@ mkPatClause fc fn args ty pid (ps, rhs)
                                    (weakenNs (mkSizeOf args) rhs))))
             (checkLengthMatch args ps)
   where
-    mkNames : (vars : ScopedList Name) -> (ps : ScopedList Pat) ->
+    mkNames : (vars : SnocList Name) -> (ps : SnocList Pat) ->
               LengthMatch vars ps -> Maybe (NF [<]) ->
               Core (NamedPats vars vars)
     mkNames [<] [<] NilMatch fty = pure []
@@ -1179,7 +1179,7 @@ mkPatClause fc fn args ty pid (ps, rhs)
 export
 patCompile : {auto c : Ref Ctxt Defs} ->
              FC -> Name -> Phase ->
-             ClosedTerm -> List (ScopedList Pat, ClosedTerm) ->
+             ClosedTerm -> List (SnocList Pat, ClosedTerm) ->
              Maybe (CaseTree [<]) ->
              Core (args ** CaseTree args)
 patCompile fc fn phase ty [] def
@@ -1202,8 +1202,8 @@ patCompile fc fn phase ty (p :: ps) def
                                  map (weakenNs n) def)
          pure (_ ** cases)
   where
-    mkPatClausesFrom : Int -> (args : ScopedList Name) ->
-                       List (ScopedList Pat, ClosedTerm) ->
+    mkPatClausesFrom : Int -> (args : SnocList Name) ->
+                       List (SnocList Pat, ClosedTerm) ->
                        Core (List (PatClause args args))
     mkPatClausesFrom i ns [] = pure []
     mkPatClausesFrom i ns (p :: ps)
@@ -1211,7 +1211,7 @@ patCompile fc fn phase ty (p :: ps) def
              ps' <- mkPatClausesFrom (i + 1) ns ps
              pure (p' :: ps')
 
-    getNames : Int -> ScopedList Pat -> (ns : ScopedList Name ** SizeOf ns)
+    getNames : Int -> SnocList Pat -> (ns : SnocList Name ** SizeOf ns)
     getNames i [<] = ([<] ** zero)
     getNames i (x :%: xs) =
       let (ns ** n) = getNames (i + 1) xs
@@ -1219,7 +1219,7 @@ patCompile fc fn phase ty (p :: ps) def
 
 toPatClause : {auto c : Ref Ctxt Defs} ->
               FC -> Name -> (ClosedTerm, ClosedTerm) ->
-              Core (ScopedList Pat, ClosedTerm)
+              Core (SnocList Pat, ClosedTerm)
 toPatClause fc n (lhs, rhs)
     = case getFnArgs lhs of
            (Ref ffc Func fn, args)
@@ -1347,7 +1347,7 @@ getPMDef fc phase fn ty []
          defs <- get Ctxt
          pure (!(getArgs 0 !(nf defs [] ty)) ** (Unmatched "No clauses", []))
   where
-    getArgs : Int -> NF [<] -> Core (ScopedList Name)
+    getArgs : Int -> NF [<] -> Core (SnocList Name)
     getArgs i (NBind fc x (Pi _ _ _ _) sc)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))

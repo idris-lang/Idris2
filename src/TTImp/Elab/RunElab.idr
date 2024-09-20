@@ -156,7 +156,7 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
         pathDoesNotEscape n     ("." ::rest) = pathDoesNotEscape n rest
         pathDoesNotEscape n     (_   ::rest) = pathDoesNotEscape (S n) rest
 
-    elabCon : Defs -> String -> ScopedList (Closure vars) -> Core (NF vars)
+    elabCon : Defs -> String -> SnocList (Closure vars) -> Core (NF vars)
     elabCon defs "Pure" (_ :%: val :%: [<])
         = do empty <- clearDefs defs
              evalClosure empty val
@@ -324,7 +324,7 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
     elabCon defs "Declare" (d :%: [<])
         = do d' <- evalClosure defs d
              decls <- reify defs d'
-             Core.Core.ScopedList.traverse_ (processDecl [] (MkNested []) []) decls
+             Core.Core.SnocList.traverse_ (processDecl [] (MkNested []) []) decls
              scriptRet ()
     elabCon defs "ReadFile" (lk :%: pth :%: [<])
         = do pathPrefix <- lookupDir defs !(evalClosure defs lk)

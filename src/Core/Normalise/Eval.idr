@@ -7,10 +7,10 @@ import Core.Core
 import Core.Env
 import Core.Primitives
 import Core.TT
-import Core.Name.ScopedList
 import Core.Value
 
 import Data.List
+import Data.SnocList
 import Data.Maybe
 import Data.Nat
 import Data.String
@@ -24,7 +24,7 @@ import Libraries.Data.WithDefault
 -- from a term (via 'gnf') or a normal form (via 'glueBack') but the other
 -- part will only be constructed when needed, because it's in Core.
 public export
-data Glued : ScopedList Name -> Type where
+data Glued : SnocList Name -> Type where
      MkGlue : (fromTerm : Bool) -> -- is it built from the term; i.e. can
                                    -- we read the term straight back?
               Core (Term vars) -> (Ref Ctxt Defs -> Core (NF vars)) -> Glued vars
@@ -42,7 +42,7 @@ getNF : {auto c : Ref Ctxt Defs} -> Glued vars -> Core (NF vars)
 getNF {c} (MkGlue _ _ nf) = nf c
 
 public export
-Stack : ScopedList Name -> Type
+Stack : SnocList Name -> Type
 Stack vars = List (FC, Closure vars)
 
 evalWithOpts : {auto c : Ref Ctxt Defs} ->
@@ -86,9 +86,9 @@ data CaseResult a
      | NoMatch -- case alternative didn't match anything
      | GotStuck -- alternative matched, but got stuck later
 
-record TermWithEnv (free : ScopedList Name) where
+record TermWithEnv (free : SnocList Name) where
     constructor MkTermEnv
-    { varsEnv : ScopedList Name }
+    { varsEnv : SnocList Name }
     locEnv : LocalEnv free varsEnv
     term : Term $ varsEnv +%+ free
 
@@ -110,7 +110,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
         -- Yes, it's just a map, but specialising it by hand since we
         -- use this a *lot* and it saves the run time overhead of making
         -- a closure and calling APPLY.
-        closeArgs : List (Term (vars +%+ free)) -> ScopedList (Closure free)
+        closeArgs : List (Term (vars +%+ free)) -> SnocList (Closure free)
         closeArgs [] = [<]
         closeArgs (t :: ts) = MkClosure topopts locs env t :%: closeArgs ts
     eval env locs (Bind fc x (Lam _ r _ ty) scope) (thunk :: stk)
@@ -259,7 +259,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
     evalMeta : {auto c : Ref Ctxt Defs} ->
                {free : _} ->
                Env Term free ->
-               FC -> Name -> Int -> ScopedList (Closure free) ->
+               FC -> Name -> Int -> SnocList (Closure free) ->
                Stack free -> Core (NF free)
     evalMeta env fc nm i args stk
         = let
@@ -277,7 +277,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
               {free : _} ->
               Env Term free ->
               (isMeta : Bool) ->
-              FC -> NameType -> Name -> ScopedList (FC, Closure free) -> (def : Lazy (NF free)) ->
+              FC -> NameType -> Name -> SnocList (FC, Closure free) -> (def : Lazy (NF free)) ->
               Core (NF free)
     evalRef env meta fc (DataCon tag arity) fn stk def
         = do -- logC "eval.ref.data" 50 $ do fn' <- toFullNames fn -- Can't use ! here, it gets lifted too far
@@ -323,8 +323,8 @@ parameters (defs : Defs) (topopts : EvalOpts)
                    pure nf
                 else pure def
 
-    getCaseBound : ScopedList (Closure free) ->
-                   (args : ScopedList Name) ->
+    getCaseBound : SnocList (Closure free) ->
+                   (args : SnocList Name) ->
                    LocalEnv free more ->
                    Maybe (LocalEnv free (args +%+ more))
     getCaseBound [<]            [<]      loc = Just loc
@@ -338,8 +338,8 @@ parameters (defs : Defs) (topopts : EvalOpts)
                  Env Term free ->
                  LocalEnv free more -> EvalOpts -> FC ->
                  Stack free ->
-                 (args : ScopedList Name) ->
-                 ScopedList (Closure free) ->
+                 (args : SnocList Name) ->
+                 SnocList (Closure free) ->
                  CaseTree (args +%+ more) ->
                  Core (CaseResult (TermWithEnv free))
     evalConAlt env loc opts fc stk args args' sc
@@ -450,13 +450,13 @@ parameters (defs : Defs) (topopts : EvalOpts)
 
     -- Take arguments from the stack, as long as there's enough.
     -- Returns the arguments, and the rest of the stack
-    takeFromStack : (arity : Nat) -> ScopedList (FC, Closure free) ->
-                    Maybe (Vect arity (Closure free), ScopedList (FC, Closure free))
+    takeFromStack : (arity : Nat) -> SnocList (FC, Closure free) ->
+                    Maybe (Vect arity (Closure free), SnocList (FC, Closure free))
     takeFromStack arity stk = takeStk arity stk []
       where
-        takeStk : (remain : Nat) -> ScopedList (FC, Closure free) ->
+        takeStk : (remain : Nat) -> SnocList (FC, Closure free) ->
                   Vect got (Closure free) ->
-                  Maybe (Vect (got + remain) (Closure free), ScopedList (FC, Closure free))
+                  Maybe (Vect (got + remain) (Closure free), SnocList (FC, Closure free))
         takeStk {got} Z stk acc = Just (rewrite plusZeroRightNeutral got in
                                     reverse acc, stk)
         takeStk (S k) [<] acc = Nothing
@@ -464,9 +464,9 @@ parameters (defs : Defs) (topopts : EvalOpts)
            = rewrite sym (plusSuccRightSucc got k) in
                      takeStk k stk (snd arg :: acc)
 
-    argsFromStack : (args : ScopedList Name) ->
-                    ScopedList (FC, Closure free) ->
-                    Maybe (LocalEnv free args, ScopedList (FC, Closure free))
+    argsFromStack : (args : SnocList Name) ->
+                    SnocList (FC, Closure free) ->
+                    Maybe (LocalEnv free args, SnocList (FC, Closure free))
     argsFromStack [<] stk = Just ([], stk)
     argsFromStack (n :%: ns) [<] = Nothing
     argsFromStack (n :%: ns) (arg :%: args)
@@ -476,7 +476,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
     evalOp : {auto c : Ref Ctxt Defs} ->
              {arity, free : _} ->
              (Vect arity (NF free) -> Maybe (NF free)) ->
-             ScopedList (FC, Closure free) -> (def : Lazy (NF free)) ->
+             SnocList (FC, Closure free) -> (def : Lazy (NF free)) ->
              Core (NF free)
     evalOp {arity} fn stk def
         = case takeFromStack arity stk of
@@ -498,7 +498,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
               Env Term free -> EvalOpts ->
               (isMeta : Bool) -> FC ->
               RigCount -> Def -> List DefFlag ->
-              ScopedList (FC, Closure free) -> (def : Lazy (NF free)) ->
+              SnocList (FC, Closure free) -> (def : Lazy (NF free)) ->
               Core (NF free)
     evalDef env opts meta fc rigd (PMDef r args tree _ _) flags stk def
        -- If evaluating the definition fails (e.g. due to a case being

@@ -90,7 +90,7 @@ paramPos tyn dcons = do
 
 export
 addData : {auto c : Ref Ctxt Defs} ->
-          ScopedList Name -> Visibility -> Int -> DataDef -> Core Int
+          SnocList Name -> Visibility -> Int -> DataDef -> Core Int
 addData vars vis tidx (MkData (MkCon dfc tyn arity tycon) datacons)
     = do defs <- get Ctxt
          tag <- getNextTypeTag

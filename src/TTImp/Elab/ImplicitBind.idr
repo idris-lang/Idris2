@@ -181,7 +181,7 @@ swapIsVarH (Later p) = swapP p -- it'd be nice to do this all at the top
     swapP First = MkVar First
     swapP (Later x) = MkVar (Later (Later x))
 
-swapIsVar : (vs : ScopedList Name) ->
+swapIsVar : (vs : SnocList Name) ->
             {idx : Nat} -> (0 p : IsVar nm idx (vs +%+ x :%: y :%: xs)) ->
             Var (vs +%+ y :%: x :%: xs)
 swapIsVar [<] prf = swapIsVarH prf
@@ -189,7 +189,7 @@ swapIsVar (x :%: xs) First = MkVar First
 swapIsVar (x :%: xs) (Later p)
     = let MkVar p' = swapIsVar xs p in MkVar (Later p')
 
-swapVars : {vs : ScopedList Name} ->
+swapVars : {vs : SnocList Name} ->
            Term (vs +%+ x :%: y :%: ys) -> Term (vs +%+ y :%: x :%: ys)
 swapVars (Local fc x idx p)
     = let MkVar p' = swapIsVar _ p in Local fc x _ p'

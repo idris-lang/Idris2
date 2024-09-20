@@ -53,7 +53,7 @@ changeVar old new (TForce fc r p)
     = TForce fc r (changeVar old new p)
 changeVar old new tm = tm
 
-findLater : (x : Name) -> (newer : ScopedList Name) -> Var (newer +%+ x :%: older)
+findLater : (x : Name) -> (newer : SnocList Name) -> Var (newer +%+ x :%: older)
 findLater x [<] = MkVar First
 findLater {older} x (_ :%: xs)
     = let MkVar p = findLater {older} x xs in
@@ -101,8 +101,8 @@ findImpsIn fc env ns ty
     = when (not (isNil ns)) $
            throw (TryWithImplicits fc env (reverse ns))
 
-merge : {vs : ScopedList Name} ->
-        ScopedList (Var vs) -> List (Var vs) -> List (Var vs)
+merge : {vs : SnocList Name} ->
+        SnocList (Var vs) -> List (Var vs) -> List (Var vs)
 merge [<] xs = xs
 merge (v :%: vs) xs
     = merge vs (v :: filter (v /=) xs)

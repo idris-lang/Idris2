@@ -38,7 +38,7 @@ tryNoDefaultsFirst : {auto c : Ref Ctxt Defs} ->
                      (Bool -> Core a) -> Core a
 tryNoDefaultsFirst f = tryUnifyUnambig {preferLeftError=True} (f False) (f True)
 
-SearchEnv : ScopedList Name -> Type
+SearchEnv : SnocList Name -> Type
 SearchEnv vars = List (NF vars, Closure vars)
 
 searchType : {vars : _} ->
@@ -52,7 +52,7 @@ searchType : {vars : _} ->
              Env Term vars -> (target : Term vars) -> Core (Term vars)
 
 public export
-record ArgInfo (vars : ScopedList Name) where
+record ArgInfo (vars : SnocList Name) where
   constructor MkArgInfo
   holeID : Int
   argRig : RigCount
@@ -458,7 +458,7 @@ concreteDets {vars} fc defaults env top pos dets (arg :: args)
            concrete defs argnf True
          concreteDets fc defaults env top (1 + pos) dets args
   where
-    drop : Nat -> List Nat -> ScopedList t -> ScopedList t
+    drop : Nat -> List Nat -> SnocList t -> SnocList t
     drop i ns [<] = [<]
     drop i ns (x :%: xs)
         = if i `elem` ns

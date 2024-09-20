@@ -87,7 +87,7 @@ conflict defs env nfty n
               _ => pure False
   where
     mutual
-      conflictArgs : Int -> ScopedList (Closure vars) -> ScopedList (Closure [<]) ->
+      conflictArgs : Int -> SnocList (Closure vars) -> SnocList (Closure [<]) ->
                      Core (Maybe (List (Name, Term vars)))
       conflictArgs _ [<] [<] = pure (Just [])
       conflictArgs i (c :%: cs) (c' :%: cs')
@@ -193,10 +193,10 @@ getMissingAlts fc defs nfty alts
     noneOf alts c = not $ any (altMatch c) alts
 
 -- Mapping of variable to constructor tag already matched for it
-KnownVars : ScopedList Name -> Type -> Type
+KnownVars : SnocList Name -> Type -> Type
 KnownVars vars a = List (Var vars, a)
 
-getName : {idx : Nat} -> {vars : ScopedList Name} -> (0 p : IsVar n idx vars) -> Name
+getName : {idx : Nat} -> {vars : SnocList Name} -> (0 p : IsVar n idx vars) -> Name
 getName {vars = v :%: _} First = v
 getName (Later p) = getName p
 
@@ -275,8 +275,8 @@ buildArgs : {auto c : Ref Ctxt Defs} ->
             KnownVars vars Int -> -- Things which have definitely match
             KnownVars vars (List Int) -> -- Things an argument *can't* be
                                     -- (because a previous case matches)
-            ScopedList ClosedTerm -> -- ^ arguments, with explicit names
-            CaseTree vars -> Core (List (ScopedList ClosedTerm))
+            SnocList ClosedTerm -> -- ^ arguments, with explicit names
+            CaseTree vars -> Core (List (SnocList ClosedTerm))
 buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
   -- If we've already matched on 'el' in this branch, restrict the alternatives
   -- to the tag we already know. Otherwise, add missing cases and filter out
@@ -293,7 +293,7 @@ buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
          buildArgsAlt not altsN
   where
     buildArgAlt : KnownVars vars (List Int) ->
-                  CaseAlt vars -> Core (List (ScopedList ClosedTerm))
+                  CaseAlt vars -> Core (List (SnocList ClosedTerm))
     buildArgAlt not' (ConCase n t args sc)
         = do let l = mkSizeOf args
              let con = Ref fc (DataCon t (size l)) n
@@ -316,7 +316,7 @@ buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
         = buildArgs fc defs known not' ps sc
 
     buildArgsAlt : KnownVars vars (List Int) -> List (CaseAlt vars) ->
-                   Core (List (ScopedList ClosedTerm))
+                   Core (List (SnocList ClosedTerm))
     buildArgsAlt not' [] = pure []
     buildArgsAlt not' (c@(ConCase _ t _ _) :: cs)
         = pure $ !(buildArgAlt not' c) ++

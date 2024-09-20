@@ -19,7 +19,7 @@ import Libraries.Data.SnocList.SizeOf
 
 -- List of variable usages - we'll count the contents of specific variables
 -- when discharging binders, to ensure that linear names are only used once
-data Usage : ScopedList Name -> Type where
+data Usage : SnocList Name -> Type where
      Nil : Usage vars
      (::) : Var vars -> Usage vars -> Usage vars
 
@@ -185,7 +185,7 @@ mutual
                when (not erase) $ rigSafe rigb rig
                pure (Local fc x idx prf, gnf env ty, used rig)
     where
-      getName : {idx : _} -> (vs : ScopedList Name) -> (0 p : IsVar n idx vs) -> Name
+      getName : {idx : _} -> (vs : SnocList Name) -> (0 p : IsVar n idx vs) -> Name
       getName (x :%: _) First = x
       getName (x :%: xs) (Later p) = getName xs p
 

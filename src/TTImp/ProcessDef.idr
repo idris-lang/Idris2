@@ -635,7 +635,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
     bindWithArgs :
        (rig : RigCount) -> (wvalTy : Term xs) -> Maybe ((RigCount, Name), Term xs) ->
        (wvalEnv : Env Term xs) ->
-       Core (ext : ScopedList Name
+       Core (ext : SnocList Name
          ** ( Env Term (ext +%+ xs)
             , Term (ext +%+ xs)
             , (Term (ext +%+ xs) -> Term xs)
@@ -643,7 +643,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
     bindWithArgs {xs} rig wvalTy Nothing wvalEnv =
       let wargn : Name
           wargn = MN "warg" 0
-          wargs : ScopedList Name
+          wargs : SnocList Name
           wargs = (wargn :%: [<])
 
           scenv : Env Term (wargs +%+ xs)
@@ -667,7 +667,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
 
       let wargn : Name
           wargn = MN "warg" 0
-          wargs : ScopedList Name
+          wargs : SnocList Name
           wargs = (name :%: wargn :%: [<])
 
           wvalTy' := weaken wvalTy
@@ -698,7 +698,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
     -- function. Hence, turn it to Keep whatever
     keepOldEnv : {0 outer : _} -> {vs : _} ->
                  (outprf : Thin outer vs) -> Thin vs' vs ->
-                 (vs'' : ScopedList Name ** Thin vs'' vs)
+                 (vs'' : SnocList Name ** Thin vs'' vs)
     keepOldEnv {vs} Refl p = (vs ** Refl)
     keepOldEnv {vs} p Refl = (vs ** Refl)
     keepOldEnv (Drop p) (Drop p')
@@ -738,7 +738,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
              pure (ImpossibleClause ploc newlhs)
 
 -- TODO: remove
-nameListEq : (xs : ScopedList Name) -> (ys : ScopedList Name) -> Maybe (xs = ys)
+nameListEq : (xs : SnocList Name) -> (ys : SnocList Name) -> Maybe (xs = ys)
 nameListEq [<] [<] = Just Refl
 nameListEq (x :%: xs) (y :%: ys) with (nameEq x y)
   nameListEq (x :%: xs) (x :%: ys) | (Just Refl) with (nameListEq xs ys)

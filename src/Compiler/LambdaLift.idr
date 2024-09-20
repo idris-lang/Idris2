@@ -14,9 +14,9 @@ import Core.CompileExpr
 import Core.Context
 import Core.Core
 import Core.TT
-import Core.Name.ScopedList
 
 import Data.List
+import Data.SnocList
 import Data.Vect
 
 %default covering
@@ -170,7 +170,7 @@ mutual
   ||| @ vars is the list of names accessible within the current scope of the
   |||   lambda-lifted code.
   public export
-  data LiftedConAlt : (vars : ScopedList Name) -> Type where
+  data LiftedConAlt : (vars : SnocList Name) -> Type where
 
        ||| Constructs a branch of an "LCon" (constructor tag) case statement.
        |||
@@ -188,7 +188,7 @@ mutual
        ||| @ body is the expression that is evaluated as the consequence of
        |||   this branch matching.
        MkLConAlt : (n : Name) -> (info : ConInfo) -> (tag : Maybe Int) ->
-                   (args : ScopedList Name) -> (body : Lifted (args +%+ vars)) ->
+                   (args : SnocList Name) -> (body : Lifted (args +%+ vars)) ->
                    LiftedConAlt vars
 
   ||| A branch of an "LConst" (constant expression) case statement.
@@ -196,7 +196,7 @@ mutual
   ||| @ vars is the list of names accessible within the current scope of the
   |||   lambda-lifted code.
   public export
-  data LiftedConstAlt : (vars : ScopedList Name) -> Type where
+  data LiftedConstAlt : (vars : SnocList Name) -> Type where
 
        ||| Constructs a branch of an "LConst" (constant expression) case
        ||| statement.
@@ -225,7 +225,7 @@ data LiftedDef : Type where
      -- (Sorry for the awkward API - it's to do with how the indices are
      -- arranged for the variables, and it could be expensive to reshuffle them!
      -- See Compiler.ANF for an example of how they get resolved to names)
-     MkLFun : (args : ScopedList Name) -> (scope : ScopedList Name) ->
+     MkLFun : (args : SnocList Name) -> (scope : SnocList Name) ->
               (body : Lifted (scope +%+ args)) -> LiftedDef
 
      ||| Constructs a definition of a constructor for a compound data type.
@@ -350,7 +350,7 @@ unload fc _ f [] = pure f
 -- only outermost LApp must be lazy as rest will be closures
 unload fc lazy f (a :: as) = unload fc Nothing (LApp fc lazy f a) as
 
-record Used (vars : ScopedList Name) where
+record Used (vars : SnocList Name) where
   constructor MkUsed
   used : Vect (length vars) Bool
 
@@ -398,9 +398,9 @@ getUnused : Used vars ->
 getUnused (MkUsed uv) = map not uv
 
 total
-dropped : (vars : ScopedList Name) ->
+dropped : (vars : SnocList Name) ->
           (drop : Vect (length vars) Bool) ->
-          ScopedList Name
+          SnocList Name
 dropped [<] _ = [<]
 dropped (x:%:xs) (False::us) = x:%:(dropped xs us)
 dropped (x:%:xs) (True::us) = dropped xs us
@@ -451,7 +451,7 @@ usedVars used (LCrash _ _) = used
 
 dropIdx : {vars : _} ->
           {idx : _} ->
-          (outer : ScopedList Name) ->
+          (outer : SnocList Name) ->
           (unused : Vect (length vars) Bool) ->
           (0 p : IsVar x idx (outer +%+ vars)) ->
           Var (outer +%+ (dropped vars unused))
@@ -465,7 +465,7 @@ dropIdx (_:%:xs) unused (Later p) = Var.later $ dropIdx xs unused p
 
 dropUnused : {vars : _} ->
               {auto _ : Ref Lifts LDefs} ->
-              {outer : ScopedList Name} ->
+              {outer : SnocList Name} ->
               (unused : Vect (length vars) Bool) ->
               (l : Lifted (outer +%+ vars)) ->
               Lifted (outer +%+ (dropped vars unused))
@@ -520,7 +520,7 @@ mutual
             {vars : _} ->
             {doLazyAnnots : Bool} ->
             {default Nothing lazy : Maybe LazyReason} ->
-            FC -> (bound : ScopedList Name) ->
+            FC -> (bound : SnocList Name) ->
             CExp (bound +%+ vars) -> Core (Lifted vars)
   makeLam fc bound (CLam _ x sc') = makeLam fc {doLazyAnnots} {lazy} (x :%: bound) sc'
   makeLam {vars} fc bound sc
@@ -536,7 +536,7 @@ mutual
            pure $ LUnderApp fc n (length bound) (allVars fc vars unused)
     where
 
-        allPrfs : (vs : ScopedList Name) -> (unused : Vect (length vs) Bool) -> List (Var vs)
+        allPrfs : (vs : SnocList Name) -> (unused : Vect (length vs) Bool) -> List (Var vs)
         allPrfs [<] _ = []
         allPrfs (v :%: vs) (False::uvs) = MkVar First :: map weaken (allPrfs vs uvs)
         allPrfs (v :%: vs) (True::uvs) = map weaken (allPrfs vs uvs)
@@ -544,7 +544,7 @@ mutual
         -- apply to all the variables. 'First' will be first in the last, which
         -- is good, because the most recently bound name is the first argument to
         -- the resulting function
-        allVars : FC -> (vs : ScopedList Name) -> (unused : Vect (length vs) Bool) -> List (Lifted vs)
+        allVars : FC -> (vs : SnocList Name) -> (unused : Vect (length vs) Bool) -> List (Lifted vs)
         allVars fc vs unused = map (\ (MkVar p) => LLocal fc p) (allPrfs vs unused)
 
 -- if doLazyAnnots = True then annotate function application with laziness

@@ -1,13 +1,13 @@
 module Core.Reflect
 
 import Data.List1
+import Data.SnocList
 
 import Core.Context
 import Core.Env
 import Core.Normalise
 import Core.TT
 import Core.Value
-import Core.Name.ScopedList
 
 import Libraries.Data.WithDefault
 
@@ -252,7 +252,7 @@ Reify a => Reify (List a) where
   reify defs val = cantReify val "List"
 
 export
-Reify a => Reify (ScopedList a) where
+Reify a => Reify (SnocList a) where
   reify defs val@(NDCon _ n _ _ args)
       = case (dropAllNS !(full (gamma defs) n), args) of
              (UN (Basic "[<]"), _) => pure [<]
@@ -260,8 +260,8 @@ Reify a => Reify (ScopedList a) where
                   => do x' <- reify defs !(evalClosure defs x)
                         xs' <- reify defs !(evalClosure defs xs)
                         pure (x' :%: xs')
-             _ => cantReify val "ScopedList"
-  reify defs val = cantReify val "ScopedList"
+             _ => cantReify val "SnocList"
+  reify defs val = cantReify val "SnocList"
 
 export
 Reflect a => Reflect (List a) where
@@ -272,7 +272,7 @@ Reflect a => Reflect (List a) where
            appCon fc defs (basics "::") [Erased fc Placeholder, x', xs']
 
 export
-Reflect a => Reflect (ScopedList a) where
+Reflect a => Reflect (SnocList a) where
   reflect fc defs lhs env [<] = appCon fc defs (basics "[<]") [Erased fc Placeholder]
   reflect fc defs lhs env (x :%: xs)
       = do x' <- reflect fc defs lhs env x

@@ -6,8 +6,9 @@ import Core.Core
 import Core.Env
 import Core.Normalise.Eval
 import Core.TT
-import Core.Name.ScopedList
 import Core.Value
+
+import Data.SnocList
 
 %default covering
 
@@ -26,13 +27,13 @@ record QuoteOpts where
 public export
 interface Quote tm where
     quote : {auto c : Ref Ctxt Defs} ->
-            {vars : ScopedList Name} ->
+            {vars : SnocList Name} ->
             Defs -> Env Term vars -> tm vars -> Core (Term vars)
     quoteLHS : {auto c : Ref Ctxt Defs} ->
-               {vars : ScopedList Name} ->
+               {vars : SnocList Name} ->
                Defs -> Env Term vars -> tm vars -> Core (Term vars)
     quoteOpts : {auto c : Ref Ctxt Defs} ->
-                {vars : ScopedList Name} ->
+                {vars : SnocList Name} ->
                 QuoteOpts -> Defs -> Env Term vars -> tm vars -> Core (Term vars)
 
     quoteGen : {auto c : Ref Ctxt Defs} ->
@@ -79,15 +80,15 @@ mutual
   quoteArgs : {auto c : Ref Ctxt Defs} ->
               {bound, free : _} ->
               Ref QVar Int -> QuoteOpts -> Defs -> Bounds bound ->
-              Env Term free -> ScopedList (Closure free) ->
-              Core (ScopedList (Term (bound +%+ free)))
+              Env Term free -> SnocList (Closure free) ->
+              Core (SnocList (Term (bound +%+ free)))
   quoteArgs q opts defs bounds env = traverse (quoteArg q opts defs bounds env)
 
   quoteArgsWithFC : {auto c : Ref Ctxt Defs} ->
                     {bound, free : _} ->
                     Ref QVar Int -> QuoteOpts -> Defs -> Bounds bound ->
-                    Env Term free -> ScopedList (FC, Closure free) ->
-                    Core (ScopedList (FC, Term (bound +%+ free)))
+                    Env Term free -> SnocList (FC, Closure free) ->
+                    Core (SnocList (FC, Term (bound +%+ free)))
   quoteArgsWithFC q opts defs bounds env
       = traverse (quoteArgWithFC q opts defs bounds env)
 
@@ -101,7 +102,7 @@ mutual
             pure $ Local fc mrig _ prf'
     where
       addLater : {idx : _} ->
-                 (ys : ScopedList Name) -> (0 p : IsVar n idx xs) ->
+                 (ys : SnocList Name) -> (0 p : IsVar n idx xs) ->
                  Var (ys +%+ xs)
       addLater [<] isv = MkVar isv
       addLater (x :%: xs) isv
@@ -269,7 +270,7 @@ quoteWithPiGen q opts defs bound env tm
 -- are, don't reduce anything else
 export
 quoteWithPi : {auto c : Ref Ctxt Defs} ->
-              {vars : ScopedList Name} ->
+              {vars : SnocList Name} ->
               Defs -> Env Term vars -> NF vars -> Core (Term vars)
 quoteWithPi defs env tm
     = do q <- newRef QVar 0

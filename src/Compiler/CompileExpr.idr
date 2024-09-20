@@ -7,13 +7,13 @@ import Core.Context
 import Core.Context.Log
 import Core.Env
 import Core.Name
-import Core.Name.ScopedList as SL
 import Core.Normalise
 import Core.Options
 import Core.TT
 import Core.Value
 
 import Data.List
+import Data.SnocList
 import Data.Maybe
 import Data.Vect
 
@@ -41,7 +41,7 @@ numArgs defs (Ref _ _ n)
            _ => pure (Arity 0)
 numArgs _ tm = pure (Arity 0)
 
-mkSub : Nat -> (ns : ScopedList Name) -> List Nat -> (ns' ** Thin ns' ns)
+mkSub : Nat -> (ns : SnocList Name) -> List Nat -> (ns' ** Thin ns' ns)
 mkSub i _ [] = (_ ** Refl)
 mkSub i [<] ns = (_ ** Refl)
 mkSub i (x :%: xs) es
@@ -134,8 +134,8 @@ eraseConArgs arity epos fn args
              else fn'
 
 mkDropSubst : Nat -> List Nat ->
-              (rest : ScopedList Name) ->
-              (vars : ScopedList Name) ->
+              (rest : SnocList Name) ->
+              (vars : SnocList Name) ->
               (vars' ** Thin (vars' +%+ rest) (vars +%+ rest))
 mkDropSubst i es rest [<] = ([<] ** Refl)
 mkDropSubst i es rest (x :%: xs)
@@ -318,7 +318,7 @@ mutual
                 _ => pure Nothing -- there's a normal match to do
     where
       mkSubst : Nat -> CExp vs ->
-                Nat -> (args : ScopedList Name) -> (SizeOf args, SubstCEnv args vs)
+                Nat -> (args : SnocList Name) -> (SizeOf args, SubstCEnv args vs)
       mkSubst _ _ _ [<] = (zero, [])
       mkSubst i scr pos (a :%: as)
           = let (s, env) = mkSubst (1 + i) scr pos as in
@@ -386,7 +386,7 @@ mutual
 
 -- Need this for ensuring that argument list matches up to operator arity for
 -- builtins
-data ArgList : Nat -> ScopedList Name -> Type where
+data ArgList : Nat -> SnocList Name -> Type where
      NoArgs : ArgList Z [<]
      ConsArg : (a : Name) -> ArgList k as -> ArgList (S k) (a :%: as)
 
@@ -433,7 +433,7 @@ getFieldArgs defs cl
               _ => pure []
 
 getNArgs : {auto c : Ref Ctxt Defs} ->
-           Defs -> Name -> ScopedList (Closure [<]) -> Core NArgs
+           Defs -> Name -> SnocList (Closure [<]) -> Core NArgs
 getNArgs defs (NS _ (UN $ Basic "IORes")) (arg :%: [<]) = pure $ NIORes arg
 getNArgs defs (NS _ (UN $ Basic "Ptr")) (arg :%: [<]) = pure NPtr
 getNArgs defs (NS _ (UN $ Basic "AnyPtr")) [<] = pure NPtr
@@ -520,7 +520,7 @@ getCFTypes args (NBind fc _ (Pi _ _ _ ty) sc)
 getCFTypes args t
     = pure (reverse args, !(nfToCFType (getLoc t) False t))
 
-lamRHSenv : Int -> FC -> (ns : ScopedList Name) -> (SizeOf ns, SubstCEnv ns [<])
+lamRHSenv : Int -> FC -> (ns : SnocList Name) -> (SizeOf ns, SubstCEnv ns [<])
 lamRHSenv i fc [<] = (zero, [])
 lamRHSenv i fc (n :%: ns)
     = let (s, env) = lamRHSenv (i + 1) fc ns in
@@ -531,7 +531,7 @@ mkBounds [<] = None
 mkBounds (x :%: xs) = Add x x (mkBounds xs)
 
 getNewArgs : {done : _} ->
-             SubstCEnv done args -> ScopedList Name
+             SubstCEnv done args -> SnocList Name
 getNewArgs [] = [<]
 getNewArgs (CRef _ n :: xs) = n :%: getNewArgs xs
 getNewArgs {done = x :%: xs} (_ :: sub) = x :%: getNewArgs sub
@@ -540,7 +540,7 @@ getNewArgs {done = x :%: xs} (_ :: sub) = x :%: getNewArgs sub
 -- we have to assume arity 0 for incremental compilation because
 -- we have no idea how it's defined, and when we made calls to the
 -- function, they had arity 0.
-lamRHS : (ns : ScopedList Name) -> CExp ns -> CExp [<]
+lamRHS : (ns : SnocList Name) -> CExp ns -> CExp [<]
 lamRHS ns tm
     = let (s, env) = lamRHSenv 0 (getFC tm) ns
           tmExp = substs s env (rewrite appendNilRightNeutral ns in tm)
@@ -549,7 +549,7 @@ lamRHS ns tm
           expLocs = mkLocals zero {vars = [<]} bounds tmExp in
           lamBind (getFC tm) _ expLocs
   where
-    lamBind : FC -> (ns : ScopedList Name) -> CExp ns -> CExp [<]
+    lamBind : FC -> (ns : SnocList Name) -> CExp ns -> CExp [<]
     lamBind fc [<] tm = tm
     lamBind fc (n :%: ns) tm = lamBind fc ns (CLam fc n tm)
 

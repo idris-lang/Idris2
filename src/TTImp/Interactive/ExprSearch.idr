@@ -43,7 +43,7 @@ import Libraries.Data.WithDefault
 -- of the LHS. Only recursive calls with a different structure are okay.
 record RecData where
   constructor MkRecData
-  {localVars : ScopedList Name}
+  {localVars : SnocList Name}
   recname : Name -- resolved name
   lhsapp : Term localVars
 

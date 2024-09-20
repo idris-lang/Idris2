@@ -388,7 +388,7 @@ findInTree p hint m
     match : (NonEmptyFC, Name) -> Bool
     match (_, n) = matches hint n && checkCandidate n
 
-record TermWithType (vars : ScopedList Name) where
+record TermWithType (vars : SnocList Name) where
   constructor WithType
   termOf : Term vars
   typeOf : Term vars

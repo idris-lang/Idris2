@@ -167,7 +167,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
         -- a LHS, or inside a `parameters` block) and so we need to start by dropping
         -- these local variables from the fully elaborated record's type
         -- We'll use the `env` thus obtained to unelab the remaining scope
-        dropLeadingPis : {vs : _} -> (vars : ScopedList Name) -> Term vs -> Env Term vs ->
+        dropLeadingPis : {vs : _} -> (vars : SnocList Name) -> Term vs -> Env Term vs ->
                          Core (vars' ** (Env Term vars', Term vars'))
         dropLeadingPis [<] ty env
           = do unless (null vars) $
