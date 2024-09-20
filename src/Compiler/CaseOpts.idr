@@ -39,7 +39,7 @@ shiftUnder (Later p) = insertNVar (mkSizeOf args) (MkNVar p)
 
 shiftVar : {outer, args : Scope} ->
            NVar n (outer +%+ (x :%: args +%+ vars)) ->
-           NVar n (outer +%+ (args +%+ x :%: vars))
+           NVar n ((vars :< x <>< args) ++ outer)
 shiftVar nvar
   = let out = mkSizeOf outer in
     case locateNVar out nvar of
@@ -50,7 +50,7 @@ mutual
   shiftBinder : {outer, args : _} ->
                 (new : Name) ->
                 CExp (outer +%+ old :%: (args +%+ vars)) ->
-                CExp (outer +%+ (args +%+ new :%: vars))
+                CExp ((vars :< new <>< args) ++ outer)
   shiftBinder new (CLocal fc p)
       = case shiftVar (MkNVar p) of
              MkNVar p' => CLocal fc (renameVar p')
@@ -88,7 +88,7 @@ mutual
   shiftBinderConAlt : {outer, args : _} ->
                 (new : Name) ->
                 CConAlt (outer +%+ (x :%: args +%+ vars)) ->
-                CConAlt (outer +%+ (args +%+ new :%: vars))
+                CConAlt ((vars :< new <>< args) ++ outer)
   shiftBinderConAlt new (MkConAlt n ci t args' sc)
       = let sc' : CExp ((args' +%+ outer) +%+ (x :%: args +%+ vars))
                 = rewrite sym (appendAssociative args' outer (vars <>< args :< x)) in sc in
@@ -99,7 +99,7 @@ mutual
   shiftBinderConstAlt : {outer, args : _} ->
                 (new : Name) ->
                 CConstAlt (outer +%+ (x :%: args +%+ vars)) ->
-                CConstAlt (outer +%+ (args +%+ new :%: vars))
+                CConstAlt ((vars :< new <>< args) ++ outer)
   shiftBinderConstAlt new (MkConstAlt c sc) = MkConstAlt c $ shiftBinder new sc
 
 -- If there's a lambda inside a case, move the variable so that it's bound
