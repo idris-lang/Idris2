@@ -55,8 +55,8 @@ mutual
       = case shiftVar (MkNVar p) of
              MkNVar p' => CLocal fc (renameVar p')
     where
-      renameVar : IsVar x i (outer +%+ (args +%+ (old :%: rest))) ->
-                  IsVar x i (outer +%+ (args +%+ (new :%: rest)))
+      renameVar : IsVar x i ((rest :< old <>< args) ++ outer) ->
+                  IsVar x i ((rest :< new <>< args) ++ outer)
       renameVar = believe_me -- it's the same index, so just the identity at run time
   shiftBinder new (CRef fc n) = CRef fc n
   shiftBinder {outer} new (CLam fc n sc)
