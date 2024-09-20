@@ -9,9 +9,9 @@ import Core.Name.Scoped
 import Core.TT.Binder
 import Core.TT.Primitive
 import Core.TT.Var
-import Core.Name.ScopedList
 
 import Data.List
+import Data.SnocList
 
 %default total
 
@@ -296,7 +296,7 @@ applySpineWithFC fn (args :< (fc, arg)) = App fc (applySpineWithFC fn args) arg
 
 -- Creates a chain of `App` nodes, each with its own file context
 export
-applyStackWithFC : Term vars -> ScopedList (FC, Term vars) -> Term vars
+applyStackWithFC : Term vars -> SnocList (FC, Term vars) -> Term vars
 applyStackWithFC fn [<] = fn
 applyStackWithFC fn ((fc, arg) :%: args) = applyStackWithFC (App fc fn arg) args
 
@@ -475,15 +475,15 @@ Eq (Term vars) where
 
 mutual
 
-  resolveNamesBinder : (vars : ScopedList Name) -> Binder (Term vars) -> Binder (Term vars)
+  resolveNamesBinder : (vars : SnocList Name) -> Binder (Term vars) -> Binder (Term vars)
   resolveNamesBinder vars b = assert_total $ map (resolveNames vars) b
 
-  resolveNamesTerms : (vars : ScopedList Name) -> List (Term vars) -> List (Term vars)
+  resolveNamesTerms : (vars : SnocList Name) -> List (Term vars) -> List (Term vars)
   resolveNamesTerms vars ts = assert_total $ map (resolveNames vars) ts
 
   -- Replace any Ref Bound in a type with appropriate local
   export
-  resolveNames : (vars : ScopedList Name) -> Term vars -> Term vars
+  resolveNames : (vars : SnocList Name) -> Term vars -> Term vars
   resolveNames vars (Ref fc Bound name)
       = case isNVar name vars of
              Just (MkNVar prf) => Local fc (Just False) _ prf

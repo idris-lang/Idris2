@@ -207,7 +207,7 @@ mutual
   mightMatchArgs : {auto c : Ref Ctxt Defs} ->
                    {vars : _} ->
                    Defs ->
-                   ScopedList (Closure vars) -> ScopedList (Closure [<]) ->
+                   SnocList (Closure vars) -> SnocList (Closure [<]) ->
                    Core Bool
   mightMatchArgs defs [<] [<] = pure True
   mightMatchArgs defs (x :%: xs) (y :%: ys)

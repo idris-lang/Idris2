@@ -1,15 +1,14 @@
 module Core.Env
 
 import Core.TT
-import Core.Name.ScopedList
-import Core.Name.ScopedList.SizeOf
 import Data.List
+import Data.SnocList
 
 %default total
 
 -- Environment containing types and values of local variables
 public export
-data Env : (tm : ScopedList Name -> Type) -> ScopedList Name -> Type where
+data Env : (tm : SnocList Name -> Type) -> SnocList Name -> Type where
      Nil : Env tm [<]
      (::) : Binder (tm vars) -> Env tm vars -> Env tm (x :%: vars)
 
@@ -42,13 +41,13 @@ lengthExplicitPi (Pi _ _ Explicit _ :: rho) = S (lengthExplicitPi rho)
 lengthExplicitPi (_ :: rho) = lengthExplicitPi rho
 
 export
-namesNoLet : {xs : _} -> Env tm xs -> ScopedList Name
+namesNoLet : {xs : _} -> Env tm xs -> SnocList Name
 namesNoLet [] = [<]
 namesNoLet (Let _ _ _ _ :: xs) = namesNoLet xs
 namesNoLet {xs = x :%: _} (_ :: env) = x :%: namesNoLet env
 
 public export
-data IsDefined : Name -> ScopedList Name -> Type where
+data IsDefined : Name -> SnocList Name -> Type where
   MkIsDefined : {idx : Nat} -> RigCount -> (0 p : IsVar n idx vars) ->
                 IsDefined n vars
 
@@ -74,14 +73,14 @@ bindEnv loc (b :: env) tm
                                         Explicit
                                         (binderType b)) tm)
 
-revOnto : (xs, vs : ScopedList a) -> reverseOnto xs vs = reverse vs +%+ xs
+revOnto : (xs, vs : SnocList a) -> reverseOnto xs vs = reverse vs +%+ xs
 revOnto xs [<] = Refl
 revOnto xs (v :%: vs)
     = rewrite revOnto (v :%: xs) vs in
         rewrite appendAssociative (reverse vs) (v :%: [<]) xs in
           rewrite revOnto (v :%: [<]) vs in Refl
 
-revNs : (vs, ns : ScopedList a) -> reverse ns +%+ reverse vs = reverse (vs +%+ ns)
+revNs : (vs, ns : SnocList a) -> reverse ns +%+ reverse vs = reverse (vs +%+ ns)
 revNs [<] ns = rewrite appendNilRightNeutral (reverse ns) in Refl
 revNs (v :%: vs) ns
     = rewrite revOnto (v :%: [<]) vs in
@@ -96,7 +95,7 @@ revNs (v :%: vs) ns
 -- when environments get fairly big.
 getBinderUnder : Weaken tm =>
                  {vars : _} -> {idx : Nat} ->
-                 (ns : ScopedList Name) ->
+                 (ns : SnocList Name) ->
                  (0 p : IsVar x idx vars) -> Env tm vars ->
                  Binder (tm (reverseOnto vars ns))
 getBinderUnder {idx = Z} {vars = v :%: vs} ns First (b :: env)
@@ -163,7 +162,7 @@ letToLam (b :: env) = b :: letToLam env
 mutual
   -- Quicker, if less safe, to store variables as a Nat, for quick comparison
   findUsed : {vars : _} ->
-             Env Term vars -> ScopedList Nat -> Term vars -> ScopedList Nat
+             Env Term vars -> SnocList Nat -> Term vars -> SnocList Nat
   findUsed env used (Local fc r idx p)
       = if elemBy eqNat idx used
            then used
@@ -175,7 +174,7 @@ mutual
   findUsed env used (Meta _ _ _ args)
       = findUsedArgs env used args
     where
-      findUsedArgs : Env Term vars -> ScopedList Nat -> List (Term vars) -> ScopedList Nat
+      findUsedArgs : Env Term vars -> SnocList Nat -> List (Term vars) -> SnocList Nat
       findUsedArgs env u [] = u
       findUsedArgs env u (a :: as)
           = findUsedArgs env (findUsed env u a) as
@@ -185,7 +184,7 @@ mutual
                           (map S (findUsedInBinder env used b))
                           tm)
     where
-      dropS : ScopedList Nat -> ScopedList Nat
+      dropS : SnocList Nat -> SnocList Nat
       dropS [<] = [<]
       dropS (Z :%: xs) = dropS xs
       dropS (S p :%: xs) = p :%: dropS xs
@@ -202,15 +201,15 @@ mutual
   findUsed env used _ = used
 
   findUsedInBinder : {vars : _} ->
-                     Env Term vars -> ScopedList Nat ->
-                     Binder (Term vars) -> ScopedList Nat
+                     Env Term vars -> SnocList Nat ->
+                     Binder (Term vars) -> SnocList Nat
   findUsedInBinder env used (Let _ _ val ty)
     = findUsed env (findUsed env used val) ty
   findUsedInBinder env used (PLet _ _ val ty)
     = findUsed env (findUsed env used val) ty
   findUsedInBinder env used b = findUsed env used (binderType b)
 
-toVar : (vars : ScopedList Name) -> Nat -> Maybe (Var vars)
+toVar : (vars : SnocList Name) -> Nat -> Maybe (Var vars)
 toVar (v :%: vs) Z = Just (MkVar First)
 toVar (v :%: vs) (S k)
    = do MkVar prf <- toVar vs k
@@ -219,16 +218,16 @@ toVar _ _ = Nothing
 
 export
 findUsedLocs : {vars : _} ->
-               Env Term vars -> Term vars -> ScopedList (Var vars)
+               Env Term vars -> Term vars -> SnocList (Var vars)
 findUsedLocs env tm
     = mapMaybe (toVar _) (findUsed env [<] tm)
 
-isUsed : Nat -> ScopedList (Var vars) -> Bool
+isUsed : Nat -> SnocList (Var vars) -> Bool
 isUsed n [<] = False
 isUsed n (v :%: vs) = n == varIdx v || isUsed n vs
 
 mkShrinkSub : {n : _} ->
-              (vars : _) -> ScopedList (Var (n :%: vars)) ->
+              (vars : _) -> SnocList (Var (n :%: vars)) ->
               (newvars ** Thin newvars (n :%: vars))
 mkShrinkSub [<] els
     = if isUsed 0 els
@@ -241,7 +240,7 @@ mkShrinkSub (x :%: xs) els
         else (_ ** Drop subRest)
 
 mkShrink : {vars : _} ->
-           ScopedList (Var vars) ->
+           SnocList (Var vars) ->
            (newvars ** Thin newvars vars)
 mkShrink {vars = [<]} xs = (_ ** Refl)
 mkShrink {vars = v :%: vs} xs = mkShrinkSub _ xs
@@ -251,7 +250,7 @@ mkShrink {vars = v :%: vs} xs = mkShrinkSub _ xs
 export
 findSubEnv : {vars : _} ->
              Env Term vars -> Term vars ->
-             (vars' : ScopedList Name ** Thin vars' vars)
+             (vars' : SnocList Name ** Thin vars' vars)
 findSubEnv env tm = mkShrink (findUsedLocs env tm)
 
 export
@@ -264,7 +263,7 @@ shrinkEnv (b :: env) (Keep p)
          pure (b' :: env')
 
 export
-mkEnvOnto : FC -> (xs : ScopedList Name) -> Env Term ys -> Env Term (xs +%+ ys)
+mkEnvOnto : FC -> (xs : SnocList Name) -> Env Term ys -> Env Term (xs +%+ ys)
 mkEnvOnto fc [<] vs = vs
 mkEnvOnto fc (n :%: ns) vs
    = PVar fc top Explicit (Erased fc Placeholder)
@@ -274,7 +273,7 @@ mkEnvOnto fc (n :%: ns) vs
 -- and types of the contents.
 -- We use this when building and comparing case trees.
 export
-mkEnv : FC -> (vs : ScopedList Name) -> Env Term vs
+mkEnv : FC -> (vs : SnocList Name) -> Env Term vs
 mkEnv fc [<] = []
 mkEnv fc (n :%: ns) = PVar fc top Explicit (Erased fc Placeholder) :: mkEnv fc ns
 
@@ -292,7 +291,7 @@ uniqifyEnv env = uenv [<] env
     next (NS ns n) = NS ns (next n)
     next n = MN (show n) 0
 
-    uniqueLocal : ScopedList Name -> Name -> Name
+    uniqueLocal : SnocList Name -> Name -> Name
     uniqueLocal vs n
        = if n `elem` vs
                  -- we'll find a new name eventualy since the list of names
@@ -304,7 +303,7 @@ uniqifyEnv env = uenv [<] env
             else n
 
     uenv : {vars : _} ->
-           ScopedList Name -> Env Term vars ->
+           SnocList Name -> Env Term vars ->
            (vars' ** (Env Term vars', CompatibleVars vars vars'))
     uenv used [] = ([<] ** ([], Pre))
     uenv used {vars = v :%: vs} (b :: bs)

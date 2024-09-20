@@ -9,7 +9,6 @@ import Core.Metadata
 import Core.Normalise
 import Core.Value
 import Core.UnifyState
-import Core.Name.ScopedList
 
 import Idris.REPL.Opts
 import Idris.Syntax
@@ -23,6 +22,7 @@ import TTImp.Unelab
 import Protocol.Hex
 
 import Data.List
+import Data.SnocList
 import Libraries.Data.NameMap
 import Libraries.Data.WithDefault
 
@@ -112,7 +112,7 @@ specByVar specs (p :: ps)
          ps' <- specByVar specs ps
          pure (p' :: ps')
 
-dropSpec : Nat -> List (Nat, Term [<]) -> ScopedList a -> ScopedList a
+dropSpec : Nat -> List (Nat, Term [<]) -> SnocList a -> SnocList a
 dropSpec i sargs [<] = [<]
 dropSpec i sargs (x :%: xs)
     = case lookup i sargs of
@@ -121,7 +121,7 @@ dropSpec i sargs (x :%: xs)
 
 getSpecPats : {auto c : Ref Ctxt Defs} ->
               FC -> Name ->
-              (fn : Name) -> (stk : ScopedList (FC, Term vars)) ->
+              (fn : Name) -> (stk : SnocList (FC, Term vars)) ->
               NF [<] -> -- Type of 'fn'
               List (Nat, ArgMode) -> -- All the arguments
               List (Nat, Term [<]) -> -- Just the static ones
@@ -183,7 +183,7 @@ getSpecPats fc pename fn stk fnty args sargs pats
     mkRHSargs _ app _ _
         = pure app
 
-    getRawArgs : ScopedList (Arg' Name) -> RawImp -> ScopedList (Arg' Name)
+    getRawArgs : SnocList (Arg' Name) -> RawImp -> SnocList (Arg' Name)
     getRawArgs args (IApp fc f arg) = getRawArgs (Explicit fc arg :%: args) f
     getRawArgs args (INamedApp fc f n arg)
         = getRawArgs (Named fc n arg :%: args) f
@@ -191,7 +191,7 @@ getSpecPats fc pename fn stk fnty args sargs pats
         = getRawArgs (Auto fc arg :%: args) f
     getRawArgs args tm = args
 
-    reapply : RawImp -> ScopedList (Arg' Name) -> RawImp
+    reapply : RawImp -> SnocList (Arg' Name) -> RawImp
     reapply f [<] = f
     reapply f (Explicit fc arg :%: args) = reapply (IApp fc f arg) args
     reapply f (Named fc n arg :%: args)
@@ -247,7 +247,7 @@ mkSpecDef : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
             {auto o : Ref ROpts REPLOpts} ->
             FC -> GlobalDef ->
-            Name -> List (Nat, ArgMode) -> Name -> ScopedList (FC, Term vars) ->
+            Name -> List (Nat, ArgMode) -> Name -> SnocList (FC, Term vars) ->
             Core (Term vars)
 mkSpecDef {vars} fc gdef pename sargs fn stk
     = handleUnify {unResolve = True}
@@ -401,7 +401,7 @@ specialise : {vars : _} ->
              {auto s : Ref Syn SyntaxInfo} ->
              {auto o : Ref ROpts REPLOpts} ->
              FC -> Env Term vars -> GlobalDef ->
-             Name -> ScopedList (FC, Term vars) ->
+             Name -> SnocList (FC, Term vars) ->
              Core (Maybe (Term vars))
 specialise {vars} fc env gdef fn stk
     = case specArgs gdef of
@@ -428,7 +428,7 @@ specialise {vars} fc env gdef fn stk
                Term vars -> Maybe (Term [<])
     concrete tm = shrink tm none
 
-    getSpecArgs : Nat -> List Nat -> ScopedList (FC, Term vars) ->
+    getSpecArgs : Nat -> List Nat -> SnocList (FC, Term vars) ->
                   Core (Maybe (List (Nat, ArgMode)))
     getSpecArgs i specs [<] = pure (Just [])
     getSpecArgs i specs ((_, x) :%: xs)
@@ -449,7 +449,7 @@ findSpecs : {vars : _} ->
             {auto u : Ref UST UState} ->
             {auto s : Ref Syn SyntaxInfo} ->
             {auto o : Ref ROpts REPLOpts} ->
-            Env Term vars -> ScopedList (FC, Term vars) -> Term vars ->
+            Env Term vars -> SnocList (FC, Term vars) -> Term vars ->
             Core (Term vars)
 findSpecs env stk (Ref fc Func fn)
     = do defs <- get Ctxt
@@ -500,8 +500,8 @@ mutual
               {auto s : Ref Syn SyntaxInfo} ->
               {auto o : Ref ROpts REPLOpts} ->
               Ref QVar Int -> Defs -> Bounds bound ->
-              Env Term free -> ScopedList (Closure free) ->
-              Core (ScopedList (Term (bound +%+ free)))
+              Env Term free -> SnocList (Closure free) ->
+              Core (SnocList (Term (bound +%+ free)))
   quoteArgs q defs bounds env [<] = pure [<]
   quoteArgs q defs bounds env (a :%: args)
       = pure $ (!(quoteGenNF q defs bounds env !(evalClosure defs a)) :%:
@@ -514,8 +514,8 @@ mutual
                     {auto o : Ref ROpts REPLOpts} ->
                     {bound, free : _} ->
                     Ref QVar Int -> Defs -> Bounds bound ->
-                    Env Term free -> ScopedList (FC, Closure free) ->
-                    Core (ScopedList (FC, Term (bound +%+ free)))
+                    Env Term free -> SnocList (FC, Closure free) ->
+                    Core (SnocList (FC, Term (bound +%+ free)))
   quoteArgsWithFC q defs bounds env terms
       = pure $ zip (map fst terms) !(quoteArgs q defs bounds env (map snd terms))
 
@@ -532,7 +532,7 @@ mutual
       = let MkVar prf' = addLater bound prf in
             pure $ Local fc mrig _ prf'
     where
-      addLater : {idx : _} -> (ys : ScopedList Name) -> (0 p : IsVar n idx xs) ->
+      addLater : {idx : _} -> (ys : SnocList Name) -> (0 p : IsVar n idx xs) ->
                  Var (ys +%+ xs)
       addLater [<] isv = MkVar isv
       addLater (x :%: xs) isv

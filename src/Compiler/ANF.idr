@@ -6,9 +6,9 @@ import Core.CompileExpr
 import Core.Context
 import Core.Core
 import Core.TT
-import Core.Name.ScopedList
 
 import Data.List
+import Data.SnocList
 import Data.Vect
 import Libraries.Data.SortedSet
 
@@ -137,7 +137,7 @@ Show ANFDef where
         show args ++ " -> " ++ show ret
   show (MkAError exp) = "Error: " ++ show exp
 
-data AVars : ScopedList Name -> Type where
+data AVars : SnocList Name -> Type where
      Nil : AVars [<]
      (::) : Int -> AVars xs -> AVars (x :%: xs)
 
@@ -245,7 +245,7 @@ mutual
       = do (is, vs') <- bindArgs args vs
            pure $ MkAConAlt n ci t is !(anf vs' sc)
     where
-      bindArgs : (args : ScopedList Name) -> AVars vars' ->
+      bindArgs : (args : SnocList Name) -> AVars vars' ->
                  Core (List Int, AVars (args +%+ vars'))
       bindArgs [<] vs = pure ([], vs)
       bindArgs (n :%: ns) vs
@@ -270,7 +270,7 @@ toANF (MkLFun args scope sc)
          pure $ MkAFun (iargs ++ reverse iargs') !(anf vs sc)
   where
     bindArgs : {auto v : Ref Next Int} ->
-               (args : ScopedList Name) -> AVars vars' ->
+               (args : SnocList Name) -> AVars vars' ->
                Core (List Int, AVars (args +%+ vars'))
     bindArgs [<] vs = pure ([], vs)
     bindArgs (n :%: ns) vs

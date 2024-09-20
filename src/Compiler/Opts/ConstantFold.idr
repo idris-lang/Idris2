@@ -6,8 +6,8 @@ import Core.Context.Log
 import Core.Primitives
 import Core.Value
 import Core.Name
-import Core.Name.ScopedList
 import Data.List
+import Data.SnocList
 import Data.Vect
 
 findConstAlt : Constant -> List (CConstAlt vars) ->
@@ -25,12 +25,12 @@ foldableOp (Cast from to)   = isJust (intKind from) && isJust (intKind to)
 foldableOp _                = True
 
 
-data Subst : ScopedList Name -> ScopedList Name -> Type where
+data Subst : SnocList Name -> SnocList Name -> Type where
   Nil  : Subst [<] vars
   (::) : CExp vars -> Subst ds vars -> Subst (d :%: ds) vars
   Wk   : SizeOf ws -> Subst ds vars -> Subst (ws +%+ ds) (ws +%+ vars)
 
-initSubst : (vars : ScopedList Name) -> Subst vars vars
+initSubst : (vars : SnocList Name) -> Subst vars vars
 initSubst vars
   = rewrite sym $ appendNilRightNeutral vars in
     Wk (mkSizeOf vars) []
@@ -43,9 +43,9 @@ wk sout (Wk {ws, ds, vars} sws rho)
     Wk (sout + sws) rho
 wk ws rho = Wk ws rho
 
-record WkCExp (vars : ScopedList Name) where
+record WkCExp (vars : SnocList Name) where
   constructor MkWkCExp
-  {0 outer, supp : ScopedList Name}
+  {0 outer, supp : SnocList Name}
   size : SizeOf outer
   0 prf : vars === outer +%+ supp
   expr : CExp supp

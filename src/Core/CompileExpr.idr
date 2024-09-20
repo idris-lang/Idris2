@@ -5,13 +5,12 @@ module Core.CompileExpr
 import Core.FC
 import Core.Name
 import Core.TT
-import Core.Name.ScopedList
 
 import Data.List
+import Data.SnocList
 import Data.Vect
 
 import Libraries.Data.SnocList.SizeOf
-import Core.Name.ScopedList.SizeOf
 
 %default covering
 
@@ -73,7 +72,7 @@ Eq InlineOk where
 mutual
   ||| CExp - an expression ready for compiling.
   public export
-  data CExp : ScopedList Name -> Type where
+  data CExp : SnocList Name -> Type where
        CLocal : {idx : Nat} -> FC -> (0 p : IsVar x idx vars) -> CExp vars
        CRef : FC -> Name -> CExp vars
        -- Lambda expression
@@ -111,14 +110,14 @@ mutual
        CCrash : FC -> String -> CExp vars
 
   public export
-  data CConAlt : ScopedList Name -> Type where
+  data CConAlt : SnocList Name -> Type where
        -- If no tag, then match by constructor name. Back ends might want to
        -- convert names to a unique integer for performance.
-       MkConAlt : Name -> ConInfo -> (tag : Maybe Int) -> (args : ScopedList Name) ->
+       MkConAlt : Name -> ConInfo -> (tag : Maybe Int) -> (args : SnocList Name) ->
                   CExp (args +%+ vars) -> CConAlt vars
 
   public export
-  data CConstAlt : ScopedList Name -> Type where
+  data CConstAlt : SnocList Name -> Type where
        MkConstAlt : Constant -> CExp vars -> CConstAlt vars
 
 mutual
@@ -201,7 +200,7 @@ data CFType : Type where
 public export
 data CDef : Type where
      -- Normal function definition
-     MkFun : (args : ScopedList Name) -> CExp args -> CDef
+     MkFun : (args : SnocList Name) -> CExp args -> CDef
      -- Constructor
      MkCon : (tag : Maybe Int) -> (arity : Nat) -> (nt : Maybe Nat) -> CDef
      -- Foreign definition
@@ -273,7 +272,7 @@ mutual
          = "(%constcase " ++ show x ++ " " ++ show exp ++ ")"
 
 export
-data Names : ScopedList Name -> Type where
+data Names : SnocList Name -> Type where
      Nil : Names [<]
      (::) : Name -> Names xs -> Names (x :%: xs)
 
@@ -298,13 +297,13 @@ getLocName Z (x :: xs) First = x
 getLocName (S k) (x :: xs) (Later p) = getLocName k xs p
 
 export
-addLocs : (args : ScopedList Name) -> Names vars -> Names (args +%+ vars)
+addLocs : (args : SnocList Name) -> Names vars -> Names (args +%+ vars)
 addLocs [<] ns = ns
 addLocs (x :%: xs) ns
     = let rec = addLocs xs ns in
           uniqueName x rec :: rec
 
-conArgs : (args : ScopedList Name) -> Names (args +%+ vars) -> List Name
+conArgs : (args : SnocList Name) -> Names (args +%+ vars) -> List Name
 conArgs [<] ns = []
 conArgs (a :%: as) (n :: ns) = n :: conArgs as ns
 

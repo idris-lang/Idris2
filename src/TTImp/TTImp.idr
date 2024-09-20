@@ -20,7 +20,7 @@ import Libraries.Data.WithDefault
 
 -- Information about names in nested blocks
 public export
-record NestedNames (vars : ScopedList Name) where
+record NestedNames (vars : SnocList Name) where
   constructor MkNested
   -- A map from names to the decorated version of the name, and the new name
   -- applied to its enclosing environment
