@@ -94,7 +94,7 @@ mutual
                 = rewrite sym (appendAssociative args' outer (x :%: args +%+ vars)) in sc in
         MkConAlt n ci t args' $
            rewrite (appendAssociative args' outer (args +%+ new :%: vars))
-             in shiftBinder new {outer = args' +%+ outer} sc'
+             in shiftBinder new {outer = outer ++ args'} sc'
 
   shiftBinderConstAlt : {outer, args : _} ->
                 (new : Name) ->

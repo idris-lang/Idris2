@@ -56,17 +56,17 @@ mkFresh vs n
 public export
 0 Weakenable : Scoped -> Type
 Weakenable tm = {0 vars, ns : Scope} ->
-  SizeOf ns -> tm vars -> tm (ns +%+ vars)
+  SizeOf ns -> tm vars -> tm (vars ++ ns)
 
 public export
 0 Strengthenable : Scoped -> Type
 Strengthenable tm = {0 vars, ns : Scope} ->
-  SizeOf ns -> tm (ns +%+ vars) -> Maybe (tm vars)
+  SizeOf ns -> tm (vars ++ ns) -> Maybe (tm vars)
 
 public export
 0 GenWeakenable : Scoped -> Type
 GenWeakenable tm = {0 outer, ns, local : Scope} ->
-  SizeOf local -> SizeOf ns -> tm (local +%+ outer) -> tm (local +%+ (ns +%+ outer))
+  SizeOf local -> SizeOf ns -> tm (outer ++ local) -> tm ((outer ++ ns) ++ local)
 
 public export
 0 Thinnable : Scoped -> Type
@@ -78,7 +78,7 @@ Shrinkable tm = {0 xs, ys : Scope} -> tm xs -> Thin ys xs -> Maybe (tm ys)
 
 public export
 0 Embeddable : Scoped -> Type
-Embeddable tm = {0 outer, vars : Scope} -> tm vars -> tm (vars +%+ outer)
+Embeddable tm = {0 outer, vars : Scope} -> tm vars -> tm (outer ++ vars)
 
 ------------------------------------------------------------------------
 -- IsScoped interface
@@ -100,7 +100,7 @@ interface GenWeaken (0 tm : Scoped) where
 
 export
 genWeaken : GenWeaken tm =>
-  SizeOf local -> tm (local +%+ outer) -> tm (local +%+ n :%: outer)
+  SizeOf local -> tm (outer ++ local) -> tm (local +%+ n :%: outer)
 genWeaken l = genWeakenNs l (suc zero)
 
 public export

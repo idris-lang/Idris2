@@ -28,7 +28,7 @@ foldableOp _                = True
 data Subst : SnocList Name -> SnocList Name -> Type where
   Nil  : Subst [<] vars
   (::) : CExp vars -> Subst ds vars -> Subst (d :%: ds) vars
-  Wk   : SizeOf ws -> Subst ds vars -> Subst (ws +%+ ds) (ws +%+ vars)
+  Wk   : SizeOf ws -> Subst ds vars -> Subst (ds ++ ws) (vars ++ ws)
 
 initSubst : (vars : SnocList Name) -> Subst vars vars
 initSubst vars
@@ -36,7 +36,7 @@ initSubst vars
     Wk (mkSizeOf vars) []
 
 
-wk : SizeOf out -> Subst ds vars -> Subst (out +%+ ds) (out +%+ vars)
+wk : SizeOf out -> Subst ds vars -> Subst (ds ++ out) (vars ++ out)
 wk sout (Wk {ws, ds, vars} sws rho)
   = rewrite appendAssociative out ws ds in
     rewrite appendAssociative out ws vars in
@@ -47,7 +47,7 @@ record WkCExp (vars : SnocList Name) where
   constructor MkWkCExp
   {0 outer, supp : SnocList Name}
   size : SizeOf outer
-  0 prf : vars === outer +%+ supp
+  0 prf : vars === supp ++ outer
   expr : CExp supp
 
 Weaken WkCExp where

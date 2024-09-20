@@ -452,7 +452,7 @@ searchVar fc rig depth def env nest n ty
                                          else find x xs
 
     envHints : List Name -> Env Term vars ->
-               Core (vars' ** (Term (vars' +%+ vars) -> Term vars, Env Term (vars' +%+ vars)))
+               Core (vars' ** (Term (vars ++ vars') -> Term vars, Env Term (vars ++ vars')))
     envHints [] env = pure ([<] ** (id, env))
     envHints (n :: ns) env
         = do (vs ** (f, env')) <- envHints ns env

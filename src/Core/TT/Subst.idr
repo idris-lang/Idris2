@@ -25,7 +25,7 @@ export
 findDrop :
   (Var vars -> tm vars) ->
   SizeOf dropped ->
-  Var (dropped +%+ vars) ->
+  Var (vars ++ dropped) ->
   Subst tm dropped vars ->
   tm vars
 findDrop k s var sub = case locateVar s var of
@@ -36,9 +36,9 @@ export
 find : Weaken tm =>
        (forall vars. Var vars -> tm vars) ->
        SizeOf outer -> SizeOf dropped ->
-       Var (outer +%+ (dropped +%+ vars)) ->
+       Var ((vars ++ dropped) ++ outer) ->
        Subst tm dropped vars ->
-       tm (outer +%+ vars)
+       tm (vars ++ outer)
 find k outer dropped var sub = case locateVar outer var of
   Left var => k (embed var)
   Right var => weakenNs outer (findDrop k dropped var sub)
@@ -50,5 +50,5 @@ Substitutable val tm
     SizeOf outer ->
     SizeOf dropped ->
     Subst val dropped vars ->
-    tm (outer +%+ (dropped +%+ vars)) ->
-    tm (outer +%+ vars)
+    tm ((vars ++ dropped) ++ outer) ->
+    tm (vars ++ outer)
