@@ -182,15 +182,15 @@ swapIsVarH (Later p) = swapP p -- it'd be nice to do this all at the top
     swapP (Later x) = MkVar (Later (Later x))
 
 swapIsVar : (vs : SnocList Name) ->
-            {idx : Nat} -> (0 p : IsVar nm idx (vs +%+ x :%: y :%: xs)) ->
-            Var (vs +%+ y :%: x :%: xs)
+            {idx : Nat} -> (0 p : IsVar nm idx (xs :< y :< x ++ vs)) ->
+            Var (xs :< x :< y ++ vs)
 swapIsVar [<] prf = swapIsVarH prf
 swapIsVar (x :%: xs) First = MkVar First
 swapIsVar (x :%: xs) (Later p)
     = let MkVar p' = swapIsVar xs p in MkVar (Later p')
 
 swapVars : {vs : SnocList Name} ->
-           Term (vs +%+ x :%: y :%: ys) -> Term (vs +%+ y :%: x :%: ys)
+           Term (ys :< y :< x ++ vs) -> Term (ys :< x :< y ++ vs)
 swapVars (Local fc x idx p)
     = let MkVar p' = swapIsVar _ p in Local fc x _ p'
 swapVars (Ref fc x name) = Ref fc x name
