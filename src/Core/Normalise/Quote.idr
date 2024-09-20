@@ -64,7 +64,7 @@ mutual
               {bound, free : _} ->
               Ref QVar Int -> QuoteOpts -> Defs -> Bounds bound ->
               Env Term free -> Closure free ->
-              Core (Term (bound +%+ free))
+              Core (Term (free ++ bound))
   quoteArg q opts defs bounds env a
       = quoteGenNF q opts defs bounds env !(evalClosure defs a)
 
@@ -72,7 +72,7 @@ mutual
                    {bound, free : _} ->
                    Ref QVar Int -> QuoteOpts -> Defs -> Bounds bound ->
                    Env Term free -> (FC, Closure free) ->
-                   Core ((FC, Term (bound +%+ free)))
+                   Core ((FC, Term (free ++ bound)))
   quoteArgWithFC q opts defs bounds env
        = traversePair (quoteArg q opts defs bounds env)
 
@@ -80,14 +80,14 @@ mutual
               {bound, free : _} ->
               Ref QVar Int -> QuoteOpts -> Defs -> Bounds bound ->
               Env Term free -> SnocList (Closure free) ->
-              Core (SnocList (Term (bound +%+ free)))
+              Core (SnocList (Term (free ++ bound)))
   quoteArgs q opts defs bounds env = traverse (quoteArg q opts defs bounds env)
 
   quoteArgsWithFC : {auto c : Ref Ctxt Defs} ->
                     {bound, free : _} ->
                     Ref QVar Int -> QuoteOpts -> Defs -> Bounds bound ->
                     Env Term free -> SnocList (FC, Closure free) ->
-                    Core (SnocList (FC, Term (bound +%+ free)))
+                    Core (SnocList (FC, Term (free ++ bound)))
   quoteArgsWithFC q opts defs bounds env
       = traverse (quoteArgWithFC q opts defs bounds env)
 
@@ -95,14 +95,14 @@ mutual
               {bound, free : _} ->
               Ref QVar Int -> QuoteOpts -> Defs ->
               FC -> Bounds bound -> Env Term free -> NHead free ->
-              Core (Term (bound +%+ free))
+              Core (Term (free ++ bound))
   quoteHead {bound} q opts defs fc bounds env (NLocal mrig _ prf)
       = let MkVar prf' = addLater bound prf in
             pure $ Local fc mrig _ prf'
     where
       addLater : {idx : _} ->
                  (ys : SnocList Name) -> (0 p : IsVar n idx xs) ->
-                 Var (ys +%+ xs)
+                 Var (xs ++ ys)
       addLater [<] isv = MkVar isv
       addLater (x :%: xs) isv
           = let MkVar isv' = addLater xs isv in
@@ -132,7 +132,7 @@ mutual
             {bound, free : _} ->
             Ref QVar Int -> QuoteOpts -> Defs -> Bounds bound ->
             Env Term free -> PiInfo (Closure free) ->
-            Core (PiInfo (Term (bound +%+ free)))
+            Core (PiInfo (Term (free ++ bound)))
   quotePi q opts defs bounds env Explicit = pure Explicit
   quotePi q opts defs bounds env Implicit = pure Implicit
   quotePi q opts defs bounds env AutoImplicit = pure AutoImplicit
@@ -144,7 +144,7 @@ mutual
                 {bound, free : _} ->
                 Ref QVar Int -> QuoteOpts -> Defs -> Bounds bound ->
                 Env Term free -> Binder (Closure free) ->
-                Core (Binder (Term (bound +%+ free)))
+                Core (Binder (Term (free ++ bound)))
   quoteBinder q opts defs bounds env (Lam fc r p ty)
       = do ty' <- quoteGenNF q opts defs bounds env !(evalClosure defs ty)
            p' <- quotePi q opts defs bounds env p
@@ -173,7 +173,7 @@ mutual
                {bound, vars : _} ->
                Ref QVar Int -> QuoteOpts ->
                Defs -> Bounds bound ->
-               Env Term vars -> NF vars -> Core (Term (bound +%+ vars))
+               Env Term vars -> NF vars -> Core (Term (vars ++ bound))
   quoteGenNF q opts defs bound env (NBind fc n b sc)
       = do var <- genName "qv"
            sc' <- quoteGenNF q opts defs (Add n var bound) env
@@ -250,7 +250,7 @@ Quote Closure where
 quoteWithPiGen : {auto _ : Ref Ctxt Defs} ->
                  {bound, vars : _} ->
                  Ref QVar Int -> QuoteOpts -> Defs -> Bounds bound ->
-                 Env Term vars -> NF vars -> Core (Term (bound +%+ vars))
+                 Env Term vars -> NF vars -> Core (Term (vars ++ bound))
 quoteWithPiGen q opts defs bound env (NBind fc n (Pi bfc c p ty) sc)
     = do var <- genName "qv"
          empty <- clearDefs defs

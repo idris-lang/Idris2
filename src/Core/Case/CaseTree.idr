@@ -39,7 +39,7 @@ mutual
   data CaseAlt : SnocList Name -> Type where
        ||| Constructor for a data type; bind the arguments and subterms.
        ConCase : Name -> (tag : Int) -> (args : SnocList Name) ->
-                 CaseTree (args +%+ vars) -> CaseAlt vars
+                 CaseTree (vars ++ args) -> CaseAlt vars
        ||| Lazy match for the Delay type use for codata types
        DelayCase : (ty : Name) -> (arg : Name) ->
                    CaseTree (ty :%: arg :%: vars) -> CaseAlt vars
@@ -196,8 +196,8 @@ Pretty IdrisSyntax Pat where
 mutual
   insertCaseNames : SizeOf outer ->
                     SizeOf ns ->
-                    CaseTree (outer +%+ inner) ->
-                    CaseTree (outer +%+ (ns +%+ inner))
+                    CaseTree (inner ++ outer) ->
+                    CaseTree ((inner ++ ns) ++ outer)
   insertCaseNames outer ns (Case idx prf scTy alts)
       = let MkNVar prf' = insertNVarNames outer ns (MkNVar prf) in
             Case _ prf' (insertNames outer ns scTy)
@@ -208,11 +208,11 @@ mutual
 
   insertCaseAltNames : SizeOf outer ->
                        SizeOf ns ->
-                       CaseAlt (outer +%+ inner) ->
-                       CaseAlt (outer +%+ (ns +%+ inner))
+                       CaseAlt (inner ++ outer) ->
+                       CaseAlt ((inner ++ ns) ++ outer)
   insertCaseAltNames p q (ConCase x tag args ct)
       = ConCase x tag args
-           (rewrite appendAssociative args outer (ns +%+ inner) in
+           (rewrite appendAssociative args outer (inner ++ ns) in
                     insertCaseNames (mkSizeOf args + p) q {inner}
                         (rewrite sym (appendAssociative args outer inner) in
                                  ct))

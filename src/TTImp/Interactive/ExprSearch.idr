@@ -147,7 +147,7 @@ search : {auto c : Ref Ctxt Defs} ->
 getAllEnv : {vars : _} -> FC ->
             SizeOf done ->
             Env Term vars ->
-            List (Term (done +%+ vars), Term (done +%+ vars))
+            List (Term (vars ++ done), Term (vars ++ done))
 getAllEnv fc done [] = []
 getAllEnv {vars = v :%: vs} {done} fc p (b :: env)
    = let rest = getAllEnv fc (sucR p) env

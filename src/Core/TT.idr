@@ -394,8 +394,8 @@ namespace Bounds
 
 export
 addVars : SizeOf outer -> Bounds bound ->
-          NVar name (outer +%+ vars) ->
-          NVar name (outer +%+ (bound +%+ vars))
+          NVar name (vars ++ outer) ->
+          NVar name ((vars ++ bound) ++ outer)
 addVars p = insertNVarNames p . sizeOf
 
 export
@@ -410,7 +410,7 @@ resolveRef {outer} {vars} {done} p q (Add {xs} new old bs) fc n
          else resolveRef p (q :< new) bs fc n
 
 mkLocals : SizeOf outer -> Bounds bound ->
-           Term (outer +%+ vars) -> Term (outer +%+ (bound +%+ vars))
+           Term (vars ++ outer) -> Term ((vars ++ bound) ++ outer)
 mkLocals outer bs (Local fc r idx p)
     = let MkNVar p' = addVars outer bs (MkNVar p) in Local fc r _ p'
 mkLocals outer bs (Ref fc Bound name)
@@ -443,7 +443,7 @@ mkLocals outer bs (Erased fc (Dotted t)) = Erased fc (Dotted (mkLocals outer bs 
 mkLocals outer bs (TType fc u) = TType fc u
 
 export
-refsToLocals : Bounds bound -> Term vars -> Term (bound +%+ vars)
+refsToLocals : Bounds bound -> Term vars -> Term (vars ++ bound)
 refsToLocals None y = y
 refsToLocals bs y = mkLocals zero  bs y
 

@@ -19,7 +19,7 @@ extend : (x : Name) -> Binder (tm vars) -> Env tm vars -> Env tm (x :%: vars)
 extend x = (::) {x}
 
 export
-(++) : {ns : _} -> Env Term ns -> Env Term vars -> Env Term (ns +%+ vars)
+(++) : {ns : _} -> Env Term ns -> Env Term vars -> Env Term (vars ++ ns)
 (++) (b :: bs) e = extend _ (map embed b) (bs ++ e)
 (++) [] e = e
 
@@ -73,18 +73,18 @@ bindEnv loc (b :: env) tm
                                         Explicit
                                         (binderType b)) tm)
 
-revOnto : (xs, vs : SnocList a) -> reverseOnto xs vs = reverse vs +%+ xs
+revOnto : (xs, vs : SnocList a) -> reverseOnto xs vs = xs ++ reverse vs
 revOnto xs [<] = Refl
 revOnto xs (v :%: vs)
     = rewrite revOnto (v :%: xs) vs in
         rewrite appendAssociative (reverse vs) (v :%: [<]) xs in
           rewrite revOnto (v :%: [<]) vs in Refl
 
-revNs : (vs, ns : SnocList a) -> reverse ns +%+ reverse vs = reverse (vs +%+ ns)
+revNs : (vs, ns : SnocList a) -> reverse vs ++ reverse ns = reverse (ns ++ vs)
 revNs [<] ns = rewrite appendNilRightNeutral (reverse ns) in Refl
 revNs (v :%: vs) ns
     = rewrite revOnto (v :%: [<]) vs in
-        rewrite revOnto (v :%: [<]) (vs +%+ ns) in
+        rewrite revOnto (v :%: [<]) (ns ++ vs) in
           rewrite sym (revNs vs ns) in
             rewrite appendAssociative (reverse ns) (reverse vs) (v :%: [<]) in
               Refl
@@ -263,7 +263,7 @@ shrinkEnv (b :: env) (Keep p)
          pure (b' :: env')
 
 export
-mkEnvOnto : FC -> (xs : SnocList Name) -> Env Term ys -> Env Term (xs +%+ ys)
+mkEnvOnto : FC -> (xs : SnocList Name) -> Env Term ys -> Env Term (ys ++ xs)
 mkEnvOnto fc [<] vs = vs
 mkEnvOnto fc (n :%: ns) vs
    = PVar fc top Explicit (Erased fc Placeholder)

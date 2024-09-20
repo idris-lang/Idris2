@@ -229,19 +229,19 @@ weaken (p :: ps) = weaken p :: weaken ps
 
 weakenNs : SizeOf ns ->
            NamedPats vars todo ->
-           NamedPats (ns +%+ vars) todo
+           NamedPats (vars ++ ns) todo
 weakenNs ns [] = []
 weakenNs ns (p :: ps)
     = weakenNs ns p :: weakenNs ns ps
 
-(++) : NamedPats vars ms -> NamedPats vars ns -> NamedPats vars (ms +%+ ns)
+(++) : NamedPats vars ms -> NamedPats vars ns -> NamedPats vars (ns ++ ms)
 (++) [] ys = ys
 (++) (x :: xs) ys = x :: xs ++ ys
 
 tail : NamedPats vars (p :%: ps) -> NamedPats vars ps
 tail (x :: xs) = xs
 
-take : (as : SnocList Name) -> NamedPats vars (as +%+ bs) -> NamedPats vars as
+take : (as : SnocList Name) -> NamedPats vars (bs ++ as) -> NamedPats vars as
 take [<] ps = []
 take (x :%: xs) (p :: ps) = p :: take xs ps
 
@@ -390,7 +390,7 @@ data Group : SnocList Name -> -- variables in scope
              Type where
      ConGroup : {newargs : _} ->
                 Name -> (tag : Int) ->
-                List (PatClause (newargs +%+ vars) (newargs +%+ todo)) ->
+                List (PatClause (vars ++ newargs) (todo ++ newargs)) ->
                 Group vars todo
      DelayGroup : {tyarg, valarg : _} ->
                   List (PatClause (tyarg :%: valarg :%: vars)
@@ -445,7 +445,7 @@ nextNames : {vars : _} ->
             {auto i : Ref PName Int} ->
             {auto c : Ref Ctxt Defs} ->
             FC -> String -> SnocList Pat -> Maybe (NF vars) ->
-            Core (args ** (SizeOf args, NamedPats (args +%+ vars) args))
+            Core (args ** (SizeOf args, NamedPats (vars ++ args) args))
 nextNames fc root [<] fty = pure ([<] ** (zero, []))
 nextNames {vars} fc root (p :%: pats) fty
      = do defs <- get Ctxt
@@ -474,7 +474,7 @@ nextNames {vars} fc root (p :%: pats) fty
 
 -- replace the prefix of patterns with 'pargs'
 newPats : (pargs : SnocList Pat) -> LengthMatch pargs ns ->
-          NamedPats vars (ns +%+ todo) ->
+          NamedPats vars (todo ++ ns) ->
           NamedPats vars ns
 newPats [<] NilMatch rest = []
 newPats (newpat :%: xs) (ConsMatch w) (pi :: rest)
@@ -545,7 +545,7 @@ groupCons fc fn pvars cs
              -- explicit dependencies in types accurate)
              let pats' = updatePatNames (updateNames (zip patnames pargs))
                                         (weakenNs l pats)
-             let clause = MkPatClause {todo = patnames +%+ todo'}
+             let clause = MkPatClause {todo = todo' ++ patnames}
                               pvars
                               (newargs ++ pats')
                               pid (weakenNs l rhs)
@@ -558,7 +558,7 @@ groupCons fc fn pvars cs
              let l = mkSizeOf newargs
              let pats' = updatePatNames (updateNames (zip newargs pargs))
                                         (weakenNs l pats)
-             let newclause : PatClause (newargs +%+ vars') (newargs +%+ todo')
+             let newclause : PatClause (vars' ++ newargs) (todo' ++ newargs)
                    = MkPatClause pvars
                                  (newps ++ pats')
                                  pid
@@ -700,9 +700,9 @@ highScore : {prev : SnocList Name} ->
             (names : SnocList Name) ->
             (scores : Vect (length names) Int) ->
             (highVal : Int) ->
-            (highIdx : (n ** NVar n (prev +%+ names))) ->
+            (highIdx : (n ** NVar n (names ++ prev))) ->
             (duped : Bool) ->
-            Maybe (n ** NVar n (prev +%+ names))
+            Maybe (n ** NVar n (names ++ prev))
 highScore [<] [] high idx True = Nothing
 highScore [<] [] high idx False = Just idx
 highScore (x :%: xs) (y :: ys) high idx duped =

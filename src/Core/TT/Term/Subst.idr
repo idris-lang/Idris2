@@ -49,7 +49,7 @@ substBinder outer dropped env b
   = assert_total $ map (substTerm outer dropped env) b
 
 export
-substs : SizeOf dropped -> SubstEnv dropped vars -> Term (dropped +%+ vars) -> Term vars
+substs : SizeOf dropped -> SubstEnv dropped vars -> Term (vars ++ dropped) -> Term vars
 substs dropped env tm = substTerm zero dropped env tm
 
 export
