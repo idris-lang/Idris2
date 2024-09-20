@@ -49,7 +49,7 @@ shiftVar nvar
 mutual
   shiftBinder : {outer, args : _} ->
                 (new : Name) ->
-                CExp (outer +%+ old :%: (args +%+ vars)) ->
+                CExp ((vars <>< args :< old) ++ outer) ->
                 CExp ((vars :< new <>< args) ++ outer)
   shiftBinder new (CLocal fc p)
       = case shiftVar (MkNVar p) of
