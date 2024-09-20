@@ -50,7 +50,7 @@ dropLater : IsVar nm (S idx) (n :%: ns) -> IsVar nm idx ns
 dropLater (Later p) = p
 
 export
-0 mkIsVar : HasLength m inner -> IsVar nm m (inner +%+ nm :%: outer)
+0 mkIsVar : HasLength m inner -> IsVar nm m (outer :< nm ++ inner)
 mkIsVar Z = First
 mkIsVar (S x) = Later (mkIsVar x)
 
@@ -142,7 +142,7 @@ namespace Var
   isLater (MkVar (Later p)) = Just (MkVar p)
 
 export
-mkVar : SizeOf inner -> Var (inner +%+ nm :%: outer)
+mkVar : SizeOf inner -> Var (outer :< nm ++ inner)
 mkVar (MkSizeOf s p) = MkVar (mkIsVar p)
 
 export
@@ -212,7 +212,7 @@ recoverName : (v : Var vars) -> NVar (varNm v) vars
 recoverName (MkVar p) = MkNVar p
 
 export
-mkNVar : SizeOf inner -> NVar nm (inner +%+ nm :%: outer)
+mkNVar : SizeOf inner -> NVar nm (outer :< nm ++ inner)
 mkNVar (MkSizeOf s p) = MkNVar (mkIsVar p)
 
 export
@@ -272,7 +272,7 @@ embedNVar (MkNVar p) = MkNVar (embedIsVar p)
 export
 insertNVar : SizeOf local ->
              NVar nm (outer ++ local) ->
-             NVar nm (local +%+ n :%: outer)
+             NVar nm (outer :< n ++ local)
 insertNVar p v = case locateNVar p v of
   Left v => embedNVar v
   Right v => weakenNVar p (later v)
@@ -297,7 +297,7 @@ insertNVarNames p q v = case locateNVar p v of
 ||| The (partial) inverse to insertNVar
 export
 removeNVar : SizeOf local ->
-         NVar nm (local +%+ n :%: outer) ->
+         NVar nm (outer :< n ++ local) ->
   Maybe (NVar nm (outer ++ local))
 removeNVar s var = case locateNVar s var of
   Left v => pure (embedNVar v)
@@ -306,7 +306,7 @@ removeNVar s var = case locateNVar s var of
 export
 insertVar : SizeOf local ->
   Var (outer ++ local) ->
-  Var (local +%+ n :%: outer)
+  Var (outer :< n ++ local)
 insertVar p v = forgetName $ insertNVar p (recoverName v)
 
 weakenVar : SizeOf ns -> Var outer -> Var (outer ++ ns)
@@ -318,7 +318,7 @@ insertVarNames p q v = forgetName $ insertNVarNames p q (recoverName v)
 ||| The (partial) inverse to insertVar
 export
 removeVar : SizeOf local ->
-         Var (local +%+ n :%: outer) ->
+         Var (outer :< n ++ local) ->
   Maybe (Var (outer ++ local))
 removeVar s var = forgetName <$> removeNVar s (recoverName var)
 
@@ -445,6 +445,6 @@ export
 shiftUnderNs : SizeOf {a = Name} inner ->
                {idx : _} ->
                (0 p : IsVar n idx (x :%: inner +%+ outer)) ->
-               NVar n (inner +%+ x :%: outer)
+               NVar n (outer :< x ++ inner)
 shiftUnderNs s First = weakenNs s (MkNVar First)
 shiftUnderNs s (Later p) = insertNVar s (MkNVar p)

@@ -100,7 +100,7 @@ interface GenWeaken (0 tm : Scoped) where
 
 export
 genWeaken : GenWeaken tm =>
-  SizeOf local -> tm (outer ++ local) -> tm (local +%+ n :%: outer)
+  SizeOf local -> tm (outer ++ local) -> tm (outer :< n ++ local)
 genWeaken l = genWeakenNs l (suc zero)
 
 public export

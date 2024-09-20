@@ -33,7 +33,7 @@ case t of
 shiftUnder : {args : _} ->
              {idx : _} ->
              (0 p : IsVar n idx (x :%: args +%+ vars)) ->
-             NVar n (args +%+ x :%: vars)
+             NVar n (vars :< x ++ args)
 shiftUnder First = weakenNVar (mkSizeOf args) (MkNVar First)
 shiftUnder (Later p) = insertNVar (mkSizeOf args) (MkNVar p)
 
@@ -93,7 +93,7 @@ mutual
       = let sc' : CExp ((args' +%+ outer) +%+ (x :%: args +%+ vars))
                 = rewrite sym (appendAssociative args' outer (x :%: args +%+ vars)) in sc in
         MkConAlt n ci t args' $
-           rewrite (appendAssociative args' outer (args +%+ new :%: vars))
+           rewrite (appendAssociative args' outer (vars :< new <>< args))
              in shiftBinder new {outer = outer ++ args'} sc'
 
   shiftBinderConstAlt : {outer, args : _} ->
@@ -107,7 +107,7 @@ mutual
 liftOutLambda : {args : _} ->
                 (new : Name) ->
                 CExp (old :%: args +%+ vars) ->
-                CExp (args +%+ new :%: vars)
+                CExp (vars :< new <>< args)
 liftOutLambda = shiftBinder {outer = [<]}
 
 -- If all the alternatives start with a lambda, we can have a single lambda

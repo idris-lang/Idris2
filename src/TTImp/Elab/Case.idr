@@ -53,7 +53,7 @@ changeVar old new (TForce fc r p)
     = TForce fc r (changeVar old new p)
 changeVar old new tm = tm
 
-findLater : (x : Name) -> (newer : SnocList Name) -> Var (newer +%+ x :%: older)
+findLater : (x : Name) -> (newer : SnocList Name) -> Var (older :< x ++ newer)
 findLater x [<] = MkVar First
 findLater {older} x (_ :%: xs)
     = let MkVar p = findLater {older} x xs in
