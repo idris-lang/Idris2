@@ -11,9 +11,9 @@ import Core.Options
 import Core.TT
 import Core.TTC
 import Core.Value
-import Core.Name.ScopedList
 
 import Data.List
+import Data.SnocList
 import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 import Libraries.Data.WithDefault
@@ -621,11 +621,11 @@ checkUserHolesAfter base now
     = do gs_map <- getGuesses
          let gs = toScopedList gs_map
          log "unify.unsolved" 10 $ "Unsolved guesses " ++ show gs
-         Core.Core.ScopedList.traverse_ (checkValidHole base) gs
+         Core.Core.SnocList.traverse_ (checkValidHole base) gs
          hs_map <- getCurrentHoles
          let hs = toScopedList hs_map
          let hs' = if any isUserName (map (snd . snd) hs)
-                      then Core.Name.ScopedList.Lin else hs
+                      then Core.Name.SnocList.Lin else hs
          when (now && not (isNil hs')) $
               throw (UnsolvedHoles (map snd (nubBy nameEq $ toList hs)))
          -- Note the hole names, to ensure they are resolved

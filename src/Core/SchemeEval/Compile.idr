@@ -78,7 +78,7 @@ getName (Bound x) = x
 getName (Free x) = x
 
 public export
-data SchVars : ScopedList Name -> Type where
+data SchVars : SnocList Name -> Type where
      Nil : SchVars [<]
      (::) : SVar -> SchVars ns -> SchVars (n :%: ns)
 
@@ -300,7 +300,7 @@ getArgName
          pure (MN "carg" (cast i))
 
 extend : Ref Sym Integer =>
-         (args : ScopedList Name) -> SchVars vars ->
+         (args : SnocList Name) -> SchVars vars ->
          Core (List Name, SchVars (args +%+ vars))
 extend [<] svs = pure ([], svs)
 extend (arg :%: args) svs
@@ -361,7 +361,7 @@ compileCase blk svs (Case idx p scTy xs)
                   (Apply (Var "vector-ref") [Var var, IntegerVal (cast i)])
                   (project (i + 1) var ns body)
 
-        bindArgs : String -> (args : ScopedList Name) -> CaseTree (args +%+ vars) ->
+        bindArgs : String -> (args : SnocList Name) -> CaseTree (args +%+ vars) ->
                    Core (SchemeObj Write)
         bindArgs var args sc
             = do (bind, svs') <- extend args svs
@@ -396,7 +396,7 @@ compileCase blk svs (Case idx p scTy xs)
                   (Apply (Var "vector-ref") [Var var, IntegerVal (cast i)])
                   (project (i + 1) var ns body)
 
-        bindArgs : String -> (args : ScopedList Name) -> CaseTree (args +%+ vars) ->
+        bindArgs : String -> (args : SnocList Name) -> CaseTree (args +%+ vars) ->
                    Core (SchemeObj Write)
         bindArgs var args sc
             = do (bind, svs') <- extend args svs
@@ -477,7 +477,7 @@ varObjs : SchVars ns -> List (SchemeObj Write)
 varObjs [] = []
 varObjs (x :: xs) = Var (show x) :: varObjs xs
 
-mkArgs : (ns : ScopedList Name) -> Core (SchVars ns)
+mkArgs : (ns : SnocList Name) -> Core (SchVars ns)
 mkArgs [<] = pure []
 mkArgs (x :%: xs)
     = pure $ Bound (schVarName x) :: !(mkArgs xs)
@@ -523,7 +523,7 @@ compileBody _ n (DCon tag arity newtypeArg)
                              map (Var . schVarName) (toList args))
          pure (bindArgs n argvs [] body)
   where
-    mkArgNs : Int -> Nat -> ScopedList Name
+    mkArgNs : Int -> Nat -> SnocList Name
     mkArgNs i Z = [<]
     mkArgNs i (S k) = MN "arg" i :%: mkArgNs (i+1) k
 compileBody _ n (TCon tag Z parampos detpos flags mutwith datacons detagabbleBy)
@@ -540,7 +540,7 @@ compileBody _ n (TCon tag arity parampos detpos flags mutwith datacons detagabbl
                             map (Var . schVarName) (toList args))
          pure (bindArgs n argvs [] body)
   where
-    mkArgNs : Int -> Nat -> ScopedList Name
+    mkArgNs : Int -> Nat -> SnocList Name
     mkArgNs i Z = [<]
     mkArgNs i (S k) = MN "arg" i :%: mkArgNs (i+1) k
 compileBody _ n (Hole numlocs x) = pure $ blockedMetaApp n

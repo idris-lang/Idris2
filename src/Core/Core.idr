@@ -3,9 +3,9 @@ module Core.Core
 import Core.Context.Context
 import Core.Env
 import Core.TT
-import Core.Name.ScopedList
 
 import Data.List1
+import Data.SnocList
 import Data.Vect
 
 import Libraries.Data.IMaybe
@@ -761,16 +761,16 @@ export
 traverse : (a -> Core b) -> List a -> Core (List b)
 traverse f xs = traverse' f xs []
 
-namespace ScopedList
+namespace SnocList
   -- Traversable (specialised)
-  traverse' : (a -> Core b) -> ScopedList a -> ScopedList b -> Core (ScopedList b)
+  traverse' : (a -> Core b) -> SnocList a -> SnocList b -> Core (SnocList b)
   traverse' f [<] acc = pure (reverse acc)
   traverse' f (x :%: xs) acc
       = traverse' f xs (!(f x) :%: acc)
 
   %inline
   export
-  traverse : (a -> Core b) -> ScopedList a -> Core (ScopedList b)
+  traverse : (a -> Core b) -> SnocList a -> Core (SnocList b)
   traverse f xs = traverse' f xs [<]
 
 export
@@ -843,9 +843,9 @@ traverseList1_ f xxs
          ignore (f x)
          traverse_ f xs
 
-namespace ScopedList
+namespace SnocList
   export
-  traverse_ : (a -> Core b) -> ScopedList a -> Core ()
+  traverse_ : (a -> Core b) -> SnocList a -> Core ()
   traverse_ f [<] = pure ()
   traverse_ f (x :%: xs)
       = Core.do ignore (f x)
@@ -902,7 +902,7 @@ anyM f (x :: xs)
          else anyM f xs
 
 export
-anyMScoped : (a -> Core Bool) -> ScopedList a -> Core Bool
+anyMScoped : (a -> Core Bool) -> SnocList a -> Core Bool
 anyMScoped f [<] = pure False
 anyMScoped f (x :%: xs)
     = if !(f x)

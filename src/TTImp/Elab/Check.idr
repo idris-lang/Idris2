@@ -62,7 +62,7 @@ Eq ElabOpt where
 -- Descriptions of implicit name bindings. They're either just the name,
 -- or a binding of an @-pattern which has an associated pattern.
 public export
-data ImplBinding : ScopedList Name -> Type where
+data ImplBinding : SnocList Name -> Type where
      NameBinding : {vars : _} ->
                    FC -> RigCount -> PiInfo (Term vars) ->
                    (elabAs : Term vars) -> (expTy : Term vars) ->
@@ -113,9 +113,9 @@ bindingPiInfo (AsBinding _ p _ _ _) = p
 
 -- Current elaboration state (preserved/updated throughout elaboration)
 public export
-record EState (vars : ScopedList Name) where
+record EState (vars : SnocList Name) where
   constructor MkEState
-  {outer : ScopedList Name}
+  {outer : SnocList Name}
   -- The function/constructor name we're currently working on (resolved id)
   defining : Int
   -- The outer environment in which we're running the elaborator. Things here should

@@ -3,9 +3,9 @@ module Core.Hash
 import Core.Case.CaseTree
 import Core.CompileExpr
 import Core.TT
-import Core.Name.ScopedList
 
 import Data.List1
+import Data.SnocList
 import Libraries.Data.String.Iterator
 import Data.Vect
 
@@ -85,7 +85,7 @@ Hashable a => Hashable (List a) where
   hashWithSalt h (x :: xs) = hashWithSalt (h * 33 + hash x) xs
 
 export
-Hashable a => Hashable (ScopedList a) where
+Hashable a => Hashable (SnocList a) where
   hashWithSalt h [<] = abs h
   hashWithSalt h (x :%: xs) = hashWithSalt (h * 33 + hash x) xs
 

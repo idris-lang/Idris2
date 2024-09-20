@@ -252,7 +252,7 @@ mutual
       next (NS ns n) = NS ns (next n)
       next n = MN (show n) 0
 
-      uniqueLocal : ScopedList Name -> Name -> Name
+      uniqueLocal : SnocList Name -> Name -> Name
       uniqueLocal vs n
          = if n `elem` vs
               then uniqueLocal vs (next n)

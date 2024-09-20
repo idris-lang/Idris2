@@ -8,21 +8,21 @@ import Core.Context
 import Core.Core
 import Core.Env
 import Core.TT
-import Core.Name.ScopedList
 import Core.Value
 
 import Data.List
+import Data.SnocList
 
 %default covering
 
 public export
 interface Convert tm where
   convert : {auto c : Ref Ctxt Defs} ->
-            {vars : ScopedList Name} ->
+            {vars : SnocList Name} ->
             Defs -> Env Term vars ->
             tm vars -> tm vars -> Core Bool
   convertInf : {auto c : Ref Ctxt Defs} ->
-               {vars : ScopedList Name} ->
+               {vars : SnocList Name} ->
                Defs -> Env Term vars ->
                tm vars -> tm vars -> Core Bool
 
@@ -43,13 +43,13 @@ interface Convert tm where
            convGen q True defs env tm tm'
 
 tryUpdate : {vars, vars' : _} ->
-            ScopedList (Var vars, Var vars') ->
+            SnocList (Var vars, Var vars') ->
             Term vars -> Maybe (Term vars')
 tryUpdate ms (Local fc l idx p)
     = do MkVar p' <- findIdx ms (MkVar p)
          pure $ Local fc l _ p'
   where
-    findIdx : ScopedList (Var vars, Var vars') -> Var vars -> Maybe (Var vars')
+    findIdx : SnocList (Var vars, Var vars') -> Var vars -> Maybe (Var vars')
     findIdx [<] _ = Nothing
     findIdx ((old, v) :%: ps) n
         = if old == n then Just v else findIdx ps n
@@ -87,7 +87,7 @@ mutual
   allConvNF : {auto c : Ref Ctxt Defs} ->
               {vars : _} ->
               Ref QVar Int -> Bool -> Defs -> Env Term vars ->
-              ScopedList (NF vars) -> ScopedList (NF vars) -> Core Bool
+              SnocList (NF vars) -> SnocList (NF vars) -> Core Bool
   allConvNF q i defs env [<] [<] = pure True
   allConvNF q i defs env (x :%: xs) (y :%: ys)
       = do ok <- allConvNF q i defs env xs ys
@@ -98,7 +98,7 @@ mutual
   -- return False if anything differs at the head, to quickly find
   -- conversion failures without going deeply into all the arguments.
   -- True means they might still match
-  quickConv : ScopedList (NF vars) -> ScopedList (NF vars) -> Bool
+  quickConv : SnocList (NF vars) -> SnocList (NF vars) -> Bool
   quickConv [<] [<] = True
   quickConv (x :%: xs) (y :%: ys) = quickConvArg x y && quickConv xs ys
     where
@@ -128,7 +128,7 @@ mutual
   allConv : {auto c : Ref Ctxt Defs} ->
             {vars : _} ->
             Ref QVar Int -> Bool -> Defs -> Env Term vars ->
-            ScopedList (Closure vars) -> ScopedList (Closure vars) -> Core Bool
+            SnocList (Closure vars) -> SnocList (Closure vars) -> Core Bool
   allConv q i defs env xs ys
       = do xsnf <- traverse (evalClosure defs) xs
            ysnf <- traverse (evalClosure defs) ys
@@ -141,9 +141,9 @@ mutual
   getMatchingVarAlt : {auto c : Ref Ctxt Defs} ->
                       {args, args' : _} ->
                       Defs ->
-                      ScopedList (Var args, Var args') ->
+                      SnocList (Var args, Var args') ->
                       CaseAlt args -> CaseAlt args' ->
-                      Core (Maybe (ScopedList (Var args, Var args')))
+                      Core (Maybe (SnocList (Var args, Var args')))
   getMatchingVarAlt defs ms (ConCase n tag cargs t) (ConCase n' tag' cargs' t')
       = if n == n'
            then do let Just ms' = extend cargs cargs' ms
@@ -160,9 +160,9 @@ mutual
                 (Var (c :%: args), Var (c' :%: args'))
       weakenP (v, vs) = (weaken v, weaken vs)
 
-      extend : (cs : ScopedList Name) -> (cs' : ScopedList Name) ->
-               (ScopedList (Var args, Var args')) ->
-               Maybe (ScopedList (Var (cs +%+ args), Var (cs' +%+ args')))
+      extend : (cs : SnocList Name) -> (cs' : SnocList Name) ->
+               (SnocList (Var args, Var args')) ->
+               Maybe (SnocList (Var (cs +%+ args), Var (cs' +%+ args')))
       extend [<] [<] ms = pure ms
       extend (c :%: cs) (c' :%: cs') ms
           = do rest <- extend cs cs' ms
@@ -170,13 +170,13 @@ mutual
       extend _ _ _ = Nothing
 
       dropV : forall args .
-              (cs : ScopedList Name) -> Var (cs +%+ args) -> Maybe (Var args)
+              (cs : SnocList Name) -> Var (cs +%+ args) -> Maybe (Var args)
       dropV [<] v = Just v
       dropV (c :%: cs) (MkVar First) = Nothing
       dropV (c :%: cs) (MkVar (Later x))
           = dropV cs (MkVar x)
 
-      dropP : (cs : ScopedList Name) -> (cs' : ScopedList Name) ->
+      dropP : (cs : SnocList Name) -> (cs' : SnocList Name) ->
               (Var (cs +%+ args), Var (cs' +%+ args')) ->
               Maybe (Var args, Var args')
       dropP cs cs' (x, y) = pure (!(dropV cs x), !(dropV cs' y))
@@ -192,9 +192,9 @@ mutual
   getMatchingVarAlts : {auto c : Ref Ctxt Defs} ->
                        {args, args' : _} ->
                        Defs ->
-                       ScopedList (Var args, Var args') ->
+                       SnocList (Var args, Var args') ->
                        List (CaseAlt args) -> List (CaseAlt args') ->
-                       Core (Maybe (ScopedList (Var args, Var args')))
+                       Core (Maybe (SnocList (Var args, Var args')))
   getMatchingVarAlts defs ms [] [] = pure (Just ms)
   getMatchingVarAlts defs ms (a :: as) (a' :: as')
       = do Just ms <- getMatchingVarAlt defs ms a a'
@@ -205,9 +205,9 @@ mutual
   getMatchingVars : {auto c : Ref Ctxt Defs} ->
                     {args, args' : _} ->
                     Defs ->
-                    ScopedList (Var args, Var args') ->
+                    SnocList (Var args, Var args') ->
                     CaseTree args -> CaseTree args' ->
-                    Core (Maybe (ScopedList (Var args, Var args')))
+                    Core (Maybe (SnocList (Var args, Var args')))
   getMatchingVars defs ms (Case _ p _ alts) (Case _ p' _ alts')
       = getMatchingVarAlts defs ((MkVar p, MkVar p') :%: ms) alts alts'
   getMatchingVars defs ms (STerm i tm) (STerm i' tm')
@@ -224,7 +224,7 @@ mutual
                 {vars : _} ->
                 Ref QVar Int -> Bool -> Defs -> Env Term vars ->
                 Name -> Name ->
-                ScopedList (Closure vars) -> ScopedList (Closure vars) -> Core Bool
+                SnocList (Closure vars) -> SnocList (Closure vars) -> Core Bool
   chkSameDefs q i defs env n n' nargs nargs'
      = do Just (PMDef _ args ct rt _) <- lookupDefExact n (gamma defs)
                | _ => pure False
@@ -240,13 +240,13 @@ mutual
      where
        -- We've only got the index into the argument list, and the indices
        -- don't match up, which is annoying. But it'll always be there!
-       getArgPos : Nat -> ScopedList (Closure vars) -> Maybe (Closure vars)
+       getArgPos : Nat -> SnocList (Closure vars) -> Maybe (Closure vars)
        getArgPos _ [<] = Nothing
        getArgPos Z (c :%: cs) = pure c
        getArgPos (S k) (c :%: cs) = getArgPos k cs
 
        convertMatches : {vs, vs' : _} ->
-                        ScopedList (Var vs, Var vs') ->
+                        SnocList (Var vs, Var vs') ->
                         Core Bool
        convertMatches [<] = pure True
        convertMatches ((MkVar {varIdx = ix} p, MkVar {varIdx = iy} p') :%: vs)
@@ -262,8 +262,8 @@ mutual
   chkConvCaseBlock : {auto c : Ref Ctxt Defs} ->
                      {vars : _} ->
                      FC -> Ref QVar Int -> Bool -> Defs -> Env Term vars ->
-                     NHead vars -> ScopedList (Closure vars) ->
-                     NHead vars -> ScopedList (Closure vars) -> Core Bool
+                     NHead vars -> SnocList (Closure vars) ->
+                     NHead vars -> SnocList (Closure vars) -> Core Bool
   chkConvCaseBlock fc q i defs env (NRef _ n) nargs (NRef _ n') nargs'
       = do NS _ (CaseBlock _ _) <- full (gamma defs) n
               | _ => pure False
@@ -302,7 +302,7 @@ mutual
       findArgPos (Case idx p _ _) = Just idx
       findArgPos _ = Nothing
 
-      getScrutinee : Nat -> ScopedList (Closure vs) -> Maybe (Closure vs)
+      getScrutinee : Nat -> SnocList (Closure vs) -> Maybe (Closure vs)
       getScrutinee Z (x :%: xs) = Just x
       getScrutinee (S k) (x :%: xs) = getScrutinee k xs
       getScrutinee _ _ = Nothing
@@ -380,7 +380,7 @@ mutual
                    else pure []
           getInfPos _ = pure []
 
-          dropInf : Nat -> List Nat -> ScopedList a -> ScopedList a
+          dropInf : Nat -> List Nat -> SnocList a -> SnocList a
           dropInf _ [] xs = xs
           dropInf _ _ [<] = [<]
           dropInf i ds (x :%: xs)
@@ -389,10 +389,10 @@ mutual
                    else x :%: dropInf (S i) ds xs
 
           -- Discard file context information irrelevant for conversion checking
-          args1 : ScopedList (Closure vars)
+          args1 : SnocList (Closure vars)
           args1 = map snd args
 
-          args2 : ScopedList (Closure vars)
+          args2 : SnocList (Closure vars)
           args2 = map snd args'
 
     convGen q i defs env (NDCon _ nm tag _ args) (NDCon _ nm' tag' _ args')

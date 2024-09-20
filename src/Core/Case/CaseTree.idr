@@ -1,9 +1,9 @@
 module Core.Case.CaseTree
 
 import Core.TT
-import Core.Name.ScopedList
 
 import Data.List
+import Data.SnocList
 import Data.String
 import Idris.Pretty.Annotations
 
@@ -17,7 +17,7 @@ mutual
   ||| Case trees in A-normal forms
   ||| i.e. we may only dispatch on variables, not expressions
   public export
-  data CaseTree : ScopedList Name -> Type where
+  data CaseTree : SnocList Name -> Type where
        ||| case x return scTy of { p1 => e1 ; ... }
        Case : {name : _} ->
               (idx : Nat) ->
@@ -36,9 +36,9 @@ mutual
   ||| Case alternatives. Unlike arbitrary patterns, they can be at most
   ||| one constructor deep.
   public export
-  data CaseAlt : ScopedList Name -> Type where
+  data CaseAlt : SnocList Name -> Type where
        ||| Constructor for a data type; bind the arguments and subterms.
-       ConCase : Name -> (tag : Int) -> (args : ScopedList Name) ->
+       ConCase : Name -> (tag : Int) -> (args : SnocList Name) ->
                  CaseTree (args +%+ vars) -> CaseAlt vars
        ||| Lazy match for the Delay type use for codata types
        DelayCase : (ty : Name) -> (arg : Name) ->
@@ -97,8 +97,8 @@ public export
 data Pat : Type where
      PAs : FC -> Name -> Pat -> Pat
      PCon : FC -> Name -> (tag : Int) -> (arity : Nat) ->
-            ScopedList Pat -> Pat
-     PTyCon : FC -> Name -> (arity : Nat) -> ScopedList Pat -> Pat
+            SnocList Pat -> Pat
+     PTyCon : FC -> Name -> (arity : Nat) -> SnocList Pat -> Pat
      PConst : FC -> (c : Constant) -> Pat
      PArrow : FC -> (x : Name) -> Pat -> Pat -> Pat
      PDelay : FC -> LazyReason -> Pat -> Pat -> Pat
@@ -263,7 +263,7 @@ getMetas : CaseTree vars -> NameMap Bool
 getMetas = getNames (addMetas False) empty
 
 export
-mkTerm : (vars : ScopedList Name) -> Pat -> Term vars
+mkTerm : (vars : SnocList Name) -> Pat -> Term vars
 mkTerm vars (PAs fc x y) = mkTerm vars y
 mkTerm vars (PCon fc x tag arity xs)
     = apply fc (Ref fc (DataCon tag arity) x)

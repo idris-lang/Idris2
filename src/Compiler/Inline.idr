@@ -13,10 +13,10 @@ import Core.FC
 import Core.Hash
 import Core.Options
 import Core.TT
-import Core.Name.ScopedList
 
 import Data.Maybe
 import Data.List
+import Data.SnocList
 import Data.Vect
 import Libraries.Data.List.LengthMatch
 import Libraries.Data.NameMap
@@ -24,17 +24,17 @@ import Libraries.Data.WithDefault
 
 %default covering
 
-data EEnv : ScopedList Name -> ScopedList Name -> Type where
+data EEnv : SnocList Name -> SnocList Name -> Type where
      Nil : EEnv free [<]
      (::) : CExp free -> EEnv free vars -> EEnv free (x :%: vars)
 
-extend : EEnv free vars -> (args : ScopedList (CExp free)) -> (args' : ScopedList Name) ->
+extend : EEnv free vars -> (args : SnocList (CExp free)) -> (args' : SnocList Name) ->
          LengthMatch args args' -> EEnv free (args' +%+ vars)
 extend env [<] [<] NilMatch = env
 extend env (a :%: xs) (n :%: ns) (ConsMatch w)
     = a :: extend env xs ns w
 
-Stack : ScopedList Name -> Type
+Stack : SnocList Name -> Type
 Stack vars = List (CExp vars)
 
 unload : Stack vars -> CExp vars -> CExp vars
@@ -50,7 +50,7 @@ getArity (MkCon _ arity _) = arity
 getArity (MkForeign _ args _) = length args
 getArity (MkError _) = 0
 
-takeFromStack : EEnv free vars -> Stack free -> (args : ScopedList Name) ->
+takeFromStack : EEnv free vars -> Stack free -> (args : SnocList Name) ->
                 Maybe (EEnv free (args +%+ vars), Stack free)
 takeFromStack env (e :: es) (a :%: as)
   = do (env', stk') <- takeFromStack env es as
@@ -268,7 +268,7 @@ mutual
   eval rec env stk (CCrash fc str) = pure $ unload stk $ CCrash fc str
 
   extendLoc : {auto l : Ref LVar Int} ->
-              FC -> EEnv free vars -> (args' : ScopedList Name) ->
+              FC -> EEnv free vars -> (args' : SnocList Name) ->
               Core (Bounds args', EEnv free (args' +%+ vars))
   extendLoc fc env [<] = pure (None, env)
   extendLoc fc env (n :%: ns)
@@ -424,12 +424,12 @@ getLams {done} d i env (CLam fc x sc)
     = getLams {done = x :%: done} (suc d) (i + 1) (CRef fc (MN "ext" i) :: env) sc
 getLams {done} d i env sc = (done ** (d, env, sc))
 
-mkBounds : (xs : _) -> Core.Name.ScopedList.Bounds xs
+mkBounds : (xs : _) -> Core.Name.SnocList.Bounds xs
 mkBounds [<] = None
 mkBounds (x :%: xs) = Add x x (mkBounds xs)
 
 getNewArgs : {done : _} ->
-             SubstCEnv done args -> ScopedList Name
+             SubstCEnv done args -> SnocList Name
 getNewArgs [] = [<]
 getNewArgs (CRef _ n :: xs) = n :%: getNewArgs xs
 getNewArgs {done = x :%: xs} (_ :: sub) = x :%: getNewArgs sub
@@ -438,7 +438,7 @@ getNewArgs {done = x :%: xs} (_ :: sub) = x :%: getNewArgs sub
 -- Annoyingly, the indices will need fixing up because the order in the top
 -- level definition goes left to right (i.e. first argument has lowest index,
 -- not the highest, as you'd expect if they were all lambdas).
-mergeLambdas : (args : ScopedList Name) -> CExp args -> (args' ** CExp args')
+mergeLambdas : (args : SnocList Name) -> CExp args -> (args' ** CExp args')
 mergeLambdas args (CLam fc x sc)
     = let (args' ** (s, env, exp')) = getLams zero 0 [] (CLam fc x sc)
           expNs = substs s env exp'

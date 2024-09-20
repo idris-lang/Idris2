@@ -3,10 +3,9 @@ module Core.Name.Scoped
 import Core.Name
 
 import public Data.List.HasLength
+import Data.SnocList
 
 import public Libraries.Data.List.SizeOf
-
-import Core.Name.ScopedList
 
 %default total
 
@@ -22,7 +21,7 @@ import Core.Name.ScopedList
 |||    Γ    ⊢ λx. t : A → B
 public export
 Scope : Type
-Scope = ScopedList Name
+Scope = SnocList Name
 
 ||| A scoped definition is one indexed by a scope
 public export
@@ -35,7 +34,7 @@ Scoped = Scope -> Type
 export
 scopeEq : (xs, ys : Scope) -> Maybe (xs = ys)
 scopeEq [<] [<] = Just Refl
-scopeEq (x :%: xs) (y :%: ys)
+scopeEq (xs :< x) (ys :< y)
     = do Refl <- nameEq x y
          Refl <- scopeEq xs ys
          Just Refl

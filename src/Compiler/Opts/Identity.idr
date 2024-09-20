@@ -3,14 +3,14 @@ module Compiler.Opts.Identity
 import Compiler.CompileExpr
 import Core.Context
 import Core.Context.Log
-import Core.Name.ScopedList
 import Data.List
+import Data.SnocList
 import Data.Vect
 
-makeArgs : (args : ScopedList Name) -> List (Var (args +%+ vars))
+makeArgs : (args : SnocList Name) -> List (Var (args +%+ vars))
 makeArgs args = makeArgs' args id
   where
-    makeArgs' : (args : ScopedList Name) -> (Var (args +%+ vars) -> a) -> List a
+    makeArgs' : (args : SnocList Name) -> (Var (args +%+ vars) -> a) -> List a
     makeArgs' [<] f = []
     makeArgs' (x :%: xs) f = f (MkVar First) :: makeArgs' xs (f . weaken)
 
@@ -117,7 +117,7 @@ calcIdentity : (fullName : Name) -> CDef -> Maybe Nat
 calcIdentity fn (MkFun args exp) = checkIdentity fn (makeArgs {vars=[<]} args) (rewrite appendNilRightNeutral args in exp) Z
 calcIdentity _ _ = Nothing
 
-getArg : FC -> Nat -> (args : ScopedList Name) -> Maybe (CExp args)
+getArg : FC -> Nat -> (args : SnocList Name) -> Maybe (CExp args)
 getArg _ _ [<] = Nothing
 getArg fc Z (a :%: _) = Just $ CLocal fc First
 getArg fc (S k) (_ :%: as) = weaken <$> getArg fc k as

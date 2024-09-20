@@ -12,7 +12,7 @@ import Libraries.Data.NameMap
 import Libraries.Utils.Scheme
 
 public export
-data SObj : ScopedList Name -> Type where
+data SObj : SnocList Name -> Type where
      MkSObj : ForeignObj -> SchVars vars -> SObj vars
 
 -- Values, which we read off evaluated scheme objects.
@@ -22,13 +22,13 @@ data SObj : ScopedList Name -> Type where
 -- recording a LocalEnv for example).
 mutual
   public export
-  data SHead : ScopedList Name -> Type where
+  data SHead : SnocList Name -> Type where
        SLocal : (idx : Nat) -> (0 p : IsVar nm idx vars) -> SHead vars
        SRef : NameType -> Name -> SHead vars
        SMeta : Name -> Int -> List (Core (SNF vars)) -> SHead vars
 
   public export
-  data SNF : ScopedList Name -> Type where
+  data SNF : SnocList Name -> Type where
        SBind    : FC -> (x : Name) -> Binder (SNF vars) ->
                   (SObj vars -> Core (SNF vars)) -> SNF vars
        SApp     : FC -> SHead vars -> List (Core (SNF vars)) -> SNF vars

@@ -107,7 +107,7 @@ bindReq : {vs : _} ->
 bindReq {vs} fc env Refl ns tm
     = pure (ns, notLets [] _ env, abstractEnvType fc env tm)
   where
-    notLets : List Name -> (vars : ScopedList Name) -> Env Term vars -> List Name
+    notLets : List Name -> (vars : SnocList Name) -> Env Term vars -> List Name
     notLets acc [<] _ = acc
     notLets acc (v :%: vs) (b :: env) = if isLet b then notLets acc vs env
                                        else notLets (v :: acc) vs env
@@ -126,15 +126,15 @@ data ArgUsed = Used1 -- been used
              | Used0 -- not used
              | LocalVar -- don't care if it's used
 
-data Usage : ScopedList Name -> Type where
+data Usage : SnocList Name -> Type where
      Nil : Usage [<]
      (::) : ArgUsed -> Usage xs -> Usage (x :%: xs)
 
-initUsed : (xs : ScopedList Name) -> Usage xs
+initUsed : (xs : SnocList Name) -> Usage xs
 initUsed [<] = []
 initUsed (x :%: xs) = Used0 :: initUsed xs
 
-initUsedCase : (xs : ScopedList Name) -> Usage xs
+initUsedCase : (xs : SnocList Name) -> Usage xs
 initUsedCase [<] = []
 initUsedCase (x :%: [<]) = [Used0]
 initUsedCase (x :%: xs) = LocalVar :: initUsedCase xs
@@ -158,15 +158,15 @@ setUsed : {idx : _} ->
           (0 _ : IsVar n idx vars) -> Core ()
 setUsed p = update Used $ setUsedVar p
 
-extendUsed : ArgUsed -> (new : ScopedList Name) -> Usage vars -> Usage (new +%+ vars)
+extendUsed : ArgUsed -> (new : SnocList Name) -> Usage vars -> Usage (new +%+ vars)
 extendUsed a [<] x = x
 extendUsed a (y :%: xs) x = a :: extendUsed a xs x
 
-dropUsed : (new : ScopedList Name) -> Usage (new +%+ vars) -> Usage vars
+dropUsed : (new : SnocList Name) -> Usage (new +%+ vars) -> Usage vars
 dropUsed [<] x = x
 dropUsed (x :%: xs) (u :: us) = dropUsed xs us
 
-inExtended : ArgUsed -> (new : ScopedList Name) ->
+inExtended : ArgUsed -> (new : SnocList Name) ->
              {auto u : Ref Used (Usage vars)} ->
              (Ref Used (Usage (new +%+ vars)) -> Core a) ->
              Core a

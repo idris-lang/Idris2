@@ -2,11 +2,11 @@ module Core.Primitives
 
 import Core.Context
 import Core.TT
-import Core.Name.ScopedList
 import Core.Value
 import Libraries.Utils.String
 
 import Data.Vect
+import Data.SnocList
 
 %default covering
 
@@ -567,7 +567,7 @@ castTo WorldType = const Nothing
 
 export
 getOp : {0 arity : Nat} -> PrimFn arity ->
-        {vars : ScopedList Name} -> Vect arity (NF vars) -> Maybe (NF vars)
+        {vars : SnocList Name} -> Vect arity (NF vars) -> Maybe (NF vars)
 getOp (Add ty) = binOp add
 getOp (Sub ty) = binOp sub
 getOp (Mul ty) = binOp mul

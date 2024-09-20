@@ -3,11 +3,11 @@ module Core.TT
 import public Core.FC
 import public Core.Name
 import public Core.Name.Scoped
-import public Core.Name.ScopedList
 
 import Idris.Pretty.Annotations
 
 import Data.List
+import Data.SnocList
 import Data.Nat
 import Data.String
 import Data.Vect
