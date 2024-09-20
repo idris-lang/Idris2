@@ -42,7 +42,7 @@ mutual
                  CaseTree (vars ++ args) -> CaseAlt vars
        ||| Lazy match for the Delay type use for codata types
        DelayCase : (ty : Name) -> (arg : Name) ->
-                   CaseTree (ty :%: arg :%: vars) -> CaseAlt vars
+                   CaseTree (vars :< arg :< ty) -> CaseAlt vars
        ||| Match against a literal
        ConstCase : Constant -> CaseTree vars -> CaseAlt vars
        ||| Catch-all case
@@ -125,7 +125,7 @@ showCT indent (Unmatched msg) = "Error: " ++ show msg
 showCT indent Impossible = "Impossible"
 
 showCA indent (ConCase n tag args sc)
-        = showSep " " (toList (map show (n :%: args))) ++ " => " ++
+        = showSep " " (toList (map show (args :< n))) ++ " => " ++
           showCT indent sc
 showCA indent (DelayCase _ arg sc)
         = "Delay " ++ show arg ++ " => " ++ showCT indent sc
@@ -273,7 +273,7 @@ mkTerm vars (PTyCon fc x arity xs)
                (toList $ map (mkTerm vars) xs)
 mkTerm vars (PConst fc c) = PrimVal fc c
 mkTerm vars (PArrow fc x s t)
-    = Bind fc x (Pi fc top Explicit (mkTerm vars s)) (mkTerm (x :%: vars) t)
+    = Bind fc x (Pi fc top Explicit (mkTerm vars s)) (mkTerm (vars :< x) t)
 mkTerm vars (PDelay fc r ty p)
     = TDelay fc r (mkTerm vars ty) (mkTerm vars p)
 mkTerm vars (PLoc fc n)

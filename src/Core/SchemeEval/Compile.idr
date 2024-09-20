@@ -80,7 +80,7 @@ getName (Free x) = x
 public export
 data SchVars : SnocList Name -> Type where
      Nil : SchVars [<]
-     (::) : SVar -> SchVars ns -> SchVars (n :%: ns)
+     (::) : SVar -> SchVars ns -> SchVars (ns :< n)
 
 Show (SchVars ns) where
   show xs = show (toList xs)
@@ -303,7 +303,7 @@ extend : Ref Sym Integer =>
          (args : SnocList Name) -> SchVars vars ->
          Core (List Name, SchVars (vars ++ args))
 extend [<] svs = pure ([], svs)
-extend (arg :%: args) svs
+extend (args :< arg) svs
     = do n <- getArgName
          (args', svs') <- extend args svs
          pure (n :: args', Bound (schVarName n) :: svs')
@@ -479,7 +479,7 @@ varObjs (x :: xs) = Var (show x) :: varObjs xs
 
 mkArgs : (ns : SnocList Name) -> Core (SchVars ns)
 mkArgs [<] = pure []
-mkArgs (x :%: xs)
+mkArgs (xs :< x)
     = pure $ Bound (schVarName x) :: !(mkArgs xs)
 
 bindArgs : Name ->
@@ -525,7 +525,7 @@ compileBody _ n (DCon tag arity newtypeArg)
   where
     mkArgNs : Int -> Nat -> SnocList Name
     mkArgNs i Z = [<]
-    mkArgNs i (S k) = MN "arg" i :%: mkArgNs (i+1) k
+    mkArgNs i (S k) = mkArgNs (i+1) k :< MN "arg" i
 compileBody _ n (TCon tag Z parampos detpos flags mutwith datacons detagabbleBy)
     = pure $ Vector (-1) [IntegerVal (cast tag), StringVal (show n),
                           toScheme n, toScheme emptyFC]
@@ -542,7 +542,7 @@ compileBody _ n (TCon tag arity parampos detpos flags mutwith datacons detagabbl
   where
     mkArgNs : Int -> Nat -> SnocList Name
     mkArgNs i Z = [<]
-    mkArgNs i (S k) = MN "arg" i :%: mkArgNs (i+1) k
+    mkArgNs i (S k) = mkArgNs (i+1) k :< MN "arg" i
 compileBody _ n (Hole numlocs x) = pure $ blockedMetaApp n
 compileBody _ n (BySearch x maxdepth defining) = pure $ blockedMetaApp n
 compileBody _ n (Guess guess envbind constraints) = pure $ blockedMetaApp n

@@ -765,8 +765,8 @@ namespace SnocList
   -- Traversable (specialised)
   traverse' : (a -> Core b) -> SnocList a -> SnocList b -> Core (SnocList b)
   traverse' f [<] acc = pure (reverse acc)
-  traverse' f (x :%: xs) acc
-      = traverse' f xs (!(f x) :%: acc)
+  traverse' f (xs :< x) acc
+      = traverse' f xs (acc :< !(f x))
 
   %inline
   export
@@ -847,7 +847,7 @@ namespace SnocList
   export
   traverse_ : (a -> Core b) -> SnocList a -> Core ()
   traverse_ f [<] = pure ()
-  traverse_ f (x :%: xs)
+  traverse_ f (xs :< x)
       = Core.do ignore (f x)
                 traverse_ f xs
 
@@ -904,7 +904,7 @@ anyM f (x :: xs)
 export
 anyMScoped : (a -> Core Bool) -> SnocList a -> Core Bool
 anyMScoped f [<] = pure False
-anyMScoped f (x :%: xs)
+anyMScoped f (xs :< x)
     = if !(f x)
          then pure True
          else anyMScoped f xs

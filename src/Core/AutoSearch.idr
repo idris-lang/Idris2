@@ -205,7 +205,7 @@ getUsableEnv : {vars : _} ->
                 Env Term vars ->
                 List (Term (vars ++ done), Term (vars ++ done))
 getUsableEnv fc rigc p [] = []
-getUsableEnv {vars = v :%: vs} {done} fc rigc p (b :: env)
+getUsableEnv {vars = vs :< v} {done} fc rigc p (b :: env)
    = let rest = getUsableEnv fc rigc (sucR p) env in
          if (multiplicity b == top || isErased rigc)
             then let 0 var = mkIsVar (hasLength p) in
@@ -461,9 +461,9 @@ concreteDets {vars} fc defaults env top pos dets (arg :: args)
   where
     drop : Nat -> List Nat -> SnocList t -> SnocList t
     drop i ns [<] = [<]
-    drop i ns (x :%: xs)
+    drop i ns (xs :< x)
         = if i `elem` ns
-             then x :%: drop (1+i) ns xs
+             then drop (1+i) ns xs :< x
              else drop (1+i) ns xs
 
     concrete : Defs -> NF vars -> (atTop : Bool) -> Core ()

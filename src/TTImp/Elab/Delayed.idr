@@ -28,7 +28,7 @@ mkClosedElab : {vars : _} ->
 mkClosedElab fc [] elab
     = do (tm, _) <- elab
          pure tm
-mkClosedElab {vars = x :%: vars} fc (b :: env) elab
+mkClosedElab {vars = vars :< x} fc (b :: env) elab
     = mkClosedElab fc env
           (do (sc', _) <- elab
               let b' = newBinder b

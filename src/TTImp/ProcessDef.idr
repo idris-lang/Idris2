@@ -671,7 +671,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
           wargs = (name :%: wargn :%: [<])
 
           wvalTy' := weaken wvalTy
-          eqTy : Term (MN "warg" 0 :%: xs)
+          eqTy : Term (xs :< MN "warg" 0)
                := apply vfc eqTyCon
                            [ wvalTy'
                            , wvalTy'
@@ -740,11 +740,11 @@ checkClause {vars} mult vis totreq hashit n opts nest env
 -- TODO: remove
 nameListEq : (xs : SnocList Name) -> (ys : SnocList Name) -> Maybe (xs = ys)
 nameListEq [<] [<] = Just Refl
-nameListEq (x :%: xs) (y :%: ys) with (nameEq x y)
-  nameListEq (x :%: xs) (x :%: ys) | (Just Refl) with (nameListEq xs ys)
-    nameListEq (x :%: xs) (x :%: xs) | (Just Refl) | Just Refl= Just Refl
-    nameListEq (x :%: xs) (x :%: ys) | (Just Refl) | Nothing = Nothing
-  nameListEq (x :%: xs) (y :%: ys) | Nothing = Nothing
+nameListEq (xs :< x) (ys :< y) with (nameEq x y)
+  nameListEq (xs :< x) (ys :< x) | (Just Refl) with (nameListEq xs ys)
+    nameListEq (xs :< x) (xs :< x) | (Just Refl) | Just Refl= Just Refl
+    nameListEq (xs :< x) (ys :< x) | (Just Refl) | Nothing = Nothing
+  nameListEq (xs :< x) (ys :< y) | Nothing = Nothing
 nameListEq _ _ = Nothing
 
 -- Calculate references for the given name, and recursively if they haven't

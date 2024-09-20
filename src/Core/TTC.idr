@@ -270,12 +270,12 @@ TTC NameType where
 -- (Indeed, we're expecting the whole IsVar proof to be erased because
 -- we have the idx...)
 mkPrf : (idx : Nat) -> IsVar n idx ns
-mkPrf {n} {ns} Z = believe_me (First {n} {ns = n :%: ns})
+mkPrf {n} {ns} Z = believe_me (First {n} {ns = ns :< n})
 mkPrf {n} {ns} (S k) = believe_me (Later {m=n} (mkPrf {n} {ns} k))
 
 getName : (idx : Nat) -> SnocList Name -> Maybe Name
-getName Z (x :%: xs) = Just x
-getName (S k) (x :%: xs) = getName k xs
+getName Z (xs :< x) = Just x
+getName (S k) (xs :< x) = getName k xs
 getName _ [<] = Nothing
 
 mutual
@@ -499,7 +499,7 @@ export
 
   -- Length has to correspond to length of 'vars'
   fromBuf {vars = [<]} b = pure Nil
-  fromBuf {vars = x :%: xs} b
+  fromBuf {vars = xs :< x} b
       = do bnd <- fromBuf b
            env <- fromBuf b
            pure (bnd :: env)

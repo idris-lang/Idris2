@@ -60,10 +60,10 @@ mutual
       renameVar = believe_me -- it's the same index, so just the identity at run time
   shiftBinder new (CRef fc n) = CRef fc n
   shiftBinder {outer} new (CLam fc n sc)
-      = CLam fc n $ shiftBinder {outer = n :%: outer} new sc
+      = CLam fc n $ shiftBinder {outer = outer :< n} new sc
   shiftBinder new (CLet fc n inlineOK val sc)
       = CLet fc n inlineOK (shiftBinder new val)
-                           $ shiftBinder {outer = n :%: outer} new sc
+                           $ shiftBinder {outer = outer :< n} new sc
   shiftBinder new (CApp fc f args)
       = CApp fc (shiftBinder new f) $ map (shiftBinder new) args
   shiftBinder new (CCon fc ci c tag args)
@@ -114,7 +114,7 @@ liftOutLambda = shiftBinder {outer = [<]}
 -- binding outside
 tryLiftOut : (new : Name) ->
              List (CConAlt vars) ->
-             Maybe (List (CConAlt (new :%: vars)))
+             Maybe (List (CConAlt (vars :< new)))
 tryLiftOut new [] = Just []
 tryLiftOut new (MkConAlt n ci t args (CLam fc x sc) :: as)
     = do as' <- tryLiftOut new as
@@ -124,7 +124,7 @@ tryLiftOut _ _ = Nothing
 
 tryLiftOutConst : (new : Name) ->
                   List (CConstAlt vars) ->
-                  Maybe (List (CConstAlt (new :%: vars)))
+                  Maybe (List (CConstAlt (vars :< new)))
 tryLiftOutConst new [] = Just []
 tryLiftOutConst new (MkConstAlt c (CLam fc x sc) :: as)
     = do as' <- tryLiftOutConst new as
@@ -134,7 +134,7 @@ tryLiftOutConst _ _ = Nothing
 
 tryLiftDef : (new : Name) ->
              Maybe (CExp vars) ->
-             Maybe (Maybe (CExp (new :%: vars)))
+             Maybe (Maybe (CExp (vars :< new)))
 tryLiftDef new Nothing = Just Nothing
 tryLiftDef new (Just (CLam fc x sc))
    = let sc' = liftOutLambda {args = [<]} new sc in

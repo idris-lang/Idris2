@@ -26,12 +26,12 @@ import Libraries.Data.WithDefault
 
 data EEnv : SnocList Name -> SnocList Name -> Type where
      Nil : EEnv free [<]
-     (::) : CExp free -> EEnv free vars -> EEnv free (x :%: vars)
+     (::) : CExp free -> EEnv free vars -> EEnv free (vars :< x)
 
 extend : EEnv free vars -> (args : SnocList (CExp free)) -> (args' : SnocList Name) ->
          LengthMatch args args' -> EEnv free (vars ++ args')
 extend env [<] [<] NilMatch = env
-extend env (a :%: xs) (n :%: ns) (ConsMatch w)
+extend env (xs :< a) (ns :< n) (ConsMatch w)
     = a :: extend env xs ns w
 
 Stack : SnocList Name -> Type
@@ -52,7 +52,7 @@ getArity (MkError _) = 0
 
 takeFromStack : EEnv free vars -> Stack free -> (args : SnocList Name) ->
                 Maybe (EEnv free (vars ++ args), Stack free)
-takeFromStack env (e :: es) (a :%: as)
+takeFromStack env (e :: es) (as :< a)
   = do (env', stk') <- takeFromStack env es as
        pure (e :: env', stk')
 takeFromStack env stk [<] = pure (env, stk)
@@ -67,7 +67,7 @@ genName n
          put LVar (i + 1)
          pure (MN n i)
 
-refToLocal : Name -> (x : Name) -> CExp vars -> CExp (x :%: vars)
+refToLocal : Name -> (x : Name) -> CExp vars -> CExp (vars :< x)
 refToLocal x new tm = refsToLocals (Add new x None) tm
 
 largest : Ord a => a -> List a -> a
@@ -123,11 +123,11 @@ mutual
               Core (CExp free)
   evalLocal {vars = [<]} fc rec stk env p
       = pure $ unload stk (CLocal fc p)
-  evalLocal {vars = x :%: xs} fc rec stk (v :: env) First
+  evalLocal {vars = xs :< x} fc rec stk (v :: env) First
       = case stk of
              [] => pure v
              _ => eval rec env stk (weakenNs (mkSizeOf xs) v)
-  evalLocal {vars = x :%: xs} fc rec stk (_ :: env) (Later p)
+  evalLocal {vars = xs :< x} fc rec stk (_ :: env) (Later p)
       = evalLocal fc rec stk env p
 
   tryApply : {vars, free : _} ->
@@ -248,8 +248,8 @@ mutual
                   (0 p : IsVar x idx (free ++ vs)) ->
                   EEnv free vs -> CExp free -> EEnv free vs
       updateLoc {vs = [<]} p env val = env
-      updateLoc {vs = (x:%:xs)} First (e :: env) val = val :: env
-      updateLoc {vs = (y:%:xs)} (Later p) (e :: env) val = e :: updateLoc p env val
+      updateLoc {vs = (xs :< x)} First (e :: env) val = val :: env
+      updateLoc {vs = (xs :< y)} (Later p) (e :: env) val = e :: updateLoc p env val
 
       update : {vs : _} ->
                CExp (free ++ vs) -> EEnv free vs -> CExp free -> EEnv free vs
@@ -271,7 +271,7 @@ mutual
               FC -> EEnv free vars -> (args' : SnocList Name) ->
               Core (Bounds args', EEnv free (vars ++ args'))
   extendLoc fc env [<] = pure (None, env)
-  extendLoc fc env (n :%: ns)
+  extendLoc fc env (ns :< n)
       = do xn <- genName "cv"
            (bs', env') <- extendLoc fc env ns
            pure (Add n xn bs', CRef fc xn :: env')
@@ -421,18 +421,18 @@ getLams : {done : _} -> SizeOf done ->
           Int -> SubstCEnv done args -> CExp (args ++ done) ->
           (args' ** (SizeOf args', SubstCEnv args' args, CExp (args ++ args')))
 getLams {done} d i env (CLam fc x sc)
-    = getLams {done = x :%: done} (suc d) (i + 1) (CRef fc (MN "ext" i) :: env) sc
+    = getLams {done = done :< x} (suc d) (i + 1) (CRef fc (MN "ext" i) :: env) sc
 getLams {done} d i env sc = (done ** (d, env, sc))
 
 mkBounds : (xs : _) -> Core.Name.SnocList.Bounds xs
 mkBounds [<] = None
-mkBounds (x :%: xs) = Add x x (mkBounds xs)
+mkBounds (xs :< x) = Add x x (mkBounds xs)
 
 getNewArgs : {done : _} ->
              SubstCEnv done args -> SnocList Name
 getNewArgs [] = [<]
-getNewArgs (CRef _ n :: xs) = n :%: getNewArgs xs
-getNewArgs {done = x :%: xs} (_ :: sub) = x :%: getNewArgs sub
+getNewArgs (CRef _ n :: xs) = getNewArgs xs :< n
+getNewArgs {done = xs :< x} (_ :: sub) = getNewArgs sub :< x
 
 -- Move any lambdas in the body of the definition into the lhs list of vars.
 -- Annoyingly, the indices will need fixing up because the order in the top

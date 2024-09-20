@@ -220,7 +220,7 @@ addLHS loc outerenvlen env tm
 substEnv : {vars : _} ->
            FC -> Env Term vars -> (tm : Term vars) -> ClosedTerm
 substEnv loc [] tm = tm
-substEnv {vars = x :%: _} loc (b :: env) tm
+substEnv {vars = _ :< x} loc (b :: env) tm
     = substEnv loc env (subst (Ref loc Bound x) tm)
 
 export

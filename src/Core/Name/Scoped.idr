@@ -134,7 +134,7 @@ public export
 interface Weaken (0 tm : Scoped) where
   constructor MkWeaken
   -- methods
-  weaken : tm vars -> tm (nm :%: vars)
+  weaken : tm vars -> tm (vars :< nm)
   weakenNs : Weakenable tm
   -- default implementations
   weaken = weakenNs (suc zero)
@@ -157,7 +157,7 @@ interface Strengthen (0 tm : Scoped) where
   strengthenNs : Strengthenable tm
 
 export
-strengthen : Strengthen tm => tm (nm :%: vars) -> Maybe (tm vars)
+strengthen : Strengthen tm => tm (vars :< nm) -> Maybe (tm vars)
 strengthen = strengthenNs (suc zero)
 
 public export
@@ -211,5 +211,5 @@ interface Weaken tm => IsScoped (0 tm : Scoped) where
   shrink : Shrinkable tm
 
 export
-compat : IsScoped tm => tm (m :%: xs) -> tm (n :%: xs)
+compat : IsScoped tm => tm (xs :< m) -> tm (xs :< n)
 compat = compatNs (Ext Pre)
