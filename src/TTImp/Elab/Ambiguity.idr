@@ -210,7 +210,7 @@ mutual
                    SnocList (Closure vars) -> SnocList (Closure [<]) ->
                    Core Bool
   mightMatchArgs defs [<] [<] = pure True
-  mightMatchArgs defs (x :%: xs) (y :%: ys)
+  mightMatchArgs defs (xs :< x) (ys :< y)
       = do amatch <- mightMatchArg defs x y
            if amatch
               then mightMatchArgs defs xs ys

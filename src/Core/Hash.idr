@@ -87,7 +87,7 @@ Hashable a => Hashable (List a) where
 export
 Hashable a => Hashable (SnocList a) where
   hashWithSalt h [<] = abs h
-  hashWithSalt h (x :%: xs) = hashWithSalt (h * 33 + hash x) xs
+  hashWithSalt h (xs :< x) = hashWithSalt (h * 33 + hash x) xs
 
 export
 Hashable a => Hashable (List1 a) where

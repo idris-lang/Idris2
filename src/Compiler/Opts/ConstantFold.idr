@@ -27,7 +27,7 @@ foldableOp _                = True
 
 data Subst : SnocList Name -> SnocList Name -> Type where
   Nil  : Subst [<] vars
-  (::) : CExp vars -> Subst ds vars -> Subst (d :%: ds) vars
+  (::) : CExp vars -> Subst ds vars -> Subst (ds :< d) vars
   Wk   : SizeOf ws -> Subst ds vars -> Subst (ds ++ ws) (vars ++ ws)
 
 initSubst : (vars : SnocList Name) -> Subst vars vars

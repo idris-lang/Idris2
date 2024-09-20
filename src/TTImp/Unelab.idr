@@ -329,8 +329,8 @@ mutual
                  (umode : UnelabMode) ->
                  (nest : List (Name, Nat)) ->
                  FC -> Env Term vars -> (x : Name) ->
-                 Binder (Term vars) -> Term (x :%: vars) ->
-                 IRawImp -> Term (x :%: vars) ->
+                 Binder (Term vars) -> Term (vars :< x) ->
+                 IRawImp -> Term (vars :< x) ->
                  Core (IRawImp, Glued vars)
   unelabBinder umode nest fc env x (Lam fc' rig p ty) sctm sc scty
       = do (ty', _) <- unelabTy umode nest env ty

@@ -59,7 +59,7 @@ mutual
   public export
   data LocalEnv : SnocList Name -> SnocList Name -> Type where
        Nil  : LocalEnv free [<]
-       (::) : Closure free -> LocalEnv free vars -> LocalEnv free (x :%: vars)
+       (::) : Closure free -> LocalEnv free vars -> LocalEnv free (vars :< x)
 
   public export
   data Closure : SnocList Name -> Type where

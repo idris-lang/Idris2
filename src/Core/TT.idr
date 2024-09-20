@@ -449,7 +449,7 @@ refsToLocals bs y = mkLocals zero  bs y
 
 -- Replace any reference to 'x' with a locally bound name 'new'
 export
-refToLocal : (x : Name) -> (new : Name) -> Term vars -> Term (new :%: vars)
+refToLocal : (x : Name) -> (new : Name) -> Term vars -> Term (vars :< new)
 refToLocal x new tm = refsToLocals (Add new x None) tm
 
 -- Replace an explicit name with a term

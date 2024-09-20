@@ -319,7 +319,7 @@ mutual
            i <- nextName
            let n = show name ++ "-" ++ show i
            let sc = unsafeApply proc (makeSymbol n)
-           sc' <- quote' {outer = name :%: outer} (Bound n :: svs) sc
+           sc' <- quote' {outer = outer :< name} (Bound n :: svs) sc
            pure (Bind emptyFC name
                       (binder emptyFC r pi ty)
                       sc')
@@ -339,7 +339,7 @@ mutual
            i <- nextName
            let n = show name ++ "-" ++ show i
            let sc = unsafeApply proc (makeSymbol n)
-           sc' <- quote' {outer = name :%: outer} (Bound n :: svs) sc
+           sc' <- quote' {outer = outer :< name} (Bound n :: svs) sc
            pure (Bind emptyFC name
                       (PLet emptyFC r val ty)
                       sc')

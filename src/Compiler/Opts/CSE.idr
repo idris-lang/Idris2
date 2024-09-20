@@ -123,8 +123,8 @@ dropVar :  (pre : SnocList Name)
         -> (0 p : IsVar x n (ns ++ pre))
         -> Maybe (IsVar x n pre)
 dropVar [<] _ _        = Nothing
-dropVar (y :%: xs) 0 First = Just First
-dropVar (y :%: xs) (S k) (Later p) =
+dropVar (xs :< y) 0 First = Just First
+dropVar (xs :< y) (S k) (Later p) =
   case dropVar xs k p of
     Just p' => Just $ Later p'
     Nothing => Nothing

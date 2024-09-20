@@ -149,7 +149,7 @@ getAllEnv : {vars : _} -> FC ->
             Env Term vars ->
             List (Term (vars ++ done), Term (vars ++ done))
 getAllEnv fc done [] = []
-getAllEnv {vars = v :%: vs} {done} fc p (b :: env)
+getAllEnv {vars = vs :< v} {done} fc p (b :: env)
    = let rest = getAllEnv fc (sucR p) env
          0 var = mkIsVar (hasLength p)
          usable = usableName v in
@@ -701,7 +701,7 @@ searchType : {vars : _} ->
              ClosedTerm ->
              Nat -> Term vars -> Core (Search (Term vars, ExprDefs))
 searchType fc rig opts hints env topty (S k) (Bind bfc n b@(Pi fc' c info ty) sc)
-    = do let env' : Env Term (n :%: _) = b :: env
+    = do let env' : Env Term (_ :< n) = b :: env
          log "interaction.search" 10 $ "Introduced lambda, search for " ++ show sc
          scVal <- searchType fc rig opts hints env' topty k sc
          pure (map (\ (sc, ds) => (Bind bfc n (Lam fc' c info ty) sc, ds)) scVal)
@@ -711,7 +711,7 @@ searchType {vars} fc rig opts hints env topty Z (Bind bfc n b@(Pi fc' c info ty)
            [searchLocal fc rig opts hints env (Bind bfc n b sc) topty,
             (do defs <- get Ctxt
                 let n' = UN $ Basic !(getArgName defs n [] (toList vars) !(nf defs env ty))
-                let env' : Env Term (n' :%: _) = b :: env
+                let env' : Env Term (_ :< n') = b :: env
                 let sc' = compat sc
                 log "interaction.search" 10 $ "Introduced lambda, search for " ++ show sc'
                 scVal <- searchType fc rig opts hints env' topty Z sc'

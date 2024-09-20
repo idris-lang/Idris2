@@ -114,9 +114,9 @@ specByVar specs (p :: ps)
 
 dropSpec : Nat -> List (Nat, Term [<]) -> SnocList a -> SnocList a
 dropSpec i sargs [<] = [<]
-dropSpec i sargs (x :%: xs)
+dropSpec i sargs (xs :< x)
     = case lookup i sargs of
-           Nothing => x :%: dropSpec (1 + i) sargs xs
+           Nothing => dropSpec (1 + i) sargs xs :< x
            Just _ => dropSpec (1 + i) sargs xs
 
 getSpecPats : {auto c : Ref Ctxt Defs} ->
@@ -184,19 +184,19 @@ getSpecPats fc pename fn stk fnty args sargs pats
         = pure app
 
     getRawArgs : SnocList (Arg' Name) -> RawImp -> SnocList (Arg' Name)
-    getRawArgs args (IApp fc f arg) = getRawArgs (Explicit fc arg :%: args) f
+    getRawArgs args (IApp fc f arg) = getRawArgs (args :< Explicit fc arg) f
     getRawArgs args (INamedApp fc f n arg)
-        = getRawArgs (Named fc n arg :%: args) f
+        = getRawArgs (args :< Named fc n arg) f
     getRawArgs args (IAutoApp fc f arg)
-        = getRawArgs (Auto fc arg :%: args) f
+        = getRawArgs (args :< Auto fc arg) f
     getRawArgs args tm = args
 
     reapply : RawImp -> SnocList (Arg' Name) -> RawImp
     reapply f [<] = f
-    reapply f (Explicit fc arg :%: args) = reapply (IApp fc f arg) args
-    reapply f (Named fc n arg :%: args)
+    reapply f (args :< Explicit fc arg) = reapply (IApp fc f arg) args
+    reapply f (args :< Named fc n arg)
         = reapply (INamedApp fc f n arg) args
-    reapply f (Auto fc arg :%: args)
+    reapply f (args :< Auto fc arg)
         = reapply (IAutoApp fc f arg) args
 
     dropArgs : Name -> RawImp -> RawImp
@@ -431,7 +431,7 @@ specialise {vars} fc env gdef fn stk
     getSpecArgs : Nat -> List Nat -> SnocList (FC, Term vars) ->
                   Core (Maybe (List (Nat, ArgMode)))
     getSpecArgs i specs [<] = pure (Just [])
-    getSpecArgs i specs ((_, x) :%: xs)
+    getSpecArgs i specs (xs :< (_, x))
         = do Just xs' <- getSpecArgs (1 + i) specs xs
                  | Nothing => pure Nothing
              if i `elem` specs
@@ -467,7 +467,7 @@ findSpecs env stk (Bind fc x b sc)
          pure $ applyStackWithFC (Bind fc x b' sc') stk
 findSpecs env stk (App fc fn arg)
     = do arg' <- findSpecs env [<] arg
-         findSpecs env ((fc, arg') :%: stk) fn
+         findSpecs env (stk :< (fc, arg')) fn
 findSpecs env stk (TDelayed fc r tm)
     = do tm' <- findSpecs env [<] tm
          pure $ applyStackWithFC (TDelayed fc r tm') stk
@@ -503,9 +503,9 @@ mutual
               Env Term free -> SnocList (Closure free) ->
               Core (SnocList (Term (free ++ bound)))
   quoteArgs q defs bounds env [<] = pure [<]
-  quoteArgs q defs bounds env (a :%: args)
-      = pure $ (!(quoteGenNF q defs bounds env !(evalClosure defs a)) :%:
-                !(quoteArgs q defs bounds env args))
+  quoteArgs q defs bounds env (args :< a)
+      = pure $ (!(quoteArgs q defs bounds env args) :<
+                !(quoteGenNF q defs bounds env !(evalClosure defs a)))
 
   quoteArgsWithFC : {auto c : Ref Ctxt Defs} ->
                     {auto m : Ref MD Metadata} ->
@@ -535,7 +535,7 @@ mutual
       addLater : {idx : _} -> (ys : SnocList Name) -> (0 p : IsVar n idx xs) ->
                  Var (xs ++ ys)
       addLater [<] isv = MkVar isv
-      addLater (x :%: xs) isv
+      addLater (xs :< x) isv
           = let MkVar isv' = addLater xs isv in
                 MkVar (Later isv')
   quoteHead q defs fc bounds env (NRef Bound (MN n i))
