@@ -90,7 +90,7 @@ conflict defs env nfty n
       conflictArgs : Int -> SnocList (Closure vars) -> SnocList (Closure [<]) ->
                      Core (Maybe (List (Name, Term vars)))
       conflictArgs _ [<] [<] = pure (Just [])
-      conflictArgs i (c :%: cs) (c' :%: cs')
+      conflictArgs i (cs :< c) (cs' :< c')
           = do cnf <- evalClosure defs c
                cnf' <- evalClosure defs c'
                Just ms <- conflictNF i cnf cnf'
@@ -197,7 +197,7 @@ KnownVars : SnocList Name -> Type -> Type
 KnownVars vars a = List (Var vars, a)
 
 getName : {idx : Nat} -> {vars : SnocList Name} -> (0 p : IsVar n idx vars) -> Name
-getName {vars = v :%: _} First = v
+getName {vars = _ :< v} First = v
 getName (Later p) = getName p
 
 showK : {ns : _} ->

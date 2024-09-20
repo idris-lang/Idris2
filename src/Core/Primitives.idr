@@ -533,7 +533,7 @@ doubleTy : ClosedTerm
 doubleTy = predTy DoubleType DoubleType
 
 pi : (x : String) -> RigCount -> PiInfo (Term xs) -> Term xs ->
-     Term (UN (Basic x) :%: xs) -> Term xs
+     Term (xs :< UN (Basic x)) -> Term xs
 pi x rig plic ty sc = Bind emptyFC (UN (Basic x)) (Pi emptyFC rig plic ty) sc
 
 believeMeTy : ClosedTerm

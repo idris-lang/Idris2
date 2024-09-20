@@ -113,7 +113,7 @@ processFnOpt fc _ ndef (SpecArgs ns)
       getDepsArgs : Bool -> SnocList (NF [<]) -> NameMap Bool ->
                     Core (NameMap Bool)
       getDepsArgs inparam [<] ns = pure ns
-      getDepsArgs inparam (a :%: as) ns
+      getDepsArgs inparam (as :< a) ns
           = do ns' <- getDeps inparam a ns
                getDepsArgs inparam as ns'
 
@@ -152,8 +152,8 @@ processFnOpt fc _ ndef (SpecArgs ns)
           splitPs n params (x :: xs)
               = let (ps', ds') = splitPs (1 + n) params xs in
                     if n `elem` params
-                       then (x :%: ps', ds')
-                       else (ps', x :%: ds')
+                       then (ps' :< x, ds')
+                       else (ps', ds' :< x)
       getDeps inparam (NDelayed _ _ t) ns = getDeps inparam t ns
       getDeps inparams nf ns = pure ns
 

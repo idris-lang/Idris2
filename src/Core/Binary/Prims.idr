@@ -502,7 +502,7 @@ TTC a => TTC (SnocList a) where
       ||| Once we port to Idris2, can use Data.List.TailRec.length instead
       length_aux : SnocList a -> Int -> Int
       length_aux [<] len = len
-      length_aux (_ :%: xs) len = length_aux xs (1 + len)
+      length_aux (xs :< _) len = length_aux xs (1 + len)
 
       TailRec_length : SnocList a -> Int
       TailRec_length xs = length_aux xs 0
@@ -515,4 +515,4 @@ TTC a => TTC (SnocList a) where
       readElems xs Z = pure (reverse xs)
       readElems xs (S k)
           = do val <- fromBuf b
-               readElems (val :%: xs) k
+               readElems (xs :< val) k

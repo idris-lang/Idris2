@@ -55,7 +55,7 @@ changeVar old new tm = tm
 
 findLater : (x : Name) -> (newer : SnocList Name) -> Var (older :< x ++ newer)
 findLater x [<] = MkVar First
-findLater {older} x (_ :%: xs)
+findLater {older} x (xs :< _)
     = let MkVar p = findLater {older} x xs in
           MkVar (Later p)
 
@@ -104,7 +104,7 @@ findImpsIn fc env ns ty
 merge : {vs : SnocList Name} ->
         SnocList (Var vs) -> List (Var vs) -> List (Var vs)
 merge [<] xs = xs
-merge (v :%: vs) xs
+merge (vs :< v) xs
     = merge vs (v :: filter (v /=) xs)
 
 -- Extend the list of variables we need in the environment so far, removing
@@ -121,7 +121,7 @@ extendNeeded b env needed
 
 findScrutinee : {vs : _} ->
                 Env Term vs -> RawImp -> Maybe (Var vs)
-findScrutinee {vs = n' :%: _} (b :: bs) (IVar loc' n)
+findScrutinee {vs = _ :< n'} (b :: bs) (IVar loc' n)
     = if n' == n && not (isLet b)
          then Just (MkVar First)
          else do MkVar p <- findScrutinee bs (IVar loc' n)
@@ -306,7 +306,7 @@ caseBlock {vars} rigc elabinfo fc nest env opts scr scrtm scrty caseRig alts exp
     addEnv : {vs : _} ->
              Int -> Env Term vs -> List Name -> (List (Name, Name), List RawImp)
     addEnv idx [] used = ([], [])
-    addEnv idx {vs = v :%: vs} (b :: bs) used
+    addEnv idx {vs = vs :< v} (b :: bs) used
         = let n = getBindName idx v used
               (ns, rest) = addEnv (idx + 1) bs (snd n :: used)
               ns' = n :: ns in

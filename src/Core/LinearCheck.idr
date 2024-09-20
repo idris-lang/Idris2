@@ -31,7 +31,7 @@ Show (Usage vars) where
       showAll [el] = show el
       showAll (x :: xs) = show x ++ ", " ++ show xs
 
-doneScope : Usage (n :%: vars) -> Usage vars
+doneScope : Usage (vars :< n) -> Usage vars
 doneScope [] = []
 doneScope (MkVar First :: xs) = doneScope xs
 doneScope (MkVar (Later p) :: xs) = MkVar p :: doneScope xs
@@ -186,8 +186,8 @@ mutual
                pure (Local fc x idx prf, gnf env ty, used rig)
     where
       getName : {idx : _} -> (vs : SnocList Name) -> (0 p : IsVar n idx vs) -> Name
-      getName (x :%: _) First = x
-      getName (x :%: xs) (Later p) = getName xs p
+      getName (_ :< x) First = x
+      getName (xs :< x) (Later p) = getName xs p
 
       rigSafe : RigCount -> RigCount -> Core ()
       rigSafe l r = when (l < r)
@@ -425,7 +425,7 @@ mutual
   discharge : {vars : _} ->
               Defs -> Env Term vars ->
               FC -> (nm : Name) -> Binder (Term vars) -> Glued vars ->
-              Term (nm :%: vars) -> Glued (nm :%: vars) -> Usage vars ->
+              Term (vars :< nm) -> Glued (vars :< nm) -> Usage vars ->
               Core (Term vars, Glued vars, Usage vars)
   discharge defs env fc nm (Lam fc' c x ty) gbindty scope gscopety used
        = do scty <- getTerm gscopety
@@ -529,7 +529,7 @@ mutual
                       List (Term (done <>> vars)) ->
                       Term (done <>> vars) -> Core ()
       checkEnvUsage s rig [] usage args tm = pure ()
-      checkEnvUsage s rig {done} {vars = nm :%: xs} (b :: env) usage args tm
+      checkEnvUsage s rig {done} {vars = xs :< nm} (b :: env) usage args tm
           = do let pos = mkVarChiply s
                let used_in = count (varIdx pos) usage
 
@@ -702,7 +702,7 @@ checkEnvUsage : {vars : _} ->
                 Term (done <>> vars) ->
                 Core ()
 checkEnvUsage fc s rig [] usage tm = pure ()
-checkEnvUsage fc s rig {vars = nm :%: xs} (b :: env) usage tm
+checkEnvUsage fc s rig {vars = xs :< nm} (b :: env) usage tm
     = do let pos = mkVarChiply s
          let used_in = count (varIdx pos) usage
 

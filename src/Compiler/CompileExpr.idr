@@ -44,13 +44,13 @@ numArgs _ tm = pure (Arity 0)
 mkSub : Nat -> (ns : SnocList Name) -> List Nat -> (ns' ** Thin ns' ns)
 mkSub i _ [] = (_ ** Refl)
 mkSub i [<] ns = (_ ** Refl)
-mkSub i (x :%: xs) es
+mkSub i (xs :< x) es
     = let (ns' ** p) = mkSub (S i) xs es in
           if i `elem` es
              then (ns' ** Drop p)
              else (x :%: ns' ** Keep p)
 
-weakenVar : Var ns -> Var (a :%: ns)
+weakenVar : Var ns -> Var (ns :< a)
 weakenVar (MkVar p) = (MkVar (Later p))
 
 etaExpand : {vars : _} ->
@@ -138,7 +138,7 @@ mkDropSubst : Nat -> List Nat ->
               (vars : SnocList Name) ->
               (vars' ** Thin (rest ++ vars') (rest ++ vars))
 mkDropSubst i es rest [<] = ([<] ** Refl)
-mkDropSubst i es rest (x :%: xs)
+mkDropSubst i es rest (xs :< x)
     = let (vs ** sub) = mkDropSubst (1 + i) es rest xs in
           if i `elem` es
              then (vs ** Drop sub)
@@ -305,7 +305,7 @@ mutual
                                  pure $ Just (substs s env !(toCExpTree n sc))
                         else -- let bind the scrutinee, and substitute the
                              -- name into the RHS
-                             let (s, env) : (_, SubstCEnv args (MN "eff" 0 :%: vars))
+                             let (s, env) : (_, SubstCEnv args (vars :< MN "eff" 0))
                                      = mkSubst 0 (CLocal fc First) pos args in
                              do sc' <- toCExpTree n sc
                                 let scope = insertNames {outer=args}
@@ -320,7 +320,7 @@ mutual
       mkSubst : Nat -> CExp vs ->
                 Nat -> (args : SnocList Name) -> (SizeOf args, SubstCEnv args vs)
       mkSubst _ _ _ [<] = (zero, [])
-      mkSubst i scr pos (a :%: as)
+      mkSubst i scr pos (as :< a)
           = let (s, env) = mkSubst (1 + i) scr pos as in
             if i == pos
                then (suc s, scr :: env)
@@ -388,7 +388,7 @@ mutual
 -- builtins
 data ArgList : Nat -> SnocList Name -> Type where
      NoArgs : ArgList Z [<]
-     ConsArg : (a : Name) -> ArgList k as -> ArgList (S k) (a :%: as)
+     ConsArg : (a : Name) -> ArgList k as -> ArgList (S k) (as :< a)
 
 mkArgList : Int -> (n : Nat) -> (ns ** ArgList n ns)
 mkArgList i Z = (_ ** NoArgs)
@@ -412,7 +412,7 @@ getPArgs defs cl
     = do NDCon fc _ _ _ args <- evalClosure defs cl
              | nf => throw (GenericMsg (getLoc nf) "Badly formed struct type")
          case reverse (map snd args) of
-              (tydesc :%: n :%: _) =>
+              (_ :< n :< tydesc) =>
                   do NPrimVal _ (Str n') <- evalClosure defs n
                          | nf => throw (GenericMsg (getLoc nf) "Unknown field name")
                      pure (n', tydesc)
@@ -522,19 +522,19 @@ getCFTypes args t
 
 lamRHSenv : Int -> FC -> (ns : SnocList Name) -> (SizeOf ns, SubstCEnv ns [<])
 lamRHSenv i fc [<] = (zero, [])
-lamRHSenv i fc (n :%: ns)
+lamRHSenv i fc (ns :< n)
     = let (s, env) = lamRHSenv (i + 1) fc ns in
       (suc s, CRef fc (MN "x" i) :: env)
 
 mkBounds : (xs : _) -> SL.Bounds xs
 mkBounds [<] = None
-mkBounds (x :%: xs) = Add x x (mkBounds xs)
+mkBounds (xs :< x) = Add x x (mkBounds xs)
 
 getNewArgs : {done : _} ->
              SubstCEnv done args -> SnocList Name
 getNewArgs [] = [<]
-getNewArgs (CRef _ n :: xs) = n :%: getNewArgs xs
-getNewArgs {done = x :%: xs} (_ :: sub) = x :%: getNewArgs sub
+getNewArgs (CRef _ n :: xs) = getNewArgs xs :< n
+getNewArgs {done = xs :< x} (_ :: sub) = getNewArgs sub :< x
 
 -- If a name is declared in one module and defined in another,
 -- we have to assume arity 0 for incremental compilation because
@@ -551,7 +551,7 @@ lamRHS ns tm
   where
     lamBind : FC -> (ns : SnocList Name) -> CExp ns -> CExp [<]
     lamBind fc [<] tm = tm
-    lamBind fc (n :%: ns) tm = lamBind fc ns (CLam fc n tm)
+    lamBind fc (ns :< n) tm = lamBind fc ns (CLam fc n tm)
 
 toCDef : Ref Ctxt Defs => Ref NextMN Int =>
          Name -> ClosedTerm -> List Nat -> Def ->

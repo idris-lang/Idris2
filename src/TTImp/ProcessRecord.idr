@@ -177,7 +177,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                    , "  Remaining type: \{show !(toFullNames ty)}"
                    ]
                pure (_ ** (env, ty))
-        dropLeadingPis (var :%: vars) (Bind fc n b@(Pi _ _ _ _) ty) env
+        dropLeadingPis (vars :< var) (Bind fc n b@(Pi _ _ _ _) ty) env
           = dropLeadingPis vars ty (b :: env)
         dropLeadingPis _ ty _ = throw (InternalError "Malformed record type \{show ty}")
 

@@ -102,7 +102,7 @@ data Term : Scoped where
      Meta : FC -> Name -> Int -> List (Term vars) -> Term vars
      Bind : FC -> (x : Name) ->
             (b : Binder (Term vars)) ->
-            (scope : Term (x :%: vars)) -> Term vars
+            (scope : Term (vars :< x)) -> Term vars
      App : FC -> (fn : Term vars) -> (arg : Term vars) -> Term vars
      -- as patterns; since we check LHS patterns as terms before turning
      -- them into patterns, this helps us get it right. When normalising,
@@ -298,7 +298,7 @@ applySpineWithFC fn (args :< (fc, arg)) = App fc (applySpineWithFC fn args) arg
 export
 applyStackWithFC : Term vars -> SnocList (FC, Term vars) -> Term vars
 applyStackWithFC fn [<] = fn
-applyStackWithFC fn ((fc, arg) :%: args) = applyStackWithFC (App fc fn arg) args
+applyStackWithFC fn (args :< (fc, arg)) = applyStackWithFC (App fc fn arg) args
 
 -- Build a simple function type
 export
@@ -491,7 +491,7 @@ mutual
   resolveNames vars (Meta fc n i xs)
       = Meta fc n i (resolveNamesTerms vars xs)
   resolveNames vars (Bind fc x b scope)
-      = Bind fc x (resolveNamesBinder vars b) (resolveNames (x :%: vars) scope)
+      = Bind fc x (resolveNamesBinder vars b) (resolveNames (vars :< x) scope)
   resolveNames vars (App fc fn arg)
       = App fc (resolveNames vars fn) (resolveNames vars arg)
   resolveNames vars (As fc s as pat)

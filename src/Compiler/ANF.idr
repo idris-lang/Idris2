@@ -139,7 +139,7 @@ Show ANFDef where
 
 data AVars : SnocList Name -> Type where
      Nil : AVars [<]
-     (::) : Int -> AVars xs -> AVars (x :%: xs)
+     (::) : Int -> AVars xs -> AVars (xs :< x)
 
 data Next : Type where
 
@@ -248,7 +248,7 @@ mutual
       bindArgs : (args : SnocList Name) -> AVars vars' ->
                  Core (List Int, AVars (vars' ++ args))
       bindArgs [<] vs = pure ([], vs)
-      bindArgs (n :%: ns) vs
+      bindArgs (ns :< n) vs
           = do i <- nextVar
                (is, vs') <- bindArgs ns vs
                pure (i :: is, i :: vs')
@@ -273,7 +273,7 @@ toANF (MkLFun args scope sc)
                (args : SnocList Name) -> AVars vars' ->
                Core (List Int, AVars (vars' ++ args))
     bindArgs [<] vs = pure ([], vs)
-    bindArgs (n :%: ns) vs
+    bindArgs (ns :< n) vs
         = do i <- nextVar
              (is, vs') <- bindArgs ns vs
              pure (i :: is, i :: vs')

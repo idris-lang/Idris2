@@ -76,11 +76,11 @@ mutual
        CLocal : {idx : Nat} -> FC -> (0 p : IsVar x idx vars) -> CExp vars
        CRef : FC -> Name -> CExp vars
        -- Lambda expression
-       CLam : FC -> (x : Name) -> CExp (x :%: vars) -> CExp vars
+       CLam : FC -> (x : Name) -> CExp (vars :< x) -> CExp vars
        -- Let bindings
        CLet : FC -> (x : Name) ->
               InlineOk -> -- Don't inline if set
-              CExp vars -> CExp (x :%: vars) -> CExp vars
+              CExp vars -> CExp (vars :< x) -> CExp vars
        -- Application of a defined function. The length of the argument list is
        -- exactly the same length as expected by its definition (so saturate with
        -- lambdas if necessary, or overapply with additional CApps)
@@ -274,7 +274,7 @@ mutual
 export
 data Names : SnocList Name -> Type where
      Nil : Names [<]
-     (::) : Name -> Names xs -> Names (x :%: xs)
+     (::) : Name -> Names xs -> Names (xs :< x)
 
 elem : Name -> Names xs -> Bool
 elem n [] = False
@@ -299,13 +299,13 @@ getLocName (S k) (x :: xs) (Later p) = getLocName k xs p
 export
 addLocs : (args : SnocList Name) -> Names vars -> Names (vars ++ args)
 addLocs [<] ns = ns
-addLocs (x :%: xs) ns
+addLocs (xs :< x) ns
     = let rec = addLocs xs ns in
           uniqueName x rec :: rec
 
 conArgs : (args : SnocList Name) -> Names (vars ++ args) -> List Name
 conArgs [<] ns = []
-conArgs (a :%: as) (n :: ns) = n :: conArgs as ns
+conArgs (as :< a) (n :: ns) = n :: conArgs as ns
 
 mutual
   forgetExp : Names vars -> CExp vars -> NamedCExp

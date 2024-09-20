@@ -51,7 +51,7 @@ tryUpdate ms (Local fc l idx p)
   where
     findIdx : SnocList (Var vars, Var vars') -> Var vars -> Maybe (Var vars')
     findIdx [<] _ = Nothing
-    findIdx ((old, v) :%: ps) n
+    findIdx (ps :< (old, v)) n
         = if old == n then Just v else findIdx ps n
 tryUpdate ms (Ref fc nt n) = pure $ Ref fc nt n
 tryUpdate ms (Meta fc n i args) = pure $ Meta fc n i !(traverse (tryUpdate ms) args)
@@ -72,7 +72,7 @@ tryUpdate ms (Bind fc x b sc)
     tryUpdateB _ = Nothing
 
     weakenP : {n : _} -> (Var vars, Var vars') ->
-              (Var (n :%: vars), Var (n :%: vars'))
+              (Var (vars :< n), Var (vars' :< n))
     weakenP (v, vs) = (weaken v, weaken vs)
 tryUpdate ms (App fc f a) = pure $ App fc !(tryUpdate ms f) !(tryUpdate ms a)
 tryUpdate ms (As fc s a p) = pure $ As fc s !(tryUpdate ms a) !(tryUpdate ms p)
@@ -89,7 +89,7 @@ mutual
               Ref QVar Int -> Bool -> Defs -> Env Term vars ->
               SnocList (NF vars) -> SnocList (NF vars) -> Core Bool
   allConvNF q i defs env [<] [<] = pure True
-  allConvNF q i defs env (x :%: xs) (y :%: ys)
+  allConvNF q i defs env (xs :< x) (ys :< y)
       = do ok <- allConvNF q i defs env xs ys
            if ok then convGen q i defs env x y
                  else pure False
@@ -100,7 +100,7 @@ mutual
   -- True means they might still match
   quickConv : SnocList (NF vars) -> SnocList (NF vars) -> Bool
   quickConv [<] [<] = True
-  quickConv (x :%: xs) (y :%: ys) = quickConvArg x y && quickConv xs ys
+  quickConv (xs :< x) (ys :< y) = quickConvArg x y && quickConv xs ys
     where
       quickConvHead : NHead vars -> NHead vars -> Bool
       quickConvHead (NLocal _ _ _) (NLocal _ _ _) = True
@@ -157,23 +157,23 @@ mutual
     where
       weakenP : {0 c, c' : _} -> {0 args, args' : Scope} ->
                 (Var args, Var args') ->
-                (Var (c :%: args), Var (c' :%: args'))
+                (Var (args :< c), Var (args' :< c'))
       weakenP (v, vs) = (weaken v, weaken vs)
 
       extend : (cs : SnocList Name) -> (cs' : SnocList Name) ->
                (SnocList (Var args, Var args')) ->
                Maybe (SnocList (Var (args ++ cs), Var (args' ++ cs')))
       extend [<] [<] ms = pure ms
-      extend (c :%: cs) (c' :%: cs') ms
+      extend (cs :< c) (cs' :< c') ms
           = do rest <- extend cs cs' ms
-               pure ((MkVar First, MkVar First) :%: map weakenP rest)
+               pure (map weakenP rest :< (MkVar First, MkVar First))
       extend _ _ _ = Nothing
 
       dropV : forall args .
               (cs : SnocList Name) -> Var (args ++ cs) -> Maybe (Var args)
       dropV [<] v = Just v
-      dropV (c :%: cs) (MkVar First) = Nothing
-      dropV (c :%: cs) (MkVar (Later x))
+      dropV (cs :< c) (MkVar First) = Nothing
+      dropV (cs :< c) (MkVar (Later x))
           = dropV cs (MkVar x)
 
       dropP : (cs : SnocList Name) -> (cs' : SnocList Name) ->
@@ -209,7 +209,7 @@ mutual
                     CaseTree args -> CaseTree args' ->
                     Core (Maybe (SnocList (Var args, Var args')))
   getMatchingVars defs ms (Case _ p _ alts) (Case _ p' _ alts')
-      = getMatchingVarAlts defs ((MkVar p, MkVar p') :%: ms) alts alts'
+      = getMatchingVarAlts defs (ms :< (MkVar p, MkVar p')) alts alts'
   getMatchingVars defs ms (STerm i tm) (STerm i' tm')
       = do let Just tm'' = tryUpdate ms tm
                | Nothing => pure Nothing
@@ -242,14 +242,14 @@ mutual
        -- don't match up, which is annoying. But it'll always be there!
        getArgPos : Nat -> SnocList (Closure vars) -> Maybe (Closure vars)
        getArgPos _ [<] = Nothing
-       getArgPos Z (c :%: cs) = pure c
-       getArgPos (S k) (c :%: cs) = getArgPos k cs
+       getArgPos Z (cs :< c) = pure c
+       getArgPos (S k) (cs :< c) = getArgPos k cs
 
        convertMatches : {vs, vs' : _} ->
                         SnocList (Var vs, Var vs') ->
                         Core Bool
        convertMatches [<] = pure True
-       convertMatches ((MkVar {varIdx = ix} p, MkVar {varIdx = iy} p') :%: vs)
+       convertMatches ((MkVar {varIdx = ix} p, vs :< MkVar {varIdx = iy} p'))
           = do let Just varg = getArgPos ix nargs
                    | Nothing => pure False
                let Just varg' = getArgPos iy nargs'
@@ -303,8 +303,8 @@ mutual
       findArgPos _ = Nothing
 
       getScrutinee : Nat -> SnocList (Closure vs) -> Maybe (Closure vs)
-      getScrutinee Z (x :%: xs) = Just x
-      getScrutinee (S k) (x :%: xs) = getScrutinee k xs
+      getScrutinee Z (xs :< x) = Just x
+      getScrutinee (S k) (xs :< x) = getScrutinee k xs
       getScrutinee _ _ = Nothing
   chkConvCaseBlock _ _ _ _ _ _ _ _ _ = pure False
 
@@ -383,10 +383,10 @@ mutual
           dropInf : Nat -> List Nat -> SnocList a -> SnocList a
           dropInf _ [] xs = xs
           dropInf _ _ [<] = [<]
-          dropInf i ds (x :%: xs)
+          dropInf i ds (xs :< x)
               = if i `elem` ds
                    then dropInf (S i) ds xs
-                   else x :%: dropInf (S i) ds xs
+                   else dropInf (S i) ds xs :< x
 
           -- Discard file context information irrelevant for conversion checking
           args1 : SnocList (Closure vars)

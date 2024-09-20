@@ -95,7 +95,7 @@ bindNotReq fc i (b :: env) (Keep p) ns tm
    = let tmptm = subst (Ref fc Bound (MN "arg" i)) tm
          (ns', btm) = bindNotReq fc (1 + i) env p ns tmptm in
          (ns', refToLocal (MN "arg" i) _ btm)
-bindNotReq {vs = n :%: _} fc i (b :: env) (Drop p) ns tm
+bindNotReq {vs = _ :< n} fc i (b :: env) (Drop p) ns tm
    = bindNotReq fc i env p ((plicit b, n) :: ns)
        (Bind fc _ (Pi (binderLoc b) (multiplicity b) Explicit (binderType b)) tm)
 
@@ -109,9 +109,9 @@ bindReq {vs} fc env Refl ns tm
   where
     notLets : List Name -> (vars : SnocList Name) -> Env Term vars -> List Name
     notLets acc [<] _ = acc
-    notLets acc (v :%: vs) (b :: env) = if isLet b then notLets acc vs env
+    notLets acc (vs :< v) (b :: env) = if isLet b then notLets acc vs env
                                        else notLets (v :: acc) vs env
-bindReq {vs = n :%: _} fc (b :: env) (Keep p) ns tm
+bindReq {vs = _ :< n} fc (b :: env) (Keep p) ns tm
     = do b' <- shrinkBinder b p
          bindReq fc env p ((plicit b, n) :: ns)
             (Bind fc _ (Pi (binderLoc b) (multiplicity b) Explicit (binderType b')) tm)
@@ -128,16 +128,16 @@ data ArgUsed = Used1 -- been used
 
 data Usage : SnocList Name -> Type where
      Nil : Usage [<]
-     (::) : ArgUsed -> Usage xs -> Usage (x :%: xs)
+     (::) : ArgUsed -> Usage xs -> Usage (xs :< x)
 
 initUsed : (xs : SnocList Name) -> Usage xs
 initUsed [<] = []
-initUsed (x :%: xs) = Used0 :: initUsed xs
+initUsed (xs :< x) = Used0 :: initUsed xs
 
 initUsedCase : (xs : SnocList Name) -> Usage xs
 initUsedCase [<] = []
 initUsedCase (x :%: [<]) = [Used0]
-initUsedCase (x :%: xs) = LocalVar :: initUsedCase xs
+initUsedCase (xs :< x) = LocalVar :: initUsedCase xs
 
 setUsedVar : {idx : _} ->
              (0 _ : IsVar n idx xs) -> Usage xs -> Usage xs
@@ -160,11 +160,11 @@ setUsed p = update Used $ setUsedVar p
 
 extendUsed : ArgUsed -> (new : SnocList Name) -> Usage vars -> Usage (vars ++ new)
 extendUsed a [<] x = x
-extendUsed a (y :%: xs) x = a :: extendUsed a xs x
+extendUsed a (xs :< y) x = a :: extendUsed a xs x
 
 dropUsed : (new : SnocList Name) -> Usage (vars ++ new) -> Usage vars
 dropUsed [<] x = x
-dropUsed (x :%: xs) (u :: us) = dropUsed xs us
+dropUsed (xs :< x) (u :: us) = dropUsed xs us
 
 inExtended : ArgUsed -> (new : SnocList Name) ->
              {auto u : Ref Used (Usage vars)} ->

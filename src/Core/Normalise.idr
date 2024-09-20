@@ -247,11 +247,11 @@ logEnv str n msg env
 
     dumpEnv : {vs : SnocList Name} -> Env Term vs -> Core ()
     dumpEnv [] = pure ()
-    dumpEnv {vs = x :%: _} (Let _ c val ty :: bs)
+    dumpEnv {vs = _ :< x} (Let _ c val ty :: bs)
         = do logTermNF' str n (msg ++ ": let " ++ show x) bs val
              logTermNF' str n (msg ++ ":" ++ show c ++ " " ++ show x) bs ty
              dumpEnv bs
-    dumpEnv {vs = x :%: _} (b :: bs)
+    dumpEnv {vs = _ :< x} (b :: bs)
         = do logTermNF' str n (msg ++ ":" ++ show (multiplicity b) ++ " " ++
                            show (piInfo b) ++ " " ++
                            show x) bs (binderType b)
@@ -350,7 +350,7 @@ normalisePrims : {auto c : Ref Ctxt Defs} -> {vs : _} ->
 normalisePrims boundSafe viewConstant all prims n args tm env
    = do let True = isPrimName prims !(getFullName n) -- is a primitive
               | _ => pure Nothing
-        let (mc :%: _) = reverse args -- with at least one argument
+        let (_ :< mc) = reverse args -- with at least one argument
               | _ => pure Nothing
         let (Just c) = viewConstant mc -- that is a constant
               | _ => pure Nothing

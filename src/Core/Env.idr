@@ -10,12 +10,12 @@ import Data.SnocList
 public export
 data Env : (tm : SnocList Name -> Type) -> SnocList Name -> Type where
      Nil : Env tm [<]
-     (::) : Binder (tm vars) -> Env tm vars -> Env tm (x :%: vars)
+     (::) : Binder (tm vars) -> Env tm vars -> Env tm (vars :< x)
 
 %name Env rho
 
 export
-extend : (x : Name) -> Binder (tm vars) -> Env tm vars -> Env tm (x :%: vars)
+extend : (x : Name) -> Binder (tm vars) -> Env tm vars -> Env tm (vars :< x)
 extend x = (::) {x}
 
 export
@@ -44,7 +44,7 @@ export
 namesNoLet : {xs : _} -> Env tm xs -> SnocList Name
 namesNoLet [] = [<]
 namesNoLet (Let _ _ _ _ :: xs) = namesNoLet xs
-namesNoLet {xs = x :%: _} (_ :: env) = x :%: namesNoLet env
+namesNoLet {xs = _ :< x} (_ :: env) = namesNoLet env :< x
 
 public export
 data IsDefined : Name -> SnocList Name -> Type where
@@ -56,7 +56,7 @@ defined : {vars : _} ->
           (n : Name) -> Env Term vars ->
           Maybe (IsDefined n vars)
 defined n [] = Nothing
-defined {vars = x :%: xs} n (b :: env)
+defined {vars = xs :< x} n (b :: env)
     = case nameEq n x of
            Nothing => do MkIsDefined rig prf <- defined n env
                          pure (MkIsDefined rig (Later prf))
@@ -75,14 +75,14 @@ bindEnv loc (b :: env) tm
 
 revOnto : (xs, vs : SnocList a) -> reverseOnto xs vs = xs ++ reverse vs
 revOnto xs [<] = Refl
-revOnto xs (v :%: vs)
-    = rewrite revOnto (v :%: xs) vs in
+revOnto xs (vs :< v)
+    = rewrite revOnto (xs :< v) vs in
         rewrite appendAssociative (reverse vs) (v :%: [<]) xs in
           rewrite revOnto (v :%: [<]) vs in Refl
 
 revNs : (vs, ns : SnocList a) -> reverse vs ++ reverse ns = reverse (ns ++ vs)
 revNs [<] ns = rewrite appendNilRightNeutral (reverse ns) in Refl
-revNs (v :%: vs) ns
+revNs (vs :< v) ns
     = rewrite revOnto (v :%: [<]) vs in
         rewrite revOnto (v :%: [<]) (ns ++ vs) in
           rewrite sym (revNs vs ns) in
@@ -98,10 +98,10 @@ getBinderUnder : Weaken tm =>
                  (ns : SnocList Name) ->
                  (0 p : IsVar x idx vars) -> Env tm vars ->
                  Binder (tm (reverseOnto vars ns))
-getBinderUnder {idx = Z} {vars = v :%: vs} ns First (b :: env)
-    = rewrite revOnto vs (v :%: ns) in map (weakenNs (reverse (mkSizeOf ((v :%: ns))))) b
-getBinderUnder {idx = S k} {vars = v :%: vs} ns (Later lp) (b :: env)
-    = getBinderUnder (v :%: ns) lp env
+getBinderUnder {idx = Z} {vars = vs :< v} ns First (b :: env)
+    = rewrite revOnto vs (ns :< v) in map (weakenNs (reverse (mkSizeOf ((ns :< v))))) b
+getBinderUnder {idx = S k} {vars = vs :< v} ns (Later lp) (b :: env)
+    = getBinderUnder (ns :< v) lp env
 
 export
 getBinder : Weaken tm =>
@@ -166,7 +166,7 @@ mutual
   findUsed env used (Local fc r idx p)
       = if elemBy eqNat idx used
            then used
-           else assert_total (findUsedInBinder env (idx :%: used)
+           else assert_total (findUsedInBinder env (used :< idx)
                                                (getBinder p env))
     where
       eqNat : Nat -> Nat -> Bool
@@ -186,8 +186,8 @@ mutual
     where
       dropS : SnocList Nat -> SnocList Nat
       dropS [<] = [<]
-      dropS (Z :%: xs) = dropS xs
-      dropS (S p :%: xs) = p :%: dropS xs
+      dropS (xs :< Z) = dropS xs
+      dropS (xs :< S p) = dropS xs :< p
   findUsed env used (App fc fn arg)
       = findUsed env (findUsed env used fn) arg
   findUsed env used (As fc s a p)
@@ -210,8 +210,8 @@ mutual
   findUsedInBinder env used b = findUsed env used (binderType b)
 
 toVar : (vars : SnocList Name) -> Nat -> Maybe (Var vars)
-toVar (v :%: vs) Z = Just (MkVar First)
-toVar (v :%: vs) (S k)
+toVar (vs :< v) Z = Just (MkVar First)
+toVar (vs :< v) (S k)
    = do MkVar prf <- toVar vs k
         Just (MkVar (Later prf))
 toVar _ _ = Nothing
@@ -224,16 +224,16 @@ findUsedLocs env tm
 
 isUsed : Nat -> SnocList (Var vars) -> Bool
 isUsed n [<] = False
-isUsed n (v :%: vs) = n == varIdx v || isUsed n vs
+isUsed n (vs :< v) = n == varIdx v || isUsed n vs
 
 mkShrinkSub : {n : _} ->
-              (vars : _) -> SnocList (Var (n :%: vars)) ->
-              (newvars ** Thin newvars (n :%: vars))
+              (vars : _) -> SnocList (Var (vars :< n)) ->
+              (newvars ** Thin newvars (vars :< n))
 mkShrinkSub [<] els
     = if isUsed 0 els
          then (_ ** Keep Refl)
          else (_ ** Drop Refl)
-mkShrinkSub (x :%: xs) els
+mkShrinkSub (xs :< x) els
     = let (_ ** subRest) = mkShrinkSub xs (dropFirst els) in
       if isUsed 0 els
         then (_ ** Keep subRest)
@@ -243,7 +243,7 @@ mkShrink : {vars : _} ->
            SnocList (Var vars) ->
            (newvars ** Thin newvars vars)
 mkShrink {vars = [<]} xs = (_ ** Refl)
-mkShrink {vars = v :%: vs} xs = mkShrinkSub _ xs
+mkShrink {vars = vs :< v} xs = mkShrinkSub _ xs
 
 -- Find the smallest subset of the environment which is needed to type check
 -- the given term
@@ -265,7 +265,7 @@ shrinkEnv (b :: env) (Keep p)
 export
 mkEnvOnto : FC -> (xs : SnocList Name) -> Env Term ys -> Env Term (ys ++ xs)
 mkEnvOnto fc [<] vs = vs
-mkEnvOnto fc (n :%: ns) vs
+mkEnvOnto fc (ns :< n) vs
    = PVar fc top Explicit (Erased fc Placeholder)
    :: mkEnvOnto fc ns vs
 
@@ -275,7 +275,7 @@ mkEnvOnto fc (n :%: ns) vs
 export
 mkEnv : FC -> (vs : SnocList Name) -> Env Term vs
 mkEnv fc [<] = []
-mkEnv fc (n :%: ns) = PVar fc top Explicit (Erased fc Placeholder) :: mkEnv fc ns
+mkEnv fc (ns :< n) = PVar fc top Explicit (Erased fc Placeholder) :: mkEnv fc ns
 
 -- Update an environment so that all names are guaranteed unique. In the
 -- case of a clash, the most recently bound is left unchanged.
@@ -306,13 +306,13 @@ uniqifyEnv env = uenv [<] env
            SnocList Name -> Env Term vars ->
            (vars' ** (Env Term vars', CompatibleVars vars vars'))
     uenv used [] = ([<] ** ([], Pre))
-    uenv used {vars = v :%: vs} (b :: bs)
+    uenv used {vars = vs :< v} (b :: bs)
         = if v `elem` used
              then let v' = uniqueLocal used v
-                      (vs' ** (env', compat)) = uenv (v' :%: used) bs
+                      (vs' ** (env', compat)) = uenv (used :< v') bs
                       b' = map (compatNs compat) b in
                   (v' :%: vs' ** (b' :: env', Ext compat))
-             else let (vs' ** (env', compat)) = uenv (v :%: used) bs
+             else let (vs' ** (env', compat)) = uenv (used :< v) bs
                       b' = map (compatNs compat) b in
                   (v :%: vs' ** (b' :: env', Ext compat))
 

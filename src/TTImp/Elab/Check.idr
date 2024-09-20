@@ -190,7 +190,7 @@ saveHole n = update EST { saveHoles $= insert n () }
 
 weakenedEState : {n, vars : _} ->
                  {auto e : Ref EST (EState vars)} ->
-                 Core (Ref EST (EState (n :%: vars)))
+                 Core (Ref EST (EState (vars :< n)))
 weakenedEState {e}
     = do est <- get EST
          eref <- newRef EST $
@@ -203,7 +203,7 @@ weakenedEState {e}
          pure eref
   where
     wknTms : (Name, ImplBinding vs) ->
-             (Name, ImplBinding (n :%: vs))
+             (Name, ImplBinding (vs :< n))
     wknTms (f, NameBinding fc c p x y)
         = (f, NameBinding fc c (map weaken p) (weaken x) (weaken y))
     wknTms (f, AsBinding c p x y z)
@@ -211,8 +211,8 @@ weakenedEState {e}
 
 strengthenedEState : {n, vars : _} ->
                      Ref Ctxt Defs ->
-                     Ref EST (EState (n :%: vars)) ->
-                     FC -> Env Term (n :%: vars) ->
+                     Ref EST (EState (vars :< n)) ->
+                     FC -> Env Term (vars :< n) ->
                      Core (EState vars)
 strengthenedEState {n} {vars} c e fc env
     = do est <- get EST
@@ -228,7 +228,7 @@ strengthenedEState {n} {vars} c e fc env
                 } est
 
   where
-    dropSub : Thin xs (y :%: ys) -> Core (Thin xs ys)
+    dropSub : Thin xs (ys :< y) -> Core (Thin xs ys)
     dropSub (Drop sub) = pure sub
     dropSub _ = throw (InternalError "Badly formed weakened environment")
 
@@ -239,7 +239,7 @@ strengthenedEState {n} {vars} c e fc env
     -- never actualy *use* that hole - this process is only to ensure that the
     -- unbound implicit doesn't depend on any variables it doesn't have
     -- in scope.
-    removeArgVars : List (Term (n :%: vs)) -> Maybe (List (Term vs))
+    removeArgVars : List (Term (vs :< n)) -> Maybe (List (Term vs))
     removeArgVars [] = pure []
     removeArgVars (Local fc r (S k) p :: args)
         = do args' <- removeArgVars args
@@ -251,7 +251,7 @@ strengthenedEState {n} {vars} c e fc env
              args' <- removeArgVars args
              pure (a' :: args')
 
-    removeArg : Term (n :%: vs) -> Maybe (Term vs)
+    removeArg : Term (vs :< n) -> Maybe (Term vs)
     removeArg tm
         = case getFnArgs tm of
                (f, args) =>
@@ -259,7 +259,7 @@ strengthenedEState {n} {vars} c e fc env
                       f' <- shrink f (Drop Refl)
                       pure (apply (getLoc f) f' args')
 
-    strTms : Defs -> (Name, ImplBinding (n :%: vars)) ->
+    strTms : Defs -> (Name, ImplBinding (vars :< n)) ->
              Core (Name, ImplBinding vars)
     strTms defs (f, NameBinding fc c p x y)
         = do xnf <- normaliseHoles defs env x
@@ -282,7 +282,7 @@ strengthenedEState {n} {vars} c e fc env
                     pure (f, AsBinding c p' x' y' z')
                _ => throw (BadUnboundImplicit fc env f y)
 
-    dropTop : (Var (n :%: vs)) -> Maybe (Var vs)
+    dropTop : (Var (vs :< n)) -> Maybe (Var vs)
     dropTop (MkVar First) = Nothing
     dropTop (MkVar (Later p)) = Just (MkVar p)
 
@@ -290,8 +290,8 @@ export
 inScope : {n, vars : _} ->
           {auto c : Ref Ctxt Defs} ->
           {auto e : Ref EST (EState vars)} ->
-          FC -> Env Term (n :%: vars) ->
-          (Ref EST (EState (n :%: vars)) -> Core a) ->
+          FC -> Env Term (vars :< n) ->
+          (Ref EST (EState (vars :< n)) -> Core a) ->
           Core a
 inScope {c} {e} fc env elab
     = do e' <- weakenedEState
@@ -468,7 +468,7 @@ searchVar fc rig depth def env nest n ty
              let binder = Let fc top (weakenNs (mkSizeOf vs) app)
                                      (weakenNs (mkSizeOf vs) tyenv)
              varn <- toFullNames n'
-             pure ((varn :%: vs) **
+             pure ((vs :< varn) **
                     (\t => f (Bind fc varn binder t),
                        binder :: env'))
 

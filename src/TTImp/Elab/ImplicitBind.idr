@@ -100,7 +100,7 @@ mkPatternHole {vars'} loc rig n topenv imode (Just expty_in)
                 Env Term vs -> Term vs -> Thin newvars vs ->
                 Maybe (Term newvars)
     bindInner env ty Refl = Just ty
-    bindInner {vs = x :%: _} (b :: env) ty (Drop p)
+    bindInner {vs = _ :< x} (b :: env) ty (Drop p)
         = bindInner env (Bind loc x b ty) p
     bindInner _ _ _ = Nothing
 
@@ -169,15 +169,15 @@ bindUnsolved {vars} fc elabmode _
                          _ => inTerm)
                    fc env tm bindtm
 
-swapIsVarH : {idx : Nat} -> (0 p : IsVar nm idx (x :%: y :%: xs)) ->
-             Var (y :%: x :%: xs)
+swapIsVarH : {idx : Nat} -> (0 p : IsVar nm idx (xs :< y :< x)) ->
+             Var (xs :< x :< y)
 swapIsVarH First = MkVar (Later First)
 swapIsVarH (Later p) = swapP p -- it'd be nice to do this all at the top
                                -- level, but that will need an improvement
                                -- in erasability checking
   where
-    swapP : forall name . {idx : _} -> (0 p : IsVar name idx (y :%: xs)) ->
-            Var (y :%: x :%: xs)
+    swapP : forall name . {idx : _} -> (0 p : IsVar name idx (xs :< y)) ->
+            Var (xs :< x :< y)
     swapP First = MkVar First
     swapP (Later x) = MkVar (Later (Later x))
 
@@ -185,8 +185,8 @@ swapIsVar : (vs : SnocList Name) ->
             {idx : Nat} -> (0 p : IsVar nm idx (xs :< y :< x ++ vs)) ->
             Var (xs :< x :< y ++ vs)
 swapIsVar [<] prf = swapIsVarH prf
-swapIsVar (x :%: xs) First = MkVar First
-swapIsVar (x :%: xs) (Later p)
+swapIsVar (xs :< x) First = MkVar First
+swapIsVar (xs :< x) (Later p)
     = let MkVar p' = swapIsVar xs p in MkVar (Later p')
 
 swapVars : {vs : SnocList Name} ->
@@ -196,7 +196,7 @@ swapVars (Local fc x idx p)
 swapVars (Ref fc x name) = Ref fc x name
 swapVars (Meta fc n i xs) = Meta fc n i (map swapVars xs)
 swapVars {vs} (Bind fc x b scope)
-    = Bind fc x (map swapVars b) (swapVars {vs = x :%: vs} scope)
+    = Bind fc x (map swapVars b) (swapVars {vs = vs :< x} scope)
 swapVars (App fc fn arg) = App fc (swapVars fn) (swapVars arg)
 swapVars (As fc s nm pat) = As fc s (swapVars nm) (swapVars pat)
 swapVars (TDelayed fc x tm) = TDelayed fc x (swapVars tm)
@@ -212,7 +212,7 @@ swapVars (TType fc u) = TType fc u
 -- move it under implicit binders that don't depend on it, and stop
 -- when hitting any non-implicit binder
 push : {vs : _} ->
-       FC -> (n : Name) -> Binder (Term vs) -> Term (n :%: vs) -> Term vs
+       FC -> (n : Name) -> Binder (Term vs) -> Term (vs :< n) -> Term vs
 push ofc n b tm@(Bind fc (PV x i) (Pi fc' c Implicit ty) sc) -- only push past 'PV's
     = case shrink ty (Drop Refl) of
            Nothing => -- needs explicit pi, do nothing

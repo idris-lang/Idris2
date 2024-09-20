@@ -259,7 +259,7 @@ Reify a => Reify (SnocList a) where
              (UN (Basic ":%:"), (_ :%: (_, x) :%: (_, xs) :%: [<]))
                   => do x' <- reify defs !(evalClosure defs x)
                         xs' <- reify defs !(evalClosure defs xs)
-                        pure (x' :%: xs')
+                        pure (xs' :< x')
              _ => cantReify val "SnocList"
   reify defs val = cantReify val "SnocList"
 
@@ -274,7 +274,7 @@ Reflect a => Reflect (List a) where
 export
 Reflect a => Reflect (SnocList a) where
   reflect fc defs lhs env [<] = appCon fc defs (basics "[<]") [Erased fc Placeholder]
-  reflect fc defs lhs env (x :%: xs)
+  reflect fc defs lhs env (xs :< x)
       = do x' <- reflect fc defs lhs env x
            xs' <- reflect fc defs lhs env xs
            appCon fc defs (basics ":%:") [Erased fc Placeholder, x', xs']

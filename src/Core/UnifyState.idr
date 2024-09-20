@@ -325,7 +325,7 @@ mkConstantAppArgs : {vars : _} ->
                     (wkns : SnocList Name) ->
                     List (Term (wkns <>> (vars +%+ done)))
 mkConstantAppArgs lets fc [] wkns = []
-mkConstantAppArgs {done} {vars = x :%: xs} lets fc (b :: env) wkns
+mkConstantAppArgs {done} {vars = xs :< x} lets fc (b :: env) wkns
     = let rec = mkConstantAppArgs {done} lets fc env (wkns :< x) in
           if lets || not (isLet b)
              then mkLocal fc b :: rec
@@ -337,13 +337,13 @@ mkConstantAppArgsSub : {vars : _} ->
                        (wkns : SnocList Name) ->
                        List (Term (wkns <>> (vars +%+ done)))
 mkConstantAppArgsSub lets fc [] p wkns = []
-mkConstantAppArgsSub {done} {vars = x :%: xs}
+mkConstantAppArgsSub {done} {vars = xs :< x}
                         lets fc (b :: env) Refl wkns
     = mkConstantAppArgs lets fc env (wkns :< x)
-mkConstantAppArgsSub {done} {vars = x :%: xs}
+mkConstantAppArgsSub {done} {vars = xs :< x}
                         lets fc (b :: env) (Drop p) wkns
     = mkConstantAppArgsSub lets fc env p (wkns :< x)
-mkConstantAppArgsSub {done} {vars = x :%: xs}
+mkConstantAppArgsSub {done} {vars = xs :< x}
                         lets fc (b :: env) (Keep p) wkns
     = let rec = mkConstantAppArgsSub {done} lets fc env p (wkns :< x) in
           if lets || not (isLet b)
@@ -356,13 +356,13 @@ mkConstantAppArgsOthers : {vars : _} ->
                           (wkns : SnocList Name) ->
                           List (Term (wkns <>> (vars +%+ done)))
 mkConstantAppArgsOthers lets fc [] p wkns = []
-mkConstantAppArgsOthers {done} {vars = x :%: xs}
+mkConstantAppArgsOthers {done} {vars = xs :< x}
                         lets fc (b :: env) Refl wkns
     = mkConstantAppArgsOthers lets fc env Refl (wkns :< x)
-mkConstantAppArgsOthers {done} {vars = x :%: xs}
+mkConstantAppArgsOthers {done} {vars = xs :< x}
                         lets fc (b :: env) (Keep p) wkns
     = mkConstantAppArgsOthers lets fc env p (wkns :< x)
-mkConstantAppArgsOthers {done} {vars = x :%: xs}
+mkConstantAppArgsOthers {done} {vars = xs :< x}
                         lets fc (b :: env) (Drop p) wkns
     = let rec = mkConstantAppArgsOthers {done} lets fc env p (wkns :< x) in
           if lets || not (isLet b)
@@ -442,7 +442,7 @@ mkConstant : {vars : _} ->
 mkConstant fc [] tm = tm
 -- mkConstant {vars = x :: _} fc (Let c val ty :: env) tm
 --     = mkConstant fc env (Bind fc x (Let c val ty) tm)
-mkConstant {vars = x :%: _} fc (b :: env) tm
+mkConstant {vars = _ :< x} fc (b :: env) tm
     = let ty = binderType b in
           mkConstant fc env (Bind fc x (Lam fc (multiplicity b) Explicit ty) tm)
 

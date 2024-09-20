@@ -11,7 +11,7 @@ import Data.SnocList
 public export
 data Subst : Scoped -> Scope -> Scoped where
   Nil : Subst tm [<] vars
-  (::) : tm vars -> Subst tm ds vars -> Subst tm (d :%: ds) vars
+  (::) : tm vars -> Subst tm ds vars -> Subst tm (ds :< d) vars
 
 namespace Var
 

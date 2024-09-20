@@ -26,8 +26,8 @@ import Libraries.Data.Erased
 ||| in the snoclist ns
 public export
 data IsVar : a -> Nat -> SnocList a -> Type where
-     First : IsVar n Z (n :%: ns)
-     Later : IsVar n i ns -> IsVar n (S i) (m :%: ns)
+     First : IsVar n Z (ns :< n)
+     Later : IsVar n i ns -> IsVar n (S i) (ns :< m)
 
 %name IsVar idx
 
@@ -41,12 +41,12 @@ finIdx (Later l) = FS (finIdx l)
 ||| O(n) in the size of the index
 export
 nameAt : {vars : SnocList a} -> {idx : Nat} -> (0 p : IsVar n idx vars) -> a
-nameAt {vars = n :%: _} First = n
+nameAt {vars = _ :< n} First = n
 nameAt (Later p) = nameAt p
 
 ||| Inversion principle for Later
 export
-dropLater : IsVar nm (S idx) (n :%: ns) -> IsVar nm idx ns
+dropLater : IsVar nm (S idx) (ns :< n) -> IsVar nm idx ns
 dropLater (Later p) = p
 
 export
@@ -59,7 +59,7 @@ mkIsVar (S x) = Later (mkIsVar x)
 export
 0 mkIsVarChiply : HasLength m inner -> IsVar nm m (inner <>> nm :%: outer)
 mkIsVarChiply hl
-  = rewrite chipsAsListAppend inner (nm :%: outer) in
+  = rewrite chipsAsListAppend inner (outer :< nm) in
     rewrite sym $ plusZeroRightNeutral m in
     mkIsVar (hlChips hl Z)
 
@@ -69,8 +69,8 @@ dropIsVar :
   (ns : SnocList a) ->
   {idx : Nat} -> (0 p : IsVar name idx ns) ->
   SnocList a
-dropIsVar (_ :%: xs) First = xs
-dropIsVar (n :%: xs) (Later p) = n :%: dropIsVar xs p
+dropIsVar (xs :< _) First = xs
+dropIsVar (xs :< n) (Later p) = dropIsVar xs p :< n
 
 ||| Throw in extra variables on the outer side of the context
 ||| This is essentially the identity function
@@ -133,11 +133,11 @@ record Var {0 a : Type} (vars : SnocList a) where
 namespace Var
 
   export
-  later : Var ns -> Var (n :%: ns)
+  later : Var ns -> Var (ns :< n)
   later (MkVar p) = MkVar (Later p)
 
   export
-  isLater : Var (n :%: vs) -> Maybe (Var vs)
+  isLater : Var (vs :< n) -> Maybe (Var vs)
   isLater (MkVar First) = Nothing
   isLater (MkVar (Later p)) = Just (MkVar p)
 
@@ -156,7 +156,7 @@ allVars = go [<] where
 
   go : SizeOf local -> (vs : Scope) -> SnocList (Var (local <>> vs))
   go s [<] = [<]
-  go s (v :%: vs) = mkVarChiply s :%: go (s :< v) vs
+  go s (vs :< v) = (go (s :< v) vs) :< mkVarChiply s
 
 export
 Eq (Var xs) where
@@ -164,7 +164,7 @@ Eq (Var xs) where
 
 ||| Removing var 0, strengthening all the other ones
 export
-dropFirst : SnocList (Var (n :%: vs)) -> SnocList (Var vs)
+dropFirst : SnocList (Var (vs :< n)) -> SnocList (Var vs)
 dropFirst = SnocList.mapMaybe isLater
 
 ||| Manufacturing a thinning from a list of variables to keep
@@ -174,7 +174,7 @@ thinFromVars :
   (newvars ** Thin newvars vars)
 thinFromVars [<] els
     = (_ ** Refl)
-thinFromVars (x :%: xs) els
+thinFromVars (xs :< x) els
     = let (vs ** subRest) = thinFromVars xs (dropFirst els) in
       if MkVar First `elem` els
         then (x :%: vs ** Keep subRest)
@@ -195,11 +195,11 @@ record NVar {0 a : Type} (nm : a) (vars : SnocList a) where
 
 namespace NVar
   export
-  later : NVar nm ns -> NVar nm (n :%: ns)
+  later : NVar nm ns -> NVar nm (ns :< n)
   later (MkNVar p) = MkNVar (Later p)
 
   export
-  isLater : NVar nm (n :%: ns) -> Maybe (NVar nm ns)
+  isLater : NVar nm (ns :< n) -> Maybe (NVar nm ns)
   isLater (MkNVar First) = Nothing
   isLater (MkNVar (Later p)) = Just (MkNVar p)
 
@@ -235,14 +235,14 @@ dropNVar (MkNVar p) = dropIsVar ns p
 
 export
 isDeBruijn : Nat -> (vars : SnocList Name) -> Maybe (Var vars)
-isDeBruijn Z (_ :%: _) = pure (MkVar First)
-isDeBruijn (S k) (_ :%: vs) = later <$> isDeBruijn k vs
+isDeBruijn Z (_ :< _) = pure (MkVar First)
+isDeBruijn (S k) (vs :< _) = later <$> isDeBruijn k vs
 isDeBruijn _ _ = Nothing
 
 export
 isNVar : (n : Name) -> (ns : SnocList Name) -> Maybe (NVar n ns)
 isNVar n [<] = Nothing
-isNVar n (m :%: ms)
+isNVar n (ms :< m)
     = case nameEq n m of
            Nothing   => map later (isNVar n ms)
            Just Refl => pure (MkNVar First)
@@ -282,7 +282,7 @@ insertNVarChiply : SizeOf local ->
   NVar nm (local <>> outer) ->
   NVar nm (local <>> n :%: outer)
 insertNVarChiply p v
-  = rewrite chipsAsListAppend local (n :%: outer) in
+  = rewrite chipsAsListAppend local (outer :< n) in
     insertNVar (p <>> zero)
   $ replace {p = NVar nm} (chipsAsListAppend local outer) v
 

@@ -112,7 +112,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
         -- a closure and calling APPLY.
         closeArgs : List (Term (free ++ vars)) -> SnocList (Closure free)
         closeArgs [] = [<]
-        closeArgs (t :: ts) = MkClosure topopts locs env t :%: closeArgs ts
+        closeArgs (t :: ts) = closeArgs ts :< MkClosure topopts locs env t
     eval env locs (Bind fc x (Lam _ r _ ty) scope) (thunk :: stk)
         = eval env (snd thunk :: locs) scope stk
     eval env locs (Bind fc x b@(Let _ r val ty) scope) stk
@@ -241,7 +241,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
              else pure $ NApp fc (NLocal mrig idx prf) (fromList stk)
     evalLocal env fc mrig Z First stk (x :: locs)
         = evalLocClosure env fc mrig stk x
-    evalLocal {vars = x :%: xs} {free}
+    evalLocal {vars = xs :< x} {free}
               env fc mrig (S idx) (Later p) stk (_ :: locs)
         = evalLocal {vars = xs} env fc mrig idx p stk locs
 
@@ -326,9 +326,9 @@ parameters (defs : Defs) (topopts : EvalOpts)
                    LocalEnv free more ->
                    Maybe (LocalEnv free (more ++ args))
     getCaseBound [<]            [<]      loc = Just loc
-    getCaseBound [<]            (_ :%: _)  loc = Nothing -- mismatched arg length
-    getCaseBound (arg :%: args) [<]      loc = Nothing -- mismatched arg length
-    getCaseBound (arg :%: args) (n :%: ns) loc = (arg ::) <$> (getCaseBound args ns loc)
+    getCaseBound [<]            (_ :< _)  loc = Nothing -- mismatched arg length
+    getCaseBound (args :< arg) [<]      loc = Nothing -- mismatched arg length
+    getCaseBound (args :< arg) (ns :< n) loc = (arg ::) <$> (getCaseBound args ns loc)
 
     -- Returns the case term from the matched pattern with the LocalEnv (arguments from constructor pattern ConCase)
     evalConAlt : {auto c : Ref Ctxt Defs} ->
@@ -458,7 +458,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
         takeStk {got} Z stk acc = Just (rewrite plusZeroRightNeutral got in
                                     reverse acc, stk)
         takeStk (S k) [<] acc = Nothing
-        takeStk {got} (S k) (arg :%: stk) acc
+        takeStk {got} (S k) (stk :< arg) acc
            = rewrite sym (plusSuccRightSucc got k) in
                      takeStk k stk (snd arg :: acc)
 
@@ -466,8 +466,8 @@ parameters (defs : Defs) (topopts : EvalOpts)
                     SnocList (FC, Closure free) ->
                     Maybe (LocalEnv free args, SnocList (FC, Closure free))
     argsFromStack [<] stk = Just ([], stk)
-    argsFromStack (n :%: ns) [<] = Nothing
-    argsFromStack (n :%: ns) (arg :%: args)
+    argsFromStack (ns :< n) [<] = Nothing
+    argsFromStack (ns :< n) (args :< arg)
          = do (loc', stk') <- argsFromStack ns args
               pure (snd arg :: loc', stk')
 

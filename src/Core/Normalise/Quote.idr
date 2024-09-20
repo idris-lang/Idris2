@@ -105,7 +105,7 @@ mutual
                  (ys : SnocList Name) -> (0 p : IsVar n idx xs) ->
                  Var (xs ++ ys)
       addLater [<] isv = MkVar isv
-      addLater (x :%: xs) isv
+      addLater (xs :< x) isv
           = let MkVar isv' = addLater xs isv in
                 MkVar (Later isv')
   quoteHead q opts defs fc bounds env (NRef Bound (MN n i))

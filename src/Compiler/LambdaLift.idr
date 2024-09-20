@@ -93,7 +93,7 @@ mutual
        ||| @ expr is the expression to bind `x` to.
        ||| @ body is the expression to evaluate after binding.
        LLet : FC -> (x : Name) -> (expr : Lifted vars) ->
-              (body : Lifted (x :%: vars)) -> Lifted vars
+              (body : Lifted (vars :< x)) -> Lifted vars
 
        ||| Use of a constructor to construct a compound data type value.
        |||
@@ -369,14 +369,14 @@ weakenUsed {outer} (MkUsed xs) =
   MkUsed (rewrite lengthDistributesOverAppend outer vars in
          (replicate (length outer) False ++ xs))
 
-contractUsed : (Used (x:%:vars)) -> Used vars
+contractUsed : (Used (vars :< x)) -> Used vars
 contractUsed (MkUsed xs) = MkUsed (tail xs)
 
 contractUsedMany : {remove : _} ->
                    (Used (vars ++ remove)) ->
                    Used vars
 contractUsedMany {remove=[<]} x = x
-contractUsedMany {remove=(r:%:rs)} x = contractUsedMany {remove=rs} (contractUsed x)
+contractUsedMany {remove=(rs :< r)} x = contractUsedMany {remove=rs} (contractUsed x)
 
 markUsed : {vars : _} ->
            (idx : Nat) ->
@@ -402,8 +402,8 @@ dropped : (vars : SnocList Name) ->
           (drop : Vect (length vars) Bool) ->
           SnocList Name
 dropped [<] _ = [<]
-dropped (x:%:xs) (False::us) = x:%:(dropped xs us)
-dropped (x:%:xs) (True::us) = dropped xs us
+dropped (xs :< x) (False::us) = dropped xs us :< x
+dropped (xs :< x) (True::us) = dropped xs us
 
 usedVars : {vars : _} ->
             {auto l : Ref Lifts LDefs} ->
@@ -419,7 +419,7 @@ usedVars used (LUnderApp fc n miss args) =
 usedVars used (LApp fc lazy c arg) =
   usedVars (usedVars used arg) c
 usedVars used (LLet fc x val sc) =
-  let innerUsed = contractUsed $ usedVars (weakenUsed {outer=(x :%: [<])} used) sc in
+  let innerUsed = contractUsed $ usedVars (weakenUsed {outer=[<x]} used) sc in
       usedVars innerUsed val
 usedVars used (LCon fc n ci tag args) =
   foldl (usedVars {vars}) used args
@@ -460,8 +460,8 @@ dropIdx [<] (True::_) First = assert_total $
   idris_crash "INTERNAL ERROR: Referenced variable marked as unused"
 dropIdx [<] (False::rest) (Later p) = Var.later $ dropIdx [<] rest p
 dropIdx [<] (True::rest) (Later p) = dropIdx [<] rest p
-dropIdx (_:%:xs) unused First = MkVar First
-dropIdx (_:%:xs) unused (Later p) = Var.later $ dropIdx xs unused p
+dropIdx (xs :< _) unused First = MkVar First
+dropIdx (xs :< _) unused (Later p) = Var.later $ dropIdx xs unused p
 
 dropUnused : {vars : _} ->
               {auto _ : Ref Lifts LDefs} ->
@@ -479,7 +479,7 @@ dropUnused unused (LCon fc n ci tag args) =
       LCon fc n ci tag args'
 dropUnused {outer} unused (LLet fc n val sc) =
   let val' = dropUnused unused val
-      sc' = dropUnused {outer=n:%:outer} (unused) sc in
+      sc' = dropUnused {outer= outer :< n} (unused) sc in
       LLet fc n val' sc'
 dropUnused unused (LApp fc lazy c arg) =
   let c' = dropUnused unused c
@@ -522,7 +522,7 @@ mutual
             {default Nothing lazy : Maybe LazyReason} ->
             FC -> (bound : SnocList Name) ->
             CExp (vars ++ bound) -> Core (Lifted vars)
-  makeLam fc bound (CLam _ x sc') = makeLam fc {doLazyAnnots} {lazy} (x :%: bound) sc'
+  makeLam fc bound (CLam _ x sc') = makeLam fc {doLazyAnnots} {lazy} (bound :< x) sc'
   makeLam {vars} fc bound sc
       = do scl <- liftExp {doLazyAnnots} {lazy} sc
            -- Find out which variables aren't used in the new definition, and
@@ -538,8 +538,8 @@ mutual
 
         allPrfs : (vs : SnocList Name) -> (unused : Vect (length vs) Bool) -> List (Var vs)
         allPrfs [<] _ = []
-        allPrfs (v :%: vs) (False::uvs) = MkVar First :: map weaken (allPrfs vs uvs)
-        allPrfs (v :%: vs) (True::uvs) = map weaken (allPrfs vs uvs)
+        allPrfs (vs :< v) (False::uvs) = MkVar First :: map weaken (allPrfs vs uvs)
+        allPrfs (vs :< v) (True::uvs) = map weaken (allPrfs vs uvs)
 
         -- apply to all the variables. 'First' will be first in the last, which
         -- is good, because the most recently bound name is the first argument to
