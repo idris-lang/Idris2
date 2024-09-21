@@ -1,42 +1,42 @@
 module Core.Name.CompatibleVars
 
 public export
-data CompatibleVars : (xs, ys : List a) -> Type where
+data CompatibleVars : (xs, ys : SnocList a) -> Type where
    Pre : CompatibleVars xs xs
-   Ext : CompatibleVars xs ys -> CompatibleVars (n :: xs) (m :: ys)
+   Ext : CompatibleVars xs ys -> CompatibleVars (xs :< n) (ys :< m)
 
 export
-invertExt : CompatibleVars (n :: xs) (m :: ys) -> CompatibleVars xs ys
+invertExt : CompatibleVars (xs :< n) (ys :< m) -> CompatibleVars xs ys
 invertExt Pre = Pre
 invertExt (Ext p) = p
 
 export
-extendCompats : (args : List a) ->
+extendCompats : (args : SnocList a) ->
                 CompatibleVars xs ys ->
-                CompatibleVars (args ++ xs) (args ++ ys)
+                CompatibleVars (xs ++ args) (ys ++ args)
 extendCompats args Pre = Pre
 extendCompats args prf = go args prf where
 
-  go : (args : List a) ->
+  go : (args : SnocList a) ->
        CompatibleVars xs ys ->
-       CompatibleVars (args ++ xs) (args ++ ys)
-  go [] prf = prf
-  go (x :: xs) prf = Ext (go xs prf)
+       CompatibleVars (xs ++ args) (ys ++ args)
+  go [<] prf = prf
+  go (xs :< x) prf = Ext (go xs prf)
 
 export
-decCompatibleVars : (xs, ys : List a) -> Dec (CompatibleVars xs ys)
-decCompatibleVars [] [] = Yes Pre
-decCompatibleVars [] (x :: xs) = No (\case p impossible)
-decCompatibleVars (x :: xs) [] = No (\case p impossible)
-decCompatibleVars (x :: xs) (y :: ys) = case decCompatibleVars xs ys of
+decCompatibleVars : (xs, ys : SnocList a) -> Dec (CompatibleVars xs ys)
+decCompatibleVars [<] [<] = Yes Pre
+decCompatibleVars [<] (xs :< x) = No (\case p impossible)
+decCompatibleVars (xs :< x) [<] = No (\case p impossible)
+decCompatibleVars (xs :< x) (ys :< y) = case decCompatibleVars xs ys of
   Yes prf => Yes (Ext prf)
   No nprf => No (nprf . invertExt)
 
 export
-areCompatibleVars : (xs, ys : List a) ->
+areCompatibleVars : (xs, ys : SnocList a) ->
                     Maybe (CompatibleVars xs ys)
-areCompatibleVars [] [] = pure Pre
-areCompatibleVars (x :: xs) (y :: ys)
+areCompatibleVars [<] [<] = pure Pre
+areCompatibleVars (xs :< x) (ys :< y)
     = do compat <- areCompatibleVars xs ys
          pure (Ext compat)
 areCompatibleVars _ _ = Nothing
