@@ -36,6 +36,14 @@ public export
 (:<) : SizeOf as -> (0 a : _) -> SizeOf (as :< a)
 MkSizeOf n p :< _ = MkSizeOf (S n) (S p)
 
+public export
+zero : SizeOf [<]
+zero = MkSizeOf Z Z
+
+public export
+suc : SizeOf as -> SizeOf (as :< a)
+suc (MkSizeOf n p) = MkSizeOf (S n) (S p)
+
 -- ||| suc but from the left
 export
 sucL : SizeOf as -> SizeOf ([<a] ++ as)
