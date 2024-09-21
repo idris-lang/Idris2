@@ -9,6 +9,7 @@ import Data.Vect
 
 import Core.Name
 import Core.Name.Scoped
+import Core.Name.CompatibleVars
 
 import Libraries.Data.SnocList.HasLength
 import Libraries.Data.SnocList.SizeOf
