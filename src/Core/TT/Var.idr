@@ -178,7 +178,7 @@ thinFromVars [<] els
 thinFromVars (xs :< x) els
     = let (vs ** subRest) = thinFromVars xs (dropFirst els) in
       if MkVar First `elem` els
-        then (x :%: vs ** Keep subRest)
+        then (vs :< x ** Keep subRest)
         else (vs ** Drop subRest)
 
 export

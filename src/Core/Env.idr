@@ -311,10 +311,10 @@ uniqifyEnv env = uenv [<] env
              then let v' = uniqueLocal used v
                       (vs' ** (env', compat)) = uenv (used :< v') bs
                       b' = map (compatNs compat) b in
-                  (v' :%: vs' ** (b' :: env', Ext compat))
+                  (vs' :< v' ** (b' :: env', Ext compat))
              else let (vs' ** (env', compat)) = uenv (used :< v) bs
                       b' = map (compatNs compat) b in
-                  (v :%: vs' ** (b' :: env', Ext compat))
+                  (vs' :< v ** (b' :: env', Ext compat))
 
 export
 allVars : {vars : _} -> Env Term vars -> List (Var vars)
