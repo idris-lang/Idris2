@@ -210,10 +210,10 @@ getUsableEnv {vars = vs :< v} {done} fc rigc p (b :: env)
          if (multiplicity b == top || isErased rigc)
             then let 0 var = mkIsVar (hasLength p) in
                      (Local (binderLoc b) Nothing _ var,
-                       rewrite appendAssociative done (v :%: [<]) vs in
+                       rewrite appendAssociative done [<v] vs in
                           weakenNs (sucR p) (binderType b)) ::
-                               rewrite appendAssociative done (v :%: [<]) vs in rest
-            else rewrite appendAssociative done (v :%: [<]) vs in rest
+                               rewrite appendAssociative done [<v] vs in rest
+            else rewrite appendAssociative done [<v] vs in rest
 
 -- A local is usable if it contains no holes in a determining argument position
 usableLocal : {vars : _} ->
@@ -318,7 +318,7 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
               NF vars ->  -- local's type
               (target : NF vars) ->
               Core (Term vars)
-    findPos defs f nty@(NTCon pfc pn _ _ ((_, xty) :%: (_, yty) :%: [<])) target
+    findPos defs f nty@(NTCon pfc pn _ _ [<(_, yty), (_, xty)]) target
         = tryUnifyUnambig (findDirect defs f nty target) $
              do fname <- maybe (throw (CantSolveGoal fc (gamma defs) [] top Nothing))
                                pure
@@ -501,7 +501,7 @@ checkConcreteDets fc defaults env top (NTCon tfc tyn t a args)
     = do defs <- get Ctxt
          if !(isPairType tyn)
             then case args of
-                      ((_, aty) :%: (_, bty) :%: [<]) =>
+                      [<(_, bty), (_, aty)] =>
                           do anf <- evalClosure defs aty
                              bnf <- evalClosure defs bty
                              checkConcreteDets fc defaults env top anf
