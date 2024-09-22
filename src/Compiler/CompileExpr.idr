@@ -48,7 +48,7 @@ mkSub i (xs :< x) es
     = let (ns' ** p) = mkSub (S i) xs es in
           if i `elem` es
              then (ns' ** Drop p)
-             else (x :%: ns' ** Keep p)
+             else (ns' :< x ** Keep p)
 
 weakenVar : Var ns -> Var (ns :< a)
 weakenVar (MkVar p) = (MkVar (Later p))
@@ -142,7 +142,7 @@ mkDropSubst i es rest (xs :< x)
     = let (vs ** sub) = mkDropSubst (1 + i) es rest xs in
           if i `elem` es
              then (vs ** Drop sub)
-             else (x :%: vs ** Keep sub)
+             else (vs :< x ** Keep sub)
 
 -- See if the constructor is a special constructor type, e.g a nil or cons
 -- shaped thing.

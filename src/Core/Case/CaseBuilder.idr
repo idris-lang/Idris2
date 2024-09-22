@@ -470,7 +470,7 @@ nextNames {vars} fc root (pats :< p) fty
                            Unknown => Unknown
                            Known rig t => Known rig (weakenNs (suc l) t)
                            Stuck t => Stuck (weakenNs (suc l) t)
-          pure (n :%: args ** (suc l, MkInfo p First argTy :: weaken ps))
+          pure (args :< n ** (suc l, MkInfo p First argTy :: weaken ps))
 
 -- replace the prefix of patterns with 'pargs'
 newPats : (pargs : SnocList Pat) -> LengthMatch pargs ns ->
@@ -1213,7 +1213,7 @@ patCompile fc fn phase ty (p :: ps) def
     getNames i [<] = ([<] ** zero)
     getNames i (xs :< x) =
       let (ns ** n) = getNames (i + 1) xs
-      in (MN "arg" i :%: ns ** suc n)
+      in (MN "arg" ns :< i ** suc n)
 
 toPatClause : {auto c : Ref Ctxt Defs} ->
               FC -> Name -> (ClosedTerm, ClosedTerm) ->
