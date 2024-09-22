@@ -1192,7 +1192,7 @@ mutual
   unifyNoEta mode loc env (NDelayed xfc _ x) (NDelayed yfc _ y)
       = unify (lower mode) loc env x y
   unifyNoEta mode loc env (NDelay xfc _ xty x) (NDelay yfc _ yty y)
-      = unifyArgs mode loc env (xty :%: x :%: [<]) (yty :%: y :%: [<])
+      = unifyArgs mode loc env [<x, xty] [<y, yty]
   unifyNoEta mode loc env (NForce xfc _ x axs) (NForce yfc _ y ays)
       = do cs <- unify (lower mode) loc env x y
            cs' <- unifyArgs mode loc env (map snd axs) (map snd ays)

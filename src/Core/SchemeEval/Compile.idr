@@ -404,7 +404,7 @@ compileCase blk svs (Case idx p scTy xs)
 
         makeAlt : String -> CaseAlt vars ->
                   Core (Maybe (SchemeObj Write, SchemeObj Write))
-        makeAlt var (ConCase (UN (Basic "->")) t (_ :%: _ :%: [<]) sc)
+        makeAlt var (ConCase (UN (Basic "->")) t [<_, _] sc)
             = pure Nothing -- do this in 'addPiMatch' below, since the
                            -- representation is different
         makeAlt var (ConCase n t args sc)
@@ -417,7 +417,7 @@ compileCase blk svs (Case idx p scTy xs)
         -- t is a function type, and conveniently the scope of a pi
         -- binding is represented as a function. Lucky us! So we just need
         -- to extract it then evaluate the scope
-        addPiMatch var (ConCase (UN (Basic "->")) _ (s :%: t :%: [<]) sc :: _) def
+        addPiMatch var (ConCase (UN (Basic "->")) _ [<t, s] sc :: _) def
             = do sn <- getArgName
                  tn <- getArgName
                  let svs' = Bound (schVarName sn) ::

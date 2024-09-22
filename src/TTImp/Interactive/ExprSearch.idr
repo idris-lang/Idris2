@@ -155,10 +155,10 @@ getAllEnv {vars = vs :< v} {done} fc p (b :: env)
          usable = usableName v in
          if usable
             then (Local fc Nothing _ var,
-                     rewrite appendAssociative done (v :%: [<]) vs in
+                     rewrite appendAssociative done [<v] vs in
                         weakenNs (sucR p) (binderType b)) ::
-                             rewrite appendAssociative done (v :%: [<]) vs in rest
-            else rewrite appendAssociative done (v :%: [<]) vs in rest
+                             rewrite appendAssociative done [<v] vs in rest
+            else rewrite appendAssociative done [<v] vs in rest
   where
     usableName : Name -> Bool
     usableName (UN _) = True
@@ -488,7 +488,7 @@ searchLocalWith {vars} fc nofn rig opts hints env ((p, pty) :: rest) ty topty
     findPos : Defs -> Term vars ->
               (Term vars -> Term vars) ->
               NF vars -> NF vars -> Core (Search (Term vars, ExprDefs))
-    findPos defs prf f x@(NTCon pfc pn _ _ ((fc1, xty) :%: (fc2, yty) :%: [<])) target
+    findPos defs prf f x@(NTCon pfc pn _ _ [<(fc2, yty), (fc1, xty)]) target
         = getSuccessful fc rig opts False env ty topty
               [findDirect defs prf f x target,
                  (do fname <- maybe (throw (InternalError "No fst"))
@@ -504,17 +504,10 @@ searchLocalWith {vars} fc nofn rig opts hints env ((p, pty) :: rest) ty topty
                                 getSuccessful fc rig opts False env ty topty
                                   [(do xtynf <- evalClosure defs xty
                                        findPos defs prf
-                                         (\arg => applyStackWithFC (Ref fc Func fname)
-                                                          ((fc1, xtytm) :%:
-                                                           (fc2, ytytm) :%:
-                                                           (fc, f arg) :%: [<]))
-                                         xtynf target),
+                                         (\arg => applyStackWithFC (Ref fc Func fname) [<(fc, f arg), (fc2, ytytm), (fc1, xtytm)] xtynf target),
                                    (do ytynf <- evalClosure defs yty
                                        findPos defs prf
-                                           (\arg => applyStackWithFC (Ref fc Func sname)
-                                                          ((fc1, xtytm) :%:
-                                                           (fc2, ytytm) :%:
-                                                           (fc, f arg) :%: [<]))
+                                           (\arg => applyStackWithFC (Ref fc Func sname) [<(fc, f arg), (fc2, ytytm), (fc1, xtytm)])
                                            ytynf target)]
                          else noResult)]
     findPos defs prf f nty target = findDirect defs prf f nty target

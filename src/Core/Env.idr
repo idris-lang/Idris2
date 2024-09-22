@@ -77,16 +77,16 @@ revOnto : (xs, vs : SnocList a) -> reverseOnto xs vs = xs ++ reverse vs
 revOnto xs [<] = Refl
 revOnto xs (vs :< v)
     = rewrite revOnto (xs :< v) vs in
-        rewrite appendAssociative (reverse vs) (v :%: [<]) xs in
-          rewrite revOnto (v :%: [<]) vs in Refl
+        rewrite appendAssociative (reverse vs) [<v] xs in
+          rewrite revOnto [<v] vs in Refl
 
 revNs : (vs, ns : SnocList a) -> reverse vs ++ reverse ns = reverse (ns ++ vs)
 revNs [<] ns = rewrite appendNilRightNeutral (reverse ns) in Refl
 revNs (vs :< v) ns
-    = rewrite revOnto (v :%: [<]) vs in
-        rewrite revOnto (v :%: [<]) (ns ++ vs) in
+    = rewrite revOnto [<v] vs in
+        rewrite revOnto [<v] (ns ++ vs) in
           rewrite sym (revNs vs ns) in
-            rewrite appendAssociative (reverse ns) (reverse vs) (v :%: [<]) in
+            rewrite appendAssociative (reverse ns) (reverse vs) [<v] in
               Refl
 
 -- Weaken by all the names at once at the end, to save multiple traversals
