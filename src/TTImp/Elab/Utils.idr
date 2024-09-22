@@ -136,7 +136,7 @@ initUsed (xs :< x) = Used0 :: initUsed xs
 
 initUsedCase : (xs : SnocList Name) -> Usage xs
 initUsedCase [<] = []
-initUsedCase (x :%: [<]) = [Used0]
+initUsedCase [<x] = [Used0]
 initUsedCase (xs :< x) = LocalVar :: initUsedCase xs
 
 setUsedVar : {idx : _} ->
@@ -198,7 +198,7 @@ termInlineSafe (Meta fc x y xs)
 termInlineSafe (Bind fc x b scope)
    = do bok <- binderInlineSafe b
         if bok
-           then inExtended LocalVar (x :%: [<]) (\u' => termInlineSafe scope)
+           then inExtended LocalVar [<x] (\u' => termInlineSafe scope)
            else pure False
   where
     binderInlineSafe : Binder (Term vars) -> Core Bool
@@ -246,7 +246,7 @@ mutual
   caseAltInlineSafe (ConCase x tag args sc)
       = inExtended Used0 args (\u' => caseInlineSafe sc)
   caseAltInlineSafe (DelayCase ty arg sc)
-      = inExtended Used0 (ty :%: arg :%: [<]) (\u' => caseInlineSafe sc)
+      = inExtended Used0 [<arg, ty] (\u' => caseInlineSafe sc)
   caseAltInlineSafe (ConstCase x sc) = caseInlineSafe sc
   caseAltInlineSafe (DefaultCase sc) = caseInlineSafe sc
 

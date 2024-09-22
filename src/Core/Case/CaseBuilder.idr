@@ -586,11 +586,10 @@ groupCons fc fn pvars cs
                             do a' <- evalClosure d a
                                pure (NBind fc (MN "x" 0) (Pi fc top Explicit a)
                                        (\dv, av => pure (NDelayed fc LUnknown a'))))
-             ((tyname :%: argname :%: [<]) ** (l, newargs)) <- nextNames {vars=vars'} fc "e" (pty :%: parg :%: [<])
+             ([<argname, tyname] ** (l, newargs)) <- nextNames {vars=vars'} fc "e" [<parg, pty]
                                                   (Just dty)
                 | _ => throw (InternalError "Error compiling Delay pattern match")
-             let pats' = updatePatNames (updateNames ((tyname, pty) :%:
-                                                      (argname, parg) :%: [<]))
+             let pats' = updatePatNames (updateNames [<(argname, parg), (tyname, pty)])
                                         (weakenNs l pats)
              let clause = MkPatClause {todo = todo' :< argname :< tyname}
                              pvars (newargs ++  pats')
@@ -600,10 +599,9 @@ groupCons fc fn pvars cs
       addDelayG {vars'} {todo'} pty parg pats pid rhs
           ((DelayGroup {tyarg} {valarg} ((MkPatClause pvars ps tid tm) :: rest)) :: gs)
                  | (DelayMatch {tyarg} {valarg})
-         = do let l = mkSizeOf (tyarg :%: valarg :%: [<])
-              let newps = newPats (pty :%: parg :%: [<]) (ConsMatch (ConsMatch NilMatch)) ps
-              let pats' = updatePatNames (updateNames ((tyarg, pty) :%:
-                                                       (valarg, parg) :%: [<]))
+         = do let l = mkSizeOf [<valarg, tyarg]
+              let newps = newPats [<parg, pty] (ConsMatch (ConsMatch NilMatch)) ps
+              let pats' = updatePatNames (updateNames [<(valarg, parg), (tyarg, pty)])
                                          (weakenNs l pats)
               let newclause : PatClause (vars' :< valarg :< tyarg)
                                         (todo' :< valarg :< tyarg)
@@ -651,7 +649,7 @@ groupCons fc fn pvars cs
            then addConG n 0 pargs pats pid rhs acc
            else throw (CaseCompile cfc fn (NotFullyApplied n))
     addGroup (PArrow _ _ s t) pprf pats pid rhs acc
-         = addConG (UN $ Basic "->") 0 (s :%: t :%: [<]) pats pid rhs acc
+         = addConG (UN $ Basic "->") 0 [<t, s] pats pid rhs acc
     -- Go inside the delay; we'll flag the case as needing to force its
     -- scrutinee (need to check in 'caseGroups below)
     addGroup (PDelay _ _ pty parg) pprf pats pid rhs acc
@@ -1015,7 +1013,7 @@ mutual
                cs' <- altGroups cs
                pure (ConCase cn tag newargs crest :: cs')
       altGroups (DelayGroup {tyarg} {valarg} rest :: cs)
-          = do crest <- match fc fn phase rest (map (weakenNs (mkSizeOf (tyarg :%: valarg :%: [<]))) errorCase)
+          = do crest <- match fc fn phase rest (map (weakenNs (mkSizeOf [<valarg, tyarg])) errorCase)
                cs' <- altGroups cs
                pure (DelayCase tyarg valarg crest :: cs')
       altGroups (ConstGroup c rest :: cs)

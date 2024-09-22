@@ -88,7 +88,7 @@ constFold : {vars' : _} ->
 constFold rho (CLocal fc p) = lookup fc (MkVar p) rho
 constFold rho e@(CRef fc x) = CRef fc x
 constFold rho (CLam fc x y)
-  = CLam fc x $ constFold (wk (mkSizeOf (x :%: [<])) rho) y
+  = CLam fc x $ constFold (wk (mkSizeOf [<x]) rho) y
 
 -- Expressions of the type `let x := y in x` can be introduced
 -- by the compiler when inlining monadic code (for instance, `io_bind`).
@@ -97,7 +97,7 @@ constFold rho (CLet fc x inl y z) =
     let val := constFold rho y
      in case replace val of
           True  => constFold (val::rho) z
-          False => case constFold (wk (mkSizeOf (x :%: [<])) rho) z of
+          False => case constFold (wk (mkSizeOf [<x]) rho) z of
             CLocal {idx = 0} _ _ => val
             body                 => CLet fc x inl val body
 constFold rho (CApp fc (CRef fc2 n) [x]) =

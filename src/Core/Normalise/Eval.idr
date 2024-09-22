@@ -378,9 +378,9 @@ parameters (defs : Defs) (topopts : EvalOpts)
          = pure NoMatch
     -- Arrow matching, in typecase
     tryAlt {more}
-           env loc opts fc stk (NBind pfc x (Pi fc' r e aty) scty) (ConCase (UN (Basic "->")) tag (s :%: t :%: [<]) sc)
-       = evalConAlt {more} env loc opts fc stk (s :%: t :%: [<])
-                  (aty :%: MkNFClosure opts env (NBind pfc x (Lam fc' r e aty) scty) :%: [<])
+           env loc opts fc stk (NBind pfc x (Pi fc' r e aty) scty) (ConCase (UN (Basic "->")) tag [<t, s] sc)
+       = evalConAlt {more} env loc opts fc stk [<t, s]
+                  [<MkNFClosure opts env (NBind pfc x (Lam fc' r e aty) scty), aty]
                   sc
     tryAlt {more}
            env loc opts fc stk (NBind pfc x (Pi fc' r e aty) scty) (ConCase nm tag args sc)

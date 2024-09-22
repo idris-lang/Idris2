@@ -644,7 +644,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
       let wargn : Name
           wargn = MN "warg" 0
           wargs : SnocList Name
-          wargs = (wargn :%: [<])
+          wargs = [<wargn]
 
           scenv : Env Term (xs ++ wargs)
                 := Pi vfc top Explicit wvalTy :: wvalEnv
@@ -668,7 +668,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
       let wargn : Name
           wargn = MN "warg" 0
           wargs : SnocList Name
-          wargs = (name :%: wargn :%: [<])
+          wargs = [<wargn, name]
 
           wvalTy' := weaken wvalTy
           eqTy : Term (xs :< MN "warg" 0)

@@ -310,7 +310,7 @@ mutual
                              do sc' <- toCExpTree n sc
                                 let scope = insertNames {outer=args}
                                                         {inner=vars}
-                                                        {ns = (MN "eff" 0 :%: [<])}
+                                                        {ns = [<MN "eff" 0]}
                                                         (mkSizeOf _) (mkSizeOf _) sc'
                                 let tm = CLet fc (MN "eff" 0) NotInline scr (substs s env scope)
                                 log "compiler.newtype.world" 50 "Kept the scrutinee \{show tm}"
@@ -425,7 +425,7 @@ getFieldArgs defs cl
              | nf => throw (GenericMsg (getLoc nf) "Badly formed struct type")
          case map snd args of
               -- cons
-              (_ :%: t :%: rest :%: [<]) =>
+              [<rest, t, _] =>
                   do rest' <- getFieldArgs defs rest
                      (n, ty) <- getPArgs defs t
                      pure ((n, ty) :: rest')
@@ -434,15 +434,15 @@ getFieldArgs defs cl
 
 getNArgs : {auto c : Ref Ctxt Defs} ->
            Defs -> Name -> SnocList (Closure [<]) -> Core NArgs
-getNArgs defs (NS _ (UN $ Basic "IORes")) (arg :%: [<]) = pure $ NIORes arg
-getNArgs defs (NS _ (UN $ Basic "Ptr")) (arg :%: [<]) = pure NPtr
+getNArgs defs (NS _ (UN $ Basic "IORes")) [<arg] = pure $ NIORes arg
+getNArgs defs (NS _ (UN $ Basic "Ptr")) [<arg] = pure NPtr
 getNArgs defs (NS _ (UN $ Basic "AnyPtr")) [<] = pure NPtr
-getNArgs defs (NS _ (UN $ Basic "GCPtr")) (arg :%: [<]) = pure NGCPtr
+getNArgs defs (NS _ (UN $ Basic "GCPtr")) [<arg] = pure NGCPtr
 getNArgs defs (NS _ (UN $ Basic "GCAnyPtr")) [<] = pure NGCPtr
 getNArgs defs (NS _ (UN $ Basic "Buffer")) [<] = pure NBuffer
 getNArgs defs (NS _ (UN $ Basic "ForeignObj")) [<] = pure NForeignObj
 getNArgs defs (NS _ (UN $ Basic "Unit")) [<] = pure NUnit
-getNArgs defs (NS _ (UN $ Basic "Struct")) (n :%: args :%: [<])
+getNArgs defs (NS _ (UN $ Basic "Struct")) [<args, n]
     = do NPrimVal _ (Str n') <- evalClosure defs n
              | nf => throw (GenericMsg (getLoc nf) "Unknown name for struct")
          pure (Struct n' !(getFieldArgs defs args))

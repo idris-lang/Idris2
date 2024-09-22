@@ -105,7 +105,7 @@ natBranch (MkConAlt n SUCC _ _ _) = True
 natBranch _ = False
 
 trySBranch : CExp vars -> CConAlt vars -> Maybe (CExp vars)
-trySBranch n (MkConAlt nm SUCC _ (arg :%: [<]) sc)
+trySBranch n (MkConAlt nm SUCC _ [<arg] sc)
     = Just (CLet (getFC n) arg YesInline (magic__natUnsuc (getFC n) (getFC n) [n]) sc)
 trySBranch _ _ = Nothing
 
