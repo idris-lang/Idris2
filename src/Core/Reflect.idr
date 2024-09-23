@@ -252,32 +252,12 @@ Reify a => Reify (List a) where
   reify defs val = cantReify val "List"
 
 export
-Reify a => Reify (SnocList a) where
-  reify defs val@(NDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), args) of
-             (UN (Basic "[<]"), _) => pure [<]
-             (UN (Basic ":%:"), [<(_, xs), (_, x), _])
-                  => do x' <- reify defs !(evalClosure defs x)
-                        xs' <- reify defs !(evalClosure defs xs)
-                        pure (xs' :< x')
-             _ => cantReify val "SnocList"
-  reify defs val = cantReify val "SnocList"
-
-export
 Reflect a => Reflect (List a) where
   reflect fc defs lhs env [] = appCon fc defs (basics "Nil") [Erased fc Placeholder]
   reflect fc defs lhs env (x :: xs)
       = do x' <- reflect fc defs lhs env x
            xs' <- reflect fc defs lhs env xs
            appCon fc defs (basics "::") [Erased fc Placeholder, x', xs']
-
-export
-Reflect a => Reflect (SnocList a) where
-  reflect fc defs lhs env [<] = appCon fc defs (basics "[<]") [Erased fc Placeholder]
-  reflect fc defs lhs env (xs :< x)
-      = do x' <- reflect fc defs lhs env x
-           xs' <- reflect fc defs lhs env xs
-           appCon fc defs (basics ":%:") [Erased fc Placeholder, x', xs']
 
 export
 Reify a => Reify (List1 a) where
