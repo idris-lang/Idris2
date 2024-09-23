@@ -58,7 +58,7 @@ mkIsVar (S x) = Later (mkIsVar x)
 -- SLZ = Core.Name.SnocList.LHasLength.Z
 
 export
-0 mkIsVarChiply : HasLength m inner -> IsVar nm m (inner <>> nm :%: outer)
+0 mkIsVarChiply : HasLength m inner -> IsVar nm m (inner <>> outer :< nm)
 mkIsVarChiply hl
   = rewrite chipsAsListAppend inner (outer :< nm) in
     rewrite sym $ plusZeroRightNeutral m in
@@ -147,7 +147,7 @@ mkVar : SizeOf inner -> Var (outer :< nm ++ inner)
 mkVar (MkSizeOf s p) = MkVar (mkIsVar p)
 
 export
-mkVarChiply : SizeOf inner -> Var (inner <>> nm :%: outer)
+mkVarChiply : SizeOf inner -> Var (inner <>> outer :< nm)
 mkVarChiply (MkSizeOf s p) = MkVar (mkIsVarChiply p)
 
 ||| Generate all variables
@@ -217,7 +217,7 @@ mkNVar : SizeOf inner -> NVar nm (outer :< nm ++ inner)
 mkNVar (MkSizeOf s p) = MkNVar (mkIsVar p)
 
 export
-mkNVarChiply : SizeOf inner -> NVar nm (inner <>> nm :%: outer)
+mkNVarChiply : SizeOf inner -> NVar nm (inner <>> outer :< nm)
 mkNVarChiply (MkSizeOf s p) = MkNVar (mkIsVarChiply p)
 
 export
@@ -281,7 +281,7 @@ insertNVar p v = case locateNVar p v of
 export
 insertNVarChiply : SizeOf local ->
   NVar nm (local <>> outer) ->
-  NVar nm (local <>> n :%: outer)
+  NVar nm (local <>> outer :< n)
 insertNVarChiply p v
   = rewrite chipsAsListAppend local (outer :< n) in
     insertNVar (p <>> zero)
