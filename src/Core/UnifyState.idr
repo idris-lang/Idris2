@@ -317,7 +317,7 @@ addPolyConstraint fc env arg x@(NApp _ (NMeta _ _ _) _) y
 addPolyConstraint fc env arg x y
     = pure ()
 
-mkLocal : {wkns : SnocList Name} -> FC -> Binder (Term vars) -> Term (wkns <>> x :%: (vars +%+ done))
+mkLocal : {wkns : SnocList Name} -> FC -> Binder (Term vars) -> Term (wkns <>> (done ++ vars) :< x)
 mkLocal fc b = Local fc (Just (isLet b)) _ (mkIsVarChiply (mkHasLength wkns))
 
 mkConstantAppArgs : {vars : _} ->
