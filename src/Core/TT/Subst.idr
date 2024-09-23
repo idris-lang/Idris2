@@ -6,6 +6,8 @@ import Core.TT.Var
 
 import Data.SnocList
 
+import Libraries.Data.SnocList.SizeOf
+
 %default total
 
 public export
