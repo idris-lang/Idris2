@@ -688,7 +688,7 @@ zeroedScore nps = Scored nps (replicate (S $ length ps) 0)
 ||| Proof that a value `v` inserted in the middle of a list with
 ||| prefix `ps` and suffix `qs` can equivalently be snoced with
 ||| `ps` or consed with `qs` before appending `qs` to `ps`.
-elemInsertedMiddle : (v : a) -> (ps,qs : SnocList a) -> (ps +%+ (qs :< v)) = ((ps `snoc` v) +%+ qs)
+elemInsertedMiddle : (v : a) -> (ps,qs : SnocList a) -> ((qs :< v) ++ ps) = (qs ++ (ps `snoc` v))
 elemInsertedMiddle v [<] qs = Refl
 elemInsertedMiddle v (xs :< x) qs = rewrite elemInsertedMiddle v xs qs in Refl
 
