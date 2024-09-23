@@ -6,12 +6,15 @@ import Core.FC
 
 import Core.Name
 import Core.Name.Scoped
+import Core.Name.CompatibleVars
 import Core.TT.Binder
 import Core.TT.Primitive
 import Core.TT.Var
 
 import Data.List
 import Data.SnocList
+
+import Libraries.Data.SnocList.SizeOf
 
 %default total
 
