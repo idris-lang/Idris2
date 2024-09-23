@@ -323,7 +323,7 @@ mkLocal fc b = Local fc (Just (isLet b)) _ (mkIsVarChiply (mkHasLength wkns))
 mkConstantAppArgs : {vars : _} ->
                     Bool -> FC -> Env Term vars ->
                     (wkns : SnocList Name) ->
-                    List (Term (wkns <>> (vars +%+ done)))
+                    List (Term (wkns <>> (done ++ vars)))
 mkConstantAppArgs lets fc [] wkns = []
 mkConstantAppArgs {done} {vars = xs :< x} lets fc (b :: env) wkns
     = let rec = mkConstantAppArgs {done} lets fc env (wkns :< x) in
@@ -335,7 +335,7 @@ mkConstantAppArgsSub : {vars : _} ->
                        Bool -> FC -> Env Term vars ->
                        Thin smaller vars ->
                        (wkns : SnocList Name) ->
-                       List (Term (wkns <>> (vars +%+ done)))
+                       List (Term (wkns <>> (done ++ vars)))
 mkConstantAppArgsSub lets fc [] p wkns = []
 mkConstantAppArgsSub {done} {vars = xs :< x}
                         lets fc (b :: env) Refl wkns
@@ -354,7 +354,7 @@ mkConstantAppArgsOthers : {vars : _} ->
                           Bool -> FC -> Env Term vars ->
                           Thin smaller vars ->
                           (wkns : SnocList Name) ->
-                          List (Term (wkns <>> (vars +%+ done)))
+                          List (Term (wkns <>> (done ++ vars)))
 mkConstantAppArgsOthers lets fc [] p wkns = []
 mkConstantAppArgsOthers {done} {vars = xs :< x}
                         lets fc (b :: env) Refl wkns
