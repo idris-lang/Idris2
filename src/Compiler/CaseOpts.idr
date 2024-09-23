@@ -90,7 +90,7 @@ mutual
                 CConAlt ((vars <>< args :< x) ++ outer) ->
                 CConAlt ((vars :< new <>< args) ++ outer)
   shiftBinderConAlt new (MkConAlt n ci t args' sc)
-      = let sc' : CExp ((args' +%+ outer) +%+ (x :%: args +%+ vars))
+      = let sc' : CExp ((vars ++ args :< x) ++ (outer ++ args'))
                 = rewrite sym (appendAssociative args' outer (vars <>< args :< x)) in sc in
         MkConAlt n ci t args' $
            rewrite (appendAssociative args' outer (vars :< new <>< args))
