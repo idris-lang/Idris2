@@ -254,6 +254,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Several functions like `pop`, `differenceMap` and `toSortedMap` were added to `Data.Sorted{Map|Set}`
 
+* Added `kvList` function to `Data.SortedMap` and `Data.SortedMap.Dependent` to have an unambiguous
+  `toList` variant.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
