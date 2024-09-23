@@ -402,7 +402,7 @@ export
 resolveRef : SizeOf outer ->
              SizeOf done ->
              Bounds bound -> FC -> Name ->
-             Maybe (Var (outer +%+ (done <>> (bound +%+ vars))))
+             Maybe (Var ((done <>> (vars ++ bound)) ++ outer))
 resolveRef _ _ None _ _ = Nothing
 resolveRef {outer} {vars} {done} p q (Add {xs} new old bs) fc n
     = if n == old
