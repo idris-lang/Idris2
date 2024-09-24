@@ -735,14 +735,15 @@ mutual
       = do tm' <- desugarDo side ps ns tm
            rest' <- expandDo side ps topfc ns rest
            pure $ seqFun fc ns tm' rest'
-  expandDo side ps topfc ns (DoBind fc nameFC n tm :: rest)
+  expandDo side ps topfc ns (DoBind fc nameFC n rig ty tm :: rest)
       = do tm' <- desugarDo side ps ns tm
            rest' <- expandDo side ps topfc ns rest
            whenJust (isConcreteFC nameFC) $ \nfc => addSemanticDecorations [(nfc, Bound, Just n)]
+           ty' <- maybe (pure $ Implicit (virtualiseFC fc) False)
+                        (\ty => desugarDo side ps ns ty) ty
            pure $ bindFun fc ns tm'
-                $ ILam nameFC top Explicit (Just n)
-                       (Implicit (virtualiseFC fc) False) rest'
-  expandDo side ps topfc ns (DoBindPat fc pat exp alts :: rest)
+                $ ILam nameFC rig Explicit (Just n) ty' rest'
+  expandDo side ps topfc ns (DoBindPat fc pat ty exp alts :: rest)
       = do pat' <- desugarDo LHS ps ns pat
            (newps, bpat) <- bindNames False pat'
            exp' <- desugarDo side ps ns exp
@@ -752,9 +753,11 @@ mutual
            let fcOriginal = fc
            let fc = virtualiseFC fc
            let patFC = virtualiseFC (getFC bpat)
+           ty' <- maybe (pure $ Implicit fc False)
+                        (\ty => desugarDo side ps ns ty) ty
            pure $ bindFun fc ns exp'
                 $ ILam EmptyFC top Explicit (Just (MN "_" 0))
-                          (Implicit fc False)
+                          ty'
                           (ICase fc [] (IVar patFC (MN "_" 0))
                                (Implicit fc False)
                                (PatClause fcOriginal bpat rest'

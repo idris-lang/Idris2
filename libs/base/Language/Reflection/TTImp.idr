@@ -222,6 +222,18 @@ mutual
 
   %name Decl decl
 
+%TTImpLit fromTTImp
+
+public export
+fromTTImp : TTImp -> TTImp
+fromTTImp s = s
+
+%declsLit fromDecls
+
+public export
+fromDecls : List Decl -> List Decl
+fromDecls decls = decls
+
 public export
 getFC : TTImp -> FC
 getFC (IVar fc _)                = fc

@@ -18,6 +18,15 @@ data JSON
 
 %name JSON json
 
+public export
+Eq JSON where
+    JNull == JNull = True
+    JBoolean x == JBoolean y = x == y
+    JNumber x == JNumber y = x == y
+    JString x == JString y = x == y
+    JArray xs == JArray ys = assert_total $ xs == ys
+    JObject xs == JObject ys = assert_total $ on (==) (sortBy $ compare `on` fst) xs ys
+    _ == _ = False
 
 private
 b16ToHexString : Bits16 -> String
@@ -156,3 +165,39 @@ Cast String JSON where
 public export
 Cast a JSON => Cast (List a) JSON where
   cast xs = JArray $ map cast xs
+
+public export
+lookup : String -> JSON -> Maybe JSON
+lookup key (JObject xs) = lookup key xs
+lookup key json = Nothing
+
+public export
+update : (Maybe JSON -> Maybe JSON) -> String -> JSON -> JSON
+update f key (JObject xs) = JObject $ updateAttr f key xs
+  where
+    updateAttr : (Maybe JSON -> Maybe JSON) -> String -> List (String, JSON) -> List (String, JSON)
+    updateAttr f key [] = do
+        let Just y = f Nothing
+            | Nothing => []
+        [(key, y)]
+    updateAttr f key ((nm, x) :: xs) = if key == nm
+        then do
+            let Just y = f (Just x)
+                | Nothing => xs
+            (nm, y) :: xs
+        else (nm, x) :: updateAttr f key xs
+update f key json = json
+
+public export
+traverseJSON : Monad m => (JSON -> m JSON) -> JSON -> m JSON
+traverseJSON f (JArray xs) = do
+    xs <- assert_total $ traverse (traverseJSON f) xs
+    f $ JArray xs
+traverseJSON f (JObject xs) = do
+    xs <- traverse (assert_total $ bitraverse pure $ traverseJSON f) xs
+    f $ JObject xs
+traverseJSON f json = f json
+
+public export
+traverseJSON_ : Monad m => (JSON -> m ()) -> JSON -> m ()
+traverseJSON_ f json = ignore $ traverseJSON (\x => f x *> pure x) json

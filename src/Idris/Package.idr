@@ -604,6 +604,12 @@ installSrcFrom wdir destdir (ns, srcRelPath)
            | Left err => throw $ UserError (show err)
          pure ()
 
+absoluteInstallDir : (relativeInstallDir : String) -> Core String
+absoluteInstallDir relativeInstallDir = do
+  mdestdir <- coreLift $ getEnv "DESTDIR"
+  let destdir = fromMaybe "" mdestdir
+  pure $ destdir ++ relativeInstallDir
+
 -- Install all the built modules in prefix/package/
 -- We've already built and checked for success, so if any don't exist that's
 -- an internal error.
@@ -617,11 +623,9 @@ install pkg opts installSrc -- not used but might be in the future
     = do defs <- get Ctxt
          build <- ttcBuildDirectory
          let lib = installDir pkg
-         mdestdir <- coreLift $ getEnv "DESTDIR"
-         let destdir = fromMaybe "" mdestdir
-         libTargetDir <- (destdir ++) <$> libInstallDirectory lib
-         ttcTargetDir <- (destdir ++) <$> ttcInstallDirectory lib
-         srcTargetDir <- (destdir ++) <$> srcInstallDirectory lib
+         libTargetDir <- absoluteInstallDir =<< libInstallDirectory lib
+         ttcTargetDir <- absoluteInstallDir =<< ttcInstallDirectory lib
+         srcTargetDir <- absoluteInstallDir =<< srcInstallDirectory lib
 
          let src = source_dir (dirs (options defs))
          runScript (preinstall pkg)
@@ -759,7 +763,8 @@ makeDoc pkg opts =
          )
          | errs => pure errs
 
-       Right () <- coreLift $ writeFile (docBase </> "index.html") $ renderDocIndex pkg
+       Right () <- do syn <- get Syn
+                      coreLift $ writeFile (docBase </> "index.html") $ renderDocIndex pkg (modDocstrings syn)
          | Left err => fileError (docBase </> "index.html") err
 
        errs <- for cssFiles $ \ cssFile => do
@@ -842,6 +847,10 @@ clean pkg opts -- `opts` is not used but might be in the future
          deleteFolder builddir []
          maybe (pure ()) (\e => delete (outputdir </> e))
                (executable pkg)
+         -- clean out the generated docs
+         let build = build_dir (dirs (options defs))
+         deleteDocsFolder $ build </> "docs" </> "docs"
+         deleteDocsFolder $ build </> "docs"
          runScript (postclean pkg)
   where
     delete : String -> Core ()
@@ -857,6 +866,14 @@ clean pkg opts -- `opts` is not used but might be in the future
         = do let ttFile = builddir </> joinPath ns </> mod
              delete $ ttFile <.> "ttc"
              delete $ ttFile <.> "ttm"
+
+    deleteDocsFolder : String -> Core ()
+    deleteDocsFolder dir
+        = do Right docbasefiles <- coreLift $ listDir dir
+               | Left err => pure ()
+             traverse_ (\x => delete $ dir </> x)
+                       docbasefiles
+             deleteFolder dir []
 
 -- Just load the given module, if it exists, which will involve building
 -- it if necessary
@@ -902,7 +919,8 @@ processPackage : {auto c : Ref Ctxt Defs} ->
 processPackage opts (cmd, mfile)
     = withCtxt . withSyn . withROpts $ case cmd of
         Init =>
-          do pkg <- coreLift interactive
+          do Just pkg <- coreLift interactive
+               | Nothing => coreLift (exitWith (ExitFailure 1))
              let fp = fromMaybe (pkg.name ++ ".ipkg") mfile
              False <- coreLift (exists fp)
                | _ => throw (GenericMsg emptyFC ("File " ++ fp ++ " already exists"))
@@ -945,6 +963,10 @@ processPackage opts (cmd, mfile)
                     runRepl (map snd $ mainmod pkg)
                   Init => pure () -- already handled earlier
                   DumpJson => coreLift . putStrLn $ toJson pkg
+                  DumpInstallDir => do
+                    libInstallDir <- libInstallDirectory (installDir pkg)
+                    dir <- absoluteInstallDir libInstallDir
+                    coreLift (putStrLn dir)
 
 record PackageOpts where
   constructor MkPFR

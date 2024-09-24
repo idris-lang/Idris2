@@ -123,6 +123,7 @@ jobs:
       - name: Artifact Idris2 from previous version
         uses: actions/upload-artifact@v4
         with:
+          include-hidden-files: true
           name: ubuntu-installed-idris2-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}-chez
           path: ~/.idris2/
 
@@ -157,6 +158,7 @@ jobs:
       - name: Artifact Bootstrapped Idris2
         uses: actions/upload-artifact@v4
         with:
+          include-hidden-files: true
           name: ubuntu-installed-bootstrapped-idris2-chez
           path: ~/.idris2/
 
@@ -188,6 +190,7 @@ jobs:
       - name: Artifact Bootstrapped Idris2
         uses: actions/upload-artifact@v4
         with:
+          include-hidden-files: true
           name: macos-installed-bootstrapped-idris2-chez
           path: ~/.idris2/
 
@@ -238,6 +241,7 @@ jobs:
       - name: Artifact Idris2 from chez
         uses: actions/upload-artifact@v4
         with:
+          include-hidden-files: true
           name: windows-installed-bootstrapped-idris2-chez
           path: ${{ env.IDRIS_PREFIX }}
 
@@ -284,6 +288,7 @@ jobs:
       - name: Artifact Bootstrapped Idris2
         uses: actions/upload-artifact@v4
         with:
+          include-hidden-files: true
           name: ubuntu-installed-bootstrapped-idris2-racket
           path: ~/.idris2/
 
@@ -403,6 +408,7 @@ jobs:
       - name: Artifact Idris2
         uses: actions/upload-artifact@v4
         with:
+          include-hidden-files: true
           name: idris2-nightly-chez
           path: ~/.idris2/
 
@@ -448,7 +454,7 @@ jobs:
           name: windows-installed-bootstrapped-idris2-chez
           path: ${{ env.IDRIS_PREFIX }}
       - name: Install build dependencies
-        uses: Bogdanp/setup-racket@v1.4
+        uses: Bogdanp/setup-racket@v1.11
         with:
           variant: 'CS'
           version: 'stable'

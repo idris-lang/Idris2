@@ -1,0 +1,14 @@
+. ../../../testutils.sh
+
+windows_tweaks() {
+  sed 's#C:.msys64##' | sed 's#\\#/#g'
+}
+
+# pretend Idris2 is installed at root for reproducible
+# installdirs:
+IDRIS2_PREFIX=/ idris2 --dump-installdir test.ipkg \
+  | windows_tweaks
+
+# by contrast, the location containing all installed packages:
+IDRIS2_PREFIX=/ idris2 --libdir \
+  | windows_tweaks

@@ -1,0 +1,4 @@
+. ../../testutils.sh
+
+idris2 --cg chez -o test Test.idr
+HELLO=hi ./build/exec/test

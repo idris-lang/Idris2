@@ -16,6 +16,15 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   installed will be ignored by the compiler when it tries to use that library as
   a dependency for some other package.
 
+* The `idris2 --help pragma` command now outputs the `%hint` pragma.
+
+* The `idris2 --init` command now ensures that package names are
+  valid Idris2 identifiers.
+
+* A new `idris2 --dump-installdir {ipkg-filename}` command outputs the file path
+  where Idris2 will install the given package if `idris2 --install
+  {ipkg-filename}` is called.
+
 ### Building/Packaging changes
 
 * The Nix flake's `buildIdris` function now returns a set with `executable` and
@@ -38,6 +47,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * A new `idris2 --dump-ipkg-json` option (requires either `--find-ipkg` or
   specifying the `.ipkg` file) dumps JSON information about an Idris package.
 
+* Support for macOS PowerPC added.
+
 ### Language changes
 
 * Autobind and Typebind modifier on operators allow the user to
@@ -52,6 +63,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * The language now has a ``%foreign_impl`` pragma to add additional languages
   to a ``%foreign`` function.
+
+* Bind expressions in `do` blocks can now have a type ascription.
+  See [#3327](https://github.com/idris-lang/Idris2/issues/3327).
 
 ### Compiler changes
 
@@ -72,6 +86,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * LHS of `with`-applications are parsed as `PWithApp` instead of `PApp`. As a
   consequence, `IWithApp` appears in `TTImp` values in elaborator scripts instead
   of `IApp`, as it should have been.
+
+* `MakeFuture` primitive is removed.
 
 ### Backend changes
 
@@ -126,11 +142,21 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   evaluated. Now when a delayed expression is lifted by CSE, it is compiled
   using Scheme's `delay` and `force` to memoize them.
 
+* More efficient `collect-request-handler` is used.
+
+* Add a codegen directive called `lazy=weakMemo` to make `Lazy` and `Inf` values *weakly*
+  memoised. That is, once accessed, they are allowed to be not re-evaluated until garbage
+  collector wipes them.
+
 #### Racket
 
 * Fixed CSE soundness bug that caused delayed expressions to sometimes be eagerly
   evaluated. Now when a delayed expression is lifted by CSE, it is compiled
   using Scheme's `delay` and `force` to memoize them.
+
+* Add a codegen directive called `lazy=weakMemo` to make `Lazy` and `Inf` values *weakly*
+  memoised. That is, once accessed, they are allowed to be not re-evaluated until garbage
+  collector wipes them.
 
 #### NodeJS Backend
 
@@ -193,6 +219,21 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Some pieces of `Data.Fin.Extra` from `contrib` were moved to `base` to modules
   `Data.Fin.Properties`, `Data.Fin.Arith` and `Data.Fin.Split`.
 
+* `Decidable.Decidable.decison` is now `public export`.
+
+* `Functor` is implemented for `PiInfo` from `Language.Reflection.TT`.
+
+* Quantity of the argument for the type being searched in the `search` function
+  from `Language.Reflection` was changed to be zero.
+
+* Added `fromRight` and `fromLeft` for extracting values out of `Either`, equivalent to `fromJust` for `Just`.
+
+* Export `System.Signal.signalCode` and `System.Signal.toSignal`.
+
+* Added implementations of `Foldable` and `Traversable` for `Control.Monad.Identity`
+
+* Added `Data.IORef.atomically` for the chez backend.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
@@ -227,6 +268,22 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   - `Data/Morphisms/Algebra.idr`
   - `Data/Nat/Algebra.idr`
 
+* `prim__makeFuture` from `System.Future` is reimplemented as `%foreign` instead of
+  using now removed `MakeFuture` primitive
+
 #### Network
 
 * Add a missing function parameter (the flag) in the C implementation of `idrnet_recv_bytes`
+
+
+#### Test
+
+* Replaced `Requirement` data type with a new record that can be used to create
+  any requirement needed. The constructors for the old `Requirement` type are
+  now functions of the same names that return values of the new record type so
+  in most situations there should be no compatibility issues.
+
+#### Documentation
+
+* Module docstrings are now displayed for namespace indexes when documentation is built via `--mkdoc`.
+* Generated documentation are now removed via `--clean`.

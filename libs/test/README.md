@@ -50,7 +50,11 @@ The second argument to `MkTestPool` (empty in the above example) is a list of
 constraints that need to be satisfied to be able to run the tests in the given
 pool. An empty list means no requirements. If your tests required racket to be
 installed, you could for instance specify `[Racket]`.
-See the [`Requirement` type](./Test/Golden.idr#L228) for more.
+See the [`Requirement` type](./Test/Golden.idr#L335) for more.
+
+You may have requirements for a particular `TestPool` that aren't simply "The
+Node Backend can be used." To represent your own requirements, create your own
+values of the `Requirement` type.
 
 The third argument to `MkTestPool` is an optional backend. In the example we
 did not specify any but if you want to use the reference counting C backend
@@ -94,3 +98,10 @@ can choose whether the output produced by a new test run should become the new
 You can even skip the step of creating an `expected` file altogether when you
 write a new test case and use interactive mode to accept the output of your
 test case as the expectation.
+
+### testsInDir
+
+If you'd like to make a `TestPool` that automatically picks up all the tests
+from a particular directory, you can use the `testsInDir` helper function from
+the `Test.Golden` module.
+

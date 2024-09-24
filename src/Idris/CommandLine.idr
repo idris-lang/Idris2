@@ -25,6 +25,7 @@ data PkgCommand
       | REPL
       | Init
       | DumpJson
+      | DumpInstallDir
 
 export
 Show PkgCommand where
@@ -37,6 +38,7 @@ Show PkgCommand where
   show REPL = "--repl"
   show Init = "--init"
   show DumpJson = "--dump-ipkg-json"
+  show DumpInstallDir = "--dump-installdir"
 
 public export
 data DirCommand
@@ -284,6 +286,9 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            MkOpt ["--dump-ipkg-json"] [Optional "package file"]
               (\ f => [Package DumpJson f])
               (Just "Dump an Idris2 package file in the JSON format"),
+           MkOpt ["--dump-installdir"] [Optional "package file"]
+              (\ f => [Package DumpInstallDir f])
+              (Just "Dump the location where the given package will be installed"),
            MkOpt ["--build"] [Optional "package file"]
                (\f => [Package Build f])
               (Just "Build modules/executable for the given package"),

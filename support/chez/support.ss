@@ -1,10 +1,12 @@
+#!chezscheme
+
 (define (blodwen-os)
   (case (machine-type)
     [(i3le ti3le a6le ta6le tarm64le) "unix"]  ; GNU/Linux
     [(i3ob ti3ob a6ob ta6ob tarm64ob) "unix"]  ; OpenBSD
     [(i3fb ti3fb a6fb ta6fb tarm64fb) "unix"]  ; FreeBSD
     [(i3nb ti3nb a6nb ta6nb tarm64nb) "unix"]  ; NetBSD
-    [(i3osx ti3osx a6osx ta6osx tarm64osx) "darwin"]
+    [(i3osx ti3osx a6osx ta6osx tarm64osx tppc32osx tppc64osx) "darwin"]
     [(i3nt ti3nt a6nt ta6nt tarm64nt) "windows"]
     [else "unknown"]))
 
@@ -18,6 +20,16 @@
                    (set! f void))
             (void))
         res))))
+
+(define (blodwen-delay-lazy f)
+  (weak-cons #!bwp f))
+
+(define (blodwen-force-lazy e)
+  (let ((exval (car e)))
+    (if (bwp-object? exval)
+      (let ((val ((cdr e))))
+        (begin (set-car! e val) val))
+      exval)))
 
 (define (blodwen-toSignedInt x bits)
   (if (logbit? bits x)
@@ -454,10 +466,10 @@
 ;; Future
 
 (define-record future-internal (result ready mutex signal))
-(define (blodwen-make-future work)
+(define (blodwen-make-future ty work)
   (let ([future (make-future-internal #f #f (make-mutex) (make-condition))])
     (fork-thread (lambda ()
-      (let ([result (work)])
+      (let ([result (work '())])
         (with-mutex (future-internal-mutex future)
           (set-future-internal-result! future result)
           (set-future-internal-ready! future #t)

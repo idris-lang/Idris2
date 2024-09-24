@@ -53,10 +53,10 @@ Eq (Clock type) where
 public export
 Ord (Clock type) where
   compare (MkClock seconds1 nanoseconds1) (MkClock seconds2 nanoseconds2) =
-  case compare seconds1 seconds2 of
-    LT => LT
-    GT => GT
-    EQ => compare nanoseconds1 nanoseconds2
+    case compare seconds1 seconds2 of
+      LT => LT
+      GT => GT
+      EQ => compare nanoseconds1 nanoseconds2
 
 public export
 Show (Clock type) where

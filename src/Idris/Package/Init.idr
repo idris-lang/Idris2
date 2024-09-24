@@ -12,6 +12,7 @@ import Idris.Package.Types
 import System.Directory
 import Control.App.FileIO
 
+import Libraries.Text.Lexer
 import Libraries.Utils.Path
 import Libraries.System.Directory.Tree
 
@@ -67,9 +68,11 @@ prompt p = putStr p >> fflush stdout >> getLine
 
 export
 covering
-interactive : IO PkgDesc
+interactive : IO (Maybe PkgDesc)
 interactive = do
-  pname    <- prompt "Package name: "
+  pname <- prompt "Package name: "
+  let True = checkPackageName $ fastUnpack pname
+    | False => pure Nothing
   pauthors <- prompt "Package authors: "
   poptions <- prompt "Package options: "
   psource  <- prompt "Source directory: "
@@ -81,7 +84,7 @@ interactive = do
         , modules   := modules
         , sourcedir := sourcedir
         } (initPkgDesc (fromMaybe "project" (mstring pname)))
-  pure pkg
+  pure $ Just pkg
 
   where
 
@@ -89,3 +92,24 @@ interactive = do
     mstring str = case trim str of
       "" => Nothing
       str => Just str
+
+    isIdentStart : Char -> Bool
+    isIdentStart '_' = True
+    isIdentStart x   = isUpper x ||
+                       isAlpha x ||
+                       x > chr 160
+
+    isIdentTrailing : List Char -> Bool
+    isIdentTrailing []      = True
+    isIdentTrailing (x::xs) = case isAlphaNum x ||
+                                   x > chr 160  ||
+                                   x == '-'     ||
+                                   x == '_'     ||
+                                   x == '\'' of
+                                False => False
+                                True  => isIdentTrailing xs
+
+    checkPackageName : List Char -> Bool
+    checkPackageName []      = True
+    checkPackageName (x::xs) = isIdentStart x &&
+                               isIdentTrailing xs

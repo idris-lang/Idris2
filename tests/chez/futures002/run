@@ -1,5 +1,7 @@
 . ../../testutils.sh
 
 idris2 --cg chez Futures.idr -p contrib --exec main
+echo "----"
+idris2 --cg chez --directive lazy=weakMemo Futures.idr -p contrib --exec main
 
 rm -r build

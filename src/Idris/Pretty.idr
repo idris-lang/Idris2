@@ -133,8 +133,13 @@ mutual
 
   prettyPDo : PDo' KindedName -> Doc IdrisSyntax
   prettyPDo (DoExp _ tm) = pretty tm
-  prettyPDo (DoBind _ _ n tm) = pretty0 n <++> keyword "<-" <++> pretty tm
-  prettyPDo (DoBindPat _ l tm alts) =
+  prettyPDo (DoBind _ _ n rig (Just ty) tm) =
+      prettyRig rig <+> pretty0 n <++> colon <++> pretty ty <++> keyword "<-" <++> pretty tm
+  prettyPDo (DoBind _ _ n rig Nothing tm) =
+      prettyRig rig <+> pretty0 n <++> keyword "<-" <++> pretty tm
+  prettyPDo (DoBindPat _ l (Just ty) tm alts) =
+      pretty l <++> colon <++> keyword "<-" <++> pretty tm <+> hang 4 (fillSep $ prettyAlt <$> alts)
+  prettyPDo (DoBindPat _ l Nothing tm alts) =
       pretty l <++> keyword "<-" <++> pretty tm <+> hang 4 (fillSep $ prettyAlt <$> alts)
   prettyPDo (DoLet _ _ l rig _ tm) =
       let_ <++> prettyRig rig <+> pretty0 l <++> equals <++> pretty tm
@@ -308,7 +313,7 @@ mutual
     prettyPrec d (PDelay _ tm) = parenthesise (d > startPrec) $ "Delay" <++> prettyPrec appPrec tm
     prettyPrec d (PForce _ tm) = parenthesise (d > startPrec) $ "Force" <++> prettyPrec appPrec tm
     prettyPrec d (PAutoApp _ f a) =
-    parenthesise (d > startPrec) $ group $ prettyPrec leftAppPrec f <++> "@" <+> braces (pretty a)
+      parenthesise (d > startPrec) $ group $ prettyPrec leftAppPrec f <++> "@" <+> braces (pretty a)
     prettyPrec d (PNamedApp _ f n (PRef _ a)) =
       parenthesise (d > startPrec) $ group $
         if n == rawName a

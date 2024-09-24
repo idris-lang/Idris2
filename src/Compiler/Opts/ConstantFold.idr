@@ -73,6 +73,7 @@ lookup fc (MkVar p) rho = case go p rho of
 replace : CExp vars -> Bool
 replace (CLocal _ _)   = True
 replace (CPrimVal _ _) = True
+replace (CErased _)    = True
 replace _              = False
 
 -- constant folding of primitive functions
@@ -87,11 +88,17 @@ constFold rho (CLocal fc p) = lookup fc (MkVar p) rho
 constFold rho e@(CRef fc x) = CRef fc x
 constFold rho (CLam fc x y)
   = CLam fc x $ constFold (wk (mkSizeOf [x]) rho) y
+
+-- Expressions of the type `let x := y in x` can be introduced
+-- by the compiler when inlining monadic code (for instance, `io_bind`).
+-- They can be replaced by `y`.
 constFold rho (CLet fc x inl y z) =
-    let val = constFold rho y
-     in if replace val
-          then constFold (val :: rho) z
-          else CLet fc x inl val (constFold (wk (mkSizeOf [x]) rho) z)
+    let val := constFold rho y
+     in case replace val of
+          True  => constFold (val::rho) z
+          False => case constFold (wk (mkSizeOf [x]) rho) z of
+            CLocal {idx = 0} _ _ => val
+            body                 => CLet fc x inl val body
 constFold rho (CApp fc (CRef fc2 n) [x]) =
   if n == NS typesNS (UN $ Basic "prim__integerToNat")
      then case constFold rho x of
@@ -100,6 +107,9 @@ constFold rho (CApp fc (CRef fc2 n) [x]) =
             v                   => CApp fc (CRef fc2 n) [v]
      else CApp fc (CRef fc2 n) [constFold rho x]
 constFold rho (CApp fc x xs) = CApp fc (constFold rho x) (constFold rho <$> xs)
+-- erase `UNIT` constructors, so they get constant-folded
+-- in `let` bindings (for instance, when optimizing `(>>)` for `IO`
+constFold rho (CCon fc x UNIT tag []) = CErased fc
 constFold rho (CCon fc x y tag xs) = CCon fc x y tag $ constFold rho <$> xs
 constFold rho (COp fc BelieveMe [CErased _, CErased _ , x]) = constFold rho x
 constFold rho (COp {arity} fc fn xs) =

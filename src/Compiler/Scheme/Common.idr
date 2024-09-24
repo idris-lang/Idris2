@@ -207,7 +207,6 @@ data ExtPrim = NewIORef | ReadIORef | WriteIORef
              | SysOS | SysCodegen
              | OnCollect
              | OnCollectAny
-             | MakeFuture
              | Unknown Name
 
 export
@@ -225,7 +224,6 @@ Show ExtPrim where
   show SysCodegen = "SysCodegen"
   show OnCollect = "OnCollect"
   show OnCollectAny = "OnCollectAny"
-  show MakeFuture = "MakeFuture"
   show (Unknown n) = "Unknown " ++ show n
 
 ||| Match on a user given name to get the scheme primitive
@@ -243,8 +241,7 @@ toPrim pn@(NS _ n)
             (n == UN (Basic "prim__os"), SysOS),
             (n == UN (Basic "prim__codegen"), SysCodegen),
             (n == UN (Basic "prim__onCollect"), OnCollect),
-            (n == UN (Basic "prim__onCollectAny"), OnCollectAny),
-            (n == UN (Basic "prim__makeFuture"), MakeFuture)
+            (n == UN (Basic "prim__onCollectAny"), OnCollectAny)
             ]
            (Unknown pn)
 toPrim pn = Unknown pn
@@ -320,9 +317,28 @@ var _ = False
 getScrutineeTemp : Nat -> Builder
 getScrutineeTemp i = fromString $ "sc" ++ show i
 
+public export
+record LazyExprProc where
+  constructor MkLazyExprProc
+  processDelay : Builder -> Builder
+  processForce : Builder -> Builder
+
+public export
+defaultLaziness : LazyExprProc
+defaultLaziness = MkLazyExprProc
+  (\expr => "(lambda () " ++ expr ++ ")")
+  (\expr => "(" ++ expr ++ ")")
+
+public export
+weakMemoLaziness : LazyExprProc
+weakMemoLaziness = MkLazyExprProc
+  (\expr => "(blodwen-delay-lazy (lambda () " ++ expr ++ "))")
+  (\expr => "(blodwen-force-lazy " ++ expr ++ ")")
+
 parameters (constants : SortedSet Name,
             schExtPrim : Nat -> ExtPrim -> List NamedCExp -> Core Builder,
-            schString : String -> Builder)
+            schString : String -> Builder,
+            schLazy : LazyExprProc)
   showTag : Name -> Maybe Int -> Builder
   showTag n (Just i) = showB i
   showTag n Nothing = schString (show n)
@@ -565,8 +581,8 @@ parameters (constants : SortedSet Name,
         = schExtPrim i (toPrim p) args
     schExp i (NmForce _ _ (NmApp fc x@(NmRef _ _) []))
        = pure $ "(force " ++ !(schExp i x) ++ ")" -- Special version for memoized toplevel lazy definitions
-    schExp i (NmForce fc lr t) = pure $ "(" ++ !(schExp i t) ++ ")"
-    schExp i (NmDelay fc lr t) = pure $ "(lambda () " ++ !(schExp i t) ++ ")"
+    schExp i (NmForce fc lr t) = pure $ schLazy.processForce !(schExp i t)
+    schExp i (NmDelay fc lr t) = pure $ schLazy.processDelay !(schExp i t)
     schExp i (NmConCase fc sc alts def)
         = cond [(recordCase alts, schRecordCase i sc alts def),
                 (maybeCase alts, schMaybeCase i sc alts def),
@@ -681,6 +697,7 @@ getScheme : {auto c : Ref Ctxt Defs} ->
             (constants  : SortedSet Name) ->
             (schExtPrim : Nat -> ExtPrim -> List NamedCExp -> Core Builder) ->
             (schString : String -> Builder) ->
+            (schLazy : LazyExprProc) ->
             (Name, FC, NamedDef) -> Core Builder
-getScheme constants schExtPrim schString (n, fc, d)
-    = schDef constants schExtPrim schString n d
+getScheme constants schExtPrim schString schLazy (n, fc, d)
+    = schDef constants schExtPrim schString schLazy n d
