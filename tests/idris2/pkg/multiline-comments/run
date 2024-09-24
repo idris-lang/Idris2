@@ -1,0 +1,4 @@
+. ../../../testutils.sh
+
+# Previously reported: Uncaught error: Error: Can't recognise token.
+idris2 --build test.ipkg
