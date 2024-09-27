@@ -25,6 +25,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   where Idris2 will install the given package if `idris2 --install
   {ipkg-filename}` is called.
 
+* Remove reference to column number parameter in help menu for `refine` command.
+
 ### Building/Packaging changes
 
 * The Nix flake's `buildIdris` function now returns a set with `executable` and
