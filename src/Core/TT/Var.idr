@@ -77,9 +77,8 @@ dropIsVar (xs :< n) (Later p) = dropIsVar xs p :< n
 ||| This is essentially the identity function
 ||| This is slow so we ensure it's only used in a runtime irrelevant manner
 export
-0 embedIsVar : IsVar x idx xs -> IsVar x idx (outer ++ xs)
-embedIsVar First = First
-embedIsVar (Later p) = Later (embedIsVar p)
+0 embedIsVar : IsVar x idx vars -> IsVar x idx (more ++ vars)
+embedIsVar tm = believe_me tm
 
 ||| Throw in extra variables on the local end of the context.
 ||| This is slow so we ensure it's only used in a runtime irrelevant manner
@@ -110,10 +109,10 @@ locateIsVarGE (MkSizeOf (S k) (S l)) so v = case v of
   Later v => locateIsVarGE (MkSizeOf k l) so v
 
 export
-locateIsVar : {idx : Nat} -> (s : SizeOf local) ->
-  (0 p : IsVar x idx (outer ++ local)) ->
-  Either (Erased (IsVar x idx local))
-         (Erased (IsVar x (idx `minus` size s) outer))
+locateIsVar : {idx : Nat} -> (s : SizeOf outer) ->
+  (0 p : IsVar x idx (inner ++ outer)) ->
+  Either (Erased (IsVar x idx outer))
+         (Erased (IsVar x (idx `minus` size s) inner))
 locateIsVar s p = case choose (idx < size s) of
   Left so => Left (MkErased (locateIsVarLT s so p))
   Right so => Right (MkErased (locateIsVarGE s so p))
@@ -221,8 +220,8 @@ mkNVarChiply : SizeOf inner -> NVar nm (inner <>> outer :< nm)
 mkNVarChiply (MkSizeOf s p) = MkNVar (mkIsVarChiply p)
 
 export
-locateNVar : SizeOf local -> NVar nm (outer ++ local) ->
-             Either (NVar nm local) (NVar nm outer)
+locateNVar : SizeOf outer -> NVar nm (local ++ outer) ->
+             Either (NVar nm outer) (NVar nm local)
 locateNVar s (MkNVar p) = case locateIsVar s p of
   Left p => Left (MkNVar (runErased p))
   Right p => Right (MkNVar (runErased p))
@@ -253,8 +252,8 @@ isVar : (n : Name) -> (ns : SnocList Name) -> Maybe (Var ns)
 isVar n ns = forgetName <$> isNVar n ns
 
 export
-locateVar : SizeOf local -> Var (outer ++ local) ->
-            Either (Var local) (Var outer)
+locateVar : SizeOf outer -> Var (local ++ outer) ->
+            Either (Var outer) (Var local)
 locateVar s v  = bimap forgetName forgetName
   $ locateNVar s (recoverName v)
 
@@ -262,18 +261,18 @@ locateVar s v  = bimap forgetName forgetName
 -- Weakening
 
 export
-weakenNVar : SizeOf ns -> NVar name outer -> NVar name (outer ++ ns)
+weakenNVar : SizeOf ns -> NVar name inner -> NVar name (inner ++ ns)
 weakenNVar s (MkNVar {nvarIdx} p)
   = MkNVar {nvarIdx = plus (size s) nvarIdx} (weakenIsVar s p)
 
 export
-embedNVar : NVar name ns -> NVar name (outer ++ ns)
+embedNVar : NVar name vars -> NVar name (more ++ vars)
 embedNVar (MkNVar p) = MkNVar (embedIsVar p)
 
 export
-insertNVar : SizeOf local ->
-             NVar nm (outer ++ local) ->
-             NVar nm (outer :< n ++ local)
+insertNVar : SizeOf outer ->
+             NVar nm (local ++ outer) ->
+             NVar nm (local :< n ++ outer)
 insertNVar p v = case locateNVar p v of
   Left v => embedNVar v
   Right v => weakenNVar p (later v)
@@ -292,25 +291,25 @@ insertNVarNames : GenWeakenable (NVar name)
 insertNVarNames p q v = case locateNVar p v of
   Left v => embedNVar v
   Right v =>
-    rewrite appendAssociative local ns outer in
-    weakenNVar (p + q) v
+    rewrite sym $ appendAssociative local ns outer in
+    weakenNVar (q + p) v
 
 ||| The (partial) inverse to insertNVar
 export
-removeNVar : SizeOf local ->
-         NVar nm (outer :< n ++ local) ->
-  Maybe (NVar nm (outer ++ local))
+removeNVar : SizeOf outer ->
+         NVar nm (local :< n ++ outer) ->
+  Maybe (NVar nm (local ++ outer))
 removeNVar s var = case locateNVar s var of
   Left v => pure (embedNVar v)
   Right v => weakenNVar s <$> isLater v
 
 export
-insertVar : SizeOf local ->
-  Var (outer ++ local) ->
-  Var (outer :< n ++ local)
+insertVar : SizeOf outer ->
+  Var (local ++ outer) ->
+  Var (local :< n ++ outer)
 insertVar p v = forgetName $ insertNVar p (recoverName v)
 
-weakenVar : SizeOf ns -> Var outer -> Var (outer ++ ns)
+weakenVar : SizeOf ns -> Var inner -> Var (inner ++ ns)
 weakenVar p v = forgetName $ weakenNVar p (recoverName v)
 
 insertVarNames : GenWeakenable Var
@@ -327,21 +326,21 @@ removeVar s var = forgetName <$> removeNVar s (recoverName var)
 -- Strengthening
 
 export
-strengthenIsVar : {n : Nat} -> (s : SizeOf inner) ->
-  (0 p : IsVar x n (vars ++ inner)) ->
+strengthenIsVar : {n : Nat} -> (s : SizeOf outer) ->
+  (0 p : IsVar x n (vars ++ outer)) ->
   Maybe (Erased (IsVar x (n `minus` size s) vars))
 strengthenIsVar s p = case locateIsVar s p of
   Left _ => Nothing
   Right p => pure p
 
-strengthenVar : SizeOf inner ->
-  Var (vars ++ inner) -> Maybe (Var vars)
+strengthenVar : SizeOf outer ->
+  Var (vars ++ outer) -> Maybe (Var vars)
 strengthenVar s (MkVar p)
   = do MkErased p <- strengthenIsVar s p
        pure (MkVar p)
 
-strengthenNVar : SizeOf inner ->
-  NVar x (vars ++ inner) -> Maybe (NVar x vars)
+strengthenNVar : SizeOf outer ->
+  NVar x (vars ++ outer) -> Maybe (NVar x vars)
 strengthenNVar s (MkNVar p)
   = do MkErased p <- strengthenIsVar s p
        pure (MkNVar p)

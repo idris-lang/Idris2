@@ -12,16 +12,16 @@ import Libraries.Data.SnocList.SizeOf
 
 public export
 data Subst : Scoped -> Scope -> Scoped where
-  Nil : Subst tm [<] vars
-  (::) : tm vars -> Subst tm ds vars -> Subst tm (ds :< d) vars
+  Lin : Subst tm [<] vars
+  (:<) : Subst tm ds vars -> tm vars -> Subst tm (ds :< d) vars
 
 namespace Var
 
   export
   index : Subst tm ds vars -> Var ds -> tm vars
-  index [] (MkVar p) impossible
-  index (t :: _) (MkVar First) = t
-  index (_ :: ts) (MkVar (Later p)) = index ts (MkVar p)
+  index [<] (MkVar p) impossible
+  index (_ :< t) (MkVar First) = ?t
+  index (ts :< _) (MkVar (Later p)) = index ts (MkVar p)
 
 export
 findDrop :
