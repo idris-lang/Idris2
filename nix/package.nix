@@ -1,5 +1,5 @@
-{ stdenv, lib, chez, clang, gmp, makeWrapper, installShellFiles, support, idris2Version
-, srcRev, gambit, nodejs, zsh, idris2Bootstrap ? null }:
+{ stdenv, lib, chez, clang, gmp, makeWrapper, installShellFiles, idris2Version
+, srcRev, gambit, nodejs, support, zsh, idris2Bootstrap ? null }:
 
 # Uses scheme to bootstrap the build of idris2
 let

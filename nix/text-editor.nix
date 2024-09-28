@@ -1,4 +1,4 @@
-{ pkgs, idris-emacs-src, idris2Pkg }:
+{ pkgs, idris-emacs-src, idris2 }:
 with pkgs;
 let
   init-file = ./init.el;
@@ -19,7 +19,7 @@ in rec {
   idris-emacs = emacsWithPackages [ idris2-mode ];
   emacs-dev = makeEmacsWrapper "emacs-dev" idris-emacs init-file;
   emacs-with-idris = writeShellScriptBin "emacs-with-idris" ''
-    export PATH=${idris2Pkg}/bin:$PATH
+    export PATH=${idris2}/bin:$PATH
     ${emacs-dev}/bin/emacs-dev $@
   '';
 }

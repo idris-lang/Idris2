@@ -22,44 +22,18 @@
           description = "A custom Idris 2 package with dependencies";
         };
         defaultTemplate = templates.pkg;
+        overlays.default = import ./nix/overlay.nix {
+          inherit idris2Version;
+          shortRev = self.shortRev or null;
+        };
         version = idris2Version;
       };
       per-system = { config ? { }, overlays ? [ ] }:
         system:
         let
-          pkgs = import nixpkgs { inherit config system overlays; };
-          chezSupportsSystem = (system == "x86_64-linux")
-            || (pkgs.lib.versionAtLeast pkgs.chez.version "10.0.0");
-          chez = if chezSupportsSystem then
-            pkgs.chez
-          else
-            pkgs.chez-racket;
-          idris2Support = pkgs.callPackage ./nix/support.nix { inherit idris2Version; };
-          idris2Bootstrap = pkgs.callPackage ./nix/package.nix {
-            inherit idris2Version chez;
-            idris2Bootstrap = null;
-            support = idris2Support;
-            srcRev = self.shortRev or "dirty";
-          };
-          idris2Pkg = pkgs.callPackage ./nix/package.nix {
-            inherit idris2Version chez idris2Bootstrap;
-            support = idris2Support;
-            srcRev = self.shortRev or "dirty";
-          };
-          buildIdris = pkgs.callPackage ./nix/buildIdris.nix {
-            inherit idris2Version;
-            idris2 = idris2Pkg;
-            support = idris2Support;
-          };
-          idris2ApiPkg = buildIdris {
-            src = ./.;
-            ipkgName = "idris2api";
-            version = idris2Version;
-            idrisLibraries = [ ];
-            preBuild = ''
-              export IDRIS2_PREFIX=$out/lib
-              make src/IdrisPaths.idr
-            '';
+          pkgs = import nixpkgs {
+            inherit config system;
+            overlays = overlays ++ [ self.overlays.default ];
           };
           stdenv' = with pkgs; if stdenv.isDarwin then overrideSDK stdenv "11.0" else stdenv;
         in {
@@ -69,16 +43,16 @@
             idris = self;
           };
           packages = rec {
-            support = idris2Support;
-            idris2 = idris2Pkg;
-            idris2Api = idris2ApiPkg.library { withSource = true; };
+            inherit (pkgs.idris2Packages) support idris2;
+            idris2Api = pkgs.idris2Packages.idris2Api.library { withSource = true; };
             default = idris2;
           } // (import ./nix/text-editor.nix {
-            inherit pkgs idris-emacs-src idris2Pkg;
+            inherit (pkgs) idris2;
+            inherit pkgs idris-emacs-src;
           });
-          inherit buildIdris;
+          inherit (pkgs.idris2Packages) buildIdris;
           devShells.default = pkgs.mkShell.override { stdenv = stdenv'; } {
-            packages = idris2Pkg.buildInputs;
+            packages = pkgs.idris2.buildInputs;
           };
         };
     in lib.mkOvrOptsFlake

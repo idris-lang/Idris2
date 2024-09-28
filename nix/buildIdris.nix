@@ -1,4 +1,4 @@
-{ stdenv, lib, idris2Version, idris2, jq, support, makeWrapper }:
+{ stdenv, lib, idris2Version, idris2Packages, jq, makeWrapper }:
 # Usage: let
 #          pkg = idris2Pkg.buildIdris {
 #            src = ...;
@@ -20,6 +20,7 @@ let
   # loop over idrisLibraries and normalize them by turning any that are
   # direct outputs of the buildIdris function into the `.library {}`
   # property.
+  inherit (idris2Packages) idris2 support;
   idrisLibraryLibs = map (idrisLib:
     if lib.isDerivation idrisLib
     then idrisLib
