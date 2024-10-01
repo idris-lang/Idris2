@@ -102,7 +102,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
         = logDepth $ evalLocal env fc mrig idx prf stk locs
     eval env locs (Ref fc nt fn) stk
         =
-            let scoped_list_stk = fromList stk
+            let scoped_list_stk = cast stk
             in evalRef env False fc nt fn scoped_list_stk (NApp fc (NRef nt fn) scoped_list_stk)
     eval {vars} {free} env locs (Meta fc name idx args) stk
         = evalMeta env fc name idx (closeArgs args) stk
@@ -149,7 +149,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
              case tm' of
                   NDelay fc r _ arg =>
                       eval env (arg :: locs) (Local {name = UN (Basic "fvar")} fc Nothing _ First) stk
-                  _ => pure (NForce fc r tm' (fromList stk))
+                  _ => pure (NForce fc r tm' (cast stk))
     eval env locs (PrimVal fc c) stk = pure $ NPrimVal fc c
     eval env locs (Erased fc a) stk
       = NErased fc <$> traverse @{%search} @{CORE} (\ t => eval env locs t stk) a
@@ -237,8 +237,8 @@ parameters (defs : Defs) (topopts : EvalOpts)
              then
                case getBinder prf env of
                     Let _ _ val _ => eval env [] val stk
-                    _ => pure $ NApp fc (NLocal mrig idx prf) (fromList stk)
-             else pure $ NApp fc (NLocal mrig idx prf) (fromList stk)
+                    _ => pure $ NApp fc (NLocal mrig idx prf) (cast stk)
+             else pure $ NApp fc (NLocal mrig idx prf) (cast stk)
     evalLocal env fc mrig Z First stk (x :: locs)
         = evalLocClosure env fc mrig stk x
     evalLocal {vars = xs :< x} {free}
@@ -266,7 +266,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
                          else (map (EmptyFC,) args) <>< stk
                         in
               evalRef env True fc Func (Resolved i) args'
-                          (NApp fc (NMeta nm i args) (fromList scoped_list_stack))
+                          (NApp fc (NMeta nm i args) (cast stk))
 
     -- The commented out logging here might still be useful one day, but
     -- evalRef is used a lot and even these tiny checks turn out to be
