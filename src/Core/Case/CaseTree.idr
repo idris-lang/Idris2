@@ -10,6 +10,7 @@ import Idris.Pretty.Annotations
 import Libraries.Data.NameMap
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Data.String.Extra -- needed for boostrapping
+import Libraries.Data.SnocList.SizeOf
 
 %default covering
 
@@ -197,7 +198,7 @@ mutual
   insertCaseNames : SizeOf outer ->
                     SizeOf ns ->
                     CaseTree (inner ++ outer) ->
-                    CaseTree ((inner ++ ns) ++ outer)
+                    CaseTree (inner ++ ns ++ outer)
   insertCaseNames outer ns (Case idx prf scTy alts)
       = let MkNVar prf' = insertNVarNames outer ns (MkNVar prf) in
             Case _ prf' (insertNames outer ns scTy)
@@ -209,13 +210,23 @@ mutual
   insertCaseAltNames : SizeOf outer ->
                        SizeOf ns ->
                        CaseAlt (inner ++ outer) ->
-                       CaseAlt ((inner ++ ns) ++ outer)
+                       CaseAlt (inner ++ ns ++ outer)
   insertCaseAltNames p q (ConCase x tag args ct)
-      = ConCase x tag args
-           (rewrite appendAssociative args outer (inner ++ ns) in
-                    insertCaseNames (mkSizeOf args + p) q {inner}
-                        (rewrite sym (appendAssociative args outer inner) in
-                                 ct))
+        = ConCase x tag args locals'
+      where
+        ct' : CaseTree (inner ++ (outer ++ args))
+        ct' = rewrite (appendAssociative inner outer args) in ct
+
+        locals : CaseTree (inner ++ (ns ++ (outer ++ args)))
+        locals = insertCaseNames (p + mkSizeOf args) q ct'
+
+        locals' : CaseTree ((inner ++ (ns ++ outer)) ++ args)
+        locals' = do
+          rewrite (appendAssociative inner ns outer)
+          rewrite sym (appendAssociative (inner ++ ns) outer args)
+          rewrite sym (appendAssociative inner ns (outer ++ args))
+          locals
+
   insertCaseAltNames outer ns (DelayCase tyn valn ct)
       = DelayCase tyn valn
                   (insertCaseNames (suc (suc outer)) ns ct)

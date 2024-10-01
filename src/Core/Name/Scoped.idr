@@ -113,7 +113,7 @@ Strengthenable tm = {0 vars, ns : Scope} ->
 public export
 0 GenWeakenable : Scoped -> Type
 GenWeakenable tm = {0 local, ns, outer : Scope} ->
-  SizeOf outer -> SizeOf ns -> tm (local ++ outer) -> tm ((local ++ ns) ++ outer)
+  SizeOf outer -> SizeOf ns -> tm (local ++ outer) -> tm (local ++ ns ++ outer)
 
 public export
 0 Thinnable : Scoped -> Type
@@ -147,7 +147,7 @@ interface GenWeaken (0 tm : Scoped) where
 
 export
 genWeaken : GenWeaken tm =>
-  SizeOf outer -> tm (local ++ outer) -> tm (local :< n ++ outer)
+  SizeOf outer -> tm (local ++ outer) -> tm (local ++ ([<n] ++ outer))
 genWeaken l = genWeakenNs l (suc zero)
 
 public export
