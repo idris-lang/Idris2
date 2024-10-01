@@ -7,6 +7,8 @@ import Data.List
 import Data.SnocList
 import Data.Vect
 
+import Libraries.Data.SnocList.SizeOf
+
 makeArgs : (args : SnocList Name) -> List (Var (vars ++ args))
 makeArgs args = makeArgs' args id
   where
@@ -114,7 +116,7 @@ checkIdentity fn (v :: vs) exp idx = if cexpIdentity fn idx v Nothing Nothing ex
     else checkIdentity fn vs exp (S idx)
 
 calcIdentity : (fullName : Name) -> CDef -> Maybe Nat
-calcIdentity fn (MkFun args exp) = checkIdentity fn (makeArgs {vars=[<]} args) (rewrite appendNilRightNeutral args in exp) Z
+calcIdentity fn (MkFun args exp) = checkIdentity fn (makeArgs {vars=[<]} args) (rewrite appendLinLeftNeutral args in exp) Z
 calcIdentity _ _ = Nothing
 
 getArg : FC -> Nat -> (args : SnocList Name) -> Maybe (CExp args)

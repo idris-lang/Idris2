@@ -71,7 +71,7 @@ normaliseLHS : {auto c : Ref Ctxt Defs} ->
                {free : _} ->
                Defs -> Env Term free -> Term free -> Core (Term free)
 normaliseLHS defs env (Bind fc n b sc)
-    = pure $ Bind fc n b !(normaliseLHS defs (b :: env) sc)
+    = pure $ Bind fc n b !(normaliseLHS defs (env :< b) sc)
 normaliseLHS defs env tm
     = quote defs env !(nfOpts onLHS defs env tm)
 
@@ -118,7 +118,7 @@ normaliseScope : {auto c : Ref Ctxt Defs} ->
                  {free : _} ->
                  Defs -> Env Term free -> Term free -> Core (Term free)
 normaliseScope defs env (Bind fc n b sc)
-    = pure $ Bind fc n b !(normaliseScope defs (b :: env) sc)
+    = pure $ Bind fc n b !(normaliseScope defs (env :< b) sc)
 normaliseScope defs env tm = normalise defs env tm
 
 export
@@ -246,12 +246,12 @@ logEnv str n msg env
   where
 
     dumpEnv : {vs : SnocList Name} -> Env Term vs -> Core ()
-    dumpEnv [] = pure ()
-    dumpEnv {vs = _ :< x} (Let _ c val ty :: bs)
+    dumpEnv [<] = pure ()
+    dumpEnv {vs = _ :< x} (bs :< Let _ c val ty)
         = do logTermNF' str n (msg ++ ": let " ++ show x) bs val
              logTermNF' str n (msg ++ ":" ++ show c ++ " " ++ show x) bs ty
              dumpEnv bs
-    dumpEnv {vs = _ :< x} (b :: bs)
+    dumpEnv {vs = _ :< x} (bs :< b)
         = do logTermNF' str n (msg ++ ":" ++ show (multiplicity b) ++ " " ++
                            show (piInfo b) ++ " " ++
                            show x) bs (binderType b)

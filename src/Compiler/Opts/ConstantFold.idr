@@ -10,6 +10,8 @@ import Data.List
 import Data.SnocList
 import Data.Vect
 
+import Libraries.Data.SnocList.SizeOf
+
 findConstAlt : Constant -> List (CConstAlt vars) ->
                Maybe (CExp vars) -> Maybe (CExp vars)
 findConstAlt c [] def = def
@@ -32,15 +34,16 @@ data Subst : SnocList Name -> SnocList Name -> Type where
 
 initSubst : (vars : SnocList Name) -> Subst vars vars
 initSubst vars
-  = rewrite sym $ appendNilRightNeutral vars in
+  = rewrite sym $ appendLinLeftNeutral vars in
     Wk (mkSizeOf vars) []
 
 
 wk : SizeOf out -> Subst ds vars -> Subst (ds ++ out) (vars ++ out)
 wk sout (Wk {ws, ds, vars} sws rho)
-  = rewrite appendAssociative out ws ds in
-    rewrite appendAssociative out ws vars in
-    Wk (sout + sws) rho
+  = do
+    rewrite sym $ appendAssociative ds ws out
+    rewrite sym $ appendAssociative vars ws out
+    Wk (sws + sout) rho
 wk ws rho = Wk ws rho
 
 record WkCExp (vars : SnocList Name) where
@@ -52,7 +55,7 @@ record WkCExp (vars : SnocList Name) where
 
 Weaken WkCExp where
   weakenNs s' (MkWkCExp {outer, supp} s Refl e)
-    = MkWkCExp (s' + s) (appendAssociative ns outer supp)  e
+    = MkWkCExp (s + s') (sym $ appendAssociative supp outer ns)  e
 
 lookup : FC -> Var ds -> Subst ds vars -> CExp vars
 lookup fc (MkVar p) rho = case go p rho of
