@@ -264,7 +264,7 @@ toANF : LiftedDef -> Core ANFDef
 toANF (MkLFun args scope sc)
     = do v <- newRef Next (the Int 0)
          (iargs, vsNil) <- bindArgs args []
-         let vs : AVars args = rewrite sym (appendNilRightNeutral args) in
+         let vs : AVars args = rewrite sym (appendLinLeftNeutral args) in
                                       vsNil
          (iargs', vs) <- bindArgs scope vs
          pure $ MkAFun (iargs ++ reverse iargs') !(anf vs sc)

@@ -358,10 +358,10 @@ initUsed : {vars : _} -> Used vars
 initUsed {vars} = MkUsed (replicate (length vars) False)
 
 lengthDistributesOverAppend
-  : (xs, ys : List a)
-  -> length (xs ++ ys) = length xs + length ys
-lengthDistributesOverAppend [] ys = Refl
-lengthDistributesOverAppend (x :: xs) ys =
+  : (xs, ys : SnocList a)
+  -> length (ys ++ xs) = length xs + length ys
+lengthDistributesOverAppend [<] ys = Refl
+lengthDistributesOverAppend (xs :< x) ys =
   cong S $ lengthDistributesOverAppend xs ys
 
 weakenUsed : {outer : _} -> Used vars -> Used (vars ++ outer)
@@ -581,11 +581,18 @@ mutual
         LConCase fc (dropUnused unused sc) alts' (map (dropUnused unused) def)
     where
       dropConCase : LiftedConAlt (vars ++ outer) ->
-                    LiftedConAlt ((dropped vars unused) ++ outer)
+                    LiftedConAlt (dropped vars unused ++ outer)
       dropConCase (MkLConAlt n ci t args sc) =
-        let sc' = (rewrite sym $ appendAssociative args outer vars in sc)
-            droppedSc = dropUnused {vars=vars} {outer=outer++args} unused sc' in
-        MkLConAlt n ci t args (rewrite appendAssociative args outer (dropped vars unused) in droppedSc)
+        MkLConAlt n ci t args (?sdf droppedSc)
+        where
+          sc' : Lifted (vars ++ (outer ++ args))
+          sc' = (rewrite appendAssociative vars outer args in sc)
+
+          droppedSc : Lifted ((dropped vars unused ++ outer) ++ args)
+          droppedSc = do
+            rewrite sym $ appendAssociative (dropped vars unused) outer args
+            dropUnused {vars=vars} {outer=outer++args} unused sc'
+
   dropUnused {vars} {outer} unused (LConstCase fc sc alts def) =
     let alts' = map dropConstCase alts in
         LConstCase fc (dropUnused unused sc) alts' (map (dropUnused unused) def)
