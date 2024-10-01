@@ -557,13 +557,13 @@ mutual
 
 export
 HasNames (Env Term vars) where
-  full gam [] = pure []
-  full gam (b :: bs)
-      = pure $ !(traverse (full gam) b) :: !(full gam bs)
+  full gam [<] = pure [<]
+  full gam (bs :< b)
+      = pure $ !(full gam bs) :< !(traverse (full gam) b)
 
-  resolved gam [] = pure []
-  resolved gam (b :: bs)
-      = pure $ !(traverse (resolved gam) b) :: !(resolved gam bs)
+  resolved gam [<] = pure [<]
+  resolved gam (bs :< b)
+      = pure $ !(resolved gam bs) :< !(traverse (resolved gam) b)
 
 export
 HasNames Clause where
