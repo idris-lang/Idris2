@@ -249,7 +249,7 @@ mutual
                         SnocList (Var vs, Var vs') ->
                         Core Bool
        convertMatches [<] = pure True
-       convertMatches ((MkVar {varIdx = ix} p, vs :< MkVar {varIdx = iy} p'))
+       convertMatches (vs :< (MkVar {varIdx = ix} p, MkVar {varIdx = iy} p'))
           = do let Just varg = getArgPos ix nargs
                    | Nothing => pure False
                let Just varg' = getArgPos iy nargs'
