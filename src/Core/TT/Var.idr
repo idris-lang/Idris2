@@ -289,10 +289,8 @@ insertNVarChiply p v
 export
 insertNVarNames : GenWeakenable (NVar name)
 insertNVarNames p q v = case locateNVar p v of
-  Left v => embedNVar v
-  Right v =>
-    rewrite sym $ appendAssociative local ns outer in
-    weakenNVar (q + p) v
+  Left v => rewrite appendAssociative local ns outer in embedNVar v
+  Right v => weakenNVar (q + p) v
 
 ||| The (partial) inverse to insertNVar
 export
