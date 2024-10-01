@@ -16,6 +16,8 @@ import Data.SnocList
 import Data.Maybe
 import Data.Vect
 
+import Libraries.Data.SnocList.SizeOf
+
 %default covering
 
 data Args
@@ -463,7 +465,11 @@ mutual
                              let (s, env) : (_, SubstCEnv args (vars :< MN "eff" 0))
                                      = mkSubst 0 (CLocal fc First) pos args in
                              do sc' <- toCExpTree n sc
-                                let scope = insertNames {outer=args}
+                                let
+                                    scope : CExp ((vars ++ [<MN "eff" 0]) ++ args)
+                                    scope = do
+                                            rewrite sym $ appendAssociative vars [<MN "eff" 0] args
+                                            insertNames {outer=args}
                                                         {inner=vars}
                                                         {ns = [<MN "eff" 0]}
                                                         (mkSizeOf _) (mkSizeOf _) sc'
@@ -474,12 +480,12 @@ mutual
     where
       mkSubst : Nat -> CExp vs ->
                 Nat -> (args : SnocList Name) -> (SizeOf args, SubstCEnv args vs)
-      mkSubst _ _ _ [<] = (zero, [])
+      mkSubst _ _ _ [<] = (zero, [<])
       mkSubst i scr pos (as :< a)
           = let (s, env) = mkSubst (1 + i) scr pos as in
             if i == pos
-               then (suc s, scr :: env)
-               else (suc s, CErased fc :: env)
+               then (suc s, env :< scr)
+               else (suc s, env :< CErased fc)
   getNewType fc scr n (_ :: ns) = getNewType fc scr n ns
 
   getDef : {vars : _} ->
@@ -628,7 +634,7 @@ nfToCFType _ _ (NPrimVal _ $ PrT WorldType) = pure CFWorld
 nfToCFType _ False (NBind fc _ (Pi _ _ _ ty) sc)
     = do defs <- get Ctxt
          sty <- nfToCFType fc False !(evalClosure defs ty)
-         sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
+         sc' <- sc defs (toClosure defaultOpts [<] (Erased fc Placeholder))
          tty <- nfToCFType fc False sc'
          pure (CFFun sty tty)
 nfToCFType _ True (NBind fc _ _ _)
@@ -663,7 +669,7 @@ nfToCFType _ s (NErased _ _)
     = pure (CFUser (UN (Basic "__")) [])
 nfToCFType fc s t
     = do defs <- get Ctxt
-         ty <- quote defs [] t
+         ty <- quote defs [<] t
          throw (GenericMsg (getLoc t)
                        ("Can't marshal type for foreign call " ++
                                       show !(toFullNames ty)))
@@ -674,26 +680,26 @@ getCFTypes : {auto c : Ref Ctxt Defs} ->
 getCFTypes args (NBind fc _ (Pi _ _ _ ty) sc)
     = do defs <- get Ctxt
          aty <- nfToCFType fc False !(evalClosure defs ty)
-         sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
+         sc' <- sc defs (toClosure defaultOpts [<] (Erased fc Placeholder))
          getCFTypes (aty :: args) sc'
 getCFTypes args t
     = pure (reverse args, !(nfToCFType (getLoc t) False t))
 
 lamRHSenv : Int -> FC -> (ns : SnocList Name) -> (SizeOf ns, SubstCEnv ns [<])
-lamRHSenv i fc [<] = (zero, [])
+lamRHSenv i fc [<] = (zero, [<])
 lamRHSenv i fc (ns :< n)
     = let (s, env) = lamRHSenv (i + 1) fc ns in
-      (suc s, CRef fc (MN "x" i) :: env)
+      (suc s, env :< CRef fc (MN "x" i))
 
-mkBounds : (xs : _) -> SL.Bounds xs
+mkBounds : (xs : _) -> Bounds xs
 mkBounds [<] = None
 mkBounds (xs :< x) = Add x x (mkBounds xs)
 
 getNewArgs : {done : _} ->
              SubstCEnv done args -> SnocList Name
-getNewArgs [] = [<]
-getNewArgs (CRef _ n :: xs) = getNewArgs xs :< n
-getNewArgs {done = xs :< x} (_ :: sub) = getNewArgs sub :< x
+getNewArgs [<] = [<]
+getNewArgs (xs :< CRef _ n) = getNewArgs xs :< n
+getNewArgs {done = xs :< x} (sub :< _) = getNewArgs sub :< x
 
 -- If a name is declared in one module and defined in another,
 -- we have to assume arity 0 for incremental compilation because
@@ -702,7 +708,7 @@ getNewArgs {done = xs :< x} (_ :: sub) = getNewArgs sub :< x
 lamRHS : (ns : SnocList Name) -> CExp ns -> CExp [<]
 lamRHS ns tm
     = let (s, env) = lamRHSenv 0 (getFC tm) ns
-          tmExp = substs s env (rewrite appendNilRightNeutral ns in tm)
+          tmExp = substs s env (rewrite appendLinLeftNeutral ns in tm)
           newArgs = reverse $ getNewArgs env
           bounds = mkBounds newArgs
           expLocs = mkLocals zero {vars = [<]} bounds tmExp in
@@ -740,7 +746,7 @@ toCDef n ty _ (ExternDef arity)
     getVars (ConsArg a rest) = MkVar First :: map weakenVar (getVars rest)
 toCDef n ty _ (ForeignDef arity cs)
     = do defs <- get Ctxt
-         (atys, retty) <- getCFTypes [] !(nf defs [] ty)
+         (atys, retty) <- getCFTypes [] !(nf defs [<] ty)
          pure $ MkForeign cs atys retty
 toCDef n ty _ (Builtin {arity} op)
     = let (ns ** args) = mkArgList 0 arity in
