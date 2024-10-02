@@ -493,16 +493,16 @@ mutual
 
 export
 {vars : _} -> TTC (Env Term vars) where
-  toBuf b [] = pure ()
-  toBuf b ((::) bnd env)
+  toBuf b [<] = pure ()
+  toBuf b (env :< bnd)
       = do toBuf b bnd; toBuf b env
 
   -- Length has to correspond to length of 'vars'
-  fromBuf {vars = [<]} b = pure Nil
+  fromBuf {vars = [<]} b = pure Lin
   fromBuf {vars = xs :< x} b
       = do bnd <- fromBuf b
            env <- fromBuf b
-           pure (bnd :: env)
+           pure (env :< bnd)
 
 export
 TTC Visibility where
