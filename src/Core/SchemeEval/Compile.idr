@@ -20,6 +20,7 @@ import Core.SchemeEval.ToScheme
 import Core.TT
 
 import Data.List
+import Data.SnocList
 
 import Libraries.Utils.Scheme
 import System.Info

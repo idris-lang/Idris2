@@ -16,6 +16,8 @@ import TTImp.Elab
 import TTImp.Elab.Check
 import TTImp.TTImp
 
+import Data.SnocList
+
 %default covering
 
 extend : {extvs : _} ->
@@ -24,7 +26,7 @@ extend : {extvs : _} ->
          Term extvs ->
          (vars' ** (Thin vs vars', Env Term vars', NestedNames vars'))
 extend env p nest (Bind _ n b@(Pi fc c pi ty) sc)
-    = extend (b :: env) (Drop p) (weaken nest) sc
+    = extend (env :< b) (Drop p) (weaken nest) sc
 extend env p nest tm = (_ ** (p, env, nest))
 
 export

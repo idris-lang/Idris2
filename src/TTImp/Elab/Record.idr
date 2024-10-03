@@ -18,6 +18,7 @@ import TTImp.Elab.Delayed
 import TTImp.TTImp
 
 import Data.List
+import Data.SnocList
 import Libraries.Data.SortedSet
 
 %default covering
@@ -87,7 +88,7 @@ findFieldsAndTypeArgs : {auto c : Ref Ctxt Defs} ->
                         Core $ Maybe (List (String, Maybe Name, Maybe Name), SortedSet Name)
 findFieldsAndTypeArgs defs con
     = case !(lookupTyExact con (gamma defs)) of
-           Just t => pure (Just !(getExpNames empty [] !(nf defs [] t)))
+           Just t => pure (Just !(getExpNames empty [] !(nf defs [<] t)))
            _ => pure Nothing
   where
     getExpNames : SortedSet Name ->
@@ -100,8 +101,8 @@ findFieldsAndTypeArgs defs con
                             _ => Just x
              nfty <- evalClosure defs ty
              let names = !(getNames defs nfty) `union` names
-             let expNames = (nameRoot x, imp, getRecordType [] nfty) :: expNames
-             getExpNames names expNames !(sc defs (toClosure defaultOpts [] (Ref fc Bound x)))
+             let expNames = (nameRoot x, imp, getRecordType [<] nfty) :: expNames
+             getExpNames names expNames !(sc defs (toClosure defaultOpts [<] (Ref fc Bound x)))
     getExpNames names expNames nfty = pure (reverse expNames, (!(getNames defs nfty) `union` names))
 
 genFieldName : {auto u : Ref UST UState} ->

@@ -19,6 +19,8 @@ import Data.String
 import Data.Vect
 import Libraries.Data.List.LengthMatch
 import Libraries.Data.SortedSet
+import Libraries.Data.SnocList.SizeOf
+import Libraries.Data.SnocList.LengthMatch
 
 import Decidable.Equality
 
@@ -476,8 +478,8 @@ nextNames {vars} fc root (pats :< p) fty
 newPats : (pargs : SnocList Pat) -> LengthMatch pargs ns ->
           NamedPats vars (todo ++ ns) ->
           NamedPats vars ns
-newPats [<] NilMatch rest = []
-newPats (xs :< newpat) (ConsMatch w) (pi :: rest)
+newPats [<] LinMatch rest = []
+newPats (xs :< newpat) (SnocMatch w) (pi :: rest)
   = { pat := newpat} pi :: newPats xs w rest
 
 updateNames : SnocList (Name, Pat) -> SnocList (Name, Name)
@@ -600,7 +602,7 @@ groupCons fc fn pvars cs
           ((DelayGroup {tyarg} {valarg} ((MkPatClause pvars ps tid tm) :: rest)) :: gs)
                  | (DelayMatch {tyarg} {valarg})
          = do let l = mkSizeOf [<valarg, tyarg]
-              let newps = newPats [<parg, pty] (ConsMatch (ConsMatch NilMatch)) ps
+              let newps = newPats [<parg, pty] (SnocMatch (SnocMatch LinMatch)) ps
               let pats' = updatePatNames (updateNames [<(valarg, parg), (tyarg, pty)])
                                          (weakenNs l pats)
               let newclause : PatClause (vars' :< valarg :< tyarg)
@@ -685,10 +687,10 @@ data ScoredPats : SnocList Name -> SnocList Name -> Type where
 zeroedScore : {ps : _} -> List (NamedPats ns (ps :< p)) -> ScoredPats ns (ps :< p)
 zeroedScore nps = Scored nps (replicate (S $ length ps) 0)
 
-||| Proof that a value `v` inserted in the middle of a list with
-||| prefix `ps` and suffix `qs` can equivalently be snoced with
+||| Proof that a value `v` inserted in the middle of a snoc list with
+||| prefix `ps` and suffix `qs` can equivalently be consed with
 ||| `ps` or consed with `qs` before appending `qs` to `ps`.
-elemInsertedMiddle : (v : a) -> (ps,qs : SnocList a) -> ((qs :< v) ++ ps) = (qs ++ (ps `snoc` v))
+elemInsertedMiddle : (v : a) -> (ps,qs : SnocList a) -> ((qs :< v) ++ ps) = (qs ++ (v `cons` ps))
 elemInsertedMiddle v [<] qs = Refl
 elemInsertedMiddle v (xs :< x) qs = rewrite elemInsertedMiddle v xs qs in Refl
 
@@ -704,7 +706,7 @@ highScore : {prev : SnocList Name} ->
 highScore [<] [] high idx True = Nothing
 highScore [<] [] high idx False = Just idx
 highScore (xs :< x) (y :: ys) high idx duped =
-  let next = highScore {prev = prev `snoc` x} xs ys
+  let next = highScore {prev = x `cons` prev} xs ys
       prf = elemInsertedMiddle x prev xs
   in  rewrite prf in
         case compare y high of
@@ -1097,7 +1099,7 @@ mkPat args orig (Ref fc (DataCon t a) n) = pure $ PCon fc n t a args
 mkPat args orig (Ref fc (TyCon t a) n) = pure $ PTyCon fc n a args
 mkPat args orig (Ref fc Func n)
   = do prims <- getPrimitiveNames
-       mtm <- normalisePrims (const True) isPConst True prims n args orig []
+       mtm <- normalisePrims (const True) isPConst True prims n args orig [<]
        case mtm of
          Just tm => if tm /= orig -- check we made progress; if there's an
                                   -- unresolved interface, we might be stuck
@@ -1146,34 +1148,34 @@ mkPatClause fc fn args ty pid (ps, rhs)
     = maybe (throw (CaseCompile fc fn DifferingArgNumbers))
             (\eq =>
                do defs <- get Ctxt
-                  nty <- nf defs [] ty
+                  nty <- nf defs [<] ty
                   ns <- logDepth $ mkNames args ps eq (Just nty)
                   log "compile.casetree" 20 $
                     "Make pat clause for names " ++ show ns
                      ++ " in LHS " ++ show ps
                   pure (MkPatClause [] ns pid
-                          (rewrite sym (appendNilRightNeutral args) in
+                          (rewrite sym (appendLinLeftNeutral args) in
                                    (weakenNs (mkSizeOf args) rhs))))
             (checkLengthMatch args ps)
   where
     mkNames : (vars : SnocList Name) -> (ps : SnocList Pat) ->
               LengthMatch vars ps -> Maybe (NF [<]) ->
               Core (NamedPats vars vars)
-    mkNames [<] [<] NilMatch fty = pure []
-    mkNames (args :< arg) (ps :< p) (ConsMatch eq) fty
+    mkNames [<] [<] LinMatch fty = pure []
+    mkNames (args :< arg) (ps :< p) (SnocMatch eq) fty
         = do defs <- get Ctxt
              empty <- clearDefs defs
              fa_tys <- the (Core (Maybe _, ArgType _)) $
                 case fty of
                      Nothing => pure (Nothing, CaseBuilder.Unknown)
                      Just (NBind pfc _ (Pi _ c _ farg) fsc) =>
-                        pure (Just !(fsc defs (toClosure defaultOpts [] (Ref pfc Bound arg))),
+                        pure (Just !(fsc defs (toClosure defaultOpts [<] (Ref pfc Bound arg))),
                                 Known c (embed {outer = args :< arg}
-                                          !(quote empty [] farg)))
+                                          !(quote empty [<] farg)))
                      Just t =>
                         pure (Nothing,
                                 Stuck (embed {outer = args :< arg}
-                                        !(quote empty [] t)))
+                                        !(quote empty [<] t)))
              pure (MkInfo p First (Builtin.snd fa_tys)
                       :: weaken !(mkNames args ps eq (Builtin.fst fa_tys)))
 
@@ -1199,7 +1201,7 @@ patCompile fc fn phase ty (p :: ps) def
          log "compile.casetree" 10 $ show pats
          i <- newRef PName (the Int 0)
          cases <- match fc fn phase pats
-                        (rewrite sym (appendNilRightNeutral ns) in
+                        (rewrite sym (appendLinLeftNeutral ns) in
                                  map (weakenNs n) def)
          pure (_ ** cases)
   where
@@ -1216,7 +1218,7 @@ patCompile fc fn phase ty (p :: ps) def
     getNames i [<] = ([<] ** zero)
     getNames i (xs :< x) =
       let (ns ** n) = getNames (i + 1) xs
-      in (MN "arg" ns :< i ** suc n)
+      in (ns :< MN "arg" i ** suc n)
 
 toPatClause : {auto c : Ref Ctxt Defs} ->
               FC -> Name -> (ClosedTerm, ClosedTerm) ->
@@ -1346,12 +1348,12 @@ getPMDef : {auto c : Ref Ctxt Defs} ->
 getPMDef fc phase fn ty []
     = do log "compile.casetree.getpmdef" 20 "getPMDef: No clauses!"
          defs <- get Ctxt
-         pure (!(getArgs 0 !(nf defs [] ty)) ** (Unmatched "No clauses", []))
+         pure (!(getArgs 0 !(nf defs [<] ty)) ** (Unmatched "No clauses", []))
   where
     getArgs : Int -> NF [<] -> Core (SnocList Name)
     getArgs i (NBind fc x (Pi _ _ _ _) sc)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
+             sc' <- sc defs (toClosure defaultOpts [<] (Erased fc Placeholder))
              pure (!(getArgs i sc') :< MN "arg" i)
     getArgs i _ = pure [<]
 getPMDef fc phase fn ty clauses

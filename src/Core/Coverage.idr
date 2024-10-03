@@ -15,6 +15,7 @@ import Data.String
 
 import Libraries.Data.NameMap
 import Libraries.Data.String.Extra
+import Libraries.Data.SnocList.SizeOf
 import Libraries.Text.PrettyPrint.Prettyprinter
 
 %default covering
@@ -77,7 +78,7 @@ conflict defs env nfty n
               | Nothing => pure False
          case (definition gdef, type gdef) of
               (DCon t arity _, dty)
-                  => do Nothing <- conflictNF 0 nfty !(nf defs [] dty)
+                  => do Nothing <- conflictNF 0 nfty !(nf defs [<] dty)
                             | Just ms => pure $ conflictMatch ms
                         pure True
               _ => pure False
@@ -110,7 +111,7 @@ conflict defs env nfty n
           -- put posslbe
           = let x' = MN (show x) i in
                 conflictNF (i + 1) t
-                       !(sc defs (toClosure defaultOpts [] (Ref fc Bound x')))
+                       !(sc defs (toClosure defaultOpts [<] (Ref fc Bound x')))
       conflictNF i nf (NApp _ (NRef Bound n) [<])
           = do empty <- clearDefs defs
                pure (Just [(n, !(quote empty env nf))])
@@ -455,7 +456,7 @@ checkMatched cs ulhs
   where
     tryClauses : List Clause -> ClosedTerm -> Core (Maybe ClosedTerm)
     tryClauses [] ulhs
-        = do logTermNF "coverage" 10 "Nothing matches" [] ulhs
+        = do logTermNF "coverage" 10 "Nothing matches" [<] ulhs
              pure $ Just ulhs
     tryClauses (MkClause env lhs _ :: cs) ulhs
         = if !(clauseMatches env lhs ulhs)
