@@ -10,9 +10,11 @@ import TTImp.TTImp
 
 import Libraries.Data.NameMap
 
+import Data.SnocList
+
 getRetTy : Defs -> NF [<] -> Core Name
 getRetTy defs (NBind fc _ (Pi _ _ _ _) sc)
-    = getRetTy defs !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder)))
+    = getRetTy defs !(sc defs (toClosure defaultOpts [<] (Erased fc Placeholder)))
 getRetTy defs (NTCon _ n _ _ _) = pure n
 getRetTy defs ty
     = throw (GenericMsg (getLoc ty)
@@ -50,7 +52,7 @@ processFnOpt fc True ndef (Hint d)
     = do defs <- get Ctxt
          Just ty <- lookupTyExact ndef (gamma defs)
               | Nothing => undefinedName fc ndef
-         target <- getRetTy defs !(nf defs [] ty)
+         target <- getRetTy defs !(nf defs [<] ty)
          addHintFor fc target ndef d False
 processFnOpt fc _ ndef (Hint d)
     = do logC "elab" 5 $ do pure $ "Adding local hint " ++ show !(toFullNames ndef)
@@ -78,7 +80,7 @@ processFnOpt fc _ ndef (SpecArgs ns)
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact ndef (gamma defs)
               | Nothing => undefinedName fc ndef
-         nty <- nf defs [] (type gdef)
+         nty <- nf defs [<] (type gdef)
          ps <- getNamePos 0 nty
          ddeps <- collectDDeps nty
          specs <- collectSpec [] ddeps ps nty
@@ -98,10 +100,10 @@ processFnOpt fc _ ndef (SpecArgs ns)
     collectDDeps (NBind tfc x (Pi _ _ _ nty) sc)
         = do defs <- get Ctxt
              empty <- clearDefs defs
-             sc' <- sc defs (toClosure defaultOpts [] (Ref tfc Bound x))
+             sc' <- sc defs (toClosure defaultOpts [<] (Ref tfc Bound x))
              if x `elem` ns
                 then collectDDeps sc'
-                else do aty <- quote empty [] nty
+                else do aty <- quote empty [<] nty
                         -- Get names depended on by nty
                         let deps = keys (getRefs (UN Underscore) aty)
                         rest <- collectDDeps sc'
@@ -122,12 +124,12 @@ processFnOpt fc _ ndef (SpecArgs ns)
       getDeps inparam (NBind _ x (Pi _ _ _ pty) sc) ns
           = do defs <- get Ctxt
                ns' <- getDeps inparam !(evalClosure defs pty) ns
-               sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
+               sc' <- sc defs (toClosure defaultOpts [<] (Erased fc Placeholder))
                getDeps inparam sc' ns'
       getDeps inparam (NBind _ x b sc) ns
           = do defs <- get Ctxt
                ns' <- getDeps False !(evalClosure defs (binderType b)) ns
-               sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
+               sc' <- sc defs (toClosure defaultOpts [<] (Erased fc Placeholder))
                getDeps False sc' ns
       getDeps inparam (NApp _ (NRef Bound n) args) ns
           = do defs <- get Ctxt
@@ -168,7 +170,7 @@ processFnOpt fc _ ndef (SpecArgs ns)
     collectSpec acc ddeps ps (NBind tfc x (Pi _ _ _ nty) sc)
         = do defs <- get Ctxt
              empty <- clearDefs defs
-             sc' <- sc defs (toClosure defaultOpts [] (Ref tfc Bound x))
+             sc' <- sc defs (toClosure defaultOpts [<] (Ref tfc Bound x))
              if x `elem` ns
                 then do deps <- getDeps True !(evalClosure defs nty) NameMap.empty
                         -- Get names depended on by nty
@@ -186,6 +188,6 @@ processFnOpt fc _ ndef (SpecArgs ns)
     getNamePos : Nat -> NF [<] -> Core (List (Name, Nat))
     getNamePos i (NBind tfc x (Pi _ _ _ _) sc)
         = do defs <- get Ctxt
-             ns' <- getNamePos (1 + i) !(sc defs (toClosure defaultOpts [] (Erased tfc Placeholder)))
+             ns' <- getNamePos (1 + i) !(sc defs (toClosure defaultOpts [<] (Erased tfc Placeholder)))
              pure ((x, i) :: ns')
     getNamePos _ _ = pure []

@@ -30,6 +30,8 @@ import TTImp.Unelab
 
 import System.File.Meta
 
+import Data.SnocList
+
 %default covering
 
 record NameInfo where
@@ -253,7 +255,7 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
              let lamsc = refToLocal n x qsc
              qp <- quotePi p
              qty <- quote empty env ty
-             let env' = Lam fc' c qp qty :: env
+             let env' = env :< Lam fc' c qp qty
 
              runsc <- elabScript rig fc (weaken nest) env'
                                  !(nf defs env' lamsc) Nothing -- (map weaken exp)
@@ -287,7 +289,7 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
       where
         unelabType : (Name, Int, ClosedTerm) -> Core (Name, RawImp)
         unelabType (n, _, ty)
-            = pure (n, map rawName !(unelabUniqueBinders [] ty))
+            = pure (n, map rawName !(unelabUniqueBinders [<] ty))
     elabCon defs "GetInfo" [<n]
         = do n' <- evalClosure defs n
              res <- lookupNameInfo !(reify defs n') (gamma defs)
@@ -324,7 +326,7 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
     elabCon defs "Declare" [<d]
         = do d' <- evalClosure defs d
              decls <- reify defs d'
-             Core.Core.SnocList.traverse_ (processDecl [] (MkNested []) []) decls
+             Core.Core.SnocList.traverse_ (processDecl [] (MkNested []) [<]) decls
              scriptRet ()
     elabCon defs "ReadFile" [<pth, lk]
         = do pathPrefix <- lookupDir defs !(evalClosure defs lk)

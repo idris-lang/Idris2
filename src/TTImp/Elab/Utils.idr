@@ -11,6 +11,8 @@ import Core.Value
 import TTImp.Elab.Check
 import TTImp.TTImp
 
+import Data.SnocList
+
 %default covering
 
 detagSafe : {auto c : Ref Ctxt Defs} ->
@@ -38,7 +40,7 @@ findErasedFrom defs pos (NBind fc x (Pi _ c _ aty) scf)
     = do -- In the scope, use 'Erased fc Impossible' to mean 'argument is erased'.
          -- It's handy here, because we can use it to tell if a detaggable
          -- argument position is available
-         sc <- scf defs (toClosure defaultOpts [] (Erased fc (ifThenElse (isErased c) Impossible Placeholder)))
+         sc <- scf defs (toClosure defaultOpts [<] (Erased fc (ifThenElse (isErased c) Impossible Placeholder)))
          (erest, dtrest) <- findErasedFrom defs (1 + pos) sc
          let dt' = if !(detagSafe defs !(evalClosure defs aty))
                       then (pos :: dtrest) else dtrest
@@ -54,7 +56,7 @@ findErased : {auto c : Ref Ctxt Defs} ->
              ClosedTerm -> Core (List Nat, List Nat)
 findErased tm
     = do defs <- get Ctxt
-         tmnf <- nf defs [] tm
+         tmnf <- nf defs [<] tm
          findErasedFrom defs 0 tmnf
 
 export
@@ -86,16 +88,16 @@ bindNotReq : {vs : _} ->
              FC -> Int -> Env Term vs -> (sub : Thin pre vs) ->
              List (PiInfo RawImp, Name) ->
              Term vs -> (List (PiInfo RawImp, Name), Term pre)
-bindNotReq fc i [] Refl ns tm = (ns, embed tm)
-bindNotReq fc i (b :: env) Refl ns tm
+bindNotReq fc i [<] Refl ns tm = (ns, embed tm)
+bindNotReq fc i (env :< b) Refl ns tm
    = let tmptm = subst (Ref fc Bound (MN "arg" i)) tm
          (ns', btm) = bindNotReq fc (1 + i) env Refl ns tmptm in
          (ns', refToLocal (MN "arg" i) _ btm)
-bindNotReq fc i (b :: env) (Keep p) ns tm
+bindNotReq fc i (env :< b) (Keep p) ns tm
    = let tmptm = subst (Ref fc Bound (MN "arg" i)) tm
          (ns', btm) = bindNotReq fc (1 + i) env p ns tmptm in
          (ns', refToLocal (MN "arg" i) _ btm)
-bindNotReq {vs = _ :< n} fc i (b :: env) (Drop p) ns tm
+bindNotReq {vs = _ :< n} fc i (env :< b) (Drop p) ns tm
    = bindNotReq fc i env p ((plicit b, n) :: ns)
        (Bind fc _ (Pi (binderLoc b) (multiplicity b) Explicit (binderType b)) tm)
 
@@ -109,13 +111,13 @@ bindReq {vs} fc env Refl ns tm
   where
     notLets : List Name -> (vars : SnocList Name) -> Env Term vars -> List Name
     notLets acc [<] _ = acc
-    notLets acc (vs :< v) (b :: env) = if isLet b then notLets acc vs env
+    notLets acc (vs :< v) (env :< b) = if isLet b then notLets acc vs env
                                        else notLets (v :: acc) vs env
-bindReq {vs = _ :< n} fc (b :: env) (Keep p) ns tm
+bindReq {vs = _ :< n} fc (env :< b) (Keep p) ns tm
     = do b' <- shrinkBinder b p
          bindReq fc env p ((plicit b, n) :: ns)
             (Bind fc _ (Pi (binderLoc b) (multiplicity b) Explicit (binderType b')) tm)
-bindReq fc (b :: env) (Drop p) ns tm
+bindReq fc (env :< b) (Drop p) ns tm
     = bindReq fc env p ns tm
 
 -- This machinery is to calculate whether any top level argument is used

@@ -221,7 +221,7 @@ mutual
                {vars : _} ->
                Defs -> NF vars -> NF [<] -> Core TypeMatch
   mightMatch defs target (NBind fc n (Pi _ _ _ _) sc)
-      = mightMatchD defs target !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder)))
+      = mightMatchD defs target !(sc defs (toClosure defaultOpts [<] (Erased fc Placeholder)))
   mightMatch defs (NBind _ _ _ _) (NBind _ _ _ _) = pure Poly -- lambdas might match
   mightMatch defs (NTCon _ n t a args) (NTCon _ n' t' a' args')
       = if n == n'
@@ -249,7 +249,7 @@ couldBeName : {auto c : Ref Ctxt Defs} ->
 couldBeName defs target n
     = case !(lookupTyExact n (gamma defs)) of
            Nothing => pure Poly -- could be a local name, don't rule it out
-           Just ty => mightMatchD defs target !(nf defs [] ty)
+           Just ty => mightMatchD defs target !(nf defs [<] ty)
 
 couldBeFn : {auto c : Ref Ctxt Defs} ->
             {vars : _} ->

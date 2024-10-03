@@ -88,9 +88,9 @@ prettyType : {auto c : Ref Ctxt Defs} ->
              (IdrisSyntax -> ann) -> ClosedTerm -> Core (Doc ann)
 prettyType syn ty = do
   defs <- get Ctxt
-  ty <- normaliseHoles defs [] ty
+  ty <- normaliseHoles defs [<] ty
   ty <- toFullNames ty
-  ty <- resugar [] ty
+  ty <- resugar [<] ty
   pure (prettyBy syn ty)
 
 ||| Look up implementations
@@ -108,10 +108,10 @@ getImplDocs keep
               let Just Func = defNameType (definition def)
                 | _ => pure []
               -- Check that the type mentions the name of interest
-              ty <- toFullNames !(normaliseHoles defs [] (type def))
+              ty <- toFullNames !(normaliseHoles defs [<] (type def))
               True <- keep ty
                 | False => pure []
-              ty <- resugar [] ty
+              ty <- resugar [<] ty
               pure [annotate (Decl impl) $ prettyBy Syntax ty]
          pure $ case concat docss of
            [] => []
@@ -156,7 +156,7 @@ getDocsForPrimitive constant = do
     let (_, type) = checkPrim EmptyFC constant
     let typeString = prettyBy Syntax constant
                      <++> colon
-                     <++> prettyBy Syntax !(resugar [] type)
+                     <++> prettyBy Syntax !(resugar [<] type)
     hintsDoc <- getHintsForPrimitive constant
     pure $ vcat $ typeString
                :: indent 2 (primDoc constant)
@@ -451,7 +451,7 @@ getDocsForName fc n config
                                (pure (Nothing, []))
 
              -- Then form the type declaration
-             ty <- resugar [] =<< normaliseHoles defs [] (type def)
+             ty <- resugar [<] =<< normaliseHoles defs [<] (type def)
              -- when printing e.g. interface methods there is no point in
              -- repeating the interface's name
              let ty = ifThenElse (not dropFirst) ty $ case ty of
@@ -504,7 +504,7 @@ getDocsForImplementation t = do
     -- get the return type of all the candidate hints
     Just (ix, def) <- lookupCtxtExactI hint (gamma defs)
       | Nothing => pure Nothing
-    ty <- resugar [] =<< normaliseHoles defs [] (type def)
+    ty <- resugar [<] =<< normaliseHoles defs [<] (type def)
     let (_, retTy) = underPis ty
     -- try to see whether it approximates what we are looking for
     -- we throw the head away because it'll be the interface name (I)

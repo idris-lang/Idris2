@@ -10,6 +10,8 @@ import Core.Value
 import TTImp.TTImp
 import Libraries.Data.WithDefault
 
+import Data.SnocList
+
 %default covering
 
 export

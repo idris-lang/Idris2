@@ -70,13 +70,13 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
 
          -- Go into new namespace, if there is one, for getters
          case newns of
-              Nothing => elabGetters tn conName params 0 [] [] conty
+              Nothing => elabGetters tn conName params 0 [] [<] conty
               Just ns =>
                    do let cns = currentNS defs
                       let nns = nestedNS defs
                       extendNS (mkNamespace ns)
                       newns <- getNS
-                      elabGetters tn conName params 0 [] [] conty
+                      elabGetters tn conName params 0 [] [<] conty
                       -- Record that the current namespace is allowed to look
                       -- at private names in the nested namespace
                       update Ctxt { currentNS := cns,
@@ -155,7 +155,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
              Just ty <- lookupTyExact tn (gamma defs)
                | Nothing => throw (InternalError "Missing data type \{show tn}, despite having just declared it!")
              log "declare.record" 20 "Obtained type: \{show ty}"
-             (_ ** (tyenv, ty)) <- dropLeadingPis vars ty []
+             (_ ** (tyenv, ty)) <- dropLeadingPis vars ty [<]
              ty <- unelabNest (NoSugar True) !nestDrop tyenv ty
              log "declare.record.parameters" 30 "Unelaborated type: \{show ty}"
              params <- getParameters [<] ty
@@ -178,7 +178,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                    ]
                pure (_ ** (env, ty))
         dropLeadingPis (vars :< var) (Bind fc n b@(Pi _ _ _ _) ty) env
-          = dropLeadingPis vars ty (b :: env)
+          = dropLeadingPis vars ty (env :< b)
         dropLeadingPis _ ty _ = throw (InternalError "Malformed record type \{show ty}")
 
         getParameters :
@@ -255,7 +255,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
              then elabGetters tn con params
                               (if imp == Explicit && not (n `elem` vars)
                                   then S done else done)
-                              upds (b :: tyenv) sc
+                              upds (tyenv :< b) sc
              else
                 do let fldNameStr = nameRoot n
                    rfNameNS <- inCurrentNS (UN $ Field fldNameStr)
@@ -345,7 +345,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                    elabGetters tn con params
                                (if imp == Explicit
                                    then S done else done)
-                               upds' (b :: tyenv) sc
+                               upds' (tyenv :< b) sc
 
     elabGetters tn con _ done upds _ _ = pure ()
 

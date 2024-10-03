@@ -41,6 +41,7 @@ import Data.Maybe
 import Libraries.Data.NameMap
 import Libraries.Data.WithDefault
 import Libraries.Text.PrettyPrint.Prettyprinter
+import Libraries.Data.SnocList.SizeOf
 
 %default covering
 
@@ -247,13 +248,13 @@ extendEnv env p nest (Bind _ n (PVar fc c pi tmty) sc) (Bind _ n' (PVTy _ _ _) t
   extendEnv env p nest (Bind _ n (PVar fc c pi tmty) sc) (Bind _ n' (PVTy _ _ _) tysc) | Nothing
       = throw (InternalError "Can't happen: names don't match in pattern type")
   extendEnv env p nest (Bind _ n (PVar fc c pi tmty) sc) (Bind _ n (PVTy _ _ _) tysc) | (Just Refl)
-      = extendEnv (PVar fc c pi tmty :: env) (Drop p) (weaken nest) sc tysc
+      = extendEnv (env :< PVar fc c pi tmty) (Drop p) (weaken nest) sc tysc
 extendEnv env p nest (Bind _ n (PLet fc c tmval tmty) sc) (Bind _ n' (PLet _ _ _ _) tysc) with (nameEq n n')
   extendEnv env p nest (Bind _ n (PLet fc c tmval tmty) sc) (Bind _ n' (PLet _ _ _ _) tysc) | Nothing
       = throw (InternalError "Can't happen: names don't match in pattern type")
   -- PLet on the left becomes Let on the right, to give it computational force
   extendEnv env p nest (Bind _ n (PLet fc c tmval tmty) sc) (Bind _ n (PLet _ _ _ _) tysc) | (Just Refl)
-      = extendEnv (Let fc c tmval tmty :: env) (Drop p) (weaken nest) sc tysc
+      = extendEnv (env :< Let fc c tmval tmty) (Drop p) (weaken nest) sc tysc
 extendEnv env p nest tm ty
       = pure (_ ** (p, env, nest, tm, ty))
 
@@ -278,7 +279,7 @@ findLinear top bound rig tm
               => do defs <- get Ctxt
                     Just nty <- lookupTyExact n (gamma defs)
                          | Nothing => pure []
-                    findLinArg (accessible nt rig) !(nf defs [] nty) args
+                    findLinArg (accessible nt rig) !(nf defs [<] nty) args
            _ => pure []
     where
       accessible : NameType -> RigCount -> RigCount
@@ -298,15 +299,15 @@ findLinear top bound rig tm
           = do defs <- get Ctxt
                let a = nameAt prf
                if idx < bound
-                 then do sc' <- sc defs (toClosure defaultOpts [] (Ref fc Bound x))
+                 then do sc' <- sc defs (toClosure defaultOpts [<] (Ref fc Bound x))
                          pure $ (a, rigMult c rig) ::
                                     !(findLinArg rig sc' as)
-                 else do sc' <- sc defs (toClosure defaultOpts [] (Ref fc Bound x))
+                 else do sc' <- sc defs (toClosure defaultOpts [<] (Ref fc Bound x))
                          findLinArg rig sc' as
       findLinArg rig (NBind fc x (Pi _ c _ _) sc) (a :: as)
           = do defs <- get Ctxt
                pure $ !(findLinear False bound (c |*| rig) a) ++
-                      !(findLinArg rig !(sc defs (toClosure defaultOpts [] (Ref fc Bound x))) as)
+                      !(findLinArg rig !(sc defs (toClosure defaultOpts [<] (Ref fc Bound x))) as)
       findLinArg rig ty (a :: as)
           = pure $ !(findLinear False bound rig a) ++ !(findLinArg rig ty as)
       findLinArg _ _ [] = pure []
@@ -440,7 +441,7 @@ hasEmptyPat : {vars : _} ->
               Defs -> Env Term vars -> Term vars -> Core Bool
 hasEmptyPat defs env (Bind fc x b sc)
    = pure $ !(isEmpty defs env !(nf defs env (binderType b)))
-            || !(hasEmptyPat defs (b :: env) sc)
+            || !(hasEmptyPat defs (env :< b) sc)
 hasEmptyPat defs env _ = pure False
 
 -- For checking with blocks as nested names
@@ -628,9 +629,9 @@ checkClause {vars} mult vis totreq hashit n opts nest env
     vfc = virtualiseFC ifc
 
     mkExplicit : forall vs . Env Term vs -> Env Term vs
-    mkExplicit [] = []
-    mkExplicit (Pi fc c _ ty :: env) = Pi fc c Explicit ty :: mkExplicit env
-    mkExplicit (b :: env) = b :: mkExplicit env
+    mkExplicit [<] = [<]
+    mkExplicit (env :< Pi fc c _ ty) = mkExplicit env :< Pi fc c Explicit ty
+    mkExplicit (env :< b) = mkExplicit env :< b
 
     bindWithArgs :
        (rig : RigCount) -> (wvalTy : Term xs) -> Maybe ((RigCount, Name), Term xs) ->
@@ -647,7 +648,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
           wargs = [<wargn]
 
           scenv : Env Term (xs ++ wargs)
-                := Pi vfc top Explicit wvalTy :: wvalEnv
+                := wvalEnv :< Pi vfc top Explicit wvalTy
 
           var : Term (xs ++ wargs)
               := Local vfc (Just False) Z First
@@ -680,9 +681,9 @@ checkClause {vars} mult vis totreq hashit n opts nest env
                            ]
 
           scenv : Env Term (xs ++ wargs)
-                := Pi vfc top Implicit eqTy
-                :: Pi vfc top Explicit wvalTy
-                :: wvalEnv
+                := wvalEnv
+                :< Pi vfc top Explicit wvalTy
+                :< Pi vfc top Implicit eqTy
 
           var : Term (xs ++ wargs)
               := Local vfc (Just False) (S Z) (Later First)
@@ -1094,7 +1095,7 @@ processDef opts nest env fc n_in cs_in
     checkImpossible : Int -> RigCount -> ClosedTerm ->
                       Core (Maybe ClosedTerm)
     checkImpossible n mult tm
-        = do itm <- unelabNoPatvars [] tm
+        = do itm <- unelabNoPatvars [<] tm
              let itm = map rawName itm
              handleUnify
                (do ctxt <- get Ctxt
@@ -1103,17 +1104,17 @@ processDef opts nest env fc n_in cs_in
                    setUnboundImplicits True
                    (_, lhstm) <- bindNames False itm
                    setUnboundImplicits autoimp
-                   (lhstm, _) <- elabTerm n (InLHS mult) [] (MkNested []) []
+                   (lhstm, _) <- elabTerm n (InLHS mult) [] (MkNested []) [<]
                                     (IBindHere fc COVERAGE lhstm) Nothing
                    defs <- get Ctxt
-                   lhs <- normaliseHoles defs [] lhstm
-                   if !(hasEmptyPat defs [] lhs)
+                   lhs <- normaliseHoles defs [<] lhstm
+                   if !(hasEmptyPat defs [<] lhs)
                       then do log "declare.def.impossible" 5 "Some empty pat"
                               put Ctxt ctxt
                               pure Nothing
                       else do log "declare.def.impossible" 5 "No empty pat"
                               empty <- clearDefs ctxt
-                              rtm <- closeEnv empty !(nf empty [] lhs)
+                              rtm <- closeEnv empty !(nf empty [<] lhs)
                               put Ctxt ctxt
                               pure (Just rtm))
                (\err => do defs <- get Ctxt
@@ -1125,14 +1126,14 @@ processDef opts nest env fc n_in cs_in
       where
         closeEnv : Defs -> NF [<] -> Core ClosedTerm
         closeEnv defs (NBind _ x (PVar _ _ _ _) sc)
-            = closeEnv defs !(sc defs (toClosure defaultOpts [] (Ref fc Bound x)))
-        closeEnv defs nf = quote defs [] nf
+            = closeEnv defs !(sc defs (toClosure defaultOpts [<] (Ref fc Bound x)))
+        closeEnv defs nf = quote defs [<] nf
 
     getClause : Either RawImp Clause -> Core (Maybe Clause)
     getClause (Left rawlhs)
         = catch (do lhsp <- getImpossibleTerm env nest rawlhs
                     log "declare.def.impossible" 3 $ "Generated impossible LHS: " ++ show lhsp
-                    pure $ Just $ MkClause [] lhsp (Erased (getFC rawlhs) Impossible))
+                    pure $ Just $ MkClause [<] lhsp (Erased (getFC rawlhs) Impossible))
                 (\e => do log "declare.def" 5 $ "Error in getClause " ++ show e
                           pure Nothing)
     getClause (Right c) = pure (Just c)

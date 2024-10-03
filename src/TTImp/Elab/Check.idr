@@ -27,6 +27,8 @@ import Libraries.Data.NameMap
 import Libraries.Data.UserNameMap
 import Libraries.Data.WithDefault
 
+import Libraries.Data.SnocList.SizeOf
+
 %default covering
 
 public export
@@ -470,7 +472,7 @@ searchVar fc rig depth def env nest n ty
              varn <- toFullNames n'
              pure ((vs :< varn) **
                     (\t => f (Bind fc varn binder t),
-                       binder :: env'))
+                       env' :< binder))
 
 -- Elaboration info (passed to recursive calls)
 public export

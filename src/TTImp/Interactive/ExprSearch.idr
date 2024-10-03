@@ -33,9 +33,11 @@ import TTImp.Unelab
 import TTImp.Utils
 
 import Data.List
+import Data.SnocList
 
 import Libraries.Data.Tap
 import Libraries.Data.WithDefault
+import Libraries.Data.SnocList.SizeOf
 
 %default covering
 
@@ -147,17 +149,17 @@ getAllEnv : {vars : _} -> FC ->
             SizeOf done ->
             Env Term vars ->
             List (Term (vars ++ done), Term (vars ++ done))
-getAllEnv fc done [] = []
-getAllEnv {vars = vs :< v} {done} fc p (b :: env)
+getAllEnv fc done [<] = []
+getAllEnv {vars = vs :< v} {done} fc p (env :< b)
    = let rest = getAllEnv fc (sucR p) env
          0 var = mkIsVar (hasLength p)
          usable = usableName v in
          if usable
             then (Local fc Nothing _ var,
-                     rewrite appendAssociative done [<v] vs in
+                     rewrite sym (appendAssociative vs [<v] done) in
                         weakenNs (sucR p) (binderType b)) ::
-                             rewrite appendAssociative done [<v] vs in rest
-            else rewrite appendAssociative done [<v] vs in rest
+                             rewrite sym (appendAssociative vs [<v] done) in rest
+            else rewrite sym (appendAssociative vs [<v] done) in rest
   where
     usableName : Name -> Bool
     usableName (UN _) = True
@@ -497,7 +499,7 @@ searchLocalWith {vars} fc nofn rig opts hints env ((p, pty) :: rest) ty topty
                                 getSuccessful fc rig opts False env ty topty
                                   [(do xtynf <- evalClosure defs xty
                                        findPos defs prf
-                                         (\arg => applyStackWithFC (Ref fc Func fname) [<(fc, f arg), (fc2, ytytm), (fc1, xtytm)] xtynf target),
+                                         (\arg => applyStackWithFC (Ref fc Func fname) [<(fc, f arg), (fc2, ytytm), (fc1, xtytm)]) xtynf target),
                                    (do ytynf <- evalClosure defs yty
                                        findPos defs prf
                                            (\arg => applyStackWithFC (Ref fc Func sname) [<(fc, f arg), (fc2, ytytm), (fc1, xtytm)])
@@ -536,7 +538,7 @@ makeHelper fc rig opts env letty targetty ((locapp, ds) :: next)
          intn <- genVarName "cval"
          helpern_in <- genCaseName "search"
          helpern <- inCurrentNS helpern_in
-         let env' = Lam fc top Explicit letty :: env
+         let env' = env :< Lam fc top Explicit letty
          scopeMeta <- metaVar fc top env' helpern
                              (weaken targetty)
          let scope = toApp scopeMeta
@@ -550,7 +552,7 @@ makeHelper fc rig opts env letty targetty ((locapp, ds) :: next)
          defs <- get Ctxt
          Just ty <- lookupTyExact helpern (gamma defs)
              | Nothing => throw (InternalError "Can't happen")
-         logTermNF "interaction.search" 10 "Type of scope name" [] ty
+         logTermNF "interaction.search" 10 "Type of scope name" [<] ty
 
          -- Generate a definition for the helper, but with more restrictions.
          -- Always take the first result, to avoid blowing up search space.
@@ -651,7 +653,7 @@ tryIntermediateRec fc rig opts hints env ty topty (Just rd)
     = do defs <- get Ctxt
          Just rty <- lookupTyExact (recname rd) (gamma defs)
               | Nothing => noResult
-         True <- isSingleCon defs !(nf defs [] rty)
+         True <- isSingleCon defs !(nf defs [<] rty)
               | _ => noResult
          intnty <- genVarName "cty"
          u <- uniVar fc
@@ -666,7 +668,7 @@ tryIntermediateRec fc rig opts hints env ty topty (Just rd)
   where
     isSingleCon : Defs -> NF [<] -> Core Bool
     isSingleCon defs (NBind fc x (Pi _ _ _ _) sc)
-        = isSingleCon defs !(sc defs (toClosure defaultOpts []
+        = isSingleCon defs !(sc defs (toClosure defaultOpts [<]
                                               (Erased fc Placeholder)))
     isSingleCon defs (NTCon _ n _ _ _)
         = do Just (TCon _ _ _ _ _ _ (Just [con]) _) <- lookupDefExact n (gamma defs)
@@ -681,7 +683,7 @@ searchType : {vars : _} ->
              ClosedTerm ->
              Nat -> Term vars -> Core (Search (Term vars, ExprDefs))
 searchType fc rig opts hints env topty (S k) (Bind bfc n b@(Pi fc' c info ty) sc)
-    = do let env' : Env Term (_ :< n) = b :: env
+    = do let env' : Env Term (_ :< n) = env :< b
          log "interaction.search" 10 $ "Introduced lambda, search for " ++ show sc
          scVal <- searchType fc rig opts hints env' topty k sc
          pure (map (\ (sc, ds) => (Bind bfc n (Lam fc' c info ty) sc, ds)) scVal)
@@ -691,7 +693,7 @@ searchType {vars} fc rig opts hints env topty Z (Bind bfc n b@(Pi fc' c info ty)
            [searchLocal fc rig opts hints env (Bind bfc n b sc) topty,
             (do defs <- get Ctxt
                 let n' = UN $ Basic !(getArgName defs n [] (toList vars) !(nf defs env ty))
-                let env' : Env Term (_ :< n') = b :: env
+                let env' : Env Term (_ :< n') = env :< b
                 let sc' = compat sc
                 log "interaction.search" 10 $ "Introduced lambda, search for " ++ show sc'
                 scVal <- searchType fc rig opts hints env' topty Z sc'
@@ -753,10 +755,10 @@ searchHole : {auto c : Ref Ctxt Defs} ->
              Nat -> ClosedTerm ->
              Defs -> GlobalDef -> Core (Search (ClosedTerm, ExprDefs))
 searchHole fc rig opts hints n locs topty defs glob
-    = do searchty <- normalise defs [] (type glob)
+    = do searchty <- normalise defs [<] (type glob)
          logTerm "interaction.search" 10 "Normalised type" searchty
          checkTimer
-         searchType fc rig opts hints [] topty locs searchty
+         searchType fc rig opts hints [<] topty locs searchty
 
 -- Declared at the top
 search fc rig opts hints topty n_in
@@ -768,7 +770,7 @@ search fc rig opts hints topty n_in
                    case definition gdef of
                         Hole locs _ => searchHole fc rig opts hints n locs topty defs gdef
                         BySearch _ _ _ => searchHole fc rig opts hints n
-                                                   !(getArity defs [] (type gdef))
+                                                   !(getArity defs [<] (type gdef))
                                                    topty defs gdef
                         _ => do log "interaction.search" 10 $ show n_in ++ " not a hole"
                                 throw (InternalError $ "Not a hole: " ++ show n ++ " in " ++
@@ -789,7 +791,7 @@ getLHSData : {auto c : Ref Ctxt Defs} ->
              Defs -> Maybe ClosedTerm -> Core (Maybe RecData)
 getLHSData defs Nothing = pure Nothing
 getLHSData defs (Just tm)
-    = pure $ getLHS !(toFullNames !(normaliseHoles defs [] tm))
+    = pure $ getLHS !(toFullNames !(normaliseHoles defs [<] tm))
   where
     getLHS : {vars : _} -> Term vars -> Maybe RecData
     getLHS (Bind _ _ (PVar _ _ _ _) sc) = getLHS sc
@@ -810,11 +812,11 @@ firstLinearOK fc [] = noResult
 firstLinearOK fc ((t, ds) :: next)
     = handleUnify
             (do unless (isNil ds) $
-                   traverse_ (processDecl [InCase] (MkNested []) []) ds
-                ignore $ linearCheck fc linear False [] t
+                   traverse_ (processDecl [InCase] (MkNested []) [<]) ds
+                ignore $ linearCheck fc linear False [<] t
                 defs <- get Ctxt
-                nft <- normaliseHoles defs [] t
-                raw <- unelab [] !(toFullNames nft)
+                nft <- normaliseHoles defs [<] t
+                raw <- unelab [<] !(toFullNames nft)
                 pure (map rawName raw :: firstLinearOK fc !next))
             (\err =>
                 do next' <- next
@@ -836,7 +838,7 @@ exprSearchOpts opts fc n_in hints
          -- expression search might be invoked some other way
          let Hole _ _ = definition gdef
              | PMDef pi [<] (STerm _ tm) _ _
-                 => do raw <- unelab [] !(toFullNames !(normaliseHoles defs [] tm))
+                 => do raw <- unelab [<] !(toFullNames !(normaliseHoles defs [<] tm))
                        one (map rawName raw)
              | _ => throw (GenericMsg fc "Name is already defined")
          lhs <- findHoleLHS !(getFullName (Resolved idx))

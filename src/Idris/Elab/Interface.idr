@@ -22,6 +22,7 @@ import TTImp.Utils
 import Libraries.Data.ANameMap
 import Libraries.Data.List.Extra
 import Data.List
+import Data.SnocList
 import Libraries.Data.WithDefault
 
 %default covering

@@ -33,7 +33,7 @@ mutual
            chkMeta fc env !(nf defs env (embed mty)) args
   chk env (Bind fc nm b sc)
       = do bt <- chkBinder env b
-           sct <- chk {vars = _ :< nm} (b :: env) sc
+           sct <- chk {vars = _ :< nm} (env :< b) sc
            pure $ gnf env (discharge fc nm b !(getTerm bt) !(getTerm sct))
   chk env (App fc f a)
       = do fty <- chk env f
