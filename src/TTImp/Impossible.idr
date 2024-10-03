@@ -25,7 +25,7 @@ match : {auto c : Ref Ctxt Defs} ->
         NF [<] -> (Name, Int, ClosedTerm) -> Core Bool
 match nty (n, i, rty)
     = do defs <- get Ctxt
-         rtynf <- nf defs [] rty
+         rtynf <- nf defs [<] rty
          sameRet nty rtynf
   where
     sameRet : NF [<] -> NF [<] -> Core Bool
@@ -38,7 +38,7 @@ match nty (n, i, rty)
     sameRet (NType _ _) (NType _ _) = pure True
     sameRet nf (NBind fc _ (Pi _ _ _ _) sc)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
+             sc' <- sc defs (toClosure defaultOpts [<] (Erased fc Placeholder))
              sameRet nf sc'
     sameRet _ _ = pure False
 
@@ -75,14 +75,14 @@ mutual
   processArgs fn (NBind fc x (Pi _ _ Explicit ty) sc) (e :: exps) autos named
      = do e' <- mkTerm e (Just ty) [] [] []
           defs <- get Ctxt
-          processArgs (App fc fn e') !(sc defs (toClosure defaultOpts [] e'))
+          processArgs (App fc fn e') !(sc defs (toClosure defaultOpts [<] e'))
                       exps autos named
   processArgs fn (NBind fc x (Pi _ _ Explicit ty) sc) [] autos named
      = do defs <- get Ctxt
           case findNamed x named of
             Just ((_, e), named') =>
                do e' <- mkTerm e (Just ty) [] [] []
-                  processArgs (App fc fn e') !(sc defs (toClosure defaultOpts [] e'))
+                  processArgs (App fc fn e') !(sc defs (toClosure defaultOpts [<] e'))
                               [] autos named'
             Nothing => badClause fn [] autos named
   processArgs fn (NBind fc x (Pi _ _ Implicit ty) sc) exps autos named
@@ -90,29 +90,29 @@ mutual
           case findNamed x named of
             Nothing => do e' <- nextVar fc
                           processArgs (App fc fn e')
-                                      !(sc defs (toClosure defaultOpts [] e'))
+                                      !(sc defs (toClosure defaultOpts [<] e'))
                                       exps autos named
             Just ((_, e), named') =>
                do e' <- mkTerm e (Just ty) [] [] []
-                  processArgs (App fc fn e') !(sc defs (toClosure defaultOpts [] e'))
+                  processArgs (App fc fn e') !(sc defs (toClosure defaultOpts [<] e'))
                               exps autos named'
   processArgs fn (NBind fc x (Pi _ _ AutoImplicit ty) sc) exps autos named
      = do defs <- get Ctxt
           case autos of
                (e :: autos') => -- unnamed takes priority
                    do e' <- mkTerm e (Just ty) [] [] []
-                      processArgs (App fc fn e') !(sc defs (toClosure defaultOpts [] e'))
+                      processArgs (App fc fn e') !(sc defs (toClosure defaultOpts [<] e'))
                                   exps autos' named
                [] =>
                   case findNamed x named of
                      Nothing =>
                         do e' <- nextVar fc
                            processArgs (App fc fn e')
-                                       !(sc defs (toClosure defaultOpts [] e'))
+                                       !(sc defs (toClosure defaultOpts [<] e'))
                                        exps [] named
                      Just ((_, e), named') =>
                         do e' <- mkTerm e (Just ty) [] [] []
-                           processArgs (App fc fn e') !(sc defs (toClosure defaultOpts [] e'))
+                           processArgs (App fc fn e') !(sc defs (toClosure defaultOpts [<] e'))
                                        exps [] named'
   processArgs fn ty [] [] [] = pure fn
   processArgs fn ty exps autos named
@@ -134,7 +134,7 @@ mutual
            gdefs <- lookupNameBy id n (gamma defs)
            [(n', i, gdef)] <- dropNoMatch !(traverseOpt (evalClosure defs) mty) gdefs
               | ts => ambiguousName fc n (map fst ts)
-           tynf <- nf defs [] (type gdef)
+           tynf <- nf defs [<] (type gdef)
            -- #899 we need to make sure that type & data constructors are marked
            -- as such so that the coverage checker actually uses the matches in
            -- `impossible` branches to generate parts of the case tree.
@@ -184,8 +184,8 @@ getImpossibleTerm env nest tm
   where
     addEnv : {vars : _} ->
              FC -> Env Term vars -> List RawImp
-    addEnv fc [] = []
-    addEnv fc (b :: env) =
+    addEnv fc [<] = []
+    addEnv fc (env :< b) =
        if isLet b
           then addEnv fc env
           else Implicit fc False :: addEnv fc env

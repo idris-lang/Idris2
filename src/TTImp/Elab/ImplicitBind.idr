@@ -100,7 +100,7 @@ mkPatternHole {vars'} loc rig n topenv imode (Just expty_in)
                 Env Term vs -> Term vs -> Thin newvars vs ->
                 Maybe (Term newvars)
     bindInner env ty Refl = Just ty
-    bindInner {vs = _ :< x} (b :: env) ty (Drop p)
+    bindInner {vs = _ :< x} (env :< b) ty (Drop p)
         = bindInner env (Bind loc x b ty) p
     bindInner _ _ _ = Nothing
 
@@ -285,7 +285,7 @@ normaliseHolesScope defs env (Bind fc n b sc)
     = pure $ Bind fc n b
                   !(normaliseHolesScope defs
                    -- use Lam because we don't want it reducing in the scope
-                   (Lam fc (multiplicity b) Explicit (binderType b) :: env) sc)
+                   (env :< Lam fc (multiplicity b) Explicit (binderType b)) sc)
 normaliseHolesScope defs env tm = normaliseHoles defs env tm
 
 export

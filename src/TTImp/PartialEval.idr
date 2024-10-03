@@ -155,26 +155,26 @@ getSpecPats fc pename fn stk fnty args sargs pats
                 Core RawImp
     mkRHSargs (NBind _ x (Pi _ _ Explicit _) sc) app (a :: as) ((_, Dynamic) :: ds)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
+             sc' <- sc defs (toClosure defaultOpts [<] (Erased fc Placeholder))
              mkRHSargs sc' (IApp fc app (IVar fc (UN $ Basic a))) as ds
     mkRHSargs (NBind _ x (Pi _ _ _ _) sc) app (a :: as) ((_, Dynamic) :: ds)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
+             sc' <- sc defs (toClosure defaultOpts [<] (Erased fc Placeholder))
              mkRHSargs sc' (INamedApp fc app x (IVar fc (UN $ Basic a))) as ds
     mkRHSargs (NBind _ x (Pi _ _ Explicit _) sc) app as ((_, Static tm) :: ds)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
-             tm' <- unelabNoSugar [] tm
+             sc' <- sc defs (toClosure defaultOpts [<] (Erased fc Placeholder))
+             tm' <- unelabNoSugar [<] tm
              mkRHSargs sc' (IApp fc app (map rawName tm')) as ds
     mkRHSargs (NBind _ x (Pi _ _ Implicit _) sc) app as ((_, Static tm) :: ds)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
-             tm' <- unelabNoSugar [] tm
+             sc' <- sc defs (toClosure defaultOpts [<] (Erased fc Placeholder))
+             tm' <- unelabNoSugar [<] tm
              mkRHSargs sc' (INamedApp fc app x (map rawName tm')) as ds
     mkRHSargs (NBind _ _ (Pi _ _ AutoImplicit _) sc) app as ((_, Static tm) :: ds)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
-             tm' <- unelabNoSugar [] tm
+             sc' <- sc defs (toClosure defaultOpts [<] (Erased fc Placeholder))
+             tm' <- unelabNoSugar [<] tm
              mkRHSargs sc' (IAutoApp fc app (map rawName tm')) as ds
     -- Type will depend on the value here (we assume a variadic function) but
     -- the argument names are still needed
@@ -274,7 +274,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
                              " (" ++ show fn ++ ") -> \{show pename} by " ++
                              showSep ", " args'
            let sty = specialiseTy 0 staticargs (type gdef)
-           logTermNF "specialise" 3 ("Specialised type " ++ show pename) [] sty
+           logTermNF "specialise" 3 ("Specialised type " ++ show pename) [<] sty
 
            -- Add as RigW - if it's something else, we don't need it at
            -- runtime anyway so this is wasted effort, therefore a failure
@@ -304,12 +304,12 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
                       pure $ "Attempting to specialise:\n" ++
                              showSep "\n" (map showPat inpats)
 
-           Just newpats <- getSpecPats fc pename fn stk !(nf defs [] (type gdef))
+           Just newpats <- getSpecPats fc pename fn stk !(nf defs [<] (type gdef))
                                        sargs staticargs pats
                 | Nothing => pure (applyStackWithFC (Ref fc Func fn) stk)
            log "specialise" 5 $ "New patterns for " ++ show pename ++ ":\n" ++
                     showSep "\n" (map showPat newpats)
-           processDecl [InPartialEval] (MkNested []) []
+           processDecl [InPartialEval] (MkNested []) [<]
                        (IDef fc (Resolved peidx) newpats)
            setAllPublic False
            pure peapp)
@@ -414,7 +414,7 @@ specialise {vars} fc env gdef fn stk
                    | Nothing => pure Nothing
                defs <- get Ctxt
                sargs <- for sargs $ traversePair $ traverseArgMode $ \ tm =>
-                          normalise defs [] tm
+                          normalise defs [<] tm
                let nhash = hash !(traverse toFullNames $ mapMaybe getStatic $ map snd sargs)
                               `hashWithSalt` fnfull -- add function name to hash to avoid namespace clashes
                let pename = NS partialEvalNS
@@ -463,7 +463,7 @@ findSpecs env stk (Meta fc n i args)
          pure $ applyStackWithFC (Meta fc n i args') stk
 findSpecs env stk (Bind fc x b sc)
     = do b' <- traverse (findSpecs env [<]) b
-         sc' <- findSpecs (b' :: env) [<] sc
+         sc' <- findSpecs (env :< b') [<] sc
          pure $ applyStackWithFC (Bind fc x b' sc') stk
 findSpecs env stk (App fc fn arg)
     = do arg' <- findSpecs env [<] arg
@@ -648,7 +648,7 @@ mutual
        extendEnv (Add x n bs) env
            -- We're just using this to evaluate holes in the right scope, so
            -- a placeholder binder is fine
-           = Lam fc top Explicit (Erased fc Placeholder) :: extendEnv bs env
+           = extendEnv bs env :< Lam fc top Explicit (Erased fc Placeholder)
   quoteGenNF q defs bound env (NApp fc f args)
       = do f' <- quoteHead q defs fc bound env f
            args' <- quoteArgsWithFC q defs bound env args

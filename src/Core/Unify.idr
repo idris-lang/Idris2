@@ -13,10 +13,12 @@ import public Core.UnifyState
 import Core.Value
 
 import Data.List
+import Data.SnocList
 import Data.Maybe
 
 import Libraries.Data.IntMap
 import Libraries.Data.NameMap
+import Libraries.Data.SnocList.SizeOf
 
 %default covering
 
@@ -452,7 +454,7 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
               PV pv pi => throw (PatternVariableUnifies loc (getLoc otm) env (PV pv pi) otm)
               _ => pure ()
          defs <- get Ctxt
-         ty <- normalisePis defs [] $ type mdef
+         ty <- normalisePis defs [<] $ type mdef
                      -- make sure we have all the pi binders we need in the
                      -- type to make the metavariable definition
          logTerm "unify.instantiate" 5 ("Type: " ++ show mname) (type mdef)
@@ -1071,7 +1073,7 @@ mutual
                   ct <- unify (lower mode) loc env tx ty
                   xn <- genVarName "x"
                   let env' : Env Term (_ :< x)
-                           = Pi fcy cy Explicit tx' :: env
+                           = env :< Pi fcy cy Explicit tx'
                   case constraints ct of
                       [] => -- No constraints, check the scope
                          do tscx <- scx defs (toClosure defaultOpts env (Ref loc Bound xn))
@@ -1108,7 +1110,7 @@ mutual
                   xn <- genVarName "x"
                   txtm <- quote empty env tx
                   let env' : Env Term (_ :< x)
-                           = Lam fcx cx Explicit txtm :: env
+                           = env :< Lam fcx cx Explicit txtm
 
                   tscx <- scx defs (toClosure defaultOpts env (Ref loc Bound xn))
                   tscy <- scy defs (toClosure defaultOpts env (Ref loc Bound xn))
@@ -1438,9 +1440,9 @@ retryGuess mode smode (hid, (loc, hname))
                BySearch rig depth defining =>
                   handleUnify
                      (do tm <- search loc rig (smode == Defaults) depth defining
-                                      (type def) []
+                                      (type def) [<]
                          let gdef = { definition := PMDef defaultPI [<] (STerm 0 tm) (STerm 0 tm) [] } def
-                         logTermNF "unify.retry" 5 ("Solved " ++ show hname) [] tm
+                         logTermNF "unify.retry" 5 ("Solved " ++ show hname) [<] tm
                          ignore $ addDef (Resolved hid) gdef
                          removeGuess hid
                          pure True)
@@ -1454,13 +1456,13 @@ retryGuess mode smode (hid, (loc, hname))
                        err =>
                          do logTermNF "unify.retry" 5
                                       ("Search failed at " ++ show rig ++ " for " ++ show hname)
-                                      [] (type def)
+                                      [<] (type def)
                             case smode of
                                  LastChance => throw err
                                  _ => if recoverable err
                                          then pure False -- Postpone again
                                          else throw (CantSolveGoal loc (gamma defs)
-                                                        [] (type def) (Just err))
+                                                        [<] (type def) (Just err))
                Guess tm envb [constr] =>
                  do let umode = case smode of
                                      MatchArgs => inMatch
@@ -1471,7 +1473,7 @@ retryGuess mode smode (hid, (loc, hname))
                                            NoLazy => pure tm
                                            AddForce r => pure $ forceMeta r envb tm
                                            AddDelay r =>
-                                              do ty <- getType [] tm
+                                              do ty <- getType [<] tm
                                                  logTerm "unify.retry" 5 "Retry Delay" tm
                                                  pure $ delayMeta r envb !(getTerm ty) tm
                                   let gdef = { definition := PMDef (MkPMDefInfo NotHole True False)
@@ -1484,7 +1486,7 @@ retryGuess mode smode (hid, (loc, hname))
                                            NoLazy => pure tm
                                            AddForce r => pure $ forceMeta r envb tm
                                            AddDelay r =>
-                                              do ty <- getType [] tm
+                                              do ty <- getType [<] tm
                                                  logTerm "unify.retry" 5 "Retry Delay (constrained)" tm
                                                  pure $ delayMeta r envb !(getTerm ty) tm
                                      let gdef = { definition := Guess tm' envb newcs } def
@@ -1579,7 +1581,7 @@ checkArgsSame (x :: xs)
              Just (PMDef _ [<] (STerm 0 def) _ _) <-
                         lookupDefExact (Resolved t) (gamma defs)
                  | _ => anySame tm ts
-             if !(convert defs [] tm def)
+             if !(convert defs [<] tm def)
                 then pure True
                 else anySame tm ts
 
@@ -1597,7 +1599,7 @@ checkDots
     getHoleName : Term [<] -> Core (Maybe Name)
     getHoleName tm
         = do defs <- get Ctxt
-             NApp _ (NMeta n' i args) _ <- nf defs [] tm
+             NApp _ (NMeta n' i args) _ <- nf defs [<] tm
                  | _ => pure Nothing
              pure (Just n')
 
@@ -1651,7 +1653,7 @@ checkDots
                            do defs <- get Ctxt
                               Just dty <- lookupTyExact n (gamma defs)
                                    | Nothing => undefinedName fc n
-                              logTermNF "unify.constraint" 5 "Dot type" [] dty
+                              logTermNF "unify.constraint" 5 "Dot type" [<] dty
                               -- Clear constraints so we don't report again
                               -- later
                               put UST ({ dotConstraints := [] } ust)

@@ -87,14 +87,14 @@ seval mode env tm
             Env Term vars ->
             (SchemeObj Write -> SchemeObj Write) ->
             Core (SchemeObj Write -> SchemeObj Write, SchVars vars)
-    mkEnv [] k = pure (k, [])
-    mkEnv (Let fc c val ty :: es) k
+    mkEnv [<] k = pure (k, [])
+    mkEnv (es :< Let fc c val ty) k
         = do i <- nextName
              (bind, vs) <- mkEnv es k
              val' <- compile vs val
              let n = "let-var-" ++ show i
              pure (\x => Let n val' (bind x), Bound n :: vs)
-    mkEnv (_ :: es) k
+    mkEnv (es :< _) k
         = do i <- nextName
              (bind, vs) <- mkEnv es k
              pure (bind, Free ("free-" ++ show i) :: vs)

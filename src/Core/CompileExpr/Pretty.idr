@@ -17,17 +17,15 @@ import Libraries.Data.String.Extra
 %hide Vect.catMaybes
 %hide Vect.(++)
 
-%hide Libraries.Data.List.SizeOf.map
-
 %hide Core.Name.prettyOp
 
-%hide CompileExpr.(::)
-%hide CompileExpr.Nil
+%hide CompileExpr.(:<)
+%hide CompileExpr.Lin
 %hide String.(::)
 %hide String.Nil
 %hide Doc.Nil
-%hide Subst.(::)
-%hide Subst.Nil
+%hide Subst.(:<)
+%hide Subst.Lin
 %hide CList.(::)
 %hide CList.Nil
 %hide Stream.(::)
