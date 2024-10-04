@@ -55,15 +55,6 @@ export
 mkIsVar Z = First
 mkIsVar (S x) = Later (mkIsVar x)
 
--- SLZ = Core.Name.SnocList.LHasLength.Z
-
-export
-0 mkIsVarChiply : HasLength m inner -> IsVar nm m (inner <>> outer :< nm)
-mkIsVarChiply hl
-  = rewrite chipsAsListAppend inner (outer :< nm) in
-    rewrite sym $ plusZeroRightNeutral m in
-    mkIsVar (hlChips hl Z)
-
 ||| Compute the remaining scope once the target variable has been removed
 public export
 dropIsVar :
@@ -146,19 +137,6 @@ mkVar : SizeOf inner -> Var (outer :< nm ++ inner)
 mkVar (MkSizeOf s p) = MkVar (mkIsVar p)
 
 export
-mkVarChiply : SizeOf inner -> Var (inner <>> outer :< nm)
-mkVarChiply (MkSizeOf s p) = MkVar (mkIsVarChiply p)
-
-||| Generate all variables
-export
-allVars : (vars : Scope) -> SnocList (Var vars)
-allVars = go [<] where
-
-  go : SizeOf local -> (vs : Scope) -> SnocList (Var (local <>> vs))
-  go s [<] = [<]
-  go s (vs :< v) = (go (s :< v) vs) :< mkVarChiply s
-
-export
 Eq (Var xs) where
   v == w = varIdx v == varIdx w
 
@@ -214,10 +192,6 @@ recoverName (MkVar p) = MkNVar p
 export
 mkNVar : SizeOf inner -> NVar nm (outer :< nm ++ inner)
 mkNVar (MkSizeOf s p) = MkNVar (mkIsVar p)
-
-export
-mkNVarChiply : SizeOf inner -> NVar nm (inner <>> outer :< nm)
-mkNVarChiply (MkSizeOf s p) = MkNVar (mkIsVarChiply p)
 
 export
 locateNVar : SizeOf outer -> NVar nm (local ++ outer) ->
@@ -276,15 +250,6 @@ insertNVar : SizeOf outer ->
 insertNVar p v = case locateNVar p v of
   Left v => embedNVar v
   Right v => weakenNVar p (later v)
-
-export
-insertNVarChiply : SizeOf local ->
-  NVar nm (local <>> outer) ->
-  NVar nm (local <>> outer :< n)
-insertNVarChiply p v
-  = rewrite chipsAsListAppend local (outer :< n) in
-    insertNVar (p <>> zero)
-  $ replace {p = NVar nm} (chipsAsListAppend local outer) v
 
 export
 insertNVarNames : GenWeakenable (NVar name)
