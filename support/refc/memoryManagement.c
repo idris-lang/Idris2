@@ -1,5 +1,46 @@
+#include <stdbool.h>
+
+#include "_datatypes.h"
 #include "refc_util.h"
 #include "runtime.h"
+
+#if 0
+struct {
+  unsigned int n_newValue;
+  unsigned int n_newReference;
+  unsigned int n_actualNewReference;
+  unsigned int n_immortalized;
+  unsigned int n_removeReference;
+  unsigned int n_tried_to_kill_immortals;
+  unsigned int n_freed;
+} idris2_memory_stat = {0, 0, 0, 0, 0, 00, 0};
+#define IDRIS2_INC_MEMSTAT(x)                                                  \
+  do {                                                                         \
+    ++(idris2_memory_stat.x);                                                  \
+  } while (0)
+
+void idris2_dumpMemoryStats(void) {
+  fprintf(
+      stderr,
+      "n_newValue = %u\n"
+      "n_newReference = %u\n"
+      "n_actualNewReference = %u\n"
+      "n_immortalized = %u\n"
+      "n_removeReference = %u\n"
+      "n_tried_to_kill_immortals = %u\n"
+      "n_freed = %u\n",
+      idris2_memory_stat.n_newValue, idris2_memory_stat.n_newReference,
+      idris2_memory_stat.n_actualNewReference,
+      idris2_memory_stat.n_immortalized, idris2_memory_stat.n_removeReference,
+      idris2_memory_stat.n_tried_to_kill_immortals, idris2_memory_stat.n_freed);
+}
+
+#else
+#define IDRIS2_INC_MEMSTAT(x)
+// don't inline this, Because IDRIS2_MEMSTAT works only at compiling support
+// libraries to suppressing overhead.
+void idris2_dumpMemoryStats() {}
+#endif
 
 Value *idris2_newValue(size_t size) {
 #if !defined(_WIN32) && defined(__STDC_VERSION__) &&                           \
@@ -11,6 +52,7 @@ Value *idris2_newValue(size_t size) {
   Value *retVal = (Value *)malloc(size);
 #endif
   IDRIS2_REFC_VERIFY(retVal && !idris2_vp_is_unboxed(retVal), "malloc failed");
+  IDRIS2_INC_MEMSTAT(n_newValue);
   retVal->header.refCounter = 1;
   retVal->header.tag = NO_TAG;
   return retVal;
@@ -51,6 +93,9 @@ Value *idris2_mkBits32_Boxed(uint32_t i) {
 }
 
 Value *idris2_mkBits64(uint64_t i) {
+  if (i < 100)
+    return (Value *)&idris2_predefined_Bits64[i];
+
   Value_Bits64 *retVal = IDRIS2_NEW_VALUE(Value_Bits64);
   retVal->header.tag = BITS64_TAG;
   retVal->ui64 = i;
@@ -65,6 +110,9 @@ Value *idris2_mkInt32_Boxed(int32_t i) {
 }
 
 Value *idris2_mkInt64(int64_t i) {
+  if (i >= 0 && i < 100)
+    return (Value *)&idris2_predefined_Int64[i];
+
   Value_Int64 *retVal = IDRIS2_NEW_VALUE(Value_Int64);
   retVal->header.tag = INT64_TAG;
   retVal->i64 = i;
@@ -78,13 +126,16 @@ Value_Integer *idris2_mkInteger() {
   return retVal;
 }
 
-Value_Integer *idris2_mkIntegerLiteral(char *i) {
+Value *idris2_mkIntegerLiteral(char *i) {
   Value_Integer *retVal = idris2_mkInteger();
   mpz_set_str(retVal->i, i, 10);
-  return retVal;
+  return (Value *)retVal;
 }
 
 Value_String *idris2_mkEmptyString(size_t l) {
+  if (l == 1)
+    return (Value_String *)&idris2_predefined_nullstring;
+
   Value_String *retVal = IDRIS2_NEW_VALUE(Value_String);
   retVal->header.tag = STRING_TAG;
   retVal->str = malloc(l);
@@ -93,6 +144,9 @@ Value_String *idris2_mkEmptyString(size_t l) {
 }
 
 Value_String *idris2_mkString(char *s) {
+  if (s[0] == '\0')
+    return (Value_String *)&idris2_predefined_nullstring;
+
   Value_String *retVal = IDRIS2_NEW_VALUE(Value_String);
   int l = strlen(s);
   retVal->header.tag = STRING_TAG;
@@ -135,25 +189,30 @@ Value_Array *idris2_makeArray(int length) {
 }
 
 Value *idris2_newReference(Value *source) {
+  IDRIS2_INC_MEMSTAT(n_newReference);
   // note that we explicitly allow NULL as source (for erased arguments)
-  if (source && !idris2_vp_is_unboxed(source)) {
-    source->header.refCounter++;
+  if (source && !idris2_vp_is_unboxed(source) &&
+      source->header.refCounter != IDRIS2_VP_REFCOUNTER_MAX) {
+    IDRIS2_INC_MEMSTAT(n_actualNewReference);
+    ++source->header.refCounter;
+    if (source->header.refCounter == IDRIS2_VP_REFCOUNTER_MAX)
+      IDRIS2_INC_MEMSTAT(n_immortalized);
   }
   return source;
 }
 
 void idris2_removeReference(Value *elem) {
-  if (!elem || idris2_vp_is_unboxed(elem)) {
+  IDRIS2_INC_MEMSTAT(n_removeReference);
+  if (!elem || idris2_vp_is_unboxed(elem))
     return;
-  }
-
-  IDRIS2_REFC_VERIFY(elem->header.refCounter > 0, "refCounter %lld",
-                     (long long)elem->header.refCounter);
-  // remove reference counter
-  elem->header.refCounter--;
-  if (elem->header.refCounter == 0)
-  // recursively remove all references to all children
-  {
+  else if (elem->header.refCounter == IDRIS2_VP_REFCOUNTER_MAX) {
+    IDRIS2_INC_MEMSTAT(n_tried_to_kill_immortals);
+    return;
+  } else if (elem->header.refCounter != 1) {
+    --elem->header.refCounter;
+    return;
+  } else {
+    IDRIS2_INC_MEMSTAT(n_freed);
     switch (elem->header.tag) {
     case BITS32_TAG:
     case BITS64_TAG:
@@ -161,13 +220,14 @@ void idris2_removeReference(Value *elem) {
     case INT64_TAG:
       /* nothing to delete, added for sake of completeness */
       break;
-    case INTEGER_TAG: {
+    case INTEGER_TAG:
       mpz_clear(((Value_Integer *)elem)->i);
       break;
-    }
+
     case DOUBLE_TAG:
       /* nothing to delete, added for sake of completeness */
       break;
+
     case STRING_TAG:
       free(((Value_String *)elem)->str);
       break;
@@ -224,4 +284,63 @@ void idris2_removeReference(Value *elem) {
     // finally, free element
     free(elem);
   }
+}
+
+// /////////////////////////////////////////////////////////////////////////
+// PRE-DEFINED VLAUES
+
+#define IDRIS2_MK_PREDEFINED_INT_10(t, n)                                      \
+  {IDRIS2_STOCKVAL(t), (n + 0)}, {IDRIS2_STOCKVAL(t), (n + 1)},                \
+      {IDRIS2_STOCKVAL(t), (n + 2)}, {IDRIS2_STOCKVAL(t), (n + 3)},            \
+      {IDRIS2_STOCKVAL(t), (n + 4)}, {IDRIS2_STOCKVAL(t), (n + 5)},            \
+      {IDRIS2_STOCKVAL(t), (n + 6)}, {IDRIS2_STOCKVAL(t), (n + 7)},            \
+      {IDRIS2_STOCKVAL(t), (n + 8)}, {                                         \
+    IDRIS2_STOCKVAL(t), (n + 9)                                                \
+  }
+Value_Int64 const idris2_predefined_Int64[100] = {
+    IDRIS2_MK_PREDEFINED_INT_10(INT64_TAG, 0),
+    IDRIS2_MK_PREDEFINED_INT_10(INT64_TAG, 10),
+    IDRIS2_MK_PREDEFINED_INT_10(INT64_TAG, 20),
+    IDRIS2_MK_PREDEFINED_INT_10(INT64_TAG, 30),
+    IDRIS2_MK_PREDEFINED_INT_10(INT64_TAG, 40),
+    IDRIS2_MK_PREDEFINED_INT_10(INT64_TAG, 50),
+    IDRIS2_MK_PREDEFINED_INT_10(INT64_TAG, 60),
+    IDRIS2_MK_PREDEFINED_INT_10(INT64_TAG, 70),
+    IDRIS2_MK_PREDEFINED_INT_10(INT64_TAG, 80),
+    IDRIS2_MK_PREDEFINED_INT_10(INT64_TAG, 90)};
+
+Value_Bits64 const idris2_predefined_Bits64[100] = {
+    IDRIS2_MK_PREDEFINED_INT_10(BITS64_TAG, 0),
+    IDRIS2_MK_PREDEFINED_INT_10(BITS64_TAG, 10),
+    IDRIS2_MK_PREDEFINED_INT_10(BITS64_TAG, 20),
+    IDRIS2_MK_PREDEFINED_INT_10(BITS64_TAG, 30),
+    IDRIS2_MK_PREDEFINED_INT_10(BITS64_TAG, 40),
+    IDRIS2_MK_PREDEFINED_INT_10(BITS64_TAG, 50),
+    IDRIS2_MK_PREDEFINED_INT_10(BITS64_TAG, 60),
+    IDRIS2_MK_PREDEFINED_INT_10(BITS64_TAG, 70),
+    IDRIS2_MK_PREDEFINED_INT_10(BITS64_TAG, 80),
+    IDRIS2_MK_PREDEFINED_INT_10(BITS64_TAG, 90)};
+
+Value_String const idris2_predefined_nullstring = {IDRIS2_STOCKVAL(STRING_TAG),
+                                                   ""};
+
+static bool idris2_predefined_integer_initialized = false;
+Value_Integer idris2_predefined_Integer[100];
+
+Value *idris2_getPredefinedInteger(int n) {
+  IDRIS2_REFC_VERIFY(n >= 0 && n < 100,
+                     "invalid range of predefined integers.");
+
+  if (!idris2_predefined_integer_initialized) {
+    idris2_predefined_integer_initialized = true;
+    for (int i = 0; i < 100; ++i) {
+      idris2_predefined_Integer[i].header.refCounter = IDRIS2_VP_REFCOUNTER_MAX;
+      idris2_predefined_Integer[i].header.tag = INTEGER_TAG;
+      idris2_predefined_Integer[i].header.reserved = 0;
+
+      mpz_init(idris2_predefined_Integer[i].i);
+      mpz_set_si(idris2_predefined_Integer[i].i, i);
+    }
+  }
+  return (Value *)&idris2_predefined_Integer[n];
 }

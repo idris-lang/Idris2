@@ -9,9 +9,9 @@ Value *Main_last
 ,   Value * var_1
 )
 {
-    Value * tmp_66 = NULL;                                   // Main:5:8--5:14
+    Value * tmp_67 = NULL;                                   // Main:5:8--5:14
     if (NULL == var_0 /* Prelude.Basics.Nil [nil] */) {
-        tmp_66 = var_1;
+        tmp_67 = var_1;
     } else if (NULL != var_0 /* Prelude.Basics.(::) [cons] */) {
         Value *var_2 = ((Value_Constructor*)var_0)->args[0];
         Value *var_3 = ((Value_Constructor*)var_0)->args[1];
@@ -19,13 +19,13 @@ Value *Main_last
         idris2_newReference(var_3);
         idris2_removeReference(var_0);
         idris2_removeReference(var_1);
-        Value *closure_67 = (Value *)idris2_mkClosure((Value *(*)())Main_last, 2, 2);
+        Value *closure_68 = (Value *)idris2_mkClosure((Value *(*)())Main_last, 2, 2);
                                                              // Main:7:20--7:24
-        ((Value_Closure*)closure_67)->args[0] = var_3;
-        ((Value_Closure*)closure_67)->args[1] = var_2;
-        tmp_66 = closure_67;
+        ((Value_Closure*)closure_68)->args[0] = var_3;
+        ((Value_Closure*)closure_68)->args[1] = var_2;
+        tmp_67 = closure_68;
     }
-    return tmp_66;
+    return tmp_67;
 }
 Value *Main_main_0
 (
@@ -122,8 +122,8 @@ Value *Main_main(void)
                                                              // Main:11:21--11:22
     Value * var_4 = closure_42;                              // Prelude.Types:605:11--605:20
     Value * var_0 = idris2_trampoline(csegen_44());          // Prelude.Types:1121:1--1138:48
-    Value * var_1 = (Value*)idris2_mkIntegerLiteral("1");    // Prelude.Types:1121:1--1138:48
-    Value * var_2 = (Value*)idris2_mkIntegerLiteral("5");    // Prelude.Types:1121:1--1138:48
+    Value * var_1 = idris2_getPredefinedInteger(1);          // Prelude.Types:1121:1--1138:48
+    Value * var_2 = idris2_getPredefinedInteger(5);          // Prelude.Types:1121:1--1138:48
     Value * var_5 = idris2_trampoline(Prelude_Types_rangeFromTo_Range__dollara(var_0, var_1, var_2));
                                                              // Prelude.Types:605:11--605:20
     Value * var_7 = idris2_trampoline(Prelude_Types_List_mapAppend(var_3, var_4, var_5));
@@ -147,7 +147,7 @@ Value *Main_main_11
 )
 {
     Value * var_1 = idris2_trampoline(csegen_44());          // Prelude.Types:1121:1--1138:48
-    Value * var_2 = (Value*)idris2_mkIntegerLiteral("1");    // Prelude.Types:1121:1--1138:48
+    Value * var_2 = idris2_getPredefinedInteger(1);          // Prelude.Types:1121:1--1138:48
     Value *closure_45 = (Value *)idris2_mkClosure((Value *(*)())Prelude_Types_rangeFromTo_Range__dollara, 3, 3);
                                                              // Prelude.Types:1121:1--1138:48
     ((Value_Closure*)closure_45)->args[0] = var_1;
@@ -161,20 +161,20 @@ Value *Main_main_10
 ,   Value * var_0
 )
 {
-    Value * var_2 = (Value*)idris2_mkIntegerLiteral("0");    // Main:10:30--10:36
+    Value * var_2 = idris2_getPredefinedInteger(0);          // Main:10:30--10:36
     Value * var_3 = idris2_trampoline(Main_last(var_1, var_2));
                                                              // Prelude.Show:110:1--112:50
     Value * var_4 = idris2_trampoline(Prelude_Show_show_Show_Integer(var_3));
-    Value * var_5 = (Value*)idris2_mkString("\x0a""");
-    Value *primVar_46 = strAppend(var_4, var_5);
+    Value * var_5 = ((Value*)&idris2_constant_String_46);
+    Value *primVar_47 = strAppend(var_4, var_5);
     idris2_removeReference(var_4);
     idris2_removeReference(var_5);
-    Value * var_6 = primVar_46;                              // Prelude.IO:98:22--98:34
-    Value *closure_47 = (Value *)idris2_mkClosure((Value *(*)())Prelude_IO_prim__putStr, 2, 2);
+    Value * var_6 = primVar_47;                              // Prelude.IO:98:22--98:34
+    Value *closure_48 = (Value *)idris2_mkClosure((Value *(*)())Prelude_IO_prim__putStr, 2, 2);
                                                              // Prelude.IO:98:22--98:34
-    ((Value_Closure*)closure_47)->args[0] = var_6;
-    ((Value_Closure*)closure_47)->args[1] = var_0;
-    return closure_47;
+    ((Value_Closure*)closure_48)->args[0] = var_6;
+    ((Value_Closure*)closure_48)->args[1] = var_0;
+    return closure_48;
 }
 Value *Main_main_9
 (
@@ -182,48 +182,48 @@ Value *Main_main_9
 ,   Value * var_0
 )
 {
-    Value *closure_48 = (Value *)idris2_mkClosure((Value *(*)())Main_main_0, 5, 0);
-    Value * var_2 = closure_48;                              // Prelude.IO:19:1--26:30
-    Value *closure_49 = (Value *)idris2_mkClosure((Value *(*)())Main_main_1, 3, 0);
-    Value * var_3 = closure_49;                              // Prelude.IO:19:1--26:30
-    Value *closure_50 = (Value *)idris2_mkClosure((Value *(*)())Main_main_2, 5, 0);
-    Value * var_4 = closure_50;                              // Prelude.IO:19:1--26:30
+    Value *closure_49 = (Value *)idris2_mkClosure((Value *(*)())Main_main_0, 5, 0);
+    Value * var_2 = closure_49;                              // Prelude.IO:19:1--26:30
+    Value *closure_50 = (Value *)idris2_mkClosure((Value *(*)())Main_main_1, 3, 0);
+    Value * var_3 = closure_50;                              // Prelude.IO:19:1--26:30
+    Value *closure_51 = (Value *)idris2_mkClosure((Value *(*)())Main_main_2, 5, 0);
+    Value * var_4 = closure_51;                              // Prelude.IO:19:1--26:30
      // constructor Prelude.Interfaces.MkApplicative         // Prelude.IO:19:1--26:30
-    Value_Constructor* constructor_51 = idris2_newConstructor(3, 0);
+    Value_Constructor* constructor_52 = idris2_newConstructor(3, 0);
                                                              // Prelude.IO:19:1--26:30
-    constructor_51->args[0] = var_2;
-    constructor_51->args[1] = var_3;
-    constructor_51->args[2] = var_4;
-    Value * var_11 = (Value*)constructor_51;                 // Main:10:13--10:17
-    Value *closure_52 = (Value *)idris2_mkClosure((Value *(*)())Main_main_3, 5, 0);
-    Value * var_5 = closure_52;                              // Prelude.Types:656:1--669:59
-    Value *closure_53 = (Value *)idris2_mkClosure((Value *(*)())Main_main_4, 5, 0);
-    Value * var_6 = closure_53;                              // Prelude.Types:656:1--669:59
-    Value *closure_54 = (Value *)idris2_mkClosure((Value *(*)())Main_main_5, 2, 0);
-    Value * var_7 = closure_54;                              // Prelude.Types:656:1--669:59
-    Value *closure_55 = (Value *)idris2_mkClosure((Value *(*)())Main_main_6, 7, 0);
-    Value * var_8 = closure_55;                              // Prelude.Types:656:1--669:59
-    Value *closure_56 = (Value *)idris2_mkClosure((Value *(*)())Main_main_7, 2, 0);
-    Value * var_9 = closure_56;                              // Prelude.Types:656:1--669:59
-    Value *closure_57 = (Value *)idris2_mkClosure((Value *(*)())Main_main_8, 5, 0);
-    Value * var_10 = closure_57;                             // Prelude.Types:656:1--669:59
+    constructor_52->args[0] = var_2;
+    constructor_52->args[1] = var_3;
+    constructor_52->args[2] = var_4;
+    Value * var_11 = (Value*)constructor_52;                 // Main:10:13--10:17
+    Value *closure_53 = (Value *)idris2_mkClosure((Value *(*)())Main_main_3, 5, 0);
+    Value * var_5 = closure_53;                              // Prelude.Types:656:1--669:59
+    Value *closure_54 = (Value *)idris2_mkClosure((Value *(*)())Main_main_4, 5, 0);
+    Value * var_6 = closure_54;                              // Prelude.Types:656:1--669:59
+    Value *closure_55 = (Value *)idris2_mkClosure((Value *(*)())Main_main_5, 2, 0);
+    Value * var_7 = closure_55;                              // Prelude.Types:656:1--669:59
+    Value *closure_56 = (Value *)idris2_mkClosure((Value *(*)())Main_main_6, 7, 0);
+    Value * var_8 = closure_56;                              // Prelude.Types:656:1--669:59
+    Value *closure_57 = (Value *)idris2_mkClosure((Value *(*)())Main_main_7, 2, 0);
+    Value * var_9 = closure_57;                              // Prelude.Types:656:1--669:59
+    Value *closure_58 = (Value *)idris2_mkClosure((Value *(*)())Main_main_8, 5, 0);
+    Value * var_10 = closure_58;                             // Prelude.Types:656:1--669:59
      // constructor Prelude.Interfaces.MkFoldable            // Prelude.Types:656:1--669:59
-    Value_Constructor* constructor_58 = idris2_newConstructor(6, 0);
+    Value_Constructor* constructor_59 = idris2_newConstructor(6, 0);
                                                              // Prelude.Types:656:1--669:59
-    constructor_58->args[0] = var_5;
-    constructor_58->args[1] = var_6;
-    constructor_58->args[2] = var_7;
-    constructor_58->args[3] = var_8;
-    constructor_58->args[4] = var_9;
-    constructor_58->args[5] = var_10;
-    Value * var_12 = (Value*)constructor_58;                 // Main:10:13--10:17
-    Value *closure_59 = (Value *)idris2_mkClosure((Value *(*)())Prelude_Interfaces_for_, 4, 4);
+    constructor_59->args[0] = var_5;
+    constructor_59->args[1] = var_6;
+    constructor_59->args[2] = var_7;
+    constructor_59->args[3] = var_8;
+    constructor_59->args[4] = var_9;
+    constructor_59->args[5] = var_10;
+    Value * var_12 = (Value*)constructor_59;                 // Main:10:13--10:17
+    Value *closure_60 = (Value *)idris2_mkClosure((Value *(*)())Prelude_Interfaces_for_, 4, 4);
                                                              // Main:10:13--10:17
-    ((Value_Closure*)closure_59)->args[0] = var_11;
-    ((Value_Closure*)closure_59)->args[1] = var_12;
-    ((Value_Closure*)closure_59)->args[2] = var_1;
-    ((Value_Closure*)closure_59)->args[3] = var_0;
-    return closure_59;
+    ((Value_Closure*)closure_60)->args[0] = var_11;
+    ((Value_Closure*)closure_60)->args[1] = var_12;
+    ((Value_Closure*)closure_60)->args[2] = var_1;
+    ((Value_Closure*)closure_60)->args[3] = var_0;
+    return closure_60;
 }
 Value *Main_main_8
 (
@@ -236,12 +236,12 @@ Value *Main_main_8
 {
     idris2_removeReference(var_3);
     idris2_removeReference(var_4);
-    Value *closure_60 = (Value *)idris2_mkClosure((Value *(*)())Prelude_Types_foldMap_Foldable_List, 3, 3);
+    Value *closure_61 = (Value *)idris2_mkClosure((Value *(*)())Prelude_Types_foldMap_Foldable_List, 3, 3);
                                                              // Prelude.Types:656:1--669:59
-    ((Value_Closure*)closure_60)->args[0] = var_2;
-    ((Value_Closure*)closure_60)->args[1] = var_1;
-    ((Value_Closure*)closure_60)->args[2] = var_0;
-    return closure_60;
+    ((Value_Closure*)closure_61)->args[0] = var_2;
+    ((Value_Closure*)closure_61)->args[1] = var_1;
+    ((Value_Closure*)closure_61)->args[2] = var_0;
+    return closure_61;
 }
 Value *Main_main_7
 (
@@ -266,13 +266,13 @@ Value *Main_main_6
     idris2_removeReference(var_4);
     idris2_removeReference(var_5);
     idris2_removeReference(var_6);
-    Value *closure_61 = (Value *)idris2_mkClosure((Value *(*)())Prelude_Types_foldlM_Foldable_List, 4, 4);
+    Value *closure_62 = (Value *)idris2_mkClosure((Value *(*)())Prelude_Types_foldlM_Foldable_List, 4, 4);
                                                              // Prelude.Types:656:1--669:59
-    ((Value_Closure*)closure_61)->args[0] = var_3;
-    ((Value_Closure*)closure_61)->args[1] = var_2;
-    ((Value_Closure*)closure_61)->args[2] = var_1;
-    ((Value_Closure*)closure_61)->args[3] = var_0;
-    return closure_61;
+    ((Value_Closure*)closure_62)->args[0] = var_3;
+    ((Value_Closure*)closure_62)->args[1] = var_2;
+    ((Value_Closure*)closure_62)->args[2] = var_1;
+    ((Value_Closure*)closure_62)->args[3] = var_0;
+    return closure_62;
 }
 Value *Main_main_5
 (
@@ -281,10 +281,10 @@ Value *Main_main_5
 )
 {
     idris2_removeReference(var_1);
-    Value *closure_62 = (Value *)idris2_mkClosure((Value *(*)())Prelude_Types_null_Foldable_List, 1, 1);
+    Value *closure_63 = (Value *)idris2_mkClosure((Value *(*)())Prelude_Types_null_Foldable_List, 1, 1);
                                                              // Prelude.Types:656:1--669:59
-    ((Value_Closure*)closure_62)->args[0] = var_0;
-    return closure_62;
+    ((Value_Closure*)closure_63)->args[0] = var_0;
+    return closure_63;
 }
 Value *Main_main_4
 (
@@ -297,12 +297,12 @@ Value *Main_main_4
 {
     idris2_removeReference(var_3);
     idris2_removeReference(var_4);
-    Value *closure_63 = (Value *)idris2_mkClosure((Value *(*)())Prelude_Types_foldl_Foldable_List, 3, 3);
+    Value *closure_64 = (Value *)idris2_mkClosure((Value *(*)())Prelude_Types_foldl_Foldable_List, 3, 3);
                                                              // Prelude.Types:656:1--669:59
-    ((Value_Closure*)closure_63)->args[0] = var_2;
-    ((Value_Closure*)closure_63)->args[1] = var_1;
-    ((Value_Closure*)closure_63)->args[2] = var_0;
-    return closure_63;
+    ((Value_Closure*)closure_64)->args[0] = var_2;
+    ((Value_Closure*)closure_64)->args[1] = var_1;
+    ((Value_Closure*)closure_64)->args[2] = var_0;
+    return closure_64;
 }
 Value *Main_main_3
 (
@@ -315,12 +315,12 @@ Value *Main_main_3
 {
     idris2_removeReference(var_3);
     idris2_removeReference(var_4);
-    Value *closure_64 = (Value *)idris2_mkClosure((Value *(*)())Prelude_Types_foldr_Foldable_List, 3, 3);
+    Value *closure_65 = (Value *)idris2_mkClosure((Value *(*)())Prelude_Types_foldr_Foldable_List, 3, 3);
                                                              // Prelude.Types:656:1--669:59
-    ((Value_Closure*)closure_64)->args[0] = var_2;
-    ((Value_Closure*)closure_64)->args[1] = var_1;
-    ((Value_Closure*)closure_64)->args[2] = var_0;
-    return closure_64;
+    ((Value_Closure*)closure_65)->args[0] = var_2;
+    ((Value_Closure*)closure_65)->args[1] = var_1;
+    ((Value_Closure*)closure_65)->args[2] = var_0;
+    return closure_65;
 }
 Value *Main_main_2
 (
@@ -360,10 +360,10 @@ Value *Main_main_0
 {
     idris2_removeReference(var_3);
     idris2_removeReference(var_4);
-    Value *closure_65 = (Value *)idris2_mkClosure((Value *(*)())Prelude_IO_map_Functor_IO, 3, 3);
+    Value *closure_66 = (Value *)idris2_mkClosure((Value *(*)())Prelude_IO_map_Functor_IO, 3, 3);
                                                              // Prelude.IO:15:1--17:38
-    ((Value_Closure*)closure_65)->args[0] = var_2;
-    ((Value_Closure*)closure_65)->args[1] = var_1;
-    ((Value_Closure*)closure_65)->args[2] = var_0;
-    return closure_65;
+    ((Value_Closure*)closure_66)->args[0] = var_2;
+    ((Value_Closure*)closure_66)->args[1] = var_1;
+    ((Value_Closure*)closure_66)->args[2] = var_0;
+    return closure_66;
 }

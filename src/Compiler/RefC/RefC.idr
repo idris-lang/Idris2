@@ -142,23 +142,6 @@ cPrimType CharType = "Char"
 cPrimType DoubleType = "Double"
 cPrimType WorldType = "void"
 
-cConstant : Constant -> String
-cConstant (I x) = "idris2_mkInt64("++ showIntMin x ++")"
-cConstant (I8 x) = "idris2_mkInt8(INT8_C("++ show x ++"))"
-cConstant (I16 x) = "idris2_mkInt16(INT16_C("++ show x ++"))"
-cConstant (I32 x) = "idris2_mkInt32(INT32_C("++ show x ++"))"
-cConstant (I64 x) = "idris2_mkInt64("++ showInt64Min x ++")"
-cConstant (BI x) = "(Value*)idris2_mkIntegerLiteral(\""++ show x ++"\")"
-cConstant (B8 x)   = "idris2_mkBits8(UINT8_C("++ show x ++"))"
-cConstant (B16 x)  = "idris2_mkBits16(UINT16_C("++ show x ++"))"
-cConstant (B32 x)  = "idris2_mkBits32(UINT32_C("++ show x ++"))"
-cConstant (B64 x)  = "idris2_mkBits64(UINT64_C("++ show x ++"))"
-cConstant (Db x) = "idris2_mkDouble("++ show x ++")"
-cConstant (Ch x) = "idris2_mkChar("++ escapeChar x ++")"
-cConstant (Str x) = "(Value*)idris2_mkString("++ cStringQuoted x ++")"
-cConstant (PrT t) = cPrimType t
-cConstant WorldVal = "(Value*)NULL"
-
 ||| Generate scheme for a primitive function.
 cOp : {0 arity : Nat} -> PrimFn arity -> Vect arity String -> String
 cOp (Neg ty)      [x]       = "idris2_negate_"  ++  cPrimType ty ++ "(" ++ x ++ ")"
@@ -211,6 +194,7 @@ data EnvTracker : Type where
 data FunctionDefinitions : Type where
 data IndentLevel : Type where
 data HeaderFiles : Type where
+data ConstDef : Type where
 
 ReuseMap = SortedMap Name String
 Owned = SortedSet AVar
@@ -457,6 +441,7 @@ mutual
                  -> {auto e : Ref EnvTracker Env}
                  -> {auto oft : Ref OutfileText Output}
                  -> {auto il : Ref IndentLevel Nat}
+                 -> {auto _ : Ref ConstDef (SortedMap Constant String)}
                  -> Env
                  -> String -> String -> List Int -> ANF -> TailPositionStatus
                  -> Core ()
@@ -479,6 +464,7 @@ mutual
                       -> {auto oft : Ref OutfileText Output}
                       -> {auto il : Ref IndentLevel Nat}
                       -> {auto e : Ref EnvTracker Env}
+                      -> {auto _ : Ref ConstDef (SortedMap Constant String)}
                       -> ANF
                       -> TailPositionStatus
                       -> Core String
@@ -557,8 +543,8 @@ mutual
              "prim__void", "prim__os", "prim__codegen", "prim__onCollect", "prim__onCollectAny" ]
         case p of
             NS _ (UN (Basic pn)) =>
-               unless (elem pn prims) $ throw $ InternalError $ "INTERNAL ERROR: Unknown primitive: " ++ cName p
-            _ => throw $ InternalError $ "INTERNAL ERROR: Unknown primitive: " ++ cName p
+               unless (elem pn prims) $ throw $ InternalError $ "[refc] Unknown primitive: " ++ cName p
+            _ => throw $ InternalError $ "[refc] Unknown primitive: " ++ cName p
         emit fc $ "// call to external primitive " ++ cName p
         pure $ "idris2_\{cName p}("++ showSep ", " (map varName args) ++")"
 
@@ -635,7 +621,53 @@ mutual
         emit emptyFC "}"
         pure switchReturnVar
 
-    cStatementsFromANF (APrimVal fc c) _ = pure $ cConstant c
+    cStatementsFromANF (APrimVal fc (I x)) tailPosition = cStatementsFromANF (APrimVal fc (I64 $ cast x)) tailPosition
+    cStatementsFromANF (APrimVal fc c) _ = do
+      constdefs <- get ConstDef
+      case lookup c constdefs of
+           Just constid => constantName c constid -- the constant already booked.
+           Nothing => dyngen
+     where
+        constantName : Constant -> String -> Core String
+        constantName c n = case c of
+           I x   => pure "((Value*)&idris2_constant_Int64_\{cCleanString $ show x})"
+           I64 x => pure "((Value*)&idris2_constant_Int64_\{cCleanString $ show x})"
+           B64 x => pure "((Value*)&idris2_constant_Bits64_\{show x})"
+           Db x  => pure "((Value*)&idris2_constant_Double_\{cCleanString $ show x})"
+           Str x => pure "((Value*)&idris2_constant_String_\{n})"
+           _ => throw $ InternalError "[refc] Unsupported type of constant."
+        orStagen : Core String
+        orStagen = do
+            constdefs <- get ConstDef
+            constid <- case c of
+                 Str _ => getNextCounter
+                 _ => pure ""
+            -- booking the constant to generate later
+            put ConstDef $ insert c constid constdefs
+            constantName c constid
+        dyngen : Core String
+        dyngen = case c of
+            I8 x  => pure "idris2_mkInt8(INT8_C(\{show x}))"
+            I16 x => pure "idris2_mkInt16(INT16_C(\{show x}))"
+            I32 x => pure "idris2_mkInt32(INT32_C(\{show x}))"
+            I64 x => if x >= 0 && x < 100
+                then pure "(Value*)(&idris2_predefined_Int64[\{show x}])"
+                else orStagen
+            BI x => if x >= 0 && x < 100
+                then pure "idris2_getPredefinedInteger(\{show x})"
+                else pure "idris2_mkIntegerLiteral(\"\{show x}\")"
+            B8 x  => pure "idris2_mkBits8(UINT8_C(\{show x}))"
+            B16 x => pure "idris2_mkBits16(UINT16_C(\{show x}))"
+            B32 x => pure "idris2_mkBits32(UINT32_C(\{show x}))"
+            B64 x => if x >= 0 && x < 100
+               then pure "(Value*)(&idris2_predefined_Bits64[\{show x}])"
+               else orStagen
+            Db _ => orStagen
+            Ch x  => pure "idris2_mkChar(\{escapeChar x})"
+            Str _ => orStagen
+            PrT t => pure $ cPrimType t
+            _ => pure "NULL"
+
     cStatementsFromANF (AErased fc) _ = pure "NULL"
     cStatementsFromANF (ACrash fc x) _ = pure "(NULL /* CRASH */)"
 
@@ -760,6 +792,7 @@ additionalFFIStub name argTypes retType =
 
 createCFunctions : {auto c : Ref Ctxt Defs}
                 -> {auto a : Ref ArgCounter Nat}
+                -> {auto _ : Ref ConstDef (SortedMap Constant String)}
                 -> {auto f : Ref FunctionDefinitions (List String)}
                 -> {auto oft : Ref OutfileText Output}
                 -> {auto il : Ref IndentLevel Nat}
@@ -856,17 +889,19 @@ createCFunctions n (MkAForeign ccs fargs ret) = do
 
           decreaseIndentation
           emit EmptyFC "}"
-      _ => assert_total $ idris_crash ("INTERNAL ERROR: FFI not found for " ++ cName n)
+      _ => throw $ InternalError "[refc] FFI not found for \{cName n}"
           -- not really total but this way this internal error does not contaminate everything else
 
-createCFunctions n (MkAError exp) = assert_total $ idris_crash ("INTERNAL ERROR: Error with expression: " ++ show exp)
+createCFunctions n (MkAError exp) = throw $ InternalError "[refc] Error with expression: \{show exp}"
 -- not really total but this way this internal error does not contaminate everything else
+
 
 header : {auto c : Ref Ctxt Defs}
       -> {auto f : Ref FunctionDefinitions (List String)}
       -> {auto o : Ref OutfileText Output}
       -> {auto il : Ref IndentLevel Nat}
       -> {auto h : Ref HeaderFiles (SortedSet String)}
+      -> {auto _ : Ref ConstDef (SortedMap Constant String)}
       -> Core ()
 header = do
     let initLines = """
@@ -875,9 +910,31 @@ header = do
 
       """
     let headerFiles = SortedSet.toList !(get HeaderFiles)
-    let headerLines = map (\h => "#include <" ++ h ++ ">\n") headerFiles
     fns <- get FunctionDefinitions
-    update OutfileText (appendL ([initLines] ++ headerLines ++ ["\n// function definitions"] ++ fns))
+    update OutfileText $ appendL $
+        [initLines] ++
+        map (\h => "#include <\{h}>\n") headerFiles ++
+        ["\n// function definitions"] ++
+        fns ++
+        ["\n// constant value definitions"] ++
+        map (uncurry genConstant) (SortedMap.toList !(get ConstDef))
+  where
+    go : String -> String -> String -> String -> String
+    go suffix ty tag v =
+      "static Value_\{ty} const idris2_constant_\{ty}_\{cCleanString suffix}"
+        ++ " = { IDRIS2_STOCKVAL(\{tag}_TAG), \{v} };"
+    genConstant : Constant -> String -> String
+    genConstant c n = case c of
+      I x   => let x' = show x in go x' "Int64" "INT64" (showIntMin x)
+      I64 x => let x' = show x in go x' "Int64" "INT64" (showInt64Min x)
+      B64 x => let x' = show x in go x' "Bits64" "BITS64" "UINT64_C(\{x'})"
+      Db x  => let x' = show x in go x' "Double" "DOUBLE" x'
+      Str x => go n "String" "STRING" (cStringQuoted x)
+      _ => "/* bad constant */"
+
+
+
+
 
 footer : {auto il : Ref IndentLevel Nat}
       -> {auto f : Ref OutfileText Output}
@@ -908,6 +965,7 @@ generateCSourceFile : {auto c : Ref Ctxt Defs}
 generateCSourceFile defs outn =
   do _ <- newRef ArgCounter 0
      _ <- newRef FunctionDefinitions []
+     _ <- newRef ConstDef Data.SortedMap.empty
      _ <- newRef OutfileText DList.Nil
      _ <- newRef HeaderFiles empty
      _ <- newRef IndentLevel 0
