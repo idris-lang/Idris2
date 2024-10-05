@@ -225,6 +225,10 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Added `Data.IORef.atomically` for the chez backend.
 
+* Deprecated `toList` function in favor of `kvList` function in `Data.SortedMap` and `Data.SortedMap.Dependent`.
+
+* Deprecated `toList` function in favor of `Prelude.toList` in `Data.SortedSet`.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
