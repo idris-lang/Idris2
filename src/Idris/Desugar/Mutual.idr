@@ -19,7 +19,7 @@ getDecl p (PImplementation fc vis opts _ is cons n ps iname nusing ds)
 getDecl p (PNamespace fc ns ds)
     = Just (PNamespace fc ns (assert_total $ mapMaybe (getDecl p) ds))
 
-getDecl AsType d@(PClaim _ _ _ _ _) = Just d
+getDecl AsType d@(PClaim _ _) = Just d
 getDecl AsType (PData fc doc vis mbtot (MkPData dfc tyn (Just tyc) _ _))
     = Just (PData fc doc vis mbtot (MkPLater dfc tyn tyc))
 getDecl AsType d@(PInterface _ _ _ _ _ _ _ _ _) = Just d
@@ -33,7 +33,7 @@ getDecl AsType d@(PFixity _ _ _ _ _ _) = Just d
 getDecl AsType d@(PDirective _ _) = Just d
 getDecl AsType d = Nothing
 
-getDecl AsDef (PClaim _ _ _ _ _) = Nothing
+getDecl AsDef (PClaim _ _) = Nothing
 getDecl AsDef d@(PData _ _ _ _ (MkPLater _ _ _)) = Just d
 getDecl AsDef (PInterface _ _ _ _ _ _ _ _ _) = Nothing
 getDecl AsDef d@(PRecord _ _ _ _ (MkPRecordLater _ _)) = Just d

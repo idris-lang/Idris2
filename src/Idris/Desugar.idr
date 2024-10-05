@@ -1039,7 +1039,7 @@ mutual
                 {auto m : Ref MD Metadata} ->
                 {auto o : Ref ROpts REPLOpts} ->
                 List Name -> PDecl -> Core (List ImpDecl)
-  desugarDecl ps (PClaim fc rig vis fnopts ty)
+  desugarDecl ps (PClaim fc (MkPClaim rig vis fnopts ty))
       = do opts <- traverse (desugarFnOpt ps) fnopts
            pure [IClaim fc rig vis opts !(desugarType ps ty)]
         where

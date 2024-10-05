@@ -153,6 +153,10 @@ export
 boundToFC : OriginDesc -> WithBounds t -> FC
 boundToFC mbModIdent b = MkFC mbModIdent (start b) (end b)
 
+export
+boundToFC' : OriginDesc -> Bounds -> FC
+boundToFC' mbModIdent b = MkFC mbModIdent (startBounds b) (endBounds b)
+
 ------------------------------------------------------------------------
 -- Predicates
 

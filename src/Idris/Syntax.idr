@@ -10,6 +10,7 @@ import public Core.TT
 
 import TTImp.TTImp
 
+import Data.Choice
 import Data.List
 import Data.Maybe
 import Data.SnocList
@@ -313,7 +314,7 @@ mutual
                    (params : List (Name, RigCount, PiInfo (PTerm' nm), PTerm' nm)) ->
                    (opts : List DataOpt) ->
                    (conName : Maybe (String, Name)) ->
-                   (fields : List (PField' nm)) ->
+                   (decls : List (PField' nm)) ->
                    PRecordDecl' nm
        MkPRecordLater : (tyname : Name) ->
                         (params : List (Name, RigCount, PiInfo (PTerm' nm), PTerm' nm)) ->
@@ -392,6 +393,17 @@ mutual
   data PField' : Type -> Type where
        MkField : FC -> (doc : String) -> RigCount -> PiInfo (PTerm' nm) ->
                  Name -> (ty : PTerm' nm) -> PField' nm
+       MkRecordLet : FC -> List1 (PRecordDeclLet' nm) -> PField' nm
+
+  public export
+  PRecordDeclLet : Type
+  PRecordDeclLet = PRecordDeclLet' Name
+
+  public export
+  data PRecordDeclLet' nm = RecordClaim (PClaimData' nm) | RecordClause (PClause' nm)
+
+  0 PRecordDeclLetChoice : Type -> Type
+  PRecordDeclLetChoice nm = ChoiceOf ["RecordClaim" :- PClaimData' nm, "RecordClause" :- PClause' nm]
 
   -- For noting the pass we're in when desugaring a mutual block
   -- TODO: Decide whether we want mutual blocks!
@@ -424,12 +436,24 @@ mutual
        PForeignExport : List (PTerm' nm) -> PFnOpt' nm
 
   public export
+  PClaimData : Type
+  PClaimData = PClaimData' Name
+
+  public export
+  record PClaimData' (nm : Type) where
+    constructor MkPClaim
+    qty : RigCount
+    vis : Visibility
+    opts : List (PFnOpt' nm)
+    type : PTypeDecl' nm
+
+  public export
   PDecl : Type
   PDecl = PDecl' Name
 
   public export
   data PDecl' : Type -> Type where
-       PClaim : FC -> RigCount -> Visibility -> List (PFnOpt' nm) -> PTypeDecl' nm -> PDecl' nm
+       PClaim : FC -> PClaimData' nm -> PDecl' nm
        PDef : FC -> List (PClause' nm) -> PDecl' nm
        PData : FC -> (doc : String) -> WithDefault Visibility Private ->
                Maybe TotalReq -> PDataDecl' nm -> PDecl' nm
@@ -481,7 +505,7 @@ mutual
 
   export
   getPDeclLoc : PDecl' nm -> FC
-  getPDeclLoc (PClaim fc _ _ _ _) = fc
+  getPDeclLoc (PClaim fc _) = fc
   getPDeclLoc (PDef fc _) = fc
   getPDeclLoc (PData fc _ _ _ _) = fc
   getPDeclLoc (PParameters fc _ _) = fc
@@ -524,7 +548,7 @@ definedInData (MkPLater _ n _) = [n]
 export
 definedIn : List PDecl -> List Name
 definedIn [] = []
-definedIn (PClaim _ _ _ _ (MkPTy _ _ n _ _) :: ds) = n :: definedIn ds
+definedIn (PClaim _ (MkPClaim _ _ _ (MkPTy _ _ n _ _)) :: ds) = n :: definedIn ds
 definedIn (PData _ _ _ _ d :: ds) = definedInData d ++ definedIn ds
 definedIn (PParameters _ _ pds :: ds) = definedIn pds ++ definedIn ds
 definedIn (PUsing _ _ pds :: ds) = definedIn pds ++ definedIn ds
@@ -1082,11 +1106,16 @@ Show PClause where
   show (MkWithClause _ _ _ _ _) = "MkWithClause"
   show (MkImpossible _ lhs) = unwords [ show lhs, "impossible" ]
 
+export
+covering
+Show PClaimData where
+  show (MkPClaim rig _ _ sig) = showCount rig ++ show sig
+
 -- TODO: finish writing this instance
 export
 covering
 Show PDecl where
-  show (PClaim _ rig vis opts sig) = showCount rig ++ show sig
+  show (PClaim _ pclaim) = show pclaim
   show (PDef _ cls) = unlines (show <$> cls)
   show (PData{}) = "PData"
   show (PParameters{}) = "PParameters"

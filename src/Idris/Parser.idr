@@ -23,6 +23,8 @@ import Libraries.Data.WithDefault
 
 import Idris.Parser.Let
 
+import Debug.Trace
+
 %default covering
 
 decorate : OriginDesc -> Decoration -> Rule a -> Rule a
@@ -1869,9 +1871,8 @@ paramDecls fname indents = do
     newParamDecls fname indents
         = map concat (some $ typedArg fname indents)
 
-
-claims : OriginDesc -> IndentInfo -> Rule (List1 PDecl)
-claims fname indents
+localClaim : OriginDesc -> IndentInfo -> Rule (List1 (FC, PClaimData))
+localClaim fname indents
     = do bs <- bounds (do
                   doc     <- optDocumentation fname
                   visOpts <- many (visOpt fname)
@@ -1882,8 +1883,12 @@ claims fname indents
                                   doc fname indents
                   pure $ map (\cl => the (Pair _ _) (doc, vis, opts, rig, cl)) cls)
          pure $ map (\(doc, vis, opts, rig, cl) : Pair _ _ =>
-                           PClaim (boundToFC fname bs) rig vis opts cl)
+                           (boundToFC fname bs, MkPClaim  rig vis opts cl))
                     bs.val
+
+-- come back to this later
+claims : OriginDesc -> IndentInfo -> Rule (List1 PDecl)
+claims o i = map (uncurry PClaim) <$> (localClaim o i)
 
 definition : OriginDesc -> IndentInfo -> Rule PDecl
 definition fname indents

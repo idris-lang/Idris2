@@ -233,6 +233,9 @@ mapPTermM f = goPTerm where
     goPDo (DoLetLocal fc decls) = DoLetLocal fc <$> goPDecls decls
     goPDo (DoRewrite fc t) = DoRewrite fc <$> goPTerm t
 
+    goPRecordDeclLet : PRecordDeclLet' nm -> Core (PRecordDeclLet' nm)
+    goPRecordDeclLet x = ?goPRecordDeclLet_rhs
+
     goPClause : PClause' nm -> Core (PClause' nm)
     goPClause (MkPatClause fc lhs rhs wh) =
       MkPatClause fc <$> goPTerm lhs
@@ -249,10 +252,14 @@ mapPTermM f = goPTerm where
     goPWithProblem (MkPWithProblem rig wval mnm)
       = MkPWithProblem rig <$> goPTerm wval <*> pure mnm
 
+    goPClaim : PClaimData' nm -> Core (PClaimData' nm)
+    goPClaim (MkPClaim c v opts tdecl) =
+      MkPClaim c v <$> goPFnOpts opts
+                   <*> goPTypeDecl tdecl
+
     goPDecl : PDecl' nm -> Core (PDecl' nm)
-    goPDecl (PClaim fc c v opts tdecl) =
-      PClaim fc c v <$> goPFnOpts opts
-                    <*> goPTypeDecl tdecl
+    goPDecl (PClaim fc claim) =
+      PClaim fc <$> goPClaim claim
     goPDecl (PDef fc cls) = PDef fc <$> goPClauses cls
     goPDecl (PData fc doc v mbt d) = PData fc doc v mbt <$> goPDataDecl d
     goPDecl (PParameters fc nts ps) =
@@ -309,6 +316,8 @@ mapPTermM f = goPTerm where
       MkField fc doc c <$> goPiInfo info
                        <*> pure n
                        <*> goPTerm t
+    goPField (MkRecordLet fc decls) =
+      MkRecordLet fc <$> traverseList1 ?rest decls
 
     goPiInfo : PiInfo (PTerm' nm) -> Core (PiInfo (PTerm' nm))
     goPiInfo (DefImplicit t) = DefImplicit <$> goPTerm t
@@ -534,9 +543,12 @@ mapPTerm f = goPTerm where
       = MkWithClause fc (goPTerm lhs) (goPWithProblem <$> wps) flags (goPClause <$> cls)
     goPClause (MkImpossible fc lhs) = MkImpossible fc $ goPTerm lhs
 
+    goPClaim : PClaimData' nm -> PClaimData' nm
+    goPClaim (MkPClaim c v opts tdecl) = MkPClaim c v (goPFnOpt <$> opts) (goPTypeDecl tdecl)
+
     goPDecl : PDecl' nm -> PDecl' nm
-    goPDecl (PClaim fc c v opts tdecl)
-      = PClaim fc c v (goPFnOpt <$> opts) (goPTypeDecl tdecl)
+    goPDecl (PClaim fc claim)
+      = PClaim fc (goPClaim claim)
     goPDecl (PDef fc cls) = PDef fc $ goPClause <$> cls
     goPDecl (PData fc doc v mbt d) = PData fc doc v mbt $ goPDataDecl d
     goPDecl (PParameters fc nts ps)
@@ -570,9 +582,15 @@ mapPTerm f = goPTerm where
       = MkPData fc n (map goPTerm t) opts (goPTypeDecl <$> tdecls)
     goPDataDecl (MkPLater fc n t) = MkPLater fc n $ goPTerm t
 
+    goPRecordDeclLet : PRecordDeclLet' nm -> PRecordDeclLet' nm
+    goPRecordDeclLet (RecordClaim x) = RecordClaim (goPClaim x)
+    goPRecordDeclLet (RecordClause x) = RecordClause (goPClause x)
+
     goPField : PField' nm -> PField' nm
     goPField (MkField fc doc c info n t)
       = MkField fc doc c (goPiInfo info) n (goPTerm t)
+    goPField (MkRecordLet fc decls)
+      = MkRecordLet fc (map goPRecordDeclLet decls)
 
     goPiInfo : PiInfo (PTerm' nm) -> PiInfo (PTerm' nm)
     goPiInfo (DefImplicit t) = DefImplicit $ goPTerm t
