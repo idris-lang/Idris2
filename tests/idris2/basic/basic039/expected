@@ -4,7 +4,7 @@ Data constructor:
   tag: 0
   arity: 1
   newtype by: (False, 0)
-Compiled: Type Constructor:
+Compiled: Data Constructor:
   tag: 0
   arity: 1
   newtype by: 0
@@ -13,7 +13,7 @@ Main> Main.MkBar
 Data constructor:
   tag: 0
   arity: 1
-Compiled: Type Constructor:
+Compiled: Data Constructor:
   tag: 0
   arity: 1
 Flags: contype [record]
