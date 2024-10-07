@@ -76,7 +76,7 @@ mutual
        NLocal : Maybe Bool -> (idx : Nat) -> (0 p : IsVar nm idx vars) ->
                 NHead vars
        NRef   : NameType -> Name -> NHead vars
-       NMeta  : Name -> Int -> SnocList (Closure vars) -> NHead vars
+       NMeta  : Name -> Int -> List (Closure vars) -> NHead vars
 
 
   -- Values themselves. 'Closure' is an unevaluated thunk, which means

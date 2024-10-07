@@ -266,10 +266,10 @@ unifyArgs : (Unify tm, Quote tm) =>
             {auto c : Ref Ctxt Defs} ->
             {auto u : Ref UST UState} ->
             UnifyInfo -> FC -> Env Term vars ->
-            SnocList (tm vars) -> SnocList (tm vars) ->
+            List (tm vars) -> List (tm vars) ->
             Core UnifyResult
-unifyArgs mode loc env [<] [<] = pure success
-unifyArgs mode loc env (cxs :< cx) (cys :< cy)
+unifyArgs mode loc env [] [] = pure success
+unifyArgs mode loc env (cx :: cxs) (cy :: cys)
     = do -- Do later arguments first, since they may depend on earlier
          -- arguments and use their solutions.
          cs <- unifyArgs mode loc env cxs cys
@@ -691,7 +691,7 @@ mutual
                     (swaporder : Bool) ->
                     UnifyInfo -> FC -> Env Term vars ->
                     (metaname : Name) -> (metaref : Int) ->
-                    (margs : SnocList (Closure vars)) ->
+                    (margs : List (Closure vars)) ->
                     (margs' : SnocList (Closure vars)) ->
                     Maybe ClosedTerm ->
                     (SnocList (FC, Closure vars) -> NF vars) ->
@@ -703,7 +703,7 @@ mutual
            -- argument types match up
            Just vty <- lookupTyExact (Resolved mref) (gamma defs)
                 | Nothing => ufail fc ("No such metavariable " ++ show mname)
-           vargTys <- getArgTypes defs !(nf defs env (embed vty)) (margs' ++ margs) -- (cast (margs ++ margs')) ? See https://github.com/idris-lang/Idris2/pull/3128 #4efcf27bbc542bf9991ebaf75415644af7135b5d
+           vargTys <- getArgTypes defs !(nf defs env (embed vty)) (reverse (cast margs) ++ margs')
            nargTys <- maybe (pure Nothing)
                             (\ty => getArgTypes defs !(nf defs env (embed ty)) $ map snd args')
                             nty
@@ -751,7 +751,7 @@ mutual
                  (swaporder : Bool) ->
                  UnifyInfo -> FC -> Env Term vars ->
                  (metaname : Name) -> (metaref : Int) ->
-                 (margs : SnocList (Closure vars)) ->
+                 (margs : List (Closure vars)) ->
                  (margs' : SnocList (Closure vars)) ->
                  NF vars ->
                  Core UnifyResult
@@ -791,7 +791,7 @@ mutual
                    (swaporder : Bool) ->
                    UnifyInfo -> FC -> Env Term vars ->
                    (metaname : Name) -> (metaref : Int) ->
-                   (margs : SnocList (Closure vars)) ->
+                   (margs : List (Closure vars)) ->
                    (margs' : SnocList (Closure vars)) ->
                    (soln : NF vars) ->
                    Core UnifyResult
@@ -808,7 +808,7 @@ mutual
               {newvars, vars : _} ->
               FC -> UnifyInfo -> Env Term vars ->
               (metaname : Name) -> (metaref : Int) ->
-              (margs : SnocList (Closure vars)) ->
+              (margs : List (Closure vars)) ->
               (margs' : SnocList (Closure vars)) ->
               SnocList (Var newvars) ->
               Thin newvars vars ->
@@ -853,14 +853,14 @@ mutual
               (swaporder : Bool) ->
               UnifyInfo -> FC -> Env Term vars ->
               FC -> (metaname : Name) -> (metaref : Int) ->
-              (args : SnocList (Closure vars)) ->
+              (args : List (Closure vars)) ->
               (args' : SnocList (Closure vars)) ->
               (soln : NF vars) ->
               Core UnifyResult
   unifyHole swap mode loc env fc mname mref margs margs' tmnf
       = do defs <- get Ctxt
            empty <- clearDefs defs
-           let args = if isLin margs then margs' else margs' ++ margs -- margs ++ margs' ? See https://github.com/idris-lang/Idris2/pull/3128 #4efcf27bbc542bf9991ebaf75415644af7135b5d
+           let args = if isLin margs' then cast margs else cast margs ++ margs'
            logC "unify.hole" 10
                    (do args' <- traverse (evalArg empty) args
                        qargs <- traverse (quote empty env) args'
@@ -982,7 +982,7 @@ mutual
   -- for *all* possible values, we can safely unify the arguments.
   unifyBothApps mode@(MkUnifyInfo p InTerm) loc env xfc (NLocal xr x xp) xargs yfc (NLocal yr y yp) yargs
       = if x == y
-           then unifyArgs mode loc env (map snd xargs) (map snd yargs)
+           then unifyArgs mode loc env (cast {to=List (Closure _)} $ map snd xargs) (cast {to=List (Closure _)} $ map snd yargs)
            else postpone loc mode "Postponing local app"
                          env (NApp xfc (NLocal xr x xp) xargs)
                              (NApp yfc (NLocal yr y yp) yargs)
@@ -996,8 +996,8 @@ mutual
            if xi == yi && (invx || umode mode == InSearch)
                                -- Invertible, (from auto implicit search)
                                -- so we can also unify the arguments.
-              then unifyArgs mode loc env (map snd xargs' ++ xargs)
-                                          (map snd yargs' ++ yargs)
+              then unifyArgs mode loc env (cast {to=List (Closure _)} $ map snd xargs' <>> xargs)
+                                          (cast {to=List (Closure _)} $ map snd yargs' <>> yargs)
               else do xlocs <- localsIn xargs
                       ylocs <- localsIn yargs
                       -- Solve the one with the bigger context, and if they're
@@ -1016,9 +1016,9 @@ mutual
       pv (PV _ _) = True
       pv _ = False
 
-      localsIn : SnocList (Closure vars) -> Core Nat
-      localsIn [<] = pure 0
-      localsIn (cs :< c)
+      localsIn : List (Closure vars) -> Core Nat
+      localsIn [] = pure 0
+      localsIn (c :: cs)
           = do defs <- get Ctxt
                case !(evalClosure defs c) of
                  NApp _ (NLocal _ _ _) _ => pure $ S !(localsIn cs)
@@ -1035,7 +1035,7 @@ mutual
                                         (NApp yfc (NMeta yn yi yargs) yargs')
   unifyBothApps mode@(MkUnifyInfo p InSearch) loc env xfc fx@(NRef xt hdx) xargs yfc fy@(NRef yt hdy) yargs
       = if hdx == hdy
-           then unifyArgs mode loc env (map snd xargs) (map snd yargs)
+           then unifyArgs mode loc env (cast {to=List (Closure _)} $ map snd xargs) (cast {to=List (Closure _)} $ map snd yargs)
            else unifyApp False mode loc env xfc fx xargs (NApp yfc fy yargs)
   unifyBothApps mode@(MkUnifyInfo p InMatch) loc env xfc fx@(NRef xt hdx) xargs yfc fy@(NRef yt hdy) yargs
       = if hdx == hdy
@@ -1044,7 +1044,7 @@ mutual
                               xs <- traverse (quote defs env) (map snd xargs)
                               ys <- traverse (quote defs env) (map snd yargs)
                               pure ("Matching args " ++ show xs ++ " " ++ show ys))
-                   unifyArgs mode loc env (map snd xargs) (map snd yargs)
+                   unifyArgs mode loc env (cast {to=List (Closure _)} $ map snd xargs) (cast {to=List (Closure _)} $ map snd yargs)
            else unifyApp False mode loc env xfc fx xargs (NApp yfc fy yargs)
   unifyBothApps mode loc env xfc fx ax yfc fy ay
       = unifyApp False mode loc env xfc fx ax (NApp yfc fy ay)
@@ -1163,7 +1163,7 @@ mutual
                            log "unify" 20 "WITH:"
                            traverse_ (dumpArg env) ys
                      -}
-                     unifyArgs mode loc env (map snd xs) (map snd ys)
+                     unifyArgs mode loc env (cast {to=List (Closure _)} $ map snd xs) (cast {to=List (Closure _)} $ map snd ys)
              else convertError loc env
                        (NDCon xfc x tagx ax xs)
                        (NDCon yfc y tagy ay ys)
@@ -1173,8 +1173,8 @@ mutual
           y <- toFullNames y
           pure $ "Comparing type constructors " ++ show x ++ " and " ++ show y
         if x == y
-           then do let xs = map snd xs
-                   let ys = map snd ys
+           then do let xs = cast {to=List (Closure _)} $ map snd xs
+                   let ys = cast {to=List (Closure _)} $ map snd ys
 
                    logC "unify" 20 $
                      pure $ "Constructor " ++ show x
@@ -1194,10 +1194,10 @@ mutual
   unifyNoEta mode loc env (NDelayed xfc _ x) (NDelayed yfc _ y)
       = unify (lower mode) loc env x y
   unifyNoEta mode loc env (NDelay xfc _ xty x) (NDelay yfc _ yty y)
-      = unifyArgs mode loc env [<x, xty] [<y, yty]
+      = unifyArgs mode loc env [xty, x] [yty, y]
   unifyNoEta mode loc env (NForce xfc _ x axs) (NForce yfc _ y ays)
       = do cs <- unify (lower mode) loc env x y
-           cs' <- unifyArgs mode loc env (map snd axs) (map snd ays)
+           cs' <- unifyArgs mode loc env (cast {to=List (Closure _)} $ map snd axs) (cast {to=List (Closure _)} $ map snd ays)
            pure (union cs cs')
   unifyNoEta mode loc env x@(NApp xfc fx@(NMeta _ _ _) axs)
                           y@(NApp yfc fy@(NMeta _ _ _) ays)

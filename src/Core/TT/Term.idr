@@ -291,6 +291,11 @@ apply : FC -> Term vars -> List (Term vars) -> Term vars
 apply loc fn [] = fn
 apply loc fn (a :: args) = apply loc (App loc fn a) args
 
+export
+applySpine : FC -> Term vars -> SnocList (Term vars) -> Term vars
+applySpine loc fn [<] = fn
+applySpine loc fn (args :< a) = App loc (applySpine loc fn args) a
+
 -- Creates a chain of `App` nodes, each with its own file context
 export
 applySpineWithFC : Term vars -> SnocList (FC, Term vars) -> Term vars
@@ -319,6 +324,15 @@ getFnArgs tm = getFA [] tm
     getFA : List (Term vars) -> Term vars ->
             (Term vars, List (Term vars))
     getFA args (App _ f a) = getFA (a :: args) f
+    getFA args tm = (tm, args)
+
+export
+getFnArgsSpine : Term vars -> (Term vars, SnocList (Term vars))
+getFnArgsSpine tm = getFA [<] tm
+  where
+    getFA : SnocList (Term vars) -> Term vars ->
+            (Term vars, SnocList (Term vars))
+    getFA args (App _ f a) = getFA (args :< a) f
     getFA args tm = (tm, args)
 
 export
