@@ -413,26 +413,26 @@ match _ _ = False
 eraseApps : {auto c : Ref Ctxt Defs} ->
             Term vs -> Core (Term vs)
 eraseApps {vs} tm
-    = case getFnArgs tm of
+    = case getFnArgsSpine tm of
            (Ref fc Bound n, args) =>
-                do args' <- traverse eraseApps args
-                   pure (apply fc (Ref fc Bound n) args')
+                do args' <- traverseSnocList eraseApps args
+                   pure (applySpine fc (Ref fc Bound n) args')
            (Ref fc nt n, args) =>
                 do defs <- get Ctxt
                    mgdef <- lookupCtxtExact n (gamma defs)
                    let eargs = maybe [] eraseArgs mgdef
-                   args' <- traverse eraseApps (dropPos fc 0 eargs args)
-                   pure (apply fc (Ref fc nt n) args')
+                   args' <- traverseSnocList eraseApps (dropPos fc 0 eargs args)
+                   pure (applySpine fc (Ref fc nt n) args')
            (tm, args) =>
-                do args' <- traverse eraseApps args
-                   pure (apply (getLoc tm) tm args')
+                do args' <- traverseSnocList eraseApps args
+                   pure (applySpine (getLoc tm) tm args')
   where
-    dropPos : FC -> Nat -> List Nat -> List (Term vs) -> List (Term vs)
-    dropPos fc i ns [] = []
-    dropPos fc i ns (x :: xs)
+    dropPos : FC -> Nat -> List Nat -> SnocList (Term vs) -> SnocList (Term vs)
+    dropPos fc i ns [<] = [<]
+    dropPos fc i ns (xs :< x)
         = if i `elem` ns
-             then Erased fc Placeholder :: dropPos fc (S i) ns xs
-             else x :: dropPos fc (S i) ns xs
+             then dropPos fc (S i) ns xs :< Erased fc Placeholder
+             else dropPos fc (S i) ns xs :< x
 
 -- if tm would be matched by trylhs, then it's not an impossible case
 -- because we've already got it. Ignore anything in erased position.

@@ -80,8 +80,8 @@ mutual
   quoteArgs : {auto c : Ref Ctxt Defs} ->
               {bound, free : _} ->
               Ref QVar Int -> QuoteOpts -> Defs -> Bounds bound ->
-              Env Term free -> SnocList (Closure free) ->
-              Core (SnocList (Term (free ++ bound)))
+              Env Term free -> List (Closure free) ->
+              Core (List (Term (free ++ bound)))
   quoteArgs q opts defs bounds env = traverse (quoteArg q opts defs bounds env)
 
   quoteArgsWithFC : {auto c : Ref Ctxt Defs} ->

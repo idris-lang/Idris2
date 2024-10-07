@@ -556,7 +556,7 @@ mutual
                Just (MkVar (Later p))
   quoteHead q defs fc bounds env (NRef nt n) = pure $ Ref fc nt n
   quoteHead q defs fc bounds env (NMeta n i args)
-      = do args' <- quoteArgs q defs bounds env args
+      = do args' <- quoteArgs q defs bounds env (cast {to=SnocList (Closure _)} args)
            pure $ Meta fc n i (toList args')
 
   quotePi : {bound, free : _} ->

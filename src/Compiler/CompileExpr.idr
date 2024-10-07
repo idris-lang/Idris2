@@ -417,7 +417,7 @@ getPArgs : {auto c : Ref Ctxt Defs} ->
 getPArgs defs cl
     = do NDCon fc _ _ _ args <- evalClosure defs cl
              | nf => throw (GenericMsg (getLoc nf) "Badly formed struct type")
-         case reverse (map snd args) of
+         case map snd args of
               (_ :< n :< tydesc) =>
                   do NPrimVal _ (Str n') <- evalClosure defs n
                          | nf => throw (GenericMsg (getLoc nf) "Unknown field name")
@@ -431,7 +431,7 @@ getFieldArgs defs cl
              | nf => throw (GenericMsg (getLoc nf) "Badly formed struct type")
          case map snd args of
               -- cons
-              [<rest, t, _] =>
+              [< _, t, rest] =>
                   do rest' <- getFieldArgs defs rest
                      (n, ty) <- getPArgs defs t
                      pure ((n, ty) :: rest')
@@ -439,20 +439,20 @@ getFieldArgs defs cl
               _ => pure []
 
 getNArgs : {auto c : Ref Ctxt Defs} ->
-           Defs -> Name -> SnocList (Closure [<]) -> Core NArgs
-getNArgs defs (NS _ (UN $ Basic "IORes")) [<arg] = pure $ NIORes arg
-getNArgs defs (NS _ (UN $ Basic "Ptr")) [<arg] = pure NPtr
-getNArgs defs (NS _ (UN $ Basic "AnyPtr")) [<] = pure NPtr
-getNArgs defs (NS _ (UN $ Basic "GCPtr")) [<arg] = pure NGCPtr
-getNArgs defs (NS _ (UN $ Basic "GCAnyPtr")) [<] = pure NGCPtr
-getNArgs defs (NS _ (UN $ Basic "Buffer")) [<] = pure NBuffer
-getNArgs defs (NS _ (UN $ Basic "ForeignObj")) [<] = pure NForeignObj
-getNArgs defs (NS _ (UN $ Basic "Unit")) [<] = pure NUnit
-getNArgs defs (NS _ (UN $ Basic "Struct")) [<args, n]
+           Defs -> Name -> List (Closure [<]) -> Core NArgs
+getNArgs defs (NS _ (UN $ Basic "IORes")) [arg] = pure $ NIORes arg
+getNArgs defs (NS _ (UN $ Basic "Ptr")) [arg] = pure NPtr
+getNArgs defs (NS _ (UN $ Basic "AnyPtr")) [] = pure NPtr
+getNArgs defs (NS _ (UN $ Basic "GCPtr")) [arg] = pure NGCPtr
+getNArgs defs (NS _ (UN $ Basic "GCAnyPtr")) [] = pure NGCPtr
+getNArgs defs (NS _ (UN $ Basic "Buffer")) [] = pure NBuffer
+getNArgs defs (NS _ (UN $ Basic "ForeignObj")) [] = pure NForeignObj
+getNArgs defs (NS _ (UN $ Basic "Unit")) [] = pure NUnit
+getNArgs defs (NS _ (UN $ Basic "Struct")) [n, args]
     = do NPrimVal _ (Str n') <- evalClosure defs n
              | nf => throw (GenericMsg (getLoc nf) "Unknown name for struct")
          pure (Struct n' !(getFieldArgs defs args))
-getNArgs defs n args = pure $ User n (toList args)
+getNArgs defs n args = pure $ User n args
 
 nfToCFType : {auto c : Ref Ctxt Defs} ->
              FC -> (inStruct : Bool) -> NF [<] -> Core CFType
@@ -483,7 +483,7 @@ nfToCFType _ True (NBind fc _ _ _)
 nfToCFType _ s (NTCon fc n_in _ _ args)
     = do defs <- get Ctxt
          n <- toFullNames n_in
-         case !(getNArgs defs n $ map snd args) of
+         case !(getNArgs defs n $ toList (map snd args)) of
               User un uargs =>
                 do nargs <- traverse (evalClosure defs) uargs
                    cargs <- traverse (nfToCFType fc s) nargs
