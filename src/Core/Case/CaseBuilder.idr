@@ -1224,13 +1224,13 @@ toPatClause : {auto c : Ref Ctxt Defs} ->
               FC -> Name -> (ClosedTerm, ClosedTerm) ->
               Core (SnocList Pat, ClosedTerm)
 toPatClause fc n (lhs, rhs)
-    = case getFnArgs lhs of
+    = case getFnArgsSpine lhs of
            (Ref ffc Func fn, args)
               => do defs <- get Ctxt
                     (np, _) <- getPosition n (gamma defs)
                     (fnp, _) <- getPosition fn (gamma defs)
                     if np == fnp
-                       then pure (!(traverse argToPat (fromList args)), rhs)
+                       then pure (!(traverseSnocList argToPat args), rhs)
                        else throw (GenericMsg ffc ("Wrong function name in pattern LHS " ++ show (n, fn)))
            (f, args) => throw (GenericMsg fc "Not a function name in pattern LHS")
 
