@@ -42,10 +42,10 @@ process : {auto c : Ref Ctxt Defs} ->
           {auto o : Ref ROpts REPLOpts} ->
           ImpREPL -> Core Bool
 process (Eval ttimp)
-    = do (tm, _) <- elabTerm 0 InExpr [] (MkNested []) [] ttimp Nothing
+    = do (tm, _) <- elabTerm 0 InExpr [] (MkNested []) [<] ttimp Nothing
          defs <- get Ctxt
-         tmnf <- normalise defs [] tm
-         coreLift_ (printLn !(unelab [] tmnf))
+         tmnf <- normalise defs [<] tm
+         coreLift_ (printLn !(unelab [<] tmnf))
          pure True
 process (Check (IVar _ n))
     = do defs <- get Ctxt
@@ -56,23 +56,23 @@ process (Check (IVar _ n))
     printName : (Name, Int, ClosedTerm) -> Core ()
     printName (n, _, tyh)
         = do defs <- get Ctxt
-             ty <- normaliseHoles defs [] tyh
+             ty <- normaliseHoles defs [<] tyh
              coreLift_ $ putStrLn $ show n ++ " : " ++
-                                    show !(unelab [] ty)
+                                    show !(unelab [<] ty)
 process (Check ttimp)
-    = do (tm, gty) <- elabTerm 0 InExpr [] (MkNested []) [] ttimp Nothing
+    = do (tm, gty) <- elabTerm 0 InExpr [] (MkNested []) [<] ttimp Nothing
          defs <- get Ctxt
          tyh <- getTerm gty
-         ty <- normaliseHoles defs [] tyh
-         coreLift_ (printLn !(unelab [] ty))
+         ty <- normaliseHoles defs [<] tyh
+         coreLift_ (printLn !(unelab [<] ty))
          pure True
 process (ProofSearch n_in)
     = do defs <- get Ctxt
          [(n, i, ty)] <- lookupTyName n_in (gamma defs)
               | ns => ambiguousName (justFC defaultFC) n_in (map fst ns)
-         def <- search (justFC defaultFC) top False 1000 n ty []
+         def <- search (justFC defaultFC) top False 1000 n ty [<]
          defs <- get Ctxt
-         defnf <- normaliseHoles defs [] def
+         defnf <- normaliseHoles defs [<] def
          coreLift_ (printLn !(toFullNames defnf))
          pure True
 process (ExprSearch n_in)

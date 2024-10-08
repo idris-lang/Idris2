@@ -83,11 +83,11 @@ localHelper {vars} nest env nestdecls_in func
     -- This is because, at the moment, we don't have any mechanism of
     -- ensuring the nested definition is used exactly once
     dropLinear : Env Term vs -> Env Term vs
-    dropLinear [] = []
-    dropLinear (b :: bs)
+    dropLinear [<] = [<]
+    dropLinear (bs :< b)
         = if isLinear (multiplicity b)
-             then setMultiplicity b erased :: dropLinear bs
-             else b :: dropLinear bs
+             then dropLinear bs :< setMultiplicity b erased
+             else dropLinear bs :< b
 
     applyEnv : Int -> Name ->
                Core (Name, (Maybe Name, List (Var vars), FC -> NameType -> Term vars))

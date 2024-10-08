@@ -151,11 +151,11 @@ mutual
   -- list, to the surrounding scope.
   stmt e (NmApp _ x xs) = do
     (mbx, vx)    <- liftFun x
-    (mbxs, args) <- liftArgs xs
+    (mbxs, args) <- liftArgs (toList xs)
     pure . prepend (mbx ++ mbxs) $ assign e (EApp vx args)
 
   stmt e (NmCon _ n ci tg xs) = do
-    (mbxs, args) <- liftArgs xs
+    (mbxs, args) <- liftArgs (toList xs)
     pure . prepend mbxs $ assign e (ECon (tag n tg) ci args)
 
   stmt e o@(NmOp _ x xs) =
@@ -166,7 +166,7 @@ mutual
         pure . prepend mbxs $ assign e (EOp x args)
 
   stmt e (NmExtPrim _ n xs) = do
-    (mbxs, args) <- liftArgs xs
+    (mbxs, args) <- liftArgs (toList xs)
     pure . prepend mbxs $ assign e (EExtPrim n args)
 
   stmt e (NmForce _ _ x) = do
