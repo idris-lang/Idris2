@@ -6,7 +6,8 @@ import Data.String
 
 public export
 data KwPragma
-  = KwHide
+  = KwHint
+  | KwHide
   | KwUnhide
   | KwLogging
   | KwAutoLazy
@@ -76,6 +77,7 @@ Show PragmaArg where
 
 export
 pragmaArgs : KwPragma -> List PragmaArg
+pragmaArgs KwHint = []
 pragmaArgs KwHide = [AName "nm"]
 pragmaArgs KwUnhide = [AName "nm"]
 pragmaArgs KwLogging = [AnOptionalLoggingTopic, ANat]
@@ -101,6 +103,7 @@ pragmaArgs KwSearchTimeOut = [ANat]
 export
 Show KwPragma where
   show kw = case kw of
+    KwHint => "%hint"
     KwHide => "%hide"
     KwUnhide => "%unhide"
     KwLogging => "%logging"
@@ -126,7 +129,8 @@ Show KwPragma where
 export
 allPragmas : List KwPragma
 allPragmas =
-  [ KwHide
+  [ KwHint
+  , KwHide
   , KwUnhide
   , KwLogging
   , KwAutoLazy

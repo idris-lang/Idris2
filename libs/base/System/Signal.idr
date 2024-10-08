@@ -105,6 +105,9 @@ Eq Signal where
   SigPosix x == SigPosix y = x == y
   _ == _ = False
 
+||| Converts a `Signal` to its integer representation to be used
+||| in FFI calls.
+export
 signalCode : Signal -> Int
 signalCode SigINT   = prim__sigint
 signalCode SigABRT  = prim__sigabrt
@@ -117,6 +120,8 @@ signalCode (SigPosix SigTRAP ) = prim__sigtrap
 signalCode (SigPosix SigUser1) = prim__sigusr1
 signalCode (SigPosix SigUser2) = prim__sigusr2
 
+||| Tries to convert an integer to the corresponding `Signal`.
+export
 toSignal : Int -> Maybe Signal
 toSignal (-1) = Nothing
 toSignal x    = lookup x codes

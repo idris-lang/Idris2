@@ -1,0 +1,18 @@
+Main> Prelude.Basics.Bool
+Type constructor:
+  tag: 100
+  arity: 0
+  parameter positions: []
+  constructors: Prelude.Basics.False, Prelude.Basics.True
+Compiled: Type Constructor:
+  arity: 0
+Main> Prelude.Basics.True
+Data constructor:
+  tag: 1
+  arity: 0
+Compiled: Data Constructor:
+  tag: 1
+  arity: 0
+Flags: contype [enum 2]
+Main> 
+Bye for now!

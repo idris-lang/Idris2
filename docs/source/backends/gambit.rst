@@ -65,11 +65,15 @@ Gambit Directives
 
   .. code-block:: shell
 
-    $ idris2 --codegen chez --directive extraRuntime=/path/to/extensions.scm -o main Main.idr
+    $ idris2 --codegen gambit --directive extraRuntime=/path/to/extensions.scm -o main Main.idr
 
 * ``--directive C``
 
-  Compile to C.
+  Compile to C. With this directive, gambit will generate a `.c` file instead of an executable.
+
+  .. code-block:: shell
+
+    $ idris2 --codegen gambit --directive C -o main.c Main.idr
 
 Gambit Environment Configurations
 =================================
@@ -82,7 +86,5 @@ Gambit Environment Configurations
 
     $ export GAMBIT_GSC_BACKEND=clang
 
-  Gambit after version v4.9.3 supports the ``-cc`` option, which configures
-  the compiler backend Gambit will use to build the binary. Currently to
-  get this functionality Gambit needs to be built from source, since it is
-  not yet available in a released version.
+  Gambit version 4.9.4 or newer supports the ``-cc`` option, which configures
+  the compiler backend Gambit will use to build the binary.

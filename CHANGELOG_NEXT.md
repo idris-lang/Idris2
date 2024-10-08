@@ -16,6 +16,15 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   installed will be ignored by the compiler when it tries to use that library as
   a dependency for some other package.
 
+* The `idris2 --help pragma` command now outputs the `%hint` pragma.
+
+* The `idris2 --init` command now ensures that package names are
+  valid Idris2 identifiers.
+
+* A new `idris2 --dump-installdir {ipkg-filename}` command outputs the file path
+  where Idris2 will install the given package if `idris2 --install
+  {ipkg-filename}` is called.
+
 ### Building/Packaging changes
 
 * The Nix flake's `buildIdris` function now returns a set with `executable` and
@@ -39,6 +48,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   specifying the `.ipkg` file) dumps JSON information about an Idris package.
 
 * Support for macOS PowerPC added.
+
+* Multiline comments `{- text -}` are now supported in ipkg files.
 
 ### Language changes
 
@@ -127,11 +138,19 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * More efficient `collect-request-handler` is used.
 
+* Add a codegen directive called `lazy=weakMemo` to make `Lazy` and `Inf` values *weakly*
+  memoised. That is, once accessed, they are allowed to be not re-evaluated until garbage
+  collector wipes them.
+
 #### Racket
 
 * Fixed CSE soundness bug that caused delayed expressions to sometimes be eagerly
   evaluated. Now when a delayed expression is lifted by CSE, it is compiled
   using Scheme's `delay` and `force` to memoize them.
+
+* Add a codegen directive called `lazy=weakMemo` to make `Lazy` and `Inf` values *weakly*
+  memoised. That is, once accessed, they are allowed to be not re-evaluated until garbage
+  collector wipes them.
 
 #### NodeJS Backend
 
@@ -203,6 +222,12 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Added `fromRight` and `fromLeft` for extracting values out of `Either`, equivalent to `fromJust` for `Just`.
 
+* Export `System.Signal.signalCode` and `System.Signal.toSignal`.
+
+* Added implementations of `Foldable` and `Traversable` for `Control.Monad.Identity`
+
+* Added `Data.IORef.atomically` for the chez backend.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
@@ -254,4 +279,5 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 #### Documentation
 
-* Module docstrings are now displayed for namespace indexes when documentation is built via --mkdoc.
+* Module docstrings are now displayed for namespace indexes when documentation is built via `--mkdoc`.
+* Generated documentation are now removed via `--clean`.

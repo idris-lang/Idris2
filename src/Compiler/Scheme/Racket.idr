@@ -86,34 +86,33 @@ showRacketString (c :: cs) acc = showRacketChar c $ showRacketString cs acc
 racketString : String -> Builder
 racketString cs = "\"" ++ showRacketString (unpack cs) "\""
 
-mutual
-  racketPrim : SortedSet Name -> Nat -> ExtPrim -> List NamedCExp -> Core Builder
-  racketPrim cs i GetField [NmPrimVal _ (Str s), _, _, struct,
-                         NmPrimVal _ (Str fld), _]
-      = do structsc <- schExp cs (racketPrim cs) racketString 0 struct
-           pure $ "(" ++ fromString s ++ "-" ++ fromString fld ++ " " ++ structsc ++ ")"
-  racketPrim cs i GetField [_,_,_,_,_,_]
-      = pure "(error \"bad getField\")"
-  racketPrim cs i SetField [NmPrimVal _ (Str s), _, _, struct,
-                         NmPrimVal _ (Str fld), _, val, world]
-      = do structsc <- schExp cs (racketPrim cs) racketString 0 struct
-           valsc <- schExp cs (racketPrim cs) racketString 0 val
-           pure $ mkWorld $
-                "(set-" ++ fromString s ++ "-" ++ fromString fld ++ "! " ++ structsc ++ " " ++ valsc ++ ")"
-  racketPrim cs i SetField [_,_,_,_,_,_,_,_]
-      = pure "(error \"bad setField\")"
-  racketPrim cs i SysCodegen []
-      = pure $ "\"racket\""
-  racketPrim cs i OnCollect [_, p, c, world]
-      = do p' <- schExp cs (racketPrim cs) racketString 0 p
-           c' <- schExp cs (racketPrim cs) racketString 0 c
-           pure $ mkWorld $ "(blodwen-register-object " ++ p' ++ " " ++ c' ++ ")"
-  racketPrim cs i OnCollectAny [p, c, world]
-      = do p' <- schExp cs (racketPrim cs) racketString 0 p
-           c' <- schExp cs (racketPrim cs) racketString 0 c
-           pure $ mkWorld $ "(blodwen-register-object " ++ p' ++ " " ++ c' ++ ")"
-  racketPrim cs i prim args
-      = schExtCommon cs (racketPrim cs) racketString i prim args
+racketPrim : SortedSet Name -> LazyExprProc -> Nat -> ExtPrim -> List NamedCExp -> Core Builder
+racketPrim cs schLazy i GetField [NmPrimVal _ (Str s), _, _, struct,
+                       NmPrimVal _ (Str fld), _]
+    = do structsc <- schExp cs (racketPrim cs schLazy) racketString schLazy 0 struct
+         pure $ "(" ++ fromString s ++ "-" ++ fromString fld ++ " " ++ structsc ++ ")"
+racketPrim cs schLazy i GetField [_,_,_,_,_,_]
+    = pure "(error \"bad getField\")"
+racketPrim cs schLazy i SetField [NmPrimVal _ (Str s), _, _, struct,
+                       NmPrimVal _ (Str fld), _, val, world]
+    = do structsc <- schExp cs (racketPrim cs schLazy) racketString schLazy 0 struct
+         valsc <- schExp cs (racketPrim cs schLazy) racketString schLazy 0 val
+         pure $ mkWorld $
+              "(set-" ++ fromString s ++ "-" ++ fromString fld ++ "! " ++ structsc ++ " " ++ valsc ++ ")"
+racketPrim cs schLazy i SetField [_,_,_,_,_,_,_,_]
+    = pure "(error \"bad setField\")"
+racketPrim cs schLazy i SysCodegen []
+    = pure $ "\"racket\""
+racketPrim cs schLazy i OnCollect [_, p, c, world]
+    = do p' <- schExp cs (racketPrim cs schLazy) racketString schLazy 0 p
+         c' <- schExp cs (racketPrim cs schLazy) racketString schLazy 0 c
+         pure $ mkWorld $ "(blodwen-register-object " ++ p' ++ " " ++ c' ++ ")"
+racketPrim cs schLazy i OnCollectAny [p, c, world]
+    = do p' <- schExp cs (racketPrim cs schLazy) racketString schLazy 0 p
+         c' <- schExp cs (racketPrim cs schLazy) racketString schLazy 0 c
+         pure $ mkWorld $ "(blodwen-register-object " ++ p' ++ " " ++ c' ++ ")"
+racketPrim cs schLazy i prim args
+    = schExtCommon cs (racketPrim cs schLazy) racketString schLazy i prim args
 
 -- Reference label for keeping track of loaded external libraries
 data Loaded : Type where
@@ -390,17 +389,19 @@ compileToRKT c appdir tm outfile
          let ndefs = namedDefs cdata
          let ctm = forget (mainExpr cdata)
 
+         ds <- getDirectives Racket
+         let schLazy = if getWeakMemoLazy ds then weakMemoLaziness else defaultLaziness
+
          defs <- get Ctxt
          f <- newRef {t = List String} Done empty
          l <- newRef {t = List String} Loaded []
          s <- newRef {t = List String} Structs []
          fgndefs <- traverse (getFgnCall appdir) ndefs
          (sortedDefs, constants) <- sortDefs ndefs
-         compdefs <- traverse (getScheme constants (racketPrim constants) racketString) sortedDefs
+         compdefs <- traverse (getScheme constants (racketPrim constants schLazy) racketString schLazy) sortedDefs
          let code = concat (map snd fgndefs) ++ concat compdefs
-         main <- schExp constants (racketPrim constants) racketString 0 ctm
+         main <- schExp constants (racketPrim constants schLazy) racketString schLazy 0 ctm
          support <- readDataFile "racket/support.rkt"
-         ds <- getDirectives Racket
          extraRuntime <- getExtraRuntime ds
          let prof = profile !getSession
          let runmain
