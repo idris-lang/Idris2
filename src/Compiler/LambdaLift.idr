@@ -583,7 +583,7 @@ mutual
       dropConCase : LiftedConAlt (vars ++ outer) ->
                     LiftedConAlt (dropped vars unused ++ outer)
       dropConCase (MkLConAlt n ci t args sc) =
-        MkLConAlt n ci t args (?sdf droppedSc)
+        MkLConAlt n ci t args droppedSc
         where
           sc' : Lifted (vars ++ (outer ++ args))
           sc' = (rewrite appendAssociative vars outer args in sc)

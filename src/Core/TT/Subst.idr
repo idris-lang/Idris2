@@ -20,7 +20,7 @@ namespace Var
   export
   index : Subst tm ds vars -> Var ds -> tm vars
   index [<] (MkVar p) impossible
-  index (_ :< t) (MkVar First) = ?t
+  index (_ :< t) (MkVar First) = t
   index (ts :< _) (MkVar (Later p)) = index ts (MkVar p)
 
 export

@@ -144,6 +144,7 @@ mutual
                | Nothing => pure Nothing
            res <- eval rec env' stk'
                      (rewrite appendAssociative free vars args in
+                              -- Yaffle: embed {vars = free ++ vars} exp
                               embed {outer = free ++ vars} exp)
            pure (Just res)
   tryApply rec stk env _ = pure Nothing
