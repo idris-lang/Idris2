@@ -121,7 +121,7 @@ mutual
       substArgs : SizeOf vs -> List (List (Var vs), Term vars) -> Term vs -> Term (vars ++ vs)
       substArgs p substs tm =
         let
-          substs' = map (bimap (map $ embed {outer = vars}) (weakenNs p)) substs
+          substs' = map (bimap (map embed) (weakenNs p)) substs
           tm' = embed tm
         in
           substVars substs' tm'

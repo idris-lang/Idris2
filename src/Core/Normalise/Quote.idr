@@ -127,7 +127,7 @@ mutual
   quoteHead q opts defs fc bounds env (NRef nt n) = pure $ Ref fc nt n
   quoteHead q opts defs fc bounds env (NMeta n i args)
       = do args' <- quoteArgs q opts defs bounds env args
-           pure $ Meta fc n i (toList args')
+           pure $ Meta fc n i args'
 
   quotePi : {auto c : Ref Ctxt Defs} ->
             {bound, free : _} ->

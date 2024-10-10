@@ -173,10 +173,8 @@ parameters (defs : Defs) (topopts : EvalOpts)
         = pure (NBind fc x b
                       (\defs', arg => applyToStack env !(sc defs' arg) stk))
     applyToStack env (NApp fc (NRef nt fn) args) stk
-        =
-            let combined_stack = args <>< stk
-            in evalRef env False fc nt fn (cast combined_stack)
-                  (NApp fc (NRef nt fn) combined_stack)
+        = evalRef env False fc nt fn (args <>> stk)
+                  (NApp fc (NRef nt fn) (args <>< stk))
     applyToStack env (NApp fc (NLocal mrig idx p) args) stk
         = evalLocal env fc mrig _ p (args <>> stk) []
     applyToStack env (NApp fc (NMeta n i args) args') stk
@@ -260,10 +258,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
                FC -> Name -> Int -> List (Closure free) ->
                Stack free -> Core (NF free)
     evalMeta env fc nm i args stk
-        = let
-              args' = if isNil stk then map (EmptyFC,) args
-                         else (map (EmptyFC,) args) ++ stk
-                        in
+        = let args' = (map (emptyFC,) args) ++ stk in
               evalRef env True fc Func (Resolved i) args'
                           (NApp fc (NMeta nm i args) (cast stk))
 
@@ -274,7 +269,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
               {free : _} ->
               Env Term free ->
               (isMeta : Bool) ->
-              FC -> NameType -> Name -> List (FC, Closure free) -> (def : Lazy (NF free)) ->
+              FC -> NameType -> Name -> Stack free -> (def : Lazy (NF free)) ->
               Core (NF free)
     evalRef env meta fc (DataCon tag arity) fn stk def
         = do -- logC "eval.ref.data" 50 $ do fn' <- toFullNames fn -- Can't use ! here, it gets lifted too far
@@ -447,13 +442,13 @@ parameters (defs : Defs) (topopts : EvalOpts)
 
     -- Take arguments from the stack, as long as there's enough.
     -- Returns the arguments, and the rest of the stack
-    takeFromStack : (arity : Nat) -> List (FC, Closure free) ->
-                    Maybe (Vect arity (Closure free), List (FC, Closure free))
+    takeFromStack : (arity : Nat) -> Stack free ->
+                    Maybe (Vect arity (Closure free), Stack free)
     takeFromStack arity stk = takeStk arity stk []
       where
-        takeStk : (remain : Nat) -> List (FC, Closure free) ->
+        takeStk : (remain : Nat) -> Stack free ->
                   Vect got (Closure free) ->
-                  Maybe (Vect (got + remain) (Closure free), List (FC, Closure free))
+                  Maybe (Vect (got + remain) (Closure free), Stack free)
         takeStk {got} Z stk acc = Just (rewrite plusZeroRightNeutral got in
                                     reverse acc, stk)
         takeStk (S k) [] acc = Nothing
@@ -462,8 +457,8 @@ parameters (defs : Defs) (topopts : EvalOpts)
                      takeStk k stk (snd arg :: acc)
 
     argsFromStack : (args : SnocList Name) ->
-                    List (FC, Closure free) ->
-                    Maybe (LocalEnv free args, List (FC, Closure free))
+                    Stack free ->
+                    Maybe (LocalEnv free args, Stack free)
     argsFromStack [<] stk = Just ([], stk)
     argsFromStack (ns :< n) [] = Nothing
     argsFromStack (ns :< n) (arg :: args)
@@ -473,7 +468,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
     evalOp : {auto c : Ref Ctxt Defs} ->
              {arity, free : _} ->
              (Vect arity (NF free) -> Maybe (NF free)) ->
-             List (FC, Closure free) -> (def : Lazy (NF free)) ->
+             Stack free -> (def : Lazy (NF free)) ->
              Core (NF free)
     evalOp {arity} fn stk def
         = case takeFromStack arity stk of
@@ -495,7 +490,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
               Env Term free -> EvalOpts ->
               (isMeta : Bool) -> FC ->
               RigCount -> Def -> List DefFlag ->
-              List (FC, Closure free) -> (def : Lazy (NF free)) ->
+              Stack free -> (def : Lazy (NF free)) ->
               Core (NF free)
     evalDef env opts meta fc rigd (PMDef r args tree _ _) flags stk def
        -- If evaluating the definition fails (e.g. due to a case being
@@ -518,18 +513,18 @@ parameters (defs : Defs) (topopts : EvalOpts)
                                        pure "Cannot reduce under-applied \{show def}"
                                      pure def
                        Just (locs', stk') =>
-                            do (Result (MkTermEnv newLoc res)) <- evalTree env locs' opts fc (toList stk') tree
+                            do (Result (MkTermEnv newLoc res)) <- evalTree env locs' opts fc stk' tree
                                     | _ => do logC "eval.def.stuck" 50 $ do
                                                 def <- toFullNames def
                                                 pure "evalTree failed on \{show def}"
                                               pure def
                                case fuel opts of
-                                    Nothing => evalWithOpts defs opts env newLoc res (toList stk')
+                                    Nothing => evalWithOpts defs opts env newLoc res stk'
                                     Just Z => log "eval.def.stuck" 50 "Recursion depth limit exceeded"
                                               >> pure def
                                     Just (S k) =>
                                         do let opts' = { fuel := Just k } opts
-                                           evalWithOpts defs opts' env newLoc res (toList stk')
+                                           evalWithOpts defs opts' env newLoc res stk'
              else do -- logC "eval.def.stuck" 50 $ do
                      --   def <- toFullNames def
                      --   pure $ unlines [ "Refusing to reduce \{show def}:"

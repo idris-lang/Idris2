@@ -413,7 +413,7 @@ checkLHS {vars} trans mult n opts nest env fc lhs_in
          -- patterns were allowed, but now they're fully normalised anyway
          -- so we only need to do the holes. If there's a lot of type level
          -- computation, this is a huge saving!
-         lhstm <- normaliseHoles defs lhsenv lhstm
+         lhstm <- normaliseLHS defs lhsenv lhstm
          lhsty <- normaliseHoles defs env lhsty
          linvars_in <- findLinear True 0 linear lhstm
          logTerm "declare.def.lhs" 10 "Checked LHS term after normalise" lhstm
