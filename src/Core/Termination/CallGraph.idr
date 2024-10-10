@@ -151,7 +151,7 @@ mutual
                 Core SizeChange
 
   sizeCompareCon : {auto defs : Defs} -> Nat -> Term vars -> Term vars -> Core Bool
-  sizeCompareTyCon : {auto defs : Defs} -> Term vars -> Term vars -> Bool
+  sizeCompareTyCon : {auto defs : Defs} -> Nat -> Term vars -> Term vars -> Core Bool
   sizeCompareConArgs : {auto defs : Defs} -> Nat -> Term vars -> List (Term vars) -> Core Bool
   sizeCompareApp : {auto defs : Defs} -> Nat -> Term vars -> Term vars -> Core SizeChange
 
@@ -183,20 +183,10 @@ mutual
       substMeta rhs _ _ _ = throw (InternalError ("Badly formed metavar solution \{show n}"))
 
   sizeCompare fuel s t
-     = if sizeCompareTyCon s t then pure Same
+     = if !(sizeCompareTyCon fuel s t) then pure Same
        else if !(sizeCompareCon fuel s t)
           then pure Smaller
           else knownOr (sizeCompareApp fuel s t) (pure $ if sizeEq s t then Same else Unknown)
-
-  -- consider two types the same size
-  sizeCompareTyCon s t =
-    let (f, args) = getFnArgs t in
-    let (g, args') = getFnArgs s in
-    case f of
-      Ref _ (TyCon _ _) cn => case g of
-        Ref _ (TyCon _ _) cn' => cn == cn'
-        _ => False
-      _ => False
 
   sizeCompareProdConArgs : {auto defs : Defs} -> Nat -> List (Term vars) -> List (Term vars) -> Core SizeChange
   sizeCompareProdConArgs _ [] [] = pure Same
@@ -205,6 +195,17 @@ mutual
       Unknown => pure Unknown
       t => (t |*|) <$> sizeCompareProdConArgs fuel xs ys
   sizeCompareProdConArgs _ _ _ = pure Unknown
+
+  sizeCompareTyCon fuel s t =
+    let (f, args) = getFnArgs t in
+    let (g, args') = getFnArgs s in
+    case f of
+      Ref _ (TyCon _ _) cn => case g of
+        Ref _ (TyCon _ _) cn' => if cn == cn'
+            then (Unknown /=) <$> sizeCompareProdConArgs fuel args' args
+            else pure False
+        _ => pure False
+      _ => pure False
 
   sizeCompareCon fuel s t
       = let (f, args) = getFnArgs t in
