@@ -128,10 +128,10 @@ mutual
   allConv : {auto c : Ref Ctxt Defs} ->
             {vars : _} ->
             Ref QVar Int -> Bool -> Defs -> Env Term vars ->
-            SnocList (Closure vars) -> SnocList (Closure vars) -> Core Bool
+            SnocList (FC, Closure vars) -> SnocList (FC, Closure vars) -> Core Bool
   allConv q i defs env xs ys
-      = do xsnf <- traverse (evalClosure defs) xs
-           ysnf <- traverse (evalClosure defs) ys
+      = do xsnf <- traverse (evalClosure defs . snd) xs
+           ysnf <- traverse (evalClosure defs . snd) ys
            if quickConv xsnf ysnf
               then allConvNF q i defs env xsnf ysnf
               else pure False
@@ -316,7 +316,7 @@ mutual
   chkConvHead q i defs env (NRef _ n) (NRef _ n') = pure $ n == n'
   chkConvHead q inf defs env (NMeta n i args) (NMeta n' i' args')
      = if i == i'
-          then allConv q inf defs env (cast args) (cast args')
+          then allConv q inf defs env (cast $ map (emptyFC,) args) (cast $ map (emptyFC,) args')
           else pure False
   chkConvHead q i defs env _ _ = pure False
 
@@ -368,7 +368,7 @@ mutual
     convGen q inf defs env (NApp fc val args) (NApp _ val' args')
         = if !(chkConvHead q inf defs env val val')
              then do i <- getInfPos val
-                     allConv q inf defs env (dropInf 0 i args1) (dropInf 0 i args2)
+                     allConv q inf defs env (dropInf 0 i args) (dropInf 0 i args')
              else chkConvCaseBlock fc q inf defs env val args1 val' args2
         where
           getInfPos : NHead vars -> Core (List Nat)
@@ -397,11 +397,11 @@ mutual
 
     convGen q i defs env (NDCon _ nm tag _ args) (NDCon _ nm' tag' _ args')
         = if tag == tag'
-             then allConv q i defs env (map snd args) (map snd args')
+             then allConv q i defs env args args'
              else pure False
     convGen q i defs env (NTCon _ nm tag _ args) (NTCon _ nm' tag' _ args')
         = if nm == nm'
-             then allConv q i defs env (map snd args) (map snd args')
+             then allConv q i defs env args args'
              else pure False
     convGen q i defs env (NAs _ _ _ tm) (NAs _ _ _ tm')
         = convGen q i defs env tm tm'
@@ -422,7 +422,7 @@ mutual
     convGen q i defs env (NForce _ r arg args) (NForce _ r' arg' args')
         = if compatible r r'
              then if !(convGen q i defs env arg arg')
-                     then allConv q i defs env (map snd args) (map snd args')
+                     then allConv q i defs env args args'
                      else pure False
              else pure False
 

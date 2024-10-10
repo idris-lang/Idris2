@@ -328,12 +328,10 @@ getFnArgs tm = getFA [] tm
 
 export
 getFnArgsSpine : Term vars -> (Term vars, SnocList (Term vars))
-getFnArgsSpine tm = getFA [<] tm
-  where
-    getFA : SnocList (Term vars) -> Term vars ->
-            (Term vars, SnocList (Term vars))
-    getFA args (App _ f a) = getFA (args :< a) f
-    getFA args tm = (tm, args)
+getFnArgsSpine (App _ f a)
+    = let (fn, sp) = getFnArgsSpine f in
+          (fn, sp :< a)
+getFnArgsSpine tm = (tm, [<])
 
 export
 getFn : Term vars -> Term vars
