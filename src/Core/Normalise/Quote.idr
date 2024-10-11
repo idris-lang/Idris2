@@ -280,4 +280,5 @@ quoteWithPi : {auto c : Ref Ctxt Defs} ->
               Defs -> Env Term vars -> NF vars -> Core (Term vars)
 quoteWithPi defs env tm
     = do q <- newRef QVar 0
+      -- do q <- newRef QVar 100 in Yaffle
          quoteWithPiGen q (MkQuoteOpts True False Nothing) defs None env tm

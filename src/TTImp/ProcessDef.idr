@@ -273,13 +273,14 @@ findLinear top bound rig (Bind fc n b sc)
 findLinear top bound rig (As fc _ _ p)
     = findLinear top bound rig p
 findLinear top bound rig tm
-    = case getFnArgsSpine tm of
-           (Ref _ _ n, [<]) => pure []
+    = case getFnArgs tm of
+           (Ref _ _ n, []) => pure []
            (Ref _ nt n, args)
               => do defs <- get Ctxt
                     Just nty <- lookupTyExact n (gamma defs)
                          | Nothing => pure []
-                    findLinArg (accessible nt rig) !(nf defs [<] nty) args
+                    logTerm "declare.def.lhs" 5 ("Type of " ++ show !(toFullNames n)) nty
+                    findLinArg (accessible nt rig) !(nfLHS defs [<] nty) args
            _ => pure []
     where
       accessible : NameType -> RigCount -> RigCount
@@ -287,15 +288,16 @@ findLinear top bound rig tm
       accessible _ r = r
 
       findLinArg : {vars : _} ->
-                   RigCount -> NF [<] -> SnocList (Term vars) ->
+                   RigCount -> NF [<] -> List (Term vars) ->
                    Core (List (Name, RigCount))
-      findLinArg rig ty@(NBind _ _ (Pi _ c _ _) _) (as :< As fc u a p)
+      findLinArg rig ty@(NBind _ _ (Pi _ c _ _) _) (As fc u a p :: as)
           = if isLinear c
                then case u of
-                         UseLeft => findLinArg rig ty (as :< p)
-                         UseRight => findLinArg rig ty (as :< a)
-               else pure $ !(findLinArg rig ty (as :< p :< a))
-      findLinArg rig (NBind _ x (Pi _ c _ _) sc) (as :< Local {name=a} fc _ idx prf)
+                         UseLeft => findLinArg rig ty (p :: as)
+                         UseRight => findLinArg rig ty (a :: as)
+               -- Yaffle: else findLinArg rig ty (as :< p :< a)
+               else pure $ !(findLinArg rig ty [a]) ++ !(findLinArg rig ty (p :: as))
+      findLinArg rig (NBind _ x (Pi _ c _ _) sc) (Local {name=a} fc _ idx prf :: as)
           = do defs <- get Ctxt
                let a = nameAt prf
                if idx < bound
@@ -304,13 +306,13 @@ findLinear top bound rig tm
                                     !(findLinArg rig sc' as)
                  else do sc' <- sc defs (toClosure defaultOpts [<] (Ref fc Bound x))
                          findLinArg rig sc' as
-      findLinArg rig (NBind fc x (Pi _ c _ _) sc) (as :< a)
+      findLinArg rig (NBind fc x (Pi _ c _ _) sc) (a :: as)
           = do defs <- get Ctxt
                pure $ !(findLinear False bound (c |*| rig) a) ++
                       !(findLinArg rig !(sc defs (toClosure defaultOpts [<] (Ref fc Bound x))) as)
-      findLinArg rig ty (as :< a)
+      findLinArg rig ty (a :: as)
           = pure $ !(findLinear False bound rig a) ++ !(findLinArg rig ty as)
-      findLinArg _ _ [<] = pure []
+      findLinArg _ _ [] = pure []
 
 setLinear : List (Name, RigCount) -> Term vars -> Term vars
 setLinear vs (Bind fc x b@(PVar _ _ _ _) sc)
