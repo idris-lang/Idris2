@@ -10,7 +10,7 @@ Issue2250a:14:1--14:36
       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Missing cases:
-    Bug (Choose m)
+    Bug _
 
 Error: Yikes is not covering.
 
@@ -69,8 +69,7 @@ Issue2250c:3:1--3:13
      ^^^^^^^^^^^^
 
 Missing cases:
-    g False
-    g True
+    g _
 
 1/1: Building Issue3276 (Issue3276.idr)
 Error: dis0 is not covering.
@@ -84,7 +83,7 @@ Issue3276:19:1--19:24
       ^^^^^^^^^^^^^^^^^^^^^^^
 
 Missing cases:
-    dis0 (MkDigit e)
+    dis0 _
 
 1/1: Building Visibility (Visibility.idr)
 Error: boom is not covering.
@@ -98,7 +97,7 @@ Visibility:7:1--7:19
      ^^^^^^^^^^^^^^^^^^
 
 Missing cases:
-    boom MkFoo
+    boom _
 
 1/1: Building Head (Head.idr)
 Error: head is not covering.

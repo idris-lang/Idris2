@@ -148,7 +148,7 @@ isEmpty defs env _ = pure False
 altMatch : CaseAlt vars -> CaseAlt vars -> Bool
 altMatch _ (DefaultCase _) = True
 altMatch (DelayCase _ _ t) (DelayCase _ _ t') = True
-altMatch (ConCase n t _ _) (ConCase n' t' _ _) = t == t' && n == n'
+altMatch (ConCase n t _ _) (ConCase n' t' _ _) = t == t'
 altMatch (ConstCase c _) (ConstCase c' _) = c == c'
 altMatch _ _ = False
 

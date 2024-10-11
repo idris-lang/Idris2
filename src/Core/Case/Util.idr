@@ -26,11 +26,11 @@ getCons defs (NTCon _ tn _ _ _)
   where
     addTy : Name -> Core (Maybe DataCon)
     addTy cn
-        = do Just (idx, gdef) <- lookupCtxtExactI cn (gamma defs)
+        = do Just gdef <- lookupCtxtExact cn (gamma defs)
                   | _ => pure Nothing
              case (gdef.definition, gdef.type) of
                   (DCon t arity _, ty) =>
-                        pure . Just $ MkDataCon (Resolved idx) t arity
+                        pure . Just $ MkDataCon cn t arity
                   _ => pure Nothing
 getCons defs _ = pure []
 
