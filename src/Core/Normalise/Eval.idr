@@ -578,6 +578,13 @@ nfOpts : {auto c : Ref Ctxt Defs} ->
 nfOpts opts defs env tm = logDepth $ eval defs opts env [<] tm []
 
 export
+nfLHS : {auto c : Ref Ctxt Defs} ->
+        {vars : _} ->
+        Defs -> Env Term vars -> Term vars -> Core (NF vars)
+nfLHS defs env tm
+    = nfOpts onLHS defs env tm
+
+export
 gnf : {vars : _} ->
       Env Term vars -> Term vars -> Glued vars
 gnf env tm

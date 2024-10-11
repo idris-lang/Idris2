@@ -73,7 +73,7 @@ normaliseLHS : {auto c : Ref Ctxt Defs} ->
 normaliseLHS defs env (Bind fc n b sc)
     = pure $ Bind fc n b !(normaliseLHS defs (env :< b) sc)
 normaliseLHS defs env tm
-    = quote defs env !(nfOpts onLHS defs env tm)
+    = quoteLHS defs env !(nfOpts onLHS defs env tm)
 
 export
 tryNormaliseSizeLimit : {auto c : Ref Ctxt Defs} ->
