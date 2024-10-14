@@ -45,6 +45,9 @@ mapPTermM f = goPTerm where
       PLocal fc <$> goPDecls xs
                 <*> goPTerm scope
       >>= f
+    goPTerm (PDict fc xs) =
+      PDict fc <$> goPDict xs
+      >>= f
     goPTerm (PUpdate fc xs) =
       PUpdate fc <$> goPFieldUpdates xs
       >>= f
@@ -329,6 +332,10 @@ mapPTermM f = goPTerm where
     goPTerms []        = pure []
     goPTerms (t :: ts) = (::) <$> goPTerm t <*> goPTerms ts
 
+    goPDict : List (PTerm' nm, PTerm' nm) -> Core (List (PTerm' nm, PTerm' nm))
+    goPDict []             = pure []
+    goPDict ((t, s) :: ts) = (::) <$> (MkPair <$> goPTerm t <*> goPTerm s) <*> goPDict ts
+
     goPairedPTerms : List (x, PTerm' nm) -> Core (List (x, PTerm' nm))
     goPairedPTerms []             = pure []
     goPairedPTerms ((a, t) :: ts) =
@@ -420,6 +427,8 @@ mapPTerm f = goPTerm where
       = f $ PCase fc (goPFnOpt <$>  opts) (goPTerm x) (goPClause <$> xs)
     goPTerm (PLocal fc xs scope)
       = f $ PLocal fc (goPDecl <$> xs) (goPTerm scope)
+    goPTerm (PDict fc xs)
+      = f $ PDict fc (goPDict xs)
     goPTerm (PUpdate fc xs)
       = f $ PUpdate fc (goPFieldUpdate <$> xs)
     goPTerm (PApp fc x y)
@@ -503,6 +512,11 @@ mapPTerm f = goPTerm where
     goPTerm t@(PPostfixAppPartial fc fields) = f t
     goPTerm (PWithUnambigNames fc ns rhs)
       = f $ PWithUnambigNames fc ns (goPTerm rhs)
+
+    goPDict : List (PTerm' nm, PTerm' nm) -> List (PTerm' nm, PTerm' nm)
+    goPDict [] = []
+    goPDict ((t, s) :: ts)
+        = (goPTerm t, goPTerm s) :: goPDict ts
 
     goPFieldUpdate : PFieldUpdate' nm -> PFieldUpdate' nm
     goPFieldUpdate (PSetField p t)    = PSetField p $ goPTerm t
@@ -618,6 +632,7 @@ substFC fc = mapPTerm $ \case
   PLet _ x pat nTy nVal scope alts => PLet fc x pat nTy nVal scope alts
   PCase _ opts x xs => PCase fc opts x xs
   PLocal _ xs scope => PLocal fc xs scope
+  PDict _ xs => PDict fc xs
   PUpdate _ xs => PUpdate fc xs
   PApp _ x y => PApp fc x y
   PWithApp _ x y => PWithApp fc x y

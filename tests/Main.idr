@@ -149,7 +149,9 @@ idrisTests = MkTestPool "Misc" [] Nothing
        -- quantifiers
        "quantifiers001",
        -- unification
-       "unification001"
+       "unification001",
+       -- dictionary syntax
+       "dictionary001"
        ]
 
 typeddTests : IO TestPool
