@@ -56,6 +56,9 @@ HasNames (ArgType vars) where
   resolved gam (Stuck ty) = Stuck <$> resolved gam ty
   resolved gam Unknown = pure Unknown
 
+export
+FreelyEmbeddable CaseTree where
+
 covering
 {ns : _} -> Show (ArgType ns) where
   show (Known c t) = "Known " ++ show c ++ " " ++ show t
@@ -107,6 +110,15 @@ data NamedPats : SnocList Name -> -- pattern variables still to process
             -- and its type. The type has no variable names; any names it
             -- refers to are explicit
             NamedPats vars ns -> NamedPats vars (ns :< pvar)
+
+-- For ease of type level reasoning!
+rev : SnocList a -> SnocList a
+rev [<] = [<]
+rev (xs :< x) = [<x] ++ rev xs
+
+snoc : NamedPats vars ns -> PatInfo pvar vars -> NamedPats vars ([<pvar] ++ ns)
+snoc [] p = [p]
+snoc (n :: ns) p = n :: snoc ns p
 
 getPatInfo : NamedPats vars todo -> List Pat
 getPatInfo [] = []
@@ -473,6 +485,25 @@ nextNames {vars} fc root (pats :< p) fty
                            Known rig t => Known rig (weakenNs (suc l) t)
                            Stuck t => Stuck (weakenNs (suc l) t)
           pure (args :< n ** (suc l, MkInfo p First argTy :: weaken ps))
+
+-- Copied from
+-- https://github.com/gallais/Idris2/blob/4efcf27bbc542bf9991ebaf75415644af7135b5d/src/Core/Case/CaseBuilder.idr
+getArgTys : {vars : _} ->
+            {auto c : Ref Ctxt Defs} ->
+            Env Term vars -> List Name -> Maybe (NF vars) -> Core (List (ArgType vars))
+getArgTys env (n :: ns) (Just (NBind pfc _ (Pi _ c _ fargc) fsc))
+    = do defs <- get Ctxt
+         empty <- clearDefs defs
+         argty <- case !(evalClosure defs fargc) of
+           NErased _ _ => pure Unknown
+           farg => Known c <$> quote empty env farg
+         scty <- fsc defs (toClosure defaultOpts env (Ref pfc Bound n))
+         rest <- getArgTys env ns (Just scty)
+         pure (argty :: rest)
+getArgTys env (n :: ns) (Just t)
+    = do empty <- clearDefs =<< get Ctxt
+         pure [Stuck !(quote empty env t)]
+getArgTys _ _ _ = pure []
 
 -- replace the prefix of patterns with 'pargs'
 newPats : (pargs : SnocList Pat) -> LengthMatch pargs ns ->
@@ -1140,13 +1171,18 @@ mkPatClause : {auto c : Ref Ctxt Defs} ->
               FC -> Name ->
               (args : SnocList Name) -> ClosedTerm ->
               Int -> (SnocList Pat, ClosedTerm) ->
-              Core (PatClause args args)
+              Core (PatClause args (rev args))
 mkPatClause fc fn args ty pid (ps, rhs)
     = maybe (throw (CaseCompile fc fn DifferingArgNumbers))
             (\eq =>
                do defs <- get Ctxt
                   nty <- nf defs [<] ty
-                  ns <- logDepth $ mkNames args ps eq (Just nty)
+                  log "compile.casetree" 20 $ "Args " ++ show args
+                  -- The arguments are in reverse order, so we need to
+                  -- read what we know off 'nty', and reverse it
+                  argTys <- getArgTys [<] (cast $ args) (Just nty)
+                  log "compile.casetree" 20 $ "Argument types " ++ show argTys
+                  ns <- logDepth $ mkNames args ps eq (reverse argTys)
                   log "compile.casetree" 20 $
                     "Make pat clause for names " ++ show ns
                      ++ " in LHS " ++ show ps
@@ -1155,26 +1191,21 @@ mkPatClause fc fn args ty pid (ps, rhs)
                                    (weakenNs (mkSizeOf args) rhs))))
             (checkLengthMatch args ps)
   where
-    mkNames : (vars : SnocList Name) -> (ps : SnocList Pat) ->
-              LengthMatch vars ps -> Maybe (NF [<]) ->
-              Core (NamedPats vars vars)
+    mkNames : (vars : SnocList Name) -> (ps : SnocList (Pat)) ->
+              LengthMatch vars ps -> List (ArgType [<]) ->
+              Core (NamedPats vars (rev vars))
     mkNames [<] [<] LinMatch fty = pure []
-    mkNames (args :< arg) (ps :< p) (SnocMatch eq) fty
-        = do defs <- get Ctxt
-             empty <- clearDefs defs
-             fa_tys <- the (Core (Maybe _, ArgType _)) $
-                case fty of
-                     Nothing => pure (Nothing, CaseBuilder.Unknown)
-                     Just (NBind pfc _ (Pi _ c _ farg) fsc) =>
-                        pure (Just !(fsc defs (toClosure defaultOpts [<] (Ref pfc Bound arg))),
-                                Known c (embed {outer = args :< arg}
-                                          !(quote empty [<] farg)))
-                     Just t =>
-                        pure (Nothing,
-                                Stuck (embed {outer = args :< arg}
-                                        !(quote empty [<] t)))
-             pure (MkInfo p First (Builtin.snd fa_tys)
-                      :: weaken !(mkNames args ps eq (Builtin.fst fa_tys)))
+    mkNames (args :< _) (ps :< p) (SnocMatch eq) []
+        = do rest <- mkNames args ps eq []
+             pure (snoc (weaken rest) (MkInfo p First Unknown))
+    mkNames (args :< _) (ps :< p) (SnocMatch eq) (f :: fs)
+        = do rest <- mkNames args ps eq fs
+             pure (snoc (weaken rest) (MkInfo p First (embed' f)))
+      where
+        embed' : ArgType [<] -> ArgType more
+        embed' Unknown = Unknown
+        embed' (Stuck t) = Stuck (embed {outer = more} t)
+        embed' (Known c t) = Known c (embed {outer = more} t)
 
 export
 patCompile : {auto c : Ref Ctxt Defs} ->
@@ -1188,7 +1219,7 @@ patCompile fc fn phase ty [] def
             def
 patCompile fc fn phase ty (p :: ps) def
     = do let (ns ** n) = getNames 0 (fst p)
-         pats <- mkPatClausesFrom 0 ns (p :: ps)
+         pats <- mkPatClausesFrom 0 (rev ns) (p :: ps)
          -- low verbosity level: pretty print fully resolved names
          logC "compile.casetree" 5 $ do
            pats <- traverse toFullNames pats
@@ -1197,14 +1228,12 @@ patCompile fc fn phase ty (p :: ps) def
          -- higher verbosity: dump the raw data structure
          log "compile.casetree" 10 $ show pats
          i <- newRef PName (the Int 0)
-         cases <- match fc fn phase pats
-                        (rewrite sym (appendLinLeftNeutral ns) in
-                                 map (weakenNs n) def)
+         cases <- match fc fn phase pats (embed @{MaybeFreelyEmbeddable} def)
          pure (_ ** cases)
   where
     mkPatClausesFrom : Int -> (args : SnocList Name) ->
                        List (SnocList Pat, ClosedTerm) ->
-                       Core (List (PatClause args args))
+                       Core (List (PatClause args (rev args)))
     mkPatClausesFrom i ns [] = pure []
     mkPatClausesFrom i ns (p :: ps)
         = do p' <- mkPatClause fc fn ns ty i p
