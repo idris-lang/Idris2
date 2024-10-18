@@ -351,8 +351,8 @@ mutual
   toCExpTree n alts@(Case _ x scTy (DelayCase ty arg sc :: rest))
       = let fc = getLoc scTy in
             pure $
-              CLet fc arg YesInline (CForce fc LInf (CLocal (getLoc scTy) x)) $
-              CLet fc ty YesInline (CErased fc)
+              CLet fc ty YesInline (CErased fc) $
+              CLet fc arg YesInline (CForce fc LInf (CLocal (getLoc scTy) (Later x)))
                    !(toCExpTree n sc)
   toCExpTree n alts
       = toCExpTree' n alts

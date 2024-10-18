@@ -304,7 +304,7 @@ buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
              buildArgs fc defs (weakenNs l ((MkVar el, t) :: known))
                                (weakenNs l not') ps' sc
     buildArgAlt not' (DelayCase t a sc)
-        = let l = mkSizeOf [<a, t]
+        = let l = mkSizeOf [<t, a]
               ps' = map (substName var (TDelay fc LUnknown
                                              (Ref fc Bound t)
                                              (Ref fc Bound a))) ps in

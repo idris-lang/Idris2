@@ -404,10 +404,10 @@ data Group : SnocList Name -> -- variables in scope
              Type where
      ConGroup : {newargs : _} ->
                 Name -> (tag : Int) ->
-                List (PatClause (vars ++ newargs) (todo ++ newargs)) ->
+                List (PatClause (vars ++ newargs) (todo ++ rev newargs)) ->
                 Group vars todo
      DelayGroup : {tyarg, valarg : _} ->
-                  List (PatClause (vars :< valarg :< tyarg)
+                  List (PatClause (vars :< tyarg :< valarg)
                                   (todo :< valarg :< tyarg)) ->
                   Group vars todo
      ConstGroup : Constant -> List (PatClause vars todo) ->
@@ -459,7 +459,7 @@ nextNames : {vars : _} ->
             {auto i : Ref PName Int} ->
             {auto c : Ref Ctxt Defs} ->
             FC -> String -> SnocList Pat -> Maybe (NF vars) ->
-            Core (args ** (SizeOf args, NamedPats (vars ++ args) args))
+            Core (args ** (SizeOf args, NamedPats (vars ++ args) (rev args)))
 nextNames fc root [<] fty = pure ([<] ** (zero, []))
 nextNames {vars} fc root (pats :< p) fty
      = do defs <- get Ctxt
@@ -484,7 +484,7 @@ nextNames {vars} fc root (pats :< p) fty
                            Unknown => Unknown
                            Known rig t => Known rig (weakenNs (suc l) t)
                            Stuck t => Stuck (weakenNs (suc l) t)
-          pure (args :< n ** (suc l, MkInfo p First argTy :: weaken ps))
+          pure (args :< n ** (suc l, snoc (weaken ps) (MkInfo p First argTy)))
 
 -- Copied from
 -- https://github.com/gallais/Idris2/blob/4efcf27bbc542bf9991ebaf75415644af7135b5d/src/Core/Case/CaseBuilder.idr
@@ -504,6 +504,18 @@ getArgTys env (n :: ns) (Just t)
     = do empty <- clearDefs =<< get Ctxt
          pure [Stuck !(quote empty env t)]
 getArgTys _ _ _ = pure []
+
+snocLMatch : LengthMatch xs ys -> LengthMatch ([<x] ++ xs) ([<y] ++ ys)
+snocLMatch LinMatch = SnocMatch LinMatch
+snocLMatch (SnocMatch z)
+    = let z' = snocLMatch z in
+          SnocMatch z'
+
+revLMatch : LengthMatch xs ys -> LengthMatch (rev xs) (rev ys)
+revLMatch LinMatch = LinMatch
+revLMatch (SnocMatch x)
+    = let x' = revLMatch x in
+          snocLMatch x'
 
 -- replace the prefix of patterns with 'pargs'
 newPats : (pargs : SnocList Pat) -> LengthMatch pargs ns ->
@@ -578,7 +590,7 @@ groupCons fc fn pvars cs
              -- explicit dependencies in types accurate)
              let pats' = updatePatNames (updateNames (zip patnames pargs))
                                         (weakenNs l pats)
-             let clause = MkPatClause {todo = todo' ++ patnames}
+             let clause = MkPatClause {todo = todo' ++ rev patnames}
                               pvars
                               (newargs ++ pats')
                               pid (weakenNs l rhs)
@@ -587,11 +599,11 @@ groupCons fc fn pvars cs
       addConG {vars'} {todo'} n tag pargs pats pid rhs
               ((ConGroup {newargs} n tag ((MkPatClause pvars ps tid tm) :: rest)) :: gs)
                    | (ConMatch {newargs} lprf)
-        = do let newps = newPats pargs lprf ps
+        = do let newps = newPats (rev pargs) (revLMatch lprf) ps
              let l = mkSizeOf newargs
              let pats' = updatePatNames (updateNames (zip newargs pargs))
                                         (weakenNs l pats)
-             let newclause : PatClause (vars' ++ newargs) (todo' ++ newargs)
+             let newclause : PatClause (vars' ++ newargs) (todo' ++ rev newargs)
                    = MkPatClause pvars
                                  (newps ++ pats')
                                  pid
@@ -624,7 +636,7 @@ groupCons fc fn pvars cs
                 | _ => throw (InternalError "Error compiling Delay pattern match")
              let pats' = updatePatNames (updateNames [<(argname, parg), (tyname, pty)])
                                         (weakenNs l pats)
-             let clause = MkPatClause {todo = todo' :< argname :< tyname}
+             let clause = MkPatClause
                              pvars (newargs ++  pats')
                                    pid (weakenNs l rhs)
              pure [DelayGroup [clause]]
@@ -632,11 +644,11 @@ groupCons fc fn pvars cs
       addDelayG {vars'} {todo'} pty parg pats pid rhs
           ((DelayGroup {tyarg} {valarg} ((MkPatClause pvars ps tid tm) :: rest)) :: gs)
                  | (DelayMatch {tyarg} {valarg})
-         = do let l = mkSizeOf [<valarg, tyarg]
+         = do let l = mkSizeOf [<tyarg, valarg]
               let newps = newPats [<parg, pty] (SnocMatch (SnocMatch LinMatch)) ps
               let pats' = updatePatNames (updateNames [<(valarg, parg), (tyarg, pty)])
                                          (weakenNs l pats)
-              let newclause : PatClause (vars' :< valarg :< tyarg)
+              let newclause : PatClause (vars' :< tyarg :< valarg)
                                         (todo' :< valarg :< tyarg)
                     = MkPatClause pvars (newps ++ pats') pid
                                         (weakenNs l rhs)
@@ -1046,7 +1058,7 @@ mutual
                cs' <- altGroups cs
                pure (ConCase cn tag newargs crest :: cs')
       altGroups (DelayGroup {tyarg} {valarg} rest :: cs)
-          = do crest <- match fc fn phase rest (map (weakenNs (mkSizeOf [<valarg, tyarg])) errorCase)
+          = do crest <- match fc fn phase rest (map (weakenNs (mkSizeOf [<tyarg, valarg])) errorCase)
                cs' <- altGroups cs
                pure (DelayCase tyarg valarg crest :: cs')
       altGroups (ConstGroup c rest :: cs)
