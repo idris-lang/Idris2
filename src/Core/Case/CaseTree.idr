@@ -43,7 +43,7 @@ mutual
                  CaseTree (vars ++ args) -> CaseAlt vars
        ||| Lazy match for the Delay type use for codata types
        DelayCase : (ty : Name) -> (arg : Name) ->
-                   CaseTree (vars :< arg :< ty) -> CaseAlt vars
+                   CaseTree (vars :< ty :< arg) -> CaseAlt vars
        ||| Match against a literal
        ConstCase : Constant -> CaseTree vars -> CaseAlt vars
        ||| Catch-all case
