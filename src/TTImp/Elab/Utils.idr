@@ -248,7 +248,7 @@ mutual
   caseAltInlineSafe (ConCase x tag args sc)
       = inExtended Used0 args (\u' => caseInlineSafe sc)
   caseAltInlineSafe (DelayCase ty arg sc)
-      = inExtended Used0 [<arg, ty] (\u' => caseInlineSafe sc)
+      = inExtended Used0 [<ty, arg] (\u' => caseInlineSafe sc)
   caseAltInlineSafe (ConstCase x sc) = caseInlineSafe sc
   caseAltInlineSafe (DefaultCase sc) = caseInlineSafe sc
 
