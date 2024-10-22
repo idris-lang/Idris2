@@ -631,10 +631,10 @@ groupCons fc fn pvars cs
                             do a' <- evalClosure d a
                                pure (NBind fc (MN "x" 0) (Pi fc top Explicit a)
                                        (\dv, av => pure (NDelayed fc LUnknown a'))))
-             ([<argname, tyname] ** (l, newargs)) <- nextNames {vars=vars'} fc "e" [<parg, pty]
+             ([<tyname, argname] ** (l, newargs)) <- nextNames {vars=vars'} fc "e" [<pty, parg]
                                                   (Just dty)
                 | _ => throw (InternalError "Error compiling Delay pattern match")
-             let pats' = updatePatNames (updateNames [<(argname, parg), (tyname, pty)])
+             let pats' = updatePatNames (updateNames [<(tyname, pty), (argname, parg)])
                                         (weakenNs l pats)
              let clause = MkPatClause
                              pvars (newargs ++  pats')
@@ -646,7 +646,7 @@ groupCons fc fn pvars cs
                  | (DelayMatch {tyarg} {valarg})
          = do let l = mkSizeOf [<tyarg, valarg]
               let newps = newPats [<parg, pty] (SnocMatch (SnocMatch LinMatch)) ps
-              let pats' = updatePatNames (updateNames [<(valarg, parg), (tyarg, pty)])
+              let pats' = updatePatNames (updateNames [<(tyarg, pty), (valarg, parg)])
                                          (weakenNs l pats)
               let newclause : PatClause (vars' :< tyarg :< valarg)
                                         (todo' :< valarg :< tyarg)
