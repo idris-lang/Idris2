@@ -172,8 +172,8 @@ export
 covering
 Show Pat where
   show (PAs _ n p) = show n ++ "@(" ++ show p ++ ")"
-  show (PCon _ n i _ args) = show n ++ " " ++ show i ++ " " ++ assert_total (show args)
-  show (PTyCon _ n _ args) = "<TyCon>" ++ show n ++ " " ++ assert_total (show args)
+  show (PCon _ n i _ args) = show n ++ " " ++ show i ++ " " ++ assert_total (show $ toList args)
+  show (PTyCon _ n _ args) = "<TyCon>" ++ show n ++ " " ++ assert_total (show $ toList args)
   show (PConst _ c) = show c
   show (PArrow _ x s t) = "(" ++ show s ++ " -> " ++ show t ++ ")"
   show (PDelay _ _ _ p) = "(Delay " ++ show p ++ ")"

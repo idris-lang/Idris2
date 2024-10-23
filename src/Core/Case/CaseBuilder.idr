@@ -455,37 +455,6 @@ nextName root
          put PName (x + 1)
          pure (MN root x)
 
-nextNames : {vars : _} ->
-            {auto i : Ref PName Int} ->
-            {auto c : Ref Ctxt Defs} ->
-            FC -> String -> SnocList Pat -> Maybe (NF vars) ->
-            Core (args ** (SizeOf args, NamedPats (vars ++ args) (rev args)))
-nextNames fc root [<] fty = pure ([<] ** (zero, []))
-nextNames {vars} fc root (pats :< p) fty
-     = do defs <- get Ctxt
-          empty <- clearDefs defs
-          n <- nextName root
-          let env = mkEnv fc vars
-          fa_tys <- the (Core (Maybe (NF vars), ArgType vars)) $
-              case fty of
-                   Nothing => pure (Nothing, Unknown)
-                   Just (NBind pfc _ (Pi _ c _ fargc) fsc) =>
-                      do farg <- evalClosure defs fargc
-                         case farg of
-                              NErased _ _ =>
-                                pure (Just !(fsc defs (toClosure defaultOpts env (Ref pfc Bound n))),
-                                  Unknown)
-                              _ => pure (Just !(fsc defs (toClosure defaultOpts env (Ref pfc Bound n))),
-                                      Known c !(quote empty env farg))
-                   Just t =>
-                      pure (Nothing, Stuck !(quote empty env t))
-          (args ** (l, ps)) <- nextNames {vars} fc root pats (fst fa_tys)
-          let argTy = case snd fa_tys of
-                           Unknown => Unknown
-                           Known rig t => Known rig (weakenNs (suc l) t)
-                           Stuck t => Stuck (weakenNs (suc l) t)
-          pure (args :< n ** (suc l, snoc (weaken ps) (MkInfo p First argTy)))
-
 -- Copied from
 -- https://github.com/gallais/Idris2/blob/4efcf27bbc542bf9991ebaf75415644af7135b5d/src/Core/Case/CaseBuilder.idr
 getArgTys : {vars : _} ->
@@ -504,6 +473,55 @@ getArgTys env (n :: ns) (Just t)
     = do empty <- clearDefs =<< get Ctxt
          pure [Stuck !(quote empty env t)]
 getArgTys _ _ _ = pure []
+
+nextNames' : {vars : _} ->
+             {auto i : Ref PName Int} ->
+             {auto c : Ref Ctxt Defs} ->
+             FC ->
+             (pats : SnocList Pat) ->
+             (ns : SnocList Name) ->
+             LengthMatch pats ns ->
+             List (ArgType vars) ->
+             Core (args ** (SizeOf args, NamedPats (vars ++ args) (rev args)))
+nextNames' fc [<] [<] LinMatch argtys = pure ([<] ** (zero, []))
+nextNames' fc (pats :< p) (ns :< n) (SnocMatch prf) (argTy :: as)
+    = do (args ** (l, ps)) <- nextNames' fc pats ns prf as
+         let argTy' : ArgType ((vars ++ args) :< n)
+             = weakenNs (mkSizeOf (args :< n)) argTy
+         pure (args :< n ** (suc l,
+                 snoc (weaken ps)
+                   (MkInfo p First argTy')))
+nextNames' fc (pats :< p) (ns :< n) (SnocMatch prf) argtys
+    = do (args ** (l, ps)) <- nextNames' fc pats ns prf argtys
+         pure (args :< n ** (suc l,
+                 snoc (weaken ps)
+                   (MkInfo p First Unknown)))
+
+nextNames : {vars : _} ->
+            {auto i : Ref PName Int} ->
+            {auto c : Ref Ctxt Defs} ->
+            FC -> String -> SnocList Pat -> Maybe (NF vars) ->
+            Core (args ** (SizeOf args, NamedPats (vars ++ args) (rev args)))
+nextNames fc root [<] fty = pure ([<] ** (zero, []))
+nextNames {vars} fc root pats fty
+     = do (args ** lprf) <- mkNames pats
+          let env = mkEnv fc vars
+          -- logEnv "compile.casetree" 25 "env  " env
+          -- The arguments are given in reverse order, so when we process them,
+          -- the argument types are in the correct order
+          argTys <- getArgTys env (cast args) fty
+          -- for_ (toList fty) $ \ ty => do
+          --   logNF "compile.casetree" 25 "nextNames'' NF" env ty
+          -- log "compile.casetree" 25 $ "nextNames''  " ++ show !(traverse toFullNames argTys)
+          nextNames' fc pats args lprf (reverse argTys)
+  where
+    mkNames : (vars : SnocList a) ->
+                Core (ns : SnocList Name ** LengthMatch vars ns)
+    mkNames [<] = pure ([<] ** LinMatch)
+    mkNames (xs :< x)
+        = do n <- nextName root
+             (ns ** p) <- mkNames xs
+             pure (ns :< n ** SnocMatch p)
 
 snocLMatch : LengthMatch xs ys -> LengthMatch ([<x] ++ xs) ([<y] ++ ys)
 snocLMatch LinMatch = SnocMatch LinMatch
@@ -709,7 +727,7 @@ groupCons fc fn pvars cs
          List (PatClause vars (todo :< a)) ->
          Core (List (Group vars todo))
     gc acc [] = pure acc
-    gc {a} acc ((MkPatClause pvars (MkInfo pat pprf fty :: pats) pid rhs) :: cs)
+    gc {a} acc ((MkPatClause _ (MkInfo pat pprf _ :: pats) pid rhs) :: cs)
         = do acc' <- addGroup pat pprf pats pid rhs acc
              gc acc' cs
 
@@ -1083,7 +1101,10 @@ mutual
            groups <- groupCons fc fn pvars refinedcs
            ty <- case fty of
                       Known _ t => pure t
-                      _ => throw (CaseCompile fc fn UnknownType)
+                      Stuck tm => do logTerm "compile.casetree" 25 "Stuck" tm
+                                     throw (CaseCompile fc fn UnknownType)
+                      _ => do log "compile.casetree" 25 "Unknown type"
+                              throw (CaseCompile fc fn UnknownType)
            caseGroups fc fn phase pprf ty groups err
 
   varRule : {a, vars, todo : _} ->
@@ -1135,8 +1156,8 @@ mutual
 export
 mkPat : {auto c : Ref Ctxt Defs} -> SnocList Pat -> ClosedTerm -> ClosedTerm -> Core Pat
 mkPat [<] orig (Ref fc Bound n) = pure $ PLoc fc n
-mkPat args orig (Ref fc (DataCon t a) n) = pure $ PCon fc n t a args
-mkPat args orig (Ref fc (TyCon t a) n) = pure $ PTyCon fc n a args
+mkPat args orig (Ref fc (DataCon t a) n) = pure $ PCon fc n t a (reverse args)
+mkPat args orig (Ref fc (TyCon t a) n) = pure $ PTyCon fc n a (reverse args)
 mkPat args orig (Ref fc Func n)
   = do prims <- getPrimitiveNames
        mtm <- normalisePrims (const True) isPConst True prims n args orig [<]
@@ -1152,6 +1173,10 @@ mkPat args orig (Ref fc Func n)
                 "Unmatchable function: " ++ show n
               pure $ PUnmatchable (getLoc orig) orig
 mkPat args orig (Bind fc x (Pi _ _ _ s) t)
+    -- from Yaffle:
+    -- = let t' = subst (Erased fc Placeholder) t in
+    --   pure $ PArrow fc x !(mkPat [<] s s) !(mkPat [<] t' t')
+
     -- For (b:Nat) -> b, the codomain looks like b [__], but we want `b` as the pattern
     = case subst (Erased fc Placeholder) t of
         App _ t'@(Ref fc Bound n) (Erased _ _) =>  pure $ PArrow fc x !(mkPat [<] s s) !(mkPat [<] t' t')
@@ -1159,6 +1184,7 @@ mkPat args orig (Bind fc x (Pi _ _ _ s) t)
 mkPat args orig (App fc fn arg)
     = do parg <- mkPat [<] arg arg
          mkPat (args :< parg) orig fn
+-- Assumption is that clauses are converted to explicit names
 mkPat args orig (As fc _ (Ref _ Bound n) ptm)
     = pure $ PAs fc n !(mkPat [<] ptm ptm)
 mkPat args orig (As fc _ _ ptm)
@@ -1231,7 +1257,7 @@ patCompile fc fn phase ty [] def
             def
 patCompile fc fn phase ty (p :: ps) def
     = do let (ns ** n) = getNames 0 (fst p)
-         pats <- mkPatClausesFrom 0 (rev ns) (p :: ps)
+         pats <- mkPatClausesFrom 0 ns (p :: ps)
          -- low verbosity level: pretty print fully resolved names
          logC "compile.casetree" 5 $ do
            pats <- traverse toFullNames pats
