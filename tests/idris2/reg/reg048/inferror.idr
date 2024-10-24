@@ -1,8 +1,13 @@
 import Data.SortedMap
 import Data.List
 
+%hide Data.SortedMap.toList -- deprecated and to be removed
+
+toList : SortedMap k v -> List (k, v)
+toList = kvList
+
 f : Ord k => SortedMap k v -> List (k, v)
-f m = case sortBy (\(x, _), (y, _) => compare x y) (SortedMap.toList m) of
+f m = case sortBy (\(x, _), (y, _) => compare x y) (Main.toList m) of
     as => as
 
 g : Ord k => SortedMap k v -> List (k, v)

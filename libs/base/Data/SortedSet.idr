@@ -4,8 +4,6 @@ import Data.Maybe
 import Data.SortedMap
 import Data.SortedMap.Dependent
 
-%hide Prelude.toList
-
 export
 data SortedSet k = SetWrapper (Data.SortedMap.SortedMap k ())
 
@@ -42,17 +40,21 @@ fromList : Ord k => List k -> SortedSet k
 fromList l = SetWrapper (Data.SortedMap.fromList (map (\i => (i, ())) l))
 
 export
-toList : SortedSet k -> List k
-toList (SetWrapper m) = keys m
-
-export
 Foldable SortedSet where
-  foldr f z = foldr f z . Data.SortedSet.toList
-  foldl f z = foldl f z . Data.SortedSet.toList
+  foldr f z = foldr f z . toList
+  foldl f z = foldl f z . toList
 
   null (SetWrapper m) = null m
 
-  foldMap f = foldMap f . Data.SortedSet.toList
+  foldMap f = foldMap f . toList
+
+  toList (SetWrapper m) = keys m
+
+-- Remove as soon as 0.8.0 (or greater) is released
+%deprecate -- Use `Prelude.toList` instead
+public export %inline
+toList : SortedSet k -> List k
+toList = Prelude.toList
 
 ||| Set union. Inserts all elements of x into y
 export
@@ -98,7 +100,7 @@ Eq k => Eq (SortedSet k) where
 
 export
 Show k => Show (SortedSet k) where
-   show m = "fromList " ++ (show $ toList m)
+   show m = "fromList " ++ show (Prelude.toList m)
 
 export
 keySet : SortedMap k v -> SortedSet k
