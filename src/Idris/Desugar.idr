@@ -737,10 +737,10 @@ mutual
            pure $ seqFun fc ns tm' rest'
   expandDo side ps topfc ns (DoBind fc nameFC n rig ty tm :: rest)
       = do tm' <- desugarDo side ps ns tm
-           rest' <- expandDo side ps topfc ns rest
            whenJust (isConcreteFC nameFC) $ \nfc => addSemanticDecorations [(nfc, Bound, Just n)]
            ty' <- maybe (pure $ Implicit (virtualiseFC fc) False)
                         (\ty => desugarDo side ps ns ty) ty
+           rest' <- expandDo side ps topfc ns rest
            pure $ bindFun fc ns tm'
                 $ ILam nameFC rig Explicit (Just n) ty' rest'
   expandDo side ps topfc ns (DoBindPat fc pat ty exp alts :: rest)
@@ -749,12 +749,12 @@ mutual
            exp' <- desugarDo side ps ns exp
            alts' <- traverse (map snd . desugarClause ps True) alts
            let ps' = newps ++ ps
-           rest' <- expandDo side ps' topfc ns rest
            let fcOriginal = fc
            let fc = virtualiseFC fc
            let patFC = virtualiseFC (getFC bpat)
            ty' <- maybe (pure $ Implicit fc False)
                         (\ty => desugarDo side ps ns ty) ty
+           rest' <- expandDo side ps' topfc ns rest
            pure $ bindFun fc ns exp'
                 $ ILam EmptyFC top Explicit (Just (MN "_" 0))
                           ty'
@@ -788,12 +788,12 @@ mutual
                        (PatClause fc bpat rest'
                                   :: alts')
   expandDo side ps topfc ns (DoLetLocal fc decls :: rest)
-      = do rest' <- expandDo side ps topfc ns rest
-           decls' <- traverse (desugarDecl ps) decls
+      = do decls' <- traverse (desugarDecl ps) decls
+           rest' <- expandDo side ps topfc ns rest
            pure $ ILocal fc (concat decls') rest'
   expandDo side ps topfc ns (DoRewrite fc rule :: rest)
-      = do rest' <- expandDo side ps topfc ns rest
-           rule' <- desugarDo side ps ns rule
+      = do rule' <- desugarDo side ps ns rule
+           rest' <- expandDo side ps topfc ns rest
            pure $ IRewrite fc rule' rest'
 
   -- Replace all operator by function application
