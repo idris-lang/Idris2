@@ -91,6 +91,13 @@ record UnifyResult where
   namesSolved : List Int -- which ones did we solve (as name indices)
   addLazy : AddLazy
 
+export
+Show UnifyResult where
+  show a = "constraints: " ++ show a.constraints
+    ++ ", holesSolved: " ++ show a.holesSolved
+    ++ ", namesSolved: " ++ show a.namesSolved
+    ++ ", addLazy: " ++ show a.addLazy
+
 union : UnifyResult -> UnifyResult -> UnifyResult
 union u1 u2 = MkUnifyResult (union (constraints u1) (constraints u2))
                             (holesSolved u1 || holesSolved u2)
@@ -442,7 +449,7 @@ tryInstantiate : {auto c : Ref Ctxt Defs} ->
               FC -> UnifyInfo -> Env Term vars ->
               (metavar : Name) -> (mref : Int) -> (numargs : Nat) ->
               (mdef : GlobalDef) ->
-              SnocList (Var newvars) -> -- Variable each argument maps to
+              List (Var newvars) -> -- Variable each argument maps to
               Term vars -> -- original, just for error message
               Term newvars -> -- shrunk environment
               Core Bool -- postpone if the type is yet unknown
@@ -574,10 +581,10 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
     updateIVars ivs (TType fc u) = Just (TType fc u)
 
     mkDef : {vs, newvars : _} ->
-            SnocList (Var newvars) ->
+            List (Var newvars) ->
             IVars vs newvars -> Term newvars -> Term vs ->
             Core (Maybe (Term vs))
-    mkDef (vs :< v) vars soln (Bind bfc x (Pi fc c _ ty) sc)
+    mkDef (v :: vs) vars soln (Bind bfc x (Pi fc c _ ty) sc)
        = do sc' <- mkDef vs (ICons (Just v) vars) soln sc
             pure $ (Bind bfc x (Lam fc c Explicit (Erased bfc Placeholder)) <$> sc')
     mkDef vs vars soln (Bind bfc x b@(Let _ c val ty) sc)
@@ -586,7 +593,7 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
               case shrink sc' (Drop Refl) of
                 Just scs => pure scs
                 Nothing => pure $ Bind bfc x b sc'
-    mkDef [<] vars soln _
+    mkDef [] vars soln _
        = do let Just soln' = updateIVars vars soln
                 | Nothing => ufail loc ("Can't make solution for " ++ show mname
                                            ++ " " ++ show (getIVars vars, soln))
@@ -610,7 +617,7 @@ updateSolution env (Meta fc mname idx args) soln
                        Just stm =>
                           do Just hdef <- lookupCtxtExact (Resolved idx) (gamma defs)
                                   | Nothing => throw (InternalError "Can't happen: no definition")
-                             tryInstantiate fc inTerm env mname idx (length args) hdef locs soln stm
+                             tryInstantiate fc inTerm env mname idx (length args) hdef (toList locs) soln stm
 updateSolution env metavar soln
     = pure False
 
@@ -831,7 +838,7 @@ mutual
                    -- metavariables)
                    do Just hdef <- lookupCtxtExact (Resolved mref) (gamma defs)
                            | Nothing => throw (InternalError ("Can't happen: Lost hole " ++ show mname))
-                      progress <- tryInstantiate loc mode env mname mref (length margs) hdef locs solfull stm
+                      progress <- tryInstantiate loc mode env mname mref (length margs) hdef (toList locs) solfull stm
                       pure $ toMaybe progress (solvedHole mref)
     where
       inNoSolve : Int -> IntMap () -> Bool
@@ -1178,9 +1185,9 @@ mutual
 
                    logC "unify" 20 $
                      pure $ "Constructor " ++ show x
-                   logC "unify" 20 $ map (const "") $ traverse_ (dumpArg env) xs
-                   logC "unify" 20 $ map (const "") $ traverse_ (dumpArg env) ys
-                   unifyArgs mode loc env xs ys
+                   logC "unify" 20 $ map (const "xs:") $ traverse_ (dumpArg env) $ reverse xs
+                   logC "unify" 20 $ map (const "ys:") $ traverse_ (dumpArg env) $ reverse ys
+                   unifyArgs mode loc env (reverse xs) (reverse ys)
              -- TODO: Type constructors are not necessarily injective.
              -- If we don't know it's injective, need to postpone the
              -- constraint. But before then, we need some way to decide
