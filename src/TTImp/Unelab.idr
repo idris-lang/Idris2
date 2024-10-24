@@ -13,6 +13,8 @@ import TTImp.TTImp
 import Data.List
 import Data.String
 
+import Libraries.Data.SnocList.SizeOf
+
 %default covering
 
 used : (idx : Nat) -> Term vars -> Bool
@@ -115,10 +117,10 @@ mutual
           = TForce fc r (substVars xs y)
       substVars xs tm = tm
 
-      substArgs : SizeOf vs -> List (List (Var vs), Term vars) -> Term vs -> Term (vs ++ vars)
+      substArgs : SizeOf vs -> List (List (Var vs), Term vars) -> Term vs -> Term (vars ++ vs)
       substArgs p substs tm =
         let
-          substs' = map (bimap (map $ embed {outer = vars}) (weakenNs p)) substs
+          substs' = map (bimap (map embed) (weakenNs p)) substs
           tm' = embed tm
         in
           substVars substs' tm'
@@ -155,7 +157,7 @@ mutual
                (argpos : Nat) -> List (Term vars) -> Core (Maybe IRawImp)
       mkCase pats argpos args
           = do unless (null args) $ log "unelab.case.clause" 20 $
-                 unwords $ "Ignoring" :: map show args
+                 unwords $ "Ignoring" :: map show (toList $ args)
                let Just scrutinee = idxOrMaybe argpos args
                      | _ => pure Nothing
                    fc = getLoc scrutinee
@@ -237,7 +239,7 @@ mutual
                                  _ => pure (term, gErased fc)
            pure (term, gnf env (embed ty))
   unelabTy' umode nest env (Bind fc x b sc)
-      = do (sc', scty) <- unelabTy umode nest (b :: env) sc
+      = do (sc', scty) <- unelabTy umode nest (env :< b) sc
            case umode of
                 NoSugar True =>
                    let x' = uniqueLocal vars x in
@@ -252,7 +254,7 @@ mutual
       next (NS ns n) = NS ns (next n)
       next n = MN (show n) 0
 
-      uniqueLocal : List Name -> Name -> Name
+      uniqueLocal : SnocList Name -> Name -> Name
       uniqueLocal vs n
          = if n `elem` vs
               then uniqueLocal vs (next n)
@@ -329,8 +331,8 @@ mutual
                  (umode : UnelabMode) ->
                  (nest : List (Name, Nat)) ->
                  FC -> Env Term vars -> (x : Name) ->
-                 Binder (Term vars) -> Term (x :: vars) ->
-                 IRawImp -> Term (x :: vars) ->
+                 Binder (Term vars) -> Term (vars :< x) ->
+                 IRawImp -> Term (vars :< x) ->
                  Core (IRawImp, Glued vars)
   unelabBinder umode nest fc env x (Lam fc' rig p ty) sctm sc scty
       = do (ty', _) <- unelabTy umode nest env ty
@@ -401,7 +403,7 @@ unelabNest : {vars : _} ->
              Env Term vars ->
              Term vars -> Core IRawImp
 unelabNest nest env (Meta fc n i args)
-    = do let mkn = nameRoot n ++ showScope args
+    = do let mkn = nameRoot n ++ (showScope $ toList args)
          pure (IHole fc mkn)
   where
     toName : Term vars -> Maybe Name

@@ -8,6 +8,7 @@ import Core.Core
 import Core.TT
 
 import Data.List
+import Data.SnocList
 import Data.Vect
 import Libraries.Data.SortedSet
 
@@ -136,9 +137,9 @@ Show ANFDef where
         show args ++ " -> " ++ show ret
   show (MkAError exp) = "Error: " ++ show exp
 
-data AVars : List Name -> Type where
-     Nil : AVars []
-     (::) : Int -> AVars xs -> AVars (x :: xs)
+data AVars : SnocList Name -> Type where
+     Nil : AVars [<]
+     (::) : Int -> AVars xs -> AVars (xs :< x)
 
 data Next : Type where
 
@@ -194,7 +195,7 @@ mutual
             List (Lifted vars) -> (List AVar -> ANF) -> Core ANF
   anfArgs fc vs args f
       = do args' <- traverse (anf vs) args
-           letBind fc args' f
+           letBind fc (toList args') f
 
   anf : {vars : _} ->
         {auto v : Ref Next Int} ->
@@ -244,10 +245,10 @@ mutual
       = do (is, vs') <- bindArgs args vs
            pure $ MkAConAlt n ci t is !(anf vs' sc)
     where
-      bindArgs : (args : List Name) -> AVars vars' ->
-                 Core (List Int, AVars (args ++ vars'))
-      bindArgs [] vs = pure ([], vs)
-      bindArgs (n :: ns) vs
+      bindArgs : (args : SnocList Name) -> AVars vars' ->
+                 Core (List Int, AVars (vars' ++ args))
+      bindArgs [<] vs = pure ([], vs)
+      bindArgs (ns :< n) vs
           = do i <- nextVar
                (is, vs') <- bindArgs ns vs
                pure (i :: is, i :: vs')
@@ -263,16 +264,16 @@ toANF : LiftedDef -> Core ANFDef
 toANF (MkLFun args scope sc)
     = do v <- newRef Next (the Int 0)
          (iargs, vsNil) <- bindArgs args []
-         let vs : AVars args = rewrite sym (appendNilRightNeutral args) in
+         let vs : AVars args = rewrite sym (appendLinLeftNeutral args) in
                                       vsNil
          (iargs', vs) <- bindArgs scope vs
          pure $ MkAFun (iargs ++ reverse iargs') !(anf vs sc)
   where
     bindArgs : {auto v : Ref Next Int} ->
-               (args : List Name) -> AVars vars' ->
-               Core (List Int, AVars (args ++ vars'))
-    bindArgs [] vs = pure ([], vs)
-    bindArgs (n :: ns) vs
+               (args : SnocList Name) -> AVars vars' ->
+               Core (List Int, AVars (vars' ++ args))
+    bindArgs [<] vs = pure ([], vs)
+    bindArgs (ns :< n) vs
         = do i <- nextVar
              (is, vs') <- bindArgs ns vs
              pure (i :: is, i :: vs')
