@@ -1,0 +1,8 @@
+. ../../../testutils.sh
+
+check Issue2250a.idr
+check Issue2250b.idr
+check Issue2250c.idr
+check Issue3276.idr
+check Visibility.idr
+check Head.idr

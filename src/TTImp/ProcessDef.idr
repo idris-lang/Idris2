@@ -221,6 +221,8 @@ recoverableErr defs (CantSolveEq fc gam env l r)
                         !(nf defs env r)
 recoverableErr defs (BadDotPattern _ _ ErasedArg _ _) = pure True
 recoverableErr defs (CyclicMeta _ _ _ _) = pure False
+-- Don't mark a case as impossible because we can't see the constructor.
+recoverableErr defs (InvisibleName _ _ _) = pure True
 recoverableErr defs (AllFailed errs)
     = anyM (recoverableErr defs) (map snd errs)
 recoverableErr defs (WhenUnifying _ _ _ _ _ err)

@@ -1,0 +1,120 @@
+1/1: Building Issue2250a (Issue2250a.idr)
+Error: Bug is not covering.
+
+Issue2250a:14:1--14:36
+ 10 | 
+ 11 | Ex1 : 3 `LessThanOrEqualTo` 5
+ 12 | Ex1 = Choose 2
+ 13 | 
+ 14 | Bug : Not (3 `LessThanOrEqualTo` 5)
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Missing cases:
+    Bug _
+
+Error: Yikes is not covering.
+
+Issue2250a:17:1--17:13
+ 13 | 
+ 14 | Bug : Not (3 `LessThanOrEqualTo` 5)
+ 15 | Bug Refl impossible
+ 16 | 
+ 17 | Yikes : Void
+      ^^^^^^^^^^^^
+
+Calls non covering function Main.Bug
+1/1: Building Issue2250b (Issue2250b.idr)
+Error: f is not covering.
+
+Issue2250b:5:1--5:22
+ 1 | import Data.Nat
+ 2 | 
+ 3 | %default total
+ 4 | 
+ 5 | f : n `LTE` m -> Void
+     ^^^^^^^^^^^^^^^^^^^^^
+
+Missing cases:
+    f LTEZero
+
+Error: x is not covering.
+
+Issue2250b:9:1--9:9
+ 5 | f : n `LTE` m -> Void
+ 6 | f Z impossible
+ 7 | f (LTESucc x) = f x
+ 8 | 
+ 9 | x : Void
+     ^^^^^^^^
+
+Calls non covering function Main.f
+1/1: Building Issue2250c (Issue2250c.idr)
+Error: f is not covering.
+
+Issue2250c:6:1--6:9
+ 2 | 
+ 3 | g : Not Bool
+ 4 | g () impossible
+ 5 | 
+ 6 | f : Void
+     ^^^^^^^^
+
+Calls non covering function Main.g
+Error: g is not covering.
+
+Issue2250c:3:1--3:13
+ 1 | %default total
+ 2 | 
+ 3 | g : Not Bool
+     ^^^^^^^^^^^^
+
+Missing cases:
+    g _
+
+1/1: Building Issue3276 (Issue3276.idr)
+Error: dis0 is not covering.
+
+Issue3276:19:1--19:24
+ 15 | 
+ 16 | prf1 : Digit 51
+ 17 | prf1 = MkDigit 51
+ 18 | 
+ 19 | dis0 : Digit 51 -> Void
+      ^^^^^^^^^^^^^^^^^^^^^^^
+
+Missing cases:
+    dis0 _
+
+1/1: Building Visibility (Visibility.idr)
+Error: boom is not covering.
+
+Visibility:7:1--7:19
+ 3 |     export
+ 4 |     data Foo : Type where
+ 5 |         MkFoo : Foo
+ 6 | 
+ 7 | boom : Foo -> Void
+     ^^^^^^^^^^^^^^^^^^
+
+Missing cases:
+    boom _
+
+1/1: Building Head (Head.idr)
+Error: head is not covering.
+
+Head:1:1--2:19
+ 1 | total
+ 2 | head : List a -> a
+
+Missing cases:
+    head []
+
+Error: head' is not covering.
+
+Head:6:1--7:20
+ 6 | total
+ 7 | head' : List a -> a
+
+Missing cases:
+    head' []
+
