@@ -289,13 +289,15 @@ mutual
   record PTypeDecl' (nm : Type) where
       constructor MkPTy
       fc : FC
-      names : List1 (WithFC Name)
+      -- List of names and their associated documentation
+      -- If no documentation is provided the first projection is `Nothing`
+      names : List1 (Maybe String, WithFC Name)
       doc: String
       type : PTerm' nm
 
   export
   (.nameList) : PTypeDecl' nm -> List Name
-  (.nameList) = forget . map val . names
+  (.nameList) = forget . map (val . snd) . names
 
   export
   getPTypeDeclLoc : PTypeDecl' nm -> FC
@@ -459,7 +461,7 @@ mutual
 
   public export
   data PDecl' : Type -> Type where
-       PClaim : FC -> PClaimData' nm -> PDecl' nm
+       PClaim : WithFC (PClaimData' nm) -> PDecl' nm
        PDef : FC -> List (PClause' nm) -> PDecl' nm
        PData : FC -> (doc : String) -> WithDefault Visibility Private ->
                Maybe TotalReq -> PDataDecl' nm -> PDecl' nm
@@ -511,7 +513,7 @@ mutual
 
   export
   getPDeclLoc : PDecl' nm -> FC
-  getPDeclLoc (PClaim fc _) = fc
+  getPDeclLoc (PClaim c) = c.fc
   getPDeclLoc (PDef fc _) = fc
   getPDeclLoc (PData fc _ _ _ _) = fc
   getPDeclLoc (PParameters fc _ _) = fc
@@ -527,6 +529,10 @@ mutual
   getPDeclLoc (PRunElabDecl fc _) = fc
   getPDeclLoc (PDirective fc _) = fc
   getPDeclLoc (PBuiltin fc _ _) = fc
+
+export
+HasFC (PDecl' nm) where
+  (.getFC) = getPDeclLoc
 
 export
 isStrInterp : PStr -> Maybe FC
@@ -551,7 +557,7 @@ definedInData (MkPLater _ n _) = [n]
 export
 definedIn : List PDecl -> List Name
 definedIn [] = []
-definedIn (PClaim _ (MkPClaim _ _ _ ty) :: ds) = ty.nameList ++ definedIn ds
+definedIn (PClaim claim :: ds) = claim.val.type.nameList ++ definedIn ds
 definedIn (PData _ _ _ _ d :: ds) = definedInData d ++ definedIn ds
 definedIn (PParameters _ _ pds :: ds) = definedIn pds ++ definedIn ds
 definedIn (PUsing _ _ pds :: ds) = definedIn pds ++ definedIn ds
@@ -1099,7 +1105,7 @@ getFixityInfo nm = do
 export
 covering
 Show PTypeDecl where
-  show (MkPTy _ nm doc ty) = unwords [show (map val nm), ":", show ty]
+  show pty = unwords [show pty.nameList, ":", show pty.type]
 
 export
 covering
@@ -1118,7 +1124,7 @@ Show PClaimData where
 export
 covering
 Show PDecl where
-  show (PClaim _ pclaim) = show pclaim
+  show (PClaim pclaim) = show pclaim.val
   show (PDef _ cls) = unlines (show <$> cls)
   show (PData{}) = "PData"
   show (PParameters{}) = "PParameters"

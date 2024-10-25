@@ -877,8 +877,8 @@ mutual
                 {auto o : Ref ROpts REPLOpts} ->
                 List Name -> PTypeDecl -> Core (List ImpTy)
   desugarType ps (MkPTy fc names d ty)
-      = flip Core.traverse (forget names) $ \n : WithFC Name =>
-          do addDocString n.val d
+      = flip Core.traverse (forget names) $ \(doc, n) : (Maybe String, WithFC Name) =>
+          do addDocString n.val (d ++ fromMaybe "" doc)
              syn <- get Syn
              pure $ MkImpTy fc n.fc n.val !(bindTypeNames fc (usingImpl syn)
                                                  ps !(desugar AnyExpr ps ty))
@@ -970,12 +970,13 @@ mutual
   desugarData ps doc (MkPData fc n tycon opts datacons)
       = do addDocString n doc
            syn <- get Syn
+           mm <- traverse (desugarType ps) datacons
            pure $ MkImpData fc n
                    !(flip traverseOpt tycon $ \ tycon => do
                       tycon <- desugar AnyExpr ps tycon
                       bindTypeNames fc (usingImpl syn) ps tycon)
                    opts
-                   ?huh -- !(traverse (desugarType ps) datacons)
+                   (concat mm) -- !(traverse (desugarType ps) datacons)
   desugarData ps doc (MkPLater fc n tycon)
       = do addDocString n doc
            syn <- get Syn
@@ -1044,7 +1045,7 @@ mutual
                 {auto m : Ref MD Metadata} ->
                 {auto o : Ref ROpts REPLOpts} ->
                 List Name -> PDecl -> Core (List ImpDecl)
-  desugarDecl ps (PClaim fc (MkPClaim rig vis fnopts ty))
+  desugarDecl ps (PClaim (MkFCVal fc (MkPClaim rig vis fnopts ty)))
       = do opts <- traverse (desugarFnOpt ps) fnopts
            types <- desugarType ps ty
            pure $ flip (map {f = List, b = ImpDecl}) types $ \ty' =>

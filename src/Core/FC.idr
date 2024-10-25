@@ -84,15 +84,19 @@ record WithFC (ty : Type) where
   fc : FC
   val : ty
 
+export
+mapFC : (a -> b) -> WithFC a -> WithFC b
+mapFC f (MkFCVal fc val) = MkFCVal fc (f val)
+
 ||| An interface to extract the location of some data
 public export
-interface HasLoc ty where
+interface HasFC ty where
   constructor MkHasLoc
   (.getFC) : ty -> FC
 
 ||| Anything with locations has a location
 export
-HasLoc (WithFC ty) where
+HasFC (WithFC ty) where
   (.getFC) (MkFCVal f _) = f
 
 ------------------------------------------------------------------------

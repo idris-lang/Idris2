@@ -475,7 +475,7 @@ mutual
                 ImpTy' KindedName -> Core (PTypeDecl' KindedName)
   toPTypeDecl (MkImpTy fc nameFC n ty)
       -- /!\ change the constructor to take WithFC
-      = pure (MkPTy fc (pure (MkFCVal nameFC n)) "" !(toPTerm startPrec ty))
+      = pure (MkPTy fc (pure (Nothing, MkFCVal nameFC n)) "" !(toPTerm startPrec ty))
 
   toPData : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
@@ -529,7 +529,7 @@ mutual
             ImpDecl' KindedName -> Core (Maybe (PDecl' KindedName))
   toPDecl (IClaim (MkIClaimData fc rig vis opts ty))
       = do opts' <- traverse toPFnOpt opts
-           pure (Just (PClaim fc (MkPClaim rig vis opts' !(toPTypeDecl ty))))
+           pure (Just (PClaim (MkFCVal fc $ MkPClaim rig vis opts' !(toPTypeDecl ty))))
   toPDecl (IData fc vis mbtot d)
       = pure (Just (PData fc "" vis mbtot !(toPData d)))
   toPDecl (IDef fc n cs)

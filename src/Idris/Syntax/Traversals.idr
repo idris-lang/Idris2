@@ -258,8 +258,8 @@ mapPTermM f = goPTerm where
                    <*> goPTypeDecl tdecl
 
     goPDecl : PDecl' nm -> Core (PDecl' nm)
-    goPDecl (PClaim fc claim) =
-      PClaim fc <$> goPClaim claim
+    goPDecl (PClaim (MkFCVal fc claim)) =
+      PClaim <$> (MkFCVal fc <$> goPClaim claim)
     goPDecl (PDef fc cls) = PDef fc <$> goPClauses cls
     goPDecl (PData fc doc v mbt d) = PData fc doc v mbt <$> goPDataDecl d
     goPDecl (PParameters fc nts ps) =
@@ -547,8 +547,8 @@ mapPTerm f = goPTerm where
     goPClaim (MkPClaim c v opts tdecl) = MkPClaim c v (goPFnOpt <$> opts) (goPTypeDecl tdecl)
 
     goPDecl : PDecl' nm -> PDecl' nm
-    goPDecl (PClaim fc claim)
-      = PClaim fc (goPClaim claim)
+    goPDecl (PClaim (MkFCVal fc claim))
+      = PClaim $ MkFCVal fc (goPClaim claim)
     goPDecl (PDef fc cls) = PDef fc $ goPClause <$> cls
     goPDecl (PData fc doc v mbt d) = PData fc doc v mbt $ goPDataDecl d
     goPDecl (PParameters fc nts ps)

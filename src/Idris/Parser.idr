@@ -1197,16 +1197,21 @@ exportVisibility fname
     = (specified <$> visOption fname)
   <|> pure defaulted
 
-tyDecls : Rule Name -> String -> OriginDesc -> IndentInfo -> Rule (List1 PTypeDecl)
+tyDecls : Rule Name -> String -> OriginDesc -> IndentInfo -> Rule PTypeDecl
 tyDecls declName predoc fname indents
-    = do bs <- do docns <- sepBy1 (decoratedSymbol fname ",")
+    = do bs <- bounds $ do
+                  docns <- sepBy1 (decoratedSymbol fname ",")
                                   [| (optDocumentation fname, bounds declName) |]
                   b <- bounds $ decoratedSymbol fname ":"
                   mustWorkBecause b.bounds "Expected a type declaration" $ do
                     ty  <- typeExpr pdef fname indents
-                    pure $ map (\(doc, n) => (doc, n.val, boundToFC fname n, ty)) docns
+                    pure $ (docns, ty)
          atEnd indents
-         ?wha
+         let loc = bs.toFC
+         let docs = fst bs.val
+         let ty = snd bs.val
+         pure $ MkPTy loc ?namsss predoc ty
+
          -- pure $ map (\(doc, n, nFC, ty) => (MkPTy nFC nFC n (predoc ++ doc) ty))
          --            bs
 
@@ -1326,7 +1331,7 @@ simpleCon fname ret indents
          (cdoc, cname, params) <- pure b.val
          let cfc = boundToFC fname b
          fromMaybe (fatalError "Named arguments not allowed in ADT constructors")
-                   (pure . MkPTy cfc (singleton cname) cdoc <$> mkDataConType cfc ret (concat params))
+                   (pure . MkPTy cfc (singleton (Nothing, cname)) cdoc <$> mkDataConType cfc ret (concat params))
 
 simpleData : OriginDesc -> WithBounds t ->
              WithBounds Name -> IndentInfo -> Rule PDataDecl
@@ -1369,7 +1374,7 @@ dataBody fname mincol start n indents ty
   <|> do b <- bounds (do (mustWork $ decoratedKeyword fname "where")
                          opts <- dataOpts fname
                          cs <- blockAfter mincol (tyDecls (mustWork $ decoratedDataConstructorName fname) "" fname)
-                         pure (opts, concatMap forget cs))
+                         pure (opts, cs))
          (opts, cs) <- pure b.val
          pure (MkPData (boundToFC fname (mergeBounds start b)) n ty opts cs)
 
@@ -1878,7 +1883,7 @@ paramDecls fname indents = do
     newParamDecls fname indents
         = map concat (some $ typedArg fname indents)
 
-localClaim : OriginDesc -> IndentInfo -> Rule (FC, PClaimData)
+localClaim : OriginDesc -> IndentInfo -> Rule (WithFC PClaimData)
 localClaim fname indents
     = do bs <- bounds (do
                   doc     <- optDocumentation fname
@@ -1888,15 +1893,18 @@ localClaim fname indents
                   rig  <- multiplicity fname
                   cls  <- tyDecls (decorate fname Function name)
                                   doc fname indents
-                  pure $ map (\cl => the (Pair _ _) (doc, vis, opts, rig, cl)) cls)
-         ?whuat
+                  pure $ MkPClaim rig vis opts ?hahua
+                  )
+
+         -- pure $ MkPClaim ?rigcount ?vis ?options ?whuat
+         ?ada
          -- pure $ map (\(doc, vis, opts, rig, cl) : Pair _ _ =>
          --                   (boundToFC fname bs, MkPClaim  rig vis opts cl))
          --            bs.val
 
 -- come back to this later
 claims : OriginDesc -> IndentInfo -> Rule PDecl
-claims o i = uncurry PClaim <$> localClaim o i
+claims o i = PClaim <$> localClaim o i
 
 definition : OriginDesc -> IndentInfo -> Rule PDecl
 definition fname indents
