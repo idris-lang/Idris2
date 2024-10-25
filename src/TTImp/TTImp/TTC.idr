@@ -368,7 +368,7 @@ mutual
 
   export
   TTC ImpDecl where
-    toBuf b (IClaim fc c vis xs d)
+    toBuf b (IClaim (MkIClaimData fc c vis xs d))
         = do tag 0; toBuf b fc; toBuf b c; toBuf b vis; toBuf b xs; toBuf b d
     toBuf b (IData fc vis mbtot d)
         = do tag 1; toBuf b fc; toBuf b vis; toBuf b mbtot; toBuf b d
@@ -397,7 +397,7 @@ mutual
                0 => do fc <- fromBuf b; c <- fromBuf b
                        vis <- fromBuf b;
                        xs <- fromBuf b; d <- fromBuf b
-                       pure (IClaim fc c vis xs d)
+                       pure (IClaim (MkIClaimData fc c vis xs d))
                1 => do fc <- fromBuf b; vis <- fromBuf b
                        mbtot <- fromBuf b; d <- fromBuf b
                        pure (IData fc vis mbtot d)

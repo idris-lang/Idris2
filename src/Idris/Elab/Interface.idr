@@ -52,7 +52,7 @@ namePis i (IBindHere fc m ty) = IBindHere fc m (namePis i ty)
 namePis i ty = ty
 
 getSig : ImpDecl -> Maybe Signature
-getSig (IClaim _ c _ opts (MkImpTy fc nameFC n ty))
+getSig (IClaim (MkIClaimData _ c _ opts (MkImpTy fc nameFC n ty)))
     = Just $ MkSignature { location = fc
                          , count    = c
                          , flags    = opts
@@ -192,9 +192,9 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params sig
              substNames vars (map applyCon allmeths) sig.type
          ty_imp <- bindTypeNames EmptyFC [] vars (bindPs params $ bindIFace vfc ity ty_constr)
          cn <- inCurrentNS sig.name
-         let tydecl = IClaim vfc sig.count vis (if sig.isData then [Inline, Invertible]
+         let tydecl = IClaim (MkIClaimData vfc sig.count vis (if sig.isData then [Inline, Invertible]
                                             else [Inline])
-                                      (MkImpTy vfc sig.nameLoc cn ty_imp)
+                                      (MkImpTy vfc sig.nameLoc cn ty_imp))
          let conapp = apply (IVar vfc cname)
                             (map (IBindVar EmptyFC) (map bindName allmeths))
          let argns = getExplicitArgs 0 sig.type
@@ -258,8 +258,8 @@ getConstraintHint {vars} fc env vis iname cname constraints meths params (cn, co
          let hintname = DN ("Constraint " ++ show con)
                           (UN (Basic $ "__" ++ show iname ++ "_" ++ show con))
 
-         let tydecl = IClaim fc top vis [Inline, Hint False]
-                          (MkImpTy EmptyFC EmptyFC hintname ty_imp)
+         let tydecl = IClaim (MkIClaimData fc top vis [Inline, Hint False]
+                          (MkImpTy EmptyFC EmptyFC hintname ty_imp))
 
          let conapp = apply (impsBind (IVar fc cname) (map bindName constraints))
                               (map (const (Implicit fc True)) meths)
@@ -454,7 +454,7 @@ elabInterface {vars} ifc def_vis env nest constraints iname params dets mcon bod
              dty_imp <- bindTypeNames dfc [] (map name tydecls ++ vars) dty
              log "elab.interface.default" 5 $ "Default method " ++ show dn ++ " : " ++ show dty_imp
 
-             let dtydecl = IClaim vdfc rig (collapseDefault def_vis) [] (MkImpTy EmptyFC EmptyFC dn dty_imp)
+             let dtydecl = IClaim (MkIClaimData vdfc rig (collapseDefault def_vis) [] (MkImpTy EmptyFC EmptyFC dn dty_imp))
 
              processDecl [] nest env dtydecl
 

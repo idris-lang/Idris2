@@ -62,8 +62,8 @@ parameters (f : RawImp' nm -> RawImp' nm)
 
   export
   mapImpDecl : ImpDecl' nm -> ImpDecl' nm
-  mapImpDecl (IClaim fc rig vis opts ty)
-    = IClaim fc rig vis (map mapFnOpt opts) (mapImpTy ty)
+  mapImpDecl (IClaim (MkIClaimData fc rig vis opts ty))
+    = IClaim (MkIClaimData fc rig vis (map mapFnOpt opts) (mapImpTy ty))
   mapImpDecl (IData fc vis mtreq dat) = IData fc vis mtreq (mapImpData dat)
   mapImpDecl (IDef fc n cls) = IDef fc n (map mapImpClause cls)
   mapImpDecl (IParameters fc params xs) = IParameters fc params (assert_total $ map mapImpDecl xs)

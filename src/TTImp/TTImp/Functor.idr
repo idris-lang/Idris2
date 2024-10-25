@@ -88,8 +88,8 @@ mutual
 
   export
   Functor ImpDecl' where
-    map f (IClaim fc rig vis opts ty)
-      = IClaim fc rig vis (map (map f) opts) (map f ty)
+    map f (IClaim (MkIClaimData fc rig vis opts ty))
+      = IClaim (MkIClaimData fc rig vis (map (map f) opts) (map f ty))
     map f (IData fc vis mbtot dt)
       = IData fc vis mbtot (map f dt)
     map f (IDef fc nm cls)

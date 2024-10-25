@@ -999,6 +999,8 @@ mutual
           toRF : Name -> Name
           toRF (UN (Basic n)) = UN (Field n)
           toRF n = n
+  desugarField ps ns (MkRecordLet fc let_)
+      = ?whu
 
   export
   desugarFnOpt : {auto s : Ref Syn SyntaxInfo} ->
@@ -1041,7 +1043,7 @@ mutual
                 List Name -> PDecl -> Core (List ImpDecl)
   desugarDecl ps (PClaim fc (MkPClaim rig vis fnopts ty))
       = do opts <- traverse (desugarFnOpt ps) fnopts
-           pure [IClaim fc rig vis opts !(desugarType ps ty)]
+           pure [IClaim (MkIClaimData fc rig vis opts !(desugarType ps ty))]
         where
           isTotalityOption : FnOpt -> Bool
           isTotalityOption (Totality _) = True
@@ -1186,7 +1188,7 @@ mutual
                              pure (n, c, p', tm'))
                         params
            let _ = the (List (Name, RigCount, PiInfo RawImp, RawImp)) params'
-           let fnames = map fname fields
+           let fnames = mapMaybe fname fields
            let _ = the (List Name) fnames
            -- Look for bindable names in the parameters
 
@@ -1200,7 +1202,7 @@ mutual
            let paramsb = map (\ (n, c, p, tm) => (n, c, p, doBind bnames tm)) params'
            let _ = the (List (Name, RigCount, PiInfo RawImp, RawImp)) paramsb
            let recName = nameRoot tn
-           fields' <- traverse (desugarField (ps ++ map fname fields ++
+           fields' <- traverse (desugarField (ps ++ fnames ++
                                               map fst params) (mkNamespace recName))
                                fields
            let _ = the (List IField) fields'
@@ -1210,8 +1212,9 @@ mutual
            pure [IRecord fc (Just recName)
                          vis mbtot (MkImpRecord fc tn paramsb opts conname fields')]
     where
-      fname : PField -> Name
-      fname (MkField _ _ _ _ n _) = n
+      fname : PField -> Maybe Name
+      fname (MkField _ _ _ _ n _) = Just n
+      fname (MkRecordLet fc let_) = Nothing
 
       mkConName : Name -> Name
       mkConName (NS ns (UN n))

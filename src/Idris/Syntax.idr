@@ -396,14 +396,13 @@ mutual
        MkRecordLet : FC -> List1 (PRecordDeclLet' nm) -> PField' nm
 
   public export
-  PRecordDeclLet : Type
+  0 PRecordDeclLet : Type
   PRecordDeclLet = PRecordDeclLet' Name
 
   public export
-  data PRecordDeclLet' nm = RecordClaim (PClaimData' nm) | RecordClause (PClause' nm)
-
-  0 PRecordDeclLetChoice : Type -> Type
-  PRecordDeclLetChoice nm = ChoiceOf ["RecordClaim" :- PClaimData' nm, "RecordClause" :- PClause' nm]
+  data PRecordDeclLet' : Type -> Type where
+    RecordClaim : FC -> PClaimData' nm -> PRecordDeclLet' nm
+    RecordClause : FC -> PClause' nm -> PRecordDeclLet' nm
 
   -- For noting the pass we're in when desugaring a mutual block
   -- TODO: Decide whether we want mutual blocks!

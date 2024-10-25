@@ -526,7 +526,7 @@ mutual
   toPDecl : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
             ImpDecl' KindedName -> Core (Maybe (PDecl' KindedName))
-  toPDecl (IClaim fc rig vis opts ty)
+  toPDecl (IClaim (MkIClaimData fc rig vis opts ty))
       = do opts' <- traverse toPFnOpt opts
            pure (Just (PClaim fc (MkPClaim rig vis opts' !(toPTypeDecl ty))))
   toPDecl (IData fc vis mbtot d)

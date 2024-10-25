@@ -583,8 +583,8 @@ mapPTerm f = goPTerm where
     goPDataDecl (MkPLater fc n t) = MkPLater fc n $ goPTerm t
 
     goPRecordDeclLet : PRecordDeclLet' nm -> PRecordDeclLet' nm
-    goPRecordDeclLet (RecordClaim x) = RecordClaim (goPClaim x)
-    goPRecordDeclLet (RecordClause x) = RecordClause (goPClause x)
+    goPRecordDeclLet (RecordClaim c x) = RecordClaim c (goPClaim x)
+    goPRecordDeclLet (RecordClause c x) = RecordClause c (goPClause x)
 
     goPField : PField' nm -> PField' nm
     goPField (MkField fc doc c info n t)

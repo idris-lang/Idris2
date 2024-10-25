@@ -272,7 +272,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
 
                    let mkProjClaim = \ nm =>
                           let ty = MkImpTy EmptyFC EmptyFC nm projTy
-                          in IClaim bfc rig isVis [Inline] ty
+                          in IClaim (MkIClaimData bfc rig isVis [Inline] ty)
 
                    log "declare.record.projection" 5 $
                       "Projection " ++ show rfNameNS ++ " : " ++ show projTy
