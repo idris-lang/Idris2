@@ -1003,7 +1003,7 @@ mutual
           toRF : Name -> Name
           toRF (UN (Basic n)) = UN (Field n)
           toRF n = n
-  desugarField ps ns (MkRecordLet fc let_)
+  desugarField ps ns (MkRecordLet (MkFCVal fc let_))
       = ?whu
 
   export
@@ -1216,7 +1216,7 @@ mutual
     where
       getfname : PField -> List Name
       getfname (MkField _ _ _ _ n _) = n
-      getfname (MkRecordLet fc let_) = []
+      getfname (MkRecordLet let_) = []
 
       mkConName : Name -> Name
       mkConName (NS ns (UN n))

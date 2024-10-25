@@ -316,8 +316,8 @@ mapPTermM f = goPTerm where
       MkField fc doc c <$> goPiInfo info
                        <*> pure n
                        <*> goPTerm t
-    goPField (MkRecordLet fc decls) =
-      MkRecordLet fc <$> traverseList1 ?rest decls
+    goPField (MkRecordLet (MkFCVal fc decls)) =
+      MkRecordLet <$> (MkFCVal fc) <$> traverseList1 ?rest decls
 
     goPiInfo : PiInfo (PTerm' nm) -> Core (PiInfo (PTerm' nm))
     goPiInfo (DefImplicit t) = DefImplicit <$> goPTerm t
@@ -589,8 +589,8 @@ mapPTerm f = goPTerm where
     goPField : PField' nm -> PField' nm
     goPField (MkField fc doc c info n t)
       = MkField fc doc c (goPiInfo info) n (goPTerm t)
-    goPField (MkRecordLet fc decls)
-      = MkRecordLet fc (map goPRecordDeclLet decls)
+    goPField (MkRecordLet (MkFCVal fc decls))
+      = MkRecordLet $ MkFCVal fc (map goPRecordDeclLet decls)
 
     goPiInfo : PiInfo (PTerm' nm) -> PiInfo (PTerm' nm)
     goPiInfo (DefImplicit t) = DefImplicit $ goPTerm t

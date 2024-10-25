@@ -1810,7 +1810,7 @@ fieldDecl fname indents
                     decoratedKeyword fname "let"
                     nonEmptyBlockAfter col (parseRecordLet fname)
                     )
-             pure $ MkRecordLet b.toFC ?hu
+             pure $ MkRecordLet b.withFC
       <|> do b <- bounds (do
                     rig <- multiplicity fname
                     ns <- sepBy1 (decoratedSymbol fname ",")
