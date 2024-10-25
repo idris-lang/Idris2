@@ -1769,6 +1769,20 @@ implDecl fname indents
          atEnd indents
          pure (b.val (boundToFC fname b))
 
+localClaim : OriginDesc -> IndentInfo -> Rule (WithFC PClaimData)
+localClaim fname indents
+    = do bs <- bounds (do
+                  doc     <- optDocumentation fname
+                  visOpts <- many (visOpt fname)
+                  vis     <- getVisibility Nothing visOpts
+                  let opts = mapMaybe getRight visOpts
+                  rig  <- multiplicity fname
+                  cls  <- tyDecls (decorate fname Function name)
+                                  doc fname indents
+                  pure $ MkPClaim rig vis opts cls
+                  )
+         pure bs.withFC
+
 fieldDecl : OriginDesc -> IndentInfo -> Rule PField
 fieldDecl fname indents
       = do doc <- optDocumentation fname
@@ -1784,11 +1798,17 @@ fieldDecl fname indents
            atEnd indents
            pure fs
   where
+    parseRecordLet : OriginDesc -> IndentInfo -> Rule PRecordDeclLet
+    parseRecordLet fname idents =
+          RecordClaim <$> localClaim fname idents
+      <|> do b <- bounds (clause 0 Nothing fname idents)
+             pure $ RecordClause (b.withFC {o = fname})
     fieldBody : String -> PiInfo PTerm -> Rule (PField)
     fieldBody doc p
         = do b <- bounds (do
+                    col <- column
                     decoratedKeyword fname "let"
-                    nonEmptyBlockAfter ?col ?buw
+                    nonEmptyBlockAfter col (parseRecordLet fname)
                     )
              pure $ MkRecordLet b.toFC ?hu
       <|> do b <- bounds (do
@@ -1880,19 +1900,6 @@ paramDecls fname indents = do
     newParamDecls fname indents
         = map concat (some $ typedArg fname indents)
 
-localClaim : OriginDesc -> IndentInfo -> Rule (WithFC PClaimData)
-localClaim fname indents
-    = do bs <- bounds (do
-                  doc     <- optDocumentation fname
-                  visOpts <- many (visOpt fname)
-                  vis     <- getVisibility Nothing visOpts
-                  let opts = mapMaybe getRight visOpts
-                  rig  <- multiplicity fname
-                  cls  <- tyDecls (decorate fname Function name)
-                                  doc fname indents
-                  pure $ MkPClaim rig vis opts cls
-                  )
-         pure bs.withFC
 
 -- come back to this later
 claims : OriginDesc -> IndentInfo -> Rule PDecl

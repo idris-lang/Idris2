@@ -410,8 +410,8 @@ mutual
 
   public export
   data PRecordDeclLet' : Type -> Type where
-    RecordClaim : FC -> PClaimData' nm -> PRecordDeclLet' nm
-    RecordClause : FC -> PClause' nm -> PRecordDeclLet' nm
+    RecordClaim : WithFC (PClaimData' nm) -> PRecordDeclLet' nm
+    RecordClause : WithFC (PClause' nm) -> PRecordDeclLet' nm
 
   -- For noting the pass we're in when desugaring a mutual block
   -- TODO: Decide whether we want mutual blocks!
