@@ -1206,8 +1206,9 @@ tyDecls declName predoc fname indents
                     ty  <- typeExpr pdef fname indents
                     pure $ map (\(doc, n) => (doc, n.val, boundToFC fname n, ty)) docns
          atEnd indents
-         pure $ map (\(doc, n, nFC, ty) => (MkPTy nFC nFC n (predoc ++ doc) ty))
-                    bs
+         ?wha
+         -- pure $ map (\(doc, n, nFC, ty) => (MkPTy nFC nFC n (predoc ++ doc) ty))
+         --            bs
 
 withFlags : OriginDesc -> EmptyRule (List WithFlag)
 withFlags fname
@@ -1320,12 +1321,12 @@ simpleCon fname ret indents
     = do b <- bounds (do cdoc   <- optDocumentation fname
                          cname  <- bounds $ decoratedDataConstructorName fname
                          params <- many (argExpr plhs fname indents)
-                         pure (cdoc, cname.val, boundToFC fname cname, params))
+                         pure (cdoc, cname.withFC, params))
          atEnd indents
-         (cdoc, cname, cnameFC, params) <- pure b.val
+         (cdoc, cname, params) <- pure b.val
          let cfc = boundToFC fname b
          fromMaybe (fatalError "Named arguments not allowed in ADT constructors")
-                   (pure . MkPTy cfc cnameFC cname cdoc <$> mkDataConType cfc ret (concat params))
+                   (pure . MkPTy cfc (singleton cname) cdoc <$> mkDataConType cfc ret (concat params))
 
 simpleData : OriginDesc -> WithBounds t ->
              WithBounds Name -> IndentInfo -> Rule PDataDecl
@@ -1783,8 +1784,11 @@ fieldDecl fname indents
   where
     fieldBody : String -> PiInfo PTerm -> Rule (PField)
     fieldBody doc p
-        = do decoratedKeyword fname "let"
-             pure $ MkRecordLet ?aa ?hu
+        = do b <- bounds (do
+                    decoratedKeyword fname "let"
+                    nonEmptyBlockAfter ?col ?buw
+                    )
+             pure $ MkRecordLet b.toFC ?hu
       <|> do b <- bounds (do
                     rig <- multiplicity fname
                     ns <- sepBy1 (decoratedSymbol fname ",")
@@ -1794,7 +1798,7 @@ fieldDecl fname indents
                     decoratedSymbol fname ":"
                     ty <- typeExpr pdef fname indents
                     pure (\fc : FC => MkField fc doc rig p (forget ns) ty))
-             pure (b.val (boundToFC fname b))
+             pure (b.val b.toFC)
 
 typedArg : OriginDesc -> IndentInfo -> Rule (List (Name, RigCount, PiInfo PTerm, PTerm))
 typedArg fname indents
@@ -1874,7 +1878,7 @@ paramDecls fname indents = do
     newParamDecls fname indents
         = map concat (some $ typedArg fname indents)
 
-localClaim : OriginDesc -> IndentInfo -> Rule (List1 (FC, PClaimData))
+localClaim : OriginDesc -> IndentInfo -> Rule (FC, PClaimData)
 localClaim fname indents
     = do bs <- bounds (do
                   doc     <- optDocumentation fname
@@ -1885,13 +1889,14 @@ localClaim fname indents
                   cls  <- tyDecls (decorate fname Function name)
                                   doc fname indents
                   pure $ map (\cl => the (Pair _ _) (doc, vis, opts, rig, cl)) cls)
-         pure $ map (\(doc, vis, opts, rig, cl) : Pair _ _ =>
-                           (boundToFC fname bs, MkPClaim  rig vis opts cl))
-                    bs.val
+         ?whuat
+         -- pure $ map (\(doc, vis, opts, rig, cl) : Pair _ _ =>
+         --                   (boundToFC fname bs, MkPClaim  rig vis opts cl))
+         --            bs.val
 
 -- come back to this later
-claims : OriginDesc -> IndentInfo -> Rule (List1 PDecl)
-claims o i = map (uncurry PClaim) <$> (localClaim o i)
+claims : OriginDesc -> IndentInfo -> Rule PDecl
+claims o i = uncurry PClaim <$> localClaim o i
 
 definition : OriginDesc -> IndentInfo -> Rule PDecl
 definition fname indents
@@ -1931,7 +1936,7 @@ topDecl fname indents
   <|> do d <- dataDecl fname indents
          pure [d]
   <|> do ds <- claims fname indents
-         pure (forget ds)
+         pure [ds]
   <|> do d <- directiveDecl fname indents
          pure [d]
   <|> do d <- implDecl fname indents

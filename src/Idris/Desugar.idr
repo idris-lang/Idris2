@@ -875,12 +875,13 @@ mutual
                 {auto u : Ref UST UState} ->
                 {auto m : Ref MD Metadata} ->
                 {auto o : Ref ROpts REPLOpts} ->
-                List Name -> PTypeDecl -> Core ImpTy
-  desugarType ps (MkPTy fc nameFC n d ty)
-      = do addDocString n d
-           syn <- get Syn
-           pure $ MkImpTy fc nameFC n !(bindTypeNames fc (usingImpl syn)
-                                               ps !(desugar AnyExpr ps ty))
+                List Name -> PTypeDecl -> Core (List ImpTy)
+  desugarType ps (MkPTy fc names d ty)
+      = flip Core.traverse (forget names) $ \n : WithFC Name =>
+          do addDocString n.val d
+             syn <- get Syn
+             pure $ MkImpTy fc n.fc n.val !(bindTypeNames fc (usingImpl syn)
+                                                 ps !(desugar AnyExpr ps ty))
 
   -- Attempt to get the function name from a function pattern. For example,
   --   - given the pattern 'f x y', getClauseFn would return 'f'.
@@ -974,7 +975,7 @@ mutual
                       tycon <- desugar AnyExpr ps tycon
                       bindTypeNames fc (usingImpl syn) ps tycon)
                    opts
-                   !(traverse (desugarType ps) datacons)
+                   ?huh -- !(traverse (desugarType ps) datacons)
   desugarData ps doc (MkPLater fc n tycon)
       = do addDocString n doc
            syn <- get Syn
@@ -1045,11 +1046,9 @@ mutual
                 List Name -> PDecl -> Core (List ImpDecl)
   desugarDecl ps (PClaim fc (MkPClaim rig vis fnopts ty))
       = do opts <- traverse (desugarFnOpt ps) fnopts
-           pure [IClaim (MkIClaimData fc rig vis opts !(desugarType ps ty))]
-        where
-          isTotalityOption : FnOpt -> Bool
-          isTotalityOption (Totality _) = True
-          isTotalityOption _            = False
+           types <- desugarType ps ty
+           pure $ flip (map {f = List, b = ImpDecl}) types $ \ty' =>
+                      IClaim (MkIClaimData fc rig vis opts ty')
 
   desugarDecl ps (PDef fc clauses)
   -- The clauses won't necessarily all be from the same function, so split

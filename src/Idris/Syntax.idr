@@ -286,13 +286,20 @@ mutual
   PTypeDecl = PTypeDecl' Name
 
   public export
-  data PTypeDecl' : Type -> Type where
-       MkPTy : FC -> (nameFC : FC) -> (n : Name) ->
-               (doc: String) -> (type : PTerm' nm) -> PTypeDecl' nm
+  record PTypeDecl' (nm : Type) where
+      constructor MkPTy
+      fc : FC
+      names : List1 (WithFC Name)
+      doc: String
+      type : PTerm' nm
+
+  export
+  (.nameList) : PTypeDecl' nm -> List Name
+  (.nameList) = forget . map val . names
 
   export
   getPTypeDeclLoc : PTypeDecl' nm -> FC
-  getPTypeDeclLoc (MkPTy fc _ _ _ _) = fc
+  getPTypeDeclLoc (MkPTy fc _ _ _) = fc
 
   public export
   PDataDecl : Type
@@ -538,16 +545,13 @@ isPDef _ = Nothing
 
 
 definedInData : PDataDecl -> List Name
-definedInData (MkPData _ n _ _ cons) = n :: map getName cons
-  where
-    getName : PTypeDecl -> Name
-    getName (MkPTy _ _ n _ _) = n
+definedInData (MkPData _ n _ _ cons) = n :: concatMap (.nameList) cons
 definedInData (MkPLater _ n _) = [n]
 
 export
 definedIn : List PDecl -> List Name
 definedIn [] = []
-definedIn (PClaim _ (MkPClaim _ _ _ (MkPTy _ _ n _ _)) :: ds) = n :: definedIn ds
+definedIn (PClaim _ (MkPClaim _ _ _ ty) :: ds) = ty.nameList ++ definedIn ds
 definedIn (PData _ _ _ _ d :: ds) = definedInData d ++ definedIn ds
 definedIn (PParameters _ _ pds :: ds) = definedIn pds ++ definedIn ds
 definedIn (PUsing _ _ pds :: ds) = definedIn pds ++ definedIn ds
@@ -1095,7 +1099,7 @@ getFixityInfo nm = do
 export
 covering
 Show PTypeDecl where
-  show (MkPTy _ _ nm doc ty) = unwords [show nm, ":", show ty]
+  show (MkPTy _ nm doc ty) = unwords [show (map val nm), ":", show ty]
 
 export
 covering

@@ -302,7 +302,7 @@ mapPTermM f = goPTerm where
 
 
     goPTypeDecl : PTypeDecl' nm -> Core (PTypeDecl' nm)
-    goPTypeDecl (MkPTy fc nameFC n d t) = MkPTy fc nameFC n d <$> goPTerm t
+    goPTypeDecl (MkPTy fc n d t) = MkPTy fc n d <$> goPTerm t
 
     goPDataDecl : PDataDecl' nm -> Core (PDataDecl' nm)
     goPDataDecl (MkPData fc n t opts tdecls) =
@@ -575,7 +575,7 @@ mapPTerm f = goPTerm where
 
 
     goPTypeDecl : PTypeDecl' nm -> PTypeDecl' nm
-    goPTypeDecl (MkPTy fc nameFC n d t) = MkPTy fc nameFC n d $ goPTerm t
+    goPTypeDecl (MkPTy fc n d t) = MkPTy fc n d $ goPTerm t
 
     goPDataDecl : PDataDecl' nm -> PDataDecl' nm
     goPDataDecl (MkPData fc n t opts tdecls)

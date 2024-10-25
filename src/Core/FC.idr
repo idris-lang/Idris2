@@ -77,6 +77,25 @@ NonEmptyFC : Type
 NonEmptyFC = (OriginDesc, FilePos, FilePos)
 
 ------------------------------------------------------------------------
+||| A wrapper for a value with a file context.
+public export
+record WithFC (ty : Type) where
+  constructor MkFCVal
+  fc : FC
+  val : ty
+
+||| An interface to extract the location of some data
+public export
+interface HasLoc ty where
+  constructor MkHasLoc
+  (.getFC) : ty -> FC
+
+||| Anything with locations has a location
+export
+HasLoc (WithFC ty) where
+  (.getFC) (MkFCVal f _) = f
+
+------------------------------------------------------------------------
 -- Conversion between NonEmptyFC and FC
 
 ||| NonEmptyFC always embeds into FC
@@ -154,8 +173,16 @@ boundToFC : OriginDesc -> WithBounds t -> FC
 boundToFC mbModIdent b = MkFC mbModIdent (start b) (end b)
 
 export
+(.toFC) : (o : OriginDesc) => WithBounds t -> FC
+x.toFC = boundToFC o x
+
+export
 boundToFC' : OriginDesc -> Bounds -> FC
 boundToFC' mbModIdent b = MkFC mbModIdent (startBounds b) (endBounds b)
+
+export
+(.withFC) : (o : OriginDesc) => WithBounds t -> WithFC t
+x.withFC = MkFCVal x.toFC x.val
 
 ------------------------------------------------------------------------
 -- Predicates
