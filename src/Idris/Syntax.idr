@@ -392,7 +392,7 @@ mutual
   public export
   data PField' : Type -> Type where
        MkField : FC -> (doc : String) -> RigCount -> PiInfo (PTerm' nm) ->
-                 Name -> (ty : PTerm' nm) -> PField' nm
+                 List Name -> (ty : PTerm' nm) -> PField' nm
        MkRecordLet : FC -> List1 (PRecordDeclLet' nm) -> PField' nm
 
   public export

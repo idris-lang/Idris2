@@ -1766,7 +1766,7 @@ implDecl fname indents
          atEnd indents
          pure (b.val (boundToFC fname b))
 
-fieldDecl : OriginDesc -> IndentInfo -> Rule (List PField)
+fieldDecl : OriginDesc -> IndentInfo -> Rule PField
 fieldDecl fname indents
       = do doc <- optDocumentation fname
            decoratedSymbol fname "{"
@@ -1781,18 +1781,20 @@ fieldDecl fname indents
            atEnd indents
            pure fs
   where
-    fieldBody : String -> PiInfo PTerm -> Rule (List PField)
-    fieldBody doc p = do
-      b <- bounds (do
-             rig <- multiplicity fname
-             ns <- sepBy1 (decoratedSymbol fname ",")
-                     (decorate fname Function name
-                        <|> (do b <- bounds (symbol "_")
-                                fatalLoc {c = True} b.bounds "Fields have to be named"))
-             decoratedSymbol fname ":"
-             ty <- typeExpr pdef fname indents
-             pure (\fc : FC => map (\n => MkField fc doc rig p n ty) (forget ns)))
-      pure (b.val (boundToFC fname b))
+    fieldBody : String -> PiInfo PTerm -> Rule (PField)
+    fieldBody doc p
+        = do decoratedKeyword fname "let"
+             pure $ MkRecordLet ?aa ?hu
+      <|> do b <- bounds (do
+                    rig <- multiplicity fname
+                    ns <- sepBy1 (decoratedSymbol fname ",")
+                            (decorate fname Function name
+                               <|> (do b <- bounds (symbol "_")
+                                       fatalLoc {c = True} b.bounds "Fields have to be named"))
+                    decoratedSymbol fname ":"
+                    ty <- typeExpr pdef fname indents
+                    pure (\fc : FC => MkField fc doc rig p (forget ns) ty))
+             pure (b.val (boundToFC fname b))
 
 typedArg : OriginDesc -> IndentInfo -> Rule (List (Name, RigCount, PiInfo PTerm, PTerm))
 typedArg fname indents
@@ -1830,7 +1832,8 @@ recordBody fname indents doc vis mbtot col n params
          dcflds <- blockWithOptHeaderAfter col
                      (\ idt => recordConstructor fname <* atEnd idt)
                      (fieldDecl fname)
-         pure (\fc : FC => PRecord fc doc vis mbtot (MkPRecord n params opts (fst dcflds) (concat (snd dcflds))))
+         pure (\fc : FC => PRecord fc doc vis mbtot
+                (MkPRecord n params opts (fst dcflds) (snd dcflds)))
 
 recordDecl : OriginDesc -> IndentInfo -> Rule PDecl
 recordDecl fname indents

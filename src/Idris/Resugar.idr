@@ -491,7 +491,7 @@ mutual
   toPField (MkIField fc c p n ty)
       = do ty' <- toPTerm startPrec ty
            p' <- traverse (toPTerm startPrec) p
-           pure (MkField fc "" c p' n ty')
+           pure (MkField fc "" c p' [n] ty')
 
   toPRecord : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->

@@ -987,11 +987,13 @@ mutual
                  {auto m : Ref MD Metadata} ->
                  {auto o : Ref ROpts REPLOpts} ->
                  List Name -> Namespace -> PField ->
-                 Core IField
-  desugarField ps ns (MkField fc doc rig p n ty)
-      = do addDocStringNS ns n doc
+                 Core (List IField)
+  desugarField ps ns (MkField fc doc rig p names ty)
+      = flip Core.traverse names $ \n : Name => do
+           addDocStringNS ns n doc
            addDocStringNS ns (toRF n) doc
            syn <- get Syn
+
            pure (MkIField fc rig !(traverse (desugar AnyExpr ps) p )
                           n !(bindTypeNames fc (usingImpl syn)
                           ps !(desugar AnyExpr ps ty)))
@@ -1188,7 +1190,7 @@ mutual
                              pure (n, c, p', tm'))
                         params
            let _ = the (List (Name, RigCount, PiInfo RawImp, RawImp)) params'
-           let fnames = mapMaybe fname fields
+           let fnames = concat $ map getfname fields
            let _ = the (List Name) fnames
            -- Look for bindable names in the parameters
 
@@ -1205,16 +1207,16 @@ mutual
            fields' <- traverse (desugarField (ps ++ fnames ++
                                               map fst params) (mkNamespace recName))
                                fields
-           let _ = the (List IField) fields'
+           let _ = the (List $ List IField) fields'
            let conname = maybe (mkConName tn) snd conname_in
            whenJust (fst <$> conname_in) (addDocString conname)
            let _ = the Name conname
            pure [IRecord fc (Just recName)
-                         vis mbtot (MkImpRecord fc tn paramsb opts conname fields')]
+                         vis mbtot (MkImpRecord fc tn paramsb opts conname (concat fields'))]
     where
-      fname : PField -> Maybe Name
-      fname (MkField _ _ _ _ n _) = Just n
-      fname (MkRecordLet fc let_) = Nothing
+      getfname : PField -> List Name
+      getfname (MkField _ _ _ _ n _) = n
+      getfname (MkRecordLet fc let_) = []
 
       mkConName : Name -> Name
       mkConName (NS ns (UN n))
