@@ -290,8 +290,8 @@ mutual
       constructor MkPTy
       fc : FC
       -- List of names and their associated documentation
-      -- If no documentation is provided the first projection is `Nothing`
-      names : List1 (Maybe String, WithFC Name)
+      -- If no documentation is provided the first projection is `""`
+      names : List1 (String, WithFC Name)
       doc: String
       type : PTerm' nm
 

@@ -877,8 +877,8 @@ mutual
                 {auto o : Ref ROpts REPLOpts} ->
                 List Name -> PTypeDecl -> Core (List ImpTy)
   desugarType ps (MkPTy fc names d ty)
-      = flip Core.traverse (forget names) $ \(doc, n) : (Maybe String, WithFC Name) =>
-          do addDocString n.val (d ++ fromMaybe "" doc)
+      = flip Core.traverse (forget names) $ \(doc, n) : (String, WithFC Name) =>
+          do addDocString n.val (d ++ doc)
              syn <- get Syn
              pure $ MkImpTy fc n.fc n.val !(bindTypeNames fc (usingImpl syn)
                                                  ps !(desugar AnyExpr ps ty))

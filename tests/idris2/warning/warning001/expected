@@ -3,13 +3,13 @@ Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   idF is shadowing Main.idF
 
-Issue539:10:1--10:7
+Issue539:10:1--10:39
  06 | 
  07 | leftIdPoint : (f : a -> b) -> (x : a) -> idF (f x) = f x
  08 | leftIdPoint f x = Refl
  09 | 
  10 | leftId : (f : a -> b) -> (idF . f = f)
-      ^^^^^^
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 1/1: Building Issue621 (Issue621.idr)
 Warning: We are about to implicitly bind the following lowercase names.
@@ -17,13 +17,13 @@ You may be unintentionally shadowing the associated global definitions:
   a1 is shadowing Main.a1
   a2 is shadowing Main.a2
 
-Issue621:8:1--8:7
+Issue621:8:1--8:17
  4 | 
  5 | a2 : Char
  6 | a2 = 'a'
  7 | 
  8 | whyNot : a1 = a2
-     ^^^^^^
+     ^^^^^^^^^^^^^^^^
 
 1/1: Building Issue1401 (Issue1401.idr)
 Warning: We are about to implicitly bind the following lowercase names.
@@ -31,33 +31,33 @@ You may be unintentionally shadowing the associated global definitions:
   fst is shadowing Builtin.fst, Builtin.DPair.DPair.fst
   dup is shadowing Prelude.Basics.dup
 
-Issue1401:1:1--1:7
+Issue1401:1:1--1:53
  1 | fstDup: (xs : List a) -> map fst (map dup xs) === xs
-     ^^^^^^
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 1/1: Building PR1407 (PR1407.idr)
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   f is shadowing Main.Hoo.f
 
-PR1407:7:3--7:10
+PR1407:7:3--7:79
  3 |   f : Either a b -> Either b a
  4 |   f (Left a) = Right a
  5 |   f (Right b) = Left b
  6 | 
  7 |   natural : (xs : Either a b) -> ((f . f) . map g) xs === (map g . (f . f)) xs
-       ^^^^^^^
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   g is shadowing Main.g
 
-PR1407:15:3--15:4
+PR1407:15:3--15:14
  11 | 
  12 |   g : h === h
  13 |   g = Refl
  14 | 
  15 |   h : g === g
-        ^
+        ^^^^^^^^^^^
 
 1/1: Building Holes (Holes.idr)

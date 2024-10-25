@@ -39,6 +39,18 @@ Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
 
+Fld:86:3--86:37
+ 82 |                                              -- constructor)
+ 83 | 
+ 84 | 
+ 85 | data MyDataImpl : a -> Type where            -- implementation of MyData
+ 86 |   MkMyData : (x : a) -> MyDataImpl x
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning: We are about to implicitly bind the following lowercase names.
+You may be unintentionally shadowing the associated global definitions:
+  a is shadowing Main.R2.R2.a, Main.R1.R1.a
+
 Fld:85:1--86:37
  85 | data MyDataImpl : a -> Type where            -- implementation of MyData
  86 |   MkMyData : (x : a) -> MyDataImpl x
@@ -47,51 +59,39 @@ Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
 
-Fld:86:3--86:11
- 82 |                                              -- constructor)
- 83 | 
- 84 | 
- 85 | data MyDataImpl : a -> Type where            -- implementation of MyData
- 86 |   MkMyData : (x : a) -> MyDataImpl x
-        ^^^^^^^^
-
-Warning: We are about to implicitly bind the following lowercase names.
-You may be unintentionally shadowing the associated global definitions:
-  a is shadowing Main.R2.R2.a, Main.R1.R1.a
-
-Fld:112:1--112:11
+Fld:112:1--112:40
  108 | Show' String where
  109 |    show' = id
  110 | 
  111 | %hint
  112 | showMaybe' : Show' a => Show' (Maybe a)
-       ^^^^^^^^^^
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
   b is shadowing Main.Other.b
 
-Fld:141:3--141:10
+Fld:141:3--141:57
  137 | setName : String -> OrdinaryDog -> OrdinaryDog
  138 | setName name' = {name := name'}
  139 | 
  140 | data Three : Type -> Type -> Type -> Type where
  141 |   MkThree : (x : a) -> (y : b) -> (z : c) -> Three a b c
-         ^^^^^^^
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
   b is shadowing Main.Other.b
 
-Fld:143:1--143:10
+Fld:143:1--143:74
  139 | 
  140 | data Three : Type -> Type -> Type -> Type where
  141 |   MkThree : (x : a) -> (y : b) -> (z : c) -> Three a b c
  142 | 
  143 | mapSetMap : (a -> a') -> b' -> (c -> c') -> Three a b c -> Three a' b' c'
-       ^^^^^^^^^
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Warning: You may be unintentionally shadowing the following local bindings:
   a
@@ -165,13 +165,13 @@ Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
 
-Fld:221:1--221:7
+Fld:221:1--221:24
  217 | -- dontCare2 _ _ _ _ _ = plusCommutative _ _
  218 | 
  219 | data Tree a = Leaf a | Node (Tree a) a (Tree a)
  220 | 
  221 | isNode : Tree a -> Bool
-       ^^^^^^
+       ^^^^^^^^^^^^^^^^^^^^^^^
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
@@ -185,13 +185,13 @@ Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
 
-Fld:228:1--228:10
+Fld:228:1--228:43
  224 | 
  225 | data IsNode : Tree a -> Type where
  226 |   Is : IsNode (Node {})
  227 | 
  228 | decIsNode : (x : Tree a) -> Dec (IsNode x)
-       ^^^^^^^^^
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Error: While processing right hand side of r2_shouldNotTypecheck1. Ambiguous elaboration. Possible results:
     Main.R2.MkR

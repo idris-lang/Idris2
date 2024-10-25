@@ -475,7 +475,7 @@ mutual
                 ImpTy' KindedName -> Core (PTypeDecl' KindedName)
   toPTypeDecl (MkImpTy fc nameFC n ty)
       -- /!\ change the constructor to take WithFC
-      = pure (MkPTy fc (pure (Nothing, MkFCVal nameFC n)) "" !(toPTerm startPrec ty))
+      = pure (MkPTy fc (pure ("", MkFCVal nameFC n)) "" !(toPTerm startPrec ty))
 
   toPData : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->

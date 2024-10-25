@@ -1208,12 +1208,9 @@ tyDecls declName predoc fname indents
                     pure $ (docns, ty)
          atEnd indents
          let loc = bs.toFC
-         let docs = fst bs.val
+         let docNames = fst bs.val
          let ty = snd bs.val
-         pure $ MkPTy loc ?namsss predoc ty
-
-         -- pure $ map (\(doc, n, nFC, ty) => (MkPTy nFC nFC n (predoc ++ doc) ty))
-         --            bs
+         pure $ MkPTy loc (map (mapSnd (.withFC)) docNames) predoc ty
 
 withFlags : OriginDesc -> EmptyRule (List WithFlag)
 withFlags fname
@@ -1331,7 +1328,7 @@ simpleCon fname ret indents
          (cdoc, cname, params) <- pure b.val
          let cfc = boundToFC fname b
          fromMaybe (fatalError "Named arguments not allowed in ADT constructors")
-                   (pure . MkPTy cfc (singleton (Nothing, cname)) cdoc <$> mkDataConType cfc ret (concat params))
+                   (pure . MkPTy cfc (singleton ("", cname)) cdoc <$> mkDataConType cfc ret (concat params))
 
 simpleData : OriginDesc -> WithBounds t ->
              WithBounds Name -> IndentInfo -> Rule PDataDecl
@@ -1893,14 +1890,9 @@ localClaim fname indents
                   rig  <- multiplicity fname
                   cls  <- tyDecls (decorate fname Function name)
                                   doc fname indents
-                  pure $ MkPClaim rig vis opts ?hahua
+                  pure $ MkPClaim rig vis opts cls
                   )
-
-         -- pure $ MkPClaim ?rigcount ?vis ?options ?whuat
-         ?ada
-         -- pure $ map (\(doc, vis, opts, rig, cl) : Pair _ _ =>
-         --                   (boundToFC fname bs, MkPClaim  rig vis opts cl))
-         --            bs.val
+         pure bs.withFC
 
 -- come back to this later
 claims : OriginDesc -> IndentInfo -> Rule PDecl

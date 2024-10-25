@@ -6,25 +6,25 @@ Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   any is shadowing Prelude.Interfaces.any
 
-refleq:5:1--5:15
+refleq:5:1--5:35
  1 | import Language.Reflection
  2 | 
  3 | %language ElabReflection
  4 | 
  5 | solveReflected : TTImp -> Elab any
-     ^^^^^^^^^^^^^^
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   any is shadowing Prelude.Interfaces.any
 
-refleq:15:1--15:6
+refleq:15:1--15:17
  11 |     = do logTerm "" 0 "Goal" g
  12 |          fail "I don't know how to prove this"
  13 | 
  14 | %macro
  15 | prove : Elab any
-      ^^^^^
+      ^^^^^^^^^^^^^^^^
 
 Error: While processing right hand side of commutes. Error during reflection: Not done
 
