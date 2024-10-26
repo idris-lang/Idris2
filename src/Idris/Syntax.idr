@@ -456,13 +456,22 @@ mutual
     type : PTypeDecl' nm
 
   public export
+  record PFixityData where
+    constructor MkPFixityData
+    exportModifier : WithDefault Visibility Export
+    binding : BindingModifier
+    fixity : Fixity
+    precedence : Nat
+    operators : List1 OpStr
+
+  public export
   PDecl : Type
   PDecl = PDecl' Name
 
   public export
   data PDecl' : Type -> Type where
        PClaim : WithFC (PClaimData' nm) -> PDecl' nm
-       PDef : FC -> List (PClause' nm) -> PDecl' nm
+       PDef : WithFC (List (PClause' nm)) -> PDecl' nm
        PData : FC -> (doc : String) -> WithDefault Visibility Private ->
                Maybe TotalReq -> PDataDecl' nm -> PDecl' nm
        PParameters : FC ->
@@ -503,31 +512,31 @@ mutual
        ||| substring of the error message raised when checking the block.
        PFail : FC -> Maybe String -> List (PDecl' nm) -> PDecl' nm
 
-       PMutual : FC -> List (PDecl' nm) -> PDecl' nm
-       PFixity : FC -> WithDefault Visibility Export -> BindingModifier -> Fixity -> Nat -> OpStr -> PDecl' nm
+       PMutual : WithFC (List (PDecl' nm)) -> PDecl' nm
+       PFixity : WithFC PFixityData -> PDecl' nm
        PNamespace : FC -> Namespace -> List (PDecl' nm) -> PDecl' nm
        PTransform : FC -> String -> PTerm' nm -> PTerm' nm -> PDecl' nm
        PRunElabDecl : FC -> PTerm' nm -> PDecl' nm
-       PDirective : FC -> Directive -> PDecl' nm
+       PDirective : WithFC Directive -> PDecl' nm
        PBuiltin : FC -> BuiltinType -> Name -> PDecl' nm
 
   export
   getPDeclLoc : PDecl' nm -> FC
   getPDeclLoc (PClaim c) = c.fc
-  getPDeclLoc (PDef fc _) = fc
+  getPDeclLoc (PDef c) = c.fc
   getPDeclLoc (PData fc _ _ _ _) = fc
   getPDeclLoc (PParameters fc _ _) = fc
   getPDeclLoc (PUsing fc _ _) = fc
   getPDeclLoc (PInterface fc _ _ _ _ _ _ _ _) = fc
   getPDeclLoc (PImplementation fc _ _ _ _ _ _ _ _ _ _) = fc
   getPDeclLoc (PRecord fc _ _ _ _) = fc
-  getPDeclLoc (PMutual fc _) = fc
+  getPDeclLoc (PMutual x) = x.fc
   getPDeclLoc (PFail fc _ _) = fc
-  getPDeclLoc (PFixity fc _ _ _ _ _) = fc
+  getPDeclLoc (PFixity pf) = pf.fc
   getPDeclLoc (PNamespace fc _ _) = fc
   getPDeclLoc (PTransform fc _ _ _) = fc
   getPDeclLoc (PRunElabDecl fc _) = fc
-  getPDeclLoc (PDirective fc _) = fc
+  getPDeclLoc (PDirective d) = d.fc
   getPDeclLoc (PBuiltin fc _ _) = fc
 
 export
@@ -545,8 +554,8 @@ isStrLiteral (StrInterp _ _) = Nothing
 isStrLiteral (StrLiteral fc str) = Just (fc, str)
 
 export
-isPDef : PDecl -> Maybe (FC, List PClause)
-isPDef (PDef annot cs) = Just (annot, cs)
+isPDef : PDecl -> Maybe (WithFC (List PClause))
+isPDef (PDef cs) = Just cs
 isPDef _ = Nothing
 
 
@@ -1125,7 +1134,7 @@ export
 covering
 Show PDecl where
   show (PClaim pclaim) = show pclaim.val
-  show (PDef _ cls) = unlines (show <$> cls)
+  show (PDef cls) = unlines (show <$> cls.val)
   show (PData{}) = "PData"
   show (PParameters{}) = "PParameters"
   show (PUsing{}) = "PUsing"

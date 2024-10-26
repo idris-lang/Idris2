@@ -533,7 +533,7 @@ mutual
   toPDecl (IData fc vis mbtot d)
       = pure (Just (PData fc "" vis mbtot !(toPData d)))
   toPDecl (IDef fc n cs)
-      = pure (Just (PDef fc !(traverse toPClause cs)))
+      = pure (Just (PDef $ MkFCVal fc !(traverse toPClause cs)))
   toPDecl (IParameters fc ps ds)
       = do ds' <- traverse toPDecl ds
            pure (Just (PParameters fc

@@ -830,6 +830,10 @@ traverseList1_ f xxs
          ignore (f x)
          traverse_ f xs
 
+export
+traverseFC : (a -> Core b) -> WithFC a -> Core (WithFC b)
+traverseFC f (MkFCVal fc x) = MkFCVal fc <$> f x
+
 namespace PiInfo
   export
   traverse : (a -> Core b) -> PiInfo a -> Core (PiInfo b)

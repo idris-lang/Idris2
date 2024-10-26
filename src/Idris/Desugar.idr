@@ -1051,7 +1051,7 @@ mutual
            pure $ flip (map {f = List, b = ImpDecl}) types $ \ty' =>
                       IClaim (MkIClaimData fc rig vis opts ty')
 
-  desugarDecl ps (PDef fc clauses)
+  desugarDecl ps (PDef (MkFCVal fc clauses))
   -- The clauses won't necessarily all be from the same function, so split
   -- after desugaring, by function name, using collectDefs from RawImp
       = do ncs <- traverse (desugarClause ps False) clauses
@@ -1224,8 +1224,9 @@ mutual
           NS ns (DN str (MN ("__mk" ++ str) 0))
       mkConName n = DN (show n) (MN ("__mk" ++ show n) 0)
 
-  desugarDecl ps fx@(PFixity fc vis binding fix prec opName)
-      = do unless (checkValidFixity binding fix prec)
+  desugarDecl ps fx@(PFixity $ MkFCVal fc (MkPFixityData vis binding fix prec opNames))
+      = flip (Core.traverseList1_ {b = Unit}) opNames (\opName : OpStr => do
+           unless (checkValidFixity binding fix prec)
              (throw $ GenericMsgSol fc
                  "Invalid fixity, \{binding} operator must be infixr 0." "Possible solutions"
                  [ "Make it `infixr 0`: `\{binding} infixr 0 \{show opName}`"
@@ -1252,8 +1253,8 @@ mutual
            update Syn
              { fixities $=
                addName updatedNS
-                 (MkFixityInfo fc (collapseDefault vis) binding fix prec) }
-           pure []
+                 (MkFixityInfo fc (collapseDefault vis) binding fix prec) })
+        >> pure []
   desugarDecl ps d@(PFail fc mmsg ds)
       = do -- save the state: the content of a failing block should be discarded
            ust <- get UST
@@ -1296,7 +1297,7 @@ mutual
              Right ds => [IFail fc mmsg ds] <$ log "desugar.failing" 20 "Success"
              Left Nothing => [] <$ log "desugar.failing" 20 "Correctly failed"
              Left (Just err) => throw err
-  desugarDecl ps (PMutual fc ds)
+  desugarDecl ps (PMutual (MkFCVal fc ds))
       = do let (tys, defs) = splitMutual ds
            mds' <- traverse (desugarDecl ps) (tys ++ defs)
            pure (concat mds')
@@ -1311,7 +1312,7 @@ mutual
   desugarDecl ps (PRunElabDecl fc tm)
       = do tm' <- desugar AnyExpr ps tm
            pure [IRunElabDecl fc tm']
-  desugarDecl ps (PDirective fc d)
+  desugarDecl ps (PDirective $ MkFCVal fc d)
       = case d of
              Hide (HideName n) => pure [IPragma fc [] (\nest, env => hide fc n)]
              Hide (HideFixity fx n) => pure [IPragma fc [] (\_, _ => removeFixity fc fx n)]

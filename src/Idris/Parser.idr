@@ -89,7 +89,7 @@ decoratedSimpleNamedArg fname
   <|> parens fname (decorate fname Bound unqualifiedOperatorName)
 
 -- Forward declare since they're used in the parser
-topDecl : OriginDesc -> IndentInfo -> Rule (List PDecl)
+topDecl : OriginDesc -> IndentInfo -> Rule PDecl
 collectDefs : List PDecl -> List PDecl
 
 -- Some context for the parser
@@ -154,7 +154,7 @@ whereBlock : OriginDesc -> Int -> Rule (List PDecl)
 whereBlock fname col
     = do decoratedKeyword fname "where"
          ds <- blockAfter col (topDecl fname)
-         pure (collectDefs (concat ds))
+         pure (collectDefs ds)
 
 -- Expect a keyword, but if we get anything else it's a fatal error
 commitKeyword : OriginDesc -> IndentInfo -> String -> Rule ()
@@ -632,7 +632,7 @@ mutual
                   ts <- nonEmptyBlock (topDecl fname)
                   decoratedSymbol fname "]"
                   pure ts
-           pure (PQuoteDecl (boundToFC fname b) (collectDefs (concat b.val)))
+           pure (PQuoteDecl (boundToFC fname b) (collectDefs (forget b.val)))
     <|> do b <- bounds (decoratedSymbol fname "~" *> simplerExpr fname indents)
            pure (PUnquote (boundToFC fname b) b.val)
     <|> do start <- bounds (symbol "(")
@@ -838,7 +838,7 @@ mutual
                    pure (MkLetBinder rig pat ty val alts)
 
     letDecl : Rule LetDecl
-    letDecl = collectDefs . concat <$> nonEmptyBlock (try . topDecl fname)
+    letDecl = collectDefs . forget <$> nonEmptyBlock (try . topDecl fname)
 
   let_ : OriginDesc -> IndentInfo -> Rule PTerm
   let_ fname indents
@@ -1569,7 +1569,7 @@ namespaceDecl fname indents
                          ds    <- blockAfter col (topDecl fname)
                          pure (doc, ns, ds))
          (doc, ns, ds) <- pure b.val
-         pure (PNamespace (boundToFC fname b) ns (collectDefs $ concat ds))
+         pure (PNamespace (boundToFC fname b) ns (collectDefs ds))
 
 transformDecl : OriginDesc -> IndentInfo -> Rule PDecl
 transformDecl fname indents
@@ -1600,7 +1600,7 @@ failDecls fname indents
          pure $
            let (msg, ds) = msgds.val
                fc = boundToFC fname msgds
-           in PFail fc msg (collectDefs (concat ds))
+           in PFail fc msg (collectDefs (forget ds))
 
 mutualDecls : OriginDesc -> IndentInfo -> Rule PDecl
 mutualDecls fname indents
@@ -1609,7 +1609,7 @@ mutualDecls fname indents
                     decoratedKeyword fname "mutual"
                     commit
                     nonEmptyBlockAfter col (topDecl fname)
-         pure (PMutual (boundToFC fname ds) (concat ds.val))
+         pure (PMutual (mapFC forget ds.withFC))
 
 usingDecls : OriginDesc -> IndentInfo -> Rule PDecl
 usingDecls fname indents
@@ -1629,7 +1629,7 @@ usingDecls fname indents
                     ds <- nonEmptyBlockAfter col (topDecl fname)
                     pure (us, ds)
          (us, ds) <- pure b.val
-         pure (PUsing (boundToFC fname b) us (collectDefs (concat ds)))
+         pure (PUsing (boundToFC fname b) us (collectDefs (forget ds)))
 
 builtinDecl : OriginDesc -> IndentInfo -> Rule PDecl
 builtinDecl fname indents
@@ -1742,7 +1742,7 @@ ifaceDecl fname indents
                          dc <- optional (recordConstructor fname)
                          body <- blockAfter col (topDecl fname)
                          pure (\fc : FC => PInterface fc
-                                      vis cons n doc params det dc (collectDefs (concat body))))
+                                      vis cons n doc params det dc (collectDefs body)))
          pure (b.val (boundToFC fname b))
 
 implDecl : OriginDesc -> IndentInfo -> Rule PDecl
@@ -1765,7 +1765,7 @@ implDecl fname indents
                          body <- optional $ decoratedKeyword fname "where" *> blockAfter col (topDecl fname)
                          pure $ \fc : FC =>
                             (PImplementation fc vis opts Single impls cons n params iname nusing
-                                             (map (collectDefs . concat) body)))
+                                             (map collectDefs body)))
          atEnd indents
          pure (b.val (boundToFC fname b))
 
@@ -1882,7 +1882,8 @@ paramDecls fname indents = do
          commit
          declarations <- bounds $ nonEmptyBlockAfter startCol (topDecl fname)
          mergedBounds <- pure $ b1 `mergeBounds` (args `mergeBounds` declarations)
-         pure (PParameters (boundToFC fname mergedBounds) args.val (collectDefs (concat declarations.val)))
+         pure (PParameters (boundToFC fname mergedBounds) args.val
+                  (collectDefs (forget declarations.val)))
 
   where
     oldParamDecls : OriginDesc -> IndentInfo -> Rule (List (Name, RigCount, PiInfo PTerm, PTerm))
@@ -1908,7 +1909,7 @@ claims o i = PClaim <$> localClaim o i
 definition : OriginDesc -> IndentInfo -> Rule PDecl
 definition fname indents
     = do nd <- bounds (clause 0 Nothing fname indents)
-         pure (PDef (boundToFC fname nd) [nd.val])
+         pure (PDef $ MkFCVal (boundToFC fname nd) [nd.val])
 
 operatorBindingKeyword : OriginDesc -> EmptyRule BindingModifier
 operatorBindingKeyword fname
@@ -1916,7 +1917,7 @@ operatorBindingKeyword fname
   <|> (decoratedKeyword fname "typebind" >> pure Typebind)
   <|> pure NotBinding
 
-fixDecl : OriginDesc -> IndentInfo -> Rule (List PDecl)
+fixDecl : OriginDesc -> IndentInfo -> Rule PDecl
 fixDecl fname indents
     = do vis <- exportVisibility fname
          binding <- operatorBindingKeyword fname
@@ -1924,14 +1925,13 @@ fixDecl fname indents
                          commit
                          prec <- decorate fname Keyword $ intLit
                          ops <- sepBy1 (decoratedSymbol fname ",") iOperator
-                         pure (fixity, prec, ops))
-         (fixity, prec, ops) <- pure b.val
-         pure (map (PFixity (boundToFC fname b) vis binding fixity (fromInteger prec)) (forget ops))
+                         pure (MkPFixityData vis binding fixity (fromInteger prec) ops)
+                     )
+         pure (PFixity b.withFC)
 
 directiveDecl : OriginDesc -> IndentInfo -> Rule PDecl
 directiveDecl fname indents
-    = do b <- bounds (directive fname indents)
-         pure (PDirective (boundToFC fname b) b.val)
+    = PDirective . (.withFC) <$> bounds (directive fname indents)
 
 -- Declared at the top
 -- topDecl : OriginDesc -> IndentInfo -> Rule (List PDecl)
@@ -1939,48 +1939,33 @@ topDecl fname indents
       -- Specifically check if the user has attempted to use a reserved identifier to begin their declaration to give improved error messages.
       -- i.e. the claim "String : Type" is a parse error, but the underlying reason may not be clear to new users.
     = do id <- anyReservedIdent
-         the (Rule (List PDecl)) $ fatalLoc id.bounds "Cannot begin a declaration with a reserved identifier"
-  <|> do d <- dataDecl fname indents
-         pure [d]
-  <|> do ds <- claims fname indents
-         pure [ds]
-  <|> do d <- directiveDecl fname indents
-         pure [d]
-  <|> do d <- implDecl fname indents
-         pure [d]
-  <|> do d <- definition fname indents
-         pure [d]
+         the (Rule PDecl) $ fatalLoc id.bounds "Cannot begin a declaration with a reserved identifier"
+  <|> dataDecl fname indents
+  <|> claims fname indents
+  <|> directiveDecl fname indents
+  <|> implDecl fname indents
+  <|> definition fname indents
   <|> fixDecl fname indents
-  <|> do d <- ifaceDecl fname indents
-         pure [d]
-  <|> do d <- recordDecl fname indents
-         pure [d]
-  <|> do d <- namespaceDecl fname indents
-         pure [d]
-  <|> do d <- failDecls fname indents
-         pure [d]
-  <|> do d <- mutualDecls fname indents
-         pure [d]
-  <|> do d <- paramDecls fname indents
-         pure [d]
-  <|> do d <- usingDecls fname indents
-         pure [d]
-  <|> do d <- builtinDecl fname indents
-         pure [d]
-  <|> do d <- runElabDecl fname indents
-         pure [d]
-  <|> do d <- transformDecl fname indents
-         pure [d]
+  <|> ifaceDecl fname indents
+  <|> recordDecl fname indents
+  <|> namespaceDecl fname indents
+  <|> failDecls fname indents
+  <|> mutualDecls fname indents
+  <|> paramDecls fname indents
+  <|> usingDecls fname indents
+  <|> builtinDecl fname indents
+  <|> runElabDecl fname indents
+  <|> transformDecl fname indents
   <|> do dstr <- bounds (terminal "Expected CG directive"
                           (\case
                              CGDirective d => Just d
                              _ => Nothing))
-         pure [let cgrest = span isAlphaNum dstr.val in
-                   PDirective (boundToFC fname dstr)
-                        (CGAction (fst cgrest) (stripBraces (trim (snd cgrest))))]
+         pure (let cgrest = span isAlphaNum dstr.val in
+                   PDirective $ MkFCVal (boundToFC fname dstr)
+                        (CGAction (fst cgrest) (stripBraces (trim (snd cgrest)))))
       -- If the user tried to begin a declaration with any other keyword, then show a more informative error.
   <|> do kw <- bounds anyKeyword
-         the (Rule (List PDecl)) $ fatalLoc kw.bounds "Keyword '\{kw.val}' is not a valid start to a declaration"
+         the (Rule PDecl) $ fatalLoc kw.bounds "Keyword '\{kw.val}' is not a valid start to a declaration"
   <|> fatalError "Couldn't parse declaration"
 
 -- All the clauses get parsed as one-clause definitions. Collect any
@@ -1991,19 +1976,19 @@ topDecl fname indents
 -- Declared at the top.
 -- collectDefs : List PDecl -> List PDecl
 collectDefs [] = []
-collectDefs (PDef annot cs :: ds)
+collectDefs (PDef (MkFCVal annot cs) :: ds)
     = let (csWithFC, rest) = spanBy isPDef ds
-          cs' = cs ++ concat (map snd csWithFC)
+          cs' = cs ++ concat (map val csWithFC)
           annot' = foldr
                    (\fc1, fc2 => fromMaybe EmptyFC (mergeFC fc1 fc2))
                    annot
-                   (map fst csWithFC)
+                   (map fc csWithFC)
       in
-          PDef annot' cs' :: assert_total (collectDefs rest)
+          PDef (MkFCVal annot' cs') :: assert_total (collectDefs rest)
 collectDefs (PNamespace annot ns nds :: ds)
     = PNamespace annot ns (collectDefs nds) :: collectDefs ds
-collectDefs (PMutual annot nds :: ds)
-    = PMutual annot (collectDefs nds) :: collectDefs ds
+collectDefs (PMutual nds :: ds)
+    = PMutual (mapFC collectDefs nds) :: collectDefs ds
 collectDefs (d :: ds)
     = d :: collectDefs ds
 
@@ -2039,7 +2024,7 @@ prog : OriginDesc -> EmptyRule Module
 prog fname
     = do mod <- progHdr fname
          ds <- block (topDecl fname)
-         pure $ { decls := collectDefs (concat ds)} mod
+         pure $ { decls := collectDefs ds} mod
 
 parseMode : Rule REPLEval
 parseMode
@@ -2483,7 +2468,7 @@ declsArgCmd parseCmd command doc = (names, DeclsArg, doc, parse)
       symbol ":"
       runParseCmd parseCmd
       tm <- mustWork $ topDecl (Virtual Interactive) init
-      pure (command tm)
+      pure (command [tm])
 
 optArgCmd : ParseCmd -> (REPLOpt -> REPLCmd) -> Bool -> String -> CommandDefinition
 optArgCmd parseCmd command set doc = (names, OptionArg, doc, parse)

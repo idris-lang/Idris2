@@ -258,9 +258,9 @@ mapPTermM f = goPTerm where
                    <*> goPTypeDecl tdecl
 
     goPDecl : PDecl' nm -> Core (PDecl' nm)
-    goPDecl (PClaim (MkFCVal fc claim)) =
-      PClaim <$> (MkFCVal fc <$> goPClaim claim)
-    goPDecl (PDef fc cls) = PDef fc <$> goPClauses cls
+    goPDecl (PClaim claim) =
+      PClaim <$> traverseFC goPClaim claim
+    goPDecl (PDef cls) = PDef <$> traverseFC goPClauses cls
     goPDecl (PData fc doc v mbt d) = PData fc doc v mbt <$> goPDataDecl d
     goPDecl (PParameters fc nts ps) =
       PParameters fc <$> go4TupledPTerms nts
@@ -292,12 +292,12 @@ mapPTermM f = goPTerm where
     goPDecl (PRecord fc doc v tot (MkPRecordLater n nts)) =
       pure $ PRecord fc doc v tot (MkPRecordLater n !(go4TupledPTerms nts))
     goPDecl (PFail fc msg ps) = PFail fc msg <$> goPDecls ps
-    goPDecl (PMutual fc ps) = PMutual fc <$> goPDecls ps
-    goPDecl p@(PFixity _ _ _ _ _ _) = pure p
+    goPDecl (PMutual ps) = PMutual <$> traverseFC goPDecls ps
+    goPDecl (PFixity p) = pure (PFixity p)
     goPDecl (PNamespace fc strs ps) = PNamespace fc strs <$> goPDecls ps
     goPDecl (PTransform fc n a b) = PTransform fc n <$> goPTerm a <*> goPTerm b
     goPDecl (PRunElabDecl fc a) = PRunElabDecl fc <$> goPTerm a
-    goPDecl p@(PDirective _ _) = pure p
+    goPDecl (PDirective d) = pure (PDirective d)
     goPDecl p@(PBuiltin _ _ _) = pure p
 
 
@@ -316,8 +316,8 @@ mapPTermM f = goPTerm where
       MkField fc doc c <$> goPiInfo info
                        <*> pure n
                        <*> goPTerm t
-    goPField (MkRecordLet (MkFCVal fc decls)) =
-      MkRecordLet <$> (MkFCVal fc) <$> traverseList1 ?rest decls
+    goPField (MkRecordLet decls) =
+      MkRecordLet <$> ?haah
 
     goPiInfo : PiInfo (PTerm' nm) -> Core (PiInfo (PTerm' nm))
     goPiInfo (DefImplicit t) = DefImplicit <$> goPTerm t
@@ -416,6 +416,7 @@ mapPTerm : (PTerm' nm -> PTerm' nm) -> PTerm' nm -> PTerm' nm
 mapPTerm f = goPTerm where
 
   mutual
+
 
     goPTerm : PTerm' nm -> PTerm' nm
     goPTerm t@(PRef _ _) = f t
@@ -547,9 +548,9 @@ mapPTerm f = goPTerm where
     goPClaim (MkPClaim c v opts tdecl) = MkPClaim c v (goPFnOpt <$> opts) (goPTypeDecl tdecl)
 
     goPDecl : PDecl' nm -> PDecl' nm
-    goPDecl (PClaim (MkFCVal fc claim))
-      = PClaim $ MkFCVal fc (goPClaim claim)
-    goPDecl (PDef fc cls) = PDef fc $ goPClause <$> cls
+    goPDecl (PClaim claim)
+      = PClaim $ mapFC goPClaim claim
+    goPDecl (PDef cls) = PDef $ mapFC (map goPClause) cls
     goPDecl (PData fc doc v mbt d) = PData fc doc v mbt $ goPDataDecl d
     goPDecl (PParameters fc nts ps)
       = PParameters fc (go4TupledPTerms nts) (goPDecl <$> ps)
@@ -565,12 +566,12 @@ mapPTerm f = goPTerm where
     goPDecl (PRecord fc doc v tot (MkPRecordLater n nts))
       = PRecord fc doc v tot (MkPRecordLater n (go4TupledPTerms nts))
     goPDecl (PFail fc msg ps) = PFail fc msg $ goPDecl <$> ps
-    goPDecl (PMutual fc ps) = PMutual fc $ goPDecl <$> ps
-    goPDecl p@(PFixity _ _ _ _ _ _) = p
+    goPDecl (PMutual ps) = PMutual $ mapFC (map goPDecl) ps
+    goPDecl (PFixity p) = PFixity p
     goPDecl (PNamespace fc strs ps) = PNamespace fc strs $ goPDecl <$> ps
     goPDecl (PTransform fc n a b) = PTransform fc n (goPTerm a) (goPTerm b)
     goPDecl (PRunElabDecl fc a) = PRunElabDecl fc $ goPTerm a
-    goPDecl p@(PDirective _ _) = p
+    goPDecl (PDirective d) = PDirective d
     goPDecl p@(PBuiltin _ _ _) = p
 
 
@@ -583,14 +584,14 @@ mapPTerm f = goPTerm where
     goPDataDecl (MkPLater fc n t) = MkPLater fc n $ goPTerm t
 
     goPRecordDeclLet : PRecordDeclLet' nm -> PRecordDeclLet' nm
-    goPRecordDeclLet (RecordClaim (MkFCVal fc x)) = RecordClaim (MkFCVal fc (goPClaim x))
-    goPRecordDeclLet (RecordClause (MkFCVal fc x)) = RecordClause (MkFCVal fc (goPClause x))
+    goPRecordDeclLet (RecordClaim claim) = RecordClaim $ mapFC goPClaim claim
+    goPRecordDeclLet (RecordClause clause) = RecordClause $ mapFC goPClause clause
 
     goPField : PField' nm -> PField' nm
     goPField (MkField fc doc c info n t)
       = MkField fc doc c (goPiInfo info) n (goPTerm t)
-    goPField (MkRecordLet (MkFCVal fc decls))
-      = MkRecordLet $ MkFCVal fc (map goPRecordDeclLet decls)
+    goPField (MkRecordLet decls)
+      = MkRecordLet $ mapFC (map goPRecordDeclLet) decls
 
     goPiInfo : PiInfo (PTerm' nm) -> PiInfo (PTerm' nm)
     goPiInfo (DefImplicit t) = DefImplicit $ goPTerm t

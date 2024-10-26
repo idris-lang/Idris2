@@ -84,7 +84,7 @@ record WithFC (ty : Type) where
   fc : FC
   val : ty
 
-export
+%inline export
 mapFC : (a -> b) -> WithFC a -> WithFC b
 mapFC f (MkFCVal fc val) = MkFCVal fc (f val)
 
