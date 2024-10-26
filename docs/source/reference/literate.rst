@@ -21,14 +21,15 @@ Lexing is simple and greedy in that when consuming anything that is a code block
 This means that use of verbatim modes in a literate file will also be treated as active code.
 
 In future we should add support for literate ``LaTeX`` files, and potentially other common document formats.
-But more importantly, a more intelligent processing of literate documents using a pandoc like library in Idris such as: `Edda <https://github.com/jfdm/edda>` would also be welcome.
+But more importantly, a more intelligent processing of literate documents using a pandoc like library in Idris such as:
+`Edda <https://github.com/jfdm/edda>`_ would also be welcome.
 
 Bird Style Literate Files
 =========================
 
 We treat files with an extension of ``.lidr`` as bird style literate files.
 
-Bird notation is a classic literate mode found in Haskell, (and Orwell) in which visible code lines begin with ``>`` and hidden lines with ``<``.
+Bird notation is a classic literate mode found in Haskell (and Orwell), in which visible code lines begin with ``>`` and hidden lines with ``<``.
 Other lines are treated as documentation.
 
 
@@ -97,11 +98,33 @@ We treat files with an extension of ``.md`` and ``.markdown`` as CommonMark styl
     data Nat = Z | S Nat
     ~~~
 
-+ Comment blocks of the form ``<!-- idris\n ... \n -->`` are treated as invisible code blocks::
++ Comment blocks of the form ``<!-- idris\n ... \n-->`` are treated as invisible code blocks::
 
     <!-- idris
     data Nat = Z | S Nat
     -->
+
++ Syntax of beginnings and endings of visible and invisible code blocks must not have preceding white spaces::
+
+    Some text
+
+    ```idris
+    -- treated as visible code
+    ```
+
+    <!-- idris
+    -- treated as invisible code
+    -->
+
+    - Some list element
+
+      ```idris
+      -- code here will be ignored by the compiler
+      ```
+
+      <!-- idris
+      -- this code also will be ignored
+      -->
 
 + Code lines are not supported.
 
@@ -156,3 +179,44 @@ With one such example using ``fancyverbatim`` and ``comment`` packages as::
     \usepackage{comment}
 
     \excludecomment{hidden}
+
+Typst
+*****
+
+We treat files with an extension of ``.typ`` as `Typst <https://github.com/typst/typst>`_ style literate files.
+
++ Code blocks with the Idris language set are recognised as visible code blocks::
+
+    ```idris
+    data Nat = Z | S Nat
+    ```
+
++ Comment blocks of the form ``/* idris\n ... \n*/`` are treated as invisible code blocks::
+
+    /* idris
+    data Nat = Z | S Nat
+    */
+
++ Syntax of beginnings and endings of visible and invisible code blocks must not have preceding white spaces::
+
+    Some text
+    ```idris
+    -- treated as visible code
+    ```
+    /* idris
+    -- treated as invisible code
+    */
+
+    - Some list element
+      ```idris
+      -- code here will be ignored by the compiler
+      ```
+      /* idris
+      -- this code also will be ignored
+      */
+
++ Code lines using ``#raw`` function are not supported.
+
++ Specifications can be given using ``#raw`` function with the language and block being set, e.g.::
+
+  #raw("data Nat = Z | S Nat", lang: "idris", block: true)

@@ -91,6 +91,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * `MakeFuture` primitive is removed.
 
+* Typst files can be compiled as Literate Idris
+
 ### Backend changes
 
 #### RefC Backend

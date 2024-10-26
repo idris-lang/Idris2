@@ -42,9 +42,16 @@ styleTeX = MkLitStyle
               Nil
               [".tex", ".ltx"]
 
+export
+styleTypst : LiterateStyle
+styleTypst = MkLitStyle
+               [("```idris", "```"), ("/* idris", "*/")]
+               Nil
+               [".typ"]
+
 
 supportedStyles : List LiterateStyle
-supportedStyles = [styleBird, styleOrg, styleCMark, styleTeX]
+supportedStyles = [styleBird, styleOrg, styleCMark, styleTeX, styleTypst]
 
 ||| Return the list of extensions used for literate files.
 export
