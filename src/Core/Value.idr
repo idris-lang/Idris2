@@ -76,7 +76,13 @@ mutual
        NLocal : Maybe Bool -> (idx : Nat) -> (0 p : IsVar nm idx vars) ->
                 NHead vars
        NRef   : NameType -> Name -> NHead vars
-       NMeta  : Name -> Int -> List (Closure vars) -> NHead vars
+       NMeta  : Name -> Int -> SnocList (FC, Closure vars) -> NHead vars
+       -- [Note] Meta args
+       -- ----------------
+       -- We should use same strategy to process Meta<->NMeta across all occurencies.
+       -- For now direct strategy is used. It means Meta<->NMeta conversion happens
+       -- how lists are traversed. Which means in its own order that `cast` is enough
+       -- but it might be bad by performance.
 
 
   -- Values themselves. 'Closure' is an unevaluated thunk, which means
