@@ -342,7 +342,7 @@ mutual
   Convert NF where
     convGen q i defs env (NBind fc x b sc) (NBind _ x' b' sc')
         = do var <- genName "conv"
-             let c = MkClosure defaultOpts [] env (Ref fc Bound var)
+             let c = MkClosure defaultOpts [<] env (Ref fc Bound var)
              bok <- convBinders q i defs env b b'
              if bok
                 then do bsc <- sc defs c
