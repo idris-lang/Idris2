@@ -266,10 +266,10 @@ unifyArgs : (Unify tm, Quote tm) =>
             {auto c : Ref Ctxt Defs} ->
             {auto u : Ref UST UState} ->
             UnifyInfo -> FC -> Env Term vars ->
-            List (tm vars) -> List (tm vars) ->
+            SnocList (tm vars) -> SnocList (tm vars) ->
             Core UnifyResult
-unifyArgs mode loc env [] [] = pure success
-unifyArgs mode loc env (cx :: cxs) (cy :: cys)
+unifyArgs mode loc env [<] [<] = pure success
+unifyArgs mode loc env (cxs :< cx) (cys :< cy)
     = do -- Do later arguments first, since they may depend on earlier
          -- arguments and use their solutions.
          cs <- unifyArgs mode loc env cxs cys
@@ -691,7 +691,7 @@ mutual
                     (swaporder : Bool) ->
                     UnifyInfo -> FC -> Env Term vars ->
                     (metaname : Name) -> (metaref : Int) ->
-                    (margs : List (Closure vars)) ->
+                    (margs : SnocList (Closure vars)) ->
                     (margs' : SnocList (Closure vars)) ->
                     Maybe ClosedTerm ->
                     (SnocList (FC, Closure vars) -> NF vars) ->
@@ -721,7 +721,7 @@ mutual
                                  ures <- unify mode fc env h (snd f)
                                  log "unify.invertible" 10 $ "Constraints " ++ show (constraints ures)
                                  uargs <- unify mode fc env
-                                       (NApp fc (NMeta mname mref margs) (reverse $ map (EmptyFC,) hargs))
+                                       (NApp fc (NMeta mname mref (map (EmptyFC,) margs)) (reverse $ map (EmptyFC,) hargs))
                                        (con (reverse fargs))
                                  pure (union ures uargs)
                              else
@@ -730,17 +730,17 @@ mutual
                                  log "unify.invertible" 10 $ "Constraints " ++ show (constraints ures)
                                  uargs <- unify mode fc env
                                        (con (reverse fargs))
-                                       (NApp fc (NMeta mname mref margs) (reverse $ map (EmptyFC,) hargs))
+                                       (NApp fc (NMeta mname mref (map (EmptyFC,) margs)) (reverse $ map (EmptyFC,) hargs))
                                  pure (union ures uargs))
                           (postponeS swap fc mode "Postponing hole application [1]" env
-                                (NApp fc (NMeta mname mref margs) $ (map (EmptyFC,) margs'))
+                                (NApp fc (NMeta mname mref (map (EmptyFC,) margs)) $ (map (EmptyFC,) margs'))
                                 (con args'))
                      _ => postponeS swap fc mode "Postponing hole application [2]" env
-                                (NApp fc (NMeta mname mref margs) (map (EmptyFC,) margs'))
+                                (NApp fc (NMeta mname mref (map (EmptyFC,) margs)) (map (EmptyFC,) margs'))
                                 (con args')
               else -- TODO: Cancellable function applications
                    postpone fc mode "Postponing hole application [3]" env
-                            (NApp fc (NMeta mname mref margs) (map (EmptyFC,) margs')) (con args')
+                            (NApp fc (NMeta mname mref (map (EmptyFC,) margs)) (map (EmptyFC,) margs')) (con args')
 
   -- Unify a hole application - we have already checked that the hole is
   -- invertible (i.e. it's a determining argument to a proof search where
@@ -751,7 +751,7 @@ mutual
                  (swaporder : Bool) ->
                  UnifyInfo -> FC -> Env Term vars ->
                  (metaname : Name) -> (metaref : Int) ->
-                 (margs : List (Closure vars)) ->
+                 (margs : SnocList (Closure vars)) ->
                  (margs' : SnocList (Closure vars)) ->
                  NF vars ->
                  Core UnifyResult
@@ -775,7 +775,7 @@ mutual
               then unifyInvertible swap (lower mode) loc env mname mref margs margs' Nothing
                                    (NApp nfc (NMeta n i margs2)) args2'
               else postponeS swap loc mode "Postponing hole application" env
-                             (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs') tm
+                             (NApp loc (NMeta mname mref (map (EmptyFC,) margs)) $ map (EmptyFC,) margs') tm
     where
       isPatName : Name -> Bool
       isPatName (PV _ _) = True
@@ -783,7 +783,7 @@ mutual
 
   unifyHoleApp swap mode loc env mname mref margs margs' tm
       = postponeS swap loc mode "Postponing hole application" env
-                 (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs') tm
+                 (NApp loc (NMeta mname mref (map (EmptyFC,) margs)) $ map (EmptyFC,) margs') tm
 
   postponePatVar : {auto c : Ref Ctxt Defs} ->
                    {auto u : Ref UST UState} ->
@@ -791,12 +791,12 @@ mutual
                    (swaporder : Bool) ->
                    UnifyInfo -> FC -> Env Term vars ->
                    (metaname : Name) -> (metaref : Int) ->
-                   (margs : List (Closure vars)) ->
+                   (margs : SnocList (Closure vars)) ->
                    (margs' : SnocList (Closure vars)) ->
                    (soln : NF vars) ->
                    Core UnifyResult
   postponePatVar swap mode loc env mname mref margs margs' tm
-      = do let x = NApp loc (NMeta mname mref margs) (map (EmptyFC,) margs')
+      = do let x = NApp loc (NMeta mname mref (map (EmptyFC,) margs)) (map (EmptyFC,) margs')
            defs <- get Ctxt
            if !(convert defs env x tm)
               then pure success
@@ -808,7 +808,7 @@ mutual
               {newvars, vars : _} ->
               FC -> UnifyInfo -> Env Term vars ->
               (metaname : Name) -> (metaref : Int) ->
-              (margs : List (Closure vars)) ->
+              (margs : SnocList (Closure vars)) ->
               (margs' : SnocList (Closure vars)) ->
               SnocList (Var newvars) ->
               Thin newvars vars ->
@@ -853,7 +853,7 @@ mutual
               (swaporder : Bool) ->
               UnifyInfo -> FC -> Env Term vars ->
               FC -> (metaname : Name) -> (metaref : Int) ->
-              (args : List (Closure vars)) ->
+              (args : SnocList (Closure vars)) ->
               (args' : SnocList (Closure vars)) ->
               (soln : NF vars) ->
               Core UnifyResult
@@ -881,7 +881,7 @@ mutual
                          | _ => postponePatVar swap mode loc env mname mref margs margs' tmnf
                      let Hole _ _ = definition hdef
                          | _ => postponeS swap loc mode "Delayed hole" env
-                                          (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs')
+                                          (NApp loc (NMeta mname mref (map (EmptyFC,) margs)) $ map (EmptyFC,) margs')
                                           tmnf
                      let qopts = MkQuoteOpts False False
                                              (Just defs.options.elabDirectives.nfThreshold)
@@ -890,7 +890,7 @@ mutual
                                  (\err => quote defs env tmnf)
                      Just tm <- occursCheck loc env mode mname tm
                          | _ => postponeS swap loc mode "Occurs check failed" env
-                                          (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs')
+                                          (NApp loc (NMeta mname mref (map (EmptyFC,) margs)) $ map (EmptyFC,) margs')
                                           tmnf
 
                      let solveOrElsePostpone : Term newvars -> Core UnifyResult
@@ -900,7 +900,7 @@ mutual
                                             tm stm tmnf
                            flip fromMaybe (pure <$> mbResult) $
                              postponeS swap loc mode "Can't instantiate" env
-                                       (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs') tmnf
+                                       (NApp loc (NMeta mname mref (map (EmptyFC,) margs)) $ map (EmptyFC,) margs') tmnf
 
                      case shrink tm submv of
                           Just stm => solveOrElsePostpone stm
@@ -908,7 +908,7 @@ mutual
                             do tm' <- quote defs env tmnf
                                case shrink tm' submv of
                                     Nothing => postponeS swap loc mode "Can't shrink" env
-                                                 (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs')
+                                                 (NApp loc (NMeta mname mref (map (EmptyFC,) margs)) $ map (EmptyFC,) margs')
                                                  tmnf
                                     Just stm => solveOrElsePostpone stm
 
@@ -922,9 +922,9 @@ mutual
              NHead vars -> SnocList (FC, Closure vars) -> NF vars ->
              Core UnifyResult
   unifyApp swap mode loc env fc (NMeta n i margs) args tm
-      = unifyHole swap mode loc env fc n i margs (map snd args) tm
+      = unifyHole swap mode loc env fc n i (map snd margs) (map snd args) tm
   unifyApp swap mode loc env fc hd args (NApp mfc (NMeta n i margs) margs')
-      = unifyHole swap mode loc env mfc n i margs (map snd margs') (NApp fc hd args)
+      = unifyHole swap mode loc env mfc n i (map snd margs) (map snd margs') (NApp fc hd args)
   unifyApp swap mode loc env fc hd args (NErased _ (Dotted t))
       = unifyApp swap mode loc env fc hd args t
   -- Postpone if a name application against an application, unless they are
@@ -982,7 +982,7 @@ mutual
   -- for *all* possible values, we can safely unify the arguments.
   unifyBothApps mode@(MkUnifyInfo p InTerm) loc env xfc (NLocal xr x xp) xargs yfc (NLocal yr y yp) yargs
       = if x == y
-           then unifyArgs mode loc env (cast {to=List (Closure _)} $ map snd xargs) (cast {to=List (Closure _)} $ map snd yargs)
+           then unifyArgs mode loc env (map snd xargs) (map snd yargs)
            else postpone loc mode "Postponing local app"
                          env (NApp xfc (NLocal xr x xp) xargs)
                              (NApp yfc (NLocal yr y yp) yargs)
@@ -996,8 +996,8 @@ mutual
            if xi == yi && (invx || umode mode == InSearch)
                                -- Invertible, (from auto implicit search)
                                -- so we can also unify the arguments.
-              then unifyArgs mode loc env (cast {to=List (Closure _)} $ map snd xargs' <>> xargs)
-                                          (cast {to=List (Closure _)} $ map snd yargs' <>> yargs)
+              then unifyArgs mode loc env (map snd $ xargs' ++ xargs)
+                                          (map snd $ yargs' ++ yargs)
               else do xlocs <- localsIn xargs
                       ylocs <- localsIn yargs
                       -- Solve the one with the bigger context, and if they're
@@ -1016,9 +1016,9 @@ mutual
       pv (PV _ _) = True
       pv _ = False
 
-      localsIn : List (Closure vars) -> Core Nat
-      localsIn [] = pure 0
-      localsIn (c :: cs)
+      localsIn : SnocList (FC, Closure vars) -> Core Nat
+      localsIn [<] = pure 0
+      localsIn (cs :< (_, c))
           = do defs <- get Ctxt
                case !(evalClosure defs c) of
                  NApp _ (NLocal _ _ _) _ => pure $ S !(localsIn cs)
@@ -1035,7 +1035,7 @@ mutual
                                         (NApp yfc (NMeta yn yi yargs) yargs')
   unifyBothApps mode@(MkUnifyInfo p InSearch) loc env xfc fx@(NRef xt hdx) xargs yfc fy@(NRef yt hdy) yargs
       = if hdx == hdy
-           then unifyArgs mode loc env (cast {to=List (Closure _)} $ map snd xargs) (cast {to=List (Closure _)} $ map snd yargs)
+           then unifyArgs mode loc env (map snd xargs) (map snd yargs)
            else unifyApp False mode loc env xfc fx xargs (NApp yfc fy yargs)
   unifyBothApps mode@(MkUnifyInfo p InMatch) loc env xfc fx@(NRef xt hdx) xargs yfc fy@(NRef yt hdy) yargs
       = if hdx == hdy
@@ -1044,7 +1044,7 @@ mutual
                               xs <- traverse (quote defs env) (map snd xargs)
                               ys <- traverse (quote defs env) (map snd yargs)
                               pure ("Matching args " ++ show xs ++ " " ++ show ys))
-                   unifyArgs mode loc env (cast {to=List (Closure _)} $ map snd xargs) (cast {to=List (Closure _)} $ map snd yargs)
+                   unifyArgs mode loc env (map snd xargs) (map snd yargs)
            else unifyApp False mode loc env xfc fx xargs (NApp yfc fy yargs)
   unifyBothApps mode loc env xfc fx ax yfc fy ay
       = unifyApp False mode loc env xfc fx ax (NApp yfc fy ay)
@@ -1163,7 +1163,7 @@ mutual
                            log "unify" 20 "WITH:"
                            traverse_ (dumpArg env) ys
                      -}
-                     unifyArgs mode loc env (cast {to=List (Closure _)} $ map snd xs) (cast {to=List (Closure _)} $ map snd ys)
+                     unifyArgs mode loc env (map snd xs) (map snd ys)
              else convertError loc env
                        (NDCon xfc x tagx ax xs)
                        (NDCon yfc y tagy ay ys)
@@ -1173,8 +1173,8 @@ mutual
           y <- toFullNames y
           pure $ "Comparing type constructors " ++ show x ++ " and " ++ show y
         if x == y
-           then do let xs = cast {to=List (Closure _)} $ map snd xs
-                   let ys = cast {to=List (Closure _)} $ map snd ys
+           then do let xs = map snd xs
+                   let ys = map snd ys
 
                    logC "unify" 20 $
                      pure $ "Constructor " ++ show x
@@ -1194,10 +1194,10 @@ mutual
   unifyNoEta mode loc env (NDelayed xfc _ x) (NDelayed yfc _ y)
       = unify (lower mode) loc env x y
   unifyNoEta mode loc env (NDelay xfc _ xty x) (NDelay yfc _ yty y)
-      = unifyArgs mode loc env [xty, x] [yty, y]
+      = unifyArgs mode loc env [<xty, x] [<yty, y]
   unifyNoEta mode loc env (NForce xfc _ x axs) (NForce yfc _ y ays)
       = do cs <- unify (lower mode) loc env x y
-           cs' <- unifyArgs mode loc env (cast {to=List (Closure _)} $ map snd axs) (cast {to=List (Closure _)} $ map snd ays)
+           cs' <- unifyArgs mode loc env (map snd axs) (map snd ays)
            pure (union cs cs')
   unifyNoEta mode loc env x@(NApp xfc fx@(NMeta _ _ _) axs)
                           y@(NApp yfc fy@(NMeta _ _ _) ays)

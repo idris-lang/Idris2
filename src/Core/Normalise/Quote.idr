@@ -80,9 +80,14 @@ mutual
   quoteArgs : {auto c : Ref Ctxt Defs} ->
               {bound, free : _} ->
               Ref QVar Int -> QuoteOpts -> Defs -> Bounds bound ->
-              Env Term free -> List (Closure free) ->
-              Core (List (Term (free ++ bound)))
-  quoteArgs q opts defs bounds env = traverse (quoteArg q opts defs bounds env)
+              Env Term free -> SnocList (FC, Closure free) ->
+              Core (SnocList (FC, Term (free ++ bound)))
+  quoteArgs q opts defs bounds env spine = SnocList.traverse quoteArgSpine spine
+    where
+      quoteArgSpine : (FC, Closure free) -> Core (FC, Term (free ++ bound))
+      quoteArgSpine (fc, c) = do
+        r <- quoteArg q opts defs bounds env c
+        pure (fc, r)
 
   quoteArgsWithFC : {auto c : Ref Ctxt Defs} ->
                     {bound, free : _} ->
@@ -127,7 +132,8 @@ mutual
   quoteHead q opts defs fc bounds env (NRef nt n) = pure $ Ref fc nt n
   quoteHead q opts defs fc bounds env (NMeta n i args)
       = do args' <- quoteArgs q opts defs bounds env args
-           pure $ Meta fc n i args'
+           -- See [Note] Meta args
+           pure $ Meta fc n i (toList . map snd $ args')
 
   quotePi : {auto c : Ref Ctxt Defs} ->
             {bound, free : _} ->

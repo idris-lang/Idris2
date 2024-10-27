@@ -316,7 +316,7 @@ mutual
   chkConvHead q i defs env (NRef _ n) (NRef _ n') = pure $ n == n'
   chkConvHead q inf defs env (NMeta n i args) (NMeta n' i' args')
      = if i == i'
-          then allConv q inf defs env (cast $ map (emptyFC,) args) (cast $ map (emptyFC,) args')
+          then allConv q inf defs env args args'
           else pure False
   chkConvHead q i defs env _ _ = pure False
 

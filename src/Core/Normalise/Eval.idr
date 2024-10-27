@@ -104,14 +104,16 @@ parameters (defs : Defs) (topopts : EvalOpts)
         =
             evalRef env False fc nt fn stk (NApp fc (NRef nt fn) (cast stk))
     eval {vars} {free} env locs (Meta fc name idx args) stk
-        = evalMeta env fc name idx (closeArgs args) stk
+        -- See [Note] Meta args
+        -- Seemed as a performance issue
+        = evalMeta env fc name idx (reverse $ closeArgs args) stk
       where
         -- Yes, it's just a map, but specialising it by hand since we
         -- use this a *lot* and it saves the run time overhead of making
         -- a closure and calling APPLY.
-        closeArgs : List (Term (free ++ vars)) -> List (Closure free)
-        closeArgs [] = []
-        closeArgs (t :: ts) = MkClosure topopts locs env t :: closeArgs ts
+        closeArgs : List (Term (free ++ vars)) -> SnocList (FC, Closure free)
+        closeArgs [] = [<]
+        closeArgs (t :: ts) = closeArgs ts :< (emptyFC, MkClosure topopts locs env t)
     eval env locs (Bind fc x (Lam _ r _ ty) scope) (thunk :: stk)
         = eval env (locs :< snd thunk) scope stk
     eval env locs (Bind fc x b@(Let _ r val ty) scope) stk
@@ -255,10 +257,10 @@ parameters (defs : Defs) (topopts : EvalOpts)
     evalMeta : {auto c : Ref Ctxt Defs} ->
                {free : _} ->
                Env Term free ->
-               FC -> Name -> Int -> List (Closure free) ->
+               FC -> Name -> Int -> SnocList (FC, Closure free) ->
                Stack free -> Core (NF free)
     evalMeta env fc nm i args stk
-        = let args' = (map (emptyFC,) args) ++ stk in
+        = let args' = args <>> stk in
               evalRef env True fc Func (Resolved i) args'
                           (NApp fc (NMeta nm i args) (cast stk))
 

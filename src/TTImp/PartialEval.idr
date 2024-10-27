@@ -556,8 +556,9 @@ mutual
                Just (MkVar (Later p))
   quoteHead q defs fc bounds env (NRef nt n) = pure $ Ref fc nt n
   quoteHead q defs fc bounds env (NMeta n i args)
-      = do args' <- quoteArgs q defs bounds env (cast {to=SnocList (Closure _)} args)
-           pure $ Meta fc n i (toList args')
+      = do args' <- quoteArgs q defs bounds env (map snd args)
+           -- See [Note] Meta args
+           pure $ Meta fc n i (toList $ args')
 
   quotePi : {bound, free : _} ->
             {auto c : Ref Ctxt Defs} ->
@@ -634,7 +635,7 @@ mutual
                 [] => do args' <- quoteArgsWithFC q defs bound env args
                          pure $ applySpineWithFC (Ref fc Func fn) args'
                 _ => do empty <- clearDefs defs
-                        args' <- quoteArgsWithFC q defs bound env args        -- -- [Note] Should we do reverse $ closeArgs?
+                        args' <- quoteArgsWithFC q defs bound env args
                         Just r <- specialise fc (extendEnv bound env) gdef fn (toList args')
                              | Nothing =>
                                   -- can't specialise, keep the arguments
