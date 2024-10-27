@@ -506,10 +506,10 @@ searchLocalWith {vars} fc nofn rig opts hints env ((p, pty) :: rest) ty topty
                                 getSuccessful fc rig opts False env ty topty
                                   [(do xtynf <- evalClosure defs xty
                                        findPos defs prf
-                                         (\arg => applyStackWithFC (Ref fc Func fname) [<(fc, f arg), (fc2, ytytm), (fc1, xtytm)]) xtynf target),
+                                         (\arg => applySpineWithFC (Ref fc Func fname) [<(fc, f arg), (fc2, ytytm), (fc1, xtytm)]) xtynf target),
                                    (do ytynf <- evalClosure defs yty
                                        findPos defs prf
-                                           (\arg => applyStackWithFC (Ref fc Func sname) [<(fc, f arg), (fc2, ytytm), (fc1, xtytm)])
+                                           (\arg => applySpineWithFC (Ref fc Func sname) [<(fc, f arg), (fc2, ytytm), (fc1, xtytm)])
                                            ytynf target)]
                          else noResult)]
     findPos defs prf f nty target = findDirect defs prf f nty target
