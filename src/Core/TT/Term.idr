@@ -102,6 +102,7 @@ data Term : Scoped where
              (idx : Nat) -> (0 p : IsVar name idx vars) -> Term vars
      Ref : FC -> NameType -> (name : Name) -> Term vars
      -- Metavariables and the scope they are applied to
+     -- See [Note] Meta args
      Meta : FC -> Name -> Int -> List (Term vars) -> Term vars
      Bind : FC -> (x : Name) ->
             (b : Binder (Term vars)) ->
