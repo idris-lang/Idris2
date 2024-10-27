@@ -192,17 +192,17 @@ mutual
                                quoteArgsWithFC q opts' empty bound env args
                                else quoteArgsWithFC q ({ topLevel := False } opts')
                                                     defs bound env args
-           pure $ applyStackWithFC f' args'
+           pure $ applySpineWithFC f' args'
     where
       isRef : NHead vars -> Bool
       isRef (NRef{}) = True
       isRef _ = False
   quoteGenNF q opts defs bound env (NDCon fc n t ar args)
       = do args' <- quoteArgsWithFC q opts defs bound env args
-           pure $ applyStackWithFC (Ref fc (DataCon t ar) n) args'
+           pure $ applySpineWithFC (Ref fc (DataCon t ar) n) args'
   quoteGenNF q opts defs bound env (NTCon fc n t ar args)
       = do args' <- quoteArgsWithFC q opts defs bound env args
-           pure $ applyStackWithFC (Ref fc (TyCon t ar) n) args'
+           pure $ applySpineWithFC (Ref fc (TyCon t ar) n) args'
   quoteGenNF q opts defs bound env (NAs fc s n pat)
       = do n' <- quoteGenNF q opts defs bound env n
            pat' <- quoteGenNF q opts defs bound env pat
@@ -228,9 +228,9 @@ mutual
            case arg of
                 NDelay fc _ _ arg =>
                    do argNF <- evalClosure defs arg
-                      pure $ applyStackWithFC !(quoteGenNF q opts defs bound env argNF) args'
+                      pure $ applySpineWithFC !(quoteGenNF q opts defs bound env argNF) args'
                 _ => do arg' <- quoteGenNF q opts defs bound env arg
-                        pure $ applyStackWithFC (TForce fc r arg') args'
+                        pure $ applySpineWithFC (TForce fc r arg') args'
   quoteGenNF q opts defs bound env (NPrimVal fc c) = pure $ PrimVal fc c
   quoteGenNF q opts defs bound env (NErased fc t)
     = Erased fc <$> traverse @{%search} @{CORE} (\ nf => quoteGenNF q opts defs bound env nf) t

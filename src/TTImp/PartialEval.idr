@@ -112,16 +112,16 @@ specByVar specs (p :: ps)
          ps' <- specByVar specs ps
          pure (p' :: ps')
 
-dropSpec : Nat -> List (Nat, Term [<]) -> SnocList a -> SnocList a
-dropSpec i sargs [<] = [<]
-dropSpec i sargs (xs :< x)
+dropSpec : Nat -> List (Nat, ClosedTerm) -> List a -> List a
+dropSpec i sargs [] = []
+dropSpec i sargs (x :: xs)
     = case lookup i sargs of
-           Nothing => dropSpec (1 + i) sargs xs :< x
+           Nothing => x :: dropSpec (1 + i) sargs xs
            Just _ => dropSpec (1 + i) sargs xs
 
 getSpecPats : {auto c : Ref Ctxt Defs} ->
               FC -> Name ->
-              (fn : Name) -> (stk : SnocList (FC, Term vars)) ->
+              (fn : Name) -> (stk : List (FC, Term vars)) ->
               NF [<] -> -- Type of 'fn'
               List (Nat, ArgMode) -> -- All the arguments
               List (Nat, Term [<]) -> -- Just the static ones
@@ -183,24 +183,24 @@ getSpecPats fc pename fn stk fnty args sargs pats
     mkRHSargs _ app _ _
         = pure app
 
-    getRawArgs : SnocList (Arg' Name) -> RawImp -> SnocList (Arg' Name)
-    getRawArgs args (IApp fc f arg) = getRawArgs (args :< Explicit fc arg) f
+    getRawArgs : List (Arg' Name) -> RawImp -> List (Arg' Name)
+    getRawArgs args (IApp fc f arg) = getRawArgs (Explicit fc arg :: args) f
     getRawArgs args (INamedApp fc f n arg)
-        = getRawArgs (args :< Named fc n arg) f
+        = getRawArgs (Named fc n arg :: args) f
     getRawArgs args (IAutoApp fc f arg)
-        = getRawArgs (args :< Auto fc arg) f
+        = getRawArgs (Auto fc arg :: args) f
     getRawArgs args tm = args
 
-    reapply : RawImp -> SnocList (Arg' Name) -> RawImp
-    reapply f [<] = f
-    reapply f (args :< Explicit fc arg) = reapply (IApp fc f arg) args
-    reapply f (args :< Named fc n arg)
+    reapply : RawImp -> List (Arg' Name) -> RawImp
+    reapply f [] = f
+    reapply f (Explicit fc arg :: args) = reapply (IApp fc f arg) args
+    reapply f (Named fc n arg :: args)
         = reapply (INamedApp fc f n arg) args
-    reapply f (args :< Auto fc arg)
+    reapply f (Auto fc arg :: args)
         = reapply (IAutoApp fc f arg) args
 
     dropArgs : Name -> RawImp -> RawImp
-    dropArgs pename tm = reapply (IVar fc pename) (dropSpec 0 sargs (getRawArgs [<] tm))
+    dropArgs pename tm = reapply (IVar fc pename) (dropSpec 0 sargs (getRawArgs [] tm))
 
     unelabPat : Name -> (vs ** (Env Term vs, Term vs, Term vs)) ->
                 Core ImpClause
@@ -247,7 +247,7 @@ mkSpecDef : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
             {auto o : Ref ROpts REPLOpts} ->
             FC -> GlobalDef ->
-            Name -> List (Nat, ArgMode) -> Name -> SnocList (FC, Term vars) ->
+            Name -> List (Nat, ArgMode) -> Name -> List (FC, Term vars) ->
             Core (Term vars)
 mkSpecDef {vars} fc gdef pename sargs fn stk
     = handleUnify {unResolve = True}
@@ -401,7 +401,7 @@ specialise : {vars : _} ->
              {auto s : Ref Syn SyntaxInfo} ->
              {auto o : Ref ROpts REPLOpts} ->
              FC -> Env Term vars -> GlobalDef ->
-             Name -> SnocList (FC, Term vars) ->
+             Name -> List (FC, Term vars) ->
              Core (Maybe (Term vars))
 specialise {vars} fc env gdef fn stk
     = case specArgs gdef of
@@ -428,10 +428,10 @@ specialise {vars} fc env gdef fn stk
                Term vars -> Maybe (Term [<])
     concrete tm = shrink tm none
 
-    getSpecArgs : Nat -> List Nat -> SnocList (FC, Term vars) ->
+    getSpecArgs : Nat -> List Nat -> List (FC, Term vars) ->
                   Core (Maybe (List (Nat, ArgMode)))
-    getSpecArgs i specs [<] = pure (Just [])
-    getSpecArgs i specs (xs :< (_, x))
+    getSpecArgs i specs [] = pure (Just [])
+    getSpecArgs i specs ((_, x) :: xs)
         = do Just xs' <- getSpecArgs (1 + i) specs xs
                  | Nothing => pure Nothing
              if i `elem` specs
@@ -449,7 +449,7 @@ findSpecs : {vars : _} ->
             {auto u : Ref UST UState} ->
             {auto s : Ref Syn SyntaxInfo} ->
             {auto o : Ref ROpts REPLOpts} ->
-            Env Term vars -> SnocList (FC, Term vars) -> Term vars ->
+            Env Term vars -> List (FC, Term vars) -> Term vars ->
             Core (Term vars)
 findSpecs env stk (Ref fc Func fn)
     = do defs <- get Ctxt
@@ -459,24 +459,24 @@ findSpecs env stk (Ref fc Func fn)
               | Nothing => pure (applyStackWithFC (Ref fc Func fn) stk)
          pure r
 findSpecs env stk (Meta fc n i args)
-    = do args' <- traverse (findSpecs env [<]) args
+    = do args' <- traverse (findSpecs env []) args
          pure $ applyStackWithFC (Meta fc n i args') stk
 findSpecs env stk (Bind fc x b sc)
-    = do b' <- traverse (findSpecs env [<]) b
-         sc' <- findSpecs (env :< b') [<] sc
+    = do b' <- traverse (findSpecs env []) b
+         sc' <- findSpecs (env :< b') [] sc
          pure $ applyStackWithFC (Bind fc x b' sc') stk
 findSpecs env stk (App fc fn arg)
-    = do arg' <- findSpecs env [<] arg
-         findSpecs env (stk :< (fc, arg')) fn
+    = do arg' <- findSpecs env [] arg
+         findSpecs env ((fc, arg') :: stk) fn
 findSpecs env stk (TDelayed fc r tm)
-    = do tm' <- findSpecs env [<] tm
+    = do tm' <- findSpecs env [] tm
          pure $ applyStackWithFC (TDelayed fc r tm') stk
 findSpecs env stk (TDelay fc r ty tm)
-    = do ty' <- findSpecs env [<] ty
-         tm' <- findSpecs env [<] tm
+    = do ty' <- findSpecs env [] ty
+         tm' <- findSpecs env [] tm
          pure $ applyStackWithFC (TDelay fc r ty' tm') stk
 findSpecs env stk (TForce fc r tm)
-    = do tm' <- findSpecs env [<] tm
+    = do tm' <- findSpecs env [] tm
          pure $ applyStackWithFC (TForce fc r tm') stk
 findSpecs env stk tm = pure $ applyStackWithFC tm stk
 
@@ -629,18 +629,18 @@ mutual
   quoteGenNF q defs bound env (NApp fc (NRef Func fn) args)
       = do Just gdef <- lookupCtxtExact fn (gamma defs)
                 | Nothing => do args' <- quoteArgsWithFC q defs bound env args
-                                pure $ applyStackWithFC (Ref fc Func fn) args'
+                                pure $ applySpineWithFC (Ref fc Func fn) args'
            case specArgs gdef of
                 [] => do args' <- quoteArgsWithFC q defs bound env args
-                         pure $ applyStackWithFC (Ref fc Func fn) args'
+                         pure $ applySpineWithFC (Ref fc Func fn) args'
                 _ => do empty <- clearDefs defs
-                        args' <- quoteArgsWithFC q defs bound env args
-                        Just r <- specialise fc (extendEnv bound env) gdef fn args'
+                        args' <- quoteArgsWithFC q defs bound env args        -- -- [Note] Should we do reverse $ closeArgs?
+                        Just r <- specialise fc (extendEnv bound env) gdef fn (toList args')
                              | Nothing =>
                                   -- can't specialise, keep the arguments
                                   -- unreduced
                                   do args' <- quoteArgsWithFC q empty bound env args
-                                     pure $ applyStackWithFC (Ref fc Func fn) args'
+                                     pure $ applySpineWithFC (Ref fc Func fn) args'
                         pure r
      where
        extendEnv : Bounds bs -> Env Term vs -> Env Term (vs ++ bs)
@@ -652,13 +652,13 @@ mutual
   quoteGenNF q defs bound env (NApp fc f args)
       = do f' <- quoteHead q defs fc bound env f
            args' <- quoteArgsWithFC q defs bound env args
-           pure $ applyStackWithFC f' args'
+           pure $ applySpineWithFC f' args'
   quoteGenNF q defs bound env (NDCon fc n t ar args)
       = do args' <- quoteArgsWithFC q defs bound env args
-           pure $ applyStackWithFC (Ref fc (DataCon t ar) n) args'
+           pure $ applySpineWithFC (Ref fc (DataCon t ar) n) args'
   quoteGenNF q defs bound env (NTCon fc n t ar args)
       = do args' <- quoteArgsWithFC q defs bound env args
-           pure $ applyStackWithFC (Ref fc (TyCon t ar) n) args'
+           pure $ applySpineWithFC (Ref fc (TyCon t ar) n) args'
   quoteGenNF q defs bound env (NAs fc s n pat)
       = do n' <- quoteGenNF q defs bound env n
            pat' <- quoteGenNF q defs bound env pat
@@ -683,9 +683,9 @@ mutual
            case arg of
                 NDelay fc _ _ arg =>
                    do argNF <- evalClosure defs arg
-                      pure $ applyStackWithFC !(quoteGenNF q defs bound env argNF) args'
+                      pure $ applySpineWithFC !(quoteGenNF q defs bound env argNF) args'
                 _ => do arg' <- quoteGenNF q defs bound env arg
-                        pure $ applyStackWithFC (TForce fc r arg') args'
+                        pure $ applySpineWithFC (TForce fc r arg') args'
   quoteGenNF q defs bound env (NPrimVal fc c) = pure $ PrimVal fc c
   quoteGenNF q defs bound env (NErased fc Impossible) = pure $ Erased fc Impossible
   quoteGenNF q defs bound env (NErased fc Placeholder) = pure $ Erased fc Placeholder
@@ -719,7 +719,7 @@ applySpecialise : {vars : _} ->
                   Term vars -> -- initial RHS
                   Core (Term vars)
 applySpecialise env Nothing tm
-    = findSpecs env [<] tm -- not specialising, just search through RHS
+    = findSpecs env [] tm -- not specialising, just search through RHS
 applySpecialise env (Just ls) tmin -- specialising, evaluate RHS while looking
                                  -- for names to specialise
     = do defs <- get Ctxt
