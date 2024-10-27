@@ -58,8 +58,8 @@ cbv = { strategy := CBV } defaultOpts
 mutual
   public export
   data LocalEnv : SnocList Name -> SnocList Name -> Type where
-       Nil  : LocalEnv free [<]
-       (::) : Closure free -> LocalEnv free vars -> LocalEnv free (vars :< x)
+       Lin  : LocalEnv free [<]
+       (:<) : LocalEnv free vars -> Closure free -> LocalEnv free (vars :< x)
 
   public export
   data Closure : SnocList Name -> Type where
@@ -115,6 +115,11 @@ ntCon fc n tag Z [<] = case isConstantType n of
   Just c => NPrimVal fc $ PrT c
   Nothing => NTCon fc n tag Z [<]
 ntCon fc n tag arity args = NTCon fc n tag arity args
+
+export
+cons : LocalEnv free vars -> Closure free -> LocalEnv free ([<v] ++ vars)
+cons [<] p = Lin :< p
+cons (ns :< s) p = cons ns p :< s
 
 export
 getLoc : NF vars -> FC
