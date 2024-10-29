@@ -309,15 +309,15 @@ getVars _ (xs :< _) = Nothing
 -- Make a sublist representing the variables used in the application.
 -- We'll use this to ensure that local variables which appear in a term
 -- are all arguments to a metavariable application for pattern unification
-toThin : (vars : SnocList Name) -> SnocList (Var vars) ->
+toSubVars : (vars : SnocList Name) -> SnocList (Var vars) ->
             (newvars ** Thin newvars vars)
-toThin [<] xs = ([<] ** Refl)
-toThin (ns :< n) xs
+toSubVars [<] xs = ([<] ** Refl)
+toSubVars (ns :< n) xs
      -- If there's a proof 'First' in 'xs', then 'n' should be kept,
      -- otherwise dropped
      -- (Remember: 'n' might be shadowed; looking for 'First' ensures we
      -- get the *right* proof that the name is in scope!)
-     = let (_ ** svs) = toThin ns (dropFirst xs) in
+     = let (_ ** svs) = toSubVars ns (dropFirst xs) in
            if anyFirst xs
               then (_ ** Keep svs)
               else (_ ** Drop svs)
@@ -331,7 +331,11 @@ toThin (ns :< n) xs
 -- (All of these will succeed because the Thin we have comes from
 -- the list of variable uses! It's not stated in the type, though.)
 updateVars : SnocList (Var {a = Name} vars) -> Thin newvars vars -> SnocList (Var newvars)
-updateVars vs th = mapMaybe (\ v => shrink v th) vs
+updateVars [<] svs = [<]
+updateVars (ps :< p) svs
+    = case shrink p svs of
+            Nothing => updateVars ps svs
+            Just p' => updateVars ps svs :< p'
 
 {- Applying the pattern unification rule is okay if:
    * Arguments are all distinct local variables
@@ -362,22 +366,22 @@ patternEnv {vars} env args
            case getVars [] args' of
              Nothing => Nothing
              Just vs =>
-               let (newvars ** svs) = toThin _ vs in
+               let (newvars ** svs) = toSubVars _ vs in
                  Just (newvars ** (updateVars vs svs, svs))
 
-getVarsTm : List Nat -> List (Term vars) -> Maybe (SnocList (Var vars))
-getVarsTm got [] = Just [<]
-getVarsTm got (Local fc r idx v :: xs)
+getVarsTm : List Nat -> SnocList (Term vars) -> Maybe (SnocList (Var vars))
+getVarsTm got [<] = Just [<]
+getVarsTm got (xs :< Local fc _ idx v)
     = if idx `elem` got then Nothing
          else do xs' <- getVarsTm (idx :: got) xs
                  pure (xs' :< MkVar v)
-getVarsTm _ (_ :: xs) = Nothing
+getVarsTm _ (xs :< _) = Nothing
 
 export
 patternEnvTm : {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
                {vars : _} ->
-               Env Term vars -> List (Term vars) ->
+               Env Term vars -> SnocList (Term vars) ->
                Core (Maybe (newvars ** (SnocList (Var newvars),
                                        Thin newvars vars)))
 patternEnvTm {vars} env args
@@ -386,7 +390,7 @@ patternEnvTm {vars} env args
          pure $ case getVarsTm [] args of
            Nothing => Nothing
            Just vs =>
-             let (newvars ** svs) = toThin _ vs in
+             let (newvars ** svs) = toSubVars _ vs in
                  Just (newvars ** (updateVars vs svs, svs))
 
 -- Check that the metavariable name doesn't occur in the solution.
@@ -609,7 +613,8 @@ updateSolution : {vars : _} ->
                  Env Term vars -> Term vars -> Term vars -> Core Bool
 updateSolution env (Meta fc mname idx args) soln
     = do defs <- get Ctxt
-         case !(patternEnvTm env args) of
+         -- See [Note] Meta args
+         case !(patternEnvTm env (cast args)) of
               Nothing => pure False
               Just (newvars ** (locs, submv)) =>
                   case shrink soln submv of
