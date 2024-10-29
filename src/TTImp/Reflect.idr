@@ -425,7 +425,7 @@ mutual
                           x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
                           z' <- reify defs !(evalClosure defs z)
-                          pure (IClaim (MkIClaimData v' w' x' y' z'))
+                          pure (IClaim (MkFCVal v' $ MkIClaimData w' x' y' z'))
                (UN (Basic "IData"), [x,y,z,w])
                     => do x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
@@ -766,7 +766,7 @@ mutual
 
   export
   Reflect ImpDecl where
-    reflect fc defs lhs env (IClaim (MkIClaimData v w x y z))
+    reflect fc defs lhs env (IClaim (MkFCVal v $ MkIClaimData w x y z))
         = do v' <- reflect fc defs lhs env v
              w' <- reflect fc defs lhs env w
              x' <- reflect fc defs lhs env x

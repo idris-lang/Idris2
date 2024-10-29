@@ -148,8 +148,8 @@ mutual
                    {auto u : Ref UST UState} ->
                    ImpDecl ->
                    Core ImpDecl
-  getUnquoteDecl (IClaim (MkIClaimData fc c v opts ty))
-      = pure $ IClaim (MkIClaimData fc c v opts !(getUnquoteTy ty))
+  getUnquoteDecl (IClaim (MkFCVal fc (MkIClaimData c v opts ty)))
+      = pure $ IClaim (MkFCVal fc (MkIClaimData c v opts !(getUnquoteTy ty)))
   getUnquoteDecl (IData fc v mbt d)
       = pure $ IData fc v mbt !(getUnquoteData d)
   getUnquoteDecl (IDef fc v d)

@@ -1049,7 +1049,7 @@ mutual
       = do opts <- traverse (desugarFnOpt ps) fnopts
            types <- desugarType ps ty
            pure $ flip (map {f = List, b = ImpDecl}) types $ \ty' =>
-                      IClaim (MkIClaimData fc rig vis opts ty')
+                      IClaim (MkFCVal fc $ MkIClaimData rig vis opts ty')
 
   desugarDecl ps (PDef (MkFCVal fc clauses))
   -- The clauses won't necessarily all be from the same function, so split

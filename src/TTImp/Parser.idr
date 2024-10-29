@@ -733,7 +733,7 @@ topDecl fname indents
          rig <- getMult m
          claim <- tyDecl fname indents
          end <- location
-         pure (IClaim (MkIClaimData (MkFC fname start end) rig vis opts claim))
+         pure (IClaim (MkFCVal (MkFC fname start end) $ MkIClaimData  rig vis opts claim))
   <|> recordDecl fname indents
   <|> directive fname indents
   <|> definition fname indents

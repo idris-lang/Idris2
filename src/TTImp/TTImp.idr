@@ -300,6 +300,7 @@ mutual
 
   public export
   data ImpTy' : Type -> Type where
+      -- withFC the name
        MkImpTy : FC -> (nameFC : FC) -> (n : Name) -> (ty : RawImp' nm) -> ImpTy' nm
 
   %name ImpTy' ty
@@ -359,10 +360,16 @@ mutual
 
   public export
   data IField' : Type -> Type where
-       MkIField : FC -> RigCount -> PiInfo (RawImp' nm) -> Name -> RawImp' nm ->
+       MkIField : FC -> RigCount -> PiInfo (RawImp' nm) ->
+                  (name : Name) -> (ty : RawImp' nm) ->
                   IField' nm
 
   %name IField' fld
+
+  public export
+  data IFieldList' : Type -> Type where
+    Done : (last : IField' nm) -> IFieldList' nm
+    MoreField : IField' nm -> IFieldList' nm -> IFieldList' nm
 
   public export
   ImpParameter : Type
@@ -450,7 +457,6 @@ mutual
   public export
   record IClaimData (nm : Type) where
     constructor MkIClaimData
-    loc : FC
     rig : RigCount
     vis : Visibility
     opts : List (FnOpt' nm)
@@ -458,7 +464,7 @@ mutual
 
   public export
   data ImpDecl' : Type -> Type where
-       IClaim : IClaimData nm -> ImpDecl' nm
+       IClaim : WithFC (IClaimData nm) -> ImpDecl' nm
        IData : FC -> WithDefault Visibility Private ->
                Maybe TotalReq -> ImpData' nm -> ImpDecl' nm
        IDef : FC -> Name -> List (ImpClause' nm) -> ImpDecl' nm
@@ -488,7 +494,7 @@ mutual
   export
   covering
   Show nm => Show (ImpDecl' nm) where
-    show (IClaim (MkIClaimData _ c _ opts ty))
+    show (IClaim (MkFCVal _ $ MkIClaimData c _ opts ty))
         = show opts ++ " " ++ show c ++ " " ++ show ty
     show (IData _ _ _ d) = show d
     show (IDef _ n cs) = "(%def " ++ show n ++ " " ++ show cs ++ ")"
@@ -811,7 +817,7 @@ definedInBlock ns decls =
            _ => n
 
     defName : Namespace -> SortedSet Name -> ImpDecl -> SortedSet Name
-    defName ns acc (IClaim (MkIClaimData _ _ _ _ ty)) = insert (expandNS ns (getName ty)) acc
+    defName ns acc (IClaim c) = insert (expandNS ns (getName c.val.type)) acc
     defName ns acc (IDef _ nm _) = insert (expandNS ns nm) acc
     defName ns acc (IData _ _ _ (MkImpData _ n _ _ cons))
         = foldl (flip insert) acc $ expandNS ns n :: map (expandNS ns . getName) cons
@@ -899,7 +905,7 @@ namespace ImpDecl
 
   public export
   getFC : ImpDecl' nm -> FC
-  getFC (IClaim (MkIClaimData fc _ _ _ _)) = fc
+  getFC (IClaim c) = c.fc
   getFC (IData fc _ _ _) = fc
   getFC (IDef fc _ _) = fc
   getFC (IParameters fc _ _) = fc

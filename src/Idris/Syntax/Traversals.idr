@@ -234,7 +234,8 @@ mapPTermM f = goPTerm where
     goPDo (DoRewrite fc t) = DoRewrite fc <$> goPTerm t
 
     goPRecordDeclLet : PRecordDeclLet' nm -> Core (PRecordDeclLet' nm)
-    goPRecordDeclLet x = ?goPRecordDeclLet_rhs
+    goPRecordDeclLet (RecordClaim x) = RecordClaim <$> traverseFC goPClaim x
+    goPRecordDeclLet (RecordClause x) = RecordClause <$> traverseFC goPClause x
 
     goPClause : PClause' nm -> Core (PClause' nm)
     goPClause (MkPatClause fc lhs rhs wh) =
@@ -317,7 +318,7 @@ mapPTermM f = goPTerm where
                        <*> pure n
                        <*> goPTerm t
     goPField (MkRecordLet decls) =
-      MkRecordLet <$> ?haah
+      MkRecordLet <$> traverseFC (traverseList1 goPRecordDeclLet) decls
 
     goPiInfo : PiInfo (PTerm' nm) -> Core (PiInfo (PTerm' nm))
     goPiInfo (DefImplicit t) = DefImplicit <$> goPTerm t
