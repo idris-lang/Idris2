@@ -240,6 +240,10 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Added `Data.IORef.atomically` for the chez backend.
 
+* `Data.Nat.NonZero` was made to be an alias for `Data.Nat.IsSucc`.
+  `SIsNonZero` was made to be an alias for `ItIsSucc`, was marked as deprecated,
+  and won't work on LHS anymore.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
