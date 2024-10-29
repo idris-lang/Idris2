@@ -59,6 +59,11 @@ data LazyReason = LInf | LLazy | LUnknown
 public export
 data UseSide = UseLeft | UseRight
 
+export
+Show UseSide where
+  show UseLeft = "UseLeft"
+  show UseRight = "UseRight"
+
 %name UseSide side
 
 public export
