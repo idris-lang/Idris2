@@ -1803,15 +1803,10 @@ fieldDecl fname indents
           RecordClaim <$> localClaim fname idents
       <|> do b <- bounds (clause 0 Nothing fname idents)
              pure $ RecordClause (b.withFC {o = fname})
+
     fieldBody : String -> PiInfo PTerm -> Rule (PField)
     fieldBody doc p
         = do b <- bounds (do
-                    col <- column
-                    decoratedKeyword fname "let"
-                    nonEmptyBlockAfter col (parseRecordLet fname)
-                    )
-             pure $ MkRecordLet b.withFC
-      <|> do b <- bounds (do
                     rig <- multiplicity fname
                     ns <- sepBy1 (decoratedSymbol fname ",")
                             (decorate fname Function name
@@ -1819,8 +1814,8 @@ fieldDecl fname indents
                                        fatalLoc {c = True} b.bounds "Fields have to be named"))
                     decoratedSymbol fname ":"
                     ty <- typeExpr pdef fname indents
-                    pure (\fc : FC => MkField fc doc rig p (forget ns) ty))
-             pure (b.val b.toFC)
+                    pure (MkRecordField doc rig p (forget ns) ty))
+             pure b.withFC
 
 typedArg : OriginDesc -> IndentInfo -> Rule (List (Name, RigCount, PiInfo PTerm, PTerm))
 typedArg fname indents

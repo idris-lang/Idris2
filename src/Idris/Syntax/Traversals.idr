@@ -312,13 +312,11 @@ mapPTermM f = goPTerm where
                    <*> goPTypeDecls tdecls
     goPDataDecl (MkPLater fc n t) = MkPLater fc n <$> goPTerm t
 
-    goPField : PField' nm -> Core (PField' nm)
-    goPField (MkField fc doc c info n t) =
-      MkField fc doc c <$> goPiInfo info
-                       <*> pure n
-                       <*> goPTerm t
-    goPField (MkRecordLet decls) =
-      MkRecordLet <$> traverseFC (traverseList1 goPRecordDeclLet) decls
+    goRecordField : RecordField' nm -> Core (RecordField' nm)
+    goRecordField (MkRecordField doc c info n t) =
+      MkRecordField doc c <$> goPiInfo info
+                          <*> pure n
+                          <*> goPTerm t
 
     goPiInfo : PiInfo (PTerm' nm) -> Core (PiInfo (PTerm' nm))
     goPiInfo (DefImplicit t) = DefImplicit <$> goPTerm t
@@ -402,7 +400,7 @@ mapPTermM f = goPTerm where
 
     goPFields : List (PField' nm) -> Core (List (PField' nm))
     goPFields []        = pure []
-    goPFields (f :: fs) = (::) <$> goPField f <*> goPFields fs
+    goPFields (f :: fs) = (::) <$> traverseFC goRecordField f <*> goPFields fs
 
     goPFnOpts : List (PFnOpt' nm) -> Core (List (PFnOpt' nm))
     goPFnOpts []        = pure []
@@ -563,7 +561,8 @@ mapPTerm f = goPTerm where
       = PImplementation fc v opts p (goImplicits is) (goPairedPTerms cs)
            n (goPTerm <$> ts) mn ns (map (goPDecl <$>) mps)
     goPDecl (PRecord fc doc v tot (MkPRecord n nts opts mn fs))
-      = PRecord fc doc v tot (MkPRecord n (go4TupledPTerms nts) opts mn (goPField <$> fs))
+      = PRecord fc doc v tot
+          (MkPRecord n (go4TupledPTerms nts) opts mn (map (mapFC goRecordField) fs))
     goPDecl (PRecord fc doc v tot (MkPRecordLater n nts))
       = PRecord fc doc v tot (MkPRecordLater n (go4TupledPTerms nts))
     goPDecl (PFail fc msg ps) = PFail fc msg $ goPDecl <$> ps
@@ -588,11 +587,9 @@ mapPTerm f = goPTerm where
     goPRecordDeclLet (RecordClaim claim) = RecordClaim $ mapFC goPClaim claim
     goPRecordDeclLet (RecordClause clause) = RecordClause $ mapFC goPClause clause
 
-    goPField : PField' nm -> PField' nm
-    goPField (MkField fc doc c info n t)
-      = MkField fc doc c (goPiInfo info) n (goPTerm t)
-    goPField (MkRecordLet decls)
-      = MkRecordLet $ mapFC (map goPRecordDeclLet) decls
+    goRecordField : RecordField' nm -> RecordField' nm
+    goRecordField (MkRecordField doc c info n t)
+      = MkRecordField doc c (goPiInfo info) n (goPTerm t)
 
     goPiInfo : PiInfo (PTerm' nm) -> PiInfo (PTerm' nm)
     goPiInfo (DefImplicit t) = DefImplicit $ goPTerm t

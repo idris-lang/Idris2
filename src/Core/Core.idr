@@ -830,7 +830,7 @@ traverseList1_ f xxs
          ignore (f x)
          traverse_ f xs
 
-export
+%inline export
 traverseFC : (a -> Core b) -> WithFC a -> Core (WithFC b)
 traverseFC f (MkFCVal fc x) = MkFCVal fc <$> f x
 

@@ -10,7 +10,6 @@ import public Core.TT
 
 import TTImp.TTImp
 
-import Data.Choice
 import Data.List
 import Data.Maybe
 import Data.SnocList
@@ -394,15 +393,23 @@ mutual
        -- There is no nm on Directive
        ForeignImpl : Name -> List PTerm -> Directive
 
+
+  public export
+  record RecordField' (nm : Type) where
+    constructor MkRecordField
+    doc : String
+    rig : RigCount
+    piInfo : PiInfo (PTerm' nm)
+    names : List Name -- Those names should be `WithFC`
+    type : PTerm' nm
+
   public export
   PField : Type
   PField = PField' Name
 
   public export
-  data PField' : Type -> Type where
-       MkField : FC -> (doc : String) -> RigCount -> PiInfo (PTerm' nm) ->
-                 List Name -> (ty : PTerm' nm) -> PField' nm
-       MkRecordLet : WithFC (List1 (PRecordDeclLet' nm)) -> PField' nm
+  PField' : Type -> Type
+  PField' nm = WithFC (RecordField' nm)
 
   public export
   0 PRecordDeclLet : Type

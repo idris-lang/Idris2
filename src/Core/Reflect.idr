@@ -863,7 +863,6 @@ Reflect FC where
            appCon fc defs (reflectiontt "MkFC") [fn', start', end']
   reflect fc defs lhs env EmptyFC = getCon fc defs (reflectiontt "EmptyFC")
 
-
 {-
 -- Reflection of well typed terms: We don't reify terms because that involves
 -- type checking, but we can reflect them

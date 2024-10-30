@@ -976,7 +976,7 @@ mutual
                       tycon <- desugar AnyExpr ps tycon
                       bindTypeNames fc (usingImpl syn) ps tycon)
                    opts
-                   (concat mm) -- !(traverse (desugarType ps) datacons)
+                   (concat mm)
   desugarData ps doc (MkPLater fc n tycon)
       = do addDocString n doc
            syn <- get Syn
@@ -990,12 +990,11 @@ mutual
                  {auto o : Ref ROpts REPLOpts} ->
                  List Name -> Namespace -> PField ->
                  Core (List IField)
-  desugarField ps ns (MkField fc doc rig p names ty)
+  desugarField ps ns (MkFCVal fc $ MkRecordField doc rig p names ty)
       = flip Core.traverse names $ \n : Name => do
            addDocStringNS ns n doc
            addDocStringNS ns (toRF n) doc
            syn <- get Syn
-
            pure (MkIField fc rig !(traverse (desugar AnyExpr ps) p )
                           n !(bindTypeNames fc (usingImpl syn)
                           ps !(desugar AnyExpr ps ty)))
@@ -1003,8 +1002,6 @@ mutual
           toRF : Name -> Name
           toRF (UN (Basic n)) = UN (Field n)
           toRF n = n
-  desugarField ps ns (MkRecordLet (MkFCVal fc let_))
-      = ?whu
 
   export
   desugarFnOpt : {auto s : Ref Syn SyntaxInfo} ->
@@ -1215,8 +1212,7 @@ mutual
                          vis mbtot (MkImpRecord fc tn paramsb opts conname (concat fields'))]
     where
       getfname : PField -> List Name
-      getfname (MkField _ _ _ _ n _) = n
-      getfname (MkRecordLet let_) = []
+      getfname x = x.val.names
 
       mkConName : Name -> Name
       mkConName (NS ns (UN n))
