@@ -501,7 +501,7 @@ tyDecl fname indents
          ty <- expr fname indents
          end <- location
          atEnd indents
-         pure (MkImpTy (MkFC fname start end) (MkFC fname start nameEnd) n ty)
+         pure (MkImpTy (MkFC fname start end) (MkFCVal (MkFC fname start nameEnd) n) ty)
 
 mutual
   parseRHS : (withArgs : Nat) ->

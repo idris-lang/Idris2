@@ -849,6 +849,18 @@ Reify FC where
   reify defs val = cantReify val "FC"
 
 export
+Reify a => Reify (WithFC a) where
+  reify defs con@(NDCon _ n _ _ args)
+      = case (dropAllNS !(full (gamma defs) n), args) of
+             (UN (Basic "MkFCVal"), [(_, fc), (_, val)])
+                 => do reifiedFC <- reify defs !(evalClosure defs fc)
+                       reifiedVal <- reify defs !(evalClosure defs val)
+                       pure (MkFCVal reifiedFC reifiedVal)
+             _ => cantReify con "WithFC1 + \{show con}"
+  reify _ con = cantReify con "WithFC2"
+
+
+export
 Reflect FC where
   reflect fc defs True env _ = pure $ Erased fc Placeholder
   reflect fc defs lhs env (MkFC fn start end)
@@ -862,6 +874,13 @@ Reflect FC where
            end' <- reflect fc defs lhs env end
            appCon fc defs (reflectiontt "MkFC") [fn', start', end']
   reflect fc defs lhs env EmptyFC = getCon fc defs (reflectiontt "EmptyFC")
+
+export
+Reflect a => Reflect (WithFC a) where
+  reflect fc defs lhs env (MkFCVal loc val)
+      = do refFC <- reflect fc defs lhs env loc
+           refVal <- reflect fc defs lhs env val
+           appCon fc defs (reflectiontt "MkFCVal") [refFC, refVal]
 
 {-
 -- Reflection of well typed terms: We don't reify terms because that involves

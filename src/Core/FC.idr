@@ -84,6 +84,11 @@ record WithFC (ty : Type) where
   fc : FC
   val : ty
 
+||| Smart constructor for WithFC that uses EmptyFC as location
+%inline export
+NoFC : a -> WithFC a
+NoFC = MkFCVal EmptyFC
+
 %inline export
 mapFC : (a -> b) -> WithFC a -> WithFC b
 mapFC f (MkFCVal fc val) = MkFCVal fc (f val)

@@ -105,8 +105,8 @@ localHelper {vars} nest env nestdecls_in func
     -- When we encounter the names in elaboration, we'll update to an
     -- application of the nested name.
     updateTyName : NestedNames vars -> ImpTy -> ImpTy
-    updateTyName nest (MkImpTy loc' nameLoc n ty)
-        = MkImpTy loc' nameLoc (mapNestedName nest n) ty
+    updateTyName nest (MkImpTy loc' n ty)
+        = MkImpTy loc' (mapFC (mapNestedName nest) n) ty
 
     updateDataName : NestedNames vars -> ImpData -> ImpData
     updateDataName nest (MkImpData loc' n tycons dopts dcons)

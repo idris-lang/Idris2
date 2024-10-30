@@ -29,9 +29,9 @@ genUniqueStr xs x = if x `elem` xs then genUniqueStr xs (x ++ "'") else x
 -- Used in findBindableNames{,Quot}
 rawImpFromDecl : ImpDecl -> List RawImp
 rawImpFromDecl decl = case decl of
-    IClaim (MkFCVal fc1 $ MkIClaimData y z ys ty) => [getFromTy ty]
+    IClaim (MkFCVal fc1 $ MkIClaimData y z ys ty) => [ty.type]
     IData fc1 y _ (MkImpData fc2 n tycon opts datacons)
-        => maybe id (::) tycon $ map getFromTy datacons
+        => maybe id (::) tycon $ map type datacons
     IData fc1 y _ (MkImpLater fc2 n tycon) => [tycon]
     IDef fc1 y ys => getFromClause !ys
     IParameters fc1 ys zs => rawImpFromDecl !zs ++ map getParamTy ys
@@ -47,8 +47,6 @@ rawImpFromDecl decl = case decl of
     IBuiltin _ _ _ => []
   where getParamTy : (a, b, c, RawImp) -> RawImp
         getParamTy (_, _, _, ty) = ty
-        getFromTy : ImpTy -> RawImp
-        getFromTy (MkImpTy _ _ _ ty) = ty
         getFromClause : ImpClause -> List RawImp
         getFromClause (PatClause fc1 lhs rhs) = [lhs, rhs]
         getFromClause (WithClause fc1 lhs rig wval prf flags ys) = [wval, lhs] ++ getFromClause !ys
@@ -373,8 +371,8 @@ mutual
 
   substNamesTy' : Bool -> List Name -> List (Name, RawImp) ->
                   ImpTy -> ImpTy
-  substNamesTy' bvar bound ps (MkImpTy fc nameFC n ty)
-      = MkImpTy fc nameFC n (substNames' bvar bound ps ty)
+  substNamesTy' bvar bound ps (MkImpTy fc n ty)
+      = MkImpTy fc n (substNames' bvar bound ps ty)
 
   substNamesData' : Bool -> List Name -> List (Name, RawImp) ->
                     ImpData -> ImpData
@@ -475,8 +473,9 @@ mutual
       = ImpossibleClause fc' (substLoc fc' lhs)
 
   substLocTy : FC -> ImpTy -> ImpTy
-  substLocTy fc' (MkImpTy fc nameFC n ty)
-      = MkImpTy fc' fc' n (substLoc fc' ty)
+  substLocTy fc' (MkImpTy fc n ty)
+      -- This FC update is sus why would the name's location be changed?
+      = MkImpTy fc' ({fc := fc'} n) (substLoc fc' ty)
 
   substLocData : FC -> ImpData -> ImpData
   substLocData fc' (MkImpData fc n con opts dcons)

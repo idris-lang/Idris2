@@ -26,7 +26,7 @@ parameters (f : RawImp' nm -> RawImp' nm)
 
   export
   mapImpTy : ImpTy' nm -> ImpTy' nm
-  mapImpTy (MkImpTy fc nameFC n ty) = MkImpTy fc nameFC n (mapTTImp ty)
+  mapImpTy (MkImpTy fc n ty) = MkImpTy fc n (mapTTImp ty)
 
   export
   mapFnOpt : FnOpt' nm -> FnOpt' nm

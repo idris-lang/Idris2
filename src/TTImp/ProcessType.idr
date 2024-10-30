@@ -144,10 +144,10 @@ processType : {vars : _} ->
               List ElabOpt -> NestedNames vars -> Env Term vars ->
               FC -> RigCount -> Visibility ->
               List FnOpt -> ImpTy -> Core ()
-processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc nameFC n_in ty_raw)
-    = do n <- inCurrentNS n_in
+processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc n_in ty_raw)
+    = do n <- inCurrentNS n_in.val
 
-         addNameLoc nameFC n
+         addNameLoc n_in.fc n
 
          log "declare.type" 1 $ "Processing " ++ show n
          log "declare.type" 5 $ unwords ["Checking type decl:", show rig, show n, ":", show ty_raw]
@@ -201,7 +201,7 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc nameFC n_in ty_ra
          addTyDecl fc (Resolved idx) env ty -- for definition generation
 
          log "metadata.names" 7 $ "processType is adding ↓"
-         addNameType nameFC (Resolved idx) env ty -- for looking up types
+         addNameType n_in.fc (Resolved idx) env ty -- for looking up types
 
          traverse_ addToSave (keys (getMetas ty))
          addToSave n

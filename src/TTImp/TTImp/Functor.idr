@@ -134,8 +134,8 @@ mutual
 
   export
   Functor ImpTy' where
-    map f (MkImpTy fc nameFC n ty)
-      = MkImpTy fc nameFC n (map f ty)
+    map f (MkImpTy fc n ty)
+      = MkImpTy fc n (map f ty)
 
   export
   Functor ImpData' where

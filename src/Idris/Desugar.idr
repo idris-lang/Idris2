@@ -880,7 +880,7 @@ mutual
       = flip Core.traverse (forget names) $ \(doc, n) : (String, WithFC Name) =>
           do addDocString n.val (d ++ doc)
              syn <- get Syn
-             pure $ MkImpTy fc n.fc n.val !(bindTypeNames fc (usingImpl syn)
+             pure $ MkImpTy fc n !(bindTypeNames fc (usingImpl syn)
                                                  ps !(desugar AnyExpr ps ty))
 
   -- Attempt to get the function name from a function pattern. For example,

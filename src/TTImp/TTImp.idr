@@ -299,16 +299,18 @@ mutual
   ImpTy = ImpTy' Name
 
   public export
-  data ImpTy' : Type -> Type where
-      -- withFC the name
-       MkImpTy : FC -> (nameFC : FC) -> (n : Name) -> (ty : RawImp' nm) -> ImpTy' nm
+  record ImpTy' (nm : Type) where
+      constructor MkImpTy
+      loc : FC
+      name : WithFC Name
+      type : RawImp' nm
 
   %name ImpTy' ty
 
   export
   covering
   Show nm => Show (ImpTy' nm) where
-    show (MkImpTy fc _ n ty) = "(%claim " ++ show n ++ " " ++ show ty ++ ")"
+    show (MkImpTy fc n ty) = "(%claim " ++ show n.val ++ " " ++ show ty ++ ")"
 
   public export
   data DataOpt : Type where
@@ -803,7 +805,7 @@ definedInBlock ns decls =
     SortedSet.toList $ foldl (defName ns) empty decls
   where
     getName : ImpTy -> Name
-    getName (MkImpTy _ _ n _) = n
+    getName (MkImpTy _ n _) = n.val
 
     getFieldName : IField -> Name
     getFieldName (MkIField _ _ _ n _) = n

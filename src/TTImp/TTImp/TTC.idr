@@ -234,11 +234,11 @@ mutual
 
   export
   TTC ImpTy where
-    toBuf b (MkImpTy fc nameFC n ty)
-        = do toBuf b fc; toBuf b nameFC; toBuf b n; toBuf b ty
+    toBuf b (MkImpTy fc n ty)
+        = do toBuf b fc;  toBuf b n; toBuf b ty
     fromBuf b
-        = do fc <- fromBuf b; nameFC <- fromBuf b; n <- fromBuf b; ty <- fromBuf b
-             pure (MkImpTy fc nameFC n ty)
+        = do fc <- fromBuf b; n <- fromBuf b; ty <- fromBuf b
+             pure (MkImpTy fc n ty)
 
   export
   TTC ImpClause where

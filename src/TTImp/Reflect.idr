@@ -315,7 +315,7 @@ mutual
                           x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
                           z' <- reify defs !(evalClosure defs z)
-                          pure (MkImpTy w' x' y' z')
+                          pure (MkImpTy w' (MkFCVal x' y') z')
                _ => cantReify val "ITy"
     reify defs val = cantReify val "ITy"
 
@@ -685,7 +685,7 @@ mutual
 
   export
   Reflect ImpTy where
-    reflect fc defs lhs env (MkImpTy w x y z)
+    reflect fc defs lhs env (MkImpTy w (MkFCVal x y) z)
         = do w' <- reflect fc defs lhs env w
              x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
