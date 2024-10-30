@@ -384,8 +384,8 @@ mutual
 
   substNamesDecl' : Bool -> List Name -> List (Name, RawImp ) ->
                    ImpDecl -> ImpDecl
-  substNamesDecl' bvar bound ps (IClaim (MkFCVal fc $ MkIClaimData r vis opts td))
-      = IClaim (MkFCVal fc $ MkIClaimData r vis opts (substNamesTy' bvar bound ps td))
+  substNamesDecl' bvar bound ps (IClaim claim)
+      = IClaim $ mapFC {type $= substNamesTy' bvar bound ps} claim
   substNamesDecl' bvar bound ps (IDef fc n cs)
       = IDef fc n (map (substNamesClause' bvar bound ps) cs)
   substNamesDecl' bvar bound ps (IData fc vis mbtot d)
@@ -474,7 +474,6 @@ mutual
 
   substLocTy : FC -> ImpTy -> ImpTy
   substLocTy fc' (MkImpTy fc n ty)
-      -- This FC update is sus why would the name's location be changed?
       = MkImpTy fc' ({fc := fc'} n) (substLoc fc' ty)
 
   substLocData : FC -> ImpData -> ImpData

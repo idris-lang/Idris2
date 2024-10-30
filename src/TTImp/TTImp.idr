@@ -369,11 +369,6 @@ mutual
   %name IField' fld
 
   public export
-  data IFieldList' : Type -> Type where
-    Done : (last : IField' nm) -> IFieldList' nm
-    MoreField : IField' nm -> IFieldList' nm -> IFieldList' nm
-
-  public export
   ImpParameter : Type
   ImpParameter = ImpParameter' Name
 

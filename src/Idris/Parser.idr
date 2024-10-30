@@ -23,8 +23,6 @@ import Libraries.Data.WithDefault
 
 import Idris.Parser.Let
 
-import Debug.Trace
-
 %default covering
 
 decorate : OriginDesc -> Decoration -> Rule a -> Rule a
@@ -1206,11 +1204,11 @@ tyDecls declName predoc fname indents
                   mustWorkBecause b.bounds "Expected a type declaration" $ do
                     ty  <- typeExpr pdef fname indents
                     pure $ (docns, ty)
+
          atEnd indents
-         let loc = bs.toFC
-         let docNames = fst bs.val
-         let ty = snd bs.val
-         pure $ MkPTy loc (map (mapSnd (.withFC)) docNames) predoc ty
+         let MkFCVal loc (docNames, ty) = bs.withFC
+         let namesWithFC = map (mapSnd (.withFC)) docNames
+         pure $ MkPTy loc namesWithFC predoc ty
 
 withFlags : OriginDesc -> EmptyRule (List WithFlag)
 withFlags fname
@@ -1798,12 +1796,6 @@ fieldDecl fname indents
            atEnd indents
            pure fs
   where
-    parseRecordLet : OriginDesc -> IndentInfo -> Rule PRecordDeclLet
-    parseRecordLet fname idents =
-          RecordClaim <$> localClaim fname idents
-      <|> do b <- bounds (clause 0 Nothing fname idents)
-             pure $ RecordClause (b.withFC {o = fname})
-
     fieldBody : String -> PiInfo PTerm -> Rule (PField)
     fieldBody doc p
         = do b <- bounds (do
@@ -1897,9 +1889,10 @@ paramDecls fname indents = do
         = map concat (some $ typedArg fname indents)
 
 
--- come back to this later
-claims : OriginDesc -> IndentInfo -> Rule PDecl
-claims o i = PClaim <$> localClaim o i
+-- topLevelClaim is for claims appearing at the top-level of the file
+-- localClaim is for claims appearing in nested positions, like `let` or `record` in the future
+topLevelClaim : OriginDesc -> IndentInfo -> Rule PDecl
+topLevelClaim o i = PClaim <$> localClaim o i
 
 definition : OriginDesc -> IndentInfo -> Rule PDecl
 definition fname indents
@@ -1936,7 +1929,7 @@ topDecl fname indents
     = do id <- anyReservedIdent
          the (Rule PDecl) $ fatalLoc id.bounds "Cannot begin a declaration with a reserved identifier"
   <|> dataDecl fname indents
-  <|> claims fname indents
+  <|> topLevelClaim fname indents
   <|> directiveDecl fname indents
   <|> implDecl fname indents
   <|> definition fname indents

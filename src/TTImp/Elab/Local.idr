@@ -132,8 +132,8 @@ localHelper {vars} nest env nestdecls_in func
     updateRecordNS nest (Just ns) = Just $ show $ mapNestedName nest (UN $ mkUserName ns)
 
     updateName : NestedNames vars -> ImpDecl -> ImpDecl
-    updateName nest (IClaim (MkFCVal loc' $ MkIClaimData r vis fnopts ty))
-         = IClaim (MkFCVal loc' $ MkIClaimData r vis fnopts (updateTyName nest ty))
+    updateName nest (IClaim claim)
+         = IClaim $ mapFC {type $= updateTyName nest} claim
     updateName nest (IDef loc' n cs)
          = IDef loc' (mapNestedName nest n) cs
     updateName nest (IData loc' vis mbt d)
@@ -143,8 +143,8 @@ localHelper {vars} nest env nestdecls_in func
     updateName nest i = i
 
     setPublic : ImpDecl -> ImpDecl
-    setPublic (IClaim (MkFCVal fc $ MkIClaimData c _ opts ty))
-        = IClaim (MkFCVal fc $ MkIClaimData c Public opts ty)
+    setPublic (IClaim claim)
+        = IClaim $ mapFC {vis := Public} claim
     setPublic (IData fc _ mbt d) = IData fc (specified Public) mbt d
     setPublic (IRecord fc c _ mbt r) = IRecord fc c (specified Public) mbt r
     setPublic (IParameters fc ps decls)
@@ -154,8 +154,8 @@ localHelper {vars} nest env nestdecls_in func
     setPublic d = d
 
     setErased : ImpDecl -> ImpDecl
-    setErased (IClaim (MkFCVal fc $ MkIClaimData _ v opts ty))
-        = IClaim (MkFCVal fc $ MkIClaimData erased v opts ty)
+    setErased (IClaim claim)
+        = IClaim $ mapFC {rig := erased} claim
     setErased (IParameters fc ps decls)
         = IParameters fc ps (map setErased decls)
     setErased (INamespace fc ps decls)

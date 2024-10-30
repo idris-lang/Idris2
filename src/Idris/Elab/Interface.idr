@@ -198,10 +198,7 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params sig
          -- eta expand the RHS so that we put implicits in the right place
          let fnclause = PatClause vfc
                                   (INamedApp vfc
-                                             -- Another sus location
-                                             -- why do we take the location of the signature
-                                             -- rather than the location of the name
-                                             (IVar sig.location cn.val)
+                                             (IVar sig.location cn.val) -- See #3409
                                              (UN $ Basic "__con")
                                              conapp
                                              )

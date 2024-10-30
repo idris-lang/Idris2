@@ -400,7 +400,7 @@ mutual
     doc : String
     rig : RigCount
     piInfo : PiInfo (PTerm' nm)
-    names : List Name -- Those names should be `WithFC`
+    names : List Name -- See #3409
     type : PTerm' nm
 
   public export

@@ -953,8 +953,7 @@ lookupOrAddAlias eopts nest env fc n [cl@(PatClause _ lhs _)]
        --   3) declare an alias
        log "declare.def" 5 "Not a misspelling: go ahead and declare it!"
        processType eopts nest env fc top Public []
-          -- another sus FC, why does the name have the same locaiton
-          -- as the rest of the entire expression? that's definitely incorrect
+          -- See #3409
           $ MkImpTy fc (MkFCVal fc n) $ holeyType (map snd args)
        defs <- get Ctxt
        lookupCtxtExact n (gamma defs)
