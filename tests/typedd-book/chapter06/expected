@@ -4,122 +4,122 @@ Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   schema is shadowing Main.DataStore.schema
 
-DataStore:26:5--26:14
+DataStore:26:5--26:89
  22 | 
  23 | addToStore : (store : DataStore) -> SchemaType (schema store) -> DataStore
  24 | addToStore (MkData schema size store) newitem = MkData schema _ (addToData store)
  25 |   where
  26 |     addToData : Vect oldsize (SchemaType schema) -> Vect (S oldsize) (SchemaType schema)
-          ^^^^^^^^^
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   schema is shadowing Main.DataStore.schema
 
-DataStore:36:6--36:15
+DataStore:36:6--36:42
  32 |                               Z => Just (MkData schema _ [])
  33 |                               S k => Nothing
  34 | 
  35 | data Command : Schema -> Type where
  36 |      SetSchema : Schema -> Command schema
-           ^^^^^^^^^
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   schema is shadowing Main.DataStore.schema
 
-DataStore:37:6--37:9
+DataStore:37:6--37:47
  33 |                               S k => Nothing
  34 | 
  35 | data Command : Schema -> Type where
  36 |      SetSchema : Schema -> Command schema
  37 |      Add : SchemaType schema -> Command schema
-           ^^^
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   schema is shadowing Main.DataStore.schema
 
-DataStore:38:6--38:9
+DataStore:38:6--38:37
  34 | 
  35 | data Command : Schema -> Type where
  36 |      SetSchema : Schema -> Command schema
  37 |      Add : SchemaType schema -> Command schema
  38 |      Get : Integer -> Command schema
-           ^^^
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   schema is shadowing Main.DataStore.schema
 
-DataStore:39:6--39:10
+DataStore:39:6--39:27
  35 | data Command : Schema -> Type where
  36 |      SetSchema : Schema -> Command schema
  37 |      Add : SchemaType schema -> Command schema
  38 |      Get : Integer -> Command schema
  39 |      Quit : Command schema
-           ^^^^
+           ^^^^^^^^^^^^^^^^^^^^^
 
 3/8: Building DataStoreHoles (DataStoreHoles.idr)
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   schema is shadowing Main.DataStore.schema
 
-DataStoreHoles:25:5--25:14
+DataStoreHoles:25:5--25:89
  21 | 
  22 | addToStore : (d : DataStore) -> SchemaType (schema d) -> DataStore
  23 | addToStore (MkData schema size store) newitem = MkData schema _ (addToData store)
  24 |   where
  25 |     addToData : Vect oldsize (SchemaType schema) -> Vect (S oldsize) (SchemaType schema)
-          ^^^^^^^^^
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   schema is shadowing Main.DataStore.schema
 
-DataStoreHoles:30:6--30:9
+DataStoreHoles:30:6--30:47
  26 |     addToData [] = [newitem]
  27 |     addToData (x :: xs) = x :: addToData xs
  28 | 
  29 | data Command : Schema -> Type where
  30 |      Add : SchemaType schema -> Command schema
-           ^^^
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   schema is shadowing Main.DataStore.schema
 
-DataStoreHoles:31:6--31:9
+DataStoreHoles:31:6--31:37
  27 |     addToData (x :: xs) = x :: addToData xs
  28 | 
  29 | data Command : Schema -> Type where
  30 |      Add : SchemaType schema -> Command schema
  31 |      Get : Integer -> Command schema
-           ^^^
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   schema is shadowing Main.DataStore.schema
 
-DataStoreHoles:32:6--32:10
+DataStoreHoles:32:6--32:27
  28 | 
  29 | data Command : Schema -> Type where
  30 |      Add : SchemaType schema -> Command schema
  31 |      Get : Integer -> Command schema
  32 |      Quit : Command schema
-           ^^^^
+           ^^^^^^^^^^^^^^^^^^^^^
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   schema is shadowing Main.DataStore.schema
 
-DataStoreHoles:34:1--34:13
+DataStoreHoles:34:1--34:58
  30 |      Add : SchemaType schema -> Command schema
  31 |      Get : Integer -> Command schema
  32 |      Quit : Command schema
  33 | 
  34 | parseCommand : String -> String -> Maybe (Command schema)
-      ^^^^^^^^^^^^
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 4/8: Building Maybe (Maybe.idr)
 5/8: Building Printf (Printf.idr)

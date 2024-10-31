@@ -5,12 +5,12 @@ Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   letters is shadowing Main.letters
 
-Hangman:28:3--28:8
- 24 | 
- 25 |   Won :  GameCmd () (Running (S guesses) 0) (const NotRunning)
- 26 |   Lost : GameCmd () (Running 0 (S guesses)) (const NotRunning)
- 27 | 
+Hangman:28:3--33:74
  28 |   Guess : (c : Char) ->
-        ^^^^^
+ 29 |           GameCmd GuessResult
+ 30 |                   (Running (S guesses) (S letters))
+ 31 |                   (\res => case res of
+ 32 |                                 Correct => Running (S guesses) letters
+ 33 |                                 Incorrect => Running guesses (S letters))
 
 4/4: Building All (All.idr)
