@@ -104,7 +104,8 @@ mutual
                     Env Term free -> SnocList (FC, Closure free) ->
                     Core (SnocList (FC, Term (free ++ bound)))
   quoteArgsWithFC q opts defs bounds env
-      = traverse (quoteArgWithFC q opts defs bounds env)
+      -- [Note] Restore logging sequence
+      = map reverse . traverse (quoteArgWithFC q opts defs bounds env) . reverse
 
   quoteHead : {auto c : Ref Ctxt Defs} ->
               {bound, free : _} ->
