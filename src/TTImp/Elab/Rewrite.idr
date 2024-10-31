@@ -50,7 +50,7 @@ rewriteErr : Error -> Bool
 rewriteErr (NotRewriteRule _ _ _) = True
 rewriteErr (RewriteNoChange _ _ _ _) = True
 rewriteErr (InType _ _ err) = rewriteErr err
-rewriteErr (InCon _ _ err) = rewriteErr err
+rewriteErr (InCon _ err) = rewriteErr err
 rewriteErr (InLHS _ _ err) = rewriteErr err
 rewriteErr (InRHS _ _ err) = rewriteErr err
 rewriteErr (WhenUnifying _ _ _ _ _ err) = rewriteErr err

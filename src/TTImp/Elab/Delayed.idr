@@ -150,7 +150,7 @@ ambiguous (AmbiguousElab _ _ _) = True
 ambiguous (AmbiguousName _ _) = True
 ambiguous (AmbiguityTooDeep _ _ _) = True
 ambiguous (InType _ _ err) = ambiguous err
-ambiguous (InCon _ _ err) = ambiguous err
+ambiguous (InCon _ err) = ambiguous err
 ambiguous (InLHS _ _ err) = ambiguous err
 ambiguous (InRHS _ _ err) = ambiguous err
 ambiguous (WhenUnifying _ _ _ _ _ err) = ambiguous err
@@ -213,7 +213,7 @@ recoverable (CantSolveEq _ gam env l r)
 recoverable (UndefinedName _ _) = pure False
 recoverable (LinearMisuse _ _ _ _) = pure False
 recoverable (InType _ _ err) = recoverable err
-recoverable (InCon _ _ err) = recoverable err
+recoverable (InCon _ err) = recoverable err
 recoverable (InLHS _ _ err) = recoverable err
 recoverable (InRHS _ _ err) = recoverable err
 recoverable (WhenUnifying _ _ _ _ _ err) = recoverable err

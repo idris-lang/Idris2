@@ -1417,7 +1417,7 @@ forceMeta r envb tm = TForce (getLoc tm) r tm
 recoverable : Error -> Bool
 recoverable (UndefinedName _ _) = False
 recoverable (InType _ _ err) = recoverable err
-recoverable (InCon _ _ err) = recoverable err
+recoverable (InCon _ err) = recoverable err
 recoverable (InLHS _ _ err) = recoverable err
 recoverable (InRHS _ _ err) = recoverable err
 recoverable (WhenUnifying _ _ _ _ _ err) = recoverable err

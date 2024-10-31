@@ -266,3 +266,8 @@ Pretty Void FC where
   pretty (MkVirtualFC ident startPos endPos) = byShow ident <+> colon
                  <+> prettyPos startPos <+> pretty "--"
                  <+> prettyPos endPos
+
+export
+Eq a => Eq (WithFC a) where
+  a == b = a.fc == b.fc && a.val == b.val
+
