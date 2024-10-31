@@ -393,6 +393,12 @@ namespace Bounds
   sizeOf (Add _ _ b) = suc (sizeOf b)
 
 export
+covering
+{vars : _} -> Show (Bounds vars) where
+  show None = "None"
+  show (Add x n b) = show x ++ " " ++ show n ++ " + " ++ show b
+
+export
 addVars : SizeOf outer -> Bounds bound ->
           NVar name (vars ++ outer) ->
           NVar name (vars ++ bound ++ outer)

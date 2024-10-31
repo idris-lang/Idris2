@@ -119,14 +119,14 @@ showCT indent (Case {name} idx prf ty alts)
   = "case " ++ show name ++ "[" ++ show idx ++ "] : " ++ show ty ++ " of"
   ++ "\n" ++ indent ++ " { "
   ++ showSep ("\n" ++ indent ++ " | ")
-             (assert_total (toList (map (showCA ("  " ++ indent)) alts)))
+             (assert_total (map (showCA ("  " ++ indent)) alts))
   ++ "\n" ++ indent ++ " }"
 showCT indent (STerm i tm) = "[" ++ show i ++ "] " ++ show tm
 showCT indent (Unmatched msg) = "Error: " ++ show msg
 showCT indent Impossible = "Impossible"
 
 showCA indent (ConCase n tag args sc)
-        = showSep " " (reverse $ toList (map show (args :< n))) ++ " => " ++
+        = showSep " " ([show n] ++ map show (args)) ++ " => " ++
           showCT indent sc
 showCA indent (DelayCase _ arg sc)
         = "Delay " ++ show arg ++ " => " ++ showCT indent sc

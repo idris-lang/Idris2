@@ -552,7 +552,7 @@ SubstCEnv = Subst CExp
 public export
 covering
 {dropped, vars : _} -> Show (SubstCEnv dropped vars) where
-    show x = "[<" ++ showAll x ++ "]{vars = " ++ show vars ++ ", dropped = " ++ show dropped ++ "}"
+    show x = "SubstCEnv [" ++ showAll x ++ "]{vars = " ++ show (toList vars) ++ ", dropped = " ++ show (toList dropped) ++ "}"
         where
             showAll : {dropped, vars : _} -> SubstCEnv dropped vars -> String
             showAll Lin = ""

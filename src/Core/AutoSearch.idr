@@ -296,10 +296,13 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
     findDirect defs f ty target
         = do (args, appTy) <- mkArgs fc rigc env ty
              fprf <- f prf
+             log "auto" 10 $ "findDirect args" ++ show args
+             logNF "auto" 10 "findDirect appTy" env appTy
              logTermNF "auto" 10 "Trying" env fprf
              logNF "auto" 10 "Type" env ty
              logNF "auto" 10 "For target" env target
              ures <- unify inTerm fc env target appTy
+             log "auto" 10 $ "findDirect ures: " ++ show ures
              let [] = constraints ures
                  | _ => throw (CantSolveGoal fc (gamma defs) [<] top Nothing)
              -- We can only use the local if its type is not an unsolved hole
@@ -548,8 +551,9 @@ searchType {vars} fc rigc defaults trying depth def checkdets top env target
          case nty of
               NTCon tfc tyn t a args =>
                   if a == length args
-                     then do logNF "auto" 10 "Next target" env nty
+                     then do logNF "auto" 10 "Next target NTCon" env nty
                              sd <- getSearchData fc defaults tyn
+                             log "auto" 10 $ "Next target NTCon search result detArgs: " ++ show (detArgs sd) ++ ", hintGroups: " ++ show (hintGroups sd)
                              -- Check determining arguments are okay for 'args'
                              when checkdets $
                                  checkConcreteDets fc defaults env top
@@ -560,8 +564,10 @@ searchType {vars} fc rigc defaults trying depth def checkdets top env target
                                        (searchLocalVars fc rigc defaults trying' depth def top env nty)
                                        (tryGroups Nothing nty (hintGroups sd))
                      else throw (CantSolveGoal fc (gamma defs) [<] top Nothing)
-              _ => do logNF "auto" 10 "Next target: " env nty
-                      searchLocalVars fc rigc defaults trying' depth def top env nty
+              _ => do logNF "auto" 10 "Next target other: " env nty
+                      result <- searchLocalVars fc rigc defaults trying' depth def top env nty
+                      logTerm "auto" 10 "Next target other result" result
+                      pure result
   where
     -- Take the earliest error message (that's when we look inside pairs,
     -- typically, and it's best to be more precise)

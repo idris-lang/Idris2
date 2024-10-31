@@ -147,7 +147,7 @@ covering
 Show Def where
   show None = "undefined"
   show (PMDef _ args ct rt pats)
-      = unlines [ show args ++ ";"
+      = unlines [ show (toList args) ++ ";"
                 , "Compile time tree: " ++ show ct
                 , "Run time tree: " ++ show rt
                 ]

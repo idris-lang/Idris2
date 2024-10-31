@@ -220,8 +220,8 @@ mutual
       = "pty " ++ showCount c ++ show x ++ " : " ++ show ty ++
         " => [closure]"
     show (NApp _ hd args) = show hd ++ " [" ++ show (length args) ++ " closures " ++ showClosureSnocList args ++ "]"
-    show (NDCon _ n _ _ args) = show n ++ " [" ++ show (length args) ++ " closures " ++ showClosureSnocList args ++ "]"
-    show (NTCon _ n _ _ args) = show n ++ " [" ++ show (length args) ++ " closures " ++ showClosureSnocList args ++ "]"
+    show (NDCon _ n _ _ args) = show n ++ " %DCon [" ++ show (length args) ++ " closures " ++ showClosureSnocList args ++ "]"
+    show (NTCon _ n _ _ args) = show n ++ " %TCon [" ++ show (length args) ++ " closures " ++ showClosureSnocList args ++ "]"
     show (NAs _ _ n tm) = show n ++ "@" ++ show tm
     show (NDelayed _ _ tm) = "%Delayed " ++ show tm
     show (NDelay _ _ _ _) = "%Delay [closure]"

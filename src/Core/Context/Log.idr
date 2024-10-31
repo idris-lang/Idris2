@@ -2,6 +2,7 @@ module Core.Context.Log
 
 import Core.Context
 import Core.Options
+import Core.Value
 
 import Data.String
 import Data.List1
@@ -106,6 +107,25 @@ logTerm s n msg tm
         $ do depth <- getDepth
              tm' <- toFullNames tm
              logString depth s.topic n $ msg ++ ": " ++ show tm'
+
+export
+logLocalEnv : {free, vars : _} ->
+         {auto c : Ref Ctxt Defs} ->
+         (s : String) ->
+         {auto 0 _ : KnownTopic s} ->
+         Nat -> String -> LocalEnv free vars -> Core ()
+logLocalEnv str n msg env
+    = when !(logging str n) $
+        do depth <- getDepth
+           logString depth str n msg
+           dumpEnv env
+  where
+    dumpEnv : {free, vs : SnocList Name} -> LocalEnv free vs -> Core ()
+    dumpEnv [<] = pure ()
+    dumpEnv {vs = _ :< x} (bs :< closure)
+        = do depth <- getDepth
+             logString depth str n $ msg ++ ": " ++ show x ++ " :: " ++ show closure
+             dumpEnv bs
 
 export
 log' : {auto c : Ref Ctxt Defs} ->
