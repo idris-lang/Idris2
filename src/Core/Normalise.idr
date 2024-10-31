@@ -256,6 +256,36 @@ logEnv str n msg env
                            show (piInfo b) ++ " " ++
                            show x) bs (binderType b)
              dumpEnv bs
+
+export
+-- It is OKAY to use it only for `mkEnv`-generated Environment which is dummy
+logEnvRev : {vars : _} ->
+         {auto c : Ref Ctxt Defs} ->
+         (s : String) ->
+         {auto 0 _ : KnownTopic s} ->
+         Nat -> String -> Env Term vars -> Core ()
+logEnvRev str n msg env
+    = when !(logging str n) $
+        do depth <- getDepth
+           logString depth str n msg
+           dumpEnv env
+
+  where
+
+    dumpEnv : {vs : SnocList Name} -> Env Term vs -> Core ()
+    dumpEnv [<] = pure ()
+    dumpEnv {vs = _ :< x} (bs :< Let _ c val ty)
+        -- Reversed output
+        = do dumpEnv bs
+             logTermNF' str n (msg ++ ": let " ++ show x) bs val
+             logTermNF' str n (msg ++ ":" ++ show c ++ " " ++ show x) bs ty
+    dumpEnv {vs = _ :< x} (bs :< b)
+        -- Reversed output
+        = do dumpEnv bs
+             logTermNF' str n (msg ++ ":" ++ show (multiplicity b) ++ " " ++
+                           show (piInfo b) ++ " " ++
+                           show x) bs (binderType b)
+
 replace' : {auto c : Ref Ctxt Defs} ->
            {vars : _} ->
            Int -> Defs -> Env Term vars ->

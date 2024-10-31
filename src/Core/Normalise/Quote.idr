@@ -60,6 +60,12 @@ genName n
          put QVar (i + 1)
          pure (MN n i)
 
+logEnv : {vars : _} ->
+         {auto c : Ref Ctxt Defs} ->
+         (s : String) ->
+         {auto 0 _ : KnownTopic s} ->
+         Nat -> String -> Env Term vars -> Core ()
+
 mutual
   quoteArg : {auto c : Ref Ctxt Defs} ->
               {bound, free : _} ->
@@ -67,7 +73,10 @@ mutual
               Env Term free -> Closure free ->
               Core (Term (free ++ bound))
   quoteArg q opts defs bounds env a
-      = quoteGenNF q opts defs bounds env !(evalClosure defs a)
+      = do log "eval.ref" 50 $ "quoteArg a: " ++ (show a)
+           a <- evalClosure defs a
+           log "eval.ref" 50 $ "quoteArg evalClosure a: " ++ (show a)
+           quoteGenNF q opts defs bounds env a
 
   quoteArgWithFC : {auto c : Ref Ctxt Defs} ->
                    {bound, free : _} ->
@@ -113,10 +122,13 @@ mutual
       addLater (xs :< x) isv
           = let MkVar isv' = addLater xs isv in
                 MkVar (Later isv')
-  quoteHead q opts defs fc bounds env (NRef Bound (MN n i))
-      = pure $ case findName bounds of
-             Just (MkVar p) => Local fc Nothing _ (embedIsVar p)
-             Nothing => Ref fc Bound (MN n i)
+  quoteHead {bound} {free} q opts defs fc bounds env t@(NRef Bound (MN n i))
+      = do
+          log "eval.ref" 50 $ "quoteHead-2 bound: " ++ show (reverse $ toList bound) ++ ", free: " ++ show (reverse $ toList free) ++ ", t: " ++ show t ++ ", bounds: " ++ show bounds
+          case findName bounds of
+             Just (MkVar p) => do log "eval.ref" 50 $ "quoteHead-2 findName MkVar(p): " ++ show (MkVar p)
+                                  pure $ Local fc Nothing _ (embedIsVar p)
+             Nothing => pure $ Ref fc Bound (MN n i)
     where
       findName : Bounds bound' -> Maybe (Var bound')
       findName None = Nothing
@@ -183,12 +195,19 @@ mutual
                Env Term vars -> NF vars -> Core (Term (vars ++ bound))
   quoteGenNF q opts defs bound env (NBind fc n b sc)
       = do var <- genName "qv"
-           sc' <- quoteGenNF q opts defs (Add n var bound) env
-                       !(sc defs (toClosure defaultOpts env (Ref fc Bound var)))
+           logEnv "eval.ref" 50 "NBind env" env
+           log "eval.ref" 50 $ "NBind n: " ++ show !(toFullNames n)
+           sc' <- sc defs (toClosure defaultOpts env (Ref fc Bound var))
+           log "eval.ref" 50 $ "NBind scQ: " ++ show !(toFullNames sc')
+           sc'' <- quoteGenNF q opts defs (Add n var bound) env sc'
+           logTerm "eval.ref" 50 "NBind scQQ" sc''
            b' <- quoteBinder q opts defs bound env b
-           pure (Bind fc n b' sc')
+           pure (Bind fc n b' sc'')
   quoteGenNF q opts defs bound env (NApp fc f args)
-      = do f' <- quoteHead q opts defs fc bound env f
+      = do logC "eval.ref" 50 $ do f' <- toFullNames f
+                                   pure "NApp \{show f'} \{show $ toList args}"
+           f' <- quoteHead q opts defs fc bound env f
+           logTerm "eval.ref" 50 "fQ" f'
            opts' <- case sizeLimit opts of
                          Nothing => pure opts
                          Just Z => throw (InternalError "Size limit exceeded")
@@ -198,6 +217,7 @@ mutual
                                quoteArgsWithFC q opts' empty bound env args
                                else quoteArgsWithFC q ({ topLevel := False } opts')
                                                     defs bound env args
+           logC "eval.ref" 50 $ do pure "NApp args: \{show $ toList $ args'}"
            pure $ applySpineWithFC f' args'
     where
       isRef : NHead vars -> Bool
@@ -253,6 +273,36 @@ Quote Term where
 export
 Quote Closure where
   quoteGen q opts defs env c = quoteGen q opts defs env !(evalClosure defs c)
+
+logTermNF' : {vars : _} ->
+             {auto c : Ref Ctxt Defs} ->
+             (s : String) ->
+             {auto 0 _ : KnownTopic s} ->
+             Nat -> Lazy String -> Env Term vars -> Term vars -> Core ()
+logTermNF' str n msg env tm
+    = do tm' <- toFullNames tm
+         depth <- getDepth
+         logString depth str n (msg ++ ": " ++ show tm')
+
+logEnv str n msg env
+    = when !(logging str n) $
+        do depth <- getDepth
+           logString depth str n msg
+           dumpEnv env
+
+  where
+
+    dumpEnv : {vs : SnocList Name} -> Env Term vs -> Core ()
+    dumpEnv [<] = pure ()
+    dumpEnv {vs = _ :< x} (bs :< Let _ c val ty)
+        = do logTermNF' str n (msg ++ ": let " ++ show x) bs val
+             logTermNF' str n (msg ++ ":" ++ show c ++ " " ++ show x) bs ty
+             dumpEnv bs
+    dumpEnv {vs = _ :< x} (bs :< b)
+        = do logTermNF' str n (msg ++ ":" ++ show (multiplicity b) ++ " " ++
+                           show (piInfo b) ++ " " ++
+                           show x) bs (binderType b)
+             dumpEnv bs
 
 quoteWithPiGen : {auto _ : Ref Ctxt Defs} ->
                  {bound, vars : _} ->

@@ -99,10 +99,14 @@ parameters (defs : Defs) (topopts : EvalOpts)
            Env Term free -> LocalEnv free vars ->
            Term (free ++ vars) -> Stack free -> Core (NF free)
     eval env locs (Local fc mrig idx prf) stk
-        = logDepth $ evalLocal env fc mrig idx prf stk locs
+        = logDepth $
+            do log "eval.ref" 50 "eval Local \{show idx} \{show $ MkVar prf} to \{show stk}"
+               logDepth $ logLocalEnv "eval.ref" 50 "eval Local locs" locs
+               evalLocal env fc mrig idx prf stk locs
     eval env locs (Ref fc nt fn) stk
-        =
-            evalRef env False fc nt fn stk (NApp fc (NRef nt fn) (cast stk))
+        = do logC "eval.ref" 50 $ do fn' <- toFullNames fn
+                                     pure "Ref \{show nt} \{show fn'} to \{show stk}"
+             evalRef env False fc nt fn stk (NApp fc (NRef nt fn) (cast stk))
     eval {vars} {free} env locs (Meta fc name idx args) stk
         -- See [Note] Meta args
         -- Seemed as a performance issue
@@ -239,7 +243,8 @@ parameters (defs : Defs) (topopts : EvalOpts)
                     _ => pure $ NApp fc (NLocal mrig idx prf) (cast stk)
              else pure $ NApp fc (NLocal mrig idx prf) (cast stk)
     evalLocal env fc mrig Z First stk (locs :< x)
-        = evalLocClosure env fc mrig stk x
+        = do log "eval.ref" 50 $ "evalLocal-2: " ++ show x
+             evalLocClosure env fc mrig stk x
     evalLocal {vars = xs :< x} {free}
               env fc mrig (S idx) (Later p) stk (locs :< _)
         = evalLocal {vars = xs} env fc mrig idx p stk locs
@@ -311,9 +316,9 @@ parameters (defs : Defs) (topopts : EvalOpts)
                                         pure def -- name is past reduction limit
                    nf <- evalDef env opts' meta fc
                            (multiplicity res) (definition res) (flags res) stk def
-                   -- logC "eval.ref" 50 $ do n' <- toFullNames n
-                   --                         nf <- toFullNames nf
-                   --                         pure "Reduced \{show n'} to \{show nf}"
+                   logC "eval.ref" 50 $ do n' <- toFullNames n
+                                           nf <- toFullNames nf
+                                           pure "Reduced \{show n'} to \{show nf}"
                    pure nf
                 else pure def
 
@@ -515,11 +520,15 @@ parameters (defs : Defs) (topopts : EvalOpts)
                                        pure "Cannot reduce under-applied \{show def}"
                                      pure def
                        Just (locs', stk') =>
-                            do (Result (MkTermEnv newLoc res)) <- evalTree env locs' opts fc stk' (rewrite reverseInvolutive args in tree)
+                            do log "eval.def.stuck" 50 $ "pre-evalTree args: " ++ show (toList args) ++ ", stk: " ++ show stk' ++ ", tree: " ++ show tree
+                               logDepth $ logLocalEnv "eval.def.stuck" 50 "pre-evalTree locs" locs'
+                               (Result (MkTermEnv newLoc res)) <- evalTree env locs' opts fc stk' (rewrite reverseInvolutive args in tree)
                                     | _ => do logC "eval.def.stuck" 50 $ do
                                                 def <- toFullNames def
                                                 pure "evalTree failed on \{show def}"
                                               pure def
+                               logTerm "eval.def.stuck" 50 "post-evalTree res" res
+                               logDepth $ logLocalEnv "eval.def.stuck" 50 "post-evalTree locs" newLoc
                                case fuel opts of
                                     Nothing => evalWithOpts defs opts env newLoc res stk'
                                     Just Z => log "eval.def.stuck" 50 "Recursion depth limit exceeded"

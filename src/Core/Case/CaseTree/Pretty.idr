@@ -30,7 +30,7 @@ namespace Raw
   prettyTree Impossible = "Impossible"
 
   prettyAlt (ConCase n tag args sc)
-      = hsep (annotate (DCon (Just n)) (pretty0 n) ::  map pretty0 (toList args))
+      = hsep (annotate (DCon (Just n)) (pretty0 n) ::  map pretty0 args)
         <++> fatArrow
         <+> let sc = prettyTree sc in
             Union (spaces 1 <+> sc) (nest 2 (hardline <+> sc))

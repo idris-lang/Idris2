@@ -744,14 +744,15 @@ convertWithLazy withLazy fc elabinfo env x y
             (do let lazy = !isLazyActive && withLazy
                 logGlueNF "elab.unify" 5 ("Unifying " ++ show withLazy ++ " "
                              ++ show (elabMode elabinfo)) env x
-                logGlueNF "elab.unify" 5 "....with" env y
                 vs <- if isFromTerm x && isFromTerm y
-                         then do xtm <- getTerm x
+                         then do logGlueNF "elab.unify" 5 "....with lazy=\{show lazy} from Term" env y
+                                 xtm <- getTerm x
                                  ytm <- getTerm y
                                  if lazy
                                     then logDepth $ unifyWithLazy umode fc env xtm ytm
                                     else logDepth $ unify umode fc env xtm ytm
-                         else do xnf <- getNF x
+                         else do logGlueNF "elab.unify" 5 "....with lazy=\{show lazy} from NF" env y
+                                 xnf <- getNF x
                                  ynf <- getNF y
                                  if lazy
                                     then logDepth $ unifyWithLazy umode fc env xnf ynf
