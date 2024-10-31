@@ -878,7 +878,8 @@ mutual
            let args = if isLin margs' then cast margs else cast margs ++ margs'
            logC "unify.hole" 10
                    (do args' <- traverse (evalArg empty) args
-                       qargs <- traverse (quote empty env) args'
+                       -- [Note] Restore logging sequence
+                       qargs <- map reverse $ traverse (quote empty env) (reverse args')
                        qtm <- quote empty env tmnf
                        pure $ "Unifying: " ++ show !(toFullNames mname) ++ " " ++ show !(traverse toFullNames $ toList qargs) ++
                               " with " ++ show !(toFullNames qtm)) -- first attempt, try 'empty', only try 'defs' when on 'retry'?
@@ -999,7 +1000,7 @@ mutual
   -- for *all* possible values, we can safely unify the arguments.
   unifyBothApps mode@(MkUnifyInfo p InTerm) loc env xfc (NLocal xr x xp) xargs yfc (NLocal yr y yp) yargs
       = if x == y
-           then unifyArgs mode loc env (map snd xargs) (map snd yargs)
+           then unifyArgs mode loc env (reverse $ map snd xargs) (reverse $ map snd yargs)
            else postpone loc mode "Postponing local app"
                          env (NApp xfc (NLocal xr x xp) xargs)
                              (NApp yfc (NLocal yr y yp) yargs)
@@ -1013,8 +1014,8 @@ mutual
            if xi == yi && (invx || umode mode == InSearch)
                                -- Invertible, (from auto implicit search)
                                -- so we can also unify the arguments.
-              then unifyArgs mode loc env (map snd $ xargs' ++ xargs)
-                                          (map snd $ yargs' ++ yargs)
+              then unifyArgs mode loc env (reverse $ map snd $ xargs' ++ xargs)
+                                          (reverse $ map snd $ yargs' ++ yargs)
               else do xlocs <- localsIn xargs
                       ylocs <- localsIn yargs
                       -- Solve the one with the bigger context, and if they're
@@ -1052,7 +1053,7 @@ mutual
                                         (NApp yfc (NMeta yn yi yargs) yargs')
   unifyBothApps mode@(MkUnifyInfo p InSearch) loc env xfc fx@(NRef xt hdx) xargs yfc fy@(NRef yt hdy) yargs
       = if hdx == hdy
-           then unifyArgs mode loc env (map snd xargs) (map snd yargs)
+           then unifyArgs mode loc env (reverse $ map snd xargs) (reverse $ map snd yargs)
            else unifyApp False mode loc env xfc fx xargs (NApp yfc fy yargs)
   unifyBothApps mode@(MkUnifyInfo p InMatch) loc env xfc fx@(NRef xt hdx) xargs yfc fy@(NRef yt hdy) yargs
       = if hdx == hdy
@@ -1061,7 +1062,7 @@ mutual
                               xs <- traverse (quote defs env) (map snd xargs)
                               ys <- traverse (quote defs env) (map snd yargs)
                               pure ("Matching args " ++ show xs ++ " " ++ show ys))
-                   unifyArgs mode loc env (map snd xargs) (map snd yargs)
+                   unifyArgs mode loc env (reverse $ map snd xargs) (reverse $ map snd yargs)
            else unifyApp False mode loc env xfc fx xargs (NApp yfc fy yargs)
   unifyBothApps mode loc env xfc fx ax yfc fy ay
       = unifyApp False mode loc env xfc fx ax (NApp yfc fy ay)
@@ -1181,7 +1182,7 @@ mutual
                            log "unify" 20 "WITH:"
                            traverse_ (dumpArg env) ys
                      -}
-                     unifyArgs mode loc env (map snd xs) (map snd ys)
+                     unifyArgs mode loc env (reverse $ map snd xs) (reverse $ map snd ys)
              else convertError loc env
                        (NDCon xfc x tagx ax xs)
                        (NDCon yfc y tagy ay ys)
@@ -1191,14 +1192,14 @@ mutual
           y <- toFullNames y
           pure $ "Comparing type constructors " ++ show x ++ " and " ++ show y
         if x == y
-           then do let xs = map snd xs
-                   let ys = map snd ys
+           then do let xs = reverse $ map snd xs
+                   let ys = reverse $ map snd ys
 
                    logC "unify" 20 $
                      pure $ "Constructor " ++ show x
-                   logC "unify" 20 $ map (const "xs ↑") $ traverse_ (dumpArg env) $ reverse xs
-                   logC "unify" 20 $ map (const "ys ↑") $ traverse_ (dumpArg env) $ reverse ys
-                   unifyArgs mode loc env (reverse xs) (reverse ys)
+                   logC "unify" 20 $ map (const "xs ↑") $ traverse_ (dumpArg env) $ xs
+                   logC "unify" 20 $ map (const "ys ↑") $ traverse_ (dumpArg env) $ ys
+                   unifyArgs mode loc env xs ys
              -- TODO: Type constructors are not necessarily injective.
              -- If we don't know it's injective, need to postpone the
              -- constraint. But before then, we need some way to decide
@@ -1215,7 +1216,7 @@ mutual
       = unifyArgs mode loc env [<xty, x] [<yty, y]
   unifyNoEta mode loc env (NForce xfc _ x axs) (NForce yfc _ y ays)
       = do cs <- unify (lower mode) loc env x y
-           cs' <- unifyArgs mode loc env (map snd axs) (map snd ays)
+           cs' <- unifyArgs mode loc env (reverse $ map snd axs) (reverse $ map snd ays)
            pure (union cs cs')
   unifyNoEta mode loc env x@(NApp xfc fx@(NMeta _ _ _) axs)
                           y@(NApp yfc fy@(NMeta _ _ _) ays)
