@@ -91,6 +91,7 @@ getNameType elabMode rigc env fc x
                        $ "getNameType is adding " ++ show decor ++ ": " ++ show def.fullname
                      addSemanticDecorations [(nfc, decor, Just def.fullname)]
 
+                 logTerm "ide-mode.highlight" 8 "def" (embed {outer=vars} (type def))
                  pure (Ref fc nt (Resolved i), gnf env (embed (type def)))
   where
     rigSafe : RigCount -> RigCount -> Core ()
@@ -439,7 +440,9 @@ mutual
   checkRestApp rig argRig elabinfo nest env fc tm x aty sc
                (n, argpos) arg_in expargs autoargs namedargs knownret expty
      = do defs <- get Ctxt
+          log "elab" 10 ("arg_in: " ++ show arg_in)
           arg <- dotErased aty n argpos (elabMode elabinfo) argRig arg_in
+          log "elab" 10 ("arg: " ++ show arg)
           kr <- if knownret
                    then pure True
                    else do sc' <- sc defs (toClosure defaultOpts env (Erased fc Placeholder))
@@ -471,6 +474,7 @@ mutual
              nm <- genMVName x
              empty <- clearDefs defs
              metaty <- quote empty env aty
+             logTerm "elab" 10 "metaty: " metaty
              (idx, metaval) <- argVar (getFC arg) argRig env nm metaty
              let fntm = App fc tm metaval
              logTerm "elab" 10 "...as" metaval
@@ -478,6 +482,8 @@ mutual
              (tm, gty) <- checkAppWith rig elabinfo nest env fc
                                        fntm fnty (n, 1 + argpos) expargs autoargs namedargs kr expty
              defs <- get Ctxt
+             logEnv "elab" 10 "Metaty Env" env
+             logMetatyCtxt defs metaty
              aty' <- nf defs env metaty
              logNF "elab" 10 ("Now trying " ++ show nm ++ " " ++ show arg) env aty'
 
@@ -508,7 +514,8 @@ mutual
              -- *may* have as patterns in it and we need to retain them.
              -- (As patterns are a bit of a hack but I don't yet see a
              -- better way that leads to good code...)
-             logTerm "elab" 10 ("Solving " ++ show metaval ++ " with") argv
+             logTerm "elab" 10 ("Solving " ++ show !(toFullNames metaval) ++ " with") !(toFullNames argv)
+             logEnv "elab" 10 "In env" env
              ok <- solveIfUndefined env metaval argv
              -- If there's a constraint, make a constant, but otherwise
              -- just return the term as expected
@@ -535,6 +542,13 @@ mutual
                         )
              removeHole idx
              pure (tm, gty)
+        where
+          logMetatyCtxt : Defs -> Term vars -> Core ()
+          logMetatyCtxt defs (Meta _ _ idx _) = do
+            m_metagdef <- lookupCtxtExact (Resolved idx) (gamma defs)
+            log "elab" 10 $ "Meta definition from " ++ show idx ++ ": " ++ show (map definition m_metagdef)
+            pure ()
+          logMetatyCtxt _ _ = pure ()
 
       checkLtoR : Bool -> -- return type is known
                   RawImp -> -- argument currently being checked
@@ -825,6 +839,11 @@ checkApp rig elabinfo nest env fc (IVar fc' n) expargs autoargs namedargs exp
         prims <- getPrimitiveNames
         elabinfo <- updateElabInfo prims elabinfo.elabMode n expargs elabinfo
 
+        logTerm "elab" 10 "checkApp-IVar ntm" ntm
+        log "elab" 10 $ "checkApp-IVar nty_in NF: " ++ show !(toFullNames nty)
+        logTerm "elab" 10 "checkApp-IVar nty_in Term" !(getTerm nty_in)
+        logEnv "elab" 10 "checkApp-IVar Env" env
+        logNF "elab" 10 "checkApp-IVar nty_in NF" env nty
         addNameLoc fc' n
 
         logC "elab" 10

@@ -280,7 +280,9 @@ unifyArgs mode loc env (cxs :< cx) (cys :< cy)
     = do -- Do later arguments first, since they may depend on earlier
          -- arguments and use their solutions.
          cs <- unifyArgs mode loc env cxs cys
+         logC "unify" 20 $ pure $ "unifyArgs done: " ++ show cs
          res <- unify (lower mode) loc env cx cy
+         logC "unify" 20 $ pure $ "unify done: " ++ show res
          pure (union res cs)
 unifyArgs mode loc env _ _ = ufail loc ""
 
@@ -468,7 +470,7 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
          ty <- normalisePis defs [<] $ type mdef
                      -- make sure we have all the pi binders we need in the
                      -- type to make the metavariable definition
-         logTerm "unify.instantiate" 5 ("Type: " ++ show mname) (type mdef)
+         logTerm "unify.instantiate" 5 ("Type: " ++ show !(toFullNames mname)) (type mdef)
          logTerm "unify.instantiate" 5 ("Type: " ++ show mname) ty
          log "unify.instantiate" 5 ("With locs: " ++ show locs)
          log "unify.instantiate" 5 ("From vars: " ++ show newvars)
@@ -1143,14 +1145,15 @@ mutual
   dumpArg env (MkClosure opts loc lenv tm)
       = do defs <- get Ctxt
            empty <- clearDefs defs
-           logTerm "unify" 20 "Term: " tm
+           logTerm "unify" 20 "MkClosure Term: " tm
            nf <- evalClosure empty (MkClosure opts loc lenv tm)
-           logNF "unify" 20 "  " env nf
-  dumpArg env cl
+           logNF "unify" 20 "MkClosure NF: " env nf
+  dumpArg env cl@(MkNFClosure opts lenv nf)
       = do defs <- get Ctxt
            empty <- clearDefs defs
-           nf <- evalClosure empty cl
-           logNF "unify" 20 "  " env nf
+           logNF "unify" 20 "MkNFClosure NF: " lenv nf
+           nf' <- evalClosure empty cl
+           logNF "unify" 20 "MkNFClosure NF': " env nf'
 
   export
   unifyNoEta : {auto c : Ref Ctxt Defs} ->
