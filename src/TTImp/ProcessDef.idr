@@ -280,6 +280,8 @@ findLinear top bound rig tm
                     Just nty <- lookupTyExact n (gamma defs)
                          | Nothing => pure []
                     logTerm "declare.def.lhs" 5 ("Type of " ++ show !(toFullNames n)) nty
+                    log "declare.def.lhs" 5 ("Type NF of " ++ show !(toFullNames n) ++ ": " ++ show !(nfLHS defs [<] nty))
+                    log "declare.def.lhs" 5 ("Args: " ++ show !(traverse toFullNames args))
                     findLinArg (accessible nt rig) !(nfLHS defs [<] nty) args
            _ => pure []
     where
@@ -824,6 +826,7 @@ mkRunTime fc n
                [ show cov ++ ":"
                , "Runtime tree for " ++ show (fullname gdef) ++ ":"
                , show (indent 2 $ prettyTree tree_rt)
+               , show (toList rargs)
                ]
            log "compile.casetree" 10 $ show tree_rt
            log "compile.casetree.measure" 15 $ show (measure tree_rt)
@@ -1007,7 +1010,7 @@ processDef opts nest env fc n_in cs_in
 
          -- Dynamically rebind default totality requirement to this function's totality requirement
          -- and use this requirement when processing `with` blocks
-         log "declare.def" 5 $ "Traversing clauses of " ++ show n ++ " with mult " ++ show mult
+         log "declare.def" 5 $ "Traversing clauses of " ++ show n ++ " with mult " ++ show mult ++ " in " ++ show cs_in
          let treq = fromMaybe !getDefaultTotalityOption (findSetTotal (flags gdef))
          cs <- withTotality treq $
                traverse (checkClause mult (collapseDefault $ visibility gdef) treq

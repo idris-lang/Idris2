@@ -280,7 +280,9 @@ unifyArgs mode loc env (cxs :< cx) (cys :< cy)
     = do -- Do later arguments first, since they may depend on earlier
          -- arguments and use their solutions.
          cs <- unifyArgs mode loc env cxs cys
+         logC "unify" 20 $ pure $ "unifyArgs done: " ++ show cs
          res <- unify (lower mode) loc env cx cy
+         logC "unify" 20 $ pure $ "unify done: " ++ show res
          pure (union res cs)
 unifyArgs mode loc env _ _ = ufail loc ""
 
@@ -468,7 +470,7 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
          ty <- normalisePis defs [<] $ type mdef
                      -- make sure we have all the pi binders we need in the
                      -- type to make the metavariable definition
-         logTerm "unify.instantiate" 5 ("Type: " ++ show mname) (type mdef)
+         logTerm "unify.instantiate" 5 ("Type: " ++ show !(toFullNames mname)) (type mdef)
          logTerm "unify.instantiate" 5 ("Type: " ++ show mname) ty
          log "unify.instantiate" 5 ("With locs: " ++ show locs)
          log "unify.instantiate" 5 ("From vars: " ++ show newvars)
@@ -719,6 +721,7 @@ mutual
            nargTys <- maybe (pure Nothing)
                             (\ty => getArgTypes defs !(nf defs env (embed ty)) $ map snd args')
                             nty
+           log "unify.invertible" 10 "Unifying invertible vty: \{show vty}, vargTys: \{show vargTys}, nargTys: \{show nargTys}"
            -- If the rightmost arguments have the same type, or we don't
            -- know the types of the arguments, we'll get on with it.
            if !(headsConvert mode fc env vargTys nargTys)
@@ -877,9 +880,11 @@ mutual
                    (do args' <- traverse (evalArg empty) args
                        qargs <- traverse (quote empty env) args'
                        qtm <- quote empty env tmnf
-                       pure $ "Unifying: " ++ show mname ++ " " ++ show qargs ++
-                              " with " ++ show qtm) -- first attempt, try 'empty', only try 'defs' when on 'retry'?
-           case !(patternEnv env args) of
+                       pure $ "Unifying: " ++ show !(toFullNames mname) ++ " " ++ show !(traverse toFullNames $ toList qargs) ++
+                              " with " ++ show !(toFullNames qtm)) -- first attempt, try 'empty', only try 'defs' when on 'retry'?
+           patEnv <- patternEnv env args
+           log "unify.hole" 10 $ "unifyHole patEnv: \{show patEnv}"
+           case patEnv of
                 Nothing =>
                   do Just hdef <- lookupCtxtExact (Resolved mref) (gamma defs)
                         | _ => postponePatVar swap mode loc env mname mref margs margs' tmnf
@@ -1143,14 +1148,15 @@ mutual
   dumpArg env (MkClosure opts loc lenv tm)
       = do defs <- get Ctxt
            empty <- clearDefs defs
-           logTerm "unify" 20 "Term: " tm
+           logTerm "unify" 20 "MkClosure Term: " tm
            nf <- evalClosure empty (MkClosure opts loc lenv tm)
-           logNF "unify" 20 "  " env nf
-  dumpArg env cl
+           logNF "unify" 20 "MkClosure NF: " env nf
+  dumpArg env cl@(MkNFClosure opts lenv nf)
       = do defs <- get Ctxt
            empty <- clearDefs defs
-           nf <- evalClosure empty cl
-           logNF "unify" 20 "  " env nf
+           logNF "unify" 20 "MkNFClosure NF: " lenv nf
+           nf' <- evalClosure empty cl
+           logNF "unify" 20 "MkNFClosure NF': " env nf'
 
   export
   unifyNoEta : {auto c : Ref Ctxt Defs} ->
@@ -1190,8 +1196,8 @@ mutual
 
                    logC "unify" 20 $
                      pure $ "Constructor " ++ show x
-                   logC "unify" 20 $ map (const "xs:") $ traverse_ (dumpArg env) $ reverse xs
-                   logC "unify" 20 $ map (const "ys:") $ traverse_ (dumpArg env) $ reverse ys
+                   logC "unify" 20 $ map (const "xs ↑") $ traverse_ (dumpArg env) $ reverse xs
+                   logC "unify" 20 $ map (const "ys ↑") $ traverse_ (dumpArg env) $ reverse ys
                    unifyArgs mode loc env (reverse xs) (reverse ys)
              -- TODO: Type constructors are not necessarily injective.
              -- If we don't know it's injective, need to postpone the
