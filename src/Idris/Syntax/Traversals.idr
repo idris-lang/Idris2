@@ -256,7 +256,7 @@ mapPTermM f = goPTerm where
     goPClaim : PClaimData' nm -> Core (PClaimData' nm)
     goPClaim (MkPClaim c v opts tdecl) =
       MkPClaim c v <$> goPFnOpts opts
-                   <*> goPTypeDecl tdecl
+                   <*> traverseFC goPTypeDecl tdecl
 
     goPDecl : PDecl' nm -> Core (PDecl' nm)
     goPDecl (PClaim claim) =
@@ -302,8 +302,8 @@ mapPTermM f = goPTerm where
     goPDecl p@(PBuiltin _ _ _) = pure p
 
 
-    goPTypeDecl : PTypeDecl' nm -> Core (PTypeDecl' nm)
-    goPTypeDecl (MkPTy fc n d t) = MkPTy fc n d <$> goPTerm t
+    goPTypeDecl : PTypeDeclData' nm -> Core (PTypeDeclData' nm)
+    goPTypeDecl (MkPTy n d t) = MkPTy n d <$> goPTerm t
 
     goPDataDecl : PDataDecl' nm -> Core (PDataDecl' nm)
     goPDataDecl (MkPData fc n t opts tdecls) =
@@ -408,7 +408,7 @@ mapPTermM f = goPTerm where
 
     goPTypeDecls : List (PTypeDecl' nm) -> Core (List (PTypeDecl' nm))
     goPTypeDecls []        = pure []
-    goPTypeDecls (t :: ts) = (::) <$> goPTypeDecl t <*> goPTypeDecls ts
+    goPTypeDecls (t :: ts) = (::) <$> traverseFC goPTypeDecl t <*> goPTypeDecls ts
 
 export
 mapPTerm : (PTerm' nm -> PTerm' nm) -> PTerm' nm -> PTerm' nm
@@ -544,7 +544,7 @@ mapPTerm f = goPTerm where
     goPClause (MkImpossible fc lhs) = MkImpossible fc $ goPTerm lhs
 
     goPClaim : PClaimData' nm -> PClaimData' nm
-    goPClaim (MkPClaim c v opts tdecl) = MkPClaim c v (goPFnOpt <$> opts) (goPTypeDecl tdecl)
+    goPClaim (MkPClaim c v opts tdecl) = MkPClaim c v (goPFnOpt <$> opts) (mapFC goPTypeDecl tdecl)
 
     goPDecl : PDecl' nm -> PDecl' nm
     goPDecl (PClaim claim)
@@ -575,12 +575,12 @@ mapPTerm f = goPTerm where
     goPDecl p@(PBuiltin _ _ _) = p
 
 
-    goPTypeDecl : PTypeDecl' nm -> PTypeDecl' nm
-    goPTypeDecl (MkPTy fc n d t) = MkPTy fc n d $ goPTerm t
+    goPTypeDecl : PTypeDeclData' nm -> PTypeDeclData' nm
+    goPTypeDecl (MkPTy n d t) = MkPTy n d $ goPTerm t
 
     goPDataDecl : PDataDecl' nm -> PDataDecl' nm
     goPDataDecl (MkPData fc n t opts tdecls)
-      = MkPData fc n (map goPTerm t) opts (goPTypeDecl <$> tdecls)
+      = MkPData fc n (map goPTerm t) opts (mapFC goPTypeDecl <$> tdecls)
     goPDataDecl (MkPLater fc n t) = MkPLater fc n $ goPTerm t
 
     goPRecordDeclLet : PRecordDeclLet' nm -> PRecordDeclLet' nm

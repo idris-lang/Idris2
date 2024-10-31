@@ -285,22 +285,21 @@ mutual
   PTypeDecl = PTypeDecl' Name
 
   public export
-  record PTypeDecl' (nm : Type) where
+  record PTypeDeclData' (nm : Type) where
       constructor MkPTy
-      fc : FC
       -- List of names and their associated documentation
       -- If no documentation is provided the first projection is `""`
       names : List1 (String, WithFC Name)
       doc: String
-      type : PTerm' nm
+      type : PTerm' nm -- probably need `WithFC` here to fix #3408
+
+  public export
+  PTypeDecl' : Type -> Type
+  PTypeDecl' nm = WithFC (PTypeDeclData' nm)
 
   export
   (.nameList) : PTypeDecl' nm -> List Name
-  (.nameList) = forget . map (val . snd) . names
-
-  export
-  getPTypeDeclLoc : PTypeDecl' nm -> FC
-  getPTypeDeclLoc (MkPTy fc _ _ _) = fc
+  (.nameList) = forget . map (val . snd) . names . val
 
   public export
   PDataDecl : Type
@@ -1121,7 +1120,7 @@ getFixityInfo nm = do
 export
 covering
 Show PTypeDecl where
-  show pty = unwords [show pty.nameList, ":", show pty.type]
+  show pty = unwords [show pty.nameList, ":", show pty.val.type]
 
 export
 covering

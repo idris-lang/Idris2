@@ -25,6 +25,9 @@ import Idris.Parser.Let
 
 %default covering
 
+fcBounds : OriginDesc => Rule a -> Rule (WithFC a)
+fcBounds a = (.withFC) <$> bounds a
+
 decorate : OriginDesc -> Decoration -> Rule a -> Rule a
 decorate fname decor rule = do
   res <- bounds rule
@@ -1199,16 +1202,13 @@ tyDecls : Rule Name -> String -> OriginDesc -> IndentInfo -> Rule PTypeDecl
 tyDecls declName predoc fname indents
     = do bs <- bounds $ do
                   docns <- sepBy1 (decoratedSymbol fname ",")
-                                  [| (optDocumentation fname, bounds declName) |]
+                                  [| (optDocumentation fname, fcBounds declName) |]
                   b <- bounds $ decoratedSymbol fname ":"
                   mustWorkBecause b.bounds "Expected a type declaration" $ do
-                    ty  <- typeExpr pdef fname indents
-                    pure $ (docns, ty)
-
+                    ty <- the (Rule PTerm) (typeExpr pdef fname indents)
+                    pure $ MkPTy docns predoc ty
          atEnd indents
-         let MkFCVal loc (docNames, ty) = bs.withFC
-         let namesWithFC = map (mapSnd (.withFC)) docNames
-         pure $ MkPTy loc namesWithFC predoc ty
+         pure $ bs.withFC
 
 withFlags : OriginDesc -> EmptyRule (List WithFlag)
 withFlags fname
@@ -1307,26 +1307,28 @@ mkTyConType fname fc (x :: xs)
      PPi bfc top Explicit Nothing (PType (virtualiseFC fc))
      $ mkTyConType fname fc xs
 
-mkDataConType : FC -> PTerm -> List ArgType -> Maybe PTerm
-mkDataConType fc ret [] = Just ret
-mkDataConType fc ret (UnnamedExpArg x :: xs)
-    = PPi fc top Explicit Nothing x <$> mkDataConType fc ret xs
-mkDataConType fc ret (UnnamedAutoArg x :: xs)
-    = PPi fc top AutoImplicit Nothing x <$> mkDataConType fc ret xs
-mkDataConType _ _ _ -- with and named applications not allowed in simple ADTs
+mkDataConType : PTerm -> List (WithFC ArgType) -> Maybe PTerm
+mkDataConType ret [] = Just ret
+mkDataConType ret (MkFCVal fc (UnnamedExpArg x) :: xs)
+    = PPi fc top Explicit Nothing x <$> mkDataConType ret xs
+mkDataConType ret (MkFCVal fc (UnnamedAutoArg x) :: xs)
+    = PPi fc top AutoImplicit Nothing x <$> mkDataConType ret xs
+mkDataConType _ _ -- with and named applications not allowed in simple ADTs
     = Nothing
 
 simpleCon : OriginDesc -> PTerm -> IndentInfo -> Rule PTypeDecl
 simpleCon fname ret indents
     = do b <- bounds (do cdoc   <- optDocumentation fname
-                         cname  <- bounds $ decoratedDataConstructorName fname
-                         params <- many (argExpr plhs fname indents)
-                         pure (cdoc, cname.withFC, params))
+                         cname  <- fcBounds $ decoratedDataConstructorName fname
+                         params <- the (EmptyRule $ List $ WithFC $ List ArgType)
+                                     $ many (fcBounds $ argExpr plhs fname indents)
+                         let conType = the (Maybe PTerm) (mkDataConType ret
+                                                            (concat (map distribFC params)))
+                         fromMaybe (fatalError "Named arguments not allowed in ADT constructors")
+                                   (pure . MkPTy (singleton ("", cname)) cdoc <$> conType)
+                         )
          atEnd indents
-         (cdoc, cname, params) <- pure b.val
-         let cfc = boundToFC fname b
-         fromMaybe (fatalError "Named arguments not allowed in ADT constructors")
-                   (pure . MkPTy cfc (singleton ("", cname)) cdoc <$> mkDataConType cfc ret (concat params))
+         pure b.withFC
 
 simpleData : OriginDesc -> WithBounds t ->
              WithBounds Name -> IndentInfo -> Rule PDataDecl

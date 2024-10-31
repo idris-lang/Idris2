@@ -876,7 +876,7 @@ mutual
                 {auto m : Ref MD Metadata} ->
                 {auto o : Ref ROpts REPLOpts} ->
                 List Name -> PTypeDecl -> Core (List ImpTy)
-  desugarType ps (MkPTy fc names d ty)
+  desugarType ps (MkFCVal fc $ MkPTy names d ty)
       = flip Core.traverse (forget names) $ \(doc, n) : (String, WithFC Name) =>
           do addDocString n.val (d ++ doc)
              syn <- get Syn

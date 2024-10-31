@@ -93,6 +93,10 @@ NoFC = MkFCVal EmptyFC
 mapFC : (a -> b) -> WithFC a -> WithFC b
 mapFC f (MkFCVal fc val) = MkFCVal fc (f val)
 
+%inline export
+distribFC : WithFC (List a) -> List (WithFC a)
+distribFC x = map (MkFCVal x.fc) x.val
+
 ||| An interface to extract the location of some data
 public export
 interface HasFC ty where
