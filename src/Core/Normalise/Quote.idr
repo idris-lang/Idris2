@@ -104,7 +104,8 @@ mutual
                     Env Term free -> SnocList (FC, Closure free) ->
                     Core (SnocList (FC, Term (free ++ bound)))
   quoteArgsWithFC q opts defs bounds env
-      = traverse (quoteArgWithFC q opts defs bounds env)
+      -- [Note] Restore logging sequence
+      = map reverse . traverse (quoteArgWithFC q opts defs bounds env) . reverse
 
   quoteHead : {auto c : Ref Ctxt Defs} ->
               {bound, free : _} ->
@@ -124,7 +125,10 @@ mutual
                 MkVar (Later isv')
   quoteHead {bound} {free} q opts defs fc bounds env t@(NRef Bound (MN n i))
       = do
-          log "eval.ref" 50 $ "quoteHead-2 bound: " ++ show (reverse $ toList bound) ++ ", free: " ++ show (toList free) ++ ", t: " ++ show t ++ ", bounds: " ++ show bounds
+          -- TODO: Sometimes `free` has right order, sometimes back order.
+          -- Back order for calls `LOG totality.termination.sizechange:5: Calculating Size Change` and `LOG elab:10: checkApp-IVar nty_in N`
+          -- Equal order for calls `LOG compile.casetree:25: addConG nextNames`
+          log "eval.ref" 50 $ "quoteHead-2 bound: " ++ show (asList bound) ++ ", free: " ++ show (asList free) ++ ", t: " ++ show t ++ ", bounds: " ++ show bounds
           case findName bounds of
              Just (MkVar p) => do log "eval.ref" 50 $ "quoteHead-2 findName MkVar(p): " ++ show (MkVar p)
                                   pure $ Local fc Nothing _ (embedIsVar p)
