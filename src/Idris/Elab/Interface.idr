@@ -31,7 +31,6 @@ import Libraries.Data.WithDefault
 
 record Signature where
   constructor MkSignature
-  location : FC
   count    : RigCount
   flags    : List FnOpt
   name     : WithFC Name
@@ -52,16 +51,14 @@ namePis i ty = ty
 
 getSig : ImpDecl -> Maybe Signature
 getSig (IClaim (MkFCVal _ $ MkIClaimData c _ opts (MkImpTy fc n ty)))
-    = Just $ MkSignature { location = fc
-                         , count    = c
+    = Just $ MkSignature { count    = c
                          , flags    = opts
                          , name     = n
                          , isData   = False
                          , type     = namePis 0 ty
                          }
 getSig (IData _ _ _ (MkImpLater fc n ty))
-    = Just $ MkSignature { location = fc
-                         , count    = erased
+    = Just $ MkSignature { count    = erased
                          , flags    = [Invertible]
                          , name     = NoFC n
                          , isData   = True
@@ -198,7 +195,7 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params sig
          -- eta expand the RHS so that we put implicits in the right place
          let fnclause = PatClause vfc
                                   (INamedApp vfc
-                                             (IVar sig.location cn.val) -- See #3409
+                                             (IVar cn.fc cn.val) -- See #3409
                                              (UN $ Basic "__con")
                                              conapp
                                              )
@@ -209,7 +206,7 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params sig
          pure [tydecl, fndef]
   where
     vfc : FC
-    vfc = virtualiseFC sig.location
+    vfc = virtualiseFC sig.name.fc
 
     -- Bind the type parameters given explicitly - there might be information
     -- in there that we can't infer after all
