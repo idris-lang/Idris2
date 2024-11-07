@@ -194,7 +194,20 @@ data EnvTracker : Type where
 data FunctionDefinitions : Type where
 data IndentLevel : Type where
 data HeaderFiles : Type where
-data ConstDef : Type where
+data ConstDef
+  = CDI64 String
+  | CDB64 String
+  | CDDb  String
+  | CDStr String
+
+constantName : ConstDef -> String
+constantName = \case
+  CDI64 x => go "Int64" x
+  CDB64 x => go "Bits64" x
+  CDDb x  => go "Double" x
+  CDStr x => go "String" x
+  where go : String -> String -> String
+        go x y = "idris2_constant_\{x}_\{y}"
 
 ReuseMap = SortedMap Name String
 Owned = SortedSet AVar
@@ -441,7 +454,7 @@ mutual
                  -> {auto e : Ref EnvTracker Env}
                  -> {auto oft : Ref OutfileText Output}
                  -> {auto il : Ref IndentLevel Nat}
-                 -> {auto _ : Ref ConstDef (SortedMap Constant String)}
+                 -> {auto _ : Ref ConstDef (SortedMap Constant ConstDef)}
                  -> Env
                  -> String -> String -> List Int -> ANF -> TailPositionStatus
                  -> Core ()
@@ -464,7 +477,7 @@ mutual
                       -> {auto oft : Ref OutfileText Output}
                       -> {auto il : Ref IndentLevel Nat}
                       -> {auto e : Ref EnvTracker Env}
-                      -> {auto _ : Ref ConstDef (SortedMap Constant String)}
+                      -> {auto _ : Ref ConstDef (SortedMap Constant ConstDef)}
                       -> ANF
                       -> TailPositionStatus
                       -> Core String
@@ -625,26 +638,14 @@ mutual
     cStatementsFromANF (APrimVal fc c) _ = do
       constdefs <- get ConstDef
       case lookup c constdefs of
-           Just constid => constantName c constid -- the constant already booked.
+           Just cdef => pure "((Value*)&\{constantName cdef})" -- the constant already booked.
            Nothing => dyngen
      where
-        constantName : Constant -> String -> Core String
-        constantName c n = case c of
-           I x   => pure "((Value*)&idris2_constant_Int64_\{cCleanString $ show x})"
-           I64 x => pure "((Value*)&idris2_constant_Int64_\{cCleanString $ show x})"
-           B64 x => pure "((Value*)&idris2_constant_Bits64_\{show x})"
-           Db x  => pure "((Value*)&idris2_constant_Double_\{cCleanString $ show x})"
-           Str x => pure "((Value*)&idris2_constant_String_\{n})"
-           _ => throw $ InternalError "[refc] Unsupported type of constant."
-        orStagen : Core String
-        orStagen = do
+        orStagen : ConstDef -> Core String
+        orStagen cdef = do -- booking the constant to generate later
             constdefs <- get ConstDef
-            constid <- case c of
-                 Str _ => getNextCounter
-                 _ => pure ""
-            -- booking the constant to generate later
-            put ConstDef $ insert c constid constdefs
-            constantName c constid
+            put ConstDef $ insert c cdef constdefs
+            pure "((Value*)&\{constantName cdef})" -- the constant already booked.
         dyngen : Core String
         dyngen = case c of
             I8 x  => pure "idris2_mkInt8(INT8_C(\{show x}))"
@@ -652,7 +653,7 @@ mutual
             I32 x => pure "idris2_mkInt32(INT32_C(\{show x}))"
             I64 x => if x >= 0 && x < 100
                 then pure "(Value*)(&idris2_predefined_Int64[\{show x}])"
-                else orStagen
+                else orStagen $ CDI64 $ cCleanString $ show x
             BI x => if x >= 0 && x < 100
                 then pure "idris2_getPredefinedInteger(\{show x})"
                 else pure "idris2_mkIntegerLiteral(\"\{show x}\")"
@@ -661,10 +662,10 @@ mutual
             B32 x => pure "idris2_mkBits32(UINT32_C(\{show x}))"
             B64 x => if x >= 0 && x < 100
                then pure "(Value*)(&idris2_predefined_Bits64[\{show x}])"
-               else orStagen
-            Db _ => orStagen
+               else orStagen $ CDB64 $ show x
+            Db x => orStagen $ CDDb $ cCleanString $ show x
             Ch x  => pure "idris2_mkChar(\{escapeChar x})"
-            Str _ => orStagen
+            Str _ => orStagen $ CDStr !(getNextCounter)
             PrT t => pure $ cPrimType t
             _ => pure "NULL"
 
@@ -792,7 +793,7 @@ additionalFFIStub name argTypes retType =
 
 createCFunctions : {auto c : Ref Ctxt Defs}
                 -> {auto a : Ref ArgCounter Nat}
-                -> {auto _ : Ref ConstDef (SortedMap Constant String)}
+                -> {auto _ : Ref ConstDef (SortedMap Constant ConstDef)}
                 -> {auto f : Ref FunctionDefinitions (List String)}
                 -> {auto oft : Ref OutfileText Output}
                 -> {auto il : Ref IndentLevel Nat}
@@ -901,7 +902,7 @@ header : {auto c : Ref Ctxt Defs}
       -> {auto o : Ref OutfileText Output}
       -> {auto il : Ref IndentLevel Nat}
       -> {auto h : Ref HeaderFiles (SortedSet String)}
-      -> {auto _ : Ref ConstDef (SortedMap Constant String)}
+      -> {auto _ : Ref ConstDef (SortedMap Constant ConstDef)}
       -> Core ()
 header = do
     let initLines = """
@@ -919,17 +920,17 @@ header = do
         ["\n// constant value definitions"] ++
         map (uncurry genConstant) (SortedMap.toList !(get ConstDef))
   where
-    go : String -> String -> String -> String -> String
-    go suffix ty tag v =
-      "static Value_\{ty} const idris2_constant_\{ty}_\{cCleanString suffix}"
+    go : ConstDef -> String -> String -> String -> String
+    go cdef ty tag v =
+      "static Value_\{ty} const \{constantName cdef}"
         ++ " = { IDRIS2_STOCKVAL(\{tag}_TAG), \{v} };"
-    genConstant : Constant -> String -> String
-    genConstant c n = case c of
-      I x   => let x' = show x in go x' "Int64" "INT64" (showIntMin x)
-      I64 x => let x' = show x in go x' "Int64" "INT64" (showInt64Min x)
-      B64 x => let x' = show x in go x' "Bits64" "BITS64" "UINT64_C(\{x'})"
-      Db x  => let x' = show x in go x' "Double" "DOUBLE" x'
-      Str x => go n "String" "STRING" (cStringQuoted x)
+    genConstant : Constant -> ConstDef -> String
+    genConstant c cdef = case c of
+      I x   => go cdef "Int64" "INT64" (showIntMin x)
+      I64 x => go cdef "Int64" "INT64" (showInt64Min x)
+      B64 x => go cdef "Bits64" "BITS64" "UINT64_C(\{show x})"
+      Db x  => go cdef "Double" "DOUBLE" (show x)
+      Str x => go cdef "String" "STRING" (cStringQuoted x)
       _ => "/* bad constant */"
 
 
