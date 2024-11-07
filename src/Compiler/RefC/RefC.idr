@@ -648,6 +648,9 @@ mutual
             pure "((Value*)&\{constantName cdef})" -- the constant already booked.
         dyngen : Core String
         dyngen = case c of
+            I x => if x >= 0 && x < 100
+                then pure "(Value*)(&idris2_predefined_Int64[\{show x}])"
+                else orStagen $ CDI64 $ cCleanString $ show x
             I8 x  => pure "idris2_mkInt8(INT8_C(\{show x}))"
             I16 x => pure "idris2_mkInt16(INT16_C(\{show x}))"
             I32 x => pure "idris2_mkInt32(INT32_C(\{show x}))"
@@ -667,7 +670,7 @@ mutual
             Ch x  => pure "idris2_mkChar(\{escapeChar x})"
             Str _ => orStagen $ CDStr !(getNextCounter)
             PrT t => pure $ cPrimType t
-            _ => pure "NULL"
+            WorldVal => pure "(NULL /* World */)"
 
     cStatementsFromANF (AErased fc) _ = pure "NULL"
     cStatementsFromANF (ACrash fc x) _ = pure "(NULL /* CRASH */)"
