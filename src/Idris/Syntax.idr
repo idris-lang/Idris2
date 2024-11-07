@@ -285,13 +285,21 @@ mutual
   PTypeDecl = PTypeDecl' Name
 
   public export
-  data PTypeDecl' : Type -> Type where
-       MkPTy : FC -> (nameFC : FC) -> (n : Name) ->
-               (doc: String) -> (type : PTerm' nm) -> PTypeDecl' nm
+  record PTypeDeclData' (nm : Type) where
+      constructor MkPTy
+      -- List of names and their associated documentation
+      -- If no documentation is provided the first projection is `""`
+      names : List1 (String, WithFC Name)
+      doc: String
+      type : PTerm' nm -- probably need `WithFC` here to fix #3408
+
+  public export
+  PTypeDecl' : Type -> Type
+  PTypeDecl' nm = WithFC (PTypeDeclData' nm)
 
   export
-  getPTypeDeclLoc : PTypeDecl' nm -> FC
-  getPTypeDeclLoc (MkPTy fc _ _ _ _) = fc
+  (.nameList) : PTypeDecl' nm -> List Name
+  (.nameList) = forget . map (val . snd) . names . val
 
   public export
   PDataDecl : Type
@@ -313,7 +321,7 @@ mutual
                    (params : List (Name, RigCount, PiInfo (PTerm' nm), PTerm' nm)) ->
                    (opts : List DataOpt) ->
                    (conName : Maybe (String, Name)) ->
-                   (fields : List (PField' nm)) ->
+                   (decls : List (PField' nm)) ->
                    PRecordDecl' nm
        MkPRecordLater : (tyname : Name) ->
                         (params : List (Name, RigCount, PiInfo (PTerm' nm), PTerm' nm)) ->
@@ -384,14 +392,32 @@ mutual
        -- There is no nm on Directive
        ForeignImpl : Name -> List PTerm -> Directive
 
+
+  public export
+  record RecordField' (nm : Type) where
+    constructor MkRecordField
+    doc : String
+    rig : RigCount
+    piInfo : PiInfo (PTerm' nm)
+    names : List Name -- See #3409
+    type : PTerm' nm
+
   public export
   PField : Type
   PField = PField' Name
 
   public export
-  data PField' : Type -> Type where
-       MkField : FC -> (doc : String) -> RigCount -> PiInfo (PTerm' nm) ->
-                 Name -> (ty : PTerm' nm) -> PField' nm
+  PField' : Type -> Type
+  PField' nm = WithFC (RecordField' nm)
+
+  public export
+  0 PRecordDeclLet : Type
+  PRecordDeclLet = PRecordDeclLet' Name
+
+  public export
+  data PRecordDeclLet' : Type -> Type where
+    RecordClaim : WithFC (PClaimData' nm) -> PRecordDeclLet' nm
+    RecordClause : WithFC (PClause' nm) -> PRecordDeclLet' nm
 
   -- For noting the pass we're in when desugaring a mutual block
   -- TODO: Decide whether we want mutual blocks!
@@ -424,13 +450,34 @@ mutual
        PForeignExport : List (PTerm' nm) -> PFnOpt' nm
 
   public export
+  PClaimData : Type
+  PClaimData = PClaimData' Name
+
+  public export
+  record PClaimData' (nm : Type) where
+    constructor MkPClaim
+    qty : RigCount
+    vis : Visibility
+    opts : List (PFnOpt' nm)
+    type : PTypeDecl' nm
+
+  public export
+  record PFixityData where
+    constructor MkPFixityData
+    exportModifier : WithDefault Visibility Export
+    binding : BindingModifier
+    fixity : Fixity
+    precedence : Nat
+    operators : List1 OpStr
+
+  public export
   PDecl : Type
   PDecl = PDecl' Name
 
   public export
   data PDecl' : Type -> Type where
-       PClaim : FC -> RigCount -> Visibility -> List (PFnOpt' nm) -> PTypeDecl' nm -> PDecl' nm
-       PDef : FC -> List (PClause' nm) -> PDecl' nm
+       PClaim : WithFC (PClaimData' nm) -> PDecl' nm
+       PDef : WithFC (List (PClause' nm)) -> PDecl' nm
        PData : FC -> (doc : String) -> WithDefault Visibility Private ->
                Maybe TotalReq -> PDataDecl' nm -> PDecl' nm
        PParameters : FC ->
@@ -471,32 +518,36 @@ mutual
        ||| substring of the error message raised when checking the block.
        PFail : FC -> Maybe String -> List (PDecl' nm) -> PDecl' nm
 
-       PMutual : FC -> List (PDecl' nm) -> PDecl' nm
-       PFixity : FC -> WithDefault Visibility Export -> BindingModifier -> Fixity -> Nat -> OpStr -> PDecl' nm
+       PMutual : WithFC (List (PDecl' nm)) -> PDecl' nm
+       PFixity : WithFC PFixityData -> PDecl' nm
        PNamespace : FC -> Namespace -> List (PDecl' nm) -> PDecl' nm
        PTransform : FC -> String -> PTerm' nm -> PTerm' nm -> PDecl' nm
        PRunElabDecl : FC -> PTerm' nm -> PDecl' nm
-       PDirective : FC -> Directive -> PDecl' nm
+       PDirective : WithFC Directive -> PDecl' nm
        PBuiltin : FC -> BuiltinType -> Name -> PDecl' nm
 
   export
   getPDeclLoc : PDecl' nm -> FC
-  getPDeclLoc (PClaim fc _ _ _ _) = fc
-  getPDeclLoc (PDef fc _) = fc
+  getPDeclLoc (PClaim c) = c.fc
+  getPDeclLoc (PDef c) = c.fc
   getPDeclLoc (PData fc _ _ _ _) = fc
   getPDeclLoc (PParameters fc _ _) = fc
   getPDeclLoc (PUsing fc _ _) = fc
   getPDeclLoc (PInterface fc _ _ _ _ _ _ _ _) = fc
   getPDeclLoc (PImplementation fc _ _ _ _ _ _ _ _ _ _) = fc
   getPDeclLoc (PRecord fc _ _ _ _) = fc
-  getPDeclLoc (PMutual fc _) = fc
+  getPDeclLoc (PMutual x) = x.fc
   getPDeclLoc (PFail fc _ _) = fc
-  getPDeclLoc (PFixity fc _ _ _ _ _) = fc
+  getPDeclLoc (PFixity pf) = pf.fc
   getPDeclLoc (PNamespace fc _ _) = fc
   getPDeclLoc (PTransform fc _ _ _) = fc
   getPDeclLoc (PRunElabDecl fc _) = fc
-  getPDeclLoc (PDirective fc _) = fc
+  getPDeclLoc (PDirective d) = d.fc
   getPDeclLoc (PBuiltin fc _ _) = fc
+
+export
+HasFC (PDecl' nm) where
+  (.getFC) = getPDeclLoc
 
 export
 isStrInterp : PStr -> Maybe FC
@@ -509,22 +560,19 @@ isStrLiteral (StrInterp _ _) = Nothing
 isStrLiteral (StrLiteral fc str) = Just (fc, str)
 
 export
-isPDef : PDecl -> Maybe (FC, List PClause)
-isPDef (PDef annot cs) = Just (annot, cs)
+isPDef : PDecl -> Maybe (WithFC (List PClause))
+isPDef (PDef cs) = Just cs
 isPDef _ = Nothing
 
 
 definedInData : PDataDecl -> List Name
-definedInData (MkPData _ n _ _ cons) = n :: map getName cons
-  where
-    getName : PTypeDecl -> Name
-    getName (MkPTy _ _ n _ _) = n
+definedInData (MkPData _ n _ _ cons) = n :: concatMap (.nameList) cons
 definedInData (MkPLater _ n _) = [n]
 
 export
 definedIn : List PDecl -> List Name
 definedIn [] = []
-definedIn (PClaim _ _ _ _ (MkPTy _ _ n _ _) :: ds) = n :: definedIn ds
+definedIn (PClaim claim :: ds) = claim.val.type.nameList ++ definedIn ds
 definedIn (PData _ _ _ _ d :: ds) = definedInData d ++ definedIn ds
 definedIn (PParameters _ _ pds :: ds) = definedIn pds ++ definedIn ds
 definedIn (PUsing _ _ pds :: ds) = definedIn pds ++ definedIn ds
@@ -1072,7 +1120,7 @@ getFixityInfo nm = do
 export
 covering
 Show PTypeDecl where
-  show (MkPTy _ _ nm doc ty) = unwords [show nm, ":", show ty]
+  show pty = unwords [show pty.nameList, ":", show pty.val.type]
 
 export
 covering
@@ -1082,12 +1130,17 @@ Show PClause where
   show (MkWithClause _ _ _ _ _) = "MkWithClause"
   show (MkImpossible _ lhs) = unwords [ show lhs, "impossible" ]
 
+export
+covering
+Show PClaimData where
+  show (MkPClaim rig _ _ sig) = showCount rig ++ show sig
+
 -- TODO: finish writing this instance
 export
 covering
 Show PDecl where
-  show (PClaim _ rig vis opts sig) = showCount rig ++ show sig
-  show (PDef _ cls) = unlines (show <$> cls)
+  show (PClaim pclaim) = show pclaim.val
+  show (PDef cls) = unlines (show <$> cls.val)
   show (PData{}) = "PData"
   show (PParameters{}) = "PParameters"
   show (PUsing{}) = "PUsing"

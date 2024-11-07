@@ -596,7 +596,7 @@ successful allowCons ((tm, elab) :: elabs)
     abandon : Error -> Bool
     abandon (UndefinedName _ _) = True
     abandon (InType _ _ err) = abandon err
-    abandon (InCon _ _ err) = abandon err
+    abandon (InCon _ err) = abandon err
     abandon (InLHS _ _ err) = abandon err
     abandon (InRHS _ _ err) = abandon err
     abandon (AllFailed errs) = any (abandon . snd) errs

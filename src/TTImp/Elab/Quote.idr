@@ -109,7 +109,7 @@ mutual
                  {auto u : Ref UST UState} ->
                  ImpTy ->
                  Core ImpTy
-  getUnquoteTy (MkImpTy fc nameFC n t) = pure $ MkImpTy fc nameFC n !(getUnquote t)
+  getUnquoteTy (MkImpTy fc n t) = pure $ MkImpTy fc n !(getUnquote t)
 
   getUnquoteField : {auto c : Ref Ctxt Defs} ->
                     {auto q : Ref Unq (List (Name, FC, RawImp))} ->
@@ -148,8 +148,8 @@ mutual
                    {auto u : Ref UST UState} ->
                    ImpDecl ->
                    Core ImpDecl
-  getUnquoteDecl (IClaim fc c v opts ty)
-      = pure $ IClaim fc c v opts !(getUnquoteTy ty)
+  getUnquoteDecl (IClaim (MkFCVal fc (MkIClaimData c v opts ty)))
+      = pure $ IClaim (MkFCVal fc (MkIClaimData c v opts !(getUnquoteTy ty)))
   getUnquoteDecl (IData fc v mbt d)
       = pure $ IData fc v mbt !(getUnquoteData d)
   getUnquoteDecl (IDef fc v d)

@@ -15,6 +15,7 @@ record Bounds where
   ||| 0-based first column after bound
   endCol : Int
 
+export
 Show Bounds where
   showPrec d (MkBounds sl sc el ec) =
     showCon d "MkBounds" (concat [showArg sl, showArg sc, showArg el, showArg ec])
@@ -26,6 +27,13 @@ startBounds b = (b.startLine, b.startCol)
 export
 endBounds : Bounds -> (Int, Int)
 endBounds b = (b.endLine, b.endCol)
+
+export
+union : Bounds -> Bounds -> Bounds
+union b1 b2 =
+  let (ur, uc) = min (startBounds b1) (startBounds b2)
+      (lr, lc) = max (endBounds b1) (endBounds b2)
+   in MkBounds ur uc lr lc
 
 export
 Eq Bounds where
@@ -86,9 +94,7 @@ mergeBounds (MkBounded _ True _) (MkBounded val True _) = irrelevantBounds val
 mergeBounds (MkBounded _ True _) b2 = b2
 mergeBounds b1 (MkBounded val True _) = const val <$> b1
 mergeBounds b1 b2 =
-  let (ur, uc) = min (start b1) (start b2)
-      (lr, lc) = max (end b1) (end b2) in
-      MkBounded b2.val False (MkBounds ur uc lr lc)
+      MkBounded b2.val False (union (bounds b1) (bounds b2))
 
 export
 joinBounds : WithBounds (WithBounds ty) -> WithBounds ty

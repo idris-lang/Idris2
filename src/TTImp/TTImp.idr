@@ -299,15 +299,18 @@ mutual
   ImpTy = ImpTy' Name
 
   public export
-  data ImpTy' : Type -> Type where
-       MkImpTy : FC -> (nameFC : FC) -> (n : Name) -> (ty : RawImp' nm) -> ImpTy' nm
+  record ImpTy' (nm : Type) where
+      constructor MkImpTy
+      loc : FC
+      name : WithFC Name
+      type : RawImp' nm
 
   %name ImpTy' ty
 
   export
   covering
   Show nm => Show (ImpTy' nm) where
-    show (MkImpTy fc _ n ty) = "(%claim " ++ show n ++ " " ++ show ty ++ ")"
+    show (MkImpTy fc n ty) = "(%claim " ++ show n.val ++ " " ++ show ty ++ ")"
 
   public export
   data DataOpt : Type where
@@ -359,7 +362,8 @@ mutual
 
   public export
   data IField' : Type -> Type where
-       MkIField : FC -> RigCount -> PiInfo (RawImp' nm) -> Name -> RawImp' nm ->
+       MkIField : FC -> RigCount -> PiInfo (RawImp' nm) ->
+                  (name : Name) -> (ty : RawImp' nm) ->
                   IField' nm
 
   %name IField' fld
@@ -448,9 +452,16 @@ mutual
   ImpDecl = ImpDecl' Name
 
   public export
+  record IClaimData (nm : Type) where
+    constructor MkIClaimData
+    rig : RigCount
+    vis : Visibility
+    opts : List (FnOpt' nm)
+    type : ImpTy' nm
+
+  public export
   data ImpDecl' : Type -> Type where
-       IClaim : FC -> RigCount -> Visibility -> List (FnOpt' nm) ->
-                ImpTy' nm -> ImpDecl' nm
+       IClaim : WithFC (IClaimData nm) -> ImpDecl' nm
        IData : FC -> WithDefault Visibility Private ->
                Maybe TotalReq -> ImpData' nm -> ImpDecl' nm
        IDef : FC -> Name -> List (ImpClause' nm) -> ImpDecl' nm
@@ -480,7 +491,8 @@ mutual
   export
   covering
   Show nm => Show (ImpDecl' nm) where
-    show (IClaim _ c _ opts ty) = show opts ++ " " ++ show c ++ " " ++ show ty
+    show (IClaim (MkFCVal _ $ MkIClaimData c _ opts ty))
+        = show opts ++ " " ++ show c ++ " " ++ show ty
     show (IData _ _ _ d) = show d
     show (IDef _ n cs) = "(%def " ++ show n ++ " " ++ show cs ++ ")"
     show (IParameters _ ps ds)
@@ -788,7 +800,7 @@ definedInBlock ns decls =
     SortedSet.toList $ foldl (defName ns) empty decls
   where
     getName : ImpTy -> Name
-    getName (MkImpTy _ _ n _) = n
+    getName (MkImpTy _ n _) = n.val
 
     getFieldName : IField -> Name
     getFieldName (MkIField _ _ _ n _) = n
@@ -802,7 +814,7 @@ definedInBlock ns decls =
            _ => n
 
     defName : Namespace -> SortedSet Name -> ImpDecl -> SortedSet Name
-    defName ns acc (IClaim _ _ _ _ ty) = insert (expandNS ns (getName ty)) acc
+    defName ns acc (IClaim c) = insert (expandNS ns (getName c.val.type)) acc
     defName ns acc (IDef _ nm _) = insert (expandNS ns nm) acc
     defName ns acc (IData _ _ _ (MkImpData _ n _ _ cons))
         = foldl (flip insert) acc $ expandNS ns n :: map (expandNS ns . getName) cons
@@ -890,7 +902,7 @@ namespace ImpDecl
 
   public export
   getFC : ImpDecl' nm -> FC
-  getFC (IClaim fc _ _ _ _) = fc
+  getFC (IClaim c) = c.fc
   getFC (IData fc _ _ _) = fc
   getFC (IDef fc _ _) = fc
   getFC (IParameters fc _ _) = fc

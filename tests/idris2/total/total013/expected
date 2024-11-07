@@ -7,10 +7,10 @@ Issue1404:3:1--4:30
 
 Error: MkFoo is not total, not strictly positive
 
-Issue1404:4:3--4:8
+Issue1404:4:3--4:30
  1 | 
  2 | total
  3 | data Foo : Type where
  4 |   MkFoo : (Foo -> Foo) -> Foo
-       ^^^^^
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

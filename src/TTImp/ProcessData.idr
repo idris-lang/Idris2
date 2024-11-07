@@ -92,8 +92,8 @@ checkCon : {vars : _} ->
            List ElabOpt -> NestedNames vars ->
            Env Term vars -> Visibility -> (orig : Name) -> (resolved : Name) ->
            ImpTy -> Core Constructor
-checkCon {vars} opts nest env vis tn_in tn (MkImpTy fc _ cn_in ty_raw)
-    = do cn <- inCurrentNS cn_in
+checkCon {vars} opts nest env vis tn_in tn (MkImpTy fc cn_in ty_raw)
+    = do cn <- inCurrentNS cn_in.val
          let ty_raw = updateNS tn_in tn ty_raw
          log "declare.data.constructor" 5 $ "Checking constructor type " ++ show cn ++ " : " ++ show ty_raw
          log "declare.data.constructor" 10 $ "Updated " ++ show (tn_in, tn)
@@ -104,7 +104,7 @@ checkCon {vars} opts nest env vis tn_in tn (MkImpTy fc _ cn_in ty_raw)
              | Just gdef => throw (AlreadyDefined fc cn)
          u <- uniVar fc
          ty <-
-             wrapErrorC opts (InCon fc cn) $
+             wrapErrorC opts (InCon cn_in) $
                    checkTerm !(resolveName cn) InType opts nest env
                               (IBindHere fc (PI erased) ty_raw)
                               (gType fc u)
@@ -414,7 +414,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpLater dfc n_in ty_raw)
 
          u <- uniVar fc
          (ty, _) <-
-             wrapErrorC eopts (InCon fc n) $
+             wrapErrorC eopts (InCon $ MkFCVal dfc n) $
                     elabTerm !(resolveName n) InType eopts nest env
                               (IBindHere fc (PI erased) ty_raw)
                               (Just (gType dfc u))
@@ -452,7 +452,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
 
            u <- uniVar fc
            (ty, _) <-
-               wrapErrorC eopts (InCon fc n) $
+               wrapErrorC eopts (InCon $ MkFCVal fc n) $
                       elabTerm !(resolveName n) InType eopts nest env
                                 (IBindHere fc (PI erased) ty_raw)
                                 (Just (gType dfc u))

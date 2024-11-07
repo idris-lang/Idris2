@@ -181,7 +181,8 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
                           else []
          let impTy = doBind paramBinds initTy
 
-         let impTyDecl = IClaim vfc top vis opts (MkImpTy EmptyFC EmptyFC impName impTy)
+         let impTyDecl
+             = IClaim (MkFCVal vfc $ MkIClaimData top vis opts (MkImpTy EmptyFC (NoFC impName) impTy))
 
          log "elab.implementation" 5 $ "Implementation type: " ++ show impTy
 
@@ -466,7 +467,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
     mkTopMethDecl : (Name, Name, List (String, String), RigCount, Maybe TotalReq, RawImp) -> ImpDecl
     mkTopMethDecl (mn, n, upds, c, treq, mty)
         = let opts = maybe opts_in (\t => Totality t :: opts_in) treq in
-              IClaim vfc c vis opts (MkImpTy EmptyFC EmptyFC n mty)
+              IClaim (MkFCVal vfc (MkIClaimData c vis opts (MkImpTy EmptyFC (NoFC n) mty)))
 
     -- Given the method type (result of topMethType) return the mapping from
     -- top level method name to current implementation's method name

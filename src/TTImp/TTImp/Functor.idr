@@ -87,9 +87,14 @@ mutual
       = ImpossibleClause fc (map f lhs)
 
   export
+  Functor IClaimData where
+    map f (MkIClaimData rig vis opts ty)
+      = MkIClaimData rig vis (map (map f) opts) (map f ty)
+
+  export
   Functor ImpDecl' where
-    map f (IClaim fc rig vis opts ty)
-      = IClaim fc rig vis (map (map f) opts) (map f ty)
+    map f (IClaim c)
+      = IClaim (mapFC (map f) c)
     map f (IData fc vis mbtot dt)
       = IData fc vis mbtot (map f dt)
     map f (IDef fc nm cls)
@@ -129,8 +134,8 @@ mutual
 
   export
   Functor ImpTy' where
-    map f (MkImpTy fc nameFC n ty)
-      = MkImpTy fc nameFC n (map f ty)
+    map f (MkImpTy fc n ty)
+      = MkImpTy fc n (map f ty)
 
   export
   Functor ImpData' where

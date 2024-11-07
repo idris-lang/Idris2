@@ -79,6 +79,16 @@ TTC FC where
              _ => corrupt "FC"
 
 export
+TTC a => TTC (WithFC a) where
+  toBuf b (MkFCVal fc val)
+    = do toBuf b fc
+       ; toBuf b val
+  fromBuf b
+    = do fc <- fromBuf b
+         val <- fromBuf b
+         pure $ MkFCVal fc val
+
+export
 TTC Name where
   -- for efficiency reasons we do not encode UserName separately
   -- hence the nested pattern matches on UN (Basic/Hole/Field)

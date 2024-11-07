@@ -29,9 +29,9 @@ genUniqueStr xs x = if x `elem` xs then genUniqueStr xs (x ++ "'") else x
 -- Used in findBindableNames{,Quot}
 rawImpFromDecl : ImpDecl -> List RawImp
 rawImpFromDecl decl = case decl of
-    IClaim fc1 y z ys ty => [getFromTy ty]
+    IClaim (MkFCVal fc1 $ MkIClaimData y z ys ty) => [ty.type]
     IData fc1 y _ (MkImpData fc2 n tycon opts datacons)
-        => maybe id (::) tycon $ map getFromTy datacons
+        => maybe id (::) tycon $ map type datacons
     IData fc1 y _ (MkImpLater fc2 n tycon) => [tycon]
     IDef fc1 y ys => getFromClause !ys
     IParameters fc1 ys zs => rawImpFromDecl !zs ++ map getParamTy ys
@@ -47,8 +47,6 @@ rawImpFromDecl decl = case decl of
     IBuiltin _ _ _ => []
   where getParamTy : (a, b, c, RawImp) -> RawImp
         getParamTy (_, _, _, ty) = ty
-        getFromTy : ImpTy -> RawImp
-        getFromTy (MkImpTy _ _ _ ty) = ty
         getFromClause : ImpClause -> List RawImp
         getFromClause (PatClause fc1 lhs rhs) = [lhs, rhs]
         getFromClause (WithClause fc1 lhs rig wval prf flags ys) = [wval, lhs] ++ getFromClause !ys
@@ -373,8 +371,8 @@ mutual
 
   substNamesTy' : Bool -> List Name -> List (Name, RawImp) ->
                   ImpTy -> ImpTy
-  substNamesTy' bvar bound ps (MkImpTy fc nameFC n ty)
-      = MkImpTy fc nameFC n (substNames' bvar bound ps ty)
+  substNamesTy' bvar bound ps (MkImpTy fc n ty)
+      = MkImpTy fc n (substNames' bvar bound ps ty)
 
   substNamesData' : Bool -> List Name -> List (Name, RawImp) ->
                     ImpData -> ImpData
@@ -386,8 +384,8 @@ mutual
 
   substNamesDecl' : Bool -> List Name -> List (Name, RawImp ) ->
                    ImpDecl -> ImpDecl
-  substNamesDecl' bvar bound ps (IClaim fc r vis opts td)
-      = IClaim fc r vis opts (substNamesTy' bvar bound ps td)
+  substNamesDecl' bvar bound ps (IClaim claim)
+      = IClaim $ mapFC {type $= substNamesTy' bvar bound ps} claim
   substNamesDecl' bvar bound ps (IDef fc n cs)
       = IDef fc n (map (substNamesClause' bvar bound ps) cs)
   substNamesDecl' bvar bound ps (IData fc vis mbtot d)
@@ -475,8 +473,8 @@ mutual
       = ImpossibleClause fc' (substLoc fc' lhs)
 
   substLocTy : FC -> ImpTy -> ImpTy
-  substLocTy fc' (MkImpTy fc nameFC n ty)
-      = MkImpTy fc' fc' n (substLoc fc' ty)
+  substLocTy fc' (MkImpTy fc n ty)
+      = MkImpTy fc' ({fc := fc'} n) (substLoc fc' ty)
 
   substLocData : FC -> ImpData -> ImpData
   substLocData fc' (MkImpData fc n con opts dcons)
@@ -486,8 +484,8 @@ mutual
       = MkImpLater fc' n (substLoc fc' con)
 
   substLocDecl : FC -> ImpDecl -> ImpDecl
-  substLocDecl fc' (IClaim fc r vis opts td)
-      = IClaim fc' r vis opts (substLocTy fc' td)
+  substLocDecl fc' (IClaim (MkFCVal _ $ MkIClaimData r vis opts td))
+      = IClaim (MkFCVal fc' $ MkIClaimData r vis opts (substLocTy fc' td))
   substLocDecl fc' (IDef fc n cs)
       = IDef fc' n (map (substLocClause fc') cs)
   substLocDecl fc' (IData fc vis mbtot d)

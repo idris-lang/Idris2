@@ -270,7 +270,7 @@ checkLet rigc_in elabinfo nest env fc lhsFC rigl n nTy nVal scope expty {vars}
     linearErr : Error -> Maybe RigCount
     linearErr (LinearMisuse _ _ r _) = Just r
     linearErr (InType _ _ e) = linearErr e
-    linearErr (InCon _ _ e) = linearErr e
+    linearErr (InCon _ e) = linearErr e
     linearErr (InLHS _ _ e) = linearErr e
     linearErr (InRHS _ _ e) = linearErr e
     linearErr _ = Nothing

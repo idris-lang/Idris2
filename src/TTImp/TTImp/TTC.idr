@@ -234,11 +234,11 @@ mutual
 
   export
   TTC ImpTy where
-    toBuf b (MkImpTy fc nameFC n ty)
-        = do toBuf b fc; toBuf b nameFC; toBuf b n; toBuf b ty
+    toBuf b (MkImpTy fc n ty)
+        = do toBuf b fc;  toBuf b n; toBuf b ty
     fromBuf b
-        = do fc <- fromBuf b; nameFC <- fromBuf b; n <- fromBuf b; ty <- fromBuf b
-             pure (MkImpTy fc nameFC n ty)
+        = do fc <- fromBuf b; n <- fromBuf b; ty <- fromBuf b
+             pure (MkImpTy fc n ty)
 
   export
   TTC ImpClause where
@@ -367,9 +367,20 @@ mutual
                _ => corrupt "FnOpt"
 
   export
+  TTC (IClaimData Name) where
+    toBuf b (MkIClaimData rig vis opts type)
+        = do toBuf b rig; toBuf b vis; toBuf b opts; toBuf b type
+    fromBuf b
+        = do rig <- fromBuf b
+             vis <- fromBuf b
+             opts <- fromBuf b
+             type <- fromBuf b
+             pure $ MkIClaimData rig vis opts type
+
+  export
   TTC ImpDecl where
-    toBuf b (IClaim fc c vis xs d)
-        = do tag 0; toBuf b fc; toBuf b c; toBuf b vis; toBuf b xs; toBuf b d
+    toBuf b (IClaim claim)
+        = do tag 0; toBuf b claim
     toBuf b (IData fc vis mbtot d)
         = do tag 1; toBuf b fc; toBuf b vis; toBuf b mbtot; toBuf b d
     toBuf b (IDef fc n xs)
@@ -394,10 +405,8 @@ mutual
 
     fromBuf b
         = case !getTag of
-               0 => do fc <- fromBuf b; c <- fromBuf b
-                       vis <- fromBuf b;
-                       xs <- fromBuf b; d <- fromBuf b
-                       pure (IClaim fc c vis xs d)
+               0 => do claimData <- fromBuf b
+                       pure (IClaim claimData)
                1 => do fc <- fromBuf b; vis <- fromBuf b
                        mbtot <- fromBuf b; d <- fromBuf b
                        pure (IData fc vis mbtot d)

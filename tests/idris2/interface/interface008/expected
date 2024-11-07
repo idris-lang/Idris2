@@ -3,13 +3,13 @@ Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   card is shadowing Main.card
 
-Deps:15:3--15:8
+Deps:15:3--15:28
  11 |   to = id
  12 | 
  13 | interface BadFinite t where
  14 |   badcard   : Nat
  15 |   badto     : t -> Fin card
-        ^^^^^
+        ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Error: While processing right hand side of badcard. k is not accessible in this context.
 

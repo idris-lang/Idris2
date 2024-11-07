@@ -501,7 +501,7 @@ tyDecl fname indents
          ty <- expr fname indents
          end <- location
          atEnd indents
-         pure (MkImpTy (MkFC fname start end) (MkFC fname start nameEnd) n ty)
+         pure (MkImpTy (MkFC fname start end) (MkFCVal (MkFC fname start nameEnd) n) ty)
 
 mutual
   parseRHS : (withArgs : Nat) ->
@@ -733,7 +733,7 @@ topDecl fname indents
          rig <- getMult m
          claim <- tyDecl fname indents
          end <- location
-         pure (IClaim (MkFC fname start end) rig vis opts claim)
+         pure (IClaim (MkFCVal (MkFC fname start end) $ MkIClaimData  rig vis opts claim))
   <|> recordDecl fname indents
   <|> directive fname indents
   <|> definition fname indents

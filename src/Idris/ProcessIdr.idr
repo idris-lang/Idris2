@@ -81,8 +81,8 @@ processDecl : {auto c : Ref Ctxt Defs} ->
 -- as soon as one of the definitions fails)
 processDecl (PNamespace fc ns ps)
     = withExtendedNS ns $ processDecls ps
-processDecl (PMutual fc ps)
-    = let (tys, defs) = splitMutual ps in
+processDecl (PMutual ps)
+    = let (tys, defs) = splitMutual ps.val in
       processDecls (tys ++ defs)
 
 processDecl decl

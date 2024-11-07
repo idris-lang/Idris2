@@ -473,8 +473,8 @@ mutual
   toPTypeDecl : {auto c : Ref Ctxt Defs} ->
                 {auto s : Ref Syn SyntaxInfo} ->
                 ImpTy' KindedName -> Core (PTypeDecl' KindedName)
-  toPTypeDecl (MkImpTy fc nameFC n ty)
-      = pure (MkPTy fc nameFC n "" !(toPTerm startPrec ty))
+  toPTypeDecl (MkImpTy fc n ty)
+      = pure (MkFCVal fc $ MkPTy (pure ("", n)) "" !(toPTerm startPrec ty))
 
   toPData : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
@@ -491,7 +491,7 @@ mutual
   toPField (MkIField fc c p n ty)
       = do ty' <- toPTerm startPrec ty
            p' <- traverse (toPTerm startPrec) p
-           pure (MkField fc "" c p' n ty')
+           pure (MkFCVal fc $ MkRecordField "" c p' [n] ty')
 
   toPRecord : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
@@ -526,13 +526,13 @@ mutual
   toPDecl : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
             ImpDecl' KindedName -> Core (Maybe (PDecl' KindedName))
-  toPDecl (IClaim fc rig vis opts ty)
+  toPDecl (IClaim (MkFCVal fc $ MkIClaimData rig vis opts ty))
       = do opts' <- traverse toPFnOpt opts
-           pure (Just (PClaim fc rig vis opts' !(toPTypeDecl ty)))
+           pure (Just (PClaim (MkFCVal fc $ MkPClaim rig vis opts' !(toPTypeDecl ty))))
   toPDecl (IData fc vis mbtot d)
       = pure (Just (PData fc "" vis mbtot !(toPData d)))
   toPDecl (IDef fc n cs)
-      = pure (Just (PDef fc !(traverse toPClause cs)))
+      = pure (Just (PDef $ MkFCVal fc !(traverse toPClause cs)))
   toPDecl (IParameters fc ps ds)
       = do ds' <- traverse toPDecl ds
            pure (Just (PParameters fc

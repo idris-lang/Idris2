@@ -190,7 +190,7 @@ data Error : Type where
      FailingWrongError : FC -> String -> List1 Error -> Error
 
      InType : FC -> Name -> Error -> Error
-     InCon : FC -> Name -> Error -> Error
+     InCon : WithFC Name -> Error -> Error
      InLHS : FC -> Name -> Error -> Error
      InRHS : FC -> Name -> Error -> Error
 
@@ -387,8 +387,8 @@ Show Error where
   show (InType fc n err)
        = show fc ++ ":When elaborating type of " ++ show n ++ ":\n" ++
          show err
-  show (InCon fc n err)
-       = show fc ++ ":When elaborating type of constructor " ++ show n ++ ":\n" ++
+  show (InCon n err)
+       = show n.fc ++ ":When elaborating type of constructor " ++ show n.val ++ ":\n" ++
          show err
   show (InLHS fc n err)
        = show fc ++ ":When elaborating left hand side of " ++ show n ++ ":\n" ++
@@ -491,7 +491,7 @@ getErrorLoc (NoForeignCC loc _) = Just loc
 getErrorLoc (BadMultiline loc _) = Just loc
 getErrorLoc (Timeout _) = Nothing
 getErrorLoc (InType _ _ err) = getErrorLoc err
-getErrorLoc (InCon _ _ err) = getErrorLoc err
+getErrorLoc (InCon _ err) = getErrorLoc err
 getErrorLoc (FailingDidNotFail fc) = pure fc
 getErrorLoc (FailingWrongError fc _ _) = pure fc
 getErrorLoc (InLHS _ _ err) = getErrorLoc err
@@ -583,7 +583,7 @@ killErrorLoc (Timeout x) = Timeout x
 killErrorLoc (FailingDidNotFail fc) = FailingDidNotFail emptyFC
 killErrorLoc (FailingWrongError fc x errs) = FailingWrongError emptyFC x (map killErrorLoc errs)
 killErrorLoc (InType fc x err) = InType emptyFC x (killErrorLoc err)
-killErrorLoc (InCon fc x err) = InCon emptyFC x (killErrorLoc err)
+killErrorLoc (InCon x err) = InCon (NoFC x.val) (killErrorLoc err)
 killErrorLoc (InLHS fc x err) = InLHS emptyFC x (killErrorLoc err)
 killErrorLoc (InRHS fc x err) = InRHS emptyFC x (killErrorLoc err)
 killErrorLoc (MaybeMisspelling err xs) = MaybeMisspelling (killErrorLoc err) xs
@@ -829,6 +829,10 @@ traverseList1_ f xxs
          let xs = tail xxs
          ignore (f x)
          traverse_ f xs
+
+%inline export
+traverseFC : (a -> Core b) -> WithFC a -> Core (WithFC b)
+traverseFC f (MkFCVal fc x) = MkFCVal fc <$> f x
 
 namespace PiInfo
   export

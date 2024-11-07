@@ -41,37 +41,37 @@ Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   f is shadowing Main.f
 
-Issue1366:30:3--30:4
+Issue1366:30:3--30:33
  26 |   uninhabited (Z _) impossible
  27 |   uninhabited (S _) impossible
  28 | 
  29 | data Funny : (a : Type) -> (f : Type -> Type) -> Type where
  30 |   A : List a -> f a -> Funny a f
-        ^
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   f is shadowing Main.f
 
-Issue1366:31:3--31:4
+Issue1366:31:3--31:16
  27 |   uninhabited (S _) impossible
  28 | 
  29 | data Funny : (a : Type) -> (f : Type -> Type) -> Type where
  30 |   A : List a -> f a -> Funny a f
  31 |   B : Funny a f
-        ^
+        ^^^^^^^^^^^^^
 
 Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   f is shadowing Main.f
 
-Issue1366:33:1--33:7
+Issue1366:33:1--33:45
  29 | data Funny : (a : Type) -> (f : Type -> Type) -> Type where
  30 |   A : List a -> f a -> Funny a f
  31 |   B : Funny a f
  32 | 
  33 | decode : NS [[List a, f a], []] -> Funny a f
-      ^^^^^^
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Error: decode is not covering.
 

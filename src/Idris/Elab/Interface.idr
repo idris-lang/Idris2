@@ -31,11 +31,9 @@ import Libraries.Data.WithDefault
 
 record Signature where
   constructor MkSignature
-  location : FC
   count    : RigCount
   flags    : List FnOpt
-  name     : Name
-  nameLoc  : FC
+  name     : WithFC Name
   isData   : Bool
   type     : RawImp
 
@@ -52,21 +50,17 @@ namePis i (IBindHere fc m ty) = IBindHere fc m (namePis i ty)
 namePis i ty = ty
 
 getSig : ImpDecl -> Maybe Signature
-getSig (IClaim _ c _ opts (MkImpTy fc nameFC n ty))
-    = Just $ MkSignature { location = fc
-                         , count    = c
+getSig (IClaim (MkFCVal _ $ MkIClaimData c _ opts (MkImpTy fc n ty)))
+    = Just $ MkSignature { count    = c
                          , flags    = opts
                          , name     = n
-                         , nameLoc  = nameFC
                          , isData   = False
                          , type     = namePis 0 ty
                          }
 getSig (IData _ _ _ (MkImpLater fc n ty))
-    = Just $ MkSignature { location = fc
-                         , count    = erased
+    = Just $ MkSignature { count    = erased
                          , flags    = [Invertible]
-                         , name     = n
-                         , nameLoc  = emptyFC
+                         , name     = NoFC n
                          , isData   = True
                          , type     = namePis 0 ty
                          }
@@ -85,7 +79,7 @@ record Declaration where
 
 sigToDecl : Signature -> Declaration
 sigToDecl sig = MkDeclaration
-  { name = sig.name
+  { name = sig.name.val
   , count = sig.count
   , flags = sig.flags
   , isData = sig.isData
@@ -117,7 +111,7 @@ mkIfaceData {vars} ifc def_vis env constraints n conName ps dets meths
           retty = apply (IVar vfc n) (map (IVar EmptyFC) pNames)
           conty = mkTy Implicit (map jname ps) $
                   mkTy AutoImplicit (map bhere constraints) (mkTy Explicit (map bname meths) retty)
-          con = MkImpTy vfc EmptyFC conName !(bindTypeNames ifc [] (pNames ++ map fst meths ++ vars) conty)
+          con = MkImpTy vfc (NoFC conName) !(bindTypeNames ifc [] (pNames ++ map fst meths ++ vars) conty)
           bound = pNames ++ map fst meths ++ vars in
 
           pure $ IData vfc def_vis Nothing {- ?? -}
@@ -191,25 +185,28 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params sig
          let ty_constr =
              substNames vars (map applyCon allmeths) sig.type
          ty_imp <- bindTypeNames EmptyFC [] vars (bindPs params $ bindIFace vfc ity ty_constr)
-         cn <- inCurrentNS sig.name
-         let tydecl = IClaim vfc sig.count vis (if sig.isData then [Inline, Invertible]
+         cn <- traverseFC inCurrentNS sig.name
+         let tydecl = IClaim (MkFCVal vfc $ MkIClaimData sig.count vis (if sig.isData then [Inline, Invertible]
                                             else [Inline])
-                                      (MkImpTy vfc sig.nameLoc cn ty_imp)
+                                      (MkImpTy vfc cn ty_imp))
          let conapp = apply (IVar vfc cname)
                             (map (IBindVar EmptyFC) (map bindName allmeths))
          let argns = getExplicitArgs 0 sig.type
          -- eta expand the RHS so that we put implicits in the right place
-         let fnclause = PatClause vfc (INamedApp vfc (IVar sig.location cn)
-                                                   (UN $ Basic "__con")
-                                                   conapp)
+         let fnclause = PatClause vfc
+                                  (INamedApp vfc
+                                             (IVar cn.fc cn.val) -- See #3409
+                                             (UN $ Basic "__con")
+                                             conapp
+                                             )
                                   (mkLam argns
-                                    (apply (IVar EmptyFC (methName sig.name))
+                                    (apply (IVar EmptyFC (methName sig.name.val))
                                            (map (IVar EmptyFC) argns)))
-         let fndef = IDef vfc cn [fnclause]
+         let fndef = IDef vfc cn.val [fnclause]
          pure [tydecl, fndef]
   where
     vfc : FC
-    vfc = virtualiseFC sig.location
+    vfc = virtualiseFC sig.name.fc
 
     -- Bind the type parameters given explicitly - there might be information
     -- in there that we can't infer after all
@@ -258,8 +255,8 @@ getConstraintHint {vars} fc env vis iname cname constraints meths params (cn, co
          let hintname = DN ("Constraint " ++ show con)
                           (UN (Basic $ "__" ++ show iname ++ "_" ++ show con))
 
-         let tydecl = IClaim fc top vis [Inline, Hint False]
-                          (MkImpTy EmptyFC EmptyFC hintname ty_imp)
+         let tydecl = IClaim (MkFCVal fc $ MkIClaimData top vis [Inline, Hint False]
+                          (MkImpTy EmptyFC (NoFC hintname) ty_imp))
 
          let conapp = apply (impsBind (IVar fc cname) (map bindName constraints))
                               (map (const (Implicit fc True)) meths)
@@ -390,7 +387,7 @@ elabInterface {vars} ifc def_vis env nest constraints iname params dets mcon bod
         = do -- set up the implicit arguments correctly in the method
              -- signatures and constraint hints
              meths <- traverse (\ meth => getMethDecl env nest params meth_names
-                                          (meth.count, meth.name, meth.type))
+                                          (meth.count, meth.name.val, meth.type))
                                 meth_sigs
              log "elab.interface" 5 $ "Method declarations: " ++ show meths
 
@@ -454,7 +451,9 @@ elabInterface {vars} ifc def_vis env nest constraints iname params dets mcon bod
              dty_imp <- bindTypeNames dfc [] (map name tydecls ++ vars) dty
              log "elab.interface.default" 5 $ "Default method " ++ show dn ++ " : " ++ show dty_imp
 
-             let dtydecl = IClaim vdfc rig (collapseDefault def_vis) [] (MkImpTy EmptyFC EmptyFC dn dty_imp)
+             let dtydecl = IClaim $ MkFCVal vdfc
+                                  $ MkIClaimData rig (collapseDefault def_vis) []
+                                  $ MkImpTy EmptyFC (NoFC dn) dty_imp
 
              processDecl [] nest env dtydecl
 

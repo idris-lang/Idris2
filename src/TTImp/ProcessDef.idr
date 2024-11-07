@@ -953,7 +953,8 @@ lookupOrAddAlias eopts nest env fc n [cl@(PatClause _ lhs _)]
        --   3) declare an alias
        log "declare.def" 5 "Not a misspelling: go ahead and declare it!"
        processType eopts nest env fc top Public []
-          $ MkImpTy fc fc n $ holeyType (map snd args)
+          -- See #3409
+          $ MkImpTy fc (MkFCVal fc n) $ holeyType (map snd args)
        defs <- get Ctxt
        lookupCtxtExact n (gamma defs)
 
