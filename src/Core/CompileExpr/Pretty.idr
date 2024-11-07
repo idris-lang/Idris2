@@ -125,7 +125,7 @@ prettyCDef (MkFun args exp) = reAnnotate Syntax $
   keyword "\\" <++> concatWith (\ x, y => x <+> keyword "," <++> y) (map prettyName args)
        <++> fatArrow <++> prettyCExp exp
 prettyCDef (MkCon mtag arity nt)
-  = vcat $ header (maybe "Data" (const "Type") mtag <++> "Constructor") :: map (indent 2)
+  = vcat $ header (maybe "Type" (const "Data") mtag <++> "Constructor") :: map (indent 2)
          ( maybe [] (\ tag => ["tag:" <++> byShow tag]) mtag ++
          [ "arity:" <++> byShow arity ] ++
            maybe [] (\ n => ["newtype by:" <++> byShow n]) nt)

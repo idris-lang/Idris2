@@ -42,17 +42,22 @@ styleTeX = MkLitStyle
               Nil
               [".tex", ".ltx"]
 
+export
+styleTypst : LiterateStyle
+styleTypst = MkLitStyle
+               [("```idris", "```"), ("/* idris", "*/")]
+               Nil
+               [".typ"]
+
+
+supportedStyles : List LiterateStyle
+supportedStyles = [styleBird, styleOrg, styleCMark, styleTeX, styleTypst]
 
 ||| Return the list of extensions used for literate files.
 export
 listOfExtensionsLiterate : List String
 listOfExtensionsLiterate
-  = do let exts = concatMap file_extensions
-              [ styleBird
-              , styleOrg
-              , styleCMark
-              , styleTeX
-              ]
+  = do let exts = concatMap file_extensions supportedStyles
        pfx <- [ "", ".idr", ".lidr"]
        ext <- exts
        pure (pfx ++ ext)
@@ -87,11 +92,7 @@ hasLitFileExt fname =
 ||| Are we dealing with a valid literate file name, if so return the identified style.
 export
 isLitFile : String -> Maybe LiterateStyle
-isLitFile fname
-    =   isStyle styleBird
-    <|> isStyle styleOrg
-    <|> isStyle styleCMark
-    <|> isStyle styleTeX
+isLitFile fname = choiceMap isStyle supportedStyles
 
   where
    hasSuffix : String -> Bool
@@ -116,11 +117,7 @@ isLitLine str
           _           => Nothing
 
     walk : Maybe (Maybe String, String)
-    walk
-      =   try styleBird
-      <|> try styleOrg
-      <|> try styleCMark
-      <|> try styleTeX
+    walk = choiceMap try supportedStyles
 
 export
 unlit : Maybe LiterateStyle -> String -> Either LiterateError String

@@ -42,6 +42,7 @@ This CHANGELOG describes the history of already-released versions. Please see [C
   and `Force`.
 * Adds `--no-cse` command-line option to disable common subexpression elimination
   for code generation debugging.
+* Fixes a confusion between data and type constructors in the `:di` command.
 
 ### Backend changes
 

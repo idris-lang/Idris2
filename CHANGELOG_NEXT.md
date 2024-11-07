@@ -49,6 +49,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Support for macOS PowerPC added.
 
+* Multiline comments `{- text -}` are now supported in ipkg files.
+
 ### Language changes
 
 * Autobind and Typebind modifier on operators allow the user to
@@ -88,6 +90,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   of `IApp`, as it should have been.
 
 * `MakeFuture` primitive is removed.
+
+* Typst files can be compiled as Literate Idris
 
 ### Backend changes
 

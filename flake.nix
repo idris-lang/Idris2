@@ -23,6 +23,20 @@
         };
         defaultTemplate = templates.pkg;
         version = idris2Version;
+        overlays.default = final: prev:
+          let
+            outputPackages = prev.lib.filterAttrs
+              (n: _: n != "default" && n != "idris2Api")
+              self.packages.${prev.system};
+            idris2Api = final.callPackage ./nix/idris2Api.nix {
+              inherit (final.idris2Packages) buildIdris;
+              inherit idris2Version;
+            };
+          in
+           {
+             idris2Packages = prev.idris2Packages // outputPackages // { inherit idris2Api; };
+             idris2 = final.idris2Packages.idris2;
+           };
       };
       per-system = { config ? { }, overlays ? [ ] }:
         system:
@@ -51,15 +65,8 @@
             idris2 = idris2Pkg;
             support = idris2Support;
           };
-          idris2ApiPkg = buildIdris {
-            src = ./.;
-            ipkgName = "idris2api";
-            version = idris2Version;
-            idrisLibraries = [ ];
-            preBuild = ''
-              export IDRIS2_PREFIX=$out/lib
-              make src/IdrisPaths.idr
-            '';
+          idris2ApiPkg = pkgs.callPackage ./nix/idris2Api.nix {
+            inherit idris2Version buildIdris;
           };
           stdenv' = with pkgs; if stdenv.isDarwin then overrideSDK stdenv "11.0" else stdenv;
         in {
