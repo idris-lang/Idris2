@@ -45,6 +45,10 @@ nameAt : {vars : SnocList a} -> {idx : Nat} -> (0 p : IsVar n idx vars) -> a
 nameAt {vars = _ :< n} First = n
 nameAt (Later p) = nameAt p
 
+export
+snocIdx : {vars : SnocList a} -> {idx : Nat} -> (0 p : IsVar n idx vars) -> Nat
+snocIdx {vars} {idx} p = minus (length vars) idx
+
 ||| Inversion principle for Later
 export
 dropLater : IsVar nm (S idx) (ns :< n) -> IsVar nm idx ns
