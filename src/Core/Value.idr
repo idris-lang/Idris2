@@ -5,6 +5,8 @@ import Core.Core
 import Core.Env
 import Core.TT
 
+import Data.SnocList
+
 %default covering
 
 public export
@@ -123,7 +125,22 @@ ntCon fc n tag Z [<] = case isConstantType n of
 ntCon fc n tag arity args = NTCon fc n tag arity args
 
 export
-cons : LocalEnv free vars -> Closure free -> LocalEnv free ([<v] ++ vars)
+(++) : LocalEnv free varsl -> LocalEnv free varsr -> LocalEnv free (varsl ++ varsr)
+(++) sx Lin = sx
+(++) sx (sy :< y) = (sx ++ sy) :< y
+
+export
+reverseOnto : LocalEnv free varsl -> LocalEnv free varsr -> LocalEnv free (varsl ++ reverse varsr)
+reverseOnto acc Lin       = acc
+reverseOnto {varsr=[<] :< r} acc ([<] :< x) = reverseOnto {varsl=varsl :< r} (acc :< x) [<]
+reverseOnto {varsr=[<] :< vars :< r} acc (sx :< x) = reverseOnto {varsl=varsl :< r} (acc :< x) sx
+
+export
+reverse : LocalEnv free vars -> LocalEnv free (reverse vars)
+reverse {vars} = rewrite sym $ appendLinLeftNeutral (reverse vars) in reverseOnto Lin
+
+export
+cons : LocalEnv free vars -> Closure free -> LocalEnv free (v `cons` vars)
 cons [<] p = Lin :< p
 cons (ns :< s) p = cons ns p :< s
 
