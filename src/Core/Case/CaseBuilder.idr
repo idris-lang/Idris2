@@ -1258,7 +1258,7 @@ mkPatClause fc fn args ty pid (ps, rhs)
                   log "compile.casetree" 20 $ "mkPatClause nty: " ++ show nty
                   -- The arguments are in reverse order, so we need to
                   -- read what we know off 'nty', and reverse it
-                  argTys <- getArgTys [<] (cast $ args) (Just nty)
+                  argTys <- getArgTys [<] (reverse $ toList $ args) (Just nty)
                   log "compile.casetree" 20 $ "mkPatClause args: " ++ show (toList args) ++ ", argTys: " ++ show argTys
                   ns <- logDepth $ mkNames args ps eq (reverse argTys)
                   log "compile.casetree" 20 $
