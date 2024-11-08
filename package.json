@@ -1,0 +1,14 @@
+{
+  "name": "idris2",
+  "license": "BSD 3-Clause License",
+  "type": "module",
+  "scripts": {
+    "test": "eslint"
+  },
+  "devDependencies": {
+    "@eslint/compat": "^1.2.2",
+    "@eslint/js": "^9.14.0",
+    "eslint": "^9.14.0",
+    "globals": "^15.12.0"
+  }
+}

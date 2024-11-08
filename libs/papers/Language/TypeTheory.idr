@@ -170,7 +170,7 @@ namespace Section2
   evalInfer (Ann t _) env = evalCheck t env
   evalInfer (Bnd x) env = case inBounds x env of
     Yes prf => index x env
-    No nprf => idris_crash "OOPS"
+    No nprf => idris_crash "INTERNAL ERROR: evalInfer -> impossible case"
   evalInfer (Var x) env = vfree x
   evalInfer (App f t) env = vapp (evalInfer f env) (evalCheck t env)
 
@@ -448,7 +448,7 @@ namespace Section3
   vapp : Value -> Value -> Value
   vapp (VLam f) t = f t
   vapp (VEmb n) t = VEmb (NApp n t)
-  vapp _ _ = idris_crash "Oops"
+  vapp _ _ = idris_crash "INTERNAL ERROR: vapp -> impossible case"
 
   ||| An environment is a list of values for all the bound variables in scope
   Env : Type
@@ -472,7 +472,7 @@ namespace Section3
   evalInfer (Pi a b) env = VPi (evalCheck a env) (evalAbs b env)
   evalInfer (Bnd x) env = case inBounds x env of
     Yes prf => index x env
-    No nprf => idris_crash "OOPS"
+    No nprf => idris_crash "INTERNAL ERROR: evalInfer -> impossible case"
   evalInfer (Var x) env = vfree x
   evalInfer (App f t) env = vapp (evalInfer f env) (evalCheck t env)
 
@@ -701,7 +701,7 @@ namespace Section4
   vapp : Value -> Value -> Value
   vapp (VLam f) t = f t
   vapp (VEmb n) t = VEmb (NApp n t)
-  vapp _ _ = idris_crash "Oops"
+  vapp _ _ = idris_crash "INTERNAL ERROR: vapp -> impossible case"
 
   ||| An environment is a list of values for all the bound variables in scope
   Env : Type
@@ -731,12 +731,12 @@ namespace Section4
     go pz ps VZro = pz
     go pz ps (VSuc n) = ps `vapp` n `vapp` (go pz ps n)
     go pz ps (VEmb n) = VEmb (NRec (evalCheck p env) pz ps n)
-    go _ _ _ = idris_crash "Oops"
+    go _ _ _ = idris_crash "INTERNAL ERROR: evalInfer -> impossible case"
 
   evalInfer (Pi a b) env = VPi (evalCheck a env) (evalAbs b env)
   evalInfer (Bnd x) env = case inBounds x env of
     Yes prf => index x env
-    No nprf => idris_crash "OOPS"
+    No nprf => idris_crash "INTERNAL ERROR: evalInfer -> impossible case"
   evalInfer (Var x) env = vfree x
   evalInfer (App f t) env = vapp (evalInfer f env) (evalCheck t env)
 

@@ -26,9 +26,9 @@ clean-refc:
 clean-chez:
 	@${MAKE} -C chez clean
 
-.PHONY: install install-docs install-racket install-gambit install-js install-c install-refc install-chez
+.PHONY: install install-docs install-racket install-gambit install-javascript install-node install-c install-refc install-chez
 
-install: install-docs install-racket install-gambit install-js install-c install-refc install-chez
+install: install-docs install-racket install-gambit install-javascript install-node install-c install-refc install-chez
 
 install-docs:
 	mkdir -p ${DESTDIR}${PREFIX}/${NAME_VERSION}/support/docs
@@ -42,9 +42,13 @@ install-gambit:
 	mkdir -p ${DESTDIR}${PREFIX}/${NAME_VERSION}/support/gambit
 	install -m 644 gambit/* ${DESTDIR}${PREFIX}/${NAME_VERSION}/support/gambit
 
-install-js:
-	mkdir -p ${DESTDIR}${PREFIX}/${NAME_VERSION}/support/js
-	install -m 644 js/* ${DESTDIR}${PREFIX}/${NAME_VERSION}/support/js
+install-javascript:
+	mkdir -p ${DESTDIR}${PREFIX}/${NAME_VERSION}/support/javascript
+	install -m 644 javascript/* ${DESTDIR}${PREFIX}/${NAME_VERSION}/support/javascript
+
+install-node:
+	mkdir -p ${DESTDIR}${PREFIX}/${NAME_VERSION}/support/node
+	install -m 644 node/* ${DESTDIR}${PREFIX}/${NAME_VERSION}/support/node
 
 install-c:
 	@${MAKE} -C c install

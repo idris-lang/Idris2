@@ -13,20 +13,21 @@ import System.FFI
 %default total
 
 %foreign supportC "idris2_seekLine"
-         supportNode "seekLine"
+         "node:support"
 prim__seekLine : FilePtr -> PrimIO Int
 
 %foreign supportC "idris2_readLine"
-         supportNode "readLine"
+         "node:support"
 prim__readLine : FilePtr -> PrimIO (Ptr String)
 
 %foreign supportC "idris2_readChars"
 prim__readChars : Int -> FilePtr -> PrimIO (Ptr String)
+
 %foreign "C:fgetc,libc 6"
 prim__readChar : FilePtr -> PrimIO Int
 
 %foreign supportC "idris2_writeLine"
-         "node:lambda:(filePtr, line) => require('fs').writeSync(filePtr.fd, line, undefined, 'utf-8')"
+         "node:support"
 prim__writeLine : FilePtr -> String -> PrimIO Int
 
 %foreign supportC "idris2_eof"
@@ -34,7 +35,7 @@ prim__writeLine : FilePtr -> String -> PrimIO Int
 prim__eof : FilePtr -> PrimIO Int
 
 %foreign supportC "idris2_removeFile"
-         supportNode "removeFile"
+         "node:support"
 prim__removeFile : String -> PrimIO Int
 
 ||| Seek through the next newline.

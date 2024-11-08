@@ -10,10 +10,10 @@ import public System.File.Types
 %foreign "C:fflush,libc 6"
 prim__flush : FilePtr -> PrimIO Int
 %foreign supportC "idris2_popen"
-         supportNode "popen"
+         "node:support"
 prim__popen : String -> String -> PrimIO FilePtr
 %foreign supportC "idris2_pclose"
-         supportNode "pclose"
+         "node:support"
 prim__pclose : FilePtr -> PrimIO Int
 
 data Popen2Result : Type where [external]

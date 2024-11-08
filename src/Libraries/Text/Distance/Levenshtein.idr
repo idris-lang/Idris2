@@ -43,7 +43,7 @@ compute a b = do
   -- We introduce a specialised `read` for ease of use
   let get = \i, j => case !(read {io} mat i j) of
         Nothing => assert_total $
-          idris_crash "INTERNAL ERROR: Badly initialised matrix"
+          idris_crash "INTERNAL ERROR: compute -> Badly initialised matrix"
         Just n => pure n
 
   -- We fill the matrix from the bottom up, using the same formula we used

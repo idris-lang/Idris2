@@ -30,11 +30,19 @@ expression.
 
 
 .. code-block:: idris
+    module My.Module.Name
 
-    %foreign "node:lambda:fp=>require('fs').fstatSync(fp.fd, {bigint: false}).size"
+    %foreign "node:support"
     prim__fileSize : FilePtr -> PrimIO Int
 
-``require`` can be used to import javascript modules.
+And in `./support/My.Module.Name.js`
+
+.. code-block:: js
+    import fs from 'node:fs'
+
+    export const prim__fileSize = fp => fs.fstatSync(fp.fd, {bigint: false}).size
+
+``require`` cannot be used to import javascript modules.
 
 For completion below an example of a foreign available only with ``browser`` codegen:
 

@@ -837,10 +837,11 @@ compileToES c s cg tm ccTypes = do
   st <- get ESs
 
   -- main preamble containing primops implementations
-  static_preamble <- readDataFile ("js/support.js")
+  -- static_preamble <- readDataFile ("js/support.js")
 
   -- complete preamble, including content from additional
   -- support files (if any)
-  let pre = showSep "\n" $ static_preamble :: (values $ preamble st)
+  -- let pre = showSep "\n" $ static_preamble :: (values $ preamble st)
+  let pre = showSep "\n" $ values $ preamble st
 
   pure $ fastUnlines [pre,allDecls,main]

@@ -37,10 +37,12 @@ ifeq ($(OS), windows)
 	IDRIS2_PREFIX ?= $(shell cygpath -m ${PREFIX})
 	IDRIS2_CURDIR := $(shell cygpath -m ${CURDIR})
 	SEP := ;
+	LINK_CMD = cp -rf
 else
 	IDRIS2_PREFIX ?= ${PREFIX}
 	IDRIS2_CURDIR := ${CURDIR}
 	SEP := :
+	LINK_CMD = ln -sf
 endif
 
 IDRIS2_SUPPORT_DIR ?= ${IDRIS2_CURDIR}/support/c
@@ -114,24 +116,13 @@ libdocs:
 	${MAKE} -C libs/test docs IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 	${MAKE} -C libs/linear docs IDRIS2=${TARGET} IDRIS2_PATH=${IDRIS2_BOOT_PATH}
 
-
-ifeq ($(OS), windows)
 ${TEST_PREFIX}/${NAME_VERSION} :
-	cp -rf ${IDRIS2_CURDIR}/libs/prelude/build/ttc ${TEST_PREFIX}/${NAME_VERSION}/prelude-${IDRIS2_VERSION}
-	cp -rf ${IDRIS2_CURDIR}/libs/base/build/ttc    ${TEST_PREFIX}/${NAME_VERSION}/base-${IDRIS2_VERSION}
-	cp -rf ${IDRIS2_CURDIR}/libs/linear/build/ttc  ${TEST_PREFIX}/${NAME_VERSION}/linear-${IDRIS2_VERSION}
-	cp -rf ${IDRIS2_CURDIR}/libs/network/build/ttc ${TEST_PREFIX}/${NAME_VERSION}/network-${IDRIS2_VERSION}
-	cp -rf ${IDRIS2_CURDIR}/libs/contrib/build/ttc ${TEST_PREFIX}/${NAME_VERSION}/contrib-${IDRIS2_VERSION}
-	cp -rf ${IDRIS2_CURDIR}/libs/test/build/ttc    ${TEST_PREFIX}/${NAME_VERSION}/test-${IDRIS2_VERSION}
-else
-${TEST_PREFIX}/${NAME_VERSION} :
-	ln -sf ${IDRIS2_CURDIR}/libs/prelude/build/ttc ${TEST_PREFIX}/${NAME_VERSION}/prelude-${IDRIS2_VERSION}
-	ln -sf ${IDRIS2_CURDIR}/libs/base/build/ttc    ${TEST_PREFIX}/${NAME_VERSION}/base-${IDRIS2_VERSION}
-	ln -sf ${IDRIS2_CURDIR}/libs/linear/build/ttc  ${TEST_PREFIX}/${NAME_VERSION}/linear-${IDRIS2_VERSION}
-	ln -sf ${IDRIS2_CURDIR}/libs/network/build/ttc ${TEST_PREFIX}/${NAME_VERSION}/network-${IDRIS2_VERSION}
-	ln -sf ${IDRIS2_CURDIR}/libs/contrib/build/ttc ${TEST_PREFIX}/${NAME_VERSION}/contrib-${IDRIS2_VERSION}
-	ln -sf ${IDRIS2_CURDIR}/libs/test/build/ttc    ${TEST_PREFIX}/${NAME_VERSION}/test-${IDRIS2_VERSION}
-endif
+	${LINK_CMD} ${IDRIS2_CURDIR}/libs/prelude/build/ttc ${TEST_PREFIX}/${NAME_VERSION}/prelude-${IDRIS2_VERSION}
+	${LINK_CMD} ${IDRIS2_CURDIR}/libs/base/build/ttc    ${TEST_PREFIX}/${NAME_VERSION}/base-${IDRIS2_VERSION}
+	${LINK_CMD} ${IDRIS2_CURDIR}/libs/linear/build/ttc  ${TEST_PREFIX}/${NAME_VERSION}/linear-${IDRIS2_VERSION}
+	${LINK_CMD} ${IDRIS2_CURDIR}/libs/network/build/ttc ${TEST_PREFIX}/${NAME_VERSION}/network-${IDRIS2_VERSION}
+	${LINK_CMD} ${IDRIS2_CURDIR}/libs/contrib/build/ttc ${TEST_PREFIX}/${NAME_VERSION}/contrib-${IDRIS2_VERSION}
+	${LINK_CMD} ${IDRIS2_CURDIR}/libs/test/build/ttc    ${TEST_PREFIX}/${NAME_VERSION}/test-${IDRIS2_VERSION}
 
 .PHONY: ${TEST_PREFIX}/${NAME_VERSION}
 
