@@ -227,6 +227,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Added `Data.IORef.atomically` for the chez backend.
 
+* Refactor `Uninhabited` implementation for `Data.List.Elem`, `Data.List1.Elem`, `Data.SnocList.Elem` and `Data.Vect.Elem`.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
