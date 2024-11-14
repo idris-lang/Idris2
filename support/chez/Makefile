@@ -24,7 +24,7 @@ support-sep.ss: support.ss
 	echo ") (import (chezscheme))" >> $@
 
 	# copy the code
-	cat $< >> $@
+	sed '1{/^#!/d;}' $< >> $@
 
 	# close the bracket
 	echo ") ; end of (library)" >> $@

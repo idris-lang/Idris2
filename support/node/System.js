@@ -1,9 +1,10 @@
-// import child_process from 'child_process';
-// export function spawnSync(cmd) {
-//   const options = { shell: true, stdio: 'inherit' }
-//   const { status } = child_process.spawnSync(cmd, [], options)
-//   return status
-// }
+import child_process from 'child_process';
+
+export function prim__system(cmd) {
+  const options = { shell: true, stdio: 'inherit' }
+  const { status } = child_process.spawnSync(cmd, [], options)
+  return status
+}
 
 // call with overwrite == 0 to avoid overwriting an existing variable.
 export function prim__setEnv(name, value, overwrite) {

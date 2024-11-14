@@ -58,8 +58,8 @@ data CG = Chez
         | ChezSep
         | Racket
         | Gambit
-        | Node
-        | Javascript
+        | NodeJavascript
+        | BrowserJavascript
         | RefC
         | VMCodeInterp
         | Other String
@@ -70,8 +70,8 @@ Eq CG where
   ChezSep == ChezSep = True
   Racket == Racket = True
   Gambit == Gambit = True
-  Node == Node = True
-  Javascript == Javascript = True
+  NodeJavascript == NodeJavascript = True
+  BrowserJavascript == BrowserJavascript = True
   RefC == RefC = True
   VMCodeInterp == VMCodeInterp = True
   Other s == Other t = s == t
@@ -83,8 +83,8 @@ Show CG where
   show ChezSep = "chez-sep"
   show Racket = "racket"
   show Gambit = "gambit"
-  show Node = "node"
-  show Javascript = "javascript"
+  show NodeJavascript = "node"
+  show BrowserJavascript = "browser"
   show RefC = "refc"
   show VMCodeInterp = "vmcode-interp"
   show (Other s) = s
@@ -200,14 +200,32 @@ record Options where
   -- fullName and definition for %foreign_impl
   foreignImpl : List (Name, String)
 
+public export
+Show Options where
+  show (MkOptions dirs printing session elabDirectives pairnames rewritenames primnames extensions additionalCGs hashFn foreignImpl) =
+    "Options {" ++
+    "\n,  dirs: TODO" ++ -- show dirs ++
+    "\n,  printing: TODO" ++ -- show printing ++
+    "\n,  session: TODO" ++ -- show session ++
+    "\n,  elabDirectives: TODO" ++ -- show elabDirectives ++
+    "\n,  pairnames: TODO" ++ -- show pairnames ++
+    "\n,  rewritenames: TODO" ++ -- show rewritenames ++
+    "\n,  primnames: TODO" ++ -- show primnames ++
+    "\n,  extensions: " ++ show extensions ++
+    "\n,  additionalCGs: " ++ show additionalCGs ++
+    "\n,  hashFn: " ++ show hashFn ++
+    "\n,  foreignImpl: " ++ show foreignImpl ++
+    "\n}"
+
 export
 availableCGs : Options -> List (String, CG)
 availableCGs o
     = [("chez", Chez),
        ("chez-sep", ChezSep),
        ("racket", Racket),
-       ("node", Node),
-       ("javascript", Javascript),
+       ("node", NodeJavascript),
+       ("browser", BrowserJavascript),
+       -- ("javascript", BrowserJavascript), -- deprecated
        ("refc", RefC),
        ("gambit", Gambit),
        ("vmcode-interp", VMCodeInterp)] ++ additionalCGs o

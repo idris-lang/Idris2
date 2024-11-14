@@ -1,3 +1,5 @@
+module LambdaCalculus
+
 import Data.List
 import Data.List1
 import Text.Lexer

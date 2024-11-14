@@ -77,10 +77,11 @@ ${TARGET}: support src/IdrisPaths.idr
 
 # We use FORCE to always rebuild IdrisPath so that the git SHA1 info is always up to date
 src/IdrisPaths.idr: FORCE
-	echo "-- @""generated" > src/IdrisPaths.idr
-	echo 'module IdrisPaths' >> src/IdrisPaths.idr
-	echo 'export idrisVersion : ((Nat,Nat,Nat), String); idrisVersion = ((${MAJOR},${MINOR},${PATCH}), "${VERSION_TAG}")' >> src/IdrisPaths.idr
-	echo 'export yprefix : String; yprefix="${IDRIS2_PREFIX}"' >> src/IdrisPaths.idr
+	@printf '%s\n' \
+	'-- @generated' \
+	'module IdrisPaths' \
+	'export idrisVersion : ((Nat,Nat,Nat), String); idrisVersion = ((${MAJOR},${MINOR},${PATCH}), "${VERSION_TAG}")' \
+	'export yprefix : String; yprefix="${IDRIS2_PREFIX}"' > src/IdrisPaths.idr
 
 FORCE:
 
@@ -126,10 +127,17 @@ ${TEST_PREFIX}/${NAME_VERSION} :
 
 .PHONY: ${TEST_PREFIX}/${NAME_VERSION}
 
-${TEST_IDRIS2_SUPPORT_DIR}/${IDRIS2_SUPPORT}:
+# FIXME:
+# make support
+# 	installs to /home/srghma/projects/Idris2/support/c/libidris2_support.so
+# 	.h files are at /home/srghma/projects/Idris2/support/c/getline.h
+# make test-support
+# 	installs to /home/srghma/projects/Idris2/build/env/idris2-0.7.0/lib/libidris2_support.so
+# 	maybe should to /home/srghma/projects/Idris2/build/env/idris2-0.7.0/support/c/getline.h ???
+${TEST_IDRIS2_SUPPORT_DIR}/lib/${IDRIS2_SUPPORT}:
 	${MAKE} install-support PREFIX=${TEST_PREFIX}
 
-test-support: ${TEST_IDRIS2_SUPPORT_DIR}/${IDRIS2_SUPPORT}
+test-support: ${TEST_IDRIS2_SUPPORT_DIR}/lib/${IDRIS2_SUPPORT}
 
 testenv: test-support
 	mkdir -p ${TEST_PREFIX}/${NAME_VERSION}

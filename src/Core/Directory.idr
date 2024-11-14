@@ -13,6 +13,7 @@ import Parser.Unlit
 
 import Libraries.Data.Version
 import Libraries.Utils.Path
+import Libraries.System.Directory.Tree
 
 import Data.List
 import Data.Maybe
@@ -146,6 +147,39 @@ findDataFile fname
          let fs = map (\p => cleanPath $ p </> fname) (data_dirs d)
          Just f <- firstAvailable fs
             | Nothing => throw (InternalError ("Can't find data file " ++ fname ++
+                                               " in any of " ++ show fs))
+         pure f
+
+export
+directoryExists : String -> IO Bool
+directoryExists fp = do
+  Right dir <- openDir fp
+    | Left _ => pure False
+  closeDir dir
+  pure True
+
+-- Return the name of the first file available in the list
+-- Used in LSP.
+export
+firstAvailableDir : {auto c : Ref Ctxt Defs} ->
+                  List String -> Core (Maybe String)
+firstAvailableDir [] = pure Nothing
+firstAvailableDir (f :: fs) = do
+  log "import" 30 $ "Attempting to open dir " ++ f
+  if !(coreLift $ directoryExists f)
+      then pure (Just f)
+      else firstAvailableDir fs
+
+
+export
+covering
+findDataDir : {auto c : Ref Ctxt Defs} ->
+               String -> Core String
+findDataDir fname
+    = do d <- getDirs
+         let fs = map (\p => cleanPath $ p </> fname) (data_dirs d)
+         Just f <- firstAvailableDir fs
+            | Nothing => throw (InternalError ("Can't find data dir " ++ fname ++
                                                " in any of " ++ show fs))
          pure f
 

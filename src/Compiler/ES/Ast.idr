@@ -37,6 +37,12 @@ data Var =
     ||| Index of a mangled toplevel function
     VRef  Int
 
+public export
+Show Var where
+  show (VName n) = "Var.VName " ++ show n
+  show (VLoc i)  = "Var.VLoc "  ++ show i
+  show (VRef i)  = "Var.VRef "  ++ show i
+
 ||| A minimal expression.
 public export
 data Minimal =
@@ -49,6 +55,11 @@ data Minimal =
   ||| for name resolution during the generation of the
   ||| imperative syntax tree.
   MProjection Nat Minimal
+
+public export
+Show Minimal where
+  show (MVar v) = "Minimal.MVar " ++ show v
+  show (MProjection n m) = "Minimal.MProjection " ++ show n ++ " " ++ show m
 
 --------------------------------------------------------------------------------
 --          Expressions
@@ -68,6 +79,11 @@ data Minimal =
 ||| block of code.
 public export
 data Effect = Returns | ErrorWithout Var
+
+public export
+Show Effect where
+  show Returns = "Effect.Returns"
+  show (ErrorWithout v) = "Effect.ErrorWithout " ++ show v
 
 mutual
   ||| An expression in a function definition.

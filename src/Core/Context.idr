@@ -1060,6 +1060,50 @@ record Defs where
        -- maps names to a pair of the back end and the exported function name
   defsStack : SnocList Name -- stack of the definition names being processed
 
+public export
+Show Defs where
+  show (MkDefs gamma mutData currentNS nestedNS options toSave nextTag
+               typeHints autoHints openHints localHints saveTypeHints
+               saveAutoHints transforms saveTransforms namedirectives ifaceHash
+               importHashes imported allImported cgdirectives toCompileCase
+               incData allIncData toIR userHoles peFailures timings timer
+               warnings schemeEvalLoaded foreignExports defsStack) =
+    "Defs {" ++
+    "\n  gamma: " ++ show gamma ++
+    "\n  mutData: " ++ show mutData ++
+    "\n  currentNS: " ++ show currentNS ++
+    "\n  nestedNS: " ++ show nestedNS ++
+    "\n  options: " ++ show options ++
+    "\n  toSave: " ++ show toSave ++
+    "\n  nextTag: " ++ show nextTag ++
+    "\n  typeHints: " ++ show typeHints ++
+    "\n  autoHints: " ++ show autoHints ++
+    "\n  openHints: " ++ show openHints ++
+    "\n  localHints: " ++ show localHints ++
+    "\n  saveTypeHints: " ++ show saveTypeHints ++
+    "\n  saveAutoHints: " ++ show saveAutoHints ++
+    "\n  transforms: TODO" ++ -- show transforms ++
+    "\n  saveTransforms: TODO" ++ -- show saveTransforms ++
+    "\n  namedirectives: " ++ show namedirectives ++
+    "\n  ifaceHash: " ++ show ifaceHash ++
+    "\n  importHashes: " ++ show importHashes ++
+    "\n  imported: " ++ show imported ++
+    "\n  allImported: " ++ show allImported ++
+    "\n  cgdirectives: " ++ show cgdirectives ++
+    "\n  toCompileCase: " ++ show toCompileCase ++
+    "\n  incData: " ++ show incData ++
+    "\n  allIncData: " ++ show allIncData ++
+    "\n  toIR: " ++ show toIR ++
+    "\n  userHoles: " ++ show userHoles ++
+    "\n  peFailures: " ++ show peFailures ++
+    "\n  timings: " ++ show timings ++
+    "\n  timer: " ++ show timer ++
+    "\n  warnings: " ++ show warnings ++
+    "\n  schemeEvalLoaded: " ++ show schemeEvalLoaded ++
+    "\n  foreignExports: " ++ show foreignExports ++
+    "\n  defsStack: TODO" ++ -- show defsStack ++
+    "\n}"
+
 -- Label for context references
 export
 data Ctxt : Type where

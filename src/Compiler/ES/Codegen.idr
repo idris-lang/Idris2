@@ -19,10 +19,15 @@ import Compiler.NoMangle
 import Libraries.Data.SortedMap
 import Protocol.Hex
 import Libraries.Data.String.Extra
+import Libraries.Data.SortedSet
+import Libraries.Data.SortedSet as SortedSet
+import Libraries.Utils.Path
+import Libraries.System.Directory.Tree as Directory.Tree
 
 import Idris.Pretty.Annotations
 import Idris.Syntax
 import Idris.Doc.String
+import System.Directory
 
 import Data.Vect
 
@@ -63,10 +68,10 @@ jsString s = "'" ++ (concatMap okchar (unpack s)) ++ "'"
 jsStringDoc : String -> Doc
 jsStringDoc = Text . jsString
 
--- A name from the preamble (file `support.js`).
+-- A name from the preamble (file `support/javascript/runtime.js`).
 -- the given string is just prefixed with an underscore.
-esName : String -> String
-esName x = "_" ++ x
+esNameFromRuntime : String -> String
+esNameFromRuntime x = "$runtime." ++ x
 
 -- convert a string to a Javascript identifier
 -- by escaping non-alphanumeric characters (except underscores).
@@ -194,7 +199,7 @@ callFun1 fun = callFun fun . pure
 
 -- throws an error in JS land with the given error message.
 jsCrashExp : (msg : Doc) -> Doc
-jsCrashExp = callFun1 (esName "crashExp")
+jsCrashExp = callFun1 (esNameFromRuntime "crashExp")
 
 -- creates a toplevel function definition of the form
 -- ```javascript
@@ -229,12 +234,12 @@ useBigInt (Unsigned x)       = useBigInt' x
 -- call _bigIntOfString from the preamble, which
 -- converts a string to a `BigInt`
 jsBigIntOfString : Doc -> Doc
-jsBigIntOfString = callFun1 (esName "bigIntOfString")
+jsBigIntOfString = callFun1 (esNameFromRuntime "bigIntOfString")
 
 -- call _parseFloat from the preamble, which
 -- converts a string to a `Number`
 jsNumberOfString : Doc -> Doc
-jsNumberOfString = callFun1 (esName "numberOfString")
+jsNumberOfString = callFun1 (esNameFromRuntime "numberOfString")
 
 -- convert an string to an integral type based
 -- on its `IntKind`.
@@ -242,7 +247,7 @@ jsIntOfString : IntKind -> Doc -> Doc
 jsIntOfString k =
   if useBigInt k
      then jsBigIntOfString
-     else callFun1 (esName "intOfString")
+     else callFun1 (esNameFromRuntime "intOfString")
 
 -- introduce a binary infix operation
 binOp : (symbol : String) -> (lhs : Doc) -> (rhs : Doc) -> Doc
@@ -271,9 +276,9 @@ jsAnyToString : Doc -> Doc
 jsAnyToString s = "(''+" <+> s <+> ")"
 
 -- converts an integer (`Number` or `BigInt`) to a character
--- by calling `_truncToChar` from the preamble.
+-- by calling `$runtime.truncToChar` from the preamble.
 jsCharOfInt : IntKind -> Doc -> Doc
-jsCharOfInt k = callFun1 (esName "truncToChar") . fromInt k
+jsCharOfInt k = callFun1 (esNameFromRuntime "truncToChar") . fromInt k
 
 -- Invokes a function from the preamble to check if an bounded
 -- signed integer is within bounds, and - if that's not the case -
@@ -287,16 +292,16 @@ jsCharOfInt k = callFun1 (esName "truncToChar") . fromInt k
 truncateSigned : (isBigInt : Bool) -> (bits : Int) -> (int : Doc) -> Doc
 truncateSigned isBigInt bits =
    let add = if isBigInt then "BigInt" else "Int"
-    in callFun1 (esName "trunc" ++ add ++ show bits)
+    in callFun1 (esNameFromRuntime "trunc" ++ add ++ show bits)
 
 -- like `truncateSigned` but for unsigned integers
 truncateUnsigned : (isBigInt : Bool) -> (bits : Int) -> (int : Doc) -> Doc
 truncateUnsigned isBigInt bits =
    let add = if isBigInt then "BigInt" else "Int"
-    in callFun1 (esName "truncU" ++ add ++ show bits)
+    in callFun1 (esNameFromRuntime "truncU" ++ add ++ show bits)
 
 integerOp : (op : String) -> (lhs : Doc) -> (rhs : Doc) -> Doc
-integerOp op x y = callFun (fastConcat ["_", op, "BigInt"]) [x,y]
+integerOp op x y = callFun (esNameFromRuntime $ fastConcat [op, "BigInt"]) [x,y]
 
 -- invokes an arithmetic operation for a bounded integral value.
 -- this is used to implement `boundedIntOp` and `boundedUIntOp`
@@ -307,7 +312,7 @@ boundedOp :  (suffix : String)
           -> (lhs : Doc)
           -> (rhs : Doc)
           -> Doc
-boundedOp s bits o x y = callFun (fastConcat ["_", o, show bits, s]) [x,y]
+boundedOp s bits o x y = callFun (esNameFromRuntime $ fastConcat [o, show bits, s]) [x,y]
 
 -- alias for `boundedOp "s"`
 boundedIntOp : Int -> String -> Doc -> Doc -> Doc
@@ -340,7 +345,7 @@ jsConstant (Str s)  = jsString s
 jsConstant (Ch c)   = jsString $ singleton c
 jsConstant (Db f)   = show f
 jsConstant (PrT t)  = jsPrimType t
-jsConstant WorldVal = esName "idrisworld"
+jsConstant WorldVal = esNameFromRuntime "idrisworld"
 
 -- Creates the definition of a binary arithmetic operation.
 -- Rounding / truncation behavior is determined from the
@@ -365,7 +370,7 @@ jsMod : PrimType -> Doc -> Doc -> Doc
 jsMod ty x y = case jsIntKind ty of
   (Just $ Signed $ P n) => case useBigInt' n of
     True  => integerOp "mod" x y
-    False => callFun "_mod" [x,y]
+    False => callFun (esNameFromRuntime "mod") [x,y]
   (Just $ Unsigned n)   => binOp "%" x y
   _                     => integerOp "mod" x y
 
@@ -457,9 +462,9 @@ jsOp StrTail [x] = pure $ "(" <+> x <+> ".slice(1))"
 jsOp StrIndex [x, y] = pure $ "(" <+> x <+> ".charAt(" <+> y <+> "))"
 jsOp StrCons [x, y] = pure $ binOp "+" x y
 jsOp StrAppend [x, y] = pure $ binOp "+" x y
-jsOp StrReverse [x] = pure $ callFun1 (esName "strReverse") x
+jsOp StrReverse [x] = pure $ callFun1 (esNameFromRuntime "strReverse") x
 jsOp StrSubstr [offset, len, str] =
-  pure $ callFun (esName "substr") [offset,len,str]
+  pure $ callFun (esNameFromRuntime "substr") [offset,len,str]
 jsOp DoubleExp [x]     = pure $ callFun1 "Math.exp" x
 jsOp DoubleLog [x]     = pure $ callFun1 "Math.log" x
 jsOp DoublePow [x, y]  = pure $ callFun "Math.pow" [x, y]
@@ -489,47 +494,65 @@ jsOp (Crash) [_, msg] = pure $ jsCrashExp msg
 readCCPart : String -> (String, String)
 readCCPart = breakDrop1 ':'
 
+pairToPairWithEsBackend : (String, String) -> Maybe (EsForeignBackend, String)
+pairToPairWithEsBackend (x, y) = do
+  backend <- esForeignBackend__fromString x
+  pure (backend, y)
+
+findPair : Eq a => a -> List (a, b) -> Maybe (a, b)
+findPair x [] = Nothing
+findPair x ((y, z) :: xs) = if x == y then Just (y, z) else findPair x xs
+
 -- search a an FFI implementation for one of the supported
 -- backends.
-searchForeign : List String -> List String -> Either (List String) String
-searchForeign knownBackends decls =
-  let pairs = map readCCPart decls
-      backends = Left $ map fst pairs
-   in maybe backends (Right. snd) $ find ((`elem` knownBackends) . fst) pairs
+-- Example:
+-- searchForeign NodePreferredJavascriptFallback ["scheme:string-unpack", "RefC:fastUnpack", "javascript:support"]
+-- => Right ("javascript", "support")
+-- searchForeign NodePreferredJavascriptFallback ["scheme:string-unpack", "RefC:fastUnpack", "javascript:support", "node:support"]
+-- => Right ("node", "support")
+-- searchForeign NodePreferredJavascriptFallback ["scheme:string-unpack", "RefC:fastUnpack"]
+-- => Left ["scheme", "RefC"]
+searchForeign : ESSupportedBackendOrFallback -> List String -> Either (List String) (EsForeignBackend, String)
+searchForeign esSupportedBackend foreignFunctionBackendAndTypeAndCode =
+  let pairs = map readCCPart foreignFunctionBackendAndTypeAndCode
+      pairsWithEsBackend = mapMaybe pairToPairWithEsBackend pairs
+      left : Lazy _ =  findPair (eSSupportedBackend__toPrimaryBackend esSupportedBackend) pairsWithEsBackend
+      righ : Lazy _ = findPair EsForeignBackend_Javascript pairsWithEsBackend
+      maybeFoundPairOrFindJavascript : Maybe (EsForeignBackend, String) = left <|> righ
+  in maybe (Left $ map fst pairs) Right maybeFoundPairOrFindJavascript
+
+getBasicName : UserName -> Maybe String
+data UserName : Type where
+  Basic : String -> UserName -- default name constructor       e.g. map
+  Field : String -> UserName -- field accessor                 e.g. .fst
+  Underscore : UserName      -- no name                        e.g. _
 
 -- given a function name and FFI implementation string,
 -- generate a toplevel function definition.
 makeForeign :  {auto d : Ref Ctxt Defs}
             -> {auto c : Ref ESs ESSt}
             -> {auto nm : Ref NoMangleMap NoMangleMap}
-            -> (name : Name)
-            -> (ffDecl : String)
-            -> Core Doc
-makeForeign n x = do
-  nd <- var !(get NoMangleMap) <$> getOrRegisterRef n
-  let (ty, def) = readCCPart x
-  case ty of
-    "lambda" => pure . constant nd . paren $ Text def
-    "support" => do
-      let (name, lib) = breakDrop1 ',' def
-      lib_code <- readDataFile ("js/" ++ lib ++ ".js")
-      addToPreamble lib lib_code
-      pure . constant nd . Text $ lib ++ "_" ++ name
-    "stringIterator" =>
-      case def of
-        "new"      => pure $ constant nd "__prim_stringIteratorNew"
-        "next"     => pure $ constant nd "__prim_stringIteratorNext"
-        "toString" => pure $ constant nd "__prim_stringIteratorToString"
-        _ => errorConcat
-               [ "Invalid string iterator function: ", def, ". "
-               , "Supported functions are: "
-               , stringList ["new","next","toString"], "."
-               ]
-
-    _ => errorConcat
-           [ "Invalid foreign type : ", ty, ". "
+            -> (idrisFunctionName : Name) -- e.g. System.prim__system
+            -> (foreignFunctionBackend : EsForeignBackend) -- e.g. "node"
+            -> (foreignFunctionTypeAndCode : String) -- e.g. "lambda:x=>x"
+            -> Core (Maybe Doc) -- maybe - bc if it is foreign, then there is no need to generate "const x = code"
+makeForeign idrisFunctionName foreignFunctionBackend foreignFunctionTypeAndCode = do
+  noMangleMap <- get NoMangleMap
+  varFromName <- getOrRegisterRef idrisFunctionName
+  let varFromNameDoc = var noMangleMap varFromName
+  case readCCPart foreignFunctionTypeAndCode of
+    ("support", "") => do
+      addToImportFileToPreamble foreignFunctionBackend idrisFunctionName -- TODO: if not added already
+      st <- get ESs
+      pure Nothing
+    ("support", _) => errorConcat
+      [ "Invalid foreign type for function \{show idrisFunctionName}: it should be like `%foreign \"\{esForeignBackend__toString foreignFunctionBackend}:support\"`, without any code"
+      ]
+    ("lambda", code) => pure . Just . constant varFromNameDoc . paren $ Text code
+    (type, _) => errorConcat
+           [ "Invalid foreign type : ", type, ". "
            , "Supported types are: "
-           , stringList ["lambda", "support", "stringIterator"]
+           , stringList ["lambda", "support"]
            ]
 
 -- given a function name and list of FFI declarations, tries
@@ -538,17 +561,17 @@ foreignDecl :  {auto d : Ref Ctxt Defs}
             -> {auto c : Ref ESs ESSt}
             -> {auto nm : Ref NoMangleMap NoMangleMap}
             -> Name
-            -> List String
-            -> Core Doc
-foreignDecl n ccs = do
-  tys <- ccTypes <$> get ESs
-  case searchForeign tys ccs of
-    Right x        => makeForeign n x
-    Left  backends =>
+            -> List String -- e.g. "node:lambda:x=>x"
+            -> Core (Maybe Doc)
+foreignDecl idrisFunctionName foreignFunctionBackendCode = do
+  esSupportedBackend' <- supportedBackendPrimaryAndFallback <$> get ESs
+  case searchForeign esSupportedBackend' foreignFunctionBackendCode of
+    Right (foreignFunctionBackend, foreignFunctionTypeAndCode) => makeForeign idrisFunctionName foreignFunctionBackend foreignFunctionTypeAndCode
+    Left  backendsInDefinition =>
       errorConcat
-        [ "No supported backend found in the definition of ", show n, ". "
-        , "Supported backends: ", stringList tys, ". "
-        , "Backends in definition: ", stringList backends, "."
+        [ "No supported backend found in the definition of ", show idrisFunctionName, ". "
+        , "Supported backends: ", stringList (map esForeignBackend__toString $ eSSupportedBackend__toListBackends esSupportedBackend'), ". "
+        , "Backends in definition: ", stringList backendsInDefinition, "."
         ]
 
 -- implementations for external primitive functions.
@@ -563,22 +586,15 @@ jsPrim nm docs = case (dropAllNS nm, docs) of
   (UN (Basic "void"), [_, _]) => pure . jsCrashExp $ jsStringDoc "Error: Executed 'void'"
   (UN (Basic "prim__void"), [_, _]) => pure . jsCrashExp $ jsStringDoc "Error: Executed 'void'"
   (UN (Basic "prim__codegen"), []) => do
-    (cg :: _) <- ccTypes <$> get ESs
-        | _ => pure "\"javascript\""
-    pure . Text $ jsString cg
-
--- fix #1839: Only support `prim__os` in Node backend but not in browsers
+    backend <- supportedBackendPrimaryAndFallback <$> get ESs
+    pure $ Text $ jsString $ esForeignBackend__toString $ eSSupportedBackend__toPrimaryBackend backend -- BREAKING CHANGE: before it was returning "javascript", now - "browser" or "node"
   (UN (Basic "prim__os"), []) => do
-    tys <- ccTypes <$> get ESs
-    case searchForeign tys ["node"] of
-      Right _ => do
-        addToPreamble "prim__os" $
-          "const _sysos = ((o => o === 'linux'?'unix':o==='win32'?'windows':o)" ++
-          "(require('os').platform()));"
-        pure $ Text $ esName "sysos"
-      Left  _ =>
-        throw $ InternalError $ "prim not implemented: prim__os"
-
+    case !(supportedBackendPrimaryAndFallback <$> get ESs) of
+         NodePreferredJavascriptFallback => do
+             addToImportFileToPreamble EsForeignBackend_Node nm
+             pure $ Text $ jsMangleName nm
+         BrowserPreferredJavascriptFallback =>
+             throw $ InternalError $ "prim__os not implemented for browser, only for node"
   _ => throw $ InternalError $ "prim not implemented: " ++ show nm
 
 --------------------------------------------------------------------------------
@@ -588,7 +604,7 @@ jsPrim nm docs = case (dropAllNS nm, docs) of
 -- checks, whether we accept the given `Exp` as a function argument, or
 -- whether it needs to be lifted to the surrounding scope and assigned
 -- to a new variable.
-isArg : CGMode -> Exp -> Bool
+isArg : EsCGMode -> Exp -> Bool
 isArg Pretty (ELam _ $ Block _ _)           = False
 isArg Pretty (ELam _ $ ConSwitch _ _ _ _)   = False
 isArg Pretty (ELam _ $ ConstSwitch _ _ _ _) = False
@@ -722,7 +738,7 @@ mutual
 
 -- pretty print a piece of code based on the given
 -- codegen mode.
-printDoc : CGMode -> Doc -> String
+printDoc : EsCGMode -> Doc -> String
 printDoc Pretty y = pretty (y <+> LineBreak)
 printDoc Compact y = compact y
 printDoc Minimal y = compact y
@@ -755,7 +771,7 @@ def (MkFunction n as body) = do
     then pure $ printDoc mde $ vcat
           [ cmt
           , constant (var !(get NoMangleMap) ref)
-               ("__lazy(" <+> function neutral [] b <+> ")") ]
+               ("$runtime.__lazy(" <+> function neutral [] b <+> ")") ]
     else pure $ printDoc mde $ vcat
           [ cmt
           , function (var !(get NoMangleMap) ref)
@@ -766,9 +782,11 @@ foreign :  {auto c : Ref ESs ESSt}
         -> {auto d : Ref Ctxt Defs}
         -> {auto nm : Ref NoMangleMap NoMangleMap}
         -> (Name,FC,NamedDef)
-        -> Core (List String)
-foreign (n, _, MkNmForeign path _ _) = pure . pretty <$> foreignDecl n path
-foreign _                            = pure []
+        -> Core (Maybe String)
+foreign (name, _, MkNmForeign ccs _ _) = do
+  maybeDoc <- foreignDecl name ccs
+  pure $ map pretty maybeDoc
+foreign _ = pure Nothing
 
 -- name of the toplevel tail call loop from the
 -- preamble.
@@ -786,15 +804,44 @@ validJSName name =
     validNameChar : Char -> Bool
     validNameChar c = isAlphaNum c || c == '_' || c == '$'
 
+------------ Printers
+
+printNameImport : Name -> String
+printNameImport idrisFunctionWithNamespace =
+  let (_, idrisFunctionName) = Core.Name.splitNS $ idrisFunctionWithNamespace
+      jsFunctionNameString = case idrisFunctionName of
+        UN (Basic jsFunctionNameString) => jsFunctionNameString
+        other => "Invalid foreign type for function \{show idrisFunctionWithNamespace}: the function name should be Basic, but got \{show other}"
+  in "  \{jsFunctionNameString} as \{jsMangleName idrisFunctionWithNamespace}"
+
+printImport : (EsImport_PathToForeignFile, SortedSet Name) -> String
+printImport (path, names) =
+  "import {\n\{concat $ intersperse ",\n" $ map printNameImport $ Libraries.Data.SortedSet.toList names}\n} from \"./\{esImport_PathToForeignFile__print path}\";"
+
+-- will print
+-- import { foo as My_Module_foo } from "./node/My.Module.js"
+public export
+printPreamble : SortedMap EsImport_PathToForeignFile (SortedSet Name) -> String
+printPreamble preamble =
+  concat $ intersperse "\n" $ map printImport $ Libraries.Data.SortedMap.toList preamble
+
 ||| Compiles the given `ClosedTerm` for the list of supported
 ||| backends to JS code.
 export
-compileToES : Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
-              (cg : CG) -> ClosedTerm -> List String -> Core String
-compileToES c s cg tm ccTypes = do
-  _ <- initNoMangle ccTypes validJSName
+compileToES : Ref Ctxt Defs ->
+              Ref Syn SyntaxInfo ->
+              (cg : CG) ->
+              ClosedTerm ->
+              ESSupportedBackendOrFallback ->
+              (outputDir : String) ->
+              Core String
+compileToES c s cg tm esSupportedBackend outputDir = do
+  let supportedBackendList : List EsForeignBackend = eSSupportedBackend__toListBackends esSupportedBackend
+  let supportedBackendListString : List String = map esForeignBackend__toString supportedBackendList
 
-  cdata <- getCompileDataWith ccTypes False Cases tm
+  _ <- initNoMangle supportedBackendListString validJSName
+
+  cdata <- getCompileDataWith supportedBackendListString False Cases tm
 
   -- read a derive the codegen mode to use from
   -- user defined directives for the
@@ -804,7 +851,7 @@ compileToES c s cg tm ccTypes = do
              else Pretty
 
   -- initialize the state used in the code generator
-  s <- newRef ESs $ init mode (isArg mode) isFun ccTypes !(get NoMangleMap)
+  s <- newRef ESs $ init mode (isArg mode) isFun esSupportedBackend !(get NoMangleMap)
 
   -- register the toplevel `__tailRec` function to make sure
   -- it is not mangled in `Minimal` mode
@@ -822,7 +869,8 @@ compileToES c s cg tm ccTypes = do
   defDecls <- traverse def defs
 
   -- pretty printed toplevel FFI definitions
-  foreigns <- concat <$> traverse foreign allDefs
+  let runtimeForeign = "import * as $runtime from \"./javascript/runtime.js\";\nimport { __tailRec } from \"./javascript/runtime.js\";"
+  foreigns <- catMaybes <$> traverse foreign allDefs
 
   -- lookup the (possibly mangled) name of the main function
   mainName <- compact . var !(get NoMangleMap) <$> getOrRegisterRef mainExpr
@@ -830,18 +878,22 @@ compileToES c s cg tm ccTypes = do
   -- main function and list of all declarations
   let main =  "try{"
            ++ mainName
-           ++ "()}catch(e){if(e instanceof IdrisError){console.log('ERROR: ' + e.message)}else{throw e} }"
+           ++ "()}catch(e){if(e instanceof $runtime.IdrisError){console.log('ERROR: ' + e.message)}else{throw e} }"
 
-      allDecls = fastUnlines $ foreigns ++ defDecls
+      allDecls = fastUnlines $ (runtimeForeign :: foreigns) ++ defDecls
 
   st <- get ESs
 
-  -- main preamble containing primops implementations
-  -- static_preamble <- readDataFile ("js/support.js")
-
   -- complete preamble, including content from additional
   -- support files (if any)
-  -- let pre = showSep "\n" $ static_preamble :: (values $ preamble st)
-  let pre = showSep "\n" $ values $ preamble st
+  let pre = printPreamble $ preamble st
+
+  for_ supportedBackendListString $ \backend => do
+    fromPath <- findDataDir backend
+    Right ok <- coreLift $ Directory.Tree.removeDirRecursive (parse $ outputDir </> backend)
+      | Left err => errorConcat $ ["copyPreludeFile -> removeDirRecursive failed for \{show backend}: ", show err]
+    Right ok <- coreLift $ Directory.Tree.copyDir (parse fromPath) (parse $ outputDir </> backend)
+      | Left err => errorConcat $ ["copyPreludeFile -> cannot copy \{show fromPath} to \{show $ outputDir </> backend}: ", show err]
+    pure ok
 
   pure $ fastUnlines [pre,allDecls,main]

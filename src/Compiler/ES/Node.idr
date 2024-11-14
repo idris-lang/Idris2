@@ -15,7 +15,7 @@ import Libraries.Utils.Path
 
 import System
 import System.File.Permissions
-
+import Compiler.ES.State as Compiler.ES.State
 import Data.Maybe
 
 %default covering
@@ -31,12 +31,14 @@ findNode = do
    pure $ fromMaybe envNode path
 
 ||| Compile a TT expression to Node
-compileToNode :
+compileToNodeJS :
   Ref Ctxt Defs ->
   Ref Syn SyntaxInfo ->
-  ClosedTerm -> Core String
-compileToNode c s tm = do
-  js <- compileToES c s Node tm ["node", "javascript"]
+  ClosedTerm ->
+  (outputDir : String) ->
+  Core String
+compileToNodeJS c s tm outputDir = do
+  js <- compileToES c s NodeJavascript tm Compiler.ES.State.NodePreferredJavascriptFallback outputDir
   pure $ shebang ++ js
   where
     shebang : String
@@ -52,7 +54,7 @@ compileExpr :
   (outfile : String) ->
   Core (Maybe String)
 compileExpr c s tmpDir outputDir tm outfile =
-  do es <- compileToNode c s tm
+  do es <- compileToNodeJS c s tm outputDir
      let out = outputDir </> outfile
      Core.writeFile out es
      coreLift_ $ chmodRaw out 0o755
@@ -65,7 +67,7 @@ executeExpr :
   (tmpDir : String) -> ClosedTerm -> Core ()
 executeExpr c s tmpDir tm =
   do let outn = tmpDir </> "_tmp_node.js"
-     js <- compileToNode c s tm
+     js <- compileToNodeJS c s tm tmpDir
      Core.writeFile outn js
      node <- coreLift findNode
      quoted_node <- pure $ "\"" ++ node ++ "\"" -- Windows often have a space in the path.
@@ -73,5 +75,5 @@ executeExpr c s tmpDir tm =
 
 ||| Codegen wrapper for Node implementation.
 export
-codegenNode : Codegen
-codegenNode = MkCG compileExpr executeExpr Nothing Nothing
+codegenNodeJavascript : Codegen
+codegenNodeJavascript = MkCG compileExpr executeExpr Nothing Nothing

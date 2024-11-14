@@ -6,6 +6,10 @@ import Core.Context
 import Compiler.ES.Ast
 import Compiler.NoMangle
 import Libraries.Data.SortedMap
+import Libraries.Data.SortedSet
+import Libraries.Data.SortedSet as SortedSet
+import Core.Name.Namespace as Core.Name.Namespace
+import Core.Name as Core.Name
 
 %default total
 
@@ -44,20 +48,109 @@ errorConcat = error . fastConcat
 ||| function names will be mangled and replaced with
 ||| machine generated indices.
 public export
-data CGMode = Pretty | Compact | Minimal
+data EsCGMode = Pretty | Compact | Minimal
 
 ||| We only keep user defined local names and only so
 ||| in `Pretty` mode.
 export
-keepLocalName : Name -> CGMode -> Bool
+keepLocalName : Name -> EsCGMode -> Bool
 keepLocalName (UN n) Pretty = True
 keepLocalName _      _      = False
 
 ||| We mangle toplevel function names only in `Minimal` mode.
 export
-keepRefName : Name -> CGMode -> Bool
+keepRefName : Name -> EsCGMode -> Bool
 keepRefName _ Minimal = False
 keepRefName _ _       = True
+
+--------------------------------------------------------------------------------
+--          Foreign Imports
+--------------------------------------------------------------------------------
+
+public export
+data EsForeignBackend = EsForeignBackend_Node | EsForeignBackend_Browser | EsForeignBackend_Javascript
+
+public export
+Eq EsForeignBackend where
+  (EsForeignBackend_Node) == (EsForeignBackend_Node) = True
+  (EsForeignBackend_Browser) == (EsForeignBackend_Browser) = True
+  (EsForeignBackend_Javascript) == (EsForeignBackend_Javascript) = True
+  _ == _ = False
+
+public export
+Show EsForeignBackend where
+  show EsForeignBackend_Node = "EsForeignBackend_Node"
+  show EsForeignBackend_Browser = "EsForeignBackend_Browser"
+  show EsForeignBackend_Javascript = "EsForeignBackend_Javascript"
+
+public export
+Ord EsForeignBackend where
+  compare EsForeignBackend_Node EsForeignBackend_Node = EQ
+  compare EsForeignBackend_Browser EsForeignBackend_Browser = EQ
+  compare EsForeignBackend_Javascript EsForeignBackend_Javascript = EQ
+  compare EsForeignBackend_Node EsForeignBackend_Browser = LT
+  compare EsForeignBackend_Node EsForeignBackend_Javascript = LT
+  compare EsForeignBackend_Browser EsForeignBackend_Javascript = LT
+  compare _ _ = GT
+
+public export
+esForeignBackend__toString : EsForeignBackend -> String
+esForeignBackend__toString EsForeignBackend_Node = "node"
+esForeignBackend__toString EsForeignBackend_Browser = "browser"
+esForeignBackend__toString EsForeignBackend_Javascript = "javascript"
+
+public export
+esForeignBackend__fromString : String -> Maybe EsForeignBackend
+esForeignBackend__fromString "node" = Just EsForeignBackend_Node
+esForeignBackend__fromString "browser" = Just EsForeignBackend_Browser
+esForeignBackend__fromString "javascript" = Just EsForeignBackend_Javascript
+esForeignBackend__fromString _ = Nothing
+
+||| Code compiler backend?
+public export
+data ESSupportedBackendOrFallback = NodePreferredJavascriptFallback | BrowserPreferredJavascriptFallback
+
+public export
+Show ESSupportedBackendOrFallback where
+  show NodePreferredJavascriptFallback    = "NodePreferredJavascriptFallback"
+  show BrowserPreferredJavascriptFallback = "BrowserPreferredJavascriptFallback"
+
+public export
+eSSupportedBackend__toListBackends : ESSupportedBackendOrFallback -> List EsForeignBackend
+eSSupportedBackend__toListBackends NodePreferredJavascriptFallback = [EsForeignBackend_Node,EsForeignBackend_Javascript]
+eSSupportedBackend__toListBackends BrowserPreferredJavascriptFallback = [EsForeignBackend_Browser,EsForeignBackend_Javascript]
+
+public export
+eSSupportedBackend__toPrimaryBackend : ESSupportedBackendOrFallback -> EsForeignBackend
+eSSupportedBackend__toPrimaryBackend NodePreferredJavascriptFallback = EsForeignBackend_Node
+eSSupportedBackend__toPrimaryBackend BrowserPreferredJavascriptFallback = EsForeignBackend_Browser
+
+public export
+record EsImport_PathToForeignFile where
+  constructor MkEsImport_PathToForeignFile
+  foreignBackend : EsForeignBackend
+  fileName : Core.Name.Namespace.Namespace
+
+public export
+Eq EsImport_PathToForeignFile where
+  (MkEsImport_PathToForeignFile fbt fn) == (MkEsImport_PathToForeignFile fbt' fn') =
+    fbt == fbt' && fn == fn'
+
+public export
+Ord EsImport_PathToForeignFile where
+  compare (MkEsImport_PathToForeignFile fbt fn) (MkEsImport_PathToForeignFile fbt' fn') =
+    case compare fbt fbt' of
+      EQ => compare fn fn'
+      x  => x
+
+public export
+Show EsImport_PathToForeignFile where
+  show (MkEsImport_PathToForeignFile fbt fn) = "MkEsImport_PathToForeignFile { fileName: " ++ show fn ++ ", foreignBackend: " ++ show fbt ++ " }"
+
+public export
+esImport_PathToForeignFile__print : EsImport_PathToForeignFile -> String
+esImport_PathToForeignFile__print (MkEsImport_PathToForeignFile fbt fn) =
+  esForeignBackend__toString fbt ++ "/" ++ Core.Name.Namespace.showNSWithSep "." fn ++ ".js"
 
 --------------------------------------------------------------------------------
 --          State
@@ -71,7 +164,7 @@ public export
 record ESSt where
   constructor MkESSt
   ||| Whether to always use minimal names
-  mode     : CGMode
+  mode     : EsCGMode
 
   ||| Returns `True`, if the given expression can be used as an
   ||| argument in a function call. (If this returns `False`, the
@@ -99,12 +192,12 @@ record ESSt where
 
   ||| Mappings from name to definitions to be added
   ||| to the preamble.
-  preamble : SortedMap String String
+  preamble : SortedMap EsImport_PathToForeignFile (SortedSet Name)
 
   ||| Accepted codegen types in foreign function definitions.
   ||| For JS, this is either `["node","javascript"]` or
   ||| `["browser","javascript"]`.
-  ccTypes  : List String
+  supportedBackendPrimaryAndFallback : ESSupportedBackendOrFallback
 
   ||| %nomangle names
   noMangleMap : NoMangleMap
@@ -206,23 +299,42 @@ getOrRegisterRef n = do
 --          Preamble and Foreign Definitions
 --------------------------------------------------------------------------------
 
+updatePreamble :  {auto c : Ref ESs ESSt}
+               -> (
+                   SortedMap EsImport_PathToForeignFile (SortedSet Name)
+                 -> Either (List String) (SortedMap EsImport_PathToForeignFile (SortedSet Name))
+                )
+               -> Core ()
+updatePreamble updateOrError = do
+  esState <- get ESs
+  let preamble' : SortedMap EsImport_PathToForeignFile (SortedSet Name) = preamble esState
+  case updateOrError preamble' of
+    Left err => errorConcat err
+    Right newPreamble => put ESs $ { preamble := newPreamble } esState
+
+
 ||| Add a new set of definitions under the given name to
 ||| the preamble. Fails with an error if a different set
 ||| of definitions have already been added under the same name.
 export
-addToPreamble :  {auto c : Ref ESs ESSt}
-              -> (name : String)
-              -> (def : String) -> Core ()
-addToPreamble name def = do
-  s <- get ESs
-  case lookup name (preamble s) of
-    Nothing => put ESs $ { preamble $= insert name def } s
-    Just x =>
-      unless (x == def) $ do
-        errorConcat
-              [ "two incompatible definitions for ", name
-              , "<|",x ,"|> <|" , def, "|>"
-              ]
+addToImportFileToPreamble :  {auto c : Ref ESs ESSt}
+                          -> EsForeignBackend
+                          -> (idrisFunctionWithNamespace : Name)
+                          -> Core ()
+addToImportFileToPreamble backend idrisFunctionWithNamespace = do
+  let (idrisFunctionNamespace, idrisFunctionName) = Core.Name.splitNS idrisFunctionWithNamespace
+  let pathToForeignFile = MkEsImport_PathToForeignFile backend idrisFunctionNamespace
+  updatePreamble $ \preamble' =>
+    case lookup pathToForeignFile preamble' of
+      Nothing => Right $ insert pathToForeignFile (SortedSet.singleton idrisFunctionWithNamespace) preamble'
+      Just idrisFunctionsSet =>
+        if SortedSet.contains idrisFunctionName idrisFunctionsSet
+          then Left
+            [ "For file ", esImport_PathToForeignFile__print pathToForeignFile, " the function "
+            , show idrisFunctionName, " was already imported"
+            ]
+          else
+            Right $ insert pathToForeignFile (SortedSet.insert idrisFunctionWithNamespace idrisFunctionsSet) preamble'
 
 --------------------------------------------------------------------------------
 --          Initialize State
@@ -230,14 +342,14 @@ addToPreamble name def = do
 
 ||| Initial state of the code generator
 export
-init :  (mode  : CGMode)
+init :  (mode  : EsCGMode)
      -> (isArg : Exp -> Bool)
      -> (isFun : Exp -> Bool)
-     -> (types : List String)
+     -> (backendOrFallback : ESSupportedBackendOrFallback)
      -> (noMangle : NoMangleMap)
      -> ESSt
-init mode isArg isFun ccs noMangle =
-  MkESSt mode isArg isFun 0 0 empty empty empty ccs noMangle
+init mode isArg isFun ccSupportedBackend noMangle =
+  MkESSt mode isArg isFun 0 0 empty empty empty ccSupportedBackend noMangle
 
 ||| Reset the local state before defining a new toplevel
 ||| function.

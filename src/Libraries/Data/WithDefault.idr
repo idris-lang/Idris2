@@ -5,6 +5,11 @@ data WithDefault : (0 a : Type) -> (0 def : a) -> Type where
   DefaultedValue : WithDefault a def
   SpecifiedValue : a -> WithDefault a def
 
+public export
+Show a => Show (WithDefault a def) where
+  show DefaultedValue = "WithDefault.Defaulted"
+  show (SpecifiedValue value) = "WithDefault.Specified { value: " ++ show value ++ " }"
+
 export
 specified : a -> WithDefault a def
 specified = SpecifiedValue

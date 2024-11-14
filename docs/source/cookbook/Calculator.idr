@@ -1,3 +1,5 @@
+module Calculator
+
 import Data.List1
 import Text.Lexer
 import Text.Parser

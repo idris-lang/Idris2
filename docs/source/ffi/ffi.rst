@@ -87,8 +87,7 @@ or ``javascript``. The former two are mutually exclusive while ``javascript``
 FFI specifiers apply both when building for the browser and when building for
 NodeJS.
 
-Javascript specifiers must be further specialized as ``lambda``, ``support``,
-or ``stringIterator``.
+Javascript specifiers must be further specialized as ``lambda``, ``support``.
 
 The syntax, therefore, is ``node:lambda:some_func`` (for the NodeJS-specific
 FFI and a lambda that executes a function named ``some_func``).

@@ -288,6 +288,11 @@ data SchemeMode
         = EvalAll -- evaluate everything
         | BlockExport -- compile 'export' names in other modules as blocked
 
+public export
+Show SchemeMode where
+  show EvalAll = "SchemeMode.EvalAll"
+  show BlockExport = "SchemeMode.BlockExport"
+
 export
 Eq SchemeMode where
    EvalAll == EvalAll = True
@@ -327,6 +332,39 @@ record GlobalDef where
   sizeChange : List SCCall
   schemeExpr : Maybe (SchemeMode, SchemeObj Write)
 
+public export
+Show GlobalDef where
+  show (MkGlobalDef location fullname type eraseArgs safeErase specArgs
+                    inferrable multiplicity localVars visibility totality
+                    isEscapeHatch flags refersToM refersToRuntimeM invertible
+                    noCycles linearChecked definition compexpr namedcompexpr
+                    sizeChange schemeExpr) =
+    "GlobalDef {" ++
+    "\n  location: " ++ show location ++
+    "\n  fullname: " ++ show fullname ++
+    -- "\n  type: " ++ show type ++
+    "\n  eraseArgs: " ++ show eraseArgs ++
+    "\n  safeErase: " ++ show safeErase ++
+    "\n  specArgs: " ++ show specArgs ++
+    "\n  inferrable: " ++ show inferrable ++
+    "\n  multiplicity: " ++ show multiplicity ++
+    "\n  localVars: " ++ show localVars ++
+    "\n  visibility: " ++ show visibility ++
+    "\n  totality: " ++ show totality ++
+    "\n  isEscapeHatch: " ++ show isEscapeHatch ++
+    "\n  flags: " ++ show flags ++
+    "\n  refersToM: " ++ show refersToM ++
+    "\n  refersToRuntimeM: " ++ show refersToRuntimeM ++
+    "\n  invertible: " ++ show invertible ++
+    "\n  noCycles: " ++ show noCycles ++
+    "\n  linearChecked: " ++ show linearChecked ++
+    -- "\n  definition: " ++ show definition ++
+    -- "\n  compexpr: " ++ show compexpr ++
+    -- "\n  namedcompexpr: " ++ show namedcompexpr ++
+    "\n  sizeChange: " ++ show sizeChange ++
+    "\n  schemeExpr: <SchemeObj>" ++
+    "\n}"
+
 export
 gDefKindedName : GlobalDef -> KindedName
 gDefKindedName def
@@ -360,6 +398,13 @@ data ContextEntry : Type where
      Decoded : GlobalDef -> ContextEntry
 
 public export
+Show ContextEntry where
+  show (Coded ns binary) =
+    "ContextEntry.Coded { namespace: " ++ show ns ++ ", binary: " ++ show binary ++ " }"
+  show (Decoded globalDef) =
+    "ContextEntry.Decoded { globalDef: <GlobalDef> " -- " ++ show globalDef ++ " }"
+
+public export
 data PossibleName : Type where
      Direct : Name -> Int -> PossibleName -- full name and resolved name id
      Alias : Name -> -- aliased name (from "import as")
@@ -367,9 +412,24 @@ data PossibleName : Type where
              PossibleName
 
 public export
+Show PossibleName where
+  show (Direct name resolvedId) =
+    "PossibleName.Direct { name: " ++ show name ++ ", resolvedId: " ++ show resolvedId ++ " }"
+  show (Alias alias realName resolvedId) =
+    "PossibleName.Alias { alias: " ++ show alias ++ ", realName: " ++ show realName ++
+    ", resolvedId: " ++ show resolvedId ++ " }"
+
+public export
 data UConstraint : Type where
      ULE : Name -> Name -> UConstraint
      ULT : Name -> Name -> UConstraint
+
+public export
+Show UConstraint where
+  show (ULE name1 name2) =
+    "UConstraint.ULE { " ++ show name1 ++ " <= " ++ show name2 ++ " }"
+  show (ULT name1 name2) =
+    "UConstraint.ULT { " ++ show name1 ++ " < " ++ show name2 ++ " }"
 
 export
 Eq UConstraint where
@@ -424,5 +484,25 @@ record Context where
     inlineOnly : Bool -- only return things with the 'alwaysReduce' flag
     hidden : NameMap () -- Never return these
     uconstraints : List UConstraint
+
+public export
+Show Context where
+  show (MkContext firstEntry nextEntry resolvedAs possibles content branchDepth
+                   staging visibleNS allPublic inlineOnly hidden uconstraints) =
+    "Context {" ++
+    "\n  firstEntry: " ++ show firstEntry ++
+    "\n  nextEntry: " ++ show nextEntry ++
+    "\n  resolvedAs: " ++ show resolvedAs ++
+    "\n  possibles: " ++ show possibles ++
+    "\n  content: <Ref IOArray ContextEntry>" ++
+    -- Skipping the actual content value to avoid dereferencing in show
+    "\n  branchDepth: " ++ show branchDepth ++
+    "\n  staging: " ++ show (Libraries.Data.IntMap.toList staging) ++
+    "\n  visibleNS: " ++ show visibleNS ++
+    "\n  allPublic: " ++ show allPublic ++
+    "\n  inlineOnly: " ++ show inlineOnly ++
+    "\n  hidden: " ++ show hidden ++
+    "\n  uconstraints: " ++ show uconstraints ++
+    "\n}"
 
 %name Context gam

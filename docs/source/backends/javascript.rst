@@ -1,5 +1,5 @@
 ***********************************
-Javascript and Node Code Generators
+Browser and Node Code Generators
 ***********************************
 
 There are two javascript code generators, ``node`` and ``javascript``. There are two

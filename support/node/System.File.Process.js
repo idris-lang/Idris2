@@ -2,7 +2,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import crypto from 'node:crypto';
 import child_process from 'node:child_process';
-import { prim__openFile, prim__removeFile } from './System.File.ReadWrite.js'
+import { prim__removeFile } from './System.File.ReadWrite.js'
+import { prim__open } from './System.File.Handle.js'
 import { parseMode } from './utils.js'
 
 // IMPLEMENTATION NOTE:
@@ -53,7 +54,7 @@ export function prim__popen(cmd, m) {
     return null
   }
 
-  const read_ptr = prim__openFile(
+  const read_ptr = prim__open(
     tmp_file,
     'r'
   )

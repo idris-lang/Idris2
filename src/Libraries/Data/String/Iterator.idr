@@ -25,7 +25,7 @@ data StringIterator : String -> Type where [external]
 %foreign
   "scheme:blodwen-string-iterator-new"
   "RefC:stringIteratorNew"
-  "javascript:stringIterator:new"
+  "javascript:support"
 private
 fromString : (str : String) -> StringIterator str
 
@@ -40,7 +40,7 @@ withString str f = f (fromString str)
 %foreign
   "scheme:blodwen-string-iterator-to-string"
   "RefC:stringIteratorToString"
-  "javascript:stringIterator:toString"
+  "javascript:support"
 export
 withIteratorString : (str : String)
                   -> (1 it : StringIterator str)
@@ -65,7 +65,7 @@ data UnconsResult : String -> Type where
 %foreign
   "scheme:blodwen-string-iterator-next"
   "RefC:stringIteratorNext"
-  "javascript:stringIterator:next"
+  "javascript:support"
 export
 uncons : (str : String) -> (1 it : StringIterator str) -> UnconsResult str
 

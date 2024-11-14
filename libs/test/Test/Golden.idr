@@ -109,7 +109,7 @@ record Options where
   ||| How many threads should we use?
   threads      : Nat
   ||| Should we write the list of failing cases to a file?
-  failureFile     : Maybe String
+  failureFile  : Maybe String
 
 export
 initOptions : String -> Bool -> Options
@@ -126,7 +126,7 @@ initOptions exe color
 export
 usage : String
 usage = unwords
-  ["Usage:"
+  [ "Usage:"
   , "runtests <path>"
   , "[--timing]"
   , "[--interactive]"

@@ -1,3 +1,5 @@
+// Input: [1, 2, 3]
+// Output: { a1: 1, a2: { a1: 2, a2: { a1: 3, a2: { h: 0 }}}}
 export function js2idris_array(x) {
   let acc = { h: 0 };
 

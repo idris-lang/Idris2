@@ -1,8 +1,1 @@
-*.d
-*.o
-*.obj
-*.a
-*.lib
-*.so
-*.dylib
-*.dll
+libidris2_support.so
