@@ -465,28 +465,28 @@ refToLocal x new tm = refsToLocals (Add new x None) tm
 
 -- Replace an explicit name with a term
 export
-substName : Name -> Term vars -> Term vars -> Term vars
-substName x new (Ref fc nt name)
+substName : SizeOf local -> Name -> Term vars -> Term (vars ++ local) -> Term (vars ++ local)
+substName s x new (Ref fc nt name)
     = case nameEq x name of
            Nothing => Ref fc nt name
-           Just Refl => new
-substName x new (Meta fc n i xs)
-    = Meta fc n i (map (substName x new) xs)
+           Just Refl => weakenNs s new
+substName s x new (Meta fc n i xs)
+    = Meta fc n i (map (substName s x new) xs)
 -- ASSUMPTION: When we substitute under binders, the name has always been
 -- resolved to a Local, so no need to check that x isn't shadowing
-substName x new (Bind fc y b scope)
-    = Bind fc y (map (substName x new) b) (substName x (weaken new) scope)
-substName x new (App fc fn arg)
-    = App fc (substName x new fn) (substName x new arg)
-substName x new (As fc s as pat)
-    = As fc s as (substName x new pat)
-substName x new (TDelayed fc y z)
-    = TDelayed fc y (substName x new z)
-substName x new (TDelay fc y t z)
-    = TDelay fc y (substName x new t) (substName x new z)
-substName x new (TForce fc r y)
-    = TForce fc r (substName x new y)
-substName x new tm = tm
+substName s x new (Bind fc y b scope)
+    = Bind fc y (map (substName s x new) b) (substName (suc s) x new scope)
+substName s x new (App fc fn arg)
+    = App fc (substName s x new fn) (substName s x new arg)
+substName s x new (As fc use as pat)
+    = As fc use (substName s x new as) (substName s x new pat)
+substName s x new (TDelayed fc y z)
+    = TDelayed fc y (substName s x new z)
+substName s x new (TDelay fc y t z)
+    = TDelay fc y (substName s x new t) (substName s x new z)
+substName s x new (TForce fc r y)
+    = TForce fc r (substName s x new y)
+substName s x new tm = tm
 
 export
 addMetas : (usingResolved : Bool) -> NameMap Bool -> Term vars -> NameMap Bool
