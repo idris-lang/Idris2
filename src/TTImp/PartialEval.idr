@@ -25,6 +25,7 @@ import Data.List
 import Data.SnocList
 import Libraries.Data.NameMap
 import Libraries.Data.WithDefault
+import Libraries.Data.SnocList.SizeOf
 
 %default covering
 
@@ -531,15 +532,8 @@ mutual
               FC -> Bounds bound -> Env Term free -> NHead free ->
               Core (Term (free ++ bound))
   quoteHead {bound} q defs fc bounds env (NLocal mrig _ prf)
-      = let MkVar prf' = addLater bound prf in
+      = let MkVar prf' = weakenNs (mkSizeOf bound) (MkVar prf) in
             pure $ Local fc mrig _ prf'
-    where
-      addLater : {idx : _} -> (ys : SnocList Name) -> (0 p : IsVar n idx xs) ->
-                 Var (xs ++ ys)
-      addLater [<] isv = MkVar isv
-      addLater (xs :< x) isv
-          = let MkVar isv' = addLater xs isv in
-                MkVar (Later isv')
   quoteHead q defs fc bounds env (NRef Bound (MN n i))
       = case findName bounds of
              Just (MkVar p) => pure $ Local fc Nothing _ (embedIsVar p)
