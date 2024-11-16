@@ -162,14 +162,14 @@ substInPatInfo {pvar} {vars} fc n tm p ps
                    tynf <- nf defs env ty
                    case tynf of
                         NApp _ _ _ =>
-                           pure ({ argType := Known c (substName n tm ty) } p, ps)
+                           pure ({ argType := Known c (substName zero n tm ty) } p, ps)
                         -- Got a concrete type, and that's all we need, so stop
                         _ => pure (p, ps)
            Stuck fty =>
              do defs <- get Ctxt
                 empty <- clearDefs defs
                 let env = mkEnv fc vars
-                case !(nf defs env (substName n tm fty)) of
+                case !(nf defs env (substName zero n tm fty)) of
                      NBind pfc _ (Pi _ c _ farg) fsc =>
                        pure ({ argType := Known c !(quote empty env farg) } p,
                                  !(updatePats env
@@ -722,7 +722,7 @@ groupCons fc fn pvars cs
     -- In 'As' replace the name on the RHS with a reference to the
     -- variable we're doing the case split on
     addGroup (PAs fc n p) pprf pats pid rhs acc
-         = addGroup p pprf pats pid (substName n (Local fc (Just True) _ pprf) rhs) acc
+         = addGroup p pprf pats pid (substName zero n (Local fc (Just True) _ pprf) rhs) acc
     addGroup (PCon cfc n t a pargs) pprf pats pid rhs acc
          = if a == length pargs
               then addConG n t pargs pats pid rhs acc
@@ -1150,7 +1150,7 @@ mutual
                   "Replacing \{show n} with \{show name}[\{show idx}] in \{show rhs}"
                log "compile.casetree" 5 $ "Var update " ++
                     show a ++ ", " ++ show n ++ ", vars: " ++ show (toList vars) ++ " ==> " ++ show !(toFullNames rhs)
-               let rhs' = substName n (Local pfc (Just False) _ prf) rhs
+               let rhs' = substName zero n (Local pfc (Just False) _ prf) rhs
                logTerm "compile.casetree" 5 "rhs'" rhs'
                pure $ MkPatClause (n :: pvars)
                         !(substInPats fc a (Local pfc (Just False) _ prf) pats)
@@ -1161,7 +1161,7 @@ mutual
           = do log "compile.casetree" 5 $ "Var replace " ++
                     show a ++ ", " ++ show n ++ ", vars: " ++ show (toList vars) ++ " ==> " ++ show !(toFullNames rhs)
                pats' <- substInPats fc a (mkTerm _ pat) pats
-               let rhs' = substName n (Local pfc (Just True) _ prf) rhs
+               let rhs' = substName zero n (Local pfc (Just True) _ prf) rhs
                logTerm "compile.casetree" 5 "rhs'" rhs'
                updateVar (MkPatClause pvars (MkInfo pat prf fty :: pats') pid rhs')
       -- match anything, name won't appear in rhs but need to update

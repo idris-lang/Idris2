@@ -298,20 +298,20 @@ buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
     buildArgAlt not' (ConCase n t args sc)
         = do let l = mkSizeOf args
              let con = Ref fc (DataCon t (size l)) n
-             let ps' = map (substName var
+             let ps' = map (substName zero var
                              (apply fc
                                     con (toList $ map (Ref fc Bound) args))) ps
              buildArgs fc defs (weakenNs l ((MkVar el, t) :: known))
                                (weakenNs l not') ps' sc
     buildArgAlt not' (DelayCase t a sc)
         = let l = mkSizeOf [<t, a]
-              ps' = map (substName var (TDelay fc LUnknown
+              ps' = map (substName zero var (TDelay fc LUnknown
                                              (Ref fc Bound t)
                                              (Ref fc Bound a))) ps in
               buildArgs fc defs (weakenNs l known) (weakenNs l not')
                                 ps' sc
     buildArgAlt not' (ConstCase c sc)
-        = do let ps' = map (substName var (PrimVal fc c)) ps
+        = do let ps' = map (substName zero var (PrimVal fc c)) ps
              buildArgs fc defs known not' ps' sc
     buildArgAlt not' (DefaultCase sc)
         = buildArgs fc defs known not' ps sc
