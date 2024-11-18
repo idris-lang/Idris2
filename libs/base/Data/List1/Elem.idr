@@ -21,11 +21,11 @@ data Elem : a -> List1 a -> Type where
      There : Elem x xs -> Elem x (y ::: xs)
 
 export
-Uninhabited (List1.Elem.Here {x} {xs} = List1.Elem.There {x = x'} {y} {xs} e) where
+Uninhabited (List1.Elem.Here {x} {xs} = List1.Elem.There {x = x'} {y} {xs = xs'} e) where
   uninhabited Refl impossible
 
 export
-Uninhabited (List1.Elem.There {x} {y} {xs} e = List1.Elem.Here {x = x'} {xs}) where
+Uninhabited (List1.Elem.There {x} {y} {xs} e = List1.Elem.Here {x = x'} {xs = xs'}) where
   uninhabited Refl impossible
 
 export
