@@ -427,7 +427,7 @@ mutual
        PatClause : FC -> (lhs : RawImp' nm) -> (rhs : RawImp' nm) -> ImpClause' nm
        WithClause : FC -> (lhs : RawImp' nm) ->
                     (rig : RigCount) -> (wval : RawImp' nm) -> -- with'd expression (& quantity)
-                    (prf : Maybe Name) -> -- optional name for the proof
+                    (prf : Maybe (RigCount, Name)) -> -- optional name for the proof
                     (flags : List WithFlag) ->
                     List (ImpClause' nm) -> ImpClause' nm
        ImpossibleClause : FC -> (lhs : RawImp' nm) -> ImpClause' nm
@@ -441,8 +441,8 @@ mutual
        = show lhs ++ " = " ++ show rhs
     show (WithClause fc lhs rig wval prf flags block)
        = show lhs
-       ++ " with (" ++ show rig ++ " " ++ show wval ++ ")"
-       ++ maybe "" (\ nm => " proof " ++ show nm) prf
+       ++ " with " ++ showCount rig ++ "(" ++ show wval ++ ")"
+       ++ maybe "" (\ nm => " proof " ++ showCount (fst nm) ++ show (snd nm)) prf
        ++ "\n\t" ++ show block
     show (ImpossibleClause fc lhs)
        = show lhs ++ " impossible"
@@ -518,7 +518,7 @@ mutual
 
 
 export
-mkWithClause : FC -> RawImp' nm -> List1 (RigCount, RawImp' nm, Maybe Name) ->
+mkWithClause : FC -> RawImp' nm -> List1 (RigCount, RawImp' nm, Maybe (RigCount, Name)) ->
                List WithFlag -> List (ImpClause' nm) -> ImpClause' nm
 mkWithClause fc lhs ((rig, wval, prf) ::: []) flags cls
   = WithClause fc lhs rig wval prf flags cls

@@ -1,0 +1,4 @@
+. ../../../testutils.sh
+
+check WithProof0.idr
+check WithProof1.idr
