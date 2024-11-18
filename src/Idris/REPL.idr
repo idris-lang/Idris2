@@ -226,8 +226,8 @@ printClause l i (WithClause _ lhsraw rig wvraw prf flags csraw)
          cs <- traverse (printClause l (i + 2)) csraw
          pure (relit l ((pack (replicate i ' ')
                 ++ show lhs
-                ++ " with " ++ elimSemi "0 " "1 " (const "") rig ++ "(" ++ show wval ++ ")"
-                ++ maybe "" (\ nm => " proof " ++ show nm) prf
+                ++ " with " ++ showCount rig ++ "(" ++ show wval ++ ")"
+                ++ maybe "" (\ nm => " proof " ++ showCount (fst nm) ++ show (snd nm)) prf
                 ++ "\n"))
                ++ showSep "\n" cs)
 printClause l i (ImpossibleClause _ lhsraw)
