@@ -2,3 +2,5 @@
 
 check WithProof0.idr
 check WithProof1.idr
+check WithProof0Fail.idr
+check WithProof1Fail.idr
