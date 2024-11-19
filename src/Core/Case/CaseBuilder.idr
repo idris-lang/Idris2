@@ -1258,7 +1258,7 @@ mkPatClause fc fn args ty pid (ps, rhs)
                   log "compile.casetree" 20 $ "mkPatClause nty: " ++ show nty
                   -- The arguments are in reverse order, so we need to
                   -- read what we know off 'nty', and reverse it
-                  argTys <- getArgTys [<] (reverse $ toList $ args) (Just nty)
+                  argTys <- getArgTys [<] (toList $ args) (Just nty)
                   log "compile.casetree" 20 $ "mkPatClause args: " ++ show (toList args) ++ ", argTys: " ++ show argTys
                   ns <- logDepth $ mkNames args ps eq (reverse argTys)
                   log "compile.casetree" 20 $
@@ -1296,7 +1296,7 @@ patCompile fc fn phase _ [] def
             (\e => pure ([<] ** e))
             def
 patCompile fc fn phase ty (p :: ps) def
-    = do let (ns ** n) = getNames 0 (fst p)
+    = do let (ns ** n) = getNames 0 (reverse $ fst p)
          log "compile.casetree" 25 $ "ns: " ++ show (asList ns)
          pats <- mkPatClausesFrom 0 ns (p :: ps)
          -- low verbosity level: pretty print fully resolved names
