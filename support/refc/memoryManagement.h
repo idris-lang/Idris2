@@ -55,7 +55,7 @@ Value *idris2_mkInt32_Boxed(int32_t i);
 Value *idris2_mkInt64(int64_t i);
 
 Value_Integer *idris2_mkInteger();
-Value_Integer *idris2_mkIntegerLiteral(char *i);
+Value *idris2_mkIntegerLiteral(char *i);
 Value_String *idris2_mkEmptyString(size_t l);
 Value_String *idris2_mkString(char *);
 
@@ -64,3 +64,12 @@ Value_GCPointer *idris2_makeGCPointer(void *ptr_Raw,
                                       Value_Closure *onCollectFct);
 Value_Buffer *idris2_makeBuffer(void *buf);
 Value_Array *idris2_makeArray(int length);
+
+extern Value_Int64 const idris2_predefined_Int64[100];
+extern Value_Bits64 const idris2_predefined_Bits64[100];
+extern Value_Integer idris2_predefined_Integer[100];
+Value *idris2_getPredefinedInteger(int n);
+extern Value_String const idris2_predefined_nullstring;
+
+// You need uncomment a debugging code in memoryManagement.c to use this.
+void idris2_dumpMemoryStats(void);

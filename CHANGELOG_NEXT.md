@@ -129,6 +129,17 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Switch calling conventions based on the number of arguments to avoid limits on
   the number of arguments and to reduce stack usage.
 
+* Values that reference counters reaching their maximum limit are immortalized to
+  prevent counter overflow. This can potentially cause memory leaks, but they
+  occur rarely and are a better choice than crashing. Since overflow is no longer
+  a concern, changing refCounter from int to uint16 reduces the size of 'Value_Header'.
+
+* Values often found at runtime, such as integers less than 100 are generate
+  staticaly and share.
+
+* Constant String, Int64, Bits64 and Double values are allocated statically as
+  imortal and shared.
+
 #### Chez
 
 * Fixed CSE soundness bug that caused delayed expressions to sometimes be eagerly
