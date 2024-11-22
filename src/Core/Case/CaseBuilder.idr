@@ -21,6 +21,7 @@ import Libraries.Data.List.LengthMatch
 import Libraries.Data.SortedSet
 import Libraries.Data.SnocList.SizeOf
 import Libraries.Data.SnocList.LengthMatch
+import Libraries.Data.SnocList.HasLength
 
 import Decidable.Equality
 
@@ -237,6 +238,11 @@ Weaken ArgType where
   weakenNs s (Stuck fty) = Stuck (weakenNs s fty)
   weakenNs s Unknown = Unknown
 
+GenWeaken ArgType where
+  genWeakenNs p q Unknown = Unknown
+  genWeakenNs p q (Known c ty) = Known c $ genWeakenNs p q ty
+  genWeakenNs p q (Stuck fty) = Stuck $ genWeakenNs p q fty
+
 Weaken (PatInfo p) where
   weakenNs s (MkInfo p el fty) = MkInfo p (weakenIsVar s el) (weakenNs s fty)
 
@@ -252,6 +258,25 @@ weakenNs : SizeOf ns ->
 weakenNs ns [] = []
 weakenNs ns (p :: ps)
     = weakenNs ns p :: weakenNs ns ps
+
+FreelyEmbeddable (PatInfo p) where
+
+FreelyEmbeddable ArgType where
+
+GenWeaken (PatInfo p) where
+  genWeakenNs p q (MkInfo {idx} {name} pat loc at) = do
+    let MkNVar loc' = genWeakenNs p q $ MkNVar {nvarIdx=idx} loc
+    let at' = genWeakenNs p q at
+    MkInfo pat loc' at'
+
+genWeakenNs : {0 local, ns, outer : Scope} ->
+  SizeOf outer -> SizeOf ns -> NamedPats (local ++ outer) todo -> NamedPats (local ++ ns ++ outer) todo
+genWeakenNs p q Nil = Nil
+genWeakenNs p q (pi :: np) = genWeakenNs p q pi :: genWeakenNs p q np
+
+genWeakenAssociative : {0 local, outer : Scope} ->
+  SizeOf outer -> NamedPats (local ++ outer) todo -> NamedPats ((local ++ [<nm]) ++ outer) todo
+genWeakenAssociative l n = rewrite sym $ appendAssociative local [<nm] outer in genWeakenNs l (suc zero) n
 
 (++) : NamedPats vars ms -> NamedPats vars ns -> NamedPats vars (ns ++ ms)
 (++) [] ys = ys
@@ -466,8 +491,8 @@ nextName root
 -- https://github.com/gallais/Idris2/blob/4efcf27bbc542bf9991ebaf75415644af7135b5d/src/Core/Case/CaseBuilder.idr
 getArgTys : {vars : _} ->
             {auto c : Ref Ctxt Defs} ->
-            Env Term vars -> List Name -> Maybe (NF vars) -> Core (List (ArgType vars))
-getArgTys {vars} env (n :: ns) (Just t@(NBind pfc _ (Pi _ c _ fargc) fsc))
+            Env Term vars -> SnocList Name -> Maybe (NF vars) -> Core (List (ArgType vars))
+getArgTys {vars} env (ns :< n) (Just t@(NBind pfc _ (Pi _ c _ fargc) fsc))
     = do defs <- get Ctxt
          empty <- clearDefs defs
          -- log "compile.casetree" 25 $ "getArgTys-1 t: " ++ show t ++ ", n: " ++ show n ++ ", vars: " ++ show (reverse $ toList vars)
@@ -480,7 +505,7 @@ getArgTys {vars} env (n :: ns) (Just t@(NBind pfc _ (Pi _ c _ fargc) fsc))
          -- log "compile.casetree" 25 $ "getArgTys-1 scty: " ++ show scty
          rest <- logDepth $ getArgTys env ns (Just scty)
          pure (argty :: rest)
-getArgTys env (n :: ns) (Just t)
+getArgTys env (ns :< n) (Just t)
     = do empty <- clearDefs =<< get Ctxt
          -- log "compile.casetree" 25 $ "getArgTys-2 t: " ++ show t ++ ", n: " ++ show n
          pure [Stuck !(quote empty env t)]
@@ -509,6 +534,30 @@ nextNames' fc (pats :< p) (ns :< n) (SnocMatch prf) argtys
                  snoc (weaken ps)
                    (MkInfo p First Unknown)))
 
+snocLMatch : LengthMatch xs ys -> LengthMatch ([<x] ++ xs) ([<y] ++ ys)
+snocLMatch LinMatch = SnocMatch LinMatch
+snocLMatch (SnocMatch z)
+    = let z' = snocLMatch z in
+          SnocMatch z'
+
+revLMatch : LengthMatch xs ys -> LengthMatch (rev xs) (rev ys)
+revLMatch LinMatch = LinMatch
+revLMatch (SnocMatch x)
+    = let x' = revLMatch x in
+          snocLMatch x'
+
+snocRMatch : LengthMatch xs ys -> LengthMatch (xs :< x) ([<y] ++ ys)
+snocRMatch LinMatch = SnocMatch LinMatch
+snocRMatch (SnocMatch z)
+    = let z' = snocRMatch z in
+          SnocMatch z'
+
+revRMatch : LengthMatch xs ys -> LengthMatch xs (rev ys)
+revRMatch LinMatch = LinMatch
+revRMatch (SnocMatch x)
+    = let x' = revRMatch x in
+          snocRMatch x'
+
 nextNames : {vars : _} ->
             {auto i : Ref PName Int} ->
             {auto c : Ref Ctxt Defs} ->
@@ -522,12 +571,12 @@ nextNames {vars} fc root pats m_nty
           -- The arguments are given in reverse order, so when we process them,
           -- the argument types are in the correct order
           log "compile.casetree" 20 $ "nextNames getArgTys m_nty: " ++ show m_nty ++ ", args: " ++ show args
-          argTys <- getArgTys env (cast args) m_nty
+          argTys <- getArgTys env args m_nty
           -- for_ (toList m_nty) $ \ ty => do
           --   logNF "compile.casetree" 25 "nextNames'' NF" env ty
-          result@(args_r ** (_, pats_r)) <- nextNames' fc pats args lprf (reverse argTys)
-          -- log "compile.casetree" 25 $ "nextNames argTys: " ++ show argTys ++ ", args_r: " ++ show args_r ++ ", pats_r: " ++ show pats_r
-          -- log "compile.casetree" 25 $ "nextNames argTy: <nothing>"
+          result@(args_r ** (_, pats_r)) <- nextNames' fc pats (rev args) (revRMatch lprf) (reverse argTys)
+          log "compile.casetree" 25 $ "nextNames argTys: " ++ show argTys ++ ", args_r: " ++ show args_r ++ ", pats_r: " ++ show pats_r
+          log "compile.casetree" 25 $ "nextNames argTy: <nothing>"
           pure result
   where
     mkNames : (vars : SnocList a) ->
@@ -537,18 +586,6 @@ nextNames {vars} fc root pats m_nty
         = do n <- nextName root
              (ns ** p) <- mkNames xs
              pure (ns :< n ** SnocMatch p)
-
-snocLMatch : LengthMatch xs ys -> LengthMatch ([<x] ++ xs) ([<y] ++ ys)
-snocLMatch LinMatch = SnocMatch LinMatch
-snocLMatch (SnocMatch z)
-    = let z' = snocLMatch z in
-          SnocMatch z'
-
-revLMatch : LengthMatch xs ys -> LengthMatch (rev xs) (rev ys)
-revLMatch LinMatch = LinMatch
-revLMatch (SnocMatch x)
-    = let x' = revLMatch x in
-          snocLMatch x'
 
 -- replace the prefix of patterns with 'pargs'
 newPats : (pargs : SnocList Pat) -> LengthMatch pargs ns ->
@@ -1195,8 +1232,8 @@ mutual
 export
 mkPat : {auto c : Ref Ctxt Defs} -> SnocList Pat -> ClosedTerm -> ClosedTerm -> Core Pat
 mkPat [<] orig (Ref fc Bound n) = pure $ PLoc fc n
-mkPat args orig (Ref fc (DataCon t a) n) = pure $ PCon fc n t a (reverse args)
-mkPat args orig (Ref fc (TyCon t a) n) = pure $ PTyCon fc n a (reverse args)
+mkPat args orig (Ref fc (DataCon t a) n) = pure $ PCon fc n t a (rev args)
+mkPat args orig (Ref fc (TyCon t a) n) = pure $ PTyCon fc n a (rev args)
 mkPat args orig (Ref fc Func n)
   = do prims <- getPrimitiveNames
        mtm <- normalisePrims (const True) isPConst True prims n args orig [<]
@@ -1258,7 +1295,7 @@ mkPatClause fc fn args ty pid (ps, rhs)
                   log "compile.casetree" 20 $ "mkPatClause nty: " ++ show nty
                   -- The arguments are in reverse order, so we need to
                   -- read what we know off 'nty', and reverse it
-                  argTys <- getArgTys [<] (toList $ args) (Just nty)
+                  argTys <- getArgTys [<] (rev args) (Just nty)
                   log "compile.casetree" 20 $ "mkPatClause args: " ++ show (toList args) ++ ", argTys: " ++ show argTys
                   ns <- logDepth $ mkNames args ps eq (reverse argTys)
                   log "compile.casetree" 20 $
@@ -1298,7 +1335,7 @@ patCompile fc fn phase _ [] def
 patCompile fc fn phase ty (p :: ps) def
     = do let (ns ** n) = getNames 0 (reverse $ fst p)
          log "compile.casetree" 25 $ "ns: " ++ show (asList ns)
-         pats <- mkPatClausesFrom 0 ns (p :: ps)
+         pats <- mkPatClausesFrom 0 (rev ns) (p :: ps)
          -- low verbosity level: pretty print fully resolved names
          logC "compile.casetree" 5 $ do
            pats <- traverse toFullNames pats
