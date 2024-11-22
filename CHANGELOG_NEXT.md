@@ -98,6 +98,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * `min` was renamed to `leftMost` in `Libraries.Data.Sorted{Map|Set}` in order
   to be defined as in `base`.
 
+* Reflected trees now make use of WithFC to replicate the new location tracking
+  in the compiler.
+
 ### Backend changes
 
 #### RefC Backend
