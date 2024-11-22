@@ -282,7 +282,7 @@ mkEnvOnto fc (ns :< n) vs
 export
 mkEnv : FC -> (vs : SnocList Name) -> Env Term vs
 mkEnv fc [<] = [<]
-mkEnv fc (ns :< n) = mkEnv fc ns :< PVar fc top Explicit (Erased fc Placeholder)
+mkEnv fc (ns :< _) = mkEnv fc ns :< PVar fc top Explicit (Erased fc Placeholder)
 
 -- Update an environment so that all names are guaranteed unique. In the
 -- case of a clash, the most recently bound is left unchanged.
