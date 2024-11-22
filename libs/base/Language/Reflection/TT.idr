@@ -81,6 +81,18 @@ record WithFC (ty : Type) where
 NoFC : a -> WithFC a
 NoFC = MkFCVal EmptyFC
 
+export
+Functor WithFC where
+  map f = { val $= f}
+
+export
+Foldable WithFC where
+  foldr f i v = f v.val i
+
+export
+Traversable WithFC where
+  traverse f (MkFCVal fc val) = map (MkFCVal fc) (f val)
+
 public export
 data NameType : Type where
      Bound   : NameType

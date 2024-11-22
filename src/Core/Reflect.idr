@@ -874,9 +874,7 @@ Reify a => Reify (WithFC a) where
                  pure $ MkFCVal fc val
              (UN (Basic "MkFCVal"), [_, fc, l2]) => do
                  fc' <- reify defs !(evalClosure defs fc)
-                 --val1 <- (evalClosure defs l1)
                  val' <- reify defs !(evalClosure defs l2)
-                 -- cantReify val "MkFCVal wrong arguments: \{show fc} \{show val1} \{show val2}"
                  pure $ MkFCVal fc' val'
              (t, l) => cantReify val "WithFC constructor: \{show t}, args: \{show (length l)}"
   reify defs val = cantReify val "Expected WithFC, found something else"

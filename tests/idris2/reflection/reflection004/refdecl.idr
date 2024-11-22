@@ -27,7 +27,7 @@ mkPoint n
 
 logDecls : TTImp -> Elab (Int -> Int)
 logDecls v
-    = do declare [IClaim EmptyFC MW Public []
+    = do declare [IClaim $ MkFCVal EmptyFC $ MkIClaimData MW Public []
                  (MkTy EmptyFC (MkFCVal EmptyFC `{ Main.foo })
                                `(Int -> Int -> Int) )]
 

@@ -381,7 +381,7 @@ namespace Foldable
 
     -- Define the instance
     check $ ILocal fc
-      [ IClaim fc MW vis [Totality treq] ty
+      [ IClaim (MkFCVal fc (MkIClaimData MW vis [Totality treq] ty))
       , IDef fc foldMapName cls
       ] `(fromFoldMap ~(t) ~(IVar fc foldMapName))
 

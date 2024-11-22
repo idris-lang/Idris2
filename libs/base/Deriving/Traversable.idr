@@ -406,7 +406,7 @@ namespace Traversable
 
     -- Define the instance
     check $ ILocal fc
-      [ IClaim fc MW vis [Totality treq] ty
+      [ IClaim (MkFCVal fc (MkIClaimData MW vis [Totality treq] ty))
       , IDef fc traverseName cls
       ] `(MkTraversable {t = ~(t)} ~(IVar fc traverseName))
 
