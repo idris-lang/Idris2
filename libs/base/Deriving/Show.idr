@@ -264,7 +264,7 @@ namespace Show
             ])
 
     -- Generate the type of the show function
-    let ty = MkTy fc fc showName $ withParams fc (paramConstraints ns) params
+    let ty = MkTy fc (NoFC showName) $ withParams fc (paramConstraints ns) params
            $ `(Prec -> ~(t) -> String)
     logMsg "derive.show.clauses" 1 $
       joinBy "\n" ("" :: ("  " ++ show (mapITy cleanup ty))

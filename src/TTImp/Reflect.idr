@@ -310,12 +310,11 @@ mutual
   Reify ImpTy where
     reify defs val@(NDCon _ n _ _ args)
         = case (dropAllNS !(full (gamma defs) n), map snd args) of
-               (UN (Basic "MkTy"), [w, x, y, z])
+               (UN (Basic "MkTy"), [w, y, z])
                     => do w' <- reify defs !(evalClosure defs w)
-                          x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
                           z' <- reify defs !(evalClosure defs z)
-                          pure (MkImpTy w' (MkFCVal x' y') z')
+                          pure (MkImpTy w' y' z')
                _ => cantReify val "ITy"
     reify defs val = cantReify val "ITy"
 
@@ -685,12 +684,11 @@ mutual
 
   export
   Reflect ImpTy where
-    reflect fc defs lhs env (MkImpTy w (MkFCVal x y) z)
+    reflect fc defs lhs env (MkImpTy w x z)
         = do w' <- reflect fc defs lhs env w
              x' <- reflect fc defs lhs env x
-             y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
-             appCon fc defs (reflectionttimp "MkTy") [w', x', y', z']
+             appCon fc defs (reflectionttimp "MkTy") [w', x', z']
 
   export
   Reflect DataOpt where

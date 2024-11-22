@@ -14,7 +14,7 @@ desiredType = IApp EmptyFC (IVar EmptyFC `{CanElabType.T}) `(3)
 
 elabDecl : Name -> Elab Unit
 elabDecl n = declare [
-    IClaim EmptyFC MW Public [] $ MkTy EmptyFC EmptyFC n desiredType
+    IClaim EmptyFC MW Public [] $ MkTy EmptyFC (MkFCVal EmptyFC n) desiredType
   ]
 
 %runElab elabDecl `{x1}

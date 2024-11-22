@@ -68,6 +68,19 @@ public export
 emptyFC : FC
 emptyFC = EmptyFC
 
+------------------------------------------------------------------------
+||| A wrapper for a value with a file context.
+public export
+record WithFC (ty : Type) where
+  constructor MkFCVal
+  fc : FC
+  val : ty
+
+||| Smart constructor for WithFC that uses EmptyFC as location
+%inline export
+NoFC : a -> WithFC a
+NoFC = MkFCVal EmptyFC
+
 public export
 data NameType : Type where
      Bound   : NameType

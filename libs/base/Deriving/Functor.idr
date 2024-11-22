@@ -382,7 +382,7 @@ namespace Functor
       , "Bifunctors: \{show ns.asBifunctors}"
       , "Parameters: \{show (map (mapFst unArg) params)}"
       ]
-    let ty = MkTy fc fc mapName $ withParams fc (paramConstraints ns) params
+    let ty = MkTy fc (NoFC mapName) $ withParams fc (paramConstraints ns) params
            $ IPi fc M0 ImplicitArg (Just a) (IType fc)
            $ IPi fc M0 ImplicitArg (Just b) (IType fc)
            $ `((~(va) -> ~(vb)) -> ~(t) ~(va) -> ~(t) ~(vb))

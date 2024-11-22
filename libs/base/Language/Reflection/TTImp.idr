@@ -123,7 +123,7 @@ mutual
 
   public export
   data ITy : Type where
-       MkTy : FC -> (nameFC : FC) -> (n : Name) -> (ty : TTImp) -> ITy
+       MkTy : FC -> (n : WithFC Name) -> (ty : TTImp) -> ITy
 
   %name ITy sig
 
@@ -408,7 +408,7 @@ parameters {auto eqTTImp : Eq TTImp}
 
   public export
   Eq ITy where
-    MkTy _ _ n ty == MkTy _ _ n' ty' = n == n' && ty == ty'
+    MkTy _ n ty == MkTy _ n' ty' = n.val == n'.val && ty == ty'
 
   public export
   Eq Data where
@@ -541,7 +541,7 @@ mutual
 
   public export
   Show ITy where
-    show (MkTy fc nameFC n ty) = "\{show n} : \{show ty}"
+    show (MkTy fc n ty) = "\{show n.val} : \{show ty}"
 
   public export
   Show Decl where
@@ -774,7 +774,7 @@ parameters (f : TTImp -> TTImp)
 
   public export
   mapITy : ITy -> ITy
-  mapITy (MkTy fc nameFC n ty) = MkTy fc nameFC n (mapTTImp ty)
+  mapITy (MkTy fc n ty) = MkTy fc n (mapTTImp ty)
 
   public export
   mapFnOpt : FnOpt -> FnOpt
@@ -895,7 +895,7 @@ parameters {0 m : Type -> Type} {auto apl : Applicative m} (f : (original : TTIm
 
   public export
   mapMITy : ITy -> m ITy
-  mapMITy (MkTy fc nameFC n ty) = MkTy fc nameFC n <$> mapATTImp' ty
+  mapMITy (MkTy fc n ty) = MkTy fc n <$> mapATTImp' ty
 
   public export
   mapMFnOpt : FnOpt -> m FnOpt
