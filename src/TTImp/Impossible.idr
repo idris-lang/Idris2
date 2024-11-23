@@ -45,7 +45,6 @@ match nty (n, i, rty)
 dropNoMatch : {auto c : Ref Ctxt Defs} ->
               Maybe (NF []) -> List (Name, Int, GlobalDef) ->
               Core (List (Name, Int, GlobalDef))
-dropNoMatch _ [t] = pure [t]
 dropNoMatch Nothing ts = pure ts
 dropNoMatch (Just nty) ts
     = -- if the return type of a thing in ts doesn't match nty, drop it
@@ -168,6 +167,8 @@ mutual
   mkTerm (INamedApp fc fn nm arg) mty exps autos named
      = mkTerm fn mty exps autos ((nm, arg) :: named)
   mkTerm (IPrimVal fc c) _ _ _ _ = pure (PrimVal fc c)
+  mkTerm (IAlternative _ (UniqueDefault tm) _) mty exps autos named
+     = mkTerm tm mty exps autos named
   mkTerm tm _ _ _ _ = nextVar (getFC tm)
 
 -- Given an LHS that is declared 'impossible', build a term to match from,
