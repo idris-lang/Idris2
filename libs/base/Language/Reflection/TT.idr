@@ -74,7 +74,7 @@ public export
 record WithFC (ty : Type) where
   constructor MkFCVal
   fc : FC
-  val : ty
+  value : ty
 
 ||| Smart constructor for WithFC that uses EmptyFC as location
 %inline export
@@ -83,11 +83,11 @@ NoFC = MkFCVal EmptyFC
 
 export
 Functor WithFC where
-  map f = { val $= f}
+  map f = { value $= f}
 
 export
 Foldable WithFC where
-  foldr f i v = f v.val i
+  foldr f i v = f v.value i
 
 export
 Traversable WithFC where
