@@ -38,7 +38,7 @@ tarjan {cuid} deps = loop initial (SortedMap.keys deps)
     strongConnect ts v =
         let ts'' = case SortedMap.lookup v deps of
               Nothing => ts'  -- no edges
-              Just edgeSet => loop ts' (SortedSet.toList edgeSet)
+              Just edgeSet => loop ts' (Prelude.toList edgeSet)
           in case SortedMap.lookup v ts''.vertices of
               Nothing => { impossibleHappened := True } ts''
               Just vtv =>

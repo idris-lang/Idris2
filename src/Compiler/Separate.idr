@@ -62,7 +62,7 @@ record CompilationUnit def where
 export
 Hashable def => Hashable (CompilationUnit def) where
   hashWithSalt h cu =
-    h `hashWithSalt` SortedSet.toList cu.dependencies
+    h `hashWithSalt` Prelude.toList cu.dependencies
       `hashWithSalt` cu.definitions
 
 private
@@ -281,7 +281,7 @@ getCompilationUnits {def} defs =
       dependencies : SortedSet CompilationUnitId
       dependencies = SortedSet.fromList $ do
         ns <- List1.forget nss  -- NS contained within
-        depsNS <- SortedSet.toList $  -- NS we depend on
+        depsNS <- Prelude.toList $  -- NS we depend on
           fromMaybe SortedSet.empty $
             SortedMap.lookup ns nsDeps
 
