@@ -113,6 +113,29 @@ namespace Dependent
   keySet : SortedDMap k v -> SortedSet k
   keySet = SetWrapper . cast . map (const ())
 
+||| Removes all given keys from the given map
+export
+differenceMap : SortedMap k v -> SortedSet k -> SortedMap k v
+differenceMap x y = foldr delete x y
+
+||| Leaves only given keys in the given map
+export
+intersectionMap : SortedMap k v -> SortedSet k -> SortedMap k v
+intersectionMap x y = differenceMap x (keySet $ differenceMap x y)
+
 export
 singleton : Ord k => k -> SortedSet k
 singleton = insert' empty
+
+export %inline
+toSortedMap : SortedSet k -> SortedMap k ()
+toSortedMap (SetWrapper m) = m
+
+export %inline
+fromSortedMap : SortedMap k () -> SortedSet k
+fromSortedMap = SetWrapper
+
+||| Pops the leftmost element from the set
+export
+pop : SortedSet k -> Maybe (k, SortedSet k)
+pop (SetWrapper m) = bimap fst fromSortedMap <$> pop m

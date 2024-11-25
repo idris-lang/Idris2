@@ -189,6 +189,11 @@ rightMost : SortedMap key val -> Maybe (key,val)
 rightMost = map unDPair . rightMost . unM
 
 
+||| Pops the leftmost key and corresponding value from the map
+export
+pop : SortedMap k v -> Maybe ((k, v), SortedMap k v)
+pop = map (bimap unDPair M) . pop . unM
+
 export
 (Show k, Show v) => Show (SortedMap k v) where
    show m = "fromList " ++ (show $ toList m)
