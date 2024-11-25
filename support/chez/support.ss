@@ -443,22 +443,22 @@
   (if (mutex-acquire (channel-read-mut chan))
       ((mutex-release (channel-read-mut chan))
        (let* ([val-box  (channel-val-box  chan)]
-             [the-val  (unbox val-box)]
-            )
-        (if (eq? the-val #f)
-            (#f)
-            ((channel-get-while-helper chan)
-             (let* ([val-box  (channel-val-box  chan)]
-                    [read-box (channel-read-box chan)]
-                    [read-cv  (channel-read-cv  chan)]
-                    [the-val  (unbox val-box)]
-                    )
-               (set-box! val-box '())
-               (set-box! read-box #t)
-               (mutex-release (channel-read-mut chan))
-               (condition-signal read-cv)
-               the-val))
-            )
+              [the-val  (unbox val-box)]
+             )
+         (if (eq? the-val #f)
+             (#f)
+             ((channel-get-while-helper chan)
+              (let* ([val-box  (channel-val-box  chan)]
+                     [read-box (channel-read-box chan)]
+                     [read-cv  (channel-read-cv  chan)]
+                     [the-val  (unbox val-box)]
+                     )
+                (set-box! val-box '())
+                (set-box! read-box #t)
+                (mutex-release (channel-read-mut chan))
+                (condition-signal read-cv)
+                the-val))
+         )
        )
       )
       (#f)
