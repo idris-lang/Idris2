@@ -217,14 +217,6 @@ channelGet chan = primIO (prim__channelGet chan)
 export
 channelGetNonBlocking : HasIO io => (chan : Channel a) -> io a
 channelGetNonBlocking chan = primIO (prim__channelGetNonBlocking chan)
-    {-
-    Right False =>
-      pure Nothing
-    Right True  =>
-      pure Nothing
-    Left x      =>
-      pure $ Just x
-    -}
 
 ||| Puts a value on the given channel.
 |||
