@@ -19,7 +19,7 @@ names = runConst . mapATTImp' f where
 logNames : TTImp -> Elab ()
 logNames expr = do
   logSugaredTerm "elab.test" 0 "term being analysed" expr
-  logMsg "elab.test" 0 "- names: \{show $ SortedSet.toList $ names expr}"
+  logMsg "elab.test" 0 "- names: \{show $ Prelude.toList $ names expr}"
 
 %runElab logNames `(f (a b) (c d))
 %runElab logNames `(Prelude.id $ Prelude.pure 5)

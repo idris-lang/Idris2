@@ -244,6 +244,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   `SIsNonZero` was made to be an alias for `ItIsSucc`, was marked as deprecated,
   and won't work on LHS anymore.
 
+* Deprecated `toList` function in favor of `Prelude.toList` in `Data.SortedSet`.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
