@@ -457,14 +457,10 @@
                 (mutex-release (channel-read-mut chan))
                 (condition-signal read-cv)
                 the-val))
-         )
-       )
-      )
+         )))
       ((mutex-release (channel-read-mut chan))
        (#f)
-      )
-  )
-)
+      )))
 
 ;; Mutex
 
