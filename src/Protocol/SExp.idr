@@ -2,12 +2,9 @@ module Protocol.SExp
 
 import Data.List
 import Data.List1
+import Data.String
 
 %default total
-
--- should be in base somewhere!
-join : String -> List String -> String
-join sep xs = concat $ intersperse sep xs
 
 public export
 data SExp = SExpList (List SExp)
@@ -26,7 +23,7 @@ escape = pack . concatMap escapeChar . unpack
 
 export
 Show SExp where
-  show (SExpList xs) = assert_total $ "(" ++ join " " (map show xs) ++ ")"
+  show (SExpList xs) = assert_total $ "(" ++ joinBy " " (map show xs) ++ ")"
   show (StringAtom str) = "\"" ++ escape str ++ "\""
   show (BoolAtom b) = ":" ++ show b
   show (IntegerAtom i) = show i
