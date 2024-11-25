@@ -1302,5 +1302,10 @@ mutual
          {auto m : Ref MD Metadata} ->
          {auto o : Ref ROpts REPLOpts} -> REPLResult -> Core ()
   displayErrors (ErrorLoadingFile x err)
-    = printError (reflow "File error in" <++> pretty0 x <+> colon <++> pretty0 (show err))
+    = printError $
+        hardline <+>
+        (indent 2 $
+          error ((reflow "Error loading file") <++> (dquotes $ pretty0 x) <+> colon) <++>
+            pretty0 (show err)) <+>
+        hardline
   displayErrors _ = pure ()
