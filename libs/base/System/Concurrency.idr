@@ -188,7 +188,7 @@ prim__makeChannel : PrimIO (Channel a)
 %foreign "scheme:blodwen-channel-get"
 prim__channelGet : Channel a -> PrimIO a
 %foreign "scheme:blodwen-channel-get-non-blocking"
-prim__channelGetNonBlocking : Channel a -> Maybe (PrimIO a)
+prim__channelGetNonBlocking : Channel a -> PrimIO (Either a Bool)
 %foreign "scheme:blodwen-channel-put"
 prim__channelPut : Channel a -> a -> PrimIO ()
 
@@ -215,8 +215,15 @@ channelGet chan = primIO (prim__channelGet chan)
 |||
 ||| @ chan the channel to receive on
 export
-channelGetNonBlocking : HasIO io => (chan : Channel a) -> Maybe (io a)
-channelGetNonBlocking chan = primIO (prim__channelGetNonBlocking chan)
+channelGetNonBlocking : HasIO io => (chan : Channel a) -> io (Maybe a)
+channelGetNonBlocking chan =
+  case !(primIO (prim__channelGetNonBlocking chan)) of
+    Right False =>
+      pure Nothing
+    Right True  =>
+      pure Nothing
+    Left x      =>
+      pure $ Just x
 
 ||| Puts a value on the given channel.
 |||
