@@ -447,8 +447,7 @@
              )
          (if (eq? the-val '())
              (#f)
-             ((channel-get-while-helper chan)
-              (let* ([val-box  (channel-val-box  chan)]
+             ((let* ([val-box  (channel-val-box  chan)]
                      [read-box (channel-read-box chan)]
                      [read-cv  (channel-read-cv  chan)]
                      [the-val  (unbox val-box)]
