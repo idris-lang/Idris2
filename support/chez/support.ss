@@ -441,8 +441,7 @@
 
 (define (blodwen-channel-get-non-blocking ty chan)
   (if (mutex-acquire (channel-read-mut chan))
-      ((mutex-release (channel-read-mut chan))
-       (let* ([val-box  (channel-val-box  chan)]
+      ((let* ([val-box  (channel-val-box  chan)]
               [the-val  (unbox val-box)]
              )
          (if (eq? the-val '())
