@@ -446,10 +446,8 @@
              )
          (if (eq? the-val '())
              (#f)
-             ((let* ([val-box  (channel-val-box  chan)]
-                     [read-box (channel-read-box chan)]
+             ((let* ([read-box (channel-read-box chan)]
                      [read-cv  (channel-read-cv  chan)]
-                     [the-val  (unbox val-box)]
                      )
                 (set-box! val-box '())
                 (set-box! read-box #t)
