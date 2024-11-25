@@ -441,7 +441,8 @@
 
 (define (blodwen-channel-get-non-blocking ty chan)
   (if (mutex-acquire (channel-read-mut chan))
-      (let* ([val-box  (channel-val-box  chan)]
+      ((mutex-release (channel-read-mut chan))
+       (let* ([val-box  (channel-val-box  chan)]
              [the-val  (unbox val-box)]
             )
         (if (eq? the-val #f)
@@ -458,6 +459,7 @@
                (condition-signal read-cv)
                the-val))
             )
+       )
       )
       (#f)
   )
