@@ -1,3 +1,4 @@
+-- Remove as soon as 0.8.0 (or greater) is released
 module Libraries.Data.SortedSet
 
 import Data.Maybe
@@ -97,9 +98,10 @@ export
 toSortedMap : SortedSet k -> SortedMap k ()
 toSortedMap (SetWrapper m) = m
 
+||| Returns the leftmost (least) value
 export
-min : SortedSet k -> Maybe k
-min (SetWrapper m) = fst <$> min m
+leftMost : SortedSet k -> Maybe k
+leftMost (SetWrapper m) = fst <$> leftMost m
 
 export
 pop : SortedSet k -> Maybe (k, SortedSet k)

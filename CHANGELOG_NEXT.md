@@ -95,6 +95,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Typst files can be compiled as Literate Idris
 
+* `min` was renamed to `leftMost` in `Libraries.Data.Sorted{Map|Set}` in order
+  to be defined as in `base`.
+
 ### Backend changes
 
 #### RefC Backend
@@ -245,6 +248,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   and won't work on LHS anymore.
 
 * Deprecated `toList` function in favor of `Prelude.toList` in `Data.SortedSet`.
+
+* Several functions like `pop`, `differenceMap` and `toSortedMap` were added to `Data.Sorted{Map|Set}`
 
 #### Contrib
 

@@ -1,3 +1,4 @@
+-- Remove as soon as 0.8.0 (or greater) is released
 module Libraries.Data.SortedMap
 
 %default total
@@ -324,20 +325,20 @@ adjust k f m =
     Nothing => m
     Just v => insert k (f v) m
 
-treeMin : Tree n k v o -> (k, v)
-treeMin (Leaf k v) = (k, v)
-treeMin (Branch2 t _ _) = treeMin t
-treeMin (Branch3 t _ _ _ _) = treeMin t
+treeLeftMost : Tree n k v o -> (k, v)
+treeLeftMost (Leaf k v) = (k, v)
+treeLeftMost (Branch2 t _ _) = treeLeftMost t
+treeLeftMost (Branch3 t _ _ _ _) = treeLeftMost t
 
 export
-min : SortedMap k v -> Maybe (k, v)
-min Empty = Nothing
-min (M _ t) = Just (treeMin t)
+leftMost : SortedMap k v -> Maybe (k, v)
+leftMost Empty = Nothing
+leftMost (M _ t) = Just $ treeLeftMost t
 
 export
 pop : SortedMap k v -> Maybe ((k, v), SortedMap k v)
 pop m = do
-  (k, v) <- min m
+  (k, v) <- leftMost m
   pure ((k, v), delete k m)
 
 export
