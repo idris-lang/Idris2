@@ -446,7 +446,7 @@
              )
          (if (eq? the-val '())
              ((mutex-release (channel-read-mut chan))
-              (error blodwen-channel-get-non-blocking "empty channel"))
+              '())
              ((let* ([read-box (channel-read-box chan)]
                      [read-cv  (channel-read-cv  chan)]
                      )
@@ -457,8 +457,13 @@
                 the-val))
          )))
       ((mutex-release (channel-read-mut chan))
-       (error blodwen-channel-get-non-blocking "could not acquire mutex"))
+       '())
   ))
+
+(define (blodwen-channel-check result)
+  (if (eq? result '())
+      #t   ; Return #t if the result is empty
+      #f)) ; Return #f if the result is a value
 
 ;; Mutex
 
