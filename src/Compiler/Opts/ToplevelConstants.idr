@@ -82,7 +82,7 @@ appendDef t = do
   put SortTag $ {triples $= (:< t)} st
 
 getCalls : Ref SortTag SortST => Name -> Core (List Name)
-getCalls n = map (maybe [] SortedSet.toList . lookup n . graph) (get SortTag)
+getCalls n = map (maybe [] Prelude.toList . lookup n . graph) (get SortTag)
 
 getTriple : Ref SortTag SortST => Name -> Core (Maybe (Name,FC,NamedDef))
 getTriple n = map (lookup n . map) (get SortTag)

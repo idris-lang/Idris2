@@ -211,7 +211,7 @@ recUpdate : {vars : _} ->
 recUpdate rigc elabinfo iloc nest env flds rec grecty
       = do let dups = checkForDuplicates flds empty empty
            unless (null dups) $
-             throw (DuplicatedRecordUpdatePath iloc $ SortedSet.toList dups)
+             throw (DuplicatedRecordUpdatePath iloc $ Prelude.toList dups)
            defs <- get Ctxt
            rectynf <- getNF grecty
            let Just rectyn = getRecordType env rectynf

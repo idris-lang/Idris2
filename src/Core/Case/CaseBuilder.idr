@@ -1321,7 +1321,7 @@ findExtraDefaults fc defs ctree@(Case {name = var} idx el ty altsIn)
        nfty <- nf defs fenv ty
        extraCases <- identifyUnreachableDefaults fc defs nfty altsIn
        extraCases' <- concat <$> traverse findExtraAlts altsIn
-       pure (SortedSet.toList extraCases ++ extraCases')
+       pure (Prelude.toList extraCases ++ extraCases')
   where
     findExtraAlts : CaseAlt vars -> Core (List Int)
     findExtraAlts (ConCase x tag args ctree') = findExtraDefaults fc defs ctree'
