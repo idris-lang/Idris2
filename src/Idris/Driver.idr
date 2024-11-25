@@ -37,10 +37,12 @@ import Yaffle.Main
 
 %default covering
 
-findInput : List CLOpt -> Maybe String
-findInput [] = Nothing
-findInput (InputFile f :: fs) = Just f
-findInput (_ :: fs) = findInput fs
+findInputs : List CLOpt -> Maybe (List1 String)
+findInputs [] = Nothing
+findInputs (InputFile f :: fs) =
+  let rest = maybe [] toList (findInputs fs)
+  in  Just (f ::: rest)
+findInputs (_ :: fs) = findInputs fs
 
 splitPaths : String -> List1 String
 splitPaths = map trim . split (==pathSeparator)
@@ -157,7 +159,11 @@ stMain cgs opts
          let ide = ideMode opts
          let ideSocket = ideModeSocket opts
          let outmode = if ide then IDEMode 0 stdin stdout else REPL InfoLvl
-         let fname = findInput opts
+         fname <- case (findInputs opts) of
+                       Just (fname ::: Nil) => pure $ Just fname
+                       Nothing => pure Nothing
+                       Just fnames => throw $
+                         UserError "Expected at most one input file but was given: \{joinBy ", " (toList fnames)}"
          o <- newRef ROpts (REPL.Opts.defaultOpts fname outmode cgs)
          updateEnv
 
