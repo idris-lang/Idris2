@@ -461,7 +461,9 @@
          )
        )
       )
-      (#f)
+      ((mutex-release (channel-read-mut chan))
+       (#f)
+      )
   )
 )
 
