@@ -187,6 +187,8 @@ data Channel : Type -> Type where [external]
 prim__makeChannel : PrimIO (Channel a)
 %foreign "scheme:blodwen-channel-get"
 prim__channelGet : Channel a -> PrimIO a
+%foreign "scheme:blodwen-channel-get-non-blocking"
+prim__channelGetNonBlocking : Channel a -> Maybe (PrimIO a)
 %foreign "scheme:blodwen-channel-put"
 prim__channelPut : Channel a -> a -> PrimIO ()
 
@@ -207,6 +209,14 @@ makeChannel = primIO prim__makeChannel
 export
 channelGet : HasIO io => (chan : Channel a) -> io a
 channelGet chan = primIO (prim__channelGet chan)
+
+||| Non-blocking version of channelGet.  Returns `Nothing` if
+||| either the mutex could not be acquired or the box was empty.
+|||
+||| @ chan the channel to receive on
+export
+channelGetNonBlocking : HasIO io => (chan : Channel a) -> Maybe (io a)
+channelGetNonBlocking chan = primIO (prim__channelGetNonBlocking chan)
 
 ||| Puts a value on the given channel.
 |||
