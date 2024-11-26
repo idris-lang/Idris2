@@ -440,7 +440,7 @@
     the-val))
 
 (define (blodwen-channel-get-non-blocking ty chan)
-  (if (mutex-acquire (channel-read-mut chan))
+  (if (mutex-acquire (channel-read-mut chan) #f)
       ((let* ([val-box  (channel-val-box  chan)]
               [the-val  (unbox val-box)]
              )
@@ -456,14 +456,14 @@
                 (condition-signal read-cv)
                 the-val))
          )))
-      ((mutex-release (channel-read-mut chan))
-       '())
+      ('())
   ))
+
 
 (define (blodwen-channel-check result)
   (if (eq? result '())
-      #t   ; Return #t if the result is empty
-      #f)) ; Return #f if the result is a value
+      0   ; Return 0 if the result is empty
+      1)) ; Return 1 if the result is a value
 
 ;; Mutex
 
