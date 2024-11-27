@@ -34,7 +34,7 @@ Main>  <expr>                                                Evaluate an express
  :mc :makecase     <l:number> <n:string>               Make case on term <n> defined on line <l>
  :mw :makewith     <l:number> <n:string>               Add with expression on term <n> defined on line <l>
  :intro            <l:number> <n:string>               Introduce unambiguous constructor in hole <n> defined on line <l>
- :refine           <l:number> <c:number> <h:string> <e:expr>Refine hole <h> with identifier <n> on line <l> and column <c>
+ :refine           <l:number> <h:string> <e:expr>      Refine hole <h> with identifier <n> on line <l>
  :ps :proofsearch  <l:number> <n:string> <h:[name]>    Search for a proof
  :psnext                                               Show next proof
  :gd               <l:number> <n:string> <r:number|0>  Try to generate a definition using proof-search
@@ -79,7 +79,7 @@ Main>  <expr>                                                Evaluate an express
  :mc :makecase     <l:number> <n:string>               Make case on term <n> defined on line <l>
  :mw :makewith     <l:number> <n:string>               Add with expression on term <n> defined on line <l>
  :intro            <l:number> <n:string>               Introduce unambiguous constructor in hole <n> defined on line <l>
- :refine           <l:number> <c:number> <h:string> <e:expr>Refine hole <h> with identifier <n> on line <l> and column <c>
+ :refine           <l:number> <h:string> <e:expr>      Refine hole <h> with identifier <n> on line <l>
  :ps :proofsearch  <l:number> <n:string> <h:[name]>    Search for a proof
  :psnext                                               Show next proof
  :gd               <l:number> <n:string> <r:number|0>  Try to generate a definition using proof-search
@@ -124,7 +124,7 @@ Main>  <expr>                                                Evaluate an express
  :mc :makecase     <l:number> <n:string>               Make case on term <n> defined on line <l>
  :mw :makewith     <l:number> <n:string>               Add with expression on term <n> defined on line <l>
  :intro            <l:number> <n:string>               Introduce unambiguous constructor in hole <n> defined on line <l>
- :refine           <l:number> <c:number> <h:string> <e:expr>Refine hole <h> with identifier <n> on line <l> and column <c>
+ :refine           <l:number> <h:string> <e:expr>      Refine hole <h> with identifier <n> on line <l>
  :ps :proofsearch  <l:number> <n:string> <h:[name]>    Search for a proof
  :psnext                                               Show next proof
  :gd               <l:number> <n:string> <r:number|0>  Try to generate a definition using proof-search

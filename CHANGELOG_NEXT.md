@@ -25,6 +25,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   where Idris2 will install the given package if `idris2 --install
   {ipkg-filename}` is called.
 
+* Remove reference to column number parameter in help menu for `refine` command.
+
 ### Building/Packaging changes
 
 * The Nix flake's `buildIdris` function now returns a set with `executable` and
@@ -129,6 +131,17 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Switch calling conventions based on the number of arguments to avoid limits on
   the number of arguments and to reduce stack usage.
 
+* Values that reference counters reaching their maximum limit are immortalized to
+  prevent counter overflow. This can potentially cause memory leaks, but they
+  occur rarely and are a better choice than crashing. Since overflow is no longer
+  a concern, changing refCounter from int to uint16 reduces the size of 'Value_Header'.
+
+* Values often found at runtime, such as integers less than 100 are generate
+  staticaly and share.
+
+* Constant String, Int64, Bits64 and Double values are allocated statically as
+  imortal and shared.
+
 #### Chez
 
 * Fixed CSE soundness bug that caused delayed expressions to sometimes be eagerly
@@ -226,6 +239,10 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Added implementations of `Foldable` and `Traversable` for `Control.Monad.Identity`
 
 * Added `Data.IORef.atomically` for the chez backend.
+
+* `Data.Nat.NonZero` was made to be an alias for `Data.Nat.IsSucc`.
+  `SIsNonZero` was made to be an alias for `ItIsSucc`, was marked as deprecated,
+  and won't work on LHS anymore.
 
 * Refactor `Uninhabited` implementation for `Data.List.Elem`, `Data.List1.Elem`, `Data.SnocList.Elem` and `Data.Vect.Elem`
   so it can be used for homogeneous (===) and heterogeneous (~=~) equality.

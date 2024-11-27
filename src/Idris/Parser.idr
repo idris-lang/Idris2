@@ -2241,7 +2241,7 @@ knownCommands =
   explain ["mc", "makecase"] "Make case on term <n> defined on line <l>" ++
   explain ["mw", "makewith"] "Add with expression on term <n> defined on line <l>" ++
   [ ("intro", "Introduce unambiguous constructor in hole <n> defined on line <l>")
-  , ("refine", "Refine hole <h> with identifier <n> on line <l> and column <c>")
+  , ("refine", "Refine hole <h> with identifier <n> on line <l>")
   ] ++
   explain ["ps", "proofsearch"] "Search for a proof" ++
   [ ("psnext", "Show next proof")
@@ -2587,7 +2587,6 @@ editLineNamePTermArgCmd : ParseCmd -> (Bool -> Int -> Name -> PTerm -> EditCmd) 
 editLineNamePTermArgCmd parseCmd command doc =
   ( names
   , Args [ NamedCmdArg "l" NumberArg
-         , NamedCmdArg "c" NumberArg
          , NamedCmdArg "h" StringArg
          , NamedCmdArg "e" ExprArg
          ]
