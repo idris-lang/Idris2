@@ -460,7 +460,7 @@ tryInstantiate : {auto c : Ref Ctxt Defs} ->
               Term newvars -> -- shrunk environment
               Core Bool -- postpone if the type is yet unknown
 tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
-    = do logTerm "unify.instantiate" 5 ("Instantiating in " ++ show newvars) tm
+    = do logTerm "unify.instantiate" 5 ("Instantiating in " ++ show !(traverse toFullNames (reverse $ toList newvars))) !(toFullNames tm)
 --          let Hole _ _ = definition mdef
 --              | def => ufail {a=()} loc (show mname ++ " already resolved as " ++ show def)
          case fullname mdef of
@@ -473,7 +473,7 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
          logTerm "unify.instantiate" 5 ("Type: " ++ show !(toFullNames mname)) (type mdef)
          logTerm "unify.instantiate" 5 ("Type: " ++ show mname) ty
          log "unify.instantiate" 5 ("With locs: " ++ show locs)
-         log "unify.instantiate" 5 ("From vars: " ++ show newvars)
+         log "unify.instantiate" 5 ("From vars: " ++ show (reverse $ toList newvars))
 
          defs <- get Ctxt
          -- Try to instantiate the hole
@@ -879,8 +879,8 @@ mutual
                    (do args' <- traverse (evalArg empty) args
                        qargs <- traverse (quote empty env) args'
                        qtm <- quote empty env tmnf
-                       pure $ "Unifying: " ++ show mname ++ " " ++ show qargs ++
-                              " with " ++ show qtm) -- first attempt, try 'empty', only try 'defs' when on 'retry'?
+                       pure $ "Unifying: " ++ show !(toFullNames mname) ++ " " ++ show !(traverse toFullNames $ toList qargs) ++
+                              " with " ++ show !(toFullNames qtm)) -- first attempt, try 'empty', only try 'defs' when on 'retry'?
            case !(patternEnv env args) of
                 Nothing =>
                   do Just hdef <- lookupCtxtExact (Resolved mref) (gamma defs)

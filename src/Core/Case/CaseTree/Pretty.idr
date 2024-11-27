@@ -24,7 +24,7 @@ namespace Raw
                     _ => space <+> keyword ":" <++> byShow ty
         in case_ <++> annotate Bound (pretty0 name) <+> ann <++> of_
          <+> nest 2 (hardline
-         <+> vsep (assert_total (map prettyAlt alts)))
+         <+> vsep (assert_total (reverse $ map prettyAlt alts)))
   prettyTree (STerm i tm) = byShow tm
   prettyTree (Unmatched msg) = "Error:" <++> pretty0 msg
   prettyTree Impossible = "Impossible"

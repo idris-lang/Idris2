@@ -75,8 +75,9 @@ logLocalEnv str n msg env
     dumpEnv : {free, vs : SnocList Name} -> LocalEnv free vs -> Core ()
     dumpEnv [<] = pure ()
     dumpEnv {vs = _ :< x} (bs :< closure)
-        = do logString str n $ msg ++ ": " ++ show x ++ " :: " ++ show closure
-             dumpEnv bs
+        = do dumpEnv bs
+             logString str n $ msg ++ ": " ++ show x ++ " :: " ++ show closure
+
 
 export
 log' : {auto c : Ref Ctxt Defs} ->
