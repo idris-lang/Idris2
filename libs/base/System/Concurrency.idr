@@ -363,7 +363,7 @@ channelGetNonBlocking : HasIO io => Scheme a => (chan : Channel a) -> io (Maybe 
 channelGetNonBlocking chan =
   pure $ (fromScheme . decodeObj) !(primIO (prim__channelGetNonBlocking chan))
   where
-    decodeObj : ChannelObj -> ChannelSchemeObj 
+    decodeObj : ChannelObj -> ChannelSchemeObj
     decodeObj obj =
       if prim_isInteger obj == 1 then IntegerVal (unsafeGetInteger obj)
       else if prim_isVector obj == 1 then Vector (unsafeGetInteger (unsafeVectorRef obj 0))

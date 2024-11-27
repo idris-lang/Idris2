@@ -1,7 +1,7 @@
 import System.Concurrency
 import System
 
--- Test that using channelGetNonBlocking works as expected. 
+-- Test that using channelGetNonBlocking works as expected.
 main : IO ()
 main = do
   chan <- makeChannel
