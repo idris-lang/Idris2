@@ -158,7 +158,7 @@ substInPatInfo {pvar} {vars} fc n tm p ps
                    logTerm "compile.casetree" 25 "substInPatInfo-Known-ty" ty
                    log "compile.casetree" 25 $ "n: " ++ show n
                    let env = mkEnv fc vars
-                   logEnv "compile.casetree" 25 "substInPatInfo env" env
+                   logEnvRev "compile.casetree" 25 "substInPatInfo env" env
                    tynf <- nf defs env ty
                    case tynf of
                         NApp _ _ _ =>
@@ -472,7 +472,7 @@ getArgTys {vars} env (n :: ns) (Just t@(NBind pfc _ (Pi _ c _ fargc) fsc))
          argty <- case !(evalClosure defs fargc) of
            NErased _ _ => pure Unknown
            farg => do log "compile.casetree" 25 $ "getArgTys-1 farg: " ++ show farg
-                      logEnv "compile.casetree" 25 "getArgTys-1 env " env
+                      logEnvRev "compile.casetree" 25 "getArgTys-1 env " env
                       Known c <$> quote empty env farg
          scty <- fsc defs (toClosure defaultOpts env (Ref pfc Bound n))
          log "compile.casetree" 25 $ "getArgTys-1 scty: " ++ show scty
@@ -516,7 +516,7 @@ nextNames fc root [<] _ = pure ([<] ** (zero, []))
 nextNames {vars} fc root pats m_nty
      = do (args ** lprf) <- mkNames pats
           let env = mkEnv fc vars
-          logEnv "compile.casetree" 25 "nextNames env" env
+          logEnvRev "compile.casetree" 25 "nextNames env" env
           log "compile.casetree" 20 $ "nextNames m_nty: " ++ show m_nty ++ ", args: " ++ show args
           -- The arguments are given in reverse order, so when we process them,
           -- the argument types are in the correct order
@@ -1290,7 +1290,7 @@ patCompile fc fn phase _ [] def
             def
 patCompile fc fn phase ty (p :: ps) def
     = do let (ns ** n) = getNames 0 (fst p)
-         log "compile.casetree" 25 $ "ns: " ++ show ns
+         log "compile.casetree" 25 $ "ns: " ++ show (asList ns)
          pats <- mkPatClausesFrom 0 ns (p :: ps)
          -- low verbosity level: pretty print fully resolved names
          logC "compile.casetree" 5 $ do

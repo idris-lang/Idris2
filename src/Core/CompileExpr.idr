@@ -406,13 +406,13 @@ Show CFType where
 export
 covering
 Show CDef where
-  show (MkFun args exp) = show args ++ ": " ++ show exp
+  show (MkFun args exp) = show (reverse $ toList args) ++ ": " ++ show exp
   show (MkCon tag arity pos)
       = "Constructor tag " ++ show tag ++ " arity " ++ show arity ++
         maybe "" (\n => " (newtype by " ++ show n ++ ")") pos
   show (MkForeign ccs args ret)
       = "Foreign call " ++ show ccs ++ " " ++
-        show args ++ " -> " ++ show ret
+        show (reverse $ toList args) ++ " -> " ++ show ret
   show (MkError exp) = "Error: " ++ show exp
 
 export

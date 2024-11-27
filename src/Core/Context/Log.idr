@@ -127,6 +127,7 @@ logLocalEnv str n msg env
              logString depth str n $ msg ++ ": " ++ show x ++ " :: " ++ show closure
              dumpEnv bs
 
+
 export
 log' : {auto c : Ref Ctxt Defs} ->
        LogLevel -> Lazy String -> Core ()

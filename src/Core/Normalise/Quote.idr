@@ -143,9 +143,10 @@ mutual
                Just (MkVar (Later p))
   quoteHead q opts defs fc bounds env (NRef nt n) = pure $ Ref fc nt n
   quoteHead q opts defs fc bounds env (NMeta n i args)
-      = do args' <- quoteArgs q opts defs bounds env args
+           -- [Note] Restore logging sequence
+      = do args' <- quoteArgs q opts defs bounds env (reverse args)
            -- See [Note] Meta args
-           pure $ Meta fc n i (toList . map snd $ args')
+           pure $ Meta fc n i (toList . map snd . reverse $ args')
 
   quotePi : {auto c : Ref Ctxt Defs} ->
             {bound, free : _} ->
