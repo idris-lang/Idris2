@@ -15,6 +15,7 @@ import Libraries.Data.Version
 import Libraries.Utils.Path
 
 import Data.List
+import Data.SnocList
 import Data.Maybe
 
 import System.Directory
@@ -104,9 +105,22 @@ public export
 listOfExtensionsStr : List String
 listOfExtensionsStr = listOfExtensionsLiterate ++ [".yaff", ".idr"]
 
+||| Applies the following properties of relative directory construction:
+||| X / .  = X
+||| X / .. = .    where X =/= ..
+collapseSpecialDirs : SnocList Body -> SnocList Body
+collapseSpecialDirs path@(xs :< ParentDir) =
+  case collapseSpecialDirs xs of
+    xs :< CurDir   => xs
+    xs :< Normal _ => xs
+    _ => path
+collapseSpecialDirs (xs :< CurDir) = collapseSpecialDirs xs
+collapseSpecialDirs (xs :< Normal n) = collapseSpecialDirs xs :< Normal n
+collapseSpecialDirs [<] = [<]
+
 ||| Given a path, removes trailing separators and current directory identifiers, '.'.
 cleanPath : String -> String
-cleanPath = show . the (Path -> Path) { hasTrailSep := False, body $= filter (/= CurDir) } . parse
+cleanPath = show . the (Path -> Path) { hasTrailSep := False, body $= cast . collapseSpecialDirs . cast } . parse
 
 ||| Return the basename and extension used *if* given filename is a valid idris filename.
 |||
@@ -224,9 +238,9 @@ corePathToNS : String -> Maybe String -> String -> Core ModuleIdent
 corePathToNS wdir sdir fname = do
   let err = UserError $
           "Source file "
-       ++ show fname
+       ++ show (cleanPath fname)
        ++ " is not in the source directory "
-       ++ show (wdir </> fromMaybe "" sdir)
+       ++ show (cleanPath (wdir </> fromMaybe "" sdir))
   maybe (throw err) pure (mbPathToNS wdir sdir fname)
 
 export
