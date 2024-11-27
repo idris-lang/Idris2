@@ -446,7 +446,7 @@
             )
          (if (eq? the-val '())
              ((mutex-release (channel-read-mut chan))
-	      0)
+	      '())
              (let* ([read-box (channel-read-box chan)]
                     [read-cv  (channel-read-cv  chan)]
                     )
@@ -456,7 +456,7 @@
                 (condition-signal read-cv)
                 the-val)
          ))
-      0
+      '()
   ))
 
 ;; Mutex
