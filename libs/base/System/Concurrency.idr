@@ -285,8 +285,6 @@ Scheme a => Scheme (Maybe a) where
   fromScheme (Box x) = Just $ Just !(fromScheme x)
   fromScheme _       = Nothing
 
-%foreign "scheme:blodwen-is-number"
-prim_isNumber : ChannelObj -> Int
 %foreign "scheme:blodwen-is-integer"
 prim_isInteger : ChannelObj -> Int
 %foreign "scheme:blodwen-is-float"
@@ -369,9 +367,9 @@ channelGetNonBlocking chan =
     decodeObj obj =
       if prim_isInteger obj == 1 then IntegerVal (unsafeGetInteger obj)
       else if prim_isVector obj == 1 then Vector (unsafeGetInteger (unsafeVectorRef obj 0))
-                                            (readVector (unsafeVectorLength obj) 1 obj)
+                                                 (readVector (unsafeVectorLength obj) 1 obj)
       else if prim_isPair obj == 1 then Cons (decodeObj (unsafeFst obj))
-                                        (decodeObj (unsafeSnd obj))
+                                             (decodeObj (unsafeSnd obj))
       else if prim_isFloat obj == 1 then FloatVal (unsafeGetFloat obj)
       else if prim_isString obj == 1 then StringVal (unsafeGetString obj)
       else if prim_isChar obj == 1 then CharVal (unsafeGetChar obj)
