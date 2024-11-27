@@ -456,14 +456,8 @@
                 (condition-signal read-cv)
                 the-val))
          )))
-      ('())
+      '()
   ))
-
-
-(define (blodwen-channel-check result)
-  (if (eq? result '())
-      0   ; Return 0 if the result is empty
-      1)) ; Return 1 if the result is a value
 
 ;; Mutex
 
@@ -524,7 +518,6 @@
 (define (blodwen-is-time? clk) (if (time? clk) 1 0))
 (define (blodwen-clock-second time) (time-second time))
 (define (blodwen-clock-nanosecond time) (time-nanosecond time))
-
 
 (define (blodwen-arg-count)
   (length (command-line)))
