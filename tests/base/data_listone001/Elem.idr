@@ -27,6 +27,9 @@ decHomogeneousElem (There el1') (There el2') = case decHomogeneousElemList el1' 
                                                 Yes Refl => Yes Refl
                                                 No contra => No $ \Refl => contra Refl
 
+decHomogeneousElem' : (el1 : Data.List1.Elem.Elem x xs) -> (el2 : Data.List1.Elem.Elem x xs) -> Dec (el1 = el2)
+decHomogeneousElem' = decHomogeneousElem
+
 decHeterogeneousElem : (el1 : Data.List1.Elem.Elem x xs) -> (el2 : Data.List1.Elem.Elem y xs) -> Dec (el1 ~=~ el2)
 decHeterogeneousElem Here         Here         = Yes Refl
 decHeterogeneousElem (There _)    Here         = No uninhabited
@@ -34,6 +37,9 @@ decHeterogeneousElem Here         (There _)    = No uninhabited
 decHeterogeneousElem (There el1') (There el2') = case decHeterogeneousElemList el1' el2' of
                                                   Yes Refl => Yes Refl
                                                   No contra => No $ \Refl => contra Refl
+
+decHeterogeneousElem' : (el1 : Data.List1.Elem.Elem x xs) -> (el2 : Data.List1.Elem.Elem y xs) -> Dec (el1 = el2)
+decHeterogeneousElem' = decHeterogeneousElem
 
 main : IO ()
 main = printLn "OK"
