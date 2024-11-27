@@ -335,12 +335,6 @@ prim__makeChannel : PrimIO (Channel a)
 prim__channelGet : Channel a -> PrimIO a
 %foreign "scheme:blodwen-channel-get-non-blocking"
 prim__channelGetNonBlocking : Channel a -> PrimIO ChannelObj
-%foreign "scheme:blodwen-unbox"
-prim__channelUnbox : ChannelObj -> a
-%foreign "scheme:blodwen-channel-eval-okay"
-prim__channelEvalOkay : ChannelObj -> Int
-%foreign "scheme:blodwen-eval-chan-result"
-prim__chanEvalResult : ChannelObj -> a
 %foreign "scheme:blodwen-channel-put"
 prim__channelPut : Channel a -> a -> PrimIO ()
 
