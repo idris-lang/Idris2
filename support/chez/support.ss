@@ -441,23 +441,22 @@
 
 (define (blodwen-channel-get-non-blocking ty chan)
   (if (mutex-acquire (channel-read-mut chan) #f)
-      (let* ([val-box  (channel-val-box  chan)]
-             [the-val  (unbox val-box)]
-            )
-         (if (eq? the-val '())
-             ((mutex-release (channel-read-mut chan))
-	      '())
-             (let* ([read-box (channel-read-box chan)]
-                    [read-cv  (channel-read-cv  chan)]
-                    )
-                (set-box! val-box '())
-                (set-box! read-box #t)
-                (mutex-release (channel-read-mut chan))
-                (condition-signal read-cv)
-                the-val)
-         ))
-      '()
-  ))
+    (let* ([val-box  (channel-val-box chan)]
+           [the-val  (unbox val-box)]
+          )
+      (if (eq? the-val '())
+          ((mutex-release (channel-read-mut chan))
+	   '())
+          (let* ([read-box (channel-read-box chan)]
+                 [read-cv  (channel-read-cv  chan)]
+                 )
+             (set-box! val-box '())
+             (set-box! read-box #t)
+             (mutex-release (channel-read-mut chan))
+             (condition-signal read-cv)
+             the-val)
+      ))
+  '()))
 
 ;; Mutex
 
