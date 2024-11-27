@@ -150,7 +150,7 @@ namespace RuleName
     where
     display : Nat -> List Char
     display n =
-      let (p, q) = divmodNatNZ n 26 SIsNonZero in
+      let (p, q) = divmodNatNZ n 26 ItIsSucc in
       cast (q + cast 'a') :: if p == 0 then [] else display (assert_smaller n (pred p))
 
 

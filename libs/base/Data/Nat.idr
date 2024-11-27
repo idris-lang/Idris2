@@ -32,6 +32,9 @@ isSucc : Nat -> Bool
 isSucc Z     = False
 isSucc (S n) = True
 
+||| A definition of non-zero with a better behaviour than `Not (x = Z)`
+||| This is amenable to proof search and `NonZero Z` is more readily
+||| detected as impossible by Idris
 public export
 data IsSucc : (n : Nat) -> Type where
   ItIsSucc : IsSucc (S n)
@@ -44,6 +47,18 @@ public export
 isItSucc : (n : Nat) -> Dec (IsSucc n)
 isItSucc Z = No absurd
 isItSucc (S n) = Yes ItIsSucc
+
+||| A hystorical synonym for `IsSucc`
+public export
+0 NonZero : Nat -> Type
+NonZero = IsSucc
+
+-- Remove as soon as 0.8.0 (or greater) is released
+||| Use `ItIsSucc` instead
+public export %inline
+%deprecate
+SIsNonZero : NonZero (S n)
+SIsNonZero = ItIsSucc
 
 public export
 power : Nat -> Nat -> Nat
@@ -319,15 +334,6 @@ export
 Injective S where
   injective Refl = Refl
 
-||| A definition of non-zero with a better behaviour than `Not (x = Z)`
-||| This is amenable to proof search and `NonZero Z` is more readily
-||| detected as impossible by Idris
-public export
-data NonZero : Nat -> Type where
-  SIsNonZero : NonZero (S x)
-
-export Uninhabited (NonZero Z) where uninhabited SIsNonZero impossible
-
 export
 SIsNotZ : Not (S x = Z)
 SIsNotZ = absurd
@@ -351,7 +357,7 @@ modNatNZ left (S right) _ = mod' left left right
 
 export partial
 modNat : Nat -> Nat -> Nat
-modNat left (S right) = modNatNZ left (S right) SIsNonZero
+modNat left (S right) = modNatNZ left (S right) ItIsSucc
 
 ||| Auxiliary function:
 ||| div' fuel a b = a `div` (S b)
@@ -372,7 +378,7 @@ divNatNZ left (S right) _ = div' left left right
 
 export partial
 divNat : Nat -> Nat -> Nat
-divNat left (S right) = divNatNZ left (S right) SIsNonZero
+divNat left (S right) = divNatNZ left (S right) ItIsSucc
 
 export
 covering
@@ -383,7 +389,7 @@ divCeilNZ x y p = case (modNatNZ x y p) of
 
 export partial
 divCeil : Nat -> Nat -> Nat
-divCeil x (S y) = divCeilNZ x (S y) SIsNonZero
+divCeil x (S y) = divCeilNZ x (S y) ItIsSucc
 
 
 public export
@@ -411,7 +417,7 @@ covering
 gcd : (a: Nat) -> (b: Nat) -> {auto 0 ok: NotBothZero a b} -> Nat
 gcd a Z     = a
 gcd Z b     = b
-gcd a (S b) = gcd (S b) (modNatNZ a (S b) SIsNonZero)
+gcd a (S b) = gcd (S b) (modNatNZ a (S b) ItIsSucc)
 
 export partial
 lcm : Nat -> Nat -> Nat
