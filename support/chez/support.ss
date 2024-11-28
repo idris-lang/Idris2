@@ -448,10 +448,10 @@
           )
       (if (null? the-val)
           (begin
-	    (mutex-release (channel-read-mut chan))
-	   '())
+           (mutex-release (channel-read-mut chan))
+           '())
           (begin
-	    (set-box! val-box '())
+            (set-box! val-box '())
             (set-box! read-box #t)
             (mutex-release (channel-read-mut chan))
             (condition-signal read-cv)
