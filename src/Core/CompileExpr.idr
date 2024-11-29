@@ -371,6 +371,11 @@ covering
 {vars : _} -> Show (CExp vars) where
   show exp = show (forget exp)
 
+public export
+covering
+{vars : _} -> Show (CConAlt vars) where
+    show (MkConAlt name ci t args cexp) = "{MkConAlt name: \{show name}, ci: \{show ci}, t: \{show t}, args: \{show args}, cexp: \{show cexp}}"
+
 export
 covering
 Show CFType where
@@ -543,6 +548,16 @@ Weaken CConAlt where
 public export
 SubstCEnv : Scope -> Scoped
 SubstCEnv = Subst CExp
+
+public export
+covering
+{dropped, vars : _} -> Show (SubstCEnv dropped vars) where
+    show x = "[<" ++ showAll x ++ "]{vars = " ++ show vars ++ ", dropped = " ++ show dropped ++ "}"
+        where
+            showAll : {dropped, vars : _} -> SubstCEnv dropped vars -> String
+            showAll Lin = ""
+            showAll (Lin :< x) = show x
+            showAll (xx :< x) = show x ++ ", " ++ showAll xx
 
 mutual
   substEnv : Substitutable CExp CExp
