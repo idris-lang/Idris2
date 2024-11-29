@@ -38,6 +38,13 @@ data Thin : SnocList a -> SnocList a -> Type where
   Keep : Thin xs ys -> Thin (xs :< x) (ys :< x)
 
 export
+covering
+{xs, ys : _} -> Show (Thin xs ys) where
+  show Refl = "ThinRefl"
+  show (Drop t) = "ThinDrop \{show t}"
+  show (Keep t) = "ThinKeep \{show t}"
+
+export
 none : {xs : SnocList a} -> Thin [<] xs
 none {xs = [<]} = Refl
 none {xs = _ :< _} = Drop none

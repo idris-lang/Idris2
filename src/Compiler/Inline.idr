@@ -32,6 +32,16 @@ data EEnv : SnocList Name -> SnocList Name -> Type where
      Lin : EEnv free [<]
      (:<) : EEnv free vars -> CExp free -> EEnv free (vars :< x)
 
+public export
+covering
+{free, vars : _} -> Show (EEnv free vars) where
+    show x = "EEnv [" ++ showAll x ++ "]{vars = " ++ show (toList vars) ++ ", free = " ++ show (toList free) ++ "}"
+        where
+            showAll : {free, vars : _} -> EEnv free vars -> String
+            showAll Lin = ""
+            showAll (Lin :< x) = show x
+            showAll (xx :< x) = show x ++ ", " ++ showAll xx
+
 extend : EEnv free vars -> (args : SnocList (CExp free)) -> (args' : SnocList Name) ->
          LengthMatch args args' -> EEnv free (vars ++ args')
 extend env [<] [<] LinMatch = env
