@@ -62,6 +62,9 @@ record ArgInfo (vars : SnocList Name) where
   metaApp : Term vars
   argType : Term vars
 
+{vars: _} -> Show (ArgInfo vars) where
+    show x = "{ArgInfo holeId: \{show $ holeID x}, argRig: \{show $ argRig x}, plicit: \{assert_total $ show $ plicit x}, metaApp: \{assert_total $ show $ metaApp x}, argType: \{assert_total $ show $ argType x}}"
+
 export
 mkArgs : {vars : _} ->
          {auto c : Ref Ctxt Defs} ->
