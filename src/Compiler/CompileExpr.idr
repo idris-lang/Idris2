@@ -142,76 +142,10 @@ mkDropSubst i es rest (x :: xs)
              then (vs ** Drop sub)
              else (x :: vs ** Keep sub)
 
--- Rewrite applications of Nat-like constructors and functions to more optimal
--- versions using Integer
-
--- None of these should be hard coded, but we'll do it this way until we
--- have a more general approach to optimising data types!
--- NOTE: Make sure that names mentioned here are listed in 'natHackNames' in
--- Common.idr, so that they get compiled, as they won't be spotted by the
--- usual calls to 'getRefs'.
-data Magic : Type where
-  MagicCCon : Name -> (arity : Nat) -> -- checks
-              (FC -> forall vars. Vect arity (CExp vars) -> CExp vars) -> -- translation
-              Magic
-  MagicCRef : Name -> (arity : Nat) -> -- checks
-              (FC -> FC -> forall vars. Vect arity (CExp vars) -> CExp vars) -> --translation
-              Magic
-
-magic : List Magic -> CExp vars -> CExp vars
-magic ms (CLam fc x exp) = CLam fc x (magic ms exp)
-magic ms e = go ms e where
-
-  fire : Magic -> CExp vars -> Maybe (CExp vars)
-  fire (MagicCCon n arity f) (CCon fc n' _ _ es)
-    = do guard (n == n')
-         map (f fc) (toVect arity es)
-  fire (MagicCRef n arity f) (CApp fc (CRef fc' n') es)
-    = do guard (n == n')
-         map (f fc fc') (toVect arity es)
-  fire _ _ = Nothing
-
-  go : List Magic -> CExp vars -> CExp vars
-  go [] e = e
-  go (m :: ms) e = case fire m e of
-    Nothing => go ms e
-    Just e' => e'
-
-%inline
-magic__integerToNat : FC -> FC -> forall vars. Vect 1 (CExp vars) -> CExp vars
-magic__integerToNat fc fc' [k]
-  = CApp fc (CRef fc' (NS typesNS (UN $ Basic "prim__integerToNat"))) [k]
-
-magic__natMinus : FC -> FC -> forall vars. Vect 2 (CExp vars) -> CExp vars
-magic__natMinus fc fc' [m, n]
-  = magic__integerToNat fc fc'
-    [COp fc (Sub IntegerType) [m, n]]
-
--- We don't reuse natMinus here because we assume that unsuc will only be called
--- on S-headed numbers so we do not need the truncating integerToNat call!
-magic__natUnsuc : FC -> FC -> forall vars. Vect 1 (CExp vars) -> CExp vars
-magic__natUnsuc fc fc' [m]
+||| Unsucc of some positive natural number
+natUnsucc : FC -> FC -> forall vars. Vect 1 (CExp vars) -> CExp vars
+natUnsucc fc fc' [m]
   = COp fc (Sub IntegerType) [m, CPrimVal fc (BI 1)]
-
--- TODO: next release remove this and use %builtin pragma
-natHack : List Magic
-natHack =
-    [ MagicCRef (NS typesNS (UN $ Basic "natToInteger")) 1 (\ _, _, [k] => k)
-    , MagicCRef (NS typesNS (UN $ Basic "integerToNat")) 1 magic__integerToNat
-    , MagicCRef (NS typesNS (UN $ Basic "plus")) 2
-         (\ fc, fc', [m,n] => COp fc (Add IntegerType) [m, n])
-    , MagicCRef (NS typesNS (UN $ Basic "mult")) 2
-         (\ fc, fc', [m,n] => COp fc (Mul IntegerType) [m, n])
-    , MagicCRef (NS typesNS (UN $ Basic "minus")) 2 magic__natMinus
-    , MagicCRef (NS typesNS (UN $ Basic "equalNat")) 2
-         (\ fc, fc', [m,n] => COp fc (EQ IntegerType) [m, n])
-    , MagicCRef (NS typesNS (UN $ Basic "compareNat")) 2
-         (\ fc, fc', [m,n] => CApp fc (CRef fc' (NS eqOrdNS (UN $ Basic "compareInteger"))) [m, n])
-    ]
-
--- get all builtin transformations
-builtinMagic : forall vars. CExp vars -> CExp vars
-builtinMagic = magic natHack
 
 data NextMN : Type where
 newMN : {auto s : Ref NextMN Int} -> String -> Core Name
@@ -227,7 +161,7 @@ natBranch _ = False
 
 trySBranch : CExp vars -> CConAlt vars -> Maybe (CExp vars)
 trySBranch n (MkConAlt nm SUCC _ [arg] sc)
-    = Just (CLet (getFC n) arg YesInline (magic__natUnsuc (getFC n) (getFC n) [n]) sc)
+    = Just (CLet (getFC n) arg YesInline (natUnsucc (getFC n) (getFC n) [n]) sc)
 trySBranch _ _ = Nothing
 
 tryZBranch : CConAlt vars -> Maybe (CExp vars)
@@ -370,13 +304,10 @@ toCExp n tm
                  f' <- toCExpTm n f
                  Arity a <- numArgs defs f
                     | NewTypeBy arity pos =>
-                          do let res = applyNewType arity pos f' args'
-                             pure $ builtinMagic res
+                          pure $ applyNewType arity pos f' args'
                     | EraseArgs arity epos =>
-                          do let res = eraseConArgs arity epos f' args'
-                             pure $ builtinMagic res
-                 let res = expandToArity a f' args'
-                 pure $ builtinMagic res
+                          pure $ eraseConArgs arity epos f' args'
+                 pure $ expandToArity a f' args'
 
 mutual
   conCases : {vars : _} ->
