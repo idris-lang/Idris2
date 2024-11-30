@@ -203,7 +203,7 @@ stMain cgs opts
                                    pure Done
                       Just f => logTime 1 "Loading main file" $ do
                                   res <- loadMainFile f
-                                  displayErrors res
+                                  displayStartupErrors res
                                   pure res
 
                  doRepl <- catch (postOptions result opts)

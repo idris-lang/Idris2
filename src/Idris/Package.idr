@@ -896,7 +896,7 @@ runRepl fname = do
       Nothing => pure ()
       Just fn => do
         errs <- loadMainFile fn
-        displayErrors errs
+        displayStartupErrors errs
   repl {u} {s}
 
 ||| If the user did not provide a package file we can look in the working

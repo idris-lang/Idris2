@@ -507,12 +507,24 @@ export
 getOpts : List String -> Either String (List CLOpt)
 getOpts opts = parseOpts options opts
 
-
 export covering
 getCmdOpts : IO (Either String (List CLOpt))
 getCmdOpts = do (_ :: opts) <- getArgs
                     | _ => pure (Left "Invalid command line")
                 pure $ getOpts opts
+
+||| Find an opt that would have matched if only the user had prefixed it with
+||| double-dashes. It is common to see the user error of specifying a command
+||| like "idris2 repl ..." when they mean to write "idris2 --repl ..."
+export
+findNearMatchOpt : String -> Maybe String
+findNearMatchOpt arg =
+  let argWithDashes = "--\{arg}"
+  in
+  case (getOpts [argWithDashes]) of
+       Right [(InputFile _)] => Nothing
+       Right [_] => Just argWithDashes
+       _ => Nothing
 
 ||| List of all command line option flags.
 export
