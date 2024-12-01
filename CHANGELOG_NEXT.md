@@ -27,6 +27,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Remove reference to column number parameter in help menu for `refine` command.
 
+* CLI errors will now be printed to `stderr` instead of `stdout`.
+
 ### Building/Packaging changes
 
 * The Nix flake's `buildIdris` function now returns a set with `executable` and
