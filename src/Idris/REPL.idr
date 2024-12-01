@@ -1321,10 +1321,7 @@ mutual
          {auto m : Ref MD Metadata} ->
          {auto o : Ref ROpts REPLOpts} -> REPLResult -> Core ()
   displayStartupErrors (ErrorLoadingFile x err) =
-    let suggestion = findNearMatchOpt x <&>
-                        \opt =>
-                          (reflow "Did you mean to type" <++>
-                            (dquotes . meta $ pretty0 opt) <+> "?")
+    let suggestion = nearMatchOptSuggestion x
     in
       printError (fileLoadingError x err suggestion)
   displayStartupErrors _ = pure ()

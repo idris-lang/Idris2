@@ -159,12 +159,19 @@ stMain cgs opts
          let ide = ideMode opts
          let ideSocket = ideModeSocket opts
          let outmode = if ide then IDEMode 0 stdin stdout else REPL InfoLvl
+         o <- newRef ROpts (REPL.Opts.defaultOpts Nothing outmode cgs)
          fname <- case (findInputs opts) of
                        Just (fname ::: Nil) => pure $ Just fname
                        Nothing => pure Nothing
-                       Just fnames => throw $
-                         UserError "Expected at most one input file but was given: \{joinBy ", " (toList fnames)}"
-         o <- newRef ROpts (REPL.Opts.defaultOpts fname outmode cgs)
+                       Just (fname1 ::: fnames) => do
+                         let suggestion = nearMatchOptSuggestion fname1
+                         renderedSuggestion <- maybe (pure "") render suggestion
+                         quitWithError $
+                           UserError """
+                                     Expected at most one input file but was given: \{joinBy ", " (fname1 :: fnames)}
+                                     \{renderedSuggestion}
+                                     """
+         update ROpts { mainfile := fname }
          updateEnv
 
          finish <- showInfo opts
@@ -177,7 +184,7 @@ stMain cgs opts
            -- If there's a --build or --install, just do that then quit
            done <- processPackageOpts opts
 
-           when (not done) $ flip catch renderError $
+           when (not done) $ flip catch quitWithError $
               do when (checkVerbose opts) $ -- override Quiet if implicitly set
                      setOutput (REPL InfoLvl)
                  u <- newRef UST initUState
@@ -237,14 +244,14 @@ stMain cgs opts
 
   where
 
-  renderError : {auto c : Ref Ctxt Defs} ->
+  quitWithError : {auto c : Ref Ctxt Defs} ->
                 {auto s : Ref Syn SyntaxInfo} ->
                 {auto o : Ref ROpts REPLOpts} ->
-                Error -> Core ()
-  renderError err = do
+                Error -> Core a
+  quitWithError err = do
     doc <- perror err
     msg <- render doc
-    throw (UserError msg)
+    coreLift (die msg)
 
 -- Run any options (such as --version or --help) which imply printing a
 -- message then exiting. Returns wheter the program should continue
