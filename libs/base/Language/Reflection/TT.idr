@@ -68,6 +68,41 @@ public export
 emptyFC : FC
 emptyFC = EmptyFC
 
+------------------------------------------------------------------------
+||| A wrapper for a value with a file context.
+public export
+record WithFC (ty : Type) where
+  constructor MkFCVal
+  fc : FC
+  value : ty
+
+||| Smart constructor for WithFC that uses EmptyFC as location
+%inline export
+NoFC : a -> WithFC a
+NoFC = MkFCVal EmptyFC
+
+export
+Functor WithFC where
+  map f = { value $= f}
+
+export
+Foldable WithFC where
+  foldr f i v = f v.value i
+
+export
+Traversable WithFC where
+  traverse f (MkFCVal fc val) = map (MkFCVal fc) (f val)
+
+||| Locations are not taken into account when comparing reflected trees
+export
+Eq a => Eq (WithFC a) where
+  x == y = x.value == y.value
+
+||| Locations are not taken into account when comparing reflected trees
+export
+Ord a => Ord (WithFC a) where
+  compare x y = compare x.value y.value
+
 public export
 data NameType : Type where
      Bound   : NameType

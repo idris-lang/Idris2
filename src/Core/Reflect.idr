@@ -12,6 +12,7 @@ import Libraries.Data.WithDefault
 
 %default covering
 
+
 public export
 interface Reify a where
   reify : {auto c : Ref Ctxt Defs} ->
@@ -862,6 +863,28 @@ Reflect FC where
            end' <- reflect fc defs lhs env end
            appCon fc defs (reflectiontt "MkFC") [fn', start', end']
   reflect fc defs lhs env EmptyFC = getCon fc defs (reflectiontt "EmptyFC")
+
+export
+Reify a => Reify (WithFC a) where
+  reify defs val@(NDCon _ n _ _ args)
+      = case (dropAllNS !(full (gamma defs) n), map snd args) of
+             (UN (Basic "MkFCVal"), [fcterm, nestedVal]) => do
+                 fc <- reify defs !(evalClosure defs fcterm)
+                 val <- reify defs !(evalClosure defs nestedVal)
+                 pure $ MkFCVal fc val
+             (UN (Basic "MkFCVal"), [_, fc, l2]) => do
+                 fc' <- reify defs !(evalClosure defs fc)
+                 val' <- reify defs !(evalClosure defs l2)
+                 pure $ MkFCVal fc' val'
+             (t, l) => cantReify val "WithFC constructor: \{show t}, args: \{show (length l)}"
+  reify defs val = cantReify val "Expected WithFC, found something else"
+
+export
+Reflect a => Reflect (WithFC a) where
+  reflect fc defs lhs env (MkFCVal loc val)
+      = do loc' <- reflect fc defs lhs env loc
+           val' <- reflect fc defs lhs env val
+           appCon fc defs (reflectiontt "MkFCVal") [loc', val']
 
 {-
 -- Reflection of well typed terms: We don't reify terms because that involves

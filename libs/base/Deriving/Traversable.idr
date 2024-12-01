@@ -395,7 +395,7 @@ namespace Traversable
     let va = IVar fc a
     let vb = IVar fc b
     let vf = IVar fc f
-    let ty = MkTy fc fc traverseName $ withParams fc (paramConstraints ns) params
+    let ty = MkTy fc (NoFC traverseName) $ withParams fc (paramConstraints ns) params
            $ IPi fc M0 ImplicitArg (Just a) (IType fc)
            $ IPi fc M0 ImplicitArg (Just b) (IType fc)
            $ IPi fc M0 ImplicitArg (Just f) (IPi fc MW ExplicitArg Nothing (IType fc) (IType fc))
@@ -406,7 +406,7 @@ namespace Traversable
 
     -- Define the instance
     check $ ILocal fc
-      [ IClaim fc MW vis [Totality treq] ty
+      [ IClaim (MkFCVal fc (MkIClaimData MW vis [Totality treq] ty))
       , IDef fc traverseName cls
       ] `(MkTraversable {t = ~(t)} ~(IVar fc traverseName))
 
