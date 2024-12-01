@@ -1,2 +1,2 @@
-[1mError:[0m Expected at most one input file but was given: repl, pkg.ipkg
-Did you mean to type "[38;5;2m--repl[0m"?
+Error: Expected at most one input file but was given: repl, pkg.ipkg
+Did you mean to type "--repl"?

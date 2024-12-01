@@ -160,6 +160,7 @@ stMain cgs opts
          let ideSocket = ideModeSocket opts
          let outmode = if ide then IDEMode 0 stdin stdout else REPL InfoLvl
          o <- newRef ROpts (REPL.Opts.defaultOpts Nothing outmode cgs)
+         updateEnv
          fname <- case (findInputs opts) of
                        Just (fname ::: Nil) => pure $ Just fname
                        Nothing => pure Nothing
@@ -172,7 +173,6 @@ stMain cgs opts
                                      \{renderedSuggestion}
                                      """
          update ROpts { mainfile := fname }
-         updateEnv
 
          finish <- showInfo opts
          when (not finish) $ do
@@ -249,7 +249,7 @@ stMain cgs opts
                 {auto o : Ref ROpts REPLOpts} ->
                 Error -> Core a
   quitWithError err = do
-    doc <- perror err
+    doc <- display err
     msg <- render doc
     coreLift (die msg)
 
