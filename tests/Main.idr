@@ -199,6 +199,9 @@ linearLibraryTests = testsInDir "linear" "Linear library" {requirements = [Chez,
 codegenTests : IO TestPool
 codegenTests = testsInDir "codegen" "Code generation"
 
+commandLineTests : IO TestPool
+commandLineTests = testsInDir "cli" "Command-line interface"
+
 main : IO ()
 main = runner $
   [ !ttimpTests
@@ -240,6 +243,7 @@ main = runner $
   , !vmcodeInterpTests
   , !templateTests
   , !codegenTests
+  , !commandLineTests
   ]
   ++ !(traverse idrisTestsAllSchemes [Chez, Racket])
   ++ map (testPaths "allbackends" . idrisTestsAllBackends) [Chez, Node, Racket, C]
