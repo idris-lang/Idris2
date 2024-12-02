@@ -459,6 +459,38 @@
       ))
   '()))
 
+(define (blodwen-channel-get-with-timeout ty chan timeout)
+  (if (mutex-acquire (channel-read-mut chan) #f)
+    (let* ([val-box  (channel-val-box  chan)]
+           [read-box (channel-read-box chan)]
+           [read-cv  (channel-read-cv  chan)]
+           [the-val  (unbox val-box)]
+           [waittime (make-time 'time-duration (current-time + timeout) current-time)]
+          )
+      
+
+  )))
+
+#|
+    (let* ([val-box  (channel-val-box  chan)]
+           [read-box (channel-read-box chan)]
+           [read-cv  (channel-read-cv  chan)]
+           [the-val  (unbox val-box)]
+          )
+      (if (null? the-val)
+          (begin
+           (mutex-release (channel-read-mut chan))
+           '())
+          (begin
+            (set-box! val-box '())
+            (set-box! read-box #t)
+            (mutex-release (channel-read-mut chan))
+            (condition-signal read-cv)
+            the-val)
+      ))
+  '()))
+|#
+
 ;; Mutex
 
 (define (blodwen-make-mutex)
