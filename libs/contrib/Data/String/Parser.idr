@@ -285,10 +285,17 @@ covering
 spaces1 : Monad m => ParseT m ()
 spaces1 = skip (some space) <?> "whitespaces"
 
+
+||| Run the parser p between the opening parser `o` and the closing parser `c`,
+||| returning the result of p.
+export
+between : Monad m => ParseT m o -> ParseT m c -> ParseT m p -> ParseT m p
+between o c p = id <$ o <*> p <* c
+
 ||| Discards brackets around a matching parser
 export
 parens : Monad m => ParseT m a -> ParseT m a
-parens p = char '(' *> p <* char ')'
+parens p = between (char '(') (char ')') p
 
 ||| Discards whitespace after a matching parser
 export
@@ -406,3 +413,4 @@ export
 ntimes : Monad m => (n : Nat) -> ParseT m a -> ParseT m (Vect n a)
 ntimes    Z  p = pure Vect.Nil
 ntimes (S n) p = [| p :: (ntimes n p) |]
+
