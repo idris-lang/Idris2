@@ -123,7 +123,7 @@ mutual
 
   public export
   data ITy : Type where
-       MkTy : FC -> (nameFC : FC) -> (n : Name) -> (ty : TTImp) -> ITy
+       MkTy : FC -> (n : WithFC Name) -> (ty : TTImp) -> ITy
 
   %name ITy sig
 
@@ -203,9 +203,16 @@ mutual
   onWithDefault _ valHandler (SpecifiedValue v) = valHandler v
 
   public export
+  record IClaimData where
+    constructor MkIClaimData
+    rig : Count
+    vis : Visibility
+    opts : List FnOpt
+    type : ITy
+
+  public export
   data Decl : Type where
-       IClaim : FC -> Count -> Visibility -> List FnOpt ->
-                ITy -> Decl
+       IClaim : WithFC IClaimData -> Decl
        IData : FC -> WithDefault Visibility Private -> Maybe TotalReq -> Data -> Decl
        IDef : FC -> Name -> (cls : List Clause) -> Decl
        IParameters : FC -> (params : List (Name, Count, PiInfo TTImp, TTImp)) ->
@@ -408,7 +415,7 @@ parameters {auto eqTTImp : Eq TTImp}
 
   public export
   Eq ITy where
-    MkTy _ _ n ty == MkTy _ _ n' ty' = n == n' && ty == ty'
+    MkTy _ n ty == MkTy _ n' ty' = n.value == n'.value && ty == ty'
 
   public export
   Eq Data where
@@ -429,9 +436,13 @@ parameters {auto eqTTImp : Eq TTImp}
       n == n' && ps == ps' && opts == opts' && cn == cn' && fs == fs'
 
   public export
-  Eq Decl where
-    IClaim _ c v fos t == IClaim _ c' v' fos' t' =
+  Eq IClaimData where
+    MkIClaimData c v fos t == MkIClaimData c' v' fos' t' =
       c == c' && v == v' && fos == fos' && t == t'
+
+  public export
+  Eq Decl where
+    IClaim c == IClaim c' = c.value == c'.value
     IData _ v t d == IData _ v' t' d' =
       v == v' && t == t' && d == d'
     IDef _ n cs == IDef _ n' cs' =
@@ -541,13 +552,16 @@ mutual
 
   public export
   Show ITy where
-    show (MkTy fc nameFC n ty) = "\{show n} : \{show ty}"
+    show (MkTy fc n ty) = "\{show n.value} : \{show ty}"
+
+  Show IClaimData where
+    show (MkIClaimData rig vis xs sig)
+      = unwords [ show vis
+                , showCount rig (show sig) ]
 
   public export
   Show Decl where
-    show (IClaim fc rig vis xs sig)
-      = unwords [ show vis
-                , showCount rig (show sig) ]
+    show (IClaim claim) = show claim.value
     show (IData fc vis treq dt)
       = unwords [ show vis
                 , showTotalReq treq (show dt)
@@ -774,7 +788,7 @@ parameters (f : TTImp -> TTImp)
 
   public export
   mapITy : ITy -> ITy
-  mapITy (MkTy fc nameFC n ty) = MkTy fc nameFC n (mapTTImp ty)
+  mapITy (MkTy fc n ty) = MkTy fc n (mapTTImp ty)
 
   public export
   mapFnOpt : FnOpt -> FnOpt
@@ -807,10 +821,13 @@ parameters (f : TTImp -> TTImp)
   mapRecord (MkRecord fc n params opts conName fields)
     = MkRecord fc n (map (map $ map $ bimap mapPiInfo mapTTImp) params) opts conName (map mapIField fields)
 
+  mapIClaimData : IClaimData -> IClaimData
+  mapIClaimData (MkIClaimData rig vis opts ty)
+    = MkIClaimData rig vis (map mapFnOpt opts) (mapITy ty)
+
   public export
   mapDecl : Decl -> Decl
-  mapDecl (IClaim fc rig vis opts ty)
-    = IClaim fc rig vis (map mapFnOpt opts) (mapITy ty)
+  mapDecl (IClaim claim) = IClaim $ map mapIClaimData claim
   mapDecl (IData fc vis mtreq dat) = IData fc vis mtreq (mapData dat)
   mapDecl (IDef fc n cls) = IDef fc n (map mapClause cls)
   mapDecl (IParameters fc params xs) = IParameters fc params (assert_total $ map mapDecl xs)
@@ -895,7 +912,7 @@ parameters {0 m : Type -> Type} {auto apl : Applicative m} (f : (original : TTIm
 
   public export
   mapMITy : ITy -> m ITy
-  mapMITy (MkTy fc nameFC n ty) = MkTy fc nameFC n <$> mapATTImp' ty
+  mapMITy (MkTy fc n ty) = MkTy fc n <$> mapATTImp' ty
 
   public export
   mapMFnOpt : FnOpt -> m FnOpt
@@ -933,10 +950,13 @@ parameters {0 m : Type -> Type} {auto apl : Applicative m} (f : (original : TTIm
     <*> pure conName
     <*> traverse mapMIField fields
 
+  mapMIClaimData : IClaimData -> m IClaimData
+  mapMIClaimData (MkIClaimData rig vis opts ty)
+    = MkIClaimData rig vis <$> traverse mapMFnOpt opts <*> mapMITy ty
+
   public export
   mapMDecl : Decl -> m Decl
-  mapMDecl (IClaim fc rig vis opts ty)
-    = IClaim fc rig vis <$> traverse mapMFnOpt opts <*> mapMITy ty
+  mapMDecl (IClaim claim) = IClaim <$> traverse mapMIClaimData claim
   mapMDecl (IData fc vis mtreq dat) = IData fc vis mtreq <$> mapMData dat
   mapMDecl (IDef fc n cls) = IDef fc n <$> traverse mapMClause cls
   mapMDecl (IParameters fc params xs) = IParameters fc params <$> assert_total (traverse mapMDecl xs)

@@ -95,6 +95,12 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Typst files can be compiled as Literate Idris
 
+* `min` was renamed to `leftMost` in `Libraries.Data.Sorted{Map|Set}` in order
+  to be defined as in `base`.
+
+* Reflected trees now make use of WithFC to replicate the new location tracking
+  in the compiler.
+
 ### Backend changes
 
 #### RefC Backend
@@ -244,7 +250,11 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   `SIsNonZero` was made to be an alias for `ItIsSucc`, was marked as deprecated,
   and won't work on LHS anymore.
 
-* Refactor `Uninhabited` implementation for `Data.List.Elem`, `Data.List1.Elem`, `Data.SnocList.Elem` and `Data.Vect.Elem`
+* Deprecated `toList` function in favor of `Prelude.toList` in `Data.SortedSet`.
+
+* Several functions like `pop`, `differenceMap` and `toSortedMap` were added to `Data.Sorted{Map|Set}`
+
+* Refactored `Uninhabited` implementation for `Data.List.Elem`, `Data.List1.Elem`, `Data.SnocList.Elem` and `Data.Vect.Elem`
   so it can be used for homogeneous (===) and heterogeneous (~=~) equality.
 
 #### Contrib

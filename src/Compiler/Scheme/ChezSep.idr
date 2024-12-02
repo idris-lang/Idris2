@@ -201,7 +201,7 @@ compileToSS c chez appdir tm = do
                   chezLibraryName
                   (SortedMap.lookup cuid cui.byId)
               ++ ")"
-            | cuid <- SortedSet.toList cu.dependencies
+            | cuid <- Prelude.toList cu.dependencies
             ]
       let exports = sepBy " " $ catMaybes
             -- constructors don't generate Scheme definitions

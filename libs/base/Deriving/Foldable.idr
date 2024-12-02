@@ -371,7 +371,7 @@ namespace Foldable
     let b = un $ freshName paramNames "b"
     let va = IVar fc a
     let vb = IVar fc b
-    let ty = MkTy fc fc foldMapName $ withParams fc (paramConstraints ns) params
+    let ty = MkTy fc (NoFC foldMapName) $ withParams fc (paramConstraints ns) params
            $ IPi fc M0 ImplicitArg (Just a) (IType fc)
            $ IPi fc M0 ImplicitArg (Just b) (IType fc)
            $ `(Monoid ~(vb) => (~(va) -> ~(vb)) -> ~(t) ~(va) -> ~(vb))
@@ -381,7 +381,7 @@ namespace Foldable
 
     -- Define the instance
     check $ ILocal fc
-      [ IClaim fc MW vis [Totality treq] ty
+      [ IClaim (MkFCVal fc (MkIClaimData MW vis [Totality treq] ty))
       , IDef fc foldMapName cls
       ] `(fromFoldMap ~(t) ~(IVar fc foldMapName))
 

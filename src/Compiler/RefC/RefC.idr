@@ -408,7 +408,7 @@ dropUnusedOwnedVars : Owned -> SortedSet AVar -> (List String, Owned)
 dropUnusedOwnedVars owned usedVars =
     let actualOwned = intersection owned usedVars in
     let shouldDrop = difference owned actualOwned in
-    (varName <$> SortedSet.toList shouldDrop, actualOwned)
+    (varName <$> Prelude.toList shouldDrop, actualOwned)
 
 -- if the constructor is unique use it, otherwise add it to should drop vars and create null constructor
 addReuseConstructor : {auto a : Ref ArgCounter Nat}
@@ -825,7 +825,7 @@ createCFunctions n (MkAFun args anf) = do
          emit EmptyFC "Value *var_\{show j} = var_arglist[\{show i}];"
          pure $ i + 1) 0 args
       pure ()
-    removeVars (varName <$> SortedSet.toList shouldDrop)
+    removeVars (varName <$> Prelude.toList shouldDrop)
     _ <- newRef EnvTracker (MkEnv bodyFreeVars empty)
     emit EmptyFC $ "return \{!(cStatementsFromANF anf InTailPosition)};"
     decreaseIndentation
@@ -913,7 +913,7 @@ header = do
       /* \{ generatedString "RefC" } */
 
       """
-    let headerFiles = SortedSet.toList !(get HeaderFiles)
+    let headerFiles = Prelude.toList !(get HeaderFiles)
     fns <- get FunctionDefinitions
     update OutfileText $ appendL $
         [initLines] ++

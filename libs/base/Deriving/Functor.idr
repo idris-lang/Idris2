@@ -382,7 +382,7 @@ namespace Functor
       , "Bifunctors: \{show ns.asBifunctors}"
       , "Parameters: \{show (map (mapFst unArg) params)}"
       ]
-    let ty = MkTy fc fc mapName $ withParams fc (paramConstraints ns) params
+    let ty = MkTy fc (NoFC mapName) $ withParams fc (paramConstraints ns) params
            $ IPi fc M0 ImplicitArg (Just a) (IType fc)
            $ IPi fc M0 ImplicitArg (Just b) (IType fc)
            $ `((~(va) -> ~(vb)) -> ~(t) ~(va) -> ~(t) ~(vb))
@@ -392,7 +392,7 @@ namespace Functor
 
     -- Define the instance
     check $ ILocal fc
-      [ IClaim fc MW vis [Totality treq] ty
+      [ IClaim (MkFCVal fc (MkIClaimData MW vis [Totality treq] ty))
       , IDef fc mapName cls
       ] `(MkFunctor {f = ~(t)} ~(IVar fc mapName))
 

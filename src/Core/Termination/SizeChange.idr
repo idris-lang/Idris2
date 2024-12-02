@@ -230,7 +230,7 @@ findLoops s
       map (foldMap checkNonDesc) loops
     where
       filterEndos : (Graph -> Bool) -> SCSet -> NameMap (List Graph)
-      filterEndos p = mapWithKey (\f, m => filter p (Data.SortedSet.toList (lookupSet f m)))
+      filterEndos p = mapWithKey (\f, m => filter p (Prelude.toList (lookupSet f m)))
 
 findNonTerminatingLoop : SCSet -> Maybe (Name, Graph)
 findNonTerminatingLoop s = findNonTerminating (findLoops s)
