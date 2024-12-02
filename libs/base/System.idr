@@ -292,12 +292,13 @@ data ExitCode : Type where
   |||
   ||| @errNo A non-zero numerical value indicating failure.
   ||| @prf   Proof that the int value is non-zero.
-  ExitFailure : (errNo    : Int) -> (So (not $ errNo == 0)) => ExitCode
+  ExitFailure : (errNo : Int) -> (So $ errNo /= 0) => ExitCode
 
 export
 Cast Int ExitCode where
-  cast 0 = ExitSuccess
-  cast code = ExitFailure code @{believe_me Oh}
+  cast code with (code == 0) proof prf
+    _ | True = ExitSuccess
+    _ | False = ExitFailure code @{rewrite prf in Oh}
 
 export
 Cast ExitCode Int where
