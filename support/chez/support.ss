@@ -460,9 +460,11 @@
   '()))
 
 (define (blodwen-channel-get-with-timeout ty chan seconds)
-  (let loop ([start-time (current-time)]) ; Record the start time
-    (let ([elapsed (- (current-time) start-time)]) ; Calculate elapsed time in seconds
-      (if (>= elapsed seconds)
+  (let loop ([start-time (current-time)]
+             [seconds-time (make-time 'time-duration 0 seconds)]
+	    ) ; Record the start time
+    (let ([elapsed (make-time 'time-duration (current-time) start-time)]) ; Calculate elapsed time in seconds
+      (if (time>=? elapsed seconds-time)
           '() ; Timeout reached, return '() for empty value
           (if (mutex-acquire (channel-read-mut chan) #f)
               (let* ([val-box  (channel-val-box chan)]
