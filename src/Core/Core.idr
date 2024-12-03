@@ -958,18 +958,17 @@ export
 currentDir : Core String
 currentDir = maybe (throw $ SystemError "Failed to get the current directory") pure !(coreLift currentDir)
 
+export
+changeDir : String -> Core Bool
+changeDir = coreLift . changeDir
+
 ||| Change the current working directory to the specified path.
 ||| Throws `SystemError` if the operation did not succeed.
 export
-changeDir : String -> Core ()
-changeDir dir =
-  unless !(coreLift $ changeDir dir) $
+safeChangeDir : String -> Core ()
+safeChangeDir dir =
+  unless !(changeDir dir) $
     throw $ SystemError "Failed to change directory to '\{dir}'"
-
-||| Change the current working directory to the specified path. Ignores errors.
-export
-unsafeChangeDir : String -> Core ()
-unsafeChangeDir = ignore . coreLift . changeDir
 
 export
 handleFileError : (fname : String) -> IO (Either FileError a) -> Core a

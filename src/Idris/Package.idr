@@ -1055,7 +1055,7 @@ findIpkg : {auto c : Ref Ctxt Defs} ->
 findIpkg fname
    = do Just (dir, ipkgn, up) <- coreLift findIpkgFile
              | Nothing => pure fname
-        changeDir dir
+        safeChangeDir dir
         setWorkingDir dir
         pkg <- parsePkgFile True ipkgn
         maybe (pure ()) setBuildDir (builddir pkg)

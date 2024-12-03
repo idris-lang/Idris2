@@ -2185,7 +2185,7 @@ setSourceDir mdir = update Ctxt { options->dirs->source_dir := mdir }
 export
 setWorkingDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
 setWorkingDir dir
-    = do unsafeChangeDir dir
+    = do ignore $ changeDir dir
          cdir <- currentDir
          update Ctxt { options->dirs->working_dir := cdir }
 
@@ -2207,7 +2207,7 @@ withCtxt = wrapRef Ctxt resetCtxt
   where
     resetCtxt : Defs -> Core ()
     resetCtxt defs = do let dir = defs.options.dirs.working_dir
-                        changeDir dir
+                        safeChangeDir dir
 
 export
 setPrefix : {auto c : Ref Ctxt Defs} -> String -> Core ()
