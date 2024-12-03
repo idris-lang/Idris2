@@ -14,6 +14,8 @@ import Libraries.Text.PrettyPrint.Prettyprinter.Doc
 import Libraries.Data.Tap
 
 import public Data.IORef
+import System
+import System.Directory
 import System.File
 
 %default covering
@@ -171,6 +173,8 @@ data Error : Type where
          (opName : Either Name Name) -> (rhs : a) -> (candidates : List String) -> Error
      TTCError : TTCErrorMsg -> Error
      FileErr : String -> FileError -> Error
+     NonZeroExitCode : String -> Int -> Error
+     SystemError : String -> Error
      CantFindPackage : String -> Error
      LazyImplicitFunction : FC -> Error
      LazyPatternVar :  FC -> Error
@@ -360,6 +364,8 @@ Show Error where
   show (GenericMsgSol fc msg solutionHeader sols) = show fc ++ ":" ++ msg ++ " \{solutionHeader}: " ++ show sols
   show (TTCError msg) = "Error in TTC file: " ++ show msg
   show (FileErr fname err) = "File error (" ++ fname ++ "): " ++ show err
+  show (NonZeroExitCode cmd status) = "Command '\{cmd}' exited with return code \{show status}"
+  show (SystemError msg) = "System error: '\{msg}'"
   show (CantFindPackage fname) = "Can't find package " ++ fname
   show (LazyImplicitFunction fc) = "Implicit lazy functions are not yet supported"
   show (LazyPatternVar fc) = "Defining lazy functions via pattern matching is not yet supported"
@@ -476,6 +482,8 @@ getErrorLoc (GenericMsg loc _) = Just loc
 getErrorLoc (GenericMsgSol loc _ _ _) = Just loc
 getErrorLoc (TTCError _) = Nothing
 getErrorLoc (FileErr _ _) = Nothing
+getErrorLoc (NonZeroExitCode _ _) = Nothing
+getErrorLoc (SystemError _) = Nothing
 getErrorLoc (CantFindPackage _) = Nothing
 getErrorLoc (LazyImplicitFunction loc) = Just loc
 getErrorLoc (LazyPatternVar loc) = Just loc
@@ -566,6 +574,8 @@ killErrorLoc (GenericMsg fc x) = GenericMsg emptyFC x
 killErrorLoc (GenericMsgSol fc x y z) = GenericMsgSol emptyFC x y z
 killErrorLoc (TTCError x) = TTCError x
 killErrorLoc (FileErr x y) = FileErr x y
+killErrorLoc (NonZeroExitCode x y) = NonZeroExitCode x y
+killErrorLoc (SystemError x) = SystemError x
 killErrorLoc (CantFindPackage x) = CantFindPackage x
 killErrorLoc (LazyImplicitFunction fc) = LazyImplicitFunction emptyFC
 killErrorLoc (LazyPatternVar fc) = LazyPatternVar emptyFC
@@ -642,14 +652,12 @@ export %inline
 (<$) = (<$>) . const
 
 export %inline
-ignore : Core a -> Core ()
-ignore = map (\ _ => ())
+($>) : Core a -> b -> Core b
+($>) = flip (<$)
 
--- This would be better if we restrict it to a limited set of IO operations
-export
-%inline
-coreLift_ : IO a -> Core ()
-coreLift_ op = ignore (coreLift op)
+export %inline
+ignore : Core a -> Core ()
+ignore = map (const ())
 
 -- Monad (specialised)
 export %inline
@@ -944,18 +952,59 @@ condC ((x, y) :: xs) def
     = if !x then y else condC xs def
 
 export
-writeFile : (fname : String) -> (content : String) -> Core ()
-writeFile fname content =
-  coreLift (writeFile fname content) >>= \case
-    Right () => pure ()
-    Left err => throw $ FileErr fname err
+currentDir : Core String
+currentDir = maybe (throw $ SystemError "Failed to get the current directory") pure !(coreLift currentDir)
+
+||| Change the current working directory to the specified path.
+||| Throws `SystemError` if the operation did not succeed.
+export
+changeDir : String -> Core ()
+changeDir dir =
+  unless !(coreLift $ changeDir dir) $
+    throw $ SystemError "Failed to change directory to '\{dir}'"
+
+||| Change the current working directory to the specified path. Ignores errors.
+export
+unsafeChangeDir : String -> Core ()
+unsafeChangeDir = ignore . coreLift . changeDir
 
 export
+handleFileError : (fname : String) -> IO (Either FileError a) -> Core a
+handleFileError fname res = either (throw . FileErr fname) pure !(coreLift res)
+
+||| Write the given string to the file at the specified name.
+||| Throws `FileErr` when errors occur.
+export
+writeFile : (fname : String) -> (content : String) -> Core ()
+writeFile fname content = handleFileError fname $ writeFile fname content
+
+||| Read the entire file at the given name. Throws `FileErr` when errors occur.
+export
 readFile : (fname : String) -> Core String
-readFile fname =
-  coreLift (readFile fname) >>= \case
-    Right content => pure content
-    Left err => throw $ FileErr fname err
+readFile fname = handleFileError fname $ readFile fname
+
+handleExitCode : String -> ExitCode -> Core ()
+handleExitCode _ ExitSuccess = pure ()
+handleExitCode cmd (ExitFailure status) = throw $ NonZeroExitCode cmd status
+
+export
+system : String -> Core ExitCode
+system = map cast . coreLift . system
+
+||| Execute a shell command. Throws `NonZeroExitCode` if the command returns
+||| non-zero exit code.
+export
+safeSystem : String -> Core ()
+safeSystem cmd = system cmd >>= handleExitCode cmd
+
+namespace Escaped
+  export
+  system : List String -> Core ExitCode
+  system = map cast . coreLift . system
+
+  export
+  safeSystem : List String -> Core ()
+  safeSystem cmd = system cmd >>= handleExitCode (escapeCmd cmd)
 
 namespace Functor
 
