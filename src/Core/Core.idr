@@ -12,6 +12,7 @@ import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 import Libraries.Text.PrettyPrint.Prettyprinter.Doc
 import Libraries.Data.Tap
+import Libraries.System
 
 import public Data.IORef
 import System
@@ -989,7 +990,7 @@ handleExitCode cmd (ExitFailure status) = throw $ NonZeroExitCode cmd status
 
 export
 system : String -> Core ExitCode
-system = map cast . coreLift . system
+system = map (cast @{ToExitCode}) . coreLift . system
 
 ||| Execute a shell command. Throws `NonZeroExitCode` if the command returns
 ||| non-zero exit code.
@@ -1000,7 +1001,7 @@ safeSystem cmd = system cmd >>= handleExitCode cmd
 namespace Escaped
   export
   system : List String -> Core ExitCode
-  system = map cast . coreLift . system
+  system = map (cast @{ToExitCode}) . coreLift . system
 
   export
   safeSystem : List String -> Core ()
