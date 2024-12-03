@@ -351,8 +351,6 @@ displayIDEResult outf i  (REPL $ NoFileLoaded)
   = printIDEError outf i $ reflow "No file can be reloaded"
 displayIDEResult outf i  (REPL $ CurrentDirectory dir)
   = printIDEResult outf i $ AString $ "Current working directory is \"\{dir}\""
-displayIDEResult outf i  (REPL CompilationFailed)
-  = printIDEError outf i $ reflow "Compilation failed"
 displayIDEResult outf i  (REPL $ Compiled f)
   = printIDEResult outf i $ AString "File \{f} written"
 displayIDEResult outf i  (REPL $ ProofFound x)

@@ -750,6 +750,7 @@ perrorRaw (CyclicImports ns)
     = pure $ errorDesc (reflow "Module imports form a cycle" <+> colon)
         <++> concatWith (surround " -> ") (pretty0 <$> ns)
 perrorRaw ForceNeeded = pure $ errorDesc (reflow "Internal error when resolving implicit laziness")
+perrorRaw (CodegenNotFound cg) = pure $ errorDesc ("Codegenerator" <++> byShow cg <++> "not found")
 perrorRaw (InternalError str) = pure $ errorDesc (reflow "INTERNAL ERROR" <+> colon) <++> pretty0 str
 perrorRaw (UserError str) = pure . errorDesc $ pretty0 str
 perrorRaw (NoForeignCC fc specs) = do

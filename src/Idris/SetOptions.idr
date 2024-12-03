@@ -513,8 +513,7 @@ postOptions res (OutputFile outfile :: rest)
          (_, status) <- postOptions res rest
          pure (False, status)
 postOptions res (ExecFn str :: rest)
-    = do Executed _ code <- execExp (PRef EmptyFC (UN $ Basic str))
-           | _ => throw $ InternalError "Failed to execute the expression"
+    = do code <- execExpRaw (PRef EmptyFC (UN $ Basic str))
          (_, status) <- postOptions res rest
          pure (False, status <|> Just code)
 postOptions res (CheckOnly :: rest)
