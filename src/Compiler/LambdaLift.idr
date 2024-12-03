@@ -371,6 +371,20 @@ weakenUsed {outer} (MkUsed xs) =
   MkUsed (rewrite lengthDistributesOverAppend outer vars in
          (replicate (length outer) False ++ xs))
 
+-- TODO
+-- lengthDistributesOverAppendFish
+--   : (xs : List a)
+--   -> (ys : SnocList a)
+--   -> length (ys <>< xs) = length xs + length ys
+
+weakenUsedFish : {outer : _} -> Used vars -> Used (vars <>< outer)
+weakenUsedFish {outer} (MkUsed xs) =
+    do rewrite fishAsSnocAppend vars outer
+       MkUsed $ do
+                  rewrite lengthDistributesOverAppend (cast outer) vars
+                  -- See lengthDistributesOverAppendFish
+                  (believe_me $ replicate (length outer) False ++ xs)
+
 contractUsed : (Used (vars :< x)) -> Used vars
 contractUsed (MkUsed xs) = MkUsed (tail xs)
 
@@ -379,6 +393,12 @@ contractUsedMany : {remove : _} ->
                    Used vars
 contractUsedMany {remove=[<]} x = x
 contractUsedMany {remove=(rs :< r)} x = contractUsedMany {remove=rs} (contractUsed x)
+
+contractUsedManyFish : {remove : _} ->
+                   (Used (vars <>< remove)) ->
+                   Used vars
+contractUsedManyFish {remove=[]} x = x
+contractUsedManyFish {remove=(r :: rs)} x = contractUsed $ contractUsedManyFish {remove=rs} x
 
 markUsed : {vars : _} ->
            (idx : Nat) ->

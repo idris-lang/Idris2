@@ -47,9 +47,10 @@ shiftVar :  {outer : Scope} -> {args : List Name} ->
            NVar n ((vars :< x <>< args) ++ outer)
 shiftVar nvar
   = let out = mkSizeOf outer in
+    -- TODO: G.Allois version has Left/Right swap
     case locateNVar out nvar of
       Left nvar => embed nvar
-      Right (MkNVar p) => weakenNs out (shiftUnder p)
+      Right (MkNVar p) => weakenNs out (shiftUndersN (mkSizeOf _) p)
 
 mutual
   renameVar : IsVar x i ((vars :< old <>< args) ++ local) ->
