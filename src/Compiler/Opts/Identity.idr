@@ -7,6 +7,7 @@ import Data.List
 import Data.SnocList
 import Data.Vect
 
+import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.SizeOf
 
 makeArgs : (args : SnocList Name) -> List (Var (vars ++ args))
@@ -15,6 +16,11 @@ makeArgs args = makeArgs' args id
     makeArgs' : (args : SnocList Name) -> (Var (vars ++ args) -> a) -> List a
     makeArgs' [<] f = []
     makeArgs' (xs :< x) f = f (MkVar First) :: makeArgs' xs (f . weaken)
+
+makeArgz : (args : List Name) -> List (Var (vars <>< args))
+makeArgz args
+  = embedFishily @{ListFreelyEmbeddable}
+  $ allVars ([<] <>< args)
 
 parameters (fn1 : Name) (idIdx : Nat)
   mutual
@@ -88,8 +94,8 @@ parameters (fn1 : Name) (idIdx : Nat)
         altEq : CConAlt vars -> Bool
         altEq (MkConAlt y _ _ args exp) =
             cexpIdentity
-                (weakenNs (mkSizeOf args) var)
-                (Just (y, makeArgs args))
+                (weakensN (mkSizeOf args) var)
+                (Just (y, makeArgz args))
                 const
                 exp
     cexpIdentity var con const (CConstCase fc sc xs x) =

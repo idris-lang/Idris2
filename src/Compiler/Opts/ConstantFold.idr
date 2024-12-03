@@ -10,6 +10,7 @@ import Data.List
 import Data.SnocList
 import Data.Vect
 
+import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.SizeOf
 
 findConstAlt : Constant -> List (CConstAlt vars) ->
@@ -45,6 +46,12 @@ wk sout (Wk {ws, ds, vars} sws rho)
     rewrite sym $ appendAssociative vars ws out
     Wk (sws + sout) rho
 wk ws rho = Wk ws rho
+
+wksN : SizeOf out -> Subst ds vars -> Subst (ds <>< out) (vars <>< out)
+wksN s
+  = rewrite fishAsSnocAppend ds out in
+    rewrite fishAsSnocAppend vars out in
+    wk (zero <>< s)
 
 record WkCExp (vars : SnocList Name) where
   constructor MkWkCExp
@@ -161,7 +168,7 @@ constFold rho (CConCase fc sc xs x)
   where
     foldAlt : CConAlt vars -> CConAlt vars'
     foldAlt (MkConAlt n ci t xs e)
-      = MkConAlt n ci t xs $ constFold (wk (mkSizeOf xs) rho) e
+      = MkConAlt n ci t xs $ constFold (wksN (mkSizeOf xs) rho) e
 
 constFold rho (CConstCase fc sc xs x) =
     let sc' = constFold rho sc

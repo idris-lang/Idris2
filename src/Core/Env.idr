@@ -271,10 +271,11 @@ shrinkEnv (env :< b) (Keep p)
          pure (env' :< b')
 
 export
-mkEnvOnto : FC -> (xs : SnocList Name) -> Env Term ys -> Env Term (ys ++ xs)
-mkEnvOnto fc [<] vs = vs
-mkEnvOnto fc (ns :< n) vs
-   = mkEnvOnto fc ns vs :< PVar fc top Explicit (Erased fc Placeholder)
+mkEnvOnto : FC -> (xs : List Name) -> Env Term ys -> Env Term (ys <>< xs)
+mkEnvOnto fc [] vs = vs
+mkEnvOnto fc (n :: ns) vs
+   = let pv = PVar fc top Explicit (Erased fc Placeholder) in
+     mkEnvOnto fc ns (vs :< pv)
 
 -- Make a dummy environment, if we genuinely don't care about the values
 -- and types of the contents.

@@ -22,12 +22,17 @@ import Libraries.Data.List.LengthMatch
 import Libraries.Data.NameMap
 import Libraries.Data.WithDefault
 
+import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.LengthMatch
 import Libraries.Data.SnocList.SizeOf
 import Libraries.Data.SnocList.HasLength
+import Libraries.Data.SnocList.Extra
 
 %default covering
 
+-- TODO: refactor (by G.Allois)
+-- E.g. it's very similar to a `Subst` type defined in Compiler.Opts
+-- or Core.TT.Subst' Subst
 data EEnv : SnocList Name -> SnocList Name -> Type where
      Lin : EEnv free [<]
      (:<) : EEnv free vars -> CExp free -> EEnv free (vars :< x)
@@ -42,11 +47,13 @@ covering
             showAll (Lin :< x) = show x
             showAll (xx :< x) = show x ++ ", " ++ showAll xx
 
-extend : EEnv free vars -> (args : SnocList (CExp free)) -> (args' : SnocList Name) ->
-         LengthMatch args args' -> EEnv free (vars ++ args')
-extend env [<] [<] LinMatch = env
-extend env (xs :< a) (ns :< n) (SnocMatch w)
-    = extend env xs ns w :< a
+extend : EEnv free vars ->
+         (args : List Name) ->
+         (argsVal : List (CExp free)) ->
+         Maybe (EEnv free (vars <>< args))
+extend env [] [] = pure env
+extend env (_ :: ns) (v :: vs) = extend (env :< v) ns vs
+extend _ _ _ = Nothing
 
 Stack : SnocList Name -> Type
 Stack vars = List (CExp vars)
@@ -120,7 +127,7 @@ mutual
   usedCon : {free : _} ->
             {idx : Nat} -> (0 p : IsVar n idx free) -> CConAlt free -> Int
   usedCon n (MkConAlt _ _ _ args sc)
-      = let MkVar n' = weakenNs (mkSizeOf args) (MkVar n) in
+      = let MkVar n' = weakensN (mkSizeOf args) (MkVar n) in
             used n' sc
 
   usedConst : {free : _} ->
@@ -296,14 +303,21 @@ mutual
 
   extendLoc : {vars, free : _} ->
               {auto c : Ref Ctxt Defs} -> {auto l : Ref LVar Int} ->
-              FC -> EEnv free vars -> (args' : SnocList Name) ->
-              Core (Bounds args', EEnv free (vars ++ args'))
-  extendLoc fc env [<] = pure (None, env)
-  extendLoc fc env a@(ns :< n)
+              FC -> EEnv free vars -> (args' : List Name) ->
+              Core (Bounds (cast args'), EEnv free (vars <>< args'))
+  extendLoc fc env [] = pure (None, env)
+  extendLoc fc env a@(n :: ns)
       = do log "compiler.inline.io_bind" 50 "Attempting to extendLoc, env: \{show env}, a: \{show a}"
            xn <- genName "cv"
-           (bs', env') <- extendLoc fc env ns
-           let (bs'', env'') = (Add n xn bs', env' :< CRef fc xn)
+           let env' = env :< CRef fc xn
+           (bs', env'') <- extendLoc fc env' ns
+
+           let
+                bs'' : Bounds ([<n] <>< ns)
+                bs'' = do
+                    rewrite snocAppendFishAssociative [<n] [<] ns
+                    cons n xn bs'
+
            log "compiler.inline.io_bind" 50 "Attempting to extendLoc, bs'': \{show bs''}, env'': \{show env''}"
            pure (bs'', env'')
 
@@ -317,8 +331,8 @@ mutual
            (bs, env') <- extendLoc fc env args
            log "compiler.inline.io_bind" 50 $ "Attempting to evalAlt, bs: \{show bs}, env': \{show env'}"
            scEval <- eval rec env' stk
-                          (rewrite appendAssociative free vars args in sc)
-           pure $ MkConAlt n ci t args (refsToLocals bs scEval)
+                          (rewrite sym $ snocAppendFishAssociative free vars args in sc)
+           pure $ MkConAlt n ci t args (rewrite snocAppendFishAssociative free [<] args in refsToLocals bs scEval)
 
   evalConstAlt : {vars, free : _} ->
                  {auto c : Ref Ctxt Defs} ->
@@ -339,16 +353,11 @@ mutual
       = traverseOpt (eval rec env stk) def
   pickAlt {vars} {free} rec env stk con@(CCon fc n ci t args) (MkConAlt n' _ t' args' sc :: alts) def
       =
-        let args'' = cast args
-        in if matches n t n' t'
-           then case checkLengthMatch args'' args' of
-                     Nothing => pure Nothing
-                     Just m =>
-                         do let env' : EEnv free (vars ++ args')
-                                   = extend env args'' args' m
-                            pure $ Just !(eval rec env' stk
-                                    (rewrite appendAssociative free vars args' in
-                                             sc))
+        if matches n t n' t'
+           then do let Just env' = extend env args' args
+                         | Nothing => pure Nothing
+                   pure $ Just !(eval rec env' stk
+                           (rewrite sym $ snocAppendFishAssociative free vars args' in sc))
            else pickAlt rec env stk con alts def
     where
       matches : Name -> Maybe Int -> Name -> Maybe Int -> Bool
