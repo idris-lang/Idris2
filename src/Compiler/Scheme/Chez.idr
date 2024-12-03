@@ -578,7 +578,7 @@ compileExprWhole :
   Ref Ctxt Defs ->
   Ref Syn SyntaxInfo ->
   (tmpDir : String) -> (outputDir : String) ->
-  ClosedTerm -> (outfile : String) -> Core (Maybe String)
+  ClosedTerm -> (outfile : String) -> Core String
 compileExprWhole makeitso c s tmpDir outputDir tm outfile
     = do let appDirRel = outfile ++ "_app" -- relative to build dir
          let appDirGen = outputDir </> appDirRel -- relative to here
@@ -598,14 +598,14 @@ compileExprWhole makeitso c s tmpDir outputDir tm outfile
             then makeShWindows chez outShRel appDirRel (if makeitso then outSoFile else outSsFile) "--program"
             else makeSh outShRel appDirRel (if makeitso then outSoFile else outSsFile)
          handleFileError outShRel $ chmodRaw outShRel 0o755
-         pure (Just outShRel)
+         pure outShRel
 
 compileExprInc :
   Bool ->
   Ref Ctxt Defs ->
   Ref Syn SyntaxInfo ->
   (tmpDir : String) -> (outputDir : String) ->
-  ClosedTerm -> (outfile : String) -> Core (Maybe String)
+  ClosedTerm -> (outfile : String) -> Core String
 compileExprInc makeitso c s tmpDir outputDir tm outfile
     = do defs <- get Ctxt
          let Just (mods, libs) = lookup Chez (allIncData defs)
@@ -627,7 +627,7 @@ compileExprInc makeitso c s tmpDir outputDir tm outfile
             then makeShWindows chez outShRel appDirRel outSsFile "--script"
             else makeSh outShRel appDirRel outSsFile
          handleFileError outShRel $ chmodRaw outShRel 0o755
-         pure (Just outShRel)
+         pure outShRel
 
 ||| Chez Scheme implementation of the `compileExpr` interface.
 compileExpr :
@@ -635,7 +635,7 @@ compileExpr :
   Ref Ctxt Defs ->
   Ref Syn SyntaxInfo ->
   (tmpDir : String) -> (outputDir : String) ->
-  ClosedTerm -> (outfile : String) -> Core (Maybe String)
+  ClosedTerm -> (outfile : String) -> Core String
 compileExpr makeitso c s tmpDir outputDir tm outfile
     = do sesh <- getSession
          if not (wholeProgram sesh) && (Chez `elem` incrementalCGs sesh)
@@ -649,14 +649,12 @@ executeExpr :
   Ref Syn SyntaxInfo ->
   (tmpDir : String) -> ClosedTerm -> Core ()
 executeExpr c s tmpDir tm
-    = do Just sh <- compileExpr False c s tmpDir tmpDir tm "_tmpchez"
-            | Nothing => throw (InternalError "compileExpr returned Nothing")
-         ignore $ system sh
+    = ignore . system =<< compileExpr False c s tmpDir tmpDir tm "_tmpchez"
 
 incCompile :
   Ref Ctxt Defs ->
   Ref Syn SyntaxInfo ->
-  (sourceFile : String) -> Core (Maybe (String, List String))
+  (sourceFile : String) -> Core (String, List String)
 incCompile c s sourceFile
     = do
          ssFile <- getTTCFileName sourceFile "ss"
@@ -669,7 +667,7 @@ incCompile c s sourceFile
 
          let ndefs = namedDefs cdata
          if isNil ndefs
-            then pure (Just ("", []))
+            then pure ("", [])
                       -- ^ no code to generate, but still recored that the
                       -- module has been compiled, with no output needed.
             else do
@@ -690,7 +688,7 @@ incCompile c s sourceFile
                           show ssFile ++ "))"
                writeFile tmpFileAbs build
                safeSystem [chez, "--script", tmpFileAbs]
-               pure (Just (soFilename, mapMaybe fst fgndefs))
+               pure (soFilename, mapMaybe fst fgndefs)
 
 ||| Codegen wrapper for Chez scheme implementation.
 export

@@ -433,7 +433,7 @@ compileExpr :
   Ref Ctxt Defs ->
   Ref Syn SyntaxInfo ->
   (tmpDir : String) -> (outputDir : String) ->
-  ClosedTerm -> (outfile : String) -> Core (Maybe String)
+  ClosedTerm -> (outfile : String) -> Core String
 compileExpr mkexec c s tmpDir outputDir tm outfile
     = do let appDirRel = outfile ++ "_app" -- relative to build dir
          let appDirGen = outputDir </> appDirRel -- relative to here
@@ -457,16 +457,14 @@ compileExpr mkexec c s tmpDir outputDir tm outfile
          let outShRel = outputDir </> outfile
          makeShPlatform isWindows (if mkexec then "" else racket ++ " ") outShRel appDirRel outRktFile
          handleFileError outShRel $ chmodRaw outShRel 0o755
-         pure (Just outShRel)
+         pure outShRel
 
 executeExpr :
   Ref Ctxt Defs ->
   Ref Syn SyntaxInfo ->
   (tmpDir : String) -> ClosedTerm -> Core ()
 executeExpr c s tmpDir tm
-    = do Just sh <- compileExpr False c s tmpDir tmpDir tm "_tmpracket"
-            | Nothing => throw (InternalError "compileExpr returned Nothing")
-         ignore $ system sh
+    = ignore . system =<< compileExpr False c s tmpDir tmpDir tm "_tmpracket"
 
 export
 codegenRacket : Codegen
