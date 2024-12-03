@@ -813,10 +813,7 @@ compileExp ctm outfile
                    do iputStrLn (reflow "No such code generator available")
                       pure CompilationFailed
          tm_erased <- prepareExp ctm
-         ok <- compile cg tm_erased outfile
-         maybe (pure CompilationFailed)
-               (pure . Compiled)
-               ok
+         Compiled <$> compile cg tm_erased outfile
 
 export
 loadMainFile : {auto c : Ref Ctxt Defs} ->

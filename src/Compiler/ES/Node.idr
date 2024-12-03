@@ -50,13 +50,13 @@ compileExpr :
   (outputDir : String) ->
   ClosedTerm ->
   (outfile : String) ->
-  Core (Maybe String)
+  Core String
 compileExpr c s tmpDir outputDir tm outfile =
   do es <- compileToNode c s tm
      let out = outputDir </> outfile
      writeFile out es
      handleFileError out $ chmodRaw out 0o755
-     pure (Just out)
+     pure out
 
 ||| Node implementation of the `executeExpr` interface.
 executeExpr :
@@ -64,8 +64,7 @@ executeExpr :
   Ref Syn SyntaxInfo ->
   (tmpDir : String) -> ClosedTerm -> Core ()
 executeExpr c s tmpDir tm =
-  do Just out <- compileExpr c s tmpDir tmpDir tm "_tmp_node.js"
-       | Nothing => throw (InternalError "compileExpr returned Nothing")
+  do out <- compileExpr c s tmpDir tmpDir tm "_tmp_node.js"
      node <- coreLift findNode
      ignore $ system [node, out]
 
