@@ -99,7 +99,7 @@ startChezWinSh chez appDirSh targetSh = """
 
 -- TODO: parallelise this
 compileChezLibraries : (chez : String) -> (libDir : String) -> (ssFiles : List String) -> Core ()
-compileChezLibraries chez libDir ssFiles = coreLift_ $ system
+compileChezLibraries chez libDir ssFiles = safeSystem
   [ "echo"
   , unwords
     [ "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-library " ++ build (chezString ssFile) ++ "))'"
@@ -112,7 +112,7 @@ compileChezLibraries chez libDir ssFiles = coreLift_ $ system
   ]
 
 compileChezLibrary : (chez : String) -> (libDir : String) -> (ssFile : String) -> Core ()
-compileChezLibrary chez libDir ssFile = coreLift_ $ system
+compileChezLibrary chez libDir ssFile = safeSystem
   [ "echo"
   , "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-library " ++ build (chezString ssFile) ++ "))'"
   , "'(delete-file " ++ build (chezString ssFile) ++ ")'"
@@ -120,7 +120,7 @@ compileChezLibrary chez libDir ssFile = coreLift_ $ system
   ]
 
 compileChezProgram : (chez : String) -> (libDir : String) -> (ssFile : String) -> Core ()
-compileChezProgram chez libDir ssFile = coreLift_ $ system
+compileChezProgram chez libDir ssFile = safeSystem
   [ "echo"
   , "'(parameterize ([optimize-level 3] [compile-file-message #f]) (compile-program " ++ build (chezString ssFile) ++ "))'"
   , "'(delete-file " ++ build (chezString ssFile) ++ ")'"
@@ -138,7 +138,7 @@ chezLibraryName : CompilationUnit def -> String
 chezLibraryName cu = chezNS (foldl1 min cu.namespaces)
 
 touch : String -> Core ()
-touch s = coreLift_ $ system ["touch", s]
+touch s = safeSystem ["touch", s]
 
 record ChezLib where
   constructor MkChezLib
@@ -168,8 +168,8 @@ compileToSS c chez appdir tm = do
       Left err => pure True
       Right fileHash => pure (fileHash /= supportHash)
   when supportChanged $ do
-    Core.writeFile (appdir </> "support.ss") support
-    Core.writeFile (appdir </> "support.hash") supportHash
+    writeFile (appdir </> "support.ss") support
+    writeFile (appdir </> "support.hash") supportHash
 
   -- TODO: add extraRuntime
   -- the problem with this is that it's unclear what to put in the (export) clause of the library
@@ -222,20 +222,20 @@ compileToSS c chez appdir tm = do
 
       -- write the files
       log "compiler.scheme.chez" 3 $ "Generating code for " ++ chezLib
-      Core.writeFile (appdir </> chezLib <.> "ss") $ build $ concat $
+      writeFile (appdir </> chezLib <.> "ss") $ build $ concat $
         [header]
         ++ map snd fgndefs  -- definitions using foreign libs
         ++ compdefs
         ++ loadlibs  -- foreign library load statements
         ++ [footer]
 
-      Core.writeFile (appdir </> chezLib <.> "hash") cuHash
+      writeFile (appdir </> chezLib <.> "hash") cuHash
 
     pure (MkChezLib chezLib hashChanged)
 
   -- main module
   main <- schExp empty (Chez.chezExtPrim empty defaultLaziness) Chez.chezString defaultLaziness 0 ctm
-  Core.writeFile (appdir </> "mainprog.ss") $ build $ sepBy "\n"
+  writeFile (appdir </> "mainprog.ss") $ build $ sepBy "\n"
     [ schHeader (map snd libs) [lib.name | lib <- chezLibs]
     , collectRequestHandler
     , main
@@ -246,14 +246,17 @@ compileToSS c chez appdir tm = do
 
 makeSh : String -> String -> String -> String -> Core ()
 makeSh chez outShRel appDirSh targetSh =
-  Core.writeFile outShRel (startChez chez appDirSh targetSh)
+  writeFile outShRel (startChez chez appDirSh targetSh)
 
 ||| Make Windows start scripts, one for bash environments and one batch file
 makeShWindows : String -> String -> String -> String -> Core ()
 makeShWindows chez outShRel appDirSh targetSh = do
   let cmdFile = outShRel ++ ".cmd"
-  Core.writeFile cmdFile (startChezCmd chez appDirSh targetSh)
-  Core.writeFile outShRel (startChezWinSh chez appDirSh targetSh)
+  writeFile cmdFile (startChezCmd chez appDirSh targetSh)
+  writeFile outShRel (startChezWinSh chez appDirSh targetSh)
+
+makeShPlatform : Bool -> String -> String -> String -> String -> Core ()
+makeShPlatform isWindows = if isWindows then makeShWindows else makeSh
 
 ||| Chez Scheme implementation of the `compileExpr` interface.
 compileExpr :
@@ -264,15 +267,14 @@ compileExpr :
   ClosedTerm -> (outfile : String) -> Core (Maybe String)
 compileExpr makeitso c s tmpDir outputDir tm outfile = do
   -- set up paths
-  Just cwd <- coreLift currentDir
-       | Nothing => throw (InternalError "Can't get current directory")
+  cwd <- currentDir
   let appDirSh  = outfile ++ "_app"  -- relative to the launcher shell script
   let appDirRel = outputDir </> appDirSh  -- relative to CWD
   let appDirAbs = cwd </> appDirRel
-  coreLift_ $ mkdirAll appDirRel
+  handleFileError appDirRel $ mkdirAll appDirRel
 
   -- generate the code
-  chez <- coreLift $ findChez
+  chez <- coreLift findChez
   (supportChanged, chezLibs) <- compileToSS c chez appDirRel tm
 
   -- compile the code
@@ -298,10 +300,8 @@ compileExpr makeitso c s tmpDir outputDir tm outfile = do
   -- generate the launch script
   let outShRel = outputDir </> outfile
   let launchTargetSh = appDirSh </> "mainprog" <.> (if makeitso then "so" else "ss")
-  if isWindows
-     then makeShWindows chez outShRel appDirSh launchTargetSh
-     else makeSh        chez outShRel appDirSh launchTargetSh
-  coreLift_ $ chmodRaw outShRel 0o755
+  makeShPlatform isWindows chez outShRel appDirSh launchTargetSh
+  handleFileError outShRel $ chmodRaw outShRel 0o755
   pure (Just outShRel)
 
 ||| Chez Scheme implementation of the `executeExpr` interface.
@@ -313,7 +313,7 @@ executeExpr :
 executeExpr c s tmpDir tm
     = do Just sh <- compileExpr False c s tmpDir tmpDir tm "_tmpchez"
             | Nothing => throw (InternalError "compileExpr returned Nothing")
-         coreLift_ $ system [sh]
+         ignore $ system sh
 
 ||| Codegen wrapper for Chez scheme implementation.
 export

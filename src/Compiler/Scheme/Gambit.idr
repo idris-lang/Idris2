@@ -379,8 +379,7 @@ compileToSCM c tm outfile
          extraRuntime <- getExtraRuntime ds
          foreign <- readDataFile "gambit/foreign.scm"
          let scm = sepBy "\n" [schHeader, fromString support, fromString extraRuntime, fromString foreign, code, main]
-         Right () <- coreLift $ writeFile outfile $ build scm
-            | Left err => throw (FileErr outfile err)
+         writeFile outfile $ build scm
          pure $ mapMaybe fst fgndefs
 
 compileExpr :
@@ -401,10 +400,8 @@ compileExpr c s tmpDir outputDir tm outfile
                  Nothing => gscBackend ++ ["-exe", "-cc-options", "-Wno-implicit-function-declaration", "-ld-options"] ++ libsfile
                  Just _ => ["-c"]
          let cmd = gsc ++ gscCompileOpts ++ ["-o", execPath, srcPath]
-         ok <- coreLift $ system cmd
-         if ok == 0
-            then pure (Just execPath)
-            else pure Nothing
+         safeSystem cmd
+         pure (Just execPath)
 
 executeExpr :
   Ref Ctxt Defs ->
@@ -413,8 +410,7 @@ executeExpr :
 executeExpr c s tmpDir tm
     = do Just sh <- compileExpr c s tmpDir tmpDir tm "_tmpgambit"
            | Nothing => throw (InternalError "compileExpr returned Nothing")
-         coreLift_ $ system [sh] -- TODO: on windows, should add exe extension
-         pure ()
+         ignore $ system sh -- TODO: on windows, should add exe extension
 
 export
 codegenGambit : Codegen

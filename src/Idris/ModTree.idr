@@ -221,8 +221,7 @@ needsBuilding sourceFile ttcFile depFiles
          | False => pure False
        -- if it needs rebuilding then remove the buggy .ttc file to avoid going
        -- into an infinite loop!
-       Right () <- coreLift $ removeFile ttcFile
-         | Left err => throw (FileErr ttcFile err)
+       handleFileError ttcFile $ removeFile ttcFile
        pure True
 
 

@@ -35,8 +35,7 @@ export
 pkgLocalDirectory : {auto c : Ref Ctxt Defs} -> Core String
 pkgLocalDirectory =
   do d <- getDirs
-     Just srcdir <- coreLift currentDir
-       | Nothing => throw (InternalError "Can't get current directory")
+     srcdir <- currentDir
      pure $ srcdir </> depends_dir d
 
 ------------------------------------------------------------------------
@@ -167,11 +166,7 @@ export
 covering
 readDataFile : {auto c : Ref Ctxt Defs} ->
                String -> Core String
-readDataFile fname
-    = do f <- findDataFile fname
-         Right d <- coreLift $ readFile f
-            | Left err => throw (FileErr f err)
-         pure d
+readDataFile fname = readFile !(findDataFile fname)
 
 ||| Look for a library file required by a code generator. Look in the
 ||| library directories, and in the lib/ subdirectory of all the 'extra import'
@@ -282,17 +277,13 @@ makeBuildDirectory ns
     = do bdir <- ttcBuildDirectory
          let ns = reverse $ fromMaybe [] $ tail' $ unsafeUnfoldModuleIdent ns -- first item is file name
          let ndir = joinPath ns
-         Right _ <- coreLift $ mkdirAll (bdir </> ndir)
-            | Left err => throw (FileErr (bdir </> ndir) err)
-         pure ()
+         let path = bdir </> ndir
+         handleFileError path $ mkdirAll path
 
 export
 covering
 ensureDirectoryExists : String -> Core ()
-ensureDirectoryExists dir
-    = do Right _ <- coreLift $ mkdirAll dir
-            | Left err => throw (FileErr dir err)
-         pure ()
+ensureDirectoryExists dir = handleFileError dir $ mkdirAll dir
 
 -- Given a source file, return the name of the ttc file to generate
 export
