@@ -766,21 +766,26 @@ processLocal {vars} eopts nest env nestdecls_in scope
     = localHelper nest env nestdecls_in $ \nest' => traverse_ (processDecl eopts nest' env) scope
 
 export
+execExpRaw : {auto c : Ref Ctxt Defs} ->
+             {auto u : Ref UST UState} ->
+             {auto s : Ref Syn SyntaxInfo} ->
+             {auto m : Ref MD Metadata} ->
+             {auto o : Ref ROpts REPLOpts} ->
+             PTerm -> Core ExitCode
+execExpRaw ctm
+    = do cg <- findCG
+         tm_erased <- prepareExp ctm
+         logTimeWhen !getEvalTiming 0 "Execution" $
+           execute cg tm_erased
+
+export
 execExp : {auto c : Ref Ctxt Defs} ->
           {auto u : Ref UST UState} ->
           {auto s : Ref Syn SyntaxInfo} ->
           {auto m : Ref MD Metadata} ->
           {auto o : Ref ROpts REPLOpts} ->
           PTerm -> Core REPLResult
-execExp ctm
-    = do Just cg <- findCG
-           | Nothing =>
-              do iputStrLn (reflow "No such code generator available")
-                 pure CompilationFailed
-         tm_erased <- prepareExp ctm
-         status <- logTimeWhen !getEvalTiming 0 "Execution" $
-           execute cg tm_erased
-         pure $ Executed ctm status
+execExp ctm = Executed ctm <$> execExpRaw ctm
 
 
 execDecls : {auto c : Ref Ctxt Defs} ->
@@ -808,10 +813,7 @@ compileExp : {auto c : Ref Ctxt Defs} ->
              {auto o : Ref ROpts REPLOpts} ->
              PTerm -> String -> Core REPLResult
 compileExp ctm outfile
-    = do Just cg <- findCG
-              | Nothing =>
-                   do iputStrLn (reflow "No such code generator available")
-                      pure CompilationFailed
+    = do cg <- findCG
          tm_erased <- prepareExp ctm
          Compiled <$> compile cg tm_erased outfile
 
@@ -1258,7 +1260,6 @@ mutual
   displayResult NoFileLoaded = printResult (reflow "No file can be reloaded")
   displayResult (CurrentDirectory dir)
     = printResult (reflow "Current working directory is" <++> dquotes (pretty0 dir))
-  displayResult CompilationFailed = printResult (reflow "Compilation failed")
   displayResult (Compiled f) = printResult ("File" <++> pretty0 f <++> "written")
   displayResult (ProofFound x) = printResult (prettyBy Syntax x)
   displayResult (Missed cases) = printResult $ vsep (handleMissing <$> cases)

@@ -810,6 +810,7 @@ HasNames Error where
   full gam (ModuleNotFound fc x) = pure (ModuleNotFound fc x)
   full gam (CyclicImports xs) = pure (CyclicImports xs)
   full gam ForceNeeded = pure ForceNeeded
+  full gam (CodegenNotFound x) = pure (CodegenNotFound x)
   full gam (InternalError x) = pure (InternalError x)
   full gam (UserError x) = pure (UserError x)
   full gam (NoForeignCC fc xs) = pure (NoForeignCC fc xs)
@@ -910,6 +911,7 @@ HasNames Error where
   resolved gam (ModuleNotFound fc x) = pure (ModuleNotFound fc x)
   resolved gam (CyclicImports xs) = pure (CyclicImports xs)
   resolved gam ForceNeeded = pure ForceNeeded
+  resolved gam (CodegenNotFound x) = pure (CodegenNotFound x)
   resolved gam (InternalError x) = pure (InternalError x)
   resolved gam (UserError x) = pure (UserError x)
   resolved gam (NoForeignCC fc xs) = pure (NoForeignCC fc xs)

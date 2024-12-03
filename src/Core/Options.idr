@@ -54,42 +54,6 @@ toString d@(MkDirs wdir sdir bdir ldir odir dfix edirs ppaths pdirs ldirs ddirs)
   """
 
 public export
-data CG = Chez
-        | ChezSep
-        | Racket
-        | Gambit
-        | Node
-        | Javascript
-        | RefC
-        | VMCodeInterp
-        | Other String
-
-export
-Eq CG where
-  Chez == Chez = True
-  ChezSep == ChezSep = True
-  Racket == Racket = True
-  Gambit == Gambit = True
-  Node == Node = True
-  Javascript == Javascript = True
-  RefC == RefC = True
-  VMCodeInterp == VMCodeInterp = True
-  Other s == Other t = s == t
-  _ == _ = False
-
-export
-Show CG where
-  show Chez = "chez"
-  show ChezSep = "chez-sep"
-  show Racket = "racket"
-  show Gambit = "gambit"
-  show Node = "node"
-  show Javascript = "javascript"
-  show RefC = "refc"
-  show VMCodeInterp = "vmcode-interp"
-  show (Other s) = s
-
-public export
 record PairNames where
   constructor MkPairNs
   pairType : Name

@@ -517,8 +517,7 @@ postOptions res (ExecFn expr :: rest)
     = do setCurrentElabSource expr
          let Right (_, _, e) = runParser (Virtual Interactive) Nothing expr $ aPTerm <* eoi
            | Left err => throw err
-         Executed _ code <- execExp e
-           | _ => throw $ InternalError "Failed to execute the expression"
+         code <- execExpRaw e
          (_, status) <- postOptions res rest
          pure (False, status <|> Just code)
 postOptions res (CheckOnly :: rest)
