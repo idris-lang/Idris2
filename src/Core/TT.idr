@@ -395,7 +395,7 @@ namespace Bounds
 export
 cons : (x : Name) -> Name -> Bounds xs -> Bounds (x `cons` xs)
 cons n xn None = Add n xn None
-cons n xn b@(Add _ _ _) = cons n xn b
+cons n xn (Add n' xn' b) = Add n' xn' (cons n xn b)
 
 export
 covering
