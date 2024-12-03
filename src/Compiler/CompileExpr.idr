@@ -392,6 +392,7 @@ toCExp n tm
                  pure $ builtinMagic res
 
 -- For ease of type level reasoning!
+public export
 rev : SnocList a -> SnocList a
 rev [<] = [<]
 rev (xs :< x) = [<x] ++ rev xs
