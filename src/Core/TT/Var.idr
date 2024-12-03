@@ -14,6 +14,10 @@ import Core.Name.CompatibleVars
 import Libraries.Data.SnocList.HasLength
 import Libraries.Data.SnocList.SizeOf
 
+import Data.List.HasLength
+import Libraries.Data.List.HasLength
+import Libraries.Data.List.SizeOf
+
 import Libraries.Data.Erased
 
 %default total
@@ -53,6 +57,19 @@ snocIdx {vars} {idx} p = minus (length vars) idx
 export
 dropLater : IsVar nm (S idx) (ns :< n) -> IsVar nm idx ns
 dropLater (Later p) = p
+
+export
+appendIsVar : HasLength m inner -> IsVar nm m (outer :< nm ++ inner)
+appendIsVar Z = First
+appendIsVar (S x) = Later (appendIsVar x)
+
+export
+fishyIsVar : HasLength m inner -> IsVar nm m (outer :< nm <>< inner)
+fishyIsVar hl
+  = rewrite fishAsSnocAppend (outer :< nm) inner in
+    appendIsVar
+  $ rewrite sym $ plusZeroRightNeutral m in
+    hlFish Z hl
 
 export
 0 mkIsVar : HasLength m inner -> IsVar nm m (outer :< nm ++ inner)
@@ -139,6 +156,19 @@ namespace Var
 export
 mkVar : SizeOf inner -> Var (outer :< nm ++ inner)
 mkVar (MkSizeOf s p) = MkVar (mkIsVar p)
+
+export
+fishyVar : SizeOf inner -> Var (outer :< nm <>< inner)
+fishyVar (MkSizeOf s p) = MkVar (fishyIsVar p)
+
+||| Generate all variables
+export
+allVars : (vars : Scope) -> List (Var vars)
+allVars = go zero where
+
+  go : SizeOf local -> (vs : Scope) -> List (Var (vs <>< local))
+  go s [<] = []
+  go s (vs :< v) = fishyVar s :: go (suc s) vs
 
 export
 Eq (Var xs) where
@@ -254,6 +284,15 @@ insertNVar : SizeOf outer ->
 insertNVar p v = case locateNVar p v of
   Left v => embedNVar v
   Right v => weakenNVar p (later v)
+
+export
+insertNVarFishy : SizeOf local ->
+             NVar nm (outer <>< local) ->
+             NVar nm (outer :< n <>< local)
+insertNVarFishy p v
+  = rewrite fishAsSnocAppend (outer :< n) local in
+    insertNVar (zero <>< p)
+  $ replace {p = NVar nm} (fishAsSnocAppend outer local) v
 
 export
 insertNVarNames : GenWeakenable (NVar name)
@@ -415,3 +454,13 @@ shiftUnderNs : SizeOf {a = Name} inner ->
                NVar n (outer :< x ++ inner)
 shiftUnderNs s First = weakenNs s (MkNVar First)
 shiftUnderNs s (Later p) = insertNVar s (MkNVar p)
+
+||| Moving the zeroth variable under a set number of variables
+||| Fishy version (cf. shiftUnderNs for the append one)
+export
+shiftUndersN : SizeOf {a = Name} args ->
+               {idx : _} ->
+               (0 p : IsVar n idx (vars <>< args :< x)) ->
+               NVar n (vars :< x <>< args)
+shiftUndersN s First = weakensN s (MkNVar First)
+shiftUndersN s (Later p) = insertNVarFishy s (MkNVar p)

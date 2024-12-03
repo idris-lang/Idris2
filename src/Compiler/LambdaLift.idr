@@ -19,6 +19,8 @@ import Data.List
 import Data.SnocList
 import Data.Vect
 
+import Libraries.Data.SnocList.Extra
+
 %default covering
 
 mutual
@@ -188,7 +190,7 @@ mutual
        ||| @ body is the expression that is evaluated as the consequence of
        |||   this branch matching.
        MkLConAlt : (n : Name) -> (info : ConInfo) -> (tag : Maybe Int) ->
-                   (args : SnocList Name) -> (body : Lifted (vars ++ args)) ->
+                   (args : List Name) -> (body : Lifted (vars <>< args)) ->
                    LiftedConAlt vars
 
   ||| A branch of an "LConst" (constant expression) case statement.
@@ -435,7 +437,7 @@ usedVars used (LConCase fc sc alts def) =
     usedConAlt : {default Nothing lazy : Maybe LazyReason} ->
                   Used vars -> LiftedConAlt vars -> Used vars
     usedConAlt used (MkLConAlt n ci tag args sc) =
-      contractUsedMany {remove=args} (usedVars (weakenUsed used) sc)
+      contractUsedManyFish {remove=args} (usedVars (weakenUsedFish used) sc)
 
 usedVars used (LConstCase fc sc alts def) =
     let defUsed = maybe used (usedVars used {vars}) def
@@ -506,13 +508,13 @@ dropUnused {vars} {outer} unused (LConCase fc sc alts def) =
     dropConCase (MkLConAlt n ci t args sc) =
       MkLConAlt n ci t args droppedSc
       where
-        sc' : Lifted (vars ++ (outer ++ args))
-        sc' = (rewrite appendAssociative vars outer args in sc)
+        sc' : Lifted (vars ++ (outer <>< args))
+        sc' = rewrite sym $ snocAppendFishAssociative vars outer args in sc
 
-        droppedSc : Lifted ((dropped vars unused ++ outer) ++ args)
+        droppedSc : Lifted ((dropped vars unused ++ outer) <>< args)
         droppedSc = do
-          rewrite sym $ appendAssociative (dropped vars unused) outer args
-          dropUnused {vars=vars} {outer=outer++args} unused sc'
+          rewrite snocAppendFishAssociative (dropped vars unused) outer args
+          dropUnused {vars=vars} {outer=outer <>< args} unused sc'
 dropUnused {vars} {outer} unused (LConstCase fc sc alts def) =
   let alts' = map dropConstCase alts in
       LConstCase fc (dropUnused unused sc) alts' (map (dropUnused unused) def)

@@ -17,7 +17,9 @@ import Data.SnocList
 import Data.Maybe
 import Data.Vect
 
+import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.SizeOf
+import Libraries.Data.SnocList.Extra
 
 %default covering
 
@@ -150,21 +152,16 @@ eraseConArgs arity epos fn args
              then dropPos epos fn' -- fn' might be lambdas, after eta expansion
              else fn'
 
-mkDropSubst : Nat -> List Nat ->
-              (rest : SnocList Name) ->
-              (vars : SnocList Name) ->
-              (vars' ** Thin (rest ++ vars') (rest ++ vars))
-mkDropSubst i es rest [<] = ([<] ** Refl)
-mkDropSubst (S i) es rest (xs :< x)
-    = let (vs ** sub) = mkDropSubst i es rest xs in
-          if (S i) `elem` es
-             then (vs ** Drop sub)
-             else (vs :< x ** Keep sub)
--- Next case can't happen if called with the right Nat from mkDropSubst
--- FIXME: rule it out with a type!
-mkDropSubst Z es rest (xs :< x)
-    = let (vs ** sub) = mkDropSubst Z es rest xs in
-          (vs ** Drop sub)
+||| Compute the thinning dropping the erased arguments
+mkDropSubst : (erasedArgs : List Nat) ->
+  (args : List Name) ->
+  (args' ** Thin (vars <>< args') (vars <>< args))
+mkDropSubst es args
+  = let (vs ** th) = mkSub (cast args) es in
+    MkDPair (cast vs)
+  $ rewrite sym $ snocAppendAsFish vars vs in
+    rewrite fishAsSnocAppend vars args in
+    embed th
 
 -- See if the constructor is a special constructor type, e.g a nil or cons
 -- shaped thing.
@@ -268,7 +265,7 @@ mutual
                         let erased = eraseArgs gdef
                         log "compiler.newtype.world" 50 "conCases-2 on \{show n} args: \{show args}, erased: \{show erased}"
                         let (args' ** sub)
-                            = mkDropSubst (length args) erased vars args
+                            = mkDropSubst erased args
                         sc' <- toCExpTree n sc
                         ns' <- conCases n ns
                         log "compiler.newtype.world" 50 "conCases-2 on \{show n} sc': \{show sc'}, ns': \{show ns'}, args': \{show args'}, sub: \{show sub}"
@@ -324,44 +321,51 @@ mutual
 -- works in a nice principled way.
                      if noworld -- just substitute the scrutinee into
                                 -- the RHS
-                        then
-                             let (s, env) : (SizeOf args, SubstCEnv args vars)
-                                     = mkSubst 0 scr pos args in
-                              do log "compiler.newtype.world" 50 "Inlining case on \{show n} (no world)"
-                                 pure $ Just (substs s env !(toCExpTree n sc))
+                        then do log "compiler.newtype.world" 50 "Inlining case on \{show n} (no world)"
+
+                                sc' : CExp (vars <>< args) <- toCExpTree n sc
+                                let sc'' : CExp (vars ++ cast args)
+                                := rewrite sym $ fishAsSnocAppend vars args in sc'
+
+                                let (s, env) : (SizeOf args, SubstCEnv (cast args) vars)
+                                = mkSubst 0 scr pos args
+
+                                pure $ Just (substs (cast s) env sc'')
                         else -- let bind the scrutinee, and substitute the
                              -- name into the RHS
 
                              do log "compiler.newtype.world" 25 "Kept the scrutinee \{show n} \{show pos} sc \{show sc}, vars: \{show $ toList vars}, args: \{show $ toList args}, scr: \{show scr}"
-                                let (s, env) : (_, SubstCEnv args (vars :< MN "eff" 0))
+                                let (s, env) : (_, SubstCEnv (cast args) (vars :< MN "eff" 0))
                                         = mkSubst 0 (CLocal fc First) pos args
 
-                                sc' <- toCExpTree n sc
+                                sc' : CExp (vars <>< args) <- toCExpTree n sc
+
+                                let sc'' : CExp (vars ++ cast args)
+                                    := rewrite sym $ fishAsSnocAppend vars args in sc'
 
                                 log "compiler.newtype.world" 25 "Kept the scrutinee \{show pos} sc': \{show sc'}, env: \{show env}"
 
                                 let
-                                    scope : CExp ((vars ++ [<MN "eff" 0]) ++ args)
+                                    scope : CExp ((vars ++ [<MN "eff" 0]) ++ cast args)
                                     scope = do
-                                                rewrite sym $ appendAssociative vars [<MN "eff" 0] args
-                                                insertNames {outer=args}
-                                                            {inner=vars}
-                                                            {ns = [<MN "eff" 0]}
-                                                            (mkSizeOf _) (mkSizeOf _) sc'
-
-                                let tm = CLet fc (MN "eff" 0) NotInline scr (substs s env scope)
+                                            rewrite sym $ appendAssociative vars [<MN "eff" 0] (cast args)
+                                            insertNames {outer=cast args}
+                                                        {inner=vars}
+                                                        {ns = [<MN "eff" 0]}
+                                                        (mkSizeOf _) (mkSizeOf _) sc''
+                                let tm = CLet fc (MN "eff" 0) NotInline scr (substs (cast s) env scope)
                                 log "compiler.newtype.world" 50 "Kept the scrutinee \{show tm}, scope: \{show scope}"
                                 pure (Just tm)
                 _ => pure Nothing -- there's a normal match to do
     where
       mkSubst : Nat -> CExp vs ->
-                Nat -> (args : SnocList Name) -> (SizeOf args, SubstCEnv args vs)
-      mkSubst _ _ _ [<] = (zero, [<])
-      mkSubst i scr pos (as :< a)
+                Nat -> (args : List Name) -> (SizeOf args, SubstCEnv (cast args) vs)
+      mkSubst _ _ _ [] = (zero, [<])
+      mkSubst i scr pos (a :: as)
           = let (s, env) = mkSubst (1 + i) scr pos as in
-            if i == pos
-               then (suc s, env :< scr)
-               else (suc s, env :< CErased fc)
+            rewrite snocAppendFishAssociative [<a] [<] as in if i == pos
+               then (suc s, env `cons` scr)
+               else (suc s, env `cons` CErased fc)
   getNewType fc scr n (_ :: ns) = getNewType fc scr n ns
 
   getDef : {vars : _} ->

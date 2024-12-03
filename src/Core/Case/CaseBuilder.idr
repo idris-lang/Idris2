@@ -22,6 +22,7 @@ import Libraries.Data.SortedSet
 import Libraries.Data.SnocList.SizeOf
 import Libraries.Data.SnocList.LengthMatch
 import Libraries.Data.SnocList.HasLength
+import Libraries.Data.SnocList.Extra
 
 import Decidable.Equality
 
@@ -1139,7 +1140,7 @@ mutual
       altGroups (ConGroup {newargs} cn tag rest :: cs)
           = do crest <- match fc fn phase rest (map (weakenNs (mkSizeOf newargs)) errorCase)
                cs' <- altGroups cs
-               pure (ConCase cn tag newargs crest :: cs')
+               pure (ConCase cn tag (cast newargs) (rewrite sym $ snocAppendAsFish vars newargs in crest) :: cs')
       altGroups (DelayGroup {tyarg} {valarg} rest :: cs)
           = do crest <- match fc fn phase rest (map (weakenNs (mkSizeOf [<tyarg, valarg])) errorCase)
                cs' <- altGroups cs

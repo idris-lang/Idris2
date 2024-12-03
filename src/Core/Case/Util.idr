@@ -7,6 +7,7 @@ import Core.Value
 import Data.SnocList
 import Libraries.Data.SnocList.Extra
 import Libraries.Data.SnocList.SizeOf
+import Libraries.Data.List.SizeOf
 
 public export
 record DataCon where
@@ -53,26 +54,8 @@ export
 mkAlt : {vars : _} ->
         FC -> CaseTree vars -> DataCon -> CaseAlt vars
 mkAlt fc sc (MkDataCon cn t ar)
-    = ConCase cn t generatedArgs weakenVars
-    where
-      pos : List Int
-      pos = take ar [0..]
-
-      generatedArgs : SnocList Name
-      generatedArgs = map (MN "m") (cast $ reverse pos)
-
-      lemmaTake
-        : (ar : Nat)
-        -> (s : Stream Int)
-        -> [<] <>< reverseOnto [] (Prelude.take ar s) = take ar s
-      lemmaTake ar s = case ar of
-          Z => Refl
-          (S k) => lemmaTake (S k) s
-
-      weakenVars : CaseTree (vars ++ mapImpl (MN "m") (cast {from=List Int} (reverse $ Prelude.take ar s)))
-      weakenVars = do
-        rewrite lemmaTake ar s
-        weakenNs (map take) (emptyRHS fc sc)
+    = ConCase cn t (map (MN "m") (take ar [0..]))
+    $ weakensN (map take) (emptyRHS fc sc)
 
 export
 tagIs : Int -> CaseAlt vars -> Bool

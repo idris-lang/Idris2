@@ -6,6 +6,7 @@ import Core.Name.CompatibleVars
 import Data.SnocList
 import Data.SnocList.HasLength
 import Libraries.Data.SnocList.SizeOf
+import Libraries.Data.List.SizeOf
 
 %default total
 
@@ -37,6 +38,13 @@ data Thin : SnocList a -> SnocList a -> Type where
   Drop : Thin xs ys -> Thin xs (ys :< y)
   Keep : Thin xs ys -> Thin (xs :< x) (ys :< x)
 
+namespace Thin
+  -- At runtime, Thin's `Refl` does not carry any additional
+  -- information. So this is safe!
+  export
+  embed : Thin xs ys -> Thin (outer ++ xs) (outer ++ ys)
+  embed = believe_me
+
 export
 covering
 {xs, ys : _} -> Show (Thin xs ys) where
@@ -49,19 +57,23 @@ none : {xs : SnocList a} -> Thin [<] xs
 none {xs = [<]} = Refl
 none {xs = _ :< _} = Drop none
 
-{- UNUSED: we actually sometimes want Refl vs. Keep!
+-- we actually sometimes want Refl vs. Keep!
 ||| Smart constructor. We should use this to maximise the length
 ||| of the Refl segment thus getting more short-circuiting behaviours
 export
-Keep : Thin xs ys -> Thin (xs :< x) (ys :< x)
-Keep Refl = Refl
-Keep p = Keep p
--}
+keep : Thin xs ys -> Thin (xs :< x) (ys :< x)
+keep Refl = Refl
+keep p = Keep p
 
 export
 keeps : (args : SnocList a) -> Thin xs ys -> Thin (xs ++ args) (ys ++ args)
 keeps [<] th = th
 keeps (sx :< x) th = Keep (keeps sx th)
+
+export
+keepz : (args : List a) -> Thin xs ys -> Thin (xs <>< args) (ys <>< args)
+keepz [] th = th
+keepz (x :: xs) th = keepz xs (keep th)
 
 ------------------------------------------------------------------------
 -- Semi-decidable equality
@@ -74,6 +86,15 @@ scopeEq (xs :< x) (ys :< y)
          Refl <- scopeEq xs ys
          Just Refl
 scopeEq _ _ = Nothing
+
+export
+localEq : (xs, ys : List Name) -> Maybe (xs = ys)
+localEq [] [] = Just Refl
+localEq (x :: xs) (y :: ys)
+    = do Refl <- nameEq x y
+         Refl <- localEq xs ys
+         Just Refl
+localEq _ _ = Nothing
 
 ------------------------------------------------------------------------
 -- Generate a fresh name (for a given scope)
@@ -138,6 +159,14 @@ genWeaken : GenWeaken tm =>
   SizeOf outer -> tm (local ++ outer) -> tm (local ++ ([<n] ++ outer))
 genWeaken l = genWeakenNs l (suc zero)
 
+export
+weakensN : Weaken tm =>
+  {0 vars : Scope} -> {0 ns : List Name} ->
+  SizeOf ns -> tm vars -> tm (vars <>< ns)
+weakensN s t
+  = rewrite fishAsSnocAppend vars ns in
+    weakenNs (zero <>< s) t
+
 public export
 interface Strengthen (0 tm : Scoped) where
   constructor MkStrengthen
@@ -148,12 +177,24 @@ export
 strengthen : Strengthen tm => tm (vars :< nm) -> Maybe (tm vars)
 strengthen = strengthenNs (suc zero)
 
+export
+strengthensN :
+  Strengthen tm => SizeOf ns ->
+  tm (vars <>< ns) -> Maybe (tm vars)
+strengthensN s t
+  = strengthenNs (zero <>< s)
+  $ rewrite sym $ fishAsSnocAppend vars ns in t
+
 public export
 interface FreelyEmbeddable (0 tm : Scoped) where
   constructor MkFreelyEmbeddable
   -- this is free for nameless representations
   embed : Embeddable tm
   embed = believe_me
+
+export
+embedFishily : FreelyEmbeddable tm => tm (cast ns) -> tm (vars <>< ns)
+embedFishily t = rewrite fishAsSnocAppend vars ns in embed t
 
 export
 FunctorFreelyEmbeddable : Functor f => FreelyEmbeddable tm => FreelyEmbeddable (f . tm)

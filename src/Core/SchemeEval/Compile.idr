@@ -79,22 +79,22 @@ getName (Bound x) = x
 getName (Free x) = x
 
 public export
-data SchVars : SnocList Name -> Type where
-     Nil : SchVars [<]
-     (::) : SVar -> SchVars ns -> SchVars (ns :< n)
+data SchVars : Scoped where
+     Lin : SchVars [<]
+     (:<) : SchVars ns -> SVar -> SchVars (ns :< n)
 
 Show (SchVars ns) where
-  show xs = show (toList xs)
+  show xs = show (toSnocList xs <>> [])
     where
-      toList : forall ns . SchVars ns -> List String
-      toList [] = []
-      toList (Bound x :: xs) = x :: toList xs
-      toList (Free x :: xs) = "'x" :: toList xs
+      toSnocList : forall ns . SchVars ns -> SnocList String
+      toSnocList [<] = [<]
+      toSnocList (xs :< Bound x) = toSnocList xs :< x
+      toSnocList (xs :< Free x) = toSnocList xs :< "'x"
 
 getSchVar : {idx : _} -> (0 _ : IsVar n idx vars) -> SchVars vars -> String
-getSchVar First (Bound x :: xs) = x
-getSchVar First (Free x :: xs) = "'" ++ x
-getSchVar (Later p) (x :: xs) = getSchVar p xs
+getSchVar First (xs :< Bound x) = x
+getSchVar First (xs :< Free x) = "'" ++ x
+getSchVar (Later p) (xs :< x) = getSchVar p xs
 
 {-
 
@@ -220,13 +220,13 @@ compileStk svs stk (Bind fc x (Let _ _ val _) scope)
     = do i <- nextName
          let x' = schVarName x ++ "-" ++ show i
          val' <- compileStk svs [] val
-         sc' <- compileStk (Bound x' :: svs) [] scope
+         sc' <- compileStk (svs :< Bound x') [] scope
          pure $ unload (Let x' val' sc') stk
 compileStk svs stk (Bind fc x (Pi _ rig p ty) scope)
     = do i <- nextName
          let x' = schVarName x ++ "-" ++ show i
          ty' <- compileStk svs [] ty
-         sc' <- compileStk (Bound x' :: svs) [] scope
+         sc' <- compileStk (svs :< Bound x') [] scope
          p' <- compilePiInfo svs p
          pure $ Vector (-3) [Lambda [x'] sc', toScheme rig, toSchemePi p',
                                               ty', toScheme x]
@@ -234,7 +234,7 @@ compileStk svs stk (Bind fc x (PVar _ rig p ty) scope)
     = do i <- nextName
          let x' = schVarName x ++ "-" ++ show i
          ty' <- compileStk svs [] ty
-         sc' <- compileStk (Bound x' :: svs) [] scope
+         sc' <- compileStk (svs :< Bound x') [] scope
          p' <- compilePiInfo svs p
          pure $ Vector (-12) [Lambda [x'] sc', toScheme rig, toSchemePi p',
                                                ty', toScheme x]
@@ -242,27 +242,27 @@ compileStk svs stk (Bind fc x (PVTy _ rig ty) scope)
     = do i <- nextName
          let x' = schVarName x ++ "-" ++ show i
          ty' <- compileStk svs [] ty
-         sc' <- compileStk (Bound x' :: svs) [] scope
+         sc' <- compileStk (svs :< Bound x') [] scope
          pure $ Vector (-13) [Lambda [x'] sc', toScheme rig, ty', toScheme x]
 compileStk svs stk (Bind fc x (PLet _ rig val ty) scope) -- we only see this on LHS
     = do i <- nextName
          let x' = schVarName x ++ "-" ++ show i
          val' <- compileStk svs [] val
          ty' <- compileStk svs [] ty
-         sc' <- compileStk (Bound x' :: svs) [] scope
+         sc' <- compileStk (svs :< Bound x') [] scope
          pure $ Vector (-14) [Lambda [x'] sc', toScheme rig, val', ty', toScheme x]
 compileStk svs [] (Bind fc x (Lam _ rig p ty) scope)
     = do i <- nextName
          let x' = schVarName x ++ "-" ++ show i
          ty' <- compileStk svs [] ty
-         sc' <- compileStk (Bound x' :: svs) [] scope
+         sc' <- compileStk (svs :< Bound x') [] scope
          p' <- compilePiInfo svs p
          pure $ Vector (-8) [Lambda [x'] sc', toScheme rig, toSchemePi p',
                                               ty', toScheme x]
 compileStk svs (s :: stk) (Bind fc x (Lam _ _ _ _) scope)
     = do i <- nextName
          let x' = schVarName x ++ "-" ++ show i
-         sc' <- compileStk (Bound x' :: svs) stk scope
+         sc' <- compileStk (svs :< Bound x') stk scope
          pure $ Apply (Lambda [x'] sc') [s]
 compileStk svs stk (App fc fn arg)
     = compileStk svs (!(compileStk svs [] arg) :: stk) fn
@@ -301,13 +301,12 @@ getArgName
          pure (MN "carg" (cast i))
 
 extend : Ref Sym Integer =>
-         (args : SnocList Name) -> SchVars vars ->
-         Core (List Name, SchVars (vars ++ args))
-extend [<] svs = pure ([], svs)
-extend (args :< arg) svs
+         (args : List Name) -> SchVars vars ->
+         Core (List Name, SchVars (vars <>< args))
+extend [] svs = pure ([], svs)
+extend (arg :: args) svs
     = do n <- getArgName
-         (args', svs') <- extend args svs
-         pure (n :: args', Bound (schVarName n) :: svs')
+         extend args (svs :< Bound (schVarName n))
 
 compileCase : Ref Sym Integer =>
               {auto c : Ref Ctxt Defs} ->
@@ -362,7 +361,7 @@ compileCase blk svs (Case idx p scTy xs)
                   (Apply (Var "vector-ref") [Var var, IntegerVal (cast i)])
                   (project (i + 1) var ns body)
 
-        bindArgs : String -> (args : SnocList Name) -> CaseTree (vars ++ args) ->
+        bindArgs : String -> (args : List Name) -> CaseTree (vars <>< args) ->
                    Core (SchemeObj Write)
         bindArgs var args sc
             = do (bind, svs') <- extend args svs
@@ -397,7 +396,7 @@ compileCase blk svs (Case idx p scTy xs)
                   (Apply (Var "vector-ref") [Var var, IntegerVal (cast i)])
                   (project (i + 1) var ns body)
 
-        bindArgs : String -> (args : SnocList Name) -> CaseTree (vars ++ args) ->
+        bindArgs : String -> (args : List Name) -> CaseTree (vars <>< args) ->
                    Core (SchemeObj Write)
         bindArgs var args sc
             = do (bind, svs') <- extend args svs
@@ -405,7 +404,7 @@ compileCase blk svs (Case idx p scTy xs)
 
         makeAlt : String -> CaseAlt vars ->
                   Core (Maybe (SchemeObj Write, SchemeObj Write))
-        makeAlt var (ConCase (UN (Basic "->")) t [<_, _] sc)
+        makeAlt var (ConCase (UN (Basic "->")) t [_, _] sc)
             = pure Nothing -- do this in 'addPiMatch' below, since the
                            -- representation is different
         makeAlt var (ConCase n t args sc)
@@ -418,11 +417,12 @@ compileCase blk svs (Case idx p scTy xs)
         -- t is a function type, and conveniently the scope of a pi
         -- binding is represented as a function. Lucky us! So we just need
         -- to extract it then evaluate the scope
-        addPiMatch var (ConCase (UN (Basic "->")) _ [<t, s] sc :: _) def
+        addPiMatch var (ConCase (UN (Basic "->")) _ [s, t] sc :: _) def
             = do sn <- getArgName
                  tn <- getArgName
-                 let svs' = Bound (schVarName sn) ::
-                              Bound (schVarName tn) :: svs
+                 let svs' = svs
+                            :< Bound (schVarName tn)
+                            :< Bound (schVarName sn)
                  sc' <- compileCase blk svs' sc
                  pure $ If (Apply (Var "ct-isPi") [Var var])
                            (Let (schVarName sn) (Apply (Var "vector-ref") [Var var, IntegerVal 4]) $
@@ -458,8 +458,9 @@ compileCase blk svs (Case idx p scTy xs)
         = do let var = getSchVar p svs
              tyn <- getArgName
              argn <- getArgName
-             let svs' = Bound (schVarName tyn) ::
-                          Bound (schVarName argn) :: svs
+             let svs' = svs
+                      :< Bound (schVarName tyn)
+                      :< Bound (schVarName argn)
              sc' <- compileCase blk svs' sc
              pure $ If (Apply (Var "ct-isDelay") [Var var])
                        (Let (schVarName tyn)
@@ -475,20 +476,19 @@ compileCase blk vars (STerm _ tm) = compile vars tm
 compileCase blk vars _ = pure blk
 
 varObjs : SchVars ns -> List (SchemeObj Write)
-varObjs [] = []
-varObjs (x :: xs) = Var (show x) :: varObjs xs
+varObjs [<] = []
+varObjs (xs :< x) = Var (show x) :: varObjs xs
 
-mkArgs : (ns : SnocList Name) -> Core (SchVars ns)
-mkArgs [<] = pure []
-mkArgs (xs :< x)
-    = pure $ Bound (schVarName x) :: !(mkArgs xs)
+mkArgs : (ns : Scope) -> SchVars ns
+mkArgs [<] = [<]
+mkArgs (xs :< x) = mkArgs xs :< Bound (schVarName x)
 
 bindArgs : Name ->
            (todo : SchVars ns) ->
            (done : List (SchemeObj Write)) ->
            SchemeObj Write -> SchemeObj Write
-bindArgs n [] done body = body
-bindArgs n (x :: xs) done body
+bindArgs n [<] done body = body
+bindArgs n (xs :< x) done body
     = Vector (-9) [blockedAppWith n (reverse done),
                    Lambda [show x]
                       (bindArgs n xs (Var (show x) :: done) body)]
@@ -499,7 +499,7 @@ compileBody : {auto c : Ref Ctxt Defs} ->
 compileBody _ n None = pure $ blockedAppWith n []
 compileBody redok n (PMDef pminfo args treeCT treeRT pats)
     = do i <- newRef Sym 0
-         argvs <- mkArgs args
+         let argvs = mkArgs args
          let blk = blockedAppWith n (varObjs argvs)
          body <- compileCase blk argvs treeCT
          let body' = if redok
@@ -517,7 +517,7 @@ compileBody _ n (DCon tag Z newtypeArg)
     = pure $ Vector (cast tag) [toScheme !(toResolvedNames n), toScheme emptyFC]
 compileBody _ n (DCon tag arity newtypeArg)
     = do let args = mkArgNs 0 arity
-         argvs <- mkArgs args
+         let argvs = mkArgs args
          let body
                = Vector (cast tag)
                         (toScheme n :: toScheme emptyFC ::
@@ -532,7 +532,7 @@ compileBody _ n (TCon tag Z parampos detpos flags mutwith datacons detagabbleBy)
                           toScheme n, toScheme emptyFC]
 compileBody _ n (TCon tag arity parampos detpos flags mutwith datacons detagabbleBy)
     = do let args = mkArgNs 0 arity
-         argvs <- mkArgs args
+         let argvs = mkArgs args
          let body
                = Vector (-1)
                         (IntegerVal (cast tag) ::

@@ -15,6 +15,11 @@ data Subst : Scoped -> Scope -> Scoped where
   Lin : Subst tm [<] vars
   (:<) : Subst tm ds vars -> tm vars -> Subst tm (ds :< d) vars
 
+export
+cons : Subst tm ds vars -> tm vars -> Subst tm (v `cons` ds) vars
+cons [<] p = Lin :< p
+cons (ns :< s) p = cons ns p :< s
+
 namespace Var
 
   export

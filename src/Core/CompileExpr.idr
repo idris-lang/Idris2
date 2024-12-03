@@ -10,7 +10,9 @@ import Data.List
 import Data.SnocList
 import Data.Vect
 
+import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.SizeOf
+import Libraries.Data.SnocList.Extra
 
 %default covering
 
@@ -113,8 +115,8 @@ mutual
   data CConAlt : SnocList Name -> Type where
        -- If no tag, then match by constructor name. Back ends might want to
        -- convert names to a unique integer for performance.
-       MkConAlt : Name -> ConInfo -> (tag : Maybe Int) -> (args : SnocList Name) ->
-                  CExp (vars ++ args) -> CConAlt vars
+       MkConAlt : Name -> ConInfo -> (tag : Maybe Int) -> (args : List Name) ->
+                  CExp (vars <>< args) -> CConAlt vars
 
   public export
   data CConstAlt : SnocList Name -> Type where
@@ -297,25 +299,44 @@ getLocName Z (xs :< x) First = x
 getLocName (S k) (xs :< x) (Later p) = getLocName k xs p
 
 export
-addLocs : (args : SnocList Name) -> Names vars -> Names (vars ++ args)
-addLocs [<] ns = ns
-addLocs (xs :< x) ns
-    = let rec = addLocs xs ns in
-          rec :< uniqueName x rec
+addLocz : (args : Scope) -> Names vars -> Names (vars ++ args)
+addLocz [<] ns = ns
+addLocz (xs :< x) ns
+  = let rec = addLocz xs ns in
+    rec :< uniqueName x rec
 
-conArgs : (args : SnocList Name) -> Names (vars ++ args) -> SnocList Name
-conArgs [<] ns = [<]
-conArgs (as :< a) (ns :< n) = conArgs as ns :< n
+export
+initLocs : (vars : Scope) -> Names vars
+initLocs vars
+  = rewrite sym $ appendLinLeftNeutral vars in
+    addLocz vars [<]
+
+export
+addLocs : (args : List Name) -> Names vars -> Names (vars <>< args)
+addLocs [] ns = ns
+addLocs (x :: xs) ns
+    = let n = uniqueName x ns in
+      addLocs xs (ns :< n)
+
+conArgz : (args : SnocList Name) -> Names (vars ++ args) -> SnocList Name
+conArgz [<] ns = [<]
+conArgz (as :< a) (ns :< n) = conArgz as ns :< n
+
+conArgs : (args : List Name) -> Names (vars <>< args) -> List Name
+conArgs args ns
+  = let ns' : Names (vars ++ cast args)
+      := rewrite sym $ fishAsSnocAppend vars args in ns
+    in conArgz ([<] <>< args) ns' <>> []
 
 mutual
   forgetExp : Names vars -> CExp vars -> NamedCExp
   forgetExp locs (CLocal fc p) = NmLocal fc (getLocName _ locs p)
   forgetExp locs (CRef fc n) = NmRef fc n
   forgetExp locs (CLam fc x sc)
-      = let locs' = addLocs [<x] locs in
+      = let locs' = addLocs [x] locs in
             NmLam fc (getLocName _ locs' First) (forgetExp locs' sc)
   forgetExp locs (CLet fc x _ val sc)
-      = let locs' = addLocs [<x] locs in
+      = let locs' = addLocs [x] locs in
             NmLet fc (getLocName _ locs' First)
                      (forgetExp locs val)
                      (forgetExp locs' sc)
@@ -344,7 +365,7 @@ mutual
   forgetConAlt : Names vars -> CConAlt vars -> NamedConAlt
   forgetConAlt locs (MkConAlt n ci t args exp)
       = let args' = addLocs args locs in
-            MkNConAlt n ci t (cast $ conArgs args args') (forgetExp args' exp)
+            MkNConAlt n ci t (conArgs args args') (forgetExp args' exp)
 
   forgetConstAlt : Names vars -> CConstAlt vars -> NamedConstAlt
   forgetConstAlt locs (MkConstAlt c exp)
@@ -352,15 +373,13 @@ mutual
 
 export
 forget : {vars : _} -> CExp vars -> NamedCExp
-forget {vars} exp
-    = forgetExp (addLocs vars [<])
-                (rewrite appendLinLeftNeutral vars in exp)
+forget exp = forgetExp (initLocs vars) exp
 
 export
 forgetDef : CDef -> NamedDef
 forgetDef (MkFun args def)
-    = let ns = addLocs args [<]
-          args' = conArgs {vars = [<]} args ns in
+    = let ns = addLocz args [<]
+          args' = conArgz {vars = [<]} args ns in
           MkNmFun (cast args') (forget def)
 forgetDef (MkCon t a nt) = MkNmCon t a nt
 forgetDef (MkForeign ccs fargs ty) = MkNmForeign ccs fargs ty
@@ -468,20 +487,20 @@ mutual
                       CConAlt (inner ++ outer) ->
                       CConAlt (inner ++ (ns ++ outer))
   insertNamesConAlt {outer} {ns} p q (MkConAlt x ci tag args sc)
-      = MkConAlt x ci tag args locals'
-      where
-        sc' : CExp (inner ++ (outer ++ args))
-        sc' = rewrite (appendAssociative inner outer args) in sc
+        = let sc' : CExp (inner ++ (outer <>< args))
+                  = rewrite sym $ snocAppendFishAssociative inner outer args in sc
 
-        locals : CExp (inner ++ (ns ++ (outer ++ args)))
-        locals = insertNames (p + mkSizeOf args) q sc'
+              sc'' : CExp (inner ++ (ns ++ (outer <>< args)))
+                   = insertNames (p <>< mkSizeOf args) q sc'
 
-        locals' : CExp ((inner ++ (ns ++ outer)) ++ args)
-        locals' = do
-          rewrite (appendAssociative inner ns outer)
-          rewrite sym (appendAssociative (inner ++ ns) outer args)
-          rewrite sym (appendAssociative inner ns (outer ++ args))
-          locals
+              sc''' : CExp ((inner ++ (ns ++ outer)) <>< args)
+                    = do rewrite (appendAssociative inner ns outer)
+                         rewrite snocAppendFishAssociative (inner ++ ns) outer args
+                         rewrite sym (appendAssociative inner ns (outer <>< args))
+                         sc''
+
+           in
+              MkConAlt x ci tag args sc'''
 
   insertNamesConstAlt : SizeOf outer ->
                         SizeOf ns ->
@@ -532,7 +551,7 @@ mutual
 
   shrinkConAlt : Thin newvars vars -> CConAlt vars -> CConAlt newvars
   shrinkConAlt sub (MkConAlt x ci tag args sc)
-        = MkConAlt x ci tag args (shrinkCExp (keeps args sub) sc)
+        = MkConAlt x ci tag args (shrinkCExp (keepz args sub) sc)
 
   shrinkConstAlt : Thin newvars vars -> CConstAlt vars -> CConstAlt newvars
   shrinkConstAlt sub (MkConstAlt x sc) = MkConstAlt x (shrinkCExp sub sc)
@@ -594,13 +613,14 @@ mutual
 
   substConAlt : Substitutable CExp CConAlt
   substConAlt {vars} {outer} {dropped} p q env (MkConAlt x ci tag args sc)
-      = MkConAlt x ci tag args
-        (rewrite (sym $ appendAssociative vars outer args)
-            in substEnv (p + mkSizeOf args) q env sc'
-        )
-      where
-        sc' : CExp ((vars ++ dropped) ++ (outer ++ args))
-        sc' = rewrite (appendAssociative (vars ++ dropped) outer args) in sc
+    = let sc' : CExp ((vars ++ dropped) ++ (outer <>< args))
+              = rewrite sym (snocAppendFishAssociative (vars ++ dropped) outer args) in sc
+
+          substed : CExp ((vars ++ outer) <>< args)
+              = do rewrite snocAppendFishAssociative vars outer args
+                   substEnv (p <>< mkSizeOf args) q env sc'
+
+      in MkConAlt x ci tag args substed
 
   substConstAlt : Substitutable CExp CConstAlt
   substConstAlt outer dropped env (MkConstAlt x sc) = MkConstAlt x (substEnv outer dropped env sc)
@@ -660,17 +680,17 @@ mutual
   mkLocalsConAlt {bound} {outer} {vars} p bs (MkConAlt x ci tag args sc)
       = MkConAlt x ci tag args locals'
       where
-        sc' : CExp (vars ++ (outer ++ args))
-        sc' = rewrite (appendAssociative vars outer args) in sc
+        sc' : CExp (vars ++ (outer <>< args))
+        sc' = rewrite sym $ snocAppendFishAssociative vars outer args in sc
 
-        locals : CExp (vars ++ (bound ++ (outer ++ args)))
-        locals = mkLocals (p + mkSizeOf args) bs sc'
+        locals : CExp (vars ++ (bound ++ (outer <>< args)))
+        locals = mkLocals (p <>< mkSizeOf args) bs sc'
 
-        locals' : CExp ((vars ++ (bound ++ outer)) ++ args)
+        locals' : CExp ((vars ++ (bound ++ outer)) <>< args)
         locals' = do
           rewrite (appendAssociative vars bound outer)
-          rewrite sym (appendAssociative (vars ++ bound) outer args)
-          rewrite sym (appendAssociative vars bound (outer ++ args))
+          rewrite snocAppendFishAssociative (vars ++ bound) outer args
+          rewrite sym (appendAssociative vars bound (outer <>< args))
           locals
 
   mkLocalsConstAlt : SizeOf outer ->

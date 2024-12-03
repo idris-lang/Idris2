@@ -337,14 +337,15 @@ parameters (defs : Defs) (topopts : EvalOpts)
                  Env Term free ->
                  LocalEnv free more -> EvalOpts -> FC ->
                  Stack free ->
-                 (args : SnocList Name) ->
+                 (args : List Name) ->
                  SnocList (Closure free) ->
-                 CaseTree (more ++ args) ->
+                 CaseTree (more <>< args) ->
                  Core (CaseResult (TermWithEnv free))
     evalConAlt env loc opts fc stk args args' sc
-         = do let Just bound = getCaseBound args' args loc
+         = do let Just bound = getCaseBound args' (cast args) loc
                    | Nothing => pure GotStuck
-              evalTree env bound opts fc stk sc
+              evalTree env bound opts fc stk $
+                rewrite sym $ fishAsSnocAppend more args in sc
 
     tryAlt : {auto c : Ref Ctxt Defs} ->
              {free, more : _} ->
@@ -368,19 +369,19 @@ parameters (defs : Defs) (topopts : EvalOpts)
     -- Primitive type matching, in typecase
     tryAlt env loc opts fc stk (NPrimVal _ c) (ConCase nm tag args sc)
          = case args of -- can't just test for it in the `if` for typing reasons
-             [<] => if UN (Basic $ show c) == nm
+             [] => if UN (Basic $ show c) == nm
                    then evalTree env loc opts fc stk sc
                    else pure NoMatch
              _ => pure NoMatch
     -- Type of type matching, in typecase
-    tryAlt env loc opts fc stk (NType _ _) (ConCase (UN (Basic "Type")) tag [<] sc)
+    tryAlt env loc opts fc stk (NType _ _) (ConCase (UN (Basic "Type")) tag [] sc)
          = evalTree env loc opts fc stk sc
     tryAlt env loc opts fc stk (NType _ _) (ConCase _ _ _ _)
          = pure NoMatch
     -- Arrow matching, in typecase
     tryAlt {more}
-           env loc opts fc stk (NBind pfc x (Pi fc' r e aty) scty) (ConCase (UN (Basic "->")) tag [<t, s] sc)
-       = evalConAlt {more} env loc opts fc stk [<t, s]
+           env loc opts fc stk (NBind pfc x (Pi fc' r e aty) scty) (ConCase (UN (Basic "->")) tag [s,t] sc)
+       = evalConAlt {more} env loc opts fc stk [s,t]
                   [<MkNFClosure opts env (NBind pfc x (Lam fc' r e aty) scty), aty]
                   sc
     tryAlt {more}

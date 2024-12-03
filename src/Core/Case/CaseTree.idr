@@ -11,6 +11,8 @@ import Libraries.Data.NameMap
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Data.String.Extra -- needed for boostrapping
 import Libraries.Data.SnocList.SizeOf
+import Libraries.Data.SnocList.Extra
+import Libraries.Data.List.SizeOf
 
 %default covering
 
@@ -39,8 +41,8 @@ mutual
   public export
   data CaseAlt : SnocList Name -> Type where
        ||| Constructor for a data type; bind the arguments and subterms.
-       ConCase : Name -> (tag : Int) -> (args : SnocList Name) ->
-                 CaseTree (vars ++ args) -> CaseAlt vars
+       ConCase : Name -> (tag : Int) -> (args : List Name) ->
+                 CaseTree (vars <>< args) -> CaseAlt vars
        ||| Lazy match for the Delay type use for codata types
        DelayCase : (ty : Name) -> (arg : Name) ->
                    CaseTree (vars :< ty :< arg) -> CaseAlt vars
@@ -212,20 +214,18 @@ mutual
                        CaseAlt (inner ++ outer) ->
                        CaseAlt (inner ++ ns ++ outer)
   insertCaseAltNames p q (ConCase x tag args ct)
-        = ConCase x tag args locals'
+      = ConCase x tag args ct''
       where
-        ct' : CaseTree (inner ++ (outer ++ args))
-        ct' = rewrite (appendAssociative inner outer args) in ct
+        ct' : CaseTree (inner ++ (ns ++ (outer <>< args)))
+        ct' = insertCaseNames (p <>< mkSizeOf args) q
+          $ replace {p = CaseTree} (snocAppendFishAssociative inner outer args) ct
 
-        locals : CaseTree (inner ++ (ns ++ (outer ++ args)))
-        locals = insertCaseNames (p + mkSizeOf args) q ct'
-
-        locals' : CaseTree ((inner ++ (ns ++ outer)) ++ args)
-        locals' = do
+        ct'' : CaseTree ((inner ++ (ns ++ outer)) <>< args)
+        ct'' = do
           rewrite (appendAssociative inner ns outer)
-          rewrite sym (appendAssociative (inner ++ ns) outer args)
-          rewrite sym (appendAssociative inner ns (outer ++ args))
-          locals
+          rewrite snocAppendFishAssociative (inner ++ ns) outer args
+          rewrite sym (appendAssociative inner ns (outer <>< args))
+          ct'
 
   insertCaseAltNames outer ns (DelayCase tyn valn ct)
       = DelayCase tyn valn

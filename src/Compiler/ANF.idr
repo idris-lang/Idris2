@@ -11,6 +11,7 @@ import Data.List
 import Data.SnocList
 import Data.Vect
 import Libraries.Data.SortedSet
+import Libraries.Data.SnocList.Extra
 
 %default covering
 
@@ -138,8 +139,8 @@ Show ANFDef where
   show (MkAError exp) = "Error: " ++ show exp
 
 data AVars : SnocList Name -> Type where
-     Nil : AVars [<]
-     (::) : Int -> AVars xs -> AVars (xs :< x)
+     Lin : AVars [<]
+     (:<) : AVars xs -> Int -> AVars (xs :< x)
 
 data Next : Type where
 
@@ -151,8 +152,8 @@ nextVar
          pure i
 
 lookup : {idx : _} -> (0 p : IsVar x idx vs) -> AVars vs -> Int
-lookup First (x :: xs) = x
-lookup (Later p) (x :: xs) = lookup p xs
+lookup First (xs :< x) = x
+lookup (Later p) (xs :< x) = lookup p xs
 
 bindArgs : {auto v : Ref Next Int} ->
            List ANF -> Core (List (AVar, Maybe ANF))
@@ -188,6 +189,15 @@ mlet fc val sc
     = do i <- nextVar
          pure $ ALet fc i val (sc (ALocal i))
 
+bindAsFresh :
+  {auto v : Ref Next Int} ->
+  (args : List Name) -> AVars vars' ->
+  Core (List Int, AVars (vars' <>< args))
+bindAsFresh [] vs = pure ([], vs)
+bindAsFresh (n :: ns) vs
+    = do i <- nextVar
+         mapFst (i ::) <$> bindAsFresh ns (vs :< i)
+
 mutual
   anfArgs : {vars : _} ->
             {auto v : Ref Next Int} ->
@@ -212,7 +222,7 @@ mutual
                   _ => ACrash fc "Can't happen (AApp)"
   anf vs (LLet fc x val sc)
       = do i <- nextVar
-           let vs' = i :: vs
+           let vs' = vs :< i
            pure $ ALet fc i !(anf vs val) !(anf vs' sc)
   anf vs (LCon fc n ci t args)
       = anfArgs fc vs args (ACon fc n ci t)
@@ -242,16 +252,8 @@ mutual
               {auto v : Ref Next Int} ->
               AVars vars -> LiftedConAlt vars -> Core AConAlt
   anfConAlt vs (MkLConAlt n ci t args sc)
-      = do (is, vs') <- bindArgs args vs
+      = do (is, vs') <- bindAsFresh args vs
            pure $ MkAConAlt n ci t is !(anf vs' sc)
-    where
-      bindArgs : (args : SnocList Name) -> AVars vars' ->
-                 Core (List Int, AVars (vars' ++ args))
-      bindArgs [<] vs = pure ([], vs)
-      bindArgs (ns :< n) vs
-          = do i <- nextVar
-               (is, vs') <- bindArgs ns vs
-               pure (i :: is, i :: vs')
 
   anfConstAlt : {vars : _} ->
                 {auto v : Ref Next Int} ->
@@ -263,25 +265,18 @@ export
 toANF : LiftedDef -> Core ANFDef
 toANF (MkLFun args scope sc)
     = do v <- newRef Next (the Int 0)
-         (iargs, vsNil) <- bindArgs args []
-         let vs : AVars args = rewrite sym (appendLinLeftNeutral args) in
-                                      vsNil
-         (iargs', vs) <- bindArgs scope vs
-         pure $ MkAFun (iargs ++ reverse iargs') !(anf vs sc)
-  where
-    bindArgs : {auto v : Ref Next Int} ->
-               (args : SnocList Name) -> AVars vars' ->
-               Core (List Int, AVars (vars' ++ args))
-    bindArgs [<] vs = pure ([], vs)
-    bindArgs (ns :< n) vs
-        = do i <- nextVar
-             (is, vs') <- bindArgs ns vs
-             pure (i :: is, i :: vs')
+         (iargs, vsNil) <- bindAsFresh (cast args) [<]
+         let vs : AVars args
+           := rewrite sym $ appendLinLeftNeutral args in
+              rewrite snocAppendAsFish [<] args in vsNil
+         (iargs', vs) <- bindAsFresh (cast scope) vs
+         sc' <- anf (rewrite snocAppendAsFish args scope in vs) sc
+         pure $ MkAFun (iargs ++ reverse iargs') sc'
 toANF (MkLCon t a ns) = pure $ MkACon t a ns
 toANF (MkLForeign ccs fargs t) = pure $ MkAForeign ccs fargs t
 toANF (MkLError err)
     = do v <- newRef Next (the Int 0)
-         pure $ MkAError !(anf [] err)
+         pure $ MkAError !(anf [<] err)
 
 export
 freeVariables : ANF -> SortedSet AVar

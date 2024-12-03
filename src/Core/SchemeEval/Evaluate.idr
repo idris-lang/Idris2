@@ -87,17 +87,17 @@ seval mode env tm
             Env Term vars ->
             (SchemeObj Write -> SchemeObj Write) ->
             Core (SchemeObj Write -> SchemeObj Write, SchVars vars)
-    mkEnv [<] k = pure (k, [])
+    mkEnv [<] k = pure (k, [<])
     mkEnv (es :< Let fc c val ty) k
         = do i <- nextName
              (bind, vs) <- mkEnv es k
              val' <- compile vs val
              let n = "let-var-" ++ show i
-             pure (\x => Let n val' (bind x), Bound n :: vs)
+             pure (\x => Let n val' (bind x), vs :< Bound n)
     mkEnv (es :< _) k
         = do i <- nextName
              (bind, vs) <- mkEnv es k
-             pure (bind, Free ("free-" ++ show i) :: vs)
+             pure (bind, vs :< Free ("free-" ++ show i))
 
 invalid : Core (Term vs)
 invalid = pure (Erased emptyFC Placeholder)
@@ -319,7 +319,7 @@ mutual
            i <- nextName
            let n = show name ++ "-" ++ show i
            let sc = unsafeApply proc (makeSymbol n)
-           sc' <- quote' {outer = outer :< name} (Bound n :: svs) sc
+           sc' <- quote' {outer = outer :< name} (svs :< Bound n) sc
            pure (Bind emptyFC name
                       (binder emptyFC r pi ty)
                       sc')
@@ -339,7 +339,7 @@ mutual
            i <- nextName
            let n = show name ++ "-" ++ show i
            let sc = unsafeApply proc (makeSymbol n)
-           sc' <- quote' {outer = outer :< name} (Bound n :: svs) sc
+           sc' <- quote' {outer = outer :< name} (svs :< Bound n) sc
            pure (Bind emptyFC name
                       (PLet emptyFC r val ty)
                       sc')
@@ -364,8 +364,8 @@ mutual
         else invalid
     where
       findName : forall vars . SchVars vars -> String -> Term vars
-      findName [] n = Ref emptyFC Func (UN (Basic n))
-      findName (x :: xs) n
+      findName [<] n = Ref emptyFC Func (UN (Basic n))
+      findName (xs :< x) n
           = if getName x == n
                then Local emptyFC Nothing _ First
                else let Local fc loc _ p = findName xs n
@@ -583,8 +583,8 @@ mutual
            else invalidS
     where
       findName : forall vars . SchVars vars -> String -> SNF vars
-      findName [] n = SApp emptyFC (SRef Func (UN (Basic n))) []
-      findName (x :: xs) n
+      findName [<] n = SApp emptyFC (SRef Func (UN (Basic n))) []
+      findName (xs :< x) n
           = if getName x == n
                then SApp emptyFC (SLocal _ First) []
                else let SApp fc (SLocal _ p) args = findName xs n
