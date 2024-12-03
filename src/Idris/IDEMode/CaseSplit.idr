@@ -293,8 +293,7 @@ updateCase splits line col
          case mainfile opts of
               Nothing => throw (InternalError "No file loaded")
               Just f =>
-                do Right file <- coreLift $ readFile f
-                       | Left err => throw (FileErr f err)
+                do file <- readFile f
                    let thisline = elemAt (lines file) (integerToNat (cast line))
                    case thisline of
                         Nothing => throw (InternalError "File too short!")

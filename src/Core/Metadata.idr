@@ -435,17 +435,14 @@ writeToTTM fname
          meta <- get MD
          defs <- get Ctxt
          toBuf buf (MkTTMFile ttcVersion !(full (gamma defs) meta))
-         Right ok <- coreLift $ writeToFile fname !(get Bin)
-             | Left err => throw (InternalError (fname ++ ": " ++ show err))
-         pure ()
+         handleFileError fname $ writeToFile fname !(get Bin)
 
 export
 readFromTTM : {auto m : Ref MD Metadata} ->
               (fname : String) ->
               Core ()
 readFromTTM fname
-    = do Right buf <- coreLift $ readFromFile fname
-             | Left err => throw (InternalError (fname ++ ": " ++ show err))
+    = do buf <- handleFileError fname $ readFromFile fname
          bin <- newRef Bin buf
          ttm <- fromBuf bin
          put MD (metadata ttm)
@@ -454,8 +451,7 @@ readFromTTM fname
 export
 readMetadata : (fname : String) -> Core Metadata
 readMetadata fname
-  = do Right buf <- coreLift $ readFromFile fname
-             | Left err => throw (InternalError (fname ++ ": " ++ show err))
+  = do buf <- handleFileError fname $ readFromFile fname
        bin <- newRef Bin buf
        MkTTMFile _ md <- fromBuf bin
        pure md

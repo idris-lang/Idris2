@@ -228,10 +228,8 @@ dirOption dirs Prefix
 
 findIpkg : {auto c : Ref Ctxt Defs} -> Core (List String)
 findIpkg =
-  do Just srcdir <- coreLift currentDir
-       | Nothing => throw (InternalError "Can't get current directory")
-     Right fs <- coreLift $ listDir srcdir
-       | Left err => pure []
+  do srcdir <- currentDir
+     fs <- handleFileError srcdir $ listDir srcdir
      pure $ filter (".ipkg" `isSuffixOf`) fs
 
 -- keep only those Strings, of which `x` is a prefix

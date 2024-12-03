@@ -221,9 +221,7 @@ natHackNames =
 dumpIR : Show def => String -> List (Name, def) -> Core ()
 dumpIR fn lns
     = do let cstrs = map dumpDef lns
-         Right () <- coreLift $ writeFile fn (fastConcat cstrs)
-               | Left err => throw (FileErr fn err)
-         pure ()
+         writeFile fn (fastConcat cstrs)
   where
     fullShow : Name -> String
     fullShow (DN _ n) = show n
@@ -533,9 +531,7 @@ copyLib (lib, fullname)
          then pure ()
          else do Right bin <- coreLift $ readFromFile fullname
                     | Left err => pure () -- assume a system library installed globally
-                 Right _ <- coreLift $ writeToFile lib bin
-                    | Left err => throw (FileErr lib err)
-                 pure ()
+                 handleFileError lib $ writeToFile lib bin
 
 
 -- parses `--directive extraRuntime=/path/to/defs.scm` options for textual inclusion in generated

@@ -216,5 +216,4 @@ processTTImpFile fname
                       Nothing <- checkDelayedHoles
                           | Just err => throw err
                       pure True)
-                  (\err => do coreLift_ (printLn err)
-                              pure False)
+                  (\err => coreLift (printLn err) $> False)

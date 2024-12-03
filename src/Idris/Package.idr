@@ -651,7 +651,7 @@ install pkg opts installSrc -- not used but might be in the future
 
          let pkgStr = String.renderString $ layoutUnbounded $ pretty $ savePkgMetadata pkg
          log "package.depends" 25 $ "  package file:\n\{pkgStr}"
-         coreLift_ $ writeFile pkgFile pkgStr
+         writeFile pkgFile pkgStr
 
          runScript (postinstall pkg)
   where
@@ -756,24 +756,21 @@ makeDoc pkg opts =
 
            let modExports = map (map (reAnnotate Syntax . prettyImport)) mreexports
 
-           Right () <- do doc <- renderModuleDoc mod modDoc modExports
-                                   (allDecls <$ guard (not $ null allDocs))
-                          coreLift $ writeFile outputFilePath doc
-             | Left err => fileError (docBase </> "index.html") err
+           doc <- renderModuleDoc mod modDoc modExports
+                    (allDecls <$ guard (not $ null allDocs))
+           writeFile outputFilePath doc
 
            pure $ the (List Error) []
          )
          | errs => pure errs
 
-       Right () <- do syn <- get Syn
-                      coreLift $ writeFile (docBase </> "index.html") $ renderDocIndex pkg (modDocstrings syn)
-         | Left err => fileError (docBase </> "index.html") err
+       syn <- get Syn
+       writeFile (docBase </> "index.html") $ renderDocIndex pkg (modDocstrings syn)
 
        errs <- for cssFiles $ \ cssFile => do
           let fn = cssFile.filename ++ ".css"
           css <- readDataFile ("docs/" ++ fn)
-          Right () <- coreLift $ writeFile (docBase </> fn) css
-            | Left err => fileError (docBase </> fn) err
+          writeFile (docBase </> fn) css
           pure (the (List Error) [])
 
        let [] = concat errs
@@ -926,9 +923,7 @@ processPackage opts (cmd, mfile)
              let fp = fromMaybe (pkg.name ++ ".ipkg") mfile
              False <- coreLift (exists fp)
                | _ => throw (GenericMsg emptyFC ("File " ++ fp ++ " already exists"))
-             Right () <- coreLift $ writeFile fp (show $ pretty pkg)
-               | Left err => throw (FileErr fp err)
-             pure ()
+             writeFile fp (show $ pretty pkg)
         _ =>
           do file <- localPackageFile mfile
              let Just (dir, filename) = splitParent file
@@ -1060,7 +1055,7 @@ findIpkg : {auto c : Ref Ctxt Defs} ->
 findIpkg fname
    = do Just (dir, ipkgn, up) <- coreLift findIpkgFile
              | Nothing => pure fname
-        coreLift_ $ changeDir dir
+        changeDir dir
         setWorkingDir dir
         pkg <- parsePkgFile True ipkgn
         maybe (pure ()) setBuildDir (builddir pkg)

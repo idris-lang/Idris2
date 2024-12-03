@@ -30,9 +30,9 @@ import Parser.Source
 
 showInfo : (Name, Int, GlobalDef) -> Core ()
 showInfo (n, _, d)
-    = coreLift_ $ putStrLn (show n ++ " ==>\n" ++
-                   "\t" ++ show (definition d) ++ "\n" ++
-                   "\t" ++ show (sizeChange d) ++ "\n")
+    = coreLift $ putStrLn (show n ++ " ==>\n" ++
+                  "\t" ++ show (definition d) ++ "\n" ++
+                  "\t" ++ show (sizeChange d) ++ "\n")
 
 -- Returns 'True' if the REPL should continue
 process : {auto c : Ref Ctxt Defs} ->
@@ -45,7 +45,7 @@ process (Eval ttimp)
     = do (tm, _) <- elabTerm 0 InExpr [] (MkNested []) [] ttimp Nothing
          defs <- get Ctxt
          tmnf <- normalise defs [] tm
-         coreLift_ (printLn !(unelab [] tmnf))
+         coreLift (printLn !(unelab [] tmnf))
          pure True
 process (Check (IVar _ n))
     = do defs <- get Ctxt
@@ -57,14 +57,14 @@ process (Check (IVar _ n))
     printName (n, _, tyh)
         = do defs <- get Ctxt
              ty <- normaliseHoles defs [] tyh
-             coreLift_ $ putStrLn $ show n ++ " : " ++
-                                    show !(unelab [] ty)
+             coreLift $ putStrLn $ show n ++ " : " ++
+                                   show !(unelab [] ty)
 process (Check ttimp)
     = do (tm, gty) <- elabTerm 0 InExpr [] (MkNested []) [] ttimp Nothing
          defs <- get Ctxt
          tyh <- getTerm gty
          ty <- normaliseHoles defs [] tyh
-         coreLift_ (printLn !(unelab [] ty))
+         coreLift (printLn !(unelab [] ty))
          pure True
 process (ProofSearch n_in)
     = do defs <- get Ctxt
@@ -73,7 +73,7 @@ process (ProofSearch n_in)
          def <- search (justFC defaultFC) top False 1000 n ty []
          defs <- get Ctxt
          defnf <- normaliseHoles defs [] def
-         coreLift_ (printLn !(toFullNames defnf))
+         coreLift (printLn !(toFullNames defnf))
          pure True
 process (ExprSearch n_in)
     = do defs <- get Ctxt
@@ -85,18 +85,18 @@ process (ExprSearch n_in)
 process (GenerateDef line name)
     = do defs <- get Ctxt
          Just (_, n', _, _) <- findTyDeclAt (\p, n => onLine line p)
-              | Nothing => do coreLift_ (putStrLn ("Can't find declaration for " ++ show name))
+              | Nothing => do coreLift (putStrLn ("Can't find declaration for " ++ show name))
                               pure True
          case !(lookupDefExact n' (gamma defs)) of
               Just None =>
                   catch
                     (do ((fc, cs) :: _) <- logTime 0 "Generation" $
                                 makeDefN (\p, n => onLine line p) 1 n'
-                           | _ => coreLift_ (putStrLn "Failed")
-                        coreLift_ $ putStrLn (show cs))
-                    (\err => coreLift_ $ putStrLn $ "Can't find a definition for " ++ show n')
-              Just _ => coreLift_ $ putStrLn "Already defined"
-              Nothing => coreLift_ $ putStrLn $ "Can't find declaration for " ++ show name
+                           | _ => coreLift (putStrLn "Failed")
+                        coreLift $ putStrLn (show cs))
+                    (\err => coreLift $ putStrLn $ "Can't find a definition for " ++ show n')
+              Just _ => coreLift $ putStrLn "Already defined"
+              Nothing => coreLift $ putStrLn $ "Can't find declaration for " ++ show name
          pure True
 process (Missing n_in)
     = do defs <- get Ctxt
@@ -106,15 +106,15 @@ process (Missing n_in)
                           do tot <- getTotality emptyFC fn
                              case isCovering tot of
                                   MissingCases cs =>
-                                     coreLift_ (putStrLn (show fn ++ ":\n" ++
-                                                 showSep "\n" (map show cs)))
+                                     coreLift (putStrLn (show fn ++ ":\n" ++
+                                               showSep "\n" (map show cs)))
                                   NonCoveringCall ns =>
-                                     coreLift_ (putStrLn
+                                     coreLift (putStrLn
                                          (show fn ++ ": Calls non covering function"
                                            ++ case ns of
                                                    [fn] => " " ++ show fn
                                                    _ => "s: " ++ showSep ", " (map show ns)))
-                                  _ => coreLift_ $ putStrLn (show fn ++ ": All cases covered"))
+                                  _ => coreLift $ putStrLn (show fn ++ ": All cases covered"))
                         (map fst ts)
                        pure True
 process (CheckTotal n)
@@ -124,7 +124,7 @@ process (CheckTotal n)
               ts => do traverse_ (\fn =>
                           do ignore $ checkTotal emptyFC fn
                              tot <- getTotality emptyFC fn
-                             coreLift_ (putStrLn (show fn ++ " is " ++ show tot)))
+                             coreLift (putStrLn (show fn ++ " is " ++ show tot)))
                                (map fst ts)
                        pure True
 process (DebugInfo n)
@@ -132,7 +132,7 @@ process (DebugInfo n)
          traverse_ showInfo !(lookupCtxtName n (gamma defs))
          pure True
 process Quit
-    = do coreLift_ $ putStrLn "Bye for now!"
+    = do coreLift $ putStrLn "Bye for now!"
          pure False
 
 processCatch : {auto c : Ref Ctxt Defs} ->
@@ -143,8 +143,7 @@ processCatch : {auto c : Ref Ctxt Defs} ->
                ImpREPL -> Core Bool
 processCatch cmd
     = catch (process cmd)
-            (\err => do coreLift_ (putStrLn (show err))
-                        pure True)
+            (\err => coreLift (putStrLn $ show err) $> True)
 
 export
 repl : {auto c : Ref Ctxt Defs} ->
@@ -154,9 +153,9 @@ repl : {auto c : Ref Ctxt Defs} ->
        {auto o : Ref ROpts REPLOpts} ->
        Core ()
 repl
-    = do coreLift_ (putStr "Yaffle> ")
+    = do coreLift (putStr "Yaffle> ")
          inp <- coreLift getLine
          case runParser (Virtual Interactive) Nothing inp command of
-              Left err => do coreLift_ (printLn err)
+              Left err => do coreLift (printLn err)
                              repl
               Right (_, _, cmd) => when !(processCatch cmd) repl

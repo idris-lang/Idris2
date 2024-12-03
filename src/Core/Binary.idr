@@ -334,9 +334,7 @@ writeToTTC extradata sourceFileName ttcFileName
                               (NameMap.toList (foreignExports defs))
                               extradata)
 
-         Right ok <- coreLift $ writeToFile ttcFileName !(get Bin)
-               | Left err => throw (InternalError (ttcFileName ++ ": " ++ show err))
-         pure ()
+         handleFileError ttcFileName $ writeToFile ttcFileName !(get Bin)
 
 addGlobalDef : {auto c : Ref Ctxt Defs} ->
                (modns : ModuleIdent) -> Namespace ->
@@ -477,12 +475,9 @@ readFromTTC nestedns loc reexp fname modNS importAs
               | True => pure Nothing
          put Ctxt ({ allImported $= ((fname, (modNS, reexp, importAs)) :: ) } defs)
 
-         Right buffer <- coreLift $ readFromFile fname
-               | Left err => throw (InternalError (fname ++ ": " ++ show err))
+         buffer <- handleFileError fname $ readFromFile fname
          bin <- newRef Bin buffer -- for reading the file into
-         let as = if importAs == miAsNamespace modNS
-                     then Nothing
-                     else Just importAs
+         let as = toMaybe (importAs /= miAsNamespace modNS) importAs
 
          -- If it's already imported, but without reexporting, then all we're
          -- interested in is returning which other modules to load.

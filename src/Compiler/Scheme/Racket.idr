@@ -411,26 +411,22 @@ compileToRKT c appdir tm outfile
          let scm = schHeader prof (concat (map fst fgndefs)) ++
                    fromString support ++ fromString extraRuntime ++ code ++
                    runmain ++ schFooter
-         Right () <- coreLift $ writeFile outfile $ build scm
-            | Left err => throw (FileErr outfile err)
-         coreLift_ $ chmodRaw outfile 0o755
-         pure ()
+         writeFile outfile $ build scm
+         handleFileError outfile $ chmodRaw outfile 0o755
 
 makeSh : String -> String -> String -> String -> Core ()
 makeSh racket outShRel appdir outAbs
-    = do Right () <- coreLift $ writeFile outShRel (startRacket racket appdir outAbs)
-            | Left err => throw (FileErr outShRel err)
-         pure ()
+    = writeFile outShRel (startRacket racket appdir outAbs)
 
 ||| Make Windows start scripts, one for bash environments and one batch file
 makeShWindows : String -> String -> String -> String -> Core ()
 makeShWindows racket outShRel appdir outAbs
     = do let cmdFile = outShRel ++ ".cmd"
-         Right () <- coreLift $ writeFile cmdFile (startRacketCmd racket appdir outAbs)
-            | Left err => throw (FileErr cmdFile err)
-         Right () <- coreLift $ writeFile outShRel (startRacketWinSh racket appdir outAbs)
-            | Left err => throw (FileErr outShRel err)
-         pure ()
+         writeFile cmdFile (startRacketCmd racket appdir outAbs)
+         writeFile outShRel (startRacketWinSh racket appdir outAbs)
+
+makeShPlatform : Bool -> String -> String -> String -> String -> Core ()
+makeShPlatform isWindows = if isWindows then makeShWindows else makeSh
 
 compileExpr :
   Bool ->
@@ -441,9 +437,8 @@ compileExpr :
 compileExpr mkexec c s tmpDir outputDir tm outfile
     = do let appDirRel = outfile ++ "_app" -- relative to build dir
          let appDirGen = outputDir </> appDirRel -- relative to here
-         coreLift_ $ mkdirAll appDirGen
-         Just cwd <- coreLift currentDir
-              | Nothing => throw (InternalError "Can't get current directory")
+         handleFileError appDirGen $ mkdirAll appDirGen
+         cwd <- currentDir
 
          let ext = if isWindows then ".exe" else ""
          let outRktFile = appDirRel </> outfile <.> "rkt"
@@ -455,23 +450,14 @@ compileExpr mkexec c s tmpDir outputDir tm outfile
          raco <- coreLift findRacoExe
          racket <- coreLift findRacket
 
-         ok <- the (Core Int) $ if mkexec
-                  then logTime 1 "Build racket" $
-                         coreLift $ system $ raco ++ ["-o", outBinAbs, outRktAbs]
-                  else pure 0
-         if ok == 0
-            then do -- TODO: add launcher script
-                    let outShRel = outputDir </> outfile
-                    if isWindows
-                       then if mkexec
-                               then makeShWindows "" outShRel appDirRel outBinFile
-                               else makeShWindows (racket ++ " ") outShRel appDirRel outRktFile
-                       else if mkexec
-                               then makeSh "" outShRel appDirRel outBinFile
-                               else makeSh (racket ++ " ") outShRel appDirRel outRktFile
-                    coreLift_ $ chmodRaw outShRel 0o755
-                    pure (Just outShRel)
-            else pure Nothing
+         when mkexec $ logTime 1 "Build racket" $
+             safeSystem $ raco ++ ["-o", outBinAbs, outRktAbs]
+
+         -- TODO: add launcher script
+         let outShRel = outputDir </> outfile
+         makeShPlatform isWindows (if mkexec then "" else racket ++ " ") outShRel appDirRel outRktFile
+         handleFileError outShRel $ chmodRaw outShRel 0o755
+         pure (Just outShRel)
 
 executeExpr :
   Ref Ctxt Defs ->
@@ -480,7 +466,7 @@ executeExpr :
 executeExpr c s tmpDir tm
     = do Just sh <- compileExpr False c s tmpDir tmpDir tm "_tmpracket"
             | Nothing => throw (InternalError "compileExpr returned Nothing")
-         coreLift_ $ system [sh]
+         ignore $ system sh
 
 export
 codegenRacket : Codegen

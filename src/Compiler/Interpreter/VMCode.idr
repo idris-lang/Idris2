@@ -151,7 +151,7 @@ knownForeign = fromList
     world stk o = interpError stk $ "expected %MkWorld or Null, got \{show o}"
 
     prim_putChar : Ref State InterpState => Stack -> Vect 2 Object -> Core Object
-    prim_putChar stk [Const (Ch c), w] = world stk w *> (ioRes unit <$ coreLift_ (putChar c))
+    prim_putChar stk [Const (Ch c), w] = world stk w *> (ioRes unit <$ coreLift (putChar c))
     prim_putChar stk as = argError stk as
 
     prim_getChar : Ref State InterpState => Stack -> Vect 1 Object -> Core Object
@@ -163,7 +163,7 @@ knownForeign = fromList
     prim_getStr stk as = argError stk as
 
     prim_putStr : Ref State InterpState => Stack -> Vect 2 Object -> Core Object
-    prim_putStr stk [Const (Str s), w] = world stk w *> (ioRes unit <$ coreLift_ (putStr s))
+    prim_putStr stk [Const (Str s), w] = world stk w *> (ioRes unit <$ coreLift (putStr s))
     prim_putStr stk as = argError stk as
 
 knownExtern : NameMap (ar ** (Ref State InterpState => Stack -> Vect ar Object -> Core Object))

@@ -49,16 +49,16 @@ yaffleMain sourceFileName args
          whenJust t $ setLogTimings
          addPrimitives
          case extension sourceFileName of
-              Just "ttc" => do coreLift_ $ putStrLn "Processing as TTC"
+              Just "ttc" => do coreLift $ putStrLn "Processing as TTC"
                                ignore $ readFromTTC {extra = ()} True emptyFC True sourceFileName (nsAsModuleIdent emptyNS) emptyNS
-                               coreLift_ $ putStrLn "Read TTC"
-              _ => do coreLift_ $ putStrLn "Processing as TTImp"
+                               coreLift $ putStrLn "Read TTC"
+              _ => do coreLift $ putStrLn "Processing as TTImp"
                       ok <- processTTImpFile sourceFileName
                       when ok $
                          do makeBuildDirectory modIdent
                             ttcFileName <- getTTCFileName sourceFileName "ttc"
                             writeToTTC () sourceFileName ttcFileName
-                            coreLift_ $ putStrLn "Written TTC"
+                            coreLift $ putStrLn "Written TTC"
          repl {c} {u} {s} {o}
 
 ymain : IO ()
