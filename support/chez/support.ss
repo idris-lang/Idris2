@@ -459,37 +459,29 @@
       ))
   '()))
 
-(define (blodwen-channel-get-with-timeout ty chan timeout)
-  (if (mutex-acquire (channel-read-mut chan) #f)
-    (let* ([val-box  (channel-val-box  chan)]
-           [read-box (channel-read-box chan)]
-           [read-cv  (channel-read-cv  chan)]
-           [the-val  (unbox val-box)]
-           [waittime (make-time 'time-duration (current-time + timeout) current-time)]
-          )
-      
-
-  )))
-
-#|
-    (let* ([val-box  (channel-val-box  chan)]
-           [read-box (channel-read-box chan)]
-           [read-cv  (channel-read-cv  chan)]
-           [the-val  (unbox val-box)]
-          )
-      (if (null? the-val)
-          (begin
-           (mutex-release (channel-read-mut chan))
-           '())
-          (begin
-            (set-box! val-box '())
-            (set-box! read-box #t)
-            (mutex-release (channel-read-mut chan))
-            (condition-signal read-cv)
-            the-val)
-      ))
-  '()))
-|#
+(define (blodwen-channel-get-with-timeout ty chan seconds)
+  (let loop ([start-time (current-time)]) ; Record the start time
+    (let ([elapsed (- (current-time) start-time)]) ; Calculate elapsed time in seconds
+      (if (>= elapsed seconds)
+          '() ; Timeout reached, return '() for empty value
+          (if (mutex-acquire (channel-read-mut chan) #f)
+              (let* ([val-box  (channel-val-box chan)]
+                     [the-val  (unbox val-box)])
+                (if (null? the-val)
+                    (begin
+                      (mutex-release (channel-read-mut chan))
+                      (sleep (make-time 'time-duration 0 0.001)) ; Sleep for 1ms before retrying
+                      (loop start-time)) ; Continue with the same start-time
+                    (let* ([read-box (channel-read-box chan)]
+                           [read-cv  (channel-read-cv chan)])
+                      (set-box! val-box '())
+                      (set-box! read-box #t)
+                      (mutex-release (channel-read-mut chan))
+                      (condition-signal read-cv)
+                      the-val)))
+              (begin
+                (sleep (make-time 'time-duration 0 0.001)) ; Sleep for 1ms before retrying
+                (loop start-time))))))) ; Continue with the same start-time
 
 ;; Mutex
 
