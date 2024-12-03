@@ -287,10 +287,13 @@ getCG (Other s) = getCodegen s
 
 export
 findCG : {auto o : Ref ROpts REPLOpts} ->
-         {auto c : Ref Ctxt Defs} -> Core (Maybe Codegen)
+         {auto c : Ref Ctxt Defs} -> Core Codegen
 findCG
     = do defs <- get Ctxt
-         getCG (codegen (session (options defs)))
+         let cg = defs.options.session.codegen
+         Just codegen <- getCG cg
+           | Nothing => throw $ CodegenNotFound cg
+         pure codegen
 
 ||| Process everything in the module; return the syntax information which
 ||| needs to be written to the TTC (e.g. exported infix operators)

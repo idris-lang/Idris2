@@ -227,7 +227,6 @@ data REPLResult : Type where
   ErrorsBuildingFile : String -> List Error -> REPLResult
   NoFileLoaded : REPLResult
   CurrentDirectory : String -> REPLResult
-  CompilationFailed: REPLResult
   Compiled : String -> REPLResult
   ProofFound : IPTerm -> REPLResult
   Missed : List MissedResult -> REPLResult
