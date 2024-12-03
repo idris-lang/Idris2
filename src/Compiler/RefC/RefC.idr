@@ -1005,9 +1005,8 @@ compileExpr c s _ outputDir tm outfile =
 
 export
 executeExpr : Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
-              (execDir : String) -> ClosedTerm -> Core ()
-executeExpr c s tmpDir tm = do
-  do ignore . system =<< compileExpr c s tmpDir tmpDir tm "_tmp_refc"
+              (execDir : String) -> ClosedTerm -> Core ExitCode
+executeExpr c s tmpDir tm = system !(compileExpr c s tmpDir tmpDir tm "_tmp_refc")
 
 export
 codegenRefC : Codegen
