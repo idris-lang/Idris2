@@ -28,19 +28,22 @@ Now create a file containing
     import Compiler.Common
     import Idris.Driver
     import Idris.Syntax
+    import System
 
     compile :
       Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
       (tmpDir : String) -> (execDir : String) ->
-      ClosedTerm -> (outfile : String) -> Core (Maybe String)
-    compile syn defs tmp dir term file
+      ClosedTerm -> (outfile : String) -> Core String
+    compile defs syn tmp dir term file
       = do coreLift $ putStrLn "I'd rather not."
-           pure Nothing
+          throw $ InternalError "Compile is not implemented"
 
     execute :
       Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
-      (execDir : String) -> ClosedTerm -> Core ()
-    execute defs syn dir term = do coreLift $ putStrLn "Maybe in an hour."
+      (execDir : String) -> ClosedTerm -> Core ExitCode
+    execute defs syn dir term
+      = do coreLift $ putStrLn "Maybe in an hour."
+          pure ExitSuccess
 
     lazyCodegen : Codegen
     lazyCodegen = MkCG compile execute Nothing Nothing
