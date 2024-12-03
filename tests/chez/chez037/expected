@@ -1,1 +1,1 @@
-Error: Command '"false" "--script" "build/exec/hello_app/compileChez"' exited with return code 1
+Error: Command 'false' exited with return code 1

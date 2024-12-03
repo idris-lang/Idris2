@@ -1007,7 +1007,7 @@ namespace Escaped
 
   export
   safeSystem : List String -> Core ()
-  safeSystem cmd = system cmd >>= handleExitCode (escapeCmd cmd)
+  safeSystem cmd = system cmd >>= handleExitCode (fromMaybe "" $ head' cmd)
 
 namespace Functor
 
