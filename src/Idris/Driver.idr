@@ -97,13 +97,6 @@ updateREPLOpts
     = do ed <- coreLift $ idrisGetEnv "EDITOR"
          whenJust ed $ \ e => update ROpts { editor := e }
 
-showInfo : {auto c : Ref Ctxt Defs}
-        -> {auto o : Ref ROpts REPLOpts}
-        -> List CLOpt
-        -> Core Bool
-showInfo Nil = pure False
-showInfo (_::rest) = showInfo rest
-
 tryYaffle : List CLOpt -> Core Bool
 tryYaffle [] = pure False
 tryYaffle (Yaffle f :: _) = do yaffleMain f []
@@ -138,12 +131,12 @@ checkVerbose [] = False
 checkVerbose (Verbose :: _) = True
 checkVerbose (_ :: xs) = checkVerbose xs
 
-stMain : List (String, Codegen) -> List CLOpt -> Core ()
+stMain : List (String, Codegen) -> List CLOpt -> Core ExitCode
 stMain cgs opts
     = do False <- tryYaffle opts
-            | True => pure ()
+            | True => pure ExitSuccess
          False <- tryTTM opts
-            | True => pure ()
+            | True => pure ExitSuccess
          defs <- initDefs
          let updated = foldl (\o, (s, _) => addCG (s, Other s) o) (options defs) cgs
          c <- newRef Ctxt ({ options := updated } defs)
@@ -173,73 +166,77 @@ stMain cgs opts
                                      """
          update ROpts { mainfile := fname }
 
-         finish <- showInfo opts
-         when (not finish) $ do
-           -- start by going over the pre-options, and stop if we do not need to
-           -- continue
-           True <- preOptions opts
-              | False => pure ()
+         -- start by going over the pre-options, and stop if we do not need to
+         -- continue
+         True <- preOptions opts
+            | False => pure ExitSuccess
 
-           -- If there's a --build or --install, just do that then quit
-           done <- processPackageOpts opts
+         -- If there's a --build or --install, just do that then quit
+         False <- processPackageOpts opts
+            | True => pure ExitSuccess
 
-           when (not done) $ flip catch quitWithError $
-              do when (checkVerbose opts) $ -- override Quiet if implicitly set
-                     setOutput (REPL InfoLvl)
-                 u <- newRef UST initUState
-                 origin <- maybe
-                   (pure $ Virtual Interactive) (\fname => do
-                     modIdent <- ctxtPathToNS fname
-                     pure (PhysicalIdrSrc modIdent)
-                     ) fname
-                 m <- newRef MD (initMetadata origin)
-                 updateREPLOpts
-                 session <- getSession
-                 when (not $ nobanner session) $ do
-                   iputStrLn $ pretty0 banner
-                   when (isCons cgs) $ iputStrLn (reflow "With codegen for:" <++> hsep (pretty0 . fst <$> cgs))
-                 fname <- if findipkg session
-                             then findIpkg fname
-                             else pure fname
-                 setMainFile fname
-                 result <- case fname of
-                      Nothing => logTime 1 "Loading prelude" $ do
-                                   when (not $ noprelude session) $
-                                     readPrelude True
-                                   pure Done
-                      Just f => logTime 1 "Loading main file" $ do
-                                  res <- loadMainFile f
-                                  displayStartupErrors res
-                                  pure res
+         flip catch quitWithError $
+            do when (checkVerbose opts) $ -- override Quiet if implicitly set
+                   setOutput (REPL InfoLvl)
+               u <- newRef UST initUState
+               origin <- maybe
+                 (pure $ Virtual Interactive) (\fname => do
+                   modIdent <- ctxtPathToNS fname
+                   pure (PhysicalIdrSrc modIdent)
+                   ) fname
+               m <- newRef MD (initMetadata origin)
+               updateREPLOpts
+               session <- getSession
+               when (not $ nobanner session) $ do
+                 iputStrLn $ pretty0 banner
+                 when (isCons cgs) $ iputStrLn (reflow "With codegen for:" <++> hsep (pretty0 . fst <$> cgs))
+               fname <- if findipkg session
+                           then findIpkg fname
+                           else pure fname
+               setMainFile fname
+               result <- case fname of
+                    Nothing => logTime 1 "Loading prelude" $ do
+                                 when (not $ noprelude session) $
+                                   readPrelude True
+                                 pure Done
+                    Just f => logTime 1 "Loading main file" $ do
+                                res <- loadMainFile f
+                                displayStartupErrors res
+                                pure res
 
-                 doRepl <- catch (postOptions result opts)
-                                 (\err => emitError err *> pure False)
-                 if doRepl then
-                   if ide || ideSocket then
-                     if not ideSocket
-                      then do
-                       setOutput (IDEMode 0 stdin stdout)
-                       replIDE {c} {u} {m}
-                     else do
-                       let (host, port) = ideSocketModeAddress opts
-                       f <- coreLift $ initIDESocketFile host port
-                       case f of
-                         Left err => do
-                           coreLift $ putStrLn err
-                           coreLift $ exitWith (ExitFailure 1)
-                         Right file => do
-                           setOutput (IDEMode 0 file file)
-                           replIDE {c} {u} {m}
+               (doRepl, status) <- catch (postOptions result opts)
+                                         (\err => emitError err $> (False, Nothing))
+               if doRepl
+                then
+                 if ide
+                  then do
+                   setOutput (IDEMode 0 stdin stdout)
+                   replIDE {c} {u} {m}
+                   pure ExitSuccess
+                  else if ideSocket
+                   then do
+                     let (host, port) = ideSocketModeAddress opts
+                     f <- coreLift $ initIDESocketFile host port
+                     case f of
+                       Left err => do
+                         coreLift $ putStrLn err
+                         pure $ ExitFailure 1
+                       Right file => do
+                         setOutput (IDEMode 0 file file)
+                         replIDE {c} {u} {m}
+                         pure ExitSuccess
                    else do
-                       repl {c} {u} {m}
-                       showTimeRecord
-                  else
-                      -- exit with an error code if there was an error, otherwise
-                      -- just exit
-                    do ropts <- get ROpts
-                       showTimeRecord
-                       whenJust (errorLine ropts) $ \ _ =>
-                         coreLift $ exitWith (ExitFailure 1)
+                     repl {c} {u} {m}
+                     showTimeRecord
+                     pure ExitSuccess
+                else
+                    -- exit with an error code if there was an error, otherwise
+                    -- exit with the status if present or success
+                  do ropts <- get ROpts
+                     showTimeRecord
+                     pure $ case errorLine ropts of
+                       Nothing => fromMaybe ExitSuccess status
+                       Just _ => ExitFailure 1
 
   where
 
@@ -286,4 +283,4 @@ mainWithCodegens cgs = do
     coreRun (stMain cgs opts)
       (\err : Error => do putStrLn ("Uncaught error: " ++ show err)
                           exitWith (ExitFailure 1))
-      (\res => pure ())
+      exitWith
