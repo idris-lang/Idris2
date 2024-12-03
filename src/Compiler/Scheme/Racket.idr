@@ -462,9 +462,8 @@ compileExpr mkexec c s tmpDir outputDir tm outfile
 executeExpr :
   Ref Ctxt Defs ->
   Ref Syn SyntaxInfo ->
-  (tmpDir : String) -> ClosedTerm -> Core ()
-executeExpr c s tmpDir tm
-    = ignore . system =<< compileExpr False c s tmpDir tmpDir tm "_tmpracket"
+  (tmpDir : String) -> ClosedTerm -> Core ExitCode
+executeExpr c s tmpDir tm = system !(compileExpr False c s tmpDir tmpDir tm "_tmpracket")
 
 export
 codegenRacket : Codegen

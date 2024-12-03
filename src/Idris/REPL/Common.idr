@@ -25,6 +25,7 @@ import Libraries.Data.ANameMap
 import Libraries.Data.String.Extra
 
 import Data.String
+import System
 import System.File
 
 %default covering
@@ -212,7 +213,7 @@ public export
 data REPLResult : Type where
   Done : REPLResult
   REPLError : Doc IdrisAnn -> REPLResult
-  Executed : PTerm -> REPLResult
+  Executed : PTerm -> ExitCode -> REPLResult
   RequestedHelp : REPLResult
   RequestedDetails : String -> REPLResult
   Evaluated : IPTerm -> Maybe IPTerm -> REPLResult

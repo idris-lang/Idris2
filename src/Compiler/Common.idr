@@ -28,6 +28,7 @@ import Libraries.Utils.Scheme
 import Idris.Syntax
 import Idris.Env
 
+import System
 import System.Directory
 import System.Info
 
@@ -43,7 +44,7 @@ record Codegen where
                 ClosedTerm -> (outfile : String) -> Core String
   ||| Execute an Idris 2 expression directly.
   executeExpr : Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
-                (tmpDir : String) -> ClosedTerm -> Core ()
+                (tmpDir : String) -> ClosedTerm -> Core ExitCode
   ||| Incrementally compile definitions in the current module (toIR defs)
   ||| if supported
   ||| Takes a source file name, returns the name of the generated object
@@ -121,7 +122,7 @@ compile {c} {s} cg tm out
 export
 execute : {auto c : Ref Ctxt Defs} ->
           {auto s : Ref Syn SyntaxInfo} ->
-          Codegen -> ClosedTerm -> Core ()
+          Codegen -> ClosedTerm -> Core ExitCode
 execute {c} {s} cg tm
     = do d <- getDirs
          let tmpDir = execBuildDir d

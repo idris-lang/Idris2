@@ -1,0 +1,9 @@
+. ../../testutils.sh
+
+idris2 Main.idr --exec success; echo $?
+echo "------"
+idris2 Main.idr --exec fail; echo $?
+echo "------"
+idris2 Main.idr --exec success --exec fail; echo $?
+echo "------"
+idris2 Main.idr --exec fail --exec success; echo $?

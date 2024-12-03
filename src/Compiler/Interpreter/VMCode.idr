@@ -17,6 +17,8 @@ import Data.Nat
 import Data.SnocList
 import Data.Vect
 
+import System
+
 public export
 data Object : Type where
     Closure : (predMissing : Nat) -> (args : SnocList Object) -> Name -> Object
@@ -293,11 +295,12 @@ compileExpr _ _ _ _ _ _ = throw (InternalError "compile not implemeted for vmcod
 executeExpr :
   Ref Ctxt Defs ->
   Ref Syn SyntaxInfo ->
-  String -> ClosedTerm -> Core ()
+  String -> ClosedTerm -> Core ExitCode
 executeExpr c s _ tm = do
     cdata <- getCompileData False VMCode tm
     st <- newRef State !(initInterpState cdata.vmcode)
     ignore $ callFunc [] (MN "__mainExpression" 0) []
+    pure ExitSuccess
 
 export
 codegenVMCodeInterp : Codegen
