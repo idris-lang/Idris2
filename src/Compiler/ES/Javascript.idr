@@ -56,13 +56,13 @@ compileExpr :
   (outputDir : String) ->
   ClosedTerm ->
   (outfile : String) ->
-  Core (Maybe String)
+  Core String
 compileExpr c s tmpDir outputDir tm outfile =
   do es <- compileToJS c s tm
      let res = addHeaderAndFooter outfile es
      let out = outputDir </> outfile
      writeFile out res
-     pure (Just out)
+     pure out
 
 ||| Node implementation of the `executeExpr` interface.
 executeExpr :

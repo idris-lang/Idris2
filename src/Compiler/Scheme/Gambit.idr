@@ -386,7 +386,7 @@ compileExpr :
   Ref Ctxt Defs ->
   Ref Syn SyntaxInfo ->
   (tmpDir : String) -> (outputDir : String) ->
-  ClosedTerm -> (outfile : String) -> Core (Maybe String)
+  ClosedTerm -> (outfile : String) -> Core String
 compileExpr c s tmpDir outputDir tm outfile
     = do let srcPath = tmpDir </> outfile <.> "scm"
          let execPath = outputDir </> outfile
@@ -401,16 +401,14 @@ compileExpr c s tmpDir outputDir tm outfile
                  Just _ => ["-c"]
          let cmd = gsc ++ gscCompileOpts ++ ["-o", execPath, srcPath]
          safeSystem cmd
-         pure (Just execPath)
+         pure execPath
 
 executeExpr :
   Ref Ctxt Defs ->
   Ref Syn SyntaxInfo ->
   (tmpDir : String) -> ClosedTerm -> Core ()
 executeExpr c s tmpDir tm
-    = do Just sh <- compileExpr c s tmpDir tmpDir tm "_tmpgambit"
-           | Nothing => throw (InternalError "compileExpr returned Nothing")
-         ignore $ system sh -- TODO: on windows, should add exe extension
+    = ignore . system =<< compileExpr c s tmpDir tmpDir tm "_tmpgambit" -- TODO: on windows, should add exe extension
 
 export
 codegenGambit : Codegen

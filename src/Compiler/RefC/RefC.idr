@@ -989,7 +989,7 @@ compileExpr : Ref Ctxt Defs
            -> (outputDir : String)
            -> ClosedTerm
            -> (outfile : String)
-           -> Core (Maybe String)
+           -> Core String
 compileExpr c s _ outputDir tm outfile =
   do let outn = outputDir </> outfile <.> "c"
      let outobj = outputDir </> outfile <.> "o"
@@ -1001,15 +1001,13 @@ compileExpr c s _ outputDir tm outfile =
 
      generateCSourceFile defs outn
      obj <- compileCObjectFile outn outobj
-     Just <$> compileCFile obj outexec
+     compileCFile obj outexec
 
 export
 executeExpr : Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
               (execDir : String) -> ClosedTerm -> Core ()
 executeExpr c s tmpDir tm = do
-  do Just sh <- compileExpr c s tmpDir tmpDir tm "_tmp_refc"
-       | Nothing => coreLift $ putStrLn "Error: failed to compile"
-     ignore $ system sh
+  do ignore . system =<< compileExpr c s tmpDir tmpDir tm "_tmp_refc"
 
 export
 codegenRefC : Codegen

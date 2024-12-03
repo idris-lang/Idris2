@@ -40,7 +40,7 @@ record Codegen where
   ||| Compile an Idris 2 expression, saving it to a file.
   compileExpr : Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
                 (tmpDir : String) -> (outputDir : String) ->
-                ClosedTerm -> (outfile : String) -> Core (Maybe String)
+                ClosedTerm -> (outfile : String) -> Core String
   ||| Execute an Idris 2 expression directly.
   executeExpr : Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
                 (tmpDir : String) -> ClosedTerm -> Core ()
@@ -52,7 +52,7 @@ record Codegen where
   ||| directory as the associated TTC.
   incCompileFile : Maybe (Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
                           (sourcefile : String) ->
-                          Core (Maybe (String, List String)))
+                          Core (String, List String))
   ||| If incremental compilation is supported, get the output file extension
   incExt : Maybe String
 
@@ -105,7 +105,7 @@ export
 compile : {auto c : Ref Ctxt Defs} ->
           {auto s : Ref Syn SyntaxInfo} ->
           Codegen ->
-          ClosedTerm -> (outfile : String) -> Core (Maybe String)
+          ClosedTerm -> (outfile : String) -> Core String
 compile {c} {s} cg tm out
     = do d <- getDirs
          let tmpDir = execBuildDir d
@@ -135,7 +135,7 @@ incCompile : {auto c : Ref Ctxt Defs} ->
 incCompile {c} {s} cg src
     = do let Just inc = incCompileFile cg
              | Nothing => pure Nothing
-         inc c s src
+         Just <$> inc c s src
 
 -- If an entry isn't already decoded, get the minimal entry we need for
 -- compilation, and record the Binary so that we can put it back when we're
