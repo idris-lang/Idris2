@@ -952,6 +952,8 @@ condC [] def = def
 condC ((x, y) :: xs) def
     = if !x then y else condC xs def
 
+||| Get the absolute path of the current working directory.
+||| Throws `SystemError` if an error occurred.
 export
 currentDir : Core String
 currentDir = maybe (throw $ SystemError "Failed to get the current directory") pure !(coreLift currentDir)
