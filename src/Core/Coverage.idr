@@ -15,6 +15,7 @@ import Data.String
 
 import Libraries.Data.NameMap
 import Libraries.Data.String.Extra
+import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.SizeOf
 import Libraries.Text.PrettyPrint.Prettyprinter
 
@@ -214,6 +215,11 @@ weakenNs args [] = []
 weakenNs args ((v, t) :: xs)
   = (weakenNs args v, t) :: weakenNs args xs
 
+weakensN : SizeOf args -> KnownVars vars a -> KnownVars (vars <>< args) a
+weakensN args [] = []
+weakensN args ((v, t) :: xs)
+  = (weakensN args v, t) :: weakensN args xs
+
 findTag : {idx, vars : _} ->
           (0 p : IsVar n idx vars) -> KnownVars vars a -> Maybe a
 findTag v [] = Nothing
@@ -296,20 +302,21 @@ buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
     buildArgAlt : KnownVars vars (List Int) ->
                   CaseAlt vars -> Core (List (SnocList ClosedTerm))
     buildArgAlt not' (ConCase n t args sc)
-        = do let l = mkSizeOf args
+        = do let known' = (MkVar el, t) :: known
+             let l = mkSizeOf args
              let con = Ref fc (DataCon t (size l)) n
              let ps' = map (substName zero var
                              (apply fc
-                                    con (toList $ map (Ref fc Bound) args))) ps
-             buildArgs fc defs (weakenNs l ((MkVar el, t) :: known))
-                               (weakenNs l not') ps' sc
+                                    con (map (Ref fc Bound) args))) ps
+             buildArgs fc defs (weakensN l known')
+                               (weakensN l not') ps' sc
     buildArgAlt not' (DelayCase t a sc)
-        = let l = mkSizeOf [<t, a]
+        = let l = mkSizeOf [t, a]
               ps' = map (substName zero var (TDelay fc LUnknown
                                              (Ref fc Bound t)
                                              (Ref fc Bound a))) ps in
-              buildArgs fc defs (weakenNs l known) (weakenNs l not')
-                                ps' sc
+              buildArgs fc defs (weakensN l known)
+                                (weakensN l not') ps' sc
     buildArgAlt not' (ConstCase c sc)
         = do let ps' = map (substName zero var (PrimVal fc c)) ps
              buildArgs fc defs known not' ps' sc

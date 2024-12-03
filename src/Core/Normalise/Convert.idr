@@ -13,7 +13,33 @@ import Core.Value
 import Data.List
 import Data.SnocList
 
+import Libraries.Data.List.SizeOf
+
 %default covering
+
+extend : {args, args' : List Name} ->
+     SizeOf args -> SizeOf args' ->
+     (List (Var vars, Var vars')) ->
+     Maybe (List (Var (vars <>< args), Var (vars' <>< args')))
+extend s s' ms
+  = do guard (size s == size s')
+       let vs  = embedFishily @{ListFreelyEmbeddable} (Var.allVars (cast args))
+       let vs' = embedFishily @{ListFreelyEmbeddable} (Var.allVars (cast args'))
+       pure $ zip vs vs' ++ map (bimap (weakensN s) (weakensN s')) ms
+
+findIdx : List (Var vars, Var vars') -> Nat -> Maybe (Var vars')
+findIdx [] _ = Nothing
+findIdx ((MkVar {varIdx = i} _, v) :: ps) n
+    = if i == n then Just v else findIdx ps n
+
+dropP : {0 args, args' : List Name} ->
+  SizeOf args -> SizeOf args' ->
+  (Var (vars <>< args), Var (vars' <>< args')) ->
+  Maybe (Var vars, Var vars')
+dropP s s' (x, y)
+  = do x' <- strengthensN s x
+       y' <- strengthensN s' y
+       pure (x', y')
 
 public export
 interface Convert tm where
@@ -43,16 +69,11 @@ interface Convert tm where
            convGen q True defs env tm tm'
 
 tryUpdate : {vars, vars' : _} ->
-            SnocList (Var vars, Var vars') ->
+            List (Var vars, Var vars') ->
             Term vars -> Maybe (Term vars')
 tryUpdate ms (Local fc l idx p)
-    = do MkVar p' <- findIdx ms (MkVar p)
+    = do MkVar p' <- findIdx ms idx
          pure $ Local fc l _ p'
-  where
-    findIdx : SnocList (Var vars, Var vars') -> Var vars -> Maybe (Var vars')
-    findIdx [<] _ = Nothing
-    findIdx (ps :< (old, v)) n
-        = if old == n then Just v else findIdx ps n
 tryUpdate ms (Ref fc nt n) = pure $ Ref fc nt n
 tryUpdate ms (Meta fc n i args) = pure $ Meta fc n i !(traverse (tryUpdate ms) args)
 tryUpdate ms (Bind fc x b sc)
@@ -141,45 +162,26 @@ mutual
   getMatchingVarAlt : {auto c : Ref Ctxt Defs} ->
                       {args, args' : _} ->
                       Defs ->
-                      SnocList (Var args, Var args') ->
+                      List (Var args, Var args') ->
                       CaseAlt args -> CaseAlt args' ->
-                      Core (Maybe (SnocList (Var args, Var args')))
+                      Core (Maybe (List (Var args, Var args')))
   getMatchingVarAlt defs ms (ConCase n tag cargs t) (ConCase n' tag' cargs' t')
       = if n == n'
-           then do let Just ms' = extend cargs cargs' ms
+           then do let s = mkSizeOf cargs
+                   let s' = mkSizeOf cargs'
+                   let Just ms' = extend s s' ms
                         | Nothing => pure Nothing
                    Just ms <- getMatchingVars defs ms' t t'
                         | Nothing => pure Nothing
                    -- drop the prefix from cargs/cargs' since they won't
                    -- be in the caller
-                   pure (Just (mapMaybe (dropP cargs cargs') ms))
+                   pure (Just (mapMaybe (dropP s s') ms))
            else pure Nothing
     where
       weakenP : {0 c, c' : _} -> {0 args, args' : Scope} ->
                 (Var args, Var args') ->
                 (Var (args :< c), Var (args' :< c'))
       weakenP (v, vs) = (weaken v, weaken vs)
-
-      extend : (cs : SnocList Name) -> (cs' : SnocList Name) ->
-               (SnocList (Var args, Var args')) ->
-               Maybe (SnocList (Var (args ++ cs), Var (args' ++ cs')))
-      extend [<] [<] ms = pure ms
-      extend (cs :< c) (cs' :< c') ms
-          = do rest <- extend cs cs' ms
-               pure (map weakenP rest :< (MkVar First, MkVar First))
-      extend _ _ _ = Nothing
-
-      dropV : forall args .
-              (cs : SnocList Name) -> Var (args ++ cs) -> Maybe (Var args)
-      dropV [<] v = Just v
-      dropV (cs :< c) (MkVar First) = Nothing
-      dropV (cs :< c) (MkVar (Later x))
-          = dropV cs (MkVar x)
-
-      dropP : (cs : SnocList Name) -> (cs' : SnocList Name) ->
-              (Var (args ++ cs), Var (args' ++ cs')) ->
-              Maybe (Var args, Var args')
-      dropP cs cs' (x, y) = pure (!(dropV cs x), !(dropV cs' y))
 
   getMatchingVarAlt defs ms (ConstCase c t) (ConstCase c' t')
       = if c == c'
@@ -192,9 +194,9 @@ mutual
   getMatchingVarAlts : {auto c : Ref Ctxt Defs} ->
                        {args, args' : _} ->
                        Defs ->
-                       SnocList (Var args, Var args') ->
+                       List (Var args, Var args') ->
                        List (CaseAlt args) -> List (CaseAlt args') ->
-                       Core (Maybe (SnocList (Var args, Var args')))
+                       Core (Maybe (List (Var args, Var args')))
   getMatchingVarAlts defs ms [] [] = pure (Just ms)
   getMatchingVarAlts defs ms (a :: as) (a' :: as')
       = do Just ms <- getMatchingVarAlt defs ms a a'
@@ -205,11 +207,11 @@ mutual
   getMatchingVars : {auto c : Ref Ctxt Defs} ->
                     {args, args' : _} ->
                     Defs ->
-                    SnocList (Var args, Var args') ->
+                    List (Var args, Var args') ->
                     CaseTree args -> CaseTree args' ->
-                    Core (Maybe (SnocList (Var args, Var args')))
+                    Core (Maybe (List (Var args, Var args')))
   getMatchingVars defs ms (Case _ p _ alts) (Case _ p' _ alts')
-      = getMatchingVarAlts defs (ms :< (MkVar p, MkVar p')) alts alts'
+      = getMatchingVarAlts defs ((MkVar p, MkVar p') :: ms) alts alts'
   getMatchingVars defs ms (STerm i tm) (STerm i' tm')
       = do let Just tm'' = tryUpdate ms tm
                | Nothing => pure Nothing
@@ -234,7 +236,7 @@ mutual
           -- If the two case blocks match in structure, get which variables
           -- correspond. If corresponding variables convert, the two case
           -- blocks convert.
-          Just ms <- getMatchingVars defs [<] ct ct'
+          Just ms <- getMatchingVars defs [] ct ct'
                | Nothing => pure False
           convertMatches ms
      where
@@ -246,13 +248,13 @@ mutual
        getArgPos (S k) (cs :< c) = getArgPos k cs
 
        convertMatches : {vs, vs' : _} ->
-                        SnocList (Var vs, Var vs') ->
+                        List (Var vs, Var vs') ->
                         Core Bool
-       convertMatches [<] = pure True
-       convertMatches (vs :< (MkVar {varIdx = ix} p, MkVar {varIdx = iy} p'))
-          = do let Just varg = getArgPos ix nargs
+       convertMatches [] = pure True
+       convertMatches ((MkVar {varIdx=ix} p, MkVar {varIdx=iy} p') :: vs)
+          = do let Just varg = getArgPos ix (cast nargs)
                    | Nothing => pure False
-               let Just varg' = getArgPos iy nargs'
+               let Just varg' = getArgPos iy (cast nargs')
                    | Nothing => pure False
                pure $ !(convGen q i defs env varg varg') &&
                       !(convertMatches vs)

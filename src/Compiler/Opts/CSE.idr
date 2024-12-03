@@ -42,6 +42,8 @@ import Data.Vect
 import Libraries.Data.SortedSet
 import Libraries.Data.SortedMap
 
+import Libraries.Data.SnocList.Extra
+
 ||| Maping from a pairing of closed terms together with
 ||| their size (for efficiency) to the number of
 ||| occurences in toplevel definitions and flag for
@@ -164,8 +166,9 @@ mutual
   dropConAlt :  {pre : SnocList Name}
              -> CConAlt (ns ++ pre)
              -> Maybe (CConAlt pre)
-  dropConAlt (MkConAlt x y tag args z) =
-    MkConAlt x y tag args . embed <$> dropEnv z
+  dropConAlt (MkConAlt x y tag args z)
+    = do z <- dropEnv {ns} (rewrite sym $ snocAppendFishAssociative ns pre args in z)
+         pure $ MkConAlt x y tag args z
 
   dropConstAlt :  {pre : SnocList Name}
                -> CConstAlt (ns ++ pre)

@@ -129,29 +129,32 @@ data ArgUsed = Used1 -- been used
              | LocalVar -- don't care if it's used
 
 data Usage : SnocList Name -> Type where
-     Nil : Usage [<]
-     (::) : ArgUsed -> Usage xs -> Usage (xs :< x)
+     Lin : Usage [<]
+     (:<) : Usage xs -> ArgUsed -> Usage (xs :< x)
+
+tail : Usage (xs :< x) -> Usage xs
+tail (us :< _) = us
 
 initUsed : (xs : SnocList Name) -> Usage xs
-initUsed [<] = []
-initUsed (xs :< x) = Used0 :: initUsed xs
+initUsed [<] = [<]
+initUsed (xs :< _) = initUsed xs :< Used0
 
 initUsedCase : (xs : SnocList Name) -> Usage xs
-initUsedCase [<] = []
-initUsedCase [<x] = [Used0]
-initUsedCase (xs :< x) = LocalVar :: initUsedCase xs
+initUsedCase [<] = [<]
+initUsedCase [<x] = [<Used0]
+initUsedCase (xs :< x) =  initUsedCase xs :< LocalVar
 
 setUsedVar : {idx : _} ->
              (0 _ : IsVar n idx xs) -> Usage xs -> Usage xs
-setUsedVar First (Used0 :: us) = Used1 :: us
-setUsedVar (Later p) (x :: us) = x :: setUsedVar p us
+setUsedVar First (us :< Used0) = us :< Used1
+setUsedVar (Later p) (us :< x) = setUsedVar p us :< x
 setUsedVar First us = us
 
 isUsed : {idx : _} ->
          (0 _ : IsVar n idx xs) -> Usage xs -> Bool
-isUsed First (Used1 :: us) = True
-isUsed First (_ :: us) = False
-isUsed (Later p) (_ :: us) = isUsed p us
+isUsed First (us :< Used1) = True
+isUsed First (us :< _) = False
+isUsed (Later p) (us :< _) = isUsed p us
 
 data Used : Type where
 
@@ -160,17 +163,17 @@ setUsed : {idx : _} ->
           (0 _ : IsVar n idx vars) -> Core ()
 setUsed p = update Used $ setUsedVar p
 
-extendUsed : ArgUsed -> (new : SnocList Name) -> Usage vars -> Usage (vars ++ new)
-extendUsed a [<] x = x
-extendUsed a (xs :< y) x = a :: extendUsed a xs x
+extendUsed : ArgUsed -> (new : List Name) -> Usage vars -> Usage (vars <>< new)
+extendUsed a [] x = x
+extendUsed a (y :: xs) x = extendUsed a xs (x :< a)
 
-dropUsed : (new : SnocList Name) -> Usage (vars ++ new) -> Usage vars
-dropUsed [<] x = x
-dropUsed (xs :< x) (u :: us) = dropUsed xs us
+dropUsed : (new : List Name) -> Usage (vars <>< new) -> Usage vars
+dropUsed [] x = x
+dropUsed (_ :: xs) (us) = tail (dropUsed xs us)
 
-inExtended : ArgUsed -> (new : SnocList Name) ->
+inExtended : ArgUsed -> (new : List Name) ->
              {auto u : Ref Used (Usage vars)} ->
-             (Ref Used (Usage (vars ++ new)) -> Core a) ->
+             (Ref Used (Usage (vars <>< new)) -> Core a) ->
              Core a
 inExtended a new sc
     = do used <- get Used
@@ -200,7 +203,7 @@ termInlineSafe (Meta fc x y xs)
 termInlineSafe (Bind fc x b scope)
    = do bok <- binderInlineSafe b
         if bok
-           then inExtended LocalVar [<x] (\u' => termInlineSafe scope)
+           then inExtended LocalVar [x] (\u' => termInlineSafe scope)
            else pure False
   where
     binderInlineSafe : Binder (Term vars) -> Core Bool
@@ -248,7 +251,7 @@ mutual
   caseAltInlineSafe (ConCase x tag args sc)
       = inExtended Used0 args (\u' => caseInlineSafe sc)
   caseAltInlineSafe (DelayCase ty arg sc)
-      = inExtended Used0 [<ty, arg] (\u' => caseInlineSafe sc)
+      = inExtended Used0 [ty, arg] (\u' => caseInlineSafe sc)
   caseAltInlineSafe (ConstCase x sc) = caseInlineSafe sc
   caseAltInlineSafe (DefaultCase sc) = caseInlineSafe sc
 
