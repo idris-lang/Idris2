@@ -17,6 +17,7 @@ import Data.List
 import Data.SnocList
 import Data.String
 import Data.Vect
+import Libraries.Data.List.SizeOf
 import Libraries.Data.List.LengthMatch
 import Libraries.Data.SortedSet
 import Libraries.Data.SnocList.SizeOf
