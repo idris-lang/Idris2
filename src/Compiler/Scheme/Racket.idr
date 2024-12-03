@@ -455,7 +455,9 @@ compileExpr mkexec c s tmpDir outputDir tm outfile
 
          -- TODO: add launcher script
          let outShRel = outputDir </> outfile
-         makeShPlatform isWindows (if mkexec then "" else racket ++ " ") outShRel appDirRel outRktFile
+         if mkexec
+           then  makeShPlatform isWindows "" outShRel appDirRel outBinFile
+           else  makeShPlatform isWindows (racket ++ " ") outShRel appDirRel outRktFile
          handleFileError outShRel $ chmodRaw outShRel 0o755
          pure outShRel
 
