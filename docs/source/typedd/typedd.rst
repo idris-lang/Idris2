@@ -281,28 +281,23 @@ in the type:
 .. code-block:: idris
 
     snocListHelp : {input : _} ->
-                   (snoc : SnocList input) -> (rest : List a) -> SnocList (input +
+                   (snoc : SnocList input) -> (rest : List a) -> SnocList (input ++ rest)
 
 It's no longer necessary to give ``{input}`` explicitly in the patterns for
 ``snocListHelp``, although it's harmless to do so.
 
-In ``IsSuffix.idr``, the matching has to be written slightly differently. The
-recursive with application in Idris 1 probably shouldn't have allowed this!
-Note that the ``Snoc`` - ``Snoc`` case has to be written first otherwise Idris
-generates a case tree splitting on ``input1`` and ``input2`` instead of the
-``SnocList`` objects and this leads to a lot of cases being detected as missing.
+``IsSuffix.idr`` also has to be adjusted to match the new ``Snoc`` arguments.
 
 .. code-block:: idris
 
+  total
   isSuffix : Eq a => List a -> List a -> Bool
-  isSuffix input1 input2 with (snocList input1, snocList input2)
-    isSuffix _ _ | (Snoc x xs xsrec, Snoc y ys ysrec)
-       = (x == y) && (isSuffix _ _ | (xsrec, ysrec))
-    isSuffix _ _ | (Empty, s) = True
-    isSuffix _ _ | (s, Empty) = False
-
-This doesn't yet get past the totality checker, however, because it doesn't
-know about looking inside pairs.
+  isSuffix input1 input2 with (snocList input1)
+    isSuffix [] input2 | Empty = True
+    isSuffix (xs ++ [x]) input2 | (Snoc x xs xsrec) with (snocList input2)
+      isSuffix (xs ++ [x]) [] | (Snoc x xs xsrec) | Empty = False
+      isSuffix (xs ++ [x]) (ys ++ [y]) | (Snoc x xs xsrec) | (Snoc y ys ysrec)
+        = if x == y then isSuffix xs ys | xsrec else False
 
 For the ``VList`` view in the exercise 4 after Chapter 10-2 ``import Data.List.Views.Extra`` from ``contrib`` library.
 
