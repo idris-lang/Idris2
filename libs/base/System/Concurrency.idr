@@ -389,6 +389,7 @@ channelGetNonBlocking chan =
               else decodeObj (unsafeVectorRef obj i) :: readVector len (i + 1) obj
 
 ||| Timeout version of channelGet.
+||| Continously loops with 1ms delays until `seconds` has elapsed, or a value is provided through `chan`.
 |||
 ||| @ chan the channel to receive on
 ||| @ seconds how many seconds to wait until timeout
