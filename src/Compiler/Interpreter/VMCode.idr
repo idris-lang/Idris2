@@ -290,7 +290,7 @@ compileExpr :
   Ref Ctxt Defs ->
   Ref Syn SyntaxInfo ->
   String -> String -> ClosedTerm -> String -> Core String
-compileExpr _ _ _ _ _ _ = throw (InternalError "compile not implemeted for vmcode-interp")
+compileExpr _ _ _ _ _ _ = throw $ compileNotSupport VMCodeInterp "Compile not implemeted for vmcode-interp"
 
 executeExpr :
   Ref Ctxt Defs ->

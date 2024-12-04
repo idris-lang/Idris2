@@ -122,6 +122,14 @@ Show CG where
   show VMCodeInterp = "vmcode-interp"
   show (Other s) = s
 
+public export
+data CGOperation = Compile | Execute
+
+export
+Show CGOperation where
+  show Compile = "compile"
+  show Execute = "execute"
+
 -- All possible errors, carrying a location
 public export
 data Error : Type where
@@ -222,6 +230,7 @@ data Error : Type where
      CyclicImports : List ModuleIdent -> Error
      ForceNeeded : Error
      CodegenNotFound : CG -> Error
+     UnsupportedOpertaion : CGOperation -> CG -> String -> Error
      InternalError : String -> Error
      UserError : String -> Error
      ||| Contains list of specifiers for which foreign call cannot be resolved
@@ -240,6 +249,14 @@ data Error : Type where
      WarningAsError : Warning -> Error
 
 %name Error err
+
+export
+compileNotSupport : CG -> String -> Error
+compileNotSupport = UnsupportedOpertaion Compile
+
+export
+executeNotSupport : CG -> String -> Error
+executeNotSupport = UnsupportedOpertaion Execute
 
 export
 Show TTCErrorMsg where
@@ -416,6 +433,7 @@ Show Error where
       = "Module imports form a cycle: " ++ showSep " -> " (map show ns)
   show ForceNeeded = "Internal error when resolving implicit laziness"
   show (CodegenNotFound cg) = "Codegenerator \{show cg} not found"
+  show (UnsupportedOpertaion op cg msg) = "Codegenerator \{show cg} doesn't support '\{show op}: \{msg}"
   show (InternalError str) = "INTERNAL ERROR: " ++ str
   show (UserError str) = "Error: " ++ str
   show (NoForeignCC fc specs) = show fc ++
@@ -533,6 +551,7 @@ getErrorLoc (ModuleNotFound loc _) = Just loc
 getErrorLoc (CyclicImports _) = Nothing
 getErrorLoc ForceNeeded = Nothing
 getErrorLoc (CodegenNotFound _) = Nothing
+getErrorLoc (UnsupportedOpertaion _ _ _) = Nothing
 getErrorLoc (InternalError _) = Nothing
 getErrorLoc (UserError _) = Nothing
 getErrorLoc (NoForeignCC loc _) = Just loc
@@ -626,6 +645,7 @@ killErrorLoc (ModuleNotFound fc x) = ModuleNotFound emptyFC x
 killErrorLoc (CyclicImports xs) = CyclicImports xs
 killErrorLoc ForceNeeded = ForceNeeded
 killErrorLoc (CodegenNotFound x) = CodegenNotFound x
+killErrorLoc (UnsupportedOpertaion x y z) = UnsupportedOpertaion x y z
 killErrorLoc (InternalError x) = InternalError x
 killErrorLoc (UserError x) = UserError x
 killErrorLoc (NoForeignCC fc xs) = NoForeignCC emptyFC xs
