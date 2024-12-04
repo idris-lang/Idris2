@@ -72,7 +72,7 @@ executeExpr :
   Ref Syn SyntaxInfo ->
   (tmpDir : String) -> ClosedTerm -> Core ExitCode
 executeExpr c s tmpDir tm =
-  throw $ InternalError "Javascript backend is only able to compile, use Node instead"
+  throw $ executeNotSupport Javascript "Javascript backend is only able to compile, use Node instead"
 
 ||| Codegen wrapper for Javascript implementation.
 export

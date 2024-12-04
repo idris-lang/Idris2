@@ -14,8 +14,7 @@ compile :
   (tmpDir : String) -> (execDir : String) ->
   ClosedTerm -> (outfile : String) -> Core String
 compile defs syn tmp dir term file
-  = do coreLift $ putStrLn "I'd rather not."
-       throw $ InternalError "Compile is not implemented"
+  = throw $ compileNotSupport (Other "lazy") "I'd rather not."
 
 execute :
   Ref Ctxt Defs ->

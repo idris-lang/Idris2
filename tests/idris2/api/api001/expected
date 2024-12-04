@@ -1,2 +1,1 @@
-I'd rather not.
-Error: INTERNAL ERROR: Compile is not implemented
+Error: Codegenerator lazy doesn't support 'compile': I'd rather not.

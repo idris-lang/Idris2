@@ -751,6 +751,10 @@ perrorRaw (CyclicImports ns)
         <++> concatWith (surround " -> ") (pretty0 <$> ns)
 perrorRaw ForceNeeded = pure $ errorDesc (reflow "Internal error when resolving implicit laziness")
 perrorRaw (CodegenNotFound cg) = pure $ errorDesc ("Codegenerator" <++> byShow cg <++> "not found")
+perrorRaw (UnsupportedOpertaion op cg msg)
+    = pure $ errorDesc (reflow "Codegenerator" <++> byShow cg <++> reflow "doesn't support"
+                        <++> enclose "'" "'" (byShow op) <+> colon)
+        <++> pretty0 msg
 perrorRaw (InternalError str) = pure $ errorDesc (reflow "INTERNAL ERROR" <+> colon) <++> pretty0 str
 perrorRaw (UserError str) = pure . errorDesc $ pretty0 str
 perrorRaw (NoForeignCC fc specs) = do
