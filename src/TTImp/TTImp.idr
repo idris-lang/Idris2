@@ -442,7 +442,8 @@ mutual
     show (WithClause fc lhs rig wval prf flags block)
        = show lhs
        ++ " with " ++ showCount rig ++ "(" ++ show wval ++ ")"
-       ++ maybe "" (\ nm => " proof " ++ showCount (fst nm) ++ show (snd nm)) prf
+          -- TODO: remove `the` after fix idris-lang/Idris2#3418
+       ++ maybe "" (the (_ -> _) $ \(rg, nm) => " proof " ++ showCount rg ++ show nm) prf
        ++ "\n\t" ++ show block
     show (ImpossibleClause fc lhs)
        = show lhs ++ " impossible"

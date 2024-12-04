@@ -605,7 +605,8 @@ mutual
   showClause mode (WithClause fc lhs rig wval prf flags cls) -- TODO print flags
       = unwords
       [ show lhs, "with"
-      , showCount rig $ maybe id (\ nm => (++ " proof \{showCount (fst nm) $ show (snd nm)}")) prf
+        -- TODO: remove `the` after fix idris-lang/Idris2#3418
+      , showCount rig $ maybe id (the (_ -> _) $ \(rg, nm) => (++ " proof \{showCount rg $ show nm}")) prf
                       $ showParens True (show wval)
       , "{", joinBy "; " (assert_total $ map (showClause mode) cls), "}"
       ]
