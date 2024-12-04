@@ -203,6 +203,11 @@ Scheme Integer where
   fromScheme _              = Nothing
 
 export
+Scheme Nat where
+  fromScheme (IntegerVal x) = Just $ integerToNat x
+  fromScheme _              = Nothing
+
+export
 Scheme Int where
   fromScheme (IntegerVal x) = Just (cast x)
   fromScheme _              = Nothing
