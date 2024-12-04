@@ -14,6 +14,7 @@ main = do
       putStrLn "Nothing"
     Just val' =>
       putStrLn val'
+  sleep 1
   case !(channelGetNonBlocking chan) of
     Nothing   =>
       putStrLn "Nothing"
