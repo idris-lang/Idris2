@@ -373,8 +373,8 @@ selfIsCommonFactor a = CommonFactorExists a reflexive reflexive
 gcdUnproven' : (m, n : Nat) -> (0 sizeM : SizeAccessible m) -> (0 n_lt_m : LT n m) -> Nat
 gcdUnproven' m Z _ _ = m
 gcdUnproven' m (S n) (Access rec) n_lt_m =
-  let mod_lt_n = boundModNatNZ m (S n) SIsNonZero in
-  gcdUnproven' (S n) (modNatNZ m (S n) SIsNonZero) (rec _ n_lt_m) mod_lt_n
+  let mod_lt_n = boundModNatNZ m (S n) ItIsSucc in
+  gcdUnproven' (S n) (modNatNZ m (S n) ItIsSucc) (rec _ n_lt_m) mod_lt_n
 
 ||| Total definition of the gcd function. Does not return GСD evidence, but is faster.
 gcdUnproven : Nat -> Nat -> Nat
@@ -388,7 +388,7 @@ gcdUnproven'Greatest : {m, n, c : Nat} -> (0 sizeM : SizeAccessible m) -> (0 n_l
   -> Factor c m -> Factor c n -> Factor c (gcdUnproven' m n sizeM n_lt_m)
 gcdUnproven'Greatest {n = Z} _ _ cFactM _ = cFactM
 gcdUnproven'Greatest {n = S n} (Access rec) n_lt_m cFactM cFactN =
-  gcdUnproven'Greatest (rec _ n_lt_m) (boundModNatNZ m (S n) SIsNonZero) cFactN (commonFactorAlsoFactorOfMod cFactM cFactN)
+  gcdUnproven'Greatest (rec _ n_lt_m) (boundModNatNZ m (S n) ItIsSucc) cFactN (commonFactorAlsoFactorOfMod cFactM cFactN)
 
 gcdUnprovenGreatest : (m, n : Nat) -> {auto 0 ok : NotBothZero m n} -> (q : Nat) -> CommonFactor q m n -> Factor q (gcdUnproven m n)
 gcdUnprovenGreatest m n q (CommonFactorExists q qFactM qFactN) with (isLT n m)
@@ -402,7 +402,7 @@ gcdUnprovenGreatest m n q (CommonFactorExists q qFactM qFactN) with (isLT n m)
 
 gcdUnproven'CommonFactor : {m, n : Nat} -> (0 sizeM : SizeAccessible m) -> (0 n_lt_m : LT n m) -> CommonFactor (gcdUnproven' m n sizeM n_lt_m) m n
 gcdUnproven'CommonFactor {n = Z} _ _ = CommonFactorExists _ reflexive (anythingFactorZero m)
-gcdUnproven'CommonFactor {n = S n} (Access rec) n_lt_m with (gcdUnproven'CommonFactor (rec _ n_lt_m) (boundModNatNZ m (S n) SIsNonZero))
+gcdUnproven'CommonFactor {n = S n} (Access rec) n_lt_m with (gcdUnproven'CommonFactor (rec _ n_lt_m) (boundModNatNZ m (S n) ItIsSucc))
   gcdUnproven'CommonFactor (Access rec) n_lt_m | (CommonFactorExists _ factM factN)
     = CommonFactorExists _ (modFactorAlsoFactorOfDivider factM factN) factM
 

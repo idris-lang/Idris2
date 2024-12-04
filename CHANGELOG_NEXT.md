@@ -95,6 +95,12 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Typst files can be compiled as Literate Idris
 
+* `min` was renamed to `leftMost` in `Libraries.Data.Sorted{Map|Set}` in order
+  to be defined as in `base`.
+
+* Reflected trees now make use of WithFC to replicate the new location tracking
+  in the compiler.
+
 ### Backend changes
 
 #### RefC Backend
@@ -239,6 +245,14 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Added implementations of `Foldable` and `Traversable` for `Control.Monad.Identity`
 
 * Added `Data.IORef.atomically` for the chez backend.
+
+* `Data.Nat.NonZero` was made to be an alias for `Data.Nat.IsSucc`.
+  `SIsNonZero` was made to be an alias for `ItIsSucc`, was marked as deprecated,
+  and won't work on LHS anymore.
+
+* Deprecated `toList` function in favor of `Prelude.toList` in `Data.SortedSet`.
+
+* Several functions like `pop`, `differenceMap` and `toSortedMap` were added to `Data.Sorted{Map|Set}`
 
 * Added `System.Concurrency.channelGetNonBlocking` for the chez backend.
 

@@ -451,6 +451,13 @@ rightMost : SortedDMap k v -> Maybe (x : k ** v x)
 rightMost Empty = Nothing
 rightMost (M _ t) = Just $ treeRightMost t
 
+||| Pops the leftmost key and corresponding value from the map
+export
+pop : SortedDMap k v -> Maybe ((x : k ** v x), SortedDMap k v)
+pop m = do
+  kv@(k ** _) <- leftMost m
+  pure (kv, delete k m)
+
 export
 (Show k, {x : k} -> Show (v x)) => Show (SortedDMap k v) where
    show m = "fromList " ++ (show $ toList m)

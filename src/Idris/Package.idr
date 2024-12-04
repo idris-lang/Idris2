@@ -484,6 +484,7 @@ assertIdrisCompatibility pkg
          unless (inBounds version requiredBounds) $
            throw (GenericMsg emptyFC "\{pkg.name} requires Idris2 \{show requiredBounds} but the installed version of Idris2 is \{show Version.version}.")
 
+export
 build : {auto c : Ref Ctxt Defs} ->
         {auto s : Ref Syn SyntaxInfo} ->
         {auto o : Ref ROpts REPLOpts} ->
@@ -662,6 +663,7 @@ install pkg opts installSrc -- not used but might be in the future
       } $ initPkgDesc pkg.name
 
 -- Check package without compiling anything.
+export
 check : {auto c : Ref Ctxt Defs} ->
         {auto s : Ref Syn SyntaxInfo} ->
         {auto o : Ref ROpts REPLOpts} ->

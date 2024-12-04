@@ -310,12 +310,11 @@ mutual
   Reify ImpTy where
     reify defs val@(NDCon _ n _ _ args)
         = case (dropAllNS !(full (gamma defs) n), map snd args) of
-               (UN (Basic "MkTy"), [w, x, y, z])
+               (UN (Basic "MkTy"), [w, y, z])
                     => do w' <- reify defs !(evalClosure defs w)
-                          x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
                           z' <- reify defs !(evalClosure defs z)
-                          pure (MkImpTy w' (MkFCVal x' y') z')
+                          pure (MkImpTy w' y' z')
                _ => cantReify val "ITy"
     reify defs val = cantReify val "ITy"
 
@@ -416,16 +415,25 @@ mutual
     reify defs val = cantReify val "Clause"
 
   export
-  Reify ImpDecl where
+  Reify (IClaimData Name) where
     reify defs val@(NDCon _ n _ _ args)
         = case (dropAllNS !(full (gamma defs) n), map snd args) of
-               (UN (Basic "IClaim"), [v,w,x,y,z])
-                    => do v' <- reify defs !(evalClosure defs v)
-                          w' <- reify defs !(evalClosure defs w)
+               (UN (Basic "MkIClaimData"), [w, x, y, z])
+                    => do w' <- reify defs !(evalClosure defs w)
                           x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
                           z' <- reify defs !(evalClosure defs z)
-                          pure (IClaim (MkFCVal v' $ MkIClaimData w' x' y' z'))
+                          pure (MkIClaimData w' x' y' z')
+               _ => cantReify val "IClaimData"
+    reify defs val = cantReify val "IClaimData"
+
+  export
+  Reify ImpDecl where
+    reify defs val@(NDCon _ n _ _ args)
+        = case (dropAllNS !(full (gamma defs) n), map snd args) of
+               (UN (Basic "IClaim"), [v])
+                    => do v' <- reify defs !(evalClosure defs v)
+                          pure (IClaim v')
                (UN (Basic "IData"), [x,y,z,w])
                     => do x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
@@ -685,12 +693,11 @@ mutual
 
   export
   Reflect ImpTy where
-    reflect fc defs lhs env (MkImpTy w (MkFCVal x y) z)
+    reflect fc defs lhs env (MkImpTy w x z)
         = do w' <- reflect fc defs lhs env w
              x' <- reflect fc defs lhs env x
-             y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
-             appCon fc defs (reflectionttimp "MkTy") [w', x', y', z']
+             appCon fc defs (reflectionttimp "MkTy") [w', x', z']
 
   export
   Reflect DataOpt where
@@ -765,14 +772,19 @@ mutual
              appCon fc defs (reflectionttimp "ImpossibleClause") [x', y']
 
   export
-  Reflect ImpDecl where
-    reflect fc defs lhs env (IClaim (MkFCVal v $ MkIClaimData w x y z))
-        = do v' <- reflect fc defs lhs env v
-             w' <- reflect fc defs lhs env w
+  Reflect (IClaimData Name) where
+    reflect fc defs lhs env (MkIClaimData w x y z)
+        = do w' <- reflect fc defs lhs env w
              x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
-             appCon fc defs (reflectionttimp "IClaim") [v', w', x', y', z']
+             appCon fc defs (reflectionttimp "MkIClaimData") [w', x', y', z']
+
+  export
+  Reflect ImpDecl where
+    reflect fc defs lhs env (IClaim v)
+        = do v' <- reflect fc defs lhs env v
+             appCon fc defs (reflectionttimp "IClaim") [v']
     reflect fc defs lhs env (IData x y z w)
         = do x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y

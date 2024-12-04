@@ -1,3 +1,4 @@
+-- Remove as soon as 0.8.0 (or greater) is released
 module Libraries.Data.SortedSet
 
 import Data.Maybe
@@ -29,15 +30,21 @@ fromList : Ord k => List k -> SortedSet k
 fromList l = SetWrapper (Data.SortedMap.fromList (map (\i => (i, ())) l))
 
 export
-toList : SortedSet k -> List k
-toList (SetWrapper m) = Data.SortedMap.keys m
-
-export
 Foldable SortedSet where
-  foldr f z xs = foldr f z (Data.SortedSet.toList xs)
-  foldl f z xs = foldl f z (Data.SortedSet.toList xs)
+  foldr f z = foldr f z . toList
+  foldl f z = foldl f z . toList
 
   null (SetWrapper m) = null m
+
+  foldMap f = foldMap f . toList
+
+  toList (SetWrapper m) = Data.SortedMap.keys m
+
+||| use `Prelude.toList`
+%deprecate
+export %inline
+toList : SortedSet k -> List k
+toList = Prelude.toList
 
 ||| Set union. Inserts all elements of x into y
 export
@@ -81,7 +88,7 @@ Ord k => Monoid (SortedSet k) where
 
 export
 Show k => Show (SortedSet k) where
-  show = show . SortedSet.toList
+  show = show . Prelude.toList
 
 export
 singleton : Ord k => k -> SortedSet k
@@ -91,9 +98,10 @@ export
 toSortedMap : SortedSet k -> SortedMap k ()
 toSortedMap (SetWrapper m) = m
 
+||| Returns the leftmost (least) value
 export
-min : SortedSet k -> Maybe k
-min (SetWrapper m) = fst <$> min m
+leftMost : SortedSet k -> Maybe k
+leftMost (SetWrapper m) = fst <$> leftMost m
 
 export
 pop : SortedSet k -> Maybe (k, SortedSet k)

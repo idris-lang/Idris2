@@ -15,7 +15,8 @@ defy = do
     logTerm "" 0 "Quoted term:" val
 
     declare [
-        IClaim fc MW Private [] (MkTy fc fc (UN (Basic "y")) (IVar fc (UN (Basic "Nat")))),
+        IClaim (MkFCVal fc (MkIClaimData MW Private []
+          (MkTy fc (MkFCVal fc (UN (Basic "y"))) (IVar fc (UN (Basic "Nat")))))),
         IDef fc (UN (Basic "y")) [PatClause fc (IVar fc (UN (Basic "y"))) (IApp fc (IApp fc (IVar fc (UN (Basic "+"))) val) val)]
     ]
 

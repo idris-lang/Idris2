@@ -797,7 +797,7 @@ export
 definedInBlock : Namespace -> -- namespace to resolve names
                  List ImpDecl -> List Name
 definedInBlock ns decls =
-    SortedSet.toList $ foldl (defName ns) empty decls
+    Prelude.toList $ foldl (defName ns) empty decls
   where
     getName : ImpTy -> Name
     getName (MkImpTy _ n _) = n.val

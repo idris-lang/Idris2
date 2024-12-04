@@ -474,7 +474,9 @@ processArgs flag (AutoNat a :: as) (x :: xs) f =
 processArgs flag (Required a :: as) (x :: xs) f =
   processArgs flag as xs (f x)
 processArgs flag (Optional a :: as) (x :: xs) f =
-  processArgs flag as xs (f $ toMaybe (not (isPrefixOf "-" x)) x)
+  if isPrefixOf "-" x
+    then processArgs flag as (x :: xs) (f Nothing)
+    else processArgs flag as xs (f $ Just x)
 
 matchFlag : (d : OptDesc) -> List String ->
             Either String (Maybe (List CLOpt, List String))
