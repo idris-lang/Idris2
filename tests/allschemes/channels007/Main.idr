@@ -1,5 +1,5 @@
-import System.Concurrency
 import System
+import System.Concurrency
 
 -- Test that using channelGetNonBlocking works as expected.
 main : IO ()
