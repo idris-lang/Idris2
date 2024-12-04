@@ -461,19 +461,18 @@
 
 (define (blodwen-channel-get-with-timeout ty chan seconds)
   (let loop ([start-time (current-time)]
-             [seconds-time (make-time 'time-duration 0 seconds)]
-	    ) ; Record the start time
-    (let ([elapsed (make-time 'time-duration (current-time) start-time)]) ; Calculate elapsed time in seconds
-      (if (time>=? elapsed seconds-time)
-          '() ; Timeout reached, return '() for empty value
+            )
+    (let ([elapsed (time-difference (current-time) start-time)])
+      (if (time>=? elapsed (make-time 'time-duration 0 seconds))
+          '()
           (if (mutex-acquire (channel-read-mut chan) #f)
               (let* ([val-box  (channel-val-box chan)]
                      [the-val  (unbox val-box)])
                 (if (null? the-val)
                     (begin
                       (mutex-release (channel-read-mut chan))
-                      (sleep (make-time 'time-duration 0 0.001)) ; Sleep for 1ms before retrying
-                      (loop start-time)) ; Continue with the same start-time
+                      (sleep (make-time 'time-duration 1000000 0))
+                      (loop start-time))
                     (let* ([read-box (channel-read-box chan)]
                            [read-cv  (channel-read-cv chan)])
                       (set-box! val-box '())
@@ -482,8 +481,8 @@
                       (condition-signal read-cv)
                       the-val)))
               (begin
-                (sleep (make-time 'time-duration 0 0.001)) ; Sleep for 1ms before retrying
-                (loop start-time))))))) ; Continue with the same start-time
+                (sleep (make-time 'time-duration 1000000 0))
+                (loop start-time)))))))
 
 ;; Mutex
 
