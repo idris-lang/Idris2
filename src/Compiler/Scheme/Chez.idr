@@ -518,9 +518,8 @@ compileToSS c prof appdir tm outfile
                    , main
                    , schFooter prof True
                    ]
-         Right () <- coreLift $ writeFile outfile $ build scm
-            | Left err => throw (FileErr outfile err)
-         coreLift_ $ chmodRaw outfile 0o755
+         writeFile outfile $ build scm
+         handleFileError outfile $ chmodRaw outfile 0o755
 
 ||| Compile a Chez Scheme source file to an executable, daringly with runtime checks off.
 compileToSO : {auto c : Ref Ctxt Defs} ->
@@ -533,12 +532,9 @@ compileToSO prof chez appDirRel outSsAbs
                                 else "") ++
                      "[compile-file-message #f]) (compile-program " ++
                     show outSsAbs ++ "))"
-         Right () <- coreLift $ writeFile tmpFileAbs build
-            | Left err => throw (FileErr tmpFileAbs err)
-         coreLift_ $ chmodRaw tmpFileAbs 0o755
-         0 <- coreLift $ system [chez, "--script", tmpFileAbs]
-            | status => throw (InternalError "Chez exited with return code \{show status}")
-         pure ()
+         writeFile tmpFileAbs build
+         handleFileError tmpFileAbs $ chmodRaw tmpFileAbs 0o755
+         safeSystem [chez, "--script", tmpFileAbs]
 
 ||| Compile a TT expression to Chez Scheme using incremental module builds
 compileToSSInc : Ref Ctxt Defs ->
@@ -563,40 +559,31 @@ compileToSSInc c mods libs appdir tm outfile
                    collectRequestHandler ++ "\n" ++
                    main ++ schFooter False False
 
-         Right () <- coreLift $ writeFile outfile $ build scm
-            | Left err => throw (FileErr outfile err)
-         coreLift_ $ chmodRaw outfile 0o755
-         pure ()
+         writeFile outfile $ build scm
+         handleFileError outfile $ chmodRaw outfile 0o755
 
 
 makeSh : String -> String -> String -> Core ()
-makeSh outShRel appdir outAbs
-    = do Right () <- coreLift $ writeFile outShRel (startChez appdir outAbs)
-            | Left err => throw (FileErr outShRel err)
-         pure ()
+makeSh outShRel appdir outAbs = writeFile outShRel (startChez appdir outAbs)
 
 ||| Make Windows start scripts, one for bash environments and one batch file
 makeShWindows : String -> String -> String -> String -> String -> Core ()
 makeShWindows chez outShRel appdir outAbs progType
     = do let cmdFile = outShRel ++ ".cmd"
-         Right () <- coreLift $ writeFile cmdFile (startChezCmd chez appdir outAbs progType)
-            | Left err => throw (FileErr cmdFile err)
-         Right () <- coreLift $ writeFile outShRel (startChezWinSh chez appdir outAbs progType)
-            | Left err => throw (FileErr outShRel err)
-         pure ()
+         writeFile cmdFile (startChezCmd chez appdir outAbs progType)
+         writeFile outShRel (startChezWinSh chez appdir outAbs progType)
 
 compileExprWhole :
   Bool ->
   Ref Ctxt Defs ->
   Ref Syn SyntaxInfo ->
   (tmpDir : String) -> (outputDir : String) ->
-  ClosedTerm -> (outfile : String) -> Core (Maybe String)
+  ClosedTerm -> (outfile : String) -> Core String
 compileExprWhole makeitso c s tmpDir outputDir tm outfile
     = do let appDirRel = outfile ++ "_app" -- relative to build dir
          let appDirGen = outputDir </> appDirRel -- relative to here
-         coreLift_ $ mkdirAll appDirGen
-         Just cwd <- coreLift currentDir
-              | Nothing => throw (InternalError "Can't get current directory")
+         handleFileError appDirGen $ mkdirAll appDirGen
+         cwd <- currentDir
          let outSsFile = appDirRel </> outfile <.> "ss"
          let outSoFile = appDirRel </> outfile <.> "so"
          let outSsAbs = cwd </> outputDir </> outSsFile
@@ -604,21 +591,21 @@ compileExprWhole makeitso c s tmpDir outputDir tm outfile
          chez <- coreLift $ findChez
          let prof = profile !getSession
          logTime 2 "Compile to scheme" $ compileToSS c (makeitso && prof) appDirGen tm outSsAbs
-         logTime 2 "Make SO" $ when makeitso $
+         when makeitso $ logTime 2 "Make SO" $
            compileToSO prof chez appDirGen outSsAbs
          let outShRel = outputDir </> outfile
          if isWindows
             then makeShWindows chez outShRel appDirRel (if makeitso then outSoFile else outSsFile) "--program"
             else makeSh outShRel appDirRel (if makeitso then outSoFile else outSsFile)
-         coreLift_ $ chmodRaw outShRel 0o755
-         pure (Just outShRel)
+         handleFileError outShRel $ chmodRaw outShRel 0o755
+         pure outShRel
 
 compileExprInc :
   Bool ->
   Ref Ctxt Defs ->
   Ref Syn SyntaxInfo ->
   (tmpDir : String) -> (outputDir : String) ->
-  ClosedTerm -> (outfile : String) -> Core (Maybe String)
+  ClosedTerm -> (outfile : String) -> Core String
 compileExprInc makeitso c s tmpDir outputDir tm outfile
     = do defs <- get Ctxt
          let Just (mods, libs) = lookup Chez (allIncData defs)
@@ -627,21 +614,20 @@ compileExprInc makeitso c s tmpDir outputDir tm outfile
                     compileExprWhole makeitso c s tmpDir outputDir tm outfile
          let appDirRel = outfile ++ "_app" -- relative to build dir
          let appDirGen = outputDir </> appDirRel -- relative to here
-         coreLift_ $ mkdirAll appDirGen
-         Just cwd <- coreLift currentDir
-              | Nothing => throw (InternalError "Can't get current directory")
+         handleFileError appDirGen $ mkdirAll appDirGen
+         cwd <- currentDir
          let outSsFile = appDirRel </> outfile <.> "ss"
          let outSoFile = appDirRel </> outfile <.> "so"
          let outSsAbs = cwd </> outputDir </> outSsFile
          let outSoAbs = cwd </> outputDir </> outSoFile
-         chez <- coreLift $ findChez
+         chez <- coreLift findChez
          compileToSSInc c mods libs appDirGen tm outSsAbs
          let outShRel = outputDir </> outfile
          if isWindows
             then makeShWindows chez outShRel appDirRel outSsFile "--script"
             else makeSh outShRel appDirRel outSsFile
-         coreLift_ $ chmodRaw outShRel 0o755
-         pure (Just outShRel)
+         handleFileError outShRel $ chmodRaw outShRel 0o755
+         pure outShRel
 
 ||| Chez Scheme implementation of the `compileExpr` interface.
 compileExpr :
@@ -649,7 +635,7 @@ compileExpr :
   Ref Ctxt Defs ->
   Ref Syn SyntaxInfo ->
   (tmpDir : String) -> (outputDir : String) ->
-  ClosedTerm -> (outfile : String) -> Core (Maybe String)
+  ClosedTerm -> (outfile : String) -> Core String
 compileExpr makeitso c s tmpDir outputDir tm outfile
     = do sesh <- getSession
          if not (wholeProgram sesh) && (Chez `elem` incrementalCGs sesh)
@@ -661,16 +647,13 @@ compileExpr makeitso c s tmpDir outputDir tm outfile
 executeExpr :
   Ref Ctxt Defs ->
   Ref Syn SyntaxInfo ->
-  (tmpDir : String) -> ClosedTerm -> Core ()
-executeExpr c s tmpDir tm
-    = do Just sh <- compileExpr False c s tmpDir tmpDir tm "_tmpchez"
-            | Nothing => throw (InternalError "compileExpr returned Nothing")
-         coreLift_ $ system [sh]
+  (tmpDir : String) -> ClosedTerm -> Core ExitCode
+executeExpr c s tmpDir tm = system !(compileExpr False c s tmpDir tmpDir tm "_tmpchez")
 
 incCompile :
   Ref Ctxt Defs ->
   Ref Syn SyntaxInfo ->
-  (sourceFile : String) -> Core (Maybe (String, List String))
+  (sourceFile : String) -> Core (String, List String)
 incCompile c s sourceFile
     = do
          ssFile <- getTTCFileName sourceFile "ss"
@@ -683,7 +666,7 @@ incCompile c s sourceFile
 
          let ndefs = namedDefs cdata
          if isNil ndefs
-            then pure (Just ("", []))
+            then pure ("", [])
                       -- ^ no code to generate, but still recored that the
                       -- module has been compiled, with no output needed.
             else do
@@ -695,19 +678,16 @@ incCompile c s sourceFile
                (sortedDefs, constants) <- sortDefs ndefs
                compdefs <- traverse (getScheme empty (chezExtPrim empty defaultLaziness) chezString defaultLaziness) sortedDefs
                let code = concat $ map snd fgndefs ++ compdefs
-               Right () <- coreLift $ writeFile ssFile $ build code
-                  | Left err => throw (FileErr ssFile err)
+               writeFile ssFile $ build code
 
                -- Compile to .so
                let tmpFileAbs = outputDir </> "compileChez"
                let build = "(parameterize ([optimize-level 3] " ++
                            "[compile-file-message #f]) (compile-file " ++
                           show ssFile ++ "))"
-               Right () <- coreLift $ writeFile tmpFileAbs build
-                  | Left err => throw (FileErr tmpFileAbs err)
-               0 <- coreLift $ system [chez, "--script", tmpFileAbs]
-                  | status => throw (InternalError "Chez exited with return code \{show status}")
-               pure (Just (soFilename, mapMaybe fst fgndefs))
+               writeFile tmpFileAbs build
+               safeSystem [chez, "--script", tmpFileAbs]
+               pure (soFilename, mapMaybe fst fgndefs)
 
 ||| Codegen wrapper for Chez scheme implementation.
 export

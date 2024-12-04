@@ -979,45 +979,35 @@ generateCSourceFile defs outn =
      fileContent <- get OutfileText
      let code = fastConcat (map (++ "\n") (reify fileContent))
 
-     coreLift_ $ writeFile outn code
+     writeFile outn code
      log "compiler.refc" 10 $ "Generated C file " ++ outn
 
 export
-compileExpr : UsePhase
-           -> Ref Ctxt Defs
+compileExpr : Ref Ctxt Defs
            -> Ref Syn SyntaxInfo
            -> (tmpDir : String)
            -> (outputDir : String)
            -> ClosedTerm
            -> (outfile : String)
-           -> Core (Maybe String)
-compileExpr ANF c s _ outputDir tm outfile =
-  do let outn = outputDir </> outfile ++ ".c"
-     let outobj = outputDir </> outfile ++ ".o"
+           -> Core String
+compileExpr c s _ outputDir tm outfile =
+  do let outn = outputDir </> outfile <.> "c"
+     let outobj = outputDir </> outfile <.> "o"
      let outexec = outputDir </> outfile
 
-     coreLift_ $ mkdirAll outputDir
+     handleFileError outputDir $ mkdirAll outputDir
      cdata <- getCompileData False ANF tm
      let defs = anf cdata
 
      generateCSourceFile defs outn
-     Just _ <- compileCObjectFile outn outobj
-       | Nothing => pure Nothing
-     compileCFile outobj outexec
-
-compileExpr _ _ _ _ _ _ _ = pure Nothing
-
-
+     obj <- compileCObjectFile outn outobj
+     compileCFile obj outexec
 
 export
 executeExpr : Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
-              (execDir : String) -> ClosedTerm -> Core ()
-executeExpr c s tmpDir tm = do
-  do let outfile = "_tmp_refc"
-     Just _ <- compileExpr ANF c s tmpDir tmpDir tm outfile
-       | Nothing => do coreLift_ $ putStrLn "Error: failed to compile"
-     coreLift_ $ system (tmpDir </> outfile)
+              (execDir : String) -> ClosedTerm -> Core ExitCode
+executeExpr c s tmpDir tm = system !(compileExpr c s tmpDir tmpDir tm "_tmp_refc")
 
 export
 codegenRefC : Codegen
-codegenRefC = MkCG (compileExpr ANF) executeExpr Nothing Nothing
+codegenRefC = MkCG compileExpr executeExpr Nothing Nothing

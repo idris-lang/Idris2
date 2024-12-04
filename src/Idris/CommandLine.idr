@@ -3,6 +3,7 @@ module Idris.CommandLine
 import Idris.Env
 import Idris.Version
 
+import Core.Core
 import Core.Options
 
 import Data.List

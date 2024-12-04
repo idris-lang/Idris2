@@ -50,26 +50,23 @@ compileExpr :
   (outputDir : String) ->
   ClosedTerm ->
   (outfile : String) ->
-  Core (Maybe String)
+  Core String
 compileExpr c s tmpDir outputDir tm outfile =
   do es <- compileToNode c s tm
      let out = outputDir </> outfile
-     Core.writeFile out es
-     coreLift_ $ chmodRaw out 0o755
-     pure (Just out)
+     writeFile out es
+     handleFileError out $ chmodRaw out 0o755
+     pure out
 
 ||| Node implementation of the `executeExpr` interface.
 executeExpr :
   Ref Ctxt Defs ->
   Ref Syn SyntaxInfo ->
-  (tmpDir : String) -> ClosedTerm -> Core ()
+  (tmpDir : String) -> ClosedTerm -> Core ExitCode
 executeExpr c s tmpDir tm =
-  do let outn = tmpDir </> "_tmp_node.js"
-     js <- compileToNode c s tm
-     Core.writeFile outn js
+  do out <- compileExpr c s tmpDir tmpDir tm "_tmp_node.js"
      node <- coreLift findNode
-     quoted_node <- pure $ "\"" ++ node ++ "\"" -- Windows often have a space in the path.
-     coreLift_ $ system (quoted_node ++ " " ++ outn)
+     system $ "\"" ++ node ++ "\" " ++ out -- Windows often have a space in the path.
 
 ||| Codegen wrapper for Node implementation.
 export

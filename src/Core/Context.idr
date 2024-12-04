@@ -799,6 +799,8 @@ HasNames Error where
   full gam (GenericMsgSol fc x y z) = pure (GenericMsgSol fc x y z)
   full gam (TTCError x) = pure (TTCError x)
   full gam (FileErr x y) = pure (FileErr x y)
+  full gam (NonZeroExitCode x y) = pure (NonZeroExitCode x y)
+  full gam (SystemError x) = pure (SystemError x)
   full gam (CantFindPackage x) = pure (CantFindPackage x)
   full gam (LazyImplicitFunction fc) = pure (LazyImplicitFunction fc)
   full gam (LazyPatternVar fc) = pure (LazyPatternVar fc)
@@ -808,6 +810,8 @@ HasNames Error where
   full gam (ModuleNotFound fc x) = pure (ModuleNotFound fc x)
   full gam (CyclicImports xs) = pure (CyclicImports xs)
   full gam ForceNeeded = pure ForceNeeded
+  full gam (CodegenNotFound x) = pure (CodegenNotFound x)
+  full gam (UnsupportedOpertaion x y z) = pure (UnsupportedOpertaion x y z)
   full gam (InternalError x) = pure (InternalError x)
   full gam (UserError x) = pure (UserError x)
   full gam (NoForeignCC fc xs) = pure (NoForeignCC fc xs)
@@ -897,6 +901,8 @@ HasNames Error where
   resolved gam (GenericMsgSol fc x y z) = pure (GenericMsgSol fc x y z)
   resolved gam (TTCError x) = pure (TTCError x)
   resolved gam (FileErr x y) = pure (FileErr x y)
+  resolved gam (NonZeroExitCode x y) = pure (NonZeroExitCode x y)
+  resolved gam (SystemError x) = pure (SystemError x)
   resolved gam (CantFindPackage x) = pure (CantFindPackage x)
   resolved gam (LazyImplicitFunction fc) = pure (LazyImplicitFunction fc)
   resolved gam (LazyPatternVar fc) = pure (LazyPatternVar fc)
@@ -906,6 +912,8 @@ HasNames Error where
   resolved gam (ModuleNotFound fc x) = pure (ModuleNotFound fc x)
   resolved gam (CyclicImports xs) = pure (CyclicImports xs)
   resolved gam ForceNeeded = pure ForceNeeded
+  resolved gam (CodegenNotFound x) = pure (CodegenNotFound x)
+  resolved gam (UnsupportedOpertaion x y z) = pure (UnsupportedOpertaion x y z)
   resolved gam (InternalError x) = pure (InternalError x)
   resolved gam (UserError x) = pure (UserError x)
   resolved gam (NoForeignCC fc xs) = pure (NoForeignCC fc xs)
@@ -2181,17 +2189,13 @@ setSourceDir mdir = update Ctxt { options->dirs->source_dir := mdir }
 export
 setWorkingDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
 setWorkingDir dir
-    = do coreLift_ $ changeDir dir
-         Just cdir <- coreLift $ currentDir
-              | Nothing => throw (InternalError "Can't get current directory")
+    = do ignore $ changeDir dir
+         cdir <- currentDir
          update Ctxt { options->dirs->working_dir := cdir }
 
 export
 getWorkingDir : Core String
-getWorkingDir
-    = do Just d <- coreLift $ currentDir
-              | Nothing => throw (InternalError "Can't get current directory")
-         pure d
+getWorkingDir = currentDir
 
 export
 setExtraDirs : {auto c : Ref Ctxt Defs} -> List String -> Core ()
@@ -2207,7 +2211,7 @@ withCtxt = wrapRef Ctxt resetCtxt
   where
     resetCtxt : Defs -> Core ()
     resetCtxt defs = do let dir = defs.options.dirs.working_dir
-                        coreLift_ $ changeDir dir
+                        safeChangeDir dir
 
 export
 setPrefix : {auto c : Ref Ctxt Defs} -> String -> Core ()
