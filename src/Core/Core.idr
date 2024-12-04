@@ -720,6 +720,12 @@ export %inline
 ignore : Core a -> Core ()
 ignore = map (const ())
 
+-- This would be better if we restrict it to a limited set of IO operations
+export
+%inline
+coreLift_ : IO a -> Core ()
+coreLift_ op = ignore (coreLift op)
+
 -- Monad (specialised)
 export %inline
 (>>=) : Core a -> (a -> Core b) -> Core b
