@@ -42,14 +42,23 @@ numArgs defs (Ref _ _ n)
            _ => pure (Arity 0)
 numArgs _ tm = pure (Arity 0)
 
-mkSub : Nat -> (ns : SnocList Name) -> List Nat -> (ns' ** Thin ns' ns)
-mkSub i _ [] = (_ ** Refl)
-mkSub i [<] ns = (_ ** Refl)
-mkSub i (xs :< x) es
-    = let (ns' ** p) = mkSub (S i) xs es in
-          if i `elem` es
-             then (ns' ** Drop p)
-             else (ns' :< x ** Keep p)
+||| Compute the thinning getting rid of the listed de Bruijn indices.
+-- TODO: is the list of erased arguments guaranteed to be sorted?
+-- Should it?
+mkSub : (ns : SnocList Name) -> List Nat -> (ns' ** Thin ns' ns)
+mkSub ns = mkSub' (length ns) ns
+    where
+        mkSub' : Nat -> (ns : SnocList Name) -> List Nat -> (ns' ** Thin ns' ns)
+        mkSub' i _ [] = (_ ** Refl)
+        mkSub' i [<] ns = (_ ** Refl)
+        mkSub' (S i) (xs :< x) es
+            = let (ns' ** p) = mkSub' i xs es in
+                if i `elem` es
+                    then (ns' ** Drop p)
+                    else (ns' :< x ** Keep p)
+        -- Next case can't happen if called with the right Nat from mkDropSubst
+        -- FIXME: rule it out with a type!
+        mkSub' Z (xs :< x) es = let (vs ** th) = mkSub' Z xs es in (vs ** Drop th)
 
 weakenVar : Var ns -> Var (ns :< a)
 weakenVar (MkVar p) = (MkVar (Later p))
@@ -139,11 +148,16 @@ mkDropSubst : Nat -> List Nat ->
               (vars : SnocList Name) ->
               (vars' ** Thin (rest ++ vars') (rest ++ vars))
 mkDropSubst i es rest [<] = ([<] ** Refl)
-mkDropSubst i es rest (xs :< x)
-    = let (vs ** sub) = mkDropSubst (1 + i) es rest xs in
-          if i `elem` es
+mkDropSubst (S i) es rest (xs :< x)
+    = let (vs ** sub) = mkDropSubst i es rest xs in
+          if (S i) `elem` es
              then (vs ** Drop sub)
              else (vs :< x ** Keep sub)
+-- Next case can't happen if called with the right Nat from mkDropSubst
+-- FIXME: rule it out with a type!
+mkDropSubst Z es rest (xs :< x)
+    = let (vs ** sub) = mkDropSubst Z es rest xs in
+          (vs ** Drop sub)
 
 -- Rewrite applications of Nat-like constructors and functions to more optimal
 -- versions using Integer
@@ -399,7 +413,7 @@ mutual
                 DCon _ arity (Just pos) => conCases n ns -- skip it
                 _ => do xn <- getFullName x
                         let (args' ** sub)
-                            = mkDropSubst 0 (eraseArgs gdef) vars args
+                            = mkDropSubst (length args) (eraseArgs gdef) vars args
                         sc' <- toCExpTree n sc
                         ns' <- conCases n ns
                         log "compiler.newtype.world" 50 "conCases-2 on \{show n} sc': \{show sc'}, ns': \{show ns'}, args': \{show args'}, sub: \{show sub}"
@@ -737,7 +751,7 @@ toCDef n ty _ None
     = pure $ MkError $ CCrash emptyFC ("Encountered undefined name " ++ show !(getFullName n))
 toCDef n ty erased (PMDef pi args _ tree _)
     = do log "compiler.newtype.world" 25 "toCDef PMDef args \{show $ toList args}, ty: \{show ty}, n: \{show n}, erased: \{show erased}, tree: \{show tree}"
-         let (args' ** p) = mkSub 0 args erased
+         let (args' ** p) = mkSub args erased
          s <- newRef NextMN 0
          comptree <- toCExpTree n tree
          log "compiler.newtype.world" 25 "toCDef PMDef comptree \{show comptree}, p: \{show p}"
