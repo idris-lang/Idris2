@@ -181,114 +181,17 @@ data Channel : Type -> Type where [external]
 
 data ChannelObj : Type where [external]
 
-data ChannelSchemeObj : Type where
-  Null       : ChannelSchemeObj
-  Cons       : ChannelSchemeObj -> ChannelSchemeObj -> ChannelSchemeObj
-  IntegerVal : Integer -> ChannelSchemeObj
-  FloatVal   : Double -> ChannelSchemeObj
-  StringVal  : String -> ChannelSchemeObj
-  CharVal    : Char -> ChannelSchemeObj
-  Symbol     : String -> ChannelSchemeObj
-  Box        : ChannelSchemeObj -> ChannelSchemeObj
-  Vector     : Integer -> List ChannelSchemeObj -> ChannelSchemeObj
-  Procedure  : ChannelObj -> ChannelSchemeObj
-
-export
-interface Scheme a where
-  fromScheme : ChannelSchemeObj -> Maybe a
-
-export
-Scheme Integer where
-  fromScheme (IntegerVal x) = Just x
-  fromScheme _              = Nothing
-
-export
-Scheme Nat where
-  fromScheme (IntegerVal x) = Just $ integerToNat x
-  fromScheme _              = Nothing
-
-export
-Scheme Int where
-  fromScheme (IntegerVal x) = Just (cast x)
-  fromScheme _              = Nothing
-
-export
-Scheme Int8 where
-  fromScheme (IntegerVal x) = Just (cast x)
-  fromScheme _              = Nothing
-
-export
-Scheme Int16 where
-  fromScheme (IntegerVal x) = Just (cast x)
-  fromScheme _              = Nothing
-
-export
-Scheme Int32 where
-  fromScheme (IntegerVal x) = Just (cast x)
-  fromScheme _              = Nothing
-
-export
-Scheme Int64 where
-  fromScheme (IntegerVal x) = Just (cast x)
-  fromScheme _              = Nothing
-
-export
-Scheme Bits8 where
-  fromScheme (IntegerVal x) = Just (cast x)
-  fromScheme _              = Nothing
-
-export
-Scheme Bits16 where
-  fromScheme (IntegerVal x) = Just (cast x)
-  fromScheme _              = Nothing
-
-export
-Scheme Bits32 where
-  fromScheme (IntegerVal x) = Just (cast x)
-  fromScheme _              = Nothing
-
-export
-Scheme Bits64 where
-  fromScheme (IntegerVal x) = Just (cast x)
-  fromScheme _              = Nothing
-
-export
-Scheme String where
-  fromScheme (StringVal x) = Just x
-  fromScheme _             = Nothing
-
-export
-Scheme Double where
-  fromScheme (FloatVal x) = Just x
-  fromScheme _            = Nothing
-
-export
-Scheme Char where
-  fromScheme (CharVal x) = Just x
-  fromScheme _           = Nothing
-
-export
-Scheme Bool where
-  fromScheme (IntegerVal 0) = Just False
-  fromScheme (IntegerVal 1) = Just True
-  fromScheme _              = Nothing
-
-export
-Scheme a => Scheme (List a) where
-  fromScheme Null        = Just []
-  fromScheme (Cons x xs) = Just $ !(fromScheme x) :: !(fromScheme xs)
-  fromScheme _           = Nothing
-
-export
-(Scheme a, Scheme b) => Scheme (a, b) where
-  fromScheme (Cons x y) = Just (!(fromScheme x), !(fromScheme y))
-  fromScheme _          = Nothing
-
-export
-Scheme a => Scheme (Maybe a) where
-  fromScheme Null    = Just Nothing
-  fromScheme (Box x) = Just $ Just !(fromScheme x)
-  fromScheme _       = Nothing
+data ChannelSchemeObj
+  = Null
+  | Cons ChannelSchemeObj ChannelSchemeObj
+  | IntegerVal Integer
+  | FloatVal Double
+  | StringVal String
+  | CharVal Char
+  | Symbol String
+  | Box ChannelSchemeObj
+  | Vector Integer (List ChannelSchemeObj)
+  | Procedure ChannelObj
 
 %foreign "scheme:blodwen-is-number"
 prim_isNumber : ChannelObj -> Int
@@ -310,6 +213,8 @@ prim_isNil : ChannelObj -> Int
 prim_isPair : ChannelObj -> Int
 %foreign "scheme:blodwen-is-vector"
 prim_isVector : ChannelObj -> Int
+%foreign "scheme:blodwen-is-box"
+prim_isBox : ChannelObj -> Int
 %foreign "scheme:blodwen-id"
 unsafeGetInteger : ChannelObj -> Integer
 %foreign "scheme:blodwen-id"
@@ -332,8 +237,6 @@ unsafeVectorLength : ChannelObj -> Integer
 unsafeVectorToList : ChannelObj -> List ChannelObj
 %foreign "scheme:blodwen-read-symbol"
 unsafeReadSymbol : ChannelObj -> String
-%foreign "scheme:blodwen-is-box"
-prim_isBox : ChannelObj -> Int
 %foreign "scheme:blodwen-make-channel"
 prim__makeChannel : PrimIO (Channel a)
 %foreign "scheme:blodwen-channel-get"
@@ -344,6 +247,154 @@ prim__channelGetNonBlocking : Channel a -> PrimIO ChannelObj
 prim__channelGetWithTimeout : Channel a -> Nat -> PrimIO ChannelObj
 %foreign "scheme:blodwen-channel-put"
 prim__channelPut : Channel a -> a -> PrimIO ()
+
+export
+interface FromScheme a where
+  fromScheme : ChannelSchemeObj -> Maybe a
+
+{-
+partial
+private
+decodeObj : ChannelObj -> ChannelSchemeObj
+decodeObj obj =
+  if prim_isInteger obj == 1 then IntegerVal (unsafeGetInteger obj)
+  else if prim_isVector obj == 1 then Vector (unsafeGetInteger (unsafeVectorRef obj 0))
+                                             (readVector (unsafeVectorLength obj) 1 obj)
+  else if prim_isPair obj == 1 then Cons (decodeObj (unsafeFst obj))
+                                         (decodeObj (unsafeSnd obj))
+  else if prim_isFloat obj == 1 then FloatVal (unsafeGetFloat obj)
+  else if prim_isString obj == 1 then StringVal (unsafeGetString obj)
+  else if prim_isChar obj == 1 then CharVal (unsafeGetChar obj)
+  else if prim_isSymbol obj == 1 then Symbol (unsafeReadSymbol obj)
+  else if prim_isProcedure obj == 1 then Procedure obj
+  else if prim_isBox obj == 1 then Box (decodeObj (unsafeUnbox obj))
+  else Null
+  where
+    readVector : Integer -> Integer -> ChannelObj -> List ChannelSchemeObj
+    readVector len i obj
+      = if len == i
+          then []
+          else decodeObj (unsafeVectorRef obj i) :: readVector len (i + 1) obj
+-}
+
+partial
+private
+decodeObj : ChannelObj -> (ChannelObj -> Int) -> ChannelSchemeObj
+decodeObj obj f =
+  case f obj == 1 of
+    
+
+  if prim_isInteger obj == 1 then IntegerVal (unsafeGetInteger obj)
+  else if prim_isVector obj == 1 then Vector (unsafeGetInteger (unsafeVectorRef obj 0))
+                                             (readVector (unsafeVectorLength obj) 1 obj)
+  else if prim_isPair obj == 1 then Cons (decodeObj (unsafeFst obj))
+                                         (decodeObj (unsafeSnd obj))
+  else if prim_isFloat obj == 1 then FloatVal (unsafeGetFloat obj)
+  else if prim_isString obj == 1 then StringVal (unsafeGetString obj)
+  else if prim_isChar obj == 1 then CharVal (unsafeGetChar obj)
+  else if prim_isSymbol obj == 1 then Symbol (unsafeReadSymbol obj)
+  else if prim_isProcedure obj == 1 then Procedure obj
+  else if prim_isBox obj == 1 then Box (decodeObj (unsafeUnbox obj))
+  else Null
+  where
+    readVector : Integer -> Integer -> ChannelObj -> List ChannelSchemeObj
+    readVector len i obj
+      = if len == i
+          then []
+          else decodeObj (unsafeVectorRef obj i) :: readVector len (i + 1) obj
+
+export
+FromScheme Integer where
+  fromScheme (IntegerVal x) = Just x
+  fromScheme _              = Nothing
+
+export
+FromScheme Nat where
+  fromScheme (IntegerVal x) = Just $ integerToNat x
+  fromScheme _              = Nothing
+
+export
+FromScheme Int where
+  fromScheme (IntegerVal x) = Just $ cast x
+  fromScheme _              = Nothing
+
+export
+FromScheme Int8 where
+  fromScheme (IntegerVal x) = Just $ cast x
+  fromScheme _              = Nothing
+
+export
+FromScheme Int16 where
+  fromScheme (IntegerVal x) = Just $ cast x
+  fromScheme _              = Nothing
+
+export
+FromScheme Int32 where
+  fromScheme (IntegerVal x) = Just $ cast x
+  fromScheme _              = Nothing
+
+export
+FromScheme Int64 where
+  fromScheme (IntegerVal x) = Just $ cast x
+  fromScheme _              = Nothing
+
+export
+FromScheme Bits8 where
+  fromScheme (IntegerVal x) = Just $ cast x
+  fromScheme _              = Nothing
+
+export
+FromScheme Bits16 where
+  fromScheme (IntegerVal x) = Just $ cast x
+  fromScheme _              = Nothing
+
+export
+FromScheme Bits32 where
+  fromScheme (IntegerVal x) = Just $ cast x
+  fromScheme _              = Nothing
+
+export
+FromScheme Bits64 where
+  fromScheme (IntegerVal x) = Just $ cast x
+  fromScheme _              = Nothing
+
+export
+FromScheme String where
+  fromScheme (StringVal x) = Just x
+  fromScheme _             = Nothing
+
+export
+FromScheme Double where
+  fromScheme (FloatVal x) = Just x
+  fromScheme _            = Nothing
+
+export
+FromScheme Char where
+  fromScheme (CharVal x) = Just x
+  fromScheme _           = Nothing
+
+export
+FromScheme Bool where
+  fromScheme (IntegerVal 0) = Just False
+  fromScheme (IntegerVal 1) = Just True
+  fromScheme _              = Nothing
+
+export
+FromScheme a => FromScheme (List a) where
+  fromScheme Null        = Just []
+  fromScheme (Cons x xs) = Just $ !(fromScheme x) :: !(fromScheme xs)
+  fromScheme _           = Nothing
+
+export
+(FromScheme a, FromScheme b) => FromScheme (a, b) where
+  fromScheme (Cons x y) = Just (!(fromScheme x), !(fromScheme y))
+  fromScheme _          = Nothing
+
+export
+FromScheme a => FromScheme (Maybe a) where
+  fromScheme Null    = Just Nothing
+  fromScheme (Box x) = Just $ Just !(fromScheme x)
+  fromScheme _       = Nothing
 
 ||| Creates and returns a new `Channel`.
 |||
@@ -368,30 +419,9 @@ channelGet chan = primIO (prim__channelGet chan)
 ||| @ chan the channel to receive on
 partial
 export
-channelGetNonBlocking : HasIO io => Scheme a => (chan : Channel a) -> io (Maybe a)
+channelGetNonBlocking : HasIO io => FromScheme a => (chan : Channel a) -> io (Maybe a)
 channelGetNonBlocking chan =
   pure $ (fromScheme . decodeObj) !(primIO (prim__channelGetNonBlocking chan))
-  where
-    decodeObj : ChannelObj -> ChannelSchemeObj
-    decodeObj obj =
-      if prim_isInteger obj == 1 then IntegerVal (unsafeGetInteger obj)
-      else if prim_isVector obj == 1 then Vector (unsafeGetInteger (unsafeVectorRef obj 0))
-                                                 (readVector (unsafeVectorLength obj) 1 obj)
-      else if prim_isPair obj == 1 then Cons (decodeObj (unsafeFst obj))
-                                             (decodeObj (unsafeSnd obj))
-      else if prim_isFloat obj == 1 then FloatVal (unsafeGetFloat obj)
-      else if prim_isString obj == 1 then StringVal (unsafeGetString obj)
-      else if prim_isChar obj == 1 then CharVal (unsafeGetChar obj)
-      else if prim_isSymbol obj == 1 then Symbol (unsafeReadSymbol obj)
-      else if prim_isProcedure obj == 1 then Procedure obj
-      else if prim_isBox obj == 1 then Box (decodeObj (unsafeUnbox obj))
-      else Null
-      where
-        readVector : Integer -> Integer -> ChannelObj -> List ChannelSchemeObj
-        readVector len i obj
-          = if len == i
-              then []
-              else decodeObj (unsafeVectorRef obj i) :: readVector len (i + 1) obj
 
 ||| Timeout version of channelGet.
 ||| Continously loops with 1ms delays until `seconds` has elapsed, or a value is provided through `chan`.
@@ -400,30 +430,9 @@ channelGetNonBlocking chan =
 ||| @ seconds how many seconds to wait until timeout
 partial
 export
-channelGetWithTimeout : HasIO io => Scheme a => (chan : Channel a) -> (seconds : Nat) -> io (Maybe a)
+channelGetWithTimeout : HasIO io => FromScheme a => (chan : Channel a) -> (seconds : Nat) -> io (Maybe a)
 channelGetWithTimeout chan seconds =
   pure $ (fromScheme . decodeObj) !(primIO (prim__channelGetWithTimeout chan seconds))
-  where
-    decodeObj : ChannelObj -> ChannelSchemeObj
-    decodeObj obj =
-      if prim_isInteger obj == 1 then IntegerVal (unsafeGetInteger obj)
-      else if prim_isVector obj == 1 then Vector (unsafeGetInteger (unsafeVectorRef obj 0))
-                                                 (readVector (unsafeVectorLength obj) 1 obj)
-      else if prim_isPair obj == 1 then Cons (decodeObj (unsafeFst obj))
-                                             (decodeObj (unsafeSnd obj))
-      else if prim_isFloat obj == 1 then FloatVal (unsafeGetFloat obj)
-      else if prim_isString obj == 1 then StringVal (unsafeGetString obj)
-      else if prim_isChar obj == 1 then CharVal (unsafeGetChar obj)
-      else if prim_isSymbol obj == 1 then Symbol (unsafeReadSymbol obj)
-      else if prim_isProcedure obj == 1 then Procedure obj
-      else if prim_isBox obj == 1 then Box (decodeObj (unsafeUnbox obj))
-      else Null
-      where
-        readVector : Integer -> Integer -> ChannelObj -> List ChannelSchemeObj
-        readVector len i obj
-          = if len == i
-              then []
-              else decodeObj (unsafeVectorRef obj i) :: readVector len (i + 1) obj
 
 ||| Puts a value on the given channel.
 |||
