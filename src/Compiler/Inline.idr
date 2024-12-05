@@ -174,7 +174,7 @@ mutual
            log "compiler.inline.io_bind" 50 $ "tryApply stk': \{show stk'}, env': \{show env'}"
            res <- logDepth $ eval rec env' stk'
                      (rewrite appendAssociative free vars args in
-                              -- Yaffle: embed {vars = free ++ vars} exp
+                              -- Old: (embed $ embed exp)
                               embed {outer = free ++ vars} exp)
            pure (Just res)
   tryApply rec stk env _ = pure Nothing

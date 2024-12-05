@@ -101,9 +101,15 @@ NamedPats always have the same 'Elem' proof, though this isn't expressed in
 a type anywhere.
 -}
 
+-- Comment from Yaffle:
+-- This is using cons syntax, rather than snoc, because we want to process
+-- arguments left to right, although the natural order based on when the
+-- arguments were lambda bound would be right to left.
+-- That's why we use SnocList in the type - the names refer to the lambda
+-- bound arguments. I realise this is a bit confusing. Sorry!
 data NamedPats : SnocList Name -> -- pattern variables still to process
                  SnocList Name -> -- the pattern variables still to process,
-                              -- in order
+                                  -- in reverse order
                  Type where
      Nil : NamedPats vars [<]
      (::) : PatInfo pvar vars ->
