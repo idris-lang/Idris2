@@ -1,3 +1,4 @@
+import Data.Maybe
 import System
 import System.Concurrency
 
@@ -17,15 +18,6 @@ main =
   do c    <- makeChannel
      tids <- for [0..11] $ \n => fork $ producer c n
      vals <- for [0..11] $ \_ => channelGetWithTimeout c 5
-     ignore $ traverse (\t => threadWait t) tids
-     let vals' = map (\val => case val of
-                        Nothing   =>
-                          0
-                        Just val' =>
-                          val'
-                     ) vals
-         s     = sum vals'
-     if s == 55
-        then putStrLn "Success!"
-        else putStrLn "How did we get here?"
+     ignore $ traverse (\t => threadWait t) tids 
+     putStrLn $ show $ sum $ fromMaybe 0 <$> vals
 

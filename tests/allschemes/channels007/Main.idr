@@ -10,15 +10,11 @@ main = do
     channelPut chan "Goodbye"
   sleep 1
   case !(channelGetNonBlocking chan) of
-    Nothing   =>
-      putStrLn "Nothing"
-    Just val' =>
-      putStrLn val'
+    Nothing   => putStrLn "Nothing"
+    Just val' => putStrLn val'
   sleep 1
   case !(channelGetNonBlocking chan) of
-    Nothing   =>
-      putStrLn "Nothing"
-    Just val' =>
-      putStrLn val'
+    Nothing   => putStrLn "Nothing"
+    Just val' => putStrLn val'
   sleep 1
 
