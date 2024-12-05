@@ -299,6 +299,18 @@ It's no longer necessary to give ``{input}`` explicitly in the patterns for
       isSuffix (xs ++ [x]) (ys ++ [y]) | (Snoc x xs xsrec) | (Snoc y ys ysrec)
         = if x == y then isSuffix xs ys | xsrec else False
 
+For the ``SplitRec`` view in the exercise 2 after Chapter 10-2 ``import Data.Vect.Views.Extra``
+from ``contrib`` library. The ``n`` argument needs to be made explicit, and so
+does the ``xs`` and ``ys`` for the ``SplitRecPair`` constructor.
+
+.. code-block:: idris
+
+   mergeSort : {n : _} -> Ord a => Vect n a -> Vect n a
+   mergeSort xs with (splitRec xs)
+     mergeSort [] | SplitRecNil = ?mergeSort_rhs_rhss_0
+     mergeSort [x] | SplitRecOne = ?mergeSort_rhs_rhss_1
+     mergeSort (xs ++ ys) | (SplitRecPair {xs} {ys} lrec rrec) = ?mergeSort_rhs_rhss_2
+
 For the ``VList`` view in the exercise 4 after Chapter 10-2 ``import Data.List.Views.Extra`` from ``contrib`` library.
 
 In ``DataStore.idr``: Well this is embarrassing - I've no idea how Idris 1 lets
