@@ -155,11 +155,16 @@ mkDropSubst : Nat -> List Nat ->
               (vars : SnocList Name) ->
               (vars' ** Thin (rest ++ vars') (rest ++ vars))
 mkDropSubst i es rest [<] = ([<] ** Refl)
-mkDropSubst i es rest (xs :< x)
-    = let (vs ** sub) = mkDropSubst (1 + i) es rest xs in
-          if i `elem` es
+mkDropSubst (S i) es rest (xs :< x)
+    = let (vs ** sub) = mkDropSubst i es rest xs in
+          if (S i) `elem` es
              then (vs ** Drop sub)
              else (vs :< x ** Keep sub)
+-- Next case can't happen if called with the right Nat from mkDropSubst
+-- FIXME: rule it out with a type!
+mkDropSubst Z es rest (xs :< x)
+    = let (vs ** sub) = mkDropSubst Z es rest xs in
+          (vs ** Drop sub)
 
 -- See if the constructor is a special constructor type, e.g a nil or cons
 -- shaped thing.
@@ -263,7 +268,7 @@ mutual
                         let erased = eraseArgs gdef
                         log "compiler.newtype.world" 50 "conCases-2 on \{show n} args: \{show args}, erased: \{show erased}"
                         let (args' ** sub)
-                            = mkDropSubst 0 erased vars args
+                            = mkDropSubst (length args) erased vars args
                         sc' <- toCExpTree n sc
                         ns' <- conCases n ns
                         log "compiler.newtype.world" 50 "conCases-2 on \{show n} sc': \{show sc'}, ns': \{show ns'}, args': \{show args'}, sub: \{show sub}"
@@ -595,7 +600,7 @@ toCDef n ty _ None
     = pure $ MkError $ CCrash emptyFC ("Encountered undefined name " ++ show !(getFullName n))
 toCDef n ty erased (PMDef pi args _ tree _)
     = do log "compiler.newtype.world" 25 "toCDef PMDef args \{show $ toList args}, ty: \{show ty}, n: \{show n}, erased: \{show erased}, tree: \{show tree}"
-         let (args' ** p) = mkSub 0 args erased
+         let (args' ** p) = mkSub args erased
          comptree <- toCExpTree n tree
          log "compiler.newtype.world" 25 "toCDef PMDef comptree \{show comptree}, p: \{show p}, is_ext: \{show $ (externalDecl pi)}"
          let lam = toLam (externalDecl pi) $

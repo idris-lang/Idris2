@@ -63,25 +63,6 @@ keeps : (args : SnocList a) -> Thin xs ys -> Thin (xs ++ args) (ys ++ args)
 keeps [<] th = th
 keeps (sx :< x) th = Keep (keeps sx th)
 
-||| Compute the thinning getting rid of the listed de Bruijn indices.
--- TODO: is the list of erased arguments guaranteed to be sorted?
--- Should it?
-export
-removeByIndices :
-  (erasedArgs : List Nat) ->
-  (args : Scope) ->
-  (args' ** Thin args' args)
-removeByIndices es = go 0 where
-
-  go : (currentIdx : Nat) -> (args : Scope) ->
-    (args' ** Thin args' args)
-  go idx [<] = ([<] ** Refl)
-  go idx (xs :< x) =
-    let (vs ** th) = go (S idx) xs in
-    if idx `elem` es
-      then (vs ** Drop th)
-      else (vs :< x ** Keep th)
-
 ------------------------------------------------------------------------
 -- Semi-decidable equality
 
