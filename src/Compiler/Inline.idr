@@ -259,11 +259,11 @@ mutual
            -- a name from another module where the job is already done
            defs <- get Ctxt
            Just gdef <- lookupCtxtExact n (gamma defs)
-                | Nothing => do args' <- traverse (eval rec env []) args
+                | Nothing => do args' <- traverse (eval (n :: rec) env []) args
                                 log "compiler.inline.io_bind" 50 $ "Attempting to CApp CRef Nothing, f: \{show f}, args': \{show args'}"
                                 pure (unload stk
                                           (CApp fc (CRef nfc n) args'))
-           args' <- traverse (eval rec env []) args
+           args' <- traverse (eval (n :: rec) env []) args
            log "compiler.inline.io_bind" 50 $ "Attempting to CApp CRef, f: \{show f}, args': \{show args'}"
            eval rec env (args' ++ stk) f
   eval rec env stk (CApp fc f args)
