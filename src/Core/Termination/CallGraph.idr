@@ -390,6 +390,7 @@ findCalls : {auto c : Ref Ctxt Defs} ->
 findCalls defs (_ ** (env, lhs, rhs_in))
    = do let pargs = getArgs (delazy defs lhs)
         rhs <- normaliseOpts tcOnly defs env rhs_in
+        -- Yaffle: (reverse pargs)
         findSC defs env Toplevel pargs (delazy defs rhs)
 
 getSC : {auto c : Ref Ctxt Defs} ->
