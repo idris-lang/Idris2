@@ -181,18 +181,6 @@ data Channel : Type -> Type where [external]
 
 data ChannelObj : Type where [external]
 
-data ChannelSchemeObj
-  = Null
-  | Cons ChannelSchemeObj ChannelSchemeObj
-  | IntegerVal Integer
-  | FloatVal Double
-  | StringVal String
-  | CharVal Char
-  | Symbol String
-  | Box ChannelSchemeObj
-  | Vector Integer (List ChannelSchemeObj)
-  | Procedure ChannelObj
-
 %foreign "scheme:blodwen-is-number"
 prim_isNumber : ChannelObj -> Int
 %foreign "scheme:blodwen-is-integer"
@@ -250,123 +238,110 @@ prim__channelPut : Channel a -> a -> PrimIO ()
 
 export
 interface FromScheme a where
-  fromScheme : ChannelSchemeObj -> Maybe a
+  fromScheme : ChannelObj -> Maybe a
 
 partial
 private
-decodeObj : ChannelObj -> ChannelSchemeObj
-decodeObj obj =
-  if prim_isInteger obj == 1 then IntegerVal (unsafeGetInteger obj)
-  else if prim_isVector obj == 1 then Vector (unsafeGetInteger (unsafeVectorRef obj 0))
-                                             (readVector (unsafeVectorLength obj) 1 obj)
-  else if prim_isPair obj == 1 then Cons (decodeObj (unsafeFst obj))
-                                         (decodeObj (unsafeSnd obj))
-  else if prim_isFloat obj == 1 then FloatVal (unsafeGetFloat obj)
-  else if prim_isString obj == 1 then StringVal (unsafeGetString obj)
-  else if prim_isChar obj == 1 then CharVal (unsafeGetChar obj)
-  else if prim_isSymbol obj == 1 then Symbol (unsafeReadSymbol obj)
-  else if prim_isProcedure obj == 1 then Procedure obj
-  else if prim_isBox obj == 1 then Box (decodeObj (unsafeUnbox obj))
-  else Null
-  where
-    readVector : Integer -> Integer -> ChannelObj -> List ChannelSchemeObj
-    readVector len i obj
-      = if len == i
-          then []
-          else decodeObj (unsafeVectorRef obj i) :: readVector len (i + 1) obj
+marshalChannelObj :  (pred : ChannelObj -> Int)
+                  -> (unsafeGet : ChannelObj -> a)
+                  -> ChannelObj
+                  -> Maybe a
+marshalChannelObj pred unsafeGet obj =
+  case pred obj of
+    1 => Just $ unsafeGet obj
+    _ => Nothing
 
 export
 FromScheme Integer where
-  fromScheme (IntegerVal x) = Just x
-  fromScheme _              = Nothing
+  fromScheme = marshalChannelObj prim_isInteger unsafeGetInteger
 
 export
 FromScheme Nat where
-  fromScheme (IntegerVal x) = Just $ integerToNat x
-  fromScheme _              = Nothing
+  fromScheme = marshalChannelObj prim_isInteger (integerToNat . unsafeGetInteger)
 
 export
 FromScheme Int where
-  fromScheme (IntegerVal x) = Just $ cast x
-  fromScheme _              = Nothing
+  fromScheme = marshalChannelObj prim_isInteger (cast . unsafeGetInteger)
 
 export
 FromScheme Int8 where
-  fromScheme (IntegerVal x) = Just $ cast x
-  fromScheme _              = Nothing
+  fromScheme = marshalChannelObj prim_isInteger (cast . unsafeGetInteger)
 
 export
 FromScheme Int16 where
-  fromScheme (IntegerVal x) = Just $ cast x
-  fromScheme _              = Nothing
+  fromScheme = marshalChannelObj prim_isInteger (cast . unsafeGetInteger)
 
 export
 FromScheme Int32 where
-  fromScheme (IntegerVal x) = Just $ cast x
-  fromScheme _              = Nothing
+  fromScheme = marshalChannelObj prim_isInteger (cast . unsafeGetInteger)
 
 export
 FromScheme Int64 where
-  fromScheme (IntegerVal x) = Just $ cast x
-  fromScheme _              = Nothing
+  fromScheme = marshalChannelObj prim_isInteger (cast . unsafeGetInteger)
 
 export
 FromScheme Bits8 where
-  fromScheme (IntegerVal x) = Just $ cast x
-  fromScheme _              = Nothing
+  fromScheme = marshalChannelObj prim_isInteger (cast . unsafeGetInteger)
 
 export
 FromScheme Bits16 where
-  fromScheme (IntegerVal x) = Just $ cast x
-  fromScheme _              = Nothing
+  fromScheme = marshalChannelObj prim_isInteger (cast . unsafeGetInteger)
 
 export
 FromScheme Bits32 where
-  fromScheme (IntegerVal x) = Just $ cast x
-  fromScheme _              = Nothing
+  fromScheme = marshalChannelObj prim_isInteger (cast . unsafeGetInteger)
 
 export
 FromScheme Bits64 where
-  fromScheme (IntegerVal x) = Just $ cast x
-  fromScheme _              = Nothing
+  fromScheme = marshalChannelObj prim_isInteger (cast . unsafeGetInteger)
 
 export
 FromScheme String where
-  fromScheme (StringVal x) = Just x
-  fromScheme _             = Nothing
+  fromScheme = marshalChannelObj prim_isString unsafeGetString
 
 export
 FromScheme Double where
-  fromScheme (FloatVal x) = Just x
-  fromScheme _            = Nothing
+  fromScheme = marshalChannelObj prim_isFloat unsafeGetFloat
 
 export
 FromScheme Char where
-  fromScheme (CharVal x) = Just x
-  fromScheme _           = Nothing
+  fromScheme = marshalChannelObj prim_isChar unsafeGetChar
 
 export
 FromScheme Bool where
-  fromScheme (IntegerVal 0) = Just False
-  fromScheme (IntegerVal 1) = Just True
-  fromScheme _              = Nothing
+  fromScheme obj =
+    case prim_isInteger obj == 1 of
+      False => Nothing
+      True  => case unsafeGetInteger obj of
+        0 => Just False
+        1 => Just True
+        _ => Nothing
 
+partial
 export
 FromScheme a => FromScheme (List a) where
-  fromScheme Null        = Just []
-  fromScheme (Cons x xs) = Just $ !(fromScheme x) :: !(fromScheme xs)
-  fromScheme _           = Nothing
+  fromScheme obj =
+    case prim_isNil obj == 1 of
+      True  => Just []
+      False => case prim_isPair obj == 1 of
+        False => Nothing
+        True  => Just $ !(fromScheme $ unsafeFst obj) :: !(fromScheme $ unsafeSnd obj)
 
 export
 (FromScheme a, FromScheme b) => FromScheme (a, b) where
-  fromScheme (Cons x y) = Just (!(fromScheme x), !(fromScheme y))
-  fromScheme _          = Nothing
+  fromScheme obj =
+    case prim_isPair obj == 1 of
+      False => Nothing
+      True  => Just (!(fromScheme $ unsafeFst obj), !(fromScheme $ unsafeSnd obj))
 
 export
 FromScheme a => FromScheme (Maybe a) where
-  fromScheme Null    = Just Nothing
-  fromScheme (Box x) = Just $ Just !(fromScheme x)
-  fromScheme _       = Nothing
+  fromScheme obj =
+    case prim_isNil obj == 1 of
+      True  => Just Nothing
+      False => case prim_isBox obj == 1 of
+        False => Nothing
+        True  => Just $ Just !(fromScheme $ unsafeUnbox obj)
 
 ||| Creates and returns a new `Channel`.
 |||
@@ -393,7 +368,7 @@ partial
 export
 channelGetNonBlocking : HasIO io => FromScheme a => (chan : Channel a) -> io (Maybe a)
 channelGetNonBlocking chan =
-  pure $ (fromScheme . decodeObj) !(primIO (prim__channelGetNonBlocking chan))
+  pure $ fromScheme !(primIO (prim__channelGetNonBlocking chan))
 
 ||| Timeout version of channelGet.
 ||| Continously loops with 1ms delays until `seconds` has elapsed, or a value is provided through `chan`.
@@ -404,7 +379,7 @@ partial
 export
 channelGetWithTimeout : HasIO io => FromScheme a => (chan : Channel a) -> (seconds : Nat) -> io (Maybe a)
 channelGetWithTimeout chan seconds =
-  pure $ (fromScheme . decodeObj) !(primIO (prim__channelGetWithTimeout chan seconds))
+  pure $ fromScheme !(primIO (prim__channelGetWithTimeout chan seconds))
 
 ||| Puts a value on the given channel.
 |||
