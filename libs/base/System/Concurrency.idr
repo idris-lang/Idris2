@@ -179,169 +179,16 @@ barrierWait barrier = primIO (prim__barrierWait barrier)
 export
 data Channel : Type -> Type where [external]
 
-data ChannelObj : Type where [external]
-
-%foreign "scheme:blodwen-is-number"
-prim_isNumber : ChannelObj -> Int
-%foreign "scheme:blodwen-is-integer"
-prim_isInteger : ChannelObj -> Int
-%foreign "scheme:blodwen-is-float"
-prim_isFloat : ChannelObj -> Int
-%foreign "scheme:blodwen-is-char"
-prim_isChar : ChannelObj -> Int
-%foreign "scheme:blodwen-is-string"
-prim_isString : ChannelObj -> Int
-%foreign "scheme:blodwen-is-procedure"
-prim_isProcedure : ChannelObj -> Int
-%foreign "scheme:blodwen-is-symbol"
-prim_isSymbol : ChannelObj -> Int
-%foreign "scheme:blodwen-is-nil"
-prim_isNil : ChannelObj -> Int
-%foreign "scheme:blodwen-is-pair"
-prim_isPair : ChannelObj -> Int
-%foreign "scheme:blodwen-is-vector"
-prim_isVector : ChannelObj -> Int
-%foreign "scheme:blodwen-is-box"
-prim_isBox : ChannelObj -> Int
-%foreign "scheme:blodwen-id"
-unsafeGetInteger : ChannelObj -> Integer
-%foreign "scheme:blodwen-id"
-unsafeGetString : ChannelObj -> String
-%foreign "scheme:blodwen-id"
-unsafeGetFloat : ChannelObj -> Double
-%foreign "scheme:blodwen-id"
-unsafeGetChar : ChannelObj -> Char
-%foreign "scheme:car"
-unsafeFst : ChannelObj -> ChannelObj
-%foreign "scheme:cdr"
-unsafeSnd : ChannelObj -> ChannelObj
-%foreign "scheme:blodwen-vector-ref"
-unsafeVectorRef : ChannelObj -> Integer -> ChannelObj
-%foreign "scheme:blodwen-unbox"
-unsafeUnbox : ChannelObj -> ChannelObj
-%foreign "scheme:blodwen-vector-length"
-unsafeVectorLength : ChannelObj -> Integer
-%foreign "scheme:blodwen-vector-list"
-unsafeVectorToList : ChannelObj -> List ChannelObj
-%foreign "scheme:blodwen-read-symbol"
-unsafeReadSymbol : ChannelObj -> String
 %foreign "scheme:blodwen-make-channel"
 prim__makeChannel : PrimIO (Channel a)
 %foreign "scheme:blodwen-channel-get"
 prim__channelGet : Channel a -> PrimIO a
-%foreign "scheme:blodwen-channel-get-non-blocking"
-prim__channelGetNonBlocking : Channel a -> PrimIO ChannelObj
-%foreign "scheme:blodwen-channel-get-with-timeout"
-prim__channelGetWithTimeout : Channel a -> Nat -> PrimIO ChannelObj
+%foreign "scheme,chez:blodwen-channel-get-non-blocking"
+prim__channelGetNonBlocking : Channel a -> PrimIO (Maybe a)
+%foreign "scheme,chez:blodwen-channel-get-with-timeout"
+prim__channelGetWithTimeout : Channel a -> Nat -> PrimIO (Maybe a)
 %foreign "scheme:blodwen-channel-put"
 prim__channelPut : Channel a -> a -> PrimIO ()
-
-export
-interface FromScheme a where
-  fromScheme : ChannelObj -> Maybe a
-
-partial
-private
-marshalChannelObj :  (pred : ChannelObj -> Int)
-                  -> (unsafeGet : ChannelObj -> a)
-                  -> ChannelObj
-                  -> Maybe a
-marshalChannelObj pred unsafeGet obj =
-  case pred obj of
-    1 => Just $ unsafeGet obj
-    _ => Nothing
-
-export
-FromScheme Integer where
-  fromScheme = marshalChannelObj prim_isInteger unsafeGetInteger
-
-export
-FromScheme Nat where
-  fromScheme = marshalChannelObj prim_isInteger (integerToNat . unsafeGetInteger)
-
-export
-FromScheme Int where
-  fromScheme = marshalChannelObj prim_isInteger (cast . unsafeGetInteger)
-
-export
-FromScheme Int8 where
-  fromScheme = marshalChannelObj prim_isInteger (cast . unsafeGetInteger)
-
-export
-FromScheme Int16 where
-  fromScheme = marshalChannelObj prim_isInteger (cast . unsafeGetInteger)
-
-export
-FromScheme Int32 where
-  fromScheme = marshalChannelObj prim_isInteger (cast . unsafeGetInteger)
-
-export
-FromScheme Int64 where
-  fromScheme = marshalChannelObj prim_isInteger (cast . unsafeGetInteger)
-
-export
-FromScheme Bits8 where
-  fromScheme = marshalChannelObj prim_isInteger (cast . unsafeGetInteger)
-
-export
-FromScheme Bits16 where
-  fromScheme = marshalChannelObj prim_isInteger (cast . unsafeGetInteger)
-
-export
-FromScheme Bits32 where
-  fromScheme = marshalChannelObj prim_isInteger (cast . unsafeGetInteger)
-
-export
-FromScheme Bits64 where
-  fromScheme = marshalChannelObj prim_isInteger (cast . unsafeGetInteger)
-
-export
-FromScheme String where
-  fromScheme = marshalChannelObj prim_isString unsafeGetString
-
-export
-FromScheme Double where
-  fromScheme = marshalChannelObj prim_isFloat unsafeGetFloat
-
-export
-FromScheme Char where
-  fromScheme = marshalChannelObj prim_isChar unsafeGetChar
-
-export
-FromScheme Bool where
-  fromScheme obj =
-    case prim_isInteger obj == 1 of
-      False => Nothing
-      True  => case unsafeGetInteger obj of
-        0 => Just False
-        1 => Just True
-        _ => Nothing
-
-partial
-export
-FromScheme a => FromScheme (List a) where
-  fromScheme obj =
-    case prim_isNil obj == 1 of
-      True  => Just []
-      False => case prim_isPair obj == 1 of
-        False => Nothing
-        True  => Just $ !(fromScheme $ unsafeFst obj) :: !(fromScheme $ unsafeSnd obj)
-
-export
-(FromScheme a, FromScheme b) => FromScheme (a, b) where
-  fromScheme obj =
-    case prim_isPair obj == 1 of
-      False => Nothing
-      True  => Just (!(fromScheme $ unsafeFst obj), !(fromScheme $ unsafeSnd obj))
-
-export
-FromScheme a => FromScheme (Maybe a) where
-  fromScheme obj =
-    case prim_isNil obj == 1 of
-      True  => Just Nothing
-      False => case prim_isBox obj == 1 of
-        False => Nothing
-        True  => Just $ Just !(fromScheme $ unsafeUnbox obj)
 
 ||| Creates and returns a new `Channel`.
 |||
@@ -361,25 +208,22 @@ export
 channelGet : HasIO io => (chan : Channel a) -> io a
 channelGet chan = primIO (prim__channelGet chan)
 
-||| Non-blocking version of channelGet.
+||| Non-blocking version of channelGet (chez backend).
 |||
 ||| @ chan the channel to receive on
 partial
 export
-channelGetNonBlocking : HasIO io => FromScheme a => (chan : Channel a) -> io (Maybe a)
-channelGetNonBlocking chan =
-  pure $ fromScheme !(primIO (prim__channelGetNonBlocking chan))
+channelGetNonBlocking : HasIO io => (chan : Channel a) -> io (Maybe a)
+channelGetNonBlocking chan = primIO (prim__channelGetNonBlocking chan)
 
-||| Timeout version of channelGet.
-||| Continously loops with 1ms delays until `seconds` has elapsed, or a value is provided through `chan`.
+||| Timeout version of channelGet (chez backend).
 |||
 ||| @ chan the channel to receive on
-||| @ seconds how many seconds to wait until timeout
+||| @ milliseconds how many milliseconds to wait until timeout
 partial
 export
-channelGetWithTimeout : HasIO io => FromScheme a => (chan : Channel a) -> (seconds : Nat) -> io (Maybe a)
-channelGetWithTimeout chan seconds =
-  pure $ fromScheme !(primIO (prim__channelGetWithTimeout chan seconds))
+channelGetWithTimeout : HasIO io => (chan : Channel a) -> (milliseconds : Nat) -> io (Maybe a)
+channelGetWithTimeout chan milliseconds = primIO (prim__channelGetWithTimeout chan milliseconds)
 
 ||| Puts a value on the given channel.
 |||
