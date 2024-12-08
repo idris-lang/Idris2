@@ -2253,6 +2253,11 @@ setAmbigLimit : {auto c : Ref Ctxt Defs} ->
 setAmbigLimit max = update Ctxt { options->elabDirectives->ambigLimit := max }
 
 export
+setTotalLimit : {auto c : Ref Ctxt Defs} ->
+                Nat -> Core ()
+setTotalLimit max = update Ctxt { options->elabDirectives->totalLimit := max }
+
+export
 setAutoImplicitLimit : {auto c : Ref Ctxt Defs} ->
                        Nat -> Core ()
 setAutoImplicitLimit max = update Ctxt { options->elabDirectives->autoImplicitLimit := max }

@@ -62,6 +62,13 @@ definition.
 Set how deep nested ambiguous names can be before Idris gives up. The default is 3, increashing this
 will effect compiler performance. For more details, see :ref:`ambiguous-name-resolution`.
 
+``%totality_depth``
+-------------------
+
+Set the number of matching constructors Idris will look under when checking totality.  For instance
+`Just xs` is smaller than `Just (x :: xs)` if Idris looks under the matching constructor. The default
+value is 5.  Increasing the value may slow down totality checking.
+
 ``%auto_implicit_depth``
 ------------------------
 
