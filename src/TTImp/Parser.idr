@@ -522,7 +522,9 @@ mutual
            symbol "("
            wval <- expr fname indents
            symbol ")"
-           prf <- optional (keyword "proof" *> name)
+           prf <- optional $ do
+                    keyword "proof"
+                    pure (!(getMult !multiplicity), !name)
            ws <- nonEmptyBlock (clause (S withArgs) fname)
            end <- location
            let fc = MkFC fname start end
