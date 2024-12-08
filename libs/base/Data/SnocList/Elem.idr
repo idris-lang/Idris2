@@ -14,11 +14,11 @@ data Elem : a -> SnocList a -> Type where
   There : {0 x, y : a} -> Elem x sx -> Elem x (sx :< y)
 
 export
-Uninhabited (Here = There e) where
+Uninhabited (Here {x} {sx} = There {x = x'} {y} {sx = sx'} e) where
   uninhabited Refl impossible
 
 export
-Uninhabited (There e = Here) where
+Uninhabited (There {x} {y} {sx} e = Here {x = x'} {sx = sx'}) where
   uninhabited Refl impossible
 
 export
