@@ -2,6 +2,7 @@ module Core.Context.Log
 
 import Core.Context
 import Core.Options
+import Core.Value
 
 import Data.String
 import Libraries.Data.StringMap
@@ -59,6 +60,24 @@ logTerm str n msg tm
     = when !(logging str n)
         $ do tm' <- toFullNames tm
              logString str n $ msg ++ ": " ++ show tm'
+
+export
+logLocalEnv : {free, vars : _} ->
+         {auto c : Ref Ctxt Defs} ->
+         (s : String) ->
+         {auto 0 _ : KnownTopic s} ->
+         Nat -> String -> LocalEnv free vars -> Core ()
+logLocalEnv str n msg env
+    = when !(logging str n) $
+        do logString str n msg
+           dumpEnv env
+  where
+    dumpEnv : {free, vs : SnocList Name} -> LocalEnv free vs -> Core ()
+    dumpEnv [<] = pure ()
+    dumpEnv {vs = _ :< x} (bs :< closure)
+        = do dumpEnv bs
+             logString str n $ msg ++ ": " ++ show x ++ " :: " ++ show closure
+
 
 export
 log' : {auto c : Ref Ctxt Defs} ->
