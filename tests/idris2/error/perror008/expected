@@ -57,13 +57,13 @@ Issue710f:2:15--2:19
  2 |   constructor cons
                    ^^^^
 ... (1 others)
-Uncaught error: Error: Expected a capitalised identifier, got: ggg.
+Error: Expected a capitalised identifier, got: ggg.
 
 Issue1224a:1:8--1:11
  1 | module ggg
             ^^^
 
-Uncaught error: Error: Expected a capitalised identifier, got: ggg.
+Error: Expected a capitalised identifier, got: ggg.
 
 Issue1224b:1:8--1:11
  1 | import ggg
