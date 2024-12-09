@@ -99,8 +99,7 @@ updateREPLOpts
 
 tryYaffle : List CLOpt -> Core Bool
 tryYaffle [] = pure False
-tryYaffle (Yaffle f :: _) = do yaffleMain f []
-                               pure True
+tryYaffle (Yaffle f :: _) = yaffleMain f [] $> True
 tryYaffle (c :: cs) = tryYaffle cs
 
 ignoreMissingIpkg : List CLOpt -> Bool
@@ -110,8 +109,7 @@ ignoreMissingIpkg (c :: cs) = ignoreMissingIpkg cs
 
 tryTTM : List CLOpt -> Core Bool
 tryTTM [] = pure False
-tryTTM (Metadata f :: _) = do dumpTTM f
-                              pure True
+tryTTM (Metadata f :: _) = dumpTTM f $> True
 tryTTM (c :: cs) = tryTTM cs
 
 

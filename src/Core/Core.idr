@@ -670,14 +670,12 @@ record Core t where
   runCore : IO (Either Error t)
 
 export
-coreRun : Core a ->
-          (Error -> IO b) -> (a -> IO b) -> IO b
-coreRun (MkCore act) err ok
-    = either err ok !act
+coreRun : Core a -> (Error -> IO b) -> (a -> IO b) -> IO b
+coreRun (MkCore act) err ok = either err ok !act
 
 export
 coreFail : Error -> Core a
-coreFail e = MkCore (pure (Left e))
+coreFail = MkCore . pure . Left
 
 export
 wrapError : (Error -> Error) -> Core a -> Core a
@@ -687,8 +685,7 @@ wrapError fe (MkCore prog) = MkCore $ mapFst fe <$> prog
 export
 %inline
 coreLift : IO a -> Core a
-coreLift op = MkCore (do op' <- op
-                         pure (Right op'))
+coreLift = MkCore . map Right
 
 {- Monad, Applicative, Traversable are specialised by hand for Core.
 In theory, this shouldn't be necessary, but it turns out that Idris 1 doesn't
@@ -702,11 +699,11 @@ in the next version (i.e., in this project...)! -}
 -- Functor (specialised)
 export %inline
 map : (a -> b) -> Core a -> Core b
-map f (MkCore a) = MkCore (map (map f) a)
+map f (MkCore a) = MkCore $ map (map f) a
 
 export %inline
 (<$>) : (a -> b) -> Core a -> Core b
-(<$>) f (MkCore a) = MkCore (map (map f) a)
+(<$>) = map
 
 export %inline
 (<$) : b -> Core a -> Core b
@@ -718,7 +715,7 @@ export %inline
 
 export %inline
 ignore : Core a -> Core ()
-ignore = map (const ())
+ignore = map $ const ()
 
 -- This would be better if we restrict it to a limited set of IO operations
 export
@@ -729,11 +726,9 @@ coreLift_ op = ignore (coreLift op)
 -- Monad (specialised)
 export %inline
 (>>=) : Core a -> (a -> Core b) -> Core b
-(>>=) (MkCore act) f
-    = MkCore (act >>=
-                   \case
-                     Left err => pure $ Left err
-                     Right val => runCore $ f val)
+MkCore act >>= f = MkCore $ act >>= \case
+  Left err => pure $ Left err
+  Right val => runCore $ f val
 
 export %inline
 (>>) : Core () -> Core a -> Core a
@@ -757,25 +752,24 @@ export %inline
 -- Applicative (specialised)
 export %inline
 pure : a -> Core a
-pure x = MkCore (pure (pure x))
+pure = MkCore . pure . Right
 
 export
 (<*>) : Core (a -> b) -> Core a -> Core b
-(<*>) (MkCore f) (MkCore a) = MkCore [| f <*> a |]
+MkCore f <*> MkCore a = MkCore [| f <*> a |]
 
 export
 (*>) : Core a -> Core b -> Core b
-(*>) (MkCore a) (MkCore b) = MkCore [| a *> b |]
+MkCore a *> MkCore b = MkCore [| a *> b |]
 
 export
 (<*) : Core a -> Core b -> Core a
-(<*) (MkCore a) (MkCore b) = MkCore [| a <* b |]
+MkCore a <* MkCore b = MkCore [| a <* b |]
 
 export %inline
 when : Bool -> Lazy (Core ()) -> Core ()
 when True f = f
 when False f = pure ()
-
 
 export %inline
 unless : Bool -> Lazy (Core ()) -> Core ()
@@ -811,11 +805,9 @@ interface Catchable m t | m where
 
 export
 Catchable Core Error where
-  catch (MkCore prog) h
-      = MkCore ( do p' <- prog
-                    case p' of
-                         Left e => let MkCore he = h e in he
-                         Right val => pure (Right val))
+  catch (MkCore prog) h = MkCore $ prog >>= \case
+    Left e => runCore (h e)
+    Right val => pure (Right val)
   breakpoint (MkCore prog) = MkCore (pure <$> prog)
   throw = coreFail
 
@@ -827,8 +819,7 @@ foldlC fm a0 = foldl (\ma,b => ma >>= flip fm b) (pure a0)
 -- Traversable (specialised)
 traverse' : (a -> Core b) -> List a -> List b -> Core (List b)
 traverse' f [] acc = pure (reverse acc)
-traverse' f (x :: xs) acc
-    = traverse' f xs (!(f x) :: acc)
+traverse' f (x :: xs) acc = traverse' f xs (!(f x) :: acc)
 
 %inline
 export
@@ -851,15 +842,12 @@ for = flip traverse
 
 export
 traverseList1 : (a -> Core b) -> List1 a -> Core (List1 b)
-traverseList1 f xxs
-    = let x = head xxs
-          xs = tail xxs in
-          [| f x ::: traverse f xs |]
+traverseList1 f (x ::: xs) = [| f x ::: traverse f xs |]
 
 export
 traverseSnocList : (a -> Core b) -> SnocList a -> Core (SnocList b)
 traverseSnocList f [<] = pure [<]
-traverseSnocList f (as :< a) = (:<) <$> traverseSnocList f as <*> f a
+traverseSnocList f (as :< a) = [| traverseSnocList f as :< f a |]
 
 export
 traverseVect : (a -> Core b) -> Vect n a -> Core (Vect n b)
@@ -879,9 +867,8 @@ traversePair f (w, a) = (w,) <$> f a
 export
 traverse_ : (a -> Core b) -> List a -> Core ()
 traverse_ f [] = pure ()
-traverse_ f (x :: xs)
-    = Core.do ignore (f x)
-              traverse_ f xs
+traverse_ f (x :: xs) = ignore (f x) >> traverse_ f xs
+
 %inline
 export
 for_ : List a -> (a -> Core ()) -> Core ()
@@ -890,20 +877,12 @@ for_ = flip traverse_
 %inline
 export
 sequence : List (Core a) -> Core (List a)
-sequence (x :: xs)
-   = do
-        x' <- x
-        xs' <- sequence xs
-        pure (x' :: xs')
+sequence (x :: xs) = [| x :: sequence xs |]
 sequence [] = pure []
 
 export
 traverseList1_ : (a -> Core b) -> List1 a -> Core ()
-traverseList1_ f xxs
-    = do let x = head xxs
-         let xs = tail xxs
-         ignore (f x)
-         traverse_ f xs
+traverseList1_ f (x ::: xs) = ignore (f x) >> traverse_ f xs
 
 %inline export
 traverseFC : (a -> Core b) -> WithFC a -> Core (WithFC b)

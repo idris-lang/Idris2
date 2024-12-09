@@ -593,11 +593,9 @@ mutual
             decreaseIndentation
             pure "} else ") "" alts
 
-        case mDef of
-            Nothing => pure ()
-            Just body => do
-                emit emptyFC "} else {"
-                concaseBody env switchReturnVar "" [] body tailPosition
+        whenJust mDef $ \body => do
+          emit emptyFC "} else {"
+          concaseBody env switchReturnVar "" [] body tailPosition
         emit emptyFC "}"
         pure switchReturnVar
 
@@ -626,11 +624,9 @@ mutual
                     pure "} else ") "" alts
                 pure ()
 
-        case def of
-            Nothing => pure ()
-            Just body => do
-                emit emptyFC "} else {"
-                concaseBody env switchReturnVar "" [] body tailPosition
+        whenJust def $ \body => do
+          emit emptyFC "} else {"
+          concaseBody env switchReturnVar "" [] body tailPosition
         emit emptyFC "}"
         pure switchReturnVar
 

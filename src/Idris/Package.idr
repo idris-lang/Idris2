@@ -889,11 +889,9 @@ runRepl fname = do
       pure (PhysicalIdrSrc modIdent)
       ) fname
   m <- newRef MD (initMetadata origin)
-  case fname of
-      Nothing => pure ()
-      Just fn => do
-        errs <- loadMainFile fn
-        displayStartupErrors errs
+  whenJust fname $ \fn => do
+    errs <- loadMainFile fn
+    displayStartupErrors errs
   repl {u} {s}
 
 ||| If the user did not provide a package file we can look in the working
