@@ -258,6 +258,12 @@ mutual
   isTotalityReq _ = False
 
   export
+  findTotality : List (FnOpt' nm) -> Maybe TotalReq
+  findTotality [] = Nothing
+  findTotality (Totality t :: _) = Just t
+  findTotality (_ :: xs) = findTotality xs
+
+  export
   covering
   Show nm => Show (FnOpt' nm) where
     show Unsafe = "%unsafe"

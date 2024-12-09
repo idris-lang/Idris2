@@ -303,14 +303,9 @@ updateIfaceSyn iname cn impps ps cs ms ds
          update Syn { ifaces     $= addName iname info,
                       saveIFaces $= (iname :: ) }
  where
-    findSetTotal : List FnOpt -> Maybe TotalReq
-    findSetTotal [] = Nothing
-    findSetTotal (Totality t :: _) = Just t
-    findSetTotal (_ :: xs) = findSetTotal xs
-
     totMeth : Declaration -> Core Method
     totMeth decl
-        = do let treq = findSetTotal decl.flags
+        = do let treq = findTotality decl.flags
              pure $ MkMethod { name = decl.name
                              , count = decl.count
                              , totalReq = treq

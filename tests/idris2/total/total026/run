@@ -1,0 +1,7 @@
+. ../../../testutils.sh
+
+idris2 --check default.idr
+echo "------"
+idris2 --check --total option.idr
+echo "------"
+idris2 --check issue3437.idr
