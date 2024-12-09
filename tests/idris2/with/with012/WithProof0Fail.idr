@@ -1,18 +1,11 @@
 module WithProof0Fail
 
+import Data.So
+import Data.List.Quantifiers
+
 %default total
 
 %hide List.filter
-
-data So : Bool -> Type where
-  Oh : So True
-
-eqToSo : b = True -> So b
-eqToSo Refl = Oh
-
-data All : (0 p : a -> Type) -> List a -> Type where
-  Nil  : All p Nil
-  (::) : {0 xs : List a} -> p x -> All p xs -> All p (x :: xs)
 
 filter : (p : a -> Bool) -> (xs : List a) -> List a
 filter p [] = []
