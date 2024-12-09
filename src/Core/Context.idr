@@ -1385,10 +1385,9 @@ updateDef n fdef
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
              | Nothing => pure ()
-         case fdef (definition gdef) of
-              Nothing => pure ()
-              Just def' => ignore $ addDef n ({ definition := def',
-                                                schemeExpr := Nothing } gdef)
+         whenJust (fdef $ definition gdef) $ \def' =>
+            ignore $ addDef n $ { definition := def',
+                                  schemeExpr := Nothing } gdef
 
 export
 updateTy : {auto c : Ref Ctxt Defs} ->
