@@ -219,8 +219,7 @@ readHeader : {auto c : Ref Ctxt Defs} ->
              {auto o : Ref ROpts REPLOpts} ->
              (path : String) -> (origin : ModuleIdent) -> Core Module
 readHeader path origin
-    = do Right res <- coreLift (readFile path)
-            | Left err => throw (FileErr path err)
+    = do res <- readFile path
          -- Stop at the first :, that's definitely not part of the header, to
          -- save lexing the whole file unnecessarily
          setCurrentElabSource res -- for error printing purposes
@@ -288,10 +287,13 @@ getCG (Other s) = getCodegen s
 
 export
 findCG : {auto o : Ref ROpts REPLOpts} ->
-         {auto c : Ref Ctxt Defs} -> Core (Maybe Codegen)
+         {auto c : Ref Ctxt Defs} -> Core Codegen
 findCG
     = do defs <- get Ctxt
-         getCG (codegen (session (options defs)))
+         let cg = defs.options.session.codegen
+         Just codegen <- getCG cg
+           | Nothing => throw $ CodegenNotFound cg
+         pure codegen
 
 ||| Process everything in the module; return the syntax information which
 ||| needs to be written to the TTC (e.g. exported infix operators)
