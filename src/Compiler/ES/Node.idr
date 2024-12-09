@@ -66,7 +66,9 @@ executeExpr :
 executeExpr c s tmpDir tm =
   do out <- compileExpr c s tmpDir tmpDir tm "_tmp_node.js"
      node <- coreLift findNode
-     system $ "\"" ++ node ++ "\" " ++ out -- Windows often have a space in the path.
+     system $ "\"" ++ node ++ "\" " ++ escapeArg out -- Windows often have a space in the path.
+     -- TODO: Replace with the following call after fix idris-lang/Idris2#3436
+    --  system $ [node, out]
 
 ||| Codegen wrapper for Node implementation.
 export
