@@ -2,3 +2,4 @@
 1/1: Building WithProof1 (WithProof1.idr)
 1/1: Building WithProof0Fail (WithProof0Fail.idr)
 1/1: Building WithProof1Fail (WithProof1Fail.idr)
+1/1: Building WithProof0ElabFail (WithProof0ElabFail.idr)
