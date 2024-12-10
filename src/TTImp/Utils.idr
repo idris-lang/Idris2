@@ -590,7 +590,7 @@ getArgName defs x bound allvars ty
     findNamesM : NF vars -> Core (Maybe (List String))
     findNamesM (NBind _ x (Pi _ _ _ _) _)
         = pure (Just ["f", "g"])
-    findNamesM (NTCon _ n _ d [(_, v)]) = do
+    findNamesM (NTCon _ n _ d [<(_, v)]) = do
           case dropNS !(full (gamma defs) n) of
             UN (Basic "List") =>
               do nf <- evalClosure defs v
