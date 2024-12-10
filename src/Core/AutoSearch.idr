@@ -326,7 +326,7 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
               NF vars ->  -- local's type
               (target : NF vars) ->
               Core (Term vars)
-    findPos defs f nty@(NTCon pfc pn _ _ [<(_, yty), (_, xty)]) target
+    findPos defs f nty@(NTCon pfc pn _ _ [<(_, xty), (_, yty)]) target
         = tryUnifyUnambig (findDirect defs f nty target) $
              do fname <- maybe (throw (CantSolveGoal fc (gamma defs) [<] top Nothing))
                                pure
@@ -508,7 +508,7 @@ checkConcreteDets fc defaults env top (NTCon tfc tyn t a args)
     = do defs <- get Ctxt
          if !(isPairType tyn)
             then case args of
-                      [<(_, bty), (_, aty)] =>
+                      [<(_, aty), (_, bty)] =>
                           do anf <- evalClosure defs aty
                              bnf <- evalClosure defs bty
                              checkConcreteDets fc defaults env top anf
