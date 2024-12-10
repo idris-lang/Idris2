@@ -224,11 +224,12 @@ printClause l i (WithClause _ lhsraw rig wvraw prf flags csraw)
     = do lhs <- pterm $ map defaultKindedName lhsraw -- hack
          wval <- pterm $ map defaultKindedName wvraw -- hack
          cs <- traverse (printClause l (i + 2)) csraw
-         pure (relit l ((pack (replicate i ' ')
+         pure (relit l (pack (replicate i ' ')
                 ++ show lhs
-                ++ " with " ++ elimSemi "0 " "1 " (const "") rig ++ "(" ++ show wval ++ ")"
-                ++ maybe "" (\ nm => " proof " ++ show nm) prf
-                ++ "\n"))
+                ++ " with " ++ showCount rig ++ "(" ++ show wval ++ ")"
+                   -- TODO: remove `the` after fix idris-lang/Idris2#3418
+                ++ maybe "" (the (_ -> _) $ \(rg, nm) => " proof " ++ showCount rg ++ show nm) prf
+                ++ "\n")
                ++ showSep "\n" cs)
 printClause l i (ImpossibleClause _ lhsraw)
     = do lhs <- pterm $ map defaultKindedName lhsraw -- hack

@@ -171,7 +171,7 @@ mutual
        PatClause : FC -> (lhs : TTImp) -> (rhs : TTImp) -> Clause
        WithClause : FC -> (lhs : TTImp) ->
                     (rig : Count) -> (wval : TTImp) -> -- with'd expression (& quantity)
-                    (prf : Maybe Name) -> -- optional name for the proof
+                    (prf : Maybe (Count, Name)) -> -- optional name for the proof (& quantity)
                     (flags : List WithFlag) ->
                     List Clause -> Clause
        ImpossibleClause : FC -> (lhs : TTImp) -> Clause
@@ -605,7 +605,8 @@ mutual
   showClause mode (WithClause fc lhs rig wval prf flags cls) -- TODO print flags
       = unwords
       [ show lhs, "with"
-      , showCount rig $ maybe id (\ nm => (++ " proof \{show nm}")) prf
+        -- TODO: remove `the` after fix idris-lang/Idris2#3418
+      , showCount rig $ maybe id (the (_ -> _) $ \(rg, nm) => (++ " proof \{showCount rg $ show nm}")) prf
                       $ showParens True (show wval)
       , "{", joinBy "; " (assert_total $ map (showClause mode) cls), "}"
       ]

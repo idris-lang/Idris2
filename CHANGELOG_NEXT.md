@@ -76,6 +76,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Bind expressions in `do` blocks can now have a type ascription.
   See [#3327](https://github.com/idris-lang/Idris2/issues/3327).
 
+* Added syntax to specifying quantity for proof in with-clause.
+
 ### Compiler changes
 
 * The compiler now differentiates between "package search path" and "package

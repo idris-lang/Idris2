@@ -342,7 +342,7 @@ mutual
     constructor MkPWithProblem
     withRigCount : RigCount
     withRigValue : PTerm' nm
-    withRigProof : Maybe Name -- This ought to be a `Basic` username
+    withRigProof : Maybe (RigCount, Name) -- This ought to be a `Basic` username
 
   public export
   PClause : Type
