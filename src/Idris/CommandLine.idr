@@ -234,7 +234,7 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            MkOpt ["--output", "-o"] [Required "file"] (\f => [OutputFile f, Quiet])
               (Just "Specify output file"),
            MkOpt ["--exec", "-x"] [Required "name"] (\f => [ExecFn f, Quiet])
-              (Just "Execute function after checking source file"),
+              (Just "Execute expression"),
            MkOpt ["--no-prelude"] [] [NoPrelude]
               (Just "Don't implicitly import Prelude"),
            MkOpt ["--codegen", "--cg"] [Required "backend"] (\f => [SetCG f])

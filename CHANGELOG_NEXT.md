@@ -29,6 +29,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * CLI errors will now be printed to `stderr` instead of `stdout`.
 
+* The `idris2 --exec` command now takes an arbitrary expression, not just the
+  function name.
+
 ### Building/Packaging changes
 
 * The Nix flake's `buildIdris` function now returns a set with `executable` and

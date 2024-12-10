@@ -13,6 +13,7 @@ import Libraries.Data.List.Extra
 
 import Idris.CommandLine
 import Idris.Package.Types
+import Idris.Parser
 import Idris.Pretty
 import Idris.ProcessIdr
 import Idris.REPL
@@ -514,8 +515,11 @@ postOptions res (OutputFile outfile :: rest)
     = do ignore $ compileExp (PRef EmptyFC (UN $ Basic "main")) outfile
          ignore $ postOptions res rest
          pure False
-postOptions res (ExecFn str :: rest)
-    = do ignore $ execExp (PRef EmptyFC (UN $ Basic str))
+postOptions res (ExecFn expr :: rest)
+    = do setCurrentElabSource expr
+         let Right (_, _, e) = runParser (Virtual Interactive) Nothing expr $ aPTerm <* eoi
+           | Left err => throw err
+         ignore $ execExp e
          ignore $ postOptions res rest
          pure False
 postOptions res (CheckOnly :: rest)
