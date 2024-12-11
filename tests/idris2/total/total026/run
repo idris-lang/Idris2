@@ -1,7 +1,15 @@
 . ../../../testutils.sh
 
-idris2 --check default.idr
+check default.idr
 echo "------"
-idris2 --check --total option.idr
+idris2 --check --total compilerOption.idr
 echo "------"
-idris2 --check issue3437.idr
+check implementationOverride.idr
+echo "------"
+check issue3437.idr
+echo "------"
+check doubleTotal.idr
+echo "------"
+check implementation.idr
+echo "------"
+check interface.idr

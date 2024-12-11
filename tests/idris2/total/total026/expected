@@ -1,6 +1,8 @@
 1/1: Building default (default.idr)
 ------
-1/1: Building option (option.idr)
+1/1: Building compilerOption (compilerOption.idr)
+------
+1/1: Building implementationOverride (implementationOverride.idr)
 ------
 1/1: Building issue3437 (issue3437.idr)
 Error: Multiple totality modifiers
@@ -10,10 +12,32 @@ issue3437:1:1--3:15
  2 | covering
  3 | f : Int -> Int
 
-Error: f is not total, possibly not terminating due to recursive path Main.f
+------
+1/1: Building doubleTotal (doubleTotal.idr)
+Error: Multiple totality modifiers
 
-issue3437:1:1--3:15
+doubleTotal:1:1--3:7
  1 | total
- 2 | covering
- 3 | f : Int -> Int
+ 2 | total
+ 3 | f : ()
+
+------
+1/1: Building implementation (implementation.idr)
+Error: Multiple totality modifiers
+
+implementation:3:1--6:21
+ 3 | total
+ 4 | covering
+ 5 | partial
+ 6 | implementation Iface
+
+------
+1/1: Building interface (interface.idr)
+Error: Multiple totality modifiers
+
+interface:2:3--5:14
+ 2 |   total
+ 3 |   covering
+ 4 |   partial
+ 5 |   method : ()
 

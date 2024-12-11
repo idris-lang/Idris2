@@ -1044,6 +1044,9 @@ mutual
                 List Name -> PDecl -> Core (List ImpDecl)
   desugarDecl ps (PClaim (MkFCVal fc (MkPClaim rig vis fnopts ty)))
       = do opts <- traverse (desugarFnOpt ps) fnopts
+           when (count isTotalityReq opts > 1) $
+             throw $ GenericMsg fc "Multiple totality modifiers"
+
            types <- desugarType ps ty
            pure $ flip (map {f = List, b = ImpDecl}) types $ \ty' =>
                       IClaim (MkFCVal fc $ MkIClaimData rig vis opts ty')
@@ -1136,6 +1139,9 @@ mutual
 
   desugarDecl ps (PImplementation fc vis fnopts pass is cons tn params impln nusing body)
       = do opts <- traverse (desugarFnOpt ps) fnopts
+           when (count isTotalityReq opts > 1) $
+             throw $ GenericMsg fc "Multiple totality modifiers"
+
            is' <- for is $ \ (fc, c, n, pi, tm) =>
                      do tm' <- desugar AnyExpr ps tm
                         pi' <- mapDesugarPiInfo ps pi
