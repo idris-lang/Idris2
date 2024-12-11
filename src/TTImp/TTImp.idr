@@ -258,10 +258,13 @@ mutual
   isTotalityReq _ = False
 
   export
+  extractTotality : FnOpt' nm -> Maybe TotalReq
+  extractTotality (Totality t) = Just t
+  extractTotality _ = Nothing
+
+  export
   findTotality : List (FnOpt' nm) -> Maybe TotalReq
-  findTotality [] = Nothing
-  findTotality (Totality t :: _) = Just t
-  findTotality (_ :: xs) = findTotality xs
+  findTotality = foldr (\elem, acc => extractTotality elem <|> acc) empty
 
   export
   covering

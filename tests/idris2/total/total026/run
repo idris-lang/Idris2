@@ -1,8 +1,10 @@
 . ../../../testutils.sh
 
-check default.idr
+check overrideDefault.idr
 echo "------"
 idris2 --check --total compilerOption.idr
+echo "------"
+check sameAsDefault.idr
 echo "------"
 check implementationOverride.idr
 echo "------"
@@ -13,3 +15,7 @@ echo "------"
 check implementation.idr
 echo "------"
 check interface.idr
+echo "------"
+check noOverrideDefault.idr
+echo "------"
+check duplicates.idr

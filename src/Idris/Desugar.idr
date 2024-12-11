@@ -1033,6 +1033,39 @@ mutual
   displayFixity (Just vis) NotBinding fix prec op = "\{show vis} \{show fix} \{show  prec} \{show op}"
   displayFixity (Just vis) bind fix prec op = "\{show vis} \{show bind} \{show fix} \{show  prec} \{show op}"
 
+  verifyTotalityModifiers : {auto c : Ref Ctxt Defs} ->
+                            FC -> List FnOpt -> Core ()
+  verifyTotalityModifiers fc opts =
+    when (count isTotalityReq opts > 1) $ do
+      let totalities = sort $ mapMaybe extractTotality opts
+      let dedupTotalities = dedup totalities
+      defaultTotality <- getDefaultTotalityOption
+      throw $ GenericMsgSol fc "Multiple totality modifiers" "Possible solutions" $
+        catMaybes $
+          [ checkDuplicates totalities dedupTotalities
+          , checkCompability dedupTotalities
+          , checkDefault defaultTotality dedupTotalities
+          ]
+    where
+      showModifiers : Show a => List a -> String
+      showModifiers = concat . intersperse ", " . map (\s => "`\{show s}`")
+
+      checkCompability : List TotalReq -> Maybe String
+      checkCompability totalities =
+        toMaybe (length totalities > 1) $
+          "Leave only one modifier out of " ++ showModifiers totalities
+
+      checkDuplicates : List TotalReq -> List TotalReq -> Maybe String
+      checkDuplicates totalities dedupTotalities =
+        toMaybe (totalities /= dedupTotalities) $ do
+          let repeated = filter (\x => count (x ==) totalities > 1) dedupTotalities
+          "Remove duplicates of " ++ showModifiers repeated
+
+      checkDefault : TotalReq -> List TotalReq -> Maybe String
+      checkDefault def totalities =
+        toMaybe (def `elem` totalities) $
+          "Remove modifiers " ++ showModifiers totalities
+
   -- Given a high level declaration, return a list of TTImp declarations
   -- which process it, and update any necessary state on the way.
   export
@@ -1044,8 +1077,7 @@ mutual
                 List Name -> PDecl -> Core (List ImpDecl)
   desugarDecl ps (PClaim (MkFCVal fc (MkPClaim rig vis fnopts ty)))
       = do opts <- traverse (desugarFnOpt ps) fnopts
-           when (count isTotalityReq opts > 1) $
-             throw $ GenericMsg fc "Multiple totality modifiers"
+           verifyTotalityModifiers fc opts
 
            types <- desugarType ps ty
            pure $ flip (map {f = List, b = ImpDecl}) types $ \ty' =>
@@ -1139,8 +1171,7 @@ mutual
 
   desugarDecl ps (PImplementation fc vis fnopts pass is cons tn params impln nusing body)
       = do opts <- traverse (desugarFnOpt ps) fnopts
-           when (count isTotalityReq opts > 1) $
-             throw $ GenericMsg fc "Multiple totality modifiers"
+           verifyTotalityModifiers fc opts
 
            is' <- for is $ \ (fc, c, n, pi, tm) =>
                      do tm' <- desugar AnyExpr ps tm
