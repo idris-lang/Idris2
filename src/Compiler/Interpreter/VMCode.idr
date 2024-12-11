@@ -17,6 +17,8 @@ import Data.Nat
 import Data.SnocList
 import Data.Vect
 
+import System
+
 public export
 data Object : Type where
     Closure : (predMissing : Nat) -> (args : SnocList Object) -> Name -> Object
@@ -151,7 +153,7 @@ knownForeign = fromList
     world stk o = interpError stk $ "expected %MkWorld or Null, got \{show o}"
 
     prim_putChar : Ref State InterpState => Stack -> Vect 2 Object -> Core Object
-    prim_putChar stk [Const (Ch c), w] = world stk w *> (ioRes unit <$ coreLift_ (putChar c))
+    prim_putChar stk [Const (Ch c), w] = world stk w *> (ioRes unit <$ coreLift (putChar c))
     prim_putChar stk as = argError stk as
 
     prim_getChar : Ref State InterpState => Stack -> Vect 1 Object -> Core Object
@@ -163,7 +165,7 @@ knownForeign = fromList
     prim_getStr stk as = argError stk as
 
     prim_putStr : Ref State InterpState => Stack -> Vect 2 Object -> Core Object
-    prim_putStr stk [Const (Str s), w] = world stk w *> (ioRes unit <$ coreLift_ (putStr s))
+    prim_putStr stk [Const (Str s), w] = world stk w *> (ioRes unit <$ coreLift (putStr s))
     prim_putStr stk as = argError stk as
 
 knownExtern : NameMap (ar ** (Ref State InterpState => Stack -> Vect ar Object -> Core Object))
@@ -287,17 +289,18 @@ parameters {auto c : Ref Ctxt Defs}
 compileExpr :
   Ref Ctxt Defs ->
   Ref Syn SyntaxInfo ->
-  String -> String -> ClosedTerm -> String -> Core (Maybe String)
-compileExpr _ _ _ _ _ _ = throw (InternalError "compile not implemeted for vmcode-interp")
+  String -> String -> ClosedTerm -> String -> Core String
+compileExpr _ _ _ _ _ _ = throw $ compileNotSupport VMCodeInterp "Compile not implemeted for vmcode-interp"
 
 executeExpr :
   Ref Ctxt Defs ->
   Ref Syn SyntaxInfo ->
-  String -> ClosedTerm -> Core ()
+  String -> ClosedTerm -> Core ExitCode
 executeExpr c s _ tm = do
     cdata <- getCompileData False VMCode tm
     st <- newRef State !(initInterpState cdata.vmcode)
     ignore $ callFunc [] (MN "__mainExpression" 0) []
+    pure ExitSuccess
 
 export
 codegenVMCodeInterp : Codegen

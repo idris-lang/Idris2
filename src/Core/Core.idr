@@ -12,8 +12,11 @@ import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 import Libraries.Text.PrettyPrint.Prettyprinter.Doc
 import Libraries.Data.Tap
+import Libraries.System
 
 import public Data.IORef
+import System
+import System.Directory
 import System.File
 
 %default covering
@@ -82,6 +85,50 @@ data Warning : Type where
      GenericWarn : FC -> String -> Warning
 
 %name Warning wrn
+
+public export
+data CG = Chez
+        | ChezSep
+        | Racket
+        | Gambit
+        | Node
+        | Javascript
+        | RefC
+        | VMCodeInterp
+        | Other String
+
+export
+Eq CG where
+  Chez == Chez = True
+  ChezSep == ChezSep = True
+  Racket == Racket = True
+  Gambit == Gambit = True
+  Node == Node = True
+  Javascript == Javascript = True
+  RefC == RefC = True
+  VMCodeInterp == VMCodeInterp = True
+  Other s == Other t = s == t
+  _ == _ = False
+
+export
+Show CG where
+  show Chez = "chez"
+  show ChezSep = "chez-sep"
+  show Racket = "racket"
+  show Gambit = "gambit"
+  show Node = "node"
+  show Javascript = "javascript"
+  show RefC = "refc"
+  show VMCodeInterp = "vmcode-interp"
+  show (Other s) = s
+
+public export
+data CGOperation = Compile | Execute
+
+export
+Show CGOperation where
+  show Compile = "compile"
+  show Execute = "execute"
 
 -- All possible errors, carrying a location
 public export
@@ -171,6 +218,8 @@ data Error : Type where
          (opName : Either Name Name) -> (rhs : a) -> (candidates : List String) -> Error
      TTCError : TTCErrorMsg -> Error
      FileErr : String -> FileError -> Error
+     NonZeroExitCode : String -> Int -> Error
+     SystemError : String -> Error
      CantFindPackage : String -> Error
      LazyImplicitFunction : FC -> Error
      LazyPatternVar :  FC -> Error
@@ -180,6 +229,8 @@ data Error : Type where
      ModuleNotFound : FC -> ModuleIdent -> Error
      CyclicImports : List ModuleIdent -> Error
      ForceNeeded : Error
+     CodegenNotFound : CG -> Error
+     UnsupportedOpertaion : CGOperation -> CG -> String -> Error
      InternalError : String -> Error
      UserError : String -> Error
      ||| Contains list of specifiers for which foreign call cannot be resolved
@@ -198,6 +249,14 @@ data Error : Type where
      WarningAsError : Warning -> Error
 
 %name Error err
+
+export
+compileNotSupport : CG -> String -> Error
+compileNotSupport = UnsupportedOpertaion Compile
+
+export
+executeNotSupport : CG -> String -> Error
+executeNotSupport = UnsupportedOpertaion Execute
 
 export
 Show TTCErrorMsg where
@@ -360,6 +419,8 @@ Show Error where
   show (GenericMsgSol fc msg solutionHeader sols) = show fc ++ ":" ++ msg ++ " \{solutionHeader}: " ++ show sols
   show (TTCError msg) = "Error in TTC file: " ++ show msg
   show (FileErr fname err) = "File error (" ++ fname ++ "): " ++ show err
+  show (NonZeroExitCode cmd status) = "Command '\{cmd}' exited with return code \{show status}"
+  show (SystemError msg) = "System error: '\{msg}'"
   show (CantFindPackage fname) = "Can't find package " ++ fname
   show (LazyImplicitFunction fc) = "Implicit lazy functions are not yet supported"
   show (LazyPatternVar fc) = "Defining lazy functions via pattern matching is not yet supported"
@@ -371,6 +432,8 @@ Show Error where
   show (CyclicImports ns)
       = "Module imports form a cycle: " ++ showSep " -> " (map show ns)
   show ForceNeeded = "Internal error when resolving implicit laziness"
+  show (CodegenNotFound cg) = "Codegenerator \{show cg} not found"
+  show (UnsupportedOpertaion op cg msg) = "Codegenerator \{show cg} doesn't support '\{show op}: \{msg}"
   show (InternalError str) = "INTERNAL ERROR: " ++ str
   show (UserError str) = "Error: " ++ str
   show (NoForeignCC fc specs) = show fc ++
@@ -476,6 +539,8 @@ getErrorLoc (GenericMsg loc _) = Just loc
 getErrorLoc (GenericMsgSol loc _ _ _) = Just loc
 getErrorLoc (TTCError _) = Nothing
 getErrorLoc (FileErr _ _) = Nothing
+getErrorLoc (NonZeroExitCode _ _) = Nothing
+getErrorLoc (SystemError _) = Nothing
 getErrorLoc (CantFindPackage _) = Nothing
 getErrorLoc (LazyImplicitFunction loc) = Just loc
 getErrorLoc (LazyPatternVar loc) = Just loc
@@ -485,6 +550,8 @@ getErrorLoc (ParseFail ((loc, _) ::: _)) = Just loc
 getErrorLoc (ModuleNotFound loc _) = Just loc
 getErrorLoc (CyclicImports _) = Nothing
 getErrorLoc ForceNeeded = Nothing
+getErrorLoc (CodegenNotFound _) = Nothing
+getErrorLoc (UnsupportedOpertaion _ _ _) = Nothing
 getErrorLoc (InternalError _) = Nothing
 getErrorLoc (UserError _) = Nothing
 getErrorLoc (NoForeignCC loc _) = Just loc
@@ -566,6 +633,8 @@ killErrorLoc (GenericMsg fc x) = GenericMsg emptyFC x
 killErrorLoc (GenericMsgSol fc x y z) = GenericMsgSol emptyFC x y z
 killErrorLoc (TTCError x) = TTCError x
 killErrorLoc (FileErr x y) = FileErr x y
+killErrorLoc (NonZeroExitCode x y) = NonZeroExitCode x y
+killErrorLoc (SystemError x) = SystemError x
 killErrorLoc (CantFindPackage x) = CantFindPackage x
 killErrorLoc (LazyImplicitFunction fc) = LazyImplicitFunction emptyFC
 killErrorLoc (LazyPatternVar fc) = LazyPatternVar emptyFC
@@ -575,6 +644,8 @@ killErrorLoc (ParseFail xs) = ParseFail $ map ((emptyFC,) . snd) $ xs
 killErrorLoc (ModuleNotFound fc x) = ModuleNotFound emptyFC x
 killErrorLoc (CyclicImports xs) = CyclicImports xs
 killErrorLoc ForceNeeded = ForceNeeded
+killErrorLoc (CodegenNotFound x) = CodegenNotFound x
+killErrorLoc (UnsupportedOpertaion x y z) = UnsupportedOpertaion x y z
 killErrorLoc (InternalError x) = InternalError x
 killErrorLoc (UserError x) = UserError x
 killErrorLoc (NoForeignCC fc xs) = NoForeignCC emptyFC xs
@@ -599,14 +670,12 @@ record Core t where
   runCore : IO (Either Error t)
 
 export
-coreRun : Core a ->
-          (Error -> IO b) -> (a -> IO b) -> IO b
-coreRun (MkCore act) err ok
-    = either err ok !act
+coreRun : Core a -> (Error -> IO b) -> (a -> IO b) -> IO b
+coreRun (MkCore act) err ok = either err ok !act
 
 export
 coreFail : Error -> Core a
-coreFail e = MkCore (pure (Left e))
+coreFail = MkCore . pure . Left
 
 export
 wrapError : (Error -> Error) -> Core a -> Core a
@@ -616,8 +685,7 @@ wrapError fe (MkCore prog) = MkCore $ mapFst fe <$> prog
 export
 %inline
 coreLift : IO a -> Core a
-coreLift op = MkCore (do op' <- op
-                         pure (Right op'))
+coreLift = MkCore . map Right
 
 {- Monad, Applicative, Traversable are specialised by hand for Core.
 In theory, this shouldn't be necessary, but it turns out that Idris 1 doesn't
@@ -631,19 +699,23 @@ in the next version (i.e., in this project...)! -}
 -- Functor (specialised)
 export %inline
 map : (a -> b) -> Core a -> Core b
-map f (MkCore a) = MkCore (map (map f) a)
+map f (MkCore a) = MkCore $ map (map f) a
 
 export %inline
 (<$>) : (a -> b) -> Core a -> Core b
-(<$>) f (MkCore a) = MkCore (map (map f) a)
+(<$>) = map
 
 export %inline
 (<$) : b -> Core a -> Core b
 (<$) = (<$>) . const
 
 export %inline
+($>) : Core a -> b -> Core b
+($>) = flip (<$)
+
+export %inline
 ignore : Core a -> Core ()
-ignore = map (\ _ => ())
+ignore = map $ const ()
 
 -- This would be better if we restrict it to a limited set of IO operations
 export
@@ -654,11 +726,9 @@ coreLift_ op = ignore (coreLift op)
 -- Monad (specialised)
 export %inline
 (>>=) : Core a -> (a -> Core b) -> Core b
-(>>=) (MkCore act) f
-    = MkCore (act >>=
-                   \case
-                     Left err => pure $ Left err
-                     Right val => runCore $ f val)
+MkCore act >>= f = MkCore $ act >>= \case
+  Left err => pure $ Left err
+  Right val => runCore $ f val
 
 export %inline
 (>>) : Core () -> Core a -> Core a
@@ -682,25 +752,24 @@ export %inline
 -- Applicative (specialised)
 export %inline
 pure : a -> Core a
-pure x = MkCore (pure (pure x))
+pure = MkCore . pure . Right
 
 export
 (<*>) : Core (a -> b) -> Core a -> Core b
-(<*>) (MkCore f) (MkCore a) = MkCore [| f <*> a |]
+MkCore f <*> MkCore a = MkCore [| f <*> a |]
 
 export
 (*>) : Core a -> Core b -> Core b
-(*>) (MkCore a) (MkCore b) = MkCore [| a *> b |]
+MkCore a *> MkCore b = MkCore [| a *> b |]
 
 export
 (<*) : Core a -> Core b -> Core a
-(<*) (MkCore a) (MkCore b) = MkCore [| a <* b |]
+MkCore a <* MkCore b = MkCore [| a <* b |]
 
 export %inline
 when : Bool -> Lazy (Core ()) -> Core ()
 when True f = f
 when False f = pure ()
-
 
 export %inline
 unless : Bool -> Lazy (Core ()) -> Core ()
@@ -736,11 +805,9 @@ interface Catchable m t | m where
 
 export
 Catchable Core Error where
-  catch (MkCore prog) h
-      = MkCore ( do p' <- prog
-                    case p' of
-                         Left e => let MkCore he = h e in he
-                         Right val => pure (Right val))
+  catch (MkCore prog) h = MkCore $ prog >>= \case
+    Left e => runCore (h e)
+    Right val => pure (Right val)
   breakpoint (MkCore prog) = MkCore (pure <$> prog)
   throw = coreFail
 
@@ -752,8 +819,7 @@ foldlC fm a0 = foldl (\ma,b => ma >>= flip fm b) (pure a0)
 -- Traversable (specialised)
 traverse' : (a -> Core b) -> List a -> List b -> Core (List b)
 traverse' f [] acc = pure (reverse acc)
-traverse' f (x :: xs) acc
-    = traverse' f xs (!(f x) :: acc)
+traverse' f (x :: xs) acc = traverse' f xs (!(f x) :: acc)
 
 %inline
 export
@@ -776,15 +842,12 @@ for = flip traverse
 
 export
 traverseList1 : (a -> Core b) -> List1 a -> Core (List1 b)
-traverseList1 f xxs
-    = let x = head xxs
-          xs = tail xxs in
-          [| f x ::: traverse f xs |]
+traverseList1 f (x ::: xs) = [| f x ::: traverse f xs |]
 
 export
 traverseSnocList : (a -> Core b) -> SnocList a -> Core (SnocList b)
 traverseSnocList f [<] = pure [<]
-traverseSnocList f (as :< a) = (:<) <$> traverseSnocList f as <*> f a
+traverseSnocList f (as :< a) = [| traverseSnocList f as :< f a |]
 
 export
 traverseVect : (a -> Core b) -> Vect n a -> Core (Vect n b)
@@ -804,9 +867,8 @@ traversePair f (w, a) = (w,) <$> f a
 export
 traverse_ : (a -> Core b) -> List a -> Core ()
 traverse_ f [] = pure ()
-traverse_ f (x :: xs)
-    = Core.do ignore (f x)
-              traverse_ f xs
+traverse_ f (x :: xs) = ignore (f x) >> traverse_ f xs
+
 %inline
 export
 for_ : List a -> (a -> Core ()) -> Core ()
@@ -815,20 +877,12 @@ for_ = flip traverse_
 %inline
 export
 sequence : List (Core a) -> Core (List a)
-sequence (x :: xs)
-   = do
-        x' <- x
-        xs' <- sequence xs
-        pure (x' :: xs')
+sequence (x :: xs) = [| x :: sequence xs |]
 sequence [] = pure []
 
 export
 traverseList1_ : (a -> Core b) -> List1 a -> Core ()
-traverseList1_ f xxs
-    = do let x = head xxs
-         let xs = tail xxs
-         ignore (f x)
-         traverse_ f xs
+traverseList1_ f (x ::: xs) = ignore (f x) >> traverse_ f xs
 
 %inline export
 traverseFC : (a -> Core b) -> WithFC a -> Core (WithFC b)
@@ -943,19 +997,61 @@ condC [] def = def
 condC ((x, y) :: xs) def
     = if !x then y else condC xs def
 
+||| Get the absolute path of the current working directory.
+||| Throws `SystemError` if an error occurred.
 export
-writeFile : (fname : String) -> (content : String) -> Core ()
-writeFile fname content =
-  coreLift (writeFile fname content) >>= \case
-    Right () => pure ()
-    Left err => throw $ FileErr fname err
+currentDir : Core String
+currentDir = maybe (throw $ SystemError "Failed to get the current directory") pure !(coreLift currentDir)
 
 export
+changeDir : String -> Core Bool
+changeDir = coreLift . changeDir
+
+||| Change the current working directory to the specified path.
+||| Throws `SystemError` if the operation did not succeed.
+export
+safeChangeDir : String -> Core ()
+safeChangeDir dir =
+  unless !(changeDir dir) $
+    throw $ SystemError "Failed to change directory to '\{dir}'"
+
+export
+handleFileError : (fname : String) -> IO (Either FileError a) -> Core a
+handleFileError fname res = either (throw . FileErr fname) pure !(coreLift res)
+
+||| Write the given string to the file at the specified name.
+||| Throws `FileErr` when errors occur.
+export
+writeFile : (fname : String) -> (content : String) -> Core ()
+writeFile fname content = handleFileError fname $ writeFile fname content
+
+||| Read the entire file at the given name. Throws `FileErr` when errors occur.
+export
 readFile : (fname : String) -> Core String
-readFile fname =
-  coreLift (readFile fname) >>= \case
-    Right content => pure content
-    Left err => throw $ FileErr fname err
+readFile fname = handleFileError fname $ readFile fname
+
+handleExitCode : String -> ExitCode -> Core ()
+handleExitCode _ ExitSuccess = pure ()
+handleExitCode cmd (ExitFailure status) = throw $ NonZeroExitCode cmd status
+
+export
+system : String -> Core ExitCode
+system = map (cast @{ToExitCode}) . coreLift . system
+
+||| Execute a shell command. Throws `NonZeroExitCode` if the command returns
+||| non-zero exit code.
+export
+safeSystem : String -> Core ()
+safeSystem cmd = system cmd >>= handleExitCode cmd
+
+namespace Escaped
+  export
+  system : List String -> Core ExitCode
+  system = map (cast @{ToExitCode}) . coreLift . system
+
+  export
+  safeSystem : List String -> Core ()
+  safeSystem cmd = system cmd >>= handleExitCode (fromMaybe "" $ head' cmd)
 
 namespace Functor
 

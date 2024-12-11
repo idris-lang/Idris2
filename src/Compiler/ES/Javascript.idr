@@ -14,6 +14,8 @@ import Idris.Syntax
 
 import Data.String
 
+import System
+
 %default covering
 
 ||| Compile a TT expression to Javascript
@@ -56,21 +58,21 @@ compileExpr :
   (outputDir : String) ->
   ClosedTerm ->
   (outfile : String) ->
-  Core (Maybe String)
+  Core String
 compileExpr c s tmpDir outputDir tm outfile =
   do es <- compileToJS c s tm
      let res = addHeaderAndFooter outfile es
      let out = outputDir </> outfile
-     Core.writeFile out res
-     pure (Just out)
+     writeFile out res
+     pure out
 
 ||| Node implementation of the `executeExpr` interface.
 executeExpr :
   Ref Ctxt Defs ->
   Ref Syn SyntaxInfo ->
-  (tmpDir : String) -> ClosedTerm -> Core ()
+  (tmpDir : String) -> ClosedTerm -> Core ExitCode
 executeExpr c s tmpDir tm =
-  throw $ InternalError "Javascript backend is only able to compile, use Node instead"
+  throw $ executeNotSupport Javascript "Javascript backend is only able to compile, use Node instead"
 
 ||| Codegen wrapper for Javascript implementation.
 export

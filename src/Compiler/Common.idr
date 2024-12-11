@@ -28,6 +28,7 @@ import Libraries.Utils.Scheme
 import Idris.Syntax
 import Idris.Env
 
+import System
 import System.Directory
 import System.Info
 
@@ -40,10 +41,10 @@ record Codegen where
   ||| Compile an Idris 2 expression, saving it to a file.
   compileExpr : Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
                 (tmpDir : String) -> (outputDir : String) ->
-                ClosedTerm -> (outfile : String) -> Core (Maybe String)
+                ClosedTerm -> (outfile : String) -> Core String
   ||| Execute an Idris 2 expression directly.
   executeExpr : Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
-                (tmpDir : String) -> ClosedTerm -> Core ()
+                (tmpDir : String) -> ClosedTerm -> Core ExitCode
   ||| Incrementally compile definitions in the current module (toIR defs)
   ||| if supported
   ||| Takes a source file name, returns the name of the generated object
@@ -52,7 +53,7 @@ record Codegen where
   ||| directory as the associated TTC.
   incCompileFile : Maybe (Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
                           (sourcefile : String) ->
-                          Core (Maybe (String, List String)))
+                          Core (String, List String))
   ||| If incremental compilation is supported, get the output file extension
   incExt : Maybe String
 
@@ -105,7 +106,7 @@ export
 compile : {auto c : Ref Ctxt Defs} ->
           {auto s : Ref Syn SyntaxInfo} ->
           Codegen ->
-          ClosedTerm -> (outfile : String) -> Core (Maybe String)
+          ClosedTerm -> (outfile : String) -> Core String
 compile {c} {s} cg tm out
     = do d <- getDirs
          let tmpDir = execBuildDir d
@@ -121,7 +122,7 @@ compile {c} {s} cg tm out
 export
 execute : {auto c : Ref Ctxt Defs} ->
           {auto s : Ref Syn SyntaxInfo} ->
-          Codegen -> ClosedTerm -> Core ()
+          Codegen -> ClosedTerm -> Core ExitCode
 execute {c} {s} cg tm
     = do d <- getDirs
          let tmpDir = execBuildDir d
@@ -135,7 +136,7 @@ incCompile : {auto c : Ref Ctxt Defs} ->
 incCompile {c} {s} cg src
     = do let Just inc = incCompileFile cg
              | Nothing => pure Nothing
-         inc c s src
+         Just <$> inc c s src
 
 -- If an entry isn't already decoded, get the minimal entry we need for
 -- compilation, and record the Binary so that we can put it back when we're
@@ -221,9 +222,7 @@ natHackNames =
 dumpIR : Show def => String -> List (Name, def) -> Core ()
 dumpIR fn lns
     = do let cstrs = map dumpDef lns
-         Right () <- coreLift $ writeFile fn (fastConcat cstrs)
-               | Left err => throw (FileErr fn err)
-         pure ()
+         writeFile fn (fastConcat cstrs)
   where
     fullShow : Name -> String
     fullShow (DN _ n) = show n
@@ -533,9 +532,7 @@ copyLib (lib, fullname)
          then pure ()
          else do Right bin <- coreLift $ readFromFile fullname
                     | Left err => pure () -- assume a system library installed globally
-                 Right _ <- coreLift $ writeToFile lib bin
-                    | Left err => throw (FileErr lib err)
-                 pure ()
+                 handleFileError lib $ writeToFile lib bin
 
 
 -- parses `--directive extraRuntime=/path/to/defs.scm` options for textual inclusion in generated

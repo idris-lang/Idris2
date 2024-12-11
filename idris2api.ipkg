@@ -207,6 +207,7 @@ modules =
     Libraries.Data.Version,
     Libraries.Data.WithDefault,
 
+    Libraries.System,
     Libraries.System.Directory.Tree,
 
     Libraries.Text.Bounded,
