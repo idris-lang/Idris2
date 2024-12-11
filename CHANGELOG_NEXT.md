@@ -262,6 +262,10 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Several functions like `pop`, `differenceMap` and `toSortedMap` were added to `Data.Sorted{Map|Set}`
 
+* Added `System.Concurrency.channelGetNonBlocking` for the chez backend.
+
+* Added `System.Concurrency.channelGetWithTimeout` for the chez backend.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
