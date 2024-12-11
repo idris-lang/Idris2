@@ -7,6 +7,7 @@ import Core.Env
 import Core.Normalise
 import Core.Options
 import Core.Value
+import Core.Name.CompatibleVars
 
 import Libraries.Data.IntMap
 import Libraries.Data.SparseMatrix
@@ -79,7 +80,7 @@ mutual
   findSC {vars} defs env g pats (Bind fc n b sc)
        = pure $
             !(findSCbinder b) ++
-            !(findSC defs (b :: env) g (map weaken pats) sc)
+            !(findSC defs (env :< b) g (map weaken pats) sc)
     where
       findSCbinder : Binder (Term vars) -> Core (List SCCall)
       findSCbinder (Let _ c val ty) = findSC defs env g pats val

@@ -24,7 +24,7 @@ namespace Raw
                     _ => space <+> keyword ":" <++> byShow ty
         in case_ <++> annotate Bound (pretty0 name) <+> ann <++> of_
          <+> nest 2 (hardline
-         <+> vsep (assert_total (map prettyAlt alts)))
+         <+> vsep (assert_total (reverse $ map prettyAlt alts)))
   prettyTree (STerm i tm) = byShow tm
   prettyTree (Unmatched msg) = "Error:" <++> pretty0 msg
   prettyTree Impossible = "Impossible"
@@ -84,11 +84,11 @@ namespace Resugared
   prettyAlt env (ConCase n tag args sc) = do
     con <- prettyName n
     sc <- prettyTree (mkEnvOnto emptyFC args env) sc
-    pure $ hsep (annotate (DCon (Just n)) con ::  map pretty0 args)
+    pure $ hsep (annotate (DCon (Just n)) con ::  map pretty0 (toList args))
      <++> fatArrow
       <+> Union (spaces 1 <+> sc) (nest 2 (hardline <+> sc))
   prettyAlt env (DelayCase _ arg sc) = do
-    sc <- prettyTree (mkEnvOnto emptyFC [_,_] env) sc
+    sc <- prettyTree (mkEnvOnto emptyFC [_, _] env) sc
     pure $ keyword "Delay" <++> pretty0 arg
         <++> fatArrow
         <+> Union (spaces 1 <+> sc) (nest 2 (hardline <+> sc))
