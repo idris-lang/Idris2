@@ -262,6 +262,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Several functions like `pop`, `differenceMap` and `toSortedMap` were added to `Data.Sorted{Map|Set}`
 
+* Refactored `Uninhabited` implementation for `Data.List.Elem`, `Data.List1.Elem`, `Data.SnocList.Elem` and `Data.Vect.Elem`
+  so it can be used for homogeneous (===) and heterogeneous (~=~) equality.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
