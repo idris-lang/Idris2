@@ -1629,6 +1629,14 @@ hasFlag fc n fl
          pure (fl `elem` flags def)
 
 export
+hasSetTotal : {auto c : Ref Ctxt Defs} -> FC -> Name -> Core Bool
+hasSetTotal fc n
+    = do defs <- get Ctxt
+         Just def <- lookupCtxtExact n (gamma defs)
+             | Nothing => undefinedName fc n
+         pure $ isJust $ findSetTotal def.flags
+
+export
 setSizeChange : {auto c : Ref Ctxt Defs} ->
                 FC -> Name -> List SCCall -> Core ()
 setSizeChange loc n sc
