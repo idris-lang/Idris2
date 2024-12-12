@@ -19,11 +19,11 @@ data Elem : a -> List a -> Type where
      There : Elem x xs -> Elem x (y :: xs)
 
 export
-Uninhabited (Here = There e) where
+Uninhabited (Here {x} {xs} = There {x = x'} {y} {xs = xs'} e) where
   uninhabited Refl impossible
 
 export
-Uninhabited (There e = Here) where
+Uninhabited (There {x} {y} {xs} e = Here {x = x'} {xs = xs'}) where
   uninhabited Refl impossible
 
 export
