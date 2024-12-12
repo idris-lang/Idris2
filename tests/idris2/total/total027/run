@@ -1,0 +1,9 @@
+. ../../../testutils.sh
+
+check sameTotality.idr
+echo "------"
+check differentTotality.idr
+echo "------"
+check totalityOnlyDeclaration.idr
+echo "------"
+check totalityOnlyDefinition.idr
