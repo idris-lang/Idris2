@@ -196,7 +196,7 @@ mutual
                Env Term vars -> NF vars -> Core (Term (vars ++ bound))
   quoteGenNF q opts defs bound env (NBind fc n b sc)
       = do var <- genName "qv"
-           logEnv "eval.ref" 50 "NBind env" env
+           -- logEnv "eval.ref" 50 "NBind env" env
            log "eval.ref" 50 $ "NBind n: " ++ show !(toFullNames n)
            sc' <- sc defs (toClosure defaultOpts env (Ref fc Bound var))
            log "eval.ref" 50 $ "NBind scQ: " ++ show !(toFullNames sc')
