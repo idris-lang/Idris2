@@ -842,7 +842,7 @@ checkApp rig elabinfo nest env fc (IVar fc' n) expargs autoargs namedargs exp
         logTerm "elab" 10 "checkApp-IVar ntm" ntm
         log "elab" 10 $ "checkApp-IVar nty_in NF: " ++ show !(toFullNames nty)
         logTerm "elab" 10 "checkApp-IVar nty_in Term" !(getTerm nty_in)
-        logEnv "elab" 10 "checkApp-IVar Env" env
+        -- logEnv "elab" 10 "checkApp-IVar Env" env
         logNF "elab" 10 "checkApp-IVar nty_in NF" env nty
         addNameLoc fc' n
 
