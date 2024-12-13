@@ -158,7 +158,7 @@ substInPatInfo {pvar} {vars} fc n tm p ps
                    logTerm "compile.casetree" 25 "substInPatInfo-Known-ty" ty
                    log "compile.casetree" 25 $ "n: " ++ show n
                    let env = mkEnv fc vars
-                   logEnvRev "compile.casetree" 25 "substInPatInfo env" env
+                   --  logEnvRev "compile.casetree" 25 "substInPatInfo env" env
                    tynf <- nf defs env ty
                    case tynf of
                         NApp _ _ _ =>
@@ -468,19 +468,19 @@ getArgTys : {vars : _} ->
 getArgTys {vars} env (n :: ns) (Just t@(NBind pfc _ (Pi _ c _ fargc) fsc))
     = do defs <- get Ctxt
          empty <- clearDefs defs
-         log "compile.casetree" 25 $ "getArgTys-1 t: " ++ show t ++ ", n: " ++ show n ++ ", vars: " ++ show (reverse $ toList vars)
+         -- log "compile.casetree" 25 $ "getArgTys-1 t: " ++ show t ++ ", n: " ++ show n ++ ", vars: " ++ show (reverse $ toList vars)
          argty <- case !(evalClosure defs fargc) of
            NErased _ _ => pure Unknown
-           farg => do log "compile.casetree" 25 $ "getArgTys-1 farg: " ++ show farg
-                      logEnvRev "compile.casetree" 25 "getArgTys-1 env " env
+           farg => do -- log "compile.casetree" 25 $ "getArgTys-1 farg: " ++ show farg
+                      -- logEnvRev "compile.casetree" 25 "getArgTys-1 env " env
                       Known c <$> quote empty env farg
          scty <- fsc defs (toClosure defaultOpts env (Ref pfc Bound n))
-         log "compile.casetree" 25 $ "getArgTys-1 scty: " ++ show scty
+         -- log "compile.casetree" 25 $ "getArgTys-1 scty: " ++ show scty
          rest <- getArgTys env ns (Just scty)
          pure (argty :: rest)
 getArgTys env (n :: ns) (Just t)
     = do empty <- clearDefs =<< get Ctxt
-         log "compile.casetree" 25 $ "getArgTys-2 t: " ++ show t ++ ", n: " ++ show n
+         -- log "compile.casetree" 25 $ "getArgTys-2 t: " ++ show t ++ ", n: " ++ show n
          pure [Stuck !(quote empty env t)]
 getArgTys _ _ _ = pure []
 
@@ -516,16 +516,16 @@ nextNames fc root [<] _ = pure ([<] ** (zero, []))
 nextNames {vars} fc root pats m_nty
      = do (args ** lprf) <- mkNames pats
           let env = mkEnv fc vars
-          logEnvRev "compile.casetree" 25 "nextNames env" env
-          log "compile.casetree" 20 $ "nextNames m_nty: " ++ show m_nty ++ ", args: " ++ show args
+          -- logEnvRev "compile.casetree" 25 "nextNames env" env
+          -- log "compile.casetree" 20 $ "nextNames m_nty: " ++ show m_nty ++ ", args: " ++ show args
           -- The arguments are given in reverse order, so when we process them,
           -- the argument types are in the correct order
           argTys <- getArgTys env (cast args) m_nty
           -- for_ (toList m_nty) $ \ ty => do
           --   logNF "compile.casetree" 25 "nextNames'' NF" env ty
           result@(args_r ** (_, pats_r)) <- nextNames' fc pats args lprf (reverse argTys)
-          log "compile.casetree" 25 $ "nextNames argTys: " ++ show argTys ++ ", args_r: " ++ show args_r ++ ", pats_r: " ++ show pats_r
-          log "compile.casetree" 25 $ "nextNames argTy: <nothing>"
+          -- log "compile.casetree" 25 $ "nextNames argTys: " ++ show argTys ++ ", args_r: " ++ show args_r ++ ", pats_r: " ++ show pats_r
+          -- log "compile.casetree" 25 $ "nextNames argTy: <nothing>"
           pure result
   where
     mkNames : (vars : SnocList a) ->
