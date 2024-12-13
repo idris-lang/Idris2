@@ -37,10 +37,12 @@ import Yaffle.Main
 
 %default covering
 
-findInput : List CLOpt -> Maybe String
-findInput [] = Nothing
-findInput (InputFile f :: fs) = Just f
-findInput (_ :: fs) = findInput fs
+findInputs : List CLOpt -> Maybe (List1 String)
+findInputs [] = Nothing
+findInputs (InputFile f :: fs) =
+  let rest = maybe [] toList (findInputs fs)
+  in  Just (f ::: rest)
+findInputs (_ :: fs) = findInputs fs
 
 splitPaths : String -> List1 String
 splitPaths = map trim . split (==pathSeparator)
@@ -157,9 +159,20 @@ stMain cgs opts
          let ide = ideMode opts
          let ideSocket = ideModeSocket opts
          let outmode = if ide then IDEMode 0 stdin stdout else REPL InfoLvl
-         let fname = findInput opts
-         o <- newRef ROpts (REPL.Opts.defaultOpts fname outmode cgs)
+         o <- newRef ROpts (REPL.Opts.defaultOpts Nothing outmode cgs)
          updateEnv
+         fname <- case (findInputs opts) of
+                       Just (fname ::: Nil) => pure $ Just fname
+                       Nothing => pure Nothing
+                       Just (fname1 ::: fnames) => do
+                         let suggestion = nearMatchOptSuggestion fname1
+                         renderedSuggestion <- maybe (pure "") render suggestion
+                         quitWithError $
+                           UserError """
+                                     Expected at most one input file but was given: \{joinBy ", " (fname1 :: fnames)}
+                                     \{renderedSuggestion}
+                                     """
+         update ROpts { mainfile := fname }
 
          finish <- showInfo opts
          when (not finish) $ do
@@ -171,7 +184,7 @@ stMain cgs opts
            -- If there's a --build or --install, just do that then quit
            done <- processPackageOpts opts
 
-           when (not done) $ flip catch renderError $
+           when (not done) $ flip catch quitWithError $
               do when (checkVerbose opts) $ -- override Quiet if implicitly set
                      setOutput (REPL InfoLvl)
                  u <- newRef UST initUState
@@ -197,7 +210,7 @@ stMain cgs opts
                                    pure Done
                       Just f => logTime 1 "Loading main file" $ do
                                   res <- loadMainFile f
-                                  displayErrors res
+                                  displayStartupErrors res
                                   pure res
 
                  doRepl <- catch (postOptions result opts)
@@ -231,14 +244,14 @@ stMain cgs opts
 
   where
 
-  renderError : {auto c : Ref Ctxt Defs} ->
+  quitWithError : {auto c : Ref Ctxt Defs} ->
                 {auto s : Ref Syn SyntaxInfo} ->
                 {auto o : Ref ROpts REPLOpts} ->
-                Error -> Core ()
-  renderError err = do
-    doc <- perror err
+                Error -> Core a
+  quitWithError err = do
+    doc <- display err
     msg <- render doc
-    throw (UserError msg)
+    coreLift (die msg)
 
 -- Run any options (such as --version or --help) which imply printing a
 -- message then exiting. Returns wheter the program should continue

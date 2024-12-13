@@ -1,0 +1,9 @@
+3
+------
+Error: Expected end of input.
+
+(Interactive):2:1--2:2
+ 1 | printLn $ 1
+ 2 | + 2
+     ^
+

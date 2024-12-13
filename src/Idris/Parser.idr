@@ -1471,6 +1471,10 @@ directive fname indents
          b <- onoff
          atEnd indents
          pure (PrefixRecordProjections b)
+  <|> do decoratedPragma fname "totality_depth"
+         lvl <- decorate fname Keyword $ intLit
+         atEnd indents
+         pure (TotalityDepth (fromInteger lvl))
   <|> do decoratedPragma fname "ambiguity_depth"
          lvl <- decorate fname Keyword $ intLit
          atEnd indents

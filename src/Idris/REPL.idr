@@ -26,6 +26,7 @@ import Core.SchemeEval
 
 import Parser.Unlit
 
+import Idris.CommandLine
 import Idris.Desugar
 import Idris.Doc.Display
 import Idris.Doc.String
@@ -1226,6 +1227,17 @@ mutual
   handleResult Exited = iputStrLn (reflow "Bye for now!")
   handleResult other = do { displayResult other ; repl }
 
+  fileLoadingError : (fname : String) -> (err : FileError) -> (suggestion : Maybe (Doc IdrisAnn)) -> Doc IdrisAnn
+  fileLoadingError fname err suggestion =
+    let suggestion = maybe "" (hardline <+>) suggestion
+    in
+    hardline <+>
+    (indent 2 $
+      error ((reflow "Error loading file") <++> (dquotes $ pretty0 fname) <+> colon) <++>
+        pretty0 (show err) <+>
+      suggestion) <+>
+    hardline
+
   export
   displayResult : {auto c : Ref Ctxt Defs} ->
          {auto u : Ref UST UState} ->
@@ -1243,7 +1255,7 @@ mutual
   displayResult (ErrorLoadingModule x err)
     = printResult (reflow "Error loading module" <++> pretty0 x <+> colon <++> !(perror err))
   displayResult (ErrorLoadingFile x err)
-    = printResult (reflow "Error loading file" <++> pretty0 x <+> colon <++> pretty0 (show err))
+    = printResult (fileLoadingError x err Nothing)
   displayResult (ErrorsBuildingFile x errs)
     = printResult (reflow "Error(s) building file" <++> pretty0 x) -- messages already displayed while building
   displayResult NoFileLoaded = printResult (reflow "No file can be reloaded")
@@ -1295,12 +1307,21 @@ mutual
       cmdInfo : (List String, CmdArg, String) -> String
       cmdInfo (cmds, args, text) = " " ++ col 18 36 (showSep " " cmds) (show args) text
 
+  ||| Display errors that may occur when starting the REPL.
+  ||| Does not force the REPL to exit, just prints the error(s).
+  |||
+  ||| NOTE: functionally the only reason to consider this function specialized
+  ||| to "startup" is that it will provide suggestions to the user under the
+  ||| assumption that the user has just entered the REPL via CLI arguments that
+  ||| they may have used incorrectly.
   export
-  displayErrors : {auto c : Ref Ctxt Defs} ->
+  displayStartupErrors : {auto c : Ref Ctxt Defs} ->
          {auto u : Ref UST UState} ->
          {auto s : Ref Syn SyntaxInfo} ->
          {auto m : Ref MD Metadata} ->
          {auto o : Ref ROpts REPLOpts} -> REPLResult -> Core ()
-  displayErrors (ErrorLoadingFile x err)
-    = printError (reflow "File error in" <++> pretty0 x <+> colon <++> pretty0 (show err))
-  displayErrors _ = pure ()
+  displayStartupErrors (ErrorLoadingFile x err) =
+    let suggestion = nearMatchOptSuggestion x
+    in
+      printError (fileLoadingError x err suggestion)
+  displayStartupErrors _ = pure ()

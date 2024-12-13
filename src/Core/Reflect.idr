@@ -884,7 +884,7 @@ Reflect a => Reflect (WithFC a) where
   reflect fc defs lhs env (MkFCVal loc val)
       = do loc' <- reflect fc defs lhs env loc
            val' <- reflect fc defs lhs env val
-           appCon fc defs (reflectiontt "MkFCVal") [loc', val']
+           appCon fc defs (reflectiontt "MkFCVal") [Erased fc Placeholder, loc', val']
 
 {-
 -- Reflection of well typed terms: We don't reify terms because that involves

@@ -1,0 +1,9 @@
+. ../../testutils.sh
+
+idris2 --exec 'putStrLn "Hello!"' --exec "1 + 2" --exec 'putStrLn "Bye!"'
+echo "------"
+idris2 --exec 'putStrLn "Hello!"' --exec "do" --exec 'putStrLn "Bye!"'
+echo "------"
+idris2 --exec 'putStrLn "Hello!"' --exec "!!" --exec 'putStrLn "Bye!"'
+echo "------"
+idris2 --exec 'putStrLn "Hello!"' --exec "undefined" --exec 'putStrLn "Bye!"'

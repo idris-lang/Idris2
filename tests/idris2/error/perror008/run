@@ -1,11 +1,11 @@
 . ../../../testutils.sh
 
-check Issue710a.idr || true
-check Issue710b.idr || true
-check Issue710c.idr || true
-check Issue710d.idr || true
-check Issue710e.idr || true
-check Issue710f.idr || true
+check Issue710a.idr 2>&1 || true
+check Issue710b.idr 2>&1 || true
+check Issue710c.idr 2>&1 || true
+check Issue710d.idr 2>&1 || true
+check Issue710e.idr 2>&1 || true
+check Issue710f.idr 2>&1 || true
 
-check Issue1224a.idr || true
-check Issue1224b.idr || true
+check Issue1224a.idr 2>&1 || true
+check Issue1224b.idr 2>&1 || true
