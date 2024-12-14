@@ -747,7 +747,7 @@ perrorRaw (CyclicImports ns)
         <++> concatWith (surround " -> ") (pretty0 <$> ns)
 perrorRaw ForceNeeded = pure $ errorDesc (reflow "Internal error when resolving implicit laziness")
 perrorRaw (InternalError str) = pure $ errorDesc (reflow "INTERNAL ERROR" <+> colon) <++> pretty0 str
-perrorRaw (UserError str) = pure $ errorDesc ("Error" <+> colon) <++> pretty0 str
+perrorRaw (UserError str) = pure . errorDesc $ pretty0 str
 perrorRaw (NoForeignCC fc specs) = do
     let cgs = fst <$> availableCGs (options !(get Ctxt))
     let res = vsep [ errorDesc (reflow ("The given specifier '" ++ show specs ++ "' was not accepted by any backend. Available backends") <+> colon)

@@ -335,7 +335,7 @@ doParse s ws com (Try g) xs = case doParse s ws com g xs of
   res => res
 doParse s ws com Commit xs = Res s ws True (irrelevantBounds ()) xs
 doParse s ws com (MustWork g) xs =
-  case assert_total (doParse s ws com g xs) of
+  case doParse s ws com g xs of
        Failure com' _ errs => Failure com' True errs
        res => res
 doParse s ws com (Terminal err f) [] = Failure com False (Error "End of input" Nothing ::: Nil)
@@ -357,7 +357,7 @@ doParse s ws com (Alt {c1} {c2} x y) xs
                         -- If the alternative had committed, don't try the
                         -- other branch (and reset commit flag)
                    then Failure com fatal errs
-                   else case (assert_total doParse s ws False y xs) of
+                   else case doParse s ws False y xs of
                              (Failure com'' fatal' errs') => if com'' || fatal'
                                                                      -- Only add the errors together if the second branch
                                                                      -- is also non-committed and non-fatal.
@@ -367,27 +367,27 @@ doParse s ws com (Alt {c1} {c2} x y) xs
            -- Successfully parsed the first option, so use the outer commit flag
            Res s ws _ val xs => Res s ws com val xs
 doParse s ws com (SeqEmpty act next) xs
-    = case assert_total (doParse s ws com act xs) of
+    = case doParse s ws com act xs of
            Failure com fatal errs => Failure com fatal errs
            Res s ws com v xs =>
-             mergeWith v (assert_total $ doParse s ws com (next v.val) xs)
+             mergeWith v $ doParse s ws com (next v.val) xs
 doParse s ws com (SeqEat act next) xs
-    = case assert_total (doParse s ws com act xs) of
+    = case doParse s ws com act xs of
            Failure com fatal errs => Failure com fatal errs
            Res s ws com v xs =>
-             mergeWith v (assert_total $ doParse s ws com (next v.val) xs)
+             mergeWith v $ assert_total doParse s ws com (next v.val) xs
 doParse s ws com (ThenEmpty act next) xs
-    = case assert_total (doParse s ws com act xs) of
+    = case doParse s ws com act xs of
            Failure com fatal errs => Failure com fatal errs
            Res s ws com v xs =>
-             mergeWith v (assert_total $ doParse s ws com next xs)
+             mergeWith v $ doParse s ws com next xs
 doParse s ws com (ThenEat act next) xs
-    = case assert_total (doParse s ws com act xs) of
+    = case doParse s ws com act xs of
            Failure com fatal errs => Failure com fatal errs
            Res s ws com v xs =>
-             mergeWith v (assert_total $ doParse s ws com next xs)
+             mergeWith v $ assert_total doParse s ws com next xs
 doParse s ws com (Bounds act) xs
-    = case assert_total (doParse s ws com act xs) of
+    = case doParse s ws com act xs of
            Failure com fatal errs => Failure com fatal errs
            Res s ws com v xs => Res s ws com (const v <$> v) xs
 doParse s ws com Position [] = Failure com False (Error "End of input" Nothing ::: Nil)

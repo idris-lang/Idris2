@@ -1,0 +1,5 @@
+. ../../../testutils.sh
+
+# it is common to hear about folks doing this by accident when they mean
+# to do `idris2 --repl pkg.ipkg`.
+idris2 repl pkg.ipkg 2>&1

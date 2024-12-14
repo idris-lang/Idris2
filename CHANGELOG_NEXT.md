@@ -27,6 +27,11 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Remove reference to column number parameter in help menu for `refine` command.
 
+* CLI errors will now be printed to `stderr` instead of `stdout`.
+
+* The `idris2 --exec` command now takes an arbitrary expression, not just the
+  function name.
+
 ### Building/Packaging changes
 
 * The Nix flake's `buildIdris` function now returns a set with `executable` and
@@ -86,6 +91,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * The compiler now parses `~x.fun` as unquoting `x` rather than `x.fun`
   and `~(f 5).fun` as unquoting `(f 5)` rather than `(f 5).fun`.
+
+* Totality checking will now look under data constructors, so `Just xs` will
+  be considered smaller than `Just (x :: xs)`.
 
 * LHS of `with`-applications are parsed as `PWithApp` instead of `PApp`. As a
   consequence, `IWithApp` appears in `TTImp` values in elaborator scripts instead
@@ -256,6 +264,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Added `kvList` function to `Data.SortedMap` and `Data.SortedMap.Dependent` to have an unambiguous
   `toList` variant.
+
+* Refactored `Uninhabited` implementation for `Data.List.Elem`, `Data.List1.Elem`, `Data.SnocList.Elem` and `Data.Vect.Elem`
+  so it can be used for homogeneous (===) and heterogeneous (~=~) equality.
 
 #### Contrib
 
