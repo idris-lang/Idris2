@@ -83,18 +83,26 @@ getPackageDirs dname = do
     ttcVersions : String -> IO (List Int)
     ttcVersions dir = catMaybes . map parsePositive <$> listDirOrEmpty (dname </> dir)
 
--- Get a list of all the candidate directories that match a package spec
--- in a given path. Return an empty list on file error (e.g. path not existing)
+||| Get a list of all the candidate directories that match a package spec
+||| in a given path. Return an empty list on file error (e.g. path not existing)
+|||
+||| Only package's with build artifacts for the correct TTC version for the
+||| compiler will be considered.
 export
 candidateDirs : String -> String -> PkgVersionBounds ->
                 IO (List (String, Maybe PkgVersion))
 candidateDirs dname pkg bounds =
-  mapMaybe checkBounds <$> getPackageDirs dname
+  mapMaybe (checkBounds <=< checkTTCVersion) <$> getPackageDirs dname
 
-  where checkBounds : PkgDir -> Maybe (String,Maybe PkgVersion)
+  where checkBounds : PkgDir -> Maybe (String, Maybe PkgVersion)
         checkBounds (MkPkgDir dirName pkgName ver _) =
           do guard (pkgName == pkg && inBounds ver bounds)
              pure ((dname </> dirName), ver)
+
+        checkTTCVersion : PkgDir -> Maybe PkgDir
+        checkTTCVersion pkg = if isJust (find (== ttcVersion) pkg.ttcVersions)
+                                 then Just pkg
+                                 else Nothing
 
 ||| Find all package directories (plus version) matching
 ||| the given package name and version bounds. Results
@@ -102,6 +110,9 @@ candidateDirs dname pkg bounds =
 |||
 ||| All package _search paths_ will be searched for package
 ||| _directories_ that fit the requested critera.
+|||
+||| Only packages with build artifacts for the correct TTC version for the
+||| compiler will be considered.
 export
 findPkgDirs :
     Ref Ctxt Defs =>
