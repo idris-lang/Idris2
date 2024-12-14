@@ -313,14 +313,19 @@ toList : SortedDMap k v -> List (x : k ** v x)
 toList Empty = []
 toList (M _ t) = treeToList t
 
+||| Returns a list of key-value pairs stored in this map
+public export %inline
+kvList : SortedDMap k v -> List (x : k ** v x)
+kvList = toList
+
 ||| Gets the keys of the map.
 export
 keys : SortedDMap k v -> List k
-keys = map fst . toList
+keys = map fst . kvList
 
 export
 values : SortedDMap k v -> List (x : k ** v x)
-values = toList
+values = kvList
 
 treeMap : ({x : k} -> a x -> b x) -> Tree n k a o -> Tree n k b o
 treeMap f (Leaf k v) = Leaf k (f v)
@@ -385,7 +390,7 @@ mergeWith : DecEq k => ({x : k} -> v x -> v x -> v x) -> SortedDMap k v -> Sorte
 mergeWith f x y = insertFrom inserted x where
   inserted : List (x : k ** v x)
   inserted = do
-    (k ** v) <- toList y
+    (k ** v) <- kvList y
     let v' = (maybe id f $ lookupPrecise k x) v
     pure (k ** v')
 
@@ -460,15 +465,15 @@ pop m = do
 
 export
 (Show k, {x : k} -> Show (v x)) => Show (SortedDMap k v) where
-   show m = "fromList " ++ (show $ toList m)
+   show m = "fromList " ++ (show $ kvList m)
 
 export
 (DecEq k, {x : k} -> Eq (v x)) => Eq (SortedDMap k v) where
-  (==) = (==) `on` toList
+  (==) = (==) `on` kvList
 
 export
 strictSubmap : DecEq k => ({x : k} -> Eq (v x)) => (sub : SortedDMap k v) -> (sup : SortedDMap k v) -> Bool
-strictSubmap sub sup = all (\(k ** v) => Just v == lookupPrecise k sup) $ toList sub
+strictSubmap sub sup = all (\(k ** v) => Just v == lookupPrecise k sup) $ kvList sub
 
 -- TODO: is this the right variant of merge to use for this? I think it is, but
 -- I could also see the advantages of using `mergeLeft`. The current approach is
