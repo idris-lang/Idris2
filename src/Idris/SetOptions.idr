@@ -100,7 +100,7 @@ candidateDirs dname pkg bounds =
              pure ((dname </> dirName), ver)
 
         checkTTCVersion : PkgDir -> Maybe PkgDir
-        checkTTCVersion pkg = if isJust (find (== ttcVersion) pkg.ttcVersions)
+        checkTTCVersion pkg = if ttcVersion `elem` pkg.ttcVersions
                                  then Just pkg
                                  else Nothing
 
