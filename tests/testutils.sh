@@ -78,6 +78,10 @@ clean_names() {
     awk "$_awk_clean_name"
 }
 
+append_package_path() {
+    export IDRIS2_PACKAGE_PATH="$IDRIS2_PACKAGE_PATH$SEP$1"
+}
+
 # Folder containing the currently running test
 if [ "$OS" = "windows" ]; then
     test_dir="$(cygpath -m "$(pwd)")"

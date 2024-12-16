@@ -1,0 +1,6 @@
+expect error:
+Uncaught error: Can't find package testpkg (any)
+
+expect success:
+Main> Imported module Stuff
+Main> Bye for now!
