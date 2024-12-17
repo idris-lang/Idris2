@@ -173,7 +173,8 @@ logNF s n msg env tmnf
         do defs <- get Ctxt
            tm <- quote defs env tmnf
            tm' <- toFullNames tm
-           logString s.topic n (msg ++ ": " ++ show tm')
+           depth <- getDepth
+           logString depth s.topic n (msg ++ ": " ++ show tm')
 
 -- Log message with a term, reducing holes and translating back to human
 -- readable names first
@@ -186,7 +187,8 @@ logTermNF' s n msg env tm
     = do defs <- get Ctxt
          tmnf <- normaliseHoles defs env tm
          tm' <- toFullNames tmnf
-         logString s.topic n (msg ++ ": " ++ show tm')
+         depth <- getDepth
+         logString depth s.topic n (msg ++ ": " ++ show tm')
 
 export
 logTermNF : {vars : _} ->
@@ -206,7 +208,8 @@ logGlue s n msg env gtm
         do defs <- get Ctxt
            tm <- getTerm gtm
            tm' <- toFullNames tm
-           logString s.topic n (msg ++ ": " ++ show tm')
+           depth <- getDepth
+           logString depth s.topic n (msg ++ ": " ++ show tm')
 
 export
 logGlueNF : {vars : _} ->
@@ -219,7 +222,8 @@ logGlueNF s n msg env gtm
            tm <- getTerm gtm
            tmnf <- normaliseHoles defs env tm
            tm' <- toFullNames tmnf
-           logString s.topic n (msg ++ ": " ++ show tm')
+           depth <- getDepth
+           logString depth s.topic n (msg ++ ": " ++ show tm')
 
 export
 logEnv : {vars : _} ->
@@ -228,7 +232,8 @@ logEnv : {vars : _} ->
          Nat -> String -> Env Term vars -> Core ()
 logEnv s n msg env
     = when !(logging s n) $
-        do logString s.topic n msg
+        do depth <- getDepth
+           logString depth s.topic n msg
            dumpEnv env
 
   where
