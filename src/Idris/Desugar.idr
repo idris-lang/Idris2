@@ -1064,7 +1064,8 @@ mutual
       checkDefault : TotalReq -> List TotalReq -> Maybe String
       checkDefault def totalities =
         toMaybe (def `elem` totalities) $
-          "Remove modifiers " ++ showModifiers totalities
+          "Remove modifiers " ++ showModifiers totalities ++
+          ", resulting in the default totality of " ++ showModifiers [def]
 
   -- Given a high level declaration, return a list of TTImp declarations
   -- which process it, and update any necessary state on the way.
