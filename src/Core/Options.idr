@@ -154,6 +154,7 @@ record Session where
                     -- any logging is enabled.
   logLevel : LogLevels
   logTimings : Maybe Nat -- log level, higher means more details
+  logDepth : Nat -- depth level of logging to separate related stuff visually
   debugElabCheck : Bool -- do conversion check to verify results of elaborator
   dumpcases : Maybe String -- file to output compiled case trees
   dumplifted : Maybe String -- file to output lambda lifted definitions
@@ -227,7 +228,7 @@ defaultPPrint = MkPPOpts False False True False
 export
 defaultSession : Session
 defaultSession = MkSessionOpts False CoveringOnly False False Chez [] 1000 False False
-                               defaultLogLevel Nothing False Nothing Nothing
+                               defaultLogLevel Nothing 0 False Nothing Nothing
                                Nothing Nothing False 1 False False True
                                False [] False False
 

@@ -655,11 +655,12 @@ dumpHole : {auto u : Ref UST UState} ->
 dumpHole str n hole
     = do ust <- get UST
          defs <- get Ctxt
+         depth <- getDepth
          case !(lookupCtxtExact (Resolved hole) (gamma defs)) of
           Nothing => pure ()
           Just gdef => case (definition gdef, type gdef) of
              (Guess tm envb constraints, ty) =>
-                  do logString str n $
+                  do logString depth str n $
                        "!" ++ show !(getFullName (Resolved hole)) ++ " : "
                            ++ show !(toFullNames !(normaliseHoles defs [] ty))
                        ++ "\n\t  = "
@@ -667,13 +668,13 @@ dumpHole str n hole
                            ++ "\n\twhen"
                      traverse_ dumpConstraint constraints
              (Hole _ p, ty) =>
-                  logString str n $
+                  logString depth str n $
                     "?" ++ show (fullname gdef) ++ " : "
                         ++ show !(normaliseHoles defs [] ty)
                         ++ if implbind p then " (ImplBind)" else ""
                         ++ if invertible gdef then " (Invertible)" else ""
              (BySearch _ _ _, ty) =>
-                  logString str n $
+                  logString depth str n $
                      "Search " ++ show hole ++ " : " ++
                      show !(toFullNames !(normaliseHoles defs [] ty))
              (PMDef _ args t _ _, ty) =>
@@ -695,11 +696,12 @@ dumpHole str n hole
     dumpConstraint cid
         = do ust <- get UST
              defs <- get Ctxt
+             depth <- getDepth
              case lookup cid (constraints ust) of
                   Nothing => pure ()
-                  Just Resolved => logString str n "\tResolved"
+                  Just Resolved => logString depth str n "\tResolved"
                   Just (MkConstraint _ lazy env x y) =>
-                    do logString str n $
+                    do logString depth str n $
                          "\t  " ++ show !(toFullNames !(quote defs env x))
                                 ++ " =?= " ++ show !(toFullNames !(quote defs env y))
                        empty <- clearDefs defs
@@ -723,5 +725,6 @@ dumpConstraints str n all
            let hs = toList (guesses ust) ++
                     toList (if all then holes ust else currentHoles ust)
            unless (isNil hs) $
-             do logString str n "--- CONSTRAINTS AND HOLES ---"
+             do depth <- getDepth
+                logString depth str n "--- CONSTRAINTS AND HOLES ---"
                 traverse_ (dumpHole str n) (map fst hs)
