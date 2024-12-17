@@ -636,6 +636,8 @@ jobs:
             echo "commit = \"latest:${GITHUB_REF_NAME}\""
             echo "bootstrap  = true"
           } > pack.toml
+      - name: Fetching bleeding-edge state of libraries
+        run: pack switch HEAD
       - name: Build idris2-pack
         run: |
           git config --global --add safe.directory "${PWD}"
@@ -678,6 +680,8 @@ jobs:
             echo "commit = \"latest:${GITHUB_REF_NAME}\""
             echo "bootstrap  = true"
           } > pack.toml
+      - name: Fetching bleeding-edge state of libraries
+        run: pack switch HEAD
       # make sure pack is running the PR's Idris2 before building LSP
       - name: Build pack with PR-Idris
         run: |
