@@ -228,14 +228,14 @@ listPackages
     pkgTTCVersions (MkPkgDir _ _ _ ttcVersions) =
       pretty0 "├ TTC Versions:" <++> prettyTTCVersions
       where
-        colorize : Int -> Doc IdrisAnn
-        colorize version =
+        annotate : Int -> Doc IdrisAnn
+        annotate version =
           if version == ttcVersion
              then pretty0 $ show version
-             else warning (pretty0 $ show version)
+             else warning ((pretty0 $ show version) <++> (parens "incompatible"))
 
         prettyTTCVersions : Doc IdrisAnn
-        prettyTTCVersions = (concatWith (\x,y => x <+> "," <++> y)) $ colorize <$> sort ttcVersions
+        prettyTTCVersions = (concatWith (\x,y => x <+> "," <++> y)) $ annotate <$> sort ttcVersions
 
     pkgPath : String -> Doc IdrisAnn
     pkgPath path = pretty0 "└ \{path}"
