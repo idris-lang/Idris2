@@ -1009,4 +1009,5 @@ logRaw : {auto c : Ref Ctxt Defs} ->
          Nat -> Lazy String -> RawImp -> Core ()
 logRaw str n msg tm
     = when !(logging str n) $
-        do logString str n (msg ++ ": " ++ show tm)
+        do depth <- getDepth
+           logString depth str n (msg ++ ": " ++ show tm)
