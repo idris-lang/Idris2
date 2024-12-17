@@ -142,7 +142,7 @@ unify : Unify tm =>
         FC -> Env Term vars ->
         tm vars -> tm vars ->
         Core UnifyResult
-unify {c} {u} = unifyD c u
+unify {c} {u} a b d e f = logDepth $ unifyD c u a b d e f
 
 export
 unifyWithLazy : Unify tm =>

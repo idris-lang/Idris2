@@ -454,7 +454,7 @@ doEval : {args : _} ->
 doEval n exp
     = do l <- newRef LVar (the Int 0)
          log "compiler.inline.eval" 10 (show n ++ ": " ++ show exp)
-         exp' <- eval [] [] [] exp
+         exp' <- logDepth $ eval [] [] [] exp
          log "compiler.inline.eval" 10 ("Inlined: " ++ show exp')
          pure exp'
 
@@ -574,17 +574,17 @@ compileAndInlineAll
          let ns = keys (toIR defs)
          cns <- filterM nonErased ns
 
-         traverse_ compileDef cns
-         traverse_ rewriteIdentityFlag cns
+         traverse_ (logDepthWrap compileDef) cns
+         traverse_ (logDepthWrap rewriteIdentityFlag) cns
          transform 3 cns -- number of rounds to run transformations.
                          -- This seems to be the point where not much useful
                          -- happens any more.
-         traverse_ updateCallGraph cns
+         traverse_ (logDepthWrap updateCallGraph) cns
          -- in incremental mode, add the arity of the definitions to the hash,
          -- because if these change we need to recompile dependencies
          -- accordingly
          unless (isNil (incrementalCGs !getSession)) $
-           traverse_ addArityHash cns
+           traverse_ (logDepthWrap addArityHash) cns
   where
     transform : Nat -> List Name -> Core ()
     transform Z cns = pure ()

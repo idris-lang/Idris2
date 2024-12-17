@@ -40,15 +40,15 @@ interface Quote tm where
 
     quote defs env tm
         = do q <- newRef QVar 0
-             quoteGen q (MkQuoteOpts True False Nothing) defs env tm
+             logDepth $ quoteGen q (MkQuoteOpts True False Nothing) defs env tm
 
     quoteLHS defs env tm
         = do q <- newRef QVar 0
-             quoteGen q (MkQuoteOpts True True Nothing) defs env tm
+             logDepth $ quoteGen q (MkQuoteOpts True True Nothing) defs env tm
 
     quoteOpts opts defs env tm
         = do q <- newRef QVar 0
-             quoteGen q opts defs env tm
+             logDepth $ quoteGen q opts defs env tm
 
 export
 genName : {auto q : Ref QVar Int} -> String -> Core Name
