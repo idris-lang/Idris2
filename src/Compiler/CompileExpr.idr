@@ -643,7 +643,7 @@ compileDef n
            -- For now, consider it an incentive not to have cycles :).
             then recordWarning (GenericWarn emptyFC ("Compiling hole " ++ show n))
             else do s <- newRef NextMN 0
-                    ce <- toCDef n (type gdef) (eraseArgs gdef)
+                    ce <- logDepth $ toCDef n (type gdef) (eraseArgs gdef)
                            !(toFullNames (definition gdef))
                     ce <- constructorCDef ce
                     setCompiled n ce

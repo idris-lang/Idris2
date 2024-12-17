@@ -98,7 +98,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
            Env Term free -> LocalEnv free vars ->
            Term (vars ++ free) -> Stack free -> Core (NF free)
     eval env locs (Local fc mrig idx prf) stk
-        = evalLocal env fc mrig idx prf stk locs
+        = logDepth $ evalLocal env fc mrig idx prf stk locs
     eval env locs (Ref fc nt fn) stk
         = evalRef env False fc nt fn stk (NApp fc (NRef nt fn) stk)
     eval {vars} {free} env locs (Meta fc name idx args) stk
@@ -568,13 +568,13 @@ export
 nf : {auto c : Ref Ctxt Defs} ->
      {vars : _} ->
      Defs -> Env Term vars -> Term vars -> Core (NF vars)
-nf defs env tm = eval defs defaultOpts env [] tm []
+nf defs env tm = logDepth $ eval defs defaultOpts env [] tm []
 
 export
 nfOpts : {auto c : Ref Ctxt Defs} ->
          {vars : _} ->
          EvalOpts -> Defs -> Env Term vars -> Term vars -> Core (NF vars)
-nfOpts opts defs env tm = eval defs opts env [] tm []
+nfOpts opts defs env tm = logDepth $ eval defs opts env [] tm []
 
 export
 gnf : {vars : _} ->
