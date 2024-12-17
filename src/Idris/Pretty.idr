@@ -109,6 +109,9 @@ export
 code : Doc IdrisAnn -> Doc IdrisAnn
 code = annotate Code
 
+Pretty i a => Pretty i (WithFC a) where
+  pretty x = pretty x.val
+
 mutual
 
   prettyAlt : PClause' KindedName -> Doc IdrisSyntax
@@ -174,9 +177,26 @@ mutual
       then annotateM (kindAnn op) $ pretty0 nm
       else Chara '`' <+> annotateM (kindAnn op) (pretty0 nm) <+> Chara '`'
 
+  Pretty IdrisSyntax (BasicMultiBinder' KindedName) where
+    pretty (MkBasicMultiBinder rig names type)
+      = prettyRig rig <++> commaSep (forget $ map (prettyBinder . val) names)
+      <++> colon <++> pretty type
+
   export
   Pretty IdrisSyntax IPTerm where
     prettyPrec d (PRef _ nm) = annotateM (kindAnn nm) $ cast $ prettyOp False nm.rawName
+    prettyPrec d (NewPi (MkFCVal fc (MkPBinderScope (MkPBinder Implicit bind) scope))) =
+      lcurly <+> pretty bind <+> rcurly <++> arrow <++> prettyPrec d scope
+    prettyPrec d (NewPi (MkFCVal fc (MkPBinderScope (MkPBinder Explicit bind) scope))) =
+      lparen <+> pretty bind <+> rparen <++> arrow <++> prettyPrec d scope
+    prettyPrec d (NewPi (MkFCVal fc (MkPBinderScope (MkPBinder AutoImplicit bind) scope))) =
+      lcurly <+> auto_ <++> pretty bind <+> rcurly <++> arrow <++> prettyPrec d scope
+    prettyPrec d (NewPi (MkFCVal fc (MkPBinderScope (MkPBinder (DefImplicit x) bind) scope))) =
+      lcurly <+> default_ <++> prettyPrec appPrec x
+      <++> pretty bind <+> rcurly <++> arrow <++> prettyPrec d scope
+    prettyPrec d (Forall (MkFCVal fc (names, scope))) =
+      parenthesise (d > startPrec) $ group $
+        forall_ <++> commaSep (map (prettyBinder . val) (forget names)) <++> dot <++> pretty scope
     prettyPrec d (PPi _ rig Explicit Nothing arg ret) =
       parenthesise (d > startPrec) $ group $
         branchVal

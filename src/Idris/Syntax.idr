@@ -111,6 +111,9 @@ mutual
        -- Direct (more or less) translations to RawImp
 
        PRef : FC -> nm -> PTerm' nm
+       NewPi : WithFC (PBinderScope' nm) -> PTerm' nm
+       Forall : WithFC (List1 (WithFC Name), PTerm' nm) -> PTerm' nm
+
        PPi : FC -> RigCount -> PiInfo (PTerm' nm) -> Maybe Name ->
              (argTy : PTerm' nm) -> (retTy : PTerm' nm) -> PTerm' nm
        PLam : FC -> RigCount -> PiInfo (PTerm' nm) -> (pat : PTerm' nm) ->
@@ -188,6 +191,8 @@ mutual
   export
   getPTermLoc : PTerm' nm -> FC
   getPTermLoc (PRef fc _) = fc
+  getPTermLoc (NewPi x) = x.fc
+  getPTermLoc (Forall x) = x.fc
   getPTermLoc (PPi fc _ _ _ _ _) = fc
   getPTermLoc (PLam fc _ _ _ _ _) = fc
   getPTermLoc (PLet fc _ _ _ _ _ _) = fc
@@ -272,6 +277,82 @@ mutual
        StrLiteral : FC -> String -> PStr' nm
        StrInterp : FC -> PTerm' nm -> PStr' nm
 
+  public export
+  PlainMultiBinder : Type
+  PlainMultiBinder = PlainMultiBinder' Name
+
+  ||| A plain binder without information about its use
+  ||| plainBinder := name ':' term
+  public export
+  PlainMultiBinder' : (nm : Type) -> Type
+  PlainMultiBinder' nm = List1 (WithName (PTerm' nm))
+
+  public export
+  PlainBinder : Type
+  PlainBinder = PlainBinder' Name
+
+  ||| A plain binder without information about its use
+  ||| plainBinder := name ':' term
+  public export
+  PlainBinder' : (nm : Type) -> Type
+  PlainBinder' nm  = WithName (PTerm' nm)
+
+  public export
+  BasicMultiBinder : Type
+  BasicMultiBinder = BasicMultiBinder' Name
+
+  ||| A binder with quantity information attached
+  ||| basicBinder := qty plainBinder
+  public export
+  record BasicMultiBinder' (nm : Type) where
+    constructor MkBasicMultiBinder
+    rig : RigCount
+    names : List1 (WithFC Name)
+    type : PTerm' nm
+
+  public export
+  BasicBinder : Type
+  BasicBinder = BasicBinder' Name
+
+  ||| A binder with quantity information attached
+  ||| basicBinder := qty plainBinder
+  public export
+  record BasicBinder' (nm : Type) where
+    constructor MkBasicBinder
+    rig : RigCount
+    name : WithFC Name
+    type : PTerm' nm
+
+  public export
+  PBinder : Type
+  PBinder = PBinder' Name
+
+  ||| A binder with information about how it is binding
+  ||| pbinder := '{' basicBinder '}'
+  |||          | '{' auto basicBinder '}'
+  |||          | '{' default term basicBinder '}'
+  |||          | '(' basicBinder ')'
+  public export
+  record PBinder' (nm : Type) where
+    constructor MkPBinder
+    info : PiInfo (PTerm' nm)
+    bind : BasicMultiBinder' nm
+
+  public export
+  PBinderScope : Type
+  PBinderScope = PBinderScope' Name
+
+  public export
+  record PBinderScope' (nm : Type) where
+    constructor MkPBinderScope
+    binder : PBinder' nm
+    scope : PTerm' nm
+
+  public export
+  MkFullBinder : PiInfo (PTerm' nm) -> RigCount -> WithFC Name -> PTerm' nm -> PBinder' nm
+  MkFullBinder info rig x y = MkPBinder info (MkBasicMultiBinder rig (singleton x) y)
+
+
   export
   getLoc : PDo' nm -> FC
   getLoc (DoExp fc _) = fc
@@ -335,13 +416,13 @@ mutual
   public export
   data PRecordDecl' : Type -> Type where
        MkPRecord : (tyname : Name) ->
-                   (params : List (Name, RigCount, PiInfo (PTerm' nm), PTerm' nm)) ->
+                   (params : List (PBinder' nm)) ->
                    (opts : List DataOpt) ->
                    (conName : Maybe (String, Name)) ->
                    (decls : List (PField' nm)) ->
                    PRecordDecl' nm
        MkPRecordLater : (tyname : Name) ->
-                        (params : List (Name, RigCount, PiInfo (PTerm' nm), PTerm' nm)) ->
+                        (params : List (PBinder' nm)) ->
                         PRecordDecl' nm
 
   export
@@ -498,8 +579,8 @@ mutual
        PDef : List (PClause' nm) -> PDeclNoFC' nm
        PData : (doc : String) -> WithDefault Visibility Private ->
                Maybe TotalReq -> PDataDecl' nm -> PDeclNoFC' nm
-       PParameters : Either (List (Name, PTerm' nm))
-                            (List (Name, RigCount, PiInfo (PTerm' nm), PTerm' nm)) ->
+       PParameters : Either (List1 (PlainBinder' nm))
+                            (List1 (PBinder' nm)) ->
                      List (PDecl' nm) -> PDeclNoFC' nm
        PUsing : List (Maybe Name, PTerm' nm) ->
                 List (PDecl' nm) -> PDeclNoFC' nm
@@ -507,7 +588,7 @@ mutual
                     (constraints : List (Maybe Name, PTerm' nm)) ->
                     Name ->
                     (doc : String) ->
-                    (params : List (Name, RigCount, PTerm' nm)) ->
+                    (params : List (BasicMultiBinder' nm)) ->
                     (det : List Name) ->
                     (conName : Maybe (String, Name)) ->
                     List (PDecl' nm) ->
@@ -752,6 +833,8 @@ parameters {0 nm : Type} (toName : nm -> Name)
   showUpdate : PFieldUpdate' nm -> String
   showPTermPrec : Prec -> PTerm' nm -> String
   showOpPrec : Prec -> OpStr' nm -> String
+  showPBinder : Prec -> PBinder' nm -> String
+  showBasicMultiBinder : BasicMultiBinder' nm -> String
 
   showPTerm : PTerm' nm -> String
   showPTerm = showPTermPrec Open
@@ -783,7 +866,22 @@ parameters {0 nm : Type} (toName : nm -> Name)
   showUpdate (PSetField p v) = showSep "." p ++ " = " ++ showPTerm v
   showUpdate (PSetFieldApp p v) = showSep "." p ++ " $= " ++ showPTerm v
 
+  showBasicMultiBinder (MkBasicMultiBinder rig names type)
+        = "\{showCount rig} \{showNames}: \{showPTerm type}"
+        where
+          showNames : String
+          showNames = concat $ intersperse ", " $ map (show . val) (forget names)
+
+  showPBinder d (MkPBinder Implicit bind) = "{\{showBasicMultiBinder bind}}"
+  showPBinder d (MkPBinder Explicit bind) = "(\{showBasicMultiBinder bind})"
+  showPBinder d (MkPBinder AutoImplicit bind) = "{auto \{showBasicMultiBinder bind}}"
+  showPBinder d (MkPBinder (DefImplicit x) bind) = "{default \{showPTerm x} \{ showBasicMultiBinder bind}}"
+
   showPTermPrec d (PRef _ n) = showPrec d (toName n)
+  showPTermPrec d (Forall (MkFCVal _ (names, scope)))
+        = "forall " ++ concat (intersperse ", " (map (show . val) (forget names))) ++ " . " ++ showPTermPrec d scope
+  showPTermPrec d (NewPi (MkFCVal _ (MkPBinderScope binder scope)))
+        = showPBinder d binder ++ " -> "  ++ showPTermPrec d scope
   showPTermPrec d (PPi _ rig Explicit Nothing arg ret)
         = showPTermPrec d arg ++ " -> " ++ showPTermPrec d ret
   showPTermPrec d (PPi _ rig Explicit (Just n) arg ret)

@@ -27,7 +27,8 @@ getFnArgs embed fts = go fts [] where
   go (PNamedApp fc f n t) = go f . (Named fc n t ::)
   go (PBracketed fc f) = go f
   -- we don't care about the binder info here
-  go (POp fc leftSide op r) = (PRef op.fc op.val.toName,) . (Explicit fc leftSide.val.getLhs ::) . (Explicit fc r ::)
+  go (POp fc leftSide op r) =
+    (PRef op.fc op.val.toName,) . (Explicit fc leftSide.val.getLhs ::) . (Explicit fc r ::)
   go (PEq fc l r) = (PRef fc $ embed eqName,) . (Explicit fc l ::) . (Explicit fc r ::)
   -- ambiguous, picking the type constructor here
   go (PPair fc l r) = (PRef fc $ embed pairname,) . (Explicit fc l ::) . (Explicit fc r ::)
