@@ -748,13 +748,13 @@ convertWithLazy withLazy fc elabinfo env x y
                          then do xtm <- getTerm x
                                  ytm <- getTerm y
                                  if lazy
-                                    then unifyWithLazy umode fc env xtm ytm
-                                    else unify umode fc env xtm ytm
+                                    then logDepth $ unifyWithLazy umode fc env xtm ytm
+                                    else logDepth $ unify umode fc env xtm ytm
                          else do xnf <- getNF x
                                  ynf <- getNF y
                                  if lazy
-                                    then unifyWithLazy umode fc env xnf ynf
-                                    else unify umode fc env xnf ynf
+                                    then logDepth $ unifyWithLazy umode fc env xnf ynf
+                                    else logDepth $ unify umode fc env xnf ynf
                 when (holesSolved vs) $
                     solveConstraints umode Normal
                 pure vs)

@@ -802,7 +802,7 @@ compileDef n
            -- traversing everything from the main expression.
            -- For now, consider it an incentive not to have cycles :).
             then recordWarning (GenericWarn emptyFC ("Compiling hole " ++ show n))
-            else do ce <- toCDef n (type gdef) (eraseArgs gdef)
+            else do ce <- logDepth $ toCDef n (type gdef) (eraseArgs gdef)
                            !(toFullNames (definition gdef))
                     setCompiled n ce
   where
