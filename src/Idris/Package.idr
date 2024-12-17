@@ -335,7 +335,6 @@ reason : Maybe PkgVersion -> String
 reason Nothing  = "no matching version is installed"
 reason (Just x) = "assigned version \{show x} which is out of bounds"
 
-
 printResolutionError : ResolutionError -> String
 printResolutionError (MkRE ds d v) = go [<] ds
   where go : SnocList String -> List Candidate -> String
