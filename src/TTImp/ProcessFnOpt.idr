@@ -18,9 +18,17 @@ getRetTy defs ty
     = throw (GenericMsg (getLoc ty)
              "Can only add hints for concrete return types")
 
+%inline
+throwIf : {auto c : Ref Ctxt Defs} -> FC -> Bool -> String -> Core ()
+throwIf fc cond msg = when cond $ throw (GenericMsg fc msg)
+
+%inline
 throwIfHasFlag : {auto c : Ref Ctxt Defs} -> FC -> Name -> DefFlag -> String -> Core ()
-throwIfHasFlag fc ndef fl msg
-    = when !(hasFlag fc ndef fl) $ throw (GenericMsg fc msg)
+throwIfHasFlag fc ndef fl msg = throwIf fc !(hasFlag fc ndef fl) msg
+
+%inline
+throwIfHasTotality : {auto c : Ref Ctxt Defs} -> FC -> Name -> String -> Core ()
+throwIfHasTotality fc ndef msg = throwIf fc !(hasSetTotal fc ndef) msg
 
 export
 processFnOpt : {auto c : Ref Ctxt Defs} ->
@@ -35,7 +43,7 @@ processFnOpt fc _ ndef NoInline
     = do throwIfHasFlag fc ndef Inline "%inline and %noinline are mutually exclusive"
          setFlag fc ndef NoInline
 processFnOpt fc _ ndef Deprecate
-    =  setFlag fc ndef Deprecate
+    = setFlag fc ndef Deprecate
 processFnOpt fc _ ndef TCInline
     = setFlag fc ndef TCInline
 processFnOpt fc True ndef (Hint d)
@@ -62,7 +70,8 @@ processFnOpt fc _ ndef (ForeignExport _)
 processFnOpt fc _ ndef Invertible
     = setFlag fc ndef Invertible
 processFnOpt fc _ ndef (Totality tot)
-    = setFlag fc ndef (SetTotal tot)
+    = do throwIfHasTotality fc ndef "Multiple totality modifiers"
+         setFlag fc ndef (SetTotal tot)
 processFnOpt fc _ ndef Macro
     = setFlag fc ndef Macro
 processFnOpt fc _ ndef (SpecArgs ns)

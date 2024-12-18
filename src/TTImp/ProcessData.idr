@@ -441,6 +441,10 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpLater dfc n_in ty_raw)
                       addHashWithNames fullty
                       log "module.hash" 15 "Adding hash for data declaration with name \{show n}"
 
+         whenJust mbtot $ \ tot => do
+             log "declare.data" 5 $ "setting totality flag for data declaration with name \{show n}"
+             setFlag fc n (SetTotal tot)
+
 processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw opts cons_raw)
     = do n <- inCurrentNS n_in
 
@@ -464,14 +468,15 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
          let mfullty = map snd mmetasfullty
 
          -- If n exists, check it's the same type as we have here, is
-         -- a type constructor, and has either the same visibility or we don't define one.
+         -- a type constructor, and has either the same visibility and totality
+         -- or we don't define them.
          -- When looking up, note the data types which were undefined at the
          -- point of declaration.
          ndefm <- lookupCtxtExact n (gamma defs)
-         (mw, vis, fullty) <- the (Core (List Name, Visibility, ClosedTerm)) $ case ndefm of
+         (mw, vis, tot, fullty) <- the (Core (List Name, Visibility, Maybe TotalReq, ClosedTerm)) $ case ndefm of
                   Nothing => case mfullty of
                     Nothing => throw (GenericMsg fc "Missing telescope for data definition \{show n_in}")
-                    Just fullty => pure ([], collapseDefault def_vis, fullty)
+                    Just fullty => pure ([], collapseDefault def_vis, mbtot, fullty)
                   Just ndef => do
                     vis <- the (Core Visibility) $ case collapseDefaults ndef.visibility def_vis of
                       Right finalVis => pure finalVis
@@ -480,12 +485,25 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
                         recordWarning (IncompatibleVisibility fc oldVis newVis n)
                         pure (max oldVis newVis)
 
+                    let declTot = findSetTotal $ ndef.flags
+                    tot <- case (mbtot, declTot) of
+                      (Just oldTot, Just newTot) => do
+                        when (oldTot /= newTot) $ throw $ GenericMsgSol fc
+                          "Data \{show n_in} has been forward-declared with totality `\{show oldTot}`, cannot change to `\{show newTot}`"
+                          "Possible solutions"
+                          [ "Use the same totality modifiers"
+                          , "Remove the totality modifier from the declaration"
+                          , "Remove the totality modifier from the definition"
+                          ]
+                        pure mbtot
+                      _ => pure $ mbtot <|> declTot
+
                     case definition ndef of
                       TCon _ _ _ _ _ mw [] _ => case mfullty of
-                        Nothing => pure (mw, vis, type ndef)
+                        Nothing => pure (mw, vis, tot, type ndef)
                         Just fullty =>
                             do ok <- convert defs [] fullty (type ndef)
-                               if ok then pure (mw, vis, fullty)
+                               if ok then pure (mw, vis, tot, fullty)
                                      else do logTermNF "declare.data" 1 "Previous" [] (type ndef)
                                              logTermNF "declare.data" 1 "Now" [] fullty
                                              throw (AlreadyDefined fc n)
@@ -545,6 +563,6 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
          traverse_ updateErasable (Resolved tidx :: connames)
 
          -- #1404
-         whenJust mbtot $ \ tot => do
-             log "declare.data" 5 $ "setting totality flag for " ++ show n ++ " and its constructors"
+         whenJust tot $ \ tot => do
+             log "declare.data" 5 $ "setting totality flag for \{show n} and its constructors"
              for_ (n :: map name cons) $ \ n => setFlag fc n (SetTotal tot)
