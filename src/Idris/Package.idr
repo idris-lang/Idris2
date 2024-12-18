@@ -914,6 +914,16 @@ localPackageFile Nothing
          [] => throw $ UserError "No .ipkg file supplied and none could be found in the working directory."
          _ => throw $ UserError "No .ipkg file supplied and the working directory contains more than one."
 
+withWarnings : Ref Ctxt Defs =>
+               Ref Syn SyntaxInfo =>
+               Ref ROpts REPLOpts =>
+               Core a -> Core a
+withWarnings op = do o <- catch op $ \err =>
+                           do ignore emitWarnings
+                              throw err
+                     ignore emitWarnings
+                     pure o
+
 processPackage : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
                  {auto o : Ref ROpts REPLOpts} ->
@@ -921,7 +931,7 @@ processPackage : {auto c : Ref Ctxt Defs} ->
                  (PkgCommand, Maybe String) ->
                  Core ()
 processPackage opts (cmd, mfile)
-    = withCtxt . withSyn . withROpts $ case cmd of
+    = withCtxt . withWarnings . withSyn . withROpts $ case cmd of
         Init =>
           do Just pkg <- coreLift interactive
                | Nothing => coreLift (exitWith (ExitFailure 1))
