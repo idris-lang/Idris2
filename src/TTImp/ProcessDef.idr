@@ -600,7 +600,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
                       Just _  =>
                        let fc = emptyFC in
                        let refl = IVar fc (NS builtinNS (UN $ Basic "Refl")) in
-                       [(mprf, INamedApp fc refl (UN $ Basic "x") wval_raw)]
+                       [(map snd mprf, INamedApp fc refl (UN $ Basic "x") wval_raw)]
 
          let rhs_in = gapply (IVar vfc wname)
                     $ map (\ nm => (Nothing, IVar vfc nm)) envns
@@ -633,7 +633,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
     mkExplicit (b :: env) = b :: mkExplicit env
 
     bindWithArgs :
-       (rig : RigCount) -> (wvalTy : Term xs) -> Maybe (Name, Term xs) ->
+       (rig : RigCount) -> (wvalTy : Term xs) -> Maybe ((RigCount, Name), Term xs) ->
        (wvalEnv : Env Term xs) ->
        Core (ext : List Name
          ** ( Env Term (ext ++ xs)
@@ -657,7 +657,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
 
       in pure (wargs ** (scenv, var, binder))
 
-    bindWithArgs {xs} rig wvalTy (Just (name, wval)) wvalEnv = do
+    bindWithArgs {xs} rig wvalTy (Just ((rigPrf, name), wval)) wvalEnv = do
       defs <- get Ctxt
 
       let eqName = NS builtinNS (UN $ Basic "Equal")
@@ -689,7 +689,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
 
           binder : Term (wargs ++ xs) -> Term xs
                  := \ t => Bind vfc wargn (Pi vfc rig Explicit wvalTy)
-                         $ Bind vfc name  (Pi vfc rig Implicit eqTy) t
+                         $ Bind vfc name  (Pi vfc rigPrf Implicit eqTy) t
 
       pure (wargs ** (scenv, var, binder))
 

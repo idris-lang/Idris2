@@ -1222,8 +1222,9 @@ withProblem fname col indents
   = do rig <- multiplicity fname
        start <- mustWork $ bounds (decoratedSymbol fname "(")
        wval <- bracketedExpr fname start indents
-       prf <- optional (decoratedKeyword fname "proof"
-              *> UN . Basic <$> decoratedSimpleBinderName fname)
+       prf <- optional $ do
+                decoratedKeyword fname "proof"
+                pure (!(multiplicity fname), UN $ Basic !(decoratedSimpleBinderName fname))
        pure (MkPWithProblem rig wval prf)
 
 mutual

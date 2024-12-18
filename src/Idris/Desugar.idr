@@ -926,7 +926,7 @@ mutual
     {auto m : Ref MD Metadata} ->
     {auto o : Ref ROpts REPLOpts} ->
     List Name -> PWithProblem ->
-    Core (RigCount, RawImp, Maybe Name)
+    Core (RigCount, RawImp, Maybe (RigCount, Name))
   desugarWithProblem ps (MkPWithProblem rig wval mnm)
     = (rig,,mnm) <$> desugar AnyExpr ps wval
 
