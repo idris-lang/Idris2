@@ -182,7 +182,7 @@ stMain cgs opts
               | False => pure ()
 
            -- If there's a --build or --install, just do that then quit
-           done <- processPackageOpts opts
+           done <- flip catch quitWithError $ processPackageOpts opts
 
            when (not done) $ flip catch quitWithError $
               do when (checkVerbose opts) $ -- override Quiet if implicitly set
