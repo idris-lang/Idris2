@@ -6,6 +6,7 @@ import Idris.Doc.Display
 import Idris.Doc.String
 import Idris.Pretty
 
+import Core.Core
 import Core.Options
 
 import Data.List

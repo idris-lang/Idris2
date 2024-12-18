@@ -87,24 +87,24 @@ import System.File
 showInfo : {auto c : Ref Ctxt Defs} ->
            (Name, Int, GlobalDef) -> Core ()
 showInfo (n, idx, d)
-    = do coreLift_ $ putStrLn (show (fullname d) ++ " ==> " ++
+    = do coreLift $ putStrLn (show (fullname d) ++ " ==> " ++
                               show !(toFullNames (definition d)))
-         coreLift_ $ putStrLn (show (multiplicity d))
-         coreLift_ $ putStrLn ("Erasable args: " ++ show (eraseArgs d))
-         coreLift_ $ putStrLn ("Detaggable arg types: " ++ show (safeErase d))
-         coreLift_ $ putStrLn ("Specialise args: " ++ show (specArgs d))
-         coreLift_ $ putStrLn ("Inferrable args: " ++ show (inferrable d))
+         coreLift $ putStrLn (show (multiplicity d))
+         coreLift $ putStrLn ("Erasable args: " ++ show (eraseArgs d))
+         coreLift $ putStrLn ("Detaggable arg types: " ++ show (safeErase d))
+         coreLift $ putStrLn ("Specialise args: " ++ show (specArgs d))
+         coreLift $ putStrLn ("Inferrable args: " ++ show (inferrable d))
          whenJust (compexpr d) $ \ expr =>
-           coreLift_ $ putStrLn ("Compiled: " ++ show expr)
-         coreLift_ $ putStrLn ("Refers to: " ++
+           coreLift $ putStrLn ("Compiled: " ++ show expr)
+         coreLift $ putStrLn ("Refers to: " ++
                                show !(traverse getFullName (keys (refersTo d))))
-         coreLift_ $ putStrLn ("Refers to (runtime): " ++
+         coreLift $ putStrLn ("Refers to (runtime): " ++
                                show !(traverse getFullName (keys (refersToRuntime d))))
-         coreLift_ $ putStrLn ("Flags: " ++ show (flags d))
+         coreLift $ putStrLn ("Flags: " ++ show (flags d))
          when (not (isNil (sizeChange d))) $
             let scinfo = map (\s => show (fnCall s) ++ ": " ++
                                     show (fnArgs s)) !(traverse toFullNames (sizeChange d)) in
-                coreLift_ $ putStrLn $
+                coreLift $ putStrLn $
                         "Size change: " ++ showSep ", " scinfo
 
 prettyInfo : {auto c : Ref Ctxt Defs} ->
@@ -246,10 +246,9 @@ updateFile update
     = do opts <- get ROpts
          let Just f = mainfile opts
              | Nothing => pure (DisplayEdit emptyDoc) -- no file, nothing to do
-         Right content <- coreLift $ readFile f
-               | Left err => throw (FileErr f err)
-         coreLift_ $ writeFile (f ++ "~") content
-         coreLift_ $ writeFile f (unlines (update (lines content)))
+         content <- readFile f
+         writeFile (f ++ "~") content
+         writeFile f (unlines (update (lines content)))
          pure (DisplayEdit emptyDoc)
 
 rtrim : String -> String
@@ -767,21 +766,26 @@ processLocal {vars} eopts nest env nestdecls_in scope
     = localHelper nest env nestdecls_in $ \nest' => traverse_ (processDecl eopts nest' env) scope
 
 export
+execExpRaw : {auto c : Ref Ctxt Defs} ->
+             {auto u : Ref UST UState} ->
+             {auto s : Ref Syn SyntaxInfo} ->
+             {auto m : Ref MD Metadata} ->
+             {auto o : Ref ROpts REPLOpts} ->
+             PTerm -> Core ExitCode
+execExpRaw ctm
+    = do cg <- findCG
+         tm_erased <- prepareExp ctm
+         logTimeWhen !getEvalTiming 0 "Execution" $
+           execute cg tm_erased
+
+export
 execExp : {auto c : Ref Ctxt Defs} ->
           {auto u : Ref UST UState} ->
           {auto s : Ref Syn SyntaxInfo} ->
           {auto m : Ref MD Metadata} ->
           {auto o : Ref ROpts REPLOpts} ->
           PTerm -> Core REPLResult
-execExp ctm
-    = do Just cg <- findCG
-           | Nothing =>
-              do iputStrLn (reflow "No such code generator available")
-                 pure CompilationFailed
-         tm_erased <- prepareExp ctm
-         logTimeWhen !getEvalTiming 0 "Execution" $
-           execute cg tm_erased
-         pure $ Executed ctm
+execExp ctm = Executed ctm <$> execExpRaw ctm
 
 
 execDecls : {auto c : Ref Ctxt Defs} ->
@@ -809,15 +813,9 @@ compileExp : {auto c : Ref Ctxt Defs} ->
              {auto o : Ref ROpts REPLOpts} ->
              PTerm -> String -> Core REPLResult
 compileExp ctm outfile
-    = do Just cg <- findCG
-              | Nothing =>
-                   do iputStrLn (reflow "No such code generator available")
-                      pure CompilationFailed
+    = do cg <- findCG
          tm_erased <- prepareExp ctm
-         ok <- compile cg tm_erased outfile
-         maybe (pure CompilationFailed)
-               (pure . Compiled)
-               ok
+         Compiled <$> compile cg tm_erased outfile
 
 export
 loadMainFile : {auto c : Ref Ctxt Defs} ->
@@ -889,7 +887,7 @@ process (Eval itm)
     = do opts <- get ROpts
          let emode = evalMode opts
          case emode of
-            Execute => do ignore (execExp itm); pure (Executed itm)
+            Execute => execExp itm
             Scheme =>
               do (tm `WithType` ty) <- inferAndElab InExpr itm []
                  qtm <- logTimeWhen !getEvalTiming 0 "Evaluation" $
@@ -974,7 +972,7 @@ process Edit
               Nothing => pure NoFileLoaded
               Just f =>
                 do let line = maybe [] (\i => ["+" ++ show (i + 1)]) (errorLine opts)
-                   coreLift_ $ system $ [editor opts, f] ++ line
+                   safeSystem $ [editor opts, f] ++ line
                    loadMainFile f
 process (Compile ctm outfile)
     = compileExp ctm outfile
@@ -1072,7 +1070,7 @@ process (CGDirective str)
     = do setSession ({ directives $= (str::) } !getSession)
          pure Done
 process (RunShellCommand cmd)
-    = do coreLift_ (system cmd)
+    = do safeSystem cmd
          pure Done
 process Quit
     = pure Exited
@@ -1181,14 +1179,14 @@ mutual
   repl
       = do ns <- getNS
            opts <- get ROpts
-           coreLift_ (putStr (prompt (evalMode opts) ++ show ns ++ "> "))
-           coreLift_ (fflush stdout)
+           coreLift (putStr (prompt (evalMode opts) ++ show ns ++ "> "))
+           coreLift (fflush stdout)
            inp <- coreLift getLine
            end <- coreLift $ fEOF stdin
            if end
              then do
                -- start a new line in REPL mode (not relevant in IDE mode)
-               coreLift_ $ putStrLn ""
+               coreLift $ putStrLn ""
                iputStrLn "Bye for now!"
               else do res <- interpret inp
                       handleResult res
@@ -1262,7 +1260,6 @@ mutual
   displayResult NoFileLoaded = printResult (reflow "No file can be reloaded")
   displayResult (CurrentDirectory dir)
     = printResult (reflow "Current working directory is" <++> dquotes (pretty0 dir))
-  displayResult CompilationFailed = printResult (reflow "Compilation failed")
   displayResult (Compiled f) = printResult ("File" <++> pretty0 f <++> "written")
   displayResult (ProofFound x) = printResult (prettyBy Syntax x)
   displayResult (Missed cases) = printResult $ vsep (handleMissing <$> cases)
@@ -1288,7 +1285,7 @@ mutual
 
   -- do not use a catchall so that we are warned when a new constructor is added
   displayResult Done = pure ()
-  displayResult (Executed _) = pure ()
+  displayResult (Executed _ _) = pure ()
   displayResult DefDeclared = pure ()
   displayResult Exited = pure ()
 

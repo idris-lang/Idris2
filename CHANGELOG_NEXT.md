@@ -186,6 +186,13 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   That file already had a NodeJS shebang at the top, so now it is fully ready to
   go after compilation.
 
+### API changes
+
+* Removed `Maybe` from the return types `compileExpr` and `incCompileFile`. Use
+  `throw` for compilation errors.
+
+* `executeExpr` now returns `ExitCode`.
+
 ### Library changes
 
 #### Prelude
