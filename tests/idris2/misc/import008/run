@@ -1,11 +1,16 @@
 . ../../../testutils.sh
 
+mkdir -p Exe/depends/lib-0
+
 rm -rf Exe/build
 rm -rf Lib/build
 
 cd Lib
 idris2 --build
 cd ..
+cp -R Lib/build/ttc/* Exe/depends/lib-0/
 cd Exe
 check --find-ipkg Mod.idr
 run --find-ipkg Mod.idr
+
+rm -rf Exe/depends/lib-0
