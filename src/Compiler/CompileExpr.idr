@@ -354,9 +354,9 @@ toCExpTm n (As _ _ _ p) = toCExpTm n p
 -- TODO: Either make sure 'Delayed' is always Rig0, or add to typecase
 toCExpTm n (TDelayed fc _ _) = pure $ CErased fc
 toCExpTm n (TDelay fc lr _ arg)
-    = pure (CDelay fc lr !(toCExp n arg))
+    = CDelay fc lr <$> toCExp n arg
 toCExpTm n (TForce fc lr arg)
-    = pure (CForce fc lr !(toCExp n arg))
+    = CForce fc lr <$> toCExp n arg
 toCExpTm n (PrimVal fc $ PrT c) = pure $ CCon fc (UN $ Basic $ show c) TYCON Nothing [] -- Primitive type constant
 toCExpTm n (PrimVal fc c) = pure $ CPrimVal fc c -- Non-type constant
 toCExpTm n (Erased fc _) = pure $ CErased fc
@@ -604,7 +604,7 @@ getNArgs defs (NS _ (UN $ Basic "Unit")) [] = pure NUnit
 getNArgs defs (NS _ (UN $ Basic "Struct")) [n, args]
     = do NPrimVal _ (Str n') <- evalClosure defs n
              | nf => throw (GenericMsg (getLoc nf) "Unknown name for struct")
-         pure (Struct n' !(getFieldArgs defs args))
+         Struct n' <$> getFieldArgs defs args
 getNArgs defs n args = pure $ User n args
 
 nfToCFType : {auto c : Ref Ctxt Defs} ->

@@ -250,7 +250,7 @@ getUpdates : Defs -> RawImp -> RawImp -> Core (List (Name, RawImp))
 getUpdates defs orig updated
     = do u <- newRef UPD (MkUpdates [] [])
          findUpdates defs orig updated
-         pure (updates !(get UPD))
+         updates <$> get UPD
 
 mkCase : {auto c : Ref Ctxt Defs} ->
          {auto u : Ref UST UState} ->
@@ -285,7 +285,7 @@ mkCase {c} {u} fn orig lhs_raw
                log "interaction.casesplit" 3 $ "Original LHS: " ++ show orig
                log "interaction.casesplit" 3 $ "New LHS: " ++ show lhs'
 
-               pure (Valid lhs' !(getUpdates defs orig lhs')))
+               Valid lhs' <$> getUpdates defs orig lhs')
            (\err =>
                do put Ctxt defs
                   put UST ust

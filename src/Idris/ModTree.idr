@@ -137,7 +137,7 @@ getBuildMods loc done fname
                  dm <- newRef DoneMod empty
                  o <- newRef BuildOrder []
                  mkBuildMods {d=dm} {o} t
-                 pure (reverse !(get BuildOrder))
+                 reverse <$> get BuildOrder
 
 checkTotalReq : {auto c : Ref Ctxt Defs} ->
                 String -> String -> TotalReq -> Core Bool
@@ -221,8 +221,7 @@ needsBuilding sourceFile ttcFile depFiles
          | False => pure False
        -- if it needs rebuilding then remove the buggy .ttc file to avoid going
        -- into an infinite loop!
-       Right () <- coreLift $ removeFile ttcFile
-         | Left err => throw (FileErr ttcFile err)
+       handleFileError ttcFile $ removeFile ttcFile
        pure True
 
 

@@ -1155,9 +1155,7 @@ mutual
            let isb = map (\ (info, r, n, p, tm) => (info, r, n, p, doBind bnames tm)) is'
            let consb = map (\(n, tm) => (n, doBind bnames tm)) cons'
 
-           body' <- maybe (pure Nothing)
-                          (\b => do b' <- traverse (desugarDecl ps) b
-                                    pure (Just (concat b'))) body
+           body' <- traverseOpt (map concat . traverse (desugarDecl ps)) body
            -- calculate the name of the implementation, if it's not explicitly
            -- given.
            let impname = maybe (mkImplName fc tn paramsb) id impln

@@ -472,7 +472,7 @@ mutual
                 Core (List ArgUsage)
   getArgUsage topfc rig ty pats
       = do us <- traverse (getPUsage ty) pats
-           pure (map snd !(combine us))
+           map snd <$> combine us
     where
       getCaseUsage : {vs : _} ->
                      Term ns -> Env Term vs -> List (Term vs) ->

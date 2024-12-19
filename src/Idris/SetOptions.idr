@@ -228,10 +228,8 @@ dirOption dirs Prefix
 
 findIpkg : {auto c : Ref Ctxt Defs} -> Core (List String)
 findIpkg =
-  do Just srcdir <- coreLift currentDir
-       | Nothing => throw (InternalError "Can't get current directory")
-     Right fs <- coreLift $ listDir srcdir
-       | Left err => pure []
+  do srcdir <- currentDir
+     fs <- handleFileError srcdir $ listDir srcdir
      pure $ filter (".ipkg" `isSuffixOf`) fs
 
 -- keep only those Strings, of which `x` is a prefix
@@ -506,28 +504,28 @@ postOptions : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
               {auto m : Ref MD Metadata} ->
               {auto o : Ref ROpts REPLOpts} ->
-              REPLResult -> List CLOpt -> Core Bool
-postOptions _ [] = pure True
+              REPLResult -> List CLOpt -> Core (Bool, Maybe ExitCode)
+postOptions _ [] = pure (True, Nothing)
 postOptions res@(ErrorLoadingFile _ _) (OutputFile _ :: rest)
-    = do ignore $ postOptions res rest
-         pure False
+    = do (_, status) <- postOptions res rest
+         pure (False, status)
 postOptions res (OutputFile outfile :: rest)
     = do ignore $ compileExp (PRef EmptyFC (UN $ Basic "main")) outfile
-         ignore $ postOptions res rest
-         pure False
+         (_, status) <- postOptions res rest
+         pure (False, status)
 postOptions res (ExecFn expr :: rest)
     = do setCurrentElabSource expr
          let Right (_, _, e) = runParser (Virtual Interactive) Nothing expr $ aPTerm <* eoi
            | Left err => throw err
-         ignore $ execExp e
-         ignore $ postOptions res rest
-         pure False
+         code <- execExpRaw e
+         (_, status) <- postOptions res rest
+         pure (False, status <|> Just code)
 postOptions res (CheckOnly :: rest)
-    = do ignore $ postOptions res rest
-         pure False
+    = do (_, status) <- postOptions res rest
+         pure (False, status)
 postOptions res (RunREPL str :: rest)
     = do replCmd str
-         pure False
+         pure (False, Nothing)
 postOptions res (_ :: rest) = postOptions res rest
 
 export

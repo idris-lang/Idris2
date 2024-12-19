@@ -91,11 +91,8 @@ checkForce : {vars : _} ->
              Core (Term vars, Glued vars)
 checkForce rig elabinfo nest env fc tm exp
     = do defs <- get Ctxt
-         expf <- maybe (pure Nothing)
-                       (\gty => do tynf <- getNF gty
-                                   pure (Just (glueBack defs env
-                                         (NDelayed fc LUnknown tynf))))
-                       exp
+         expf <- traverseOpt (map (glueBack defs env . NDelayed fc LUnknown) . getNF)
+                             exp
          (tm', gty) <- check rig elabinfo nest env tm expf
          tynf <- getNF gty
          case tynf of

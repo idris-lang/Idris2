@@ -543,9 +543,8 @@ mutual
              logNF "elab" 10 ("Full function type") env
                       (NBind fc x (Pi fc argRig Explicit aty) sc)
              logC "elab" 10
-                     (do ety <- maybe (pure Nothing)
-                                     (\t => pure (Just !(toFullNames!(getTerm t))))
-                                     expty
+                     (do ety <- traverseOpt (\t => toFullNames !(getTerm t))
+                                            expty
                          pure ("Overall expected type: " ++ show ety))
              res <- check argRig ({ topLevel := False } elabinfo)
                                    nest env arg (Just (glueClosure defs env aty))
@@ -829,11 +828,10 @@ checkApp rig elabinfo nest env fc (IVar fc' n) expargs autoargs namedargs exp
         logC "elab" 10
                 (do defs <- get Ctxt
                     fnty <- quote defs env nty
-                    exptyt <- maybe (pure Nothing)
-                                       (\t => do ety <- getTerm t
-                                                 etynf <- normaliseHoles defs env ety
-                                                 pure (Just !(toFullNames etynf)))
-                                       exp
+                    exptyt <- traverseOpt (\t => do ety <- getTerm t
+                                                    etynf <- normaliseHoles defs env ety
+                                                    toFullNames etynf)
+                                          exp
                     pure ("Checking application of " ++ show !(getFullName n) ++
                           " (" ++ show n ++ ")" ++
                           " to " ++ show expargs ++ "\n\tFunction type " ++

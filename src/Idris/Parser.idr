@@ -71,9 +71,9 @@ decoratedNamespacedSymbol fname smb =
 
 parens : {b : _} -> OriginDesc -> BRule b a -> Rule a
 parens fname p
-  = pure id <* decoratedSymbol fname "("
-            <*> p
-            <* decoratedSymbol fname ")"
+  = id <$ decoratedSymbol fname "("
+       <*> p
+       <* decoratedSymbol fname ")"
 
 decoratedDataTypeName : OriginDesc -> Rule Name
 decoratedDataTypeName fname = decorate fname Typ dataTypeName
@@ -1822,10 +1822,9 @@ typedArg fname indents
          pure $ map (\(c, n, tm) => (n.val, c, Explicit, tm)) params
   <|> do decoratedSymbol fname "{"
          commit
-         info <-
-                 (pure  AutoImplicit <* decoratedKeyword fname "auto"
-              <|> (decoratedKeyword fname "default" *> DefImplicit <$> simpleExpr fname indents)
-              <|> pure      Implicit)
+         info <- AutoImplicit <$ decoratedKeyword fname "auto"
+             <|> decoratedKeyword fname "default" *> DefImplicit <$> simpleExpr fname indents
+             <|> pure Implicit
          params <- pibindListName fname indents
          decoratedSymbol fname "}"
          pure $ map (\(c, n, tm) => (n.val, c, info, tm)) params

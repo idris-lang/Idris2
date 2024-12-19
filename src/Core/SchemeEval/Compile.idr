@@ -606,8 +606,7 @@ initEvalWith "racket"
                             | Nothing => pure False
                        put Ctxt ({ schemeEvalLoaded := True } defs)
                        pure True)
-                (\err => do coreLift $ printLn err
-                            pure False)
+                (\err => coreLift (printLn err) $> False)
 initEvalWith _ = pure False -- only works on Chez for now
 
 -- Initialise the internal functions we need to build/extend blocked
