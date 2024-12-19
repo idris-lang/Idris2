@@ -414,7 +414,7 @@ parameters (constants : SortedSet Name,
                     !(showAlts n alts)
     schCaseTree i sc alts def
         = do tcode <- schExp (i + 1) sc
-             defc <- maybe (pure Nothing) (\v => pure (Just !(schExp i v))) def
+             defc <- traverseOpt (schExp i) def
              let n = getScrutineeTemp i
              if var sc
                 then pure $ "(case (vector-ref " ++ tcode ++ " 0) "
@@ -446,8 +446,7 @@ parameters (constants : SortedSet Name,
     schListCase i sc alts def
         = do tcode <- schExp (i + 1) sc
              let n = getScrutineeTemp i
-             defc <- maybe (pure Nothing)
-                           (\v => pure (Just !(schExp (i + 1) v))) def
+             defc <- traverseOpt (schExp (i + 1)) def
              nil <- getNilCode alts
              if var sc
                 then do cons <- getConsCode tcode alts
@@ -473,7 +472,7 @@ parameters (constants : SortedSet Name,
         getNilCode : List NamedConAlt -> Core (Maybe Builder)
         getNilCode [] = pure Nothing
         getNilCode (MkNConAlt _ NIL _ _ sc :: _)
-            = pure (Just !(schExp (i + 1) sc))
+            = Just <$> schExp (i + 1) sc
         getNilCode (_ :: xs) = getNilCode xs
 
         getConsCode : Builder -> List NamedConAlt -> Core (Maybe Builder)
@@ -496,8 +495,7 @@ parameters (constants : SortedSet Name,
     schMaybeCase i sc alts def
         = do tcode <- schExp (i + 1) sc
              let n = getScrutineeTemp i
-             defc <- maybe (pure Nothing)
-                           (\v => pure (Just !(schExp (i + 1) v))) def
+             defc <- traverseOpt (schExp (i + 1)) def
              nothing <- getNothingCode alts
              if var sc
                 then do just <- getJustCode tcode alts
@@ -523,7 +521,7 @@ parameters (constants : SortedSet Name,
         getNothingCode : List NamedConAlt -> Core (Maybe Builder)
         getNothingCode [] = pure Nothing
         getNothingCode (MkNConAlt _ NOTHING _ _ sc :: _)
-            = pure (Just !(schExp (i + 1) sc))
+            = Just <$> schExp (i + 1) sc
         getNothingCode (_ :: xs) = getNothingCode xs
 
         getJustCode : Builder -> List NamedConAlt -> Core (Maybe Builder)
@@ -623,7 +621,7 @@ parameters (constants : SortedSet Name,
            = pure $ !(schConstAlt (i + 1) n alt) ++ " " ++
                     !(showConstAlts n alts)
     schExp i (NmConstCase fc sc alts def)
-        = do defc <- maybe (pure Nothing) (\v => pure (Just !(schExp i v))) def
+        = do defc <- traverseOpt (schExp i) def
              tcode <- schExp (i + 1) sc
              let n = getScrutineeTemp i
              if var sc

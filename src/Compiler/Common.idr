@@ -354,7 +354,7 @@ getCompileDataWith exports doLazyAnnots phase_in tm_in
                       ldefs ++ concat lifted_in
 
          anf <- if phase >= ANF
-                   then logTime 2 "Get ANF" $ traverse (\ (n, d) => pure (n, !(toANF d))) lifted
+                   then logTime 2 "Get ANF" $ traverse (traversePair toANF) lifted
                    else pure []
          vmcode <- if phase >= VMCode
                       then logTime 2 "Get VM Code" $ pure (allDefs anf)
@@ -440,7 +440,7 @@ getIncCompileData doLazyAnnots phase
                          else pure []
          let lifted = concat lifted_in
          anf <- if phase >= ANF
-                   then logTime 2 "Get ANF" $ traverse (\ (n, d) => pure (n, !(toANF d))) lifted
+                   then logTime 2 "Get ANF" $ traverse (traversePair toANF) lifted
                    else pure []
          vmcode <- if phase >= VMCode
                       then logTime 2 "Get VM Code" $ pure (allDefs anf)

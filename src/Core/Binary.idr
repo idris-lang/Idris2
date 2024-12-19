@@ -345,10 +345,8 @@ addGlobalDef modns filens asm (n, def)
          codedentry <- lookupContextEntry n (gamma defs)
          -- Don't update the coded entry because some names might not be
          -- resolved yet
-         entry <- maybe (pure Nothing)
-                        (\ p => do x <- decode (gamma defs) (fst p) False (snd p)
-                                   pure (Just x))
-                        codedentry
+         entry <- traverseOpt (\p => decode (gamma defs) (fst p) False (snd p))
+                              codedentry
          unless (completeDef entry) $
            ignore $ addContextEntry filens n def
 

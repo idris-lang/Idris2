@@ -369,7 +369,7 @@ mutual
   toPTerm p (IAlternative fc _ _) = pure (PImplicit fc)
   toPTerm p (IRewrite fc rule tm)
       = pure (PRewrite fc !(toPTerm startPrec rule)
-                               !(toPTerm startPrec tm))
+                          !(toPTerm startPrec tm))
   toPTerm p (ICoerced fc tm) = toPTerm p tm
   toPTerm p (IPrimVal fc c) = pure (PPrimVal fc c)
   toPTerm p (IHole fc str) = pure (PHole fc False str)
@@ -378,19 +378,18 @@ mutual
     = let nm = UN (Basic v) in
       pure (PRef fc (MkKindedName (Just Bound) nm nm))
   toPTerm p (IBindHere fc _ tm) = toPTerm p tm
-  toPTerm p (IAs fc nameFC _ n pat) = pure (PAs fc nameFC n !(toPTerm argPrec pat))
-  toPTerm p (IMustUnify fc r pat) = pure (PDotted fc !(toPTerm argPrec pat))
+  toPTerm p (IAs fc nameFC _ n pat) = PAs fc nameFC n <$> toPTerm argPrec pat
+  toPTerm p (IMustUnify fc r pat) = PDotted fc <$> toPTerm argPrec pat
 
-  toPTerm p (IDelayed fc r ty) = pure (PDelayed fc r !(toPTerm argPrec ty))
-  toPTerm p (IDelay fc tm) = pure (PDelay fc !(toPTerm argPrec tm))
-  toPTerm p (IForce fc tm) = pure (PForce fc !(toPTerm argPrec tm))
-  toPTerm p (IQuote fc tm) = pure (PQuote fc !(toPTerm argPrec tm))
+  toPTerm p (IDelayed fc r ty) = PDelayed fc r <$> toPTerm argPrec ty
+  toPTerm p (IDelay fc tm) = PDelay fc <$> toPTerm argPrec tm
+  toPTerm p (IForce fc tm) = PForce fc <$> toPTerm argPrec tm
+  toPTerm p (IQuote fc tm) = PQuote fc <$> toPTerm argPrec tm
   toPTerm p (IQuoteName fc n) = pure (PQuoteName fc n)
   toPTerm p (IQuoteDecl fc ds)
-      = do ds' <- traverse toPDecl ds
-           pure $ PQuoteDecl fc (catMaybes ds')
-  toPTerm p (IUnquote fc tm) = pure (PUnquote fc !(toPTerm argPrec tm))
-  toPTerm p (IRunElab fc _ tm) = pure (PRunElab fc !(toPTerm argPrec tm))
+      = PQuoteDecl fc . catMaybes <$> traverse toPDecl ds
+  toPTerm p (IUnquote fc tm) = PUnquote fc <$> toPTerm argPrec tm
+  toPTerm p (IRunElab fc _ tm) = PRunElab fc <$> toPTerm argPrec tm
 
   toPTerm p (IUnifyLog fc _ tm) = toPTerm p tm
   toPTerm p (Implicit fc True) = pure (PImplicit fc)
@@ -468,22 +467,22 @@ mutual
                  flags
                  !(traverse toPClause cs)
   toPClause (ImpossibleClause fc lhs)
-      = pure (MkImpossible fc !(toPTerm startPrec lhs))
+      = MkImpossible fc <$> toPTerm startPrec lhs
 
   toPTypeDecl : {auto c : Ref Ctxt Defs} ->
                 {auto s : Ref Syn SyntaxInfo} ->
                 ImpTy' KindedName -> Core (PTypeDecl' KindedName)
   toPTypeDecl (MkImpTy fc n ty)
-      = pure (MkFCVal fc $ MkPTy (pure ("", n)) "" !(toPTerm startPrec ty))
+      = MkFCVal fc . MkPTy (pure ("", n)) "" <$> toPTerm startPrec ty
 
   toPData : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
             ImpData' KindedName -> Core (PDataDecl' KindedName)
   toPData (MkImpData fc n ty opts cs)
       = pure (MkPData fc n !(traverseOpt (toPTerm startPrec) ty) opts
-                   !(traverse toPTypeDecl cs))
+                           !(traverse toPTypeDecl cs))
   toPData (MkImpLater fc n ty)
-      = pure (MkPLater fc n !(toPTerm startPrec ty))
+      = MkPLater fc n <$> toPTerm startPrec ty
 
   toPField : {auto c : Ref Ctxt Defs} ->
              {auto s : Ref Syn SyntaxInfo} ->
@@ -528,11 +527,11 @@ mutual
             ImpDecl' KindedName -> Core (Maybe (PDecl' KindedName))
   toPDecl (IClaim (MkFCVal fc $ MkIClaimData rig vis opts ty))
       = do opts' <- traverse toPFnOpt opts
-           pure (Just (PClaim (MkFCVal fc $ MkPClaim rig vis opts' !(toPTypeDecl ty))))
+           Just . PClaim . MkFCVal fc . MkPClaim rig vis opts' <$> toPTypeDecl ty
   toPDecl (IData fc vis mbtot d)
-      = pure (Just (PData fc "" vis mbtot !(toPData d)))
+      = Just . PData fc "" vis mbtot <$> toPData d
   toPDecl (IDef fc n cs)
-      = pure (Just (PDef $ MkFCVal fc !(traverse toPClause cs)))
+      = Just . PDef . MkFCVal fc <$> traverse toPClause cs
   toPDecl (IParameters fc ps ds)
       = do ds' <- traverse toPDecl ds
            pure (Just (PParameters fc
@@ -545,17 +544,15 @@ mutual
       = do (n, ps, opts, con, fs) <- toPRecord r
            pure (Just (PRecord fc "" vis mbtot (MkPRecord n ps opts con fs)))
   toPDecl (IFail fc msg ds)
-      = do ds' <- traverse toPDecl ds
-           pure (Just (PFail fc msg (catMaybes ds')))
+      = Just . PFail fc msg . catMaybes <$> traverse toPDecl ds
   toPDecl (INamespace fc ns ds)
-      = do ds' <- traverse toPDecl ds
-           pure (Just (PNamespace fc ns (catMaybes ds')))
+      = Just . PNamespace fc ns . catMaybes <$> traverse toPDecl ds
   toPDecl (ITransform fc n lhs rhs)
       = pure (Just (PTransform fc (show n)
                                   !(toPTerm startPrec lhs)
                                   !(toPTerm startPrec rhs)))
   toPDecl (IRunElabDecl fc tm)
-      = pure (Just (PRunElabDecl fc !(toPTerm startPrec tm)))
+      = Just . PRunElabDecl fc <$> toPTerm startPrec tm
   toPDecl (IPragma _ _ _) = pure Nothing
   toPDecl (ILog _) = pure Nothing
   toPDecl (IBuiltin fc type name) = pure $ Just $ PBuiltin fc type name

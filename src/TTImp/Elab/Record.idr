@@ -86,9 +86,8 @@ findFieldsAndTypeArgs : {auto c : Ref Ctxt Defs} ->
                         Defs -> Name ->
                         Core $ Maybe (List (String, Maybe Name, Maybe Name), SortedSet Name)
 findFieldsAndTypeArgs defs con
-    = case !(lookupTyExact con (gamma defs)) of
-           Just t => pure (Just !(getExpNames empty [] !(nf defs [] t)))
-           _ => pure Nothing
+    = traverseOpt (\t => getExpNames empty [] !(nf defs [] t))
+                  !(lookupTyExact con (gamma defs))
   where
     getExpNames : SortedSet Name ->
                   List (String, Maybe Name, Maybe Name) ->

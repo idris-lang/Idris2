@@ -196,7 +196,7 @@ field fname
     depends
         = do name <- packageName
              bs <- sepBy andop bound
-             pure (MkDepends name !(mkBound (concat bs) anyBounds))
+             MkDepends name <$> mkBound (concat bs) anyBounds
 
     strField : (FC -> String -> DescField) -> String -> Rule DescField
     strField fieldConstructor fieldName

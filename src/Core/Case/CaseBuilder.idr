@@ -1080,10 +1080,10 @@ mutual
             Core (Maybe (CaseTree vars))
   mixture fc fn phase (ConClauses cs rest) err
       = do fallthrough <- mixture fc fn phase rest err
-           pure (Just !(conRule fc fn phase cs fallthrough))
+           Just <$> conRule fc fn phase cs fallthrough
   mixture fc fn phase (VarClauses vs rest) err
       = do fallthrough <- mixture fc fn phase rest err
-           pure (Just !(varRule fc fn phase vs fallthrough))
+           Just <$> varRule fc fn phase vs fallthrough
   mixture fc fn {a} {todo} phase NoClauses err
       = pure err
 

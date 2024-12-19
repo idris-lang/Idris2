@@ -894,7 +894,7 @@ namespace PiInfo
   traverse f Explicit = pure Explicit
   traverse f Implicit = pure Implicit
   traverse f AutoImplicit = pure AutoImplicit
-  traverse f (DefImplicit t) = pure (DefImplicit !(f t))
+  traverse f (DefImplicit t) = DefImplicit <$> f t
 
 namespace Binder
   export

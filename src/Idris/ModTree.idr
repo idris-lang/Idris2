@@ -137,7 +137,7 @@ getBuildMods loc done fname
                  dm <- newRef DoneMod empty
                  o <- newRef BuildOrder []
                  mkBuildMods {d=dm} {o} t
-                 pure (reverse !(get BuildOrder))
+                 reverse <$> get BuildOrder
 
 checkTotalReq : {auto c : Ref Ctxt Defs} ->
                 String -> String -> TotalReq -> Core Bool

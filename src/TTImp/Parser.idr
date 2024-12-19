@@ -611,12 +611,9 @@ recordParam fname indents
   <|> do symbol "{"
          commit
          start <- location
-         info <- (pure  AutoImplicit <* keyword "auto"
-              <|>(do
-                  keyword "default"
-                  t <- simpleExpr fname indents
-                  pure $ DefImplicit t)
-              <|> pure      Implicit)
+         info <- AutoImplicit <$ keyword "auto"
+             <|> keyword "default" *> DefImplicit <$> simpleExpr fname indents
+             <|> pure Implicit
          params <- pibindListName fname start indents
          symbol "}"
          pure $ map (\(c, n, tm) => (n, c, info, tm)) params

@@ -1130,10 +1130,10 @@ processCatch cmd
                            )
 
 parseEmptyCmd : EmptyRule (Maybe REPLCmd)
-parseEmptyCmd = eoi *> (pure Nothing)
+parseEmptyCmd = eoi $> Nothing
 
 parseCmd : EmptyRule (Maybe REPLCmd)
-parseCmd = do c <- command; eoi; pure $ Just c
+parseCmd = Just <$> command <* eoi
 
 export
 parseRepl : String -> Either Error (Maybe REPLCmd)

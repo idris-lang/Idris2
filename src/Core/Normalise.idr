@@ -154,7 +154,7 @@ etaContract tm = do
 export
 getValArity : Defs -> Env Term vars -> NF vars -> Core Nat
 getValArity defs env (NBind fc x (Pi _ _ _ _) sc)
-    = pure (S !(getValArity defs env !(sc defs (toClosure defaultOpts env (Erased fc Placeholder)))))
+    = S <$> getValArity defs env !(sc defs (toClosure defaultOpts env (Erased fc Placeholder)))
 getValArity defs env val = pure 0
 
 export
