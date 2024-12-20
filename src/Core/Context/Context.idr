@@ -12,6 +12,7 @@ import public Algebra.SizeChange
 import Data.IORef
 import Data.String
 import Data.List1
+import Data.SnocList
 
 import Libraries.Data.IntMap
 import Libraries.Data.IOArray
@@ -70,7 +71,7 @@ public export
 data Def : Type where
     None : Def -- Not yet defined
     PMDef : (pminfo : PMDefInfo) ->
-            (args : List Name) ->
+            (args : SnocList Name) ->
             (treeCT : CaseTree args) ->
             (treeRT : CaseTree args) ->
             (pats : List (vs ** (Env Term vs, Term vs, Term vs))) ->
@@ -146,7 +147,7 @@ covering
 Show Def where
   show None = "undefined"
   show (PMDef _ args ct rt pats)
-      = unlines [ show args ++ ";"
+      = unlines [ show (toList args) ++ ";"
                 , "Compile time tree: " ++ show ct
                 , "Run time tree: " ++ show rt
                 ]
@@ -194,7 +195,7 @@ export
 covering
 Show Clause where
   show (MkClause {vars} env lhs rhs)
-      = show vars ++ ": " ++ show lhs ++ " = " ++ show rhs
+      = show (toList $ reverse vars) ++ ": " ++ show lhs ++ " = " ++ show rhs
 
 public export
 data DefFlag
@@ -307,7 +308,7 @@ record GlobalDef where
   specArgs : List Nat -- arguments to specialise by
   inferrable : List Nat -- arguments which can be inferred from elsewhere in the type
   multiplicity : RigCount
-  localVars : List Name -- environment name is defined in
+  localVars : SnocList Name -- environment name is defined in
   visibility : WithDefault Visibility Private
   totality : Totality
   isEscapeHatch : Bool
