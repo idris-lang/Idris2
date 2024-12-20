@@ -619,7 +619,7 @@ toCDef n ty erased (PMDef pi args _ tree _)
     toLam _ d = d
 toCDef n ty _ (ExternDef arity)
     = let (ns ** args) = mkArgList 0 arity in
-          pure $ MkFun _ (CExtPrim emptyFC !(getFullName n) (map toArgExp (getVars args)))
+          pure $ MkFun _ (CExtPrim emptyFC !(getFullName n) (reverse $ map toArgExp (getVars args)))
   where
     toArgExp : (Var ns) -> CExp ns
     toArgExp (MkVar p) = CLocal emptyFC p
@@ -633,7 +633,7 @@ toCDef n ty _ (ForeignDef arity cs)
          pure $ MkForeign cs atys retty
 toCDef n ty _ (Builtin {arity} op)
     = let (ns ** args) = mkArgList 0 arity in
-          pure $ MkFun _ (COp emptyFC op (map toArgExp (getVars args)))
+          pure $ MkFun _ (COp emptyFC op (reverse $ map toArgExp (getVars args)))
   where
     toArgExp : (Var ns) -> CExp ns
     toArgExp (MkVar p) = CLocal emptyFC p
