@@ -15,30 +15,6 @@ Warning: We are about to implicitly bind the following lowercase names.
 You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
 
-Fld:76:1--81:38
- 76 | interface Show a => (num : Num a) => MyIface a where -- Some interface with
- 77 |   constructor MkIface
- 78 |                                              -- constraints
- 79 |   data MyData : a -> Type                    -- and a data declaration.
- 80 |   someFunc : a -> a                          -- Constraints are now elaborated as auto implicits (as one would expect)
- 81 |   giveBack : {x : a} -> MyData x -> a        -- (previously as explicit arguments of the interface
-
-Warning: We are about to implicitly bind the following lowercase names.
-You may be unintentionally shadowing the associated global definitions:
-  a is shadowing Main.R2.R2.a, Main.R1.R1.a
-
-Fld:76:1--81:38
- 76 | interface Show a => (num : Num a) => MyIface a where -- Some interface with
- 77 |   constructor MkIface
- 78 |                                              -- constraints
- 79 |   data MyData : a -> Type                    -- and a data declaration.
- 80 |   someFunc : a -> a                          -- Constraints are now elaborated as auto implicits (as one would expect)
- 81 |   giveBack : {x : a} -> MyData x -> a        -- (previously as explicit arguments of the interface
-
-Warning: We are about to implicitly bind the following lowercase names.
-You may be unintentionally shadowing the associated global definitions:
-  a is shadowing Main.R2.R2.a, Main.R1.R1.a
-
 Fld:86:3--86:37
  82 |                                              -- constructor)
  83 | 
