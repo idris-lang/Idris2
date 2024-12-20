@@ -28,29 +28,13 @@ import Idris.Parser.Let
 fcBounds : OriginDesc => Rule a -> Rule (WithFC a)
 fcBounds a = (.withFC) <$> bounds a
 
-decorate : OriginDesc -> Decoration -> Rule a -> Rule a
+decorate : {a : Type} -> OriginDesc -> Decoration -> Rule a -> Rule a
 decorate fname decor rule = do
   res <- bounds rule
   actD (decorationFromBounded fname decor res)
   pure res.val
 
-boundedNameDecoration : OriginDesc -> Decoration -> WithBounds Name -> ASemanticDecoration
-boundedNameDecoration fname decor bstr = ((fname, start bstr, end bstr)
-                                         , decor
-                                         , Just bstr.val)
-
-decorateBoundedNames : OriginDesc -> Decoration -> List (WithBounds Name) -> EmptyRule ()
-decorateBoundedNames fname decor bns
-  = act $ MkState (cast (map (boundedNameDecoration fname decor) bns)) []
-
-decorateBoundedName : OriginDesc -> Decoration -> WithBounds Name -> EmptyRule ()
-decorateBoundedName fname decor bn = actD (boundedNameDecoration fname decor bn)
-
-decorateKeywords : OriginDesc -> List (WithBounds a) -> EmptyRule ()
-decorateKeywords fname xs
-  = act $ MkState (cast (map (decorationFromBounded fname Keyword) xs)) []
-
-dependentDecorate : OriginDesc -> Rule a -> (a -> Decoration) -> Rule a
+dependentDecorate : {a : Type} -> OriginDesc -> Rule a -> (a -> Decoration) -> Rule a
 dependentDecorate fname rule decor = do
   res <- bounds rule
   actD (decorationFromBounded fname (decor res.val) res)
@@ -58,6 +42,10 @@ dependentDecorate fname rule decor = do
 
 decoratedKeyword : OriginDesc -> String -> Rule ()
 decoratedKeyword fname kwd = decorate fname Keyword (keyword kwd)
+
+decorateKeywords : {a : Type} -> OriginDesc -> List (WithBounds a) -> EmptyRule ()
+decorateKeywords fname xs
+  = act $ MkState (cast (map (decorationFromBounded fname Keyword) xs)) []
 
 decoratedPragma : OriginDesc -> String -> Rule ()
 decoratedPragma fname prg = decorate fname Keyword (pragma prg)
@@ -87,11 +75,8 @@ decoratedDataTypeName fname = decorate fname Typ dataTypeName
 decoratedDataConstructorName : OriginDesc -> Rule Name
 decoratedDataConstructorName fname = decorate fname Data dataConstructorName
 
-decoratedSimpleBinderName : OriginDesc -> Rule String
-decoratedSimpleBinderName fname = decorate fname Bound unqualifiedName
-
 decoratedSimpleBinderUName : OriginDesc -> Rule Name
-decoratedSimpleBinderUName fname = UN . Basic <$> decorate fname Bound unqualifiedName
+decoratedSimpleBinderUName fname = decorate fname Bound (UN . Basic <$> unqualifiedName)
 
 decoratedSimpleNamedArg : OriginDesc -> Rule String
 decoratedSimpleNamedArg fname
@@ -403,7 +388,7 @@ mutual
 
   dpairType : OriginDesc -> WithBounds t -> IndentInfo -> Rule PTerm
   dpairType fname start indents
-      = do loc <- bounds (do x <- UN . Basic <$> decoratedSimpleBinderName fname
+      = do loc <- bounds (do x <- decoratedSimpleBinderUName fname
                              decoratedSymbol fname ":"
                              ty <- typeExpr pdef fname indents
                              pure (x, ty))
@@ -598,7 +583,7 @@ mutual
 
   simplerExpr : OriginDesc -> IndentInfo -> Rule PTerm
   simplerExpr fname indents
-      = do b <- bounds (do x <- bounds (UN . Basic <$> decoratedSimpleBinderName fname)
+      = do b <- bounds (do x <- bounds (decoratedSimpleBinderUName fname)
                            decoratedSymbol fname "@"
                            commit
                            expr <- simpleExpr fname indents
@@ -687,16 +672,16 @@ mutual
   pibindListName fname indents
        = do rig <- multiplicity fname
             ns <- sepBy1 (decoratedSymbol fname ",")
-                         (fcBounds $ UN <$> binderName)
+                         (fcBounds binderName)
             decoratedSymbol fname ":"
             ty <- typeExpr pdef fname indents
             atEnd indents
             pure (MkBasicMultiBinder rig ns ty)
     where
       -- _ gets treated specially here, it means "I don't care about the name"
-      binderName : Rule UserName
-      binderName = Basic <$> decoratedSimpleBinderName fname
-               <|> symbol "_" $> Underscore
+      binderName : Rule Name
+      binderName = decoratedSimpleBinderUName fname
+               <|> decorate fname Bound (UN <$> symbol "_" $> Underscore)
 
   ||| The arrow used after an explicit binder
   ||| BNF:
@@ -1241,7 +1226,7 @@ withProblem fname col indents
        wval <- bracketedExpr fname start indents
        prf <- optional $ do
                 decoratedKeyword fname "proof"
-                pure (!(multiplicity fname), UN $ Basic !(decoratedSimpleBinderName fname))
+                pure (!(multiplicity fname), !(decoratedSimpleBinderUName fname))
        pure (MkPWithProblem rig wval prf)
 
 mutual
@@ -1549,9 +1534,9 @@ directive
   <|> do decoratedPragma fname "name"
          n <- name
          ns <- sepBy1 (decoratedSymbol fname ",")
-                       (decoratedSimpleBinderName fname)
+                      (decoratedSimpleBinderUName fname)
          atEnd indents
-         pure (Names n (forget ns))
+         pure (Names n (forget (map nameRoot ns)))
   <|> do decoratedPragma fname "start"
          e <- expr pdef fname indents
          atEnd indents
