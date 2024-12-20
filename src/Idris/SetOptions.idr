@@ -83,18 +83,56 @@ getPackageDirs dname = do
     ttcVersions : String -> IO (List Int)
     ttcVersions dir = catMaybes . map parsePositive <$> listDirOrEmpty (dname </> dir)
 
--- Get a list of all the candidate directories that match a package spec
--- in a given path. Return an empty list on file error (e.g. path not existing)
+||| Get a list of all the candidate directories that match a package spec
+||| in a given path. Return an empty list on file error (e.g. path not existing)
+|||
+||| Only package's with build artifacts for the correct TTC version for the
+||| compiler will be considered.
 export
-candidateDirs : String -> String -> PkgVersionBounds ->
-                IO (List (String, Maybe PkgVersion))
-candidateDirs dname pkg bounds =
-  mapMaybe checkBounds <$> getPackageDirs dname
+candidateDirs :
+    Ref Ctxt Defs =>
+    String -> String -> PkgVersionBounds ->
+    Core (List (String, Maybe PkgVersion))
+candidateDirs dname pkgName bounds = do
+  dirs <- coreLift (getPackageDirs dname)
+  checkedDirs <- traverse check dirs
+  pure (catMaybes checkedDirs)
 
-  where checkBounds : PkgDir -> Maybe (String,Maybe PkgVersion)
-        checkBounds (MkPkgDir dirName pkgName ver _) =
-          do guard (pkgName == pkg && inBounds ver bounds)
-             pure ((dname </> dirName), ver)
+  where
+    data CandidateError = OutOfBounds | TTCMismatch
+
+    checkNameAndBounds : PkgDir -> Either CandidateError PkgDir
+    checkNameAndBounds pkg =
+      if pkg.pkgName == pkgName && inBounds pkg.version bounds
+         then Right pkg
+         else Left OutOfBounds
+
+    checkTTCVersion : PkgDir -> Either CandidateError PkgDir
+    checkTTCVersion pkg =
+      if ttcVersion `elem` pkg.ttcVersions
+         then Right pkg
+         else Left TTCMismatch
+
+    unpack : PkgDir -> (String, Maybe PkgVersion)
+    unpack (MkPkgDir dirName pkgName ver _) =
+      ((dname </> dirName), ver)
+
+    check : PkgDir -> Core (Maybe (String, Maybe PkgVersion))
+    check pkg =
+      let checkedPkg = checkNameAndBounds pkg >>= checkTTCVersion
+      in
+      case checkedPkg of
+        Right pkg'       => pure . Just $ unpack pkg'
+        Left OutOfBounds => pure Nothing
+        Left TTCMismatch => do
+          let pkgVersion = maybe "unversioned" (\v => "version \{show v} of") pkg.version
+          recordWarning $ GenericWarn EmptyFC $
+                 """
+                 Found \{pkgVersion} package \{pkg.pkgName} installed with no compatible binaries for the current Idris2 compiler.
+
+                 Reinstall \{pkg.pkgName} with the current Idris2 compiler to resolve the issue.
+                 """
+          pure Nothing
 
 ||| Find all package directories (plus version) matching
 ||| the given package name and version bounds. Results
@@ -102,6 +140,9 @@ candidateDirs dname pkg bounds =
 |||
 ||| All package _search paths_ will be searched for package
 ||| _directories_ that fit the requested critera.
+|||
+||| Only packages with build artifacts for the correct TTC version for the
+||| compiler will be considered.
 export
 findPkgDirs :
     Ref Ctxt Defs =>
@@ -112,10 +153,10 @@ findPkgDirs p bounds = do
   localdir <- pkgLocalDirectory
 
   -- Get candidate directories from the local package directory
-  locFiles <- coreLift $ candidateDirs localdir p bounds
+  locFiles <- candidateDirs localdir p bounds
   -- Look in all the package paths too
   d <- getDirs
-  pkgFiles <- coreLift $ traverse (\d => candidateDirs d p bounds) d.package_search_paths
+  pkgFiles <- traverse (\d => candidateDirs d p bounds) d.package_search_paths
 
   -- If there's anything locally, use that and ignore the global ones
   let allFiles = if isNil locFiles

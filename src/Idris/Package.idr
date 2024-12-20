@@ -369,6 +369,8 @@ tryAll ps f = go [<] ps
           Failed errs <- f x | Resolved res => pure (Resolved res)
           go (se <>< map (prepend x) errs) xs
 
+||| Add all dependencies (transitively) from the given package file into the
+||| context so modules from each is accessible during compilation.
 addDeps :
     {auto c : Ref Ctxt Defs} ->
     {auto s : Ref Syn SyntaxInfo} ->
@@ -377,14 +379,15 @@ addDeps :
     Core ()
 addDeps pkg = do
   Resolved allPkgs <- getTransitiveDeps pkg.depends empty
-    | Failed errs => throw $ GenericMsg EmptyFC (printErrs pkg errs)
+    | Failed errs => do
+        throw $ GenericMsg EmptyFC (printErrs pkg errs)
   log "package.depends" 10 $ "all depends: \{show allPkgs}"
   traverse_ addPackageDir allPkgs
   traverse_ addDataDir ((</> "data") <$> allPkgs)
   where
     -- Note: findPkgDir throws an error if a package is not found
     -- *unless* --ignore-missing-ipkg is enabled
-    -- therefore, findPkgDir returns Nothing, skip the package
+    -- therefore, if findPkgDir returns Nothing, skip the package
     --
     -- We use a backtracking algorithm here: If several versions of
     -- a package are installed, we must try all, which are are
@@ -912,6 +915,16 @@ localPackageFile Nothing
          [] => throw $ UserError "No .ipkg file supplied and none could be found in the working directory."
          _ => throw $ UserError "No .ipkg file supplied and the working directory contains more than one."
 
+withWarnings : Ref Ctxt Defs =>
+               Ref Syn SyntaxInfo =>
+               Ref ROpts REPLOpts =>
+               Core a -> Core a
+withWarnings op = do o <- catch op $ \err =>
+                           do ignore emitWarnings
+                              throw err
+                     ignore emitWarnings
+                     pure o
+
 processPackage : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
                  {auto o : Ref ROpts REPLOpts} ->
@@ -919,7 +932,7 @@ processPackage : {auto c : Ref Ctxt Defs} ->
                  (PkgCommand, Maybe String) ->
                  Core ()
 processPackage opts (cmd, mfile)
-    = withCtxt . withSyn . withROpts $ case cmd of
+    = withCtxt . withWarnings . withSyn . withROpts $ case cmd of
         Init =>
           do Just pkg <- coreLift interactive
                | Nothing => coreLift (exitWith (ExitFailure 1))
