@@ -85,6 +85,10 @@ impossible_ : Doc IdrisSyntax
 impossible_ = keyword "impossible"
 
 export
+forall_ : Doc IdrisSyntax
+forall_ = keyword "forall"
+
+export
 auto_ : Doc IdrisSyntax
 auto_ = keyword "auto"
 

@@ -107,7 +107,9 @@ documentation' = terminal "Expected documentation comment" $
                             _ => Nothing
 
 export
-decorationFromBounded : OriginDesc -> Decoration -> WithBounds a -> ASemanticDecoration
+decorationFromBounded : {a : Type} -> OriginDesc -> Decoration -> WithBounds a -> ASemanticDecoration
+decorationFromBounded {a = Name} fname decor bnds
+   = ((fname, start bnds, end bnds), decor, Just bnds.val)
 decorationFromBounded fname decor bnds
    = ((fname, start bnds, end bnds), decor, Nothing)
 
@@ -259,6 +261,14 @@ pragma n =
   terminal ("Expected pragma " ++ n) $
     \case
       Pragma s => guard (s == n)
+      _ => Nothing
+
+export
+cgDirective : Rule String
+cgDirective =
+  terminal "Expected CG directive" $
+    \case
+      CGDirective d => Just d
       _ => Nothing
 
 export

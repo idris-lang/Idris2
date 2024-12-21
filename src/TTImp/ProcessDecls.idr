@@ -125,7 +125,7 @@ process eopts nest env (IData fc vis mbtot ddef)
 process eopts nest env (IDef fc fname def)
     = processDef eopts nest env fc fname def
 process eopts nest env (IParameters fc ps decls)
-    = processParams nest env fc ps decls
+    = processParams nest env fc (forget ps) decls
 process eopts nest env (IRecord fc ns vis mbtot rec)
     = processRecord eopts nest env ns vis mbtot rec
 process eopts nest env (IFail fc msg decls)

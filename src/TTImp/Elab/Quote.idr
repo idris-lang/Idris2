@@ -156,7 +156,7 @@ mutual
       = pure $ IDef fc v !(traverse getUnquoteClause d)
   getUnquoteDecl (IParameters fc ps ds)
       = pure $ IParameters fc
-                           !(traverse unqTuple ps)
+                           !(traverseList1 unqTuple ps)
                            !(traverse getUnquoteDecl ds)
     where
       unqTuple : (Name, RigCount, PiInfo RawImp, RawImp) -> Core (Name, RigCount, PiInfo RawImp, RawImp)

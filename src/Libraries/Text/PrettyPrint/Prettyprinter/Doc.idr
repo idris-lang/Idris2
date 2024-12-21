@@ -418,6 +418,10 @@ export
 FromString (Doc ann) where
   fromString = pretty0
 
+export
+commaSep : List (Doc ann) -> Doc ann
+commaSep = concatWith (\x, y => x <+> pretty0 "," <++> y)
+
 ||| Variant of `encloseSep` with braces and comma as separator.
 export
 list : List (Doc ann) -> Doc ann

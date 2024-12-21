@@ -8,13 +8,13 @@ Warning: operator fixity is ambiguous, we are picking Lib2.infixl.(%%%) out of :
 To remove this warning, use `%hide` with the fixity to remove
 For example: %hide Lib2.infixl.(%%%)
 
-Main1:7:17--7:32
+Main1:7:20--7:23
  3 | import Lib2
  4 | import Lib1
  5 | 
  6 | main : IO ()
  7 | main = printLn (10 %%% 10 %%% 1)
-                     ^^^^^^^^^^^^^^^
+                        ^^^
 
 Warning: operator fixity is ambiguous, we are picking Lib2.infixl.(%%%) out of :
  - Lib2.infixl.(%%%), precedence level 5
@@ -23,12 +23,12 @@ Warning: operator fixity is ambiguous, we are picking Lib2.infixl.(%%%) out of :
 To remove this warning, use `%hide` with the fixity to remove
 For example: %hide Lib2.infixl.(%%%)
 
-Main1:7:24--7:32
+Main1:7:27--7:30
  3 | import Lib2
  4 | import Lib1
  5 | 
  6 | main : IO ()
  7 | main = printLn (10 %%% 10 %%% 1)
-                            ^^^^^^^^
+                               ^^^
 
 0

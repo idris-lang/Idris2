@@ -109,6 +109,9 @@ export
 code : Doc IdrisAnn -> Doc IdrisAnn
 code = annotate Code
 
+Pretty i a => Pretty i (WithFC a) where
+  pretty x = pretty x.val
+
 mutual
 
   prettyAlt : PClause' KindedName -> Doc IdrisSyntax
@@ -174,9 +177,26 @@ mutual
       then annotateM (kindAnn op) $ pretty0 nm
       else Chara '`' <+> annotateM (kindAnn op) (pretty0 nm) <+> Chara '`'
 
+  Pretty IdrisSyntax (BasicMultiBinder' KindedName) where
+    pretty (MkBasicMultiBinder rig names type)
+      = prettyRig rig <++> commaSep (forget $ map (prettyBinder . val) names)
+      <++> colon <++> pretty type
+
   export
   Pretty IdrisSyntax IPTerm where
     prettyPrec d (PRef _ nm) = annotateM (kindAnn nm) $ cast $ prettyOp False nm.rawName
+    prettyPrec d (NewPi (MkFCVal fc (MkPBinderScope (MkPBinder Implicit bind) scope))) =
+      lcurly <+> pretty bind <+> rcurly <++> arrow <++> prettyPrec d scope
+    prettyPrec d (NewPi (MkFCVal fc (MkPBinderScope (MkPBinder Explicit bind) scope))) =
+      lparen <+> pretty bind <+> rparen <++> arrow <++> prettyPrec d scope
+    prettyPrec d (NewPi (MkFCVal fc (MkPBinderScope (MkPBinder AutoImplicit bind) scope))) =
+      lcurly <+> auto_ <++> pretty bind <+> rcurly <++> arrow <++> prettyPrec d scope
+    prettyPrec d (NewPi (MkFCVal fc (MkPBinderScope (MkPBinder (DefImplicit x) bind) scope))) =
+      lcurly <+> default_ <++> prettyPrec appPrec x
+      <++> pretty bind <+> rcurly <++> arrow <++> prettyPrec d scope
+    prettyPrec d (Forall (MkFCVal fc (names, scope))) =
+      parenthesise (d > startPrec) $ group $
+        forall_ <++> commaSep (map (prettyBinder . val) (forget names)) <++> dot <++> pretty scope
     prettyPrec d (PPi _ rig Explicit Nothing arg ret) =
       parenthesise (d > startPrec) $ group $
         branchVal
@@ -337,26 +357,26 @@ mutual
     prettyPrec d (PDotted _ p) = dot <+> prettyPrec d p
     prettyPrec d (PImplicit _) = "_"
     prettyPrec d (PInfer _) = annotate Hole $ "?"
-    prettyPrec d (POp _ _ (BindType nm left) op right) =
+    prettyPrec d (POp _ (MkFCVal _ $ BindType nm left) op right) =
         group $ parens (prettyPrec d nm <++> ":" <++> pretty left)
-           <++> prettyOp op.toName
+           <++> prettyOp op.val.toName
            <++> pretty right
-    prettyPrec d (POp _ _ (BindExpr nm left) op right) =
+    prettyPrec d (POp _ (MkFCVal _ $ BindExpr nm left) op right) =
         group $ parens (prettyPrec d nm <++> ":=" <++> pretty left)
-           <++> prettyOp op.toName
+           <++> prettyOp op.val.toName
            <++> pretty right
-    prettyPrec d (POp _ _ (BindExplicitType nm ty left) op right) =
+    prettyPrec d (POp _ (MkFCVal _ $ BindExplicitType nm ty left) op right) =
         group $ parens (prettyPrec d nm <++> ":" <++> pretty ty <++> ":=" <++> pretty left)
-           <++> prettyOp op.toName
+           <++> prettyOp op.val.toName
            <++> pretty right
-    prettyPrec d (POp _ _ (NoBinder x) op y) =
+    prettyPrec d (POp _ (MkFCVal _ $ NoBinder x) op y) =
       parenthesise (d >= App) $
         group $ pretty x
-           <++> prettyOp op.toName
+           <++> prettyOp op.val.toName
            <++> pretty y
-    prettyPrec d (PPrefixOp _ _ op x) = parenthesise (d > startPrec) $ prettyOp op.toName <+> pretty x
-    prettyPrec d (PSectionL _ _ op x) = parens (prettyOp op.toName <++> pretty x)
-    prettyPrec d (PSectionR _ _ x op) = parens (pretty x <++> prettyOp op.toName)
+    prettyPrec d (PPrefixOp _ op x) = parenthesise (d > startPrec) $ prettyOp op.val.toName <+> pretty x
+    prettyPrec d (PSectionL _ op x) = parens (prettyOp op.val.toName <++> pretty x)
+    prettyPrec d (PSectionR _ x op) = parens (pretty x <++> prettyOp op.val.toName)
     prettyPrec d (PEq fc l r) = parenthesise (d > startPrec) $ prettyPrec Equal l <++> equals <++> prettyPrec Equal r
     prettyPrec d (PBracketed _ tm) = parens (pretty tm)
     prettyPrec d (PString _ _ xs) = parenthesise (d > startPrec) $ hsep $ punctuate "++" (prettyPStr <$> xs)
