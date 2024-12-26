@@ -939,7 +939,7 @@ processPackage : {auto c : Ref Ctxt Defs} ->
                  (PkgCommand, Maybe String) ->
                  Core ()
 processPackage opts (cmd, mfile)
-    = withCtxt . withSyn . withROpts $ case cmd of -- withWarnings .
+    = withCtxt . withSyn . withROpts $ case cmd of
         Init =>
           do Just pkg <- coreLift interactive
                | Nothing => coreLift (exitWith (ExitFailure 1))
