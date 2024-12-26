@@ -459,6 +459,24 @@ compileMain mainn mfilename exec
          ignore $ loadMainFile mfilename
          ignore $ compileExp (PRef replFC mainn) exec
 
+||| Emit captured warnings from inner scope and clear them
+||| afterwards (to avoid emitting them in some unrelated
+||| codepath later).
+withWarnings : Ref Ctxt Defs =>
+               Ref Syn SyntaxInfo =>
+               Ref ROpts REPLOpts =>
+               Core a -> Core a
+withWarnings op = do o <- catch op $ \err =>
+                           do emit
+                              throw err
+                     emit
+                     pure o
+  where
+    emit : Core ()
+    emit = do
+      ignore emitWarnings
+      update Ctxt { warnings := [] }
+
 prepareCompilation : {auto c : Ref Ctxt Defs} ->
                      {auto s : Ref Syn SyntaxInfo} ->
                      {auto o : Ref ROpts REPLOpts} ->
@@ -468,7 +486,7 @@ prepareCompilation : {auto c : Ref Ctxt Defs} ->
 prepareCompilation pkg opts =
   do
     processOptions (options pkg)
-    addDeps pkg
+    withWarnings $ addDeps pkg
 
     ignore $ preOptions opts
 
@@ -914,16 +932,6 @@ localPackageFile Nothing
          [] => throw $ UserError "No .ipkg file supplied and none could be found in the working directory."
          _ => throw $ UserError "No .ipkg file supplied and the working directory contains more than one."
 
-withWarnings : Ref Ctxt Defs =>
-               Ref Syn SyntaxInfo =>
-               Ref ROpts REPLOpts =>
-               Core a -> Core a
-withWarnings op = do o <- catch op $ \err =>
-                           do ignore emitWarnings
-                              throw err
-                     ignore emitWarnings
-                     pure o
-
 processPackage : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
                  {auto o : Ref ROpts REPLOpts} ->
@@ -931,7 +939,7 @@ processPackage : {auto c : Ref Ctxt Defs} ->
                  (PkgCommand, Maybe String) ->
                  Core ()
 processPackage opts (cmd, mfile)
-    = withCtxt . withWarnings . withSyn . withROpts $ case cmd of
+    = withCtxt . withSyn . withROpts $ case cmd of -- withWarnings .
         Init =>
           do Just pkg <- coreLift interactive
                | Nothing => coreLift (exitWith (ExitFailure 1))
