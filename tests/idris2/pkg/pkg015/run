@@ -7,7 +7,7 @@ for folder in ./depends/*; do
   mkdir -p "${folder}/${TTC_VERSION}"
 done
 
-idris2 --build test.ipkg --log package.depends:10
+idris2 --build test.ipkg --log package.depends:10 2>&1
 
 for folder in ./depends/*; do
   rmdir "${folder}/${TTC_VERSION}"
