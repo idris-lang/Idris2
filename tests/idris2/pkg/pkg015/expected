@@ -1,6 +1,13 @@
 Error: Failed to resolve the dependencies for test:
-  foo-0.2.0; baz-0.3.0; required quux any but no matching version is installed
-  foo-0.2.0; baz-0.2.0; bar-0.1.1; required baz < 0.2.0 but assigned version 0.2.0 which is out of bounds
-  foo-0.2.0; baz-0.2.0; bar-0.1.0; required prz > 0.1.0 but no matching version is installed
-  foo-0.1.0; required baz < 0.1.0 but no matching version is installed
+  Required quux any but no matching version is installed. Resolved transitive dependencies: foo-0.2.0; baz-0.3.0.
+  Required baz < 0.2.0 but only found version 0.2.0 which is out of bounds. Resolved transitive dependencies: foo-0.2.0; baz-0.2.0; bar-0.1.1.
+  Required prz > 0.1.0 but no matching version is installed. Resolved transitive dependencies: foo-0.2.0; baz-0.2.0; bar-0.1.0.
+  Required baz < 0.1.0 but no matching version is installed. Resolved transitive dependencies: foo-0.1.0.
+
+Searched for packages in:
+  [...]/tests/idris2/pkg/pkg015/depends
+  [...]/tests/idris2/pkg/pkg015/prefix/idris2-0.7.0
+  [...]/build/env/idris2-0.7.0
+
+For more details on what packages Idris2 can locate, run `idris2 --list-packages`
 

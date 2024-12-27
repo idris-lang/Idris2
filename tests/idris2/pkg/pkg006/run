@@ -7,11 +7,17 @@ for folder in ./depends/*; do
   mkdir -p "${folder}/${TTC_VERSION}"
 done
 
-idris2 --build test1.ipkg 2>&1
-idris2 --build test2.ipkg 2>&1
-idris2 --build test3.ipkg 2>&1
-idris2 --build test4.ipkg 2>&1
-idris2 --build test5.ipkg 2>&1
+TEST_FOLDER_PREFIX="$(cd ../../../.. && pwd | windows_path_tweaks | sed "s#/d#D:#g")"
+
+fix_path() {
+  windows_path_tweaks | sed "s#$TEST_FOLDER_PREFIX#[...]#g"
+}
+
+idris2 --build test1.ipkg 2>&1 | fix_path
+idris2 --build test2.ipkg 2>&1 | fix_path
+idris2 --build test3.ipkg 2>&1 | fix_path
+idris2 --build test4.ipkg 2>&1 | fix_path
+idris2 --build test5.ipkg 2>&1 | fix_path
 
 for folder in ./depends/*; do
   rmdir "${folder}/${TTC_VERSION}"

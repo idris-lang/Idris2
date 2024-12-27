@@ -40,6 +40,10 @@ sed_literal() {
     printf '%s\n' "$1" | sed -e 's/[]\/$*.^[]/\\&/g'
 }
 
+windows_path_tweaks() {
+    sed 's#C:.msys64##' | sed 's#\\#/#g'
+}
+
 # used below to normalise machine names
 # shellcheck disable=SC2016
 _awk_clean_name='
@@ -101,6 +105,7 @@ if [ -z "$PREFIX_CHANGED" ] && [ -n "$IDRIS2_PREFIX" ]; then
 
     # Set where to look to installed stuff
     export IDRIS2_PACKAGE_PATH="$OLD_PP$SEP$NEW_PP"
+    echo "${IDRIS2_PACKAGE_PATH} -- HERE (looking for dupes)"
     # Use TEST_IDRIS2_LIBS and TEST_IDRIS2_DATA to pass locations for
     # prebuilt libidris2_support and its DATA files.
     export IDRIS2_LIBS="$OLD_PP/lib$SEP$NEW_PP/lib$SEP$TEST_IDRIS2_LIBS"
