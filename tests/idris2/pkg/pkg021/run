@@ -1,0 +1,24 @@
+. ../../../testutils.sh
+
+INSTALL_DIR="$(idris2 --dump-installdir test.ipkg)"
+TTC_VERSION="$(idris2 --ttc-version)"
+
+rm -rf "${INSTALL_DIR}"
+rm -rf ./secondary_install
+
+# install package, copy install to a second location, bork the first location
+# by using a bad TTC version subfolder.
+idris2 --install test.ipkg > /dev/null
+
+mkdir -p ./secondary_install
+cp -R "${INSTALL_DIR}" ./secondary_install/
+mv "${INSTALL_DIR}/${TTC_VERSION}" "${INSTALL_DIR}/12345"
+
+echo "expect error:"
+idris2 -p testpkg < input
+append_package_path ./secondary_install
+echo ""
+echo "expect success:"
+idris2 -p testpkg < input
+
+rm -rf ./secondary_install

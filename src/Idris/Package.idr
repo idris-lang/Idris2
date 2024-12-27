@@ -369,6 +369,8 @@ tryAll ps f = go [<] ps
           Failed errs <- f x | Resolved res => pure (Resolved res)
           go (se <>< map (prepend x) errs) xs
 
+||| Add all dependencies (transitively) from the given package file into the
+||| context so modules from each is accessible during compilation.
 addDeps :
     {auto c : Ref Ctxt Defs} ->
     {auto s : Ref Syn SyntaxInfo} ->
@@ -384,7 +386,7 @@ addDeps pkg = do
   where
     -- Note: findPkgDir throws an error if a package is not found
     -- *unless* --ignore-missing-ipkg is enabled
-    -- therefore, findPkgDir returns Nothing, skip the package
+    -- therefore, if findPkgDir returns Nothing, skip the package
     --
     -- We use a backtracking algorithm here: If several versions of
     -- a package are installed, we must try all, which are are
@@ -457,6 +459,24 @@ compileMain mainn mfilename exec
          ignore $ loadMainFile mfilename
          ignore $ compileExp (PRef replFC mainn) exec
 
+||| Emit captured warnings from inner scope and clear them
+||| afterwards (to avoid emitting them in some unrelated
+||| codepath later).
+withWarnings : Ref Ctxt Defs =>
+               Ref Syn SyntaxInfo =>
+               Ref ROpts REPLOpts =>
+               Core a -> Core a
+withWarnings op = do o <- catch op $ \err =>
+                           do emit
+                              throw err
+                     emit
+                     pure o
+  where
+    emit : Core ()
+    emit = do
+      ignore emitWarnings
+      update Ctxt { warnings := [] }
+
 prepareCompilation : {auto c : Ref Ctxt Defs} ->
                      {auto s : Ref Syn SyntaxInfo} ->
                      {auto o : Ref ROpts REPLOpts} ->
@@ -466,7 +486,7 @@ prepareCompilation : {auto c : Ref Ctxt Defs} ->
 prepareCompilation pkg opts =
   do
     processOptions (options pkg)
-    addDeps pkg
+    withWarnings $ addDeps pkg
 
     ignore $ preOptions opts
 

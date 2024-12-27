@@ -3,4 +3,4 @@
 check Issue1345.idr 2>&1 || true
 check Issue1496-1.idr 2>&1 || true
 check Issue1496-2.idr 2>&1 || true
-idris2 --build foo.ipkg
+idris2 --build foo.ipkg 2>&1 || true

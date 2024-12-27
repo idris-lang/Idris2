@@ -1,7 +1,18 @@
 . ../../../testutils.sh
 
-idris2 --build test1.ipkg
-idris2 --build test2.ipkg
-idris2 --build test3.ipkg
-idris2 --build test4.ipkg
-idris2 --build test5.ipkg
+TTC_VERSION="$(idris2 --ttc-version)"
+
+# the mock dependencies must have a compatible TTC folder
+for folder in ./depends/*; do
+  mkdir -p "${folder}/${TTC_VERSION}"
+done
+
+idris2 --build test1.ipkg 2>&1
+idris2 --build test2.ipkg 2>&1
+idris2 --build test3.ipkg 2>&1
+idris2 --build test4.ipkg 2>&1
+idris2 --build test5.ipkg 2>&1
+
+for folder in ./depends/*; do
+  rmdir "${folder}/${TTC_VERSION}"
+done

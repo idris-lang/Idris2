@@ -17,4 +17,4 @@ Overridable options are:
     --output-dir <dir>
 
 Packages must have an '.ipkg' extension: "malformed-package-name".
-Uncaught error: File error (non-existent-package.ipkg): File Not Found
+Error: File error in non-existent-package.ipkg : File Not Found
