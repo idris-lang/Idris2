@@ -156,7 +156,7 @@ findPkgDirs p bounds = do
   locFiles <- candidateDirs localdir p bounds
   -- Look in all the package paths too
   d <- getDirs
-  pkgFiles <- traverse (\d => candidateDirs d p bounds) d.package_search_paths
+  pkgFiles <- traverse (\d => candidateDirs (show d) p bounds) d.package_search_paths
 
   -- If there's anything locally, use that and ignore the global ones
   let allFiles = if isNil locFiles
@@ -206,7 +206,7 @@ visiblePackages dir = map (MkQualifiedPkgDir dir) <$> filter viable <$> getPacka
 findPackages : {auto c : Ref Ctxt Defs} -> Core (List QualifiedPkgDir)
 findPackages
     = do d <- getDirs
-         pkgPathPkgs <- coreLift $ traverse (\d => visiblePackages d) d.package_search_paths
+         pkgPathPkgs <- coreLift $ traverse (\d => visiblePackages $ show d) d.package_search_paths
          -- local packages
          localPkgs <- coreLift $ visiblePackages !pkgLocalDirectory
          pure $ localPkgs ++ join pkgPathPkgs

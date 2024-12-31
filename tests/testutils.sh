@@ -105,7 +105,6 @@ if [ -z "$PREFIX_CHANGED" ] && [ -n "$IDRIS2_PREFIX" ]; then
 
     # Set where to look to installed stuff
     export IDRIS2_PACKAGE_PATH="$OLD_PP$SEP$NEW_PP"
-    echo "${IDRIS2_PACKAGE_PATH} -- HERE (looking for dupes)"
     # Use TEST_IDRIS2_LIBS and TEST_IDRIS2_DATA to pass locations for
     # prebuilt libidris2_support and its DATA files.
     export IDRIS2_LIBS="$OLD_PP/lib$SEP$NEW_PP/lib$SEP$TEST_IDRIS2_LIBS"

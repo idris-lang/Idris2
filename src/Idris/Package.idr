@@ -385,7 +385,7 @@ pkgDirs :
 pkgDirs = do
   localdir <- pkgLocalDirectory
   d <- getDirs
-  pure (localdir :: d.package_search_paths)
+  pure (localdir ::  (show <$> d.package_search_paths))
 
 ||| Add all dependencies (transitively) from the given package file into the
 ||| context so modules from each is accessible during compilation.
