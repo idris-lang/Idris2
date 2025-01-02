@@ -1,0 +1,17 @@
+. ../../../testutils.sh
+
+check dataSameTotality.idr
+echo "------"
+check recordSameTotality.idr
+echo "------"
+check dataDifferentTotality.idr
+echo "------"
+check recordDifferentTotality.idr
+echo "------"
+check dataTotalityOnlyDeclaration.idr
+echo "------"
+check recordTotalityOnlyDeclaration.idr
+echo "------"
+check dataTotalityOnlyDefinition.idr
+echo "------"
+check recordTotalityOnlyDefinition.idr

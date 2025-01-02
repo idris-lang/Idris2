@@ -1,0 +1,3 @@
+. ../../testutils.sh
+
+idris2 --check --yaffle issue3437.yaff < input

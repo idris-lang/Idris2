@@ -1,0 +1,79 @@
+1/1: Building dataSameTotality (dataSameTotality.idr)
+Error: X is not total, not strictly positive
+
+dataSameTotality:5:1--6:22
+ 5 | data X where
+ 6 |   MkX : (X -> X) -> X
+
+------
+1/1: Building recordSameTotality (recordSameTotality.idr)
+Error: X is not total, not strictly positive
+
+recordSameTotality:4:1--7:13
+ 4 | total
+ 5 | record X where
+ 6 |   constructor MkX
+ 7 |   f : X -> X
+
+------
+1/1: Building dataDifferentTotality (dataDifferentTotality.idr)
+Error: Data X has been forward-declared with totality `partial`, cannot change to `total`
+
+dataDifferentTotality:4:1--6:22
+ 4 | partial
+ 5 | data X where
+ 6 |   MkX : (X -> X) -> X
+
+Possible solutions:
+ - Use the same totality modifiers
+ - Remove the totality modifier from the declaration
+ - Remove the totality modifier from the definition
+------
+1/1: Building recordDifferentTotality (recordDifferentTotality.idr)
+Error: Data Main.X has been forward-declared with totality `partial`, cannot change to `total`
+
+recordDifferentTotality:4:1--7:13
+ 4 | partial
+ 5 | record X where
+ 6 |   constructor MkX
+ 7 |   f : X -> X
+
+Possible solutions:
+ - Use the same totality modifiers
+ - Remove the totality modifier from the declaration
+ - Remove the totality modifier from the definition
+------
+1/1: Building dataTotalityOnlyDeclaration (dataTotalityOnlyDeclaration.idr)
+Error: X is not total, not strictly positive
+
+dataTotalityOnlyDeclaration:4:1--5:22
+ 4 | data X where
+ 5 |   MkX : (X -> X) -> X
+
+------
+1/1: Building recordTotalityOnlyDeclaration (recordTotalityOnlyDeclaration.idr)
+Error: X is not total, not strictly positive
+
+recordTotalityOnlyDeclaration:4:1--6:13
+ 4 | record X where
+ 5 |   constructor MkX
+ 6 |   f : X -> X
+
+------
+1/1: Building dataTotalityOnlyDefinition (dataTotalityOnlyDefinition.idr)
+Error: X is not total, not strictly positive
+
+dataTotalityOnlyDefinition:4:1--5:22
+ 4 | data X where
+ 5 |   MkX : (X -> X) -> X
+
+------
+1/1: Building recordTotalityOnlyDefinition (recordTotalityOnlyDefinition.idr)
+Error: X is not total, not strictly positive
+
+recordTotalityOnlyDefinition:3:1--6:13
+ 3 | total
+ 4 | record X where
+ 5 |   constructor MkX
+ 6 |   f : X -> X
+

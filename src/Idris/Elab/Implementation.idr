@@ -466,8 +466,10 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
 
     mkTopMethDecl : (Name, Name, List (String, String), RigCount, Maybe TotalReq, RawImp) -> ImpDecl
     mkTopMethDecl (mn, n, upds, c, treq, mty)
-        = let opts = maybe opts_in (\t => Totality t :: opts_in) treq in
-              IClaim (MkFCVal vfc (MkIClaimData c vis opts (MkImpTy EmptyFC (NoFC n) mty)))
+        = do let opts = if isJust $ findTotality opts_in
+                          then opts_in
+                          else maybe opts_in (\t => Totality t :: opts_in) treq
+             IClaim $ MkFCVal vfc $ MkIClaimData c vis opts $ MkImpTy EmptyFC (NoFC n) mty
 
     -- Given the method type (result of topMethType) return the mapping from
     -- top level method name to current implementation's method name

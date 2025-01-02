@@ -1,0 +1,83 @@
+1/1: Building overrideDefault (overrideDefault.idr)
+------
+1/1: Building compilerOption (compilerOption.idr)
+------
+1/1: Building sameAsDefault (sameAsDefault.idr)
+------
+1/1: Building implementationOverride (implementationOverride.idr)
+------
+1/1: Building issue3437 (issue3437.idr)
+Error: Multiple totality modifiers
+
+issue3437:1:1--3:15
+ 1 | total
+ 2 | covering
+ 3 | f : Int -> Int
+
+Possible solutions:
+ - Leave only one modifier out of `covering`, `total`
+ - Remove modifiers `covering`, `total`, resulting in the default totality of `covering`
+------
+1/1: Building doubleTotal (doubleTotal.idr)
+Error: Multiple totality modifiers
+
+doubleTotal:1:1--3:7
+ 1 | total
+ 2 | total
+ 3 | f : ()
+
+Possible solutions:
+ - Remove duplicates of `total`
+------
+1/1: Building implementation (implementation.idr)
+Error: Multiple totality modifiers
+
+implementation:3:1--6:21
+ 3 | total
+ 4 | covering
+ 5 | partial
+ 6 | implementation Iface
+
+Possible solutions:
+ - Leave only one modifier out of `partial`, `covering`, `total`
+ - Remove modifiers `partial`, `covering`, `total`, resulting in the default totality of `covering`
+------
+1/1: Building interface (interface.idr)
+Error: Multiple totality modifiers
+
+interface:2:3--5:14
+ 2 |   total
+ 3 |   covering
+ 4 |   partial
+ 5 |   method : ()
+
+Possible solutions:
+ - Leave only one modifier out of `partial`, `covering`, `total`
+ - Remove modifiers `partial`, `covering`, `total`, resulting in the default totality of `covering`
+------
+1/1: Building noOverrideDefault (noOverrideDefault.idr)
+Error: Multiple totality modifiers
+
+noOverrideDefault:1:1--3:15
+ 1 | total
+ 2 | partial
+ 3 | f : Int -> Int
+
+Possible solutions:
+ - Leave only one modifier out of `partial`, `total`
+------
+1/1: Building duplicates (duplicates.idr)
+Error: Multiple totality modifiers
+
+duplicates:1:1--6:7
+ 1 | total
+ 2 | partial
+ 3 | covering
+ 4 | total
+ 5 | partial
+ 6 | f : ()
+
+Possible solutions:
+ - Remove duplicates of `partial`, `total`
+ - Leave only one modifier out of `partial`, `covering`, `total`
+ - Remove modifiers `partial`, `covering`, `total`, resulting in the default totality of `covering`
