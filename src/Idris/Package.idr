@@ -332,16 +332,19 @@ prepend : Candidate -> ResolutionError -> ResolutionError
 prepend p = { decisions $= (p ::)}
 
 reason : Maybe PkgVersion -> String
-reason Nothing  = "no matching version is installed"
-reason (Just x) = "assigned version \{show x} which is out of bounds"
-
+reason Nothing  = "no matching version is installed."
+reason (Just x) = "only found version \{show x} which is out of bounds."
 
 printResolutionError : ResolutionError -> String
 printResolutionError (MkRE ds d v) = go [<] ds
   where go : SnocList String -> List Candidate -> String
         go ss []        =
-          let pre    := "required \{d.pkgname} \{show d.pkgbounds} but"
-           in fastConcat . intersperse "; " $ ss <>> ["\{pre} \{reason v}"]
+          let pre        := "Required \{d.pkgname} \{show d.pkgbounds} but"
+              failure    := "\{pre} \{reason v}"
+              candidates := case ss of
+                               [<] => ""
+                               ss  => " Resolved transitive dependencies: " ++ (fastConcat $ intersperse "; " $ cast ss) ++ "."
+           in failure ++ candidates
         go ss (c :: cs) =
           let v := fromMaybe defaultVersion c.version
            in go (ss :< "\{c.name}-\{show v}") cs
@@ -350,10 +353,17 @@ data ResolutionRes : Type where
   Resolved : List String -> ResolutionRes
   Failed   : List ResolutionError -> ResolutionRes
 
-printErrs : PkgDesc -> List ResolutionError -> String
-printErrs x es =
-  unlines $  "Failed to resolve the dependencies for \{x.name}:"
-          :: map (indent 2 . printResolutionError) es
+printErrs : (pkgDirs : List String) -> PkgDesc -> List ResolutionError -> String
+printErrs pkgDirs x es =
+  let errors := unlines $ "Failed to resolve the dependencies for \{x.name}:"
+                          :: map (indent 2 . printResolutionError) es
+      dirs   := unlines $ "Searched for packages in:"
+                          :: map (indent 2) pkgDirs
+  in """
+     \{errors}
+     \{dirs}
+     For more details on what packages Idris2 can locate, run `idris2 --list-packages`
+     """
 
 -- try all possible resolution paths, keeping the first
 -- that works
@@ -369,6 +379,14 @@ tryAll ps f = go [<] ps
           Failed errs <- f x | Resolved res => pure (Resolved res)
           go (se <>< map (prepend x) errs) xs
 
+pkgDirs :
+    {auto c : Ref Ctxt Defs} ->
+    Core (List String)
+pkgDirs = do
+  localdir <- pkgLocalDirectory
+  d <- getDirs
+  pure (localdir ::  (show <$> d.package_search_paths))
+
 ||| Add all dependencies (transitively) from the given package file into the
 ||| context so modules from each is accessible during compilation.
 addDeps :
@@ -379,7 +397,7 @@ addDeps :
     Core ()
 addDeps pkg = do
   Resolved allPkgs <- getTransitiveDeps pkg.depends empty
-    | Failed errs => throw $ GenericMsg EmptyFC (printErrs pkg errs)
+    | Failed errs => throw $ GenericMsg EmptyFC (printErrs !pkgDirs pkg errs)
   log "package.depends" 10 $ "all depends: \{show allPkgs}"
   traverse_ addPackageDir allPkgs
   traverse_ addDataDir ((</> "data") <$> allPkgs)

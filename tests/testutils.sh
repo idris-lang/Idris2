@@ -40,6 +40,10 @@ sed_literal() {
     printf '%s\n' "$1" | sed -e 's/[]\/$*.^[]/\\&/g'
 }
 
+windows_path_tweaks() {
+    sed 's#C:.msys64##' | sed 's#\\#/#g'
+}
+
 # used below to normalise machine names
 # shellcheck disable=SC2016
 _awk_clean_name='

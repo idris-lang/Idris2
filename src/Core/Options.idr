@@ -24,7 +24,7 @@ record Dirs where
   output_dir : Maybe String -- output directory, relative to working directory
   prefix_dir : String -- installation prefix, for finding data files (e.g. run time support)
   extra_dirs : List String -- places to look for import files
-  package_search_paths : List String -- paths at which to look for packages
+  package_search_paths : List Path -- paths at which to look for packages
   package_dirs : List String -- places where specific needed packages at required versions are located
   lib_dirs : List String -- places to look for libraries (for code generation)
   data_dirs : List String -- places to look for data file

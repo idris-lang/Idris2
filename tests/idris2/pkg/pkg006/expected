@@ -1,7 +1,21 @@
 Error: Failed to resolve the dependencies for test3:
-  required foo >= 0.4 && < 0.5 but no matching version is installed
+  Required foo >= 0.4 && < 0.5 but no matching version is installed.
+
+Searched for packages in:
+  [...]/tests/idris2/pkg/pkg006/depends
+  [...]/tests/idris2/pkg/pkg006/prefix/idris2-0.7.0
+  [...]/build/env/idris2-0.7.0
+
+For more details on what packages Idris2 can locate, run `idris2 --list-packages`
 
 Error: Failed to resolve the dependencies for test4:
-  required baz any but no matching version is installed
+  Required baz any but no matching version is installed.
+
+Searched for packages in:
+  [...]/tests/idris2/pkg/pkg006/depends
+  [...]/tests/idris2/pkg/pkg006/prefix/idris2-0.7.0
+  [...]/build/env/idris2-0.7.0
+
+For more details on what packages Idris2 can locate, run `idris2 --list-packages`
 
 Warning: Deprecation warning: version numbers must now be of the form x.y.z

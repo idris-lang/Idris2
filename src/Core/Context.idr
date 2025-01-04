@@ -12,6 +12,7 @@ import public Core.Options.Log
 import public Core.TT
 
 import Libraries.Utils.Binary
+import Libraries.Utils.Path
 import Libraries.Utils.Scheme
 import Libraries.Text.PrettyPrint.Prettyprinter
 
@@ -2160,7 +2161,9 @@ addPackageDir dir = update Ctxt { options->dirs->package_dirs $= ((::) dir) . fi
 
 export
 addPackageSearchPath: {auto c : Ref Ctxt Defs} -> String -> Core ()
-addPackageSearchPath dir = update Ctxt { options->dirs->package_search_paths $= ((::) dir) . filter (/= dir) }
+addPackageSearchPath dir =
+  let newPath = parse dir
+   in update Ctxt { options->dirs->package_search_paths $= ((::) newPath) . filter (/= newPath) }
 
 export
 addDataDir : {auto c : Ref Ctxt Defs} -> String -> Core ()
