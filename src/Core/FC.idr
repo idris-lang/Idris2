@@ -97,6 +97,10 @@ mapFC f (MkFCVal fc val) = MkFCVal fc (f val)
 distribFC : WithFC (List a) -> List (WithFC a)
 distribFC x = map (MkFCVal x.fc) x.val
 
+%inline export
+traverseFCMaybe : (a -> Maybe b) -> WithFC a -> Maybe (WithFC b)
+traverseFCMaybe f (MkFCVal fc val) = MkFCVal fc <$> f val
+
 ||| An interface to extract the location of some data
 public export
 interface HasFC ty where
@@ -107,6 +111,10 @@ interface HasFC ty where
 export
 HasFC (WithFC ty) where
   (.getFC) (MkFCVal f _) = f
+
+export
+setFC : FC -> WithFC a -> WithFC a
+setFC x = { fc := x }
 
 ------------------------------------------------------------------------
 -- Conversion between NonEmptyFC and FC
