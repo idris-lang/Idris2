@@ -81,7 +81,7 @@ mapPTermM f = goPTerm where
       >>= f
     goPTerm t@(PQuoteName _ _) = f t
     goPTerm (PQuoteDecl fc x) =
-      PQuoteDecl fc <$> traverse goPDecl x
+      PQuoteDecl fc <$> traverse (traverseFC goPDecl) x
       >>= f
     goPTerm (PUnquote fc x) =
       PUnquote fc <$> goPTerm x
@@ -99,38 +99,38 @@ mapPTermM f = goPTerm where
       >>= f
     goPTerm t@(PImplicit _) = f t
     goPTerm t@(PInfer _) = f t
-    goPTerm (POp fc opFC (NoBinder left) op right) =
-      POp fc opFC
-          <$> (NoBinder <$> goPTerm left)
+    goPTerm (POp fc (MkFCVal opFC $ NoBinder left) op right) =
+      POp fc
+          <$> (MkFCVal opFC <$> NoBinder <$> goPTerm left)
           <*> pure op
           <*> goPTerm right
       >>= f
-    goPTerm (POp fc opFC (BindType nm left) op right) =
-      POp fc opFC
-          <$> (BindType <$> goPTerm nm <*> goPTerm left)
+    goPTerm (POp fc (MkFCVal opFC $ BindType nm left) op right) =
+      POp fc
+          <$> (MkFCVal opFC <$> (BindType <$> goPTerm nm <*> goPTerm left))
           <*> pure op
           <*> goPTerm right
       >>= f
-    goPTerm (POp fc opFC (BindExpr nm left) op right) =
-      POp fc opFC
-          <$> (BindExpr nm <$> goPTerm left)
+    goPTerm (POp fc (MkFCVal opFC $ BindExpr nm left) op right) =
+      POp fc
+          <$> (MkFCVal opFC <$> BindExpr nm <$> goPTerm left)
           <*> pure op
           <*> goPTerm right
       >>= f
-    goPTerm (POp fc opFC (BindExplicitType nm ty left) op right) =
-      POp fc opFC
-          <$> (BindExplicitType <$> goPTerm nm <*> goPTerm ty <*> goPTerm left)
+    goPTerm (POp fc (MkFCVal opFC $ BindExplicitType nm ty left) op right) =
+      POp fc
+          <$> (MkFCVal opFC <$> (BindExplicitType <$> goPTerm nm <*> goPTerm ty <*> goPTerm left))
           <*> pure op
           <*> goPTerm right
       >>= f
-    goPTerm (PPrefixOp fc opFC x y) =
-      PPrefixOp fc opFC x <$> goPTerm y
+    goPTerm (PPrefixOp fc x y) =
+      PPrefixOp fc x <$> goPTerm y
       >>= f
-    goPTerm (PSectionL fc opFC x y) =
-      PSectionL fc opFC x <$> goPTerm y
+    goPTerm (PSectionL fc x y) =
+      PSectionL fc x <$> goPTerm y
       >>= f
-    goPTerm (PSectionR fc opFC x y) =
-      PSectionR fc opFC <$> goPTerm x
+    goPTerm (PSectionR fc x y) =
+      PSectionR fc <$> goPTerm x
                    <*> pure y
       >>= f
     goPTerm (PEq fc x y) =
@@ -258,49 +258,53 @@ mapPTermM f = goPTerm where
       MkPClaim c v <$> goPFnOpts opts
                    <*> traverseFC goPTypeDecl tdecl
 
-    goPDecl : PDecl' nm -> Core (PDecl' nm)
-    goPDecl (PClaim claim) =
-      PClaim <$> traverseFC goPClaim claim
-    goPDecl (PDef cls) = PDef <$> traverseFC goPClauses cls
-    goPDecl (PData fc doc v mbt d) = PData fc doc v mbt <$> goPDataDecl d
-    goPDecl (PParameters fc nts ps) =
-      PParameters fc <$> go4TupledPTerms nts
-                     <*> goPDecls ps
-    goPDecl (PUsing fc mnts ps) =
-      PUsing fc <$> goPairedPTerms mnts
-                <*> goPDecls ps
-    goPDecl (PInterface fc v mnts n doc nrts ns mn ps) =
-      PInterface fc v <$> goPairedPTerms mnts
-                      <*> pure n
-                      <*> pure doc
-                      <*> go3TupledPTerms nrts
-                      <*> pure ns
-                      <*> pure mn
-                      <*> goPDecls ps
-    goPDecl (PImplementation fc v opts p is cs n ts mn ns mps) =
-      PImplementation fc v opts p <$> goImplicits is
-                                  <*> goPairedPTerms cs
-                                  <*> pure n
-                                  <*> goPTerms ts
-                                  <*> pure mn
-                                  <*> pure ns
-                                  <*> goMPDecls mps
-    goPDecl (PRecord fc doc v tot (MkPRecord n nts opts mn fs)) =
-      pure $ PRecord fc doc v tot !(MkPRecord n <$> go4TupledPTerms nts
-                                                <*> pure opts
-                                                <*> pure mn
-                                                <*> goPFields fs)
-    goPDecl (PRecord fc doc v tot (MkPRecordLater n nts)) =
-      pure $ PRecord fc doc v tot (MkPRecordLater n !(go4TupledPTerms nts))
-    goPDecl (PFail fc msg ps) = PFail fc msg <$> goPDecls ps
-    goPDecl (PMutual ps) = PMutual <$> traverseFC goPDecls ps
-    goPDecl (PFixity p) = pure (PFixity p)
-    goPDecl (PNamespace fc strs ps) = PNamespace fc strs <$> goPDecls ps
-    goPDecl (PTransform fc n a b) = PTransform fc n <$> goPTerm a <*> goPTerm b
-    goPDecl (PRunElabDecl fc a) = PRunElabDecl fc <$> goPTerm a
-    goPDecl (PDirective d) = pure (PDirective d)
-    goPDecl p@(PBuiltin _ _ _) = pure p
+    goPDecl' : PDecl' nm -> Core (PDecl' nm)
 
+    goPDecl : PDeclNoFC' nm -> Core (PDeclNoFC' nm)
+    goPDecl (PClaim claim) =
+      PClaim <$> goPClaim claim
+    goPDecl (PDef cls) = PDef <$> traverse goPClause cls
+    goPDecl (PData doc v mbt d) = PData doc v mbt <$> goPDataDecl d
+    goPDecl (PParameters (Left nts) ps) =
+      PParameters <$> Left <$> traverse (traversePair goPTerm) nts
+                  <*> goPDecls ps
+    goPDecl (PParameters (Right nts) ps) =
+      PParameters <$> (Right <$> (go4TupledPTerms nts))
+                  <*> goPDecls ps
+    goPDecl (PUsing mnts ps) =
+      PUsing <$> goPairedPTerms mnts
+             <*> goPDecls ps
+    goPDecl (PInterface v mnts n doc nrts ns mn ps) =
+      PInterface v <$> goPairedPTerms mnts
+                   <*> pure n
+                   <*> pure doc
+                   <*> go3TupledPTerms nrts
+                   <*> pure ns
+                   <*> pure mn
+                   <*> goPDecls ps
+    goPDecl (PImplementation v opts p is cs n ts mn ns mps) =
+      PImplementation v opts p <$> goImplicits is
+                               <*> goPairedPTerms cs
+                               <*> pure n
+                               <*> goPTerms ts
+                               <*> pure mn
+                               <*> pure ns
+                               <*> goMPDecls mps
+    goPDecl (PRecord doc v tot (MkPRecord n nts opts mn fs)) =
+      pure $ PRecord doc v tot !(MkPRecord n <$> go4TupledPTerms nts
+                                             <*> pure opts
+                                             <*> pure mn
+                                             <*> goPFields fs)
+    goPDecl (PRecord doc v tot (MkPRecordLater n nts)) =
+      pure $ PRecord doc v tot (MkPRecordLater n !(go4TupledPTerms nts))
+    goPDecl (PFail msg ps) = PFail msg <$> goPDecls ps
+    goPDecl (PMutual ps) = PMutual <$> goPDecls ps
+    goPDecl (PFixity p) = pure (PFixity p)
+    goPDecl (PNamespace strs ps) = PNamespace strs <$> goPDecls ps
+    goPDecl (PTransform n a b) = PTransform n <$> goPTerm a <*> goPTerm b
+    goPDecl (PRunElabDecl a) = PRunElabDecl <$> goPTerm a
+    goPDecl (PDirective d) = pure (PDirective d)
+    goPDecl p@(PBuiltin _ _) = pure p
 
     goPTypeDecl : PTypeDeclData' nm -> Core (PTypeDeclData' nm)
     goPTypeDecl (MkPTy n d t) = MkPTy n d <$> goPTerm t
@@ -392,7 +396,7 @@ mapPTermM f = goPTerm where
 
     goPDecls : List (PDecl' nm) -> Core (List (PDecl' nm))
     goPDecls []          = pure []
-    goPDecls (d :: ds) = (::) <$> goPDecl d <*> goPDecls ds
+    goPDecls (d :: ds) = (::) <$> traverseFC goPDecl d <*> goPDecls ds
 
     goPFieldUpdates : List (PFieldUpdate' nm) -> Core (List (PFieldUpdate' nm))
     goPFieldUpdates []          = pure []
@@ -428,7 +432,7 @@ mapPTerm f = goPTerm where
     goPTerm (PCase fc opts x xs)
       = f $ PCase fc (goPFnOpt <$>  opts) (goPTerm x) (goPClause <$> xs)
     goPTerm (PLocal fc xs scope)
-      = f $ PLocal fc (goPDecl <$> xs) (goPTerm scope)
+      = f $ PLocal fc (mapFC goPDecl <$> xs) (goPTerm scope)
     goPTerm (PUpdate fc xs)
       = f $ PUpdate fc (goPFieldUpdate <$> xs)
     goPTerm (PApp fc x y)
@@ -451,7 +455,7 @@ mapPTerm f = goPTerm where
       = f $ PQuote fc $ goPTerm x
     goPTerm t@(PQuoteName _ _) = f t
     goPTerm (PQuoteDecl fc x)
-      = f $ PQuoteDecl fc (goPDecl <$> x)
+      = f $ PQuoteDecl fc (mapFC goPDecl <$> x)
     goPTerm (PUnquote fc x)
       = f $ PUnquote fc $ goPTerm x
     goPTerm (PRunElab fc x)
@@ -464,14 +468,14 @@ mapPTerm f = goPTerm where
       = f $ PDotted fc $ goPTerm x
     goPTerm t@(PImplicit _) = f t
     goPTerm t@(PInfer _) = f t
-    goPTerm (POp fc opFC autoBindInfo opName z)
-      = f $ POp fc opFC (map f autoBindInfo) opName (goPTerm z)
-    goPTerm (PPrefixOp fc opFC x y)
-      = f $ PPrefixOp fc opFC x $ goPTerm y
-    goPTerm (PSectionL fc opFC x y)
-      = f $ PSectionL fc opFC x $ goPTerm y
-    goPTerm (PSectionR fc opFC x y)
-      = f $ PSectionR fc opFC (goPTerm x) y
+    goPTerm (POp fc autoBindInfo opName z)
+      = f $ POp fc (mapFC (map f) autoBindInfo) opName (goPTerm z)
+    goPTerm (PPrefixOp fc x y)
+      = f $ PPrefixOp fc x $ goPTerm y
+    goPTerm (PSectionL fc x y)
+      = f $ PSectionL fc x $ goPTerm y
+    goPTerm (PSectionR fc x y)
+      = f $ PSectionR fc (goPTerm x) y
     goPTerm (PEq fc x y)
       = f $ PEq fc (goPTerm x) (goPTerm y)
     goPTerm (PBracketed fc x)
@@ -530,7 +534,7 @@ mapPTerm f = goPTerm where
       = DoLet fc lhsFC n c (goPTerm t) (goPTerm scope)
     goPDo (DoLetPat fc pat t scope cls)
       = DoLetPat fc (goPTerm pat) (goPTerm t) (goPTerm scope) (goPClause <$> cls)
-    goPDo (DoLetLocal fc decls) = DoLetLocal fc $ goPDecl <$> decls
+    goPDo (DoLetLocal fc decls) = DoLetLocal fc $ mapFC goPDecl <$> decls
     goPDo (DoRewrite fc t) = DoRewrite fc $ goPTerm t
 
     goPWithProblem : PWithProblem' nm -> PWithProblem' nm
@@ -538,7 +542,7 @@ mapPTerm f = goPTerm where
 
     goPClause : PClause' nm -> PClause' nm
     goPClause (MkPatClause fc lhs rhs wh)
-      = MkPatClause fc (goPTerm lhs) (goPTerm rhs) (goPDecl <$> wh)
+      = MkPatClause fc (goPTerm lhs) (goPTerm rhs) (mapFC goPDecl <$> wh)
     goPClause (MkWithClause fc lhs wps flags cls)
       = MkWithClause fc (goPTerm lhs) (goPWithProblem <$> wps) flags (goPClause <$> cls)
     goPClause (MkImpossible fc lhs) = MkImpossible fc $ goPTerm lhs
@@ -546,34 +550,39 @@ mapPTerm f = goPTerm where
     goPClaim : PClaimData' nm -> PClaimData' nm
     goPClaim (MkPClaim c v opts tdecl) = MkPClaim c v (goPFnOpt <$> opts) (mapFC goPTypeDecl tdecl)
 
-    goPDecl : PDecl' nm -> PDecl' nm
-    goPDecl (PClaim claim)
-      = PClaim $ mapFC goPClaim claim
-    goPDecl (PDef cls) = PDef $ mapFC (map goPClause) cls
-    goPDecl (PData fc doc v mbt d) = PData fc doc v mbt $ goPDataDecl d
-    goPDecl (PParameters fc nts ps)
-      = PParameters fc (go4TupledPTerms nts) (goPDecl <$> ps)
-    goPDecl (PUsing fc mnts ps)
-      = PUsing fc (goPairedPTerms mnts) (goPDecl <$> ps)
-    goPDecl (PInterface fc v mnts n doc nrts ns mn ps)
-      = PInterface fc v (goPairedPTerms mnts) n doc (go3TupledPTerms nrts) ns mn (goPDecl <$> ps)
-    goPDecl (PImplementation fc v opts p is cs n ts mn ns mps)
-      = PImplementation fc v opts p (goImplicits is) (goPairedPTerms cs)
-           n (goPTerm <$> ts) mn ns (map (goPDecl <$>) mps)
-    goPDecl (PRecord fc doc v tot (MkPRecord n nts opts mn fs))
-      = PRecord fc doc v tot
-          (MkPRecord n (go4TupledPTerms nts) opts mn (map (mapFC goRecordField) fs))
-    goPDecl (PRecord fc doc v tot (MkPRecordLater n nts))
-      = PRecord fc doc v tot (MkPRecordLater n (go4TupledPTerms nts))
-    goPDecl (PFail fc msg ps) = PFail fc msg $ goPDecl <$> ps
-    goPDecl (PMutual ps) = PMutual $ mapFC (map goPDecl) ps
-    goPDecl (PFixity p) = PFixity p
-    goPDecl (PNamespace fc strs ps) = PNamespace fc strs $ goPDecl <$> ps
-    goPDecl (PTransform fc n a b) = PTransform fc n (goPTerm a) (goPTerm b)
-    goPDecl (PRunElabDecl fc a) = PRunElabDecl fc $ goPTerm a
-    goPDecl (PDirective d) = PDirective d
-    goPDecl p@(PBuiltin _ _ _) = p
+    goPDeclFC : PDecl' nm -> PDecl' nm
 
+    goPDecl : PDeclNoFC' nm -> PDeclNoFC' nm
+    goPDecl (PClaim claim)
+      = PClaim $ goPClaim claim
+    goPDecl (PDef cls) = PDef $ map goPClause cls
+    goPDecl (PData doc v mbt d) = PData doc v mbt $ goPDataDecl d
+    goPDecl (PParameters (Left nts) ps)
+      = PParameters (Left $ map (map goPTerm) nts) (goPDeclFC <$> ps)
+    goPDecl (PParameters (Right nts) ps)
+      = PParameters (Right $ go4TupledPTerms nts) (goPDeclFC <$> ps)
+    goPDecl (PUsing mnts ps)
+      = PUsing (goPairedPTerms mnts) (goPDeclFC <$> ps)
+    goPDecl (PInterface v mnts n doc nrts ns mn ps)
+      = PInterface v (goPairedPTerms mnts) n doc (go3TupledPTerms nrts) ns mn (goPDeclFC <$> ps)
+    goPDecl (PImplementation v opts p is cs n ts mn ns mps)
+      = PImplementation v opts p (goImplicits is) (goPairedPTerms cs)
+           n (goPTerm <$> ts) mn ns (map (goPDeclFC <$>) mps)
+    goPDecl (PRecord doc v tot (MkPRecord n nts opts mn fs))
+      = PRecord doc v tot
+          (MkPRecord n (go4TupledPTerms nts) opts mn (map (mapFC goRecordField) fs))
+    goPDecl (PRecord doc v tot (MkPRecordLater n nts))
+      = PRecord doc v tot (MkPRecordLater n (go4TupledPTerms nts))
+    goPDecl (PFail msg ps) = PFail msg $ goPDeclFC <$> ps
+    goPDecl (PMutual ps) = PMutual $ goPDeclFC <$> ps
+    goPDecl (PFixity p) = PFixity p
+    goPDecl (PNamespace strs ps) = PNamespace strs $ goPDeclFC <$> ps
+    goPDecl (PTransform n a b) = PTransform n (goPTerm a) (goPTerm b)
+    goPDecl (PRunElabDecl a) = PRunElabDecl $ goPTerm a
+    goPDecl (PDirective d) = PDirective d
+    goPDecl p@(PBuiltin _ _) = p
+
+    goPDeclFC = mapFC goPDecl
 
     goPTypeDecl : PTypeDeclData' nm -> PTypeDeclData' nm
     goPTypeDecl (MkPTy n d t) = MkPTy n d $ goPTerm t
@@ -656,10 +665,10 @@ substFC fc = mapPTerm $ \case
   PDotted _ x => PDotted fc x
   PImplicit _ => PImplicit fc
   PInfer _ => PInfer fc
-  POp _ _ ab nm r => POp fc fc ab nm r
-  PPrefixOp _ _ x y => PPrefixOp fc fc x y
-  PSectionL _ _ x y => PSectionL fc fc x y
-  PSectionR _ _ x y => PSectionR fc fc x y
+  POp _ ab nm r => POp fc ab nm r
+  PPrefixOp _ x y => PPrefixOp fc (setFC fc x) y
+  PSectionL _ x y => PSectionL fc (setFC fc x) y
+  PSectionR _ x y => PSectionR fc x (setFC fc y)
   PEq _ x y => PEq fc x y
   PBracketed _ x => PBracketed fc x
   PString _ x ys => PString fc x ys

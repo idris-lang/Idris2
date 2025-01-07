@@ -124,8 +124,8 @@ mkPrec Prefix = Prefix
 checkConflictingFixities : {auto s : Ref Syn SyntaxInfo} ->
                            {auto c : Ref Ctxt Defs} ->
                            (isPrefix : Bool) ->
-                           FC -> OpStr' Name -> Core (OpPrec, FixityDeclarationInfo)
-checkConflictingFixities isPrefix exprFC opn
+                           WithFC (OpStr' Name) -> Core (OpPrec, FixityDeclarationInfo)
+checkConflictingFixities isPrefix (MkFCVal exprFC opn)
   = do let op = nameRoot opn.toName
        foundFixities <- getFixityInfo op
        let (pre, inf) = partition ((== Prefix) . fix . snd) foundFixities
@@ -174,9 +174,9 @@ checkConflictingFixities isPrefix exprFC opn
 
 checkConflictingBinding : Ref Ctxt Defs =>
                           Ref Syn SyntaxInfo =>
-                          FC -> OpStr -> (foundFixity : FixityDeclarationInfo) ->
+                          WithFC OpStr -> (foundFixity : FixityDeclarationInfo) ->
                           (usage : OperatorLHSInfo PTerm) -> (rhs : PTerm) -> Core ()
-checkConflictingBinding fc opName foundFixity use_site rhs
+checkConflictingBinding (MkFCVal fc opName) foundFixity use_site rhs
     = if isCompatible foundFixity use_site
          then pure ()
          else throw $ OperatorBindingMismatch
@@ -230,19 +230,19 @@ parameters (side : Side)
   toTokList : {auto s : Ref Syn SyntaxInfo} ->
               {auto c : Ref Ctxt Defs} ->
               PTerm -> Core (List (Tok ((OpStr, FixityDeclarationInfo), Maybe (OperatorLHSInfo PTerm)) PTerm))
-  toTokList (POp fc opFC l opn r)
-      = do (precInfo, fixInfo) <- checkConflictingFixities False fc opn
+  toTokList (POp fc (MkFCVal lhsFC l) opn r)
+      = do (precInfo, fixInfo) <- checkConflictingFixities False opn
            unless (side == LHS) -- do not check for conflicting fixity on the LHS
                                 -- This is because we do not parse binders on the lhs
                                 -- and so, if we check, we will find uses of regular
                                 -- operator when binding is expected.
-                  (checkConflictingBinding opFC opn fixInfo l r)
+                  (checkConflictingBinding opn fixInfo l r)
            rtoks <- toTokList r
-           pure (Expr l.getLhs :: Op fc opFC ((opn, fixInfo), Just l) precInfo :: rtoks)
-  toTokList (PPrefixOp fc opFC opn arg)
-      = do (precInfo, fixInfo) <- checkConflictingFixities True fc opn
+           pure (Expr l.getLhs :: Op fc opn.fc ((opn.val, fixInfo), Just l) precInfo :: rtoks)
+  toTokList (PPrefixOp fc opn arg)
+      = do (precInfo, fixInfo) <- checkConflictingFixities True opn
            rtoks <- toTokList arg
-           pure (Op fc opFC ((opn, fixInfo), Nothing) precInfo :: rtoks)
+           pure (Op fc opn.fc ((opn.val, fixInfo), Nothing) precInfo :: rtoks)
   toTokList t = pure [Expr t]
 
 record BangData where
@@ -351,7 +351,7 @@ mutual
            cls <- traverse (map snd . desugarClause ps True) cls
            pure $ ICase fc opts scr scrty cls
   desugarB side ps (PLocal fc xs scope)
-      = let ps' = definedIn xs ++ ps in
+      = let ps' = definedIn (map val xs) ++ ps in
             pure $ ILocal fc (concat !(traverse (desugarDecl ps') xs))
                              !(desugar side ps' scope)
   desugarB side ps (PApp pfc (PUpdate fc fs) rec)
@@ -383,30 +383,30 @@ mutual
                      [apply (IVar fc (UN $ Basic "===")) [l', r'],
                       apply (IVar fc (UN $ Basic "~=~")) [l', r']]
   desugarB side ps (PBracketed fc e) = desugarB side ps e
-  desugarB side ps (POp fc opFC l op r)
-      = do ts <- toTokList side (POp fc opFC l op r)
+  desugarB side ps (POp fc l op r)
+      = do ts <- toTokList side (POp fc l op r)
            tree <- parseOps @{interpName} @{showWithLoc} ts
            unop <- desugarTree side ps (mapFst (\((x, _), y) => (x, y)) tree)
            desugarB side ps unop
-  desugarB side ps (PPrefixOp fc opFC op arg)
-      = do ts <- toTokList side (PPrefixOp fc opFC op arg)
+  desugarB side ps (PPrefixOp fc op arg)
+      = do ts <- toTokList side (PPrefixOp fc op arg)
            tree <- parseOps @{interpName} @{showWithLoc} ts
            unop <- desugarTree side ps (mapFst (\((x, _), y) => (x, y)) tree)
            desugarB side ps unop
-  desugarB side ps (PSectionL fc opFC op arg)
+  desugarB side ps (PSectionL fc op arg)
       = do syn <- get Syn
            -- It might actually be a prefix argument rather than a section
            -- so check that first, otherwise desugar as a lambda
-           case lookupName op.toName (prefixes syn) of
+           case lookupName op.val.toName (prefixes syn) of
                 [] =>
                     desugarB side ps
                         (PLam fc top Explicit (PRef fc (MN "arg" 0)) (PImplicit fc)
-                            (POp fc opFC (NoBinder (PRef fc (MN "arg" 0))) op arg))
-                (prec :: _) => desugarB side ps (PPrefixOp fc opFC op arg)
-  desugarB side ps (PSectionR fc opFC arg op)
+                            (POp fc (MkFCVal op.fc (NoBinder (PRef fc (MN "arg" 0)))) op arg))
+                (prec :: _) => desugarB side ps (PPrefixOp fc op arg)
+  desugarB side ps (PSectionR fc arg op)
       = desugarB side ps
           (PLam fc top Explicit (PRef fc (MN "arg" 0)) (PImplicit fc)
-              (POp fc opFC (NoBinder arg) op (PRef fc (MN "arg" 0))))
+              (POp fc (MkFCVal op.fc $ NoBinder arg) op (PRef fc (MN "arg" 0))))
   desugarB side ps (PSearch fc depth) = pure $ ISearch fc depth
   desugarB side ps (PPrimVal fc (BI x))
       = case !fromIntegerName of
@@ -1076,7 +1076,7 @@ mutual
                 {auto m : Ref MD Metadata} ->
                 {auto o : Ref ROpts REPLOpts} ->
                 List Name -> PDecl -> Core (List ImpDecl)
-  desugarDecl ps (PClaim (MkFCVal fc (MkPClaim rig vis fnopts ty)))
+  desugarDecl ps (MkFCVal fc (PClaim (MkPClaim rig vis fnopts ty)))
       = do opts <- traverse (desugarFnOpt ps) fnopts
            verifyTotalityModifiers fc opts
 
@@ -1084,7 +1084,7 @@ mutual
            pure $ flip (map {f = List, b = ImpDecl}) types $ \ty' =>
                       IClaim (MkFCVal fc $ MkIClaimData rig vis opts ty')
 
-  desugarDecl ps (PDef (MkFCVal fc clauses))
+  desugarDecl ps (MkFCVal fc (PDef clauses))
   -- The clauses won't necessarily all be from the same function, so split
   -- after desugaring, by function name, using collectDefs from RawImp
       = do ncs <- traverse (desugarClause ps False) clauses
@@ -1099,24 +1099,36 @@ mutual
       toIDef nm (ImpossibleClause fc lhs)
           = pure $ IDef fc nm [ImpossibleClause fc lhs]
 
-  desugarDecl ps (PData fc doc vis mbtot ddecl)
+  desugarDecl ps (MkFCVal fc $ PData doc vis mbtot ddecl)
       = pure [IData fc vis mbtot !(desugarData ps doc ddecl)]
 
-  desugarDecl ps (PParameters fc params pds)
-      = do pds' <- traverse (desugarDecl (ps ++ map fst params)) pds
-           params' <- traverse (\(n, rig, i, ntm) => do tm' <- desugar AnyExpr ps ntm
-                                                        i' <- traverse (desugar AnyExpr ps) i
-                                                        pure (n, rig, i', tm')) params
+  desugarDecl ps (MkFCVal fc $ PParameters params pds)
+      = do
+           params' <- getArgs params
+           pds' <- traverse (desugarDecl (ps ++ map fst params')) pds
            -- Look for implicitly bindable names in the parameters
            pnames <- ifThenElse (not !isUnboundImplicits) (pure [])
              $ map concat
              $ for (map (Builtin.snd . Builtin.snd . Builtin.snd) params')
-             $ findUniqueBindableNames fc True (ps ++ map Builtin.fst params) []
+             $ findUniqueBindableNames fc True (ps ++ map Builtin.fst params') []
 
            let paramsb = map (\(n, rig, info, tm) =>
                                  (n, rig, info, doBind pnames tm)) params'
            pure [IParameters fc paramsb (concat pds')]
-  desugarDecl ps (PUsing fc uimpls uds)
+      where
+        getArgs : Either (List (Name, PTerm))
+                         (List (Name, RigCount, PiInfo (PTerm' Name), PTerm' Name)) ->
+                         Core (List (ImpParameter' Name))
+        getArgs (Left params)
+          = traverse (\(n, ty) => do
+              ty' <- desugar AnyExpr ps ty
+              pure (n, top, Explicit, ty')) params
+        getArgs (Right params)
+          = traverse (\(n, rig, info, ntm) => do
+              tm' <- desugar AnyExpr ps ntm
+              i' <- traverse (desugar AnyExpr ps) info
+              pure (n, rig, i', tm')) params
+  desugarDecl ps (MkFCVal fc $ PUsing uimpls uds)
       = do syn <- get Syn
            let oldu = usingImpl syn
            uimpls' <- traverse (\ ntm => do tm' <- desugar AnyExpr ps (snd ntm)
@@ -1126,7 +1138,7 @@ mutual
            uds' <- traverse (desugarDecl ps) uds
            update Syn { usingImpl := oldu }
            pure (concat uds')
-  desugarDecl ps (PInterface fc vis cons_in tn doc params det conname body)
+  desugarDecl ps (MkFCVal fc $ PInterface vis cons_in tn doc params det conname body)
       = do addDocString tn doc
            let paramNames = map fst params
 
@@ -1139,7 +1151,7 @@ mutual
                             pure (nm, (rig, tm')))
                       params
            -- Look for bindable names in all the constraints and parameters
-           let mnames = map dropNS (definedIn body)
+           let mnames = map dropNS (definedIn (map val body))
            bnames <- ifThenElse (not !isUnboundImplicits) (pure [])
              $ map concat
              $ for (map Builtin.snd cons' ++ map (snd . snd) params')
@@ -1170,7 +1182,7 @@ mutual
       expandConstraint (Nothing, p)
           = map (\x => (Nothing, x)) (pairToCons p)
 
-  desugarDecl ps (PImplementation fc vis fnopts pass is cons tn params impln nusing body)
+  desugarDecl ps (MkFCVal fc $ PImplementation vis fnopts pass is cons tn params impln nusing body)
       = do opts <- traverse (desugarFnOpt ps) fnopts
            verifyTotalityModifiers fc opts
 
@@ -1211,13 +1223,13 @@ mutual
       isNamed Nothing = False
       isNamed (Just _) = True
 
-  desugarDecl ps (PRecord fc doc vis mbtot (MkPRecordLater tn params))
-      = desugarDecl ps (PData fc doc vis mbtot (MkPLater fc tn (mkRecType params)))
+  desugarDecl ps (MkFCVal fc $ PRecord doc vis mbtot (MkPRecordLater tn params))
+      = desugarDecl ps (MkFCVal fc $ PData doc vis mbtot (MkPLater fc tn (mkRecType params)))
     where
       mkRecType : List (Name, RigCount, PiInfo PTerm, PTerm) -> PTerm
       mkRecType [] = PType fc
       mkRecType ((n, c, p, t) :: ts) = PPi fc c p (Just n) t (mkRecType ts)
-  desugarDecl ps (PRecord fc doc vis mbtot (MkPRecord tn params opts conname_in fields))
+  desugarDecl ps (MkFCVal fc $ PRecord doc vis mbtot (MkPRecord tn params opts conname_in fields))
       = do addDocString tn doc
            params' <- traverse (\ (n,c,p,tm) =>
                           do tm' <- desugar AnyExpr ps tm
@@ -1258,7 +1270,7 @@ mutual
           NS ns (DN str (MN ("__mk" ++ str) 0))
       mkConName n = DN (show n) (MN ("__mk" ++ show n) 0)
 
-  desugarDecl ps fx@(PFixity $ MkFCVal fc (MkPFixityData vis binding fix prec opNames))
+  desugarDecl ps fx@(MkFCVal fc $ PFixity (MkPFixityData vis binding fix prec opNames))
       = flip (Core.traverseList1_ {b = Unit}) opNames (\opName : OpStr => do
            unless (checkValidFixity binding fix prec)
              (throw $ GenericMsgSol fc
@@ -1289,14 +1301,14 @@ mutual
                addName updatedNS
                  (MkFixityInfo fc (collapseDefault vis) binding fix prec) })
         >> pure []
-  desugarDecl ps d@(PFail fc mmsg ds)
+  desugarDecl ps d@(MkFCVal fc $ PFail mmsg ds)
       = do -- save the state: the content of a failing block should be discarded
            ust <- get UST
            md <- get MD
            opts <- get ROpts
            syn <- get Syn
            defs <- branch
-           log "desugar.failing" 20 $ "Desugaring the block:\n" ++ show d
+           log "desugar.failing" 20 $ "Desugaring the block:\n" ++ show d.val
            -- See whether the desugaring phase fails and return
            -- * Right ds                            if the desugaring succeeded
            --                                       the error will have to come later in the pipeline
@@ -1331,22 +1343,22 @@ mutual
              Right ds => [IFail fc mmsg ds] <$ log "desugar.failing" 20 "Success"
              Left Nothing => [] <$ log "desugar.failing" 20 "Correctly failed"
              Left (Just err) => throw err
-  desugarDecl ps (PMutual (MkFCVal fc ds))
+  desugarDecl ps (MkFCVal fc $ PMutual ds)
       = do let (tys, defs) = splitMutual ds
            mds' <- traverse (desugarDecl ps) (tys ++ defs)
            pure (concat mds')
-  desugarDecl ps (PNamespace fc ns decls)
+  desugarDecl ps (MkFCVal fc $ PNamespace ns decls)
       = withExtendedNS ns $ do
            ds <- traverse (desugarDecl ps) decls
            pure [INamespace fc ns (concat ds)]
-  desugarDecl ps (PTransform fc n lhs rhs)
+  desugarDecl ps (MkFCVal fc $ PTransform n lhs rhs)
       = do (bound, blhs) <- bindNames False !(desugar LHS ps lhs)
            rhs' <- desugar AnyExpr (bound ++ ps) rhs
            pure [ITransform fc (UN $ Basic n) blhs rhs']
-  desugarDecl ps (PRunElabDecl fc tm)
+  desugarDecl ps (MkFCVal fc $ PRunElabDecl tm)
       = do tm' <- desugar AnyExpr ps tm
            pure [IRunElabDecl fc tm']
-  desugarDecl ps (PDirective $ MkFCVal fc d)
+  desugarDecl ps (MkFCVal fc $ PDirective d)
       = case d of
              Hide (HideName n) => pure [IPragma fc [] (\nest, env => hide fc n)]
              Hide (HideFixity fx n) => pure [IPragma fc [] (\_, _ => removeFixity fc fx n)]
@@ -1391,7 +1403,7 @@ mutual
 
                       update Ctxt { options->foreignImpl $= (map (n',) calls ++) }
                     )]
-  desugarDecl ps (PBuiltin fc type name) = pure [IBuiltin fc type name]
+  desugarDecl ps (MkFCVal fc $ PBuiltin type name) = pure [IBuiltin fc type name]
 
   export
   desugarDo : {auto s : Ref Syn SyntaxInfo} ->

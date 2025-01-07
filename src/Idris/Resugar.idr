@@ -47,7 +47,7 @@ mkOp tm@(PApp fc (PApp _ (PRef opFC kn) x) y)
        -- to know if the name is an operator or not, it's enough to check
        -- that the fixity context contains the name `(++)`
        let rootName = UN (Basic (nameRoot raw))
-       let asOp = POp fc opFC (NoBinder (unbracketApp x)) (pop kn) (unbracketApp y)
+       let asOp = POp fc (MkFCVal opFC $ NoBinder (unbracketApp x)) (MkFCVal opFC $ pop kn) (unbracketApp y)
        if not (null (lookupName rootName (infixes syn)))
          then pure asOp
          else case dropNS raw of
@@ -56,7 +56,7 @@ mkOp tm@(PApp fc (PApp _ (PRef opFC kn) x) y)
 mkOp tm@(PApp fc (PRef opFC kn) x)
   = do syn <- get Syn
        let n = rawName kn
-       let asOp = PSectionR fc opFC (unbracketApp x) (OpSymbols kn)
+       let asOp = PSectionR fc (unbracketApp x) (MkFCVal opFC $ OpSymbols kn)
        if not (null $ lookupName (UN $ Basic (nameRoot n)) (infixes syn))
          then pure asOp
          else case dropNS n of
@@ -74,7 +74,7 @@ mkSectionL tm@(PLam fc rig info (PRef _ bd) ty
          | _ => pure tm
        syn <- get Syn
        let n = rawName kn
-       let asOp = PSectionL fc opFC (OpSymbols kn) (unbracketApp x)
+       let asOp = PSectionL fc (MkFCVal opFC $ OpSymbols kn) (unbracketApp x)
        if not (null $ lookupName (UN $ Basic (nameRoot n)) (fixities syn))
          then pure asOp
          else case dropNS n of
@@ -528,37 +528,37 @@ mutual
             ImpDecl' KindedName -> Core (Maybe (PDecl' KindedName))
   toPDecl (IClaim (MkFCVal fc $ MkIClaimData rig vis opts ty))
       = do opts' <- traverse toPFnOpt opts
-           pure (Just (PClaim (MkFCVal fc $ MkPClaim rig vis opts' !(toPTypeDecl ty))))
+           pure (Just (MkFCVal fc $ PClaim (MkPClaim rig vis opts' !(toPTypeDecl ty))))
   toPDecl (IData fc vis mbtot d)
-      = pure (Just (PData fc "" vis mbtot !(toPData d)))
+      = pure (Just (MkFCVal fc $ PData "" vis mbtot !(toPData d)))
   toPDecl (IDef fc n cs)
-      = pure (Just (PDef $ MkFCVal fc !(traverse toPClause cs)))
+      = pure (Just (MkFCVal fc $ PDef $ !(traverse toPClause cs)))
   toPDecl (IParameters fc ps ds)
       = do ds' <- traverse toPDecl ds
-           pure (Just (PParameters fc
-                        !(traverse (\(n, rig, info, tpe) =>
-                            do info' <- traverse (toPTerm startPrec) info
-                               tpe' <- toPTerm startPrec tpe
-                               pure (n, rig, info', tpe')) ps)
-                (catMaybes ds')))
+           args <-
+             traverse (\(n, rig, info, tpe) =>
+                 do info' <- traverse (toPTerm startPrec) info
+                    type' <- toPTerm startPrec tpe
+                    pure (n, rig, info', type')) ps
+           pure (Just $ MkFCVal fc (PParameters (Right args) (catMaybes ds')))
   toPDecl (IRecord fc _ vis mbtot r)
       = do (n, ps, opts, con, fs) <- toPRecord r
-           pure (Just (PRecord fc "" vis mbtot (MkPRecord n ps opts con fs)))
+           pure (Just $ MkFCVal fc (PRecord "" vis mbtot (MkPRecord n ps opts con fs)))
   toPDecl (IFail fc msg ds)
       = do ds' <- traverse toPDecl ds
-           pure (Just (PFail fc msg (catMaybes ds')))
+           pure (Just (MkFCVal fc $ PFail msg (catMaybes ds')))
   toPDecl (INamespace fc ns ds)
       = do ds' <- traverse toPDecl ds
-           pure (Just (PNamespace fc ns (catMaybes ds')))
+           pure (Just (MkFCVal fc $ PNamespace ns (catMaybes ds')))
   toPDecl (ITransform fc n lhs rhs)
-      = pure (Just (PTransform fc (show n)
+      = pure (Just (MkFCVal fc $ PTransform (show n)
                                   !(toPTerm startPrec lhs)
                                   !(toPTerm startPrec rhs)))
   toPDecl (IRunElabDecl fc tm)
-      = pure (Just (PRunElabDecl fc !(toPTerm startPrec tm)))
+      = pure (Just (MkFCVal fc $ PRunElabDecl !(toPTerm startPrec tm)))
   toPDecl (IPragma _ _ _) = pure Nothing
   toPDecl (ILog _) = pure Nothing
-  toPDecl (IBuiltin fc type name) = pure $ Just $ PBuiltin fc type name
+  toPDecl (IBuiltin fc type name) = pure $ Just $ MkFCVal fc $ PBuiltin type name
 
 export
 cleanPTerm : {auto c : Ref Ctxt Defs} ->
@@ -591,14 +591,14 @@ cleanPTerm ptm
     cleanNode : IPTerm -> Core IPTerm
     cleanNode (PRef fc nm)    =
       PRef fc <$> cleanKindedName nm
-    cleanNode (POp fc opFC abi op y) =
-      (\ op => POp fc opFC abi op y) <$> traverseOp @{Functor.CORE} cleanKindedName op
-    cleanNode (PPrefixOp fc opFC op x) =
-      (\ op => PPrefixOp fc opFC op x) <$> traverseOp @{Functor.CORE} cleanKindedName op
-    cleanNode (PSectionL fc opFC op x) =
-      (\ op => PSectionL fc opFC op x) <$> traverseOp @{Functor.CORE} cleanKindedName op
-    cleanNode (PSectionR fc opFC x op) =
-      PSectionR fc opFC x <$> traverseOp @{Functor.CORE} cleanKindedName op
+    cleanNode (POp fc abi op y) =
+      (\ op => POp fc abi op y) <$> traverseFC (traverseOp @{Functor.CORE} cleanKindedName) op
+    cleanNode (PPrefixOp fc op x) =
+      (\ op => PPrefixOp fc op x) <$> traverseFC (traverseOp @{Functor.CORE} cleanKindedName) op
+    cleanNode (PSectionL fc op x) =
+      (\ op => PSectionL fc op x) <$> traverseFC (traverseOp @{Functor.CORE} cleanKindedName) op
+    cleanNode (PSectionR fc x op) =
+      PSectionR fc x <$> traverseFC (traverseOp @{Functor.CORE} cleanKindedName) op
     cleanNode (PPi fc rig vis (Just n) arg ret) =
       (\ n => PPi fc rig vis n arg ret) <$> (cleanBinderName vis n)
     cleanNode tm = pure tm

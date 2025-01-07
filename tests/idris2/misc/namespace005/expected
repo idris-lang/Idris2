@@ -10,13 +10,13 @@ Warning: operator fixity is ambiguous, we are picking Lib2.infixl.(%%%) out of :
 To remove this warning, use `%hide` with the fixity to remove
 For example: %hide Lib2.infixl.(%%%)
 
-MainFail:7:17--7:32
+MainFail:7:20--7:23
  3 | import Lib2
  4 | import Lib1
  5 | 
  6 | main : IO ()
  7 | main = printLn (10 %%% 10 %%% 1)
-                     ^^^^^^^^^^^^^^^
+                        ^^^
 
 Warning: operator fixity is ambiguous, we are picking Lib2.infixl.(%%%) out of :
  - Lib2.infixl.(%%%), precedence level 5
@@ -25,13 +25,13 @@ Warning: operator fixity is ambiguous, we are picking Lib2.infixl.(%%%) out of :
 To remove this warning, use `%hide` with the fixity to remove
 For example: %hide Lib2.infixl.(%%%)
 
-MainFail:7:24--7:32
+MainFail:7:27--7:30
  3 | import Lib2
  4 | import Lib1
  5 | 
  6 | main : IO ()
  7 | main = printLn (10 %%% 10 %%% 1)
-                            ^^^^^^^^
+                               ^^^
 
 2/2: Building Main3 (Main3.idr)
 Warning: operator fixity is ambiguous, we are picking Main3.prefix.(%%%) out of :
@@ -41,13 +41,13 @@ Warning: operator fixity is ambiguous, we are picking Main3.prefix.(%%%) out of 
 To remove this warning, use `%hide` with the fixity to remove
 For example: %hide Main3.prefix.(%%%)
 
-Main3:12:28--12:35
+Main3:12:29--12:32
  08 | (%%%) : Nat -> Nat
  09 | (%%%) = S
  10 | 
  11 | main : IO ()
  12 | main = do printLn (the Nat (%%% 4))
-                                 ^^^^^^^
+                                  ^^^
 
 Warning: operator fixity is ambiguous, we are picking Prelude.Ops.infixl.(-) out of :
  - Prelude.Ops.infixl.(-), precedence level 8
@@ -56,13 +56,13 @@ Warning: operator fixity is ambiguous, we are picking Prelude.Ops.infixl.(-) out
 To remove this warning, use `%hide` with the fixity to remove
 For example: %hide Prelude.Ops.infixl.(-)
 
-Main3:13:20--13:29
+Main3:13:22--13:23
  09 | (%%%) = S
  10 | 
  11 | main : IO ()
  12 | main = do printLn (the Nat (%%% 4))
  13 |           printLn (1 - 1 - 1)
-                         ^^^^^^^^^
+                           ^
 
 Warning: operator fixity is ambiguous, we are picking Prelude.Ops.infixl.(-) out of :
  - Prelude.Ops.infixl.(-), precedence level 8
@@ -71,13 +71,13 @@ Warning: operator fixity is ambiguous, we are picking Prelude.Ops.infixl.(-) out
 To remove this warning, use `%hide` with the fixity to remove
 For example: %hide Prelude.Ops.infixl.(-)
 
-Main3:13:24--13:29
+Main3:13:26--13:27
  09 | (%%%) = S
  10 | 
  11 | main : IO ()
  12 | main = do printLn (the Nat (%%% 4))
  13 |           printLn (1 - 1 - 1)
-                             ^^^^^
+                               ^
 
 0
 1
