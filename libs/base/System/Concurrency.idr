@@ -186,7 +186,7 @@ prim__channelGet : Channel a -> PrimIO a
 %foreign "scheme,chez:blodwen-channel-get-non-blocking"
 prim__channelGetNonBlocking : Channel a -> PrimIO (Maybe a)
 %foreign "scheme,chez:blodwen-channel-get-with-timeout"
-prim__channelGetWithTimeout : Channel a -> Nat -> PrimIO (Maybe a)
+prim__channelGetWithTimeout : Channel a -> Int -> PrimIO (Maybe a)
 %foreign "scheme:blodwen-channel-put"
 prim__channelPut : Channel a -> a -> PrimIO ()
 
@@ -223,7 +223,7 @@ channelGetNonBlocking chan = primIO (prim__channelGetNonBlocking chan)
 partial
 export
 channelGetWithTimeout : HasIO io => (chan : Channel a) -> (milliseconds : Nat) -> io (Maybe a)
-channelGetWithTimeout chan milliseconds = primIO (prim__channelGetWithTimeout chan milliseconds)
+channelGetWithTimeout chan milliseconds = primIO (prim__channelGetWithTimeout chan (cast milliseconds))
 
 ||| Puts a value on the given channel.
 |||
