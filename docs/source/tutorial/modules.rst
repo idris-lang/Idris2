@@ -301,15 +301,15 @@ Look at the following example.
     useNSFromOutside' : String
     useNSFromOutside' = Y.g "x" -- value is "xa"
 
-Parameterised blocks
-====================
+Parameterised blocks - `parameters`-blocks
+==========================================
 
 Groups of functions can be parameterised over a number of arguments
 using a ``parameters`` declaration, for example:
 
 .. code-block:: idris
 
-    parameters (x : Nat, y : Nat)
+    parameters (x : Nat) (y : Nat)
       addAll : Nat -> Nat
       addAll z = x + y + z
 
@@ -338,7 +338,7 @@ constructors. They may also be dependent types with implicit arguments:
 
 .. code-block:: idris
 
-    parameters (y : Nat, xs : Vect x a)
+    parameters (y : Nat) (xs : Vect x a)
       data Vects : Type -> Type where
         MkVects : Vect y a -> Vects a
 
@@ -353,3 +353,11 @@ which can be inferred by the type checker:
 
     Main> show (append _ _ (MkVects _ [1,2,3] [4,5,6]))
     "[1, 2, 3, 4, 5, 6]"
+
+You can specify what quantity and if the parameters are implicits using
+the same syntax as record parameters.
+
+.. code-block:: idris
+
+    parameters {0 m : Type -> Type} {auto mon : Monad m}
+

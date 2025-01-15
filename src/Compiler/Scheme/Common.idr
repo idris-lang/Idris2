@@ -335,10 +335,10 @@ weakMemoLaziness = MkLazyExprProc
   (\expr => "(blodwen-delay-lazy (lambda () " ++ expr ++ "))")
   (\expr => "(blodwen-force-lazy " ++ expr ++ ")")
 
-parameters (constants : SortedSet Name,
-            schExtPrim : Nat -> ExtPrim -> List NamedCExp -> Core Builder,
-            schString : String -> Builder,
-            schLazy : LazyExprProc)
+parameters (constants : SortedSet Name)
+           (schExtPrim : Nat -> ExtPrim -> List NamedCExp -> Core Builder)
+           (schString : String -> Builder)
+           (schLazy : LazyExprProc)
   showTag : Name -> Maybe Int -> Builder
   showTag n (Just i) = showB i
   showTag n Nothing = schString (show n)

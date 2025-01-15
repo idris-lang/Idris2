@@ -91,7 +91,7 @@ record TermWithEnv (free : List Name) where
     locEnv : LocalEnv free varsEnv
     term : Term $ varsEnv ++ free
 
-parameters (defs : Defs, topopts : EvalOpts)
+parameters (defs : Defs) (topopts : EvalOpts)
   mutual
     eval : {auto c : Ref Ctxt Defs} ->
            {free, vars : _} ->
