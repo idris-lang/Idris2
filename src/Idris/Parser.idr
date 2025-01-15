@@ -1850,7 +1850,7 @@ paramDecls fname indents = do
          _ <- decoratedKeyword fname "parameters"
          _ <- commit
          params <- Right <$> newParamDecls fname indents
-               <|> Left <$> oldParamDecls fname indents
+               <|> Left <$> withWarning "DEPRECATED: old parameter syntax https://github.com/idris-lang/Idris2/issues/3447" (oldParamDecls fname indents)
          commit
          declarations <- bounds $ nonEmptyBlockAfter startCol (topDecl fname)
          pure (PParameters params

@@ -78,6 +78,13 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Added syntax to specifying quantity for proof in with-clause.
 
+* Old-style parameter block syntax is deprecated in favor of the new one.
+  In Idris1 you could write `parameters (a : t1, b : t2)` but this did not
+  allow for implicits arguments or quantities, this is deprecated. Use the
+  new Idris2 syntax instead where you can write
+  `parameters {0 t : Type} (v : t)` to indicate if arguments are implicit or
+  erased.
+
 ### Compiler changes
 
 * The compiler now differentiates between "package search path" and "package
