@@ -203,12 +203,12 @@ mutual
   onWithDefault _ valHandler (SpecifiedValue v) = valHandler v
 
   public export
-  record IClaimData where
-    constructor MkIClaimData
-    rig : Count
-    vis : Visibility
-    opts : List FnOpt
-    type : ITy
+  data IClaimData : Type where
+    MkIClaimData : (rig  : Count) ->
+                   (vis  : Visibility) ->
+                   (opts : List FnOpt) ->
+                   (type : ITy) ->
+                   IClaimData
 
   public export
   data Decl : Type where

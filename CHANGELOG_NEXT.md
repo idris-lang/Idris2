@@ -103,12 +103,12 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * `MakeFuture` primitive is removed.
 
-* Typst files can be compiled as Literate Idris
+* [Typst](https://typst.app/) files can be compiled as Literate Idris.
 
 * `min` was renamed to `leftMost` in `Libraries.Data.Sorted{Map|Set}` in order
   to be defined as in `base`.
 
-* Reflected trees now make use of WithFC to replicate the new location tracking
+* Reflected trees now make use of `WithFC` to replicate the new location tracking
   in the compiler.
 
 ### Backend changes
@@ -140,9 +140,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Rename C function to avoid confliction. But only a part.
 
-* Supress code generation of _arglist wrappers to reduce code size and compilation time.
+* Suppress code generation of `_arglist` wrappers to reduce code size and compilation time.
 
-* Removed Value_Arglist to reduce Closure's allocation overhead and make code simply.
+* Removed `Value_Arglist` to reduce Closure's allocation overhead and make code simply.
 
 * Switch calling conventions based on the number of arguments to avoid limits on
   the number of arguments and to reduce stack usage.
@@ -150,13 +150,13 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Values that reference counters reaching their maximum limit are immortalized to
   prevent counter overflow. This can potentially cause memory leaks, but they
   occur rarely and are a better choice than crashing. Since overflow is no longer
-  a concern, changing refCounter from int to uint16 reduces the size of 'Value_Header'.
+  a concern, changing `refCounter` from `int` to `uint16` reduces the size of `Value_Header`.
 
 * Values often found at runtime, such as integers less than 100 are generate
-  staticaly and share.
+  statically and share.
 
-* Constant String, Int64, Bits64 and Double values are allocated statically as
-  imortal and shared.
+* Constant `String`, `Int64`, `Bits64` and `Double` values are allocated statically as
+  immortal and shared.
 
 #### Chez
 
@@ -268,7 +268,7 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   `toList` variant.
 
 * Refactored `Uninhabited` implementation for `Data.List.Elem`, `Data.List1.Elem`, `Data.SnocList.Elem` and `Data.Vect.Elem`
-  so it can be used for homogeneous (===) and heterogeneous (~=~) equality.
+  so it can be used for homogeneous (`===`) and heterogeneous (`~=~`) equality.
 
 #### Contrib
 
