@@ -32,6 +32,14 @@ data EEnv : SnocList Name -> SnocList Name -> Type where
      Lin : EEnv free [<]
      (:<) : EEnv free vars -> CExp free -> EEnv free (vars :< x)
 
+snoc : EEnv free vars -> CExp free -> EEnv free ([<pvar] ++ vars)
+snoc Lin p = [<p]
+snoc (ns :< n) p = snoc ns p :< n
+
+(++) : EEnv free varsl -> EEnv free varsr -> EEnv free (varsl ++ varsr)
+(++) sx Lin = sx
+(++) sx (sy :< y) = (sx ++ sy) :< y
+
 public export
 covering
 {free, vars : _} -> Show (EEnv free vars) where
@@ -63,6 +71,11 @@ getArity (MkFun args _) = length args
 getArity (MkCon _ arity _) = arity
 getArity (MkForeign _ args _) = length args
 getArity (MkError _) = 0
+
+insertInMiddle : {0 local, outer : Scope} ->
+  SizeOf outer -> (n : Name) -> (CExp free) -> EEnv free (local ++ outer) -> EEnv free ((local :< n) ++ outer)
+insertInMiddle {outer = [<]}     (MkSizeOf Z       Z)      _ y xs        = xs :< y
+insertInMiddle {outer = os :< o} (MkSizeOf (S len) (S sz)) n y (xs :< x) = insertInMiddle (MkSizeOf len sz) n y xs :< x
 
 takeFromStack : EEnv free vars -> Stack free -> (args : SnocList Name) ->
                 Maybe (EEnv free (vars ++ args), Stack free)

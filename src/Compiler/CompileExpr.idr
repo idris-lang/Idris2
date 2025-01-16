@@ -21,6 +21,12 @@ import Libraries.Data.SnocList.SizeOf
 
 %default covering
 
+-- For ease of type level reasoning!
+public export
+rev : SnocList a -> SnocList a
+rev [<] = [<]
+rev (xs :< x) = [<x] ++ rev xs
+
 data Args
     = NewTypeBy Nat Nat
     | EraseArgs Nat (List Nat)
@@ -43,14 +49,23 @@ numArgs defs (Ref _ _ n)
            _ => pure (Arity 0)
 numArgs _ tm = pure (Arity 0)
 
-mkSub : Nat -> (ns : SnocList Name) -> List Nat -> (ns' ** Thin ns' ns)
-mkSub i _ [] = (_ ** Refl)
-mkSub i [<] ns = (_ ** Refl)
-mkSub i (xs :< x) es
-    = let (ns' ** p) = mkSub (S i) xs es in
-          if i `elem` es
-             then (ns' ** Drop p)
-             else (ns' :< x ** Keep p)
+||| Compute the thinning getting rid of the listed de Bruijn indices.
+-- TODO: is the list of erased arguments guaranteed to be sorted?
+-- Should it?
+mkSub : (ns : SnocList Name) -> List Nat -> (ns' ** Thin ns' ns)
+mkSub ns = mkSub' (length ns) ns
+    where
+        mkSub' : Nat -> (ns : SnocList Name) -> List Nat -> (ns' ** Thin ns' ns)
+        mkSub' i _ [] = (_ ** Refl)
+        mkSub' i [<] ns = (_ ** Refl)
+        mkSub' (S i) (xs :< x) es
+            = let (ns' ** p) = mkSub' i xs es in
+                if i `elem` es
+                    then (ns' ** Drop p)
+                    else (ns' :< x ** Keep p)
+        -- Next case can't happen if called with the right Nat from mkDropSubst
+        -- FIXME: rule it out with a type!
+        mkSub' Z (xs :< x) es = let (vs ** th) = mkSub' Z xs es in (vs ** Drop th)
 
 weakenVar : Var ns -> Var (ns :< a)
 weakenVar (MkVar p) = (MkVar (Later p))
