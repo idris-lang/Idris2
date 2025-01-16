@@ -249,9 +249,9 @@ mutual
     show (NmForce _ lr x) = "(%force " ++ show lr ++ " " ++ show x ++ ")"
     show (NmDelay _ lr x) = "(%delay " ++ show lr ++ " " ++ show x ++ ")"
     show (NmConCase _ sc xs def)
-        = assert_total $ "(%case " ++ show sc ++ " " ++ show xs ++ " " ++ show def ++ ")"
+        = assert_total $ "(%case con " ++ show sc ++ " " ++ show xs ++ " " ++ show def ++ ")"
     show (NmConstCase _ sc xs def)
-        = assert_total $ "(%case " ++ show sc ++ " " ++ show xs ++ " " ++ show def ++ ")"
+        = assert_total $ "(%case const " ++ show sc ++ " " ++ show xs ++ " " ++ show def ++ ")"
     show (NmPrimVal _ x) = show x
     show (NmErased _) = "___"
     show (NmCrash _ x) = "(CRASH " ++ show x ++ ")"

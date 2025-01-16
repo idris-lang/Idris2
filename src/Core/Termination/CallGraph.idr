@@ -407,4 +407,6 @@ calculateSizeChange loc n
          defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
               | Nothing => undefinedName loc n
-         getSC defs (definition def)
+         r <- getSC defs (definition def)
+         log "totality.termination.sizechange" 5 $ "Calculated: " ++ show r
+         pure r

@@ -124,7 +124,7 @@ mutual
                 MkVar (Later isv')
   quoteHead {bound} {free} q opts defs fc bounds env t@(NRef Bound (MN n i))
       = do
-          log "eval.ref" 50 $ "quoteHead-2 bound: " ++ show (reverse $ toList bound) ++ ", free: " ++ show (reverse $ toList free) ++ ", t: " ++ show t ++ ", bounds: " ++ show bounds
+          log "eval.ref" 50 $ "quoteHead-2 bound: " ++ show (reverse $ toList bound) ++ ", free: " ++ show (toList free) ++ ", t: " ++ show t ++ ", bounds: " ++ show bounds
           case findName bounds of
              Just (MkVar p) => do log "eval.ref" 50 $ "quoteHead-2 findName MkVar(p): " ++ show (MkVar p)
                                   pure $ Local fc Nothing _ (embedIsVar p)

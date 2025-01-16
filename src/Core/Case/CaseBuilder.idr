@@ -294,7 +294,9 @@ substInClause : {a, vars, todo : _} ->
                 FC -> PatClause vars (todo :< a) ->
                 Core (PatClause vars (todo :< a))
 substInClause {vars} {a} fc (MkPatClause pvars (MkInfo pat pprf fty :: pats) pid rhs)
-    = do pats' <- substInPats fc a (mkTerm vars pat) pats
+    = do let tm = mkTerm vars pat
+         log "compile.casetree.subst" 50 "Substituting \{show tm} for \{show a} in \{show pat}"
+         pats' <- substInPats fc a tm pats
          pure (MkPatClause pvars (MkInfo pat pprf fty :: pats') pid rhs)
 
 data Partitions : List (PatClause vars todo) -> Type where
@@ -476,7 +478,7 @@ getArgTys {vars} env (n :: ns) (Just t@(NBind pfc _ (Pi _ c _ fargc) fsc))
                       Known c <$> quote empty env farg
          scty <- fsc defs (toClosure defaultOpts env (Ref pfc Bound n))
          -- log "compile.casetree" 25 $ "getArgTys-1 scty: " ++ show scty
-         rest <- getArgTys env ns (Just scty)
+         rest <- logDepth $ getArgTys env ns (Just scty)
          pure (argty :: rest)
 getArgTys env (n :: ns) (Just t)
     = do empty <- clearDefs =<< get Ctxt
@@ -517,9 +519,9 @@ nextNames {vars} fc root pats m_nty
      = do (args ** lprf) <- mkNames pats
           let env = mkEnv fc vars
           -- logEnvRev "compile.casetree" 25 "nextNames env" env
-          -- log "compile.casetree" 20 $ "nextNames m_nty: " ++ show m_nty ++ ", args: " ++ show args
           -- The arguments are given in reverse order, so when we process them,
           -- the argument types are in the correct order
+          log "compile.casetree" 20 $ "nextNames getArgTys m_nty: " ++ show m_nty ++ ", args: " ++ show args
           argTys <- getArgTys env (cast args) m_nty
           -- for_ (toList m_nty) $ \ ty => do
           --   logNF "compile.casetree" 25 "nextNames'' NF" env ty
@@ -616,7 +618,10 @@ groupCons fc fn pvars cs
                               Just t <- lookupTyExact n (gamma defs)
                                    | Nothing => pure (NErased fc Placeholder)
                               nf defs (mkEnv fc vars') (embed t)
-             (patnames ** (l, newargs)) <- logDepth $ nextNames {vars=vars'} fc "e" pargs (Just cty)
+             (patnames ** (l, newargs)) <- logDepth $ do
+                log "compile.casetree" 25 $ "addConG nextNames for " ++ show (toList pargs)
+                logNF "compile.casetree" 25 "addConG nextNames cty" (mkEnv fc vars') cty
+                nextNames {vars=vars'} fc "e" pargs (Just cty)
              log "compile.casetree" 25 $ "addConG patnames  " ++ show (toList patnames)
              log "compile.casetree" 25 $ "addConG newargs  " ++ show newargs
              -- Update non-linear names in remaining patterns (to keep
@@ -1140,8 +1145,10 @@ mutual
     where
       updateVar : PatClause vars (todo :< a) -> Core (PatClause vars todo)
       -- replace the name with the relevant variable on the rhs
-      updateVar (MkPatClause pvars (MkInfo (PLoc pfc n) prf fty :: pats) pid rhs)
-          = do log "compile.casetree" 5 $ "Var update " ++
+      updateVar (MkPatClause pvars (MkInfo {idx} {name} (PLoc pfc n) prf fty :: pats) pid rhs)
+          = do log "compile.casetree.updateVar" 50
+                  "Replacing \{show n} with \{show name}[\{show idx}] in \{show rhs}"
+               log "compile.casetree" 5 $ "Var update " ++
                     show a ++ ", " ++ show n ++ ", vars: " ++ show (toList vars) ++ " ==> " ++ show !(toFullNames rhs)
                let rhs' = substName n (Local pfc (Just False) _ prf) rhs
                logTerm "compile.casetree" 5 "rhs'" rhs'
@@ -1448,9 +1455,10 @@ getPMDef : {auto c : Ref Ctxt Defs} ->
 -- for the type, which we can use in coverage checking to ensure that one of
 -- the arguments has an empty type
 getPMDef fc phase fn ty []
-    = do log "compile.casetree.getpmdef" 20 "getPMDef: No clauses!"
-         defs <- get Ctxt
-         pure (!(getArgs 0 !(nf defs [<] ty)) ** (Unmatched "No clauses", []))
+    = do defs <- get Ctxt
+         args <- getArgs 0 !(nf defs [<] ty)
+         log "compile.casetree.getpmdef" 20 "getPMDef: No clauses! args: \{show args}"
+         pure (args ** (Unmatched "No clauses", []))
   where
     getArgs : Int -> NF [<] -> Core (SnocList Name)
     getArgs i (NBind fc x (Pi _ _ _ _) sc)
@@ -1461,15 +1469,15 @@ getPMDef fc phase fn ty []
 getPMDef fc phase fn ty clauses
     = do defs <- get Ctxt
          let cs = map (toClosed defs) (labelPat 0 clauses)
-         (_ ** t) <- simpleCase fc phase fn ty Nothing cs
+         (args ** t) <- simpleCase fc phase fn ty Nothing cs
          logC "compile.casetree.getpmdef" 20 $
            pure $ "Compiled to: " ++ show !(toFullNames t)
          let reached = findReached t
          log "compile.casetree.clauses" 25 $
-           "Reached clauses: " ++ (show reached)
+           "Reached args: \{show $ toList args} clauses: " ++ (show reached)
          extraDefaults <- findExtraDefaults fc defs t
          let unreachable = getUnreachable 0 (reached \\ extraDefaults) clauses
-         pure (_ ** (t, unreachable))
+         pure (args ** (t, unreachable))
   where
     getUnreachable : Int -> List Int -> List Clause -> List Clause
     getUnreachable i is [] = []
