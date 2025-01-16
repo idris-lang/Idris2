@@ -60,6 +60,15 @@ logDepth r
          logDepthDecrease r
 
 export
+logQuite : {auto c : Ref Ctxt Defs} -> Core a -> Core a
+logQuite r
+    = do opts <- getSession
+         update Ctxt { options->session->logEnabled := False }
+         r' <- r
+         update Ctxt { options->session->logEnabled := (logEnabled opts) }
+         pure r'
+
+export
 logDepthWrap : {auto c : Ref Ctxt Defs} -> (a -> Core b) -> a -> Core b
 logDepthWrap fn p
     = do logDepthIncrease
