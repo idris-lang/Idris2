@@ -271,7 +271,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                                       IPi bfc top Explicit (Just rname) (recTy tn params) ty'
 
                    let mkProjClaim = \ nm =>
-                          let ty = MkImpTy EmptyFC (NoFC nm) projTy
+                          let ty = MkImpTy fc (MkFCVal fc nm) projTy
                           in IClaim (MkFCVal bfc (MkIClaimData rig isVis [Inline] ty))
 
                    log "declare.record.projection" 5 $
@@ -283,7 +283,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                           = apply (IVar bfc con)
                                     (replicate done (Implicit bfc True) ++
                                        (if imp == Explicit
-                                           then [IBindVar EmptyFC fldNameStr]
+                                           then [IBindVar fc fldNameStr]
                                            else []) ++
                                     (replicate (countExp sc) (Implicit bfc True)))
                    let lhs = IApp bfc (IVar bfc rfNameNS)
@@ -291,7 +291,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                                     then lhs_exp
                                     else INamedApp bfc lhs_exp (UN $ Basic fldNameStr)
                                              (IBindVar bfc fldNameStr))
-                   let rhs = IVar EmptyFC (UN $ Basic fldNameStr)
+                   let rhs = IVar fc (UN $ Basic fldNameStr)
                    log "declare.record.projection" 5 $ "Projection " ++ show lhs ++ " = " ++ show rhs
                    processDecl [] nest env
                        (IDef bfc rfNameNS [PatClause bfc lhs rhs])
