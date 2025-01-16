@@ -883,10 +883,10 @@ mutual
                        pure $ "Unifying: " ++ show !(toFullNames mname) ++ " " ++ show !(traverse toFullNames $ toList qargs) ++
                               " with " ++ show !(toFullNames qtm)) -- first attempt, try 'empty', only try 'defs' when on 'retry'?
            patEnv <- patternEnv env args
-           log "unify.hole" 10 $ "unifyHole patEnv: \{show patEnv}"
            case patEnv of
                 Nothing =>
-                  do Just hdef <- lookupCtxtExact (Resolved mref) (gamma defs)
+                  do log "unify.hole" 10 $ "unifyHole patEnv: Nothing"
+                     Just hdef <- lookupCtxtExact (Resolved mref) (gamma defs)
                         | _ => postponePatVar swap mode loc env mname mref margs margs' tmnf
                      let Hole _ _ = definition hdef
                         | _ => postponePatVar swap mode loc env mname mref margs margs' tmnf
@@ -894,7 +894,8 @@ mutual
                         then unifyHoleApp swap mode loc env mname mref margs margs' tmnf
                         else postponePatVar swap mode loc env mname mref margs margs' tmnf
                 Just (newvars ** (locs, submv)) =>
-                  do Just hdef <- lookupCtxtExact (Resolved mref) (gamma defs)
+                  do log "unify.hole" 10 $ "unifyHole patEnv newvars: \{show $ asList newvars}, locs: \{show $ toList locs}, submv: \{show submv}"
+                     Just hdef <- lookupCtxtExact (Resolved mref) (gamma defs)
                          | _ => postponePatVar swap mode loc env mname mref margs margs' tmnf
                      let Hole _ _ = definition hdef
                          | _ => postponeS swap loc mode "Delayed hole" env

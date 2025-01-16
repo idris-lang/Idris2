@@ -245,8 +245,10 @@ mutual
            case (definition gdef) of
                 DCon _ arity (Just pos) => conCases n ns -- skip it
                 _ => do xn <- getFullName x
+                        let erased = eraseArgs gdef
+                        log "compiler.newtype.world" 50 "conCases-2 on \{show n} args: \{show args}, erased: \{show erased}"
                         let (args' ** sub)
-                            = mkDropSubst 0 (eraseArgs gdef) vars args
+                            = mkDropSubst 0 erased vars args
                         sc' <- toCExpTree n sc
                         ns' <- conCases n ns
                         log "compiler.newtype.world" 50 "conCases-2 on \{show n} sc': \{show sc'}, ns': \{show ns'}, args': \{show args'}, sub: \{show sub}"
@@ -580,7 +582,7 @@ toCDef n ty erased (PMDef pi args _ tree _)
     = do log "compiler.newtype.world" 25 "toCDef PMDef args \{show $ toList args}, ty: \{show ty}, n: \{show n}, erased: \{show erased}, tree: \{show tree}"
          let (args' ** p) = mkSub 0 args erased
          comptree <- toCExpTree n tree
-         log "compiler.newtype.world" 25 "toCDef PMDef comptree \{show comptree}, p: \{show p}"
+         log "compiler.newtype.world" 25 "toCDef PMDef comptree \{show comptree}, p: \{show p}, is_ext: \{show $ (externalDecl pi)}"
          let lam = toLam (externalDecl pi) $
             if isNil erased
                 then MkFun args comptree

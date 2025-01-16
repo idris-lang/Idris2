@@ -1313,6 +1313,7 @@ addDef n def
     = do defs <- get Ctxt
          (idx, gam') <- addCtxt n def (gamma defs)
          put Ctxt ({ gamma := gam' } defs)
+         -- coreLift $ putStrLn "Context addDef, n: \{show n}, expr: \{show $ compexpr def}"
          case definition def of
               None => pure ()
               Hole _ _ => pure ()
