@@ -84,13 +84,28 @@ insertInMiddle : {0 local, outer : Scope} ->
 insertInMiddle {outer = [<]}     (MkSizeOf Z       Z)      _ y xs        = xs :< y
 insertInMiddle {outer = os :< o} (MkSizeOf (S len) (S sz)) n y (xs :< x) = insertInMiddle (MkSizeOf len sz) n y xs :< x
 
+getArgsFromStack : Stack free -> (args : SnocList Name) ->
+                   List (CExp free) ->
+                   Maybe (List (CExp free), Stack free)
+getArgsFromStack (e :: es) (as :< a) acc
+    = getArgsFromStack es as (e :: acc)
+getArgsFromStack stk [<] acc = Just (acc, stk)
+getArgsFromStack _ _ _ = Nothing
+
+takeArgs : EEnv free vars -> List (CExp free) -> (args : SnocList Name) ->
+           Maybe (EEnv free (vars ++ args))
+takeArgs env (e :: es) (as :< a)
+  = do env' <- takeArgs env es as
+       pure (env' :< e)
+takeArgs env stk [<] = pure env
+takeArgs env [] args = Nothing
+
 takeFromStack : EEnv free vars -> Stack free -> (args : SnocList Name) ->
                 Maybe (EEnv free (vars ++ args), Stack free)
-takeFromStack env (e :: es) (as :< a)
-  = do (env', stk') <- takeFromStack env es as
-       pure (env' :< e, stk')
-takeFromStack env stk [<] = pure (env, stk)
-takeFromStack env [] args = Nothing
+takeFromStack env es as
+    = do (args, stk') <- getArgsFromStack es as []
+         env' <- takeArgs env args as
+         pure (env', stk')
 
 data LVar : Type where
 
@@ -178,11 +193,10 @@ mutual
                : Maybe (EEnv free (vars ++ args), List (CExp free))
                = (takeFromStack env stk args)
                | Nothing => pure Nothing
-           log "compiler.inline.io_bind" 50 $ "tryApply stk': \{show stk'}, env': \{show env'}"
-           res <- logDepth $ eval rec env' stk'
-                     (rewrite appendAssociative free vars args in
-                              -- Old: (embed $ embed exp)
-                              embed {outer = free ++ vars} exp)
+           -- Old: (rewrite appendAssociative free vars args in embed {outer = free ++ vars} exp)
+           let exp' : CExp (free ++ (vars ++ args)) = (embed $ embed exp)
+           log "compiler.inline.io_bind" 50 $ "tryApply stk': \{show stk'}, env': \{show env'}, rec: \{show rec}, exp': \{show exp'}"
+           res <- eval rec env' stk' exp'
            pure (Just res)
   tryApply rec stk env _ = pure Nothing
 
@@ -266,12 +280,16 @@ mutual
            -- a name from another module where the job is already done
            defs <- get Ctxt
            Just gdef <- lookupCtxtExact n (gamma defs)
-                | Nothing => do args' <- traverse (eval (n :: rec) env []) args
-                                log "compiler.inline.io_bind" 50 $ "Attempting to CApp CRef Nothing, f: \{show f}, args': \{show args'}"
+                | Nothing => do log "compiler.inline.io_bind" 50 $ "Attempting to CApp CRef Nothing, rec: \{show rec}, env: \{show env}, args: \{show args}"
+                                -- Yaffle: (n :: rec)
+                                args' <- logDepth $ traverse (eval rec env []) args
+                                log "compiler.inline.io_bind" 50 $ "Attempting to CApp CRef Nothing, stk: \{show stk}, n: \{show n}, args': \{show args'}"
                                 pure (unload stk
                                           (CApp fc (CRef nfc n) args'))
-           args' <- traverse (eval (n :: rec) env []) args
-           log "compiler.inline.io_bind" 50 $ "Attempting to CApp CRef, f: \{show f}, args': \{show args'}"
+           log "compiler.inline.io_bind" 50 $ "Attempting to CApp CRef, rec: \{show rec}, env: \{show env}, args: \{show args}"
+           -- Yaffle: (n :: rec)
+           args' <- logDepth $ traverse (eval rec env []) args
+           log "compiler.inline.io_bind" 50 $ "Attempting to CApp CRef, env: \{show env}, args': \{show args'}, stk: \{show stk}, f: \{show f}"
            eval rec env (args' ++ stk) f
   eval rec env stk (CApp fc f args)
       = do log "compiler.inline.io_bind" 50 $ "Attempting to CApp, f: \{show f}, args: \{show args}"

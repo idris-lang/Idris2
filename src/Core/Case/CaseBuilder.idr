@@ -1503,14 +1503,14 @@ getPMDef fc phase fn ty []
     = do defs <- get Ctxt
          args <- getArgs 0 !(nf defs [<] ty)
          log "compile.casetree.getpmdef" 20 "getPMDef: No clauses! args: \{show args}"
-         pure (args ** (Unmatched "No clauses", []))
+         pure (cast args ** (Unmatched "No clauses", []))
   where
-    getArgs : Int -> NF [<] -> Core (SnocList Name)
+    getArgs : Int -> NF [<] -> Core (List Name)
     getArgs i (NBind fc x (Pi _ _ _ _) sc)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts [<] (Erased fc Placeholder))
-             pure (!(getArgs i sc') :< MN "arg" i)
-    getArgs i _ = pure [<]
+             pure (MN "arg" i :: !(getArgs i sc'))
+    getArgs i _ = pure []
 getPMDef fc phase fn ty clauses
     = do defs <- get Ctxt
          let cs = map (toClosed defs) (labelPat 0 clauses)
