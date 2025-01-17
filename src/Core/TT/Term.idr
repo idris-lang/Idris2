@@ -557,19 +557,6 @@ covering
                         assert_total (showSep " " (map show args))
                      ++ ")"
 
-||| A telescope of names and their associated types/terms
-public export
-data TelNames : List Name -> Type where
-  Nil : TelNames xs
-  AddName : (n : Name) -> Term vars -> (isImplicit : Bool) -> TelNames (n :: vars) -> TelNames vars
-
-covering export
-{vars : _} -> Show (TelNames vars) where
-  show [] = ""
-  show (AddName n ty _ []) = "(\{show n} : \{show ty})"
-  show (AddName n ty False rest) = "(\{show n} : \{show ty}) -> \{show rest}"
-  show (AddName n ty True rest) = "{\{show n} : \{show ty}} -> \{show rest}"
-
 ||| Obtain the telescope of names and their types
 export
 collectPiNames : Term vars -> List (Bool, Name)
