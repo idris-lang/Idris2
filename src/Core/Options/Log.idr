@@ -86,6 +86,8 @@ knownTopics = [
     ("declare.record.parameters", Just "Showing the implicitlty bound parameters"),
     ("declare.record.projection", Nothing),
     ("declare.record.projection.prefix", Nothing),
+    ("declare.record.projection.claim", Just "Showing the clause of an elaborated projection function"),
+    ("declare.record.projection.clause", Just "Showing the clause of an elaborated projection function"),
     ("declare.type", Nothing),
     ("desugar.idiom", Nothing),
     ("desugar.failing", Just "Log result of desugaring a `failing' block"),

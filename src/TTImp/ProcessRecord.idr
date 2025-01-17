@@ -154,7 +154,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                | Nothing => throw (InternalError "Missing data type \{show tn}, despite having just declared it!")
              log "declare.record" 20 "Obtained type: \{show ty}"
              (_ ** (tyenv, ty)) <- dropLeadingPis vars ty []
-             ty <- unelabNest !nestDrop tyenv ty
+             ty <- unelabNest (NoSugar True) !nestDrop tyenv ty
              log "declare.record.parameters" 30 "Unelaborated type: \{show ty}"
              params <- getParameters [<] ty
              addMissingNames ([<] <>< map fst params0) params []
@@ -259,7 +259,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                    rfNameNS <- inCurrentNS (UN $ Field fldNameStr)
                    unNameNS <- inCurrentNS (UN $ Basic fldNameStr)
 
-                   ty <- unelabNest !nestDrop tyenv ty_chk
+                   ty <- unelabNest (NoSugar True) !nestDrop tyenv ty_chk
                    let ty' = substNames vars upds $ map rawName ty
                    log "declare.record.field" 5 $ "Field type: " ++ show ty'
                    let rname = MN "rec" 0
@@ -269,12 +269,12 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                                  (map fst params ++ map fname fields ++ vars) $
                                       mkTy (paramTelescope params) $
                                       IPi bfc top Explicit (Just rname) (recTy tn params) ty'
-
+                   let fc' = virtualiseFC fc
                    let mkProjClaim = \ nm =>
-                          let ty = MkImpTy EmptyFC (NoFC nm) projTy
+                          let ty = MkImpTy fc' (MkFCVal fc' nm) projTy
                           in IClaim (MkFCVal bfc (MkIClaimData rig isVis [Inline] ty))
 
-                   log "declare.record.projection" 5 $
+                   log "declare.record.projection.claim" 5 $
                       "Projection " ++ show rfNameNS ++ " : " ++ show projTy
                    processDecl [] nest env (mkProjClaim rfNameNS)
 
@@ -283,7 +283,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                           = apply (IVar bfc con)
                                     (replicate done (Implicit bfc True) ++
                                        (if imp == Explicit
-                                           then [IBindVar EmptyFC fldNameStr]
+                                           then [IBindVar fc' fldNameStr]
                                            else []) ++
                                     (replicate (countExp sc) (Implicit bfc True)))
                    let lhs = IApp bfc (IVar bfc rfNameNS)
@@ -291,8 +291,22 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                                     then lhs_exp
                                     else INamedApp bfc lhs_exp (UN $ Basic fldNameStr)
                                              (IBindVar bfc fldNameStr))
-                   let rhs = IVar EmptyFC (UN $ Basic fldNameStr)
-                   log "declare.record.projection" 5 $ "Projection " ++ show lhs ++ " = " ++ show rhs
+                   let rhs = IVar fc' (UN $ Basic fldNameStr)
+
+                   -- EtaExpand implicits on both sides:
+                   -- First, obtain all the implicit names in the prefix of
+                   let piNames = collectPiNames ty_chk
+
+                   let namesToRawImp : List (Bool, Name) -> (fn : RawImp) -> RawImp
+                       namesToRawImp ((True,  nm@(UN{})) :: xs) fn = namesToRawImp xs (INamedApp fc fn nm (IVar fc' nm))
+                       namesToRawImp _ fn = fn
+
+                   -- Then apply names for each argument to the lhs
+                   let lhs = namesToRawImp piNames lhs
+                   -- Do the same for the rhs
+                   let rhs = namesToRawImp piNames rhs
+
+                   log "declare.record.projection.clause" 5 $ "Projection " ++ show lhs ++ " = " ++ show rhs
                    processDecl [] nest env
                        (IDef bfc rfNameNS [PatClause bfc lhs rhs])
 

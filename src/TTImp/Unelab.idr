@@ -30,6 +30,7 @@ used idx (TDelay _ _ _ tm) = used idx tm
 used idx (TForce _ _ tm) = used idx tm
 used idx _ = False
 
+public export
 data UnelabMode
      = Full
      | NoSugar Bool -- uniqify names
@@ -397,10 +398,11 @@ unelabNoPatvars env tm
 export
 unelabNest : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
+             UnelabMode ->
              List (Name, Nat) ->
              Env Term vars ->
              Term vars -> Core IRawImp
-unelabNest nest env (Meta fc n i args)
+unelabNest mode nest env (Meta fc n i args)
     = do let mkn = nameRoot n ++ showScope args
          pure (IHole fc mkn)
   where
@@ -415,8 +417,8 @@ unelabNest nest env (Meta fc n i args)
     showScope : List (Term vars) -> String
     showScope ts = " " ++ showNScope (mapMaybe toName ts)
 
-unelabNest nest env tm
-    = do tm' <- unelabTy Full nest env tm
+unelabNest mode nest env tm
+    = do tm' <- unelabTy mode nest env tm
          pure $ fst tm'
 
 export
@@ -424,4 +426,4 @@ unelab : {vars : _} ->
          {auto c : Ref Ctxt Defs} ->
          Env Term vars ->
          Term vars -> Core IRawImp
-unelab = unelabNest []
+unelab = unelabNest Full []

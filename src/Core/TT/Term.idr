@@ -556,3 +556,10 @@ covering
       showApp f args = "(" ++ assert_total (show f) ++ " " ++
                         assert_total (showSep " " (map show args))
                      ++ ")"
+
+||| Obtain the telescope of names and their types
+export
+collectPiNames : Term vars -> List (Bool, Name)
+collectPiNames (Bind _ nm (Pi _ _ Explicit ty) scope) = (False, nm) :: collectPiNames scope
+collectPiNames (Bind _ nm (Pi _ _ _ ty) scope) = (True, nm) :: (collectPiNames scope)
+collectPiNames _ = []
