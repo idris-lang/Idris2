@@ -75,20 +75,20 @@ LOG derive.functor.clauses:1:
   mapIVect : {0 m : _} -> {0 a, b : Type} -> (a -> b) -> IVect {n = m} a -> IVect {n = m} b
   mapIVect f (MkIVect x2) = MkIVect (map f x2)
 LOG derive.functor.clauses:1: 
-  mapEqMap : {0 key, eq : _} -> {0 a, b : Type} -> (a -> b) -> EqMap key {{conArg:5687} = eq} a -> EqMap key {{conArg:5687} = eq} b
+  mapEqMap : {0 key, eq : _} -> {0 a, b : Type} -> (a -> b) -> EqMap key {{conArg:5684} = eq} a -> EqMap key {{conArg:5684} = eq} b
   mapEqMap f (MkEqMap x3) = MkEqMap (map (map f) x3)
 LOG derive.functor.clauses:1: 
   mapCont : {0 r : _} -> {0 a, b : Type} -> (a -> b) -> Cont r a -> Cont r b
-  mapCont f (MkCont x2) = MkCont (\ {arg:6043} => x2 (\ {arg:6045} => {arg:6043} (f {arg:6045})))
+  mapCont f (MkCont x2) = MkCont (\ {arg:6040} => x2 (\ {arg:6042} => {arg:6040} (f {arg:6042})))
 LOG derive.functor.clauses:1: 
   mapCont2 : {0 r, e : _} -> {0 a, b : Type} -> (a -> b) -> Cont2 r e a -> Cont2 r e b
-  mapCont2 f (MkCont2 x3) = MkCont2 (\ {arg:6135} => \ {arg:6142} => x3 {arg:6135} (\ {arg:6144} => {arg:6142} (f {arg:6144})))
+  mapCont2 f (MkCont2 x3) = MkCont2 (\ {arg:6132} => \ {arg:6139} => x3 {arg:6132} (\ {arg:6141} => {arg:6139} (f {arg:6141})))
 LOG derive.functor.clauses:1: 
   mapCont2' : {0 r, e : _} -> {0 a, b : Type} -> (a -> b) -> Cont2' r e a -> Cont2' r e b
-  mapCont2' f (MkCont2' x3) = MkCont2' (\ {arg:6249} => x3 (mapFst (\ t => \ {arg:6251} => t (f {arg:6251})) {arg:6249}))
+  mapCont2' f (MkCont2' x3) = MkCont2' (\ {arg:6246} => x3 (mapFst (\ t => \ {arg:6248} => t (f {arg:6248})) {arg:6246}))
 LOG derive.functor.clauses:1: 
   mapCont2'' : {0 r, e : _} -> {0 a, b : Type} -> (a -> b) -> Cont2'' r e a -> Cont2'' r e b
-  mapCont2'' f (MkCont2'' x3) = MkCont2'' (\ {arg:6373} => x3 (Delay (mapFst (\ t => \ {arg:6376} => t (Delay (f {arg:6376}))) {arg:6373})))
+  mapCont2'' f (MkCont2'' x3) = MkCont2'' (\ {arg:6370} => x3 (Delay (mapFst (\ t => \ {arg:6373} => t (Delay (f {arg:6373}))) {arg:6370})))
 LOG derive.functor.clauses:1: 
   mapWithImplicits : {0 a, b : Type} -> (a -> b) -> WithImplicits a -> WithImplicits b
   mapWithImplicits f (MkImplicit {x = x1} x2) = MkImplicit {x = f x1} (f x2)
