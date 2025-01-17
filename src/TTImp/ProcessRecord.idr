@@ -298,9 +298,8 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                    let piNames = collectPiNames ty_chk
 
                    let namesToRawImp : List (Bool, Name) -> (fn : RawImp) -> RawImp
-                       namesToRawImp [] fn = fn
-                       namesToRawImp ((False, nm) :: xs) fn = namesToRawImp xs (IApp fc fn (IVar fc nm))
                        namesToRawImp ((True,  nm) :: xs) fn = namesToRawImp xs (INamedApp fc fn nm (IVar fc nm))
+                       namesToRawImp _ fn = fn
 
                    -- Then apply names for each argument to the lhs
                    let lhs = namesToRawImp piNames lhs
