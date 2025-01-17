@@ -154,7 +154,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                | Nothing => throw (InternalError "Missing data type \{show tn}, despite having just declared it!")
              log "declare.record" 20 "Obtained type: \{show ty}"
              (_ ** (tyenv, ty)) <- dropLeadingPis vars ty []
-             ty <- unelabNest !nestDrop tyenv ty
+             ty <- unelabNest (NoSugar True) !nestDrop tyenv ty
              log "declare.record.parameters" 30 "Unelaborated type: \{show ty}"
              params <- getParameters [<] ty
              addMissingNames ([<] <>< map fst params0) params []
@@ -259,7 +259,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                    rfNameNS <- inCurrentNS (UN $ Field fldNameStr)
                    unNameNS <- inCurrentNS (UN $ Basic fldNameStr)
 
-                   ty <- unelabNest !nestDrop tyenv ty_chk
+                   ty <- unelabNest (NoSugar True) !nestDrop tyenv ty_chk
                    let ty' = substNames vars upds $ map rawName ty
                    log "declare.record.field" 5 $ "Field type: " ++ show ty'
                    let rname = MN "rec" 0
