@@ -269,9 +269,9 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                                  (map fst params ++ map fname fields ++ vars) $
                                       mkTy (paramTelescope params) $
                                       IPi bfc top Explicit (Just rname) (recTy tn params) ty'
-
+                   let fc' = virtualiseFC fc
                    let mkProjClaim = \ nm =>
-                          let ty = MkImpTy fc (MkFCVal fc nm) projTy
+                          let ty = MkImpTy fc' (MkFCVal fc' nm) projTy
                           in IClaim (MkFCVal bfc (MkIClaimData rig isVis [Inline] ty))
 
                    log "declare.record.projection.claim" 5 $
@@ -283,7 +283,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                           = apply (IVar bfc con)
                                     (replicate done (Implicit bfc True) ++
                                        (if imp == Explicit
-                                           then [IBindVar fc fldNameStr]
+                                           then [IBindVar fc' fldNameStr]
                                            else []) ++
                                     (replicate (countExp sc) (Implicit bfc True)))
                    let lhs = IApp bfc (IVar bfc rfNameNS)
@@ -291,14 +291,14 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                                     then lhs_exp
                                     else INamedApp bfc lhs_exp (UN $ Basic fldNameStr)
                                              (IBindVar bfc fldNameStr))
-                   let rhs = IVar fc (UN $ Basic fldNameStr)
+                   let rhs = IVar fc' (UN $ Basic fldNameStr)
 
                    -- EtaExpand implicits on both sides:
                    -- First, obtain all the implicit names in the prefix of
                    let piNames = collectPiNames ty_chk
 
                    let namesToRawImp : List (Bool, Name) -> (fn : RawImp) -> RawImp
-                       namesToRawImp ((True,  nm) :: xs) fn = namesToRawImp xs (INamedApp fc fn nm (IVar fc nm))
+                       namesToRawImp ((True,  nm@(UN{})) :: xs) fn = namesToRawImp xs (INamedApp fc fn nm (IVar fc' nm))
                        namesToRawImp _ fn = fn
 
                    -- Then apply names for each argument to the lhs
