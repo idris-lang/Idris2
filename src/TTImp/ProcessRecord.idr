@@ -274,7 +274,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                           let ty = MkImpTy fc (MkFCVal fc nm) projTy
                           in IClaim (MkFCVal bfc (MkIClaimData rig isVis [Inline] ty))
 
-                   log "declare.record.projection" 5 $
+                   log "declare.record.projection.claim" 5 $
                       "Projection " ++ show rfNameNS ++ " : " ++ show projTy
                    processDecl [] nest env (mkProjClaim rfNameNS)
 
@@ -292,7 +292,22 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                                     else INamedApp bfc lhs_exp (UN $ Basic fldNameStr)
                                              (IBindVar bfc fldNameStr))
                    let rhs = IVar fc (UN $ Basic fldNameStr)
-                   log "declare.record.projection" 5 $ "Projection " ++ show lhs ++ " = " ++ show rhs
+
+                   -- EtaExpand implicits on both sides:
+                   -- First, obtain all the implicit names in the prefix of
+                   let piNames = collectPiNames ty_chk
+
+                   let namesToRawImp : List (Bool, Name) -> (fn : RawImp) -> RawImp
+                       namesToRawImp [] fn = fn
+                       namesToRawImp ((False, nm) :: xs) fn = namesToRawImp xs (IApp fc fn (IVar fc nm))
+                       namesToRawImp ((True,  nm) :: xs) fn = namesToRawImp xs (INamedApp fc fn nm (IVar fc nm))
+
+                   -- Then apply names for each argument to the lhs
+                   let lhs = namesToRawImp piNames lhs
+                   -- Do the same for the rhs
+                   let rhs = namesToRawImp piNames rhs
+
+                   log "declare.record.projection.clause" 5 $ "Projection " ++ show lhs ++ " = " ++ show rhs
                    processDecl [] nest env
                        (IDef bfc rfNameNS [PatClause bfc lhs rhs])
 

@@ -345,11 +345,12 @@ mutual
   unelabBinder umode nest fc env x (Pi _ rig p ty) sctm sc scty
       = do (ty', _) <- unelabTy umode nest env ty
            p' <- unelabPi umode nest env p
-           let nm = if used 0 sctm || isNoSugar umode
-                       then Just x
-                       else if rig /= top || isDefImp p
-                               then Just (UN Underscore)
-                               else Nothing
+           let nm = Just x
+                       -- then Just x
+                       -- else if rig /= top || isDefImp p
+                       --         then Just (UN Underscore)
+                       --         else Nothing
+
            pure (IPi fc rig p' nm ty' sc, gType fc (MN "top" 0))
     where
       isNoSugar : UnelabMode -> Bool
