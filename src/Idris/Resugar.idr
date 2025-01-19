@@ -47,7 +47,8 @@ mkOp tm@(PApp fc (PApp _ (PRef opFC kn) x) y)
        -- to know if the name is an operator or not, it's enough to check
        -- that the fixity context contains the name `(++)`
        let rootName = UN (Basic (nameRoot raw))
-       let asOp = POp fc (MkFCVal opFC $ NoBinder (unbracketApp x)) (MkFCVal opFC $ pop kn) (unbracketApp y)
+       let asOp = POp fc (MkFCVal opFC
+                $ NoBinder (unbracketApp x)) (MkFCVal opFC (pop kn)) (unbracketApp y)
        if not (null (lookupName rootName (infixes syn)))
          then pure asOp
          else case dropNS raw of
@@ -532,18 +533,25 @@ mutual
   toPDecl (IData fc vis mbtot d)
       = pure (Just (MkFCVal fc $ PData "" vis mbtot !(toPData d)))
   toPDecl (IDef fc n cs)
-      = pure (Just (MkFCVal fc $ PDef $ !(traverse toPClause cs)))
+      = pure (Just (MkFCVal fc $ PDef !(traverse toPClause cs)))
   toPDecl (IParameters fc ps ds)
       = do ds' <- traverse toPDecl ds
            args <-
-             traverse (\(n, rig, info, tpe) =>
+             traverseList1 (\(n, rig, info, tpe) =>
                  do info' <- traverse (toPTerm startPrec) info
                     type' <- toPTerm startPrec tpe
-                    pure (n, rig, info', type')) ps
-           pure (Just $ MkFCVal fc (PParameters (Right args) (catMaybes ds')))
+                    pure (MkFullBinder info' rig (NoFC n) type')) ps
+           pure (Just (MkFCVal fc (PParameters (Right args) (catMaybes ds'))))
   toPDecl (IRecord fc _ vis mbtot r)
       = do (n, ps, opts, con, fs) <- toPRecord r
-           pure (Just $ MkFCVal fc (PRecord "" vis mbtot (MkPRecord n ps opts con fs)))
+           pure (Just (MkFCVal fc $ PRecord "" vis mbtot (MkPRecord n (map toBinder ps) opts con fs)))
+           where
+             toBinder : (Name, ZeroOneOmega, PiInfo (PTerm' KindedName), PTerm' KindedName) -> PBinder' KindedName
+             toBinder (n, rig, info, ty)
+               = MkFullBinder info rig (NoFC n) ty
+                              --        ^^^^
+                              -- we should know this location
+
   toPDecl (IFail fc msg ds)
       = do ds' <- traverse toPDecl ds
            pure (Just (MkFCVal fc $ PFail msg (catMaybes ds')))

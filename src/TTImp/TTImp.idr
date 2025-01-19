@@ -10,7 +10,7 @@ import Core.TT
 import Core.Value
 
 import Data.List
-import Data.List1
+import public Data.List1
 import Data.Maybe
 
 import Libraries.Data.SortedSet
@@ -476,7 +476,7 @@ mutual
                Maybe TotalReq -> ImpData' nm -> ImpDecl' nm
        IDef : FC -> Name -> List (ImpClause' nm) -> ImpDecl' nm
        IParameters : FC ->
-                     List (ImpParameter' nm) ->
+                     List1 (ImpParameter' nm) ->
                      List (ImpDecl' nm) -> ImpDecl' nm
        IRecord : FC ->
                  Maybe String -> -- nested namespace
