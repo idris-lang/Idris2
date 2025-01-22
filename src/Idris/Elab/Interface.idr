@@ -202,9 +202,9 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params sig
          -- First, obtain all the implicit names in the prefix of
          let piNames = collectImplicitNames sig.type
          -- Then apply names for each argument to the lhs
-         let lhs = namesToRawImp piNames lhs
+         let lhs = namesToRawImp True piNames lhs
          -- Do the same for the rhs
-         let rhs = namesToRawImp piNames rhs
+         let rhs = namesToRawImp False piNames rhs
 
          let fnclause = PatClause vfc lhs rhs
          let fndef = IDef vfc cn.val [fnclause]
@@ -238,9 +238,13 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params sig
     collectImplicitNames (IPi _ _ _        Nothing  _ ty) = collectImplicitNames ty
     collectImplicitNames _                                = []
 
-    namesToRawImp : List Name -> RawImp -> RawImp
-    namesToRawImp (nm@(UN{}) :: xs) fn = namesToRawImp xs (INamedApp vfc fn nm (IVar vfc nm))
-    namesToRawImp _                 fn = fn
+    namesToRawImp : Bool -> List Name -> RawImp -> RawImp
+    namesToRawImp bind (nm@(UN{}) :: xs) fn =
+      namesToRawImp bind xs $ INamedApp vfc fn nm $
+        if bind
+           then IBindVar vfc $ nameRoot nm
+           else IVar vfc nm
+    namesToRawImp _    _                 fn = fn
 
 -- Get the function for chasing a constraint. This is one of the
 -- arguments to the record, appearing before the method arguments.
