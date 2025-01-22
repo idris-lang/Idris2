@@ -9,6 +9,17 @@ fork1 : L IO () -@ L IO ThreadID
 fork1 act = liftIO1 $ fork $ LIO.run act
 
 ||| Run a computation concurrently to the current thread.
+||| This returns a receiver for the value.
+export
+concurrently : L IO a -@ L1 IO (L IO a)
+concurrently act = do
+  ch <- makeChannel
+  _ <- fork1 $ do
+    x <- act
+    channelPut ch x
+  pure1 $ channelGet ch
+
+||| Run a computation concurrently to the current thread.
 ||| This returns a receiver for the value. A typical usage
 ||| pattern is showcased by the implementation of `par1`:
 ||| in a do block start executing a series of actions
