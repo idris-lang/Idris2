@@ -191,13 +191,22 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params sig
                                       (MkImpTy vfc cn ty_imp))
          let conapp = apply (IVar vfc cname)
                             (map (IBindVar EmptyFC) (map bindName allmeths))
-         let fnclause = PatClause vfc
-                                  (INamedApp vfc
-                                             (IVar cn.fc cn.val) -- See #3409
-                                             (UN $ Basic "__con")
-                                             conapp
-                                             )
-                                  (IVar EmptyFC (methName sig.name.val))
+
+         let lhs = INamedApp vfc
+                             (IVar cn.fc cn.val) -- See #3409
+                             (UN $ Basic "__con")
+                             conapp
+         let rhs = IVar EmptyFC (methName sig.name.val)
+
+         -- EtaExpand implicits on both sides:
+         -- First, obtain all the implicit names in the prefix of
+         let piNames = collectImplicitNames sig.type
+         -- Then apply names for each argument to the lhs
+         let lhs = namesToRawImp piNames lhs
+         -- Do the same for the rhs
+         let rhs = namesToRawImp piNames rhs
+
+         let fnclause = PatClause vfc lhs rhs
          let fndef = IDef vfc cn.val [fnclause]
          pure [tydecl, fndef]
   where
@@ -222,6 +231,16 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params sig
 
     methName : Name -> Name
     methName n = UN (Basic $ bindName n)
+
+    collectImplicitNames : RawImp -> List Name
+    collectImplicitNames (IPi _ _ Explicit _        _ ty) = []
+    collectImplicitNames (IPi _ _ _        (Just n) _ ty) = n :: collectImplicitNames ty
+    collectImplicitNames (IPi _ _ _        Nothing  _ ty) = collectImplicitNames ty
+    collectImplicitNames _                                = []
+
+    namesToRawImp : List Name -> RawImp -> RawImp
+    namesToRawImp (nm@(UN{}) :: xs) fn = namesToRawImp xs (INamedApp vfc fn nm (IVar vfc nm))
+    namesToRawImp _                 fn = fn
 
 -- Get the function for chasing a constraint. This is one of the
 -- arguments to the record, appearing before the method arguments.
