@@ -191,17 +191,13 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params sig
                                       (MkImpTy vfc cn ty_imp))
          let conapp = apply (IVar vfc cname)
                             (map (IBindVar EmptyFC) (map bindName allmeths))
-         let argns = getExplicitArgs 0 sig.type
-         -- eta expand the RHS so that we put implicits in the right place
          let fnclause = PatClause vfc
                                   (INamedApp vfc
                                              (IVar cn.fc cn.val) -- See #3409
                                              (UN $ Basic "__con")
                                              conapp
                                              )
-                                  (mkLam argns
-                                    (apply (IVar EmptyFC (methName sig.name.val))
-                                           (map (IVar EmptyFC) argns)))
+                                  (IVar EmptyFC (methName sig.name.val))
          let fndef = IDef vfc cn.val [fnclause]
          pure [tydecl, fndef]
   where
@@ -218,17 +214,6 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params sig
     applyCon : Name -> (Name, RawImp)
     applyCon n = let name = UN (Basic "__con") in
                  (n, INamedApp vfc (IVar vfc n) name (IVar vfc name))
-
-    getExplicitArgs : Int -> RawImp -> List Name
-    getExplicitArgs i (IPi _ _ Explicit n _ sc)
-        = MN "arg" i :: getExplicitArgs (i + 1) sc
-    getExplicitArgs i (IPi _ _ _ n _ sc) = getExplicitArgs i sc
-    getExplicitArgs i tm = []
-
-    mkLam : List Name -> RawImp -> RawImp
-    mkLam [] tm = tm
-    mkLam (x :: xs) tm
-       = ILam EmptyFC top Explicit (Just x) (Implicit vfc False) (mkLam xs tm)
 
     bindName : Name -> String
     bindName (UN n) = "__bind_" ++ displayUserName n
