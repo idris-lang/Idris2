@@ -45,6 +45,8 @@ namePis i (IPi fc r AutoImplicit Nothing ty sc)
     = IPi fc r AutoImplicit (Just (MN "i_con" i)) ty (namePis (i + 1) sc)
 namePis i (IPi fc r Implicit Nothing ty sc)
     = IPi fc r Implicit (Just (MN "i_imp" i)) ty (namePis (i + 1) sc)
+namePis i (IPi fc r Implicit (Just (UN Underscore)) ty sc)
+    = IPi fc r Implicit (Just (MN "i_imp" i)) ty (namePis (i + 1) sc)
 namePis i (IPi fc r p n ty sc)
     = IPi fc r p n ty (namePis i sc)
 namePis i (IBindHere fc m ty) = IBindHere fc m (namePis i ty)
@@ -150,15 +152,15 @@ bindIFace fc ity sc = IPi fc top AutoImplicit (Just (UN $ Basic "__con")) ity sc
 -- Get the top level function for implementing a method
 getMethToplevel : {vars : _} ->
                   {auto c : Ref Ctxt Defs} ->
+                  {auto u : Ref UST UState} ->
                   Env Term vars -> Visibility ->
                   Name -> Name ->
-                  (constraints : List (Maybe Name)) ->
                   (allmeths : List Name) ->
                   (bindNames : List Name) ->
                   (params : List (Name, (RigCount, RawImp))) ->
                   (Name, Signature) ->
                   Core (List ImpDecl)
-getMethToplevel {vars} env vis iname cname constraints allmeths bindNames params (mname, sig)
+getMethToplevel {vars} env vis iname cname allmeths bindNames params (mname, sig)
     = do let paramNames = map fst params
          let ity = apply (IVar vfc iname) (map (IVar EmptyFC) paramNames)
          -- Make the constraint application explicit for any method names
@@ -171,13 +173,19 @@ getMethToplevel {vars} env vis iname cname constraints allmeths bindNames params
                                             else [Inline])
                                       (Mk [vfc, cn] ty_imp))
          let conapp = apply (IVar vfc cname) (map (IBindVar EmptyFC) bindNames)
-         let fnclause = PatClause vfc
-                                  (INamedApp vfc
-                                             (IVar cn.fc cn.val) -- See #3409
-                                             (UN $ Basic "__con")
-                                             conapp
-                                             )
-                                  (IVar EmptyFC mname)
+
+         let lhs = INamedApp vfc
+                             (IVar cn.fc cn.val) -- See #3409
+                             (UN $ Basic "__con")
+                             conapp
+         let rhs = IVar EmptyFC mname
+
+         -- EtaExpand implicits on both sides:
+         -- First, obtain all the implicit names in the prefix of
+         -- See idris-lang/Idris2#3474
+         (lhs, rhs) <- etaExpandImplicits vfc sig.type lhs rhs
+
+         let fnclause = PatClause vfc lhs rhs
          let fndef = IDef vfc cn.val [fnclause]
          pure [tydecl, fndef]
   where
@@ -349,7 +357,6 @@ elabInterface {vars} ifc def_vis env nest constraints iname params dets mcon bod
              -- Methods have same visibility as data declaration
              fnsm <- traverse (getMethToplevel env (collapseDefault def_vis)
                                                iname conName
-                                               (map fst constraints)
                                                methNames
                                                bindNames
                                                params)

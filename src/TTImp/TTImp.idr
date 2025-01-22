@@ -7,6 +7,7 @@ import Core.Normalise
 import Core.Options
 import Core.Options.Log
 import Core.TT
+import Core.UnifyState
 import Core.Value
 
 import Data.List
@@ -985,7 +986,7 @@ gapply f [] = f
 gapply f (x :: xs) = gapply (uncurry (app f) x) xs where
 
   app : RawImp' nm -> Maybe Name -> RawImp' nm -> RawImp' nm
-  app f Nothing x =  IApp (getFC f) f x
+  app f Nothing   x = IApp (getFC f) f x
   app f (Just nm) x = INamedApp (getFC f) f nm x
 
 
@@ -998,6 +999,30 @@ getFn (IAutoApp _ f _) = getFn f
 getFn (IAs _ _ _ _ f) = getFn f
 getFn (IMustUnify _ _ f) = getFn f
 getFn f = f
+
+export
+etaExpandImplicits : {auto c : Ref Ctxt Defs} ->
+                     {auto u : Ref UST UState} ->
+                     FC -> (ty, lhs, rhs : RawImp) ->
+                     Core (RawImp, RawImp)
+etaExpandImplicits fc ty lhs rhs
+    = do let imps = collectImplicits ty
+         namedImps <- for imps $ \nm => (nm,) <$> genVarName "arg"
+         let lhsArgs = namedImps <&> makeArg True
+         let rhsArgs = namedImps <&> makeArg False
+         pure (apply lhs lhsArgs, apply rhs rhsArgs)
+  where
+    collectImplicits : RawImp -> List Name
+    collectImplicits (IPi _ _ Explicit _        _ ty) = []
+    collectImplicits (IPi _ _ _        (Just n) _ ty) = n :: collectImplicits ty
+    collectImplicits _                                = []
+
+    ivar : (bind : Bool) -> Name -> RawImp
+    ivar True  = IBindVar fc
+    ivar False = IVar fc
+
+    makeArg : (bind : Bool) -> (Name, Name) -> Arg
+    makeArg bind (n, bindName) = Named fc n $ ivar bind bindName
 
 -- Log message with a RawImp
 export
