@@ -304,6 +304,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * `unrestricted`, for unpacking a `!* a`, now uses its argument once
 
+* Added default definitions for `zipWith3` and `unzipWith3` in `Zippable`
+  interface.
+
 #### Contrib
 
 * `Data.Vect.Views.Extra` was moved from `contrib` to `base`.
