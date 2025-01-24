@@ -112,8 +112,7 @@ conflict defs env nfty n
                 conflictNF (i + 1) t
                        !(sc defs (toClosure defaultOpts [] (Ref fc Bound x')))
       conflictNF i nf (NApp _ (NRef Bound n) [])
-          = do empty <- clearDefs defs
-               pure (Just [(n, !(quote empty env nf))])
+          = pure (Just [(n, !(quote defs env nf))])
       conflictNF i (NDCon _ n t a args) (NDCon _ n' t' a' args')
           = if t == t'
                then conflictArgs i (map snd args) (map snd args')
