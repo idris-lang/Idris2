@@ -27,6 +27,7 @@ interface Zippable z where
   ||| @ z the parameterised type
   ||| @ func the function to combine elements with
   zipWith3 : (func : a -> b -> c -> d) -> z a -> z b -> z c -> z d
+  zipWith3 f = zipWith (uncurry f) .: zip
 
   ||| Combine three parameterised types into a parameterised type of triplets.
   ||| @ z the parameterised type
@@ -49,6 +50,7 @@ interface Zippable z where
   ||| @ z the parameterised type
   ||| @ func the function to split elements with
   unzipWith3 : (func : a -> (b, c, d)) -> z a -> (z b, z c, z d)
+  unzipWith3 = mapSnd unzip .: unzipWith
 
   ||| Split a parameterised type of triplets into a triplet of parameterised
   ||| types.
