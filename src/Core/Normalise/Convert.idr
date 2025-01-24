@@ -370,7 +370,9 @@ mutual
     convGen q inf defs env (NApp fc val args) (NApp _ val' args')
         = if !(chkConvHead q inf defs env val val')
              then do i <- getInfPos val
-                     allConv q inf defs env (dropInf 0 i args) (dropInf 0 i args')
+                     allConv q inf defs env
+                        (cast {from = List (FC, Closure vars)} $ dropInf 0 i $ cast args) -- TODO: UGH!
+                        (cast {from = List (FC, Closure vars)} $ dropInf 0 i $ cast args')
              else chkConvCaseBlock fc q inf defs env val args1 val' args2
         where
           getInfPos : NHead vars -> Core (List Nat)
@@ -382,13 +384,13 @@ mutual
                    else pure []
           getInfPos _ = pure []
 
-          dropInf : Nat -> List Nat -> SnocList a -> SnocList a
+          dropInf : Nat -> List Nat -> List a -> List a
           dropInf _ [] xs = xs
-          dropInf _ _ [<] = [<]
-          dropInf i ds (xs :< x)
+          dropInf _ _ [] = []
+          dropInf i ds (x :: xs)
               = if i `elem` ds
                    then dropInf (S i) ds xs
-                   else dropInf (S i) ds xs :< x
+                   else x :: dropInf (S i) ds xs
 
           -- Discard file context information irrelevant for conversion checking
           args1 : SnocList (Closure vars)
