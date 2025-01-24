@@ -466,11 +466,11 @@ concreteDets {vars} fc defaults env top pos dets (arg :: args)
            concrete defs argnf True
          concreteDets fc defaults env top (1 + pos) dets args
   where
-    drop : Nat -> List Nat -> SnocList t -> SnocList t
-    drop i ns [<] = [<]
-    drop i ns (xs :< x)
+    drop : Nat -> List Nat -> List t -> List t
+    drop i ns [] = []
+    drop i ns (x :: xs)
         = if i `elem` ns
-             then drop (1+i) ns xs :< x
+             then x :: drop (1+i) ns xs
              else drop (1+i) ns xs
 
     concrete : Defs -> NF vars -> (atTop : Bool) -> Core ()
@@ -479,7 +479,7 @@ concreteDets {vars} fc defaults env top pos dets (arg :: args)
              logDepth $ concrete defs scnf False
     concrete defs (NTCon nfc n t a args) atTop
         = do sd <- getSearchData nfc False n
-             let args' = drop 0 (detArgs sd) args
+             let args' = drop 0 (detArgs sd) (cast {to = List (FC, Closure vars)} args)
              log "auto" 10 $ "concrete-2 args: \{show $ toList args}, detArgs: \{show $ detArgs sd}, args': \{show $ toList args'}"
              traverse_ (\ parg => do argnf <- evalClosure defs parg
                                      logDepth $ concrete defs argnf False) (map snd args')
