@@ -24,20 +24,20 @@ conflictMatch : {vars : _} -> List (Name, Term vars) -> Bool
 conflictMatch [] = False
 conflictMatch ((x, tm) :: ms) = conflictArgs x tm ms || conflictMatch ms
   where
-    clash : Term vars -> Term vars -> Bool
+    clash : Term vars -> Term vars -> Maybe Bool
     clash (Ref _ (DataCon t _) _) (Ref _ (DataCon t' _) _)
-        = t /= t'
+        = if t /= t' then Just True else Nothing
     clash (Ref _ (TyCon t _) _) (Ref _ (TyCon t' _) _)
-        = t /= t'
+        = if t /= t' then Just True else Nothing
     clash (PrimVal _ c) (PrimVal _ c')
-      = c /= c'
-    clash (Ref _ t _) (PrimVal _ _) = isJust (isCon t)
-    clash (PrimVal _ _) (Ref _ t _) = isJust (isCon t)
-    clash (Ref _ t _) (TType _ _) = isJust (isCon t)
-    clash (TType _ _) (Ref _ t _) = isJust (isCon t)
-    clash (TType _ _) (PrimVal _ _) = True
-    clash (PrimVal _ _) (TType _ _) = True
-    clash _ _ = False
+      = Just $ c /= c'
+    clash (Ref _ t _) (PrimVal _ _) = Just $ isJust (isCon t)
+    clash (PrimVal _ _) (Ref _ t _) = Just $ isJust (isCon t)
+    clash (Ref _ t _) (TType _ _)   = Just $ isJust (isCon t)
+    clash (TType _ _) (Ref _ t _)   = Just $ isJust (isCon t)
+    clash (TType _ _) (PrimVal _ _) = Just True
+    clash (PrimVal _ _) (TType _ _) = Just True
+    clash _ _ = Just False
 
     findN : Nat -> Term vars -> Bool
     findN i (Local _ _ i' _) = i == i'
@@ -60,7 +60,7 @@ conflictMatch ((x, tm) :: ms) = conflictArgs x tm ms || conflictMatch ms
     conflictTm tm tm'
         = let (f, args) = getFnArgs tm
               (f', args') = getFnArgs tm' in
-          clash f f' || any (uncurry conflictTm) (zip args args')
+          fromMaybe (any (uncurry conflictTm) (zip args args')) (clash f f')
 
     conflictArgs : Name -> Term vars -> List (Name, Term vars) -> Bool
     conflictArgs n tm [] = False
@@ -107,7 +107,7 @@ conflict defs env nfty n
       conflictNF i t (NBind fc x b sc)
           -- invent a fresh name, in case a user has bound the same name
           -- twice somehow both references appear in the result  it's unlikely
-          -- put posslbe
+          -- put possible
           = let x' = MN (show x) i in
                 conflictNF (i + 1) t
                        !(sc defs (toClosure defaultOpts [] (Ref fc Bound x')))
