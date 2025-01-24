@@ -717,9 +717,9 @@ mutual
            -- argument types match up
            Just vty <- lookupTyExact (Resolved mref) (gamma defs)
                 | Nothing => ufail fc ("No such metavariable " ++ show mname)
-           vargTys <- getArgTypes defs !(nf defs env (embed vty)) (reverse (cast margs) ++ margs')
+           vargTys <- getArgTypes defs !(nf defs env (embed vty)) (reverse $ margs ++ margs')
            nargTys <- maybe (pure Nothing)
-                            (\ty => getArgTypes defs !(nf defs env (embed ty)) $ map snd args')
+                            (\ty => getArgTypes defs !(nf defs env (embed ty)) $ (reverse $ map snd args'))
                             nty
            log "unify.invertible" 10 "Unifying invertible vty: \{show vty}, vargTys: \{show $ map asList vargTys}, nargTys: \{show $ map asList nargTys}"
            -- If the rightmost arguments have the same type, or we don't
@@ -728,7 +728,7 @@ mutual
               then
                 -- Unify the rightmost arguments, with the goal of turning the
                 -- hole application into a pattern form
-                case (reverse margs', reverse args') of
+                case (margs', args') of
                      (hargs :< h, fargs :< f) =>
                         tryUnify
                           (if not swap then
@@ -736,16 +736,16 @@ mutual
                                  ures <- unify mode fc env h (snd f)
                                  log "unify.invertible" 10 $ "Constraints " ++ show (constraints ures)
                                  uargs <- unify mode fc env
-                                       (NApp fc (NMeta mname mref (map (EmptyFC,) margs)) (reverse $ map (EmptyFC,) hargs))
-                                       (con (reverse fargs))
+                                       (NApp fc (NMeta mname mref (map (EmptyFC,) margs)) (map (EmptyFC,) hargs))
+                                       (con fargs)
                                  pure (union ures uargs)
                              else
                               do log "unify.invertible" 10 "Unifying invertible"
                                  ures <- unify mode fc env (snd f) h
                                  log "unify.invertible" 10 $ "Constraints " ++ show (constraints ures)
                                  uargs <- unify mode fc env
-                                       (con (reverse fargs))
-                                       (NApp fc (NMeta mname mref (map (EmptyFC,) margs)) (reverse $ map (EmptyFC,) hargs))
+                                       (con fargs)
+                                       (NApp fc (NMeta mname mref (map (EmptyFC,) margs)) (map (EmptyFC,) hargs))
                                  pure (union ures uargs))
                           (postponeS swap fc mode "Postponing hole application [1]" env
                                 (NApp fc (NMeta mname mref (map (EmptyFC,) margs)) $ (map (EmptyFC,) margs'))
