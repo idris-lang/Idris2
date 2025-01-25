@@ -20,15 +20,15 @@ genEq typeName = do
   constrs <- getCons n
   let and : TTImp -> TTImp -> TTImp
       and x y = `(~(x) && ~(y))
-      compareEq : String -> String -> TTImp
-      compareEq x y = `(~(IVar pos $ UN (Basic x)) == ~(IVar pos $ UN (Basic y)))
+      compareEq : Name -> Name -> TTImp
+      compareEq x y = `(~(IVar pos x) == ~(IVar pos y))
       makeClause : Name -> Elab Clause
       makeClause constr = do
         [(_, ty)] <- getType constr
             | _ => fail "ambiguous name for constr"
         let nArgs = countArgs ty
-        let xs = map (\i => "x_" ++ show i) $ take nArgs [1..]
-        let ys = map (\i => "y_" ++ show i) $ take nArgs [1..]
+        let xs = map (\i => UN $ Basic $ "x_" ++ show i) $ take nArgs [1..]
+        let ys = map (\i => UN $ Basic $ "y_" ++ show i) $ take nArgs [1..]
         let px = foldl (IApp pos) (IVar pos constr) $ map (IBindVar pos) xs
         let py = foldl (IApp pos) (IVar pos constr) $ map (IBindVar pos) ys
         pure $ PatClause pos `(MkPair ~(px) ~(py))

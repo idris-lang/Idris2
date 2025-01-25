@@ -59,7 +59,7 @@ atom fname
          pure (IVar (MkFC fname start end) x)
   <|> do start <- location
          symbol "$"
-         x <- unqualifiedName
+         x <- UN . Basic <$> unqualifiedName
          end <- location
          pure (IBindVar (MkFC fname start end) x)
   <|> do start <- location
