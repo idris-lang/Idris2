@@ -60,7 +60,7 @@ Show Rec where
 toLHS' : FC -> Rec -> (Maybe Name, RawImp)
 toLHS' loc (Field mn@(Just _) n _)
     = (mn, IAs loc (virtualiseFC loc) UseRight (UN $ Basic n) (Implicit loc True))
-toLHS' loc (Field mn n _) = (mn, IBindVar (virtualiseFC loc) n)
+toLHS' loc (Field mn n _) = (mn, IBindVar (virtualiseFC loc) (UN $ Basic n))
 toLHS' loc (Constr mn con args)
     = let args' = map (toLHS' loc . snd) args in
           (mn, gapply (IVar loc con) args')

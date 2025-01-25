@@ -285,14 +285,14 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                           = apply (IVar bfc con)
                                     (replicate done (Implicit bfc True) ++
                                        (if imp == Explicit
-                                           then [IBindVar fc' fldNameStr]
+                                           then [IBindVar fc' (UN $ Basic fldNameStr)]
                                            else []) ++
                                     (replicate (countExp sc) (Implicit bfc True)))
                    let lhs = IApp bfc (IVar bfc rfNameNS)
                                 (if imp == Explicit
                                     then lhs_exp
                                     else INamedApp bfc lhs_exp (UN $ Basic fldNameStr)
-                                             (IBindVar bfc fldNameStr))
+                                             (IBindVar bfc (UN $ Basic fldNameStr)))
                    let rhs = IVar fc' (UN $ Basic fldNameStr)
 
                    -- EtaExpand implicits on both sides:

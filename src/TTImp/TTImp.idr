@@ -106,7 +106,7 @@ mutual
        -- the given binder
        IBindHere : FC -> BindMode -> RawImp' nm -> RawImp' nm
        -- A name which should be implicitly bound
-       IBindVar : FC -> String -> RawImp' nm
+       IBindVar : FC -> Name -> RawImp' nm
        -- An 'as' pattern, valid on the LHS of a clause only
        IAs : FC -> (nameFC : FC) -> UseSide -> Name -> RawImp' nm -> RawImp' nm
        -- A 'dot' pattern, i.e. one which must also have the given value
@@ -201,7 +201,7 @@ mutual
 
       show (IBindHere fc b sc)
          = "(%bindhere " ++ show sc ++ ")"
-      show (IBindVar fc n) = "$" ++ n
+      show (IBindVar fc n) = "$" ++ show n
       show (IAs fc _ _ n tm) = show n ++ "@(" ++ show tm ++ ")"
       show (IMustUnify fc r tm) = ".(" ++ show tm ++ ")"
       show (IDelayed fc r tm) = "(%delayed " ++ show tm ++ ")"
@@ -538,7 +538,7 @@ mkWithClause fc lhs ((rig, wval, prf) ::: []) flags cls
 mkWithClause fc lhs ((rig, wval, prf) ::: wp :: wps) flags cls
   = let vfc = virtualiseFC fc in
     WithClause fc lhs rig wval prf flags
-      [mkWithClause fc (IApp vfc lhs (IBindVar vfc "arg")) (wp ::: wps) flags cls]
+      [mkWithClause fc (IApp vfc lhs $ IBindVar vfc $ UN $ Basic "arg") (wp ::: wps) flags cls]
 
 -- Extract the RawImp term from a FieldUpdate.
 export
@@ -610,7 +610,7 @@ lhsInCurrentNS nest (IVar loc n)
 lhsInCurrentNS nest tm = pure tm
 
 export
-findIBinds : RawImp' nm -> List String
+findIBinds : RawImp' nm -> List Name
 findIBinds (IPi fc rig p mn aty retty)
     = findIBinds aty ++ findIBinds retty
 findIBinds (ILam fc rig p n aty sc)
@@ -623,7 +623,7 @@ findIBinds (INamedApp _ fn _ av)
     = findIBinds fn ++ findIBinds av
 findIBinds (IWithApp fc fn av)
     = findIBinds fn ++ findIBinds av
-findIBinds (IAs fc _ _ (UN (Basic n)) pat)
+findIBinds (IAs fc _ _ n@(UN (Basic _)) pat)
     = n :: findIBinds pat
 findIBinds (IAs fc _ _ n pat)
     = findIBinds pat
@@ -646,8 +646,8 @@ findIBinds (IUpdate fc updates tm)
 findIBinds tm = []
 
 export
-findImplicits : RawImp' nm -> List String
-findImplicits (IPi fc rig p (Just (UN (Basic mn))) aty retty)
+findImplicits : RawImp' nm -> List Name
+findImplicits (IPi fc rig p (Just mn@(UN (Basic _))) aty retty)
     = mn :: findImplicits aty ++ findImplicits retty
 findImplicits (IPi fc rig p mn aty retty)
     = findImplicits aty ++ findImplicits retty
@@ -690,7 +690,7 @@ implicitsAs : {auto c : Ref Ctxt Defs} ->
 implicitsAs n defs ns tm
   = do let implicits = findIBinds tm
        log "declare.def.lhs.implicits" 30 $ "Found implicits: " ++ show implicits
-       setAs (map Just (ns ++ map (UN . Basic) implicits)) [] tm
+       setAs (map Just (ns ++ implicits)) [] tm
   where
     -- Takes the function application expression which is the lhs of a clause
     -- and decomposes it into the underlying function symbol and the variables
@@ -787,9 +787,9 @@ implicitsAs n defs ns tm
 
         impAs : FC -> List (Name, PiInfo RawImp) -> RawImp -> RawImp
         impAs loc' [] tm = tm
-        impAs loc' ((nm@(UN (Basic n)), AutoImplicit) :: ns) tm
+        impAs loc' ((nm@(UN (Basic _)), AutoImplicit) :: ns) tm
             = impAs loc' ns $
-                 INamedApp loc' tm nm (IBindVar loc' n)
+                 INamedApp loc' tm nm (IBindVar loc' nm)
 
         impAs loc' ((n, Implicit) :: ns) tm
             = impAs loc' ns $
@@ -870,7 +870,7 @@ isIVar (IVar fc v) = Just (fc, v)
 isIVar _ = Nothing
 
 export
-isIBindVar : RawImp' nm -> Maybe (FC, String)
+isIBindVar : RawImp' nm -> Maybe (FC, Name)
 isIBindVar (IBindVar fc v) = Just (fc, v)
 isIBindVar _ = Nothing
 

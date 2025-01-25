@@ -273,7 +273,7 @@ findIBindVars (IAutoApp fc fn av)
 findIBindVars (IWithApp fc fn av)
     = findIBindVars fn ++ findIBindVars av
 findIBindVars (IBindVar fc v)
-    = [UN (Basic v)]
+    = [v]
 findIBindVars (IDelayed fc r t)
     = findIBindVars t
 findIBindVars (IDelay fc t)
@@ -300,8 +300,8 @@ mutual
                      _ => IVar fc n
            else IVar fc n
   substNames' True bound ps (IBindVar fc n)
-      = if not (UN (Basic n) `elem` bound)
-           then case lookup (UN $ Basic n) ps of
+      = if not (n `elem` bound)
+           then case lookup n ps of
                      Just t => t
                      _ => IBindVar fc n
            else IBindVar fc n
