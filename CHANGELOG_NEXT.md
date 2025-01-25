@@ -129,6 +129,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Fixed a bug that caused `ttc` size to grow exponentially.
 
+* `IBindVar` supports arbitrary names. `String` in the signature is replaced
+  by `Name`.
+
 ### Backend changes
 
 #### RefC Backend

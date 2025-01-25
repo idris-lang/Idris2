@@ -68,13 +68,13 @@ renameIBinds rs us (IAlternative fc u alts)
     renameAlt : AltType -> State (List (String, String)) AltType
     renameAlt (UniqueDefault t) = pure $ UniqueDefault !(renameIBinds rs us t)
     renameAlt u = pure u
-renameIBinds rs us (IBindVar fc n)
+renameIBinds rs us (IBindVar fc nm@(UN (Basic n)))
     = if n `elem` rs
          then do let n' = genUniqueStr (rs ++ us) n
                  upds <- get
                  put ((n, n') :: upds)
-                 pure $ IBindVar fc n'
-         else pure $ IBindVar fc n
+                 pure $ IBindVar fc (UN (Basic n'))
+         else pure $ IBindVar fc nm
 renameIBinds rs us tm = pure $ tm
 
 export
@@ -82,7 +82,7 @@ doBind : List (String, String) -> RawImp -> RawImp
 doBind [] tm = tm
 doBind ns (IVar fc nm@(UN (Basic n)))
     = maybe (IVar fc nm)
-            (IBindVar fc)
+            (IBindVar fc . UN . Basic)
             (lookup n ns)
 doBind ns (IPi fc rig p mn aty retty)
     = let ns' = case mn of
