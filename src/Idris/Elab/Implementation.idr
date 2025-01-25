@@ -241,7 +241,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
 
                -- 2. Elaborate top level function types for this interface
                defs <- get Ctxt
-               fns <- topMethTypes [] impName methImps impsp
+               fns <- topMethTypes [] impName methImps (show <$> impsp)
                                       (implParams cdata) (params cdata)
                                       (map name (methods cdata))
                                       (methods cdata)
@@ -251,7 +251,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
                let mtops = map (Builtin.fst . snd) fns
                let con = iconstructor cdata
                let ilhs = impsApply (IVar EmptyFC impName)
-                                    (map (\x => (x, IBindVar vfc (show x)))
+                                    (map (\x => (x, IBindVar vfc x))
                                               (map fst methImps))
                -- RHS is the constructor applied to a search for the necessary
                -- parent constraints, then the method implementations
@@ -366,7 +366,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
               mkLam argns
                     (impsApply
                          (applyTo (IVar EmptyFC n) argns)
-                         (map (\n => (n, IVar vfc (UN (Basic $ show n)))) imps))
+                         (map (\n => (n, IVar vfc n)) imps))
       where
         applyUpdate : (Name, RigCount, PiInfo RawImp) ->
                       (Name, RigCount, PiInfo RawImp)
@@ -414,7 +414,8 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
              -- parameters
              let upds' = !(traverse (applyCon impName) allmeths)
              let mty_in = substNames varsList upds' meth.type
-             let (upds, mty_in) = runState Prelude.Nil (renameIBinds impsp (findImplicits mty_in) mty_in)
+             let implicits = show <$> findImplicits mty_in
+             let (upds, mty_in) = runState Prelude.Nil (renameIBinds impsp implicits mty_in)
              -- Finally update the method type so that implicits from the
              -- parameters are passed through to any earlier methods which
              -- appear in the type
@@ -436,7 +437,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
              let mbase = bindImps methImps $
                          bindConstraints vfc AutoImplicit cons $
                          mty_params
-             let ibound = findImplicits mbase
+             let ibound = show <$> findImplicits mbase
 
              mty <- bindTypeNamesUsed ifc ibound varsList mbase
 
@@ -452,7 +453,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
              let ibinds = map fst methImps
              let methupds' = if isNil ibinds then []
                              else [(n, impsApply (IVar vfc n)
-                                     (map (\x => (x, IBindVar vfc (show x))) ibinds))]
+                                     (map (\x => (x, IBindVar vfc x)) ibinds))]
 
              pure ((meth.name, n, upds, meth.count, meth.totalReq, mty), methupds')
 

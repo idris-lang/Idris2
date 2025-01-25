@@ -375,9 +375,8 @@ mutual
   toPTerm p (IPrimVal fc c) = pure (PPrimVal fc c)
   toPTerm p (IHole fc str) = pure (PHole fc False str)
   toPTerm p (IType fc) = pure (PType fc)
-  toPTerm p (IBindVar fc v)
-    = let nm = UN (Basic v) in
-      pure (PRef fc (MkKindedName (Just Bound) nm nm))
+  toPTerm p (IBindVar fc nm)
+    = pure (PRef fc (MkKindedName (Just Bound) nm nm))
   toPTerm p (IBindHere fc _ tm) = toPTerm p tm
   toPTerm p (IAs fc nameFC _ n pat) = pure (PAs fc nameFC n !(toPTerm argPrec pat))
   toPTerm p (IMustUnify fc r pat) = pure (PDotted fc !(toPTerm argPrec pat))

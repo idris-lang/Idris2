@@ -42,7 +42,7 @@ mutual
   getMatch : {auto m : Ref MD Metadata} ->
              {auto c : Ref Ctxt Defs} ->
              (lhs : Bool) -> RawImp -> RawImp ->
-             Core (List (String, RawImp))
+             Core (List (Name, RawImp))
   getMatch lhs (IBindVar to n) tm@(IBindVar from _)
       = [(n, tm)] <$ addAlias from to
   getMatch lhs (IBindVar _ n) tm = pure [(n, tm)]
@@ -98,12 +98,12 @@ mutual
   -- one of them is okay
   getMatch lhs (IAlternative fc _ as) (IAlternative _ _ as')
       = matchAny fc lhs (zip as as')
-  getMatch lhs (IAs _ _ _ (UN (Basic n)) p) (IAs _ fc _ nm'@(UN (Basic n')) p')
+  getMatch lhs (IAs _ _ _ nm@(UN (Basic _)) p) (IAs _ fc _ nm'@(UN (Basic _)) p')
       = do ms <- getMatch lhs p p'
-           mergeMatches lhs ((n, IAs fc emptyFC UseLeft nm' (Implicit fc True)) :: ms)
-  getMatch lhs (IAs _ _ _ (UN (Basic n)) p) p'
+           mergeMatches lhs ((nm, IAs fc emptyFC UseLeft nm' (Implicit fc True)) :: ms)
+  getMatch lhs (IAs _ _ _ nm@(UN (Basic _)) p) p'
       = do ms <- getMatch lhs p p'
-           mergeMatches lhs ((n, p') :: ms)
+           mergeMatches lhs ((nm, p') :: ms)
   getMatch lhs (IAs _ _ _ _ p) p' = getMatch lhs p p'
   getMatch lhs p (IAs _ _ _ _ p') = getMatch lhs p p'
   getMatch lhs (IType _) (IType _) = pure []
@@ -116,7 +116,7 @@ mutual
   matchAny : {auto m : Ref MD Metadata} ->
              {auto c : Ref Ctxt Defs} ->
              FC -> (lhs : Bool) -> List (RawImp, RawImp) ->
-             Core (List (String, RawImp))
+             Core (List (Name, RawImp))
   matchAny fc lhs [] = matchFail fc
   matchAny fc lhs ((x, y) :: ms)
       = catch (getMatch lhs x y)
@@ -125,7 +125,7 @@ mutual
   matchAll : {auto m : Ref MD Metadata} ->
              {auto c : Ref Ctxt Defs} ->
              (lhs : Bool) -> List (RawImp, RawImp) ->
-             Core (List (String, RawImp))
+             Core (List (Name, RawImp))
   matchAll lhs [] = pure []
   matchAll lhs ((x, y) :: ms)
       = do matches <- matchAll lhs ms
@@ -134,8 +134,8 @@ mutual
 
   mergeMatches : {auto m : Ref MD Metadata} ->
                  {auto c : Ref Ctxt Defs} ->
-                 (lhs : Bool) -> List (String, RawImp) ->
-                 Core (List (String, RawImp))
+                 (lhs : Bool) -> List (Name, RawImp) ->
+                 Core (List (Name, RawImp))
   mergeMatches lhs [] = pure []
   mergeMatches lhs ((n, tm) :: rest)
       = do rest' <- mergeMatches lhs rest
@@ -149,11 +149,11 @@ mutual
 -- Get the arguments for the rewritten pattern clause of a with by looking
 -- up how the argument names matched
 getArgMatch : FC -> (side : ElabMode) -> (search : Bool) ->
-              (warg : RawImp) -> (matches : List (String, RawImp)) ->
+              (warg : RawImp) -> (matches : List (Name, RawImp)) ->
               (arg : Maybe (PiInfo RawImp, Name)) -> RawImp
 getArgMatch ploc mode search warg ms Nothing = warg
 getArgMatch ploc mode True warg ms (Just (AutoImplicit, nm))
-    = case (isUN nm >>= \ (_, un) => isBasic un >>= \ n => lookup n ms) of
+    = case lookup nm ms of
         Just tm => tm
         Nothing =>
           let arg = ISearch ploc 500 in
@@ -161,7 +161,7 @@ getArgMatch ploc mode True warg ms (Just (AutoImplicit, nm))
             then IAs ploc ploc UseLeft nm arg
              else arg
 getArgMatch ploc mode search warg ms (Just (_, nm))
-    = case (isUN nm >>= \ (_, un) => isBasic un >>= \ n => lookup n ms) of
+    = case lookup nm ms of
         Just tm => tm
         Nothing =>
           let arg = Implicit ploc True in

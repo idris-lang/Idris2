@@ -144,7 +144,7 @@ expandCon fc usedvars con
          Just ty <- lookupTyExact con (gamma defs)
               | Nothing => undefinedName fc con
          pure (apply (IVar fc con)
-                (map (IBindVar fc)
+                (map (IBindVar fc . UN . Basic)
                      !(getArgNames defs [] usedvars Env.empty
                                    !(nf defs Env.empty ty))))
 

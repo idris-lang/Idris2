@@ -190,7 +190,7 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params sig
                                             else [Inline])
                                       (MkImpTy vfc cn ty_imp))
          let conapp = apply (IVar vfc cname)
-                            (map (IBindVar EmptyFC) (map bindName allmeths))
+                            (map (IBindVar EmptyFC) (map methName allmeths))
          let argns = getExplicitArgs 0 sig.type
          -- eta expand the RHS so that we put implicits in the right place
          let fnclause = PatClause vfc
@@ -260,7 +260,7 @@ getConstraintHint {vars} fc env vis iname cname constraints meths params (cn, co
          let tydecl = IClaim (MkFCVal fc $ MkIClaimData top vis [Inline, Hint False]
                           (MkImpTy EmptyFC (NoFC hintname) ty_imp))
 
-         let conapp = apply (impsBind (IVar fc cname) (map bindName constraints))
+         let conapp = apply (impsBind (IVar fc cname) (map constName constraints))
                               (map (const (Implicit fc True)) meths)
 
          let fnclause = PatClause fc (IApp fc (IVar fc hintname) conapp)
@@ -276,7 +276,7 @@ getConstraintHint {vars} fc env vis iname cname constraints meths params (cn, co
     constName : Name -> Name
     constName n = UN (Basic $ bindName n)
 
-    impsBind : RawImp -> List String -> RawImp
+    impsBind : RawImp -> List Name -> RawImp
     impsBind fn [] = fn
     impsBind fn (n :: ns)
         = impsBind (IAutoApp fc fn (IBindVar fc n)) ns
@@ -475,8 +475,8 @@ elabInterface {vars} ifc def_vis env nest constraints iname params dets mcon bod
 
         applyParams : RawImp -> List Name -> RawImp
         applyParams tm [] = tm
-        applyParams tm (UN (Basic n) :: ns)
-            = applyParams (INamedApp vdfc tm (UN (Basic n)) (IBindVar vdfc n)) ns
+        applyParams tm (n@(UN (Basic _)) :: ns)
+            = applyParams (INamedApp vdfc tm n (IBindVar vdfc n)) ns
         applyParams tm (_ :: ns) = applyParams tm ns
 
         changeNameTerm : Name -> RawImp -> Core RawImp
