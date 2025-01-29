@@ -483,7 +483,7 @@ searchLocalWith {vars} fc nofn rig opts hints env ((p, pty) :: rest) ty topty
     findPos : Defs -> Term vars ->
               (Term vars -> Term vars) ->
               NF vars -> NF vars -> Core (Search (Term vars, ExprDefs))
-    findPos defs prf f x@(NTCon pfc pn _ _ [<(fc2, yty), (fc1, xty)]) target
+    findPos defs prf f x@(NTCon pfc pn _ _ [<(fc1, xty), (fc2, yty)]) target
         = getSuccessful fc rig opts False env ty topty
               [findDirect defs prf f x target,
                  (do fname <- maybe (throw (InternalError "No fst"))

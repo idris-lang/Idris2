@@ -159,24 +159,24 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
         pathDoesNotEscape n     (_   ::rest) = pathDoesNotEscape (S n) rest
 
     elabCon : Defs -> String -> SnocList (Closure vars) -> Core (NF vars)
-    elabCon defs "Pure" [<val, _]
+    elabCon defs "Pure" [<_, val]
         = do empty <- clearDefs defs
              evalClosure empty val
-    elabCon defs "Map" [<act, fm, _, _]
+    elabCon defs "Map" [<_, _, fm, act]
         -- fm : A -> B
         -- elab : A
         = do act <- elabScript rig fc nest env !(evalClosure defs act) exp
              act <- quote defs env act
              fm <- evalClosure defs fm
              applyToStack defs withHoles env fm [(getLoc act, toClosure withAll env act)]
-    elabCon defs "Ap" [<actX, actF, _, _]
+    elabCon defs "Ap" [<_, _, actF, actX]
         -- actF : Elab (A -> B)
         -- actX : Elab A
         = do actF <- elabScript rig fc nest env !(evalClosure defs actF) exp
              actX <- elabScript rig fc nest env !(evalClosure defs actX) exp
              actX <- quote defs env actX
              applyToStack defs withHoles env actF [(getLoc actX, toClosure withAll env actX)]
-    elabCon defs "Bind" [<k, act, _, _]
+    elabCon defs "Bind" [<_,_,act,k]
         -- act : Elab A
         -- k : A -> Elab B
         -- 1) Run elabScript on act stripping off Elab
@@ -189,14 +189,14 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
              k <- evalClosure defs k
              r <- applyToStack defs withAll env k [(getLoc act, toClosure withAll env act)]
              elabScript rig fc nest env r exp
-    elabCon defs "Fail" [<msg, mbfc, _]
+    elabCon defs "Fail" [<_, mbfc, msg]
         = do msg' <- evalClosure defs msg
              throw $ RunElabFail $ GenericMsg !(reifyFC defs mbfc) !(reify defs msg')
-    elabCon defs "Warn" [<msg, mbfc]
+    elabCon defs "Warn" [<mbfc, msg]
         = do msg' <- evalClosure defs msg
              recordWarning $ GenericWarn !(reifyFC defs mbfc) !(reify defs msg')
              scriptRet ()
-    elabCon defs "Try" [<elab2, elab1, _]
+    elabCon defs "Try" [<_, elab1, elab2]
         = tryUnify (do constart <- getNextEntry
                        res <- elabScript rig fc nest env !(evalClosure defs elab1) exp
                        -- We ensure that all of the constraints introduced during the elab script
@@ -205,14 +205,14 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
                        solveConstraintsAfter constart inTerm LastChance
                        pure res)
                    (elabScript rig fc nest env !(evalClosure defs elab2) exp)
-    elabCon defs "LogMsg" [<str, verb, topic]
+    elabCon defs "LogMsg" [<topic, verb, str]
         = do topic' <- evalClosure defs topic
              verb' <- evalClosure defs verb
              unverifiedLogC !(reify defs topic') !(reify defs verb') $
                   do str' <- evalClosure defs str
                      reify defs str'
              scriptRet ()
-    elabCon defs "LogTerm" [<tm, str, verb, topic]
+    elabCon defs "LogTerm" [<topic, verb, str, tm]
         = do topic' <- evalClosure defs topic
              verb' <- evalClosure defs verb
              unverifiedLogC !(reify defs topic') !(reify defs verb') $
@@ -221,7 +221,7 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
                      pure $ !(reify defs str') ++ ": " ++
                              show (the RawImp !(reify defs tm'))
              scriptRet ()
-    elabCon defs "LogSugaredTerm" [<tm, str, verb, topic]
+    elabCon defs "LogSugaredTerm" [<topic, verb, str, tm]
         = do topic' <- evalClosure defs topic
              verb' <- evalClosure defs verb
              unverifiedLogC !(reify defs topic') !(reify defs verb') $
@@ -230,7 +230,7 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
                      ptm <- pterm (map defaultKindedName tm')
                      pure $ !(reify defs str') ++ ": " ++ show ptm
              scriptRet ()
-    elabCon defs "Check" [<ttimp, exp]
+    elabCon defs "Check" [<exp, ttimp]
         = do exp' <- evalClosure defs exp
              ttimp' <- evalClosure defs ttimp
              tidx <- resolveName (UN $ Basic "[elaborator script]")
@@ -240,12 +240,12 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
                            (Just (glueBack defs env exp'))
              empty <- clearDefs defs
              nf empty env checktm
-    elabCon defs "Quote" [<tm, exp]
+    elabCon defs "Quote" [<exp, tm]
         = do tm' <- evalClosure defs tm
              defs <- get Ctxt
              empty <- clearDefs defs
              scriptRet $ map rawName !(unelabUniqueBinders env !(quote empty env tm'))
-    elabCon defs "Lambda" [<scope, _, x]
+    elabCon defs "Lambda" [<x, _, scope]
         = do empty <- clearDefs defs
              NBind bfc x (Lam fc' c p ty) sc <- evalClosure defs scope
                    | _ => failWith defs "Not a lambda"
@@ -328,7 +328,7 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
              decls <- reify defs d'
              Core.Core.SnocList.traverse_ (processDecl [] (MkNested []) [<]) decls
              scriptRet ()
-    elabCon defs "ReadFile" [<pth, lk]
+    elabCon defs "ReadFile" [<lk, pth]
         = do pathPrefix <- lookupDir defs !(evalClosure defs lk)
              path <- reify defs !(evalClosure defs pth)
              validatePath defs path
@@ -337,7 +337,7 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
                | False => scriptRet $ Nothing {ty=String}
              contents <- readFile fullPath
              scriptRet $ Just contents
-    elabCon defs "WriteFile" [<contents, pth, lk]
+    elabCon defs "WriteFile" [<lk, pth, contents]
         = do pathPrefix <- lookupDir defs !(evalClosure defs lk)
              path <- reify defs !(evalClosure defs pth)
              validatePath defs path

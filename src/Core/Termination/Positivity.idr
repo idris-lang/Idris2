@@ -51,9 +51,9 @@ posArg  : {auto c : Ref Ctxt Defs} ->
           Defs -> List Name -> NF [<] -> Core Terminating
 
 posArgs : {auto c : Ref Ctxt Defs} ->
-          Defs -> List Name -> SnocList (Closure [<]) -> Core Terminating
-posArgs defs tyn [<] = pure IsTerminating
-posArgs defs tyn (xs :< x)
+          Defs -> List Name -> List (Closure [<]) -> Core Terminating
+posArgs defs tyn [] = pure IsTerminating
+posArgs defs tyn (x :: xs)
   = do xNF <- evalClosure defs x
        logNF "totality.positivity" 50 "Checking parameter for positivity" [<] xNF
        IsTerminating <- posArg defs tyn xNF
@@ -68,22 +68,22 @@ posArg defs tyns nf@(NTCon loc tc _ _ args) =
                     Just (TCon _ _ params _ _ _ _ _) => do
                          logC "totality.positivity" 50 $
                            do pure $ unwords [show tc, "has", show (length params), "parameters"]
-                         pure $ splitParams 0 params (map snd args)
+                         pure $ splitParams 0 params (toList $ map snd args)
                     _ => throw (GenericMsg loc (show tc ++ " not a data type"))
      let (params, indices) = testargs
      False <- anyM (nameIn defs tyns) (cast !(traverse (evalClosure defs) indices))
        | True => pure (NotTerminating NotStrictlyPositive)
      posArgs defs tyns params
   where
-    splitParams : Nat -> List Nat -> SnocList (Closure [<]) ->
-        ( SnocList (Closure [<]) -- parameters (to be checked for strict positivity)
-        , SnocList (Closure [<]) -- indices    (to be checked for no mention at all)
+    splitParams : Nat -> List Nat -> List (Closure [<]) ->
+        ( List (Closure [<]) -- parameters (to be checked for strict positivity)
+        , List (Closure [<]) -- indices    (to be checked for no mention at all)
         )
-    splitParams i ps [<] = ([<], [<])
-    splitParams i ps (xs :< x)
+    splitParams i ps [] = ([], [])
+    splitParams i ps (x :: xs)
         = if i `elem` ps
-             then mapFst (:< x) (splitParams (S i) ps xs)
-             else mapSnd (:< x) (splitParams (S i) ps xs)
+             then mapFst (x ::) (splitParams (S i) ps xs)
+             else mapSnd (x ::) (splitParams (S i) ps xs)
 -- a tyn can not appear as part of ty
 posArg defs tyns nf@(NBind fc x (Pi _ _ e ty) sc)
   = do logNF "totality.positivity" 50 "Found a Pi-type" [<] nf
