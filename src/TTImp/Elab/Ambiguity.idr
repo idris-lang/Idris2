@@ -207,10 +207,10 @@ mutual
   mightMatchArgs : {auto c : Ref Ctxt Defs} ->
                    {vars : _} ->
                    Defs ->
-                   SnocList (Closure vars) -> SnocList (Closure [<]) ->
+                   List (Closure vars) -> List (Closure [<]) ->
                    Core Bool
-  mightMatchArgs defs [<] [<] = pure True
-  mightMatchArgs defs (xs :< x) (ys :< y)
+  mightMatchArgs defs [] [] = pure True
+  mightMatchArgs defs (x :: xs) (y :: ys)
       = do amatch <- mightMatchArg defs x y
            if amatch
               then mightMatchArgs defs xs ys
@@ -226,13 +226,13 @@ mutual
   mightMatch defs (NTCon _ n t a args) (NTCon _ n' t' a' args')
       = if n == n'
            -- [Note] Restore logging sequence
-           then do amatch <- mightMatchArgs defs (reverse $ map snd args) (reverse $ map snd args')
+           then do amatch <- mightMatchArgs defs (toList $ map snd args) (toList $ map snd args')
                    if amatch then pure Concrete else pure NoMatch
            else pure NoMatch
   mightMatch defs (NDCon _ n t a args) (NDCon _ n' t' a' args')
       = if t == t'
            -- [Note] Restore logging sequence
-           then do amatch <- mightMatchArgs defs (reverse $ map snd args) (reverse $ map snd args')
+           then do amatch <- mightMatchArgs defs (toList $ map snd args) (toList $ map snd args')
                    if amatch then pure Concrete else pure NoMatch
            else pure NoMatch
   mightMatch defs (NPrimVal _ x) (NPrimVal _ y)

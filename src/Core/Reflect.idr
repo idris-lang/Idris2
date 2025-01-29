@@ -244,7 +244,7 @@ Reify a => Reify (List a) where
   reify defs val@(NDCon _ n _ _ args)
       = case (dropAllNS !(full (gamma defs) n), args) of
              (UN (Basic "Nil"), _) => pure []
-             (UN (Basic "::"), [<(_, xs), (_, x), _])
+             (UN (Basic "::"), [<_, (_, x), (_, xs)])
                   => do x' <- reify defs !(evalClosure defs x)
                         xs' <- reify defs !(evalClosure defs xs)
                         pure (x' :: xs')
@@ -261,7 +261,7 @@ Reflect a => Reflect (List a) where
 
 export
 Reify a => Reify (List1 a) where
-  reify defs val@(NDCon _ n _ _ [<(_, xs), (_, x), _])
+  reify defs val@(NDCon _ n _ _ [<_, (_, x), (_, xs)])
       = case dropAllNS !(full (gamma defs) n) of
              UN (Basic ":::")
                   => do x' <- reify defs !(evalClosure defs x)
@@ -283,7 +283,7 @@ Reify a => Reify (SnocList a) where
   reify defs val@(NDCon _ n _ _ args)
       = case (dropAllNS !(full (gamma defs) n), args) of
              (UN (Basic "Lin"), _) => pure [<]
-             (UN (Basic ":<"), [<(_, x), (_, sx), _])
+             (UN (Basic ":<"), [<_, (_, sx), (_, x)])
                   => do sx' <- reify defs !(evalClosure defs sx)
                         x' <- reify defs !(evalClosure defs x)
                         pure (sx' :< x')
@@ -303,7 +303,7 @@ Reify a => Reify (Maybe a) where
   reify defs val@(NDCon _ n _ _ args)
       = case (dropAllNS !(full (gamma defs) n), args) of
              (UN (Basic "Nothing"), _) => pure Nothing
-             (UN (Basic "Just"), [<(_, x), _])
+             (UN (Basic "Just"), [<_, (_, x)])
                   => do x' <- reify defs !(evalClosure defs x)
                         pure (Just x')
              _ => cantReify val "Maybe"
@@ -322,7 +322,7 @@ Reify a => Reify (WithDefault a def) where
   reify defs val@(NDCon _ n _ _ args)
       = case (dropAllNS !(full (gamma defs) n), args) of
              (UN (Basic "DefaultedValue"), _) => pure defaulted
-             (UN (Basic "SpecifiedValue"), [<(_, x), _, _])
+             (UN (Basic "SpecifiedValue"), [<_, _, (_, x)])
                   => do x' <- reify defs !(evalClosure defs x)
                         pure (specified x')
              _ => cantReify val "WithDefault"
@@ -339,7 +339,7 @@ Reflect a => Reflect (WithDefault a def) where
 
 export
 (Reify a, Reify b) => Reify (a, b) where
-  reify defs val@(NDCon _ n _ _ [<(_, y), (_, x), _, _])
+  reify defs val@(NDCon _ n _ _ [<_, _, (_, x), (_, y)])
       = case dropAllNS !(full (gamma defs) n) of
              UN (Basic "MkPair")
                  => do x' <- reify defs !(evalClosure defs x)
@@ -422,27 +422,27 @@ Reify Name where
              (UN (Basic "UN"), [<(_, str)])
                  => do str' <- reify defs !(evalClosure defs str)
                        pure (UN str')
-             (UN (Basic "MN"), [<(_, i), (_, str)])
+             (UN (Basic "MN"), [<(_, str), (_, i)])
                  => do str' <- reify defs !(evalClosure defs str)
                        i' <- reify defs !(evalClosure defs i)
                        pure (MN str' i')
-             (UN (Basic "NS"), [<(_, n), (_, ns)])
+             (UN (Basic "NS"), [<(_, ns), (_, n)])
                  => do ns' <- reify defs !(evalClosure defs ns)
                        n' <- reify defs !(evalClosure defs n)
                        pure (NS ns' n')
-             (UN (Basic "DN"), [<(_, n), (_, str)])
+             (UN (Basic "DN"), [<(_, str), (_, n)])
                  => do str' <- reify defs !(evalClosure defs str)
                        n' <- reify defs !(evalClosure defs n)
                        pure (DN str' n')
-             (UN (Basic "Nested"), [<(_, n), (_, ix)])
+             (UN (Basic "Nested"), [<(_, ix), (_, n)])
                  => do ix' <- reify defs !(evalClosure defs ix)
                        n' <- reify defs !(evalClosure defs n)
                        pure (Nested ix' n')
-             (UN (Basic "CaseBlock"), [<(_, i), (_, outer)])
+             (UN (Basic "CaseBlock"), [<(_, outer), (_, i)])
                  => do outer' <- reify defs !(evalClosure defs outer)
                        i' <- reify defs !(evalClosure defs i)
                        pure (CaseBlock outer' i')
-             (UN (Basic "WithBlock"), [<(_, i), (_, outer)])
+             (UN (Basic "WithBlock"), [<(_, outer), (_, i)])
                  => do outer' <- reify defs !(evalClosure defs outer)
                        i' <- reify defs !(evalClosure defs i)
                        pure (WithBlock outer' i')
@@ -494,11 +494,11 @@ Reify NameType where
       = case (dropAllNS !(full (gamma defs) n), args) of
              (UN (Basic "Bound"), _) => pure Bound
              (UN (Basic "Func"), _) => pure Func
-             (UN (Basic "DataCon"), [<(_, i), (_, t)])
+             (UN (Basic "DataCon"), [<(_, t), (_, i)])
                   => do t' <- reify defs !(evalClosure defs t)
                         i' <- reify defs !(evalClosure defs i)
                         pure (DataCon t' i')
-             (UN (Basic "TyCon"), [<(_, i), (_, t)])
+             (UN (Basic "TyCon"), [<(_, t),(_, i)])
                   => do t' <- reify defs !(evalClosure defs t)
                         i' <- reify defs !(evalClosure defs i)
                         pure (TyCon t' i')
@@ -739,7 +739,7 @@ Reify t => Reify (PiInfo t) where
              (UN (Basic "ImplicitArg"), _) => pure Implicit
              (UN (Basic "ExplicitArg"), _) => pure Explicit
              (UN (Basic "AutoImplicit"), _) => pure AutoImplicit
-             (UN (Basic "DefImplicit"), [<(_, t), _])
+             (UN (Basic "DefImplicit"), [<_, (_, t)])
                  => do t' <- reify defs !(evalClosure defs t)
                        pure (DefImplicit t')
              _ => cantReify val "PiInfo"
@@ -841,7 +841,7 @@ export
 Reify FC where
   reify defs val@(NDCon _ n _ _ args)
       = case (dropAllNS !(full (gamma defs) n), args) of
-             (UN (Basic "MkFC"), [<(_, end), (_, start), (_, fn)])
+             (UN (Basic "MkFC"), [<(_, fn), (_, start), (_, end)])
                    => do fn' <- reify defs !(evalClosure defs fn)
                          start' <- reify defs !(evalClosure defs start)
                          end' <- reify defs !(evalClosure defs end)
@@ -869,11 +869,11 @@ export
 Reify a => Reify (WithFC a) where
   reify defs val@(NDCon _ n _ _ args)
       = case (dropAllNS !(full (gamma defs) n), map snd args) of
-             (UN (Basic "MkFCVal"), [<nestedVal, fcterm]) => do
+             (UN (Basic "MkFCVal"), [<fcterm, nestedVal]) => do
                  fc <- reify defs !(evalClosure defs fcterm)
                  val <- reify defs !(evalClosure defs nestedVal)
                  pure $ MkFCVal fc val
-             (UN (Basic "MkFCVal"), [<l2, fc, _]) => do
+             (UN (Basic "MkFCVal"), [<_, fc, l2]) => do
                  fc' <- reify defs !(evalClosure defs fc)
                  val' <- reify defs !(evalClosure defs l2)
                  pure $ MkFCVal fc' val'
