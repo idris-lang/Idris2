@@ -428,18 +428,21 @@ eraseApps {vs} tm
                 do defs <- get Ctxt
                    mgdef <- lookupCtxtExact n (gamma defs)
                    let eargs = maybe [] eraseArgs mgdef
-                   args' <- traverseSnocList eraseApps (dropPos fc 0 eargs args)
+                   args' <- traverseSnocList eraseApps
+                                  (dropPos fc (length args) eargs args)
                    pure (applySpine fc (Ref fc nt n) args')
            (tm, args) =>
                 do args' <- traverseSnocList eraseApps args
                    pure (applySpine (getLoc tm) tm args')
   where
-    dropPos : FC -> Nat -> List Nat -> SnocList (Term vs) -> SnocList (Term vs)
-    dropPos fc i ns [<] = [<]
-    dropPos fc i ns (xs :< x)
+    dropPos : FC -> Nat -> List Nat -> SnocList (Term vs) ->
+              SnocList (Term vs)
+    dropPos fc _ ns [<] = [<]
+    dropPos fc (S i) ns (xs :< x)
         = if i `elem` ns
-             then dropPos fc (S i) ns xs :< Erased fc Placeholder
-             else dropPos fc (S i) ns xs :< x
+             then dropPos fc i ns xs :< Erased fc Placeholder
+             else dropPos fc i ns xs :< x
+    dropPos fc _ ns xs = xs
 
 -- if tm would be matched by trylhs, then it's not an impossible case
 -- because we've already got it. Ignore anything in erased position.
