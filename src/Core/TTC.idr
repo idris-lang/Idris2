@@ -969,12 +969,10 @@ TTC TypeFlags where
   toBuf b l
       = do toBuf b (uniqueAuto l)
            toBuf b (external l)
-           toBuf b (forwardDecl l)
   fromBuf b
       = do u <- fromBuf b
            e <- fromBuf b
-           f <- fromBuf b
-           pure (MkTypeFlags u e f)
+           pure (MkTypeFlags u e)
 
 export
 TTC Def where

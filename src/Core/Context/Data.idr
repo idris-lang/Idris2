@@ -104,7 +104,7 @@ addData vars vis tidx (MkData (MkCon dfc tyn arity tycon) datacons)
                             (TCon tag arity
                                   paramPositions
                                   allPos
-                                  defaultFlags [] (map name datacons) Nothing)
+                                  defaultFlags [] (Just $ map name datacons) Nothing)
          (idx, gam') <- addCtxt tyn tydef (gamma defs)
          gam'' <- addDataConstructors 0 datacons gam'
          put Ctxt ({ gamma := gam'' } defs)

@@ -425,9 +425,8 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpLater dfc n_in ty_raw)
          arity <- getArity defs [] fullty
 
          -- Add the type constructor as a placeholder
-         let flags = { forwardDecl := True } defaultFlags
          tidx <- addDef n (newDef fc n linear vars fullty def_vis
-                          (TCon 0 arity [] [] flags [] [] Nothing))
+                          (TCon 0 arity [] [] defaultFlags [] Nothing Nothing))
          addMutData (Resolved tidx)
          defs <- get Ctxt
          traverse_ (\n => setMutWith fc n (mutData defs)) (mutData defs)
@@ -500,11 +499,10 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
                       _ => pure $ mbtot <|> declTot
 
                     case definition ndef of
-                      TCon _ _ _ _ flags mw [] _ => case mfullty of
+                      TCon _ _ _ _ flags mw Nothing _ => case mfullty of
                         Nothing => pure (mw, vis, tot, type ndef)
                         Just fullty =>
                             do ok <- convert defs [] fullty (type ndef)
-                               when (not flags.forwardDecl) $ throw (AlreadyDefined fc n)
                                if ok then pure (mw, vis, tot, fullty)
                                      else do logTermNF "declare.data" 1 "Previous" [] (type ndef)
                                              logTermNF "declare.data" 1 "Now" [] fullty
@@ -518,7 +516,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
          -- Add the type constructor as a placeholder while checking
          -- data constructors
          tidx <- addDef n (newDef fc n linear vars fullty (specified vis)
-                          (TCon 0 arity [] [] defaultFlags [] [] Nothing))
+                          (TCon 0 arity [] [] defaultFlags [] Nothing Nothing))
          case vis of
               Private => pure ()
               _ => do addHashWithNames n

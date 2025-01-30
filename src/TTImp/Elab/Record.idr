@@ -79,7 +79,7 @@ toRHS fc r = snd (toRHS' fc r)
 findConName : Defs -> Name -> Core (Maybe Name)
 findConName defs tyn
     = case !(lookupDefExact tyn (gamma defs)) of
-           Just (TCon _ _ _ _ _ _ [con] _) => pure (Just con)
+           Just (TCon _ _ _ _ _ _ (Just [con]) _) => pure (Just con)
            _ => pure Nothing
 
 findFieldsAndTypeArgs : {auto c : Ref Ctxt Defs} ->

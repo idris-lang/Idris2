@@ -51,11 +51,10 @@ record TypeFlags where
   constructor MkTypeFlags
   uniqueAuto : Bool  -- should 'auto' implicits check for uniqueness
   external : Bool -- defined externally (e.g. in a C or Scheme library)
-  forwardDecl  : Bool -- is a forward declaration is not yet defined
 
 export
 defaultFlags : TypeFlags
-defaultFlags = MkTypeFlags False False False
+defaultFlags = MkTypeFlags False False
 
 public export
 record HoleFlags where
@@ -102,7 +101,7 @@ data Def : Type where
            (detpos : List Nat) -> -- determining arguments
            (flags : TypeFlags) -> -- should 'auto' implicits check
            (mutwith : List Name) ->
-           (datacons : List Name) ->
+           (datacons : Maybe (List Name)) ->
            (detagabbleBy : Maybe (List Nat)) ->
                     -- argument positions which can be used for
                     -- detagging, if it's possible (to check if it's
