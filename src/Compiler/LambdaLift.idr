@@ -272,26 +272,26 @@ mutual
   {vs : _} -> Show (Lifted vs) where
     show (LLocal {idx} _ p) = "!" ++ show (nameAt p)
     show (LAppName fc lazy n args)
-        = show n ++ showLazy lazy ++ "(" ++ showSep ", " (toList $ map show args) ++ ")"
+        = show n ++ showLazy lazy ++ "(" ++ showSep ", " (map show args) ++ ")"
     show (LUnderApp fc n m args)
         = "<" ++ show n ++ " underapp " ++ show m ++ ">(" ++
-          showSep ", " (toList $ map show args) ++ ")"
+          showSep ", " (map show args) ++ ")"
     show (LApp fc lazy c arg)
         = show c ++ showLazy lazy ++ " @ (" ++ show arg ++ ")"
     show (LLet fc x val sc)
         = "%let " ++ show x ++ " = " ++ show val ++ " in " ++ show sc
     show (LCon fc n _ t args)
-        = "%con " ++ show n ++ "(" ++ showSep ", " (toList $ map show args) ++ ")"
+        = "%con " ++ show n ++ "(" ++ showSep ", " (map show args) ++ ")"
     show (LOp fc lazy op args)
-        = "%op " ++ show op ++ showLazy lazy ++ "(" ++ showSep ", " (toList (map show args)) ++ ")"
+        = "%op " ++ show op ++ showLazy lazy ++ "(" ++ showSep ", " (toList $ map show args) ++ ")"
     show (LExtPrim fc lazy p args)
-        = "%extprim " ++ show p ++ showLazy lazy ++ "(" ++ showSep ", " (toList $ map show args) ++ ")"
+        = "%extprim " ++ show p ++ showLazy lazy ++ "(" ++ showSep ", " (map show args) ++ ")"
     show (LConCase fc sc alts def)
         = "%case " ++ show sc ++ " of { "
-             ++ showSep "| " (toList $ map show alts) ++ " " ++ show def
+             ++ showSep "| " (map show alts) ++ " " ++ show def
     show (LConstCase fc sc alts def)
         = "%case " ++ show sc ++ " of { "
-             ++ showSep "| " (toList $ map show alts) ++ " " ++ show def
+             ++ showSep "| " (map show alts) ++ " " ++ show def
     show (LPrimVal _ x) = show x
     show (LErased _) = "___"
     show (LCrash _ x) = "%CRASH(" ++ show x ++ ")"
@@ -301,7 +301,7 @@ mutual
   {vs : _} -> Show (LiftedConAlt vs) where
     show (MkLConAlt n _ t args sc)
         = "%conalt " ++ show n ++
-             "(" ++ showSep ", " (toList $ map show args) ++ ") => " ++ show sc
+             "(" ++ showSep ", " (map show args) ++ ") => " ++ show sc
 
   export
   covering
@@ -313,7 +313,7 @@ export
 covering
 Show LiftedDef where
   show (MkLFun args scope exp)
-      = show args ++ show (reverse scope) ++ ": " ++ show exp
+      = show (toList args) ++ show (toList scope) ++ ": " ++ show exp
   show (MkLCon tag arity pos)
       = "Constructor tag " ++ show tag ++ " arity " ++ show arity ++
         maybe "" (\n => " (newtype by " ++ show n ++ ")") pos
