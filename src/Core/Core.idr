@@ -901,6 +901,7 @@ anyM f (x :: xs)
          then pure True
          else anyM f xs
 
+-- Do really need it? Better do toList and use `anyM`
 export
 anyMScoped : (a -> Core Bool) -> SnocList a -> Core Bool
 anyMScoped f [<] = pure False

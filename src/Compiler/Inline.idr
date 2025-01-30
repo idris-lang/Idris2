@@ -189,7 +189,7 @@ mutual
              List Name -> Stack free -> EEnv free vars -> CDef ->
              Core (Maybe (CExp free))
   tryApply {free} {vars} rec stk env (MkFun args exp)
-      = do log "compiler.inline.io_bind" 50 $ "tryApply args: \{show $ toList args}, exp: \{show exp}, stk: \{show stk}, env: \{show env}"
+      = do log "compiler.inline.io_bind" 50 $ "tryApply args: \{show $ asList args}, exp: \{show exp}, stk: \{show stk}, env: \{show env}"
            let Just (env', stk')
                : Maybe (EEnv free (vars <>< cast args), List (CExp free))
                = (takeFromStack env stk (cast args))
@@ -562,9 +562,9 @@ inline n d = pure d
 mergeLam : {auto c : Ref Ctxt Defs} ->
            CDef -> Core CDef
 mergeLam (MkFun args def)
-    = do log "compiler.inline.io_bind" 50 "mergeLam, args: \{show $ toList args}, def: \{show def}"
+    = do log "compiler.inline.io_bind" 50 "mergeLam, args: \{show $ asList args}, def: \{show def}"
          let (args' ** exp') = mergeLambdas args def
-         log "compiler.inline.io_bind" 50 "mergeLam, args': \{show $ toList args'}, exp': \{show exp'}"
+         log "compiler.inline.io_bind" 50 "mergeLam, args': \{show $ asList args'}, exp': \{show exp'}"
          pure $ MkFun args' exp'
 mergeLam d = pure d
 
