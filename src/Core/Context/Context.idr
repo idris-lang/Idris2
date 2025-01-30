@@ -51,10 +51,11 @@ record TypeFlags where
   constructor MkTypeFlags
   uniqueAuto : Bool  -- should 'auto' implicits check for uniqueness
   external : Bool -- defined externally (e.g. in a C or Scheme library)
+  forwardDecl  : Bool -- is a forward declaration is not yet defined
 
 export
 defaultFlags : TypeFlags
-defaultFlags = MkTypeFlags False False
+defaultFlags = MkTypeFlags False False False
 
 public export
 record HoleFlags where
