@@ -1,0 +1,18 @@
+1/1: Building Test (Test.idr)
+Error: foo x is not a valid impossible case.
+
+Test:5:1--5:17
+ 1 | data Bar : Type
+ 2 | 
+ 3 | total
+ 4 | foo : Bar -> a
+ 5 | foo x impossible
+     ^^^^^^^^^^^^^^^^
+
+1/1: Building Test2 (Test2.idr)
+Error: Main.Bar is already defined.
+
+Test2:3:1--4:16
+ 3 | data Bar : Type where
+ 4 |     MkBar : Bar
+

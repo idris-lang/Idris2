@@ -139,7 +139,7 @@ isEmpty defs env (NTCon fc n t a args)
          | _ => pure False
        case nty of
             TCon _ _ _ _ flags _ cons _
-                 => if not (external flags)
+                 => if not (external flags) && not (forwardDecl flags)
                        then allM (conflict defs env (NTCon fc n t a args)) cons
                        else pure False
             _ => pure False
