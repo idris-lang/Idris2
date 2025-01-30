@@ -4,6 +4,7 @@ import Compiler.LambdaLift
 
 import Core.CompileExpr
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.TT
 
@@ -205,7 +206,7 @@ mutual
             List (Lifted vars) -> (List AVar -> ANF) -> Core ANF
   anfArgs fc vs args f
       = do args' <- traverse (anf vs) args
-           letBind fc (toList args') f
+           letBind fc args' f
 
   anf : {vars : _} ->
         {auto v : Ref Next Int} ->
@@ -214,7 +215,8 @@ mutual
   anf vs (LAppName fc lazy n args)
       = anfArgs fc vs args (AAppName fc lazy n)
   anf vs (LUnderApp fc n m args)
-      = anfArgs fc vs args (AUnderApp fc n m)
+    --   = anfArgs fc vs (reverse args) (AUnderApp fc n m)
+    = anfArgs fc vs args (AUnderApp fc n m)
   anf vs (LApp fc lazy f a)
       = anfArgs fc vs [f, a] $
                 \case
@@ -262,15 +264,17 @@ mutual
       = pure $ MkAConstAlt c !(anf vs sc)
 
 export
-toANF : LiftedDef -> Core ANFDef
+toANF : {auto c : Ref Ctxt Defs} -> LiftedDef -> Core ANFDef
 toANF (MkLFun args scope sc)
     = do v <- newRef Next (the Int 0)
+         log "compile.execute" 40 $ "toANF args: \{show $ toList args}, scope: \{show $ asList scope}, lifted: \{show sc}"
          (iargs, vsNil) <- bindAsFresh (cast args) [<]
          let vs : AVars args
            := rewrite sym $ appendLinLeftNeutral args in
               rewrite snocAppendAsFish [<] args in vsNil
          (iargs', vs) <- bindAsFresh (cast scope) vs
          sc' <- anf (rewrite snocAppendAsFish args scope in vs) sc
+         log "compile.execute" 40 $ "toANF iargs: \{show iargs}, iargs': \{show iargs'}, lifted: \{show sc'}"
          pure $ MkAFun (iargs ++ reverse iargs') sc'
 toANF (MkLCon t a ns) = pure $ MkACon t a ns
 toANF (MkLForeign ccs fargs t) = pure $ MkAForeign ccs fargs t

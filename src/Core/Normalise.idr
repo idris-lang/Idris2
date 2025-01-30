@@ -238,44 +238,42 @@ logEnv s n msg env
 
   where
 
-    dumpEnv : {vs : SnocList Name} -> Env Term vs -> Core ()
-    dumpEnv [<] = pure ()
-    dumpEnv {vs = _ :< x} (bs :< Let _ c val ty)
+    dumpEnv : {vs : SnocList Name} -> LogTopic -> Env Term vs -> Core ()
+    dumpEnv _ [<] = pure ()
+    dumpEnv {vs = _ :< x} s (bs :< Let _ c val ty)
         = do logTermNF' s n (msg ++ ": let " ++ show x) bs val
              logTermNF' s n (msg ++ ":" ++ show c ++ " " ++ show x) bs ty
-             dumpEnv bs
-    dumpEnv {vs = _ :< x} (bs :< b)
+             dumpEnv s bs
+    dumpEnv {vs = _ :< x} s (bs :< b)
         = do logTermNF' s n (msg ++ ":" ++ show (multiplicity b) ++ " " ++
                            show (piInfo b) ++ " " ++
                            show x) bs (binderType b)
-             dumpEnv bs
+             dumpEnv s bs
 
 export
 -- It is OKAY to use it only for `mkEnv`-generated Environment which is dummy
 logEnvRev : {vars : _} ->
          {auto c : Ref Ctxt Defs} ->
-         (s : String) ->
-         {auto 0 _ : KnownTopic s} ->
-         Nat -> String -> Env Term vars -> Core ()
-logEnvRev str n msg env
-    = when !(logging str n) $
+         LogTopic -> Nat -> String -> Env Term vars -> Core ()
+logEnvRev s n msg env
+    = when !(logging s n) $
         do depth <- getDepth
-           logString depth str n msg
-           dumpEnv env
+           logString depth s.topic n msg
+           dumpEnv s env
 
   where
 
-    dumpEnv : {vs : SnocList Name} -> Env Term vs -> Core ()
-    dumpEnv [<] = pure ()
-    dumpEnv {vs = _ :< x} (bs :< Let _ c val ty)
+    dumpEnv : {vs : SnocList Name} -> LogTopic -> Env Term vs -> Core ()
+    dumpEnv _ [<] = pure ()
+    dumpEnv {vs = _ :< x} s (bs :< Let _ c val ty)
         -- Reversed output
-        = do dumpEnv bs
-             logTermNF' str n (msg ++ ": let " ++ show x) bs val
-             logTermNF' str n (msg ++ ":" ++ show c ++ " " ++ show x) bs ty
-    dumpEnv {vs = _ :< x} (bs :< b)
+        = do dumpEnv s bs
+             logTermNF' s n (msg ++ ": let " ++ show x) bs val
+             logTermNF' s n (msg ++ ":" ++ show c ++ " " ++ show x) bs ty
+    dumpEnv {vs = _ :< x} s (bs :< b)
         -- Reversed output
-        = do dumpEnv bs
-             logTermNF' str n (msg ++ ":" ++ show (multiplicity b) ++ " " ++
+        = do dumpEnv s bs
+             logTermNF' s n (msg ++ ":" ++ show (multiplicity b) ++ " " ++
                            show (piInfo b) ++ " " ++
                            show x) bs (binderType b)
 

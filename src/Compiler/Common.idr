@@ -341,6 +341,8 @@ getCompileDataWith exports doLazyAnnots phase_in tm_in
 
          (cseDefs, csetm) <- logTime 2 "CSE" $ cse rcns compiledtm
 
+         for_ cseDefs $ \(n, _, def) => log "compile.execute" 40 $ "getCompileDataWith cseDefs: \{show (n, def)}"
+
          -- Add intrinsic constructors (see Compiler.Opts.Constructor)
          let cseDefs = intrinsicCons ++ cseDefs
 
@@ -369,18 +371,22 @@ getCompileDataWith exports doLazyAnnots phase_in tm_in
          whenJust (dumpcases sopts) $ \ f =>
             do coreLift $ putStrLn $ "Dumping case trees to " ++ f
                dumpIR f (map (\(n, _, def) => (n, def)) namedDefs)
+         for_ namedDefs $ \(n, _, def) => log "compile.execute" 40 $ "getCompileDataWith namedDefs: \{show (n, def)}"
 
          whenJust (dumplifted sopts) $ \ f =>
             do coreLift $ putStrLn $ "Dumping lambda lifted defs to " ++ f
                dumpIR f lifted
+         for_ lifted $ \(n, def) => log "compile.execute" 40 $ "getCompileDataWith lifted: \{show (n, def)}"
 
          whenJust (dumpanf sopts) $ \ f =>
             do coreLift $ putStrLn $ "Dumping ANF defs to " ++ f
                dumpIR f anf
+         for_ anf $ \(n, def) => log "compile.execute" 40 $ "getCompileDataWith anf: \{show (n, def)}"
 
          whenJust (dumpvmcode sopts) $ \ f =>
             do coreLift $ putStrLn $ "Dumping VM defs to " ++ f
                dumpIR f vmcode
+         for_ vmcode $ \(n, def) => log "compile.execute" 40 $ "getCompileDataWith vmcode: \{show (n, def)}"
 
          -- We're done with our minimal context now, so put it back the way
          -- it was. Back ends shouldn't look at the global context, because

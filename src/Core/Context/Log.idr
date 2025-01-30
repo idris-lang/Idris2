@@ -111,21 +111,19 @@ logTerm s n msg tm
 export
 logLocalEnv : {free, vars : _} ->
          {auto c : Ref Ctxt Defs} ->
-         (s : String) ->
-         {auto 0 _ : KnownTopic s} ->
-         Nat -> String -> LocalEnv free vars -> Core ()
-logLocalEnv str n msg env
-    = when !(logging str n) $
+         LogTopic -> Nat -> String -> LocalEnv free vars -> Core ()
+logLocalEnv s n msg env
+    = when !(logging s n) $
         do depth <- getDepth
-           logString depth str n msg
-           dumpEnv env
+           logString depth s.topic n msg
+           dumpEnv s env
   where
-    dumpEnv : {free, vs : SnocList Name} -> LocalEnv free vs -> Core ()
-    dumpEnv [<] = pure ()
-    dumpEnv {vs = _ :< x} (bs :< closure)
+    dumpEnv : {free, vs : SnocList Name} -> LogTopic -> LocalEnv free vs -> Core ()
+    dumpEnv _ [<] = pure ()
+    dumpEnv {vs = _ :< x} s (bs :< closure)
         = do depth <- getDepth
-             logString depth str n $ msg ++ ": " ++ show x ++ " :: " ++ show closure
-             dumpEnv bs
+             logString depth s.topic n $ msg ++ ": " ++ show x ++ " :: " ++ show closure
+             dumpEnv s bs
 
 
 export

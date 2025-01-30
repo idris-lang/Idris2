@@ -30,7 +30,7 @@ Show (Usage vars) where
       showAll : Usage vs -> String
       showAll [<] = ""
       showAll [<el] = show el
-      showAll (xs :< x) = show x ++ ", " ++ show xs
+      showAll (xs :< x) = showAll xs ++ ", " ++ show x
 
 doneScope : Usage (vars :< n) -> Usage vars
 doneScope [<] = [<]

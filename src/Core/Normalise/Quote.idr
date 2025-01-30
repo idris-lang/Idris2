@@ -63,9 +63,7 @@ genName n
 
 logEnv : {vars : _} ->
          {auto c : Ref Ctxt Defs} ->
-         (s : String) ->
-         {auto 0 _ : KnownTopic s} ->
-         Nat -> String -> Env Term vars -> Core ()
+         LogTopic -> Nat -> String -> Env Term vars -> Core ()
 
 mutual
   quoteArg : {auto c : Ref Ctxt Defs} ->
@@ -274,33 +272,31 @@ Quote Closure where
 
 logTermNF' : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
-             (s : String) ->
-             {auto 0 _ : KnownTopic s} ->
-             Nat -> Lazy String -> Env Term vars -> Term vars -> Core ()
-logTermNF' str n msg env tm
+             LogTopic -> Nat -> Lazy String -> Env Term vars -> Term vars -> Core ()
+logTermNF' s n msg env tm
     = do tm' <- toFullNames tm
          depth <- getDepth
-         logString depth str n (msg ++ ": " ++ show tm')
+         logString depth s.topic n (msg ++ ": " ++ show tm')
 
-logEnv str n msg env
-    = when !(logging str n) $
+logEnv s n msg env
+    = when !(logging s n) $
         do depth <- getDepth
-           logString depth str n msg
-           dumpEnv env
+           logString depth s.topic n msg
+           dumpEnv s env
 
   where
 
-    dumpEnv : {vs : SnocList Name} -> Env Term vs -> Core ()
-    dumpEnv [<] = pure ()
-    dumpEnv {vs = _ :< x} (bs :< Let _ c val ty)
-        = do logTermNF' str n (msg ++ ": let " ++ show x) bs val
-             logTermNF' str n (msg ++ ":" ++ show c ++ " " ++ show x) bs ty
-             dumpEnv bs
-    dumpEnv {vs = _ :< x} (bs :< b)
-        = do logTermNF' str n (msg ++ ":" ++ show (multiplicity b) ++ " " ++
+    dumpEnv : {vs : SnocList Name} -> LogTopic -> Env Term vs -> Core ()
+    dumpEnv _ [<]= pure ()
+    dumpEnv {vs = _ :< x} s (bs :< Let _ c val ty)
+        = do logTermNF' s n (msg ++ ": let " ++ show x) bs val
+             logTermNF' s n (msg ++ ":" ++ show c ++ " " ++ show x) bs ty
+             dumpEnv s bs
+    dumpEnv {vs = _ :< x} s (bs :< b)
+        = do logTermNF' s n (msg ++ ":" ++ show (multiplicity b) ++ " " ++
                            show (piInfo b) ++ " " ++
                            show x) bs (binderType b)
-             dumpEnv bs
+             dumpEnv s bs
 
 quoteWithPiGen : {auto _ : Ref Ctxt Defs} ->
                  {bound, vars : _} ->

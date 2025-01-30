@@ -1196,7 +1196,7 @@ mutual
                log "compile.casetree" 5 $ "Var update " ++
                     show a ++ ", " ++ show n ++ ", vars: " ++ show (toList vars) ++ " ==> " ++ show !(toFullNames rhs)
                let rhs' = substName zero n (Local pfc (Just False) _ prf) rhs
-               logTerm "compile.casetree" 5 "rhs'" rhs'
+               logTerm "compile.casetree" 5 "updateVar-2 rhs'" rhs'
                pure $ MkPatClause (n :: pvars)
                         !(substInPats fc a (Local pfc (Just False) _ prf) pats)
                         pid rhs'
@@ -1207,7 +1207,7 @@ mutual
                     show a ++ ", " ++ show n ++ ", vars: " ++ show (toList vars) ++ " ==> " ++ show !(toFullNames rhs)
                pats' <- substInPats fc a (mkTerm _ pat) pats
                let rhs' = substName zero n (Local pfc (Just True) _ prf) rhs
-               logTerm "compile.casetree" 5 "rhs'" rhs'
+               logTerm "compile.casetree" 5 "updateVar-3 rhs'" rhs'
                updateVar (MkPatClause pvars (MkInfo pat prf fty :: pats') pid rhs')
       -- match anything, name won't appear in rhs but need to update
       -- LHS pattern types based on what we've learned
@@ -1305,7 +1305,7 @@ mkPatClause fc fn args ty pid (ps, rhs)
                   -- read what we know off 'nty', and reverse it
                   argTys <- getArgTys [<] (rev args) (Just nty)
                   log "compile.casetree" 20 $ "mkPatClause args: " ++ show (toList args) ++ ", argTys: " ++ show argTys
-                  ns <- logDepth $ mkNames args ps eq (reverse argTys)
+                  ns <- logQuite $ mkNames args ps eq (reverse argTys)
                   log "compile.casetree" 20 $
                     "Make pat clause for names " ++ show ns
                      ++ " in LHS " ++ show (toList ps)
@@ -1351,7 +1351,7 @@ patCompile fc fn phase ty (p :: ps) def
                 ++ show (indent 2 $ vcat $ pretty <$> pats)
          log "compile.casetree" 25 $ "Def " ++ show def
          -- higher verbosity: dump the raw data structure
-         log "compile.casetree" 10 $ show pats
+         log "compile.casetree" 10 $ "pats " ++ show pats
          i <- newRef PName (the Int 0)
          cases <- match fc fn phase pats (embed @{MaybeFreelyEmbeddable} def)
          pure (_ ** cases)
