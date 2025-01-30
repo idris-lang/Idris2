@@ -576,7 +576,7 @@ covering
             showAll : {dropped, vars : _} -> SubstCEnv dropped vars -> String
             showAll Lin = ""
             showAll (Lin :< x) = show x
-            showAll (xx :< x) = show x ++ ", " ++ showAll xx
+            showAll (xx :< x) = showAll xx ++ ", " ++ show x
 
 mutual
   substEnv : Substitutable CExp CExp
