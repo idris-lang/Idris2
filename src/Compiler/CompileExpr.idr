@@ -323,7 +323,7 @@ mutual
                                 -- the RHS
                         then do log "compiler.newtype.world" 50 "Inlining case on \{show n} (no world)"
 
-                                sc' : CExp (vars <>< args) <- toCExpTree n sc
+                                sc' <- toCExpTree n sc
                                 let sc'' : CExp (vars ++ cast args)
                                 := rewrite sym $ fishAsSnocAppend vars args in sc'
 
@@ -338,7 +338,7 @@ mutual
                                 let (s, env) : (_, SubstCEnv (cast args) (vars :< MN "eff" 0))
                                         = mkSubst 0 (CLocal fc First) pos args
 
-                                sc' : CExp (vars <>< args) <- toCExpTree n sc
+                                sc' <- toCExpTree n sc
 
                                 let sc'' : CExp (vars ++ cast args)
                                     := rewrite sym $ fishAsSnocAppend vars args in sc'
