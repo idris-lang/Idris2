@@ -1193,7 +1193,8 @@ mutual
           y <- toFullNames y
           pure $ "Comparing type constructors " ++ show x ++ " and " ++ show y
         if x == y
-           then do let xs = reverse $ map snd xs
+           then do -- [Note] Restore logging sequence
+                   let xs = reverse $ map snd xs
                    let ys = reverse $ map snd ys
 
                    logC "unify" 20 $
