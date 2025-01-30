@@ -425,7 +425,7 @@ Show CFType where
 export
 covering
 Show CDef where
-  show (MkFun args exp) = show (toList args) ++ ": " ++ show exp
+  show (MkFun args exp) = show (asList args) ++ ": " ++ show exp
   show (MkCon tag arity pos)
       = "Constructor tag " ++ show tag ++ " arity " ++ show arity ++
         maybe "" (\n => " (newtype by " ++ show n ++ ")") pos
