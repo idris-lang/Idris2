@@ -5,6 +5,7 @@ import Data.Morphisms
 
 public export
 interface Category (0 cat : obj -> obj -> Type) | cat where
+  constructor MkCategory
   id  : cat a a
   (.) : cat b c -> cat a b -> cat a c
 
