@@ -490,6 +490,10 @@ preOptions (Logging n :: opts)
 preOptions (ConsoleWidth n :: opts)
     = do setConsoleWidth n
          preOptions opts
+preOptions (ShowImplicits :: opts)
+    = do pp <- getPPrint
+         setPPrint ({ showImplicits := True } pp)
+         preOptions opts
 preOptions (ShowMachineNames :: opts)
     = do pp <- getPPrint
          setPPrint ({ showMachineNames := True } pp)

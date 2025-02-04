@@ -1,0 +1,2 @@
+Main> Prelude.map : {0 b : Type} -> {0 a : Type} -> {0 f : Type -> Type} -> Functor f => (a -> b) -> f a -> f b
+Main> Bye for now!
