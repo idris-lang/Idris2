@@ -103,6 +103,8 @@ data CLOpt
   NoBanner |
    ||| Run Idris 2 in quiet mode
   Quiet |
+   ||| Show implicits when pretty printing
+  ShowImplicits |
    ||| Show machine names when pretty printing
   ShowMachineNames |
    ||| Show namespaces when pretty printing
@@ -336,6 +338,8 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Quiet mode; display fewer messages"),
            MkOpt ["--console-width"] [AutoNat "console width"] (\l => [ConsoleWidth l])
               (Just "Width for console output (0 for unbounded) (auto by default)"),
+          MkOpt ["--show-implicits"] [] [ShowImplicits]
+              (Just "Show implicits when pretty printing"),
            MkOpt ["--show-machine-names"] [] [ShowMachineNames]
               (Just "Show machine names when pretty printing"),
            MkOpt ["--show-namespaces"] [] [ShowNamespaces]
