@@ -277,6 +277,10 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Refactored `Uninhabited` implementation for `Data.List.Elem`, `Data.List1.Elem`, `Data.SnocList.Elem` and `Data.Vect.Elem`
   so it can be used for homogeneous (`===`) and heterogeneous (`~=~`) equality.
 
+* Added `System.Concurrency.channelGetNonBlocking` for the chez backend.
+
+* Added `System.Concurrency.channelGetWithTimeout` for the chez backend.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
@@ -317,7 +321,6 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 #### Network
 
 * Add a missing function parameter (the flag) in the C implementation of `idrnet_recv_bytes`
-
 
 #### Test
 
