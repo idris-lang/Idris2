@@ -94,13 +94,9 @@ schHeader chez libs whole
     (import (chezscheme))
     (case (machine-type)
       [(i3fb ti3fb a6fb ta6fb) #f]
-      [(i3le ti3le a6le ta6le tarm64le) 
-       (let ((os-str
-               (let-values (((in out err pid) (open-process-ports "uname -o" 'block (make-transcoder (utf-8-codec)))))
-                 (get-string-all out))))
-         (if (string=? os-str "GNU/Linux\n")
-           (load-shared-object "libc.so.6")
-           (load-shared-object "libc.so")))]
+      [(i3le ti3le a6le ta6le tarm64le)
+         (with-exception-handler (lambda(x) (load-shared-object "libc.so"))
+            (load-shared-object "libc.so.6"))]
       [(i3osx ti3osx a6osx ta6osx tarm64osx tppc32osx tppc64osx) (load-shared-object "libc.dylib")]
       [(i3nt ti3nt a6nt ta6nt) (load-shared-object "msvcrt.dll")]
       [else (load-shared-object "libc.so")])
