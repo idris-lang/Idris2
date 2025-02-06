@@ -522,6 +522,7 @@ namespace Machine
   public export
   vlam0 : (eq : ctx = []) -> (tr : Trace (Lam sc) env ctx) -> tr ~=~ Machine.Done {sc, env}
   vlam0 eq Done = Refl
+  vlam0 eq (Beta {arg = Element _ _, ctx = Element _ _} _) impossible
 
   public export
   vlamS : {0 env : ValidEnv g} -> {0 arg : ValidClosed a} ->
@@ -529,6 +530,7 @@ namespace Machine
           (eq : ctx = ValidEvalContext.(::) arg ctx') ->
           (tr : Trace (Lam sc) env ctx) ->
           (tr' : Trace sc (arg :: env) ctx' ** tr ~=~ Machine.Beta {sc, arg, env} tr')
+  vlamS {arg = (Element _ _)} {ctx' = (Element _ _)} eq Done impossible
   vlamS eq (Beta tr) with 0 (fst (biinjective @{CONS} eq))
     _ | Refl with 0 (snd (biinjective @{CONS} eq))
       _ | Refl = (tr ** Refl)

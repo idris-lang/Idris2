@@ -1118,7 +1118,9 @@ processDef opts nest env fc n_in cs_in
                               pure (Just rtm))
                (\err => do defs <- get Ctxt
                            if not !(recoverableErr defs err)
-                              then pure Nothing
+                              then do
+                                log "declare.def.impossible" 5 "impossible because \{show err}"
+                                pure Nothing
                               else pure (Just tm))
       where
         closeEnv : Defs -> NF [] -> Core ClosedTerm
