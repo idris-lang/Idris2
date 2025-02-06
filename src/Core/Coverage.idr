@@ -24,20 +24,21 @@ conflictMatch : {vars : _} -> List (Name, Term vars) -> Bool
 conflictMatch [] = False
 conflictMatch ((x, tm) :: ms) = conflictArgs x tm ms || conflictMatch ms
   where
-    clash : Term vars -> Term vars -> Maybe Bool
+    data ClashResult = Distinct | Same | Incomparable
+
+    clash : Term vars -> Term vars -> ClashResult
     clash (Ref _ (DataCon t _) _) (Ref _ (DataCon t' _) _)
-        = if t /= t' then Just True else Nothing
+        = if t /= t' then Distinct else Same
     clash (Ref _ (TyCon t _) _) (Ref _ (TyCon t' _) _)
-        = if t /= t' then Just True else Nothing
-    clash (PrimVal _ c) (PrimVal _ c')
-      = Just $ c /= c'
-    clash (Ref _ t _) (PrimVal _ _) = Just $ isJust (isCon t)
-    clash (PrimVal _ _) (Ref _ t _) = Just $ isJust (isCon t)
-    clash (Ref _ t _) (TType _ _)   = Just $ isJust (isCon t)
-    clash (TType _ _) (Ref _ t _)   = Just $ isJust (isCon t)
-    clash (TType _ _) (PrimVal _ _) = Just True
-    clash (PrimVal _ _) (TType _ _) = Just True
-    clash _ _ = Just False
+        = if t /= t' then Distinct else Same
+    clash (PrimVal _ c) (PrimVal _ c') = if  c /= c' then Distinct else Same
+    clash (Ref _ t _) (PrimVal _ _) = if isJust (isCon t) then Distinct else Incomparable
+    clash (PrimVal _ _) (Ref _ t _) = if isJust (isCon t) then Distinct else Incomparable
+    clash (Ref _ t _) (TType _ _)   = if isJust (isCon t) then Distinct else Incomparable
+    clash (TType _ _) (Ref _ t _)   = if isJust (isCon t) then Distinct else Incomparable
+    clash (TType _ _) (PrimVal _ _) = Distinct
+    clash (PrimVal _ _) (TType _ _) = Distinct
+    clash _ _ = Incomparable
 
     findN : Nat -> Term vars -> Bool
     findN i (Local _ _ i' _) = i == i'
@@ -60,7 +61,10 @@ conflictMatch ((x, tm) :: ms) = conflictArgs x tm ms || conflictMatch ms
     conflictTm tm tm'
         = let (f, args) = getFnArgs tm
               (f', args') = getFnArgs tm' in
-          fromMaybe (any (uncurry conflictTm) (zip args args')) (clash f f')
+          case clash f f' of
+            Distinct => True
+            Incomparable => False
+            Same => (any (uncurry conflictTm) (zip args args'))
 
     conflictArgs : Name -> Term vars -> List (Name, Term vars) -> Bool
     conflictArgs n tm [] = False
