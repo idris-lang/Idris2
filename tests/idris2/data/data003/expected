@@ -31,3 +31,5 @@ Missing cases:
     fun (MkFoo C _)
 
 1/1: Building Positivity (Positivity.idr)
+1/2: Building OopsDef (OopsDef.idr)
+2/2: Building OopsRef (OopsRef.idr)

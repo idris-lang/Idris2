@@ -4,3 +4,4 @@ check Test.idr
 check Test2.idr
 check Issue3457.idr
 check Positivity.idr
+check OopsRef.idr

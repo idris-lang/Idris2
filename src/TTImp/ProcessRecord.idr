@@ -147,9 +147,9 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
              let dataTy = IBindHere fc (PI erased) !(bindTypeNames fc [] vars (mkDataTy fc params0))
              defs <- get Ctxt
              -- Create a forward declaration if none exists
-             let dt = MkImpLater fc tn dataTy
-             log "declare.record" 10 $ "Pre-declare record data type: \{show dt}"
-             when (isNothing !(lookupTyExact tn (gamma defs))) $
+             when (isNothing !(lookupTyExact tn (gamma defs))) $ do
+               let dt = MkImpLater fc tn dataTy
+               log "declare.record" 10 $ "Pre-declare record data type: \{show dt}"
                processDecl [] nest env (IData fc def_vis mbtot dt)
              defs <- get Ctxt
              Just ty <- lookupTyExact tn (gamma defs)
