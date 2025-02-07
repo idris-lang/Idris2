@@ -503,19 +503,14 @@ getArgTys : {vars : _} ->
 getArgTys {vars} env (ns :< n) (Just t@(NBind pfc _ (Pi _ c _ fargc) fsc))
     = do defs <- get Ctxt
          empty <- clearDefs defs
-         -- log "compile.casetree" 25 $ "getArgTys-1 t: " ++ show t ++ ", n: " ++ show n ++ ", vars: " ++ show (reverse $ toList vars)
          argty <- case !(evalClosure defs fargc) of
            NErased _ _ => pure Unknown
-           farg => do -- log "compile.casetree" 25 $ "getArgTys-1 farg: " ++ show farg
-                      -- logEnvRev "compile.casetree" 25 "getArgTys-1 env " env
-                      Known c <$> quote empty env farg
+           farg => do Known c <$> quote empty env farg
          scty <- fsc defs (toClosure defaultOpts env (Ref pfc Bound n))
-         -- log "compile.casetree" 25 $ "getArgTys-1 scty: " ++ show scty
-         rest <- logDepth $ getArgTys env ns (Just scty)
+         rest <- getArgTys env ns (Just scty)
          pure (argty :: rest)
 getArgTys env (ns :< n) (Just t)
     = do empty <- clearDefs =<< get Ctxt
-         -- log "compile.casetree" 25 $ "getArgTys-2 t: " ++ show t ++ ", n: " ++ show n
          pure [Stuck !(quote empty env t)]
 getArgTys _ _ _ = pure []
 
@@ -527,20 +522,16 @@ nextNames' : {vars : _} ->
              (ns : SnocList Name) ->
              LengthMatch pats ns ->
              List (ArgType vars) ->
-             Core (args ** (SizeOf args, NamedPats (vars ++ args) (rev args)))
-nextNames' fc [<] [<] LinMatch argtys = pure ([<] ** (zero, []))
+             (args ** (SizeOf args, NamedPats (vars ++ args) (rev args)))
+nextNames' fc [<] [<] LinMatch argtys = ([<] ** (zero, []))
 nextNames' fc (pats :< p) (ns :< n) (SnocMatch prf) (argTy :: as)
-    = do (args ** (l, ps)) <- nextNames' fc pats ns prf as
-         let argTy' : ArgType ((vars ++ args) :< n)
-             = weakenNs (mkSizeOf (args :< n)) argTy
-         pure (args :< n ** (suc l,
-                 snoc (weaken ps)
-                   (MkInfo p First argTy')))
+    = let (args ** (l, ps)) = nextNames' fc pats ns prf as
+          argTy' : ArgType ((vars ++ args) :< n)
+             := weakenNs (mkSizeOf (args :< n)) argTy
+      in (args :< n ** (suc l, snoc (weaken ps) (MkInfo p First argTy')))
 nextNames' fc (pats :< p) (ns :< n) (SnocMatch prf) argtys
-    = do (args ** (l, ps)) <- nextNames' fc pats ns prf argtys
-         pure (args :< n ** (suc l,
-                 snoc (weaken ps)
-                   (MkInfo p First Unknown)))
+    = let (args ** (l, ps)) = nextNames' fc pats ns prf argtys
+      in (args :< n ** (suc l, snoc (weaken ps) (MkInfo p First Unknown)))
 
 snocLMatch : LengthMatch xs ys -> LengthMatch ([<x] ++ xs) ([<y] ++ ys)
 snocLMatch LinMatch = SnocMatch LinMatch
@@ -575,17 +566,8 @@ nextNames fc root [<] _ = pure ([<] ** (zero, []))
 nextNames {vars} fc root pats m_nty
      = do (args ** lprf) <- mkNames pats
           let env = mkEnv fc vars
-          -- logEnvRev "compile.casetree" 25 "nextNames env" env
-          -- The arguments are given in reverse order, so when we process them,
-          -- the argument types are in the correct order
-          log "compile.casetree" 20 $ "nextNames getArgTys m_nty: " ++ show m_nty ++ ", args: " ++ show args
-          argTys <- getArgTys env args m_nty
-          -- for_ (toList m_nty) $ \ ty => do
-          --   logNF "compile.casetree" 25 "nextNames'' NF" env ty
-          result@(args_r ** (_, pats_r)) <- nextNames' fc pats (rev args) (revRMatch lprf) (reverse argTys)
-          log "compile.casetree" 25 $ "nextNames argTys: " ++ show argTys ++ ", args_r: " ++ show args_r ++ ", pats_r: " ++ show pats_r
-          log "compile.casetree" 25 $ "nextNames argTy: <nothing>"
-          pure result
+          argTys <- logQuite $ getArgTys env args m_nty
+          pure $ nextNames' fc pats (rev args) (revRMatch lprf) (reverse argTys)
   where
     mkNames : (vars : SnocList a) ->
                 Core (ns : SnocList Name ** LengthMatch vars ns)
@@ -1303,7 +1285,7 @@ mkPatClause fc fn args ty pid (ps, rhs)
                   log "compile.casetree" 20 $ "mkPatClause nty: " ++ show nty
                   -- The arguments are in reverse order, so we need to
                   -- read what we know off 'nty', and reverse it
-                  argTys <- getArgTys [<] (rev args) (Just nty)
+                  argTys <- logQuite $ getArgTys [<] (rev args) (Just nty)
                   log "compile.casetree" 20 $ "mkPatClause args: " ++ show (toList args) ++ ", argTys: " ++ show argTys
                   ns <- logQuite $ mkNames args ps eq (reverse argTys)
                   log "compile.casetree" 20 $
