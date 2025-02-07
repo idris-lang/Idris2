@@ -497,13 +497,19 @@ nextName root
 
 -- Copied from
 -- https://github.com/gallais/Idris2/blob/4efcf27bbc542bf9991ebaf75415644af7135b5d/src/Core/Case/CaseBuilder.idr
+-- But the origin is changed a bit. We are passing emptied defs to evalClosure.
+-- Prevents too deep evaluation.
+-- LOG compile.casetree:20: Make pat clause for names [{arg:0} {pat0::4} [Known Rig0 Type], {arg:1} {pat0::0}@({pat0::3}) [Known Rig0 {arg:0}], {arg:2} {pat0::3} [Known Rig0 {arg:0}], {arg:3} {pat0::2} [Known Rig0 (Builtin.{argTy:203} : {arg:0}) -> Type], {arg:4} $resolved528 0 [{pat0::4}, {pat0::3}] [Known Rig0 ($resolved511 {arg:0} {arg:0} {arg:1} {arg:2})], {arg:5} {pat0::1} [Known Rig1 ({arg:3} {arg:2})]] in LHS [{pat0::4}, {pat0::0}@({pat0::3}), {pat0::3}, {pat0::2}, $resolved528 0 [{pat0::4}, {pat0::3}], {pat0::1}]
+-- vs
+-- LOG compile.casetree:20: Make pat clause for names [{arg:0} {pat0::4} [Known Rig0 Type], {arg:1} {pat0::0}@({pat0::3}) [Known Rig0 {arg:0}], {arg:2} {pat0::3} [Known Rig0 {arg:0}], {arg:3} {pat0::2} [Known Rig0 (Builtin.{argTy:203} : {arg:0}) -> Type], {arg:4} $resolved528 0 [{pat0::4}, {pat0::3}] [Known Rig0 ($resolved537 {arg:0} {arg:1} {arg:2})], {arg:5} {pat0::1} [Known Rig1 ({arg:3} {arg:2})]] in LHS [{pat0::4}, {pat0::0}@({pat0::3}), {pat0::3}, {pat0::2}, $resolved528 0 [{pat0::4}, {pat0::3}], {pat0::1}]
+-- $resolved511 vs $resolved537 where $resolved537 uses at its internals $resolved511
 getArgTys : {vars : _} ->
             {auto c : Ref Ctxt Defs} ->
             Env Term vars -> SnocList Name -> Maybe (NF vars) -> Core (List (ArgType vars))
 getArgTys {vars} env (ns :< n) (Just t@(NBind pfc _ (Pi _ c _ fargc) fsc))
     = do defs <- get Ctxt
          empty <- clearDefs defs
-         argty <- case !(evalClosure defs fargc) of
+         argty <- case !(evalClosure empty fargc) of
            NErased _ _ => pure Unknown
            farg => do Known c <$> quote empty env farg
          scty <- fsc defs (toClosure defaultOpts env (Ref pfc Bound n))
