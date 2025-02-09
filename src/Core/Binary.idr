@@ -31,7 +31,6 @@ export
 ttcVersion : Int
 ttcVersion = 2025_02_09_00
 
-
 export
 checkTTCVersion : String -> Int -> Int -> Core ()
 checkTTCVersion file ver exp
