@@ -394,7 +394,7 @@ mutual
                 | Nothing => pure Nothing
                 let (TCon _ _ _ _ _ _ datacons _) = gdef.definition
                 | _ => pure Nothing
-                pure (Just (length datacons))
+                pure (length <$> datacons)
         else pure Nothing
       countConstructors _ = pure Nothing
 

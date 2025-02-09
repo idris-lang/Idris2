@@ -585,9 +585,9 @@ HasNames Def where
       fullNamesPat (_ ** (env, lhs, rhs))
           = pure $ (_ ** (!(full gam env),
                           !(full gam lhs), !(full gam rhs)))
-  full gam (TCon t a ps ds u ms cs det)
+  full gam (TCon t a ps ds u ms mcs det)
       = pure $ TCon t a ps ds u !(traverse (full gam) ms)
-                                !(traverse (full gam) cs) det
+                                !(traverseOpt (traverse (full gam)) mcs) det
   full gam (BySearch c d def)
       = pure $ BySearch c d !(full gam def)
   full gam (Guess tm b cs)
@@ -603,9 +603,9 @@ HasNames Def where
       resolvedNamesPat (_ ** (env, lhs, rhs))
           = pure $ (_ ** (!(resolved gam env),
                           !(resolved gam lhs), !(resolved gam rhs)))
-  resolved gam (TCon t a ps ds u ms cs det)
+  resolved gam (TCon t a ps ds u ms mcs det)
       = pure $ TCon t a ps ds u !(traverse (resolved gam) ms)
-                                !(traverse (resolved gam) cs) det
+                                !(traverseOpt (traverse (full gam)) mcs) det
   resolved gam (BySearch c d def)
       = pure $ BySearch c d !(resolved gam def)
   resolved gam (Guess tm b cs)

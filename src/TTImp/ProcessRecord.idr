@@ -26,7 +26,7 @@ import Data.String
 %default covering
 
 -- Used to remove the holes so that we don't end up with "hole is already defined"
--- errors because they've been duplicarted when forming the various types of the
+-- errors because they've been duplicated when forming the various types of the
 -- record constructor, getters, etc.
 killHole : RawImp -> RawImp
 killHole (IHole fc str) = Implicit fc True
@@ -145,10 +145,12 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
     preElabAsData tn
         = do let fc = virtualiseFC fc
              let dataTy = IBindHere fc (PI erased) !(bindTypeNames fc [] vars (mkDataTy fc params0))
-             -- we don't use MkImpLater because users may have already declared the record ahead of time
-             let dt = MkImpData fc tn (Just dataTy) opts []
-             log "declare.record" 10 $ "Pre-declare record data type: \{show dt}"
-             processDecl [] nest env (IData fc def_vis mbtot dt)
+             defs <- get Ctxt
+             -- Create a forward declaration if none exists
+             when (isNothing !(lookupTyExact tn (gamma defs))) $ do
+               let dt = MkImpLater fc tn dataTy
+               log "declare.record" 10 $ "Pre-declare record data type: \{show dt}"
+               processDecl [] nest env (IData fc def_vis mbtot dt)
              defs <- get Ctxt
              Just ty <- lookupTyExact tn (gamma defs)
                | Nothing => throw (InternalError "Missing data type \{show tn}, despite having just declared it!")

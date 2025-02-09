@@ -154,7 +154,7 @@ isNatural fc n = do
         | Nothing => undefinedName EmptyFC n
     let TCon _ _ _ _ _ _ cons _ = gdef.definition
         | _ => pure False
-    consDefs <- getConsGDef fc cons
+    consDefs <- getConsGDef fc (fromMaybe [] cons)
     pure $ all hasNatFlag consDefs
   where
     isNatFlag : DefFlag -> Bool
@@ -225,7 +225,7 @@ processBuiltinNatural fc name = do
     let TCon _ _ _ _ _ _ dcons _ = gdef.definition
         | def => throw $ GenericMsg fc
             $ "Expected a type constructor, found " ++ showDefType def ++ "."
-    cons <- getConsGDef fc dcons
+    cons <- getConsGDef fc (fromMaybe [] dcons)
     checkNatCons ds.gamma cons n fc
 
 ||| Check a `%builtin NaturalToInteger` pragma is correct.

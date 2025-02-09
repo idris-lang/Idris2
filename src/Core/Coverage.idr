@@ -141,7 +141,8 @@ isEmpty defs env (NTCon fc n t a args)
   = do Just nty <- lookupDefExact n (gamma defs)
          | _ => pure False
        case nty of
-            TCon _ _ _ _ flags _ cons _
+            TCon _ _ _ _ flags _ Nothing _ => pure False
+            TCon _ _ _ _ flags _ (Just cons) _
                  => if not (external flags)
                        then allM (conflict defs env (NTCon fc n t a args)) cons
                        else pure False

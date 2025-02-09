@@ -50,7 +50,7 @@ parameters
     let TCon _ _ _ _ _ _ cs _ = definition gdef
       | _ => pure []
     let gty = gnf env ty
-    ics <- for cs $ \ cons => do
+    ics <- for (fromMaybe [] cs) $ \ cons => do
       Just gdef <- lookupCtxtExact cons (gamma defs)
         | _ => pure Nothing
       let nargs = lengthExplicitPi $ fst $ snd $ underPis (-1) [] (type gdef)

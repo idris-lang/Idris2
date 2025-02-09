@@ -1,0 +1,35 @@
+1/1: Building Test (Test.idr)
+Error: foo x is not a valid impossible case.
+
+Test:5:1--5:17
+ 1 | data Bar : Type
+ 2 | 
+ 3 | total
+ 4 | foo : Bar -> a
+ 5 | foo x impossible
+     ^^^^^^^^^^^^^^^^
+
+1/1: Building Test2 (Test2.idr)
+Error: Main.Bar is already defined.
+
+Test2:3:1--4:16
+ 3 | data Bar : Type where
+ 4 |     MkBar : Bar
+
+1/1: Building Issue3457 (Issue3457.idr)
+Error: fun is not covering.
+
+Issue3457:6:1--6:20
+ 2 | data Bar : Type
+ 3 | data Foo : Type where
+ 4 |   MkFoo : Three -> Bar -> Foo
+ 5 | 
+ 6 | fun : Foo -> String
+     ^^^^^^^^^^^^^^^^^^^
+
+Missing cases:
+    fun (MkFoo C _)
+
+1/1: Building Positivity (Positivity.idr)
+1/2: Building OopsDef (OopsDef.idr)
+2/2: Building OopsRef (OopsRef.idr)

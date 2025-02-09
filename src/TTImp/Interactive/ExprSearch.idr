@@ -688,7 +688,7 @@ tryIntermediateRec fc rig opts hints env ty topty (Just rd)
         = isSingleCon defs !(sc defs (toClosure defaultOpts []
                                               (Erased fc Placeholder)))
     isSingleCon defs (NTCon _ n _ _ _)
-        = do Just (TCon _ _ _ _ _ _ [con] _) <- lookupDefExact n (gamma defs)
+        = do Just (TCon _ _ _ _ _ _ (Just [con]) _) <- lookupDefExact n (gamma defs)
                   | _ => pure False
              pure True
     isSingleCon _ _ = pure False
