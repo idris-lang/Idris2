@@ -1,5 +1,6 @@
 module Compiler.CompileExpr
 
+import Compiler.Opts.Constructor
 import Core.Case.CaseTree
 import public Core.CompileExpr
 import Core.Context
@@ -142,150 +143,6 @@ mkDropSubst i es rest (x :: xs)
              then (vs ** Drop sub)
              else (x :: vs ** Keep sub)
 
--- Rewrite applications of Nat-like constructors and functions to more optimal
--- versions using Integer
-
--- None of these should be hard coded, but we'll do it this way until we
--- have a more general approach to optimising data types!
--- NOTE: Make sure that names mentioned here are listed in 'natHackNames' in
--- Common.idr, so that they get compiled, as they won't be spotted by the
--- usual calls to 'getRefs'.
-data Magic : Type where
-  MagicCCon : Name -> (arity : Nat) -> -- checks
-              (FC -> forall vars. Vect arity (CExp vars) -> CExp vars) -> -- translation
-              Magic
-  MagicCRef : Name -> (arity : Nat) -> -- checks
-              (FC -> FC -> forall vars. Vect arity (CExp vars) -> CExp vars) -> --translation
-              Magic
-
-magic : List Magic -> CExp vars -> CExp vars
-magic ms (CLam fc x exp) = CLam fc x (magic ms exp)
-magic ms e = go ms e where
-
-  fire : Magic -> CExp vars -> Maybe (CExp vars)
-  fire (MagicCCon n arity f) (CCon fc n' _ _ es)
-    = do guard (n == n')
-         map (f fc) (toVect arity es)
-  fire (MagicCRef n arity f) (CApp fc (CRef fc' n') es)
-    = do guard (n == n')
-         map (f fc fc') (toVect arity es)
-  fire _ _ = Nothing
-
-  go : List Magic -> CExp vars -> CExp vars
-  go [] e = e
-  go (m :: ms) e = case fire m e of
-    Nothing => go ms e
-    Just e' => e'
-
-%inline
-magic__integerToNat : FC -> FC -> forall vars. Vect 1 (CExp vars) -> CExp vars
-magic__integerToNat fc fc' [k]
-  = CApp fc (CRef fc' (NS typesNS (UN $ Basic "prim__integerToNat"))) [k]
-
-magic__natMinus : FC -> FC -> forall vars. Vect 2 (CExp vars) -> CExp vars
-magic__natMinus fc fc' [m, n]
-  = magic__integerToNat fc fc'
-    [COp fc (Sub IntegerType) [m, n]]
-
--- We don't reuse natMinus here because we assume that unsuc will only be called
--- on S-headed numbers so we do not need the truncating integerToNat call!
-magic__natUnsuc : FC -> FC -> forall vars. Vect 1 (CExp vars) -> CExp vars
-magic__natUnsuc fc fc' [m]
-  = COp fc (Sub IntegerType) [m, CPrimVal fc (BI 1)]
-
--- TODO: next release remove this and use %builtin pragma
-natHack : List Magic
-natHack =
-    [ MagicCRef (NS typesNS (UN $ Basic "natToInteger")) 1 (\ _, _, [k] => k)
-    , MagicCRef (NS typesNS (UN $ Basic "integerToNat")) 1 magic__integerToNat
-    , MagicCRef (NS typesNS (UN $ Basic "plus")) 2
-         (\ fc, fc', [m,n] => COp fc (Add IntegerType) [m, n])
-    , MagicCRef (NS typesNS (UN $ Basic "mult")) 2
-         (\ fc, fc', [m,n] => COp fc (Mul IntegerType) [m, n])
-    , MagicCRef (NS typesNS (UN $ Basic "minus")) 2 magic__natMinus
-    , MagicCRef (NS typesNS (UN $ Basic "equalNat")) 2
-         (\ fc, fc', [m,n] => COp fc (EQ IntegerType) [m, n])
-    , MagicCRef (NS typesNS (UN $ Basic "compareNat")) 2
-         (\ fc, fc', [m,n] => CApp fc (CRef fc' (NS eqOrdNS (UN $ Basic "compareInteger"))) [m, n])
-    ]
-
--- get all builtin transformations
-builtinMagic : forall vars. CExp vars -> CExp vars
-builtinMagic = magic natHack
-
-data NextMN : Type where
-newMN : {auto s : Ref NextMN Int} -> String -> Core Name
-newMN base = do
-    x <- get NextMN
-    put NextMN $ x + 1
-    pure $ MN base x
-
-natBranch :  CConAlt vars -> Bool
-natBranch (MkConAlt n ZERO _ _ _) = True
-natBranch (MkConAlt n SUCC _ _ _) = True
-natBranch _ = False
-
-trySBranch : CExp vars -> CConAlt vars -> Maybe (CExp vars)
-trySBranch n (MkConAlt nm SUCC _ [arg] sc)
-    = Just (CLet (getFC n) arg YesInline (magic__natUnsuc (getFC n) (getFC n) [n]) sc)
-trySBranch _ _ = Nothing
-
-tryZBranch : CConAlt vars -> Maybe (CExp vars)
-tryZBranch (MkConAlt n ZERO _ [] sc) = Just sc
-tryZBranch _ = Nothing
-
-getSBranch : CExp vars -> List (CConAlt vars) -> Maybe (CExp vars)
-getSBranch n [] = Nothing
-getSBranch n (x :: xs) = trySBranch n x <|> getSBranch n xs
-
-getZBranch : List (CConAlt vars) -> Maybe (CExp vars)
-getZBranch [] = Nothing
-getZBranch (x :: xs) = tryZBranch x <|> getZBranch xs
-
--- Rewrite case trees on Nat to be case trees on Integer
-builtinNatTree : {auto s : Ref NextMN Int} -> CExp vars -> Core (CExp vars)
-builtinNatTree (CConCase fc sc@(CLocal _ _) alts def)
-   = pure $ if any natBranch alts
-               then let defb = fromMaybe (CCrash fc "Nat case not covered") def
-                        salt = maybe defb id (getSBranch sc alts)
-                        zalt = maybe defb id (getZBranch alts) in
-                        CConstCase fc sc [MkConstAlt (BI 0) zalt] (Just salt)
-               else CConCase fc sc alts def
-builtinNatTree (CConCase fc sc alts def)
-    = do x <- newMN "succ"
-         pure $ CLet fc x YesInline sc
-                !(builtinNatTree $ CConCase fc (CLocal fc First) (map weaken alts) (map weaken def))
-builtinNatTree t = pure t
-
-enumTag : Nat -> Int -> Constant
-enumTag k i =
-  if      k <= 0xff   then B8 (cast i)
-  else if k <= 0xffff then B16 (cast i)
-  else                     B32 (cast i)
-
-enumTree : CExp vars -> CExp vars
-enumTree (CConCase fc sc alts def)
-   = let x = traverse toEnum alts
-         Just alts' = x
-              | Nothing => CConCase fc sc alts def in
-         CConstCase fc sc alts' def
-  where
-    toEnum : CConAlt vars -> Maybe (CConstAlt vars)
-    toEnum (MkConAlt nm (ENUM n) (Just tag) [] sc)
-        = pure $ MkConstAlt (enumTag n tag) sc
-    toEnum _ = Nothing
-enumTree t = t
-
--- remove pattern matches on unit
-unitTree : {auto u : Ref NextMN Int} -> CExp vars -> Core (CExp vars)
-unitTree exp@(CConCase fc sc alts def) = fromMaybe (pure exp)
-    $ do let [MkConAlt _ UNIT _ [] e] = alts
-             | _ => Nothing
-         Just $ case sc of -- TODO: Check scrutinee has no effect, and skip let binding
-                     CLocal _ _ => pure e
-                     _ => pure $ CLet fc !(newMN "_unit") NotInline sc (weaken e)
-unitTree t = pure t
-
 -- See if the constructor is a special constructor type, e.g a nil or cons
 -- shaped thing.
 dconFlag : {auto c : Ref Ctxt Defs} ->
@@ -320,12 +177,7 @@ toCExpTm n (Ref fc (DataCon tag arity) fn)
     = do -- get full name for readability, and %builtin Natural
          cn <- getFullName fn
          fl <- dconFlag cn
-         case fl of
-              (ENUM n) => pure $ CPrimVal fc (enumTag n tag)
-              ZERO => pure $ CPrimVal fc (BI 0)
-              SUCC => do x <- newMN "succ"
-                         pure $ CLam fc x $ COp fc (Add IntegerType) [CPrimVal fc (BI 1), CLocal fc First]
-              _ => pure $ CCon fc cn fl (Just tag) []
+         pure $ CCon fc cn fl (Just tag) []
 toCExpTm n (Ref fc (TyCon tag arity) fn)
     = pure $ CCon fc fn TYCON Nothing []
 toCExpTm n (Ref fc _ fn)
@@ -368,15 +220,13 @@ toCExp n tm
               do args' <- traverse (toCExp n) args
                  defs <- get Ctxt
                  f' <- toCExpTm n f
-                 Arity a <- numArgs defs f
-                    | NewTypeBy arity pos =>
-                          do let res = applyNewType arity pos f' args'
-                             pure $ builtinMagic res
-                    | EraseArgs arity epos =>
-                          do let res = eraseConArgs arity epos f' args'
-                             pure $ builtinMagic res
-                 let res = expandToArity a f' args'
-                 pure $ builtinMagic res
+                 case !(numArgs defs f) of
+                      NewTypeBy arity pos =>
+                        pure $ applyNewType arity pos f' args'
+                      EraseArgs arity epos =>
+                        pure $ eraseConArgs arity epos f' args'
+                      Arity a =>
+                        pure $ expandToArity a f' args'
 
 mutual
   conCases : {vars : _} ->
@@ -521,9 +371,8 @@ mutual
                cases <- conCases n alts
                def <- getDef n alts
                if isNil cases
-                  then pure (fromMaybe (CErased fc) def)
-                  else unitTree $ enumTree !(builtinNatTree $
-                            CConCase fc (CLocal fc x) cases def)
+                  then pure $ fromMaybe (CErased fc) def
+                  else pure $ CConCase fc (CLocal fc x) cases def
   toCExpTree' n (Case _ x scTy alts@(DelayCase _ _ _ :: _))
       = throw (InternalError "Unexpected DelayCase")
   toCExpTree' n (Case fc x scTy alts@(ConstCase _ _ :: _))
@@ -712,14 +561,13 @@ lamRHS ns tm
     lamBind fc [] tm = tm
     lamBind fc (n :: ns) tm = lamBind fc ns (CLam fc n tm)
 
-toCDef : {auto c : Ref Ctxt Defs} ->
+toCDef : Ref Ctxt Defs => Ref NextMN Int =>
          Name -> ClosedTerm -> List Nat -> Def ->
          Core CDef
 toCDef n ty _ None
     = pure $ MkError $ CCrash emptyFC ("Encountered undefined name " ++ show !(getFullName n))
 toCDef n ty erased (PMDef pi args _ tree _)
     = do let (args' ** p) = mkSub 0 args erased
-         s <- newRef NextMN 0
          comptree <- toCExpTree n tree
          pure $ toLam (externalDecl pi) $ if isNil erased
             then MkFun args comptree
@@ -784,7 +632,7 @@ compileExp : {auto c : Ref Ctxt Defs} ->
 compileExp tm
     = do s <- newRef NextMN 0
          exp <- toCExp (UN $ Basic "main") tm
-         pure exp
+         constructorCExp exp
 
 ||| Given a name, look up an expression, and compile it to a CExp in the environment
 export
@@ -802,8 +650,10 @@ compileDef n
            -- traversing everything from the main expression.
            -- For now, consider it an incentive not to have cycles :).
             then recordWarning (GenericWarn emptyFC ("Compiling hole " ++ show n))
-            else do ce <- toCDef n (type gdef) (eraseArgs gdef)
+            else do s <- newRef NextMN 0
+                    ce <- toCDef n (type gdef) (eraseArgs gdef)
                            !(toFullNames (definition gdef))
+                    ce <- constructorCDef ce
                     setCompiled n ce
   where
     noDefYet : Def -> List CG -> Bool

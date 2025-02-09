@@ -21,6 +21,7 @@ modules =
     Compiler.VMCode,
 
     Compiler.Opts.ConstantFold,
+    Compiler.Opts.Constructor,
     Compiler.Opts.Identity,
     Compiler.Opts.InlineHeuristics,
     Compiler.Opts.ToplevelConstants,

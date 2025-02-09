@@ -6,6 +6,7 @@ import Compiler.CompileExpr
 import Compiler.Inline
 import Compiler.LambdaLift
 import Compiler.NoMangle
+import Compiler.Opts.Constructor
 import Compiler.Opts.CSE
 import Compiler.VMCode
 
@@ -339,6 +340,9 @@ getCompileDataWith exports doLazyAnnots phase_in tm_in
          compiledtm <- fixArityExp !(compileExp tm)
 
          (cseDefs, csetm) <- logTime 2 "CSE" $ cse rcns compiledtm
+
+         -- Add intrinsic constructors (see Compiler.Opts.Constructor)
+         let cseDefs = intrinsicCons ++ cseDefs
 
          namedDefs <- logTime 2 "Forget names" $
            traverse getNamedDef cseDefs
