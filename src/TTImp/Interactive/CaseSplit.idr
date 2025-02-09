@@ -110,7 +110,7 @@ findCons n lhs
                                                ("Not a type constructor " ++
                                                   show res)))
                              pure (OK (fn, !(toFullNames tyn),
-                                           !(traverse toFullNames cons)))
+                                           !(traverse toFullNames $ fromMaybe [] cons)))
 
 findAllVars : Term vars -> List Name
 findAllVars (Bind _ x (PVar _ _ _ _) sc)

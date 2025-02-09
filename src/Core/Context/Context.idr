@@ -101,7 +101,7 @@ data Def : Type where
            (detpos : List Nat) -> -- determining arguments
            (flags : TypeFlags) -> -- should 'auto' implicits check
            (mutwith : List Name) ->
-           (datacons : List Name) ->
+           (datacons : Maybe (List Name)) ->
            (detagabbleBy : Maybe (List Nat)) ->
                     -- argument positions which can be used for
                     -- detagging, if it's possible (to check if it's

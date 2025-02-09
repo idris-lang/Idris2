@@ -166,6 +166,7 @@ calcPositive loc n
          logC "totality.positivity" 6 $ do pure $ "Calculating positivity: " ++ show !(toFullNames n)
          case !(lookupDefTyExact n (gamma defs)) of
               Just (TCon _ _ _ _ _ tns dcons _, ty) =>
+                  let dcons = fromMaybe [] dcons in
                   case !(totRefsIn defs ty) of
                        IsTerminating =>
                             do log "totality.positivity" 30 $

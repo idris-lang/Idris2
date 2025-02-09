@@ -57,7 +57,7 @@ namespace Raw
           ([ "tag:" <++> byShow tag
            , "arity:" <++> byShow arity
            , "parameter positions:" <++> byShow ps
-           , "constructors:" <++> enum ((\ nm => annotate (Syntax $ DCon (Just nm)) (pretty0 nm)) <$> cons)
+           , "constructors:" <++> enum ((\ nm => annotate (Syntax $ DCon (Just nm)) (pretty0 nm)) <$> fromMaybe [] cons)
            ] ++ (("mutual with:" <++> enum (pretty0 <$> ms)) <$ guard (not $ null ms))
              ++ (maybe [] (\ pos => ["detaggable by:" <++> byShow pos]) det))
   prettyDef (ExternDef arity) =
@@ -109,7 +109,7 @@ namespace Resugared
           ([ "tag:" <++> byShow tag
            , "arity:" <++> byShow arity
            , "parameter positions:" <++> byShow ps
-           , "constructors:" <++> enum ((\ nm => annotate (Syntax $ DCon (Just nm)) (pretty0 nm)) <$> cons)
+           , "constructors:" <++> enum ((\ nm => annotate (Syntax $ DCon (Just nm)) (pretty0 nm)) <$> fromMaybe [] cons)
            ] ++ (("mutual with:" <++> enum (pretty0 <$> ms)) <$ guard (not $ null ms))
              ++ (maybe [] (\ pos => ["detaggable by:" <++> byShow pos]) det))
   prettyDef (ExternDef arity) = pure $
