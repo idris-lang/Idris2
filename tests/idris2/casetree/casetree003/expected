@@ -2,17 +2,17 @@
 Main> Main.idL
 Arguments [{arg:0}, {arg:1}, {arg:2}]
 Compile time tree: case {arg:2} of
-  Nil {e:0} => []
-  (::) {e:1} {e:2} {e:3} => {e:2} :: idL {e:3} (view {e:3})
+  Nil {e:0} {e:1} => []
+  (::) {e:2} {e:3} {e:4} => {e:3} :: idL {e:4} (view {e:4})
 Erasable args: [0]
 Detaggable arg types: [2]
 Inferrable args: [1, 0]
 Compiled: \ {arg:1}, {arg:2} => case {arg:2} of
-  { Main.Nil {tag = 0} [nil] => Prelude.Basics.Nil {tag = 0} [nil]
-  ; Main.(::) {tag = 1} [cons] {e:2} {e:3} => Prelude.Basics.(::) {tag = 1} [cons] {e:2} (Main.idL {e:3} (Main.view {e:3}))
+  { Main.Nil {tag = 0} {e:1} => _builtin.NIL {tag = 0} [nil]
+  ; Main.(::) {tag = 1} {e:3} {e:4} => _builtin.CONS {tag = 1} [cons] {e:3} (Main.idL {e:4} (Main.view {e:4}))
   }
 Refers to: Main.view, Main.idL, Prelude.Basics.Nil, Prelude.Basics.(::)
-Refers to (runtime): Main.view, Main.idL, Main.Nil, Main.(::), Prelude.Basics.Nil, Prelude.Basics.(::)
+Refers to (runtime): _builtin.CONS, _builtin.NIL, Main.view, Main.idL, Main.Nil, Main.(::)
 Flags: covering
 Size change:
   Prelude.Basics.Nil:

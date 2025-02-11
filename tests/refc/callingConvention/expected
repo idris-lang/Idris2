@@ -10,9 +10,9 @@ Value *Main_last
 )
 {
     Value * tmp_67 = NULL;                                   // Main:5:8--5:14
-    if (NULL == var_0 /* Prelude.Basics.Nil [nil] */) {
+    if (NULL == var_0 /* _builtin.NIL [nil] */) {
         tmp_67 = var_1;
-    } else if (NULL != var_0 /* Prelude.Basics.(::) [cons] */) {
+    } else if (NULL != var_0 /* _builtin.CONS [cons] */) {
         Value *var_2 = ((Value_Constructor*)var_0)->args[0];
         Value *var_3 = ((Value_Constructor*)var_0)->args[1];
         idris2_newReference(var_2);
@@ -116,8 +116,8 @@ Value *Main_main(void)
     Value *closure_41 = (Value *)idris2_mkClosure((Value *(*)())Main_main_10, 2, 0);
                                                              // Main:10:27--10:28
     Value * var_9 = closure_41;                              // Main:10:8--10:12
-    Value * var_6 = (NULL /* Prelude.Basics.Nil */);         // Main:11:11--11:13
-    Value * var_3 = (NULL /* Prelude.Basics.Lin */);         // Prelude.Types:605:11--605:20
+    Value * var_6 = (NULL /* _builtin.NIL */);               // Main:11:11--11:13
+    Value * var_3 = (NULL /* _builtin.NIL */);               // Prelude.Types:605:11--605:20
     Value *closure_42 = (Value *)idris2_mkClosure((Value *(*)())Main_main_11, 1, 0);
                                                              // Main:11:21--11:22
     Value * var_4 = closure_42;                              // Prelude.Types:605:11--605:20
@@ -128,7 +128,7 @@ Value *Main_main(void)
                                                              // Prelude.Types:605:11--605:20
     Value * var_7 = idris2_trampoline(Prelude_Types_List_mapAppend(var_3, var_4, var_5));
                                                              // Main:11:11--11:13
-     // constructor Prelude.Basics.(::)                      // Main:11:11--11:13
+     // constructor _builtin.CONS                            // Main:11:11--11:13
     Value_Constructor* constructor_43 = idris2_newConstructor(2, 1);
                                                              // Main:11:11--11:13
     constructor_43->args[0] = var_6;
