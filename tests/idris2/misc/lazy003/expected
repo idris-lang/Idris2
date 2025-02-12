@@ -17,10 +17,10 @@ Compile time tree: let f = Force (switch {arg:0}) in \{lamc:0} => let (x, (y, z)
 Detaggable arg types: [1]
 Compiled: \ {arg:0} => let f = Force Lazy (Main.switch {arg:0}) in
 \{lamc:0}=> case {lamc:0} of
-  { Builtin.MkPair {tag = 0} [cons] {e:2} {e:3} => case {e:3} of  { Builtin.MkPair {tag = 0} [cons] {e:6} {e:7} => Builtin.MkPair {tag = 0} [cons] (f {e:2}) (Builtin.MkPair {tag = 0} [cons] (f {e:6}) (f {e:7}))}
+  { _builtin.CONS {tag = 1} [cons] {e:2} {e:3} => case {e:3} of  { _builtin.CONS {tag = 1} [cons] {e:6} {e:7} => _builtin.CONS {tag = 1} [cons] (f {e:2}) (_builtin.CONS {tag = 1} [cons] (f {e:6}) (f {e:7}))}
   }
 Refers to: Main.case block in switch3, Main.{_:980}, Main.switch, Builtin.Pair, Prelude.Types.Nat
-Refers to (runtime): Main.switch, Builtin.MkPair
+Refers to (runtime): _builtin.CONS, Main.switch
 Flags: covering
 Size change:
   Main.switch:

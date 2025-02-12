@@ -118,6 +118,10 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Reflected trees now make use of `WithFC` to replicate the new location tracking
   in the compiler.
 
+* Constructors with certain tags (`CONS`, `NIL`, `JUST`, `NOTHING`) are replaced
+  with `_builtin.<TAG>` (eg `_builtin.CONS`). This allows the identity optimisation
+  to optimise conversions between list-shaped things.
+
 ### Backend changes
 
 #### RefC Backend
