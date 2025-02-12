@@ -1,4 +1,7 @@
 1/1: Building refprims (refprims.idr)
+LOG 0: Name: Data.List1.(++)
+LOG 0: Type: (%pi Rig0 Implicit (Just a) %type (%pi RigW Explicit (Just xs) (Data.List1.List1 a) (%pi RigW Explicit (Just ys) (Data.List1.List1 a) (Data.List1.List1 a))))
+LOG 0: Pretty Type: (xs : List1 a) -> (ys : List1 a) -> List1 a
 LOG 0: Name: Prelude.Types.List.(++)
 LOG 0: Type: (%pi Rig0 Implicit (Just a) %type (%pi RigW Explicit (Just xs) (Prelude.Basics.List a) (%pi RigW Explicit (Just ys) (Prelude.Basics.List a) (Prelude.Basics.List a))))
 LOG 0: Pretty Type: (xs : List a) -> (ys : List a) -> List a
