@@ -102,11 +102,10 @@ mkIfaceData : {vars : _} ->
               FC -> WithDefault Visibility Private -> Env Term vars ->
               List (Maybe Name, RigCount, RawImp) ->
               Name -> Name -> List (Name, (RigCount, RawImp)) ->
-              List Name -> List (Name, RigCount, RawImp) -> Core ImpDecl
+              Maybe (List1 Name) -> List (Name, RigCount, RawImp) -> Core ImpDecl
 mkIfaceData {vars} ifc def_vis env constraints n conName ps dets meths
-    = let opts = if isNil dets
-                    then [NoHints, UniqueSearch]
-                    else [NoHints, UniqueSearch, SearchBy dets]
+    = let opts = [NoHints, UniqueSearch] ++
+                 maybe [] (singleton . SearchBy) dets
           pNames = map fst ps
           retty = apply (IVar vfc n) (map (IVar EmptyFC) pNames)
           conty = mkTy Implicit (map jname ps) $
@@ -331,7 +330,7 @@ elabInterface : {vars : _} ->
                 (constraints : List (Maybe Name, RawImp)) ->
                 Name ->
                 (params : List (Name, (RigCount, RawImp))) ->
-                (dets : List Name) ->
+                (dets : Maybe (List1 Name)) ->
                 (conName : Maybe (String, Name)) ->
                 List ImpDecl ->
                 Core ()

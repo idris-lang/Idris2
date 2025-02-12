@@ -1,7 +1,7 @@
 module Language.Reflection.TTImp
 
+import public Data.List1
 import Data.Maybe
-import Data.String
 import public Language.Reflection.TT
 
 
@@ -129,7 +129,7 @@ mutual
 
   public export
   data DataOpt : Type where
-       SearchBy : List Name -> DataOpt -- determining arguments
+       SearchBy : List1 Name -> DataOpt -- determining arguments
        NoHints : DataOpt -- Don't generate search hints for constructors
        UniqueSearch : DataOpt -- auto implicit search must check result is unique
        External : DataOpt -- implemented externally

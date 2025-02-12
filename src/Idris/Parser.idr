@@ -1360,7 +1360,7 @@ dataOpt fname
     = (decorate fname Keyword (exactIdent "noHints") $> NoHints)
   <|> (decorate fname Keyword (exactIdent "uniqueSearch") $> UniqueSearch)
   <|> (do decorate fname Keyword (exactIdent "search")
-          SearchBy <$> forget <$> some (decorate fname Bound name))
+          SearchBy <$> some (decorate fname Bound name))
   <|> (decorate fname Keyword (exactIdent "external") $> External)
   <|> (decorate fname Keyword (exactIdent "noNewtype") $> NoNewtype)
 
@@ -1766,7 +1766,7 @@ parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
             cons   <- constraints fname indents
             n      <- decorate fname Typ name
             params <- many ifaceParam
-            det    <- option [] $ decoratedSymbol fname "|" *> sepBy (decoratedSymbol fname ",") (decorate fname Bound name)
+            det    <- optional $ decoratedSymbol fname "|" *> sepBy1 (decoratedSymbol fname ",") (decorate fname Bound name)
             decoratedKeyword fname "where"
             dc <- optional (recordConstructor fname)
             body <- blockAfter col (topDecl fname)
