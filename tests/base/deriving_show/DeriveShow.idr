@@ -8,6 +8,8 @@ import Deriving.Show
 %logging "derive.show.clauses" 1
 %logging "derive.show.assumption" 10
 
+%hide List1
+
 namespace Enum
 
   data Enum = A | B | C

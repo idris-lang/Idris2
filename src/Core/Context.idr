@@ -1795,14 +1795,14 @@ dropMutData n = update Ctxt { mutData $= filter (/= n) }
 
 export
 setDetermining : {auto c : Ref Ctxt Defs} ->
-                 FC -> Name -> List Name -> Core ()
+                 FC -> Name -> List1 Name -> Core ()
 setDetermining fc tyn args
     = do defs <- get Ctxt
          Just g <- lookupCtxtExact tyn (gamma defs)
               | _ => undefinedName fc tyn
          let TCon t a ps _ u cons ms det = definition g
               | _ => throw (GenericMsg fc (show (fullname g) ++ " is not a type constructor [setDetermining]"))
-         apos <- getPos 0 args (type g)
+         apos <- getPos 0 (forget args) (type g)
          updateDef tyn (const (Just (TCon t a ps apos u cons ms det)))
   where
     -- Type isn't normalised, but the argument names refer to those given

@@ -79,16 +79,16 @@ LOG derive.functor.clauses:1:
   mapEqMap f (MkEqMap x3) = MkEqMap (map (map f) x3)
 LOG derive.functor.clauses:1: 
   mapCont : {0 r : _} -> {0 a, b : Type} -> (a -> b) -> Cont r a -> Cont r b
-  mapCont f (MkCont x2) = MkCont (\ {arg:6040} => x2 (\ {arg:6042} => {arg:6040} (f {arg:6042})))
+  mapCont f (MkCont x2) = MkCont (\ {arg:6041} => x2 (\ {arg:6043} => {arg:6041} (f {arg:6043})))
 LOG derive.functor.clauses:1: 
   mapCont2 : {0 r, e : _} -> {0 a, b : Type} -> (a -> b) -> Cont2 r e a -> Cont2 r e b
-  mapCont2 f (MkCont2 x3) = MkCont2 (\ {arg:6132} => \ {arg:6139} => x3 {arg:6132} (\ {arg:6141} => {arg:6139} (f {arg:6141})))
+  mapCont2 f (MkCont2 x3) = MkCont2 (\ {arg:6133} => \ {arg:6140} => x3 {arg:6133} (\ {arg:6142} => {arg:6140} (f {arg:6142})))
 LOG derive.functor.clauses:1: 
   mapCont2' : {0 r, e : _} -> {0 a, b : Type} -> (a -> b) -> Cont2' r e a -> Cont2' r e b
-  mapCont2' f (MkCont2' x3) = MkCont2' (\ {arg:6246} => x3 (mapFst (\ t => \ {arg:6248} => t (f {arg:6248})) {arg:6246}))
+  mapCont2' f (MkCont2' x3) = MkCont2' (\ {arg:6247} => x3 (mapFst (\ t => \ {arg:6249} => t (f {arg:6249})) {arg:6247}))
 LOG derive.functor.clauses:1: 
   mapCont2'' : {0 r, e : _} -> {0 a, b : Type} -> (a -> b) -> Cont2'' r e a -> Cont2'' r e b
-  mapCont2'' f (MkCont2'' x3) = MkCont2'' (\ {arg:6370} => x3 (Delay (mapFst (\ t => \ {arg:6373} => t (Delay (f {arg:6373}))) {arg:6370})))
+  mapCont2'' f (MkCont2'' x3) = MkCont2'' (\ {arg:6371} => x3 (Delay (mapFst (\ t => \ {arg:6374} => t (Delay (f {arg:6374}))) {arg:6371})))
 LOG derive.functor.clauses:1: 
   mapWithImplicits : {0 a, b : Type} -> (a -> b) -> WithImplicits a -> WithImplicits b
   mapWithImplicits f (MkImplicit {x = x1} x2) = MkImplicit {x = f x1} (f x2)

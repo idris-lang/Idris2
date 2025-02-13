@@ -1,0 +1,2 @@
+record R where
+  [search]

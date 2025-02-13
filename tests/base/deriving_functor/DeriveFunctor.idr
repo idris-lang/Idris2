@@ -8,6 +8,8 @@ import Deriving.Functor
 %logging "derive.functor.clauses" 1
 %logging "derive.functor.assumption" 10
 
+%hide List1
+
 list : Functor List
 list = %runElab derive
 

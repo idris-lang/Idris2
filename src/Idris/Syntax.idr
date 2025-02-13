@@ -589,7 +589,7 @@ mutual
                     Name ->
                     (doc : String) ->
                     (params : List (BasicMultiBinder' nm)) ->
-                    (det : List Name) ->
+                    (det : Maybe (List1 Name)) ->
                     (conName : Maybe (String, Name)) ->
                     List (PDecl' nm) ->
                     PDeclNoFC' nm

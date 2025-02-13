@@ -578,7 +578,7 @@ dataOpt
   <|> do exactIdent "uniqueSearch"
          pure UniqueSearch
   <|> do exactIdent "search"
-         ns <- forget <$> some name
+         ns <- some name
          pure (SearchBy ns)
 
 dataOpts : EmptyRule (List DataOpt)

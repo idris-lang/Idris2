@@ -1359,8 +1359,10 @@ dataOpt : OriginDesc -> Rule DataOpt
 dataOpt fname
     = (decorate fname Keyword (exactIdent "noHints") $> NoHints)
   <|> (decorate fname Keyword (exactIdent "uniqueSearch") $> UniqueSearch)
-  <|> (do decorate fname Keyword (exactIdent "search")
-          SearchBy <$> forget <$> some (decorate fname Bound name))
+  <|> (do b   <- bounds $ decorate fname Keyword (exactIdent "search")
+          det <- mustWorkBecause b.bounds "Expected list of determining parameters" $
+                   some (decorate fname Bound name)
+          pure $ SearchBy det)
   <|> (decorate fname Keyword (exactIdent "external") $> External)
   <|> (decorate fname Keyword (exactIdent "noNewtype") $> NoNewtype)
 
@@ -1766,7 +1768,10 @@ parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
             cons   <- constraints fname indents
             n      <- decorate fname Typ name
             params <- many ifaceParam
-            det    <- option [] $ decoratedSymbol fname "|" *> sepBy (decoratedSymbol fname ",") (decorate fname Bound name)
+            det    <- optional $ do
+              b <- bounds $ decoratedSymbol fname "|"
+              mustWorkBecause b.bounds "Expected list of determining parameters" $
+                sepBy1 (decoratedSymbol fname ",") (decorate fname Bound name)
             decoratedKeyword fname "where"
             dc <- optional (recordConstructor fname)
             body <- blockAfter col (topDecl fname)
