@@ -287,11 +287,11 @@ mutual
                       else toPTerm p ret
     where
       needsBind : Maybe Name -> Bool
-      needsBind (Just nm@(UN (Basic t)))
+      needsBind (Just nm@(UN (Basic _)))
           = let ret = map rawName ret
                 ns = findBindableNames False [] [] ret
                 allNs = findAllNames [] ret in
-                (nm `elem` allNs) && not (t `elem` (map Builtin.fst ns))
+                (nm `elem` allNs) && not (nm `elem` (map Builtin.fst ns))
       needsBind _ = False
   toPTerm p (IPi fc rig pt n arg ret)
       = do arg' <- toPTerm appPrec arg

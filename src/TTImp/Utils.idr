@@ -67,16 +67,16 @@ rawImpFromDecl decl = case decl of
 -- env: Local names in scope. We only want to bind free variables, so we need this.
 export
 findBindableNames : (arg : Bool) -> (env : List Name) -> (used : List String) ->
-                    RawImp -> List (String, String)
+                    RawImp -> List (Name, Name)
 
 -- Helper to traverse the inside of a quoted expression, looking for unquotes
 findBindableNamesQuot : List Name -> (used : List String) -> RawImp ->
-                        List (String, String)
+                        List (Name, Name)
 
 findBindableNames True env used (IVar fc nm@(UN (Basic n)))
       -- If the identifier is not bound locally and begins with a lowercase letter..
     = if not (nm `elem` env) && lowerFirst n
-         then [(n, genUniqueStr used n)]
+         then [(nm, UN $ Basic $ genUniqueStr used n)]
          else []
 findBindableNames arg env used (IPi fc rig p mn aty retty)
     = let env' = case mn of
@@ -98,8 +98,8 @@ findBindableNames arg env used (IAutoApp fc fn av)
     = findBindableNames False env used fn ++ findBindableNames True env used av
 findBindableNames arg env used (IWithApp fc fn av)
     = findBindableNames False env used fn ++ findBindableNames True env used av
-findBindableNames arg env used (IAs fc _ _ (UN (Basic n)) pat)
-    = (n, genUniqueStr used n) :: findBindableNames arg env used pat
+findBindableNames arg env used (IAs fc _ _ nm@(UN (Basic n)) pat)
+    = (nm, UN $ Basic $ genUniqueStr used n) :: findBindableNames arg env used pat
 findBindableNames arg env used (IAs fc _ _ n pat)
     = findBindableNames arg env used pat
 findBindableNames arg env used (IMustUnify fc r pat)
@@ -191,14 +191,14 @@ export
 findUniqueBindableNames :
   {auto c : Ref Ctxt Defs} ->
   FC -> (arg : Bool) -> (env : List Name) -> (used : List String) ->
-  RawImp -> Core (List (String, String))
+  RawImp -> Core (List (Name, Name))
 findUniqueBindableNames fc arg env used t
   = do let assoc = nub (findBindableNames arg env used t)
        when (showShadowingWarning !getSession) $
          do defs <- get Ctxt
             let ctxt = gamma defs
             ns <- map catMaybes $ for assoc $ \ (n, _) => do
-                    ns <- lookupCtxtName (UN (Basic n)) ctxt
+                    ns <- lookupCtxtName n ctxt
                     let ns = flip List.mapMaybe ns $ \(n, _, d) =>
                                case definition d of
                                 -- do not warn about holes: `?a` is not actually
@@ -356,13 +356,13 @@ mutual
   substNamesClause' : Bool -> List Name -> List (Name, RawImp) ->
                       ImpClause -> ImpClause
   substNamesClause' bvar bound ps (PatClause fc lhs rhs)
-      = let bound' = map (UN . Basic) (map snd (findBindableNames True bound [] lhs))
+      = let bound' = map snd (findBindableNames True bound [] lhs)
                      ++ findIBindVars lhs
                      ++ bound in
             PatClause fc (substNames' bvar [] [] lhs)
                          (substNames' bvar bound' ps rhs)
   substNamesClause' bvar bound ps (WithClause fc lhs rig wval prf flags cs)
-      = let bound' = map (UN . Basic) (map snd (findBindableNames True bound [] lhs))
+      = let bound' = map snd (findBindableNames True bound [] lhs)
                      ++ findIBindVars lhs
                      ++ bound in
             WithClause fc (substNames' bvar [] [] lhs) rig

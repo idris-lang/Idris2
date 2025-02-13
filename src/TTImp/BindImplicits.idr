@@ -78,20 +78,18 @@ renameIBinds rs us (IBindVar fc nm@(UN (Basic n)))
 renameIBinds rs us tm = pure $ tm
 
 export
-doBind : List (String, String) -> RawImp -> RawImp
+doBind : List (Name, Name) -> RawImp -> RawImp
 doBind [] tm = tm
-doBind ns (IVar fc nm@(UN (Basic n)))
-    = maybe (IVar fc nm)
-            (IBindVar fc . UN . Basic)
-            (lookup n ns)
+doBind ns (IVar fc nm)
+    = maybe (IVar fc nm) (IBindVar fc) (lookup nm ns)
 doBind ns (IPi fc rig p mn aty retty)
     = let ns' = case mn of
-                     Just (UN (Basic n)) => filter (\x => fst x /= n) ns
+                     Just nm => filter (\x => fst x /= nm) ns
                      _ => ns in
           IPi fc rig p mn (doBind ns' aty) (doBind ns' retty)
 doBind ns (ILam fc rig p mn aty sc)
     = let ns' = case mn of
-                     Just (UN (Basic n)) => filter (\x => fst x /= n) ns
+                     Just nm => filter (\x => fst x /= nm) ns
                      _ => ns in
           ILam fc rig p mn (doBind ns' aty) (doBind ns' sc)
 doBind ns (IApp fc fn av)
@@ -129,7 +127,7 @@ bindNames arg tm
     = if !isUnboundImplicits
          then do let ns = nub (findBindableNames arg [] [] tm)
                  log "elab.bindnames" 10 $ "Found names :" ++ show ns
-                 pure (map (UN . Basic) (map snd ns), doBind ns tm)
+                 pure (map snd ns, doBind ns tm)
          else pure ([], tm)
 
 -- if the name is part of the using decls, add the relevant binder for it:
@@ -196,8 +194,8 @@ piBindNames loc env tm
     = do ns <- findUniqueBindableNames loc True env [] tm
          pure $ piBind (map fst ns) tm
   where
-    piBind : List String -> RawImp -> RawImp
+    piBind : List Name -> RawImp -> RawImp
     piBind [] ty = ty
     piBind (n :: ns) ty
-       = IPi loc erased Implicit (Just (UN $ Basic n)) (Implicit loc False)
+       = IPi loc erased Implicit (Just n) (Implicit loc False)
        $ piBind ns ty
