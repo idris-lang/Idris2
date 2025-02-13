@@ -86,9 +86,13 @@ doUpdates defs ups stk (AsPattern :: LBrace :: xs)
     = pure $ AsPattern :: LBrace :: !(doUpdates defs ups (Auto :: stk) xs)
 -- Handle tuples inside an implicit by pushing Paren
 doUpdates defs ups stk (Other "(" :: xs)  = pure (Other "(" :: !(doUpdates defs ups (Paren :: stk) xs))
-doUpdates defs ups (Paren :: stk) (Other ")" :: xs)  = pure (Other ")" :: !(doUpdates defs ups stk xs))
+doUpdates defs ups stk (Other ")" :: xs)  = case stk of
+  (Paren :: stk) => pure (Other ")" :: !(doUpdates defs ups stk xs))
+  _ => pure (Other ")" :: !(doUpdates defs ups stk xs))
 doUpdates defs ups stk (Other "[" :: xs)  = pure (Other "[" :: !(doUpdates defs ups (Bracket :: stk) xs))
-doUpdates defs ups (Bracket :: stk) (Other "]" :: xs)  = pure (Other "]" :: !(doUpdates defs ups stk xs))
+doUpdates defs ups stk (Other "]" :: xs)  = case stk of
+  Bracket :: stk => pure (Other "]" :: !(doUpdates defs ups stk xs))
+  stk => pure (Other "]" :: !(doUpdates defs ups stk xs))
 -- name after LBrace
 doUpdates defs ups stk (LBrace :: xs) =
   let (ws, nws) = span isWhitespace xs in
@@ -98,15 +102,20 @@ doUpdates defs ups stk (LBrace :: xs) =
         Nothing => pure (LBrace :: !(doUpdates defs ups (Brace :: stk) xs))
       _ => pure (LBrace :: !(doUpdates defs ups (Brace :: stk) xs))
 -- handle commas directly inside an implicit
-doUpdates defs ups stk@(Brace :: _) (Other "," :: xs) =
-  let (ws, nws) = span isWhitespace xs in
-    case nws of
-      Name n :: rest => case lookup n ups of
-        Nothing => pure (Other "," :: !(doUpdates defs ups stk xs))
-        Just up => pure (Other "," :: ws ++ Name n :: Whitespace " " :: Equal :: Whitespace " " :: Other up :: !(doUpdates defs ups stk rest))
-      _ => pure (Other "," :: !(doUpdates defs ups stk xs))
-doUpdates defs ups (Brace :: stk) (RBrace :: xs) = pure (RBrace :: !(doUpdates defs ups stk xs))
-doUpdates defs ups (Auto :: stk) (RBrace :: xs) = pure (RBrace :: !(doUpdates defs ups stk xs))
+doUpdates defs ups stk (Other "," :: xs) =
+      let (ws, nws) = span isWhitespace xs in
+        case nws of
+          Name n :: rest => case lookup n ups of
+            Nothing => pure (Other "," :: !(doUpdates defs ups stk xs))
+            Just up => case stk of
+              Brace :: _ => pure (Other "," :: ws ++ Name n :: Whitespace " " :: Equal :: Whitespace " " :: Other up :: !(doUpdates defs ups stk rest))
+              _ => pure (Other "," :: ws ++ Other up :: !(doUpdates defs ups stk rest))
+          _ => pure (Other "," :: !(doUpdates defs ups stk xs))
+
+doUpdates defs ups stk (RBrace :: xs) = case stk of
+  Brace :: stk => pure (RBrace :: !(doUpdates defs ups stk xs))
+  Auto :: stk => pure (RBrace :: !(doUpdates defs ups stk xs))
+  stk => pure (RBrace :: !(doUpdates defs ups stk xs))
 
 -- if we have a name, look up if it's a name we're updating. If it isn't, keep
 -- the old name, otherwise update the name, i.e. replace with the new name
