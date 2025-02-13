@@ -11,3 +11,8 @@ three {a = Just x} c = ?rhs4
 four : { a : List Nat} -> () -> ()
 four {a = [x,y]} c = ?rhs5
 four {a = xs} c = ?rhs6
+
+five : Nat -> Nat
+five x = (case x of
+  y => ?rhs7 ) -- something y
+

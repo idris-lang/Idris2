@@ -93,6 +93,7 @@ doUpdates defs ups stk (Other "[" :: xs)  = pure (Other "[" :: !(doUpdates defs 
 doUpdates defs ups stk (Other "]" :: xs)  = case stk of
   Bracket :: stk => pure (Other "]" :: !(doUpdates defs ups stk xs))
   stk => pure (Other "]" :: !(doUpdates defs ups stk xs))
+doUpdates defs ups stk (Other "-" :: Other "-" :: xs) = pure (Other "--" :: xs)
 -- name after LBrace
 doUpdates defs ups stk (LBrace :: xs) =
   let (ws, nws) = span isWhitespace xs in
@@ -184,7 +185,7 @@ data CaseStmtType = Oneline Nat
 ||| splitting, and if it does, determine the type of interesting `case` block
 getCaseStmtType : (toks : List SourcePart) -> Maybe CaseStmtType
 getCaseStmtType toks
-  = let nws = filter (not . isWhitespace) toks in
+  = let nws = dropComment $ filter (not . isWhitespace) toks in
         -- use SnocList of nws so we can express the pattern we're looking for
         -- as it would appear
         case Lin <>< nws of
@@ -203,7 +204,7 @@ getCaseStmtType toks
                             -- constructed a SnocList so the index is backwards
                             let ofIndex = minus (length toks) (finToNat skotOfIndex) in
                                 Just $ OnelineParen (calcIndent ofIndex toks)
-             -- If the line ends with a `HoleName`, check if its a oneline `case` block
+             -- If the line ends with a `HoleName`, check if it's a oneline `case` block
              start :< HoleName _ =>
                   case findIndex isNameOf (Lin <>< toks) of
                        Nothing => Nothing
@@ -213,6 +214,11 @@ getCaseStmtType toks
              -- If it doesn't, it's not a statement we're interested in
              _ => Nothing
     where
+      dropComment : List SourcePart -> List SourcePart
+      dropComment [] = []
+      dropComment (Other "-" :: Other "-" :: xs) = []
+      dropComment (x :: xs) = x :: dropComment xs
+
       isNameOf : SourcePart -> Bool
       isNameOf (Name "of") = True
       isNameOf _ = False
@@ -234,9 +240,15 @@ dropLast updChars with (snocList updChars)
 rtrim : String -> String
 rtrim = reverse . ltrim . reverse
 
+-- remove last paren and everything after it
+dropLastParen : SnocList Char -> SnocList Char
+dropLastParen Lin = Lin
+dropLastParen (cs :< ')') = cs
+dropLastParen (cs :< c) = dropLastParen cs :< c
+
 ||| Drop the closing parenthesis and any indentation preceding it.
 parenTrim : String -> String
-parenTrim = Idris.IDEMode.CaseSplit.rtrim . fastPack . dropLast . fastUnpack
+parenTrim = rtrim . fastPack . cast . dropLastParen . cast . fastUnpack
 
 ||| Drop the number of letters equal to the indentation level to align
 ||| just after the `of`.
@@ -245,7 +257,7 @@ onelineIndent indentation
   = (indent indentation) . fastPack . (drop indentation) . fastUnpack
 
 ||| An unbracketed, oneline `case` block just needs to have the last updates
-||| indented to lign up with the statement after the `of`.
+||| indented to align with the statement after the `of`.
 handleOneline : (indentation : Nat) -> (upds : List String) -> List String
 handleOneline indentation [] = []
 handleOneline indentation (u :: us) = u :: ((onelineIndent indentation) <$> us)
