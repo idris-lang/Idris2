@@ -79,30 +79,24 @@ getArity (MkCon _ arity _) = arity
 getArity (MkForeign _ args _) = length args
 getArity (MkError _) = 0
 
-insertInMiddle : {0 local, outer : Scope} ->
-  SizeOf outer -> (n : Name) -> (CExp free) -> EEnv free (local ++ outer) -> EEnv free ((local :< n) ++ outer)
-insertInMiddle {outer = [<]}     (MkSizeOf Z       Z)      _ y xs        = xs :< y
-insertInMiddle {outer = os :< o} (MkSizeOf (S len) (S sz)) n y (xs :< x) = insertInMiddle (MkSizeOf len sz) n y xs :< x
-
-getArgsFromStack : Stack free -> (args : List Name) ->
+getArgsFromStack : Stack free -> (args : SnocList Name) ->
                    List (CExp free) ->
                    Maybe (List (CExp free), Stack free)
-getArgsFromStack (e :: es) (a :: as) acc
+getArgsFromStack (e :: es) (as :< a) acc
     = getArgsFromStack es as (e :: acc)
-getArgsFromStack stk [] acc = Just (acc, stk)
+getArgsFromStack stk [<] acc = Just (acc, stk)
 getArgsFromStack _ _ _ = Nothing
 
-takeArgs : EEnv free vars -> List (CExp free) -> (args : List Name) ->
-           Maybe (EEnv free (vars <>< args))
-takeArgs env (e :: es) args@(a :: as)
+takeArgs : EEnv free vars -> List (CExp free) -> (args : SnocList Name) ->
+           Maybe (EEnv free (vars ++ args))
+takeArgs env (e :: es) (as :< a)
   = do env' <- takeArgs env es as
-       let inserted = insertInMiddle {local=vars} {outer = cast as} (mkSizeOf $ cast as) a e (rewrite sym $ fishAsSnocAppend vars as in env')
-       pure (rewrite fishAsSnocAppend (vars :< a) as in inserted)
-takeArgs env stk [] = pure env
+       pure (env' :< e)
+takeArgs env stk [<] = pure env
 takeArgs env [] args = Nothing
 
-takeFromStack : EEnv free vars -> Stack free -> (args : List Name) ->
-                Maybe (EEnv free (vars <>< args), Stack free)
+takeFromStack : EEnv free vars -> Stack free -> (args : SnocList Name) ->
+                Maybe (EEnv free (vars ++ args), Stack free)
 takeFromStack env es as
     = do (args, stk') <- getArgsFromStack es as []
          env' <- takeArgs env args as
@@ -191,20 +185,13 @@ mutual
   tryApply {free} {vars} rec stk env (MkFun args exp)
       = do log "compiler.inline.io_bind" 50 $ "tryApply args: \{show $ asList args}, exp: \{show exp}, stk: \{show stk}, env: \{show env}"
            let Just (env', stk')
-               : Maybe (EEnv free (vars <>< cast args), List (CExp free))
-               = (takeFromStack env stk (cast args))
+               : Maybe (EEnv free (vars ++ args), List (CExp free))
+               = (takeFromStack env stk args)
                | Nothing => pure Nothing
-           let exp' : CExp (free ++ (vars <>< cast args)) = (embed $ embedFishily (castInvolutive exp))
+           let exp' : CExp (free ++ (vars ++ args)) = (embed $ embed exp)
            log "compiler.inline.io_bind" 50 $ "tryApply stk': \{show stk'}, env': \{show env'}, rec: \{show rec}, exp': \{show exp'}"
            res <- eval rec env' stk' exp'
            pure (Just res)
-        where
-            -- it should be like that:
-            -- castInvolutive : { args : _ } -> cast {to=SnocList Name} (cast {to=List Name} args) === args
-            -- castInvolutive = ...
-            -- And if yes, so, we could move further in decision but for now leave it trivially:
-            castInvolutive : CExp args -> CExp ([<] <>< (args <>> []))
-            castInvolutive = believe_me
   tryApply rec stk env _ = pure Nothing
 
   eval : {vars, free : _} ->

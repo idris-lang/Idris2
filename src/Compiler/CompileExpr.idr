@@ -437,8 +437,8 @@ data ArgList : Nat -> SnocList Name -> Type where
 mkArgList : Int -> (n : Nat) -> (ns ** ArgList n ns)
 mkArgList i Z = (_ ** NoArgs)
 mkArgList i (S k)
-    = let (_ ** rec) = mkArgList (i + 1) k in
-          (_ ** ConsArg (MN "arg" i) rec)
+    = let (_ ** rec) = mkArgList (i - 1) k in
+          (_ ** ConsArg (MN "arg" (i - 1)) rec)
 
 mkArgList' : Int -> (n : Nat) -> (ns ** ArgList n ns)
 mkArgList' i Z = (_ ** NoArgs)
@@ -624,12 +624,8 @@ toCDef n ty erased (PMDef pi args _ tree _)
     toLam True (MkFun args rhs) = MkFun [<] (lamRHS args rhs)
     toLam _ d = d
 toCDef n ty _ (ExternDef arity)
-    -- We are going to reverse args order, not their list. See comment from Yaffle below.
-    -- It is interconnected with the order of args at MkFun, see Show CDef.
-    = let (ns ** args) = mkArgList' (cast arity) arity in
-          -- Yaffle: Reverse the args since we build them in the wrong order (most
-          -- recently bound lambda is last argument to primitive)
-          pure $ MkFun _ (CExtPrim emptyFC !(getFullName n) (map toArgExp (getVars args)))
+    = let (ns ** args) = mkArgList (cast arity) arity in
+          pure $ MkFun _ (CExtPrim emptyFC !(getFullName n) (reverse $ map toArgExp (getVars args)))
   where
     toArgExp : (Var ns) -> CExp ns
     toArgExp (MkVar p) = CLocal emptyFC p
@@ -642,12 +638,8 @@ toCDef n ty _ (ForeignDef arity cs)
          (atys, retty) <- getCFTypes [] !(nf defs [<] ty)
          pure $ MkForeign cs atys retty
 toCDef n ty _ (Builtin {arity} op)
-    -- We are going to reverse args order, not their list. See comment from Yaffle below.
-    -- It is interconnected with the order of args at MkFun, see Show CDef.
-    = let (ns ** args) = mkArgList' (cast arity) arity in
-          -- Yaffle: Reverse the args since we build them in the wrong order (most
-          -- recently bound lambda is last argument to primitive)
-          pure $ MkFun _ (COp emptyFC op (map toArgExp (getVars args)))
+    = let (ns ** args) = mkArgList (cast arity) arity in
+          pure $ MkFun _ (COp emptyFC op (reverse $ map toArgExp (getVars args)))
   where
     toArgExp : (Var ns) -> CExp ns
     toArgExp (MkVar p) = CLocal emptyFC p
