@@ -1,7 +1,7 @@
 1/1: Building Main (Main.idr)
-Error: Expected end of input.
+Error: Expected list of determining parameters.
 
-Main:1:1--1:10
+Main:1:17--1:18
  1 | interface Iface | where
-     ^^^^^^^^^
+                     ^
 

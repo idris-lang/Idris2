@@ -1,0 +1,8 @@
+1/1: Building EmptySearch (EmptySearch.idr)
+Error: Expected list of determining parameters.
+
+EmptySearch:2:4--2:10
+ 1 | data X : Type where
+ 2 |   [search]
+        ^^^^^^
+
