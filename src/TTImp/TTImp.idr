@@ -536,9 +536,10 @@ mkWithClause : FC -> RawImp' nm -> List1 (RigCount, RawImp' nm, Maybe (RigCount,
 mkWithClause fc lhs ((rig, wval, prf) ::: []) flags cls
   = WithClause fc lhs rig wval prf flags cls
 mkWithClause fc lhs ((rig, wval, prf) ::: wp :: wps) flags cls
-  = let vfc = virtualiseFC fc in
-    WithClause fc lhs rig wval prf flags
-      [mkWithClause fc (IApp vfc lhs $ IBindVar vfc $ UN $ Basic "arg") (wp ::: wps) flags cls]
+  = let vfc = virtualiseFC fc
+        arg = UN $ Basic "arg"
+     in WithClause fc lhs rig wval prf flags
+          [mkWithClause fc (IApp vfc lhs $ IBindVar vfc arg) (wp ::: wps) flags cls]
 
 -- Extract the RawImp term from a FieldUpdate.
 export

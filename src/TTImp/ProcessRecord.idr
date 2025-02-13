@@ -258,8 +258,9 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                               upds (b :: tyenv) sc
              else
                 do let fldNameStr = nameRoot n
+                   let unName = UN $ Basic fldNameStr
                    rfNameNS <- inCurrentNS (UN $ Field fldNameStr)
-                   unNameNS <- inCurrentNS (UN $ Basic fldNameStr)
+                   unNameNS <- inCurrentNS unName
 
                    ty <- unelabNest (NoSugar True) !nestDrop tyenv ty_chk
                    let ty' = substNames (toList vars) upds $ map rawName ty
@@ -285,15 +286,15 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                           = apply (IVar bfc con)
                                     (replicate done (Implicit bfc True) ++
                                        (if imp == Explicit
-                                           then [IBindVar fc' (UN $ Basic fldNameStr)]
+                                           then [IBindVar fc' unName]
                                            else []) ++
                                     (replicate (countExp sc) (Implicit bfc True)))
                    let lhs = IApp bfc (IVar bfc rfNameNS)
                                 (if imp == Explicit
                                     then lhs_exp
-                                    else INamedApp bfc lhs_exp (UN $ Basic fldNameStr)
-                                             (IBindVar bfc (UN $ Basic fldNameStr)))
-                   let rhs = IVar fc' (UN $ Basic fldNameStr)
+                                    else INamedApp bfc lhs_exp unName
+                                             (IBindVar bfc unName))
+                   let rhs = IVar fc' unName
 
                    -- EtaExpand implicits on both sides:
                    -- First, obtain all the implicit names in the prefix of
