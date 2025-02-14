@@ -18,8 +18,12 @@ Main> four {a = [x,0]} c = ?rhs5_0
 four {a = [x,(S k)]} c = ?rhs5_1
 Main>   0 => ?rhs7_0  -- something y
   (S k) => ?rhs7_1 ) -- something y
-Main> six 0 {- is x -} {a {- is a -} } = ?rhs8_0 -- it is a x
-six (S k) {- is x -} {a {- is a -} } = ?rhs8_1 -- it is a x
-Main> six x {- is x -} {a = 0 {- is a -} } = ?rhs8_0 -- it is a x
-six x {- is x -} {a = (S k) {- is a -} } = ?rhs8_1 -- it is a x
+Main> six 0 {- is x -} {a {- is a -} } { {- here is b -} b, {- and c -} c} = ?rhs8_0 -- it is a x
+six (S k) {- is x -} {a {- is a -} } { {- here is b -} b, {- and c -} c} = ?rhs8_1 -- it is a x
+Main> six x {- is x -} {a = 0 {- is a -} } { {- here is b -} b, {- and c -} c} = ?rhs8_0 -- it is a x
+six x {- is x -} {a = (S k) {- is a -} } { {- here is b -} b, {- and c -} c} = ?rhs8_1 -- it is a x
+Main> six x {- is x -} {a {- is a -} } { {- here is b -} b = 0, {- and c -} c} = ?rhs8_0 -- it is a x
+six x {- is x -} {a {- is a -} } { {- here is b -} b = (S k), {- and c -} c} = ?rhs8_1 -- it is a x
+Main> six x {- is x -} {a {- is a -} } { {- here is b -} b, {- and c -} c = 0} = ?rhs8_0 -- it is a x
+six x {- is x -} {a {- is a -} } { {- here is b -} b, {- and c -} c = (S k)} = ?rhs8_1 -- it is a x
 Main> Bye for now!

@@ -65,6 +65,21 @@ isWhitespace : SourcePart -> Bool
 isWhitespace (Whitespace _) = True
 isWhitespace _              = False
 
+splitSpaceAndComments : List SourcePart -> (List SourcePart, List SourcePart)
+splitSpaceAndComments = skipSpace Lin
+  where
+    skipSpace : SnocList SourcePart -> List SourcePart -> (List SourcePart, List SourcePart)
+    skipComment : SnocList SourcePart -> List SourcePart -> (List SourcePart, List SourcePart)
+
+    skipComment left [] = (left <>> [], [])
+    skipComment left (Other "-" :: RBrace :: toks) = skipSpace (left :< Other "-" :< RBrace) toks
+    skipComment left (tok :: toks) = skipComment (left :< tok) toks
+
+    skipSpace left [] = (left <>> [], [])
+    skipSpace left (LBrace :: Other "-" :: toks) = skipComment (left :< LBrace :< Other "-") toks
+    skipSpace left (Whitespace ws :: toks) = skipSpace (left :< Whitespace ws) toks
+    skipSpace left toks = (left <>> [], toks)
+
 data Wrap = Brace | Auto | Paren | Bracket
 
 ||| Given a list of definitions, a list of mappings from `RawName` to `String`,
@@ -84,14 +99,9 @@ doUpdates defs ups stk (Name n :: AsPattern :: xs)
 -- valid. Push `Auto` to mark this case.
 doUpdates defs ups stk (AsPattern :: LBrace :: xs)
     = pure $ AsPattern :: LBrace :: !(doUpdates defs ups (Auto :: stk) xs)
-doUpdates defs ups stk (LBrace :: Other "-" :: xs) =
-  let (comment, rest) = splitComment Lin xs in
-  pure (LBrace :: Other "-" :: comment ++ !(doUpdates defs ups stk rest))
-  where
-    splitComment : SnocList SourcePart -> List SourcePart -> (List SourcePart, List SourcePart)
-    splitComment comment [] = (comment <>> [], [])
-    splitComment comment (Other "-" :: RBrace :: rest) = (comment <>> [Other "-", RBrace], rest)
-    splitComment comment (tok :: toks) = splitComment (comment :< tok) toks
+doUpdates defs ups stk toks@(LBrace :: Other "-" :: _) =
+  let (ws, nws) = splitSpaceAndComments toks in
+  pure (ws ++ !(doUpdates defs ups stk nws))
 -- Handle tuples inside an implicit by pushing Paren
 doUpdates defs ups stk (Other "(" :: xs)  = pure (Other "(" :: !(doUpdates defs ups (Paren :: stk) xs))
 doUpdates defs ups stk (Other ")" :: xs)  = case stk of
@@ -104,7 +114,7 @@ doUpdates defs ups stk (Other "]" :: xs)  = case stk of
 doUpdates defs ups stk (Other "-" :: Other "-" :: xs) = pure (Other "--" :: xs)
 -- name after LBrace
 doUpdates defs ups stk (LBrace :: xs) =
-  let (ws, nws) = span isWhitespace xs in
+  let (ws, nws) = splitSpaceAndComments xs in
     case nws of
       Name n :: rest => case lookup n ups of
         Just up => pure (LBrace :: ws ++ Name n :: Whitespace " " :: Equal :: Whitespace " " :: Other up :: !(doUpdates defs ups stk rest))
@@ -112,7 +122,7 @@ doUpdates defs ups stk (LBrace :: xs) =
       _ => pure (LBrace :: ws ++ !(doUpdates defs ups (Brace :: stk) nws))
 -- handle commas directly inside an implicit
 doUpdates defs ups stk (Other "," :: xs) =
-      let (ws, nws) = span isWhitespace xs in
+      let (ws, nws) = splitSpaceAndComments xs in
         case nws of
           Name n :: rest => case lookup n ups of
             Nothing => pure (Other "," :: ws ++ !(doUpdates defs ups stk nws))
