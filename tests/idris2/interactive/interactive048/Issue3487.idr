@@ -16,3 +16,5 @@ five : Nat -> Nat
 five x = (case x of
   y => ?rhs7 ) -- something y
 
+six : Nat -> { a : Nat} -> ()
+six x {- is x -} {a {- is a -} } = ?rhs8 -- it is a x
