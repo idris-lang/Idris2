@@ -310,7 +310,6 @@ buildDeps fname
               errs => pure errs -- Error happened, give up
 
 getAllBuildMods : {auto c : Ref Ctxt Defs} ->
-                  {auto s : Ref Syn SyntaxInfo} ->
                   {auto o : Ref ROpts REPLOpts} ->
                   FC -> (done : List BuildMod) ->
                   (allFiles : List String) ->

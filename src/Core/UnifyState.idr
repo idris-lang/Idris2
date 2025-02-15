@@ -559,7 +559,6 @@ addDelayedHoleName (idx, h) = update UST { delayedHoles $= insert idx h }
 
 export
 checkDelayedHoles : {auto u : Ref UST UState} ->
-                    {auto c : Ref Ctxt Defs} ->
                     Core (Maybe Error)
 checkDelayedHoles
     = do ust <- get UST

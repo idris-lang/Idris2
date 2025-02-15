@@ -202,7 +202,6 @@ export
 recUpdate : {vars : _} ->
             {auto c : Ref Ctxt Defs} ->
             {auto u : Ref UST UState} ->
-            {auto e : Ref EST (EState vars)} ->
             RigCount -> ElabInfo -> FC ->
             NestedNames vars -> Env Term vars ->
             List IFieldUpdate ->

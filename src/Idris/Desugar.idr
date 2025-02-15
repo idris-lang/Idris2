@@ -829,13 +829,7 @@ mutual
            pure $ IRewrite fc rule' rest'
 
   -- Replace all operator by function application
-  desugarTree : {auto s : Ref Syn SyntaxInfo} ->
-                {auto b : Ref Bang BangData} ->
-                {auto c : Ref Ctxt Defs} ->
-                {auto u : Ref UST UState} ->
-                {auto m : Ref MD Metadata} ->
-                {auto o : Ref ROpts REPLOpts} ->
-                Side -> List Name -> Tree (OpStr, Maybe $ OperatorLHSInfo PTerm) PTerm ->
+  desugarTree : Side -> List Name -> Tree (OpStr, Maybe $ OperatorLHSInfo PTerm) PTerm ->
                 Core PTerm
   desugarTree side ps (Infix loc eqFC (OpSymbols $ UN $ Basic "=", _) l r) -- special case since '=' is special syntax
       = pure $ PEq eqFC !(desugarTree side ps l) !(desugarTree side ps r)

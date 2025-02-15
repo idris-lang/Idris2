@@ -442,7 +442,6 @@ searchNames fc rigc defaults trying depth defining topty env ambig (n :: ns) tar
 
 concreteDets : {vars : _} ->
                {auto c : Ref Ctxt Defs} ->
-               {auto u : Ref UST UState} ->
                FC -> Bool ->
                Env Term vars -> (top : ClosedTerm) ->
                (pos : Nat) -> (dets : List Nat) ->
@@ -492,7 +491,6 @@ concreteDets {vars} fc defaults env top pos dets (arg :: args)
 
 checkConcreteDets : {vars : _} ->
                     {auto c : Ref Ctxt Defs} ->
-                    {auto u : Ref UST UState} ->
                     FC -> Bool ->
                     Env Term vars -> (top : ClosedTerm) ->
                     NF vars ->

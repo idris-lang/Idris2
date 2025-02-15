@@ -619,8 +619,7 @@ lambdaLiftDef doLazyAnnots n (MkError exp)
 -- An empty list an error, because on success you will always get at least
 -- one definition, the lifted definition for the given name.
 export
-lambdaLift :  {auto c : Ref Ctxt Defs}
-           -> (doLazyAnnots : Bool)
+lambdaLift :  (doLazyAnnots : Bool)
            -> (Name,FC,CDef)
            -> Core (List (Name, LiftedDef))
 lambdaLift doLazyAnnots (n,_,def) = lambdaLiftDef doLazyAnnots n def

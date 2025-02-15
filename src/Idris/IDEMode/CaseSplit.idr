@@ -146,7 +146,6 @@ updateAll defs l (rs :: rss)
 -- replacements
 getReplaces : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
-              {auto o : Ref ROpts REPLOpts} ->
               List (Name, RawImp) -> Core Updates
 getReplaces updates
     = do strups <- traverse toStrUpdate updates
@@ -154,7 +153,6 @@ getReplaces updates
 
 showImpossible : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
-                 {auto o : Ref ROpts REPLOpts} ->
                  (indent : Nat) -> RawImp -> Core String
 showImpossible indent lhs
     = do clause <- pterm (map defaultKindedName lhs) -- hack
