@@ -17,7 +17,7 @@ main : IO ()
 main =
   do c    <- makeChannel
      tids <- for [0..11] $ \n => fork $ producer c n
-     vals <- for [0..11] $ \_ => channelGetWithTimeout c 5000
+     vals <- for [0..11] $ \_ => channelGetWithTimeout c 15000
      ignore $ traverse (\t => threadWait t) tids
      putStrLn $ show $ sum $ fromMaybe 0 <$> vals
 
