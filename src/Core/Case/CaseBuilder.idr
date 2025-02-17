@@ -1123,7 +1123,7 @@ mutual
       altGroups (ConGroup {newargs} cn tag rest :: cs)
           = do crest <- match fc fn phase rest (map (weakenNs (mkSizeOf newargs)) errorCase)
                cs' <- altGroups cs
-               pure (ConCase cn tag (cast newargs) (rewrite sym $ snocAppendAsFish vars newargs in crest) :: cs')
+               pure (ConCase cn tag (toList newargs) (rewrite sym $ snocAppendAsFish vars newargs in crest) :: cs')
       altGroups (DelayGroup {tyarg} {valarg} rest :: cs)
           = do crest <- match fc fn phase rest (map (weakenNs (mkSizeOf [<tyarg, valarg])) errorCase)
                cs' <- altGroups cs
