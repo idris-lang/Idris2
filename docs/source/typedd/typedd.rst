@@ -304,7 +304,7 @@ generates a case tree splitting on ``input1`` and ``input2`` instead of the
 This doesn't yet get past the totality checker, however, because it doesn't
 know about looking inside pairs.
 
-For the ``SplitRec`` view in the exercise 2 after Chapter 10-2, ``import Data.Vect.Views.Extra`` from ``contrib`` library.
+For the ``SplitRec`` view in exercise 2 after Chapter 10-2, ``import Data.Vect.Views.Extra`` from ``contrib`` library.
 
 For the ``VList`` view in exercise 4 after Chapter 10-2, ``import Data.List.Views.Extra`` from ``contrib`` library.
 
