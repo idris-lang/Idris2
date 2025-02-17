@@ -97,6 +97,15 @@ mkDataTy fc [] = IType fc
 mkDataTy fc ((n, (_, ty)) :: ps)
     = IPi fc top Explicit (Just n) ty (mkDataTy fc ps)
 
+jname : (Name, (RigCount, RawImp)) -> (Maybe Name, RigCount, RawImp)
+jname (n, rig, t) = (Just n, rig, t)
+
+mkTy : FC -> PiInfo RawImp ->
+       List (Maybe Name, RigCount, RawImp) -> RawImp -> RawImp
+mkTy fc imp [] ret = ret
+mkTy fc imp ((n, c, argty) :: args) ret
+    = IPi fc c imp n argty (mkTy fc imp args ret)
+
 mkIfaceData : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               FC -> WithDefault Visibility Private -> Env Term vars ->
@@ -108,8 +117,9 @@ mkIfaceData {vars} ifc def_vis env constraints n conName ps dets meths
                  maybe [] (singleton . SearchBy) dets
           pNames = map fst ps
           retty = apply (IVar vfc n) (map (IVar EmptyFC) pNames)
-          conty = mkTy Implicit (map jname ps) $
-                  mkTy AutoImplicit (map bhere constraints) (mkTy Explicit (map bname meths) retty)
+          conty = mkTy vfc Implicit (map jname ps) $
+                  mkTy vfc AutoImplicit (map bhere constraints) $
+                  mkTy vfc Explicit (map bname meths) retty
           con = MkImpTy vfc (NoFC conName) !(bindTypeNames ifc [] (pNames ++ map fst meths ++ vars) conty)
           bound = pNames ++ map fst meths ++ vars in
 
@@ -118,24 +128,14 @@ mkIfaceData {vars} ifc def_vis env constraints n conName ps dets meths
                    (Just !(bindTypeNames ifc [] bound (mkDataTy vfc ps)))
                    opts [con]
   where
-
     vfc : FC
     vfc = virtualiseFC ifc
-
-    jname : (Name, (RigCount, RawImp)) -> (Maybe Name, RigCount, RawImp)
-    jname (n, rig, t) = (Just n, rig, t)
 
     bname : (Name, RigCount, RawImp) -> (Maybe Name, RigCount, RawImp)
     bname (n, c, t) = (Just n, c, IBindHere (getFC t) (PI erased) t)
 
     bhere : (Maybe Name, RigCount, RawImp) -> (Maybe Name, RigCount, RawImp)
     bhere (n, c, t) = (n, c, IBindHere (getFC t) (PI erased) t)
-
-    mkTy : PiInfo RawImp ->
-           List (Maybe Name, RigCount, RawImp) -> RawImp -> RawImp
-    mkTy imp [] ret = ret
-    mkTy imp ((n, c, argty) :: args) ret
-        = IPi vfc c imp n argty (mkTy imp args ret)
 
 -- Get the implicit arguments for a method declaration or constraint hint
 -- to allow us to build the data declaration
@@ -245,12 +245,14 @@ getConstraintHint : {vars : _} ->
                     Name -> Name ->
                     (constraints : List Name) ->
                     (allmeths : List Name) ->
-                    (params : List Name) ->
+                    (params : List (Name, RigCount, RawImp)) ->
                     (Name, RawImp) -> Core (Name, List ImpDecl)
 getConstraintHint {vars} fc env vis iname cname constraints meths params (cn, con)
-    = do let ity = apply (IVar fc iname) (map (IVar fc) params)
-         let fty = IPi fc top Explicit Nothing ity con
-         ty_imp <- bindTypeNames fc [] (meths ++ vars) fty
+    = do let pNames = map fst params
+         let ity = apply (IVar fc iname) (map (IVar fc) pNames)
+         let fty = mkTy fc Implicit (map jname params) $
+                   mkTy fc Explicit [(Nothing, top, ity)] con
+         ty_imp <- bindTypeNames fc [] (pNames ++ meths ++ vars) fty
          let hintname = DN ("Constraint " ++ show con)
                           (UN (Basic $ "__" ++ show iname ++ "_" ++ show con))
 
@@ -515,7 +517,7 @@ elabInterface {vars} ifc def_vis env nest constraints iname params dets mcon bod
                                                  iname conName
                                                  (map fst nconstraints)
                                                  meth_names
-                                                 paramNames) nconstraints
+                                                 params) nconstraints
              log "elab.interface" 5 $ "Constraint hints from " ++ show constraints ++ ": " ++ show chints
              traverse_ (processDecl [] nest env) (concatMap snd chints)
              traverse_ (\n => do mn <- inCurrentNS n

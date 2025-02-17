@@ -1,0 +1,4 @@
+. ../../../testutils.sh
+
+check Issue3448.idr
+check NoUnbound.idr
