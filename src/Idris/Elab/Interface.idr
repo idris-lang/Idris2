@@ -253,7 +253,7 @@ getConstraintHint {vars} fc env vis iname cname constraints meths params (cn, co
          let ity = apply (IVar fc iname) (map (IVar fc) pNames)
          let fty = mkTy fc Implicit (map jname params) $
                    mkTy fc Explicit [(Nothing, top, ity)] con
-         ty_imp <- bindTypeNames fc [] (meths ++ vars) fty
+         ty_imp <- bindTypeNames fc [] (pNames ++ meths ++ vars) fty
          let hintname = DN ("Constraint " ++ show con)
                           (UN (Basic $ "__" ++ show iname ++ "_" ++ show con))
 
