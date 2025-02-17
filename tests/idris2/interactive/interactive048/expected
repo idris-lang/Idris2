@@ -1,0 +1,29 @@
+1/1: Building Issue3487 (Issue3487.idr)
+Main> one {a = 0, b} c = ?rhs_0
+one {a = (S k), b} c = ?rhs_1
+Main> one {a, b = 0} c = ?rhs_0
+one {a, b = (S k)} c = ?rhs_1
+Main> Can't split on a (Can't find type of a in LHS)
+Main> two {a=0, b = (c, d)} e = ?rhs2_0
+two {a=(S k), b = (c, d)} e = ?rhs2_1
+Main> two {a=x, b = (0, d)} e = ?rhs2_0
+two {a=x, b = ((S k), d)} e = ?rhs2_1
+Main> two {a=x, b = (c, 0)} e = ?rhs2_0
+two {a=x, b = (c, (S k))} e = ?rhs2_1
+Main> three {a = Nothing, b = 0} c = ?rhs3_0
+three {a = Nothing, b = (S k)} c = ?rhs3_1
+Main> three {a = Just 0} c = ?rhs4_0
+three {a = Just (S k)} c = ?rhs4_1
+Main> four {a = [x,0]} c = ?rhs5_0
+four {a = [x,(S k)]} c = ?rhs5_1
+Main>   0 => ?rhs7_0  -- something y
+  (S k) => ?rhs7_1 ) -- something y
+Main> six 0 {- is x -} {a {- is a -} } { {- here is b -} b, {- and c -} c} = ?rhs8_0 -- it is a x
+six (S k) {- is x -} {a {- is a -} } { {- here is b -} b, {- and c -} c} = ?rhs8_1 -- it is a x
+Main> six x {- is x -} {a = 0 {- is a -} } { {- here is b -} b, {- and c -} c} = ?rhs8_0 -- it is a x
+six x {- is x -} {a = (S k) {- is a -} } { {- here is b -} b, {- and c -} c} = ?rhs8_1 -- it is a x
+Main> six x {- is x -} {a {- is a -} } { {- here is b -} b = 0, {- and c -} c} = ?rhs8_0 -- it is a x
+six x {- is x -} {a {- is a -} } { {- here is b -} b = (S k), {- and c -} c} = ?rhs8_1 -- it is a x
+Main> six x {- is x -} {a {- is a -} } { {- here is b -} b, {- and c -} c = 0} = ?rhs8_0 -- it is a x
+six x {- is x -} {a {- is a -} } { {- here is b -} b, {- and c -} c = (S k)} = ?rhs8_1 -- it is a x
+Main> Bye for now!
