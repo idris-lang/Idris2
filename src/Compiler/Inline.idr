@@ -521,8 +521,7 @@ mergeLambdas args (CLam fc x sc)
     = let (args' ** (s, env, exp')) = getLams zero 0 [<] (CLam fc x sc)
           expNs = substs s env exp'
           newArgs = reverse $ getNewArgs env
-          expLocs = mkLocals (mkSizeOf args) {vars = [<]} (mkBounds newArgs)
-                             (rewrite appendLinLeftNeutral args in expNs) in
+          expLocs = refsToLocals (mkBounds newArgs) expNs in
           (_ ** expLocs)
 mergeLambdas args exp = (args ** exp)
 
