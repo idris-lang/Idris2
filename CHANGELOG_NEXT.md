@@ -285,6 +285,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Added `System.Concurrency.channelGetWithTimeout` for the chez backend.
 
+* Added `System.Concurrency.getThreadId` for the chez backend.
+
 #### Contrib
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
