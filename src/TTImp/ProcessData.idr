@@ -425,7 +425,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpLater dfc n_in ty_raw)
          arity <- getArity defs [] fullty
 
          -- Add the type constructor as a placeholder
-         tidx <- addDef n (newDef fc n linear vars fullty def_vis
+         tidx <- addDef n (newDef fc n top vars fullty def_vis
                           (TCon 0 arity [] [] defaultFlags [] Nothing Nothing))
          addMutData (Resolved tidx)
          defs <- get Ctxt
