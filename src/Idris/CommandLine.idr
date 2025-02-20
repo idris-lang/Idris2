@@ -117,6 +117,8 @@ data CLOpt
   Color Bool |
    ||| Set the log level globally
   Logging LogLevel |
+   ||| Enable logging in a tree-like output
+  LoggingTree |
    ||| Add a package as a dependency
   PkgPath String |
    ||| List installed packages
@@ -352,6 +354,8 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
               (Just "Verbose mode (default)"),
            MkOpt ["--log"] [RequiredLogLevel "log level"] (\l => [Logging l])
               (Just "Global log level (0 by default)"),
+           MkOpt ["--log-tree"] [] [LoggingTree]
+              (Just "Enable log output in a tree-like view to allow folding/unfolding inner parts (disabled by default)"),
 
            optSeparator,
            MkOpt ["--version", "-v"] [] [Version]
