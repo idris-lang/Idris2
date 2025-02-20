@@ -520,7 +520,7 @@ mergeLambdas : (args : SnocList Name) -> CExp args -> (args' ** CExp args')
 mergeLambdas args (CLam fc x sc)
     = let (args' ** (s, env, exp')) = getLams zero 0 [<] (CLam fc x sc)
           expNs = substs s env exp'
-          newArgs = reverse $ getNewArgs env
+          newArgs = getNewArgs env
           expLocs = refsToLocals (mkBounds newArgs) expNs in
           (_ ** expLocs)
 mergeLambdas args exp = (args ** exp)
