@@ -37,7 +37,8 @@ getDepth : {auto c : Ref Ctxt Defs} ->
              Core Nat
 getDepth
     = do defs <- get Ctxt
-         pure (logDepth $ session (options defs))
+         let treeLikeOutput = (logTreeEnabled $ session (options defs))
+         pure $ if treeLikeOutput then (logDepth $ session (options defs)) else 0
 
 export
 logDepthIncrease : {auto c : Ref Ctxt Defs} -> Core ()
