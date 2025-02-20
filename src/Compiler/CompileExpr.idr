@@ -617,7 +617,7 @@ toCDef n ty erased (PMDef pi args _ tree _)
             if isNil erased
                 then MkFun args comptree
                 else MkFun args' (shrinkCExp p comptree)
-         log "compiler.newtype.world" 25 "toCDef PMDef is_erased: \{show $ isNil erased}, lam \{show lam}, args': \{show $ asList args'}"
+         log "compiler.newtype.world" 25 "toCDef PMDef is_erased: \{show $ isNil erased}, lam \{show lam}, args': \{show $ toList args'}"
          pure lam
   where
     toLam : Bool -> CDef -> CDef
