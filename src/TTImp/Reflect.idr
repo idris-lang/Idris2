@@ -420,7 +420,7 @@ mutual
   Reify (IClaimData Name) where
     reify defs val@(NDCon _ n _ _ args)
         = case (dropAllNS !(full (gamma defs) n), map snd args) of
-               (UN (Basic "IClaim"), [<w,x,y,z])
+               (UN (Basic "MkIClaimData"), [<w,x,y,z])
                     => do w' <- reify defs !(evalClosure defs w)
                           x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
