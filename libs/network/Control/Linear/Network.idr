@@ -45,18 +45,21 @@ Next Receive True  = Socket Open
 Next Close   True  = Socket Closed
 Next _       False = Socket Closed
 
+data LEither' : Type -> Type -> Type where
+  Left : a -> LEither' a b
+  Right : b -@ LEither' a b
+
 export
 newSocket : LinearIO io
       => (fam  : SocketFamily)
       -> (ty   : SocketType)
       -> (pnum : ProtocolNumber)
-      -> (success : (1 sock : Socket Ready) -> L io ())
-      -> (fail : SocketError -> L io ())
+      -> (1 f : (1 sock : LEither' SocketError (Socket Ready)) -> L io ())
       -> L io ()
-newSocket fam ty pnum success fail
+newSocket fam ty pnum f
     = do Right rawsock <- socket fam ty pnum
-               | Left err => fail err
-         success (MkSocket rawsock)
+               | Left err => f (Left err)
+         f (Right $ MkSocket rawsock)
 
 export
 close : LinearIO io => (1 sock : Socket st) -> L1 io (Socket Closed)
