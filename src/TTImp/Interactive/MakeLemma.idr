@@ -85,8 +85,7 @@ mkApp loc n args
 -- Return a top level type for the lemma, and an expression which applies
 -- the lemma to solve a hole with 'locs' arguments
 export
-makeLemma : {auto m : Ref MD Metadata} ->
-            {auto c : Ref Ctxt Defs} ->
+makeLemma : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
             FC -> Name -> Nat -> ClosedTerm ->
             Core (RawImp, RawImp)

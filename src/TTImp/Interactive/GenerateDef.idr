@@ -108,8 +108,7 @@ splittableNames (INamedApp _ f _ _)
     = splittableNames f
 splittableNames _ = []
 
-trySplit : {auto m : Ref MD Metadata} ->
-           {auto c : Ref Ctxt Defs} ->
+trySplit : {auto c : Ref Ctxt Defs} ->
            {auto u : Ref UST UState} ->
            {auto s : Ref Syn SyntaxInfo} ->
            {auto o : Ref ROpts REPLOpts} ->

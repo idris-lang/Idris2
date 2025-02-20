@@ -308,9 +308,6 @@ Cast REPLOpt REPLOption where
 
 
 displayIDEResult : {auto c : Ref Ctxt Defs} ->
-       {auto u : Ref UST UState} ->
-       {auto s : Ref Syn SyntaxInfo} ->
-       {auto m : Ref MD Metadata} ->
        {auto o : Ref ROpts REPLOpts} ->
        File -> Integer -> IDEResult -> Core ()
 displayIDEResult outf i  (REPL $ REPLError err)
@@ -457,9 +454,6 @@ displayIDEResult outf i (REPL Exited) = printIDEResult outf i (AString "")
 
 
 handleIDEResult : {auto c : Ref Ctxt Defs} ->
-       {auto u : Ref UST UState} ->
-       {auto s : Ref Syn SyntaxInfo} ->
-       {auto m : Ref MD Metadata} ->
        {auto o : Ref ROpts REPLOpts} ->
        File -> Integer -> IDEResult -> Core ()
 handleIDEResult outf i (REPL Exited) = idePutStrLn outf i "Bye for now!"

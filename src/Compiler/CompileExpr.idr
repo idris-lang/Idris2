@@ -162,12 +162,10 @@ dconFlag n
 
 toCExpTm : {vars : _} ->
            {auto c : Ref Ctxt Defs} ->
-           {auto s : Ref NextMN Int} ->
            Name -> Term vars ->
            Core (CExp vars)
 toCExp : {vars : _} ->
          {auto c : Ref Ctxt Defs} ->
-         {auto s : Ref NextMN Int} ->
          Name -> Term vars ->
          Core (CExp vars)
 
@@ -231,7 +229,6 @@ toCExp n tm
 mutual
   conCases : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
-             {auto s : Ref NextMN Int} ->
              Name -> List (CaseAlt vars) ->
              Core (List (CConAlt vars))
   conCases n [] = pure []
@@ -260,7 +257,6 @@ mutual
 
   constCases : {vars : _} ->
                {auto c : Ref Ctxt Defs} ->
-               {auto s : Ref NextMN Int} ->
                Name -> List (CaseAlt vars) ->
                Core (List (CConstAlt vars))
   constCases n [] = pure []
@@ -278,7 +274,6 @@ mutual
   -- once.
   getNewType : {vars : _} ->
                {auto c : Ref Ctxt Defs} ->
-               {auto s : Ref NextMN Int} ->
                FC -> CExp vars ->
                Name -> List (CaseAlt vars) ->
                Core (Maybe (CExp vars))
@@ -334,7 +329,6 @@ mutual
 
   getDef : {vars : _} ->
            {auto c : Ref Ctxt Defs} ->
-           {auto s : Ref NextMN Int} ->
            Name -> List (CaseAlt vars) ->
            Core (Maybe (CExp vars))
   getDef n [] = pure Nothing
@@ -346,7 +340,6 @@ mutual
 
   toCExpTree : {vars : _} ->
                {auto c : Ref Ctxt Defs} ->
-               {auto s : Ref NextMN Int} ->
                Name -> CaseTree vars ->
                Core (CExp vars)
   toCExpTree n alts@(Case _ x scTy (DelayCase ty arg sc :: rest))
@@ -360,7 +353,6 @@ mutual
 
   toCExpTree' : {vars : _} ->
                 {auto c : Ref Ctxt Defs} ->
-                {auto s : Ref NextMN Int} ->
                 Name -> CaseTree vars ->
                 Core (CExp vars)
   toCExpTree' n (Case _ x scTy alts@(ConCase _ _ _ _ :: _))

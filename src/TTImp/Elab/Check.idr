@@ -730,7 +730,6 @@ convertWithLazy
         : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
           {auto u : Ref UST UState} ->
-          {auto e : Ref EST (EState vars)} ->
           (withLazy : Bool) ->
           FC -> ElabInfo -> Env Term vars -> Glued vars -> Glued vars ->
           Core UnifyResult
@@ -775,7 +774,6 @@ export
 convert : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
           {auto u : Ref UST UState} ->
-          {auto e : Ref EST (EState vars)} ->
           FC -> ElabInfo -> Env Term vars -> Glued vars -> Glued vars ->
           Core UnifyResult
 convert = convertWithLazy False
@@ -789,7 +787,6 @@ export
 checkExp : {vars : _} ->
            {auto c : Ref Ctxt Defs} ->
            {auto u : Ref UST UState} ->
-           {auto e : Ref EST (EState vars)} ->
            RigCount -> ElabInfo -> Env Term vars -> FC ->
            (term : Term vars) ->
            (got : Glued vars) -> (expected : Maybe (Glued vars)) ->

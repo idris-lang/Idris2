@@ -167,8 +167,7 @@ postCompose h ch2 s work f _ ch1
        insert (f, h, ch) work
 
 mutual
-  addGraph : {auto c : Ref Ctxt Defs} ->
-             (f, g : Name) -> Graph {- f g -} ->
+  addGraph : (f, g : Name) -> Graph {- f g -} ->
              WorkList ->
              SCSet ->
              SCSet
@@ -188,8 +187,7 @@ mutual
         -- And then we need to close over all of these new paths too
         transitiveClosure work_post s
 
-  transitiveClosure : {auto c : Ref Ctxt Defs} ->
-                      WorkList ->
+  transitiveClosure : WorkList ->
                       SCSet ->
                       SCSet
   transitiveClosure work s

@@ -289,8 +289,7 @@ normaliseHolesScope defs env (Bind fc n b sc)
 normaliseHolesScope defs env tm = normaliseHoles defs env tm
 
 export
-bindImplicits : {auto c : Ref Ctxt Defs} ->
-                {vars : _} ->
+bindImplicits : {vars : _} ->
                 FC -> BindMode ->
                 Defs -> Env Term vars ->
                 List (Name, ImplBinding vars) ->

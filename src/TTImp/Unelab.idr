@@ -166,8 +166,7 @@ mutual
                -- TODO: actually grab the fnopts?
                pure $ Just $ ICase fc [] tm (Implicit fc False) pats'
 
-  dropParams : {auto c : Ref Ctxt Defs} ->
-               List (Name, Nat) -> (IRawImp, Glued vars) ->
+  dropParams : List (Name, Nat) -> (IRawImp, Glued vars) ->
                Core (IRawImp, Glued vars)
   dropParams nest (tm, ty)
      = case getFnArgs tm [] of

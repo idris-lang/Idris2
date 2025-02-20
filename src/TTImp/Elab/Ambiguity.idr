@@ -308,7 +308,6 @@ filterCore f (x :: xs)
 
 pruneByType : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
-              {auto u : Ref UST UState} ->
               Env Term vars -> NF vars -> List RawImp ->
               Core (List RawImp)
 pruneByType env target alts

@@ -149,7 +149,6 @@ addImport imp
          setNS topNS
 
 readImportMeta : {auto c : Ref Ctxt Defs} ->
-                 {auto u : Ref UST UState} ->
                  Import -> Core (Bool, (Namespace, Int))
 readImportMeta imp
     = do Right ttcFileName <- nsToPath (loc imp) (path imp)
@@ -274,7 +273,6 @@ unchangedHash hashFn ttcFileName sourceFileName
 
 export
 getCG : {auto o : Ref ROpts REPLOpts} ->
-        {auto c : Ref Ctxt Defs} ->
         CG -> Core (Maybe Codegen)
 getCG Chez = pure $ Just codegenChez
 getCG ChezSep = pure $ Just codegenChezSep

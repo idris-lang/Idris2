@@ -138,7 +138,6 @@ initSearchOpts rec depth
                    Nothing
 
 search : {auto c : Ref Ctxt Defs} ->
-         {auto m : Ref MD Metadata} ->
          {auto u : Ref UST UState} ->
          FC -> RigCount ->
          SearchOpts -> List Name -> ClosedTerm ->
@@ -167,7 +166,6 @@ getAllEnv {vars = v :: vs} {done} fc p (b :: env)
 -- Search recursively, but only if the given name wasn't solved by unification
 searchIfHole : {vars : _} ->
                {auto c : Ref Ctxt Defs} ->
-               {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
                FC -> SearchOpts -> List Name -> ClosedTerm ->
                Env Term vars -> ArgInfo vars ->
@@ -274,7 +272,6 @@ mkCandidates fc f ds (((arg, ds') :: next) :: argss)
 -- If there are any remaining holes, search fails.
 searchName : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
-             {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              FC -> RigCount -> SearchOpts -> List Name ->
              Env Term vars -> NF vars -> ClosedTerm ->
@@ -319,7 +316,6 @@ searchName fc rigc opts hints env target topty (n, ndef)
 
 getSuccessful : {vars : _} ->
                 {auto c : Ref Ctxt Defs} ->
-                {auto m : Ref MD Metadata} ->
                 {auto u : Ref UST UState} ->
                 FC -> RigCount -> SearchOpts -> Bool ->
                 Env Term vars -> Term vars -> ClosedTerm ->
@@ -344,7 +340,6 @@ getSuccessful {vars} fc rig opts mkHole env ty topty all
 
 searchNames : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
-              {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
               FC -> RigCount -> SearchOpts -> List Name -> Env Term vars ->
               Term vars -> ClosedTerm ->
@@ -372,7 +367,6 @@ searchNames fc rig opts hints env ty topty (n :: ns)
 
 tryRecursive : {vars : _} ->
                {auto c : Ref Ctxt Defs} ->
-               {auto m : Ref MD Metadata} ->
                {auto u : Ref UST UState} ->
                FC -> RigCount -> SearchOpts -> List Name ->
                Env Term vars -> Term vars -> ClosedTerm ->
@@ -441,7 +435,6 @@ usableLocal loc _ _ = True
 
 searchLocalWith : {vars : _} ->
                   {auto c : Ref Ctxt Defs} ->
-                  {auto m : Ref MD Metadata} ->
                   {auto u : Ref UST UState} ->
                   FC -> Bool ->
                   RigCount -> SearchOpts -> List Name -> Env Term vars ->
@@ -521,7 +514,6 @@ searchLocalWith {vars} fc nofn rig opts hints env ((p, pty) :: rest) ty topty
 
 searchLocal : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
-              {auto m : Ref MD Metadata} ->
               {auto u : Ref UST UState} ->
               FC -> RigCount -> SearchOpts -> List Name ->
               Env Term vars -> Term vars -> ClosedTerm ->
@@ -535,7 +527,6 @@ searchLocal fc rig opts hints env ty topty
 
 makeHelper : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
-             {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              FC -> RigCount -> SearchOpts ->
              Env Term vars ->
@@ -598,7 +589,6 @@ makeHelper fc rig opts env letty targetty ((locapp, ds) :: next)
 
 tryIntermediateWith : {vars : _} ->
                       {auto c : Ref Ctxt Defs} ->
-                      {auto m : Ref MD Metadata} ->
                       {auto u : Ref UST UState} ->
                       FC -> RigCount -> SearchOpts -> List Name ->
                       Env Term vars -> List (Term vars, Term vars) ->
@@ -644,7 +634,6 @@ tryIntermediateWith fc rig opts hints env ((p, pty) :: rest) ty topty
 -- the job
 tryIntermediate : {vars : _} ->
                   {auto c : Ref Ctxt Defs} ->
-                  {auto m : Ref MD Metadata} ->
                   {auto u : Ref UST UState} ->
                   FC -> RigCount -> SearchOpts -> List Name ->
                   Env Term vars -> Term vars -> ClosedTerm ->
@@ -659,7 +648,6 @@ tryIntermediate fc rig opts hints env ty topty
 -- things like dependent pairs and singleton types before proceeding.
 tryIntermediateRec : {vars : _} ->
                      {auto c : Ref Ctxt Defs} ->
-                     {auto m : Ref MD Metadata} ->
                      {auto u : Ref UST UState} ->
                      FC -> RigCount -> SearchOpts -> List Name ->
                      Env Term vars ->
@@ -695,7 +683,6 @@ tryIntermediateRec fc rig opts hints env ty topty (Just rd)
 
 searchType : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
-             {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              FC -> RigCount -> SearchOpts -> List Name -> Env Term vars ->
              ClosedTerm ->
@@ -768,7 +755,6 @@ searchType fc rig opts hints env topty _ ty
                              ++ tryIntRec)
 
 searchHole : {auto c : Ref Ctxt Defs} ->
-             {auto m : Ref MD Metadata} ->
              {auto u : Ref UST UState} ->
              FC -> RigCount -> SearchOpts -> List Name -> Name ->
              Nat -> ClosedTerm ->

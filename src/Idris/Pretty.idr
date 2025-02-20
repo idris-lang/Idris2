@@ -443,7 +443,6 @@ render = render colorAnn
 
 export
 renderWithDecorations :
-  {auto c : Ref Ctxt Defs} ->
   {auto o : Ref ROpts REPLOpts} ->
   (ann -> Maybe ann') ->
   Doc ann ->

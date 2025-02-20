@@ -313,8 +313,7 @@ combine (Invalid :: xs) acc = combine xs acc
 combine (x :: xs) acc = combine xs (x :: acc)
 
 export
-getSplitsLHS : {auto m : Ref MD Metadata} ->
-               {auto c : Ref Ctxt Defs} ->
+getSplitsLHS : {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
                {auto s : Ref Syn SyntaxInfo} ->
                {auto o : Ref ROpts REPLOpts} ->

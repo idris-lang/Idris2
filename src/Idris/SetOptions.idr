@@ -267,7 +267,7 @@ dirOption dirs Prefix
 --          Bash Autocompletions
 --------------------------------------------------------------------------------
 
-findIpkg : {auto c : Ref Ctxt Defs} -> Core (List String)
+findIpkg : Core (List String)
 findIpkg =
   do Just srcdir <- coreLift currentDir
        | Nothing => throw (InternalError "Can't get current directory")

@@ -544,10 +544,7 @@ build pkg opts
          runScript (postbuild pkg)
          pure []
 
-installBuildArtifactFrom : {auto o : Ref ROpts REPLOpts} ->
-              {auto c : Ref Ctxt Defs} ->
-              String ->
-              String -> String -> ModuleIdent -> Core ()
+installBuildArtifactFrom : String -> String -> String -> ModuleIdent -> Core ()
 
 installBuildArtifactFrom file_extension builddir destdir ns
     = do let filename_trunk = ModuleIdent.toPath ns
@@ -606,8 +603,7 @@ installFrom builddir destdir ns = do
       ignore $ coreLift $ copyFile obj dest)
     objPaths
 
-installSrcFrom : {auto c : Ref Ctxt Defs} ->
-                 String -> String -> (ModuleIdent, FileName) -> Core ()
+installSrcFrom : String -> String -> (ModuleIdent, FileName) -> Core ()
 installSrcFrom wdir destdir (ns, srcRelPath)
     = do let srcfile = ModuleIdent.toPath ns
          let srcPath = wdir </> srcRelPath
@@ -853,7 +849,6 @@ foldWithKeysC {a} {b} fk fv = go []
                    nd
 
 clean : {auto c : Ref Ctxt Defs} ->
-        {auto o : Ref ROpts REPLOpts} ->
         PkgDesc ->
         List CLOpt ->
         Core ()

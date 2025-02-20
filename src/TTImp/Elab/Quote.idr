@@ -222,9 +222,7 @@ checkQuote rig elabinfo nest env fc tm exp
 export
 checkQuoteName : {vars : _} ->
                  {auto c : Ref Ctxt Defs} ->
-                 {auto m : Ref MD Metadata} ->
                  {auto u : Ref UST UState} ->
-                 {auto e : Ref EST (EState vars)} ->
                  RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> Name -> Maybe (Glued vars) ->
