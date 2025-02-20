@@ -1,5 +1,5 @@
-||| Additional views for Vect
-module Data.Vect.Views.Extra
+||| Views for Vect
+module Data.Vect.Views
 
 import Control.WellFounded
 import Data.Vect

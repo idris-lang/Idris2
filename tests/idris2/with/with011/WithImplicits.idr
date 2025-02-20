@@ -1,5 +1,5 @@
 import Data.Vect
-import Data.Vect.Views.Extra
+import Data.Vect.Views
 
 mergeSort : Ord a => {n : _} -> Vect n a -> Vect n a
 mergeSort input with (splitRec input)

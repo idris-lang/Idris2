@@ -98,6 +98,7 @@ modules = Control.App,
           Data.Vect.AtIndex,
           Data.Vect.Elem,
           Data.Vect.Quantifiers,
+          Data.Vect.Views,
           Data.Void,
           Data.Zippable,
 
