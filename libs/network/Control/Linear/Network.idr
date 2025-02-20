@@ -3,6 +3,7 @@ module Control.Linear.Network
 -- An experimental linear type based API to sockets
 
 import public Data.Either
+import public Data.Linear.LEither
 import public Data.Maybe
 
 import Control.Linear.LIO
@@ -45,20 +46,16 @@ Next Receive True  = Socket Open
 Next Close   True  = Socket Closed
 Next _       False = Socket Closed
 
-data LEither' : Type -> Type -> Type where
-  Left : a -> LEither' a b
-  Right : b -@ LEither' a b
-
 export
 newSocket : LinearIO io
       => (fam  : SocketFamily)
       -> (ty   : SocketType)
       -> (pnum : ProtocolNumber)
-      -> (1 f : (1 sock : LEither' SocketError (Socket Ready)) -> L io ())
+      -> (1 f : (1 sock : LEither (!* SocketError) (Socket Ready)) -> L io ())
       -> L io ()
 newSocket fam ty pnum f
     = do Right rawsock <- socket fam ty pnum
-               | Left err => f (Left err)
+               | Left err => f (Left $ MkBang err)
          f (Right $ MkSocket rawsock)
 
 export
