@@ -1,3 +1,3 @@
 Dumping case trees to Main.cases
-Main.plus = [{arg:1}, {arg:2}]: (%case !{arg:1} [(%constcase 0 !{arg:2})] Just (%let {e:0} (-Integer [!{arg:1}, 1]) (+Integer [(Main.plus [!{e:0}, !{arg:2}]), 1])))
+Main.plus = [{arg:1}, {arg:2}]: (%case const !{arg:1} [(%constcase 0 !{arg:2})] Just (%let {e:0} (-Integer [!{arg:1}, 1]) (+Integer [(Main.plus [!{e:0}, !{arg:2}]), 1])))
 Main.main = [{ext:0}]: (Main.plus [1, 2])
