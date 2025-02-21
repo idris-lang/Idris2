@@ -173,7 +173,7 @@ logNF : {vars : _} ->
 logNF str n msg env tmnf
     = when !(logging str n) $
         do defs <- get Ctxt
-           tm <- logQuite $ quote defs env tmnf
+           tm <- logQuiet $ quote defs env tmnf
            tm' <- toFullNames tm
            depth <- getDepth
            logString depth str n (msg ++ ": " ++ show tm')
@@ -188,7 +188,7 @@ logTermNF' : {vars : _} ->
              Nat -> Lazy String -> Env Term vars -> Term vars -> Core ()
 logTermNF' str n msg env tm
     = do defs <- get Ctxt
-         tmnf <- logQuite $ normaliseHoles defs env tm
+         tmnf <- logQuiet $ normaliseHoles defs env tm
          tm' <- toFullNames tmnf
          depth <- getDepth
          logString depth str n (msg ++ ": " ++ show tm')
@@ -226,7 +226,7 @@ logGlueNF str n msg env gtm
     = when !(logging str n) $
         do defs <- get Ctxt
            tm <- getTerm gtm
-           tmnf <- logQuite $ normaliseHoles defs env tm
+           tmnf <- logQuiet $ normaliseHoles defs env tm
            tm' <- toFullNames tmnf
            depth <- getDepth
            logString depth str n (msg ++ ": " ++ show tm')
