@@ -6,6 +6,7 @@ Overridable options are:
     --verbose
     --timing
     --log <log level>
+    --log-tree
     --dumpcases <file>
     --dumplifted <file>
     --dumpvmcode <file>
