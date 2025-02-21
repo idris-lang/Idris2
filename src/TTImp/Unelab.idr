@@ -81,8 +81,9 @@ mutual
                 | _ => pure Nothing
            let Just argpos = findArgPos treect
                 | _ => pure Nothing
-           if length args == length pargs
-              then mkCase pats argpos args
+           let len = length args
+           if len == length pargs
+              then mkCase pats (len `minus` argpos + 1) args
               else pure Nothing
     where
       -- Need to find the position of the scrutinee to rebuild original
