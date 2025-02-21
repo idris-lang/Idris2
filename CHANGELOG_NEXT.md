@@ -122,6 +122,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   with `_builtin.<TAG>` (eg `_builtin.CONS`). This allows the identity optimisation
   to optimise conversions between list-shaped things.
 
+* [Djot](https://djot.net/) files can now be compiled as CommonMark style
+  Literate Idris files.
+
 ### Backend changes
 
 #### RefC Backend
