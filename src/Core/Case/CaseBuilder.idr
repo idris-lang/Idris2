@@ -566,7 +566,7 @@ nextNames fc root [<] _ = pure ([<] ** (zero, []))
 nextNames {vars} fc root pats m_nty
      = do (args ** lprf) <- mkNames pats
           let env = mkEnv fc vars
-          argTys <- logQuite $ getArgTys env args m_nty
+          argTys <- logQuiet $ getArgTys env args m_nty
           pure $ nextNames' fc pats (rev args) (revRMatch lprf) (reverse argTys)
   where
     mkNames : (vars : SnocList a) ->
@@ -1285,9 +1285,9 @@ mkPatClause fc fn args ty pid (ps, rhs)
                   log "compile.casetree" 20 $ "mkPatClause nty: " ++ show nty
                   -- The arguments are in reverse order, so we need to
                   -- read what we know off 'nty', and reverse it
-                  argTys <- logQuite $ getArgTys [<] (rev args) (Just nty)
+                  argTys <- logQuiet $ getArgTys [<] (rev args) (Just nty)
                   log "compile.casetree" 20 $ "mkPatClause args: " ++ show (toList args) ++ ", argTys: " ++ show argTys
-                  ns <- logQuite $ mkNames args ps eq (reverse argTys)
+                  ns <- logQuiet $ mkNames args ps eq (reverse argTys)
                   log "compile.casetree" 20 $
                     "Make pat clause for names " ++ show ns
                      ++ " in LHS " ++ show (toList ps)
