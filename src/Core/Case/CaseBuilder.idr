@@ -759,7 +759,7 @@ groupCons fc fn pvars cs
            then addConG n 0 pargs pats pid rhs acc
            else throw (CaseCompile cfc fn (NotFullyApplied n))
     addGroup (PArrow _ _ s t) pprf pats pid rhs acc
-         = addConG (UN $ Basic "->") 0 [<t, s] pats pid rhs acc
+         = addConG (UN $ Basic "->") 0 [<s, t] pats pid rhs acc
     -- Go inside the delay; we'll flag the case as needing to force its
     -- scrutinee (need to check in 'caseGroups below)
     addGroup (PDelay _ _ pty parg) pprf pats pid rhs acc
