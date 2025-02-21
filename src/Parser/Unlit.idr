@@ -33,7 +33,7 @@ styleCMark : LiterateStyle
 styleCMark = MkLitStyle
               [("```idris", "```"), ("~~~idris", "~~~"), ("<!-- idris", "-->")]
               Nil
-              [".md", ".markdown"]
+              [".md", ".markdown", ".dj"]
 
 export
 styleTeX : LiterateStyle

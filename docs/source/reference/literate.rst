@@ -86,7 +86,7 @@ Each of the following markup is recognised regardless of case:
 CommonMark
 **********
 
-We treat files with an extension of ``.md`` and ``.markdown`` as CommonMark style literate files.
+We treat Markdown files with an extension of ``.md`` or ``.markdown`` and Djot files with an extension of ``.dj`` as CommonMark style literate files.
 
 + CommonMark source blocks for idris sans options are recognised as visible code blocks::
 
