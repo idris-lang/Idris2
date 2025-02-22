@@ -208,6 +208,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 #### Base
 
+* `Data.Vect.Views.Extra` was moved from `contrib` to `base`.
+
 * `Data.List.Lazy` was moved from `contrib` to `base`.
 
 * Added an `Interpolation` implementation for primitive decimal numeric types and `Nat`.
@@ -289,6 +291,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Added `System.Concurrency.channelGetWithTimeout` for the chez backend.
 
 #### Contrib
+
+* `Data.Vect.Views.Extra` was moved from `contrib` to `base`.
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
 

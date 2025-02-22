@@ -94,7 +94,6 @@ modules = Control.ANSI,
           Data.Vect.Properties.Fin,
           Data.Vect.Extra,
           Data.Vect.Sort,
-          Data.Vect.Views.Extra,
 
           Debug.Buffer,
 
