@@ -4,7 +4,7 @@ module System.Errno
 %default total
 
 %foreign "C:idris2_getErrno, libidris2_support, idris_support.h"
-         "node:support:fileErrno,support_system_file"
+         "node:support:getErrno,support_system"
 prim__getErrno : PrimIO Int
 
 %foreign "C:idris2_strerror, libidris2_support, idris_support.h"
