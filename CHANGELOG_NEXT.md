@@ -332,6 +332,7 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 #### Network
 
 * Add a missing function parameter (the flag) in the C implementation of `idrnet_recv_bytes`
+* Merge callbacks in linear `newSocket` into one single, linear callback
 
 #### Test
 
