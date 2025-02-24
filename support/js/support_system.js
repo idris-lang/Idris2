@@ -21,5 +21,5 @@ function support_system_unsetEnv(name) {
 }
 
 function support_system_getErrno() {
-  return process.__lasterr===undefined?0:process.__lasterr.errno || 0
+  return process.__lasterr === undefined ? 0 : -process.__lasterr.errno || 0
 }
