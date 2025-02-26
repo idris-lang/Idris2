@@ -900,8 +900,7 @@ createCFunctions n (MkAError exp) = throw $ InternalError "[refc] Error with exp
 -- not really total but this way this internal error does not contaminate everything else
 
 
-header : {auto c : Ref Ctxt Defs}
-      -> {auto f : Ref FunctionDefinitions (List String)}
+header : {auto f : Ref FunctionDefinitions (List String)}
       -> {auto o : Ref OutfileText Output}
       -> {auto il : Ref IndentLevel Nat}
       -> {auto h : Ref HeaderFiles (SortedSet String)}

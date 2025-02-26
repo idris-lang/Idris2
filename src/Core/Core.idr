@@ -898,27 +898,27 @@ filterM p (x :: xs)
          else filterM p xs
 
 export
-newRef : (x : label) -> t -> Core (Ref x t)
+newRef : (0 x : label) -> t -> Core (Ref x t)
 newRef x val
     = do ref <- coreLift (newIORef val)
          pure (MkRef ref)
 
 export %inline
-get : (x : label) -> {auto ref : Ref x a} -> Core a
+get : (0 x : label) -> {auto ref : Ref x a} -> Core a
 get x {ref = MkRef io} = coreLift (readIORef io)
 
 export %inline
-put : (x : label) -> {auto ref : Ref x a} -> a -> Core ()
+put : (0 x : label) -> {auto ref : Ref x a} -> a -> Core ()
 put x {ref = MkRef io} val = coreLift (writeIORef io val)
 
 export %inline
-update : (x : label) -> {auto ref : Ref x a} -> (a -> a) -> Core ()
+update : (0 x : label) -> {auto ref : Ref x a} -> (a -> a) -> Core ()
 update x f
   = do v <- get x
        put x (f v)
 
 export
-wrapRef : (x : label) -> {auto ref : Ref x a} ->
+wrapRef : (0 x : label) -> {auto ref : Ref x a} ->
           (a -> Core ()) ->
           Core b ->
           Core b

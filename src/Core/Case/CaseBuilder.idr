@@ -808,7 +808,6 @@ nextIdxByScore True RunTime xs      =
 -- and matchable type, which is multiplicity > 0.
 -- If so, it's okay to match on it
 sameType : {ns : _} ->
-           {auto i : Ref PName Int} ->
            {auto c : Ref Ctxt Defs} ->
            FC -> Phase -> Name ->
            Env Term ns -> List (NamedPats ns (p :: ps)) ->
@@ -906,7 +905,6 @@ countDiff xs = length (distinct [] (map getFirstCon xs))
             else distinct (p :: acc) ps
 
 getScore : {ns : _} ->
-           {auto i : Ref PName Int} ->
            {auto c : Ref Ctxt Defs} ->
            FC -> Phase -> Name ->
            List (NamedPats ns (p :: ps)) ->
@@ -921,7 +919,6 @@ getScore fc phase name npss
 ||| Pick the leftmost matchable thing with all constructors in the
 ||| same family, or all variables, or all the same type constructor.
 pickNextViable : {p, ns, ps : _} ->
-           {auto i : Ref PName Int} ->
            {auto c : Ref Ctxt Defs} ->
            FC -> Phase -> Name -> List (NamedPats ns (p :: ps)) ->
            Core (n ** NVar n (p :: ps))
