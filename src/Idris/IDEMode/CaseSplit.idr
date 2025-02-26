@@ -65,69 +65,93 @@ isWhitespace : SourcePart -> Bool
 isWhitespace (Whitespace _) = True
 isWhitespace _              = False
 
+splitSpaceAndComments : List SourcePart -> (List SourcePart, List SourcePart)
+splitSpaceAndComments = skipSpace Lin
+  where
+    skipSpace : SnocList SourcePart -> List SourcePart -> (List SourcePart, List SourcePart)
+    skipComment : SnocList SourcePart -> List SourcePart -> (List SourcePart, List SourcePart)
+
+    skipComment left [] = (left <>> [], [])
+    skipComment left (Other "-" :: RBrace :: toks) = skipSpace (left :< Other "-" :< RBrace) toks
+    skipComment left (tok :: toks) = skipComment (left :< tok) toks
+
+    skipSpace left [] = (left <>> [], [])
+    skipSpace left (LBrace :: Other "-" :: toks) = skipComment (left :< LBrace :< Other "-") toks
+    skipSpace left (Whitespace ws :: toks) = skipSpace (left :< Whitespace ws) toks
+    skipSpace left toks = (left <>> [], toks)
+
+data Wrap = Brace | Auto | Paren | Bracket
+
 ||| Given a list of definitions, a list of mappings from `RawName` to `String`,
 ||| and a list of tokens to update, work out the updates to do, apply them, and
-||| return the result.
+||| return the result. Maintain a stack of brackets so we know if we need to insert
+||| a named application.
 doUpdates : {auto s : Ref Syn SyntaxInfo} ->
             {auto u : Ref UPD (List String)} ->
-            Defs -> Updates -> List SourcePart ->
+            Defs -> Updates -> List Wrap -> List SourcePart ->
             Core (List SourcePart)
-doUpdates defs ups [] = pure []   -- no more tokens to update, so we are done
+doUpdates defs ups stk [] = pure []   -- no more tokens to update, so we are done
 -- if we have a name that acts as an as-pattern then do not update it
-doUpdates defs ups (Name n :: AsPattern :: xs)
-    = pure $ Name n :: AsPattern :: !(doUpdates defs ups xs)
+doUpdates defs ups stk (Name n :: AsPattern :: xs)
+    = pure $ Name n :: AsPattern :: !(doUpdates defs ups stk xs)
 -- if we have an `@{` that was not handled as a named pattern, it should not
 -- result in named expansion (i.e. `@{n = ...}`) because that is not syntactically
--- valid. This clause allows us to treat `@{n}` just like `n` (no braces).
-doUpdates defs ups (AsPattern :: LBrace :: xs)
-    = pure $ AsPattern :: LBrace :: !(doUpdates defs ups xs)
--- if we have an LBrace (i.e. `{`), handle its contents
-doUpdates defs ups (LBrace :: xs)
-    -- the cases we care about are easy to detect w/o whitespace, so separate it
-    = let (ws, nws) = span isWhitespace xs in
+-- valid. Push `Auto` to mark this case.
+doUpdates defs ups stk (AsPattern :: LBrace :: xs)
+    = pure $ AsPattern :: LBrace :: !(doUpdates defs ups (Auto :: stk) xs)
+doUpdates defs ups stk toks@(LBrace :: Other "-" :: _) =
+  let (ws, nws) = splitSpaceAndComments toks in
+  pure (ws ++ !(doUpdates defs ups stk nws))
+-- Handle tuples inside an implicit by pushing Paren
+doUpdates defs ups stk (Other "(" :: xs)  = pure (Other "(" :: !(doUpdates defs ups (Paren :: stk) xs))
+doUpdates defs ups stk (Other ")" :: xs)  = case stk of
+  (Paren :: stk) => pure (Other ")" :: !(doUpdates defs ups stk xs))
+  _ => pure (Other ")" :: !(doUpdates defs ups stk xs))
+doUpdates defs ups stk (Other "[" :: xs)  = pure (Other "[" :: !(doUpdates defs ups (Bracket :: stk) xs))
+doUpdates defs ups stk (Other "]" :: xs)  = case stk of
+  Bracket :: stk => pure (Other "]" :: !(doUpdates defs ups stk xs))
+  stk => pure (Other "]" :: !(doUpdates defs ups stk xs))
+doUpdates defs ups stk (Other "-" :: Other "-" :: xs) = pure (Other "--" :: xs)
+-- name after LBrace
+doUpdates defs ups stk (LBrace :: xs) =
+  let (ws, nws) = splitSpaceAndComments xs in
+    case nws of
+      Name n :: rest => case lookup n ups of
+        Just up => pure (LBrace :: ws ++ Name n :: Whitespace " " :: Equal :: Whitespace " " :: Other up :: !(doUpdates defs ups stk rest))
+        Nothing => pure (LBrace :: ws ++ !(doUpdates defs ups (Brace :: stk) nws))
+      _ => pure (LBrace :: ws ++ !(doUpdates defs ups (Brace :: stk) nws))
+-- handle commas directly inside an implicit
+doUpdates defs ups stk (Other "," :: xs) =
+      let (ws, nws) = splitSpaceAndComments xs in
         case nws of
-          -- handle potential whitespace in the other parts
-          Name n :: rest =>
-             let (ws', nws') = span isWhitespace rest in
-               case nws' of
-                  -- brace is immediately closed, so generate a new
-                  -- pattern-match on the values the name can have, e.g.
-                  -- { x}  where x : Nat would become { x = Z}
-                  --                       (and later { x = (S k)})
-                  RBrace :: rest' =>
-                    pure (LBrace :: ws ++
-                          Name n :: Whitespace " " :: Equal :: Whitespace " " ::
-                          !(doUpdates defs ups (Name n :: ws' ++ RBrace :: rest'))
-                          )
-                  -- preserve whitespace before (and after) the Equal
-                  Equal :: rest' =>
-                    let (ws'', nws'') = span isWhitespace rest' in
-                    pure (LBrace :: ws ++
-                          Name n :: ws' ++ Equal :: ws'' ++
-                          !(doUpdates defs ups nws'')
-                          )
-                  -- handle everything else as usual, preserving whitespace
-                  _ => pure (LBrace :: ws ++ Name n :: ws' ++
-                             !(doUpdates defs ups rest)
-                             )
-          -- not a special case: proceed as normal
-          _ => pure (LBrace :: [] ++ !(doUpdates defs ups xs))
+          Name n :: rest => case lookup n ups of
+            Nothing => pure (Other "," :: ws ++ !(doUpdates defs ups stk nws))
+            Just up => case stk of
+              Brace :: _ => pure (Other "," :: ws ++ Name n :: Whitespace " " :: Equal :: Whitespace " " :: Other up :: !(doUpdates defs ups stk rest))
+              _ => pure (Other "," :: ws ++ Other up :: !(doUpdates defs ups stk rest))
+          _ => pure (Other "," :: ws ++ !(doUpdates defs ups stk nws))
+
+doUpdates defs ups stk (RBrace :: xs) = case stk of
+  Brace :: stk => pure (RBrace :: !(doUpdates defs ups stk xs))
+  Auto :: stk => pure (RBrace :: !(doUpdates defs ups stk xs))
+  stk => pure (RBrace :: !(doUpdates defs ups stk xs))
+
 -- if we have a name, look up if it's a name we're updating. If it isn't, keep
 -- the old name, otherwise update the name, i.e. replace with the new name
-doUpdates defs ups (Name n :: xs)
+doUpdates defs ups stk (Name n :: xs)
     = case lookup n ups of
-           Nothing => pure (Name n :: !(doUpdates defs ups xs))
-           Just up => pure (Other up :: !(doUpdates defs ups xs))
+           Nothing => pure (Name n :: !(doUpdates defs ups stk xs))
+           Just up => pure (Other up :: !(doUpdates defs ups stk xs))
 -- if we have a hole, get the used names, generate+register a new unique name,
 -- and change the hole's name to the new one
-doUpdates defs ups (HoleName n :: xs)
+doUpdates defs ups stk (HoleName n :: xs)
     = do used <- get UPD
          n' <- uniqueHoleName defs used n
          put UPD (n' :: used)
-         pure $ HoleName n' :: !(doUpdates defs ups xs)
+         pure $ HoleName n' :: !(doUpdates defs ups stk xs)
 -- if it's not a thing we update, leave it and continue working on the rest
-doUpdates defs ups (x :: xs)
-    = pure $ x :: !(doUpdates defs ups xs)
+doUpdates defs ups stk (x :: xs)
+    = pure $ x :: !(doUpdates defs ups stk xs)
 
 -- State here is a list of new hole names we generated (so as not to reuse any).
 -- Update the token list with the string replacements for each match, and return
@@ -138,7 +162,7 @@ updateAll : {auto s : Ref Syn SyntaxInfo} ->
             Core (List String)
 updateAll defs l [] = pure []
 updateAll defs l (rs :: rss)
-    = do l' <- doUpdates defs rs l
+    = do l' <- doUpdates defs rs [] l
          rss' <- updateAll defs l rss
          pure (concatMap toString l' :: rss')
 
@@ -177,7 +201,7 @@ data CaseStmtType = Oneline Nat
 ||| splitting, and if it does, determine the type of interesting `case` block
 getCaseStmtType : (toks : List SourcePart) -> Maybe CaseStmtType
 getCaseStmtType toks
-  = let nws = filter (not . isWhitespace) toks in
+  = let nws = dropComment $ filter (not . isWhitespace) toks in
         -- use SnocList of nws so we can express the pattern we're looking for
         -- as it would appear
         case Lin <>< nws of
@@ -196,7 +220,7 @@ getCaseStmtType toks
                             -- constructed a SnocList so the index is backwards
                             let ofIndex = minus (length toks) (finToNat skotOfIndex) in
                                 Just $ OnelineParen (calcIndent ofIndex toks)
-             -- If the line ends with a `HoleName`, check if its a oneline `case` block
+             -- If the line ends with a `HoleName`, check if it's a oneline `case` block
              start :< HoleName _ =>
                   case findIndex isNameOf (Lin <>< toks) of
                        Nothing => Nothing
@@ -206,6 +230,11 @@ getCaseStmtType toks
              -- If it doesn't, it's not a statement we're interested in
              _ => Nothing
     where
+      dropComment : List SourcePart -> List SourcePart
+      dropComment [] = []
+      dropComment (Other "-" :: Other "-" :: xs) = []
+      dropComment (x :: xs) = x :: dropComment xs
+
       isNameOf : SourcePart -> Bool
       isNameOf (Name "of") = True
       isNameOf _ = False
@@ -227,9 +256,15 @@ dropLast updChars with (snocList updChars)
 rtrim : String -> String
 rtrim = reverse . ltrim . reverse
 
+-- remove last paren
+dropLastParen : SnocList Char -> SnocList Char
+dropLastParen Lin = Lin
+dropLastParen (cs :< ')') = cs
+dropLastParen (cs :< c) = dropLastParen cs :< c
+
 ||| Drop the closing parenthesis and any indentation preceding it.
 parenTrim : String -> String
-parenTrim = Idris.IDEMode.CaseSplit.rtrim . fastPack . dropLast . fastUnpack
+parenTrim = rtrim . fastPack . cast . dropLastParen . cast . fastUnpack
 
 ||| Drop the number of letters equal to the indentation level to align
 ||| just after the `of`.
@@ -238,7 +273,7 @@ onelineIndent indentation
   = (indent indentation) . fastPack . (drop indentation) . fastUnpack
 
 ||| An unbracketed, oneline `case` block just needs to have the last updates
-||| indented to lign up with the statement after the `of`.
+||| indented to align with the statement after the `of`.
 handleOneline : (indentation : Nat) -> (upds : List String) -> List String
 handleOneline indentation [] = []
 handleOneline indentation (u :: us) = u :: ((onelineIndent indentation) <$> us)
