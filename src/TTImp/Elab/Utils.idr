@@ -21,8 +21,8 @@ detagSafe : {auto c : Ref Ctxt Defs} ->
 detagSafe defs (NTCon _ n _ _ args)
     = do Just (TCon _ _ _ _ _ _ _ (Just detags)) <- lookupDefExact n (gamma defs)
               | _ => pure False
-         args' <- traverse (evalClosure defs . snd) (toList args)
-         pure $ notErased 0 detags args'
+         args' <- traverse (evalClosure defs . snd) args
+         pure $ notErased 0 detags (toList args')
   where
     -- if any argument positions are in the detaggable set, and unerased, then
     -- detagging is safe
@@ -155,10 +155,13 @@ initUsed : (xs : SnocList Name) -> Usage xs
 initUsed [<] = [<]
 initUsed (xs :< _) = initUsed xs :< Used0
 
-initUsedCase : (xs : SnocList Name) -> Usage xs
+allLocalVars : (xs : Scope) -> Usage xs
+allLocalVars [<] = [<]
+allLocalVars (xs :< x) = allLocalVars xs :< LocalVar
+
+initUsedCase : (xs : Scope) -> Usage xs
 initUsedCase [<] = [<]
-initUsedCase [<x] = [<Used0]
-initUsedCase (xs :< x) =  initUsedCase xs :< LocalVar
+initUsedCase (xs :< x) = allLocalVars xs :< Used0
 
 setUsedVar : {idx : _} ->
              (0 _ : IsVar n idx xs) -> Usage xs -> Usage xs
