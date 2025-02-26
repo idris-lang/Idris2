@@ -316,6 +316,9 @@
 (define (blodwen-thread-wait handle)
   (blodwen-semaphore-wait (thread-handle-semaphore handle)))
 
+(define (blodwen-get-thread-id)
+  (get-thread-id))
+
 ;; Thread mailboxes
 
 (define blodwen-thread-data
