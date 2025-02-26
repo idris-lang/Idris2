@@ -51,7 +51,7 @@ nameAt (Later p) = nameAt p
 
 export
 snocIdx : {vars : SnocList a} -> {idx : Nat} -> (0 p : IsVar n idx vars) -> Nat
-snocIdx {vars} {idx} p = minus (length vars) idx
+snocIdx {vars} {idx} p = minus (length vars) (S idx)
 
 ||| Inversion principle for Later
 export

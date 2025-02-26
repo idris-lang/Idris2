@@ -252,7 +252,7 @@ GenWeaken ArgType where
   genWeakenNs p q (Stuck fty) = Stuck $ genWeakenNs p q fty
 
 Weaken (PatInfo p) where
-  weakenNs s (MkInfo p el fty) = MkInfo p (weakenIsVar s el) (weakenNs s fty)
+  weaken (MkInfo p el fty) = MkInfo p (Later el) (weaken fty)
 
 -- FIXME: perhaps 'vars' should be second argument so we can use Weaken interface
 weaken : {x, vars : _} ->

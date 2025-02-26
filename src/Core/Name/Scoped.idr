@@ -151,6 +151,9 @@ interface Weaken (0 tm : Scoped) where
   weakenNs : Weakenable tm
   -- default implementations
   weaken = weakenNs (suc zero)
+  weakenNs p t = case sizedView p of
+    Z   => t
+    S p => weaken (weakenNs p t)
 
 -- This cannot be merged with Weaken because of WkCExp
 public export

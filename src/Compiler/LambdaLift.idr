@@ -408,12 +408,6 @@ markUsed : {vars : _} ->
 markUsed {vars} {prf} idx (MkUsed us) =
   let newUsed = replaceAt (finIdx prf) True us in
   MkUsed newUsed
-    where
-    finIdx : {vars : _} -> {idx : _} ->
-               (0 prf : IsVar x idx vars) ->
-               Fin (length vars)
-    finIdx {idx=Z} First = FZ
-    finIdx {idx=S x} (Later l) = FS (finIdx l)
 
 getUnused : Used vars ->
             Vect (length vars) Bool
