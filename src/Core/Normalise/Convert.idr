@@ -291,9 +291,9 @@ mutual
                 | Nothing => pure False
            let Just scpos' = findArgPos tree'
                 | Nothing => pure False
-           let Just sc = getScrutinee scpos nargs
+           let Just sc = getScrutinee ((length nargs) `minus` scpos + 1) nargs
                 | Nothing => pure False
-           let Just sc' = getScrutinee scpos' nargs'
+           let Just sc' = getScrutinee ((length nargs') `minus` scpos' + 1) nargs'
                 | Nothing => pure False
            ignore $ convGen q i defs env sc sc'
            pure (location def == location def')
