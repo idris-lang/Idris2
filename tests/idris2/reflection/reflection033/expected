@@ -1,0 +1,7 @@
+1/1: Building QuotingShadowed (QuotingShadowed.idr)
+LOG shdw:0: tyExpr  : (x : Nat) -> (y : X (\x => S x)) -> Nat
+LOG shdw:0: tyExpr' : (x : Nat) -> (y : X (\{x:0} => S x)) -> Nat
+LOG shdw:0: tyExpr'': (x : Nat) -> (y : X (\{x:0} => S {x:0})) -> Nat
+LOG shdw:0: quoted T  : (x : Nat) -> (y : X (\{x:0} => S {x:0})) -> Nat
+LOG shdw:0: quoted T' : (x : Nat) -> (y : X (\{x:0} => S x)) -> Nat
+LOG shdw:0: quoted T'': (x : Nat) -> (y : X (\{x:0} => S {x:0})) -> Nat
