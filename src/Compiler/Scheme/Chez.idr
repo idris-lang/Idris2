@@ -262,7 +262,7 @@ cCall fc cfn clib args ret collectSafe
                            pure (Just clib)
          argTypes <- traverse (cftySpec fc . snd) args
          retType <- cftySpec fc ret
-         let callConv = if collectSafe then " __collect_safe" else ""
+         let callConv : Builder = if collectSafe then " __collect_safe" else ""
          let call = "((foreign-procedure" ++ callConv ++ " " ++ showB cfn ++ " ("
                       ++ sepBy " " argTypes ++ ") " ++ retType ++ ") "
                       ++ sepBy " " !(traverse buildArg args) ++ ")"

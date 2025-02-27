@@ -167,75 +167,68 @@ getArity defs env tm = getValArity defs env !(nf defs env tm)
 export
 logNF : {vars : _} ->
         {auto c : Ref Ctxt Defs} ->
-        (s : String) ->
-        {auto 0 _ : KnownTopic s} ->
-        Nat -> Lazy String -> Env Term vars -> NF vars -> Core ()
-logNF str n msg env tmnf
-    = when !(logging str n) $
+        LogTopic -> Nat -> Lazy String -> Env Term vars -> NF vars -> Core ()
+logNF s n msg env tmnf
+    = when !(logging s n) $
         do defs <- get Ctxt
            tm <- quote defs env tmnf
            tm' <- toFullNames tm
-           logString str n (msg ++ ": " ++ show tm')
+           logString s.topic n (msg ++ ": " ++ show tm')
 
 -- Log message with a term, reducing holes and translating back to human
 -- readable names first
 export
 logTermNF' : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
-             (s : String) ->
-             {auto 0 _ : KnownTopic s} ->
+             LogTopic ->
              Nat -> Lazy String -> Env Term vars -> Term vars -> Core ()
-logTermNF' str n msg env tm
+logTermNF' s n msg env tm
     = do defs <- get Ctxt
          tmnf <- normaliseHoles defs env tm
          tm' <- toFullNames tmnf
-         logString str n (msg ++ ": " ++ show tm')
+         logString s.topic n (msg ++ ": " ++ show tm')
 
 export
 logTermNF : {vars : _} ->
             {auto c : Ref Ctxt Defs} ->
-            (s : String) ->
-            {auto 0 _ : KnownTopic s} ->
+            LogTopic ->
             Nat -> Lazy String -> Env Term vars -> Term vars -> Core ()
-logTermNF str n msg env tm
-    = when !(logging str n) $ logTermNF' str n msg env tm
+logTermNF s n msg env tm
+    = when !(logging s n) $ logTermNF' s n msg env tm
 
 export
 logGlue : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
-          (s : String) ->
-          {auto 0 _ : KnownTopic s} ->
+          LogTopic ->
           Nat -> Lazy String -> Env Term vars -> Glued vars -> Core ()
-logGlue str n msg env gtm
-    = when !(logging str n) $
+logGlue s n msg env gtm
+    = when !(logging s n) $
         do defs <- get Ctxt
            tm <- getTerm gtm
            tm' <- toFullNames tm
-           logString str n (msg ++ ": " ++ show tm')
+           logString s.topic n (msg ++ ": " ++ show tm')
 
 export
 logGlueNF : {vars : _} ->
             {auto c : Ref Ctxt Defs} ->
-            (s : String) ->
-            {auto 0 _ : KnownTopic s} ->
+            LogTopic ->
             Nat -> Lazy String -> Env Term vars -> Glued vars -> Core ()
-logGlueNF str n msg env gtm
-    = when !(logging str n) $
+logGlueNF s n msg env gtm
+    = when !(logging s n) $
         do defs <- get Ctxt
            tm <- getTerm gtm
            tmnf <- normaliseHoles defs env tm
            tm' <- toFullNames tmnf
-           logString str n (msg ++ ": " ++ show tm')
+           logString s.topic n (msg ++ ": " ++ show tm')
 
 export
 logEnv : {vars : _} ->
          {auto c : Ref Ctxt Defs} ->
-         (s : String) ->
-         {auto 0 _ : KnownTopic s} ->
+         LogTopic ->
          Nat -> String -> Env Term vars -> Core ()
-logEnv str n msg env
-    = when !(logging str n) $
-        do logString str n msg
+logEnv s n msg env
+    = when !(logging s n) $
+        do logString s.topic n msg
            dumpEnv env
 
   where
@@ -243,11 +236,11 @@ logEnv str n msg env
     dumpEnv : {vs : List Name} -> Env Term vs -> Core ()
     dumpEnv [] = pure ()
     dumpEnv {vs = x :: _} (Let _ c val ty :: bs)
-        = do logTermNF' str n (msg ++ ": let " ++ show x) bs val
-             logTermNF' str n (msg ++ ":" ++ show c ++ " " ++ show x) bs ty
+        = do logTermNF' s n (msg ++ ": let " ++ show x) bs val
+             logTermNF' s n (msg ++ ":" ++ show c ++ " " ++ show x) bs ty
              dumpEnv bs
     dumpEnv {vs = x :: _} (b :: bs)
-        = do logTermNF' str n (msg ++ ":" ++ show (multiplicity b) ++ " " ++
+        = do logTermNF' s n (msg ++ ":" ++ show (multiplicity b) ++ " " ++
                            show (piInfo b) ++ " " ++
                            show x) bs (binderType b)
              dumpEnv bs

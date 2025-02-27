@@ -1004,9 +1004,5 @@ getFn f = f
 -- Log message with a RawImp
 export
 logRaw : {auto c : Ref Ctxt Defs} ->
-         (s : String) ->
-         {auto 0 _ : KnownTopic s} ->
-         Nat -> Lazy String -> RawImp -> Core ()
-logRaw str n msg tm
-    = when !(logging str n) $
-        do logString str n (msg ++ ": " ++ show tm)
+         LogTopic -> Nat -> Lazy String -> RawImp -> Core ()
+logRaw s n msg tm = log s n $ msg ++ ": " ++ show tm
