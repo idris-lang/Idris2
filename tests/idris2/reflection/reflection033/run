@@ -1,0 +1,3 @@
+. ../../../testutils.sh
+
+check --show-machine-names QuotingShadowed.idr

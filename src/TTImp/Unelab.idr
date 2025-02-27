@@ -237,14 +237,17 @@ mutual
                                  _ => pure (term, gErased fc)
            pure (term, gnf env (embed ty))
   unelabTy' umode nest env (Bind fc x b sc)
-      = do (sc', scty) <- unelabTy umode nest (b :: env) sc
-           case umode of
-                NoSugar True =>
-                   let x' = uniqueLocal vars x in
-                       unelabBinder umode nest fc env x' b
-                                    (compat sc) sc'
-                                    (compat !(getTerm scty))
-                _ => unelabBinder umode nest fc env x b sc sc' !(getTerm scty)
+      = case umode of
+          NoSugar True => do
+            let x' = uniqueLocal vars x
+            let sc : Term (x' :: vars) = compat sc
+            (sc', scty) <- unelabTy umode nest (b :: env) sc
+            unelabBinder umode nest fc env x' b
+                         (compat sc) sc'
+                         (compat !(getTerm scty))
+          _ => do
+            (sc', scty) <- unelabTy umode nest (b :: env) sc
+            unelabBinder umode nest fc env x b sc sc' !(getTerm scty)
     where
       next : Name -> Name
       next (MN n i) = MN n (i + 1)

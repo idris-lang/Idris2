@@ -1,3 +1,4 @@
 . ../../../testutils.sh
 
 check RecordParam.idr
+check Issue3501.idr
