@@ -197,6 +197,7 @@ jobs:
   windows-bootstrap-chez:
     needs: [initialise, quick-check]
     runs-on: windows-latest
+    timeout-minutes: 45
     if: |
       !contains(needs.initialise.outputs.commit_message, '[ci:')
       || contains(needs.initialise.outputs.commit_message, '[ci: windows]')
@@ -301,6 +302,7 @@ jobs:
   ubuntu-self-host-chez:
     needs: ubuntu-bootstrap-chez
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     env:
       IDRIS2_CG: chez
       SCHEME: scheme
@@ -326,6 +328,7 @@ jobs:
   macos-self-host-chez:
     needs: macos-bootstrap-chez
     runs-on: macos-latest
+    timeout-minutes: 45
     env:
       SCHEME: chez
     steps:
@@ -381,6 +384,7 @@ jobs:
   ubuntu-self-host-previous-version:
     needs: [initialise, quick-check]
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     if: |
       !contains(needs.initialise.outputs.commit_message, '[ci:')
       || contains(needs.initialise.outputs.commit_message, '[ci: ubuntu]')
