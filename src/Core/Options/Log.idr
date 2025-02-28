@@ -211,8 +211,18 @@ helpTopics = show $ vcat $ map helpTopic knownTopics
       in vcat (title :: blurb)
 
 public export
-KnownTopic : String -> Type
-KnownTopic s = IsJust (lookup s knownTopics)
+data KnownTopic : String -> Type where
+  IsKnownTopic : IsJust (lookup s Log.knownTopics) => KnownTopic s
+
+public export
+record LogTopic where
+  constructor MkLogTopic
+  topic : String
+  {auto 0 known : KnownTopic topic}
+
+export
+fromString : (s : String) -> (0 _ : KnownTopic s) => LogTopic
+fromString = MkLogTopic
 
 ||| An individual log level is a pair of a list of non-empty strings and a number.
 ||| We keep the representation opaque to force users to call the smart constructor
@@ -244,8 +254,8 @@ mkUnverifiedLogLevel ps = mkLogLevel' (Just (split (== '.') ps))
 ||| Like `mkUnverifiedLogLevel` but with a compile time check that
 ||| the passed string is a known topic.
 export
-mkLogLevel : (s : String) -> {auto 0 _ : KnownTopic s} -> Nat -> LogLevel
-mkLogLevel s = mkUnverifiedLogLevel s
+mkLogLevel : LogTopic -> Nat -> LogLevel
+mkLogLevel s = mkUnverifiedLogLevel s.topic
 
 ||| The unsafe constructor should only be used in places where the topic has already
 ||| been appropriately processed.

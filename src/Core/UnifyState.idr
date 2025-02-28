@@ -648,17 +648,15 @@ checkNoGuards = checkUserHoles False
 export
 dumpHole : {auto u : Ref UST UState} ->
            {auto c : Ref Ctxt Defs} ->
-           (s : String) ->
-           {auto 0 _ : KnownTopic s} ->
-           Nat -> (hole : Int) -> Core ()
-dumpHole str n hole
+           LogTopic -> Nat -> (hole : Int) -> Core ()
+dumpHole s n hole
     = do ust <- get UST
          defs <- get Ctxt
          case !(lookupCtxtExact (Resolved hole) (gamma defs)) of
           Nothing => pure ()
           Just gdef => case (definition gdef, type gdef) of
              (Guess tm envb constraints, ty) =>
-                  do logString str n $
+                  do logString s.topic n $
                        "!" ++ show !(getFullName (Resolved hole)) ++ " : "
                            ++ show !(toFullNames !(normaliseHoles defs [] ty))
                        ++ "\n\t  = "
@@ -666,26 +664,26 @@ dumpHole str n hole
                            ++ "\n\twhen"
                      traverse_ dumpConstraint constraints
              (Hole _ p, ty) =>
-                  logString str n $
+                  logString s.topic n $
                     "?" ++ show (fullname gdef) ++ " : "
                         ++ show !(normaliseHoles defs [] ty)
                         ++ if implbind p then " (ImplBind)" else ""
                         ++ if invertible gdef then " (Invertible)" else ""
              (BySearch _ _ _, ty) =>
-                  logString str n $
+                  logString s.topic n $
                      "Search " ++ show hole ++ " : " ++
                      show !(toFullNames !(normaliseHoles defs [] ty))
              (PMDef _ args t _ _, ty) =>
-                  log str 4 $
+                  log s 4 $
                      "Solved: " ++ show hole ++ " : " ++
                      show !(normalise defs [] ty) ++
                      " = " ++ show !(normalise defs [] (Ref emptyFC Func (Resolved hole)))
              (ImpBind, ty) =>
-                  log str 4 $
+                  log s 4 $
                       "Bound: " ++ show hole ++ " : " ++
                       show !(normalise defs [] ty)
              (Delayed, ty) =>
-                  log str 4 $
+                  log s 4 $
                      "Delayed elaborator : " ++
                      show !(normalise defs [] ty)
              _ => pure ()
@@ -696,13 +694,13 @@ dumpHole str n hole
              defs <- get Ctxt
              case lookup cid (constraints ust) of
                   Nothing => pure ()
-                  Just Resolved => logString str n "\tResolved"
+                  Just Resolved => logString s.topic n "\tResolved"
                   Just (MkConstraint _ lazy env x y) =>
-                    do logString str n $
+                    do logString s.topic n $
                          "\t  " ++ show !(toFullNames !(quote defs env x))
                                 ++ " =?= " ++ show !(toFullNames !(quote defs env y))
                        empty <- clearDefs defs
-                       log str 5 $
+                       log s 5 $
                          "\t    from " ++ show !(toFullNames !(quote empty env x))
                             ++ " =?= " ++ show !(toFullNames !(quote empty env y))
                             ++ if lazy then "\n\t(lazy allowed)" else ""
@@ -710,17 +708,13 @@ dumpHole str n hole
 export
 dumpConstraints : {auto u : Ref UST UState} ->
                   {auto c : Ref Ctxt Defs} ->
-                  (topics : String) ->
-                  {auto 0 _ : KnownTopic topics} ->
-                  (verbosity : Nat) ->
-                  (all : Bool) ->
-                  Core ()
-dumpConstraints str n all
+                  LogTopic -> (verbosity : Nat) -> (all : Bool) -> Core ()
+dumpConstraints s n all
     = do ust <- get UST
          defs <- get Ctxt
-         when !(logging str n) $ do
+         when !(logging s n) $ do
            let hs = toList (guesses ust) ++
                     toList (if all then holes ust else currentHoles ust)
            unless (isNil hs) $
-             do logString str n "--- CONSTRAINTS AND HOLES ---"
-                traverse_ (dumpHole str n) (map fst hs)
+             do logString s.topic n "--- CONSTRAINTS AND HOLES ---"
+                traverse_ (dumpHole s n) (map fst hs)

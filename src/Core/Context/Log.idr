@@ -44,21 +44,18 @@ unverifiedLogging str n = do
 %inline
 export
 logging : {auto c : Ref Ctxt Defs} ->
-          (s : String) -> {auto 0 _ : KnownTopic s} ->
-          Nat -> Core Bool
-logging str n = unverifiedLogging str n
+          LogTopic -> Nat -> Core Bool
+logging s n = unverifiedLogging s.topic n
 
 ||| Log message with a term, translating back to human readable names first.
 export
 logTerm : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
-          (s : String) ->
-          {auto 0 _ : KnownTopic s} ->
-          Nat -> Lazy String -> Term vars -> Core ()
-logTerm str n msg tm
-    = when !(logging str n)
+          LogTopic -> Nat -> Lazy String -> Term vars -> Core ()
+logTerm s n msg tm
+    = when !(logging s n)
         $ do tm' <- toFullNames tm
-             logString str n $ msg ++ ": " ++ show tm'
+             logString s.topic n $ msg ++ ": " ++ show tm'
 
 export
 log' : {auto c : Ref Ctxt Defs} ->
@@ -77,17 +74,14 @@ log' lvl msg
 ||| `do` before `pure` in this case ensures the correct bounds.
 export
 log : {auto c : Ref Ctxt Defs} ->
-      (s : String) ->
-      {auto 0 _ : KnownTopic s} ->
-      Nat -> Lazy String -> Core ()
-log str n msg
-    = when !(logging str n)
-        $ logString str n msg
+      LogTopic -> Nat -> Lazy String -> Core ()
+log s n msg
+    = when !(logging s n)
+        $ logString s.topic n msg
 
 export
 unverifiedLogC : {auto c : Ref Ctxt Defs} ->
-                 (s : String) ->
-                 Nat -> Core String -> Core ()
+                 String -> Nat -> Core String -> Core ()
 unverifiedLogC str n cmsg
     = when !(unverifiedLogging str n)
         $ do msg <- cmsg
@@ -96,10 +90,8 @@ unverifiedLogC str n cmsg
 %inline
 export
 logC : {auto c : Ref Ctxt Defs} ->
-       (s : String) ->
-       {auto 0 _ : KnownTopic s} ->
-       Nat -> Core String -> Core ()
-logC str = unverifiedLogC str
+       LogTopic -> Nat -> Core String -> Core ()
+logC s = unverifiedLogC s.topic
 
 nano : Integer
 nano = 1000000000
