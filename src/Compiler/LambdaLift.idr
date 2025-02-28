@@ -564,7 +564,7 @@ mutual
 
         allPrfs : (vs : SnocList Name) -> (unused : Vect (length vs) Bool) -> List (Var vs)
         allPrfs [<] _ = []
-        allPrfs (vs :< v) (False::uvs) = MkVar First :: map weaken (allPrfs vs uvs)
+        allPrfs (vs :< v) (False::uvs) = map weaken (allPrfs vs uvs) ++ [MkVar First]
         allPrfs (vs :< v) (True::uvs) = map weaken (allPrfs vs uvs)
 
         -- apply to all the variables. 'First' will be first in the last, which
