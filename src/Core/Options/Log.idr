@@ -211,8 +211,8 @@ helpTopics = show $ vcat $ map helpTopic knownTopics
       in vcat (title :: blurb)
 
 public export
-KnownTopic : String -> Type
-KnownTopic s = IsJust (lookup s knownTopics)
+data KnownTopic : String -> Type where
+  IsKnownTopic : IsJust (lookup s Log.knownTopics) => KnownTopic s
 
 public export
 record LogTopic where
