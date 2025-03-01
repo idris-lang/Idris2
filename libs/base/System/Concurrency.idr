@@ -15,6 +15,8 @@ module System.Concurrency
 prim__setThreadData : {a : Type} -> a -> PrimIO ()
 %foreign "scheme:blodwen-get-thread-data"
 prim__getThreadData : (a : Type) -> PrimIO a
+%foreign "scheme,chez:get-thread-id"
+prim__getThreadId : PrimIO Int
 
 ||| Set the data stored in a thread's parameter to the given value.
 ||| Currently only supported under the scheme backends.
@@ -27,6 +29,11 @@ setThreadData val = primIO (prim__setThreadData val)
 export
 getThreadData : HasIO io => (a : Type) -> io a
 getThreadData a = primIO (prim__getThreadData a)
+
+||| Get the thread id of the current thread (chez backend).
+export
+getThreadId : HasIO io => io Int
+getThreadId = primIO prim__getThreadId
 
 
 -- Mutexes
