@@ -12,6 +12,7 @@ prim__getErrno : PrimIO Int
 prim__strerror : Int -> PrimIO String
 
 ||| Fetch libc `errno` global variable.
+||| This sometimes returns 0 on windows.
 export
 getErrno : HasIO io => io Int
 getErrno = primIO prim__getErrno

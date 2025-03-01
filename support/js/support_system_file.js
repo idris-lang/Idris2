@@ -8,7 +8,7 @@ function support_system_file_fileErrno(){
     switch(n) {
       // these are documented in include/uv/errno.h of libuv
       case -4058: return 2
-      case -4092: return 3
+      case -4048: return 3
       case -4075: return 4
       default: return -n + 5
     }
@@ -136,7 +136,7 @@ function support_system_file_popen (cmd, m) {
     case "r":
       io_setting = ['ignore', write_fd, 2]
       break
-    case "w": 
+    case "w":
     case "a":
       io_setting = [write_fd, 'ignore', 2]
       break
