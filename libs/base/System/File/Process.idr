@@ -8,6 +8,7 @@ import System.File.Support
 import public System.File.Types
 
 %foreign "C:fflush,libc 6"
+         "node:lambda:()=>0"
 prim__flush : FilePtr -> PrimIO Int
 %foreign supportC "idris2_popen"
          supportNode "popen"

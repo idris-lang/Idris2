@@ -52,6 +52,8 @@ function support_system_directory_dirEntry(d) {
   try{
     const dir = d.readSync()
     if (dir == null) {
+      // to distinguish between an error and end of stream
+      process.__lasterr = undefined
       return null
     } else {
       return dir.name
