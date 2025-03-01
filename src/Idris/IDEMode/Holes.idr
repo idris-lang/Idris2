@@ -100,7 +100,7 @@ extractHoleData : {vars : _} ->
 extractHoleData defs env fn (S args) (Bind fc x (Let _ c val ty) sc)
   = extractHoleData defs env fn args (subst val sc)
 extractHoleData defs env fn (S args) (Bind fc x b sc)
-  = do rest <- extractHoleData defs (b :: env) fn args sc
+  = do rest <- extractHoleData defs (env :< b) fn args sc
        let True = showName x
          | False => do log "ide-mode.hole" 10 $ "Not showing name: " ++ show x
                        pure rest
@@ -155,7 +155,7 @@ getUserHolesData
          traverse (\n_gdef_args =>
                      -- Inference can't deal with this for now :/
                      let (n, gdef, args) = the (Name, GlobalDef, Nat) n_gdef_args in
-                     holeData defs [] n args (type gdef))
+                     holeData defs [<] n args (type gdef))
                   holesWithArgs
 
 export
