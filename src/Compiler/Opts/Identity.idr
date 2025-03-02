@@ -20,7 +20,7 @@ makeArgs args = makeArgs' args id
 makeArgz : (args : List Name) -> List (Var (vars <>< args))
 makeArgz args
   = embedFishily @{ListFreelyEmbeddable}
-  $ allVars ([<] <>< args)
+  $ reverse $ allVars ([<] <>< args)
 
 parameters (fn1 : Name) (idIdx : Nat)
   mutual
