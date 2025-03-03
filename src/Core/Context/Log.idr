@@ -2,29 +2,79 @@ module Core.Context.Log
 
 import Core.Context
 import Core.Options
+import Core.Value
 
 import Data.String
+import Data.List1
 import Libraries.Data.StringMap
 
 import System.Clock
 
 %default covering
 
+padLeft : Nat -> String -> String
+padLeft pl str =
+    let whitespace = replicate (pl * 2) ' '
+    in joinBy "\n" $ toList $ map (\r => whitespace ++ r) $ split (== '\n') str
+
 -- if this function is called, then logging must be enabled.
 %inline
 export
-logString : String -> Nat -> String -> Core ()
-logString "" n msg = coreLift $ putStrLn
-    $ "LOG " ++ show n ++ ": " ++ msg
-logString str n msg = coreLift $ putStrLn
-    $ "LOG " ++ str ++ ":" ++ show n ++ ": " ++ msg
+logString : Nat -> String -> Nat -> String -> Core ()
+logString depth "" n msg = coreLift $ putStrLn
+    $ padLeft depth $ "LOG " ++ show n ++ ": " ++ msg
+logString depth str n msg = coreLift $ putStrLn
+    $ padLeft depth $ "LOG " ++ str ++ ":" ++ show n ++ ": " ++ msg
 
 %inline
 export
-logString' : LogLevel -> String -> Core ()
-logString' lvl =
-  logString (fastConcat (intersperse "." (topics lvl)) ++ ":")
+logString' : Nat -> LogLevel -> String -> Core ()
+logString' depth lvl =
+  logString depth (fastConcat (intersperse "." (topics lvl)) ++ ":")
             (verbosity lvl)
+
+export
+getDepth : {auto c : Ref Ctxt Defs} ->
+             Core Nat
+getDepth
+    = do defs <- get Ctxt
+         let treeLikeOutput = (logTreeEnabled $ session (options defs))
+         pure $ if treeLikeOutput then (logDepth $ session (options defs)) else 0
+
+export
+logDepthIncrease : {auto c : Ref Ctxt Defs} -> Core ()
+logDepthIncrease
+    = do depth <- getDepth
+         update Ctxt { options->session->logDepth := depth + 1 }
+
+export
+logDepthDecrease : {auto c : Ref Ctxt Defs} -> Core a -> Core a
+logDepthDecrease r
+    = do r' <- r
+         depth <- getDepth
+         update Ctxt { options->session->logDepth := depth `minus` 1 }
+         pure r'
+
+export
+logDepth : {auto c : Ref Ctxt Defs} -> Core a -> Core a
+logDepth r
+    = do logDepthIncrease
+         logDepthDecrease r
+
+export
+logQuiet : {auto c : Ref Ctxt Defs} -> Core a -> Core a
+logQuiet r
+    = do opts <- getSession
+         update Ctxt { options->session->logEnabled := False }
+         r' <- r
+         update Ctxt { options->session->logEnabled := (logEnabled opts) }
+         pure r'
+
+export
+logDepthWrap : {auto c : Ref Ctxt Defs} -> (a -> Core b) -> a -> Core b
+logDepthWrap fn p
+    = do logDepthIncrease
+         logDepthDecrease (fn p)
 
 export
 logging' : {auto c : Ref Ctxt Defs} ->
@@ -54,15 +104,35 @@ logTerm : {vars : _} ->
           LogTopic -> Nat -> Lazy String -> Term vars -> Core ()
 logTerm s n msg tm
     = when !(logging s n)
-        $ do tm' <- toFullNames tm
-             logString s.topic n $ msg ++ ": " ++ show tm'
+        $ do depth <- getDepth
+             tm' <- toFullNames tm
+             logString depth s.topic n $ msg ++ ": " ++ show tm'
+
+export
+logLocalEnv : {free, vars : _} ->
+         {auto c : Ref Ctxt Defs} ->
+         LogTopic -> Nat -> String -> LocalEnv free vars -> Core ()
+logLocalEnv s n msg env
+    = when !(logging s n) $
+        do depth <- getDepth
+           logString depth s.topic n msg
+           dumpEnv s env
+  where
+    dumpEnv : {free, vs : SnocList Name} -> LogTopic -> LocalEnv free vs -> Core ()
+    dumpEnv _ [<] = pure ()
+    dumpEnv {vs = _ :< x} s (bs :< closure)
+        = do depth <- getDepth
+             logString depth s.topic n $ msg ++ ": " ++ show x ++ " :: " ++ show closure
+             dumpEnv s bs
+
 
 export
 log' : {auto c : Ref Ctxt Defs} ->
        LogLevel -> Lazy String -> Core ()
 log' lvl msg
     = when !(logging' lvl)
-        $ logString' lvl msg
+        $ do depth <- getDepth
+             logString' depth lvl msg
 
 ||| Log a message with the given log level. Use increasingly
 ||| high log level numbers for more granular logging.
@@ -77,15 +147,17 @@ log : {auto c : Ref Ctxt Defs} ->
       LogTopic -> Nat -> Lazy String -> Core ()
 log s n msg
     = when !(logging s n)
-        $ logString s.topic n msg
+        $ do depth <- getDepth
+             logString depth s.topic n msg
 
 export
 unverifiedLogC : {auto c : Ref Ctxt Defs} ->
                  String -> Nat -> Core String -> Core ()
 unverifiedLogC str n cmsg
     = when !(unverifiedLogging str n)
-        $ do msg <- cmsg
-             logString str n msg
+        $ do depth <- getDepth
+             msg <- cmsg
+             logString depth str n msg
 
 %inline
 export
