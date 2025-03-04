@@ -1287,7 +1287,7 @@ mkPatClause fc fn args ty pid (ps, rhs)
                   -- read what we know off 'nty', and reverse it
                   argTys <- logQuiet $ getArgTys [<] (rev args) (Just nty)
                   log "compile.casetree" 20 $ "mkPatClause args: " ++ show (toList args) ++ ", argTys: " ++ show argTys
-                  ns <- logQuiet $ mkNames args ps eq (reverse argTys)
+                  ns <- logQuiet $ mkNames args ps eq (reverse argTys) (length args `minus` length argTys)
                   log "compile.casetree" 20 $
                     "Make pat clause for names " ++ show ns
                      ++ " in LHS " ++ show (toList ps)
@@ -1296,15 +1296,18 @@ mkPatClause fc fn args ty pid (ps, rhs)
                                    (weakenNs (mkSizeOf args) rhs))))
             (checkLengthMatch args ps)
   where
-    mkNames : (vars : SnocList Name) -> (ps : SnocList (Pat)) ->
-              LengthMatch vars ps -> List (ArgType [<]) ->
+    mkNames : (vars : SnocList Name) -> (ps : SnocList Pat) ->
+              LengthMatch vars ps -> List (ArgType [<]) -> (skip : Nat) ->
               Core (NamedPats vars (rev vars))
-    mkNames [<] [<] LinMatch fty = pure []
-    mkNames (args :< _) (ps :< p) (SnocMatch eq) []
-        = do rest <- mkNames args ps eq []
+    mkNames [<] [<] LinMatch fty _ = pure []
+    mkNames (args :< _) (ps :< p) (SnocMatch eq) fs (S n)
+        = do rest <- mkNames args ps eq fs n
              pure (snoc (weaken rest) (MkInfo p First Unknown))
-    mkNames (args :< _) (ps :< p) (SnocMatch eq) (f :: fs)
-        = do rest <- mkNames args ps eq fs
+    mkNames (args :< _) (ps :< p) (SnocMatch eq) [] Z
+        = do rest <- mkNames args ps eq [] Z
+             pure (snoc (weaken rest) (MkInfo p First Unknown))
+    mkNames (args :< _) (ps :< p) (SnocMatch eq) (f :: fs) Z
+        = do rest <- mkNames args ps eq fs Z
              pure (snoc (weaken rest) (MkInfo p First (embed' f)))
       where
         embed' : ArgType [<] -> ArgType more
