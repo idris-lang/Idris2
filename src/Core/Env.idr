@@ -5,6 +5,7 @@ import Core.Name.CompatibleVars
 import Data.List
 import Data.SnocList
 
+import Libraries.Data.SnocList.Extra
 import Libraries.Data.SnocList.SizeOf
 import Libraries.Data.SnocList.HasLength
 
@@ -78,19 +79,11 @@ bindEnv loc (env :< b) tm
                                         (binderType b)) tm)
 
 public export
-revOnto : (xs, vs : SnocList a) -> reverseOnto xs vs = xs ++ reverse vs
-revOnto xs [<] = Refl
-revOnto xs (vs :< v)
-    = rewrite revOnto (xs :< v) vs in
-        rewrite revOnto [<v] vs in
-          rewrite appendAssociative xs [<v] (reverse vs) in Refl
-
-public export
 revNs : (vs, ns : SnocList a) -> reverse vs ++ reverse ns = reverse (ns ++ vs)
 revNs [<] ns = rewrite appendLinLeftNeutral (reverse ns) in Refl
 revNs (vs :< v) ns
-    = rewrite revOnto [<v] vs in
-        rewrite revOnto [<v] (ns ++ vs) in
+    = rewrite Extra.revOnto [<v] vs in
+        rewrite Extra.revOnto [<v] (ns ++ vs) in
           rewrite sym $ revNs vs ns in
             rewrite appendAssociative [<v] (reverse vs) (reverse ns) in Refl
 
@@ -104,7 +97,7 @@ getBinderUnder : Weaken tm =>
                  (0 p : IsVar x idx vars) -> Env tm vars ->
                  Binder (tm (reverseOnto vars ns))
 getBinderUnder {idx = Z} {vars = vs :< v} ns First (env :< b)
-    = rewrite revOnto (vs :< x) ns in
+    = rewrite Extra.revOnto (vs :< x) ns in
         rewrite sym $ appendAssociative vs [<v] (reverse ns) in
                 map (weakenNs (sucR (reverse (mkSizeOf ns)))) b
 getBinderUnder {idx = S k} {vars = vs :< v} ns (Later lp) (env :< b)

@@ -20,3 +20,11 @@ snocAppendAsFish : (sx, sy : SnocList a) -> sx ++ sy === sx <>< (cast sy)
 snocAppendAsFish sx sy = sym
   $ trans (fishAsSnocAppend sx (sy <>> []))
           (cong (sx ++) (castToList sy))
+
+export
+revOnto : (xs, vs : SnocList a) -> reverseOnto xs vs = xs ++ reverse vs
+revOnto xs [<] = Refl
+revOnto xs (vs :< v)
+    = rewrite Extra.revOnto (xs :< v) vs in
+        rewrite Extra.revOnto [<v] vs in
+          rewrite appendAssociative xs [<v] (reverse vs) in Refl

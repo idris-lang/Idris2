@@ -16,6 +16,7 @@ import Data.Nat
 import Data.String
 import Data.Vect
 
+import Libraries.Data.SnocList.Extra
 import Libraries.Data.WithDefault
 
 %default covering
@@ -471,7 +472,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
     argsFromStack (ns :< n) [] = Nothing
     argsFromStack (ns :< n) (arg :: args)
          = do (loc', stk') <- argsFromStack ns args
-              pure (rewrite revOnto [<n] ns in cons {v=n} loc' (snd arg), stk')
+              pure (rewrite Extra.revOnto [<n] ns in cons {v=n} loc' (snd arg), stk')
 
     evalOp : {auto c : Ref Ctxt Defs} ->
              {arity, free : _} ->
