@@ -594,7 +594,7 @@ lamRHS : (ns : SnocList Name) -> CExp ns -> CExp [<]
 lamRHS ns tm
     = let (s, env) = lamRHSenv 0 (getFC tm) ns
           tmExp = substs s env (rewrite appendLinLeftNeutral ns in tm)
-          newArgs = reverse $ getNewArgs env
+          newArgs = getNewArgs env
           bounds = mkBounds newArgs
           expLocs = mkLocals zero {vars = [<]} bounds tmExp in
           lamBind (getFC tm) _ expLocs
