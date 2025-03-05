@@ -7,7 +7,13 @@ import Core.Primitives
 import Core.Value
 import Core.Name
 import Data.List
+import Data.SnocList
 import Data.Vect
+
+import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
+
+%hide Core.TT.Subst.Subst
 
 findConstAlt : Constant -> List (CConstAlt vars) ->
                Maybe (CExp vars) -> Maybe (CExp vars)
@@ -24,34 +30,42 @@ foldableOp (Cast from to)   = isJust (intKind from) && isJust (intKind to)
 foldableOp _                = True
 
 
-data Subst : List Name -> List Name -> Type where
-  Nil  : Subst [] vars
-  (::) : CExp vars -> Subst ds vars -> Subst (d :: ds) vars
-  Wk   : SizeOf ws -> Subst ds vars -> Subst (ws ++ ds) (ws ++ vars)
+data Subst : SnocList Name -> SnocList Name -> Type where
+  Lin  : Subst [<] vars
+  (:<) : Subst ds vars -> CExp vars -> Subst (ds :< d) vars
+  Wk   : Subst ds vars -> SizeOf ws -> Subst (ds ++ ws) (vars ++ ws)
 
-initSubst : (vars : List Name) -> Subst vars vars
+initSubst : (vars : SnocList Name) -> Subst vars vars
 initSubst vars
-  = rewrite sym $ appendNilRightNeutral vars in
-    Wk (mkSizeOf vars) []
+  = rewrite sym $ appendLinLeftNeutral vars in
+    Wk [<] (mkSizeOf vars)
 
 
-wk : SizeOf out -> Subst ds vars -> Subst (out ++ ds) (out ++ vars)
-wk sout (Wk {ws, ds, vars} sws rho)
-  = rewrite appendAssociative out ws ds in
-    rewrite appendAssociative out ws vars in
-    Wk (sout + sws) rho
-wk ws rho = Wk ws rho
+wk : Subst ds vars -> SizeOf out -> Subst (ds ++ out) (vars ++ out)
+wk (Wk {ws, ds, vars} rho sws) sout
+  = do
+    rewrite sym $ appendAssociative ds ws out
+    rewrite sym $ appendAssociative vars ws out
+    -- Yaffle: Wk rho (sout + sws)
+    Wk rho (sws + sout)
+wk rho ws = Wk rho ws
 
-record WkCExp (vars : List Name) where
+wksN : Subst ds vars -> SizeOf out -> Subst (ds <>< out) (vars <>< out)
+wksN s s'
+  = rewrite fishAsSnocAppend ds out in
+    rewrite fishAsSnocAppend vars out in
+    wk s (zero <>< s')
+
+record WkCExp (vars : Scope) where
   constructor MkWkCExp
-  {0 outer, supp : List Name}
+  {0 outer, supp : Scope}
   size : SizeOf outer
-  0 prf : vars === outer ++ supp
+  0 prf : vars === supp ++ outer
   expr : CExp supp
 
 Weaken WkCExp where
-  weakenNs s' (MkWkCExp {outer, supp} s Refl e)
-    = MkWkCExp (s' + s) (appendAssociative ns outer supp)  e
+  weakenNs s' (MkWkCExp {supp, outer} s Refl e)
+    = MkWkCExp (s + s') (sym $ appendAssociative supp outer ns) e
 
 lookup : FC -> Var ds -> Subst ds vars -> CExp vars
 lookup fc (MkVar p) rho = case go p rho of
@@ -62,17 +76,18 @@ lookup fc (MkVar p) rho = case go p rho of
 
   go : {i : Nat} -> {0 ds, vars : _} -> (0 _ : IsVar n i ds) ->
        Subst ds vars -> Either (Var vars) (WkCExp vars)
-  go First     (val :: rho) = Right (MkWkCExp zero Refl val)
-  go (Later p) (val :: rho) = go p rho
-  go p         (Wk ws  rho) = case sizedView ws of
+  go First     (rho :< val) = Right (MkWkCExp zero Refl val)
+  go (Later p) (rho :< val) = go p rho
+  go p         (Wk rho  ws) = case sizedView ws of
     Z => go p rho
     S ws' => case i of
       Z => Left (MkVar First)
-      S i' => bimap later weaken (go (dropLater p) (Wk ws' rho))
+      S i' => bimap later weaken (go (dropLater p) (Wk rho ws'))
 
 replace : CExp vars -> Bool
 replace (CLocal _ _)   = True
 replace (CPrimVal _ _) = True
+-- Yaffle: the line is removed
 replace (CErased _)    = True
 replace _              = False
 
@@ -87,16 +102,16 @@ constFold : {vars' : _} ->
 constFold rho (CLocal fc p) = lookup fc (MkVar p) rho
 constFold rho e@(CRef fc x) = CRef fc x
 constFold rho (CLam fc x y)
-  = CLam fc x $ constFold (wk (mkSizeOf [x]) rho) y
-
+  = CLam fc x $ constFold (wk rho (mkSizeOf [<x])) y
 -- Expressions of the type `let x := y in x` can be introduced
 -- by the compiler when inlining monadic code (for instance, `io_bind`).
 -- They can be replaced by `y`.
 constFold rho (CLet fc x inl y z) =
     let val := constFold rho y
      in case replace val of
-          True  => constFold (val::rho) z
-          False => case constFold (wk (mkSizeOf [x]) rho) z of
+          True  => constFold (rho :< val) z
+          False => case constFold (wk rho (mkSizeOf [<x])) z of
+            -- Yaffle: the case is removed
             CLocal {idx = 0} _ _ => val
             body                 => CLet fc x inl val body
 constFold rho (CApp fc (CRef fc2 n) [x]) =
@@ -104,13 +119,14 @@ constFold rho (CApp fc (CRef fc2 n) [x]) =
      then case constFold rho x of
             CPrimVal fc3 (BI v) =>
               if v >= 0 then CPrimVal fc3 (BI v) else CPrimVal fc3 (BI 0)
-            v                   => CApp fc (CRef fc2 n) [v]
-     else CApp fc (CRef fc2 n) [constFold rho x]
+            v                   => CApp fc (CRef fc2 n) (v :: Nil)
+     else CApp fc (CRef fc2 n) (constFold rho x :: Nil)
 constFold rho (CApp fc x xs) = CApp fc (constFold rho x) (constFold rho <$> xs)
 -- erase `UNIT` constructors, so they get constant-folded
 -- in `let` bindings (for instance, when optimizing `(>>)` for `IO`
 constFold rho (CCon fc x UNIT tag []) = CErased fc
 constFold rho (CCon fc x y tag xs) = CCon fc x y tag $ constFold rho <$> xs
+--- ?
 constFold rho (COp fc BelieveMe [CErased _, CErased _ , x]) = constFold rho x
 constFold rho (COp {arity} fc fn xs) =
     let xs' = map (constFold rho) xs
@@ -157,7 +173,7 @@ constFold rho (CConCase fc sc xs x)
   where
     foldAlt : CConAlt vars -> CConAlt vars'
     foldAlt (MkConAlt n ci t xs e)
-      = MkConAlt n ci t xs $ constFold (wk (mkSizeOf xs) rho) e
+      = MkConAlt n ci t xs $ constFold (wksN rho (mkSizeOf xs)) e
 
 constFold rho (CConstCase fc sc xs x) =
     let sc' = constFold rho sc

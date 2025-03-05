@@ -5,6 +5,7 @@ import Core.CompileExpr
 import Core.Name
 import Core.TT
 import Data.Vect
+import Data.SnocList
 
 import Libraries.Data.Ordering.Extra
 
@@ -47,7 +48,7 @@ mutual
     export
     covering
     Eq (CConAlt vars) where
-        MkConAlt n1 _ t1 a1 e1 == MkConAlt n2 _ t2 a2 e2 = t1 == t2 && n1 == n2 && case namesEq a1 a2 of
+        MkConAlt n1 _ t1 a1 e1 == MkConAlt n2 _ t2 a2 e2 = t1 == t2 && n1 == n2 && case localEq a1 a2 of
             Just Refl => e1 == e2
             Nothing => False
 
@@ -104,7 +105,7 @@ mutual
     covering
     Ord (CConAlt vars) where
         MkConAlt n1 _ t1 a1 e1 `compare` MkConAlt n2 _ t2 a2 e2 =
-            compare t1 t2 `thenCmp` compare n1 n2 `thenCmp` case namesEq a1 a2 of
+            compare t1 t2 `thenCmp` compare n1 n2 `thenCmp` case localEq a1 a2 of
                 Just Refl => compare e1 e2
                 Nothing => compare a1 a2
 

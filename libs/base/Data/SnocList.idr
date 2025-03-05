@@ -471,3 +471,13 @@ tailRecAppendIsAppend : (sx, sy : SnocList a) -> tailRecAppend sx sy = sx ++ sy
 tailRecAppendIsAppend sx Lin = Refl
 tailRecAppendIsAppend sx (sy :< y) =
   trans (snocTailRecAppend y sx sy) (cong (:< y) $ tailRecAppendIsAppend sx sy)
+
+||| `reverseOnto` reverses the snoc list and prepends it to the "onto" argument
+export
+revOnto : (xs, vs : SnocList a) -> reverseOnto xs vs = xs ++ reverse vs
+revOnto _ [<] = Refl
+revOnto xs (vs :< v) =
+  do rewrite revOnto (xs :< v) vs
+     rewrite sym $ appendAssociative xs [<v] (reverse vs)
+     rewrite revOnto [<v] vs
+     Refl
