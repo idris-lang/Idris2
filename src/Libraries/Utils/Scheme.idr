@@ -197,65 +197,6 @@ data SchemeObj : Direction -> Type where
      Apply : SchemeObj Write -> List (SchemeObj Write) -> SchemeObj Write
 
 export
-evalSchemeObj : SchemeObj Write -> IO (Maybe ForeignObj)
-evalSchemeObj obj
-    = do let str = toString obj
-         evalSchemeStr str
-  where
-    showSep : String -> List String -> String
-    showSep sep [] = ""
-    showSep sep [x] = x
-    showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
-
-    toString : SchemeObj Write -> String
-    toString Null = "'()"
-    toString (Cons x y) = "(cons " ++ toString x ++ " " ++ toString y ++ ")"
-    toString (IntegerVal x) = show x
-    toString (FloatVal x) = show x
-    toString (StringVal x) = show x
-    toString (CharVal x)
-       = if (the Int (cast x) >= 32 && the Int (cast x) < 127)
-            then "#\\" ++ cast x
-            else "(integer->char " ++ show (the Int (cast x)) ++ ")"
-    toString (Symbol x) = "'" ++ x
-    toString (Vector i xs) = "(vector " ++ show i ++ " " ++ showSep " " (map toString xs) ++ ")"
-    toString (Box x) = "(box " ++ toString x ++ ")"
-    toString (Define x body) = "(define (" ++ x ++ ") " ++ toString body ++ ")"
-    toString (Var x) = x
-    toString (Lambda xs x)
-        = "(lambda (" ++ showSep " " xs ++ ") " ++ toString x ++ ")"
-    toString (Let var val x)
-        = "(let ((" ++ var ++ " " ++ toString val ++ ")) " ++ toString x ++ ")"
-    toString (If x t e)
-        = "(if " ++ toString x ++ " " ++ toString t ++ " " ++ toString e ++ ")"
-    toString (Case x alts def)
-        = "(case " ++ toString x ++ " " ++
-              showSep " " (map showAlt alts) ++
-              showDef def ++ ")"
-      where
-        showAlt : (SchemeObj Write, SchemeObj Write) -> String
-        showAlt (opt, go)
-           = "((" ++ toString opt ++ ") " ++ toString go ++ ")"
-
-        showDef : Maybe (SchemeObj Write) -> String
-        showDef Nothing = ""
-        showDef (Just e) = " (else " ++ toString e ++ ")"
-    toString (Cond alts def)
-        = "(cond " ++
-              showSep " " (map showAlt alts) ++
-              showDef def ++ ")"
-      where
-        showAlt : (SchemeObj Write, SchemeObj Write) -> String
-        showAlt (opt, go)
-           = "(" ++ toString opt ++ " " ++ toString go ++ ")"
-
-        showDef : Maybe (SchemeObj Write) -> String
-        showDef Nothing = ""
-        showDef (Just e) = " (else " ++ toString e ++ ")"
-    toString (Apply x xs)
-        = "(" ++ toString x ++ " " ++ showSep " " (map toString xs) ++ ")"
-
-export
 decodeObj : ForeignObj -> SchemeObj Readback
 decodeObj obj
     = if isInteger obj then IntegerVal (unsafeGetInteger obj)
@@ -277,6 +218,71 @@ decodeObj obj
              then []
              else decodeObj (unsafeVectorRef obj i) ::
                      readVector len (i + 1) obj
+
+showSep : String -> List String -> String
+showSep sep [] = ""
+showSep sep [x] = x
+showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
+
+export
+toString : SchemeObj direction -> String
+toString Null = "'()"
+toString (Cons x y) = "(cons " ++ toString x ++ " " ++ toString y ++ ")"
+toString (IntegerVal x) = show x
+toString (FloatVal x) = show x
+toString (StringVal x) = show x
+toString (CharVal x)
+    = if (the Int (cast x) >= 32 && the Int (cast x) < 127)
+        then "#\\" ++ cast x
+        else "(integer->char " ++ show (the Int (cast x)) ++ ")"
+toString (Symbol x) = "'" ++ x
+toString (Vector i xs) = "(vector " ++ show i ++ " " ++ showSep " " (map toString xs) ++ ")"
+toString (Box x) = "(box " ++ toString x ++ ")"
+toString (Define x body) = "(define (" ++ x ++ ") " ++ toString body ++ ")"
+toString (Var x) = x
+toString (Lambda xs x)
+    = "(lambda (" ++ showSep " " xs ++ ") " ++ toString x ++ ")"
+toString (Let var val x)
+    = "(let ((" ++ var ++ " " ++ toString val ++ ")) " ++ toString x ++ ")"
+toString (If x t e)
+    = "(if " ++ toString x ++ " " ++ toString t ++ " " ++ toString e ++ ")"
+toString (Case x alts def)
+    = "(case " ++ toString x ++ " " ++
+          showSep " " (map showAlt alts) ++
+          showDef def ++ ")"
+  where
+    showAlt : (SchemeObj Write, SchemeObj Write) -> String
+    showAlt (opt, go)
+        = "((" ++ toString opt ++ ") " ++ toString go ++ ")"
+
+    showDef : Maybe (SchemeObj Write) -> String
+    showDef Nothing = ""
+    showDef (Just e) = " (else " ++ toString e ++ ")"
+toString (Cond alts def)
+    = "(cond " ++
+          showSep " " (map showAlt alts) ++
+          showDef def ++ ")"
+  where
+    showAlt : (SchemeObj Write, SchemeObj Write) -> String
+    showAlt (opt, go)
+        = "(" ++ toString opt ++ " " ++ toString go ++ ")"
+
+    showDef : Maybe (SchemeObj Write) -> String
+    showDef Nothing = ""
+    showDef (Just e) = " (else " ++ toString e ++ ")"
+toString (Apply x xs)
+    = "(" ++ toString x ++ " " ++ showSep " " (map toString xs) ++ ")"
+toString (Procedure o) = toString $ decodeObj o
+
+export
+evalSchemeObj : SchemeObj Write -> IO (Maybe ForeignObj)
+evalSchemeObj obj
+    = do let str = toString obj
+         evalSchemeStr str
+
+export
+Show (SchemeObj p) where
+  show = (assert_total toString)
 
 public export
 interface Scheme a where

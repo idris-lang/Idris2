@@ -44,6 +44,45 @@ mutual
        SErased  : FC -> WhyErased (SNF vars) -> SNF vars
        SType    : FC -> Name -> SNF vars
 
+mutual
+  export
+  covering
+  {free : _} -> Show (SHead free) where
+    show (SLocal idx p) = show (nameAt p) ++ "[" ++ show idx ++ "]"
+    show (SRef _ n) = show n
+    show (SMeta n _ args) = "?" ++ show n ++ "_[" ++ show (length args) ++ " closures]"
+
+  export
+  covering
+  {free : _} -> Show (SNF free) where
+    show (SBind _ x (Lam _ c info ty) _)
+      = "\\" ++ withPiInfo info (showCount c ++ show x ++ " : " ++ show ty) ++
+        " => [closure]"
+    show (SBind _ x (Let _ c val ty) _)
+      = "let " ++ showCount c ++ show x ++ " : " ++ show ty ++
+        " = " ++ show val ++ " in [closure]"
+    show (SBind _ x (Pi _ c info ty) _)
+      = withPiInfo info (showCount c ++ show x ++ " : " ++ show ty) ++
+        " -> [closure]"
+    show (SBind _ x (PVar _ c info ty) _)
+      = withPiInfo info ("pat " ++ showCount c ++ show x ++ " : " ++ show ty) ++
+        " => [closure]"
+    show (SBind _ x (PLet _ c val ty) _)
+      = "plet " ++ showCount c ++ show x ++ " : " ++ show ty ++
+        " = " ++ show val ++ " in [closure]"
+    show (SBind _ x (PVTy _ c ty) _)
+      = "pty " ++ showCount c ++ show x ++ " : " ++ show ty ++
+        " => [closure]"
+    show (SApp _ hd args) = show hd ++ " [" ++ show (length args) ++ " closures]"
+    show (SDCon _ n _ _ args) = show n ++ " %DCon [" ++ show (length args) ++ " closures]"
+    show (STCon _ n _ _ args) = show n ++ " %TCon [" ++ show (length args) ++ " closures]"
+    show (SDelayed _ _ tm) = "%Delayed " ++ show tm
+    show (SDelay _ _ _ _) = "%Delay [closure]"
+    show (SForce _ _ tm) = "%Force " ++ show tm
+    show (SPrimVal _ c) = show c
+    show (SErased _ why) = "[__ " ++ show why ++ "]"
+    show (SType _ n) = "Type " ++ show n
+
 getAllNames : {auto c : Ref Ctxt Defs} ->
               NameMap () -> List Name -> Core (NameMap ())
 getAllNames done [] = pure done
