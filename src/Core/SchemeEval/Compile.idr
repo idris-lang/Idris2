@@ -92,6 +92,13 @@ Show (SchVars ns) where
       toSnocList (xs :< Bound x) = toSnocList xs :< x
       toSnocList (xs :< Free x) = toSnocList xs :< "'x"
 
+reverseOnto : SchVars varsl -> SchVars varsr -> SchVars (reverseOnto varsl varsr)
+reverseOnto acc [<]       = acc
+reverseOnto acc (sx :< x) = reverseOnto (acc :< x) sx
+
+reverse : SchVars vars -> SchVars (reverse vars)
+reverse sx = reverseOnto [<] sx
+
 getSchVar : {idx : _} -> (0 _ : IsVar n idx vars) -> SchVars vars -> String
 getSchVar First (xs :< Bound x) = x
 getSchVar First (xs :< Free x) = "'" ++ x
@@ -307,7 +314,8 @@ extend : Ref Sym Integer =>
 extend [] svs = pure ([], svs)
 extend (arg :: args) svs
     = do n <- getArgName
-         extend args (svs :< Bound (schVarName n))
+         (args', svs') <- extend args (svs :< Bound (schVarName n))
+         pure (n :: args', svs')
 
 compileCase : Ref Sym Integer =>
               {auto c : Ref Ctxt Defs} ->
@@ -422,8 +430,8 @@ compileCase blk svs (Case idx p scTy xs)
             = do sn <- getArgName
                  tn <- getArgName
                  let svs' = svs
-                            :< Bound (schVarName tn)
                             :< Bound (schVarName sn)
+                            :< Bound (schVarName tn)
                  sc' <- compileCase blk svs' sc
                  pure $ If (Apply (Var "ct-isPi") [Var var])
                            (Let (schVarName sn) (Apply (Var "vector-ref") [Var var, IntegerVal 4]) $
@@ -484,6 +492,10 @@ mkArgs : (ns : Scope) -> SchVars ns
 mkArgs [<] = [<]
 mkArgs (xs :< x) = mkArgs xs :< Bound (schVarName x)
 
+mkArgNs : Int -> Nat -> SnocList Name
+mkArgNs i Z = [<]
+mkArgNs i (S k) = mkArgNs (i-1) k :< MN "arg" i
+
 bindArgs : Name ->
            (todo : SchVars ns) ->
            (done : List (SchemeObj Write)) ->
@@ -501,7 +513,8 @@ compileBody _ n None = pure $ blockedAppWith n []
 compileBody redok n (PMDef pminfo args treeCT treeRT pats)
     = do i <- newRef Sym 0
          let argvs = mkArgs args
-         let blk = blockedAppWith n (varObjs argvs)
+         let argvsr = reverse argvs
+         let blk = blockedAppWith n (varObjs argvsr)
          body <- compileCase blk argvs treeCT
          let body' = if redok
                         then If (Apply (Var "ct-isBlockAll") []) blk body
@@ -509,31 +522,27 @@ compileBody redok n (PMDef pminfo args treeCT treeRT pats)
          -- If it arose from a hole, we need to take an extra argument for
          -- the arity since that's what Meta gets applied to
          case holeInfo pminfo of
-              NotHole => pure (bindArgs n argvs [] body')
-              SolvedHole _ => pure (Lambda ["h-0"] (bindArgs n argvs [] body'))
+              NotHole => pure (bindArgs n argvsr [] body')
+              SolvedHole _ => pure (Lambda ["h-0"] (bindArgs n argvsr [] body'))
 compileBody _ n (ExternDef arity) = pure $ blockedAppWith n []
 compileBody _ n (ForeignDef arity xs) = pure $ blockedAppWith n []
 compileBody _ n (Builtin x) = pure $ compileBuiltin n x
 compileBody _ n (DCon tag Z newtypeArg)
     = pure $ Vector (cast tag) [toScheme !(toResolvedNames n), toScheme emptyFC]
 compileBody _ n (DCon tag arity newtypeArg)
-    = do let args = mkArgNs 0 arity
-         let argvs = mkArgs args
+    = do let args = mkArgNs (cast arity - 1) arity
+         let argvs = mkArgs $ reverse args
          let body
                = Vector (cast tag)
                         (toScheme n :: toScheme emptyFC ::
                              map (Var . schVarName) (toList args))
          pure (bindArgs n argvs [] body)
-  where
-    mkArgNs : Int -> Nat -> SnocList Name
-    mkArgNs i Z = [<]
-    mkArgNs i (S k) = mkArgNs (i+1) k :< MN "arg" i
 compileBody _ n (TCon tag Z parampos detpos flags mutwith datacons detagabbleBy)
     = pure $ Vector (-1) [IntegerVal (cast tag), StringVal (show n),
                           toScheme n, toScheme emptyFC]
 compileBody _ n (TCon tag arity parampos detpos flags mutwith datacons detagabbleBy)
-    = do let args = mkArgNs 0 arity
-         let argvs = mkArgs args
+    = do let args = mkArgNs (cast arity - 1) arity
+         let argvs = mkArgs $ reverse args
          let body
                = Vector (-1)
                         (IntegerVal (cast tag) ::
@@ -541,10 +550,6 @@ compileBody _ n (TCon tag arity parampos detpos flags mutwith datacons detagabbl
                           toScheme n :: toScheme emptyFC ::
                             map (Var . schVarName) (toList args))
          pure (bindArgs n argvs [] body)
-  where
-    mkArgNs : Int -> Nat -> SnocList Name
-    mkArgNs i Z = [<]
-    mkArgNs i (S k) = mkArgNs (i+1) k :< MN "arg" i
 compileBody _ n (Hole numlocs x) = pure $ blockedMetaApp n
 compileBody _ n (BySearch x maxdepth defining) = pure $ blockedMetaApp n
 compileBody _ n (Guess guess envbind constraints) = pure $ blockedMetaApp n
