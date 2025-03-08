@@ -22,7 +22,7 @@ export prefix 5 !*
 ||| Prefix notation for the linear unrestricted modality
 public export
 data (!*) : Type -> Type where
-  MkBang : (unrestricted : a) -> MkBang a
+  MkBang : a -> !* a
 
 ||| Unpack an unrestricted value in a linear context
 public export
