@@ -23,12 +23,6 @@ import Libraries.Data.SnocList.Extra
 
 %default covering
 
--- For ease of type level reasoning!
-public export
-rev : SnocList a -> SnocList a
-rev [<] = [<]
-rev (xs :< x) = [<x] ++ rev xs
-
 data Args
     = NewTypeBy Nat Nat
     | EraseArgs Nat (List Nat)

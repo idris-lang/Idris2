@@ -97,7 +97,7 @@ reverseOnto acc [<]       = acc
 reverseOnto acc (sx :< x) = reverseOnto (acc :< x) sx
 
 reverse : SchVars vars -> SchVars (reverse vars)
-reverse sx = reverseOnto [<] sx
+reverse = reverseOnto [<]
 
 getSchVar : {idx : _} -> (0 _ : IsVar n idx vars) -> SchVars vars -> String
 getSchVar First (xs :< Bound x) = x

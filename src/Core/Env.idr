@@ -78,15 +78,6 @@ bindEnv loc (env :< b) tm
                                         Explicit
                                         (binderType b)) tm)
 
-public export
-revNs : (vs, ns : SnocList a) -> reverse vs ++ reverse ns = reverse (ns ++ vs)
-revNs [<] ns = rewrite appendLinLeftNeutral (reverse ns) in Refl
-revNs (vs :< v) ns
-    = rewrite Extra.revOnto [<v] vs in
-        rewrite Extra.revOnto [<v] (ns ++ vs) in
-          rewrite sym $ revNs vs ns in
-            rewrite appendAssociative [<v] (reverse vs) (reverse ns) in Refl
-
 -- Weaken by all the names at once at the end, to save multiple traversals
 -- in big environments
 -- Also reversing the names at the end saves significant time over concatenating

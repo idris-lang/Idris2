@@ -222,9 +222,9 @@ covering
     where
       showAll : {vs, ts : _} -> NamedPats vs ts -> String
       showAll [] = ""
-      showAll {ts = _ :< t } [x]
+      showAll {ts = _ :< t} [x]
           = show t ++ " " ++ show (pat x) ++ " [" ++ show (argType x) ++ "]"
-      showAll {ts = _ :< t } (x :: xs)
+      showAll {ts = _ :< t} (x :: xs)
           = show t ++ " " ++ show (pat x) ++ " [" ++ show (argType x) ++ "]"
                      ++ ", " ++ showAll xs
 
@@ -233,7 +233,7 @@ covering
     where
       prettyAll : {vs, ts : _} -> NamedPats vs ts -> List (Doc IdrisSyntax)
       prettyAll [] = []
-      prettyAll {ts = _ :< t } (x :: xs)
+      prettyAll {ts = _ :< t} (x :: xs)
           = parens (pretty0 t <++> equals <++> pretty (pat x))
           :: prettyAll xs
 
@@ -597,10 +597,6 @@ updatePatNames _ [] = []
 updatePatNames ns (pi :: ps)
     = { pat $= update } pi :: updatePatNames ns ps
   where
-    lookup : Name -> SnocList (Name, Name) -> Maybe Name
-    lookup n [<] = Nothing
-    lookup n (ns :< (x, n')) = if x == n then Just n' else lookup n ns
-
     update : Pat -> Pat
     update (PAs fc n p)
         = case lookup n ns of
@@ -1226,7 +1222,7 @@ mkPat args orig (Ref fc (DataCon t a) n) = pure $ PCon fc n t a (rev args)
 mkPat args orig (Ref fc (TyCon t a) n) = pure $ PTyCon fc n a (rev args)
 mkPat args orig (Ref fc Func n)
   = do prims <- getPrimitiveNames
-       mtm <- normalisePrims (const True) isPConst True prims n args orig [<]
+       mtm <- normalisePrims (const True) isPConst True prims n (cast args) orig [<]
        case mtm of
          Just tm => if tm /= orig -- check we made progress; if there's an
                                   -- unresolved interface, we might be stuck

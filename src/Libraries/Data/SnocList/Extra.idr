@@ -1,6 +1,8 @@
 module Libraries.Data.SnocList.Extra
 
+import Data.Nat
 import Data.SnocList
+import Syntax.PreorderReasoning
 
 public export
 take : (n : Nat) -> (xs : Stream a) -> SnocList a
@@ -28,3 +30,19 @@ revOnto xs (vs :< v)
     = rewrite Extra.revOnto (xs :< v) vs in
         rewrite Extra.revOnto [<v] vs in
           rewrite appendAssociative xs [<v] (reverse vs) in Refl
+
+export
+lookup : Eq a => a -> SnocList (a, b) -> Maybe b
+lookup n [<] = Nothing
+lookup n (ns :< (x, n')) = if x == n then Just n' else lookup n ns
+
+export
+lengthDistributesOverFish : (sx : SnocList a) -> (ys : List a) ->
+                            length (sx <>< ys) === length sx + length ys
+lengthDistributesOverFish sx [] = sym $ plusZeroRightNeutral _
+lengthDistributesOverFish sx (y :: ys) = Calc $
+  |~ length ((sx :< y) <>< ys)
+  ~~ length (sx :< y) + length ys ...( lengthDistributesOverFish (sx :< y) ys )
+  ~~ S (length sx) + length ys    ...( Refl )
+  ~~ length sx + S (length ys)    ...( plusSuccRightSucc _ _ )
+  ~~ length sx + length (y :: ys) ...( Refl )

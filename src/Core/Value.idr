@@ -130,16 +130,6 @@ export
 (++) sx (sy :< y) = (sx ++ sy) :< y
 
 export
-reverseOnto : LocalEnv free varsl -> LocalEnv free varsr -> LocalEnv free (varsl ++ reverse varsr)
-reverseOnto acc Lin       = acc
-reverseOnto {varsr=[<] :< r} acc ([<] :< x) = reverseOnto {varsl=varsl :< r} (acc :< x) [<]
-reverseOnto {varsr=[<] :< vars :< r} acc (sx :< x) = reverseOnto {varsl=varsl :< r} (acc :< x) sx
-
-export
-reverse : LocalEnv free vars -> LocalEnv free (reverse vars)
-reverse {vars} = rewrite sym $ appendLinLeftNeutral (reverse vars) in reverseOnto Lin
-
-export
 cons : LocalEnv free vars -> Closure free -> LocalEnv free (v `cons` vars)
 cons [<] p = Lin :< p
 cons (ns :< s) p = cons ns p :< s

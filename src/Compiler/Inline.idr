@@ -18,14 +18,11 @@ import Data.Maybe
 import Data.List
 import Data.SnocList
 import Data.Vect
-import Libraries.Data.List.LengthMatch
+
 import Libraries.Data.NameMap
 import Libraries.Data.WithDefault
-
 import Libraries.Data.List.SizeOf
-import Libraries.Data.SnocList.LengthMatch
 import Libraries.Data.SnocList.SizeOf
-import Libraries.Data.SnocList.HasLength
 import Libraries.Data.SnocList.Extra
 
 %default covering

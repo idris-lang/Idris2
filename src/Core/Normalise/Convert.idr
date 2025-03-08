@@ -14,6 +14,8 @@ import Data.List
 import Data.SnocList
 
 import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.HasLength
+import Libraries.Data.SnocList.SizeOf
 
 %default covering
 
@@ -369,10 +371,12 @@ mutual
 
     convGen q inf defs env (NApp fc val args) (NApp _ val' args')
         = if !(chkConvHead q inf defs env val val')
-             then do i <- getInfPos val
-                     allConv q inf defs env
-                        (cast {from = List (FC, Closure vars)} $ dropInf 0 i $ cast args) -- TODO: UGH!
-                        (cast {from = List (FC, Closure vars)} $ dropInf 0 i $ cast args')
+             then case !(getInfPos val) of
+                    [] => allConv q inf defs env args args'
+                    i  => allConv q inf defs env
+                                  (dropInf i args  $ mkSizeOf args)
+                                  (dropInf i args' $ mkSizeOf args')
+
              else chkConvCaseBlock fc q inf defs env val args1 val' args2
         where
           getInfPos : NHead vars -> Core (List Nat)
@@ -384,13 +388,12 @@ mutual
                    else pure []
           getInfPos _ = pure []
 
-          dropInf : Nat -> List Nat -> List a -> List a
-          dropInf _ [] xs = xs
-          dropInf _ _ [] = []
-          dropInf i ds (x :: xs)
+          dropInf : List Nat -> (sx : SnocList a) -> SizeOf sx -> SnocList a
+          dropInf _ [<] _ = [<]
+          dropInf ds (sx :< x) (MkSizeOf (S i) (S p))
               = if i `elem` ds
-                   then dropInf (S i) ds xs
-                   else x :: dropInf (S i) ds xs
+                   then dropInf ds sx (MkSizeOf i p)
+                   else dropInf ds sx (MkSizeOf i p) :< x
 
           -- Discard file context information irrelevant for conversion checking
           args1 : SnocList (Closure vars)

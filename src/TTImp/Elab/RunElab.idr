@@ -282,7 +282,7 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
              ty <- getTerm gty
              scriptRet (Just $ map rawName $ !(unelabUniqueBinders env ty))
     elabCon defs "LocalVars" [<]
-        = scriptRet $ reverse $ toList vars
+        = scriptRet $ asList vars
     elabCon defs "GenSym" [<str]
         = do str' <- evalClosure defs str
              n <- genVarName !(reify defs str')

@@ -71,7 +71,7 @@ mutual
                List (Name, Nat) ->
                Env Term vars ->
                Name ->
-               List (Term vars) ->
+               SnocList (Term vars) ->
                Core (Maybe IRawImp)
   unelabCase nest env n args
       = do defs <- get Ctxt
@@ -81,9 +81,8 @@ mutual
                 | _ => pure Nothing
            let Just argpos = findArgPos treect
                 | _ => pure Nothing
-           let len = length args
-           if len == length pargs
-              then mkCase pats (len `minus` argpos + 1) args
+           if length args == length pargs
+              then mkCase pats argpos args
               else pure Nothing
     where
       -- Need to find the position of the scrutinee to rebuild original
@@ -92,13 +91,13 @@ mutual
       findArgPos (Case idx p _ _) = Just idx
       findArgPos _ = Nothing
 
-      idxOrMaybe : Nat -> List a -> Maybe a
-      idxOrMaybe Z (x :: _) = Just x
-      idxOrMaybe (S k) (_ :: xs) = idxOrMaybe k xs
-      idxOrMaybe _ [] = Nothing
+      idxOrMaybe : Nat -> SnocList a -> Maybe a
+      idxOrMaybe Z (_ :< x) = Just x
+      idxOrMaybe (S k) (xs :< _) = idxOrMaybe k xs
+      idxOrMaybe _ [<] = Nothing
 
       -- TODO: some utility like this should probably be implemented in Core
-      substVars : List (List (Var vs), Term vs) -> Term vs -> Term vs
+      substVars : SnocList (List (Var vs), Term vs) -> Term vs -> Term vs
       substVars xs tm@(Local fc _ idx prf)
           = case find (any ((idx ==) . varIdx) . fst) xs of
                  Just (_, new) => new
@@ -119,13 +118,11 @@ mutual
           = TForce fc r (substVars xs y)
       substVars xs tm = tm
 
-      substArgs : SizeOf vs -> List (List (Var vs), Term vars) -> Term vs -> Term (vars ++ vs)
+      substArgs : SizeOf vs -> SnocList (List (Var vs), Term vars) -> Term vs -> Term (vars ++ vs)
       substArgs p substs tm =
-        let
-          substs' = map (bimap (map embed) (weakenNs p)) substs
-          tm' = embed tm
-        in
-          substVars substs' tm'
+        let substs' = map (bimap (map embed) (weakenNs p)) substs
+            tm' = embed tm
+         in substVars substs' tm'
 
       argVars : {vs : _} -> Term vs -> List (Var vs)
       argVars (As _ _ as pat) = argVars as ++ argVars pat
@@ -133,12 +130,12 @@ mutual
       argVars _ = []
 
       mkClause : FC -> Nat ->
-                 List (Term vars) ->
+                 SnocList (Term vars) ->
                  (vs ** (Env Term vs, Term vs, Term vs)) ->
                  Core (Maybe IImpClause)
       mkClause fc argpos args (vs ** (clauseEnv, lhs, rhs))
           = do logTerm "unelab.case.clause" 20 "Unelaborating clause" lhs
-               let patArgs = snd (getFnArgs lhs)
+               let patArgs = snd (getFnArgsSpine lhs)
                    Just pat = idxOrMaybe argpos patArgs
                      | _ => pure Nothing
                    rhs = substArgs (mkSizeOf vs) (zip (map argVars patArgs) args) rhs
@@ -156,7 +153,7 @@ mutual
       ||| Once we have the scrutinee `e`, we can form `case e of` and so focus
       ||| on manufacturing the clauses.
       mkCase : List (vs ** (Env Term vs, Term vs, Term vs)) ->
-               (argpos : Nat) -> List (Term vars) -> Core (Maybe IRawImp)
+               (argpos : Nat) -> SnocList (Term vars) -> Core (Maybe IRawImp)
       mkCase pats argpos args
           = do unless (null args) $ log "unelab.case.clause" 20 $
                  unwords $ "Ignoring" :: map show (toList $ args)
@@ -272,7 +269,7 @@ mutual
               case umode of
                 (NoSugar _) => pure Nothing
                 ImplicitHoles => pure Nothing
-                _ => case getFnArgs tm of
+                _ => case getFnArgsSpine tm of
                      (Ref _ _ fnName, args) => do
                        fullName <- getFullName fnName
                        let (NS ns (CaseBlock n i)) = fullName

@@ -18,6 +18,7 @@ import Core.TT
 
 import Data.List
 import Data.SnocList
+import Data.SnocList.Operations
 import Data.Vect
 
 import Libraries.Data.SnocList.Extra
@@ -360,31 +361,19 @@ record Used (vars : SnocList Name) where
 initUsed : {vars : _} -> Used vars
 initUsed {vars} = MkUsed (replicate (length vars) False)
 
-lengthDistributesOverAppend
-  : (xs, ys : SnocList a)
-  -> length (ys ++ xs) = length xs + length ys
-lengthDistributesOverAppend [<] ys = Refl
-lengthDistributesOverAppend (xs :< x) ys =
-  cong S $ lengthDistributesOverAppend xs ys
-
 weakenUsed : {outer : _} -> Used vars -> Used (vars ++ outer)
 weakenUsed {outer} (MkUsed xs) =
-  MkUsed (rewrite lengthDistributesOverAppend outer vars in
-         (replicate (length outer) False ++ xs))
-
--- TODO
--- lengthDistributesOverAppendFish
---   : (xs : List a)
---   -> (ys : SnocList a)
---   -> length (ys <>< xs) = length xs + length ys
+  MkUsed (rewrite lengthHomomorphism vars outer in
+          rewrite plusCommutative (length vars) (length outer) in
+          replicate (length outer) False ++ xs)
 
 weakenUsedFish : {outer : _} -> Used vars -> Used (vars <>< outer)
 weakenUsedFish {outer} (MkUsed xs) =
     do rewrite fishAsSnocAppend vars outer
-       MkUsed $ do
-                  rewrite lengthDistributesOverAppend (cast outer) vars
-                  -- See lengthDistributesOverAppendFish
-                  (believe_me $ replicate (length outer) False ++ xs)
+       MkUsed $ do rewrite lengthHomomorphism vars (cast outer)
+                   rewrite Extra.lengthDistributesOverFish [<] outer
+                   rewrite plusCommutative (length vars) (length outer)
+                   replicate (length outer) False ++ xs
 
 contractUsed : (Used (vars :< x)) -> Used vars
 contractUsed (MkUsed xs) = MkUsed (tail xs)
