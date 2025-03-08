@@ -21,6 +21,10 @@ public export
 export prefix 5 !*
 ||| Prefix notation for the linear unrestricted modality
 public export
-record (!*) (a : Type) where
-  constructor MkBang
-  unrestricted : a
+data (!*) : Type -> Type where
+  MkBang : (unrestricted : a) -> MkBang a
+
+||| Unpack an unrestricted value in a linear context
+public export
+unrestricted : !* a -@ a
+unrestricted (MkBang unr) = unr

@@ -49,6 +49,8 @@ idris2docs_venv
 .\#*
 # VS Code
 .vscode/*
+# JetBrains IDEs
+.idea/
 
 # macOS
 .DS_Store
