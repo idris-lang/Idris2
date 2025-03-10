@@ -15,10 +15,12 @@ import Core.Value
 
 import Idris.Resugar
 import Idris.REPL.Opts
+import Idris.Pretty
 import Idris.Syntax
 
 import Libraries.Data.NameMap
 import Libraries.Data.WithDefault
+import Libraries.Text.PrettyPrint.Prettyprinter.Doc -- for PageWidth
 import Libraries.Utils.Path
 
 import TTImp.Elab.Check
@@ -228,6 +230,12 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
                      ptm <- pterm (map defaultKindedName tm')
                      pure $ !(reify defs str') ++ ": " ++ show ptm
              scriptRet ()
+    elabCon defs "ResugarTerm" [maxLineWidth, tm]
+        = do ptm <- pterm . map defaultKindedName =<< reify defs !(evalClosure defs tm)
+             mlw <- reify defs !(evalClosure defs maxLineWidth)
+             let _ : Maybe Nat = mlw
+             let pw = maybe Unbounded (\w => AvailablePerLine (cast w) 1) mlw
+             scriptRet $ render' pw Nothing $ pretty {ann=IdrisSyntax} ptm
     elabCon defs "Check" [exp, ttimp]
         = do exp' <- evalClosure defs exp
              ttimp' <- evalClosure defs ttimp

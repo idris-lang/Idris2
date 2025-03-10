@@ -1,0 +1,28 @@
+1/1: Building ResugarTerm (ResugarTerm.idr)
+
+--------
+p1:
+let x =
+      fromInteger 5
+in x + fromInteger 2
+
+--------
+p2:
+let x = fromInteger 5 in x + fromInteger 2
+
+--------
+p3:
+(case y of
+  { Nice => pure nicest
+  ; Just x => x <*> foo (fromString "ha")
+  }) >>= (\x =>
+let {<<definitions>>}
+in f (fromInteger 16) >>= (\_ =>
+case _ of
+  { Z => f (fromInteger 2)
+  ; S n => fromInteger 18
+  }))
+
+--------
+p4:
+(case y of { Nice => pure nicest ; Just x => x <*> foo (fromString "ha") }) >>= (\x => let {<<definitions>>} in f (fromInteger 16) >>= (\_ => case _ of { Z => f (fromInteger 2) ; S n => fromInteger 18 }))

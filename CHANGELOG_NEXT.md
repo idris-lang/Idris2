@@ -85,6 +85,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   `parameters {0 t : Type} (v : t)` to indicate if arguments are implicit or
   erased.
 
+* Elaborator scripts were made to be able to get pretty-printed resugared expressions.
+
 ### Compiler changes
 
 * The compiler now differentiates between "package search path" and "package
