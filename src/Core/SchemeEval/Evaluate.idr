@@ -12,7 +12,7 @@ import Libraries.Data.NameMap
 import Libraries.Utils.Scheme
 
 public export
-data SObj : List Name -> Type where
+data SObj : SnocList Name -> Type where
      MkSObj : ForeignObj -> SchVars vars -> SObj vars
 
 -- Values, which we read off evaluated scheme objects.
@@ -22,13 +22,13 @@ data SObj : List Name -> Type where
 -- recording a LocalEnv for example).
 mutual
   public export
-  data SHead : List Name -> Type where
+  data SHead : SnocList Name -> Type where
        SLocal : (idx : Nat) -> (0 p : IsVar nm idx vars) -> SHead vars
        SRef : NameType -> Name -> SHead vars
        SMeta : Name -> Int -> List (Core (SNF vars)) -> SHead vars
 
   public export
-  data SNF : List Name -> Type where
+  data SNF : SnocList Name -> Type where
        SBind    : FC -> (x : Name) -> Binder (SNF vars) ->
                   (SObj vars -> Core (SNF vars)) -> SNF vars
        SApp     : FC -> SHead vars -> List (Core (SNF vars)) -> SNF vars
@@ -43,6 +43,45 @@ mutual
        SPrimVal : FC -> Constant -> SNF vars
        SErased  : FC -> WhyErased (SNF vars) -> SNF vars
        SType    : FC -> Name -> SNF vars
+
+mutual
+  export
+  covering
+  {free : _} -> Show (SHead free) where
+    show (SLocal idx p) = show (nameAt p) ++ "[" ++ show idx ++ "]"
+    show (SRef _ n) = show n
+    show (SMeta n _ args) = "?" ++ show n ++ "_[" ++ show (length args) ++ " closures]"
+
+  export
+  covering
+  {free : _} -> Show (SNF free) where
+    show (SBind _ x (Lam _ c info ty) _)
+      = "\\" ++ withPiInfo info (showCount c ++ show x ++ " : " ++ show ty) ++
+        " => [closure]"
+    show (SBind _ x (Let _ c val ty) _)
+      = "let " ++ showCount c ++ show x ++ " : " ++ show ty ++
+        " = " ++ show val ++ " in [closure]"
+    show (SBind _ x (Pi _ c info ty) _)
+      = withPiInfo info (showCount c ++ show x ++ " : " ++ show ty) ++
+        " -> [closure]"
+    show (SBind _ x (PVar _ c info ty) _)
+      = withPiInfo info ("pat " ++ showCount c ++ show x ++ " : " ++ show ty) ++
+        " => [closure]"
+    show (SBind _ x (PLet _ c val ty) _)
+      = "plet " ++ showCount c ++ show x ++ " : " ++ show ty ++
+        " = " ++ show val ++ " in [closure]"
+    show (SBind _ x (PVTy _ c ty) _)
+      = "pty " ++ showCount c ++ show x ++ " : " ++ show ty ++
+        " => [closure]"
+    show (SApp _ hd args) = show hd ++ " [" ++ show (length args) ++ " closures]"
+    show (SDCon _ n _ _ args) = show n ++ " %DCon [" ++ show (length args) ++ " closures]"
+    show (STCon _ n _ _ args) = show n ++ " %TCon [" ++ show (length args) ++ " closures]"
+    show (SDelayed _ _ tm) = "%Delayed " ++ show tm
+    show (SDelay _ _ _ _) = "%Delay [closure]"
+    show (SForce _ _ tm) = "%Force " ++ show tm
+    show (SPrimVal _ c) = show c
+    show (SErased _ why) = "[__ " ++ show why ++ "]"
+    show (SType _ n) = "Type " ++ show n
 
 getAllNames : {auto c : Ref Ctxt Defs} ->
               NameMap () -> List Name -> Core (NameMap ())
@@ -87,17 +126,17 @@ seval mode env tm
             Env Term vars ->
             (SchemeObj Write -> SchemeObj Write) ->
             Core (SchemeObj Write -> SchemeObj Write, SchVars vars)
-    mkEnv [] k = pure (k, [])
-    mkEnv (Let fc c val ty :: es) k
+    mkEnv [<] k = pure (k, [<])
+    mkEnv (es :< Let fc c val ty) k
         = do i <- nextName
              (bind, vs) <- mkEnv es k
              val' <- compile vs val
              let n = "let-var-" ++ show i
-             pure (\x => Let n val' (bind x), Bound n :: vs)
-    mkEnv (_ :: es) k
+             pure (\x => Let n val' (bind x), vs :< Bound n)
+    mkEnv (es :< _) k
         = do i <- nextName
              (bind, vs) <- mkEnv es k
-             pure (bind, Free ("free-" ++ show i) :: vs)
+             pure (bind, vs :< Free ("free-" ++ show i))
 
 invalid : Core (Term vs)
 invalid = pure (Erased emptyFC Placeholder)
@@ -147,9 +186,9 @@ mutual
   -- Instead, decode the ForeignObj directly, which is uglier but faster.
   quoteVector : Ref Sym Integer =>
                 Ref Ctxt Defs =>
-                SchVars (outer ++ vars) ->
+                SchVars (vars ++ local) ->
                 Integer -> List ForeignObj ->
-                Core (Term (outer ++ vars))
+                Core (Term (vars ++ local))
   quoteVector svs (-2) [_, fname_in, args_in] -- Blocked app
       = quoteOrInvalid fname_in $ \ fname => do
            let argList = getArgList args_in
@@ -275,9 +314,9 @@ mutual
 
   quotePiInfo : Ref Sym Integer =>
                 Ref Ctxt Defs =>
-                SchVars (outer ++ vars) ->
+                SchVars (vars ++ local) ->
                 ForeignObj ->
-                Core (PiInfo (Term (outer ++ vars)))
+                Core (PiInfo (Term (vars ++ local)))
   quotePiInfo svs obj
       = if isInteger obj
            then case unsafeGetInteger obj of
@@ -305,49 +344,49 @@ mutual
 
   quoteBinder : Ref Sym Integer =>
                 Ref Ctxt Defs =>
-                SchVars (outer ++ vars) ->
+                SchVars (vars ++ local) ->
                 (forall ty . FC -> RigCount -> PiInfo ty -> ty -> Binder ty) ->
                 ForeignObj -> -- body of binder, represented as a function
                 RigCount ->
-                PiInfo (Term (outer ++ vars)) ->
-                Term (outer ++ vars) -> -- decoded type
+                PiInfo (Term (vars ++ local)) ->
+                Term (vars ++ local) -> -- decoded type
                 Name -> -- bound name
-                Core (Term (outer ++ vars))
+                Core (Term (vars ++ local))
   quoteBinder svs binder proc_in r pi ty name
       = do let Procedure proc = decodeObj proc_in
                     | _ => invalid
            i <- nextName
            let n = show name ++ "-" ++ show i
            let sc = unsafeApply proc (makeSymbol n)
-           sc' <- quote' {outer = name :: outer} (Bound n :: svs) sc
+           sc' <- quote' {local = local :< name} (svs :< Bound n) sc
            pure (Bind emptyFC name
                       (binder emptyFC r pi ty)
                       sc')
 
   quotePLet : Ref Sym Integer =>
               Ref Ctxt Defs =>
-              SchVars (outer ++ vars) ->
+              SchVars (vars ++ local) ->
               ForeignObj -> -- body of binder, represented as a function
               RigCount ->
-              Term (outer ++ vars) -> -- decoded type
-              Term (outer ++ vars) -> -- decoded value
+              Term (vars ++ local) -> -- decoded type
+              Term (vars ++ local) -> -- decoded value
               Name -> -- bound name
-              Core (Term (outer ++ vars))
+              Core (Term (vars ++ local))
   quotePLet svs proc_in r val ty name
       = do let Procedure proc = decodeObj proc_in
                     | _ => invalid
            i <- nextName
            let n = show name ++ "-" ++ show i
            let sc = unsafeApply proc (makeSymbol n)
-           sc' <- quote' {outer = name :: outer} (Bound n :: svs) sc
+           sc' <- quote' {local = local :< name} (svs :< Bound n) sc
            pure (Bind emptyFC name
                       (PLet emptyFC r val ty)
                       sc')
 
   quote' : Ref Sym Integer =>
            Ref Ctxt Defs =>
-           SchVars (outer ++ vars) -> ForeignObj ->
-           Core (Term (outer ++ vars))
+           SchVars (vars ++ local) -> ForeignObj ->
+           Core (Term (vars ++ local))
   quote' svs obj
       = if isVector obj
            then quoteVector svs (unsafeGetInteger (unsafeVectorRef obj 0))
@@ -364,8 +403,8 @@ mutual
         else invalid
     where
       findName : forall vars . SchVars vars -> String -> Term vars
-      findName [] n = Ref emptyFC Func (UN (Basic n))
-      findName (x :: xs) n
+      findName [<] n = Ref emptyFC Func (UN (Basic n))
+      findName (xs :< x) n
           = if getName x == n
                then Local emptyFC Nothing _ First
                else let Local fc loc _ p = findName xs n
@@ -386,7 +425,7 @@ quoteObj : {auto c : Ref Ctxt Defs} ->
            SObj vars -> Core (Term vars)
 quoteObj (MkSObj val schEnv)
     = do i <- newRef Sym 0
-         quote' {outer = []} schEnv val
+         quote' {local = [<]} schEnv val
 
 mutual
   snfVector : Ref Ctxt Defs =>
@@ -583,8 +622,8 @@ mutual
            else invalidS
     where
       findName : forall vars . SchVars vars -> String -> SNF vars
-      findName [] n = SApp emptyFC (SRef Func (UN (Basic n))) []
-      findName (x :: xs) n
+      findName [<] n = SApp emptyFC (SRef Func (UN (Basic n))) []
+      findName (xs :< x) n
           = if getName x == n
                then SApp emptyFC (SLocal _ First) []
                else let SApp fc (SLocal _ p) args = findName xs n
