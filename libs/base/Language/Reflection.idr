@@ -60,6 +60,8 @@ data Elab : Type -> Type where
      ||| * term
      LogSugaredTerm : String -> Nat -> String -> TTImp -> Elab ()
 
+     ResugarTerm : (maxLineWidth : Maybe Nat) -> TTImp -> Elab String
+
      -- Elaborate a TTImp term to a concrete value
      Check : TTImp -> Elab expected
      -- Quote a concrete expression back to a TTImp
@@ -149,6 +151,9 @@ interface Monad m => Elaboration m where
   ||| Write a log message and a resugared & rendered term, if the log level is >= the given level
   logSugaredTerm : String -> Nat -> String -> TTImp -> m ()
 
+  ||| Resugar given term to a pretty string
+  resugarTerm : (maxLineWidth : Maybe Nat) -> TTImp -> m String
+
   ||| Check that some TTImp syntax has the expected type
   ||| Returns the type checked value
   check : TTImp -> m expected
@@ -233,6 +238,7 @@ Elaboration Elab where
   logMsg         = LogMsg
   logTerm        = LogTerm
   logSugaredTerm = LogSugaredTerm
+  resugarTerm    = ResugarTerm
   check          = Check
   quote          = Quote
   lambda         = Lambda
@@ -260,6 +266,7 @@ Elaboration m => MonadTrans t => Monad (t m) => Elaboration (t m) where
   logMsg s            = lift .: logMsg s
   logTerm s n         = lift .: logTerm s n
   logSugaredTerm s n  = lift .: logSugaredTerm s n
+  resugarTerm         = lift .: resugarTerm
   check               = lift . check
   quote v             = lift $ quote v
   lambda x            = lift . lambda x

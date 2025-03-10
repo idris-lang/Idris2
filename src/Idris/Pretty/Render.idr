@@ -24,18 +24,21 @@ getPageWidth = do
     Just cw => pure $ AvailablePerLine (cast cw) 1
 
 export
+render' : PageWidth ->
+          Maybe (ann -> AnsiStyle) ->
+          Doc ann -> String
+render' pageWidth stylerAnn doc = do
+  let opts = MkLayoutOptions pageWidth
+  let layout = layoutPretty opts doc
+  renderString $ case stylerAnn of
+    Just stylerAnn => reAnnotateS stylerAnn layout
+    Nothing => unAnnotateS layout
+
+export
 render : {auto o : Ref ROpts REPLOpts} ->
          (ann -> AnsiStyle) ->
          Doc ann -> Core String
-render stylerAnn doc = do
-  color <- getColor
-  pageWidth <- getPageWidth
-  let opts = MkLayoutOptions pageWidth
-  let layout = layoutPretty opts doc
-  pure $ renderString $
-    if color
-      then reAnnotateS stylerAnn layout
-      else unAnnotateS layout
+render stylerAnn doc = pure $ render' !getPageWidth (toMaybe !getColor stylerAnn) doc
 
 export
 renderWithoutColor : {auto o : Ref ROpts REPLOpts} -> Doc ann -> Core String

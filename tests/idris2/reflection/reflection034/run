@@ -1,0 +1,4 @@
+. ../../../testutils.sh
+
+check ResugarTerm.idr
+run ResugarTerm.idr
