@@ -4,12 +4,16 @@ import Compiler.CompileExpr
 import Core.Context
 import Core.Context.Log
 import Data.List
+import Data.SnocList
 import Data.Vect
 
-makeArgs : (args : List Name) -> List (Var (args ++ vars))
+import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
+
+makeArgs : (args : Scope) -> List (Var (args ++ vars))
 makeArgs args = makeArgs' args id
   where
-    makeArgs' : (args : List Name) -> (Var (args ++ vars) -> a) -> List a
+    makeArgs' : (args : Scope) -> (Var (args ++ vars) -> a) -> List a
     makeArgs' [] f = []
     makeArgs' (x :: xs) f = f (MkVar First) :: makeArgs' xs (f . weaken)
 
@@ -113,10 +117,10 @@ checkIdentity fn (v :: vs) exp idx = if cexpIdentity fn idx v Nothing Nothing ex
     else checkIdentity fn vs exp (S idx)
 
 calcIdentity : (fullName : Name) -> CDef -> Maybe Nat
-calcIdentity fn (MkFun args exp) = checkIdentity fn (makeArgs {vars=[]} args) (rewrite appendNilRightNeutral args in exp) Z
+calcIdentity fn (MkFun args exp) = checkIdentity fn (makeArgs {vars=ScopeEmpty} args) (rewrite appendNilRightNeutral args in exp) Z
 calcIdentity _ _ = Nothing
 
-getArg : FC -> Nat -> (args : List Name) -> Maybe (CExp args)
+getArg : FC -> Nat -> (args : Scope) -> Maybe (CExp args)
 getArg _ _ [] = Nothing
 getArg fc Z (a :: _) = Just $ CLocal fc First
 getArg fc (S k) (_ :: as) = weaken <$> getArg fc k as

@@ -5,6 +5,7 @@ import Core.CompileExpr
 import Core.TT
 
 import Data.List1
+import Data.SnocList
 import Libraries.Data.String.Iterator
 import Data.Vect
 
@@ -82,6 +83,11 @@ export
 Hashable a => Hashable (List a) where
   hashWithSalt h [] = abs h
   hashWithSalt h (x :: xs) = hashWithSalt (h * 33 + hash x) xs
+
+export
+Hashable a => Hashable (SnocList a) where
+  hashWithSalt h [<] = abs h
+  hashWithSalt h (xs :< x) = hashWithSalt (h * 33 + hash x) xs
 
 export
 Hashable a => Hashable (List1 a) where

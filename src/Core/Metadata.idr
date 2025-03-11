@@ -357,7 +357,7 @@ normaliseTypes
     nfType : Defs -> (NonEmptyFC, (Name, Nat, ClosedTerm)) ->
              Core (NonEmptyFC, (Name, Nat, ClosedTerm))
     nfType defs (loc, (n, len, ty))
-       = pure (loc, (n, len, !(normaliseArgHoles defs [] ty)))
+       = pure (loc, (n, len, !(normaliseArgHoles defs ScopeEmpty ty)))
 
 record TTMFile where
   constructor MkTTMFile

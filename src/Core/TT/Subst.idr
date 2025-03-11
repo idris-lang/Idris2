@@ -4,12 +4,23 @@ import Core.Name
 import Core.Name.Scoped
 import Core.TT.Var
 
+import Data.List
+import Data.SnocList
+
+import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
+
 %default total
 
 public export
 data Subst : Scoped -> Scope -> Scoped where
-  Nil : Subst tm [] vars
+  Nil : Subst tm ScopeEmpty vars
   (::) : tm vars -> Subst tm ds vars -> Subst tm (d :: ds) vars
+
+public export
+ScopeEmpty : {tm: _} -> Subst tm ScopeEmpty vars
+ScopeEmpty = []
+
 
 namespace Var
 
