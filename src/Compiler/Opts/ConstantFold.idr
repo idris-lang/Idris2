@@ -7,7 +7,13 @@ import Core.Primitives
 import Core.Value
 import Core.Name
 import Data.List
+import Data.SnocList
 import Data.Vect
+
+import Data.List.HasLength
+import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
+
 
 findConstAlt : Constant -> List (CConstAlt vars) ->
                Maybe (CExp vars) -> Maybe (CExp vars)
@@ -24,15 +30,18 @@ foldableOp (Cast from to)   = isJust (intKind from) && isJust (intKind to)
 foldableOp _                = True
 
 
-data Subst : List Name -> List Name -> Type where
-  Nil  : Subst [] vars
+data Subst : Scope -> Scope -> Type where
+  Nil  : Subst ScopeEmpty vars
   (::) : CExp vars -> Subst ds vars -> Subst (d :: ds) vars
   Wk   : SizeOf ws -> Subst ds vars -> Subst (ws ++ ds) (ws ++ vars)
 
-initSubst : (vars : List Name) -> Subst vars vars
+ScopeEmpty : Subst ScopeEmpty vars
+ScopeEmpty = []
+
+initSubst : (vars : Scope) -> Subst vars vars
 initSubst vars
   = rewrite sym $ appendNilRightNeutral vars in
-    Wk (mkSizeOf vars) []
+    Wk (mkSizeOf vars) ScopeEmpty
 
 
 wk : SizeOf out -> Subst ds vars -> Subst (out ++ ds) (out ++ vars)
@@ -42,9 +51,9 @@ wk sout (Wk {ws, ds, vars} sws rho)
     Wk (sout + sws) rho
 wk ws rho = Wk ws rho
 
-record WkCExp (vars : List Name) where
+record WkCExp (vars : Scope) where
   constructor MkWkCExp
-  {0 outer, supp : List Name}
+  {0 outer, supp : Scope}
   size : SizeOf outer
   0 prf : vars === outer ++ supp
   expr : CExp supp
@@ -87,7 +96,7 @@ constFold : {vars' : _} ->
 constFold rho (CLocal fc p) = lookup fc (MkVar p) rho
 constFold rho e@(CRef fc x) = CRef fc x
 constFold rho (CLam fc x y)
-  = CLam fc x $ constFold (wk (mkSizeOf [x]) rho) y
+  = CLam fc x $ constFold (wk (mkSizeOf (ScopeSingle x)) rho) y
 
 -- Expressions of the type `let x := y in x` can be introduced
 -- by the compiler when inlining monadic code (for instance, `io_bind`).
@@ -96,7 +105,7 @@ constFold rho (CLet fc x inl y z) =
     let val := constFold rho y
      in case replace val of
           True  => constFold (val::rho) z
-          False => case constFold (wk (mkSizeOf [x]) rho) z of
+          False => case constFold (wk (mkSizeOf (ScopeSingle x)) rho) z of
             CLocal {idx = 0} _ _ => val
             body                 => CLet fc x inl val body
 constFold rho (CApp fc (CRef fc2 n) [x]) =

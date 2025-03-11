@@ -18,7 +18,7 @@ import Core.Value
 -- reduce
 export
 normalisePis : {auto c : Ref Ctxt Defs} ->
-               {vars : List Name} ->
+               {vars : Scope} ->
                Defs -> Env Term vars -> Term vars -> Core (Term vars)
 normalisePis defs env tm
     = do tmnf <- nf defs env tm
@@ -233,7 +233,7 @@ logEnv s n msg env
 
   where
 
-    dumpEnv : {vs : List Name} -> Env Term vs -> Core ()
+    dumpEnv : {vs : Scope} -> Env Term vs -> Core ()
     dumpEnv [] = pure ()
     dumpEnv {vs = x :: _} (Let _ c val ty :: bs)
         = do logTermNF' s n (msg ++ ": let " ++ show x) bs val
@@ -268,23 +268,23 @@ replace' {vars} tmpi defs env lhs parg tm
              pure (Bind fc x b' (refsToLocals (Add x x' None) sc'))
     repSub (NApp fc hd [])
         = do empty <- clearDefs defs
-             quote empty env (NApp fc hd [])
+             quote empty env (NApp fc hd ScopeEmpty)
     repSub (NApp fc hd args)
         = do args' <- traverse (traversePair repArg) args
              pure $ applyStackWithFC
-                        !(replace' tmpi defs env lhs parg (NApp fc hd []))
+                        !(replace' tmpi defs env lhs parg (NApp fc hd ScopeEmpty))
                         args'
     repSub (NDCon fc n t a args)
         = do args' <- traverse (traversePair repArg) args
              empty <- clearDefs defs
              pure $ applyStackWithFC
-                        !(quote empty env (NDCon fc n t a []))
+                        !(quote empty env (NDCon fc n t a ScopeEmpty))
                         args'
     repSub (NTCon fc n t a args)
         = do args' <- traverse (traversePair repArg) args
              empty <- clearDefs defs
              pure $ applyStackWithFC
-                        !(quote empty env (NTCon fc n t a []))
+                        !(quote empty env (NTCon fc n t a ScopeEmpty))
                         args'
     repSub (NAs fc s a p)
         = do a' <- repSub a

@@ -1,11 +1,15 @@
 module Core.Normalise.Quote
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Normalise.Eval
 import Core.TT
 import Core.Value
+
+import Data.SnocList
+import Libraries.Data.SnocList.SizeOf
 
 %default covering
 
@@ -24,13 +28,13 @@ record QuoteOpts where
 public export
 interface Quote tm where
     quote : {auto c : Ref Ctxt Defs} ->
-            {vars : List Name} ->
+            {vars : Scope} ->
             Defs -> Env Term vars -> tm vars -> Core (Term vars)
     quoteLHS : {auto c : Ref Ctxt Defs} ->
-               {vars : List Name} ->
+               {vars : Scope} ->
                Defs -> Env Term vars -> tm vars -> Core (Term vars)
     quoteOpts : {auto c : Ref Ctxt Defs} ->
-                {vars : List Name} ->
+                {vars : Scope} ->
                 QuoteOpts -> Defs -> Env Term vars -> tm vars -> Core (Term vars)
 
     quoteGen : {auto c : Ref Ctxt Defs} ->
@@ -77,15 +81,15 @@ mutual
   quoteArgs : {auto c : Ref Ctxt Defs} ->
               {bound, free : _} ->
               Ref QVar Int -> QuoteOpts -> Defs -> Bounds bound ->
-              Env Term free -> List (Closure free) ->
-              Core (List (Term (bound ++ free)))
+              Env Term free -> Scopeable (Closure free) ->
+              Core (Scopeable (Term (bound ++ free)))
   quoteArgs q opts defs bounds env = traverse (quoteArg q opts defs bounds env)
 
   quoteArgsWithFC : {auto c : Ref Ctxt Defs} ->
                     {bound, free : _} ->
                     Ref QVar Int -> QuoteOpts -> Defs -> Bounds bound ->
-                    Env Term free -> List (FC, Closure free) ->
-                    Core (List (FC, Term (bound ++ free)))
+                    Env Term free -> Scopeable (FC, Closure free) ->
+                    Core (Scopeable (FC, Term (bound ++ free)))
   quoteArgsWithFC q opts defs bounds env
       = traverse (quoteArgWithFC q opts defs bounds env)
 
@@ -124,7 +128,7 @@ mutual
   quoteHead q opts defs fc bounds env (NRef nt n) = pure $ Ref fc nt n
   quoteHead q opts defs fc bounds env (NMeta n i args)
       = do args' <- quoteArgs q opts defs bounds env args
-           pure $ Meta fc n i args'
+           pure $ Meta fc n i (toList args')
 
   quotePi : {auto c : Ref Ctxt Defs} ->
             {bound, free : _} ->
@@ -267,7 +271,7 @@ quoteWithPiGen q opts defs bound env tm
 -- are, don't reduce anything else
 export
 quoteWithPi : {auto c : Ref Ctxt Defs} ->
-              {vars : List Name} ->
+              {vars : Scope} ->
               Defs -> Env Term vars -> NF vars -> Core (Term vars)
 quoteWithPi defs env tm
     = do q <- newRef QVar 0

@@ -1,15 +1,22 @@
 module Core.Name.Scoped
 
 import Core.Name
+import Core.Name.CompatibleVars
 
-import public Data.List.HasLength
-
-import public Libraries.Data.List.SizeOf
+import Data.SnocList
+import Libraries.Data.SnocList.HasLength
+import Libraries.Data.SnocList.SizeOf
+import Libraries.Data.List.SizeOf
 
 %default total
 
 ------------------------------------------------------------------------
 -- Basic type definitions
+
+||| Something which is having similar order as Scope itself
+public export
+Scopeable : (a: Type) -> Type
+Scopeable = List
 
 ||| A scope is represented by a list of names. E.g. in the following
 ||| rule, the scope Γ is extended with x when going under the λx.
@@ -20,8 +27,15 @@ import public Libraries.Data.List.SizeOf
 |||    Γ    ⊢ λx. t : A → B
 public export
 Scope : Type
-Scope = List Name
--- TODO: make that a SnocList
+Scope = Scopeable Name
+
+public export
+ScopeEmpty : {a: Type} -> Scopeable a
+ScopeEmpty = []
+
+public export
+ScopeSingle : a -> Scopeable a
+ScopeSingle n = [n]
 
 ||| A scoped definition is one indexed by a scope
 public export

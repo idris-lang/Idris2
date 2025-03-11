@@ -4,6 +4,11 @@ import Core.Case.CaseTree
 import Core.Context
 import Core.Value
 
+import Data.SnocList
+import Libraries.Data.SnocList.Extra
+import Libraries.Data.SnocList.SizeOf
+import Libraries.Data.List.SizeOf
+
 public export
 record DataCon where
   constructor MkDataCon

@@ -53,7 +53,7 @@ changeVar old new (TForce fc r p)
     = TForce fc r (changeVar old new p)
 changeVar old new tm = tm
 
-findLater : (x : Name) -> (newer : List Name) -> Var (newer ++ x :: older)
+findLater : (x : Name) -> (newer : Scope) -> Var (newer ++ x :: older)
 findLater x [] = MkVar First
 findLater {older} x (_ :: xs)
     = let MkVar p = findLater {older} x xs in
@@ -101,8 +101,8 @@ findImpsIn fc env ns ty
     = when (not (isNil ns)) $
            throw (TryWithImplicits fc env (reverse ns))
 
-merge : {vs : List Name} ->
-        List (Var vs) -> List (Var vs) -> List (Var vs)
+merge : {vs : Scope} ->
+        Scopeable (Var vs) -> List (Var vs) -> List (Var vs)
 merge [] xs = xs
 merge (v :: vs) xs
     = merge vs (v :: filter (v /=) xs)
@@ -218,11 +218,11 @@ caseBlock {vars} rigc elabinfo fc nest env opts scr scrtm scrty caseRig alts exp
          -- If we can normalise the type without the result being excessively
          -- big do it. It's the depth of stuck applications - 10 is already
          -- pretty much unreadable!
-         casefnty <- normaliseSizeLimit defs 10 [] casefnty
+         casefnty <- normaliseSizeLimit defs 10 ScopeEmpty casefnty
          (erasedargs, _) <- findErased casefnty
 
          logEnv "elab.case" 10 "Case env" env
-         logTermNF "elab.case" 2 ("Case function type: " ++ show casen) [] casefnty
+         logTermNF "elab.case" 2 ("Case function type: " ++ show casen) ScopeEmpty casefnty
          traverse_ addToSave (keys (getMetas casefnty))
 
          -- If we've had to add implicits to the case type (because there
@@ -230,10 +230,10 @@ caseBlock {vars} rigc elabinfo fc nest env opts scr scrtm scrty caseRig alts exp
          -- way out is to throw an error and try again with the implicits
          -- actually bound! This is rather hacky, but a lot less fiddly than
          -- the alternative of fixing up the environment
-         when (not (isNil fullImps)) $ findImpsIn fc [] [] casefnty
+         when (not (isNil fullImps)) $ findImpsIn fc ScopeEmpty [] casefnty
          cidx <- addDef casen ({ eraseArgs := erasedargs }
                                 (newDef fc casen (if isErased rigc then erased else top)
-                                      [] casefnty vis None))
+                                      ScopeEmpty casefnty vis None))
 
          traverse_ (processFnOpt fc False casen) opts
 
@@ -266,7 +266,7 @@ caseBlock {vars} rigc elabinfo fc nest env opts scr scrtm scrty caseRig alts exp
          -- we come out again, so save them
          let olddelayed = delayedElab ust
          put UST ({ delayedElab := [] } ust)
-         processDecl [InCase] nest' [] (IDef fc casen alts')
+         processDecl [InCase] nest' ScopeEmpty (IDef fc casen alts')
 
          -- If there's no duplication of the scrutinee in the block,
          -- flag it as inlinable.
@@ -284,7 +284,7 @@ caseBlock {vars} rigc elabinfo fc nest env opts scr scrtm scrty caseRig alts exp
          pure (appTm, gnf env caseretty)
   where
     mkLocalEnv : Env Term vs -> Env Term vs
-    mkLocalEnv [] = []
+    mkLocalEnv [] = ScopeEmpty
     mkLocalEnv (b :: bs)
         = let b' = if isLinear (multiplicity b)
                       then setMultiplicity b erased
@@ -431,23 +431,23 @@ checkCase rig elabinfo nest env fc opts scr scrty_in alts exp
         = throw (GenericMsg fc "Can't infer type for case scrutinee")
     checkConcrete _ = pure ()
 
-    applyTo : Defs -> RawImp -> NF [] -> Core RawImp
+    applyTo : Defs -> RawImp -> ClosedNF -> Core RawImp
     applyTo defs ty (NBind fc _ (Pi _ _ Explicit _) sc)
         = applyTo defs (IApp fc ty (Implicit fc False))
-               !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder)))
+               !(sc defs (toClosure defaultOpts ScopeEmpty (Erased fc Placeholder)))
     applyTo defs ty (NBind _ x (Pi _ _ _ _) sc)
         = applyTo defs (INamedApp fc ty x (Implicit fc False))
-               !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder)))
+               !(sc defs (toClosure defaultOpts ScopeEmpty (Erased fc Placeholder)))
     applyTo defs ty _ = pure ty
 
     -- Get the name and type of the family the scrutinee is in
-    getRetTy : Defs -> NF [] -> Core (Maybe (Name, NF []))
+    getRetTy : Defs -> ClosedNF -> Core (Maybe (Name, ClosedNF))
     getRetTy defs (NBind fc _ (Pi _ _ _ _) sc)
-        = getRetTy defs !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder)))
+        = getRetTy defs !(sc defs (toClosure defaultOpts ScopeEmpty (Erased fc Placeholder)))
     getRetTy defs (NTCon _ n _ arity _)
         = do Just ty <- lookupTyExact n (gamma defs)
                   | Nothing => pure Nothing
-             pure (Just (n, !(nf defs [] ty)))
+             pure (Just (n, !(nf defs ScopeEmpty ty)))
     getRetTy _ _ = pure Nothing
 
     -- Guess a scrutinee type by looking at the alternatives, so that we
@@ -460,7 +460,7 @@ checkCase rig elabinfo nest env fc opts scr scrty_in alts exp
                   do defs <- get Ctxt
                      [(_, (_, ty))] <- lookupTyName (mapNestedName nest n) (gamma defs)
                          | _ => guessScrType xs
-                     Just (tyn, tyty) <- getRetTy defs !(nf defs [] ty)
+                     Just (tyn, tyty) <- getRetTy defs !(nf defs ScopeEmpty ty)
                          | _ => guessScrType xs
                      applyTo defs (IVar fc tyn) tyty
                _ => guessScrType xs

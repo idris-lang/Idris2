@@ -18,6 +18,7 @@ import TTImp.Elab.Dot
 import TTImp.TTImp
 
 import Data.List
+import Data.SnocList
 import Data.Maybe
 
 import Libraries.Data.WithDefault

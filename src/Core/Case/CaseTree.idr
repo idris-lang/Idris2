@@ -3,12 +3,16 @@ module Core.Case.CaseTree
 import Core.TT
 
 import Data.List
+import Data.SnocList
 import Data.String
 import Idris.Pretty.Annotations
 
 import Libraries.Data.NameMap
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Data.String.Extra -- needed for boostrapping
+import Libraries.Data.SnocList.SizeOf
+import Libraries.Data.SnocList.Extra
+import Libraries.Data.List.SizeOf
 
 %default covering
 
@@ -16,7 +20,7 @@ mutual
   ||| Case trees in A-normal forms
   ||| i.e. we may only dispatch on variables, not expressions
   public export
-  data CaseTree : List Name -> Type where
+  data CaseTree : Scoped where
        ||| case x return scTy of { p1 => e1 ; ... }
        Case : {name : _} ->
               (idx : Nat) ->
@@ -35,7 +39,7 @@ mutual
   ||| Case alternatives. Unlike arbitrary patterns, they can be at most
   ||| one constructor deep.
   public export
-  data CaseAlt : List Name -> Type where
+  data CaseAlt : Scoped where
        ||| Constructor for a data type; bind the arguments and subterms.
        ConCase : Name -> (tag : Int) -> (args : List Name) ->
                  CaseTree (args ++ vars) -> CaseAlt vars
@@ -96,14 +100,14 @@ public export
 data Pat : Type where
      PAs : FC -> Name -> Pat -> Pat
      PCon : FC -> Name -> (tag : Int) -> (arity : Nat) ->
-            List Pat -> Pat
-     PTyCon : FC -> Name -> (arity : Nat) -> List Pat -> Pat
+            Scopeable Pat -> Pat
+     PTyCon : FC -> Name -> (arity : Nat) -> Scopeable Pat -> Pat
      PConst : FC -> (c : Constant) -> Pat
      PArrow : FC -> (x : Name) -> Pat -> Pat -> Pat
      PDelay : FC -> LazyReason -> Pat -> Pat -> Pat
      -- TODO: Matching on lazy types
      PLoc : FC -> Name -> Pat
-     PUnmatchable : FC -> Term [] -> Pat
+     PUnmatchable : FC -> ClosedTerm -> Pat
 
 export
 isPConst : Pat -> Maybe Constant
@@ -182,9 +186,9 @@ export
 Pretty IdrisSyntax Pat where
   prettyPrec d (PAs _ n p) = pretty0 n <++> keyword "@" <+> parens (pretty p)
   prettyPrec d (PCon _ n _ _ args) =
-    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) args)
+    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) (toList args))
   prettyPrec d (PTyCon _ n _ args) =
-    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) args)
+    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) (toList args))
   prettyPrec d (PConst _ c) = pretty c
   prettyPrec d (PArrow _ _ p q) =
     parenthesise (d > Open) $ pretty p <++> arrow <++> pretty q
@@ -262,7 +266,7 @@ getMetas : CaseTree vars -> NameMap Bool
 getMetas = getNames (addMetas False) empty
 
 export
-mkTerm : (vars : List Name) -> Pat -> Term vars
+mkTerm : (vars : Scope) -> Pat -> Term vars
 mkTerm vars (PAs fc x y) = mkTerm vars y
 mkTerm vars (PCon fc x tag arity xs)
     = apply fc (Ref fc (DataCon tag arity) x)

@@ -10,9 +10,11 @@ import TTImp.TTImp
 
 import Libraries.Data.NameMap
 
-getRetTy : Defs -> NF [] -> Core Name
+import Data.SnocList
+
+getRetTy : Defs -> ClosedNF -> Core Name
 getRetTy defs (NBind fc _ (Pi _ _ _ _) sc)
-    = getRetTy defs !(sc defs (toClosure defaultOpts [] (Erased fc Placeholder)))
+    = getRetTy defs !(sc defs (toClosure defaultOpts ScopeEmpty (Erased fc Placeholder)))
 getRetTy defs (NTCon _ n _ _ _) = pure n
 getRetTy defs ty
     = throw (GenericMsg (getLoc ty)
@@ -50,7 +52,7 @@ processFnOpt fc True ndef (Hint d)
     = do defs <- get Ctxt
          Just ty <- lookupTyExact ndef (gamma defs)
               | Nothing => undefinedName fc ndef
-         target <- getRetTy defs !(nf defs [] ty)
+         target <- getRetTy defs !(nf defs ScopeEmpty ty)
          addHintFor fc target ndef d False
 processFnOpt fc _ ndef (Hint d)
     = do logC "elab" 5 $ do pure $ "Adding local hint " ++ show !(toFullNames ndef)
@@ -78,7 +80,7 @@ processFnOpt fc _ ndef (SpecArgs ns)
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact ndef (gamma defs)
               | Nothing => undefinedName fc ndef
-         nty <- nf defs [] (type gdef)
+         nty <- nf defs ScopeEmpty (type gdef)
          ps <- getNamePos 0 nty
          ddeps <- collectDDeps nty
          specs <- collectSpec [] ddeps ps nty
@@ -94,14 +96,14 @@ processFnOpt fc _ ndef (SpecArgs ns)
                               else insertDeps (pos :: acc) ps ns
 
     -- Collect the argument names which the dynamic args depend on
-    collectDDeps : NF [] -> Core (List Name)
+    collectDDeps : ClosedNF -> Core (List Name)
     collectDDeps (NBind tfc x (Pi _ _ _ nty) sc)
         = do defs <- get Ctxt
              empty <- clearDefs defs
-             sc' <- sc defs (toClosure defaultOpts [] (Ref tfc Bound x))
+             sc' <- sc defs (toClosure defaultOpts ScopeEmpty (Ref tfc Bound x))
              if x `elem` ns
                 then collectDDeps sc'
-                else do aty <- quote empty [] nty
+                else do aty <- quote empty ScopeEmpty nty
                         -- Get names depended on by nty
                         let deps = keys (getRefs (UN Underscore) aty)
                         rest <- collectDDeps sc'
@@ -110,24 +112,24 @@ processFnOpt fc _ ndef (SpecArgs ns)
 
     -- Return names the type depends on, and whether it's a parameter
     mutual
-      getDepsArgs : Bool -> List (NF []) -> NameMap Bool ->
+      getDepsArgs : Bool -> Scopeable ClosedNF -> NameMap Bool ->
                     Core (NameMap Bool)
       getDepsArgs inparam [] ns = pure ns
       getDepsArgs inparam (a :: as) ns
           = do ns' <- getDeps inparam a ns
                getDepsArgs inparam as ns'
 
-      getDeps : Bool -> NF [] -> NameMap Bool ->
+      getDeps : Bool -> ClosedNF -> NameMap Bool ->
                 Core (NameMap Bool)
       getDeps inparam (NBind _ x (Pi _ _ _ pty) sc) ns
           = do defs <- get Ctxt
                ns' <- getDeps inparam !(evalClosure defs pty) ns
-               sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
+               sc' <- sc defs (toClosure defaultOpts ScopeEmpty (Erased fc Placeholder))
                getDeps inparam sc' ns'
       getDeps inparam (NBind _ x b sc) ns
           = do defs <- get Ctxt
                ns' <- getDeps False !(evalClosure defs (binderType b)) ns
-               sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
+               sc' <- sc defs (toClosure defaultOpts ScopeEmpty (Erased fc Placeholder))
                getDeps False sc' ns
       getDeps inparam (NApp _ (NRef Bound n) args) ns
           = do defs <- get Ctxt
@@ -141,14 +143,14 @@ processFnOpt fc _ ndef (SpecArgs ns)
                params <- case !(lookupDefExact n (gamma defs)) of
                               Just (TCon _ _ ps _ _ _ _ _) => pure ps
                               _ => pure []
-               let (ps, ds) = splitPs 0 params (map snd args)
+               let (ps, ds) = splitPs 0 params (map snd (toList args))
                ns' <- getDepsArgs True !(traverse (evalClosure defs) ps) ns
                getDepsArgs False !(traverse (evalClosure defs) ds) ns'
         where
           -- Split into arguments in parameter position, and others
-          splitPs : Nat -> List Nat -> List (Closure []) ->
-                    (List (Closure []), List (Closure []))
-          splitPs n params [] = ([], [])
+          splitPs : Nat -> List Nat -> List ClosedClosure ->
+                    (Scopeable ClosedClosure, Scopeable ClosedClosure)
+          splitPs n params [] = (ScopeEmpty, ScopeEmpty)
           splitPs n params (x :: xs)
               = let (ps', ds') = splitPs (1 + n) params xs in
                     if n `elem` params
@@ -164,11 +166,11 @@ processFnOpt fc _ ndef (SpecArgs ns)
                   List Name -> -- things depended on by dynamic args
                                -- We're assuming  it's a short list, so just use
                                -- List and don't worry about duplicates.
-                  List (Name, Nat) -> NF [] -> Core (List Nat)
+                  List (Name, Nat) -> ClosedNF -> Core (List Nat)
     collectSpec acc ddeps ps (NBind tfc x (Pi _ _ _ nty) sc)
         = do defs <- get Ctxt
              empty <- clearDefs defs
-             sc' <- sc defs (toClosure defaultOpts [] (Ref tfc Bound x))
+             sc' <- sc defs (toClosure defaultOpts ScopeEmpty (Ref tfc Bound x))
              if x `elem` ns
                 then do deps <- getDeps True !(evalClosure defs nty) NameMap.empty
                         -- Get names depended on by nty
@@ -183,9 +185,9 @@ processFnOpt fc _ ndef (SpecArgs ns)
                 else collectSpec acc ddeps ps sc'
     collectSpec acc ddeps ps _ = pure acc
 
-    getNamePos : Nat -> NF [] -> Core (List (Name, Nat))
+    getNamePos : Nat -> ClosedNF -> Core (List (Name, Nat))
     getNamePos i (NBind tfc x (Pi _ _ _ _) sc)
         = do defs <- get Ctxt
-             ns' <- getNamePos (1 + i) !(sc defs (toClosure defaultOpts [] (Erased tfc Placeholder)))
+             ns' <- getNamePos (1 + i) !(sc defs (toClosure defaultOpts ScopeEmpty (Erased tfc Placeholder)))
              pure ((x, i) :: ns')
     getNamePos _ _ = pure []

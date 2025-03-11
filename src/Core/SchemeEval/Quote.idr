@@ -68,7 +68,7 @@ mutual
             pure (Local fc Nothing _ prf')
     where
       addLater : {idx : _} ->
-                 (ys : List Name) -> (0 p : IsVar n idx xs) ->
+                 (ys : Scope) -> (0 p : IsVar n idx xs) ->
                  Var (ys ++ xs)
       addLater [] isv = MkVar isv
       addLater (x :: xs) isv

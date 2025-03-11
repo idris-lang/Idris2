@@ -16,6 +16,8 @@ import TTImp.Elab
 import TTImp.Elab.Check
 import TTImp.TTImp
 
+import Data.SnocList
+
 %default covering
 
 extend : {extvs : _} ->
@@ -43,7 +45,7 @@ processParams {vars} {c} {m} {u} nest env fc ps ds
          -- then read off the environment from the elaborated type. This way
          -- we'll get all the implicit names we need
          let pty_raw = mkParamTy ps
-         pty_imp <- bindTypeNames fc [] vars (IBindHere fc (PI erased) pty_raw)
+         pty_imp <- bindTypeNames fc [] (toList vars) (IBindHere fc (PI erased) pty_raw)
          log "declare.param" 10 $ "Checking " ++ show pty_imp
          u <- uniVar fc
          pty <- checkTerm (-1) InType []

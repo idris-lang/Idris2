@@ -7,9 +7,12 @@ import Core.Name
 import Core.TT
 
 import Data.List
+import Data.SnocList
 import Data.Vect
 
+import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.SizeOf
+import Libraries.Data.SnocList.Extra
 
 %default covering
 
@@ -71,7 +74,7 @@ Eq InlineOk where
 mutual
   ||| CExp - an expression ready for compiling.
   public export
-  data CExp : List Name -> Type where
+  data CExp : Scoped where
        CLocal : {idx : Nat} -> FC -> (0 p : IsVar x idx vars) -> CExp vars
        CRef : FC -> Name -> CExp vars
        -- Lambda expression
@@ -109,15 +112,19 @@ mutual
        CCrash : FC -> String -> CExp vars
 
   public export
-  data CConAlt : List Name -> Type where
+  data CConAlt : Scoped where
        -- If no tag, then match by constructor name. Back ends might want to
        -- convert names to a unique integer for performance.
        MkConAlt : Name -> ConInfo -> (tag : Maybe Int) -> (args : List Name) ->
                   CExp (args ++ vars) -> CConAlt vars
 
   public export
-  data CConstAlt : List Name -> Type where
+  data CConstAlt : Scoped where
        MkConstAlt : Constant -> CExp vars -> CConstAlt vars
+
+public export
+ClosedCExp : Type
+ClosedCExp = CExp []
 
 mutual
   ||| NamedCExp - as above, but without the name index, so with explicit
@@ -199,7 +206,7 @@ data CFType : Type where
 public export
 data CDef : Type where
      -- Normal function definition
-     MkFun : (args : List Name) -> CExp args -> CDef
+     MkFun : (args : Scope) -> CExp args -> CDef
      -- Constructor
      MkCon : (tag : Maybe Int) -> (arity : Nat) -> (nt : Maybe Nat) -> CDef
      -- Foreign definition
@@ -209,7 +216,7 @@ data CDef : Type where
                  CDef
      -- A function which will fail at runtime (usually due to being a hole) so needs
      -- to run, discarding arguments, no matter how many arguments are passed
-     MkError : CExp [] -> CDef
+     MkError : ClosedCExp -> CDef
 
 public export
 data NamedDef : Type where
@@ -271,7 +278,7 @@ mutual
          = "(%constcase " ++ show x ++ " " ++ show exp ++ ")"
 
 export
-data Names : List Name -> Type where
+data Names : Scoped where
      Nil : Names []
      (::) : Name -> Names xs -> Names (x :: xs)
 
@@ -359,7 +366,7 @@ export
 forgetDef : CDef -> NamedDef
 forgetDef (MkFun args def)
     = let ns = addLocs args []
-          args' = conArgs {vars = []} args ns in
+          args' = conArgs {vars = ScopeEmpty} args ns in
           MkNmFun args' (forget def)
 forgetDef (MkCon t a nt) = MkNmCon t a nt
 forgetDef (MkForeign ccs fargs ty) = MkNmForeign ccs fargs ty

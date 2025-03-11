@@ -7,6 +7,7 @@ import public Core.Name.Scoped
 import Idris.Pretty.Annotations
 
 import Data.List
+import Data.SnocList
 import Data.Nat
 import Data.String
 import Data.Vect
@@ -18,6 +19,7 @@ import Libraries.Text.PrettyPrint.Prettyprinter.Util
 import Libraries.Text.Bounded
 import Libraries.Data.String.Extra
 
+import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.SizeOf
 
 import public Algebra
@@ -319,7 +321,7 @@ Pretty Void Terminating where
 public export
 data Covering
        = IsCovering
-       | MissingCases (List (Term []))
+       | MissingCases (List ClosedTerm)
        | NonCoveringCall (List Name)
 
 export
@@ -382,8 +384,8 @@ notCovering = MkTotality Unchecked (MissingCases [])
 
 namespace Bounds
   public export
-  data Bounds : List Name -> Type where
-       None : Bounds []
+  data Bounds : Scoped where
+       None : Bounds ScopeEmpty
        Add : (x : Name) -> Name -> Bounds xs -> Bounds (x :: xs)
 
   export

@@ -10,7 +10,12 @@ import Core.FC
 import Core.TT
 
 import Data.List
+import Data.SnocList
 import Data.Vect
+
+import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
+import Libraries.Data.SnocList.Extra
 
 %default covering
 
@@ -37,7 +42,7 @@ shiftUnder : {args : _} ->
 shiftUnder First = weakenNVar (mkSizeOf args) (MkNVar First)
 shiftUnder (Later p) = insertNVar (mkSizeOf args) (MkNVar p)
 
-shiftVar : {outer, args : Scope} ->
+shiftVar : {outer : Scope} -> {args : List Name} ->
            NVar n (outer ++ (x :: args ++ vars)) ->
            NVar n (outer ++ (args ++ x :: vars))
 shiftVar nvar
@@ -108,7 +113,7 @@ liftOutLambda : {args : _} ->
                 (new : Name) ->
                 CExp (old :: args ++ vars) ->
                 CExp (args ++ new :: vars)
-liftOutLambda = shiftBinder {outer = []}
+liftOutLambda = shiftBinder {outer = ScopeEmpty}
 
 -- If all the alternatives start with a lambda, we can have a single lambda
 -- binding outside
