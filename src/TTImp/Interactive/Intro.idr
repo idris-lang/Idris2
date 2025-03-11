@@ -19,6 +19,8 @@ import TTImp.TTImp
 import TTImp.Unelab
 import TTImp.Utils
 
+import Data.SnocList
+
 %default covering
 
 parameters
@@ -53,13 +55,13 @@ parameters
     ics <- for (fromMaybe [] cs) $ \ cons => do
       Just gdef <- lookupCtxtExact cons (gamma defs)
         | _ => pure Nothing
-      let nargs = lengthExplicitPi $ fst $ snd $ underPis (-1) [] (type gdef)
+      let nargs = lengthExplicitPi $ fst $ snd $ underPis (-1) ScopeEmpty (type gdef)
       new_hole_names <- uniqueHoleNames defs nargs (nameRoot hole)
       let new_holes = PHole replFC True <$> new_hole_names
       let pcons = papply replFC (PRef replFC cons) new_holes
       res <- catch
         (do -- We're desugaring it to the corresponding TTImp
-            icons <- desugar AnyExpr lhsCtxt pcons
+            icons <- desugar AnyExpr (toList lhsCtxt) pcons
             ccons <- checkTerm hidx {-is this correct?-} InExpr [] (MkNested []) env icons gty
             newdefs <- get Ctxt
             ncons <- normaliseHoles newdefs env ccons

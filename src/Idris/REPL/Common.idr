@@ -258,7 +258,7 @@ docsOrSignature fc n
     typeSummary : Defs -> Core (Doc IdrisDocAnn)
     typeSummary defs = do Just def <- lookupCtxtExact n (gamma defs)
                             | Nothing => pure ""
-                          ty <- resugar [] !(normaliseHoles defs [] (type def))
+                          ty <- resugar ScopeEmpty !(normaliseHoles defs ScopeEmpty (type def))
                           pure $ pretty0 n <++> ":" <++> prettyBy Syntax ty
 
 export
@@ -271,11 +271,11 @@ equivTypes ty1 ty2 =
           | _ => pure False
      logTerm "typesearch.equiv" 10 "Candidate: " ty1
      defs <- get Ctxt
-     True <- pure (!(getArity defs [] ty1) == !(getArity defs [] ty2))
+     True <- pure (!(getArity defs ScopeEmpty ty1) == !(getArity defs ScopeEmpty ty2))
        | False => pure False
      _ <- newRef UST initUState
      b <- catch
-           (do res <- unify inTerm EmptyFC [] ty1 ty2
+           (do res <- unify inTerm EmptyFC ScopeEmpty ty1 ty2
                case res of
                  (MkUnifyResult [] _ [] NoLazy) => pure True
                  _ => pure False)

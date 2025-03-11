@@ -155,7 +155,7 @@ getUserHolesData
          traverse (\n_gdef_args =>
                      -- Inference can't deal with this for now :/
                      let (n, gdef, args) = the (Name, GlobalDef, Nat) n_gdef_args in
-                     holeData defs [] n args (type gdef))
+                     holeData defs ScopeEmpty n args (type gdef))
                   holesWithArgs
 
 export
