@@ -28,3 +28,10 @@ data (!*) : Type -> Type where
 public export
 unrestricted : !* a -@ a
 unrestricted (MkBang unr) = unr
+
+||| Unpack an unrestricted value in a linear context
+|||
+||| A postfix alias for function unrestricted.
+public export
+(.unrestricted) : !* a -@ a
+(.unrestricted) = unrestricted
