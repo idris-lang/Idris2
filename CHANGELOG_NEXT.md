@@ -294,6 +294,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Added `System.Concurrency.getThreadId` for the chez backend.
 
+* `unrestricted`, for unpacking a `!* a`, now uses its argument once
+
 #### Contrib
 
 * `Data.Vect.Views.Extra` was moved from `contrib` to `base`.
