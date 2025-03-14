@@ -464,7 +464,7 @@ findSpecs env stk (Meta fc n i args)
          pure $ applyStackWithFC (Meta fc n i args') stk
 findSpecs env stk (Bind fc x b sc)
     = do b' <- traverse (findSpecs env []) b
-         sc' <- findSpecs (b' :: env) [] sc
+         sc' <- findSpecs (env :< b') [] sc
          pure $ applyStackWithFC (Bind fc x b' sc') stk
 findSpecs env stk (App fc fn arg)
     = do arg' <- findSpecs env [] arg
@@ -502,11 +502,11 @@ mutual
               {auto o : Ref ROpts REPLOpts} ->
               Ref QVar Int -> Defs -> Bounds bound ->
               Env Term free -> Scopeable (Closure free) ->
-              Core (Scopeable (Term (bound ++ free)))
-  quoteArgs q defs bounds env [] = pure ScopeEmpty
-  quoteArgs q defs bounds env (a :: args)
-      = pure $ (!(quoteGenNF q defs bounds env !(evalClosure defs a)) ::
-                !(quoteArgs q defs bounds env args))
+              Core (Scopeable (Term (free ++ bound)))
+  quoteArgs q defs bounds env [<] = pure ScopeEmpty
+  quoteArgs q defs bounds env (args :< a)
+      = pure $ (!(quoteArgs q defs bounds env args) :<
+                !(quoteGenNF q defs bounds env !(evalClosure defs a)))
 
   quoteArgsWithFC : {auto c : Ref Ctxt Defs} ->
                     {auto m : Ref MD Metadata} ->
@@ -516,7 +516,7 @@ mutual
                     {bound, free : _} ->
                     Ref QVar Int -> Defs -> Bounds bound ->
                     Env Term free -> Scopeable (FC, Closure free) ->
-                    Core (Scopeable (FC, Term (bound ++ free)))
+                    Core (Scopeable (FC, Term (free ++ bound)))
   quoteArgsWithFC q defs bounds env terms
       = pure $ zip (map fst terms) !(quoteArgs q defs bounds env (map snd terms))
 
@@ -528,17 +528,10 @@ mutual
               {auto o : Ref ROpts REPLOpts} ->
               Ref QVar Int -> Defs ->
               FC -> Bounds bound -> Env Term free -> NHead free ->
-              Core (Term (bound ++ free))
+              Core (Term (free ++ bound))
   quoteHead {bound} q defs fc bounds env (NLocal mrig _ prf)
-      = let MkVar prf' = addLater bound prf in
+      = let MkVar prf' = weakenNs (mkSizeOf bound) (MkVar prf) in
             pure $ Local fc mrig _ prf'
-    where
-      addLater : {idx : _} -> (ys : List Name) -> (0 p : IsVar n idx xs) ->
-                 Var (ys ++ xs)
-      addLater [] isv = MkVar isv
-      addLater (x :: xs) isv
-          = let MkVar isv' = addLater xs isv in
-                MkVar (Later isv')
   quoteHead q defs fc bounds env (NRef Bound (MN n i))
       = case findName bounds of
              Just (MkVar p) => pure $ Local fc Nothing _ (embedIsVar p)
@@ -568,7 +561,7 @@ mutual
             {auto o : Ref ROpts REPLOpts} ->
             Ref QVar Int -> Defs -> Bounds bound ->
             Env Term free -> PiInfo (Closure free) ->
-            Core (PiInfo (Term (bound ++ free)))
+            Core (PiInfo (Term (free ++ bound)))
   quotePi q defs bounds env Explicit = pure Explicit
   quotePi q defs bounds env Implicit = pure Implicit
   quotePi q defs bounds env AutoImplicit = pure AutoImplicit
@@ -584,7 +577,7 @@ mutual
                 {auto o : Ref ROpts REPLOpts} ->
                 Ref QVar Int -> Defs -> Bounds bound ->
                 Env Term free -> Binder (Closure free) ->
-                Core (Binder (Term (bound ++ free)))
+                Core (Binder (Term (free ++ bound)))
   quoteBinder q defs bounds env (Lam fc r p ty)
       = do ty' <- quoteGenNF q defs bounds env !(evalClosure defs ty)
            p' <- quotePi q defs bounds env p
@@ -617,7 +610,7 @@ mutual
                {auto o : Ref ROpts REPLOpts} ->
                Ref QVar Int ->
                Defs -> Bounds bound ->
-               Env Term vars -> NF vars -> Core (Term (bound ++ vars))
+               Env Term vars -> NF vars -> Core (Term (vars ++ bound))
   quoteGenNF q defs bound env (NBind fc n b sc)
       = do var <- bName "qv"
            sc' <- quoteGenNF q defs (Add n var bound) env
@@ -630,10 +623,10 @@ mutual
   quoteGenNF q defs bound env (NApp fc (NRef Func fn) args)
       = do Just gdef <- lookupCtxtExact fn (gamma defs)
                 | Nothing => do args' <- quoteArgsWithFC q defs bound env args
-                                pure $ applyStackWithFC (Ref fc Func fn) args'
+                                pure $ applySpineWithFC (Ref fc Func fn) args'
            case specArgs gdef of
                 [] => do args' <- quoteArgsWithFC q defs bound env args
-                         pure $ applyStackWithFC (Ref fc Func fn) args'
+                         pure $ applySpineWithFC (Ref fc Func fn) args'
                 _ => do empty <- clearDefs defs
                         args' <- quoteArgsWithFC q defs bound env args
                         Just r <- specialise fc (extendEnv bound env) gdef fn (toList args')
@@ -641,25 +634,25 @@ mutual
                                   -- can't specialise, keep the arguments
                                   -- unreduced
                                   do args' <- quoteArgsWithFC q empty bound env args
-                                     pure $ applyStackWithFC (Ref fc Func fn) args'
+                                     pure $ applySpineWithFC (Ref fc Func fn) args'
                         pure r
      where
-       extendEnv : Bounds bs -> Env Term vs -> Env Term (bs ++ vs)
+       extendEnv : Bounds bs -> Env Term vs -> Env Term (vs ++ bs)
        extendEnv None env = env
        extendEnv (Add x n bs) env
            -- We're just using this to evaluate holes in the right scope, so
            -- a placeholder binder is fine
-           = Lam fc top Explicit (Erased fc Placeholder) :: extendEnv bs env
+           = extendEnv bs env :< Lam fc top Explicit (Erased fc Placeholder)
   quoteGenNF q defs bound env (NApp fc f args)
       = do f' <- quoteHead q defs fc bound env f
            args' <- quoteArgsWithFC q defs bound env args
-           pure $ applyStackWithFC f' args'
+           pure $ applySpineWithFC f' args'
   quoteGenNF q defs bound env (NDCon fc n t ar args)
       = do args' <- quoteArgsWithFC q defs bound env args
-           pure $ applyStackWithFC (Ref fc (DataCon t ar) n) args'
+           pure $ applySpineWithFC (Ref fc (DataCon t ar) n) args'
   quoteGenNF q defs bound env (NTCon fc n t ar args)
       = do args' <- quoteArgsWithFC q defs bound env args
-           pure $ applyStackWithFC (Ref fc (TyCon t ar) n) args'
+           pure $ applySpineWithFC (Ref fc (TyCon t ar) n) args'
   quoteGenNF q defs bound env (NAs fc s n pat)
       = do n' <- quoteGenNF q defs bound env n
            pat' <- quoteGenNF q defs bound env pat
@@ -684,9 +677,9 @@ mutual
            case arg of
                 NDelay fc _ _ arg =>
                    do argNF <- evalClosure defs arg
-                      pure $ applyStackWithFC !(quoteGenNF q defs bound env argNF) args'
+                      pure $ applySpineWithFC !(quoteGenNF q defs bound env argNF) args'
                 _ => do arg' <- quoteGenNF q defs bound env arg
-                        pure $ applyStackWithFC (TForce fc r arg') args'
+                        pure $ applySpineWithFC (TForce fc r arg') args'
   quoteGenNF q defs bound env (NPrimVal fc c) = pure $ PrimVal fc c
   quoteGenNF q defs bound env (NErased fc Impossible) = pure $ Erased fc Impossible
   quoteGenNF q defs bound env (NErased fc Placeholder) = pure $ Erased fc Placeholder

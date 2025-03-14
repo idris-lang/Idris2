@@ -19,6 +19,30 @@ import Libraries.Data.SnocList.SizeOf
 
 %default covering
 
+extend : {args, args' : List Name} ->
+     SizeOf args -> SizeOf args' ->
+     (List (Var vars, Var vars')) ->
+     Maybe (List (Var (vars <>< args), Var (vars' <>< args')))
+extend s s' ms
+  = do guard (size s == size s')
+       let vs  = embedFishily @{ListFreelyEmbeddable} (Var.allVars (cast args))
+       let vs' = embedFishily @{ListFreelyEmbeddable} (Var.allVars (cast args'))
+       pure $ zip vs vs' ++ map (bimap (weakensN s) (weakensN s')) ms
+
+findIdx : List (Var vars, Var vars') -> Nat -> Maybe (Var vars')
+findIdx [] _ = Nothing
+findIdx ((MkVar {varIdx = i} _, v) :: ps) n
+    = if i == n then Just v else findIdx ps n
+
+dropP : {0 args, args' : List Name} ->
+  SizeOf args -> SizeOf args' ->
+  (Var (vars <>< args), Var (vars' <>< args')) ->
+  Maybe (Var vars, Var vars')
+dropP s s' (x, y)
+  = do x' <- strengthensN s x
+       y' <- strengthensN s' y
+       pure (x', y')
+
 public export
 interface Convert tm where
   convert : {auto c : Ref Ctxt Defs} ->
@@ -50,13 +74,8 @@ tryUpdate : {vars, vars' : _} ->
             List (Var vars, Var vars') ->
             Term vars -> Maybe (Term vars')
 tryUpdate ms (Local fc l idx p)
-    = do MkVar p' <- findIdx ms (MkVar p)
+    = do MkVar p' <- findIdx ms idx
          pure $ Local fc l _ p'
-  where
-    findIdx : List (Var vars, Var vars') -> Var vars -> Maybe (Var vars')
-    findIdx [] _ = Nothing
-    findIdx ((old, v) :: ps) n
-        = if old == n then Just v else findIdx ps n
 tryUpdate ms (Ref fc nt n) = pure $ Ref fc nt n
 tryUpdate ms (Meta fc n i args) = pure $ Meta fc n i !(traverse (tryUpdate ms) args)
 tryUpdate ms (Bind fc x b sc)
@@ -76,7 +95,7 @@ tryUpdate ms (Bind fc x b sc)
     tryUpdateB _ = Nothing
 
     weakenP : {n : _} -> (Var vars, Var vars') ->
-              (Var (n :: vars), Var (n :: vars'))
+              (Var (vars :< n), Var (vars' :< n))
     weakenP (v, vs) = (weaken v, weaken vs)
 tryUpdate ms (App fc f a) = pure $ App fc !(tryUpdate ms f) !(tryUpdate ms a)
 tryUpdate ms (As fc s a p) = pure $ As fc s !(tryUpdate ms a) !(tryUpdate ms p)
@@ -92,8 +111,8 @@ mutual
               {vars : _} ->
               Ref QVar Int -> Bool -> Defs -> Env Term vars ->
               Scopeable (NF vars) -> Scopeable (NF vars) -> Core Bool
-  allConvNF q i defs env [] [] = pure True
-  allConvNF q i defs env (x :: xs) (y :: ys)
+  allConvNF q i defs env [<] [<] = pure True
+  allConvNF q i defs env (xs :< x) (ys :< y)
       = do ok <- allConvNF q i defs env xs ys
            if ok then convGen q i defs env x y
                  else pure False
@@ -103,8 +122,8 @@ mutual
   -- conversion failures without going deeply into all the arguments.
   -- True means they might still match
   quickConv : Scopeable (NF vars) -> Scopeable (NF vars) -> Bool
-  quickConv [] [] = True
-  quickConv (x :: xs) (y :: ys) = quickConvArg x y && quickConv xs ys
+  quickConv [<] [<] = True
+  quickConv (xs :< x) (ys :< y) = quickConvArg x y && quickConv xs ys
     where
       quickConvHead : NHead vars -> NHead vars -> Bool
       quickConvHead (NLocal _ _ _) (NLocal _ _ _) = True
@@ -150,40 +169,21 @@ mutual
                       Core (Maybe (List (Var args, Var args')))
   getMatchingVarAlt defs ms (ConCase n tag cargs t) (ConCase n' tag' cargs' t')
       = if n == n'
-           then do let Just ms' = extend cargs cargs' ms
+           then do let s = mkSizeOf cargs
+                   let s' = mkSizeOf cargs'
+                   let Just ms' = extend s s' ms
                         | Nothing => pure Nothing
                    Just ms <- getMatchingVars defs ms' t t'
                         | Nothing => pure Nothing
                    -- drop the prefix from cargs/cargs' since they won't
                    -- be in the caller
-                   pure (Just (mapMaybe (dropP cargs cargs') ms))
+                   pure (Just (mapMaybe (dropP s s') ms))
            else pure Nothing
     where
       weakenP : {0 c, c' : _} -> {0 args, args' : Scope} ->
                 (Var args, Var args') ->
-                (Var (c :: args), Var (c' :: args'))
+                (Var (args :< c), Var (args' :< c'))
       weakenP (v, vs) = (weaken v, weaken vs)
-
-      extend : (cs : List Name) -> (cs' : List Name) ->
-               (List (Var args, Var args')) ->
-               Maybe (List (Var (cs ++ args), Var (cs' ++ args')))
-      extend [] [] ms = pure ms
-      extend (c :: cs) (c' :: cs') ms
-          = do rest <- extend cs cs' ms
-               pure ((MkVar First, MkVar First) :: map weakenP rest)
-      extend _ _ _ = Nothing
-
-      dropV : forall args .
-              (cs : List Name) -> Var (cs ++ args) -> Maybe (Var args)
-      dropV [] v = Just v
-      dropV (c :: cs) (MkVar First) = Nothing
-      dropV (c :: cs) (MkVar (Later x))
-          = dropV cs (MkVar x)
-
-      dropP : (cs : List Name) -> (cs' : List Name) ->
-              (Var (cs ++ args), Var (cs' ++ args')) ->
-              Maybe (Var args, Var args')
-      dropP cs cs' (x, y) = pure (!(dropV cs x), !(dropV cs' y))
 
   getMatchingVarAlt defs ms (ConstCase c t) (ConstCase c' t')
       = if c == c'
@@ -245,9 +245,9 @@ mutual
        -- We've only got the index into the argument list, and the indices
        -- don't match up, which is annoying. But it'll always be there!
        getArgPos : Nat -> Scopeable (Closure vars) -> Maybe (Closure vars)
-       getArgPos _ [] = Nothing
-       getArgPos Z (c :: cs) = pure c
-       getArgPos (S k) (c :: cs) = getArgPos k cs
+       getArgPos _ [<] = Nothing
+       getArgPos Z (cs :< c) = pure c
+       getArgPos (S k) (cs :< c) = getArgPos k cs
 
        convertMatches : {vs, vs' : _} ->
                         List (Var vs, Var vs') ->
@@ -293,9 +293,9 @@ mutual
                 | Nothing => pure False
            let Just scpos' = findArgPos tree'
                 | Nothing => pure False
-           let Just sc = getScrutinee scpos nargs
+           let Just sc = getScrutinee ((length nargs) `minus` scpos + 1) nargs
                 | Nothing => pure False
-           let Just sc' = getScrutinee scpos' nargs'
+           let Just sc' = getScrutinee ((length nargs') `minus` scpos' + 1) nargs'
                 | Nothing => pure False
            ignore $ convGen q i defs env sc sc'
            pure (location def == location def')
@@ -307,8 +307,8 @@ mutual
       findArgPos _ = Nothing
 
       getScrutinee : Nat -> Scopeable (Closure vs) -> Maybe (Closure vs)
-      getScrutinee Z (x :: xs) = Just x
-      getScrutinee (S k) (x :: xs) = getScrutinee k xs
+      getScrutinee Z (xs :< x) = Just x
+      getScrutinee (S k) (xs :< x) = getScrutinee k xs
       getScrutinee _ _ = Nothing
   chkConvCaseBlock _ _ _ _ _ _ _ _ _ = pure False
 
@@ -371,8 +371,12 @@ mutual
 
     convGen q inf defs env (NApp fc val args) (NApp _ val' args')
         = if !(chkConvHead q inf defs env val val')
-             then do i <- getInfPos val
-                     allConv q inf defs env (dropInf 0 i $ toList args1) (dropInf 0 i $ toList args2)
+             then case !(getInfPos val) of
+                    [] => allConv q inf defs env args1 args2
+                    i  => allConv q inf defs env
+                                  (dropInf i args1 $ mkSizeOf args1)
+                                  (dropInf i args2 $ mkSizeOf args2)
+
              else chkConvCaseBlock fc q inf defs env val args1 val' args2
         where
           getInfPos : NHead vars -> Core (List Nat)
@@ -384,13 +388,12 @@ mutual
                    else pure []
           getInfPos _ = pure []
 
-          dropInf : Nat -> List Nat -> Scopeable a -> Scopeable a
-          dropInf _ [] xs = xs
-          dropInf _ _ [] = []
-          dropInf i ds (x :: xs)
+          dropInf : List Nat -> (sx : Scopeable a) -> SizeOf sx -> Scopeable a
+          dropInf _ [<] _ = [<]
+          dropInf ds (sx :< x) (MkSizeOf (S i) (S p))
               = if i `elem` ds
-                   then dropInf (S i) ds xs
-                   else x :: dropInf (S i) ds xs
+                   then dropInf ds sx (MkSizeOf i p)
+                   else dropInf ds sx (MkSizeOf i p) :< x
 
           -- Discard file context information irrelevant for conversion checking
           args1 : Scopeable (Closure vars)
