@@ -1,9 +1,9 @@
 LOG compiler.identity:5: found identity flag for: Main.id, 0
-	old def: Just [{arg:0}]: (%case !{arg:0} [(%constcase 0 0)] Just (%let {e:0} (-Integer [!{arg:0}, 1]) (+Integer [(Main.id [!{e:0}]), 1])))
-LOG compiler.identity:5: 	new def: [{arg:0}]: !{arg:0}
+	old def: Just [< {arg:0}]: (%case !{arg:0} [(%constcase 0 0)] Just (%let {e:0} (-Integer [!{arg:0}, 1]) (+Integer [(Main.id [!{e:0}]), 1])))
+LOG compiler.identity:5: 	new def: [< {arg:0}]: !{arg:0}
 LOG compiler.identity:5: found identity flag for: Main.id, 0
-	old def: Just [{arg:0}]: !{arg:0}
-LOG compiler.identity:5: 	new def: [{arg:0}]: !{arg:0}
+	old def: Just [< {arg:0}]: !{arg:0}
+LOG compiler.identity:5: 	new def: [< {arg:0}]: !{arg:0}
 LOG compiler.identity:5: found identity flag for: Main.id, 0
-	old def: Just [{arg:0}]: !{arg:0}
-LOG compiler.identity:5: 	new def: [{arg:0}]: !{arg:0}
+	old def: Just [< {arg:0}]: !{arg:0}
+LOG compiler.identity:5: 	new def: [< {arg:0}]: !{arg:0}

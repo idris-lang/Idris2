@@ -60,26 +60,26 @@ LOG specialise:5: Already specialised _PE.PE_identity_3c7f5598e5c9b732
 LOG specialise:5: New RHS: (Prelude.Basics.(::) Prelude.Types.Nat x[1] (_PE.PE_identity_3c7f5598e5c9b732 xs[0]))
 LOG specialise:5: Already specialised _PE.PE_identity_3c7f5598e5c9b732
 LOG compiler.identity:5: found identity flag for: _PE.PE_identity_3c7f5598e5c9b732, 0
-	old def: Just [{arg:11}]: (%case !{arg:11} [(%concase [nil] _builtin.NIL Just 0 [] (%con [nil] _builtin.NIL Just 0 [])), (%concase [cons] _builtin.CONS Just 1 [{e:2}, {e:3}] (%con [cons] _builtin.CONS Just 1 [!{e:2}, (_PE.PE_identity_3c7f5598e5c9b732 [!{e:3}])]))] Nothing)
-LOG compiler.identity:5: 	new def: [{arg:11}]: !{arg:11}
+	old def: Just [< {arg:11}]: (%case !{arg:11} [(%concase [nil] _builtin.NIL Just 0 [] (%con [nil] _builtin.NIL Just 0 [])), (%concase [cons] _builtin.CONS Just 1 [{e:2}, {e:3}] (%con [cons] _builtin.CONS Just 1 [!{e:2}, (_PE.PE_identity_3c7f5598e5c9b732 [!{e:3}])]))] Nothing)
+LOG compiler.identity:5: 	new def: [< {arg:11}]: !{arg:11}
 LOG compiler.identity:5: found identity flag for: Main.identity, 0
-	old def: Just [{arg:12}]: (%case !{arg:12} [(%concase [nil] _builtin.NIL Just 0 [] (%con [nil] _builtin.NIL Just 0 [])), (%concase [cons] _builtin.CONS Just 1 [{e:2}, {e:3}] (%con [cons] _builtin.CONS Just 1 [!{e:2}, (Main.identity [!{e:3}])]))] Nothing)
-LOG compiler.identity:5: 	new def: [{arg:12}]: !{arg:12}
+	old def: Just [< {arg:12}]: (%case !{arg:12} [(%concase [nil] _builtin.NIL Just 0 [] (%con [nil] _builtin.NIL Just 0 [])), (%concase [cons] _builtin.CONS Just 1 [{e:2}, {e:3}] (%con [cons] _builtin.CONS Just 1 [!{e:2}, (Main.identity [!{e:3}])]))] Nothing)
+LOG compiler.identity:5: 	new def: [< {arg:12}]: !{arg:12}
 LOG compiler.identity:5: found identity flag for: _PE.PE_identity_3c7f5598e5c9b732, 0
-	old def: Just [{arg:11}]: !{arg:11}
-LOG compiler.identity:5: 	new def: [{arg:11}]: !{arg:11}
+	old def: Just [< {arg:11}]: !{arg:11}
+LOG compiler.identity:5: 	new def: [< {arg:11}]: !{arg:11}
 LOG compiler.identity:5: found identity flag for: Main.identity, 0
-	old def: Just [{arg:12}]: !{arg:12}
-LOG compiler.identity:5: 	new def: [{arg:12}]: !{arg:12}
+	old def: Just [< {arg:12}]: !{arg:12}
+LOG compiler.identity:5: 	new def: [< {arg:12}]: !{arg:12}
 LOG compiler.identity:5: found identity flag for: Main.test, 0
-	old def: Just [{arg:11}]: !{arg:11}
-LOG compiler.identity:5: 	new def: [{arg:11}]: !{arg:11}
+	old def: Just [< {arg:11}]: !{arg:11}
+LOG compiler.identity:5: 	new def: [< {arg:11}]: !{arg:11}
 LOG compiler.identity:5: found identity flag for: _PE.PE_identity_3c7f5598e5c9b732, 0
-	old def: Just [{arg:11}]: !{arg:11}
-LOG compiler.identity:5: 	new def: [{arg:11}]: !{arg:11}
+	old def: Just [< {arg:11}]: !{arg:11}
+LOG compiler.identity:5: 	new def: [< {arg:11}]: !{arg:11}
 LOG compiler.identity:5: found identity flag for: Main.identity, 0
-	old def: Just [{arg:12}]: !{arg:12}
-LOG compiler.identity:5: 	new def: [{arg:12}]: !{arg:12}
+	old def: Just [< {arg:12}]: !{arg:12}
+LOG compiler.identity:5: 	new def: [< {arg:12}]: !{arg:12}
 LOG compiler.identity:5: found identity flag for: Main.test, 0
-	old def: Just [{arg:11}]: !{arg:11}
-LOG compiler.identity:5: 	new def: [{arg:11}]: !{arg:11}
+	old def: Just [< {arg:11}]: !{arg:11}
+LOG compiler.identity:5: 	new def: [< {arg:11}]: !{arg:11}

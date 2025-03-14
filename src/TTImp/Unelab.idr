@@ -93,9 +93,9 @@ mutual
       findArgPos _ = Nothing
 
       idxOrMaybe : Nat -> Scopeable a -> Maybe a
-      idxOrMaybe Z (x :: _) = Just x
-      idxOrMaybe (S k) (_ :: xs) = idxOrMaybe k xs
-      idxOrMaybe _ [] = Nothing
+      idxOrMaybe Z (_ :< x) = Just x
+      idxOrMaybe (S k) (xs :< _) = idxOrMaybe k xs
+      idxOrMaybe _ [<] = Nothing
 
       -- TODO: some utility like this should probably be implemented in Core
       substVars : Scopeable (List (Var vs), Term vs) -> Term vs -> Term vs
@@ -119,13 +119,11 @@ mutual
           = TForce fc r (substVars xs y)
       substVars xs tm = tm
 
-      substArgs : SizeOf vs -> Scopeable (List (Var vs), Term vars) -> Term vs -> Term (vs ++ vars)
+      substArgs : SizeOf vs -> Scopeable (List (Var vs), Term vars) -> Term vs -> Term (vars ++ vs)
       substArgs p substs tm =
-        let
-          substs' = map (bimap (map $ embed {outer = vars}) (weakenNs p)) substs
-          tm' = embed tm
-        in
-          substVars substs' tm'
+        let substs' = map (bimap (map embed) (weakenNs p)) substs
+            tm' = embed tm
+         in substVars substs' tm'
 
       argVars : {vs : _} -> Term vs -> List (Var vs)
       argVars (As _ _ as pat) = argVars as ++ argVars pat
@@ -138,7 +136,7 @@ mutual
                  Core (Maybe IImpClause)
       mkClause fc argpos args (vs ** (clauseEnv, lhs, rhs))
           = do logTerm "unelab.case.clause" 20 "Unelaborating clause" lhs
-               let patArgs = snd (getFnArgs lhs)
+               let patArgs = snd (getFnArgsSpine lhs)
                    Just pat = idxOrMaybe argpos patArgs
                      | _ => pure Nothing
                    rhs = substArgs (mkSizeOf vs) (zip (map argVars patArgs) args) rhs
@@ -243,13 +241,13 @@ mutual
       = case umode of
           NoSugar True => do
             let x' = uniqueLocal vars x
-            let sc : Term (x' :: vars) = compat sc
-            (sc', scty) <- unelabTy umode nest (b :: env) sc
+            let sc : Term (vars :< x') = compat sc
+            (sc', scty) <- unelabTy umode nest (env :< b) sc
             unelabBinder umode nest fc env x' b
                          (compat sc) sc'
                          (compat !(getTerm scty))
           _ => do
-            (sc', scty) <- unelabTy umode nest (b :: env) sc
+            (sc', scty) <- unelabTy umode nest (env :< b) sc
             unelabBinder umode nest fc env x b sc sc' !(getTerm scty)
     where
       next : Name -> Name
@@ -272,7 +270,7 @@ mutual
               case umode of
                 (NoSugar _) => pure Nothing
                 ImplicitHoles => pure Nothing
-                _ => case getFnArgs tm of
+                _ => case getFnArgsSpine tm of
                      (Ref _ _ fnName, args) => do
                        fullName <- getFullName fnName
                        let (NS ns (CaseBlock n i)) = fullName
@@ -335,8 +333,8 @@ mutual
                  (umode : UnelabMode) ->
                  (nest : List (Name, Nat)) ->
                  FC -> Env Term vars -> (x : Name) ->
-                 Binder (Term vars) -> Term (x :: vars) ->
-                 IRawImp -> Term (x :: vars) ->
+                 Binder (Term vars) -> Term (vars :< x) ->
+                 IRawImp -> Term (vars :< x) ->
                  Core (IRawImp, Glued vars)
   unelabBinder umode nest fc env x (Lam fc' rig p ty) sctm sc scty
       = do (ty', _) <- unelabTy umode nest env ty
