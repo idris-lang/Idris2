@@ -58,8 +58,8 @@ cbv = { strategy := CBV } defaultOpts
 mutual
   public export
   data LocalEnv : Scope -> Scope -> Type where
-       Nil  : LocalEnv free ScopeEmpty
-       (::) : Closure free -> LocalEnv free vars -> LocalEnv free (x :: vars)
+       Lin  : LocalEnv free ScopeEmpty
+       (:<) : LocalEnv free vars -> Closure free -> LocalEnv free (vars :< x)
 
   public export
   data Closure : Scoped where
@@ -67,7 +67,7 @@ mutual
                    (opts : EvalOpts) ->
                    LocalEnv free vars ->
                    Env Term free ->
-                   Term (vars ++ free) -> Closure free
+                   Term (free ++ vars) -> Closure free
        MkNFClosure : EvalOpts -> Env Term free -> NF free -> Closure free
 
   -- The head of a value: things you can apply arguments to
@@ -108,25 +108,30 @@ mutual
 
 public export
 ClosedClosure : Type
-ClosedClosure = Closure []
+ClosedClosure = Closure [<]
 
 public export
 ClosedNF : Type
-ClosedNF = NF []
+ClosedNF = NF [<]
 
 public export
-ScopeEmpty : LocalEnv free []
-ScopeEmpty = []
+ScopeEmpty : LocalEnv free [<]
+ScopeEmpty = [<]
 
 export
 ntCon : FC -> Name -> Int -> Nat -> Scopeable (FC, Closure vars) -> NF vars
 -- Part of the machinery for matching on types - I believe this won't affect
 -- universe checking so put a dummy name.
-ntCon fc (UN (Basic "Type")) tag Z [] = NType fc (MN "top" 0)
-ntCon fc n tag Z [] = case isConstantType n of
+ntCon fc (UN (Basic "Type")) tag Z [<] = NType fc (MN "top" 0)
+ntCon fc n tag Z [<] = case isConstantType n of
   Just c => NPrimVal fc $ PrT c
-  Nothing => NTCon fc n tag Z []
+  Nothing => NTCon fc n tag Z [<]
 ntCon fc n tag arity args = NTCon fc n tag arity args
+
+export
+cons : LocalEnv free vars -> Closure free -> LocalEnv free ([<v] ++ vars)
+cons [<] p = Lin :< p
+cons (ns :< s) p = cons ns p :< s
 
 export
 getLoc : NF vars -> FC

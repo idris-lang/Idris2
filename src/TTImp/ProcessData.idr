@@ -159,9 +159,9 @@ getDetags fc tys
   where
     mutual
       disjointArgs : Scopeable ClosedNF -> Scopeable ClosedNF -> Core Bool
-      disjointArgs [] _ = pure False
-      disjointArgs _ [] = pure False
-      disjointArgs (a :: args) (a' :: args')
+      disjointArgs [<] _ = pure False
+      disjointArgs _ [<] = pure False
+      disjointArgs (args :< a) (args' :< a')
           = if !(disjoint a a')
                then pure True
                else disjointArgs args args'

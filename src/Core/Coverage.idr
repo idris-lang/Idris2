@@ -91,8 +91,8 @@ conflict defs env nfty n
     mutual
       conflictArgs : Int -> Scopeable (Closure vars) -> Scopeable ClosedClosure ->
                      Core (Maybe (List (Name, Term vars)))
-      conflictArgs _ [] [] = pure (Just [])
-      conflictArgs i (c :: cs) (c' :: cs')
+      conflictArgs _ [<] [<] = pure (Just [])
+      conflictArgs i (cs :< c) (cs' :< c')
           = do cnf <- evalClosure defs c
                cnf' <- evalClosure defs c'
                Just ms <- conflictNF i cnf cnf'
@@ -117,7 +117,7 @@ conflict defs env nfty n
           = let x' = MN (show x) i in
                 conflictNF (i + 1) t
                        !(sc defs (toClosure defaultOpts ScopeEmpty (Ref fc Bound x')))
-      conflictNF i nf (NApp _ (NRef Bound n) [])
+      conflictNF i nf (NApp _ (NRef Bound n) [<])
           = pure (Just [(n, !(quote defs env nf))])
       conflictNF i (NDCon _ n t a args) (NDCon _ n' t' a' args')
           = if t == t'
@@ -199,7 +199,7 @@ KnownVars : Scope -> Type -> Type
 KnownVars vars a = List (Var vars, a)
 
 getName : {idx : Nat} -> {vars : Scope} -> (0 p : IsVar n idx vars) -> Name
-getName {vars = v :: _} First = v
+getName {vars = _ :< v} First = v
 getName (Later p) = getName p
 
 showK : {ns : _} ->
@@ -210,10 +210,15 @@ showK {a} xs = show (map aString xs)
               (Var vars, a) -> (Name, a)
     aString (MkVar v, t) = (nameAt v, t)
 
-weakenNs : SizeOf args -> KnownVars vars a -> KnownVars (args ++ vars) a
+weakenNs : SizeOf args -> KnownVars vars a -> KnownVars (vars ++ args) a
 weakenNs args [] = []
 weakenNs args ((v, t) :: xs)
   = (weakenNs args v, t) :: weakenNs args xs
+
+weakensN : SizeOf args -> KnownVars vars a -> KnownVars (vars <>< args) a
+weakensN args [] = []
+weakensN args ((v, t) :: xs)
+  = (weakensN args v, t) :: weakensN args xs
 
 findTag : {idx, vars : _} ->
           (0 p : IsVar n idx vars) -> KnownVars vars a -> Maybe a
@@ -299,20 +304,21 @@ buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
     buildArgAlt not' (ConCase n t args sc)
         = do let l = mkSizeOf args
              let con = Ref fc (DataCon t (size l)) n
-             let ps' = map (substName var
+             let ps' = map (substName zero var
                              (apply fc
                                     con (map (Ref fc Bound) args))) ps
-             buildArgs fc defs (weakenNs l ((MkVar el, t) :: known))
-                               (weakenNs l not') ps' sc
+             let known' = (MkVar el, t) :: known
+             buildArgs fc defs (weakensN l known')
+                               (weakensN l not') ps' sc
     buildArgAlt not' (DelayCase t a sc)
         = let l = mkSizeOf [t, a]
-              ps' = map (substName var (TDelay fc LUnknown
+              ps' = map (substName zero var (TDelay fc LUnknown
                                              (Ref fc Bound t)
                                              (Ref fc Bound a))) ps in
-              buildArgs fc defs (weakenNs l known) (weakenNs l not')
-                                ps' sc
+              buildArgs fc defs (weakensN l known)
+                                (weakensN l not') ps' sc
     buildArgAlt not' (ConstCase c sc)
-        = do let ps' = map (substName var (PrimVal fc c)) ps
+        = do let ps' = map (substName zero var (PrimVal fc c)) ps
              buildArgs fc defs known not' ps' sc
     buildArgAlt not' (DefaultCase sc)
         = buildArgs fc defs known not' ps sc
@@ -414,26 +420,28 @@ match _ _ = False
 eraseApps : {auto c : Ref Ctxt Defs} ->
             Term vs -> Core (Term vs)
 eraseApps {vs} tm
-    = case getFnArgs tm of
+    = case getFnArgsSpine tm of
            (Ref fc Bound n, args) =>
-                do args' <- traverse eraseApps args
-                   pure (apply fc (Ref fc Bound n) args')
+                do args' <- traverseSnocList eraseApps args
+                   pure (applySpine fc (Ref fc Bound n) args')
            (Ref fc nt n, args) =>
                 do defs <- get Ctxt
                    mgdef <- lookupCtxtExact n (gamma defs)
                    let eargs = maybe [] eraseArgs mgdef
-                   args' <- traverse eraseApps (dropPos fc 0 eargs args)
-                   pure (apply fc (Ref fc nt n) args')
+                   args' <- traverseSnocList eraseApps
+                                  (dropPos fc (length args) eargs args)
+                   pure (applySpine fc (Ref fc nt n) args')
            (tm, args) =>
-                do args' <- traverse eraseApps args
-                   pure (apply (getLoc tm) tm args')
+                do args' <- traverseSnocList eraseApps args
+                   pure (applySpine (getLoc tm) tm args')
   where
     dropPos : FC -> Nat -> List Nat -> Scopeable (Term vs) -> Scopeable (Term vs)
-    dropPos fc i ns [] = []
-    dropPos fc i ns (x :: xs)
+    dropPos fc _ ns [<] = [<]
+    dropPos fc (S i) ns (xs :< x)
         = if i `elem` ns
-             then Erased fc Placeholder :: dropPos fc (S i) ns xs
-             else x :: dropPos fc (S i) ns xs
+             then dropPos fc i ns xs :< Erased fc Placeholder
+             else dropPos fc i ns xs :< x
+    dropPos fc _ ns xs = xs
 
 -- if tm would be matched by trylhs, then it's not an impossible case
 -- because we've already got it. Ignore anything in erased position.
