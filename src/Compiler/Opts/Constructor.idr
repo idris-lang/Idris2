@@ -252,9 +252,15 @@ parameters (try : forall vars. CExp vars -> Core (CExp vars))
     rewriteSub (CDelay fc lr e) =
         CDelay fc lr <$> rewriteCExp e
     rewriteSub (CConCase fc x alts def) =
-        CConCase fc x <$> traverse rewriteCConAlt alts <*> traverseOpt rewriteCExp def
+        CConCase fc
+            <$> rewriteCExp x
+            <*> traverse rewriteCConAlt alts
+            <*> traverseOpt rewriteCExp def
     rewriteSub (CConstCase fc x alts def) =
-        CConstCase fc x <$> traverse rewriteCConstAlt alts <*> traverseOpt rewriteCExp def
+        CConstCase fc
+            <$> rewriteCExp x
+            <*> traverse rewriteCConstAlt alts
+            <*> traverseOpt rewriteCExp def
     rewriteSub e = pure e
 
     rewriteCConAlt (MkConAlt n ci t as e) = MkConAlt n ci t as <$> rewriteCExp e
