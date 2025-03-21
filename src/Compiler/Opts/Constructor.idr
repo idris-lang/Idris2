@@ -232,8 +232,8 @@ parameters (try : forall vars. CExp vars -> Core (CExp vars))
     rewriteCConstAlt : CConstAlt vars -> Core (CConstAlt vars)
 
     rewriteCExp exp = do
-        exp' <- try exp
-        rewriteSub exp'
+        exp' <- rewriteSub exp
+        try exp'
 
     rewriteSub (CLam fc x e) =
         CLam fc x <$> rewriteCExp e
