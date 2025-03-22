@@ -19,6 +19,10 @@ record Binary where
   size : Integer -- Capacity
   used : Integer -- Amount used
 
+public export
+Show Binary where
+  show (MkBin buf loc size used) = "Binary { buffer: <buffer>, location: " ++ show loc ++ ", size: " ++ show size ++ ", used: " ++ show used ++ " }"
+
 export
 newBinary : Buffer -> Integer -> Binary
 newBinary b s = MkBin b 0 s 0
