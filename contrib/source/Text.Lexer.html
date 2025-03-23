@@ -305,13 +305,13 @@
 <div id="line184"><a href="#line184" class="IdrisLineNumber"> 184 | </a><span class="IdrisFunction">binDigits</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisFunction">Lexer</span></div>
 <div id="line185"><a href="#line185" class="IdrisLineNumber"> 185 | </a><span class="IdrisFunction">binDigits</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">some</span>&nbsp;<span class="IdrisFunction">binDigit</span></div>
 <div id="line186"><a href="#line186" class="IdrisLineNumber"> 186 | </a></div>
-<div id="line187"><a href="#line187" class="IdrisLineNumber"> 187 | </a><span class="IdrisComment">|||&nbsp;Recognise&nbsp;a&nbsp;single&nbsp;hexidecimal&nbsp;digit</span></div>
+<div id="line187"><a href="#line187" class="IdrisLineNumber"> 187 | </a><span class="IdrisComment">|||&nbsp;Recognise&nbsp;a&nbsp;single&nbsp;hexadecimal&nbsp;digit</span></div>
 <div id="line188"><a href="#line188" class="IdrisLineNumber"> 188 | </a><span class="IdrisComment">|||&nbsp;/[0-9A-Fa-f]/</span></div>
 <div id="line189"><a href="#line189" class="IdrisLineNumber"> 189 | </a><span class="IdrisKeyword">export</span></div>
 <div id="line190"><a href="#line190" class="IdrisLineNumber"> 190 | </a><span class="IdrisFunction">hexDigit</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisFunction">Lexer</span></div>
 <div id="line191"><a href="#line191" class="IdrisLineNumber"> 191 | </a><span class="IdrisFunction">hexDigit</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">pred</span>&nbsp;<span class="IdrisFunction">isHexDigit</span></div>
 <div id="line192"><a href="#line192" class="IdrisLineNumber"> 192 | </a></div>
-<div id="line193"><a href="#line193" class="IdrisLineNumber"> 193 | </a><span class="IdrisComment">|||&nbsp;Recognise&nbsp;one&nbsp;or&nbsp;more&nbsp;hexidecimal&nbsp;digits</span></div>
+<div id="line193"><a href="#line193" class="IdrisLineNumber"> 193 | </a><span class="IdrisComment">|||&nbsp;Recognise&nbsp;one&nbsp;or&nbsp;more&nbsp;hexadecimal&nbsp;digits</span></div>
 <div id="line194"><a href="#line194" class="IdrisLineNumber"> 194 | </a><span class="IdrisComment">|||&nbsp;/[0-9A-Fa-f]+/</span></div>
 <div id="line195"><a href="#line195" class="IdrisLineNumber"> 195 | </a><span class="IdrisKeyword">export</span></div>
 <div id="line196"><a href="#line196" class="IdrisLineNumber"> 196 | </a><span class="IdrisFunction">hexDigits</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisFunction">Lexer</span></div>
@@ -488,7 +488,7 @@
 <div id="line367"><a href="#line367" class="IdrisLineNumber"> 367 | </a><span class="IdrisFunction">binLit</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisFunction">Lexer</span></div>
 <div id="line368"><a href="#line368" class="IdrisLineNumber"> 368 | </a><span class="IdrisFunction">binLit</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">exact</span>&nbsp;<span class="IdrisData">&quot;0b&quot;</span>&nbsp;<span class="IdrisFunction">&lt;+&gt;</span>&nbsp;<span class="IdrisFunction">binDigits</span></div>
 <div id="line369"><a href="#line369" class="IdrisLineNumber"> 369 | </a></div>
-<div id="line370"><a href="#line370" class="IdrisLineNumber"> 370 | </a><span class="IdrisComment">|||&nbsp;Recognise&nbsp;a&nbsp;hexidecimal&nbsp;literal,&nbsp;prefixed&nbsp;by&nbsp;&quot;0x&quot;&nbsp;or&nbsp;&quot;0X&quot;</span></div>
+<div id="line370"><a href="#line370" class="IdrisLineNumber"> 370 | </a><span class="IdrisComment">|||&nbsp;Recognise&nbsp;a&nbsp;hexadecimal&nbsp;literal,&nbsp;prefixed&nbsp;by&nbsp;&quot;0x&quot;&nbsp;or&nbsp;&quot;0X&quot;</span></div>
 <div id="line371"><a href="#line371" class="IdrisLineNumber"> 371 | </a><span class="IdrisComment">|||&nbsp;/0[Xx][0-9A-Fa-f]+/</span></div>
 <div id="line372"><a href="#line372" class="IdrisLineNumber"> 372 | </a><span class="IdrisKeyword">export</span></div>
 <div id="line373"><a href="#line373" class="IdrisLineNumber"> 373 | </a><span class="IdrisFunction">hexLit</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisFunction">Lexer</span></div>

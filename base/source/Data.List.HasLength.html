@@ -137,7 +137,7 @@
 <div id="line16"><a href="#line16" class="IdrisLineNumber"> &nbsp;16 | </a><span class="IdrisComment">|||&nbsp;```</span></div>
 <div id="line17"><a href="#line17" class="IdrisLineNumber"> &nbsp;17 | </a><span class="IdrisComment">|||</span></div>
 <div id="line18"><a href="#line18" class="IdrisLineNumber"> &nbsp;18 | </a><span class="IdrisComment">|||&nbsp;See&nbsp;`sucR`&nbsp;for&nbsp;an&nbsp;example&nbsp;where&nbsp;the&nbsp;update&nbsp;to&nbsp;the&nbsp;runtime-relevant&nbsp;Nat&nbsp;is&nbsp;O(1)</span></div>
-<div id="line19"><a href="#line19" class="IdrisLineNumber"> &nbsp;19 | </a><span class="IdrisComment">|||&nbsp;but&nbsp;the&nbsp;udpate&nbsp;to&nbsp;the&nbsp;list&nbsp;(were&nbsp;we&nbsp;to&nbsp;keep&nbsp;it&nbsp;around)&nbsp;an&nbsp;O(n)&nbsp;traversal.</span></div>
+<div id="line19"><a href="#line19" class="IdrisLineNumber"> &nbsp;19 | </a><span class="IdrisComment">|||&nbsp;but&nbsp;the&nbsp;update&nbsp;to&nbsp;the&nbsp;list&nbsp;(were&nbsp;we&nbsp;to&nbsp;keep&nbsp;it&nbsp;around)&nbsp;an&nbsp;O(n)&nbsp;traversal.</span></div>
 <div id="line20"><a href="#line20" class="IdrisLineNumber"> &nbsp;20 | </a></div>
 <div id="line21"><a href="#line21" class="IdrisLineNumber"> &nbsp;21 | </a><span class="IdrisKeyword">module</span>&nbsp;<span class="IdrisModule">Data.List.HasLength</span></div>
 <div id="line22"><a href="#line22" class="IdrisLineNumber"> &nbsp;22 | </a></div>
@@ -194,7 +194,7 @@
 <div id="line73"><a href="#line73" class="IdrisLineNumber"> &nbsp;73 | </a><span class="IdrisFunction">map</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisData">Z</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">Z</span></div>
 <div id="line74"><a href="#line74" class="IdrisLineNumber"> &nbsp;74 | </a><span class="IdrisFunction">map</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisData">S</span>&nbsp;<span class="IdrisBound">n</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">S</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">map</span>&nbsp;<span class="IdrisBound">f</span>&nbsp;<span class="IdrisBound">n</span><span class="IdrisKeyword">)</span></div>
 <div id="line75"><a href="#line75" class="IdrisLineNumber"> &nbsp;75 | </a></div>
-<div id="line76"><a href="#line76" class="IdrisLineNumber"> &nbsp;76 | </a><span class="IdrisComment">|||&nbsp;@sucR&nbsp;demonstrates&nbsp;that&nbsp;snoc&nbsp;only&nbsp;increases&nbsp;the&nbsp;lenght&nbsp;by&nbsp;one</span></div>
+<div id="line76"><a href="#line76" class="IdrisLineNumber"> &nbsp;76 | </a><span class="IdrisComment">|||&nbsp;@sucR&nbsp;demonstrates&nbsp;that&nbsp;snoc&nbsp;only&nbsp;increases&nbsp;the&nbsp;length&nbsp;by&nbsp;one</span></div>
 <div id="line77"><a href="#line77" class="IdrisLineNumber"> &nbsp;77 | </a><span class="IdrisComment">|||&nbsp;So&nbsp;performing&nbsp;this&nbsp;operation&nbsp;while&nbsp;carrying&nbsp;the&nbsp;list&nbsp;around&nbsp;would&nbsp;cost&nbsp;O(n)</span></div>
 <div id="line78"><a href="#line78" class="IdrisLineNumber"> &nbsp;78 | </a><span class="IdrisComment">|||&nbsp;but&nbsp;relying&nbsp;on&nbsp;n&nbsp;together&nbsp;with&nbsp;an&nbsp;erased&nbsp;HasLength&nbsp;proof&nbsp;instead&nbsp;is&nbsp;O(1)</span></div>
 <div id="line79"><a href="#line79" class="IdrisLineNumber"> &nbsp;79 | </a><span class="IdrisKeyword">export</span></div>
