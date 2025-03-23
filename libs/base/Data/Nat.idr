@@ -48,7 +48,7 @@ isItSucc : (n : Nat) -> Dec (IsSucc n)
 isItSucc Z = No absurd
 isItSucc (S n) = Yes ItIsSucc
 
-||| A hystorical synonym for `IsSucc`
+||| A historical synonym for `IsSucc`
 public export
 0 NonZero : Nat -> Type
 NonZero = IsSucc

@@ -30,7 +30,7 @@ data LookupDir =
 
 ||| Elaboration scripts
 ||| Where types/terms are returned, binders will have unique, if not
-||| necessarily human readabe, names
+||| necessarily human readable, names
 export
 data Elab : Type -> Type where
      Pure : a -> Elab a

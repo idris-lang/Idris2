@@ -348,7 +348,7 @@ export
 Functor Doc where
   map = reAnnotate
 
-||| Overloaded converison to `Doc`.
+||| Overloaded conversion to `Doc`.
 public export
 interface Pretty a where
   pretty : a -> Doc ann

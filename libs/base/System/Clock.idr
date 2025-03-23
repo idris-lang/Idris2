@@ -67,7 +67,7 @@ Show (Clock type) where
 ||| appropriate.
 |||
 ||| @ s   the number of digits used to display the seconds
-||| @ ns  the number of digits used to display the nanosecondns
+||| @ ns  the number of digits used to display the nanoseconds
 ||| @ clk the Clock whose contents to display
 export
 showTime : (s, ns : Nat) -> (clk : Clock type) -> String

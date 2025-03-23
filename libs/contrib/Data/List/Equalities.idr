@@ -8,7 +8,7 @@ import Data.List.Reverse
 
 %default total
 
-||| A list constructued using snoc cannot be empty.
+||| A list constructed using snoc cannot be empty.
 export
 snocNonEmpty : {x : a} -> {xs : List a} -> Not (xs ++ [x] = [])
 snocNonEmpty {xs = []} prf = uninhabited prf

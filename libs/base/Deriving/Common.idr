@@ -9,7 +9,7 @@ import Language.Reflection
 -- Being free of a variable
 
 ||| IsFreeOf is parametrised by
-||| @ x  the name of the type variable that the functioral action will change
+||| @ x  the name of the type variable that the functorial action will change
 ||| @ ty the type that does not contain any mention of x
 export
 data IsFreeOf : (x : Name) -> (ty : TTImp) -> Type where

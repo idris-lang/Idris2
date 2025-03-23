@@ -119,7 +119,7 @@ namespace All
 ------------------------------------------------------------------------
 -- Relationship between all and any
 
-||| If there does not exist an element that satifies the property, then it is
+||| If there does not exist an element that satisfies the property, then it is
 ||| the case that all elements do not satisfy it.
 export
 negAnyAll : {xs : List1 a} -> Not (Any p xs) -> All (Not . p) xs
@@ -228,7 +228,7 @@ split dec xs = splitOnto dec xs (MkSplit [] [])
 
 ||| If any `a` either satisfies p or q then given a List of as,
 ||| either all values satisfy p
-||| or at least one of them sastifies q
+||| or at least one of them satisfies q
 public export
 decide : ((x : a) -> Either (p x) (q x)) ->
          (xs : List a) -> Either (All p xs) (Any q xs)

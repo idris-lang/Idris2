@@ -62,7 +62,7 @@ export
 union : (x, y : SortedSet k) -> SortedSet k
 union x y = foldr insert x y
 
-||| Set difference. Delete all elments in y from x
+||| Set difference. Delete all elements in y from x
 export
 difference : (x, y : SortedSet k) -> SortedSet k
 difference x y = foldr delete x y

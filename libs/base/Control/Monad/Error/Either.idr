@@ -26,7 +26,7 @@ public export
 runEitherT : EitherT e m a -> m (Either e a)
 runEitherT (MkEitherT x) = x
 
-||| Run an `EitherT` computation, handling results and exceptions with seperate
+||| Run an `EitherT` computation, handling results and exceptions with separate
 ||| functions.
 |||
 ||| This is a version of `either` lifted to work with `EitherT`.

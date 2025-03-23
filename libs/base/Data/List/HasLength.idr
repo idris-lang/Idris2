@@ -17,7 +17,7 @@
 ||| ```
 |||
 ||| See `sucR` for an example where the update to the runtime-relevant Nat is O(1)
-||| but the udpate to the list (were we to keep it around) an O(n) traversal.
+||| but the update to the list (were we to keep it around) an O(n) traversal.
 
 module Data.List.HasLength
 
@@ -74,7 +74,7 @@ map : (f : a -> b) -> HasLength n xs -> HasLength n (map f xs)
 map f Z = Z
 map f (S n) = S (map f n)
 
-||| @sucR demonstrates that snoc only increases the lenght by one
+||| @sucR demonstrates that snoc only increases the length by one
 ||| So performing this operation while carrying the list around would cost O(n)
 ||| but relying on n together with an erased HasLength proof instead is O(1)
 export

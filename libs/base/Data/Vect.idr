@@ -166,7 +166,7 @@ deleteAt FZ     (_::xs)        = xs
 deleteAt (FS k) [x]            = absurd k
 deleteAt (FS k) (x::xs@(_::_)) = x :: deleteAt k xs
 
-||| Replace an element at a particlar index with another
+||| Replace an element at a particular index with another
 |||
 ||| ```idris example
 ||| replaceAt 1 8 [1,2,3,4]
@@ -205,7 +205,7 @@ public export
 ||| `Vect n a -> a -> Vect (n + 1) a` which you get by using `++ [x]`
 |||
 ||| Snoc gets its name by reversing `cons`, indicating we are
-||| tacking on the element at the end rather than the begining.
+||| tacking on the element at the end rather than the beginning.
 ||| `append` would also be a suitable name.
 |||
 ||| @ xs The vector to be appended
@@ -539,7 +539,7 @@ lookupBy : (p : key -> key -> Bool) -> (e : key) -> (xs : Vect n (key, val)) -> 
 lookupBy p e []           = Nothing
 lookupBy p e ((l, r)::xs) = if p e l then Just r else lookupBy p e xs
 
-||| Find the assocation of some key using the default Boolean equality test
+||| Find the association of some key using the default Boolean equality test
 |||
 ||| ```idris example
 ||| lookup 3 [(1, 'a'), (2, 'b'), (3, 'c')]
@@ -634,7 +634,7 @@ public export
 elemIndicesBy : (elem -> elem -> Bool) -> elem -> Vect m elem -> List (Fin m)
 elemIndicesBy p e = findIndices $ p e
 
-||| Find the indices of all elements uquals to the given one
+||| Find the indices of all elements equal to the given one
 |||
 ||| ```idris example
 ||| elemIndices 3 [1,2,3,4,3]

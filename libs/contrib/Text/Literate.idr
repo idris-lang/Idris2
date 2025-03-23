@@ -223,7 +223,7 @@ embedCode (MkLitStyle ((s,e)::delims) _            _) str = unlines [s,str,e]
 embedCode (MkLitStyle Nil             (m::markers) _) str = unwords [m, str]
 embedCode (MkLitStyle _               _            _) str = str
 
-||| Synonm for `embedCode`
+||| Synonym for `embedCode`
 export
 relit : (specification : LiterateStyle)
      -> (code : String)
