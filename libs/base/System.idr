@@ -39,7 +39,7 @@ prim__usleep : Int -> PrimIO ()
 
 ||| Sleep for the specified number of seconds or, if signals are supported,
 ||| until an un-ignored signal arrives.
-||| The exact wall-clock time slept might slighly differ depending on how busy
+||| The exact wall-clock time slept might slightly differ depending on how busy
 ||| the system is and the resolution of the system's clock.
 |||
 ||| @ sec the number of seconds to sleep for

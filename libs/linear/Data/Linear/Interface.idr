@@ -69,7 +69,7 @@ Duplicable (!* a) where
 ||| are identical, unlike with `duplicate`. For example if we build a comonoid out of a group, with
 ||| comult returning both the element given and its inverse:
 ||| comult x = x # inverse x
-||| It is not necessarily the case that x equals its inverse. For example the finite groupe of size
+||| It is not necessarily the case that x equals its inverse. For example the finite group of size
 ||| 3, has 1 and 2 as inverses of each other wrt to addition, but are not the same.
 public export
 interface Comonoid a where

@@ -9,7 +9,7 @@ import Syntax.PreorderReasoning
 
 ||| Addition of `Fin`s as bounded naturals.
 ||| The resulting type has the smallest possible bound
-||| as illustated by the relations with the `last` function.
+||| as illustrated by the relations with the `last` function.
 public export
 (+) : {m, n : Nat} -> Fin m -> Fin (S n) -> Fin (m + n)
 (+) FZ y = coerce (cong S $ plusCommutative n (pred m)) (weakenN (pred m) y)

@@ -12,7 +12,7 @@ export infix 1 `Copies`
 ||| reads as "m copies of value x". This data structure is necessary to implement
 ||| algorithms that rely on linearity but also interact with Nat indicies, like
 ||| Vect and Fin.
-||| This datastructure can be found in the paper "How to Take the Inverse of a Type" by
+||| This data structure can be found in the paper "How to Take the Inverse of a Type" by
 ||| Daniel Marshall and Dominic Orchard where it's described as an exponent operator
 public export
 data Copies : Nat -> (0 x : a) -> Type where

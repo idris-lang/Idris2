@@ -80,7 +80,7 @@ Monad (General a b) where
 ------------------------------------------------------------------------
 -- Fuel-based (partial) evaluation
 
-||| Check whehther we are ready to return a value
+||| Check whether we are ready to return a value
 public export
 already : General a b x -> Maybe x
 already = monadMorphism (\ i => Nothing)

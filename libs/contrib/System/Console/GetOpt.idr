@@ -153,7 +153,7 @@ errNoArg s = OptErr ("option `" ++ s ++ "' doesn't allow an argument\n")
 --          Parsing Options
 --------------------------------------------------------------------------------
 
-||| Result of parsing the command line arguments accoring to a list
+||| Result of parsing the command line arguments according to a list
 ||| of `OptDescr`s. (see also function `getOpt`).
 public export
 record Result a where

@@ -102,7 +102,7 @@ natToInteger (S k) = 1 + natToInteger k
 
 -- %builtin NaturalToInteger Prelude.Types.natToInteger
 
-||| Counts the number of elements that satify a predicate.
+||| Counts the number of elements that satisfy a predicate.
 public export
 count : Foldable t => (predicate : a -> Bool) -> t a -> Nat
 count predicate = foldMap @{%search} @{Additive} (\x => if predicate x then 1 else 0)

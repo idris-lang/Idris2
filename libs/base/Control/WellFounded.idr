@@ -48,7 +48,7 @@ accRec : {0 rel : (arg1 : a) -> (arg2 : a) -> Type} ->
 accRec step z (Access f) =
   step z $ \yarg, lt => accRec step yarg (f yarg lt)
 
-||| Depedently-typed induction based on accessibility.
+||| Dependently-typed induction based on accessibility.
 |||
 ||| The recursive step for an element has access to all elements smaller than
 ||| it. The recursion will therefore halt when it reaches a minimum element.

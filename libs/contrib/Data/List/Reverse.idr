@@ -39,7 +39,7 @@ public export
 slowReverse [] = []
 slowReverse (x :: xs) = slowReverse xs `snoc` x
 
-||| The iterative and recursive defintions of reverse are the same.
+||| The iterative and recursive definitions of reverse are the same.
 export
 reverseEquiv : (xs : List a) -> slowReverse xs = reverse xs
 reverseEquiv [] = Refl

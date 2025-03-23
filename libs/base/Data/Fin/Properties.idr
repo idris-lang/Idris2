@@ -88,7 +88,7 @@ strengthenLastIsLeft : {n : Nat} -> strengthen (Fin.last {n}) = Nothing
 strengthenLastIsLeft {n=Z} = Refl
 strengthenLastIsLeft {n=S k} = rewrite strengthenLastIsLeft {n=k} in Refl
 
-||| It's possible to strengthen the inverse of a succesor
+||| It's possible to strengthen the inverse of a successor
 export
 strengthenNotLastIsRight : {n : Nat} -> (m : Fin n) -> strengthen (complement (FS m)) = Just (complement m)
 strengthenNotLastIsRight m = strengthenWeakenIsRight (complement m)

@@ -19,7 +19,7 @@
 |||   * May use `${IDRIS2_TESTS_CG}` to pick a codegen that ought to work
 |||   * Clean up after itself (e.g. by running `rm -rf build/`)
 |||
-||| + `expected` a file containting the expected output of `run`
+||| + `expected` a file containing the expected output of `run`
 |||
 ||| During testing, the test harness will generate an artefact named `output`
 ||| and display both outputs if there is a failure.

@@ -198,7 +198,7 @@ public export
 implementation Monoid (Seq a) where
   neutral = empty
 
-||| This implementation is differnt from that of Seq.
+||| This implementation is different from that of Seq.
 public export
 implementation Applicative Seq where
   pure = singleton

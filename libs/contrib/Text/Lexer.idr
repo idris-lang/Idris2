@@ -185,13 +185,13 @@ export
 binDigits : Lexer
 binDigits = some binDigit
 
-||| Recognise a single hexidecimal digit
+||| Recognise a single hexadecimal digit
 ||| /[0-9A-Fa-f]/
 export
 hexDigit : Lexer
 hexDigit = pred isHexDigit
 
-||| Recognise one or more hexidecimal digits
+||| Recognise one or more hexadecimal digits
 ||| /[0-9A-Fa-f]+/
 export
 hexDigits : Lexer
@@ -368,7 +368,7 @@ export
 binLit : Lexer
 binLit = exact "0b" <+> binDigits
 
-||| Recognise a hexidecimal literal, prefixed by "0x" or "0X"
+||| Recognise a hexadecimal literal, prefixed by "0x" or "0X"
 ||| /0[Xx][0-9A-Fa-f]+/
 export
 hexLit : Lexer

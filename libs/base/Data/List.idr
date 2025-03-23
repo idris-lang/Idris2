@@ -106,7 +106,7 @@ iterate f x  = x :: case f x of
 ||| CAUTION: Only terminates if `f` eventually returns `Nothing`.
 |||
 ||| @ f  a function which provides an element of `b` and the rest of `b`
-||| @ b  a structure contanining any number of elements
+||| @ b  a structure containing any number of elements
 covering
 public export
 unfoldr : (f : b -> Maybe (a, b)) -> b -> List a
@@ -405,7 +405,7 @@ public export
 splitOn : Eq a => a -> List a -> List1 (List a)
 splitOn a = split (== a)
 
-||| Replace an element at a particlar index with another.
+||| Replace an element at a particular index with another.
 |||
 ||| ```idris example
 ||| replaceAt 2 6 [1, 2, 3, 4]
@@ -790,7 +790,7 @@ prefixOfBy p = go [<] where
 |||
 ||| @ eq    a custom equality function for comparing the elements
 ||| @ left  the list which might be a prefix of `right`
-||| @ right the list of elements to compare againts
+||| @ right the list of elements to compare against
 public export
 isPrefixOfBy : (eq : a -> b -> Bool) ->
                (left : List a) -> (right : List b) -> Bool

@@ -35,7 +35,7 @@ finToElem  {n      }       xs  i with (finNonEmpty xs $ finNonZero i)
  finToElem {n = S n} (x :: xs)  FZ    | IsNonEmpty = Here
  finToElem {n = S n} (x :: xs) (FS i) | IsNonEmpty = There (finToElem xs i)
 
-||| Analogus to `indexNaturality`, but morphisms can (irrelevantly) know the context
+||| Analogous to `indexNaturality`, but morphisms can (irrelevantly) know the context
 export
 indexNaturalityWithElem : (i : Fin n) -> (xs : Vect n a) -> (f : (x : a) -> (0 pos : x `Elem` xs) -> b)
   -> index i (mapWithElem xs f) = f (index i xs) (finToElem xs i)

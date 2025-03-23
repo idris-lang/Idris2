@@ -45,7 +45,7 @@ atIndexUnique : AtIndex a as n -> AtIndex b as n -> a === b
 atIndexUnique Z Z = Refl
 atIndexUnique (S p) (S q) = atIndexUnique p q
 
-||| Provided that equality is decidable, we can look for the first occurence
+||| Provided that equality is decidable, we can look for the first occurrence
 ||| of a value inside of a list
 public export
 find : DecEq a => (x : a) -> (xs : List a) -> Dec (Subset Nat (AtIndex x xs))

@@ -13,7 +13,7 @@ data LNat : Type where
   Succ : LNat -@ LNat
 
 ||| Convert a linear nat to an unrestricted Nat, only usable at the type level
-||| because we canot call `S` with an argument that is expected to be used exactly once
+||| because we cannot call `S` with an argument that is expected to be used exactly once
 public export
 0 toNat : LNat -@ Nat
 toNat Zero = Z

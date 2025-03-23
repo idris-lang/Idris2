@@ -84,7 +84,7 @@ namespace Example
 ------------------------------------------------------------------------------
 
 ||| Assuming that the enumerator is building one layer of term,
-||| sized e n willl produce a list of values of depth n
+||| sized e n will produce a list of values of depth n
 export
 sized : Enumerator a a -> Nat -> List a
 sized (MkEnumerator enum) = go where

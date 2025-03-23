@@ -205,7 +205,7 @@ makeChannel s = do
   pure1 (posCh # negCh)
 
 ||| Given a session and two functions communicating according to that
-||| sesion, we can run the two programs concurrently and collect their
+||| session, we can run the two programs concurrently and collect their
 ||| final results.
 export
 fork : (0 s : Session) ->

@@ -52,7 +52,7 @@ isJustT : Functor m => MaybeT m a -> m Bool
 isJustT = map isJust . runMaybeT
 
 ||| Run a `MaybeT` computation, handling the case of a result or no result
-||| seperately.
+||| separately.
 |||
 ||| This is a version of `maybe` lifted to work with `MaybeT`.
 public export

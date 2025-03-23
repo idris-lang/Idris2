@@ -16,7 +16,7 @@ export
 codegen : String
 codegen = prim__codegen
 
-||| Whether we are running on MS Windows, either directly or with a compability
+||| Whether we are running on MS Windows, either directly or with a compatibility
 ||| layer (e.g. cygwin).
 export
 isWindows : Bool
