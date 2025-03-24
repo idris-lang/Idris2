@@ -38,6 +38,18 @@ data IsVar : a -> Nat -> SnocList a -> Type where
 
 %name IsVar idx
 
+namespace List
+  ||| IsVar n k ns is a proof that
+  ||| the name n
+  ||| is a position k
+  ||| in the list ns
+  public export
+  data IsVarL : a -> Nat -> List a -> Type where
+      First : IsVarL n Z (n :: ns)
+      Later : IsVarL n i ns -> IsVarL n (S i) (m :: ns)
+
+  %name IsVarL idx
+
 export
 finIdx : {idx : _} -> (0 prf : IsVar x idx vars) ->
          Fin (length vars)
@@ -83,12 +95,19 @@ dropIsVar :
 dropIsVar (xs :< _) First = xs
 dropIsVar (xs :< n) (Later p) = dropIsVar xs p :< n
 
+||| Compute the remaining scope once the target variable has been removed
+public export
+dropIsVarL : (ns : List a) -> {idx : Nat} -> (0 _ : IsVarL nm idx ns) -> List a
+dropIsVarL (_ :: xs) First = xs
+dropIsVarL (n :: xs) (Later p) = n :: dropIsVarL xs p
+
 ||| Throw in extra variables on the outer side of the context
 ||| This is essentially the identity function
 ||| This is slow so we ensure it's only used in a runtime irrelevant manner
 export
 0 embedIsVar : IsVar x idx vars -> IsVar x idx (more ++ vars)
-embedIsVar tm = believe_me tm
+embedIsVar First = First
+embedIsVar (Later p) = Later (embedIsVar p)
 
 ||| Throw in extra variables on the local end of the context.
 ||| This is slow so we ensure it's only used in a runtime irrelevant manner
@@ -96,6 +115,13 @@ export
 0 weakenIsVar : (s : SizeOf ns) -> IsVar x idx xs -> IsVar x (size s + idx) (xs ++ ns)
 weakenIsVar (MkSizeOf Z Z) p =  p
 weakenIsVar (MkSizeOf (S k) (S l)) p =  Later (weakenIsVar (MkSizeOf k l) p)
+
+||| Throw in extra variables on the local end of the context.
+||| This is slow so we ensure it's only used in a runtime irrelevant manner
+export
+0 weakenIsVarL : (s : SizeOf ns) -> IsVarL x idx xs -> IsVarL x (size s + idx) (ns ++ xs)
+weakenIsVarL (MkSizeOf Z Z) p =  p
+weakenIsVarL (MkSizeOf (S k) (S l)) p =  Later (weakenIsVarL (MkSizeOf k l) p)
 
 0 locateIsVarLT :
   (s : SizeOf local) ->
@@ -203,6 +229,13 @@ record NVar {0 a : Type} (nm : a) (vars : SnocList a) where
   {nvarIdx : Nat}
   0 nvarPrf : IsVar nm nvarIdx vars
 
+namespace List
+  public export
+  record NVarL {0 a : Type} (nm : a) (vars : List a) where
+    constructor MkNVarL
+    {nvarIdx : Nat}
+    0 nvarPrf : IsVarL nm nvarIdx vars
+
 namespace NVar
   export
   later : NVar nm ns -> NVar nm (ns :< n)
@@ -268,8 +301,11 @@ locateVar s v  = bimap forgetName forgetName
 
 export
 weakenNVar : SizeOf ns -> NVar name inner -> NVar name (inner ++ ns)
-weakenNVar s (MkNVar {nvarIdx} p)
-  = MkNVar {nvarIdx = plus (size s) nvarIdx} (weakenIsVar s p)
+weakenNVar s (MkNVar p) = MkNVar (weakenIsVar s p)
+
+export
+weakenNVarL : SizeOf ns -> NVarL nm inner -> NVarL nm (ns ++ inner)
+weakenNVarL s (MkNVarL p) = MkNVarL (weakenIsVarL s p)
 
 export
 embedNVar : NVar name vars -> NVar name (more ++ vars)

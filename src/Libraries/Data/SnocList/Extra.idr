@@ -34,18 +34,6 @@ revOnto xs (vs :< v)
           rewrite appendAssociative xs [<v] (reverse vs) in Refl
 
 export
-lookup : Eq a => a -> SnocList (a, b) -> Maybe b
-lookup n [<] = Nothing
-lookup n (ns :< (x, n')) = if x == n then Just n' else lookup n ns
-
-lengthDistributesOverAppend
-  : (xs, ys : SnocList a)
-  -> length (ys ++ xs) = length xs + length ys
-lengthDistributesOverAppend [<] ys = Refl
-lengthDistributesOverAppend (xs :< x) ys =
-  cong S $ lengthDistributesOverAppend xs ys
-
-export
 lengthDistributesOverFish : (sx : SnocList a) -> (ys : List a) ->
                             length (sx <>< ys) === length sx + length ys
 lengthDistributesOverFish sx [] = sym $ plusZeroRightNeutral _

@@ -188,8 +188,16 @@ interface GenWeaken (0 tm : Scoped) where
 
 export
 genWeaken : GenWeaken tm =>
-  SizeOf outer -> tm (Scope.addInner local outer) -> tm (Scope.addInner local (Scope.addInner [<n] outer))
-genWeaken l = genWeakenNs l (suc zero)
+  SizeOf outer -> tm (Scope.addInner local outer) -> tm (Scope.addInner (Scope.bind local n) outer)
+genWeaken l = rewrite sym $ appendAssociative local [<n] outer in genWeakenNs l (suc zero)
+
+export
+genWeakenFishily : GenWeaken tm =>
+  SizeOf outer -> tm (Scope.ext local outer) -> tm (Scope.ext (Scope.bind local n) outer)
+genWeakenFishily
+    = rewrite fishAsSnocAppend local outer in
+      rewrite fishAsSnocAppend (local :<n) outer in
+      genWeaken . cast
 
 export
 weakensN : Weaken tm =>
