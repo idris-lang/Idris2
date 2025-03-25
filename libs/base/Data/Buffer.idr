@@ -316,7 +316,7 @@ export
 getNat : HasIO io => Buffer -> (offset : Int) -> io (Int, Nat)
 getNat buf offset
   = do len <- getInt64 buf offset
-       when (len < 0) $ assert_total $ idris_crash "corrupt Nat"
+       when (len < 0) $ assert_total $ idris_crash "INTERNAL ERROR: getNat -> corrupt Nat"
        limbs <- getLimbs [<] (offset + 8) len
        pure (offset + 8 + 4 * cast len, cast $ fromLimbs limbs)
 

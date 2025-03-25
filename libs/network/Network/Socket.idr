@@ -256,7 +256,7 @@ sendBytes : HasIO m => Socket -> List Bits8 -> m (Either SocketError Int)
 sendBytes sock bytes = do
   let len' = cast $ length bytes
   Just buffer <- newBuffer len'
-  | Nothing => assert_total $ idris_crash "somehow newBuffer failed"
+  | Nothing => assert_total $ idris_crash "INTERNAL ERROR: sendBytes -> somehow newBuffer failed"
   traverse_ (uncurry (setBits8 buffer)) (zip [0..len'] bytes)
   ret <- primIO $ prim__idrnet_send_bytes sock.descriptor buffer len' 0
   case ret < 0 of

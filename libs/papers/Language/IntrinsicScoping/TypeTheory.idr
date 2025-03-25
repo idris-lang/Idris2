@@ -238,7 +238,7 @@ partial
 vapp : Value f -> Value f -> Value f
 vapp (VLam f) t = f [] t
 vapp (VEmb n) t = VEmb (NApp n t)
-vapp _ _ = idris_crash "Oops"
+vapp _ _ = idris_crash "INTERNAL ERROR: vapp -> impossible case"
 
 ||| An environment is a list of values for all the bound variables in scope
 Env : Scoped
@@ -272,7 +272,7 @@ evalInfer (Rec p pz ps n) env = go (evalCheck pz env) (evalCheck ps env) (evalCh
   go pz ps VZro = pz
   go pz ps (VSuc n) = ps `vapp` n `vapp` (go pz ps n)
   go pz ps (VEmb n) = VEmb (NRec (evalCheck p env) pz ps n)
-  go _ _ _ = idris_crash "Oops"
+  go _ _ _ = idris_crash "INTERNAL ERROR: evalInfer -> impossible case"
 
 evalInfer (Pi a b) env = VPi (evalCheck a env) (evalAbs b env)
 evalInfer (Bnd i) env = evalIndex i env
