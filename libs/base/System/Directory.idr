@@ -17,12 +17,6 @@ DirPtr = AnyPtr
 supportC : (fn : String) -> String
 supportC fn = "C:\{fn}, libidris2_support, idris_directory.h"
 
-||| Shorthand for referring to the Node system support library
-|||
-||| @ fn the function name to refer to in the js/system_support.js file
-supportNode : (fn : String) -> String
-supportNode fn = "node:support:\{fn},support_system_directory"
-
 ok : HasIO io => a -> io (Either FileError a)
 ok x = pure (Right x)
 
@@ -31,27 +25,27 @@ ok x = pure (Right x)
 prim__currentDir : PrimIO (Ptr String)
 
 %foreign supportC "idris2_changeDir"
-         supportNode "changeDir"
+         "node:support"
 prim__changeDir : String -> PrimIO Int
 
 %foreign supportC "idris2_createDir"
-         supportNode "createDir"
+         "node:support"
 prim__createDir : String -> PrimIO Int
 
 %foreign supportC "idris2_openDir"
-         supportNode "openDir"
+         "node:support"
 prim__openDir : String -> PrimIO DirPtr
 
 %foreign supportC "idris2_closeDir"
-         supportNode "closeDir"
+         "node:support"
 prim__closeDir : DirPtr -> PrimIO ()
 
 %foreign supportC "idris2_removeDir"
-         supportNode "removeDir"
+         "node:support"
 prim__removeDir : String -> PrimIO ()
 
 %foreign supportC "idris2_nextDirEntry"
-         supportNode "dirEntry"
+         "node:support"
 prim__dirEntry : DirPtr -> PrimIO (Ptr String)
 
 ||| Data structure for managing the pointer to a directory.

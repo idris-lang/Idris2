@@ -11,10 +11,10 @@ import public System.File.Types
          "node:lambda:()=>0"
 prim__flush : FilePtr -> PrimIO Int
 %foreign supportC "idris2_popen"
-         supportNode "popen"
+         "node:support:system_open" -- why specify file? bc this function uses some dependency
 prim__popen : String -> String -> PrimIO FilePtr
 %foreign supportC "idris2_pclose"
-         supportNode "pclose"
+         "node:support:system_removeFileAndPclose" -- why specify file? bc this function uses some dependency
 prim__pclose : FilePtr -> PrimIO Int
 
 data Popen2Result : Type where [external]
