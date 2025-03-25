@@ -66,7 +66,7 @@ atom fname
          pure (IVar (MkFC fname start end) x)
   <|> do start <- location
          symbol "$"
-         x <- UN . Basic <$> unqualifiedName
+         x <- userName
          end <- location
          pure (IBindVar (MkFC fname start end) x)
   <|> do start <- location
@@ -192,7 +192,7 @@ mutual
   implicitArg fname indents
       = do start <- location
            symbol "{"
-           x <- UN . Basic <$> unqualifiedName
+           x <- userName
            (do symbol "="
                commit
                tm <- expr fname indents
@@ -210,7 +210,7 @@ mutual
   as : OriginDesc -> IndentInfo -> Rule RawImp
   as fname indents
       = do start <- location
-           x <- UN . Basic <$> unqualifiedName
+           x <- userName
            nameEnd <- location
            symbol "@"
            pat <- simpleExpr fname indents
@@ -252,26 +252,26 @@ mutual
   bindList fname start indents
       = forget <$> sepBy1 (symbol ",")
                           (do rigc <- multiplicity
-                              n <- unqualifiedName
+                              n <- userName
                               end <- location
                               ty <- option
                                        (Implicit (MkFC fname start end) False)
                                        (do symbol ":"
                                            appExpr fname indents)
                               rig <- getMult rigc
-                              pure (rig, UN (Basic n), ty))
+                              pure (rig, n, ty))
 
 
   pibindListName : OriginDesc -> FilePos -> IndentInfo ->
                    Rule (List (WithRig $ WithName RawImp))
   pibindListName fname start indents
        = do rigc <- multiplicity
-            ns <- sepBy1 (symbol ",") (withFC unqualifiedName)
+            ns <- sepBy1 (symbol ",") (withFC userName)
             symbol ":"
             ty <- expr fname indents
             atEnd indents
             rig <- getMult rigc
-            pure (map (\n => Mk [rig, map (UN . Basic) n] ty) (forget ns))
+            pure (map (\n => Mk [rig, n] ty) (forget ns))
      <|> forget <$> sepBy1 (symbol ",")
                            (do rigc <- multiplicity
                                n <- withFC name
@@ -306,11 +306,10 @@ mutual
            keyword "forall"
            commit
            nstart <- location
-           ns <- sepBy1 (symbol ",") (withFC unqualifiedName)
+           ns <- sepBy1 (symbol ",") (withFC userName)
            nend <- location
            let nfc = MkFC fname nstart nend
-           let binders = map (\n => Mk [erased {a=RigCount}
-                                       , Just (map (UN . Basic) n)]
+           let binders = map (\n => Mk [erased {a=RigCount}, Just n]
                                        (Implicit nfc False))
                              (forget ns)
            symbol "."
@@ -645,11 +644,11 @@ fieldDecl fname indents
     fieldBody : PiInfo RawImp -> Rule (List IField)
     fieldBody p
         = do start <- location
-             ns <- sepBy1 (symbol ",") (withFC unqualifiedName)
+             ns <- sepBy1 (symbol ",") (withFC userName)
              symbol ":"
              ty <- expr fname indents
              end <- location
-             pure (map (\n => Mk [MkFC fname start end, linear, map (UN . Basic) n]
+             pure (map (\n => Mk [MkFC fname start end, linear, n]
                                        (MkPiBindData p ty)) (forget ns))
 
 recordDecl : OriginDesc -> IndentInfo -> Rule ImpDecl
