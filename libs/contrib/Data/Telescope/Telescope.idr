@@ -31,7 +31,7 @@ plusAccZeroRightNeutral m =
 
 
 export infixl 4 -.
-export infixr 4 .-
+export typebind infixr 0 .-
 
 namespace Left
 
@@ -68,11 +68,13 @@ namespace Left
     (sigma ** (\ v => delta v -. (\ env => ty (left v env)))
            ** (\ v, (env ** w) => (left v env ** w)))
 
+  export autobind infixr 0 \++
+
   public export
-  (++) : {n : Nat} -> (gamma : Left.Telescope m) -> (Environment gamma -> Left.Telescope n) ->
+  (\++) : {n : Nat} -> (gamma : Left.Telescope m) -> (Environment gamma -> Left.Telescope n) ->
          Telescope (plusAcc n m)
-  (++) {n = Z} gamma delta = gamma
-  (++) {n = S n} gamma delta = (gamma -. sigma) ++ uncurry theta where
+  (\++) {n = Z} gamma delta = gamma
+  (\++) {n = S n} gamma delta = (env := gamma -. sigma) \++ uncurry theta env where
 
     sigma : Environment gamma -> Type
     sigma env = fst (uncons (delta env))
@@ -86,7 +88,7 @@ namespace Left
   cons sigma gamma =
     rewrite plusCommutative 1 k in
     rewrite plusAccIsPlus k 1 in
-    ([] -. const sigma) ++ (gamma . snd)
+    (env := [] -. const sigma) \++ gamma (snd env)
 
   ||| A position between the variables of a telescope, counting from the _end_:
   ||| Telescope:   Nil -. ty1 -. ... -. tyn
@@ -121,8 +123,8 @@ namespace Right
 
   export
   snoc : (gamma : Right.Telescope k) -> (Environment gamma -> Type) -> Right.Telescope (S k)
-  snoc [] tau   = tau () .- const []
-  snoc (sigma .- gamma) tau = sigma .- \ v => snoc (gamma v) (\ env => tau (v ** env))
+  snoc [] tau   = (v : tau ()) .- const [] v
+  snoc (sigma .- gamma) tau = (v : sigma) .- snoc (gamma v) (\ env => tau (v ** env))
 
   export
   unsnoc : {k : Nat} -> (gamma : Right.Telescope (S k)) ->
@@ -131,7 +133,7 @@ namespace Right
             ** (env : Environment delta) -> sigma env -> Environment gamma)
   unsnoc {k = Z} (sigma .- gamma) = ([] ** const sigma ** \ (), v => (v ** empty (gamma v)))
   unsnoc {k = S k} (sigma .- gamma)
-    = (sigma .- delta ** uncurry tau ** \ (v ** env) => transp v env) where
+    = ((x : sigma) .- delta x ** uncurry tau ** \ (v ** env) => transp v env) where
 
     delta : sigma -> Right.Telescope k
     delta v = fst (unsnoc (gamma v))
@@ -139,17 +141,19 @@ namespace Right
     tau : (v : sigma) -> Environment (delta v) -> Type
     tau v = fst (snd (unsnoc (gamma v)))
 
-    transp : (v : sigma) -> (env : Environment (delta v)) -> tau v env -> Environment (sigma .- gamma)
+    transp : (v : sigma) -> (env : Environment (delta v)) -> tau v env -> Environment ((x : sigma) .- gamma x)
     transp v env w = (v ** (snd (snd (unsnoc (gamma v))) env w))
 
+  export autobind infixr 0 ++/
+
   export
-  (++) : (gamma : Right.Telescope m) -> (Environment gamma -> Right.Telescope n) -> Right.Telescope (m + n)
-  [] ++ delta = delta ()
-  (sigma .- gamma) ++ delta = sigma .- (\ v => (gamma v ++ (\ env => delta (v ** env))))
+  (++/) : (gamma : Right.Telescope m) -> (Environment gamma -> Right.Telescope n) -> Right.Telescope (m + n)
+  [] ++/ delta = delta ()
+  (sigma .- gamma) ++/ delta = (v : sigma) .- (env := gamma v) ++/ delta (v ** env)
 
   export
   split : (gamma : Right.Telescope m) -> (delta : Environment gamma -> Right.Telescope n) ->
-          Environment (gamma ++ delta) ->
+          Environment ((env := gamma) ++/ delta env) ->
           (env : Environment gamma ** Environment (delta env))
   split [] delta env = (() ** env)
   split (sigma .- gamma) delta (v ** env) =
@@ -180,35 +184,35 @@ namespace Tree
   export
   concat : (gamma : Tree.Telescope k) -> (delta : Right.Telescope k ** Environment delta -> Environment gamma)
   concat Nil = ([] ** id)
-  concat (Elt t) = ((t .- const []) ** fst)
+  concat (Elt t) = ((x : t) .- const [] x ** fst)
   concat (gamma >< delta) =
     let (thetaL ** transpL) = concat gamma in
-    ((thetaL ++ \ envL => fst (concat (delta (transpL envL))))
+    (((envL := thetaL) ++/ fst (concat (delta (transpL envL))))
     ** \ env =>
          let (env1 ** env2) = split thetaL (\ envL => fst (concat (delta (transpL envL)))) env in
          (transpL env1 ** snd (concat (delta (transpL env1))) env2)
     )
 
-export infix 5 <++>
+export autobind infixr 0 <++>
 
 public export
 (<++>) : (gamma : Left.Telescope m) -> (Environment gamma -> Right.Telescope n) -> Right.Telescope (plusAcc m n)
 [] <++> delta = delta ()
-(gamma -. sigma ) <++> delta = gamma <++> (\ env => sigma env .- \ v => delta (env ** v))
+(gamma -. sigma ) <++> delta = (env := gamma) <++> (v : sigma env) .- delta (env ** v)
 
-export infix 5 >++<
+export autobind infixr 0 >++<
 
 (>++<) : {m, n : Nat} -> (gamma : Right.Telescope m) -> (Environment gamma -> Left.Telescope n) ->
          Left.Telescope (plusAcc m n)
 [] >++< delta = delta ()
 gamma@(_ .- _) >++< delta =
   let (gamma ** sigma ** transp) = unsnoc gamma in
-  gamma >++< \ env => (cons (sigma env) (\ v => delta (transp env v)))
+  (env := gamma) >++< cons (sigma env) (\ v => delta (transp env v))
 
 export
 leftToRight : Left.Telescope m -> Right.Telescope m
-leftToRight gamma = rewrite sym (plusAccZeroRightNeutral m) in (gamma <++> const [])
+leftToRight gamma = rewrite sym (plusAccZeroRightNeutral m) in (env := gamma) <++> const [] env
 
 export
 rightToLeft : {m : Nat} -> Right.Telescope m -> Left.Telescope m
-rightToLeft gamma = rewrite sym (plusAccZeroRightNeutral m) in (gamma >++< const [])
+rightToLeft gamma = rewrite sym (plusAccZeroRightNeutral m) in (env := gamma) >++< const [] env
