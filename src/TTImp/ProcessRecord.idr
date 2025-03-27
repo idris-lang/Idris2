@@ -70,13 +70,13 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
 
          -- Go into new namespace, if there is one, for getters
          case newns of
-              Nothing => elabGetters tn conName params 0 [] [] conty
+              Nothing => elabGetters tn conName params 0 [] ScopeEmpty conty
               Just ns =>
                    do let cns = currentNS defs
                       let nns = nestedNS defs
                       extendNS (mkNamespace ns)
                       newns <- getNS
-                      elabGetters tn conName params 0 [] [] conty
+                      elabGetters tn conName params 0 [] ScopeEmpty conty
                       -- Record that the current namespace is allowed to look
                       -- at private names in the nested namespace
                       update Ctxt { currentNS := cns,
@@ -144,7 +144,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                     Core (List ImpParameter) -- New telescope of parameters, including missing bindings
     preElabAsData tn
         = do let fc = virtualiseFC fc
-             let dataTy = IBindHere fc (PI erased) !(bindTypeNames fc [] vars (mkDataTy fc params0))
+             let dataTy = IBindHere fc (PI erased) !(bindTypeNames fc [] (toList vars) (mkDataTy fc params0))
              defs <- get Ctxt
              -- Create a forward declaration if none exists
              when (isNothing !(lookupTyExact tn (gamma defs))) $ do
@@ -155,7 +155,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
              Just ty <- lookupTyExact tn (gamma defs)
                | Nothing => throw (InternalError "Missing data type \{show tn}, despite having just declared it!")
              log "declare.record" 20 "Obtained type: \{show ty}"
-             (_ ** (tyenv, ty)) <- dropLeadingPis vars ty []
+             (_ ** (tyenv, ty)) <- dropLeadingPis vars ty ScopeEmpty
              ty <- unelabNest (NoSugar True) !nestDrop tyenv ty
              log "declare.record.parameters" 30 "Unelaborated type: \{show ty}"
              params <- getParameters [<] ty
@@ -167,9 +167,9 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
         -- a LHS, or inside a `parameters` block) and so we need to start by dropping
         -- these local variables from the fully elaborated record's type
         -- We'll use the `env` thus obtained to unelab the remaining scope
-        dropLeadingPis : {vs : _} -> (vars : List Name) -> Term vs -> Env Term vs ->
+        dropLeadingPis : {vs : _} -> (vars : Scope) -> Term vs -> Env Term vs ->
                          Core (vars' ** (Env Term vars', Term vars'))
-        dropLeadingPis [] ty env
+        dropLeadingPis [<] ty env
           = do unless (null vars) $
                  logC "declare.record.parameters" 60 $ pure $ unlines
                    [ "We elaborated \{show tn} in a non-empty local context."
@@ -177,8 +177,8 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                    , "  Remaining type: \{show !(toFullNames ty)}"
                    ]
                pure (_ ** (env, ty))
-        dropLeadingPis (var :: vars) (Bind fc n b@(Pi _ _ _ _) ty) env
-          = dropLeadingPis vars ty (b :: env)
+        dropLeadingPis (vars :< var) (Bind fc n b@(Pi _ _ _ _) ty) env
+          = dropLeadingPis vars ty (env :< b)
         dropLeadingPis _ ty _ = throw (InternalError "Malformed record type \{show ty}")
 
         getParameters :
@@ -221,7 +221,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
         = do let fc = virtualiseFC fc
              let conty = mkTy (paramTelescope params) $
                          mkTy (map farg fields) (recTy tn params)
-             let boundNames = paramNames params ++ map fname fields ++ vars
+             let boundNames = paramNames params ++ map fname fields ++ (toList vars)
              let con = MkImpTy (virtualiseFC fc) (NoFC cname)
                        !(bindTypeNames fc [] boundNames conty)
              let dt = MkImpData fc tn Nothing opts [con]
@@ -255,20 +255,20 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
              then elabGetters tn con params
                               (if imp == Explicit && not (n `elem` vars)
                                   then S done else done)
-                              upds (b :: tyenv) sc
+                              upds (tyenv :< b) sc
              else
                 do let fldNameStr = nameRoot n
                    rfNameNS <- inCurrentNS (UN $ Field fldNameStr)
                    unNameNS <- inCurrentNS (UN $ Basic fldNameStr)
 
                    ty <- unelabNest (NoSugar True) !nestDrop tyenv ty_chk
-                   let ty' = substNames vars upds $ map rawName ty
+                   let ty' = substNames (toList vars) upds $ map rawName ty
                    log "declare.record.field" 5 $ "Field type: " ++ show ty'
                    let rname = MN "rec" 0
 
                    -- Claim the projection type
                    projTy <- bindTypeNames fc []
-                                 (map fst params ++ map fname fields ++ vars) $
+                                 (map fst params ++ map fname fields ++ toList vars) $
                                       mkTy (paramTelescope params) $
                                       IPi bfc top Explicit (Just rname) (recTy tn params) ty'
                    let fc' = virtualiseFC fc
@@ -345,7 +345,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                    elabGetters tn con params
                                (if imp == Explicit
                                    then S done else done)
-                               upds' (b :: tyenv) sc
+                               upds' (tyenv :< b) sc
 
     elabGetters tn con _ done upds _ _ = pure ()
 

@@ -42,13 +42,15 @@ import Data.Vect
 import Libraries.Data.SortedSet
 import Libraries.Data.SortedMap
 
+import Libraries.Data.SnocList.Extra
+
 ||| Maping from a pairing of closed terms together with
 ||| their size (for efficiency) to the number of
 ||| occurences in toplevel definitions and flag for
 ||| whether it was encountered in delayed subexpression.
 public export
 UsageMap : Type
-UsageMap = SortedMap (Integer, CExp []) (Name, Integer, Bool)
+UsageMap = SortedMap (Integer, ClosedCExp) (Name, Integer, Bool)
 
 ||| Number of appearances of a closed expression.
 |||
@@ -76,7 +78,7 @@ Show Count where
 ||| some delayed expression.
 public export
 ReplaceMap : Type
-ReplaceMap = SortedMap Name (CExp [], Count, Bool)
+ReplaceMap = SortedMap Name (ClosedCExp, Count, Bool)
 
 toReplaceMap : UsageMap -> ReplaceMap
 toReplaceMap = SortedMap.fromList
@@ -99,7 +101,7 @@ record St where
 -- returning a new machine generated name to be used
 -- if the expression should be lifted to the toplevel.
 -- Very small expressions are being ignored.
-store : Ref Sts St => Integer -> CExp [] -> Core (Maybe Name)
+store : Ref Sts St => Integer -> ClosedCExp -> Core (Maybe Name)
 store sz exp =
   if sz < 5
      then pure Nothing
@@ -118,13 +120,13 @@ store sz exp =
 --          Strengthening of Expressions
 --------------------------------------------------------------------------------
 
-dropVar :  (pre : List Name)
+dropVar :  (pre : Scope)
         -> (n : Nat)
-        -> (0 p : IsVar x n (pre ++ ns))
+        -> (0 p : IsVar x n (ns ++ pre))
         -> Maybe (IsVar x n pre)
-dropVar [] _ _        = Nothing
-dropVar (y :: xs) 0 First = Just First
-dropVar (y :: xs) (S k) (Later p) =
+dropVar [<] _ _        = Nothing
+dropVar (xs :< y) 0 First = Just First
+dropVar (xs :< y) (S k) (Later p) =
   case dropVar xs k p of
     Just p' => Just $ Later p'
     Nothing => Nothing
@@ -133,7 +135,7 @@ mutual
   -- tries to 'strengthen' an expression by removing
   -- a prefix of bound variables. typically, this is invoked
   -- with `{pre = []}`.
-  dropEnv : {pre : List Name} -> CExp (pre ++ ns) -> Maybe (CExp pre)
+  dropEnv : {pre : Scope} -> CExp (ns ++ pre) -> Maybe (CExp pre)
   dropEnv (CLocal {idx} fc p) = (\q => CLocal fc q) <$> dropVar pre idx p
   dropEnv (CRef fc x) = Just (CRef fc x)
   dropEnv (CLam fc x y) = CLam fc x <$> dropEnv y
@@ -161,14 +163,15 @@ mutual
   dropEnv (CErased fc) = Just $ CErased fc
   dropEnv (CCrash fc x) = Just $ CCrash fc x
 
-  dropConAlt :  {pre : List Name}
-             -> CConAlt (pre ++ ns)
+  dropConAlt :  {pre : Scope}
+             -> CConAlt (ns ++ pre)
              -> Maybe (CConAlt pre)
-  dropConAlt (MkConAlt x y tag args z) =
-    MkConAlt x y tag args . embed <$> dropEnv z
+  dropConAlt (MkConAlt x y tag args z)
+    = do z <- dropEnv {ns} (rewrite sym $ snocAppendFishAssociative ns pre args in z)
+         pure $ MkConAlt x y tag args z
 
-  dropConstAlt :  {pre : List Name}
-               -> CConstAlt (pre ++ ns)
+  dropConstAlt :  {pre : Scope}
+               -> CConstAlt (ns ++ pre)
                -> Maybe (CConstAlt pre)
   dropConstAlt (MkConstAlt x y) = MkConstAlt x <$> dropEnv y
 
@@ -204,7 +207,7 @@ mutual
 
   analyze exp = do
     (sze, exp') <- analyzeSubExp exp
-    case dropEnv {pre = []} exp' of
+    case dropEnv {pre = ScopeEmpty} exp' of
       Just e0 => do
         Just nm <- store sze e0
           | Nothing => pure (sze, exp')
@@ -474,12 +477,12 @@ replaceDef (n, fc, d@(MkError _))       = pure (n, fc, d)
 
 newToplevelDefs : ReplaceMap -> List (Name, FC, CDef)
 newToplevelDefs rm = mapMaybe toDef $ SortedMap.toList rm
-  where toDef : (Name,(CExp[],Count,Bool)) -> Maybe (Name, FC, CDef)
-        toDef (nm,(exp,Many,False)) = Just (nm, EmptyFC, MkFun [] exp)
-        toDef (nm,(exp,Many,True)) = Just (nm, EmptyFC, MkFun [] (CDelay EmptyFC LLazy exp))
+  where toDef : (Name,(ClosedCExp,Count,Bool)) -> Maybe (Name, FC, CDef)
+        toDef (nm,(exp,Many,False)) = Just (nm, EmptyFC, MkFun ScopeEmpty exp)
+        toDef (nm,(exp,Many,True)) = Just (nm, EmptyFC, MkFun ScopeEmpty (CDelay EmptyFC LLazy exp))
         toDef _               = Nothing
 
-undefinedCount : (Name, (CExp [], Count)) -> Bool
+undefinedCount : (Name, (ClosedCExp, Count)) -> Bool
 undefinedCount (_, _, Once) = False
 undefinedCount (_, _, Many) = False
 undefinedCount (_, _, C x)  = True
