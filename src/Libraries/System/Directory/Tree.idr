@@ -214,3 +214,41 @@ copyDir src target = runEitherT $ do
           MkEitherT $ createDir $ show $ targetSubDir
           copyDirContents !(liftIO subDirTree) targetSubDir
         ) subTrees
+
+covering
+removeDirContents : HasIO io => (target : Path) -> Directory -> io (Either FileError ())
+removeDirContents target dir = do
+  Right ent <- nextDirEntry dir
+    | Left err => pure (Left err)
+  case ent of
+    Nothing => pure (Right ())
+    Just ent => do
+      let entPath = target /> ent
+      Right dirFromEnt <- openDir (show entPath)
+        | Left (GenericFileError 20) => do -- strerror 20 == "Not a directory"
+          Right ok <- removeFile (show entPath)
+            | Left fileRemoveError => pure (Left fileRemoveError)
+          Right ok <- removeDirContents target dir
+            | Left err => pure (Left err)
+          pure (Right ())
+        | Left err => pure (Left err)
+      Right ok <- removeDirContents entPath dirFromEnt
+        | Left err => pure (Left err)
+      closeDir dirFromEnt
+      removeDir (show entPath)
+      removeDirContents target dirFromEnt
+
+||| Works like `fs.rmdir({ recursive: true, force: true })` from node
+||| i.e. exceptions will be ignored if the folder does not exist.
+export
+covering
+removeDirRecursive : HasIO io => (target : Path) -> io (Either FileError ())
+removeDirRecursive dirName = do
+  Right dir <- openDir (show dirName)
+    | Left FileNotFound => pure (Right ()) -- folder does not exist - ignore
+    | Left err => pure (Left err)
+  Right ok <- removeDirContents dirName dir
+    | Left err => pure (Left err)
+  closeDir dir
+  removeDir (show dirName)
+  pure (Right ())
