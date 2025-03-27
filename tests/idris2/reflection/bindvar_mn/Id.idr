@@ -8,13 +8,9 @@ foo : a -> a
 
 definition : Decl
 definition =
-  let fooName = UN $ Basic "foo"
-      argName = MN "x" 42
-   in IDef EmptyFC fooName
-        [ PatClause EmptyFC
-                    (IApp EmptyFC (IVar EmptyFC fooName)
-                                  (IBindVar EmptyFC argName))
-                    (IVar EmptyFC argName)]
+  let argName = MN "x" 42
+   in IDef EmptyFC `{ foo }
+        [ PatClause EmptyFC `( foo ~(IBindVar EmptyFC argName) ) (IVar EmptyFC argName)]
 
 %runElab declare (pure definition)
 
