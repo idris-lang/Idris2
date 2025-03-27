@@ -117,6 +117,9 @@ insertGraph f g ch s
     let s_fg = lookupSet g s_f in
     insert f (insert g (insert ch s_fg) s_f) s
 
+Cast WorkList SCSet where
+  cast = foldl (\s, (f, g, ch) => insertGraph f g ch s) empty
+
 ------------------------------------------------------------------------
 -- Actual size-change computations
 
@@ -148,48 +151,29 @@ preCompose f ch1 s work _ h ch2
      else
        insert (f, h, ch) work
 
-||| Precompose a given Arg change & insert it in the worklist (unless it's already known)
-postCompose : (h : Name) -> Graph {- g h -} -> -- /!\ g bound later
-              SCSet ->
-              WorkList ->
-              (f : Name) -> (g : Name) -> Graph {- f g -} ->
-              WorkList
-postCompose h ch2 s work f _ ch1
-   = let ch : Graph {- f h -} = composeGraph ch1 ch2 in
-     if contains ch (lookupGraphs f h s) then
-       work
-     else
-       insert (f, h, ch) work
-
 mutual
   addGraph : (f, g : Name) -> Graph {- f g -} ->
              WorkList ->
-             SCSet ->
+             (s, h : SCSet) ->
              SCSet
-  addGraph f g ch work s_in
-      = let s = insertGraph f g ch s_in
+  addGraph f g ch work s h
+      = let s = insertGraph f g ch s
             -- Now that (ch : Graph f g) has been added, we need to update
             -- the graph with the paths it has extended i.e.
-
             -- the ones start in g
-            after = selectDom g s
-            work_pre = foldl (preCompose f ch s) work after
-
-            -- and the ones ending in f
-            before = selectCod f s
-            work_post = foldl (postCompose g ch s) work_pre before in
-
+            after = selectDom g h
+            work = foldl (preCompose f ch s) work after in
         -- And then we need to close over all of these new paths too
-        transitiveClosure work_post s
+        transitiveClosure work s h
 
   transitiveClosure : WorkList ->
-                      SCSet ->
+                      (s, h : SCSet) ->
                       SCSet
-  transitiveClosure work s
+  transitiveClosure work s h
       = case pop work of
              Nothing => s
              Just ((f, g, ch), work) =>
-               addGraph f g ch work s
+               addGraph f g ch work s h
 
 -- find (potential) chain of calls to given function (inclusive)
 prefixCallSeq : NameMap (FC, Name) -> (g : Name) -> {- Exists \ f => -} CallSeq {- f g -}
@@ -311,7 +295,7 @@ calcTerminating loc n
            | bad => pure bad
          Right (work, pred) <- initWork defs def
            | Left bad => pure bad
-         let s = transitiveClosure work initSCSet
+         let s = transitiveClosure work initSCSet $ cast work
          let Nothing = findNonTerminatingLoop s
            | Just (g, loop) =>
                ifThenElse (def.fullname == g)
