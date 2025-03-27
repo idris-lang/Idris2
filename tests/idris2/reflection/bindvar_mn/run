@@ -1,3 +1,4 @@
 . ../../../testutils.sh
 
-check BindMN.idr
+check Id.idr
+check Plus.idr
