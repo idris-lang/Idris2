@@ -7,9 +7,13 @@ import Core.Env
 import Core.Normalise
 import Core.Options
 import Core.Value
+import Core.Name.CompatibleVars
+
+import Libraries.Data.List.SizeOf
 
 import Libraries.Data.IntMap
 import Libraries.Data.SparseMatrix
+import Libraries.Data.SnocList.SizeOf
 
 import Data.String
 
@@ -168,7 +172,7 @@ mutual
   sizeCompare fuel s@(Meta n _ i args) t = do
     Just gdef <- lookupCtxtExact (Resolved i) (gamma defs) | _ => pure Unknown
     let (PMDef _ [] (STerm _ tm) _ _) = definition gdef | _ => pure Unknown
-    tm <- substMeta (embed tm) args zero []
+    tm <- substMeta (embed tm) args zero ScopeEmpty
     sizeCompare fuel tm t
     where
       substMeta : {0 drop, vs : _} ->

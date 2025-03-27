@@ -13,7 +13,7 @@ unload [] fn = fn
 unload ((fc, arg) :: args) fn = unload args (App fc fn arg)
 
 -- List of matches on LHS
-data MatchVars : List Name -> List Name -> Type where
+data MatchVars : Scope -> Scope -> Type where
      None : MatchVars lhsvars vs
      Match : (idx : Nat) -> (0 p : IsVar n idx lhsvars) -> Term vs ->
              MatchVars lhsvars vs -> MatchVars lhsvars vs

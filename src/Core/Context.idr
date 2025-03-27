@@ -324,7 +324,7 @@ commitCtxt ctxt
 ||| @vis  Visibility, defaulting to private
 ||| @def  actual definition
 export
-newDef : (fc : FC) -> (n : Name) -> (rig : RigCount) -> (vars : List Name) ->
+newDef : (fc : FC) -> (n : Name) -> (rig : RigCount) -> (vars : Scope) ->
          (ty : ClosedTerm) -> (vis : WithDefault Visibility Private) -> (def : Def) -> GlobalDef
 newDef fc n rig vars ty vis def
     = MkGlobalDef
@@ -557,11 +557,11 @@ mutual
 
 export
 HasNames (Env Term vars) where
-  full gam [] = pure []
+  full gam [] = pure ScopeEmpty
   full gam (b :: bs)
       = pure $ !(traverse (full gam) b) :: !(full gam bs)
 
-  resolved gam [] = pure []
+  resolved gam [] = pure ScopeEmpty
   resolved gam (b :: bs)
       = pure $ !(traverse (resolved gam) b) :: !(resolved gam bs)
 
@@ -1354,7 +1354,7 @@ addBuiltin n ty tot op
          , specArgs = []
          , inferrable = []
          , multiplicity = top
-         , localVars = []
+         , localVars = ScopeEmpty
          , visibility = specified Public
          , totality = tot
          , isEscapeHatch = False

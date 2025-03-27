@@ -181,7 +181,7 @@ swapIsVarH (Later p) = swapP p -- it'd be nice to do this all at the top
     swapP First = MkVar First
     swapP (Later x) = MkVar (Later (Later x))
 
-swapIsVar : (vs : List Name) ->
+swapIsVar : (vs : Scope) ->
             {idx : Nat} -> (0 p : IsVar nm idx (vs ++ x :: y :: xs)) ->
             Var (vs ++ y :: x :: xs)
 swapIsVar [] prf = swapIsVarH prf
@@ -189,7 +189,7 @@ swapIsVar (x :: xs) First = MkVar First
 swapIsVar (x :: xs) (Later p)
     = let MkVar p' = swapIsVar xs p in MkVar (Later p')
 
-swapVars : {vs : List Name} ->
+swapVars : {vs : Scope} ->
            Term (vs ++ x :: y :: ys) -> Term (vs ++ y :: x :: ys)
 swapVars (Local fc x idx p)
     = let MkVar p' = swapIsVar _ p in Local fc x _ p'
@@ -218,7 +218,7 @@ push ofc n b tm@(Bind fc (PV x i) (Pi fc' c Implicit ty) sc) -- only push past '
            Nothing => -- needs explicit pi, do nothing
                       Bind ofc n b tm
            Just ty' => Bind fc (PV x i) (Pi fc' c Implicit ty')
-                            (push ofc n (map weaken b) (swapVars {vs = []} sc))
+                            (push ofc n (map weaken b) (swapVars {vs = ScopeEmpty} sc))
 push ofc n b tm = Bind ofc n b tm
 
 -- Move any implicit arguments as far to the left as possible - this helps

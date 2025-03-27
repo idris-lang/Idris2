@@ -6,11 +6,16 @@ import Core.FC
 
 import Core.Name
 import Core.Name.Scoped
+import Core.Name.CompatibleVars
 import Core.TT.Binder
 import Core.TT.Primitive
 import Core.TT.Var
 
 import Data.List
+import Data.SnocList
+
+import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
 
 %default total
 
@@ -474,15 +479,15 @@ Eq (Term vars) where
 
 mutual
 
-  resolveNamesBinder : (vars : List Name) -> Binder (Term vars) -> Binder (Term vars)
+  resolveNamesBinder : (vars : Scope) -> Binder (Term vars) -> Binder (Term vars)
   resolveNamesBinder vars b = assert_total $ map (resolveNames vars) b
 
-  resolveNamesTerms : (vars : List Name) -> List (Term vars) -> List (Term vars)
+  resolveNamesTerms : (vars : Scope) -> List (Term vars) -> List (Term vars)
   resolveNamesTerms vars ts = assert_total $ map (resolveNames vars) ts
 
   -- Replace any Ref Bound in a type with appropriate local
   export
-  resolveNames : (vars : List Name) -> Term vars -> Term vars
+  resolveNames : (vars : Scope) -> Term vars -> Term vars
   resolveNames vars (Ref fc Bound name)
       = case isNVar name vars of
              Just (MkNVar prf) => Local fc (Just False) _ prf

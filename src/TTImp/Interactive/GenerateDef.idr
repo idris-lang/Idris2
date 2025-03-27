@@ -63,7 +63,7 @@ expandClause : {auto c : Ref Ctxt Defs} ->
                Core (Search (List ImpClause))
 expandClause loc opts n c
     = do c <- uniqueRHS c
-         Right clause <- checkClause linear Private PartialOK False n [] (MkNested []) [] c
+         Right clause <- checkClause linear Private PartialOK False n [] (MkNested []) ScopeEmpty c
             | Left err => noResult -- TODO: impossible clause, do something
                                    -- appropriate
 
@@ -158,7 +158,7 @@ generateSplits loc opts fn (ImpossibleClause fc lhs) = pure []
 generateSplits loc opts fn (WithClause fc lhs rig wval prf flags cs) = pure []
 generateSplits loc opts fn (PatClause fc lhs rhs)
     = do (lhstm, _) <-
-                elabTerm fn (InLHS linear) [] (MkNested []) []
+                elabTerm fn (InLHS linear) [] (MkNested []) ScopeEmpty
                          (IBindHere loc PATTERN lhs) Nothing
          let splitnames =
                  if ltor opts then splittableNames lhs
@@ -228,7 +228,7 @@ makeDefFromType loc opts n envlen ty
          (do defs <- branch
              meta <- get MD
              ust <- get UST
-             argns <- getEnvArgNames defs envlen !(nf defs [] ty)
+             argns <- getEnvArgNames defs envlen !(nf defs ScopeEmpty ty)
              -- Need to add implicit patterns for the outer environment.
              -- We won't try splitting on these
              let pre_env = replicate envlen (Implicit loc True)
