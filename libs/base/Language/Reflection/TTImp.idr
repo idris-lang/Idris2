@@ -57,7 +57,7 @@ mutual
        -- the given binder
        IBindHere : FC -> BindMode -> TTImp -> TTImp
        -- A name which should be implicitly bound
-       IBindVar : FC -> String -> TTImp
+       IBindVar : FC -> Name -> TTImp
        -- An 'as' pattern, valid on the LHS of a clause only
        IAs : FC -> (nameFC : FC) -> UseSide -> Name -> TTImp -> TTImp
        -- A 'dot' pattern, i.e. one which must also have the given value
@@ -676,7 +676,7 @@ mutual
     showPrec d (IRewrite fc s t)
       = showParens (d > Open) "rewrite \{show s} in \{show t}"
     showPrec d (IBindHere fc bm s) = showPrec d s
-    showPrec d (IBindVar fc x) = x
+    showPrec d (IBindVar fc x) = showPrec d x
     showPrec d (IAs fc nameFC side nm s)
       = "\{show nm}@\{showPrec App s}"
     showPrec d (IMustUnify fc dr s) = ".(\{show s})"

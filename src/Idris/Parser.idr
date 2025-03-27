@@ -76,7 +76,7 @@ decoratedDataConstructorName : OriginDesc -> Rule Name
 decoratedDataConstructorName fname = decorate fname Data dataConstructorName
 
 decoratedSimpleBinderUName : OriginDesc -> Rule Name
-decoratedSimpleBinderUName fname = decorate fname Bound (UN . Basic <$> unqualifiedName)
+decoratedSimpleBinderUName fname = decorate fname Bound userName
 
 decoratedSimpleNamedArg : OriginDesc -> Rule String
 decoratedSimpleNamedArg fname
@@ -1627,10 +1627,7 @@ parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
            commit
            decoratedSymbol fname "("
            us <- sepBy (decoratedSymbol fname ",")
-                       (do n <- optional $ do
-                                      x <- unqualifiedName
-                                      decoratedSymbol fname ":"
-                                      pure (UN $ Basic x)
+                       (do n <- optional $ userName <* decoratedSymbol fname ":"
                            ty <- typeExpr pdef fname indents
                            pure (n, ty))
            decoratedSymbol fname ")"
