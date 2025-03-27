@@ -201,6 +201,23 @@ record Options where
   -- fullName and definition for %foreign_impl
   foreignImpl : List (Name, String)
 
+public export
+Show Options where
+  show (MkOptions dirs printing session elabDirectives pairnames rewritenames primnames extensions additionalCGs hashFn foreignImpl) =
+    "Options {" ++
+    "\n,  dirs: TODO" ++ -- show dirs ++
+    "\n,  printing: TODO" ++ -- show printing ++
+    "\n,  session: TODO" ++ -- show session ++
+    "\n,  elabDirectives: TODO" ++ -- show elabDirectives ++
+    "\n,  pairnames: TODO" ++ -- show pairnames ++
+    "\n,  rewritenames: TODO" ++ -- show rewritenames ++
+    "\n,  primnames: TODO" ++ -- show primnames ++
+    "\n,  extensions: " ++ show extensions ++
+    "\n,  additionalCGs: " ++ show additionalCGs ++
+    "\n,  hashFn: " ++ show hashFn ++
+    "\n,  foreignImpl: " ++ show foreignImpl ++
+    "\n}"
+
 export
 availableCGs : Options -> List (String, CG)
 availableCGs o

@@ -12,6 +12,11 @@ record NoMangleMap where
     constructor MkNMMap
     map : NameMap String
 
+public export
+Show NoMangleMap where
+  show (MkNMMap map) =
+    "NoMangleMap " ++ show (Libraries.Data.NameMap.toList map)
+
 ||| Get a map of all %export names
 ||| Errors for all invalid names, so the backend can skip checking
 ||| or adding escape characters.
