@@ -106,7 +106,7 @@ data Term : Scoped where
      Meta : FC -> Name -> Int -> List (Term vars) -> Term vars
      Bind : FC -> (x : Name) ->
             (b : Binder (Term vars)) ->
-            (scope : Term (x :: vars)) -> Term vars
+            (scope : Term (Scope.bind vars x)) -> Term vars
      App : FC -> (fn : Term vars) -> (arg : Term vars) -> Term vars
      -- as patterns; since we check LHS patterns as terms before turning
      -- them into patterns, this helps us get it right. When normalising,

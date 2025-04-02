@@ -57,7 +57,12 @@ localHelper {vars} nest env nestdecls_in func
          let defNames = definedInBlock emptyNS nestdeclsMult
          names' <- traverse (applyEnv f) defNames
          let nest' = { names $= (names' ++) } nest
-         let env' = dropLinear env
+         -- TODO is this comment still up-to-date?
+         -- For the local definitions, don't allow access to linear things
+         -- unless they're explicitly passed.
+         -- This is because, at the moment, we don't have any mechanism of
+         -- ensuring the nested definition is used exactly once
+         let env' = eraseLinear env
          -- We don't want to keep rechecking delayed elaborators in the
          -- locals  block, because they're not going to make progress until
          -- we come out again, so save them
@@ -78,17 +83,6 @@ localHelper {vars} nest env nestdecls_in func
          update Ctxt { localHints := oldhints }
          pure res
   where
-    -- For the local definitions, don't allow access to linear things
-    -- unless they're explicitly passed.
-    -- This is because, at the moment, we don't have any mechanism of
-    -- ensuring the nested definition is used exactly once
-    dropLinear : Env Term vs -> Env Term vs
-    dropLinear [] = ScopeEmpty
-    dropLinear (b :: bs)
-        = if isLinear (multiplicity b)
-             then setMultiplicity b erased :: dropLinear bs
-             else b :: dropLinear bs
-
     applyEnv : Int -> Name ->
                Core (Name, (Maybe Name, List (Var vars), FC -> NameType -> Term vars))
     applyEnv outer inner

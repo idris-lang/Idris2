@@ -32,7 +32,7 @@ getNames defs (NApp _ hd args)
     = do eargs <- traverse (evalClosure defs . snd) args
          pure $ nheadNames hd `union` concat !(traverse (getNames defs) eargs)
   where
-    nheadNames : NHead ScopeEmpty -> SortedSet Name
+    nheadNames : NHead Scope.empty -> SortedSet Name
     nheadNames (NRef Bound n) = singleton n
     nheadNames _ = empty
 getNames defs (NDCon _ _ _ _ args)
@@ -88,7 +88,7 @@ findFieldsAndTypeArgs : {auto c : Ref Ctxt Defs} ->
                         Core $ Maybe (List (String, Maybe Name, Maybe Name), SortedSet Name)
 findFieldsAndTypeArgs defs con
     = case !(lookupTyExact con (gamma defs)) of
-           Just t => pure (Just !(getExpNames empty [] !(nf defs ScopeEmpty t)))
+           Just t => pure (Just !(getExpNames empty [] !(nf defs Env.empty t)))
            _ => pure Nothing
   where
     getExpNames : SortedSet Name ->
@@ -101,8 +101,8 @@ findFieldsAndTypeArgs defs con
                             _ => Just x
              nfty <- evalClosure defs ty
              let names = !(getNames defs nfty) `union` names
-             let expNames = (nameRoot x, imp, getRecordType ScopeEmpty nfty) :: expNames
-             getExpNames names expNames !(sc defs (toClosure defaultOpts ScopeEmpty (Ref fc Bound x)))
+             let expNames = (nameRoot x, imp, getRecordType Env.empty nfty) :: expNames
+             getExpNames names expNames !(sc defs (toClosure defaultOpts Env.empty (Ref fc Bound x)))
     getExpNames names expNames nfty = pure (reverse expNames, (!(getNames defs nfty) `union` names))
 
 genFieldName : {auto u : Ref UST UState} ->

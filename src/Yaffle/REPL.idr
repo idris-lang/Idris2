@@ -42,10 +42,10 @@ process : {auto c : Ref Ctxt Defs} ->
           {auto o : Ref ROpts REPLOpts} ->
           ImpREPL -> Core Bool
 process (Eval ttimp)
-    = do (tm, _) <- elabTerm 0 InExpr [] (MkNested []) ScopeEmpty ttimp Nothing
+    = do (tm, _) <- elabTerm 0 InExpr [] (MkNested []) Env.empty ttimp Nothing
          defs <- get Ctxt
-         tmnf <- normalise defs ScopeEmpty tm
-         coreLift_ (printLn !(unelab ScopeEmpty tmnf))
+         tmnf <- normalise defs Env.empty tm
+         coreLift_ (printLn !(unelab Env.empty tmnf))
          pure True
 process (Check (IVar _ n))
     = do defs <- get Ctxt
@@ -56,23 +56,23 @@ process (Check (IVar _ n))
     printName : (Name, Int, ClosedTerm) -> Core ()
     printName (n, _, tyh)
         = do defs <- get Ctxt
-             ty <- normaliseHoles defs ScopeEmpty tyh
+             ty <- normaliseHoles defs Env.empty tyh
              coreLift_ $ putStrLn $ show n ++ " : " ++
-                                    show !(unelab ScopeEmpty ty)
+                                    show !(unelab Env.empty ty)
 process (Check ttimp)
-    = do (tm, gty) <- elabTerm 0 InExpr [] (MkNested []) ScopeEmpty ttimp Nothing
+    = do (tm, gty) <- elabTerm 0 InExpr [] (MkNested []) Env.empty ttimp Nothing
          defs <- get Ctxt
          tyh <- getTerm gty
-         ty <- normaliseHoles defs ScopeEmpty tyh
-         coreLift_ (printLn !(unelab ScopeEmpty ty))
+         ty <- normaliseHoles defs Env.empty tyh
+         coreLift_ (printLn !(unelab Env.empty ty))
          pure True
 process (ProofSearch n_in)
     = do defs <- get Ctxt
          [(n, i, ty)] <- lookupTyName n_in (gamma defs)
               | ns => ambiguousName (justFC defaultFC) n_in (map fst ns)
-         def <- search (justFC defaultFC) top False 1000 n ty ScopeEmpty
+         def <- search (justFC defaultFC) top False 1000 n ty Env.empty
          defs <- get Ctxt
-         defnf <- normaliseHoles defs ScopeEmpty def
+         defnf <- normaliseHoles defs Env.empty def
          coreLift_ (printLn !(toFullNames defnf))
          pure True
 process (ExprSearch n_in)

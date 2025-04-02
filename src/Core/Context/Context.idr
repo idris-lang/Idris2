@@ -74,7 +74,7 @@ data Def : Type where
             (args : Scope) ->
             (treeCT : CaseTree args) ->
             (treeRT : CaseTree args) ->
-            (pats : List (vs ** (Env Term vs, Term vs, Term vs))) ->
+            (pats : List (vs : Scope ** (Env Term vs, Term vs, Term vs))) ->
                 -- original checked patterns (LHS/RHS) with the names in
                 -- the environment. Used for display purposes, for helping
                 -- find size changes in termination checking, and for
@@ -101,7 +101,7 @@ data Def : Type where
            (parampos : List Nat) -> -- parameters
            (detpos : List Nat) -> -- determining arguments
            (flags : TypeFlags) -> -- should 'auto' implicits check
-           (mutwith : List Name) ->
+           (mutwith : List Name) -> -- TODO morally `Set Name`
            (datacons : Maybe (List Name)) ->
            (detagabbleBy : Maybe (List Nat)) ->
                     -- argument positions which can be used for

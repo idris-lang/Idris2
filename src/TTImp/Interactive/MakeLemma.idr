@@ -92,5 +92,5 @@ makeLemma : {auto c : Ref Ctxt Defs} ->
             Core (RawImp, RawImp)
 makeLemma loc n nlocs ty
     = do defs <- get Ctxt
-         (args, ret) <- getArgs ScopeEmpty nlocs !(normalise defs ScopeEmpty ty)
+         (args, ret) <- getArgs Env.empty nlocs !(normalise defs Env.empty ty)
          pure (mkType loc args ret, mkApp loc n args)

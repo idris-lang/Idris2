@@ -218,7 +218,7 @@ push ofc n b tm@(Bind fc (PV x i) (Pi fc' c Implicit ty) sc) -- only push past '
            Nothing => -- needs explicit pi, do nothing
                       Bind ofc n b tm
            Just ty' => Bind fc (PV x i) (Pi fc' c Implicit ty')
-                            (push ofc n (map weaken b) (swapVars {vs = ScopeEmpty} sc))
+                            (push ofc n (map weaken b) (swapVars {vs = Scope.empty} sc))
 push ofc n b tm = Bind ofc n b tm
 
 -- Move any implicit arguments as far to the left as possible - this helps

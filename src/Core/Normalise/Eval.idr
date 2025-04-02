@@ -10,6 +10,7 @@ import Core.TT
 import Core.Value
 
 import Data.List
+import Data.List.Quantifiers
 import Data.SnocList
 import Data.Maybe
 import Data.Nat
@@ -62,7 +63,7 @@ evalArg defs c = evalClosure defs c
 
 export
 toClosure : EvalOpts -> Env Term outer -> Term outer -> Closure outer
-toClosure opts env tm = MkClosure opts ScopeEmpty env tm
+toClosure opts env tm = MkClosure opts LocalEnv.empty env tm
 
 updateLimit : NameType -> Name -> EvalOpts -> Core (Maybe EvalOpts)
 updateLimit Func n opts
@@ -91,7 +92,7 @@ record TermWithEnv (free : Scope) where
     constructor MkTermEnv
     { varsEnv : Scope }
     locEnv : LocalEnv free varsEnv
-    term : Term $ varsEnv ++ free
+    term : Term $ Scope.addInner free varsEnv
 
 parameters (defs : Defs) (topopts : EvalOpts)
   mutual
@@ -109,8 +110,8 @@ parameters (defs : Defs) (topopts : EvalOpts)
         -- Yes, it's just a map, but specialising it by hand since we
         -- use this a *lot* and it saves the run time overhead of making
         -- a closure and calling APPLY.
-        closeArgs : List (Term (vars ++ free)) -> Scopeable (Closure free)
-        closeArgs [] = ScopeEmpty
+        closeArgs : List (Term (Scope.addInner free vars)) -> List (Closure free)
+        closeArgs [] = []
         closeArgs (t :: ts) = MkClosure topopts locs env t :: closeArgs ts
     eval env locs (Bind fc x (Lam _ r _ ty) scope) (thunk :: stk)
         = eval env (snd thunk :: locs) scope stk
@@ -176,7 +177,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
         = evalRef env False fc nt fn (args ++ stk)
                   (NApp fc (NRef nt fn) (args ++ stk))
     applyToStack env (NApp fc (NLocal mrig idx p) args) stk
-        = evalLocal env fc mrig _ p (args ++ stk) ScopeEmpty
+        = evalLocal env fc mrig _ p (args ++ stk) LocalEnv.empty
     applyToStack env (NApp fc (NMeta n i args) args') stk
         = evalMeta env fc n i args (args' ++ stk)
     applyToStack env (NDCon fc n t a args) stk
@@ -233,7 +234,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
              && fromMaybe True mrig
              then
                case getBinder prf env of
-                    Let _ _ val _ => eval env ScopeEmpty val stk
+                    Let _ _ val _ => eval env LocalEnv.empty val stk
                     _ => pure $ NApp fc (NLocal mrig idx prf) stk
              else pure $ NApp fc (NLocal mrig idx prf) stk
     evalLocal env fc mrig Z First stk (x :: locs)
@@ -255,10 +256,10 @@ parameters (defs : Defs) (topopts : EvalOpts)
     evalMeta : {auto c : Ref Ctxt Defs} ->
                {free : _} ->
                Env Term free ->
-               FC -> Name -> Int -> Scopeable (Closure free) ->
+               FC -> Name -> Int -> List (Closure free) ->
                Stack free -> Core (NF free)
     evalMeta env fc nm i args stk
-        = let args' = if isNil stk then map (EmptyFC,) (toList args)
+        = let args' = if isNil stk then map (EmptyFC,) args
                          else map (EmptyFC,) args ++ stk
                         in
               evalRef env True fc Func (Resolved i) args'
@@ -317,10 +318,11 @@ parameters (defs : Defs) (topopts : EvalOpts)
                    pure nf
                 else pure def
 
-    getCaseBound : Scopeable (Closure free) ->
+    -- TODO note the list of closures is stored RTL
+    getCaseBound : List (Closure free) ->
                    (args : Scope) ->
                    LocalEnv free more ->
-                   Maybe (LocalEnv free (args ++ more))
+                   Maybe (LocalEnv free (Scope.addInner more args))
     getCaseBound []            []        loc = Just loc
     getCaseBound []            (_ :: _)  loc = Nothing -- mismatched arg length
     getCaseBound (arg :: args) []        loc = Nothing -- mismatched arg length
@@ -333,8 +335,8 @@ parameters (defs : Defs) (topopts : EvalOpts)
                  LocalEnv free more -> EvalOpts -> FC ->
                  Stack free ->
                  (args : List Name) ->
-                 Scopeable (Closure free) ->
-                 CaseTree (args ++ more) ->
+                 List (Closure free) ->
+                 CaseTree (Scope.addInner more args) ->
                  Core (CaseResult (TermWithEnv free))
     evalConAlt env loc opts fc stk args args' sc
          = do let Just bound = getCaseBound args' args loc
@@ -459,10 +461,10 @@ parameters (defs : Defs) (topopts : EvalOpts)
            = rewrite sym (plusSuccRightSucc got k) in
                      takeStk k stk (snd arg :: acc)
 
-    argsFromStack : (args : Scope) ->
+    argsFromStack : (args : List Name) ->
                     Stack free ->
                     Maybe (LocalEnv free args, Stack free)
-    argsFromStack [] stk = Just (ScopeEmpty, stk)
+    argsFromStack [] stk = Just ([], stk)
     argsFromStack (n :: ns) [] = Nothing
     argsFromStack (n :: ns) (arg :: args)
          = do (loc', stk') <- argsFromStack ns args
@@ -570,13 +572,13 @@ export
 nf : {auto c : Ref Ctxt Defs} ->
      {vars : _} ->
      Defs -> Env Term vars -> Term vars -> Core (NF vars)
-nf defs env tm = eval defs defaultOpts env ScopeEmpty tm []
+nf defs env tm = eval defs defaultOpts env LocalEnv.empty tm []
 
 export
 nfOpts : {auto c : Ref Ctxt Defs} ->
          {vars : _} ->
          EvalOpts -> Defs -> Env Term vars -> Term vars -> Core (NF vars)
-nfOpts opts defs env tm = eval defs opts env ScopeEmpty tm []
+nfOpts opts defs env tm = eval defs opts env LocalEnv.empty tm []
 
 export
 gnf : {vars : _} ->

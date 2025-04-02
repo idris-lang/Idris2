@@ -28,6 +28,7 @@ import Libraries.Data.NameMap
 
 %default covering
 
+-- TODO move out of file, maybe make `show` instance for `FC` platform-independent
 replaceSep : String -> String
 replaceSep = pack . map toForward . unpack
   where
@@ -140,7 +141,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
          -- alias for something
          syn <- get Syn
          defs <- get Ctxt
-         let varsList = toList vars
+         let varsList = toList vars -- TODO change list in findBindableNames?
          inames <- lookupCtxtName iname (gamma defs)
          let [cndata] = concatMap (\n => lookupName n (ifaces syn))
                                   (map fst inames)
@@ -203,10 +204,10 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
                                       (IBindHere vfc (PI erased) impTy)
                                       (Just (gType vfc u))
                    let fullty = abstractFullEnvType vfc env ty
-                   ok <- convert defs ScopeEmpty fullty (type gdef)
-                   unless ok $ do logTermNF "elab.implementation" 1 "Previous" ScopeEmpty (type gdef)
-                                  logTermNF "elab.implementation" 1 "Now" ScopeEmpty fullty
-                                  throw (CantConvert (getFC impTy) (gamma defs) ScopeEmpty fullty (type gdef))
+                   ok <- convert defs Env.empty fullty (type gdef)
+                   unless ok $ do logTermNF "elab.implementation" 1 "Previous" Env.empty (type gdef)
+                                  logTermNF "elab.implementation" 1 "Now" Env.empty fullty
+                                  throw (CantConvert (getFC impTy) (gamma defs) Env.empty fullty (type gdef))
 
          -- If the body is empty, we're done for now (just declaring that
          -- the implementation exists and define it later)
@@ -215,7 +216,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
                defs <- get Ctxt
                Just impTyc <- lookupTyExact impName (gamma defs)
                     | Nothing => throw (InternalError ("Can't happen, can't find type of " ++ show impName))
-               methImps <- getMethImps ScopeEmpty impTyc
+               methImps <- getMethImps Env.empty impTyc
                log "elab.implementation" 3 $ "Bind implicits to each method: " ++ show methImps
 
                -- 1.5. Lookup default definitions and add them to the body
@@ -255,7 +256,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
                -- RHS is the constructor applied to a search for the necessary
                -- parent constraints, then the method implementations
                defs <- get Ctxt
-               let fldTys = getFieldArgs !(normaliseHoles defs ScopeEmpty conty)
+               let fldTys = getFieldArgs !(normaliseHoles defs Env.empty conty)
                log "elab.implementation" 5 $ "Field types " ++ show fldTys
                let irhs = apply (autoImpsApply (IVar vfc con) $ map (const (ISearch vfc 500)) (parents cdata))
                                   (map (mkMethField methImps fldTys) fns)

@@ -69,8 +69,8 @@ normaliseHoleTypes
   where
     updateType : Defs -> Int -> GlobalDef -> Core ()
     updateType defs i def
-        = do ty' <- catch (tryNormaliseSizeLimit defs 10 ScopeEmpty (type def))
-                          (\err => normaliseHoles defs ScopeEmpty (type def))
+        = do ty' <- catch (tryNormaliseSizeLimit defs 10 Env.empty (type def))
+                          (\err => normaliseHoles defs Env.empty (type def))
              ignore $ addDef (Resolved i) ({ type := ty' } def)
 
     normaliseH : Defs -> Int -> Core ()

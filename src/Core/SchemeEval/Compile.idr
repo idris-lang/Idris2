@@ -20,6 +20,7 @@ import Core.SchemeEval.ToScheme
 import Core.TT
 
 import Data.List
+import Data.List.Quantifiers
 import Data.SnocList
 
 import Libraries.Utils.Scheme
@@ -79,13 +80,13 @@ getName (Bound x) = x
 getName (Free x) = x
 
 public export
-data SchVars : Scoped where
-     Nil : SchVars []
-     (::) : SVar -> SchVars ns -> SchVars (n :: ns)
+SchVars : Scoped
+SchVars = All (\_ => SVar)
 
 Show (SchVars ns) where
   show xs = show (toList xs)
     where
+      -- TODO move to Data.List.Quantifiers
       toList : forall ns . SchVars ns -> List String
       toList [] = []
       toList (Bound x :: xs) = x :: toList xs
@@ -521,7 +522,7 @@ compileBody _ n (DCon tag arity newtypeArg)
          let body
                = Vector (cast tag)
                         (toScheme n :: toScheme emptyFC ::
-                             map (Var . schVarName) (toList args))
+                             map (Var . schVarName) args)
          pure (bindArgs n argvs [] body)
   where
     mkArgNs : Int -> Nat -> List Name
@@ -538,7 +539,7 @@ compileBody _ n (TCon tag arity parampos detpos flags mutwith datacons detagabbl
                         (IntegerVal (cast tag) ::
                          StringVal (show n) ::
                           toScheme n :: toScheme emptyFC ::
-                            map (Var . schVarName) (toList args))
+                            map (Var . schVarName) args)
          pure (bindArgs n argvs [] body)
   where
     mkArgNs : Int -> Nat -> List Name

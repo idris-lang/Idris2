@@ -557,11 +557,11 @@ mutual
 
 export
 HasNames (Env Term vars) where
-  full gam [] = pure ScopeEmpty
+  full gam [] = pure Env.empty
   full gam (b :: bs)
       = pure $ !(traverse (full gam) b) :: !(full gam bs)
 
-  resolved gam [] = pure ScopeEmpty
+  resolved gam [] = pure Env.empty
   resolved gam (b :: bs)
       = pure $ !(traverse (resolved gam) b) :: !(resolved gam bs)
 
@@ -1354,7 +1354,7 @@ addBuiltin n ty tot op
          , specArgs = []
          , inferrable = []
          , multiplicity = top
-         , localVars = ScopeEmpty
+         , localVars = Scope.empty
          , visibility = specified Public
          , totality = tot
          , isEscapeHatch = False

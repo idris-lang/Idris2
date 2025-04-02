@@ -99,7 +99,7 @@ findCons n lhs
                             (CantSplitThis n "Can't find function name on LHS"))
            Just fn =>
               do defs <- get Ctxt
-                 case !(findTyName defs ScopeEmpty n lhs) of
+                 case !(findTyName defs Env.empty n lhs) of
                       Nothing => pure (SplitFail (CantSplitThis n
                                          ("Can't find type of " ++ show n ++ " in LHS")))
                       Just tyn =>
@@ -126,15 +126,15 @@ export
 explicitlyBound : Defs -> ClosedNF -> Core (List Name)
 explicitlyBound defs (NBind fc x (Pi _ _ _ _) sc)
     = pure $ x :: !(explicitlyBound defs
-                    !(sc defs (toClosure defaultOpts ScopeEmpty (Erased fc Placeholder))))
+                    !(sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))))
 explicitlyBound defs _ = pure []
 
 export
 getEnvArgNames : {auto c : Ref Ctxt Defs} ->
                  Defs -> Nat -> ClosedNF -> Core (List String)
-getEnvArgNames defs Z sc = getArgNames defs !(explicitlyBound defs sc) [] ScopeEmpty sc
+getEnvArgNames defs Z sc = getArgNames defs !(explicitlyBound defs sc) [] Env.empty sc
 getEnvArgNames defs (S k) (NBind fc n _ sc)
-    = getEnvArgNames defs k !(sc defs (toClosure defaultOpts ScopeEmpty (Erased fc Placeholder)))
+    = getEnvArgNames defs k !(sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder)))
 getEnvArgNames defs n ty = pure []
 
 expandCon : {auto c : Ref Ctxt Defs} ->
@@ -145,8 +145,8 @@ expandCon fc usedvars con
               | Nothing => undefinedName fc con
          pure (apply (IVar fc con)
                 (map (IBindVar fc)
-                     !(getArgNames defs [] usedvars ScopeEmpty
-                                   !(nf defs ScopeEmpty ty))))
+                     !(getArgNames defs [] usedvars Env.empty
+                                   !(nf defs Env.empty ty))))
 
 updateArg : {auto c : Ref Ctxt Defs} ->
             List Name -> -- all the variable names
@@ -274,13 +274,13 @@ mkCase {c} {u} fn orig lhs_raw
                -- once split and turned into a pattern)
                (lhs, _) <- elabTerm {c} {m} {u}
                                     fn (InLHS erased) [] (MkNested [])
-                                    ScopeEmpty (IBindHere (getFC lhs_raw) PATTERN lhs_raw)
+                                    Env.empty (IBindHere (getFC lhs_raw) PATTERN lhs_raw)
                                     Nothing
                -- Revert all public back to false
                setAllPublic False
                put Ctxt defs -- reset the context, we don't want any updates
                put UST ust
-               lhs' <- map (map rawName) $ unelabNoSugar ScopeEmpty lhs
+               lhs' <- map (map rawName) $ unelabNoSugar Env.empty lhs
 
                log "interaction.casesplit" 3 $ "Original LHS: " ++ show orig
                log "interaction.casesplit" 3 $ "New LHS: " ++ show lhs'
@@ -329,7 +329,7 @@ getSplitsLHS fc envlen lhs_in n
          OK (fn, tyn, cons) <- findCons n lhs
             | SplitFail err => pure (SplitFail err)
 
-         rawlhs <- map (map rawName) $ unelabNoSugar ScopeEmpty lhs
+         rawlhs <- map (map rawName) $ unelabNoSugar Env.empty lhs
          trycases <- traverse (\c => newLHS fc envlen usedns n c rawlhs) cons
 
          let Just idx = getNameID fn (gamma defs)

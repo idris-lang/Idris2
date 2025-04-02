@@ -29,13 +29,31 @@ public export
 Scope : Type
 Scope = Scopeable Name
 
-public export
-ScopeEmpty : {a: Type} -> Scopeable a
-ScopeEmpty = []
+namespace Scope
+  public export
+  empty : Scopeable a
+  empty = []
 
-public export
-ScopeSingle : a -> Scopeable a
-ScopeSingle n = [n]
+  {-
+  public export
+  ext : Scopeable a -> List a -> Scopeable a
+  ext vars ns = ns ++ vars
+  --- TODO replace by `vars <>< ns`
+  -}
+
+  public export
+  addInner : Scopeable a -> Scopeable a -> Scopeable a
+  addInner vars inner = inner ++ vars
+  --- TODO replace by `vars ++ inner`
+
+  public export
+  bind : Scopeable a -> a -> Scopeable a
+  bind vars n = n :: vars
+  --- TODO replace with `<:`
+
+  public export
+  single : a -> Scopeable a
+  single n = [n]
 
 ||| A scoped definition is one indexed by a scope
 public export

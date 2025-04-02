@@ -385,8 +385,9 @@ notCovering = MkTotality Unchecked (MissingCases [])
 namespace Bounds
   public export
   data Bounds : Scoped where
-       None : Bounds ScopeEmpty
+       None : Bounds Scope.empty
        Add : (x : Name) -> Name -> Bounds xs -> Bounds (x :: xs)
+       -- TODO add diagonal constructor
 
   export
   sizeOf : Bounds xs -> SizeOf xs

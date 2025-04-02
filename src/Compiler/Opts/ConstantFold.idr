@@ -30,19 +30,21 @@ foldableOp (Cast from to)   = isJust (intKind from) && isJust (intKind to)
 foldableOp _                = True
 
 
-data Subst : Scope -> Scope -> Type where
-  Nil  : Subst ScopeEmpty vars
+data Subst : Scope -> Scoped where
+  Nil  : Subst Scope.empty vars
   (::) : CExp vars -> Subst ds vars -> Subst (d :: ds) vars
   Wk   : SizeOf ws -> Subst ds vars -> Subst (ws ++ ds) (ws ++ vars)
 
-ScopeEmpty : Subst ScopeEmpty vars
-ScopeEmpty = []
+namespace Subst
+  public export
+  empty : Subst Scope.empty vars
+  empty = []
 
 initSubst : (vars : Scope) -> Subst vars vars
+initSubst [] = Subst.empty
 initSubst vars
   = rewrite sym $ appendNilRightNeutral vars in
-    Wk (mkSizeOf vars) ScopeEmpty
-
+    Wk (mkSizeOf vars) Subst.empty
 
 wk : SizeOf out -> Subst ds vars -> Subst (out ++ ds) (out ++ vars)
 wk sout (Wk {ws, ds, vars} sws rho)
@@ -96,7 +98,7 @@ constFold : {vars' : _} ->
 constFold rho (CLocal fc p) = lookup fc (MkVar p) rho
 constFold rho e@(CRef fc x) = CRef fc x
 constFold rho (CLam fc x y)
-  = CLam fc x $ constFold (wk (mkSizeOf (ScopeSingle x)) rho) y
+  = CLam fc x $ constFold (wk (mkSizeOf (Scope.single x)) rho) y
 
 -- Expressions of the type `let x := y in x` can be introduced
 -- by the compiler when inlining monadic code (for instance, `io_bind`).
@@ -105,7 +107,7 @@ constFold rho (CLet fc x inl y z) =
     let val := constFold rho y
      in case replace val of
           True  => constFold (val::rho) z
-          False => case constFold (wk (mkSizeOf (ScopeSingle x)) rho) z of
+          False => case constFold (wk (mkSizeOf (Scope.single x)) rho) z of
             CLocal {idx = 0} _ _ => val
             body                 => CLet fc x inl val body
 constFold rho (CApp fc (CRef fc2 n) [x]) =

@@ -206,7 +206,7 @@ mutual
 
   analyze exp = do
     (sze, exp') <- analyzeSubExp exp
-    case dropEnv {pre = ScopeEmpty} exp' of
+    case dropEnv {pre = Scope.empty} exp' of
       Just e0 => do
         Just nm <- store sze e0
           | Nothing => pure (sze, exp')
@@ -477,8 +477,8 @@ replaceDef (n, fc, d@(MkError _))       = pure (n, fc, d)
 newToplevelDefs : ReplaceMap -> List (Name, FC, CDef)
 newToplevelDefs rm = mapMaybe toDef $ SortedMap.toList rm
   where toDef : (Name,(ClosedCExp,Count,Bool)) -> Maybe (Name, FC, CDef)
-        toDef (nm,(exp,Many,False)) = Just (nm, EmptyFC, MkFun ScopeEmpty exp)
-        toDef (nm,(exp,Many,True)) = Just (nm, EmptyFC, MkFun ScopeEmpty (CDelay EmptyFC LLazy exp))
+        toDef (nm,(exp,Many,False)) = Just (nm, EmptyFC, MkFun Scope.empty exp)
+        toDef (nm,(exp,Many,True)) = Just (nm, EmptyFC, MkFun Scope.empty (CDelay EmptyFC LLazy exp))
         toDef _               = Nothing
 
 undefinedCount : (Name, (ClosedCExp, Count)) -> Bool

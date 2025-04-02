@@ -156,26 +156,26 @@ getSpecPats fc pename fn stk fnty args sargs pats
                 Core RawImp
     mkRHSargs (NBind _ x (Pi _ _ Explicit _) sc) app (a :: as) ((_, Dynamic) :: ds)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts ScopeEmpty (Erased fc Placeholder))
+             sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
              mkRHSargs sc' (IApp fc app (IVar fc (UN $ Basic a))) as ds
     mkRHSargs (NBind _ x (Pi _ _ _ _) sc) app (a :: as) ((_, Dynamic) :: ds)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts ScopeEmpty (Erased fc Placeholder))
+             sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
              mkRHSargs sc' (INamedApp fc app x (IVar fc (UN $ Basic a))) as ds
     mkRHSargs (NBind _ x (Pi _ _ Explicit _) sc) app as ((_, Static tm) :: ds)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts ScopeEmpty (Erased fc Placeholder))
-             tm' <- unelabNoSugar ScopeEmpty tm
+             sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
+             tm' <- unelabNoSugar Env.empty tm
              mkRHSargs sc' (IApp fc app (map rawName tm')) as ds
     mkRHSargs (NBind _ x (Pi _ _ Implicit _) sc) app as ((_, Static tm) :: ds)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts ScopeEmpty (Erased fc Placeholder))
-             tm' <- unelabNoSugar ScopeEmpty tm
+             sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
+             tm' <- unelabNoSugar Env.empty tm
              mkRHSargs sc' (INamedApp fc app x (map rawName tm')) as ds
     mkRHSargs (NBind _ _ (Pi _ _ AutoImplicit _) sc) app as ((_, Static tm) :: ds)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts ScopeEmpty (Erased fc Placeholder))
-             tm' <- unelabNoSugar ScopeEmpty tm
+             sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
+             tm' <- unelabNoSugar Env.empty tm
              mkRHSargs sc' (IAutoApp fc app (map rawName tm')) as ds
     -- Type will depend on the value here (we assume a variadic function) but
     -- the argument names are still needed
@@ -275,7 +275,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
                              " (" ++ show fn ++ ") -> \{show pename} by " ++
                              showSep ", " args'
            let sty = specialiseTy 0 staticargs (type gdef)
-           logTermNF "specialise" 3 ("Specialised type " ++ show pename) ScopeEmpty sty
+           logTermNF "specialise" 3 ("Specialised type " ++ show pename) Env.empty sty
 
            -- Add as RigW - if it's something else, we don't need it at
            -- runtime anyway so this is wasted effort, therefore a failure
@@ -284,7 +284,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
            log "specialise.flags" 20 "Defining \{show pename} with flags: \{show defflags}"
            peidx <- addDef pename
                   $ the (GlobalDef -> GlobalDef) { flags := defflags }
-                  $ newDef fc pename top ScopeEmpty sty (specified Public) None
+                  $ newDef fc pename top Scope.empty sty (specified Public) None
            addToSave (Resolved peidx)
 
            -- Reduce the function to be specialised, and reduce any name in
@@ -305,12 +305,12 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
                       pure $ "Attempting to specialise:\n" ++
                              showSep "\n" (map showPat inpats)
 
-           Just newpats <- getSpecPats fc pename fn stk !(nf defs ScopeEmpty (type gdef))
+           Just newpats <- getSpecPats fc pename fn stk !(nf defs Env.empty (type gdef))
                                        sargs staticargs pats
                 | Nothing => pure (applyStackWithFC (Ref fc Func fn) stk)
            log "specialise" 5 $ "New patterns for " ++ show pename ++ ":\n" ++
                     showSep "\n" (map showPat newpats)
-           processDecl [InPartialEval] (MkNested []) ScopeEmpty
+           processDecl [InPartialEval] (MkNested []) Env.empty
                        (IDef fc (Resolved peidx) newpats)
            setAllPublic False
            pure peapp)
@@ -415,7 +415,7 @@ specialise {vars} fc env gdef fn stk
                    | Nothing => pure Nothing
                defs <- get Ctxt
                sargs <- for sargs $ traversePair $ traverseArgMode $ \ tm =>
-                          normalise defs ScopeEmpty tm
+                          normalise defs Env.empty tm
                let nhash = hash !(traverse toFullNames $ mapMaybe getStatic $ map snd sargs)
                               `hashWithSalt` fnfull -- add function name to hash to avoid namespace clashes
                let pename = NS partialEvalNS
@@ -501,9 +501,9 @@ mutual
               {auto s : Ref Syn SyntaxInfo} ->
               {auto o : Ref ROpts REPLOpts} ->
               Ref QVar Int -> Defs -> Bounds bound ->
-              Env Term free -> Scopeable (Closure free) ->
-              Core (Scopeable (Term (bound ++ free)))
-  quoteArgs q defs bounds env [] = pure ScopeEmpty
+              Env Term free -> List (Closure free) ->
+              Core (List (Term (bound ++ free)))
+  quoteArgs q defs bounds env [] = pure []
   quoteArgs q defs bounds env (a :: args)
       = pure $ (!(quoteGenNF q defs bounds env !(evalClosure defs a)) ::
                 !(quoteArgs q defs bounds env args))
@@ -515,8 +515,8 @@ mutual
                     {auto o : Ref ROpts REPLOpts} ->
                     {bound, free : _} ->
                     Ref QVar Int -> Defs -> Bounds bound ->
-                    Env Term free -> Scopeable (FC, Closure free) ->
-                    Core (Scopeable (FC, Term (bound ++ free)))
+                    Env Term free -> List (FC, Closure free) ->
+                    Core (List (FC, Term (bound ++ free)))
   quoteArgsWithFC q defs bounds env terms
       = pure $ zip (map fst terms) !(quoteArgs q defs bounds env (map snd terms))
 
@@ -558,7 +558,7 @@ mutual
   quoteHead q defs fc bounds env (NRef nt n) = pure $ Ref fc nt n
   quoteHead q defs fc bounds env (NMeta n i args)
       = do args' <- quoteArgs q defs bounds env args
-           pure $ Meta fc n i (toList args')
+           pure $ Meta fc n i args'
 
   quotePi : {bound, free : _} ->
             {auto c : Ref Ctxt Defs} ->
@@ -636,7 +636,7 @@ mutual
                          pure $ applyStackWithFC (Ref fc Func fn) args'
                 _ => do empty <- clearDefs defs
                         args' <- quoteArgsWithFC q defs bound env args
-                        Just r <- specialise fc (extendEnv bound env) gdef fn (toList args')
+                        Just r <- specialise fc (extendEnv bound env) gdef fn args'
                              | Nothing =>
                                   -- can't specialise, keep the arguments
                                   -- unreduced

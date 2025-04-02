@@ -25,9 +25,13 @@ hasLength Z = Refl
 hasLength (S p) = cong S (hasLength p)
 
 export
-sucR : HasLength n sx -> HasLength (S n) ([<x] ++ sx)
-sucR Z     = S Z
-sucR (S n) = S (sucR n)
+sucR : HasLength n sx -> HasLength (S n) (sx ++ [<x])
+sucR = S
+
+export
+sucL : HasLength n sx -> HasLength (S n) ([<x] ++ sx)
+sucL Z     = S Z
+sucL (S n) = S (sucL n)
 
 export
 hlAppend : HasLength m sx -> HasLength n sy -> HasLength (n + m) (sx ++ sy)
@@ -51,11 +55,12 @@ hlChips {m = S m} {n} (S x) y
   = rewrite plusSuccRightSucc m n in
     hlChips x (S y)
 
+{-
 export
 take : (n : Nat) -> (xs : Stream a) -> HasLength n (take n xs)
 take Z _ = Z
 take (S n) (x :: xs) = S (take n xs)
-
+-}
 
 export
 cast : {sy : _} -> (0 _ : SnocList.length sx = SnocList.length sy) ->

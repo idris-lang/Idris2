@@ -4,10 +4,14 @@ import Data.Nat
 import Data.SnocList
 import Syntax.PreorderReasoning
 
+-- TODO left-to-right reversal of the stream
+--      is this what we want?
+{-
 public export
 take : (n : Nat) -> (xs : Stream a) -> SnocList a
 take Z xs = [<]
 take (S k) (x :: xs) = take k xs :< x
+-}
 
 public export
 snocAppendFishAssociative :

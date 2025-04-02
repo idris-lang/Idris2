@@ -25,12 +25,14 @@ import Libraries.Data.Erased
 ------------------------------------------------------------------------
 -- IsVar Predicate
 
+-- TODO need a copy of `IsVar` for both
+
 ||| IsVar n k ns is a proof that
 ||| the name n
 ||| is a position k
 ||| in the snoclist ns
 public export
-data IsVar : a -> Nat -> Scopeable a -> Type where
+data IsVar : a -> Nat -> List a -> Type where
      First : IsVar n Z (n :: ns)
      Later : IsVar n i ns -> IsVar n (S i) (m :: ns)
 
@@ -45,7 +47,7 @@ finIdx (Later l) = FS (finIdx l)
 ||| Recover the value pointed at by an IsVar proof
 ||| O(n) in the size of the index
 export
-nameAt : {vars : Scopeable a} -> {idx : Nat} -> (0 p : IsVar n idx vars) -> a
+nameAt : {vars : List a} -> {idx : Nat} -> (0 p : IsVar n idx vars) -> a
 nameAt {vars = n :: _} First = n
 nameAt (Later p) = nameAt p
 
@@ -69,9 +71,9 @@ mkIsVarChiply hl
 ||| Compute the remaining scope once the target variable has been removed
 public export
 dropIsVar :
-  (ns : Scopeable a) ->
+  (ns : List a) ->
   {idx : Nat} -> (0 p : IsVar name idx ns) ->
-  Scopeable a
+  List a
 dropIsVar (_ :: xs) First = xs
 dropIsVar (n :: xs) (Later p) = n :: dropIsVar xs p
 
@@ -127,7 +129,7 @@ locateIsVar s p = case choose (idx < size s) of
 ||| and a proof that the name is at that position in the scope.
 ||| Everything but the De Bruijn index is erased.
 public export
-record Var {0 a : Type} (vars : Scopeable a) where
+record Var {0 a : Type} (vars : List a) where
   constructor MkVar
   {varIdx : Nat}
   {0 varNm : a}
@@ -168,13 +170,13 @@ Eq (Var xs) where
 
 ||| Removing var 0, strengthening all the other ones
 export
-dropFirst : Scopeable (Var (n :: vs)) -> Scopeable (Var vs)
+dropFirst : List (Var (Scope.bind vs n)) -> List (Var vs)
 dropFirst = List.mapMaybe isLater
 
 ||| Manufacturing a thinning from a list of variables to keep
 export
 thinFromVars :
-  (vars : _) -> Scopeable (Var vars) ->
+  (vars : _) -> List (Var vars) ->
   (newvars ** Thin newvars vars)
 thinFromVars [] els
     = (_ ** Refl)
@@ -192,7 +194,7 @@ Show (Var ns) where
 -- Named variable in scope
 
 public export
-record NVar {0 a : Type} (nm : a) (vars : Scopeable a) where
+record NVar {0 a : Type} (nm : a) (vars : List a) where
   constructor MkNVar
   {nvarIdx : Nat}
   0 nvarPrf : IsVar nm nvarIdx vars
@@ -231,20 +233,20 @@ locateNVar s (MkNVar p) = case locateIsVar s p of
   Right p => Right (MkNVar (runErased p))
 
 public export
-dropNVar : {ns : Scopeable a} -> NVar nm ns -> Scopeable a
+dropNVar : {ns : List a} -> NVar nm ns -> List a
 dropNVar (MkNVar p) = dropIsVar ns p
 
 ------------------------------------------------------------------------
 -- Scope checking
 
 export
-isDeBruijn : Nat -> (vars : Scope) -> Maybe (Var vars)
+isDeBruijn : Nat -> (vars : List Name) -> Maybe (Var vars)
 isDeBruijn Z (_ :: _) = pure (MkVar First)
 isDeBruijn (S k) (_ :: vs) = later <$> isDeBruijn k vs
 isDeBruijn _ _ = Nothing
 
 export
-isNVar : (n : Name) -> (ns : Scope) -> Maybe (NVar n ns)
+isNVar : (n : Name) -> (ns : List Name) -> Maybe (NVar n ns)
 isNVar n [] = Nothing
 isNVar n (m :: ms)
     = case nameEq n m of
@@ -252,7 +254,7 @@ isNVar n (m :: ms)
            Just Refl => pure (MkNVar First)
 
 export
-isVar : (n : Name) -> (ns : Scope) -> Maybe (Var ns)
+isVar : (n : Name) -> (ns : List Name) -> Maybe (Var ns)
 isVar n ns = forgetName <$> isNVar n ns
 
 export

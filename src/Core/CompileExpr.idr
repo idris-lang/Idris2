@@ -366,7 +366,7 @@ export
 forgetDef : CDef -> NamedDef
 forgetDef (MkFun args def)
     = let ns = addLocs args []
-          args' = conArgs {vars = ScopeEmpty} args ns in
+          args' = conArgs {vars = Scope.empty} args ns in
           MkNmFun args' (forget def)
 forgetDef (MkCon t a nt) = MkNmCon t a nt
 forgetDef (MkForeign ccs fargs ty) = MkNmForeign ccs fargs ty

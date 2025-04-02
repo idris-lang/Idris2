@@ -520,6 +520,6 @@ elabInterface {vars} ifc def_vis env nest constraints iname params dets mcon bod
                                                  meth_names
                                                  params) nconstraints
              log "elab.interface" 5 $ "Constraint hints from " ++ show constraints ++ ": " ++ show chints
-             Core.Core.traverse_ (processDecl [] nest env) (concatMap snd chints)
+             List.traverse_ (processDecl [] nest env) (concatMap snd chints)
              traverse_ (\n => do mn <- inCurrentNS n
                                  setFlag vfc mn TCInline) (map fst chints)

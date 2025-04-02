@@ -72,7 +72,7 @@ mutual
                List (Name, Nat) ->
                Env Term vars ->
                Name ->
-               Scopeable (Term vars) ->
+               List (Term vars) ->
                Core (Maybe IRawImp)
   unelabCase nest env n args
       = do defs <- get Ctxt
@@ -92,13 +92,8 @@ mutual
       findArgPos (Case idx p _ _) = Just idx
       findArgPos _ = Nothing
 
-      idxOrMaybe : Nat -> Scopeable a -> Maybe a
-      idxOrMaybe Z (x :: _) = Just x
-      idxOrMaybe (S k) (_ :: xs) = idxOrMaybe k xs
-      idxOrMaybe _ [] = Nothing
-
       -- TODO: some utility like this should probably be implemented in Core
-      substVars : Scopeable (List (Var vs), Term vs) -> Term vs -> Term vs
+      substVars : List (List (Var vs), Term vs) -> Term vs -> Term vs
       substVars xs tm@(Local fc _ idx prf)
           = case find (any ((idx ==) . varIdx) . fst) xs of
                  Just (_, new) => new
@@ -119,7 +114,7 @@ mutual
           = TForce fc r (substVars xs y)
       substVars xs tm = tm
 
-      substArgs : SizeOf vs -> Scopeable (List (Var vs), Term vars) -> Term vs -> Term (vs ++ vars)
+      substArgs : SizeOf vs -> List (List (Var vs), Term vars) -> Term vs -> Term (vs ++ vars)
       substArgs p substs tm =
         let
           substs' = map (bimap (map $ embed {outer = vars}) (weakenNs p)) substs
@@ -133,13 +128,13 @@ mutual
       argVars _ = []
 
       mkClause : FC -> Nat ->
-                 Scopeable (Term vars) ->
+                 List (Term vars) ->
                  (vs ** (Env Term vs, Term vs, Term vs)) ->
                  Core (Maybe IImpClause)
       mkClause fc argpos args (vs ** (clauseEnv, lhs, rhs))
           = do logTerm "unelab.case.clause" 20 "Unelaborating clause" lhs
                let patArgs = snd (getFnArgs lhs)
-                   Just pat = idxOrMaybe argpos patArgs
+                   Just pat = getAt argpos patArgs
                      | _ => pure Nothing
                    rhs = substArgs (mkSizeOf vs) (zip (map argVars patArgs) args) rhs
                logTerm "unelab.case.clause" 20 "Unelaborating LHS" pat
@@ -156,11 +151,11 @@ mutual
       ||| Once we have the scrutinee `e`, we can form `case e of` and so focus
       ||| on manufacturing the clauses.
       mkCase : List (vs ** (Env Term vs, Term vs, Term vs)) ->
-               (argpos : Nat) -> Scopeable (Term vars) -> Core (Maybe IRawImp)
+               (argpos : Nat) -> List (Term vars) -> Core (Maybe IRawImp)
       mkCase pats argpos args
           = do unless (null args) $ log "unelab.case.clause" 20 $
-                 unwords $ "Ignoring" :: map show (toList args)
-               let Just scrutinee = idxOrMaybe argpos args
+                 unwords $ "Ignoring" :: map show args
+               let Just scrutinee = getAt argpos args
                      | _ => pure Nothing
                    fc = getLoc scrutinee
                (tm, _) <- unelabTy Full nest env scrutinee

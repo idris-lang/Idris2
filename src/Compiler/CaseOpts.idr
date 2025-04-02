@@ -113,7 +113,7 @@ liftOutLambda : {args : _} ->
                 (new : Name) ->
                 CExp (old :: args ++ vars) ->
                 CExp (args ++ new :: vars)
-liftOutLambda = shiftBinder {outer = ScopeEmpty}
+liftOutLambda = shiftBinder {outer = Scope.empty}
 
 -- If all the alternatives start with a lambda, we can have a single lambda
 -- binding outside

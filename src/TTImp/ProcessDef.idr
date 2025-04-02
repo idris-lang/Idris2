@@ -280,7 +280,7 @@ findLinear top bound rig tm
               => do defs <- get Ctxt
                     Just nty <- lookupTyExact n (gamma defs)
                          | Nothing => pure []
-                    findLinArg (accessible nt rig) !(nf defs ScopeEmpty nty) args
+                    findLinArg (accessible nt rig) !(nf defs Env.empty nty) args
            _ => pure []
     where
       accessible : NameType -> RigCount -> RigCount
@@ -300,15 +300,15 @@ findLinear top bound rig tm
           = do defs <- get Ctxt
                let a = nameAt prf
                if idx < bound
-                 then do sc' <- sc defs (toClosure defaultOpts ScopeEmpty (Ref fc Bound x))
+                 then do sc' <- sc defs (toClosure defaultOpts Env.empty (Ref fc Bound x))
                          pure $ (a, rigMult c rig) ::
                                     !(findLinArg rig sc' as)
-                 else do sc' <- sc defs (toClosure defaultOpts ScopeEmpty (Ref fc Bound x))
+                 else do sc' <- sc defs (toClosure defaultOpts Env.empty (Ref fc Bound x))
                          findLinArg rig sc' as
       findLinArg rig (NBind fc x (Pi _ c _ _) sc) (a :: as)
           = do defs <- get Ctxt
                pure $ !(findLinear False bound (c |*| rig) a) ++
-                      !(findLinArg rig !(sc defs (toClosure defaultOpts ScopeEmpty (Ref fc Bound x))) as)
+                      !(findLinArg rig !(sc defs (toClosure defaultOpts Env.empty (Ref fc Bound x))) as)
       findLinArg rig ty (a :: as)
           = pure $ !(findLinear False bound rig a) ++ !(findLinArg rig ty as)
       findLinArg _ _ [] = pure []
@@ -629,11 +629,6 @@ checkClause {vars} mult vis totreq hashit n opts nest env
     vfc : FC
     vfc = virtualiseFC ifc
 
-    mkExplicit : forall vs . Env Term vs -> Env Term vs
-    mkExplicit [] = ScopeEmpty
-    mkExplicit (Pi fc c _ ty :: env) = Pi fc c Explicit ty :: mkExplicit env
-    mkExplicit (b :: env) = b :: mkExplicit env
-
     bindWithArgs :
        (rig : RigCount) -> (wvalTy : Term xs) -> Maybe ((RigCount, Name), Term xs) ->
        (wvalEnv : Env Term xs) ->
@@ -739,16 +734,6 @@ checkClause {vars} mult vis totreq hashit n opts nest env
              newlhs <- getNewLHS ploc drop nest wname wargnames lhs patlhs
              pure (ImpossibleClause ploc newlhs)
 
--- TODO: remove
-nameListEq : (xs : Scope) -> (ys : Scope) -> Maybe (xs = ys)
-nameListEq [] [] = Just Refl
-nameListEq (x :: xs) (y :: ys) with (nameEq x y)
-  nameListEq (x :: xs) (x :: ys) | (Just Refl) with (nameListEq xs ys)
-    nameListEq (x :: xs) (x :: xs) | (Just Refl) | Just Refl= Just Refl
-    nameListEq (x :: xs) (x :: ys) | (Just Refl) | Nothing = Nothing
-  nameListEq (x :: xs) (y :: ys) | Nothing = Nothing
-nameListEq _ _ = Nothing
-
 -- Calculate references for the given name, and recursively if they haven't
 -- been calculated already
 calcRefs : {auto c : Ref Ctxt Defs} ->
@@ -825,7 +810,7 @@ mkRunTime fc n
            log "compile.casetree" 10 $ show tree_rt
            log "compile.casetree.measure" 15 $ show (measure tree_rt)
 
-           let Just Refl = nameListEq cargs rargs
+           let Just Refl = scopeEq cargs rargs
                    | Nothing => throw (InternalError "WAT")
            ignore $ addDef n $
                        { definition := PMDef r rargs tree_ct tree_rt pats
@@ -1096,7 +1081,7 @@ processDef opts nest env fc n_in cs_in
     checkImpossible : Int -> RigCount -> ClosedTerm ->
                       Core (Maybe ClosedTerm)
     checkImpossible n mult tm
-        = do itm <- unelabNoPatvars ScopeEmpty tm
+        = do itm <- unelabNoPatvars Env.empty tm
              let itm = map rawName itm
              handleUnify
                (do ctxt <- get Ctxt
@@ -1105,17 +1090,17 @@ processDef opts nest env fc n_in cs_in
                    setUnboundImplicits True
                    (_, lhstm) <- bindNames False itm
                    setUnboundImplicits autoimp
-                   (lhstm, _) <- elabTerm n (InLHS mult) [] (MkNested []) ScopeEmpty
+                   (lhstm, _) <- elabTerm n (InLHS mult) [] (MkNested []) Env.empty
                                     (IBindHere fc COVERAGE lhstm) Nothing
                    defs <- get Ctxt
-                   lhs <- normaliseHoles defs ScopeEmpty lhstm
-                   if !(hasEmptyPat defs ScopeEmpty lhs)
+                   lhs <- normaliseHoles defs Env.empty lhstm
+                   if !(hasEmptyPat defs Env.empty lhs)
                       then do log "declare.def.impossible" 5 "Some empty pat"
                               put Ctxt ctxt
                               pure Nothing
                       else do log "declare.def.impossible" 5 "No empty pat"
                               empty <- clearDefs ctxt
-                              rtm <- closeEnv empty !(nf empty ScopeEmpty lhs)
+                              rtm <- closeEnv empty !(nf empty Env.empty lhs)
                               put Ctxt ctxt
                               pure (Just rtm))
                (\err => do defs <- get Ctxt
@@ -1127,14 +1112,14 @@ processDef opts nest env fc n_in cs_in
       where
         closeEnv : Defs -> ClosedNF -> Core ClosedTerm
         closeEnv defs (NBind _ x (PVar _ _ _ _) sc)
-            = closeEnv defs !(sc defs (toClosure defaultOpts ScopeEmpty (Ref fc Bound x)))
-        closeEnv defs nf = quote defs ScopeEmpty nf
+            = closeEnv defs !(sc defs (toClosure defaultOpts Env.empty (Ref fc Bound x)))
+        closeEnv defs nf = quote defs Env.empty nf
 
     getClause : Either RawImp Clause -> Core (Maybe Clause)
     getClause (Left rawlhs)
         = catch (do lhsp <- getImpossibleTerm env nest rawlhs
                     log "declare.def.impossible" 3 $ "Generated impossible LHS: " ++ show lhsp
-                    pure $ Just $ MkClause ScopeEmpty lhsp (Erased (getFC rawlhs) Impossible))
+                    pure $ Just $ MkClause Env.empty lhsp (Erased (getFC rawlhs) Impossible))
                 (\e => do log "declare.def" 5 $ "Error in getClause " ++ show e
                           pure Nothing)
     getClause (Right c) = pure (Just c)

@@ -242,7 +242,7 @@ strengthenedEState {n} {vars} c e fc env
     -- never actualy *use* that hole - this process is only to ensure that the
     -- unbound implicit doesn't depend on any variables it doesn't have
     -- in scope.
-    removeArgVars : Scopeable (Term (n :: vs)) -> Maybe (Scopeable (Term vs))
+    removeArgVars : List (Term (n :: vs)) -> Maybe (List (Term vs))
     removeArgVars [] = pure []
     removeArgVars (Local fc r (S k) p :: args)
         = do args' <- removeArgVars args
@@ -416,7 +416,7 @@ uniVar : {auto c : Ref Ctxt Defs} ->
          FC -> Core Name
 uniVar fc
     = do n <- genName "u"
-         idx <- addDef n (newDef fc n erased ScopeEmpty (Erased fc Placeholder) (specified Public) None)
+         idx <- addDef n (newDef fc n erased Scope.empty (Erased fc Placeholder) (specified Public) None)
          pure (Resolved idx)
 
 export
@@ -456,7 +456,7 @@ searchVar fc rig depth def env nest n ty
 
     envHints : List Name -> Env Term vars ->
                Core (vars' ** (Term (vars' ++ vars) -> Term vars, Env Term (vars' ++ vars)))
-    envHints [] env = pure (ScopeEmpty ** (id, env))
+    envHints [] env = pure (Scope.empty ** (id, env))
     envHints (n :: ns) env
         = do (vs ** (f, env')) <- envHints ns env
              let Just (nestn, argns, tmf) = find !(toFullNames n) (names nest)

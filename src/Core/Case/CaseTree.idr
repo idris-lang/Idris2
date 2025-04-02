@@ -42,14 +42,18 @@ mutual
   data CaseAlt : Scoped where
        ||| Constructor for a data type; bind the arguments and subterms.
        ConCase : Name -> (tag : Int) -> (args : List Name) ->
-                 CaseTree (args ++ vars) -> CaseAlt vars
+                 CaseTree (Scope.addInner vars args) -> CaseAlt vars
        ||| Lazy match for the Delay type use for codata types
        DelayCase : (ty : Name) -> (arg : Name) ->
-                   CaseTree (ty :: arg :: vars) -> CaseAlt vars
+                   CaseTree (Scope.addInner vars [ty, arg]) -> CaseAlt vars
+                   -- TODO `arg` and `ty` should be swapped, as in Yaffle
        ||| Match against a literal
        ConstCase : Constant -> CaseTree vars -> CaseAlt vars
        ||| Catch-all case
        DefaultCase : CaseTree vars -> CaseAlt vars
+
+export
+FreelyEmbeddable CaseTree where
 
 mutual
   public export
@@ -100,8 +104,8 @@ public export
 data Pat : Type where
      PAs : FC -> Name -> Pat -> Pat
      PCon : FC -> Name -> (tag : Int) -> (arity : Nat) ->
-            Scopeable Pat -> Pat
-     PTyCon : FC -> Name -> (arity : Nat) -> Scopeable Pat -> Pat
+            List Pat -> Pat
+     PTyCon : FC -> Name -> (arity : Nat) -> List Pat -> Pat
      PConst : FC -> (c : Constant) -> Pat
      PArrow : FC -> (x : Name) -> Pat -> Pat -> Pat
      PDelay : FC -> LazyReason -> Pat -> Pat -> Pat
@@ -186,9 +190,9 @@ export
 Pretty IdrisSyntax Pat where
   prettyPrec d (PAs _ n p) = pretty0 n <++> keyword "@" <+> parens (pretty p)
   prettyPrec d (PCon _ n _ _ args) =
-    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) (toList args))
+    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) args)
   prettyPrec d (PTyCon _ n _ args) =
-    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) (toList args))
+    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) args)
   prettyPrec d (PConst _ c) = pretty c
   prettyPrec d (PArrow _ _ p q) =
     parenthesise (d > Open) $ pretty p <++> arrow <++> pretty q

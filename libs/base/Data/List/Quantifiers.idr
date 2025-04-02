@@ -91,6 +91,14 @@ namespace All
   imapProperty i f @{[]} [] = []
   imapProperty i f @{ix :: ixs} (x :: xs) = f @{ix} x :: imapProperty i f @{ixs} xs
 
+  export
+  head : All p (x :: xs) -> p x
+  head (px :: _) = px
+
+  export
+  tail : All p (x :: xs) -> All p xs
+  tail (_ :: pxs) = pxs
+
   ||| Forget property source for a homogeneous collection of properties
   public export
   forget : All (const type) types -> List type

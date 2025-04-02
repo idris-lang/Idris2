@@ -150,6 +150,7 @@ search : {auto c : Ref Ctxt Defs} ->
 getAllEnv : {vars : _} -> FC ->
             SizeOf done ->
             Env Term vars ->
+            -- TODO should be `vars <>< done`
             List (Term (done ++ vars), Term (done ++ vars))
 getAllEnv fc done [] = []
 getAllEnv {vars = v :: vs} {done} fc p (b :: env)
@@ -158,10 +159,10 @@ getAllEnv {vars = v :: vs} {done} fc p (b :: env)
          usable = usableName v in
          if usable
             then (Local fc Nothing _ var,
-                     rewrite appendAssociative done (ScopeSingle v) vs in
+                     rewrite appendAssociative done [v] vs in
                         weakenNs (sucR p) (binderType b)) ::
-                             rewrite appendAssociative done (ScopeSingle v) vs in rest
-            else rewrite appendAssociative done (ScopeSingle v) vs in rest
+                             rewrite appendAssociative done [v] vs in rest
+            else rewrite appendAssociative done [v] vs in rest
   where
     usableName : Name -> Bool
     usableName (UN _) = True
@@ -561,7 +562,7 @@ makeHelper fc rig opts env letty targetty ((locapp, ds) :: next)
          defs <- get Ctxt
          Just ty <- lookupTyExact helpern (gamma defs)
              | Nothing => throw (InternalError "Can't happen")
-         logTermNF "interaction.search" 10 "Type of scope name" ScopeEmpty ty
+         logTermNF "interaction.search" 10 "Type of scope name" Env.empty ty
 
          -- Generate a definition for the helper, but with more restrictions.
          -- Always take the first result, to avoid blowing up search space.
@@ -662,7 +663,7 @@ tryIntermediateRec fc rig opts hints env ty topty (Just rd)
     = do defs <- get Ctxt
          Just rty <- lookupTyExact (recname rd) (gamma defs)
               | Nothing => noResult
-         True <- isSingleCon defs !(nf defs ScopeEmpty rty)
+         True <- isSingleCon defs !(nf defs Env.empty rty)
               | _ => noResult
          intnty <- genVarName "cty"
          u <- uniVar fc
@@ -677,7 +678,7 @@ tryIntermediateRec fc rig opts hints env ty topty (Just rd)
   where
     isSingleCon : Defs -> ClosedNF -> Core Bool
     isSingleCon defs (NBind fc x (Pi _ _ _ _) sc)
-        = isSingleCon defs !(sc defs (toClosure defaultOpts ScopeEmpty
+        = isSingleCon defs !(sc defs (toClosure defaultOpts Env.empty
                                               (Erased fc Placeholder)))
     isSingleCon defs (NTCon _ n _ _ _)
         = do Just (TCon _ _ _ _ _ _ (Just [con]) _) <- lookupDefExact n (gamma defs)
@@ -764,10 +765,10 @@ searchHole : {auto c : Ref Ctxt Defs} ->
              Nat -> ClosedTerm ->
              Defs -> GlobalDef -> Core (Search (ClosedTerm, ExprDefs))
 searchHole fc rig opts hints n locs topty defs glob
-    = do searchty <- normalise defs ScopeEmpty (type glob)
+    = do searchty <- normalise defs Env.empty (type glob)
          logTerm "interaction.search" 10 "Normalised type" searchty
          checkTimer
-         searchType fc rig opts hints ScopeEmpty topty locs searchty
+         searchType fc rig opts hints Env.empty topty locs searchty
 
 -- Declared at the top
 search fc rig opts hints topty n_in
@@ -779,7 +780,7 @@ search fc rig opts hints topty n_in
                    case definition gdef of
                         Hole locs _ => searchHole fc rig opts hints n locs topty defs gdef
                         BySearch _ _ _ => searchHole fc rig opts hints n
-                                                   !(getArity defs ScopeEmpty (type gdef))
+                                                   !(getArity defs Env.empty (type gdef))
                                                    topty defs gdef
                         _ => do log "interaction.search" 10 $ show n_in ++ " not a hole"
                                 throw (InternalError $ "Not a hole: " ++ show n ++ " in " ++
@@ -800,7 +801,7 @@ getLHSData : {auto c : Ref Ctxt Defs} ->
              Defs -> Maybe ClosedTerm -> Core (Maybe RecData)
 getLHSData defs Nothing = pure Nothing
 getLHSData defs (Just tm)
-    = pure $ getLHS !(toFullNames !(normaliseHoles defs ScopeEmpty tm))
+    = pure $ getLHS !(toFullNames !(normaliseHoles defs Env.empty tm))
   where
     getLHS : {vars : _} -> Term vars -> Maybe RecData
     getLHS (Bind _ _ (PVar _ _ _ _) sc) = getLHS sc
@@ -821,11 +822,11 @@ firstLinearOK fc [] = noResult
 firstLinearOK fc ((t, ds) :: next)
     = handleUnify
             (do unless (isNil ds) $
-                   traverse_ (processDecl [InCase] (MkNested []) ScopeEmpty) ds
-                ignore $ linearCheck fc linear False ScopeEmpty t
+                   traverse_ (processDecl [InCase] (MkNested []) Env.empty) ds
+                ignore $ linearCheck fc linear False Env.empty t
                 defs <- get Ctxt
-                nft <- normaliseHoles defs ScopeEmpty t
-                raw <- unelab ScopeEmpty !(toFullNames nft)
+                nft <- normaliseHoles defs Env.empty t
+                raw <- unelab Env.empty !(toFullNames nft)
                 pure (map rawName raw :: firstLinearOK fc !next))
             (\err =>
                 do next' <- next
@@ -847,7 +848,7 @@ exprSearchOpts opts fc n_in hints
          -- expression search might be invoked some other way
          let Hole _ _ = definition gdef
              | PMDef pi [] (STerm _ tm) _ _
-                 => do raw <- unelab ScopeEmpty !(toFullNames !(normaliseHoles defs ScopeEmpty tm))
+                 => do raw <- unelab Env.empty !(toFullNames !(normaliseHoles defs Env.empty tm))
                        one (map rawName raw)
              | _ => throw (GenericMsg fc "Name is already defined")
          lhs <- findHoleLHS !(getFullName (Resolved idx))

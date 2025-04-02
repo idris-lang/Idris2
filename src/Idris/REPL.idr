@@ -165,7 +165,7 @@ displayPatTerm : {auto c : Ref Ctxt Defs} ->
                  Defs -> ClosedTerm ->
                  Core String
 displayPatTerm defs tm
-    = do ptm <- resugarNoPatvars ScopeEmpty !(normaliseHoles defs ScopeEmpty tm)
+    = do ptm <- resugarNoPatvars Env.empty !(normaliseHoles defs Env.empty tm)
          pure (show ptm)
 
 setOpt : {auto c : Ref Ctxt Defs} ->
@@ -504,7 +504,7 @@ processEdit (Intro upd line hole)
            | _ => pure $ EditError ("Could not find hole named" <++> pretty0 hole)
          let Hole args _ = definition hgdef
            | _ => pure $ EditError (pretty0 hole <++> "is not a refinable hole")
-         let (lhsCtxt ** (env, htyInLhsCtxt)) = underPis (cast args) ScopeEmpty (type hgdef)
+         let (lhsCtxt ** (env, htyInLhsCtxt)) = underPis (cast args) Env.empty (type hgdef)
 
          (iintrod :: iintrods) <- intro hidx hole env htyInLhsCtxt
            | [] => pure $ EditError "Don't know what to do."
@@ -526,7 +526,7 @@ processEdit (Refine upd line hole e)
            | _ => pure $ EditError ("Could not find hole named" <++> pretty0 hole)
          let Hole args _ = definition hgdef
            | _ => pure $ EditError (pretty0 hole <++> "is not a refinable hole")
-         let (lhsCtxt ** (env, htyInLhsCtxt)) = underPis (cast args) ScopeEmpty (type hgdef)
+         let (lhsCtxt ** (env, htyInLhsCtxt)) = underPis (cast args) Env.empty (type hgdef)
 
          -- Then we elaborate the expression we were given and infer its type.
          -- We have some magic built-in if the expression happens to be a single identifier
@@ -537,7 +537,7 @@ processEdit (Refine upd line hole e)
                  -- could not find the variable: it may be a local one!
                  | [] => pure (Right Nothing)
                let sizes = (n ::: ns) <&> \ (_,_,gdef) =>
-                              let ctxt = underPis (-1) ScopeEmpty (type gdef) in
+                              let ctxt = underPis (-1) Env.empty (type gdef) in
                               lengthExplicitPi $ fst $ snd $ ctxt
                let True = all (head sizes ==) sizes
                  | _ => pure (Left ("Ambiguous name" <++> pretty0 v <++> "(couldn't infer arity)"))
@@ -577,7 +577,7 @@ processEdit (Refine upd line hole e)
          -- without eta-expansion to (\ a => fun a)
          -- It is hopefully a good enough approximation for now. A very ambitious approach
          -- would be to type-align the telescopes. Bonus points for allowing permutations.
-         let size_tele_hole = lengthExplicitPi $ fst $ snd $ underPis (-1) ScopeEmpty (type hgdef)
+         let size_tele_hole = lengthExplicitPi $ fst $ snd $ underPis (-1) Env.empty (type hgdef)
          let True = size_tele_fun >= size_tele_hole
            | _ => pure $ EditError $ hsep
                        [ "Cannot seem to refine", pretty0 hole
@@ -636,7 +636,7 @@ processEdit (ExprSearch upd line name hints)
                   case holeInfo pi of
                        NotHole => pure $ EditError "Not a searchable hole"
                        SolvedHole locs =>
-                          do let (_ ** (env, tm')) = dropLamsTm locs ScopeEmpty !(normaliseHoles defs ScopeEmpty tm)
+                          do let (_ ** (env, tm')) = dropLamsTm locs Env.empty !(normaliseHoles defs Env.empty tm)
                              itm <- resugar env tm'
                              let itm'= ifThenElse brack (addBracket replFC itm) itm
                              if upd
@@ -747,8 +747,8 @@ prepareExp ctm
          let ttimpWithIt = ILocal replFC !getItDecls ttimp
          inidx <- resolveName (UN $ Basic "[input]")
          (tm, ty) <- elabTerm inidx InExpr [] (MkNested [])
-                                 ScopeEmpty ttimpWithIt Nothing
-         tm_erased <- linearCheck replFC linear True ScopeEmpty tm
+                                 Env.empty ttimpWithIt Nothing
+         tm_erased <- linearCheck replFC linear True Env.empty tm
          compileAndInlineAll
          pure tm_erased
 
@@ -798,8 +798,8 @@ execDecls decls = do
     execDecl decl = do
       i <- desugarDecl [] decl
       inidx <- resolveName (UN $ Basic "[defs]")
-      _ <- newRef EST (initEStateSub inidx ScopeEmpty Refl)
-      processLocal [] (MkNested []) ScopeEmpty !getItDecls i
+      _ <- newRef EST (initEStateSub inidx Env.empty Refl)
+      processLocal [] (MkNested []) Env.empty !getItDecls i
 
 export
 compileExp : {auto c : Ref Ctxt Defs} ->
@@ -858,14 +858,14 @@ inferAndNormalize : {auto c : Ref Ctxt Defs} ->
   {auto o : Ref ROpts REPLOpts} ->
   REPLEval ->
   PTerm ->
-  Core (TermWithType ScopeEmpty)
+  Core (TermWithType Scope.empty)
 inferAndNormalize emode itm
-  = do (tm `WithType` ty) <- inferAndElab (elabMode emode) itm ScopeEmpty
+  = do (tm `WithType` ty) <- inferAndElab (elabMode emode) itm Env.empty
        logTerm "repl.eval" 10 "Elaborated input" tm
        defs <- get Ctxt
        let norm = replEval emode
-       ntm <- norm defs ScopeEmpty tm
-       logTermNF "repl.eval" 5 "Normalised" ScopeEmpty ntm
+       ntm <- norm defs Env.empty tm
+       logTermNF "repl.eval" 5 "Normalised" Env.empty ntm
        pure $ ntm `WithType` ty
   where
     elabMode : REPLEval -> ElabMode
@@ -891,27 +891,27 @@ process (Eval itm)
          case emode of
             Execute => do ignore (execExp itm); pure (Executed itm)
             Scheme =>
-              do (tm `WithType` ty) <- inferAndElab InExpr itm ScopeEmpty
+              do (tm `WithType` ty) <- inferAndElab InExpr itm Env.empty
                  qtm <- logTimeWhen !getEvalTiming 0 "Evaluation" $
-                           (do nf <- snfAll ScopeEmpty tm
-                               quote ScopeEmpty nf)
-                 itm <- logTimeWhen False 0 "Resugar" $ resugar ScopeEmpty qtm
+                           (do nf <- snfAll Env.empty tm
+                               quote Env.empty nf)
+                 itm <- logTimeWhen False 0 "Resugar" $ resugar Env.empty qtm
                  pure (Evaluated itm Nothing)
             _ =>
               do (ntm `WithType` ty) <- logTimeWhen !getEvalTiming 0 "Evaluation" $
                                            inferAndNormalize emode itm
-                 itm <- resugar ScopeEmpty ntm
+                 itm <- resugar Env.empty ntm
                  defs <- get Ctxt
                  opts <- get ROpts
                  let norm = replEval emode
                  evalResultName <- DN "it" <$> genName "evalResult"
                  ignore $ addDef evalResultName
-                   $ newDef replFC evalResultName top ScopeEmpty ty defaulted
-                   $ PMDef defaultPI ScopeEmpty (STerm 0 ntm) (STerm 0 ntm) []
+                   $ newDef replFC evalResultName top Scope.empty ty defaulted
+                   $ PMDef defaultPI Scope.empty (STerm 0 ntm) (STerm 0 ntm) []
                  addToSave evalResultName
                  put ROpts ({ evalResultName := Just evalResultName } opts)
                  if showTypes opts
-                    then do ity <- resugar ScopeEmpty !(norm defs ScopeEmpty ty)
+                    then do ity <- resugar Env.empty !(norm defs Env.empty ty)
                             pure (Evaluated itm (Just ity))
                     else pure (Evaluated itm Nothing)
 process (Check (PRef fc (UN (Basic "it"))))
@@ -926,11 +926,11 @@ process (Check (PRef fc fn))
               ts => do tys <- traverse (displayType False defs) ts
                        pure (Printed $ vsep $ map (reAnnotate Syntax) tys)
 process (Check itm)
-    = do (tm `WithType` ty) <- inferAndElab InExpr itm ScopeEmpty
+    = do (tm `WithType` ty) <- inferAndElab InExpr itm Env.empty
          defs <- get Ctxt
-         itm <- resugar ScopeEmpty !(normaliseHoles defs ScopeEmpty tm)
+         itm <- resugar Env.empty !(normaliseHoles defs Env.empty tm)
          -- ty <- getTerm gty
-         ity <- resugar ScopeEmpty !(normalise defs ScopeEmpty ty)
+         ity <- resugar Env.empty !(normalise defs Env.empty ty)
          pure (TermChecked itm ity)
 process (CheckWithImplicits itm)
     = do showImplicits <- showImplicits <$> getPPrint
@@ -990,7 +990,7 @@ process (TypeSearch searchTerm)
          let ctxt = gamma defs
          rawTy <- desugar AnyExpr [] searchTerm
          bound <- piBindNames replFC [] rawTy
-         (ty, _) <- elabTerm 0 InType [] (MkNested []) ScopeEmpty bound Nothing
+         (ty, _) <- elabTerm 0 InType [] (MkNested []) Env.empty bound Nothing
          ty' <- toResolvedNames ty
          filteredDefs <-
            do names   <- allNames ctxt

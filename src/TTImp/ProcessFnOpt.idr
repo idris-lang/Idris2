@@ -14,7 +14,7 @@ import Data.SnocList
 
 getRetTy : Defs -> ClosedNF -> Core Name
 getRetTy defs (NBind fc _ (Pi _ _ _ _) sc)
-    = getRetTy defs !(sc defs (toClosure defaultOpts ScopeEmpty (Erased fc Placeholder)))
+    = getRetTy defs !(sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder)))
 getRetTy defs (NTCon _ n _ _ _) = pure n
 getRetTy defs ty
     = throw (GenericMsg (getLoc ty)
@@ -52,7 +52,7 @@ processFnOpt fc True ndef (Hint d)
     = do defs <- get Ctxt
          Just ty <- lookupTyExact ndef (gamma defs)
               | Nothing => undefinedName fc ndef
-         target <- getRetTy defs !(nf defs ScopeEmpty ty)
+         target <- getRetTy defs !(nf defs Env.empty ty)
          addHintFor fc target ndef d False
 processFnOpt fc _ ndef (Hint d)
     = do logC "elab" 5 $ do pure $ "Adding local hint " ++ show !(toFullNames ndef)
@@ -80,7 +80,7 @@ processFnOpt fc _ ndef (SpecArgs ns)
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact ndef (gamma defs)
               | Nothing => undefinedName fc ndef
-         nty <- nf defs ScopeEmpty (type gdef)
+         nty <- nf defs Env.empty (type gdef)
          ps <- getNamePos 0 nty
          ddeps <- collectDDeps nty
          specs <- collectSpec [] ddeps ps nty
@@ -100,10 +100,10 @@ processFnOpt fc _ ndef (SpecArgs ns)
     collectDDeps (NBind tfc x (Pi _ _ _ nty) sc)
         = do defs <- get Ctxt
              empty <- clearDefs defs
-             sc' <- sc defs (toClosure defaultOpts ScopeEmpty (Ref tfc Bound x))
+             sc' <- sc defs (toClosure defaultOpts Env.empty (Ref tfc Bound x))
              if x `elem` ns
                 then collectDDeps sc'
-                else do aty <- quote empty ScopeEmpty nty
+                else do aty <- quote empty Env.empty nty
                         -- Get names depended on by nty
                         let deps = keys (getRefs (UN Underscore) aty)
                         rest <- collectDDeps sc'
@@ -112,7 +112,7 @@ processFnOpt fc _ ndef (SpecArgs ns)
 
     -- Return names the type depends on, and whether it's a parameter
     mutual
-      getDepsArgs : Bool -> Scopeable ClosedNF -> NameMap Bool ->
+      getDepsArgs : Bool -> List ClosedNF -> NameMap Bool ->
                     Core (NameMap Bool)
       getDepsArgs inparam [] ns = pure ns
       getDepsArgs inparam (a :: as) ns
@@ -124,12 +124,12 @@ processFnOpt fc _ ndef (SpecArgs ns)
       getDeps inparam (NBind _ x (Pi _ _ _ pty) sc) ns
           = do defs <- get Ctxt
                ns' <- getDeps inparam !(evalClosure defs pty) ns
-               sc' <- sc defs (toClosure defaultOpts ScopeEmpty (Erased fc Placeholder))
+               sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
                getDeps inparam sc' ns'
       getDeps inparam (NBind _ x b sc) ns
           = do defs <- get Ctxt
                ns' <- getDeps False !(evalClosure defs (binderType b)) ns
-               sc' <- sc defs (toClosure defaultOpts ScopeEmpty (Erased fc Placeholder))
+               sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
                getDeps False sc' ns
       getDeps inparam (NApp _ (NRef Bound n) args) ns
           = do defs <- get Ctxt
@@ -143,14 +143,14 @@ processFnOpt fc _ ndef (SpecArgs ns)
                params <- case !(lookupDefExact n (gamma defs)) of
                               Just (TCon _ _ ps _ _ _ _ _) => pure ps
                               _ => pure []
-               let (ps, ds) = splitPs 0 params (map snd (toList args))
+               let (ps, ds) = splitPs 0 params (map snd args)
                ns' <- getDepsArgs True !(traverse (evalClosure defs) ps) ns
                getDepsArgs False !(traverse (evalClosure defs) ds) ns'
         where
           -- Split into arguments in parameter position, and others
           splitPs : Nat -> List Nat -> List ClosedClosure ->
-                    (Scopeable ClosedClosure, Scopeable ClosedClosure)
-          splitPs n params [] = (ScopeEmpty, ScopeEmpty)
+                    (List ClosedClosure, List ClosedClosure)
+          splitPs n params [] = ([], [])
           splitPs n params (x :: xs)
               = let (ps', ds') = splitPs (1 + n) params xs in
                     if n `elem` params
@@ -170,7 +170,7 @@ processFnOpt fc _ ndef (SpecArgs ns)
     collectSpec acc ddeps ps (NBind tfc x (Pi _ _ _ nty) sc)
         = do defs <- get Ctxt
              empty <- clearDefs defs
-             sc' <- sc defs (toClosure defaultOpts ScopeEmpty (Ref tfc Bound x))
+             sc' <- sc defs (toClosure defaultOpts Env.empty (Ref tfc Bound x))
              if x `elem` ns
                 then do deps <- getDeps True !(evalClosure defs nty) NameMap.empty
                         -- Get names depended on by nty
@@ -188,6 +188,6 @@ processFnOpt fc _ ndef (SpecArgs ns)
     getNamePos : Nat -> ClosedNF -> Core (List (Name, Nat))
     getNamePos i (NBind tfc x (Pi _ _ _ _) sc)
         = do defs <- get Ctxt
-             ns' <- getNamePos (1 + i) !(sc defs (toClosure defaultOpts ScopeEmpty (Erased tfc Placeholder)))
+             ns' <- getNamePos (1 + i) !(sc defs (toClosure defaultOpts Env.empty (Erased tfc Placeholder)))
              pure ((x, i) :: ns')
     getNamePos _ _ = pure []

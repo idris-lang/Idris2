@@ -173,7 +173,7 @@ mutual
   ||| @ vars is the list of names accessible within the current scope of the
   |||   lambda-lifted code.
   public export
-  data LiftedConAlt : (vars : Scope) -> Type where
+  data LiftedConAlt : Scoped where
 
        ||| Constructs a branch of an "LCon" (constructor tag) case statement.
        |||
@@ -199,7 +199,7 @@ mutual
   ||| @ vars is the list of names accessible within the current scope of the
   |||   lambda-lifted code.
   public export
-  data LiftedConstAlt : (vars : Scope) -> Type where
+  data LiftedConstAlt : Scoped where
 
        ||| Constructs a branch of an "LConst" (constant expression) case
        ||| statement.
@@ -229,7 +229,7 @@ data LiftedDef : Type where
      -- arranged for the variables, and it could be expensive to reshuffle them!
      -- See Compiler.ANF for an example of how they get resolved to names)
      MkLFun : (args : Scope) -> (scope : Scope) ->
-              (body : Lifted (scope ++ args)) -> LiftedDef
+              (body : Lifted (Scope.addInner args scope)) -> LiftedDef
 
      ||| Constructs a definition of a constructor for a compound data type.
      |||
@@ -262,7 +262,7 @@ data LiftedDef : Type where
      ||| `LCrash` rather than `prim_crash`.
      |||
      ||| @ expl : an explanation of the error.
-     MkLError : (expl : Lifted ScopeEmpty) -> LiftedDef
+     MkLError : (expl : Lifted Scope.empty) -> LiftedDef
 
 showLazy : Maybe LazyReason -> String
 showLazy = maybe "" $ (" " ++) . show
@@ -360,8 +360,9 @@ record Used (vars : Scope) where
 initUsed : {vars : _} -> Used vars
 initUsed {vars} = MkUsed (replicate (length vars) False)
 
+-- TODO upstream
 lengthDistributesOverAppend
-  : (xs, ys : Scopeable a)
+  : (xs, ys : List a)
   -> length (xs ++ ys) = length xs + length ys
 lengthDistributesOverAppend [] ys = Refl
 lengthDistributesOverAppend (x :: xs) ys =
@@ -422,7 +423,7 @@ usedVars used (LUnderApp fc n miss args) =
 usedVars used (LApp fc lazy c arg) =
   usedVars (usedVars used arg) c
 usedVars used (LLet fc x val sc) =
-  let innerUsed = contractUsed $ usedVars (weakenUsed {outer=ScopeSingle x} used) sc in
+  let innerUsed = contractUsed $ usedVars (weakenUsed {outer=Scope.single x} used) sc in
       usedVars innerUsed val
 usedVars used (LCon fc n ci tag args) =
   foldl (usedVars {vars}) used args
@@ -461,8 +462,8 @@ dropIdx : {vars : _} ->
 dropIdx [] (False::_) First = MkVar First
 dropIdx [] (True::_) First = assert_total $
   idris_crash "INTERNAL ERROR: Referenced variable marked as unused"
-dropIdx [] (False::rest) (Later p) = Var.later $ dropIdx ScopeEmpty rest p
-dropIdx [] (True::rest) (Later p) = dropIdx ScopeEmpty rest p
+dropIdx [] (False::rest) (Later p) = Var.later $ dropIdx Scope.empty rest p
+dropIdx [] (True::rest) (Later p) = dropIdx Scope.empty rest p
 dropIdx (_::xs) unused First = MkVar First
 dropIdx (_::xs) unused (Later p) = Var.later $ dropIdx xs unused p
 
@@ -559,7 +560,7 @@ mutual
             CExp vars -> Core (Lifted vars)
   liftExp (CLocal fc prf) = pure $ LLocal fc prf
   liftExp (CRef fc n) = pure $ LAppName fc lazy n [] -- probably shouldn't happen!
-  liftExp (CLam fc x sc) = makeLam {doLazyAnnots} {lazy} fc (ScopeSingle x) sc
+  liftExp (CLam fc x sc) = makeLam {doLazyAnnots} {lazy} fc (Scope.single x) sc
   liftExp (CLet fc x _ val sc) = pure $ LLet fc x !(liftExp {doLazyAnnots} val) !(liftExp {doLazyAnnots} sc)
   liftExp (CApp fc (CRef _ n) args) -- names are applied exactly in compileExp
       = pure $ LAppName fc lazy n !(traverse (liftExp {doLazyAnnots}) args)
@@ -610,7 +611,7 @@ export
 lambdaLiftDef : (doLazyAnnots : Bool) -> Name -> CDef -> Core (List (Name, LiftedDef))
 lambdaLiftDef doLazyAnnots n (MkFun args exp)
     = do (expl, defs) <- liftBody {doLazyAnnots} n exp
-         pure ((n, MkLFun args ScopeEmpty expl) :: defs)
+         pure ((n, MkLFun args Scope.empty expl) :: defs)
 lambdaLiftDef _ n (MkCon t a nt) = pure [(n, MkLCon t a nt)]
 lambdaLiftDef _ n (MkForeign ccs fargs ty) = pure [(n, MkLForeign ccs fargs ty)]
 lambdaLiftDef doLazyAnnots n (MkError exp)

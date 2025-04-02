@@ -17,14 +17,14 @@ import Libraries.Data.SnocList.HasLength
 -- Environment containing types and values of local variables
 public export
 data Env : (tm : Scoped) -> Scope -> Type where
-     Nil : Env tm ScopeEmpty
+     Nil : Env tm Scope.empty
      (::) : Binder (tm vars) -> Env tm vars -> Env tm (x :: vars)
 
 %name Env rho
 
 public export
-ScopeEmpty : {tm: _} -> Env tm []
-ScopeEmpty = []
+empty : Env tm Scope.empty
+empty = []
 
 export
 extend : (x : Name) -> Binder (tm vars) -> Env tm vars -> Env tm (x :: vars)
@@ -53,10 +53,26 @@ lengthExplicitPi (Pi _ _ Explicit _ :: rho) = S (lengthExplicitPi rho)
 lengthExplicitPi (_ :: rho) = lengthExplicitPi rho
 
 export
-namesNoLet : {xs : _} -> Env tm xs -> Scopeable Name
+namesNoLet : {xs : _} -> Env tm xs -> List Name
 namesNoLet [] = []
 namesNoLet (Let _ _ _ _ :: xs) = namesNoLet xs
 namesNoLet {xs = x :: _} (_ :: env) = x :: namesNoLet env
+
+export
+eraseLinear : Env tm vs -> Env tm vs
+eraseLinear [] = Env.empty
+eraseLinear (b :: bs)
+    = if isLinear (multiplicity b)
+         then setMultiplicity b erased :: eraseLinear bs
+         else b :: eraseLinear bs
+
+export
+getErased : {vs : _} -> Env tm vs -> List (Var vs)
+getErased [] = []
+getErased (b :: bs)
+    = if isErased (multiplicity b)
+         then MkVar First :: map weaken (getErased bs)
+         else map weaken (getErased bs)
 
 public export
 data IsDefined : Name -> Scope -> Type where
@@ -111,7 +127,7 @@ export
 getBinder : Weaken tm =>
             {vars : _} -> {idx : Nat} ->
             (0 p : IsVar x idx vars) -> Env tm vars -> Binder (tm vars)
-getBinder el env = getBinderUnder ScopeEmpty el env
+getBinder el env = getBinderUnder Scope.empty el env
 
 -- For getBinderLoc, we are not reusing getBinder because there is no need to
 -- needlessly weaken stuff;
@@ -158,15 +174,23 @@ abstractFullEnvType fc (b :: env) tm
       in abstractFullEnvType fc env (Bind fc _ bnd tm)
 
 export
+mkExplicit : Env Term vs -> Env Term vs
+mkExplicit [] = Env.empty
+mkExplicit (Pi fc c _ ty :: env) = Pi fc c Explicit ty :: mkExplicit env
+mkExplicit (b :: env) = b :: mkExplicit env
+
+export
 letToLam : Env Term vars -> Env Term vars
 letToLam [] = []
 letToLam (Let fc c val ty :: env) = Lam fc c Explicit ty :: letToLam env
 letToLam (b :: env) = b :: letToLam env
 
 mutual
+  -- TODO turn list into set of nats throughout
+
   -- Quicker, if less safe, to store variables as a Nat, for quick comparison
   findUsed : {vars : _} ->
-             Env Term vars -> Scopeable Nat -> Term vars -> Scopeable Nat
+             Env Term vars -> List Nat -> Term vars -> List Nat
   findUsed env used (Local fc r idx p)
       = if elemBy eqNat idx used
            then used
@@ -178,7 +202,7 @@ mutual
   findUsed env used (Meta _ _ _ args)
       = findUsedArgs env used args
     where
-      findUsedArgs : Env Term vars -> Scopeable Nat -> List (Term vars) -> Scopeable Nat
+      findUsedArgs : Env Term vars -> List Nat -> List (Term vars) -> List Nat
       findUsedArgs env u [] = u
       findUsedArgs env u (a :: as)
           = findUsedArgs env (findUsed env u a) as
@@ -188,7 +212,7 @@ mutual
                           (map S (findUsedInBinder env used b))
                           tm)
     where
-      dropS : Scopeable Nat -> Scopeable Nat
+      dropS : List Nat -> List Nat
       dropS [] = []
       dropS (Z :: xs) = dropS xs
       dropS (S p :: xs) = p :: dropS xs
@@ -205,8 +229,8 @@ mutual
   findUsed env used _ = used
 
   findUsedInBinder : {vars : _} ->
-                     Env Term vars -> Scopeable Nat ->
-                     Binder (Term vars) -> Scopeable Nat
+                     Env Term vars -> List Nat ->
+                     Binder (Term vars) -> List Nat
   findUsedInBinder env used (Let _ _ val ty)
     = findUsed env (findUsed env used val) ty
   findUsedInBinder env used (PLet _ _ val ty)
@@ -222,16 +246,16 @@ toVar _ _ = Nothing
 
 export
 findUsedLocs : {vars : _} ->
-               Env Term vars -> Term vars -> Scopeable (Var vars)
+               Env Term vars -> Term vars -> List (Var vars)
 findUsedLocs env tm
-    = mapMaybe (toVar _) (findUsed env ScopeEmpty tm)
+    = mapMaybe (toVar _) (findUsed env [] tm)
 
-isUsed : Nat -> Scopeable (Var vars) -> Bool
+isUsed : Nat -> List (Var vars) -> Bool
 isUsed n [] = False
 isUsed n (v :: vs) = n == varIdx v || isUsed n vs
 
 mkShrinkSub : {n : _} ->
-              (vars : _) -> Scopeable (Var (n :: vars)) ->
+              (vars : _) -> List (Var (n :: vars)) ->
               (newvars ** Thin newvars (n :: vars))
 mkShrinkSub [] els
     = if isUsed 0 els
@@ -244,7 +268,7 @@ mkShrinkSub (x :: xs) els
         else (_ ** Drop subRest)
 
 mkShrink : {vars : _} ->
-           Scopeable (Var vars) ->
+           List (Var vars) ->
            (newvars ** Thin newvars vars)
 mkShrink {vars = []} xs = (_ ** Refl)
 mkShrink {vars = v :: vs} xs = mkShrinkSub _ xs
@@ -283,11 +307,13 @@ mkEnv fc (n :: ns) = PVar fc top Explicit (Erased fc Placeholder) :: mkEnv fc ns
 
 -- Update an environment so that all names are guaranteed unique. In the
 -- case of a clash, the most recently bound is left unchanged.
+--
+-- TODO replace list of `used` names with a proper set
 export
 uniqifyEnv : {vars : _} ->
              Env Term vars ->
              (vars' ** (Env Term vars', CompatibleVars vars vars'))
-uniqifyEnv env = uenv ScopeEmpty env
+uniqifyEnv env = uenv [] env
   where
     next : Name -> Name
     next (MN n i) = MN n (i + 1)
@@ -295,7 +321,7 @@ uniqifyEnv env = uenv ScopeEmpty env
     next (NS ns n) = NS ns (next n)
     next n = MN (show n) 0
 
-    uniqueLocal : Scope -> Name -> Name
+    uniqueLocal : List Name -> Name -> Name
     uniqueLocal vs n
        = if n `elem` vs
                  -- we'll find a new name eventualy since the list of names
@@ -307,7 +333,7 @@ uniqifyEnv env = uenv ScopeEmpty env
             else n
 
     uenv : {vars : _} ->
-           Scope -> Env Term vars ->
+           List Name -> Env Term vars ->
            (vars' ** (Env Term vars', CompatibleVars vars vars'))
     uenv used [] = ([] ** ([], Pre))
     uenv used {vars = v :: vs} (b :: bs)
@@ -338,8 +364,8 @@ close fc nm env tm
     substs s env (rewrite appendNilRightNeutral vars in tm)
 
   where
-    mkSubstEnv : Int -> Env Term vs -> (SizeOf vs, SubstEnv vs ScopeEmpty)
-    mkSubstEnv i [] = (zero, ScopeEmpty)
+    mkSubstEnv : Int -> Env Term vs -> (SizeOf vs, SubstEnv vs Scope.empty)
+    mkSubstEnv i [] = (zero, Subst.empty)
     mkSubstEnv i (v :: vs)
        = let (s, env) = mkSubstEnv (i + 1) vs in
          (suc s, Ref fc Bound (MN nm i) :: env)

@@ -113,7 +113,7 @@ checkCon {vars} opts nest env vis tn_in tn (MkImpTy fc cn_in ty_raw)
          -- Check 'ty' returns something in the right family
          checkFamily fc cn tn env !(nf defs env ty)
          let fullty = abstractEnvType fc env ty
-         logTermNF "declare.data.constructor" 5 ("Constructor " ++ show cn) ScopeEmpty fullty
+         logTermNF "declare.data.constructor" 5 ("Constructor " ++ show cn) Env.empty fullty
 
          traverse_ addToSave (keys (getMetas ty))
          addToSave cn
@@ -124,20 +124,20 @@ checkCon {vars} opts nest env vis tn_in tn (MkImpTy fc cn_in ty_raw)
                            addHashWithNames fullty
                            log "module.hash" 15 "Adding hash for data constructor: \{show cn}"
               _ => pure ()
-         pure (MkCon fc cn !(getArity defs ScopeEmpty fullty) fullty)
+         pure (MkCon fc cn !(getArity defs Env.empty fullty) fullty)
 
 -- Get the indices of the constructor type (with non-constructor parts erased)
 getIndexPats : {auto c : Ref Ctxt Defs} ->
                ClosedTerm -> Core (List ClosedNF)
 getIndexPats tm
     = do defs <- get Ctxt
-         tmnf <- nf defs ScopeEmpty tm
+         tmnf <- nf defs Env.empty tm
          ret <- getRetType defs tmnf
          getPats defs ret
   where
     getRetType : Defs -> ClosedNF -> Core ClosedNF
     getRetType defs (NBind fc _ (Pi _ _ _ _) sc)
-        = do sc' <- sc defs (toClosure defaultOpts ScopeEmpty (Erased fc Placeholder))
+        = do sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
              getRetType defs sc'
     getRetType defs t = pure t
 
@@ -158,7 +158,7 @@ getDetags fc tys
              xs => pure $ Just xs
   where
     mutual
-      disjointArgs : Scopeable ClosedNF -> Scopeable ClosedNF -> Core Bool
+      disjointArgs : List ClosedNF -> List ClosedNF -> Core Bool
       disjointArgs [] _ = pure False
       disjointArgs _ [] = pure False
       disjointArgs (a :: args) (a' :: args')
@@ -215,19 +215,19 @@ getRelevantArg : {auto c : Ref Ctxt Defs} ->
                  Core (Maybe (Bool, Nat))
 getRelevantArg defs i rel world (NBind fc _ (Pi _ rig _ val) sc)
     = branchZero (getRelevantArg defs (1 + i) rel world
-                              !(sc defs (toClosure defaultOpts ScopeEmpty (Erased fc Placeholder))))
+                              !(sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))))
                  (case !(evalClosure defs val) of
                        -- %World is never inspected, so might as well be deleted from data types,
                        -- although it needs care when compiling to ensure that the function that
                        -- returns the IO/%World type isn't erased
                        (NPrimVal _ $ PrT WorldType) =>
                            getRelevantArg defs (1 + i) rel False
-                               !(sc defs (toClosure defaultOpts ScopeEmpty (Erased fc Placeholder)))
+                               !(sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder)))
                        _ =>
                        -- if we haven't found a relevant argument yet, make
                        -- a note of this one and keep going. Otherwise, we
                        -- have more than one, so give up.
-                           maybe (do sc' <- sc defs (toClosure defaultOpts ScopeEmpty (Erased fc Placeholder))
+                           maybe (do sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
                                      getRelevantArg defs (1 + i) (Just i) False sc')
                                  (const (pure Nothing))
                                  rel)
@@ -242,7 +242,7 @@ findNewtype : {auto c : Ref Ctxt Defs} ->
               List Constructor -> Core ()
 findNewtype [con]
     = do defs <- get Ctxt
-         Just arg <- getRelevantArg defs 0 Nothing True !(nf defs ScopeEmpty (type con))
+         Just arg <- getRelevantArg defs 0 Nothing True !(nf defs Env.empty (type con))
               | Nothing => pure ()
          updateDef (name con) $
                \case
@@ -281,7 +281,7 @@ shaped : {auto c : Ref Ctxt Defs} ->
 shaped as [] = pure Nothing
 shaped as (c :: cs)
     = do defs <- get Ctxt
-         if as !(normalise defs ScopeEmpty (type c))
+         if as !(normalise defs Env.empty (type c))
             then pure (Just (name c))
             else shaped as cs
 
@@ -334,7 +334,7 @@ calcEnum fc cs
     isNullary : Constructor -> Core Bool
     isNullary c
         = do defs <- get Ctxt
-             pure $ hasArgs 0 !(normalise defs ScopeEmpty (type c))
+             pure $ hasArgs 0 !(normalise defs Env.empty (type c))
 
 calcRecord : {auto c : Ref Ctxt Defs} ->
              FC -> List Constructor -> Core Bool
@@ -421,10 +421,10 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpLater dfc n_in ty_raw)
                               (IBindHere fc (PI erased) ty_raw)
                               (Just (gType dfc u))
          let fullty = abstractEnvType dfc env ty
-         logTermNF "declare.data" 5 ("data " ++ show n) ScopeEmpty fullty
+         logTermNF "declare.data" 5 ("data " ++ show n) Env.empty fullty
 
          checkIsType fc n env !(nf defs env ty)
-         arity <- getArity defs ScopeEmpty fullty
+         arity <- getArity defs Env.empty fullty
 
          -- Add the type constructor as a placeholder
          tidx <- addDef n (newDef fc n top vars fullty def_vis
@@ -504,16 +504,16 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
                       TCon _ _ _ _ flags mw Nothing _ => case mfullty of
                         Nothing => pure (mw, vis, tot, type ndef)
                         Just fullty =>
-                            do ok <- convert defs ScopeEmpty fullty (type ndef)
+                            do ok <- convert defs Env.empty fullty (type ndef)
                                if ok then pure (mw, vis, tot, fullty)
-                                     else do logTermNF "declare.data" 1 "Previous" ScopeEmpty (type ndef)
-                                             logTermNF "declare.data" 1 "Now" ScopeEmpty fullty
-                                             throw (CantConvert fc (gamma defs) ScopeEmpty (type ndef) fullty)
+                                     else do logTermNF "declare.data" 1 "Previous" Env.empty (type ndef)
+                                             logTermNF "declare.data" 1 "Now" Env.empty fullty
+                                             throw (CantConvert fc (gamma defs) Env.empty (type ndef) fullty)
                       _ => throw (AlreadyDefined fc n)
 
-         logTermNF "declare.data" 5 ("data " ++ show n) ScopeEmpty fullty
+         logTermNF "declare.data" 5 ("data " ++ show n) Env.empty fullty
 
-         arity <- getArity defs ScopeEmpty fullty
+         arity <- getArity defs Env.empty fullty
 
          -- Add the type constructor as a placeholder while checking
          -- data constructors

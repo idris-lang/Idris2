@@ -47,8 +47,8 @@ suc (MkSizeOf n p) = MkSizeOf (S n) (S p)
 
 -- ||| suc but from the right
 export
-sucR : SizeOf as -> SizeOf ([<a] ++ as)
-sucR (MkSizeOf n p) = MkSizeOf (S n) (sucR p)
+sucL : SizeOf as -> SizeOf ([<a] ++ as)
+sucL (MkSizeOf n p) = MkSizeOf (S n) (sucL p)
 
 public export
 (<><) : SizeOf {a} sx -> LSizeOf {a} ys -> SizeOf (sx <>< ys)
@@ -82,9 +82,11 @@ map (MkSizeOf n p) = MkSizeOf n (cast (sym $ lengthMap sx) p) where
   lengthMap [<] = Refl
   lengthMap (sx :< x) = cong S (lengthMap sx)
 
+{-
 public export
 take : {n : Nat} -> {0 sx : Stream a} -> SizeOf (take n sx)
 take = MkSizeOf n (take n sx)
+-}
 
 namespace SizedView
 

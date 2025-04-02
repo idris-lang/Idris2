@@ -83,13 +83,13 @@ conflict defs env nfty n
               | Nothing => pure False
          case (definition gdef, type gdef) of
               (DCon t arity _, dty)
-                  => do Nothing <- conflictNF 0 nfty !(nf defs ScopeEmpty dty)
+                  => do Nothing <- conflictNF 0 nfty !(nf defs Env.empty dty)
                             | Just ms => pure $ conflictMatch ms
                         pure True
               _ => pure False
   where
     mutual
-      conflictArgs : Int -> Scopeable (Closure vars) -> Scopeable ClosedClosure ->
+      conflictArgs : Int -> List (Closure vars) -> List ClosedClosure ->
                      Core (Maybe (List (Name, Term vars)))
       conflictArgs _ [] [] = pure (Just [])
       conflictArgs i (c :: cs) (c' :: cs')
@@ -116,7 +116,7 @@ conflict defs env nfty n
           -- put possible
           = let x' = MN (show x) i in
                 conflictNF (i + 1) t
-                       !(sc defs (toClosure defaultOpts ScopeEmpty (Ref fc Bound x')))
+                       !(sc defs (toClosure defaultOpts Env.empty (Ref fc Bound x')))
       conflictNF i nf (NApp _ (NRef Bound n) [])
           = pure (Just [(n, !(quote defs env nf))])
       conflictNF i (NDCon _ n t a args) (NDCon _ n' t' a' args')
@@ -198,10 +198,6 @@ getMissingAlts fc defs nfty alts
 KnownVars : Scope -> Type -> Type
 KnownVars vars a = List (Var vars, a)
 
-getName : {idx : Nat} -> {vars : Scope} -> (0 p : IsVar n idx vars) -> Name
-getName {vars = v :: _} First = v
-getName (Later p) = getName p
-
 showK : {ns : _} ->
         Show a => KnownVars ns a -> String
 showK {a} xs = show (map aString xs)
@@ -210,6 +206,7 @@ showK {a} xs = show (map aString xs)
               (Var vars, a) -> (Name, a)
     aString (MkVar v, t) = (nameAt v, t)
 
+-- TODO re-use `Thinnable`
 weakenNs : SizeOf args -> KnownVars vars a -> KnownVars (args ++ vars) a
 weakenNs args [] = []
 weakenNs args ((v, t) :: xs)
@@ -277,8 +274,8 @@ buildArgs : {auto c : Ref Ctxt Defs} ->
             KnownVars vars Int -> -- Things which have definitely match
             KnownVars vars (List Int) -> -- Things an argument *can't* be
                                     -- (because a previous case matches)
-            Scopeable ClosedTerm -> -- ^ arguments, with explicit names
-            CaseTree vars -> Core (List (Scopeable ClosedTerm))
+            List ClosedTerm -> -- ^ arguments, with explicit names
+            CaseTree vars -> Core (List (List ClosedTerm))
 buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
   -- If we've already matched on 'el' in this branch, restrict the alternatives
   -- to the tag we already know. Otherwise, add missing cases and filter out
@@ -295,7 +292,7 @@ buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
          buildArgsAlt not altsN
   where
     buildArgAlt : KnownVars vars (List Int) ->
-                  CaseAlt vars -> Core (List (Scopeable ClosedTerm))
+                  CaseAlt vars -> Core (List (List ClosedTerm))
     buildArgAlt not' (ConCase n t args sc)
         = do let l = mkSizeOf args
              let con = Ref fc (DataCon t (size l)) n
@@ -318,7 +315,7 @@ buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
         = buildArgs fc defs known not' ps sc
 
     buildArgsAlt : KnownVars vars (List Int) -> List (CaseAlt vars) ->
-                   Core (List (Scopeable ClosedTerm))
+                   Core (List (List ClosedTerm))
     buildArgsAlt not' [] = pure []
     buildArgsAlt not' (c@(ConCase _ t _ _) :: cs)
         = pure $ !(buildArgAlt not' c) ++
@@ -351,7 +348,7 @@ getMissing fc n ctree
           logC "coverage.missing" 20 $ map (join "\n") $
             flip traverse pats $ \ pat =>
               show <$> toFullNames pat
-        pure (map (apply fc (Ref fc Func n) . toList) patss)
+        pure (map (apply fc (Ref fc Func n)) patss)
 
 -- For the given name, get the names it refers to which are not themselves
 -- covering.
@@ -428,7 +425,7 @@ eraseApps {vs} tm
                 do args' <- traverse eraseApps args
                    pure (apply (getLoc tm) tm args')
   where
-    dropPos : FC -> Nat -> List Nat -> Scopeable (Term vs) -> Scopeable (Term vs)
+    dropPos : FC -> Nat -> List Nat -> List (Term vs) -> List (Term vs)
     dropPos fc i ns [] = []
     dropPos fc i ns (x :: xs)
         = if i `elem` ns
@@ -461,7 +458,7 @@ checkMatched cs ulhs
   where
     tryClauses : List Clause -> ClosedTerm -> Core (Maybe ClosedTerm)
     tryClauses [] ulhs
-        = do logTermNF "coverage" 10 "Nothing matches" ScopeEmpty ulhs
+        = do logTermNF "coverage" 10 "Nothing matches" Env.empty ulhs
              pure $ Just ulhs
     tryClauses (MkClause env lhs _ :: cs) ulhs
         = if !(clauseMatches env lhs ulhs)

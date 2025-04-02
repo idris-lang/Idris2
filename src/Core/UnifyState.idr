@@ -373,14 +373,14 @@ export
 applyTo : {vars : _} ->
           FC -> Term vars -> Env Term vars -> Term vars
 applyTo fc tm env
-  = let args = reverse (mkConstantAppArgs {done = ScopeEmpty} False fc env [<]) in
+  = let args = reverse (mkConstantAppArgs {done = Scope.empty} False fc env [<]) in
         apply fc tm (rewrite sym (appendNilRightNeutral vars) in args)
 
 export
 applyToFull : {vars : _} ->
               FC -> Term vars -> Env Term vars -> Term vars
 applyToFull fc tm env
-  = let args = reverse (mkConstantAppArgs {done = ScopeEmpty} True fc env [<]) in
+  = let args = reverse (mkConstantAppArgs {done = Scope.empty} True fc env [<]) in
         apply fc tm (rewrite sym (appendNilRightNeutral vars) in args)
 
 export
@@ -388,7 +388,7 @@ applyToSub : {vars : _} ->
              FC -> Term vars -> Env Term vars ->
              Thin smaller vars -> Term vars
 applyToSub fc tm env sub
-  = let args = reverse (mkConstantAppArgsSub {done = ScopeEmpty} True fc env sub [<]) in
+  = let args = reverse (mkConstantAppArgsSub {done = Scope.empty} True fc env sub [<]) in
         apply fc tm (rewrite sym (appendNilRightNeutral vars) in args)
 
 export
@@ -396,7 +396,7 @@ applyToOthers : {vars : _} ->
                 FC -> Term vars -> Env Term vars ->
                 Thin smaller vars -> Term vars
 applyToOthers fc tm env sub
-  = let args = reverse (mkConstantAppArgsOthers {done = ScopeEmpty} True fc env sub [<]) in
+  = let args = reverse (mkConstantAppArgsOthers {done = Scope.empty} True fc env sub [<]) in
         apply fc tm (rewrite sym (appendNilRightNeutral vars) in args)
 
 -- Create a new metavariable with the given name and return type,
@@ -416,7 +416,7 @@ newMetaLets {vars} fc rig env n ty def nocyc lets
     = do let hty = if lets then abstractFullEnvType fc env ty
                            else abstractEnvType fc env ty
          let hole = { noCycles := nocyc }
-                           (newDef fc n rig ScopeEmpty hty (specified Public) def)
+                           (newDef fc n rig Scope.empty hty (specified Public) def)
          log "unify.meta" 5 $ "Adding new meta " ++ show (n, fc, rig)
          logTerm "unify.meta" 10 ("New meta type " ++ show n) hty
          idx <- addDef n hole
@@ -424,7 +424,7 @@ newMetaLets {vars} fc rig env n ty def nocyc lets
          pure (idx, Meta fc n idx envArgs)
   where
     envArgs : List (Term vars)
-    envArgs = let args = reverse (mkConstantAppArgs {done = ScopeEmpty} lets fc env [<]) in
+    envArgs = let args = reverse (mkConstantAppArgs {done = Scope.empty} lets fc env [<]) in
                   rewrite sym (appendNilRightNeutral vars) in args
 
 export
@@ -461,7 +461,7 @@ newConstant {vars} fc rig env tm ty constrs
     = do let def = mkConstant fc env tm
          let defty = abstractFullEnvType fc env ty
          cn <- genName "postpone"
-         let guess = newDef fc cn rig ScopeEmpty defty (specified Public)
+         let guess = newDef fc cn rig Scope.empty defty (specified Public)
                             (Guess def (length env) constrs)
          log "unify.constant" 5 $ "Adding new constant " ++ show (cn, fc, rig)
          logTerm "unify.constant" 10 ("New constant type " ++ show cn) defty
@@ -470,7 +470,7 @@ newConstant {vars} fc rig env tm ty constrs
          pure (Meta fc cn idx envArgs)
   where
     envArgs : List (Term vars)
-    envArgs = let args = reverse (mkConstantAppArgs {done = ScopeEmpty} True fc env [<]) in
+    envArgs = let args = reverse (mkConstantAppArgs {done = Scope.empty} True fc env [<]) in
                   rewrite sym (appendNilRightNeutral vars) in args
 
 -- Create a new search with the given name and return type,
@@ -484,15 +484,15 @@ newSearch : {vars : _} ->
             Env Term vars -> Name -> Term vars -> Core (Int, Term vars)
 newSearch {vars} fc rig depth def env n ty
     = do let hty = abstractEnvType fc env ty
-         let hole = newDef fc n rig ScopeEmpty hty (specified Public) (BySearch rig depth def)
+         let hole = newDef fc n rig Scope.empty hty (specified Public) (BySearch rig depth def)
          log "unify.search" 10 $ "Adding new search " ++ show fc ++ " " ++ show n
-         logTermNF "unify.search" 10 "New search type" ScopeEmpty hty
+         logTermNF "unify.search" 10 "New search type" Env.empty hty
          idx <- addDef n hole
          addGuessName fc n idx
          pure (idx, Meta fc n idx envArgs)
   where
     envArgs : List (Term vars)
-    envArgs = let args = reverse (mkConstantAppArgs {done = ScopeEmpty} False fc env [<]) in
+    envArgs = let args = reverse (mkConstantAppArgs {done = Scope.empty} False fc env [<]) in
                   rewrite sym (appendNilRightNeutral vars) in args
 
 -- Add a hole which stands for a delayed elaborator
@@ -505,14 +505,14 @@ newDelayed : {vars : _} ->
              (ty : Term vars) -> Core (Int, Term vars)
 newDelayed {vars} fc rig env n ty
     = do let hty = abstractEnvType fc env ty
-         let hole = newDef fc n rig ScopeEmpty hty (specified Public) Delayed
+         let hole = newDef fc n rig Scope.empty hty (specified Public) Delayed
          idx <- addDef n hole
          log "unify.delay" 10 $ "Added delayed elaborator " ++ show (n, idx)
          addHoleName fc n idx
          pure (idx, Meta fc n idx envArgs)
   where
     envArgs : List (Term vars)
-    envArgs = let args = reverse (mkConstantAppArgs {done = ScopeEmpty} False fc env [<]) in
+    envArgs = let args = reverse (mkConstantAppArgs {done = Scope.empty} False fc env [<]) in
                   rewrite sym (appendNilRightNeutral vars) in args
 
 export
@@ -585,7 +585,7 @@ checkValidHole base (idx, (fc, n))
                   do defs <- get Ctxt
                      Just ty <- lookupTyExact n (gamma defs)
                           | Nothing => pure ()
-                     throw (CantSolveGoal fc (gamma defs) ScopeEmpty ty Nothing)
+                     throw (CantSolveGoal fc (gamma defs) Env.empty ty Nothing)
               Guess tm envb (con :: _) =>
                   do ust <- get UST
                      let Just c = lookup con (constraints ust)
@@ -620,7 +620,7 @@ checkUserHolesAfter base now
     = do gs_map <- getGuesses
          let gs = toList gs_map
          log "unify.unsolved" 10 $ "Unsolved guesses " ++ show gs
-         Core.Core.traverse_ (checkValidHole base) gs
+         List.traverse_ (checkValidHole base) gs
          hs_map <- getCurrentHoles
          let hs = toList hs_map
          let hs' = if any isUserName (map (snd . snd) hs)
@@ -659,34 +659,34 @@ dumpHole s n hole
              (Guess tm envb constraints, ty) =>
                   do logString s.topic n $
                        "!" ++ show !(getFullName (Resolved hole)) ++ " : "
-                           ++ show !(toFullNames !(normaliseHoles defs ScopeEmpty ty))
+                           ++ show !(toFullNames !(normaliseHoles defs Env.empty ty))
                        ++ "\n\t  = "
-                           ++ show !(normaliseHoles defs ScopeEmpty tm)
+                           ++ show !(normaliseHoles defs Env.empty tm)
                            ++ "\n\twhen"
                      traverse_ dumpConstraint constraints
              (Hole _ p, ty) =>
                   logString s.topic n $
                     "?" ++ show (fullname gdef) ++ " : "
-                        ++ show !(normaliseHoles defs ScopeEmpty ty)
+                        ++ show !(normaliseHoles defs Env.empty ty)
                         ++ if implbind p then " (ImplBind)" else ""
                         ++ if invertible gdef then " (Invertible)" else ""
              (BySearch _ _ _, ty) =>
                   logString s.topic n $
                      "Search " ++ show hole ++ " : " ++
-                     show !(toFullNames !(normaliseHoles defs ScopeEmpty ty))
+                     show !(toFullNames !(normaliseHoles defs Env.empty ty))
              (PMDef _ args t _ _, ty) =>
                   log s 4 $
                      "Solved: " ++ show hole ++ " : " ++
-                     show !(normalise defs ScopeEmpty ty) ++
-                     " = " ++ show !(normalise defs ScopeEmpty (Ref emptyFC Func (Resolved hole)))
+                     show !(normalise defs Env.empty ty) ++
+                     " = " ++ show !(normalise defs Env.empty (Ref emptyFC Func (Resolved hole)))
              (ImpBind, ty) =>
                   log s 4 $
                       "Bound: " ++ show hole ++ " : " ++
-                      show !(normalise defs ScopeEmpty ty)
+                      show !(normalise defs Env.empty ty)
              (Delayed, ty) =>
                   log s 4 $
                      "Delayed elaborator : " ++
-                     show !(normalise defs ScopeEmpty ty)
+                     show !(normalise defs Env.empty ty)
              _ => pure ()
   where
     dumpConstraint : Int -> Core ()

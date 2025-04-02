@@ -259,9 +259,9 @@ retryDelayed' errmode p acc (d@(_, i, hints, elab) :: ds)
 
                updateDef (Resolved i) (const (Just
                     (PMDef (MkPMDefInfo NotHole True False)
-                           ScopeEmpty (STerm 0 tm) (STerm 0 tm) [])))
+                           Scope.empty (STerm 0 tm) (STerm 0 tm) [])))
                logTerm "elab.update" 5 ("Resolved delayed hole " ++ show i) tm
-               logTermNF "elab.update" 5 ("Resolved delayed hole NF " ++ show i) ScopeEmpty tm
+               logTermNF "elab.update" 5 ("Resolved delayed hole NF " ++ show i) Env.empty tm
                removeHole i
                retryDelayed' errmode True acc ds')
            (\err => do logC "elab" 5 $ do pure $ show errmode ++ ":Error in " ++ show !(getFullName (Resolved i))

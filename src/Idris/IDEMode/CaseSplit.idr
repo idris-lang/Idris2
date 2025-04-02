@@ -382,7 +382,7 @@ getClause l n
          Just (loc, nidx, envlen, ty) <- findTyDeclAt (\p, n => onLine (l-1) p)
              | Nothing => pure Nothing
          n <- getFullName nidx
-         argns <- getEnvArgNames defs envlen !(nf defs ScopeEmpty ty)
+         argns <- getEnvArgNames defs envlen !(nf defs Env.empty ty)
          Just srcLine <- getSourceLine l
            | Nothing => pure Nothing
          let (mark, src) = isLitLine srcLine

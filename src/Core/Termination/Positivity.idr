@@ -26,22 +26,22 @@ nameIn defs tyns (NBind fc x b sc)
     = if !(nameIn defs tyns !(evalClosure defs (binderType b)))
          then pure True
          else do let nm = Ref fc Bound (MN ("NAMEIN_" ++ show x) 0)
-                 let arg = toClosure defaultOpts ScopeEmpty nm
+                 let arg = toClosure defaultOpts Env.empty nm
                  sc' <- sc defs arg
                  nameIn defs tyns sc'
 nameIn defs tyns (NApp _ nh args)
     = do False <- isAssertTotal nh
            | True => pure False
          anyM (nameIn defs tyns)
-           !(traverse (evalClosure defs . snd) (toList args))
+           !(traverse (evalClosure defs . snd) args)
 nameIn defs tyns (NTCon _ n _ _ args)
     = if n `elem` tyns
          then pure True
-         else do args' <- traverse (evalClosure defs . snd) (toList args)
+         else do args' <- traverse (evalClosure defs . snd) args
                  anyM (nameIn defs tyns) args'
 nameIn defs tyns (NDCon _ n _ _ args)
     = anyM (nameIn defs tyns)
-           !(traverse (evalClosure defs . snd) (toList args))
+           !(traverse (evalClosure defs . snd) args)
 nameIn defs tyns (NDelayed fc lr ty) = nameIn defs tyns ty
 nameIn defs tyns _ = pure False
 
@@ -55,7 +55,7 @@ posArgs : {auto c : Ref Ctxt Defs} ->
 posArgs defs tyn [] = pure IsTerminating
 posArgs defs tyn (x :: xs)
   = do xNF <- evalClosure defs x
-       logNF "totality.positivity" 50 "Checking parameter for positivity" ScopeEmpty xNF
+       logNF "totality.positivity" 50 "Checking parameter for positivity" Env.empty xNF
        IsTerminating <- posArg defs tyn xNF
           | err => pure err
        posArgs defs tyn xs
@@ -63,12 +63,12 @@ posArgs defs tyn (x :: xs)
 -- a tyn can only appear in the parameter positions of
 -- tc; report positivity failure if it appears anywhere else
 posArg defs tyns nf@(NTCon loc tc _ _ args) =
-  do logNF "totality.positivity" 50 "Found a type constructor" ScopeEmpty nf
+  do logNF "totality.positivity" 50 "Found a type constructor" Env.empty nf
      testargs <- case !(lookupDefExact tc (gamma defs)) of
                     Just (TCon _ _ params _ _ _ _ _) => do
                          log "totality.positivity" 50 $
                            unwords [show tc, "has", show (length params), "parameters"]
-                         pure $ splitParams 0 params (toList $ map snd args)
+                         pure $ splitParams 0 params (map snd args)
                     _ => throw (GenericMsg loc (show tc ++ " not a data type"))
      let (params, indices) = testargs
      False <- anyM (nameIn defs tyns) !(traverse (evalClosure defs) indices)
@@ -86,25 +86,25 @@ posArg defs tyns nf@(NTCon loc tc _ _ args) =
              else mapSnd (x ::) (splitParams (S i) ps xs)
 -- a tyn can not appear as part of ty
 posArg defs tyns nf@(NBind fc x (Pi _ _ e ty) sc)
-  = do logNF "totality.positivity" 50 "Found a Pi-type" ScopeEmpty nf
+  = do logNF "totality.positivity" 50 "Found a Pi-type" Env.empty nf
        if !(nameIn defs tyns !(evalClosure defs ty))
          then pure (NotTerminating NotStrictlyPositive)
          else do let nm = Ref fc Bound (MN ("POSCHECK_" ++ show x) 1)
-                 let arg = toClosure defaultOpts ScopeEmpty nm
+                 let arg = toClosure defaultOpts Env.empty nm
                  sc' <- sc defs arg
                  posArg defs tyns sc'
 posArg defs tyns nf@(NApp fc nh args)
     = do False <- isAssertTotal nh
-           | True => do logNF "totality.positivity" 50 "Trusting an assertion" ScopeEmpty nf
+           | True => do logNF "totality.positivity" 50 "Trusting an assertion" Env.empty nf
                         pure IsTerminating
-         logNF "totality.positivity" 50 "Found an application" ScopeEmpty nf
-         args <- traverse (evalClosure defs . snd) (toList args)
+         logNF "totality.positivity" 50 "Found an application" Env.empty nf
+         args <- traverse (evalClosure defs . snd) args
          pure $ if !(anyM (nameIn defs tyns) args)
            then NotTerminating NotStrictlyPositive
            else IsTerminating
 posArg defs tyn (NDelayed fc lr ty) = posArg defs tyn ty
 posArg defs tyn nf
-  = do logNF "totality.positivity" 50 "Reached the catchall" ScopeEmpty nf
+  = do logNF "totality.positivity" 50 "Reached the catchall" Env.empty nf
        pure IsTerminating
 
 checkPosArgs : {auto c : Ref Ctxt Defs} ->
@@ -113,11 +113,11 @@ checkPosArgs defs tyns (NBind fc x (Pi _ _ e ty) sc)
     = case !(posArg defs tyns !(evalClosure defs ty)) of
            IsTerminating =>
                do let nm = Ref fc Bound (MN ("POSCHECK_" ++ show x) 0)
-                  let arg = toClosure defaultOpts ScopeEmpty nm
+                  let arg = toClosure defaultOpts Env.empty nm
                   checkPosArgs defs tyns !(sc defs arg)
            bad => pure bad
 checkPosArgs defs tyns nf
-  = do logNF "totality.positivity" 50 "Giving up on non-Pi type" ScopeEmpty nf
+  = do logNF "totality.positivity" 50 "Giving up on non-Pi type" Env.empty nf
        pure IsTerminating
 
 checkCon : {auto c : Ref Ctxt Defs} ->
@@ -130,8 +130,8 @@ checkCon defs tyns cn
         Just ty =>
           case !(totRefsIn defs ty) of
             IsTerminating =>
-              do tyNF <- nf defs ScopeEmpty ty
-                 logNF "totality.positivity" 20 "Checking the type " ScopeEmpty tyNF
+              do tyNF <- nf defs Env.empty ty
+                 logNF "totality.positivity" 20 "Checking the type " Env.empty tyNF
                  checkPosArgs defs tyns tyNF
             bad => pure bad
 

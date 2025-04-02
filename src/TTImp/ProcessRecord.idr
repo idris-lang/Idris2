@@ -70,13 +70,13 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
 
          -- Go into new namespace, if there is one, for getters
          case newns of
-              Nothing => elabGetters tn conName params 0 [] ScopeEmpty conty
+              Nothing => elabGetters tn conName params 0 [] Env.empty conty
               Just ns =>
                    do let cns = currentNS defs
                       let nns = nestedNS defs
                       extendNS (mkNamespace ns)
                       newns <- getNS
-                      elabGetters tn conName params 0 [] ScopeEmpty conty
+                      elabGetters tn conName params 0 [] Env.empty conty
                       -- Record that the current namespace is allowed to look
                       -- at private names in the nested namespace
                       update Ctxt { currentNS := cns,
@@ -155,7 +155,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
              Just ty <- lookupTyExact tn (gamma defs)
                | Nothing => throw (InternalError "Missing data type \{show tn}, despite having just declared it!")
              log "declare.record" 20 "Obtained type: \{show ty}"
-             (_ ** (tyenv, ty)) <- dropLeadingPis vars ty ScopeEmpty
+             (_ ** (tyenv, ty)) <- dropLeadingPis vars ty Env.empty
              ty <- unelabNest (NoSugar True) !nestDrop tyenv ty
              log "declare.record.parameters" 30 "Unelaborated type: \{show ty}"
              params <- getParameters [<] ty
@@ -168,7 +168,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
         -- these local variables from the fully elaborated record's type
         -- We'll use the `env` thus obtained to unelab the remaining scope
         dropLeadingPis : {vs : _} -> (vars : Scope) -> Term vs -> Env Term vs ->
-                         Core (vars' ** (Env Term vars', Term vars'))
+                         Core (vars' : Scope ** (Env Term vars', Term vars'))
         dropLeadingPis [] ty env
           = do unless (null vars) $
                  logC "declare.record.parameters" 60 $ pure $ unlines

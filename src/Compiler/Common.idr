@@ -153,7 +153,7 @@ getMinimalDef (Coded ns bin)
          name <- fromBuf
          let def
              = MkGlobalDef fc name (Erased fc Placeholder) [] [] [] [] mul
-                           ScopeEmpty (specified Public) (MkTotality Unchecked IsCovering) False
+                           Scope.empty (specified Public) (MkTotality Unchecked IsCovering) False
                            [] Nothing refsR False False True
                            None cdef Nothing [] Nothing
          pure (def, Just (ns, bin))
@@ -355,7 +355,7 @@ getCompileDataWith exports doLazyAnnots phase_in tm_in
                               traverse (lambdaLift doLazyAnnots) cseDefs
                          else pure []
 
-         let lifted = (mainname, MkLFun ScopeEmpty ScopeEmpty liftedtm) ::
+         let lifted = (mainname, MkLFun Scope.empty Scope.empty liftedtm) ::
                       (ldefs ++ concat lifted_in)
 
          anf <- if phase >= ANF

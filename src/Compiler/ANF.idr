@@ -139,11 +139,11 @@ Show ANFDef where
   show (MkAError exp) = "Error: " ++ show exp
 
 data AVars : Scoped where
-     Nil : AVars ScopeEmpty
+     Nil : AVars Scope.empty
      (::) : Int -> AVars xs -> AVars (x :: xs)
 
-ScopeEmpty : AVars ScopeEmpty
-ScopeEmpty = []
+empty : AVars Scope.empty
+empty = []
 
 data Next : Type where
 
@@ -285,7 +285,7 @@ toANF (MkLCon t a ns) = pure $ MkACon t a ns
 toANF (MkLForeign ccs fargs t) = pure $ MkAForeign ccs fargs t
 toANF (MkLError err)
     = do v <- newRef Next (the Int 0)
-         pure $ MkAError !(anf ScopeEmpty err)
+         pure $ MkAError !(anf ANF.empty err)
 
 export
 freeVariables : ANF -> SortedSet AVar

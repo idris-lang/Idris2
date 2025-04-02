@@ -12,14 +12,15 @@ import Libraries.Data.SnocList.SizeOf
 
 %default total
 
+-- TODO replace by pointwise lifting: `Subst tm ds vars = All (\_. tm vars) ds`
 public export
 data Subst : Scoped -> Scope -> Scoped where
-  Nil : Subst tm ScopeEmpty vars
+  Nil : Subst tm Scope.empty vars
   (::) : tm vars -> Subst tm ds vars -> Subst tm (d :: ds) vars
 
 public export
-ScopeEmpty : {tm: _} -> Subst tm ScopeEmpty vars
-ScopeEmpty = []
+empty : Subst tm Scope.empty vars
+empty = []
 
 
 namespace Var
@@ -30,6 +31,7 @@ namespace Var
   index (t :: _) (MkVar First) = t
   index (_ :: ts) (MkVar (Later p)) = index ts (MkVar p)
 
+-- TODO revisit order of `dropped` and `Subst`
 export
 findDrop :
   (Var vars -> tm vars) ->
@@ -52,6 +54,7 @@ find k outer dropped var sub = case locateVar outer var of
   Left var => k (embed var)
   Right var => weakenNs outer (findDrop k dropped var sub)
 
+-- TODO rename `outer`
 public export
 0 Substitutable : Scoped -> Scoped -> Type
 Substitutable val tm

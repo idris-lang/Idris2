@@ -11,7 +11,10 @@ import Core.Value
 import TTImp.Elab.Check
 import TTImp.TTImp
 
+import Data.List.Quantifiers
 import Data.SnocList
+
+import Libraries.Data.List.Quantifiers.Extra as Lib
 
 %default covering
 
@@ -21,7 +24,7 @@ detagSafe defs (NTCon _ n _ _ args)
     = do Just (TCon _ _ _ _ _ _ _ (Just detags)) <- lookupDefExact n (gamma defs)
               | _ => pure False
          args' <- traverse (evalClosure defs . snd) args
-         pure $ notErased 0 detags (toList args')
+         pure $ notErased 0 detags args'
   where
     -- if any argument positions are in the detaggable set, and unerased, then
     -- detagging is safe
@@ -40,7 +43,7 @@ findErasedFrom defs pos (NBind fc x (Pi _ c _ aty) scf)
     = do -- In the scope, use 'Erased fc Impossible' to mean 'argument is erased'.
          -- It's handy here, because we can use it to tell if a detaggable
          -- argument position is available
-         sc <- scf defs (toClosure defaultOpts ScopeEmpty (Erased fc (ifThenElse (isErased c) Impossible Placeholder)))
+         sc <- scf defs (toClosure defaultOpts Env.empty (Erased fc (ifThenElse (isErased c) Impossible Placeholder)))
          (erest, dtrest) <- findErasedFrom defs (1 + pos) sc
          let dt' = if !(detagSafe defs !(evalClosure defs aty))
                       then (pos :: dtrest) else dtrest
@@ -56,7 +59,7 @@ findErased : {auto c : Ref Ctxt Defs} ->
              ClosedTerm -> Core (List Nat, List Nat)
 findErased tm
     = do defs <- get Ctxt
-         tmnf <- nf defs ScopeEmpty tm
+         tmnf <- nf defs Env.empty tm
          findErasedFrom defs 0 tmnf
 
 export
@@ -128,21 +131,14 @@ data ArgUsed = Used1 -- been used
              | Used0 -- not used
              | LocalVar -- don't care if it's used
 
-data Usage : Scoped where
-     Nil : Usage ScopeEmpty
-     (::) : ArgUsed -> Usage xs -> Usage (x :: xs)
-
-public export
-ScopeEmpty : Usage ScopeEmpty
-ScopeEmpty = []
-
+Usage : Scoped
+Usage = All (\_ => ArgUsed)
 
 initUsed : (xs : Scope) -> Usage xs
-initUsed [] = ScopeEmpty
-initUsed (x :: xs) = Used0 :: initUsed xs
+initUsed = Lib.tabulate (\_ => Used0)
 
 initUsedCase : (xs : Scope) -> Usage xs
-initUsedCase [] = ScopeEmpty
+initUsedCase [] = []
 initUsedCase [x] = [Used0]
 initUsedCase (x :: xs) = LocalVar :: initUsedCase xs
 
