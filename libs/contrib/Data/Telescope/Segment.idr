@@ -219,7 +219,7 @@ breakOnto : {0 k,k' : Nat} -> (gamma : Telescope k) -> (pos : Position gamma)
          -> {auto 0 ford1 : k' === (finToNat $ finComplement pos) }
          -> {default
                -- disgusting, sorry
-               (replace {p = \u => k = finToNat pos + u}
+               (replace (\u => k = finToNat pos + u)
                         (sym ford1)
                         (sym $ finComplementSpec pos))
              0 ford2 : (k === ((finToNat pos) + k')) }
@@ -252,12 +252,12 @@ breakStartEmpty {k} {k' = S k'} {ford1} {ford2} (gamma -. ty) =
                     v : break {k} {k'} gamma (start gamma) {ford = u}
                         ~=~ Telescope.Nil
                     v = breakStartEmpty {k} {k'} gamma {ford2 = u}
-                in replace {p = \z =>
+                in replace (\z =>
                              Equal {a = Telescope k} {b = Telescope 0}
                                    (break {k'} {k} gamma (start gamma)
                                           {ford = z})
                                           []
-                        }
+                        )
                         (uip u _)
                         (keep v)
 

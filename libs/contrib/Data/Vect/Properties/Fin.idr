@@ -25,7 +25,7 @@ finNonZero (FS i) = ItIsSucc
 ||| Inhabitants of `Fin n` witness runtime-irrelevant vectors of length `n` aren't empty
 export
 finNonEmpty : (0 xs : Vect n a) -> NonZero n -> NonEmpty xs
-finNonEmpty xs ItIsSucc = replace {p = NonEmpty} (etaCons xs) IsNonEmpty
+finNonEmpty xs ItIsSucc = replace NonEmpty (etaCons xs) IsNonEmpty
 
 ||| Cast an index into a runtime-irrelevant `Vect` into the position
 ||| of the corresponding element

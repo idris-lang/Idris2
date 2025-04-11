@@ -52,7 +52,7 @@ record (<->) (a, b : Type) where
 map : (a <-> b) -> IsSearchable a -> IsSearchable b
 map (MkIso f g _ inv) search p pdec =
   let (xa ** prfa) = search (p . f) (\ x => pdec (f x)) in
-  (f xa ** \ xb, pxb => prfa (g xb) $ replace {p} (sym $ inv xb) pxb)
+  (f xa ** \ xb, pxb => prfa (g xb) $ replace p (sym $ inv xb) pxb)
 
 interface Searchable (0 a : Type) where
   constructor MkSearchable
@@ -485,7 +485,7 @@ discreteIsUContinuous pdec = MkUC 1 isUContinuous where
 
   isUContinuous : IsUModFor PartI.dc p 1
   isUContinuous v w hyp pv with (decEq v w)
-    _ | Yes eq = replace {p} eq pv
+    _ | Yes eq = replace p eq pv
     _ | No neq = absurd (hyp 0 Oh)
 
 [PROMOTE] Discrete x => CSearchable x PartI.dc => Searchable x where
@@ -571,7 +571,7 @@ parameters
                  v0s : Nat -> x; v0s = tail vv0s
              in sH .snd v0
               $ (sT v0) .snd v0s
-              $ replace {p} (eta vv0s) pvv0s
+              $ replace p (eta vv0s) pvv0s
 
 cantorIsCSearchable : Extensionality => IsCSearchable (Nat -> Bool) PartI.dsc
 cantorIsCSearchable = csearch @{BYUCONTINUITY}

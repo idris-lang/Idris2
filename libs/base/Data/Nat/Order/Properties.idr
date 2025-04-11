@@ -26,7 +26,7 @@ ltReflection a = lteReflection (S a)
 -- For example:
 export
 lteIsLTE : (a, b : Nat) -> a `lte` b = True -> a `LTE` b
-lteIsLTE  a b prf = invert (replace {p = Reflects (a `LTE` b)} prf (lteReflection a b))
+lteIsLTE  a b prf = invert (replace (Reflects (a `LTE` b)) prf (lteReflection a b))
 
 export
 ltIsLT : (a, b : Nat) -> a `lt` b = True -> a `LT` b
@@ -34,7 +34,7 @@ ltIsLT  a = lteIsLTE (S a)
 
 export
 notlteIsNotLTE : (a, b : Nat) -> a `lte` b = False -> Not (a `LTE` b)
-notlteIsNotLTE a b prf = invert (replace {p = Reflects (a `LTE` b)} prf (lteReflection a b))
+notlteIsNotLTE a b prf = invert (replace (Reflects (a `LTE` b)) prf (lteReflection a b))
 
 export
 notltIsNotLT : (a, b : Nat) -> a `lt` b = False -> Not (a `LT` b)
@@ -45,7 +45,7 @@ export
 notlteIsLT : (a, b : Nat) -> a `lte` b = False -> b `LT` a
 notlteIsLT a b prf = notLTImpliesGTE $
                        \prf' =>
-                         (invert $ replace {p = Reflects (S a `LTE` S b)} prf
+                         (invert $ replace (Reflects (S a `LTE` S b)) prf
                                  $ lteReflection (S a) (S b)) prf'
 
 export

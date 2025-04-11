@@ -56,8 +56,8 @@ To use this in our proofs there is the following function in the prelude:
 .. code-block:: idris
 
    ||| Perform substitution in a term according to some equality.
-   replace : forall x, y, prop . (0 rule : x = y) -> prop x -> prop y
-   replace Refl prf = prf
+   replace : forall x, y . (0 prop : _) -> (0 rule : x = y) -> prop x -> prop y
+   replace _ Refl prf = prf
 
 If we supply an equality (x=y) and a proof of a property of x (``prop x``) then we get
 a proof of a property of y (``prop y``).
@@ -70,15 +70,15 @@ the equality ``x=y`` then we get a proof that ``y=2``.
    p1 n = (n=2)
 
    testReplace: (x=y) -> (p1 x) -> (p1 y)
-   testReplace a b = replace a b
+   testReplace a b = replace p1 a b
 
 Rewrite
 =======
 
-In practice, ``replace`` can be
-a little tricky to use because in general the implicit argument ``prop``
-can be hard to infer for the machine, so Idris provides a high level
-syntax which calculates the property and applies ``replace``.
+In practice, ``replace`` can be a little tricky to use because in
+general the argument ``prop`` can be hard to infer for the machine,
+so Idris provides a high level syntax which calculates the property
+and applies ``replace``.
 
 Example: again we supply ``p1 x`` which is a proof that ``x=2`` and the equality
 ``y=x`` then we get a proof that ``y=2``.

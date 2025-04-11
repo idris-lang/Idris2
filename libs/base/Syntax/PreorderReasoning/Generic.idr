@@ -74,7 +74,7 @@ public export
 (~~) : {0 x : dom} -> {0 y : dom}
          -> FastDerivation leq x y -> {0 z : dom} -> (0 step : Step Equal y z)
          -> FastDerivation leq x z
-(~~) der (z ... yEqZ) = replace {p = FastDerivation leq _} yEqZ der
+(~~) der (z ... yEqZ) = replace (FastDerivation leq _) yEqZ der
 
 -- Smart constructors
 public export
