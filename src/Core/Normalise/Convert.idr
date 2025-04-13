@@ -319,6 +319,16 @@ mutual
           else pure False
   chkConvHead q i defs env _ _ = pure False
 
+  convPiInfo : {auto c : Ref Ctxt Defs} ->
+               {vars : _} ->
+               Ref QVar Int -> Bool -> Defs -> Env Term vars ->
+               PiInfo (Closure vars) -> PiInfo (Closure vars) -> Core Bool
+  convPiInfo q i defs env Implicit Implicit = pure True
+  convPiInfo q i defs env Explicit Explicit = pure True
+  convPiInfo q i defs env AutoImplicit AutoImplicit = pure True
+  convPiInfo q i defs env (DefImplicit x) (DefImplicit y) = convGen q i defs env x y
+  convPiInfo q i defs env _ _ = pure False
+
   convBinders : {auto c : Ref Ctxt Defs} ->
                 {vars : _} ->
                 Ref QVar Int -> Bool -> Defs -> Env Term vars ->
@@ -326,11 +336,13 @@ mutual
   convBinders q i defs env (Pi _ cx ix tx) (Pi _ cy iy ty)
       = if cx /= cy
            then pure False
-           else convGen q i defs env tx ty
+           else pure $ !(convPiInfo q i defs env ix iy)
+                    && !(convGen q i defs env tx ty)
   convBinders q i defs env (Lam _ cx ix tx) (Lam _ cy iy ty)
       = if cx /= cy
            then pure False
-           else convGen q i defs env tx ty
+           else pure $ !(convPiInfo q i defs env ix iy)
+                    && !(convGen q i defs env tx ty)
   convBinders q i defs env bx by = pure False
 
 
