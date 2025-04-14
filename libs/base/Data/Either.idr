@@ -42,6 +42,7 @@ Uninhabited (IsRight (Left x)) where
   uninhabited ItIsRight impossible
 
 ||| Returns the `r` value of an `Either l r` which is proved `Right`.
+public export
 fromRight : (e : Either l r) -> {auto 0 isRight : IsRight e} -> r
 fromRight (Right r) = r
 fromRight (Left _) impossible
@@ -56,6 +57,7 @@ Uninhabited (IsLeft (Right x)) where
   uninhabited ItIsLeft impossible
 
 ||| Returns the `l` value of an `Either l r` which is proved `Left`.
+public export
 fromLeft : (e : Either l r) -> {auto 0 isLeft : IsLeft e} -> l
 fromLeft (Right _) impossible
 fromLeft (Left l) = l
