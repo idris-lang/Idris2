@@ -41,7 +41,7 @@ interface WellFounded a rel where
 ||| it. The recursion will therefore halt when it reaches a minimum element.
 |||
 ||| This may sometimes improve type-inference, compared to `accInd`.
-export
+public export
 accRec : {0 rel : (arg1 : a) -> (arg2 : a) -> Type} ->
          (step : (x : a) -> ((y : a) -> rel y x -> b) -> b) ->
          (z : a) -> (0 acc : Accessible rel z) -> b
@@ -52,7 +52,7 @@ accRec step z (Access f) =
 |||
 ||| The recursive step for an element has access to all elements smaller than
 ||| it. The recursion will therefore halt when it reaches a minimum element.
-export
+public export
 accInd : {0 rel : a -> a -> Type} -> {0 P : a -> Type} ->
          (step : (x : a) -> ((y : a) -> rel y x -> P y) -> P x) ->
          (z : a) -> (0 acc : Accessible rel z) -> P z
@@ -60,7 +60,7 @@ accInd step z (Access f) =
   step z $ \y, lt => accInd step y (f y lt)
 
 ||| Depedently-typed induction for creating extrinsic proofs on results of `accInd`.
-export
+public export
 accIndProp : {0 P : a -> Type} ->
             (step : (x : a) -> ((y : a) -> rel y x -> P y) -> P x) ->
             {0 RP : (x : a) -> P x -> Type} ->
@@ -77,7 +77,7 @@ accIndProp step ih z (Access rec) =
 |||
 ||| This is `accRec` applied to accessibility derived from a `WellFounded`
 ||| instance.
-export
+public export
 wfRec : (0 _ : WellFounded a rel) =>
         (step : (x : a) -> ((y : a) -> rel y x -> b) -> b) ->
         a -> b
@@ -87,7 +87,7 @@ wfRec step x = accRec step x (wellFounded {rel} x)
 |||
 ||| This is `accInd` applied to accessibility derived from a `WellFounded`
 ||| instance.
-export
+public export
 wfInd : (0 _ : WellFounded a rel) => {0 P : a -> Type} ->
         (step : (x : a) -> ((y : a) -> rel y x -> P y) -> P x) ->
         (myz : a) -> P myz
@@ -123,7 +123,7 @@ SizeAccessible : Sized a => a -> Type
 SizeAccessible = Accessible Smaller
 
 ||| Any value of a sized type is accessible, since naturals are well-founded.
-export
+public export
 sizeAccessible : Sized a => (x : a) -> SizeAccessible x
 sizeAccessible x = Access (acc $ size x)
   where
@@ -134,7 +134,7 @@ sizeAccessible x = Access (acc $ size x)
 ||| Depedently-typed induction based on the size of values.
 |||
 ||| This is `accInd` applied to accessibility derived from size.
-export
+public export
 sizeInd : Sized a => {0 P : a -> Type} ->
           (step : (x : a) -> ((y : a) -> Smaller y x -> P y) -> P x) ->
           (z : a) ->
@@ -144,24 +144,24 @@ sizeInd step z = accInd step z (sizeAccessible z)
 ||| Simply-typed recursion based on the size of values.
 |||
 ||| This is `recInd` applied to accessibility derived from size.
-export
+public export
 sizeRec : Sized a =>
           (step : (x : a) -> ((y : a) -> Smaller y x -> b) -> b) ->
           (z : a) -> b
 sizeRec step z = accRec step z (sizeAccessible z)
 
-export
+public export
 Sized Nat where
   size = id
 
-export
+public export
 WellFounded Nat LT where
   wellFounded = sizeAccessible
 
-export
+public export
 Sized (List a) where
   size = length
 
-export
+public export
 (Sized a, Sized b) => Sized (Pair a b) where
-  size (x,y) = size x + size y
+  size (x, y) = size x + size y
