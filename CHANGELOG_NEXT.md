@@ -206,6 +206,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 #### Prelude
 
+* Made the property argument to `replace` explicit.
+
 * Added pipeline operators `(|>)` and `(<|)`.
 
 #### Base
