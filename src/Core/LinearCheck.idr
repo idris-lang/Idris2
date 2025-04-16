@@ -12,37 +12,45 @@ import Core.Value
 import Core.TT
 
 import Data.List
+import Data.SnocList
 
+import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.SizeOf
 
 %default covering
 
 -- List of variable usages - we'll count the contents of specific variables
 -- when discharging binders, to ensure that linear names are only used once
-data Usage : List Name -> Type where
-     Nil : Usage vars
-     (::) : Var vars -> Usage vars -> Usage vars
+data Usage : Scoped where
+     Lin : Usage vars
+     (:<) : Usage vars -> Var vars -> Usage vars
+
+UsageEmpty : Usage vars
+UsageEmpty = [<]
+
+UsageSingle : Var vars -> Usage vars
+UsageSingle a = Lin :< a
 
 Show (Usage vars) where
   show xs = "[" ++ showAll xs ++ "]"
     where
       showAll : Usage vs -> String
-      showAll [] = ""
-      showAll [el] = show el
-      showAll (x :: xs) = show x ++ ", " ++ show xs
+      showAll [<] = ""
+      showAll [<el] = show el
+      showAll (xs :< x) = show x ++ ", " ++ show xs
 
-doneScope : Usage (n :: vars) -> Usage vars
-doneScope [] = []
-doneScope (MkVar First :: xs) = doneScope xs
-doneScope (MkVar (Later p) :: xs) = MkVar p :: doneScope xs
+doneScope : Usage (vars :< n) -> Usage vars
+doneScope [<] = [<]
+doneScope (xs :< MkVar First) = doneScope xs
+doneScope (xs :< MkVar (Later p)) = doneScope xs :< MkVar p
 
 (++) : Usage ns -> Usage ns -> Usage ns
-(++) [] ys = ys
-(++) (x :: xs) ys = x :: xs ++ ys
+(++) sx Lin = sx
+(++) sx (sy :< y) = (sx ++ sy) :< y
 
 count : Nat -> Usage ns -> Nat
-count p [] = 0
-count p (v :: xs)
+count p [<] = 0
+count p (xs :< v)
     = if p == varIdx v then 1 + count p xs else count p xs
 
 mutual
@@ -185,9 +193,9 @@ mutual
                when (not erase) $ rigSafe rigb rig
                pure (Local fc x idx prf, gnf env ty, used rig)
     where
-      getName : {idx : _} -> (vs : List Name) -> (0 p : IsVar n idx vs) -> Name
-      getName (x :: _) First = x
-      getName (x :: xs) (Later p) = getName xs p
+      getName : {idx : _} -> (vs : Scope) -> (0 p : IsVar n idx vs) -> Name
+      getName (_ :< x) First = x
+      getName (xs :< x) (Later p) = getName xs p
 
       rigSafe : RigCount -> RigCount -> Core ()
       rigSafe l r = when (l < r)
@@ -196,12 +204,12 @@ mutual
       -- count the usage if we're in a linear context. If not, the usage doesn't
       -- matter
       used : RigCount -> Usage vars
-      used r = if isLinear r then [MkVar prf] else []
+      used r = if isLinear r then UsageSingle (MkVar prf) else UsageEmpty
 
   lcheck rig erase env (Ref fc nt fn)
       = do logC "quantity" 15 $ do pure "lcheck Ref \{show (nt)} \{show !(toFullNames fn)}"
            ty <- lcheckDef fc rig erase env fn
-           pure (Ref fc nt fn, gnf env (embed ty), [])
+           pure (Ref fc nt fn, gnf env (embed ty), UsageEmpty)
 
   -- If the meta has a definition, and we're not in Rig0, expand it first
   -- and check the result.
@@ -261,7 +269,7 @@ mutual
                               (Lam _ _ _ _) => eraseLinear env
                               _ => env
                          else env
-           (sc', sct, usedsc) <- lcheck rig erase (b' :: env') sc
+           (sc', sct, usedsc) <- lcheck rig erase (env' :< b') sc
 
            let used_in = count 0 usedsc
            holeFound <- if not erase && isLinear (multiplicity b)
@@ -295,18 +303,18 @@ mutual
                          else linear
 
       getZeroes : {vs : _} -> Env Term vs -> List (Var vs)
-      getZeroes [] = []
-      getZeroes (b :: bs)
+      getZeroes [<] = []
+      getZeroes (bs :< b)
           = if isErased (multiplicity b)
                then MkVar First :: map weaken (getZeroes bs)
                else map weaken (getZeroes bs)
 
       eraseLinear : Env Term vs -> Env Term vs
-      eraseLinear [] = []
-      eraseLinear (b :: bs)
+      eraseLinear [<] = ScopeEmpty
+      eraseLinear (bs :< b)
           = if isLinear (multiplicity b)
-               then setMultiplicity b erased :: eraseLinear bs
-               else b :: eraseLinear bs
+               then eraseLinear bs :< setMultiplicity b erased
+               else eraseLinear bs :< b
 
       checkUsageOK : Nat -> RigCount -> Core ()
       checkUsageOK used r = when (isLinear r && used /= 1)
@@ -351,7 +359,7 @@ mutual
                   do when (not erase) $ needFunctionType f' gfty
                      -- we don't do any linearity checking when `erase` is set
                      -- so returning an empty usage is fine
-                     pure (App fc f a, gErased fc, [])
+                     pure (App fc f a, gErased fc, UsageEmpty)
                 _ =>
                   needFunctionType f' gfty
     where
@@ -386,14 +394,14 @@ mutual
                 _ => throw (GenericMsg fc "Not a delayed type")
   lcheck rig erase env (PrimVal fc c)
       = do log "quantity" 15 "lcheck PrimVal"
-           pure (PrimVal fc c, gErased fc, [])
+           pure (PrimVal fc c, gErased fc, UsageEmpty)
   lcheck rig erase env (Erased fc i)
       = do log "quantity" 15 "lcheck Erased"
-           pure (Erased fc i, gErased fc, [])
+           pure (Erased fc i, gErased fc, UsageEmpty)
   lcheck rig erase env (TType fc u)
       -- Not universe checking here, just use the top of the hierarchy
       = do log "quantity" 15 "lcheck TType"
-           pure (TType fc u, gType fc (MN "top" 0), [])
+           pure (TType fc u, gType fc (MN "top" 0), UsageEmpty)
 
   lcheckBinder : {vars : _} ->
                  {auto c : Ref Ctxt Defs} ->
@@ -403,29 +411,29 @@ mutual
                  Core (Binder (Term vars), Glued vars, Usage vars)
   lcheckBinder rig erase env (Lam fc c x ty)
       = do (tyv, tyt, _) <- lcheck erased erase env ty
-           pure (Lam fc c x tyv, tyt, [])
+           pure (Lam fc c x tyv, tyt, UsageEmpty)
   lcheckBinder rig erase env (Let fc rigc val ty)
       = do (tyv, tyt, _) <- lcheck erased erase env ty
            (valv, valt, vs) <- lcheck (rig |*| rigc) erase env val
            pure (Let fc rigc valv tyv, tyt, vs)
   lcheckBinder rig erase env (Pi fc c x ty)
       = do (tyv, tyt, _) <- lcheck (rig |*| c) erase env ty
-           pure (Pi fc c x tyv, tyt, [])
+           pure (Pi fc c x tyv, tyt, UsageEmpty)
   lcheckBinder rig erase env (PVar fc c p ty)
       = do (tyv, tyt, _) <- lcheck erased erase env ty
-           pure (PVar fc c p tyv, tyt, [])
+           pure (PVar fc c p tyv, tyt, UsageEmpty)
   lcheckBinder rig erase env (PLet fc rigc val ty)
       = do (tyv, tyt, _) <- lcheck erased erase env ty
            (valv, valt, vs) <- lcheck (rig |*| rigc) erase env val
            pure (PLet fc rigc valv tyv, tyt, vs)
   lcheckBinder rig erase env (PVTy fc c ty)
       = do (tyv, tyt, _) <- lcheck erased erase env ty
-           pure (PVTy fc c tyv, tyt, [])
+           pure (PVTy fc c tyv, tyt, UsageEmpty)
 
   discharge : {vars : _} ->
               Defs -> Env Term vars ->
               FC -> (nm : Name) -> Binder (Term vars) -> Glued vars ->
-              Term (nm :: vars) -> Glued (nm :: vars) -> Usage vars ->
+              Term (vars :< nm) -> Glued (vars :< nm) -> Usage vars ->
               Core (Term vars, Glued vars, Usage vars)
   discharge defs env fc nm (Lam fc' c x ty) gbindty scope gscopety used
        = do scty <- getTerm gscopety
@@ -525,12 +533,12 @@ mutual
       checkEnvUsage : {vars : _} ->
                       SizeOf done ->
                       RigCount ->
-                      Env Term vars -> Usage (done <>> vars) ->
-                      List (Term (done <>> vars)) ->
-                      Term (done <>> vars) -> Core ()
-      checkEnvUsage s rig [] usage args tm = pure ()
-      checkEnvUsage s rig {done} {vars = nm :: xs} (b :: env) usage args tm
-          = do let pos = mkVarChiply s
+                      Env Term vars -> Usage (vars ++ done) ->
+                      List (Term (vars ++ done)) ->
+                      Term (vars ++ done) -> Core ()
+      checkEnvUsage s rig [<] usage args tm = pure ()
+      checkEnvUsage s rig {done} {vars = xs :< nm} (env :< b) usage args tm
+          = do let pos = mkVar s
                let used_in = count (varIdx pos) usage
 
                holeFound <- if isLinear (multiplicity b)
@@ -543,7 +551,10 @@ mutual
                checkUsageOK (getLoc (binderType b))
                             used nm (isLocArg pos args)
                                     ((multiplicity b) |*| rig)
-               checkEnvUsage (s :< nm) rig env usage args tm
+               checkEnvUsage ([<nm] + s) rig env
+                    (rewrite appendAssociative xs [<nm] done in usage)
+                    (rewrite appendAssociative xs [<nm] done in args)
+                    (rewrite appendAssociative xs [<nm] done in tm)
 
       getPUsage : ClosedTerm -> (vs ** (Env Term vs, Term vs, Term vs)) ->
                   Core (List (Name, ArgUsage))
@@ -645,16 +656,16 @@ mutual
                RigCount -> (erase : Bool) -> Env Term vars ->
                Name -> Int -> Def -> List (Term vars) ->
                Core (Term vars, Glued vars, Usage vars)
-  expandMeta rig erase env n idx (PMDef _ [] (STerm _ fn) _ _) args
-      = do tm <- substMeta (embed fn) args zero []
+  expandMeta rig erase env n idx (PMDef _ [<] (STerm _ fn) _ _) args
+      = do tm <- substMeta (embed fn) args zero ScopeEmpty
            lcheck rig erase env tm
     where
       substMeta : {drop, vs : _} ->
-                  Term (drop ++ vs) -> List (Term vs) ->
+                  Term (vs ++ drop) -> List (Term vs) ->
                   SizeOf drop -> SubstEnv drop vs ->
                   Core (Term vs)
       substMeta (Bind bfc n (Lam _ c e ty) sc) (a :: as) drop env
-          = substMeta sc as (suc drop) (a :: env)
+          = substMeta sc as (suc drop) (env :< a)
       substMeta (Bind bfc n (Let _ c val ty) sc) as drop env
           = substMeta (subst val sc) as drop env
       substMeta rhs [] drop env = pure (substs drop env rhs)
@@ -691,19 +702,19 @@ mutual
                       ++ " not a function type)"))
   lcheckMeta rig erase env fc n idx [] chk nty
       = do defs <- get Ctxt
-           pure (Meta fc n idx (reverse chk), glueBack defs env nty, [])
+           pure (Meta fc n idx (reverse chk), glueBack defs env nty, UsageEmpty)
 
 
 checkEnvUsage : {vars : _} ->
                 {auto c : Ref Ctxt Defs} ->
                 {auto u : Ref UST UState} ->
                 FC -> SizeOf done -> RigCount ->
-                Env Term vars -> Usage (done <>> vars) ->
-                Term (done <>> vars) ->
+                Env Term vars -> Usage (vars ++ done) ->
+                Term (vars ++ done) ->
                 Core ()
-checkEnvUsage fc s rig [] usage tm = pure ()
-checkEnvUsage fc s rig {vars = nm :: xs} (b :: env) usage tm
-    = do let pos = mkVarChiply s
+checkEnvUsage fc s rig [<] usage tm = pure ()
+checkEnvUsage fc s rig {vars = xs :< nm} (env :< b) usage tm
+    = do let pos = mkVar s
          let used_in = count (varIdx pos) usage
 
          holeFound <- if isLinear (multiplicity b)
@@ -714,7 +725,10 @@ checkEnvUsage fc s rig {vars = nm :: xs} (b :: env) usage tm
                        then 1
                        else used_in
          checkUsageOK used ((multiplicity b) |*| rig)
-         checkEnvUsage fc (s :< nm) rig env usage tm
+         checkEnvUsage fc ([<nm] + s) rig env
+            (rewrite appendAssociative xs [<nm] done in usage)
+            (rewrite appendAssociative xs [<nm] done in tm)
+
   where
     checkUsageOK : Nat -> RigCount -> Core ()
     checkUsageOK used r = when (isLinear r && used /= 1)

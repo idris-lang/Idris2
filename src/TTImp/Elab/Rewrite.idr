@@ -18,6 +18,12 @@ import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.TTImp
 
+import Data.List
+import Libraries.Data.List.SizeOf
+
+import Data.SnocList
+import Libraries.Data.SnocList.SizeOf
+
 %default covering
 
 -- TODO: Later, we'll get the name of the lemma from the type, if it's one
@@ -36,8 +42,8 @@ getRewriteTerms : {vars : _} ->
                   Core (NF vars, NF vars, NF vars)
 getRewriteTerms loc defs (NTCon nfc eq t a args) err
     = if !(isEqualTy eq)
-         then case reverse $ map snd args of
-                   (rhs :: lhs :: rhsty :: lhsty :: _) =>
+         then case map snd args of
+                   (_ :< lhsty :< rhsty :< lhs :< rhs) =>
                         pure (!(evalClosure defs lhs),
                               !(evalClosure defs rhs),
                               !(evalClosure defs lhsty))
@@ -135,7 +141,7 @@ checkRewrite {vars} rigc elabinfo nest env ifc rule tm (Just expected)
            let pbind = Let vfc erased lemma.pred lemma.predTy
            let rbind = Let vfc erased (weaken rulev) (weaken rulet)
 
-           let env' = rbind :: pbind :: env
+           let env' =  env :< pbind :< rbind
 
            -- Nothing we do in this last part will affect the EState,
            -- we're only doing the application this way to make sure the
@@ -143,9 +149,9 @@ checkRewrite {vars} rigc elabinfo nest env ifc rule tm (Just expected)
            -- we still need the right type for the EState, so weaken it once
            -- for each of the let bindings above.
            (rwtm, grwty) <-
-              inScope vfc (pbind :: env) $ \e' =>
+              inScope vfc (env :< pbind) $ \e' =>
                 inScope {e=e'} vfc env' $ \e'' =>
-                  let offset = mkSizeOf [rname, pname] in
+                  let offset = mkSizeOf [<pname, rname] in
                   check {e = e''} rigc elabinfo (weakenNs offset nest) env'
                     (apply (IVar vfc lemma.name)
                       [ IVar vfc pname
