@@ -880,8 +880,8 @@ TTC CG where
   toBuf b Racket = tag 2
   toBuf b Gambit = tag 3
   toBuf b (Other s) = do tag 4; toBuf b s
-  toBuf b Node = tag 5
-  toBuf b Javascript = tag 6
+  toBuf b NodeJavascript = tag 5
+  toBuf b BrowserJavascript = tag 6
   toBuf b RefC = tag 7
   toBuf b VMCodeInterp = tag 8
 
@@ -893,8 +893,8 @@ TTC CG where
              3 => pure Gambit
              4 => do s <- fromBuf b
                      pure (Other s)
-             5 => pure Node
-             6 => pure Javascript
+             5 => pure NodeJavascript
+             6 => pure BrowserJavascript
              7 => pure RefC
              8 => pure VMCodeInterp
              _ => corrupt "CG"

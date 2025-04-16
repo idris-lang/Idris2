@@ -136,7 +136,7 @@ clockTimeUtc = fromPrim prim__clockTimeUtc
 
 %foreign "scheme:blodwen-clock-time-process"
          "RefC:clockTimeProcess"
-         "javascript:support:clockTimeProcess,support_system_clock"
+         "javascript:support"
 prim__clockTimeProcess : PrimIO OSClock
 
 ||| Get the amount of time used by the current process.
@@ -145,7 +145,7 @@ clockTimeProcess = fromPrim prim__clockTimeProcess
 
 %foreign "scheme:blodwen-clock-time-thread"
          "RefC:clockTimeThread"
-         "javascript:support:clockTimeThread,support_system_clock"
+         "javascript:support"
 prim__clockTimeThread : PrimIO OSClock
 
 ||| Get the amount of time used by the current thread.
