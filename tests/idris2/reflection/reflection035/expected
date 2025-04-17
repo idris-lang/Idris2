@@ -1,0 +1,12 @@
+1/2: Building Broken (Broken.idr)
+2/2: Building Main (Main.idr)
+Error: While processing right hand side of broken. Can't find an implementation for VoidContainer.
+
+Main:8:10--8:17
+ 4 | 
+ 5 | %default total
+ 6 | 
+ 7 | broken : VoidContainer
+ 8 | broken = %search
+              ^^^^^^^
+

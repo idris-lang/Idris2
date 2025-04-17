@@ -1117,7 +1117,7 @@ TTC GlobalDef where
            toBuf b (fullname gdef)
            toBuf b (map NameMap.toList (refersToM gdef))
            toBuf b (definition gdef)
-           when (isUserName (fullname gdef) || cwName (fullname gdef)) $
+           when (isUserName (fullname gdef)) $
               do toBuf b (type gdef)
                  toBuf b (eraseArgs gdef)
                  toBuf b (safeErase gdef)
@@ -1131,11 +1131,7 @@ TTC GlobalDef where
                  toBuf b (invertible gdef)
                  toBuf b (noCycles gdef)
                  toBuf b (sizeChange gdef)
-    where
-      cwName : Name -> Bool
-      cwName (CaseBlock _ _) = True
-      cwName (WithBlock _ _) = True
-      cwName _ = False
+
   fromBuf b
       = do cdef <- fromBuf b
            refsRList <- fromBuf b

@@ -116,8 +116,7 @@ data Term : Scoped where
      TDelay : FC -> LazyReason -> (ty : Term vars) -> (arg : Term vars) -> Term vars
      TForce : FC -> LazyReason -> Term vars -> Term vars
      PrimVal : FC -> (c : Constant) -> Term vars
-     Erased : FC -> WhyErased (Term vars) -> -- True == impossible term, for coverage checker
-              Term vars
+     Erased : FC -> WhyErased (Term vars) -> Term vars
      TType : FC -> Name -> -- universe variable
              Term vars
 

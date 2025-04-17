@@ -391,6 +391,9 @@ searchName fc rigc defaults trying depth def top env target (n, ndef)
             throw (CantSolveGoal fc (gamma defs) [] top Nothing)
 
          let ty = type ndef
+         when (isErased ty) $
+            throw (CantSolveGoal fc (gamma defs) [] top Nothing)
+
          let namety : NameType
                  = case definition ndef of
                         DCon tag arity _ => DataCon tag arity
