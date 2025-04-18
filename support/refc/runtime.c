@@ -8,55 +8,96 @@ void idris2_missing_ffi() {
   exit(1);
 }
 
+typedef Value *(*const FUN0)();
+typedef Value *(*const FUN1)(Value *);
+typedef Value *(*const FUN2)(Value *, Value *);
+typedef Value *(*const FUN3)(Value *, Value *, Value *);
+typedef Value *(*const FUN4)(Value *, Value *, Value *, Value *);
+typedef Value *(*const FUN5)(Value *, Value *, Value *, Value *, Value *);
+typedef Value *(*const FUN6)(Value *, Value *, Value *, Value *, Value *,
+                             Value *);
+typedef Value *(*const FUN7)(Value *, Value *, Value *, Value *, Value *,
+                             Value *, Value *);
+typedef Value *(*const FUN8)(Value *, Value *, Value *, Value *, Value *,
+                             Value *, Value *, Value *);
+typedef Value *(*const FUN9)(Value *, Value *, Value *, Value *, Value *,
+                             Value *, Value *, Value *, Value *);
+typedef Value *(*const FUN10)(Value *, Value *, Value *, Value *, Value *,
+                              Value *, Value *, Value *, Value *, Value *);
+typedef Value *(*const FUN11)(Value *, Value *, Value *, Value *, Value *,
+                              Value *, Value *, Value *, Value *, Value *,
+                              Value *);
+typedef Value *(*const FUN12)(Value *, Value *, Value *, Value *, Value *,
+                              Value *, Value *, Value *, Value *, Value *,
+                              Value *, Value *);
+typedef Value *(*const FUN13)(Value *, Value *, Value *, Value *, Value *,
+                              Value *, Value *, Value *, Value *, Value *,
+                              Value *, Value *, Value *);
+typedef Value *(*const FUN14)(Value *, Value *, Value *, Value *, Value *,
+                              Value *, Value *, Value *, Value *, Value *,
+                              Value *, Value *, Value *, Value *);
+typedef Value *(*const FUN15)(Value *, Value *, Value *, Value *, Value *,
+                              Value *, Value *, Value *, Value *, Value *,
+                              Value *, Value *, Value *, Value *, Value *);
+typedef Value *(*const FUN16)(Value *, Value *, Value *, Value *, Value *,
+                              Value *, Value *, Value *, Value *, Value *,
+                              Value *, Value *, Value *, Value *, Value *,
+                              Value *);
+typedef Value *(*const FUNStar)(Value **);
+
 static inline Value *idris2_dispatch_closure(Value_Closure *clo) {
   Value **const xs = clo->args;
-  Value *(*const f)() = clo->f;
 
   switch (clo->arity) {
   default:
-    return (*f)(xs);
+    return (*(FUNStar)clo->f)(xs);
 
   case 0:
-    return (*f)();
+    return (*(FUN0)clo->f)();
   case 1:
-    return (*f)(xs[0]);
+    return (*(FUN1)clo->f)(xs[0]);
   case 2:
-    return (*f)(xs[0], xs[1]);
+    return (*(FUN2)clo->f)(xs[0], xs[1]);
   case 3:
-    return (*f)(xs[0], xs[1], xs[2]);
+    return (*(FUN3)clo->f)(xs[0], xs[1], xs[2]);
   case 4:
-    return (*f)(xs[0], xs[1], xs[2], xs[3]);
+    return (*(FUN4)clo->f)(xs[0], xs[1], xs[2], xs[3]);
   case 5:
-    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4]);
+    return (*(FUN5)clo->f)(xs[0], xs[1], xs[2], xs[3], xs[4]);
   case 6:
-    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5]);
+    return (*(FUN6)clo->f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5]);
   case 7:
-    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6]);
+    return (*(FUN7)clo->f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6]);
   case 8:
-    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7]);
+    return (*(FUN8)clo->f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6],
+                           xs[7]);
   case 9:
-    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8]);
+    return (*(FUN9)clo->f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6],
+                           xs[7], xs[8]);
   case 10:
-    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
-                xs[9]);
+    return (*(FUN10)clo->f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6],
+                            xs[7], xs[8], xs[9]);
   case 11:
-    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
-                xs[9], xs[10]);
+    return (*(FUN11)clo->f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6],
+                            xs[7], xs[8], xs[9], xs[10]);
   case 12:
-    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
-                xs[9], xs[10], xs[11]);
+    return (*(FUN12)clo->f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6],
+                            xs[7], xs[8], xs[9], xs[10], xs[11]);
   case 13:
-    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
-                xs[9], xs[10], xs[11], xs[12]);
+    return (*(FUN13)clo->f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6],
+                            xs[7], xs[8], xs[9], xs[10], xs[11], xs[12]);
   case 14:
-    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
-                xs[9], xs[10], xs[11], xs[12], xs[13]);
+    return (*(FUN14)clo->f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6],
+                            xs[7], xs[8], xs[9], xs[10], xs[11], xs[12],
+                            xs[13]);
   case 15:
-    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
-                xs[9], xs[10], xs[11], xs[12], xs[13], xs[14]);
+    return (*(FUN15)clo->f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6],
+                            xs[7], xs[8], xs[9], xs[10], xs[11], xs[12], xs[13],
+                            xs[14]);
   case 16:
-    return (*f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6], xs[7], xs[8],
-                xs[9], xs[10], xs[11], xs[12], xs[13], xs[14], xs[15]);
+    return (*(FUN16)clo->f)(xs[0], xs[1], xs[2], xs[3], xs[4], xs[5], xs[6],
+                            xs[7], xs[8], xs[9], xs[10], xs[11], xs[12], xs[13],
+                            xs[14], xs[15]);
   }
 }
 
