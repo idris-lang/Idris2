@@ -296,6 +296,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * `unrestricted`, for unpacking a `!* a`, now uses its argument once
 
+* public export items in `Control.WellFounded` 
+
 #### Contrib
 
 * `Data.Vect.Views.Extra` was moved from `contrib` to `base`.
