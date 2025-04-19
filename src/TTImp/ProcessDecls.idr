@@ -172,22 +172,22 @@ processTTImpDecls {vars} nest env decls
   where
     bindConNames : ImpTy -> Core ImpTy
     bindConNames (MkImpTy fc n ty)
-        = do ty' <- bindTypeNames fc [] vars ty
+        = do ty' <- bindTypeNames fc [] (toList vars) ty
              pure (MkImpTy fc n ty')
 
     bindDataNames : ImpData -> Core ImpData
     bindDataNames (MkImpData fc n t opts cons)
-        = do t' <- traverseOpt (bindTypeNames fc [] vars) t
+        = do t' <- traverseOpt (bindTypeNames fc [] (toList vars)) t
              cons' <- traverse bindConNames cons
              pure (MkImpData fc n t' opts cons')
     bindDataNames (MkImpLater fc n t)
-        = do t' <- bindTypeNames fc [] vars t
+        = do t' <- bindTypeNames fc [] (toList vars) t
              pure (MkImpLater fc n t')
 
     -- bind implicits to make raw TTImp source a bit friendlier
     bindNames : ImpDecl -> Core ImpDecl
     bindNames (IClaim (MkFCVal fc (MkIClaimData c vis opts (MkImpTy tfc n ty))))
-        = do ty' <- bindTypeNames fc [] vars ty
+        = do ty' <- bindTypeNames fc [] (toList vars) ty
              pure (IClaim (MkFCVal fc (MkIClaimData c vis opts (MkImpTy tfc n ty'))))
     bindNames (IData fc vis mbtot d)
         = do d' <- bindDataNames d
@@ -212,7 +212,7 @@ processTTImpFile fname
                                 pure False
          traverse_ recordWarning ws
          logTime 0 "Elaboration" $
-            catch (do ignore $ processTTImpDecls (MkNested []) [] tti
+            catch (do ignore $ processTTImpDecls (MkNested []) ScopeEmpty tti
                       Nothing <- checkDelayedHoles
                           | Just err => throw err
                       pure True)

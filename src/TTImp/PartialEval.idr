@@ -22,8 +22,10 @@ import TTImp.Unelab
 import Protocol.Hex
 
 import Data.List
+import Data.SnocList
 import Libraries.Data.NameMap
 import Libraries.Data.WithDefault
+import Libraries.Data.SnocList.SizeOf
 
 %default covering
 
@@ -42,12 +44,12 @@ Show a => Show (ArgMode' a) where
   show Dynamic = "Dynamic"
 
 
-getStatic : ArgMode -> Maybe (Term [])
+getStatic : ArgMode -> Maybe ClosedTerm
 getStatic Dynamic = Nothing
 getStatic (Static t) = Just t
 
 specialiseTy : {vars : _} ->
-               Nat -> List (Nat, Term []) -> Term vars -> Term vars
+               Nat -> List (Nat, ClosedTerm) -> Term vars -> Term vars
 specialiseTy i specs (Bind fc x (Pi fc' c p ty) sc)
     = case lookup i specs of
            Nothing => Bind fc x (Pi fc' c p ty) $ -- easier later if everything explicit
@@ -75,7 +77,7 @@ substLocs : {vs : _} ->
 substLocs [] tm = tm
 substLocs ((i, tm') :: subs) tm = substLocs subs (substLoc i tm' tm)
 
-mkSubsts : Nat -> List (Nat, Term []) ->
+mkSubsts : Nat -> List (Nat, ClosedTerm) ->
            List (Term vs) -> Term vs -> Maybe (List (Nat, Term vs))
 mkSubsts i specs [] rhs = Just []
 mkSubsts i specs (arg :: args) rhs
@@ -93,7 +95,7 @@ mkSubsts i specs (arg :: args) rhs
 
 -- In the case where all the specialised positions are variables on the LHS,
 -- substitute the term in on the RHS
-specPatByVar : List (Nat, Term []) ->
+specPatByVar : List (Nat, ClosedTerm) ->
                 (vs ** (Env Term vs, Term vs, Term vs)) ->
                 Maybe (vs ** (Env Term vs, Term vs, Term vs))
 specPatByVar specs (vs ** (env, lhs, rhs))
@@ -102,7 +104,7 @@ specPatByVar specs (vs ** (env, lhs, rhs))
          let lhs' = apply (getLoc fn) fn args
          pure (vs ** (env, substLocs psubs lhs', substLocs psubs rhs))
 
-specByVar : List (Nat, Term []) ->
+specByVar : List (Nat, ClosedTerm) ->
             List (vs ** (Env Term vs, Term vs, Term vs)) ->
             Maybe (List (vs ** (Env Term vs, Term vs, Term vs)))
 specByVar specs [] = pure []
@@ -111,7 +113,7 @@ specByVar specs (p :: ps)
          ps' <- specByVar specs ps
          pure (p' :: ps')
 
-dropSpec : Nat -> List (Nat, Term []) -> List a -> List a
+dropSpec : Nat -> List (Nat, ClosedTerm) -> List a -> List a
 dropSpec i sargs [] = []
 dropSpec i sargs (x :: xs)
     = case lookup i sargs of
@@ -121,9 +123,9 @@ dropSpec i sargs (x :: xs)
 getSpecPats : {auto c : Ref Ctxt Defs} ->
               FC -> Name ->
               (fn : Name) -> (stk : List (FC, Term vars)) ->
-              NF [] -> -- Type of 'fn'
+              ClosedNF -> -- Type of 'fn'
               List (Nat, ArgMode) -> -- All the arguments
-              List (Nat, Term []) -> -- Just the static ones
+              List (Nat, ClosedTerm) -> -- Just the static ones
               List (vs ** (Env Term vs, Term vs, Term vs)) ->
               Core (Maybe (List ImpClause))
 getSpecPats fc pename fn stk fnty args sargs pats
@@ -150,30 +152,30 @@ getSpecPats fc pename fn stk fnty args sargs pats
     -- Build a RHS from the type of the function to be specialised, the
     -- dynamic argument names, and the list of given arguments. We assume
     -- the latter two correspond appropriately.
-    mkRHSargs : NF [] -> RawImp -> List String -> List (Nat, ArgMode) ->
+    mkRHSargs : ClosedNF -> RawImp -> List String -> List (Nat, ArgMode) ->
                 Core RawImp
     mkRHSargs (NBind _ x (Pi _ _ Explicit _) sc) app (a :: as) ((_, Dynamic) :: ds)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
+             sc' <- sc defs (toClosure defaultOpts ScopeEmpty (Erased fc Placeholder))
              mkRHSargs sc' (IApp fc app (IVar fc (UN $ Basic a))) as ds
     mkRHSargs (NBind _ x (Pi _ _ _ _) sc) app (a :: as) ((_, Dynamic) :: ds)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
+             sc' <- sc defs (toClosure defaultOpts ScopeEmpty (Erased fc Placeholder))
              mkRHSargs sc' (INamedApp fc app x (IVar fc (UN $ Basic a))) as ds
     mkRHSargs (NBind _ x (Pi _ _ Explicit _) sc) app as ((_, Static tm) :: ds)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
-             tm' <- unelabNoSugar [] tm
+             sc' <- sc defs (toClosure defaultOpts ScopeEmpty (Erased fc Placeholder))
+             tm' <- unelabNoSugar ScopeEmpty tm
              mkRHSargs sc' (IApp fc app (map rawName tm')) as ds
     mkRHSargs (NBind _ x (Pi _ _ Implicit _) sc) app as ((_, Static tm) :: ds)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
-             tm' <- unelabNoSugar [] tm
+             sc' <- sc defs (toClosure defaultOpts ScopeEmpty (Erased fc Placeholder))
+             tm' <- unelabNoSugar ScopeEmpty tm
              mkRHSargs sc' (INamedApp fc app x (map rawName tm')) as ds
     mkRHSargs (NBind _ _ (Pi _ _ AutoImplicit _) sc) app as ((_, Static tm) :: ds)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
-             tm' <- unelabNoSugar [] tm
+             sc' <- sc defs (toClosure defaultOpts ScopeEmpty (Erased fc Placeholder))
+             tm' <- unelabNoSugar ScopeEmpty tm
              mkRHSargs sc' (IAutoApp fc app (map rawName tm')) as ds
     -- Type will depend on the value here (we assume a variadic function) but
     -- the argument names are still needed
@@ -273,7 +275,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
                              " (" ++ show fn ++ ") -> \{show pename} by " ++
                              showSep ", " args'
            let sty = specialiseTy 0 staticargs (type gdef)
-           logTermNF "specialise" 3 ("Specialised type " ++ show pename) [] sty
+           logTermNF "specialise" 3 ("Specialised type " ++ show pename) ScopeEmpty sty
 
            -- Add as RigW - if it's something else, we don't need it at
            -- runtime anyway so this is wasted effort, therefore a failure
@@ -282,7 +284,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
            log "specialise.flags" 20 "Defining \{show pename} with flags: \{show defflags}"
            peidx <- addDef pename
                   $ the (GlobalDef -> GlobalDef) { flags := defflags }
-                  $ newDef fc pename top [] sty (specified Public) None
+                  $ newDef fc pename top ScopeEmpty sty (specified Public) None
            addToSave (Resolved peidx)
 
            -- Reduce the function to be specialised, and reduce any name in
@@ -303,12 +305,12 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
                       pure $ "Attempting to specialise:\n" ++
                              showSep "\n" (map showPat inpats)
 
-           Just newpats <- getSpecPats fc pename fn stk !(nf defs [] (type gdef))
+           Just newpats <- getSpecPats fc pename fn stk !(nf defs ScopeEmpty (type gdef))
                                        sargs staticargs pats
                 | Nothing => pure (applyStackWithFC (Ref fc Func fn) stk)
            log "specialise" 5 $ "New patterns for " ++ show pename ++ ":\n" ++
                     showSep "\n" (map showPat newpats)
-           processDecl [InPartialEval] (MkNested []) []
+           processDecl [InPartialEval] (MkNested []) ScopeEmpty
                        (IDef fc (Resolved peidx) newpats)
            setAllPublic False
            pure peapp)
@@ -408,12 +410,12 @@ specialise {vars} fc env gdef fn stk
         specs =>
             do fnfull <- toFullNames fn
                -- If all the arguments are concrete (meaning, no local variables
-               -- or holes in them, so they can be a Term []) we can specialise
+               -- or holes in them, so they can be a ClosedTerm) we can specialise
                Just sargs <- getSpecArgs 0 specs stk
                    | Nothing => pure Nothing
                defs <- get Ctxt
                sargs <- for sargs $ traversePair $ traverseArgMode $ \ tm =>
-                          normalise defs [] tm
+                          normalise defs ScopeEmpty tm
                let nhash = hash !(traverse toFullNames $ mapMaybe getStatic $ map snd sargs)
                               `hashWithSalt` fnfull -- add function name to hash to avoid namespace clashes
                let pename = NS partialEvalNS
@@ -424,7 +426,7 @@ specialise {vars} fc env gdef fn stk
                     Just _ => pure Nothing
   where
     concrete : {vars : _} ->
-               Term vars -> Maybe (Term [])
+               Term vars -> Maybe ClosedTerm
     concrete tm = shrink tm none
 
     getSpecArgs : Nat -> List Nat -> List (FC, Term vars) ->
@@ -499,9 +501,9 @@ mutual
               {auto s : Ref Syn SyntaxInfo} ->
               {auto o : Ref ROpts REPLOpts} ->
               Ref QVar Int -> Defs -> Bounds bound ->
-              Env Term free -> List (Closure free) ->
-              Core (List (Term (bound ++ free)))
-  quoteArgs q defs bounds env [] = pure []
+              Env Term free -> Scopeable (Closure free) ->
+              Core (Scopeable (Term (bound ++ free)))
+  quoteArgs q defs bounds env [] = pure ScopeEmpty
   quoteArgs q defs bounds env (a :: args)
       = pure $ (!(quoteGenNF q defs bounds env !(evalClosure defs a)) ::
                 !(quoteArgs q defs bounds env args))
@@ -513,8 +515,8 @@ mutual
                     {auto o : Ref ROpts REPLOpts} ->
                     {bound, free : _} ->
                     Ref QVar Int -> Defs -> Bounds bound ->
-                    Env Term free -> List (FC, Closure free) ->
-                    Core (List (FC, Term (bound ++ free)))
+                    Env Term free -> Scopeable (FC, Closure free) ->
+                    Core (Scopeable (FC, Term (bound ++ free)))
   quoteArgsWithFC q defs bounds env terms
       = pure $ zip (map fst terms) !(quoteArgs q defs bounds env (map snd terms))
 
@@ -556,7 +558,7 @@ mutual
   quoteHead q defs fc bounds env (NRef nt n) = pure $ Ref fc nt n
   quoteHead q defs fc bounds env (NMeta n i args)
       = do args' <- quoteArgs q defs bounds env args
-           pure $ Meta fc n i args'
+           pure $ Meta fc n i (toList args')
 
   quotePi : {bound, free : _} ->
             {auto c : Ref Ctxt Defs} ->
@@ -634,7 +636,7 @@ mutual
                          pure $ applyStackWithFC (Ref fc Func fn) args'
                 _ => do empty <- clearDefs defs
                         args' <- quoteArgsWithFC q defs bound env args
-                        Just r <- specialise fc (extendEnv bound env) gdef fn args'
+                        Just r <- specialise fc (extendEnv bound env) gdef fn (toList args')
                              | Nothing =>
                                   -- can't specialise, keep the arguments
                                   -- unreduced

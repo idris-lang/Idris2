@@ -12,16 +12,24 @@ import Core.Value
 import Core.TT
 
 import Data.List
+import Data.SnocList
 
+import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.SizeOf
 
 %default covering
 
 -- List of variable usages - we'll count the contents of specific variables
 -- when discharging binders, to ensure that linear names are only used once
-data Usage : List Name -> Type where
+data Usage : Scoped where
      Nil : Usage vars
      (::) : Var vars -> Usage vars -> Usage vars
+
+UsageEmpty : Usage vars
+UsageEmpty = []
+
+UsageSingle : Var vars -> Usage vars
+UsageSingle a = a :: Nil
 
 Show (Usage vars) where
   show xs = "[" ++ showAll xs ++ "]"
@@ -185,7 +193,7 @@ mutual
                when (not erase) $ rigSafe rigb rig
                pure (Local fc x idx prf, gnf env ty, used rig)
     where
-      getName : {idx : _} -> (vs : List Name) -> (0 p : IsVar n idx vs) -> Name
+      getName : {idx : _} -> (vs : Scope) -> (0 p : IsVar n idx vs) -> Name
       getName (x :: _) First = x
       getName (x :: xs) (Later p) = getName xs p
 
@@ -196,12 +204,12 @@ mutual
       -- count the usage if we're in a linear context. If not, the usage doesn't
       -- matter
       used : RigCount -> Usage vars
-      used r = if isLinear r then [MkVar prf] else []
+      used r = if isLinear r then UsageSingle (MkVar prf) else UsageEmpty
 
   lcheck rig erase env (Ref fc nt fn)
       = do logC "quantity" 15 $ do pure "lcheck Ref \{show (nt)} \{show !(toFullNames fn)}"
            ty <- lcheckDef fc rig erase env fn
-           pure (Ref fc nt fn, gnf env (embed ty), [])
+           pure (Ref fc nt fn, gnf env (embed ty), UsageEmpty)
 
   -- If the meta has a definition, and we're not in Rig0, expand it first
   -- and check the result.
@@ -302,7 +310,7 @@ mutual
                else map weaken (getZeroes bs)
 
       eraseLinear : Env Term vs -> Env Term vs
-      eraseLinear [] = []
+      eraseLinear [] = ScopeEmpty
       eraseLinear (b :: bs)
           = if isLinear (multiplicity b)
                then setMultiplicity b erased :: eraseLinear bs
@@ -351,7 +359,7 @@ mutual
                   do when (not erase) $ needFunctionType f' gfty
                      -- we don't do any linearity checking when `erase` is set
                      -- so returning an empty usage is fine
-                     pure (App fc f a, gErased fc, [])
+                     pure (App fc f a, gErased fc, UsageEmpty)
                 _ =>
                   needFunctionType f' gfty
     where
@@ -386,14 +394,14 @@ mutual
                 _ => throw (GenericMsg fc "Not a delayed type")
   lcheck rig erase env (PrimVal fc c)
       = do log "quantity" 15 "lcheck PrimVal"
-           pure (PrimVal fc c, gErased fc, [])
+           pure (PrimVal fc c, gErased fc, UsageEmpty)
   lcheck rig erase env (Erased fc i)
       = do log "quantity" 15 "lcheck Erased"
-           pure (Erased fc i, gErased fc, [])
+           pure (Erased fc i, gErased fc, UsageEmpty)
   lcheck rig erase env (TType fc u)
       -- Not universe checking here, just use the top of the hierarchy
       = do log "quantity" 15 "lcheck TType"
-           pure (TType fc u, gType fc (MN "top" 0), [])
+           pure (TType fc u, gType fc (MN "top" 0), UsageEmpty)
 
   lcheckBinder : {vars : _} ->
                  {auto c : Ref Ctxt Defs} ->
@@ -403,24 +411,24 @@ mutual
                  Core (Binder (Term vars), Glued vars, Usage vars)
   lcheckBinder rig erase env (Lam fc c x ty)
       = do (tyv, tyt, _) <- lcheck erased erase env ty
-           pure (Lam fc c x tyv, tyt, [])
+           pure (Lam fc c x tyv, tyt, UsageEmpty)
   lcheckBinder rig erase env (Let fc rigc val ty)
       = do (tyv, tyt, _) <- lcheck erased erase env ty
            (valv, valt, vs) <- lcheck (rig |*| rigc) erase env val
            pure (Let fc rigc valv tyv, tyt, vs)
   lcheckBinder rig erase env (Pi fc c x ty)
       = do (tyv, tyt, _) <- lcheck (rig |*| c) erase env ty
-           pure (Pi fc c x tyv, tyt, [])
+           pure (Pi fc c x tyv, tyt, UsageEmpty)
   lcheckBinder rig erase env (PVar fc c p ty)
       = do (tyv, tyt, _) <- lcheck erased erase env ty
-           pure (PVar fc c p tyv, tyt, [])
+           pure (PVar fc c p tyv, tyt, UsageEmpty)
   lcheckBinder rig erase env (PLet fc rigc val ty)
       = do (tyv, tyt, _) <- lcheck erased erase env ty
            (valv, valt, vs) <- lcheck (rig |*| rigc) erase env val
            pure (PLet fc rigc valv tyv, tyt, vs)
   lcheckBinder rig erase env (PVTy fc c ty)
       = do (tyv, tyt, _) <- lcheck erased erase env ty
-           pure (PVTy fc c tyv, tyt, [])
+           pure (PVTy fc c tyv, tyt, UsageEmpty)
 
   discharge : {vars : _} ->
               Defs -> Env Term vars ->
@@ -646,7 +654,7 @@ mutual
                Name -> Int -> Def -> List (Term vars) ->
                Core (Term vars, Glued vars, Usage vars)
   expandMeta rig erase env n idx (PMDef _ [] (STerm _ fn) _ _) args
-      = do tm <- substMeta (embed fn) args zero []
+      = do tm <- substMeta (embed fn) args zero ScopeEmpty
            lcheck rig erase env tm
     where
       substMeta : {drop, vs : _} ->
@@ -691,7 +699,7 @@ mutual
                       ++ " not a function type)"))
   lcheckMeta rig erase env fc n idx [] chk nty
       = do defs <- get Ctxt
-           pure (Meta fc n idx (reverse chk), glueBack defs env nty, [])
+           pure (Meta fc n idx (reverse chk), glueBack defs env nty, UsageEmpty)
 
 
 checkEnvUsage : {vars : _} ->

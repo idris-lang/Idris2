@@ -11,17 +11,22 @@ import Core.TT
 import Core.Value
 
 import Data.List
+import Data.SnocList
+
+import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.HasLength
+import Libraries.Data.SnocList.SizeOf
 
 %default covering
 
 public export
 interface Convert tm where
   convert : {auto c : Ref Ctxt Defs} ->
-            {vars : List Name} ->
+            {vars : Scope} ->
             Defs -> Env Term vars ->
             tm vars -> tm vars -> Core Bool
   convertInf : {auto c : Ref Ctxt Defs} ->
-               {vars : List Name} ->
+               {vars : Scope} ->
                Defs -> Env Term vars ->
                tm vars -> tm vars -> Core Bool
 
@@ -86,7 +91,7 @@ mutual
   allConvNF : {auto c : Ref Ctxt Defs} ->
               {vars : _} ->
               Ref QVar Int -> Bool -> Defs -> Env Term vars ->
-              List (NF vars) -> List (NF vars) -> Core Bool
+              Scopeable (NF vars) -> Scopeable (NF vars) -> Core Bool
   allConvNF q i defs env [] [] = pure True
   allConvNF q i defs env (x :: xs) (y :: ys)
       = do ok <- allConvNF q i defs env xs ys
@@ -97,7 +102,7 @@ mutual
   -- return False if anything differs at the head, to quickly find
   -- conversion failures without going deeply into all the arguments.
   -- True means they might still match
-  quickConv : List (NF vars) -> List (NF vars) -> Bool
+  quickConv : Scopeable (NF vars) -> Scopeable (NF vars) -> Bool
   quickConv [] [] = True
   quickConv (x :: xs) (y :: ys) = quickConvArg x y && quickConv xs ys
     where
@@ -127,7 +132,7 @@ mutual
   allConv : {auto c : Ref Ctxt Defs} ->
             {vars : _} ->
             Ref QVar Int -> Bool -> Defs -> Env Term vars ->
-            List (Closure vars) -> List (Closure vars) -> Core Bool
+            Scopeable (Closure vars) -> Scopeable (Closure vars) -> Core Bool
   allConv q i defs env xs ys
       = do xsnf <- traverse (evalClosure defs) xs
            ysnf <- traverse (evalClosure defs) ys
@@ -223,7 +228,7 @@ mutual
                 {vars : _} ->
                 Ref QVar Int -> Bool -> Defs -> Env Term vars ->
                 Name -> Name ->
-                List (Closure vars) -> List (Closure vars) -> Core Bool
+                Scopeable (Closure vars) -> Scopeable (Closure vars) -> Core Bool
   chkSameDefs q i defs env n n' nargs nargs'
      = do Just (PMDef _ args ct rt _) <- lookupDefExact n (gamma defs)
                | _ => pure False
@@ -239,7 +244,7 @@ mutual
      where
        -- We've only got the index into the argument list, and the indices
        -- don't match up, which is annoying. But it'll always be there!
-       getArgPos : Nat -> List (Closure vars) -> Maybe (Closure vars)
+       getArgPos : Nat -> Scopeable (Closure vars) -> Maybe (Closure vars)
        getArgPos _ [] = Nothing
        getArgPos Z (c :: cs) = pure c
        getArgPos (S k) (c :: cs) = getArgPos k cs
@@ -261,8 +266,8 @@ mutual
   chkConvCaseBlock : {auto c : Ref Ctxt Defs} ->
                      {vars : _} ->
                      FC -> Ref QVar Int -> Bool -> Defs -> Env Term vars ->
-                     NHead vars -> List (Closure vars) ->
-                     NHead vars -> List (Closure vars) -> Core Bool
+                     NHead vars -> Scopeable (Closure vars) ->
+                     NHead vars -> Scopeable (Closure vars) -> Core Bool
   chkConvCaseBlock fc q i defs env (NRef _ n) nargs (NRef _ n') nargs'
       = do NS _ (CaseBlock _ _) <- full (gamma defs) n
               | _ => pure False
@@ -301,7 +306,7 @@ mutual
       findArgPos (Case idx p _ _) = Just idx
       findArgPos _ = Nothing
 
-      getScrutinee : Nat -> List (Closure vs) -> Maybe (Closure vs)
+      getScrutinee : Nat -> Scopeable (Closure vs) -> Maybe (Closure vs)
       getScrutinee Z (x :: xs) = Just x
       getScrutinee (S k) (x :: xs) = getScrutinee k xs
       getScrutinee _ _ = Nothing
@@ -341,7 +346,7 @@ mutual
   Convert NF where
     convGen q i defs env (NBind fc x b sc) (NBind _ x' b' sc')
         = do var <- genName "conv"
-             let c = MkClosure defaultOpts [] env (Ref fc Bound var)
+             let c = MkClosure defaultOpts ScopeEmpty env (Ref fc Bound var)
              bok <- convBinders q i defs env b b'
              if bok
                 then do bsc <- sc defs c
@@ -367,7 +372,7 @@ mutual
     convGen q inf defs env (NApp fc val args) (NApp _ val' args')
         = if !(chkConvHead q inf defs env val val')
              then do i <- getInfPos val
-                     allConv q inf defs env (dropInf 0 i args1) (dropInf 0 i args2)
+                     allConv q inf defs env (dropInf 0 i $ toList args1) (dropInf 0 i $ toList args2)
              else chkConvCaseBlock fc q inf defs env val args1 val' args2
         where
           getInfPos : NHead vars -> Core (List Nat)
@@ -379,7 +384,7 @@ mutual
                    else pure []
           getInfPos _ = pure []
 
-          dropInf : Nat -> List Nat -> List a -> List a
+          dropInf : Nat -> List Nat -> Scopeable a -> Scopeable a
           dropInf _ [] xs = xs
           dropInf _ _ [] = []
           dropInf i ds (x :: xs)
@@ -388,10 +393,10 @@ mutual
                    else x :: dropInf (S i) ds xs
 
           -- Discard file context information irrelevant for conversion checking
-          args1 : List (Closure vars)
+          args1 : Scopeable (Closure vars)
           args1 = map snd args
 
-          args2 : List (Closure vars)
+          args2 : Scopeable (Closure vars)
           args2 = map snd args'
 
     convGen q i defs env (NDCon _ nm tag _ args) (NDCon _ nm' tag' _ args')

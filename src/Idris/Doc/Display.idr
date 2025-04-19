@@ -24,13 +24,13 @@ displayType : {auto c : Ref Ctxt Defs} ->
               (shortName : Bool) -> Defs -> (Name, Int, GlobalDef) ->
               Core (Doc IdrisSyntax)
 displayType shortName defs (n, i, gdef)
-  = maybe (do tm <- resugar [] !(normaliseHoles defs [] (type gdef))
+  = maybe (do tm <- resugar ScopeEmpty !(normaliseHoles defs ScopeEmpty (type gdef))
               nm <- aliasName (fullname gdef)
               let nm = ifThenElse shortName (dropNS nm) nm
               let prig = prettyRig gdef.multiplicity
               let ann = showCategory id gdef
               pure (prig <+> ann (cast $ prettyOp True nm) <++> colon <++> pretty tm))
-          (\num => prettyHole defs [] n num (type gdef))
+          (\num => prettyHole defs ScopeEmpty n num (type gdef))
           (isHole gdef)
 export
 displayTerm : {auto c : Ref Ctxt Defs} ->
@@ -38,7 +38,7 @@ displayTerm : {auto c : Ref Ctxt Defs} ->
               Defs -> ClosedTerm ->
               Core (Doc IdrisSyntax)
 displayTerm defs tm
-  = do ptm <- resugar [] !(normaliseHoles defs [] tm)
+  = do ptm <- resugar ScopeEmpty !(normaliseHoles defs ScopeEmpty tm)
        pure (pretty ptm)
 
 export

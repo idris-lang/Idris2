@@ -32,6 +32,8 @@ import TTImp.Unelab
 
 import System.File.Meta
 
+import Data.SnocList
+
 %default covering
 
 record NameInfo where
@@ -158,7 +160,7 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
         pathDoesNotEscape n     ("." ::rest) = pathDoesNotEscape n rest
         pathDoesNotEscape n     (_   ::rest) = pathDoesNotEscape (S n) rest
 
-    elabCon : Defs -> String -> List (Closure vars) -> Core (NF vars)
+    elabCon : Defs -> String -> Scopeable (Closure vars) -> Core (NF vars)
     elabCon defs "Pure" [_,val]
         = do empty <- clearDefs defs
              evalClosure empty val
@@ -295,7 +297,7 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
       where
         unelabType : (Name, Int, ClosedTerm) -> Core (Name, RawImp)
         unelabType (n, _, ty)
-            = pure (n, map rawName !(unelabUniqueBinders [] ty))
+            = pure (n, map rawName !(unelabUniqueBinders ScopeEmpty ty))
     elabCon defs "GetInfo" [n]
         = do n' <- evalClosure defs n
              res <- lookupNameInfo !(reify defs n') (gamma defs)
@@ -331,8 +333,8 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
              scriptRet defs.defsStack
     elabCon defs "Declare" [d]
         = do d' <- evalClosure defs d
-             decls <- reify defs d'
-             traverse_ (processDecl [] (MkNested []) []) decls
+             decls <- reify {a=List _} defs d'
+             traverse_ (processDecl [] (MkNested []) ScopeEmpty) decls
              scriptRet ()
     elabCon defs "ReadFile" [lk, pth]
         = do pathPrefix <- lookupDir defs !(evalClosure defs lk)
