@@ -127,6 +127,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * [Djot](https://djot.net/) files can now be compiled as CommonMark style
   Literate Idris files.
 
+* `IBindVar` supports arbitrary names. `String` in the signature is replaced
+  by `Name`.
+
 ### Backend changes
 
 #### RefC Backend
