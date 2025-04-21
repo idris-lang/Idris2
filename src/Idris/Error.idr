@@ -392,7 +392,7 @@ perrorRaw (NotCovering fc n (MissingCases cs))
     = pure $ errorDesc (code (pretty0 !(prettyName n)) <++> reflow "is not covering.")
         <+> line <+> !(ploc fc) <+> line
         <+> reflow "Missing cases" <+> colon <+> line
-        <+> indent 4 (vsep !(traverse (pshow []) cs)) <+> line
+        <+> indent 4 (vsep !(traverse (pshow ScopeEmpty) cs)) <+> line
 perrorRaw (NotCovering fc n (NonCoveringCall ns))
     = pure $ errorDesc (pretty0 !(prettyName n) <++> reflow "is not covering.")
         <+> line <+> !(ploc fc) <+> line
@@ -533,8 +533,8 @@ perrorRaw (CantSolveGoal fc gam env g reason)
     dropEnv : {vars : _} ->
               Env Term vars -> Term vars ->
               (ns ** (Env Term ns, Term ns))
-    dropEnv env (Bind _ n b@(Pi _ _ _ _) sc) = dropEnv (b :: env) sc
-    dropEnv env (Bind _ n b@(Let _ _ _ _) sc) = dropEnv (b :: env) sc
+    dropEnv env (Bind _ n b@(Pi _ _ _ _) sc) = dropEnv (env :< b) sc
+    dropEnv env (Bind _ n b@(Let _ _ _ _) sc) = dropEnv (env :< b) sc
     dropEnv env tm = (_ ** (env, tm))
 
 perrorRaw (DeterminingArg fc n i env g)

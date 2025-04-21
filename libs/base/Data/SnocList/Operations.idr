@@ -96,6 +96,17 @@ lengthHomomorphism sx (sy :< x) = Calc $
   ~~ 1 + (length sx + length sy) ...(cong (1+) $ lengthHomomorphism _ _)
   ~~ length sx + (1 + length sy) ...(plusSuccRightSucc _ _)
 
+export
+lengthDistributesOverFish : (sx : SnocList a) -> (ys : List a) ->
+                            length (sx <>< ys) === length sx + length ys
+lengthDistributesOverFish sx [] = sym $ plusZeroRightNeutral _
+lengthDistributesOverFish sx (y :: ys) = Calc $
+  |~ length ((sx :< y) <>< ys)
+  ~~ length (sx :< y) + length ys ...( lengthDistributesOverFish (sx :< y) ys)
+  ~~ S (length sx) + length ys    ...( Refl )
+  ~~ length sx + S (length ys)    ...( plusSuccRightSucc _ _ )
+  ~~ length sx + length (y :: ys) ...( Refl )
+
 -- cons-list operations on snoc-lists
 
 ||| Take `n` first elements from `sx`, returning the whole list if

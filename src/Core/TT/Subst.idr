@@ -4,26 +4,41 @@ import Core.Name
 import Core.Name.Scoped
 import Core.TT.Var
 
+import Data.List
+import Data.SnocList
+
+import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
+
 %default total
 
 public export
 data Subst : Scoped -> Scope -> Scoped where
-  Nil : Subst tm [] vars
-  (::) : tm vars -> Subst tm ds vars -> Subst tm (d :: ds) vars
+  Lin : Subst tm ScopeEmpty vars
+  (:<) : Subst tm ds vars -> tm vars -> Subst tm (ds :< d) vars
+
+public export
+ScopeEmpty : {tm: _} -> Subst tm ScopeEmpty vars
+ScopeEmpty = [<]
+
+export
+cons : Subst tm ds vars -> tm vars -> Subst tm (v `cons` ds) vars
+cons [<] p = Lin :< p
+cons (ns :< s) p = cons ns p :< s
 
 namespace Var
 
   export
   index : Subst tm ds vars -> Var ds -> tm vars
-  index [] (MkVar p) impossible
-  index (t :: _) (MkVar First) = t
-  index (_ :: ts) (MkVar (Later p)) = index ts (MkVar p)
+  index [<] (MkVar p) impossible
+  index (_ :< t) (MkVar First) = t
+  index (ts :< _) (MkVar (Later p)) = index ts (MkVar p)
 
 export
 findDrop :
   (Var vars -> tm vars) ->
   SizeOf dropped ->
-  Var (dropped ++ vars) ->
+  Var (vars ++ dropped) ->
   Subst tm dropped vars ->
   tm vars
 findDrop k s var sub = case locateVar s var of
@@ -34,9 +49,9 @@ export
 find : Weaken tm =>
        (forall vars. Var vars -> tm vars) ->
        SizeOf outer -> SizeOf dropped ->
-       Var (outer ++ (dropped ++ vars)) ->
+       Var ((vars ++ dropped) ++ outer) ->
        Subst tm dropped vars ->
-       tm (outer ++ vars)
+       tm (vars ++ outer)
 find k outer dropped var sub = case locateVar outer var of
   Left var => k (embed var)
   Right var => weakenNs outer (findDrop k dropped var sub)
@@ -48,5 +63,5 @@ Substitutable val tm
     SizeOf outer ->
     SizeOf dropped ->
     Subst val dropped vars ->
-    tm (outer ++ (dropped ++ vars)) ->
-    tm (outer ++ vars)
+    tm ((vars ++ dropped) ++ outer) ->
+    tm (vars ++ outer)

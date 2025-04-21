@@ -14,6 +14,7 @@ import TTImp.TTImp.Functor
 import TTImp.Utils
 
 import Data.List
+import Data.SnocList
 
 %default covering
 
@@ -49,8 +50,8 @@ getArgs : {vars : _} ->
 getArgs {vars} env (S k) (Bind _ x b@(Pi _ c _ ty) sc)
     = do defs <- get Ctxt
          ty' <- map (map rawName) $ unelab env !(normalise defs env ty)
-         let x' = UN $ Basic !(uniqueBasicName defs (map nameRoot vars) (nameRoot x))
-         (sc', ty) <- getArgs (b :: env) k (compat {n = x'} sc)
+         let x' = UN $ Basic !(uniqueBasicName defs (toList $ map nameRoot vars) (nameRoot x))
+         (sc', ty) <- getArgs (env :< b) k (compat {n = x'} sc)
          -- Don't need to use the name if it's not used in the scope type
          let mn = if c == top
                        then case shrink sc (Drop Refl) of
@@ -91,5 +92,5 @@ makeLemma : {auto c : Ref Ctxt Defs} ->
             Core (RawImp, RawImp)
 makeLemma loc n nlocs ty
     = do defs <- get Ctxt
-         (args, ret) <- getArgs [] nlocs !(normalise defs [] ty)
+         (args, ret) <- getArgs ScopeEmpty nlocs !(normalise defs ScopeEmpty ty)
          pure (mkType loc args ret, mkApp loc n args)
