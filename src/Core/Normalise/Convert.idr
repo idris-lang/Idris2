@@ -331,10 +331,7 @@ mutual
       = if cx /= cy
            then pure False
            else convGen q i defs env tx ty
-  convBinders q i defs env bx by
-      = if multiplicity bx /= multiplicity by
-           then pure False
-           else convGen q i defs env (binderType bx) (binderType by)
+  convBinders q i defs env bx by = pure False
 
 
   export
