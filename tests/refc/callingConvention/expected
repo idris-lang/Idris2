@@ -23,7 +23,7 @@ Value *Main_last
 ,   Value * var_1
 )
 {
-    Value * tmp_70 = NULL;                                   // Main:8:8--8:14
+    Value * tmp_67 = NULL;                                   // Main:5:1--5:24
     if (NULL == var_0 /* _builtin.NIL [nil] */) {
         tmp_70 = var_1;
     } else if (NULL != var_0 /* _builtin.CONS [cons] */) {
@@ -215,12 +215,13 @@ Value *Main_main_9
 ,   Value * var_1
 )
 {
-    Value *closure_52 = (Value *)idris2_mkClosure((Value *(*)())Main_main_0, 5, 0);
-    Value * var_2 = closure_52;                              // Prelude.IO:19:1--26:30
-    Value *closure_53 = (Value *)idris2_mkClosure((Value *(*)())Main_main_1, 3, 0);
-    Value * var_3 = closure_53;                              // Prelude.IO:19:1--26:30
-    Value *closure_54 = (Value *)idris2_mkClosure((Value *(*)())Main_main_2, 5, 0);
-    Value * var_4 = closure_54;                              // Prelude.IO:19:1--26:30
+    Value *closure_49 = (Value *)idris2_mkClosure((Value *(*)())Main_main_0, 5, 0);
+                                                             // Prelude.IO:19:1--26:30
+    Value * var_2 = closure_49;                              // Prelude.IO:19:1--26:30
+    Value *closure_50 = (Value *)idris2_mkClosure((Value *(*)())Main_main_1, 3, 0);
+    Value * var_3 = closure_50;                              // Prelude.IO:19:1--26:30
+    Value *closure_51 = (Value *)idris2_mkClosure((Value *(*)())Main_main_2, 5, 0);
+    Value * var_4 = closure_51;                              // Prelude.IO:19:1--26:30
      // constructor Prelude.Interfaces.MkApplicative         // Prelude.IO:19:1--26:30
     Value_Constructor* constructor_55 = idris2_newConstructor(3, 0);
                                                              // Prelude.IO:19:1--26:30

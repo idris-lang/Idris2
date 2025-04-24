@@ -503,6 +503,9 @@ preOptions (Logging n :: opts)
     = do setSession ({ logEnabled := True,
                        logLevel $= insertLogLevel n } !getSession)
          preOptions opts
+preOptions (LoggingTree :: opts)
+    = do updateSession ({ logTreeEnabled := True })
+         preOptions opts
 preOptions (ConsoleWidth n :: opts)
     = do setConsoleWidth n
          preOptions opts

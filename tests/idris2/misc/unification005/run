@@ -1,0 +1,4 @@
+. ../../../testutils.sh
+
+check Good1.idr
+check Good2.idr

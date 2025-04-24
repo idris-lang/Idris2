@@ -1,11 +1,13 @@
 module Core.Coverage
 
-import Core.Case.CaseTree
 import Core.Case.Util
 import Core.Context.Log
 import Core.Env
-import Core.Normalise
-import Core.Value
+import Core.Evaluate
+import Core.Evaluate.Value
+import Core.Evaluate.Quote
+import Core.Evaluate.Normalise
+import Core.Evaluate.Expand
 
 import Data.Maybe
 import Data.SnocList
@@ -82,18 +84,18 @@ conflict defs env nfty n
               | Nothing => pure False
          case (definition gdef, type gdef) of
               (DCon t arity _, dty)
-                  => do Nothing <- conflictNF 0 nfty !(nf defs Env.empty dty)
+                  => do Nothing <- conflictNF 0 nfty !(expand !(nf Env.empty dty))
                             | Just ms => pure $ conflictMatch ms
                         pure True
               _ => pure False
   where
     mutual
-      conflictArgs : Int -> SnocList (Closure vars) -> SnocList ClosedClosure ->
+      conflictArgs : Int -> SnocList (Glued vars) -> SnocList (Glued [<]) ->
                      Core (Maybe (List (Name, Term vars)))
       conflictArgs _ [<] [<] = pure (Just [])
       conflictArgs i (cs :< c) (cs' :< c')
-          = do cnf <- evalClosure defs c
-               cnf' <- evalClosure defs c'
+          = do cnf <- expand c
+               cnf' <- expand c'
                Just ms <- conflictNF i cnf cnf'
                     | Nothing => pure Nothing
                Just ms' <- conflictArgs i cs cs'
@@ -109,24 +111,28 @@ conflict defs env nfty n
       -- conflictNF returns the list of matches, for checking
       conflictNF : Int -> NF vars -> ClosedNF ->
                    Core (Maybe (List (Name, Term vars)))
-      conflictNF i t (NBind fc x b sc)
+      conflictNF i t (VBind fc x b sc)
           -- invent a fresh name, in case a user has bound the same name
           -- twice somehow both references appear in the result it's unlikely
           -- put possible
           = let x' = MN (show x) i in
                 conflictNF (i + 1) t
-                       !(sc defs (toClosure defaultOpts Env.empty (Ref fc Bound x')))
-      conflictNF i nf (NApp _ (NRef Bound n) [<])
-          = pure (Just [(n, !(quote defs env nf))])
-      conflictNF i (NDCon _ n t a args) (NDCon _ n' t' a' args')
+                       !(expand !(sc (pure (vRef fc Bound x'))))
+      conflictNF i nf (VApp _ Bound n [<] _)
+          = pure (Just [(n, !(quote env nf))])
+      conflictNF i (VDCon _ n t a args) (VDCon _ n' t' a' args')
           = if t == t'
-               then conflictArgs i (map value args) (map value args')
+               then conflictArgs i
+                       !(traverseSnocList value args)
+                       !(traverseSnocList value args')
                else pure Nothing
-      conflictNF i (NTCon _ n a args) (NTCon _ n' a' args')
+      conflictNF i (VTCon _ n a args) (VTCon _ n' a' args')
           = if n == n'
-               then conflictArgs i (map value args) (map value args')
+               then conflictArgs i
+                      !(traverseSnocList value args)
+                      !(traverseSnocList value args')
                else pure Nothing
-      conflictNF i (NPrimVal _ c) (NPrimVal _ c')
+      conflictNF i (VPrimVal _ c) (VPrimVal _ c')
           = if c == c'
                then pure (Just [])
                else pure Nothing
@@ -138,23 +144,23 @@ export
 isEmpty : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
           Defs -> Env Term vars -> NF vars -> Core Bool
-isEmpty defs env (NTCon fc n a args)
+isEmpty defs env (VTCon fc n a args)
   = do Just nty <- lookupDefExact n (gamma defs)
          | _ => pure False
        case nty of
             TCon _ _ _ flags _ Nothing _ => pure False
             TCon _ _ _ flags _ (Just cons) _
                  => if not (external flags)
-                       then allM (conflict defs env (NTCon fc n a args)) cons
+                       then allM (conflict defs env (VTCon fc n a args)) cons
                        else pure False
             _ => pure False
 isEmpty defs env _ = pure False
 
 altMatch : CaseAlt vars -> CaseAlt vars -> Bool
-altMatch _ (DefaultCase _) = True
-altMatch (DelayCase _ _ t) (DelayCase _ _ t') = True
-altMatch (ConCase n t _ _) (ConCase n' t' _ _) = t == t'
-altMatch (ConstCase c _) (ConstCase c' _) = c == c'
+altMatch _ (DefaultCase _ _) = True
+altMatch (DelayCase _ _ _ t) (DelayCase _ _ _ t') = True
+altMatch (ConCase _ n t _) (ConCase _ n' t' _) = t == t'
+altMatch (ConstCase _ c _) (ConstCase _ c' _) = c == c'
 altMatch _ _ = False
 
 -- Given a type and a list of case alternatives, return the
@@ -165,29 +171,28 @@ getMissingAlts : {auto c : Ref Ctxt Defs} ->
                  Core (List (CaseAlt vars))
 -- If it's a primitive other than WorldVal, there's too many to reasonably
 -- check, so require a catch all
-getMissingAlts fc defs (NPrimVal _ $ PrT WorldType) alts
+getMissingAlts fc defs (VPrimVal _ $ PrT WorldType) alts
     = if isNil alts
-         then pure [DefaultCase (Unmatched "Coverage check")]
+         then pure [DefaultCase fc (Unmatched fc "Coverage check")]
          else pure []
-getMissingAlts fc defs (NPrimVal _ c) alts
+getMissingAlts fc defs (VPrimVal _ c) alts
   = do log "coverage.missing" 50 $ "Looking for missing alts at type " ++ show c
        if any isDefault alts
          then do log "coverage.missing" 20 "Found default"
                  pure []
-         else pure [DefaultCase (Unmatched "Coverage check")]
+         else pure [DefaultCase fc (Unmatched fc "Coverage check")]
 -- Similarly for types
-getMissingAlts fc defs (NType {}) alts
+getMissingAlts fc defs (VType {}) alts
     = do log "coverage.missing" 50 "Looking for missing alts at type Type"
          if any isDefault alts
            then do log "coverage.missing" 20 "Found default"
                    pure []
-           else pure [DefaultCase (Unmatched "Coverage check")]
+           else pure [DefaultCase fc (Unmatched fc "Coverage check")]
 getMissingAlts fc defs nfty alts
-    = do log "coverage.missing" 50 $ "Getting constructors for: " ++ show nfty
-         logNF "coverage.missing" 20 "Getting constructors for" (mkEnv fc _) nfty
+    = do logNF "coverage.missing" 20 "Getting constructors for" (mkEnv fc _) nfty
          allCons <- getCons defs nfty
          pure (filter (noneOf alts)
-                 (map (mkAlt fc (Unmatched "Coverage check")) allCons))
+                 (map (mkAltTm fc (Unmatched fc "Coverage check")) allCons))
   where
     -- Return whether the alternative c matches none of the given cases in alts
     noneOf : List (CaseAlt vars) -> CaseAlt vars -> Bool
@@ -210,10 +215,15 @@ showK {a} xs = show (map aString xs)
     aString (MkVar v, t) = (nameAt v, t)
 
 -- TODO re-use `Thinnable`
-weakensN : SizeOf args -> KnownVars vars a -> KnownVars (Scope.ext vars args) a
-weakensN args [] = []
-weakensN args ((v, t) :: xs)
-  = (weakensN args v, t) :: weakensN args xs
+weakenNs : SizeOf args -> KnownVars vars a -> KnownVars (Scope.addInner vars args) a
+weakenNs args [] = []
+weakenNs args ((v, t) :: xs)
+  = (weakenNs args v, t) :: weakenNs args xs
+
+weaken : KnownVars vars a -> KnownVars (vars :< n) a
+weaken [] = []
+weaken ((v, t) :: xs)
+  = (weaken v, t) :: weaken xs
 
 findTag : {idx, vars : _} ->
           (0 p : IsVar n idx vars) -> KnownVars vars a -> Maybe a
@@ -233,10 +243,10 @@ addNot v t ((v', ts) :: xs)
          else ((v', ts) :: addNot v t xs)
 
 tagIsNot : List Int -> CaseAlt vars -> Bool
-tagIsNot ts (ConCase _ t' _ _) = not (t' `elem` ts)
-tagIsNot ts (ConstCase {}) = True
-tagIsNot ts (DelayCase {}) = True
-tagIsNot ts (DefaultCase _) = False
+tagIsNot ts (ConCase _ _ t' _) = not (t' `elem` ts)
+tagIsNot ts (ConstCase _ {}) = True
+tagIsNot ts (DelayCase _ {}) = True
+tagIsNot ts (DefaultCase _ _) = False
 
 -- Replace a default case with explicit branches for the constructors.
 -- This is easier than checking whether a default is needed when traversing
@@ -247,24 +257,24 @@ replaceDefaults : {auto c : Ref Ctxt Defs} ->
                   Core (List (CaseAlt vars))
 -- Leave it alone if it's a primitive type though, since we need the catch
 -- all case there
-replaceDefaults fc defs (NPrimVal {}) cs = pure cs
-replaceDefaults fc defs (NType {}) cs = pure cs
+replaceDefaults fc defs (VPrimVal {}) cs = pure cs
+replaceDefaults fc defs (VType {}) cs = pure cs
 replaceDefaults fc defs nfty cs
     = do cs' <- traverse rep cs
          pure (dropRep (concat cs'))
   where
     rep : CaseAlt vars -> Core (List (CaseAlt vars))
-    rep (DefaultCase sc)
+    rep (DefaultCase _ sc)
         = do allCons <- getCons defs nfty
-             pure (map (mkAlt fc sc) allCons)
+             pure (map (mkAltTm fc sc) allCons)
     rep c = pure [c]
 
     dropRep : List (CaseAlt vars) -> List (CaseAlt vars)
     dropRep [] = []
-    dropRep (c@(ConCase n t args sc) :: rest)
+    dropRep (c@(ConCase _ n t sc) :: rest)
           -- assumption is that there's no defaultcase in 'rest' because
           -- we've just removed it
-        = c :: dropRep (filter (not . tagIs t) rest)
+        = c :: dropRep (filter (not . tagIsTm t) rest)
     dropRep (c :: rest) = c :: dropRep rest
 
 -- Traverse a case tree and refine the arguments while matching, so that
@@ -273,66 +283,81 @@ replaceDefaults fc defs nfty cs
 -- The returned patterns are those arising from the *missing* cases
 buildArgs : {auto c : Ref Ctxt Defs} ->
             {vars : _} ->
-            FC -> Defs ->
+            Defs ->
             KnownVars vars Int -> -- Things which have definitely match
             KnownVars vars (List Int) -> -- Things an argument *can't* be
                                     -- (because a previous case matches)
             SnocList (RigCount, ClosedTerm) ->  -- ^ arguments, with explicit names
-            CaseTree vars -> Core (List (SnocList (RigCount, ClosedTerm)))
-buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
+            Term vars -> Core (List (SnocList (RigCount, ClosedTerm)))
+-- Coming from the case tree builder, we'll always be splitting on a
+-- variable, so coverage checking has to happen at that point, i.e. before
+-- any inlining
+-- Case blocks appear under lambdas. We only need the case block itself to
+-- be able to construct the application, so we'll only see these at the
+-- top level
+buildArgs defs known not ps (Bind fc x (Lam lfc c p ty) sc)
+    = buildArgs defs (weaken known) (weaken not) (ps :< (c, Ref fc Bound x)) sc
+buildArgs defs known not ps cs@(Case fc PatMatch c (Local lfc _ idx el) ty altsIn)
   -- If we've already matched on 'el' in this branch, restrict the alternatives
   -- to the tag we already know. Otherwise, add missing cases and filter out
   -- the ones it can't possibly be (the 'not') because a previous case
   -- has matched.
     = do let fenv = mkEnv fc _
-         nfty <- nf defs fenv ty
+         nfty <- expand !(nf fenv ty)
          alts <- replaceDefaults fc defs nfty altsIn
          let alts' = alts ++ !(getMissingAlts fc defs nfty alts)
-         let altsK = maybe alts' (\t => filter (tagIs t) alts')
+         let altsK = maybe alts' (\t => filter (tagIsTm t) alts')
                               (findTag el known)
          let altsN = maybe altsK (\ts => filter (tagIsNot ts) altsK)
                               (findTag el not)
-         buildArgsAlt not altsN
+         let var = nameAt el
+         buildArgsAlt var not altsN
   where
-    buildArgAlt : KnownVars vars (List Int) ->
+    buildArgSc : {vars, more : _} ->
+                 SizeOf more ->
+                 FC -> Name ->
+                 KnownVars vars Int -> KnownVars vars (List Int) ->
+                 Name -> Int -> SnocList (RigCount, Name) ->
+                 CaseScope (vars ++ more) -> Core (List (SnocList (RigCount, ClosedTerm)))
+    buildArgSc s fc var known not' n t args (RHS _ tm)
+        = do let con = Ref {vars=[<]} fc (DataCon t (length args)) n
+             let app = applySpine fc con
+                             (map @{Compose} (Ref fc Bound) args)
+             let ps' = map @{Compose} (substName [<] var app) ps
+             buildArgs defs (weakenNs s known) (weakenNs s not') ps' tm
+    buildArgSc s fc var known not' n t args (Arg c x sc)
+        = buildArgSc (suc s) fc var known not' n t (args :< (c, x)) sc
+
+    buildArgAlt : Name -> KnownVars vars (List Int) ->
                   CaseAlt vars -> Core (List (SnocList (RigCount, ClosedTerm)))
-    buildArgAlt not' (ConCase n t args sc)
-        = do let l = mkSizeOf args
-             let con = Ref fc (DataCon t (size l)) n
-             let ps' = map @{Compose} (substName zero var
-                             (apply fc
-                                    con (map ((top,) . Ref fc Bound) args))) ps
-             let known' = (MkVar el, t) :: known
-             buildArgs fc defs (weakensN l known')
-                               (weakensN l not') ps' sc
-    buildArgAlt not' (DelayCase t a sc)
-        = let l = mkSizeOf [t, a]
-              ps' = map @{Compose} (substName zero var (TDelay fc LUnknown
-                                                       (Ref fc Bound t)
-                                                       (Ref fc Bound a))) ps in
-              buildArgs fc defs (weakensN l known)
-                                (weakensN l not') ps' sc
-    buildArgAlt not' (ConstCase c sc)
-        = do let ps' = map @{Compose} (substName zero var (PrimVal fc c)) ps
-             buildArgs fc defs known not' ps' sc
-    buildArgAlt not' (DefaultCase sc)
-        = buildArgs fc defs known not' ps sc
+    buildArgAlt var not' (ConCase cfc n t sc)
+        = buildArgSc zero cfc var ((MkVar el, t) :: known) not' n t [<] sc
+    buildArgAlt var not' (DelayCase _ t a sc)
+        = let l = mkSizeOf [< t, a]
+              ps' = map @{Compose} (substName [<] var
+                                              (TDelay fc LUnknown
+                                                      (Ref fc Bound t)
+                                                      (Ref fc Bound a))) ps in
+              buildArgs defs (weakenNs l known) (weakenNs l not') ps' sc
+    buildArgAlt var not' (ConstCase _ i sc)
+        = do let ps' = map @{Compose} (substName [<] var (PrimVal fc i)) ps
+             buildArgs defs known not' ps' sc
+    buildArgAlt var not' (DefaultCase _ sc)
+        = buildArgs defs known not' ps sc
 
-    buildArgsAlt : KnownVars vars (List Int) -> List (CaseAlt vars) ->
+    buildArgsAlt : Name -> KnownVars vars (List Int) -> List (CaseAlt vars) ->
                    Core (List (SnocList (RigCount, ClosedTerm)))
-    buildArgsAlt not' [] = pure []
-    buildArgsAlt not' (c@(ConCase _ t _ _) :: cs)
-        = pure $ !(buildArgAlt not' c) ++
-                 !(buildArgsAlt (addNot el t not') cs)
-    buildArgsAlt not' (c :: cs)
-        = pure $ !(buildArgAlt not' c) ++ !(buildArgsAlt not' cs)
+    buildArgsAlt var not' [] = pure []
+    buildArgsAlt var not' (c@(ConCase _ _ t _) :: cs)
+        = pure $ !(buildArgAlt var not' c) ++
+                 !(buildArgsAlt var (addNot el t not') cs)
+    buildArgsAlt var not' (c :: cs)
+        = pure $ !(buildArgAlt var not' c) ++ !(buildArgsAlt var not' cs)
 
-buildArgs fc defs known not ps (STerm _ vs)
-    = pure [] -- matched, so return nothing
-buildArgs fc defs known not ps (Unmatched msg)
+buildArgs defs known not ps (Unmatched _ msg)
     = pure [ps] -- unmatched, so return it
-buildArgs fc defs known not ps Impossible
-    = pure [] -- not a possible match, so return nothing
+buildArgs defs known not ps _
+    = pure [] -- matched, or not possible, so return nothing
 
 -- Traverse a case tree and return pattern clauses which are not
 -- matched. These might still be invalid patterns, or patterns which are covered
@@ -342,24 +367,23 @@ export
 getMissing : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
              FC -> Name -> ClosedTerm ->
-             CaseTree vars ->
+             Term vars ->
              Core (List ClosedTerm)
 getMissing fc n ty ctree
    = do defs <- get Ctxt
         let psIn = map ((top,) . Ref fc Bound) vars
-        pats <- buildArgs fc defs [] [] psIn ctree
-        pats <- for pats $ trimArgs defs [<] !(nf defs Env.empty ty) . toList
+        pats <- buildArgs defs [] [] psIn ctree
+        pats <- for pats $ trimArgs [<] !(expand !(nf Env.empty ty)) . toList
         unless (null pats) $
           logC "coverage.missing" 20 $ map unlines $
             for pats $ map show . traverse toFullNames
         pure (map (apply fc (Ref fc Func n)) pats)
   where
-    trimArgs : Defs ->
-               SnocList (ZeroOneOmega, ClosedTerm) -> ClosedNF ->
+    trimArgs : SnocList (ZeroOneOmega, ClosedTerm) -> ClosedNF ->
                List (ZeroOneOmega, ClosedTerm) -> Core (List (ZeroOneOmega, ClosedTerm))
-    trimArgs defs acc (NBind _ n (Pi {}) sc) ((c, x) :: xs)
-        = trimArgs defs (acc :< (c, x)) !(sc defs $ toClosure defaultOpts Env.empty x) xs
-    trimArgs _ acc _ _ = pure $ toList acc
+    trimArgs acc (VBind _ n (Pi {}) sc) ((c, x) :: xs)
+        = trimArgs (acc :< (c, x)) !(expand !(sc (pure (VErased fc Placeholder)))) xs
+    trimArgs acc _ _ = pure $ toList acc
 
 -- For the given name, get the names it refers to which are not themselves
 -- covering.
@@ -373,18 +397,9 @@ getNonCoveringRefs fc n
         Just d <- lookupCtxtExact n (gamma defs)
            | Nothing => undefinedName fc n
         let ds = mapMaybe noAssert (toList (refersTo d))
-        let cases = filter isCase !(traverse toFullNames ds)
 
-        -- Case blocks aren't recursive, so we're safe!
-        cbad <- traverse (getNonCoveringRefs fc) cases
-        topbad <- filterM (notCovering defs) ds
-        pure (topbad ++ concat cbad)
+        filterM (notCovering defs) ds
   where
-    isCase : Name -> Bool
-    isCase (NS _ n) = isCase n
-    isCase (CaseBlock {}) = True
-    isCase _ = False
-
     noAssert : (Name, Bool) -> Maybe Name
     noAssert (n, True) = Nothing
     noAssert (n, False) = Just n

@@ -2,8 +2,10 @@ module TTImp.ProcessFnOpt
 
 import Core.Context.Log
 import Core.Env
-import Core.Normalise
-import Core.Value
+import Core.Evaluate.Value
+import Core.Evaluate.Normalise
+import Core.Evaluate.Quote
+import Core.Evaluate.Expand
 
 import TTImp.TTImp
 
@@ -12,11 +14,11 @@ import Data.SnocList
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
 
-getRetTy : Defs -> ClosedNF -> Core Name
-getRetTy defs (NBind fc _ (Pi {}) sc)
-    = getRetTy defs !(sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder)))
-getRetTy defs (NTCon _ n _ _) = pure n
-getRetTy defs ty
+getRetTy : {auto c : Ref Ctxt Defs} -> ClosedNF -> Core Name
+getRetTy (VBind fc _ (Pi {}) sc)
+    = getRetTy !(expand !(sc (pure (VErased fc Placeholder))))
+getRetTy (VTCon _ n _ _) = pure n
+getRetTy ty
     = throw (GenericMsg (getLoc ty)
              "Can only add hints for concrete return types")
 
@@ -52,7 +54,7 @@ processFnOpt fc True ndef (Hint d)
     = do defs <- get Ctxt
          Just ty <- lookupTyExact ndef (gamma defs)
               | Nothing => undefinedName fc ndef
-         target <- getRetTy defs !(nf defs Env.empty ty)
+         target <- getRetTy !(expand !(nf Env.empty ty))
          addHintFor fc target ndef d False
 processFnOpt fc _ ndef (Hint d)
     = do logC "elab" 5 $ do pure $ "Adding local hint " ++ show !(toFullNames ndef)
@@ -80,7 +82,7 @@ processFnOpt fc _ ndef (SpecArgs ns)
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact ndef (gamma defs)
               | Nothing => undefinedName fc ndef
-         nty <- nf defs Env.empty (type gdef)
+         nty <- expand !(nf Env.empty (type gdef))
          ps <- getNamePos 0 nty
          ddeps <- collectDDeps nty
          specs <- collectSpec NatSet.empty ddeps ps nty
@@ -97,13 +99,13 @@ processFnOpt fc _ ndef (SpecArgs ns)
 
     -- Collect the argument names which the dynamic args depend on
     collectDDeps : ClosedNF -> Core (List Name)
-    collectDDeps (NBind tfc x (Pi _ _ _ nty) sc)
+    collectDDeps (VBind tfc x (Pi _ _ _ nty) sc)
         = do defs <- get Ctxt
              empty <- clearDefs defs
-             sc' <- sc defs (toClosure defaultOpts Env.empty (Ref tfc Bound x))
+             sc' <- expand !(sc (pure (vRef tfc Bound x)))
              if x `elem` ns
                 then collectDDeps sc'
-                else do aty <- quote empty Env.empty nty
+                else do aty <- quote Env.empty nty
                         -- Get names depended on by nty
                         let deps = keys (getRefs (UN Underscore) aty)
                         rest <- collectDDeps sc'
@@ -119,34 +121,35 @@ processFnOpt fc _ ndef (SpecArgs ns)
           = do ns' <- getDeps inparam a ns
                getDepsArgs inparam as ns'
 
-      getDeps : Bool -> ClosedNF -> NameMap Bool ->
+      getDeps : Bool -> NF [<] -> NameMap Bool ->
                 Core (NameMap Bool)
-      getDeps inparam (NBind _ x (Pi _ _ _ pty) sc) ns
+      getDeps inparam (VBind _ x (Pi _ _ _ pty) sc) ns
           = do defs <- get Ctxt
-               ns' <- getDeps inparam !(evalClosure defs pty) ns
-               sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
+               ns' <- getDeps inparam !(expand pty) ns
+               sc' <- expand !(sc (pure (VErased fc Placeholder)))
                getDeps inparam sc' ns'
-      getDeps inparam (NBind _ x b sc) ns
+      getDeps inparam (VBind _ x b sc) ns
           = do defs <- get Ctxt
-               ns' <- getDeps False !(evalClosure defs (binderType b)) ns
-               sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
+               ns' <- getDeps False !(expand (binderType b)) ns
+               sc' <- expand !(sc (pure (VErased fc Placeholder)))
                getDeps False sc' ns
-      getDeps inparam (NApp _ (NRef Bound n) args) ns
+      getDeps inparam (VApp _ Bound n args _) ns
           = do defs <- get Ctxt
-               ns' <- getDepsArgs False !(traverse (evalClosure defs . value) args) ns
+               ns' <- getDepsArgs False !(traverseSnocList spineVal args) ns
                pure (insert n inparam ns')
-      getDeps inparam (NDCon _ n t a args) ns
+      getDeps inparam (VDCon _ n t a args) ns
           = do defs <- get Ctxt
-               getDepsArgs False !(traverse (evalClosure defs . value) args) ns
-      getDeps inparam (NTCon _ n a args) ns
+               getDepsArgs False !(traverseSnocList spineVal args) ns
+      getDeps inparam (VTCon _ n a args) ns
           = do defs <- get Ctxt
                params <- case !(lookupDefExact n (gamma defs)) of
                               Just (TCon _ ps _ _ _ _ _) => pure ps
                               _ => pure NatSet.empty
-               let (ps, ds) = NatSet.partition params (map value args)
-               ns' <- getDepsArgs True !(traverse (evalClosure defs) ps) ns
-               getDepsArgs False !(traverse (evalClosure defs) ds) ns'
-      getDeps inparam (NDelayed _ _ t) ns = getDeps inparam t ns
+               let (ps, ds) = NatSet.partition params
+                                      (cast !(traverseSnocList spineVal args))
+               ns' <- getDepsArgs True ps ns
+               getDepsArgs False ds ns'
+      getDeps inparam (VDelayed _ _ t) ns = getDeps inparam !(expand t) ns
       getDeps inparams nf ns = pure ns
 
     -- If the name of an argument is in the list of specialisable arguments,
@@ -157,12 +160,12 @@ processFnOpt fc _ ndef (SpecArgs ns)
                                -- We're assuming it's a short list, so just use
                                -- List and don't worry about duplicates.
                   List (Name, Nat) -> ClosedNF -> Core NatSet
-    collectSpec acc ddeps ps (NBind tfc x (Pi _ _ _ nty) sc)
+    collectSpec acc ddeps ps (VBind tfc x (Pi _ _ _ nty) sc)
         = do defs <- get Ctxt
              empty <- clearDefs defs
-             sc' <- sc defs (toClosure defaultOpts Env.empty (Ref tfc Bound x))
+             sc' <- expand !(sc (pure (vRef tfc Bound x)))
              if x `elem` ns
-                then do deps <- getDeps True !(evalClosure defs nty) NameMap.empty
+                then do deps <- getDeps True !(expand nty) NameMap.empty
                         -- Get names depended on by nty
                         -- Keep the ones which are either:
                         --  * parameters
@@ -176,8 +179,8 @@ processFnOpt fc _ ndef (SpecArgs ns)
     collectSpec acc ddeps ps _ = pure acc
 
     getNamePos : Nat -> ClosedNF -> Core (List (Name, Nat))
-    getNamePos i (NBind tfc x (Pi {}) sc)
+    getNamePos i (VBind tfc x (Pi {}) sc)
         = do defs <- get Ctxt
-             ns' <- getNamePos (1 + i) !(sc defs (toClosure defaultOpts Env.empty (Erased tfc Placeholder)))
+             ns' <- getNamePos (1 + i) !(expand !(sc (pure (VErased tfc Placeholder))))
              pure ((x, i) :: ns')
     getNamePos _ _ = pure []

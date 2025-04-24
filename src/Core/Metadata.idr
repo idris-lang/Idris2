@@ -3,8 +3,11 @@ module Core.Metadata
 import Core.Binary
 import Core.Context.Log
 import Core.Env
-import Core.Normalise
 import Core.TTC
+
+import Core.Evaluate.Normalise
+import Core.Evaluate.Value
+import Core.Evaluate.Quote
 
 import System.File
 import Libraries.Data.NatSet
@@ -352,7 +355,8 @@ normaliseTypes
     nfType : Defs -> (NonEmptyFC, (Name, Nat, ClosedTerm)) ->
              Core (NonEmptyFC, (Name, Nat, ClosedTerm))
     nfType defs (loc, (n, len, ty))
-       = pure (loc, (n, len, !(normaliseArgHoles defs Env.empty ty)))
+      -- See nfHolesArgs at elabTermSub of TTImp.Elab
+       = pure (loc, (n, len, !(quote Env.empty !(nfHolesArgs Env.empty ty))))
 
 record TTMFile where
   constructor MkTTMFile

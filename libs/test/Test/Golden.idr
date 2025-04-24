@@ -230,6 +230,8 @@ runTest opts testPath = do
   start <- clockTime UTC
   let cg = maybe "" (" --cg " ++) (codegen opts)
   let exe = "\"" ++ exeUnderTest opts ++ cg ++ "\""
+  putStrLn $ "Running " ++ testPath
+  fflush stdout
   ignore $ system $ "cd " ++ escapeArg testPath ++ " && " ++
     "sh ./run " ++ exe ++ " | tr -d '\\r' > output"
   end <- clockTime UTC

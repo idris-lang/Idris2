@@ -9,6 +9,7 @@ import Idris.Syntax
 import public Idris.REPL.Common
 
 import Data.String
+import Data.Vect
 import Libraries.Data.List.Extra
 import Libraries.Data.WithDefault
 
@@ -104,6 +105,8 @@ fuzzySearch expr = do
     isApproximationOf x y
   isApproximationOf' a b = eqConst a b
 
+  doFindAlt : List NameOrConst -> CaseAlt vars -> List NameOrConst
+
   ||| Find all name and type literal occurrences.
   export
   doFind : List NameOrConst -> Term vars -> List NameOrConst
@@ -118,14 +121,28 @@ fuzzySearch expr = do
   doFind ns (App fc fn _ arg)
       = doFind (doFind ns fn) arg
   doFind ns (As fc s as tm) = doFind ns tm
+  doFind ns (Case fc ct c sc scty alts)
+      = foldl doFindAlt (doFind (doFind ns sc) scty) alts
   doFind ns (TDelayed fc x y) = doFind ns y
   doFind ns (TDelay fc x t y)
       = doFind (doFind ns t) y
   doFind ns (TForce fc r x) = doFind ns x
   doFind ns (PrimVal fc c) =
     fromMaybe [] ((:: []) <$> parseNameOrConst (PPrimVal fc c)) ++ ns
+  doFind ns (PrimOp fc fn args) =
+    foldl doFind ns (toList args)
   doFind ns (Erased fc i) = ns
+  doFind ns (Unmatched fc str) = ns
   doFind ns (TType fc _) = AType :: ns
+
+  doFindScope : List NameOrConst -> CaseScope vars -> List NameOrConst
+  doFindScope ns (RHS _ tm) = doFind ns tm
+  doFindScope ns (Arg c x tm) = doFindScope ns tm
+
+  doFindAlt ns (ConCase _ n t sc) = doFindScope ns sc
+  doFindAlt ns (DelayCase _ t a tm) = doFind ns tm
+  doFindAlt ns (ConstCase _ c tm) = doFind ns tm
+  doFindAlt ns (DefaultCase _ tm) = doFind ns tm
 
   toFullNames' : NameOrConst -> Core NameOrConst
   toFullNames' (AName x) = AName <$> toFullNames x

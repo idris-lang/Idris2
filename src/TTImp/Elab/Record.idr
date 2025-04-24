@@ -3,7 +3,11 @@ module TTImp.Elab.Record
 import Core.Env
 import Core.Metadata
 import Core.Unify
-import Core.Value
+import Core.Evaluate
+import Core.Evaluate.Value
+import Core.Evaluate.Quote
+import Core.Evaluate.Normalise
+import Core.Evaluate.Expand
 
 import Idris.REPL.Opts
 import Idris.Syntax
@@ -17,25 +21,21 @@ import Data.SnocList
 
 %default covering
 
-getRecordType : Env Term vars -> NF vars -> Maybe Name
-getRecordType env (NTCon _ n _ _) = Just n
-getRecordType env _ = Nothing
+getRecordType : NF vars -> Maybe Name
+getRecordType (VTCon _ n _ _) = Just n
+getRecordType _ = Nothing
 
 getNames : {auto c : Ref Ctxt Defs} -> Defs -> ClosedNF -> Core $ SortedSet Name
-getNames defs (NApp _ hd args)
-    = do eargs <- traverse (evalClosure defs . value) args
-         pure $ nheadNames hd `union` concat !(traverse (getNames defs) eargs)
-  where
-    nheadNames : NHead Scope.empty -> SortedSet Name
-    nheadNames (NRef Bound n) = singleton n
-    nheadNames _ = empty
-getNames defs (NDCon _ _ _ _ args)
-    = do eargs <- traverse (evalClosure defs . value) args
+getNames defs (VApp _ nt n args _)
+    = do eargs <- traverseSnocList spineVal args
+         pure $ singleton n `union` concat !(traverse (getNames defs) eargs)
+getNames defs (VDCon _ _ _ _ args)
+    = do eargs <- traverseSnocList spineVal args
          pure $ concat !(traverse (getNames defs) eargs)
-getNames defs (NTCon _ _ _ args)
-  = do eargs <- traverse (evalClosure defs . value) args
+getNames defs (VTCon _ _ _ args)
+  = do eargs <- traverseSnocList spineVal args
        pure $ concat !(traverse (getNames defs) eargs)
-getNames defs (NDelayed _ _ tm) = getNames defs tm
+getNames defs (VDelayed _ _ tm) = getNames defs !(expand tm)
 getNames {} = pure empty
 
 data Rec : Type where
@@ -82,21 +82,21 @@ findFieldsAndTypeArgs : {auto c : Ref Ctxt Defs} ->
                         Core $ Maybe (List (String, Maybe Name, Maybe Name), SortedSet Name)
 findFieldsAndTypeArgs defs con
     = case !(lookupTyExact con (gamma defs)) of
-           Just t => pure (Just !(getExpNames empty [] !(nf defs Env.empty t)))
+           Just t => pure (Just !(getExpNames empty [] !(expand !(nf Env.empty t))))
            _ => pure Nothing
   where
     getExpNames : SortedSet Name ->
                   List (String, Maybe Name, Maybe Name) ->
                   ClosedNF ->
                   Core (List (String, Maybe Name, Maybe Name), SortedSet Name)
-    getExpNames names expNames (NBind fc x (Pi _ _ p ty) sc)
+    getExpNames names expNames (VBind fc x (Pi _ _ p ty) sc)
         = do let imp = case p of
                             Explicit => Nothing
                             _ => Just x
-             nfty <- evalClosure defs ty
+             nfty <- expand ty
              let names = !(getNames defs nfty) `union` names
-             let expNames = (nameRoot x, imp, getRecordType Env.empty nfty) :: expNames
-             getExpNames names expNames !(sc defs (toClosure defaultOpts Env.empty (Ref fc Bound x)))
+             let expNames = (nameRoot x, imp, getRecordType nfty) :: expNames
+             getExpNames names expNames !(expand !(sc (pure (vRef fc Bound x))))
     getExpNames names expNames nfty = pure (reverse expNames, (!(getNames defs nfty) `union` names))
 
 genFieldName : {auto u : Ref UST UState} ->
@@ -207,8 +207,8 @@ recUpdate rigc elabinfo iloc nest env flds rec grecty
            unless (null dups) $
              throw (DuplicatedRecordUpdatePath iloc $ Prelude.toList dups)
            defs <- get Ctxt
-           rectynf <- getNF grecty
-           let Just rectyn = getRecordType env rectynf
+           rectynf <- expand grecty
+           let Just rectyn = getRecordType rectynf
                     | Nothing => throw (RecordTypeNeeded iloc env)
            fldn <- genFieldName "__fld"
            sides <- getAllSides iloc flds rectyn rec
@@ -254,13 +254,13 @@ checkUpdate rig elabinfo nest env fc upds rec expected
          delayOnFailure fc rig env (Just recty) needType RecordUpdate $
            \delayed =>
              do solveConstraints solvemode Normal
-                exp <- getTerm recty
+                exp <- expand recty
                 -- We can't just use the old NF on the second attempt,
                 -- because we might know more now, so recalculate it
-                let recty' = if delayed
-                                then gnf env exp
-                                else recty
-                logGlueNF "elab.record" 5 (show delayed ++ " record type " ++ show rec) env recty'
+                recty' <- if delayed
+                                then nf env !(quote env exp)
+                                else pure recty
+                logNF "elab.record" 5 (show delayed ++ " record type " ++ show rec) env recty'
                 rcase <- recUpdate rig elabinfo fc nest env upds rec recty'
                 log "elab.record" 5 $ "Record update: " ++ show rcase
                 check rig elabinfo nest env rcase expected

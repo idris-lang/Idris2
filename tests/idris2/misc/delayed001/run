@@ -1,0 +1,3 @@
+. ../../../testutils.sh
+
+check MinimalSampleUnsolvedHoles.idr

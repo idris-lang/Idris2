@@ -87,7 +87,7 @@ processDecl decl
                         pure [err])
 
 processDecls decls
-    = do errs <- concat <$> traverse processDecl decls
+    = do errs <- concat <$> traverse (logDepthWrap processDecl) decls
          Nothing <- checkDelayedHoles
              | Just err => pure (if null errs then [err] else errs)
          pure errs
@@ -377,23 +377,26 @@ processMod sourceFileName ttcFileName msg sourcecode origin
                 -- a phase before this which builds the dependency graph
                 -- (also that we only build child dependencies if rebuilding
                 -- changes the interface - will need to store a hash in .ttc!)
+                logDepthIncrease
                 logTime 2 "Reading imports" $
-                   traverse_ (readImport False) allImports
+                   logDepthDecrease $ traverse_ (readImport False) allImports
 
                 -- Before we process the source, make sure the "hide_everywhere"
                 -- names are set to private (TODO, maybe if we want this?)
 --                 defs <- get Ctxt
 --                 traverse (\x => setVisibility emptyFC x Private) (hiddenNames defs)
                 setNS (miAsNamespace ns)
+                logDepthIncrease
                 errs <- logTime 2 "Processing decls" $
-                            processDecls (decls mod)
+                            logDepthDecrease $ processDecls (decls mod)
                 totErrs <- logTime 3 ("Totality check overall")
                             getTotalityErrors
                 let errs = errs ++ totErrs
 --                 coreLift $ gc
 
                 when (isNil errs) $
-                   logTime 2 "Compile defs" $ compileAndInlineAll
+                   do logDepthIncrease
+                      logTime 2 "Compile defs" $ logDepthDecrease $ compileAndInlineAll
 
                 -- Save the import hashes for the imports we just read.
                 -- If they haven't changed next time, and the source

@@ -80,14 +80,19 @@ parameters (fn1 : Name) (idIdx : Nat)
         && all altEq xs
         && maybeVarEq var con const x
       where
+        scopeEq : forall vars .
+                  (args : SnocList Name) ->
+                  Name ->
+                  Var (vars ++ args) ->
+                  List (Var (vars ++ args)) ->
+                  CCaseScope (vars ++ args) -> Bool
+        scopeEq args y var vs (CRHS tm)
+            = cexpIdentity var (Just (y, vs)) const tm
+        scopeEq args y var vs (CArg x sc)
+            = scopeEq (args :< x) y (weaken var) (MkVar First :: map weaken vs) sc
 
         altEq : CConAlt vars -> Bool
-        altEq (MkConAlt y _ _ args exp) =
-            cexpIdentity
-                (weakensN (mkSizeOf args) var)
-                (Just (y, makeArgz args))
-                const
-                exp
+        altEq (MkConAlt y _ _ sc) = scopeEq [<] y var [] sc
     cexpIdentity var con const (CConstCase fc sc xs x) =
         cexpIdentity var Nothing Nothing sc
         && all altEq xs

@@ -3,9 +3,12 @@ module TTImp.Interactive.GenerateDef
 -- Attempt to generate a complete definition from a type
 
 import Core.Env
+import Core.Evaluate
 import Core.Metadata
 import Core.Unify
-import Core.Value
+import Core.Evaluate.Value
+import Core.Evaluate.Normalise
+import Core.Evaluate.Expand
 
 import Idris.REPL.Opts
 import Idris.Syntax
@@ -222,7 +225,7 @@ makeDefFromType loc opts n envlen ty
          (do defs <- branch
              meta <- get MD
              ust <- get UST
-             argns <- getEnvArgNames defs envlen !(nf defs Env.empty ty)
+             argns <- getEnvArgNames defs envlen !(expand !(nf Env.empty ty))
              -- Need to add implicit patterns for the outer environment.
              -- We won't try splitting on these
              let pre_env = replicate envlen (Implicit loc True)

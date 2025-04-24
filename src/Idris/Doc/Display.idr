@@ -1,6 +1,7 @@
 module Idris.Doc.Display
 
 import Core.Env
+import Core.Evaluate
 
 import Idris.IDEMode.Holes
 
@@ -16,34 +17,34 @@ import Idris.Syntax.Views
 export
 displayType : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
-              (shortName : Bool) -> Defs -> (Name, Int, GlobalDef) ->
+              (shortName : Bool) -> (Name, Int, GlobalDef) ->
               Core (Doc IdrisSyntax)
-displayType shortName defs (n, i, gdef)
-  = maybe (do tm <- resugar Env.empty !(normaliseHoles defs Env.empty (type gdef))
+displayType shortName (n, i, gdef)
+  = maybe (do tm <- resugar Env.empty !(normaliseHoles Env.empty (type gdef))
               nm <- aliasName (fullname gdef)
               let nm = ifThenElse shortName (dropNS nm) nm
               let prig = prettyRig gdef.multiplicity
               let ann = showCategory id gdef
               pure (prig <+> ann (cast $ prettyOp True nm) <++> colon <++> pretty tm))
-          (\num => prettyHole defs Env.empty n num (type gdef))
+          (\num => prettyHole Env.empty n num (type gdef))
           (isHole gdef)
 export
 displayTerm : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
-              Defs -> ClosedTerm ->
+              ClosedTerm ->
               Core (Doc IdrisSyntax)
-displayTerm defs tm
-  = do ptm <- resugar Env.empty !(normaliseHoles defs Env.empty tm)
+displayTerm tm
+  = do ptm <- resugar Env.empty !(normaliseHoles Env.empty tm)
        pure (pretty ptm)
 
 export
 displayClause : {auto c : Ref Ctxt Defs} ->
                 {auto s : Ref Syn SyntaxInfo} ->
-                Defs -> (vs ** (Env Term vs, Term vs, Term vs)) ->
+                Clause ->
                 Core (Doc IdrisSyntax)
-displayClause defs (vs ** (env, lhs, rhs))
-  = do lhstm <- resugar env !(normaliseHoles defs env lhs)
-       rhstm <- resugar env !(normaliseHoles defs env rhs)
+displayClause (MkClause env lhs rhs)
+  = do lhstm <- resugar env !(normaliseHoles env lhs)
+       rhstm <- resugar env !(normaliseHoles env rhs)
        pure (prettyLHS lhstm <++> equals <++> pretty rhstm)
 
   where
@@ -54,25 +55,25 @@ displayClause defs (vs ** (env, lhs, rhs))
 export
 displayPats : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
-              (shortName : Bool) -> Defs -> (Name, Int, GlobalDef) ->
+              (shortName : Bool) -> (Name, Int, GlobalDef) ->
               Core (Doc IdrisSyntax)
-displayPats shortName defs (n, idx, gdef)
+displayPats shortName (n, idx, gdef)
   = case definition gdef of
-      PMDef _ _ _ _ pats =>
-        do ty <- displayType shortName defs (n, idx, gdef)
-           ps <- traverse (displayClause defs) pats
+      Function _ _ _ pats =>
+        do ty <- displayType shortName (n, idx, gdef)
+           ps <- traverse (displayClause) (maybe [] id pats)
            pure (vsep (ty :: ps))
       _ => pure (pretty0 n <++> reflow "is not a pattern matching definition")
 
 export
 displayImpl : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
-              Defs -> (Name, Int, GlobalDef) ->
+              (Name, Int, GlobalDef) ->
               Core (Doc IdrisSyntax)
-displayImpl defs (n, idx, gdef)
+displayImpl (n, idx, gdef)
   = case definition gdef of
-      PMDef _ _ ct _ [(vars ** (env,  _, rhs))] =>
-        do rhstm <- resugar env !(normaliseHoles defs env rhs)
+      Function _ ct _ (Just [MkClause env  _ rhs]) =>
+        do rhstm <- resugar env !(normaliseHoles env rhs)
            let (_, args) = getFnArgs defaultKindedName rhstm
            defs <- get Ctxt
            pds <- map catMaybes $ for args $ \ arg => do
@@ -87,7 +88,7 @@ displayImpl defs (n, idx, gdef)
              Just (idx, gdef) <- lookupCtxtExactI kn.fullName (gamma defs)
                | _ => do log "doc.implementation" 10 $ "Couldn't find \{show @{Raw} nm}"
                          pure Nothing
-             pdef <- displayPats True defs (nm, idx, gdef)
+             pdef <- displayPats True (nm, idx, gdef)
              pure (Just pdef)
            pure (vcat $ intersperse "" pds)
       _ => pure (pretty0 n <++> reflow "is not an implementation definition")

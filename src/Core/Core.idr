@@ -118,6 +118,7 @@ data Error : Type where
         -- (e.g. pattern match against an empty type).
      LinearUsed : FC -> Nat -> Name -> Error
      LinearMisuse : FC -> Name -> RigCount -> RigCount -> Error
+     InconsistentUse : FC -> List (FC, List Name) -> Error
      BorrowPartial : {vars : _} ->
                      FC -> Env Term vars -> Term vars -> Term vars -> Error
      BorrowPartialType : {vars : _} ->
@@ -266,7 +267,7 @@ Show Error where
             case cov of
                  IsCovering => "Oh yes it is (Internal error!)"
                  MissingCases cs => "Missing cases:\n\t" ++
-                                           joinBy "\n\t" (map show cs)
+                                           joinBy "\n\t" (toList $ map show cs)
                  NonCoveringCall ns => "Calls non covering function"
                                            ++ (case ns of
                                                    [fn] => " " ++ show fn
@@ -293,6 +294,9 @@ Show Error where
          "irrelevant"
          "relevant"
          (const "non-linear")
+  show (InconsistentUse fc ns)
+      = show fc ++ ":Inconsistent use of variables in case branches " ++
+        show ns
   show (BorrowPartial fc env t arg)
       = show fc ++ ":" ++ show t ++ " borrows argument " ++ show arg ++
                    " so must be fully applied"
@@ -449,6 +453,7 @@ getErrorLoc (NotTotal loc _ _) = Just loc
 getErrorLoc ImpossibleCase = Nothing
 getErrorLoc (LinearUsed loc _ _) = Just loc
 getErrorLoc (LinearMisuse loc _ _ _) = Just loc
+getErrorLoc (InconsistentUse loc _) = Just loc
 getErrorLoc (BorrowPartial loc _ _ _) = Just loc
 getErrorLoc (BorrowPartialType loc _ _) = Just loc
 getErrorLoc (AmbiguousName loc _) = Just loc
@@ -542,6 +547,7 @@ killErrorLoc ImpossibleCase = ImpossibleCase
 killErrorLoc (NotTotal fc x y) = NotTotal emptyFC x y
 killErrorLoc (LinearUsed fc k x) = LinearUsed emptyFC k x
 killErrorLoc (LinearMisuse fc x y z) = LinearMisuse emptyFC x y z
+killErrorLoc (InconsistentUse fc x) = InconsistentUse emptyFC x
 killErrorLoc (BorrowPartial fc x y z) = BorrowPartial emptyFC x y z
 killErrorLoc (BorrowPartialType fc x y) = BorrowPartialType emptyFC x y
 killErrorLoc (AmbiguousName fc xs) = AmbiguousName emptyFC xs
@@ -910,11 +916,31 @@ mapTermM f = goTerm where
     goTerm (Bind fc x bd sc) = f =<< Bind fc x <$> traverse goTerm bd <*> goTerm sc
     goTerm (App fc fn c arg) = f =<< App fc <$> goTerm fn <*> pure c <*> goTerm arg
     goTerm (As fc u as pat) = f =<< As fc u <$> goTerm as <*> goTerm pat
+    goTerm (Case fc t c sc sct alts)
+        = f =<< Case fc t c <$> goTerm sc <*> goTerm sct <*> traverse goAlt alts
+      where
+        goForced : {vars : _} -> (Var vars, Term vars) ->
+                   Core (Var vars, Term vars)
+        goForced (v, tm) = pure (v, !(goTerm tm))
+
+        goScope : {vars : _} -> CaseScope vars -> Core (CaseScope vars)
+        goScope (RHS fs tm)
+          = pure $ RHS !(traverse goForced fs) !(goTerm tm)
+        goScope (Arg c x sc) = pure $ Arg c x !(goScope sc)
+
+        goAlt : {vars : _} -> CaseAlt vars -> Core (CaseAlt vars)
+        goAlt (ConCase fc n t sc) = pure $ ConCase fc n t !(goScope sc)
+        goAlt (DelayCase fc t a sc) = pure $ DelayCase fc t a !(goTerm sc)
+        goAlt (ConstCase fc c tm) = pure $ ConstCase fc c !(goTerm tm)
+        goAlt (DefaultCase fc tm) = pure $ DefaultCase fc !(goTerm tm)
     goTerm (TDelayed fc la d) = f =<< TDelayed fc la <$> goTerm d
     goTerm (TDelay fc la ty arg) = f =<< TDelay fc la <$> goTerm ty <*> goTerm arg
     goTerm (TForce fc la t) = f =<< TForce fc la <$> goTerm t
     goTerm tm@(PrimVal {}) = f tm
+    goTerm tm@(PrimOp fc op args)
+        = f =<< PrimOp fc op <$> (traverseVect goTerm args)
     goTerm tm@(Erased {}) = f tm
+    goTerm tm@(Unmatched _ _) = f tm
     goTerm tm@(TType {}) = f tm
 
 
@@ -943,6 +969,15 @@ allM : (a -> Core Bool) -> List a -> Core Bool
 allM f [] = pure True
 allM f (x :: xs)
     = if !(f x)
+         then allM f xs
+         else pure False
+
+namespace SnocList
+  export
+  allM : (a -> Core Bool) -> SnocList a -> Core Bool
+  allM f [<] = pure False
+  allM f (xs :< x)
+      = if !(f x)
          then allM f xs
          else pure False
 
