@@ -352,6 +352,7 @@ insertVar p v = forgetName $ insertNVar p (recoverName v)
 weakenVar : Weakenable Var
 weakenVar p v = forgetName $ weakenNVar p (recoverName v)
 
+export
 insertVarNames : GenWeakenable Var
 insertVarNames p q v = forgetName $ insertNVarNames p q (recoverName v)
 

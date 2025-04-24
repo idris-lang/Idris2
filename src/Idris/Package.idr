@@ -1024,6 +1024,7 @@ partitionOpts opts = foldr pOptUpdate (MkPFR [] [] False) opts
     optType Verbose                = POpt
     optType (Timing l)             = POpt
     optType (Logging l)            = POpt
+    optType (LoggingTree)          = POpt
     optType CaseTreeHeuristics     = POpt
     optType (DumpANF f)            = POpt
     optType (DumpCases f)          = POpt
@@ -1058,6 +1059,7 @@ errorMsg = unlines
   , "    --verbose"
   , "    --timing"
   , "    --log <log level>"
+  , "    --log-tree"
   , "    --dumpcases <file>"
   , "    --dumplifted <file>"
   , "    --dumpvmcode <file>"

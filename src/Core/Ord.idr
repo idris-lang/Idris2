@@ -45,10 +45,18 @@ mutual
 
     export
     covering
+    Eq (CCaseScope vars) where
+        CRHS tm == CRHS tm' = tm == tm'
+        CArg x sc == CArg x' sc' =
+             case nameEq x x' of
+                  Just Refl => sc == sc'
+                  Nothing => False
+        _ == _ = False
+
+    export
+    covering
     Eq (CConAlt vars) where
-        MkConAlt n1 _ t1 a1 e1 == MkConAlt n2 _ t2 a2 e2 = t1 == t2 && n1 == n2 && case localEq a1 a2 of
-            Just Refl => e1 == e2
-            Nothing => False
+        MkConAlt n1 _ t1 e1 == MkConAlt n2 _ t2 e2 = t1 == t2 && n1 == n2 && e1 == e2
 
     export
     covering
@@ -101,11 +109,23 @@ mutual
 
     export
     covering
+    Ord (CCaseScope vars) where
+      compare (CRHS tm) (CRHS tm') = compare tm tm'
+      compare (CArg x sc) (CArg x' sc')
+          = case nameEq x x' of
+                 Just Refl => compare sc sc'
+                 Nothing => compare x x'
+      compare x y = compare (tag x) (tag y)
+        where
+          tag : CCaseScope vars -> Int
+          tag (CRHS{}) = 0
+          tag (CArg{}) = 1
+
+    export
+    covering
     Ord (CConAlt vars) where
-        MkConAlt n1 _ t1 a1 e1 `compare` MkConAlt n2 _ t2 a2 e2 =
-            compare t1 t2 `thenCmp` compare n1 n2 `thenCmp` case localEq a1 a2 of
-                Just Refl => compare e1 e2
-                Nothing => compare a1 a2
+        MkConAlt n1 _ t1 e1 `compare` MkConAlt n2 _ t2 e2 =
+            compare t1 t2 `thenCmp` compare n1 n2 `thenCmp` compare e1 e2
 
     export
     covering

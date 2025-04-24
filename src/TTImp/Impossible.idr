@@ -1,7 +1,12 @@
 module TTImp.Impossible
 
 import Core.Env
-import Core.Value
+
+import Core.Evaluate.Value
+import Core.Evaluate.Quote
+import Core.Evaluate.Normalise
+import Core.Evaluate.Expand
+import Core.Evaluate
 
 import TTImp.TTImp
 import TTImp.TTImp.Functor
@@ -24,20 +29,20 @@ match : {auto c : Ref Ctxt Defs} ->
         ClosedNF -> (Name, Int, ClosedTerm) -> Core Bool
 match nty (n, i, rty)
     = do defs <- get Ctxt
-         rtynf <- nf defs Env.empty rty
+         rtynf <- expand !(nf Env.empty rty)
          sameRet nty rtynf
   where
     sameRet : ClosedNF -> ClosedNF -> Core Bool
-    sameRet _ (NApp {}) = pure True
-    sameRet _ (NErased {}) = pure True
-    sameRet (NApp {}) _ = pure True
-    sameRet (NErased {}) _ = pure True
-    sameRet (NTCon _ n _ _) (NTCon _ n' _ _) = pure (n == n')
-    sameRet (NPrimVal _ c) (NPrimVal _ c') = pure (c == c')
-    sameRet (NType {}) (NType {}) = pure True
-    sameRet nf (NBind fc _ (Pi {}) sc)
+    sameRet _ (VApp{}) = pure True
+    sameRet _ (VErased{}) = pure True
+    sameRet (VApp{}) _ = pure True
+    sameRet (VErased{}) _ = pure True
+    sameRet (VTCon _ n _ _) (VTCon _ n' _ _) = pure (n == n')
+    sameRet (VPrimVal _ c) (VPrimVal _ c') = pure (c == c')
+    sameRet (VType{}) (VType{}) = pure True
+    sameRet nf (VBind fc _ (Pi {}) sc)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
+             sc' <- expand !(sc (pure (VErased fc Placeholder)))
              sameRet nf sc'
     sameRet _ _ = pure False
 
@@ -48,6 +53,8 @@ dropNoMatch Nothing ts = pure ts
 dropNoMatch (Just nty) ts
     = -- if the return type of a thing in ts doesn't match nty, drop it
       filterM (match nty . map (map type)) ts
+
+data QVar : Type where
 
 nextVar : {auto q : Ref QVar Int} ->
           FC -> Core ClosedTerm
@@ -81,19 +88,17 @@ mutual
                 (namedargs : List (Name, WithFC RawImp)) ->
                 Core ClosedTerm
   -- unnamed takes priority
-  processArgs con fn (NBind _ x (Pi _ c Explicit ty) sc) (e :: exps) autos named
+  processArgs con fn (VBind _ x (Pi _ c Explicit ty) sc) (e :: exps) autos named
      = do e' <- mkTerm e.val (Just ty)
           defs <- get Ctxt
-          processArgs con (App e.fc fn c e')
-                      !(sc defs (toClosure defaultOpts Env.empty e'))
+          processArgs con (App e.fc fn c e') !(expand !(sc (nf Env.empty e')))
                       exps autos named
-  processArgs con fn (NBind _ x (Pi _ c Explicit ty) sc) [] autos named
+  processArgs con fn (VBind _ x (Pi _ c Explicit ty) sc) [] autos named
      = do defs <- get Ctxt
           case findNamed x named of
             Just ((_, e), named') =>
                do e' <- mkTerm e.val (Just ty)
-                  processArgs con (App e.fc fn c e')
-                              !(sc defs (toClosure defaultOpts Env.empty e'))
+                  processArgs con (App e.fc fn c e') !(expand !(sc (nf Env.empty e')))
                               [] autos named'
             Nothing => -- Expected an explicit argument, but only implicits left
                        do let False = con
@@ -103,26 +108,24 @@ mutual
                           let True = null autos && null named
                             | False => badClause fn [] autos named -- unexpected arguments
                           pure fn
-  processArgs con fn (NBind _ x (Pi _ c Implicit ty) sc) exps autos named
+  processArgs con fn (VBind _ x (Pi _ c Implicit ty) sc) exps autos named
      = do defs <- get Ctxt
           case findNamed x named of
             Nothing => do let fc = getLoc fn
                           e' <- nextVar fc
                           processArgs con (App fc fn c e')
-                                      !(sc defs (toClosure defaultOpts Env.empty e'))
+                                      !(expand !(sc (nf Env.empty e')))
                                       exps autos named
             Just ((_, e), named') =>
                do e' <- mkTerm e.val (Just ty)
-                  processArgs con (App e.fc fn c e')
-                              !(sc defs (toClosure defaultOpts Env.empty e'))
+                  processArgs con (App e.fc fn c e') !(expand !(sc (nf Env.empty e')))
                               exps autos named'
-  processArgs con fn (NBind _ x (Pi _ c AutoImplicit ty) sc) exps autos named
+  processArgs con fn (VBind _ x (Pi _ c AutoImplicit ty) sc) exps autos named
      = do defs <- get Ctxt
           case autos of
                (e :: autos') => -- unnamed takes priority
                    do e' <- mkTerm e.val (Just ty)
-                      processArgs con (App e.fc fn c e')
-                                  !(sc defs (toClosure defaultOpts Env.empty e'))
+                      processArgs con (App e.fc fn c e') !(expand !(sc (nf Env.empty e')))
                                   exps autos' named
                [] =>
                   case findNamed x named of
@@ -130,12 +133,11 @@ mutual
                         do let fc = getLoc fn
                            e' <- nextVar fc
                            processArgs con (App fc fn c e')
-                                       !(sc defs (toClosure defaultOpts Env.empty e'))
+                                       !(expand !(sc (nf Env.empty e')))
                                        exps [] named
                      Just ((_, e), named') =>
                         do e' <- mkTerm e.val (Just ty)
-                           processArgs con (App e.fc fn c e')
-                                       !(sc defs (toClosure defaultOpts Env.empty e'))
+                           processArgs con (App e.fc fn c e') !(expand !(sc (nf Env.empty e')))
                                        exps [] named'
   processArgs _ fn _ [] [] [] = pure fn
   processArgs _ fn _ (x :: _) autos named
@@ -146,7 +148,7 @@ mutual
   buildApp : {auto c : Ref Ctxt Defs} ->
              {auto s : Ref Syn SyntaxInfo} ->
              {auto q : Ref QVar Int} ->
-             FC -> Name -> Maybe ClosedClosure ->
+             FC -> Name -> Maybe (Glued [<]) ->
              (expargs : List (WithFC RawImp)) ->
              (autoargs : List (WithFC RawImp)) ->
              (namedargs : List (Name, WithFC RawImp)) ->
@@ -158,13 +160,9 @@ mutual
                throw (GenericMsg fc "Can't deal with \{show n} in impossible clauses yet")
 
            gdefs <- lookupNameBy id n (gamma defs)
-           mty' <- traverseOpt (evalClosure defs) mty
-           [(n', i, gdef)] <- dropNoMatch mty' gdefs
-              | [] => if length gdefs == 0
-                        then undefinedName fc n
-                        else throw $ GenericMsg fc "\{show n} does not match expected type"
-              | ts => throw $ AmbiguousName fc (map fst ts)
-           tynf <- nf defs Env.empty (type gdef)
+           [(n', i, gdef)] <- dropNoMatch !(traverseOpt expand mty) gdefs
+              | ts => ambiguousName fc n (map fst ts)
+           tynf <- expand !(nf Env.empty (type gdef))
            -- #899 we need to make sure that type & data constructors are marked
            -- as such so that the coverage checker actually uses the matches in
            -- `impossible` branches to generate parts of the case tree.
@@ -179,7 +177,7 @@ mutual
   mkTerm : {auto c : Ref Ctxt Defs} ->
            {auto s : Ref Syn SyntaxInfo} ->
            {auto q : Ref QVar Int} ->
-           RawImp -> Maybe ClosedClosure ->
+           RawImp -> Maybe (Glued [<]) ->
            Core ClosedTerm
   mkTerm tm mty = go tm [] [] []
     where
@@ -211,15 +209,15 @@ mutual
           isValidPrimType : Core Bool
           isValidPrimType
             = do defs <- get Ctxt
-                 Just ty <- traverseOpt (evalClosure defs) mty
+                 Just ty <- traverseOpt expand mty
                    | _ => pure False
                  case (primType c, ty) of
-                      (Nothing, NType {}) => pure True
-                      (Just t1, NPrimVal _ (PrT t2)) => pure (t1 == t2)
+                      (Nothing, VType {}) => pure True
+                      (Just t1, VPrimVal _ (PrT t2)) => pure (t1 == t2)
                       _ => pure False
       go (IType fc) _ _ _
           = do defs <- get Ctxt
-               Just (NType {}) <- traverseOpt (evalClosure defs) mty
+               Just (VType {}) <- traverseOpt expand mty
                  | _ => throw $ GenericMsg fc "Type does not match expected type"
                pure (TType fc $ MN "top" 0)
       -- We're taking UniqueDefault here, _and_ we're falling through to error otherwise, which is sketchy.

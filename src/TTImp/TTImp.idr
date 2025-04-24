@@ -2,12 +2,14 @@ module TTImp.TTImp
 
 import Core.Context.Log
 import Core.Env
-import Core.Normalise
-import Core.Value
 
 import Data.String
 import public Data.List1
 import Data.SortedSet
+
+import Core.Evaluate.Value
+import Core.Evaluate.Normalise
+import Core.Evaluate.Expand
 
 import Libraries.Data.SnocList.SizeOf
 import Libraries.Data.WithDefault
@@ -711,8 +713,8 @@ implicitsAs n defs ns tm
                     "Could not find variable " ++ show n
                   pure $ IVar loc nm
             Just ty =>
-               do ty' <- nf defs Env.empty ty
-                  implicits <- findImps is es ns ty'
+               do ty' <- nf Env.empty ty
+                  implicits <- findImps is es ns !(expand ty')
                   log "declare.def.lhs.implicits" 30 $
                     "\n  In the type of " ++ show n ++ ": " ++ show ty ++
                     "\n  Using locals: " ++ show ns ++
@@ -740,20 +742,22 @@ implicitsAs n defs ns tm
         -- in the lhs: this is used to determine when to stop searching for further
         -- implicits to add.
         findImps : List (Maybe Name) -> List (Maybe Name) ->
-                   List Name -> ClosedNF ->
+                   List Name -> NF [<] ->
                    Core (List (Name, PiInfo RawImp))
         -- #834 When we are in a local definition, we have an explicit telescope
         -- corresponding to the variables bound in the parent function.
         -- Parameter blocks also introduce additional telescope of implicit, auto,
         -- and explicit variables. So we first peel off all of the quantifiers
         -- corresponding to these variables.
-        findImps ns es (_ :: locals) (NBind fc x (Pi {}) sc)
-          = do body <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
+        findImps ns es (_ :: locals) (VBind fc x (Pi {}) sc)
+          = do body <- sc (pure (VErased fc Placeholder))
+               body <- expand body
                findImps ns es locals body
                -- ^ TODO? check that name of the pi matches name of local?
         -- don't add implicits coming after explicits that aren't given
-        findImps ns es [] (NBind fc x (Pi _ _ Explicit _) sc)
-            = do body <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
+        findImps ns es [] (VBind fc x (Pi _ _ Explicit _) sc)
+            = do body <- sc (pure (VErased fc Placeholder))
+                 body <- expand body
                  case es of
                    -- Explicits were skipped, therefore all explicits are given anyway
                    Just (UN Underscore) :: _ => findImps ns es [] body
@@ -762,14 +766,16 @@ implicitsAs n defs ns tm
                           Nothing => pure [] -- explicit wasn't given
                           Just es' => findImps ns es' [] body
         -- if the implicit was given, skip it
-        findImps ns es [] (NBind fc x (Pi _ _ AutoImplicit _) sc)
-            = do body <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
+        findImps ns es [] (VBind fc x (Pi _ _ AutoImplicit _) sc)
+            = do body <- sc (pure (VErased fc Placeholder))
+                 body <- expand body
                  case updateNs x ns of
                    Nothing => -- didn't find explicit call
                       pure $ (x, AutoImplicit) :: !(findImps ns es [] body)
                    Just ns' => findImps ns' es [] body
-        findImps ns es [] (NBind fc x (Pi _ _ p _) sc)
-            = do body <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
+        findImps ns es [] (VBind fc x (Pi _ _ p _) sc)
+            = do body <- sc (pure (VErased fc Placeholder))
+                 body <- expand body
                  if Just x `elem` ns
                    then findImps ns es [] body
                    else pure $ (x, forgetDef p) :: !(findImps ns es [] body)

@@ -4,8 +4,9 @@ import Data.List1
 
 import Core.Context
 import Core.Env
-import Core.Normalise
-import Core.Value
+import Core.Evaluate
+import Core.Evaluate.Value
+import Core.Evaluate.Expand
 
 import Data.SnocList
 
@@ -27,11 +28,16 @@ interface Reflect a where
             Env Term vars -> a -> Core (Term vars)
 
 export
+spine : {vars: _} -> {auto c : Ref Ctxt Defs} ->
+        Spine vars -> Core (List (NF vars))
+spine sp = pure $ cast !(traverseSnocList spineValFull sp)
+
+export
 getCon : {vars : _} ->
          FC -> Defs -> Name -> Core (Term vars)
 getCon fc defs n
     = case !(lookupDefExact n (gamma defs)) of
-           Just (DCon t a _) => resolved (gamma defs) (Ref fc (DataCon t a) n)
+           Just (DCon _ t a) => resolved (gamma defs) (Ref fc (DataCon t a) n)
            Just (TCon a _ _ _ _ _ _) => resolved (gamma defs) (Ref fc (TyCon a) n)
            Just _ => resolved (gamma defs) (Ref fc Func n)
            _ => throw (UndefinedName fc n)
@@ -86,7 +92,7 @@ export
 cantReify : Ref Ctxt Defs => {vars : _} -> NF vars -> String -> Core a
 cantReify val ty = do
   logNF "reflection.reify" 10 "Can't reify as \{ty}" (mkEnv emptyFC vars) val
-  throw (GenericMsg (getLoc val) ("Can't reify as " ++ ty))
+  throw (GenericMsg (getLoc val) ("Can't reify as " ++ ty ++ ": \{show !(toFullNames val)}"))
 
 export
 cantReflect : FC -> String -> Core a
@@ -103,7 +109,7 @@ Reflect () where
 
 export
 Reify String where
-  reify defs (NPrimVal _ (Str str)) = pure str
+  reify defs (VPrimVal _ (Str str)) = pure str
   reify defs val = cantReify val "String"
 
 export
@@ -112,7 +118,7 @@ Reflect String where
 
 export
 Reify Int where
-  reify defs (NPrimVal _ (I v)) = pure v
+  reify defs (VPrimVal _ (I v)) = pure v
   reify defs val = cantReify val "Int"
 
 export
@@ -121,7 +127,7 @@ Reflect Int where
 
 export
 Reify Int8 where
-  reify defs (NPrimVal _ (I8 v)) = pure v
+  reify defs (VPrimVal _ (I8 v)) = pure v
   reify defs val = cantReify val "Int8"
 
 export
@@ -130,7 +136,7 @@ Reflect Int8 where
 
 export
 Reify Int16 where
-  reify defs (NPrimVal _ (I16 v)) = pure v
+  reify defs (VPrimVal _ (I16 v)) = pure v
   reify defs val = cantReify val "Int16"
 
 export
@@ -139,7 +145,7 @@ Reflect Int16 where
 
 export
 Reify Int32 where
-  reify defs (NPrimVal _ (I32 v)) = pure v
+  reify defs (VPrimVal _ (I32 v)) = pure v
   reify defs val = cantReify val "Int32"
 
 export
@@ -148,7 +154,7 @@ Reflect Int32 where
 
 export
 Reify Int64 where
-  reify defs (NPrimVal _ (I64 v)) = pure v
+  reify defs (VPrimVal _ (I64 v)) = pure v
   reify defs val = cantReify val "Int64"
 
 export
@@ -157,7 +163,7 @@ Reflect Int64 where
 
 export
 Reify Bits8 where
-  reify defs (NPrimVal _ (B8 v)) = pure v
+  reify defs (VPrimVal _ (B8 v)) = pure v
   reify defs val = cantReify val "Bits8"
 
 export
@@ -166,7 +172,7 @@ Reflect Bits8 where
 
 export
 Reify Bits16 where
-  reify defs (NPrimVal _ (B16 v)) = pure v
+  reify defs (VPrimVal _ (B16 v)) = pure v
   reify defs val = cantReify val "Bits16"
 
 export
@@ -175,7 +181,7 @@ Reflect Bits16 where
 
 export
 Reify Bits32 where
-  reify defs (NPrimVal _ (B32 v)) = pure v
+  reify defs (VPrimVal _ (B32 v)) = pure v
   reify defs val = cantReify val "Bits32"
 
 export
@@ -184,7 +190,7 @@ Reflect Bits32 where
 
 export
 Reify Bits64 where
-  reify defs (NPrimVal _ (B64 v)) = pure v
+  reify defs (VPrimVal _ (B64 v)) = pure v
   reify defs val = cantReify val "Bits64"
 
 export
@@ -193,7 +199,7 @@ Reflect Bits64 where
 
 export
 Reify Integer where
-  reify defs (NPrimVal _ (BI v)) = pure v
+  reify defs (VPrimVal _ (BI v)) = pure v
   reify defs val = cantReify val "Integer"
 
 export
@@ -202,7 +208,7 @@ Reflect Integer where
 
 export
 Reify Char where
-  reify defs (NPrimVal _ (Ch v)) = pure v
+  reify defs (VPrimVal _ (Ch v)) = pure v
   reify defs val = cantReify val "Char"
 
 export
@@ -211,7 +217,7 @@ Reflect Char where
 
 export
 Reify Double where
-  reify defs (NPrimVal _ (Db v)) = pure v
+  reify defs (VPrimVal _ (Db v)) = pure v
   reify defs val = cantReify val "Double"
 
 export
@@ -220,7 +226,7 @@ Reflect Double where
 
 export
 Reify Bool where
-  reify defs val@(NDCon _ n _ _ _)
+  reify defs val@(VDCon _ n _ _ _)
       = case dropAllNS !(full (gamma defs) n) of
             UN (Basic "True") => pure True
             UN (Basic "False") => pure False
@@ -234,11 +240,11 @@ Reflect Bool where
 
 export
 Reify Nat where
-  reify defs val@(NDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), map value args) of
+  reify defs val@(VDCon _ n _ _ args)
+      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
              (UN (Basic "Z"), _) => pure Z
-             (UN (Basic "S"), [<k])
-                 => do k' <- reify defs !(evalClosure defs k)
+             (UN (Basic "S"), [k])
+                 => do k' <- reify defs !(expandFull k)
                        pure (S k')
              _ => cantReify val "Nat"
   reify defs val = cantReify val "Nat"
@@ -252,31 +258,33 @@ Reflect Nat where
 
 export
 Reify a => Reify (List a) where
-  reify defs val@(NDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), map value args) of
+  reify defs val@(VDCon _ n _ _ args)
+      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
              (UN (Basic "Nil"), _) => pure []
-             (UN (Basic "::"), [<_, x, xs])
-                  => do x' <- reify defs !(evalClosure defs x)
-                        xs' <- reify defs !(evalClosure defs xs)
+             (UN (Basic "::"), [_, x, xs])
+                  => do x' <- reify defs !(expandFull x)
+                        xs' <- reify defs !(expandFull xs)
                         pure (x' :: xs')
              _ => cantReify val "List"
   reify defs val = cantReify val "List"
 
 export
 Reflect a => Reflect (List a) where
-  reflect fc defs lhs env [] = appCon fc defs (basics "Nil") [blank fc]
+  reflect fc defs lhs env []
+      = appCon fc defs (basics "Nil") [blank fc]
   reflect fc defs lhs env (x :: xs)
       = do x' <- reflect fc defs lhs env x
            xs' <- reflect fc defs lhs env xs
-           appCon fc defs (basics "::") [blank fc, (top, x'), (top, xs')]
+           appCon fc defs (basics "::") [blank fc,
+                                         (top, x'), (top, xs')]
 
 export
 Reify a => Reify (List1 a) where
-  reify defs val@(NDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), map value args) of
-             (UN (Basic ":::"), [<_, x, xs])
-                  => do x' <- reify defs !(evalClosure defs x)
-                        xs' <- reify defs !(evalClosure defs xs)
+  reify defs val@(VDCon _ n _ _ args)
+      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+             (UN (Basic ":::"), [_, x, xs])
+                  => do x' <- reify defs !(expandFull x)
+                        xs' <- reify defs !(expandFull xs)
                         pure (x' ::: xs')
              _ => cantReify val "List1"
   reify defs val = cantReify val "List1"
@@ -287,16 +295,17 @@ Reflect a => Reflect (List1 a) where
       = do x' <- reflect fc defs lhs env (head xxs)
            xs' <- reflect fc defs lhs env (tail xxs)
            appCon fc defs (NS (mkNamespace "Data.List1")
-                  (UN $ Basic ":::")) [blank fc, (top, x'), (top, xs')]
+                  (UN $ Basic ":::")) [blank fc,
+                                       (top, x'), (top, xs')]
 
 export
 Reify a => Reify (SnocList a) where
-  reify defs val@(NDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), map value args) of
+  reify defs val@(VDCon _ n _ _ args)
+      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
              (UN (Basic "Lin"), _) => pure [<]
-             (UN (Basic ":<"), [<_, sx, x])
-                  => do sx' <- reify defs !(evalClosure defs sx)
-                        x' <- reify defs !(evalClosure defs x)
+             (UN (Basic ":<"), [_, sx, x])
+                  => do sx' <- reify defs !(expandFull sx)
+                        x' <- reify defs !(expandFull x)
                         pure (sx' :< x')
              _ => cantReify val "SnocList"
   reify defs val = cantReify val "SnocList"
@@ -311,18 +320,19 @@ Reflect a => Reflect (SnocList a) where
 
 export
 Reify a => Reify (Maybe a) where
-  reify defs val@(NDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), map value args) of
+  reify defs val@(VDCon _ n _ _ args)
+      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
              (UN (Basic "Nothing"), _) => pure Nothing
-             (UN (Basic "Just"), [<_, x])
-                  => do x' <- reify defs !(evalClosure defs x)
+             (UN (Basic "Just"), [_, x])
+                  => do x' <- reify defs !(expandFull x)
                         pure (Just x')
              _ => cantReify val "Maybe"
   reify defs val = cantReify val "Maybe"
 
 export
 Reflect a => Reflect (Maybe a) where
-  reflect fc defs lhs env Nothing = appCon fc defs (preludetypes "Nothing") [blank fc]
+  reflect fc defs lhs env Nothing
+      = appCon fc defs (preludetypes "Nothing") [blank fc]
   reflect fc defs lhs env (Just x)
       = do x' <- reflect fc defs lhs env x
            appCon fc defs (preludetypes "Just") [blank fc, (top, x')]
@@ -330,31 +340,29 @@ Reflect a => Reflect (Maybe a) where
 
 export
 Reify a => Reify (WithDefault a def) where
-  reify defs val@(NDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), map value args) of
+  reify defs val@(VDCon _ n _ _ args)
+      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
              (UN (Basic "DefaultedValue"), _) => pure defaulted
-             (UN (Basic "SpecifiedValue"), [<_, _, x])
-                  => do x' <- reify defs !(evalClosure defs x)
-                        pure (specified x')
+             (UN (Basic "SpecifiedValue"), [_, _, x]) => do x' <- reify defs !(expandFull x)
+                                                            pure (specified x')
              _ => cantReify val "WithDefault"
   reify defs val = cantReify val "WithDefault"
 
 export
 Reflect a => Reflect (WithDefault a def) where
-  reflect fc defs lhs env def
-    = onWithDefault
-        (appCon fc defs (reflectionttimp "DefaultedValue") [blank fc, blank fc])
-        (\x => do x' <- reflect fc defs lhs env x
-                  appCon fc defs (reflectionttimp "SpecifiedValue") [blank fc, blank fc, (top, x')])
-        def
+  reflect fc defs lhs env
+      = onWithDefault
+          (appCon fc defs (reflectionttimp "DefaultedValue") [blank fc, blank fc])
+          (\x => do x' <- reflect fc defs lhs env x
+                    appCon fc defs (reflectionttimp "SpecifiedValue") [blank fc, blank fc, (top, x')])
 
 export
 (Reify a, Reify b) => Reify (a, b) where
-  reify defs val@(NDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), map value args) of
-             (UN (Basic "MkPair"), [<_, _, x, y])
-                 => do x' <- reify defs !(evalClosure defs x)
-                       y' <- reify defs !(evalClosure defs y)
+  reify defs val@(VDCon _ n _ _ args)
+      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+             (UN (Basic "MkPair"), [_, _, x, y])
+                 => do x' <- reify defs !(expandFull x)
+                       y' <- reify defs !(expandFull y)
                        pure (x', y')
              _ => cantReify val "Pair"
   reify defs val = cantReify val "Pair"
@@ -364,14 +372,15 @@ export
   reflect fc defs lhs env (x, y)
       = do x' <- reflect fc defs lhs env x
            y' <- reflect fc defs lhs env y
-           appCon fc defs (builtin "MkPair") [blank fc, blank fc, (top, x'), (top, y')]
+           appCon fc defs (builtin "MkPair") [blank fc, blank fc,
+                                              (top, x'), (top, y')]
 
 export
 Reify Namespace where
-  reify defs val@(NDCon _ n _ _ args)
-    = case (dropAllNS !(full (gamma defs) n), map value args) of
-        (UN (Basic "MkNS"), [<_, _, ns])
-          => do ns' <- reify defs !(evalClosure defs ns)
+  reify defs val@(VDCon _ n _ _ args)
+    = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+        (UN (Basic "MkNS"), [ns])
+          => do ns' <- reify defs !(expandFull ns)
                 pure (unsafeFoldNamespace ns')
         _ => cantReify val "Namespace"
   reify defs val = cantReify val "Namespace"
@@ -384,10 +393,10 @@ Reflect Namespace where
 
 export
 Reify ModuleIdent where
-  reify defs val@(NDCon _ n _ _ args)
-    = case (dropAllNS !(full (gamma defs) n), map value args) of
-        (UN (Basic "MkMI"), [<_, _, ns])
-          => do ns' <- reify defs !(evalClosure defs ns)
+  reify defs val@(VDCon _ n _ _ args)
+    = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+        (UN (Basic "MkMI"), [ns])
+          => do ns' <- reify defs !(expandFull ns)
                 pure (unsafeFoldModuleIdent ns')
         _ => cantReify val "ModuleIdent"
   reify defs val = cantReify val "ModuleIdent"
@@ -400,20 +409,20 @@ Reflect ModuleIdent where
 
 export
 Reify UserName where
-  reify defs val@(NDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), map value args) of
-             (UN (Basic "Basic"), [<str])
-                 => do str' <- reify defs !(evalClosure defs str)
+  reify defs val@(VDCon _ n _ _ args)
+      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+             (UN (Basic "Basic"), [str])
+                 => do str' <- reify defs !(expandFull str)
                        pure (Basic str')
-             (UN (Basic "Field"), [<str])
-                 => do str' <- reify defs !(evalClosure defs str)
+             (UN (Basic "Field"), [str])
+                 => do str' <- reify defs !(expandFull str)
                        pure (Field str')
-             (UN (Basic "Underscore"), [<])
+             (UN (Basic "Underscore"), [])
                  => pure Underscore
              (NS _ (UN _), _)
-                 => cantReify val "Name, reifying it is unimplemented or intentionally internal"
-             _ => cantReify val "Name, the name was not found in context"
-  reify defs val = cantReify val "Name, value is not an NDCon interally"
+                 => cantReify val "UserName, reifying it is unimplemented or intentionally internal"
+             _ => cantReify val "UserName, the name was not found in context"
+  reify defs val = cantReify val "UserName, value is not an VDCon interally"
 
 export
 Reflect UserName where
@@ -428,39 +437,39 @@ Reflect UserName where
 
 export
 Reify Name where
-  reify defs val@(NDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), map value args) of
-             (UN (Basic "UN"), [<str])
-                 => do str' <- reify defs !(evalClosure defs str)
+  reify defs val@(VDCon _ n _ _ args)
+      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+             (UN (Basic "UN"), [str])
+                 => do str' <- reify defs !(expandFull str)
                        pure (UN str')
-             (UN (Basic "MN"), [<str, i])
-                 => do str' <- reify defs !(evalClosure defs str)
-                       i' <- reify defs !(evalClosure defs i)
+             (UN (Basic "MN"), [str, i])
+                 => do str' <- reify defs !(expandFull str)
+                       i' <- reify defs !(expandFull i)
                        pure (MN str' i')
-             (UN (Basic "NS"), [<ns, n])
-                 => do ns' <- reify defs !(evalClosure defs ns)
-                       n' <- reify defs !(evalClosure defs n)
+             (UN (Basic "NS"), [ns, n])
+                 => do ns' <- reify defs !(expandFull ns)
+                       n' <- reify defs !(expandFull n)
                        pure (NS ns' n')
-             (UN (Basic "DN"), [<str, n])
-                 => do str' <- reify defs !(evalClosure defs str)
-                       n' <- reify defs !(evalClosure defs n)
+             (UN (Basic "DN"), [str, n])
+                 => do str' <- reify defs !(expandFull str)
+                       n' <- reify defs !(expandFull n)
                        pure (DN str' n')
-             (UN (Basic "Nested"), [<ix, n])
-                 => do ix' <- reify defs !(evalClosure defs ix)
-                       n' <- reify defs !(evalClosure defs n)
+             (UN (Basic "Nested"), [ix, n])
+                 => do ix' <- reify defs !(expandFull ix)
+                       n' <- reify defs !(expandFull n)
                        pure (Nested ix' n')
-             (UN (Basic "CaseBlock"), [<outer, i])
-                 => do outer' <- reify defs !(evalClosure defs outer)
-                       i' <- reify defs !(evalClosure defs i)
+             (UN (Basic "CaseBlock"), [outer, i])
+                 => do outer' <- reify defs !(expandFull outer)
+                       i' <- reify defs !(expandFull i)
                        pure (CaseBlock outer' i')
-             (UN (Basic "WithBlock"), [<outer, i])
-                 => do outer' <- reify defs !(evalClosure defs outer)
-                       i' <- reify defs !(evalClosure defs i)
+             (UN (Basic "WithBlock"), [outer, i])
+                 => do outer' <- reify defs !(expandFull outer)
+                       i' <- reify defs !(expandFull i)
                        pure (WithBlock outer' i')
              (NS _ (UN _), _)
                  => cantReify val "Name, reifying it is unimplemented or intentionally internal"
              _ => cantReify val "Name, the name was not found in context"
-  reify defs val = cantReify val "Name, value is not an NDCon interally"
+  reify defs val = cantReify val "Name, value is not an VDCon interally"
 
 export
 Reflect Name where
@@ -482,15 +491,15 @@ Reflect Name where
   reflect fc defs lhs env (Nested ix n)
       = do ix' <- reflect fc defs lhs env ix
            n'  <- reflect fc defs lhs env n
-           appCon fc defs (reflectiontt "Nested") [(top, ix'), (top, n')]
+           appCon fc defs (reflectiontt "Nested") [(top, ix'),(top, n')]
   reflect fc defs lhs env (CaseBlock outer i)
       = do outer' <- reflect fc defs lhs env outer
            i' <- reflect fc defs lhs env i
-           appCon fc defs (reflectiontt "CaseBlock") [(top, outer'), (top, i')]
+           appCon fc defs (reflectiontt "CaseBlock") [(top, outer'),(top, i')]
   reflect fc defs lhs env (WithBlock outer i)
       = do outer' <- reflect fc defs lhs env outer
            i' <- reflect fc defs lhs env i
-           appCon fc defs (reflectiontt "WithBlock") [(top, outer'), (top, i')]
+           appCon fc defs (reflectiontt "WithBlock") [(top, outer'),(top, i')]
   reflect fc defs lhs env (Resolved i)
       = case !(full (gamma defs) (Resolved i)) of
              Resolved _ => cantReflect fc
@@ -501,16 +510,16 @@ Reflect Name where
 
 export
 Reify NameType where
-  reify defs val@(NDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), map value args) of
+  reify defs val@(VDCon _ n _ _ args)
+      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
              (UN (Basic "Bound"), _) => pure Bound
              (UN (Basic "Func"), _) => pure Func
-             (UN (Basic "DataCon"), [<t, i])
-                  => do t' <- reify defs !(evalClosure defs t)
-                        i' <- reify defs !(evalClosure defs i)
+             (UN (Basic "DataCon"), [t, i])
+                  => do t' <- reify defs !(expandFull t)
+                        i' <- reify defs !(expandFull i)
                         pure (DataCon t' i')
-             (UN (Basic "TyCon"), [<i])
-                  => do i' <- reify defs !(evalClosure defs i)
+             (UN (Basic "TyCon"), [i])
+                  => do i' <- reify defs !(expandFull i)
                         pure (TyCon i')
              _ => cantReify val "NameType"
   reify defs val = cantReify val "NameType"
@@ -529,86 +538,86 @@ Reflect NameType where
 
 export
 Reify PrimType where
-  reify defs val@(NDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), args) of
-             (UN (Basic "IntType"), [<])
+  reify defs val@(VDCon _ n _ _ args)
+      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+             (UN (Basic "IntType"), [])
                   => pure IntType
-             (UN (Basic "Int8Type"), [<])
+             (UN (Basic "Int8Type"), [])
                   => pure Int8Type
-             (UN (Basic "Int16Type"), [<])
+             (UN (Basic "Int16Type"), [])
                   => pure Int16Type
-             (UN (Basic "Int32Type"), [<])
+             (UN (Basic "Int32Type"), [])
                   => pure Int32Type
-             (UN (Basic "Int64Type"), [<])
+             (UN (Basic "Int64Type"), [])
                   => pure Int64Type
-             (UN (Basic "IntegerType"), [<])
+             (UN (Basic "IntegerType"), [])
                   => pure IntegerType
-             (UN (Basic "Bits8Type"), [<])
+             (UN (Basic "Bits8Type"), [])
                   => pure Bits8Type
-             (UN (Basic "Bits16Type"), [<])
+             (UN (Basic "Bits16Type"), [])
                   => pure Bits16Type
-             (UN (Basic "Bits32Type"), [<])
+             (UN (Basic "Bits32Type"), [])
                   => pure Bits32Type
-             (UN (Basic "Bits64Type"), [<])
+             (UN (Basic "Bits64Type"), [])
                   => pure Bits64Type
-             (UN (Basic "StringType"), [<])
+             (UN (Basic "StringType"), [])
                   => pure StringType
-             (UN (Basic "CharType"), [<])
+             (UN (Basic "CharType"), [])
                   => pure CharType
-             (UN (Basic "DoubleType"), [<])
+             (UN (Basic "DoubleType"), [])
                   => pure DoubleType
-             (UN (Basic "WorldType"), [<])
+             (UN (Basic "WorldType"), [])
                   => pure WorldType
              _ => cantReify val "PrimType"
   reify defs val = cantReify val "PrimType"
 
 export
 Reify Constant where
-  reify defs val@(NDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), map value args) of
-             (UN (Basic "I"), [<x])
-                  => do x' <- reify defs !(evalClosure defs x)
+  reify defs val@(VDCon _ n _ _ args)
+      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+             (UN (Basic "I"), [x])
+                  => do x' <- reify defs !(expandFull x)
                         pure (I x')
-             (UN (Basic "I8"), [<x])
-                  => do x' <- reify defs !(evalClosure defs x)
+             (UN (Basic "I8"), [x])
+                  => do x' <- reify defs !(expandFull x)
                         pure (I8 x')
-             (UN (Basic "I16"), [<x])
-                  => do x' <- reify defs !(evalClosure defs x)
+             (UN (Basic "I16"), [x])
+                  => do x' <- reify defs !(expandFull x)
                         pure (I16 x')
-             (UN (Basic "I32"), [<x])
-                  => do x' <- reify defs !(evalClosure defs x)
+             (UN (Basic "I32"), [x])
+                  => do x' <- reify defs !(expandFull x)
                         pure (I32 x')
-             (UN (Basic "I64"), [<x])
-                  => do x' <- reify defs !(evalClosure defs x)
+             (UN (Basic "I64"), [x])
+                  => do x' <- reify defs !(expandFull x)
                         pure (I64 x')
-             (UN (Basic "BI"), [<x])
-                  => do x' <- reify defs !(evalClosure defs x)
+             (UN (Basic "BI"), [x])
+                  => do x' <- reify defs !(expandFull x)
                         pure (BI x')
-             (UN (Basic "B8"), [<x])
-                  => do x' <- reify defs !(evalClosure defs x)
+             (UN (Basic "B8"), [x])
+                  => do x' <- reify defs !(expandFull x)
                         pure (B8 x')
-             (UN (Basic "B16"), [<x])
-                  => do x' <- reify defs !(evalClosure defs x)
+             (UN (Basic "B16"), [x])
+                  => do x' <- reify defs !(expandFull x)
                         pure (B16 x')
-             (UN (Basic "B32"), [<x])
-                  => do x' <- reify defs !(evalClosure defs x)
+             (UN (Basic "B32"), [x])
+                  => do x' <- reify defs !(expandFull x)
                         pure (B32 x')
-             (UN (Basic "B64"), [<x])
-                  => do x' <- reify defs !(evalClosure defs x)
+             (UN (Basic "B64"), [x])
+                  => do x' <- reify defs !(expandFull x)
                         pure (B64 x')
-             (UN (Basic "Str"), [<x])
-                  => do x' <- reify defs !(evalClosure defs x)
+             (UN (Basic "Str"), [x])
+                  => do x' <- reify defs !(expandFull x)
                         pure (Str x')
-             (UN (Basic "Ch"), [<x])
-                  => do x' <- reify defs !(evalClosure defs x)
+             (UN (Basic "Ch"), [x])
+                  => do x' <- reify defs !(expandFull x)
                         pure (Ch x')
-             (UN (Basic "Db"), [<x])
-                  => do x' <- reify defs !(evalClosure defs x)
+             (UN (Basic "Db"), [x])
+                  => do x' <- reify defs !(expandFull x)
                         pure (Db x')
-             (UN (Basic "PrT"), [<x])
-                  => do x' <- reify defs !(evalClosure defs x)
+             (UN (Basic "PrT"), [x])
+                  => do x' <- reify defs !(expandFull x)
                         pure (PrT x')
-             (UN (Basic "WorldVal"), [<])
+             (UN (Basic "WorldVal"), [])
                   => pure WorldVal
              _ => cantReify val "Constant"
   reify defs val = cantReify val "Constant"
@@ -693,7 +702,7 @@ Reflect Constant where
 
 export
 Reify Visibility where
-  reify defs val@(NDCon _ n _ _ _)
+  reify defs val@(VDCon _ n _ _ _)
       = case dropAllNS !(full (gamma defs) n) of
              UN (Basic "Private") => pure Private
              UN (Basic "Export") => pure Export
@@ -709,7 +718,7 @@ Reflect Visibility where
 
 export
 Reify TotalReq where
-  reify defs val@(NDCon _ n _ _ _)
+  reify defs val@(VDCon _ n _ _ _)
       = case dropAllNS !(full (gamma defs) n) of
              UN (Basic "Total") => pure Total
              UN (Basic "CoveringOnly") => pure CoveringOnly
@@ -725,7 +734,7 @@ Reflect TotalReq where
 
 export
 Reify RigCount where
-  reify defs val@(NDCon _ n _ _ _)
+  reify defs val@(VDCon _ n _ _ _)
       = case dropAllNS !(full (gamma defs) n) of
              UN (Basic "M0") => pure erased
              UN (Basic "M1") => pure linear
@@ -743,13 +752,13 @@ Reflect RigCount where
 
 export
 Reify t => Reify (PiInfo t) where
-  reify defs val@(NDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), map value args) of
+  reify defs val@(VDCon _ n _ _ args)
+      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
              (UN (Basic "ImplicitArg"), _) => pure Implicit
              (UN (Basic "ExplicitArg"), _) => pure Explicit
              (UN (Basic "AutoImplicit"), _) => pure AutoImplicit
-             (UN (Basic "DefImplicit"), [<_, t])
-                 => do t' <- reify defs !(evalClosure defs t)
+             (UN (Basic "DefImplicit"), [_, t])
+                 => do t' <- reify defs !(expandFull t)
                        pure (DefImplicit t')
              _ => cantReify val "PiInfo"
   reify defs val = cantReify val "PiInfo"
@@ -768,7 +777,7 @@ Reflect t => Reflect (PiInfo t) where
 
 export
 Reify LazyReason where
-  reify defs val@(NDCon _ n _ _ _)
+  reify defs val@(VDCon _ n _ _ _)
       = case dropAllNS !(full (gamma defs) n) of
              UN (Basic "LInf") => pure LInf
              UN (Basic "LLazy") => pure LLazy
@@ -784,7 +793,7 @@ Reflect LazyReason where
 
 export
 Reify VirtualIdent where
-  reify defs val@(NDCon _ n _ _ args)
+  reify defs val@(VDCon _ n _ _ args)
       = case (dropAllNS !(full (gamma defs) n), args) of
              (UN (Basic "Interactive"), [<])
                    => pure Interactive
@@ -802,7 +811,7 @@ Reflect BuiltinType where
 
 export
 Reify BuiltinType where
-  reify defs val@(NDCon _ n _ _ args)
+  reify defs val@(VDCon _ n _ _ args)
       = case (dropAllNS !(full (gamma defs) n), args) of
              (UN (Basic "BuiltinNatural"), [<])
                    => pure BuiltinNatural
@@ -820,16 +829,16 @@ Reflect VirtualIdent where
 
 export
 Reify OriginDesc where
-  reify defs val@(NDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), map value args) of
-             (UN (Basic "PhysicalIdrSrc"), [<ident])
-                   => do ident' <- reify defs !(evalClosure defs ident)
+  reify defs val@(VDCon _ n _ _ args)
+      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+             (UN (Basic "PhysicalIdrSrc"), [ident])
+                   => do ident' <- reify defs !(expandFull ident)
                          pure (PhysicalIdrSrc ident')
-             (UN (Basic "PhysicalPkgSrc"), [<fname])
-                   => do fname' <- reify defs !(evalClosure defs fname)
+             (UN (Basic "PhysicalPkgSrc"), [fname])
+                   => do fname' <- reify defs !(expandFull fname)
                          pure (PhysicalPkgSrc fname')
-             (UN (Basic "Virtual"), [<ident])
-                   => do ident' <- reify defs !(evalClosure defs ident)
+             (UN (Basic "Virtual"), [ident])
+                   => do ident' <- reify defs !(expandFull ident)
                          pure (Virtual ident')
              _ => cantReify val "OriginDesc"
   reify defs val = cantReify val "OriginDesc"
@@ -848,12 +857,12 @@ Reflect OriginDesc where
 
 export
 Reify FC where
-  reify defs val@(NDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), map value args) of
-             (UN (Basic "MkFC"), [<fn, start, end])
-                   => do fn' <- reify defs !(evalClosure defs fn)
-                         start' <- reify defs !(evalClosure defs start)
-                         end' <- reify defs !(evalClosure defs end)
+  reify defs val@(VDCon _ n _ _ args)
+      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+             (UN (Basic "MkFC"), [fn, start, end])
+                   => do fn' <- reify defs !(expandFull fn)
+                         start' <- reify defs !(expandFull start)
+                         end' <- reify defs !(expandFull end)
                          pure (MkFC fn' start' end')
              (UN (Basic "EmptyFC"), _) => pure EmptyFC
              _ => cantReify val "FC"
@@ -876,15 +885,15 @@ Reflect FC where
 
 export
 Reify a => Reify (WithFC a) where
-  reify defs val@(NDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), map value args) of
-             (UN (Basic "MkFCVal"), [<fcterm, nestedVal]) => do
-                 fc <- reify defs !(evalClosure defs fcterm)
-                 val <- reify defs !(evalClosure defs nestedVal)
+  reify defs val@(VDCon _ n _ _ args)
+      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+             (UN (Basic "MkFCVal"), [fcterm, nestedVal]) => do
+                 fc <- reify defs !(expandFull fcterm)
+                 val <- reify defs !(expandFull nestedVal)
                  pure $ MkFCVal fc val
-             (UN (Basic "MkFCVal"), [<_, fc, l2]) => do
-                 fc' <- reify defs !(evalClosure defs fc)
-                 val' <- reify defs !(evalClosure defs l2)
+             (UN (Basic "MkFCVal"), [_, fc, nestedVal]) => do
+                 fc' <- reify defs !(expandFull fc)
+                 val' <- reify defs !(expandFull nestedVal)
                  pure $ MkFCVal fc' val'
              (t, l) => cantReify val "WithFC constructor: \{show t}, args: \{show (length l)}"
   reify defs val = cantReify val "Expected WithFC, found something else"

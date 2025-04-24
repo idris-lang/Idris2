@@ -14,15 +14,14 @@ import TTImp.TTImp
 
 showDefType : Def -> String
 showDefType None = "undefined"
-showDefType (PMDef {}) = "function"
-showDefType (ExternDef {}) = "external function"
-showDefType (ForeignDef {}) = "foreign function"
-showDefType (Builtin {}) = "builtin function"
+showDefType (Function {}) = "function"
 showDefType (DCon {}) = "data constructor"
 showDefType (TCon {}) = "type constructor"
 showDefType (Hole {}) = "hole"
 showDefType (BySearch {}) = "search"
 showDefType (Guess {}) = "guess"
+showDefType (ExternDef {}) = "external function"
+showDefType (ForeignDef {}) = "foreign function"
 showDefType ImpBind = "bound name"
 showDefType (UniverseLevel {}) = "universe level"
 showDefType Delayed = "delayed"
@@ -124,12 +123,25 @@ isStrict (Meta _ _ i args) = all (isStrict . snd) args
 isStrict (Bind _ _ b s) = isStrict (binderType b) && isStrict s
 isStrict (App _ f _ x) = isStrict f && isStrict x
 isStrict (As _ _ a p) = isStrict a && isStrict p
+isStrict (Case _ _ _ _ _ alts) = all isStrictAlt alts
+  where
+    isStrictScope : forall vs . CaseScope vs -> Bool
+    isStrictScope (RHS _ tm) = isStrict tm
+    isStrictScope (Arg _ _ sc) = isStrictScope sc
+
+    isStrictAlt : forall vs . CaseAlt vs -> Bool
+    isStrictAlt (ConCase _ _ _ sc) = isStrictScope sc
+    isStrictAlt (DelayCase _ _ _ tm) = isStrict tm
+    isStrictAlt (ConstCase _ _ tm) = isStrict tm
+    isStrictAlt (DefaultCase _ tm) = isStrict tm
 isStrict (TDelayed {}) = False
 isStrict (TDelay _ _ f x) = isStrict f && isStrict x
 isStrict (TForce _ _ tm) = isStrict tm
 isStrict (PrimVal {}) = True
+isStrict (PrimOp _ _ _) = True
 isStrict (Erased {}) = True
 isStrict (TType {}) = True
+isStrict (Unmatched _ _) = True
 
 ||| Get the name and definition of a list of names.
 getConsGDef :
@@ -195,7 +207,7 @@ checkNatCons c cons ty fc = case !(foldr checkCon (pure (Nothing, Nothing)) cons
     checkCon : (Name, GlobalDef) -> Core (Maybe Name, Maybe Name) -> Core (Maybe Name, Maybe Name)
     checkCon (n, gdef) cons = do
         (zero, succ) <- cons
-        let DCon _ arity _ = gdef.definition
+        let DCon _ _ arity = gdef.definition
             | def => throw $ GenericMsg fc $ "Expected data constructor, found:" ++ showDefType def
         case arity `minus` size gdef.eraseArgs of
             0 => case zero of
@@ -235,7 +247,7 @@ processNatToInteger fc fn = do
     log "builtin.NaturalToInteger" 5 $ "Processing %builtin NaturalToInteger " ++ show_fn ++ "."
     [(_ , i, gdef)] <- lookupCtxtName fn ds.gamma
         | ns => ambiguousName fc fn $ (\(n, _, _) => n) <$> ns
-    let PMDef _ args _ cases _ = gdef.definition
+    let Function _ _ cases _ = gdef.definition
         | def => throw $ GenericMsg fc
             $ "Expected function definition, found " ++ showDefType def ++ "."
     type <- toFullNames gdef.type
@@ -263,7 +275,7 @@ processIntegerToNat fc fn = do
     [(_, i, gdef)] <- lookupCtxtName fn ds.gamma
         | ns => ambiguousName fc fn $ (\(n, _, _) => n) <$> ns
     type <- toFullNames gdef.type
-    let PMDef _ _ _ _ _ = gdef.definition
+    let Function _ _ _ _ = gdef.definition
         | def => throw $ GenericMsg fc
             $ "Expected function definition, found " ++ showDefType def ++ "."
     logTerm "builtin.IntegerToNatural" 25 ("Type of " ++ show_fn) type

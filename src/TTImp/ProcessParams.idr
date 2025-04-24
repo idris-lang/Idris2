@@ -3,6 +3,8 @@ module TTImp.ProcessParams
 import Core.Env
 import Core.UnifyState
 import Core.Metadata
+import Core.Evaluate.Value
+import Core.Evaluate
 
 import Idris.REPL.Opts
 import Idris.Syntax

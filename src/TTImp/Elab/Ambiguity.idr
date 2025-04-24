@@ -1,9 +1,13 @@
 module TTImp.Elab.Ambiguity
 
 import Core.Env
+import Core.Evaluate
 import Core.Metadata
 import Core.Unify
-import Core.Value
+import Core.Evaluate.Value
+import Core.Evaluate.Normalise
+import Core.Evaluate.Quote
+import Core.Evaluate.Expand
 
 import Idris.REPL.Opts
 import Idris.Syntax
@@ -38,6 +42,7 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
                        pure orig
           Nothing => do
              defs <- get Ctxt
+             logC "elab.ambiguous" 50 $ pure "expandAmbigName Not-Nested: \{show x} @ \{show args}"
              case defined x env of
                   Just _ =>
                     if isNil args || notLHS mode
@@ -55,6 +60,7 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
                             pure $ mkAlt primApp est xr
                           Nothing => do
                             ns <- lookupCtxtName x (gamma defs)
+                            logC "elab.ambiguous" 50 $ pure "expandAmbigName Not-Nested Not-In-Env Not-PrimName: \{show x} @ \{show $ map fst ns}"
                             ns' <- filterM visible ns
                             case ns' of
                                [] => do log "elab.ambiguous" 50 $ "Failed to find " ++ show orig
@@ -170,9 +176,10 @@ expandAmbigName elabmode nest env orig args tm exp
     = do log "elab.ambiguous" 50 $ "No ambiguity " ++ show orig
          pure orig
 
-stripDelay : NF vars -> NF vars
-stripDelay (NDelayed fc r t) = stripDelay t
-stripDelay tm = tm
+stripDelay : {vars: _} -> {auto c : Ref Ctxt Defs} ->
+             NF vars -> Core (NF vars)
+stripDelay (VDelayed fc r t) = stripDelay !(expand t)
+stripDelay tm = pure tm
 
 data TypeMatch = Concrete | Poly | NoMatch
 
@@ -184,57 +191,56 @@ Show TypeMatch where
 mutual
   mightMatchD : {auto c : Ref Ctxt Defs} ->
                 {vars : _} ->
-                Defs -> NF vars -> ClosedNF -> Core TypeMatch
-  mightMatchD defs l r
-      = mightMatch defs (stripDelay l) (stripDelay r)
+                NF vars -> ClosedNF -> Core TypeMatch
+  mightMatchD l r
+      = mightMatch !(stripDelay l) !(stripDelay r)
+
 
   mightMatchArg : {auto c : Ref Ctxt Defs} ->
                   {vars : _} ->
-                  Defs ->
-                  Closure vars -> ClosedClosure ->
+                  Glued vars -> Glued [<] ->
                   Core Bool
-  mightMatchArg defs l r
-      = pure $ case !(mightMatchD defs !(evalClosure defs l) !(evalClosure defs r)) of
+  mightMatchArg l r
+      = pure $ case !(mightMatchD !(expand l) !(expand r)) of
              NoMatch => False
              _ => True
 
   mightMatchArgs : {auto c : Ref Ctxt Defs} ->
                    {vars : _} ->
-                   Defs ->
-                   Scopeable (Closure vars) -> Scopeable ClosedClosure ->
+                   SnocList (Core (Glued vars)) -> SnocList (Core (Glued [<])) ->
                    Core Bool
-  mightMatchArgs defs [<] [<] = pure True
-  mightMatchArgs defs (xs :< x) (ys :< y)
-      = do amatch <- mightMatchArg defs x y
+  mightMatchArgs [<] [<] = pure True
+  mightMatchArgs (xs :< x) (ys :< y)
+      = do amatch <- mightMatchArg !x !y
            if amatch
-              then mightMatchArgs defs xs ys
+              then mightMatchArgs xs ys
               else pure False
-  mightMatchArgs _ _ _ = pure False
+  mightMatchArgs _ _ = pure False
 
   mightMatch : {auto c : Ref Ctxt Defs} ->
                {vars : _} ->
-               Defs -> NF vars -> ClosedNF -> Core TypeMatch
-  mightMatch defs target (NBind fc n (Pi {}) sc)
-      = mightMatchD defs target !(sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder)))
-  mightMatch defs (NBind {}) (NBind {}) = pure Poly -- lambdas might match
-  mightMatch defs (NTCon _ n a args) (NTCon _ n' a' args')
+               NF vars -> ClosedNF -> Core TypeMatch
+  mightMatch target (VBind fc n (Pi _ _ _ _) sc)
+      = mightMatchD target !(expand !(sc (pure (VErased fc Placeholder))))
+  mightMatch (VBind{}) (VBind{}) = pure Poly -- lambdas might match
+  mightMatch (VTCon _ n a args) (VTCon _ n' a' args')
       = if n == n'
-           then do amatch <- mightMatchArgs defs (map value args) (map value args')
+           then do amatch <- mightMatchArgs (map value args) (map value args')
                    if amatch then pure Concrete else pure NoMatch
            else pure NoMatch
-  mightMatch defs (NDCon _ n t a args) (NDCon _ n' t' a' args')
+  mightMatch (VDCon _ n t a args) (VDCon _ n' t' a' args')
       = if t == t'
-           then do amatch <- mightMatchArgs defs (map value args) (map value args')
+           then do amatch <- mightMatchArgs (map value args) (map value args')
                    if amatch then pure Concrete else pure NoMatch
            else pure NoMatch
-  mightMatch defs (NPrimVal _ x) (NPrimVal _ y)
+  mightMatch (VPrimVal _ x) (VPrimVal _ y)
       = if x == y then pure Concrete else pure NoMatch
-  mightMatch defs (NType {}) (NType {}) = pure Concrete
-  mightMatch defs (NApp {}) _ = pure Poly
-  mightMatch defs (NErased {}) _ = pure Poly
-  mightMatch defs _ (NApp {}) = pure Poly
-  mightMatch defs _ (NErased {}) = pure Poly
-  mightMatch _ _ _ = pure NoMatch
+  mightMatch (VType{}) (VType{}) = pure Concrete
+  mightMatch (VApp{}) _ = pure Poly
+  mightMatch (VErased{}) _ = pure Poly
+  mightMatch _ (VApp{}) = pure Poly
+  mightMatch _ (VErased{}) = pure Poly
+  mightMatch _ _ = pure NoMatch
 
 -- Return true if the given name could return something of the given target type
 couldBeName : {auto c : Ref Ctxt Defs} ->
@@ -243,7 +249,7 @@ couldBeName : {auto c : Ref Ctxt Defs} ->
 couldBeName defs target n
     = case !(lookupTyExact n (gamma defs)) of
            Nothing => pure Poly -- could be a local name, don't rule it out
-           Just ty => mightMatchD defs target !(nf defs Env.empty ty)
+           Just ty => mightMatchD target !(expand !(nf Env.empty ty))
 
 couldBeFn : {auto c : Ref Ctxt Defs} ->
             {vars : _} ->
@@ -259,17 +265,17 @@ couldBeFn defs ty _ = pure Poly
 couldBe : {auto c : Ref Ctxt Defs} ->
           {vars : _} ->
           Defs -> NF vars -> RawImp -> Core (Maybe (Bool, RawImp))
-couldBe {vars} defs ty@(NTCon _ n _ _) app
+couldBe {vars} defs ty@(VTCon _ n _ _) app
    = case !(couldBeFn {vars} defs ty (getFn app)) of
           Concrete => pure $ Just (True, app)
           Poly => pure $ Just (False, app)
           NoMatch => pure Nothing
-couldBe {vars} defs ty@(NPrimVal {}) app
+couldBe {vars} defs ty@(VPrimVal {}) app
    = case !(couldBeFn {vars} defs ty (getFn app)) of
           Concrete => pure $ Just (True, app)
           Poly => pure $ Just (False, app)
           NoMatch => pure Nothing
-couldBe {vars} defs ty@(NType {}) app
+couldBe {vars} defs ty@(VType {}) app
    = case !(couldBeFn {vars} defs ty (getFn app)) of
           Concrete => pure $ Just (True, app)
           Poly => pure $ Just (False, app)
@@ -306,7 +312,7 @@ pruneByType : {vars : _} ->
               Core (List RawImp)
 pruneByType env target alts
     = do defs <- get Ctxt
-         matches_in <- traverse (couldBe defs (stripDelay target)) alts
+         matches_in <- traverse (couldBe defs !(stripDelay target)) alts
          let matches = mapMaybe id matches_in
          logNF "elab.prune" 10 "Prune by" env target
          log "elab.prune" 10 (show matches)
@@ -362,7 +368,7 @@ checkAlternative rig elabinfo nest env fc (UniqueDefault def) alts mexpected
          expected <- maybe (do nm <- genName "altTy"
                                u <- uniVar fc
                                ty <- metaVar fc erased env nm (TType fc u)
-                               pure (gnf env ty))
+                               nf env ty)
                            pure mexpected
          let solvemode = case elabMode elabinfo of
                               InLHS c => inLHS
@@ -370,20 +376,19 @@ checkAlternative rig elabinfo nest env fc (UniqueDefault def) alts mexpected
          delayOnFailure fc rig env (Just expected) ambiguous Ambiguity $
              \delayed =>
                do solveConstraints solvemode Normal
-                  exp <- getTerm expected
-
                   -- We can't just use the old NF on the second attempt,
                   -- because we might know more now, so recalculate it
-                  let exp' = if delayed
-                                then gnf env exp
-                                else expected
+                  exp' <- ifThenElse delayed
+                             (do exp <- quote env expected
+                                 nf env exp)
+                             (pure expected)
 
-                  logGlueNF "elab.ambiguous" 5 (fastConcat
+                  logNF "elab.ambiguous" 5 (fastConcat
                     [ "Ambiguous elaboration at ", show fc, ":\n"
                     , unlines (map (("  " ++) . show) alts)
                     , "With default. Target type "
                     ]) env exp'
-                  alts' <- pruneByType env !(getNF exp') alts
+                  alts' <- pruneByType env !(expand exp') alts
                   log "elab.prune" 5 $
                     "Pruned " ++ show (minus (length alts) (length alts')) ++ " alts."
                     ++ " Kept:\n" ++ unlines (map show alts')
@@ -408,31 +413,32 @@ checkAlternative rig elabinfo nest env fc (UniqueDefault def) alts mexpected
 checkAlternative rig elabinfo nest env fc uniq alts mexpected
     = do checkAmbigDepth fc elabinfo
          alts' <- maybe (Core.pure [])
-                        (\exp => pruneByType env !(getNF exp) alts) mexpected
+                        (\exp => do logNF "elab.ambiguous" 5 "checkAlternative exp_backtick" env exp
+                                    pruneByType env !(expand exp) alts) mexpected
          case alts' of
            [alt] => checkImp rig elabinfo nest env alt mexpected
            _ =>
              do expected <- maybe (do nm <- genName "altTy"
                                       u <- uniVar fc
                                       ty <- metaVar fc erased env nm (TType fc u)
-                                      pure (gnf env ty))
+                                      nf env ty)
                                   pure mexpected
                 let solvemode = case elabMode elabinfo of
                                       InLHS c => inLHS
                                       _ => inTerm
                 delayOnFailure fc rig env (Just expected) ambiguous Ambiguity $
                      \delayed =>
-                       do exp <- getTerm expected
-
-                          -- We can't just use the old NF on the second attempt,
+                       do -- We can't just use the old NF on the second attempt,
                           -- because we might know more now, so recalculate it
-                          let exp' = if delayed
-                                        then gnf env exp
-                                        else expected
+                          exp' <- ifThenElse delayed
+                                     (do exp <- quote env expected
+                                         nf env exp)
+                                     (pure expected)
+                          logNF "elab.ambiguous" 5 "checkAlternative delayOnFailure exp_backtick" env exp'
 
-                          alts' <- pruneByType env !(getNF exp') alts
+                          alts' <- pruneByType env !(expand exp') alts
 
-                          logGlueNF "elab.ambiguous" 5 (fastConcat
+                          logNF "elab.ambiguous" 5 (fastConcat
                               [ "Ambiguous elaboration"
                               , " (kept ", show (length alts'), " out of "
                               , show (length alts), " candidates)"

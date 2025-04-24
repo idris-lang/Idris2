@@ -3,6 +3,9 @@ module Idris.Elab.Implementation
 import Core.Env
 import Core.Metadata
 import Core.Unify
+import Core.Evaluate.Value
+import Core.Evaluate.Convert
+import Core.Evaluate
 
 import Idris.REPL.Opts
 import Idris.Syntax
@@ -203,7 +206,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
                                       (IBindHere vfc (PI erased) impTy)
                                       (Just (gType vfc u))
                    let fullty = abstractFullEnvType vfc env ty
-                   ok <- convert defs Env.empty fullty (type gdef)
+                   ok <- convert Env.empty fullty (type gdef)
                    unless ok $ do logTermNF "elab.implementation" 1 "Previous" Env.empty (type gdef)
                                   logTermNF "elab.implementation" 1 "Now" Env.empty fullty
                                   throw (CantConvert (getFC impTy) (gamma defs) Env.empty fullty (type gdef))
@@ -254,7 +257,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
                -- RHS is the constructor applied to a search for the necessary
                -- parent constraints, then the method implementations
                defs <- get Ctxt
-               let fldTys = getFieldArgs !(normaliseHoles defs Env.empty conty)
+               let fldTys = getFieldArgs !(normaliseHoles Env.empty conty)
                log "elab.implementation" 5 $ "Field types " ++ show fldTys
                let irhs = apply (autoImpsApply (IVar vfc con) $ map (const (ISearch vfc 500)) (parents cdata))
                                 (map (mkMethField methImps fldTys) fns)
@@ -278,6 +281,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
                unsetFlag vfc impName BlockedHint
 
                setFlag vfc impName TCInline
+               setFlag vfc impName BlockReduce
                -- it's the methods we're interested in, not the implementation
                setFlag vfc impName (SetTotal PartialOK)
 

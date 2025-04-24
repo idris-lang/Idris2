@@ -5,6 +5,7 @@ import Core.Env
 import Core.Metadata
 import Core.Termination
 import Core.Unify
+import Core.Evaluate
 
 import Idris.REPL.Opts
 import Idris.Syntax
@@ -40,7 +41,7 @@ process : {auto c : Ref Ctxt Defs} ->
 process (Eval ttimp)
     = do (tm, _) <- elabTerm 0 InExpr [] (NestedNames.empty) Env.empty ttimp Nothing
          defs <- get Ctxt
-         tmnf <- normalise defs Env.empty tm
+         tmnf <- normalise Env.empty tm
          coreLift_ (printLn !(unelab Env.empty tmnf))
          pure True
 process (Check (IVar _ n))
@@ -52,14 +53,14 @@ process (Check (IVar _ n))
     printName : (Name, Int, ClosedTerm) -> Core ()
     printName (n, _, tyh)
         = do defs <- get Ctxt
-             ty <- normaliseHoles defs Env.empty tyh
+             ty <- normaliseHoles Env.empty tyh
              coreLift_ $ putStrLn $ show n ++ " : " ++
                                     show !(unelab Env.empty ty)
 process (Check ttimp)
     = do (tm, gty) <- elabTerm 0 InExpr [] (NestedNames.empty) Env.empty ttimp Nothing
          defs <- get Ctxt
-         tyh <- getTerm gty
-         ty <- normaliseHoles defs Env.empty tyh
+         tyh <- quote Env.empty gty
+         ty <- normaliseHoles Env.empty tyh
          coreLift_ (printLn !(unelab Env.empty ty))
          pure True
 process (ProofSearch n_in)
@@ -68,7 +69,7 @@ process (ProofSearch n_in)
               | ns => ambiguousName (justFC defaultFC) n_in (map fst ns)
          def <- search (justFC defaultFC) top False 1000 n ty Env.empty
          defs <- get Ctxt
-         defnf <- normaliseHoles defs Env.empty def
+         defnf <- normaliseHoles Env.empty def
          coreLift_ (printLn !(toFullNames defnf))
          pure True
 process (ExprSearch n_in)

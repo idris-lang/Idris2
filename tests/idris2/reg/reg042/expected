@@ -1,8 +1,7 @@
 1/1: Building NatOpts (NatOpts.idr)
 Main> Main.doPlus
-Arguments [{arg:1}, {arg:2}]
-Compile time tree: plus {arg:1} {arg:2}
-Compiled: \ {arg:1}, {arg:2} => {arg:1} + {arg:2}
+Compile time tree: \{arg:0}, {arg:1} => plus {arg:0} {arg:1}
+Compiled: \ {arg:0}, {arg:1} => {arg:0} + {arg:1}
 Refers to: Prelude.Types.plus
 Flags: covering
 Size change:
@@ -12,9 +11,8 @@ Size change:
   0 | =
   1 |   =
 Main> Main.doMinus
-Arguments [{arg:1}, {arg:2}]
-Compile time tree: minus {arg:1} {arg:2}
-Compiled: \ {arg:1}, {arg:2} => Prelude.Types.prim__integerToNat ({arg:1} - {arg:2})
+Compile time tree: \{arg:0}, {arg:1} => minus {arg:0} {arg:1}
+Compiled: \ {arg:0}, {arg:1} => Prelude.Types.prim__integerToNat ({arg:0} - {arg:1})
 Refers to: Prelude.Types.minus
 Refers to (runtime): Prelude.Types.prim__integerToNat
 Flags: covering
@@ -25,9 +23,8 @@ Size change:
   0 | =
   1 |   =
 Main> Main.doMult
-Arguments [{arg:1}, {arg:2}]
-Compile time tree: mult {arg:1} {arg:2}
-Compiled: \ {arg:1}, {arg:2} => {arg:1} * {arg:2}
+Compile time tree: \{arg:0}, {arg:1} => mult {arg:0} {arg:1}
+Compiled: \ {arg:0}, {arg:1} => {arg:0} * {arg:1}
 Refers to: Prelude.Types.mult
 Flags: covering
 Size change:
@@ -37,9 +34,8 @@ Size change:
   0 | =
   1 |   =
 Main> Main.doCompare
-Arguments [{arg:1}, {arg:2}]
-Compile time tree: compareNat {arg:1} {arg:2}
-Compiled: \ {arg:1}, {arg:2} => Prelude.EqOrd.compare {arg:1} {arg:2}
+Compile time tree: \{arg:0}, {arg:1} => compareNat {arg:0} {arg:1}
+Compiled: \ {arg:0}, {arg:1} => Prelude.EqOrd.compare {arg:0} {arg:1}
 Refers to: Prelude.Types.compareNat
 Refers to (runtime): Prelude.EqOrd.compare
 Flags: covering
@@ -50,9 +46,8 @@ Size change:
   0 | =
   1 |   =
 Main> Main.doEqual
-Arguments [{arg:1}, {arg:2}]
-Compile time tree: equalNat {arg:1} {arg:2}
-Compiled: \ {arg:1}, {arg:2} => {arg:1} == {arg:2}
+Compile time tree: \{arg:0}, {arg:1} => equalNat {arg:0} {arg:1}
+Compiled: \ {arg:0}, {arg:1} => {arg:0} == {arg:1}
 Refers to: Prelude.Types.equalNat
 Flags: covering
 Size change:

@@ -1,5 +1,7 @@
 module Libraries.Data.List.Thin
 
+import Data.String
+
 import Libraries.Data.NatSet
 import Libraries.Data.SnocList.SizeOf
 
@@ -16,6 +18,16 @@ data Thin : SnocList a -> SnocList a -> Type where
 export
 embed : Thin xs ys -> Thin (outer ++ xs) (outer ++ ys)
 embed = believe_me
+
+export
+covering
+{xs, ys : _} -> Show (Thin xs ys) where
+  show x = joinBy " " $ showAll [] x
+    where
+      showAll : {free, vars : _} -> List String -> Thin free vars -> List String
+      showAll str Refl = str ++ ["ThinRefl"]
+      showAll str (Drop t) = showAll ("ThinDrop" :: str) t
+      showAll str (Keep t) = showAll ("ThinKeep" :: str) t
 
 export
 none : {xs : SnocList a} -> Thin [<] xs

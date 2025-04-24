@@ -2,7 +2,6 @@ module Idris.Syntax
 
 import public Core.Context
 import public Core.Context.Log
-import public Core.Normalise
 import public Core.Options
 
 import TTImp.TTImp

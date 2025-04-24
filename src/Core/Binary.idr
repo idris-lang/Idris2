@@ -58,17 +58,6 @@ record TTCFile extra where
   foreignExports : List (Name, (List (String, String)))
   extraData : extra
 
-HasNames a => HasNames (List a) where
-  full c ns = full_aux c [] ns
-    where full_aux : Context -> List a -> List a -> Core (List a)
-          full_aux c res [] = pure (reverse res)
-          full_aux c res (n :: ns) = full_aux c (!(full c n):: res) ns
-
-
-  resolved c ns = resolved_aux c [] ns
-    where resolved_aux : Context -> List a -> List a -> Core (List a)
-          resolved_aux c res [] = pure (reverse res)
-          resolved_aux c res (n :: ns) = resolved_aux c (!(resolved c n) :: res) ns
 HasNames (Int, FC, Name) where
   full c (i, fc, n) = pure (i, fc, !(full c n))
   resolved c (i, fc, n) = pure (i, fc, !(resolved c n))
@@ -276,12 +265,10 @@ getSaveDefs modns (n :: ns) acc defs
     = do Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => getSaveDefs modns ns acc defs -- 'n' really should exist though!
          -- No need to save builtins
-         case definition gdef of
-              Builtin _ => getSaveDefs modns ns acc defs
-              _ => do bin <- initBinaryS 16384
-                      toBuf (trimNS modns !(full (gamma defs) gdef))
-                      b <- get Bin
-                      getSaveDefs modns ns ((trimName (fullname gdef), b) :: acc) defs
+         bin <- initBinaryS 16384
+         toBuf (trimNS modns !(full (gamma defs) gdef))
+         b <- get Bin
+         getSaveDefs modns ns ((trimName (fullname gdef), b) :: acc) defs
   where
     trimName : Name -> Name
     trimName n@(NS defns d) = if defns == modns then d else n

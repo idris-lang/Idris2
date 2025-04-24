@@ -139,6 +139,26 @@ getBinderLoc : {vars : _} -> {idx : Nat} -> (0 p : IsVar x idx vars) -> Env tm v
 getBinderLoc                 {idx = Z}   First     (_ :< b)   = binderLoc b
 getBinderLoc {vars = _ :< _} {idx = S k} (Later p) (env :< _) = getBinderLoc p env
 
+getLetUnder : {idx : Nat} ->
+                 (0 ns : SnocList Name) ->
+                 SizeOf ns ->
+                 (0 p : IsVar x idx vars) -> Env Term vars ->
+                 Maybe (Term (reverseOnto vars ns))
+getLetUnder {idx = Z} {vars = vs :< v} ns w First (env :< Let _ _ val _)
+    = rewrite Extra.revOnto (Scope.bind vs x) ns in
+        rewrite sym $ appendAssociative vs [<v] (reverse ns) in
+                Just $ weakenNs (sucL (reverse w)) val
+getLetUnder {idx = S k} {vars = vs :< v} ns w (Later lp) (env :< b)
+    = getLetUnder (ns :< v) (suc w) lp env
+getLetUnder _ _ _ _ = Nothing
+
+-- as getBinder but only return result if it's a let bound name
+-- to save unnecessary weakening
+export
+getLet : {idx : Nat} ->
+         (0 p : IsVar x idx vars) -> Env Term vars -> Maybe (Term vars)
+getLet el env = getLetUnder [<] zero el env
+
 -- Make a type which abstracts over an environment
 -- Don't include 'let' bindings, since they have a concrete value and
 -- shouldn't be generalised
@@ -272,6 +292,29 @@ shrinkEnv (env :< b) (Keep p)
     = do env' <- shrinkEnv env p
          b' <- assert_total (shrinkBinder b p)
          pure (env' :< b')
+
+rigRestrictW : RigCount -> RigCount
+rigRestrictW p = if p == top then top else erased
+
+restrictWEnv : Env Term vars -> Env Term vars
+restrictWEnv [<] = [<]
+restrictWEnv (env :< b) = restrictWEnv env :< setMultiplicity b (rigRestrictW $ multiplicity b)
+
+-- Restriction makes p-annotated variables that do not support at least q
+-- copies unavailable at runtime
+--
+-- We use restriction to push the ambient quantity p onto the context:
+--
+--    X |- e :p A
+-- =================
+-- X \ p |- e :|p| A
+--
+-- where |p| is `presence p`
+--
+-- Note: when p is Rig0, all context quantities are ignored.
+export
+restrictEnv : Env Term vars -> RigCount -> Env Term vars
+restrictEnv env p = if p == top then restrictWEnv env else env
 
 export
 mkEnvOnto : FC -> (xs : List Name) -> Env Term ys -> Env Term (Scope.ext ys xs)

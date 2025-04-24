@@ -7,5 +7,6 @@ Now compiling the executable: runtests
 Hello World
 ------------------------------------------------------------------------
 
+Running 000-hello
 000-hello: success
 1/1 tests successful

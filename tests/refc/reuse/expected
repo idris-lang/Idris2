@@ -72,7 +72,7 @@ Idris2_Value *Main_insert
             idris2_newReference(var_10);
             Idris2_Value * var_16 = idris2_apply_closure(var_10, idris2_newReference(var_1));
                                                              // Prelude.EqOrd:121:3--121:6
-            tmp_40 = idris2_apply_closure(var_16, idris2_newReference(var_6));
+            tmp_40 = idris2_apply_closure(var_17, idris2_newReference(var_6));
         }
         Idris2_Value * var_19 = tmp_40;
         Idris2_Value *tmp_41 = NULL;
@@ -86,7 +86,7 @@ Idris2_Value *Main_insert
                 constructor_39 = idris2_newConstructor(3, 1);
                                                              // Main:8:42--8:46
             }                                                // Main:8:42--8:46
-            constructor_39->args[0] = var_17;
+            constructor_39->args[0] = var_18;
             constructor_39->args[1] = var_6;
             constructor_39->args[2] = var_7;
             tmp_41 = (Idris2_Value*)constructor_39;

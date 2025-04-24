@@ -3,7 +3,7 @@ module Compiler.Opts.ConstantFold
 import Core.CompileExpr
 import Core.Context.Log
 import Core.Primitives
-import Core.Value
+import Core.Evaluate.Value
 
 import Data.Vect
 import Data.SnocList
@@ -11,6 +11,7 @@ import Data.SnocList
 import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.SizeOf
 
+import Core.Evaluate.Value
 
 findConstAlt : Constant -> List (CConstAlt vars) ->
                Maybe (CExp vars) -> Maybe (CExp vars)
@@ -144,11 +145,11 @@ constFold rho (COp {arity} fc fn xs) =
     toNF (CPrimVal fc (I _)) = Nothing
     toNF (CPrimVal fc (Db _)) = Nothing
     -- Fold the rest
-    toNF (CPrimVal fc c) = Just $ NPrimVal fc c
+    toNF (CPrimVal fc c) = Just $ VPrimVal fc c
     toNF _ = Nothing
 
     fromNF : NF vars' -> Maybe (CExp vars')
-    fromNF (NPrimVal fc c) = Just $ CPrimVal fc c
+    fromNF (VPrimVal fc c) = Just $ CPrimVal fc c
     fromNF _ = Nothing
 
     commutative : PrimType -> Bool
@@ -173,9 +174,14 @@ constFold rho (CDelay fc x y) = CDelay fc x $ constFold rho y
 constFold rho (CConCase fc sc xs x)
   = CConCase fc (constFold rho sc) (foldAlt <$> xs) (constFold rho <$> x)
   where
+    foldScope : forall vars . {vars' : _} ->
+                Subst vars vars' -> CCaseScope vars -> CCaseScope vars'
+    foldScope rho (CRHS tm) = CRHS (constFold rho tm)
+    foldScope rho (CArg x sc) = CArg x (foldScope (wk (mkSizeOf [<x]) rho) sc)
+
     foldAlt : CConAlt vars -> CConAlt vars'
-    foldAlt (MkConAlt n ci t xs e)
-      = MkConAlt n ci t xs $ constFold (wksN rho (mkSizeOf xs)) e
+    foldAlt (MkConAlt n ci t sc)
+      = MkConAlt n ci t (foldScope rho sc)
 
 constFold rho (CConstCase fc sc xs x) =
     let sc' = constFold rho sc

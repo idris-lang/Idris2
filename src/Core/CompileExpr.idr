@@ -110,11 +110,16 @@ mutual
        CCrash : FC -> String -> CExp vars
 
   public export
+  data CCaseScope : Scoped where
+       CRHS : CExp vars -> CCaseScope vars
+       CArg : (x : Name) -> CCaseScope (vars :< x) -> CCaseScope vars
+
+  public export
   data CConAlt : Scoped where
        -- If no tag, then match by constructor name. Back ends might want to
        -- convert names to a unique integer for performance.
-       MkConAlt : Name -> ConInfo -> (tag : Maybe Int) -> (args : List Name) ->
-                  CExp (Scope.ext vars args) -> CConAlt vars
+       MkConAlt : Name -> ConInfo -> (tag : Maybe Int) ->
+                  CCaseScope vars -> CConAlt vars
 
   public export
   data CConstAlt : Scoped where
@@ -253,9 +258,9 @@ mutual
     show (NmForce _ lr x) = "(%force " ++ show lr ++ " " ++ show x ++ ")"
     show (NmDelay _ lr x) = "(%delay " ++ show lr ++ " " ++ show x ++ ")"
     show (NmConCase _ sc xs def)
-        = assert_total $ "(%case " ++ show sc ++ " " ++ show xs ++ " " ++ show def ++ ")"
+        = assert_total $ "(%case con " ++ show sc ++ " " ++ show xs ++ " " ++ show def ++ ")"
     show (NmConstCase _ sc xs def)
-        = assert_total $ "(%case " ++ show sc ++ " " ++ show xs ++ " " ++ show def ++ ")"
+        = assert_total $ "(%case const " ++ show sc ++ " " ++ show xs ++ " " ++ show def ++ ")"
     show (NmPrimVal _ x) = show x
     show (NmErased _) = "___"
     show (NmCrash _ x) = "(CRASH " ++ show x ++ ")"
@@ -363,9 +368,15 @@ mutual
   forgetExp locs (CErased fc) = NmErased fc
   forgetExp locs (CCrash fc msg) = NmCrash fc msg
 
+  getConScope : CCaseScope vars -> (ns : List Name ** CExp (Scope.ext vars ns))
+  getConScope (CRHS tm) = ([] ** tm)
+  getConScope (CArg c sc)
+      = let (args ** sc') = getConScope sc in ((c :: args) ** sc')
+
   forgetConAlt : Names vars -> CConAlt vars -> NamedConAlt
-  forgetConAlt locs (MkConAlt n ci t args exp)
-      = let args' = addLocs args locs in
+  forgetConAlt locs (MkConAlt n ci t sc)
+      = let (args ** exp) = getConScope sc
+            args' = addLocs args locs in
             MkNConAlt n ci t (conArgs args args') (forgetExp args' exp)
 
   forgetConstAlt : Names vars -> CConstAlt vars -> NamedConstAlt
@@ -390,6 +401,16 @@ export
 covering
 {vars : _} -> Show (CExp vars) where
   show exp = show (forget exp)
+
+public export
+{vars : _} -> Show (CCaseScope vars) where
+    show (CRHS rhs) = " => " ++ (assert_total $ show rhs)
+    show (CArg r nm) = " " ++ show nm
+
+public export
+covering
+{vars : _} -> Show (CConAlt vars) where
+    show (MkConAlt name ci t ccasescope) = "{MkConAlt name: \{show name}, ci: \{show ci}, t: \{show t}, ccasescope: \{show ccasescope}}"
 
 export
 covering
@@ -416,12 +437,12 @@ Show CFType where
   show (CFFun s t) = show s ++ " -> " ++ show t
   show (CFIORes t) = "IORes " ++ show t
   show (CFStruct n args) = "struct " ++ show n ++ " " ++ joinBy " " (map show args)
-  show (CFUser n args) = show n ++ " " ++ joinBy " " (map show args)
+  show (CFUser n args) = show n ++ " " ++ joinBy " " (toList $ map show args)
 
 export
 covering
 Show CDef where
-  show (MkFun args exp) = show args ++ ": " ++ show exp
+  show (MkFun args exp) = show (toList args) ++ ": " ++ show exp
   show (MkCon tag arity pos)
       = "Constructor tag " ++ show tag ++ " arity " ++ show arity ++
         maybe "" (\n => " (newtype by " ++ show n ++ ")") pos
@@ -475,9 +496,14 @@ mutual
   insertNames _ _ (CErased fc) = CErased fc
   insertNames _ _ (CCrash fc x) = CCrash fc x
 
+  insertNamesCScope : GenWeakenable CCaseScope
+  insertNamesCScope mid inn (CRHS tm) = CRHS (insertNames mid inn tm)
+  insertNamesCScope mid inn (CArg x sc)
+      = CArg x (insertNamesCScope mid (suc inn) sc)
+
   insertNamesConAlt : GenWeakenable CConAlt
-  insertNamesConAlt mid inn (MkConAlt x ci tag args sc)
-        = MkConAlt x ci tag args (underBinderz CExp (CompileExpr.insertNames mid) inn (mkSizeOf args) sc)
+  insertNamesConAlt mid inn (MkConAlt x ci tag sc)
+        = MkConAlt x ci tag (insertNamesCScope mid inn sc)
 
   insertNamesConstAlt : GenWeakenable CConstAlt
   insertNamesConstAlt outer ns (MkConstAlt x sc) = MkConstAlt x (insertNames outer ns sc)
@@ -523,9 +549,15 @@ mutual
   shrinkCExp _ (CErased fc) = CErased fc
   shrinkCExp _ (CCrash fc x) = CCrash fc x
 
+  export
+  shrinkCScope : Thin newvars vars -> CCaseScope vars -> CCaseScope newvars
+  shrinkCScope p (CRHS tm) = CRHS (shrinkCExp p tm)
+  shrinkCScope p (CArg x sc)
+      = CArg x (shrinkCScope (Keep p) sc)
+
   shrinkConAlt : Thin newvars vars -> CConAlt vars -> CConAlt newvars
-  shrinkConAlt sub (MkConAlt x ci tag args sc)
-        = MkConAlt x ci tag args (shrinkCExp (keepz args sub) sc)
+  shrinkConAlt sub (MkConAlt x ci tag sc)
+        = MkConAlt x ci tag (shrinkCScope sub sc)
 
   shrinkConstAlt : Thin newvars vars -> CConstAlt vars -> CConstAlt newvars
   shrinkConstAlt sub (MkConstAlt x sc) = MkConstAlt x (shrinkCExp sub sc)
@@ -541,6 +573,16 @@ Weaken CConAlt where
 public export
 SubstCEnv : Scope -> Scoped
 SubstCEnv = Subst CExp
+
+public export
+covering
+[ShowSubstCEnv] {dropped, vars : _} -> Show (SubstCEnv dropped vars) where
+    show x = "SubstCEnv [" ++ showAll x ++ "]{vars = " ++ show (toList vars) ++ ", dropped = " ++ show (toList dropped) ++ "}"
+        where
+            showAll : {dropped, vars : _} -> SubstCEnv dropped vars -> String
+            showAll Lin = ""
+            showAll (Lin :< x) = show x
+            showAll (xx :< x) = showAll xx ++ ", " ++ show x
 
 mutual
   substEnv : Substitutable CExp CExp
@@ -575,9 +617,13 @@ mutual
   substEnv _ _ _ (CErased fc) = CErased fc
   substEnv _ _ _ (CCrash fc x) = CCrash fc x
 
+  substCScope : Substitutable CExp CCaseScope
+  substCScope outer dropped env (CRHS tm) = CRHS (substEnv outer dropped env tm)
+  substCScope outer dropped env (CArg x sc) = CArg x (substCScope outer (suc dropped) env sc)
+
   substConAlt : Substitutable CExp CConAlt
-  substConAlt {outer} {dropped} {inner} drp inn env (MkConAlt x ci tag args sc)
-    = MkConAlt x ci tag args (underBinderz CExp (\inn => substEnv drp inn env) inn (mkSizeOf args) sc)
+  substConAlt {outer} {dropped} {inner} drp inn env (MkConAlt x ci tag sc)
+    = MkConAlt x ci tag (substCScope drp inn env sc)
 
   substConstAlt : Substitutable CExp CConstAlt
   substConstAlt outer dropped env (MkConstAlt x sc) = MkConstAlt x (substEnv outer dropped env sc)
@@ -630,12 +676,20 @@ mutual
   mkLocals bs inn (CErased fc) = CErased fc
   mkLocals bs inn (CCrash fc x) = CCrash fc x
 
+  mkLocalsCScope : Bounds bound ->
+                   SizeOf inner ->
+                   CCaseScope (Scope.addInner outer inner) ->
+                   CCaseScope ((outer ++ bound) ++ inner)
+  mkLocalsCScope bs inn (CRHS tm) = CRHS (mkLocals bs inn tm)
+  mkLocalsCScope bs inn (CArg x sc)
+      = CArg x (mkLocalsCScope bs (suc inn) sc)
+
   mkLocalsConAlt : Bounds bound ->
                    SizeOf inner ->
                    CConAlt (Scope.addInner outer inner) ->
                    CConAlt ((outer ++ bound) ++ inner)
-  mkLocalsConAlt bs inn (MkConAlt x ci tag args sc)
-      =  MkConAlt x ci tag args (underBinderz CExp (mkLocals bs) inn (mkSizeOf args) sc)
+  mkLocalsConAlt bs inn (MkConAlt x ci tag sc)
+      =  MkConAlt x ci tag (mkLocalsCScope bs inn sc)
 
   mkLocalsConstAlt : Bounds bound ->
                      SizeOf inner ->
@@ -647,6 +701,11 @@ export
 refsToLocals : Bounds bound -> CExp vars -> CExp (Scope.addInner vars bound)
 refsToLocals None tm = tm
 refsToLocals bs y = mkLocals bs zero y
+
+export
+refsToLocalsScope : Bounds bound -> CCaseScope vars -> CCaseScope (Scope.addInner vars bound)
+refsToLocalsScope None sc = sc
+refsToLocalsScope bs y = mkLocalsCScope bs zero y
 
 export
 getFC : CExp args -> FC

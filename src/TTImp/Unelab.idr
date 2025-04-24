@@ -1,14 +1,20 @@
 module TTImp.Unelab
 
-import Core.Case.CaseTree
 import Core.Context.Log
 import Core.Env
-import Core.Normalise
-import Core.Value
 
 import TTImp.TTImp
 
 import Data.String
+import Data.Vect
+
+import Core.Evaluate.Value
+import Core.Evaluate.Quote
+import Core.Evaluate.Normalise
+import Core.Evaluate.Convert
+import Core.Evaluate.Expand
+import Core.Evaluate
+import Core.Name.CompatibleVars
 
 import Libraries.Data.VarSet
 import Libraries.Data.SnocList.SizeOf
@@ -28,6 +34,7 @@ used idx (As _ _ _ pat) = used idx pat
 used idx (TDelayed _ _ tm) = used idx tm
 used idx (TDelay _ _ _ tm) = used idx tm
 used idx (TForce _ _ tm) = used idx tm
+used idx (PrimOp _ _ args) = any (used idx) args
 used idx _ = False
 
 public export
@@ -35,137 +42,16 @@ data UnelabMode
      = Full
      | NoSugar Bool -- uniqify names
      | ImplicitHoles
+     | NoImplicits
 
 Eq UnelabMode where
    Full == Full = True
    NoSugar t == NoSugar u = t == u
    ImplicitHoles == ImplicitHoles = True
+   NoImplicits == NoImplicits = True
    _ == _ = False
 
 mutual
-
-  ||| Unelaborate a call to a case expression as an inline case.
-  ||| This should allow us to eventurally resugar case blocks and if-then-else calls.
-  |||
-  ||| This is really hard however because all we have access to is the
-  ||| clauses of the lifted case expression. So e.g.
-  |||      f x = case g x of p -> e
-  ||| became
-  |||      f x = f-case x (g x)
-  |||      f-case x p = e
-  ||| and so to display the
-  |||      f-case (h y) (g (p o))
-  ||| correctly we need to:
-  ||| 1. extract p from f-case x p
-  ||| 2. replace x with (h y) in e
-  |||
-  ||| However it can be the case that x has been split because it was forced by a
-  ||| pattern in p and so looking at (f-case x p) we may not be able to recover the
-  ||| name x.
-  |||
-  ||| We will try to do our best...
-  unelabCase : {vars : _} ->
-               {auto c : Ref Ctxt Defs} ->
-               List (Name, Nat) ->
-               Env Term vars ->
-               Name ->
-               SnocList (Term vars) ->
-               Core (Maybe IRawImp)
-  unelabCase nest env n args
-      = do defs <- get Ctxt
-           Just glob <- lookupCtxtExact n (gamma defs)
-                | Nothing => pure Nothing
-           let PMDef _ pargs treect _ pats = definition glob
-                | _ => pure Nothing
-           let Just argpos = findArgPos treect
-                | _ => pure Nothing
-           if length args == length pargs
-              then mkCase pats argpos args
-              else pure Nothing
-    where
-      -- Need to find the position of the scrutinee to rebuild original
-      -- case correctly
-      findArgPos : CaseTree as -> Maybe Nat
-      findArgPos (Case idx p _ _) = Just idx
-      findArgPos _ = Nothing
-
-      idxOrMaybe : Nat -> SnocList a -> Maybe a
-      idxOrMaybe Z (_ :< x) = Just x
-      idxOrMaybe (S k) (xs :< _) = idxOrMaybe k xs
-      idxOrMaybe _ [<] = Nothing
-
-      -- TODO: some utility like this should probably be implemented in Core
-      substVars : SnocList (VarSet vs, Term vs) -> Term vs -> Term vs
-      substVars xs tm@(Local fc _ idx prf)
-          = case find ((MkVar prf `VarSet.elem`) . fst) xs of
-                 Just (_, new) => new
-                 Nothing => tm
-      substVars xs (Meta fc n i args)
-          = Meta fc n i (mapSnd @{Compose} (substVars xs) args)
-      substVars xs (Bind fc y b scope)
-          = Bind fc y (map (substVars xs) b) (substVars (map (bimap (weaken {tm = VarSet}) weaken) xs) scope)
-      substVars xs (App fc fn r arg)
-          = App fc (substVars xs fn) r (substVars xs arg)
-      substVars xs (As fc s as pat)
-          = As fc s as (substVars xs pat)
-      substVars xs (TDelayed fc y z)
-          = TDelayed fc y (substVars xs z)
-      substVars xs (TDelay fc y t z)
-          = TDelay fc y (substVars xs t) (substVars xs z)
-      substVars xs (TForce fc r y)
-          = TForce fc r (substVars xs y)
-      substVars xs tm = tm
-
-      substArgs : SizeOf vs -> SnocList (VarSet vs, Term vars) -> Term vs -> Term (Scope.addInner vars vs)
-      substArgs p substs tm =
-        let
-          substs' = map (bimap (embed {tm = VarSet} {outer = vars}) (weakenNs p)) substs
-          tm' = embed tm
-        in
-          substVars substs' tm'
-
-      argVars : {0 vs : _} -> VarSet vs -> Term vs -> VarSet vs
-      argVars acc (As _ _ as pat) = argVars (argVars acc as) pat
-      argVars acc (Local _ _ _ p) = VarSet.insert (MkVar p) acc
-      argVars acc _ = acc
-
-      mkClause : FC -> Nat ->
-                 SnocList (Term vars) ->
-                 (vs ** (Env Term vs, Term vs, Term vs)) ->
-                 Core (Maybe IImpClause)
-      mkClause fc argpos args (vs ** (clauseEnv, lhs, rhs))
-          = do logTerm "unelab.case.clause" 20 "Unelaborating clause" lhs
-               let patArgs = snd (getFnArgsSpine lhs)
-                   Just pat = idxOrMaybe argpos patArgs
-                     | _ => pure Nothing
-                   rhs = substArgs (mkSizeOf vs) (zip (map (argVars (VarSet.empty {vs})) (map snd patArgs)) args) rhs
-               logTerm "unelab.case.clause" 20 "Unelaborating LHS" (snd pat)
-               lhs' <- unelabTy Full nest clauseEnv (snd pat)
-               logTerm "unelab.case.clause" 20 "Unelaborating RHS" rhs
-               logEnv "unelab.case.clause" 20 "In Env" clauseEnv
-               rhs' <- unelabTy Full nest (clauseEnv ++ env) rhs
-               pure $ Just $ (PatClause fc (fst lhs') (fst rhs'))
-
-      ||| mkCase looks up the value passed as the scrutinee of the case-block.
-      ||| @ argpos is the index of the case-block's scrutinee in args
-      ||| @ args   is the list of arguments at the call site of the case-block
-      |||
-      ||| Once we have the scrutinee `e`, we can form `case e of` and so focus
-      ||| on manufacturing the clauses.
-      mkCase : List (vs ** (Env Term vs, Term vs, Term vs)) ->
-               (argpos : Nat) -> SnocList (Term vars) -> Core (Maybe IRawImp)
-      mkCase pats argpos args
-          = do unless (null args) $ log "unelab.case.clause" 20 $
-                 unwords $ "Ignoring" :: map show (toList args)
-               let Just scrutinee = idxOrMaybe argpos args
-                     | _ => pure Nothing
-                   fc = getLoc scrutinee
-               (tm, _) <- unelabTy Full nest env scrutinee
-               Just pats' <- map sequence $ traverse (mkClause fc argpos args) pats
-                 | _ => pure Nothing
-               -- TODO: actually grab the fnopts?
-               pure $ Just $ ICase fc [] tm (Implicit fc False) pats'
-
   dropParams : List (Name, Nat) -> (IRawImp, Glued vars) ->
                Core (IRawImp, Glued vars)
   dropParams nest (tm, ty)
@@ -205,7 +91,7 @@ mutual
   unelabTy' umode nest env (Local fc _ idx p)
       = do let nm = nameAt p
            log "unelab.case" 20 $ "Found local name: " ++ show nm
-           let ty = gnf env (binderType (getBinder p env))
+           ty <- nf env (binderType (getBinder p env))
            pure (IVar fc (MkKindedName (Just Bound) nm nm), ty)
   unelabTy' umode nest env (Ref fc nt n)
       = do defs <- get Ctxt
@@ -223,7 +109,7 @@ mutual
                      , "sugared to", show n'
                      ]
 
-           pure (IVar fc (MkKindedName (Just nt) fn n'), gnf env (embed ty))
+           pure (IVar fc (MkKindedName (Just nt) fn n'), !(nf env (embed ty)))
   unelabTy' umode nest env (Meta fc n i args)
       = do defs <- get Ctxt
            let mkn = nameRoot n
@@ -235,19 +121,22 @@ mutual
                | Nothing => case umode of
                                  ImplicitHoles => pure (Implicit fc True, gErased fc)
                                  _ => pure (term, gErased fc)
-           pure (term, gnf env (embed ty))
+           pure (term, !(nf env (embed ty)))
+
   unelabTy' umode nest env (Bind fc x b sc)
       = case umode of
           NoSugar True => do
             let x' = uniqueLocal vars x
-            let sc : Term (Scope.bind vars x') = compat sc
-            (sc', scty) <- unelabTy umode nest (Env.bind env b) sc
+            let sc : Term (vars :< x') = compat sc
+            let env' = Env.bind env b
+            (sc', scty) <- unelabTy umode nest env' sc
             unelabBinder umode nest fc env x' b
                          (compat sc) sc'
-                         (compat !(getTerm scty))
+                         (compat !(quote env' scty))
           _ => do
-            (sc', scty) <- unelabTy umode nest (Env.bind env b) sc
-            unelabBinder umode nest fc env x b sc sc' !(getTerm scty)
+            let env' = Env.bind env b
+            (sc', scty) <- unelabTy umode nest env' sc
+            unelabBinder umode nest fc env x b sc sc' !(quote env' scty)
     where
       next : Name -> Name
       next (MN n i) = MN n (i + 1)
@@ -260,33 +149,20 @@ mutual
          = if n `elem` vs
               then uniqueLocal vs (next n)
               else n
-  unelabTy' umode nest env tm@(App fc fn _ arg)
+  unelabTy' umode nest env tm@(App fc fn c arg)
       = do (fn', gfnty) <- unelabTy umode nest env fn
            (arg', gargty) <- unelabTy umode nest env arg
-           fnty <- getNF gfnty
-           defs <- get Ctxt
-           Nothing <-
-              case umode of
-                (NoSugar _) => pure Nothing
-                ImplicitHoles => pure Nothing
-                _ => case getFnArgsSpine tm of
-                     (Ref _ _ fnName, args) => do
-                       fullName <- getFullName fnName
-                       let (NS ns (CaseBlock n i)) = fullName
-                         | _ => pure Nothing
-                       unelabCase nest env fullName (map snd args)
-                     _ => pure Nothing
-             | Just tm => pure (tm, gErased fc)
+           fnty <- expand gfnty
            case fnty of
-                NBind _ x (Pi _ rig Explicit ty) sc
-                  => do sc' <- sc defs (toClosure defaultOpts env arg)
-                        pure (IApp fc fn' arg',
-                                glueBack defs env sc')
-                NBind _ x (Pi _ rig p ty) sc
-                  => do sc' <- sc defs (toClosure defaultOpts env arg)
-                        pure (INamedApp fc fn' x arg',
-                                glueBack defs env sc')
-                _ => pure (IApp fc fn' arg', gErased fc)
+                VBind _ x (Pi _ rig Explicit ty) sc
+                  => do sc' <- sc (nf env arg)
+                        pure (IApp fc fn' arg', sc')
+                VBind _ x (Pi _ rig p ty) sc
+                  => do sc' <- sc (nf env arg)
+                        case umode of
+                             NoImplicits => pure (fn', sc')
+                             _ => pure (INamedApp fc fn' x arg', sc')
+                _ => pure (IApp fc fn' arg', VErased fc Placeholder)
   unelabTy' umode nest env (As fc s p tm)
       = do (p', _) <- unelabTy' umode nest env p
            (tm', ty) <- unelabTy' umode nest env tm
@@ -296,6 +172,73 @@ mutual
                          NoSugar _ => pure (IAs fc (getLoc p) s n.rawName tm', ty)
                          _ => pure (tm', ty)
                 _ => pure (tm', ty) -- Should never happen!
+  unelabTy' umode nest env (Case fc ty c sc scty alts)
+      = do (sc', _) <- unelabTy' umode nest env sc
+           (scty', _) <- unelabTy' umode nest env scty
+           alts' <- traverse unelabAlt alts
+           pure (ICase fc [] sc' scty' alts', gErased fc)
+    where
+      unelabScope : {vars : _} ->
+                    FC -> Name -> SnocList (Maybe Name, Name) ->
+                    Env Term vars -> NF [<] ->
+                    CaseScope vars -> Core IImpClause
+      unelabScope fc n args env _ (RHS _ tm)
+          = do (tm', _) <- unelabTy' umode nest env tm
+               let n' = MkKindedName (Just Bound) n n
+               pure (PatClause fc (applySpine (IVar fc n') args) tm')
+        where
+          applySpine : IRawImp -> SnocList (Maybe Name, Name) -> IRawImp
+          applySpine fn [<] = fn
+          applySpine fn (args :< (Nothing, arg))
+              = let arg' = MkKindedName (Just Bound) arg arg in
+                    IApp fc (applySpine fn args) (IVar fc arg')
+          applySpine fn (args :< (Just n, arg))
+              = let arg' = MkKindedName (Just Bound) arg arg in
+                    case umode of
+                        ImplicitHoles => applySpine fn args
+                        _ => INamedApp fc (applySpine fn args) n (IVar fc arg')
+
+      unelabScope fc n args env (VBind _ v (Pi _ rig p ty) tsc) (Arg c x sc)
+          = do p' <- the (Core (PiInfo (Term [<]))) $ case p of
+                          Explicit => pure Explicit
+                          Implicit => pure Implicit
+                          AutoImplicit => pure AutoImplicit
+                          DefImplicit t => pure $ DefImplicit !(quote [<] t)
+               vty <- quote [<] ty
+               let env' = env :< PVar fc rig (map embed p') (embed vty)
+               -- We only need the type to make sure we're getting the plicities
+               -- right, so use an explicit name to feed to the scope type
+               tsc' <- expand !(tsc (pure (vRef fc Bound n)))
+               let xn = case p' of
+                             Explicit => Nothing
+                             _ => Just v
+               unelabScope fc n (args :< (xn, x)) env' tsc' sc
+      unelabScope fc n args env ty (Arg c x sc)
+          = do let env' = env :< PVar fc top Explicit (Erased fc Placeholder)
+               unelabScope fc n (args :< (Nothing, x)) env' (VErased fc Placeholder) sc
+
+      unelabAlt : CaseAlt vars -> Core IImpClause
+      unelabAlt (ConCase fc n t sc)
+          = do defs <- get Ctxt
+               nty <- lookupTyExact n (gamma defs)
+               let ty = case nty of
+                             Nothing => Erased fc Placeholder
+                             Just t => t
+               unelabScope fc !(getFullName n) [<] env !(expand !(nf [<] ty)) sc
+      unelabAlt (DelayCase fc t a tm)
+          = do let env' = env :<
+                       PVar fc top Explicit (Erased fc Placeholder) :<
+                       PVar fc erased Implicit (Erased fc Placeholder)
+               (tm', _) <- unelabTy' umode nest env' tm
+               let a' = MkKindedName (Just Bound) a a
+               pure (PatClause fc (IDelay fc (IVar fc a')) tm')
+      unelabAlt (ConstCase fc c tm)
+          = do (tm', _) <- unelabTy' umode nest env tm
+               pure (PatClause fc (IPrimVal fc c) tm')
+      unelabAlt (DefaultCase fc tm)
+          = do (tm', _) <- unelabTy' umode nest env tm
+               pure (PatClause fc (Implicit fc False) tm')
+
   unelabTy' umode nest env (TDelayed fc r tm)
       = do (tm', ty) <- unelabTy' umode nest env tm
            defs <- get Ctxt
@@ -309,10 +252,14 @@ mutual
            defs <- get Ctxt
            pure (IForce fc tm', gErased fc)
   unelabTy' umode nest env (PrimVal fc c) = pure (IPrimVal fc c, gErased fc)
+  unelabTy' umode nest env (PrimOp fc fn args)
+      = -- If we ever see this in output, we've overevaluated
+        pure (Implicit fc True, gErased fc)
   unelabTy' umode nest env (Erased fc (Dotted t))
     = unelabTy' umode nest env t
   unelabTy' umode nest env (Erased fc _) = pure (Implicit fc True, gErased fc)
   unelabTy' umode nest env (TType fc _) = pure (IType fc, gType fc (MN "top" 0))
+  unelabTy' umode nest env (Unmatched fc msg) = pure (Implicit fc True, gUnmatched fc msg)
 
   unelabPi : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
@@ -339,12 +286,12 @@ mutual
       = do (ty', _) <- unelabTy umode nest env ty
            p' <- unelabPi umode nest env p
            pure (ILam fc rig p' (Just x) ty' sc,
-                    gnf env (Bind fc x (Pi fc' rig p ty) scty))
+                    !(nf env (Bind fc x (Pi fc' rig p ty) scty)))
   unelabBinder umode nest fc env x (Let fc' rig val ty) sctm sc scty
       = do (val', vty) <- unelabTy umode nest env val
            (ty', _) <- unelabTy umode nest env ty
            pure (ILet fc EmptyFC rig x ty' val' sc,
-                    gnf env (Bind fc x (Let fc' rig val ty) scty))
+                    !(nf env (Bind fc x (Let fc' rig val ty) scty)))
   unelabBinder umode nest fc env x (Pi _ rig p ty) sctm sc scty
       = do (ty', _) <- unelabTy umode nest env ty
            p' <- unelabPi umode nest env p
@@ -363,12 +310,12 @@ mutual
       isDefImp _ = False
   unelabBinder umode nest fc env x (PVar fc' rig _ ty) sctm sc scty
       = do (ty', _) <- unelabTy umode nest env ty
-           pure (sc, gnf env (Bind fc x (PVTy fc' rig ty) scty))
+           pure (sc, !(nf env (Bind fc x (PVTy fc' rig ty) scty)))
   unelabBinder umode nest fc env x (PLet fc' rig val ty) sctm sc scty
       = do (val', vty) <- unelabTy umode nest env val
            (ty', _) <- unelabTy umode nest env ty
            pure (ILet fc EmptyFC rig x ty' val' sc,
-                    gnf env (Bind fc x (PLet fc' rig val ty) scty))
+                    !(nf env (Bind fc x (PLet fc' rig val ty) scty)))
   unelabBinder umode nest fc env x (PVTy _ rig ty) sctm sc scty
       = do (ty', _) <- unelabTy umode nest env ty
            pure (sc, gType fc (MN "top" 0))
@@ -405,7 +352,7 @@ unelabNest : {vars : _} ->
              Env Term vars ->
              Term vars -> Core IRawImp
 unelabNest mode nest env (Meta fc n i args)
-    = do let mkn = nameRoot n ++ (showScope $ map snd args)
+    = do let mkn = nameRoot n ++ ((showScope $ map snd args))
          pure (IHole fc mkn)
   where
     toName : Term vars -> Maybe Name

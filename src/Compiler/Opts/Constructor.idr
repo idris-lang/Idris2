@@ -94,21 +94,22 @@ natHack =
     ]
 
 -- get all builtin transformations
+export
 builtinMagic : forall vars. CExp vars -> Maybe (CExp vars)
 builtinMagic = magic natHack
 
 natBranch :  CConAlt vars -> Bool
-natBranch (MkConAlt n ZERO _ _ _) = True
-natBranch (MkConAlt n SUCC _ _ _) = True
+natBranch (MkConAlt n ZERO _ _) = True
+natBranch (MkConAlt n SUCC _ _) = True
 natBranch _ = False
 
 trySBranch : CExp vars -> CConAlt vars -> Maybe (CExp vars)
-trySBranch n (MkConAlt nm SUCC _ [arg] sc)
+trySBranch n (MkConAlt nm SUCC _ (CArg arg (CRHS sc)))
     = Just (CLet (getFC n) arg YesInline (magic__natUnsuc (getFC n) (getFC n) [n]) sc)
 trySBranch _ _ = Nothing
 
 tryZBranch : CConAlt vars -> Maybe (CExp vars)
-tryZBranch (MkConAlt n ZERO _ [] sc) = Just sc
+tryZBranch (MkConAlt n ZERO _ (CRHS sc)) = Just sc
 tryZBranch _ = Nothing
 
 getSBranch : CExp vars -> List (CConAlt vars) -> Maybe (CExp vars)
@@ -120,6 +121,7 @@ getZBranch [] = Nothing
 getZBranch (x :: xs) = tryZBranch x <|> getZBranch xs
 
 -- Rewrite case trees on Nat to be case trees on Integer
+export
 nat : {auto s : Ref NextMN Int} -> CExp vars -> Core (Maybe (CExp vars))
 nat (CCon fc _ ZERO _ []) = pure $ Just $ CPrimVal fc (BI 0)
 nat (CCon fc _ SUCC _ [x]) = pure $ Just $ COp fc (Add IntegerType) [CPrimVal fc (BI 1), x]
@@ -144,12 +146,14 @@ nat _ = pure Nothing
 =========
 -}
 
+export
 enumTag : Nat -> Int -> Constant
 enumTag k i =
   if      k <= 0xff   then B8 (cast i)
   else if k <= 0xffff then B16 (cast i)
   else                     B32 (cast i)
 
+export
 enum : CExp vars -> Maybe (CExp vars)
 enum (CCon fc _ (ENUM n) (Just tag) []) = Just (CPrimVal fc (enumTag n tag))
 enum (CConCase fc sc alts def) = do
@@ -157,7 +161,7 @@ enum (CConCase fc sc alts def) = do
     Just $ CConstCase fc sc alts' def
   where
     toEnum : CConAlt vars -> Maybe (CConstAlt vars)
-    toEnum (MkConAlt nm (ENUM n) (Just tag) [] sc)
+    toEnum (MkConAlt nm (ENUM n) (Just tag) (CRHS sc))
         = pure $ MkConstAlt (enumTag n tag) sc
     toEnum _ = Nothing
 enum t = Nothing
@@ -168,9 +172,11 @@ enum t = Nothing
 ========
 -}
 
+-- remove pattern matches on unit
+export
 unitTree : Ref NextMN Int => CExp vars -> Core (Maybe (CExp vars))
 unitTree exp@(CConCase fc sc alts def) =
-    let [MkConAlt _ UNIT _ [] e] = alts
+    let [MkConAlt _ UNIT _ (CRHS e)] = alts
             | _ => pure Nothing
     in case sc of -- TODO: Check scrutinee has no effect, and skip let binding
         CLocal {} => pure $ Just e
@@ -217,8 +223,8 @@ tryIntrinsic (CConCase fc e alts def) =
         <&> \alts => CConCase fc e alts def
   where
     go : CConAlt vars -> Maybe (CConAlt vars)
-    go (MkConAlt _ ci _ as e) =
-        conInfoNameTag ci <&> \(n, tag) => MkConAlt n ci (Just tag) as e
+    go (MkConAlt _ ci _ e) =
+        conInfoNameTag ci <&> \(n, tag) => MkConAlt n ci (Just tag) e
 tryIntrinsic _ = Nothing
 
 parameters (try : forall vars. CExp vars -> Core (CExp vars))
@@ -228,6 +234,7 @@ parameters (try : forall vars. CExp vars -> Core (CExp vars))
 
     rewriteCConAlt : CConAlt vars -> Core (CConAlt vars)
     rewriteCConstAlt : CConstAlt vars -> Core (CConstAlt vars)
+    rewriteScope : CCaseScope vars -> Core (CCaseScope vars)
 
     rewriteCExp exp = do
         exp' <- rewriteSub exp
@@ -261,9 +268,14 @@ parameters (try : forall vars. CExp vars -> Core (CExp vars))
             <*> traverseOpt rewriteCExp def
     rewriteSub e = pure e
 
-    rewriteCConAlt (MkConAlt n ci t as e) = MkConAlt n ci t as <$> rewriteCExp e
+    rewriteScope (CRHS tm) = pure $ CRHS !(rewriteCExp tm)
+    rewriteScope (CArg x sc)
+        = pure $ CArg x !(rewriteScope sc)
+
+    rewriteCConAlt (MkConAlt n ci t e) = MkConAlt n ci t <$> rewriteScope e
     rewriteCConstAlt (MkConstAlt x e) = MkConstAlt x <$> rewriteCExp e
 
+export
 sequence : List (forall vars. CExp vars -> Core (Maybe (CExp vars))) -> CExp vars -> Core (CExp vars)
 sequence [] e = pure e
 sequence (x :: xs) e = do
