@@ -8,6 +8,7 @@ import Core.Core
 import Core.TT
 
 import Data.List
+import Data.List.Quantifiers
 import Data.SnocList
 import Data.Vect
 import Libraries.Data.SortedSet
@@ -138,12 +139,8 @@ Show ANFDef where
         show args ++ " -> " ++ show ret
   show (MkAError exp) = "Error: " ++ show exp
 
-data AVars : Scoped where
-     Nil : AVars Scope.empty
-     (::) : Int -> AVars xs -> AVars (x :: xs)
-
-empty : AVars Scope.empty
-empty = []
+AVars : Scope -> Type
+AVars = All (\_ => Int)
 
 data Next : Type where
 
@@ -285,7 +282,7 @@ toANF (MkLCon t a ns) = pure $ MkACon t a ns
 toANF (MkLForeign ccs fargs t) = pure $ MkAForeign ccs fargs t
 toANF (MkLError err)
     = do v <- newRef Next (the Int 0)
-         pure $ MkAError !(anf ANF.empty err)
+         pure $ MkAError !(anf [] err)
 
 export
 freeVariables : ANF -> SortedSet AVar
