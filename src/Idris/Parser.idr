@@ -2025,8 +2025,6 @@ parseMode
           pure Execute
    <|> do exactIdent "exec"
           pure Execute
-   <|> do exactIdent "scheme"
-          pure Scheme
 
 setVarOption : Rule REPLOpt
 setVarOption

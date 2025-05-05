@@ -625,21 +625,18 @@ data REPLEval : Type where
      EvalTC : REPLEval -- Evaluate as if part of the typechecker
      NormaliseAll : REPLEval -- Normalise everything (default)
      Execute : REPLEval -- Evaluate then pass to an executer
-     Scheme : REPLEval -- Use the scheme evaluator
 
 export
 Show REPLEval where
   show EvalTC = "typecheck"
   show NormaliseAll = "normalise"
   show Execute = "execute"
-  show Scheme = "scheme"
 
 export
 Pretty Void REPLEval where
   pretty EvalTC = pretty "typecheck"
   pretty NormaliseAll = pretty "normalise"
   pretty Execute = pretty "execute"
-  pretty Scheme = pretty "scheme"
 
 public export
 data REPLOpt : Type where
