@@ -1,5 +1,0 @@
-:set eval scheme
--- Partly a performance test, partly to test primitives
-natToInteger (plus (integerToNat 300000) (integerToNat 400000))
-the Double 0.1+0.2
-:q

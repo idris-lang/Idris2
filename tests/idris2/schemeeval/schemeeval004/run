@@ -1,3 +1,0 @@
-. ../../../testutils.sh
-
-idris2 list.idr < input

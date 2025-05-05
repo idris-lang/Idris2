@@ -85,7 +85,6 @@ modules =
     Core.Ord,
     Core.Primitives,
     Core.Reflect,
-    Core.SchemeEval,
     Core.Termination.CallGraph,
     Core.Termination.SizeChange,
     Core.Termination.Positivity,
@@ -106,12 +105,6 @@ modules =
     Core.UnifyState,
     Core.Value,
     Core.WithData,
-
-    Core.SchemeEval.Builtins,
-    Core.SchemeEval.Compile,
-    Core.SchemeEval.Evaluate,
-    Core.SchemeEval.Quote,
-    Core.SchemeEval.ToScheme,
 
     IdrisPaths,
 

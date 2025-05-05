@@ -293,7 +293,6 @@ Cast REPLEval String where
   cast EvalTC = "typecheck"
   cast NormaliseAll = "normalise"
   cast Execute = "execute"
-  cast Scheme = "scheme"
 
 Cast REPLOpt REPLOption where
   cast (ShowImplicits impl)  = MkOption "show-implicits" BOOL impl

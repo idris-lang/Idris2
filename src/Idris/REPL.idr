@@ -16,8 +16,6 @@ import Core.Termination
 import Core.Unify
 import Core.Value
 
-import Core.SchemeEval
-
 import Parser.Unlit
 
 import Idris.CommandLine
@@ -879,13 +877,6 @@ process (Eval itm)
          let emode = evalMode opts
          case emode of
             Execute => do ignore (execExp itm); pure (Executed itm)
-            Scheme =>
-              do (tm `WithType` ty) <- inferAndElab InExpr itm Env.empty
-                 qtm <- logTimeWhen !getEvalTiming 0 "Evaluation" $
-                           (do nf <- snfAll Env.empty tm
-                               quote Env.empty nf)
-                 itm <- logTimeWhen False 0 "Resugar" $ resugar Env.empty qtm
-                 pure (Evaluated itm Nothing)
             _ =>
               do (ntm `WithType` ty) <- logTimeWhen !getEvalTiming 0 "Evaluation" $
                                            inferAndNormalize emode itm
@@ -1187,7 +1178,6 @@ mutual
       prompt EvalTC = "[tc] "
       prompt NormaliseAll = ""
       prompt Execute = "[exec] "
-      prompt Scheme = "[scheme] "
 
   export
   handleMissing' : MissedResult -> String
