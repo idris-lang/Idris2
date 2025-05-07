@@ -127,6 +127,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * [Djot](https://djot.net/) files can now be compiled as CommonMark style
   Literate Idris files.
 
+* Fixed a bug that caused `ttc` size to grow exponentially.
+
 ### Backend changes
 
 #### RefC Backend

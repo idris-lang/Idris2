@@ -1082,6 +1082,7 @@ record SyntaxInfo where
   defDocstrings : ANameMap String
   bracketholes : List Name -- hole names in argument position (so need
                            -- to be bracketed when solved)
+                           -- TODO: use Set instead List
   usingImpl : List (Maybe Name, RawImp)
   startExpr : RawImp
   holeNames : List String -- hole names in the file
