@@ -1,0 +1,213 @@
+1/1: Building UnifyPiInfo (UnifyPiInfo.idr)
+Error: While processing right hand side of g. When unifying:
+    Type -> Type -> Type
+and:
+    Type -> Type
+Mismatch between: Type -> Type and Type.
+
+UnifyPiInfo:8:7--8:8
+ 4 | 
+ 5 | namespace EI
+ 6 |   f : Type -> Type -> Type
+ 7 |   g : Type -> {_ : Type} -> Type
+ 8 |   g = f
+           ^
+
+Error: While processing right hand side of g. When unifying:
+    Type -> Type -> Type
+and:
+    Type -> Type => Type
+Mismatch between: Type -> Type and Type => Type.
+
+UnifyPiInfo:13:7--13:8
+ 09 | 
+ 10 | namespace EA
+ 11 |   f : Type -> Type -> Type
+ 12 |   g : Type -> {auto _ : Type} -> Type
+ 13 |   g = f
+            ^
+
+Error: While processing right hand side of g. When unifying:
+    Type -> Type -> Type
+and:
+    Type -> {default Int _ : Type} -> Type
+Mismatch between: Type -> Type and {default Int _ : Type} -> Type.
+
+UnifyPiInfo:18:7--18:8
+ 14 | 
+ 15 | namespace ED
+ 16 |   f : Type -> Type -> Type
+ 17 |   g : Type -> {default Int _ : Type} -> Type
+ 18 |   g = f
+            ^
+
+Error: While processing right hand side of g. When unifying:
+    Type -> Type
+and:
+    Type -> Type -> Type
+Mismatch between: Type and Type -> Type.
+
+UnifyPiInfo:27:7--27:8
+ 23 | 
+ 24 | namespace IE
+ 25 |   f : Type -> {_ : Type} -> Type
+ 26 |   g : Type -> Type -> Type
+ 27 |   g = f
+            ^
+
+Error: While processing right hand side of g. When unifying:
+    Type -> Type
+and:
+    Type -> Type => Type
+Mismatch between: Type and Type => Type.
+
+UnifyPiInfo:32:7--32:8
+ 28 | 
+ 29 | namespace IA
+ 30 |   f : Type -> {_ : Type} -> Type
+ 31 |   g : Type -> {auto _ : Type} -> Type
+ 32 |   g = f
+            ^
+
+Error: While processing right hand side of g. When unifying:
+    Type -> Type
+and:
+    Type -> {default Int _ : Type} -> Type
+Mismatch between: Type and {default Int _ : Type} -> Type.
+
+UnifyPiInfo:37:7--37:8
+ 33 | 
+ 34 | namespace ID
+ 35 |   f : Type -> {_ : Type} -> Type
+ 36 |   g : Type -> {default Int _ : Type} -> Type
+ 37 |   g = f
+            ^
+
+Error: While processing right hand side of g. When unifying:
+    Type -> Type => Type
+and:
+    Type -> Type -> Type
+Mismatch between: Type => Type and Type -> Type.
+
+UnifyPiInfo:46:7--46:8
+ 42 | 
+ 43 | namespace AE
+ 44 |   f : Type -> {auto _ : Type} -> Type
+ 45 |   g : Type -> Type -> Type
+ 46 |   g = f
+            ^
+
+Error: While processing right hand side of g. When unifying:
+    Type -> Type => Type
+and:
+    Type -> Type
+Mismatch between: Type => Type and Type.
+
+UnifyPiInfo:51:7--51:8
+ 47 | 
+ 48 | namespace AI
+ 49 |   f : Type -> {auto _ : Type} -> Type
+ 50 |   g : Type -> {_ : Type} -> Type
+ 51 |   g = f
+            ^
+
+Error: While processing right hand side of g. When unifying:
+    Type -> Type => Type
+and:
+    Type -> {default Int _ : Type} -> Type
+Mismatch between: Type => Type and {default Int _ : Type} -> Type.
+
+UnifyPiInfo:56:7--56:8
+ 52 | 
+ 53 | namespace AD
+ 54 |   f : Type -> {auto _ : Type} -> Type
+ 55 |   g : Type -> {default Int _ : Type} -> Type
+ 56 |   g = f
+            ^
+
+Error: While processing right hand side of g. When unifying:
+    Type -> {default Int _ : Type} -> Type
+and:
+    Type -> Type -> Type
+Mismatch between: {default Int _ : Type} -> Type and Type -> Type.
+
+UnifyPiInfo:65:7--65:8
+ 61 | 
+ 62 | namespace DE
+ 63 |   f : Type -> {default Int _ : Type} -> Type
+ 64 |   g : Type -> Type -> Type
+ 65 |   g = f
+            ^
+
+Error: While processing right hand side of g. When unifying:
+    Type -> {default Int _ : Type} -> Type
+and:
+    Type -> Type
+Mismatch between: {default Int _ : Type} -> Type and Type.
+
+UnifyPiInfo:70:7--70:8
+ 66 | 
+ 67 | namespace DI
+ 68 |   f : Type -> {default Int _ : Type} -> Type
+ 69 |   g : Type -> {_ : Type} -> Type
+ 70 |   g = f
+            ^
+
+Error: While processing right hand side of g. When unifying:
+    Type -> {default Int _ : Type} -> Type
+and:
+    Type -> Type => Type
+Mismatch between: {default Int _ : Type} -> Type and Type => Type.
+
+UnifyPiInfo:75:7--75:8
+ 71 | 
+ 72 | namespace DA
+ 73 |   f : Type -> {default Int _ : Type} -> Type
+ 74 |   g : Type -> {auto _ : Type} -> Type
+ 75 |   g = f
+            ^
+
+1/1: Building Examples (Examples.idr)
+Error: While processing right hand side of pls. When unifying:
+    Int -> Int -> Int
+and:
+    Int -> Int
+Mismatch between: Int -> Int and Int.
+
+Examples:2:7--2:10
+ 1 | pls : Int -> {_ : Int} -> Int
+ 2 | pls = (+)
+           ^^^
+
+Error: While processing right hand side of foo. When unifying:
+    Int -> Int -> Int
+and:
+    Int -> Int
+Mismatch between: Int -> Int and Int.
+
+Examples:8:19--8:22
+ 4 | higherOrder : (Int -> {_ : Int} -> Int) -> ()
+ 5 | higherOrder _ = ()
+ 6 | 
+ 7 | foo : ()
+ 8 | foo = higherOrder (+)
+                       ^^^
+
+Error: While processing right hand side of maybePls. When unifying:
+    Maybe Int
+and:
+    Maybe Int
+When unifying:
+    Maybe Int
+and:
+    Maybe (Int -> ?b)
+Mismatch between: Int and Int -> ?b.
+
+Examples:11:16--11:46
+ 07 | foo : ()
+ 08 | foo = higherOrder (+)
+ 09 | 
+ 10 | maybePls : Maybe Int -> Maybe Int -> Maybe Int
+ 11 | maybePls x y = pure {f=Maybe} pls <*> x <*> y
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
