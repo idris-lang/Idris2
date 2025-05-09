@@ -721,7 +721,7 @@ Ord a => Ord (SnocList a) where
 %foreign
   "scheme:string-concat"
   "RefC:fastConcat"
-  "javascript:lambda:(xs)=>__prim_idris2js_array(xs).join('')"
+  "javascript:support"
 export
 fastConcat : List String -> String
 
@@ -853,7 +853,7 @@ pack (x :: xs) = strCons x (pack xs)
 %foreign
     "scheme:string-pack"
     "RefC:fastPack"
-    "javascript:lambda:(xs)=>__prim_idris2js_array(xs).join('')"
+    "javascript:support"
 export
 fastPack : List Char -> String
 
@@ -880,7 +880,7 @@ unpack str = go [] (length str)
 %foreign
   "scheme:string-unpack"
   "RefC:fastUnpack"
-  "javascript:lambda:(str)=>__prim_js2idris_array(Array.from(str))"
+  "javascript:support"
 export
 fastUnpack : String -> List Char
 

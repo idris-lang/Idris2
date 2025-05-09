@@ -6,7 +6,7 @@ import Compiler.Scheme.ChezSep
 import Compiler.Scheme.Racket
 import Compiler.Scheme.Gambit
 import Compiler.ES.Node
-import Compiler.ES.Javascript
+import Compiler.ES.Browser
 import Compiler.Common
 import Compiler.Inline
 import Compiler.Interpreter.VMCode
@@ -278,8 +278,8 @@ getCG Chez = pure $ Just codegenChez
 getCG ChezSep = pure $ Just codegenChezSep
 getCG Racket = pure $ Just codegenRacket
 getCG Gambit = pure $ Just codegenGambit
-getCG Node = pure $ Just codegenNode
-getCG Javascript = pure $ Just codegenJavascript
+getCG NodeJavascript = pure $ Just codegenNodeJavascript
+getCG BrowserJavascript = pure $ Just codegenBrowserJavascript
 getCG RefC = pure $ Just codegenRefC
 getCG VMCodeInterp = pure $ Just codegenVMCodeInterp
 getCG (Other s) = getCodegen s
