@@ -40,6 +40,7 @@ import Idris.Pretty
 import Idris.Doc.String
 
 import Data.List
+import Data.SnocList
 import Data.String
 import Libraries.Data.SortedMap
 
@@ -87,7 +88,7 @@ processDecl (MkFCVal _ $ PMutual ps)
 
 processDecl decl
     = catch (do impdecls <- desugarDecl [] decl
-                traverse_ (Check.processDecl [] (MkNested []) []) impdecls
+                traverse_ (Check.processDecl [] (MkNested []) ScopeEmpty) impdecls
                 pure [])
             (\err => do giveUpConstraints -- or we'll keep trying...
                         pure [err])

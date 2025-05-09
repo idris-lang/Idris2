@@ -6,6 +6,7 @@ import Core.Value
 import Libraries.Utils.String
 
 import Data.Vect
+import Data.SnocList
 
 %default covering
 
@@ -566,7 +567,7 @@ castTo WorldType = const Nothing
 
 export
 getOp : {0 arity : Nat} -> PrimFn arity ->
-        {vars : List Name} -> Vect arity (NF vars) -> Maybe (NF vars)
+        {vars : Scope} -> Vect arity (NF vars) -> Maybe (NF vars)
 getOp (Add ty) = binOp add
 getOp (Sub ty) = binOp sub
 getOp (Mul ty) = binOp mul

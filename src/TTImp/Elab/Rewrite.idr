@@ -18,6 +18,12 @@ import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.TTImp
 
+import Data.List
+import Libraries.Data.List.SizeOf
+
+import Data.SnocList
+import Libraries.Data.SnocList.SizeOf
+
 %default covering
 
 -- TODO: Later, we'll get the name of the lemma from the type, if it's one

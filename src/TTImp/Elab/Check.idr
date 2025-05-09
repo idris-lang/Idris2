@@ -27,6 +27,9 @@ import Libraries.Data.NameMap
 import Libraries.Data.UserNameMap
 import Libraries.Data.WithDefault
 
+import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
+
 %default covering
 
 public export
@@ -62,7 +65,7 @@ Eq ElabOpt where
 -- Descriptions of implicit name bindings. They're either just the name,
 -- or a binding of an @-pattern which has an associated pattern.
 public export
-data ImplBinding : List Name -> Type where
+data ImplBinding : Scope -> Type where
      NameBinding : {vars : _} ->
                    FC -> RigCount -> PiInfo (Term vars) ->
                    (elabAs : Term vars) -> (expTy : Term vars) ->
@@ -113,9 +116,9 @@ bindingPiInfo (AsBinding _ p _ _ _) = p
 
 -- Current elaboration state (preserved/updated throughout elaboration)
 public export
-record EState (vars : List Name) where
+record EState (vars : Scope) where
   constructor MkEState
-  {outer : List Name}
+  {outer : Scope}
   -- The function/constructor name we're currently working on (resolved id)
   defining : Int
   -- The outer environment in which we're running the elaborator. Things here should
@@ -239,7 +242,7 @@ strengthenedEState {n} {vars} c e fc env
     -- never actualy *use* that hole - this process is only to ensure that the
     -- unbound implicit doesn't depend on any variables it doesn't have
     -- in scope.
-    removeArgVars : List (Term (n :: vs)) -> Maybe (List (Term vs))
+    removeArgVars : Scopeable (Term (n :: vs)) -> Maybe (Scopeable (Term vs))
     removeArgVars [] = pure []
     removeArgVars (Local fc r (S k) p :: args)
         = do args' <- removeArgVars args
@@ -413,7 +416,7 @@ uniVar : {auto c : Ref Ctxt Defs} ->
          FC -> Core Name
 uniVar fc
     = do n <- genName "u"
-         idx <- addDef n (newDef fc n erased [] (Erased fc Placeholder) (specified Public) None)
+         idx <- addDef n (newDef fc n erased ScopeEmpty (Erased fc Placeholder) (specified Public) None)
          pure (Resolved idx)
 
 export
@@ -453,7 +456,7 @@ searchVar fc rig depth def env nest n ty
 
     envHints : List Name -> Env Term vars ->
                Core (vars' ** (Term (vars' ++ vars) -> Term vars, Env Term (vars' ++ vars)))
-    envHints [] env = pure ([] ** (id, env))
+    envHints [] env = pure (ScopeEmpty ** (id, env))
     envHints (n :: ns) env
         = do (vs ** (f, env')) <- envHints ns env
              let Just (nestn, argns, tmf) = find !(toFullNames n) (names nest)
