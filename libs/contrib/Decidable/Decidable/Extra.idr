@@ -64,9 +64,9 @@ decideTransform :
   -> IsDecidable n ts (chain {ts} t r)
 decideTransform tDec posDec =
   curryAll $ \xs =>
-    replace {p = id} (chainUncurry (chain t r) Dec xs) $
-      replace {p = Dec} (chainUncurry r t xs) $
-        tDec $ replace {p = id} (sym $ chainUncurry r Dec xs) $
+    replace id (chainUncurry (chain t r) Dec xs) $
+      replace Dec (chainUncurry r t xs) $
+        tDec $ replace id (sym $ chainUncurry r Dec xs) $
           uncurryAll posDec xs
 
 

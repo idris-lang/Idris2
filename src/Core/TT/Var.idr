@@ -283,7 +283,7 @@ insertNVarChiply : SizeOf local ->
 insertNVarChiply p v
   = rewrite chipsAsListAppend local (n :: outer) in
     insertNVar (p <>> zero)
-  $ replace {p = NVar nm} (chipsAsListAppend local outer) v
+  $ replace (NVar nm) (chipsAsListAppend local outer) v
 
 export
 insertNVarNames : GenWeakenable (NVar name)
