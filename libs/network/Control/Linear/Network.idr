@@ -51,8 +51,8 @@ newSocket : LinearIO io
       => (fam  : SocketFamily)
       -> (ty   : SocketType)
       -> (pnum : ProtocolNumber)
-      -> (1 f : (1 sock : LEither (!* SocketError) (Socket Ready)) -> L io ())
-      -> L io ()
+      -> (1 f : (1 sock : LEither (!* SocketError) (Socket Ready)) -> L io a)
+      -> L io a
 newSocket fam ty pnum f
     = do Right rawsock <- socket fam ty pnum
                | Left err => f (Left $ MkBang err)
