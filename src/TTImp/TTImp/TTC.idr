@@ -88,7 +88,7 @@ mutual
     toBuf b (Implicit fc i)
         = do tag 29; toBuf b fc; toBuf b i
     toBuf b (IWithUnambigNames fc ns rhs)
-        = do tag 30; toBuf b ns; toBuf b rhs
+        = do tag 30; toBuf b fc; toBuf b ns; toBuf b rhs
     toBuf b (IAutoApp fc fn arg)
         = do tag 31; toBuf b fc; toBuf b fn; toBuf b arg
 
