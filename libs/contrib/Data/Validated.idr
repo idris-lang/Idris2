@@ -146,7 +146,7 @@ public export
 
 --- Convenience representations ---
 
-||| Special case of `Validated` with a `List` as an error accumulator.
+||| Special case of `Validated` with a `List1` as an error accumulator.
 public export %inline
 ValidatedL : Type -> Type -> Type
 ValidatedL = Validated . List1
