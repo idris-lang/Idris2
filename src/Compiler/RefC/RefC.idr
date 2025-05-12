@@ -544,7 +544,7 @@ mutual
 
     cStatementsFromANF (AOp fc _ op args) _ = do
         let resultVar = "primVar_" ++ !(getNextCounter)
-        let argsVect : Env -> Vect arity AVar -> Vect arity String
+        let argsVect : Env -> Vect ar AVar -> Vect ar String
             argsVect _ [] = []
             argsVect env (v :: vars) =
               let ownedVars = if contains v env.owned then singleton v else empty
