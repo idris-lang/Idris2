@@ -168,7 +168,7 @@ mutual
                  {auto o : Ref ROpts REPLOpts} ->
                  RigCount -> RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
-                 FC -> (fntm : Term vars) ->
+                 FC -> (fntm : Term vars) -> RigCount ->
                  Name -> Closure vars -> (Defs -> Closure vars -> Core (NF vars)) ->
                  (argdata : (Maybe Name, Nat)) ->
                  (expargs : List RawImp) ->
@@ -177,13 +177,13 @@ mutual
                  (knownret : Bool) ->
                  (expected : Maybe (Glued vars)) ->
                  Core (Term vars, Glued vars)
-  makeImplicit rig argRig elabinfo nest env fc tm x aty sc (n, argpos) expargs autoargs namedargs kr expty
+  makeImplicit rig argRig elabinfo nest env fc tm tmrig x aty sc (n, argpos) expargs autoargs namedargs kr expty
       = do defs <- get Ctxt
            nm <- genMVName x
            empty <- clearDefs defs
            metaty <- quote empty env aty
            metaval <- metaVar fc argRig env nm metaty
-           let fntm = App fc tm metaval
+           let fntm = App fc tm tmrig metaval
            fnty <- sc defs (toClosure defaultOpts env metaval)
            when (bindingVars elabinfo) $ update EST $
              addBindIfUnsolved nm (getLoc (getFn tm)) argRig Implicit env metaval metaty
@@ -199,7 +199,7 @@ mutual
                      {auto o : Ref ROpts REPLOpts} ->
                      RigCount -> RigCount -> ElabInfo ->
                      NestedNames vars -> Env Term vars ->
-                     FC -> (fntm : Term vars) ->
+                     FC -> (fntm : Term vars) -> RigCount ->
                      Name -> Closure vars -> (Defs -> Closure vars -> Core (NF vars)) ->
                      (argpos : (Maybe Name, Nat)) ->
                      (expargs : List RawImp) ->
@@ -208,7 +208,7 @@ mutual
                      (knownret : Bool) ->
                      (expected : Maybe (Glued vars)) ->
                      Core (Term vars, Glued vars)
-  makeAutoImplicit rig argRig elabinfo nest env fc tm x aty sc (n, argpos) expargs autoargs namedargs kr expty
+  makeAutoImplicit rig argRig elabinfo nest env fc tm tmrig x aty sc (n, argpos) expargs autoargs namedargs kr expty
   -- on the LHS, just treat it as an implicit pattern variable.
   -- on the RHS, add a searchable hole
       = if metavarImp (elabMode elabinfo)
@@ -217,7 +217,7 @@ mutual
                    empty <- clearDefs defs
                    metaty <- quote empty env aty
                    metaval <- metaVar fc argRig env nm metaty
-                   let fntm = App fc tm metaval
+                   let fntm = App fc tm tmrig metaval
                    fnty <- sc defs (toClosure defaultOpts env metaval)
                    update EST $ addBindIfUnsolved nm (getLoc (getFn tm)) argRig AutoImplicit env metaval metaty
                    checkAppWith rig elabinfo nest env fc
@@ -236,7 +236,7 @@ mutual
                    lim <- getAutoImplicitLimit
                    metaval <- searchVar fc argRig lim (Resolved (defining est))
                                         env nest nm metaty
-                   let fntm = App fc tm metaval
+                   let fntm = App fc tm tmrig metaval
                    fnty <- sc defs (toClosure defaultOpts env metaval)
                    checkAppWith rig elabinfo nest env fc
                                 fntm fnty (n, 1 + argpos) expargs autoargs namedargs kr expty
@@ -255,7 +255,7 @@ mutual
                     {auto o : Ref ROpts REPLOpts} ->
                     RigCount -> RigCount -> ElabInfo ->
                     NestedNames vars -> Env Term vars ->
-                    FC -> (fntm : Term vars) ->
+                    FC -> (fntm : Term vars) -> RigCount ->
                     Name -> Closure vars -> Closure vars ->
                     (Defs -> Closure vars -> Core (NF vars)) ->
                     (argpos : (Maybe Name, Nat)) ->
@@ -265,7 +265,7 @@ mutual
                     (knownret : Bool) ->
                     (expected : Maybe (Glued vars)) ->
                     Core (Term vars, Glued vars)
-  makeDefImplicit rig argRig elabinfo nest env fc tm x arg aty sc (n, argpos) expargs autoargs namedargs kr expty
+  makeDefImplicit rig argRig elabinfo nest env fc tm tmrig x arg aty sc (n, argpos) expargs autoargs namedargs kr expty
   -- on the LHS, just treat it as an implicit pattern variable.
   -- on the RHS, use the default
       = if metavarImp (elabMode elabinfo)
@@ -274,7 +274,7 @@ mutual
                    empty <- clearDefs defs
                    metaty <- quote empty env aty
                    metaval <- metaVar fc argRig env nm metaty
-                   let fntm = App fc tm metaval
+                   let fntm = App fc tm tmrig metaval
                    fnty <- sc defs (toClosure defaultOpts env metaval)
                    update EST $ addBindIfUnsolved nm (getLoc (getFn tm)) argRig AutoImplicit env metaval metaty
                    checkAppWith rig elabinfo nest env fc
@@ -282,7 +282,7 @@ mutual
            else do defs <- get Ctxt
                    empty <- clearDefs defs
                    aval <- quote empty env arg
-                   let fntm = App fc tm aval
+                   let fntm = App fc tm tmrig aval
                    fnty <- sc defs (toClosure defaultOpts env aval)
                    checkAppWith rig elabinfo nest env fc
                                 fntm fnty (n, 1 + argpos) expargs autoargs namedargs kr expty
@@ -424,7 +424,7 @@ mutual
                  RigCount -> RigCount -> ElabInfo ->
                  NestedNames vars -> Env Term vars ->
                  FC -> (fntm : Term vars) -> Name ->
-                 (aty : Closure vars) -> (sc : Defs -> Closure vars -> Core (NF vars)) ->
+                 RigCount -> (aty : Closure vars) -> (sc : Defs -> Closure vars -> Core (NF vars)) ->
                  (argdata : (Maybe Name, Nat)) ->
                  (arg : RawImp) ->
                  (expargs : List RawImp) ->
@@ -433,7 +433,7 @@ mutual
                  (knownret : Bool) ->
                  (expected : Maybe (Glued vars)) ->
                  Core (Term vars, Glued vars)
-  checkRestApp rig argRig elabinfo nest env fc tm x aty sc
+  checkRestApp rig argRig elabinfo nest env fc tm x rigb aty sc
                (n, argpos) arg_in expargs autoargs namedargs knownret expty
      = do defs <- get Ctxt
           arg <- dotErased aty n argpos (elabMode elabinfo) argRig arg_in
@@ -469,7 +469,7 @@ mutual
              empty <- clearDefs defs
              metaty <- quote empty env aty
              (idx, metaval) <- argVar (getFC arg) argRig env nm metaty
-             let fntm = App fc tm metaval
+             let fntm = App fc tm rigb metaval
              logTerm "elab" 10 "...as" metaval
              fnty <- sc defs (toClosure defaultOpts env metaval)
              (tm, gty) <- checkAppWith rig elabinfo nest env fc
@@ -555,7 +555,7 @@ mutual
 
              logGlueNF "elab" 10 "Got arg type" env argt
              defs <- get Ctxt
-             let fntm = App fc tm argv
+             let fntm = App fc tm rigb argv
              fnty <- sc defs (toClosure defaultOpts env argv)
              checkAppWith rig elabinfo nest env fc
                           fntm fnty (n, 1 + argpos) expargs autoargs namedargs kr expty
@@ -605,7 +605,7 @@ mutual
                argdata (arg :: expargs') autoargs namedargs kr expty
      = do let argRig = rig |*| rigb
           checkRestApp rig argRig elabinfo nest env fc
-                       tm x aty sc argdata arg expargs' autoargs namedargs kr expty
+                       tm x rigb aty sc argdata arg expargs' autoargs namedargs kr expty
   checkAppWith' rig elabinfo nest env fc tm ty@(NBind tfc x (Pi _ rigb Explicit aty) sc)
                argdata [] autoargs namedargs kr expty with (findNamed x namedargs)
    -- We found a compatible named argument
@@ -613,14 +613,14 @@ mutual
                 argdata [] autoargs namedargs kr expty | Just ((_, arg), namedargs')
     = do let argRig = rig |*| rigb
          checkRestApp rig argRig elabinfo nest env fc
-                      tm x aty sc argdata arg [] autoargs namedargs' kr expty
+                      tm x rigb aty sc argdata arg [] autoargs namedargs' kr expty
    checkAppWith' rig elabinfo nest env fc tm ty@(NBind tfc x (Pi _ rigb Explicit aty) sc)
                 argdata [] autoargs namedargs kr expty | Nothing
     = case findBindAllExpPattern namedargs of
            Just arg => -- Bind-all-explicit pattern is present - implicitly bind
              do let argRig = rig |*| rigb
                 checkRestApp rig argRig elabinfo nest env fc
-                             tm x aty sc argdata arg [] autoargs namedargs kr expty
+                             tm x rigb aty sc argdata arg [] autoargs namedargs kr expty
            _ =>
              do defs <- get Ctxt
                 if all isImplicitAs (autoargs
@@ -654,11 +654,11 @@ mutual
                 NBind tfc' x' (Pi _ rigb' Implicit aty') sc'
                    => checkExp rig elabinfo env fc tm (glueBack defs env ty) (Just expty_in)
                 _ => if not (preciseInf elabinfo)
-                        then makeImplicit rig argRig elabinfo nest env fc tm x aty sc argdata [] [] [] kr (Just expty_in)
+                        then makeImplicit rig argRig elabinfo nest env fc tm rigb x aty sc argdata [] [] [] kr (Just expty_in)
                         -- in 'preciseInf' mode blunder on anyway, and hope
                         -- that we can resolve the implicits
                         else handle (checkExp rig elabinfo env fc tm (glueBack defs env ty) (Just expty_in))
-                               (\err => makeImplicit rig argRig elabinfo nest env fc tm x aty sc argdata [] [] [] kr (Just expty_in))
+                               (\err => makeImplicit rig argRig elabinfo nest env fc tm rigb x aty sc argdata [] [] [] kr (Just expty_in))
   -- Same for auto
   checkAppWith' rig elabinfo nest env fc tm ty@(NBind tfc x (Pi _ rigb AutoImplicit aty) sc)
                argdata [] [] [] kr (Just expty_in)
@@ -668,7 +668,7 @@ mutual
            case expty of
                 NBind tfc' x' (Pi _ rigb' AutoImplicit aty') sc'
                    => checkExp rig elabinfo env fc tm (glueBack defs env ty) (Just expty_in)
-                _ => makeAutoImplicit rig argRig elabinfo nest env fc tm x aty sc argdata [] [] [] kr (Just expty_in)
+                _ => makeAutoImplicit rig argRig elabinfo nest env fc tm rigb x aty sc argdata [] [] [] kr (Just expty_in)
   -- Same for default
   checkAppWith' rig elabinfo nest env fc tm ty@(NBind tfc x (Pi _ rigb (DefImplicit aval) aty) sc)
                argdata [] [] [] kr (Just expty_in)
@@ -679,14 +679,14 @@ mutual
                 NBind tfc' x' (Pi _ rigb' (DefImplicit aval') aty') sc'
                    => if !(convert defs env aval aval')
                          then checkExp rig elabinfo env fc tm (glueBack defs env ty) (Just expty_in)
-                         else makeDefImplicit rig argRig elabinfo nest env fc tm x aval aty sc argdata [] [] [] kr (Just expty_in)
-                _ => makeDefImplicit rig argRig elabinfo nest env fc tm x aval aty sc argdata [] [] [] kr (Just expty_in)
+                         else makeDefImplicit rig argRig elabinfo nest env fc tm rigb x aval aty sc argdata [] [] [] kr (Just expty_in)
+                _ => makeDefImplicit rig argRig elabinfo nest env fc tm rigb x aval aty sc argdata [] [] [] kr (Just expty_in)
 
   -- Check next unnamed auto implicit argument
   checkAppWith' rig elabinfo nest env fc tm (NBind tfc x (Pi _ rigb AutoImplicit aty) sc)
                argdata expargs (arg :: autoargs') namedargs kr expty
       = checkRestApp rig (rig |*| rigb) elabinfo nest env fc
-                         tm x aty sc argdata arg expargs autoargs' namedargs kr expty
+                         tm x rigb aty sc argdata arg expargs autoargs' namedargs kr expty
   -- Check next named auto implicit argument
   checkAppWith' rig elabinfo nest env fc tm (NBind tfc x (Pi _ rigb AutoImplicit aty) sc)
                argdata expargs [] namedargs kr expty
@@ -694,30 +694,30 @@ mutual
             case findNamed x namedargs of
                  Just ((_, arg), namedargs') =>
                     checkRestApp rig argRig elabinfo nest env fc
-                                 tm x aty sc argdata arg expargs [] namedargs' kr expty
+                                 tm x rigb aty sc argdata arg expargs [] namedargs' kr expty
                  Nothing =>
-                         makeAutoImplicit rig argRig elabinfo nest env fc tm
+                         makeAutoImplicit rig argRig elabinfo nest env fc tm rigb
                                               x aty sc argdata expargs [] namedargs kr expty
   -- Check next implicit argument
   checkAppWith' rig elabinfo nest env fc tm (NBind tfc x (Pi _ rigb Implicit aty) sc)
                argdata expargs autoargs namedargs kr expty
       = let argRig = rig |*| rigb in
             case findNamed x namedargs of
-               Nothing => makeImplicit rig argRig elabinfo nest env fc tm
+               Nothing => makeImplicit rig argRig elabinfo nest env fc tm rigb
                                        x aty sc argdata expargs autoargs namedargs kr expty
                Just ((_, arg), namedargs') =>
-                     checkRestApp rig argRig elabinfo nest env fc
-                                  tm x aty sc argdata arg expargs autoargs namedargs' kr expty
+                     checkRestApp rig argRig elabinfo nest env fc tm
+                                  x rigb aty sc argdata arg expargs autoargs namedargs' kr expty
   -- Check next default argument
   checkAppWith' rig elabinfo nest env fc tm (NBind tfc x (Pi _ rigb (DefImplicit arg) aty) sc)
                argdata expargs autoargs namedargs kr expty
       = let argRig = rigMult rig rigb in
             case findNamed x namedargs of
-               Nothing => makeDefImplicit rig argRig elabinfo nest env fc tm
+               Nothing => makeDefImplicit rig argRig elabinfo nest env fc tm rigb
                                           x arg aty sc argdata expargs autoargs namedargs kr expty
                Just ((_, arg), namedargs') =>
                      checkRestApp rig argRig elabinfo nest env fc
-                                  tm x aty sc argdata arg expargs autoargs namedargs' kr expty
+                                  tm x rigb aty sc argdata arg expargs autoargs namedargs' kr expty
   -- Invent a function type if we have extra explicit arguments but type is further unknown
   checkAppWith' {vars} rig elabinfo nest env fc tm ty (n, argpos) (arg :: expargs) autoargs namedargs kr expty
       = -- Invent a function type,  and hope that we'll know enough to solve it
@@ -734,7 +734,7 @@ mutual
                             retn (TType fc u)
            (argv, argt) <- check rig elabinfo
                                  nest env arg (Just argTyG)
-           let fntm = App fc tm argv
+           let fntm = App fc tm top argv
            defs <- get Ctxt
            fnty <- nf defs env retTy -- (Bind fc argn (Let RigW argv argTy) retTy)
            let expfnty = gnf env (Bind fc argn (Pi fc top Explicit argTy) (weaken retTy))

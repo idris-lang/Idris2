@@ -128,19 +128,19 @@ mutual
   updateHoleUsage useInHole var zs (Meta fc n i args)
       = do defs <- get Ctxt
            Just gdef <- lookupCtxtExact (Resolved i) (gamma defs)
-                | Nothing => updateHoleUsageArgs useInHole var zs args
+                | Nothing => updateHoleUsageArgs useInHole var zs $ map snd args
            -- only update for holes with no definition yet
            case definition gdef of
                 Hole {} =>
                    do let ty = type gdef
-                      ty' <- updateHoleType useInHole var zs ty args
+                      ty' <- updateHoleType useInHole var zs ty $ map snd args
                       updateTy i ty'
                       logTerm "quantity.hole.update" 5 ("New type of " ++
                                  show (fullname gdef)) ty'
                       logTerm "quantity.hole.update" 5 ("Updated from " ++
                                  show (fullname gdef)) (type gdef)
                       pure True
-                _ => updateHoleUsageArgs useInHole var zs args
+                _ => updateHoleUsageArgs useInHole var zs $ map snd args
   updateHoleUsage useInHole var zs (As _ _ a p)
       = do h <- updateHoleUsage useInHole var zs a
            h' <- updateHoleUsage useInHole var zs a
@@ -219,7 +219,7 @@ mutual
              pure (show rig ++ ": " ++ show n ++ " " ++ show fc ++ "\n"
                      ++ show def)
            if expand
-              then expandMeta rig erase env n idx (definition gdef) args
+              then expandMeta rig erase env n idx (definition gdef) $ map snd args
               else do let ty : ClosedTerm
                              = case definition gdef of
                                     Hole {} => unusedHoleArgs args (type gdef)
@@ -287,7 +287,7 @@ mutual
       checkUsageOK used r = when (isLinear r && used /= 1)
                                  (throw (LinearUsed fc used nm))
 
-  lcheck rig erase env (App fc f a)
+  lcheck rig erase env (App fc f c a)
       = do logC "quantity" 15 $ do pure "lcheck App \{show !(toFullNames f)} \{show !(toFullNames a)}"
            (f', gfty, fused) <- lcheck rig erase env f
            defs <- get Ctxt
@@ -314,7 +314,7 @@ mutual
                            do ty' <- quote defs env ty
                               aty' <- quote defs env aty
                               throw (CantConvert fc (gamma defs) env ty' aty')
-                      pure (App fc f' aerased,
+                      pure (App fc f' c aerased,
                             glueBack defs env sc',
                             fused ++ aused)
                 NApp _ (NRef _ n) _ =>
@@ -326,7 +326,7 @@ mutual
                   do when (not erase) $ needFunctionType f' gfty
                      -- we don't do any linearity checking when `erase` is set
                      -- so returning an empty usage is fine
-                     pure (App fc f a, gErased fc, Usage.empty)
+                     pure (App fc f c a, gErased fc, Usage.empty)
                 _ =>
                   needFunctionType f' gfty
     where
@@ -648,11 +648,11 @@ mutual
                {auto u : Ref UST UState} ->
                RigCount -> Bool -> Env Term vars ->
                FC -> Name -> Int ->
-               (args : List (Term vars)) ->
-               (checked : List (Term vars)) ->
+               (args : List (RigCount, Term vars)) ->
+               (checked : List (RigCount, Term vars)) ->
                NF vars -> Core (Term vars, Glued vars, Usage vars)
   lcheckMeta rig erase env fc n idx
-             (arg :: args) chk (NBind _ _ (Pi _ rigf _ ty) sc)
+             ((c, arg) :: args) chk (NBind _ _ (Pi _ rigf _ ty) sc)
       = do let checkRig = rigf |*| rig
            (arg', gargTy, aused) <- lcheck checkRig erase env arg
            defs <- get Ctxt
@@ -661,7 +661,7 @@ mutual
                             then Erased fc Placeholder
                             else arg'
            (tm, gty, u) <- lcheckMeta rig erase env fc n idx args
-                                      (aerased :: chk) sc'
+                                      ((c, aerased) :: chk) sc'
            pure (tm, gty, aused ++ u)
   lcheckMeta rig erase env fc n idx (arg :: args) chk nty
       = do defs <- get Ctxt

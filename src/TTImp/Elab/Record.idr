@@ -23,17 +23,17 @@ getRecordType env _ = Nothing
 
 getNames : {auto c : Ref Ctxt Defs} -> Defs -> ClosedNF -> Core $ SortedSet Name
 getNames defs (NApp _ hd args)
-    = do eargs <- traverse (evalClosure defs . snd) args
+    = do eargs <- traverse (evalClosure defs . value) args
          pure $ nheadNames hd `union` concat !(traverse (getNames defs) eargs)
   where
     nheadNames : NHead Scope.empty -> SortedSet Name
     nheadNames (NRef Bound n) = singleton n
     nheadNames _ = empty
 getNames defs (NDCon _ _ _ _ args)
-    = do eargs <- traverse (evalClosure defs . snd) args
+    = do eargs <- traverse (evalClosure defs . value) args
          pure $ concat !(traverse (getNames defs) eargs)
 getNames defs (NTCon _ _ _ args)
-  = do eargs <- traverse (evalClosure defs . snd) args
+  = do eargs <- traverse (evalClosure defs . value) args
        pure $ concat !(traverse (getNames defs) eargs)
 getNames defs (NDelayed _ _ tm) = getNames defs tm
 getNames {} = pure empty

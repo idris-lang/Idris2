@@ -906,9 +906,9 @@ mapTermM f = goTerm where
     goTerm : {vars : _} -> Term vars -> Core (Term vars)
     goTerm tm@(Local {}) = f tm
     goTerm tm@(Ref {}) = f tm
-    goTerm (Meta fc n i args) = f =<< Meta fc n i <$> traverse goTerm args
+    goTerm (Meta fc n i args) = f =<< Meta fc n i <$> traverse (traversePair goTerm) args
     goTerm (Bind fc x bd sc) = f =<< Bind fc x <$> traverse goTerm bd <*> goTerm sc
-    goTerm (App fc fn arg) = f =<< App fc <$> goTerm fn <*> goTerm arg
+    goTerm (App fc fn c arg) = f =<< App fc <$> goTerm fn <*> pure c <*> goTerm arg
     goTerm (As fc u as pat) = f =<< As fc u <$> goTerm as <*> goTerm pat
     goTerm (TDelayed fc la d) = f =<< TDelayed fc la <$> goTerm d
     goTerm (TDelay fc la ty arg) = f =<< TDelay fc la <$> goTerm ty <*> goTerm arg

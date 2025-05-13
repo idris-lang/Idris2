@@ -133,17 +133,17 @@ processFnOpt fc _ ndef (SpecArgs ns)
                getDeps False sc' ns
       getDeps inparam (NApp _ (NRef Bound n) args) ns
           = do defs <- get Ctxt
-               ns' <- getDepsArgs False !(traverse (evalClosure defs . snd) args) ns
+               ns' <- getDepsArgs False !(traverse (evalClosure defs . value) args) ns
                pure (insert n inparam ns')
       getDeps inparam (NDCon _ n t a args) ns
           = do defs <- get Ctxt
-               getDepsArgs False !(traverse (evalClosure defs . snd) args) ns
+               getDepsArgs False !(traverse (evalClosure defs . value) args) ns
       getDeps inparam (NTCon _ n a args) ns
           = do defs <- get Ctxt
                params <- case !(lookupDefExact n (gamma defs)) of
                               Just (TCon _ ps _ _ _ _ _) => pure ps
                               _ => pure NatSet.empty
-               let (ps, ds) = NatSet.partition params (map snd args)
+               let (ps, ds) = NatSet.partition params (map value args)
                ns' <- getDepsArgs True !(traverse (evalClosure defs) ps) ns
                getDepsArgs False !(traverse (evalClosure defs) ds) ns'
       getDeps inparam (NDelayed _ _ t) ns = getDeps inparam t ns

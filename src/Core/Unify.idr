@@ -280,10 +280,10 @@ unifySpine : (Unify tm, Quote tm) =>
              {auto c : Ref Ctxt Defs} ->
              {auto u : Ref UST UState} ->
              UnifyInfo -> FC -> Env Term vars ->
-             SnocList (tm vars) -> SnocList (tm vars) ->
+             SnocList (RigCount, tm vars) -> SnocList (RigCount, tm vars) ->
              Core UnifyResult
 unifySpine mode loc env [<] [<] = pure success
-unifySpine mode loc env (cxs :< cx) (cys :< cy)
+unifySpine mode loc env (cxs :< (_, cx)) (cys :< (_, cy))
     = do -- Do later arguments first, since they may depend on earlier
          -- arguments and use their solutions.
          res <- unify (lower mode) loc env cx cy
@@ -492,7 +492,7 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
     --   * It is smaller than some threshold and has no metavariables in it
     --   * It's just a metavariable itself
     noMeta : Term vs -> Nat -> Bool
-    noMeta (App _ f a) (S k) = noMeta f k && noMeta a k
+    noMeta (App _ f _ a) (S k) = noMeta f k && noMeta a k
     noMeta (Bind _ _ b sc) (S k) = noMeta (binderType b) k && noMeta sc k
     noMeta (Meta {}) d = False
     noMeta (TDelayed _ _ t) d = noMeta t d
@@ -508,7 +508,7 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
     isSimple : Term vs -> Bool
     isSimple (Meta {}) = True
     isSimple (Bind _ _ (Lam {}) sc) = isSimple sc
-    isSimple (App _ f a) = noMeta f 6 && noMeta a 3
+    isSimple (App _ f _ a) = noMeta f 6 && noMeta a 3
     isSimple tm = noMeta tm 0
 
     updateIVar : forall vs, newvars . IVars vs newvars -> Var newvars ->
@@ -528,7 +528,7 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
              Just (Local fc r _ p')
     updateIVars ivs (Ref fc nt n) = pure $ Ref fc nt n
     updateIVars ivs (Meta fc n i args)
-        = pure $ Meta fc n i !(traverse (updateIVars ivs) args)
+        = pure $ Meta fc n i !(traverse @{Compose} (updateIVars ivs) args)
     updateIVars {vs} ivs (Bind fc x b sc)
         = do b' <- updateIVarsB ivs b
              sc' <- updateIVars (ICons (Just first) (weaken ivs)) sc
@@ -559,8 +559,8 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
                  Just (PVar fc c p' !(updateIVars ivs t))
         updateIVarsB ivs (PLet fc c v t) = Just (PLet fc c !(updateIVars ivs v) !(updateIVars ivs t))
         updateIVarsB ivs (PVTy fc c t) = Just (PVTy fc c !(updateIVars ivs t))
-    updateIVars ivs (App fc f a)
-        = Just (App fc !(updateIVars ivs f) !(updateIVars ivs a))
+    updateIVars ivs (App fc f c a)
+        = Just (App fc !(updateIVars ivs f) c !(updateIVars ivs a))
     updateIVars ivs (As fc u a p)
         = Just (As fc u !(updateIVars ivs a) !(updateIVars ivs p))
     updateIVars ivs (TDelayed fc r arg)
@@ -604,7 +604,7 @@ updateSolution : {vars : _} ->
                  Env Term vars -> Term vars -> Term vars -> Core Bool
 updateSolution env (Meta fc mname idx args) soln
     = do defs <- get Ctxt
-         case !(patternEnvTm env (cast args)) of
+         case !(patternEnvTm env (cast (map snd args))) of
               Nothing => pure False
               Just (newvars ** (locs, submv)) =>
                   case shrink soln submv of
@@ -693,11 +693,11 @@ mutual
                     (swaporder : Bool) ->
                     UnifyInfo -> FC -> Env Term vars ->
                     (metaname : Name) -> (metaref : Int) ->
-                    (margs : SnocList (Closure vars)) ->
-                    (margs' : SnocList (Closure vars)) ->
+                    (margs : SnocList (RigCount, Closure vars)) ->
+                    (margs' : SnocList (RigCount, Closure vars)) ->
                     Maybe ClosedTerm ->
-                    (SnocList (FC, Closure vars) -> NF vars) ->
-                    SnocList (FC, Closure vars) ->
+                    (Spine vars -> NF vars) ->
+                    Spine vars ->
                     Core UnifyResult
   unifyInvertible swap mode fc env mname mref margs margs' nty con args'
       = do defs <- get Ctxt
@@ -705,9 +705,9 @@ mutual
            -- argument types match up
            Just vty <- lookupTyExact (Resolved mref) (gamma defs)
                 | Nothing => ufail fc ("No such metavariable " ++ show mname)
-           vargTys <- getArgTypes defs !(nf defs env (embed vty)) (reverse $ margs ++ margs')
+           vargTys <- getArgTypes defs !(nf defs env (embed vty)) $ map snd $ reverse $ margs ++ margs'
            nargTys <- maybe (pure Nothing)
-                            (\ty => getArgTypes defs !(nf defs env (embed ty)) $ (reverse $ map snd args'))
+                            (\ty => getArgTypes defs !(nf defs env (embed ty)) $ (reverse $ map value args'))
                             nty
            -- If the rightmost arguments have the same type, or we don't
            -- know the types of the arguments, we'll get on with it.
@@ -720,7 +720,7 @@ mutual
                         tryUnify
                           (if not swap then
                               do log "unify.invertible" 10 "Unifying invertible"
-                                 ures <- unify mode fc env h (snd f)
+                                 ures <- unify mode fc env (snd h) (value f)
                                  log "unify.invertible" 10 $ "Constraints " ++ show (constraints ures)
                                  uargs <- unify mode fc env
                                        (NApp fc (NMeta mname mref margs) (map (EmptyFC,) hargs))
@@ -728,7 +728,7 @@ mutual
                                  pure (union ures uargs)
                              else
                               do log "unify.invertible" 10 "Unifying invertible"
-                                 ures <- unify mode fc env (snd f) h
+                                 ures <- unify mode fc env (value f) (snd h)
                                  log "unify.invertible" 10 $ "Constraints " ++ show (constraints ures)
                                  uargs <- unify mode fc env
                                        (con fargs)
@@ -753,8 +753,8 @@ mutual
                  (swaporder : Bool) ->
                  UnifyInfo -> FC -> Env Term vars ->
                  (metaname : Name) -> (metaref : Int) ->
-                 (margs : SnocList (Closure vars)) ->
-                 (margs' : SnocList (Closure vars)) ->
+                 (margs : SnocList (RigCount, Closure vars)) ->
+                 (margs' : SnocList (RigCount, Closure vars)) ->
                  NF vars ->
                  Core UnifyResult
   unifyHoleApp swap mode loc env mname mref margs margs' (NTCon nfc n a args')
@@ -793,8 +793,8 @@ mutual
                    (swaporder : Bool) ->
                    UnifyInfo -> FC -> Env Term vars ->
                    (metaname : Name) -> (metaref : Int) ->
-                   (margs : SnocList (Closure vars)) ->
-                   (margs' : SnocList (Closure vars)) ->
+                   (margs : SnocList (RigCount, Closure vars)) ->
+                   (margs' : SnocList (RigCount, Closure vars)) ->
                    (soln : NF vars) ->
                    Core UnifyResult
   postponePatVar swap mode loc env mname mref margs margs' tm
@@ -810,8 +810,8 @@ mutual
               {newvars, vars : _} ->
               FC -> UnifyInfo -> Env Term vars ->
               (metaname : Name) -> (metaref : Int) ->
-              (margs : SnocList (Closure vars)) ->
-              (margs' : SnocList (Closure vars)) ->
+              (margs : SnocList (RigCount, Closure vars)) ->
+              (margs' : SnocList (RigCount, Closure vars)) ->
               SnocList (Var newvars) ->
               Thin newvars vars ->
               (solfull : Term vars) -> -- Original solution
@@ -855,8 +855,8 @@ mutual
               (swaporder : Bool) ->
               UnifyInfo -> FC -> Env Term vars ->
               FC -> (metaname : Name) -> (metaref : Int) ->
-              (args : SnocList (Closure vars)) ->
-              (args' : SnocList (Closure vars)) ->
+              (args : SnocList (RigCount, Closure vars)) ->
+              (args' : SnocList (RigCount, Closure vars)) ->
               (soln : NF vars) ->
               Core UnifyResult
   unifyHole swap mode loc env fc mname mref margs margs' tmnf
@@ -864,12 +864,12 @@ mutual
            empty <- clearDefs defs
            let args = if isLin margs' then cast margs else cast margs ++ margs'
            logC "unify.hole" 10
-                   (do args' <- traverse (evalArg empty) args
+                   (do args' <- traverse (evalArg empty . snd) args
                        qargs <- traverse (quote empty env) args'
                        qtm <- quote empty env tmnf
                        pure $ "Unifying: " ++ show mname ++ " " ++ show qargs ++
                               " with " ++ show qtm) -- first attempt, try 'empty', only try 'defs' when on 'retry'?
-           case !(patternEnv env args) of
+           case !(patternEnv env $ map snd args) of
                 Nothing =>
                   do Just hdef <- lookupCtxtExact (Resolved mref) (gamma defs)
                         | _ => postponePatVar swap mode loc env mname mref margs margs' tmnf
@@ -920,7 +920,7 @@ mutual
              (swaporder : Bool) -> -- swap the order when postponing
                                    -- (this is to preserve second arg being expected type)
              UnifyInfo -> FC -> Env Term vars -> FC ->
-             NHead vars -> SnocList (FC, Closure vars) -> NF vars ->
+             NHead vars -> Spine vars -> NF vars ->
              Core UnifyResult
   unifyApp swap mode loc env fc (NMeta n i margs) args tm
       = unifyHole swap mode loc env fc n i margs (map snd args) tm
@@ -971,8 +971,8 @@ mutual
                   {auto u : Ref UST UState} ->
                   {vars : _} ->
                   UnifyInfo -> FC -> Env Term vars ->
-                  FC -> NHead vars -> SnocList (FC, Closure vars) ->
-                  FC -> NHead vars -> SnocList (FC, Closure vars) ->
+                  FC -> NHead vars -> Spine vars ->
+                  FC -> NHead vars -> Spine vars ->
                   Core UnifyResult
   unifyBothApps mode loc env xfc (NLocal xr x xp) [<] yfc (NLocal yr y yp) [<]
       = if x == y
@@ -999,8 +999,8 @@ mutual
                                -- so we can also unify the arguments.
               then unifySpine mode loc env (Scope.addInner (map snd xargs') xargs)
                                            (Scope.addInner (map snd yargs') yargs)
-              else do xlocs <- localsIn xargs
-                      ylocs <- localsIn yargs
+              else do xlocs <- localsIn (map snd xargs)
+                      ylocs <- localsIn (map snd yargs)
                       -- Solve the one with the bigger context, and if they're
                       -- equal, the one that's applied to fewest things (because
                       -- then they arguments get substituted in)
@@ -1042,8 +1042,8 @@ mutual
       = if hdx == hdy
            then do logC "unify.application" 5
                           (do defs <- get Ctxt
-                              xs <- traverse (quote defs env) (map snd xargs)
-                              ys <- traverse (quote defs env) (map snd yargs)
+                              xs <- traverse (quote defs env) (map value xargs)
+                              ys <- traverse (quote defs env) (map value yargs)
                               pure ("Matching args " ++ show xs ++ " " ++ show ys))
                    unifySpine mode loc env (map snd xargs) (map snd yargs)
            else unifyApp False mode loc env xfc fx xargs (NApp yfc fy yargs)
@@ -1107,7 +1107,7 @@ mutual
                                       (Bind xfc x (Pi fcy cy Explicit txtm)
                                           (weaken tytm)) cs
                                tscx <- scx defs (toClosure defaultOpts env (Ref loc Bound xn))
-                               tscy <- scy defs (toClosure defaultOpts env (App loc c (Ref loc Bound xn)))
+                               tscy <- scy defs (toClosure defaultOpts env (App loc c cy (Ref loc Bound xn)))
                                tmx <- quote empty env tscx
                                tmy <- quote empty env tscy
                                cs' <- unify (lower mode) loc env'
@@ -1191,14 +1191,14 @@ mutual
           y <- toFullNames y
           pure $ "Comparing type constructors " ++ show x ++ " and " ++ show y
         if x == y
-           then do let xs = map snd xs
-                   let ys = map snd ys
+           then do let xs' = map snd xs
+                   let ys' = map snd ys
 
                    logC "unify" 20 $
                      pure $ "Constructor " ++ show x
-                   logC "unify" 20 $ map (const "") $ traverse_ (dumpArg env) xs
-                   logC "unify" 20 $ map (const "") $ traverse_ (dumpArg env) ys
-                   unifySpine mode loc env xs ys
+                   logC "unify" 20 $ map (const "") $ traverse_ (dumpArg env) $ map snd xs'
+                   logC "unify" 20 $ map (const "") $ traverse_ (dumpArg env) $ map snd ys'
+                   unifySpine mode loc env xs' ys'
              -- TODO: Type constructors are not necessarily injective.
              -- If we don't know it's injective, need to postpone the
              -- constraint. But before then, we need some way to decide
@@ -1270,7 +1270,7 @@ mutual
                         domty <- quote empty env tx
                         etay <- nf defs env
                                   $ Bind xfc x (Lam fcx cx Explicit domty)
-                                  $ App xfc (weaken !(quote empty env tmy))
+                                  $ App xfc (weaken !(quote empty env tmy)) cx
                                             (Local xfc Nothing 0 First)
                         logNF "unify" 10 "Expand" env etay
                         unify (lower mode) loc env tmx etay
@@ -1286,7 +1286,7 @@ mutual
                         domty <- quote empty env ty
                         etax <- nf defs env
                                  $ Bind yfc y (Lam fcy cy Explicit domty)
-                                 $ App yfc (weaken !(quote empty env tmx))
+                                 $ App yfc (weaken !(quote empty env tmx)) cy
                                            (Local yfc Nothing 0 First)
                         logNF "unify" 10 "Expand" env etax
                         unify (lower mode) loc env etax tmy

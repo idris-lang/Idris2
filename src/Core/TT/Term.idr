@@ -99,11 +99,11 @@ data Term : Scoped where
              (idx : Nat) -> (0 p : IsVar name idx vars) -> Term vars
      Ref : FC -> NameType -> (name : Name) -> Term vars
      -- Metavariables and the scope they are applied to
-     Meta : FC -> Name -> Int -> List (Term vars) -> Term vars
+     Meta : FC -> Name -> Int -> List (RigCount, Term vars) -> Term vars
      Bind : FC -> (x : Name) ->
             (b : Binder (Term vars)) ->
             (scope : Term (Scope.bind vars x)) -> Term vars
-     App : FC -> (fn : Term vars) -> (arg : Term vars) -> Term vars
+     App : FC -> (fn : Term vars) -> RigCount -> (arg : Term vars) -> Term vars
      -- as patterns; since we check LHS patterns as terms before turning
      -- them into patterns, this helps us get it right. When normalising,
      -- we just reduce the inner term and ignore the 'as' part
@@ -136,12 +136,12 @@ insertNames mid inn (Local fc r idx prf)
      Local fc r _ prf'
 insertNames mid inn (Ref fc nt name) = Ref fc nt name
 insertNames mid inn (Meta fc name idx args)
-    = Meta fc name idx (map (insertNames mid inn) args)
+    = Meta fc name idx (map @{Compose} (insertNames mid inn) args)
 insertNames mid inn (Bind fc x b scope)
     = Bind fc x (assert_total (map (insertNames mid inn) b))
            (insertNames mid (suc inn) scope)
-insertNames mid inn (App fc fn arg)
-    = App fc (insertNames mid inn fn) (insertNames mid inn arg)
+insertNames mid inn (App fc fn c arg)
+    = App fc (insertNames mid inn fn) c (insertNames mid inn arg)
 insertNames mid inn (As fc s as tm)
     = As fc s (insertNames mid inn as) (insertNames mid inn tm)
 insertNames mid inn (TDelayed fc r ty) = TDelayed fc r (insertNames mid inn ty)
@@ -167,8 +167,8 @@ compatTerm compat tm = believe_me tm -- no names in term, so it's identity
 --     = Meta fc n i (map (compatTerm prf) args)
 -- compatTerm prf (Bind fc x b scope)
 --     = Bind fc x (map (compatTerm prf) b) (compatTerm (CompatExt prf) scope)
--- compatTerm prf (App fc fn arg)
---     = App fc (compatTerm prf fn) (compatTerm prf arg)
+-- compatTerm prf (App fc fn c arg)
+--     = App fc (compatTerm prf fn) c (compatTerm prf arg)
 -- compatTerm prf (As fc s as tm)
 --     = As fc s (compatTerm prf as) (compatTerm prf tm)
 -- compatTerm prf (TDelayed fc r ty) = TDelayed fc r (compatTerm prf ty)
@@ -199,17 +199,23 @@ mutual
     = assert_total
     $ traverse (\ t => shrinkTerm t th) ts
 
+  export
+  shrinkTaggedTerms : Shrinkable (List . (RigCount,) . Term)
+  shrinkTaggedTerms ts th
+    = assert_total
+    $ traverse @{Compose} (\ t => shrinkTerm t th) ts
+
   shrinkTerm : Shrinkable Term
   shrinkTerm (Local fc r idx loc) prf
     = do MkVar loc' <- shrinkIsVar loc prf
          pure (Local fc r _ loc')
   shrinkTerm (Ref fc x name) prf = Just (Ref fc x name)
   shrinkTerm (Meta fc x y xs) prf
-     = do Just (Meta fc x y !(shrinkTerms xs prf))
+     = do Just (Meta fc x y !(shrinkTaggedTerms xs prf))
   shrinkTerm (Bind fc x b scope) prf
      = Just (Bind fc x !(shrinkBinder b prf) !(shrinkTerm scope (Keep prf)))
-  shrinkTerm (App fc fn arg) prf
-     = Just (App fc !(shrinkTerm fn prf) !(shrinkTerm arg prf))
+  shrinkTerm (App fc fn c arg) prf
+     = Just (App fc !(shrinkTerm fn prf) c !(shrinkTerm arg prf))
   shrinkTerm (As fc s as tm) prf
      = Just (As fc s !(shrinkTerm as prf) !(shrinkTerm tm prf))
   shrinkTerm (TDelayed fc x y) prf
@@ -238,16 +244,20 @@ mutual
   thinTerms : Thinnable (List . Term)
   thinTerms ts th = assert_total $ map (\ t => thinTerm t th) ts
 
+  export
+  thinTaggedTerms : Thinnable (List . (RigCount,) . Term)
+  thinTaggedTerms ts th = assert_total $ map @{Compose} (\ t => thinTerm t th) ts
+
   thinTerm : Thinnable Term
   thinTerm (Local fc x idx y) th
       = let MkVar y' = thinIsVar y th in Local fc x _ y'
   thinTerm (Ref fc x name) th = Ref fc x name
   thinTerm (Meta fc x y xs) th
-      = Meta fc x y (thinTerms xs th)
+      = Meta fc x y (thinTaggedTerms xs th)
   thinTerm (Bind fc x b scope) th
       = Bind fc x (thinBinder b th) (thinTerm scope (Keep th))
-  thinTerm (App fc fn arg) th
-      = App fc (thinTerm fn th) (thinTerm arg th)
+  thinTerm (App fc fn c arg) th
+      = App fc (thinTerm fn th) c (thinTerm arg th)
   thinTerm (As fc s nm pat) th
       = As fc s (thinTerm nm th) (thinTerm pat th)
   thinTerm (TDelayed fc x y) th = TDelayed fc x (thinTerm y th)
@@ -282,26 +292,26 @@ IsScoped Term where
 -- Smart constructors
 
 export
-apply : FC -> Term vars -> List (Term vars) -> Term vars
+apply : FC -> Term vars -> List (RigCount, Term vars) -> Term vars
 apply loc fn [] = fn
-apply loc fn (a :: args) = apply loc (App loc fn a) args
+apply loc fn ((c, a) :: args) = apply loc (App loc fn c a) args
 
 export
-applySpine : FC -> Term vars -> SnocList (Term vars) -> Term vars
+applySpine : FC -> Term vars -> SnocList (RigCount, Term vars) -> Term vars
 applySpine loc fn [<] = fn
-applySpine loc fn (args :< a) = App loc (applySpine loc fn args) a
+applySpine loc fn (args :< (c, a)) = App loc (applySpine loc fn args) c a
 
 -- Creates a chain of `App` nodes, each with its own file context
 export
-applySpineWithFC : Term vars -> SnocList (FC, Term vars) -> Term vars
+applySpineWithFC : Term vars -> SnocList (FC, RigCount, Term vars) -> Term vars
 applySpineWithFC fn [<] = fn
-applySpineWithFC fn (args :< (fc, arg)) = App fc (applySpineWithFC fn args) arg
+applySpineWithFC fn (args :< (fc, c, arg)) = App fc (applySpineWithFC fn args) c arg
 
 -- Creates a chain of `App` nodes, each with its own file context
 export
-applyStackWithFC : Term vars -> List (FC, Term vars) -> Term vars
+applyStackWithFC : Term vars -> List (FC, RigCount, Term vars) -> Term vars
 applyStackWithFC fn [] = fn
-applyStackWithFC fn ((fc, arg) :: args) = applyStackWithFC (App fc fn arg) args
+applyStackWithFC fn ((fc, c, arg) :: args) = applyStackWithFC (App fc fn c arg) args
 
 -- Build a simple function type
 export
@@ -318,19 +328,28 @@ getFnArgs tm = getFA [] tm
   where
     getFA : List (Term vars) -> Term vars ->
             (Term vars, List (Term vars))
-    getFA args (App _ f a) = getFA (a :: args) f
+    getFA args (App _ f _ a) = getFA (a :: args) f
     getFA args tm = (tm, args)
 
 export
-getFnArgsSpine : Term vars -> (Term vars, SnocList (Term vars))
-getFnArgsSpine (App _ f a)
+getFnArgsWithCounts : Term vars -> (Term vars, List (RigCount, Term vars))
+getFnArgsWithCounts tm = getFA [] tm
+  where
+    getFA : List (RigCount, Term vars) -> Term vars ->
+            (Term vars, List (RigCount, Term vars))
+    getFA args (App _ f c a) = getFA ((c, a) :: args) f
+    getFA args tm = (tm, args)
+
+export
+getFnArgsSpine : Term vars -> (Term vars, SnocList (RigCount, Term vars))
+getFnArgsSpine (App _ f c a)
     = let (fn, sp) = getFnArgsSpine f in
-          (fn, sp :< a)
+          (fn, sp :< (c, a))
 getFnArgsSpine tm = (tm, [<])
 
 export
 getFn : Term vars -> Term vars
-getFn (App _ f a) = getFn f
+getFn (App _ f _ a) = getFn f
 getFn tm = tm
 
 export
@@ -368,11 +387,11 @@ StripNamespace (Term vars) where
   trimNS ns (Ref fc x nm)
       = Ref fc x (trimNS ns nm)
   trimNS ns (Meta fc x y xs)
-      = Meta fc x y (map (trimNS ns) xs)
+      = Meta fc x y (map @{Compose} (trimNS ns) xs)
   trimNS ns (Bind fc x b scope)
       = Bind fc x (map (trimNS ns) b) (trimNS ns scope)
-  trimNS ns (App fc fn arg)
-      = App fc (trimNS ns fn) (trimNS ns arg)
+  trimNS ns (App fc fn c arg)
+      = App fc (trimNS ns fn) c (trimNS ns arg)
   trimNS ns (As fc s p tm)
       = As fc s (trimNS ns p) (trimNS ns tm)
   trimNS ns (TDelayed fc x y)
@@ -386,11 +405,11 @@ StripNamespace (Term vars) where
   restoreNS ns (Ref fc x nm)
       = Ref fc x (restoreNS ns nm)
   restoreNS ns (Meta fc x y xs)
-      = Meta fc x y (map (restoreNS ns) xs)
+      = Meta fc x y (map @{Compose} (restoreNS ns) xs)
   restoreNS ns (Bind fc x b scope)
       = Bind fc x (map (restoreNS ns) b) (restoreNS ns scope)
-  restoreNS ns (App fc fn arg)
-      = App fc (restoreNS ns fn) (restoreNS ns arg)
+  restoreNS ns (App fc fn c arg)
+      = App fc (restoreNS ns fn) c (restoreNS ns arg)
   restoreNS ns (As fc s p tm)
       = As fc s (restoreNS ns p) (restoreNS ns tm)
   restoreNS ns (TDelayed fc x y)
@@ -413,7 +432,7 @@ getLoc (Local fc _ _ _) = fc
 getLoc (Ref fc _ _) = fc
 getLoc (Meta fc _ _ _) = fc
 getLoc (Bind fc _ _ _) = fc
-getLoc (App fc _ _) = fc
+getLoc (App fc _ _ _) = fc
 getLoc (As fc _ _ _) = fc
 getLoc (TDelayed fc _ _) = fc
 getLoc (TDelay fc _ _ _) = fc
@@ -462,10 +481,10 @@ eqTerm : Term vs -> Term vs' -> Bool
 eqTerm (Local _ _ idx _) (Local _ _ idx' _) = idx == idx'
 eqTerm (Ref _ _ n) (Ref _ _ n') = n == n'
 eqTerm (Meta _ _ i args) (Meta _ _ i' args')
-    = i == i' && assert_total (all (uncurry eqTerm) (zip args args'))
+    = i == i' && assert_total (all (uncurry eqTerm) (zip (map snd args) (map snd args')))
 eqTerm (Bind _ _ b sc) (Bind _ _ b' sc')
     = assert_total (eqBinderBy eqTerm b b') && eqTerm sc sc'
-eqTerm (App _ f a) (App _ f' a') = eqTerm f f' && eqTerm a a'
+eqTerm (App _ f _ a) (App _ f' _ a') = eqTerm f f' && eqTerm a a'
 eqTerm (As _ _ a p) (As _ _ a' p') = eqTerm a a' && eqTerm p p'
 eqTerm (TDelayed _ _ t) (TDelayed _ _ t') = eqTerm t t'
 eqTerm (TDelay _ _ t x) (TDelay _ _ t' x') = eqTerm t t' && eqTerm x x'
@@ -488,8 +507,8 @@ mutual
   resolveNamesBinder : (vars : Scope) -> Binder (Term vars) -> Binder (Term vars)
   resolveNamesBinder vars b = assert_total $ map (resolveNames vars) b
 
-  resolveNamesTerms : (vars : Scope) -> List (Term vars) -> List (Term vars)
-  resolveNamesTerms vars ts = assert_total $ map (resolveNames vars) ts
+  resolveNamesTerms : (vars : Scope) -> List (RigCount, Term vars) -> List (RigCount, Term vars)
+  resolveNamesTerms vars ts = assert_total $ map @{Compose} (resolveNames vars) ts
 
   -- Replace any Ref Bound in a type with appropriate local
   export
@@ -502,8 +521,8 @@ mutual
       = Meta fc n i (resolveNamesTerms vars xs)
   resolveNames vars (Bind fc x b scope)
       = Bind fc x (resolveNamesBinder vars b) (resolveNames (Scope.bind vars x) scope)
-  resolveNames vars (App fc fn arg)
-      = App fc (resolveNames vars fn) (resolveNames vars arg)
+  resolveNames vars (App fc fn c arg)
+      = App fc (resolveNames vars fn) c (resolveNames vars arg)
   resolveNames vars (As fc s as pat)
       = As fc s (resolveNames vars as) (resolveNames vars pat)
   resolveNames vars (TDelayed fc x y)
@@ -554,7 +573,7 @@ covering
       showApp (Bind _ x (PVTy _ c ty) sc) []
           = "pty " ++ showCount c ++ show x ++ " : " ++ show ty ++
             " => " ++ show sc
-      showApp (App {}) [] = "[can't happen]"
+      showApp (App _ {}) [] = "[can't happen]"
       showApp (As _ _ n tm) [] = show n ++ "@" ++ show tm
       showApp (TDelayed _ _ tm) [] = "%Delayed " ++ show tm
       showApp (TDelay _ _ _ tm) [] = "%Delay " ++ show tm

@@ -32,12 +32,12 @@ changeVar old (MkVar new) (Local fc r idx p)
          then Local fc r _ new
          else Local fc r _ p
 changeVar old new (Meta fc nm i args)
-    = Meta fc nm i (map (changeVar old new) args)
+    = Meta fc nm i (map @{Compose} (changeVar old new) args)
 changeVar (MkVar old) (MkVar new) (Bind fc x b sc)
     = Bind fc x (assert_total (map (changeVar (MkVar old) (MkVar new)) b))
            (changeVar (MkVar (Later old)) (MkVar (Later new)) sc)
-changeVar old new (App fc fn arg)
-    = App fc (changeVar old new fn) (changeVar old new arg)
+changeVar old new (App fc fn c arg)
+    = App fc (changeVar old new fn) c (changeVar old new arg)
 changeVar old new (As fc s nm p)
     = As fc s (changeVar old new nm) (changeVar old new p)
 changeVar old new (TDelayed fc r p)
@@ -231,7 +231,7 @@ caseBlock {vars} rigc elabinfo fc nest env opts scr scrtm scrty caseRig alts exp
 
          let applyEnv = applyToFull fc caseRef env
          let appTm : Term vars
-                   = maybe (App fc applyEnv scrtm)
+                   = maybe (App fc applyEnv caseRig scrtm)
                            (const applyEnv)
                            splitOn
 

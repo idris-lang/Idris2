@@ -68,28 +68,20 @@ mutual
   quoteArg q opts defs bounds env a
       = quoteGenNF q opts defs bounds env !(evalClosure defs a)
 
-  quoteArgWithFC : {auto c : Ref Ctxt Defs} ->
-                   {bound, free : _} ->
-                   Ref QVar Int -> QuoteOpts -> Defs -> Bounds bound ->
-                   Env Term free -> (FC, Closure free) ->
-                   Core ((FC, Term (Scope.addInner free bound)))
-  quoteArgWithFC q opts defs bounds env
-       = traversePair (quoteArg q opts defs bounds env)
-
   quoteArgs : {auto c : Ref Ctxt Defs} ->
               {bound, free : _} ->
               Ref QVar Int -> QuoteOpts -> Defs -> Bounds bound ->
-              Env Term free -> SnocList (Closure free) ->
-              Core (SnocList (Term (Scope.addInner free bound)))
-  quoteArgs q opts defs bounds env = traverse (quoteArg q opts defs bounds env)
+              Env Term free -> SnocList (RigCount, Closure free) ->
+              Core (SnocList (RigCount, Term (Scope.addInner free bound)))
+  quoteArgs q opts defs bounds env = traverse $ traversePair $ quoteArg q opts defs bounds env
 
   quoteArgsWithFC : {auto c : Ref Ctxt Defs} ->
                     {bound, free : _} ->
                     Ref QVar Int -> QuoteOpts -> Defs -> Bounds bound ->
-                    Env Term free -> SnocList (FC, Closure free) ->
-                    Core (SnocList (FC, Term (Scope.addInner free bound)))
+                    Env Term free -> Spine free ->
+                    Core (SnocList (FC, RigCount, Term (Scope.addInner free bound)))
   quoteArgsWithFC q opts defs bounds env
-      = traverse (quoteArgWithFC q opts defs bounds env)
+      = traverse (traversePair $ traversePair $ quoteArg q opts defs bounds env)
 
   quoteHead : {auto c : Ref Ctxt Defs} ->
               {bound, free : _} ->

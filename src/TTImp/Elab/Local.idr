@@ -174,7 +174,7 @@ getLocalTerm fc env f (a :: as)
     = case defined a env of
            Just (MkIsDefined rigb lv) =>
                 do (tm, vs) <- getLocalTerm fc env
-                                   (App fc f (Local fc Nothing _ lv)) as
+                                   (App fc f rigb (Local fc Nothing _ lv)) as
                    pure (tm, MkVar lv :: vs)
            Nothing => throw (InternalError "Case Local failed")
 

@@ -161,11 +161,11 @@ mutual
   mismatchNF defs (NTCon _ xn _ xargs) (NTCon _ yn _ yargs)
       = if xn /= yn
            then pure True
-           else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
+           else anyM (mismatch defs) (zipWith (curry $ mapHom $ value) xargs yargs)
   mismatchNF defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
       = if xt /= yt
            then pure True
-           else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
+           else anyM (mismatch defs) (zipWith (curry $ mapHom $ value) xargs yargs)
   mismatchNF defs (NPrimVal _ xc) (NPrimVal _ yc) = pure (xc /= yc)
   mismatchNF defs (NDelayed _ _ x) (NDelayed _ _ y) = mismatchNF defs x y
   mismatchNF defs (NDelay _ _ _ x) (NDelay _ _ _ y)
@@ -185,11 +185,11 @@ contra : {auto c : Ref Ctxt Defs} ->
 contra defs (NTCon _ xn xa xargs) (NTCon _ yn ya yargs)
     = if xn /= yn
          then pure True
-         else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
+         else anyM (mismatch defs) (zipWith (curry $ mapHom $ value) xargs yargs)
 contra defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
     = if xt /= yt
          then pure True
-         else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
+         else anyM (mismatch defs) (zipWith (curry $ mapHom $ value) xargs yargs)
 contra defs (NPrimVal _ x) (NPrimVal _ y) = pure (x /= y)
 contra defs (NDCon {}) (NPrimVal {}) = pure True
 contra defs (NPrimVal {}) (NDCon {}) = pure True

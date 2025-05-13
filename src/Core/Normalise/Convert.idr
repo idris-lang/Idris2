@@ -73,7 +73,7 @@ tryUpdate ms (Local fc l idx p)
     = do MkVar p' <- findIdx ms idx
          pure $ Local fc l _ p'
 tryUpdate ms (Ref fc nt n) = pure $ Ref fc nt n
-tryUpdate ms (Meta fc n i args) = pure $ Meta fc n i !(traverse (tryUpdate ms) args)
+tryUpdate ms (Meta fc n i args) = pure $ Meta fc n i !(traverse @{Compose} (tryUpdate ms) args)
 tryUpdate ms (Bind fc x b sc)
     = do b' <- tryUpdateB b
          pure $ Bind fc x b' !(tryUpdate (map weakenP ms) sc)
@@ -93,7 +93,7 @@ tryUpdate ms (Bind fc x b sc)
     weakenP : {n : _} -> (Var vars, Var vars') ->
               (Var (Scope.bind vars n), Var (Scope.bind vars' n))
     weakenP (v, vs) = (weaken v, weaken vs)
-tryUpdate ms (App fc f a) = pure $ App fc !(tryUpdate ms f) !(tryUpdate ms a)
+tryUpdate ms (App fc f c a) = pure $ App fc !(tryUpdate ms f) c !(tryUpdate ms a)
 tryUpdate ms (As fc s a p) = pure $ As fc s !(tryUpdate ms a) !(tryUpdate ms p)
 tryUpdate ms (TDelayed fc r tm) = pure $ TDelayed fc r !(tryUpdate ms tm)
 tryUpdate ms (TDelay fc r ty tm) = pure $ TDelay fc r !(tryUpdate ms ty) !(tryUpdate ms tm)
@@ -316,7 +316,7 @@ mutual
   chkConvHead q i defs env (NRef _ n) (NRef _ n') = pure $ n == n'
   chkConvHead q inf defs env (NMeta n i args) (NMeta n' i' args')
      = if i == i'
-          then allConv q inf defs env args args'
+          then allConv q inf defs env (map snd args) (map snd args')
           else pure False
   chkConvHead q i defs env _ _ = pure False
 
@@ -361,14 +361,14 @@ mutual
         = do empty <- clearDefs defs
              etay <- nf defs env
                         (Bind fc x (Lam fc' c !(traverse (quote empty env) ix) !(quote empty env tx))
-                           (App fc (weaken !(quote empty env tmy))
+                           (App fc (weaken !(quote empty env tmy)) c
                                 (Local fc Nothing _ First)))
              convGen q i defs env tmx etay
     convGen q i defs env tmx tmy@(NBind fc y (Lam fc' c iy ty) scy)
         = do empty <- clearDefs defs
              etax <- nf defs env
                         (Bind fc y (Lam fc' c !(traverse (quote empty env) iy) !(quote empty env ty))
-                           (App fc (weaken !(quote empty env tmx))
+                           (App fc (weaken !(quote empty env tmx)) c
                                 (Local fc Nothing _ First)))
              convGen q i defs env etax tmy
 
@@ -389,18 +389,18 @@ mutual
 
           -- Discard file context information irrelevant for conversion checking
           args1 : SnocList (Closure vars)
-          args1 = map snd args
+          args1 = map value args
 
           args2 : SnocList (Closure vars)
-          args2 = map snd args'
+          args2 = map value args'
 
     convGen q i defs env (NDCon _ nm tag _ args) (NDCon _ nm' tag' _ args')
         = if tag == tag'
-             then allConv q i defs env (map snd args) (map snd args')
+             then allConv q i defs env (map value args) (map value args')
              else pure False
     convGen q i defs env (NTCon _ nm _ args) (NTCon _ nm' _ args')
         = if nm == nm'
-             then allConv q i defs env (map snd args) (map snd args')
+             then allConv q i defs env (map value args) (map value args')
              else pure False
     convGen q i defs env (NAs _ _ _ tm) (NAs _ _ _ tm')
         = convGen q i defs env tm tm'
@@ -421,7 +421,7 @@ mutual
     convGen q i defs env (NForce _ r arg args) (NForce _ r' arg' args')
         = if compatible r r'
              then if !(convGen q i defs env arg arg')
-                     then allConv q i defs env (map snd args) (map snd args')
+                     then allConv q i defs env (map value args) (map value args')
                      else pure False
              else pure False
 

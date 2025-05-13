@@ -32,7 +32,7 @@ processRunElab eopts nest env fc tm
          tidx <- resolveName (UN $ Basic "[elaborator script]")
          let n = NS reflectionNS (UN $ Basic "Elab")
          unit <- getCon fc defs (builtin "Unit")
-         exp <- appCon fc defs n [unit]
+         exp <- appConTop fc defs n [unit]
 
          stm <- checkTerm tidx InExpr eopts nest env tm (gnf env exp)
          nfstm <- nfOpts withAll defs env stm

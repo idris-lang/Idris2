@@ -7,9 +7,9 @@ import Libraries.Data.NameMap
 
 %default total
 
-unload : List (FC, Term vars) -> Term vars -> Term vars
+unload : List (FC, RigCount, Term vars) -> Term vars -> Term vars
 unload [] fn = fn
-unload ((fc, arg) :: args) fn = unload args (App fc fn arg)
+unload ((fc, c, arg) :: args) fn = unload args (App fc fn c arg)
 
 -- List of matches on LHS
 data MatchVars : Scope -> Scope -> Type where
@@ -40,7 +40,7 @@ match : MatchVars vars vs ->
         Term vars -> Term vs -> Maybe (MatchVars vars vs)
 match ms (Local _ _ idx p) val
     = addMatch idx p val ms
-match ms (App _ f a) (App _ f' a')
+match ms (App _ f _ a) (App _ f' _ a')
     = do ms' <- match ms f f'
          match ms' a a'
 match ms x y
@@ -53,16 +53,16 @@ tryReplace : MatchVars vars vs -> Term vars -> Maybe (Term vs)
 tryReplace ms (Local _ _ idx p) = lookupMatch idx p ms
 tryReplace ms (Ref fc nt n) = pure (Ref fc nt n)
 tryReplace ms (Meta fc n i as)
-    = do as' <- traverse (tryReplace ms) as
+    = do as' <- traverse @{Compose} (tryReplace ms) as
          pure (Meta fc n i as')
 tryReplace ms (Bind fc x b sc)
     = Nothing -- TODO: can't do this yet... need to be able to weaken ms
               -- Rules are unlikely to have binders usually but we should
               -- still support it eventually
-tryReplace ms (App fc f a)
+tryReplace ms (App fc f c a)
     = do f' <- tryReplace ms f
          a' <- tryReplace ms a
-         pure (App fc f' a')
+         pure (App fc f' c a')
 tryReplace ms (As fc s a p)
     = do a' <- tryReplace ms a
          p' <- tryReplace ms p
@@ -90,9 +90,9 @@ tryApply trans@(MkTransform {vars} n _ lhs rhs) tm
           Just ms => tryReplace ms rhs
           Nothing =>
             case tm of
-                 App fc f a =>
+                 App fc f c a =>
                      do f' <- tryApply trans f
-                        Just (App fc f' a)
+                        Just (App fc f' c a)
                  _ => Nothing
 
 covering
@@ -108,7 +108,7 @@ data Upd : Type where
 covering
 trans : {auto c : Ref Ctxt Defs} ->
         {auto u : Ref Upd Bool} ->
-        Env Term vars -> List (FC, Term vars) -> Term vars ->
+        Env Term vars -> List (FC, RigCount, Term vars) -> Term vars ->
         Core (Term vars)
 trans env stk (Ref fc Func fn)
     = do defs <- get Ctxt
@@ -119,15 +119,15 @@ trans env stk (Ref fc Func fn)
                             update Upd (|| u)
                             pure tm'
 trans env stk (Meta fc n i args)
-    = do args' <- traverse (trans env []) args
+    = do args' <- traverse (traversePair $ trans env []) args
          pure $ unload stk (Meta fc n i args')
 trans env stk (Bind fc x b sc)
     = do b' <- traverse (trans env []) b
          sc' <- trans (Env.bind env b') [] sc
          pure $ unload stk (Bind fc x b' sc')
-trans env stk (App fc fn arg)
+trans env stk (App fc fn c arg)
     = do arg' <- trans env [] arg
-         trans env ((fc, arg') :: stk) fn
+         trans env ((fc, c, arg') :: stk) fn
 trans env stk (TDelayed fc r tm)
     = do tm' <- trans env [] tm
          pure $ unload stk (TDelayed fc r tm')

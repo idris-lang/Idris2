@@ -110,12 +110,12 @@ fuzzySearch expr = do
   doFind ns (Local fc x idx y) = ns
   doFind ns (Ref fc x name) = AName name :: ns
   doFind ns (Meta fc n i xs)
-      = foldl doFind ns xs
+      = foldl doFind ns $ map snd xs
   doFind ns (Bind fc x (Let _ c val ty) scope)
       = doFind (doFind (doFind ns val) ty) scope
   doFind ns (Bind fc x b scope)
       = doFind (doFind ns (binderType b)) scope
-  doFind ns (App fc fn arg)
+  doFind ns (App fc fn _ arg)
       = doFind (doFind ns fn) arg
   doFind ns (As fc s as tm) = doFind ns tm
   doFind ns (TDelayed fc x y) = doFind ns y
