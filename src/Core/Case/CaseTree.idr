@@ -102,8 +102,8 @@ public export
 data Pat : Type where
      PAs : FC -> Name -> Pat -> Pat
      PCon : FC -> Name -> (tag : Int) -> (arity : Nat) ->
-            SnocList Pat -> Pat
-     PTyCon : FC -> Name -> (arity : Nat) -> SnocList Pat -> Pat
+            SnocList (RigCount, Pat) -> Pat
+     PTyCon : FC -> Name -> (arity : Nat) -> SnocList (RigCount, Pat) -> Pat
      PConst : FC -> (c : Constant) -> Pat
      PArrow : FC -> (x : Name) -> Pat -> Pat -> Pat
      PDelay : FC -> LazyReason -> Pat -> Pat -> Pat
@@ -202,9 +202,9 @@ export
 Pretty IdrisSyntax Pat where
   prettyPrec d (PAs _ n p) = pretty0 n <++> keyword "@" <+> parens (pretty p)
   prettyPrec d (PCon _ n _ _ args) =
-    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) (toList args))
+    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App . snd) (toList args))
   prettyPrec d (PTyCon _ n _ args) =
-    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) (toList args))
+    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App . snd) (toList args))
   prettyPrec d (PConst _ c) = pretty c
   prettyPrec d (PArrow _ _ p q) =
     parenthesise (d > Open) $ pretty p <++> arrow <++> pretty q
@@ -277,10 +277,10 @@ mkTerm : (vars : Scope) -> Pat -> Term vars
 mkTerm vars (PAs fc x y) = mkTerm vars y
 mkTerm vars (PCon fc x tag arity xs)
     = applySpine fc (Ref fc (DataCon tag arity) x)
-               (map (mkTerm vars) xs)
+                    (map @{Compose} (mkTerm vars) xs)
 mkTerm vars (PTyCon fc x arity xs)
     = applySpine fc (Ref fc (TyCon arity) x)
-               (map (mkTerm vars) xs)
+                    (map @{Compose} (mkTerm vars) xs)
 mkTerm vars (PConst fc c) = PrimVal fc c
 mkTerm vars (PArrow fc x s t)
     = Bind fc x (Pi fc top Explicit (mkTerm vars s)) (mkTerm (Scope.bind vars x) t)

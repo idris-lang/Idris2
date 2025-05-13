@@ -120,11 +120,11 @@ conflict defs env nfty n
           = pure (Just [(n, !(quote defs env nf))])
       conflictNF i (NDCon _ n t a args) (NDCon _ n' t' a' args')
           = if t == t'
-               then conflictArgs i (map snd args) (map snd args')
+               then conflictArgs i (map value args) (map value args')
                else pure Nothing
       conflictNF i (NTCon _ n a args) (NTCon _ n' a' args')
           = if n == n'
-               then conflictArgs i (map snd args) (map snd args')
+               then conflictArgs i (map value args) (map value args')
                else pure Nothing
       conflictNF i (NPrimVal _ c) (NPrimVal _ c')
           = if c == c'
@@ -277,8 +277,8 @@ buildArgs : {auto c : Ref Ctxt Defs} ->
             KnownVars vars Int -> -- Things which have definitely match
             KnownVars vars (List Int) -> -- Things an argument *can't* be
                                     -- (because a previous case matches)
-            SnocList ClosedTerm ->  -- ^ arguments, with explicit names
-            CaseTree vars -> Core (List (SnocList ClosedTerm))
+            SnocList (RigCount, ClosedTerm) ->  -- ^ arguments, with explicit names
+            CaseTree vars -> Core (List (SnocList (RigCount, ClosedTerm)))
 buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
   -- If we've already matched on 'el' in this branch, restrict the alternatives
   -- to the tag we already know. Otherwise, add missing cases and filter out
@@ -295,31 +295,31 @@ buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
          buildArgsAlt not altsN
   where
     buildArgAlt : KnownVars vars (List Int) ->
-                  CaseAlt vars -> Core (List (SnocList ClosedTerm))
+                  CaseAlt vars -> Core (List (SnocList (RigCount, ClosedTerm)))
     buildArgAlt not' (ConCase n t args sc)
         = do let l = mkSizeOf args
              let con = Ref fc (DataCon t (size l)) n
-             let ps' = map (substName zero var
+             let ps' = map @{Compose} (substName zero var
                              (apply fc
-                                    con (map (Ref fc Bound) args))) ps
+                                    con (map ((top,) . Ref fc Bound) args))) ps
              let known' = (MkVar el, t) :: known
              buildArgs fc defs (weakensN l known')
                                (weakensN l not') ps' sc
     buildArgAlt not' (DelayCase t a sc)
         = let l = mkSizeOf [t, a]
-              ps' = map (substName zero var (TDelay fc LUnknown
-                                             (Ref fc Bound t)
-                                             (Ref fc Bound a))) ps in
+              ps' = map @{Compose} (substName zero var (TDelay fc LUnknown
+                                                       (Ref fc Bound t)
+                                                       (Ref fc Bound a))) ps in
               buildArgs fc defs (weakensN l known)
                                 (weakensN l not') ps' sc
     buildArgAlt not' (ConstCase c sc)
-        = do let ps' = map (substName zero var (PrimVal fc c)) ps
+        = do let ps' = map @{Compose} (substName zero var (PrimVal fc c)) ps
              buildArgs fc defs known not' ps' sc
     buildArgAlt not' (DefaultCase sc)
         = buildArgs fc defs known not' ps sc
 
     buildArgsAlt : KnownVars vars (List Int) -> List (CaseAlt vars) ->
-                   Core (List (SnocList ClosedTerm))
+                   Core (List (SnocList (RigCount, ClosedTerm)))
     buildArgsAlt not' [] = pure []
     buildArgsAlt not' (c@(ConCase _ t _ _) :: cs)
         = pure $ !(buildArgAlt not' c) ++
@@ -346,7 +346,7 @@ getMissing : {vars : _} ->
              Core (List ClosedTerm)
 getMissing fc n ty ctree
    = do defs <- get Ctxt
-        let psIn = map (Ref fc Bound) vars
+        let psIn = map ((top,) . Ref fc Bound) vars
         pats <- buildArgs fc defs [] [] psIn ctree
         pats <- for pats $ trimArgs defs [<] !(nf defs Env.empty ty) . toList
         unless (null pats) $
@@ -355,10 +355,10 @@ getMissing fc n ty ctree
         pure (map (apply fc (Ref fc Func n)) pats)
   where
     trimArgs : Defs ->
-               SnocList ClosedTerm -> ClosedNF ->
-               List ClosedTerm -> Core (List ClosedTerm)
-    trimArgs defs acc (NBind _ n (Pi {}) sc) (x :: xs)
-        = trimArgs defs (acc :< x) !(sc defs $ toClosure defaultOpts Env.empty x) xs
+               SnocList (ZeroOneOmega, ClosedTerm) -> ClosedNF ->
+               List (ZeroOneOmega, ClosedTerm) -> Core (List (ZeroOneOmega, ClosedTerm))
+    trimArgs defs acc (NBind _ n (Pi {}) sc) ((c, x) :: xs)
+        = trimArgs defs (acc :< (c, x)) !(sc defs $ toClosure defaultOpts Env.empty x) xs
     trimArgs _ acc _ _ = pure $ toList acc
 
 -- For the given name, get the names it refers to which are not themselves
@@ -404,7 +404,7 @@ match : Term vs -> Term vs -> Bool
 match (Local _ _ i _) _ = True
 match (Ref _ Bound n) _ = True
 match (Ref _ _ n) (Ref _ _ n') = n == n'
-match (App _ f a) (App _ f' a') = match f f' && match a a'
+match (App _ f _ a) (App _ f' _ a') = match f f' && match a a'
 match (As _ _ _ p) (As _ _ _ p') = match p p'
 match (As _ _ _ p) p' = match p p'
 match (TDelayed _ _ t) (TDelayed _ _ t') = match t t'
@@ -424,16 +424,16 @@ eraseApps : {auto c : Ref Ctxt Defs} ->
 eraseApps {vs} tm
     = case getFnArgsSpine tm of
            (Ref fc Bound n, args) =>
-                do args' <- traverseSnocList eraseApps args
+                do args' <- traverseSnocList (traversePair eraseApps) args
                    pure (applySpine fc (Ref fc Bound n) args')
            (Ref fc nt n, args) =>
                 do defs <- get Ctxt
                    mgdef <- lookupCtxtExact n (gamma defs)
                    let eargs = maybe NatSet.empty eraseArgs mgdef
-                   args' <- traverseSnocList eraseApps (NatSet.overwrite (Erased fc Placeholder) eargs args)
+                   args' <- traverseSnocList (traversePair eraseApps) (NatSet.overwrite (erased, Erased fc Placeholder) eargs args)
                    pure (applySpine fc (Ref fc nt n) args')
            (tm, args) =>
-                do args' <- traverseSnocList eraseApps args
+                do args' <- traverseSnocList (traversePair eraseApps) args
                    pure (applySpine (getLoc tm) tm args')
 
 -- if tm would be matched by trylhs, then it's not an impossible case

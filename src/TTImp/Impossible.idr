@@ -81,18 +81,18 @@ mutual
                 (namedargs : List (Name, WithFC RawImp)) ->
                 Core ClosedTerm
   -- unnamed takes priority
-  processArgs con fn (NBind _ x (Pi _ _ Explicit ty) sc) (e :: exps) autos named
+  processArgs con fn (NBind _ x (Pi _ c Explicit ty) sc) (e :: exps) autos named
      = do e' <- mkTerm e.val (Just ty)
           defs <- get Ctxt
-          processArgs con (App e.fc fn e')
+          processArgs con (App e.fc fn c e')
                       !(sc defs (toClosure defaultOpts Env.empty e'))
                       exps autos named
-  processArgs con fn (NBind _ x (Pi _ _ Explicit ty) sc) [] autos named
+  processArgs con fn (NBind _ x (Pi _ c Explicit ty) sc) [] autos named
      = do defs <- get Ctxt
           case findNamed x named of
             Just ((_, e), named') =>
                do e' <- mkTerm e.val (Just ty)
-                  processArgs con (App e.fc fn e')
+                  processArgs con (App e.fc fn c e')
                               !(sc defs (toClosure defaultOpts Env.empty e'))
                               [] autos named'
             Nothing => -- Expected an explicit argument, but only implicits left
@@ -103,25 +103,25 @@ mutual
                           let True = null autos && null named
                             | False => badClause fn [] autos named -- unexpected arguments
                           pure fn
-  processArgs con fn (NBind _ x (Pi _ _ Implicit ty) sc) exps autos named
+  processArgs con fn (NBind _ x (Pi _ c Implicit ty) sc) exps autos named
      = do defs <- get Ctxt
           case findNamed x named of
             Nothing => do let fc = getLoc fn
                           e' <- nextVar fc
-                          processArgs con (App fc fn e')
+                          processArgs con (App fc fn c e')
                                       !(sc defs (toClosure defaultOpts Env.empty e'))
                                       exps autos named
             Just ((_, e), named') =>
                do e' <- mkTerm e.val (Just ty)
-                  processArgs con (App e.fc fn e')
+                  processArgs con (App e.fc fn c e')
                               !(sc defs (toClosure defaultOpts Env.empty e'))
                               exps autos named'
-  processArgs con fn (NBind _ x (Pi _ _ AutoImplicit ty) sc) exps autos named
+  processArgs con fn (NBind _ x (Pi _ c AutoImplicit ty) sc) exps autos named
      = do defs <- get Ctxt
           case autos of
                (e :: autos') => -- unnamed takes priority
                    do e' <- mkTerm e.val (Just ty)
-                      processArgs con (App e.fc fn e')
+                      processArgs con (App e.fc fn c e')
                                   !(sc defs (toClosure defaultOpts Env.empty e'))
                                   exps autos' named
                [] =>
@@ -129,12 +129,12 @@ mutual
                      Nothing =>
                         do let fc = getLoc fn
                            e' <- nextVar fc
-                           processArgs con (App fc fn e')
+                           processArgs con (App fc fn c e')
                                        !(sc defs (toClosure defaultOpts Env.empty e'))
                                        exps [] named
                      Just ((_, e), named') =>
                         do e' <- mkTerm e.val (Just ty)
-                           processArgs con (App e.fc fn e')
+                           processArgs con (App e.fc fn c e')
                                        !(sc defs (toClosure defaultOpts Env.empty e'))
                                        exps [] named'
   processArgs _ fn _ [] [] [] = pure fn

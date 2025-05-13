@@ -20,9 +20,9 @@ onPRefs f = go neutral where
 
   go acc (Local fc isLet idx p) = acc
   go acc (Ref fc x name) = acc <+> f name
-  go acc (Meta fc x y xs) = gos acc xs
+  go acc (Meta fc x y xs) = gos acc $ map snd xs
   go acc (Bind fc x b scope) = go (acc <+> concatMap (onPRefs f) b) scope
-  go acc (App fc fn arg) = go (go acc fn) arg
+  go acc (App fc fn _ arg) = go (go acc fn) arg
   go acc (As fc x as pat) = go (go acc as) pat
   go acc (TDelayed fc x y) = go acc y
   go acc (TDelay fc x ty arg) = go (go acc ty) arg
@@ -49,9 +49,9 @@ onConstants f = go neutral where
 
   go acc (Local fc isLet idx p) = acc
   go acc (Ref fc x name) = acc
-  go acc (Meta fc x y xs) = gos acc xs
+  go acc (Meta fc x y xs) = gos acc $ map snd xs
   go acc (Bind fc x b scope) = go (acc <+> concatMap (onConstants f) b) scope
-  go acc (App fc fn arg) = go (go acc fn) arg
+  go acc (App fc fn _ arg) = go (go acc fn) arg
   go acc (As fc x as pat) = go (go acc as) pat
   go acc (TDelayed fc x y) = go acc y
   go acc (TDelay fc x ty arg) = go (go acc ty) arg
@@ -80,9 +80,9 @@ mapTermM f t = act t where
 
   go t@(Local fc isLet idx p) = pure t
   go t@(Ref fc x name) = pure t
-  go t@(Meta fc x y xs) = Meta fc x y <$> traverse act xs
+  go t@(Meta fc x y xs) = Meta fc x y <$> traverse @{Compose} act xs
   go t@(Bind fc x b scope) = Bind fc x <$> traverse act b <*> act scope
-  go t@(App fc fn arg) = App fc <$> act fn <*> act arg
+  go t@(App fc fn c arg) = App fc <$> act fn <*> pure c <*> act arg
   go t@(As fc x as pat) = As fc x <$> act as <*> act pat
   go t@(TDelayed fc x y) = TDelayed fc x <$> act y
   go t@(TDelay fc x ty arg) = TDelay fc x <$> act ty <*> act arg
@@ -103,9 +103,9 @@ mapTerm f t = act t where
 
   go t@(Local fc isLet idx p) = t
   go t@(Ref fc x name) = t
-  go t@(Meta fc x y xs) = Meta fc x y (map act xs)
+  go t@(Meta fc x y xs) = Meta fc x y (map @{Compose} act xs)
   go t@(Bind fc x b scope) = Bind fc x (map act b) (act scope)
-  go t@(App fc fn arg) = App fc (act fn) (act arg)
+  go t@(App fc fn c arg) = App fc (act fn) c (act arg)
   go t@(As fc x as pat) = As fc x (act as) (act pat)
   go t@(TDelayed fc x y) = TDelayed fc x (act y)
   go t@(TDelay fc x ty arg) = TDelay fc x (act ty) (act arg)

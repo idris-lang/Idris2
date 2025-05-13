@@ -37,8 +37,8 @@ getNF : {auto c : Ref Ctxt Defs} -> Glued vars -> Core (NF vars)
 getNF {c} (MkGlue _ _ nf) = nf c
 
 public export
-Stack : Scoped
-Stack vars = List (FC, Closure vars)
+0 Stack : Scoped
+Stack vars = List (SpineEntry vars)
 
 evalWithOpts : {auto c : Ref Ctxt Defs} ->
                {free, vars : _} ->
@@ -119,11 +119,11 @@ parameters (defs : Defs) (topopts : EvalOpts)
         -- Yes, it's just a map, but specialising it by hand since we
         -- use this a *lot* and it saves the run time overhead of making
         -- a closure and calling APPLY.
-        closeArgs : List (Term (Scope.addInner free vars)) -> SnocList (Closure free)
+        closeArgs : List ((RigCount, Term (Scope.addInner free vars))) -> SnocList (RigCount, Closure free)
         closeArgs [] = Scope.empty
-        closeArgs (t :: ts) = closeArgs ts :< mkClosure topopts locs env t
+        closeArgs ((c, t) :: ts) = (closeArgs ts) :< (c, mkClosure topopts locs env t)
     eval env locs (Bind fc x (Lam _ r _ ty) scope) (thunk :: stk)
-        = eval env (locs :< snd thunk) scope stk
+        = eval env (locs :< value thunk) scope stk
     eval env locs (Bind fc x b@(Let _ r val ty) scope) stk
         = if (holesOnly topopts || argHolesOnly topopts) && not (tcInline topopts)
              then do let b' = map (mkClosure topopts locs env) b
@@ -136,11 +136,11 @@ parameters (defs : Defs) (topopts : EvalOpts)
              pure $ NBind fc x b'
                       (\defs', arg => evalWithOpts defs' topopts
                                               env (locs :< arg) scope stk)
-    eval env locs (App fc fn arg) stk
+    eval env locs (App fc fn c arg) stk
         = case strategy topopts of
                CBV => do arg' <- eval env locs arg []
-                         eval env locs fn ((fc, MkNFClosure topopts env arg') :: stk)
-               CBN => eval env locs fn ((fc, mkClosure topopts locs env arg) :: stk)
+                         eval env locs fn ((fc, c, MkNFClosure topopts env arg') :: stk)
+               CBN => eval env locs fn ((fc, c, mkClosure topopts locs env arg) :: stk)
     eval env locs (As fc s n tm) stk
         = if removeAs topopts
              then eval env locs tm stk
@@ -172,7 +172,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
                    Env Term free ->
                    NF free -> Stack free -> Core (NF free)
     applyToStack env (NBind fc _ (Lam {}) sc) (arg :: stk)
-        = do arg' <- sc defs $ snd arg
+        = do arg' <- sc defs $ value arg
              applyToStack env arg' stk
     applyToStack env (NBind fc x b@(Let _ r val ty) sc) stk
         = if (holesOnly topopts || argHolesOnly topopts) && not (tcInline topopts)
@@ -264,7 +264,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
     evalMeta : {auto c : Ref Ctxt Defs} ->
                {free : _} ->
                Env Term free ->
-               FC -> Name -> Int -> SnocList (Closure free) ->
+               FC -> Name -> Int -> SnocList (RigCount, Closure free) ->
                Stack free -> Core (NF free)
     evalMeta env fc nm i args stk
         = let args' = if isNil stk then map (EmptyFC,) (toList args)
@@ -364,12 +364,12 @@ parameters (defs : Defs) (topopts : EvalOpts)
     -- Ordinary constructor matching
     tryAlt {more} env loc opts fc stk (NDCon _ nm tag' arity args') (ConCase x tag args sc)
          = if tag == tag'
-              then evalConAlt env loc opts fc stk args (map snd args') sc
+              then evalConAlt env loc opts fc stk args (map (snd . snd) args') sc
               else pure NoMatch
     -- Type constructor matching, in typecase
     tryAlt {more} env loc opts fc stk (NTCon _ nm arity args') (ConCase nm' tag args sc)
          = if nm == nm'
-              then evalConAlt env loc opts fc stk args (map snd args') sc
+              then evalConAlt env loc opts fc stk args (map (snd . snd) args') sc
               else pure NoMatch
     -- Primitive type matching, in typecase
     tryAlt env loc opts fc stk (NPrimVal _ c) (ConCase nm tag args sc)
@@ -468,7 +468,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
         takeStk (S k) [] acc = Nothing
         takeStk {got} (S k) (arg :: stk) acc
            = rewrite sym (plusSuccRightSucc got k) in
-                     takeStk k stk (snd arg :: acc)
+                     takeStk k stk (value arg :: acc)
 
     argsFromStack : (args : SnocList Name) ->
                     Stack free ->
@@ -477,7 +477,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
     argsFromStack (ns :< n) [] = Nothing
     argsFromStack (ns :< n) (arg :: args)
          = do (loc', stk') <- argsFromStack ns args
-              pure (rewrite Extra.revOnto [<n] ns in cons {v=n} loc' (snd arg), stk')
+              pure (rewrite Extra.revOnto [<n] ns in cons {v=n} loc' ((snd . snd) arg), stk')
         where
             -- TODO: Find a way for better performance
             cons : LocalEnv free vars -> Closure free -> LocalEnv free ([<v] ++ vars)

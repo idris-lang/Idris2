@@ -44,7 +44,7 @@ lookupNameInfo n ctxt
 Reflect NameInfo where
   reflect fc defs lhs env inf
       = do nt <- reflect fc defs lhs env (nametype inf)
-           appCon fc defs (reflectiontt "MkNameInfo") [nt]
+           appConTop fc defs (reflectiontt "MkNameInfo") [nt]
 
 deepRefersTo : {auto c : Ref Ctxt Defs} ->
                GlobalDef -> Core (List Name)
@@ -84,7 +84,7 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
          case fnm of
               NS ns (UN (Basic n))
                  => if ns == reflectionNS
-                      then elabCon defs n (map snd args)
+                      then elabCon defs n (map value args)
                              `catch` \case -- wrap into `RunElabFail` any non-elab error
                                e@(BadRunElab {})  => throw e
                                e@(RunElabFail {}) => throw e
@@ -159,14 +159,14 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
         = do act <- elabScript rig fc nest env !(evalClosure defs act) exp
              act <- quote defs env act
              fm <- evalClosure defs fm
-             applyToStack defs withHoles env fm [(getLoc act, toClosure withAll env act)]
+             applyToStack defs withHoles env fm [(getLoc act, top, toClosure withAll env act)]
     elabCon defs "Ap" [<_,_,actF,actX]
         -- actF : Elab (A -> B)
         -- actX : Elab A
         = do actF <- elabScript rig fc nest env !(evalClosure defs actF) exp
              actX <- elabScript rig fc nest env !(evalClosure defs actX) exp
              actX <- quote defs env actX
-             applyToStack defs withHoles env actF [(getLoc actX, toClosure withAll env actX)]
+             applyToStack defs withHoles env actF [(getLoc actX, top, toClosure withAll env actX)]
     elabCon defs "Bind" [<_,_,act,k]
         -- act : Elab A
         -- k : A -> Elab B
@@ -178,7 +178,7 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
                                 !(evalClosure defs act) exp
              act <- quote defs env act
              k <- evalClosure defs k
-             r <- applyToStack defs withAll env k [(getLoc act, toClosure withAll env act)]
+             r <- applyToStack defs withAll env k [(getLoc act, top, toClosure withAll env act)]
              elabScript rig fc nest env r exp
     elabCon defs "Fail" [<_, mbfc, msg]
         = do msg' <- evalClosure defs msg
@@ -369,7 +369,7 @@ checkRunElab rig elabinfo nest env fc reqExt script exp
          unless (not reqExt || isExtension ElabReflection defs) $
              throw (GenericMsg fc "%language ElabReflection not enabled")
          let n = NS reflectionNS (UN $ Basic "Elab")
-         elabtt <- appCon fc defs n [expected]
+         elabtt <- appConTop fc defs n [expected]
          (stm, sty) <- runDelays (const True) $
                            check rig elabinfo nest env script (Just (gnf env elabtt))
          solveConstraints inTerm Normal

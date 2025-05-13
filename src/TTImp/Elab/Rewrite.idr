@@ -35,7 +35,7 @@ getRewriteTerms : {vars : _} ->
                   Core (NF vars, NF vars, NF vars)
 getRewriteTerms loc defs (NTCon nfc eq a args) err
     = if !(isEqualTy eq)
-         then case map snd args of
+         then case map value args of
                    (_ :< lhsty :< rhsty :< lhs :< rhs) =>
                         pure (!(evalClosure defs lhs),
                               !(evalClosure defs rhs),

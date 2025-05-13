@@ -316,58 +316,14 @@ mkLocal fc b = Local fc (Just (isLet b)) _ (mkIsVar (mkHasLength wkns))
 mkConstantAppArgs : {vars : _} ->
                     Bool -> FC -> Env Term vars ->
                     (wkns : SnocList Name) ->
-                    List (Term ((done ++ vars) ++ wkns))
+                    List (RigCount, Term ((done ++ vars) ++ wkns))
 mkConstantAppArgs lets fc [<] wkns = []
 mkConstantAppArgs {done} {vars = xs :< x} lets fc (env :< b) wkns
     = let rec = mkConstantAppArgs {done} lets fc env (cons x wkns) in
           if lets || not (isLet b)
-             then mkLocal fc b ::
+             then (multiplicity b, mkLocal fc b) ::
                 rewrite sym $ appendAssociative (done ++ xs) [<x] wkns in rec
              else rewrite sym $ appendAssociative (done ++ xs) [<x] wkns in rec
-
-mkConstantAppArgsSub : {vars : _} ->
-                       Bool -> FC -> Env Term vars ->
-                       Thin smaller vars ->
-                       (wkns : SnocList Name) ->
-                       List (Term ((done ++ vars) ++ wkns))
-mkConstantAppArgsSub lets fc [<] p wkns = []
-mkConstantAppArgsSub {done} {vars = xs :< x}
-                        lets fc (env :< b) Refl wkns
-    = rewrite sym $ appendAssociative (done ++ xs) (Scope.single x) wkns in
-      mkConstantAppArgs lets fc env (cons x wkns)
-mkConstantAppArgsSub {done} {vars = xs :< x}
-                        lets fc (env :< b) (Drop p) wkns
-    = rewrite sym $ appendAssociative (done ++ xs) (Scope.single x) wkns in
-      mkConstantAppArgs lets fc env (cons x wkns)
-mkConstantAppArgsSub {done} {vars = xs :< x}
-                        lets fc (env :< b) (Keep p) wkns
-    = let rec = mkConstantAppArgsSub {done} lets fc env p (cons x wkns) in
-          if lets || not (isLet b)
-             then mkLocal fc b ::
-                rewrite sym $ appendAssociative (done ++ xs) (Scope.single x) wkns in rec
-             else rewrite sym $ appendAssociative (done ++ xs) (Scope.single x) wkns in rec
-
-mkConstantAppArgsOthers : {vars : _} ->
-                          Bool -> FC -> Env Term vars ->
-                          Thin smaller vars ->
-                          (wkns : SnocList Name) ->
-                          List (Term ((done ++ vars) ++ wkns))
-mkConstantAppArgsOthers lets fc [<] p wkns = []
-mkConstantAppArgsOthers {done} {vars = xs :< x}
-                        lets fc (env :< b) Refl wkns
-    = rewrite sym $ appendAssociative (done ++ xs) (Scope.single x) wkns in
-      mkConstantAppArgsOthers lets fc env Refl (cons x wkns)
-mkConstantAppArgsOthers {done} {vars = xs :< x}
-                        lets fc (env :< b) (Keep p) wkns
-    = rewrite sym $ appendAssociative (done ++ xs) (Scope.single x) wkns in
-      mkConstantAppArgsOthers lets fc env p (cons x wkns)
-mkConstantAppArgsOthers {done} {vars = xs :< x}
-                        lets fc (env :< b) (Drop p) wkns
-    = let rec = mkConstantAppArgsOthers {done} lets fc env p (cons x wkns) in
-          if lets || not (isLet b)
-             then mkLocal fc b ::
-                rewrite sym $ appendAssociative (done ++ xs) (Scope.single x) wkns in rec
-             else rewrite sym $ appendAssociative (done ++ xs) (Scope.single x) wkns in rec
 
 export
 applyTo : {vars : _} ->
@@ -381,22 +337,6 @@ applyToFull : {vars : _} ->
               FC -> Term vars -> Env Term vars -> Term vars
 applyToFull fc tm env
   = let args = reverse (mkConstantAppArgs {done = Scope.empty} True fc env [<]) in
-        apply fc tm (rewrite sym (appendLinLeftNeutral vars) in args)
-
-export
-applyToSub : {vars : _} ->
-             FC -> Term vars -> Env Term vars ->
-             Thin smaller vars -> Term vars
-applyToSub fc tm env sub
-  = let args = reverse (mkConstantAppArgsSub {done = Scope.empty} True fc env sub [<]) in
-        apply fc tm (rewrite sym (appendLinLeftNeutral vars) in args)
-
-export
-applyToOthers : {vars : _} ->
-                FC -> Term vars -> Env Term vars ->
-                Thin smaller vars -> Term vars
-applyToOthers fc tm env sub
-  = let args = reverse (mkConstantAppArgsOthers {done = Scope.empty} True fc env sub [<]) in
         apply fc tm (rewrite sym (appendLinLeftNeutral vars) in args)
 
 -- Create a new metavariable with the given name and return type,
@@ -423,7 +363,7 @@ newMetaLets {vars} fc rig env n ty def nocyc lets
          addHoleName fc n idx
          pure (idx, Meta fc n idx envArgs)
   where
-    envArgs : List (Term vars)
+    envArgs : List (RigCount, Term vars)
     envArgs = let args = reverse (mkConstantAppArgs {done = Scope.empty} lets fc env [<]) in
                   (rewrite sym (appendLinLeftNeutral vars) in args)
 
@@ -469,7 +409,7 @@ newConstant {vars} fc rig env tm ty constrs
          addGuessName fc cn idx
          pure (Meta fc cn idx envArgs)
   where
-    envArgs : List (Term vars)
+    envArgs : List (RigCount, Term vars)
     envArgs = let args = reverse (mkConstantAppArgs {done = Scope.empty} True fc env [<]) in
                   rewrite sym (appendLinLeftNeutral vars) in args
 
@@ -491,7 +431,7 @@ newSearch {vars} fc rig depth def env n ty
          addGuessName fc n idx
          pure (idx, Meta fc n idx envArgs)
   where
-    envArgs : List (Term vars)
+    envArgs : List (RigCount, Term vars)
     envArgs = let args = reverse (mkConstantAppArgs {done = Scope.empty} False fc env [<]) in
                   rewrite sym (appendLinLeftNeutral vars) in args
 
@@ -511,7 +451,7 @@ newDelayed {vars} fc rig env n ty
          addHoleName fc n idx
          pure (idx, Meta fc n idx envArgs)
   where
-    envArgs : List (Term vars)
+    envArgs : List (RigCount, Term vars)
     envArgs = let args = reverse (mkConstantAppArgs {done = Scope.empty} False fc env [<]) in
                   rewrite sym (appendLinLeftNeutral vars) in args
 

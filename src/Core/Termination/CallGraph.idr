@@ -31,9 +31,9 @@ sizeEq : {auto 0 cv : CompatibleVars rhsVars lhsVars} ->
 sizeEq (Local _ _ idx _) (Local _ _ idx' _) = idx == idx'
 sizeEq (Ref _ _ n) (Ref _ _ n') = n == n'
 sizeEq (Meta _ _ i args) (Meta _ _ i' args')
-    = i == i' && assert_total (all (uncurry sizeEq) (zip args args'))
+    = i == i' && assert_total (all (uncurry sizeEq) (zip (map snd args) (map snd args')))
 sizeEq (Bind _ _ b sc) (Bind _ _ b' sc') = eqBinderBy sizeEq b b' && sizeEq sc sc'
-sizeEq (App _ f a) (App _ f' a') = sizeEq f f' && sizeEq a a'
+sizeEq (App _ f _ a) (App _ f' _ a') = sizeEq f f' && sizeEq a a'
 sizeEq (As _ _ a p) p' = sizeEq p p'
 sizeEq p (As _ _ a p') = sizeEq p a || sizeEq p p'
 sizeEq (TDelayed _ _ t) (TDelayed _ _ t') = sizeEq t t'
@@ -63,10 +63,10 @@ delazy defs (TForce fc r t)
     = case r of
            LInf => TForce fc r (delazy defs t)
            _ => delazy defs t
-delazy defs (Meta fc n i args) = Meta fc n i (map (delazy defs) args)
+delazy defs (Meta fc n i args) = Meta fc n i (map @{Compose} (delazy defs) args)
 delazy defs (Bind fc x b sc)
     = Bind fc x (map (delazy defs) b) (delazy defs sc)
-delazy defs (App fc f a) = App fc (delazy defs f) (delazy defs a)
+delazy defs (App fc f c a) = App fc (delazy defs f) c (delazy defs a)
 delazy defs (As fc s a p) = As fc s (delazy defs a) (delazy defs p)
 delazy defs tm = tm
 
@@ -178,7 +178,7 @@ mutual
   sizeCompare fuel s@(Meta n _ i args) t = do
     Just gdef <- lookupCtxtExact (Resolved i) (gamma defs) | _ => pure Unknown
     let (PMDef _ [<] (STerm _ tm) _ _) = definition gdef | _ => pure Unknown
-    tm <- substMeta (embed tm) args zero (Subst.empty {tm = Term})
+    tm <- substMeta (embed tm) (map snd args) zero (Subst.empty {tm = Term})
     sizeCompare fuel tm t
     where
       substMeta : {0 drop, vs : _} ->
@@ -240,7 +240,7 @@ mutual
           Unknown => sizeCompareConArgs fuel s ts
           _ => pure True
 
-  sizeCompareApp fuel (App _ f _) t = sizeCompare fuel f t
+  sizeCompareApp fuel (App _ f _ _) t = sizeCompare fuel f t
   sizeCompareApp _ _ t = pure Unknown
 
   sizeCompareAsserted : {auto defs : Defs} -> Nat -> Maybe (Term vars) -> Term vars -> Core SizeChange
@@ -312,8 +312,8 @@ mutual
           urhs : Term vs -> Term vs'
           urhs (Local fc _ _ _) = Erased fc Placeholder
           urhs (Ref fc nt n) = Ref fc nt n
-          urhs (Meta fc m i margs) = Meta fc m i (map (updateRHS ms) margs)
-          urhs (App fc f a) = App fc (updateRHS ms f) (updateRHS ms a)
+          urhs (Meta fc m i margs) = Meta fc m i (map @{Compose} (updateRHS ms) margs)
+          urhs (App fc f r a) = App fc (updateRHS ms f) r (updateRHS ms a)
           urhs (As fc s a p) = As fc s (updateRHS ms a) (updateRHS ms p)
           urhs (TDelayed fc r ty) = TDelayed fc r (updateRHS ms ty)
           urhs (TDelay fc r ty tm)

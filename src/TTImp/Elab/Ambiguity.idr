@@ -219,12 +219,12 @@ mutual
   mightMatch defs (NBind {}) (NBind {}) = pure Poly -- lambdas might match
   mightMatch defs (NTCon _ n a args) (NTCon _ n' a' args')
       = if n == n'
-           then do amatch <- mightMatchArgs defs (map snd args) (map snd args')
+           then do amatch <- mightMatchArgs defs (map value args) (map value args')
                    if amatch then pure Concrete else pure NoMatch
            else pure NoMatch
   mightMatch defs (NDCon _ n t a args) (NDCon _ n' t' a' args')
       = if t == t'
-           then do amatch <- mightMatchArgs defs (map snd args) (map snd args')
+           then do amatch <- mightMatchArgs defs (map value args) (map value args')
                    if amatch then pure Concrete else pure NoMatch
            else pure NoMatch
   mightMatch defs (NPrimVal _ x) (NPrimVal _ y)

@@ -198,7 +198,7 @@ mutual
            else assert_total (findUsedInBinder env (VarSet.insert v used)
                                                (getBinder p env))
   findUsed env used (Meta _ _ _ args)
-      = findUsedArgs env used args
+      = assert_total $ findUsedArgs env used $ map snd args
     where
       findUsedArgs : Env Term vars -> VarSet vars -> List (Term vars) -> VarSet vars
       findUsedArgs env u [] = u
@@ -209,7 +209,7 @@ mutual
           VarSet.dropFirst (findUsed (Env.bind env b)
                           (weaken {tm = VarSet} (findUsedInBinder env used b))
                           tm)
-  findUsed env used (App fc fn arg)
+  findUsed env used (App fc fn _ arg)
       = findUsed env (findUsed env used fn) arg
   findUsed env used (As fc s a p)
       = findUsed env (findUsed env used a) p

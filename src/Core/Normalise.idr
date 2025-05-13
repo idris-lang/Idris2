@@ -135,7 +135,7 @@ etaContract tm = do
     act tm = do
       logTerm "eval.eta" 10 "  Considering" tm
       case tm of
-        (Bind _ x (Lam {}) (App _ fn (Local _ _ Z _))) => do
+        (Bind _ x (Lam {}) (App _ fn c (Local _ _ Z _))) => do
           logTerm "eval.eta" 10 "  Shrinking candidate" fn
           let shrunk = shrink fn (Drop Refl)
           case shrunk of
@@ -266,18 +266,18 @@ replace' {vars} tmpi defs env lhs parg tm
         = do empty <- clearDefs defs
              quote empty env (NApp fc hd Scope.empty)
     repSub (NApp fc hd args)
-        = do args' <- traverse (traversePair repArg) args
+        = do args' <- traverse (traversePair $ traversePair repArg) args
              pure $ applySpineWithFC
                         !(replace' tmpi defs env lhs parg (NApp fc hd Scope.empty))
                         args'
     repSub (NDCon fc n t a args)
-        = do args' <- traverse (traversePair repArg) args
+        = do args' <- traverse (traversePair $ traversePair repArg) args
              empty <- clearDefs defs
              pure $ applySpineWithFC
                         !(quote empty env (NDCon fc n t a Scope.empty))
                         args'
     repSub (NTCon fc n a args)
-        = do args' <- traverse (traversePair repArg) args
+        = do args' <- traverse (traversePair $ traversePair repArg) args
              empty <- clearDefs defs
              pure $ applySpineWithFC
                         !(quote empty env (NTCon fc n a Scope.empty))
@@ -294,7 +294,7 @@ replace' {vars} tmpi defs env lhs parg tm
              tm' <- replace' tmpi defs env lhs parg !(evalClosure defs tm)
              pure (TDelay fc r ty' tm')
     repSub (NForce fc r tm args)
-        = do args' <- traverse (traversePair repArg) args
+        = do args' <- traverse (traversePair $ traversePair repArg) args
              tm' <- repSub tm
              pure $ applySpineWithFC (TForce fc r tm') args'
     repSub (NErased fc (Dotted t))

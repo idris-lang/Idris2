@@ -43,7 +43,7 @@ getTypeCons (Meta {}) = Nothing
 getTypeCons (Bind _ x b scope) = case b of
     Let _ _ val _ => getTypeCons $ subst {x} val scope
     _ => Nothing
-getTypeCons (App _ fn _) = getTypeCons fn
+getTypeCons (App _ fn _ _) = getTypeCons fn
 getTypeCons _ = Nothing
 
 ||| Get the arguments of a `Term` representing a type.
@@ -99,11 +99,11 @@ termConMatch : Term vs -> Term vs' -> Bool
 termConMatch (Local _ _ x _) (Local _ _ y _) = x == y
 termConMatch (Ref _ _ n) (Ref _ _ m) = n == m
 termConMatch (Meta _ _ i args0) (Meta _ _ j args1)
-    = i == j && all (uncurry termConMatch) (zip args0 args1)
+    = i == j && all (uncurry termConMatch) (zip (map snd args0) (map snd args1))
     -- I don't understand how they're equal if args are different lengths
     -- but this is what's in Core.TT.
 termConMatch (Bind _ _ b s) (Bind _ _ c t) = eqBinderBy termConMatch b c && termConMatch s t
-termConMatch (App _ f _) (App _ g _) = termConMatch f g
+termConMatch (App _ f _ _) (App _ g _ _) = termConMatch f g
 termConMatch (As _ _ a p) (As _ _ b q) = termConMatch a b && termConMatch p q
 termConMatch (TDelayed _ _ tm0) tm1 = termConMatch tm0 tm1
 termConMatch tm0 (TDelayed _ _ tm1) = termConMatch tm0 tm1
@@ -120,9 +120,9 @@ termConMatch _ _ = False
 isStrict : Term vs -> Bool
 isStrict (Local {}) = True
 isStrict (Ref {}) = True
-isStrict (Meta _ _ i args) = all isStrict args
+isStrict (Meta _ _ i args) = all (isStrict . snd) args
 isStrict (Bind _ _ b s) = isStrict (binderType b) && isStrict s
-isStrict (App _ f x) = isStrict f && isStrict x
+isStrict (App _ f _ x) = isStrict f && isStrict x
 isStrict (As _ _ a p) = isStrict a && isStrict p
 isStrict (TDelayed {}) = False
 isStrict (TDelay _ _ f x) = isStrict f && isStrict x

@@ -166,7 +166,7 @@ searchIfHole : {vars : _} ->
                {auto u : Ref UST UState} ->
                FC -> SearchOpts -> List Name -> ClosedTerm ->
                Env Term vars -> ArgInfo vars ->
-               Core (Search (Term vars, ExprDefs))
+               Core (Search (RigCount, Term vars, ExprDefs))
 searchIfHole fc opts hints topty env arg
     = case depth opts of
            Z => noResult
@@ -177,7 +177,8 @@ searchIfHole fc opts hints topty env arg
                  Just gdef <- lookupCtxtExact (Resolved hole) (gamma defs)
                       | Nothing => noResult
                  let Hole _ _ = definition gdef
-                      | _ => one (!(normaliseHoles defs env (metaApp arg)), [])
+                      | _ => one (fst (metaApp arg),
+                                  !(normaliseHoles defs env (snd $ metaApp arg)), [])
                                 -- already solved
                  res <- search fc rig ({ depth := k,
                                          inArg := True } opts) hints
@@ -186,7 +187,8 @@ searchIfHole fc opts hints topty env arg
                  -- expression for its environment, so we need to apply it to
                  -- the current environment to use it as an argument.
                  traverse (\(tm, ds) =>
-                    pure (!(normaliseHoles defs env
+                    pure (fst (metaApp arg),
+                          !(normaliseHoles defs env
                              (applyTo fc (embed tm) env)), ds)) res
 
 explicit : ArgInfo vars -> Bool
@@ -251,16 +253,16 @@ mkCandidates : {vars : _} ->
                {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
                FC -> Term vars -> ExprDefs ->
-               List (Search (Term vars, ExprDefs)) ->
+               List (Search (RigCount, Term vars, ExprDefs)) ->
                Core (Search (Term vars, ExprDefs))
 -- out of arguments, we have a candidate
 mkCandidates fc f ds [] = one (f, ds)
 -- argument has run out of ideas, we're stuck
 mkCandidates fc f ds ([] :: argss) = noResult
 -- make a candidate from 'f arg' applied to the rest of the arguments
-mkCandidates fc f ds (((arg, ds') :: next) :: argss)
+mkCandidates fc f ds (((c, arg, ds') :: next) :: argss)
     = firstSuccess
-           [mkCandidates fc (App fc f arg) (ds ++ ds') argss,
+           [mkCandidates fc (App fc f c arg) (ds ++ ds') argss,
             do next' <- next
                mkCandidates fc f ds (next' :: argss)]
 
@@ -385,7 +387,7 @@ tryRecursive fc rig opts hints env ty topty rdata
       argDiff (Ref _ _ fn) (Ref _ _ fn') = fn /= fn'
       argDiff (Bind {}) _ = False
       argDiff _ (Bind {}) = False
-      argDiff (App _ f a) (App _ f' a')
+      argDiff (App _ f _ a) (App _ f' _ a')
          = structDiff f f' || structDiff a a'
       argDiff (PrimVal _ c) (PrimVal _ c') = c /= c'
       argDiff (Erased {}) _ = False
@@ -473,7 +475,7 @@ searchLocalWith {vars} fc nofn rig opts hints env ((p, pty) :: rest) ty topty
     findPos : Defs -> Term vars ->
               (Term vars -> Term vars) ->
               NF vars -> NF vars -> Core (Search (Term vars, ExprDefs))
-    findPos defs prf f x@(NTCon pfc pn _ [<(fc1, xty), (fc2, yty)]) target
+    findPos defs prf f x@(NTCon pfc pn _ [<(fc1, xc, xty), (fc2, xy, yty)]) target
         = getSuccessful fc rig opts False env ty topty
               [findDirect defs prf f x target,
                  (do fname <- maybe (throw (InternalError "No fst"))
@@ -490,16 +492,16 @@ searchLocalWith {vars} fc nofn rig opts hints env ((p, pty) :: rest) ty topty
                                   [(do xtynf <- evalClosure defs xty
                                        findPos defs prf
                                          (\arg => applySpineWithFC (Ref fc Func fname)
-                                                          [<(fc1, xtytm),
-                                                           (fc2, ytytm),
-                                                           (fc, f arg)])
+                                                          [<(fc1, xc, xtytm),
+                                                            (fc2, xy, ytytm),
+                                                            (fc, top, f arg)])
                                          xtynf target),
                                    (do ytynf <- evalClosure defs yty
                                        findPos defs prf
                                            (\arg => applySpineWithFC (Ref fc Func sname)
-                                                          [<(fc1, xtytm),
-                                                           (fc2, ytytm),
-                                                           (fc, f arg)])
+                                                          [<(fc1, xc, xtytm),
+                                                            (fc2, xy, ytytm),
+                                                            (fc, top, f arg)])
                                            ytynf target)]
                          else noResult)]
     findPos defs prf f nty target = findDirect defs prf f nty target
@@ -543,7 +545,7 @@ makeHelper fc rig opts env letty targetty ((locapp, ds) :: next)
          -- Apply the intermediate result to the helper function we're
          -- about to generate.
          let def = App fc (Bind fc intn (Lam fc top Explicit letty) scope)
-                          locapp
+                          top locapp
 
          logTermNF "interaction.search" 10 "Binding def" env def
          defs <- get Ctxt

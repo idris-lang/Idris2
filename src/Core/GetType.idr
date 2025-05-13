@@ -29,12 +29,12 @@ mutual
       = do defs <- get Ctxt
            Just mty <- lookupTyExact (Resolved i) (gamma defs)
                | Nothing => undefinedName fc n
-           chkMeta fc env !(nf defs env (embed mty)) args
+           chkMeta fc env !(nf defs env (embed mty)) (map snd args)
   chk env (Bind fc nm b sc)
       = do bt <- chkBinder env b
            sct <- chk {vars = _ :< nm} (Env.bind env b) sc
            pure $ gnf env (discharge fc nm b !(getTerm bt) !(getTerm sct))
-  chk env (App fc f a)
+  chk env (App fc f _ a)
       = do fty <- chk env f
            case !(getNF fty) of
                 NBind _ _ (Pi _ _ _ ty) scdone =>

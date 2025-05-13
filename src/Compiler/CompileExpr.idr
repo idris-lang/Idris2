@@ -166,7 +166,7 @@ toCExpTm n (Ref fc _ fn)
              -- ^ For readability of output code, and the Nat hack,
          pure $ CApp fc (CRef fc full) []
 toCExpTm n (Meta fc mn i args)
-    = pure $ CApp fc (CRef fc mn) !(traverse (toCExp n) args)
+    = pure $ CApp fc (CRef fc mn) !(traverse (toCExp n) $ map snd args)
 toCExpTm n (Bind fc x (Lam {}) sc)
     = pure $ CLam fc x !(toCExp n sc)
 toCExpTm n (Bind fc x (Let _ rig val _) sc)
@@ -180,7 +180,7 @@ toCExpTm n (Bind fc x (Pi _ c e ty) sc)
                      , CLam fc x !(toCExp n sc)]
 toCExpTm n (Bind fc x b tm) = pure $ CErased fc
 -- We'd expect this to have been dealt with in toCExp, but for completeness...
-toCExpTm n (App fc tm arg)
+toCExpTm n (App fc tm _ arg)
     = pure $ CApp fc !(toCExp n tm) [!(toCExp n arg)]
 -- This shouldn't be in terms any more, but here for completeness
 toCExpTm n (As _ _ _ p) = toCExpTm n p
@@ -404,9 +404,9 @@ getPArgs defs cl
              | nf => throw (GenericMsg (getLoc nf) "Badly formed struct type")
          case map snd args of
               (_ :< n :< tydesc) =>
-                  do NPrimVal _ (Str n') <- evalClosure defs n
+                  do NPrimVal _ (Str n') <- evalClosure defs $ snd n
                          | nf => throw (GenericMsg (getLoc nf) "Unknown field name")
-                     pure (n', tydesc)
+                     pure (n', snd tydesc)
               _ => throw (GenericMsg fc "Badly formed struct type")
 
 getFieldArgs : {auto c : Ref Ctxt Defs} ->
@@ -417,8 +417,8 @@ getFieldArgs defs cl
          case map snd args of
               -- cons
               [< _, t, rest] =>
-                  do rest' <- getFieldArgs defs rest
-                     (n, ty) <- getPArgs defs t
+                  do rest' <- getFieldArgs defs $ snd rest
+                     (n, ty) <- getPArgs defs $ snd t
                      pure ((n, ty) :: rest')
               -- nil
               _ => pure []
@@ -469,7 +469,7 @@ nfToCFType _ (NBind fc _ _ _) True
 nfToCFType _ (NTCon fc n_in _ args) s
     = do defs <- get Ctxt
          n <- toFullNames n_in
-         case !(getNArgs defs n $ toList (map snd args)) of
+         case !(getNArgs defs n $ toList (map value args)) of
               User un uargs =>
                 do nargs <- traverse (evalClosure defs) uargs
                    cargs <- traverse (\ arg => nfToCFType fc arg s) nargs

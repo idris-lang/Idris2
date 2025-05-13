@@ -22,8 +22,8 @@ used {vars} idx (Bind _ x b sc) = usedBinder b || used (1 + idx) sc
     usedBinder : Binder (Term vars) -> Bool
     usedBinder (Let _ _ val ty) = used idx val || used idx ty
     usedBinder b = used idx (binderType b)
-used idx (Meta _ _ _ args) = any (used idx) args
-used idx (App _ f a) = used idx f || used idx a
+used idx (Meta _ _ _ args) = any (used idx . snd) args
+used idx (App _ f _ a) = used idx f || used idx a
 used idx (As _ _ _ pat) = used idx pat
 used idx (TDelayed _ _ tm) = used idx tm
 used idx (TDelay _ _ _ tm) = used idx tm
@@ -101,11 +101,11 @@ mutual
                  Just (_, new) => new
                  Nothing => tm
       substVars xs (Meta fc n i args)
-          = Meta fc n i (map (substVars xs) args)
+          = Meta fc n i (mapSnd @{Compose} (substVars xs) args)
       substVars xs (Bind fc y b scope)
           = Bind fc y (map (substVars xs) b) (substVars (map (bimap (weaken {tm = VarSet}) weaken) xs) scope)
-      substVars xs (App fc fn arg)
-          = App fc (substVars xs fn) (substVars xs arg)
+      substVars xs (App fc fn r arg)
+          = App fc (substVars xs fn) r (substVars xs arg)
       substVars xs (As fc s as pat)
           = As fc s as (substVars xs pat)
       substVars xs (TDelayed fc y z)
@@ -138,9 +138,9 @@ mutual
                let patArgs = snd (getFnArgsSpine lhs)
                    Just pat = idxOrMaybe argpos patArgs
                      | _ => pure Nothing
-                   rhs = substArgs (mkSizeOf vs) (zip (map (argVars (VarSet.empty {vs})) patArgs) args) rhs
-               logTerm "unelab.case.clause" 20 "Unelaborating LHS" pat
-               lhs' <- unelabTy Full nest clauseEnv pat
+                   rhs = substArgs (mkSizeOf vs) (zip (map (argVars (VarSet.empty {vs})) (map snd patArgs)) args) rhs
+               logTerm "unelab.case.clause" 20 "Unelaborating LHS" (snd pat)
+               lhs' <- unelabTy Full nest clauseEnv (snd pat)
                logTerm "unelab.case.clause" 20 "Unelaborating RHS" rhs
                logEnv "unelab.case.clause" 20 "In Env" clauseEnv
                rhs' <- unelabTy Full nest (clauseEnv ++ env) rhs
@@ -260,7 +260,7 @@ mutual
          = if n `elem` vs
               then uniqueLocal vs (next n)
               else n
-  unelabTy' umode nest env tm@(App fc fn arg)
+  unelabTy' umode nest env tm@(App fc fn _ arg)
       = do (fn', gfnty) <- unelabTy umode nest env fn
            (arg', gargty) <- unelabTy umode nest env arg
            fnty <- getNF gfnty
@@ -274,7 +274,7 @@ mutual
                        fullName <- getFullName fnName
                        let (NS ns (CaseBlock n i)) = fullName
                          | _ => pure Nothing
-                       unelabCase nest env fullName args
+                       unelabCase nest env fullName (map snd args)
                      _ => pure Nothing
              | Just tm => pure (tm, gErased fc)
            case fnty of
@@ -405,7 +405,7 @@ unelabNest : {vars : _} ->
              Env Term vars ->
              Term vars -> Core IRawImp
 unelabNest mode nest env (Meta fc n i args)
-    = do let mkn = nameRoot n ++ showScope args
+    = do let mkn = nameRoot n ++ (showScope $ map snd args)
          pure (IHole fc mkn)
   where
     toName : Term vars -> Maybe Name

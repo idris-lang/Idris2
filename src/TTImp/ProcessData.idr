@@ -142,7 +142,7 @@ getIndexPats tm
 
     getPats : Defs -> ClosedNF -> Core (List ClosedNF)
     getPats defs (NTCon fc _ _ args)
-        = do args' <- traverse (evalClosure defs . snd) args
+        = do args' <- traverse (evalClosure defs . value) args
              pure (toList args')
     getPats defs _ = pure [] -- Can't happen if we defined the type successfully!
 
@@ -169,15 +169,15 @@ getDetags fc tys
           = if t /= t'
                then pure True
                else do defs <- get Ctxt
-                       argsnf <- traverse (evalClosure defs . snd) args
-                       args'nf <- traverse (evalClosure defs . snd) args'
+                       argsnf <- traverse (evalClosure defs . value) args
+                       args'nf <- traverse (evalClosure defs . value) args'
                        disjointArgs argsnf args'nf
       disjoint (NTCon _ n _ args) (NTCon _ n' _ args')
           = if n /= n'
                then pure True
                else do defs <- get Ctxt
-                       argsnf <- traverse (evalClosure defs . snd) args
-                       args'nf <- traverse (evalClosure defs . snd) args'
+                       argsnf <- traverse (evalClosure defs . value) args
+                       args'nf <- traverse (evalClosure defs . value) args'
                        disjointArgs argsnf args'nf
       disjoint (NPrimVal _ c) (NPrimVal _ c') = pure (c /= c')
       disjoint _ _ = pure False
@@ -270,7 +270,7 @@ firstArg tm = Nothing
 
 typeCon : Term vs -> Maybe Name
 typeCon (Ref _ (TyCon _) n) = Just n
-typeCon (App _ fn _) = typeCon fn
+typeCon (App _ fn _ _) = typeCon fn
 typeCon _ = Nothing
 
 shaped : {auto c : Ref Ctxt Defs} ->
