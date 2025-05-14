@@ -12,7 +12,7 @@ import public System.File.Types
 prim__error : FilePtr -> PrimIO Int
 
 %foreign supportC "idris2_fileErrno"
-         supportNode "fileErrno"
+         "node:support"
 prim__fileErrno : PrimIO Int
 
 ||| The types of errors that can occur during file operations.
