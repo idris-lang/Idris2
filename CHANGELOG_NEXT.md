@@ -337,6 +337,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * `prim__makeFuture` from `System.Future` is reimplemented as `%foreign` instead of
   using now removed `MakeFuture` primitive
 
+* The documentation for `Data.Validated.ValidatedL` has been corrected to reflect that
+  it uses a `List1` as an error accumulator, not a `List`.
+
 #### Network
 
 * Add a missing function parameter (the flag) in the C implementation of `idrnet_recv_bytes`
