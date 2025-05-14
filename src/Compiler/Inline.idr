@@ -16,16 +16,24 @@ import Core.TT
 
 import Data.Maybe
 import Data.List
+import Data.SnocList
 import Data.Vect
+
 import Libraries.Data.List.LengthMatch
 import Libraries.Data.NameMap
 import Libraries.Data.WithDefault
+import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
+import Libraries.Data.SnocList.Extra
 
 %default covering
 
-data EEnv : List Name -> List Name -> Type where
-     Nil : EEnv free []
+data EEnv : Scope -> Scope -> Type where
+     Nil : EEnv free ScopeEmpty
      (::) : CExp free -> EEnv free vars -> EEnv free (x :: vars)
+public export
+ScopeEmpty : {tm: _} -> EEnv tm ScopeEmpty
+ScopeEmpty = []
 
 extend : EEnv free vars -> (args : List (CExp free)) -> (args' : List Name) ->
          LengthMatch args args' -> EEnv free (args' ++ vars)
@@ -33,7 +41,7 @@ extend env [] [] NilMatch = env
 extend env (a :: xs) (n :: ns) (ConsMatch w)
     = a :: extend env xs ns w
 
-Stack : List Name -> Type
+Stack : Scoped
 Stack vars = List (CExp vars)
 
 unload : Stack vars -> CExp vars -> CExp vars
@@ -49,7 +57,7 @@ getArity (MkCon _ arity _) = arity
 getArity (MkForeign _ args _) = length args
 getArity (MkError _) = 0
 
-takeFromStack : EEnv free vars -> Stack free -> (args : List Name) ->
+takeFromStack : EEnv free vars -> Stack free -> (args : Scope) ->
                 Maybe (EEnv free (args ++ vars), Stack free)
 takeFromStack env (e :: es) (a :: as)
   = do (env', stk') <- takeFromStack env es as
@@ -161,7 +169,7 @@ mutual
         case (n == NS primIONS (UN $ Basic "io_bind"), stk) of
           (True, act :: cont :: world :: stk) =>
                  do xn <- genName "act"
-                    sc <- eval rec [] [] (CApp fc cont [CRef fc xn, world])
+                    sc <- eval rec ScopeEmpty [] (CApp fc cont [CRef fc xn, world])
                     pure $ unload stk $
                              CLet fc xn NotInline
                                (CApp fc act [world])
@@ -170,7 +178,7 @@ mutual
                  do wn <- genName "world"
                     xn <- genName "act"
                     let world : forall vars. CExp vars := CRef fc wn
-                    sc <- eval rec [] [] (CApp fc cont [CRef fc xn, world])
+                    sc <- eval rec ScopeEmpty [] (CApp fc cont [CRef fc xn, world])
                     pure $ CLam fc wn
                          $ refToLocal wn wn
                          $ CLet fc xn NotInline (CApp fc act [world])
@@ -230,7 +238,7 @@ mutual
       = pure $ unload stk $ CExtPrim fc p !(traverse (eval rec env []) args)
   eval rec env stk (CForce fc lr e)
       = case !(eval rec env [] e) of
-             CDelay _ _ e' => eval rec [] stk e'
+             CDelay _ _ e' => eval rec ScopeEmpty stk e'
              res => pure $ unload stk (CForce fc lr res) -- change this to preserve laziness semantics
   eval rec env stk (CDelay fc lr e)
       = pure $ unload stk (CDelay fc lr !(eval rec env [] e))
@@ -426,7 +434,7 @@ mkBounds [] = None
 mkBounds (x :: xs) = Add x x (mkBounds xs)
 
 getNewArgs : {done : _} ->
-             SubstCEnv done args -> List Name
+             SubstCEnv done args -> Scope
 getNewArgs [] = []
 getNewArgs (CRef _ n :: xs) = n :: getNewArgs xs
 getNewArgs {done = x :: xs} (_ :: sub) = x :: getNewArgs sub
@@ -435,9 +443,9 @@ getNewArgs {done = x :: xs} (_ :: sub) = x :: getNewArgs sub
 -- Annoyingly, the indices will need fixing up because the order in the top
 -- level definition goes left to right (i.e. first argument has lowest index,
 -- not the highest, as you'd expect if they were all lambdas).
-mergeLambdas : (args : List Name) -> CExp args -> (args' ** CExp args')
+mergeLambdas : (args : Scope) -> CExp args -> (args' ** CExp args')
 mergeLambdas args (CLam fc x sc)
-    = let (args' ** (s, env, exp')) = getLams zero 0 [] (CLam fc x sc)
+    = let (args' ** (s, env, exp')) = getLams zero 0 ScopeEmpty (CLam fc x sc)
           expNs = substs s env exp'
           newArgs = reverse $ getNewArgs env
           expLocs = mkLocals (mkSizeOf args) {vars = []} (mkBounds newArgs)
@@ -454,7 +462,7 @@ doEval : {args : _} ->
 doEval n exp
     = do l <- newRef LVar (the Int 0)
          log "compiler.inline.eval" 10 (show n ++ ": " ++ show exp)
-         exp' <- eval [] [] [] exp
+         exp' <- eval [] ScopeEmpty [] exp
          log "compiler.inline.eval" 10 ("Inlined: " ++ show exp')
          pure exp'
 

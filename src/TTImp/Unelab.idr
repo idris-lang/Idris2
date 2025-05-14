@@ -13,6 +13,9 @@ import TTImp.TTImp
 import Data.List
 import Data.String
 
+import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
+
 %default covering
 
 used : (idx : Nat) -> Term vars -> Bool
@@ -69,7 +72,7 @@ mutual
                List (Name, Nat) ->
                Env Term vars ->
                Name ->
-               List (Term vars) ->
+               Scopeable (Term vars) ->
                Core (Maybe IRawImp)
   unelabCase nest env n args
       = do defs <- get Ctxt
@@ -89,13 +92,13 @@ mutual
       findArgPos (Case idx p _ _) = Just idx
       findArgPos _ = Nothing
 
-      idxOrMaybe : Nat -> List a -> Maybe a
+      idxOrMaybe : Nat -> Scopeable a -> Maybe a
       idxOrMaybe Z (x :: _) = Just x
       idxOrMaybe (S k) (_ :: xs) = idxOrMaybe k xs
       idxOrMaybe _ [] = Nothing
 
       -- TODO: some utility like this should probably be implemented in Core
-      substVars : List (List (Var vs), Term vs) -> Term vs -> Term vs
+      substVars : Scopeable (List (Var vs), Term vs) -> Term vs -> Term vs
       substVars xs tm@(Local fc _ idx prf)
           = case find (any ((idx ==) . varIdx) . fst) xs of
                  Just (_, new) => new
@@ -116,7 +119,7 @@ mutual
           = TForce fc r (substVars xs y)
       substVars xs tm = tm
 
-      substArgs : SizeOf vs -> List (List (Var vs), Term vars) -> Term vs -> Term (vs ++ vars)
+      substArgs : SizeOf vs -> Scopeable (List (Var vs), Term vars) -> Term vs -> Term (vs ++ vars)
       substArgs p substs tm =
         let
           substs' = map (bimap (map $ embed {outer = vars}) (weakenNs p)) substs
@@ -130,7 +133,7 @@ mutual
       argVars _ = []
 
       mkClause : FC -> Nat ->
-                 List (Term vars) ->
+                 Scopeable (Term vars) ->
                  (vs ** (Env Term vs, Term vs, Term vs)) ->
                  Core (Maybe IImpClause)
       mkClause fc argpos args (vs ** (clauseEnv, lhs, rhs))
@@ -153,10 +156,10 @@ mutual
       ||| Once we have the scrutinee `e`, we can form `case e of` and so focus
       ||| on manufacturing the clauses.
       mkCase : List (vs ** (Env Term vs, Term vs, Term vs)) ->
-               (argpos : Nat) -> List (Term vars) -> Core (Maybe IRawImp)
+               (argpos : Nat) -> Scopeable (Term vars) -> Core (Maybe IRawImp)
       mkCase pats argpos args
           = do unless (null args) $ log "unelab.case.clause" 20 $
-                 unwords $ "Ignoring" :: map show args
+                 unwords $ "Ignoring" :: map show (toList args)
                let Just scrutinee = idxOrMaybe argpos args
                      | _ => pure Nothing
                    fc = getLoc scrutinee
@@ -255,7 +258,7 @@ mutual
       next (NS ns n) = NS ns (next n)
       next n = MN (show n) 0
 
-      uniqueLocal : List Name -> Name -> Name
+      uniqueLocal : Scope -> Name -> Name
       uniqueLocal vs n
          = if n `elem` vs
               then uniqueLocal vs (next n)
