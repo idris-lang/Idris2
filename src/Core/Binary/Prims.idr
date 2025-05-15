@@ -30,10 +30,10 @@ data ResID : Type where
 public export
 interface TTC a where -- TTC = TT intermediate code/interface file
   -- Add binary data representing the value to the given buffer
-  toBuf : Ref Bin Binary -> a -> Core ()
+  toBuf : Ref Bin Binary => a -> Core ()
   -- Return the data representing a thing of type 'a' from the given buffer.
   -- Throws if the data can't be parsed as an 'a'
-  fromBuf : Ref Bin Binary -> Core a
+  fromBuf : Ref Bin Binary => Core a
 
 -- Create a new list of chunks, initialised with one 64k chunk
 export
@@ -96,7 +96,7 @@ getTag {b}
 
 export
 [Wasteful] TTC Int where
-  toBuf b val
+  toBuf val
     = do chunk <- get Bin
          if avail chunk >= 8
             then
@@ -106,7 +106,7 @@ export
                     coreLift $ setInt (buf chunk') (cast $ loc chunk') val
                     put Bin (appended 8 chunk')
 
-  fromBuf b
+  fromBuf
     = do chunk <- get Bin
          if toRead chunk >= 8
             then
@@ -117,7 +117,7 @@ export
 
 export
 TTC Int where
-  toBuf b val
+  toBuf val
     = if val >= -127 && val < 128
          then tag (val + 127)
          else do tag 255
@@ -130,7 +130,7 @@ TTC Int where
                             coreLift $ setInt (buf chunk') (cast $ loc chunk') val
                             put Bin (appended 8 chunk')
 
-  fromBuf b
+  fromBuf
     = case !getTag of
            255 => do chunk <- get Bin
                      if toRead chunk >= 8
@@ -143,12 +143,12 @@ TTC Int where
 
 export
 TTC String where
-  toBuf b val
+  toBuf val
       -- To support UTF-8 strings, this has to get the length of the string
       -- in bytes, not the length in characters.
       = do let ireq = stringByteLength val
            let req : Integer = cast ireq
-           toBuf b ireq
+           toBuf ireq
            chunk <- get Bin
            if avail chunk >= req
               then
@@ -158,8 +158,8 @@ TTC String where
                       coreLift $ setString (buf chunk') (cast $ loc chunk') val
                       put Bin (appended req chunk')
 
-  fromBuf b
-      = do ilen <- fromBuf {a = Int} b
+  fromBuf
+      = do ilen <- fromBuf {a = Int}
            chunk <- get Bin
            let len = cast ilen
            when (len < 0) $ corrupt "String"
@@ -173,10 +173,10 @@ TTC String where
 
 export
 TTC Binary where
-  toBuf b val
+  toBuf val
     = do let len = used val
          let ilen : Int = cast len
-         toBuf b ilen
+         toBuf ilen
          chunk <- get Bin
          if avail chunk >= len
             then
@@ -188,8 +188,8 @@ TTC Binary where
                                         (buf chunk') (cast $ loc chunk')
                     put Bin (appended len chunk')
 
-  fromBuf b
-    = do ilen <- fromBuf b
+  fromBuf
+    = do ilen <- fromBuf
          let len : Integer = cast ilen
          chunk <- get Bin
          if toRead chunk >= len
@@ -204,9 +204,9 @@ TTC Binary where
 
 export
 TTC Bool where
-  toBuf b False = tag 0
-  toBuf b True = tag 1
-  fromBuf b
+  toBuf False = tag 0
+  toBuf True = tag 1
+  fromBuf
       = case !getTag of
              0 => pure False
              1 => pure True
@@ -214,14 +214,14 @@ TTC Bool where
 
 export
 TTC Char where
-  toBuf b c = toBuf b (cast {to=Int} c)
-  fromBuf b
-      = do i <- fromBuf b
+  toBuf c = toBuf (cast {to=Int} c)
+  fromBuf
+      = do i <- fromBuf
            pure (cast {from=Int} i)
 
 export
 TTC Double where
-  toBuf b val
+  toBuf val
     = do chunk <- get Bin
          if avail chunk >= 8
             then
@@ -231,7 +231,7 @@ TTC Double where
                     coreLift $ setDouble (buf chunk') (cast $ loc chunk') val
                     put Bin (appended 8 chunk')
 
-  fromBuf b
+  fromBuf
     = do chunk <- get Bin
          if toRead chunk >= 8
             then
@@ -242,82 +242,82 @@ TTC Double where
 
 export
 (TTC a, TTC b) => TTC (a, b) where
-  toBuf b (x, y)
-     = do toBuf b x
-          toBuf b y
-  fromBuf b
-     = do x <- fromBuf b
-          y <- fromBuf b
+  toBuf (x, y)
+     = do toBuf x
+          toBuf y
+  fromBuf
+     = do x <- fromBuf
+          y <- fromBuf
           pure (x, y)
 
 export
 TTC () where
-  toBuf b () = pure ()
-  fromBuf b = pure ()
+  toBuf () = pure ()
+  fromBuf = pure ()
 
 export
 (TTC a, {y : a} -> TTC (p y)) => TTC (DPair a p) where
-  toBuf b (vs ** tm)
-      = do toBuf b vs
-           toBuf b tm
+  toBuf (vs ** tm)
+      = do toBuf vs
+           toBuf tm
 
-  fromBuf b
-      = do x <- fromBuf b
-           p <- fromBuf b
+  fromBuf
+      = do x <- fromBuf
+           p <- fromBuf
            pure (x ** p)
 
 export
 TTC a => TTC (Maybe a) where
-  toBuf b Nothing
+  toBuf Nothing
      = tag 0
-  toBuf b (Just val)
+  toBuf (Just val)
      = do tag 1
-          toBuf b val
+          toBuf val
 
-  fromBuf b
+  fromBuf
      = case !getTag of
             0 => pure Nothing
-            1 => do val <- fromBuf b
+            1 => do val <- fromBuf
                     pure (Just val)
             _ => corrupt "Maybe"
 
 export
 TTC a => TTC (WithDefault a def) where
-  toBuf b def = onWithDefault
+  toBuf def = onWithDefault
                   (tag 0)
                   (\v => do tag 1
-                            toBuf b v)
+                            toBuf v)
                   def
 
-  fromBuf b
+  fromBuf
      = case !getTag of
             0 => pure defaulted
-            1 => do val <- fromBuf b
+            1 => do val <- fromBuf
                     pure (specified val)
             _ => corrupt "WithDefault"
 
 export
 (TTC a, TTC b) => TTC (Either a b) where
-  toBuf b (Left val)
+  toBuf (Left val)
      = do tag 0
-          toBuf b val
-  toBuf b (Right val)
+          toBuf val
+  toBuf (Right val)
      = do tag 1
-          toBuf b val
+          toBuf val
 
-  fromBuf b
+  fromBuf
      = case !getTag of
-            0 => do val <- fromBuf b
+            0 => do val <- fromBuf
                     pure (Left val)
-            1 => do val <- fromBuf b
+            1 => do val <- fromBuf
                     pure (Right val)
             _ => corrupt "Either"
 
 export
 TTC a => TTC (List a) where
-  toBuf b xs
-      = do toBuf b (TailRec_length xs)
-           traverse_ (toBuf b) xs
+  toBuf xs
+      = do toBuf (TailRec_length xs)
+           traverse_ (toBuf) xs
     where
       ||| Tail-recursive length as buffer sizes can get large
       |||
@@ -329,49 +329,49 @@ TTC a => TTC (List a) where
       TailRec_length : List a -> Int
       TailRec_length xs = length_aux xs 0
 
-  fromBuf b
-      = do len <- fromBuf b {a = Int}
+  fromBuf
+      = do len <- fromBuf {a = Int}
            readElems [] (integerToNat (cast len))
     where
       readElems : List a -> Nat -> Core (List a)
       readElems xs Z = pure (reverse xs)
       readElems xs (S k)
-          = do val <- fromBuf b
+          = do val <- fromBuf
                readElems (val :: xs) k
 
 export
 TTC a => TTC (List1 a) where
-  toBuf b xxs
-     = do toBuf b (head xxs)
-          toBuf b (tail xxs)
+  toBuf xxs
+     = do toBuf (head xxs)
+          toBuf (tail xxs)
 
-  fromBuf b = do
-    x <- fromBuf b
-    xs <- fromBuf b
+  fromBuf = do
+    x <- fromBuf
+    xs <- fromBuf
     pure (x ::: xs)
 
 export
 {n : Nat} -> TTC a => TTC (Vect n a) where
-  toBuf b xs = writeAll xs
+  toBuf xs = writeAll xs
     where
       writeAll : forall n . Vect n a -> Core ()
       writeAll [] = pure ()
-      writeAll (x :: xs) = do toBuf b x; writeAll xs
+      writeAll (x :: xs) = do toBuf x; writeAll xs
 
-  fromBuf {n} b = rewrite sym (plusZeroRightNeutral n) in readElems [] n
+  fromBuf {n} = rewrite sym (plusZeroRightNeutral n) in readElems [] n
     where
       readElems : Vect done a -> (todo : Nat) -> Core (Vect (todo + done) a)
       readElems {done} xs Z
           = pure (reverse xs)
       readElems {done} xs (S k)
-          = do val <- fromBuf b
+          = do val <- fromBuf
                rewrite (plusSuccRightSucc k done)
                readElems (val :: xs) k
 
 export
 (TTC a, Measure a) => TTC (PosMap a) where
-  toBuf b = toBuf b . toList
-  fromBuf b = fromList <$> fromBuf b
+  toBuf = toBuf . toList
+  fromBuf = fromList <$> fromBuf
 
 %hide Fin.fromInteger
 
@@ -393,66 +393,66 @@ fromLimbs (x :: xs) = cast x + prim__shl_Integer (fromLimbs xs) 32
 
 export
 TTC Integer where
-  toBuf b val
+  toBuf val
     = assert_total $ if val < 0
          then do tag 0
-                 toBuf b (toLimbs (-val))
+                 toBuf (toLimbs (-val))
          else do tag 1
-                 toBuf b (toLimbs val)
-  fromBuf b
+                 toBuf (toLimbs val)
+  fromBuf
     = do val <- getTag
          case val of
-              0 => do val <- fromBuf b
+              0 => do val <- fromBuf
                       pure (-(fromLimbs val))
-              1 => do val <- fromBuf b
+              1 => do val <- fromBuf
                       pure (fromLimbs val)
               _ => corrupt "Integer"
 
 export
 TTC Bits8 where
-  toBuf b x = toBuf b $ cast {to = Int} x
-  fromBuf b = cast {from = Int} <$> fromBuf b
+  toBuf x = toBuf $ cast {to = Int} x
+  fromBuf = cast {from = Int} <$> fromBuf
 
 export
 TTC Bits16 where
-  toBuf b x = toBuf b $ cast {to = Int} x
-  fromBuf b = cast {from = Int} <$> fromBuf b
+  toBuf x = toBuf $ cast {to = Int} x
+  fromBuf = cast {from = Int} <$> fromBuf
 
 export
 TTC Bits32 where
-  toBuf b x = toBuf b $ cast {to = Integer} x
-  fromBuf b = cast {from = Integer} <$> fromBuf b
+  toBuf x = toBuf $ cast {to = Integer} x
+  fromBuf = cast {from = Integer} <$> fromBuf
 
 export
 TTC Bits64 where
-  toBuf b x = toBuf b $ cast {to = Integer} x
-  fromBuf b = cast {from = Integer} <$> fromBuf b
+  toBuf x = toBuf $ cast {to = Integer} x
+  fromBuf = cast {from = Integer} <$> fromBuf
 
 export
 TTC Int8 where
-  toBuf b x = toBuf b $ cast {to = Int} x
-  fromBuf b = cast {from = Int} <$> fromBuf b
+  toBuf x = toBuf $ cast {to = Int} x
+  fromBuf = cast {from = Int} <$> fromBuf
 
 export
 TTC Int16 where
-  toBuf b x = toBuf b $ cast {to = Int} x
-  fromBuf b = cast {from = Int} <$> fromBuf b
+  toBuf x = toBuf $ cast {to = Int} x
+  fromBuf = cast {from = Int} <$> fromBuf
 
 export
 TTC Int32 where
-  toBuf b x = toBuf b $ cast {to = Int} x
-  fromBuf b = cast {from = Int} <$> fromBuf b
+  toBuf x = toBuf $ cast {to = Int} x
+  fromBuf = cast {from = Int} <$> fromBuf
 
 export
 TTC Int64 where
-  toBuf b x = toBuf b $ cast {to = Integer} x
-  fromBuf b = cast {from = Integer} <$> fromBuf b
+  toBuf x = toBuf $ cast {to = Integer} x
+  fromBuf = cast {from = Integer} <$> fromBuf
 
 export
 TTC Nat where
-  toBuf b val = toBuf b (cast {to=Integer} val)
-  fromBuf b
-     = do val <- fromBuf b
+  toBuf val = toBuf (cast {to=Integer} val)
+  fromBuf
+     = do val <- fromBuf
           pure (fromInteger val)
 
 ||| Get a file's modified time. If it doesn't exist, return 0 (UNIX Epoch)

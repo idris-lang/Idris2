@@ -194,48 +194,48 @@ writeTTCFile : (HasNames extra, TTC extra) =>
                Ref Bin Binary -> TTCFile extra -> Core ()
 writeTTCFile b file_in
       = do file <- toFullNames file_in
-           toBuf b "TT2"
-           toBuf @{Wasteful} b (version file)
-           toBuf b (totalReq file)
-           toBuf b (sourceHash file)
-           toBuf b (ifaceHash file)
-           toBuf b (importHashes file)
-           toBuf b (incData file)
-           toBuf b (imported file)
-           toBuf b (extraData file)
-           toBuf b (context file)
-           toBuf b (userHoles file)
-           toBuf b (autoHints file)
-           toBuf b (typeHints file)
-           toBuf b (nextVar file)
-           toBuf b (currentNS file)
-           toBuf b (nestedNS file)
-           toBuf b (pairnames file)
-           toBuf b (rewritenames file)
-           toBuf b (primnames file)
-           toBuf b (foreignImpl file)
-           toBuf b (namedirectives file)
-           toBuf b (cgdirectives file)
-           toBuf b (transforms file)
-           toBuf b (foreignExports file)
+           toBuf "TT2"
+           toBuf @{Wasteful} (version file)
+           toBuf (totalReq file)
+           toBuf (sourceHash file)
+           toBuf (ifaceHash file)
+           toBuf (importHashes file)
+           toBuf (incData file)
+           toBuf (imported file)
+           toBuf (extraData file)
+           toBuf (context file)
+           toBuf (userHoles file)
+           toBuf (autoHints file)
+           toBuf (typeHints file)
+           toBuf (nextVar file)
+           toBuf (currentNS file)
+           toBuf (nestedNS file)
+           toBuf (pairnames file)
+           toBuf (rewritenames file)
+           toBuf (primnames file)
+           toBuf (foreignImpl file)
+           toBuf (namedirectives file)
+           toBuf (cgdirectives file)
+           toBuf (transforms file)
+           toBuf (foreignExports file)
 
 readTTCFile : TTC extra =>
               {auto c : Ref Ctxt Defs} ->
               Bool -> String -> Maybe (Namespace) ->
               Ref Bin Binary -> Core (TTCFile extra)
 readTTCFile readall file as b
-      = do hdr <- fromBuf b
+      = do hdr <- fromBuf
            when (hdr /= "TT2") $
              corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
-           ver <- fromBuf @{Wasteful} b
+           ver <- fromBuf @{Wasteful}
            checkTTCVersion file ver ttcVersion
-           totalReq <- fromBuf b
-           sourceFileHash <- fromBuf b
-           ifaceHash <- fromBuf b
-           importHashes <- fromBuf b
-           incData <- fromBuf b
-           imp <- fromBuf b
-           ex <- fromBuf b
+           totalReq <- fromBuf
+           sourceFileHash <- fromBuf
+           ifaceHash <- fromBuf
+           importHashes <- fromBuf
+           incData <- fromBuf
+           imp <- fromBuf
+           ex <- fromBuf
            if not readall
               then pure (MkTTCFile ver totalReq
                                    sourceFileHash ifaceHash importHashes
@@ -245,21 +245,21 @@ readTTCFile readall file as b
                                    (MkPrimNs Nothing Nothing Nothing Nothing Nothing Nothing Nothing)
                                    [] [] [] [] [] ex)
               else do
-                 defs <- fromBuf b
-                 uholes <- fromBuf b
-                 autohs <- fromBuf b
-                 typehs <- fromBuf b
-                 nextv <- fromBuf b
-                 cns <- fromBuf b
-                 nns <- fromBuf b
-                 pns <- fromBuf b
-                 rws <- fromBuf b
-                 prims <- fromBuf b
-                 foreignImpl <- fromBuf b
-                 nds <- fromBuf b
-                 cgds <- fromBuf b
-                 trans <- fromBuf b
-                 fexp <- fromBuf b
+                 defs <- fromBuf
+                 uholes <- fromBuf
+                 autohs <- fromBuf
+                 typehs <- fromBuf
+                 nextv <- fromBuf
+                 cns <- fromBuf
+                 nns <- fromBuf
+                 pns <- fromBuf
+                 rws <- fromBuf
+                 prims <- fromBuf
+                 foreignImpl <- fromBuf
+                 nds <- fromBuf
+                 cgds <- fromBuf
+                 trans <- fromBuf
+                 fexp <- fromBuf
                  pure (MkTTCFile ver totalReq
                                  sourceFileHash ifaceHash importHashes incData
                                  (map (replaceNS cns) defs) uholes
@@ -283,7 +283,7 @@ getSaveDefs modns (n :: ns) acc defs
          case definition gdef of
               Builtin _ => getSaveDefs modns ns acc defs
               _ => do bin <- initBinaryS 16384
-                      toBuf bin (trimNS modns !(full (gamma defs) gdef))
+                      toBuf (trimNS modns !(full (gamma defs) gdef))
                       b <- get Bin
                       getSaveDefs modns ns ((trimName (fullname gdef), b) :: acc) defs
   where
@@ -540,12 +540,12 @@ readFromTTC nestedns loc reexp fname modNS importAs
 export
 getTotalReq : String -> Ref Bin Binary -> Core TotalReq
 getTotalReq file b
-    = do hdr <- fromBuf {a = String} b
+    = do hdr <- fromBuf {a = String}
          when (hdr /= "TT2") $
            corrupt ("TTC header in " ++ file ++ " " ++ show hdr)
-         ver <- fromBuf @{Wasteful} b
+         ver <- fromBuf @{Wasteful}
          checkTTCVersion file ver ttcVersion
-         fromBuf b -- `totalReq`
+         fromBuf -- `totalReq`
 
 -- Implements a portion of @readTTCFile@. The fields must be read in order.
 -- This reads everything up to and including `interfaceHash`.
@@ -553,8 +553,8 @@ export
 getHashes : String -> Ref Bin Binary -> Core (Maybe String, Int)
 getHashes file b
     = do ignore $ getTotalReq file b
-         sourceFileHash <- fromBuf b
-         interfaceHash <- fromBuf b
+         sourceFileHash <- fromBuf
+         interfaceHash <- fromBuf
          pure (sourceFileHash, interfaceHash)
 
 -- Implements a portion of @readTTCFile@. The fields must be read in order.
@@ -563,7 +563,7 @@ getImportHashes : String -> Ref Bin Binary ->
                   Core (List (Namespace, Int))
 getImportHashes file b
     = do ignore $ getHashes file b
-         fromBuf b -- `importHashes`
+         fromBuf -- `importHashes`
 
 -- Implements a portion of @readTTCFile@. The fields must be read in order.
 -- This reads everything up to and including `incData`.
@@ -571,7 +571,7 @@ getIncData : String -> Ref Bin Binary ->
              Core (List (CG, String, List String))
 getIncData file b
     = do ignore $ getImportHashes file b
-         fromBuf b -- `incData`
+         fromBuf -- `incData`
 
 export
 readTotalReq : (fileName : String) -> -- file containing the module
