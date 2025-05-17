@@ -145,12 +145,12 @@ getMinimalDef : ContextEntry -> Core (GlobalDef, Maybe (Namespace, Binary))
 getMinimalDef (Decoded def) = pure (def, Nothing)
 getMinimalDef (Coded ns bin)
     = do b <- newRef Bin bin
-         cdef <- fromBuf b
-         refsRList <- fromBuf b
+         cdef <- fromBuf
+         refsRList <- fromBuf
          let refsR = map fromList refsRList
-         fc <- fromBuf b
-         mul <- fromBuf b
-         name <- fromBuf b
+         fc <- fromBuf
+         mul <- fromBuf
+         name <- fromBuf
          let def
              = MkGlobalDef fc name (Erased fc Placeholder) [] [] [] [] mul
                            [] (specified Public) (MkTotality Unchecked IsCovering) False

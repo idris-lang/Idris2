@@ -42,16 +42,16 @@ SemanticDecorations : Type
 SemanticDecorations = List ASemanticDecoration
 
 TTC Decoration where
-  toBuf b Typ       = tag 0
-  toBuf b Function  = tag 1
-  toBuf b Data      = tag 2
-  toBuf b Keyword   = tag 3
-  toBuf b Bound     = tag 4
-  toBuf b Namespace = tag 5
-  toBuf b Postulate = tag 6
-  toBuf b Module    = tag 7
-  toBuf b Comment   = tag 8
-  fromBuf b
+  toBuf Typ       = tag 0
+  toBuf Function  = tag 1
+  toBuf Data      = tag 2
+  toBuf Keyword   = tag 3
+  toBuf Bound     = tag 4
+  toBuf Namespace = tag 5
+  toBuf Postulate = tag 6
+  toBuf Module    = tag 7
+  toBuf Comment   = tag 8
+  fromBuf
     = case !getTag of
         0 => pure Typ
         1 => pure Function
@@ -168,27 +168,27 @@ export
 data MD : Type where
 
 TTC Metadata where
-  toBuf b m
-      = do toBuf b (lhsApps m)
-           toBuf b (names m)
-           toBuf b (tydecls m)
-           toBuf b (holeLHS m)
-           toBuf b (nameLocMap m)
-           toBuf b (sourceIdent m)
-           toBuf b (semanticHighlighting m)
-           toBuf b (semanticAliases m)
-           toBuf b (semanticDefaults m)
+  toBuf m
+      = do toBuf (lhsApps m)
+           toBuf (names m)
+           toBuf (tydecls m)
+           toBuf (holeLHS m)
+           toBuf (nameLocMap m)
+           toBuf (sourceIdent m)
+           toBuf (semanticHighlighting m)
+           toBuf (semanticAliases m)
+           toBuf (semanticDefaults m)
 
-  fromBuf b
-      = do apps <- fromBuf b
-           ns <- fromBuf b
-           tys <- fromBuf b
-           hlhs <- fromBuf b
-           dlocs <- fromBuf b
-           fname <- fromBuf b
-           semhl <- fromBuf b
-           semal <- fromBuf b
-           semdef <- fromBuf b
+  fromBuf
+      = do apps <- fromBuf
+           ns <- fromBuf
+           tys <- fromBuf
+           hlhs <- fromBuf
+           dlocs <- fromBuf
+           fname <- fromBuf
+           semhl <- fromBuf
+           semal <- fromBuf
+           semdef <- fromBuf
            pure (MkMetadata apps ns tys Nothing hlhs dlocs fname semhl semal semdef)
 
 export
@@ -365,17 +365,17 @@ record TTMFile where
   metadata : Metadata
 
 TTC TTMFile where
-  toBuf b file
-      = do toBuf b "TTM"
-           toBuf b (version file)
-           toBuf b (metadata file)
+  toBuf file
+      = do toBuf "TTM"
+           toBuf (version file)
+           toBuf (metadata file)
 
-  fromBuf b
-      = do hdr <- fromBuf b
+  fromBuf
+      = do hdr <- fromBuf
            when (hdr /= "TTM") $ corrupt "TTM header"
-           ver <- fromBuf b
+           ver <- fromBuf
            checkTTCVersion "" ver ttcVersion -- maybe change the interface to get the filename
-           md <- fromBuf b
+           md <- fromBuf
            pure (MkTTMFile ver md)
 
 HasNames Metadata where
@@ -434,7 +434,7 @@ writeToTTM fname
          buf <- initBinary
          meta <- get MD
          defs <- get Ctxt
-         toBuf buf (MkTTMFile ttcVersion !(full (gamma defs) meta))
+         toBuf (MkTTMFile ttcVersion !(full (gamma defs) meta))
          Right ok <- coreLift $ writeToFile fname !(get Bin)
              | Left err => throw (InternalError (fname ++ ": " ++ show err))
          pure ()
@@ -447,7 +447,7 @@ readFromTTM fname
     = do Right buf <- coreLift $ readFromFile fname
              | Left err => throw (InternalError (fname ++ ": " ++ show err))
          bin <- newRef Bin buf
-         ttm <- fromBuf bin
+         ttm <- fromBuf
          put MD (metadata ttm)
 
 ||| Read Metadata from given file
@@ -457,7 +457,7 @@ readMetadata fname
   = do Right buf <- coreLift $ readFromFile fname
              | Left err => throw (InternalError (fname ++ ": " ++ show err))
        bin <- newRef Bin buf
-       MkTTMFile _ md <- fromBuf bin
+       MkTTMFile _ md <- fromBuf
        pure md
 
 ||| Dump content of a .ttm file in human-readable format
