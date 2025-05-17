@@ -65,3 +65,4 @@ extern char const idris2_constr_Double[];
 extern char const idris2_constr_Integer[];
 extern char const idris2_constr_Char[];
 extern char const idris2_constr_String[];
+extern char const idris2_constr____gt[];
