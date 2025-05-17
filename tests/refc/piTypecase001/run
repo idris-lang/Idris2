@@ -1,0 +1,4 @@
+. ../../testutils.sh
+
+idris2 --cg refc -o refc_typecase Test.idr
+./build/exec/refc_typecase

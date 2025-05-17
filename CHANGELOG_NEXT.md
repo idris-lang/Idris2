@@ -176,6 +176,10 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Constant `String`, `Int64`, `Bits64` and `Double` values are allocated statically as
   immortal and shared.
 
+* A constant string for the representation of Pi type constructor is defined in
+  the support library. Code that creates or pattern-matches on Pi types at
+  runtime will now build instead of being rejected by the C compiler.
+
 #### Chez
 
 * Fixed CSE soundness bug that caused delayed expressions to sometimes be eagerly
