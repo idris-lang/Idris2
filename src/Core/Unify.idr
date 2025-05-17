@@ -1047,6 +1047,18 @@ mutual
   unifyBothApps mode loc env xfc fx ax yfc fy ay
       = unifyApp False mode loc env xfc fx ax (NApp yfc fy ay)
 
+  unifyPiInfo : {auto c : Ref Ctxt Defs} ->
+                {auto u : Ref UST UState} ->
+                {vars : _} ->
+                UnifyInfo -> FC -> Env Term vars ->
+                PiInfo (Closure vars) -> PiInfo (Closure vars) ->
+                Core (Maybe UnifyResult)
+  unifyPiInfo mode loc env Explicit Explicit = pure $ Just success
+  unifyPiInfo mode loc env Implicit Implicit = pure $ Just success
+  unifyPiInfo mode loc env AutoImplicit AutoImplicit = pure $ Just success
+  unifyPiInfo mode loc env (DefImplicit x) (DefImplicit y) = Just <$> unify mode loc env x y
+  unifyPiInfo mode loc env _ _ = pure Nothing
+
   unifyBothBinders: {auto c : Ref Ctxt Defs} ->
                     {auto u : Ref UST UState} ->
                     {vars : _} ->
@@ -1058,65 +1070,70 @@ mutual
                     Core UnifyResult
   unifyBothBinders mode loc env xfc x (Pi fcx cx ix tx) scx yfc y (Pi fcy cy iy ty) scy
       = do defs <- get Ctxt
+           let err = convertError loc env
+                       (NBind xfc x (Pi fcx cx ix tx) scx)
+                       (NBind yfc y (Pi fcy cy iy ty) scy)
            if cx /= cy
-             then convertError loc env
-                    (NBind xfc x (Pi fcx cx ix tx) scx)
-                    (NBind yfc y (Pi fcy cy iy ty) scy)
-             else
-               do empty <- clearDefs defs
-                  tx' <- quote empty env tx
-                  logC "unify.binder" 10 $
-                            (do ty' <- quote empty env ty
-                                pure ("Unifying arg types " ++ show tx' ++ " and " ++ show ty'))
-                  ct <- unify (lower mode) loc env tx ty
-                  xn <- genVarName "x"
-                  let env' : Env Term (x :: _)
-                           = Pi fcy cy Explicit tx' :: env
-                  case constraints ct of
-                      [] => -- No constraints, check the scope
-                         do tscx <- scx defs (toClosure defaultOpts env (Ref loc Bound xn))
-                            tscy <- scy defs (toClosure defaultOpts env (Ref loc Bound xn))
-                            tmx <- quote empty env tscx
-                            tmy <- quote empty env tscy
-                            unify (lower mode) loc env'
-                              (refsToLocals (Add x xn None) tmx)
-                              (refsToLocals (Add x xn None) tmy)
-                      cs => -- Constraints, make new guarded constant
-                         do txtm <- quote empty env tx
-                            tytm <- quote empty env ty
-                            c <- newConstant loc erased env
-                                   (Bind xfc x (Lam fcy cy Explicit txtm) (Local xfc Nothing _ First))
-                                   (Bind xfc x (Pi fcy cy Explicit txtm)
-                                       (weaken tytm)) cs
-                            tscx <- scx defs (toClosure defaultOpts env (Ref loc Bound xn))
-                            tscy <- scy defs (toClosure defaultOpts env (App loc c (Ref loc Bound xn)))
-                            tmx <- quote empty env tscx
-                            tmy <- quote empty env tscy
-                            cs' <- unify (lower mode) loc env'
-                                     (refsToLocals (Add x xn None) tmx)
-                                     (refsToLocals (Add x xn None) tmy)
-                            pure (union ct cs')
+             then err
+             else do Just ci <- unifyPiInfo (lower mode) loc env ix iy
+                       | Nothing => err
+                     empty <- clearDefs defs
+                     tx' <- quote empty env tx
+                     logC "unify.binder" 10 $
+                               (do ty' <- quote empty env ty
+                                   pure ("Unifying arg types " ++ show tx' ++ " and " ++ show ty'))
+                     ct <- unify (lower mode) loc env tx ty
+                     xn <- genVarName "x"
+                     let env' : Env Term (x :: _)
+                              = Pi fcy cy Explicit tx' :: env
+                     case constraints ct of
+                         [] => -- No constraints, check the scope
+                            do tscx <- scx defs (toClosure defaultOpts env (Ref loc Bound xn))
+                               tscy <- scy defs (toClosure defaultOpts env (Ref loc Bound xn))
+                               tmx <- quote empty env tscx
+                               tmy <- quote empty env tscy
+                               cs <- unify (lower mode) loc env'
+                                       (refsToLocals (Add x xn None) tmx)
+                                       (refsToLocals (Add x xn None) tmy)
+                               pure (union ci cs)
+                         cs => -- Constraints, make new guarded constant
+                            do txtm <- quote empty env tx
+                               tytm <- quote empty env ty
+                               c <- newConstant loc erased env
+                                      (Bind xfc x (Lam fcy cy Explicit txtm) (Local xfc Nothing _ First))
+                                      (Bind xfc x (Pi fcy cy Explicit txtm)
+                                          (weaken tytm)) cs
+                               tscx <- scx defs (toClosure defaultOpts env (Ref loc Bound xn))
+                               tscy <- scy defs (toClosure defaultOpts env (App loc c (Ref loc Bound xn)))
+                               tmx <- quote empty env tscx
+                               tmy <- quote empty env tscy
+                               cs' <- unify (lower mode) loc env'
+                                        (refsToLocals (Add x xn None) tmx)
+                                        (refsToLocals (Add x xn None) tmy)
+                               pure (union ci (union ct cs'))
   unifyBothBinders mode loc env xfc x (Lam fcx cx ix tx) scx yfc y (Lam fcy cy iy ty) scy
       = do defs <- get Ctxt
+           let err = convertError loc env
+                       (NBind xfc x (Lam fcx cx ix tx) scx)
+                       (NBind yfc y (Lam fcy cy iy ty) scy)
            if cx /= cy
-             then convertError loc env
-                    (NBind xfc x (Lam fcx cx ix tx) scx)
-                    (NBind yfc y (Lam fcy cy iy ty) scy)
-             else
-               do empty <- clearDefs defs
-                  ct <- unify (lower mode) loc env tx ty
-                  xn <- genVarName "x"
-                  txtm <- quote empty env tx
-                  let env' : Env Term (x :: _)
-                           = Lam fcx cx Explicit txtm :: env
+             then err
+             else do empty <- clearDefs defs
+                     Just ci <- unifyPiInfo (lower mode) loc env ix iy
+                       | Nothing => err
+                     ct <- unify (lower mode) loc env tx ty
+                     xn <- genVarName "x"
+                     txtm <- quote empty env tx
+                     let env' : Env Term (x :: _)
+                              = Lam fcx cx Explicit txtm :: env
 
-                  tscx <- scx defs (toClosure defaultOpts env (Ref loc Bound xn))
-                  tscy <- scy defs (toClosure defaultOpts env (Ref loc Bound xn))
-                  tmx <- quote empty env tscx
-                  tmy <- quote empty env tscy
-                  cs' <- unify (lower mode) loc env' (refsToLocals (Add x xn None) tmx)
-                                                           (refsToLocals (Add x xn None) tmy)
-                  pure (union ct cs')
+                     tscx <- scx defs (toClosure defaultOpts env (Ref loc Bound xn))
+                     tscy <- scy defs (toClosure defaultOpts env (Ref loc Bound xn))
+                     tmx <- quote empty env tscx
+                     tmy <- quote empty env tscy
+                     cs' <- unify (lower mode) loc env' (refsToLocals (Add x xn None) tmx)
+                                                              (refsToLocals (Add x xn None) tmy)
+                     pure (union ci (union ct cs'))
 
   unifyBothBinders mode loc env xfc x bx scx yfc y by scy
       = convertError loc env
