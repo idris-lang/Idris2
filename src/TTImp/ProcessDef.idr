@@ -150,58 +150,55 @@ impossibleErrOK defs _ = pure False
 -- is, if we have a concrete thing, and we're expecting the same concrete
 -- thing, or a function of something, then we might have a match.
 export
-recoverable : {auto c : Ref Ctxt Defs} ->
-              {vars : _} ->
-              Defs -> NF vars -> NF vars -> Core Bool
--- Unlike the above, any mismatch will do
-
--- TYPE CONSTRUCTORS
-recoverable defs (NTCon _ xn xa xargs) (NTCon _ yn ya yargs)
+notRecoverable : {auto c : Ref Ctxt Defs} ->
+                 {vars : _} ->
+                 Defs -> NF vars -> NF vars -> Core Bool
+notRecoverable defs (NTCon _ xn xa xargs) (NTCon _ yn ya yargs)
     = if xn /= yn
-         then pure False
-         else pure $ not !(anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs))
--- Type constructor vs. primitive type
-recoverable defs (NTCon {}) (NPrimVal {}) = pure False
-recoverable defs (NPrimVal {}) (NTCon {}) = pure False
--- Type constructor vs. type
-recoverable defs (NTCon {}) (NType {}) = pure False
-recoverable defs (NType {}) (NTCon {}) = pure False
--- Type constructor vs. binder
-recoverable defs (NTCon {}) (NBind {}) = pure False
-recoverable defs (NBind {}) (NTCon {}) = pure False
-
-recoverable defs (NTCon {}) _ = pure True
-recoverable defs _ (NTCon {}) = pure True
-
--- DATA CONSTRUCTORS
-recoverable defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
+         then pure True
+         else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
+-- If it's a data constructor, any mismatch will do
+notRecoverable defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
     = if xt /= yt
-         then pure False
-         else pure $ not !(anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs))
--- Data constructor vs. primitive constant
-recoverable defs (NDCon {}) (NPrimVal {}) = pure False
-recoverable defs (NPrimVal {}) (NDCon {}) = pure False
+         then pure True
+         else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
+notRecoverable defs (NPrimVal _ x) (NPrimVal _ y) = pure (x /= y)
 
-recoverable defs (NDCon {}) _ = pure True
-recoverable defs _ (NDCon {}) = pure True
+-- NPrimVal is apart from NDCon, NTCon, NBind, and NType
+notRecoverable defs (NPrimVal {}) (NDCon {}) = pure True
+notRecoverable defs (NDCon {}) (NPrimVal {}) = pure True
+notRecoverable defs (NPrimVal {}) (NBind {}) = pure True
+notRecoverable defs (NBind {}) (NPrimVal {}) = pure True
+notRecoverable defs (NPrimVal {}) (NTCon {}) = pure True
+notRecoverable defs (NTCon {}) (NPrimVal {}) = pure True
+-- notRecoverable defs (NPrimVal {}) (NType {}) = pure True
+-- notRecoverable defs (NType {}) (NPrimVal {}) = pure True
 
--- FUNCTION CALLS
-recoverable defs (NApp _ (NRef _ f) fargs) (NApp _ (NRef _ g) gargs)
-    = pure True -- both functions; recoverable
+-- NTCon is apart from NBind, and NType
+notRecoverable defs (NTCon {}) (NBind {}) = pure True
+notRecoverable defs (NBind {}) (NTCon {}) = pure True
+notRecoverable defs (NTCon {}) (NType {}) = pure True
+notRecoverable defs (NType {}) (NTCon {}) = pure True
 
--- PRIMITIVES
-recoverable defs (NPrimVal _ x) (NPrimVal _ y) = pure (x == y)
--- primitive vs. binder
-recoverable defs (NPrimVal {}) (NBind {}) = pure False
-recoverable defs (NBind {}) (NPrimVal {}) = pure False
+-- NBind is apart from NType
+-- notRecoverable defs (NBind {}) (NType {}) = pure True
+-- notRecoverable defs (NType {}) (NBind {}) = pure True
 
--- OTHERWISE: no
-recoverable defs x y = pure False
+notRecoverable defs (NTCon {}) _ = pure False
+notRecoverable defs _ (NTCon {}) = pure False
+
+notRecoverable defs (NDCon {}) _ = pure False
+notRecoverable defs _ (NDCon {}) = pure False
+
+notRecoverable defs (NApp _ (NRef _ f) fargs) (NApp _ (NRef _ g) gargs)
+    = pure False -- both functions; notRecoverable
+
+notRecoverable defs x y = pure True
 
 export
-recoverableErr : {auto c : Ref Ctxt Defs} ->
-                 Defs -> Error -> Core Bool
-recoverableErr defs (CantConvert fc gam env l r)
+notRecoverableErr : {auto c : Ref Ctxt Defs} ->
+                    Defs -> Error -> Core Bool
+notRecoverableErr defs (CantConvert fc gam env l r)
   = do let defs = { gamma := gam } defs
        l <- nf defs env l
        r <- nf defs env r
@@ -211,21 +208,20 @@ recoverableErr defs (CantConvert fc gam env l r)
          , "  " ++ show l
          , "  " ++ show r
          ]
-       recoverable defs l r
-
-recoverableErr defs (CantSolveEq fc gam env l r)
+       notRecoverable defs l r
+notRecoverableErr defs (CantSolveEq fc gam env l r)
   = do let defs = { gamma := gam } defs
-       recoverable defs !(nf defs env l)
-                        !(nf defs env r)
-recoverableErr defs (BadDotPattern _ _ ErasedArg _ _) = pure True
-recoverableErr defs (CyclicMeta {}) = pure False
+       notRecoverable defs !(nf defs env l)
+                           !(nf defs env r)
+notRecoverableErr defs (BadDotPattern _ _ ErasedArg _ _) = pure False
+notRecoverableErr defs (CyclicMeta {}) = pure True
 -- Don't mark a case as impossible because we can't see the constructor.
-recoverableErr defs (InvisibleName {}) = pure True
-recoverableErr defs (AllFailed errs)
-    = anyM (recoverableErr defs) (map snd errs)
-recoverableErr defs (WhenUnifying _ _ _ _ _ err)
-    = recoverableErr defs err
-recoverableErr defs _ = pure False
+notRecoverableErr defs (InvisibleName {}) = pure False
+notRecoverableErr defs (AllFailed errs)
+    = allM (notRecoverableErr defs) (map snd errs)
+notRecoverableErr defs (WhenUnifying _ _ _ _ _ err)
+    = notRecoverableErr defs err
+notRecoverableErr defs _ = pure True
 
 -- Given a type checked LHS and its type, return the environment in which we
 -- should check the RHS, the LHS and its type in that environment,
@@ -1100,7 +1096,7 @@ processDef opts nest env fc n_in cs_in
                               put Ctxt ctxt
                               pure (Just rtm))
                (\err => do defs <- get Ctxt
-                           if not !(recoverableErr defs err)
+                           if !(notRecoverableErr defs err)
                               then do
                                 log "declare.def.impossible" 5 "impossible because \{show err}"
                                 pure Nothing
