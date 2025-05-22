@@ -506,7 +506,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
                                if ok then pure (mw, vis, tot, fullty)
                                      else do logTermNF "declare.data" 1 "Previous" [] (type ndef)
                                              logTermNF "declare.data" 1 "Now" [] fullty
-                                             throw (AlreadyDefined fc n)
+                                             throw (CantConvert fc (gamma defs) [] (type ndef) fullty)
                       _ => throw (AlreadyDefined fc n)
 
          logTermNF "declare.data" 5 ("data " ++ show n) [] fullty

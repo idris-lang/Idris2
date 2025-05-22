@@ -1,0 +1,121 @@
+1/1: Building ConvertPiInfo (ConvertPiInfo.idr)
+Error: Mismatch between: Type -> Type and Type.
+
+ConvertPiInfo:6:1--6:35
+ 2 | -- Explicit --
+ 3 | --------------
+ 4 | 
+ 5 | data EI : Type -> Type
+ 6 | data EI : {_ : Type} -> Type where
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Error: Mismatch between: Type -> Type and Type => Type.
+
+ConvertPiInfo:9:1--9:40
+ 5 | data EI : Type -> Type
+ 6 | data EI : {_ : Type} -> Type where
+ 7 | 
+ 8 | data EA : Type -> Type
+ 9 | data EA : {auto _ : Type} -> Type where
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Error: Mismatch between: Type -> Type and {default Int _ : Type} -> Type.
+
+ConvertPiInfo:12:1--12:47
+ 08 | data EA : Type -> Type
+ 09 | data EA : {auto _ : Type} -> Type where
+ 10 | 
+ 11 | data ED : Type -> Type
+ 12 | data ED : {default Int _ : Type} -> Type where
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Error: Mismatch between: Type and Type -> Type.
+
+ConvertPiInfo:19:1--19:29
+ 15 | -- Implicit --
+ 16 | --------------
+ 17 | 
+ 18 | data IE : {_ : Type} -> Type
+ 19 | data IE : Type -> Type where
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Error: Mismatch between: Type and Type => Type.
+
+ConvertPiInfo:22:1--22:40
+ 18 | data IE : {_ : Type} -> Type
+ 19 | data IE : Type -> Type where
+ 20 | 
+ 21 | data IA : {_ : Type} -> Type
+ 22 | data IA : {auto _ : Type} -> Type where
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Error: Mismatch between: Type and {default Int _ : Type} -> Type.
+
+ConvertPiInfo:25:1--25:47
+ 21 | data IA : {_ : Type} -> Type
+ 22 | data IA : {auto _ : Type} -> Type where
+ 23 | 
+ 24 | data ID : {_ : Type} -> Type
+ 25 | data ID : {default Int _ : Type} -> Type where
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Error: Mismatch between: Type => Type and Type -> Type.
+
+ConvertPiInfo:32:1--32:29
+ 28 | -- Auto --
+ 29 | ----------
+ 30 | 
+ 31 | data AE : {auto _ : Type} -> Type
+ 32 | data AE : Type -> Type where
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Error: Mismatch between: Type => Type and Type.
+
+ConvertPiInfo:35:1--35:35
+ 31 | data AE : {auto _ : Type} -> Type
+ 32 | data AE : Type -> Type where
+ 33 | 
+ 34 | data AI : {auto _ : Type} -> Type
+ 35 | data AI : {_ : Type} -> Type where
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Error: Mismatch between: Type => Type and {default Int _ : Type} -> Type.
+
+ConvertPiInfo:38:1--38:47
+ 34 | data AI : {auto _ : Type} -> Type
+ 35 | data AI : {_ : Type} -> Type where
+ 36 | 
+ 37 | data AD : {auto _ : Type} -> Type
+ 38 | data AD : {default Int _ : Type} -> Type where
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Error: Mismatch between: {default Int _ : Type} -> Type and Type -> Type.
+
+ConvertPiInfo:45:1--45:29
+ 41 | -- Default --
+ 42 | -------------
+ 43 | 
+ 44 | data DE : {default Int _ : Type} -> Type
+ 45 | data DE : Type -> Type where
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Error: Mismatch between: {default Int _ : Type} -> Type and Type.
+
+ConvertPiInfo:48:1--48:35
+ 44 | data DE : {default Int _ : Type} -> Type
+ 45 | data DE : Type -> Type where
+ 46 | 
+ 47 | data DI : {default Int _ : Type} -> Type
+ 48 | data DI : {_ : Type} -> Type where
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Error: Mismatch between: {default Int _ : Type} -> Type and Type => Type.
+
+ConvertPiInfo:51:1--51:40
+ 47 | data DI : {default Int _ : Type} -> Type
+ 48 | data DI : {_ : Type} -> Type where
+ 49 | 
+ 50 | data DA : {default Int _ : Type} -> Type
+ 51 | data DA : {auto _ : Type} -> Type where
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+

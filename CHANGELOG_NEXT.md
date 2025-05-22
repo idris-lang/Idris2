@@ -87,6 +87,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Elaborator scripts were made to be able to get pretty-printed resugared expressions.
 
+* Fixed unification and conversion of binders with different `PiInfo`.
+
 ### Compiler changes
 
 * The compiler now differentiates between "package search path" and "package
