@@ -171,8 +171,8 @@ notRecoverable defs (NPrimVal {}) (NBind {}) = pure True
 notRecoverable defs (NBind {}) (NPrimVal {}) = pure True
 notRecoverable defs (NPrimVal {}) (NTCon {}) = pure True
 notRecoverable defs (NTCon {}) (NPrimVal {}) = pure True
--- notRecoverable defs (NPrimVal {}) (NType {}) = pure True
--- notRecoverable defs (NType {}) (NPrimVal {}) = pure True
+notRecoverable defs (NPrimVal {}) (NType {}) = pure True
+notRecoverable defs (NType {}) (NPrimVal {}) = pure True
 
 -- NTCon is apart from NBind, and NType
 notRecoverable defs (NTCon {}) (NBind {}) = pure True
@@ -181,17 +181,8 @@ notRecoverable defs (NTCon {}) (NType {}) = pure True
 notRecoverable defs (NType {}) (NTCon {}) = pure True
 
 -- NBind is apart from NType
--- notRecoverable defs (NBind {}) (NType {}) = pure True
--- notRecoverable defs (NType {}) (NBind {}) = pure True
-
-notRecoverable defs (NTCon {}) _ = pure False
-notRecoverable defs _ (NTCon {}) = pure False
-
-notRecoverable defs (NDCon {}) _ = pure False
-notRecoverable defs _ (NDCon {}) = pure False
-
-notRecoverable defs (NApp _ (NRef _ f) fargs) (NApp _ (NRef _ g) gargs)
-    = pure False -- both functions; notRecoverable
+notRecoverable defs (NBind {}) (NType {}) = pure True
+notRecoverable defs (NType {}) (NBind {}) = pure True
 
 notRecoverable defs x y = pure False
 
