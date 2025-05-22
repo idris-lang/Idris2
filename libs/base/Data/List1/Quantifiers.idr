@@ -1,15 +1,15 @@
 module Data.List1.Quantifiers
 
 import Data.DPair
+import Data.Fin
 import Data.List1
-
 import Data.List1.Elem
 import Data.List.Quantifiers
 
 %default total
 
 ------------------------------------------------------------------------
--- Types and basic properties
+-- Quanfitier types
 
 namespace Any
 
@@ -22,6 +22,24 @@ namespace Any
     Here  : {0 xs : List a} -> p x -> Any p (x ::: xs)
     ||| A proof that the satisfying element is in the tail of the `List1`
     There : {0 xs : List a} -> Any p xs -> Any p (x ::: xs)
+
+namespace All
+
+  ||| A proof that all elements of a list satisfy a property. It is a list of
+  ||| proofs, corresponding element-wise to the `List1`.
+  public export
+  data All : (0 p : a -> Type) -> List1 a -> Type where
+    (:::) : {0 xs : List a} -> p x -> All p xs -> All p (x ::: xs)
+
+------------------------------------------------------------------------
+-- Basic properties
+
+namespace Any
+
+  export
+  {0 xs : List1 a} -> All (Uninhabited . p) xs => Uninhabited (Any p xs) where
+    uninhabited @{s:::ss} (Here y)  = uninhabited y
+    uninhabited @{s:::ss} (There y) = uninhabited y
 
   ||| Modify the property given a pointwise function
   export
@@ -47,18 +65,39 @@ namespace Any
           There ptail => ctra' ptail
 
   ||| Forget the membership proof
+  public export
+  toDPair : {xs : List1 a} -> Any p xs -> DPair a p
+  toDPair (Here prf) = (_ ** prf)
+  toDPair (There p)  = toDPair p
+
+  ||| Forget the membership proof
   export
-  toExists : {xs : List1 a} -> Any p xs -> Exists p
+  toExists : {0 xs : List1 a} -> Any p xs -> Exists p
   toExists (Here prf) = Evidence _ prf
   toExists (There prf) = toExists prf
 
-namespace All
-
-  ||| A proof that all elements of a list satisfy a property. It is a list of
-  ||| proofs, corresponding element-wise to the `List1`.
   public export
-  data All : (0 p : a -> Type) -> List1 a -> Type where
-    (:::) : {0 xs : List a} -> p x -> All p xs -> All p (x ::: xs)
+  anyToFin : {0 xs : List1 a} -> Any p xs -> Fin $ length xs
+  anyToFin (Here _)      = FZ
+  anyToFin (There later) = FS (anyToFin later)
+
+  public export
+  pushOut : Functor p => {0 xs : List1 a} -> Any (p . q) xs -> p $ Any q xs
+  pushOut @{fp} (Here v)  = map @{fp} Here v
+  pushOut @{fp} (There n) = map @{fp} There $ pushOut n
+
+  export
+  {0 xs : List1 a} -> All (Show . p) xs => Show (Any p xs) where
+    showPrec d @{s:::ss} (Here x)  = showCon d "Here"  $ showArg x
+    showPrec d @{s:::ss} (There x) = showCon d "There" $ showArg x
+
+  export
+  {0 xs : List1 a} -> All (Eq . p) xs => Eq (Any p xs) where
+    (==) @{s:::ss} (Here x)  (Here y)  = x == y
+    (==) @{s:::ss} (There x) (There y) = x == y
+    (==) _ _ = False
+
+namespace All
 
   Either (Uninhabited $ p x) (Uninhabited $ All p xs) => Uninhabited (All p $ x:::xs) where
     uninhabited @{Left  _} (px:::pxs) = uninhabited px
@@ -116,6 +155,36 @@ namespace All
   HList1 : List1 Type -> Type
   HList1 = All id
 
+  ||| Push in the property from the list level with element level
+  public export
+  pushIn : (xs : List1 a) -> (0 _ : All p xs) -> List1 $ Subset a p
+  pushIn (x:::xs) (p:::ps) = Element x p ::: pushIn xs ps
+
+  ||| Pull the elementwise property out to the list level
+  public export
+  pullOut : (xs : List1 $ Subset a p) -> Subset (List1 a) (All p)
+  pullOut (Element x p ::: xs) = let Element ss ps = pullOut xs in Element (x:::ss) (p:::ps)
+
+  export
+  pushInOutInverse : (xs : List1 a) -> (0 prf : All p xs) -> pullOut (pushIn xs prf) = Element xs prf
+  pushInOutInverse (x:::xs) (p:::ps) = rewrite pushInOutInverse xs ps in Refl
+
+  export
+  pushOutInInverse : (xs : List1 $ Subset a p) -> uncurry All.pushIn (pullOut xs) = xs
+  pushOutInInverse (Element x p ::: xs) with (pushOutInInverse xs)
+    pushOutInInverse (Element x p ::: xs) | subprf with (pullOut xs)
+      pushOutInInverse (Element x p ::: xs) | subprf | Element ss ps = rewrite subprf in Refl
+
+  ||| Given a proof of membership for some element, extract the property proof for it
+  public export
+  indexAll : {xs : List1 _} -> Elem x xs -> All p xs -> p x
+  indexAll  Here     (p::: _) = p
+  indexAll (There e) (_:::ps) = indexAll e ps
+
+  public export
+  pushOut : Applicative p => {0 xs : List1 a} -> All (p . q) xs -> p $ All q xs
+  pushOut (x:::xs) = [| x ::: pushOut xs |]
+
 ------------------------------------------------------------------------
 -- Relationship between all and any
 
@@ -138,33 +207,9 @@ allNegAny : {xs : List1 _} -> All (Not . p) xs -> Not (Any p xs)
 allNegAny (np ::: npxs) (Here p) = absurd (np p)
 allNegAny (np ::: npxs) (There p) = allNegAny npxs p
 
-||| Given a proof of membership for some element, extract the property proof for it
 public export
-indexAll : {xs : List1 _} -> Elem x xs -> All p xs -> p x
-indexAll  Here     (p::: _) = p
-indexAll (There e) (_:::ps) = indexAll e ps
-
---- Relations between listwise `All` and elementwise `Subset` ---
-
-||| Push in the property from the list level with element level
-public export
-pushIn : (xs : List1 a) -> (0 _ : All p xs) -> List1 $ Subset a p
-pushIn (x:::xs) (p:::ps) = Element x p ::: pushIn xs ps
-
-||| Pull the elementwise property out to the list level
-public export
-pullOut : (xs : List1 $ Subset a p) -> Subset (List1 a) (All p)
-pullOut (Element x p ::: xs) = let Element ss ps = pullOut xs in Element (x:::ss) (p:::ps)
-
-export
-pushInOutInverse : (xs : List1 a) -> (0 prf : All p xs) -> pullOut (pushIn xs prf) = Element xs prf
-pushInOutInverse (x:::xs) (p:::ps) = rewrite pushInOutInverse xs ps in Refl
-
-export
-pushOutInInverse : (xs : List1 $ Subset a p) -> uncurry Quantifiers.pushIn (pullOut xs) = xs
-pushOutInInverse (Element x p ::: xs) with (pushOutInInverse xs)
-  pushOutInInverse (Element x p ::: xs) | subprf with (pullOut xs)
-    pushOutInInverse (Element x p ::: xs) | subprf | Element ss ps = rewrite subprf in Refl
+allAnies : {0 xs : List1 a} -> All p xs -> List1 (Any p xs)
+allAnies (x:::xs) = Here x ::: map There (allAnies xs)
 
 {-
 ------------------------------------------------------------------------

@@ -9,9 +9,10 @@ import Decidable.Equality
 %default total
 
 ------------------------------------------------------------------------
--- Types and basic properties
+-- Quantifier types
 
 namespace Any
+
   ||| A proof that some element of a vector satisfies some property
   |||
   ||| @ p the property to be satsified
@@ -22,15 +23,24 @@ namespace Any
     ||| A proof that the satsifying element is in the tail of the `Vect`
     There : {0 xs : Vect n a} -> Any p xs -> Any p (x :: xs)
 
-  export
-  implementation Uninhabited (Any p Nil) where
-    uninhabited (Here _) impossible
-    uninhabited (There _) impossible
+namespace All
+
+  ||| A proof that all elements of a vector satisfy a property. It is a list of
+  ||| proofs, corresponding element-wise to the `Vect`.
+  public export
+  data All : (0 p : a -> Type) -> Vect n a -> Type where
+    Nil  : All p Nil
+    (::) : {0 xs : Vect n a} -> p x -> All p xs -> All p (x :: xs)
+
+------------------------------------------------------------------------
+-- Basic properties
+
+namespace Any
 
   export
-  implementation {0 p : a -> Type} -> Uninhabited (p x) => Uninhabited (Any p xs) => Uninhabited (Any p $ x::xs) where
-    uninhabited (Here y) = uninhabited y
-    uninhabited (There y) = uninhabited y
+  All (Uninhabited . p) xs => Uninhabited (Any p xs) where
+    uninhabited @{s::ss} (Here y)  = uninhabited y
+    uninhabited @{s::ss} (There y) = uninhabited y
 
   ||| Eliminator for `Any`
   public export
@@ -59,6 +69,12 @@ namespace Any
   mapProperty f (Here p)  = Here (f p)
   mapProperty f (There p) = There (mapProperty f p)
 
+  ||| Forget the membership proof
+  public export
+  toDPair : {xs : Vect n a} -> Any p xs -> DPair a p
+  toDPair (Here prf) = (_ ** prf)
+  toDPair (There p)  = toDPair p
+
   export
   toExists : Any p xs -> Exists p
   toExists (Here prf)  = Evidence _ prf
@@ -78,20 +94,28 @@ namespace Any
   anyToFinCorrect (Here prf) = prf
   anyToFinCorrect (There later) = anyToFinCorrect later
 
-namespace All
-  ||| A proof that all elements of a vector satisfy a property. It is a list of
-  ||| proofs, corresponding element-wise to the `Vect`.
   public export
-  data All : (0 p : a -> Type) -> Vect n a -> Type where
-    Nil  : All p Nil
-    (::) : {0 xs : Vect n a} -> p x -> All p xs -> All p (x :: xs)
+  anyToFinV : Any {n} p xs -> (idx : Fin n ** p $ index idx xs)
+  anyToFinV $ Here x  = (FZ ** x)
+  anyToFinV $ There x = let (idx ** v) = anyToFinV x in (FS idx ** v)
 
-  ||| If there does not exist an element that satifies the property, then it is
-  ||| the case that all elements do not satisfy.
+  public export
+  pushOut : Functor p => Any (p . q) xs -> p $ Any q xs
+  pushOut @{fp} (Here v)  = map @{fp} Here v
+  pushOut @{fp} (There n) = map @{fp} There $ pushOut n
+
   export
-  negAnyAll : {xs : Vect n a} -> Not (Any p xs) -> All (Not . p) xs
-  negAnyAll {xs=Nil} _ = Nil
-  negAnyAll {xs=(x::xs)} f = (f . Here) :: negAnyAll (f . There)
+  All (Show . p) xs => Show (Any p xs) where
+    showPrec d @{s::ss} (Here x)  = showCon d "Here"  $ showArg x
+    showPrec d @{s::ss} (There x) = showCon d "There" $ showArg x
+
+  export
+  All (Eq . p) xs => Eq (Any p xs) where
+    (==) @{s::ss} (Here x)  (Here y)  = x == y
+    (==) @{s::ss} (There x) (There y) = x == y
+    (==) _ _ = False
+
+namespace All
 
   export
   notAllHere : {0 p : a -> Type} -> {xs : Vect n a} -> Not (p x) -> Not (All p (x :: xs))
@@ -392,3 +416,60 @@ namespace All
   updateElem f (x :: xs)  Here = f x :: xs
   updateElem f (x :: xs) (There p') = x :: updateElem f xs p'
 
+  ||| Push in the property from the list level with element level
+  public export
+  pushIn : (xs : Vect n a) -> (0 _ : All p xs) -> Vect n $ Subset a p
+  pushIn []      []      = []
+  pushIn (x::xs) (p::ps) = Element x p :: pushIn xs ps
+
+  ||| Pull the elementwise property out to the list level
+  public export
+  pullOut : (xs : Vect n $ Subset a p) -> Subset (Vect n a) (All p)
+  pullOut [] = Element [] []
+  pullOut (Element x p :: xs) = let Element ss ps = pullOut xs in Element (x::ss) (p::ps)
+
+  export
+  pushInOutInverse : (xs : Vect n a) -> (0 prf : All p xs) -> pullOut (pushIn xs prf) = Element xs prf
+  pushInOutInverse [] [] = Refl
+  pushInOutInverse (x::xs) (p::ps) = rewrite pushInOutInverse xs ps in Refl
+
+  export
+  pushOutInInverse : (xs : Vect n $ Subset a p) -> uncurry All.pushIn (pullOut xs) = xs
+  pushOutInInverse [] = Refl
+  pushOutInInverse (Element x p :: xs) with (pushOutInInverse xs)
+    pushOutInInverse (Element x p :: xs) | subprf with (pullOut xs)
+      pushOutInInverse (Element x p :: xs) | subprf | Element ss ps = rewrite subprf in Refl
+
+  public export
+  pushOut : Applicative p => All (p . q) xs -> p $ All q xs
+  pushOut []      = pure []
+  pushOut (x::xs) = [| x :: pushOut xs |]
+
+------------------------------------------------------------------------
+-- Relationships between all and any
+
+||| If there does not exist an element that satifies the property, then it is
+||| the case that all elements do not satisfy.
+export
+negAnyAll : {xs : Vect n a} -> Not (Any p xs) -> All (Not . p) xs
+negAnyAll {xs=Nil} _ = Nil
+negAnyAll {xs=(x::xs)} f = (f . Here) :: negAnyAll (f . There)
+
+||| If there exists an element that doesn't satify the property, then it is
+||| not the case that all elements satisfy it.
+export
+anyNegAll : Any (Not . p) xs -> Not (All p xs)
+anyNegAll (Here ctra) (p::_)  = ctra p
+anyNegAll (There np)  (_::ps) = anyNegAll np ps
+
+||| If none of the elements satisfy the property, then not any single one can.
+export
+allNegAny : All (Not . p) xs -> Not (Any p xs)
+allNegAny [] p = absurd p
+allNegAny (np :: npxs) (Here p) = absurd (np p)
+allNegAny (np :: npxs) (There p) = allNegAny npxs p
+
+public export
+allAnies : {xs : Vect n a} -> All p xs -> Vect n (Any p xs)
+allAnies [] = []
+allAnies (x::xs) = Here x :: map There (allAnies xs)
