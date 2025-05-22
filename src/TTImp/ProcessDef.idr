@@ -146,46 +146,6 @@ impossibleErrOK defs (WhenUnifying _ _ _ _ _ err)
     = impossibleErrOK defs err
 impossibleErrOK defs _ = pure False
 
--- If it's a clause we've generated, see if the error is recoverable. That
--- is, if we have a concrete thing, and we're expecting the same concrete
--- thing, or a function of something, then we might have a match.
-export
-notRecoverable : {auto c : Ref Ctxt Defs} ->
-                 {vars : _} ->
-                 Defs -> NF vars -> NF vars -> Core Bool
-notRecoverable defs (NTCon _ xn xa xargs) (NTCon _ yn ya yargs)
-    = if xn /= yn
-         then pure True
-         else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
--- If it's a data constructor, any mismatch will do
-notRecoverable defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
-    = if xt /= yt
-         then pure True
-         else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
-notRecoverable defs (NPrimVal _ x) (NPrimVal _ y) = pure (x /= y)
-
--- NPrimVal is apart from NDCon, NTCon, NBind, and NType
-notRecoverable defs (NPrimVal {}) (NDCon {}) = pure True
-notRecoverable defs (NDCon {}) (NPrimVal {}) = pure True
-notRecoverable defs (NPrimVal {}) (NBind {}) = pure True
-notRecoverable defs (NBind {}) (NPrimVal {}) = pure True
-notRecoverable defs (NPrimVal {}) (NTCon {}) = pure True
-notRecoverable defs (NTCon {}) (NPrimVal {}) = pure True
-notRecoverable defs (NPrimVal {}) (NType {}) = pure True
-notRecoverable defs (NType {}) (NPrimVal {}) = pure True
-
--- NTCon is apart from NBind, and NType
-notRecoverable defs (NTCon {}) (NBind {}) = pure True
-notRecoverable defs (NBind {}) (NTCon {}) = pure True
-notRecoverable defs (NTCon {}) (NType {}) = pure True
-notRecoverable defs (NType {}) (NTCon {}) = pure True
-
--- NBind is apart from NType
-notRecoverable defs (NBind {}) (NType {}) = pure True
-notRecoverable defs (NType {}) (NBind {}) = pure True
-
-notRecoverable defs x y = pure False
-
 export
 notRecoverableErr : {auto c : Ref Ctxt Defs} ->
                     Defs -> Error -> Core Bool
@@ -199,11 +159,11 @@ notRecoverableErr defs (CantConvert fc gam env l r)
          , "  " ++ show l
          , "  " ++ show r
          ]
-       notRecoverable defs l r
+       impossibleOK defs l r
 notRecoverableErr defs (CantSolveEq fc gam env l r)
   = do let defs = { gamma := gam } defs
-       notRecoverable defs !(nf defs env l)
-                           !(nf defs env r)
+       impossibleOK defs !(nf defs env l)
+                         !(nf defs env r)
 notRecoverableErr defs (BadDotPattern _ _ ErasedArg _ _) = pure False
 notRecoverableErr defs (CyclicMeta {}) = pure True
 -- Don't mark a case as impossible because we can't see the constructor.
