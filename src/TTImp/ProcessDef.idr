@@ -165,15 +165,13 @@ notRecoverableErr defs (CantSolveEq fc gam env l r)
   = do let defs = { gamma := gam } defs
        impossibleOK defs !(nf defs env l)
                          !(nf defs env r)
-notRecoverableErr defs (BadDotPattern _ _ ErasedArg _ _) = pure False
 notRecoverableErr defs (CyclicMeta {}) = pure True
--- Don't mark a case as impossible because we can't see the constructor.
-notRecoverableErr defs (InvisibleName {}) = pure False
 notRecoverableErr defs (AllFailed errs)
     = allM (notRecoverableErr defs) (map snd errs)
 notRecoverableErr defs (WhenUnifying _ _ _ _ _ err)
     = notRecoverableErr defs err
-notRecoverableErr defs _ = pure True
+notRecoverableErr defs ImpossibleCase = pure True
+notRecoverableErr defs _ = pure False
 
 -- Given a type checked LHS and its type, return the environment in which we
 -- should check the RHS, the LHS and its type in that environment,
