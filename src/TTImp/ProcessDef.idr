@@ -193,7 +193,7 @@ notRecoverable defs _ (NDCon {}) = pure False
 notRecoverable defs (NApp _ (NRef _ f) fargs) (NApp _ (NRef _ g) gargs)
     = pure False -- both functions; notRecoverable
 
-notRecoverable defs x y = pure True
+notRecoverable defs x y = pure False
 
 export
 notRecoverableErr : {auto c : Ref Ctxt Defs} ->
