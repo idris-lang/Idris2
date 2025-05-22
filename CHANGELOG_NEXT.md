@@ -307,6 +307,10 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Added default definitions for `zipWith3` and `unzipWith3` in `Zippable`
   interface.
 
+* `Quantifiers` modules for `List`, `Vect`, `LazyList`, `List1` and `SnocList`
+  are harmonised among each other. Also, several existing functions related only to
+  `All` were moved to appropriate namespace. Couple new functions for `Any` were added.
+
 #### Contrib
 
 * `Data.Vect.Views.Extra` was moved from `contrib` to `base`.
