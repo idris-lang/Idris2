@@ -396,6 +396,8 @@ perrorRaw (NotCovering fc n (NonCoveringCall ns))
 perrorRaw (NotTotal fc n r)
     = pure $ errorDesc (code (pretty0 !(prettyName n)) <++> reflow "is not total," <++> pretty0 r)
         <+> line <+> !(ploc fc)
+perrorRaw ImpossibleCase
+    = pure $ errorDesc (reflow "<ImpossibleCase: this should never be displayed>")
 perrorRaw (LinearUsed fc count n)
     = pure $ errorDesc (reflow "There are" <++> byShow count <++> reflow "uses of linear name"
         <++> code (pretty0 (sugarName n)) <+> dot)

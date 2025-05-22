@@ -144,6 +144,7 @@ impossibleErrOK defs (AllFailed errs)
     = anyM (impossibleErrOK defs) (map snd errs)
 impossibleErrOK defs (WhenUnifying _ _ _ _ _ err)
     = impossibleErrOK defs err
+impossibleErrOK defs ImpossibleCase = pure True
 impossibleErrOK defs _ = pure False
 
 export
@@ -424,7 +425,7 @@ checkClause mult vis totreq hashit n opts nest env (ImpossibleClause fc lhs)
                logEnv "declare.def.clause.impossible" 5 "In env" env
                (lhstm, lhstyg) <-
                            elabTerm n (InLHS mult) opts nest env
-                                      (IBindHere fc PATTERN lhs) Nothing
+                                      (IBindHere fc COVERAGE lhs) Nothing
                defs <- get Ctxt
                lhs <- normaliseHoles defs env lhstm
                if !(hasEmptyPat defs env lhs)
