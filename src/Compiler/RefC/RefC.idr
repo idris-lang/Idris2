@@ -300,6 +300,7 @@ dupVars : {auto oft : Ref OutfileText Output}
            -> Core ()
 dupVars = applyFunctionToVars "idris2_newReference"
 
+
 removeReuseConstructors : {auto oft : Ref OutfileText Output}
                         -> {auto il : Ref IndentLevel Nat}
                         -> List String
@@ -543,8 +544,13 @@ mutual
 
     cStatementsFromANF (AOp fc _ op args) _ = do
         let resultVar = "primVar_" ++ !(getNextCounter)
-        let argsVect = map (avarToC !(get EnvTracker)) args
-        emit fc $ "Value *" ++ resultVar ++ " = " ++ cOp op argsVect ++ ";"
+        let argsVect : Env -> Vect ar AVar -> Vect ar String
+            argsVect _ [] = []
+            argsVect env (v :: vars) =
+              let ownedVars = if contains v env.owned then singleton v else empty
+              in (avarToC env v) :: argsVect (moveFromOwnedToBorrowed env ownedVars) vars
+
+        emit fc $ "Value *" ++ resultVar ++ " = " ++ cOp op (argsVect !(get EnvTracker) args) ++ ";"
         -- Removing arguments that apply to primitive functions
         removeVars $ toList $ map varName args
         pure resultVar
