@@ -57,12 +57,12 @@ _awk_clean_name='
 {
     out = ""
     # the last one is FC
-    while (match($0, /(P:[A-z]+:|\{[A-z]+:|ttc[\\\/][0-9]+|[$]resolved)[0-9]+|[A-z.]+:[0-9]+:[0-9]+--[0-9]+:[0-9]+|[A-z]+[.][0-9]+:[0-9]+/)) {
+    while (match($0, /(P:[A-z]+:|\{[A-z]+:|ttc[\\\/]|[$]resolved)[0-9]+|[A-z.]+:[0-9]+:[0-9]+--[0-9]+:[0-9]+|[A-z]+[.][0-9]+:[0-9]+/)) {
         rs = RSTART
         rl = RLENGTH
         m = substr($0, rs, rl)
         pfx = "XXX"
-        if (match(m, /^(\$resolved|\{[A-z]+:|ttc[\\\/]|P:[A-z]+:|[A-z.]+:|[A-z]+[.])/)) { pfx = substr(m, RSTART, RLENGTH) }
+        if (match(m, /^(P:[A-z]+:|\{[A-z]+:|ttc[\\\/]|[$]resolved|[A-z.]+:|[A-z]+[.])/)) { pfx = substr(m, RSTART, RLENGTH) }
         if (!(m in mapping)) {
             # scope the count to the prefix so we can add more without breaking tests
             if (!count[pfx]) { count[pfx] = 1 }
