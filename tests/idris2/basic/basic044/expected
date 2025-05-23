@@ -101,8 +101,8 @@ LOG declare.type:1: Processing Vec.Nil
 LOG declare.def:2: Case tree for Vec.Nil: [0] (Prelude.Uninhabited.absurd {arg:3}[0] (Data.Fin.Fin Prelude.Types.Z) Data.Fin.Uninhabited implementation at Data.Fin:1)
 LOG declare.type:1: Processing Vec.(::)
 LOG declare.def:2: Case tree for Vec.(::): case {arg:4}[4] : (Data.Fin.Fin (Prelude.Types.S {arg:3}[0])) of
- { Data.Fin.FZ {e:0} => [0] {arg:5}[3]
- | Data.Fin.FS {e:1} {e:2} => [1] ({arg:6}[5] {e:2}[1])
+ { Data.Fin.FZ {e:1} => [0] {arg:5}[3]
+ | Data.Fin.FS {e:2} {e:3} => [1] ({arg:6}[5] {e:3}[1])
  }
 LOG declare.type:1: Processing Vec.test
 LOG elab.ambiguous:5: Ambiguous elaboration at Vec:1:
@@ -117,33 +117,33 @@ Target type : ({arg:1} : (Data.Fin.Fin (Prelude.Types.S (Prelude.Types.S Prelude
 LOG elab.ambiguous:5: Ambiguous elaboration (kept 2 out of 2 candidates) (not delayed) at Vec:3:
 $resolved6
 $resolved7
-Target type : ?Vec.{a:4569}_[]
+Target type : ?Vec.{a:1}_[]
 LOG elab.ambiguous:5: Ambiguous elaboration (kept 3 out of 3 candidates) (not delayed) at Vec:4:
 (($resolved3 ((:: (fromInteger 0)) Nil)) Nil)
 (($resolved4 ((:: (fromInteger 0)) Nil)) Nil)
 (($resolved5 ((:: (fromInteger 0)) Nil)) Nil)
-Target type : (Vec.Vec ?Vec.{a:4569}_[] ?Vec.{n:4568}_[])
+Target type : (Vec.Vec ?Vec.{a:1}_[] ?Vec.{n:1}_[])
 LOG elab.ambiguous:5: Ambiguous elaboration (kept 3 out of 3 candidates) (not delayed) at Vec:5:
 (($resolved3 (fromInteger 0)) Nil)
 (($resolved4 (fromInteger 0)) Nil)
 (($resolved5 (fromInteger 0)) Nil)
-Target type : ?Vec.{a:4572}_[]
+Target type : ?Vec.{a:2}_[]
 LOG elab.ambiguous:5: Ambiguous elaboration at Vec:6:
   ($resolved1 0)
   ($resolved2 0)
-With default. Target type : ?Vec.{a:4574}_[]
+With default. Target type : ?Vec.{a:3}_[]
 LOG elab.ambiguous:5: Ambiguous elaboration (kept 2 out of 2 candidates) (not delayed) at Vec:7:
 $resolved6
 $resolved7
-Target type : (Vec.Vec ?Vec.{a:4574}_[] ?Vec.{n:4573}_[])
+Target type : (Vec.Vec ?Vec.{a:3}_[] ?Vec.{n:2}_[])
 LOG elab.ambiguous:5: Ambiguous elaboration at Vec:6:
   ($resolved1 0)
   ($resolved2 0)
-With default. Target type : ?Vec.{a:4573}_[]
+With default. Target type : ?Vec.{a:4}_[]
 LOG elab.ambiguous:5: Ambiguous elaboration (kept 2 out of 2 candidates) (not delayed) at Vec:8:
 $resolved6
 $resolved7
-Target type : (Vec.Vec ?Vec.{a:4572}_[] ?Vec.{n:4571}_[])
+Target type : (Vec.Vec ?Vec.{a:2}_[] ?Vec.{n:3}_[])
 LOG elab.ambiguous:5: Ambiguous elaboration (kept 1 out of 3 candidates) (delayed) at Vec:5:
 (($resolved4 (fromInteger 0)) Nil)
 Target type : (Prelude.Basics.List Prelude.Types.Nat)
