@@ -1946,6 +1946,9 @@ topDecl fname indents
   <|> fcBounds runElabDecl
   <|> fcBounds transformDecl
   <|> fcBounds cgDirectiveDecl
+      -- If the user tries to add import after some declarations, then show a more informative error.
+  <|> do kw <- bounds $ keyword "import"
+         the (Rule PDecl) $ fatalLoc kw.bounds "Imports must go before any declarations or directives"
       -- If the user tried to begin a declaration with any other keyword, then show a more informative error.
   <|> do kw <- bounds anyKeyword
          the (Rule PDecl) $ fatalLoc kw.bounds "Keyword '\{kw.val}' is not a valid start to a declaration"
