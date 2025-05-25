@@ -138,7 +138,6 @@ impossibleErrOK defs (CantSolveEq fc gam env l r)
     = do let defs = { gamma := gam } defs
          impossibleOK defs !(nf defs env l)
                            !(nf defs env r)
-impossibleErrOK defs (BadDotPattern _ _ ErasedArg _ _) = pure True
 impossibleErrOK defs (CyclicMeta {}) = pure True
 impossibleErrOK defs (AllFailed errs)
     = anyM (impossibleErrOK defs) (map snd errs)
