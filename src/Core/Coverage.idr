@@ -425,20 +425,26 @@ eraseApps {vs} tm
 -- because we've already got it. Ignore anything in erased position.
 clauseMatches : {vars : _} ->
                 {auto c : Ref Ctxt Defs} ->
-                Env Term vars -> Term vars ->
+                (erase : Bool) -> Env Term vars -> Term vars ->
                 ClosedTerm -> Core Bool
-clauseMatches env tm trylhs
-    = let lhs = !(eraseApps (close (getLoc tm) "cov" env tm)) in
-          pure $ match !(toResolvedNames lhs) !(toResolvedNames trylhs)
+clauseMatches erase env tm trylhs
+    = do let lhs = close (getLoc tm) "cov" env tm
+         lhs <- if erase
+                   then eraseApps lhs
+                   else pure lhs
+         pure $ match !(toResolvedNames lhs) !(toResolvedNames trylhs)
 
 export
 checkMatched : {auto c : Ref Ctxt Defs} ->
-               List Clause -> ClosedTerm -> Core (Maybe ClosedTerm)
-checkMatched cs ulhs
+               (erase : Bool) -> List Clause -> ClosedTerm -> Core (Maybe ClosedTerm)
+checkMatched erase cs ulhs
     = do logTerm "coverage" 5 "Checking coverage for" ulhs
          logC "coverage" 10 $ pure $ "(raw term: " ++ show !(toFullNames ulhs) ++ ")"
-         ulhs <- eraseApps ulhs
-         logTerm "coverage" 5 "Erased to" ulhs
+         ulhs <- if erase
+                    then do ulhs <- eraseApps ulhs
+                            logTerm "coverage" 5 "Erased to" ulhs
+                            pure ulhs
+                    else pure ulhs
          logC "coverage" 5 $ do
             cs <- traverse toFullNames cs
             pure $ "Against clauses:\n" ++
@@ -450,7 +456,7 @@ checkMatched cs ulhs
         = do logTermNF "coverage" 10 "Nothing matches" Env.empty ulhs
              pure $ Just ulhs
     tryClauses (MkClause env lhs _ :: cs) ulhs
-        = if !(clauseMatches env lhs ulhs)
+        = if !(clauseMatches erase env lhs ulhs)
              then do logTermNF "coverage" 10 "Yes" env lhs
                      pure Nothing -- something matches, discared it
              else do logTermNF "coverage" 10 "No match" env lhs

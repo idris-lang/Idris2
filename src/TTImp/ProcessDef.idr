@@ -1065,7 +1065,9 @@ processDef opts nest env fc n_in cs_in
              missImp <- traverse (checkImpossible n mult) missCase
              -- Filter out the ones which are actually matched (perhaps having
              -- come up due to some overlapping patterns)
-             missMatch <- traverse (checkMatched covcs) (mapMaybe id missImp)
+             missMatch <- traverse (checkMatched (not $ isErased mult) covcs) (mapMaybe id missImp)
+                                              -- ^ Do not check coverage for erased arguments
+                                              -- only in non-erased functions (Issues #1998, #3357)
              let miss = catMaybes missMatch
              if isNil miss
                 then do [] <- getNonCoveringRefs fc (Resolved n)

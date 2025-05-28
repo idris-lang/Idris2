@@ -1,0 +1,4 @@
+. ../../../testutils.sh
+
+# expect a coverage error
+check Issue1998.idr

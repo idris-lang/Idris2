@@ -37,9 +37,8 @@ data IsVar : a -> Nat -> List a -> Type where
 
 export
 0 Last : HasLength (S n) vs -> Exists (\ nm => IsVar nm n vs)
-Last {vs = []} p impossible
-Last (S Z) = Evidence _ First
-Last (S (S p)) = bimap id Later (Last (S p))
+Last {vs = .(_)} (S Z) = Evidence _ First
+Last {vs = .(_)} (S (S p)) = bimap id Later (Last (S p))
 
 export
 finIdx : {idx : _} -> (0 prf : IsVar x idx vars) ->
