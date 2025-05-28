@@ -91,7 +91,7 @@ data Def : Type where
                                 -- e.g "C:printf,libc,stdlib.h", "scheme:display", ...
                  Def
     Builtin : {arity : Nat} -> PrimFn arity -> Def
-    DCon : (tag : Int) -> (arity : Nat) ->
+    DCon : (tag : Tag) -> (arity : Nat) ->
            (newtypeArg : Maybe (Bool, Nat)) ->
                -- if only constructor, and only one argument is non-Rig0,
                -- flag it here. The Nat is the unerased argument position.

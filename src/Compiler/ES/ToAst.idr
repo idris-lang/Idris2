@@ -9,6 +9,8 @@ import Core.Context
 import Compiler.ES.Ast
 import Compiler.ES.State
 
+%hide Core.TT.Term.Tag
+
 --------------------------------------------------------------------------------
 --          Converting NamedCExp
 --------------------------------------------------------------------------------
