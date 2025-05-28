@@ -132,7 +132,7 @@ mutual
        -- had it as an argument. It's necessary so as to not lose file context
        -- information when creating the normal form.
        NApp     : FC -> NHead vars -> Spine vars -> NF vars
-       NDCon    : FC -> Name -> (tag : Int) -> (arity : Nat) ->
+       NDCon    : FC -> Name -> (tag : Tag) -> (arity : Nat) ->
                   Spine vars -> NF vars
                   -- TODO it looks like the list of closures is stored in spine order, c.f. `getCaseBounds`
        NTCon    : FC -> Name -> (arity : Nat) ->

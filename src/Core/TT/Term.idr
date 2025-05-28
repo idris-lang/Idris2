@@ -21,10 +21,14 @@ import Libraries.Data.SnocList.SizeOf
 -- too many lookups
 
 public export
+Tag : Type
+Tag = Int
+
+public export
 data NameType : Type where
      Bound   : NameType
      Func    : NameType
-     DataCon : (tag : Int) -> (arity : Nat) -> NameType
+     DataCon : (tag : Tag) -> (arity : Nat) -> NameType
      TyCon   : (arity : Nat) -> NameType
 
 %name NameType nt
