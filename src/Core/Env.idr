@@ -1,17 +1,30 @@
 module Core.Env
 
 import Core.TT
+import Core.Name.CompatibleVars
 import Data.List
+import Data.SnocList
+
+import Libraries.Data.List.SizeOf
+import Libraries.Data.List.HasLength
+
+import Libraries.Data.SnocList.Extra
+import Libraries.Data.SnocList.SizeOf
+import Libraries.Data.SnocList.HasLength
 
 %default total
 
 -- Environment containing types and values of local variables
 public export
-data Env : (tm : List Name -> Type) -> List Name -> Type where
-     Nil : Env tm []
+data Env : (tm : Scoped) -> Scope -> Type where
+     Nil : Env tm Scope.empty
      (::) : Binder (tm vars) -> Env tm vars -> Env tm (x :: vars)
 
 %name Env rho
+
+public export
+empty : Env tm Scope.empty
+empty = []
 
 export
 extend : (x : Name) -> Binder (tm vars) -> Env tm vars -> Env tm (x :: vars)
@@ -45,8 +58,24 @@ namesNoLet [] = []
 namesNoLet (Let _ _ _ _ :: xs) = namesNoLet xs
 namesNoLet {xs = x :: _} (_ :: env) = x :: namesNoLet env
 
+export
+eraseLinear : Env tm vs -> Env tm vs
+eraseLinear [] = Env.empty
+eraseLinear (b :: bs)
+    = if isLinear (multiplicity b)
+         then setMultiplicity b erased :: eraseLinear bs
+         else b :: eraseLinear bs
+
+export
+getErased : {vs : _} -> Env tm vs -> List (Var vs)
+getErased [] = []
+getErased (b :: bs)
+    = if isErased (multiplicity b)
+         then MkVar First :: map weaken (getErased bs)
+         else map weaken (getErased bs)
+
 public export
-data IsDefined : Name -> List Name -> Type where
+data IsDefined : Name -> Scope -> Type where
   MkIsDefined : {idx : Nat} -> RigCount -> (0 p : IsVar n idx vars) ->
                 IsDefined n vars
 
@@ -79,14 +108,6 @@ revOnto xs (v :: vs)
         rewrite appendAssociative (reverse vs) [v] xs in
           rewrite revOnto [v] vs in Refl
 
-revNs : (vs, ns : List a) -> reverse ns ++ reverse vs = reverse (vs ++ ns)
-revNs [] ns = rewrite appendNilRightNeutral (reverse ns) in Refl
-revNs (v :: vs) ns
-    = rewrite revOnto [v] vs in
-        rewrite revOnto [v] (vs ++ ns) in
-          rewrite sym (revNs vs ns) in
-            rewrite appendAssociative (reverse ns) (reverse vs) [v] in
-              Refl
 
 -- Weaken by all the names at once at the end, to save multiple traversals
 -- in big environments
@@ -94,7 +115,7 @@ revNs (v :: vs) ns
 -- when environments get fairly big.
 getBinderUnder : Weaken tm =>
                  {vars : _} -> {idx : Nat} ->
-                 (ns : List Name) ->
+                 (ns : Scope) ->
                  (0 p : IsVar x idx vars) -> Env tm vars ->
                  Binder (tm (reverseOnto vars ns))
 getBinderUnder {idx = Z} {vars = v :: vs} ns First (b :: env)
@@ -106,7 +127,7 @@ export
 getBinder : Weaken tm =>
             {vars : _} -> {idx : Nat} ->
             (0 p : IsVar x idx vars) -> Env tm vars -> Binder (tm vars)
-getBinder el env = getBinderUnder [] el env
+getBinder el env = getBinderUnder Scope.empty el env
 
 -- For getBinderLoc, we are not reusing getBinder because there is no need to
 -- needlessly weaken stuff;
@@ -153,12 +174,20 @@ abstractFullEnvType fc (b :: env) tm
       in abstractFullEnvType fc env (Bind fc _ bnd tm)
 
 export
+mkExplicit : Env Term vs -> Env Term vs
+mkExplicit [] = Env.empty
+mkExplicit (Pi fc c _ ty :: env) = Pi fc c Explicit ty :: mkExplicit env
+mkExplicit (b :: env) = b :: mkExplicit env
+
+export
 letToLam : Env Term vars -> Env Term vars
 letToLam [] = []
 letToLam (Let fc c val ty :: env) = Lam fc c Explicit ty :: letToLam env
 letToLam (b :: env) = b :: letToLam env
 
 mutual
+  -- TODO turn list into set of nats throughout
+
   -- Quicker, if less safe, to store variables as a Nat, for quick comparison
   findUsed : {vars : _} ->
              Env Term vars -> List Nat -> Term vars -> List Nat
@@ -208,7 +237,7 @@ mutual
     = findUsed env (findUsed env used val) ty
   findUsedInBinder env used b = findUsed env used (binderType b)
 
-toVar : (vars : List Name) -> Nat -> Maybe (Var vars)
+toVar : (vars : Scope) -> Nat -> Maybe (Var vars)
 toVar (v :: vs) Z = Just (MkVar First)
 toVar (v :: vs) (S k)
    = do MkVar prf <- toVar vs k
@@ -249,7 +278,7 @@ mkShrink {vars = v :: vs} xs = mkShrinkSub _ xs
 export
 findSubEnv : {vars : _} ->
              Env Term vars -> Term vars ->
-             (vars' : List Name ** Thin vars' vars)
+             (vars' : Scope ** Thin vars' vars)
 findSubEnv env tm = mkShrink (findUsedLocs env tm)
 
 export
@@ -272,12 +301,14 @@ mkEnvOnto fc (n :: ns) vs
 -- and types of the contents.
 -- We use this when building and comparing case trees.
 export
-mkEnv : FC -> (vs : List Name) -> Env Term vs
+mkEnv : FC -> (vs : Scope) -> Env Term vs
 mkEnv fc [] = []
 mkEnv fc (n :: ns) = PVar fc top Explicit (Erased fc Placeholder) :: mkEnv fc ns
 
 -- Update an environment so that all names are guaranteed unique. In the
 -- case of a clash, the most recently bound is left unchanged.
+--
+-- TODO replace list of `used` names with a proper set
 export
 uniqifyEnv : {vars : _} ->
              Env Term vars ->
@@ -333,9 +364,8 @@ close fc nm env tm
     substs s env (rewrite appendNilRightNeutral vars in tm)
 
   where
-
-    mkSubstEnv : Int -> Env Term vs -> (SizeOf vs, SubstEnv vs [])
-    mkSubstEnv i [] = (zero, [])
+    mkSubstEnv : Int -> Env Term vs -> (SizeOf vs, SubstEnv vs Scope.empty)
+    mkSubstEnv i [] = (zero, Subst.empty)
     mkSubstEnv i (v :: vs)
        = let (s, env) = mkSubstEnv (i + 1) vs in
          (suc s, Ref fc Bound (MN nm i) :: env)

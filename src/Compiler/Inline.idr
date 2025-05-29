@@ -16,24 +16,29 @@ import Core.TT
 
 import Data.Maybe
 import Data.List
+import Data.List.Quantifiers
+import Data.SnocList
 import Data.Vect
+
 import Libraries.Data.List.LengthMatch
 import Libraries.Data.NameMap
 import Libraries.Data.WithDefault
+import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
+import Libraries.Data.SnocList.Extra
 
 %default covering
 
-data EEnv : List Name -> List Name -> Type where
-     Nil : EEnv free []
-     (::) : CExp free -> EEnv free vars -> EEnv free (x :: vars)
+EEnv : Scope -> Scope -> Type
+EEnv free = All (\_ => CExp free)
 
 extend : EEnv free vars -> (args : List (CExp free)) -> (args' : List Name) ->
-         LengthMatch args args' -> EEnv free (args' ++ vars)
+         LengthMatch args args' -> EEnv free (Scope.addInner vars args')
 extend env [] [] NilMatch = env
 extend env (a :: xs) (n :: ns) (ConsMatch w)
     = a :: extend env xs ns w
 
-Stack : List Name -> Type
+Stack : Scoped
 Stack vars = List (CExp vars)
 
 unload : Stack vars -> CExp vars -> CExp vars
@@ -49,8 +54,8 @@ getArity (MkCon _ arity _) = arity
 getArity (MkForeign _ args _) = length args
 getArity (MkError _) = 0
 
-takeFromStack : EEnv free vars -> Stack free -> (args : List Name) ->
-                Maybe (EEnv free (args ++ vars), Stack free)
+takeFromStack : EEnv free vars -> Stack free -> (args : Scope) ->
+                Maybe (EEnv free (Scope.addInner vars args), Stack free)
 takeFromStack env (e :: es) (a :: as)
   = do (env', stk') <- takeFromStack env es as
        pure (e :: env', stk')
@@ -146,7 +151,8 @@ mutual
   eval : {vars, free : _} ->
          {auto c : Ref Ctxt Defs} ->
          {auto l : Ref LVar Int} ->
-         List Name -> EEnv free vars -> Stack free -> CExp (vars ++ free) ->
+         List Name -> -- TODO should be a set
+         EEnv free vars -> Stack free -> CExp (vars ++ free) ->
          Core (CExp free)
   eval rec env stk (CLocal fc p) = evalLocal fc rec stk env p
   -- This is hopefully a temporary hack, giving a special case for io_bind.
@@ -425,8 +431,9 @@ mkBounds : (xs : _) -> Bounds xs
 mkBounds [] = None
 mkBounds (x :: xs) = Add x x (mkBounds xs)
 
+-- TODO `getNewArgs` is always used in reverse, revisit!
 getNewArgs : {done : _} ->
-             SubstCEnv done args -> List Name
+             SubstCEnv done args -> Scope
 getNewArgs [] = []
 getNewArgs (CRef _ n :: xs) = n :: getNewArgs xs
 getNewArgs {done = x :: xs} (_ :: sub) = x :: getNewArgs sub
@@ -435,9 +442,9 @@ getNewArgs {done = x :: xs} (_ :: sub) = x :: getNewArgs sub
 -- Annoyingly, the indices will need fixing up because the order in the top
 -- level definition goes left to right (i.e. first argument has lowest index,
 -- not the highest, as you'd expect if they were all lambdas).
-mergeLambdas : (args : List Name) -> CExp args -> (args' ** CExp args')
+mergeLambdas : (args : Scope) -> CExp args -> (args' ** CExp args')
 mergeLambdas args (CLam fc x sc)
-    = let (args' ** (s, env, exp')) = getLams zero 0 [] (CLam fc x sc)
+    = let (args' ** (s, env, exp')) = getLams zero 0 Subst.empty (CLam fc x sc)
           expNs = substs s env exp'
           newArgs = reverse $ getNewArgs env
           expLocs = mkLocals (mkSizeOf args) {vars = []} (mkBounds newArgs)

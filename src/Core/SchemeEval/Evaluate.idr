@@ -8,11 +8,13 @@ import Core.SchemeEval.Compile
 import Core.SchemeEval.ToScheme
 import Core.TT
 
+import Data.List.Quantifiers
+
 import Libraries.Data.NameMap
 import Libraries.Utils.Scheme
 
 public export
-data SObj : List Name -> Type where
+data SObj : Scoped where
      MkSObj : ForeignObj -> SchVars vars -> SObj vars
 
 -- Values, which we read off evaluated scheme objects.
@@ -22,13 +24,13 @@ data SObj : List Name -> Type where
 -- recording a LocalEnv for example).
 mutual
   public export
-  data SHead : List Name -> Type where
+  data SHead : Scoped where
        SLocal : (idx : Nat) -> (0 p : IsVar nm idx vars) -> SHead vars
        SRef : NameType -> Name -> SHead vars
        SMeta : Name -> Int -> List (Core (SNF vars)) -> SHead vars
 
   public export
-  data SNF : List Name -> Type where
+  data SNF : Scoped where
        SBind    : FC -> (x : Name) -> Binder (SNF vars) ->
                   (SObj vars -> Core (SNF vars)) -> SNF vars
        SApp     : FC -> SHead vars -> List (Core (SNF vars)) -> SNF vars
@@ -386,7 +388,7 @@ quoteObj : {auto c : Ref Ctxt Defs} ->
            SObj vars -> Core (Term vars)
 quoteObj (MkSObj val schEnv)
     = do i <- newRef Sym 0
-         quote' {outer = []} schEnv val
+         quote' {outer = Scope.empty} schEnv val
 
 mutual
   snfVector : Ref Ctxt Defs =>

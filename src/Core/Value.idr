@@ -5,6 +5,8 @@ import Core.Core
 import Core.Env
 import Core.TT
 
+import Data.List.Quantifiers
+
 %default covering
 
 public export
@@ -56,23 +58,23 @@ cbv : EvalOpts
 cbv = { strategy := CBV } defaultOpts
 
 mutual
+  -- TODO swap arguments and type as `Scope -> Scoped`
   public export
-  data LocalEnv : List Name -> List Name -> Type where
-       Nil  : LocalEnv free []
-       (::) : Closure free -> LocalEnv free vars -> LocalEnv free (x :: vars)
+  LocalEnv : Scope -> Scope -> Type
+  LocalEnv free = All (\_ => Closure free)
 
   public export
-  data Closure : List Name -> Type where
+  data Closure : Scoped where
        MkClosure : {vars : _} ->
                    (opts : EvalOpts) ->
                    LocalEnv free vars ->
                    Env Term free ->
-                   Term (vars ++ free) -> Closure free
+                   Term (Scope.addInner free vars) -> Closure free
        MkNFClosure : EvalOpts -> Env Term free -> NF free -> Closure free
 
   -- The head of a value: things you can apply arguments to
   public export
-  data NHead : List Name -> Type where
+  data NHead : Scoped where
        NLocal : Maybe Bool -> (idx : Nat) -> (0 p : IsVar nm idx vars) ->
                 NHead vars
        NRef   : NameType -> Name -> NHead vars
@@ -82,7 +84,7 @@ mutual
   -- Values themselves. 'Closure' is an unevaluated thunk, which means
   -- we can wait until necessary to reduce constructor arguments
   public export
-  data NF : List Name -> Type where
+  data NF : Scoped where
        NBind    : FC -> (x : Name) -> Binder (Closure vars) ->
                   (Defs -> Closure vars -> Core (NF vars)) -> NF vars
        -- Each closure is associated with the file context of the App node that
@@ -91,6 +93,7 @@ mutual
        NApp     : FC -> NHead vars -> List (FC, Closure vars) -> NF vars
        NDCon    : FC -> Name -> (tag : Int) -> (arity : Nat) ->
                   List (FC, Closure vars) -> NF vars
+                  -- TODO it looks like the list of closures is stored in spine order, c.f. `getCaseBounds`
        NTCon    : FC -> Name -> (tag : Int) -> (arity : Nat) ->
                   List (FC, Closure vars) -> NF vars
        NAs      : FC -> UseSide -> NF vars -> NF vars -> NF vars
@@ -105,6 +108,19 @@ mutual
 %name Closure cl
 %name NHead hd
 %name NF nf
+
+public export
+ClosedClosure : Type
+ClosedClosure = Closure []
+
+public export
+ClosedNF : Type
+ClosedNF = NF []
+
+namespace LocalEnv
+  public export
+  empty : LocalEnv free Scope.empty
+  empty = []
 
 export
 ntCon : FC -> Name -> Int -> Nat -> List (FC, Closure vars) -> NF vars

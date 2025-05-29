@@ -13,6 +13,9 @@ import TTImp.TTImp
 import Data.List
 import Data.String
 
+import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
+
 %default covering
 
 used : (idx : Nat) -> Term vars -> Bool
@@ -89,11 +92,6 @@ mutual
       findArgPos (Case idx p _ _) = Just idx
       findArgPos _ = Nothing
 
-      idxOrMaybe : Nat -> List a -> Maybe a
-      idxOrMaybe Z (x :: _) = Just x
-      idxOrMaybe (S k) (_ :: xs) = idxOrMaybe k xs
-      idxOrMaybe _ [] = Nothing
-
       -- TODO: some utility like this should probably be implemented in Core
       substVars : List (List (Var vs), Term vs) -> Term vs -> Term vs
       substVars xs tm@(Local fc _ idx prf)
@@ -136,7 +134,7 @@ mutual
       mkClause fc argpos args (vs ** (clauseEnv, lhs, rhs))
           = do logTerm "unelab.case.clause" 20 "Unelaborating clause" lhs
                let patArgs = snd (getFnArgs lhs)
-                   Just pat = idxOrMaybe argpos patArgs
+                   Just pat = getAt argpos patArgs
                      | _ => pure Nothing
                    rhs = substArgs (mkSizeOf vs) (zip (map argVars patArgs) args) rhs
                logTerm "unelab.case.clause" 20 "Unelaborating LHS" pat
@@ -157,7 +155,7 @@ mutual
       mkCase pats argpos args
           = do unless (null args) $ log "unelab.case.clause" 20 $
                  unwords $ "Ignoring" :: map show args
-               let Just scrutinee = idxOrMaybe argpos args
+               let Just scrutinee = getAt argpos args
                      | _ => pure Nothing
                    fc = getLoc scrutinee
                (tm, _) <- unelabTy Full nest env scrutinee
@@ -255,7 +253,7 @@ mutual
       next (NS ns n) = NS ns (next n)
       next n = MN (show n) 0
 
-      uniqueLocal : List Name -> Name -> Name
+      uniqueLocal : Scope -> Name -> Name
       uniqueLocal vs n
          = if n `elem` vs
               then uniqueLocal vs (next n)

@@ -1,11 +1,15 @@
 module Core.Normalise.Quote
 
 import Core.Context
+import Core.Context.Log
 import Core.Core
 import Core.Env
 import Core.Normalise.Eval
 import Core.TT
 import Core.Value
+
+import Data.SnocList
+import Libraries.Data.SnocList.SizeOf
 
 %default covering
 
@@ -24,13 +28,13 @@ record QuoteOpts where
 public export
 interface Quote tm where
     quote : {auto c : Ref Ctxt Defs} ->
-            {vars : List Name} ->
+            {vars : Scope} ->
             Defs -> Env Term vars -> tm vars -> Core (Term vars)
     quoteLHS : {auto c : Ref Ctxt Defs} ->
-               {vars : List Name} ->
+               {vars : Scope} ->
                Defs -> Env Term vars -> tm vars -> Core (Term vars)
     quoteOpts : {auto c : Ref Ctxt Defs} ->
-                {vars : List Name} ->
+                {vars : Scope} ->
                 QuoteOpts -> Defs -> Env Term vars -> tm vars -> Core (Term vars)
 
     quoteGen : {auto c : Ref Ctxt Defs} ->
@@ -267,7 +271,7 @@ quoteWithPiGen q opts defs bound env tm
 -- are, don't reduce anything else
 export
 quoteWithPi : {auto c : Ref Ctxt Defs} ->
-              {vars : List Name} ->
+              {vars : Scope} ->
               Defs -> Env Term vars -> NF vars -> Core (Term vars)
 quoteWithPi defs env tm
     = do q <- newRef QVar 0

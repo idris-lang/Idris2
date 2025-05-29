@@ -11,17 +11,22 @@ import Core.TT
 import Core.Value
 
 import Data.List
+import Data.SnocList
+
+import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.HasLength
+import Libraries.Data.SnocList.SizeOf
 
 %default covering
 
 public export
 interface Convert tm where
   convert : {auto c : Ref Ctxt Defs} ->
-            {vars : List Name} ->
+            {vars : Scope} ->
             Defs -> Env Term vars ->
             tm vars -> tm vars -> Core Bool
   convertInf : {auto c : Ref Ctxt Defs} ->
-               {vars : List Name} ->
+               {vars : Scope} ->
                Defs -> Env Term vars ->
                tm vars -> tm vars -> Core Bool
 
@@ -348,7 +353,7 @@ mutual
   Convert NF where
     convGen q i defs env (NBind fc x b sc) (NBind _ x' b' sc')
         = do var <- genName "conv"
-             let c = MkClosure defaultOpts [] env (Ref fc Bound var)
+             let c = MkClosure defaultOpts LocalEnv.empty env (Ref fc Bound var)
              bok <- convBinders q i defs env b b'
              if bok
                 then do bsc <- sc defs c

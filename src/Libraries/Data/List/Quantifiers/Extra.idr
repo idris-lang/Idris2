@@ -25,3 +25,15 @@ export
 tabulate : ((x : a) -> p x) -> (xs : List a) -> All p xs
 tabulate f [] = []
 tabulate f (x :: xs) = f x :: tabulate f xs
+
+-- TODO: delete this function after 0.7.1 is released
+-- as it now exists in base's Data.List.Quantifiers
+export
+head : All p (x :: xs) -> p x
+head (px :: _) = px
+
+-- TODO: delete this function after 0.7.1 is released
+-- as it now exists in base's Data.List.Quantifiers
+export
+tail : All p (x :: xs) -> All p xs
+tail (_ :: pxs) = pxs

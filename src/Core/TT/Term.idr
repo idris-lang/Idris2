@@ -6,11 +6,16 @@ import Core.FC
 
 import Core.Name
 import Core.Name.Scoped
+import Core.Name.CompatibleVars
 import Core.TT.Binder
 import Core.TT.Primitive
 import Core.TT.Var
 
 import Data.List
+import Data.SnocList
+
+import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
 
 %default total
 
@@ -101,7 +106,7 @@ data Term : Scoped where
      Meta : FC -> Name -> Int -> List (Term vars) -> Term vars
      Bind : FC -> (x : Name) ->
             (b : Binder (Term vars)) ->
-            (scope : Term (x :: vars)) -> Term vars
+            (scope : Term (Scope.bind vars x)) -> Term vars
      App : FC -> (fn : Term vars) -> (arg : Term vars) -> Term vars
      -- as patterns; since we check LHS patterns as terms before turning
      -- them into patterns, this helps us get it right. When normalising,
@@ -473,15 +478,15 @@ Eq (Term vars) where
 
 mutual
 
-  resolveNamesBinder : (vars : List Name) -> Binder (Term vars) -> Binder (Term vars)
+  resolveNamesBinder : (vars : Scope) -> Binder (Term vars) -> Binder (Term vars)
   resolveNamesBinder vars b = assert_total $ map (resolveNames vars) b
 
-  resolveNamesTerms : (vars : List Name) -> List (Term vars) -> List (Term vars)
+  resolveNamesTerms : (vars : Scope) -> List (Term vars) -> List (Term vars)
   resolveNamesTerms vars ts = assert_total $ map (resolveNames vars) ts
 
   -- Replace any Ref Bound in a type with appropriate local
   export
-  resolveNames : (vars : List Name) -> Term vars -> Term vars
+  resolveNames : (vars : Scope) -> Term vars -> Term vars
   resolveNames vars (Ref fc Bound name)
       = case isNVar name vars of
              Just (MkNVar prf) => Local fc (Just False) _ prf

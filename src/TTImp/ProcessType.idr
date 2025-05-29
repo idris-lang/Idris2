@@ -39,10 +39,10 @@ getFnString (IPrimVal _ (Str st)) = pure st
 getFnString tm
     = do inidx <- resolveName (UN $ Basic "[foreign]")
          let fc = getFC tm
-         let gstr = gnf [] (PrimVal fc $ PrT StringType)
-         etm <- checkTerm inidx InExpr [] (MkNested []) [] tm gstr
+         let gstr = gnf Env.empty (PrimVal fc $ PrT StringType)
+         etm <- checkTerm inidx InExpr [] (MkNested []) Env.empty tm gstr
          defs <- get Ctxt
-         case !(nf defs [] etm) of
+         case !(nf defs Env.empty etm) of
               NPrimVal fc (Str st) => pure st
               _ => throw (GenericMsg fc "%foreign calling convention must evaluate to a String")
 
@@ -91,14 +91,14 @@ initDef fc n env ty (_ :: opts) = initDef fc n env ty opts
 -- generalising partially evaluated definitions and (potentially) in interactive
 -- editing
 findInferrable : {auto c : Ref Ctxt Defs} ->
-                 Defs -> NF [] -> Core (List Nat)
+                 Defs -> ClosedNF -> Core (List Nat)
 findInferrable defs ty = fi 0 0 [] [] ty
   where
     mutual
       -- Add to the inferrable arguments from the given type. An argument is
       -- inferrable if it's guarded by a constructor, or on its own
       findInf : List Nat -> List (Name, Nat) ->
-                NF [] -> Core (List Nat)
+                ClosedNF -> Core (List Nat)
       findInf acc pos (NApp _ (NRef Bound n) [])
           = case lookup n pos of
                  Nothing => pure acc
@@ -112,14 +112,14 @@ findInferrable defs ty = fi 0 0 [] [] ty
       findInf acc pos (NDelayed _ _ t) = findInf acc pos t
       findInf acc _ _ = pure acc
 
-      findInfs : List Nat -> List (Name, Nat) -> List (NF []) -> Core (List Nat)
+      findInfs : List Nat -> List (Name, Nat) -> List ClosedNF -> Core (List Nat)
       findInfs acc pos [] = pure acc
       findInfs acc pos (n :: ns) = findInf !(findInfs acc pos ns) pos n
 
-    fi : Nat -> Int -> List (Name, Nat) -> List Nat -> NF [] -> Core (List Nat)
+    fi : Nat -> Int -> List (Name, Nat) -> List Nat -> ClosedNF -> Core (List Nat)
     fi pos i args acc (NBind fc x (Pi _ _ _ aty) sc)
         = do let argn = MN "inf" i
-             sc' <- sc defs (toClosure defaultOpts [] (Ref fc Bound argn))
+             sc' <- sc defs (toClosure defaultOpts Env.empty (Ref fc Bound argn))
              acc' <- findInf acc args !(evalClosure defs aty)
              rest <- fi (1 + pos) (1 + i) ((argn, pos) :: args) acc' sc'
              pure rest
@@ -164,7 +164,7 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc n_in ty_raw)
                    checkTerm idx InType (HolesOkay :: eopts) nest env
                              (IBindHere fc (PI erased) ty_raw)
                              (gType fc u)
-         logTermNF "declare.type" 3 ("Type of " ++ show n) [] (abstractFullEnvType tfc env ty)
+         logTermNF "declare.type" 3 ("Type of " ++ show n) Env.empty (abstractFullEnvType tfc env ty)
 
          def <- initDef fc n env ty opts
          let fullty = abstractFullEnvType tfc env ty
@@ -172,7 +172,7 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc n_in ty_raw)
          (erased, dterased) <- findErased fullty
          defs <- get Ctxt
          empty <- clearDefs defs
-         infargs <- findInferrable empty !(nf defs [] fullty)
+         infargs <- findInferrable empty !(nf defs Env.empty fullty)
 
          ignore $ addDef (Resolved idx)
                 ({ eraseArgs := erased,

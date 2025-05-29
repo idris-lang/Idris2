@@ -8,6 +8,12 @@ import Core.TT.Subst
 import Core.TT.Term
 import Core.TT.Var
 
+import Data.List
+import Data.SnocList
+
+import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
+
 %default total
 
 public export
@@ -51,5 +57,5 @@ substs : SizeOf dropped -> SubstEnv dropped vars -> Term (dropped ++ vars) -> Te
 substs dropped env tm = substTerm zero dropped env tm
 
 export
-subst : Term vars -> Term (x :: vars) -> Term vars
+subst : Term vars -> Term (Scope.bind vars x) -> Term vars
 subst val tm = substs (suc zero) [val] tm

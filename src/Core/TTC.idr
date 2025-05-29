@@ -273,11 +273,6 @@ mkPrf : (idx : Nat) -> IsVar n idx ns
 mkPrf {n} {ns} Z = believe_me (First {n} {ns = n :: ns})
 mkPrf {n} {ns} (S k) = believe_me (Later {m=n} (mkPrf {n} {ns} k))
 
-getName : (idx : Nat) -> List Name -> Maybe Name
-getName Z (x :: xs) = Just x
-getName (S k) (x :: xs) = getName k xs
-getName _ [] = Nothing
-
 mutual
   export
   {vars : _} -> TTC (Binder (Term vars)) where
@@ -363,7 +358,7 @@ mutual
                0 => do c <- fromBuf
                        idx <- fromBuf
                        name <- maybe (corrupt "Term") pure
-                                     (getName idx vars)
+                                     (getAt idx vars)
                        pure (Local {name} emptyFC c idx (mkPrf idx))
                1 => do nt <- fromBuf; name <- fromBuf
                        pure (Ref emptyFC nt name)
@@ -394,7 +389,7 @@ mutual
                         pure (apply emptyFC fn args)
                idxp => do c <- fromBuf
                           let idx : Nat = fromInteger (cast (idxp - 13))
-                          let Just name = getName idx vars
+                          let Just name = getAt idx vars
                               | Nothing => corrupt "Term"
                           pure (Local {name} emptyFC c idx (mkPrf idx))
 
@@ -498,7 +493,7 @@ export
       = do toBuf bnd; toBuf env
 
   -- Length has to correspond to length of 'vars'
-  fromBuf {vars = []} = pure Nil
+  fromBuf {vars = []} = pure []
   fromBuf {vars = x :: xs}
       = do bnd <- fromBuf
            env <- fromBuf
@@ -736,7 +731,7 @@ mutual
         = assert_total $ case !getTag of
                0 => do fc <- fromBuf
                        idx <- fromBuf
-                       let Just x = getName idx vars
+                       let Just x = getAt idx vars
                            | Nothing => corrupt "CExp"
                        pure (CLocal {x} fc (mkPrf idx))
                1 => do fc <- fromBuf
@@ -1157,7 +1152,7 @@ TTC GlobalDef where
                                         mul vars vis
                                         tot hatch fl refs refsR inv c True def cdef Nothing sc Nothing)
               else pure (MkGlobalDef loc name (Erased loc Placeholder) [] [] [] []
-                                     mul [] (specified Public) unchecked False [] refs refsR
+                                     mul Scope.empty (specified Public) unchecked False [] refs refsR
                                      False False True def cdef Nothing [] Nothing)
 
 export

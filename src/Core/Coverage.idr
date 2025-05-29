@@ -15,6 +15,8 @@ import Data.String
 
 import Libraries.Data.NameMap
 import Libraries.Data.String.Extra
+import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
 import Libraries.Text.PrettyPrint.Prettyprinter
 
 %default covering
@@ -81,13 +83,13 @@ conflict defs env nfty n
               | Nothing => pure False
          case (definition gdef, type gdef) of
               (DCon t arity _, dty)
-                  => do Nothing <- conflictNF 0 nfty !(nf defs [] dty)
+                  => do Nothing <- conflictNF 0 nfty !(nf defs Env.empty dty)
                             | Just ms => pure $ conflictMatch ms
                         pure True
               _ => pure False
   where
     mutual
-      conflictArgs : Int -> List (Closure vars) -> List (Closure []) ->
+      conflictArgs : Int -> List (Closure vars) -> List ClosedClosure ->
                      Core (Maybe (List (Name, Term vars)))
       conflictArgs _ [] [] = pure (Just [])
       conflictArgs i (c :: cs) (c' :: cs')
@@ -100,13 +102,13 @@ conflict defs env nfty n
                pure (Just (ms ++ ms'))
       conflictArgs _ _ _ = pure (Just [])
 
-      -- If the constructor type (the NF []) matches the variable type,
+      -- If the constructor type (the ClosedNF) matches the variable type,
       -- then there may be a way to construct it, so return the matches in
       -- the indices.
       -- If any of those matches clash, the constructor is not valid
       -- e.g, Eq x x matches Eq Z (S Z), with x = Z and x = S Z
       -- conflictNF returns the list of matches, for checking
-      conflictNF : Int -> NF vars -> NF [] ->
+      conflictNF : Int -> NF vars -> ClosedNF ->
                    Core (Maybe (List (Name, Term vars)))
       conflictNF i t (NBind fc x b sc)
           -- invent a fresh name, in case a user has bound the same name
@@ -114,7 +116,7 @@ conflict defs env nfty n
           -- put possible
           = let x' = MN (show x) i in
                 conflictNF (i + 1) t
-                       !(sc defs (toClosure defaultOpts [] (Ref fc Bound x')))
+                       !(sc defs (toClosure defaultOpts Env.empty (Ref fc Bound x')))
       conflictNF i nf (NApp _ (NRef Bound n) [])
           = pure (Just [(n, !(quote defs env nf))])
       conflictNF i (NDCon _ n t a args) (NDCon _ n' t' a' args')
@@ -193,12 +195,8 @@ getMissingAlts fc defs nfty alts
     noneOf alts c = not $ any (altMatch c) alts
 
 -- Mapping of variable to constructor tag already matched for it
-KnownVars : List Name -> Type -> Type
+KnownVars : Scope -> Type -> Type
 KnownVars vars a = List (Var vars, a)
-
-getName : {idx : Nat} -> {vars : List Name} -> (0 p : IsVar n idx vars) -> Name
-getName {vars = v :: _} First = v
-getName (Later p) = getName p
 
 showK : {ns : _} ->
         Show a => KnownVars ns a -> String
@@ -208,6 +206,7 @@ showK {a} xs = show (map aString xs)
               (Var vars, a) -> (Name, a)
     aString (MkVar v, t) = (nameAt v, t)
 
+-- TODO re-use `Thinnable`
 weakenNs : SizeOf args -> KnownVars vars a -> KnownVars (args ++ vars) a
 weakenNs args [] = []
 weakenNs args ((v, t) :: xs)
@@ -459,7 +458,7 @@ checkMatched cs ulhs
   where
     tryClauses : List Clause -> ClosedTerm -> Core (Maybe ClosedTerm)
     tryClauses [] ulhs
-        = do logTermNF "coverage" 10 "Nothing matches" [] ulhs
+        = do logTermNF "coverage" 10 "Nothing matches" Env.empty ulhs
              pure $ Just ulhs
     tryClauses (MkClause env lhs _ :: cs) ulhs
         = if !(clauseMatches env lhs ulhs)

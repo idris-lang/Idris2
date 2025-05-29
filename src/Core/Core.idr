@@ -5,6 +5,7 @@ import Core.Env
 import Core.TT
 
 import Data.List1
+import Data.SnocList
 import Data.Vect
 
 import Libraries.Data.IMaybe
@@ -760,6 +761,18 @@ export
 traverse : (a -> Core b) -> List a -> Core (List b)
 traverse f xs = traverse' f xs []
 
+namespace SnocList
+  -- Traversable (specialised)
+  traverse' : (a -> Core b) -> SnocList a -> SnocList b -> Core (SnocList b)
+  traverse' f [<] acc = pure acc
+  traverse' f (xs :< x) acc
+      = traverse' f xs (acc :< !(f x))
+
+  %inline
+  export
+  traverse : (a -> Core b) -> SnocList a -> Core (SnocList b)
+  traverse f xs = traverse' f (reverse xs) [<]
+
 export
 mapMaybeM : (a -> Core (Maybe b)) -> List a -> Core (List b)
 mapMaybeM f = go [<] where
@@ -784,7 +797,7 @@ traverseList1 f xxs
 export
 traverseSnocList : (a -> Core b) -> SnocList a -> Core (SnocList b)
 traverseSnocList f [<] = pure [<]
-traverseSnocList f (as :< a) = (:<) <$> traverseSnocList f as <*> f a
+traverseSnocList f (as :< a) = [| traverseSnocList f as :< f a |]
 
 export
 traverseVect : (a -> Core b) -> Vect n a -> Core (Vect n b)
@@ -801,27 +814,30 @@ export
 traversePair : (a -> Core b) -> (w, a) -> Core (w, b)
 traversePair f (w, a) = (w,) <$> f a
 
-export
-traverse_ : (a -> Core b) -> List a -> Core ()
-traverse_ f [] = pure ()
-traverse_ f (x :: xs)
-    = Core.do ignore (f x)
-              traverse_ f xs
-%inline
-export
-for_ : List a -> (a -> Core ()) -> Core ()
-for_ = flip traverse_
+namespace List
+  export
+  traverse_ : (a -> Core b) -> List a -> Core ()
+  traverse_ f [] = pure ()
+  traverse_ f (x :: xs)
+      = Core.do ignore (f x)
+                traverse_ f xs
 
-%inline
-export
-sequence : List (Core a) -> Core (List a)
-sequence (x :: xs)
-   = do
-        x' <- x
-        xs' <- sequence xs
-        pure (x' :: xs')
-sequence [] = pure []
+  %inline
+  export
+  for_ : List a -> (a -> Core ()) -> Core ()
+  for_ = flip traverse_
 
+  %inline
+  export
+  sequence : List (Core a) -> Core (List a)
+  sequence (x :: xs)
+     = do
+          x' <- x
+          xs' <- sequence xs
+          pure (x' :: xs')
+  sequence [] = pure []
+
+-- TODO put in namespace `List1`
 export
 traverseList1_ : (a -> Core b) -> List1 a -> Core ()
 traverseList1_ f xxs
@@ -829,6 +845,17 @@ traverseList1_ f xxs
          let xs = tail xxs
          ignore (f x)
          traverse_ f xs
+
+namespace SnocList
+  traverse_' : (a -> Core b) -> SnocList a -> Core ()
+  traverse_' f [<] = pure ()
+  traverse_' f (xs :< x)
+      = Core.do _ <- f x
+                traverse_' f xs
+
+  export
+  traverse_ : (a -> Core b) -> SnocList a -> Core ()
+  traverse_ f xs = traverse_' f (reverse xs)
 
 %inline export
 traverseFC : (a -> Core b) -> WithFC a -> Core (WithFC b)
@@ -879,6 +906,18 @@ anyM f (x :: xs)
     = if !(f x)
          then pure True
          else anyM f xs
+
+namespace SnocList
+  anyM' : (a -> Core Bool) -> SnocList a -> Core Bool
+  anyM' f [<] = pure False
+  anyM' f (xs :< x)
+      = if !(f x)
+          then pure True
+          else anyM' f xs
+
+  export
+  anyM : (a -> Core Bool) -> SnocList a -> Core Bool
+  anyM f xs = anyM' f (reverse xs)
 
 export
 allM : (a -> Core Bool) -> List a -> Core Bool
