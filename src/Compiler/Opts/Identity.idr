@@ -2,17 +2,27 @@ module Compiler.Opts.Identity
 
 import Core.CompileExpr
 import Core.Context.Log
+
 import Data.Vect
+import Data.SnocList
 
 import Libraries.Data.List.SizeOf
 
-makeArgs : (args : Scope) -> List (Var (args ++ vars))
-makeArgs args = embed @{ListFreelyEmbeddable} (Var.allVars args)
+makeArgs : (args : Scope) -> List (Var (Scope.addInner vars args))
+makeArgs args = makeArgs' args id
+  where
+    makeArgs' : (args : Scope) -> (Var (Scope.addInner vars args) -> a) -> List a
+    makeArgs' [<] f = []
+    makeArgs' (xs :< x) f = f first :: makeArgs' xs (f . weaken)
+
+makeArgz : (args : List Name) -> List (Var (Scope.ext vars args))
+makeArgz args
+  = embedFishily @{ListFreelyEmbeddable} $ Var.List.allVars args
 
 parameters (fn1 : Name) (idIdx : Nat)
   mutual
     -- special case for matching on 'Nat'-shaped things
-    isUnsucc : Var vars -> CExp vars -> Maybe (Constant, Var (x :: vars))
+    isUnsucc : Var vars -> CExp vars -> Maybe (Constant, Var (Scope.bind vars x))
     isUnsucc var (COp _ (Sub _) [CLocal _ p, CPrimVal _ c]) =
         if var == MkVar p
             then Just (c, first)
@@ -81,8 +91,8 @@ parameters (fn1 : Name) (idIdx : Nat)
         altEq : CConAlt vars -> Bool
         altEq (MkConAlt y _ _ args exp) =
             cexpIdentity
-                (weakenNs (mkSizeOf args) var)
-                (Just (y, makeArgs args))
+                (weakensN (mkSizeOf args) var)
+                (Just (y, makeArgz args))
                 const
                 exp
     cexpIdentity var con const (CConstCase fc sc xs x) =
@@ -102,20 +112,20 @@ parameters (fn1 : Name) (idIdx : Nat)
     maybeVarEq _ _ _ Nothing = True
     maybeVarEq var con const (Just exp) = cexpIdentity var con const exp
 
-checkIdentity : (fullName : Name) -> List (Var vars) -> CExp vars -> Nat -> Maybe Nat
-checkIdentity _ [] _ _ = Nothing
-checkIdentity fn (v :: vs) exp idx = if cexpIdentity fn idx v Nothing Nothing exp
+checkIdentity : (fullName : Name) -> Scopeable (Var vars) -> CExp vars -> Nat -> Maybe Nat
+checkIdentity _ [<] _ _ = Nothing
+checkIdentity fn (vs :< v) exp idx = if cexpIdentity fn idx v Nothing Nothing exp
     then Just idx
     else checkIdentity fn vs exp (S idx)
 
 calcIdentity : (fullName : Name) -> CDef -> Maybe Nat
-calcIdentity fn (MkFun args exp) = checkIdentity fn (Var.allVars args) exp Z
+calcIdentity fn (MkFun args exp) = checkIdentity fn (Var.SnocList.allVars args) exp Z
 calcIdentity _ _ = Nothing
 
 getArg : FC -> Nat -> (args : Scope) -> Maybe (CExp args)
-getArg _ _ [] = Nothing
-getArg fc Z (a :: _) = Just $ CLocal fc First
-getArg fc (S k) (_ :: as) = weaken <$> getArg fc k as
+getArg _ _ [<] = Nothing
+getArg fc Z (_ :< a) = Just $ CLocal fc First
+getArg fc (S k) (as :< _) = weaken <$> getArg fc k as
 
 idCDef : Nat -> CDef -> Maybe CDef
 idCDef idx (MkFun args exp) = MkFun args <$> getArg (getFC exp) idx args

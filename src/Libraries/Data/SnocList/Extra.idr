@@ -7,12 +7,10 @@ import Syntax.PreorderReasoning
 
 -- TODO left-to-right reversal of the stream
 --      is this what we want?
-{-
 public export
 take : (n : Nat) -> (xs : Stream a) -> SnocList a
 take Z xs = [<]
 take (S k) (x :: xs) = take k xs :< x
--}
 
 public export
 snocAppendFishAssociative :
@@ -29,16 +27,12 @@ snocAppendAsFish sx sy = sym
           (cong (sx ++) (castToList sy))
 
 export
-lookup : Eq a => a -> SnocList (a, b) -> Maybe b
-lookup n [<] = Nothing
-lookup n (ns :< (x, n')) = if x == n then Just n' else lookup n ns
-
-lengthDistributesOverAppend
-  : (xs, ys : SnocList a)
-  -> length (ys ++ xs) = length xs + length ys
-lengthDistributesOverAppend [<] ys = Refl
-lengthDistributesOverAppend (xs :< x) ys =
-  cong S $ lengthDistributesOverAppend xs ys
+revOnto : (xs, vs : SnocList a) -> reverseOnto xs vs = xs ++ reverse vs
+revOnto xs [<] = Refl
+revOnto xs (vs :< v)
+    = rewrite Extra.revOnto (xs :< v) vs in
+        rewrite Extra.revOnto [<v] vs in
+          rewrite appendAssociative xs [<v] (reverse vs) in Refl
 
 export
 lengthDistributesOverFish : (sx : SnocList a) -> (ys : List a) ->
