@@ -4,10 +4,12 @@ import Core.CompileExpr
 import Core.Context.Log
 import Core.Primitives
 import Core.Value
-import Data.Vect
 
-import Data.List.HasLength
+import Data.Vect
+import Data.SnocList
+
 import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
 
 
 findConstAlt : Constant -> List (CConstAlt vars) ->
@@ -25,39 +27,49 @@ foldableOp (Cast from to)   = isJust (intKind from) && isJust (intKind to)
 foldableOp _                = True
 
 
-data Subst : Scope -> Scoped where
-  Nil  : Subst Scope.empty vars
-  (::) : CExp vars -> Subst ds vars -> Subst (d :: ds) vars
-  Wk   : SizeOf ws -> Subst ds vars -> Subst (ws ++ ds) (ws ++ vars)
+data Subst : Scope -> Scope -> Type where
+  Lin  : Subst Scope.empty vars
+  (:<) : Subst ds vars -> CExp vars -> Subst (Scope.bind ds d) vars
+  Wk   : Subst ds vars -> SizeOf ws -> Subst (Scope.addInner ds ws) (Scope.addInner vars ws)
 
 namespace Subst
   public export
   empty : Subst Scope.empty vars
-  empty = []
+  empty = [<]
+
+  public export
+  bind : Subst ds vars -> CExp vars -> Subst (Scope.bind ds d) vars
+  bind = (:<)
 
 initSubst : (vars : Scope) -> Subst vars vars
-initSubst [] = Subst.empty
+initSubst [<] = Subst.empty
 initSubst vars
-  = rewrite sym $ appendNilRightNeutral vars in
-    Wk (mkSizeOf vars) Subst.empty
+  = rewrite sym $ appendLinLeftNeutral vars in
+    Wk Subst.empty (mkSizeOf vars)
 
-wk : SizeOf out -> Subst ds vars -> Subst (out ++ ds) (out ++ vars)
-wk sout (Wk {ws, ds, vars} sws rho)
-  = rewrite appendAssociative out ws ds in
-    rewrite appendAssociative out ws vars in
-    Wk (sout + sws) rho
-wk ws rho = Wk ws rho
+wk : SizeOf out -> Subst ds vars -> Subst (Scope.addInner ds out) (Scope.addInner vars out)
+wk sout (Wk {ws, ds, vars} rho sws)
+  = rewrite sym $ appendAssociative ds ws out in
+    rewrite sym $ appendAssociative vars ws out in
+    Wk rho (sws + sout)
+wk ws rho = Wk rho ws
+
+wksN : Subst ds vars -> SizeOf out -> Subst (Scope.ext ds out) (Scope.ext vars out)
+wksN s s'
+  = rewrite fishAsSnocAppend ds out in
+    rewrite fishAsSnocAppend vars out in
+    wk (zero <>< s') s
 
 record WkCExp (vars : Scope) where
   constructor MkWkCExp
   {0 outer, supp : Scope}
   size : SizeOf outer
-  0 prf : vars === outer ++ supp
+  0 prf : vars === Scope.addInner supp outer
   expr : CExp supp
 
 Weaken WkCExp where
-  weakenNs s' (MkWkCExp {outer, supp} s Refl e)
-    = MkWkCExp (s' + s) (appendAssociative ns outer supp)  e
+  weakenNs s' (MkWkCExp {supp, outer} s Refl e)
+    = MkWkCExp (s + s') (sym $ appendAssociative supp outer ns) e
 
 lookup : FC -> Var ds -> Subst ds vars -> CExp vars
 lookup fc (MkVar p) rho = case go p rho of
@@ -68,13 +80,13 @@ lookup fc (MkVar p) rho = case go p rho of
 
   go : {i : Nat} -> {0 ds, vars : _} -> (0 _ : IsVar n i ds) ->
        Subst ds vars -> Either (Var vars) (WkCExp vars)
-  go First     (val :: rho) = Right (MkWkCExp zero Refl val)
-  go (Later p) (val :: rho) = go p rho
-  go p         (Wk ws  rho) = case sizedView ws of
+  go First     (rho :< val) = Right (MkWkCExp zero Refl val)
+  go (Later p) (rho :< val) = go p rho
+  go p         (Wk rho  ws) = case sizedView ws of
     Z => go p rho
     S ws' => case i of
       Z => Left first
-      S i' => bimap later weaken (go (dropLater p) (Wk ws' rho))
+      S i' => bimap later weaken (go (dropLater p) (Wk rho ws'))
 
 replace : CExp vars -> Bool
 replace (CLocal {})   = True
@@ -101,7 +113,7 @@ constFold rho (CLam fc x y)
 constFold rho (CLet fc x inl y z) =
     let val := constFold rho y
      in case replace val of
-          True  => constFold (val::rho) z
+          True  => constFold (Subst.bind rho val) z
           False => case constFold (wk (mkSizeOf (Scope.single x)) rho) z of
             CLocal {idx = 0} _ _ => val
             body                 => CLet fc x inl val body
@@ -163,7 +175,7 @@ constFold rho (CConCase fc sc xs x)
   where
     foldAlt : CConAlt vars -> CConAlt vars'
     foldAlt (MkConAlt n ci t xs e)
-      = MkConAlt n ci t xs $ constFold (wk (mkSizeOf xs) rho) e
+      = MkConAlt n ci t xs $ constFold (wksN rho (mkSizeOf xs)) e
 
 constFold rho (CConstCase fc sc xs x) =
     let sc' = constFold rho sc

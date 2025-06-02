@@ -3,16 +3,15 @@ module Core.TT.Term
 import Algebra
 
 import Core.FC
-
 import Core.Name.Scoped
+import Core.Name.CompatibleVars
 import Core.TT.Binder
 import Core.TT.Primitive
 import Core.TT.Var
 
-import Data.List
 import Data.String
 
-import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
 
 %default total
 
@@ -126,7 +125,7 @@ data Term : Scoped where
 
 public export
 ClosedTerm : Type
-ClosedTerm = Term []
+ClosedTerm = Term Scope.empty
 
 ------------------------------------------------------------------------
 -- Weakening
@@ -288,6 +287,11 @@ apply : FC -> Term vars -> List (Term vars) -> Term vars
 apply loc fn [] = fn
 apply loc fn (a :: args) = apply loc (App loc fn a) args
 
+export
+applySpine : FC -> Term vars -> SnocList (Term vars) -> Term vars
+applySpine loc fn [<] = fn
+applySpine loc fn (args :< a) = App loc (applySpine loc fn args) a
+
 -- Creates a chain of `App` nodes, each with its own file context
 export
 applySpineWithFC : Term vars -> SnocList (FC, Term vars) -> Term vars
@@ -317,6 +321,13 @@ getFnArgs tm = getFA [] tm
             (Term vars, List (Term vars))
     getFA args (App _ f a) = getFA (a :: args) f
     getFA args tm = (tm, args)
+
+export
+getFnArgsSpine : Term vars -> (Term vars, SnocList (Term vars))
+getFnArgsSpine (App _ f a)
+    = let (fn, sp) = getFnArgsSpine f in
+          (fn, sp :< a)
+getFnArgsSpine tm = (tm, [<])
 
 export
 getFn : Term vars -> Term vars
@@ -491,7 +502,7 @@ mutual
   resolveNames vars (Meta fc n i xs)
       = Meta fc n i (resolveNamesTerms vars xs)
   resolveNames vars (Bind fc x b scope)
-      = Bind fc x (resolveNamesBinder vars b) (resolveNames (x :: vars) scope)
+      = Bind fc x (resolveNamesBinder vars b) (resolveNames (Scope.bind vars x) scope)
   resolveNames vars (App fc fn arg)
       = App fc (resolveNames vars fn) (resolveNames vars arg)
   resolveNames vars (As fc s as pat)

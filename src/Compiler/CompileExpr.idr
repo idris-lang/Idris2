@@ -9,11 +9,15 @@ import Core.Normalise
 import Core.Options
 import Core.Value
 
-import Data.List.HasLength
+import Data.SnocList
+import Data.SnocList.Quantifiers
 import Data.Vect
 
 import Libraries.Data.NatSet
 import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
+import Libraries.Data.SnocList.HasLength
+import Libraries.Data.SnocList.Extra
 
 %default covering
 
@@ -39,7 +43,7 @@ numArgs defs (Ref _ _ n)
            _ => pure (Arity 0)
 numArgs _ tm = pure (Arity 0)
 
-weakenVar : Var ns -> Var (a :: ns)
+weakenVar : Var ns -> Var (ns :< a)
 weakenVar (MkVar p) = (MkVar (Later p))
 
 etaExpand : Int -> Nat -> CExp vars -> List (Var vars) -> CExp vars
@@ -111,16 +115,18 @@ eraseConArgs arity epos fn args
              then fn'
              else dropPos epos fn' -- fn' might be lambdas, after eta expansion
 
-mkDropSubst : Nat -> NatSet ->
-              (rest : List Name) ->
-              (vars : List Name) ->
-              (vars' ** Thin (vars' ++ rest) (vars ++ rest))
-mkDropSubst i es rest [] = ([] ** Refl)
-mkDropSubst i es rest (x :: xs)
-    = let (vs ** sub) = mkDropSubst (1 + i) es rest xs in
-          if i `elem` es
-             then (vs ** Drop sub)
-             else (x :: vs ** Keep sub)
+mkDropSubst : NatSet ->
+              (vars : Scope) ->
+              (args : Scope) ->
+              (SizeOf args) ->
+              (args' ** Thin (Scope.addInner vars args') (Scope.addInner vars args))
+mkDropSubst es rest l s with (sizedView s)
+    mkDropSubst _ _ _ _ | Z = ([<] ** Refl)
+    mkDropSubst es rest (xs :< x) _ | (S s@(MkSizeOf i _))
+        = let (vs ** sub) = mkDropSubst es rest xs s in
+            if i `elem` es
+                then (vs ** Drop sub)
+                else (vs :< x ** Keep sub)
 
 -- See if the constructor is a special constructor type, e.g a nil or cons
 -- shaped thing.
@@ -220,16 +226,24 @@ mutual
                 DCon _ arity (Just pos) => conCases n ns -- skip it
                 _ => do xn <- getFullName x
                         let (args' ** sub)
-                            = mkDropSubst 0 (eraseArgs gdef) vars args
+                            = mkDropSubst (eraseArgs gdef) vars (cast args) (mkSizeOf $ cast args)
+                        let subList = subThinList sub
                         sc' <- toCExpTree n sc
                         ns' <- conCases n ns
                         if dcon (definition gdef)
-                           then pure $ MkConAlt xn !(dconFlag xn) (Just tag) args' (shrinkCExp sub sc') :: ns'
-                           else pure $ MkConAlt xn !(dconFlag xn) Nothing args' (shrinkCExp sub sc') :: ns'
+                           then pure $ MkConAlt xn !(dconFlag xn) (Just tag) (toList args') (shrinkCExp subList sc') :: ns'
+                           else pure $ MkConAlt xn !(dconFlag xn) Nothing (toList args') (shrinkCExp subList sc') :: ns'
     where
       dcon : Def -> Bool
       dcon (DCon {}) = True
       dcon _ = False
+
+      subThinList : Thin (vars ++ args') (vars ++ ([<] <>< args)) -> Thin (vars <>< (args' <>> [])) (vars <>< args)
+      subThinList t = do rewrite fishAsSnocAppend vars (toList args')
+                         rewrite castToList args'
+                         rewrite fishAsSnocAppend vars args
+                         t
+
   conCases n (_ :: ns) = conCases n ns
 
   constCases : {vars : _} ->
@@ -276,32 +290,40 @@ mutual
                      if noworld -- just substitute the scrutinee into
                                 -- the RHS
                         then
-                             let (s, env) : (SizeOf args, SubstCEnv args vars)
+                             let (s, env) : (SizeOf args, SubstCEnv (cast args) vars)
                                      = mkSubst 0 scr pos args in
                               do log "compiler.newtype.world" 50 "Inlining case on \{show n} (no world)"
-                                 pure $ Just (substs s env !(toCExpTree n sc))
+                                 sc' <- toCExpTree n sc
+                                 let sc'' : CExp (Scope.addInner vars (cast args))
+                                 := rewrite sym $ fishAsSnocAppend vars args in sc'
+                                 pure $ Just (substs (cast s) env sc'')
                         else -- let bind the scrutinee, and substitute the
                              -- name into the RHS
-                             let (s, env) : (_, SubstCEnv args (MN "eff" 0 :: vars))
+                             let (s, env) : (_, SubstCEnv (cast args) (vars :< MN "eff" 0))
                                      = mkSubst 0 (CLocal fc First) pos args in
                              do sc' <- toCExpTree n sc
-                                let scope = insertNames {outer=args}
+                                let sc'' : CExp (Scope.addInner vars (cast args))
+                                    := rewrite sym $ fishAsSnocAppend vars args in sc'
+
+                                let scope : CExp ((vars ++ [<MN "eff" 0]) ++ cast args)
+                                    scope = rewrite sym $ appendAssociative vars [<MN "eff" 0] (cast args) in
+                                            insertNames {outer=cast args}
                                                         {inner=vars}
-                                                        {ns = [MN "eff" 0]}
-                                                        (mkSizeOf _) (mkSizeOf _) sc'
-                                let tm = CLet fc (MN "eff" 0) NotInline scr (substs s env scope)
-                                log "compiler.newtype.world" 50 "Kept the scrutinee \{show tm}"
+                                                        {ns = [<MN "eff" 0]}
+                                                        (mkSizeOf _) (mkSizeOf _) sc''
+                                let tm = CLet fc (MN "eff" 0) NotInline scr (substs (cast s) env scope)
+                                log "compiler.newtype.world" 50 "Kept the scrutinee \{show tm}, scope: \{show scope}"
                                 pure (Just tm)
                 _ => pure Nothing -- there's a normal match to do
     where
       mkSubst : Nat -> CExp vs ->
-                Nat -> (args : List Name) -> (SizeOf args, SubstCEnv args vs)
-      mkSubst _ _ _ [] = (zero, Subst.empty)
+                Nat -> (args : List Name) -> (SizeOf args, SubstCEnv (cast args) vs)
+      mkSubst _ _ _ [] = (zero, Subst.empty {tm = CExp})
       mkSubst i scr pos (a :: as)
           = let (s, env) = mkSubst (1 + i) scr pos as in
-            if i == pos
-               then (suc s, scr :: env)
-               else (suc s, CErased fc :: env)
+            rewrite snocAppendFishAssociative [<a] [<] as in if i == pos
+               then (suc s, cons {tm = CExp} env scr)
+               else (suc s, cons {tm = CExp} env (CErased fc))
   getNewType fc scr n (_ :: ns) = getNewType fc scr n ns
 
   getDef : {vars : _} ->
@@ -322,8 +344,8 @@ mutual
   toCExpTree n alts@(Case _ x scTy (DelayCase ty arg sc :: rest))
       = let fc = getLoc scTy in
             pure $
-              CLet fc arg YesInline (CForce fc LInf (CLocal (getLoc scTy) x)) $
-              CLet fc ty YesInline (CErased fc)
+              CLet fc ty YesInline (CErased fc) $
+              CLet fc arg YesInline (CForce fc LInf (CLocal (getLoc scTy) (Later x)))
                    !(toCExpTree n sc)
   toCExpTree n alts
       = toCExpTree' n alts
@@ -369,13 +391,8 @@ ArgList = HasLength
 mkArgList : Int -> (n : Nat) -> (ns ** ArgList n ns)
 mkArgList i Z = (_ ** Z)
 mkArgList i (S k)
-    = let (ns ** rec) = mkArgList (i + 1) k in
-          ((MN "arg" i) :: ns ** S rec)
-
--- TODO has quadratic runtime
-getVars : ArgList k ns -> Vect k (Var ns)
-getVars Z = []
-getVars (S rest) = first :: map weakenVar (getVars rest)
+    = let (ns ** rec) = mkArgList (i - 1) k in
+          (ns :< (MN "arg" (i - 1)) ** S rec)
 
 data NArgs : Type where
      User : Name -> List ClosedClosure -> NArgs
@@ -392,8 +409,8 @@ getPArgs : {auto c : Ref Ctxt Defs} ->
 getPArgs defs cl
     = do NDCon fc _ _ _ args <- evalClosure defs cl
              | nf => throw (GenericMsg (getLoc nf) "Badly formed struct type")
-         case reverse (map snd args) of
-              (tydesc :: n :: _) =>
+         case map snd args of
+              (_ :< n :< tydesc) =>
                   do NPrimVal _ (Str n') <- evalClosure defs n
                          | nf => throw (GenericMsg (getLoc nf) "Unknown field name")
                      pure (n', tydesc)
@@ -406,7 +423,7 @@ getFieldArgs defs cl
              | nf => throw (GenericMsg (getLoc nf) "Badly formed struct type")
          case map snd args of
               -- cons
-              [_, t, rest] =>
+              [< _, t, rest] =>
                   do rest' <- getFieldArgs defs rest
                      (n, ty) <- getPArgs defs t
                      pure ((n, ty) :: rest')
@@ -459,7 +476,7 @@ nfToCFType _ (NBind fc _ _ _) True
 nfToCFType _ (NTCon fc n_in _ args) s
     = do defs <- get Ctxt
          n <- toFullNames n_in
-         case !(getNArgs defs n $ map snd args) of
+         case !(getNArgs defs n $ toList (map snd args)) of
               User un uargs =>
                 do nargs <- traverse (evalClosure defs) uargs
                    cargs <- traverse (\ arg => nfToCFType fc arg s) nargs
@@ -503,20 +520,20 @@ getCFTypes args t
     = pure (reverse args, !(nfToCFType (getLoc t) t False))
 
 lamRHSenv : Int -> FC -> (ns : Scope) -> (SizeOf ns, SubstCEnv ns Scope.empty)
-lamRHSenv i fc [] = (zero, Subst.empty)
-lamRHSenv i fc (n :: ns)
+lamRHSenv i fc [<] = (zero, Subst.empty {tm = CExp})
+lamRHSenv i fc (ns :< n)
     = let (s, env) = lamRHSenv (i + 1) fc ns in
-      (suc s, CRef fc (MN "x" i) :: env)
+      (suc s, env :< CRef fc (MN "x" i))
 
 mkBounds : (xs : _) -> Bounds xs
-mkBounds [] = None
-mkBounds (x :: xs) = Add x x (mkBounds xs)
+mkBounds [<] = None
+mkBounds (xs :< x) = Add x x (mkBounds xs)
 
 getNewArgs : {done : _} ->
              SubstCEnv done args -> Scope
-getNewArgs [] = []
-getNewArgs (CRef _ n :: xs) = n :: getNewArgs xs
-getNewArgs {done = x :: xs} (_ :: sub) = x :: getNewArgs sub
+getNewArgs [<] = [<]
+getNewArgs (xs :< CRef _ n) = getNewArgs xs :< n
+getNewArgs {done = xs :< x} (sub :< _) = getNewArgs sub :< x
 
 -- If a name is declared in one module and defined in another,
 -- we have to assume arity 0 for incremental compilation because
@@ -525,15 +542,15 @@ getNewArgs {done = x :: xs} (_ :: sub) = x :: getNewArgs sub
 lamRHS : (ns : Scope) -> CExp ns -> ClosedCExp
 lamRHS ns tm
     = let (s, env) = lamRHSenv 0 (getFC tm) ns
-          tmExp = substs s env (rewrite appendNilRightNeutral ns in tm)
-          newArgs = reverse $ getNewArgs env
+          tmExp = substs s env (rewrite appendLinLeftNeutral ns in tm)
+          newArgs = getNewArgs env
           bounds = mkBounds newArgs
           expLocs = mkLocals zero {vars = Scope.empty} bounds tmExp in
           lamBind (getFC tm) _ expLocs
   where
     lamBind : FC -> (ns : Scope) -> CExp ns -> ClosedCExp
-    lamBind fc [] tm = tm
-    lamBind fc (n :: ns) tm = lamBind fc ns (CLam fc n tm)
+    lamBind fc [<] tm = tm
+    lamBind fc (ns :< n) tm = lamBind fc ns (CLam fc n tm)
 
 toArgExp : (Var ns) -> CExp ns
 toArgExp (MkVar p) = CLocal emptyFC p
@@ -548,22 +565,32 @@ toCDef n ty erased (PMDef pi args _ tree _)
          comptree <- toCExpTree n tree
          pure $ toLam (externalDecl pi) $ if isEmpty erased
             then MkFun args comptree
-            else MkFun args' (shrinkCExp p comptree)
+            else MkFun (cast args') (shrinkCExp p comptree)
   where
     toLam : Bool -> CDef -> CDef
     toLam True (MkFun args rhs) = MkFun Scope.empty (lamRHS args rhs)
     toLam _ d = d
 toCDef n ty _ (ExternDef arity)
-    = let (ns ** args) = mkArgList 0 arity in
-          pure $ MkFun _ (CExtPrim emptyFC !(getFullName n) (map toArgExp (toList $ getVars args)))
+    = let (ns ** args) = mkArgList (cast arity) arity in
+          pure $ MkFun _ (CExtPrim emptyFC !(getFullName n) (reverse $ map toArgExp (getVars args)))
+    where
+        -- TODO has quadratic runtime
+        getVars : ArgList k ns -> List (Var ns)
+        getVars Z = []
+        getVars (S rest) = first :: map weakenVar (getVars rest)
 
 toCDef n ty _ (ForeignDef arity cs)
     = do defs <- get Ctxt
          (atys, retty) <- getCFTypes [] !(nf defs Env.empty ty)
          pure $ MkForeign cs atys retty
 toCDef n ty _ (Builtin {arity} op)
-    = let (ns ** args) = mkArgList 0 arity in
-          pure $ MkFun _ (COp emptyFC op (map toArgExp (getVars args)))
+    = let (ns ** args) = mkArgList (cast arity) arity in
+          pure $ MkFun _ (COp emptyFC op (reverse $ map toArgExp (getVars args)))
+    where
+        -- TODO has quadratic runtime
+        getVars : ArgList k ns -> Vect k (Var ns)
+        getVars Z = []
+        getVars (S rest) = first :: map weakenVar (getVars rest)
 
 toCDef n _ _ (DCon tag arity pos)
     = do let nt = snd <$> pos

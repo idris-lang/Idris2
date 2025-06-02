@@ -69,8 +69,8 @@ findTyName defs env n (Bind _ x b@(PVar _ c p ty) sc)
                  case tynf of
                       NTCon _ tyn _ _ => pure $ Just tyn
                       _ => pure Nothing
-         else findTyName defs (b :: env) n sc
-findTyName defs env n (Bind _ x b sc) = findTyName defs (b :: env) n sc
+         else findTyName defs (env :< b) n sc
+findTyName defs env n (Bind _ x b sc) = findTyName defs (Env.bind env b) n sc
 findTyName _ _ _ _ = pure Nothing
 
 getDefining : Term vars -> Maybe Name

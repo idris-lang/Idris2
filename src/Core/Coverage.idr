@@ -8,12 +8,14 @@ import Core.Normalise
 import Core.Value
 
 import Data.Maybe
+import Data.SnocList
 import Data.String
 
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
 import Libraries.Data.String.Extra
 import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
 import Libraries.Text.PrettyPrint.Prettyprinter
 
 %default covering
@@ -86,10 +88,10 @@ conflict defs env nfty n
               _ => pure False
   where
     mutual
-      conflictArgs : Int -> List (Closure vars) -> List ClosedClosure ->
+      conflictArgs : Int -> SnocList (Closure vars) -> SnocList ClosedClosure ->
                      Core (Maybe (List (Name, Term vars)))
-      conflictArgs _ [] [] = pure (Just [])
-      conflictArgs i (c :: cs) (c' :: cs')
+      conflictArgs _ [<] [<] = pure (Just [])
+      conflictArgs i (cs :< c) (cs' :< c')
           = do cnf <- evalClosure defs c
                cnf' <- evalClosure defs c'
                Just ms <- conflictNF i cnf cnf'
@@ -114,7 +116,7 @@ conflict defs env nfty n
           = let x' = MN (show x) i in
                 conflictNF (i + 1) t
                        !(sc defs (toClosure defaultOpts Env.empty (Ref fc Bound x')))
-      conflictNF i nf (NApp _ (NRef Bound n) [])
+      conflictNF i nf (NApp _ (NRef Bound n) [<])
           = pure (Just [(n, !(quote defs env nf))])
       conflictNF i (NDCon _ n t a args) (NDCon _ n' t' a' args')
           = if t == t'
@@ -195,6 +197,10 @@ getMissingAlts fc defs nfty alts
 KnownVars : Scope -> Type -> Type
 KnownVars vars a = List (Var vars, a)
 
+getName : {idx : Nat} -> {vars : Scope} -> (0 p : IsVar n idx vars) -> Name
+getName {vars = _ :< v} First = v
+getName (Later p) = getName p
+
 showK : {ns : _} ->
         Show a => KnownVars ns a -> String
 showK {a} xs = show (map aString xs)
@@ -204,10 +210,10 @@ showK {a} xs = show (map aString xs)
     aString (MkVar v, t) = (nameAt v, t)
 
 -- TODO re-use `Thinnable`
-weakenNs : SizeOf args -> KnownVars vars a -> KnownVars (args ++ vars) a
-weakenNs args [] = []
-weakenNs args ((v, t) :: xs)
-  = (weakenNs args v, t) :: weakenNs args xs
+weakensN : SizeOf args -> KnownVars vars a -> KnownVars (Scope.ext vars args) a
+weakensN args [] = []
+weakensN args ((v, t) :: xs)
+  = (weakensN args v, t) :: weakensN args xs
 
 findTag : {idx, vars : _} ->
           (0 p : IsVar n idx vars) -> KnownVars vars a -> Maybe a
@@ -271,8 +277,8 @@ buildArgs : {auto c : Ref Ctxt Defs} ->
             KnownVars vars Int -> -- Things which have definitely match
             KnownVars vars (List Int) -> -- Things an argument *can't* be
                                     -- (because a previous case matches)
-            List ClosedTerm -> -- ^ arguments, with explicit names
-            CaseTree vars -> Core (List (List ClosedTerm))
+            SnocList ClosedTerm ->  -- ^ arguments, with explicit names
+            CaseTree vars -> Core (List (SnocList ClosedTerm))
 buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
   -- If we've already matched on 'el' in this branch, restrict the alternatives
   -- to the tag we already know. Otherwise, add missing cases and filter out
@@ -289,30 +295,31 @@ buildArgs fc defs known not ps cs@(Case {name = var} idx el ty altsIn)
          buildArgsAlt not altsN
   where
     buildArgAlt : KnownVars vars (List Int) ->
-                  CaseAlt vars -> Core (List (List ClosedTerm))
+                  CaseAlt vars -> Core (List (SnocList ClosedTerm))
     buildArgAlt not' (ConCase n t args sc)
         = do let l = mkSizeOf args
              let con = Ref fc (DataCon t (size l)) n
-             let ps' = map (substName var
+             let ps' = map (substName zero var
                              (apply fc
                                     con (map (Ref fc Bound) args))) ps
-             buildArgs fc defs (weakenNs l ((MkVar el, t) :: known))
-                               (weakenNs l not') ps' sc
+             let known' = (MkVar el, t) :: known
+             buildArgs fc defs (weakensN l known')
+                               (weakensN l not') ps' sc
     buildArgAlt not' (DelayCase t a sc)
         = let l = mkSizeOf [t, a]
-              ps' = map (substName var (TDelay fc LUnknown
+              ps' = map (substName zero var (TDelay fc LUnknown
                                              (Ref fc Bound t)
                                              (Ref fc Bound a))) ps in
-              buildArgs fc defs (weakenNs l known) (weakenNs l not')
-                                ps' sc
+              buildArgs fc defs (weakensN l known)
+                                (weakensN l not') ps' sc
     buildArgAlt not' (ConstCase c sc)
-        = do let ps' = map (substName var (PrimVal fc c)) ps
+        = do let ps' = map (substName zero var (PrimVal fc c)) ps
              buildArgs fc defs known not' ps' sc
     buildArgAlt not' (DefaultCase sc)
         = buildArgs fc defs known not' ps sc
 
     buildArgsAlt : KnownVars vars (List Int) -> List (CaseAlt vars) ->
-                   Core (List (List ClosedTerm))
+                   Core (List (SnocList ClosedTerm))
     buildArgsAlt not' [] = pure []
     buildArgsAlt not' (c@(ConCase _ t _ _) :: cs)
         = pure $ !(buildArgAlt not' c) ++
@@ -341,7 +348,7 @@ getMissing fc n ty ctree
    = do defs <- get Ctxt
         let psIn = map (Ref fc Bound) vars
         pats <- buildArgs fc defs [] [] psIn ctree
-        pats <- for pats $ trimArgs defs [<] !(nf defs Env.empty ty)
+        pats <- for pats $ trimArgs defs [<] !(nf defs Env.empty ty) . toList
         unless (null pats) $
           logC "coverage.missing" 20 $ map unlines $
             for pats $ map show . traverse toFullNames
@@ -415,19 +422,19 @@ match _ _ = False
 eraseApps : {auto c : Ref Ctxt Defs} ->
             Term vs -> Core (Term vs)
 eraseApps {vs} tm
-    = case getFnArgs tm of
+    = case getFnArgsSpine tm of
            (Ref fc Bound n, args) =>
-                do args' <- traverse eraseApps args
-                   pure (apply fc (Ref fc Bound n) args')
+                do args' <- traverseSnocList eraseApps args
+                   pure (applySpine fc (Ref fc Bound n) args')
            (Ref fc nt n, args) =>
                 do defs <- get Ctxt
                    mgdef <- lookupCtxtExact n (gamma defs)
                    let eargs = maybe NatSet.empty eraseArgs mgdef
-                   args' <- traverse eraseApps (NatSet.overwrite (Erased fc Placeholder) eargs args)
-                   pure (apply fc (Ref fc nt n) args')
+                   args' <- traverseSnocList eraseApps (NatSet.overwrite (Erased fc Placeholder) eargs args)
+                   pure (applySpine fc (Ref fc nt n) args')
            (tm, args) =>
-                do args' <- traverse eraseApps args
-                   pure (apply (getLoc tm) tm args')
+                do args' <- traverseSnocList eraseApps args
+                   pure (applySpine (getLoc tm) tm args')
 
 -- if tm would be matched by trylhs, then it's not an impossible case
 -- because we've already got it. Ignore anything in erased position.

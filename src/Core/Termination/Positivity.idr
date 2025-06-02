@@ -51,9 +51,9 @@ posArg  : {auto c : Ref Ctxt Defs} ->
           Defs -> List Name -> ClosedNF -> Core Terminating
 
 posArgs : {auto c : Ref Ctxt Defs} ->
-          Defs -> List Name -> List ClosedClosure -> Core Terminating
-posArgs defs tyn [] = pure IsTerminating
-posArgs defs tyn (x :: xs)
+          Defs -> List Name -> SnocList ClosedClosure -> Core Terminating
+posArgs defs tyn [<] = pure IsTerminating
+posArgs defs tyn (xs :< x)
   = do xNF <- evalClosure defs x
        logNF "totality.positivity" 50 "Checking parameter for positivity" Env.empty xNF
        IsTerminating <- posArg defs tyn xNF
