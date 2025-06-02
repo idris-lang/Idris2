@@ -7,13 +7,18 @@ import Core.TT.Subst
 import Core.TT.Term
 import Core.TT.Var
 
-import Libraries.Data.List.SizeOf
+import Data.SnocList.Quantifiers
+
+import Libraries.Data.SnocList.SizeOf
 
 %default total
 
 public export
 SubstEnv : Scope -> Scoped
 SubstEnv = Subst Term
+
+single : Term vars -> SubstEnv [<x] vars
+single n = [<n]
 
 substTerm : Substitutable Term Term
 substTerms : Substitutable Term (List . Term)
@@ -48,9 +53,9 @@ substBinder outer dropped env b
   = assert_total $ map (substTerm outer dropped env) b
 
 export
-substs : SizeOf dropped -> SubstEnv dropped vars -> Term (dropped ++ vars) -> Term vars
+substs : SizeOf dropped -> SubstEnv dropped vars -> Term (Scope.addInner vars dropped) -> Term vars
 substs dropped env tm = substTerm zero dropped env tm
 
 export
 subst : Term vars -> Term (Scope.bind vars x) -> Term vars
-subst val tm = substs (suc zero) [val] tm
+subst val tm = substs (suc zero) (Subst.single val) tm

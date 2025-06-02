@@ -93,7 +93,7 @@ findInferrable defs ty = fi 0 0 [] NatSet.empty ty
       -- inferrable if it's guarded by a constructor, or on its own
       findInf : NatSet -> List (Name, Nat) ->
                 ClosedNF -> Core NatSet
-      findInf acc pos (NApp _ (NRef Bound n) [])
+      findInf acc pos (NApp _ (NRef Bound n) [<])
           = case lookup n pos of
                  Nothing => pure acc
                  Just p => if p `elem` acc then pure acc else pure (NatSet.insert p acc)
@@ -106,9 +106,9 @@ findInferrable defs ty = fi 0 0 [] NatSet.empty ty
       findInf acc pos (NDelayed _ _ t) = findInf acc pos t
       findInf acc _ _ = pure acc
 
-      findInfs : NatSet -> List (Name, Nat) -> List ClosedNF -> Core NatSet
-      findInfs acc pos [] = pure acc
-      findInfs acc pos (n :: ns) = findInf !(findInfs acc pos ns) pos n
+      findInfs : NatSet -> List (Name, Nat) -> SnocList ClosedNF -> Core NatSet
+      findInfs acc pos [<] = pure acc
+      findInfs acc pos (ns :< n) = findInf !(findInfs acc pos ns) pos n
 
     fi : Nat -> Int -> List (Name, Nat) -> NatSet -> ClosedNF -> Core NatSet
     fi pos i args acc (NBind fc x (Pi _ _ _ aty) sc)

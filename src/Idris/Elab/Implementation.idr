@@ -103,12 +103,12 @@ getMethImps : {vars : _} ->
               Core (List (Name, RigCount, Maybe RawImp, RawImp))
 getMethImps env (Bind fc x (Pi fc' c Implicit ty) sc)
     = do rty <- map (map rawName) $ unelabNoSugar env ty
-         ts <- getMethImps (Pi fc' c Implicit ty :: env) sc
+         ts <- getMethImps (Env.bind env $ Pi fc' c Implicit ty) sc
          pure ((x, c, Nothing, rty) :: ts)
 getMethImps env (Bind fc x (Pi fc' c (DefImplicit def) ty) sc)
     = do rty <- map (map rawName) $ unelabNoSugar env ty
          rdef <- map (map rawName) $ unelabNoSugar env def
-         ts <- getMethImps (Pi fc' c (DefImplicit def) ty :: env) sc
+         ts <- getMethImps (Env.bind env $ Pi fc' c (DefImplicit def) ty) sc
          pure ((x, c, Just rdef, rty) :: ts)
 getMethImps env tm = pure []
 
@@ -309,7 +309,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
                Core (Name, (Maybe Name, List (Var vars), FC -> NameType -> Term vars))
     applyEnv n
         = do n' <- resolveName n
-             pure (Resolved n', (Nothing, reverse (allVars env),
+             pure (Resolved n', (Nothing, VarSet.asList $ allVars env,
                       \fn, nt => applyToFull vfc
                                      (Ref vfc nt (Resolved n')) env))
 

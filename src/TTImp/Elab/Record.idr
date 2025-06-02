@@ -13,6 +13,7 @@ import TTImp.Elab.Delayed
 import TTImp.TTImp
 
 import Data.SortedSet
+import Data.SnocList
 
 %default covering
 

@@ -49,11 +49,11 @@ changeVar old new (TForce fc r p)
 changeVar old new tm = tm
 
 toRig1 : {idx : Nat} -> (0 p : IsVar nm idx vs) -> Env Term vs -> Env Term vs
-toRig1 First (b :: bs)
+toRig1 First (bs :< b)
     = if isErased (multiplicity b)
-         then setMultiplicity b linear :: bs
-         else b :: bs
-toRig1 (Later p) (b :: bs) = b :: toRig1 p bs
+         then bs :< setMultiplicity b linear
+         else bs :< b
+toRig1 (Later p) (bs :< b) = toRig1 p bs :< b
 
 allow : Maybe (Var vs) -> Env Term vs -> Env Term vs
 allow Nothing env = env
@@ -68,22 +68,22 @@ updateMults vars env
   where
 
   go : {0 vs : Scope} -> VarSet vs -> Env Term vs -> Env Term vs
-  go vars [] = []
-  go vars (b :: env)
-    = (if first `VarSet.elem` vars
+  go vars [<] = Env.empty
+  go vars (env :< b)
+    = updateMults (VarSet.dropFirst vars) env
+      :< (if first `VarSet.elem` vars
         then setMultiplicity b erased
         else b)
-    :: updateMults (VarSet.dropFirst vars) env
 
 findImpsIn : {vars : _} ->
              FC -> Env Term vars -> List (Name, Term vars) -> Term vars ->
              Core ()
 findImpsIn fc env ns (Bind _ n b@(Pi _ _ Implicit ty) sc)
-    = findImpsIn fc (b :: env)
+    = findImpsIn fc (env :< b)
                  ((n, weaken ty) :: map (\x => (fst x, weaken (snd x))) ns)
                  sc
 findImpsIn fc env ns (Bind _ n b sc)
-    = findImpsIn fc (b :: env)
+    = findImpsIn fc (env :< b)
                  (map (\x => (fst x, weaken (snd x))) ns)
                  sc
 findImpsIn fc env ns ty
@@ -104,7 +104,7 @@ extendNeeded b env needed
 
 findScrutinee : {vs : _} ->
                 Env Term vs -> RawImp -> Maybe (Var vs)
-findScrutinee {vs = n' :: _} (b :: bs) (IVar loc' n)
+findScrutinee {vs = _ :< n'} (bs :< b) (IVar loc' n)
     = if n' == n && not (isLet b)
          then Just first
          else do MkVar p <- findScrutinee bs (IVar loc' n)
@@ -267,12 +267,12 @@ caseBlock {vars} rigc elabinfo fc nest env opts scr scrtm scrty caseRig alts exp
          pure (appTm, gnf env caseretty)
   where
     mkLocalEnv : Env Term vs -> Env Term vs
-    mkLocalEnv [] = Env.empty
-    mkLocalEnv (b :: bs)
+    mkLocalEnv [<] = Env.empty
+    mkLocalEnv (bs :< b)
         = let b' = if isLinear (multiplicity b)
                       then setMultiplicity b erased
                       else b in
-              b' :: mkLocalEnv bs
+              mkLocalEnv bs :< b'
 
     -- Return the original name in the environment, and what it needs to be
     -- called in the case block. We need to mapping to build the ICaseLocal
@@ -288,8 +288,8 @@ caseBlock {vars} rigc elabinfo fc nest env opts scr scrtm scrty caseRig alts exp
     -- the LHS of the case to be applied to.
     addEnv : {vs : _} ->
              Int -> Env Term vs -> List Name -> (List (Name, Name), List RawImp)
-    addEnv idx [] used = ([], [])
-    addEnv idx {vs = v :: vs} (b :: bs) used
+    addEnv idx [<] used = ([], [])
+    addEnv idx {vs = vs :< v} (bs :< b) used
         = let n = getBindName idx v used
               (ns, rest) = addEnv (idx + 1) bs (snd n :: used)
               ns' = n :: ns in
