@@ -1115,7 +1115,7 @@ mutual
           let fc = boundToFC fname x in
           toLines xs [< StrLiteral fc (last strs)]
             $ acc :< (line <>> [StrLiteral fc str])
-            <>< map (\str => [StrLiteral fc str]) (init strs)
+            <>< (the (List _) $ map (\str => [StrLiteral fc str]) (init strs))
 
   fnDirectOpt : OriginDesc -> Rule PFnOpt
   fnDirectOpt fname

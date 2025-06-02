@@ -32,7 +32,7 @@ mutual
            chkMeta fc env !(nf defs env (embed mty)) args
   chk env (Bind fc nm b sc)
       = do bt <- chkBinder env b
-           sct <- chk {vars = nm :: _} (b :: env) sc
+           sct <- chk {vars = _ :< nm} (Env.bind env b) sc
            pure $ gnf env (discharge fc nm b !(getTerm bt) !(getTerm sct))
   chk env (App fc f a)
       = do fty <- chk env f
@@ -84,7 +84,7 @@ mutual
   chkBinder env b = chk env (binderType b)
 
   discharge : FC -> (nm : Name) -> Binder (Term vars) ->
-              Term vars -> Term (nm :: vars) -> (Term vars)
+              Term vars -> Term (vars :< nm) -> (Term vars)
   discharge fc n (Lam fc' c x ty) bindty scopety
       = Bind fc n (Pi fc' c x ty) scopety
   discharge fc n (Let fc' c val ty) bindty scopety
