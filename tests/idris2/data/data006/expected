@@ -1,5 +1,5 @@
 1/1: Building ConvertPiInfo (ConvertPiInfo.idr)
-Error: Mismatch between: Type -> Type and Type.
+Error: Main.EI is already defined.
 
 ConvertPiInfo:6:1--6:35
  2 | -- Explicit --
@@ -9,7 +9,7 @@ ConvertPiInfo:6:1--6:35
  6 | data EI : {_ : Type} -> Type where
      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Error: Mismatch between: Type -> Type and Type => Type.
+Error: Main.EA is already defined.
 
 ConvertPiInfo:9:1--9:40
  5 | data EI : Type -> Type
@@ -19,7 +19,7 @@ ConvertPiInfo:9:1--9:40
  9 | data EA : {auto _ : Type} -> Type where
      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Error: Mismatch between: Type -> Type and {default Int _ : Type} -> Type.
+Error: Main.ED is already defined.
 
 ConvertPiInfo:12:1--12:47
  08 | data EA : Type -> Type
@@ -29,7 +29,7 @@ ConvertPiInfo:12:1--12:47
  12 | data ED : {default Int _ : Type} -> Type where
       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Error: Mismatch between: Type and Type -> Type.
+Error: Main.IE is already defined.
 
 ConvertPiInfo:19:1--19:29
  15 | -- Implicit --
@@ -39,7 +39,7 @@ ConvertPiInfo:19:1--19:29
  19 | data IE : Type -> Type where
       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Error: Mismatch between: Type and Type => Type.
+Error: Main.IA is already defined.
 
 ConvertPiInfo:22:1--22:40
  18 | data IE : {_ : Type} -> Type
@@ -49,7 +49,7 @@ ConvertPiInfo:22:1--22:40
  22 | data IA : {auto _ : Type} -> Type where
       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Error: Mismatch between: Type and {default Int _ : Type} -> Type.
+Error: Main.ID is already defined.
 
 ConvertPiInfo:25:1--25:47
  21 | data IA : {_ : Type} -> Type
@@ -59,7 +59,7 @@ ConvertPiInfo:25:1--25:47
  25 | data ID : {default Int _ : Type} -> Type where
       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Error: Mismatch between: Type => Type and Type -> Type.
+Error: Main.AE is already defined.
 
 ConvertPiInfo:32:1--32:29
  28 | -- Auto --
@@ -69,7 +69,7 @@ ConvertPiInfo:32:1--32:29
  32 | data AE : Type -> Type where
       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Error: Mismatch between: Type => Type and Type.
+Error: Main.AI is already defined.
 
 ConvertPiInfo:35:1--35:35
  31 | data AE : {auto _ : Type} -> Type
@@ -79,7 +79,7 @@ ConvertPiInfo:35:1--35:35
  35 | data AI : {_ : Type} -> Type where
       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Error: Mismatch between: Type => Type and {default Int _ : Type} -> Type.
+Error: Main.AD is already defined.
 
 ConvertPiInfo:38:1--38:47
  34 | data AI : {auto _ : Type} -> Type
@@ -89,7 +89,7 @@ ConvertPiInfo:38:1--38:47
  38 | data AD : {default Int _ : Type} -> Type where
       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Error: Mismatch between: {default Int _ : Type} -> Type and Type -> Type.
+Error: Main.DE is already defined.
 
 ConvertPiInfo:45:1--45:29
  41 | -- Default --
@@ -99,7 +99,7 @@ ConvertPiInfo:45:1--45:29
  45 | data DE : Type -> Type where
       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Error: Mismatch between: {default Int _ : Type} -> Type and Type.
+Error: Main.DI is already defined.
 
 ConvertPiInfo:48:1--48:35
  44 | data DE : {default Int _ : Type} -> Type
@@ -109,7 +109,7 @@ ConvertPiInfo:48:1--48:35
  48 | data DI : {_ : Type} -> Type where
       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Error: Mismatch between: {default Int _ : Type} -> Type and Type => Type.
+Error: Main.DA is already defined.
 
 ConvertPiInfo:51:1--51:40
  47 | data DI : {default Int _ : Type} -> Type
