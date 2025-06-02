@@ -769,14 +769,14 @@ traverse f xs = traverse' f xs []
 namespace SnocList
   -- Traversable (specialised)
   traverse' : (a -> Core b) -> SnocList a -> SnocList b -> Core (SnocList b)
-  traverse' f [<] acc = pure acc
+  traverse' f [<] acc = pure (reverse acc)
   traverse' f (xs :< x) acc
       = traverse' f xs (acc :< !(f x))
 
   %inline
   export
   traverse : (a -> Core b) -> SnocList a -> Core (SnocList b)
-  traverse f xs = traverse' f (reverse xs) [<]
+  traverse f xs = traverse' f xs [<]
 
 export
 mapMaybeM : (a -> Core (Maybe b)) -> List a -> Core (List b)
@@ -860,7 +860,7 @@ namespace SnocList
 
   export
   traverse_ : (a -> Core b) -> SnocList a -> Core ()
-  traverse_ f xs = traverse_' f (reverse xs)
+  traverse_ f xs = traverse_' f xs
 
 namespace WithData
   %inline export
@@ -928,7 +928,7 @@ namespace SnocList
 
   export
   anyM : (a -> Core Bool) -> SnocList a -> Core Bool
-  anyM f xs = anyM' f (reverse xs)
+  anyM f xs = anyM' f xs
 
 export
 allM : (a -> Core Bool) -> List a -> Core Bool
