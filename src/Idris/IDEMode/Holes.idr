@@ -100,7 +100,7 @@ extractHoleData : {vars : _} ->
 extractHoleData defs env fn (S args) (Bind fc x (Let _ c val ty) sc)
   = extractHoleData defs env fn args (subst val sc)
 extractHoleData defs env fn (S args) (Bind fc x b sc)
-  = do rest <- extractHoleData defs (b :: env) fn args sc
+  = do rest <- extractHoleData defs (Env.bind env b) fn args sc
        let True = showName x
          | False => do log "ide-mode.hole" 10 $ "Not showing name: " ++ show x
                        pure rest

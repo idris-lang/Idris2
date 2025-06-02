@@ -8,7 +8,7 @@ import Core.Name
 import Core.Name.Scoped
 import Core.TT.Var
 
-import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
 
 %default total
 
@@ -64,11 +64,11 @@ toList = mapMaybe (`isDeBruijn` vs) . NatSet.toList
 -- other positions by -1 (useful when coming back from under
 -- a binder)
 export %inline
-dropFirst : VarSet (v :: vs) -> VarSet vs
+dropFirst : VarSet (vs :< v) -> VarSet vs
 dropFirst = NatSet.popZ
 
 export %inline
-dropInner : SizeOf inner -> VarSet (inner ++ vs) -> VarSet vs
+dropInner : SizeOf inner -> VarSet (Scope.addInner vs inner) -> VarSet vs
 dropInner p = NatSet.popNs p.size
 
 export %hint

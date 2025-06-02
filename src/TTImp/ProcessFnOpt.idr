@@ -113,10 +113,10 @@ processFnOpt fc _ ndef (SpecArgs ns)
 
     -- Return names the type depends on, and whether it's a parameter
     mutual
-      getDepsArgs : Bool -> List ClosedNF -> NameMap Bool ->
+      getDepsArgs : Bool -> SnocList ClosedNF -> NameMap Bool ->
                     Core (NameMap Bool)
-      getDepsArgs inparam [] ns = pure ns
-      getDepsArgs inparam (a :: as) ns
+      getDepsArgs inparam [<] ns = pure ns
+      getDepsArgs inparam (as :< a) ns
           = do ns' <- getDeps inparam a ns
                getDepsArgs inparam as ns'
 

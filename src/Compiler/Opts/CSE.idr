@@ -43,7 +43,7 @@ import Data.SortedMap
 import Data.Vect
 
 import Libraries.Data.Erased
-import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
 import Libraries.Data.SnocList.Extra
 
 ||| Maping from a pairing of closed terms together with
@@ -124,7 +124,7 @@ store sz exp =
 
 dropVar : SizeOf inner
         -> {n : Nat}
-        -> (0 p : IsVar x n (inner ++ outer))
+        -> (0 p : IsVar x n (Scope.addInner outer inner))
         -> Maybe (Erased (IsVar x n inner))
 dropVar inn p = case locateIsVar inn p of
   Left p => Just p
@@ -138,7 +138,7 @@ dropVar inn p = case locateIsVar inn p of
 Drop tm
   = {0 inner, outer : Scope} ->
     SizeOf inner ->
-    tm (inner ++ outer) ->
+    tm (Scope.addInner outer inner) ->
     Maybe (tm inner)
 
 
@@ -174,8 +174,15 @@ mutual
   dropConAlt : Drop CConAlt
   dropConAlt inn (MkConAlt x y tag args z) =
     MkConAlt x y tag args <$>
-        dropCExp (mkSizeOf args + inn)
-        (replace {p = CExp} (appendAssociative args inner outer) z)
+        rewrite fishAsSnocAppend inner args in
+        dropCExp
+          (inn + mkSizeOf (cast args))
+          (replace {p = CExp} rule z)
+    where
+      rule : (outer ++ inner) <>< args = outer ++ (inner ++ (cast args))
+      rule = do rewrite appendAssociative outer inner (cast args)
+                rewrite fishAsSnocAppend (outer ++ inner) args
+                Builtin.Refl
 
   dropConstAlt : Drop CConstAlt
   dropConstAlt inn (MkConstAlt x y) = MkConstAlt x <$> dropCExp inn y
