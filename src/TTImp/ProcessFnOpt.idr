@@ -112,10 +112,10 @@ processFnOpt fc _ ndef (SpecArgs ns)
 
     -- Return names the type depends on, and whether it's a parameter
     mutual
-      getDepsArgs : Bool -> List ClosedNF -> NameMap Bool ->
+      getDepsArgs : Bool -> SnocList ClosedNF -> NameMap Bool ->
                     Core (NameMap Bool)
-      getDepsArgs inparam [] ns = pure ns
-      getDepsArgs inparam (a :: as) ns
+      getDepsArgs inparam [<] ns = pure ns
+      getDepsArgs inparam (as :< a) ns
           = do ns' <- getDeps inparam a ns
                getDepsArgs inparam as ns'
 
@@ -143,19 +143,19 @@ processFnOpt fc _ ndef (SpecArgs ns)
                params <- case !(lookupDefExact n (gamma defs)) of
                               Just (TCon _ _ ps _ _ _ _ _) => pure ps
                               _ => pure []
-               let (ps, ds) = splitPs 0 params (map snd args)
+               let (ps, ds) = splitPs 0 params (map snd (toList args))
                ns' <- getDepsArgs True !(traverse (evalClosure defs) ps) ns
                getDepsArgs False !(traverse (evalClosure defs) ds) ns'
         where
           -- Split into arguments in parameter position, and others
           splitPs : Nat -> List Nat -> List ClosedClosure ->
-                    (List ClosedClosure, List ClosedClosure)
-          splitPs n params [] = ([], [])
+                    (SnocList ClosedClosure, SnocList ClosedClosure)
+          splitPs n params [] = ([<], [<])
           splitPs n params (x :: xs)
               = let (ps', ds') = splitPs (1 + n) params xs in
                     if n `elem` params
-                       then (x :: ps', ds')
-                       else (ps', x :: ds')
+                       then (ps' :< x, ds')
+                       else (ps', ds' :< x)
       getDeps inparam (NDelayed _ _ t) ns = getDeps inparam t ns
       getDeps inparams nf ns = pure ns
 

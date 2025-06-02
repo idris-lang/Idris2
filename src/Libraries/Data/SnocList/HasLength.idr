@@ -55,12 +55,13 @@ hlChips {m = S m} {n} (S x) y
   = rewrite plusSuccRightSucc m n in
     hlChips x (S y)
 
-{-
+
+-- TODO left-to-right reversal of the stream
+--      is this what we want?
 export
 take : (n : Nat) -> (xs : Stream a) -> HasLength n (take n xs)
 take Z _ = Z
-take (S n) (x :: xs) = S (take n xs)
--}
+take (S n) (x :: sx) = S (take n sx)
 
 export
 cast : {sy : _} -> (0 _ : SnocList.length sx = SnocList.length sy) ->

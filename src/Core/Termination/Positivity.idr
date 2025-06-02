@@ -33,15 +33,15 @@ nameIn defs tyns (NApp _ nh args)
     = do False <- isAssertTotal nh
            | True => pure False
          anyM (nameIn defs tyns)
-           !(traverse (evalClosure defs . snd) args)
+           !(traverse (evalClosure defs . snd) (toList args))
 nameIn defs tyns (NTCon _ n _ _ args)
     = if n `elem` tyns
          then pure True
-         else do args' <- traverse (evalClosure defs . snd) args
+         else do args' <- traverse (evalClosure defs . snd) (toList args)
                  anyM (nameIn defs tyns) args'
 nameIn defs tyns (NDCon _ n _ _ args)
     = anyM (nameIn defs tyns)
-           !(traverse (evalClosure defs . snd) args)
+           !(traverse (evalClosure defs . snd) (toList args))
 nameIn defs tyns (NDelayed fc lr ty) = nameIn defs tyns ty
 nameIn defs tyns _ = pure False
 
@@ -68,7 +68,7 @@ posArg defs tyns nf@(NTCon loc tc _ _ args) =
                     Just (TCon _ _ params _ _ _ _ _) => do
                          log "totality.positivity" 50 $
                            unwords [show tc, "has", show (length params), "parameters"]
-                         pure $ splitParams 0 params (map snd args)
+                         pure $ splitParams 0 params (toList $ map snd args)
                     _ => throw (GenericMsg loc (show tc ++ " not a data type"))
      let (params, indices) = testargs
      False <- anyM (nameIn defs tyns) !(traverse (evalClosure defs) indices)
@@ -98,7 +98,7 @@ posArg defs tyns nf@(NApp fc nh args)
            | True => do logNF "totality.positivity" 50 "Trusting an assertion" Env.empty nf
                         pure IsTerminating
          logNF "totality.positivity" 50 "Found an application" Env.empty nf
-         args <- traverse (evalClosure defs . snd) args
+         args <- traverse (evalClosure defs . snd) (toList args)
          pure $ if !(anyM (nameIn defs tyns) args)
            then NotTerminating NotStrictlyPositive
            else IsTerminating
