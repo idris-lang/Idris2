@@ -38,7 +38,7 @@ Weaken NestedNames where
   weakenNs {ns = wkns} s (MkNested ns) = MkNested (map wknName ns)
     where
       wknName : (Name, (Maybe Name, List (Var vars), FC -> NameType -> Term vars)) ->
-                (Name, (Maybe Name, List (Var (wkns ++ vars)), FC -> NameType -> Term (wkns ++ vars)))
+                (Name, (Maybe Name, List (Var (Scope.addInner vars wkns)), FC -> NameType -> Term (Scope.addInner vars wkns)))
       wknName (n, (mn, vars, rep))
           = (n, (mn, map (weakenNs s) vars, \fc, nt => weakenNs s (rep fc nt)))
 

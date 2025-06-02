@@ -533,8 +533,8 @@ perrorRaw (CantSolveGoal fc gam env g reason)
     dropEnv : {vars : _} ->
               Env Term vars -> Term vars ->
               (ns ** (Env Term ns, Term ns))
-    dropEnv env (Bind _ n b@(Pi _ _ _ _) sc) = dropEnv (b :: env) sc
-    dropEnv env (Bind _ n b@(Let _ _ _ _) sc) = dropEnv (b :: env) sc
+    dropEnv env (Bind _ n b@(Pi _ _ _ _) sc) = dropEnv (Env.bind env b) sc
+    dropEnv env (Bind _ n b@(Let _ _ _ _) sc) = dropEnv (Env.bind env b) sc
     dropEnv env tm = (_ ** (env, tm))
 
 perrorRaw (DeterminingArg fc n i env g)

@@ -104,12 +104,12 @@ getMethImps : {vars : _} ->
               Core (List (Name, RigCount, Maybe RawImp, RawImp))
 getMethImps env (Bind fc x (Pi fc' c Implicit ty) sc)
     = do rty <- map (map rawName) $ unelabNoSugar env ty
-         ts <- getMethImps (Pi fc' c Implicit ty :: env) sc
+         ts <- getMethImps (Env.bind env $ Pi fc' c Implicit ty) sc
          pure ((x, c, Nothing, rty) :: ts)
 getMethImps env (Bind fc x (Pi fc' c (DefImplicit def) ty) sc)
     = do rty <- map (map rawName) $ unelabNoSugar env ty
          rdef <- map (map rawName) $ unelabNoSugar env def
-         ts <- getMethImps (Pi fc' c (DefImplicit def) ty :: env) sc
+         ts <- getMethImps (Env.bind env $ Pi fc' c (DefImplicit def) ty) sc
          pure ((x, c, Just rdef, rty) :: ts)
 getMethImps env tm = pure []
 

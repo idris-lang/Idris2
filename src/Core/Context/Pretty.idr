@@ -15,13 +15,11 @@ import Core.Context.Context
 
 import Libraries.Data.String.Extra
 
-%hide Env.(::)
-%hide Env.Nil
+%hide Env.(:<)
+%hide Env.Lin
 %hide String.(::)
 %hide String.Nil
 %hide Doc.Nil
-%hide Subst.(::)
-%hide Subst.Nil
 %hide CList.(::)
 %hide CList.Nil
 %hide Stream.(::)
