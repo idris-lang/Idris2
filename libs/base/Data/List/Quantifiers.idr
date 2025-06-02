@@ -311,6 +311,11 @@ allAnies : All p xs -> List (Any p xs)
 allAnies [] = []
 allAnies (x::xs) = Here x :: map There (allAnies xs)
 
+export
+altAll : Alternative p => All (p . q) xs -> p $ Any q xs
+altAll []      = empty
+altAll (a::as) = Here <$> a <|> There <$> altAll as
+
 ------------------------------------------------------------------------
 -- Partitioning lists according to All
 

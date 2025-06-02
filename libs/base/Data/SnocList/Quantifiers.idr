@@ -276,6 +276,11 @@ allAnies : All p xs -> SnocList (Any p xs)
 allAnies [<] = [<]
 allAnies (xs:<x) = map There (allAnies xs) :< Here x
 
+export
+altAll : Alternative p => All (p . q) xs -> p $ Any q xs
+altAll [<]     = empty
+altAll (as:<a) = Here <$> a <|> There <$> altAll as
+
 ||| If any `a` either satisfies p or q then given a Snoclist of as,
 ||| either all values satisfy p
 ||| or at least one of them sastifies q

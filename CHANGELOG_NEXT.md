@@ -311,6 +311,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   are harmonised among each other. Also, several existing functions related only to
   `All` were moved to appropriate namespace. Couple new functions for `Any` were added.
 
+* Add a function `altAll` connecting `All` to `Any` using `Alternative` to all `Quantifiers` modules.
+
 #### Contrib
 
 * `Data.Vect.Views.Extra` was moved from `contrib` to `base`.
