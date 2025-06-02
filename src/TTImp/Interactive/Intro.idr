@@ -16,6 +16,8 @@ import TTImp.TTImp
 import TTImp.Unelab
 import TTImp.Utils
 
+import Data.SnocList
+
 import Libraries.Data.NatSet
 
 %default covering

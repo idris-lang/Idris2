@@ -27,6 +27,8 @@ import TTImp.TTImp
 
 import TTImp.ProcessDecls.Totality
 
+import Data.SnocList
+
 import Libraries.Text.PrettyPrint.Prettyprinter.Doc
 
 %default covering

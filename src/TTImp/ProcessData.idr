@@ -18,6 +18,8 @@ import TTImp.Elab
 import TTImp.TTImp
 
 import Data.DPair
+import Data.SnocList
+
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
 import Libraries.Data.WithDefault
@@ -154,10 +156,10 @@ getDetags fc tys
         pure $ ds <$ guard (not (isEmpty ds))
   where
     mutual
-      disjointArgs : List ClosedNF -> List ClosedNF -> Core Bool
-      disjointArgs [] _ = pure False
-      disjointArgs _ [] = pure False
-      disjointArgs (a :: args) (a' :: args')
+      disjointArgs : SnocList ClosedNF -> SnocList ClosedNF -> Core Bool
+      disjointArgs [<] _ = pure False
+      disjointArgs _ [<] = pure False
+      disjointArgs (args :< a) (args' :< a')
           = if !(disjoint a a')
                then pure True
                else disjointArgs args args'
