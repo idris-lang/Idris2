@@ -1,10 +1,14 @@
 module Core.Name.Scoped
 
 import public Core.Name
+import Core.Name.CompatibleVars
 
-import Libraries.Data.List.SizeOf
+import Data.SnocList
 
 import public Libraries.Data.List.Thin
+import Libraries.Data.SnocList.SizeOf
+import Libraries.Data.SnocList.HasLength
+import Libraries.Data.List.SizeOf
 
 %default total
 
@@ -14,7 +18,7 @@ import public Libraries.Data.List.Thin
 ||| Something which is having similar order as Scope itself
 public export
 Scopeable : (a: Type) -> Type
-Scopeable = List
+Scopeable = SnocList
 
 ||| A scope is represented by a list of names. E.g. in the following
 ||| rule, the scope Γ is extended with x when going under the λx.
@@ -30,28 +34,23 @@ Scope = Scopeable Name
 namespace Scope
   public export
   empty : Scopeable a
-  empty = []
+  empty = [<]
 
-  {-
   public export
   ext : Scopeable a -> List a -> Scopeable a
-  ext vars ns = ns ++ vars
-  --- TODO replace by `vars <>< ns`
-  -}
+  ext vars ns = vars <>< ns
 
   public export
   addInner : Scopeable a -> Scopeable a -> Scopeable a
-  addInner vars inner = inner ++ vars
-  --- TODO replace by `vars ++ inner`
+  addInner vars inner = vars ++ inner
 
   public export
   bind : Scopeable a -> a -> Scopeable a
-  bind vars n = n :: vars
-  --- TODO replace with `<:`
+  bind vars n = vars :< n
 
   public export
   single : a -> Scopeable a
-  single n = [n]
+  single n = [<n]
 
 ||| A scoped definition is one indexed by a scope
 public export
@@ -63,12 +62,21 @@ Scoped = Scope -> Type
 
 export
 scopeEq : (xs, ys : Scope) -> Maybe (xs = ys)
-scopeEq [] [] = Just Refl
-scopeEq (x :: xs) (y :: ys)
+scopeEq [<] [<] = Just Refl
+scopeEq (xs :< x) (ys :< y)
     = do Refl <- nameEq x y
          Refl <- scopeEq xs ys
          Just Refl
 scopeEq _ _ = Nothing
+
+export
+localEq : (xs, ys : List Name) -> Maybe (xs = ys)
+localEq [] [] = Just Refl
+localEq (x :: xs) (y :: ys)
+    = do Refl <- nameEq x y
+         Refl <- localEq xs ys
+         Just Refl
+localEq _ _ = Nothing
 
 ------------------------------------------------------------------------
 -- Generate a fresh name (for a given scope)
@@ -80,68 +88,23 @@ mkFresh vs n
     then assert_total $ mkFresh vs (next n)
     else n
 
-
-------------------------------------------------------------------------
--- Compatible variables
-
-public export
-data CompatibleVars : (xs, ys : List a) -> Type where
-   Pre : CompatibleVars xs xs
-   Ext : CompatibleVars xs ys -> CompatibleVars (n :: xs) (m :: ys)
-
-export
-invertExt : CompatibleVars (n :: xs) (m :: ys) -> CompatibleVars xs ys
-invertExt Pre = Pre
-invertExt (Ext p) = p
-
-export
-extendCompats : (args : List a) ->
-                CompatibleVars xs ys ->
-                CompatibleVars (args ++ xs) (args ++ ys)
-extendCompats args Pre = Pre
-extendCompats args prf = go args prf where
-
-  go : (args : List a) ->
-       CompatibleVars xs ys ->
-       CompatibleVars (args ++ xs) (args ++ ys)
-  go [] prf = prf
-  go (x :: xs) prf = Ext (go xs prf)
-
-export
-decCompatibleVars : (xs, ys : List a) -> Dec (CompatibleVars xs ys)
-decCompatibleVars [] [] = Yes Pre
-decCompatibleVars [] (x :: xs) = No (\case p impossible)
-decCompatibleVars (x :: xs) [] = No (\case p impossible)
-decCompatibleVars (x :: xs) (y :: ys) = case decCompatibleVars xs ys of
-  Yes prf => Yes (Ext prf)
-  No nprf => No (nprf . invertExt)
-
-export
-areCompatibleVars : (xs, ys : List a) ->
-                    Maybe (CompatibleVars xs ys)
-areCompatibleVars [] [] = pure Pre
-areCompatibleVars (x :: xs) (y :: ys)
-    = do compat <- areCompatibleVars xs ys
-         pure (Ext compat)
-areCompatibleVars _ _ = Nothing
-
 ------------------------------------------------------------------------
 -- Concepts
 
 public export
 0 Weakenable : Scoped -> Type
 Weakenable tm = {0 vars, ns : Scope} ->
-  SizeOf ns -> tm vars -> tm (ns ++ vars)
+  SizeOf ns -> tm vars -> tm (Scope.addInner vars ns)
 
 public export
 0 Strengthenable : Scoped -> Type
 Strengthenable tm = {0 vars, ns : Scope} ->
-  SizeOf ns -> tm (ns ++ vars) -> Maybe (tm vars)
+  SizeOf ns -> tm (Scope.addInner vars ns) -> Maybe (tm vars)
 
 public export
 0 GenWeakenable : Scoped -> Type
-GenWeakenable tm = {0 outer, ns, local : Scope} ->
-  SizeOf local -> SizeOf ns -> tm (local ++ outer) -> tm (local ++ (ns ++ outer))
+GenWeakenable tm = {0 local, ns, outer : Scope} ->
+  SizeOf outer -> SizeOf ns -> tm (Scope.addInner local outer) -> tm (Scope.addInner local (Scope.addInner ns outer))
 
 public export
 0 Thinnable : Scoped -> Type
@@ -153,7 +116,7 @@ Shrinkable tm = {0 xs, ys : Scope} -> tm xs -> Thin ys xs -> Maybe (tm ys)
 
 public export
 0 Embeddable : Scoped -> Type
-Embeddable tm = {0 outer, vars : Scope} -> tm vars -> tm (vars ++ outer)
+Embeddable tm = {0 outer, vars : Scope} -> tm vars -> tm (Scope.addInner outer vars)
 
 ------------------------------------------------------------------------
 -- IsScoped interface
@@ -162,10 +125,13 @@ public export
 interface Weaken (0 tm : Scoped) where
   constructor MkWeaken
   -- methods
-  weaken : tm vars -> tm (nm :: vars)
+  weaken : tm vars -> tm (Scope.bind vars nm)
   weakenNs : Weakenable tm
   -- default implementations
   weaken = weakenNs (suc zero)
+  weakenNs p t = case sizedView p of
+    Z   => t
+    S p => weaken (weakenNs p t)
 
 -- This cannot be merged with Weaken because of WkCExp
 public export
@@ -175,8 +141,24 @@ interface GenWeaken (0 tm : Scoped) where
 
 export
 genWeaken : GenWeaken tm =>
-  SizeOf local -> tm (local ++ outer) -> tm (local ++ n :: outer)
-genWeaken l = genWeakenNs l (suc zero)
+  SizeOf outer -> tm (Scope.addInner local outer) -> tm (Scope.addInner (Scope.bind local n) outer)
+genWeaken l = rewrite sym $ appendAssociative local [<n] outer in genWeakenNs l (suc zero)
+
+export
+genWeakenFishily : GenWeaken tm =>
+  SizeOf outer -> tm (Scope.ext local outer) -> tm (Scope.ext (Scope.bind local n) outer)
+genWeakenFishily
+    = rewrite fishAsSnocAppend local outer in
+      rewrite fishAsSnocAppend (local :<n) outer in
+      genWeaken . cast
+
+export
+weakensN : Weaken tm =>
+  {0 vars : Scope} -> {0 ns : List Name} ->
+  SizeOf ns -> tm vars -> tm (vars <>< ns)
+weakensN s t
+  = rewrite fishAsSnocAppend vars ns in
+    weakenNs (zero <>< s) t
 
 public export
 interface Strengthen (0 tm : Scoped) where
@@ -185,8 +167,16 @@ interface Strengthen (0 tm : Scoped) where
   strengthenNs : Strengthenable tm
 
 export
-strengthen : Strengthen tm => tm (nm :: vars) -> Maybe (tm vars)
+strengthen : Strengthen tm => tm (Scope.bind vars nm) -> Maybe (tm vars)
 strengthen = strengthenNs (suc zero)
+
+export
+strengthensN :
+  Strengthen tm => SizeOf ns ->
+  tm (Scope.ext vars ns) -> Maybe (tm vars)
+strengthensN s t
+  = strengthenNs (zero <>< s)
+  $ rewrite sym $ fishAsSnocAppend vars ns in t
 
 public export
 interface FreelyEmbeddable (0 tm : Scoped) where
@@ -194,6 +184,10 @@ interface FreelyEmbeddable (0 tm : Scoped) where
   -- this is free for nameless representations
   embed : Embeddable tm
   embed = believe_me
+
+export
+embedFishily : FreelyEmbeddable tm => tm (cast ns) -> tm (Scope.ext vars ns)
+embedFishily t = rewrite fishAsSnocAppend vars ns in embed t
 
 export
 FunctorFreelyEmbeddable : Functor f => FreelyEmbeddable tm => FreelyEmbeddable (f . tm)
@@ -239,5 +233,5 @@ interface Weaken tm => IsScoped (0 tm : Scoped) where
   shrink : Shrinkable tm
 
 export
-compat : IsScoped tm => tm (m :: xs) -> tm (n :: xs)
+compat : IsScoped tm => tm (Scope.bind xs m) -> tm (Scope.bind xs n)
 compat = compatNs (Ext Pre)
