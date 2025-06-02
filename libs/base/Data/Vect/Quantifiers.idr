@@ -473,3 +473,8 @@ public export
 allAnies : {xs : Vect n a} -> All p xs -> Vect n (Any p xs)
 allAnies [] = []
 allAnies (x::xs) = Here x :: map There (allAnies xs)
+
+public export
+altAll : Alternative p => All (p . q) xs -> p $ Any q xs
+altAll []      = empty
+altAll (a::as) = Here <$> a <|> There <$> altAll as

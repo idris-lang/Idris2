@@ -211,6 +211,10 @@ public export
 allAnies : {0 xs : List1 a} -> All p xs -> List1 (Any p xs)
 allAnies (x:::xs) = Here x ::: map There (allAnies xs)
 
+export
+altAll : {0 xs : List1 a} -> Alternative p => All (p . q) xs -> p $ Any q xs
+altAll (a:::as) = Here <$> a <|> There <$> altAll as
+
 {-
 ------------------------------------------------------------------------
 -- Partitioning lists according to All
