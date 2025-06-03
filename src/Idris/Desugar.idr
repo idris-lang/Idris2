@@ -1281,7 +1281,7 @@ mutual
                                          (ps ++ fnames ++ paramNames) [])
                                        (map (\(_,_,_,d) => d) params')
                         else []
-           let _ = the (List (String, String)) bnames
+           let _ = the (List (Name, Name)) bnames
 
            let paramsb = map (\ (n, c, p, tm) => (n, c, p, doBind bnames tm)) params'
            let _ = the (List (Name, RigCount, PiInfo RawImp, RawImp)) paramsb

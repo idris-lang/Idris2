@@ -95,11 +95,11 @@ expandClause loc opts n c
 
 splittableNames : RawImp -> List Name
 splittableNames (IApp _ f (IBindVar _ n))
-    = splittableNames f ++ [UN $ Basic n]
+    = splittableNames f ++ [n]
 splittableNames (IApp _ f _)
     = splittableNames f
 splittableNames (IWithApp _ f (IBindVar _ n))
-    = splittableNames f ++ [UN $ Basic n]
+    = splittableNames f ++ [n]
 splittableNames (IWithApp _ f _)
     = splittableNames f
 splittableNames (IAutoApp _ f _)
@@ -125,7 +125,7 @@ trySplit loc lhsraw lhs rhs n
     valid _ = Nothing
 
     fixNames : RawImp -> RawImp
-    fixNames (IVar loc' (UN (Basic n))) = IBindVar loc' n
+    fixNames (IVar loc' n@(UN (Basic _))) = IBindVar loc' n
     fixNames (IVar loc' (MN _ _)) = Implicit loc' True
     fixNames (IApp loc' f a) = IApp loc' (fixNames f) (fixNames a)
     fixNames (IAutoApp loc' f a) = IAutoApp loc' (fixNames f) (fixNames a)
@@ -138,7 +138,7 @@ trySplit loc lhsraw lhs rhs n
                Nothing => IVar loc' n
                Just tm => fixNames tm
     updateLHS ups (IBindVar loc' n)
-        = case lookup (UN (Basic n)) ups of
+        = case lookup n ups of
                Nothing => IBindVar loc' n
                Just tm => fixNames tm
     updateLHS ups (IApp loc' f a) = IApp loc' (updateLHS ups f) (updateLHS ups a)
@@ -235,7 +235,7 @@ makeDefFromType loc opts n envlen ty
 
              rhshole <- uniqueHoleName defs [] (fnName False n ++ "_rhs")
              let initcs = PatClause loc
-                                (apply (IVar loc n) (pre_env ++ (map (IBindVar loc) argns)))
+                                (apply (IVar loc n) (pre_env ++ (map (IBindVar loc . UN . Basic) argns)))
                                 (IHole loc rhshole)
              let Just nidx = getNameID n (gamma defs)
                  | Nothing => undefinedName loc n
