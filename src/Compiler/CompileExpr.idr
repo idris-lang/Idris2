@@ -14,7 +14,6 @@ import Core.Value
 
 import Data.List
 import Data.SnocList
-import Data.SnocList.HasLength
 import Data.SnocList.Quantifiers
 import Data.Maybe
 import Data.Vect
@@ -22,6 +21,7 @@ import Data.Vect
 import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.SizeOf
 import Libraries.Data.SnocList.Extra
+import Libraries.Data.SnocList.HasLength
 
 %default covering
 
