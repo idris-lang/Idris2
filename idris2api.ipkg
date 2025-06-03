@@ -196,6 +196,7 @@ modules =
     Libraries.Data.SnocList.HasLength,
     Libraries.Data.SnocList.LengthMatch,
     Libraries.Data.SnocList.SizeOf,
+    Libraries.Data.SnocList.Quantifiers.Extra,
     Libraries.Data.Span,
     Libraries.Data.SortedMap,
     Libraries.Data.SortedSet,
