@@ -82,11 +82,11 @@ map (MkSizeOf n p) = MkSizeOf n (cast (sym $ lengthMap sx) p) where
   lengthMap [<] = Refl
   lengthMap (sx :< x) = cong S (lengthMap sx)
 
-{-
+-- TODO left-to-right reversal of the stream
+--      is this what we want?
 public export
 take : {n : Nat} -> {0 sx : Stream a} -> SizeOf (take n sx)
 take = MkSizeOf n (take n sx)
--}
 
 namespace SizedView
 

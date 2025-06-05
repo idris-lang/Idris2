@@ -184,8 +184,8 @@ getImpossibleTerm env nest tm
   where
     addEnv : {vars : _} ->
              FC -> Env Term vars -> List RawImp
-    addEnv fc [] = []
-    addEnv fc (b :: env) =
+    addEnv fc [<] = []
+    addEnv {vars = _ :< _} fc (env :< b) =
        if isLet b
           then addEnv fc env
           else Implicit fc False :: addEnv fc env

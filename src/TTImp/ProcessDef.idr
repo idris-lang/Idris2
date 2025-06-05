@@ -249,13 +249,13 @@ extendEnv env p nest (Bind _ n (PVar fc c pi tmty) sc) (Bind _ n' (PVTy _ _ _) t
   extendEnv env p nest (Bind _ n (PVar fc c pi tmty) sc) (Bind _ n' (PVTy _ _ _) tysc) | Nothing
       = throw (InternalError "Can't happen: names don't match in pattern type")
   extendEnv env p nest (Bind _ n (PVar fc c pi tmty) sc) (Bind _ n (PVTy _ _ _) tysc) | (Just Refl)
-      = extendEnv (PVar fc c pi tmty :: env) (Drop p) (weaken nest) sc tysc
+      = extendEnv (Env.bind env $ PVar fc c pi tmty) (Drop p) (weaken nest) sc tysc
 extendEnv env p nest (Bind _ n (PLet fc c tmval tmty) sc) (Bind _ n' (PLet _ _ _ _) tysc) with (nameEq n n')
   extendEnv env p nest (Bind _ n (PLet fc c tmval tmty) sc) (Bind _ n' (PLet _ _ _ _) tysc) | Nothing
       = throw (InternalError "Can't happen: names don't match in pattern type")
   -- PLet on the left becomes Let on the right, to give it computational force
   extendEnv env p nest (Bind _ n (PLet fc c tmval tmty) sc) (Bind _ n (PLet _ _ _ _) tysc) | (Just Refl)
-      = extendEnv (Let fc c tmval tmty :: env) (Drop p) (weaken nest) sc tysc
+      = extendEnv (Env.bind env $ Let fc c tmval tmty) (Drop p) (weaken nest) sc tysc
 extendEnv env p nest tm ty
       = pure (_ ** (p, env, nest, tm, ty))
 
@@ -391,7 +391,7 @@ checkLHS {vars} trans mult n opts nest env fc lhs_in
 
          lhs <- if trans
                    then pure lhs_bound
-                   else implicitsAs n defs vars lhs_bound
+                   else implicitsAs n defs (asList vars) lhs_bound
 
          logC "declare.def.lhs" 5 $ do pure $ "Checking LHS of " ++ show !(getFullName (Resolved n))
 -- todo: add Pretty RawImp instance
@@ -442,7 +442,7 @@ hasEmptyPat : {vars : _} ->
               Defs -> Env Term vars -> Term vars -> Core Bool
 hasEmptyPat defs env (Bind fc x b sc)
    = pure $ !(isEmpty defs env !(nf defs env (binderType b)))
-            || !(hasEmptyPat defs (b :: env) sc)
+            || !(hasEmptyPat defs (Env.bind env b) sc)
 hasEmptyPat defs env _ = pure False
 
 -- For checking with blocks as nested names
@@ -633,23 +633,23 @@ checkClause {vars} mult vis totreq hashit n opts nest env
        (rig : RigCount) -> (wvalTy : Term xs) -> Maybe ((RigCount, Name), Term xs) ->
        (wvalEnv : Env Term xs) ->
        Core (ext : Scope
-         ** ( Env Term (ext ++ xs)
-            , Term (ext ++ xs)
-            , (Term (ext ++ xs) -> Term xs)
+         ** ( Env Term (Scope.addInner xs ext)
+            , Term (Scope.addInner xs ext)
+            , (Term (Scope.addInner xs ext) -> Term xs)
             ))
     bindWithArgs {xs} rig wvalTy Nothing wvalEnv =
       let wargn : Name
           wargn = MN "warg" 0
           wargs : Scope
-          wargs = [wargn]
+          wargs = [<wargn]
 
-          scenv : Env Term (wargs ++ xs)
-                := Pi vfc top Explicit wvalTy :: wvalEnv
+          scenv : Env Term (Scope.addInner xs wargs)
+                := wvalEnv :< Pi vfc top Explicit wvalTy
 
-          var : Term (wargs ++ xs)
+          var : Term (Scope.addInner xs wargs)
               := Local vfc (Just False) Z First
 
-          binder : Term (wargs ++ xs) -> Term xs
+          binder : Term (Scope.addInner xs wargs) -> Term xs
                  := Bind vfc wargn (Pi vfc rig Explicit wvalTy)
 
       in pure (wargs ** (scenv, var, binder))
@@ -665,10 +665,10 @@ checkClause {vars} mult vis totreq hashit n opts nest env
       let wargn : Name
           wargn = MN "warg" 0
           wargs : Scope
-          wargs = [name, wargn]
+          wargs = [<wargn, name]
 
           wvalTy' := weaken wvalTy
-          eqTy : Term (MN "warg" 0 :: xs)
+          eqTy : Term (xs :< MN "warg" 0)
                := apply vfc eqTyCon
                            [ wvalTy'
                            , wvalTy'
@@ -676,15 +676,15 @@ checkClause {vars} mult vis totreq hashit n opts nest env
                            , Local vfc (Just False) Z First
                            ]
 
-          scenv : Env Term (wargs ++ xs)
-                := Pi vfc top Implicit eqTy
-                :: Pi vfc top Explicit wvalTy
-                :: wvalEnv
+          scenv : Env Term (Scope.addInner xs wargs)
+                := wvalEnv
+                :< Pi vfc top Explicit wvalTy
+                :< Pi vfc top Implicit eqTy
 
-          var : Term (wargs ++ xs)
+          var : Term (Scope.addInner xs wargs)
               := Local vfc (Just False) (S Z) (Later First)
 
-          binder : Term (wargs ++ xs) -> Term xs
+          binder : Term (Scope.addInner xs wargs) -> Term xs
                  := \ t => Bind vfc wargn (Pi vfc rig Explicit wvalTy)
                          $ Bind vfc name  (Pi vfc rigPrf Implicit eqTy) t
 
@@ -698,16 +698,16 @@ checkClause {vars} mult vis totreq hashit n opts nest env
                  (vs'' : Scope ** Thin vs'' vs)
     keepOldEnv {vs} Refl p = (vs ** Refl)
     keepOldEnv {vs} p Refl = (vs ** Refl)
-    keepOldEnv (Drop p) (Drop p')
+    keepOldEnv {vs = _ :< _} (Drop p) (Drop p')
         = let (_ ** rest) = keepOldEnv p p' in
               (_ ** Drop rest)
-    keepOldEnv (Drop p) (Keep p')
+    keepOldEnv {vs = _ :< _} (Drop p) (Keep p')
         = let (_ ** rest) = keepOldEnv p p' in
               (_ ** Keep rest)
-    keepOldEnv (Keep p) (Drop p')
+    keepOldEnv {vs = _ :< _} (Keep p) (Drop p')
         = let (_ ** rest) = keepOldEnv p p' in
               (_ ** Keep rest)
-    keepOldEnv (Keep p) (Keep p')
+    keepOldEnv {vs = _ :< _} (Keep p) (Keep p')
         = let (_ ** rest) = keepOldEnv p p' in
               (_ ** Keep rest)
 

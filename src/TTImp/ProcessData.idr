@@ -158,10 +158,10 @@ getDetags fc tys
              xs => pure $ Just xs
   where
     mutual
-      disjointArgs : List ClosedNF -> List ClosedNF -> Core Bool
-      disjointArgs [] _ = pure False
-      disjointArgs _ [] = pure False
-      disjointArgs (a :: args) (a' :: args')
+      disjointArgs : SnocList ClosedNF -> SnocList ClosedNF -> Core Bool
+      disjointArgs [<] _ = pure False
+      disjointArgs _ [<] = pure False
+      disjointArgs (args :< a) (args' :< a')
           = if !(disjoint a a')
                then pure True
                else disjointArgs args args'
@@ -508,7 +508,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
                                if ok then pure (mw, vis, tot, fullty)
                                      else do logTermNF "declare.data" 1 "Previous" Env.empty (type ndef)
                                              logTermNF "declare.data" 1 "Now" Env.empty fullty
-                                             throw (CantConvert fc (gamma defs) Env.empty (type ndef) fullty)
+                                             throw (AlreadyDefined fc n)
                       _ => throw (AlreadyDefined fc n)
 
          logTermNF "declare.data" 5 ("data " ++ show n) Env.empty fullty
