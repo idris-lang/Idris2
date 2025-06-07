@@ -1,7 +1,7 @@
 module Data.SnocList.Quantifiers
 
 import Data.DPair
-
+import Data.Fin
 import Data.SnocList
 import Data.SnocList.Elem
 
@@ -22,18 +22,24 @@ namespace Any
     ||| A proof that there is an element the tail of the `SnocList` satisfying p
     There : {0 xs : SnocList a} -> Any p xs -> Any p (xs :< x)
 
-  export
-  Uninhabited (Any p Lin) where
-    uninhabited (Here _) impossible
-    uninhabited (There _) impossible
+namespace All
+
+  ||| A proof that all elements of a list satisfy a property. It is a list of
+  ||| proofs, corresponding element-wise to the `List`.
+  public export
+  data All : (0 p : a -> Type) -> SnocList a -> Type where
+    Lin  : All p [<]
+    (:<) : All p xs -> p x -> All p (xs :< x)
+
+------------------------------------------------------------------------
+-- Types and basic properties
+
+namespace Any
 
   export
-  {0 p : a -> Type} ->
-    Uninhabited (p x) =>
-    Uninhabited (Any p xs) =>
-    Uninhabited (Any p (xs :< x)) where
-    uninhabited (Here y) = uninhabited y
-    uninhabited (There y) = uninhabited y
+  All (Uninhabited . p) xs => Uninhabited (Any p xs) where
+    uninhabited @{ss:<s} (Here y)  = uninhabited y
+    uninhabited @{ss:<s} (There y) = uninhabited y
 
   ||| Modify the property given a pointwise function
   public export
@@ -60,19 +66,39 @@ namespace Any
           There pxs => npxs pxs
 
   ||| Forget the membership proof
+  public export
+  toDPair : {xs : SnocList a} -> Any p xs -> DPair a p
+  toDPair (Here prf) = (_ ** prf)
+  toDPair (There p)  = toDPair p
+
+  ||| Forget the membership proof
   export
   toExists : Any p xs -> Exists p
   toExists (Here prf) = Evidence _ prf
   toExists (There prf) = toExists prf
 
-namespace All
-
-  ||| A proof that all elements of a list satisfy a property. It is a list of
-  ||| proofs, corresponding element-wise to the `List`.
   public export
-  data All : (0 p : a -> Type) -> SnocList a -> Type where
-    Lin  : All p [<]
-    (:<) : All p xs -> p x -> All p (xs :< x)
+  anyToFin : Any p xs -> Fin $ length xs
+  anyToFin (Here _)      = FZ
+  anyToFin (There later) = FS (anyToFin later)
+
+  public export
+  pushOut : Functor p => Any (p . q) xs -> p $ Any q xs
+  pushOut @{fp} (Here v)  = map @{fp} Here v
+  pushOut @{fp} (There n) = map @{fp} There $ pushOut n
+
+  export
+  All (Show . p) xs => Show (Any p xs) where
+    showPrec d @{ss:<s} (Here x)  = showCon d "Here"  $ showArg x
+    showPrec d @{ss:<s} (There x) = showCon d "There" $ showArg x
+
+  export
+  All (Eq . p) xs => Eq (Any p xs) where
+    (==) @{ss:<s} (Here x)  (Here y)  = x == y
+    (==) @{ss:<s} (There x) (There y) = x == y
+    (==) _ _ = False
+
+namespace All
 
   public export
   length : All p xs -> Nat
@@ -149,6 +175,78 @@ namespace All
         show' @{[<_]} [<px] = (show px ::)
         show' @{_ :< _} (pxs :< px) = show' pxs . (", " ::) . (show px ::)
 
+  export
+  All (Eq . p) xs => Eq (All p xs) where
+    (==)           [<]      [<]      = True
+    (==) @{_ :< _} (t1:<h1) (t2:<h2) = h1 == h2 && t1 == t2
+
+  %hint
+  allEq : All (Ord . p) xs => All (Eq . p) xs
+  allEq @{[<]}    = [<]
+  allEq @{_ :< _} = allEq :< %search
+
+  export
+  All (Ord . p) xs => Ord (All p xs) where
+    compare           [<]      [<]      = EQ
+    compare @{_ :< _} (t1:<h1) (t2:<h2) = case compare h1 h2 of
+      EQ => compare t1 t2
+      o  => o
+
+  export
+  All (Semigroup . p) xs => Semigroup (All p xs) where
+    (<+>)           [<]      [<]      = [<]
+    (<+>) @{_ :< _} (t1:<h1) (t2:<h2) = (t1 <+> t2) :< (h1 <+> h2)
+
+  %hint
+  allSemigroup : All (Monoid . p) xs => All (Semigroup . p) xs
+  allSemigroup @{[<]}    = [<]
+  allSemigroup @{_ :< _} = allSemigroup :< %search
+
+  export
+  All (Monoid . p) xs => Monoid (All p xs) where
+    neutral @{[<]}  = [<]
+    neutral @{_:<_} = neutral :< neutral
+
+  ||| A heterogeneous snoc-list of arbitrary types
+  public export
+  HSnocList : SnocList Type -> Type
+  HSnocList = All id
+
+  ||| Push in the property from the list level with element level
+  public export
+  pushIn : (xs : SnocList a) -> (0 _ : All p xs) -> SnocList $ Subset a p
+  pushIn [<]     [<]     = [<]
+  pushIn (xs:<x) (ps:<p) = pushIn xs ps :< Element x p
+
+  ||| Pull the elementwise property out to the list level
+  public export
+  pullOut : (xs : SnocList $ Subset a p) -> Subset (SnocList a) (All p)
+  pullOut [<]                 = Element [<] [<]
+  pullOut (xs :< Element x p) = let Element ss ps = pullOut xs in Element (ss:<x) (ps:<p)
+
+  export
+  pushInOutInverse : (xs : SnocList a) -> (0 prf : All p xs) -> pullOut (pushIn xs prf) = Element xs prf
+  pushInOutInverse [<] [<] = Refl
+  pushInOutInverse (xs:<x) (ps:<p) = rewrite pushInOutInverse xs ps in Refl
+
+  export
+  pushOutInInverse : (xs : SnocList $ Subset a p) -> uncurry All.pushIn (pullOut xs) = xs
+  pushOutInInverse [<] = Refl
+  pushOutInInverse (xs :< Element x p) with (pushOutInInverse xs)
+    pushOutInInverse (xs :< Element x p) | subprf with (pullOut xs)
+      pushOutInInverse (xs :< Element x p) | subprf | Element ss ps = rewrite subprf in Refl
+
+  ||| Given a proof of membership for some element, extract the property proof for it
+  public export
+  indexAll : Elem x xs -> All p xs -> p x
+  indexAll  Here     (_ :< px) = px
+  indexAll (There e) (pxs :< _) = indexAll e pxs
+
+  public export
+  pushOut : Applicative p => All (p . q) xs -> p $ All q xs
+  pushOut [<]     = pure [<]
+  pushOut (xs:<x) = [| pushOut xs :< x |]
+
 ------------------------------------------------------------------------
 -- Relationship between all and any
 
@@ -173,11 +271,15 @@ allNegAny [<] pxs = absurd pxs
 allNegAny (npxs :< npx) (Here px) = absurd (npx px)
 allNegAny (npxs :< npx) (There pxs) = allNegAny npxs pxs
 
-||| Given a proof of membership for some element, extract the property proof for it
 public export
-indexAll : Elem x xs -> All p xs -> p x
-indexAll  Here     (_ :< px) = px
-indexAll (There e) (pxs :< _) = indexAll e pxs
+allAnies : All p xs -> SnocList (Any p xs)
+allAnies [<] = [<]
+allAnies (xs:<x) = map There (allAnies xs) :< Here x
+
+export
+altAll : Alternative p => All (p . q) xs -> p $ Any q xs
+altAll [<]     = empty
+altAll (as:<a) = Here <$> a <|> There <$> altAll as
 
 ||| If any `a` either satisfies p or q then given a Snoclist of as,
 ||| either all values satisfy p

@@ -2,6 +2,8 @@ module Libraries.Data.SnocList.HasLength
 
 import Data.Nat
 
+import Libraries.Data.SnocList.Extra
+
 ---------------------------------------
 -- horrible hack
 import Data.List.HasLength as L
@@ -21,6 +23,10 @@ export
 hasLength : HasLength n sx -> length sx === n
 hasLength Z = Refl
 hasLength (S p) = cong S (hasLength p)
+
+export
+sucR : HasLength n sx -> HasLength (S n) (sx ++ [<x])
+sucR = S
 
 export
 sucL : HasLength n sx -> HasLength (S n) ([<x] ++ sx)
@@ -51,9 +57,9 @@ hlChips {m = S m} {n} (S x) y
 
 {-
 export
-take : (n : Nat) -> (sx : Stream a) -> HasLength n (take n sx)
+take : (n : Nat) -> (xs : Stream a) -> HasLength n (take n xs)
 take Z _ = Z
-take (S n) (x :: sx) = S (take n sx)
+take (S n) (x :: xs) = S (take n xs)
 -}
 
 export

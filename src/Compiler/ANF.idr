@@ -8,8 +8,11 @@ import Core.Core
 import Core.TT
 
 import Data.List
+import Data.List.Quantifiers
+import Data.SnocList
 import Data.Vect
 import Libraries.Data.SortedSet
+import Libraries.Data.SnocList.Extra
 
 %default covering
 
@@ -136,9 +139,8 @@ Show ANFDef where
         show args ++ " -> " ++ show ret
   show (MkAError exp) = "Error: " ++ show exp
 
-data AVars : List Name -> Type where
-     Nil : AVars []
-     (::) : Int -> AVars xs -> AVars (x :: xs)
+AVars : Scope -> Type
+AVars = All (\_ => Int)
 
 data Next : Type where
 

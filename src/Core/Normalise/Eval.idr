@@ -10,11 +10,14 @@ import Core.TT
 import Core.Value
 
 import Data.List
+import Data.List.Quantifiers
+import Data.SnocList
 import Data.Maybe
 import Data.Nat
 import Data.String
 import Data.Vect
 
+import Libraries.Data.SnocList.Extra
 import Libraries.Data.WithDefault
 
 %default covering
@@ -23,7 +26,7 @@ import Libraries.Data.WithDefault
 -- from a term (via 'gnf') or a normal form (via 'glueBack') but the other
 -- part will only be constructed when needed, because it's in Core.
 public export
-data Glued : List Name -> Type where
+data Glued : Scoped where
      MkGlue : (fromTerm : Bool) -> -- is it built from the term; i.e. can
                                    -- we read the term straight back?
               Core (Term vars) -> (Ref Ctxt Defs -> Core (NF vars)) -> Glued vars
@@ -41,7 +44,7 @@ getNF : {auto c : Ref Ctxt Defs} -> Glued vars -> Core (NF vars)
 getNF {c} (MkGlue _ _ nf) = nf c
 
 public export
-Stack : List Name -> Type
+Stack : Scoped
 Stack vars = List (FC, Closure vars)
 
 evalWithOpts : {auto c : Ref Ctxt Defs} ->
@@ -60,7 +63,7 @@ evalArg defs c = evalClosure defs c
 
 export
 toClosure : EvalOpts -> Env Term outer -> Term outer -> Closure outer
-toClosure opts env tm = MkClosure opts [] env tm
+toClosure opts env tm = MkClosure opts LocalEnv.empty env tm
 
 updateLimit : NameType -> Name -> EvalOpts -> Core (Maybe EvalOpts)
 updateLimit Func n opts
@@ -85,11 +88,11 @@ data CaseResult a
      | NoMatch -- case alternative didn't match anything
      | GotStuck -- alternative matched, but got stuck later
 
-record TermWithEnv (free : List Name) where
+record TermWithEnv (free : Scope) where
     constructor MkTermEnv
-    { varsEnv : List Name }
+    { varsEnv : Scope }
     locEnv : LocalEnv free varsEnv
-    term : Term $ varsEnv ++ free
+    term : Term $ Scope.addInner free varsEnv
 
 parameters (defs : Defs) (topopts : EvalOpts)
   mutual
@@ -107,7 +110,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
         -- Yes, it's just a map, but specialising it by hand since we
         -- use this a *lot* and it saves the run time overhead of making
         -- a closure and calling APPLY.
-        closeArgs : List (Term (vars ++ free)) -> List (Closure free)
+        closeArgs : List (Term (Scope.addInner free vars)) -> List (Closure free)
         closeArgs [] = []
         closeArgs (t :: ts) = MkClosure topopts locs env t :: closeArgs ts
     eval env locs (Bind fc x (Lam _ r _ ty) scope) (thunk :: stk)
@@ -174,7 +177,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
         = evalRef env False fc nt fn (args ++ stk)
                   (NApp fc (NRef nt fn) (args ++ stk))
     applyToStack env (NApp fc (NLocal mrig idx p) args) stk
-        = evalLocal env fc mrig _ p (args ++ stk) []
+        = evalLocal env fc mrig _ p (args ++ stk) LocalEnv.empty
     applyToStack env (NApp fc (NMeta n i args) args') stk
         = evalMeta env fc n i args (args' ++ stk)
     applyToStack env (NDCon fc n t a args) stk
@@ -231,7 +234,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
              && fromMaybe True mrig
              then
                case getBinder prf env of
-                    Let _ _ val _ => eval env [] val stk
+                    Let _ _ val _ => eval env LocalEnv.empty val stk
                     _ => pure $ NApp fc (NLocal mrig idx prf) stk
              else pure $ NApp fc (NLocal mrig idx prf) stk
     evalLocal env fc mrig Z First stk (x :: locs)
@@ -315,10 +318,11 @@ parameters (defs : Defs) (topopts : EvalOpts)
                    pure nf
                 else pure def
 
+    -- TODO note the list of closures is stored RTL
     getCaseBound : List (Closure free) ->
-                   (args : List Name) ->
+                   (args : Scope) ->
                    LocalEnv free more ->
-                   Maybe (LocalEnv free (args ++ more))
+                   Maybe (LocalEnv free (Scope.addInner more args))
     getCaseBound []            []        loc = Just loc
     getCaseBound []            (_ :: _)  loc = Nothing -- mismatched arg length
     getCaseBound (arg :: args) []        loc = Nothing -- mismatched arg length
@@ -332,7 +336,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
                  Stack free ->
                  (args : List Name) ->
                  List (Closure free) ->
-                 CaseTree (args ++ more) ->
+                 CaseTree (Scope.addInner more args) ->
                  Core (CaseResult (TermWithEnv free))
     evalConAlt env loc opts fc stk args args' sc
          = do let Just bound = getCaseBound args' args loc
@@ -568,13 +572,13 @@ export
 nf : {auto c : Ref Ctxt Defs} ->
      {vars : _} ->
      Defs -> Env Term vars -> Term vars -> Core (NF vars)
-nf defs env tm = eval defs defaultOpts env [] tm []
+nf defs env tm = eval defs defaultOpts env LocalEnv.empty tm []
 
 export
 nfOpts : {auto c : Ref Ctxt Defs} ->
          {vars : _} ->
          EvalOpts -> Defs -> Env Term vars -> Term vars -> Core (NF vars)
-nfOpts opts defs env tm = eval defs opts env [] tm []
+nfOpts opts defs env tm = eval defs opts env LocalEnv.empty tm []
 
 export
 gnf : {vars : _} ->

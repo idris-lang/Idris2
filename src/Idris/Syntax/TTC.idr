@@ -18,47 +18,47 @@ import Libraries.Data.StringMap
 
 export
 TTC Method where
-  toBuf b (MkMethod nm c treq ty)
-      = do toBuf b nm
-           toBuf b c
-           toBuf b treq
-           toBuf b ty
+  toBuf (MkMethod nm c treq ty)
+      = do toBuf nm
+           toBuf c
+           toBuf treq
+           toBuf ty
 
-  fromBuf b
-      = do nm <- fromBuf b
-           c <- fromBuf b
-           treq <- fromBuf b
-           ty <- fromBuf b
+  fromBuf
+      = do nm <- fromBuf
+           c <- fromBuf
+           treq <- fromBuf
+           ty <- fromBuf
            pure (MkMethod nm c treq ty)
 
 
 export
 TTC IFaceInfo where
-  toBuf b (MkIFaceInfo ic impps ps cs ms ds)
-      = do toBuf b ic
-           toBuf b impps
-           toBuf b ps
-           toBuf b cs
-           toBuf b ms
-           toBuf b ds
+  toBuf (MkIFaceInfo ic impps ps cs ms ds)
+      = do toBuf ic
+           toBuf impps
+           toBuf ps
+           toBuf cs
+           toBuf ms
+           toBuf ds
 
-  fromBuf b
-      = do ic <- fromBuf b
-           impps <- fromBuf b
-           ps <- fromBuf b
-           cs <- fromBuf b
-           ms <- fromBuf b
-           ds <- fromBuf b
+  fromBuf
+      = do ic <- fromBuf
+           impps <- fromBuf
+           ps <- fromBuf
+           cs <- fromBuf
+           ms <- fromBuf
+           ds <- fromBuf
            pure (MkIFaceInfo ic impps ps cs ms ds)
 
 export
 TTC Fixity where
-  toBuf b InfixL = tag 0
-  toBuf b InfixR = tag 1
-  toBuf b Infix = tag 2
-  toBuf b Prefix = tag 3
+  toBuf InfixL = tag 0
+  toBuf InfixR = tag 1
+  toBuf Infix = tag 2
+  toBuf Prefix = tag 3
 
-  fromBuf b
+  fromBuf
       = case !getTag of
              0 => pure InfixL
              1 => pure InfixR
@@ -68,25 +68,25 @@ TTC Fixity where
 
 export
 TTC Import where
-  toBuf b (MkImport loc reexport path nameAs)
-    = do toBuf b loc
-         toBuf b reexport
-         toBuf b path
-         toBuf b nameAs
+  toBuf (MkImport loc reexport path nameAs)
+    = do toBuf loc
+         toBuf reexport
+         toBuf path
+         toBuf nameAs
 
-  fromBuf b
-    = do loc <- fromBuf b
-         reexport <- fromBuf b
-         path <- fromBuf b
-         nameAs <- fromBuf b
+  fromBuf
+    = do loc <- fromBuf
+         reexport <- fromBuf
+         path <- fromBuf
+         nameAs <- fromBuf
          pure (MkImport loc reexport path nameAs)
 
 export
 TTC BindingModifier where
-  toBuf b NotBinding = tag 0
-  toBuf b Typebind = tag 1
-  toBuf b Autobind = tag 2
-  fromBuf b
+  toBuf NotBinding = tag 0
+  toBuf Typebind = tag 1
+  toBuf Autobind = tag 2
+  fromBuf
       = case !getTag of
              0 => pure NotBinding
              1 => pure Typebind
@@ -95,46 +95,46 @@ TTC BindingModifier where
 
 export
 TTC FixityInfo where
-  toBuf b fx
-      = do toBuf b fx.fc
-           toBuf b fx.vis
-           toBuf b fx.bindingInfo
-           toBuf b fx.fix
-           toBuf b fx.precedence
-  fromBuf b
-      = do fc <- fromBuf b
-           vis <- fromBuf b
-           binding <- fromBuf b
-           fix <- fromBuf b
-           prec <- fromBuf b
+  toBuf fx
+      = do toBuf fx.fc
+           toBuf fx.vis
+           toBuf fx.bindingInfo
+           toBuf fx.fix
+           toBuf fx.precedence
+  fromBuf
+      = do fc <- fromBuf
+           vis <- fromBuf
+           binding <- fromBuf
+           fix <- fromBuf
+           prec <- fromBuf
            pure $ MkFixityInfo fc vis binding fix prec
 
 
 export
 TTC SyntaxInfo where
-  toBuf b syn
-      = do toBuf b (ANameMap.toList (fixities syn))
-           toBuf b (filter (\n => elemBy (==) (fst n) (saveMod syn))
+  toBuf syn
+      = do toBuf (ANameMap.toList (fixities syn))
+           toBuf (filter (\n => elemBy (==) (fst n) (saveMod syn))
                            (SortedMap.toList $ modDocstrings syn))
-           toBuf b (filter (\n => elemBy (==) (fst n) (saveMod syn))
+           toBuf (filter (\n => elemBy (==) (fst n) (saveMod syn))
                            (SortedMap.toList $ modDocexports syn))
-           toBuf b (filter (\n => fst n `elem` saveIFaces syn)
+           toBuf (filter (\n => fst n `elem` saveIFaces syn)
                            (ANameMap.toList (ifaces syn)))
-           toBuf b (filter (\n => isJust (lookup (fst n) (saveDocstrings syn)))
+           toBuf (filter (\n => isJust (lookup (fst n) (saveDocstrings syn)))
                            (ANameMap.toList (defDocstrings syn)))
-           toBuf b (bracketholes syn)
-           toBuf b (startExpr syn)
-           toBuf b (holeNames syn)
+           toBuf (bracketholes syn)
+           toBuf (startExpr syn)
+           toBuf (holeNames syn)
 
-  fromBuf b
-      = do fix <- fromBuf b
-           moddstr <- fromBuf b
-           modexpts <- fromBuf b
-           ifs <- fromBuf b
-           defdstrs <- fromBuf b
-           bhs <- fromBuf b
-           start <- fromBuf b
-           hnames <- fromBuf b
+  fromBuf
+      = do fix <- fromBuf
+           moddstr <- fromBuf
+           modexpts <- fromBuf
+           ifs <- fromBuf
+           defdstrs <- fromBuf
+           bhs <- fromBuf
+           start <- fromBuf
+           hnames <- fromBuf
            pure $ MkSyntax (fromList fix)
                    [] (fromList moddstr) (fromList modexpts)
                    [] (fromList ifs)

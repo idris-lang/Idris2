@@ -1,5 +1,6 @@
 . ../../testutils.sh
 
 idris2 --cg refc -o main Main.idr
+awk -v RS= '/Value \*Main_dupargs/' build/exec/main.c
 awk -v RS= '/Value \*Main_last/' build/exec/main.c
 awk -v RS= '/Value \*Main_main/' build/exec/main.c

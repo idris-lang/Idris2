@@ -81,7 +81,7 @@ Ord UsePhase where
 public export
 record CompileData where
   constructor MkCompileData
-  mainExpr : CExp [] -- main expression to execute. This also appears in
+  mainExpr : ClosedCExp -- main expression to execute. This also appears in
                      -- the definitions below as MN "__mainExpression" 0
                      -- For incremental compilation and for compiling exported
                      -- names only, this can be set to 'erased'.
@@ -145,15 +145,15 @@ getMinimalDef : ContextEntry -> Core (GlobalDef, Maybe (Namespace, Binary))
 getMinimalDef (Decoded def) = pure (def, Nothing)
 getMinimalDef (Coded ns bin)
     = do b <- newRef Bin bin
-         cdef <- fromBuf b
-         refsRList <- fromBuf b
+         cdef <- fromBuf
+         refsRList <- fromBuf
          let refsR = map fromList refsRList
-         fc <- fromBuf b
-         mul <- fromBuf b
-         name <- fromBuf b
+         fc <- fromBuf
+         mul <- fromBuf
+         name <- fromBuf
          let def
              = MkGlobalDef fc name (Erased fc Placeholder) [] [] [] [] mul
-                           [] (specified Public) (MkTotality Unchecked IsCovering) False
+                           Scope.empty (specified Public) (MkTotality Unchecked IsCovering) False
                            [] Nothing refsR False False True
                            None cdef Nothing [] Nothing
          pure (def, Just (ns, bin))
@@ -355,8 +355,8 @@ getCompileDataWith exports doLazyAnnots phase_in tm_in
                               traverse (lambdaLift doLazyAnnots) cseDefs
                          else pure []
 
-         let lifted = (mainname, MkLFun [] [] liftedtm) ::
-                      ldefs ++ concat lifted_in
+         let lifted = (mainname, MkLFun Scope.empty Scope.empty liftedtm) ::
+                      (ldefs ++ concat lifted_in)
 
          anf <- if phase >= ANF
                    then logTime 2 "Get ANF" $ traverse (\ (n, d) => pure (n, !(toANF d))) lifted
@@ -412,7 +412,7 @@ getCompileData = getCompileDataWith []
 
 export
 compileTerm : {auto c : Ref Ctxt Defs} ->
-              ClosedTerm -> Core (CExp [])
+              ClosedTerm -> Core ClosedCExp
 compileTerm tm_in
     = do tm <- toFullNames tm_in
          fixArityExp !(compileExp tm)

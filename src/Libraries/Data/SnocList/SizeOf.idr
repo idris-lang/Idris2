@@ -3,6 +3,7 @@ module Libraries.Data.SnocList.SizeOf
 import Data.List
 import Data.SnocList
 import Data.List.HasLength
+import Libraries.Data.SnocList.Extra
 import Libraries.Data.SnocList.HasLength
 
 ---------------------------------------
@@ -36,7 +37,15 @@ public export
 (:<) : SizeOf as -> (0 a : _) -> SizeOf (as :< a)
 MkSizeOf n p :< _ = MkSizeOf (S n) (S p)
 
--- ||| suc but from the left
+public export
+zero : SizeOf [<]
+zero = MkSizeOf Z Z
+
+public export
+suc : SizeOf as -> SizeOf (as :< a)
+suc (MkSizeOf n p) = MkSizeOf (S n) (S p)
+
+-- ||| suc but from the right
 export
 sucL : SizeOf as -> SizeOf ([<a] ++ as)
 sucL (MkSizeOf n p) = MkSizeOf (S n) (sucL p)
@@ -74,7 +83,7 @@ map (MkSizeOf n p) = MkSizeOf n (cast (sym $ lengthMap sx) p) where
   lengthMap (sx :< x) = cong S (lengthMap sx)
 
 {-
-export
+public export
 take : {n : Nat} -> {0 sx : Stream a} -> SizeOf (take n sx)
 take = MkSizeOf n (take n sx)
 -}

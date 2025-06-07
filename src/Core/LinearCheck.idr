@@ -12,33 +12,20 @@ import Core.Value
 import Core.TT
 
 import Data.List
+import Data.SnocList
 
+import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.SizeOf
 
 %default covering
 
 -- List of variable usages - we'll count the contents of specific variables
 -- when discharging binders, to ensure that linear names are only used once
-data Usage : List Name -> Type where
-     Nil : Usage vars
-     (::) : Var vars -> Usage vars -> Usage vars
-
-Show (Usage vars) where
-  show xs = "[" ++ showAll xs ++ "]"
-    where
-      showAll : Usage vs -> String
-      showAll [] = ""
-      showAll [el] = show el
-      showAll (x :: xs) = show x ++ ", " ++ show xs
+Usage : Scoped
+Usage vars = List (Var vars)
 
 doneScope : Usage (n :: vars) -> Usage vars
-doneScope [] = []
-doneScope (MkVar First :: xs) = doneScope xs
-doneScope (MkVar (Later p) :: xs) = MkVar p :: doneScope xs
-
-(++) : Usage ns -> Usage ns -> Usage ns
-(++) [] ys = ys
-(++) (x :: xs) ys = x :: xs ++ ys
+doneScope = mapMaybe isLater
 
 count : Nat -> Usage ns -> Nat
 count p [] = 0
@@ -185,13 +172,9 @@ mutual
                when (not erase) $ rigSafe rigb rig
                pure (Local fc x idx prf, gnf env ty, used rig)
     where
-      getName : {idx : _} -> (vs : List Name) -> (0 p : IsVar n idx vs) -> Name
-      getName (x :: _) First = x
-      getName (x :: xs) (Later p) = getName xs p
-
       rigSafe : RigCount -> RigCount -> Core ()
       rigSafe l r = when (l < r)
-                         (throw (LinearMisuse fc (getName vars prf) l r))
+                         (throw (LinearMisuse fc (nameAt prf) l r))
 
       -- count the usage if we're in a linear context. If not, the usage doesn't
       -- matter
@@ -267,7 +250,7 @@ mutual
            holeFound <- if not erase && isLinear (multiplicity b)
                            then updateHoleUsage (used_in == 0)
                                          (MkVar First)
-                                         (map weaken (getZeroes env'))
+                                         (map weaken (getErased env'))
                                          sc'
                            else pure False
 
@@ -293,20 +276,6 @@ mutual
                  _ => if isErased rig_in
                          then erased
                          else linear
-
-      getZeroes : {vs : _} -> Env Term vs -> List (Var vs)
-      getZeroes [] = []
-      getZeroes (b :: bs)
-          = if isErased (multiplicity b)
-               then MkVar First :: map weaken (getZeroes bs)
-               else map weaken (getZeroes bs)
-
-      eraseLinear : Env Term vs -> Env Term vs
-      eraseLinear [] = []
-      eraseLinear (b :: bs)
-          = if isLinear (multiplicity b)
-               then setMultiplicity b erased :: eraseLinear bs
-               else b :: eraseLinear bs
 
       checkUsageOK : Nat -> RigCount -> Core ()
       checkUsageOK used r = when (isLinear r && used /= 1)
@@ -646,7 +615,7 @@ mutual
                Name -> Int -> Def -> List (Term vars) ->
                Core (Term vars, Glued vars, Usage vars)
   expandMeta rig erase env n idx (PMDef _ [] (STerm _ fn) _ _) args
-      = do tm <- substMeta (embed fn) args zero []
+      = do tm <- substMeta (embed fn) args zero Subst.empty
            lcheck rig erase env tm
     where
       substMeta : {drop, vs : _} ->

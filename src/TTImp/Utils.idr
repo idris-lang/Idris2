@@ -290,6 +290,7 @@ findIBindVars tm = []
 
 mutual
   -- Substitute for either an explicit variable name, or a bound variable name
+  -- TODO association list should be map (should the `List Name` be a set as well?)
   substNames' : Bool -> List Name -> List (Name, RawImp) ->
                 RawImp -> RawImp
   substNames' False bound ps (IVar fc n)
@@ -511,6 +512,7 @@ unNameNum (str, Nothing) = str
 unNameNum (str, Just n) = fastConcat [str, "_", show n]
 
 
+-- TODO use a set of `String`s
 export
 uniqueBasicName : Defs -> List String -> String -> Core String
 uniqueBasicName defs used n

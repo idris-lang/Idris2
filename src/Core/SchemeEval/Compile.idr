@@ -20,6 +20,8 @@ import Core.SchemeEval.ToScheme
 import Core.TT
 
 import Data.List
+import Data.List.Quantifiers
+import Data.SnocList
 
 import Libraries.Utils.Scheme
 import System.Info
@@ -78,13 +80,13 @@ getName (Bound x) = x
 getName (Free x) = x
 
 public export
-data SchVars : List Name -> Type where
-     Nil : SchVars []
-     (::) : SVar -> SchVars ns -> SchVars (n :: ns)
+SchVars : Scoped
+SchVars = All (\_ => SVar)
 
 Show (SchVars ns) where
   show xs = show (toList xs)
     where
+      -- TODO move to Data.List.Quantifiers
       toList : forall ns . SchVars ns -> List String
       toList [] = []
       toList (Bound x :: xs) = x :: toList xs
@@ -477,7 +479,7 @@ varObjs : SchVars ns -> List (SchemeObj Write)
 varObjs [] = []
 varObjs (x :: xs) = Var (show x) :: varObjs xs
 
-mkArgs : (ns : List Name) -> Core (SchVars ns)
+mkArgs : (ns : Scope) -> Core (SchVars ns)
 mkArgs [] = pure []
 mkArgs (x :: xs)
     = pure $ Bound (schVarName x) :: !(mkArgs xs)

@@ -10,6 +10,7 @@ import Libraries.Data.SortedSet
 
 %default covering
 
+-- TODO fix future type error
 export
 unBinds : Term vars -> Exists (\ outer => Term (outer <>> vars))
 unBinds (Bind _ x _ scope) = let (Evidence outer t) = unBinds scope in

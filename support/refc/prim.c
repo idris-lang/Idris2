@@ -233,3 +233,4 @@ char const idris2_constr_Double[] = "Double";
 char const idris2_constr_Integer[] = "Integer";
 char const idris2_constr_Char[] = "Char";
 char const idris2_constr_String[] = "String";
+char const idris2_constr____gt[] = "->";

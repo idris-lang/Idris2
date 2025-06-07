@@ -96,7 +96,7 @@ extendSyn newsyn
                     modDocstrings $= mergeLeft (modDocstrings newsyn),
                     modDocexports $= mergeLeft (modDocexports newsyn),
                     defDocstrings $= merge (defDocstrings newsyn),
-                    bracketholes $= ((bracketholes newsyn) ++) }
+                    bracketholes $= sortedNub . ((bracketholes newsyn) ++) }
                   syn)
   where
     removePrivate : ANameMap FixityInfo -> ANameMap FixityInfo

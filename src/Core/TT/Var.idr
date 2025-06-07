@@ -9,9 +9,14 @@ import Data.Vect
 
 import Core.Name
 import Core.Name.Scoped
+import Core.Name.CompatibleVars
 
 import Libraries.Data.SnocList.HasLength
 import Libraries.Data.SnocList.SizeOf
+
+import Data.List.HasLength
+import Libraries.Data.List.HasLength
+import Libraries.Data.List.SizeOf
 
 import Libraries.Data.Erased
 
@@ -19,6 +24,8 @@ import Libraries.Data.Erased
 
 ------------------------------------------------------------------------
 -- IsVar Predicate
+
+-- TODO need a copy of `IsVar` for both
 
 ||| IsVar n k ns is a proof that
 ||| the name n
@@ -163,7 +170,7 @@ Eq (Var xs) where
 
 ||| Removing var 0, strengthening all the other ones
 export
-dropFirst : List (Var (n :: vs)) -> List (Var vs)
+dropFirst : List (Var (Scope.bind vs n)) -> List (Var vs)
 dropFirst = List.mapMaybe isLater
 
 ||| Manufacturing a thinning from a list of variables to keep

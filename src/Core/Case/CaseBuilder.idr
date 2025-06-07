@@ -14,10 +14,18 @@ import Core.Value
 import Idris.Pretty.Annotations
 
 import Data.List
+import Data.List.Quantifiers
+import Data.SnocList
 import Data.String
 import Data.Vect
+import Libraries.Data.List.SizeOf
 import Libraries.Data.List.LengthMatch
+import Libraries.Data.List.Quantifiers.Extra as Lib
 import Libraries.Data.SortedSet
+import Libraries.Data.SnocList.SizeOf
+import Libraries.Data.SnocList.LengthMatch
+import Libraries.Data.SnocList.HasLength
+import Libraries.Data.SnocList.Extra
 
 import Decidable.Equality
 
@@ -35,7 +43,7 @@ Eq Phase where
   RunTime == RunTime = True
   _ == _ = False
 
-data ArgType : List Name -> Type where
+data ArgType : Scoped where
      Known : RigCount -> (ty : Term vars) -> ArgType vars -- arg has type 'ty'
      Stuck : (fty : Term vars) -> ArgType vars
          -- ^ arg will have argument type of 'fty' when we know enough to
@@ -59,7 +67,7 @@ covering
   show (Stuck t) = "Stuck " ++ show t
   show Unknown = "Unknown"
 
-record PatInfo (pvar : Name) (vars : List Name) where
+record PatInfo (pvar : Name) (vars : Scope) where
   constructor MkInfo
   {idx : Nat}
   {name : Name}
@@ -94,16 +102,16 @@ NamedPats always have the same 'Elem' proof, though this isn't expressed in
 a type anywhere.
 -}
 
-data NamedPats : List Name -> -- pattern variables still to process
-                 List Name -> -- the pattern variables still to process,
-                              -- in order
-                 Type where
-     Nil : NamedPats vars []
-     (::) : PatInfo pvar vars ->
-            -- ^ a pattern, where its variable appears in the vars list,
-            -- and its type. The type has no variable names; any names it
-            -- refers to are explicit
-            NamedPats vars ns -> NamedPats vars (pvar :: ns)
+-- TODO swap arguments to make it `Scoped`
+NamedPats : Scope -> -- local scope
+            List Name -> -- the pattern variables still to process,
+                         -- in order
+            Type
+NamedPats vars
+  = All (\pvar => PatInfo pvar vars)
+               -- ^ a pattern, where its variable appears in the vars list,
+               -- and its type. The type has no variable names; any names it
+               -- refers to are explicit
 
 getPatInfo : NamedPats vars todo -> List Pat
 getPatInfo [] = []
@@ -193,9 +201,9 @@ covering
     where
       showAll : {vs, ts : _} -> NamedPats vs ts -> String
       showAll [] = ""
-      showAll {ts = t :: _ } [x]
+      showAll {ts = t :: _} [x]
           = show t ++ " " ++ show (pat x) ++ " [" ++ show (argType x) ++ "]"
-      showAll {ts = t :: _ } (x :: xs)
+      showAll {ts = t :: _} (x :: xs)
           = show t ++ " " ++ show (pat x) ++ " [" ++ show (argType x) ++ "]"
                      ++ ", " ++ showAll xs
 
@@ -204,7 +212,7 @@ covering
     where
       prettyAll : {vs, ts : _} -> NamedPats vs ts -> List (Doc IdrisSyntax)
       prettyAll [] = []
-      prettyAll {ts = t :: _ } (x :: xs)
+      prettyAll {ts = t :: _} (x :: xs)
           = parens (pretty0 t <++> equals <++> pretty (pat x))
           :: prettyAll xs
 
@@ -217,10 +225,14 @@ Weaken ArgType where
   weakenNs s (Stuck fty) = Stuck (weakenNs s fty)
   weakenNs s Unknown = Unknown
 
+GenWeaken ArgType where
+  genWeakenNs p q Unknown = Unknown
+  genWeakenNs p q (Known c ty) = Known c $ genWeakenNs p q ty
+  genWeakenNs p q (Stuck fty) = Stuck $ genWeakenNs p q fty
+
 Weaken (PatInfo p) where
   weakenNs s (MkInfo p el fty) = MkInfo p (weakenIsVar s el) (weakenNs s fty)
 
--- FIXME: perhaps 'vars' should be second argument so we can use Weaken interface
 weaken : {x, vars : _} ->
          NamedPats vars todo -> NamedPats (x :: vars) todo
 weaken [] = []
@@ -233,18 +245,11 @@ weakenNs ns [] = []
 weakenNs ns (p :: ps)
     = weakenNs ns p :: weakenNs ns ps
 
-(++) : NamedPats vars ms -> NamedPats vars ns -> NamedPats vars (ms ++ ns)
-(++) [] ys = ys
-(++) (x :: xs) ys = x :: xs ++ ys
+FreelyEmbeddable (PatInfo p) where
 
-tail : NamedPats vars (p :: ps) -> NamedPats vars ps
-tail (x :: xs) = xs
+FreelyEmbeddable ArgType where
 
-take : (as : List Name) -> NamedPats vars (as ++ bs) -> NamedPats vars as
-take [] ps = []
-take (x :: xs) (p :: ps) = p :: take xs ps
-
-data PatClause : (vars : List Name) -> (todo : List Name) -> Type where
+data PatClause : (vars : Scope) -> (todo : List Name) -> Type where
      MkPatClause : List Name -> -- names matched so far (from original lhs)
                    NamedPats vars todo ->
                    Int -> (rhs : Term vars) -> PatClause vars todo
@@ -384,7 +389,7 @@ conTypeEq CDelay CDelay = Just Refl
 conTypeEq (CConst x) (CConst y) = (\xy => cong CConst xy) <$> constantEq x y
 conTypeEq _ _ = Nothing
 
-data Group : List Name -> -- variables in scope
+data Group : Scope -> -- variables in scope
              List Name -> -- pattern variables still to process
              Type where
      ConGroup : {newargs : _} ->
@@ -542,7 +547,7 @@ groupCons fc fn pvars cs
                                         (weakenNs l pats)
              let clause = MkPatClause {todo = patnames ++ todo'}
                               pvars
-                              (newargs ++ pats')
+                              (newargs `Lib.(++)` pats')
                               pid (weakenNs l rhs)
              pure [ConGroup n tag [clause]]
     addConG {vars'} {todo'} n tag pargs pats pid rhs (g :: gs) with (checkGroupMatch (CName n tag) pargs g)
@@ -555,7 +560,7 @@ groupCons fc fn pvars cs
                                         (weakenNs l pats)
              let newclause : PatClause (newargs ++ vars') (newargs ++ todo')
                    = MkPatClause pvars
-                                 (newps ++ pats')
+                                 (newps `Lib.(++)` pats')
                                  pid
                                  (weakenNs l rhs)
              -- put the new clause at the end of the group, since we
@@ -588,7 +593,7 @@ groupCons fc fn pvars cs
                                                       (argname, parg)])
                                         (weakenNs l pats)
              let clause = MkPatClause {todo = tyname :: argname :: todo'}
-                             pvars (newargs ++  pats')
+                             pvars (newargs `Lib.(++)` pats')
                                    pid (weakenNs l rhs)
              pure [DelayGroup [clause]]
     addDelayG {vars'} {todo'} pty parg pats pid rhs (g :: gs) with (checkGroupMatch CDelay [] g)
@@ -602,7 +607,7 @@ groupCons fc fn pvars cs
                                          (weakenNs l pats)
               let newclause : PatClause (tyarg :: valarg :: vars')
                                         (tyarg :: valarg :: todo')
-                    = MkPatClause pvars (newps ++ pats') pid
+                    = MkPatClause pvars (newps `Lib.(++)` pats') pid
                                         (weakenNs l rhs)
               pure ((DelayGroup (MkPatClause pvars ps tid tm :: rest ++ [newclause]))
                          :: gs)
@@ -673,7 +678,7 @@ getFirstArgType (p :: _) = argType p
 
 ||| Store scores alongside rows of named patterns. These scores are used to determine
 ||| which column of patterns to switch on first. One score per column.
-data ScoredPats : List Name -> List Name -> Type where
+data ScoredPats : Scope -> List Name -> Type where
  Scored : List (NamedPats ns (p :: ps)) -> Vect (length (p :: ps)) Int -> ScoredPats ns (p :: ps)
 
 {ps : _} -> Show (ScoredPats ns ps) where
@@ -682,27 +687,20 @@ data ScoredPats : List Name -> List Name -> Type where
 zeroedScore : {ps : _} -> List (NamedPats ns (p :: ps)) -> ScoredPats ns (p :: ps)
 zeroedScore nps = Scored nps (replicate (S $ length ps) 0)
 
-||| Proof that a value `v` inserted in the middle of a list with
-||| prefix `ps` and suffix `qs` can equivalently be snoced with
-||| `ps` or consed with `qs` before appending `qs` to `ps`.
-elemInsertedMiddle : (v : a) -> (ps,qs : List a) -> (ps ++ (v :: qs)) = ((ps `snoc` v) ++ qs)
-elemInsertedMiddle v [] qs = Refl
-elemInsertedMiddle v (x :: xs) qs = rewrite elemInsertedMiddle v xs qs in Refl
-
 ||| Helper to find a single highest scoring name (or none at all) while
 ||| retaining the context of all names processed.
 highScore : {prev : List Name} ->
-            (names : List Name) ->
+            (names : Scope) ->
             (scores : Vect (length names) Int) ->
             (highVal : Int) ->
-            (highIdx : (n ** NVar n (prev ++ names))) ->
+            (highIdx : (n ** NVar n (prev ++ names))) -> -- TODO should be `names <>< prev`
             (duped : Bool) ->
             Maybe (n ** NVar n (prev ++ names))
 highScore [] [] high idx True = Nothing
 highScore [] [] high idx False = Just idx
 highScore (x :: xs) (y :: ys) high idx duped =
   let next = highScore {prev = prev `snoc` x} xs ys
-      prf = elemInsertedMiddle x prev xs
+      prf = appendAssociative prev [x] xs
   in  rewrite prf in
         case compare y high of
              LT => next high (rewrite sym $ prf in idx) duped
@@ -934,7 +932,7 @@ pickNextViable {ps = q :: qs} fc phase fn npss
          then pure (_ ** MkNVar First)
          else  case !(getScore fc phase fn npss) of
                     Right () => pure (_ ** MkNVar First)
-                    _ => do (_ ** MkNVar var) <- pickNextViable fc phase fn (map tail npss)
+                    _ => do (_ ** MkNVar var) <- pickNextViable fc phase fn (map Lib.tail npss)
                             pure (_ ** MkNVar (Later var))
 
 moveFirst : {idx : Nat} -> (0 el : IsVar nm idx ps) -> NamedPats ns ps ->
@@ -1091,7 +1089,7 @@ mkPat args orig (Ref fc (DataCon t a) n) = pure $ PCon fc n t a args
 mkPat args orig (Ref fc (TyCon t a) n) = pure $ PTyCon fc n a args
 mkPat args orig (Ref fc Func n)
   = do prims <- getPrimitiveNames
-       mtm <- normalisePrims (const True) isPConst True prims n args orig []
+       mtm <- normalisePrims (const True) isPConst True prims n args orig Env.empty
        case mtm of
          Just tm => if tm /= orig -- check we made progress; if there's an
                                   -- unresolved interface, we might be stuck
@@ -1133,14 +1131,14 @@ argToPat tm = mkPat [] tm tm
 
 mkPatClause : {auto c : Ref Ctxt Defs} ->
               FC -> Name ->
-              (args : List Name) -> ClosedTerm ->
+              (args : Scope) -> ClosedTerm ->
               Int -> (List Pat, ClosedTerm) ->
               Core (PatClause args args)
 mkPatClause fc fn args ty pid (ps, rhs)
     = maybe (throw (CaseCompile fc fn DifferingArgNumbers))
             (\eq =>
                do defs <- get Ctxt
-                  nty <- nf defs [] ty
+                  nty <- nf defs Env.empty ty
                   ns <- mkNames args ps eq (Just nty)
                   log "compile.casetree" 20 $
                     "Make pat clause for names " ++ show ns
@@ -1150,7 +1148,7 @@ mkPatClause fc fn args ty pid (ps, rhs)
                                    (weakenNs (mkSizeOf args) rhs))))
             (checkLengthMatch args ps)
   where
-    mkNames : (vars : List Name) -> (ps : List Pat) ->
+    mkNames : (vars : Scope) -> (ps : List Pat) ->
               LengthMatch vars ps -> Maybe (NF []) ->
               Core (NamedPats vars vars)
     mkNames [] [] NilMatch fty = pure []
@@ -1175,11 +1173,11 @@ export
 patCompile : {auto c : Ref Ctxt Defs} ->
              FC -> Name -> Phase ->
              ClosedTerm -> List (List Pat, ClosedTerm) ->
-             Maybe (CaseTree []) ->
+             Maybe (CaseTree Scope.empty) ->
              Core (args ** CaseTree args)
 patCompile fc fn phase ty [] def
-    = maybe (pure ([] ** Unmatched "No definition"))
-            (\e => pure ([] ** e))
+    = maybe (pure (Scope.empty ** Unmatched "No definition"))
+            (\e => pure (Scope.empty ** e))
             def
 patCompile fc fn phase ty (p :: ps) def
     = do let (ns ** n) = getNames 0 (fst p)
@@ -1197,7 +1195,7 @@ patCompile fc fn phase ty (p :: ps) def
                                  map (weakenNs n) def)
          pure (_ ** cases)
   where
-    mkPatClausesFrom : Int -> (args : List Name) ->
+    mkPatClausesFrom : Int -> (args : Scope) ->
                        List (List Pat, ClosedTerm) ->
                        Core (List (PatClause args args))
     mkPatClausesFrom i ns [] = pure []
@@ -1206,7 +1204,7 @@ patCompile fc fn phase ty (p :: ps) def
              ps' <- mkPatClausesFrom (i + 1) ns ps
              pure (p' :: ps')
 
-    getNames : Int -> List Pat -> (ns : List Name ** SizeOf ns)
+    getNames : Int -> List Pat -> (ns : Scope ** SizeOf ns)
     getNames i [] = ([] ** zero)
     getNames i (x :: xs) =
       let (ns ** n) = getNames (i + 1) xs
@@ -1231,7 +1229,7 @@ toPatClause fc n (lhs, rhs)
 -- the names of the top level variables we created are returned in 'args'
 export
 simpleCase : {auto c : Ref Ctxt Defs} ->
-             FC -> Phase -> Name -> ClosedTerm -> (def : Maybe (CaseTree [])) ->
+             FC -> Phase -> Name -> ClosedTerm -> (def : Maybe (CaseTree Scope.empty)) ->
              (clauses : List (ClosedTerm, ClosedTerm)) ->
              Core (args ** CaseTree args)
 simpleCase fc phase fn ty def clauses
@@ -1340,12 +1338,12 @@ getPMDef : {auto c : Ref Ctxt Defs} ->
 getPMDef fc phase fn ty []
     = do log "compile.casetree.getpmdef" 20 "getPMDef: No clauses!"
          defs <- get Ctxt
-         pure (!(getArgs 0 !(nf defs [] ty)) ** (Unmatched "No clauses", []))
+         pure (!(getArgs 0 !(nf defs Env.empty ty)) ** (Unmatched "No clauses", []))
   where
-    getArgs : Int -> NF [] -> Core (List Name)
+    getArgs : Int -> ClosedNF -> Core (List Name)
     getArgs i (NBind fc x (Pi _ _ _ _) sc)
         = do defs <- get Ctxt
-             sc' <- sc defs (toClosure defaultOpts [] (Erased fc Placeholder))
+             sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
              pure (MN "arg" i :: !(getArgs i sc'))
     getArgs i _ = pure []
 getPMDef fc phase fn ty clauses

@@ -147,7 +147,8 @@ typedef struct {
 
 typedef struct {
   Value_header header;
-  Value *(*f)();
+  // function type depends on arity, see idris2_dispatch_closure
+  void *f;
   uint8_t arity;
   uint8_t filled; // length of args.
   Value *args[];

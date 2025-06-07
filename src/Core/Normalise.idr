@@ -18,7 +18,7 @@ import Core.Value
 -- reduce
 export
 normalisePis : {auto c : Ref Ctxt Defs} ->
-               {vars : List Name} ->
+               {vars : Scope} ->
                Defs -> Env Term vars -> Term vars -> Core (Term vars)
 normalisePis defs env tm
     = do tmnf <- nf defs env tm
@@ -233,7 +233,7 @@ logEnv s n msg env
 
   where
 
-    dumpEnv : {vs : List Name} -> Env Term vs -> Core ()
+    dumpEnv : {vs : Scope} -> Env Term vs -> Core ()
     dumpEnv [] = pure ()
     dumpEnv {vs = x :: _} (Let _ c val ty :: bs)
         = do logTermNF' s n (msg ++ ": let " ++ show x) bs val

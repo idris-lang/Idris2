@@ -11,17 +11,22 @@ import Core.TT
 import Core.Value
 
 import Data.List
+import Data.SnocList
+
+import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.HasLength
+import Libraries.Data.SnocList.SizeOf
 
 %default covering
 
 public export
 interface Convert tm where
   convert : {auto c : Ref Ctxt Defs} ->
-            {vars : List Name} ->
+            {vars : Scope} ->
             Defs -> Env Term vars ->
             tm vars -> tm vars -> Core Bool
   convertInf : {auto c : Ref Ctxt Defs} ->
-               {vars : List Name} ->
+               {vars : Scope} ->
                Defs -> Env Term vars ->
                tm vars -> tm vars -> Core Bool
 
@@ -319,29 +324,36 @@ mutual
           else pure False
   chkConvHead q i defs env _ _ = pure False
 
+  convPiInfo : {auto c : Ref Ctxt Defs} ->
+               {vars : _} ->
+               Ref QVar Int -> Bool -> Defs -> Env Term vars ->
+               PiInfo (Closure vars) -> PiInfo (Closure vars) -> Core Bool
+  convPiInfo q i defs env Implicit Implicit = pure True
+  convPiInfo q i defs env Explicit Explicit = pure True
+  convPiInfo q i defs env AutoImplicit AutoImplicit = pure True
+  convPiInfo q i defs env (DefImplicit x) (DefImplicit y) = convGen q i defs env x y
+  convPiInfo q i defs env _ _ = pure False
+
   convBinders : {auto c : Ref Ctxt Defs} ->
                 {vars : _} ->
                 Ref QVar Int -> Bool -> Defs -> Env Term vars ->
                 Binder (Closure vars) -> Binder (Closure vars) -> Core Bool
-  convBinders q i defs env (Pi _ cx ix tx) (Pi _ cy iy ty)
-      = if cx /= cy
-           then pure False
-           else convGen q i defs env tx ty
-  convBinders q i defs env (Lam _ cx ix tx) (Lam _ cy iy ty)
-      = if cx /= cy
-           then pure False
-           else convGen q i defs env tx ty
   convBinders q i defs env bx by
-      = if multiplicity bx /= multiplicity by
-           then pure False
-           else convGen q i defs env (binderType bx) (binderType by)
-
+    = if sameBinders bx by && multiplicity bx == multiplicity by
+         then allM id [ convPiInfo q i defs env (piInfo bx) (piInfo by)
+                      , convGen q i defs env (binderType bx) (binderType by)]
+         else pure False
+    where
+      sameBinders : Binder (Closure vars) -> Binder (Closure vars) -> Bool
+      sameBinders (Pi {}) (Pi {}) = True
+      sameBinders (Lam {}) (Lam {}) = True
+      sameBinders _ _ = False
 
   export
   Convert NF where
     convGen q i defs env (NBind fc x b sc) (NBind _ x' b' sc')
         = do var <- genName "conv"
-             let c = MkClosure defaultOpts [] env (Ref fc Bound var)
+             let c = MkClosure defaultOpts LocalEnv.empty env (Ref fc Bound var)
              bok <- convBinders q i defs env b b'
              if bok
                 then do bsc <- sc defs c

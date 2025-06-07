@@ -87,6 +87,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Elaborator scripts were made to be able to get pretty-printed resugared expressions.
 
+* Fixed unification and conversion of binders with different `PiInfo`.
+
 ### Compiler changes
 
 * The compiler now differentiates between "package search path" and "package
@@ -126,6 +128,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * [Djot](https://djot.net/) files can now be compiled as CommonMark style
   Literate Idris files.
+
+* Fixed a bug that caused `ttc` size to grow exponentially.
 
 ### Backend changes
 
@@ -173,6 +177,10 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Constant `String`, `Int64`, `Bits64` and `Double` values are allocated statically as
   immortal and shared.
+
+* A constant string for the representation of Pi type constructor is defined in
+  the support library. Code that creates or pattern-matches on Pi types at
+  runtime will now build instead of being rejected by the C compiler.
 
 #### Chez
 
@@ -296,6 +304,15 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * `unrestricted`, for unpacking a `!* a`, now uses its argument once
 
+* Added default definitions for `zipWith3` and `unzipWith3` in `Zippable`
+  interface.
+
+* `Quantifiers` modules for `List`, `Vect`, `LazyList`, `List1` and `SnocList`
+  are harmonised among each other. Also, several existing functions related only to
+  `All` were moved to appropriate namespace. Couple new functions for `Any` were added.
+
+* Add a function `altAll` connecting `All` to `Any` using `Alternative` to all `Quantifiers` modules.
+
 #### Contrib
 
 * `Data.Vect.Views.Extra` was moved from `contrib` to `base`.
@@ -335,10 +352,14 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * `prim__makeFuture` from `System.Future` is reimplemented as `%foreign` instead of
   using now removed `MakeFuture` primitive
 
+* The documentation for `Data.Validated.ValidatedL` has been corrected to reflect that
+  it uses a `List1` as an error accumulator, not a `List`.
+
 #### Network
 
 * Add a missing function parameter (the flag) in the C implementation of `idrnet_recv_bytes`
-* Merge callbacks in linear `newSocket` into one single, linear callback
+* Merge callbacks in linear `newSocket` into one single, linear callback,
+  and allow the callback to produce any value
 
 #### Test
 
