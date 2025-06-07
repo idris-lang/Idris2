@@ -1,9 +1,9 @@
 ***********************************
-Javascript and Node Code Generators
+Javascript (Browser and Node) Code Generators
 ***********************************
 
-There are two javascript code generators, ``node`` and ``javascript``. There are two
-differences between the two: the ``javascript`` code generator when called to
+There are two javascript code generators, ``node`` and ``browser`` (also aliased ``javascript``). There are two
+differences between the two: the ``browser`` code generator when called to
 output an HTML file will also generate a basic HTML document with the
 generated code inside a ``<script>`` tag; the other distinction is on the ffi
 that will be explained below.
@@ -30,11 +30,19 @@ expression.
 
 
 .. code-block:: idris
+    module My.Module
 
-    %foreign "node:lambda:fp=>require('fs').fstatSync(fp.fd, {bigint: false}).size"
+    %foreign "node:support"
     prim__fileSize : FilePtr -> PrimIO Int
 
-``require`` can be used to import javascript modules.
+And in `./support/node/My.Module.js`
+
+.. code-block:: js
+    import fs from 'node:fs'
+
+    export const prim__fileSize = fp => fs.fstatSync(fp.fd, {bigint: false}).size
+
+``require`` cannot be used to import javascript modules.
 
 For completion below an example of a foreign available only with ``browser`` codegen:
 
@@ -223,7 +231,7 @@ about how compact and obfusacted the generated code should be.
 The following examples show the code generated for the ``putStr``
 function from the prelude for each of the three directives.
 (``--cg node`` is used in the examples below, but the behavior is
-the same when generating code to be run in browsers with ``--cg javascript``).
+the same when generating code to be run in browsers with ``--cg browser`` or ``--cg javascript``).
 
 With ``idris2 --cg node --directive pretty`` (the default, if no directive is
 given), a basic pretty printer is used to generate properly indented

@@ -58,8 +58,8 @@ data CG = Chez
         | ChezSep
         | Racket
         | Gambit
-        | Node
-        | Javascript
+        | NodeJavascript
+        | BrowserJavascript
         | RefC
         | VMCodeInterp
         | Other String
@@ -70,8 +70,8 @@ Eq CG where
   ChezSep == ChezSep = True
   Racket == Racket = True
   Gambit == Gambit = True
-  Node == Node = True
-  Javascript == Javascript = True
+  NodeJavascript == NodeJavascript = True
+  BrowserJavascript == BrowserJavascript = True
   RefC == RefC = True
   VMCodeInterp == VMCodeInterp = True
   Other s == Other t = s == t
@@ -83,8 +83,8 @@ Show CG where
   show ChezSep = "chez-sep"
   show Racket = "racket"
   show Gambit = "gambit"
-  show Node = "node"
-  show Javascript = "javascript"
+  show NodeJavascript = "node"
+  show BrowserJavascript = "browser"
   show RefC = "refc"
   show VMCodeInterp = "vmcode-interp"
   show (Other s) = s
@@ -207,8 +207,9 @@ availableCGs o
     = [("chez", Chez),
        ("chez-sep", ChezSep),
        ("racket", Racket),
-       ("node", Node),
-       ("javascript", Javascript),
+       ("node", NodeJavascript),
+       ("browser", BrowserJavascript),
+       ("javascript", BrowserJavascript), -- deprecate?
        ("refc", RefC),
        ("gambit", Gambit),
        ("vmcode-interp", VMCodeInterp)] ++ additionalCGs o

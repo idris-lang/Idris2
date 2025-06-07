@@ -4,12 +4,10 @@
 # In this test we check this.
 --------------
 # Running an example without any top-level constants...
-# We expect no usages of `__lazy` to be present, maybe only a definition.
+# We expect no usages of `__lazy` to be present
 Hello, world!
-function __lazy(thunk) {
 --------------
 # Running an example with some top-level constant...
 # We expect `__lazy` to be used on the RHS for the top-level constant called `topLevelConst`.
 Top-level constant: 24
-function __lazy(thunk) {
-const LazyIsStillThere_topLevelConst = __lazy(function () {
+const LazyIsStillThere_topLevelConst = $runtime.__lazy(function () {

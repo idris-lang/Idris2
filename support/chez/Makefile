@@ -23,8 +23,8 @@ support-sep.ss: support.ss
 		>> $@
 	echo ") (import (chezscheme))" >> $@
 
-	# copy the code
-	cat $< >> $@
+	# copy the code (omitting shebang)
+	sed '1{/^#!/d;}' $< >> $@
 
 	# close the bracket
 	echo ") ; end of (library)" >> $@
