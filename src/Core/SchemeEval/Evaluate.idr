@@ -36,7 +36,7 @@ mutual
        SApp     : FC -> SHead vars -> List (Core (SNF vars)) -> SNF vars
        SDCon    : FC -> Name -> (tag : Int) -> (arity : Nat) ->
                   List (Core (SNF vars)) -> SNF vars
-       STCon    : FC -> Name -> (tag : Int) -> (arity : Nat) ->
+       STCon    : FC -> Name -> (arity : Nat) ->
                   List (Core (SNF vars)) -> SNF vars
        SDelayed : FC -> LazyReason -> SNF vars -> SNF vars
        SDelay   : FC -> LazyReason -> Core (SNF vars) -> Core (SNF vars) ->
@@ -172,12 +172,11 @@ mutual
            let argList = getArgList args_in
            args <- traverse (quote' svs) argList
            pure (apply emptyFC loc args)
-  quoteVector svs (-1) (_ :: tag_in :: strtag :: cname_in :: fc_in :: args_in) -- TyCon
-      = quoteOrInvalid cname_in $ \ cname =>
-        quoteOrInvalid {x = Integer} tag_in $ \ tag => do
+  quoteVector svs (-1) (_ :: strtag :: cname_in :: fc_in :: args_in) -- TyCon
+      = quoteOrInvalid cname_in $ \ cname => do
            let fc = emptyFC -- quoteFC fc_in
            args <- traverse (quote' svs) args_in
-           pure (apply fc (Ref fc (TyCon (cast tag) (length args)) cname)
+           pure (apply fc (Ref fc (TyCon (length args)) cname)
                            args)
   quoteVector svs (-15) [_, r_in, ty_in] -- Delayed
       = do ty <- quote' svs ty_in
@@ -413,12 +412,11 @@ mutual
                 | _ => invalidS
            let args' = map (snf' svs) (getArgList args_in)
            pure (SApp fc loc (args ++ args'))
-  snfVector svs (-1) (_ :: tag_in :: strtag :: cname_in :: fc_in :: args_in) -- TyCon
-      = quoteOrInvalidS cname_in $ \ cname =>
-        quoteOrInvalidS {x = Integer} tag_in $ \ tag => do
+  snfVector svs (-1) (_ :: strtag :: cname_in :: fc_in :: args_in) -- TyCon
+      = quoteOrInvalidS cname_in $ \ cname => do
            let fc = quoteFC fc_in
            let args = map (snf' svs) args_in
-           pure (STCon fc cname (cast tag) (length args) args)
+           pure (STCon fc cname (length args) args)
   snfVector svs (-15) [_, r_in, ty_in] -- Delayed
       = do ty <- snf' svs ty_in
            let r = quoteLazyReason r_in

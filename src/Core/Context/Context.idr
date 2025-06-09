@@ -98,7 +98,7 @@ data Def : Type where
                -- that the value is inspected, to make sure external effects
                -- happen)
            Def -- data constructor
-    TCon : (tag : Int) -> (arity : Nat) ->
+    TCon : (arity : Nat) ->
            (parampos : NatSet) -> -- parameters
            (detpos : NatSet) -> -- determining arguments
            (flags : TypeFlags) -> -- should 'auto' implicits check
@@ -135,7 +135,7 @@ defNameType (ExternDef {}) = Just Func
 defNameType (ForeignDef {}) = Just Func
 defNameType (Builtin {}) = Just Func
 defNameType (DCon tag ar _) = Just (DataCon tag ar)
-defNameType (TCon tag ar _ _ _ _ _ _) = Just (TyCon tag ar)
+defNameType (TCon ar _ _ _ _ _ _) = Just (TyCon ar)
 defNameType (Hole {}) = Just Func
 defNameType (BySearch {}) = Nothing
 defNameType (Guess {}) = Nothing
@@ -155,8 +155,8 @@ Show Def where
   show (DCon t a nt)
       = "DataCon " ++ show t ++ " " ++ show a
            ++ maybe "" (\n => " (newtype by " ++ show n ++ ")") nt
-  show (TCon t a ps ds u ms cons det)
-      = "TyCon " ++ show t ++ " " ++ show a ++ " params: " ++ show ps ++
+  show (TCon a ps ds u ms cons det)
+      = "TyCon " ++ show a ++ " params: " ++ show ps ++
         " constructors: " ++ show cons ++
         " mutual with: " ++ show ms ++
         " detaggable by: " ++ show det

@@ -186,7 +186,7 @@ bindUnqs ((qvar, fc, esctm) :: qs) rig elabinfo nest env tm
          Just (idx, gdef) <- lookupCtxtExactI (reflectionttimp "TTImp") (gamma defs)
               | _ => throw (UndefinedName fc (reflectionttimp "TTImp"))
          (escv, escty) <- check rig elabinfo nest env esctm
-                                (Just (gnf env (Ref fc (TyCon 0 0)
+                                (Just (gnf env (Ref fc (TyCon 0)
                                            (Resolved idx))))
          sc <- bindUnqs qs rig elabinfo nest env tm
          pure (Bind fc qvar (Let fc (rigMult top rig) escv !(getTerm escty))

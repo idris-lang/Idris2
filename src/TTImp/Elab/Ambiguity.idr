@@ -125,7 +125,7 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
     wrapDot : Bool -> EState vars ->
               ElabMode -> Name -> List RawImp -> Def -> RawImp -> RawImp
     wrapDot _ _ _ _ _ (DCon _ _ _) tm = tm
-    wrapDot _ _ _ _ _ (TCon _ _ _ _ _ _ _ _) tm = tm
+    wrapDot _ _ _ _ _ (TCon _ _ _ _ _ _ _) tm = tm
     -- Leave primitive applications alone, because they'll be inlined
     -- before compiling the case tree
     wrapDot prim est (InLHS _) n' [arg] _ tm
@@ -224,7 +224,7 @@ mutual
   mightMatch defs target (NBind fc n (Pi _ _ _ _) sc)
       = mightMatchD defs target !(sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder)))
   mightMatch defs (NBind _ _ _ _) (NBind _ _ _ _) = pure Poly -- lambdas might match
-  mightMatch defs (NTCon _ n t a args) (NTCon _ n' t' a' args')
+  mightMatch defs (NTCon _ n a args) (NTCon _ n' a' args')
       = if n == n'
            then do amatch <- mightMatchArgs defs (map snd args) (map snd args')
                    if amatch then pure Concrete else pure NoMatch
@@ -266,7 +266,7 @@ couldBeFn defs ty _ = pure Poly
 couldBe : {auto c : Ref Ctxt Defs} ->
           {vars : _} ->
           Defs -> NF vars -> RawImp -> Core (Maybe (Bool, RawImp))
-couldBe {vars} defs ty@(NTCon _ n _ _ _) app
+couldBe {vars} defs ty@(NTCon _ n _ _) app
    = case !(couldBeFn {vars} defs ty (getFn app)) of
           Concrete => pure $ Just (True, app)
           Poly => pure $ Just (False, app)

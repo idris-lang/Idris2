@@ -1,6 +1,5 @@
 Main> Prelude.Basics.Bool
 Type constructor:
-  tag: 100
   arity: 0
   parameter positions: []
   constructors: Prelude.Basics.False, Prelude.Basics.True

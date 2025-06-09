@@ -22,9 +22,9 @@ export
 getCons : {auto c : Ref Ctxt Defs} ->
           {vars : _} ->
           Defs -> NF vars -> Core (List DataCon)
-getCons defs (NTCon _ tn _ _ _)
+getCons defs (NTCon _ tn _ _)
     = case !(lookupDefExact tn (gamma defs)) of
-           Just (TCon _ _ _ _ _ _ cons _) =>
+           Just (TCon _ _ _ _ _ cons _) =>
                 do cs' <- traverse addTy (fromMaybe [] cons)
                    pure (catMaybes cs')
            _ => throw (InternalError "Called `getCons` on something that is not a Type constructor")

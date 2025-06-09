@@ -44,7 +44,7 @@ saveRecordToSimpleJSON : LookupDir -> (path : String) -> (type : Name) -> Elab (
 saveRecordToSimpleJSON lk jsonPath type = do
   infos <- getInfo type
   let [(type, _)] = flip filter infos $ \case
-                      (name, MkNameInfo $ TyCon _ _) => True
+                      (name, MkNameInfo $ TyCon _) => True
                       _                              => False
     | [] => fail "Did not found any type matching \{show type}"
     | (_::_) => fail "Too many types matching \{show type}"

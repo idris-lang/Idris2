@@ -29,7 +29,7 @@ data NameType : Type where
      Bound   : NameType
      Func    : NameType
      DataCon : (tag : Int) -> (arity : Nat) -> NameType
-     TyCon   : (tag : Int) -> (arity : Nat) -> NameType
+     TyCon   : (arity : Nat) -> NameType
 
 %name NameType nt
 
@@ -39,12 +39,12 @@ Show NameType where
   showPrec d Bound = "Bound"
   showPrec d Func = "Func"
   showPrec d (DataCon tag ar) = showCon d "DataCon" $ showArg tag ++ showArg ar
-  showPrec d (TyCon tag ar) = showCon d "TyCon" $ showArg tag ++ showArg ar
+  showPrec d (TyCon ar) = showCon d "TyCon" $ showArg ar
 
 export
-isCon : NameType -> Maybe (Int, Nat)
-isCon (DataCon t a) = Just (t, a)
-isCon (TyCon t a) = Just (t, a)
+isCon : NameType -> Maybe Nat
+isCon (DataCon t a) = Just a
+isCon (TyCon a) = Just a
 isCon _ = Nothing
 
 -- Typechecked terms

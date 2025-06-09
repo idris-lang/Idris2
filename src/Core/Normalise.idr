@@ -280,11 +280,11 @@ replace' {vars} tmpi defs env lhs parg tm
              pure $ applyStackWithFC
                         !(quote empty env (NDCon fc n t a []))
                         args'
-    repSub (NTCon fc n t a args)
+    repSub (NTCon fc n a args)
         = do args' <- traverse (traversePair repArg) args
              empty <- clearDefs defs
              pure $ applyStackWithFC
-                        !(quote empty env (NTCon fc n t a []))
+                        !(quote empty env (NTCon fc n a []))
                         args'
     repSub (NAs fc s a p)
         = do a' <- repSub a

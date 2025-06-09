@@ -182,8 +182,8 @@ parameters (defs : Defs) (topopts : EvalOpts)
         = evalMeta env fc n i args (args' ++ stk)
     applyToStack env (NDCon fc n t a args) stk
         = pure $ NDCon fc n t a (args ++ stk)
-    applyToStack env (NTCon fc n t a args) stk
-        = pure $ NTCon fc n t a (args ++ stk)
+    applyToStack env (NTCon fc n a args) stk
+        = pure $ NTCon fc n a (args ++ stk)
     applyToStack env (NAs fc s p t) stk
        = if removeAs topopts
             then applyToStack env t stk
@@ -278,10 +278,10 @@ parameters (defs : Defs) (topopts : EvalOpts)
         = do -- logC "eval.ref.data" 50 $ do fn' <- toFullNames fn -- Can't use ! here, it gets lifted too far
              --                             pure $ "Found data constructor: " ++ show fn'
              pure $ NDCon fc fn tag arity stk
-    evalRef env meta fc (TyCon tag arity) fn stk def
+    evalRef env meta fc (TyCon arity) fn stk def
         = do -- logC "eval.ref.type" 50 $ do fn' <- toFullNames fn
              --                             pure $ "Found type constructor: " ++ show fn'
-             pure $ ntCon fc fn tag arity stk
+             pure $ ntCon fc fn arity stk
     evalRef env meta fc Bound fn stk def
         = do -- logC "eval.ref.bound" 50 $ do fn' <- toFullNames fn
              --                              pure $ "Found bound variable: " ++ show fn'
@@ -358,7 +358,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
               then evalConAlt env loc opts fc stk args (map snd args') sc
               else pure NoMatch
     -- Type constructor matching, in typecase
-    tryAlt {more} env loc opts fc stk (NTCon _ nm tag' arity args') (ConCase nm' tag args sc)
+    tryAlt {more} env loc opts fc stk (NTCon _ nm arity args') (ConCase nm' tag args sc)
          = if nm == nm'
               then evalConAlt env loc opts fc stk args (map snd args') sc
               else pure NoMatch
@@ -399,7 +399,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
       where
         concrete : NF free -> Bool
         concrete (NDCon _ _ _ _ _) = True
-        concrete (NTCon _ _ _ _ _) = True
+        concrete (NTCon _ _ _ _) = True
         concrete (NPrimVal _ _) = True
         concrete (NBind _ _ _ _) = True
         concrete (NType _ _) = True

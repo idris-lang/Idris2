@@ -592,7 +592,7 @@ getArgName defs x bound allvars ty
     findNamesM : NF vars -> Core (Maybe (List String))
     findNamesM (NBind _ x (Pi _ _ _ _) _)
         = pure (Just ["f", "g"])
-    findNamesM (NTCon _ n _ d [(_, v)]) = do
+    findNamesM (NTCon _ n d [(_, v)]) = do
           case dropNS !(full (gamma defs) n) of
             UN (Basic "List") =>
               do nf <- evalClosure defs v
@@ -610,7 +610,7 @@ getArgName defs x bound allvars ty
                    Nothing => namesFor n
                    Just ns => pure (Just (map ("s" ++) ns))
             _ => namesFor n
-    findNamesM (NTCon _ n _ _ _) = namesFor n
+    findNamesM (NTCon _ n _ _) = namesFor n
     findNamesM (NPrimVal fc c) = do
           let defaultPos = Just ["m", "n", "p", "q"]
           let defaultInts = Just ["i", "j", "k", "l"]

@@ -65,7 +65,7 @@ LOG derive.traversable.clauses:1:
   traverseIVect : {0 m : _} -> {0 a, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a -> f b) -> IVect {n = m} a -> f (IVect {n = m} b)
   traverseIVect f (MkIVect x2) = MkIVect <$> (traverse f x2)
 LOG derive.traversable.clauses:1: 
-  traverseEqMap : {0 key, eq : _} -> {0 a, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a -> f b) -> EqMap key {{conArg:16433} = eq} a -> f (EqMap key {{conArg:16433} = eq} b)
+  traverseEqMap : {0 key, eq : _} -> {0 a, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a -> f b) -> EqMap key {{conArg:1} = eq} a -> f (EqMap key {{conArg:1} = eq} b)
   traverseEqMap f (MkEqMap x3) = MkEqMap <$> (traverse (traverse f) x3)
 LOG derive.traversable.clauses:1: 
   traverseTree : {0 l : _} -> {0 a, b : Type} -> {0 f : Type -> Type} -> Applicative f => (a -> f b) -> Tree l a -> f (Tree l b)

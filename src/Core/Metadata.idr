@@ -31,7 +31,7 @@ nameDecoration nm nt
   nameTypeDecoration Bound         = Bound
   nameTypeDecoration Func          = Function
   nameTypeDecoration (DataCon _ _) = Data
-  nameTypeDecoration (TyCon _ _  ) = Typ
+  nameTypeDecoration (TyCon _)     = Typ
 
 
 public export
