@@ -190,36 +190,46 @@ argTerm (UnnamedAutoArg t) = t
 argTerm (NamedArg _ t) = t
 argTerm (WithArg t) = t
 
-export
-debugString : OriginDesc -> Rule PTerm
-debugString fname = do
-  di <- bounds debugInfo
-  pure $ PPrimVal (boundToFC fname di) $ Str $ case di.val of
-    DebugLoc =>
-      let bnds = di.bounds in
-      joinBy ", "
-      [ "File \{show fname}"
-      , "line \{show (startLine bnds)}"
-      , "characters \{show (startCol bnds)}\{
-           ifThenElse (startLine bnds == endLine bnds)
-            ("-\{show (endCol bnds)}")
-            ""
-        }"
-      ]
-    DebugFile => "\{show fname}"
-    DebugLine => "\{show (startLine di.bounds)}"
-    DebugCol => "\{show (startCol di.bounds)}"
+parameters {auto fname : OriginDesc}
+  export
+  debugString : Rule PTerm
+  debugString = do
+    di <- bounds debugInfo
+    pure $ PPrimVal (boundToFC fname di) $ Str $ case di.val of
+      DebugLoc =>
+        let bnds = di.bounds in
+        joinBy ", "
+        [ "File \{show fname}"
+        , "line \{show (startLine bnds)}"
+        , "characters \{show (startCol bnds)}\{
+             ifThenElse (startLine bnds == endLine bnds)
+              ("-\{show (endCol bnds)}")
+              ""
+          }"
+        ]
+      DebugFile => "\{show fname}"
+      DebugLine => "\{show (startLine di.bounds)}"
+      DebugCol => "\{show (startCol di.bounds)}"
 
-totalityOpt : OriginDesc -> Rule TotalReq
-totalityOpt fname
-    = (decoratedKeyword fname "partial" $> PartialOK)
-  <|> (decoratedKeyword fname "total" $> Total)
-  <|> (decoratedKeyword fname "covering" $> CoveringOnly)
+  totalityOpt : Rule TotalReq
+  totalityOpt
+      = (decoratedKeyword fname "partial" $> PartialOK)
+    <|> (decoratedKeyword fname "total" $> Total)
+    <|> (decoratedKeyword fname "covering" $> CoveringOnly)
 
-fnOpt : OriginDesc -> Rule PFnOpt
-fnOpt fname
-      = do x <- totalityOpt fname
-           pure $ IFnOpt (Totality x)
+  operatorBindingOption : Rule BindingModifier
+  operatorBindingOption
+    =   (decoratedKeyword fname "autobind" >> pure Autobind)
+    <|> (decoratedKeyword fname "typebind" >> pure Typebind)
+
+  operatorBindingKeyword : EmptyRule BindingModifier
+  operatorBindingKeyword
+    = operatorBindingOption <|> pure NotBinding
+
+  fnOpt : Rule PFnOpt
+  fnOpt = do x <- totalityOpt
+             pure $ IFnOpt (Totality x)
+      <|> IFnOpt <$> Binding <$> operatorBindingOption
 
 mutual
   appExpr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
@@ -576,7 +586,7 @@ mutual
           pure $ case projs of
             [] => root
             _  => PPostfixApp (boundToFC fname b) root projs
-    <|> debugString fname
+    <|> debugString {fname}
     <|> do b <- bounds (forget <$> some (bounds postfixProj))
            pure $ let projs = map (\ proj => (boundToFC fname proj, proj.val)) b.val in
                   PPostfixAppPartial (boundToFC fname b) projs
@@ -1405,8 +1415,8 @@ dataDeclBody fname indents
 -- a data declaration can have a visibility and an optional totality (#1404)
 dataVisOpt : OriginDesc -> EmptyRule (WithDefault Visibility Private, Maybe TotalReq)
 dataVisOpt fname
-    = do { vis <- visOption   fname ; mbtot <- optional (totalityOpt fname) ; pure (specified vis, mbtot) }
-  <|> do { tot <- totalityOpt fname ; vis <- visibility fname ; pure (vis, Just tot) }
+    = do { vis <- visOption   fname ; mbtot <- optional totalityOpt ; pure (specified vis, mbtot) }
+  <|> do { tot <- totalityOpt ; vis <- visibility fname ; pure (vis, Just tot) }
   <|> pure (defaulted, Nothing)
 
 dataDecl : (fname : OriginDesc) => (indents : IndentInfo) => Rule PDeclNoFC
@@ -1556,7 +1566,7 @@ directive
          atEnd indents
          pure (Extension e)
   <|> do decoratedPragma fname "default"
-         tot <- totalityOpt fname
+         tot <- totalityOpt
          atEnd indents
          pure (DefaultTotality tot)
 
@@ -1648,7 +1658,7 @@ visOpt : OriginDesc -> Rule (Either Visibility PFnOpt)
 visOpt fname
     = do vis <- visOption fname
          pure (Left vis)
-  <|> do tot <- fnOpt fname
+  <|> do tot <- fnOpt
          pure (Right tot)
   <|> do opt <- fnDirectOpt fname
          pure (Right opt)
@@ -1892,11 +1902,6 @@ parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
       = do nd <- clause 0 Nothing fname indents
            pure (PDef (singleton nd))
 
-  operatorBindingKeyword : EmptyRule BindingModifier
-  operatorBindingKeyword
-    =   (decoratedKeyword fname "autobind" >> pure Autobind)
-    <|> (decoratedKeyword fname "typebind" >> pure Typebind)
-    <|> pure NotBinding
 
   fixDecl : Rule PDecl
   fixDecl
