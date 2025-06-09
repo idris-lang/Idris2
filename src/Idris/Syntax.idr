@@ -111,9 +111,11 @@ mutual
        -- Direct (more or less) translations to RawImp
 
        PRef : FC -> nm -> PTerm' nm
+       -- Pi-types with an arbitrary complex binder
        NewPi : WithFC (PBinderScope' nm) -> PTerm' nm
        Forall : WithFC (List1 (WithFC Name), PTerm' nm) -> PTerm' nm
 
+       -- Simple pi-types, translates directly into IPi, this should be replace din favor of `NewPi`
        PPi : FC -> RigCount -> PiInfo (PTerm' nm) -> Maybe Name ->
              (argTy : PTerm' nm) -> (retTy : PTerm' nm) -> PTerm' nm
        PLam : FC -> RigCount -> PiInfo (PTerm' nm) -> (pat : PTerm' nm) ->
