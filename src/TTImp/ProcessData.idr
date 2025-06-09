@@ -174,7 +174,7 @@ getDetags fc tys
                        argsnf <- traverse (evalClosure defs . snd) args
                        args'nf <- traverse (evalClosure defs . snd) args'
                        disjointArgs argsnf args'nf
-      disjoint (NTCon _ n _ _ args) (NDCon _ n' _ _ args')
+      disjoint (NTCon _ n _ _ args) (NTCon _ n' _ _ args')
           = if n /= n'
                then pure True
                else do defs <- get Ctxt
