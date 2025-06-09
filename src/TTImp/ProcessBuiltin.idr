@@ -152,7 +152,7 @@ isNatural fc n = do
     defs <- get Ctxt
     Just gdef <- lookupCtxtExact n defs.gamma
         | Nothing => undefinedName EmptyFC n
-    let TCon _ _ _ _ _ _ cons _ = gdef.definition
+    let TCon _ _ _ _ _ cons _ = gdef.definition
         | _ => pure False
     consDefs <- getConsGDef fc (fromMaybe [] cons)
     pure $ all hasNatFlag consDefs
@@ -222,7 +222,7 @@ processBuiltinNatural fc name = do
         | ns => ambiguousName fc name $ (\(n, _, _) => n) <$> ns
     False <- isNatural fc n
         | True => pure ()
-    let TCon _ _ _ _ _ _ dcons _ = gdef.definition
+    let TCon _ _ _ _ _ dcons _ = gdef.definition
         | def => throw $ GenericMsg fc
             $ "Expected a type constructor, found " ++ showDefType def ++ "."
     cons <- getConsGDef fc (fromMaybe [] dcons)

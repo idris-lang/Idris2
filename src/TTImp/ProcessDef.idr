@@ -50,7 +50,7 @@ mutual
   mismatchNF : {auto c : Ref Ctxt Defs} ->
                {vars : _} ->
                Defs -> NF vars -> NF vars -> Core Bool
-  mismatchNF defs (NTCon _ xn xt _ xargs) (NTCon _ yn yt _ yargs)
+  mismatchNF defs (NTCon _ xn _ xargs) (NTCon _ yn _ yargs)
       = if xn /= yn
            then pure True
            else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
@@ -68,16 +68,16 @@ mutual
   mismatchNF defs (NDCon _ _ _ _ _) (NPrimVal _ _) = pure True
   mismatchNF defs (NPrimVal _ _) (NBind _ _ _ _) = pure True
   mismatchNF defs (NBind _ _ _ _) (NPrimVal _ _) = pure True
-  mismatchNF defs (NPrimVal _ _) (NTCon _ _ _ _ _) = pure True
-  mismatchNF defs (NTCon _ _ _ _ _) (NPrimVal _ _) = pure True
+  mismatchNF defs (NPrimVal _ _) (NTCon _ _ _ _) = pure True
+  mismatchNF defs (NTCon _ _ _ _) (NPrimVal _ _) = pure True
   mismatchNF defs (NPrimVal _ _) (NType _ _) = pure True
   mismatchNF defs (NType _ _) (NPrimVal _ _) = pure True
 
 -- NTCon is apart from NBind, and NType
-  mismatchNF defs (NTCon _ _ _ _ _) (NBind _ _ _ _) = pure True
-  mismatchNF defs (NBind _ _ _ _) (NTCon _ _ _ _ _) = pure True
-  mismatchNF defs (NTCon _ _ _ _ _) (NType _ _) = pure True
-  mismatchNF defs (NType _ _) (NTCon _ _ _ _ _) = pure True
+  mismatchNF defs (NTCon _ _ _ _) (NBind _ _ _ _) = pure True
+  mismatchNF defs (NBind _ _ _ _) (NTCon _ _ _ _) = pure True
+  mismatchNF defs (NTCon _ _ _ _) (NType _ _) = pure True
+  mismatchNF defs (NType _ _) (NTCon _ _ _ _) = pure True
 
 -- NBind is apart from NType
   mismatchNF defs (NBind _ _ _ _) (NType _ _) = pure True
@@ -98,7 +98,7 @@ export
 impossibleOK : {auto c : Ref Ctxt Defs} ->
                {vars : _} ->
                Defs -> NF vars -> NF vars -> Core Bool
-impossibleOK defs (NTCon _ xn xt xa xargs) (NTCon _ yn yt ya yargs)
+impossibleOK defs (NTCon _ xn xa xargs) (NTCon _ yn ya yargs)
     = if xn /= yn
          then pure True
          else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
@@ -114,16 +114,16 @@ impossibleOK defs (NPrimVal _ _) (NDCon _ _ _ _ _) = pure True
 impossibleOK defs (NDCon _ _ _ _ _) (NPrimVal _ _) = pure True
 impossibleOK defs (NPrimVal _ _) (NBind _ _ _ _) = pure True
 impossibleOK defs (NBind _ _ _ _) (NPrimVal _ _) = pure True
-impossibleOK defs (NPrimVal _ _) (NTCon _ _ _ _ _) = pure True
-impossibleOK defs (NTCon _ _ _ _ _) (NPrimVal _ _) = pure True
+impossibleOK defs (NPrimVal _ _) (NTCon _ _ _ _) = pure True
+impossibleOK defs (NTCon _ _ _ _) (NPrimVal _ _) = pure True
 impossibleOK defs (NPrimVal _ _) (NType _ _) = pure True
 impossibleOK defs (NType _ _) (NPrimVal _ _) = pure True
 
 -- NTCon is apart from NBind, and NType
-impossibleOK defs (NTCon _ _ _ _ _) (NBind _ _ _ _) = pure True
-impossibleOK defs (NBind _ _ _ _) (NTCon _ _ _ _ _) = pure True
-impossibleOK defs (NTCon _ _ _ _ _) (NType _ _) = pure True
-impossibleOK defs (NType _ _) (NTCon _ _ _ _ _) = pure True
+impossibleOK defs (NTCon _ _ _ _) (NBind _ _ _ _) = pure True
+impossibleOK defs (NBind _ _ _ _) (NTCon _ _ _ _) = pure True
+impossibleOK defs (NTCon _ _ _ _) (NType _ _) = pure True
+impossibleOK defs (NType _ _) (NTCon _ _ _ _) = pure True
 
 -- NBind is apart from NType
 impossibleOK defs (NBind _ _ _ _) (NType _ _) = pure True
@@ -160,22 +160,22 @@ recoverable : {auto c : Ref Ctxt Defs} ->
 -- Unlike the above, any mismatch will do
 
 -- TYPE CONSTRUCTORS
-recoverable defs (NTCon _ xn xt xa xargs) (NTCon _ yn yt ya yargs)
+recoverable defs (NTCon _ xn xa xargs) (NTCon _ yn ya yargs)
     = if xn /= yn
          then pure False
          else pure $ not !(anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs))
 -- Type constructor vs. primitive type
-recoverable defs (NTCon _ _ _ _ _) (NPrimVal _ _) = pure False
-recoverable defs (NPrimVal _ _) (NTCon _ _ _ _ _) = pure False
+recoverable defs (NTCon _ _ _ _) (NPrimVal _ _) = pure False
+recoverable defs (NPrimVal _ _) (NTCon _ _ _ _) = pure False
 -- Type constructor vs. type
-recoverable defs (NTCon _ _ _ _ _) (NType _ _) = pure False
-recoverable defs (NType _ _) (NTCon _ _ _ _ _) = pure False
+recoverable defs (NTCon _ _ _ _) (NType _ _) = pure False
+recoverable defs (NType _ _) (NTCon _ _ _ _) = pure False
 -- Type constructor vs. binder
-recoverable defs (NTCon _ _ _ _ _) (NBind _ _ _ _) = pure False
-recoverable defs (NBind _ _ _ _) (NTCon _ _ _ _ _) = pure False
+recoverable defs (NTCon _ _ _ _) (NBind _ _ _ _) = pure False
+recoverable defs (NBind _ _ _ _) (NTCon _ _ _ _) = pure False
 
-recoverable defs (NTCon _ _ _ _ _) _ = pure True
-recoverable defs _ (NTCon _ _ _ _ _) = pure True
+recoverable defs (NTCon _ _ _ _) _ = pure True
+recoverable defs _ (NTCon _ _ _ _) = pure True
 
 -- DATA CONSTRUCTORS
 recoverable defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
@@ -658,9 +658,9 @@ checkClause {vars} mult vis totreq hashit n opts nest env
       defs <- get Ctxt
 
       let eqName = NS builtinNS (UN $ Basic "Equal")
-      Just (TCon t ar _ _ _ _ _ _) <- lookupDefExact eqName (gamma defs)
+      Just (TCon ar _ _ _ _ _ _) <- lookupDefExact eqName (gamma defs)
         | _ => throw (InternalError "Cannot find builtin Equal")
-      let eqTyCon = Ref vfc (TyCon t ar) !(toResolvedNames eqName)
+      let eqTyCon = Ref vfc (TyCon ar) !(toResolvedNames eqName)
 
       let wargn : Name
           wargn = MN "warg" 0

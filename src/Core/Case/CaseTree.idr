@@ -276,7 +276,7 @@ mkTerm vars (PCon fc x tag arity xs)
     = apply fc (Ref fc (DataCon tag arity) x)
                (map (mkTerm vars) xs)
 mkTerm vars (PTyCon fc x arity xs)
-    = apply fc (Ref fc (TyCon 0 arity) x)
+    = apply fc (Ref fc (TyCon arity) x)
                (map (mkTerm vars) xs)
 mkTerm vars (PConst fc c) = PrimVal fc c
 mkTerm vars (PArrow fc x s t)

@@ -388,12 +388,12 @@ mutual
       -- meta, shouldn't we delay the check instead of declaring the tm dotted?
       ||| Count the constructors of a fully applied concrete datatype
       countConstructors : NF vars -> Core (Maybe Nat)
-      countConstructors (NTCon _ tycName _ n args) =
+      countConstructors (NTCon _ tycName n args) =
         if length args == n
         then do defs <- get Ctxt
                 Just gdef <- lookupCtxtExact tycName (gamma defs)
                 | Nothing => pure Nothing
-                let (TCon _ _ _ _ _ _ datacons _) = gdef.definition
+                let (TCon _ _ _ _ _ datacons _) = gdef.definition
                 | _ => pure Nothing
                 pure (length <$> datacons)
         else pure Nothing
@@ -791,7 +791,7 @@ mutual
                | Nothing => pure res
          let (Ref _ t _, args) = getFnArgs (fst res)
                | _ => pure res
-         let Just (_, a) = isCon t
+         let Just a = isCon t
                | _ => pure res
          if a == length args
            then pure res

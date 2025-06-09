@@ -49,7 +49,7 @@ parameters
     Just gdef <- lookupCtxtExact n (gamma defs)
       | _ => pure []
     -- for now we only handle types with a unique constructor
-    let TCon _ _ _ _ _ _ cs _ = definition gdef
+    let TCon _ _ _ _ _ cs _ = definition gdef
       | _ => pure []
     let gty = gnf env ty
     ics <- for (fromMaybe [] cs) $ \ cons => do
@@ -81,5 +81,5 @@ parameters
   -- interesting ones
   intro (Bind _ x (Pi _ rig Explicit ty) _) = pure <$> introLam x rig ty
   intro t = case getFnArgs t of
-    (Ref _ (TyCon _ ar) n, _) => introCon n t
+    (Ref _ (TyCon ar) n, _) => introCon n t
     _ => pure []
