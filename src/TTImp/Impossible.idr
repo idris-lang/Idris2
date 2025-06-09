@@ -33,7 +33,7 @@ match nty (n, i, rty)
     sameRet _ (NErased _ _) = pure True
     sameRet (NApp _ _ _) _ = pure True
     sameRet (NErased _ _) _ = pure True
-    sameRet (NTCon _ n _ _ _) (NTCon _ n' _ _ _) = pure (n == n')
+    sameRet (NTCon _ n _ _) (NTCon _ n' _ _) = pure (n == n')
     sameRet (NPrimVal _ c) (NPrimVal _ c') = pure (c == c')
     sameRet (NType _ _) (NType _ _) = pure True
     sameRet nf (NBind fc _ (Pi _ _ _ _) sc)
@@ -143,7 +143,7 @@ mutual
            -- covered!
            let head = case definition gdef of
                         DCon t a _ => DataCon t a
-                        TCon t a _ _ _ _ _ _ => TyCon t a
+                        TCon a _ _ _ _ _ _ => TyCon a
                         _ => Func
            processArgs (Ref fc head (Resolved i)) tynf exps autos named
 

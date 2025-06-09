@@ -40,7 +40,7 @@ getRewriteTerms : {vars : _} ->
                   {auto c : Ref Ctxt Defs} ->
                   FC -> Defs -> NF vars -> Error ->
                   Core (NF vars, NF vars, NF vars)
-getRewriteTerms loc defs (NTCon nfc eq t a args) err
+getRewriteTerms loc defs (NTCon nfc eq a args) err
     = if !(isEqualTy eq)
          then case reverse $ map snd args of
                    (rhs :: lhs :: rhsty :: lhsty :: _) =>
