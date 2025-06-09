@@ -351,6 +351,7 @@ newDef fc n rig vars ty vis def
         , namedcompexpr = Nothing
         , sizeChange = []
         , schemeExpr = Nothing
+        , bindingMode = NotBinding
         }
 
 -- Rewrite rules, applied after type checking, for runtime code only
@@ -1369,6 +1370,7 @@ addBuiltin n ty tot op
          , namedcompexpr = Nothing
          , sizeChange = []
          , schemeExpr = Nothing
+         , bindingMode = NotBinding
          }
 
 export
