@@ -253,6 +253,8 @@ mutual
        Totality : TotalReq -> FnOpt' nm
        Macro : FnOpt' nm
        SpecArgs : List Name -> FnOpt' nm
+       Binding : BindingModifier -> FnOpt' nm
+
   %name FnOpt' fopt
 
   public export
@@ -288,6 +290,7 @@ mutual
     show (Totality PartialOK) = "partial"
     show Macro = "%macro"
     show (SpecArgs ns) = "%spec " ++ showSep " " (map show ns)
+    show (Binding b) = show b
 
   export
   Eq FnOpt where

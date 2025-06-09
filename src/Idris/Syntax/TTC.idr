@@ -82,18 +82,6 @@ TTC Import where
          pure (MkImport loc reexport path nameAs)
 
 export
-TTC BindingModifier where
-  toBuf NotBinding = tag 0
-  toBuf Typebind = tag 1
-  toBuf Autobind = tag 2
-  fromBuf
-      = case !getTag of
-             0 => pure NotBinding
-             1 => pure Typebind
-             2 => pure Autobind
-             _ => corrupt "binding"
-
-export
 TTC FixityInfo where
   toBuf fx
       = do toBuf fx.fc

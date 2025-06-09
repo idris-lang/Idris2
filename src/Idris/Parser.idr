@@ -1162,7 +1162,6 @@ mutual
         Use "%export" instead
       """
 
-
 visOption : OriginDesc ->  Rule Visibility
 visOption fname
     = (decoratedKeyword fname "public" *> decoratedKeyword fname "export" $> Public)
@@ -1175,15 +1174,14 @@ visOption fname
   <|> (decoratedKeyword fname "private" $> Private)
 
 
+parseDefault : Rule a -> EmptyRule (WithDefault a e)
+parseDefault p = (specified <$> p) <|> pure defaulted
+
 visibility : OriginDesc -> EmptyRule (WithDefault Visibility Private)
-visibility fname
-    = (specified <$> visOption fname)
-  <|> pure defaulted
+visibility fname = parseDefault (visOption fname)
 
 exportVisibility : OriginDesc -> EmptyRule (WithDefault Visibility Export)
-exportVisibility fname
-    = (specified <$> visOption fname)
-  <|> pure defaulted
+exportVisibility fname = parseDefault (visOption fname)
 
 ||| A binder with only one name and one type
 ||| BNF:

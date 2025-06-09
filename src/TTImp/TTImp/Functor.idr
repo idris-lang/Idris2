@@ -131,6 +131,7 @@ mutual
     map f (Totality tot) = Totality tot
     map f Macro = Macro
     map f (SpecArgs ns) = SpecArgs ns
+    map f (Binding b) = Binding b
 
   export
   Functor ImpTy' where

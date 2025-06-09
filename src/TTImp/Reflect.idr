@@ -692,6 +692,9 @@ mutual
     reflect fc defs lhs env (SpecArgs r)
         = do r' <- reflect fc defs lhs env r
              appCon fc defs (reflectionttimp "SpecArgs") [r']
+    reflect fc defs lhs env (Binding b)
+        = do b' <- reflect fc defs lhs env b
+             appCon fc defs (reflectionttimp "Binding") [b']
 
   export
   Reflect ImpTy where

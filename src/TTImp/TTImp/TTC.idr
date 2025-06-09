@@ -345,6 +345,7 @@ mutual
     toBuf Unsafe = tag 13
     toBuf Deprecate = tag 14
     toBuf (ForeignExport cs) = do tag 15; toBuf cs
+    toBuf (Binding b) = do tag 16 ; toBuf b
 
     fromBuf
         = case !getTag of

@@ -89,6 +89,18 @@ TTC a => TTC (WithFC a) where
          pure $ MkFCVal fc val
 
 export
+TTC BindingModifier where
+  toBuf NotBinding = tag 0
+  toBuf Autobind = tag 1
+  toBuf Typebind = tag 2
+
+  fromBuf
+    = case !getTag of
+           0 => pure NotBinding
+           1 => pure Autobind
+           2 => pure Typebind
+           _ => corrupt "BindingModifier"
+export
 TTC Name where
   -- for efficiency reasons we do not encode UserName separately
   -- hence the nested pattern matches on UN (Basic/Hole/Field)
