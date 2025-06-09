@@ -92,8 +92,8 @@ export
 addData : {auto c : Ref Ctxt Defs} ->
           Scope -> Visibility -> Int -> DataDef -> Core Int
 addData vars vis tidx (MkData (MkCon dfc tyn arity tycon) datacons)
-    = do defs <- get Ctxt
-         tag <- getNextTypeTag
+    = do tag <- getNextTypeTag
+         defs <- get Ctxt
          let allPos = allDet arity
          -- In case there are no constructors, all the positions are parameter positions!
          let paramPositions = fromMaybe allPos !(paramPos (Resolved tidx) (map type datacons))
