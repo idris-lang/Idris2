@@ -64,6 +64,11 @@ mapPTermM f = goPTerm where
       PAutoApp fc <$> goPTerm x
                          <*> goPTerm y
       >>= f
+    goPTerm (PBindingApp fn bind scope) =
+      PBindingApp <$> traverseFC goPTerm fn
+                  <*> traverseFC goPlainBinder bind
+                  <*> traverseFC goPTerm scope
+      >>= f
     goPTerm (PNamedApp fc x n y) =
       PNamedApp fc <$> goPTerm x
                    <*> pure n
@@ -450,6 +455,8 @@ mapPTerm f = goPTerm where
       = f $ PWithApp fc (goPTerm x) (goPTerm y)
     goPTerm (PAutoApp fc x y)
       = f $ PAutoApp fc (goPTerm x) (goPTerm y)
+    goPTerm (PBindingApp x bind y)
+      = f $ PBindingApp (mapFC goPTerm x) (mapFC goPlainBinder bind) (mapFC goPTerm y)
     goPTerm (PNamedApp fc x n y)
       = f $ PNamedApp fc (goPTerm x) n (goPTerm y)
     goPTerm (PDelayed fc x y)
@@ -670,6 +677,7 @@ substFC fc = mapPTerm $ \case
   PUpdate _ xs => PUpdate fc xs
   PApp _ x y => PApp fc x y
   PWithApp _ x y => PWithApp fc x y
+  PBindingApp x n y => PBindingApp x n y
   PNamedApp _ x n y => PNamedApp fc x n y
   PAutoApp _ x y => PAutoApp fc x y
   PDelayed _ x y => PDelayed fc x y

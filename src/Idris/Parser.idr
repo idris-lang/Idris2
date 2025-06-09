@@ -178,17 +178,13 @@ iOperator
     = OpSymbols <$> operator
   <|> Backticked <$> (symbol "`" *> name <* symbol "`")
 
+
+
 data ArgType
     = UnnamedExpArg PTerm
     | UnnamedAutoArg PTerm
     | NamedArg Name PTerm
     | WithArg PTerm
-
-argTerm : ArgType -> PTerm
-argTerm (UnnamedExpArg t) = t
-argTerm (UnnamedAutoArg t) = t
-argTerm (NamedArg _ t) = t
-argTerm (WithArg t) = t
 
 parameters {auto fname : OriginDesc}
   export
@@ -232,6 +228,27 @@ parameters {auto fname : OriginDesc}
       <|> IFnOpt <$> Binding <$> operatorBindingOption
 
 mutual
+  ||| A binder with only one name and one type
+  ||| BNF:
+  ||| plainBinder := name ':' typeExpr
+  plainBinder : (fname : OriginDesc) => (indents : IndentInfo) => Rule PlainBinder
+  plainBinder = do name <- fcBounds (decoratedSimpleBinderUName fname)
+                   decoratedSymbol fname ":"
+                   ty <- typeExpr pdef fname indents
+                   pure $ MkWithName name ty
+
+  ||| A binder with multiple names and one type
+  ||| BNF:
+  ||| basicMultiBinder := name (, name)* ':' typeExpr
+  basicMultiBinder : (fname : OriginDesc) => (indents : IndentInfo) => Rule BasicMultiBinder
+  basicMultiBinder
+    = do rig <- multiplicity fname
+         names <- sepBy1 (decoratedSymbol fname ",")
+                       $ fcBounds (decoratedSimpleBinderUName fname)
+         decoratedSymbol fname ":"
+         ty <- typeExpr pdef fname indents
+         pure $ MkBasicMultiBinder rig names ty
+
   appExpr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
   appExpr q fname indents
       = case_ fname indents
@@ -240,6 +257,7 @@ mutual
     <|> lazy fname indents
     <|> if_ fname indents
     <|> with_ fname indents
+    <|> bindingApp fname indents
     <|> do b <- bounds (MkPair <$> simpleExpr fname indents <*> many (argExpr q fname indents))
            (f, args) <- pure b.val
            pure (applyExpImp (start b) (end b) f (concat args))
@@ -271,12 +289,12 @@ mutual
                 t => pure [UnnamedExpArg t]
     <|> do continue indents
            braceArgs fname indents
-    <|> if withOK q
-           then do continue indents
-                   decoratedSymbol fname "|"
-                   arg <- expr ({withOK := False} q) fname indents
-                   pure [WithArg arg]
-           else fail "| not allowed here"
+    <|> do let True = withOK q
+             | False => fail "| not allowed here"
+           continue indents
+           decoratedSymbol fname "|"
+           arg <- expr ({withOK := False} q) fname indents
+           pure [WithArg arg]
     where
       underscore : FC -> ArgType
       underscore fc = NamedArg (UN Underscore) (PImplicit fc)
@@ -301,7 +319,7 @@ mutual
                               pure $ if isNil list
                                 then [underscore fc]
                                 else matchAny
-               pure $ matchAny ++ list
+               pure (matchAny ++ list)
 
         <|> do decoratedSymbol fname "@{"
                commit
@@ -332,6 +350,14 @@ mutual
         ns <- sepBy1 (decoratedSymbol fname ",") (bounds name)
         decoratedSymbol fname "]"
         pure (map (\ n => (boundToFC fname n, n.val)) $ forget ns)
+
+  bindingApp : OriginDesc -> IndentInfo -> Rule PTerm
+  bindingApp fname indents
+      = do fn <- fcBounds (simpleExpr fname indents)
+           bind <- fcBounds (parens fname plainBinder)
+           decoratedSymbol fname "|"
+           scope <- fcBounds (expr pdef fname indents)
+           pure $ PBindingApp fn bind scope
 
   -- The different kinds of operator bindings `x : ty` for typebind
   -- x := e and x : ty := e for autobind
@@ -1192,27 +1218,6 @@ visibility fname = parseDefault (visOption fname)
 
 exportVisibility : OriginDesc -> EmptyRule (WithDefault Visibility Export)
 exportVisibility fname = parseDefault (visOption fname)
-
-||| A binder with only one name and one type
-||| BNF:
-||| plainBinder := name ':' typeExpr
-plainBinder : (fname : OriginDesc) => (indents : IndentInfo) => Rule PlainBinder
-plainBinder = do name <- fcBounds (decoratedSimpleBinderUName fname)
-                 decoratedSymbol fname ":"
-                 ty <- typeExpr pdef fname indents
-                 pure $ MkWithName name ty
-
-||| A binder with multiple names and one type
-||| BNF:
-||| basicMultiBinder := name (, name)* ':' typeExpr
-basicMultiBinder : (fname : OriginDesc) => (indents : IndentInfo) => Rule BasicMultiBinder
-basicMultiBinder
-  = do rig <- multiplicity fname
-       names <- sepBy1 (decoratedSymbol fname ",")
-                     $ fcBounds (decoratedSimpleBinderUName fname)
-       decoratedSymbol fname ":"
-       ty <- typeExpr pdef fname indents
-       pure $ MkBasicMultiBinder rig names ty
 
 tyDecls : Rule Name -> String -> OriginDesc -> IndentInfo -> Rule PTypeDecl
 tyDecls declName predoc fname indents

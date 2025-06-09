@@ -334,6 +334,7 @@ mutual
     prettyPrec d (PForce _ tm) = parenthesise (d > startPrec) $ "Force" <++> prettyPrec appPrec tm
     prettyPrec d (PAutoApp _ f a) =
       parenthesise (d > startPrec) $ group $ prettyPrec leftAppPrec f <++> "@" <+> braces (pretty a)
+    prettyPrec d (PBindingApp fn bind scope) = ?TODO2
     prettyPrec d (PNamedApp _ f n (PRef _ a)) =
       parenthesise (d > startPrec) $ group $
         if n == rawName a

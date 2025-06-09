@@ -129,6 +129,7 @@ mutual
        PApp : FC -> PTerm' nm -> PTerm' nm -> PTerm' nm
        PWithApp : FC -> PTerm' nm -> PTerm' nm -> PTerm' nm
        PNamedApp : FC -> PTerm' nm -> Name -> PTerm' nm -> PTerm' nm
+       PBindingApp : (function : WithFC (PTerm' nm)) -> (binder : WithFC (PlainBinder' nm)) -> (scope : WithFC (PTerm' nm)) -> PTerm' nm
        PAutoApp : FC -> PTerm' nm -> PTerm' nm -> PTerm' nm
 
        PDelayed : FC -> LazyReason -> PTerm' nm -> PTerm' nm
@@ -205,6 +206,7 @@ mutual
   getPTermLoc (PWithApp fc _ _) = fc
   getPTermLoc (PAutoApp fc _ _) = fc
   getPTermLoc (PNamedApp fc _ _ _) = fc
+  getPTermLoc (PBindingApp s _ w) = fromMaybe EmptyFC (mergeFC s.fc w.fc)
   getPTermLoc (PDelayed fc _ _) = fc
   getPTermLoc (PDelay fc _) = fc
   getPTermLoc (PForce fc _) = fc
@@ -950,6 +952,9 @@ parameters {0 nm : Type} (toName : nm -> Name)
              else showPTermPrec d f ++ " {" ++ showPrec d n ++ " = " ++ showPrec d (toName a) ++ "}"
   showPTermPrec d (PNamedApp _ f n a)
         = showPTermPrec d f ++ " {" ++ showPrec d n ++ " = " ++ showPTermPrec d a ++ "}"
+
+  showPTermPrec d (PBindingApp fn bind scope)
+        = ?TODO1
   showPTermPrec _ (PSearch _ _) = "%search"
   showPTermPrec d (PQuote _ tm) = "`(" ++ showPTermPrec d tm ++ ")"
   showPTermPrec d (PQuoteName _ n) = "`{" ++ showPrec d n ++ "}"
