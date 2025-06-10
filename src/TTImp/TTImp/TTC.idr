@@ -47,6 +47,8 @@ mutual
         = do tag 12; toBuf fc; toBuf x; toBuf y
     toBuf (ICoerced fc y)
         = do tag 13; toBuf fc; toBuf y
+    toBuf (IBindingApp fn bind arg)
+        = do tag 14; toBuf fn; toBuf bind; toBuf arg
 
     toBuf (IBindHere fc m y)
         = do tag 14; toBuf fc; toBuf m; toBuf y

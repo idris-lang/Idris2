@@ -98,6 +98,8 @@ findBindableNames arg env used (IAutoApp fc fn av)
     = findBindableNames False env used fn ++ findBindableNames True env used av
 findBindableNames arg env used (IWithApp fc fn av)
     = findBindableNames False env used fn ++ findBindableNames True env used av
+findBindableNames arg env used (IBindingApp fc fn av)
+    = ?TODO6 --findBindableNames False env used fn ++ findBindableNames True env used av
 findBindableNames arg env used (IAs fc _ _ (UN (Basic n)) pat)
     = (n, genUniqueStr used n) :: findBindableNames arg env used pat
 findBindableNames arg env used (IAs fc _ _ n pat)
@@ -147,6 +149,8 @@ findBindableNamesQuot env used (IAutoApp fc x y)
     = findBindableNamesQuot env used ![x, y]
 findBindableNamesQuot env used (IWithApp fc x y)
     = findBindableNamesQuot env used ![x, y]
+findBindableNamesQuot env used (IBindingApp x y z)
+    = ?TODO7
 findBindableNamesQuot env used (IRewrite fc x y)
     = findBindableNamesQuot env used ![x, y]
 findBindableNamesQuot env used (ICoerced fc x)

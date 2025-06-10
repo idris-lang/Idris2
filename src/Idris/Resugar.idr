@@ -359,6 +359,8 @@ mutual
       = do arg' <- toPTerm startPrec arg
            fn' <- toPTerm startPrec fn
            bracket p appPrec (PWithApp fc fn' arg')
+  toPTerm p (IBindingApp fn bind arg)
+      = ?TODO8
   toPTerm p (INamedApp fc fn n arg)
       = do arg' <- toPTerm startPrec arg
            app <- toPTermApp fn [(fc, Just (Just n), arg')]

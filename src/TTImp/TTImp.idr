@@ -8,6 +8,7 @@ import Core.Options
 import Core.Options.Log
 import Core.TT
 import Core.Value
+import Core.WithName
 
 import Data.List
 import public Data.List1
@@ -96,6 +97,8 @@ mutual
        IAutoApp : FC -> RawImp' nm -> RawImp' nm -> RawImp' nm
        INamedApp : FC -> RawImp' nm -> Name -> RawImp' nm -> RawImp' nm
        IWithApp : FC -> RawImp' nm -> RawImp' nm -> RawImp' nm
+       IBindingApp : (fn : WithFC (RawImp' nm)) -> (bound : WithFC (WithName (RawImp' nm))) ->
+                     (scope : WithFC (RawImp' nm)) -> RawImp' nm
 
        ISearch : FC -> (depth : Nat) -> RawImp' nm
        IAlternative : FC -> AltType' nm -> List (RawImp' nm) -> RawImp' nm
@@ -191,6 +194,8 @@ mutual
          = "(" ++ show f ++ " [" ++ show a ++ "])"
       show (IWithApp fc f a)
          = "(" ++ show f ++ " | " ++ show a ++ ")"
+      show (IBindingApp x y z)
+         = ?TODO5
       show (ISearch fc d)
          = "%search"
       show (IAlternative fc ty alts)
@@ -891,6 +896,7 @@ getFC (IApp x _ _) = x
 getFC (INamedApp x _ _ _) = x
 getFC (IAutoApp x _ _) = x
 getFC (IWithApp x _ _) = x
+getFC (IBindingApp x _ y) = fromMaybe EmptyFC (mergeFC x.fc y.fc)
 getFC (ISearch x _) = x
 getFC (IAlternative x _ _) = x
 getFC (IRewrite x _ _) = x

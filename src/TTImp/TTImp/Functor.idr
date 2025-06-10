@@ -2,6 +2,9 @@ module TTImp.TTImp.Functor
 
 import Core.TT
 import TTImp.TTImp
+import Core.FC
+import Core.WithName
+
 
 %default covering
 
@@ -32,6 +35,8 @@ mutual
       = INamedApp fc (map f fn) nm (map f t)
     map f (IWithApp fc fn t)
       = IWithApp fc (map f fn) (map f t)
+    map f (IBindingApp fn bn sc)
+      = IBindingApp (mapFC (map f) fn) (mapFC (mapWName (map f)) bn) (mapFC (map f) sc)
     map f (ISearch fc n)
       = ISearch fc n
     map f (IAlternative fc alt ts)

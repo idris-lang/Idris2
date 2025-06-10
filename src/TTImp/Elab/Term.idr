@@ -160,6 +160,8 @@ checkTerm rig elabinfo nest env (IAutoApp fc fn arg) exp
     = checkApp rig elabinfo nest env fc fn [] [arg] []  exp
 checkTerm rig elabinfo nest env (IWithApp fc fn arg) exp
     = throw (GenericMsg fc "with application not implemented yet")
+checkTerm rig elabinfo nest env (IBindingApp fc fn arg) exp
+    = ?TODO11
 checkTerm rig elabinfo nest env (INamedApp fc fn nm arg) exp
     = checkApp rig elabinfo nest env fc fn [] [] [(nm, arg)] exp
 checkTerm rig elabinfo nest env (ISearch fc depth) (Just gexpty)

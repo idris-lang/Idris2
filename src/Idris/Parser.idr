@@ -351,6 +351,8 @@ mutual
         decoratedSymbol fname "]"
         pure (map (\ n => (boundToFC fname n, n.val)) $ forget ns)
 
+  ||| parse binding application
+  ||| bindingApp := simpleExpr plainBinder "|" expr
   bindingApp : OriginDesc -> IndentInfo -> Rule PTerm
   bindingApp fname indents
       = do fn <- fcBounds (simpleExpr fname indents)

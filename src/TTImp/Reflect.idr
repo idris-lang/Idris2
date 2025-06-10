@@ -159,6 +159,8 @@ mutual
                           f' <- reify defs !(evalClosure defs f)
                           a' <- reify defs !(evalClosure defs a)
                           pure (IWithApp fc' f' a')
+               (UN (Basic "IBindingApp"), [x, y, z])
+                    => ?TODO10
                (UN (Basic "ISearch"), [fc, d])
                     => do fc' <- reify defs !(evalClosure defs fc)
                           d' <- reify defs !(evalClosure defs d)
@@ -553,6 +555,8 @@ mutual
              f' <- reflect fc defs lhs env f
              a' <- reflect fc defs lhs env a
              appCon fc defs (reflectionttimp "IWithApp") [fc', f', a']
+    reflect fc defs lhs env (IBindingApp tfc f a)
+        = ?TODO9
     reflect fc defs lhs env (ISearch tfc d)
         = do fc' <- reflect fc defs lhs env tfc
              d' <- reflect fc defs lhs env d

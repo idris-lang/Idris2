@@ -10,6 +10,7 @@ import Core.FC
 import Core.Name
 import Core.Options
 import Core.TT
+import Core.WithName
 
 import Data.List1
 import Data.Vect
@@ -146,6 +147,17 @@ TTC Name where
                      pure (WithBlock x y)
              9 => pure (UN Underscore)
              _ => corrupt "Name"
+
+export
+TTC a => TTC (WithName a) where
+  toBuf (MkWithName nm val)
+    = do toBuf nm
+         toBuf val
+  fromBuf
+    = do nm <- fromBuf
+         val <- fromBuf
+         pure $ MkWithName nm val
+
 
 export
 TTC RigCount where
