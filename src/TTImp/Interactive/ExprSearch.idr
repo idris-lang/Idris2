@@ -291,11 +291,6 @@ searchName fc rigc opts hints env target topty (n, ndef)
          let ty = type ndef
          let True = usableName (fullname ndef)
              | _ => noResult
-         let namety : NameType
-                 = case definition ndef of
-                        DCon tag arity _ => DataCon tag arity
-                        TCon arity _ _ _ _ _ _ => TyCon arity
-                        _ => Func
          log "interaction.search" 5 $ "Trying " ++ show (fullname ndef)
          nty <- nf defs env (embed ty)
          (args, appTy) <- mkArgs fc rigc env nty
@@ -309,7 +304,7 @@ searchName fc rigc opts hints env target topty (n, ndef)
                    (filter explicit args)
          args' <- traverse (searchIfHole fc opts hints topty env)
                            args
-         mkCandidates fc (Ref fc namety n) [] args'
+         mkCandidates fc (Ref fc (getDefNameType ndef) n) [] args'
   where
     -- we can only use the name in a search result if it's a user writable
     -- name (so, no recursive with blocks or case blocks, for example)
