@@ -141,11 +141,7 @@ mutual
            -- When `head` is `Func`, the pattern will be marked as forced and
            -- the coverage checker will considers that all the cases have been
            -- covered!
-           let head = case definition gdef of
-                        DCon t a _ => DataCon t a
-                        TCon a _ _ _ _ _ _ => TyCon a
-                        _ => Func
-           processArgs (Ref fc head (Resolved i)) tynf exps autos named
+           processArgs (Ref fc (getDefNameType gdef) (Resolved i)) tynf exps autos named
 
   mkTerm : {auto c : Ref Ctxt Defs} ->
            {auto q : Ref QVar Int} ->

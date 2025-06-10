@@ -330,6 +330,10 @@ record GlobalDef where
   schemeExpr : Maybe (SchemeMode, SchemeObj Write)
 
 export
+getDefNameType : GlobalDef -> NameType
+getDefNameType = fromMaybe Func . defNameType . definition
+
+export
 gDefKindedName : GlobalDef -> KindedName
 gDefKindedName def
   = let nm = fullname def in

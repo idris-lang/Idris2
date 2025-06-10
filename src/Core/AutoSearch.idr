@@ -400,11 +400,6 @@ searchName fc rigc defaults trying depth def top env target (n, ndef)
          when (isErased ty) $
             throw (CantSolveGoal fc (gamma defs) [] top Nothing)
 
-         let namety : NameType
-                 = case definition ndef of
-                        DCon tag arity _ => DataCon tag arity
-                        TCon arity _ _ _ _ _ _ => TyCon arity
-                        _ => Func
          nty <- nf defs env (embed ty)
          logNF "auto" 10 ("Searching Name " ++ show n) env nty
          (args, appTy) <- mkArgs fc rigc env nty
@@ -412,7 +407,7 @@ searchName fc rigc defaults trying depth def top env target (n, ndef)
          let [] = constraints ures
              | _ => throw (CantSolveGoal fc (gamma defs) Env.empty top Nothing)
          ispair <- isPairNF env nty defs
-         let candidate = apply fc (Ref fc namety n) (map metaApp args)
+         let candidate = apply fc (Ref fc (getDefNameType ndef) n) (map metaApp args)
          logTermNF "auto" 10 "Candidate " env candidate
          -- Work right to left, because later arguments may solve earlier
          -- dependencies by unification
