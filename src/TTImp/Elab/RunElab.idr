@@ -44,13 +44,8 @@ lookupNameInfo : Name -> Context -> Core (List (Name, NameInfo))
 lookupNameInfo n ctxt
     = do res <- lookupCtxtName n ctxt
          pure (map (\ (n, i, gd) =>
-                      (n, MkNameInfo { nametype = getNameType (definition gd) } ))
+                      (n, MkNameInfo { nametype = getDefNameType gd } ))
                    res)
-  where
-    getNameType : Def -> NameType
-    getNameType (DCon t a _) = DataCon t a
-    getNameType (TCon a _ _ _ _ _ _) = TyCon a
-    getNameType _ = Func
 
 Reflect NameInfo where
   reflect fc defs lhs env inf

@@ -78,7 +78,7 @@ getNameType elabMode rigc env fc x
                  when (not $ onLHS elabMode) $
                    checkDeprecation fc def
                  rigSafe (multiplicity def) rigc
-                 let nt = fromMaybe Func (defNameType $ definition def)
+                 let nt = getDefNameType def
 
                  log "ide-mode.highlight" 8
                      $ "getNameType is trying to add something for: "
@@ -125,7 +125,7 @@ getVarType elabMode rigc nest env fc x
                  case !(lookupCtxtExact n' (gamma defs)) of
                       Nothing => undefinedName fc n'
                       Just ndef =>
-                         let nt = fromMaybe Func (defNameType $ definition ndef)
+                         let nt = getDefNameType ndef
                              tm = tmf fc nt
                              tyenv = useVars (getArgs tm)
                                              (embed (type ndef)) in
