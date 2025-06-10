@@ -400,8 +400,8 @@ mutual
       = pure $ IAutoApp fc !(desugarB side ps x) !(desugarB side ps y)
   desugarB side ps (PWithApp fc x y)
       = pure $ IWithApp fc !(desugarB side ps x) !(desugarB side ps y)
-  desugarB side ps (PBindingApp x argn y)
-      = ?TODO3REALWORK
+  desugarB side ps (PBindingApp nm bind scope)
+      = pure $ IBindingApp nm !(traverseFC (traverseWName (desugarB side ps)) bind) !(traverseFC (desugarB side ps) scope)
   desugarB side ps (PNamedApp fc x argn y)
       = pure $ INamedApp fc !(desugarB side ps x) argn !(desugarB side ps y)
   desugarB side ps (PDelayed fc r ty)
