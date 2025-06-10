@@ -421,7 +421,7 @@ getDocsForName fc n config
            PMDef _ _ _ _ _ => pure ( Nothing
                                    , catMaybes [ showTotal (totality d)
                                                , pure (showVisible (collapseDefault $ visibility d))])
-           TCon _ _ _ _ _ _ cons _ =>
+           TCon _ _ _ _ _ cons _ =>
              do let tot = catMaybes [ showTotal (totality d)
                                     , pure (showVisible (collapseDefault $ visibility d))]
                 cdocs <- traverse (getDConDoc <=< toFullNames) (fromMaybe [] cons)
