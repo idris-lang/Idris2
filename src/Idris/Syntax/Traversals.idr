@@ -65,9 +65,8 @@ mapPTermM f = goPTerm where
                          <*> goPTerm y
       >>= f
     goPTerm (PBindingApp fn bind scope) =
-      PBindingApp <$> traverseFC goPTerm fn
-                  <*> traverseFC goPlainBinder bind
-                  <*> traverseFC goPTerm scope
+      PBindingApp fn <$> traverseFC goPlainBinder bind
+                     <*> traverseFC goPTerm scope
       >>= f
     goPTerm (PNamedApp fc x n y) =
       PNamedApp fc <$> goPTerm x
@@ -456,7 +455,7 @@ mapPTerm f = goPTerm where
     goPTerm (PAutoApp fc x y)
       = f $ PAutoApp fc (goPTerm x) (goPTerm y)
     goPTerm (PBindingApp x bind y)
-      = f $ PBindingApp (mapFC goPTerm x) (mapFC goPlainBinder bind) (mapFC goPTerm y)
+      = f $ PBindingApp x (mapFC goPlainBinder bind) (mapFC goPTerm y)
     goPTerm (PNamedApp fc x n y)
       = f $ PNamedApp fc (goPTerm x) n (goPTerm y)
     goPTerm (PDelayed fc x y)

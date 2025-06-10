@@ -355,7 +355,7 @@ mutual
   ||| bindingApp := simpleExpr plainBinder "|" expr
   bindingApp : OriginDesc -> IndentInfo -> Rule PTerm
   bindingApp fname indents
-      = do fn <- fcBounds (simpleExpr fname indents)
+      = do fn <- fcBounds (decoratedSimpleBinderUName fname)
            bind <- fcBounds (parens fname plainBinder)
            decoratedSymbol fname "|"
            scope <- fcBounds (expr pdef fname indents)
