@@ -222,13 +222,16 @@ Functor OperatorLHSInfo where
   map f (NoBinder x) = NoBinder (f x)
   map f (LHSBinder bd) = LHSBinder (map f bd)
 
+export
+(.getBoundExpr) : BindingInfo tm -> tm
+(.getBoundExpr) (BindExpr _ t) = t
+(.getBoundExpr) (BindType _ t) = t
+(.getBoundExpr) (BindExplicitType _ _ t) = t
 
 export
 (.getLhs) : OperatorLHSInfo tm -> tm
 (.getLhs) (NoBinder lhs) = lhs
-(.getLhs) (LHSBinder $ BindExpr _ lhs) = lhs
-(.getLhs) (LHSBinder $ BindType _ lhs) = lhs
-(.getLhs) (LHSBinder $ BindExplicitType _ _ lhs) = lhs
+(.getLhs) (LHSBinder lhs) = lhs.getBoundExpr
 
 export
 (.getBoundPat) : OperatorLHSInfo tm -> Maybe tm

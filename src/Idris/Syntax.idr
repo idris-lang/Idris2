@@ -115,7 +115,7 @@ mutual
        PApp : FC -> PTerm' nm -> PTerm' nm -> PTerm' nm
        PWithApp : FC -> PTerm' nm -> PTerm' nm -> PTerm' nm
        PNamedApp : FC -> PTerm' nm -> Name -> PTerm' nm -> PTerm' nm
-       PBindingApp : (function : WithFC Name) -> (binder : WithFC (PlainBinder' nm)) -> (scope : WithFC (PTerm' nm)) -> PTerm' nm
+       PBindingApp : (function : WithFC Name) -> (binder : WithFC (BindingInfo (PTerm' nm))) -> (scope : WithFC (PTerm' nm)) -> PTerm' nm
        PAutoApp : FC -> PTerm' nm -> PTerm' nm -> PTerm' nm
 
        PDelayed : FC -> LazyReason -> PTerm' nm -> PTerm' nm

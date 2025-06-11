@@ -47,7 +47,7 @@ checkBindingApplication : {vars : _} ->
   {auto o : Ref ROpts REPLOpts} ->
   RigCount -> ElabInfo ->
   NestedNames vars -> Env Term vars ->
-  WithFC Name -> WithFC (WithName RawImp) -> WithFC RawImp ->
+  WithFC Name -> WithFC (BindingInfo RawImp) -> WithFC RawImp ->
   Core (Term vars, Glued vars)
 checkBindingApplication rig info nest env nm bind scope = do
   ctx <- get Ctxt

@@ -101,6 +101,19 @@ TTC BindingModifier where
            1 => pure Autobind
            2 => pure Typebind
            _ => corrupt "BindingModifier"
+
+export
+TTC a => TTC (BindingInfo a) where
+  toBuf (BindType name type) = tag 0 >> toBuf name >> toBuf type
+  toBuf (BindExpr name expr) = tag 1 >> toBuf name >> toBuf expr
+  toBuf (BindExplicitType name type expr) = tag 2 >> toBuf name >> toBuf expr
+
+  fromBuf
+    = case !getTag of
+           0 => BindType <$> fromBuf <*> fromBuf
+           1 => BindExpr <$> fromBuf <*> fromBuf
+           2 => BindExplicitType <$> fromBuf <*> fromBuf <*> fromBuf
+           _ => corrupt "BindingInfo"
 export
 TTC Name where
   -- for efficiency reasons we do not encode UserName separately

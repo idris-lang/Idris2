@@ -351,16 +351,6 @@ mutual
         decoratedSymbol fname "]"
         pure (map (\ n => (boundToFC fname n, n.val)) $ forget ns)
 
-  ||| parse binding application
-  ||| bindingApp := simpleExpr plainBinder "|" expr
-  bindingApp : OriginDesc -> IndentInfo -> Rule PTerm
-  bindingApp fname indents
-      = do fn <- fcBounds (decoratedSimpleBinderUName fname)
-           bind <- fcBounds (parens fname plainBinder)
-           decoratedSymbol fname "|"
-           scope <- fcBounds (expr pdef fname indents)
-           pure $ PBindingApp fn bind scope
-
   -- The different kinds of operator bindings `x : ty` for typebind
   -- x := e and x : ty := e for autobind
   opBinderTypes : OriginDesc -> IndentInfo -> WithBounds PTerm -> Rule (BindingInfo PTerm)
@@ -381,6 +371,16 @@ mutual
   opBinder fname indents
       = do boundName <- bounds (expr plhs fname indents)
            opBinderTypes fname indents boundName
+
+  ||| parse binding application
+  ||| bindingApp := simpleExpr binderInfo "|" expr
+  bindingApp : OriginDesc -> IndentInfo -> Rule PTerm
+  bindingApp fname indents
+      = do fn <- fcBounds (decoratedSimpleBinderUName fname)
+           bind <- fcBounds (parens fname (opBinder fname indents))
+           decoratedSymbol fname "|"
+           scope <- fcBounds (expr pdef fname indents)
+           pure $ PBindingApp fn bind scope
 
   autobindOp : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
   autobindOp q fname indents

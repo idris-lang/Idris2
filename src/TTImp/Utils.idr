@@ -99,7 +99,8 @@ findBindableNames arg env used (IAutoApp fc fn av)
 findBindableNames arg env used (IWithApp fc fn av)
     = findBindableNames False env used fn ++ findBindableNames True env used av
 findBindableNames arg env used (IBindingApp fn bound scope)
-    = findBindableNames False env used bound.val.val -- we are not going into the scope, maybe this should be changed
+    = findBindableNames False env used bound.val.getBoundExpr
+    -- we are not going into the scope, maybe this should be changed
 findBindableNames arg env used (IAs fc _ _ (UN (Basic n)) pat)
     = (n, genUniqueStr used n) :: findBindableNames arg env used pat
 findBindableNames arg env used (IAs fc _ _ n pat)

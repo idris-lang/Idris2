@@ -97,7 +97,7 @@ mutual
        IAutoApp : FC -> RawImp' nm -> RawImp' nm -> RawImp' nm
        INamedApp : FC -> RawImp' nm -> Name -> RawImp' nm -> RawImp' nm
        IWithApp : FC -> RawImp' nm -> RawImp' nm -> RawImp' nm
-       IBindingApp : (fn : WithFC Name) -> (bound : WithFC (WithName (RawImp' nm))) ->
+       IBindingApp : (fn : WithFC Name) -> (bound : WithFC (BindingInfo (RawImp' nm))) ->
                      (scope : WithFC (RawImp' nm)) -> RawImp' nm
 
        ISearch : FC -> (depth : Nat) -> RawImp' nm

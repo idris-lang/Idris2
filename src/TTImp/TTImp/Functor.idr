@@ -36,7 +36,7 @@ mutual
     map f (IWithApp fc fn t)
       = IWithApp fc (map f fn) (map f t)
     map f (IBindingApp fn bn sc)
-      = IBindingApp fn (mapFC (mapWName (map f)) bn) (mapFC (map f) sc)
+      = IBindingApp fn (mapFC (map (map f)) bn) (mapFC (map f) sc)
     map f (ISearch fc n)
       = ISearch fc n
     map f (IAlternative fc alt ts)
