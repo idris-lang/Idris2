@@ -6,16 +6,32 @@ typebind
 Exists : (t : Type) -> (t -> Type) -> Type
 Exists = DPair
 
-val : Exists (n : Nat) | Vect n Nat
-val = (4 ** [0,1,2,3])
-
 -- val2 : Exists Nat (\n => Vect n Nat)
 -- val2 = (4 ** [0,1,2,3])
 
+typebind
+Σ : (t : Type) -> (t -> Type) -> Type
+Σ = DPair
+
+(=>>) : (t : Type) -> (t -> Type) -> Type
+(=>>) a b = (x : a) -> b x
+
+private typebind infixr 0 =>>
+
 autobind
-for : Applicative f => Foldable t => t a -> (a -> f b) -> f ()
-for = Prelude.for_
+loop : Applicative f => Foldable t => t a -> (a -> f b) -> f ()
+loop = Prelude.for_
+
+val : Exists (n : Nat) | Vect n Nat
+val = (4 ** [0,1,2,3])
+
+sigmaPi : Σ (ty : Type) | (x : ty) =>> Type
+sigmaPi = (Type ** List)
+
+nestedSigma : Σ (ty : Type) | Σ (n : Nat) | Vect n ty
+nestedSigma = (String ** 2 ** ["hello", "world"])
+
 
 main : IO ()
-main = for (x := [0 .. 10]) |
+main = loop (x := [0 .. 10]) |
          printLn x
