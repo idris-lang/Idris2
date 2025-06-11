@@ -196,12 +196,15 @@ mapPTermM f = goPTerm where
       PWithUnambigNames fc ns <$> goPTerm rhs
       >>= f
 
+    goBinderInfo : BindingInfo (PTerm' nm) -> Core (BindingInfo (PTerm' nm))
+    goBinderInfo (BindType name ty) = BindType <$> goPTerm name <*> goPTerm ty
+    goBinderInfo (BindExpr name expr) = BindExpr <$> goPTerm name <*> goPTerm expr
+    goBinderInfo (BindExplicitType name type expr)
+      = BindExplicitType <$> goPTerm name <*> goPTerm type <*> goPTerm expr
+
     goOpBinder : OperatorLHSInfo (PTerm' nm) -> Core (OperatorLHSInfo (PTerm' nm))
     goOpBinder (NoBinder lhs) = NoBinder <$> goPTerm lhs
-    goOpBinder (BindType name ty) = BindType <$> goPTerm name <*> goPTerm ty
-    goOpBinder (BindExpr name expr) = BindExpr <$> goPTerm name <*> goPTerm expr
-    goOpBinder (BindExplicitType name type expr)
-      = BindExplicitType <$> goPTerm name <*> goPTerm type <*> goPTerm expr
+    goOpBinder (LHSBinder lhs) = LHSBinder <$> goBinderInfo lhs
 
     goPFieldUpdate : PFieldUpdate' nm -> Core (PFieldUpdate' nm)
     goPFieldUpdate (PSetField p t)    = PSetField p <$> goPTerm t

@@ -187,9 +187,9 @@ checkConflictingBinding (MkFCVal fc opName) foundFixity use_site rhs
       isCompatible UndeclaredFixity (NoBinder lhs) = True
       isCompatible UndeclaredFixity _ = False
       isCompatible (DeclaredFixity fixInfo) (NoBinder lhs) = fixInfo.bindingInfo == NotBinding
-      isCompatible (DeclaredFixity fixInfo) (BindType name ty) = fixInfo.bindingInfo == Typebind
-      isCompatible (DeclaredFixity fixInfo) (BindExpr name expr) = fixInfo.bindingInfo == Autobind
-      isCompatible (DeclaredFixity fixInfo) (BindExplicitType name type expr)
+      isCompatible (DeclaredFixity fixInfo) (LHSBinder $ BindType name ty) = fixInfo.bindingInfo == Typebind
+      isCompatible (DeclaredFixity fixInfo) (LHSBinder $ BindExpr name expr) = fixInfo.bindingInfo == Autobind
+      isCompatible (DeclaredFixity fixInfo) (LHSBinder $ BindExplicitType name type expr)
           = fixInfo.bindingInfo == Autobind
 
       keepCompatibleBinding : BindingModifier -> (Name, GlobalDef) -> Core Bool
@@ -846,20 +846,20 @@ mutual
            r' <- desugarTree side ps r
            pure (PApp loc (PApp loc (PRef opFC op.toName) l') r')
   -- (x : ty) =@ f x ==>> (=@) ty (\x : ty => f x)
-  desugarTree side ps (Infix loc opFC (op, Just (BindType pat lhs)) l r)
+  desugarTree side ps (Infix loc opFC (op, Just (LHSBinder $ BindType pat lhs)) l r)
       = do l' <- desugarTree side ps l
            body <- desugarTree side ps r
            pure $ PApp loc (PApp loc (PRef opFC op.toName) l')
                       (PLam loc top Explicit pat l' body)
   -- (x := exp) =@ f x ==>> (=@) exp (\x : ? => f x)
-  desugarTree side ps (Infix loc opFC (op, Just (BindExpr pat lhs)) l r)
+  desugarTree side ps (Infix loc opFC (op, Just (LHSBinder $ BindExpr pat lhs)) l r)
       = do l' <- desugarTree side ps l
            body <- desugarTree side ps r
            pure $ PApp loc (PApp loc (PRef opFC op.toName) l')
                       (PLam loc top Explicit pat (PInfer opFC) body)
 
   -- (x : ty := exp) =@ f x ==>> (=@) exp (\x : ty => f x)
-  desugarTree side ps (Infix loc opFC (op, Just (BindExplicitType pat ty expr)) l r)
+  desugarTree side ps (Infix loc opFC (op, Just (LHSBinder $ BindExplicitType pat ty expr)) l r)
       = do l' <- desugarTree side ps l
            body <- desugarTree side ps r
            pure $ PApp loc (PApp loc (PRef opFC op.toName) l')

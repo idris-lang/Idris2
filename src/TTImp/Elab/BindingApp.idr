@@ -17,8 +17,8 @@ import Idris.REPL.Opts
 import Idris.Syntax
 
 
-keepBinding : List GlobalDef -> List GlobalDef
-keepBinding = filter (\x => x.bindingMode /= NotBinding)
+keepBinding : BindingModifier -> List GlobalDef -> List GlobalDef
+keepBinding mode = filter (\x => x.bindingMode == mode)
 
 parameters (originalName : WithFC Name)
   checkUnique : List GlobalDef -> Core GlobalDef
@@ -29,10 +29,10 @@ parameters (originalName : WithFC Name)
   typecheckCandidates : List GlobalDef -> Core (List GlobalDef)
   typecheckCandidates xs = pure xs -- todo
 
-  checkBinding : (candidates : List GlobalDef) -> Core GlobalDef
-  checkBinding candidates = do
-    let bindingCandidates = keepBinding candidates
-    coreLift $ putStrLn "potential candidates for identifer : \{show bindingCandidates}"
+  checkBinding : (mode : BindingModifier) -> (candidates : List GlobalDef) -> Core GlobalDef
+  checkBinding mode candidates = do
+    let bindingCandidates = keepBinding mode candidates
+    coreLift $ putStrLn "Potential candidates for binding identifer : \{show (map fullname bindingCandidates)}"
     wellTypedCandidates <- typecheckCandidates bindingCandidates
     checkUnique bindingCandidates
 
@@ -53,7 +53,7 @@ checkBindingApplication rig info nest env nm bind scope = do
   ctx <- get Ctxt
   coreLift $ putStrLn "checking if \{show nm.val} is binding"
   defs <- lookupCtxtName nm.val (gamma ctx)
-  firstArg <- checkBinding nm (map (snd . snd) defs)
+  firstArg <- checkBinding nm ?getMode (map (snd . snd) defs)
   -- check if the name in context is marked as binding
   -- - if it's typebind, check the bound variable is a Type
   -- - if it's autobind, infer the type from the scope

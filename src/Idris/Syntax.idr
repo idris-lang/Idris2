@@ -956,11 +956,11 @@ parameters {0 nm : Type} (toName : nm -> Name)
   showPTermPrec _ (PInfer _) = "?"
   showPTermPrec d (POp _ (MkFCVal _ $ NoBinder left) op right)
         = showPTermPrec d left ++ " " ++ showOpPrec d op.val ++ " " ++ showPTermPrec d right
-  showPTermPrec d (POp _ (MkFCVal _ $ BindType nm left) op right)
+  showPTermPrec d (POp _ (MkFCVal _ $ LHSBinder $ BindType nm left) op right)
         = "(" ++ showPTermPrec d nm ++ " : " ++ showPTermPrec d left ++ " " ++ showOpPrec d op.val ++ " " ++ showPTermPrec d right ++ ")"
-  showPTermPrec d (POp _ (MkFCVal _ $ BindExpr nm left) op right)
+  showPTermPrec d (POp _ (MkFCVal _ $ LHSBinder $ BindExpr nm left) op right)
         = "(" ++ showPTermPrec d nm ++ " := " ++ showPTermPrec d left ++ " " ++ showOpPrec d op.val ++ " " ++ showPTermPrec d right ++ ")"
-  showPTermPrec d (POp _ (MkFCVal _ $ BindExplicitType nm ty left) op right)
+  showPTermPrec d (POp _ (MkFCVal _ $ LHSBinder $ BindExplicitType nm ty left) op right)
         = "(" ++ showPTermPrec d nm ++ " : " ++ showPTermPrec d ty ++ ":=" ++ showPTermPrec d left ++ " " ++ showOpPrec d op.val ++ " " ++ showPTermPrec d right ++ ")"
   showPTermPrec d (PPrefixOp _ op x) = showOpPrec d op.val ++ showPTermPrec d x
   showPTermPrec d (PSectionL _ op x) = "(" ++ showOpPrec d op.val ++ " " ++ showPTermPrec d x ++ ")"
