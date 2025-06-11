@@ -194,8 +194,12 @@ mutual
          = "(" ++ show f ++ " [" ++ show a ++ "])"
       show (IWithApp fc f a)
          = "(" ++ show f ++ " | " ++ show a ++ ")"
-      show (IBindingApp x y z)
-         = ?TODO5
+      show (IBindingApp nm (MkFCVal fc (BindType name type)) scope)
+         = "\{show nm.val} (\{show name} : \{show type}) | \{show scope.val}"
+      show (IBindingApp nm (MkFCVal fc (BindExpr name expr)) scope)
+         = "\{show nm.val} (\{show name} := \{show expr}) | \{show scope.val}"
+      show (IBindingApp nm (MkFCVal fc (BindExplicitType name type expr)) scope)
+         = "\{show nm.val} (\{show name} : \{show type} := \{show expr}) | \{show scope.val}"
       show (ISearch fc d)
          = "%search"
       show (IAlternative fc ty alts)

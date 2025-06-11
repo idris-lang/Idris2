@@ -196,6 +196,7 @@ mapPTermM f = goPTerm where
       PWithUnambigNames fc ns <$> goPTerm rhs
       >>= f
 
+    export
     goBinderInfo : BindingInfo (PTerm' nm) -> Core (BindingInfo (PTerm' nm))
     goBinderInfo (BindType name ty) = BindType <$> goPTerm name <*> goPTerm ty
     goBinderInfo (BindExpr name expr) = BindExpr <$> goPTerm name <*> goPTerm expr

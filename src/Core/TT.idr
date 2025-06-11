@@ -223,10 +223,22 @@ Functor OperatorLHSInfo where
   map f (LHSBinder bd) = LHSBinder (map f bd)
 
 export
+(.getBoundName) : BindingInfo tm -> tm
+(.getBoundName) (BindExpr n _) = n
+(.getBoundName) (BindType n _) = n
+(.getBoundName) (BindExplicitType n _ _) = n
+
+export
 (.getBoundExpr) : BindingInfo tm -> tm
 (.getBoundExpr) (BindExpr _ t) = t
 (.getBoundExpr) (BindType _ t) = t
 (.getBoundExpr) (BindExplicitType _ _ t) = t
+
+export
+(.getBindingMode) : BindingInfo tm -> BindingModifier
+(.getBindingMode) (BindType name ty) = Typebind
+(.getBindingMode) (BindExpr name expr) = Autobind
+(.getBindingMode) (BindExplicitType name type expr) = Autobind
 
 export
 (.getLhs) : OperatorLHSInfo tm -> tm
@@ -243,9 +255,7 @@ export
 export
 (.getBinder) : OperatorLHSInfo tm -> BindingModifier
 (.getBinder) (NoBinder lhs) = NotBinding
-(.getBinder) (LHSBinder $ BindType name ty) = Typebind
-(.getBinder) (LHSBinder $ BindExpr name expr) = Autobind
-(.getBinder) (LHSBinder $ BindExplicitType name type expr) = Autobind
+(.getBinder) (LHSBinder lhs) = lhs.getBindingMode
 
 public export
 data TotalReq = Total | CoveringOnly | PartialOK

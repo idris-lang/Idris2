@@ -11,6 +11,7 @@ import Core.Normalise
 import Core.WithName
 
 import TTImp.Elab.Check
+import TTImp.Elab.App
 import TTImp.TTImp
 
 import Idris.REPL.Opts
@@ -20,7 +21,7 @@ import Idris.Syntax
 keepBinding : BindingModifier -> List GlobalDef -> List GlobalDef
 keepBinding mode = filter (\x => x.bindingMode == mode)
 
-parameters (originalName : WithFC Name)
+parameters (originalName : WithFC Name) {auto c : Ref Ctxt Defs}
   checkUnique : List GlobalDef -> Core GlobalDef
   checkUnique [ def ] = pure def
   checkUnique [] = throw $ UndefinedName originalName.fc originalName.val
@@ -32,10 +33,21 @@ parameters (originalName : WithFC Name)
   checkBinding : (mode : BindingModifier) -> (candidates : List GlobalDef) -> Core GlobalDef
   checkBinding mode candidates = do
     let bindingCandidates = keepBinding mode candidates
-    coreLift $ putStrLn "Potential candidates for binding identifer : \{show (map fullname bindingCandidates)}"
+    log "elab.bindApp"  10 $ "Potential candidates for binding identifer : \{show (map fullname bindingCandidates)}"
     wellTypedCandidates <- typecheckCandidates bindingCandidates
     checkUnique bindingCandidates
 
+typeForBinder : BindingInfo RawImp -> FC -> RawImp
+typeForBinder (BindType name type) = const type
+typeForBinder (BindExpr name expr) = flip Implicit False
+typeForBinder (BindExplicitType name type expr) = const type
+
+
+buildLam : BindingInfo RawImp -> Maybe Name
+buildLam (BindType (IVar _ name) type) = Just name
+buildLam (BindExpr (IVar _ name) expr) =  Just name
+buildLam (BindExplicitType (IVar _ name) type expr) =  Just name
+buildLam _ = Nothing
 
 export
 checkBindingApplication : {vars : _} ->
@@ -48,16 +60,15 @@ checkBindingApplication : {vars : _} ->
   RigCount -> ElabInfo ->
   NestedNames vars -> Env Term vars ->
   WithFC Name -> WithFC (BindingInfo RawImp) -> WithFC RawImp ->
+  Maybe (Glued vars) ->
   Core (Term vars, Glued vars)
-checkBindingApplication rig info nest env nm bind scope = do
+checkBindingApplication rig info nest env nm bind scope exp = do
   ctx <- get Ctxt
-  coreLift $ putStrLn "checking if \{show nm.val} is binding"
+  log "elab.bindApp" 10 $ "checking if \{show nm.val} is binding"
   defs <- lookupCtxtName nm.val (gamma ctx)
-  firstArg <- checkBinding nm ?getMode (map (snd . snd) defs)
-  -- check if the name in context is marked as binding
-  -- - if it's typebind, check the bound variable is a Type
-  -- - if it's autobind, infer the type from the scope
-  --   - If the type is given explicitly, use that
-  -- - if it's neither, report the error
-  ?TODONext
+  firstArg <- checkBinding nm bind.val.getBindingMode (map (snd . snd) defs)
+  let lam = ILam scope.fc top Explicit (buildLam bind.val) (typeForBinder bind.val bind.fc) scope.val
+  let fc = fromMaybe EmptyFC (mergeFC nm.fc scope.fc)
+  log "elab.bindApp" 10 $ "generating function \{show lam}"
+  checkApp rig info nest env fc (IVar nm.fc nm.val) [ bind.val.getBoundExpr,  lam ] [] [] exp
 

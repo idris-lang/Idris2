@@ -885,6 +885,13 @@ namespace Binder
   traverse f (PVTy fc c ty) = pure $ PVTy fc c !(f ty)
 
 export
+traverseBindingInfo : (a -> Core b) -> BindingInfo a -> Core (BindingInfo b)
+traverseBindingInfo f (BindType name type) = BindType <$> f name <*> f type
+traverseBindingInfo f (BindExpr name expr) = BindExpr <$> f name <*> f expr
+traverseBindingInfo f (BindExplicitType name type expr)
+  = BindExplicitType <$> f name <*> f type <*> f expr
+
+export
 mapTermM : ({vars : _} -> Term vars -> Core (Term vars)) ->
            ({vars : _} -> Term vars -> Core (Term vars))
 mapTermM f = goTerm where
