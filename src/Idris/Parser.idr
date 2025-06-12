@@ -1679,12 +1679,13 @@ getVisibility (Just vis) (Left x :: xs)
    = fatalError "Multiple visibility modifiers"
 getVisibility v (_ :: xs) = getVisibility v xs
 
-recordConstructor : OriginDesc -> Rule (String, Name)
+recordConstructor : OriginDesc -> Rule (String, Name, BindingModifier)
 recordConstructor fname
   = do doc <- optDocumentation fname
+       binding <- operatorBindingKeyword {fname}
        decorate fname Keyword $ exactIdent "constructor"
        n <- mustWork $ decoratedDataConstructorName fname
-       pure (doc, n)
+       pure (doc, n, binding)
 
 autoImplicitField : OriginDesc -> IndentInfo -> Rule (PiInfo t)
 autoImplicitField fname _ = AutoImplicit <$ decoratedKeyword fname "auto"

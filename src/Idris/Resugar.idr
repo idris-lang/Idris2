@@ -502,15 +502,16 @@ mutual
               Core ( Name
                    , List (Name, RigCount, PiInfo IPTerm, IPTerm)
                    , List DataOpt
-                   , Maybe (String, Name)
+                   , Maybe (String, Name, BindingModifier)
                    , List (PField' KindedName))
   toPRecord (MkImpRecord fc n ps opts con fs)
       = do ps' <- traverse (\ (n, c, p, ty) =>
                                    do ty' <- toPTerm startPrec ty
                                       p' <- mapPiInfo p
                                       pure (n, c, p', ty')) ps
+           mod <- ?TODO12 -- lookup binding modifier from context given the constructor
            fs' <- traverse toPField fs
-           pure (n, ps', opts, Just ("", con), fs')
+           pure (n, ps', opts, Just ("", (con, NotBinding)), fs')
     where
       mapPiInfo : PiInfo IRawImp -> Core (PiInfo IPTerm)
       mapPiInfo Explicit        = pure   Explicit
@@ -546,7 +547,7 @@ mutual
            pure (Just (MkFCVal fc (PParameters (Right args) (catMaybes ds'))))
   toPDecl (IRecord fc _ vis mbtot r)
       = do (n, ps, opts, con, fs) <- toPRecord r
-           pure (Just (MkFCVal fc $ PRecord "" vis mbtot (MkPRecord n (map toBinder ps) opts con fs)))
+           pure (Just (MkFCVal fc $ PRecord "" vis mbtot (MkPRecord n (map toBinder ps) opts ?whu fs)))
            where
              toBinder : (Name, ZeroOneOmega, PiInfo (PTerm' KindedName), PTerm' KindedName) -> PBinder' KindedName
              toBinder (n, rig, info, ty)

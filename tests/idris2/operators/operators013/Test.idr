@@ -1,6 +1,11 @@
 
 import Data.Vect
 
+record Container where
+  typebind constructor MkCont
+  base : Type
+  fibre : base -> Type
+
 export
 typebind
 Exists : (t : Type) -> (t -> Type) -> Type
@@ -10,8 +15,10 @@ Exists = DPair
 -- val2 = (4 ** [0,1,2,3])
 
 typebind
-Σ : (t : Type) -> (t -> Type) -> Type
-Σ = DPair
+record Σ (t : Type) (s : t -> Type) where
+  constructor (&&)
+  π1 : t
+  π2 : s π1
 
 (=>>) : (t : Type) -> (t -> Type) -> Type
 (=>>) a b = (x : a) -> b x
@@ -26,10 +33,10 @@ val : Exists (n : Nat) | Vect n Nat
 val = (4 ** [0,1,2,3])
 
 sigmaPi : Σ (ty : Type) | (x : ty) =>> Type
-sigmaPi = (Type ** List)
+sigmaPi = (Type && List)
 
 nestedSigma : Σ (ty : Type) | Σ (n : Nat) | Vect n ty
-nestedSigma = (String ** 2 ** ["hello", "world"])
+nestedSigma = (String && 2 && ["hello", "world"])
 
 
 main : IO ()
