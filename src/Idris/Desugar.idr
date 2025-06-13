@@ -1265,7 +1265,7 @@ mutual
         = PPi fc c p (Just n.val) t (mkRecType ts)
       mkRecType (MkPBinder p (MkBasicMultiBinder c (n ::: x :: xs) t) :: ts)
         = PPi fc c p (Just n.val) t (mkRecType (MkPBinder p (MkBasicMultiBinder c (x ::: xs) t) :: ts))
-  desugarDecl ps (MkFCVal fc $ PRecord doc vis mbtot (MkPRecord tn params opts conname_in fields))
+  desugarDecl ps (MkFCVal fc $ PRecord doc vis mbtot (MkPRecord tn bindMod params opts conname_in fields))
       = do addDocString tn doc
            params' <- concat <$> traverse (\ (MkPBinder info (MkBasicMultiBinder rig names tm)) =>
                           do tm' <- desugar AnyExpr ps tm

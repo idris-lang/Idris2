@@ -6,6 +6,8 @@ record Container where
   base : Type
   fibre : base -> Type
 
+%hide Prelude.(&&)
+
 export
 typebind
 Exists : (t : Type) -> (t -> Type) -> Type

@@ -407,7 +407,7 @@ mutual
 
   public export
   data ImpRecord' : Type -> Type where
-       MkImpRecord : FC -> (n : Name) ->
+       MkImpRecord : FC -> (tyName : Name) ->
                      (params : List (ImpParameter' nm)) ->
                      (opts : List DataOpt) ->
                      (conName : Name) ->

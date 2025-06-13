@@ -547,7 +547,7 @@ mutual
            pure (Just (MkFCVal fc (PParameters (Right args) (catMaybes ds'))))
   toPDecl (IRecord fc _ vis mbtot r)
       = do (n, ps, opts, con, fs) <- toPRecord r
-           pure (Just (MkFCVal fc $ PRecord "" vis mbtot (MkPRecord n (map toBinder ps) opts ?whu fs)))
+           pure (Just (MkFCVal fc $ PRecord "" vis mbtot (MkPRecord n ?GetBinder (map toBinder ps) opts ?whu fs)))
            where
              toBinder : (Name, ZeroOneOmega, PiInfo (PTerm' KindedName), PTerm' KindedName) -> PBinder' KindedName
              toBinder (n, rig, info, ty)

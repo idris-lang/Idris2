@@ -406,6 +406,7 @@ mutual
   public export
   data PRecordDecl' : Type -> Type where
        MkPRecord : (tyname : Name) ->
+                   (tybind : BindingModifier) -> -- Type constructor's binding modifier
                    (params : List (PBinder' nm)) ->
                    (opts : List DataOpt) ->
                    (conName : Maybe (String, Name, BindingModifier)) ->

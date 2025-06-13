@@ -1858,9 +1858,10 @@ parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
                Maybe TotalReq ->
                Int ->
                Name ->
+               BindingModifier ->
                List PBinder ->
                EmptyRule PDeclNoFC
-  recordBody doc vis mbtot col n params
+  recordBody doc vis mbtot col n bindMod params
       = do atEndIndent indents
            pure (PRecord doc vis mbtot (MkPRecordLater n params))
     <|> do mustWork $ decoratedKeyword fname "where"
@@ -1869,17 +1870,18 @@ parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
                        (\ idt => recordConstructor fname <* atEnd idt)
                        fieldDecl
            pure (PRecord doc vis mbtot
-                  (MkPRecord n params opts (fst dcflds) (snd dcflds)))
+                  (MkPRecord n bindMod params opts (fst dcflds) (snd dcflds)))
 
   recordDecl : Rule PDeclNoFC
   recordDecl
       = do doc         <- optDocumentation fname
            (vis,mbtot) <- dataVisOpt fname
+           binding     <- operatorBindingKeyword {fname}
            col         <- column
            decoratedKeyword fname "record"
            n       <- mustWork (decoratedDataTypeName fname)
            paramss <- many (continue indents >> recordParam)
-           recordBody doc vis mbtot col n paramss
+           recordBody doc vis mbtot col n binding paramss
 
   ||| Parameter blocks
   ||| BNF:

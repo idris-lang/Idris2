@@ -304,8 +304,9 @@ mapPTermM f = goPTerm where
                                <*> pure mn
                                <*> pure ns
                                <*> goMPDecls mps
-    goPDecl (PRecord doc v tot (MkPRecord n nts opts mn fs)) =
-      pure $ PRecord doc v tot !(MkPRecord n <$> traverse goPBinder nts
+    goPDecl (PRecord doc v tot (MkPRecord n binding nts opts mn fs)) =
+      pure $ PRecord doc v tot !(MkPRecord n binding
+                                             <$> traverse goPBinder nts
                                              <*> pure opts
                                              <*> pure mn
                                              <*> goPFields fs)
@@ -590,9 +591,9 @@ mapPTerm f = goPTerm where
     goPDecl (PImplementation v opts p is cs n ts mn ns mps)
       = PImplementation v opts p (goImplicits is) (goPairedPTerms cs)
            n (goPTerm <$> ts) mn ns (map (mapFC goPDecl <$>) mps)
-    goPDecl (PRecord doc v tot (MkPRecord n nts opts mn fs))
+    goPDecl (PRecord doc v tot (MkPRecord n binding nts opts mn fs))
       = PRecord doc v tot
-          (MkPRecord n (map goPBinder nts) opts mn (map (mapFC goRecordField) fs))
+          (MkPRecord n binding (map goPBinder nts) opts mn (map (mapFC goRecordField) fs))
     goPDecl (PRecord doc v tot (MkPRecordLater n nts))
       = PRecord doc v tot (MkPRecordLater n (goPBinder <$> nts ))
     goPDecl (PFail msg ps) = PFail msg $ mapFC goPDecl <$> ps
