@@ -407,7 +407,9 @@ mutual
 
   public export
   data ImpRecord' : Type -> Type where
-       MkImpRecord : FC -> (tyName : Name) ->
+       MkImpRecord : FC ->
+                     (tyName : Name) ->
+                     (bindMod : BindingModifier) ->
                      (params : List (ImpParameter' nm)) ->
                      (opts : List DataOpt) ->
                      (conName : Name) ->
@@ -425,10 +427,15 @@ mutual
   export
   covering
   Show nm => Show (ImpRecord' nm) where
-    show (MkImpRecord _ n params opts con fields)
-        = "record " ++ show n ++ " " ++ show params ++
+    show (MkImpRecord _ n bind params opts con fields)
+        = displayHeader ++ show n ++ " " ++ show params ++
           " " ++ show con ++ "\n\t" ++
           showSep "\n\t" (map show fields) ++ "\n"
+      where
+        displayHeader : String
+        displayHeader = case bind of
+                             NotBinding => "record "
+                             x => "\{show x} record "
 
   public export
   data WithFlag
@@ -847,7 +854,7 @@ definedInBlock ns decls =
     defName ns acc (IParameters _ _ pds) = foldl (defName ns) acc pds
     defName ns acc (IFail _ _ nds) = foldl (defName ns) acc nds
     defName ns acc (INamespace _ n nds) = foldl (defName (ns <.> n)) acc nds
-    defName ns acc (IRecord _ fldns _ _ (MkImpRecord _ n _ opts con flds))
+    defName ns acc (IRecord _ fldns _ _ (MkImpRecord _ n _ _ opts con flds))
         = foldl (flip insert) acc $ expandNS ns con :: all
       where
         fldns' : Namespace

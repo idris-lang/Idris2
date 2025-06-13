@@ -46,13 +46,15 @@ elabRecord : {vars : _} ->
              List ElabOpt -> FC -> Env Term vars ->
              NestedNames vars -> Maybe String ->
              WithDefault Visibility Private ->
-             Maybe TotalReq -> Name ->
+             Maybe TotalReq ->
+             (tyName : Name) ->
+             (binding : BindingModifier) ->
              (params : List (Name, RigCount, PiInfo RawImp, RawImp)) ->
              (opts : List DataOpt) ->
              (conName : Name) ->
              List IField ->
              Core ()
-elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conName_in fields
+elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in binding params0 opts conName_in fields
     = do tn <- inCurrentNS tn_in
          conName <- inCurrentNS conName_in
          params <- preElabAsData tn
@@ -360,5 +362,5 @@ processRecord : {vars : _} ->
                 Env Term vars -> Maybe String ->
                 WithDefault Visibility Private -> Maybe TotalReq ->
                 ImpRecord -> Core ()
-processRecord eopts nest env newns def_vis mbtot (MkImpRecord fc n ps opts cons fs)
-    = do elabRecord eopts fc env nest newns def_vis mbtot n ps opts cons fs
+processRecord eopts nest env newns def_vis mbtot (MkImpRecord fc n bind ps opts cons fs)
+    = do elabRecord eopts fc env nest newns def_vis mbtot n bind ps opts cons fs

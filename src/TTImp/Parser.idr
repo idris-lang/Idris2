@@ -665,7 +665,9 @@ recordDecl fname indents
          end <- location
          pure (let fc = MkFC fname start end in
                    IRecord fc Nothing vis mbtot
-                           (MkImpRecord fc n params opts dc (concat flds)))
+                           (MkImpRecord fc n NotBinding params opts dc (concat flds)))
+                           --                ^^^^^^^^^^
+                           -- TTImp syntax does not allow to define binding type constructors
 
 namespaceDecl : Rule Namespace
 namespaceDecl

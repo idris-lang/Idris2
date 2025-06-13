@@ -35,7 +35,7 @@ rawImpFromDecl decl = case decl of
     IData fc1 y _ (MkImpLater fc2 n tycon) => [tycon]
     IDef fc1 y ys => getFromClause !ys
     IParameters fc1 ys zs => rawImpFromDecl !zs ++ map getParamTy (forget ys)
-    IRecord fc1 y z _ (MkImpRecord fc n params opts conName fields) => do
+    IRecord fc1 y z _ (MkImpRecord fc n bind params opts conName fields) => do
         (a, b) <- map (snd . snd) params
         getFromPiInfo a ++ [b] ++ getFromIField !fields
     IFail fc1 msg zs => rawImpFromDecl !zs
