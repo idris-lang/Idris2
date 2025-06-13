@@ -77,10 +77,11 @@ ${TARGET}: support src/IdrisPaths.idr
 
 # We use FORCE to always rebuild IdrisPath so that the git SHA1 info is always up to date
 src/IdrisPaths.idr: FORCE
-	echo "-- @""generated" > src/IdrisPaths.idr
-	echo 'module IdrisPaths' >> src/IdrisPaths.idr
-	echo 'export idrisVersion : ((Nat,Nat,Nat), String); idrisVersion = ((${MAJOR},${MINOR},${PATCH}), "${VERSION_TAG}")' >> src/IdrisPaths.idr
-	echo 'export yprefix : String; yprefix="${IDRIS2_PREFIX}"' >> src/IdrisPaths.idr
+	@printf '%s\n' \
+	'-- @generated' \
+	'module IdrisPaths' \
+	'export idrisVersion : ((Nat,Nat,Nat), String); idrisVersion = ((${MAJOR},${MINOR},${PATCH}), "${VERSION_TAG}")' \
+	'export yprefix : String; yprefix="${IDRIS2_PREFIX}"' > src/IdrisPaths.idr
 
 FORCE:
 
