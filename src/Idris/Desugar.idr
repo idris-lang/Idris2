@@ -1265,8 +1265,8 @@ mutual
         = PPi fc c p (Just n.val) t (mkRecType ts)
       mkRecType (MkPBinder p (MkBasicMultiBinder c (n ::: x :: xs) t) :: ts)
         = PPi fc c p (Just n.val) t (mkRecType (MkPBinder p (MkBasicMultiBinder c (x ::: xs) t) :: ts))
-  desugarDecl ps (MkFCVal fc $ PRecord doc vis mbtot (MkPRecord tn bindMod params opts conname_in fields))
-      = do addDocString tn doc
+  desugarDecl ps (MkFCVal fc $ PRecord doc vis mbtot (MkPRecord tn params opts conname_in fields))
+      = do addDocString tn.val doc
            params' <- concat <$> traverse (\ (MkPBinder info (MkBasicMultiBinder rig names tm)) =>
                           do tm' <- desugar AnyExpr ps tm
                              p'  <- mapDesugarPiInfo ps info
@@ -1288,16 +1288,16 @@ mutual
 
            let paramsb = map (\ (n, c, p, tm) => (n, c, p, doBind bnames tm)) params'
            let _ = the (List (Name, RigCount, PiInfo RawImp, RawImp)) paramsb
-           let recName = nameRoot tn
+           let recName = nameRoot tn.val
            fields' <- traverse (desugarField (ps ++ fnames ++ paramNames
                                              ) (mkNamespace recName))
                                fields
            let _ = the (List $ List IField) fields'
-           let conname = maybe (mkConName tn) (fst . snd) conname_in
+           let conname = maybe (mkConName tn.val) (fst . snd) conname_in
            whenJust (fst <$> conname_in) (addDocString conname)
            let _ = the Name conname
            pure [IRecord fc (Just recName)
-                         vis mbtot (MkImpRecord fc tn bindMod paramsb opts conname (concat fields'))]
+                         vis mbtot (MkImpRecord fc tn paramsb opts conname (concat fields'))]
     where
       getfname : PField -> List Name
       getfname x = x.val.names

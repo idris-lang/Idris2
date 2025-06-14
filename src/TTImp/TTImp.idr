@@ -9,6 +9,7 @@ import Core.Options.Log
 import Core.TT
 import Core.Value
 import Core.WithName
+import public Core.WithData
 
 import Data.List
 import public Data.List1
@@ -408,11 +409,10 @@ mutual
   public export
   data ImpRecord' : Type -> Type where
        MkImpRecord : FC ->
-                     (tyName : Name) ->
-                     (bindMod : BindingModifier) ->
+                     (tyName : FCBind Name) ->
                      (params : List (ImpParameter' nm)) ->
                      (opts : List DataOpt) ->
-                     (conName : Name) ->
+                     (conName : Name) -> -- change to FCBind
                      (fields : List (IField' nm)) ->
                      ImpRecord' nm
 
@@ -427,13 +427,13 @@ mutual
   export
   covering
   Show nm => Show (ImpRecord' nm) where
-    show (MkImpRecord _ n bind params opts con fields)
-        = displayHeader ++ show n ++ " " ++ show params ++
+    show (MkImpRecord _ n params opts con fields)
+        = displayHeader ++ show n.val ++ " " ++ show params ++
           " " ++ show con ++ "\n\t" ++
           showSep "\n\t" (map show fields) ++ "\n"
       where
         displayHeader : String
-        displayHeader = case bind of
+        displayHeader = case n.bind of
                              NotBinding => "record "
                              x => "\{show x} record "
 
@@ -854,7 +854,7 @@ definedInBlock ns decls =
     defName ns acc (IParameters _ _ pds) = foldl (defName ns) acc pds
     defName ns acc (IFail _ _ nds) = foldl (defName ns) acc nds
     defName ns acc (INamespace _ n nds) = foldl (defName (ns <.> n)) acc nds
-    defName ns acc (IRecord _ fldns _ _ (MkImpRecord _ n _ _ opts con flds))
+    defName ns acc (IRecord _ fldns _ _ (MkImpRecord _ n _ opts con flds))
         = foldl (flip insert) acc $ expandNS ns con :: all
       where
         fldns' : Namespace
@@ -878,7 +878,7 @@ definedInBlock ns decls =
         -- inside the parameter block)
         -- so let's just declare all of them and some may go unused.
         all : List Name
-        all = expandNS ns n :: map (expandNS fldns') (fnsRF ++ fnsUN)
+        all = expandNS ns n.val :: map (expandNS fldns') (fnsRF ++ fnsUN)
 
     defName ns acc (IPragma _ pns _) = foldl (flip insert) acc $ map (expandNS ns) pns
     defName _ acc _ = acc

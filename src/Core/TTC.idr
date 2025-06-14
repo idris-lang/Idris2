@@ -12,12 +12,16 @@ import Core.Options
 import Core.TT
 import Core.WithName
 
+import Data.Singleton
 import Data.List1
+import Data.List.Quantifiers
 import Data.Vect
+import Decidable.Equality
 import Libraries.Data.NameMap
 import Libraries.Data.IOArray
 import Libraries.Data.SparseMatrix
 import Libraries.Data.WithDefault
+import Libraries.Data.WithData
 
 import Libraries.Utils.Binary
 import Libraries.Utils.Scheme
@@ -161,15 +165,32 @@ TTC Name where
              9 => pure (UN Underscore)
              _ => corrupt "Name"
 
+{fs : _} -> (ev : All (TTC . Label.type) fs) => TTC (Record fs) where
+  toBuf [] = tag 0
+  toBuf {ev = _ :: _} ((lbl :- v) :: y)
+    = do tag 1
+       ; toBuf v ; toBuf y
+
+  fromBuf {fs = []}
+    = case !getTag of
+           0 => pure []
+           _ => corrupt "Record"
+  fromBuf {fs = (str :-: v :: xs)} {ev = ba :: bs}
+    = case !getTag of
+           1 => do val <- fromBuf @{ba}
+                   tail : Record xs <- fromBuf
+                   pure ((str :- val) :: tail)
+           _ => corrupt "Record"
+
 export
-TTC a => TTC (WithName a) where
-  toBuf (MkWithName nm val)
-    = do toBuf nm
+{fs : _} -> All (TTC . Label.type) fs => TTC a => TTC (WithData fs a) where
+  toBuf (MkWithData extra val)
+    = do toBuf extra
          toBuf val
   fromBuf
     = do nm <- fromBuf
          val <- fromBuf
-         pure $ MkWithName nm val
+         pure $ MkWithData nm val
 
 
 export

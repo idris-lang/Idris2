@@ -14,6 +14,7 @@ import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 import Libraries.Text.PrettyPrint.Prettyprinter.Doc
 import Libraries.Data.Tap
+import Libraries.Data.WithData
 
 import public Data.IORef
 import System.File
@@ -865,6 +866,10 @@ traverseFC f (MkFCVal fc x) = MkFCVal fc <$> f x
 %inline export
 traverseWName : (ty -> Core sy) -> WithName ty -> Core (WithName sy)
 traverseWName f (MkWithName name val) = MkWithName name <$> f val
+
+%inline export
+traverseData : (ty -> Core sy) -> WithData fs ty -> Core (WithData fs sy)
+traverseData f (MkWithData extra val) = MkWithData extra <$> f val
 
 namespace PiInfo
   export

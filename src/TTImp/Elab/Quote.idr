@@ -124,8 +124,8 @@ mutual
                      {auto u : Ref UST UState} ->
                      ImpRecord ->
                      Core ImpRecord
-  getUnquoteRecord (MkImpRecord fc n bind ps opts cn fs)
-      = pure $ MkImpRecord fc n bind !(traverse unqPair ps) opts cn
+  getUnquoteRecord (MkImpRecord fc n ps opts cn fs)
+      = pure $ MkImpRecord fc n !(traverse unqPair ps) opts cn
                            !(traverse getUnquoteField fs)
     where
       unqPair : (Name, RigCount, PiInfo RawImp, RawImp) ->

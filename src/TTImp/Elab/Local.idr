@@ -114,9 +114,8 @@ localHelper {vars} nest env nestdecls_in func
         = MkIField fc rigc piinfo (mapNestedName nest n) rawimp
 
     updateRecordName : NestedNames vars -> ImpRecord -> ImpRecord
-    updateRecordName nest (MkImpRecord fc n bind params opts conName fields)
-        = MkImpRecord fc (mapNestedName nest n)
-                         bind
+    updateRecordName nest (MkImpRecord fc n params opts conName fields)
+       = MkImpRecord fc (mapData (mapNestedName nest) n)
                          params
                          opts
                          (mapNestedName nest conName)

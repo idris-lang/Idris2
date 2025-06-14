@@ -24,10 +24,10 @@ getDecl AsType d@(MkFCVal _ $ PClaim _) = Just d
 getDecl AsType (MkFCVal fc $ PData doc vis mbtot (MkPData dfc tyn (Just tyc) _ _))
     = Just (MkFCVal fc $ PData doc vis mbtot (MkPLater dfc tyn tyc))
 getDecl AsType d@(MkFCVal _ $ PInterface _ _ _ _ _ _ _ _) = Just d
-getDecl AsType (MkFCVal fc $ PRecord doc vis mbtot (MkPRecord n bind ps _ _ _))
+getDecl AsType (MkFCVal fc $ PRecord doc vis mbtot (MkPRecord n ps _ _ _))
                          -- the `bind` variable should be used here in `PData` to carry along
                          -- the fact that the type constructor might be binding
-    = Just (MkFCVal fc $ PData doc vis mbtot (MkPLater fc n (mkRecType ps)))
+    = Just (MkFCVal fc $ PData doc vis mbtot (MkPLater fc n.val (mkRecType ps)))
   where
     mkRecType : List PBinder -> PTerm
     mkRecType [] = PType fc

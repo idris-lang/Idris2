@@ -5,6 +5,7 @@ import public Core.Context.Log
 import public Core.Core
 import public Core.FC
 import public Core.WithName
+import public Core.WithData
 import public Core.Normalise
 import public Core.Options
 import public Core.TT
@@ -24,6 +25,7 @@ import Libraries.Data.SortedMap
 import Libraries.Data.String.Extra
 import Libraries.Data.StringMap
 import Libraries.Data.WithDefault
+import public Libraries.Data.WithData
 import Libraries.Text.PrettyPrint.Prettyprinter
 
 import Parser.Lexer.Source
@@ -405,8 +407,7 @@ mutual
 
   public export
   data PRecordDecl' : Type -> Type where
-       MkPRecord : (tyname : Name) ->
-                   (tybind : BindingModifier) -> -- Type constructor's binding modifier
+       MkPRecord : (tyname : FCBind Name) ->
                    (params : List (PBinder' nm)) ->
                    (opts : List DataOpt) ->
                    (conName : Maybe (String, Name, BindingModifier)) ->

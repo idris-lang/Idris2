@@ -386,12 +386,11 @@ mutual
                (UN (Basic "MkRecord"), [v,w,b,x,y,z,a])
                     => do v' <- reify defs !(evalClosure defs v)
                           w' <- reify defs !(evalClosure defs w)
-                          b' <- reify defs !(evalClosure defs b)
                           x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
                           z' <- reify defs !(evalClosure defs z)
                           a' <- reify defs !(evalClosure defs a)
-                          pure (MkImpRecord v' w' b' x' y' z' a')
+                          pure (MkImpRecord v' w' x' y' z' a')
                _ => cantReify val "Record"
     reify defs val = cantReify val "Record"
 
@@ -756,15 +755,14 @@ mutual
 
   export
   Reflect ImpRecord where
-    reflect fc defs lhs env (MkImpRecord v w b x y z a)
+    reflect fc defs lhs env (MkImpRecord v w x y z a)
         = do v' <- reflect fc defs lhs env v
              w' <- reflect fc defs lhs env w
-             b' <- reflect fc defs lhs env b -- binders
              x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
              a' <- reflect fc defs lhs env a
-             appCon fc defs (reflectionttimp "MkRecord") [v', w', b', x', y', z', a']
+             appCon fc defs (reflectionttimp "MkRecord") [v', w', x', y', z', a']
 
   export
   Reflect WithFlag where

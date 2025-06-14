@@ -10,6 +10,7 @@ import Core.TT
 import Core.Value
 
 import Libraries.Data.WithDefault
+import Libraries.Data.WithData
 
 %default covering
 
@@ -892,6 +893,14 @@ Reflect BindingModifier where
   reflect fc defs lhs env NotBinding = getCon fc defs (reflectiontt "NotBinding")
   reflect fc defs lhs env Autobind = getCon fc defs (reflectiontt "Autobind")
   reflect fc defs lhs env Typebind = getCon fc defs (reflectiontt "Typebind")
+
+export
+{fs : _} -> Reify a => Reflect (WithData fs a) where
+  reflect = ?OHGOD2
+export
+{fs : _} -> Reify a => Reify (WithData fs a) where
+  reify = ?OHGOD
+
 
 {-
 -- Reflection of well typed terms: We don't reify terms because that involves

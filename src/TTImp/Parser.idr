@@ -2,6 +2,7 @@ module TTImp.Parser
 
 import Core.Context
 import Core.TT
+import Core.WithData
 import Parser.Source
 import TTImp.TTImp
 
@@ -528,7 +529,7 @@ mutual
            ws <- nonEmptyBlock (clause (S withArgs) fname)
            end <- location
            let fc = MkFC fname start end
-           pure (!(getFn lhs), WithClause fc lhs rig wval prf [] (forget $ map snd ws))
+           pure $ MkPair !(getFn lhs) (WithClause fc lhs rig wval prf [] (forget $ map snd ws))
 
     <|> do keyword "impossible"
            atEnd indents
@@ -665,8 +666,8 @@ recordDecl fname indents
          end <- location
          pure (let fc = MkFC fname start end in
                    IRecord fc Nothing vis mbtot
-                           (MkImpRecord fc n NotBinding params opts dc (concat flds)))
-                           --                ^^^^^^^^^^
+                           (MkImpRecord fc (Mk [?aa, NotBinding] n) params opts dc (concat flds)))
+                           --                         ^^^^^^^^^^
                            -- TTImp syntax does not allow to define binding type constructors
 
 namespaceDecl : Rule Namespace

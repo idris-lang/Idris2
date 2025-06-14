@@ -20,6 +20,7 @@ import Data.SnocList
 import Data.String
 import Libraries.Utils.String
 import Libraries.Data.WithDefault
+import Libraries.Data.WithData
 
 import Idris.Parser.Let
 
@@ -1857,20 +1858,20 @@ parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
   recordBody : String -> WithDefault Visibility Private ->
                Maybe TotalReq ->
                Int ->
-               Name ->
+               WithFC Name ->
                BindingModifier ->
                List PBinder ->
                EmptyRule PDeclNoFC
   recordBody doc vis mbtot col n bindMod params
       = do atEndIndent indents
-           pure (PRecord doc vis mbtot (MkPRecordLater n params))
+           pure (PRecord doc vis mbtot (MkPRecordLater n.val params)) -- TODO: MkPRecordLater takes WithFC Name
     <|> do mustWork $ decoratedKeyword fname "where"
            opts <- dataOpts fname
            dcflds <- blockWithOptHeaderAfter col
                        (\ idt => recordConstructor fname <* atEnd idt)
                        fieldDecl
            pure (PRecord doc vis mbtot
-                  (MkPRecord n bindMod params opts (fst dcflds) (snd dcflds)))
+                  (MkPRecord (Mk [n.fc, bindMod] n.val) params opts (fst dcflds) (snd dcflds)))
 
   recordDecl : Rule PDeclNoFC
   recordDecl
@@ -1879,7 +1880,7 @@ parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
            binding     <- operatorBindingKeyword {fname}
            col         <- column
            decoratedKeyword fname "record"
-           n       <- mustWork (decoratedDataTypeName fname)
+           n       <- fcBounds $ mustWork (decoratedDataTypeName fname)
            paramss <- many (continue indents >> recordParam)
            recordBody doc vis mbtot col n binding paramss
 

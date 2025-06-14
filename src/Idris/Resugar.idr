@@ -20,6 +20,7 @@ import Data.Maybe
 import Data.String
 import Libraries.Data.StringMap
 import Libraries.Data.ANameMap
+import Libraries.Data.WithData
 
 %default covering
 
@@ -500,17 +501,17 @@ mutual
               {auto s : Ref Syn SyntaxInfo} ->
               ImpRecord' KindedName ->
               Core ( Name
-                   , List (Name, RigCount, PiInfo IPTerm, IPTerm)
+                   , List (Name, RigCount, PiInfo IPTerm, IPTerm) -- This should really be a Record
                    , List DataOpt
                    , Maybe (String, Name, BindingModifier)
                    , List (PField' KindedName))
-  toPRecord (MkImpRecord fc n bind ps opts con fs)
+  toPRecord (MkImpRecord fc n ps opts con fs)
       = do ps' <- traverse (\ (n, c, p, ty) =>
                                    do ty' <- toPTerm startPrec ty
                                       p' <- mapPiInfo p
                                       pure (n, c, p', ty')) ps
            fs' <- traverse toPField fs
-           pure (n, ps', opts, Just ("", (con, bind)), fs')
+           pure (n.val, ps', opts, Just ("", (con, n.bind)), fs')
     where
       mapPiInfo : PiInfo IRawImp -> Core (PiInfo IPTerm)
       mapPiInfo Explicit        = pure   Explicit
@@ -546,7 +547,8 @@ mutual
            pure (Just (MkFCVal fc (PParameters (Right args) (catMaybes ds'))))
   toPDecl (IRecord fc _ vis mbtot r)
       = do (n, ps, opts, con, fs) <- toPRecord r
-           pure (Just (MkFCVal fc $ PRecord "" vis mbtot (MkPRecord n ?GetBinder (map toBinder ps) opts ?whu fs)))
+           let nameWithData = MkWithData ["fc" :- fc, "bind" :- NotBinding] n -- when resugaring we ingore the binding information
+           pure (Just (MkFCVal fc $ PRecord "" vis mbtot (MkPRecord nameWithData (map toBinder ps) opts ?whu fs)))
            where
              toBinder : (Name, ZeroOneOmega, PiInfo (PTerm' KindedName), PTerm' KindedName) -> PBinder' KindedName
              toBinder (n, rig, info, ty)

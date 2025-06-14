@@ -6,6 +6,7 @@ import Core.Core
 import Core.Env
 import Core.Metadata
 import Core.UnifyState
+import Core.WithData
 
 import Idris.REPL.Opts
 import Idris.Syntax
@@ -47,20 +48,20 @@ elabRecord : {vars : _} ->
              NestedNames vars -> Maybe String ->
              WithDefault Visibility Private ->
              Maybe TotalReq ->
-             (tyName : Name) ->
-             (binding : BindingModifier) ->
+             (tyName : FCBind Name) ->
              (params : List (Name, RigCount, PiInfo RawImp, RawImp)) ->
              (opts : List DataOpt) ->
              (conName : Name) ->
              List IField ->
              Core ()
-elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in binding params0 opts conName_in fields
-    = do tn <- inCurrentNS tn_in
+elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conName_in fields
+    = do tn' <- traverseData inCurrentNS tn_in
+         let tn = tn'.val
          conName <- inCurrentNS conName_in
          params <- preElabAsData tn
          log "declare.record.parameters" 100 $
            unlines ("New list of parameters:" :: map (("  " ++) . displayParam) params)
-         elabAsData tn conName params
+         elabAsData tn' conName params
          defs <- get Ctxt
          Just conty <- lookupTyExact conName (gamma defs)
              | Nothing => throw (InternalError ("Adding " ++ show tn ++ "failed"))
@@ -215,18 +216,18 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in binding params0 op
           = throw (InternalError "Some arguments have disappeared")
 
 
-    elabAsData : (tn : Name) -> -- fully qualified name of the record type
+    elabAsData : (tyName : FCBind Name) -> -- fully qualified name of the record type
                  (conName : Name) -> -- fully qualified name of the record type constructor
                  (params : List ImpParameter) -> -- telescope of parameters
                  Core ()
     elabAsData tn cname params
         = do let fc = virtualiseFC fc
              let conty = mkTy (paramTelescope params) $
-                         mkTy (map farg fields) (recTy tn params)
+                         mkTy (map farg fields) (recTy tn.val params)
              let boundNames = paramNames params ++ map fname fields ++ (toList vars)
              let con = MkImpTy (virtualiseFC fc) (NoFC cname)
                        !(bindTypeNames fc [] boundNames conty)
-             let dt = MkImpData fc tn Nothing opts [con]
+             let dt = MkImpData fc tn.val Nothing opts [con]
              log "declare.record" 5 $ "Record data type " ++ show dt
              processDecl [] nest env (IData fc def_vis mbtot dt)
 
@@ -362,5 +363,5 @@ processRecord : {vars : _} ->
                 Env Term vars -> Maybe String ->
                 WithDefault Visibility Private -> Maybe TotalReq ->
                 ImpRecord -> Core ()
-processRecord eopts nest env newns def_vis mbtot (MkImpRecord fc n bind ps opts cons fs)
-    = do elabRecord eopts fc env nest newns def_vis mbtot n bind ps opts cons fs
+processRecord eopts nest env newns def_vis mbtot (MkImpRecord fc n ps opts cons fs)
+    = elabRecord eopts fc env nest newns def_vis mbtot n ps opts cons fs
