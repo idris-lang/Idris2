@@ -152,3 +152,11 @@ export
 traverseDataMaybe : (a -> Maybe b) -> WithData fs a -> Maybe (WithData fs b)
 traverseDataMaybe f x = MkWithData x.extra <$> f x.val
 
+export
+(eq : All (Eq . Label.type) fs) => Eq (Record fs) where
+  (==) [] [] = True
+  (==) {eq = e :: es} {fs = (f :: fs)} (x :: xs) (y :: ys) = x.val == y.val && xs == ys
+
+export
+(eq : All (Eq . Label.type) fs) => Eq a => Eq (WithData fs a) where
+  x == y = x.val == y.val && x.extra == y.extra

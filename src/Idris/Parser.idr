@@ -29,9 +29,6 @@ import Idris.Parser.Let
 fcBounds : OriginDesc => Rule a -> Rule (WithFC a)
 fcBounds a = (.withFC) <$> bounds a
 
-fcBounds' : OriginDesc => Rule a -> Rule (AddFC a)
-fcBounds' a = (\x => Mk [x.fc] x.val) <$> fcBounds a
-
 decorate : {a : Type} -> OriginDesc -> Decoration -> Rule a -> Rule a
 decorate fname decor rule = do
   res <- bounds rule
@@ -1337,10 +1334,10 @@ mkTyConType fname fc (x :: xs)
 
 mkDataConType : PTerm -> List (WithFC ArgType) -> Maybe PTerm
 mkDataConType ret [] = Just ret
-mkDataConType ret (MkFCVal fc (UnnamedExpArg x) :: xs)
-    = PPi fc top Explicit Nothing x <$> mkDataConType ret xs
-mkDataConType ret (MkFCVal fc (UnnamedAutoArg x) :: xs)
-    = PPi fc top AutoImplicit Nothing x <$> mkDataConType ret xs
+mkDataConType ret (MkWithData loc (UnnamedExpArg x) :: xs)
+    = PPi (get "fc" loc) top Explicit Nothing x <$> mkDataConType ret xs
+mkDataConType ret (MkWithData loc (UnnamedAutoArg x) :: xs)
+    = PPi (get "fc" loc) top AutoImplicit Nothing x <$> mkDataConType ret xs
 mkDataConType _ _ -- with and named applications not allowed in simple ADTs
     = Nothing
 
@@ -1420,7 +1417,7 @@ dataDeclBody fname indents
              col <- column
              bind <- operatorBindingKeyword {fname}
              decoratedKeyword fname "data"
-             n <- mustWork (fcBounds' $ decoratedDataTypeName fname)
+             n <- mustWork (fcBounds $ decoratedDataTypeName fname)
              pure (col, bind :+ n)
          (col, n) <- pure b.val
          simpleData fname b n indents <|> gadtData fname col b n indents
@@ -1690,7 +1687,7 @@ recordConstructor fname
   = do doc <- optDocumentation fname
        binding <- operatorBindingKeyword {fname}
        decorate fname Keyword $ exactIdent "constructor"
-       n <- fcBounds' $ mustWork $ decoratedDataConstructorName fname
+       n <- fcBounds $ mustWork $ decoratedDataConstructorName fname
        pure (doc :+ binding :+ n)
 
 autoImplicitField : OriginDesc -> IndentInfo -> Rule (PiInfo t)
@@ -1884,7 +1881,7 @@ parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
            binding     <- operatorBindingKeyword {fname}
            col         <- column
            decoratedKeyword fname "record"
-           n       <- fcBounds' $ mustWork (decoratedDataTypeName fname)
+           n       <- fcBounds $ mustWork (decoratedDataTypeName fname)
            paramss <- many (continue indents >> recordParam)
            recordBody doc vis mbtot col (binding :+ n) paramss
 
@@ -1980,19 +1977,19 @@ topDecl fname indents
 -- Declared at the top.
 -- collectDefs : List PDecl -> List PDecl
 collectDefs [] = []
-collectDefs (MkFCVal annot (PDef cs) :: ds)
+collectDefs (MkWithData annot (PDef cs) :: ds)
     = let (csWithFC, rest) = spanBy isPDef ds
           cs' = cs ++ concat (map val csWithFC)
-          annot' = foldr
+          annot' = foldr {t = List}
                    (\fc1, fc2 => fromMaybe EmptyFC (mergeFC fc1 fc2))
-                   annot
-                   (map fc csWithFC)
+                   (get "fc" annot)
+                   (map (.fc) csWithFC)
       in
           MkFCVal annot' (PDef cs') :: assert_total (collectDefs rest)
-collectDefs (MkFCVal annot (PNamespace ns nds) :: ds)
-    = MkFCVal annot (PNamespace ns (collectDefs nds)) :: collectDefs ds
-collectDefs (MkFCVal fc (PMutual nds) :: ds)
-    = MkFCVal fc (PMutual (collectDefs nds)) :: collectDefs ds
+collectDefs (MkWithData annot (PNamespace ns nds) :: ds)
+    = MkWithData annot (PNamespace ns (collectDefs nds)) :: collectDefs ds
+collectDefs (MkWithData fc (PMutual nds) :: ds)
+    = MkWithData fc (PMutual (collectDefs nds)) :: collectDefs ds
 collectDefs (d :: ds)
     = d :: collectDefs ds
 

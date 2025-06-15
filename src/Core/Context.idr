@@ -10,6 +10,7 @@ import public Core.Name
 import        Core.Options
 import public Core.Options.Log
 import public Core.TT
+import public Core.WithData
 
 import Libraries.Utils.Binary
 import Libraries.Utils.Path

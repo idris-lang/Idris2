@@ -29,7 +29,7 @@ genUniqueStr xs x = if x `elem` xs then genUniqueStr xs (x ++ "'") else x
 -- Used in findBindableNames{,Quot}
 rawImpFromDecl : ImpDecl -> List RawImp
 rawImpFromDecl decl = case decl of
-    IClaim (MkFCVal fc1 $ MkIClaimData y z ys ty) => [ty.type]
+    IClaim (MkWithData fc1 $ MkIClaimData y z ys ty) => [ty.type]
     IData fc1 y _ (MkImpData fc2 n tycon opts datacons)
         => maybe id (::) tycon $ map type datacons
     IData fc1 y _ (MkImpLater fc2 n tycon) => [tycon]
@@ -480,7 +480,7 @@ mutual
 
   substLocTy : FC -> ImpTy -> ImpTy
   substLocTy fc' (MkImpTy fc n ty)
-      = MkImpTy fc' ({fc := fc'} n) (substLoc fc' ty)
+      = MkImpTy fc' (setFC fc' n) (substLoc fc' ty)
 
   substLocData : FC -> ImpData -> ImpData
   substLocData fc' (MkImpData fc n con opts dcons)
@@ -490,8 +490,8 @@ mutual
       = MkImpLater fc' n (substLoc fc' con)
 
   substLocDecl : FC -> ImpDecl -> ImpDecl
-  substLocDecl fc' (IClaim (MkFCVal _ $ MkIClaimData r vis opts td))
-      = IClaim (MkFCVal fc' $ MkIClaimData r vis opts (substLocTy fc' td))
+  substLocDecl fc' (IClaim (MkWithData _ $ MkIClaimData r vis opts td))
+      = IClaim (MkWithData ["fc" :- fc'] $ MkIClaimData r vis opts (substLocTy fc' td))
   substLocDecl fc' (IDef fc n cs)
       = IDef fc' n (map (substLocClause fc') cs)
   substLocDecl fc' (IData fc vis mbtot d)

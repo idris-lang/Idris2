@@ -194,12 +194,14 @@ mutual
          = "(" ++ show f ++ " [" ++ show a ++ "])"
       show (IWithApp fc f a)
          = "(" ++ show f ++ " | " ++ show a ++ ")"
-      show (IBindingApp nm (MkFCVal fc (BindType name type)) scope)
-         = "\{show nm.val} (\{show name} : \{show type}) | \{show scope.val}"
-      show (IBindingApp nm (MkFCVal fc (BindExpr name expr)) scope)
-         = "\{show nm.val} (\{show name} := \{show expr}) | \{show scope.val}"
-      show (IBindingApp nm (MkFCVal fc (BindExplicitType name type expr)) scope)
-         = "\{show nm.val} (\{show name} : \{show type} := \{show expr}) | \{show scope.val}"
+      show (IBindingApp nm binder scope)
+         = case binder.val of
+                (BindType name type) =>
+                    "\{show nm.val} (\{show name} : \{show type}) | \{show scope.val}"
+                (BindExpr name expr) =>
+                    "\{show nm.val} (\{show name} := \{show expr}) | \{show scope.val}"
+                (BindExplicitType name type expr) =>
+                    "\{show nm.val} (\{show name} : \{show type} := \{show expr}) | \{show scope.val}"
       show (ISearch fc d)
          = "%search"
       show (IAlternative fc ty alts)
@@ -526,7 +528,7 @@ mutual
   export
   covering
   Show nm => Show (ImpDecl' nm) where
-    show (IClaim (MkFCVal _ $ MkIClaimData c _ opts ty))
+    show (IClaim (MkWithData _ $ MkIClaimData c _ opts ty))
         = show opts ++ " " ++ show c ++ " " ++ show ty
     show (IData _ _ _ d) = show d
     show (IDef _ n cs) = "(%def " ++ show n ++ " " ++ show cs ++ ")"

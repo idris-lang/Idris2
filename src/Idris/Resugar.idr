@@ -530,9 +530,9 @@ mutual
   toPDecl : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
             ImpDecl' KindedName -> Core (Maybe (PDecl' KindedName))
-  toPDecl (IClaim (MkFCVal fc $ MkIClaimData rig vis opts ty))
+  toPDecl (IClaim (MkWithData fc $ MkIClaimData rig vis opts ty))
       = do opts' <- traverse toPFnOpt opts
-           pure (Just (MkFCVal fc $ PClaim (MkPClaim rig vis opts' !(toPTypeDecl ty))))
+           pure (Just (MkWithData fc $ PClaim (MkPClaim rig vis opts' !(toPTypeDecl ty))))
   toPDecl (IData fc vis mbtot d)
       = pure (Just (MkFCVal fc $ PData "" vis mbtot !(toPData d)))
   toPDecl (IDef fc n cs)

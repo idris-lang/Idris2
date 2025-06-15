@@ -83,16 +83,6 @@ TTC FC where
              _ => corrupt "FC"
 
 export
-TTC a => TTC (WithFC a) where
-  toBuf (MkFCVal fc val)
-    = do toBuf fc
-       ; toBuf val
-  fromBuf
-    = do fc <- fromBuf
-         val <- fromBuf
-         pure $ MkFCVal fc val
-
-export
 TTC BindingModifier where
   toBuf NotBinding = tag 0
   toBuf Autobind = tag 1

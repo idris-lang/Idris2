@@ -3,6 +3,7 @@ module Core.Core
 import Core.Context.Context
 import Core.Env
 import Core.TT
+import public Core.WithData
 
 import Data.List1
 import Data.SnocList
@@ -859,12 +860,12 @@ namespace SnocList
   traverse_ f xs = traverse_' f (reverse xs)
 
 %inline export
-traverseFC : (a -> Core b) -> WithFC a -> Core (WithFC b)
-traverseFC f (MkFCVal fc x) = MkFCVal fc <$> f x
-
-%inline export
 traverseData : (ty -> Core sy) -> WithData fs ty -> Core (WithData fs sy)
 traverseData f (MkWithData extra val) = MkWithData extra <$> f val
+
+%inline export
+traverseFC : (a -> Core b) -> WithFC a -> Core (WithFC b)
+traverseFC = traverseData
 
 namespace PiInfo
   export

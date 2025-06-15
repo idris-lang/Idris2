@@ -883,8 +883,8 @@ Reify a => Reify (WithFC a) where
 
 export
 Reflect a => Reflect (WithFC a) where
-  reflect fc defs lhs env (MkFCVal loc val)
-      = do loc' <- reflect fc defs lhs env loc
+  reflect fc defs lhs env (MkWithData loc val)
+      = do loc' <- reflect fc defs lhs env (get "fc" loc)
            val' <- reflect fc defs lhs env val
            appCon fc defs (reflectiontt "MkFCVal") [Erased fc Placeholder, loc', val']
 
