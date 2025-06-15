@@ -155,7 +155,8 @@ mutual
 
   public export
   data Record : Type where
-       MkRecord : FC -> (n : Name) ->
+       MkRecord : FC ->
+                  (n : Name) ->
                   (params : List (Name, Count, PiInfo TTImp, TTImp)) ->
                   (opts : List DataOpt) ->
                   (conName : Name) ->

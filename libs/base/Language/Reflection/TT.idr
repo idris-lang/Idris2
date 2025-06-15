@@ -1,6 +1,7 @@
 module Language.Reflection.TT
 
 import public Data.List
+import Data.List.Quantifiers
 import public Data.String
 
 import Decidable.Equality
@@ -102,6 +103,9 @@ Eq a => Eq (WithFC a) where
 export
 Ord a => Ord (WithFC a) where
   compare x y = compare x.value y.value
+
+public export
+data BindingModifier = NotBinding | Autobind | Typebind
 
 public export
 data NameType : Type where
