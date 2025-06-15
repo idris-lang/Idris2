@@ -260,7 +260,7 @@ mapPTermM f = goPTerm where
                    <*> traverseFC goPTypeDecl tdecl
 
     goPlainBinder : PlainBinder' nm -> Core (PlainBinder' nm)
-    goPlainBinder = traverseWName f
+    goPlainBinder = traverseData f
 
     goBasicMultiBinder : BasicMultiBinder' nm -> Core (BasicMultiBinder' nm)
     goBasicMultiBinder (MkBasicMultiBinder rig names type)
@@ -570,7 +570,7 @@ mapPTerm f = goPTerm where
     goPClaim (MkPClaim c v opts tdecl) = MkPClaim c v (goPFnOpt <$> opts) (mapFC goPTypeDecl tdecl)
 
     goPlainBinder : PlainBinder' nm -> PlainBinder' nm
-    goPlainBinder = mapWName goPTerm
+    goPlainBinder = mapData goPTerm
 
     goPBinderScope : PBinderScope' nm -> PBinderScope' nm
     goPBinderScope (MkPBinderScope binder scope)

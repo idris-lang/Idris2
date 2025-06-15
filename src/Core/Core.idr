@@ -864,10 +864,6 @@ traverseFC : (a -> Core b) -> WithFC a -> Core (WithFC b)
 traverseFC f (MkFCVal fc x) = MkFCVal fc <$> f x
 
 %inline export
-traverseWName : (ty -> Core sy) -> WithName ty -> Core (WithName sy)
-traverseWName f (MkWithName name val) = MkWithName name <$> f val
-
-%inline export
 traverseData : (ty -> Core sy) -> WithData fs ty -> Core (WithData fs sy)
 traverseData f (MkWithData extra val) = MkWithData extra <$> f val
 

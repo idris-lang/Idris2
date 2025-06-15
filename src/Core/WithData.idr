@@ -38,8 +38,12 @@ AddFC : Type -> Type
 AddFC = WithData [ FC' ]
 
 public export
-FCName : Type -> Type
-FCName = WithData [ "name" :-: Name, FC' ]
+WithName : Type -> Type
+WithName = WithData [ "name" :-: Name, FC' ]
+
+export
+MkWithName : WithFC Name -> ty -> WithName ty
+MkWithName x y = Mk [x.val, x.fc] y
 
 public export
 FCBind : Type -> Type
