@@ -34,12 +34,20 @@ Bind' : Label
 Bind' = "bind" :-: BindingModifier
 
 public export
+Rig' : Label
+Rig' = "rig" :-: RigCount
+
+public export
+Name' : Label
+Name' = "name" :-: Name
+
+public export
 AddFC : Type -> Type
 AddFC = WithData [ FC' ]
 
 public export
 WithName : Type -> Type
-WithName = WithData [ "name" :-: Name, FC' ]
+WithName = WithData [ Name', FC' ]
 
 export
 MkWithName : WithFC Name -> ty -> WithName ty

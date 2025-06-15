@@ -4,7 +4,6 @@ import public Core.Context
 import public Core.Context.Log
 import public Core.Core
 import public Core.FC
-import public Core.WithName
 import public Core.Normalise
 import public Core.Options
 import public Core.TT
@@ -309,11 +308,11 @@ mutual
   ||| A binder with quantity information attached
   ||| basicBinder := qty plainBinder
   public export
-  record BasicBinder' (nm : Type) where
-    constructor MkBasicBinder
-    rig : RigCount
-    name : WithFC Name
-    type : PTerm' nm
+  BasicBinder' : Type -> Type
+  BasicBinder' = WithData [Rig', Name', FC'] . PTerm'
+
+  MkBasicBinder : RigCount -> WithFC Name -> PTerm' nm -> BasicBinder' nm
+  MkBasicBinder rig nm term = Mk [rig, nm.val, nm.fc] term
 
   public export
   PBinder : Type

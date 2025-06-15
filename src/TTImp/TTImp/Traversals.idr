@@ -2,7 +2,6 @@ module TTImp.TTImp.Traversals
 
 import Core.TT
 import TTImp.TTImp
-import Core.WithName
 
 %default total
 

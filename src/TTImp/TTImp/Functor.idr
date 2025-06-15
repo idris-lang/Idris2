@@ -3,7 +3,6 @@ module TTImp.TTImp.Functor
 import Core.TT
 import TTImp.TTImp
 import Core.FC
-import Core.WithName
 
 
 %default covering

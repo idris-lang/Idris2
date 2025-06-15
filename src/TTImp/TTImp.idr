@@ -8,7 +8,6 @@ import Core.Options
 import Core.Options.Log
 import Core.TT
 import Core.Value
-import Core.WithName
 import public Core.WithData
 
 import Data.List

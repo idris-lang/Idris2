@@ -3,7 +3,6 @@ module Core.Core
 import Core.Context.Context
 import Core.Env
 import Core.TT
-import Core.WithName
 
 import Data.List1
 import Data.SnocList

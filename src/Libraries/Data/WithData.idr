@@ -3,6 +3,9 @@ module Libraries.Data.WithData
 import public Data.List.Quantifiers
 import public Data.List
 
+%hide Data.List.Quantifiers.Any.Any
+%hide Data.List.Quantifiers.Any.any
+
 export infixr 9 :-:
 export infix 9 :-
 export infixr 9 :+
@@ -34,6 +37,11 @@ fromElems {fs = []} [] = []
 fromElems {fs = (l :-: t :: xs)} (x :: zs) = (l :- x) :: fromElems zs
 
 ||| A pair of a type and an arbitrary payload given by a record
+|||
+||| Only ever put plain types in the extra data
+||| do not add functors such as `List` or `PTerm`. The functor instance
+||| for `WithData` is only functorial on its payload and not the additional
+||| data.
 public export
 record WithData (additional : List Label) (payload : Type) where
   constructor MkWithData
@@ -90,6 +98,11 @@ set field val = {extra $= Record.set field val}
 export
 (:+) : ty -> WithData ls a -> WithData (lbl :-: ty :: ls) a
 val :+ x = MkWithData (Add lbl val x.extra) x.val
+
+||| Add a record to the payload
+export
+(:++) : Record ls -> WithData xs a -> WithData (ls ++ xs) a
+(:++) rec x = MkWithData (rec ++ x.extra) x.val
 
 export
 drop : WithData (l :: ls) a -> WithData ls a

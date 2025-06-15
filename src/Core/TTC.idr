@@ -10,7 +10,6 @@ import Core.FC
 import Core.Name
 import Core.Options
 import Core.TT
-import Core.WithName
 
 import Data.Singleton
 import Data.List1

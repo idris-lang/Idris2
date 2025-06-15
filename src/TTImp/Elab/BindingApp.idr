@@ -8,7 +8,6 @@ import Core.Unify
 import Core.Metadata
 import Core.Name
 import Core.Normalise
-import Core.WithName
 
 import TTImp.Elab.Check
 import TTImp.Elab.App

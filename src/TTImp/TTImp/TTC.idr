@@ -2,7 +2,6 @@ module TTImp.TTImp.TTC
 
 import Core.Binary
 import Core.TTC
-import Core.WithName
 
 import Core.Context
 import Core.Context.TTC
