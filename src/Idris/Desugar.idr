@@ -997,7 +997,7 @@ mutual
                 List Name -> (doc : String) ->
                 PDataDecl -> Core ImpData
   desugarData ps doc (MkPData fc n tycon opts datacons)
-      = do addDocString n doc
+      = do addDocString n.val doc
            syn <- get Syn
            mm <- traverse (desugarType ps) datacons
            pure $ MkImpData fc n
@@ -1007,7 +1007,7 @@ mutual
                    opts
                    (concat mm)
   desugarData ps doc (MkPLater fc n tycon)
-      = do addDocString n doc
+      = do addDocString n.val doc
            syn <- get Syn
            pure $ MkImpLater fc n !(bindTypeNames fc (usingImpl syn)
                                                   ps !(desugar AnyExpr ps tycon))

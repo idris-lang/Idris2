@@ -600,7 +600,7 @@ dataDecl fname indents
          opts <- dataOpts
          cs <- block (tyDecl fname)
          end <- location
-         pure (MkImpData (MkFC fname start end) n (Just ty) opts cs)
+         pure (MkImpData (MkFC fname start end) (MkDef n) (Just ty) opts cs)
 
 recordParam : OriginDesc -> IndentInfo -> Rule (List (Name, RigCount, PiInfo RawImp, RawImp))
 recordParam fname indents

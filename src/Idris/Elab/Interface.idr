@@ -61,7 +61,7 @@ getSig (IClaim (MkFCVal _ $ MkIClaimData c _ opts (MkImpTy fc n ty)))
 getSig (IData _ _ _ (MkImpLater fc n ty))
     = Just $ MkSignature { count    = erased
                          , flags    = [Invertible]
-                         , name     = NoFC n
+                         , name     = NoFC n.val
                          , isData   = True
                          , type     = namePis 0 ty
                          }
@@ -125,7 +125,7 @@ mkIfaceData {vars} ifc def_vis env constraints n conName ps dets meths
           bound = pNames ++ map fst meths ++ toList vars in
 
           pure $ IData vfc def_vis Nothing {- ?? -}
-               $ MkImpData vfc n
+               $ MkImpData vfc (MkDef n) -- Interface definiton aren't binding
                    (Just !(bindTypeNames ifc [] bound (mkDataTy vfc ps)))
                    opts [con]
   where

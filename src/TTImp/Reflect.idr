@@ -356,12 +356,12 @@ mutual
                           x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
                           z' <- reify defs !(evalClosure defs z)
-                          pure (MkImpData v' w' x' y' z')
+                          pure (MkImpData v' (MkDef w') x' y' z')
                (UN (Basic "MkLater"), [x,y,z])
                     => do x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
                           z' <- reify defs !(evalClosure defs z)
-                          pure (MkImpLater x' y' z')
+                          pure (MkImpLater x' (MkDef y') z')
                _ => cantReify val "Data"
     reify defs val = cantReify val "Data"
 
@@ -733,14 +733,14 @@ mutual
   Reflect ImpData where
     reflect fc defs lhs env (MkImpData v w x y z)
         = do v' <- reflect fc defs lhs env v
-             w' <- reflect fc defs lhs env w
+             w' <- reflect fc defs lhs env w.val -- for now we don't reflect binding information
              x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
              appCon fc defs (reflectionttimp "MkData") [v', w', x', y', z']
     reflect fc defs lhs env (MkImpLater x y z)
         = do x' <- reflect fc defs lhs env x
-             y' <- reflect fc defs lhs env y
+             y' <- reflect fc defs lhs env y.val -- for now we don't reflect binding information
              z' <- reflect fc defs lhs env z
              appCon fc defs (reflectionttimp "MkLater") [x', y', z']
 

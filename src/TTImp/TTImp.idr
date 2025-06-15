@@ -360,13 +360,13 @@ mutual
 
   public export
   data ImpData' : Type -> Type where
-       MkImpData : FC -> (n : Name) ->
+       MkImpData : FC -> (n : FCBind Name) -> -- The name could be declared as binding
                    -- if we have already declared the type using `MkImpLater`,
                    -- we are allowed to leave the telescope out here.
                    (tycon : Maybe (RawImp' nm)) ->
                    (opts : List DataOpt) ->
                    (datacons : List (ImpTy' nm)) -> ImpData' nm
-       MkImpLater : FC -> (n : Name) -> (tycon : RawImp' nm) -> ImpData' nm
+       MkImpLater : FC -> (n : FCBind Name) -> (tycon : RawImp' nm) -> ImpData' nm
 
   %name ImpData' dat
 
@@ -374,11 +374,11 @@ mutual
   covering
   Show nm => Show (ImpData' nm) where
     show (MkImpData fc n (Just tycon) _ cons)
-        = "(%data " ++ show n ++ " " ++ show tycon ++ " " ++ show cons ++ ")"
+        = "(%data " ++ show n.val ++ " " ++ show tycon ++ " " ++ show cons ++ ")"
     show (MkImpData fc n Nothing _ cons)
-        = "(%data " ++ show n ++ " " ++ show cons ++ ")"
+        = "(%data " ++ show n.val ++ " " ++ show cons ++ ")"
     show (MkImpLater fc n tycon)
-        = "(%datadecl " ++ show n ++ " " ++ show tycon ++ ")"
+        = "(%datadecl " ++ show n.val ++ " " ++ show tycon ++ ")"
 
   public export
   IField : Type
@@ -852,8 +852,8 @@ definedInBlock ns decls =
     defName ns acc (IClaim c) = insert (expandNS ns (getName c.val.type)) acc
     defName ns acc (IDef _ nm _) = insert (expandNS ns nm) acc
     defName ns acc (IData _ _ _ (MkImpData _ n _ _ cons))
-        = foldl (flip insert) acc $ expandNS ns n :: map (expandNS ns . getName) cons
-    defName ns acc (IData _ _ _ (MkImpLater _ n _)) = insert (expandNS ns n) acc
+        = foldl (flip insert) acc $ expandNS ns n.val :: map (expandNS ns . getName) cons
+    defName ns acc (IData _ _ _ (MkImpLater _ n _)) = insert (expandNS ns n.val) acc
     defName ns acc (IParameters _ _ pds) = foldl (defName ns) acc pds
     defName ns acc (IFail _ _ nds) = foldl (defName ns) acc nds
     defName ns acc (INamespace _ n nds) = foldl (defName (ns <.> n)) acc nds

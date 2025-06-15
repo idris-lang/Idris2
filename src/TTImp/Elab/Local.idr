@@ -104,10 +104,10 @@ localHelper {vars} nest env nestdecls_in func
 
     updateDataName : NestedNames vars -> ImpData -> ImpData
     updateDataName nest (MkImpData loc' n tycons dopts dcons)
-        = MkImpData loc' (mapNestedName nest n) tycons dopts
+        = MkImpData loc' (mapData (mapNestedName nest) n) tycons dopts
                          (map (updateTyName nest) dcons)
     updateDataName nest (MkImpLater loc' n tycons)
-        = MkImpLater loc' (mapNestedName nest n) tycons
+        = MkImpLater loc' (mapData (mapNestedName nest) n) tycons
 
     updateFieldName : NestedNames vars -> IField -> IField
     updateFieldName nest (MkIField fc rigc piinfo n rawimp)

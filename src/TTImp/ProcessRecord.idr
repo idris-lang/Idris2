@@ -55,12 +55,13 @@ elabRecord : {vars : _} ->
              List IField ->
              Core ()
 elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conName_in fields
-    = do tn <- inCurrentNS tn_in.val
+    = do tn <- traverseData inCurrentNS tn_in
          conName <- inCurrentNS conName_in.val
          params <- preElabAsData tn
          log "declare.record.parameters" 100 $
            unlines ("New list of parameters:" :: map (("  " ++) . displayParam) params)
          elabAsData tn conName params
+         let tn = tn.val
          defs <- get Ctxt
          Just conty <- lookupTyExact conName (gamma defs)
              | Nothing => throw (InternalError ("Adding " ++ show tn ++ "failed"))
@@ -142,15 +143,16 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
     -- otherwise `a` will be bound as a field rather than a parameter!
     -- We pre-elaborate the datatype, thus resolving all the missing bindings,
     -- and return the new list of parameters
-    preElabAsData : (tn : Name) -> -- fully qualified name of the record type
+    preElabAsData : (tn : FCBind Name) -> -- fully qualified name of the record type
                     Core (List ImpParameter) -- New telescope of parameters, including missing bindings
-    preElabAsData tn
+    preElabAsData tn'
         = do let fc = virtualiseFC fc
+             let tn = tn'.val
              let dataTy = IBindHere fc (PI erased) !(bindTypeNames fc [] (toList vars) (mkDataTy fc params0))
              defs <- get Ctxt
              -- Create a forward declaration if none exists
              when (isNothing !(lookupTyExact tn (gamma defs))) $ do
-               let dt = MkImpLater fc tn dataTy
+               let dt = MkImpLater fc tn' dataTy
                log "declare.record" 10 $ "Pre-declare record data type: \{show dt}"
                processDecl [] nest env (IData fc def_vis mbtot dt)
              defs <- get Ctxt
@@ -174,7 +176,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
         dropLeadingPis [] ty env
           = do unless (null vars) $
                  logC "declare.record.parameters" 60 $ pure $ unlines
-                   [ "We elaborated \{show tn} in a non-empty local context."
+                   [ "We elaborated \{show tn'.val} in a non-empty local context."
                    , "  Dropped: \{show vars}"
                    , "  Remaining type: \{show !(toFullNames ty)}"
                    ]
@@ -215,14 +217,14 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
           = throw (InternalError "Some arguments have disappeared")
 
 
-    elabAsData : (tyName : Name) -> -- fully qualified name of the record type
+    elabAsData : (tyName : FCBind Name) -> -- fully qualified name of the record type
                  (conName : Name) -> -- fully qualified name of the record type constructor
                  (params : List ImpParameter) -> -- telescope of parameters
                  Core ()
     elabAsData tn cname params
         = do let fc = virtualiseFC fc
              let conty = mkTy (paramTelescope params) $
-                         mkTy (map farg fields) (recTy tn params)
+                         mkTy (map farg fields) (recTy tn.val params)
              let boundNames = paramNames params ++ map fname fields ++ (toList vars)
              let con = MkImpTy (virtualiseFC fc) (NoFC cname)
                        !(bindTypeNames fc [] boundNames conty)

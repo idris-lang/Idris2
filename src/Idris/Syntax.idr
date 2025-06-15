@@ -396,13 +396,13 @@ mutual
 
   public export
   data PDataDecl' : Type -> Type where
-       MkPData : FC -> (tyname : Name) ->
+       MkPData : FC -> (tyname : FCBind Name) ->
                  -- if we have already declared the type earlier using `MkPLater`,
                  -- we are allowed to leave the telescope out here
                  (tycon : Maybe (PTerm' nm)) ->
                  (opts : List DataOpt) ->
                  (datacons : List (PTypeDecl' nm)) -> PDataDecl' nm
-       MkPLater : FC -> (tyname : Name) -> (tycon : PTerm' nm) -> PDataDecl' nm
+       MkPLater : FC -> (tyname : FCBind Name) -> (tycon : PTerm' nm) -> PDataDecl' nm
 
   public export
   data PRecordDecl' : Type -> Type where
@@ -412,7 +412,7 @@ mutual
                    (conName : Maybe (DocBindFC Name)) ->
                    (decls : List (PField' nm)) ->
                    PRecordDecl' nm
-       MkPRecordLater : (tyname : Name) ->
+       MkPRecordLater : (tyname : FCBind Name) ->
                         (params : List (PBinder' nm)) ->
                         PRecordDecl' nm
 
@@ -642,8 +642,8 @@ isPDef _ = Nothing
 
 
 definedInData : PDataDecl -> List Name
-definedInData (MkPData _ n _ _ cons) = n :: concatMap (.nameList) cons
-definedInData (MkPLater _ n _) = [n]
+definedInData (MkPData _ n _ _ cons) = n.val :: concatMap (.nameList) cons
+definedInData (MkPLater _ n _) = [n.val]
 
 export
 definedIn : List PDeclNoFC -> List Name

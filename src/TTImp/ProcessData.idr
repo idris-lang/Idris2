@@ -406,7 +406,7 @@ processData : {vars : _} ->
               WithDefault Visibility Private -> Maybe TotalReq ->
               ImpData -> Core ()
 processData {vars} eopts nest env fc def_vis mbtot (MkImpLater dfc n_in ty_raw)
-    = do n <- inCurrentNS n_in
+    = do n <- inCurrentNS n_in.val
          ty_raw <- bindTypeNames fc [] (toList vars) ty_raw
 
          defs <- get Ctxt
@@ -448,7 +448,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpLater dfc n_in ty_raw)
              setFlag fc n (SetTotal tot)
 
 processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw opts cons_raw)
-    = do n <- inCurrentNS n_in
+    = do n <- inCurrentNS n_in.val
 
          log "declare.data" 1 $ "Processing " ++ show n
          defs <- get Ctxt
@@ -477,7 +477,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
          ndefm <- lookupCtxtExact n (gamma defs)
          (mw, vis, tot, fullty) <- the (Core (List Name, Visibility, Maybe TotalReq, ClosedTerm)) $ case ndefm of
                   Nothing => case mfullty of
-                    Nothing => throw (GenericMsg fc "Missing telescope for data definition \{show n_in}")
+                    Nothing => throw (GenericMsg fc "Missing telescope for data definition \{show n_in.val}")
                     Just fullty => pure ([], collapseDefault def_vis, mbtot, fullty)
                   Just ndef => do
                     vis <- the (Core Visibility) $ case collapseDefaults ndef.visibility def_vis of
@@ -491,7 +491,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
                     tot <- case (mbtot, declTot) of
                       (Just oldTot, Just newTot) => do
                         when (oldTot /= newTot) $ throw $ GenericMsgSol fc
-                          "Data \{show n_in} has been forward-declared with totality `\{show oldTot}`, cannot change to `\{show newTot}`"
+                          "Data \{show n_in.val} has been forward-declared with totality `\{show oldTot}`, cannot change to `\{show newTot}`"
                           "Possible solutions"
                           [ "Use the same totality modifiers"
                           , "Remove the totality modifier from the declaration"
@@ -528,7 +528,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
          -- Constructors are private if the data type as a whole is
          -- export
          let cvis = if vis == Export then Private else vis
-         cons <- traverse (checkCon eopts nest env cvis n_in (Resolved tidx)) cons_raw
+         cons <- traverse (checkCon eopts nest env cvis n_in.val (Resolved tidx)) cons_raw
 
          let ddef = MkData (MkCon dfc n arity fullty) cons
          ignore $ addData vars vis tidx ddef

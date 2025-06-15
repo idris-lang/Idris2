@@ -1359,19 +1359,19 @@ simpleCon fname ret indents
          pure b.withFC
 
 simpleData : OriginDesc -> WithBounds t ->
-             WithBounds Name -> IndentInfo -> Rule PDataDecl
+             FCBind Name -> IndentInfo -> Rule PDataDecl
 simpleData fname start tyName indents
     = do b <- bounds (do params <- many (bounds $ decorate fname Bound name)
                          tyend <- bounds (decoratedSymbol fname "=")
                          mustWork $ do
                            let tyfc = boundToFC fname (mergeBounds start tyend)
-                           let tyCon = PRef (boundToFC fname tyName) tyName.val
+                           let tyCon = PRef tyName.fc tyName.val
                            let toPRef = \ t => PRef (boundToFC fname t) t.val
                            let conRetTy = papply tyfc tyCon (map toPRef params)
                            cons <- sepBy1 (decoratedSymbol fname "|") (simpleCon fname conRetTy indents)
                            pure (params, tyfc, forget cons))
          (params, tyfc, cons) <- pure b.val
-         pure (MkPData (boundToFC fname (mergeBounds start b)) tyName.val
+         pure (MkPData (boundToFC fname (mergeBounds start b)) tyName
                        (Just (mkTyConType fname tyfc params)) [] cons)
 
 dataOpt : OriginDesc -> Rule DataOpt
@@ -1392,7 +1392,7 @@ dataOpts fname = option [] $ do
   decoratedSymbol fname "]"
   pure (forget opts)
 
-dataBody : OriginDesc -> Int -> WithBounds t -> Name -> IndentInfo -> Maybe PTerm ->
+dataBody : OriginDesc -> Int -> WithBounds t -> FCBind Name -> IndentInfo -> Maybe PTerm ->
           EmptyRule PDataDecl
 dataBody fname mincol start n indents ty
     = do ty <- maybe (fail "Telescope is not optional in forward declaration") pure ty
@@ -1406,20 +1406,22 @@ dataBody fname mincol start n indents ty
          pure (MkPData (boundToFC fname (mergeBounds start b)) n ty opts cs)
 
 gadtData : OriginDesc -> Int -> WithBounds t ->
-           WithBounds Name -> IndentInfo -> EmptyRule PDataDecl
+           FCBind Name -> IndentInfo -> EmptyRule PDataDecl
 gadtData fname mincol start tyName indents
     = do ty <- optional $
                  do decoratedSymbol fname ":"
                     commit
                     typeExpr pdef fname indents
-         dataBody fname mincol start tyName.val indents ty
+         dataBody fname mincol start tyName indents ty
 
 dataDeclBody : OriginDesc -> IndentInfo -> Rule PDataDecl
 dataDeclBody fname indents
-    = do b <- bounds (do col <- column
-                         decoratedKeyword fname "data"
-                         n <- mustWork (bounds $ decoratedDataTypeName fname)
-                         pure (col, n))
+    = do b : WithBounds (Int, FCBind Name) <- bounds $ do
+             col <- column
+             bind <- operatorBindingKeyword {fname}
+             decoratedKeyword fname "data"
+             n <- mustWork (fcBounds' $ decoratedDataTypeName fname)
+             pure (col, bind :+ n)
          (col, n) <- pure b.val
          simpleData fname b n indents <|> gadtData fname col b n indents
 
@@ -1861,20 +1863,19 @@ parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
   recordBody : String -> WithDefault Visibility Private ->
                Maybe TotalReq ->
                Int ->
-               AddFC Name ->
-               BindingModifier ->
+               FCBind Name ->
                List PBinder ->
                EmptyRule PDeclNoFC
-  recordBody doc vis mbtot col n bindMod params
+  recordBody doc vis mbtot col n params
       = do atEndIndent indents
-           pure (PRecord doc vis mbtot (MkPRecordLater n.val params)) -- TODO: MkPRecordLater takes WithFC Name
+           pure (PRecord doc vis mbtot (MkPRecordLater n params)) -- TODO: MkPRecordLater takes WithFC Name
     <|> do mustWork $ decoratedKeyword fname "where"
            opts <- dataOpts fname
            dcflds <- blockWithOptHeaderAfter col
                        (\ idt => recordConstructor fname <* atEnd idt)
                        fieldDecl
            pure (PRecord doc vis mbtot
-                  (MkPRecord (bindMod :+ n) params opts (fst dcflds) (snd dcflds)))
+                  (MkPRecord n params opts (fst dcflds) (snd dcflds)))
 
   recordDecl : Rule PDeclNoFC
   recordDecl
@@ -1885,7 +1886,7 @@ parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
            decoratedKeyword fname "record"
            n       <- fcBounds' $ mustWork (decoratedDataTypeName fname)
            paramss <- many (continue indents >> recordParam)
-           recordBody doc vis mbtot col n binding paramss
+           recordBody doc vis mbtot col (binding :+ n) paramss
 
   ||| Parameter blocks
   ||| BNF:
