@@ -118,7 +118,7 @@ localHelper {vars} nest env nestdecls_in func
        = MkImpRecord fc (mapData (mapNestedName nest) n)
                          params
                          opts
-                         (mapNestedName nest conName)
+                         (mapData (mapNestedName nest) conName)
                          (map (updateFieldName nest) fields)
 
     updateRecordNS : NestedNames vars -> Maybe String -> Maybe String

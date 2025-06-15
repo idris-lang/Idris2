@@ -500,7 +500,7 @@ mutual
   toPRecord : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
               ImpRecord' KindedName ->
-              Core ( Name
+              Core ( FCBind Name
                    , List (Name, RigCount, PiInfo IPTerm, IPTerm) -- This should really be a Record
                    , List DataOpt
                    , Maybe (String, Name, BindingModifier)
@@ -511,7 +511,7 @@ mutual
                                       p' <- mapPiInfo p
                                       pure (n, c, p', ty')) ps
            fs' <- traverse toPField fs
-           pure (n.val, ps', opts, Just ("", (con, n.bind)), fs')
+           pure (n, ps', opts, Just ("", (con.val, n.bind)), fs')
     where
       mapPiInfo : PiInfo IRawImp -> Core (PiInfo IPTerm)
       mapPiInfo Explicit        = pure   Explicit
@@ -547,8 +547,7 @@ mutual
            pure (Just (MkFCVal fc (PParameters (Right args) (catMaybes ds'))))
   toPDecl (IRecord fc _ vis mbtot r)
       = do (n, ps, opts, con, fs) <- toPRecord r
-           let nameWithData = MkWithData ["fc" :- fc, "bind" :- NotBinding] n -- when resugaring we ingore the binding information
-           pure (Just (MkFCVal fc $ PRecord "" vis mbtot (MkPRecord nameWithData (map toBinder ps) opts ?whu fs)))
+           pure (Just (MkFCVal fc $ PRecord "" vis mbtot (MkPRecord n (map toBinder ps) opts ?whu fs)))
            where
              toBinder : (Name, ZeroOneOmega, PiInfo (PTerm' KindedName), PTerm' KindedName) -> PBinder' KindedName
              toBinder (n, rig, info, ty)

@@ -412,7 +412,7 @@ mutual
                      (tyName : FCBind Name) ->
                      (params : List (ImpParameter' nm)) ->
                      (opts : List DataOpt) ->
-                     (conName : Name) -> -- change to FCBind
+                     (conName : FCBind Name) ->
                      (fields : List (IField' nm)) ->
                      ImpRecord' nm
 
@@ -429,9 +429,13 @@ mutual
   Show nm => Show (ImpRecord' nm) where
     show (MkImpRecord _ n params opts con fields)
         = displayHeader ++ show n.val ++ " " ++ show params ++
-          " " ++ show con ++ "\n\t" ++
+          " " ++ show con.val ++ "\n\t" ++
           showSep "\n\t" (map show fields) ++ "\n"
       where
+        displayConstructor : String
+        displayConstructor = case con.bind of
+                                  NotBinding => show con.val
+                                  x => "\{show x} \{show con.val}"
         displayHeader : String
         displayHeader = case n.bind of
                              NotBinding => "record "
@@ -855,7 +859,7 @@ definedInBlock ns decls =
     defName ns acc (IFail _ _ nds) = foldl (defName ns) acc nds
     defName ns acc (INamespace _ n nds) = foldl (defName (ns <.> n)) acc nds
     defName ns acc (IRecord _ fldns _ _ (MkImpRecord _ n _ opts con flds))
-        = foldl (flip insert) acc $ expandNS ns con :: all
+        = foldl (flip insert) acc $ expandNS ns con.val :: all
       where
         fldns' : Namespace
         fldns' = maybe ns (\ f => ns <.> mkNamespace f) fldns

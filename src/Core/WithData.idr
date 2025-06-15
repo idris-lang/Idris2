@@ -17,21 +17,52 @@ export
 (.fc) : {fs : List Label} -> (prf : Find "fc" fs === Just FC) => WithData fs a -> FC
 (.fc) = WithData.get "fc" FC @{prf}
 
+export
+(.doc) : {fs : List Label} -> (prf : Find "doc" fs === Just String) => WithData fs a -> String
+(.doc) = WithData.get "doc" String @{prf}
+
+public export
+FC' : Label
+FC' = "fc" :-: FC
+
+public export
+Doc' : Label
+Doc' = "doc" :-: String
+
+public export
+Bind' : Label
+Bind' = "bind" :-: BindingModifier
+
 public export
 AddFC : Type -> Type
-AddFC = WithData ["fc" :-: FC]
+AddFC = WithData [ FC' ]
 
 public export
 FCName : Type -> Type
-FCName = WithData [ "fc" :-: FC, "name" :-: Name ]
+FCName = WithData [ "name" :-: Name, FC' ]
 
 public export
 FCBind : Type -> Type
-FCBind = WithData [ "fc" :-: FC, "bind" :-: BindingModifier]
+FCBind = WithData [ Bind', FC' ]
 
+public export
+DocBindFC : Type -> Type
+DocBindFC = WithData [ Doc', Bind', FC' ]
+
+-- When location is unavailable, use `EmptyFC`
 export
 HasDefault FC where
   def = EmptyFC
+
+-- When binding is not provided, the default is not binding
+export
+HasDefault BindingModifier where
+  def = NotBinding
+
+-- default doc string
+export
+HasDefault String where
+  def = ""
 
 export
 {fs : _} -> (prf : Find "fc" fs === Just FC) => HasFC (WithData fs a) where

@@ -1197,7 +1197,7 @@ mutual
            let consb = map (\ (nm, tm) => (nm, doBind bnames tm)) cons'
 
            body' <- traverse (desugarDecl (ps ++ mnames ++ paramNames)) body
-           pure [IPragma fc (maybe [tn] (\n => [tn, fst (snd n)]) conname)
+           pure [IPragma fc (maybe [tn] (\n => [tn, n]) (map val conname))
                             (\nest, env =>
                               elabInterface fc vis env nest consb
                                             tn paramsb det conname
@@ -1293,11 +1293,10 @@ mutual
                                              ) (mkNamespace recName))
                                fields
            let _ = the (List $ List IField) fields'
-           let conname = maybe (mkConName tn.val) (fst . snd) conname_in
-           whenJust (fst <$> conname_in) (addDocString conname)
-           let _ = the Name conname
+           let conname : DocBindFC Name := fromMaybe (MkDef (mkConName tn.val)) conname_in
+           whenJust ((.doc) <$> conname_in) (addDocString conname.val)
            pure [IRecord fc (Just recName)
-                         vis mbtot (MkImpRecord fc tn paramsb opts conname (concat fields'))]
+                         vis mbtot (MkImpRecord fc tn paramsb opts (drop conname) (concat fields'))]
     where
       getfname : PField -> List Name
       getfname x = x.val.names

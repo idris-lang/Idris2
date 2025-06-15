@@ -5,10 +5,10 @@ import public Core.Context.Log
 import public Core.Core
 import public Core.FC
 import public Core.WithName
-import public Core.WithData
 import public Core.Normalise
 import public Core.Options
 import public Core.TT
+import public Core.WithData
 
 import TTImp.TTImp
 
@@ -410,7 +410,7 @@ mutual
        MkPRecord : (tyname : FCBind Name) ->
                    (params : List (PBinder' nm)) ->
                    (opts : List DataOpt) ->
-                   (conName : Maybe (String, Name, BindingModifier)) ->
+                   (conName : Maybe (DocBindFC Name)) ->
                    (decls : List (PField' nm)) ->
                    PRecordDecl' nm
        MkPRecordLater : (tyname : Name) ->
@@ -578,11 +578,11 @@ mutual
                 List (PDecl' nm) -> PDeclNoFC' nm
        PInterface : WithDefault Visibility Private ->
                     (constraints : List (Maybe Name, PTerm' nm)) ->
-                    Name ->
-                    (doc : String) ->
+                    (typeName : Name) -> -- Those two should be merged into
+                    (doc : String) ->    --  WithData [Doc', FC'] Name
                     (params : List (BasicMultiBinder' nm)) ->
                     (det : Maybe (List1 Name)) ->
-                    (conName : Maybe (String, Name, BindingModifier)) ->
+                    (conName : Maybe (DocBindFC Name)) ->
                     List (PDecl' nm) ->
                     PDeclNoFC' nm
        PImplementation : Visibility -> List PFnOpt -> Pass ->

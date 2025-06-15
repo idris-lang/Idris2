@@ -2,6 +2,7 @@ module Idris.Parser
 
 import Core.Options
 import Core.Metadata
+import Core.WithData
 import Idris.Syntax
 import Idris.Syntax.Traversals
 import public Parser.Source
@@ -20,7 +21,6 @@ import Data.SnocList
 import Data.String
 import Libraries.Utils.String
 import Libraries.Data.WithDefault
-import Libraries.Data.WithData
 
 import Idris.Parser.Let
 
@@ -28,6 +28,9 @@ import Idris.Parser.Let
 
 fcBounds : OriginDesc => Rule a -> Rule (WithFC a)
 fcBounds a = (.withFC) <$> bounds a
+
+fcBounds' : OriginDesc => Rule a -> Rule (AddFC a)
+fcBounds' a = (\x => Mk [x.fc] x.val) <$> fcBounds a
 
 decorate : {a : Type} -> OriginDesc -> Decoration -> Rule a -> Rule a
 decorate fname decor rule = do
@@ -1680,13 +1683,13 @@ getVisibility (Just vis) (Left x :: xs)
    = fatalError "Multiple visibility modifiers"
 getVisibility v (_ :: xs) = getVisibility v xs
 
-recordConstructor : OriginDesc -> Rule (String, Name, BindingModifier)
+recordConstructor : OriginDesc -> Rule (WithData [Doc', Bind', FC'] Name)
 recordConstructor fname
   = do doc <- optDocumentation fname
        binding <- operatorBindingKeyword {fname}
        decorate fname Keyword $ exactIdent "constructor"
-       n <- mustWork $ decoratedDataConstructorName fname
-       pure (doc, n, binding)
+       n <- fcBounds' $ mustWork $ decoratedDataConstructorName fname
+       pure (doc :+ binding :+ n)
 
 autoImplicitField : OriginDesc -> IndentInfo -> Rule (PiInfo t)
 autoImplicitField fname _ = AutoImplicit <$ decoratedKeyword fname "auto"
@@ -1858,7 +1861,7 @@ parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
   recordBody : String -> WithDefault Visibility Private ->
                Maybe TotalReq ->
                Int ->
-               WithFC Name ->
+               AddFC Name ->
                BindingModifier ->
                List PBinder ->
                EmptyRule PDeclNoFC
@@ -1871,7 +1874,7 @@ parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
                        (\ idt => recordConstructor fname <* atEnd idt)
                        fieldDecl
            pure (PRecord doc vis mbtot
-                  (MkPRecord (Mk [n.fc, bindMod] n.val) params opts (fst dcflds) (snd dcflds)))
+                  (MkPRecord (bindMod :+ n) params opts (fst dcflds) (snd dcflds)))
 
   recordDecl : Rule PDeclNoFC
   recordDecl
@@ -1880,7 +1883,7 @@ parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
            binding     <- operatorBindingKeyword {fname}
            col         <- column
            decoratedKeyword fname "record"
-           n       <- fcBounds $ mustWork (decoratedDataTypeName fname)
+           n       <- fcBounds' $ mustWork (decoratedDataTypeName fname)
            paramss <- many (continue indents >> recordParam)
            recordBody doc vis mbtot col n binding paramss
 

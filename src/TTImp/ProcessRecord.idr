@@ -51,17 +51,18 @@ elabRecord : {vars : _} ->
              (tyName : FCBind Name) ->
              (params : List (Name, RigCount, PiInfo RawImp, RawImp)) ->
              (opts : List DataOpt) ->
-             (conName : Name) ->
+             (conName : FCBind Name) ->
              List IField ->
              Core ()
 elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conName_in fields
     = do tn' <- traverseData inCurrentNS tn_in
          let tn = tn'.val
-         conName <- inCurrentNS conName_in
+         conName <- traverseData inCurrentNS conName_in
          params <- preElabAsData tn
          log "declare.record.parameters" 100 $
            unlines ("New list of parameters:" :: map (("  " ++) . displayParam) params)
          elabAsData tn' conName params
+         let conName = conName.val
          defs <- get Ctxt
          Just conty <- lookupTyExact conName (gamma defs)
              | Nothing => throw (InternalError ("Adding " ++ show tn ++ "failed"))
@@ -217,7 +218,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
 
 
     elabAsData : (tyName : FCBind Name) -> -- fully qualified name of the record type
-                 (conName : Name) -> -- fully qualified name of the record type constructor
+                 (conName : FCBind Name) -> -- fully qualified name of the record type constructor
                  (params : List ImpParameter) -> -- telescope of parameters
                  Core ()
     elabAsData tn cname params
@@ -225,7 +226,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
              let conty = mkTy (paramTelescope params) $
                          mkTy (map farg fields) (recTy tn.val params)
              let boundNames = paramNames params ++ map fname fields ++ (toList vars)
-             let con = MkImpTy (virtualiseFC fc) (NoFC cname)
+             let con = MkImpTy (virtualiseFC fc) (NoFC cname.val)
                        !(bindTypeNames fc [] boundNames conty)
              let dt = MkImpData fc tn.val Nothing opts [con]
              log "declare.record" 5 $ "Record data type " ++ show dt
