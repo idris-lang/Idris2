@@ -1369,7 +1369,7 @@ simpleData fname start tyName indents
                            pure (params, tyfc, forget cons))
          (params, tyfc, cons) <- pure b.val
          pure (MkPData (boundToFC fname (mergeBounds start b)) tyName
-                       (Just (mkTyConType fname tyfc params)) [] cons)
+                       (Just (mkTyConType fname tyfc params)) [] (map (NotBinding :+) cons))
 
 dataOpt : OriginDesc -> Rule DataOpt
 dataOpt fname
@@ -1397,9 +1397,10 @@ dataBody fname mincol start n indents ty
          pure (MkPLater (boundToFC fname start) n ty)
   <|> do b <- bounds (do (mustWork $ decoratedKeyword fname "where")
                          opts <- dataOpts fname
+                         bind <- operatorBindingKeyword
                          cs <- blockAfter mincol (tyDecls (mustWork $ decoratedDataConstructorName fname) "" fname)
-                         pure (opts, cs))
-         (opts, cs) <- pure b.val
+                         pure (opts, map (bind :+) cs))
+         (opts, cs) : Pair ? ? <- pure b.val
          pure (MkPData (boundToFC fname (mergeBounds start b)) n ty opts cs)
 
 gadtData : OriginDesc -> Int -> WithBounds t ->
@@ -1826,10 +1827,11 @@ parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
            visOpts <- many (visOpt fname)
            vis     <- getVisibility Nothing visOpts
            let opts = mapMaybe getRight visOpts
+           bind    <- operatorBindingKeyword
            rig  <- multiplicity fname
            cls  <- tyDecls (decorate fname Function name)
                            doc fname indents
-           pure $ MkPClaim rig vis opts cls
+           pure $ MkPClaim rig vis opts (bind :+ cls)
 
 
   -- A Single binder with multiple names

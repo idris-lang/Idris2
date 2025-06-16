@@ -904,7 +904,7 @@ mutual
                 {auto u : Ref UST UState} ->
                 {auto m : Ref MD Metadata} ->
                 {auto o : Ref ROpts REPLOpts} ->
-                List Name -> PTypeDecl -> Core (List ImpTy)
+                List Name -> AddTy Bind' PTypeDecl -> Core (List ImpTy)
   desugarType ps (MkWithData fc $ MkPTy names d ty)
       = flip Core.traverse (forget names) $ \(doc, n) : (String, WithFC Name) =>
           do addDocString n.val (d ++ doc)

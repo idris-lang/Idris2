@@ -476,9 +476,9 @@ mutual
 
   toPTypeDecl : {auto c : Ref Ctxt Defs} ->
                 {auto s : Ref Syn SyntaxInfo} ->
-                ImpTy' KindedName -> Core (PTypeDecl' KindedName)
+                ImpTy' KindedName -> Core (AddTy Bind' (PTypeDecl' KindedName))
   toPTypeDecl (MkImpTy fc n ty)
-      = pure (MkFCVal fc $ MkPTy (pure ("", n)) "" !(toPTerm startPrec ty))
+      = pure (Mk [NotBinding, fc] $ MkPTy (pure ("", n)) "" !(toPTerm startPrec ty))
 
   toPData : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->

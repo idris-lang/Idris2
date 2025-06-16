@@ -108,11 +108,20 @@ export
 drop : WithData (l :: ls) a -> WithData ls a
 drop = {extra $= tail}
 
+export
+(.drop) : WithData (l :: ls) a -> WithData ls a
+(.drop) = {extra $= tail}
+
 namespace Blank
 
   export
   Add : (lbl : String) -> (_ : ty) -> a -> WithData [lbl :-: ty] a
   Add lbl ty x = MkWithData [ lbl :- ty ] x
+
+public export
+AddTy : Label -> Type -> Type
+AddTy lbl (WithData ls a) = WithData (lbl :: ls) a
+AddTy lbl ty = WithData [lbl] ty
 
 export
 mapData : forall extra. (a -> b) -> WithData extra a -> WithData extra b

@@ -401,7 +401,7 @@ mutual
                  -- we are allowed to leave the telescope out here
                  (tycon : Maybe (PTerm' nm)) ->
                  (opts : List DataOpt) ->
-                 (datacons : List (PTypeDecl' nm)) -> PDataDecl' nm
+                 (datacons : List (AddTy Bind' (PTypeDecl' nm))) -> PDataDecl' nm
        MkPLater : FC -> (tyname : FCBind Name) -> (tycon : PTerm' nm) -> PDataDecl' nm
 
   public export
@@ -549,7 +549,7 @@ mutual
     qty : RigCount
     vis : Visibility
     opts : List (PFnOpt' nm)
-    type : PTypeDecl' nm
+    type : AddTy Bind' (PTypeDecl' nm)
 
   public export
   record PFixityData where
@@ -642,13 +642,13 @@ isPDef _ = Nothing
 
 
 definedInData : PDataDecl -> List Name
-definedInData (MkPData _ n _ _ cons) = n.val :: concatMap (.nameList) cons
+definedInData (MkPData _ n _ _ cons) = n.val :: concatMap ((.nameList) . drop) cons
 definedInData (MkPLater _ n _) = [n.val]
 
 export
 definedIn : List PDeclNoFC -> List Name
 definedIn [] = []
-definedIn (PClaim claim :: ds) = claim.type.nameList ++ definedIn ds
+definedIn (PClaim claim :: ds) = claim.type.drop.nameList ++ definedIn ds
 definedIn (PData _ _ _ d :: ds) = definedInData d ++ definedIn ds
 definedIn (PParameters _ pds :: ds) = definedIn (map val pds) ++ definedIn ds
 definedIn (PUsing _ pds :: ds) = definedIn (map val pds) ++ definedIn ds
@@ -1230,7 +1230,7 @@ Show PClause where
 export
 covering
 Show PClaimData where
-  show (MkPClaim rig _ _ sig) = showCount rig ++ show sig
+  show (MkPClaim rig _ _ sig) = showCount rig ++ show (map fst sig.val.names)
 
 -- TODO: finish writing this instance
 export
