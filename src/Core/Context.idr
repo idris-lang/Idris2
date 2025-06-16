@@ -325,7 +325,8 @@ commitCtxt ctxt
 ||| @vis  Visibility, defaulting to private
 ||| @def  actual definition
 export
-newDef : (fc : FC) -> (n : Name) -> (rig : RigCount) -> (vars : Scope) ->
+newDef : {default NotBinding bind : BindingModifier} ->
+         (fc : FC) -> (n : Name) -> (rig : RigCount) -> (vars : Scope) ->
          (ty : ClosedTerm) -> (vis : WithDefault Visibility Private) -> (def : Def) -> GlobalDef
 newDef fc n rig vars ty vis def
     = MkGlobalDef
@@ -352,7 +353,7 @@ newDef fc n rig vars ty vis def
         , namedcompexpr = Nothing
         , sizeChange = []
         , schemeExpr = Nothing
-        , bindingMode = NotBinding
+        , bindingMode = bind
         }
 
 -- Rewrite rules, applied after type checking, for runtime code only

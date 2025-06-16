@@ -321,14 +321,14 @@ mutual
     reify defs val = cantReify val "FnOpt"
 
   export
-  Reify ImpTy where
+  Reify ImpTyData where
     reify defs val@(NDCon _ n _ _ args)
         = case (dropAllNS !(full (gamma defs) n), map snd args) of
                (UN (Basic "MkTy"), [w, y, z])
-                    => do w' <- reify defs !(evalClosure defs w)
-                          y' <- reify defs !(evalClosure defs y)
-                          z' <- reify defs !(evalClosure defs z)
-                          pure (MkImpTy w' y' z')
+                    => do w' : FC <- reify defs !(evalClosure defs w)
+                          y' : Name <- reify defs !(evalClosure defs y)
+                          z' : RawImp <- reify defs !(evalClosure defs z)
+                          pure (Mk [NoFC y'] z')
                _ => cantReify val "ITy"
     reify defs val = cantReify val "ITy"
 
@@ -710,15 +710,6 @@ mutual
     reflect fc defs lhs env (Binding b)
         = do b' <- reflect fc defs lhs env b
              appCon fc defs (reflectionttimp "Binding") [b']
-
-  export
-  Reflect ImpTy where
-    reflect fc defs lhs env (MkImpTy w x z)
-        = do w' <- reflect fc defs lhs env w
-             x' <- reflect fc defs lhs env x
-             z' <- reflect fc defs lhs env z
-             appCon fc defs (reflectionttimp "MkTy") [w', x', z']
-
   export
   Reflect DataOpt where
     reflect fc defs lhs env (SearchBy x)

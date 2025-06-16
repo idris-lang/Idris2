@@ -16,9 +16,10 @@ import TTImp.TTImp
 import Idris.REPL.Opts
 import Idris.Syntax
 
+import Debug.Trace
 
 keepBinding : BindingModifier -> List GlobalDef -> List GlobalDef
-keepBinding mode = filter (\x => x.bindingMode == mode)
+keepBinding mode = filter (\x => trace "def has binding \{show x.bindingMode}" (x.bindingMode == mode))
 
 parameters (originalName : WithFC Name) {auto c : Ref Ctxt Defs}
   checkUnique : List GlobalDef -> Core GlobalDef
@@ -31,8 +32,10 @@ parameters (originalName : WithFC Name) {auto c : Ref Ctxt Defs}
 
   checkBinding : (mode : BindingModifier) -> (candidates : List GlobalDef) -> Core GlobalDef
   checkBinding mode candidates = do
+    log "elab.bindApp"  10 $ "Potential candidates for binding identifer : \{show (map fullname candidates)}"
+    log "elab.bindApp"  10 $ "Checking if candidates have binding \{show mode}"
     let bindingCandidates = keepBinding mode candidates
-    log "elab.bindApp"  10 $ "Potential candidates for binding identifer : \{show (map fullname bindingCandidates)}"
+    log "elab.bindApp"  10 $ "Final list of binding identifers : \{show (map fullname bindingCandidates)}"
     wellTypedCandidates <- typecheckCandidates bindingCandidates
     checkUnique bindingCandidates
 

@@ -477,8 +477,8 @@ mutual
   toPTypeDecl : {auto c : Ref Ctxt Defs} ->
                 {auto s : Ref Syn SyntaxInfo} ->
                 ImpTy' KindedName -> Core (AddTy Bind' (PTypeDecl' KindedName))
-  toPTypeDecl (MkImpTy fc n ty)
-      = pure (Mk [NotBinding, fc] $ MkPTy (pure ("", n)) "" !(toPTerm startPrec ty))
+  toPTypeDecl (MkWithData extra ty)
+      = pure $ Mk [get "bind" extra, get "fc" extra] (MkPTy (pure ("", get "fcname" extra)) "" !(toPTerm startPrec ty))
 
   toPData : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
@@ -532,7 +532,7 @@ mutual
             ImpDecl' KindedName -> Core (Maybe (PDecl' KindedName))
   toPDecl (IClaim (MkWithData fc $ MkIClaimData rig vis opts ty))
       = do opts' <- traverse toPFnOpt opts
-           pure (Just (MkWithData fc $ PClaim (MkPClaim rig vis opts' !(toPTypeDecl ty))))
+           pure (Just (MkWithData fc $ PClaim (MkPClaim rig vis opts' ?what)))
   toPDecl (IData fc vis mbtot d)
       = pure (Just (MkFCVal fc $ PData "" vis mbtot !(toPData d)))
   toPDecl (IDef fc n cs)

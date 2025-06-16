@@ -6,9 +6,6 @@ import Core.TT
 import public Libraries.Data.WithData
 import Libraries.Text.Bounded
 
-export
-(.name) : {fs : List Label} -> (prf : Find "name" fs === Just Name) => WithData fs a -> Name
-(.name) = WithData.get "name" Name @{prf}
 
 export
 (.bind) : {fs : List Label} -> (prf : Find "bind" fs === Just BindingModifier) => WithData fs a -> BindingModifier
@@ -31,6 +28,10 @@ FC' : Label
 FC' = "fc" :-: FC
 
 public export
+WithFC : Type -> Type
+WithFC = WithData [ FC' ]
+
+public export
 Doc' : Label
 Doc' = "doc" :-: String
 
@@ -46,9 +47,18 @@ public export
 Name' : Label
 Name' = "name" :-: Name
 
+export
+(.name) : {fs : List Label} -> (prf : Find "name" fs === Just Name) => WithData fs a -> Name
+(.name) = WithData.get "name" Name @{prf}
+
 public export
-WithFC : Type -> Type
-WithFC = WithData [ FC' ]
+FCName' : Label
+FCName' = "fcname" :-: WithFC Name
+
+export
+(.fcname) : {fs : List Label} -> (prf : Find "fcname" fs === Just (WithFC Name)) =>
+            WithData fs a -> WithFC Name
+(.fcname) = WithData.get "fcname" (WithFC Name) @{prf}
 
 public export
 WithName : Type -> Type

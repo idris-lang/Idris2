@@ -867,26 +867,43 @@ Reflect FC where
   reflect fc defs lhs env EmptyFC = getCon fc defs (reflectiontt "EmptyFC")
 
 export
-Reify a => Reify (WithFC a) where
-  reify defs val@(NDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), map snd args) of
-             (UN (Basic "MkFCVal"), [fcterm, nestedVal]) => do
-                 fc <- reify defs !(evalClosure defs fcterm)
-                 val <- reify defs !(evalClosure defs nestedVal)
-                 pure $ MkFCVal fc val
-             (UN (Basic "MkFCVal"), [_, fc, l2]) => do
-                 fc' <- reify defs !(evalClosure defs fc)
-                 val' <- reify defs !(evalClosure defs l2)
-                 pure $ MkFCVal fc' val'
-             (t, l) => cantReify val "WithFC constructor: \{show t}, args: \{show (length l)}"
-  reify defs val = cantReify val "Expected WithFC, found something else"
+{fields : _} -> All (Reflect . Label.type) fields => Reflect (Record fields) where
+  reflect fc defs lhs env = ?finiReflect
 
 export
-Reflect a => Reflect (WithFC a) where
-  reflect fc defs lhs env (MkWithData loc val)
-      = do loc' <- reflect fc defs lhs env (get "fc" loc)
-           val' <- reflect fc defs lhs env val
-           appCon fc defs (reflectiontt "MkFCVal") [Erased fc Placeholder, loc', val']
+{fields : _} -> All (Reify . Label.type) fields => Reify (Record fields) where
+  reify = ?finishReify
+
+export
+{fields : _} -> All (Reflect . Label.type) fields => Reflect a => Reflect (WithData fields a) where
+  reflect fc defs lhs env = ?finiReflect2
+
+export
+{fields : _} -> All (Reify . Label.type) fields => Reify a => Reify (WithData fields a) where
+  reify = ?finishReify2
+
+
+-- export
+-- Reify a => Reify (WithFC a) where
+--   reify defs val@(NDCon _ n _ _ args)
+--       = case (dropAllNS !(full (gamma defs) n), map snd args) of
+--              (UN (Basic "MkFCVal"), [fcterm, nestedVal]) => do
+--                  fc <- reify defs !(evalClosure defs fcterm)
+--                  val <- reify defs !(evalClosure defs nestedVal)
+--                  pure $ MkFCVal fc val
+--              (UN (Basic "MkFCVal"), [_, fc, l2]) => do
+--                  fc' <- reify defs !(evalClosure defs fc)
+--                  val' <- reify defs !(evalClosure defs l2)
+--                  pure $ MkFCVal fc' val'
+--              (t, l) => cantReify val "WithFC constructor: \{show t}, args: \{show (length l)}"
+--   reify defs val = cantReify val "Expected WithFC, found something else"
+--
+-- export
+-- Reflect a => Reflect (WithFC a) where
+--   reflect fc defs lhs env (MkWithData loc val)
+--       = do loc' <- reflect fc defs lhs env (get "fc" loc)
+--            val' <- reflect fc defs lhs env val
+--            appCon fc defs (reflectiontt "MkFCVal") [Erased fc Placeholder, loc', val']
 
 export
 Reflect BindingModifier where

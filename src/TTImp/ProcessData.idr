@@ -92,10 +92,12 @@ checkCon : {vars : _} ->
            {auto o : Ref ROpts REPLOpts} ->
            List ElabOpt -> NestedNames vars ->
            Env Term vars -> Visibility -> (orig : Name) -> (resolved : Name) ->
-           ImpTy -> Core Constructor
-checkCon {vars} opts nest env vis tn_in tn (MkImpTy fc cn_in ty_raw)
-    = do cn <- inCurrentNS cn_in.val
-         let ty_raw = updateNS tn_in tn ty_raw
+           (nameType : ImpTy) -> Core Constructor
+checkCon {vars} opts nest env vis tn_in tn ty_raw
+    = do let conName = ty_raw.fcname
+         cn <- inCurrentNS conName.val
+         let fc = ty_raw.fc
+         let ty_raw = updateNS tn_in tn ty_raw.val
          log "declare.data.constructor" 5 $ "Checking constructor type " ++ show cn ++ " : " ++ show ty_raw
          log "declare.data.constructor" 10 $ "Updated " ++ show (tn_in, tn)
 
@@ -105,7 +107,7 @@ checkCon {vars} opts nest env vis tn_in tn (MkImpTy fc cn_in ty_raw)
              | Just gdef => throw (AlreadyDefined fc cn)
          u <- uniVar fc
          ty <-
-             wrapErrorC opts (InCon cn_in) $
+             wrapErrorC opts (InCon conName) $
                    checkTerm !(resolveName cn) InType opts nest env
                               (IBindHere fc (PI erased) ty_raw)
                               (gType fc u)
@@ -427,7 +429,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpLater dfc n_in ty_raw)
          arity <- getArity defs Env.empty fullty
 
          -- Add the type constructor as a placeholder
-         tidx <- addDef n (newDef fc n top vars fullty def_vis
+         tidx <- addDef n (newDef {bind = n_in.bind} fc n top vars fullty def_vis
                           (TCon 0 arity [] [] defaultFlags [] Nothing Nothing))
          addMutData (Resolved tidx)
          defs <- get Ctxt
@@ -517,7 +519,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
 
          -- Add the type constructor as a placeholder while checking
          -- data constructors
-         tidx <- addDef n (newDef fc n linear vars fullty (specified vis)
+         tidx <- addDef n (newDef {bind = n_in.bind} fc n linear vars fullty (specified vis)
                           (TCon 0 arity [] [] defaultFlags [] Nothing Nothing))
          case vis of
               Private => pure ()

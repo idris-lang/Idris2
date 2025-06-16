@@ -1230,7 +1230,7 @@ Show PClause where
 export
 covering
 Show PClaimData where
-  show (MkPClaim rig _ _ sig) = showCount rig ++ show (map fst sig.val.names)
+  show (MkPClaim rig _ _ sig) = showCount rig ++ show sig.drop
 
 -- TODO: finish writing this instance
 export

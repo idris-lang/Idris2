@@ -912,7 +912,8 @@ lookupOrAddAlias : {vars : _} ->
                    {auto s : Ref Syn SyntaxInfo} ->
                    {auto o : Ref ROpts REPLOpts} ->
                    List ElabOpt -> NestedNames vars -> Env Term vars -> FC ->
-                   Name -> List ImpClause -> Core (Maybe GlobalDef)
+                   Name ->  -- mightbe worth changing to WithFC
+                   List ImpClause -> Core (Maybe GlobalDef)
 lookupOrAddAlias eopts nest env fc n [cl@(PatClause _ lhs _)]
   = do defs <- get Ctxt
        log "declare.def.alias" 20 $ "Looking at \{show cl}"
@@ -943,7 +944,7 @@ lookupOrAddAlias eopts nest env fc n [cl@(PatClause _ lhs _)]
        log "declare.def" 5 "Not a misspelling: go ahead and declare it!"
        processType eopts nest env fc top Public []
           -- See #3409
-          $ MkImpTy fc (MkFCVal fc n) $ holeyType (map snd args)
+          $ Mk [NotBinding, fc, MkFCVal fc n] $ holeyType (map snd args)
        defs <- get Ctxt
        lookupCtxtExact n (gamma defs)
 

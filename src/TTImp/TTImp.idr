@@ -320,23 +320,29 @@ mutual
     (SpecArgs ns) == (SpecArgs ns') = ns == ns'
     _ == _ = False
 
+
+  public export
+  ImpTyData : Type
+  ImpTyData = ImpTyData' Name
+
+  public export
+  ImpTyData' : Type -> Type
+  ImpTyData' = AddTy FCName' . RawImp'
+
   public export
   ImpTy : Type
   ImpTy = ImpTy' Name
 
   public export
-  record ImpTy' (nm : Type) where
-      constructor MkImpTy
-      loc : FC
-      name : WithFC Name
-      type : RawImp' nm
+  ImpTy' : Type -> Type
+  ImpTy' = AddTy Bind' . AddTy FC' . ImpTyData'
 
   %name ImpTy' ty
 
   export
   covering
-  Show nm => Show (ImpTy' nm) where
-    show (MkImpTy fc n ty) = "(%claim " ++ show n.val ++ " " ++ show ty ++ ")"
+  Show nm => Show (ImpTyData' nm) where
+    show ty = "(%claim " ++ show ty.fcname.val ++ " " ++ show ty.val ++ ")"
 
   public export
   data DataOpt : Type where
@@ -376,9 +382,9 @@ mutual
   covering
   Show nm => Show (ImpData' nm) where
     show (MkImpData fc n (Just tycon) _ cons)
-        = "(%data " ++ show n.val ++ " " ++ show tycon ++ " " ++ show cons ++ ")"
+        = "(%data " ++ show n.val ++ " " ++ show tycon ++ " " ++ show (map val cons) ++ ")"
     show (MkImpData fc n Nothing _ cons)
-        = "(%data " ++ show n.val ++ " " ++ show cons ++ ")"
+        = "(%data " ++ show n.val ++ " " ++ show (map val cons) ++ ")"
     show (MkImpLater fc n tycon)
         = "(%datadecl " ++ show n.val ++ " " ++ show tycon ++ ")"
 
@@ -529,7 +535,7 @@ mutual
   covering
   Show nm => Show (ImpDecl' nm) where
     show (IClaim (MkWithData _ $ MkIClaimData c _ opts ty))
-        = show opts ++ " " ++ show c ++ " " ++ show ty
+        = show opts ++ " " ++ show c ++ " " ++ show ty.val
     show (IData _ _ _ d) = show d
     show (IDef _ n cs) = "(%def " ++ show n ++ " " ++ show cs ++ ")"
     show (IParameters _ ps ds)
@@ -837,7 +843,7 @@ definedInBlock ns decls =
     Prelude.toList $ foldl (defName ns) empty decls
   where
     getName : ImpTy -> Name
-    getName (MkImpTy _ n _) = n.val
+    getName x = x.fcname.val
 
     getFieldName : IField -> Name
     getFieldName (MkIField _ _ _ n _) = n

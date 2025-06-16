@@ -493,16 +493,16 @@ mutual
   expr : OriginDesc -> IndentInfo -> Rule RawImp
   expr = typeExpr
 
-tyDecl : OriginDesc -> IndentInfo -> Rule ImpTy
+tyDecl : OriginDesc -> IndentInfo -> Rule ImpTyData
 tyDecl fname indents
-    = do start <- location
-         n <- name
+    = do start <- the (EmptyRule FilePos) location
+         n <- the (Rule Name) name
          nameEnd <- location
          symbol ":"
          ty <- expr fname indents
          end <- location
          atEnd indents
-         pure (MkImpTy (MkFC fname start end) (MkFCVal (MkFC fname start nameEnd) n) ty)
+         ?whau -- pure (MkImpTy (MkFCVal (MkFC fname start nameEnd) n) ty)
 
 mutual
   parseRHS : (withArgs : Nat) ->
@@ -600,7 +600,7 @@ dataDecl fname indents
          opts <- dataOpts
          cs <- block (tyDecl fname)
          end <- location
-         pure (MkImpData (MkFC fname start end) (MkDef n) (Just ty) opts cs)
+         pure (MkImpData (MkFC fname start end) (MkDef n) (Just ty) opts ?ahh)
 
 recordParam : OriginDesc -> IndentInfo -> Rule (List (Name, RigCount, PiInfo RawImp, RawImp))
 recordParam fname indents
@@ -737,9 +737,12 @@ topDecl fname indents
          let opts = mapMaybe getRight visOpts
          m <- multiplicity
          rig <- getMult m
+         startClaim <- location
          claim <- tyDecl fname indents
          end <- location
-         pure (IClaim (MkFCVal (MkFC fname start end) $ MkIClaimData  rig vis opts claim))
+         pure (IClaim (MkFCVal (MkFC fname start end) $ MkIClaimData  rig vis opts
+                  ?dunno))
+                  -- (Mk [NotBinding, MkFC fname startClaim end] claim)))
   <|> recordDecl fname indents
   <|> directive fname indents
   <|> definition fname indents
