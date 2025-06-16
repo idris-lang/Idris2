@@ -503,7 +503,7 @@ mutual
               Core ( FCBind Name
                    , List (Name, RigCount, PiInfo IPTerm, IPTerm) -- This should really be a Record
                    , List DataOpt
-                   , Maybe (String, Name, BindingModifier)
+                   , Maybe (DocBindFC Name)
                    , List (PField' KindedName))
   toPRecord (MkImpRecord fc n ps opts con fs)
       = do ps' <- traverse (\ (n, c, p, ty) =>
@@ -511,7 +511,7 @@ mutual
                                       p' <- mapPiInfo p
                                       pure (n, c, p', ty')) ps
            fs' <- traverse toPField fs
-           pure (n, ps', opts, Just ("", (con.val, n.bind)), fs')
+           pure (n, ps', opts, Just ("" :+ con), fs')
     where
       mapPiInfo : PiInfo IRawImp -> Core (PiInfo IPTerm)
       mapPiInfo Explicit        = pure   Explicit

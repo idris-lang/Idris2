@@ -99,6 +99,8 @@ export
 (:+) : ty -> WithData ls a -> WithData (lbl :-: ty :: ls) a
 val :+ x = MkWithData (Add lbl val x.extra) x.val
 
+export infixr 8 :++
+
 ||| Add a record to the payload
 export
 (:++) : Record ls -> WithData xs a -> WithData (ls ++ xs) a
