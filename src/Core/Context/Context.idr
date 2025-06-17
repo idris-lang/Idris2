@@ -175,6 +175,7 @@ record Constructor where
   constructor MkCon
   loc : FC
   name : Name
+  bind : BindingModifier
   arity : Nat
   type : ClosedTerm
 %name Constructor cons

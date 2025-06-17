@@ -16,10 +16,8 @@ import TTImp.TTImp
 import Idris.REPL.Opts
 import Idris.Syntax
 
-import Debug.Trace
-
 keepBinding : BindingModifier -> List GlobalDef -> List GlobalDef
-keepBinding mode = filter (\x => trace "def has binding \{show x.bindingMode}" (x.bindingMode == mode))
+keepBinding mode = filter (\x => x.bindingMode == mode)
 
 parameters (originalName : WithFC Name) {auto c : Ref Ctxt Defs}
   checkUnique : List GlobalDef -> Core GlobalDef

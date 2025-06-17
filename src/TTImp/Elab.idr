@@ -188,7 +188,6 @@ elabTermSub {vars} defining mode opts nest env env' sub tm ty
          -- reference
          est <- get EST
          traverse_ addHoleToSave (keys (saveHoles est))
-
          -- On the LHS, finish by tidying up the plets (changing things that
          -- were of the form x@_, where the _ is inferred to be a variable,
          -- to just x)

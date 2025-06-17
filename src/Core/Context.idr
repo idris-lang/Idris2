@@ -329,7 +329,7 @@ newDef : {default NotBinding bind : BindingModifier} ->
          (fc : FC) -> (n : Name) -> (rig : RigCount) -> (vars : Scope) ->
          (ty : ClosedTerm) -> (vis : WithDefault Visibility Private) -> (def : Def) -> GlobalDef
 newDef fc n rig vars ty vis def
-    = MkGlobalDef
+  = MkGlobalDef
         { location = fc
         , fullname = n
         , type = ty

@@ -13,8 +13,11 @@ typebind
 Exists : (t : Type) -> (t -> Type) -> Type
 Exists = DPair
 
--- val2 : Exists Nat (\n => Vect n Nat)
--- val2 = (4 ** [0,1,2,3])
+ListCont : Container
+ListCont = MkCont (n : Nat) | Fin n
+
+val2 : Exists Nat (\n => Vect n Nat)
+val2 = (4 ** [0,1,2,3])
 
 typebind
 record Σ (t : Type) (s : t -> Type) where
@@ -34,6 +37,10 @@ loop = Prelude.for_
 val : Exists (n : Nat) | Vect n Nat
 val = (4 ** [0,1,2,3])
 
+main : IO ()
+main = loop (x := [0 .. 10]) |
+         printLn x
+
 sigmaPi : Σ (ty : Type) | (x : ty) =>> Type
 sigmaPi = (Type && List)
 
@@ -41,6 +48,3 @@ nestedSigma : Σ (ty : Type) | Σ (n : Nat) | Vect n ty
 nestedSigma = (String && 2 && ["hello", "world"])
 
 
-main : IO ()
-main = loop (x := [0 .. 10]) |
-         printLn x

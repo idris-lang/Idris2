@@ -51,10 +51,6 @@ export
 (.name) : {fs : List Label} -> (prf : Find "name" fs === Just Name) => WithData fs a -> Name
 (.name) = WithData.get "name" Name @{prf}
 
-public export
-FCName' : Label
-FCName' = "fcname" :-: WithFC Name
-
 export
 (.fcname) : {fs : List Label} -> (prf : Find "fcname" fs === Just (WithFC Name)) =>
             WithData fs a -> WithFC Name
@@ -71,6 +67,16 @@ MkWithName x y = Mk [x.val, x.fc] y
 public export
 FCBind : Type -> Type
 FCBind = WithData [ Bind', FC' ]
+
+-- a constructor label
+public export
+TyName' : Label
+TyName' = "tyname" :-: FCBind Name
+
+export
+(.tyName) : {fs : List Label} -> (prf : Find "tyname" fs === Just (FCBind Name)) =>
+            WithData fs a -> FCBind Name
+(.tyName) = WithData.get "tyname" (FCBind Name) @{prf}
 
 public export
 DocBindFC : Type -> Type

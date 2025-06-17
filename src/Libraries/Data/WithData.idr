@@ -182,3 +182,4 @@ export
 export
 (eq : All (Eq . Label.type) fs) => Eq a => Eq (WithData fs a) where
   x == y = x.val == y.val && x.extra == y.extra
+

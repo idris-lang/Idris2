@@ -145,7 +145,7 @@ processType : {vars : _} ->
               FC -> RigCount -> Visibility ->
               List FnOpt -> ImpTy -> Core ()
 processType {vars} eopts nest env fc rig vis opts ty_raw
-    = do let typeName = ty_raw.fcname
+    = do let typeName = ty_raw.tyName
          n <- inCurrentNS typeName.val
          let tfc = ty_raw.fc
 

@@ -320,17 +320,17 @@ mutual
                _ => cantReify val "FnOpt"
     reify defs val = cantReify val "FnOpt"
 
-  export
-  Reify ImpTyData where
-    reify defs val@(NDCon _ n _ _ args)
-        = case (dropAllNS !(full (gamma defs) n), map snd args) of
-               (UN (Basic "MkTy"), [w, y, z])
-                    => do w' : FC <- reify defs !(evalClosure defs w)
-                          y' : Name <- reify defs !(evalClosure defs y)
-                          z' : RawImp <- reify defs !(evalClosure defs z)
-                          pure (Mk [NoFC y'] z')
-               _ => cantReify val "ITy"
-    reify defs val = cantReify val "ITy"
+--   export
+--   Reify ImpTyData where
+--     reify defs val@(NDCon _ n _ _ args)
+--         = case (dropAllNS !(full (gamma defs) n), map snd args) of
+--                (UN (Basic "MkTy"), [w, y, z])
+--                     => do w' : FC <- reify defs !(evalClosure defs w)
+--                           y' : Name <- reify defs !(evalClosure defs y)
+--                           z' : RawImp <- reify defs !(evalClosure defs z)
+--                           pure (Mk [NotBinding, NoFC y'] z')
+--                _ => cantReify val "ITy"
+--     reify defs val = cantReify val "ITy"
 
   export
   Reify DataOpt where

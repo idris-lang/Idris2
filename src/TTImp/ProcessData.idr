@@ -92,14 +92,16 @@ checkCon : {vars : _} ->
            {auto o : Ref ROpts REPLOpts} ->
            List ElabOpt -> NestedNames vars ->
            Env Term vars -> Visibility -> (orig : Name) -> (resolved : Name) ->
-           (nameType : ImpTy) -> Core Constructor
+           (nameType : ImpTy) ->
+           Core Constructor
 checkCon {vars} opts nest env vis tn_in tn ty_raw
-    = do let conName = ty_raw.fcname
+    = do let conName : FCBind Name = get "tyname" (FCBind Name) ty_raw
          cn <- inCurrentNS conName.val
          let fc = ty_raw.fc
          let ty_raw = updateNS tn_in tn ty_raw.val
          log "declare.data.constructor" 5 $ "Checking constructor type " ++ show cn ++ " : " ++ show ty_raw
          log "declare.data.constructor" 10 $ "Updated " ++ show (tn_in, tn)
+         log "declare.data.constructor" 10 $ "Binding info:  " ++ show conName.bind
 
          defs <- get Ctxt
          -- Check 'cn' is undefined
@@ -107,7 +109,7 @@ checkCon {vars} opts nest env vis tn_in tn ty_raw
              | Just gdef => throw (AlreadyDefined fc cn)
          u <- uniVar fc
          ty <-
-             wrapErrorC opts (InCon conName) $
+             wrapErrorC opts (InCon conName.drop) $
                    checkTerm !(resolveName cn) InType opts nest env
                               (IBindHere fc (PI erased) ty_raw)
                               (gType fc u)
@@ -126,7 +128,7 @@ checkCon {vars} opts nest env vis tn_in tn ty_raw
                            addHashWithNames fullty
                            log "module.hash" 15 "Adding hash for data constructor: \{show cn}"
               _ => pure ()
-         pure (MkCon fc cn !(getArity defs Env.empty fullty) fullty)
+         pure (MkCon fc cn conName.bind !(getArity defs Env.empty fullty) fullty)
 
 -- Get the indices of the constructor type (with non-constructor parts erased)
 getIndexPats : {auto c : Ref Ctxt Defs} ->
@@ -450,9 +452,9 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpLater dfc n_in ty_raw)
              setFlag fc n (SetTotal tot)
 
 processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw opts cons_raw)
-    = do n <- inCurrentNS n_in.val
+    = do typeName <- inCurrentNS n_in.val
 
-         log "declare.data" 1 $ "Processing " ++ show n
+         log "declare.data" 1 $ "Processing " ++ show typeName
          defs <- get Ctxt
 
          mmetasfullty <- flip traverseOpt mty_raw $ \ ty_raw => do
@@ -460,11 +462,11 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
 
            u <- uniVar fc
            (ty, _) <-
-               wrapErrorC eopts (InCon $ MkFCVal fc n) $
-                      elabTerm !(resolveName n) InType eopts nest env
+               wrapErrorC eopts (InCon $ MkFCVal fc typeName) $ -- check if we can inherit the location from n_in
+                      elabTerm !(resolveName typeName) InType eopts nest env
                                 (IBindHere fc (PI erased) ty_raw)
                                 (Just (gType dfc u))
-           checkIsType fc n env !(nf defs env ty)
+           checkIsType fc typeName env !(nf defs env ty)
 
            pure (keys (getMetas ty), abstractEnvType dfc env ty)
 
@@ -476,7 +478,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
          -- or we don't define them.
          -- When looking up, note the data types which were undefined at the
          -- point of declaration.
-         ndefm <- lookupCtxtExact n (gamma defs)
+         ndefm <- lookupCtxtExact typeName (gamma defs)
          (mw, vis, tot, fullty) <- the (Core (List Name, Visibility, Maybe TotalReq, ClosedTerm)) $ case ndefm of
                   Nothing => case mfullty of
                     Nothing => throw (GenericMsg fc "Missing telescope for data definition \{show n_in.val}")
@@ -486,7 +488,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
                       Right finalVis => pure finalVis
                       Left (oldVis, newVis) => do
                         -- TODO : In a later release, at least after 0.7.0, replace this with an error.
-                        recordWarning (IncompatibleVisibility fc oldVis newVis n)
+                        recordWarning (IncompatibleVisibility fc oldVis newVis typeName)
                         pure (max oldVis newVis)
 
                     let declTot = findSetTotal $ ndef.flags
@@ -511,28 +513,31 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
                                      else do logTermNF "declare.data" 1 "Previous" Env.empty (type ndef)
                                              logTermNF "declare.data" 1 "Now" Env.empty fullty
                                              throw (CantConvert fc (gamma defs) Env.empty (type ndef) fullty)
-                      _ => throw (AlreadyDefined fc n)
+                      _ => throw (AlreadyDefined fc typeName)
 
-         logTermNF "declare.data" 5 ("data " ++ show n) Env.empty fullty
+         logTermNF "declare.data" 5 ("data " ++ show typeName) Env.empty fullty
 
          arity <- getArity defs Env.empty fullty
 
          -- Add the type constructor as a placeholder while checking
          -- data constructors
-         tidx <- addDef n (newDef {bind = n_in.bind} fc n linear vars fullty (specified vis)
+         tidx <- addDef typeName
+                     (newDef {bind = n_in.bind} fc typeName linear vars fullty (specified vis)
                           (TCon 0 arity [] [] defaultFlags [] Nothing Nothing))
          case vis of
               Private => pure ()
-              _ => do addHashWithNames n
+              _ => do addHashWithNames typeName
                       addHashWithNames fullty
-                      log "module.hash" 15 "Adding hash for data declaration with name \{show n}"
+                      log "module.hash" 15 "Adding hash for data declaration with name \{show typeName}"
+
 
          -- Constructors are private if the data type as a whole is
          -- export
          let cvis = if vis == Export then Private else vis
-         cons <- traverse (checkCon eopts nest env cvis n_in.val (Resolved tidx)) cons_raw
+         cons <- traverse (checkCon eopts nest env cvis n_in.val (Resolved tidx))
+                     (cons_raw)
 
-         let ddef = MkData (MkCon dfc n arity fullty) cons
+         let ddef = MkData (MkCon dfc {- This shoud be the location of typeName -} typeName n_in.bind arity fullty) cons
          ignore $ addData vars vis tidx ddef
 
          -- Flag data type as a newtype, if possible (See `findNewtype` for criteria).
@@ -545,7 +550,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
          -- point it was declared, and every data type undefined right now
          defs <- get Ctxt
          let mutWith = nub (mw ++ mutData defs)
-         log "declare.data" 3 $ show n ++ " defined in a mutual block with " ++ show mw
+         log "declare.data" 3 $ show typeName ++ " defined in a mutual block with " ++ show mw
          setMutWith fc (Resolved tidx) mw
 
          traverse_ (processDataOpt fc (Resolved tidx)) opts
@@ -555,9 +560,9 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
          setDetags fc (Resolved tidx) detags
 
          traverse_ addToSave metas
-         addToSave n
+         addToSave typeName
          log "declare.data" 10 $
-           "Saving from " ++ show n ++ ": " ++ show metas
+           "Saving from " ++ show typeName ++ ": " ++ show metas
 
          let connames = map name cons
          unless (NoHints `elem` opts) $
@@ -568,5 +573,5 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
 
          -- #1404
          whenJust tot $ \ tot => do
-             log "declare.data" 5 $ "setting totality flag for \{show n} and its constructors"
-             for_ (n :: map name cons) $ \ n => setFlag fc n (SetTotal tot)
+             log "declare.data" 5 $ "setting totality flag for \{show typeName} and its constructors"
+             for_ (typeName :: map name cons) $ \ n => setFlag fc n (SetTotal tot)

@@ -91,7 +91,7 @@ paramPos tyn dcons = do
 export
 addData : {auto c : Ref Ctxt Defs} ->
           Scope -> Visibility -> Int -> DataDef -> Core Int
-addData vars vis tidx (MkData (MkCon dfc tyn arity tycon) datacons)
+addData vars vis tidx (MkData (MkCon dfc tyn bind arity tycon) datacons)
     = do defs <- get Ctxt
          tag <- getNextTypeTag
          let allPos = allDet arity
@@ -100,7 +100,7 @@ addData vars vis tidx (MkData (MkCon dfc tyn arity tycon) datacons)
          log "declare.data.parameters" 20 $
             "Positions of parameters for datatype" ++ show tyn ++
             ": [" ++ showSep ", " (map show paramPositions) ++ "]"
-         let tydef = newDef dfc tyn top vars tycon (specified vis)
+         let tydef = newDef {bind} dfc tyn top vars tycon (specified vis)
                             (TCon tag arity
                                   paramPositions
                                   allPos
@@ -121,8 +121,8 @@ addData vars vis tidx (MkData (MkCon dfc tyn arity tycon) datacons)
     addDataConstructors : (tag : Int) -> List Constructor ->
                           Context -> Core Context
     addDataConstructors tag [] gam = pure gam
-    addDataConstructors tag (MkCon fc n a ty :: cs) gam
-        = do let condef = newDef fc n top vars ty (specified $ conVisibility vis) (DCon tag a Nothing)
+    addDataConstructors tag (MkCon fc n bind a ty :: cs) gam
+        = do let condef = newDef {bind = bind} fc n top vars ty (specified $ conVisibility vis) (DCon tag a Nothing)
              -- Check 'n' is undefined
              Nothing <- lookupCtxtExact n gam
                  | Just gdef => throw (AlreadyDefined fc n)

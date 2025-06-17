@@ -56,11 +56,12 @@ elabRecord : {vars : _} ->
              Core ()
 elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conName_in fields
     = do tn <- traverseData inCurrentNS tn_in
-         conName <- inCurrentNS conName_in.val
+         conName <- traverseData inCurrentNS conName_in
          params <- preElabAsData tn
          log "declare.record.parameters" 100 $
            unlines ("New list of parameters:" :: map (("  " ++) . displayParam) params)
          elabAsData tn conName params
+         let conName = conName.val -- we don't need the binding information after this point
          let tn = tn.val
          defs <- get Ctxt
          Just conty <- lookupTyExact conName (gamma defs)
@@ -218,15 +219,15 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
 
 
     elabAsData : (tyName : FCBind Name) -> -- fully qualified name of the record type
-                 (conName : Name) -> -- fully qualified name of the record type constructor
+                 (conName : FCBind Name) -> -- fully qualified name of the record type constructor
                  (params : List ImpParameter) -> -- telescope of parameters
                  Core ()
-    elabAsData tn conname params
+    elabAsData tn conName params
         = do let fc = virtualiseFC fc
              let conty = mkTy (paramTelescope params) $
                          mkTy (map farg fields) (recTy tn.val params)
              let boundNames = paramNames params ++ map fname fields ++ (toList vars)
-             let con = Mk [NotBinding, fc, NoFC conname]
+             let con = Mk [fc, conName]
                        !(bindTypeNames fc [] boundNames conty)
              let dt = MkImpData fc tn Nothing opts [con]
              log "declare.record" 5 $ "Record data type " ++ show dt
@@ -277,7 +278,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                                       IPi bfc top Explicit (Just rname) (recTy tn params) ty'
                    let fc' = virtualiseFC fc
                    let mkProjClaim = \ nm =>
-                          let ty = Mk [NotBinding, fc', MkFCVal fc' nm] projTy
+                          let ty = Mk [fc', Mk [NotBinding, fc'] nm] projTy
                           in IClaim (MkFCVal bfc (MkIClaimData rig isVis [Inline] ty))
 
                    log "declare.record.projection.claim" 5 $

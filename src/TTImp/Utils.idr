@@ -474,8 +474,8 @@ mutual
       = ImpossibleClause fc' (substLoc fc' lhs)
 
   substLocTy : FC -> ImpTy -> ImpTy
-  substLocTy fc' (MkWithData [_ :- b, _ :- loc, _ :- nm] ty)
-      = Mk [b, fc', setFC fc' nm] (substLoc fc' ty)
+  substLocTy fc' (MkWithData [_ :- loc, _ :- nm] ty)
+      = Mk [fc', setFC fc' nm] (substLoc fc' ty)
 
   substLocData : FC -> ImpData -> ImpData
   substLocData fc' (MkImpData fc n con opts dcons)

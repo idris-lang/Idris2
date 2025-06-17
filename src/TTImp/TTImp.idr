@@ -327,7 +327,7 @@ mutual
 
   public export
   ImpTyData' : Type -> Type
-  ImpTyData' = AddTy FCName' . RawImp'
+  ImpTyData' = AddTy TyName' . RawImp'
 
   public export
   ImpTy : Type
@@ -335,14 +335,14 @@ mutual
 
   public export
   ImpTy' : Type -> Type
-  ImpTy' = AddTy Bind' . AddTy FC' . ImpTyData'
+  ImpTy' = AddTy FC' . ImpTyData'
 
   %name ImpTy' ty
 
   export
   covering
   Show nm => Show (ImpTyData' nm) where
-    show ty = "(%claim " ++ show ty.fcname.val ++ " " ++ show ty.val ++ ")"
+    show ty = "(%claim " ++ show ty.tyName.val ++ " " ++ show ty.val ++ ")"
 
   public export
   data DataOpt : Type where
@@ -368,7 +368,7 @@ mutual
 
   public export
   data ImpData' : Type -> Type where
-       MkImpData : FC -> (n : FCBind Name) -> -- The name could be declared as binding
+       MkImpData : FC -> (tyName : FCBind Name) -> -- The name could be declared as binding
                    -- if we have already declared the type using `MkImpLater`,
                    -- we are allowed to leave the telescope out here.
                    (tycon : Maybe (RawImp' nm)) ->
@@ -843,7 +843,7 @@ definedInBlock ns decls =
     Prelude.toList $ foldl (defName ns) empty decls
   where
     getName : ImpTy -> Name
-    getName x = x.fcname.val
+    getName x = x.tyName.val
 
     getFieldName : IField -> Name
     getFieldName (MkIField _ _ _ n _) = n
