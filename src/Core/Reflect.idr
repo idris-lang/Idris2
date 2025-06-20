@@ -867,19 +867,19 @@ Reflect FC where
   reflect fc defs lhs env EmptyFC = getCon fc defs (reflectiontt "EmptyFC")
 
 export
-{fields : _} -> All (Reflect . Label.type) fields => Reflect (Record fields) where
+{fields : _} -> All (Reflect . KeyVal.type) fields => Reflect (Record fields) where
   reflect fc defs lhs env = ?finiReflect
 
 export
-{fields : _} -> All (Reify . Label.type) fields => Reify (Record fields) where
+{fields : _} -> All (Reify . KeyVal.type) fields => Reify (Record fields) where
   reify = ?finishReify
 
 export
-{fields : _} -> All (Reflect . Label.type) fields => Reflect a => Reflect (WithData fields a) where
+{fields : _} -> All (Reflect . KeyVal.type) fields => Reflect a => Reflect (WithData fields a) where
   reflect fc defs lhs env = ?finiReflect2
 
 export
-{fields : _} -> All (Reify . Label.type) fields => Reify a => Reify (WithData fields a) where
+{fields : _} -> All (Reify . KeyVal.type) fields => Reify a => Reify (WithData fields a) where
   reify = ?finishReify2
 
 

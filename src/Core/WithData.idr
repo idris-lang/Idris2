@@ -8,23 +8,23 @@ import Libraries.Text.Bounded
 
 
 export
-(.bind) : {fs : List Label} -> (prf : Find "bind" fs === Just BindingModifier) => WithData fs a -> BindingModifier
+(.bind) : {fs : List KeyVal} -> (prf : Find "bind" fs === Just BindingModifier) => WithData fs a -> BindingModifier
 (.bind) = WithData.get "bind" BindingModifier @{prf}
 
 export
-(.fc) : {fs : List Label} -> (prf : Find "fc" fs === Just FC) => WithData fs a -> FC
+(.fc) : {fs : List KeyVal} -> (prf : Find "fc" fs === Just FC) => WithData fs a -> FC
 (.fc) = WithData.get "fc" FC @{prf}
 
 export
-setFC : {fs : List Label} -> (prf : Find "fc" fs === Just FC) => FC -> WithData fs a -> WithData fs a
+setFC : {fs : List KeyVal} -> (prf : Find "fc" fs === Just FC) => FC -> WithData fs a -> WithData fs a
 setFC fc = WithData.set "fc" fc @{prf}
 
 export
-(.doc) : {fs : List Label} -> (prf : Find "doc" fs === Just String) => WithData fs a -> String
+(.doc) : {fs : List KeyVal} -> (prf : Find "doc" fs === Just String) => WithData fs a -> String
 (.doc) = WithData.get "doc" String @{prf}
 
 public export
-FC' : Label
+FC' : KeyVal
 FC' = "fc" :-: FC
 
 public export
@@ -32,27 +32,27 @@ WithFC : Type -> Type
 WithFC = WithData [ FC' ]
 
 public export
-Doc' : Label
+Doc' : KeyVal
 Doc' = "doc" :-: String
 
 public export
-Bind' : Label
+Bind' : KeyVal
 Bind' = "bind" :-: BindingModifier
 
 public export
-Rig' : Label
+Rig' : KeyVal
 Rig' = "rig" :-: RigCount
 
 public export
-Name' : Label
+Name' : KeyVal
 Name' = "name" :-: Name
 
 export
-(.name) : {fs : List Label} -> (prf : Find "name" fs === Just Name) => WithData fs a -> Name
+(.name) : {fs : List KeyVal} -> (prf : Find "name" fs === Just Name) => WithData fs a -> Name
 (.name) = WithData.get "name" Name @{prf}
 
 export
-(.fcname) : {fs : List Label} -> (prf : Find "fcname" fs === Just (WithFC Name)) =>
+(.fcname) : {fs : List KeyVal} -> (prf : Find "fcname" fs === Just (WithFC Name)) =>
             WithData fs a -> WithFC Name
 (.fcname) = WithData.get "fcname" (WithFC Name) @{prf}
 
@@ -70,11 +70,11 @@ FCBind = WithData [ Bind', FC' ]
 
 -- a constructor label
 public export
-TyName' : Label
+TyName' : KeyVal
 TyName' = "tyname" :-: FCBind Name
 
 export
-(.tyName) : {fs : List Label} -> (prf : Find "tyname" fs === Just (FCBind Name)) =>
+(.tyName) : {fs : List KeyVal} -> (prf : Find "tyname" fs === Just (FCBind Name)) =>
             WithData fs a -> FCBind Name
 (.tyName) = WithData.get "tyname" (FCBind Name) @{prf}
 

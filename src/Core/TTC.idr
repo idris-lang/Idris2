@@ -154,7 +154,7 @@ TTC Name where
              9 => pure (UN Underscore)
              _ => corrupt "Name"
 
-{fs : _} -> (ev : All (TTC . Label.type) fs) => TTC (Record fs) where
+{fs : _} -> (ev : All (TTC . KeyVal.type) fs) => TTC (Record fs) where
   toBuf [] = tag 0
   toBuf {ev = _ :: _} ((lbl :- v) :: y)
     = do tag 1
@@ -172,7 +172,7 @@ TTC Name where
            _ => corrupt "Record"
 
 export
-{fs : _} -> All (TTC . Label.type) fs => TTC a => TTC (WithData fs a) where
+{fs : _} -> All (TTC . KeyVal.type) fs => TTC a => TTC (WithData fs a) where
   toBuf (MkWithData extra val)
     = do toBuf extra
          toBuf val

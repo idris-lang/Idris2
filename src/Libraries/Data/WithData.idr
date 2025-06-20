@@ -12,27 +12,27 @@ export infixr 9 :+
 
 ||| A type with a string-description for it. Used in `Record`
 public export
-record Label where
+record KeyVal where
   constructor (:-:)
   label : String
   type : Type
 
-||| The value-constructor for `Label`
+||| The value-constructor for `KeyVal`
 public export
-record DataLabel (str : String) (ty : Type) where
+record LabelledValue (kv : KeyVal) where
   constructor (:-)
   0 label : String
-  {auto 0 check : str === label}
-  val : ty
+  {auto 0 check : kv.label === label}
+  val : kv.type
 
 ||| A labelled heterogenous list
 public export
-Record : List Label -> Type
-Record = All (\x => DataLabel x.label x.type)
+Record : List KeyVal -> Type
+Record = All LabelledValue
 
 ||| Build a record from it's element values ignoring the labels
 export
-fromElems : {fs : _} -> All Label.type fs -> Record fs
+fromElems : {fs : _} -> All KeyVal.type fs -> Record fs
 fromElems {fs = []} [] = []
 fromElems {fs = (l :-: t :: xs)} (x :: zs) = (l :- x) :: fromElems zs
 
@@ -43,14 +43,14 @@ fromElems {fs = (l :-: t :: xs)} (x :: zs) = (l :- x) :: fromElems zs
 ||| for `WithData` is only functorial on its payload and not the additional
 ||| data.
 public export
-record WithData (additional : List Label) (payload : Type) where
+record WithData (additional : List KeyVal) (payload : Type) where
   constructor MkWithData
   extra : Record additional
   val : payload
 
 ||| A procedure to find the type associated with a label
 public export
-Find : String -> List Label -> Maybe Type
+Find : String -> List KeyVal -> Maybe Type
 Find str [] = Nothing
 Find str (x :: xs) = if str == x.label then Just x.type else Find str xs
 
@@ -62,7 +62,7 @@ namespace Record
 
   ||| Obtain the value from a record given its label and the first instance of it in the record
   export
-  get : {ls : List Label} -> (field : String) -> (prf : Find field ls === Just out) => Record ls -> out
+  get : {ls : List KeyVal} -> (field : String) -> (prf : Find field ls === Just out) => Record ls -> out
   get {ls = []} field csx = absurd prf
   get {ls = ((str :-: ty) :: xs)} field (x :: z) {prf} with (field == str)
     get {ls = ((str :-: ty) :: xs)} field (x :: z) {prf} | False = get field {ls = xs} z
@@ -70,7 +70,7 @@ namespace Record
 
   ||| Obtain the value from a record given its label and type
   export
-  get' : {ls : List Label} -> (field : String) -> (0 out : Type) -> (prf : Find field ls === Just out) => Record ls -> out
+  get' : {ls : List KeyVal} -> (field : String) -> (0 out : Type) -> (prf : Find field ls === Just out) => Record ls -> out
   get' {ls = []} field out x = absurd prf
   get' {ls = ((label :-: type) :: xs)} field out x {prf} with (field == label)
     get' {ls = ((label :-: type) :: xs)} field out (x :: y) {prf} | False = get' field out y
@@ -78,29 +78,29 @@ namespace Record
 
   ||| Update the value at the given label
   export
-  set : {ls : List Label} -> (field : String) -> (v : out) -> (prf : Find field ls === Just out) => Record ls -> Record ls
+  set : {ls : List KeyVal} -> (field : String) -> (v : out) -> (prf : Find field ls === Just out) => Record ls -> Record ls
   set {ls = []} field v x = absurd prf
   set {ls = ((label :-: type) :: xs)} field {out} v x {prf} with (field == label)
     set {ls = ((label :-: type) :: xs)} field {out} v (x :: y) {prf} | False = x :: set field v y
     set {ls = ((label :-: out) :: xs)} field  {out} v (x :: y) {prf = Refl} | True = (label :- v) :: y
 
   export
-  update : {fs : List Label} -> (field : String) -> (f : out -> out) ->
+  update : {fs : List KeyVal} -> (field : String) -> (f : out -> out) ->
            (prf : Find field fs === Just out) => Record fs -> Record fs
   update field f x = set field (f $ get field x) x
 
 ||| Obtain the value out of the payload record given its label
 export
-get : {ls : List Label} -> (field : String) -> (0 out : Type) -> (prf : Find field ls === Just out) => WithData ls a -> out
+get : {ls : List KeyVal} -> (field : String) -> (0 out : Type) -> (prf : Find field ls === Just out) => WithData ls a -> out
 get field out = Record.get' field out . extra
 
 ||| Set the value in the payload given its label
 export
-set : {ls : List Label} -> (field : String) -> (val : out) -> (prf : Find field ls === Just out) => WithData ls a -> WithData ls a
+set : {ls : List KeyVal} -> (field : String) -> (val : out) -> (prf : Find field ls === Just out) => WithData ls a -> WithData ls a
 set field val = {extra $= Record.set field val}
 
 export
-update : {fs : List Label} -> (field : String) -> (f : out -> out) ->
+update : {fs : List KeyVal} -> (field : String) -> (f : out -> out) ->
          (prf : Find field fs === Just out) => WithData fs a -> WithData fs a
 update field f x = WithData.set field (f $ WithData.get field out x) x
 
@@ -131,7 +131,7 @@ namespace Blank
   Add lbl ty x = MkWithData [ lbl :- ty ] x
 
 public export
-AddTy : Label -> Type -> Type
+AddTy : KeyVal -> Type -> Type
 AddTy lbl (WithData ls a) = WithData (lbl :: ls) a
 AddTy lbl ty = WithData [lbl] ty
 
@@ -143,21 +143,21 @@ public export
 interface HasDefault a | a where
   def : a
 
-fromDefault : All (HasDefault . Label.type) fs -> Record fs
+fromDefault : All (HasDefault . KeyVal.type) fs -> Record fs
 fromDefault [] = []
 fromDefault (_ :: y) = ? :- def :: fromDefault y
 
 ||| construct a payload filled with default values
 export
-MkDef : {fs : _} -> a -> (values : All (HasDefault . Label.type) fs) => WithData fs a
+MkDef : {fs : _} -> a -> (values : All (HasDefault . KeyVal.type) fs) => WithData fs a
 MkDef x = MkWithData ((fromDefault values)) x
 
 export
-Mk : {fs : _} -> All Label.type fs -> a -> WithData fs a
+Mk : {fs : _} -> All KeyVal.type fs -> a -> WithData fs a
 Mk x y = MkWithData (fromElems x) y
 
 export
-AddDef : {fs : _} -> (values : All (HasDefault . Label.type) fs) =>
+AddDef : {fs : _} -> (values : All (HasDefault . KeyVal.type) fs) =>
          WithData fl a -> WithData (fs ++ fl) a
 AddDef x = fromDefault values :++ x
 
@@ -175,11 +175,11 @@ traverseDataMaybe : (a -> Maybe b) -> WithData fs a -> Maybe (WithData fs b)
 traverseDataMaybe f x = MkWithData x.extra <$> f x.val
 
 export
-(eq : All (Eq . Label.type) fs) => Eq (Record fs) where
+(eq : All (Eq . KeyVal.type) fs) => Eq (Record fs) where
   (==) [] [] = True
   (==) {eq = e :: es} {fs = (f :: fs)} (x :: xs) (y :: ys) = x.val == y.val && xs == ys
 
 export
-(eq : All (Eq . Label.type) fs) => Eq a => Eq (WithData fs a) where
+(eq : All (Eq . KeyVal.type) fs) => Eq a => Eq (WithData fs a) where
   x == y = x.val == y.val && x.extra == y.extra
 
