@@ -75,21 +75,6 @@ Things we will almost certainly accept
   - Type-driven program synthesis
   - :search and related REPL commands
   - Interactive editing
-* Contributions of missing library functions, including proofs, which were
-  available in Idris 1 - at least on the assumption that we still think the
-  function is important enough, which gets increasingly unlikely over time!
-
-Things we might accept
-----------------------
-
-* Additions to the `contrib` libraries
-  - However, please consider whether it would be better as a separate library.
-    If something is in the Idris2 repository, we need to commit to maintaining
-    it to some extent, so we have to be sure that we can do so. You can find
-    (and contribute to) a list of [libraries on the wiki](
-    https://github.com/idris-lang/Idris2/wiki/1-%5BLanguage%5D-Libraries).
-  - For any library additions, please try to include as many documentation
-    strings as you can.
 
 Things that should be discussed via the issue tracker first
 -----------------------------------------------------------
