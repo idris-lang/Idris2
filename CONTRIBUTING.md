@@ -67,7 +67,7 @@ when reviewing the changes.
 ## Things We Will Almost Certainly Accept
 
 * Anything which fixes an issue on the issue tracker
-  - For bug fixes, please make sure you include a new test for it.
+  - For bugfixes, please make sure you include a new test for it.
   - This is a good way to get your change included since it tremendously helps
     with reviewing.
 * More tests, which test new features or, more importantly, existing features
