@@ -151,3 +151,26 @@ If you're editing the core system, or adding any features, please keep an
 eye on performance. In particular, check that the libraries build and tests
 run in approximately the same amount of time before and after the change.
 (Although running faster is fine as long as everything still works :))
+
+## Guidelines for Maintainers & Self-Merge Policy
+
+Maintainers can self-merge some of their PR under certain conditions. This
+aknowledges the fact that not everyone is able to review everything in a timely
+manner and reviewers are already trusted entities able to check-in code in the
+project. However, it should be done with care and consideration, self-merge is
+acceptable provided it:
+
+* Does not break any libraries in the overall ecosystem
+* Does not significantly impact performance
+* Does not break or change CI in any fundamental way (disabling tests for example)
+
+If any of the above conditions are not met, self-merge is to be avoided.
+
+Before performing a self-merge, maintainers are expected to perform a self-review
+held to the same standards as any other pull request and check for:
+* Missing documentation
+* Missing tests
+* Appropriate code styling
+* Appropriate description and motivation
+
+Please leave 7 days from the date of PR submission until performing a self-merge.
