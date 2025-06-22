@@ -10,17 +10,16 @@ discussion; and, those we almost certainly won't. The guidelines here are based
 on decisions we've previously made, and the way we have managed PRs in practice
 up to now.
 
-Disclaimer
-----------
+## Disclaimer
 
 Please remember that Idris
 is primarily a research project, and we are a small team, which limits the time
 we have available for reviewing and maintaining PRs. Nobody works full time on
-Idris - we're a team of academics and students at a university with other
+Idris - we're a team of volunteers, academics, and students at with other
 demands on our time such as teaching, and writing and presenting research
-papers, which will always take priority. This also means we have to be careful
-to make sure that we can commit to maintaining any new features which are
-contributed.
+papers, which will always take priority. This means that we have a limited
+capacity to review and accept contributions and we cannot commit to maintain
+any new features which are contributed.
 
 
 General comments
