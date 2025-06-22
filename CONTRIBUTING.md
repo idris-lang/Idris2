@@ -96,6 +96,10 @@ when reviewing the changes.
     as interface hierarchies - and while you may not agree with the way it looks,
     by and large these decisions have already been made so there must be a
     compelling reason for them to be changed.
+* Changes to elaborator script compatibility. Elaborator Reflection is a feature
+  powering some of the most important libraries in the ecosystem and breaking
+  them breaks the entire ecosystem of libraries. Changes to Elaborator Reflection
+  therefore requires careful coordination between PR author, and library maintainers.
 * Any fundamental changes to build tools, library structure, or CI workflow
 * Major refactorings (e.g. reorganisation of imports, mass renamings). These
   may be a good idea, but they are often merely a matter of taste, so please
