@@ -15,7 +15,7 @@ up to now.
 Please remember that Idris
 is primarily a research project, and we are a small team, which limits the time
 we have available for reviewing and maintaining PRs. Nobody works full time on
-Idris - we're a team of volunteers, academics, and students at with other
+Idris - we're a team of volunteers, academics, and students with other
 demands on our time such as teaching, and writing and presenting research
 papers, which will always take priority. This means that we have a limited
 capacity to review and accept contributions and we cannot commit to maintain
@@ -105,7 +105,7 @@ when reviewing the changes.
   may be a good idea, but they are often merely a matter of taste, so please
   check whether they will be considered valuable first.
 
-## Things We Probably Won’t Accept
+## Things We Probably Won't Accept
 
 * Minor refactorings. You may be making the code more beautiful, or more to
   your taste, but please remember that every PR has to be reviewed, and if it
@@ -155,7 +155,7 @@ run in approximately the same amount of time before and after the change.
 ## Guidelines for Maintainers & Self-Merge Policy
 
 Maintainers can self-merge some of their PR under certain conditions. This
-aknowledges the fact that not everyone is able to review everything in a timely
+acknowledges the fact that not everyone is able to review everything in a timely
 manner and reviewers are already trusted entities able to check-in code in the
 project. However, it should be done with care and consideration, self-merge is
 acceptable provided it:
@@ -172,5 +172,6 @@ held to the same standards as any other pull request and check for:
 * Missing tests
 * Appropriate code styling
 * Appropriate description and motivation
+* Appropriate updates to the changelog
 
 Please leave 7 days from the date of PR submission until performing a self-merge.
