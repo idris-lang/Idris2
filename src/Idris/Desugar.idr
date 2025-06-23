@@ -1396,7 +1396,7 @@ mutual
       = do tm' <- desugar AnyExpr ps tm
            pure [IRunElabDecl (get "fc" fc) tm']
   desugarDecl ps (MkWithData fc $ PDirective d)
-      = let fc = get "fc" fc
+      = let fc = get' "fc" FC fc
          in case d of
              Hide (HideName n) => pure [IPragma fc [] (\nest, env => hide fc n)]
              Hide (HideFixity fx n) => pure [IPragma fc [] (\_, _ => removeFixity fc fx n)]

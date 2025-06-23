@@ -98,9 +98,10 @@ localHelper {vars} nest env nestdecls_in func
     -- Update the names in the declarations to the new 'nested' names.
     -- When we encounter the names in elaboration, we'll update to an
     -- application of the nested name.
-    updateTyName : forall a. {fs : _} -> (Find "tyname" fs === Just (FCBind Name)) =>
+    updateTyName : forall a. {n : Nat} ->
+                   (NameInRange "tyname" fields === Just (n, FCBind Name)) =>
                    NestedNames vars ->
-                   WithData fs a -> WithData fs a
+                   WithData fields a -> WithData fields a
     updateTyName nest ty
         = update "tyname" (mapData (mapNestedName nest)) ty
 

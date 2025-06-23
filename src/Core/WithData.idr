@@ -8,20 +8,28 @@ import Libraries.Text.Bounded
 
 
 export
-(.bind) : {fs : List KeyVal} -> (prf : Find "bind" fs === Just BindingModifier) => WithData fs a -> BindingModifier
-(.bind) = WithData.get "bind" BindingModifier @{prf}
+(.bind) :
+    {n : Nat} ->
+    (0 inRange : NameInRange "bind" fields === Just (n, BindingModifier)) =>
+    WithData fields a -> BindingModifier
+(.bind) = WithData.get "bind"
 
 export
-(.fc) : {fs : List KeyVal} -> (prf : Find "fc" fs === Just FC) => WithData fs a -> FC
-(.fc) = WithData.get "fc" FC @{prf}
+(.fc) : {n : Nat} ->
+        (prf : NameInRange "fc" fields === Just (n, FC)) => WithData fields a -> FC
+(.fc) = WithData.get "fc"
 
 export
-setFC : {fs : List KeyVal} -> (prf : Find "fc" fs === Just FC) => FC -> WithData fs a -> WithData fs a
+setFC : {n : Nat} ->
+        (prf : NameInRange "fc" fields === Just (n, FC)) => FC ->
+        WithData fields a -> WithData fields a
 setFC fc = WithData.set "fc" fc @{prf}
 
 export
-(.doc) : {fs : List KeyVal} -> (prf : Find "doc" fs === Just String) => WithData fs a -> String
-(.doc) = WithData.get "doc" String @{prf}
+(.doc) : {n : Nat} ->
+         (prf : NameInRange "doc" fields === Just (n, String)) =>
+         WithData fields a -> String
+(.doc) = WithData.get "doc"
 
 public export
 FC' : KeyVal
@@ -48,13 +56,16 @@ Name' : KeyVal
 Name' = "name" :-: Name
 
 export
-(.name) : {fs : List KeyVal} -> (prf : Find "name" fs === Just Name) => WithData fs a -> Name
-(.name) = WithData.get "name" Name @{prf}
+(.name) : {n : Nat} ->
+          (prf : NameInRange "name" fields === Just (n, Name)) =>
+          WithData fields a -> Name
+(.name) = WithData.get "name" @{prf}
 
 export
-(.fcname) : {fs : List KeyVal} -> (prf : Find "fcname" fs === Just (WithFC Name)) =>
-            WithData fs a -> WithFC Name
-(.fcname) = WithData.get "fcname" (WithFC Name) @{prf}
+(.fcname) : {n : Nat} ->
+            (prf : NameInRange "fcname" fields === Just (n, WithFC Name)) =>
+            WithData fields a -> WithFC Name
+(.fcname) = WithData.get "fcname" @{prf}
 
 public export
 WithName : Type -> Type
@@ -74,9 +85,10 @@ TyName' : KeyVal
 TyName' = "tyname" :-: FCBind Name
 
 export
-(.tyName) : {fs : List KeyVal} -> (prf : Find "tyname" fs === Just (FCBind Name)) =>
-            WithData fs a -> FCBind Name
-(.tyName) = WithData.get "tyname" (FCBind Name) @{prf}
+(.tyName) : {n : Nat} ->
+            (prf : NameInRange "tyname" fields === Just (n, FCBind Name)) =>
+            WithData fields a -> FCBind Name
+(.tyName) = WithData.get "tyname" @{prf}
 
 public export
 DocBindFC : Type -> Type

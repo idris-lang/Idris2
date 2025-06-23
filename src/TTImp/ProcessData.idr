@@ -95,7 +95,7 @@ checkCon : {vars : _} ->
            (nameType : ImpTy) ->
            Core Constructor
 checkCon {vars} opts nest env vis tn_in tn ty_raw
-    = do let conName : FCBind Name = get "tyname" (FCBind Name) ty_raw
+    = do let conName : FCBind Name = get "tyname" ty_raw
          cn <- inCurrentNS conName.val
          let fc = ty_raw.fc
          let ty_raw = updateNS tn_in tn ty_raw.val
