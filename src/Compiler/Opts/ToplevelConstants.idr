@@ -95,11 +95,12 @@ markProcessed n = do
 isProcessed : Ref SortTag SortST => Name -> Core Bool
 isProcessed n = map (contains n . processed) (get SortTag)
 
-checkCrash : Ref SortTag SortST => (Name, FC, NamedDef) -> Core ()
-checkCrash (n, _, MkNmError _) = update SortTag $ { nonconst $= insert n }
-checkCrash (n, _, MkNmFun args (NmCrash _ _)) = update SortTag $ { nonconst $= insert n }
-checkCrash (n, _, MkNmFun args (NmOp _ Crash _)) = update SortTag $ { nonconst $= insert n }
-checkCrash (n, _, def) = do
+checkNonPure : Ref SortTag SortST => (Name, FC, NamedDef) -> Core ()
+checkNonPure (n, _, MkNmError _) = update SortTag $ { nonconst $= insert n }
+checkNonPure (n, _, MkNmFun args (NmCrash _ _)) = update SortTag $ { nonconst $= insert n }
+checkNonPure (n, _, MkNmFun args (NmOp _ Crash _)) = update SortTag $ { nonconst $= insert n }
+checkNonPure (n, _, MkNmFun args (NmExtPrim _ _ _)) = update SortTag $ { nonconst $= insert n }
+checkNonPure (n, _, def) = do
   st <- get SortTag
   when (any (flip contains st.nonconst) !(getCalls n)) $
     put SortTag $ { nonconst $= insert n } st
@@ -112,7 +113,7 @@ sortDef n = do
   traverse_ sortDef cs
   Just t <- getTriple n | Nothing => pure ()
   appendDef t
-  checkCrash t
+  checkNonPure t
 
 isConstant : (recursiveFunctions : SortedSet Name) -> (Name,FC,NamedDef) -> Bool
 isConstant rec (n, _, MkNmFun [] _) = not $ contains n rec
