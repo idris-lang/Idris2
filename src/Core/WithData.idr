@@ -16,18 +16,18 @@ export
 
 export
 (.fc) : {n : Nat} ->
-        (prf : NameInRange "fc" fields === Just (n, FC)) => WithData fields a -> FC
+        (inRange : NameInRange "fc" fields === Just (n, FC)) => WithData fields a -> FC
 (.fc) = WithData.get "fc"
 
 export
 setFC : {n : Nat} ->
-        (prf : NameInRange "fc" fields === Just (n, FC)) => FC ->
+        (inRange : NameInRange "fc" fields === Just (n, FC)) => FC ->
         WithData fields a -> WithData fields a
-setFC fc = WithData.set "fc" fc @{prf}
+setFC fc = WithData.set "fc" fc @{inRange}
 
 export
 (.doc) : {n : Nat} ->
-         (prf : NameInRange "doc" fields === Just (n, String)) =>
+         (inRange : NameInRange "doc" fields === Just (n, String)) =>
          WithData fields a -> String
 (.doc) = WithData.get "doc"
 
@@ -57,15 +57,15 @@ Name' = "name" :-: Name
 
 export
 (.name) : {n : Nat} ->
-          (prf : NameInRange "name" fields === Just (n, Name)) =>
+          (inRange : NameInRange "name" fields === Just (n, Name)) =>
           WithData fields a -> Name
-(.name) = WithData.get "name" @{prf}
+(.name) = WithData.get "name" @{inRange}
 
 export
 (.fcname) : {n : Nat} ->
-            (prf : NameInRange "fcname" fields === Just (n, WithFC Name)) =>
+            (inRange : NameInRange "fcname" fields === Just (n, WithFC Name)) =>
             WithData fields a -> WithFC Name
-(.fcname) = WithData.get "fcname" @{prf}
+(.fcname) = WithData.get "fcname" @{inRange}
 
 public export
 WithName : Type -> Type
@@ -86,9 +86,9 @@ TyName' = "tyname" :-: FCBind Name
 
 export
 (.tyName) : {n : Nat} ->
-            (prf : NameInRange "tyname" fields === Just (n, FCBind Name)) =>
+            (inRange : NameInRange "tyname" fields === Just (n, FCBind Name)) =>
             WithData fields a -> FCBind Name
-(.tyName) = WithData.get "tyname" @{prf}
+(.tyName) = WithData.get "tyname" @{inRange}
 
 public export
 DocBindFC : Type -> Type
@@ -97,17 +97,17 @@ DocBindFC = WithData [ Doc', Bind', FC' ]
 -- When location is unavailable, use `EmptyFC`
 export
 HasDefault FC where
-  def = EmptyFC
+  defValue = EmptyFC
 
 -- When binding is not provided, the default is not binding
 export
 HasDefault BindingModifier where
-  def = NotBinding
+  defValue = NotBinding
 
 -- default doc string
 export
 HasDefault String where
-  def = ""
+  defValue = ""
 
 ------------------------------------------------------------------------
 ||| A wrapper for a value with a file context.

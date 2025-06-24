@@ -30,6 +30,9 @@ record KeyVal where
 ||| and a value that match the specification given by `KeyVal`
 |||
 ||| ```idris example
+||| IntLabel : KeyVal
+||| IntLabel = "int" :-: Int
+|||
 ||| intValue : LabelledValue IntLabel
 ||| intValue = "int" :- 3
 ||| ```
@@ -91,6 +94,7 @@ NameInRange key (x :: xs) = if (key == x.label)
                                then Just (Z, x.type)
                                else map (mapFst S) (NameInRange key xs)
 
+-- Convert a `NameInRange` proof to a `FindIndex` proof
 0
 IndexInRange : {fields : List KeyVal} ->
                NameInRange key fields === Just (ix, ty) ->
@@ -111,83 +115,110 @@ add str val xs = (str :- val) :: xs
 absurd0 : (0 _ : t) -> Uninhabited t => a
 absurd0 x = void (uninhabited x)
 
+||| Obtain the value from a record at given index
+||| @ n The index at which we extract the value.
+||| @ out The type of the value at the index.
+||| @ inRange A proof that the field is in the record at the appropriate index with the appropriate type.
 export
-index : Record fields -> (n : Nat) -> (0 prf : FindIndex n fields === Just out) =>  out
-index ((label :- val) :: y) 0 {prf = Refl} = val
+index : Record fields -> (n : Nat) -> (0 inRange : FindIndex n fields === Just out) => out
+index ((label :- val) :: y) 0 {inRange = Refl} = val
 index (x :: y) (S k) = index y k
-index [] 0 = absurd0 prf
-index [] (S k) = absurd0 prf
+index [] 0 = absurd0 inRange
+index [] (S k) = absurd0 inRange
 
-||| Obtain the value from a record given its label and the first instance of it in the record
-||| The `out` argument holds the return type at compile-time and the index of the array at runtime
-||| the `prfName` argument proves that the field name exists in the record
-||| the `sameNat` argument proves that the runtime index matches the location of the field
-||| the `prfIdx` argument proves that the return type is the one located at the index found
-||| This arrangement ensures only the list and the index are kept at runtime and the list of labels
-||| can remain fully erased.
+||| Obtain the value from a record given its label.
+||| @ field The field for which we extract the value.
+||| @ n The index corresponding to the field given.
+||| @ out The type of the value at the given field.
+||| @ inRange A proof that the field is in the record at the appropriate index with the appropriate type.
 export
-get : (0 field : String) -> Record fields ->
+get : (0 label : String) -> Record fields ->
       {n : Nat} ->
-      (0 inRange : NameInRange field fields === Just (n, out)) => out
-get field rec = index rec n {prf = IndexInRange inRange}
+      (0 inRange : NameInRange label fields === Just (n, out)) => out
+get field rec = index rec n {inRange = IndexInRange inRange}
 
-
-||| Obtain the value from a record given its label and type
+||| Obtain the value from a record given its label and type.
+||| @ field The field for which we extract the value.
+||| @ out The type of the value at the given field.
+||| @ n The index corresponding to the field given.
+||| @ inRange A proof that the field is in the record at the appropriate index with the appropriate type.
 export
-get' : (0 field : String) -> (0 out : Type) -> Record fields ->
+get' : (0 label : String) -> (0 out : Type) -> Record fields ->
        {n : Nat} ->
-       (0 inRange : NameInRange field fields === Just (n, out)) =>
+       (0 inRange : NameInRange label fields === Just (n, out)) =>
        out
-get' field type rec = get {n} field {out = type} rec {inRange = inRange}
+get' label type rec = get {n} label {out = type} rec {inRange = inRange}
 
+||| Remove a value from the list, used in the type of `removeAt`
+public export
 ListRemoveAt :
     (fields : List KeyVal) -> (n : Nat) ->
-    (prf : IsJust (FindIndex n fields)) => List KeyVal
-ListRemoveAt [] 0 = absurd prf
+    (inRange : IsJust (FindIndex n fields)) => List KeyVal
+ListRemoveAt [] 0 = absurd inRange
 ListRemoveAt (x :: xs) 0 = xs
-ListRemoveAt [] (S k) = absurd prf
+ListRemoveAt [] (S k) = absurd inRange
 ListRemoveAt (x :: xs) (S k) = x :: ListRemoveAt xs k
 
+||| Remove the value at the given index.
+||| @ n The index we are removing.
+||| @ inRange A proof that the index is in range of the record spec.
 export
 removeAt :
     (n : Nat) ->
-    (prf : IsJust (FindIndex n fields)) =>
+    (inRange : IsJust (FindIndex n fields)) =>
     Record fields -> Record (ListRemoveAt fields n)
-removeAt 0 [] = absurd prf
+removeAt 0 [] = absurd inRange
 removeAt 0 (x :: z) = z
-removeAt (S k) [] = absurd prf
+removeAt (S k) [] = absurd inRange
 removeAt (S k) (x :: xs) = x :: removeAt k xs
 
+||| Update the value at the given index.
+||| @ n The index we are removing.
+||| @ inRange A proof that the index is in range of the record spec.
+||| @ f The update function.
 export
 updateAt :
     (n : Nat) ->
-    (0 prf : (FindIndex n fields) === Just out) =>
+    (0 inRange : (FindIndex n fields) === Just out) =>
     (f : out -> out) ->
     Record fields -> Record fields
-updateAt 0 f [] = absurd0 prf
-updateAt 0 f ((label :- val) :: y) {prf = Refl} = label :- f val :: y
-updateAt (S k) f [] = absurd0 prf
+updateAt 0 f [] = absurd0 inRange
+updateAt 0 f ((label :- val) :: y) {inRange = Refl} = label :- f val :: y
+updateAt (S k) f [] = absurd0 inRange
 updateAt (S k) f (x :: y) = x :: updateAt k f y
 
-||| Update the value at the given label
+||| Update the value with the given label.
+||| @ field The label of the value we are updating.
+||| @ inRange A proof that the label is in the record at the appropriate index with the appropriate type.
+||| @ f The update function.
 export
-setAt : (n : Nat) -> (prf : FindIndex n fields === Just out) => (newVal : out) ->
+update :
+    (0 label : String) -> {n : Nat} ->
+    (0 inRange : NameInRange label fields === Just (n, out)) =>
+    (f : out -> out) ->
+    Record fields -> Record fields
+update field f rec = updateAt n {fields, out, inRange = IndexInRange inRange} f rec
+
+||| Override the value found at the given index.
+||| @ n The index we are removing.
+||| @ inRange A proof that the index is in range of the record spec.
+||| @ newVal The value that will replace the existing one.
+export
+setAt : (n : Nat) -> (inRange : FindIndex n fields === Just out) => (newVal : out) ->
         Record fields -> Record fields
 setAt n newVal x = updateAt n (const newVal) x
 
-export
-update :
-    (0 field : String) -> {n : Nat} ->
-    (0 inRange : NameInRange field fields === Just (n, out)) =>
-    (f : out -> out) ->
-    Record fields -> Record fields
-update field f rec = updateAt n {fields, out, prf = IndexInRange inRange} f rec
 
+||| Override the value found at the given label.
+||| @ label The label of the value we are overriding.
+||| @ inRange A proof that the label is in the record at the appropriate index with the appropriate type.
+||| @ newVal The value that will replace the existing one.
 export
 set :
-    (0 field : String) -> {n : Nat} ->
-    (0 inRange : NameInRange field fields === Just (n, out)) =>
+    (0 label : String) -> {n : Nat} ->
+    (0 inRange : NameInRange label fields === Just (n, out)) =>
     (newVal : out) ->
     Record fields -> Record fields
 set field newVal rec = update field (const newVal) rec
+
 

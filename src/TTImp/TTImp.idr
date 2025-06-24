@@ -327,7 +327,7 @@ mutual
 
   public export
   ImpTyData' : Type -> Type
-  ImpTyData' = AddTy TyName' . RawImp'
+  ImpTyData' = AddMetadata TyName' . RawImp'
 
   public export
   ImpTy : Type
@@ -335,7 +335,7 @@ mutual
 
   public export
   ImpTy' : Type -> Type
-  ImpTy' = AddTy FC' . ImpTyData'
+  ImpTy' = AddMetadata FC' . ImpTyData'
 
   %name ImpTy' ty
 

@@ -401,7 +401,7 @@ mutual
                  -- we are allowed to leave the telescope out here
                  (tycon : Maybe (PTerm' nm)) ->
                  (opts : List DataOpt) ->
-                 (datacons : List (AddTy Bind' (PTypeDecl' nm))) -> PDataDecl' nm
+                 (datacons : List (AddMetadata Bind' (PTypeDecl' nm))) -> PDataDecl' nm
        MkPLater : FC -> (tyname : FCBind Name) -> (tycon : PTerm' nm) -> PDataDecl' nm
 
   public export
@@ -549,7 +549,7 @@ mutual
     qty : RigCount
     vis : Visibility
     opts : List (PFnOpt' nm)
-    type : AddTy Bind' (PTypeDecl' nm)
+    type : AddMetadata Bind' (PTypeDecl' nm)
 
   public export
   record PFixityData where
