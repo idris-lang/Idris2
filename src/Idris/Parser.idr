@@ -1400,7 +1400,7 @@ dataBody fname mincol start n indents ty
                          bind <- operatorBindingKeyword
                          cs <- blockAfter mincol (tyDecls (mustWork $ decoratedDataConstructorName fname) "" fname)
                          pure (opts, map (bind :+) cs))
-         (opts, cs) : Pair ? ? <- pure b.val
+         (opts, cs) <- pure (the (Pair ? ?) b.val)
          pure (MkPData (boundToFC fname (mergeBounds start b)) n ty opts cs)
 
 gadtData : OriginDesc -> Int -> WithBounds t ->
@@ -1414,12 +1414,13 @@ gadtData fname mincol start tyName indents
 
 dataDeclBody : OriginDesc -> IndentInfo -> Rule PDataDecl
 dataDeclBody fname indents
-    = do b : WithBounds (Int, FCBind Name) <- bounds $ do
+    = do b  <- bounds $ do
              col <- column
              bind <- operatorBindingKeyword {fname}
              decoratedKeyword fname "data"
              n <- mustWork (fcBounds $ decoratedDataTypeName fname)
              pure (col, bind :+ n)
+         let _ = the (WithBounds (Int, FCBind Name)) b
          (col, n) <- pure b.val
          simpleData fname b n indents <|> gadtData fname col b n indents
 

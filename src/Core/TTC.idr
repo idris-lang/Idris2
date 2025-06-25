@@ -167,7 +167,7 @@ TTC Name where
   fromBuf {fs = (str :-: v :: xs)} {ev = ba :: bs}
     = case !getTag of
            1 => do val <- fromBuf @{ba}
-                   tail : Record xs <- fromBuf
+                   tail <- the (Core (Record xs)) fromBuf
                    pure ((str :- val) :: tail)
            _ => corrupt "Record"
 

@@ -1268,13 +1268,14 @@ mutual
         = PPi (get "fc" fc) c p (Just n.val) t (mkRecType (MkPBinder p (MkBasicMultiBinder c (x ::: xs) t) :: ts))
   desugarDecl ps (MkWithData fc $ PRecord doc vis mbtot (MkPRecord tn params opts conname_in fields))
       = do addDocString tn.val doc
-           params' : List ImpParameter <- concat <$> traverse (\ (MkPBinder info (MkBasicMultiBinder rig names tm)) =>
+           params'  <- concat <$> traverse (\ (MkPBinder info (MkBasicMultiBinder rig names tm)) =>
                           do tm' <- desugar AnyExpr ps tm
                              p'  <- mapDesugarPiInfo ps info
                              let param = MkGenericBinder p' tm'
                              let allBinders = map (\nn => Mk [nn, rig] param) (forget names)
                              pure allBinders)
                         params
+           let _ = the (List ImpParameter) params'
            let fnames = concat $ map getfname fields
            let paramNames = concatMap (map val . forget . names . bind) params
            let _ = the (List Name) fnames
