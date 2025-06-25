@@ -110,7 +110,7 @@ public export
 Rig' : KeyVal
 Rig' = "rig" :-: RigCount
 
-||| Obtain documentation information from the metadata
+||| Obtain quantity information from the metadata
 export
 (.rig) : {n : Nat} ->
          (inRange : NameInRange "rig" fields === Just (n, RigCount)) =>
