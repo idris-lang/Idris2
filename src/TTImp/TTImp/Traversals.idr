@@ -52,10 +52,13 @@ parameters (f : RawImp' nm -> RawImp' nm)
   mapIField : IField' nm -> IField' nm
   mapIField (MkIField fc rig pinfo n t) = MkIField fc rig (mapPiInfo pinfo) n (mapTTImp t)
 
+  mapImpBinder : ImpParameterBase nm -> ImpParameterBase nm
+  mapImpBinder (MkImpParameterBase info type) = MkImpParameterBase (mapPiInfo info) (mapTTImp type)
+
   export
   mapImpRecord : ImpRecord' nm -> ImpRecord' nm
   mapImpRecord (MkImpRecord fc n params opts conName fields)
-    = MkImpRecord fc n (map (map $ map $ bimap mapPiInfo mapTTImp) params) opts conName (map mapIField fields)
+    = MkImpRecord fc n (map (mapData mapImpBinder) params) opts conName (map mapIField fields)
 
 
   export

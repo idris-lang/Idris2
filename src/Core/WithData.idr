@@ -126,8 +126,8 @@ Name' = "name" :-: WithFC Name
 export
 (.name) : {n : Nat} ->
           (inRange : NameInRange "name" fields === Just (n, WithFC Name)) =>
-          WithData fields a -> Name
-(.name) rec = (WithData.get "name" @{inRange} rec).val
+          WithData fields a -> WithFC Name
+(.name) = WithData.get "name" @{inRange}
 
 ||| Attach name and file context information to a type
 public export

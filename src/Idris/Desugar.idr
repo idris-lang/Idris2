@@ -1135,15 +1135,15 @@ mutual
       = do
            params' <- getArgs params
            let paramList = forget params'
-           pds' <- traverse (desugarDecl (ps ++ map fst paramList)) pds
+           pds' <- traverse (desugarDecl (ps ++ map (\x => x.name.val) paramList)) pds
            -- Look for implicitly bindable names in the parameters
            pnames <- ifThenElse (not !isUnboundImplicits) (pure [])
              $ map concat
-             $ for (map (Builtin.snd . Builtin.snd . Builtin.snd) paramList)
-             $ findUniqueBindableNames (get "fc" fc) True (ps ++ map Builtin.fst paramList) []
+             $ for (map (\x => x.val.type) paramList)
+             $ findUniqueBindableNames (get "fc" fc) True (ps ++ map (\x => x.name.val) paramList) []
 
-           let paramsb = map (\(n, rig, info, tm) =>
-                                 (n, rig, info, doBind pnames tm)) params'
+           let paramsb = map (mapData (\(MkImpParameterBase info tm) =>
+                                 MkImpParameterBase info (doBind pnames tm))) params'
            pure [IParameters (get "fc" fc) paramsb (concat pds')]
       where
         getArgs : Either (List1 PlainBinder)
@@ -1152,12 +1152,13 @@ mutual
         getArgs (Left params)
           = traverseList1 (\ty => do
               ty' <- desugar AnyExpr ps ty.val
-              pure (ty.name, top, Explicit, ty')) params
+              pure (Mk [ty.name, top] (MkImpParameterBase Explicit ty'))) params
         getArgs (Right params)
           = join <$> traverseList1 (\(MkPBinder info (MkBasicMultiBinder rig n ntm)) => do
               tm' <- desugar AnyExpr ps ntm
               i' <- traverse (desugar AnyExpr ps) info
-              let allbinders = map (\nn => (nn.val, rig, i', tm')) n
+              let param = MkImpParameterBase i' tm'
+              let allbinders = map (\nn => Mk [nn, rig] param) n
               pure allbinders) params
 
   desugarDecl ps (MkWithData fc $ PUsing uimpls uds)
@@ -1267,13 +1268,13 @@ mutual
         = PPi (get "fc" fc) c p (Just n.val) t (mkRecType (MkPBinder p (MkBasicMultiBinder c (x ::: xs) t) :: ts))
   desugarDecl ps (MkWithData fc $ PRecord doc vis mbtot (MkPRecord tn params opts conname_in fields))
       = do addDocString tn.val doc
-           params' <- concat <$> traverse (\ (MkPBinder info (MkBasicMultiBinder rig names tm)) =>
+           params' : List ImpParameter <- concat <$> traverse (\ (MkPBinder info (MkBasicMultiBinder rig names tm)) =>
                           do tm' <- desugar AnyExpr ps tm
                              p'  <- mapDesugarPiInfo ps info
-                             let allBinders = map (\nn => (nn.val, rig, p', tm')) (forget names)
+                             let param = MkImpParameterBase p' tm'
+                             let allBinders = map (\nn => Mk [nn, rig] param) (forget names)
                              pure allBinders)
                         params
-           let _ = the (List (Name, RigCount, PiInfo RawImp, RawImp)) params'
            let fnames = concat $ map getfname fields
            let paramNames = concatMap (map val . forget . names . bind) params
            let _ = the (List Name) fnames
@@ -1282,12 +1283,11 @@ mutual
            let bnames = if !isUnboundImplicits
                         then concatMap (findBindableNames True
                                          (ps ++ fnames ++ paramNames) [])
-                                       (map (\(_,_,_,d) => d) params')
+                                       (Prelude.map (\x => x.val.type) params')
                         else []
            let _ = the (List (String, String)) bnames
 
-           let paramsb = map (\ (n, c, p, tm) => (n, c, p, doBind bnames tm)) params'
-           let _ = the (List (Name, RigCount, PiInfo RawImp, RawImp)) paramsb
+           let paramsb = map (mapData $ \ (MkImpParameterBase info tm) => MkImpParameterBase info (doBind bnames tm)) params'
            let recName = nameRoot tn.val
            fields' <- traverse (desugarField (ps ++ fnames ++ paramNames
                                              ) (mkNamespace recName))

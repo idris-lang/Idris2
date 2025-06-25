@@ -404,10 +404,20 @@ mutual
   ImpParameter : Type
   ImpParameter = ImpParameter' Name
 
-  -- TODO: turn into a proper datatype
   public export
   ImpParameter' : Type -> Type
-  ImpParameter' nm = (Name, RigCount, PiInfo (RawImp' nm), RawImp' nm)
+  ImpParameter' nm = AddMetadata Name' $ AddMetadata Rig' $ ImpParameterBase nm
+
+  public export
+  record ImpParameterBase (nm : Type) where
+    constructor MkImpParameterBase
+    info : PiInfo (RawImp' nm)
+    type : RawImp' nm
+
+  export
+  covering
+  Show nm => Show (ImpParameterBase nm) where
+    show (MkImpParameterBase info type) = "ImpParameter \{show info} \{show type}"
 
   public export
   ImpRecord : Type
@@ -530,6 +540,11 @@ mutual
        IBuiltin : FC -> BuiltinType -> Name -> ImpDecl' nm
 
   %name ImpDecl' decl
+
+  export
+  covering
+  Show nm => Show (ImpParameter' nm) where
+    show params = "\{show params.rig} \{show params.val.info} \{show params.val.type}"
 
   export
   covering

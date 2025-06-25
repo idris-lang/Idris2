@@ -443,6 +443,10 @@ mutual
     reify defs val = cantReify val "IClaimData"
 
   export
+  Reify (ImpParameterBase Name) where
+    reify = ?implreify
+
+  export
   Reify ImpDecl where
     reify defs val@(NDCon _ n _ _ args)
         = case (dropAllNS !(full (gamma defs) n), map snd args) of
@@ -790,6 +794,10 @@ mutual
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
              appCon fc defs (reflectionttimp "MkIClaimData") [w', x', y', z']
+
+  export
+  Reflect (ImpParameterBase Name) where
+    reflect = ?reflectparameters
 
   export
   Reflect ImpDecl where

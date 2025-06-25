@@ -330,6 +330,12 @@ mutual
     bind : BasicMultiBinder' nm
 
   public export
+  record PImpBinder' (nm : Type) where
+    constructor MkPImpBinder
+    info : PiInfo (PTerm' nm)
+    type : PTerm' nm
+
+  public export
   PBinderScope : Type
   PBinderScope = PBinderScope' Name
 

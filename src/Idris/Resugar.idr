@@ -501,15 +501,15 @@ mutual
               {auto s : Ref Syn SyntaxInfo} ->
               ImpRecord' KindedName ->
               Core ( FCBind Name
-                   , List (Name, RigCount, PiInfo IPTerm, IPTerm) -- This should really be a Record
+                   , List (AddMetadata Name' $ AddMetadata Rig' $ PImpBinder' KindedName)
                    , List DataOpt
                    , Maybe (DocBindFC Name)
                    , List (PField' KindedName))
   toPRecord (MkImpRecord fc n ps opts con fs)
-      = do ps' <- traverse (\ (n, c, p, ty) =>
+      = do ps' <- traverse (traverseData $ \ (MkImpParameterBase p ty) =>
                                    do ty' <- toPTerm startPrec ty
                                       p' <- mapPiInfo p
-                                      pure (n, c, p', ty')) ps
+                                      pure (MkPImpBinder p' ty')) ps
            fs' <- traverse toPField fs
            pure (n, ps', opts, Just ("" :+ con), fs')
     where
@@ -540,20 +540,18 @@ mutual
   toPDecl (IParameters fc ps ds)
       = do ds' <- traverse toPDecl ds
            args <-
-             traverseList1 (\(n, rig, info, tpe) =>
-                 do info' <- traverse (toPTerm startPrec) info
-                    type' <- toPTerm startPrec tpe
-                    pure (MkFullBinder info' rig (NoFC n) type')) ps
+             traverseList1 (\impParam =>
+                 do info' <- traverse (toPTerm startPrec) impParam.val.info
+                    type' <- toPTerm startPrec impParam.val.type
+                    pure (MkFullBinder info' impParam.rig impParam.name type')) ps
            pure (Just (MkFCVal fc (PParameters (Right args) (catMaybes ds'))))
   toPDecl (IRecord fc _ vis mbtot r)
       = do (n, ps, opts, con, fs) <- toPRecord r
            pure (Just (MkFCVal fc $ PRecord "" vis mbtot (MkPRecord n (map toBinder ps) opts ?whu fs)))
            where
-             toBinder : (Name, ZeroOneOmega, PiInfo (PTerm' KindedName), PTerm' KindedName) -> PBinder' KindedName
-             toBinder (n, rig, info, ty)
-               = MkFullBinder info rig (NoFC n) ty
-                              --        ^^^^
-                              -- we should know this location
+             toBinder : (AddMetadata Name' $ AddMetadata Rig' $ PImpBinder' KindedName) -> PBinder' KindedName
+             toBinder binder
+               = MkFullBinder binder.val.info binder.rig binder.name binder.val.type
 
   toPDecl (IFail fc msg ds)
       = do ds' <- traverse toPDecl ds

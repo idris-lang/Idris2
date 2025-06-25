@@ -310,6 +310,10 @@ mutual
         = do fc <- fromBuf; c <- fromBuf; p <- fromBuf
              n <- fromBuf; ty <- fromBuf
              pure (MkIField fc c p n ty)
+  export
+  TTC ImpParameter where
+    toBuf = ?imppara
+    fromBuf = ?impow
 
   export
   TTC ImpRecord where

@@ -112,13 +112,19 @@ mutual
   getUnquoteField (MkIField fc c p n ty)
       = pure $ MkIField fc c p n !(getUnquote ty)
 
+  unqImpParam : {auto c : Ref Ctxt Defs} ->
+                {auto q : Ref Unq (List (Name, FC, RawImp))} ->
+                {auto u : Ref UST UState} ->
+                ImpParameterBase Name -> Core (ImpParameterBase Name)
+  unqImpParam (MkImpParameterBase i t) = MkImpParameterBase i <$> getUnquote t
+
   getUnquoteRecord : {auto c : Ref Ctxt Defs} ->
                      {auto q : Ref Unq (List (Name, FC, RawImp))} ->
                      {auto u : Ref UST UState} ->
                      ImpRecord ->
                      Core ImpRecord
   getUnquoteRecord (MkImpRecord fc n ps opts cn fs)
-      = pure $ MkImpRecord fc n !(traverse unqPair ps) opts cn
+      = pure $ MkImpRecord fc n !(traverse (traverseData unqImpParam) ps) opts cn
                            !(traverse getUnquoteField fs)
     where
       unqPair : (Name, RigCount, PiInfo RawImp, RawImp) ->
@@ -149,11 +155,10 @@ mutual
       = pure $ IDef fc v !(traverse getUnquoteClause d)
   getUnquoteDecl (IParameters fc ps ds)
       = pure $ IParameters fc
-                           !(traverseList1 unqTuple ps)
+                           !(traverseList1 (traverseData unqImpParam) ps)
                            !(traverse getUnquoteDecl ds)
     where
-      unqTuple : (Name, RigCount, PiInfo RawImp, RawImp) -> Core (Name, RigCount, PiInfo RawImp, RawImp)
-      unqTuple (n, rig, i, t) = pure (n, rig, i, !(getUnquote t))
+
   getUnquoteDecl (IRecord fc ns v mbt d)
       = pure $ IRecord fc ns v mbt !(getUnquoteRecord d)
   getUnquoteDecl (INamespace fc ns ds)
