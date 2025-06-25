@@ -99,6 +99,8 @@ checkNonPure : Ref SortTag SortST => (Name, FC, NamedDef) -> Core ()
 checkNonPure (n, _, MkNmError _) = update SortTag $ { nonconst $= insert n }
 checkNonPure (n, _, MkNmFun args (NmCrash _ _)) = update SortTag $ { nonconst $= insert n }
 checkNonPure (n, _, MkNmFun args (NmOp _ Crash _)) = update SortTag $ { nonconst $= insert n }
+-- Does not affect numeric primitives because this optimization only affects
+-- functions without runtime arguments
 checkNonPure (n, _, MkNmFun args (NmExtPrim _ _ _)) = update SortTag $ { nonconst $= insert n }
 checkNonPure (n, _, def) = do
   st <- get SortTag
