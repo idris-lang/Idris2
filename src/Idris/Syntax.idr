@@ -309,10 +309,10 @@ mutual
   ||| basicBinder := qty plainBinder
   public export
   BasicBinder' : Type -> Type
-  BasicBinder' = WithData [Rig', Name', FC'] . PTerm'
+  BasicBinder' = WithData [Rig', Name'] . PTerm'
 
   MkBasicBinder : RigCount -> WithFC Name -> PTerm' nm -> BasicBinder' nm
-  MkBasicBinder rig nm term = Mk [rig, nm.val, nm.fc] term
+  MkBasicBinder rig nm term = Mk [rig, nm] term
 
   public export
   PBinder : Type
