@@ -52,8 +52,9 @@ parameters (f : RawImp' nm -> RawImp' nm)
   mapIField : IField' nm -> IField' nm
   mapIField (MkIField fc rig pinfo n t) = MkIField fc rig (mapPiInfo pinfo) n (mapTTImp t)
 
+  export
   mapImpBinder : ImpParameterBase nm -> ImpParameterBase nm
-  mapImpBinder (MkImpParameterBase info type) = MkImpParameterBase (mapPiInfo info) (mapTTImp type)
+  mapImpBinder (MkGenericBinder info type) = MkGenericBinder (mapPiInfo info) (mapTTImp type)
 
   export
   mapImpRecord : ImpRecord' nm -> ImpRecord' nm

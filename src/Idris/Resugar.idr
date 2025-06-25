@@ -506,10 +506,10 @@ mutual
                    , Maybe (DocBindFC Name)
                    , List (PField' KindedName))
   toPRecord (MkImpRecord fc n ps opts con fs)
-      = do ps' <- traverse (traverseData $ \ (MkImpParameterBase p ty) =>
+      = do ps' <- traverse (traverseData $ \ (MkGenericBinder p ty) =>
                                    do ty' <- toPTerm startPrec ty
                                       p' <- mapPiInfo p
-                                      pure (MkPImpBinder p' ty')) ps
+                                      pure (MkGenericBinder p' ty')) ps
            fs' <- traverse toPField fs
            pure (n, ps', opts, Just ("" :+ con), fs')
     where
@@ -551,7 +551,7 @@ mutual
            where
              toBinder : (AddMetadata Name' $ AddMetadata Rig' $ PImpBinder' KindedName) -> PBinder' KindedName
              toBinder binder
-               = MkFullBinder binder.val.info binder.rig binder.name binder.val.type
+               = MkFullBinder binder.val.info binder.rig binder.name (let ty = binder.val.type in ty)
 
   toPDecl (IFail fc msg ds)
       = do ds' <- traverse toPDecl ds

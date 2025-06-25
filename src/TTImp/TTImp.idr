@@ -409,15 +409,19 @@ mutual
   ImpParameter' nm = AddMetadata Name' $ AddMetadata Rig' $ ImpParameterBase nm
 
   public export
-  record ImpParameterBase (nm : Type) where
-    constructor MkImpParameterBase
-    info : PiInfo (RawImp' nm)
-    type : RawImp' nm
+  record GenericBinder (ty : Type) where
+    constructor MkGenericBinder
+    info : PiInfo ty
+    type : ty
+
+  public export
+  ImpParameterBase : (nm : Type) -> Type
+  ImpParameterBase = GenericBinder . RawImp'
 
   export
   covering
   Show nm => Show (ImpParameterBase nm) where
-    show (MkImpParameterBase info type) = "ImpParameter \{show info} \{show type}"
+    show (MkGenericBinder info type) = "ImpParameter \{show info} \{show type}"
 
   public export
   ImpRecord : Type

@@ -308,11 +308,10 @@ updateIfaceSyn iname cn impps ps cs ms ds
     totMeth : Declaration -> Core Method
     totMeth decl
         = do let treq = findTotality decl.flags
-             pure $ MkMethod { name = decl.name
-                             , count = decl.count
-                             , totalReq = treq
-                             , type = decl.type
-                             }
+             pure $ MkWithData [ "totalReq" :- treq
+                               , "name" :- NoFC decl.name
+                               , "rig" :- decl.count ]
+                               decl.type
 
 -- Read the implicitly added parameters from an interface type, so that we
 -- know to substitute an implicit in when defining the implementation

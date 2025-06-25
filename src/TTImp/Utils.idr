@@ -36,7 +36,7 @@ rawImpFromDecl decl = case decl of
     IDef fc1 y ys => getFromClause !ys
     IParameters fc1 ys zs => rawImpFromDecl !zs ++ map (type . val) (forget ys)
     IRecord fc1 y z _ (MkImpRecord fc n params opts conName fields) => do
-        (MkImpParameterBase info ty) <- map val params
+        (MkGenericBinder info ty) <- map val params
         getFromPiInfo info ++ [ty] ++ getFromIField !fields
     IFail fc1 msg zs => rawImpFromDecl !zs
     INamespace fc1 ys zs => rawImpFromDecl !zs

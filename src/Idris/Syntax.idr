@@ -330,10 +330,8 @@ mutual
     bind : BasicMultiBinder' nm
 
   public export
-  record PImpBinder' (nm : Type) where
-    constructor MkPImpBinder
-    info : PiInfo (PTerm' nm)
-    type : PTerm' nm
+  PImpBinder' : (nm : Type) -> Type
+  PImpBinder' = GenericBinder . PTerm'
 
   public export
   PBinderScope : Type
@@ -1037,18 +1035,14 @@ Show IPTerm where
   showPrec = showPTermPrec rawName
 
 public export
-record Method where
-  constructor MkMethod
-  name     : Name
-  count    : RigCount
-  totalReq : Maybe TotalReq
-  type     : RawImp
+Method : Type
+Method = WithData [Tot', Name', Rig'] RawImp
 
 export
 covering
 Show Method where
-  show (MkMethod n c treq ty)
-    = "[" ++ show treq ++ "] " ++ show c ++ " " ++ show n ++ " : " ++ show ty
+  show m
+    = "[" ++ show m.totReq ++ "] " ++ show m.rig ++ " " ++ show m.name.val ++ " : " ++ show m.val
 
 public export
 record IFaceInfo where

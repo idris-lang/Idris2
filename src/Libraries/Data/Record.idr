@@ -44,7 +44,7 @@ record LabelledValue (kv : KeyVal) where
   ||| A proof that the label given matches the label in the specification
   {auto 0 check : kv.label === label}
   ||| A runtime value of the type given by the specification
-  val : kv.type
+  value : kv.type
 
 ||| Records are a list of of labelled values, their fields are given by a list of KeyVal
 ||| Each element in the list describes a key

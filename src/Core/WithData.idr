@@ -24,6 +24,23 @@ export
 (.bind) = WithData.get "bind"
 
 ------------------------------------------------------------------------------------------
+-- Totality information
+------------------------------------------------------------------------------------------
+
+||| The "totalReq" label containing totality information for metadata records
+public export
+Tot' : KeyVal
+Tot' = "totalReq" :-: Maybe TotalReq
+
+||| Obtain totality information from the metadata
+export
+(.totReq) :
+    {n : Nat} ->
+    (0 inRange : NameInRange "totalReq" fields === Just (n, Maybe TotalReq)) =>
+    WithData fields a -> Maybe TotalReq
+(.totReq) = WithData.get "totalReq"
+
+------------------------------------------------------------------------------------------
 -- Helpers for FC information
 ------------------------------------------------------------------------------------------
 

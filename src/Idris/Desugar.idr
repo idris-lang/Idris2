@@ -34,6 +34,7 @@ import TTImp.BindImplicits
 import TTImp.Parser
 import TTImp.ProcessType
 import TTImp.TTImp
+import TTImp.TTImp.Functor
 import TTImp.Utils
 
 import Libraries.Data.IMaybe
@@ -1142,8 +1143,7 @@ mutual
              $ for (map (\x => x.val.type) paramList)
              $ findUniqueBindableNames (get "fc" fc) True (ps ++ map (\x => x.name.val) paramList) []
 
-           let paramsb = map (mapData (\(MkImpParameterBase info tm) =>
-                                 MkImpParameterBase info (doBind pnames tm))) params'
+           let paramsb = map (mapData (map (doBind pnames))) params'
            pure [IParameters (get "fc" fc) paramsb (concat pds')]
       where
         getArgs : Either (List1 PlainBinder)
@@ -1152,12 +1152,12 @@ mutual
         getArgs (Left params)
           = traverseList1 (\ty => do
               ty' <- desugar AnyExpr ps ty.val
-              pure (Mk [ty.name, top] (MkImpParameterBase Explicit ty'))) params
+              pure (Mk [ty.name, top] (MkGenericBinder Explicit ty'))) params
         getArgs (Right params)
           = join <$> traverseList1 (\(MkPBinder info (MkBasicMultiBinder rig n ntm)) => do
               tm' <- desugar AnyExpr ps ntm
               i' <- traverse (desugar AnyExpr ps) info
-              let param = MkImpParameterBase i' tm'
+              let param = MkGenericBinder i' tm'
               let allbinders = map (\nn => Mk [nn, rig] param) n
               pure allbinders) params
 
@@ -1271,7 +1271,7 @@ mutual
            params' : List ImpParameter <- concat <$> traverse (\ (MkPBinder info (MkBasicMultiBinder rig names tm)) =>
                           do tm' <- desugar AnyExpr ps tm
                              p'  <- mapDesugarPiInfo ps info
-                             let param = MkImpParameterBase p' tm'
+                             let param = MkGenericBinder p' tm'
                              let allBinders = map (\nn => Mk [nn, rig] param) (forget names)
                              pure allBinders)
                         params
@@ -1287,7 +1287,7 @@ mutual
                         else []
            let _ = the (List (String, String)) bnames
 
-           let paramsb = map (mapData $ \ (MkImpParameterBase info tm) => MkImpParameterBase info (doBind bnames tm)) params'
+           let paramsb = map (mapData (map (doBind bnames))) params'
            let recName = nameRoot tn.val
            fields' <- traverse (desugarField (ps ++ fnames ++ paramNames
                                              ) (mkNamespace recName))

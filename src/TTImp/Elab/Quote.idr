@@ -116,7 +116,7 @@ mutual
                 {auto q : Ref Unq (List (Name, FC, RawImp))} ->
                 {auto u : Ref UST UState} ->
                 ImpParameterBase Name -> Core (ImpParameterBase Name)
-  unqImpParam (MkImpParameterBase i t) = MkImpParameterBase i <$> getUnquote t
+  unqImpParam (MkGenericBinder i t) = MkGenericBinder i <$> getUnquote t
 
   getUnquoteRecord : {auto c : Ref Ctxt Defs} ->
                      {auto q : Ref Unq (List (Name, FC, RawImp))} ->

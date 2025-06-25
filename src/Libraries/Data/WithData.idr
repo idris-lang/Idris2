@@ -261,7 +261,7 @@ traverseDataMaybe f x = MkWithData x.metadata <$> f x.val
 export
 (eq : All (Eq . KeyVal.type) fs) => Eq (Record fs) where
   (==) [] [] = True
-  (==) {eq = e :: es} {fs = (f :: fs)} (x :: xs) (y :: ys) = x.val == y.val && xs == ys
+  (==) {eq = e :: es} {fs = (f :: fs)} (x :: xs) (y :: ys) = x.value == y.value && xs == ys
 
 export
 (eq : All (Eq . KeyVal.type) fs) => Eq a => Eq (WithData fs a) where

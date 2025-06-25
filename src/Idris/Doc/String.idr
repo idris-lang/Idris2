@@ -309,7 +309,7 @@ getDocsForName fc n config
     getMethDoc : Method -> Core (List (Doc IdrisDocAnn))
     getMethDoc meth
         = do syn <- get Syn
-             let [nstr] = lookupName meth.name (defDocstrings syn)
+             let [nstr] = lookupName meth.name.val (defDocstrings syn)
                   | _ => pure []
              pure <$> showDoc methodsConfig nstr
 

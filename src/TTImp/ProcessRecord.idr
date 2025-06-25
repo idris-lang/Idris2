@@ -192,7 +192,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
           Core (SnocList (Maybe Name, AddMetadata Rig' (ImpParameterBase Name)))
         getParameters acc (IPi fc rig pinfo mnm argTy retTy)
           = let clean = mapTTImp killHole . map fullName in
-                getParameters (acc :< (mnm, Mk [rig] (MkImpParameterBase (map clean pinfo) (clean argTy)))) retTy
+                getParameters (acc :< (mnm, Mk [rig] (MkGenericBinder (map clean pinfo) (clean argTy)))) retTy
         getParameters acc (IType _) = pure acc
         getParameters acc ty = throw (InternalError "Malformed record type \{show ty}")
 

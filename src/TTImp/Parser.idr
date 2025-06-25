@@ -608,7 +608,7 @@ recordParam fname indents
          start <- location
          params <- pibindListName fname start indents
          symbol ")"
-         pure $ map (\(c, n, tm) => Mk [NoFC n, c] (MkImpParameterBase Explicit tm)) params
+         pure $ map (\(c, n, tm) => Mk [NoFC n, c] (MkGenericBinder Explicit tm)) params
   <|> do symbol "{"
          commit
          start <- location
@@ -620,11 +620,11 @@ recordParam fname indents
               <|> pure      Implicit)
          params <- pibindListName fname start indents
          symbol "}"
-         pure $ map (\(c, n, tm) => Mk [NoFC n, c] (MkImpParameterBase info tm)) params
+         pure $ map (\(c, n, tm) => Mk [NoFC n, c] (MkGenericBinder info tm)) params
   <|> do start <- location
          n <- name
          end <- location
-         pure [Mk [NoFC n, top] (MkImpParameterBase Explicit (Implicit (MkFC fname start end) False))]
+         pure [Mk [NoFC n, top] (MkGenericBinder Explicit (Implicit (MkFC fname start end) False))]
 
 fieldDecl : OriginDesc -> IndentInfo -> Rule (List IField)
 fieldDecl fname indents
