@@ -231,11 +231,17 @@ export
 Mk : {fs : _} -> All KeyVal.type fs -> a -> WithData fs a
 Mk x y = MkWithData (fromElems x) y
 
+||| Add a default values to an existing metadata record
+export
+AddDef :  (def : HasDefault ty) =>
+         WithData fl a -> WithData (lbl :-: ty :: fl) a
+AddDef x = (defValue @{def}) :+ x
+
 ||| Add a record of default values to an existing metadata record
 export
-AddDef : {fs : _} -> (values : All (HasDefault . KeyVal.type) fs) =>
+AddDefs : {fs : _} -> (values : All (HasDefault . KeyVal.type) fs) =>
          WithData fl a -> WithData (fs ++ fl) a
-AddDef x = fromDefault values :++ x
+AddDefs x = fromDefault values :++ x
 
 ------------------------------------------------------------------------------------------------
 -- WithData distributes with List and Maybe

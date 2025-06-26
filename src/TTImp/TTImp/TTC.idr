@@ -311,9 +311,12 @@ mutual
              n <- fromBuf; ty <- fromBuf
              pure (MkIField fc c p n ty)
   export
-  TTC ImpParameter where
-    toBuf = ?imppara
-    fromBuf = ?impow
+  TTC a => TTC (GenericBinder a) where
+    toBuf (MkGenericBinder info type)
+        = do toBuf info ; toBuf type
+    fromBuf = do info <- fromBuf
+                 type <- fromBuf
+                 pure (MkGenericBinder info type)
 
   export
   TTC ImpRecord where

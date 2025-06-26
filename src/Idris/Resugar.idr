@@ -361,7 +361,9 @@ mutual
            fn' <- toPTerm startPrec fn
            bracket p appPrec (PWithApp fc fn' arg')
   toPTerm p (IBindingApp fn bind arg)
-      = ?TODO8
+      = pure $ PBindingApp fn
+          !(traverseData (traverseBindingInfo (toPTerm p)) bind)
+          !(traverseData (toPTerm p) arg)
   toPTerm p (INamedApp fc fn n arg)
       = do arg' <- toPTerm startPrec arg
            app <- toPTermApp fn [(fc, Just (Just n), arg')]
@@ -532,7 +534,8 @@ mutual
             ImpDecl' KindedName -> Core (Maybe (PDecl' KindedName))
   toPDecl (IClaim (MkWithData fc $ MkIClaimData rig vis opts ty))
       = do opts' <- traverse toPFnOpt opts
-           pure (Just (MkWithData fc $ PClaim (MkPClaim rig vis opts' ?what)))
+           newTy <- (toPTypeDecl ty)
+           pure (Just (MkWithData fc $ PClaim (MkPClaim rig vis opts' newTy)))
   toPDecl (IData fc vis mbtot d)
       = pure (Just (MkFCVal fc $ PData "" vis mbtot !(toPData d)))
   toPDecl (IDef fc n cs)
@@ -547,7 +550,7 @@ mutual
            pure (Just (MkFCVal fc (PParameters (Right args) (catMaybes ds'))))
   toPDecl (IRecord fc _ vis mbtot r)
       = do (n, ps, opts, con, fs) <- toPRecord r
-           pure (Just (MkFCVal fc $ PRecord "" vis mbtot (MkPRecord n (map toBinder ps) opts ?whu fs)))
+           pure (Just (MkFCVal fc $ PRecord "" vis mbtot (MkPRecord n (map toBinder ps) opts con fs)))
            where
              toBinder : (AddMetadata Name' $ AddMetadata Rig' $ PImpBinder' KindedName) -> PBinder' KindedName
              toBinder binder
