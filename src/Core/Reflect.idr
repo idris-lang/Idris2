@@ -920,6 +920,7 @@ Reflect BindingModifier where
   reflect fc defs lhs env Autobind = getCon fc defs (reflectiontt "Autobind")
   reflect fc defs lhs env Typebind = getCon fc defs (reflectiontt "Typebind")
 
+
 {-
 -- Reflection of well typed terms: We don't reify terms because that involves
 -- type checking, but we can reflect them

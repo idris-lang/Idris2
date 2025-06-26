@@ -86,6 +86,23 @@ Reflect DotReason where
   reflect fc defs lhs env UnderAppliedCon
       = getCon fc defs (reflectionttimp "UnderAppliedCon")
 
+export
+Reflect a => Reflect (GenericBinder a) where
+  reflect fc defs lhs env (MkGenericBinder info type)
+      = do i <- reflect fc defs lhs env info
+           t <- reflect fc defs lhs env type
+           appCon fc defs (reflectiontt "MkGenericBinder") [Erased fc Placeholder, i, t]
+
+export
+Reify a => Reify (GenericBinder a) where
+  reify defs val@(NDCon _ n _ _ args)
+      = case (dropAllNS !(full (gamma defs) n), map snd args) of
+             (UN (Basic "MkGenericBinder"), [_, i, t]) => do
+               info <- reify defs !(evalClosure defs i)
+               type <- reify defs !(evalClosure defs t)
+               pure (MkGenericBinder info type)
+             _ => cantReify val "GenericBinder"
+  reify defs val = cantReify val "GenericBinder"
 
 mutual
   export

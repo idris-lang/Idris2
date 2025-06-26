@@ -1,7 +1,7 @@
 module Language.Reflection.TT
 
 import public Data.List
-import Data.List.Quantifiers
+import public Data.List.Quantifiers
 import public Data.String
 
 import Decidable.Equality
@@ -69,48 +69,15 @@ public export
 emptyFC : FC
 emptyFC = EmptyFC
 
-------------------------------------------------------------------------
-||| A wrapper for a value with a file context.
-public export
-record WithFC (ty : Type) where
-  constructor MkFCVal
-  fc : FC
-  value : ty
-
-||| Smart constructor for WithFC that uses EmptyFC as location
-%inline export
-NoFC : a -> WithFC a
-NoFC = MkFCVal EmptyFC
-
-export
-Functor WithFC where
-  map f = { value $= f}
-
-export
-Foldable WithFC where
-  foldr f i v = f v.value i
-
-export
-Traversable WithFC where
-  traverse f (MkFCVal fc val) = map (MkFCVal fc) (f val)
-
-||| Locations are not taken into account when comparing reflected trees
-export
-Eq a => Eq (WithFC a) where
-  x == y = x.value == y.value
-
-||| Locations are not taken into account when comparing reflected trees
-export
-Ord a => Ord (WithFC a) where
-  compare x y = compare x.value y.value
-
 ------------------------------------------------------------------------------------
+export infixr 9 :-:
 public export
 record KeyVal where
   constructor (:-:)
   label : String
   type : Type
 
+export infixr 8 :-
 public export
 record LabelledValue (kv : KeyVal) where
   constructor (:-)
@@ -118,13 +85,47 @@ record LabelledValue (kv : KeyVal) where
   {auto 0 check : kv.label === label}
   value : kv.type
 
+Eq a => Eq (LabelledValue (label :-: a)) where
+  x == y = x.value == y.value
+
 public export
 record WithData (additional : List KeyVal) (payload : Type) where
   constructor MkWithData
   metadata : All LabelledValue additional
   val : payload
 
+export
+Functor (WithData fields) where
+  map f = {val $= f}
+
+export
+Foldable (WithData fields) where
+  foldr f i v = f v.val i
+
+export
+Traversable (WithData fields) where
+  traverse f (MkWithData meta val) = map (MkWithData meta) (f val)
+
+export
+Eq a => All (Eq . LabelledValue) fields => Eq (WithData fields a) where
+  x == y = x.val == y.val && x.metadata == y.metadata
+
 ------------------------------------------------------------------------------------
+
+||| A wrapper for a value with a file context.
+public export
+WithFC : (ty : Type) -> Type
+WithFC = WithData ["fc" :-: FC]
+
+public export
+MkFCVal : FC -> ty -> WithFC ty
+MkFCVal fc = MkWithData ["fc" :- fc]
+
+||| Smart constructor for WithFC that uses EmptyFC as location
+%inline export
+NoFC : a -> WithFC a
+NoFC = MkFCVal EmptyFC
+
 public export
 data BindingModifier = NotBinding | Autobind | Typebind
 
@@ -308,6 +309,12 @@ showPiInfo ImplicitArg s = "{\{s}}"
 showPiInfo ExplicitArg s = if wrapExplicit then "(\{s})" else s
 showPiInfo AutoImplicit s = "{auto \{s}}"
 showPiInfo (DefImplicit t) s = "{default \{assert_total $ showPrec App t} \{s}}"
+
+public export
+record GenericBinder (ty : Type) where
+  constructor MkGenericBinder
+  info : PiInfo ty
+  type : ty
 
 public export
 data IsVar : Name -> Nat -> List Name -> Type where
