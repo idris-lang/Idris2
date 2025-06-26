@@ -104,6 +104,27 @@ export
 Ord a => Ord (WithFC a) where
   compare x y = compare x.value y.value
 
+------------------------------------------------------------------------------------
+public export
+record KeyVal where
+  constructor (:-:)
+  label : String
+  type : Type
+
+public export
+record LabelledValue (kv : KeyVal) where
+  constructor (:-)
+  0 label : String
+  {auto 0 check : kv.label === label}
+  value : kv.type
+
+public export
+record WithData (additional : List KeyVal) (payload : Type) where
+  constructor MkWithData
+  metadata : All LabelledValue additional
+  val : payload
+
+------------------------------------------------------------------------------------
 public export
 data BindingModifier = NotBinding | Autobind | Typebind
 

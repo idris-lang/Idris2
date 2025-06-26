@@ -149,8 +149,11 @@ findBindableNamesQuot env used (IAutoApp fc x y)
     = findBindableNamesQuot env used ![x, y]
 findBindableNamesQuot env used (IWithApp fc x y)
     = findBindableNamesQuot env used ![x, y]
-findBindableNamesQuot env used (IBindingApp x y z)
-    = ?TODO7
+findBindableNamesQuot env used (IBindingApp x bind z)
+    = case bind.val of
+           (BindType _ ty) => findBindableNamesQuot env used ![ty, z.val]
+           (BindExpr _ expr) => findBindableNamesQuot env used ![expr, z.val]
+           (BindExplicitType _ ty expr) => findBindableNamesQuot env used ![ty, expr, z.val]
 findBindableNamesQuot env used (IRewrite fc x y)
     = findBindableNamesQuot env used ![x, y]
 findBindableNamesQuot env used (ICoerced fc x)
