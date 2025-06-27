@@ -424,6 +424,18 @@ mutual
     show (MkGenericBinder info type) = "ImpParameter \{show info} \{show type}"
 
   public export
+  OldImp : Type -> Type
+  OldImp nm = (Name, RigCount, PiInfo (RawImp' nm), RawImp' nm)
+
+  export
+  toOldImp : ImpParameter' nm -> OldImp nm
+  toOldImp param = (param.name.val, param.rig, param.val.info, param.val.type)
+
+  export
+  fromOldImp : OldImp nm -> ImpParameter' nm
+  fromOldImp (n, r, i, t) = MkWithData ["name" :- NoFC n, "rig" :- r] (MkGenericBinder i t)
+
+  public export
   ImpRecord : Type
   ImpRecord = ImpRecord' Name
 

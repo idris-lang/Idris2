@@ -155,8 +155,7 @@ mutual
 
   public export
   data Record : Type where
-       MkRecord : FC ->
-                  (n : Name) ->
+       MkRecord : FC -> (n : Name) ->
                   (params : List (Name, Count, PiInfo TTImp, TTImp)) ->
                   (opts : List DataOpt) ->
                   (conName : Name) ->
@@ -416,7 +415,7 @@ parameters {auto eqTTImp : Eq TTImp}
 
   public export
   Eq ITy where
-    MkTy _ n ty == MkTy _ n' ty' = n.val == n'.val && ty == ty'
+    MkTy _ n ty == MkTy _ n' ty' = n.value == n'.value && ty == ty'
 
   public export
   Eq Data where
@@ -443,7 +442,7 @@ parameters {auto eqTTImp : Eq TTImp}
 
   public export
   Eq Decl where
-    IClaim c == IClaim c' = c.val == c'.val
+    IClaim c == IClaim c' = c.value == c'.value
     IData _ v t d == IData _ v' t' d' =
       v == v' && t == t' && d == d'
     IDef _ n cs == IDef _ n' cs' =
@@ -553,7 +552,7 @@ mutual
 
   public export
   Show ITy where
-    show (MkTy fc n ty) = "\{show n.val} : \{show ty}"
+    show (MkTy fc n ty) = "\{show n.value} : \{show ty}"
 
   Show IClaimData where
     show (MkIClaimData rig vis xs sig)
@@ -562,7 +561,7 @@ mutual
 
   public export
   Show Decl where
-    show (IClaim claim) = show claim.val
+    show (IClaim claim) = show claim.value
     show (IData fc vis treq dt)
       = unwords [ show vis
                 , showTotalReq treq (show dt)

@@ -871,63 +871,69 @@ Reflect FC where
   reflect fc defs lhs env EmptyFC = getCon fc defs (reflectiontt "EmptyFC")
 
 export
-Reflect ty => Reflect (LabelledValue (str :-: ty)) where
-  reflect fc defs lhs env (label :- value)
-      = do val' <- reflect fc defs lhs env value
-           appCon fc defs (reflectiontt ":-") [Erased fc Placeholder, val' ]
-
-export
-Reify ty => Reify (LabelledValue (str :-: ty)) where
+Reify a => Reify (WithFC a) where
   reify defs val@(NDCon _ n _ _ args)
       = case (dropAllNS !(full (gamma defs) n), map snd args) of
-             (UN (Basic _), [_, value]) => do
-                 val' <- reify defs !(evalClosure defs value)
-                 pure (str :- val')
-             (_, args) => cantReify val "LabelledValue : args : \{show (length args)}"
-  reify defs val = cantReify val "LabelledValue"
-
--- Records are reflected into Data.List.Quantifier.All
-export
-(refs : All (Reflect . LabelledValue) fields) => Reflect (Record fields) where
-  reflect fc defs lhs env [] = appCon fc defs (listAll "Nil") [Erased fc Placeholder]
-  reflect fc defs lhs env (x :: xs) {refs = r :: rs}
-      = do x' <- reflect @{r} fc defs lhs env x
-           xs' <- reflect fc defs lhs env xs
-           appCon fc defs (listAll "::") [Erased fc Placeholder, x', xs']
-
--- Records are reified from Data.List.Quantifier.All the labels are inferred from the type
-export
-{fields : _} -> (rei : All (Reify . LabelledValue) fields) => Reify (Record fields) where
-  reify defs val@(NDCon _ n _ _ args) {fields = []}
-    = case (dropAllNS !(full (gamma defs) n)) of
-           (UN (Basic "Nil")) => pure []
-           _ => cantReify val "expected empty fields"
-  reify defs val@(NDCon _ n _ _ args) {fields = f :: fs} {rei = r :: rs}
-    = case (dropAllNS !(full (gamma defs) n), map snd args) of
-           (UN (Basic "::"), [_, x, xs]) => do
-             x' <- reify defs !(evalClosure defs x)
-             xs' <- reify defs !(evalClosure defs xs)
-             pure (x' :: xs')
-           (_, args) => cantReify val "fields : \{show (map label (f :: fs))}, args: \{show (length args)}"
-  reify defs val {fields} = cantReify val "fields : \{show (map label fields)}"
+             (UN (Basic "MkFCVal"), [fcterm, nestedVal]) => do
+                 fc <- reify defs !(evalClosure defs fcterm)
+                 val <- reify defs !(evalClosure defs nestedVal)
+                 pure $ MkFCVal fc val
+             (UN (Basic "MkFCVal"), [_, fc, l2]) => do
+                 fc' <- reify defs !(evalClosure defs fc)
+                 val' <- reify defs !(evalClosure defs l2)
+                 pure $ MkFCVal fc' val'
+             (t, l) => cantReify val "WithFC constructor: \{show t}, args: \{show (length l)}"
+  reify defs val = cantReify val "Expected WithFC, found something else"
 
 export
-All (Reflect . LabelledValue) fields => Reflect a => Reflect (WithData fields a) where
-  reflect fc defs lhs env (MkWithData metadata val)
-    = do m' <- reflect fc defs lhs env metadata
-         val' <- reflect fc defs lhs env val
-         appCon fc defs (reflectiontt "MkWithData") [m', val']
+Reflect a => Reflect (WithFC a) where
+  reflect fc defs lhs env (MkWithData loc val)
+      = do loc' <- reflect fc defs lhs env (get "fc" loc)
+           val' <- reflect fc defs lhs env val
+           appCon fc defs (reflectiontt "MkFCVal") [Erased fc Placeholder, loc', val']
 
-export
-{fields : _} -> All (Reify . LabelledValue) fields => Reify a => Reify (WithData fields a) where
-  reify defs val@(NDCon _ n _ _ args) {fields}
-    = case (dropAllNS !(full (gamma defs) n), map snd args) of
-           (UN (Basic "MkWithData"), [_, m, val]) => do
-             m' <- reify defs !(evalClosure defs m)
-             v' <- reify defs !(evalClosure defs val)
-             pure (MkWithData m' v')
-           (_, args) => cantReify val "WithData : \{show (map label fields)}, args : \{show (length args)}"
-  reify defs val {fields} = cantReify val "WithData : \{show (map label fields)}"
+-- -- Records are reflected into Data.List.Quantifier.All
+-- export
+-- (refs : All (Reflect . LabelledValue) fields) => Reflect (Record fields) where
+--   reflect fc defs lhs env [] = appCon fc defs (listAll "Nil") [Erased fc Placeholder]
+--   reflect fc defs lhs env (x :: xs) {refs = r :: rs}
+--       = do x' <- reflect @{r} fc defs lhs env x
+--            xs' <- reflect fc defs lhs env xs
+--            appCon fc defs (listAll "::") [Erased fc Placeholder, x', xs']
+--
+-- -- Records are reified from Data.List.Quantifier.All the labels are inferred from the type
+-- export
+-- {fields : _} -> (rei : All (Reify . LabelledValue) fields) => Reify (Record fields) where
+--   reify defs val@(NDCon _ n _ _ args) {fields = []}
+--     = case (dropAllNS !(full (gamma defs) n)) of
+--            (UN (Basic "Nil")) => pure []
+--            _ => cantReify val "expected empty fields"
+--   reify defs val@(NDCon _ n _ _ args) {fields = f :: fs} {rei = r :: rs}
+--     = case (dropAllNS !(full (gamma defs) n), map snd args) of
+--            (UN (Basic "::"), [_, x, xs]) => do
+--              x' <- reify defs !(evalClosure defs x)
+--              xs' <- reify defs !(evalClosure defs xs)
+--              pure (x' :: xs')
+--            (_, args) => cantReify val "fields : \{show (map label (f :: fs))}, args: \{show (length args)}"
+--   reify defs val {fields} = cantReify val "fields : \{show (map label fields)}"
+
+-- export
+-- All (Reflect . LabelledValue) fields => Reflect a => Reflect (WithData fields a) where
+--   reflect fc defs lhs env (MkWithData metadata val)
+--     = do m' <- reflect fc defs lhs env metadata
+--          val' <- reflect fc defs lhs env val
+--          appCon fc defs (reflectiontt "MkWithData") [m', val']
+--
+-- export
+-- {fields : _} -> All (Reify . LabelledValue) fields => Reify a => Reify (WithData fields a) where
+--   reify defs val@(NDCon _ n _ _ args) {fields}
+--     = case (dropAllNS !(full (gamma defs) n), map snd args) of
+--            (UN (Basic "MkWithData"), [_, m, val]) => do
+--              m' <- reify defs !(evalClosure defs m)
+--              v' <- reify defs !(evalClosure defs val)
+--              pure (MkWithData m' v')
+--            (_, args) => cantReify val "WithData : \{show (map label fields)}, args : \{show (length args)}"
+--   reify defs val {fields} = cantReify val "WithData : \{show (map label fields)}"
 
 
 export
