@@ -380,7 +380,7 @@ mutual
       = do fn <- fcBounds (decoratedSimpleBinderUName fname)
            bind <- fcBounds (parens fname (opBinder fname indents))
            decoratedSymbol fname "|"
-           scope <- fcBounds (expr pdef fname indents)
+           scope <- fcBounds (typeExpr pdef fname indents)
            pure $ PBindingApp fn bind scope
 
   autobindOp : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
