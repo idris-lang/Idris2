@@ -423,20 +423,20 @@ checkBindVar : {vars : _} ->
                {auto o : Ref ROpts REPLOpts} ->
                RigCount -> ElabInfo ->
                NestedNames vars -> Env Term vars ->
-               FC -> UserName -> -- username is base of the pattern name
+               FC -> Name ->
                Maybe (Glued vars) ->
                Core (Term vars, Glued vars)
-checkBindVar rig elabinfo nest env fc str topexp
+checkBindVar rig elabinfo nest env fc nm topexp
     = do let elabmode = elabMode elabinfo
          -- In types, don't rebind if the name is already in scope;
          -- Below, return True if we don't need to implicitly bind the name
          let False = case implicitMode elabinfo of
-                          PI _ => maybe False (const True) (defined (UN str) env)
+                          PI _ => maybe False (const True) (defined nm env)
                           _ => False
-               | _ => check rig elabinfo nest env (IVar fc (UN str)) topexp
+               | _ => check rig elabinfo nest env (IVar fc nm) topexp
          est <- get EST
-         let n = PV (UN str) (defining est)
-         noteLHSPatVar elabmode (UN str)
+         let n = PV nm (defining est)
+         noteLHSPatVar elabmode nm
          notePatVar n
          est <- get EST
 
@@ -459,20 +459,20 @@ checkBindVar rig elabinfo nest env fc str topexp
                                 toBind $= ((n, NameBinding fc rig Explicit tm bty) :: ) }
 
                    log "metadata.names" 7 $ "checkBindVar is adding ↓"
-                   addNameType fc (UN str) env exp
-                   addNameLoc fc (UN str)
+                   addNameType fc nm env exp
+                   addNameLoc fc nm
 
                    checkExp rig elabinfo env fc tm (gnf env exp) topexp
               Just bty =>
                 do -- Check rig is consistent with the one in bty, and
                    -- update if necessary
-                   combine (UN str) rig (bindingRig bty)
+                   combine nm rig (bindingRig bty)
                    let tm = bindingTerm bty
                    let ty = bindingType bty
 
                    log "metadata.names" 7 $ "checkBindVar is adding ↓"
-                   addNameType fc (UN str) env ty
-                   addNameLoc fc (UN str)
+                   addNameType fc nm env ty
+                   addNameLoc fc nm
 
                    checkExp rig elabinfo env fc tm (gnf env ty) topexp
   where

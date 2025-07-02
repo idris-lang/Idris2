@@ -897,8 +897,8 @@ warnUnreachable : {auto c : Ref Ctxt Defs} ->
 warnUnreachable (MkClause env lhs rhs)
     = recordWarning (UnreachableClause (getLoc lhs) env lhs)
 
-isAlias : RawImp -> Maybe ((FC, Name)                -- head symbol
-                          , List (FC, (FC, String))) -- pattern variables
+isAlias : RawImp -> Maybe ((FC, Name)              -- head symbol
+                          , List (FC, (FC, Name))) -- pattern variables
 isAlias lhs
   = do let (hd, apps) = getFnArgs lhs []
        hd <- isIVar hd
@@ -948,11 +948,11 @@ lookupOrAddAlias eopts nest env fc n [cl@(PatClause _ lhs _)]
        lookupCtxtExact n (gamma defs)
 
   where
-    holeyType : List (FC, String) -> RawImp
+    holeyType : List (FC, Name) -> RawImp
     holeyType [] = Implicit fc False
     holeyType ((xfc, x) :: xs)
       = let xfc = virtualiseFC xfc in
-        IPi xfc top Explicit (Just (UN $ Basic x)) (Implicit xfc False)
+        IPi xfc top Explicit (Just x) (Implicit xfc False)
       $ holeyType xs
 
 lookupOrAddAlias _ _ _ fc n _
