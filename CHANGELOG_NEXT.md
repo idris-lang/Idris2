@@ -194,6 +194,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   memoised. That is, once accessed, they are allowed to be not re-evaluated until garbage
   collector wipes them.
 
+* Fixed early external function evaluation in constant optimization.
+
 #### Racket
 
 * Fixed CSE soundness bug that caused delayed expressions to sometimes be eagerly
