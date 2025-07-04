@@ -128,7 +128,7 @@ traverse : Monad f => (a -> f b) -> LazyList a -> f (List b)
 traverse g [] = pure []
 traverse g (x::xs) = pure $ !(g x) :: !(traverse g xs)
 
-public export %inline autobind
+public export %inline
 for : Monad f => LazyList a -> (a -> f b) -> f (List b)
 for = flip traverse
 

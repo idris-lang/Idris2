@@ -554,7 +554,7 @@ sequence = traverse id
 ||| You can call this function using binding syntax.
 ||| Instead of writing `for xs (\x => f x)` you can write
 ||| `for (x := xs) ; f x`
-%inline %tcinline public export autobind
+%inline %tcinline public export
 for : Applicative f => Traversable t => t a -> (a -> f b) -> f (t b)
 for = flip traverse
 
