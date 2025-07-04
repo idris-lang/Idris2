@@ -318,7 +318,7 @@ concrete defs env (NBind fc _ (Pi _ _ _ _) sc)
     = do sc' <- sc defs (toClosure defaultOpts env (Erased fc Placeholder))
          concrete defs env sc'
 concrete defs env (NDCon _ _ _ _ _) = pure True
-concrete defs env (NTCon _ _ _ _ _) = pure True
+concrete defs env (NTCon _ _ _ _) = pure True
 concrete defs env (NPrimVal _ _) = pure True
 concrete defs env (NType _ _) = pure True
 concrete defs env _ = pure False
@@ -465,7 +465,7 @@ searchVar fc rig depth def env nest n ty
              defs <- get Ctxt
              Just ndef <- lookupCtxtExact n' (gamma defs)
                  | Nothing => pure (vs ** (f, env'))
-             let nt = fromMaybe Func (defNameType $ definition ndef)
+             let nt = getDefNameType ndef
              let app = tmf fc nt
              let tyenv = useVars (getArgs app) (embed (type ndef))
              let binder = Let fc top (weakenNs (mkSizeOf vs) app)

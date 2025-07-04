@@ -51,11 +51,10 @@ namespace Raw
           ([ "tag:" <++> byShow tag
            , "arity:" <++> byShow arity
            ] ++ maybe [] (\ n => ["newtype by:" <++> byShow n]) nt)
-  prettyDef (TCon tag arity ps ds u ms cons det) =
+  prettyDef (TCon arity ps ds u ms cons det) =
         let enum = hsep . punctuate "," in
         vcat $ header "Type constructor" :: map (indent 2)
-          ([ "tag:" <++> byShow tag
-           , "arity:" <++> byShow arity
+          ([ "arity:" <++> byShow arity
            , "parameter positions:" <++> byShow ps
            , "constructors:" <++> enum ((\ nm => annotate (Syntax $ DCon (Just nm)) (pretty0 nm)) <$> fromMaybe [] cons)
            ] ++ (("mutual with:" <++> enum (pretty0 <$> ms)) <$ guard (not $ null ms))
@@ -103,11 +102,10 @@ namespace Resugared
           ([ "tag:" <++> byShow tag
            , "arity:" <++> byShow arity
            ] ++ maybe [] (\ n => ["newtype by:" <++> byShow n]) nt)
-  prettyDef (TCon tag arity ps ds u ms cons det) = pure $
+  prettyDef (TCon arity ps ds u ms cons det) = pure $
         let enum = hsep . punctuate "," in
         vcat $ header "Type constructor" :: map (indent 2)
-          ([ "tag:" <++> byShow tag
-           , "arity:" <++> byShow arity
+          ([ "arity:" <++> byShow arity
            , "parameter positions:" <++> byShow ps
            , "constructors:" <++> enum ((\ nm => annotate (Syntax $ DCon (Just nm)) (pretty0 nm)) <$> fromMaybe [] cons)
            ] ++ (("mutual with:" <++> enum (pretty0 <$> ms)) <$ guard (not $ null ms))

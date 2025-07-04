@@ -113,7 +113,7 @@ checkTotal loc n_in
               Unchecked => do
                   mgdef <- lookupCtxtExact n (gamma defs)
                   case definition <$> mgdef of
-                       Just (TCon _ _ _ _ _ _ _ _)
+                       Just (TCon _ _ _ _ _ _ _)
                            => checkPositive loc n
                        _ => do whenJust (refersToM =<< mgdef) $ \ refs =>
                                  log "totality" 5 $ "  Mutually defined with:"
