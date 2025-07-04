@@ -353,15 +353,15 @@ mutual
         pure (map (\ n => (boundToFC fname n, n.val)) $ forget ns)
 
   -- The different kinds of operator bindings `x : ty` for typebind
-  -- x := e and x : ty := e for autobind
+  -- x <- e and x : ty <- e for autobind
   opBinderTypes : OriginDesc -> IndentInfo -> WithBounds PTerm -> Rule (BindingInfo PTerm)
   opBinderTypes fname indents boundName =
            do decoratedSymbol fname ":"
               ty <- typeExpr pdef fname indents
-              decoratedSymbol fname ":="
+              decoratedSymbol fname "<-"
               exp <- expr pdef fname indents
               pure (BindExplicitType boundName.val ty exp)
-       <|> do decoratedSymbol fname ":="
+       <|> do decoratedSymbol fname "<-"
               exp <- expr pdef fname indents
               pure (BindExpr boundName.val exp)
        <|> do decoratedSymbol fname ":"

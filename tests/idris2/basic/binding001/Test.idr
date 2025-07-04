@@ -38,7 +38,7 @@ val : Exists (n : Nat) | Vect n Nat
 val = (4 ** [0,1,2,3])
 
 main : IO ()
-main = loop (x := [0 .. 10]) |
+main = loop (x <- [0 .. 10]) |
          printLn x
 
 sigmaPi : Σ (ty : Type) | (x : ty) =>> Type
