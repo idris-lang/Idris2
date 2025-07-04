@@ -580,10 +580,10 @@ to rely on the behaviour of a mutually defined function for something to typeche
 
   data Even : Nat -> Type where
     ZIsEven : Even Z
-    SOddIsEven : Odd n -> Even (S k)
+    SOddIsEven : Odd n -> Even (S n)
 
   data Odd : Nat -> Type where
-    SEvenIsOdd : Even n -> Odd (S k)
+    SEvenIsOdd : Even n -> Odd (S n)
 
 
 .. code-block:: idris
