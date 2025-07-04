@@ -174,6 +174,6 @@ We use ``Interpolation`` instead of ``Show`` for interpolation slices because th
 are not necessarily the same as ``interpolate``. Typically the implementation of ``show`` for ``String``
 adds double quotes around the text, but for ``interpolate`` what we want is to return the string as is.
 In the previous example, ``"hello \{username}"``, if we were to use ``show`` we would end up with the string
-``"hello "Susan`` which displays an extra pair of double quotes. That is why the implementation of
+``"hello "Susan""`` which displays an extra pair of double quotes. That is why the implementation of
 ``interpolate`` for ``String`` is the identity function: ``interpolate x = x``. This way the desugared
 code looks like: ``concat [id "hello ", interpolate username]``.
