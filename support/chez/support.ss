@@ -461,8 +461,10 @@
 
 (define (blodwen-channel-get-with-timeout ty chan timeout)
   (let* ([start-time (current-time 'time-monotonic)]
-         [timeout-duration (make-time 'time-duration 0 (div timeout 1000))])
-    (define (loop)
+         [timeout-duration (make-time 'time-duration 0 (div timeout 1000))]
+         [min-backoff-ns 100000]   ; 100 microseconds
+         [max-backoff-ns 1000000]) ; 1 millisecond
+    (define (loop backoff)
       (let* ([now (current-time 'time-monotonic)]
              [elapsed (quotient (time-nanosecond (time-difference now start-time)) 1000000)])
         (if (>= elapsed timeout)
@@ -504,10 +506,10 @@
                         (condition-signal read-cv)
                         (box the-val))))
                 (begin
-                  ;; Failed to acquire mutex, sleep briefly to avoid busy spin
-                  (sleep (make-time 'time-duration 0 1000000)) ; 1ms
-                  (loop))))))
-    (loop)))
+                  ;; Failed to acquire mutex — exponential backoff
+                  (sleep (make-time 'time-duration 0 backoff))
+                  (loop (min max-backoff-ns (* 2 backoff))))))))
+    (loop min-backoff-ns))) ; Start with smallest delay
 
 ;; Mutex
 
