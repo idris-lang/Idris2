@@ -313,6 +313,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Add a function `altAll` connecting `All` to `Any` using `Alternative` to all `Quantifiers` modules.
 
+* Fixed `blodwen-channel-get-with-timeout` implementation with proper recursive call on loop and time spent while attempting to acquire mutex.
+
 #### Contrib
 
 * `Data.Vect.Views.Extra` was moved from `contrib` to `base`.
