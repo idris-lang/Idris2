@@ -4,12 +4,13 @@ import System.Concurrency
 
 -- Simple producing thread.
 producer : Channel Nat -> IO ()
-producer c = ignore $ producer'
+producer c = ignore $ producer' 1000
   where
-    producer' : IO ()
-    producer' = do
-      channelPut c 55
-      sleep 10
+    producer' : Nat -> IO ()
+    producer' Z     = pure ()
+    producer' (S n) = do
+      channelPut c n
+      sleep 1
 
 -- Test that channelGetWithTimeout works as expected.
 main : IO ()
