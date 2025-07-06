@@ -6,7 +6,7 @@ Prerequisites for Windows
 MSYS2
 -----
 
-To build Idris 2 on Windows, an Unix-like environment is needed for
+To build Idris 2 on Windows, a Unix-like environment is needed for
 all the utilities used during the build. `MSYS2 <https://www.msys2.org>`_ provides that for us.
 
     1. Download the latest version of MSYS2
