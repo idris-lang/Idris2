@@ -62,9 +62,8 @@ going to use it to convert each element to a ``String``:
             show' (x :: Nil) = show x
             show' (x :: xs)  = show x ++ ", " ++ show' xs
 
-Note that we need the explicit ``forall n .`` in the ``show'`` function
-because otherwise the ``n`` is already in scope, and fixed to the value of
-the top level ``n``.
+Note that we need the explicit ``forall n .`` in the ``show'`` function;
+otherwise, ``n`` would refer to the top-level ``n`` already in scope.
 
 Default Definitions
 ===================
@@ -92,7 +91,7 @@ of the methods. For example, for an implementation of ``Eq`` for ``Nat``:
 
         x /= y = not (x == y)
 
-It is hard to imagine many cases where the ``/=`` method will be
+It is hard to imagine many cases where the ``/=`` method would be
 anything other than the negation of the result of applying the ``==``
 method. It is therefore convenient to give a default definition for
 each method in the interface declaration, in terms of the other method:
@@ -137,26 +136,26 @@ defining some of its own:
 
 The ``Ord`` interface allows us to compare two values and determine their
 ordering. Only the ``compare`` method is required; every other method
-has a default definition. Using this we can write functions such as
+has a default definition. Using this, we can write functions such as
 ``sort``, a function which sorts a list into increasing order,
 provided that the element type of the list is in the ``Ord`` interface. We
-give the constraints on the type variables left of the fat arrow
+give the constraints on the type variables to the left of the fat arrow
 ``=>``, and the function type to the right of the fat arrow:
 
 .. code-block:: idris
 
     sort : Ord a => List a -> List a
 
-Functions, interfaces and implementations can have multiple
-constraints. Multiple constraints are written in brackets in a comma
-separated list, for example:
+Functions, interfaces, and implementations can have multiple
+constraints. Multiple constraints are written in brackets in a
+comma-separated list, for example:
 
 .. code-block:: idris
 
     sortAndShow : (Ord a, Show a) => List a -> String
     sortAndShow xs = show (sort xs)
 
-Constraints are, like types, first class objects in the language. You can
+Constraints, like types, are first-class objects in the language. You can
 see this at the REPL:
 
 ::
@@ -165,7 +164,7 @@ see this at the REPL:
     Prelude.Ord : Type -> Type
 
 So, ``(Ord a, Show a)`` is an ordinary pair of ``Types``, with two constraints
-as the first and second element of the pair.
+as the first and second elements of the pair.
 
 Note: Interfaces and ``mutual`` blocks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -180,7 +179,7 @@ default definitions on the second pass.
 Quantities for Parameters
 =========================
 
-By default parameters that are not explicitly ascribed a type in an ``interface``
+By default, parameters that are not explicitly ascribed a type in an ``interface``
 declaration are assigned the quantity ``0``. This means that the parameter is not
 available to use at runtime in the methods' definitions.
 
@@ -193,7 +192,7 @@ the type of the ``show`` method:
      Main> :t show
      Prelude.show : {0 a : Type} -> Show a => a -> String
 
-However some use cases require that some of the parameters are available at runtime.
+However, some use cases require that some of the parameters are available at runtime.
 We may for instance want to declare an interface for ``Storable`` types. The constraint
 ``Storable a size`` means that we can store values of type ``a`` in a ``Buffer`` in
 exactly ``size`` bytes.
@@ -201,8 +200,7 @@ exactly ``size`` bytes.
 If the user provides a method to read a value for such a type ``a`` at a given offset,
 then we can read the ``k`` th element stored in the buffer by computing the appropriate
 offset from ``k`` and ``size``. This is demonstrated by providing a default implementation
-for the method ``peekElementOff`` implemented in terms of ``peekByteOff`` and the parameter
-``size``.
+for the method ``peekElementOff`` in terms of ``peekByteOff`` and the parameter ``size``.
 
 .. code-block:: idris
 
@@ -217,14 +215,14 @@ for the method ``peekElementOff`` implemented in terms of ``peekByteOff`` and th
 
 
 Note that ``a`` is explicitly marked as runtime irrelevant so that it is erased by the
-compiler. Equivalently we could have written ``interface Storable a (size : Nat)``.
+compiler. Equivalently, we could have written ``interface Storable a (size : Nat)``.
 The meaning of ``| a`` is explained in :ref:`DeterminingParameters`.
 
 
 Functors and Applicatives
 =========================
 
-So far, we have seen single parameter interfaces, where the parameter
+So far, we have seen single-parameter interfaces, where the parameter
 is of type ``Type``. In general, there can be any number of parameters
 (even zero), and the parameters can have *any* type. If the type
 of the parameter is not ``Type``, we need to give an explicit type
@@ -264,11 +262,11 @@ abstracts the notion of function application:
 
 .. _monadsdo:
 
-Monads and ``do``-notation
+Monads and ``do`` notation
 ==========================
 
 The ``Monad`` interface allows us to encapsulate binding and computation,
-and is the basis of ``do``-notation introduced in Section
+and is the basis of ``do`` notation introduced in Section
 :ref:`sect-do`. It extends ``Applicative`` as defined above, and is
 defined as follows:
 
@@ -301,7 +299,7 @@ We can also define an implementation for ``Maybe``, as follows:
         Nothing  >>= k = Nothing
         (Just x) >>= k = k x
 
-Using this we can, for example, define a function which adds two
+Using this, we can, for example, define a function that adds two
 ``Maybe Int``, using the monad to encapsulate the error handling:
 
 .. code-block:: idris
@@ -324,10 +322,10 @@ notation.
     Nothing
 
 The translation of ``do`` notation is entirely syntactic, so there is no
-need for the ``(>>=)`` and ``(>>)`` operators to be the operator defined in the
-``Monad`` interface. Idris will, in general, try to disambiguate which
-operators you mean by type, but you can explicitly choose with qualified do
-notation, for example:
+need for the ``(>>=)`` and ``(>>)`` operators to be those defined in the
+``Monad`` interface. In general, Idris will try to disambiguate which
+operators you mean based on their type. However, you can explicitly specify
+the source module using qualified ``do`` notation. For example:
 
 .. code-block:: idris
 
@@ -360,7 +358,7 @@ which reads a number from the console, returning a value of the form
          else pure Nothing
 
 If we then use it to write a function to read two numbers, returning
-``Nothing`` if neither are valid, then we would like to pattern match
+``Nothing`` if either is invalid, we would like to pattern match
 on the result of ``readNumber``:
 
 .. code-block:: idris
@@ -388,7 +386,7 @@ we could try pattern matching on values of the form ``Just x_ok``:
            pure (Just (x_ok, y_ok))
 
 There is still a problem, however, because we've now omitted the case for
-``Nothing`` so ``readNumbers`` is no longer total! We can add the ``Nothing``
+``Nothing``, so ``readNumbers`` is no longer total! We can add the ``Nothing``
 case back as follows:
 
 .. code-block:: idris
@@ -404,14 +402,14 @@ case back as follows:
 The effect of this version of ``readNumbers`` is identical to the first (in
 fact, it is syntactic sugar for it and directly translated back into that form).
 The first part of each statement (``Just x_ok <-`` and ``Just y_ok <-``) gives
-the preferred binding - if this matches, execution will continue with the rest
+the preferred binding — if this matches, execution will continue with the rest
 of the ``do`` block. The second part gives the alternative bindings, of which
 there may be more than one.
 
-``!``-notation
+``!`` notation
 ~~~~~~~~~~~~~~
 
-In many cases, using ``do``-notation can make programs unnecessarily
+In many cases, using ``do`` notation can make programs unnecessarily
 verbose, particularly in cases such as ``m_add`` above where the value
 bound is used once, immediately. In these cases, we can use a
 shorthand version, as follows:
@@ -429,11 +427,11 @@ evaluated and then implicitly bound. Conceptually, we can think of
 
     (!) : m a -> a
 
-Note, however, that it is not really a function, merely syntax! In
+Note, however, that it is not really a function, but merely syntax! In
 practice, a subexpression ``!expr`` will lift ``expr`` as high as
 possible within its current scope, bind it to a fresh name ``x``, and
-replace ``!expr`` with ``x``. Expressions are lifted depth first, left
-to right. In practice, ``!``-notation allows us to program in a more
+replace ``!expr`` with ``x``. Expressions are lifted depth-first, left
+to right. In practice, ``!`` notation allows us to program in a more
 direct style, while still giving a notational clue as to which
 expressions are monadic.
 
@@ -472,7 +470,7 @@ qualn ]`` where ``quali`` can be one of:
 
 - A *guard*, which is an expression of type ``Bool``
 
-- A let binding ``let x = e``
+- A ``let`` binding ``let x = e``
 
 To translate a comprehension ``[exp | qual1, qual2, …, qualn]``, first
 any qualifier ``qual`` which is a *guard* is translated to ``guard
@@ -507,11 +505,11 @@ directly, but rather via the ``HasIO`` interface:
     interface Monad io => HasIO io where
       liftIO : (1 _ : IO a) -> io a
 
-``HasIO`` explains, via ``liftIO``, how to convert a primitive ``IO`` operation
-to an operation in some underlying type, as long as that type has a ``Monad``
-implementation.  These interface allows a programmer to define some more
-expressive notion of interactive program, while still giving direct access to
-``IO`` primitives.
+The ``HasIO`` interface provides, via ``liftIO``, a way to convert a
+primitive ``IO`` operation into an operation in some underlying type,
+provided that type has a ``Monad`` implementation.  This interface
+allows a programmer to define more expressive notions of interactive
+programs, while still retaining direct access to ``IO`` primitives.
 
 Idiom brackets
 ==============
@@ -645,7 +643,7 @@ Named Implementations
 =====================
 
 It can be desirable to have multiple implementations of an interface for the
-same type, for example to provide alternative methods for sorting or printing
+same type — for example to provide alternative methods for sorting or printing
 values. To achieve this, implementations can be *named* as follows:
 
 .. code-block:: idris
@@ -658,7 +656,7 @@ values. To achieve this, implementations can be *named* as follows:
 
 This declares an implementation as normal, but with an explicit name,
 ``myord``. The syntax ``compare @{myord}`` gives an explicit implementation to
-``compare``, otherwise it would use the default implementation for ``Nat``. We
+``compare``; otherwise, it would use the default implementation for ``Nat``. We
 can use this, for example, to sort a list of ``Nat`` in reverse.
 Given the following list:
 
@@ -667,9 +665,9 @@ Given the following list:
     testList : List Nat
     testList = [3,4,1]
 
-We can sort it using the default ``Ord`` implementation, by using the ``sort``
-function available with ``import Data.List``, then we can try with the named
-implementation ``myord`` as follows, at the Idris prompt:
+We can sort it using the default ``Ord`` implementation by using the ``sort``
+function, available via ``import Data.List``. Then, we can try with the named
+implementation ``myord`` — both are shown below at the Idris prompt:
 
 ::
 
@@ -707,7 +705,7 @@ We can define two different implementations of ``Semigroup`` and
 
 The neutral value for addition is ``0``, but the neutral value for multiplication
 is ``1``. It's important, therefore, that when we define implementations
-of ``Monoid`` that they extend the correct ``Semigroup`` implementation. We can
+of ``Monoid``, they extend the correct ``Semigroup`` implementation. We can
 do this with a ``using`` clause in the implementation as follows:
 
 .. code-block:: idris
@@ -738,7 +736,7 @@ Interfaces, just like records, can be declared with a user-defined constructor.
 
       getB : t
 
-Then ``MkB : A t => t -> B t``. If we have 
+Then ``MkB : A t => t -> B t``. If we have:
 
 .. code-block:: idris 
 
@@ -749,7 +747,7 @@ Then ``MkB : A t => t -> B t``. If we have
    getAB = (getA, getB)
 
 Then we can use the function ``getAB`` even though we didn't implement the
-interface ``B`` for ``Nat`` by passing an implementation inline
+interface ``B`` for ``Nat`` by passing an implementation inline:
 
 .. code-block:: idris 
 
