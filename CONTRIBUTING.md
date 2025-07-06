@@ -5,7 +5,7 @@ We welcome contributions! This document describes how you can contribute to
 Idris 2, and the kind of contributions which will most benefit the project.
 
 This document outlines: the kinds of contributions we will almost certainly
-accept; those we might accept; those we might accept after a proposal and
+accept; those we might accept after a proposal and
 discussion; and, those we almost certainly won't. The guidelines here are based
 on decisions we've previously made, and the way we have managed PRs in practice
 up to now.
