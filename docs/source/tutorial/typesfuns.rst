@@ -35,8 +35,7 @@ An Idris file consists of an optional module declaration (here
 ``module Prims``) followed by an optional list of imports and a
 collection of declarations and definitions. In this example, no imports
 have been specified. However, Idris programs can consist of several
-modules, and the definitions in each module each have their own
-namespace. This is discussed further in Section
+modules, each with its own namespace. This is discussed further in Section
 :ref:`sect-namespaces`. When writing Idris programs, both the order in which
 definitions are given and indentation are significant. Functions and
 data types must be defined before use. Incidentally, each definition must
