@@ -62,7 +62,8 @@ you can add yourself to `CONTRIBUTORS`.
 
 In all cases, a pull request must have a short description that explains its purpose.
 However obvious you think it might be, it really helps reviewers know what to look for
-when reviewing the changes.
+when reviewing the changes. A reviewer does not have to be an Idris maintainer and
+could be any other knowledgable community member.
 
 ## Things We Will Almost Certainly Accept
 
