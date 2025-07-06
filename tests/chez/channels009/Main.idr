@@ -15,7 +15,7 @@ producer c = ignore $ producer'
 main : IO ()
 main =
   do c   <- makeChannel
-     tid <- fork $ producer c 
+     tid <- fork $ producer c
      val <- channelGetWithTimeout c 5
      ignore $ threadWait tid
      putStrLn $ show val
