@@ -354,8 +354,8 @@ Vectors
 
 A standard example of a dependent data type is the type of “lists with
 length”, conventionally called *vectors* in the dependent type
-literature. They are available in the Idris library by importing
-``Data.Vect``, or we can define them ourselves as follows:
+literature. They are available as part of the Idris library, by
+importing ``Data.Vect``, or we can declare them as follows:
 
 .. code-block:: idris
 
