@@ -9,18 +9,18 @@ MSYS2
 To build Idris 2 on Windows, a Unix-like environment is needed for
 all the utilities used during the build. `MSYS2 <https://www.msys2.org>`_ provides that for us.
 
-    1. Download the latest version of MSYS2
+    1. Download the latest version of MSYS2.
     2. Run the installer. Don't install it under Program files
        as it needs to write files (the "unix" home directory lies
-       under there, for example)
+       under there, for example).
     3. In the directory where you installed MSYS2, find the file
        ``mingw64.ini`` and add the line ``MSYS2_PATH_TYPE=inherit``.
        This adds the normal windows PATH to the shell in MSYS2.
     4. Start MSYS2 (click on mingw64.exe, as the icon in the start
        menu won't pick up the MSYS2_PATH_TYPE from the ini, it can be
-       added to the system settings)
+       added to the system settings).
     5. Update the installation with the latest releases with
-       ``pacman -Syu``
+       ``pacman -Syu``.
     6. Install the programs that the build needs with::
 
             $ pacman -S make mingw-w64-x86_64-gcc
@@ -35,7 +35,7 @@ Chez Scheme has a ready-made installer at `GitHub <https://github.com/cisco/Chez
        has trouble with them.
     2. Add the threaded 64-bit scheme to the PATH. It is the
        ``\bin\ta6nt`` subdirectory to where Chez Scheme was installed. So if you used "C:\Chez" it
-       will be in ``C:\Chez\bin\ta6nt``
+       will be in ``C:\Chez\bin\ta6nt``.
 
 Building
 --------
