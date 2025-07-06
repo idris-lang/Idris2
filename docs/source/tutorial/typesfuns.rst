@@ -33,21 +33,21 @@ into the Idris interactive environment by typing ``idris2 Prims.idr``:
 
 An Idris file consists of an optional module declaration (here
 ``module Prims``) followed by an optional list of imports and a
-collection of declarations and definitions. In this example no imports
-have been specified. However Idris programs can consist of several
-modules and the definitions in each module each have their own
+collection of declarations and definitions. In this example, no imports
+have been specified. However, Idris programs can consist of several
+modules, and the definitions in each module each have their own
 namespace. This is discussed further in Section
-:ref:`sect-namespaces`. When writing Idris programs both the order in which
+:ref:`sect-namespaces`. When writing Idris programs, both the order in which
 definitions are given and indentation are significant. Functions and
-data types must be defined before use, incidentally each definition must
-have a type declaration, for example see ``x : Int``, ``foo :
-String``, from the above listing. New declarations must begin at the
+data types must be defined before use. Incidentally, each definition must
+have a type declaration — for example, see ``x : Int`` or ``foo :
+String`` from the above listing. New declarations must begin at the
 same level of indentation as the preceding declaration.
 Alternatively, a semicolon ``;`` can be used to terminate declarations.
 
 A library module ``prelude`` is automatically imported by every
 Idris program, including facilities for IO, arithmetic, data
-structures and various common functions. The prelude defines several
+structures, and various common functions. The prelude defines several
 arithmetic and comparison operators, which we can use at the prompt.
 Evaluating things at the prompt gives an answer, for example:
 
@@ -61,7 +61,7 @@ Evaluating things at the prompt gives an answer, for example:
 All of the usual arithmetic and comparison operators are defined for
 the primitive types. They are overloaded using interfaces, as we
 will discuss in Section :ref:`sect-interfaces` and can be extended to
-work on user defined types. Boolean expressions can be tested with the
+work on user-defined types. Boolean expressions can be tested with the
 ``if...then...else`` construct, for example:
 
 ::
@@ -82,7 +82,7 @@ follows:
                                         -- (zero and successor)
     data List a = Nil | (::) a (List a) -- Polymorphic lists
 
-Data type names cannot begin with a lower case letter (we will see later
+Data type names cannot begin with a lowercase letter (we will see later
 why not!).  The above declarations are taken from the standard library. Unary
 natural numbers can be either zero (``Z``), or the successor of another natural
 number (``S k``). Lists can either be empty (``Nil``) or a value added to the
@@ -94,7 +94,7 @@ fixity declaration, as follows:
 
     infixr 10 ::
 
-Functions, data constructors and type constructors may all be given
+Functions, data constructors, and type constructors may all be given
 infix operators as names. They may be used in prefix form if enclosed
 in brackets, e.g. ``(::)``. Infix operators can use any of the
 symbols:
@@ -103,7 +103,7 @@ symbols:
 
     :+-*\/=.?|&><!@$%^~#
 
-Some operators built from these symbols can't be user defined. These are
+Some operators built from these symbols can't be user-defined. These are:
 
 ``%``, ``\``, ``:``, ``=``, ``|``, ``|||``, ``<-``, ``->``, ``=>``, ``?``,
 ``!``, ``&``, ``**``, ``..``
@@ -132,11 +132,10 @@ library:
 
 The standard arithmetic operators ``+`` and ``*`` are also overloaded
 for use by ``Nat``, and are implemented using the above functions.
-Unlike Haskell, there is no restriction on whether function
-names must begin with a capital letter or not. Function names
-(``plus`` and ``mult`` above), data constructors (``Z``, ``S``,
-``Nil`` and ``::``) and type constructors (``Nat`` and ``List``) are
-all part of the same namespace. By convention, however,
+Unlike in Haskell, function names are allowed to start with a capital
+letter. Function names (``plus`` and ``mult`` above), data constructors
+(``Z``, ``S``, ``Nil`` and ``::``) and type constructors (``Nat`` and
+``List``) are all part of the same namespace. By convention, however,
 data types and constructor names typically begin with a capital letter.
 We can test these functions at the Idris prompt:
 
@@ -159,8 +158,8 @@ interfaces, meaning that we can also test the functions as follows:
 
 You may wonder, by the way, why we have unary natural numbers when our
 computers have perfectly good integer arithmetic built in. The reason
-is primarily that unary numbers have a very convenient structure which
-is easy to reason about, and easy to relate to other data structures
+is primarily that unary numbers have a very convenient structure that
+is easy to reason about, and easy to relate to other data structures,
 as we will see later. Nevertheless, we do not want this convenience to
 be at the expense of efficiency. Fortunately, Idris knows about
 the relationship between ``Nat`` (and similarly structured types) and
@@ -171,8 +170,8 @@ such as ``plus`` and ``mult``.
 -----------------
 
 Functions can also be defined *locally* using ``where`` clauses. For
-example, to define a function which reverses a list, we can use an
-auxiliary function which accumulates the new, reversed list, and which
+example, to define a function that reverses a list, we can use an
+auxiliary function that accumulates the new, reversed list, and which
 does not need to be visible globally:
 
 .. code-block:: idris
@@ -188,9 +187,9 @@ indented further than the outer function.
 
 .. note:: Scope
 
-    Any names which are visible in the outer scope are also visible in
+    Any names that are visible in the outer scope are also visible in
     the ``where`` clause (unless they have been redefined, such as ``xs``
-    here). A name which appears in the type will be in scope in the
+    here). A name that appears in the type will be in scope in the
     ``where`` clause.
 
 As well as functions, ``where`` blocks can include local data
@@ -210,7 +209,7 @@ outside the definition of ``foo``:
            isLT = if x < 20 then Yes else No
 
 Functions defined in a ``where`` clause need a type
-declaration just like any top level function. Here is another example
+declaration just like any top-level function. Here is another example
 of how this works in practice:
 
 .. code-block:: idris
@@ -237,8 +236,8 @@ of how this works in practice:
 Totality and Covering
 ---------------------
 
-By default, functions in Idris must be ``covering``. That is, there must be
-patterns which cover all possible values of the inputs types. For example,
+By default, functions in Idris must be ``covering``. That is, the patterns
+must cover all possible values of the input's type. For example,
 the following definition will give an error:
 
 .. code-block:: idris
@@ -263,7 +262,7 @@ You can override this with a ``partial`` annotation:
 
 However, this is not advisable, and in general you should only do this during
 the initial development of a function, or during debugging.  If you try to
-evaluate ``fromMaybe Nothing`` at run time you will get a run time error.
+evaluate ``fromMaybe Nothing`` at runtime, you will get a runtime error.
 
 Holes
 -----
@@ -278,7 +277,7 @@ programs. For example, we could leave a hole for the greeting in our
     main = putStrLn ?greeting
 
 The syntax ``?greeting`` introduces a hole, which stands for a part of
-a program which is not yet written. This is a valid Idris program, and you
+a program that is not yet written. This is a valid Idris program, and you
 can check the type of ``greeting``:
 
 ::
@@ -329,7 +328,7 @@ For example, we could write a function which computes a type:
     isSingleton True = Nat
     isSingleton False = List Nat
 
-This function calculates the appropriate type from a ``Bool`` which flags
+This function calculates the appropriate type from a ``Bool`` that flags
 whether the type should be a singleton or not. We can use this function
 to calculate a type anywhere that a type can be used. For example, it
 can be used to calculate a return type:
@@ -501,12 +500,12 @@ names, ``n`` and ``a``, which are not declared explicitly. These are
 Implicit arguments, given with the ``forall`` declaration,
 are not given in applications of ``index``; their values can be
 inferred from the types of the ``Fin n`` and ``Vect n a``
-arguments. Any name beginning with a lower case letter which appears
+arguments. Any name beginning with a lowercase letter which appears
 as a parameter or index in a
 type declaration, which is not applied to any arguments, will
 *always* be automatically
 bound as an implicit argument; this is why data type names cannot begin with
-a lower case letter. Implicit arguments can still be given
+a lowercase letter. Implicit arguments can still be given
 explicitly in applications, using ``{a=value}`` and ``{n=value}``, for
 example:
 
@@ -1284,7 +1283,7 @@ other things, avoid these ambiguities with propositional equality:
 The code above can be read as "``ty`` has type ``Type`` and its value
 is ``v = v``".
 
-Local definitions can also be introduced using ``let``. Just like top level
+Local definitions can also be introduced using ``let``. Just like top-level
 ones and ones defined in a ``where`` clause you need to:
 
 1. declare the function and its type
