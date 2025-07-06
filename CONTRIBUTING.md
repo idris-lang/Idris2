@@ -10,21 +10,19 @@ discussion; and, those we almost certainly won't. The guidelines here are based
 on decisions we've previously made, and the way we have managed PRs in practice
 up to now.
 
-Disclaimer
-----------
+## Disclaimer
 
 Please remember that Idris
 is primarily a research project, and we are a small team, which limits the time
 we have available for reviewing and maintaining PRs. Nobody works full time on
-Idris - we're a team of academics and students at a university with other
+Idris - we're a team of volunteers, academics, and students with other
 demands on our time such as teaching, and writing and presenting research
-papers, which will always take priority. This also means we have to be careful
-to make sure that we can commit to maintaining any new features which are
-contributed.
+papers, which will always take priority. This means that we have a limited
+capacity to review and accept contributions and we cannot commit to maintain
+any new features which are contributed.
 
 
-General comments
-----------------
+## General comments
 
 Overall, when making a contribution, please try to make sure they follow the
 general philosophy of the Idris project, which can be summarised as follows:
@@ -34,19 +32,25 @@ general philosophy of the Idris project, which can be summarised as follows:
 * Idris *allows* software developers to express invariants of their data and prove
   properties of programs, but will not *require* them to do so.
 
+
+### Guidlines for Writing Issues
+
 When writing an issue and describing the problem at hand, avoid linking to
 private channels of discussions such as Discord. Other contributors might not
 have an account, the servers could be down, the information might be hard to
-find, or some people might not be able to use the service from their work
-devices. Instead, write a clear summary of the situation so that anyone can
+find, or some people might not be able to use the service from their devices.
+Instead, write a clear summary of the situation so that anyone can
 understand what the issue is about without additional context.
+
+### Guidlines for Pull Requests
 
 Many contributions will require accompanying tests and documentation updates.
 Bugfixes in particular should be accompanied by tests, to avoid future
 regressions.
 
 Library functions should be `total` as far as possible, and at least `covering`
-where `total` is not possible.
+where `total` is not possible. They should come with appropriate documentation
+and examples for how to use them.
 
 Different people have different preferences about coding style. In general,
 we haven't been too prescriptive about this. If you're editing a source file,
@@ -56,15 +60,17 @@ We may need to be more formal about this in future!
 Please remember to update `CHANGELOG_NEXT.md`, and if it's your first contribution
 you can add yourself to `CONTRIBUTORS`.
 
-In all cases, a pull request must have a short description (one sentence is
-usually enough) that explains its purpose. However obvious you think it might
-be, it really helps when reviewing the changes.
+In all cases, a pull request must have a short description that explains its purpose.
+However obvious you think it might be, it really helps reviewers know what to look for
+when reviewing the changes. A reviewer does not have to be an Idris maintainer and
+could be any other knowledgable community member.
 
-Things we will almost certainly accept
---------------------------------------
+## Things We Will Almost Certainly Accept
 
 * Anything which fixes an issue on the issue tracker
-  - In this case, please make sure you include a new test
+  - For bugfixes, please make sure you include a new test for it.
+  - This is a good way to get your change included since it tremendously helps
+    with reviewing.
 * More tests, which test new features or, more importantly, existing features
   which are not exercised enough in the existing tests
   - Note that the 'test' subdirectory is intended for testing the type checker
@@ -76,24 +82,8 @@ Things we will almost certainly accept
   - Type-driven program synthesis
   - :search and related REPL commands
   - Interactive editing
-* Contributions of missing library functions, including proofs, which were
-  available in Idris 1 - at least on the assumption that we still think the
-  function is important enough, which gets increasingly unlikely over time!
 
-Things we might accept
-----------------------
-
-* Additions to the `contrib` libraries
-  - However, please consider whether it would be better as a separate library.
-    If something is in the Idris2 repository, we need to commit to maintaining
-    it to some extent, so we have to be sure that we can do so. You can find
-    (and contribute to) a list of [libraries on the wiki](
-    https://github.com/idris-lang/Idris2/wiki/1-%5BLanguage%5D-Libraries).
-  - For any library additions, please try to include as many documentation
-    strings as you can.
-
-Things that should be discussed via the issue tracker first
------------------------------------------------------------
+## Things That Should Be Discussed via the Issue Tracker First
 
 * New language features
   - Syntactic sugar, for example, is nice but any new feature needs to be
@@ -102,22 +92,21 @@ Things that should be discussed via the issue tracker first
   - These have been fairly stable for a while, and external tools using the
     Idris 2 API may be depending on them
 * Changes to prelude and base libraries
-  - 'prelude' and 'base' are, in some sense, part of the language. There are a
+  - `prelude` and `base` are, in some sense, part of the language. There are a
     lot of trade offs to be made in the design of the prelude especially - such
     as interface hierarchies - and while you may not agree with the way it looks,
     by and large these decisions have already been made so there must be a
     compelling reason for them to be changed.
+* Changes to elaborator script compatibility. Elaborator Reflection is a feature
+  powering some of the most important libraries in the ecosystem and breaking
+  them breaks the entire ecosystem of libraries. Changes to Elaborator Reflection
+  therefore requires careful coordination between PR author, and library maintainers.
 * Any fundamental changes to build tools, library structure, or CI workflow
 * Major refactorings (e.g. reorganisation of imports, mass renamings). These
   may be a good idea, but they are often merely a matter of taste, so please
   check whether they will be considered valuable first.
-* A new approach to testing libraries: we don't have a unit testing or
-  property testing framework as part of the Idris system, itself, though it
-  would be valuable for testing the prelude and base libraries. This would be
-  nice to have, so proposals are welcome.
 
-Things we probably won't accept
--------------------------------
+## Things We Probably Won't Accept
 
 * Minor refactorings. You may be making the code more beautiful, or more to
   your taste, but please remember that every PR has to be reviewed, and if it
@@ -137,14 +126,13 @@ Things we probably won't accept
 * Fancy REPL features (e.g. readline, history, tab completion). We definitely
   want this, but it would be better implemented as a separate tool using the
   Idris 2 API, to minimise the maintenance burden on the compiler.
-* Similarly, anything which adds an external dependency. We aim to keep
+* Anything which adds an external dependency. We aim to keep
   dependencies minimal for ease of initial installation.
 * New backends. You can implement new backends via the Idris 2 API - and indeed
   several people have. The backends in this repository are limited to those we
   are able to commit to maintaining.
 
-Other possible contributions
-----------------------------
+## Other possible contributions
 
 There's plenty of other things that might be good ideas. If it isn't covered
 above, and you're in doubt as to whether it might be a good idea, please let us
@@ -158,10 +146,33 @@ Good places to discuss possible contributions are:
 * The issue tracker (in this case, please make your proposal as concrete as
   possible).
 
-On performance
---------------
+## On performance
 
 If you're editing the core system, or adding any features, please keep an
 eye on performance. In particular, check that the libraries build and tests
 run in approximately the same amount of time before and after the change.
 (Although running faster is fine as long as everything still works :))
+
+## Guidelines for Maintainers & Self-Merge Policy
+
+Maintainers can self-merge some of their PR under certain conditions. This
+acknowledges the fact that not everyone is able to review everything in a timely
+manner and reviewers are already trusted entities able to check-in code in the
+project. However, it should be done with care and consideration, self-merge is
+acceptable provided it:
+
+* Does not break any libraries in the overall ecosystem
+* Does not significantly impact performance
+* Does not break or change CI in any fundamental way (disabling tests for example)
+
+If any of the above conditions are not met, self-merge is to be avoided.
+
+Before performing a self-merge, maintainers are expected to perform a self-review
+held to the same standards as any other pull request and check for:
+* Missing documentation
+* Missing tests
+* Appropriate code styling
+* Appropriate description and motivation
+* Appropriate updates to the changelog
+
+Please leave 7 days from the date of PR submission until performing a self-merge.
