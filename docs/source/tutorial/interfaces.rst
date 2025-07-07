@@ -62,8 +62,8 @@ going to use it to convert each element to a ``String``:
             show' (x :: Nil) = show x
             show' (x :: xs)  = show x ++ ", " ++ show' xs
 
-Note that we need the explicit ``forall n .`` in the ``show'`` function;
-otherwise, ``n`` would refer to the top-level ``n`` already in scope.
+Note that we need the explicit ``forall n .`` in the ``show'`` function,
+because otherwise, ``n`` would refer to the top-level ``n`` already in scope.
 
 Default Definitions
 ===================
@@ -402,7 +402,7 @@ case back as follows:
 The effect of this version of ``readNumbers`` is identical to the first (in
 fact, it is syntactic sugar for it and directly translated back into that form).
 The first part of each statement (``Just x_ok <-`` and ``Just y_ok <-``) gives
-the preferred binding — if this matches, execution will continue with the rest
+the preferred binding; if this matches, execution will continue with the rest
 of the ``do`` block. The second part gives the alternative bindings, of which
 there may be more than one.
 
@@ -643,7 +643,7 @@ Named Implementations
 =====================
 
 It can be desirable to have multiple implementations of an interface for the
-same type — for example to provide alternative methods for sorting or printing
+same type, for example to provide alternative methods for sorting or printing
 values. To achieve this, implementations can be *named* as follows:
 
 .. code-block:: idris
