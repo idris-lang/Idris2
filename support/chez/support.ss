@@ -467,6 +467,115 @@
       (let* ((now (current-time 'time-monotonic))
              (elapsed (quotient (time-nanosecond (time-difference now start-time)) 1000000)))
         (if (>= elapsed timeout)
+            '() ; Timeout expired
+            (let ((acquired? (mutex-acquire (channel-read-mut chan) #f)))
+              (if acquired?
+                  (let* ((val-box (channel-val-box chan))
+                         (val-cv  (channel-val-cv chan))
+                         (the-val (unbox val-box)))
+                    (cond
+                      ;; Case 1: Value available immediately
+                      ((not (null? the-val))
+                       (let* ((read-box (channel-read-box chan))
+                              (read-cv  (channel-read-cv chan)))
+                         (set-box! val-box '())
+                         (set-box! read-box #t)
+                         (mutex-release (channel-read-mut chan))
+                         (condition-signal read-cv)
+                         (box the-val)))
+                      ;; Case 2: No value yet — wait, then try reacquiring
+                      (else
+                       (let* ((remaining-ms (- timeout elapsed))
+                              (remaining-sec (max 0 (div remaining-ms 1000)))
+                              (wait-time (make-time 'time-duration 0 remaining-sec)))
+                         ;; Wait may reacquire the mutex *only* if signaled
+                         (condition-wait val-cv (channel-read-mut chan) wait-time)
+                         ;; Now, attempt to reacquire (defensive)
+                         (let ((reacquired? (mutex-acquire (channel-read-mut chan) #f)))
+                           (if reacquired?
+                               (let ((post-val (unbox val-box)))
+                                 (if (null? post-val)
+                                     (begin
+                                       (mutex-release (channel-read-mut chan))
+                                       '()) ; still no value — timeout or spurious wake
+                                     (let* ((read-box (channel-read-box chan))
+                                            (read-cv  (channel-read-cv chan)))
+                                       (set-box! val-box '())
+                                       (set-box! read-box #t)
+                                       (mutex-release (channel-read-mut chan))
+                                       (condition-signal read-cv)
+                                       (box post-val))))
+                               ;; Couldn’t reacquire — another thread won the race
+                               '()))))))
+                  ;; Case 3: Failed to acquire mutex — back off and retry
+                  (begin
+                    (sleep (make-time 'time-duration 0 backoff))
+                    (loop (min max-backoff-ns (* 2 backoff)))))))))
+    (loop min-backoff-ns)))
+
+#|
+(define (blodwen-channel-get-with-timeout ty chan timeout)
+  (let* ([start-time (current-time 'time-monotonic)]
+         [timeout-duration (make-time 'time-duration 0 (div timeout 1000))]
+         [min-backoff-ns 100000]   ; 100 microseconds
+         [max-backoff-ns 1000000]) ; 1 millisecond
+    (define (loop backoff)
+      (let* ([now (current-time 'time-monotonic)]
+             [elapsed (quotient (time-nanosecond (time-difference now start-time)) 1000000)])
+        (if (>= elapsed timeout)
+            '() ; Timeout while trying to acquire mutex
+            (if (mutex-acquire (channel-read-mut chan) #f)
+                (let* ([val-box  (channel-val-box chan)]
+                       [val-cv   (channel-val-cv chan)]
+                       [the-val  (unbox val-box)])
+                  (if (null? the-val)
+                      (begin
+                        ;; Value not yet available — wait on condition variable
+                        (let* ([now (current-time 'time-monotonic)]
+                               [elapsed (quotient (time-nanosecond (time-difference now start-time)) 1000000)]
+                               [remaining-ms (- timeout elapsed)]
+                               [remaining-sec (max 0 (div remaining-ms 1000))])
+                          (condition-wait val-cv
+                                          (channel-read-mut chan)
+                                          (make-time 'time-duration 0 remaining-sec)))
+                        ;; Check again after waiting
+                        (let* ([the-val (unbox val-box)])
+                          (if (null? the-val)
+                              (begin
+                                (mutex-release (channel-read-mut chan))
+                                '()) ; Still no value — timeout
+                              (let* ([read-box (channel-read-box chan)]
+                                     [read-cv  (channel-read-cv chan)])
+                                ;; Value available now
+                                (set-box! val-box '())
+                                (set-box! read-box #t)
+                                (mutex-release (channel-read-mut chan))
+                                (condition-signal read-cv)
+                                (box the-val)))))
+                      (let* ([read-box (channel-read-box chan)]
+                             [read-cv  (channel-read-cv chan)])
+                        ;; Value was immediately available
+                        (set-box! val-box '())
+                        (set-box! read-box #t)
+                        (mutex-release (channel-read-mut chan))
+                        (condition-signal read-cv)
+                        (box the-val))))
+                (begin
+                  ;; Failed to acquire mutex — exponential backoff
+                  (sleep (make-time 'time-duration 0 backoff))
+                  (loop (min max-backoff-ns (* 2 backoff)))))))) ; ← FIXED: extra paren removed
+    (loop min-backoff-ns))) ; Start with smallest delay
+|#
+
+#|
+(define (blodwen-channel-get-with-timeout ty chan timeout)
+  (let* ((start-time (current-time 'time-monotonic))
+         (min-backoff-ns 100000)   ; 100 µs
+         (max-backoff-ns 1000000)) ; 1 ms
+    (define (loop backoff)
+      (let* ((now (current-time 'time-monotonic))
+             (elapsed (quotient (time-nanosecond (time-difference now start-time)) 1000000)))
+        (if (>= elapsed timeout)
             '() ; timeout expired
             (let ((acquired? (mutex-acquire (channel-read-mut chan) #f)))
               (if acquired?
@@ -511,7 +620,7 @@
                     (sleep (make-time 'time-duration 0 backoff))
                     (loop (min max-backoff-ns (* 2 backoff)))))))))
     (loop min-backoff-ns)))
-
+|#
 
 #|
 (define (blodwen-channel-get-with-timeout ty chan timeout)
