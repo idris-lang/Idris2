@@ -170,7 +170,7 @@ such as ``plus`` and ``mult``.
 
 Functions can also be defined *locally* using ``where`` clauses. For
 example, to define a function that reverses a list, we can use an
-auxiliary function that accumulates the new, reversed list, and which
+auxiliary function which accumulates the new, reversed list, and which
 does not need to be visible globally:
 
 .. code-block:: idris
@@ -352,8 +352,8 @@ calculates either the sum of a list of ``Nat``, or returns the given
 Vectors
 -------
 
-A standard example of a dependent data type is the type of “lists with
-length”, conventionally called *vectors* in the dependent type
+A standard example of a dependent data type is the type of "lists with
+length", conventionally called *vectors* in the dependent type
 literature. They are available as part of the Idris library, by
 importing ``Data.Vect``, or we can declare them as follows:
 
@@ -437,7 +437,7 @@ importing ``Data.Fin``, or can be declared as follows:
 
 From the signature,  we can see that this is a type constructor that takes a ``Nat``, and produces a type.
 So this is not a set in the sense of a collection that is a container of objects;
-rather, it is the canonical set of unnamed elements, as in “the set of 5 elements”, for example.
+rather, it is the canonical set of unnamed elements, as in "the set of 5 elements", for example.
 Effectively, it is a type that captures integers that fall into the range of zero to ``(n - 1)`` where
 ``n`` is the argument used to instantiate the ``Fin`` type.
 For example, ``Fin 5`` can be thought of as the type of integers between 0 and 4.
@@ -501,7 +501,7 @@ are not supplied in applications of ``index``; their values can be
 inferred from the types of the ``Fin n`` and ``Vect n a``
 arguments. Any name beginning with a lowercase letter that appears
 as a parameter or index in a
-type declaration, and is not applied to any arguments, will
+type declaration, and which is not applied to any arguments, will
 *always* be automatically
 bound as an implicit argument. This is why data type names cannot begin with
 a lowercase letter. Implicit arguments can still be given
@@ -659,7 +659,7 @@ Note that several of these return ``Either``, since they may fail.
 
 .. _sect-do:
 
-“``do``” notation
+"``do``" notation
 =================
 
 I/O programs will typically need to sequence actions, feeding the
@@ -1172,7 +1172,7 @@ name. For example, a pair type could be defined as follows:
         snd : b
 
 Using the ``Class`` record from earlier, the size of the class can be
-restricted using a ``Vect``, and the size included in the type by parameterising
+restricted using a ``Vect`` and the size included in the type by parameterising
 the record with the size.  For example:
 
 .. code-block:: idris
@@ -1286,7 +1286,7 @@ Local definitions can also be introduced using ``let``. Just like with
 top-level ones and those defined in a ``where`` clause, you need to:
 
 1. declare the function and its type
-2. define the function via pattern matching
+2. define the function by pattern matching
 
 .. code-block:: idris
 
