@@ -461,7 +461,8 @@
 
 (define (blodwen-channel-get-with-timeout ty chan timeout)
   (let loop ()
-    (let* ([sec (div timeout 1000)])
+    (let* ([timeout-clamped (if (< timeout 1000) 1000 timeout)]
+           [sec (div timeout-clamped 1000)])
       (if (mutex-acquire (channel-read-mut chan) #f)
           (let* ([val-box  (channel-val-box chan)]
                  [val-cv   (channel-val-cv  chan)]
@@ -491,7 +492,7 @@
                   (mutex-release (channel-read-mut chan))
                   (condition-signal read-cv)
                   (box the-val))))
-          (loop))))) ; Failed to acquire mutex
+          (loop)))))
 
 ;; Mutex
 
