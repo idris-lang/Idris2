@@ -90,7 +90,7 @@ mkPatternHole {vars'} loc rig n topenv imode (Just expty_in)
     -- TODO: generalise and get rid of (map weaken)
     mkArgs : {vs : _} -> Thin newvars vs -> List (Term vs)
     mkArgs Refl = []
-    mkArgs (Drop p) = Local loc Nothing 0 First :: map weaken (mkArgs p)
+    mkArgs {vs = _ :< _} (Drop p) = Local loc Nothing 0 First :: map weaken (mkArgs p)
     mkArgs _ = []
 
     -- This is for the specific situation where we're pattern matching on
@@ -100,7 +100,7 @@ mkPatternHole {vars'} loc rig n topenv imode (Just expty_in)
                 Env Term vs -> Term vs -> Thin newvars vs ->
                 Maybe (Term newvars)
     bindInner env ty Refl = Just ty
-    bindInner {vs = x :: _} (b :: env) ty (Drop p)
+    bindInner {vs = _ :< x} (env :< b) ty (Drop p)
         = bindInner env (Bind loc x b ty) p
     bindInner _ _ _ = Nothing
 
@@ -169,34 +169,34 @@ bindUnsolved {vars} fc elabmode _
                          _ => inTerm)
                    fc env tm bindtm
 
-swapIsVarH : {idx : Nat} -> (0 p : IsVar nm idx (x :: y :: xs)) ->
-             Var (y :: x :: xs)
+swapIsVarH : {idx : Nat} -> (0 p : IsVar nm idx (xs :< y :< x)) ->
+             Var (xs :< x :< y)
 swapIsVarH First = MkVar (Later First)
 swapIsVarH (Later p) = swapP p -- it'd be nice to do this all at the top
                                -- level, but that will need an improvement
                                -- in erasability checking
   where
-    swapP : forall name . {idx : _} -> (0 p : IsVar name idx (y :: xs)) ->
-            Var (y :: x :: xs)
+    swapP : forall name . {idx : _} -> (0 p : IsVar name idx (xs :< y)) ->
+            Var (xs :< x :< y)
     swapP First = MkVar First
     swapP (Later x) = MkVar (Later (Later x))
 
 swapIsVar : (vs : Scope) ->
-            {idx : Nat} -> (0 p : IsVar nm idx (vs ++ x :: y :: xs)) ->
-            Var (vs ++ y :: x :: xs)
-swapIsVar [] prf = swapIsVarH prf
-swapIsVar (x :: xs) First = MkVar First
-swapIsVar (x :: xs) (Later p)
+            {idx : Nat} -> (0 p : IsVar nm idx (xs :< y :< x ++ vs)) ->
+            Var (xs :< x :< y ++ vs)
+swapIsVar [<] prf = swapIsVarH prf
+swapIsVar (xs :< x) First = MkVar First
+swapIsVar (xs :< x) (Later p)
     = let MkVar p' = swapIsVar xs p in MkVar (Later p')
 
 swapVars : {vs : Scope} ->
-           Term (vs ++ x :: y :: ys) -> Term (vs ++ y :: x :: ys)
+           Term (ys :< y :< x ++ vs) -> Term (ys :< x :< y ++ vs)
 swapVars (Local fc x idx p)
     = let MkVar p' = swapIsVar _ p in Local fc x _ p'
 swapVars (Ref fc x name) = Ref fc x name
 swapVars (Meta fc n i xs) = Meta fc n i (map swapVars xs)
 swapVars {vs} (Bind fc x b scope)
-    = Bind fc x (map swapVars b) (swapVars {vs = x :: vs} scope)
+    = Bind fc x (map swapVars b) (swapVars {vs = vs :< x} scope)
 swapVars (App fc fn arg) = App fc (swapVars fn) (swapVars arg)
 swapVars (As fc s nm pat) = As fc s (swapVars nm) (swapVars pat)
 swapVars (TDelayed fc x tm) = TDelayed fc x (swapVars tm)
@@ -212,7 +212,7 @@ swapVars (TType fc u) = TType fc u
 -- move it under implicit binders that don't depend on it, and stop
 -- when hitting any non-implicit binder
 push : {vs : _} ->
-       FC -> (n : Name) -> Binder (Term vs) -> Term (n :: vs) -> Term vs
+       FC -> (n : Name) -> Binder (Term vs) -> Term (vs :< n) -> Term vs
 push ofc n b tm@(Bind fc (PV x i) (Pi fc' c Implicit ty) sc) -- only push past 'PV's
     = case shrink ty (Drop Refl) of
            Nothing => -- needs explicit pi, do nothing
@@ -259,7 +259,7 @@ bindImplVars {vars} fc mode gam env imps_in scope scty
 
     getBinds : (imps : List (Name, Name, ImplBinding vs)) ->
                Bounds new -> (tm : Term vs) -> (ty : Term vs) ->
-               (Term (new ++ vs), Term (new ++ vs))
+               (Term (Scope.addInner vs new), Term (Scope.addInner vs new))
     getBinds [] bs tm ty = (refsToLocals bs tm, refsToLocals bs ty)
     getBinds {new} ((n, metan, NameBinding loc c p _ bty) :: imps) bs tm ty
         = let (tm', ty') = getBinds imps (Add n metan bs) tm ty
@@ -285,7 +285,7 @@ normaliseHolesScope defs env (Bind fc n b sc)
     = pure $ Bind fc n b
                   !(normaliseHolesScope defs
                    -- use Lam because we don't want it reducing in the scope
-                   (Lam fc (multiplicity b) Explicit (binderType b) :: env) sc)
+                   (env :< Lam fc (multiplicity b) Explicit (binderType b)) sc)
 normaliseHolesScope defs env tm = normaliseHoles defs env tm
 
 export

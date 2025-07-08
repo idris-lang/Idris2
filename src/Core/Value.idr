@@ -5,7 +5,7 @@ import Core.Core
 import Core.Env
 import Core.TT
 
-import Data.List.Quantifiers
+import Data.SnocList.Quantifiers
 
 %default covering
 
@@ -78,7 +78,7 @@ mutual
        NLocal : Maybe Bool -> (idx : Nat) -> (0 p : IsVar nm idx vars) ->
                 NHead vars
        NRef   : NameType -> Name -> NHead vars
-       NMeta  : Name -> Int -> List (Closure vars) -> NHead vars
+       NMeta  : Name -> Int -> SnocList (Closure vars) -> NHead vars
 
 
   -- Values themselves. 'Closure' is an unevaluated thunk, which means
@@ -90,16 +90,16 @@ mutual
        -- Each closure is associated with the file context of the App node that
        -- had it as an argument. It's necessary so as to not lose file context
        -- information when creating the normal form.
-       NApp     : FC -> NHead vars -> List (FC, Closure vars) -> NF vars
+       NApp     : FC -> NHead vars -> SnocList (FC, Closure vars) -> NF vars
        NDCon    : FC -> Name -> (tag : Int) -> (arity : Nat) ->
-                  List (FC, Closure vars) -> NF vars
+                  SnocList (FC, Closure vars) -> NF vars
                   -- TODO it looks like the list of closures is stored in spine order, c.f. `getCaseBounds`
        NTCon    : FC -> Name -> (tag : Int) -> (arity : Nat) ->
-                  List (FC, Closure vars) -> NF vars
+                  SnocList (FC, Closure vars) -> NF vars
        NAs      : FC -> UseSide -> NF vars -> NF vars -> NF vars
        NDelayed : FC -> LazyReason -> NF vars -> NF vars
        NDelay   : FC -> LazyReason -> Closure vars -> Closure vars -> NF vars
-       NForce   : FC -> LazyReason -> NF vars -> List (FC, Closure vars) -> NF vars
+       NForce   : FC -> LazyReason -> NF vars -> SnocList (FC, Closure vars) -> NF vars
        NPrimVal : FC -> Constant -> NF vars
        NErased  : FC -> WhyErased (NF vars) -> NF vars
        NType    : FC -> Name -> NF vars
@@ -111,26 +111,31 @@ mutual
 
 public export
 ClosedClosure : Type
-ClosedClosure = Closure []
+ClosedClosure = Closure Scope.empty
 
 public export
 ClosedNF : Type
-ClosedNF = NF []
+ClosedNF = NF Scope.empty
 
 namespace LocalEnv
   public export
   empty : LocalEnv free Scope.empty
-  empty = []
+  empty = [<]
 
 export
-ntCon : FC -> Name -> Int -> Nat -> List (FC, Closure vars) -> NF vars
+ntCon : FC -> Name -> Int -> Nat -> SnocList (FC, Closure vars) -> NF vars
 -- Part of the machinery for matching on types - I believe this won't affect
 -- universe checking so put a dummy name.
-ntCon fc (UN (Basic "Type")) tag Z [] = NType fc (MN "top" 0)
-ntCon fc n tag Z [] = case isConstantType n of
+ntCon fc (UN (Basic "Type")) tag Z [<] = NType fc (MN "top" 0)
+ntCon fc n tag Z [<] = case isConstantType n of
   Just c => NPrimVal fc $ PrT c
-  Nothing => NTCon fc n tag Z []
+  Nothing => NTCon fc n tag Z [<]
 ntCon fc n tag arity args = NTCon fc n tag arity args
+
+export
+cons : LocalEnv free vars -> Closure free -> LocalEnv free ([<v] ++ vars)
+cons [<] p = Lin :< p
+cons (ns :< s) p = cons ns p :< s
 
 export
 getLoc : NF vars -> FC

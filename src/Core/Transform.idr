@@ -124,7 +124,7 @@ trans env stk (Meta fc n i args)
          pure $ unload stk (Meta fc n i args')
 trans env stk (Bind fc x b sc)
     = do b' <- traverse (trans env []) b
-         sc' <- trans (b' :: env) [] sc
+         sc' <- trans (Env.bind env b') [] sc
          pure $ unload stk (Bind fc x b' sc')
 trans env stk (App fc fn arg)
     = do arg' <- trans env [] arg

@@ -20,7 +20,7 @@ on:
       - '.github/workflows/ci-super-linter.yml'
   pull_request:
     branches:
-      - main
+      - '*'
     paths-ignore:
       - 'docs/**'
       - 'icons/**'

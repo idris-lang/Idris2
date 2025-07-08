@@ -270,8 +270,13 @@ TTC NameType where
 -- (Indeed, we're expecting the whole IsVar proof to be erased because
 -- we have the idx...)
 mkPrf : (idx : Nat) -> IsVar n idx ns
-mkPrf {n} {ns} Z = believe_me (First {n} {ns = n :: ns})
+mkPrf {n} {ns} Z = believe_me (First {n} {ns = ns :< n})
 mkPrf {n} {ns} (S k) = believe_me (Later {m=n} (mkPrf {n} {ns} k))
+
+getName : (idx : Nat) -> Scope -> Maybe Name
+getName Z (xs :< x) = Just x
+getName (S k) (xs :< x) = getName k xs
+getName _ [<] = Nothing
 
 mutual
   export
@@ -358,7 +363,7 @@ mutual
                0 => do c <- fromBuf
                        idx <- fromBuf
                        name <- maybe (corrupt "Term") pure
-                                     (getAt idx vars)
+                                     (getName idx vars)
                        pure (Local {name} emptyFC c idx (mkPrf idx))
                1 => do nt <- fromBuf; name <- fromBuf
                        pure (Ref emptyFC nt name)
@@ -389,7 +394,7 @@ mutual
                         pure (apply emptyFC fn args)
                idxp => do c <- fromBuf
                           let idx : Nat = fromInteger (cast (idxp - 13))
-                          let Just name = getAt idx vars
+                          let Just name = getName idx vars
                               | Nothing => corrupt "Term"
                           pure (Local {name} emptyFC c idx (mkPrf idx))
 
@@ -488,16 +493,16 @@ mutual
 
 export
 {vars : _} -> TTC (Env Term vars) where
-  toBuf [] = pure ()
-  toBuf ((::) bnd env)
+  toBuf [<] = pure ()
+  toBuf {vars = _ :< _} (env :< bnd)
       = do toBuf bnd; toBuf env
 
   -- Length has to correspond to length of 'vars'
-  fromBuf {vars = []} = pure []
-  fromBuf {vars = x :: xs}
+  fromBuf {vars = [<]} = pure Env.empty
+  fromBuf {vars = xs :< x}
       = do bnd <- fromBuf
            env <- fromBuf
-           pure (bnd :: env)
+           pure (Env.bind env bnd)
 
 export
 TTC Visibility where
@@ -731,7 +736,7 @@ mutual
         = assert_total $ case !getTag of
                0 => do fc <- fromBuf
                        idx <- fromBuf
-                       let Just x = getAt idx vars
+                       let Just x = getName idx vars
                            | Nothing => corrupt "CExp"
                        pure (CLocal {x} fc (mkPrf idx))
                1 => do fc <- fromBuf
