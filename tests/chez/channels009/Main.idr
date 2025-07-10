@@ -2,9 +2,9 @@ import Data.Maybe
 import System
 import System.Concurrency
 
--- One reader
-reader : Channel Nat -> IO ()
-reader c = do
+-- One consumer
+consumer : Channel Nat -> IO ()
+consumer c = do
   val <- channelGetWithTimeout c 2
   case val of
     Just _  =>
@@ -21,16 +21,16 @@ main : IO ()
 main = do
   c <- makeChannel
 
-  -- Start 5 readers
-  readerThreads <-
+  -- Start 5 consumers
+  consumerThreads <-
     for (the (List Nat) [1..5]) $ \n =>
       case n of
         1 => do
-          tid <- fork (reader c)
+          tid <- fork (consumer c)
           usleep 20000
           pure tid
         _ =>
-          fork (reader c)
+          fork (consumer c)
 
   () <- usleep 10000
 
@@ -41,11 +41,11 @@ main = do
   p4 <- fork $ producer c 3
   p5 <- fork $ producer c 4
 
-  -- Wait for all readers and producers
+  -- Wait for all consumer and producers
   threadWait p1
   threadWait p2
   threadWait p3
   threadWait p4
   threadWait p5
-  ignore $ traverse (\t => threadWait t) readerThreads
+  ignore $ traverse (\t => threadWait t) consumerThreads
 
