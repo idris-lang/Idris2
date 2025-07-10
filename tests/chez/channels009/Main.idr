@@ -5,7 +5,7 @@ import System.Concurrency
 -- One reader
 reader : Channel Nat -> IO ()
 reader c = do
-  val <- channelGetWithTimeout c 25
+  val <- channelGetWithTimeout c 1
   case val of
     Just _  =>
       putStrLn "Thread got: Just _"
@@ -25,8 +25,10 @@ main = do
   readerThreads <-
     for [1..5] $ \_ => do
       tid <- fork (reader c)
-      usleep 5000
+      usleep 10000
       pure tid
+
+  () <- usleep 10000
 
   -- Start 5 producers
   p1 <- fork $ producer c 0
