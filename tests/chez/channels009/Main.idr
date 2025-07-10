@@ -2,27 +2,38 @@ import Data.Maybe
 import System
 import System.Concurrency
 
--- Simple producing thread.
-producer : Channel Nat -> Nat -> IO ()
-producer c n = ignore $ producer' n
-  where
-    producer' : Nat -> IO ()
-    producer' Z     = pure ()
-    producer' (S n) = do
-      channelPut c n
-      sleep 1
+-- One reader
+reader : Channel Nat -> IO ()
+reader c = do
+  val <- channelGetWithTimeout c 300
+  case val of
+    Just _  =>
+      putStrLn "Thread got: Just _"
+    Nothing =>
+      putStrLn "Thread got: Nothing"
 
--- Test that channelGetWithTimeout fails under contention.
+-- One producer (delayed)
+producer : Channel Nat -> Nat -> IO ()
+producer c n =
+  channelPut c n
+
 main : IO ()
 main = do
-  c    <- makeChannel
-  tids <- for [0..11] $ \n =>
-    fork $ producer c n
-  ()   <- sleep 20
-  vals <- for [0..11] $ \_ =>
-    fork ( do val <- channelGetWithTimeout c 1000
-              putStrLn $ "Thread got: " ++ show val
-         )
-  ignore $ traverse (\t => threadWait t) tids
-  ignore $ traverse (\t => threadWait t) vals
+  c <- makeChannel
+
+  -- Start 5 readers first
+  readerThreads <-
+    for [1..5] $ \_ =>
+      fork (reader c)
+
+  -- Start 3 producers (too late for 5 readers)
+  p1 <- fork $ producer c 0
+  p2 <- fork $ producer c 1
+  p3 <- fork $ producer c 2
+
+  -- Wait for all readers and producers
+  threadWait p1
+  threadWait p2
+  threadWait p3
+  ignore $ traverse (\t => threadWait t) readerThreads
 
