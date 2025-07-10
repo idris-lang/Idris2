@@ -27,7 +27,7 @@ main = do
       case n of
         1 => do
           tid <- fork (reader c)
-          usleep 10000
+          usleep 20000
           pure tid
         _ =>
           fork (reader c)
