@@ -462,7 +462,7 @@
 (define (blodwen-channel-get-with-timeout ty chan timeout)
   ;; timeout is in milliseconds, convert to nanoseconds
   (let* ([timeout-ns (* timeout 1000000)]
-         [sleep-ns 1000] ; 10 us step
+         [sleep-ns 10000] ; 10 us step
          [sleep-time (make-time 'time-duration (mod sleep-ns 1000000000)
                                                 (div sleep-ns 1000000000))])
     (let loop ([elapsed 0])

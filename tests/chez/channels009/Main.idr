@@ -5,7 +5,7 @@ import System.Concurrency
 -- One reader
 reader : Channel Nat -> IO ()
 reader c = do
-  val <- channelGetWithTimeout c 1
+  val <- channelGetWithTimeout c 8
   case val of
     Just _  =>
       putStrLn "Thread got: Just _"
