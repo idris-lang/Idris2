@@ -237,7 +237,7 @@ channelGetWithTimeout chan milliseconds =
   case os of
     "windows" =>
       primIO (prim__channelGetWithTimeout chan 25)
-    _         =>  
+    _         =>
       primIO (prim__channelGetWithTimeout chan (cast milliseconds))
 
 ||| Puts a value on the given channel.
