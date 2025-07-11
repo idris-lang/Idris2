@@ -236,7 +236,14 @@ channelGetWithTimeout : HasIO io => (chan : Channel a) -> (milliseconds : Nat) -
 channelGetWithTimeout chan milliseconds =
   case os of
     "windows" =>
-      primIO (prim__channelGetWithTimeout chan 25)
+      let clampedms = case compare milliseconds 25 of
+                        LT =>
+                          25
+                        EQ =>
+                          25
+                        GT =>
+                          cast milliseconds
+        in primIO (prim__channelGetWithTimeout chan clampedms)
     _         =>
       primIO (prim__channelGetWithTimeout chan (cast milliseconds))
 
