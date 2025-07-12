@@ -460,38 +460,34 @@
   '()))
 
 (define (blodwen-channel-get-with-timeout ty chan timeout)
-  (let loop ()
-    (let* ([sec (div timeout 1000)])
+  ;; timeout is in milliseconds, convert to nanoseconds
+  (let* ([timeout-ns (* timeout 1000000)]
+         [sleep-ns 10000] ; 10 us step
+         [sleep-time (make-time 'time-duration (mod sleep-ns 1000000000)
+                                                (div sleep-ns 1000000000))])
+    (let loop ([elapsed 0])
       (if (mutex-acquire (channel-read-mut chan) #f)
           (let* ([val-box  (channel-val-box chan)]
-                 [val-cv   (channel-val-cv  chan)]
                  [the-val  (unbox val-box)])
             (if (null? the-val)
-                (begin
-                  ;; Wait for the condition timeout
-                  (condition-wait val-cv (channel-read-mut chan) (make-time 'time-duration 0 sec))
-                  (let* ([the-val (unbox val-box)]) ; Check again after wait
-                    (if (null? the-val)
-                        (begin
-                          (mutex-release (channel-read-mut chan))
-                          '()) ; Still empty after timeout
-                        (let* ([read-box (channel-read-box chan)]
-                               [read-cv  (channel-read-cv chan)])
-                          ;; Value now available
-                          (set-box! val-box '())
-                          (set-box! read-box #t)
-                          (mutex-release (channel-read-mut chan))
-                          (condition-signal read-cv)
-                          (box the-val)))))
+                (if (>= elapsed timeout-ns)
+                    (begin
+                      (mutex-release (channel-read-mut chan))
+                      '())
+                    (begin
+                      (mutex-release (channel-read-mut chan))
+                      (sleep sleep-time)
+                      (loop (+ elapsed sleep-ns))))
                 (let* ([read-box (channel-read-box chan)]
                        [read-cv  (channel-read-cv chan)])
-                  ;; Value available immediately
                   (set-box! val-box '())
                   (set-box! read-box #t)
                   (mutex-release (channel-read-mut chan))
                   (condition-signal read-cv)
                   (box the-val))))
-          loop)))) ; Failed to acquire mutex
+          (begin
+            (sleep sleep-time)
+            (loop (+ elapsed sleep-ns)))))))
 
 ;; Mutex
 
