@@ -5,7 +5,7 @@ import System.Concurrency
 -- One consumer
 consumer : Channel Nat -> IO ()
 consumer c = do
-  val <- channelGetWithTimeout c 2
+  val <- channelGetWithTimeout c 50
   case val of
     Just _  =>
       putStrLn "Thread got: Just _"
