@@ -496,10 +496,10 @@ names, ``n`` and ``a``, which are not declared explicitly. These are
 
     index : forall a, n . Fin n -> Vect n a -> a
 
-Implicit arguments, given with the ``forall`` declaration,
-are not supplied in applications of ``index``; their values can be
-inferred from the types of the ``Fin n`` and ``Vect n a``
-arguments. Any name beginning with a lowercase letter that appears
+Implicit arguments introduced by the ``forall`` declaration are not written
+explicitly in applications of ``index``; their values can be inferred from
+the types of the ``Fin n`` and ``Vect n a`` arguments.
+Any name beginning with a lowercase letter that appears
 as a parameter or index in a
 type declaration, and which is not applied to any arguments, will
 *always* be automatically
