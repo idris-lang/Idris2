@@ -659,13 +659,13 @@ Note that several of these return ``Either``, since they may fail.
 
 .. _sect-do:
 
-"``do``" notation
+"``do``"-notation
 =================
 
 I/O programs will typically need to sequence actions, feeding the
 output of one computation into the input of the next. ``IO`` is an
 abstract type, however, so we can’t access the result of a computation
-directly. Instead, we sequence operations with ``do`` notation:
+directly. Instead, we sequence operations with ``do``-notation:
 
 .. code-block:: idris
 
@@ -685,7 +685,7 @@ allows us to inject a value directly into an I/O operation:
 
     pure : a -> IO a
 
-As we will see later, ``do`` notation is more general than this, and
+As we will see later, ``do``-notation is more general than this, and
 can be overloaded.
 
 You can try executing ``greet`` at the Idris 2 REPL by running the command
@@ -1154,7 +1154,7 @@ This returns a new record, with the field accessed by the path
 ``a.b.c`` set to ``val``. The syntax is first-class, i.e. ``{
 a.b.c := val }`` itself has a function type.
 
-The ``$=`` notation is also valid for nested record updates.
+The ``$=``-notation is also valid for nested record updates.
 
 Dependent Records
 -----------------
@@ -1330,7 +1330,7 @@ of Pythagorean triples as follows:
     pythag n = [ (x, y, z) | z <- [1..n], y <- [1..z], x <- [1..y],
                              x*x + y*y == z*z ]
 
-The ``[a..b]`` notation is another shorthand which builds a list of
+The ``[a..b]``-notation is another shorthand which builds a list of
 numbers between ``a`` and ``b``. Alternatively, ``[a,b..c]`` builds a
 list of numbers between ``a`` and ``c`` with the increment specified
 by the difference between ``a`` and ``b``. This works for type ``Nat``,
