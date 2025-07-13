@@ -17,7 +17,7 @@ all the utilities used during the build. `MSYS2 <https://www.msys2.org>`_ provid
        ``mingw64.ini`` and add the line ``MSYS2_PATH_TYPE=inherit``.
        This adds the normal windows PATH to the shell in MSYS2.
     4. Start MSYS2 (click on mingw64.exe, as the icon in the Start menu
-       won’t pick up the MSYS2_PATH_TYPE from the .ini file — it can
+       won’t pick up the MSYS2_PATH_TYPE from the .ini file - it can
        be added to the system settings instead).
     5. Update the installation with the latest releases with
        ``pacman -Syu``.
