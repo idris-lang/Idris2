@@ -63,7 +63,7 @@ going to use it to convert each element to a ``String``:
             show' (x :: xs)  = show x ++ ", " ++ show' xs
 
 Note that we need the explicit ``forall n .`` in the ``show'`` function,
-because otherwise, ``n`` would refer to the top-level ``n`` already in scope.
+because n is already bound by the top-level definition.
 
 Default Definitions
 ===================
@@ -358,7 +358,7 @@ which reads a number from the console, returning a value of the form
          else pure Nothing
 
 If we then use it to write a function to read two numbers, returning
-``Nothing`` if either is invalid, we would like to pattern match
+``Nothing`` if any of the reads fail, we would like to pattern match
 on the result of ``readNumber``:
 
 .. code-block:: idris
@@ -667,7 +667,7 @@ Given the following list:
 
 We can sort it using the default ``Ord`` implementation by using the ``sort``
 function, available via ``import Data.List``. Then, we can try with the named
-implementation ``myord`` — both are shown below at the Idris prompt:
+implementation ``myord`` - both are shown below at the Idris prompt:
 
 ::
 
