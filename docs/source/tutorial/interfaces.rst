@@ -299,7 +299,7 @@ We can also define an implementation for ``Maybe``, as follows:
         Nothing  >>= k = Nothing
         (Just x) >>= k = k x
 
-Using this, we can, for example, define a function that adds two
+Using this, we can for example define a function that adds two
 ``Maybe Int``, using the monad to encapsulate the error handling:
 
 .. code-block:: idris
