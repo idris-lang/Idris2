@@ -262,11 +262,11 @@ abstracts the notion of function application:
 
 .. _monadsdo:
 
-Monads and ``do`` notation
+Monads and ``do``-notation
 ==========================
 
 The ``Monad`` interface allows us to encapsulate binding and computation,
-and is the basis of ``do`` notation introduced in Section
+and is the basis of ``do``-notation introduced in Section
 :ref:`sect-do`. It extends ``Applicative`` as defined above, and is
 defined as follows:
 
@@ -311,8 +311,8 @@ Using this, we can, for example, define a function that adds two
 
 This function will extract the values from ``x`` and ``y``, if they are both
 available, or return ``Nothing`` if one or both are not ("fail fast"). Managing
-the ``Nothing`` cases is achieved by the ``>>=`` operator, hidden by the ``do``
-notation.
+the ``Nothing`` cases is achieved by the ``>>=`` operator, hidden by the
+``do``-notation.
 
 ::
 
@@ -321,11 +321,11 @@ notation.
     Main> m_add (Just 82) Nothing
     Nothing
 
-The translation of ``do`` notation is entirely syntactic, so there is no
+The translation of ``do``-notation is entirely syntactic, so there is no
 need for the ``(>>=)`` and ``(>>)`` operators to be those defined in the
 ``Monad`` interface. In general, Idris will try to disambiguate which
 operators you mean based on their type. However, you can explicitly specify
-the source module using qualified ``do`` notation. For example:
+the source module using qualified ``do``-notation. For example:
 
 .. code-block:: idris
 
@@ -342,7 +342,7 @@ Pattern Matching Bind
 ~~~~~~~~~~~~~~~~~~~~~
 
 Sometimes we want to pattern match immediately on the result of a function
-in ``do`` notation. For example, let's say we have a function ``readNumber``
+in ``do``-notation. For example, let's say we have a function ``readNumber``
 which reads a number from the console, returning a value of the form
 ``Just x`` if the number is valid, or ``Nothing`` otherwise:
 
@@ -406,10 +406,10 @@ the preferred binding; if this matches, execution will continue with the rest
 of the ``do`` block. The second part gives the alternative bindings, of which
 there may be more than one.
 
-``!`` notation
+``!``-notation
 ~~~~~~~~~~~~~~
 
-In many cases, using ``do`` notation can make programs unnecessarily
+In many cases, using ``do``-notation can make programs unnecessarily
 verbose, particularly in cases such as ``m_add`` above where the value
 bound is used once, immediately. In these cases, we can use a
 shorthand version, as follows:
@@ -431,7 +431,7 @@ Note, however, that it is not really a function, but merely syntax! In
 practice, a subexpression ``!expr`` will lift ``expr`` as high as
 possible within its current scope, bind it to a fresh name ``x``, and
 replace ``!expr`` with ``x``. Expressions are lifted depth-first, left
-to right. In practice, ``!`` notation allows us to program in a more
+to right. In practice, ``!``-notation allows us to program in a more
 direct style, while still giving a notational clue as to which
 expressions are monadic.
 
@@ -480,7 +480,7 @@ qual``, using the following function:
 
     guard : Alternative f => Bool -> f ()
 
-Then the comprehension is converted to ``do`` notation:
+Then the comprehension is converted to ``do``-notation:
 
 .. code-block:: idris
 
@@ -514,7 +514,7 @@ programs, while still retaining direct access to ``IO`` primitives.
 Idiom brackets
 ==============
 
-While ``do`` notation gives an alternative meaning to sequencing,
+While ``do``-notation gives an alternative meaning to sequencing,
 idioms give an alternative meaning to *application*. The notation and
 larger example in this section is inspired by Conor McBride and Ross
 Paterson’s paper “Applicative Programming with Effects” [#ConorRoss]_.
