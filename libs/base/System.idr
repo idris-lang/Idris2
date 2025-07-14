@@ -14,12 +14,6 @@ import System.File
 supportC : (fn : String) -> String
 supportC fn = "C:\{fn}, libidris2_support, idris_support.h"
 
-||| Shorthand for referring to the Node system support library
-|||
-||| @ fn the function name to refer to in the js/system_support.js file
-supportNode : (fn : String) -> String
-supportNode fn = "node:support:\{fn},support_system"
-
 ||| Shorthand for referring to libc 6
 |||
 ||| @ fn the function name to refer to in libc 6
@@ -86,16 +80,16 @@ getArgs = do
               else pure []
 
 %foreign libc "getenv"
-         "node:lambda: n => process.env[n]"
+         "node:lambda:n => process.env[n]"
 prim__getEnv : String -> PrimIO (Ptr String)
 
 %foreign supportC "idris2_getEnvPair"
 prim__getEnvPair : Int -> PrimIO (Ptr String)
 %foreign supportC "idris2_setenv"
-         supportNode "setEnv"
+         "node:support"
 prim__setEnv : String -> String -> Int -> PrimIO Int
 %foreign supportC "idris2_unsetenv"
-         supportNode "unsetEnv"
+         "node:support"
 prim__unsetEnv : String -> PrimIO Int
 
 %foreign "C:idris2_enableRawMode, libidris2_support, idris_support.h"
@@ -198,7 +192,7 @@ unsetEnv var
         pure $ ok == 0
 
 %foreign "C:idris2_system, libidris2_support, idris_system.h"
-         supportNode "spawnSync"
+         "node:support"
 prim__system : String -> PrimIO Int
 
 ||| Execute a shell command, returning its termination status or -1 if an error

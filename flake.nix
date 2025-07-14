@@ -85,7 +85,8 @@
           });
           inherit buildIdris;
           devShells.default = pkgs.mkShell.override { stdenv = stdenv'; } {
-            packages = idris2Pkg.buildInputs;
+            packages = [ idris2Pkg.buildInputs chez pkgs.python3 ];
+            SCHEME="scheme";
           };
         };
     in lib.mkOvrOptsFlake

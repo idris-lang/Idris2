@@ -80,11 +80,11 @@ prim__getString : Ptr String -> String
 prim__putChar : Char -> (1 x : %World) -> IORes ()
 
 %foreign "C:getchar,libc 6"
-         "node:support:getChar,support_system_file"
+         "node:support"
 %extern prim__getChar : (1 x : %World) -> IORes Char
 
 %foreign "C:idris2_getStr, libidris2_support, idris_support.h"
-         "node:support:getStr,support_system_file"
+         "node:support:system_readLine"  -- why specify file? bc this function uses some dependency
 prim__getStr : PrimIO String
 
 %foreign "C:idris2_putStr, libidris2_support, idris_support.h"

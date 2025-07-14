@@ -1,2 +1,2 @@
 True
-Error: INTERNAL ERROR: prim not implemented: prim__os
+Error: INTERNAL ERROR: prim__os not implemented for browser, only for node
