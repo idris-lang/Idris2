@@ -41,6 +41,8 @@ main = do
   p4 <- fork $ producer c 3
   p5 <- fork $ producer c 4
 
+  () <- usleep 20000
+
   -- Wait for all consumer and producers
   threadWait p1
   threadWait p2
