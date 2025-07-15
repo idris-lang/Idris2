@@ -14,8 +14,9 @@ consumer c = do
 
 -- One producer (delayed)
 producer : Channel Nat -> Nat -> IO ()
-producer c n =
+producer c n = do
   channelPut c n
+  usleep 10000
 
 main : IO ()
 main = do
@@ -40,8 +41,6 @@ main = do
   p3 <- fork $ producer c 2
   p4 <- fork $ producer c 3
   p5 <- fork $ producer c 4
-
-  () <- usleep 10000
 
   -- Wait for all consumer and producers
   threadWait p1
