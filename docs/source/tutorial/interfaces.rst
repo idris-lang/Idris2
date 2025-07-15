@@ -63,7 +63,7 @@ going to use it to convert each element to a ``String``:
             show' (x :: xs)  = show x ++ ", " ++ show' xs
 
 Note that we need the explicit ``forall n .`` in the ``show'`` function,
-because n is already bound by the top-level definition.
+because ``n`` is already bound by the top-level definition.
 
 Default Definitions
 ===================
@@ -470,7 +470,7 @@ qualn ]`` where ``quali`` can be one of:
 
 - A *guard*, which is an expression of type ``Bool``
 
-- A ``let`` binding ``let x = e``
+- A ``let``-binding ``let x = e``
 
 To translate a comprehension ``[exp | qual1, qual2, …, qualn]``, first
 any qualifier ``qual`` which is a *guard* is translated to ``guard
