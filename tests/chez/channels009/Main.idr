@@ -16,7 +16,7 @@ consumer c = do
 producer : Channel Nat -> Nat -> IO ()
 producer c n = do
   channelPut c n
-  usleep 10000
+  usleep 5000
 
 main : IO ()
 main = do
