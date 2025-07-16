@@ -5,7 +5,7 @@ import System.Concurrency
 -- One consumer
 consumer : Channel Nat -> IO ()
 consumer c = do
-  val <- channelGetWithTimeout c 50
+  val <- channelGetWithTimeout c 100
   case val of
     Just _  =>
       putStrLn "Thread got: Just _"
@@ -14,9 +14,8 @@ consumer c = do
 
 -- One producer (delayed)
 producer : Channel Nat -> Nat -> IO ()
-producer c n = do
+producer c n =
   channelPut c n
-  usleep 5000
 
 main : IO ()
 main = do
@@ -28,7 +27,7 @@ main = do
       case n of
         1 => do
           tid <- fork (consumer c)
-          usleep 2000000
+          usleep 2500000
           pure tid
         _ =>
           fork (consumer c)
