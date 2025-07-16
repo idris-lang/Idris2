@@ -269,7 +269,7 @@ expand {a = Arr a b} {c = ClApp f t} (tr, hored)
   = MkPair (step tr)
   $ \ arg, red =>
     let 0 eq = headReduceClApp (ClApp f t) (\case Lam impossible) arg in
-    let red = replace {p = Reducible b} (sym eq) (hored arg red) in
+    let red = replace (Reducible b) (sym eq) (hored arg red) in
     expand {c = ClApp (ClApp f t) arg} red
 
 public export

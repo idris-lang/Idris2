@@ -180,16 +180,16 @@ prelude:
 .. code-block:: idris
 
     Main> :t replace
-    Builtin.replace : (0 rule : x = y) -> p x -> p y
+    Builtin.replace : (0 p : _) -> (0 rule : x = y) -> p x -> p y
 
 Given a proof that ``x = y``, and a property ``p`` which holds for
 ``x``, we can get a proof of the same property for ``y``, because we
 know ``x`` and ``y`` must be the same. Note the multiplicity on ``rule``
 means that it's guaranteed to be erased at run time.
-In practice, this function can be
-a little tricky to use because in general the implicit argument ``p``
-can be hard to infer by unification, so Idris provides a high level
-syntax which calculates the property and applies ``replace``:
+In practice, this function can be a little tricky to use because in
+general the argument ``p`` can be hard to infer by unification, so
+Idris provides a high level syntax which calculates the property
+and applies ``replace``:
 
 .. code-block:: idris
 
