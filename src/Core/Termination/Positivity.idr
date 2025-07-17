@@ -44,6 +44,7 @@ nameIn defs tyns (NDCon _ n _ _ args)
     = anyM (nameIn defs tyns)
            !(traverse (evalClosure defs . snd) args)
 nameIn defs tyns (NDelayed fc lr ty) = nameIn defs tyns ty
+nameIn defs tyns (NDelay fc lr ty tm) = nameIn defs tyns !(evalClosure defs tm)
 nameIn defs tyns _ = pure False
 
 -- Check an argument type doesn't contain a negative occurrence of any of
