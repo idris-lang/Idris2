@@ -93,6 +93,8 @@ mutual
       = findSC defs env InDelay pats tm
   findSC defs env g pats (TDelay _ _ _ tm)
       = findSC defs env g pats tm
+  findSC defs env g pats (TForce _ _ tm)
+      = findSC defs env Unguarded pats tm
   findSC defs env g pats tm
       = do let (fn, args) = getFnArgs tm
            False <- isAssertTotal fn
