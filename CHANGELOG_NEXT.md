@@ -216,6 +216,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Added pipeline operators `(|>)` and `(<|)`.
 
+* The `void` has been made pure.
+
 #### Base
 
 * `Data.Vect.Views.Extra` was moved from `contrib` to `base`.
