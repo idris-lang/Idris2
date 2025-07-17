@@ -1,0 +1,7 @@
+1/1: Building Issue806 (Issue806.idr)
+Error: nonProductive is not total, possibly not terminating due to recursive path Issue806.nonProductive
+
+Issue806:3:1--4:36
+ 3 | total
+ 4 | nonProductive : Integer -> Inf Void
+
