@@ -46,11 +46,11 @@ wording : NameType -> String
 wording Bound = "a bound variable"
 wording Func = "a function name"
 wording (DataCon tag arity) = "a data constructor"
-wording (TyCon tag arity) = "a type constructor"
+wording (TyCon arity) = "a type constructor"
 
 isTypeCon : Elaboration m => FC -> Name -> m (List (Name, TTImp))
 isTypeCon fc ty = do
-    [(_, MkNameInfo (TyCon _ _))] <- getInfo ty
+    [(_, MkNameInfo (TyCon _))] <- getInfo ty
       | [] => failAt fc "\{show ty} out of scope"
       | [(_, MkNameInfo nt)] => failAt fc "\{show ty} is \{wording nt} rather than a type constructor"
       | _ => failAt fc "\{show ty} is ambiguous"
