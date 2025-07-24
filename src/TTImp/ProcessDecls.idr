@@ -118,8 +118,8 @@ process : {vars : _} ->
           {auto o : Ref ROpts REPLOpts} ->
           List ElabOpt ->
           NestedNames vars -> Env Term vars -> ImpDecl -> Core ()
-process eopts nest env (IClaim (MkFCVal fc (MkIClaimData rig vis opts ty)))
-    = processType eopts nest env fc rig vis opts ty
+process eopts nest env (IClaim dat@(MkWithData fc (MkIClaimData rig vis opts ty)))
+    = processType eopts nest env dat.fc rig vis opts ty
 process eopts nest env (IData fc vis mbtot ddef)
     = processData eopts nest env fc vis mbtot ddef
 process eopts nest env (IDef fc fname def)
@@ -186,9 +186,9 @@ processTTImpDecls {vars} nest env decls
 
     -- bind implicits to make raw TTImp source a bit friendlier
     bindNames : ImpDecl -> Core ImpDecl
-    bindNames (IClaim (MkFCVal fc (MkIClaimData c vis opts (MkImpTy tfc n ty))))
-        = do ty' <- bindTypeNames fc [] (toList vars) ty
-             pure (IClaim (MkFCVal fc (MkIClaimData c vis opts (MkImpTy tfc n ty'))))
+    bindNames (IClaim dat@(MkWithData fc (MkIClaimData c vis opts (MkImpTy tfc n ty))))
+        = do ty' <- bindTypeNames dat.fc [] (toList vars) ty
+             pure (IClaim (MkWithData fc (MkIClaimData c vis opts (MkImpTy tfc n ty'))))
     bindNames (IData fc vis mbtot d)
         = do d' <- bindDataNames d
              pure (IData fc vis mbtot d')

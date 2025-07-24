@@ -80,9 +80,9 @@ processDecl : {auto c : Ref Ctxt Defs} ->
 -- Special cases to avoid treating these big blocks as units
 -- This should give us better error recovery (the whole block won't fail
 -- as soon as one of the definitions fails)
-processDecl (MkFCVal _ $ PNamespace ns ps)
+processDecl (MkWithData _ $ PNamespace ns ps)
     = withExtendedNS ns $ processDecls ps
-processDecl (MkFCVal _ $ PMutual ps)
+processDecl (MkWithData _ $ PMutual ps)
     = let (tys, defs) = splitMutual ps in
       processDecls (tys ++ defs)
 

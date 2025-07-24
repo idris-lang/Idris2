@@ -51,7 +51,7 @@ namePis i (IBindHere fc m ty) = IBindHere fc m (namePis i ty)
 namePis i ty = ty
 
 getSig : ImpDecl -> Maybe Signature
-getSig (IClaim (MkFCVal _ $ MkIClaimData c _ opts (MkImpTy fc n ty)))
+getSig (IClaim (MkWithData _ $ MkIClaimData c _ opts (MkImpTy fc n ty)))
     = Just $ MkSignature { count    = c
                          , flags    = opts
                          , name     = n

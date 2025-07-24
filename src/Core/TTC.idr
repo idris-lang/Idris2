@@ -79,16 +79,6 @@ TTC FC where
              _ => corrupt "FC"
 
 export
-TTC a => TTC (WithFC a) where
-  toBuf (MkFCVal fc val)
-    = do toBuf fc
-       ; toBuf val
-  fromBuf
-    = do fc <- fromBuf
-         val <- fromBuf
-         pure $ MkFCVal fc val
-
-export
 TTC Name where
   -- for efficiency reasons we do not encode UserName separately
   -- hence the nested pattern matches on UN (Basic/Hole/Field)
@@ -163,6 +153,35 @@ TTC t => TTC (PiInfo t) where
              2 => pure AutoImplicit
              3 => do t <- fromBuf; pure (DefImplicit t)
              _ => corrupt "PiInfo"
+
+export
+{fs : _} -> (ev : All (TTC . KeyVal.type) fs) => TTC (Record fs) where
+  toBuf [] = tag 0
+  toBuf {ev = _ :: _} ((lbl :- v) :: y)
+    = do tag 1
+       ; toBuf v ; toBuf y
+
+  fromBuf {fs = []}
+    = case !getTag of
+           0 => pure []
+           _ => corrupt "Record"
+  fromBuf {fs = (str :-: v :: xs)} {ev = ba :: bs}
+    = case !getTag of
+           1 => do val <- fromBuf @{ba}
+                   tail <- the (Core (Record xs)) fromBuf
+                   pure ((str :- val) :: tail)
+           _ => corrupt "Record"
+
+export
+{fs : _} -> All (TTC . KeyVal.type) fs => TTC a => TTC (WithData fs a) where
+  toBuf (MkWithData extra val)
+    = do toBuf extra
+         toBuf val
+  fromBuf
+    = do nm <- fromBuf
+         val <- fromBuf
+         pure $ MkWithData nm val
+
 
 export
 TTC PrimType where

@@ -365,7 +365,7 @@ mutual
                        pure $
                          let fc = boundToFC fname (mergeBounds l r)
                              opFC = virtualiseFC fc -- already been highlighted: we don't care
-                         in POp fc (mapFC NoBinder l.withFC)
+                         in POp fc (mapData NoBinder l.withFC)
                                    (MkFCVal opFC (OpSymbols $ UN $ Basic "="))
                                    r.val
                else fail "= not allowed")
@@ -379,7 +379,7 @@ mutual
                         pure (op, e)
                  (op, r) <- pure b.val
                  let fc = boundToFC fname (mergeBounds l b)
-                 pure (POp fc (mapFC NoBinder l.withFC) op r))
+                 pure (POp fc (mapData NoBinder l.withFC) op r))
                <|> pure l.val
 
   opExpr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
@@ -1318,10 +1318,10 @@ mkTyConType fname fc (x :: xs)
 
 mkDataConType : PTerm -> List (WithFC ArgType) -> Maybe PTerm
 mkDataConType ret [] = Just ret
-mkDataConType ret (MkFCVal fc (UnnamedExpArg x) :: xs)
-    = PPi fc top Explicit Nothing x <$> mkDataConType ret xs
-mkDataConType ret (MkFCVal fc (UnnamedAutoArg x) :: xs)
-    = PPi fc top AutoImplicit Nothing x <$> mkDataConType ret xs
+mkDataConType ret (con@(MkWithData _ (UnnamedExpArg x)) :: xs)
+    = PPi con.fc top Explicit Nothing x <$> mkDataConType ret xs
+mkDataConType ret (con@(MkWithData _ (UnnamedAutoArg x)) :: xs)
+    = PPi con.fc top AutoImplicit Nothing x <$> mkDataConType ret xs
 mkDataConType _ _ -- with and named applications not allowed in simple ADTs
     = Nothing
 
@@ -1332,7 +1332,7 @@ simpleCon fname ret indents
                          params <- the (EmptyRule $ List $ WithFC $ List ArgType)
                                      $ many (fcBounds $ argExpr plhs fname indents)
                          let conType = the (Maybe PTerm) (mkDataConType ret
-                                                            (concat (map distribFC params)))
+                                                            (concat (map distribData params)))
                          fromMaybe (fatalError "Named arguments not allowed in ADT constructors")
                                    (pure . MkPTy (singleton ("", cname)) cdoc <$> conType)
                          )
@@ -1910,7 +1910,7 @@ parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
                              ops <- sepBy1 (decoratedSymbol fname ",") iOperator
                              pure (MkPFixityData vis binding fixity (fromInteger prec) ops)
                        )
-           pure (mapFC PFixity b)
+           pure (mapData PFixity b)
 
 -- The compiler cannot infer the values for c1 and c2 so I had to write it
 -- this way.
@@ -1962,19 +1962,19 @@ topDecl fname indents
 -- Declared at the top.
 -- collectDefs : List PDecl -> List PDecl
 collectDefs [] = []
-collectDefs (MkFCVal annot (PDef cs) :: ds)
+collectDefs (def@(MkWithData _ (PDef cs)) :: ds)
     = let (csWithFC, rest) = spanBy isPDef ds
           cs' = cs ++ concat (map val csWithFC)
-          annot' = foldr
+          annot' = foldr {t=List}
                    (\fc1, fc2 => fromMaybe EmptyFC (mergeFC fc1 fc2))
-                   annot
-                   (map fc csWithFC)
+                   def.fc
+                   (map (.fc) csWithFC)
       in
           MkFCVal annot' (PDef cs') :: assert_total (collectDefs rest)
-collectDefs (MkFCVal annot (PNamespace ns nds) :: ds)
-    = MkFCVal annot (PNamespace ns (collectDefs nds)) :: collectDefs ds
-collectDefs (MkFCVal fc (PMutual nds) :: ds)
-    = MkFCVal fc (PMutual (collectDefs nds)) :: collectDefs ds
+collectDefs (MkWithData annot (PNamespace ns nds) :: ds)
+    = MkWithData annot (PNamespace ns (collectDefs nds)) :: collectDefs ds
+collectDefs (MkWithData fc (PMutual nds) :: ds)
+    = MkWithData fc (PMutual (collectDefs nds)) :: collectDefs ds
 collectDefs (d :: ds)
     = d :: collectDefs ds
 
