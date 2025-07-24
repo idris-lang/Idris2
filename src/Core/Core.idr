@@ -19,6 +19,9 @@ import Libraries.Data.WithData
 import public Data.IORef
 import System.File
 
+%hide Libraries.Data.Record.KeyVal.label
+%hide Libraries.Data.Record.LabelledValue.label
+
 %default covering
 
 public export

@@ -105,6 +105,7 @@ modules =
     Core.Unify,
     Core.UnifyState,
     Core.Value,
+    Core.WithData,
 
     Core.SchemeEval.Builtins,
     Core.SchemeEval.Compile,
@@ -209,6 +210,8 @@ modules =
     Libraries.Data.UserNameMap,
     Libraries.Data.Version,
     Libraries.Data.WithDefault,
+    Libraries.Data.WithData,
+    Libraries.Data.Record,
 
     Libraries.System.Directory.Tree,
 
