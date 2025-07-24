@@ -16,8 +16,7 @@ import public Libraries.Data.Record
 ||| --------------
 ||| Only ever put plain types in the metadata
 ||| Do not add functors such as `List` or `PTerm`. The functor instance
-||| for `WithData` is only functorial on its payload and not the additional
-||| data.
+||| for `WithData` is only functorial on its payload and not the metadata.
 |||
 ||| There is rarely any need to write down `WithData [ ... ] a` thanks to the
 ||| `AddMetadata` type constructor.
@@ -45,7 +44,7 @@ import public Libraries.Data.Record
 ||| Similarly, we can obtain the "cached" field by giving its name directly
 ||| ```idris example
 ||| termCache : Bool
-||| termCache = value.get "cache"
+||| termCache = value.get "cached"
 ||| ```
 public export
 record WithData (additional : List KeyVal) (payload : Type) where
@@ -231,7 +230,7 @@ export
 Mk : {fs : _} -> All KeyVal.type fs -> a -> WithData fs a
 Mk x y = MkWithData (fromElems x) y
 
-||| Add a default values to an existing metadata record
+||| Add a default value to an existing metadata record
 export
 AddDef :  (def : HasDefault ty) =>
          WithData fl a -> WithData (lbl :-: ty :: fl) a

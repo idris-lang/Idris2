@@ -81,18 +81,6 @@ MkFCVal fc = Mk [fc]
 NoFC : a -> WithFC a
 NoFC = MkFCVal EmptyFC
 
-%inline export
-mapFC : (a -> b) -> WithFC a -> WithFC b
-mapFC = mapData
-
-%inline export
-distribFC : WithFC (List a) -> List (WithFC a)
-distribFC x = map (MkFCVal x.fc) x.val
-
-%inline export
-traverseFCMaybe : (a -> Maybe b) -> WithFC a -> Maybe (WithFC b)
-traverseFCMaybe = traverseDataMaybe
-
 export
 (.withFC) : (o : OriginDesc) => WithBounds t -> WithFC t
 x.withFC = MkFCVal x.toFC x.val
@@ -122,7 +110,7 @@ public export
 Rig' : KeyVal
 Rig' = "rig" :-: RigCount
 
-||| Obtain documentation information from the metadata
+||| Obtain quantity information from the metadata
 export
 (.rig) : {n : Nat} ->
          (inRange : NameInRange "rig" fields === Just (n, RigCount)) =>

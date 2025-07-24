@@ -392,7 +392,7 @@ mutual
              commit
              e <- expr q fname indents
              pure (binder, op, e)
-           pure (POp b.fc (mapFC LHSBinder $ fst b.val) (fst (snd b.val)) (snd (snd b.val)))
+           pure (POp b.fc (mapData LHSBinder $ fst b.val) (fst (snd b.val)) (snd (snd b.val)))
 
   opExprBase : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
   opExprBase q fname indents
@@ -404,7 +404,7 @@ mutual
                        pure $
                          let fc = boundToFC fname (mergeBounds l r)
                              opFC = virtualiseFC fc -- already been highlighted: we don't care
-                         in POp fc (mapFC NoBinder l.withFC)
+                         in POp fc (mapData NoBinder l.withFC)
                                    (MkFCVal opFC (OpSymbols $ UN $ Basic "="))
                                    r.val
                else fail "= not allowed")
@@ -418,7 +418,7 @@ mutual
                         pure (op, e)
                  (op, r) <- pure b.val
                  let fc = boundToFC fname (mergeBounds l b)
-                 pure (POp fc (mapFC NoBinder l.withFC) op r))
+                 pure (POp fc (mapData NoBinder l.withFC) op r))
                <|> pure l.val
 
   opExpr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
@@ -1348,7 +1348,7 @@ simpleCon fname ret indents
                          params <- the (EmptyRule $ List $ WithFC $ List ArgType)
                                      $ many (fcBounds $ argExpr plhs fname indents)
                          let conType = the (Maybe PTerm) (mkDataConType ret
-                                                            (concat (map distribFC params)))
+                                                            (concat (map distribData params)))
                          fromMaybe (fatalError "Named arguments not allowed in ADT constructors")
                                    (pure . MkPTy (singleton ("", cname)) cdoc <$> conType)
                          )
@@ -1928,7 +1928,7 @@ parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
                              ops <- sepBy1 (decoratedSymbol fname ",") iOperator
                              pure (MkPFixityData vis binding fixity (fromInteger prec) ops)
                        )
-           pure (mapFC PFixity b)
+           pure (mapData PFixity b)
 
 -- The compiler cannot infer the values for c1 and c2 so I had to write it
 -- this way.

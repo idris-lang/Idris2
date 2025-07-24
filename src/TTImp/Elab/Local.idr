@@ -141,7 +141,7 @@ localHelper {vars} nest env nestdecls_in func
 
     setPublic : ImpDecl -> ImpDecl
     setPublic (IClaim claim)
-        = IClaim $ mapFC {vis := Public} claim
+        = IClaim $ mapData {vis := Public} claim
     setPublic (IData fc _ mbt d) = IData fc (specified Public) mbt d
     setPublic (IRecord fc c _ mbt r) = IRecord fc c (specified Public) mbt r
     setPublic (IParameters fc ps decls)
@@ -152,7 +152,7 @@ localHelper {vars} nest env nestdecls_in func
 
     setErased : ImpDecl -> ImpDecl
     setErased (IClaim claim)
-        = IClaim $ mapFC {rig := erased} claim
+        = IClaim $ mapData {rig := erased} claim
     setErased (IParameters fc ps decls)
         = IParameters fc ps (map setErased decls)
     setErased (INamespace fc ps decls)

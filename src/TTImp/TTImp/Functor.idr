@@ -35,7 +35,7 @@ mutual
     map f (IWithApp fc fn t)
       = IWithApp fc (map f fn) (map f t)
     map f (IBindingApp fn bn sc)
-      = IBindingApp fn (mapFC (map (map f)) bn) (mapFC (map f) sc)
+      = IBindingApp fn (mapData (map (map f)) bn) (mapData (map f) sc)
     map f (ISearch fc n)
       = ISearch fc n
     map f (IAlternative fc alt ts)
@@ -98,7 +98,7 @@ mutual
   export
   Functor ImpDecl' where
     map f (IClaim c)
-      = IClaim (mapFC (map f) c)
+      = IClaim (mapData (map f) c)
     map f (IData fc vis mbtot dt)
       = IData fc vis mbtot (map f dt)
     map f (IDef fc nm cls)
