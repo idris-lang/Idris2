@@ -862,13 +862,10 @@ namespace SnocList
   traverse_ : (a -> Core b) -> SnocList a -> Core ()
   traverse_ f xs = traverse_' f (reverse xs)
 
-%inline export
-traverseData : (ty -> Core sy) -> WithData fs ty -> Core (WithData fs sy)
-traverseData f (MkWithData extra val) = MkWithData extra <$> f val
-
-%inline export
-traverseFC : (a -> Core b) -> WithFC a -> Core (WithFC b)
-traverseFC = traverseData
+namespace WithData
+  %inline export
+  traverse : (ty -> Core sy) -> WithData fs ty -> Core (WithData fs sy)
+  traverse f (MkWithData extra val) = MkWithData extra <$> f val
 
 namespace PiInfo
   export

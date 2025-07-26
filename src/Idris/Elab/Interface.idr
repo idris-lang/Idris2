@@ -185,7 +185,7 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params sig
          let ty_constr =
              substNames (toList vars) (map applyCon allmeths) sig.type
          ty_imp <- bindTypeNames EmptyFC [] (toList vars) (bindPs params $ bindIFace vfc ity ty_constr)
-         cn <- traverseFC inCurrentNS sig.name
+         cn <- traverse inCurrentNS sig.name
          let tydecl = IClaim (MkFCVal vfc $ MkIClaimData sig.count vis (if sig.isData then [Inline, Invertible]
                                             else [Inline])
                                       (MkImpTy vfc cn ty_imp))
