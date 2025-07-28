@@ -77,46 +77,6 @@ NonEmptyFC : Type
 NonEmptyFC = (OriginDesc, FilePos, FilePos)
 
 ------------------------------------------------------------------------
-||| A wrapper for a value with a file context.
-public export
-record WithFC (ty : Type) where
-  constructor MkFCVal
-  fc : FC
-  val : ty
-
-||| Smart constructor for WithFC that uses EmptyFC as location
-%inline export
-NoFC : a -> WithFC a
-NoFC = MkFCVal EmptyFC
-
-%inline export
-mapFC : (a -> b) -> WithFC a -> WithFC b
-mapFC f (MkFCVal fc val) = MkFCVal fc (f val)
-
-%inline export
-distribFC : WithFC (List a) -> List (WithFC a)
-distribFC x = map (MkFCVal x.fc) x.val
-
-%inline export
-traverseFCMaybe : (a -> Maybe b) -> WithFC a -> Maybe (WithFC b)
-traverseFCMaybe f (MkFCVal fc val) = MkFCVal fc <$> f val
-
-||| An interface to extract the location of some data
-public export
-interface HasFC ty where
-  constructor MkHasLoc
-  (.getFC) : ty -> FC
-
-||| Anything with locations has a location
-export
-HasFC (WithFC ty) where
-  (.getFC) (MkFCVal f _) = f
-
-export
-setFC : FC -> WithFC a -> WithFC a
-setFC x = { fc := x }
-
-------------------------------------------------------------------------
 -- Conversion between NonEmptyFC and FC
 
 ||| NonEmptyFC always embeds into FC
@@ -201,10 +161,6 @@ export
 boundToFC' : OriginDesc -> Bounds -> FC
 boundToFC' mbModIdent b = MkFC mbModIdent (startBounds b) (endBounds b)
 
-export
-(.withFC) : (o : OriginDesc) => WithBounds t -> WithFC t
-x.withFC = MkFCVal x.toFC x.val
-
 ------------------------------------------------------------------------
 -- Predicates
 
@@ -274,8 +230,3 @@ Pretty Void FC where
   pretty (MkVirtualFC ident startPos endPos) = byShow ident <+> colon
                  <+> prettyPos startPos <+> pretty "--"
                  <+> prettyPos endPos
-
-export
-Eq a => Eq (WithFC a) where
-  a == b = a.fc == b.fc && a.val == b.val
-

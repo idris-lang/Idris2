@@ -2,6 +2,7 @@ module TTImp.TTImp.Traversals
 
 import Core.TT
 import TTImp.TTImp
+import Core.WithData
 
 %default total
 
@@ -63,8 +64,8 @@ parameters (f : RawImp' nm -> RawImp' nm)
 
   export
   mapImpDecl : ImpDecl' nm -> ImpDecl' nm
-  mapImpDecl (IClaim (MkFCVal fc (MkIClaimData rig vis opts ty)))
-    = IClaim (MkFCVal fc (MkIClaimData rig vis (map mapFnOpt opts) (mapImpTy ty)))
+  mapImpDecl (IClaim (MkWithData fc (MkIClaimData rig vis opts ty)))
+    = IClaim (MkWithData fc (MkIClaimData rig vis (map mapFnOpt opts) (mapImpTy ty)))
   mapImpDecl (IData fc vis mtreq dat) = IData fc vis mtreq (mapImpData dat)
   mapImpDecl (IDef fc n cls) = IDef fc n (map mapImpClause cls)
   mapImpDecl (IParameters fc params xs) = IParameters fc params (assert_total $ map mapImpDecl xs)
