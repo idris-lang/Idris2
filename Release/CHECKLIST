@@ -1,23 +1,24 @@
-[x] Change version number (MAJOR, MINOR, PATCH) in Makefile
-[x] Change version numbers in doc listings
-    [x] idris-prompt-helloworld
-    [x] idris-prompt-interp
-    [x] idris-prompt-start
-[x] Change version numbers in prelude, base, contrib, linear, network, papers,
+[ ] Change version number (MAJOR, MINOR, PATCH) in Makefile
+[ ] Change version numbers in doc listings
+    [ ] idris-prompt-helloworld
+    [ ] idris-prompt-interp
+    [ ] idris-prompt-start
+[ ] Change version numbers in prelude, base, contrib, linear, network, papers,
     and test ipkgs
-[x] Change version number in idris2api.ipkg
-[x] Change version number in flake.nix
-[x] Change version number in tests pkg010 and pkg017  (TODO: make this step unnecessary!)
+[ ] Change version number in idris2api.ipkg
+[ ] Change version number in flake.nix
+[ ] Change version number in tests pkg010 and pkg017  (TODO: make this step unnecessary!)
     N.B. There are 2 instances of these: tests/idris2/ and tests/idris2/pkg/
-[x] Make sure INSTALL.md gives the correct minimum Idris version
-[x] Move CHANGELOG_NEXT.md entries into CHANGELOG.md under a heading for the upcoming release version. Reset CHANGELOG_NEXT.md.
+[ ] Make sure INSTALL.md gives the correct minimum Idris version
+[ ] Move CHANGELOG_NEXT.md entries into CHANGELOG.md under a heading for the upcoming release version. Reset CHANGELOG_NEXT.md.
     release version, leaving the next "Next version" blank.
-[x] Update bootstrap chez and racket (built with new version)
-    [x] Compile Idris2 with the appropriate CG
-    [x] Copy the resulting files from build/ to bootstrap/idris2_app/
-[x] Change `IdrisPaths-yprefix` in the bootstrap sources to be defined as the
+[ ] Update bootstrap chez and racket (built with new version)
+    [ ] Compile Idris2 with the appropriate CG
+    [ ] Copy the resulting files from build/ to bootstrap/idris2_app/
+[ ] Change `IdrisPaths-yprefix` in the bootstrap sources to be defined as the
     string "__PREFIX__" rather than your local prefix
-[x] Remove __collect_safe from generated chez (to avoid need for chez >9.5)
-[x] Tag on github with version number (in the form vX.Y.Z)
+[ ] Remove __collect_safe from generated chez (to avoid need for chez >9.5)
+[ ] Tag on github with version number (in the form vX.Y.Z)
 [ ] Make libdocs and upload to idris-lang.org
-[ ] Run release script
+[ ] Run the `mkdist.sh` script with the version number as its argument (without
+    the leading `v`, only the numbers).
