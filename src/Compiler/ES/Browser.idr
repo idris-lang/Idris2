@@ -1,9 +1,10 @@
 ||| The `Javascript` code generator.
-module Compiler.ES.Javascript
+module Compiler.ES.Browser
 
 import Compiler.ES.Codegen
 
 import Compiler.Common
+import Compiler.ES.State as Compiler.ES.State
 
 import Core.Context
 import Core.TT
@@ -13,15 +14,18 @@ import Libraries.Utils.Path
 import Idris.Syntax
 
 import Data.String
+import Debug.Trace
 
 %default covering
 
 ||| Compile a TT expression to Javascript
-compileToJS :
+compileToBrowserJS :
   Ref Ctxt Defs ->
   Ref Syn SyntaxInfo ->
-  ClosedTerm -> Core String
-compileToJS c s tm = compileToES c s Javascript tm ["browser", "javascript"]
+  ClosedTerm ->
+  (outputDir : String) ->
+  Core String
+compileToBrowserJS c s tm outputDir = compileToES c s BrowserJavascript tm Compiler.ES.State.BrowserPreferredJavascriptFallback outputDir
 
 htmlHeader : String
 htmlHeader = """
@@ -30,7 +34,7 @@ htmlHeader = """
       <meta charset='utf-8'>
     </head>
     <body>
-      <script type='text/javascript'>
+      <script type='module'>
 
   """
 
@@ -42,14 +46,15 @@ htmlFooter = """
   </html>
   """
 
+-- TODO (Maybe Html, JS)
 addHeaderAndFooter : String -> String -> String
 addHeaderAndFooter outfile es =
-  case toLower <$>  extension outfile of
+  case toLower <$> extension outfile of
     Just "html" => htmlHeader ++ es ++ htmlFooter
     _ => es
 
-||| Javascript implementation of the `compileExpr` interface.
-compileExpr :
+||| Browser implementation of the `compileExpr` interface.
+compileBrowserExpr :
   Ref Ctxt Defs ->
   Ref Syn SyntaxInfo ->
   (tmpDir : String) ->
@@ -57,22 +62,22 @@ compileExpr :
   ClosedTerm ->
   (outfile : String) ->
   Core (Maybe String)
-compileExpr c s tmpDir outputDir tm outfile =
-  do es <- compileToJS c s tm
+compileBrowserExpr c s tmpDir outputDir tm outfile =
+  do es <- compileToBrowserJS c s tm outputDir
      let res = addHeaderAndFooter outfile es
      let out = outputDir </> outfile
      Core.writeFile out res
      pure (Just out)
 
 ||| Node implementation of the `executeExpr` interface.
-executeExpr :
+executeBrowserExpr :
   Ref Ctxt Defs ->
   Ref Syn SyntaxInfo ->
   (tmpDir : String) -> ClosedTerm -> Core ()
-executeExpr c s tmpDir tm =
-  throw $ InternalError "Javascript backend is only able to compile, use Node instead"
+executeBrowserExpr c s tmpDir tm =
+  throw $ InternalError "Browser Javascript backend is only able to compile, use Node instead"
 
 ||| Codegen wrapper for Javascript implementation.
 export
-codegenJavascript : Codegen
-codegenJavascript = MkCG compileExpr executeExpr Nothing Nothing
+codegenBrowserJavascript : Codegen
+codegenBrowserJavascript = MkCG compileBrowserExpr executeBrowserExpr Nothing Nothing

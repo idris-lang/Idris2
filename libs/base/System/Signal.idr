@@ -16,50 +16,47 @@ import System.Errno
 signalFFI : String -> String
 signalFFI fn = "C:" ++ fn ++ ", libidris2_support, idris_signal.h"
 
-signalFFINode : String -> String
-signalFFINode fn = "node:support:" ++ fn ++ ",support_system_signal"
-
 --
 -- Signals
 --
 %foreign signalFFI "sighup"
-         signalFFINode "sighup"
+         "node:support"
 prim__sighup : Int
 
 %foreign signalFFI "sigint"
-         signalFFINode "sigint"
+         "node:support"
 prim__sigint : Int
 
 %foreign signalFFI "sigabrt"
-         signalFFINode "sigabrt"
+         "node:support"
 prim__sigabrt : Int
 
 %foreign signalFFI "sigquit"
-         signalFFINode "sigquit"
+         "node:support"
 prim__sigquit : Int
 
 %foreign signalFFI "sigill"
-         signalFFINode "sigill"
+         "node:support"
 prim__sigill : Int
 
 %foreign signalFFI "sigsegv"
-         signalFFINode "sigsegv"
+         "node:support"
 prim__sigsegv : Int
 
 %foreign signalFFI "sigtrap"
-         signalFFINode "sigtrap"
+         "node:support"
 prim__sigtrap : Int
 
 %foreign signalFFI "sigfpe"
-         signalFFINode "sigfpe"
+         "node:support"
 prim__sigfpe : Int
 
 %foreign signalFFI "sigusr1"
-         signalFFINode "sigusr1"
+         "node:support"
 prim__sigusr1 : Int
 
 %foreign signalFFI "sigusr2"
-         signalFFINode "sigusr2"
+         "node:support"
 prim__sigusr2 : Int
 
 public export
@@ -144,27 +141,27 @@ toSignal x    = lookup x codes
 -- Signal Handling
 --
 %foreign signalFFI "ignore_signal"
-         signalFFINode "ignoreSignal"
+         "node:support"
 prim__ignoreSignal : Int -> PrimIO Int
 
 %foreign signalFFI "default_signal"
-         signalFFINode "defaultSignal"
+         "node:support"
 prim__defaultSignal : Int -> PrimIO Int
 
 %foreign signalFFI "collect_signal"
-         signalFFINode "collectSignal"
+         "node:support"
 prim__collectSignal : Int -> PrimIO Int
 
 %foreign signalFFI "handle_next_collected_signal"
-         signalFFINode "handleNextCollectedSignal"
+         "node:support"
 prim__handleNextCollectedSignal : PrimIO Int
 
 %foreign signalFFI "send_signal"
-         signalFFINode "sendSignal"
+         "node:support"
 prim__sendSignal : Int -> Int -> PrimIO Int
 
 %foreign signalFFI "raise_signal"
-         signalFFINode "raiseSignal"
+         "node:support"
 prim__raiseSignal : Int -> PrimIO Int
 
 ||| An Error represented by a code. See

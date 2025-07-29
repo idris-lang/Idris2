@@ -16,14 +16,14 @@ FileTimePtr : Type
 FileTimePtr = AnyPtr
 
 %foreign supportC "idris2_fileSize"
-         "node:lambda:fp=>require('fs').fstatSync(fp.fd).size"
+         "node:support"
 prim__fileSize : FilePtr -> PrimIO Int
 
 %foreign supportC "idris2_fileSize"
 prim__fPoll : FilePtr -> PrimIO Int
 
 %foreign supportC "idris2_fileTime"
-         "node:support:filetime,support_system_file"
+         "node:support"
 prim__fileTime : FilePtr -> PrimIO FileTimePtr
 
 %foreign supportC "idris2_filetimeAccessTimeSec"
@@ -51,7 +51,7 @@ prim__filetimeStatusTimeSec : FileTimePtr -> PrimIO Int
 prim__filetimeStatusTimeNsec : FileTimePtr -> PrimIO Int
 
 %foreign supportC "idris2_fileIsTTY"
-         "node:lambda:fp=>Number(require('tty').isatty(fp.fd))"
+         "node:support"
 prim__fileIsTTY : FilePtr -> PrimIO Int
 
 ||| Check if a file exists for reading.
@@ -154,4 +154,3 @@ fPoll (FHandle f)
 export
 isTTY : HasIO io => (h : File) -> io Bool
 isTTY (FHandle f) = (/= 0) <$> primIO (prim__fileIsTTY f)
-

@@ -7,7 +7,7 @@ import public System.File.Types
 %default total
 
 %foreign supportC "idris2_chmod"
-         supportNode "chmod"
+         "node:support"
 prim__chmod : String -> Int -> PrimIO Int
 
 ||| The UNIX file modes.

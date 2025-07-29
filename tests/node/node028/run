@@ -8,7 +8,7 @@ echo '# In this test we check this.'
 echo '--------------'
 
 echo '# Running an example without any top-level constants...'
-echo '# We expect no usages of `__lazy` to be present, maybe only a definition.'
+echo '# We expect no usages of `__lazy` to be present'
 run --cg node -o hw.js HelloWorld.idr
 grep '__lazy' build/exec/hw.js
 
