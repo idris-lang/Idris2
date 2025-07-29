@@ -28,8 +28,8 @@ This generates a function of the following type (which we call a
 
     show : Show a => a -> String
 
-We can read this as: “under the constraint that ``a`` has an implementation
-of ``Show``, take an input ``a`` and return a ``String``.” An implementation
+We can read this as: "under the constraint that ``a`` has an implementation
+of ``Show``, take an input ``a`` and return a ``String``." An implementation
 of an interface is defined by giving definitions of the methods of the interface.
 For example, the ``Show`` implementation for ``Nat`` could be defined as:
 
@@ -517,7 +517,7 @@ Idiom brackets
 While ``do``-notation gives an alternative meaning to sequencing,
 idioms give an alternative meaning to *application*. The notation and
 larger example in this section is inspired by Conor McBride and Ross
-Paterson’s paper “Applicative Programming with Effects” [#ConorRoss]_.
+Paterson’s paper "Applicative Programming with Effects" [#ConorRoss]_.
 
 First, let us revisit ``m_add`` above. All it is really doing is
 applying an operator to two values extracted from ``Maybe Int``. We
@@ -684,7 +684,7 @@ the prelude defines the following ``Semigroup`` interface:
     interface Semigroup ty where
       (<+>) : ty -> ty -> ty
 
-Then it defines ``Monoid``, which extends ``Semigroup`` with a “neutral”
+Then it defines ``Monoid``, which extends ``Semigroup`` with a "neutral"
 value:
 
 .. code-block:: idris
