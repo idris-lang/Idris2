@@ -31,7 +31,7 @@ Chez Scheme
 
 Chez Scheme has a ready-made installer at `GitHub <https://github.com/cisco/ChezScheme/releases>`_.
 
-    1. Download the installer and run it. Do not install it in a path with spaces — currently,
+    1. Download the installer and run it. Do not install it in a path with spaces - currently,
        Idris2 has trouble with them.
     2. Add the threaded 64-bit Scheme binary to the PATH. It is the
        ``\bin\ta6nt`` subdirectory where Chez Scheme was installed. So if you used "C:\Chez", it
