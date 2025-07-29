@@ -113,7 +113,7 @@ Functions
 Functions are implemented by pattern matching, again using a similar
 syntax to Haskell. The main difference is that Idris requires type
 declarations for all functions, using a single colon ``:`` (rather
-than Haskell’s double colon ``::``). Some natural number arithmetic
+than Haskell's double colon ``::``). Some natural number arithmetic
 functions can be defined as follows, again taken from the standard
 library:
 
@@ -393,7 +393,7 @@ defined as follows, appends two ``Vect``:
     (++) Nil       ys = ys
     (++) (x :: xs) ys = x :: xs ++ ys
 
-The type of ``(++)`` states that the resulting vector’s length will be
+The type of ``(++)`` states that the resulting vector's length will be
 the sum of the input lengths. If we get the definition wrong in such a
 way that this does not hold, Idris will not accept the definition.
 For example:
@@ -447,7 +447,7 @@ Let us look at the constructors in greater detail.
 ``FZ`` is the zeroth element of a finite set with ``S k`` elements;
 ``FS n`` is the ``n+1``\ th element of a finite set with ``S k``
 elements. ``Fin`` is indexed by a ``Nat``, which represents the number
-of elements in the set. Since we can’t construct an element of an
+of elements in the set. Since we can't construct an element of an
 empty set, neither constructor targets ``Fin Z``.
 
 As mentioned above, a useful application of the ``Fin`` family is to
@@ -614,10 +614,10 @@ runtime system will perform when executing a function:
 
     data IO a -- description of an I/O operation returning a value of type a
 
-We’ll leave the definition of ``IO`` abstract, but effectively it
+We'll leave the definition of ``IO`` abstract, but effectively it
 describes what the I/O operations to be executed are, rather than how
 to execute them. The resulting operations are executed externally, by
-the runtime system. We’ve already seen one I/O program:
+the runtime system. We've already seen one I/O program:
 
 .. code-block:: idris
 
@@ -664,7 +664,7 @@ Note that several of these return ``Either``, since they may fail.
 
 I/O programs will typically need to sequence actions, feeding the
 output of one computation into the input of the next. ``IO`` is an
-abstract type, however, so we can’t access the result of a computation
+abstract type, however, so we can't access the result of a computation
 directly. Instead, we sequence operations with ``do``-notation:
 
 .. code-block:: idris
@@ -877,7 +877,7 @@ Maybe
 -----
 
 ``Maybe``, defined in the Prelude, describes an optional value. Either there is
-a value of the given type, or there isn’t:
+a value of the given type, or there isn't:
 
 .. code-block:: idris
 
@@ -1022,7 +1022,7 @@ Records
 together. Idris provides syntax for defining records and automatically
 generating field access and update functions. Unlike the syntax used for data
 structures, records in Idris follow a different syntax from that seen in
-Haskell. For example, we can represent a person’s name and age in a record:
+Haskell. For example, we can represent a person's name and age in a record:
 
 .. code-block:: idris
 
