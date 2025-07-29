@@ -1013,7 +1013,7 @@ intermediate values:
                (_ ** xs') => if p x then (_ ** x :: xs')
                                     else (_ ** xs')
 
-Dependent pairs are sometimes referred to as “Sigma types”.
+Dependent pairs are sometimes referred to as "Sigma types".
 
 Records
 -------
@@ -1279,8 +1279,8 @@ other things, avoid these ambiguities with propositional equality:
    Diag : a -> Type
    Diag v = let ty : Type := v = v in ty
 
-The code above can be read as “``ty`` has type ``Type`` and its value
-is ``v = v``”.
+The code above can be read as "``ty`` has type ``Type`` and its value
+is ``v = v``".
 
 Local definitions can also be introduced using ``let``. Just like with
 top-level ones and those defined in a ``where`` clause, you need to:
