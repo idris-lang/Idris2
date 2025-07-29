@@ -42,10 +42,10 @@ mutual
   data CaseAlt : Scoped where
        ||| Constructor for a data type; bind the arguments and subterms.
        ConCase : Name -> (tag : Int) -> (args : List Name) ->
-                 CaseTree (Scope.addInner vars args) -> CaseAlt vars
+                 CaseTree (Scope.ext vars args) -> CaseAlt vars
        ||| Lazy match for the Delay type use for codata types
        DelayCase : (ty : Name) -> (arg : Name) ->
-                   CaseTree (Scope.addInner vars [ty, arg]) -> CaseAlt vars
+                   CaseTree (Scope.addInner vars [<ty, arg]) -> CaseAlt vars
                    -- TODO `arg` and `ty` should be swapped, as in Yaffle
        ||| Match against a literal
        ConstCase : Constant -> CaseTree vars -> CaseAlt vars
@@ -104,8 +104,8 @@ public export
 data Pat : Type where
      PAs : FC -> Name -> Pat -> Pat
      PCon : FC -> Name -> (tag : Int) -> (arity : Nat) ->
-            List Pat -> Pat
-     PTyCon : FC -> Name -> (arity : Nat) -> List Pat -> Pat
+            SnocList Pat -> Pat
+     PTyCon : FC -> Name -> (arity : Nat) -> SnocList Pat -> Pat
      PConst : FC -> (c : Constant) -> Pat
      PArrow : FC -> (x : Name) -> Pat -> Pat -> Pat
      PDelay : FC -> LazyReason -> Pat -> Pat -> Pat
@@ -190,9 +190,9 @@ export
 Pretty IdrisSyntax Pat where
   prettyPrec d (PAs _ n p) = pretty0 n <++> keyword "@" <+> parens (pretty p)
   prettyPrec d (PCon _ n _ _ args) =
-    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) args)
+    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) (toList args))
   prettyPrec d (PTyCon _ n _ args) =
-    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) args)
+    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) (toList args))
   prettyPrec d (PConst _ c) = pretty c
   prettyPrec d (PArrow _ _ p q) =
     parenthesise (d > Open) $ pretty p <++> arrow <++> pretty q
@@ -203,8 +203,8 @@ Pretty IdrisSyntax Pat where
 mutual
   insertCaseNames : SizeOf outer ->
                     SizeOf ns ->
-                    CaseTree (outer ++ inner) ->
-                    CaseTree (outer ++ (ns ++ inner))
+                    CaseTree (Scope.addInner inner outer) ->
+                    CaseTree (Scope.addInner inner (ns ++ outer))
   insertCaseNames outer ns (Case idx prf scTy alts)
       = let MkNVar prf' = insertNVarNames outer ns (MkNVar prf) in
             Case _ prf' (insertNames outer ns scTy)
@@ -215,14 +215,22 @@ mutual
 
   insertCaseAltNames : SizeOf outer ->
                        SizeOf ns ->
-                       CaseAlt (outer ++ inner) ->
-                       CaseAlt (outer ++ (ns ++ inner))
+                       CaseAlt (Scope.addInner inner outer) ->
+                       CaseAlt (Scope.addInner inner (ns ++ outer))
   insertCaseAltNames p q (ConCase x tag args ct)
-      = ConCase x tag args
-           (rewrite appendAssociative args outer (ns ++ inner) in
-                    insertCaseNames (mkSizeOf args + p) q {inner}
-                        (rewrite sym (appendAssociative args outer inner) in
-                                 ct))
+      = ConCase x tag args ct''
+      where
+        ct' : CaseTree (inner ++ (ns ++ (outer <>< args)))
+        ct' = insertCaseNames (p <>< mkSizeOf args) q
+          $ replace {p = CaseTree} (snocAppendFishAssociative inner outer args) ct
+
+        ct'' : CaseTree ((inner ++ (ns ++ outer)) <>< args)
+        ct'' = do
+          rewrite (appendAssociative inner ns outer)
+          rewrite snocAppendFishAssociative (inner ++ ns) outer args
+          rewrite sym (appendAssociative inner ns (outer <>< args))
+          ct'
+
   insertCaseAltNames outer ns (DelayCase tyn valn ct)
       = DelayCase tyn valn
                   (insertCaseNames (suc (suc outer)) ns ct)
@@ -273,14 +281,14 @@ export
 mkTerm : (vars : Scope) -> Pat -> Term vars
 mkTerm vars (PAs fc x y) = mkTerm vars y
 mkTerm vars (PCon fc x tag arity xs)
-    = apply fc (Ref fc (DataCon tag arity) x)
+    = applySpine fc (Ref fc (DataCon tag arity) x)
                (map (mkTerm vars) xs)
 mkTerm vars (PTyCon fc x arity xs)
-    = apply fc (Ref fc (TyCon 0 arity) x)
+    = applySpine fc (Ref fc (TyCon 0 arity) x)
                (map (mkTerm vars) xs)
 mkTerm vars (PConst fc c) = PrimVal fc c
 mkTerm vars (PArrow fc x s t)
-    = Bind fc x (Pi fc top Explicit (mkTerm vars s)) (mkTerm (x :: vars) t)
+    = Bind fc x (Pi fc top Explicit (mkTerm vars s)) (mkTerm (Scope.bind vars x) t)
 mkTerm vars (PDelay fc r ty p)
     = TDelay fc r (mkTerm vars ty) (mkTerm vars p)
 mkTerm vars (PLoc fc n)

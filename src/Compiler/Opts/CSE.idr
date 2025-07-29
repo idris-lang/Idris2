@@ -122,11 +122,11 @@ store sz exp =
 
 dropVar :  (pre : Scope)
         -> (n : Nat)
-        -> (0 p : IsVar x n (pre ++ ns))
+        -> (0 p : IsVar x n (Scope.addInner ns pre))
         -> Maybe (IsVar x n pre)
-dropVar [] _ _        = Nothing
-dropVar (y :: xs) 0 First = Just First
-dropVar (y :: xs) (S k) (Later p) =
+dropVar [<] _ _        = Nothing
+dropVar (xs :< y) 0 First = Just First
+dropVar (xs :< y) (S k) (Later p) =
   case dropVar xs k p of
     Just p' => Just $ Later p'
     Nothing => Nothing
@@ -135,7 +135,7 @@ mutual
   -- tries to 'strengthen' an expression by removing
   -- a prefix of bound variables. typically, this is invoked
   -- with `{pre = []}`.
-  dropEnv : {pre : Scope} -> CExp (pre ++ ns) -> Maybe (CExp pre)
+  dropEnv : {pre : Scope} -> CExp (Scope.addInner ns pre) -> Maybe (CExp pre)
   dropEnv (CLocal {idx} fc p) = (\q => CLocal fc q) <$> dropVar pre idx p
   dropEnv (CRef fc x) = Just (CRef fc x)
   dropEnv (CLam fc x y) = CLam fc x <$> dropEnv y
@@ -164,13 +164,14 @@ mutual
   dropEnv (CCrash fc x) = Just $ CCrash fc x
 
   dropConAlt :  {pre : Scope}
-             -> CConAlt (pre ++ ns)
+             -> CConAlt (Scope.addInner ns pre)
              -> Maybe (CConAlt pre)
-  dropConAlt (MkConAlt x y tag args z) =
-    MkConAlt x y tag args . embed <$> dropEnv z
+  dropConAlt (MkConAlt x y tag args z)
+    = do z <- dropEnv {ns} (rewrite sym $ snocAppendFishAssociative ns pre args in z)
+         pure $ MkConAlt x y tag args z
 
   dropConstAlt :  {pre : Scope}
-               -> CConstAlt (pre ++ ns)
+               -> CConstAlt (Scope.addInner ns pre)
                -> Maybe (CConstAlt pre)
   dropConstAlt (MkConstAlt x y) = MkConstAlt x <$> dropEnv y
 

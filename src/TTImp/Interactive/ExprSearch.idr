@@ -151,18 +151,18 @@ getAllEnv : {vars : _} -> FC ->
             SizeOf done ->
             Env Term vars ->
             -- TODO should be `vars <>< done`
-            List (Term (done ++ vars), Term (done ++ vars))
-getAllEnv fc done [] = []
-getAllEnv {vars = v :: vs} {done} fc p (b :: env)
-   = let rest = getAllEnv fc (sucR p) env
+            List (Term (Scope.addInner vars done), Term (Scope.addInner vars done))
+getAllEnv fc done [<] = []
+getAllEnv {vars = vs :< v} {done} fc p (env :< b)
+   = let rest = getAllEnv fc (sucL p) env
          0 var = mkIsVar (hasLength p)
          usable = usableName v in
          if usable
             then (Local fc Nothing _ var,
-                     rewrite appendAssociative done [v] vs in
-                        weakenNs (sucR p) (binderType b)) ::
-                             rewrite appendAssociative done [v] vs in rest
-            else rewrite appendAssociative done [v] vs in rest
+                     rewrite sym (appendAssociative vs (Scope.single v) done) in
+                        weakenNs (sucL p) (binderType b)) ::
+                             rewrite sym (appendAssociative vs (Scope.single v) done) in rest
+            else rewrite sym (appendAssociative vs (Scope.single v) done) in rest
   where
     usableName : Name -> Bool
     usableName (UN _) = True
@@ -486,7 +486,7 @@ searchLocalWith {vars} fc nofn rig opts hints env ((p, pty) :: rest) ty topty
     findPos : Defs -> Term vars ->
               (Term vars -> Term vars) ->
               NF vars -> NF vars -> Core (Search (Term vars, ExprDefs))
-    findPos defs prf f x@(NTCon pfc pn _ _ [(fc1, xty), (fc2, yty)]) target
+    findPos defs prf f x@(NTCon pfc pn _ _ [<(fc1, xty), (fc2, yty)]) target
         = getSuccessful fc rig opts False env ty topty
               [findDirect defs prf f x target,
                  (do fname <- maybe (throw (InternalError "No fst"))
@@ -502,15 +502,15 @@ searchLocalWith {vars} fc nofn rig opts hints env ((p, pty) :: rest) ty topty
                                 getSuccessful fc rig opts False env ty topty
                                   [(do xtynf <- evalClosure defs xty
                                        findPos defs prf
-                                         (\arg => applyStackWithFC (Ref fc Func fname)
-                                                          [(fc1, xtytm),
+                                         (\arg => applySpineWithFC (Ref fc Func fname)
+                                                          [<(fc1, xtytm),
                                                            (fc2, ytytm),
                                                            (fc, f arg)])
                                          xtynf target),
                                    (do ytynf <- evalClosure defs yty
                                        findPos defs prf
-                                           (\arg => applyStackWithFC (Ref fc Func sname)
-                                                          [(fc1, xtytm),
+                                           (\arg => applySpineWithFC (Ref fc Func sname)
+                                                          [<(fc1, xtytm),
                                                            (fc2, ytytm),
                                                            (fc, f arg)])
                                            ytynf target)]
@@ -548,7 +548,7 @@ makeHelper fc rig opts env letty targetty ((locapp, ds) :: next)
          intn <- genVarName "cval"
          helpern_in <- genCaseName "search"
          helpern <- inCurrentNS helpern_in
-         let env' = Lam fc top Explicit letty :: env
+         let env' = Env.bind env $ Lam fc top Explicit letty
          scopeMeta <- metaVar fc top env' helpern
                              (weaken targetty)
          let scope = toApp scopeMeta
@@ -693,7 +693,7 @@ searchType : {vars : _} ->
              ClosedTerm ->
              Nat -> Term vars -> Core (Search (Term vars, ExprDefs))
 searchType fc rig opts hints env topty (S k) (Bind bfc n b@(Pi fc' c info ty) sc)
-    = do let env' : Env Term (n :: _) = b :: env
+    = do let env' : Env Term (_ :< n) = Env.bind env b
          log "interaction.search" 10 $ "Introduced lambda, search for " ++ show sc
          scVal <- searchType fc rig opts hints env' topty k sc
          pure (map (\ (sc, ds) => (Bind bfc n (Lam fc' c info ty) sc, ds)) scVal)
@@ -703,7 +703,7 @@ searchType {vars} fc rig opts hints env topty Z (Bind bfc n b@(Pi fc' c info ty)
            [searchLocal fc rig opts hints env (Bind bfc n b sc) topty,
             (do defs <- get Ctxt
                 let n' = UN $ Basic !(getArgName defs n [] (toList vars) !(nf defs env ty))
-                let env' : Env Term (n' :: _) = b :: env
+                let env' : Env Term (_ :< n') = Env.bind env b
                 let sc' = compat sc
                 log "interaction.search" 10 $ "Introduced lambda, search for " ++ show sc'
                 scVal <- searchType fc rig opts hints env' topty Z sc'
@@ -847,7 +847,7 @@ exprSearchOpts opts fc n_in hints
          -- the REPL does this step, but doing it here too because
          -- expression search might be invoked some other way
          let Hole _ _ = definition gdef
-             | PMDef pi [] (STerm _ tm) _ _
+             | PMDef pi [<] (STerm _ tm) _ _
                  => do raw <- unelab Env.empty !(toFullNames !(normaliseHoles defs Env.empty tm))
                        one (map rawName raw)
              | _ => throw (GenericMsg fc "Name is already defined")
