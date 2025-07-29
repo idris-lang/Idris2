@@ -517,7 +517,7 @@ Idiom brackets
 While ``do``-notation gives an alternative meaning to sequencing,
 idioms give an alternative meaning to *application*. The notation and
 larger example in this section is inspired by Conor McBride and Ross
-Paterson’s paper "Applicative Programming with Effects" [#ConorRoss]_.
+Paterson's paper "Applicative Programming with Effects" [#ConorRoss]_.
 
 First, let us revisit ``m_add`` above. All it is really doing is
 applying an operator to two values extracted from ``Maybe Int``. We
