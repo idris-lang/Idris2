@@ -39,7 +39,7 @@ modules, each with its own namespace. This is discussed further in Section
 :ref:`sect-namespaces`. When writing Idris programs, both the order in which
 definitions are given and indentation are significant. Functions and
 data types must be defined before use. Incidentally, each definition must
-have a type declaration — for example, see ``x : Int`` or ``foo :
+have a type declaration - for example, see ``x : Int`` or ``foo :
 String`` from the above listing. New declarations must begin at the
 same level of indentation as the preceding declaration.
 Alternatively, a semicolon ``;`` can be used to terminate declarations.
@@ -181,7 +181,7 @@ does not need to be visible globally:
       revAcc acc [] = acc
       revAcc acc (x :: xs) = revAcc (x :: acc) xs
 
-Indentation is significant — functions in the ``where`` block must be
+Indentation is significant - functions in the ``where`` block must be
 indented further than the outer function.
 
 .. note:: Scope
@@ -371,7 +371,7 @@ can normally be resolved from context.
 
 This declares a family of types, and so the form of the declaration is
 rather different from the simple type declarations above. We
-explicitly state the type of the type constructor ``Vect`` — it takes
+explicitly state the type of the type constructor ``Vect`` - it takes
 a ``Nat`` and a type as arguments, where ``Type`` stands for the
 type of types. We say that ``Vect`` is *indexed* over ``Nat`` and
 *parameterised* by ``Type``. Each constructor targets a different part
@@ -419,7 +419,7 @@ following:
             m
 
 This error message suggests that there is a length mismatch between
-two vectors — we needed a vector of length ``k + m``, but provided a
+two vectors - we needed a vector of length ``k + m``, but provided a
 vector of length ``k + k``.
 
 The Finite Sets
@@ -519,7 +519,7 @@ could have declared the type of ``index`` as:
 
     index : (i : Fin n) -> (xs : Vect n a) -> a
 
-It is a matter of taste whether you want to do this — sometimes it can
+It is a matter of taste whether you want to do this - sometimes it can
 help document a function by making the purpose of an argument more
 clear.
 
@@ -605,8 +605,8 @@ I/O
 
 Computer programs are of little use if they do not interact with the
 user or the system in some way. The difficulty in a pure language such
-as Idris — that is, a language where expressions do not have
-side-effects — is that I/O is inherently side-effecting. So, Idris provides
+as Idris - that is, a language where expressions do not have
+side-effects - is that I/O is inherently side-effecting. So, Idris provides
 a parameterised type ``IO`` which *describes* the interactions that the
 runtime system will perform when executing a function:
 
@@ -677,7 +677,7 @@ directly. Instead, we sequence operations with ``do``-notation:
 The syntax ``x <- iovalue`` executes the I/O operation ``iovalue``, of
 type ``IO a``, and puts the result of type ``a`` into the variable
 ``x``. In this case, ``getLine`` returns an ``IO String``, so ``name``
-has type ``String``. Indentation is significant — each statement in
+has type ``String``. Indentation is significant - each statement in
 the do block must begin in the same column. The ``pure`` operation
 allows us to inject a value directly into an I/O operation:
 
@@ -778,7 +778,7 @@ We have already seen the ``List`` and ``Vect`` data types:
        (::) : a -> Vect k a -> Vect (S k) a
 
 You can get access to ``Vect`` with ``import Data.Vect``.
-Note that the constructor names are the same for each — constructor
+Note that the constructor names are the same for each - constructor
 names (in fact, names in general) can be overloaded, provided
 they are declared in different namespaces (see Section
 :ref:`sect-namespaces`), and will typically be resolved according to
