@@ -1125,7 +1125,7 @@ Nested record fields can be accessed using the dot notation:
     x.a.b.c
     map (.a.b.c) xs
 
-For the dot notation, there must be no spaces after the dots, but there may be
+For dot notation, there must be no spaces after the dots, but there may be
 spaces before the dots. The composite projection must be parenthesised;
 otherwise, ``map .a.b.c xs`` would be understood as ``map.a.b.c xs``.
 
