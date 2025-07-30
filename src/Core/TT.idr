@@ -418,10 +418,11 @@ cons n xn None = Add n xn None
 cons n xn (Add n' xn' b) = Add n' xn' (cons n xn b)
 
 export
-addVars : SizeOf inner -> Bounds bound ->
+addVars : Bounds bound ->
+          SizeOf inner ->
           NVar name (Scope.addInner outer inner) ->
           NVar name (Scope.addInner (outer ++ bound) inner)
-addVars p b = insertNVarNames (sizeOf b) p
+addVars = insertNVarNames . sizeOf
 
 export
 findBound : Name ->
@@ -434,6 +435,7 @@ findBound nm (Add {xs} new old bs) p
         then Just (mkVarFishily p)
         else findBound nm bs (suc p)
 
+export
 resolveRef : Name ->
              Bounds bound ->
              SizeOf inner ->
@@ -443,7 +445,7 @@ resolveRef nm bs inn = weakenNs inn . embed <$> (findBound nm bs zero)
 mkLocals : SizeOf inner -> Bounds bound ->
            Term (Scope.addInner outer inner) -> Term (Scope.addInner (outer ++ bound) inner)
 mkLocals inn bs (Local fc r idx p)
-    = let MkNVar p' = addVars inn bs (MkNVar p) in Local fc r _ p'
+    = let MkNVar p' = addVars bs inn (MkNVar p) in Local fc r _ p'
 mkLocals inn bs (Ref fc Bound name)
     = fromMaybe (Ref fc Bound name) $ do
         MkVar p <- resolveRef name bs inn
