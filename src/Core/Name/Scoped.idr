@@ -106,7 +106,7 @@ public export
 GenWeakenable tm = {0 outer, middle, inner : Scopeable a} ->
   SizeOf middle -> SizeOf inner -> tm (Scope.addInner outer inner) -> tm (Scope.addInner (Scope.addInner outer middle) inner)
 
-export
+export %inline
 underBinders :
     (0 tm : Scopeable a -> Type) ->
     (forall inner. SizeOf inner -> tm (outer ++ inner) -> tm (outer' ++ inner)) ->
@@ -117,6 +117,18 @@ underBinders :
 underBinders _ f innL innR t =
   rewrite sym $ appendAssociative outer' innerLeft innerRight in
   f (innL + innR) (rewrite appendAssociative outer innerLeft innerRight in t)
+
+export %inline
+underBinderz :
+    (0 tm : Scopeable a -> Type) ->
+    (forall inner. SizeOf inner -> tm (outer ++ inner) -> tm (outer' ++ inner)) ->
+    SizeOf innerLeft ->
+    SizeOf innerRight ->
+    tm ((outer ++ innerLeft) <>< innerRight) ->
+    tm ((outer' ++ innerLeft) <>< innerRight)
+underBinderz tm f innL innR t =
+  rewrite fishAsSnocAppend (outer' ++ innerLeft) innerRight in
+  underBinders {outer} tm f innL (cast innR) (rewrite sym $ fishAsSnocAppend (outer ++ innerLeft) innerRight in t)
 
 public export
 0 Thinnable : Scoped -> Type
