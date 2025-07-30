@@ -121,8 +121,8 @@ dropVar : SizeOf inner
         -> (0 p : IsVar x n (Scope.addInner outer inner))
         -> Maybe (Erased (IsVar x n inner))
 dropVar inn p = case locateIsVar inn p of
-  Left p => Just p
-  Right p => Nothing
+  Right p => Just p
+  Left p => Nothing
 
 
 -- Tries to 'strengthen' an expression by removing an `outer` context.
@@ -168,15 +168,9 @@ mutual
   dropConAlt : Drop CConAlt
   dropConAlt inn (MkConAlt x y tag args z) =
     MkConAlt x y tag args <$>
-        rewrite fishAsSnocAppend inner args in
-        dropCExp
-          (inn + mkSizeOf (cast args))
-          (replace {p = CExp} rule z)
-    where
-      rule : (outer ++ inner) <>< args = outer ++ (inner ++ (cast args))
-      rule = do rewrite appendAssociative outer inner (cast args)
-                rewrite fishAsSnocAppend (outer ++ inner) args
-                Builtin.Refl
+        dropCExp {outer=outer}
+          (rewrite fishAsSnocAppend inner args in inn + mkSizeOf (cast args))
+          (rewrite sym $ snocAppendFishAssociative outer inner args in z)
 
   dropConstAlt : Drop CConstAlt
   dropConstAlt inn (MkConstAlt x y) = MkConstAlt x <$> dropCExp inn y

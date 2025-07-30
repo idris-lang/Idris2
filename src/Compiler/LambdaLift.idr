@@ -17,6 +17,7 @@ import Data.String
 import Data.Vect
 import Data.SnocList.Operations
 
+import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.SizeOf
 import Libraries.Data.SnocList.Extra
 
@@ -226,8 +227,8 @@ data LiftedDef : Type where
      -- (Sorry for the awkward API - it's to do with how the indices are
      -- arranged for the variables, and it could be expensive to reshuffle them!
      -- See Compiler.ANF for an example of how they get resolved to names)
-     MkLFun : (args : Scope) -> (scope : Scope) ->
-              (body : Lifted (Scope.addInner args scope)) -> LiftedDef
+     MkLFun : (args : List Name) -> (scope : Scope) ->
+              (body : Lifted (Scope.addInner (cast args) scope)) -> LiftedDef
 
      ||| Constructs a definition of a constructor for a compound data type.
      |||
@@ -404,6 +405,8 @@ markUsed {vars} {prf} idx (MkUsed us) =
   let newUsed = replaceAt (finIdx prf) True us in
   MkUsed newUsed
 
+-- TODO replace ``Vect (length vars) Bool`` by data structure indexed by `vars` so we can erase `vars`
+-- TODO this is morally a thinning
 getUnused : Used vars ->
             Vect (length vars) Bool
 getUnused (MkUsed uv) = map not uv
@@ -456,81 +459,89 @@ usedVars used (LConstCase fc sc alts def) =
     usedConstAlt : {default Nothing lazy : Maybe LazyReason} ->
                     Used vars -> LiftedConstAlt vars -> Used vars
     usedConstAlt used (MkLConstAlt c sc) = usedVars used sc
-usedVars used (LPrimVal {}) = used
-usedVars used (LErased {})  = used
-usedVars used (LCrash {})   = used
+usedVars used (LPrimVal _ _) = used
+usedVars used (LErased _) = used
+usedVars used (LCrash _ _) = used
+
+unsafeDropVar :
+  (vars : _) ->
+  (unused : Vect (length vars) Bool) ->
+  Var vars ->
+  Var (dropped vars unused)
+unsafeDropVar [<] unused v = v
+unsafeDropVar (sx :< x) (False :: us) (MkVar First) = MkVar First
+unsafeDropVar (sx :< x) (False :: us) (MkVar (Later idx)) = later $ unsafeDropVar sx us (MkVar idx)
+unsafeDropVar (sx :< x) (True :: us) (MkVar First) = assert_total $
+  idris_crash "INTERNAL ERROR: Referenced variable marked as unused"
+unsafeDropVar (sx :< x) (True :: us) (MkVar (Later idx)) = unsafeDropVar sx us (MkVar idx)
+
 
 dropIdx : {vars : _} ->
           {idx : _} ->
-          (outer : Scope) ->
+          SizeOf inner ->
           (unused : Vect (length vars) Bool) ->
-          (0 p : IsVar x idx (Scope.addInner vars outer)) ->
-          Var (Scope.addInner (dropped vars unused) outer)
-dropIdx [<] (False::_) First = first
-dropIdx [<] (True::_) First = assert_total $
-  idris_crash "INTERNAL ERROR: Referenced variable marked as unused"
-dropIdx [<] (False::rest) (Later p) = Var.later $ dropIdx Scope.empty rest p
-dropIdx [<] (True::rest) (Later p) = dropIdx Scope.empty rest p
-dropIdx (xs :< _) unused First = first
-dropIdx (xs :< _) unused (Later p) = Var.later $ dropIdx xs unused p
+          (0 p : IsVar x idx (Scope.addInner vars inner)) ->
+          Var (Scope.addInner (dropped vars unused) inner)
+dropIdx inn unused p =
+  case locateVar inn (MkVar p) of
+    Left v => weakenNs inn (unsafeDropVar _ unused v)
+    Right v => embed v
 
-dropUnused : {vars : _} ->
-             {auto _ : Ref Lifts LDefs} ->
-             {outer : Scope} ->
-             (unused : Vect (length vars) Bool) ->
-             (l : Lifted (Scope.addInner vars outer)) ->
-             Lifted (Scope.addInner (dropped vars unused) outer)
-dropUnused _ (LPrimVal fc val) = LPrimVal fc val
-dropUnused _ (LErased fc) = LErased fc
-dropUnused _ (LCrash fc msg) = LCrash fc msg
-dropUnused {outer} unused (LLocal fc p) =
-  let (MkVar p') = dropIdx outer unused p in LLocal fc p'
-dropUnused unused (LCon fc n ci tag args) =
-  let args' = map (dropUnused unused) args in
+-- TODO this is morally a `Shrinkable`. Replace!
+0 DropUnused : Scoped -> Type
+DropUnused tm =
+  {auto _ : Ref Lifts LDefs} ->
+  {vars : _} ->
+  {0 inner : _}->
+  SizeOf inner ->
+  (unused : Vect (length vars) Bool) ->
+  tm (Scope.addInner vars inner) ->
+  tm (Scope.addInner (dropped vars unused) inner)
+
+dropUnused : DropUnused Lifted
+dropConCase : DropUnused LiftedConAlt
+dropConstCase : DropUnused LiftedConstAlt
+
+dropUnused inn _ (LPrimVal fc val) = LPrimVal fc val
+dropUnused inn _ (LErased fc) = LErased fc
+dropUnused inn _ (LCrash fc msg) = LCrash fc msg
+dropUnused inn unused (LLocal fc p) =
+  let (MkVar p') = dropIdx inn unused p in LLocal fc p'
+dropUnused inn unused (LCon fc n ci tag args) =
+  let args' = map (dropUnused inn unused) args in
       LCon fc n ci tag args'
-dropUnused {outer} unused (LLet fc n val sc) =
-  let val' = dropUnused unused val
-      sc' = dropUnused {outer= outer :< n} (unused) sc in
+dropUnused inn unused (LLet fc n val sc) =
+  let val' = dropUnused inn unused val
+      sc' = dropUnused (suc inn) (unused) sc in
       LLet fc n val' sc'
-dropUnused unused (LApp fc lazy c arg) =
-  let c' = dropUnused unused c
-      arg' = dropUnused unused arg in
+dropUnused inn unused (LApp fc lazy c arg) =
+  let c' = dropUnused inn unused c
+      arg' = dropUnused inn unused arg in
       LApp fc lazy c' arg'
-dropUnused unused (LOp fc lazy fn args) =
-  let args' = map (dropUnused unused) args in
+dropUnused inn unused (LOp fc lazy fn args) =
+  let args' = map (dropUnused inn unused) args in
       LOp fc lazy fn args'
-dropUnused unused (LExtPrim fc lazy n args) =
-  let args' = map (dropUnused unused) args in
+dropUnused inn unused (LExtPrim fc lazy n args) =
+  let args' = map (dropUnused inn unused) args in
       LExtPrim fc lazy n args'
-dropUnused unused (LAppName fc lazy n args) =
-  let args' = map (dropUnused unused) args in
+dropUnused inn unused (LAppName fc lazy n args) =
+  let args' = map (dropUnused inn unused) args in
       LAppName fc lazy n args'
-dropUnused unused (LUnderApp fc n miss args) =
-  let args' = map (dropUnused unused) args in
+dropUnused inn unused (LUnderApp fc n miss args) =
+  let args' = map (dropUnused inn unused) args in
       LUnderApp fc n miss args'
-dropUnused {vars} {outer} unused (LConCase fc sc alts def) =
-  let alts' = map dropConCase alts in
-      LConCase fc (dropUnused unused sc) alts' (map (dropUnused unused) def)
-  where
-    dropConCase : LiftedConAlt (Scope.addInner vars outer) ->
-                  LiftedConAlt (Scope.addInner (dropped vars unused) outer)
-    dropConCase (MkLConAlt n ci t args sc) =
-      MkLConAlt n ci t args droppedSc
-      where
-        sc' : Lifted (vars ++ (outer <>< args))
-        sc' = rewrite sym $ snocAppendFishAssociative vars outer args in sc
+dropUnused inn unused (LConCase fc sc alts def) =
+  let alts' = map (dropConCase inn unused) alts in
+      LConCase fc (dropUnused inn unused sc) alts' (map (dropUnused inn unused) def)
+dropUnused inn unused (LConstCase fc sc alts def) =
+  let alts' = map (dropConstCase inn unused) alts in
+      LConstCase fc (dropUnused inn unused sc) alts' (map (dropUnused inn unused) def)
 
-        droppedSc : Lifted ((dropped vars unused ++ outer) <>< args)
-        droppedSc = do
-          rewrite snocAppendFishAssociative (dropped vars unused) outer args
-          dropUnused {vars=vars} {outer=outer <>< args} unused sc'
-dropUnused {vars} {outer} unused (LConstCase fc sc alts def) =
-  let alts' = map dropConstCase alts in
-      LConstCase fc (dropUnused unused sc) alts' (map (dropUnused unused) def)
-  where
-    dropConstCase : LiftedConstAlt (Scope.addInner vars outer) ->
-                    LiftedConstAlt (Scope.addInner (dropped vars unused) outer)
-    dropConstCase (MkLConstAlt c val) = MkLConstAlt c (dropUnused unused val)
+dropConCase inn unused (MkLConAlt n ci t args sc) =
+  MkLConAlt n ci t args (underBinderz Lifted (\inn => dropUnused inn unused) inn (mkSizeOf args) sc)
+
+dropConstCase inn unused (MkLConstAlt c val) = MkLConstAlt c (dropUnused inn unused val)
+
 
 mutual
   makeLam : {vars : _} ->
@@ -547,22 +558,24 @@ mutual
            let scUsedL = usedVars initUsed scl
                unusedContracted = contractUsedMany {remove=bound} scUsedL
                unused = getUnused unusedContracted
-               scl' = dropUnused {outer=bound} unused scl
+               scl' = dropUnused (mkSizeOf bound) unused scl
            n <- genName
-           update Lifts { defs $= ((n, MkLFun (dropped vars unused) bound scl') ::) }
-           pure $ LUnderApp fc n (length bound) (allVars fc vars unused)
+           let scl'' : Lifted ((cast (toList $ dropped vars unused)) ++ bound)
+                     := rewrite castToList (dropped vars unused) in scl'
+           update Lifts { defs $= ((n, MkLFun (toList $ dropped vars unused) bound scl'') ::) }
+           pure $  LUnderApp fc n (length bound) (reverse $ allVars fc vars unused)
     where
 
-        allPrfs : (vs : Scope) -> (unused : Vect (length vs) Bool) -> List (Var vs)
-        allPrfs [<] _ = []
-        allPrfs (vs :< v) (False::uvs) = first :: map weaken (allPrfs vs uvs)
-        allPrfs (vs :< v) (True::uvs) = map weaken (allPrfs vs uvs)
+        allPrfs : (vs : Scope) -> SizeOf inner -> (unused : Vect (length vs) Bool) -> List (Var (vs <>< inner))
+        allPrfs [<] inn _ = []
+        allPrfs (vs :< v) inn (False::uvs) = mkVarFishily inn :: allPrfs vs (suc inn) uvs
+        allPrfs (vs :< v) inn (True::uvs) = allPrfs vs (suc inn) uvs
 
-        -- apply to all the variables. 'First' will be first in the last, which
+        -- apply to all the variables. 'First' will be first in the list, which
         -- is good, because the most recently bound name is the first argument to
         -- the resulting function
         allVars : FC -> (vs : Scope) -> (unused : Vect (length vs) Bool) -> List (Lifted vs)
-        allVars fc vs unused = map (\ (MkVar p) => LLocal fc p) (allPrfs vs unused)
+        allVars fc vs unused = map (\ (MkVar p) => LLocal fc p) (allPrfs vs zero unused)
 
 -- if doLazyAnnots = True then annotate function application with laziness
 -- otherwise use old behaviour (thunk is a function)
@@ -624,7 +637,7 @@ export
 lambdaLiftDef : (doLazyAnnots : Bool) -> Name -> CDef -> Core (List (Name, LiftedDef))
 lambdaLiftDef doLazyAnnots n (MkFun args exp)
     = do (expl, defs) <- liftBody {doLazyAnnots} n exp
-         pure ((n, MkLFun args Scope.empty expl) :: defs)
+         pure ((n, MkLFun (toList args) Scope.empty (rewrite castToList args in expl)) :: defs)
 lambdaLiftDef _ n (MkCon t a nt) = pure [(n, MkLCon t a nt)]
 lambdaLiftDef _ n (MkForeign ccs fargs ty) = pure [(n, MkLForeign ccs fargs ty)]
 lambdaLiftDef doLazyAnnots n (MkError exp)

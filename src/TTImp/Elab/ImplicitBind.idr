@@ -86,7 +86,7 @@ mkPatternHole {vars'} loc rig n topenv imode (Just expty_in)
     mkArgs : {0 vs : _} -> SizeOf seen -> Thin newvars vs -> List (Term (vs <>< seen))
     mkArgs p Refl = []
     mkArgs p (Drop th) =
-      let MkVar v := fishyVar {inner=seen} p in
+      let MkVar v := mkVarFishily {inner=seen} p in
       Local loc Nothing _ v :: mkArgs (suc p) th
     mkArgs p _ = []
 
