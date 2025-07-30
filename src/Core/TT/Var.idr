@@ -10,6 +10,8 @@ import Data.List.HasLength
 import Data.So
 import Data.SnocList
 
+import Data.SnocList.Quantifiers
+
 import Libraries.Data.SnocList.HasLength
 import Libraries.Data.SnocList.SizeOf
 import Libraries.Data.List.SizeOf
@@ -385,25 +387,27 @@ strengthenNVar s (MkNVar p)
 ------------------------------------------------------------------------
 -- Reindexing
 
-0 lookup :
-  CompatibleVars xs ys ->
-  {idx : Nat} ->
-  (0 p : IsVar {a} name idx xs) ->
-  a
-lookup Pre p = name
-lookup (Ext {m} x) First = m
-lookup (Ext x) (Later p) = lookup x p
+namespace CompatibleVars
+  0 lookup :
+    CompatibleVars xs ys ->
+    {idx : Nat} ->
+    (0 p : IsVar {a} name idx xs) ->
+    a
+  lookup Pre p = name
+  lookup (Ext {m} x) First = m
+  lookup (Ext x) (Later p) = lookup x p
 
-0 compatIsVar :
-  (ns : CompatibleVars xs ys) ->
-  {idx : Nat} -> (0 p : IsVar name idx xs) ->
-  IsVar (lookup ns p) idx ys
-compatIsVar Pre p = p
-compatIsVar (Ext {n} x) First = First
-compatIsVar (Ext {n} x) (Later p) = Later (compatIsVar x p)
+  0 compatIsVar :
+    (ns : CompatibleVars xs ys) ->
+    {idx : Nat} -> (0 p : IsVar name idx xs) ->
+    IsVar (lookup ns p) idx ys
+  compatIsVar Pre p = p
+  compatIsVar (Ext {n} x) First = First
+  compatIsVar (Ext {n} x) (Later p) = Later (compatIsVar x p)
 
-compatVar : CompatibleVars xs ys -> Var xs -> Var ys
-compatVar prf (MkVar p) = MkVar (compatIsVar prf p)
+  export
+  compatVar : CompatibleVars xs ys -> Var xs -> Var ys
+  compatVar prf (MkVar p) = MkVar (compatIsVar prf p)
 
 ------------------------------------------------------------------------
 -- Thinning
@@ -452,7 +456,7 @@ FreelyEmbeddable (Var {a = Name}) where
 
 export
 IsScoped (Var {a = Name}) where
-  compatNs = compatVar
+  compatNs = CompatibleVars.compatVar
 
   thin (MkVar p) = thinIsVar p
   shrink (MkVar p) = shrinkIsVar p
@@ -495,3 +499,9 @@ shiftUndersN : SizeOf {a = Name} args ->
                NVar n (vars :< x <>< args)
 shiftUndersN s First = weakensN s (MkNVar First)
 shiftUndersN s (Later p) = insertNVarFishy s (MkNVar p)
+
+namespace SnocList.All
+  export
+  lookup : {idx : _} -> (0 _ : IsVar x idx vs) -> All p vs -> p x
+  lookup First (xs :< x) = x
+  lookup (Later p) (xs :< x) = lookup p xs
