@@ -11,6 +11,8 @@ import Libraries.Data.SnocList.SizeOf
 %default total
 
 public export
+-- TODO revisit order of ds and vars?
+-- TODO vars is constantly applied
 Subst : Scoped -> Scope -> Scoped
 Subst tm ds vars = All (\_ => tm vars) ds
 
@@ -28,44 +30,35 @@ namespace Subst
   bind : Subst tm ds vars -> tm vars -> Subst tm (Scope.bind ds v) vars
   bind = (:<)
 
-namespace Var
-
-  export
-  index : Subst tm ds vars -> Var ds -> tm vars
-  index [<] (MkVar p) impossible
-  index (_ :< t) (MkVar First) = t
-  index (ts :< _) (MkVar (Later p)) = index ts {tm} (MkVar p)
-
--- TODO revisit order of `dropped` and `Subst`
 export
 findDrop :
-  (Var vars -> tm vars) ->
+  (Var outer -> tm outer) ->
   SizeOf dropped ->
-  Var (Scope.addInner vars dropped) ->
-  Subst tm dropped vars ->
-  tm vars
+  Var (Scope.addInner outer dropped) ->
+  Subst tm dropped outer ->
+  tm outer
 findDrop k s var sub = case locateVar s var of
-  Left var => index sub {tm} var
-  Right var => k var
+  Left var => k var
+  Right var => lookup sub var
 
 export
 find : Weaken tm =>
        (forall vars. Var vars -> tm vars) ->
-       SizeOf outer -> SizeOf dropped ->
-       Var (Scope.addInner (Scope.addInner vars dropped) outer) ->
-       Subst tm dropped vars ->
-       tm (Scope.addInner vars outer)
-find k outer dropped var sub = case locateVar outer var of
-  Left var => k (embed var)
-  Right var => weakenNs outer (findDrop k {tm} dropped var sub)
+       SizeOf dropped ->
+       SizeOf inner ->
+       Var (Scope.addInner (Scope.addInner outer dropped) inner) ->
+       Subst tm dropped outer ->
+       tm (Scope.addInner outer inner)
+find k dropped inner var sub = case locateVar inner var of
+  Left var => weakenNs inner (findDrop {tm} k dropped var sub)
+  Right var => k (embed var)
 
--- TODO rename `outer`
 public export
 0 Substitutable : Scoped -> Scoped -> Type
 Substitutable val tm
-  = {0 outer, dropped, vars : Scope} ->
-    SizeOf outer ->
+  = {0 outer, dropped, inner : Scope} ->
     SizeOf dropped ->
-    Subst val dropped vars ->
-    tm (Scope.addInner (Scope.addInner vars dropped) outer) ->
-    tm (Scope.addInner vars outer)
+    SizeOf inner ->
+    Subst val dropped outer ->
+    tm (Scope.addInner (Scope.addInner outer dropped) inner) ->
+    tm (Scope.addInner outer inner)
