@@ -131,6 +131,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Fixed a bug that caused `ttc` size to grow exponentially.
 
+* Fixed `assert_total` operation with coinductive calls
+
 ### Backend changes
 
 #### RefC Backend
