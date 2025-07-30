@@ -3,6 +3,7 @@
 module Compiler.ES.ToAst
 
 import Data.Vect
+import Data.SnocList
 import Core.CompileExpr
 import Core.Context
 import Compiler.ES.Ast

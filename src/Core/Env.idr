@@ -79,7 +79,7 @@ getErased env = go env zero where
   go [<] p = VarSet.empty
   go {seen} {vars = vs :< v} (bs :< b) p
       = if isErased (multiplicity b)
-          then VarSet.insert (fishyVar {inner=seen} p) (go bs (suc p))
+          then VarSet.insert (mkVarFishily {inner=seen} p) (go bs (suc p))
           else go bs (suc p)
 
 public export

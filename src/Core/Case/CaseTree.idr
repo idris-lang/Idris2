@@ -45,7 +45,6 @@ mutual
        ||| Lazy match for the Delay type use for codata types
        DelayCase : (ty : Name) -> (arg : Name) ->
                    CaseTree (Scope.addInner vars [<ty, arg]) -> CaseAlt vars
-                   -- TODO `arg` and `ty` should be swapped, as in Yaffle
        ||| Match against a literal
        ConstCase : Constant -> CaseTree vars -> CaseAlt vars
        ||| Catch-all case
@@ -214,47 +213,30 @@ Pretty IdrisSyntax Pat where
   prettyPrec d (PUnmatchable _ tm) = keyword "." <+> parens (byShow tm)
 
 mutual
-  insertCaseNames : SizeOf outer ->
-                    SizeOf ns ->
-                    CaseTree (Scope.addInner inner outer) ->
-                    CaseTree (Scope.addInner inner (ns ++ outer))
-  insertCaseNames outer ns (Case idx prf scTy alts)
-      = let MkNVar prf' = insertNVarNames outer ns (MkNVar prf) in
-            Case _ prf' (insertNames outer ns scTy)
-                (map (insertCaseAltNames outer ns) alts)
-  insertCaseNames outer ns (STerm i x) = STerm i (insertNames outer ns x)
+  insertCaseNames : GenWeakenable CaseTree
+  insertCaseNames mid inn (Case idx prf scTy alts)
+      = let MkNVar prf' = insertNVarNames mid inn (MkNVar prf) in
+            Case _ prf' (insertNames mid inn scTy)
+                (map (insertCaseAltNames mid inn) alts)
+  insertCaseNames mid inn (STerm i x) = STerm i (insertNames mid inn x)
   insertCaseNames _ _ (Unmatched msg) = Unmatched msg
   insertCaseNames _ _ Impossible = Impossible
 
-  insertCaseAltNames : SizeOf outer ->
-                       SizeOf ns ->
-                       CaseAlt (Scope.addInner inner outer) ->
-                       CaseAlt (Scope.addInner inner (ns ++ outer))
-  insertCaseAltNames p q (ConCase x tag args ct)
-      = ConCase x tag args ct''
-      where
-        ct' : CaseTree (inner ++ (ns ++ (outer <>< args)))
-        ct' = insertCaseNames (p <>< mkSizeOf args) q
-          $ replace {p = CaseTree} (snocAppendFishAssociative inner outer args) ct
+  insertCaseAltNames : GenWeakenable CaseAlt
+  insertCaseAltNames mid inn (ConCase x tag args ct)
+      = ConCase x tag args (underBinderz CaseTree (insertCaseNames mid) inn (mkSizeOf args) ct)
 
-        ct'' : CaseTree ((inner ++ (ns ++ outer)) <>< args)
-        ct'' = do
-          rewrite (appendAssociative inner ns outer)
-          rewrite snocAppendFishAssociative (inner ++ ns) outer args
-          rewrite sym (appendAssociative inner ns (outer <>< args))
-          ct'
-
-  insertCaseAltNames outer ns (DelayCase tyn valn ct)
+  insertCaseAltNames mid inn (DelayCase tyn valn ct)
       = DelayCase tyn valn
-                  (insertCaseNames (suc (suc outer)) ns ct)
-  insertCaseAltNames outer ns (ConstCase x ct)
-      = ConstCase x (insertCaseNames outer ns ct)
-  insertCaseAltNames outer ns (DefaultCase ct)
-      = DefaultCase (insertCaseNames outer ns ct)
+                  (insertCaseNames mid (suc (suc inn)) ct)
+  insertCaseAltNames mid inn (ConstCase x ct)
+      = ConstCase x (insertCaseNames mid inn ct)
+  insertCaseAltNames mid inn (DefaultCase ct)
+      = DefaultCase (insertCaseNames mid inn ct)
 
 export
 Weaken CaseTree where
-  weakenNs ns t = insertCaseNames zero ns t
+  weakenNs ns t = insertCaseNames ns zero t
 
 total
 getNames : (forall vs . NameMap Bool -> Term vs -> NameMap Bool) ->

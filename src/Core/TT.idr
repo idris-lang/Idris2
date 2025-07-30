@@ -405,64 +405,67 @@ namespace Bounds
   sizeOf (Add _ _ b) = suc (sizeOf b)
 
 export
-addVars : SizeOf outer -> Bounds bound ->
-          NVar name (Scope.addInner vars outer) ->
-          NVar name (Scope.addInner vars (bound ++ outer))
-addVars p = insertNVarNames p . sizeOf
+addVars : Bounds bound ->
+          SizeOf inner ->
+          NVar name (Scope.addInner outer inner) ->
+          NVar name (Scope.addInner (outer ++ bound) inner)
+addVars = insertNVarNames . sizeOf
 
 export
-resolveRef : SizeOf outer ->
-             SizeOf done ->
-             Bounds bound -> FC -> Name ->
-             Maybe (Var (Scope.addInner vars $ (bound ++ done) ++ outer))
-resolveRef _ _ None _ _ = Nothing
-resolveRef {outer} {done} p q (Add {xs} new old bs) fc n
-    = if n == old
-        then do
-          rewrite appendAssociative vars ((xs :< new) ++ done) outer
-          rewrite appendAssociative vars (xs :< new) done
-          Just $ weakenNs {tm = Var} p (mkVar q)
-         else do
-          rewrite sym $ appendAssociative xs (Scope.single new) done
-          resolveRef p (sucL q) bs fc n
+findBound : Name ->
+            Bounds bound ->
+            SizeOf done ->
+            Maybe (Var (Scope.ext bound done))
+findBound _ None _ = Nothing
+findBound nm (Add {xs} new old bs) p
+    = if nm == old
+        then Just (mkVarFishily p)
+        else findBound nm bs (suc p)
 
-mkLocals : SizeOf outer -> Bounds bound ->
-           Term (Scope.addInner vars outer) -> Term (Scope.addInner vars (bound ++ outer))
-mkLocals outer bs (Local fc r idx p)
-    = let MkNVar p' = addVars outer bs (MkNVar p) in Local fc r _ p'
-mkLocals outer bs (Ref fc Bound name)
+export
+resolveRef : Name ->
+             Bounds bound ->
+             SizeOf inner ->
+             Maybe (Var (Scope.addInner (outer ++ bound) inner))
+resolveRef nm bs inn = weakenNs inn . embed <$> (findBound nm bs zero)
+
+mkLocals : SizeOf inner -> Bounds bound ->
+           Term (Scope.addInner outer inner) -> Term (Scope.addInner (outer ++ bound) inner)
+mkLocals inn bs (Local fc r idx p)
+    = let MkNVar p' = addVars bs inn (MkNVar p) in Local fc r _ p'
+mkLocals inn bs (Ref fc Bound name)
     = fromMaybe (Ref fc Bound name) $ do
-        MkVar p <- resolveRef outer [<] bs fc name
+        MkVar p <- resolveRef name bs inn
         pure (Local fc Nothing _ p)
-mkLocals outer bs (Ref fc nt name)
+mkLocals inn bs (Ref fc nt name)
     = Ref fc nt name
-mkLocals outer bs (Meta fc name y xs)
-    = fromMaybe (Meta fc name y (map (mkLocals outer bs) xs)) $ do
-        MkVar p <- resolveRef outer [<] bs fc name
+mkLocals inn bs (Meta fc name y xs)
+    = fromMaybe (Meta fc name y (map (mkLocals inn bs) xs)) $ do
+        MkVar p <- resolveRef name bs inn
         pure (Local fc Nothing _ p)
-mkLocals outer bs (Bind fc x b scope)
-    = Bind fc x (map (mkLocals outer bs) b)
-           (mkLocals (suc outer) bs scope)
-mkLocals outer bs (App fc fn arg)
-    = App fc (mkLocals outer bs fn) (mkLocals outer bs arg)
-mkLocals outer bs (As fc s as tm)
-    = As fc s (mkLocals outer bs as) (mkLocals outer bs tm)
-mkLocals outer bs (TDelayed fc x y)
-    = TDelayed fc x (mkLocals outer bs y)
-mkLocals outer bs (TDelay fc x t y)
-    = TDelay fc x (mkLocals outer bs t) (mkLocals outer bs y)
-mkLocals outer bs (TForce fc r x)
-    = TForce fc r (mkLocals outer bs x)
-mkLocals outer bs (PrimVal fc c) = PrimVal fc c
-mkLocals outer bs (Erased fc Impossible) = Erased fc Impossible
-mkLocals outer bs (Erased fc Placeholder) = Erased fc Placeholder
-mkLocals outer bs (Erased fc (Dotted t)) = Erased fc (Dotted (mkLocals outer bs t))
-mkLocals outer bs (TType fc u) = TType fc u
+mkLocals inn bs (Bind fc x b scope)
+    = Bind fc x (map (mkLocals inn bs) b)
+           (mkLocals (suc inn) bs scope)
+mkLocals inn bs (App fc fn arg)
+    = App fc (mkLocals inn bs fn) (mkLocals inn bs arg)
+mkLocals inn bs (As fc s as tm)
+    = As fc s (mkLocals inn bs as) (mkLocals inn bs tm)
+mkLocals inn bs (TDelayed fc x y)
+    = TDelayed fc x (mkLocals inn bs y)
+mkLocals inn bs (TDelay fc x t y)
+    = TDelay fc x (mkLocals inn bs t) (mkLocals inn bs y)
+mkLocals inn bs (TForce fc r x)
+    = TForce fc r (mkLocals inn bs x)
+mkLocals inn bs (PrimVal fc c) = PrimVal fc c
+mkLocals inn bs (Erased fc Impossible) = Erased fc Impossible
+mkLocals inn bs (Erased fc Placeholder) = Erased fc Placeholder
+mkLocals inn bs (Erased fc (Dotted t)) = Erased fc (Dotted (mkLocals inn bs t))
+mkLocals inn bs (TType fc u) = TType fc u
 
 export
 refsToLocals : Bounds bound -> Term vars -> Term (Scope.addInner vars bound)
 refsToLocals None y = y
-refsToLocals bs y = mkLocals zero  bs y
+refsToLocals bs y = mkLocals zero bs y
 
 -- Replace any reference to 'x' with a locally bound name 'new'
 export
@@ -492,7 +495,10 @@ substName s x new (TDelay fc y t z)
     = TDelay fc y (substName s x new t) (substName s x new z)
 substName s x new (TForce fc r y)
     = TForce fc r (substName s x new y)
-substName s x new tm = tm
+substName s x new tm@(Local{}) = tm
+substName s x new tm@(PrimVal{}) = tm
+substName s x new (Erased fc why) = Erased fc (substName s x new <$> why)
+substName s x new tm@(TType{}) = tm
 
 export
 addMetas : (usingResolved : Bool) -> NameMap Bool -> Term vars -> NameMap Bool

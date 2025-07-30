@@ -6,6 +6,7 @@ import Core.TT
 
 import Data.String
 import Data.Vect
+import Data.SnocList.Quantifiers
 
 import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.SizeOf
@@ -275,9 +276,8 @@ mutual
          = "(%constcase " ++ show x ++ " " ++ show exp ++ ")"
 
 export
-data Names : Scoped where
-     Lin : Names Scope.empty
-     (:<) : Names xs -> Name -> Names (Scope.bind xs x)
+Names : Scoped
+Names = All (\_ => Name)
 
 namespace Names
   public export
@@ -298,11 +298,6 @@ uniqueName s ns =
     if s `elem` ns
        then uniqueName (tryNext s) ns
        else s
-
-export
-getLocName : (idx : Nat) -> Names vars -> (0 p : IsVar name idx vars) -> Name
-getLocName Z (xs :< x) First = x
-getLocName (S k) (xs :< x) (Later p) = getLocName k xs p
 
 export
 addLocz : (args : Scope) -> Names vars -> Names (Scope.addInner vars args)
@@ -332,18 +327,18 @@ conArgs : (args : List Name) -> Names (Scope.ext vars args) -> List Name
 conArgs args ns
   = let ns' : Names (vars ++ cast args)
       := rewrite sym $ fishAsSnocAppend vars args in ns
-    in conArgz ([<] <>< args) ns' <>> []
+    in toList $ conArgz (cast {to=Scope} args) ns'
 
 mutual
   forgetExp : Names vars -> CExp vars -> NamedCExp
-  forgetExp locs (CLocal fc p) = NmLocal fc (getLocName _ locs p)
+  forgetExp locs (CLocal fc p) = NmLocal fc (lookup locs p)
   forgetExp locs (CRef fc n) = NmRef fc n
   forgetExp locs (CLam fc x sc)
       = let locs' = addLocs [x] locs in
-            NmLam fc (getLocName _ locs' First) (forgetExp locs' sc)
+            NmLam fc (lookup locs' First) (forgetExp locs' sc)
   forgetExp locs (CLet fc x _ val sc)
       = let locs' = addLocs [x] locs in
-            NmLet fc (getLocName _ locs' First)
+            NmLet fc (lookup locs' First)
                      (forgetExp locs val)
                      (forgetExp locs' sc)
   forgetExp locs (CApp fc f args)
@@ -449,64 +444,42 @@ Show NamedDef where
 
 mutual
   export
-  insertNames : SizeOf outer ->
-                SizeOf ns ->
-                CExp (Scope.addInner inner outer) ->
-                CExp (Scope.addInner inner (ns ++ outer))
-  insertNames outer ns (CLocal fc prf)
-      = let MkNVar var' = insertNVarNames outer ns (MkNVar prf) in
+  insertNames : GenWeakenable CExp
+  insertNames mid inn (CLocal fc prf)
+      = let MkNVar var' = insertNVarNames mid inn (MkNVar prf) in
             CLocal fc var'
   insertNames _ _ (CRef fc x) = CRef fc x
-  insertNames outer ns (CLam fc x sc)
-      = let sc' = insertNames (suc outer) ns sc in
+  insertNames mid inn (CLam fc x sc)
+      = let sc' = insertNames mid (suc inn) sc in
             CLam fc x sc'
-  insertNames outer ns (CLet fc x inl val sc)
-      = let sc' = insertNames (suc outer) ns sc in
-            CLet fc x inl (insertNames outer ns val) sc'
-  insertNames outer ns (CApp fc x xs)
-      = CApp fc (insertNames outer ns x) (assert_total (map (insertNames outer ns) xs))
-  insertNames outer ns (CCon fc ci x tag xs)
-      = CCon fc ci x tag (assert_total (map (insertNames outer ns) xs))
-  insertNames outer ns (COp fc x xs)
-      = COp fc x (assert_total (map (insertNames outer ns) xs))
-  insertNames outer ns (CExtPrim fc p xs)
-      = CExtPrim fc p (assert_total (map (insertNames outer ns) xs))
-  insertNames outer ns (CForce fc lr x) = CForce fc lr (insertNames outer ns x)
-  insertNames outer ns (CDelay fc lr x) = CDelay fc lr (insertNames outer ns x)
-  insertNames outer ns (CConCase fc sc xs def)
-      = CConCase fc (insertNames outer ns sc) (assert_total (map (insertNamesConAlt outer ns) xs))
-                 (assert_total (map (insertNames outer ns) def))
-  insertNames outer ns (CConstCase fc sc xs def)
-      = CConstCase fc (insertNames outer ns sc) (assert_total (map (insertNamesConstAlt outer ns) xs))
-                   (assert_total (map (insertNames outer ns) def))
+  insertNames mid inn (CLet fc x inl val sc)
+      = let sc' = insertNames mid (suc inn) sc in
+            CLet fc x inl (insertNames mid inn val) sc'
+  insertNames mid inn (CApp fc x xs)
+      = CApp fc (insertNames mid inn x) (assert_total (map (insertNames mid inn) xs))
+  insertNames mid inn (CCon fc ci x tag xs)
+      = CCon fc ci x tag (assert_total (map (insertNames mid inn) xs))
+  insertNames mid inn (COp fc x xs)
+      = COp fc x (assert_total (map (insertNames mid inn) xs))
+  insertNames mid inn (CExtPrim fc p xs)
+      = CExtPrim fc p (assert_total (map (insertNames mid inn) xs))
+  insertNames mid inn (CForce fc lr x) = CForce fc lr (insertNames mid inn x)
+  insertNames mid inn (CDelay fc lr x) = CDelay fc lr (insertNames mid inn x)
+  insertNames mid inn (CConCase fc sc xs def)
+      = CConCase fc (insertNames mid inn sc) (assert_total (map (insertNamesConAlt mid inn) xs))
+                 (assert_total (map (insertNames mid inn) def))
+  insertNames mid inn (CConstCase fc sc xs def)
+      = CConstCase fc (insertNames mid inn sc) (assert_total (map (insertNamesConstAlt mid inn) xs))
+                   (assert_total (map (insertNames mid inn) def))
   insertNames _ _ (CPrimVal fc x) = CPrimVal fc x
   insertNames _ _ (CErased fc) = CErased fc
   insertNames _ _ (CCrash fc x) = CCrash fc x
 
-  insertNamesConAlt : SizeOf outer ->
-                      SizeOf ns ->
-                      CConAlt (Scope.addInner inner outer) ->
-                      CConAlt (Scope.addInner inner (ns ++ outer))
-  insertNamesConAlt {outer} {ns} p q (MkConAlt x ci tag args sc)
-        = let sc' : CExp (inner ++ (outer <>< args))
-                  = rewrite sym $ snocAppendFishAssociative inner outer args in sc
+  insertNamesConAlt : GenWeakenable CConAlt
+  insertNamesConAlt mid inn (MkConAlt x ci tag args sc)
+        = MkConAlt x ci tag args (underBinderz CExp (CompileExpr.insertNames mid) inn (mkSizeOf args) sc)
 
-              sc'' : CExp (inner ++ (ns ++ (outer <>< args)))
-                   = insertNames (p <>< mkSizeOf args) q sc'
-
-              sc''' : CExp ((inner ++ (ns ++ outer)) <>< args)
-                    = do rewrite (appendAssociative inner ns outer)
-                         rewrite snocAppendFishAssociative (inner ++ ns) outer args
-                         rewrite sym (appendAssociative inner ns (outer <>< args))
-                         sc''
-
-           in
-              MkConAlt x ci tag args sc'''
-
-  insertNamesConstAlt : SizeOf outer ->
-                        SizeOf ns ->
-                        CConstAlt (Scope.addInner inner outer) ->
-                        CConstAlt (Scope.addInner inner (ns ++ outer))
+  insertNamesConstAlt : GenWeakenable CConstAlt
   insertNamesConstAlt outer ns (MkConstAlt x sc) = MkConstAlt x (insertNames outer ns sc)
 
 export
@@ -559,11 +532,11 @@ mutual
 
 export
 Weaken CExp where
-  weakenNs ns tm = insertNames zero ns tm
+  weakenNs ns tm = insertNames ns zero tm
 
 export
 Weaken CConAlt where
-  weakenNs ns tm = insertNamesConAlt zero ns tm
+  weakenNs ns tm = insertNamesConAlt ns zero tm
 
 public export
 SubstCEnv : Scope -> Scoped
@@ -575,10 +548,10 @@ mutual
       = find (\ (MkVar p) => CLocal fc p) outer dropped (MkVar prf) env
   substEnv _ _ _ (CRef fc x) = CRef fc x
   substEnv outer dropped env (CLam fc x sc)
-      = let sc' = substEnv (suc outer) dropped env sc in
+      = let sc' = substEnv outer (suc dropped) env sc in
             CLam fc x sc'
   substEnv outer dropped env (CLet fc x inl val sc)
-      = let sc' = substEnv (suc outer) dropped env sc in
+      = let sc' = substEnv outer (suc dropped) env sc in
             CLet fc x inl (substEnv outer dropped env val) sc'
   substEnv outer dropped env (CApp fc x xs)
       = CApp fc (substEnv outer dropped env x) (assert_total (map (substEnv outer dropped env) xs))
@@ -603,97 +576,77 @@ mutual
   substEnv _ _ _ (CCrash fc x) = CCrash fc x
 
   substConAlt : Substitutable CExp CConAlt
-  substConAlt {vars} {outer} {dropped} p q env (MkConAlt x ci tag args sc)
-    = let sc' : CExp ((vars ++ dropped) ++ (outer <>< args))
-              = rewrite sym (snocAppendFishAssociative (vars ++ dropped) outer args) in sc
-
-          substed : CExp ((vars ++ outer) <>< args)
-              = do rewrite snocAppendFishAssociative vars outer args
-                   substEnv (p <>< mkSizeOf args) q env sc'
-
-      in MkConAlt x ci tag args substed
+  substConAlt {outer} {dropped} {inner} drp inn env (MkConAlt x ci tag args sc)
+    = MkConAlt x ci tag args (underBinderz CExp (\inn => substEnv drp inn env) inn (mkSizeOf args) sc)
 
   substConstAlt : Substitutable CExp CConstAlt
   substConstAlt outer dropped env (MkConstAlt x sc) = MkConstAlt x (substEnv outer dropped env sc)
 
 export
-substs : {dropped, vars : _} ->
+substs : {0 dropped, vars : _} ->
          SizeOf dropped ->
          SubstCEnv dropped vars -> CExp (Scope.addInner vars dropped) -> CExp vars
-substs = substEnv zero
+substs drp = substEnv drp zero
 
 mutual
   export
-  mkLocals : SizeOf outer ->
-             Bounds bound ->
-             CExp (Scope.addInner vars outer) ->
-             CExp (Scope.addInner vars (bound ++ outer))
-  mkLocals later bs (CLocal {idx} {x} fc p)
-      = let MkNVar p' = addVars later bs (MkNVar p) in CLocal {x} fc p'
-  mkLocals later bs (CRef fc var)
+  mkLocals : Bounds bound ->
+             SizeOf inner ->
+             CExp (Scope.addInner outer inner) ->
+             CExp ((outer ++ bound) ++ inner)
+  mkLocals bs inn (CLocal {idx} {x} fc p)
+      = let MkNVar p' = addVars bs inn (MkNVar p) in CLocal {x} fc p'
+  mkLocals bs inn (CRef fc var)
       = fromMaybe (CRef fc var) $ do
-          MkVar p <- resolveRef later [<] bs fc var
+          MkVar p <- resolveRef var bs inn
           pure (CLocal fc p)
-  mkLocals later bs (CLam fc x sc)
-      = let sc' = mkLocals (suc later) bs sc in
+  mkLocals bs inn (CLam fc x sc)
+      = let sc' = mkLocals bs (suc inn) sc in
             CLam fc x sc'
-  mkLocals later bs (CLet fc x inl val sc)
-      = let sc' = mkLocals (suc later) bs sc in
-            CLet fc x inl (mkLocals later bs val) sc'
-  mkLocals later bs (CApp fc f xs)
-      = CApp fc (mkLocals later bs f) (assert_total (map (mkLocals later bs) xs))
-  mkLocals later bs (CCon fc ci x tag xs)
-      = CCon fc ci x tag (assert_total (map (mkLocals later bs) xs))
-  mkLocals later bs (COp fc x xs)
-      = COp fc x (assert_total (map (mkLocals later bs) xs))
-  mkLocals later bs (CExtPrim fc x xs)
-      = CExtPrim fc x (assert_total (map (mkLocals later bs) xs))
-  mkLocals later bs (CForce fc lr x)
-      = CForce fc lr (mkLocals later bs x)
-  mkLocals later bs (CDelay fc lr x)
-      = CDelay fc lr (mkLocals later bs x)
-  mkLocals later bs (CConCase fc sc xs def)
-      = CConCase fc (mkLocals later bs sc)
-                 (assert_total (map (mkLocalsConAlt later bs) xs))
-                 (assert_total (map (mkLocals later bs) def))
-  mkLocals later bs (CConstCase fc sc xs def)
-      = CConstCase fc (mkLocals later bs sc)
-                 (assert_total (map (mkLocalsConstAlt later bs) xs))
-                 (assert_total (map (mkLocals later bs) def))
-  mkLocals later bs (CPrimVal fc x) = CPrimVal fc x
-  mkLocals later bs (CErased fc) = CErased fc
-  mkLocals later bs (CCrash fc x) = CCrash fc x
+  mkLocals bs inn (CLet fc x inl val sc)
+      = let sc' = mkLocals bs (suc inn) sc in
+            CLet fc x inl (mkLocals bs inn val) sc'
+  mkLocals bs inn (CApp fc f xs)
+      = CApp fc (mkLocals bs inn f) (assert_total (map (mkLocals bs inn) xs))
+  mkLocals bs inn (CCon fc ci x tag xs)
+      = CCon fc ci x tag (assert_total (map (mkLocals bs inn) xs))
+  mkLocals bs inn (COp fc x xs)
+      = COp fc x (assert_total (map (mkLocals bs inn) xs))
+  mkLocals bs inn (CExtPrim fc x xs)
+      = CExtPrim fc x (assert_total (map (mkLocals bs inn) xs))
+  mkLocals bs inn (CForce fc lr x)
+      = CForce fc lr (mkLocals bs inn x)
+  mkLocals bs inn (CDelay fc lr x)
+      = CDelay fc lr (mkLocals bs inn x)
+  mkLocals bs inn (CConCase fc sc xs def)
+      = CConCase fc (mkLocals bs inn sc)
+                 (assert_total (map (mkLocalsConAlt bs inn) xs))
+                 (assert_total (map (mkLocals bs inn) def))
+  mkLocals bs inn (CConstCase fc sc xs def)
+      = CConstCase fc (mkLocals bs inn sc)
+                 (assert_total (map (mkLocalsConstAlt bs inn) xs))
+                 (assert_total (map (mkLocals bs inn) def))
+  mkLocals bs inn (CPrimVal fc x) = CPrimVal fc x
+  mkLocals bs inn (CErased fc) = CErased fc
+  mkLocals bs inn (CCrash fc x) = CCrash fc x
 
-  mkLocalsConAlt : SizeOf outer ->
-                   Bounds bound ->
-                   CConAlt (Scope.addInner vars outer) ->
-                   CConAlt (Scope.addInner vars (bound ++ outer))
-  mkLocalsConAlt {bound} {outer} {vars} p bs (MkConAlt x ci tag args sc)
-      = MkConAlt x ci tag args locals'
-      where
-        sc' : CExp (vars ++ (outer <>< args))
-        sc' = rewrite sym $ snocAppendFishAssociative vars outer args in sc
+  mkLocalsConAlt : Bounds bound ->
+                   SizeOf inner ->
+                   CConAlt (Scope.addInner outer inner) ->
+                   CConAlt ((outer ++ bound) ++ inner)
+  mkLocalsConAlt bs inn (MkConAlt x ci tag args sc)
+      =  MkConAlt x ci tag args (underBinderz CExp (mkLocals bs) inn (mkSizeOf args) sc)
 
-        locals : CExp (vars ++ (bound ++ (outer <>< args)))
-        locals = mkLocals (p <>< mkSizeOf args) bs sc'
-
-        locals' : CExp ((vars ++ (bound ++ outer)) <>< args)
-        locals' = do
-          rewrite (appendAssociative vars bound outer)
-          rewrite snocAppendFishAssociative (vars ++ bound) outer args
-          rewrite sym (appendAssociative vars bound (outer <>< args))
-          locals
-
-  mkLocalsConstAlt : SizeOf outer ->
-                     Bounds bound ->
-                     CConstAlt (Scope.addInner vars outer) ->
-                     CConstAlt (Scope.addInner vars (bound ++ outer))
-  mkLocalsConstAlt later bs (MkConstAlt x sc) = MkConstAlt x (mkLocals later bs sc)
+  mkLocalsConstAlt : Bounds bound ->
+                     SizeOf inner ->
+                     CConstAlt (outer ++ inner) ->
+                     CConstAlt ((outer ++ bound) ++ inner)
+  mkLocalsConstAlt bs inn (MkConstAlt x sc) = MkConstAlt x (mkLocals bs inn sc)
 
 export
 refsToLocals : Bounds bound -> CExp vars -> CExp (Scope.addInner vars bound)
 refsToLocals None tm = tm
-refsToLocals bs y = mkLocals zero bs y
+refsToLocals bs y = mkLocals bs zero y
 
 export
 getFC : CExp args -> FC
