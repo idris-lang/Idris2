@@ -11,6 +11,7 @@ import Compiler.CompileExpr
 import Core.Context
 
 import Libraries.Data.String.Builder
+import Data.SnocList
 
 import Data.SortedSet
 import Data.Vect

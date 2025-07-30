@@ -16,8 +16,6 @@ import Idris.Doc.Annotations
 
 %hide Core.Name.prettyOp
 
-%hide CompileExpr.(:<)
-%hide CompileExpr.Lin
 %hide String.(::)
 %hide String.Nil
 %hide Doc.Nil

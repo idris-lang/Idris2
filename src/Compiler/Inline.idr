@@ -326,8 +326,7 @@ mutual
   pickAlt rec env stk (CCon fc n ci t args) [] def
       = traverseOpt (eval rec env stk) def
   pickAlt {vars} {free} rec env stk con@(CCon fc n ci t args) (MkConAlt n' _ t' args' sc :: alts) def
-      =
-        if matches n t n' t'
+      = if matches n t n' t'
            then case checkLengthMatch args' args of
                      Nothing => pure Nothing
                      Just m =>

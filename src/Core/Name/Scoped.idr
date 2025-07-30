@@ -92,19 +92,43 @@ mkFresh vs n
 -- Concepts
 
 public export
-0 Weakenable : Scoped -> Type
-Weakenable tm = {0 vars, ns : Scope} ->
-  SizeOf ns -> tm vars -> tm (Scope.addInner vars ns)
+0 Weakenable : (Scopeable a -> Type) -> Type
+Weakenable tm = {0 outer, inner : Scopeable a} ->
+  SizeOf inner -> tm outer -> tm (Scope.addInner outer inner)
 
 public export
-0 Strengthenable : Scoped -> Type
-Strengthenable tm = {0 vars, ns : Scope} ->
-  SizeOf ns -> tm (Scope.addInner vars ns) -> Maybe (tm vars)
+0 Strengthenable : (Scopeable a -> Type) -> Type
+Strengthenable tm = {0 outer, inner : Scopeable a} ->
+  SizeOf inner -> tm (Scope.addInner outer inner) -> Maybe (tm outer)
 
 public export
-0 GenWeakenable : Scoped -> Type
-GenWeakenable tm = {0 local, ns, outer : Scope} ->
-  SizeOf outer -> SizeOf ns -> tm (Scope.addInner local outer) -> tm (Scope.addInner local (Scope.addInner ns outer))
+0 GenWeakenable : (Scopeable a -> Type) -> Type
+GenWeakenable tm = {0 outer, middle, inner : Scopeable a} ->
+  SizeOf middle -> SizeOf inner -> tm (Scope.addInner outer inner) -> tm (Scope.addInner (Scope.addInner outer middle) inner)
+
+export %inline
+underBinders :
+    (0 tm : Scopeable a -> Type) ->
+    (forall inner. SizeOf inner -> tm (outer ++ inner) -> tm (outer' ++ inner)) ->
+    SizeOf innerLeft ->
+    SizeOf innerRight ->
+    tm ((outer ++ innerLeft) ++ innerRight) ->
+    tm ((outer' ++ innerLeft) ++ innerRight)
+underBinders _ f innL innR t =
+  rewrite sym $ appendAssociative outer' innerLeft innerRight in
+  f (innL + innR) (rewrite appendAssociative outer innerLeft innerRight in t)
+
+export %inline
+underBinderz :
+    (0 tm : Scopeable a -> Type) ->
+    (forall inner. SizeOf inner -> tm (outer ++ inner) -> tm (outer' ++ inner)) ->
+    SizeOf innerLeft ->
+    SizeOf innerRight ->
+    tm ((outer ++ innerLeft) <>< innerRight) ->
+    tm ((outer' ++ innerLeft) <>< innerRight)
+underBinderz tm f innL innR t =
+  rewrite fishAsSnocAppend (outer' ++ innerLeft) innerRight in
+  underBinders {outer} tm f innL (cast innR) (rewrite sym $ fishAsSnocAppend (outer ++ innerLeft) innerRight in t)
 
 public export
 0 Thinnable : Scoped -> Type
@@ -122,7 +146,7 @@ Embeddable tm = {0 outer, vars : Scope} -> tm vars -> tm (Scope.addInner outer v
 -- IsScoped interface
 
 public export
-interface Weaken (0 tm : Scoped) where
+interface Weaken (0 tm : Scopeable a -> Type) | tm where
   constructor MkWeaken
   -- methods
   weaken : tm vars -> tm (Scope.bind vars nm)
@@ -135,14 +159,14 @@ interface Weaken (0 tm : Scoped) where
 
 -- This cannot be merged with Weaken because of WkCExp
 public export
-interface GenWeaken (0 tm : Scoped) where
+interface GenWeaken (0 tm : Scopeable a -> Type) | tm where
   constructor MkGenWeaken
   genWeakenNs : GenWeakenable tm
 
 export
 genWeaken : GenWeaken tm =>
-  SizeOf outer -> tm (Scope.addInner local outer) -> tm (Scope.addInner (Scope.bind local n) outer)
-genWeaken l = rewrite sym $ appendAssociative local [<n] outer in genWeakenNs l (suc zero)
+  SizeOf inner -> tm (Scope.addInner outer inner) -> tm (Scope.addInner (Scope.bind outer n) inner)
+genWeaken = genWeakenNs (suc zero)
 
 export
 genWeakenFishily : GenWeaken tm =>
@@ -154,7 +178,7 @@ genWeakenFishily
 
 export
 weakensN : Weaken tm =>
-  {0 vars : Scope} -> {0 ns : List Name} ->
+  {0 vars : Scopeable a} -> {0 ns : List a} ->
   SizeOf ns -> tm vars -> tm (vars <>< ns)
 weakensN s t
   = rewrite fishAsSnocAppend vars ns in
@@ -203,7 +227,7 @@ MaybeFreelyEmbeddable = FunctorFreelyEmbeddable
 
 export
 GenWeakenWeakens : GenWeaken tm => Weaken tm
-GenWeakenWeakens = MkWeaken (genWeakenNs zero (suc zero)) (genWeakenNs zero)
+GenWeakenWeakens = MkWeaken (genWeakenNs (suc zero) zero) (flip genWeakenNs zero)
 
 export
 FunctorGenWeaken : Functor f => GenWeaken tm => GenWeaken (f . tm)

@@ -129,31 +129,30 @@ ClosedTerm = Term Scope.empty
 
 ------------------------------------------------------------------------
 -- Weakening
-
 export covering
 insertNames : GenWeakenable Term
-insertNames out ns (Local fc r idx prf)
-   = let MkNVar prf' = insertNVarNames out ns (MkNVar prf) in
+insertNames mid inn (Local fc r idx prf)
+   = let MkNVar prf' = insertNVarNames mid inn (MkNVar prf) in
      Local fc r _ prf'
-insertNames out ns (Ref fc nt name) = Ref fc nt name
-insertNames out ns (Meta fc name idx args)
-    = Meta fc name idx (map (insertNames out ns) args)
-insertNames out ns (Bind fc x b scope)
-    = Bind fc x (assert_total (map (insertNames out ns) b))
-           (insertNames (suc out) ns scope)
-insertNames out ns (App fc fn arg)
-    = App fc (insertNames out ns fn) (insertNames out ns arg)
-insertNames out ns (As fc s as tm)
-    = As fc s (insertNames out ns as) (insertNames out ns tm)
-insertNames out ns (TDelayed fc r ty) = TDelayed fc r (insertNames out ns ty)
-insertNames out ns (TDelay fc r ty tm)
-    = TDelay fc r (insertNames out ns ty) (insertNames out ns tm)
-insertNames out ns (TForce fc r tm) = TForce fc r (insertNames out ns tm)
-insertNames out ns (PrimVal fc c) = PrimVal fc c
-insertNames out ns (Erased fc Impossible) = Erased fc Impossible
-insertNames out ns (Erased fc Placeholder) = Erased fc Placeholder
-insertNames out ns (Erased fc (Dotted t)) = Erased fc (Dotted (insertNames out ns t))
-insertNames out ns (TType fc u) = TType fc u
+insertNames mid inn (Ref fc nt name) = Ref fc nt name
+insertNames mid inn (Meta fc name idx args)
+    = Meta fc name idx (map (insertNames mid inn) args)
+insertNames mid inn (Bind fc x b scope)
+    = Bind fc x (assert_total (map (insertNames mid inn) b))
+           (insertNames mid (suc inn) scope)
+insertNames mid inn (App fc fn arg)
+    = App fc (insertNames mid inn fn) (insertNames mid inn arg)
+insertNames mid inn (As fc s as tm)
+    = As fc s (insertNames mid inn as) (insertNames mid inn tm)
+insertNames mid inn (TDelayed fc r ty) = TDelayed fc r (insertNames mid inn ty)
+insertNames mid inn (TDelay fc r ty tm)
+    = TDelay fc r (insertNames mid inn ty) (insertNames mid inn tm)
+insertNames mid inn (TForce fc r tm) = TForce fc r (insertNames mid inn tm)
+insertNames mid inn (PrimVal fc c) = PrimVal fc c
+insertNames mid inn (Erased fc Impossible) = Erased fc Impossible
+insertNames mid inn (Erased fc Placeholder) = Erased fc Placeholder
+insertNames mid inn (Erased fc (Dotted t)) = Erased fc (Dotted (insertNames mid inn t))
+insertNames mid inn (TType fc u) = TType fc u
 
 export
 compatTerm : CompatibleVars xs ys -> Term xs -> Term ys

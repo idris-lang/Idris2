@@ -155,10 +155,6 @@ nextVar
          put Next (i + 1)
          pure i
 
-lookup : {idx : _} -> (0 p : IsVar x idx vs) -> AVars vs -> Int
-lookup First (xs :< x) = x
-lookup (Later p) (xs :< x) = lookup p xs
-
 bindArgs : {auto v : Ref Next Int} ->
            List ANF -> Core (List (AVar, Maybe ANF))
 bindArgs [] = pure []
@@ -212,7 +208,7 @@ mutual
 
   anf : {auto v : Ref Next Int} ->
         AVars vars -> Lifted vars -> Core ANF
-  anf vs (LLocal fc p) = pure $ AV fc (ALocal (lookup p vs))
+  anf vs (LLocal fc p) = pure $ AV fc (ALocal (lookup vs p))
   anf vs (LAppName fc lazy n args)
       = anfArgs fc vs args (AAppName fc lazy n)
   anf vs (LUnderApp fc n m args)
@@ -265,12 +261,12 @@ export
 toANF : LiftedDef -> Core ANFDef
 toANF (MkLFun args scope sc)
     = do v <- newRef Next (the Int 0)
-         (iargs, vsNil) <- bindAsFresh (cast args) AVars.empty
-         let vs : AVars args
-           := rewrite sym $ appendLinLeftNeutral args in
-              rewrite snocAppendAsFish Scope.empty args in vsNil
-         (iargs', vs) <- bindAsFresh (cast scope) vs
-         sc' <- anf (rewrite snocAppendAsFish args scope in vs) sc
+         (iargs, vsNil) <- bindAsFresh args AVars.empty
+         (iargs', vs) <- bindAsFresh (toList scope) vsNil
+         sc' <- anf vs $
+            do rewrite fishAsSnocAppend (cast args) (toList scope)
+               rewrite castToList scope
+               sc
          pure $ MkAFun (iargs ++ iargs') sc'
 toANF (MkLCon t a ns) = pure $ MkACon t a ns
 toANF (MkLForeign ccs fargs t) = pure $ MkAForeign ccs fargs t

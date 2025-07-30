@@ -1191,7 +1191,7 @@ mkPatClause fc fn args s ty pid (ps, rhs)
                := case as of
                       [] => (Unknown, [])
                       (a :: as) => (embed a, as)
-           let info = MkInfo {name=r} p (fishyIsVar {outer=[<]} h) ty
+           let info = MkInfo {name=r} p (isVarFishily {outer=[<]} h) ty
            rest <- mkNames args ps eq h as
            pure (info :: rewrite fishAsSnocAppend [<r] args in embed rest)
 
