@@ -158,10 +158,6 @@ nextVar
          put Next (i + 1)
          pure i
 
-lookup : {idx : _} -> (0 p : IsVar x idx vs) -> AVars vs -> Int
-lookup First (xs :< x) = x
-lookup (Later p) (xs :< x) = lookup p xs
-
 bindArgs : {auto v : Ref Next Int} ->
            List ANF -> Core (List (AVar, Maybe ANF))
 bindArgs [] = pure []
