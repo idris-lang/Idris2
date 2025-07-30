@@ -69,7 +69,7 @@ record WkCExp (vars : Scope) where
 
 Weaken WkCExp where
   weakenNs s' (MkWkCExp {supp, outer} s Refl e)
-    = MkWkCExp (s + s') (sym $ appendAssociative supp outer ns) e
+    = MkWkCExp (s + s') (sym $ appendAssociative supp outer inner) e
 
 lookup : FC -> Var ds -> Subst ds vars -> CExp vars
 lookup fc (MkVar p) rho = case go p rho of

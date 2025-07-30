@@ -8,13 +8,6 @@ import Data.SnocList
 
 import Libraries.Data.List.SizeOf
 
-makeArgs : (args : Scope) -> List (Var (Scope.addInner vars args))
-makeArgs args = makeArgs' args id
-  where
-    makeArgs' : (args : Scope) -> (Var (Scope.addInner vars args) -> a) -> List a
-    makeArgs' [<] f = []
-    makeArgs' (xs :< x) f = f first :: makeArgs' xs (f . weaken)
-
 makeArgz : (args : List Name) -> List (Var (Scope.ext vars args))
 makeArgz args
   = embedFishily @{ListFreelyEmbeddable} $ Var.List.allVars args

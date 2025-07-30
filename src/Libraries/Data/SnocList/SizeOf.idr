@@ -44,7 +44,7 @@ public export
 suc : SizeOf as -> SizeOf (as :< a)
 suc (MkSizeOf n p) = MkSizeOf (S n) (S p)
 
--- ||| suc but from the right
+-- ||| suc but from the left
 export
 sucL : SizeOf as -> SizeOf ([<a] ++ as)
 sucL (MkSizeOf n p) = MkSizeOf (S n) (sucL p)
