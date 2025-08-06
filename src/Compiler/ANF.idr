@@ -191,12 +191,12 @@ mlet fc val sc
 
 bindAsFresh :
   {auto v : Ref Next Int} ->
-  (args : List Name) -> AVars vars' ->
-  Core (List Int, AVars (Scope.ext vars' args))
-bindAsFresh [] vs = pure ([], vs)
-bindAsFresh (n :: ns) vs
+  (args : Scope) -> AVars vars' ->
+  Core (List Int, AVars (vars' ++ args))
+bindAsFresh [<] vs = pure ([], vs)
+bindAsFresh (ns :< n) vs
     = do i <- nextVar
-         mapFst (i ::) <$> bindAsFresh ns (vs :< i)
+         bimap (i ::) (:< i) <$> bindAsFresh ns vs
 
 mutual
   anfArgs : {auto v : Ref Next Int} ->
@@ -208,7 +208,7 @@ mutual
 
   anf : {auto v : Ref Next Int} ->
         AVars vars -> Lifted vars -> Core ANF
-  anf vs (LLocal fc p) = pure $ AV fc (ALocal (lookup p vs))
+  anf vs (LLocal fc p) = pure $ AV fc (ALocal (lookup vs p))
   anf vs (LAppName fc lazy n args)
       = anfArgs fc vs args (AAppName fc lazy n)
   anf vs (LUnderApp fc n m args)
@@ -261,12 +261,12 @@ export
 toANF : LiftedDef -> Core ANFDef
 toANF (MkLFun args scope sc)
     = do v <- newRef Next (the Int 0)
-         (iargs, vsNil) <- bindAsFresh (cast args) AVars.empty
+         (iargs, vsNil) <- bindAsFresh args AVars.empty
          let vs : AVars args
            := rewrite sym $ appendLinLeftNeutral args in
-              rewrite snocAppendAsFish Scope.empty args in vsNil
-         (iargs', vs) <- bindAsFresh (cast scope) vs
-         sc' <- anf (rewrite snocAppendAsFish args scope in vs) sc
+              vsNil
+         (iargs', vs) <- bindAsFresh scope vs
+         sc' <- anf vs sc
          pure $ MkAFun (iargs ++ iargs') sc'
 toANF (MkLCon t a ns) = pure $ MkACon t a ns
 toANF (MkLForeign ccs fargs t) = pure $ MkAForeign ccs fargs t

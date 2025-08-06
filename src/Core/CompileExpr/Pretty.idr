@@ -16,8 +16,6 @@ import Idris.Doc.Annotations
 
 %hide Core.Name.prettyOp
 
-%hide CompileExpr.(:<)
-%hide CompileExpr.Lin
 %hide String.(::)
 %hide String.Nil
 %hide Doc.Nil
@@ -94,7 +92,7 @@ mutual
 
   prettyNamedConAlt : NamedConAlt -> Doc IdrisSyntax
   prettyNamedConAlt (MkNConAlt x ci tag args exp)
-        = sep (prettyCon x ci tag :: map prettyName args ++ [fatArrow <+> softline <+> align (prettyNamedCExp exp) ])
+        = sep (prettyCon x ci tag :: map prettyName (toList args) ++ [fatArrow <+> softline <+> align (prettyNamedCExp exp) ])
 
   prettyNamedConstAlt : NamedConstAlt -> Doc IdrisSyntax
   prettyNamedConstAlt (MkNConstAlt x exp)

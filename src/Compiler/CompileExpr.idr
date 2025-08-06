@@ -61,7 +61,7 @@ etaExpand i Z exp args = mkApp exp (map (mkLocal (getFC exp)) (reverse args))
 etaExpand i (S k) exp args
     = CLam (getFC exp) (MN "eta" i)
              (etaExpand (i + 1) k (weaken exp)
-                  (first :: map weakenVar args))
+                  (first :: map later args))
 
 export
 expandToArity : Nat -> CExp vars -> List (CExp vars) -> CExp vars
@@ -224,7 +224,7 @@ mutual
            Just gdef <- lookupCtxtExact x (gamma defs)
                 | Nothing => -- primitive type match
                      do xn <- getFullName x
-                        pure $ MkConAlt xn TYCON Nothing args !(toCExpTree n sc)
+                        pure $ MkConAlt xn TYCON Nothing (cast args) !(toCExpTree n (rewrite sym $ fishAsSnocAppend vars args in sc))
                                   :: !(conCases n ns)
            case (definition gdef) of
                 DCon _ arity (Just pos) => conCases n ns -- skip it
@@ -235,16 +235,16 @@ mutual
                         sc' <- toCExpTree n sc
                         ns' <- conCases n ns
                         if dcon (definition gdef)
-                           then pure $ MkConAlt xn !(dconFlag xn) (Just tag) (toList args') (shrinkCExp subList sc') :: ns'
-                           else pure $ MkConAlt xn !(dconFlag xn) Nothing (toList args') (shrinkCExp subList sc') :: ns'
+                           then pure $ MkConAlt xn !(dconFlag xn) (Just tag) args' (shrinkCExp subList sc') :: ns'
+                           else pure $ MkConAlt xn !(dconFlag xn) Nothing args' (shrinkCExp subList sc') :: ns'
     where
       dcon : Def -> Bool
       dcon (DCon {}) = True
       dcon _ = False
 
-      subThinList : Thin (vars ++ args') (vars ++ ([<] <>< args)) -> Thin (vars <>< (args' <>> [])) (vars <>< args)
-      subThinList t = do rewrite fishAsSnocAppend vars (toList args')
-                         rewrite castToList args'
+      subThinList : Thin (vars ++ args') (vars ++ ([<] <>< args)) -> Thin (vars ++ args') (vars <>< args)
+      subThinList t = do -- rewrite fishAsSnocAppend vars (toList args')
+                         -- rewrite castToList args'
                          rewrite fishAsSnocAppend vars args
                          t
 
@@ -310,10 +310,9 @@ mutual
                                     := rewrite sym $ fishAsSnocAppend vars args in sc'
 
                                 let scope : CExp ((vars ++ [<MN "eff" 0]) ++ cast args)
-                                    scope = rewrite sym $ appendAssociative vars [<MN "eff" 0] (cast args) in
-                                            insertNames {outer=cast args}
-                                                        {inner=vars}
-                                                        {ns = [<MN "eff" 0]}
+                                    scope = insertNames {inner=cast args}
+                                                        {outer=vars}
+                                                        {middle = [<MN "eff" 0]}
                                                         (mkSizeOf _) (mkSizeOf _) sc''
                                 let tm = CLet fc (MN "eff" 0) NotInline scr (substs (cast s) env scope)
                                 log "compiler.newtype.world" 50 "Kept the scrutinee \{show tm}, scope: \{show scope}"
@@ -549,7 +548,7 @@ lamRHS ns tm
           tmExp = substs s env (rewrite appendLinLeftNeutral ns in tm)
           newArgs = getNewArgs env
           bounds = mkBounds newArgs
-          expLocs = mkLocals zero {vars = Scope.empty} bounds tmExp in
+          expLocs = mkLocals bounds zero {inner = Scope.empty} tmExp in
           lamBind (getFC tm) _ expLocs
   where
     lamBind : FC -> (ns : Scope) -> CExp ns -> ClosedCExp
@@ -581,7 +580,7 @@ toCDef n ty _ (ExternDef arity)
         -- TODO has quadratic runtime
         getVars : ArgList k ns -> List (Var ns)
         getVars Z = []
-        getVars (S rest) = first :: map weakenVar (getVars rest)
+        getVars (S rest) = first :: map later (getVars rest)
 
 toCDef n ty _ (ForeignDef arity cs)
     = do defs <- get Ctxt
@@ -594,7 +593,7 @@ toCDef n ty _ (Builtin {arity} op)
         -- TODO has quadratic runtime
         getVars : ArgList k ns -> Vect k (Var ns)
         getVars Z = []
-        getVars (S rest) = first :: map weakenVar (getVars rest)
+        getVars (S rest) = first :: map later (getVars rest)
 
 toCDef n _ _ (DCon tag arity pos)
     = do let nt = snd <$> pos

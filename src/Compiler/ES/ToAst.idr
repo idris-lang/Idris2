@@ -3,6 +3,7 @@
 module Compiler.ES.ToAst
 
 import Data.Vect
+import Data.SnocList
 import Core.CompileExpr
 import Core.Context
 import Compiler.ES.Ast
@@ -223,7 +224,7 @@ mutual
     -- We map the list of args to the corresponding
     -- data projections (field accessors). They'll
     -- be then properly inlined when converting `x`.
-    projections sc args
+    projections sc (toList args)
     MkEConAlt (tag n tg) ci <$> stmt e x
 
   -- a single branch in a pattern match on a constant

@@ -11,6 +11,7 @@ import Compiler.CompileExpr
 import Core.Context
 
 import Libraries.Data.String.Builder
+import Data.SnocList
 
 import Data.SortedSet
 import Data.Vect
@@ -356,11 +357,11 @@ parameters (constants : SortedSet Name)
     schConAlt : Nat -> Builder -> NamedConAlt -> Core Builder
     schConAlt i target (MkNConAlt n ci tag args sc)
         = pure $ "((" ++ showTag n tag ++ ") "
-                      ++ bindArgs target sc 1 args !(schExp i sc) ++ ")"
+                      ++ bindArgs target sc 1 (toList args) !(schExp i sc) ++ ")"
 
     schConUncheckedAlt : Nat -> Builder -> NamedConAlt -> Core Builder
     schConUncheckedAlt i target (MkNConAlt n ci tag args sc)
-        = pure $ bindArgs target sc 1 args !(schExp i sc)
+        = pure $ bindArgs target sc 1 (toList args) !(schExp i sc)
 
     schConstAlt : Nat -> Builder -> NamedConstAlt -> Core Builder
     schConstAlt i target (MkNConstAlt c exp)
@@ -433,7 +434,7 @@ parameters (constants : SortedSet Name)
       where
         getAltCode : Builder -> NamedConAlt -> Core Builder
         getAltCode n (MkNConAlt _ _ _ args sc)
-            = pure $ bindArgs n sc 0 args !(schExp i sc)
+            = pure $ bindArgs n sc 0 (toList args) !(schExp i sc)
     schRecordCase _ _ _ _ = throw $ InternalError "Case of a record has multiple alternatives"
 
     schListCase : Nat -> NamedCExp -> List NamedConAlt -> Maybe NamedCExp ->
@@ -473,7 +474,7 @@ parameters (constants : SortedSet Name)
 
         getConsCode : Builder -> List NamedConAlt -> Core (Maybe Builder)
         getConsCode n [] = pure Nothing
-        getConsCode n (MkNConAlt _ CONS _ [x,xs] sc :: _)
+        getConsCode n (MkNConAlt _ CONS _ [<x,xs] sc :: _)
             = do sc' <- schExp (i + 1) sc
                  pure $ Just $ bindArgs [(x, "car"), (xs, "cdr")] sc'
           where
@@ -523,7 +524,7 @@ parameters (constants : SortedSet Name)
 
         getJustCode : Builder -> List NamedConAlt -> Core (Maybe Builder)
         getJustCode n [] = pure Nothing
-        getJustCode n (MkNConAlt _ JUST _ [x] sc :: _)
+        getJustCode n (MkNConAlt _ JUST _ [<x] sc :: _)
             = do sc' <- schExp (i + 1) sc
                  pure $ Just $ bindArg x sc'
           where
