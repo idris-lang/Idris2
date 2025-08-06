@@ -473,7 +473,7 @@ concreteDets {vars} fc defaults env top pos dets (arg :: args)
              concrete defs scnf False
     concrete defs (NTCon nfc n t a args) atTop
         = do sd <- getSearchData nfc False n
-             let args' = NatSet.drop (detArgs sd) args
+             let args' = NatSet.take (detArgs sd) args
              traverse_ (\ parg => do argnf <- evalClosure defs parg
                                      concrete defs argnf False) (map snd args')
     concrete defs (NDCon nfc n t a args) atTop

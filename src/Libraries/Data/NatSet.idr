@@ -30,6 +30,10 @@ drop ds xs = go 0 xs
              then go (S i) xs
              else x :: go (S i) xs
 
+export %inline
+take : NatSet -> List a -> List a
+take = drop . complement
+
 export
 isEmpty : NatSet -> Bool
 isEmpty 0 = True
