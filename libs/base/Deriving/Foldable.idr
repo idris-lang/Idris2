@@ -295,7 +295,7 @@ parameters (fc : FC) (mutualWith : List Name)
     = apply fc (IVar fc (UN $ Basic "bifoldMapFst"))
       (foldMapFun (assert <|> Just True) sp rec f Nothing
       :: toList t)
-  foldMapFun assert (FIFree y) rec f t = `(mempty)
+  foldMapFun assert (FIFree y) rec f t = `(neutral)
 
 ------------------------------------------------------------------------------
 -- User-facing: Foldable deriving
