@@ -57,12 +57,6 @@ wk sout (Wk {ws, ds, vars} rho sws)
     Wk rho (sws + sout)
 wk ws rho = Wk rho ws
 
-wksN : Subst ds vars -> SizeOf out -> Subst (Scope.ext ds out) (Scope.ext vars out)
-wksN s s'
-  = rewrite fishAsSnocAppend ds out in
-    rewrite fishAsSnocAppend vars out in
-    wk (zero <>< s') s
-
 record WkCExp (vars : Scope) where
   constructor MkWkCExp
   {0 outer, supp : Scope}
@@ -72,7 +66,7 @@ record WkCExp (vars : Scope) where
 
 Weaken WkCExp where
   weakenNs s' (MkWkCExp {supp, outer} s Refl e)
-    = MkWkCExp (s + s') (sym $ appendAssociative supp outer ns) e
+    = MkWkCExp (s + s') (sym $ appendAssociative supp outer inner) e
 
 lookup : FC -> Var ds -> Subst ds vars -> CExp vars
 lookup fc (MkVar p) rho = case go p rho of
@@ -178,7 +172,7 @@ constFold rho (CConCase fc sc xs x)
   where
     foldAlt : CConAlt vars -> CConAlt vars'
     foldAlt (MkConAlt n ci t xs e)
-      = MkConAlt n ci t xs $ constFold (wksN rho (mkSizeOf xs)) e
+      = MkConAlt n ci t xs $ constFold (wk (mkSizeOf xs) rho) e
 
 constFold rho (CConstCase fc sc xs x) =
     let sc' = constFold rho sc

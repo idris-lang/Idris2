@@ -36,7 +36,7 @@ record NestedNames (vars : Scope) where
 
 export
 Weaken NestedNames where
-  weakenNs {ns = wkns} s (MkNested ns) = MkNested (map wknName ns)
+  weakenNs {inner = wkns} s (MkNested ns) = MkNested (map wknName ns)
     where
       wknName : (Name, (Maybe Name, List (Var vars), FC -> NameType -> Term vars)) ->
                 (Name, (Maybe Name, List (Var (Scope.addInner vars wkns)), FC -> NameType -> Term (Scope.addInner vars wkns)))
