@@ -98,11 +98,11 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
         jname (n, _, t) = (EmptyFC, Just n, erased, MkPiBindData Implicit t.boundType)
 
     fname : IField -> Name
-    fname (MkIField fc c p n ty) = n
+    fname (MkIField fc c n _) = n
 
     farg : IField ->
            (FC, Maybe Name, RigCount, PiBindData RawImp)
-    farg (MkIField fc c p n ty) = (virtualiseFC fc, Just n, c, MkPiBindData p ty)
+    farg (MkIField fc c n bind) = (virtualiseFC fc, Just n, c, bind)
 
     mkTy : List (FC, Maybe Name, RigCount, PiBindData RawImp) ->
            RawImp -> RawImp

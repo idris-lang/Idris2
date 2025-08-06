@@ -116,8 +116,8 @@ mutual
                     {auto u : Ref UST UState} ->
                     IField ->
                     Core IField
-  getUnquoteField (MkIField fc c p n ty)
-      = pure $ MkIField fc c p n !(getUnquote ty)
+  getUnquoteField (MkIField fc c n (MkPiBindData p ty))
+      = pure $ MkIField fc c n (MkPiBindData p !(getUnquote ty))
 
   getUnquoteRecord : {auto c : Ref Ctxt Defs} ->
                      {auto q : Ref Unq (List (Name, FC, RawImp))} ->

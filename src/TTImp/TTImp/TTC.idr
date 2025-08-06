@@ -309,13 +309,13 @@ mutual
 
   export
   TTC IField where
-    toBuf (MkIField fc c p n ty)
-        = do toBuf fc; toBuf c; toBuf p; toBuf n; toBuf ty
+    toBuf (MkIField fc c n bind)
+        = do toBuf fc; toBuf c; toBuf n; toBuf bind
 
     fromBuf
-        = do fc <- fromBuf; c <- fromBuf; p <- fromBuf
-             n <- fromBuf; ty <- fromBuf
-             pure (MkIField fc c p n ty)
+        = do fc <- fromBuf; c <- fromBuf;
+             n <- fromBuf; bind <- fromBuf
+             pure (MkIField fc c n bind)
 
   export
   TTC ImpRecord where

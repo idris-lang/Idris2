@@ -645,7 +645,7 @@ fieldDecl fname indents
              ty <- expr fname indents
              end <- location
              pure (map (\n => MkIField (MkFC fname start end)
-                                       linear p (UN $ Basic n) ty) (forget ns))
+                                       linear (UN $ Basic n) (MkPiBindData p ty)) (forget ns))
 
 recordDecl : OriginDesc -> IndentInfo -> Rule ImpDecl
 recordDecl fname indents

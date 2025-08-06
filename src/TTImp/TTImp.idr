@@ -374,8 +374,7 @@ mutual
 
   public export
   data IField' : Type -> Type where
-       MkIField : FC -> RigCount -> PiInfo (RawImp' nm) ->
-                  (name : Name) -> (ty : RawImp' nm) ->
+       MkIField : FC -> RigCount -> (name : Name) -> PiBindData (RawImp' nm) ->
                   IField' nm
 
   %name IField' fld
@@ -384,11 +383,11 @@ mutual
   ImpParameter : Type
   ImpParameter = ImpParameter' Name
 
-  -- TODO: turn into a proper datatype
   public export
   ImpParameter' : Type -> Type
   ImpParameter' nm = (Name, RigCount, PiBindData (RawImp' nm))
 
+  -- old datatype for ImpParameter, used for elabreflection compatibility
   public export
   OldParameters' : Type -> Type
   OldParameters' nm = (Name, RigCount, PiInfo (RawImp' nm), RawImp' nm)
@@ -419,8 +418,8 @@ mutual
   export
   covering
   Show nm => Show (IField' nm) where
-    show (MkIField _ c Explicit n ty) = show n ++ " : " ++ show ty
-    show (MkIField _ c _ n ty) = "{" ++ show n ++ " : " ++ show ty ++ "}"
+    show (MkIField _ _ n (MkPiBindData Explicit ty)) = show n ++ " : " ++ show ty
+    show (MkIField _ _ n ty) = "{" ++ show n ++ " : " ++ show ty.boundType ++ "}"
 
   export
   covering
@@ -828,7 +827,7 @@ definedInBlock ns decls =
     getName (MkImpTy _ n _) = n.val
 
     getFieldName : IField -> Name
-    getFieldName (MkIField _ _ _ n _) = n
+    getFieldName (MkIField _ _ n _) = n
 
     expandNS : Namespace -> Name -> Name
     expandNS ns n

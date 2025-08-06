@@ -147,8 +147,8 @@ mutual
 
   export
   Functor IField' where
-    map f (MkIField fc rig info n t)
-      = MkIField fc rig (map (map f) info) n (map f t)
+    map f (MkIField fc rig n bind)
+      = MkIField fc rig n (map (map f) bind)
 
   export
   Functor ImpRecord' where

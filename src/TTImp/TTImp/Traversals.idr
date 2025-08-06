@@ -54,7 +54,7 @@ parameters (f : RawImp' nm -> RawImp' nm)
 
   export
   mapIField : IField' nm -> IField' nm
-  mapIField (MkIField fc rig pinfo n t) = MkIField fc rig (mapPiInfo pinfo) n (mapTTImp t)
+  mapIField (MkIField fc rig n bind) = MkIField fc rig n (map f bind)
 
   export
   mapImpRecord : ImpRecord' nm -> ImpRecord' nm

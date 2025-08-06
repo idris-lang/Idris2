@@ -358,12 +358,12 @@ mutual
     reify defs val@(NDCon _ n _ _ args)
         = case (dropAllNS !(full (gamma defs) n), map snd args) of
                (UN (Basic "MkIField"), [v,w,x,y,z])
-                    => do v' <- reify defs !(evalClosure defs v)
-                          w' <- reify defs !(evalClosure defs w)
-                          x' <- reify defs !(evalClosure defs x)
-                          y' <- reify defs !(evalClosure defs y)
-                          z' <- reify defs !(evalClosure defs z)
-                          pure (MkIField v' w' x' y' z')
+                    => do fc <- reify defs !(evalClosure defs v)
+                          rig <- reify defs !(evalClosure defs w)
+                          info <- reify defs !(evalClosure defs x)
+                          name <- reify defs !(evalClosure defs y)
+                          type <- reify defs !(evalClosure defs z)
+                          pure (MkIField fc rig name (MkPiBindData info type))
                _ => cantReify val "IField"
     reify defs val = cantReify val "IField"
 
@@ -728,12 +728,12 @@ mutual
 
   export
   Reflect IField where
-    reflect fc defs lhs env (MkIField v w x y z)
+    reflect fc defs lhs env (MkIField v w name (MkPiBindData info type))
         = do v' <- reflect fc defs lhs env v
              w' <- reflect fc defs lhs env w
-             x' <- reflect fc defs lhs env x
-             y' <- reflect fc defs lhs env y
-             z' <- reflect fc defs lhs env z
+             x' <- reflect fc defs lhs env info
+             y' <- reflect fc defs lhs env name
+             z' <- reflect fc defs lhs env type
              appCon fc defs (reflectionttimp "MkIField") [v', w', x', y', z']
 
   export
