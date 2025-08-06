@@ -101,7 +101,7 @@ mutual
     map f (IDef fc nm cls)
       = IDef fc nm (map (map f) cls)
     map f (IParameters fc ps ds)
-      = IParameters fc (map (map  {f = ImpParameter'} f) ps) (map (map f) ds)
+      = IParameters fc (map (map  {f = ImpParameter'} (map f)) ps) (map (map f) ds)
     map f (IRecord fc cs vis mbtot rec)
       = IRecord fc cs vis mbtot (map f rec)
     map f (IFail fc msg ds)
@@ -153,12 +153,12 @@ mutual
   export
   Functor ImpRecord' where
     map f (MkImpRecord fc n params opts conName fields)
-      = MkImpRecord fc n (map (map {f = ImpParameter'} f) params)
+      = MkImpRecord fc n (map (map {f = ImpParameter'} (map f)) params)
                     opts conName (map (map f) fields)
 
   export
   Functor ImpParameter' where
-    map f (nm, rig, bind) = (nm, rig, map (map f) bind)
+    map f (nm, rig, bind) = (nm, rig, map f bind)
 
   export
   Functor IFieldUpdate' where

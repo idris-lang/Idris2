@@ -1146,7 +1146,7 @@ mutual
       where
         getArgs : Either (List1 PlainBinder)
                          (List1 PBinder) ->
-                         Core (List1 (ImpParameter' Name))
+                         Core (List1 (ImpParameter' RawImp))
         getArgs (Left params)
           = traverseList1 (\(MkWithName n ty) => do
               ty' <- desugar AnyExpr ps ty
@@ -1217,10 +1217,10 @@ mutual
       = do opts <- traverse (desugarFnOpt ps) fnopts
            verifyTotalityModifiers impl.fc opts
 
-           is' <- for is $ \ (fc, c, n, pi, tm) =>
-                     do tm' <- desugar AnyExpr ps tm
-                        pi' <- mapDesugarPiInfo ps pi
-                        pure (fc, c, n, pi', tm')
+           is' <- for is $ \ (fc, c, n, bind) =>
+                     do tm' <- desugar AnyExpr ps bind.boundType
+                        pi' <- mapDesugarPiInfo ps bind.info
+                        pure (fc, c, n, MkPiBindData pi' tm')
            cons' <- for cons $ \ (n, tm) =>
                      do tm' <- desugar AnyExpr ps tm
                         pure (n, tm')
@@ -1233,7 +1233,7 @@ mutual
              $ findUniqueBindableNames impl.fc True ps []
 
            let paramsb = map (doBind bnames) params'
-           let isb = map (\ (info, r, n, p, tm) => (info, r, n, p, doBind bnames tm)) is'
+           let isb = map (\ (info, r, n, bind) => (info, r, n, mapType (doBind bnames) bind)) is'
            let consb = map (\(n, tm) => (n, doBind bnames tm)) cons'
 
            body' <- maybe (pure Nothing)

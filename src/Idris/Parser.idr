@@ -1697,25 +1697,25 @@ constraints fname indents
          pure ((Just n, tm) :: more)
   <|> pure []
 
-implBinds : OriginDesc -> IndentInfo -> (namedImpl : Bool) -> EmptyRule (List (FC, RigCount, Name, PiInfo PTerm, PTerm))
+implBinds : OriginDesc -> IndentInfo -> (namedImpl : Bool) ->
+            EmptyRule (List (FC, ImpParameter' PTerm))
 implBinds fname indents namedImpl = concatMap (map adjust) <$> go where
 
-  adjust : (RigCount, WithFC Name, a) -> (FC, RigCount, Name, a)
-  adjust (r, wn, ty) = (virtualiseFC wn.fc, r, wn.val, ty)
+  adjust : (RigCount, WithFC Name, PiBindData PTerm) -> (FC, ImpParameter' PTerm)
+  adjust (r, wn, ty) = (virtualiseFC wn.fc, wn.val, r, ty)
 
   isDefaultImplicit : PiInfo a -> Bool
   isDefaultImplicit (DefImplicit _) = True
   isDefaultImplicit _               = False
 
-  go : EmptyRule (List (List (RigCount, WithFC Name, PiInfo PTerm, PTerm)))
+  go : EmptyRule (List (List (RigCount, WithFC Name, PiBindData PTerm)))
   go = do decoratedSymbol fname "{"
           piInfo <- bounds $ option Implicit $ defImplicitField fname indents
           when (not namedImpl && isDefaultImplicit piInfo.val) $
             fatalLoc piInfo.bounds "Default implicits are allowed only for named implementations"
-          ns <- map
-                    (\case (MkBasicMultiBinder rig names type) => map (\nm => (rig, nm, piInfo.val, type)) (forget names))
+          ns <- map (\case (MkBasicMultiBinder rig names type) => map (\nm => (rig, nm, MkPiBindData piInfo.val type)) (forget names))
                     (pibindListName fname indents)
-          let ns = the (List (ZeroOneOmega, (WithFC Name, (PiInfo (PTerm' Name), PTerm' Name)))) ns
+          let ns = the (List (ZeroOneOmega, WithFC Name, PiBindData PTerm)) ns
           commitSymbol fname "}"
           commitSymbol fname "->"
           more <- go

@@ -381,11 +381,11 @@ mutual
 
   public export
   ImpParameter : Type
-  ImpParameter = ImpParameter' Name
+  ImpParameter = ImpParameter' (RawImp' Name)
 
   public export
   ImpParameter' : Type -> Type
-  ImpParameter' nm = (Name, RigCount, PiBindData (RawImp' nm))
+  ImpParameter' nm = (Name, RigCount, PiBindData nm)
 
   -- old datatype for ImpParameter, used for elabreflection compatibility
   public export
@@ -393,11 +393,11 @@ mutual
   OldParameters' nm = (Name, RigCount, PiInfo (RawImp' nm), RawImp' nm)
 
   public export
-  toOldParams : ImpParameter' nm -> OldParameters' nm
+  toOldParams : ImpParameter' (RawImp' nm) -> OldParameters' nm
   toOldParams (nm, rig, bind) = (nm, rig, bind.info, bind.boundType)
 
   public export
-  fromOldParams : OldParameters' nm -> ImpParameter' nm
+  fromOldParams : OldParameters' nm -> ImpParameter' (RawImp' nm)
   fromOldParams (nm, rig, info,type) = (nm, rig, MkPiBindData info type)
 
   public export
@@ -407,7 +407,7 @@ mutual
   public export
   data ImpRecord' : Type -> Type where
        MkImpRecord : FC -> (n : Name) ->
-                     (params : List (ImpParameter' nm)) ->
+                     (params : List (ImpParameter' (RawImp' nm))) ->
                      (opts : List DataOpt) ->
                      (conName : Name) ->
                      (fields : List (IField' nm)) ->
@@ -490,7 +490,7 @@ mutual
                Maybe TotalReq -> ImpData' nm -> ImpDecl' nm
        IDef : FC -> Name -> List (ImpClause' nm) -> ImpDecl' nm
        IParameters : FC ->
-                     List1 (ImpParameter' nm) ->
+                     List1 (ImpParameter' (RawImp' nm)) ->
                      List (ImpDecl' nm) -> ImpDecl' nm
        IRecord : FC ->
                  Maybe String -> -- nested namespace

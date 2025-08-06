@@ -45,7 +45,7 @@ rawImpFromDecl decl = case decl of
     IPragma _ _ f => []
     ILog k => []
     IBuiltin _ _ _ => []
-  where getParamTy : ImpParameter' Name -> RawImp
+  where getParamTy : ImpParameter' RawImp -> RawImp
         getParamTy (_, _, binder) = binder.boundType
         getFromClause : ImpClause -> List RawImp
         getFromClause (PatClause fc1 lhs rhs) = [lhs, rhs]
