@@ -8,14 +8,17 @@ failing "Can't find an implementation for NonEmpty xs."
     myHead : List a -> a
     myHead xs = head xs
 
-failing "Can't find
+failing """
+Can't find
 an implementation
-  for NonEmpty xs."
+  for NonEmpty xs.
+"""
     myHead : List a -> a
     myHead xs = head xs
 
 
-failing "Can't
+failing """
+Can't
 find
 
 
@@ -24,6 +27,7 @@ find
 
 
 
-for NonEmpty xs."
+for NonEmpty xs.
+"""
     myHead : List a -> a
     myHead xs = head xs
