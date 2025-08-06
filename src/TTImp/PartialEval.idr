@@ -627,12 +627,12 @@ mutual
            args' <- quoteArgsWithFC q defs bound env args
            let False = NatSet.isEmpty (specArgs gdef)
                | _ => pure $ applyStackWithFC (Ref fc Func fn) args'
-           empty <- clearDefs defs
            Just r <- specialise fc (extendEnv bound env) gdef fn args'
                 | Nothing =>
                      -- can't specialise, keep the arguments
                      -- unreduced
-                     do args' <- quoteArgsWithFC q empty bound env args
+                     do empty <- clearDefs defs
+                        args' <- quoteArgsWithFC q empty bound env args
                         pure $ applyStackWithFC (Ref fc Func fn) args'
            pure r
      where
