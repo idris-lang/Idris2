@@ -498,15 +498,15 @@ mutual
               {auto s : Ref Syn SyntaxInfo} ->
               ImpRecord' KindedName ->
               Core ( Name
-                   , List (Name, RigCount, PiInfo IPTerm, IPTerm)
+                   , List (Name, RigCount, PiBindData IPTerm)
                    , List DataOpt
                    , Maybe (String, Name)
                    , List (PField' KindedName))
   toPRecord (MkImpRecord fc n ps opts con fs)
-      = do ps' <- traverse (\ (n, c, p, ty) =>
-                                   do ty' <- toPTerm startPrec ty
-                                      p' <- mapPiInfo p
-                                      pure (n, c, p', ty')) ps
+      = do ps' <- traverse (\ (n, c, binder) =>
+                                   do ty' <- toPTerm startPrec binder.boundType
+                                      p' <- mapPiInfo binder.info
+                                      pure (n, c, MkPiBindData p' ty')) ps
            fs' <- traverse toPField fs
            pure (n, ps', opts, Just ("", con), fs')
     where
@@ -537,19 +537,19 @@ mutual
   toPDecl (IParameters fc ps ds)
       = do ds' <- traverse toPDecl ds
            args <-
-             traverseList1 (\(n, rig, info, tpe) =>
-                 do info' <- traverse (toPTerm startPrec) info
-                    type' <- toPTerm startPrec tpe
+             traverseList1 (\(n, rig, binder) =>
+                 do info' <- traverse (toPTerm startPrec) binder.info
+                    type' <- toPTerm startPrec binder.boundType
                     pure (MkFullBinder info' rig (NoFC n) type')) ps
            pure (Just (MkFCVal fc (PParameters (Right args) (catMaybes ds'))))
   toPDecl (IRecord fc _ vis mbtot r)
       = do (n, ps, opts, con, fs) <- toPRecord r
            pure (Just (MkFCVal fc $ PRecord "" vis mbtot (MkPRecord n (map toBinder ps) opts con fs)))
            where
-             toBinder : (Name, ZeroOneOmega, PiInfo (PTerm' KindedName), PTerm' KindedName) -> PBinder' KindedName
-             toBinder (n, rig, info, ty)
-               = MkFullBinder info rig (NoFC n) ty
-                              --        ^^^^
+             toBinder : (Name, ZeroOneOmega, PiBindData (PTerm' KindedName)) -> PBinder' KindedName
+             toBinder (n, rig, binder)
+               = MkFullBinder binder.info rig (NoFC n) binder.boundType
+                              --               ^^^^
                               -- we should know this location
 
   toPDecl (IFail fc msg ds)

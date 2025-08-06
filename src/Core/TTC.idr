@@ -155,6 +155,16 @@ TTC t => TTC (PiInfo t) where
              _ => corrupt "PiInfo"
 
 export
+TTC t => TTC (PiBindData t) where
+  toBuf (MkPiBindData info ty)
+    = do toBuf info
+         toBuf ty
+  fromBuf
+    = do info <- fromBuf
+         ty <- fromBuf
+         pure (MkPiBindData info ty)
+
+export
 {fs : _} -> (ev : All (TTC . KeyVal.type) fs) => TTC (Record fs) where
   toBuf [] = tag 0
   toBuf {ev = _ :: _} ((lbl :- v) :: y)

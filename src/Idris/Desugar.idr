@@ -1136,11 +1136,11 @@ mutual
            -- Look for implicitly bindable names in the parameters
            pnames <- ifThenElse (not !isUnboundImplicits) (pure [])
              $ map concat
-             $ for (map (Builtin.snd . Builtin.snd . Builtin.snd) paramList)
+             $ for (map (boundType . Builtin.snd . Builtin.snd) paramList)
              $ findUniqueBindableNames pp.fc True (ps ++ map Builtin.fst paramList) []
 
-           let paramsb = map (\(n, rig, info, tm) =>
-                                 (n, rig, info, doBind pnames tm)) params'
+           let paramsb = map (\(n, rig, MkPiBindData info tm) =>
+                                 (n, rig, MkPiBindData info (doBind pnames tm))) params'
            pure [IParameters pp.fc paramsb (concat pds')]
       where
         getArgs : Either (List1 PlainBinder)
@@ -1149,12 +1149,12 @@ mutual
         getArgs (Left params)
           = traverseList1 (\(MkWithName n ty) => do
               ty' <- desugar AnyExpr ps ty
-              pure (n.val, top, Explicit, ty')) params
+              pure (n.val, top, MkPiBindData Explicit ty')) params
         getArgs (Right params)
           = join <$> traverseList1 (\(MkPBinder info (MkBasicMultiBinder rig n ntm)) => do
               tm' <- desugar AnyExpr ps ntm
               i' <- traverse (desugar AnyExpr ps) info
-              let allbinders = map (\nn => (nn.val, rig, i', tm')) n
+              let allbinders = map (\nn => (nn.val, rig, MkPiBindData i' tm')) n
               pure allbinders) params
 
   desugarDecl ps use@(MkWithData _ $ PUsing uimpls uds)
@@ -1267,10 +1267,10 @@ mutual
            params' <- concat <$> traverse (\ (MkPBinder info (MkBasicMultiBinder rig names tm)) =>
                           do tm' <- desugar AnyExpr ps tm
                              p'  <- mapDesugarPiInfo ps info
-                             let allBinders = map (\nn => (nn.val, rig, p', tm')) (forget names)
+                             let allBinders = map (\nn => (nn.val, rig, MkPiBindData p' tm')) (forget names)
                              pure allBinders)
                         params
-           let _ = the (List (Name, RigCount, PiInfo RawImp, RawImp)) params'
+           let _ = the (List ImpParameter) params'
            let fnames = concat $ map getfname fields
            let paramNames = concatMap (map val . forget . names . bind) params
            let _ = the (List Name) fnames
@@ -1279,12 +1279,12 @@ mutual
            let bnames = if !isUnboundImplicits
                         then concatMap (findBindableNames True
                                          (ps ++ fnames ++ paramNames) [])
-                                       (map (\(_,_,_,d) => d) params')
+                                       (map (\(_,_,b) => b.boundType) params')
                         else []
            let _ = the (List (String, String)) bnames
 
-           let paramsb = map (\ (n, c, p, tm) => (n, c, p, doBind bnames tm)) params'
-           let _ = the (List (Name, RigCount, PiInfo RawImp, RawImp)) paramsb
+           let paramsb = map (\ (n, c, bind) => (n, c, mapType (doBind bnames) bind)) params'
+           let _ = the (List ImpParameter) paramsb
            let recName = nameRoot tn
            fields' <- traverse (desugarField (ps ++ fnames ++ paramNames
                                              ) (mkNamespace recName))

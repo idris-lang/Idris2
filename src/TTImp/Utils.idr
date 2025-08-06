@@ -36,8 +36,8 @@ rawImpFromDecl decl = case decl of
     IDef fc1 y ys => getFromClause !ys
     IParameters fc1 ys zs => rawImpFromDecl !zs ++ map getParamTy (forget ys)
     IRecord fc1 y z _ (MkImpRecord fc n params opts conName fields) => do
-        (a, b) <- map (snd . snd) params
-        getFromPiInfo a ++ [b] ++ getFromIField !fields
+        binder <- map (snd . snd) params
+        getFromPiInfo binder.info ++ [binder.boundType] ++ getFromIField !fields
     IFail fc1 msg zs => rawImpFromDecl !zs
     INamespace fc1 ys zs => rawImpFromDecl !zs
     ITransform fc1 y z w => [z, w]
@@ -45,8 +45,8 @@ rawImpFromDecl decl = case decl of
     IPragma _ _ f => []
     ILog k => []
     IBuiltin _ _ _ => []
-  where getParamTy : (a, b, c, RawImp) -> RawImp
-        getParamTy (_, _, _, ty) = ty
+  where getParamTy : ImpParameter' Name -> RawImp
+        getParamTy (_, _, binder) = binder.boundType
         getFromClause : ImpClause -> List RawImp
         getFromClause (PatClause fc1 lhs rhs) = [lhs, rhs]
         getFromClause (WithClause fc1 lhs rig wval prf flags ys) = [wval, lhs] ++ getFromClause !ys

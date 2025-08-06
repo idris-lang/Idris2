@@ -387,7 +387,19 @@ mutual
   -- TODO: turn into a proper datatype
   public export
   ImpParameter' : Type -> Type
-  ImpParameter' nm = (Name, RigCount, PiInfo (RawImp' nm), RawImp' nm)
+  ImpParameter' nm = (Name, RigCount, PiBindData (RawImp' nm))
+
+  public export
+  OldParameters' : Type -> Type
+  OldParameters' nm = (Name, RigCount, PiInfo (RawImp' nm), RawImp' nm)
+
+  public export
+  toOldParams : ImpParameter' nm -> OldParameters' nm
+  toOldParams (nm, rig, bind) = (nm, rig, bind.info, bind.boundType)
+
+  public export
+  fromOldParams : OldParameters' nm -> ImpParameter' nm
+  fromOldParams (nm, rig, info,type) = (nm, rig, MkPiBindData info type)
 
   public export
   ImpRecord : Type

@@ -128,9 +128,9 @@ mutual
       = pure $ MkImpRecord fc n !(traverse unqPair ps) opts cn
                            !(traverse getUnquoteField fs)
     where
-      unqPair : (Name, RigCount, PiInfo RawImp, RawImp) ->
-                Core (Name, RigCount, PiInfo RawImp, RawImp)
-      unqPair (n, c, p, t) = pure (n, c, p, !(getUnquote t))
+      unqPair : (Name, RigCount, PiBindData RawImp) ->
+                Core (Name, RigCount, PiBindData RawImp)
+      unqPair (n, c, MkPiBindData i t) = pure (n, c, MkPiBindData i !(getUnquote t))
 
   getUnquoteData : {auto c : Ref Ctxt Defs} ->
                    {auto q : Ref Unq (List (Name, FC, RawImp))} ->
@@ -159,8 +159,8 @@ mutual
                            !(traverseList1 unqTuple ps)
                            !(traverse getUnquoteDecl ds)
     where
-      unqTuple : (Name, RigCount, PiInfo RawImp, RawImp) -> Core (Name, RigCount, PiInfo RawImp, RawImp)
-      unqTuple (n, rig, i, t) = pure (n, rig, i, !(getUnquote t))
+      unqTuple : (Name, RigCount, PiBindData RawImp) -> Core (Name, RigCount, PiBindData RawImp)
+      unqTuple (n, rig, MkPiBindData i t) = pure (n, rig, MkPiBindData i !(getUnquote t))
   getUnquoteDecl (IRecord fc ns v mbt d)
       = pure $ IRecord fc ns v mbt !(getUnquoteRecord d)
   getUnquoteDecl (INamespace fc ns ds)
