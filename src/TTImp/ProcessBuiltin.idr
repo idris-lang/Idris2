@@ -1,8 +1,9 @@
 ||| Checking a %builtin pragma is correct.
--- If we get more builtins it might be wise to move each builtin to it's own file.
+-- If we get more builtins it might be wise to move each builtin to its own file.
 module TTImp.ProcessBuiltin
 
 import Data.List
+import Libraries.Data.NatSet
 
 import Core.Core
 import Core.Context
@@ -200,7 +201,7 @@ checkNatCons c cons ty fc = case !(foldr checkCon (pure (Nothing, Nothing)) cons
         (zero, succ) <- cons
         let DCon _ arity _ = gdef.definition
             | def => throw $ GenericMsg fc $ "Expected data constructor, found:" ++ showDefType def
-        case arity `minus` length gdef.eraseArgs of
+        case arity `minus` size gdef.eraseArgs of
             0 => case zero of
                 Just _ => throw $ GenericMsg fc $ "Multiple 'Z'-like constructors for " ++ show ty ++ "."
                 Nothing => pure (Just n, succ)

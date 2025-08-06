@@ -13,6 +13,7 @@ import Core.Case.CaseTree
 import Core.Case.CaseTree.Pretty
 import Core.Context.Context
 
+import Libraries.Data.NatSet
 import Libraries.Data.String.Extra
 
 %hide Env.(::)

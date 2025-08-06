@@ -14,6 +14,7 @@ import Data.List
 import Data.SnocList
 import Data.Maybe
 
+import Libraries.Data.NatSet
 import Libraries.Data.List.SizeOf
 
 import Libraries.Data.WithDefault
@@ -236,7 +237,7 @@ usableLocal {vars} loc defaults env (NTCon _ n _ _ args)
   -- usable if none of the determining arguments of the local's type are
   -- holes
   where
-    usableLocalArg : Nat -> List Nat -> List (Closure vars) -> Core Bool
+    usableLocalArg : Nat -> NatSet -> List (Closure vars) -> Core Bool
     usableLocalArg i dets [] = pure True
     usableLocalArg i dets (c :: cs)
         = if i `elem` dets
@@ -452,7 +453,7 @@ concreteDets : {vars : _} ->
                {auto c : Ref Ctxt Defs} ->
                FC -> Bool ->
                Env Term vars -> (top : ClosedTerm) ->
-               (pos : Nat) -> (dets : List Nat) ->
+               (pos : Nat) -> (dets : NatSet) ->
                (args : List (Closure vars)) ->
                Core ()
 concreteDets fc defaults env top pos dets [] = pure ()
@@ -466,20 +467,13 @@ concreteDets {vars} fc defaults env top pos dets (arg :: args)
            concrete defs argnf True
          concreteDets fc defaults env top (1 + pos) dets args
   where
-    drop : Nat -> List Nat -> List t -> List t
-    drop i ns [] = []
-    drop i ns (x :: xs)
-        = if i `elem` ns
-             then x :: drop (1+i) ns xs
-             else drop (1+i) ns xs
-
     concrete : Defs -> NF vars -> (atTop : Bool) -> Core ()
     concrete defs (NBind nfc x b sc) atTop
         = do scnf <- sc defs (toClosure defaultOpts env (Erased nfc Placeholder))
              concrete defs scnf False
     concrete defs (NTCon nfc n t a args) atTop
         = do sd <- getSearchData nfc False n
-             let args' = drop 0 (detArgs sd) args
+             let args' = NatSet.drop (detArgs sd) args
              traverse_ (\ parg => do argnf <- evalClosure defs parg
                                      concrete defs argnf False) (map snd args')
     concrete defs (NDCon nfc n t a args) atTop

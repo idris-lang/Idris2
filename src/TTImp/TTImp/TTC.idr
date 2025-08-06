@@ -8,6 +8,7 @@ import Core.Context.TTC
 
 import TTImp.TTImp
 
+import Libraries.Data.NatSet
 import Libraries.Data.WithDefault
 
 %default covering

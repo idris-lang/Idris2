@@ -22,6 +22,7 @@ import Data.List
 import Data.List1
 import Data.String as String
 import Libraries.Data.NameMap
+import Libraries.Data.NatSet
 import Libraries.Data.IOArray
 import Libraries.Data.WithDefault
 import Libraries.Utils.Scheme
@@ -152,7 +153,7 @@ getMinimalDef (Coded ns bin)
          mul <- fromBuf
          name <- fromBuf
          let def
-             = MkGlobalDef fc name (Erased fc Placeholder) [] [] [] [] mul
+             = MkGlobalDef fc name (Erased fc Placeholder) NatSet.empty NatSet.empty NatSet.empty NatSet.empty mul
                            Scope.empty (specified Public) (MkTotality Unchecked IsCovering) False
                            [] Nothing refsR False False True
                            None cdef Nothing [] Nothing

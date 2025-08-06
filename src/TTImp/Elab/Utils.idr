@@ -14,6 +14,7 @@ import TTImp.TTImp
 import Data.List.Quantifiers
 import Data.SnocList
 
+import Libraries.Data.NatSet
 import Libraries.Data.List.Quantifiers.Extra as Lib
 
 %default covering
@@ -24,12 +25,11 @@ detagSafe defs (NTCon _ n _ _ args)
     = do Just (TCon _ _ _ _ _ _ _ (Just detags)) <- lookupDefExact n (gamma defs)
               | _ => pure False
          args' <- traverse (evalClosure defs . snd) args
-         pure $ notErased 0 detags args'
+         pure $ NatSet.isEmpty detags || notErased 0 detags args'
   where
-    -- if any argument positions are in the detaggable set, and unerased, then
+    -- if any argument positions are in the non-empty(!) detaggable set, and unerased, then
     -- detagging is safe
-    notErased : Nat -> List Nat -> List ClosedNF -> Bool
-    notErased i [] _ = True -- Don't need an index available
+    notErased : Nat -> NatSet -> List ClosedNF -> Bool
     notErased i ns [] = False
     notErased i ns (NErased _ Impossible :: rest)
         = notErased (i + 1) ns rest -- Can't detag here, look elsewhere
@@ -38,7 +38,7 @@ detagSafe defs (NTCon _ n _ _ args)
 detagSafe defs _ = pure False
 
 findErasedFrom : {auto c : Ref Ctxt Defs} ->
-                 Defs -> Nat -> ClosedNF -> Core (List Nat, List Nat)
+                 Defs -> Nat -> ClosedNF -> Core (NatSet, NatSet)
 findErasedFrom defs pos (NBind fc x (Pi _ c _ aty) scf)
     = do -- In the scope, use 'Erased fc Impossible' to mean 'argument is erased'.
          -- It's handy here, because we can use it to tell if a detaggable
@@ -46,17 +46,17 @@ findErasedFrom defs pos (NBind fc x (Pi _ c _ aty) scf)
          sc <- scf defs (toClosure defaultOpts Env.empty (Erased fc (ifThenElse (isErased c) Impossible Placeholder)))
          (erest, dtrest) <- findErasedFrom defs (1 + pos) sc
          let dt' = if !(detagSafe defs !(evalClosure defs aty))
-                      then (pos :: dtrest) else dtrest
+                      then (insert pos dtrest) else dtrest
          pure $ if isErased c
-                   then (pos :: erest, dt')
+                   then (insert pos erest, dt')
                    else (erest, dt')
-findErasedFrom defs pos tm = pure ([], [])
+findErasedFrom defs pos tm = pure (NatSet.empty, NatSet.empty)
 
 -- Find the argument positions in the given type which are guaranteed to be
 -- erasable
 export
 findErased : {auto c : Ref Ctxt Defs} ->
-             ClosedTerm -> Core (List Nat, List Nat)
+             ClosedTerm -> Core (NatSet, NatSet)
 findErased tm
     = do defs <- get Ctxt
          tmnf <- nf defs Env.empty tm

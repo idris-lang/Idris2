@@ -25,6 +25,7 @@ import Data.String
 
 import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
+import Libraries.Data.NatSet
 import Libraries.Data.SortedSet
 import Libraries.Data.SortedMap
 import Libraries.Data.StringMap as S

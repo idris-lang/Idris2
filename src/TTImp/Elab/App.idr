@@ -21,6 +21,7 @@ import Data.List
 import Data.SnocList
 import Data.Maybe
 
+import Libraries.Data.NatSet
 import Libraries.Data.WithDefault
 
 %default covering

@@ -14,6 +14,7 @@ import Core.TT
 import Data.List1
 import Data.Vect
 import Libraries.Data.NameMap
+import Libraries.Data.NatSet
 import Libraries.Data.IOArray
 import Libraries.Data.SparseMatrix
 import Libraries.Data.WithDefault
@@ -1170,7 +1171,7 @@ TTC GlobalDef where
                       pure (MkGlobalDef loc name ty eargs seargs specargs iargs
                                         mul vars vis
                                         tot hatch fl refs refsR inv c True def cdef Nothing sc Nothing)
-              else pure (MkGlobalDef loc name (Erased loc Placeholder) [] [] [] []
+              else pure (MkGlobalDef loc name (Erased loc Placeholder) NatSet.empty NatSet.empty NatSet.empty NatSet.empty
                                      mul Scope.empty (specified Public) unchecked False [] refs refsR
                                      False False True def cdef Nothing [] Nothing)
 
