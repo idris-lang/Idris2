@@ -323,10 +323,8 @@ mapPTermM f = goPTerm where
     goPDataDecl (MkPLater fc n t) = MkPLater fc n <$> goPTerm t
 
     goRecordField : RecordField' nm -> Core (RecordField' nm)
-    goRecordField (MkRecordField doc c info n t) =
-      MkRecordField doc c <$> goPiInfo info
-                          <*> pure n
-                          <*> goPTerm t
+    goRecordField (MkRecordField doc c n bind) =
+      MkRecordField doc c n <$> traverse f bind
 
     goPiInfo : PiInfo (PTerm' nm) -> Core (PiInfo (PTerm' nm))
     goPiInfo (DefImplicit t) = DefImplicit <$> goPTerm t
@@ -618,8 +616,8 @@ mapPTerm f = goPTerm where
     goPRecordDeclLet (RecordClause clause) = RecordClause $ mapData goPClause clause
 
     goRecordField : RecordField' nm -> RecordField' nm
-    goRecordField (MkRecordField doc c info n t)
-      = MkRecordField doc c (goPiInfo info) n (goPTerm t)
+    goRecordField (MkRecordField doc c n bind)
+      = MkRecordField doc c n (map f bind)
 
     goPiInfo : PiInfo (PTerm' nm) -> PiInfo (PTerm' nm)
     goPiInfo (DefImplicit t) = DefImplicit $ goPTerm t

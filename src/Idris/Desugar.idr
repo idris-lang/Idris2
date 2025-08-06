@@ -1016,13 +1016,15 @@ mutual
                  {auto o : Ref ROpts REPLOpts} ->
                  List Name -> Namespace -> PField ->
                  Core (List IField)
-  desugarField ps ns field@(MkWithData _ $ MkRecordField doc rig p names ty)
+  desugarField ps ns field@(MkWithData _ $ MkRecordField doc rig names (MkPiBindData p ty))
       = flip Core.traverse names $ \n : Name => do
            addDocStringNS ns n doc
            addDocStringNS ns (toRF n) doc
            syn <- get Syn
-           pure (MkIField field.fc rig n $ MkPiBindData !(traverse (desugar AnyExpr ps) p )
-                          !(bindTypeNames field.fc (usingImpl syn) ps !(desugar AnyExpr ps ty)))
+           p' <- traverse (desugar AnyExpr ps) p
+           ty' <- bindTypeNames field.fc (usingImpl syn) ps !(desugar AnyExpr ps ty)
+           pure (MkIField field.fc rig n $ MkPiBindData p' ty')
+
         where
           toRF : Name -> Name
           toRF (UN (Basic n)) = UN (Field n)

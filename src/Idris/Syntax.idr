@@ -499,9 +499,8 @@ mutual
     constructor MkRecordField
     doc : String
     rig : RigCount
-    piInfo : PiInfo (PTerm' nm)
     names : List Name -- See #3409
-    type : PTerm' nm
+    bind : PiBindData (PTerm' nm)
 
   public export
   PField : Type

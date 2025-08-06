@@ -1747,7 +1747,7 @@ fieldDecl indents
                                        fatalLoc {c = True} b.bounds "Fields have to be named"))
                     decoratedSymbol fname ":"
                     ty <- typeExpr pdef fname indents
-                    pure (MkRecordField doc rig p (forget ns) ty))
+                    pure (MkRecordField doc rig (forget ns) (MkPiBindData p ty)))
              pure b.withFC
 
 parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
