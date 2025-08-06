@@ -117,6 +117,7 @@
 module Compiler.ES.TailRec
 
 import Data.List1
+import Data.SnocList
 import Data.SortedSet
 import Data.SortedMap as M
 import Libraries.Data.Graph
@@ -246,7 +247,7 @@ tcDoneName gi = MN "TcDone" gi
 conAlt : TcGroup -> TcFunction -> NamedConAlt
 conAlt (MkTcGroup tcIx funs) (MkTcFunction n ix args exp) =
   let name = tcContinueName tcIx ix
-   in MkNConAlt name DATACON (Just ix) args (toTc exp)
+   in MkNConAlt name DATACON (Just ix) (cast args) (toTc exp)
 
    where
      mutual

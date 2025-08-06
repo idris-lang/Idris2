@@ -11,6 +11,8 @@ import Libraries.Data.SnocList.SizeOf
 %default total
 
 public export
+-- TODO revisit order of ds and vars?
+-- TODO vars is constantly applied
 Subst : Scoped -> Scope -> Scoped
 Subst tm ds vars = All (\_ => tm vars) ds
 

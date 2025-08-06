@@ -45,7 +45,6 @@ mutual
        ||| Lazy match for the Delay type use for codata types
        DelayCase : (ty : Name) -> (arg : Name) ->
                    CaseTree (Scope.addInner vars [<ty, arg]) -> CaseAlt vars
-                   -- TODO `arg` and `ty` should be swapped, as in Yaffle
        ||| Match against a literal
        ConstCase : Constant -> CaseTree vars -> CaseAlt vars
        ||| Catch-all case

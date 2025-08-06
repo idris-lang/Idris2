@@ -64,6 +64,7 @@ finIdx (Later l) = FS (finIdx l)
 
 ||| Recover the value pointed at by an IsVar proof
 ||| O(n) in the size of the index
+-- TODO make return type a Singleton
 export
 nameAt : {vars : SnocList a} -> {idx : Nat} -> (0 p : IsVar n idx vars) -> a
 nameAt {vars = _ :< n} First = n
@@ -321,16 +322,6 @@ insertNVar p v = case locateNVar p v of
   Left v => weakenNVar p (later v)
   Right v => embedNVar v
 
--- TODO clean-up implementation
-export
-insertNVarFishily : SizeOf inner ->
-             NVar nm (outer <>< inner) ->
-             NVar nm (outer :< n <>< inner)
-insertNVarFishily p v
-  = rewrite fishAsSnocAppend (outer :< n) inner in
-    insertNVar (zero <>< p)
-  $ replace {p = NVar nm} (fishAsSnocAppend outer inner) v
-
 export
 insertNVarNames : GenWeakenable (NVar name)
 insertNVarNames p q v = case locateNVar q v of
@@ -469,22 +460,12 @@ FreelyEmbeddable (NVar nm) where
 
 ||| Moving the zeroth variable under a set number of variables
 export
-shiftUnderNs : SizeOf {a = Name} inner ->
+shiftUnderNs : SizeOf {a = Name} args ->
                {idx : _} ->
-               (0 p : IsVar n idx (outer ++ inner :< x)) ->
-               NVar n (outer :< x ++ inner)
+               (0 p : IsVar n idx (vars ++ args :< x)) ->
+               NVar n (vars :< x ++ args)
 shiftUnderNs s First = weakenNs s (MkNVar First)
 shiftUnderNs s (Later p) = insertNVar s (MkNVar p)
-
-||| Moving the zeroth variable under a set number of variables
-||| Fishy version (cf. shiftUnderNs for the append one)
-export
-shiftUndersN : SizeOf args ->
-               {idx : _} ->
-               (0 p : IsVar n idx (vars <>< args :< x)) ->
-               NVar n (vars :< x <>< args)
-shiftUndersN s First = weakensN s (MkNVar First)
-shiftUndersN s (Later p) = insertNVarFishily s (MkNVar p)
 
 namespace IsVar
   export

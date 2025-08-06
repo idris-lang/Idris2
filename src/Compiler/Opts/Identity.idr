@@ -15,11 +15,6 @@ makeArgs args = makeArgs' args id
     makeArgs' [<] f = []
     makeArgs' (xs :< x) f = f first :: makeArgs' xs (f . weaken)
 
-makeArgz : (args : List Name) -> List (Var (Scope.ext vars args))
-makeArgz args
-  = embedFishily @{ListFreelyEmbeddable}
-  $ reverse $ Var.allVars ([<] <>< args)
-
 parameters (fn1 : Name) (idIdx : Nat)
   mutual
     -- special case for matching on 'Nat'-shaped things
@@ -92,8 +87,8 @@ parameters (fn1 : Name) (idIdx : Nat)
         altEq : CConAlt vars -> Bool
         altEq (MkConAlt y _ _ args exp) =
             cexpIdentity
-                (weakensN (mkSizeOf args) var)
-                (Just (y, makeArgz args))
+                (weakenNs (mkSizeOf args) var)
+                (Just (y, makeArgs args))
                 const
                 exp
     cexpIdentity var con const (CConstCase fc sc xs x) =
