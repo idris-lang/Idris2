@@ -241,11 +241,11 @@ mutual
   getMult Nothing = pure top
   getMult _ = fatalError "Invalid multiplicity (must be 0 or 1)"
 
-  pibindAll : FC -> PiInfo RawImp -> List (RigCount, Maybe Name, RawImp) ->
+  pibindAll : FC -> PiInfo RawImp -> List (WithRig $ WithMName RawImp) ->
               RawImp -> RawImp
   pibindAll fc p [] scope = scope
-  pibindAll fc p ((rig, n, ty) :: rest) scope
-           = IPi fc rig p n ty (pibindAll fc p rest scope)
+  pibindAll fc p (ty :: rest) scope
+           = IPi fc ty.rig p (map val ty.mName) ty.val (pibindAll fc p rest scope)
 
   bindList : OriginDesc -> FilePos -> IndentInfo ->
              Rule (List (RigCount, Name, RawImp))
@@ -263,7 +263,7 @@ mutual
 
 
   pibindListName : OriginDesc -> FilePos -> IndentInfo ->
-                   Rule (List (RigCount, WithFC Name, RawImp))
+                   Rule (List (WithRig $ WithName RawImp))
   pibindListName fname start indents
        = do rigc <- multiplicity
             ns <- sepBy1 (symbol ",") (withFC unqualifiedName)
@@ -271,20 +271,20 @@ mutual
             ty <- expr fname indents
             atEnd indents
             rig <- getMult rigc
-            pure (map (\n => (rig, map (UN . Basic) n, ty)) (forget ns))
+            pure (map (\n => Mk [rig, map (UN . Basic) n] ty) (forget ns))
      <|> forget <$> sepBy1 (symbol ",")
                            (do rigc <- multiplicity
                                n <- withFC name
                                symbol ":"
                                ty <- expr fname indents
                                rig <- getMult rigc
-                               pure (rig, n, ty))
+                               pure (Mk [rig, n] ty))
 
   pibindList : OriginDesc -> FilePos -> IndentInfo ->
-               Rule (List (RigCount, Maybe Name, RawImp))
+               Rule (List (WithRig $ WithMName RawImp))
   pibindList fname start indents
     = do params <- pibindListName fname start indents
-         pure $ map (\(rig, n, ty) => (rig, Just n.val, ty)) params
+         pure $ map (\ty => Mk [ty.rig, Just ty.name] ty.val) params
 
 
   autoImplicitPi : OriginDesc -> IndentInfo -> Rule RawImp
@@ -306,12 +306,12 @@ mutual
            keyword "forall"
            commit
            nstart <- location
-           ns <- sepBy1 (symbol ",") unqualifiedName
+           ns <- sepBy1 (symbol ",") (withFC unqualifiedName)
            nend <- location
            let nfc = MkFC fname nstart nend
-           let binders = map (\n => ( erased {a=RigCount}
-                                    , Just (UN $ Basic n)
-                                    , Implicit nfc False))
+           let binders = map (\n => Mk [erased {a=RigCount}
+                                       , Just (map (UN . Basic) n)]
+                                       (Implicit nfc False))
                              (forget ns)
            symbol "."
            scope <- typeExpr fname indents
@@ -614,7 +614,7 @@ recordParam fname indents
          start <- location
          params <- pibindListName fname start indents
          symbol ")"
-         pure (map (\(c, n, tm) => Mk [c, n] (MkPiBindData Explicit tm)) params)
+         pure (map (map (MkPiBindData Explicit)) params)
   <|> do symbol "{"
          commit
          start <- location
@@ -626,7 +626,7 @@ recordParam fname indents
               <|> pure      Implicit)
          params <- pibindListName fname start indents
          symbol "}"
-         pure (map (\(c, n, tm) => Mk [c, n] (MkPiBindData info tm)) params)
+         pure (map (map (MkPiBindData info)) params)
   <|> do n <- withFC name
          pure [ Mk [top, n] (MkPiBindData Explicit (Implicit n.fc False)) ]
 
