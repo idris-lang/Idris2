@@ -28,6 +28,9 @@ import Idris.Parser.Let
 fcBounds : OriginDesc => Rule a -> Rule (WithFC a)
 fcBounds a = (.withFC) <$> bounds a
 
+addFCBounds : OriginDesc => Rule (WithData ls a) -> Rule (WithData (FC' :: ls) a)
+addFCBounds a = (.addFC) <$> bounds a
+
 decorate : {a : Type} -> OriginDesc -> Decoration -> Rule a -> Rule a
 decorate fname decor rule = do
   res <- bounds rule
@@ -1728,27 +1731,25 @@ fieldDecl indents
            decoratedSymbol fname "{"
            commit
            impl <- option Implicit (autoImplicitField fname indents <|> defImplicitField fname indents)
-           fs <- fieldBody doc impl
+           fs <- addFCBounds (fieldBody doc impl)
            decoratedSymbol fname "}"
            atEnd indents
            pure fs
     <|> do doc <- optDocumentation fname
-           fs <- fieldBody doc Explicit
+           fs <- addFCBounds (fieldBody doc Explicit)
            atEnd indents
            pure fs
   where
-    fieldBody : String -> PiInfo PTerm -> Rule (PField)
+    fieldBody : String -> PiInfo PTerm -> Rule (RecordField' Name)
     fieldBody doc p
-        = do b <- bounds (do
-                    rig <- multiplicity fname
-                    ns <- sepBy1 (decoratedSymbol fname ",")
-                            (fcBounds (decorate fname Function name
-                               <|> (do b <- bounds (symbol "_")
-                                       fatalLoc {c = True} b.bounds "Fields have to be named")))
-                    decoratedSymbol fname ":"
-                    ty <- typeExpr pdef fname indents
-                    pure (MkRecordField doc rig (forget ns) (MkPiBindData p ty)))
-             pure b.withFC
+        = do rig <- multiplicity fname
+             ns <- sepBy1 (decoratedSymbol fname ",")
+                     (fcBounds (decorate fname Function name
+                        <|> (do b <- bounds (symbol "_")
+                                fatalLoc {c = True} b.bounds "Fields have to be named")))
+             decoratedSymbol fname ":"
+             ty <- typeExpr pdef fname indents
+             pure (Mk [doc, rig, forget ns] (MkPiBindData p ty))
 
 parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
 

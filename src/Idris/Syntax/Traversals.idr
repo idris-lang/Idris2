@@ -317,10 +317,6 @@ mapPTermM f = goPTerm where
                    <*> goPTypeDecls tdecls
     goPDataDecl (MkPLater fc n t) = MkPLater fc n <$> goPTerm t
 
-    goRecordField : RecordField' nm -> Core (RecordField' nm)
-    goRecordField (MkRecordField doc c n bind) =
-      MkRecordField doc c n <$> traverse f bind
-
     goPiInfo : PiInfo (PTerm' nm) -> Core (PiInfo (PTerm' nm))
     goPiInfo (DefImplicit t) = DefImplicit <$> goPTerm t
     goPiInfo t = pure t
@@ -396,7 +392,7 @@ mapPTermM f = goPTerm where
 
     goPFields : List (PField' nm) -> Core (List (PField' nm))
     goPFields []        = pure []
-    goPFields (f :: fs) = (::) <$> traverse goRecordField f <*> goPFields fs
+    goPFields (f :: fs) = (::) <$> traverse (traverse goPTerm) f <*> goPFields fs
 
     goPFnOpts : List (PFnOpt' nm) -> Core (List (PFnOpt' nm))
     goPFnOpts []        = pure []
@@ -565,7 +561,7 @@ mapPTerm f = goPTerm where
            n (goPTerm <$> ts) mn ns (map (map goPDecl <$>) mps)
     goPDecl (PRecord doc v tot (MkPRecord n nts opts mn fs))
       = PRecord doc v tot
-          (MkPRecord n (map goPBinder nts) opts mn (map (map goRecordField) fs))
+          (MkPRecord n (map goPBinder nts) opts mn (map (map (map goPTerm)) fs))
     goPDecl (PRecord doc v tot (MkPRecordLater n nts))
       = PRecord doc v tot (MkPRecordLater n (goPBinder <$> nts ))
     goPDecl (PFail msg ps) = PFail msg $ map goPDecl <$> ps
@@ -600,10 +596,6 @@ mapPTerm f = goPTerm where
     goPRecordDeclLet (RecordClaim claim) = RecordClaim $ map goPClaim claim
     goPRecordDeclLet (RecordClause clause) = RecordClause $ map goPClause clause
 
-    goRecordField : RecordField' nm -> RecordField' nm
-    goRecordField (MkRecordField doc c n bind)
-      = MkRecordField doc c n (map f bind)
-
     goPiInfo : PiInfo (PTerm' nm) -> PiInfo (PTerm' nm)
     goPiInfo (DefImplicit t) = DefImplicit $ goPTerm t
     goPiInfo t = t
@@ -621,19 +613,9 @@ mapPTerm f = goPTerm where
     goPairedSnocPTerms [<] = [<]
     goPairedSnocPTerms (ts :< (a, t)) = goPairedSnocPTerms ts :< (a, goPTerm t)
 
-    go3TupledPTerms : List (x, y, PTerm' nm) -> List (x, y, PTerm' nm)
-    go3TupledPTerms [] = []
-    go3TupledPTerms ((a, b, t) :: ts) = (a, b, goPTerm t) :: go3TupledPTerms ts
-
     goImplicits : List (x, ImpParameter' (PTerm' nm)) -> List (x, ImpParameter' (PTerm' nm))
     goImplicits [] = []
     goImplicits ((a, t) :: ts) = (a,map (map f) t) :: goImplicits ts
-
-    go4TupledPTerms : List (x, y, PiInfo (PTerm' nm), PTerm' nm) ->
-                      List (x, y, PiInfo (PTerm' nm), PTerm' nm)
-    go4TupledPTerms [] = []
-    go4TupledPTerms ((a, b, p, t) :: ts)
-      = (a, b, goPiInfo p, goPTerm t) :: go4TupledPTerms ts
 
 ||| Replace the FCs in a term with the one provided.
 ||| The current implementation is not correct: we're only substituting

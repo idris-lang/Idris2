@@ -89,6 +89,10 @@ export
 (.withFC) : (o : OriginDesc) => WithBounds t -> WithFC t
 x.withFC = MkFCVal x.toFC x.val
 
+export
+(.addFC) : (o : OriginDesc) => WithBounds (WithData ls t) -> WithData (FC' :: ls) t
+(.addFC) x = x.toFC :+ x.val
+
 ------------------------------------------------------------------------------------------
 -- Helpers for documentation information
 ------------------------------------------------------------------------------------------
@@ -97,6 +101,10 @@ x.withFC = MkFCVal x.toFC x.val
 public export
 Doc' : KeyVal
 Doc' = "doc" :-: String
+
+public export
+WithDoc : Type -> Type
+WithDoc = AddMetadata Doc'
 
 ||| Obtain documentation information from the metadata
 export
@@ -179,6 +187,21 @@ export
             (inRange : NameInRange "mname" fields === Just (n, Maybe (WithFC Name))) =>
             WithData fields a -> Maybe (WithFC Name)
 (.mName) = WithData.get "mname" @{inRange}
+
+||| the "names" label containing a `List (WithFC Name)` for metadata records
+public export
+Names' : KeyVal
+Names' = "names" :-: List (WithFC Name)
+
+public export
+WithNames : Type -> Type
+WithNames = AddMetadata Names'
+
+export
+(.names) : {n : Nat} ->
+            (inRange : NameInRange "names" fields === Just (n, List (WithFC Name))) =>
+            WithData fields a -> List (WithFC Name)
+(.names) = WithData.get "names" @{inRange}
 
 ------------------------------------------------------------------------
 -- Default instances for metadata

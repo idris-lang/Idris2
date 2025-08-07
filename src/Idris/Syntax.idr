@@ -476,14 +476,9 @@ mutual
        -- There is no nm on Directive
        ForeignImpl : Name -> List PTerm -> Directive
 
-
   public export
-  record RecordField' (nm : Type) where
-    constructor MkRecordField
-    doc : String
-    rig : RigCount
-    names : List (WithFC Name)
-    bind : PiBindData (PTerm' nm)
+  RecordField' : Type -> Type
+  RecordField' nm = WithDoc $ WithRig $ WithNames $ PiBindData (PTerm' nm)
 
   public export
   PField : Type
@@ -491,7 +486,7 @@ mutual
 
   public export
   PField' : Type -> Type
-  PField' nm = WithFC (RecordField' nm)
+  PField' nm = AddFC (RecordField' nm)
 
   public export
   0 PRecordDeclLet : Type

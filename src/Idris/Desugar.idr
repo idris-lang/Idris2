@@ -1016,14 +1016,14 @@ mutual
                  {auto o : Ref ROpts REPLOpts} ->
                  List Name -> Namespace -> PField ->
                  Core (List IField)
-  desugarField ps ns field@(MkWithData _ $ MkRecordField doc rig names (MkPiBindData p ty))
-      = flip Core.traverse names $ \n : WithFC Name => do
-           addDocStringNS ns n.val doc
-           addDocStringNS ns (toRF n.val) doc
+  desugarField ps ns field
+      = flip Core.traverse field.names $ \n : WithFC Name => do
+           addDocStringNS ns n.val field.doc
+           addDocStringNS ns (toRF n.val) field.doc
            syn <- get Syn
-           p' <- traverse (desugar AnyExpr ps) p
-           ty' <- bindTypeNames field.fc (usingImpl syn) ps !(desugar AnyExpr ps ty)
-           pure (Mk [field.fc, rig, n] $ MkPiBindData p' ty')
+           p' <- traverse (desugar AnyExpr ps) field.val.info
+           ty' <- bindTypeNames field.fc (usingImpl syn) ps !(desugar AnyExpr ps field.val.boundType)
+           pure (Mk [field.fc, field.rig, n] (MkPiBindData p' ty'))
 
         where
           toRF : Name -> Name
@@ -1287,8 +1287,8 @@ mutual
            let paramsb = map (map (mapType (doBind bnames))) params'
            let _ = the (List ImpParameter) paramsb
            let recName = nameRoot tn
-           fields' <- traverse (desugarField (ps ++ fnames ++ paramNames
-                                             ) (mkNamespace recName))
+           fields' <- traverse (desugarField (ps ++ fnames ++ paramNames)
+                                             (mkNamespace recName))
                                fields
            let _ = the (List $ List IField) fields'
            let conname = maybe (mkConName tn) snd conname_in
@@ -1298,7 +1298,7 @@ mutual
                          vis mbtot (MkImpRecord rec.fc tn paramsb opts conname (concat fields'))]
     where
       getfname : PField -> List Name
-      getfname x = map val x.val.names
+      getfname x = map val x.names
 
       mkConName : Name -> Name
       mkConName (NS ns (UN n))
