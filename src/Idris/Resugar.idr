@@ -493,19 +493,6 @@ mutual
       = do bind' <- traverse (toPTerm startPrec) field.val
            pure (Mk [field.fc , "", field.rig, [field.name]] bind')
 
-  toPRecord : {auto c : Ref Ctxt Defs} ->
-              {auto s : Ref Syn SyntaxInfo} ->
-              ImpRecord' KindedName ->
-              Core ( Name
-                   , List (ImpParameter' IPTerm)
-                   , List DataOpt
-                   , Maybe (String, Name)
-                   , List (PField' KindedName))
-  toPRecord (MkImpRecord fc n ps opts con fs)
-      = do ps' <- traverse (traverse (traverse (toPTerm startPrec))) ps
-           fs' <- traverse toPField fs
-           pure (n, ps', opts, Just ("", con), fs')
-
   toPFnOpt : {auto c : Ref Ctxt Defs} ->
              {auto s : Ref Syn SyntaxInfo} ->
              FnOpt' KindedName -> Core (PFnOpt' KindedName)
@@ -532,9 +519,11 @@ mutual
                     type' <- toPTerm startPrec binder.val.boundType
                     pure (MkFullBinder info' binder.rig binder.name type')) ps
            pure (Just (MkFCVal fc (PParameters (Right args) (catMaybes ds'))))
-  toPDecl (IRecord fc _ vis mbtot r)
-      = do (n, ps, opts, con, fs) <- toPRecord r
-           pure (Just (MkFCVal fc $ PRecord "" vis mbtot (MkPRecord n (map toBinder ps) opts con fs)))
+  toPDecl (IRecord fc _ vis mbtot (MkImpRecord _ n ps opts con fs))
+      = do ps' <- traverse (traverse (traverse (toPTerm startPrec))) ps
+           fs' <- traverse toPField fs
+           pure (Just (MkFCVal fc $ PRecord "" vis mbtot
+                          (MkPRecord n (map toBinder ps') opts (Just ("", con)) fs')))
            where
              toBinder : ImpParameter' (PTerm' KindedName) -> PBinder' KindedName
              toBinder binder
