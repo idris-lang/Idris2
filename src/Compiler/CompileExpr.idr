@@ -443,45 +443,46 @@ getNArgs defs (NS _ (UN $ Basic "Struct")) [n, args]
          pure (Struct n' !(getFieldArgs defs args))
 getNArgs defs n args = pure $ User n args
 
+-- The order of the arguments have a big effect on case-tree size
 nfToCFType : {auto c : Ref Ctxt Defs} ->
-             FC -> (inStruct : Bool) -> ClosedNF -> Core CFType
-nfToCFType _ _ (NPrimVal _ $ PrT IntType) = pure CFInt
-nfToCFType _ _ (NPrimVal _ $ PrT IntegerType) = pure CFInteger
-nfToCFType _ _ (NPrimVal _ $ PrT Bits8Type) = pure CFUnsigned8
-nfToCFType _ _ (NPrimVal _ $ PrT Bits16Type) = pure CFUnsigned16
-nfToCFType _ _ (NPrimVal _ $ PrT Bits32Type) = pure CFUnsigned32
-nfToCFType _ _ (NPrimVal _ $ PrT Bits64Type) = pure CFUnsigned64
-nfToCFType _ _ (NPrimVal _ $ PrT Int8Type) = pure CFInt8
-nfToCFType _ _ (NPrimVal _ $ PrT Int16Type) = pure CFInt16
-nfToCFType _ _ (NPrimVal _ $ PrT Int32Type) = pure CFInt32
-nfToCFType _ _ (NPrimVal _ $ PrT Int64Type) = pure CFInt64
-nfToCFType _ False (NPrimVal _ $ PrT StringType) = pure CFString
-nfToCFType fc True (NPrimVal _ $ PrT StringType)
+             FC -> ClosedNF -> (inStruct : Bool) -> Core CFType
+nfToCFType _ (NPrimVal _ $ PrT IntType) _ = pure CFInt
+nfToCFType _ (NPrimVal _ $ PrT IntegerType) _ = pure CFInteger
+nfToCFType _ (NPrimVal _ $ PrT Bits8Type) _ = pure CFUnsigned8
+nfToCFType _ (NPrimVal _ $ PrT Bits16Type) _ = pure CFUnsigned16
+nfToCFType _ (NPrimVal _ $ PrT Bits32Type) _ = pure CFUnsigned32
+nfToCFType _ (NPrimVal _ $ PrT Bits64Type) _ = pure CFUnsigned64
+nfToCFType _ (NPrimVal _ $ PrT Int8Type) _ = pure CFInt8
+nfToCFType _ (NPrimVal _ $ PrT Int16Type) _ = pure CFInt16
+nfToCFType _ (NPrimVal _ $ PrT Int32Type) _ = pure CFInt32
+nfToCFType _ (NPrimVal _ $ PrT Int64Type) _ = pure CFInt64
+nfToCFType _ (NPrimVal _ $ PrT StringType) False = pure CFString
+nfToCFType fc (NPrimVal _ $ PrT StringType) True
     = throw (GenericMsg fc "String not allowed in a foreign struct")
-nfToCFType _ _ (NPrimVal _ $ PrT DoubleType) = pure CFDouble
-nfToCFType _ _ (NPrimVal _ $ PrT CharType) = pure CFChar
-nfToCFType _ _ (NPrimVal _ $ PrT WorldType) = pure CFWorld
-nfToCFType _ False (NBind fc _ (Pi _ _ _ ty) sc)
+nfToCFType _ (NPrimVal _ $ PrT DoubleType) _ = pure CFDouble
+nfToCFType _ (NPrimVal _ $ PrT CharType) _ = pure CFChar
+nfToCFType _ (NPrimVal _ $ PrT WorldType) _ = pure CFWorld
+nfToCFType _ (NBind fc _ (Pi _ _ _ ty) sc) False
     = do defs <- get Ctxt
-         sty <- nfToCFType fc False !(evalClosure defs ty)
+         sty <- nfToCFType fc !(evalClosure defs ty) False
          sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
-         tty <- nfToCFType fc False sc'
+         tty <- nfToCFType fc sc' False
          pure (CFFun sty tty)
-nfToCFType _ True (NBind fc _ _ _)
+nfToCFType _ (NBind fc _ _ _) True
     = throw (GenericMsg fc "Function types not allowed in a foreign struct")
-nfToCFType _ s (NTCon fc n_in _ _ args)
+nfToCFType _ (NTCon fc n_in _ _ args) s
     = do defs <- get Ctxt
          n <- toFullNames n_in
          case !(getNArgs defs n $ map snd args) of
               User un uargs =>
                 do nargs <- traverse (evalClosure defs) uargs
-                   cargs <- traverse (nfToCFType fc s) nargs
+                   cargs <- traverse (\ arg => nfToCFType fc arg s) nargs
                    pure (CFUser n cargs)
               Struct n fs =>
                 do fs' <- traverse
                              (\ (n, ty) =>
                                     do tynf <- evalClosure defs ty
-                                       tycf <- nfToCFType fc True tynf
+                                       tycf <- nfToCFType fc tynf False
                                        pure (n, tycf)) fs
                    pure (CFStruct n fs')
               NUnit => pure CFUnit
@@ -491,13 +492,13 @@ nfToCFType _ s (NTCon fc n_in _ _ args)
               NForeignObj => pure CFForeignObj
               NIORes uarg =>
                 do narg <- evalClosure defs uarg
-                   carg <- nfToCFType fc s narg
+                   carg <- nfToCFType fc narg s
                    pure (CFIORes carg)
-nfToCFType _ s (NType _ _)
+nfToCFType _ (NType _ _) s
     = pure (CFUser (UN (Basic "Type")) [])
-nfToCFType _ s (NErased _ _)
+nfToCFType _ (NErased _ _) s
     = pure (CFUser (UN (Basic "__")) [])
-nfToCFType fc s t
+nfToCFType fc t s
     = do defs <- get Ctxt
          ty <- quote defs Env.empty t
          throw (GenericMsg (getLoc t)
@@ -509,11 +510,11 @@ getCFTypes : {auto c : Ref Ctxt Defs} ->
              Core (List CFType, CFType)
 getCFTypes args (NBind fc _ (Pi _ _ _ ty) sc)
     = do defs <- get Ctxt
-         aty <- nfToCFType fc False !(evalClosure defs ty)
+         aty <- nfToCFType fc !(evalClosure defs ty) False
          sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
          getCFTypes (aty :: args) sc'
 getCFTypes args t
-    = pure (reverse args, !(nfToCFType (getLoc t) False t))
+    = pure (reverse args, !(nfToCFType (getLoc t) t False))
 
 lamRHSenv : Int -> FC -> (ns : Scope) -> (SizeOf ns, SubstCEnv ns Scope.empty)
 lamRHSenv i fc [] = (zero, Subst.empty)
