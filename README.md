@@ -20,11 +20,15 @@ resources, in particular
 ## Installation and Packages
 
 The most common way to install the latest version of Idris and its packages is through [`pack`][PACK] Idris' package manager. Working with the latest version of Idris is as easy as `pack switch latest`.
-Follow instructions [on the `pack` repo][PACK] for how to install `pack`.
+Follow instructions [on the `pack` repository][PACK] for how to install `pack`.
 
-To use `pack` and idris, you will need an `.ipkg` file (Idris-package file) that describes your idris project. You can generate one with `idris2 --init`. Once setup with an `.ipkg` file, `pack` gives you access to the [_pack collection_][PACK_COL] of packages, a set of compatible libraries in the ecosystem. If your dependency is in the `depends` field of your `.ipkg` file, `pack` will automatically pull the dependency from you matching pack collection.
-
+To use `pack` and idris, you will need an `.ipkg` file (Idris-package file) that describes your idris project.
+You can generate one with `idris2 --init`. Once setup with an `.ipkg` file, `pack` gives you access to the [_pack collection_][PACK_COL] of packages, a set of compatible libraries in the ecosystem.
+If your dependency is in the `depends` field of your `.ipkg` file, `pack` will automatically pull the dependency from you matching pack collection.
 The wiki hosts a list of [curated packages by the community](https://github.com/idris-lang/Idris2/wiki/Third-party-Libraries).
+
+Finally, `pack` also makes it easy to download, and keep updated version of, [idris2-lsp](https://github.com/idris-community/idris2-lsp), and other idris-related programs.
+
 
 ## Things still missing
 
