@@ -110,8 +110,8 @@ localHelper {vars} nest env nestdecls_in func
         = MkImpLater loc' (mapNestedName nest n) tycons
 
     updateFieldName : NestedNames vars -> IField -> IField
-    updateFieldName nest (MkIField fc rigc n bind)
-        = MkIField fc rigc (mapNestedName nest n) bind
+    updateFieldName nest field
+        = update "name" (map (mapNestedName nest)) field
 
     updateRecordName : NestedNames vars -> ImpRecord -> ImpRecord
     updateRecordName nest (MkImpRecord fc n params opts conName fields)

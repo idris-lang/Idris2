@@ -53,14 +53,10 @@ parameters (f : RawImp' nm -> RawImp' nm)
   mapImpData (MkImpLater fc n tycon) = MkImpLater fc n (mapTTImp tycon)
 
   export
-  mapIField : IField' nm -> IField' nm
-  mapIField (MkIField fc rig n bind) = MkIField fc rig n (map f bind)
-
-  export
   mapImpRecord : ImpRecord' nm -> ImpRecord' nm
   mapImpRecord (MkImpRecord fc n params opts conName fields)
-    = MkImpRecord fc n (map (map (map mapTTImp)) params) opts conName (map mapIField fields)
-
+    = MkImpRecord fc n (map (map (map mapTTImp)) params) opts conName
+        (map (map (map mapTTImp)) fields)
 
   export
   mapImpDecl : ImpDecl' nm -> ImpDecl' nm

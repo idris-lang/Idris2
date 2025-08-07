@@ -146,15 +146,10 @@ mutual
       = MkImpLater fc n (map f tycon)
 
   export
-  Functor IField' where
-    map f (MkIField fc rig n bind)
-      = MkIField fc rig n (map (map f) bind)
-
-  export
   Functor ImpRecord' where
     map f (MkImpRecord fc n params opts conName fields)
       = MkImpRecord fc n (map (map (map (map f))) params)
-                    opts conName (map (map f) fields)
+                    opts conName (map (map (map (map f))) fields)
 
   export
   Functor IFieldUpdate' where

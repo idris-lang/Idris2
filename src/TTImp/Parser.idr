@@ -645,12 +645,12 @@ fieldDecl fname indents
     fieldBody : PiInfo RawImp -> Rule (List IField)
     fieldBody p
         = do start <- location
-             ns <- sepBy1 (symbol ",") unqualifiedName
+             ns <- sepBy1 (symbol ",") (withFC unqualifiedName)
              symbol ":"
              ty <- expr fname indents
              end <- location
-             pure (map (\n => MkIField (MkFC fname start end)
-                                       linear (UN $ Basic n) (MkPiBindData p ty)) (forget ns))
+             pure (map (\n => Mk [MkFC fname start end, linear, map (UN . Basic) n]
+                                       (MkPiBindData p ty)) (forget ns))
 
 recordDecl : OriginDesc -> IndentInfo -> Rule ImpDecl
 recordDecl fname indents

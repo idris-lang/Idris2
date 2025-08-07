@@ -489,9 +489,9 @@ mutual
   toPField : {auto c : Ref Ctxt Defs} ->
              {auto s : Ref Syn SyntaxInfo} ->
              IField' KindedName -> Core (PField' KindedName)
-  toPField (MkIField fc c n bind)
-      = do bind' <- traverse (toPTerm startPrec) bind
-           pure (MkFCVal fc $ MkRecordField "" c [n] bind')
+  toPField field
+      = do bind' <- traverse (toPTerm startPrec) field.val
+           pure (MkFCVal field.fc $ MkRecordField "" field.rig [field.name.val] bind')
 
   toPRecord : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->

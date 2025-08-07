@@ -88,27 +88,25 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
     displayParam binder
       = withPiInfo binder.val.info "\{showCount binder.rig}\{show binder.name.val} : \{show binder.val.boundType}"
 
-    paramTelescope : List ImpParameter -> List (FC, Maybe Name, RigCount, PiBindData RawImp)
+    paramTelescope : List ImpParameter -> List (AddFC $ WithRig $ WithMName (PiBindData RawImp))
     paramTelescope params = map jname params
       where
         jname : ImpParameter
-             -> (FC, Maybe Name, RigCount, PiBindData RawImp)
+             -> (AddFC $ WithRig $ WithMName (PiBindData RawImp))
         -- Record type parameters are implicit in the constructor
         -- and projections
-        jname binder = (EmptyFC, Just binder.name.val, erased, MkPiBindData Implicit binder.val.boundType)
+        jname binder = Mk [EmptyFC, erased, Just binder.name] $ {info := Implicit} binder.val
 
     fname : IField -> Name
-    fname (MkIField fc c n _) = n
+    fname field = field.name.val
 
-    farg : IField ->
-           (FC, Maybe Name, RigCount, PiBindData RawImp)
-    farg (MkIField fc c n bind) = (virtualiseFC fc, Just n, c, bind)
+    farg : IField -> AddFC (WithRig $ WithMName (PiBindData RawImp))
+    farg field = Mk [virtualiseFC field.fc, field.rig, Just field.name] field.val
 
-    mkTy : List (FC, Maybe Name, RigCount, PiBindData RawImp) ->
-           RawImp -> RawImp
+    mkTy : List (AddFC $ WithRig $ WithMName (PiBindData RawImp)) -> RawImp -> RawImp
     mkTy [] ret = ret
-    mkTy ((fc, n, c, bind) :: args) ret
-        = IPi fc c bind.info n bind.boundType (mkTy args ret)
+    mkTy (bind :: args) ret
+        = IPi bind.fc bind.rig bind.val.info (map val bind.mName) bind.val.boundType (mkTy args ret)
 
     recTy : (tn : Name) -> -- fully qualified name of the record type
             (params : List ImpParameter) -> -- list of all the parameters

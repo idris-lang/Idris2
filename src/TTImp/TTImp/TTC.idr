@@ -308,16 +308,6 @@ mutual
                _ => corrupt "ImpData"
 
   export
-  TTC IField where
-    toBuf (MkIField fc c n bind)
-        = do toBuf fc; toBuf c; toBuf n; toBuf bind
-
-    fromBuf
-        = do fc <- fromBuf; c <- fromBuf;
-             n <- fromBuf; bind <- fromBuf
-             pure (MkIField fc c n bind)
-
-  export
   TTC ImpRecord where
     toBuf (MkImpRecord fc n ps opts con fs)
         = do toBuf fc; toBuf n; toBuf ps; toBuf opts; toBuf con; toBuf fs

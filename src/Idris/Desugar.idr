@@ -1023,7 +1023,7 @@ mutual
            syn <- get Syn
            p' <- traverse (desugar AnyExpr ps) p
            ty' <- bindTypeNames field.fc (usingImpl syn) ps !(desugar AnyExpr ps ty)
-           pure (MkIField field.fc rig n $ MkPiBindData p' ty')
+           pure (Mk [field.fc, rig, NoFC n] $ MkPiBindData p' ty')
 
         where
           toRF : Name -> Name

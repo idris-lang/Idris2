@@ -55,7 +55,7 @@ rawImpFromDecl decl = case decl of
         getFromPiInfo (DefImplicit x) = [x]
         getFromPiInfo _ = []
         getFromIField : IField -> List RawImp
-        getFromIField (MkIField fc x y z) = getFromPiInfo z.info ++ [z.boundType]
+        getFromIField field = getFromPiInfo field.val.info ++ [field.val.boundType]
 
 
 -- Identify lower case names in argument position, which we can bind later.

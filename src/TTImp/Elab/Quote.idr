@@ -111,14 +111,6 @@ mutual
                  Core ImpTy
   getUnquoteTy (MkImpTy fc n t) = pure $ MkImpTy fc n !(getUnquote t)
 
-  getUnquoteField : {auto c : Ref Ctxt Defs} ->
-                    {auto q : Ref Unq (List (Name, FC, RawImp))} ->
-                    {auto u : Ref UST UState} ->
-                    IField ->
-                    Core IField
-  getUnquoteField (MkIField fc c n (MkPiBindData p ty))
-      = pure $ MkIField fc c n (MkPiBindData p !(getUnquote ty))
-
   getUnquoteRecord : {auto c : Ref Ctxt Defs} ->
                      {auto q : Ref Unq (List (Name, FC, RawImp))} ->
                      {auto u : Ref UST UState} ->
@@ -127,7 +119,7 @@ mutual
   getUnquoteRecord (MkImpRecord fc n ps opts cn fs)
         -- unlike before, we are also unquoting the default value, maybe this is important?
       = pure $ MkImpRecord fc n !(traverse (traverse (traverse getUnquote)) ps) opts cn
-                           !(traverse getUnquoteField fs)
+                           !(traverse (traverse (traverse getUnquote)) fs)
 
   getUnquoteData : {auto c : Ref Ctxt Defs} ->
                    {auto q : Ref Unq (List (Name, FC, RawImp))} ->

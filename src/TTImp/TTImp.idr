@@ -373,11 +373,8 @@ mutual
   IField = IField' Name
 
   public export
-  data IField' : Type -> Type where
-       MkIField : FC -> RigCount -> (name : Name) -> PiBindData (RawImp' nm) ->
-                  IField' nm
-
-  %name IField' fld
+  IField' : Type -> Type
+  IField' nm = AddFC $ ImpParameter' (RawImp' nm)
 
   public export
   ImpParameter : Type
@@ -422,8 +419,8 @@ mutual
   export
   covering
   Show nm => Show (IField' nm) where
-    show (MkIField _ _ n (MkPiBindData Explicit ty)) = show n ++ " : " ++ show ty
-    show (MkIField _ _ n ty) = "{" ++ show n ++ " : " ++ show ty.boundType ++ "}"
+    show f@(MkWithData _ (MkPiBindData Explicit ty)) = show f.name.val ++ " : " ++ show ty
+    show f@(MkWithData _ ty) = "{" ++ show f.name.val ++ " : " ++ show ty.boundType ++ "}"
 
   export
   covering
@@ -831,7 +828,7 @@ definedInBlock ns decls =
     getName (MkImpTy _ n _) = n.val
 
     getFieldName : IField -> Name
-    getFieldName (MkIField _ _ n _) = n
+    getFieldName f = f.name.val
 
     expandNS : Namespace -> Name -> Name
     expandNS ns n

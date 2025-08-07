@@ -363,7 +363,7 @@ mutual
                           info <- reify defs !(evalClosure defs x)
                           name <- reify defs !(evalClosure defs y)
                           type <- reify defs !(evalClosure defs z)
-                          pure (MkIField fc rig name (MkPiBindData info type))
+                          pure (Mk [fc, rig, NoFC name] (MkPiBindData info type))
                _ => cantReify val "IField"
     reify defs val = cantReify val "IField"
 
@@ -728,12 +728,12 @@ mutual
 
   export
   Reflect IField where
-    reflect fc defs lhs env (MkIField v w name (MkPiBindData info type))
-        = do v' <- reflect fc defs lhs env v
-             w' <- reflect fc defs lhs env w
-             x' <- reflect fc defs lhs env info
-             y' <- reflect fc defs lhs env name
-             z' <- reflect fc defs lhs env type
+    reflect fc defs lhs env field -- Order matters to maintain compatibility with elab reflection
+        = do v' <- reflect fc defs lhs env field.fc
+             w' <- reflect fc defs lhs env field.rig
+             x' <- reflect fc defs lhs env field.val.info
+             y' <- reflect fc defs lhs env field.name
+             z' <- reflect fc defs lhs env field.val.boundType
              appCon fc defs (reflectionttimp "MkIField") [v', w', x', y', z']
 
   export
