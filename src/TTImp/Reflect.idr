@@ -732,7 +732,7 @@ mutual
         = do v' <- reflect fc defs lhs env field.fc
              w' <- reflect fc defs lhs env field.rig
              x' <- reflect fc defs lhs env field.val.info
-             y' <- reflect fc defs lhs env field.name
+             y' <- reflect fc defs lhs env field.name.val
              z' <- reflect fc defs lhs env field.val.boundType
              appCon fc defs (reflectionttimp "MkIField") [v', w', x', y', z']
 
