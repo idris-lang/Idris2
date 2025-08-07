@@ -497,15 +497,15 @@ mutual
               {auto s : Ref Syn SyntaxInfo} ->
               ImpRecord' KindedName ->
               Core ( Name
-                   , List (Name, RigCount, PiBindData IPTerm)
+                   , List (ImpParameter' IPTerm)
                    , List DataOpt
                    , Maybe (String, Name)
                    , List (PField' KindedName))
   toPRecord (MkImpRecord fc n ps opts con fs)
-      = do ps' <- traverse (\ (n, c, binder) =>
+      = do ps' <- traverse (traverse $ \ binder =>
                                    do ty' <- toPTerm startPrec binder.boundType
                                       p' <- mapPiInfo binder.info
-                                      pure (n, c, MkPiBindData p' ty')) ps
+                                      pure (MkPiBindData p' ty')) ps
            fs' <- traverse toPField fs
            pure (n, ps', opts, Just ("", con), fs')
     where
@@ -536,20 +536,18 @@ mutual
   toPDecl (IParameters fc ps ds)
       = do ds' <- traverse toPDecl ds
            args <-
-             traverseList1 (\(n, rig, binder) =>
+             traverseList1 (\b@(MkWithData _ binder) =>
                  do info' <- traverse (toPTerm startPrec) binder.info
                     type' <- toPTerm startPrec binder.boundType
-                    pure (MkFullBinder info' rig (NoFC n) type')) ps
+                    pure (MkFullBinder info' b.rig b.name type')) ps
            pure (Just (MkFCVal fc (PParameters (Right args) (catMaybes ds'))))
   toPDecl (IRecord fc _ vis mbtot r)
       = do (n, ps, opts, con, fs) <- toPRecord r
            pure (Just (MkFCVal fc $ PRecord "" vis mbtot (MkPRecord n (map toBinder ps) opts con fs)))
            where
-             toBinder : (Name, ZeroOneOmega, PiBindData (PTerm' KindedName)) -> PBinder' KindedName
-             toBinder (n, rig, binder)
-               = MkFullBinder binder.info rig (NoFC n) binder.boundType
-                              --               ^^^^
-                              -- we should know this location
+             toBinder : ImpParameter' (PTerm' KindedName) -> PBinder' KindedName
+             toBinder binder
+               = MkFullBinder binder.val.info binder.rig binder.name binder.val.boundType
 
   toPDecl (IFail fc msg ds)
       = do ds' <- traverse toPDecl ds

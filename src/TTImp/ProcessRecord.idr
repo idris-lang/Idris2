@@ -85,8 +85,8 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
   where
 
     displayParam : ImpParameter -> String
-    displayParam (nm, rig, bind)
-      = withPiInfo bind.info "\{showCount rig}\{show nm} : \{show bind.boundType}"
+    displayParam binder
+      = withPiInfo binder.val.info "\{showCount binder.rig}\{show binder.name.val} : \{show binder.val.boundType}"
 
     paramTelescope : List ImpParameter -> List (FC, Maybe Name, RigCount, PiBindData RawImp)
     paramTelescope params = map jname params
@@ -95,7 +95,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
              -> (FC, Maybe Name, RigCount, PiBindData RawImp)
         -- Record type parameters are implicit in the constructor
         -- and projections
-        jname (n, _, t) = (EmptyFC, Just n, erased, MkPiBindData Implicit t.boundType)
+        jname binder = (EmptyFC, Just binder.name.val, erased, MkPiBindData Implicit binder.val.boundType)
 
     fname : IField -> Name
     fname (MkIField fc c n _) = n
@@ -113,7 +113,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
     recTy : (tn : Name) -> -- fully qualified name of the record type
             (params : List ImpParameter) -> -- list of all the parameters
             RawImp
-    recTy tn params = apply (IVar (virtualiseFC fc) tn) (map (\(n, c, bind) => (n, IVar EmptyFC n, bind.info)) params)
+    recTy tn params = apply (IVar (virtualiseFC fc) tn) (map (\binder => (binder.name.val, IVar EmptyFC binder.name.val, binder.val.info)) params)
       where
         ||| Apply argument to list of explicit or implicit named arguments
         apply : RawImp -> List (Name, RawImp, PiInfo RawImp) -> RawImp
@@ -122,11 +122,11 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
         apply f ((n, arg, _       ) :: xs) = apply (INamedApp (getFC f) f n arg) xs
 
     paramNames : List ImpParameter -> List Name
-    paramNames params = map fst params
+    paramNames params = map (\x => x.name.val) params
 
     mkDataTy : FC -> List ImpParameter -> RawImp
     mkDataTy fc [] = IType fc
-    mkDataTy fc ((n, c, bind) :: ps) = IPi fc c bind.info (Just n) bind.boundType (mkDataTy fc ps)
+    mkDataTy fc (binder :: ps) = IPi fc binder.rig binder.val.info (Just binder.name.val) binder.val.boundType (mkDataTy fc ps)
 
     nestDrop : Core (List (Name, Nat))
     nestDrop
@@ -159,7 +159,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
              ty <- unelabNest (NoSugar True) !nestDrop tyenv ty
              log "declare.record.parameters" 30 "Unelaborated type: \{show ty}"
              params <- getParameters [<] ty
-             addMissingNames ([<] <>< map fst params0) params []
+             addMissingNames ([<] <>< map (\x => x.name) params0 ) params []
 
       where
 
@@ -182,27 +182,27 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
         dropLeadingPis _ ty _ = throw (InternalError "Malformed record type \{show ty}")
 
         getParameters :
-          SnocList (Maybe Name, RigCount, PiBindData RawImp) -> -- accumulator
+          SnocList (WithRig $ WithMName $ PiBindData RawImp) -> -- accumulator
           RawImp' KindedName -> -- quoted type (some names may have disappeared)
-          Core (SnocList (Maybe Name, RigCount, PiBindData RawImp))
+          Core (SnocList (WithRig $ WithMName $ PiBindData RawImp))
         getParameters acc (IPi fc rig pinfo mnm argTy retTy)
           = let clean = mapTTImp killHole . map fullName in
-            getParameters (acc :< ((mnm, rig, MkPiBindData (map clean pinfo) (clean argTy)))) retTy
+            getParameters (acc :< (Mk [rig, map NoFC mnm] (MkPiBindData (map clean pinfo) (clean argTy)))) retTy
         getParameters acc (IType _) = pure acc
         getParameters acc ty = throw (InternalError "Malformed record type \{show ty}")
 
         addMissingNames :
-          SnocList Name ->
-          SnocList (Maybe Name, RigCount, PiBindData RawImp) ->
+          SnocList (WithFC Name) ->
+          SnocList (WithRig $ WithMName $ PiBindData RawImp) ->
           List ImpParameter -> -- accumulator
           Core (List ImpParameter)
-        addMissingNames (nms :< nm) (tele :< (_, rest)) acc
-          = addMissingNames nms tele ((nm, rest) :: acc)
+        addMissingNames (nms :< nm) (tele :< rest) acc
+          = addMissingNames nms tele (Mk [rest.rig, nm] rest.val :: acc)
         addMissingNames [<] tele acc
-          = do tele <- flip Core.traverseSnocList tele $ \ (mnm, rest) =>
-                         case mnm of
-                           Nothing => throw (InternalError "Some names have disappeared?! \{show rest}")
-                           Just nm => pure (nm, rest)
+          = do tele <- flip Core.traverseSnocList tele $ \ rest =>
+                         case rest.mName of
+                           Nothing => throw (InternalError "Some names have disappeared?! \{show rest.val}")
+                           Just nm => pure (Mk [rest.rig, nm] rest.val) -- (nm, rest)
                unless (null tele) $
                  log "declare.record.parameters" 50 $
                    unlines ( "Decided to bind the following extra parameters:"
@@ -251,7 +251,8 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
     elabGetters tn con params done upds tyenv (Bind bfc n b@(Pi _ rc imp ty_chk) sc)
         = let rig = if isErased rc then erased else top
               isVis = projVis (collapseDefault def_vis)
-          in if (n `elem` map fst params) || (n `elem` vars)
+              paramNames = map (\x => x.name.val) params
+          in if (n `elem` paramNames) || (n `elem` vars)
              then elabGetters tn con params
                               (if imp == Explicit && not (n `elem` vars)
                                   then S done else done)
@@ -268,7 +269,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
 
                    -- Claim the projection type
                    projTy <- bindTypeNames fc []
-                                 (map fst params ++ map fname fields ++ toList vars) $
+                                 (paramNames ++ map fname fields ++ toList vars) $
                                       mkTy (paramTelescope params) $
                                       IPi bfc top Explicit (Just rname) (recTy tn params) ty'
                    let fc' = virtualiseFC fc

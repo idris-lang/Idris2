@@ -54,6 +54,10 @@ public export
 WithFC : Type -> Type
 WithFC = WithData [ FC' ]
 
+public export
+AddFC : Type -> Type
+AddFC = AddMetadata FC'
+
 ||| Obtain file context information from the metadata
 export
 (.fc) : {n : Nat} ->
@@ -110,6 +114,10 @@ public export
 Rig' : KeyVal
 Rig' = "rig" :-: RigCount
 
+public export
+WithRig : Type -> Type
+WithRig = AddMetadata Rig'
+
 ||| Obtain quantity information from the metadata
 export
 (.rig) : {n : Nat} ->
@@ -137,12 +145,7 @@ export
 ||| Attach name and file context information to a type
 public export
 WithName : Type -> Type
-WithName = WithData [ Name']
-
-||| Smart constructor to add a name and location to a type
-export
-MkWithName : WithFC Name -> ty -> WithName ty
-MkWithName x y = Mk [x] y
+WithName = AddMetadata Name'
 
 ||| the "tyname" label containing a `FCBind Name` for metadata records
 public export
@@ -161,6 +164,21 @@ export
 public export
 DocBindFC : Type -> Type
 DocBindFC = WithData [ Doc', Bind', FC' ]
+
+||| the "mname" label containing a `Maybe (WithFC Name)` for metadata records
+public export
+MName' : KeyVal
+MName' = "mname" :-: Maybe (WithFC Name)
+
+public export
+WithMName : Type -> Type
+WithMName = AddMetadata MName'
+
+export
+(.mName) : {n : Nat} ->
+            (inRange : NameInRange "mname" fields === Just (n, Maybe (WithFC Name))) =>
+            WithData fields a -> Maybe (WithFC Name)
+(.mName) = WithData.get "mname" @{inRange}
 
 ------------------------------------------------------------------------
 -- Default instances for metadata

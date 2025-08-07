@@ -125,12 +125,9 @@ mutual
                      ImpRecord ->
                      Core ImpRecord
   getUnquoteRecord (MkImpRecord fc n ps opts cn fs)
-      = pure $ MkImpRecord fc n !(traverse unqPair ps) opts cn
+        -- unlike before, we are also unquoting the default value, maybe this is important?
+      = pure $ MkImpRecord fc n !(traverse (traverse (traverse getUnquote)) ps) opts cn
                            !(traverse getUnquoteField fs)
-    where
-      unqPair : (Name, RigCount, PiBindData RawImp) ->
-                Core (Name, RigCount, PiBindData RawImp)
-      unqPair (n, c, MkPiBindData i t) = pure (n, c, MkPiBindData i !(getUnquote t))
 
   getUnquoteData : {auto c : Ref Ctxt Defs} ->
                    {auto q : Ref Unq (List (Name, FC, RawImp))} ->
@@ -155,12 +152,9 @@ mutual
   getUnquoteDecl (IDef fc v d)
       = pure $ IDef fc v !(traverse getUnquoteClause d)
   getUnquoteDecl (IParameters fc ps ds)
-      = pure $ IParameters fc
-                           !(traverseList1 unqTuple ps)
+      = pure $ IParameters fc -- We also unquote default arguments here too
+                           !(traverseList1 (traverse (traverse getUnquote)) ps)
                            !(traverse getUnquoteDecl ds)
-    where
-      unqTuple : (Name, RigCount, PiBindData RawImp) -> Core (Name, RigCount, PiBindData RawImp)
-      unqTuple (n, rig, MkPiBindData i t) = pure (n, rig, MkPiBindData i !(getUnquote t))
   getUnquoteDecl (IRecord fc ns v mbt d)
       = pure $ IRecord fc ns v mbt !(getUnquoteRecord d)
   getUnquoteDecl (INamespace fc ns ds)

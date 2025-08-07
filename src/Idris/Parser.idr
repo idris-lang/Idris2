@@ -365,7 +365,7 @@ mutual
                        pure $
                          let fc = boundToFC fname (mergeBounds l r)
                              opFC = virtualiseFC fc -- already been highlighted: we don't care
-                         in POp fc (mapData NoBinder l.withFC)
+                         in POp fc (map NoBinder l.withFC)
                                    (MkFCVal opFC (OpSymbols $ UN $ Basic "="))
                                    r.val
                else fail "= not allowed")
@@ -379,7 +379,7 @@ mutual
                         pure (op, e)
                  (op, r) <- pure b.val
                  let fc = boundToFC fname (mergeBounds l b)
-                 pure (POp fc (mapData NoBinder l.withFC) op r))
+                 pure (POp fc (map NoBinder l.withFC) op r))
                <|> pure l.val
 
   opExpr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
@@ -1698,24 +1698,24 @@ constraints fname indents
   <|> pure []
 
 implBinds : OriginDesc -> IndentInfo -> (namedImpl : Bool) ->
-            EmptyRule (List (FC, ImpParameter' PTerm))
+            EmptyRule (List (AddFC (ImpParameter' PTerm)))
 implBinds fname indents namedImpl = concatMap (map adjust) <$> go where
 
-  adjust : (RigCount, WithFC Name, PiBindData PTerm) -> (FC, ImpParameter' PTerm)
-  adjust (r, wn, ty) = (virtualiseFC wn.fc, wn.val, r, ty)
+  adjust : ImpParameter' PTerm -> AddFC (ImpParameter' PTerm)
+  adjust param = virtualiseFC param.name.fc :+ param
 
   isDefaultImplicit : PiInfo a -> Bool
   isDefaultImplicit (DefImplicit _) = True
   isDefaultImplicit _               = False
 
-  go : EmptyRule (List (List (RigCount, WithFC Name, PiBindData PTerm)))
+  go : EmptyRule (List (List (ImpParameter' PTerm)))
   go = do decoratedSymbol fname "{"
           piInfo <- bounds $ option Implicit $ defImplicitField fname indents
           when (not namedImpl && isDefaultImplicit piInfo.val) $
             fatalLoc piInfo.bounds "Default implicits are allowed only for named implementations"
-          ns <- map (\case (MkBasicMultiBinder rig names type) => map (\nm => (rig, nm, MkPiBindData piInfo.val type)) (forget names))
+          ns <- map (\case (MkBasicMultiBinder rig names type) => map (\nm => Mk [rig, nm] (MkPiBindData piInfo.val type)) (forget names))
                     (pibindListName fname indents)
-          let ns = the (List (ZeroOneOmega, WithFC Name, PiBindData PTerm)) ns
+          let ns = the (List (ImpParameter' PTerm)) ns
           commitSymbol fname "}"
           commitSymbol fname "->"
           more <- go
@@ -1910,7 +1910,7 @@ parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
                              ops <- sepBy1 (decoratedSymbol fname ",") iOperator
                              pure (MkPFixityData vis binding fixity (fromInteger prec) ops)
                        )
-           pure (mapData PFixity b)
+           pure (map PFixity b)
 
 -- The compiler cannot infer the values for c1 and c2 so I had to write it
 -- this way.

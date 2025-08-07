@@ -1133,15 +1133,15 @@ mutual
       = do
            params' <- getArgs params
            let paramList = forget params'
-           pds' <- traverse (desugarDecl (ps ++ map fst paramList)) pds
+           let paramNames = map (\x => x.name.val) paramList
+           pds' <- traverse (desugarDecl (ps ++ paramNames)) pds
            -- Look for implicitly bindable names in the parameters
            pnames <- ifThenElse (not !isUnboundImplicits) (pure [])
              $ map concat
-             $ for (map (boundType . Builtin.snd . Builtin.snd) paramList)
-             $ findUniqueBindableNames pp.fc True (ps ++ map Builtin.fst paramList) []
+             $ for (map (boundType . val) paramList)
+             $ findUniqueBindableNames pp.fc True (ps ++ paramNames) []
 
-           let paramsb = map (\(n, rig, MkPiBindData info tm) =>
-                                 (n, rig, MkPiBindData info (doBind pnames tm))) params'
+           let paramsb = map {f = List1} (map {f = WithData _} (mapType (doBind pnames))) params'
            pure [IParameters pp.fc paramsb (concat pds')]
       where
         getArgs : Either (List1 PlainBinder)
@@ -1150,12 +1150,12 @@ mutual
         getArgs (Left params)
           = traverseList1 (\(MkWithName n ty) => do
               ty' <- desugar AnyExpr ps ty
-              pure (n.val, top, MkPiBindData Explicit ty')) params
+              pure (Mk [top, n] (MkPiBindData Explicit ty'))) params
         getArgs (Right params)
           = join <$> traverseList1 (\(MkPBinder info (MkBasicMultiBinder rig n ntm)) => do
               tm' <- desugar AnyExpr ps ntm
               i' <- traverse (desugar AnyExpr ps) info
-              let allbinders = map (\nn => (nn.val, rig, MkPiBindData i' tm')) n
+              let allbinders = map (\nn => Mk [rig, nn] (MkPiBindData i' tm')) n
               pure allbinders) params
 
   desugarDecl ps use@(MkWithData _ $ PUsing uimpls uds)
@@ -1217,10 +1217,10 @@ mutual
       = do opts <- traverse (desugarFnOpt ps) fnopts
            verifyTotalityModifiers impl.fc opts
 
-           is' <- for is $ \ (fc, c, n, bind) =>
+           is' <- for is $ traverse (\ bind =>
                      do tm' <- desugar AnyExpr ps bind.boundType
                         pi' <- mapDesugarPiInfo ps bind.info
-                        pure (fc, c, n, MkPiBindData pi' tm')
+                        pure (MkPiBindData pi' tm'))
            cons' <- for cons $ \ (n, tm) =>
                      do tm' <- desugar AnyExpr ps tm
                         pure (n, tm')
@@ -1233,8 +1233,8 @@ mutual
              $ findUniqueBindableNames impl.fc True ps []
 
            let paramsb = map (doBind bnames) params'
-           let isb = map (\ (info, r, n, bind) => (info, r, n, mapType (doBind bnames) bind)) is'
-           let consb = map (\(n, tm) => (n, doBind bnames tm)) cons'
+           let isb = map (map (mapType (doBind bnames))) is'
+           let consb = map (map (doBind bnames)) cons'
 
            body' <- maybe (pure Nothing)
                           (\b => do b' <- traverse (desugarDecl ps) b
@@ -1268,7 +1268,7 @@ mutual
            params' <- concat <$> traverse (\ (MkPBinder info (MkBasicMultiBinder rig names tm)) =>
                           do tm' <- desugar AnyExpr ps tm
                              p'  <- mapDesugarPiInfo ps info
-                             let allBinders = map (\nn => (nn.val, rig, MkPiBindData p' tm')) (forget names)
+                             let allBinders = map (\nm => Mk [rig, nm] (MkPiBindData p' tm')) (forget names)
                              pure allBinders)
                         params
            let _ = the (List ImpParameter) params'
@@ -1280,11 +1280,11 @@ mutual
            let bnames = if !isUnboundImplicits
                         then concatMap (findBindableNames True
                                          (ps ++ fnames ++ paramNames) [])
-                                       (map (\(_,_,b) => b.boundType) params')
+                                       (map (boundType . val) params')
                         else []
            let _ = the (List (String, String)) bnames
 
-           let paramsb = map (\ (n, c, bind) => (n, c, mapType (doBind bnames) bind)) params'
+           let paramsb = map (map (mapType (doBind bnames))) params'
            let _ = the (List ImpParameter) paramsb
            let recName = nameRoot tn
            fields' <- traverse (desugarField (ps ++ fnames ++ paramNames

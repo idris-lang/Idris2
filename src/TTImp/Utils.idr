@@ -36,7 +36,7 @@ rawImpFromDecl decl = case decl of
     IDef fc1 y ys => getFromClause !ys
     IParameters fc1 ys zs => rawImpFromDecl !zs ++ map getParamTy (forget ys)
     IRecord fc1 y z _ (MkImpRecord fc n params opts conName fields) => do
-        binder <- map (snd . snd) params
+        binder <- map val params
         getFromPiInfo binder.info ++ [binder.boundType] ++ getFromIField !fields
     IFail fc1 msg zs => rawImpFromDecl !zs
     INamespace fc1 ys zs => rawImpFromDecl !zs
@@ -46,7 +46,7 @@ rawImpFromDecl decl = case decl of
     ILog k => []
     IBuiltin _ _ _ => []
   where getParamTy : ImpParameter' RawImp -> RawImp
-        getParamTy (_, _, binder) = binder.boundType
+        getParamTy binder = binder.val.boundType
         getFromClause : ImpClause -> List RawImp
         getFromClause (PatClause fc1 lhs rhs) = [lhs, rhs]
         getFromClause (WithClause fc1 lhs rig wval prf flags ys) = [wval, lhs] ++ getFromClause !ys
@@ -386,7 +386,7 @@ mutual
   substNamesDecl' : Bool -> List Name -> List (Name, RawImp ) ->
                    ImpDecl -> ImpDecl
   substNamesDecl' bvar bound ps (IClaim claim)
-      = IClaim $ mapData {type $= substNamesTy' bvar bound ps} claim
+      = IClaim $ map {type $= substNamesTy' bvar bound ps} claim
   substNamesDecl' bvar bound ps (IDef fc n cs)
       = IDef fc n (map (substNamesClause' bvar bound ps) cs)
   substNamesDecl' bvar bound ps (IData fc vis mbtot d)

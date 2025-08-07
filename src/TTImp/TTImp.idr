@@ -385,7 +385,7 @@ mutual
 
   public export
   ImpParameter' : Type -> Type
-  ImpParameter' nm = (Name, RigCount, PiBindData nm)
+  ImpParameter' nm = WithRig $ WithName $ PiBindData nm
 
   -- old datatype for ImpParameter, used for elabreflection compatibility
   public export
@@ -394,11 +394,15 @@ mutual
 
   public export
   toOldParams : ImpParameter' (RawImp' nm) -> OldParameters' nm
-  toOldParams (nm, rig, bind) = (nm, rig, bind.info, bind.boundType)
+  toOldParams bind = (bind.name.val, bind.rig, bind.val.info, bind.val.boundType)
 
   public export
   fromOldParams : OldParameters' nm -> ImpParameter' (RawImp' nm)
-  fromOldParams (nm, rig, info,type) = (nm, rig, MkPiBindData info type)
+  fromOldParams (nm, rig, info,type) = Mk [rig, NoFC nm] (MkPiBindData info type)
+
+  export
+  Show nm => Show (ImpParameter' nm) where
+    show x = "\{show x.rig}\{show x.name.val} \{show x.val.boundType}"
 
   public export
   ImpRecord : Type

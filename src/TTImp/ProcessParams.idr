@@ -63,8 +63,8 @@ processParams {vars} {c} {m} {u} nest env fc ps ds
   where
     mkParamTy : List ImpParameter -> RawImp
     mkParamTy [] = IType fc
-    mkParamTy ((n, rig, binder) :: ps)
-       = IPi fc rig binder.info (Just n) binder.boundType (mkParamTy ps)
+    mkParamTy (binder :: ps)
+       = IPi fc binder.rig binder.val.info (Just binder.name.val) binder.val.boundType (mkParamTy ps)
 
     applyEnv : {vs : _} ->
                Env Term vs -> Name ->

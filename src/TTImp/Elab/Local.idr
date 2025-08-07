@@ -100,7 +100,7 @@ localHelper {vars} nest env nestdecls_in func
     -- application of the nested name.
     updateTyName : NestedNames vars -> ImpTy -> ImpTy
     updateTyName nest (MkImpTy loc' n ty)
-        = MkImpTy loc' (mapData (mapNestedName nest) n) ty
+        = MkImpTy loc' (map (mapNestedName nest) n) ty
 
     updateDataName : NestedNames vars -> ImpData -> ImpData
     updateDataName nest (MkImpData loc' n tycons dopts dcons)
@@ -127,7 +127,7 @@ localHelper {vars} nest env nestdecls_in func
 
     updateName : NestedNames vars -> ImpDecl -> ImpDecl
     updateName nest (IClaim claim)
-         = IClaim $ mapData {type $= updateTyName nest} claim
+         = IClaim $ map {type $= updateTyName nest} claim
     updateName nest (IDef loc' n cs)
          = IDef loc' (mapNestedName nest n) cs
     updateName nest (IData loc' vis mbt d)
@@ -138,7 +138,7 @@ localHelper {vars} nest env nestdecls_in func
 
     setPublic : ImpDecl -> ImpDecl
     setPublic (IClaim claim)
-        = IClaim $ mapData {vis := Public} claim
+        = IClaim $ map {vis := Public} claim
     setPublic (IData fc _ mbt d) = IData fc (specified Public) mbt d
     setPublic (IRecord fc c _ mbt r) = IRecord fc c (specified Public) mbt r
     setPublic (IParameters fc ps decls)
@@ -149,7 +149,7 @@ localHelper {vars} nest env nestdecls_in func
 
     setErased : ImpDecl -> ImpDecl
     setErased (IClaim claim)
-        = IClaim $ mapData {rig := erased} claim
+        = IClaim $ map {rig := erased} claim
     setErased (IParameters fc ps decls)
         = IParameters fc ps (map setErased decls)
     setErased (INamespace fc ps decls)

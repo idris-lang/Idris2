@@ -196,11 +196,10 @@ export
 (.drop) : WithData (l :: ls) a -> WithData ls a
 (.drop) = {metadata $= Record.tail }
 
-
 ||| WithData is functiorial in its payload
 export
-mapData : forall metadata. (a -> b) -> WithData metadata a -> WithData metadata b
-mapData f x = MkWithData x.metadata (f x.val)
+Functor (WithData metadata) where
+  map f x = MkWithData x.metadata (f x.val)
 
 ------------------------------------------------------------------------------------------------
 -- Default fields for records

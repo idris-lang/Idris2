@@ -595,7 +595,7 @@ mutual
                     List (PDecl' nm) ->
                     PDeclNoFC' nm
        PImplementation : Visibility -> List PFnOpt -> Pass ->
-                         (implicits : List (FC, ImpParameter' (PTerm' nm))) ->
+                         (implicits : List (AddFC (ImpParameter' (PTerm' nm)))) ->
                          (constraints : List (Maybe Name, PTerm' nm)) ->
                          Name ->
                          (params : List (PTerm' nm)) ->

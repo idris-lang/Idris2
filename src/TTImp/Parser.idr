@@ -10,6 +10,13 @@ import Data.List
 import Data.List1
 import Libraries.Data.WithDefault
 
+withFC : (fname : OriginDesc) => Rule a -> Rule (WithFC a)
+withFC parser = do
+  start <- location
+  parsed <- parser
+  end <- location
+  pure (Mk [MkFC fname start end] parsed)
+
 topDecl : OriginDesc -> IndentInfo -> Rule ImpDecl
 -- All the clauses get parsed as one-clause definitions. Collect any
 -- neighbouring clauses with the same function name into one definition.
@@ -256,18 +263,18 @@ mutual
 
 
   pibindListName : OriginDesc -> FilePos -> IndentInfo ->
-                   Rule (List (RigCount, Name, RawImp))
+                   Rule (List (RigCount, WithFC Name, RawImp))
   pibindListName fname start indents
        = do rigc <- multiplicity
-            ns <- sepBy1 (symbol ",") unqualifiedName
+            ns <- sepBy1 (symbol ",") (withFC unqualifiedName)
             symbol ":"
             ty <- expr fname indents
             atEnd indents
             rig <- getMult rigc
-            pure (map (\n => (rig, UN (Basic n), ty)) (forget ns))
+            pure (map (\n => (rig, map (UN . Basic) n, ty)) (forget ns))
      <|> forget <$> sepBy1 (symbol ",")
                            (do rigc <- multiplicity
-                               n <- name
+                               n <- withFC name
                                symbol ":"
                                ty <- expr fname indents
                                rig <- getMult rigc
@@ -277,7 +284,7 @@ mutual
                Rule (List (RigCount, Maybe Name, RawImp))
   pibindList fname start indents
     = do params <- pibindListName fname start indents
-         pure $ map (\(rig, n, ty) => (rig, Just n, ty)) params
+         pure $ map (\(rig, n, ty) => (rig, Just n.val, ty)) params
 
 
   autoImplicitPi : OriginDesc -> IndentInfo -> Rule RawImp
@@ -601,13 +608,13 @@ dataDecl fname indents
          end <- location
          pure (MkImpData (MkFC fname start end) n (Just ty) opts cs)
 
-recordParam : OriginDesc -> IndentInfo -> Rule (List (Name, RigCount, PiBindData RawImp))
+recordParam : OriginDesc -> IndentInfo -> Rule (List (ImpParameter' RawImp))
 recordParam fname indents
     = do symbol "("
          start <- location
          params <- pibindListName fname start indents
          symbol ")"
-         pure $ map (\(c, n, tm) => (n, c, MkPiBindData Explicit tm)) params
+         pure (map (\(c, n, tm) => Mk [c, n] (MkPiBindData Explicit tm)) params)
   <|> do symbol "{"
          commit
          start <- location
@@ -619,11 +626,9 @@ recordParam fname indents
               <|> pure      Implicit)
          params <- pibindListName fname start indents
          symbol "}"
-         pure $ map (\(c, n, tm) => (n, c, MkPiBindData info tm)) params
-  <|> do start <- location
-         n <- name
-         end <- location
-         pure [(n, top, MkPiBindData Explicit $ Implicit (MkFC fname start end) False)]
+         pure (map (\(c, n, tm) => Mk [c, n] (MkPiBindData info tm)) params)
+  <|> do n <- withFC name
+         pure [ Mk [top, n] (MkPiBindData Explicit (Implicit n.fc False)) ]
 
 fieldDecl : OriginDesc -> IndentInfo -> Rule (List IField)
 fieldDecl fname indents
