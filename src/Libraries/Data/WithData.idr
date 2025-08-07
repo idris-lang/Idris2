@@ -198,7 +198,7 @@ export
 
 ||| WithData is functiorial in its payload
 export
-Functor (WithData metadata) where
+Functor (WithData md) where
   map f x = MkWithData x.metadata (f x.val)
 
 ------------------------------------------------------------------------------------------------
