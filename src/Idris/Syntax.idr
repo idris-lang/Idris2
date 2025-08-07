@@ -337,7 +337,6 @@ mutual
   MkFullBinder : PiInfo (PTerm' nm) -> RigCount -> WithFC Name -> PTerm' nm -> PBinder' nm
   MkFullBinder info rig x y = MkPBinder info (MkBasicMultiBinder rig (singleton x) y)
 
-
   export
   getLoc : PDo' nm -> FC
   getLoc (DoExp fc _) = fc

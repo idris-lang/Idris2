@@ -502,18 +502,9 @@ mutual
                    , Maybe (String, Name)
                    , List (PField' KindedName))
   toPRecord (MkImpRecord fc n ps opts con fs)
-      = do ps' <- traverse (traverse $ \ binder =>
-                                   do ty' <- toPTerm startPrec binder.boundType
-                                      p' <- mapPiInfo binder.info
-                                      pure (MkPiBindData p' ty')) ps
+      = do ps' <- traverse (traverse (traverse (toPTerm startPrec))) ps
            fs' <- traverse toPField fs
            pure (n, ps', opts, Just ("", con), fs')
-    where
-      mapPiInfo : PiInfo IRawImp -> Core (PiInfo IPTerm)
-      mapPiInfo Explicit        = pure   Explicit
-      mapPiInfo Implicit        = pure   Implicit
-      mapPiInfo AutoImplicit    = pure   AutoImplicit
-      mapPiInfo (DefImplicit p) = pure $ DefImplicit !(toPTerm startPrec p)
 
   toPFnOpt : {auto c : Ref Ctxt Defs} ->
              {auto s : Ref Syn SyntaxInfo} ->
@@ -536,10 +527,10 @@ mutual
   toPDecl (IParameters fc ps ds)
       = do ds' <- traverse toPDecl ds
            args <-
-             traverseList1 (\b@(MkWithData _ binder) =>
-                 do info' <- traverse (toPTerm startPrec) binder.info
-                    type' <- toPTerm startPrec binder.boundType
-                    pure (MkFullBinder info' b.rig b.name type')) ps
+             traverseList1 (\binder =>
+                 do info' <- traverse (toPTerm startPrec) binder.val.info
+                    type' <- toPTerm startPrec binder.val.boundType
+                    pure (MkFullBinder info' binder.rig binder.name type')) ps
            pure (Just (MkFCVal fc (PParameters (Right args) (catMaybes ds'))))
   toPDecl (IRecord fc _ vis mbtot r)
       = do (n, ps, opts, con, fs) <- toPRecord r
