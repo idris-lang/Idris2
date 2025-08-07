@@ -757,24 +757,6 @@ Reflect t => Reflect (PiInfo t) where
       = do t' <- reflect fc defs lhs env t
            appCon fc defs (reflectiontt "DefImplicit") [Erased fc Placeholder, t']
 
--- export
--- Reify t => Reify (PiBindData t) where
---   reify defs val@(NDCon _ n _ _ [_, _, (_, info), (_, boundt)])
---       = case dropAllNS !(full (gamma defs) n) of
---              (UN (Basic "MkPair"))
---                => do info' <- reify defs !(evalClosure defs info)
---                      boundt' <- reify defs !(evalClosure defs boundt)
---                      pure (MkPiBindData info' boundt')
---              _ => cantReify val "PiBindData"
---   reify defs val = cantReify val "PiBindData"
---
--- export
--- Reflect t => Reflect (PiBindData t) where
---   reflect fc defs lhs env (MkPiBindData info type)
---       = do info' <- reflect fc defs lhs env info
---            type' <- reflect fc defs lhs env info
---            appCon fc defs (builtin "MkPair") [Erased fc Placeholder, Erased fc Placeholder, info', type']
-
 export
 Reify LazyReason where
   reify defs val@(NDCon _ n _ _ _)
