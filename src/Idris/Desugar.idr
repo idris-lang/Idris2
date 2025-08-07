@@ -1017,13 +1017,13 @@ mutual
                  List Name -> Namespace -> PField ->
                  Core (List IField)
   desugarField ps ns field@(MkWithData _ $ MkRecordField doc rig names (MkPiBindData p ty))
-      = flip Core.traverse names $ \n : Name => do
-           addDocStringNS ns n doc
-           addDocStringNS ns (toRF n) doc
+      = flip Core.traverse names $ \n : WithFC Name => do
+           addDocStringNS ns n.val doc
+           addDocStringNS ns (toRF n.val) doc
            syn <- get Syn
            p' <- traverse (desugar AnyExpr ps) p
            ty' <- bindTypeNames field.fc (usingImpl syn) ps !(desugar AnyExpr ps ty)
-           pure (Mk [field.fc, rig, NoFC n] $ MkPiBindData p' ty')
+           pure (Mk [field.fc, rig, n] $ MkPiBindData p' ty')
 
         where
           toRF : Name -> Name
@@ -1298,7 +1298,7 @@ mutual
                          vis mbtot (MkImpRecord rec.fc tn paramsb opts conname (concat fields'))]
     where
       getfname : PField -> List Name
-      getfname x = x.val.names
+      getfname x = map val x.val.names
 
       mkConName : Name -> Name
       mkConName (NS ns (UN n))

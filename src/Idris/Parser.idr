@@ -1742,9 +1742,9 @@ fieldDecl indents
         = do b <- bounds (do
                     rig <- multiplicity fname
                     ns <- sepBy1 (decoratedSymbol fname ",")
-                            (decorate fname Function name
+                            (fcBounds (decorate fname Function name
                                <|> (do b <- bounds (symbol "_")
-                                       fatalLoc {c = True} b.bounds "Fields have to be named"))
+                                       fatalLoc {c = True} b.bounds "Fields have to be named")))
                     decoratedSymbol fname ":"
                     ty <- typeExpr pdef fname indents
                     pure (MkRecordField doc rig (forget ns) (MkPiBindData p ty)))

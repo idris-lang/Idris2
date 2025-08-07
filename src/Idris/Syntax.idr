@@ -482,7 +482,7 @@ mutual
     constructor MkRecordField
     doc : String
     rig : RigCount
-    names : List Name -- See #3409
+    names : List (WithFC Name)
     bind : PiBindData (PTerm' nm)
 
   public export
