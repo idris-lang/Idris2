@@ -1148,9 +1148,9 @@ mutual
                          (List1 PBinder) ->
                          Core (List1 (ImpParameter' RawImp))
         getArgs (Left params)
-          = traverseList1 (\(MkWithName n ty) => do
-              ty' <- desugar AnyExpr ps ty
-              pure (Mk [top, n] (MkPiBindData Explicit ty'))) params
+          = traverseList1 (\ty => do
+              ty' <- desugar AnyExpr ps ty.val
+              pure (Mk [top, ty.name] (MkPiBindData Explicit ty'))) params
         getArgs (Right params)
           = join <$> traverseList1 (\(MkPBinder info (MkBasicMultiBinder rig n ntm)) => do
               tm' <- desugar AnyExpr ps ntm

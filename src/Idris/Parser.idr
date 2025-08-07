@@ -1192,7 +1192,7 @@ plainBinder : (fname : OriginDesc) => (indents : IndentInfo) => Rule PlainBinder
 plainBinder = do name <- fcBounds (decoratedSimpleBinderUName fname)
                  decoratedSymbol fname ":"
                  ty <- typeExpr pdef fname indents
-                 pure $ MkWithName name ty
+                 pure $ Mk [name] ty
 
 ||| A binder with multiple names and one type
 ||| BNF:

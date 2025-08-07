@@ -251,9 +251,6 @@ mapPTermM f = goPTerm where
       MkPClaim c v <$> goPFnOpts opts
                    <*> traverse goPTypeDecl tdecl
 
-    goPlainBinder : PlainBinder' nm -> Core (PlainBinder' nm)
-    goPlainBinder = traverseWName f
-
     goBasicMultiBinder : BasicMultiBinder' nm -> Core (BasicMultiBinder' nm)
     goBasicMultiBinder (MkBasicMultiBinder rig names type)
       = MkBasicMultiBinder rig names <$> goPTerm type
@@ -266,16 +263,14 @@ mapPTermM f = goPTerm where
     goPBinderScope (MkPBinderScope binder scope)
       = MkPBinderScope <$> goPBinder binder <*> goPTerm scope
 
-    -- goParamArgs :
-
     goPDecl : PDeclNoFC' nm -> Core (PDeclNoFC' nm)
     goPDecl (PClaim claim) =
       PClaim <$> goPClaim claim
     goPDecl (PDef cls) = PDef <$> goPClauses cls
     goPDecl (PData doc v mbt d) = PData doc v mbt <$> goPDataDecl d
     goPDecl (PParameters nts ps) =
-      PParameters <$> either (\x => Left <$> traverseList1 goPlainBinder x)
-                             (\x => Right <$> traverseList1 goPBinder x) nts -- go4TupledPTerms nts
+      PParameters <$> either (\x => Left <$> traverseList1 (traverse goPTerm) x)
+                             (\x => Right <$> traverseList1 goPBinder x) nts
                   <*> goPDecls ps
     goPDecl (PUsing mnts ps) =
       PUsing <$> goPairedPTerms mnts
@@ -550,9 +545,6 @@ mapPTerm f = goPTerm where
     goPClaim : PClaimData' nm -> PClaimData' nm
     goPClaim (MkPClaim c v opts tdecl) = MkPClaim c v (goPFnOpt <$> opts) (map goPTypeDecl tdecl)
 
-    goPlainBinder : PlainBinder' nm -> PlainBinder' nm
-    goPlainBinder = mapWName goPTerm
-
     goPBinderScope : PBinderScope' nm -> PBinderScope' nm
     goPBinderScope (MkPBinderScope binder scope)
       = MkPBinderScope (goPBinder binder) (goPTerm scope)
@@ -563,7 +555,7 @@ mapPTerm f = goPTerm where
     goPDecl (PDef cls) = PDef $ (map goPClause) cls
     goPDecl (PData doc v mbt d) = PData doc v mbt $ goPDataDecl d
     goPDecl (PParameters nts ps)
-      = PParameters (bimap (map goPlainBinder) (map goPBinder) nts) (map goPDecl <$> ps)
+      = PParameters (bimap (map (map goPTerm)) (map goPBinder) nts) (map goPDecl <$> ps)
     goPDecl (PUsing mnts ps)
       = PUsing (goPairedPTerms mnts) (map goPDecl <$> ps)
     goPDecl (PInterface v mnts n doc nrts ns mn ps)
