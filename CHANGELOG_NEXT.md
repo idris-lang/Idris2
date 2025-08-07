@@ -32,6 +32,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * The `idris2 --exec` command now takes an arbitrary expression, not just the
   function name.
 
+* Command line arguments beginning with `--` which are not a known flag now
+  produce an error.
+
 ### Building/Packaging changes
 
 * The Nix flake's `buildIdris` function now returns a set with `executable` and
