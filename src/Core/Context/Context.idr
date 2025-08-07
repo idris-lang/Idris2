@@ -17,6 +17,7 @@ import Data.SnocList
 import Libraries.Data.IntMap
 import Libraries.Data.IOArray
 import Libraries.Data.NameMap
+import Libraries.Data.NatSet
 import Libraries.Data.UserNameMap
 import Libraries.Data.WithDefault
 import Libraries.Data.SparseMatrix
@@ -98,12 +99,12 @@ data Def : Type where
                -- happen)
            Def -- data constructor
     TCon : (tag : Int) -> (arity : Nat) ->
-           (parampos : List Nat) -> -- parameters
-           (detpos : List Nat) -> -- determining arguments
+           (parampos : NatSet) -> -- parameters
+           (detpos : NatSet) -> -- determining arguments
            (flags : TypeFlags) -> -- should 'auto' implicits check
            (mutwith : List Name) -> -- TODO morally `Set Name`
            (datacons : Maybe (List Name)) ->
-           (detagabbleBy : Maybe (List Nat)) ->
+           (detagabbleBy : Maybe NatSet) ->
                     -- argument positions which can be used for
                     -- detagging, if it's possible (to check if it's
                     -- safe to erase)
@@ -301,12 +302,12 @@ record GlobalDef where
   location : FC
   fullname : Name -- original unresolved name
   type : ClosedTerm
-  eraseArgs : List Nat -- which argument positions to erase at runtime
-  safeErase : List Nat -- which argument positions are safe to assume
+  eraseArgs : NatSet -- which argument positions to erase at runtime
+  safeErase : NatSet -- which argument positions are safe to assume
                        -- erasable without 'dotting', because their types
                        -- are collapsible relative to non-erased arguments
-  specArgs : List Nat -- arguments to specialise by
-  inferrable : List Nat -- arguments which can be inferred from elsewhere in the type
+  specArgs : NatSet -- arguments to specialise by
+  inferrable : NatSet -- arguments which can be inferred from elsewhere in the type
   multiplicity : RigCount
   localVars : Scope -- environment name is defined in
   visibility : WithDefault Visibility Private

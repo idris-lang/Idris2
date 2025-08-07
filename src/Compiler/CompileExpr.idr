@@ -18,6 +18,7 @@ import Data.SnocList
 import Data.Maybe
 import Data.Vect
 
+import Libraries.Data.NatSet
 import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.SizeOf
 import Libraries.Data.SnocList.Extra
@@ -26,7 +27,7 @@ import Libraries.Data.SnocList.Extra
 
 data Args
     = NewTypeBy Nat Nat
-    | EraseArgs Nat (List Nat)
+    | EraseArgs Nat NatSet
     | Arity Nat
 
 ||| Extract the number of arguments from a term, or return that it's
@@ -45,15 +46,6 @@ numArgs defs (Ref _ _ n)
            Builtin {arity} f => pure (Arity arity)
            _ => pure (Arity 0)
 numArgs _ tm = pure (Arity 0)
-
-mkSub : Nat -> (ns : Scope) -> List Nat -> (ns' ** Thin ns' ns)
-mkSub i _ [] = (_ ** Refl)
-mkSub i [] ns = (_ ** Refl)
-mkSub i (x :: xs) es
-    = let (ns' ** p) = mkSub (S i) xs es in
-          if i `elem` es
-             then (ns' ** Drop p)
-             else (x :: ns' ** Keep p)
 
 weakenVar : Var ns -> Var (a :: ns)
 weakenVar (MkVar p) = (MkVar (Later p))
@@ -115,30 +107,23 @@ applyNewType arity pos fn args
     keepArg (CCon fc _ _ _ args) = keep 0 args
     keepArg tm = CErased (getFC fn)
 
-dropFrom : List Nat -> Nat -> List (CExp vs) -> List (CExp vs)
-dropFrom epos i [] = []
-dropFrom epos i (x :: xs)
-    = if i `elem` epos
-         then dropFrom epos (1 + i) xs
-         else x :: dropFrom epos (1 + i) xs
-
-dropPos : List Nat -> CExp vs -> CExp vs
+dropPos : NatSet -> CExp vs -> CExp vs
 dropPos epos (CLam fc x sc) = CLam fc x (dropPos epos sc)
 dropPos epos (CApp fc tm@(CApp _ _ _) args')
     = CApp fc (dropPos epos tm) args'
-dropPos epos (CApp fc f args) = CApp fc f (dropFrom epos 0 args)
-dropPos epos (CCon fc c ci a args) = CCon fc c ci a (dropFrom epos 0 args)
+dropPos epos (CApp fc f args) = CApp fc f (drop epos args)
+dropPos epos (CCon fc c ci a args) = CCon fc c ci a (drop epos args)
 dropPos epos tm = tm
 
 eraseConArgs : {vars : _} ->
-               Nat -> List Nat -> CExp vars -> List (CExp vars) -> CExp vars
+               Nat -> NatSet -> CExp vars -> List (CExp vars) -> CExp vars
 eraseConArgs arity epos fn args
     = let fn' = expandToArity arity fn args in
-          if not (isNil epos)
-             then dropPos epos fn' -- fn' might be lambdas, after eta expansion
-             else fn'
+          if isEmpty epos
+             then fn'
+             else dropPos epos fn' -- fn' might be lambdas, after eta expansion
 
-mkDropSubst : Nat -> List Nat ->
+mkDropSubst : Nat -> NatSet ->
               (rest : List Name) ->
               (vars : List Name) ->
               (vars' ** Thin (vars' ++ rest) (vars ++ rest))
@@ -567,14 +552,14 @@ toArgExp : (Var ns) -> CExp ns
 toArgExp (MkVar p) = CLocal emptyFC p
 
 toCDef : Ref Ctxt Defs => Ref NextMN Int =>
-         Name -> ClosedTerm -> List Nat -> Def ->
+         Name -> ClosedTerm -> NatSet -> Def ->
          Core CDef
 toCDef n ty _ None
     = pure $ MkError $ CCrash emptyFC ("Encountered undefined name " ++ show !(getFullName n))
 toCDef n ty erased (PMDef pi args _ tree _)
-    = do let (args' ** p) = mkSub 0 args erased
+    = do let (args' ** p) = fromNatSet erased args
          comptree <- toCExpTree n tree
-         pure $ toLam (externalDecl pi) $ if isNil erased
+         pure $ toLam (externalDecl pi) $ if isEmpty erased
             then MkFun args comptree
             else MkFun args' (shrinkCExp p comptree)
   where
@@ -599,7 +584,7 @@ toCDef n _ _ (DCon tag arity pos)
          args <- numArgs {vars = Scope.empty} defs (Ref EmptyFC (DataCon tag arity) n)
          let arity' = case args of
                  NewTypeBy ar _ => ar
-                 EraseArgs ar erased => ar `minus` length erased
+                 EraseArgs ar erased => ar `minus` size erased
                  Arity ar => ar
          pure $ MkCon (Just tag) arity' nt
 toCDef n _ _ (TCon tag arity _ _ _ _ _ _)

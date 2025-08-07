@@ -13,6 +13,7 @@ import Core.Value
 import Data.List
 import Data.SnocList
 
+import Libraries.Data.NatSet
 import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.HasLength
 import Libraries.Data.SnocList.SizeOf
@@ -379,25 +380,17 @@ mutual
     convGen q inf defs env (NApp fc val args) (NApp _ val' args')
         = if !(chkConvHead q inf defs env val val')
              then do i <- getInfPos val
-                     allConv q inf defs env (dropInf 0 i args1) (dropInf 0 i args2)
+                     allConv q inf defs env (drop i args1) (drop i args2)
              else chkConvCaseBlock fc q inf defs env val args1 val' args2
         where
-          getInfPos : NHead vars -> Core (List Nat)
+          getInfPos : NHead vars -> Core NatSet
           getInfPos (NRef _ n)
               = if inf
                    then do Just gdef <- lookupCtxtExact n (gamma defs)
-                                | _ => pure []
+                                | _ => pure NatSet.empty
                            pure (inferrable gdef)
-                   else pure []
-          getInfPos _ = pure []
-
-          dropInf : Nat -> List Nat -> List a -> List a
-          dropInf _ [] xs = xs
-          dropInf _ _ [] = []
-          dropInf i ds (x :: xs)
-              = if i `elem` ds
-                   then dropInf (S i) ds xs
-                   else x :: dropInf (S i) ds xs
+                   else pure NatSet.empty
+          getInfPos _ = pure NatSet.empty
 
           -- Discard file context information irrelevant for conversion checking
           args1 : List (Closure vars)

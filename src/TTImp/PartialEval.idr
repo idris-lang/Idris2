@@ -24,6 +24,7 @@ import Protocol.Hex
 import Data.List
 import Data.SnocList
 import Libraries.Data.NameMap
+import Libraries.Data.NatSet
 import Libraries.Data.WithDefault
 import Libraries.Data.SnocList.SizeOf
 
@@ -378,19 +379,12 @@ eraseInferred tm
                 do defs <- get Ctxt
                    Just gdef <- lookupCtxtExact n (gamma defs)
                         | Nothing => pure tm
-                   let argsE = dropErased fc 0 (inferrable gdef) args
+                   let argsE = NatSet.overwrite (Erased fc Placeholder) (inferrable gdef) args
                    argsE' <- traverse eraseInferred argsE
                    pure (apply fc (Ref fc Func n) argsE')
            (f, args) =>
                 do args' <- traverse eraseInferred args
                    pure (apply (getLoc f) f args)
-  where
-    dropErased : FC -> Nat -> List Nat -> List (Term vars) -> List (Term vars)
-    dropErased fc pos ps [] = []
-    dropErased fc pos ps (n :: ns)
-        = if pos `elem` ps
-             then Erased fc Placeholder :: dropErased fc (1 + pos) ps ns
-             else n :: dropErased fc (1 + pos) ps ns
 
 -- Specialise a function name according to arguments. Return the specialised
 -- application on success, or Nothing if it's not specialisable (due to static
@@ -405,31 +399,30 @@ specialise : {vars : _} ->
              Name -> List (FC, Term vars) ->
              Core (Maybe (Term vars))
 specialise {vars} fc env gdef fn stk
-    = case specArgs gdef of
-        [] => pure Nothing
-        specs =>
-            do fnfull <- toFullNames fn
-               -- If all the arguments are concrete (meaning, no local variables
-               -- or holes in them, so they can be a ClosedTerm) we can specialise
-               Just sargs <- getSpecArgs 0 specs stk
-                   | Nothing => pure Nothing
-               defs <- get Ctxt
-               sargs <- for sargs $ traversePair $ traverseArgMode $ \ tm =>
-                          normalise defs Env.empty tm
-               let nhash = hash !(traverse toFullNames $ mapMaybe getStatic $ map snd sargs)
-                              `hashWithSalt` fnfull -- add function name to hash to avoid namespace clashes
-               let pename = NS partialEvalNS
-                            (UN $ Basic ("PE_" ++ nameRoot fnfull ++ "_" ++ asHex (cast nhash)))
-               defs <- get Ctxt
-               case lookup pename (peFailures defs) of
-                    Nothing => Just <$> mkSpecDef fc gdef pename sargs fn stk
-                    Just _ => pure Nothing
+    = let specs = specArgs gdef in
+      if NatSet.isEmpty specs then pure Nothing else do
+        fnfull <- toFullNames fn
+        -- If all the arguments are concrete (meaning, no local variables
+        -- or holes in them, so they can be a ClosedTerm) we can specialise
+        Just sargs <- getSpecArgs 0 specs stk
+            | Nothing => pure Nothing
+        defs <- get Ctxt
+        sargs <- for sargs $ traversePair $ traverseArgMode $ \ tm =>
+                   normalise defs Env.empty tm
+        let nhash = hash !(traverse toFullNames $ mapMaybe getStatic $ map snd sargs)
+                       `hashWithSalt` fnfull -- add function name to hash to avoid namespace clashes
+        let pename = NS partialEvalNS
+                     (UN $ Basic ("PE_" ++ nameRoot fnfull ++ "_" ++ asHex (cast nhash)))
+        defs <- get Ctxt
+        case lookup pename (peFailures defs) of
+             Nothing => Just <$> mkSpecDef fc gdef pename sargs fn stk
+             Just _ => pure Nothing
   where
     concrete : {vars : _} ->
                Term vars -> Maybe ClosedTerm
     concrete tm = shrink tm none
 
-    getSpecArgs : Nat -> List Nat -> List (FC, Term vars) ->
+    getSpecArgs : Nat -> NatSet -> List (FC, Term vars) ->
                   Core (Maybe (List (Nat, ArgMode)))
     getSpecArgs i specs [] = pure (Just [])
     getSpecArgs i specs ((_, x) :: xs)
@@ -631,18 +624,17 @@ mutual
       = do Just gdef <- lookupCtxtExact fn (gamma defs)
                 | Nothing => do args' <- quoteArgsWithFC q defs bound env args
                                 pure $ applyStackWithFC (Ref fc Func fn) args'
-           case specArgs gdef of
-                [] => do args' <- quoteArgsWithFC q defs bound env args
-                         pure $ applyStackWithFC (Ref fc Func fn) args'
-                _ => do empty <- clearDefs defs
-                        args' <- quoteArgsWithFC q defs bound env args
-                        Just r <- specialise fc (extendEnv bound env) gdef fn args'
-                             | Nothing =>
-                                  -- can't specialise, keep the arguments
-                                  -- unreduced
-                                  do args' <- quoteArgsWithFC q empty bound env args
-                                     pure $ applyStackWithFC (Ref fc Func fn) args'
-                        pure r
+           args' <- quoteArgsWithFC q defs bound env args
+           let False = NatSet.isEmpty (specArgs gdef)
+               | _ => pure $ applyStackWithFC (Ref fc Func fn) args'
+           Just r <- specialise fc (extendEnv bound env) gdef fn args'
+                | Nothing =>
+                     -- can't specialise, keep the arguments
+                     -- unreduced
+                     do empty <- clearDefs defs
+                        args' <- quoteArgsWithFC q empty bound env args
+                        pure $ applyStackWithFC (Ref fc Func fn) args'
+           pure r
      where
        extendEnv : Bounds bs -> Env Term vs -> Env Term (bs ++ vs)
        extendEnv None env = env

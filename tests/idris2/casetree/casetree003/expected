@@ -6,7 +6,7 @@ Compile time tree: case {arg:2} of
   (::) {e:2} {e:3} {e:4} => {e:3} :: idL {e:4} (view {e:4})
 Erasable args: [0]
 Detaggable arg types: [2]
-Inferrable args: [1, 0]
+Inferrable args: [0, 1]
 Compiled: \ {arg:1}, {arg:2} => case {arg:2} of
   { Main.Nil {tag = 0} {e:1} => _builtin.NIL {tag = 0} [nil]
   ; Main.(::) {tag = 1} {e:3} {e:4} => _builtin.CONS {tag = 1} [cons] {e:3} (Main.idL {e:4} (Main.view {e:4}))

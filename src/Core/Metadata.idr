@@ -12,6 +12,7 @@ import Core.TTC
 
 import Data.List
 import System.File
+import Libraries.Data.NatSet
 import Libraries.Data.PosMap
 import Libraries.Utils.Binary
 

@@ -14,6 +14,7 @@ import Data.Maybe
 import Data.String
 
 import Libraries.Data.NameMap
+import Libraries.Data.NatSet
 import Libraries.Data.String.Extra
 import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.SizeOf
@@ -418,19 +419,12 @@ eraseApps {vs} tm
            (Ref fc nt n, args) =>
                 do defs <- get Ctxt
                    mgdef <- lookupCtxtExact n (gamma defs)
-                   let eargs = maybe [] eraseArgs mgdef
-                   args' <- traverse eraseApps (dropPos fc 0 eargs args)
+                   let eargs = maybe NatSet.empty eraseArgs mgdef
+                   args' <- traverse eraseApps (NatSet.overwrite (Erased fc Placeholder) eargs args)
                    pure (apply fc (Ref fc nt n) args')
            (tm, args) =>
                 do args' <- traverse eraseApps args
                    pure (apply (getLoc tm) tm args')
-  where
-    dropPos : FC -> Nat -> List Nat -> List (Term vs) -> List (Term vs)
-    dropPos fc i ns [] = []
-    dropPos fc i ns (x :: xs)
-        = if i `elem` ns
-             then Erased fc Placeholder :: dropPos fc (S i) ns xs
-             else x :: dropPos fc (S i) ns xs
 
 -- if tm would be matched by trylhs, then it's not an impossible case
 -- because we've already got it. Ignore anything in erased position.

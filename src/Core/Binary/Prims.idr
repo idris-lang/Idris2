@@ -12,6 +12,7 @@ import Data.Nat
 import Data.String
 import Data.Vect
 
+import Libraries.Data.NatSet
 import Libraries.Data.PosMap
 import public Libraries.Utils.Binary
 import public Libraries.Utils.String
@@ -114,7 +115,7 @@ export
               do val <- coreLift $ getInt (buf chunk) (cast $ loc chunk)
                  put Bin (incLoc 8 chunk)
                  pure val
-              else throw (TTCError (EndOfBuffer ("Int " ++ show (loc chunk, size chunk))))
+              else throw (TTCError (EndOfBuffer ("Int " ++ show (loc chunk, Binary.size chunk))))
 
 export
 TTC Int where
@@ -139,7 +140,7 @@ TTC Int where
                          do val <- coreLift $ getInt (buf chunk) (cast $ loc chunk)
                             put Bin (incLoc 8 chunk)
                             pure val
-                       else throw (TTCError (EndOfBuffer ("Int " ++ show (loc chunk, size chunk))))
+                       else throw (TTCError (EndOfBuffer ("Int " ++ show (loc chunk, Binary.size chunk))))
            t => pure (t - 127)
 
 export
@@ -455,6 +456,11 @@ TTC Nat where
   fromBuf
      = do val <- fromBuf
           pure (fromInteger val)
+
+export
+TTC NatSet where
+  toBuf ns = toBuf (cast {to=Integer} ns)
+  fromBuf = cast {from=Integer} <$> fromBuf
 
 ||| Get a file's modified time. If it doesn't exist, return 0 (UNIX Epoch)
 export
