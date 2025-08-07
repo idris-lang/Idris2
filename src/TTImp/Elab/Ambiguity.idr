@@ -91,6 +91,7 @@ expandAmbigName mode nest env orig args (IVar fc x) exp
 
     -- If there's multiple alternatives and all else fails, resort to using
     -- the primitive directly
+    -- The order of the arguments have a big effect on case-tree size
     uniqType : Name -> List (FC, Maybe (Maybe Name), RawImp) -> PrimNames -> AltType
     uniqType n [(_, _, IPrimVal fc (BI x))] (MkPrimNs (Just fi) _ _ _ _ _ _)
         = UniqueDefault (IPrimVal fc (BI x))

@@ -458,6 +458,7 @@ getNArgs defs (NS _ (UN $ Basic "Struct")) [n, args]
          pure (Struct n' !(getFieldArgs defs args))
 getNArgs defs n args = pure $ User n args
 
+-- The order of the arguments have a big effect on case-tree size
 nfToCFType : {auto c : Ref Ctxt Defs} ->
              FC -> ClosedNF -> (inStruct : Bool) -> Core CFType
 nfToCFType _ (NPrimVal _ $ PrT IntType) _ = pure CFInt
