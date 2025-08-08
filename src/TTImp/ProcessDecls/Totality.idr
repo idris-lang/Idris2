@@ -24,7 +24,7 @@ checkTotalityOK n
          -- #524: need to check positivity even if we're not in a total context
          -- because a definition coming later may need to know it is positive
          case definition gdef of
-           (TCon _ _ _ _ _ _ _ _) => ignore $ checkPositive fc n
+           (TCon _ _ _ _ _ _ _) => ignore $ checkPositive fc n
            _ => pure ()
 
          -- Once that is done, we build up errors if necessary

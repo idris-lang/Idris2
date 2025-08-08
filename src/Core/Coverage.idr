@@ -32,9 +32,9 @@ conflictMatch ((x, tm) :: ms) = conflictArgs x tm ms || conflictMatch ms
     clash : Term vars -> Term vars -> ClashResult
     clash (Ref _ (DataCon t _) _) (Ref _ (DataCon t' _) _)
         = if t /= t' then Distinct else Same
-    clash (Ref _ (TyCon t _) _) (Ref _ (TyCon t' _) _)
-        = if t /= t' then Distinct else Same
-    clash (PrimVal _ c) (PrimVal _ c') = if  c /= c' then Distinct else Same
+    clash (Ref _ (TyCon _) n) (Ref _ (TyCon _) n')
+        = if n /= n' then Distinct else Same
+    clash (PrimVal _ c) (PrimVal _ c') = if c /= c' then Distinct else Same
     clash (Ref _ t _) (PrimVal _ _) = if isJust (isCon t) then Distinct else Incomparable
     clash (PrimVal _ _) (Ref _ t _) = if isJust (isCon t) then Distinct else Incomparable
     clash (Ref _ t _) (TType _ _)   = if isJust (isCon t) then Distinct else Incomparable
@@ -124,7 +124,7 @@ conflict defs env nfty n
           = if t == t'
                then conflictArgs i (map snd args) (map snd args')
                else pure Nothing
-      conflictNF i (NTCon _ n t a args) (NTCon _ n' t' a' args')
+      conflictNF i (NTCon _ n a args) (NTCon _ n' a' args')
           = if n == n'
                then conflictArgs i (map snd args) (map snd args')
                else pure Nothing
@@ -140,14 +140,14 @@ export
 isEmpty : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
           Defs -> Env Term vars -> NF vars -> Core Bool
-isEmpty defs env (NTCon fc n t a args)
+isEmpty defs env (NTCon fc n a args)
   = do Just nty <- lookupDefExact n (gamma defs)
          | _ => pure False
        case nty of
-            TCon _ _ _ _ flags _ Nothing _ => pure False
-            TCon _ _ _ _ flags _ (Just cons) _
+            TCon _ _ _ flags _ Nothing _ => pure False
+            TCon _ _ _ flags _ (Just cons) _
                  => if not (external flags)
-                       then allM (conflict defs env (NTCon fc n t a args)) cons
+                       then allM (conflict defs env (NTCon fc n a args)) cons
                        else pure False
             _ => pure False
 isEmpty defs env _ = pure False

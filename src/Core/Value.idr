@@ -94,7 +94,7 @@ mutual
        NDCon    : FC -> Name -> (tag : Int) -> (arity : Nat) ->
                   List (FC, Closure vars) -> NF vars
                   -- TODO it looks like the list of closures is stored in spine order, c.f. `getCaseBounds`
-       NTCon    : FC -> Name -> (tag : Int) -> (arity : Nat) ->
+       NTCon    : FC -> Name -> (arity : Nat) ->
                   List (FC, Closure vars) -> NF vars
        NAs      : FC -> UseSide -> NF vars -> NF vars -> NF vars
        NDelayed : FC -> LazyReason -> NF vars -> NF vars
@@ -123,21 +123,21 @@ namespace LocalEnv
   empty = []
 
 export
-ntCon : FC -> Name -> Int -> Nat -> List (FC, Closure vars) -> NF vars
+ntCon : FC -> Name -> Nat -> List (FC, Closure vars) -> NF vars
 -- Part of the machinery for matching on types - I believe this won't affect
 -- universe checking so put a dummy name.
-ntCon fc (UN (Basic "Type")) tag Z [] = NType fc (MN "top" 0)
-ntCon fc n tag Z [] = case isConstantType n of
+ntCon fc (UN (Basic "Type")) Z [] = NType fc (MN "top" 0)
+ntCon fc n Z [] = case isConstantType n of
   Just c => NPrimVal fc $ PrT c
-  Nothing => NTCon fc n tag Z []
-ntCon fc n tag arity args = NTCon fc n tag arity args
+  Nothing => NTCon fc n Z []
+ntCon fc n arity args = NTCon fc n arity args
 
 export
 getLoc : NF vars -> FC
 getLoc (NBind fc _ _ _) = fc
 getLoc (NApp fc _ _) = fc
 getLoc (NDCon fc _ _ _ _) = fc
-getLoc (NTCon fc _ _ _ _) = fc
+getLoc (NTCon fc _ _ _) = fc
 getLoc (NAs fc _ _ _) = fc
 getLoc (NDelayed fc _ _) = fc
 getLoc (NDelay fc _ _ _) = fc
@@ -168,7 +168,7 @@ HasNames (NF free) where
   full defs (NBind fc x bd f) = pure $ NBind fc x bd f
   full defs (NApp fc hd xs) = pure $ NApp fc !(full defs hd) xs
   full defs (NDCon fc n tag arity xs) = pure $ NDCon fc !(full defs n) tag arity xs
-  full defs (NTCon fc n tag arity xs) = pure $ NTCon fc !(full defs n) tag arity xs
+  full defs (NTCon fc n arity xs) = pure $ NTCon fc !(full defs n) arity xs
   full defs (NAs fc side nf nf1) = pure $ NAs fc side !(full defs nf) !(full defs nf1)
   full defs (NDelayed fc lz nf) = pure $ NDelayed fc lz !(full defs nf)
   full defs (NDelay fc lz cl cl1) = pure $ NDelay fc lz cl cl1
@@ -180,7 +180,7 @@ HasNames (NF free) where
   resolved defs (NBind fc x bd f) = pure $ NBind fc x bd f
   resolved defs (NApp fc hd xs) = pure $ NApp fc !(resolved defs hd) xs
   resolved defs (NDCon fc n tag arity xs) = pure $ NDCon fc !(resolved defs n) tag arity xs
-  resolved defs (NTCon fc n tag arity xs) = pure $ NTCon fc !(resolved defs n) tag arity xs
+  resolved defs (NTCon fc n arity xs) = pure $ NTCon fc !(resolved defs n) arity xs
   resolved defs (NAs fc side nf nf1) = pure $ NAs fc side !(resolved defs nf) !(resolved defs nf1)
   resolved defs (NDelayed fc lz nf) = pure $ NDelayed fc lz !(resolved defs nf)
   resolved defs (NDelay fc lz cl cl1) = pure $ NDelay fc lz cl cl1
@@ -212,7 +212,7 @@ covering
       " => [closure]"
   show (NApp _ hd args) = show hd ++ " [" ++ show (length args) ++ " closures]"
   show (NDCon _ n _ _ args) = show n ++ " [" ++ show (length args) ++ " closures]"
-  show (NTCon _ n _ _ args) = show n ++ " [" ++ show (length args) ++ " closures]"
+  show (NTCon _ n _ args) = show n ++ " [" ++ show (length args) ++ " closures]"
   show (NAs _ _ n tm) = show n ++ "@" ++ show tm
   show (NDelayed _ _ tm) = "%Delayed " ++ show tm
   show (NDelay _ _ _ _) = "%Delay [closure]"

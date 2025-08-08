@@ -35,7 +35,7 @@ nameIn defs tyns (NApp _ nh args)
            | True => pure False
          anyM (nameIn defs tyns)
            !(traverse (evalClosure defs . snd) args)
-nameIn defs tyns (NTCon _ n _ _ args)
+nameIn defs tyns (NTCon _ n _ args)
     = if n `elem` tyns
          then pure True
          else do args' <- traverse (evalClosure defs . snd) args
@@ -64,10 +64,10 @@ posArgs defs tyn (x :: xs)
 
 -- a tyn can only appear in the parameter positions of
 -- tc; report positivity failure if it appears anywhere else
-posArg defs tyns nf@(NTCon loc tc _ _ args) =
+posArg defs tyns nf@(NTCon loc tc _ args) =
   do logNF "totality.positivity" 50 "Found a type constructor" Env.empty nf
      testargs <- case !(lookupDefExact tc (gamma defs)) of
-                    Just (TCon _ _ params _ _ _ _ _) => do
+                    Just (TCon _ params _ _ _ _ _) => do
                          log "totality.positivity" 50 $
                            unwords [show tc, "has", show (size params), "parameters"]
                          pure $ NatSet.partition params (map snd args)
@@ -157,7 +157,7 @@ calcPositive loc n
     = do defs <- get Ctxt
          logC "totality.positivity" 6 $ do pure $ "Calculating positivity: " ++ show !(toFullNames n)
          case !(lookupDefTyExact n (gamma defs)) of
-              Just (TCon _ _ _ _ _ tns dcons _, ty) =>
+              Just (TCon _ _ _ _ tns dcons _, ty) =>
                   let dcons = fromMaybe [] dcons in
                   case !(totRefsIn defs ty) of
                        IsTerminating =>

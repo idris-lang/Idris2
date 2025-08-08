@@ -273,14 +273,14 @@ TTC NameType where
   toBuf Bound = tag 0
   toBuf Func = tag 1
   toBuf (DataCon t arity) = do tag 2; toBuf t; toBuf arity
-  toBuf (TyCon t arity) = do tag 3; toBuf t; toBuf arity
+  toBuf (TyCon arity) = do tag 3; toBuf arity
 
   fromBuf
       = case !getTag of
              0 => pure Bound
              1 => pure Func
              2 => do x <- fromBuf; y <- fromBuf; pure (DataCon x y)
-             3 => do x <- fromBuf; y <- fromBuf; pure (TyCon x y)
+             3 => do y <- fromBuf; pure (TyCon y)
              _ => corrupt "NameType"
 
 -- Assumption is that it was type safe when we wrote it out, so believe_me
@@ -1001,8 +1001,8 @@ TTC Def where
   toBuf (Builtin a)
       = throw (InternalError "Trying to serialise a Builtin")
   toBuf (DCon t arity nt) = do tag 4; toBuf t; toBuf arity; toBuf nt
-  toBuf (TCon t arity parampos detpos u ms datacons dets)
-      = do tag 5; toBuf t; toBuf arity; toBuf parampos
+  toBuf (TCon arity parampos detpos u ms datacons dets)
+      = do tag 5; toBuf arity; toBuf parampos
            toBuf detpos; toBuf u; toBuf ms; toBuf datacons
            toBuf dets
   toBuf (Hole locs p)
@@ -1030,12 +1030,12 @@ TTC Def where
                      pure (ForeignDef a cs)
              4 => do t <- fromBuf; a <- fromBuf; nt <- fromBuf
                      pure (DCon t a nt)
-             5 => do t <- fromBuf; a <- fromBuf
+             5 => do a <- fromBuf
                      ps <- fromBuf; dets <- fromBuf;
                      u <- fromBuf
                      ms <- fromBuf; cs <- fromBuf
                      detags <- fromBuf
-                     pure (TCon t a ps dets u ms cs detags)
+                     pure (TCon a ps dets u ms cs detags)
              6 => do l <- fromBuf
                      p <- fromBuf
                      pure (Hole l (holeInit p))
