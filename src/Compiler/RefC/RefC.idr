@@ -559,7 +559,7 @@ mutual
         let prims : List String =
             ["prim__newIORef", "prim__readIORef", "prim__writeIORef", "prim__newArray",
              "prim__arrayGet", "prim__arraySet", "prim__getField", "prim__setField",
-             "prim__void", "prim__os", "prim__codegen", "prim__onCollect", "prim__onCollectAny" ]
+             "prim__os", "prim__codegen", "prim__onCollect", "prim__onCollectAny" ]
         case p of
             NS _ (UN (Basic pn)) =>
                unless (elem pn prims) $ throw $ InternalError $ "[refc] Unknown primitive: " ++ cName p

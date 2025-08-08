@@ -136,6 +136,7 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Fixed a bug that caused `ttc` size to grow exponentially.
 
+* Removes `prim__void` primitive.
 * Fixed `assert_total` operation with coinductive calls
 
 ### Backend changes
@@ -222,6 +223,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 #### Prelude
 
 * Added pipeline operators `(|>)` and `(<|)`.
+
+* The `void` has been made pure.
 
 #### Base
 
