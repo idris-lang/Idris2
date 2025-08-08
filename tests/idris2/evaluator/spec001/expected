@@ -12,7 +12,7 @@ LOG specialise:5: Already specialised _PE.PE_smult_4e8901402355876e
 /* Main.main : IO () */
 function Main_main($0) {
  const $1 = Prelude_IO_prim__getStr($0);
- const $4 = Prelude_Types_prim__integerToNat(_bigIntOfString($1));
+ const $4 = Prelude_Types_prim__integerToNat($runtime.bigIntOfString($1));
  return Prelude_IO_prim__putStr((Prelude_Show_show_Show_Nat(($4+($4+$4)))+'\n'), $0);
 }
 1/1: Building Desc (Desc.idr)

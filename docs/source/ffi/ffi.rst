@@ -87,8 +87,7 @@ or ``javascript``. The former two are mutually exclusive while ``javascript``
 FFI specifiers apply both when building for the browser and when building for
 NodeJS.
 
-Javascript specifiers must be further specialized as ``lambda``, ``support``,
-or ``stringIterator``.
+Javascript specifiers must be further specialized as ``lambda``, ``support``.
 
 The syntax, therefore, is ``node:lambda:some_func`` (for the NodeJS-specific
 FFI and a lambda that executes a function named ``some_func``).
@@ -99,12 +98,19 @@ for a file with this name. These file names should be distinct for your
 project so they don't collide with support files from other projects
 further on in the build process for an executable. Suppose your package is
 named "http-idris" and you have FFI specifiers like
-``node:support:http_request,http_idris`` in your Idris code. You should make
-sure a data directory in scope has a ``js`` directory with an
-``http_idris.js`` file in it. Another important note is that functions
-within this file must be prefixed with ``http_idris_``; therefore, the
-function referred to in the example we give here would need to be named
-``http_idris_http_request`` in the ``http_idris.js`` support file.
+``node:support`` in your Idris code. You should make
+sure a `support` directory has a ``node`` directory with an
+``My.Module.js`` file in it. Functions
+in ``My.Module.js`` file must have the same name as a name of Idris function.
+
+For example if You will write in ./src/My/Module.idr:
+1. `%foreign "javascript:support" add : Int -> Int -> Int` will look in `./support/js/My.Module.js` for `export const add = (x, y) => x + y`
+2. `%foreign "node:support" add : Int -> Int -> Int` will look in `./support/node/My.Module.js` for `export const add = (x, y) => x + y`
+3. `%foreign "browser:support" add : Int -> Int -> Int` will look in `./support/browser/My.Module.js` for `export const add = (x, y) => x + y`
+4. `%foreign "browser:support:my_globally_unique_file_name" add : Int -> Int -> Int` will look in `./support/browser/my_globally_unique_file_name.js` for `export const add = (x, y) => x + y`
+5. `%foreign "browser:support:my_func,my_globally_unique_file_name" add : Int -> Int -> Int` will look in `./support/browser/my_globally_unique_file_name.js` for `export const my_func = (x, y) => x + y`
+
+NOTE: If You use `%foreign "browser:support:my_globally_unique_file_name"`, then `my_globally_unique_file_name.js` should be unique in the whole internet. Suppose You installed `lib1` and `lib2` from github, suppose they both have `./support/browser/my_globally_unique_file_name.js`. Idris will try to copy `my_globally_unique_file_name.js` into `./build/exec/browser/my_globally_unique_file_name.js`. Which one it will prefer? From `lib1` or `lib2`? The lib that is first in `IDRIS2_DATA` path.
 
 FFI Example
 -----------
