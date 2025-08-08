@@ -514,7 +514,7 @@ Reflect NameType where
            appCon fc defs (reflectiontt "DataCon") [t', i']
   reflect fc defs lhs env (TyCon i)
       = do i' <- reflect fc defs lhs env i
-           appCon fc defs (reflectiontt "TyCon") [i']
+           appCon fc defs (reflectiontt "TyCon") [PrimVal fc (I 0), i']
 
 export
 Reify PrimType where

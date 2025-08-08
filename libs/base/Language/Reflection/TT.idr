@@ -108,7 +108,8 @@ data NameType : Type where
      Bound   : NameType
      Func    : NameType
      DataCon : (tag : Int) -> (arity : Nat) -> NameType
-     TyCon   : (arity : Nat) -> NameType
+     TyCon   : (tag : Int) -> (arity : Nat) -> NameType
+               -- TODO: remove type tag, it's is always 0
 
 %name NameType nty
 
