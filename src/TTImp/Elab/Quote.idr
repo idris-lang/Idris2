@@ -111,26 +111,15 @@ mutual
                  Core ImpTy
   getUnquoteTy (MkImpTy fc n t) = pure $ MkImpTy fc n !(getUnquote t)
 
-  getUnquoteField : {auto c : Ref Ctxt Defs} ->
-                    {auto q : Ref Unq (List (Name, FC, RawImp))} ->
-                    {auto u : Ref UST UState} ->
-                    IField ->
-                    Core IField
-  getUnquoteField (MkIField fc c p n ty)
-      = pure $ MkIField fc c p n !(getUnquote ty)
-
   getUnquoteRecord : {auto c : Ref Ctxt Defs} ->
                      {auto q : Ref Unq (List (Name, FC, RawImp))} ->
                      {auto u : Ref UST UState} ->
                      ImpRecord ->
                      Core ImpRecord
   getUnquoteRecord (MkImpRecord fc n ps opts cn fs)
-      = pure $ MkImpRecord fc n !(traverse unqPair ps) opts cn
-                           !(traverse getUnquoteField fs)
-    where
-      unqPair : (Name, RigCount, PiInfo RawImp, RawImp) ->
-                Core (Name, RigCount, PiInfo RawImp, RawImp)
-      unqPair (n, c, p, t) = pure (n, c, p, !(getUnquote t))
+        -- unlike before, we are also unquoting the default value, maybe this is important?
+      = pure $ MkImpRecord fc n !(traverse (traverse (traverse getUnquote)) ps) opts cn
+                           !(traverse (traverse (traverse getUnquote)) fs)
 
   getUnquoteData : {auto c : Ref Ctxt Defs} ->
                    {auto q : Ref Unq (List (Name, FC, RawImp))} ->
@@ -155,12 +144,9 @@ mutual
   getUnquoteDecl (IDef fc v d)
       = pure $ IDef fc v !(traverse getUnquoteClause d)
   getUnquoteDecl (IParameters fc ps ds)
-      = pure $ IParameters fc
-                           !(traverseList1 unqTuple ps)
+      = pure $ IParameters fc -- We also unquote default arguments here too
+                           !(traverseList1 (traverse (traverse getUnquote)) ps)
                            !(traverse getUnquoteDecl ds)
-    where
-      unqTuple : (Name, RigCount, PiInfo RawImp, RawImp) -> Core (Name, RigCount, PiInfo RawImp, RawImp)
-      unqTuple (n, rig, i, t) = pure (n, rig, i, !(getUnquote t))
   getUnquoteDecl (IRecord fc ns v mbt d)
       = pure $ IRecord fc ns v mbt !(getUnquoteRecord d)
   getUnquoteDecl (INamespace fc ns ds)

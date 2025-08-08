@@ -95,13 +95,13 @@ mutual
   export
   Functor ImpDecl' where
     map f (IClaim c)
-      = IClaim (mapData (map f) c)
+      = IClaim (map (map f) c)
     map f (IData fc vis mbtot dt)
       = IData fc vis mbtot (map f dt)
     map f (IDef fc nm cls)
       = IDef fc nm (map (map f) cls)
     map f (IParameters fc ps ds)
-      = IParameters fc (map (map  {f = ImpParameter'} f) ps) (map (map f) ds)
+      = IParameters fc (map (map (map (map f))) ps) (map (map f) ds)
     map f (IRecord fc cs vis mbtot rec)
       = IRecord fc cs vis mbtot (map f rec)
     map f (IFail fc msg ds)
@@ -146,19 +146,10 @@ mutual
       = MkImpLater fc n (map f tycon)
 
   export
-  Functor IField' where
-    map f (MkIField fc rig info n t)
-      = MkIField fc rig (map (map f) info) n (map f t)
-
-  export
   Functor ImpRecord' where
     map f (MkImpRecord fc n params opts conName fields)
-      = MkImpRecord fc n (map (map {f = ImpParameter'} f) params)
-                    opts conName (map (map f) fields)
-
-  export
-  Functor ImpParameter' where
-    map f (nm, rig, info, t) = (nm, rig, map (map f) info, map f t)
+      = MkImpRecord fc n (map (map (map (map f))) params)
+                    opts conName (map (map (map (map f))) fields)
 
   export
   Functor IFieldUpdate' where

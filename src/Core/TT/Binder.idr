@@ -67,7 +67,25 @@ Show t => Show (PiInfo t) where
 export
 Eq t => Eq (PiInfo t) where
   (==) = eqPiInfoBy (==)
+------------------------------------------------------------------------
+-- A bound value
 
+||| A bound value along with its `PiInfo`.
+||| We cannot use `PiInfo` as metadata for `WithData` because the record is functorial in both
+||| `t` and `PiInfo`.
+public export
+record PiBindData (t : Type) where
+  constructor MkPiBindData
+  info : PiInfo t
+  boundType : t
+
+public export
+mapType : (t -> t) -> PiBindData t -> PiBindData t
+mapType f = {boundType $= f}
+
+export
+Show t => Show (PiBindData t) where
+  show bind = show bind.info ++ ", " ++ show bind.boundType
 ------------------------------------------------------------------------
 -- Different types of binders we may encounter
 
@@ -183,6 +201,18 @@ Traversable PiInfo where
   traverse f Explicit = pure Explicit
   traverse f AutoImplicit = pure AutoImplicit
   traverse f (DefImplicit x) = map DefImplicit (f x)
+
+export
+Functor PiBindData where
+  map f (MkPiBindData info type) = MkPiBindData (map f info) (f type)
+
+export
+Foldable PiBindData where
+  foldr f acc (MkPiBindData info type) = f type (foldr f acc info)
+
+export
+Traversable PiBindData where
+  traverse f (MkPiBindData info type) = MkPiBindData <$> traverse f info <*> f type
 
 export
 Functor Binder where

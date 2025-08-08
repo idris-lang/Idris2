@@ -72,23 +72,6 @@ public export
 data HidingDirective = HideName Name
                      | HideFixity Fixity Name
 
-%hide Core.WithData.WithName
--------------------------------------------------------------------------------
--- With Name functor to carry name information with a payload
-public export
-record WithName (ty : Type) where
-  constructor MkWithName
-  name : WithFC Name
-  val : ty
-
-export
-mapWName : (ty -> sy) -> WithName ty -> WithName sy
-mapWName f = {val $= f}
-
-export
-traverseWName : (ty -> Core sy) -> WithName ty -> Core (WithName sy)
-traverseWName f (MkWithName name val) = MkWithName name <$> f val
-
 -------------------------------------------------------------------------------
 
 mutual
@@ -354,7 +337,6 @@ mutual
   MkFullBinder : PiInfo (PTerm' nm) -> RigCount -> WithFC Name -> PTerm' nm -> PBinder' nm
   MkFullBinder info rig x y = MkPBinder info (MkBasicMultiBinder rig (singleton x) y)
 
-
   export
   getLoc : PDo' nm -> FC
   getLoc (DoExp fc _) = fc
@@ -493,15 +475,9 @@ mutual
        -- There is no nm on Directive
        ForeignImpl : Name -> List PTerm -> Directive
 
-
   public export
-  record RecordField' (nm : Type) where
-    constructor MkRecordField
-    doc : String
-    rig : RigCount
-    piInfo : PiInfo (PTerm' nm)
-    names : List Name -- See #3409
-    type : PTerm' nm
+  RecordField' : Type -> Type
+  RecordField' nm = WithDoc $ WithRig $ WithNames $ PiBindData (PTerm' nm)
 
   public export
   PField : Type
@@ -509,7 +485,7 @@ mutual
 
   public export
   PField' : Type -> Type
-  PField' nm = WithFC (RecordField' nm)
+  PField' nm = AddFC (RecordField' nm)
 
   public export
   0 PRecordDeclLet : Type
@@ -596,7 +572,7 @@ mutual
                     List (PDecl' nm) ->
                     PDeclNoFC' nm
        PImplementation : Visibility -> List PFnOpt -> Pass ->
-                         (implicits : List (FC, RigCount, Name, PiInfo (PTerm' nm), PTerm' nm)) ->
+                         (implicits : List (AddFC (ImpParameter' (PTerm' nm)))) ->
                          (constraints : List (Maybe Name, PTerm' nm)) ->
                          Name ->
                          (params : List (PTerm' nm)) ->

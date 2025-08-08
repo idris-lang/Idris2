@@ -49,10 +49,10 @@ bindConstraints fc p [] ty = ty
 bindConstraints fc p ((n, ty) :: rest) sc
     = IPi fc top p n ty (bindConstraints fc p rest sc)
 
-bindImpls : List (FC, RigCount, Name, PiInfo RawImp, RawImp) -> RawImp -> RawImp
+bindImpls : List (AddFC (ImpParameter' RawImp)) -> RawImp -> RawImp
 bindImpls [] ty = ty
-bindImpls ((fc, r, n, p, ty) :: rest) sc
-    = IPi fc r p (Just n) ty (bindImpls rest sc)
+bindImpls (binder :: rest) sc
+    = IPi binder.fc binder.rig binder.val.info (Just binder.name.val) binder.val.boundType (bindImpls rest sc)
 
 addDefaults : FC -> Name ->
               (params : List (Name, RawImp)) -> -- parameters have been specialised, use them!
@@ -122,7 +122,7 @@ elabImplementation : {vars : _} ->
                      {auto o : Ref ROpts REPLOpts} ->
                      FC -> Visibility -> List FnOpt -> Pass ->
                      Env Term vars -> NestedNames vars ->
-                     (implicits : List (FC, RigCount, Name, PiInfo RawImp, RawImp)) ->
+                     (implicits : List (AddFC (ImpParameter' RawImp))) ->
                      (constraints : List (Maybe Name, RawImp)) ->
                      Name ->
                      (ps : List RawImp) ->
