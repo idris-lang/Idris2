@@ -125,9 +125,9 @@ environment. You should see something like the following:
 
 .. literalinclude:: ../listing/idris-prompt-start.txt
 
-This gives a ``ghci`` style interface which allows evaluation of, as
-well as type checking of, expressions; theorem proving, compilation;
-editing; and various other operations. The command ``:?`` gives a list
+This gives a ``ghci``-style interface which allows evaluation and
+type checking of expressions, theorem proving, compilation,
+editing, and various other operations. The command ``:?`` gives a list
 of supported commands. Below, we see an example run in
 which ``hello.idr`` is loaded, the type of ``main`` is checked and
 then the program is compiled to the executable file ``hello``,
