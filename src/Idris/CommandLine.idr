@@ -497,7 +497,9 @@ matchFlag d (x :: xs)
 findMatch : List OptDesc -> List String ->
             Either String (List CLOpt, List String)
 findMatch [] [] = Right ([], [])
-findMatch [] (f :: args) = Right ([InputFile f], args)
+findMatch [] (f :: args) = case unpack f of
+  '-' :: '-' :: _ => Left "Unknown flag \{f}"
+  _ => Right ([InputFile f], args)
 findMatch (d :: ds) args
     = case !(matchFlag d args) of
            Nothing => findMatch ds args
