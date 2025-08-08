@@ -1,6 +1,7 @@
 module Libraries.Data.NatSet
 
 import Data.Bits
+import Data.List
 import Data.SnocList
 import Libraries.Data.SnocList.Extra
 
@@ -72,6 +73,9 @@ toList = go 0
        let is = go (S i) (assert_smaller ns (shiftR ns 1)) in
        if 0 `elem` ns then i :: is else is
 
+fromList : List Nat -> NatSet
+fromList = foldr insert empty
+
 export
 Show NatSet where
   show ns = show (toList ns)
@@ -101,6 +105,12 @@ export
 allLessThan : Nat -> NatSet
 allLessThan n = shiftL 1 n - 1
 
+0 allLessThanSpecEmpty : toList (allLessThan 0) === []
+allLessThanSpecEmpty = Refl
+
+0 allLessThanSpecNonEmpty : toList (allLessThan 10) === [0..9]
+allLessThanSpecNonEmpty = Refl
+
 export
 overwrite : a -> NatSet -> List a -> List a
 overwrite c 0  xs = xs
@@ -112,3 +122,18 @@ overwrite c ds xs = go 0 xs
         = if i `elem` ds
              then c :: go (S i) xs
              else x :: go (S i) xs
+
+
+
+-- Pop the zero (whether or not in the set) and shift all the
+-- other positions by -1 (useful when coming back from under
+-- a binder)
+export %inline
+popZ : NatSet -> NatSet
+popZ = (`shiftR` 1)
+
+-- Add a 'new' Zero (not in the set) and shift all the
+-- other positions by +1 (useful when going under a binder)
+export %inline
+addZ : NatSet -> NatSet
+addZ = (`shiftL` 1)

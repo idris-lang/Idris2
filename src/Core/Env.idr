@@ -8,6 +8,8 @@ import Data.SnocList
 import Libraries.Data.List.SizeOf
 import Libraries.Data.List.HasLength
 
+import Libraries.Data.NatSet
+
 import Libraries.Data.SnocList.Extra
 import Libraries.Data.SnocList.SizeOf
 import Libraries.Data.SnocList.HasLength
@@ -186,36 +188,25 @@ letToLam (Let fc c val ty :: env) = Lam fc c Explicit ty :: letToLam env
 letToLam (b :: env) = b :: letToLam env
 
 mutual
-  -- TODO turn list into set of nats throughout
-
-  -- Quicker, if less safe, to store variables as a Nat, for quick comparison
   findUsed : {vars : _} ->
-             Env Term vars -> List Nat -> Term vars -> List Nat
+             Env Term vars -> NatSet -> Term vars -> NatSet
   findUsed env used (Local fc r idx p)
-      = if elemBy eqNat idx used
+      = if idx `elem` used
            then used
-           else assert_total (findUsedInBinder env (idx :: used)
+           else assert_total (findUsedInBinder env (NatSet.insert idx used)
                                                (getBinder p env))
-    where
-      eqNat : Nat -> Nat -> Bool
-      eqNat i j = natToInteger i == natToInteger j
   findUsed env used (Meta _ _ _ args)
       = findUsedArgs env used args
     where
-      findUsedArgs : Env Term vars -> List Nat -> List (Term vars) -> List Nat
+      findUsedArgs : Env Term vars -> NatSet -> List (Term vars) -> NatSet
       findUsedArgs env u [] = u
       findUsedArgs env u (a :: as)
           = findUsedArgs env (findUsed env u a) as
   findUsed env used (Bind fc x b tm)
       = assert_total $
-          dropS (findUsed (b :: env)
-                          (map S (findUsedInBinder env used b))
+          NatSet.popZ (findUsed (b :: env)
+                          (NatSet.addZ (findUsedInBinder env used b))
                           tm)
-    where
-      dropS : List Nat -> List Nat
-      dropS [] = []
-      dropS (Z :: xs) = dropS xs
-      dropS (S p :: xs) = p :: dropS xs
   findUsed env used (App fc fn arg)
       = findUsed env (findUsed env used fn) arg
   findUsed env used (As fc s a p)
@@ -229,8 +220,8 @@ mutual
   findUsed env used _ = used
 
   findUsedInBinder : {vars : _} ->
-                     Env Term vars -> List Nat ->
-                     Binder (Term vars) -> List Nat
+                     Env Term vars -> NatSet ->
+                     Binder (Term vars) -> NatSet
   findUsedInBinder env used (Let _ _ val ty)
     = findUsed env (findUsed env used val) ty
   findUsedInBinder env used (PLet _ _ val ty)
@@ -248,7 +239,7 @@ export
 findUsedLocs : {vars : _} ->
                Env Term vars -> Term vars -> List (Var vars)
 findUsedLocs env tm
-    = mapMaybe (toVar _) (findUsed env [] tm)
+    = mapMaybe (toVar _) (toList $ findUsed env NatSet.empty tm)
 
 isUsed : Nat -> List (Var vars) -> Bool
 isUsed n [] = False
