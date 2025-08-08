@@ -89,6 +89,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Fixed unification and conversion of binders with different `PiInfo`.
 
+* `failing` statements with multi-line strings must now use `"""` for the string.
+
 ### Compiler changes
 
 * The compiler now differentiates between "package search path" and "package

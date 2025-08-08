@@ -8,8 +8,10 @@ failing "x is not covering."
   x True = 0
 
 
-failing "x is not total, possibly not terminating due to recursive
-         path FailingTotality.x"
+failing """
+x is not total, possibly not terminating due to recursive
+path FailingTotality.x
+"""
 
   x : Bool
   x = x

@@ -1606,7 +1606,7 @@ parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
            col <- column
            decoratedKeyword fname "failing"
            commit
-           msg <- optional (decorate fname Data simpleStr)
+           msg <- optional (decorate fname Data (simpleMultiStr <|> simpleStr ))
            ds <- nonEmptyBlockAfter col (topDecl fname)
            pure $ PFail msg (collectDefs $ forget ds)
 

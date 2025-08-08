@@ -205,6 +205,10 @@ simpleStr : Rule String
 simpleStr = strBegin *> commit *> (option "" simpleStrLit) <* strEnd
 
 export
+simpleMultiStr : Rule String
+simpleMultiStr = multilineBegin *> commit *> (option "" simpleStrLit) <* strEnd
+
+export
 aDotIdent : Rule String
 aDotIdent = terminal "Expected dot+identifier" $
                      \case
