@@ -51,7 +51,7 @@ namePis i (IBindHere fc m ty) = IBindHere fc m (namePis i ty)
 namePis i ty = ty
 
 getSig : ImpDecl -> Maybe Signature
-getSig (IClaim (MkFCVal _ $ MkIClaimData c _ opts (MkImpTy fc n ty)))
+getSig (IClaim (MkWithData _ $ MkIClaimData c _ opts (MkImpTy fc n ty)))
     = Just $ MkSignature { count    = c
                          , flags    = opts
                          , name     = n
@@ -185,7 +185,7 @@ getMethToplevel {vars} env vis iname cname constraints allmeths params sig
          let ty_constr =
              substNames (toList vars) (map applyCon allmeths) sig.type
          ty_imp <- bindTypeNames EmptyFC [] (toList vars) (bindPs params $ bindIFace vfc ity ty_constr)
-         cn <- traverseFC inCurrentNS sig.name
+         cn <- traverse inCurrentNS sig.name
          let tydecl = IClaim (MkFCVal vfc $ MkIClaimData sig.count vis (if sig.isData then [Inline, Invertible]
                                             else [Inline])
                                       (MkImpTy vfc cn ty_imp))

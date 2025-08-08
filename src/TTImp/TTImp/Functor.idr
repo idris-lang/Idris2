@@ -1,6 +1,7 @@
 module TTImp.TTImp.Functor
 
 import Core.TT
+import Core.WithData
 import TTImp.TTImp
 
 %default covering
@@ -94,7 +95,7 @@ mutual
   export
   Functor ImpDecl' where
     map f (IClaim c)
-      = IClaim (mapFC (map f) c)
+      = IClaim (mapData (map f) c)
     map f (IData fc vis mbtot dt)
       = IData fc vis mbtot (map f dt)
     map f (IDef fc nm cls)

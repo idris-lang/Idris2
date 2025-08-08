@@ -71,6 +71,8 @@ OpStr = OpStr' Name
 public export
 data HidingDirective = HideName Name
                      | HideFixity Fixity Name
+
+%hide Core.WithData.WithName
 -------------------------------------------------------------------------------
 -- With Name functor to carry name information with a payload
 public export
@@ -646,7 +648,7 @@ isStrLiteral (StrLiteral fc str) = Just (fc, str)
 
 export
 isPDef : PDecl -> Maybe (WithFC (List PClause))
-isPDef (MkFCVal fc (PDef cs)) = Just (MkFCVal fc cs)
+isPDef (MkWithData fc (PDef cs)) = Just (MkWithData fc cs)
 isPDef _ = Nothing
 
 
@@ -878,9 +880,9 @@ parameters {0 nm : Type} (toName : nm -> Name)
   showPBinder d (MkPBinder (DefImplicit x) bind) = "{default \{showPTerm x} \{ showBasicMultiBinder bind}}"
 
   showPTermPrec d (PRef _ n) = showPrec d (toName n)
-  showPTermPrec d (Forall (MkFCVal _ (names, scope)))
+  showPTermPrec d (Forall (MkWithData _ (names, scope)))
         = "forall " ++ concat (intersperse ", " (map (show . val) (forget names))) ++ " . " ++ showPTermPrec d scope
-  showPTermPrec d (NewPi (MkFCVal _ (MkPBinderScope binder scope)))
+  showPTermPrec d (NewPi (MkWithData _ (MkPBinderScope binder scope)))
         = showPBinder d binder ++ " -> "  ++ showPTermPrec d scope
   showPTermPrec d (PPi _ rig Explicit Nothing arg ret)
         = showPTermPrec d arg ++ " -> " ++ showPTermPrec d ret
@@ -961,13 +963,13 @@ parameters {0 nm : Type} (toName : nm -> Name)
   showPTermPrec d (PDotted _ p) = "." ++ showPTermPrec d p
   showPTermPrec _ (PImplicit _) = "_"
   showPTermPrec _ (PInfer _) = "?"
-  showPTermPrec d (POp _ (MkFCVal _ $ NoBinder left) op right)
+  showPTermPrec d (POp _ (MkWithData _ $ NoBinder left) op right)
         = showPTermPrec d left ++ " " ++ showOpPrec d op.val ++ " " ++ showPTermPrec d right
-  showPTermPrec d (POp _ (MkFCVal _ $ BindType nm left) op right)
+  showPTermPrec d (POp _ (MkWithData _ $ BindType nm left) op right)
         = "(" ++ showPTermPrec d nm ++ " : " ++ showPTermPrec d left ++ " " ++ showOpPrec d op.val ++ " " ++ showPTermPrec d right ++ ")"
-  showPTermPrec d (POp _ (MkFCVal _ $ BindExpr nm left) op right)
+  showPTermPrec d (POp _ (MkWithData _ $ BindExpr nm left) op right)
         = "(" ++ showPTermPrec d nm ++ " := " ++ showPTermPrec d left ++ " " ++ showOpPrec d op.val ++ " " ++ showPTermPrec d right ++ ")"
-  showPTermPrec d (POp _ (MkFCVal _ $ BindExplicitType nm ty left) op right)
+  showPTermPrec d (POp _ (MkWithData _ $ BindExplicitType nm ty left) op right)
         = "(" ++ showPTermPrec d nm ++ " : " ++ showPTermPrec d ty ++ ":=" ++ showPTermPrec d left ++ " " ++ showOpPrec d op.val ++ " " ++ showPTermPrec d right ++ ")"
   showPTermPrec d (PPrefixOp _ op x) = showOpPrec d op.val ++ showPTermPrec d x
   showPTermPrec d (PSectionL _ op x) = "(" ++ showOpPrec d op.val ++ " " ++ showPTermPrec d x ++ ")"

@@ -14,6 +14,7 @@ import Core.TT
 import Data.List1
 import Data.Vect
 import Libraries.Data.NameMap
+import Libraries.Data.NatSet
 import Libraries.Data.IOArray
 import Libraries.Data.SparseMatrix
 import Libraries.Data.WithDefault
@@ -77,16 +78,6 @@ TTC FC where
                      s <- fromBuf; e <- fromBuf
                      pure (MkVirtualFC f s e)
              _ => corrupt "FC"
-
-export
-TTC a => TTC (WithFC a) where
-  toBuf (MkFCVal fc val)
-    = do toBuf fc
-       ; toBuf val
-  fromBuf
-    = do fc <- fromBuf
-         val <- fromBuf
-         pure $ MkFCVal fc val
 
 export
 TTC Name where
@@ -163,6 +154,35 @@ TTC t => TTC (PiInfo t) where
              2 => pure AutoImplicit
              3 => do t <- fromBuf; pure (DefImplicit t)
              _ => corrupt "PiInfo"
+
+export
+{fs : _} -> (ev : All (TTC . KeyVal.type) fs) => TTC (Record fs) where
+  toBuf [] = tag 0
+  toBuf {ev = _ :: _} ((lbl :- v) :: y)
+    = do tag 1
+       ; toBuf v ; toBuf y
+
+  fromBuf {fs = []}
+    = case !getTag of
+           0 => pure []
+           _ => corrupt "Record"
+  fromBuf {fs = (str :-: v :: xs)} {ev = ba :: bs}
+    = case !getTag of
+           1 => do val <- fromBuf @{ba}
+                   tail <- the (Core (Record xs)) fromBuf
+                   pure ((str :- val) :: tail)
+           _ => corrupt "Record"
+
+export
+{fs : _} -> All (TTC . KeyVal.type) fs => TTC a => TTC (WithData fs a) where
+  toBuf (MkWithData extra val)
+    = do toBuf extra
+         toBuf val
+  fromBuf
+    = do nm <- fromBuf
+         val <- fromBuf
+         pure $ MkWithData nm val
+
 
 export
 TTC PrimType where
@@ -1151,7 +1171,7 @@ TTC GlobalDef where
                       pure (MkGlobalDef loc name ty eargs seargs specargs iargs
                                         mul vars vis
                                         tot hatch fl refs refsR inv c True def cdef Nothing sc Nothing)
-              else pure (MkGlobalDef loc name (Erased loc Placeholder) [] [] [] []
+              else pure (MkGlobalDef loc name (Erased loc Placeholder) NatSet.empty NatSet.empty NatSet.empty NatSet.empty
                                      mul Scope.empty (specified Public) unchecked False [] refs refsR
                                      False False True def cdef Nothing [] Nothing)
 

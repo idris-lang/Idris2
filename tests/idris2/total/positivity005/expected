@@ -1,0 +1,27 @@
+1/1: Building Issue2548 (Issue2548.idr)
+Error: Recursive is not total, not strictly positive
+
+Issue2548:3:1--4:53
+ 3 | data Recursive : (Lazy Type -> Type) -> Type where
+ 4 |   Recursing : t (delay (Recursive t)) -> Recursive t
+
+Error: argh is not total, possibly not terminating due to function Main.Recursing being reachable via Main.f -> Main.Recursing
+
+Issue2548:15:1--15:12
+ 11 | 
+ 12 | f : F
+ 13 | f = Recursing notF
+ 14 | 
+ 15 | argh : Void
+      ^^^^^^^^^^^
+
+Error: f is not total, possibly not terminating due to call to Main.Recursing
+
+Issue2548:12:1--12:6
+ 08 | 
+ 09 | notF : Not F
+ 10 | notF f@(Recursing nF) = nF f
+ 11 | 
+ 12 | f : F
+      ^^^^^
+

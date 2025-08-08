@@ -14,42 +14,42 @@ import Data.List1
 --       implementation headers (i.e. note their existence, but not the bodies)
 -- Everything else on the second pass
 getDecl : Pass -> PDecl-> Maybe PDecl
-getDecl p (MkFCVal fc $ PImplementation vis opts _ is cons n ps iname nusing ds)
-    = Just (MkFCVal fc $ PImplementation vis opts p is cons n ps iname nusing ds)
+getDecl p (MkWithData fc $ PImplementation vis opts _ is cons n ps iname nusing ds)
+    = Just (MkWithData fc $ PImplementation vis opts p is cons n ps iname nusing ds)
 
-getDecl p (MkFCVal fc $ PNamespace ns ds)
-    = Just (MkFCVal fc $ PNamespace ns (assert_total $ mapMaybe (getDecl p) ds))
+getDecl p (MkWithData fc $ PNamespace ns ds)
+    = Just (MkWithData fc $ PNamespace ns (assert_total $ mapMaybe (getDecl p) ds))
 
-getDecl AsType d@(MkFCVal _ $ PClaim _) = Just d
-getDecl AsType (MkFCVal fc $ PData doc vis mbtot (MkPData dfc tyn (Just tyc) _ _))
-    = Just (MkFCVal fc $ PData doc vis mbtot (MkPLater dfc tyn tyc))
-getDecl AsType d@(MkFCVal _ $ PInterface _ _ _ _ _ _ _ _) = Just d
-getDecl AsType (MkFCVal fc $ PRecord doc vis mbtot (MkPRecord n ps _ _ _))
-    = Just (MkFCVal fc $ PData doc vis mbtot (MkPLater fc n (mkRecType ps)))
+getDecl AsType d@(MkWithData _ $ PClaim _) = Just d
+getDecl AsType (MkWithData fc $ PData doc vis mbtot (MkPData dfc tyn (Just tyc) _ _))
+    = Just (MkWithData fc $ PData doc vis mbtot (MkPLater dfc tyn tyc))
+getDecl AsType d@(MkWithData _ $ PInterface _ _ _ _ _ _ _ _) = Just d
+getDecl AsType d@(MkWithData fc $ PRecord doc vis mbtot (MkPRecord n ps _ _ _))
+    = Just (MkWithData fc $ PData doc vis mbtot (MkPLater d.fc n (mkRecType ps)))
   where
     mkRecType : List PBinder -> PTerm
-    mkRecType [] = PType fc
+    mkRecType [] = PType d.fc
     mkRecType (MkPBinder p (MkBasicMultiBinder c (n ::: []) t) :: ts)
-      = PPi fc c p (Just n.val) t (mkRecType ts)
+      = PPi d.fc c p (Just n.val) t (mkRecType ts)
     mkRecType (MkPBinder p (MkBasicMultiBinder c (n ::: x :: xs) t) :: ts)
-      = PPi fc c p (Just n.val) t
+      = PPi d.fc c p (Just n.val) t
           (assert_total $ mkRecType (MkPBinder p (MkBasicMultiBinder c (x ::: xs) t) :: ts))
-getDecl AsType d@(MkFCVal _ $ PFixity _ ) = Just d
-getDecl AsType d@(MkFCVal _ $ PDirective _) = Just d
+getDecl AsType d@(MkWithData _ $ PFixity _ ) = Just d
+getDecl AsType d@(MkWithData _ $ PDirective _) = Just d
 getDecl AsType d = Nothing
 
-getDecl AsDef (MkFCVal _ $ PClaim _) = Nothing
-getDecl AsDef d@(MkFCVal _ $ PData _ _ _ (MkPLater _ _ _)) = Just d
-getDecl AsDef (MkFCVal _ $ PInterface _ _ _ _ _ _ _ _) = Nothing
-getDecl AsDef d@(MkFCVal _ $ PRecord _ _ _ (MkPRecordLater _ _)) = Just d
-getDecl AsDef (MkFCVal _ $ PFixity _ ) = Nothing
-getDecl AsDef (MkFCVal _ $ PDirective _) = Nothing
+getDecl AsDef (MkWithData _ $ PClaim _) = Nothing
+getDecl AsDef d@(MkWithData _ $ PData _ _ _ (MkPLater _ _ _)) = Just d
+getDecl AsDef (MkWithData _ $ PInterface _ _ _ _ _ _ _ _) = Nothing
+getDecl AsDef d@(MkWithData _ $ PRecord _ _ _ (MkPRecordLater _ _)) = Just d
+getDecl AsDef (MkWithData _ $ PFixity _ ) = Nothing
+getDecl AsDef (MkWithData _ $ PDirective _) = Nothing
 getDecl AsDef d = Just d
 
-getDecl p (MkFCVal fc $ PParameters ps pds)
-    = Just (MkFCVal fc $ PParameters ps (assert_total $ mapMaybe (getDecl p) pds))
-getDecl p (MkFCVal fc $ PUsing ps pds)
-    = Just (MkFCVal fc $ PUsing ps (assert_total $ mapMaybe (getDecl p) pds))
+getDecl p (MkWithData fc $ PParameters ps pds)
+    = Just (MkWithData fc $ PParameters ps (assert_total $ mapMaybe (getDecl p) pds))
+getDecl p (MkWithData fc $ PUsing ps pds)
+    = Just (MkWithData fc $ PUsing ps (assert_total $ mapMaybe (getDecl p) pds))
 
 getDecl Single d = Just d
 

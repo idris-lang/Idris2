@@ -18,9 +18,9 @@ mapPTermM f = goPTerm where
     goPTerm : PTerm' nm -> Core (PTerm' nm)
     goPTerm t@(PRef _ _) = f t
     goPTerm (NewPi x) =
-      NewPi <$> traverseFC goPBinderScope x
+      NewPi <$> traverse goPBinderScope x
     goPTerm (Forall x) =
-      Forall <$> traverseFC (\(a, b) => MkPair a <$> goPTerm b) x
+      Forall <$> traverse (\(a, b) => MkPair a <$> goPTerm b) x
     goPTerm (PPi fc x info z argTy retTy) =
       PPi fc x <$> goPiInfo info
                <*> pure z
@@ -46,7 +46,7 @@ mapPTermM f = goPTerm where
                <*> goPClauses xs
       >>= f
     goPTerm (PLocal fc xs scope) =
-      PLocal fc <$> traverse (traverseFC goPDecl) xs
+      PLocal fc <$> traverse (traverse goPDecl) xs
                 <*> goPTerm scope
       >>= f
     goPTerm (PUpdate fc xs) =
@@ -105,7 +105,7 @@ mapPTermM f = goPTerm where
     goPTerm t@(PInfer _) = f t
     goPTerm (POp fc bind op right) =
       POp fc
-          <$> traverseFC goOpBinder bind
+          <$> traverse goOpBinder bind
           <*> pure op
           <*> goPTerm right
       >>= f
@@ -227,8 +227,8 @@ mapPTermM f = goPTerm where
     goPDo (DoRewrite fc t) = DoRewrite fc <$> goPTerm t
 
     goPRecordDeclLet : PRecordDeclLet' nm -> Core (PRecordDeclLet' nm)
-    goPRecordDeclLet (RecordClaim x) = RecordClaim <$> traverseFC goPClaim x
-    goPRecordDeclLet (RecordClause x) = RecordClause <$> traverseFC goPClause x
+    goPRecordDeclLet (RecordClaim x) = RecordClaim <$> traverse goPClaim x
+    goPRecordDeclLet (RecordClause x) = RecordClause <$> traverse goPClause x
 
     goPClause : PClause' nm -> Core (PClause' nm)
     goPClause (MkPatClause fc lhs rhs wh) =
@@ -249,7 +249,7 @@ mapPTermM f = goPTerm where
     goPClaim : PClaimData' nm -> Core (PClaimData' nm)
     goPClaim (MkPClaim c v opts tdecl) =
       MkPClaim c v <$> goPFnOpts opts
-                   <*> traverseFC goPTypeDecl tdecl
+                   <*> traverse goPTypeDecl tdecl
 
     goPlainBinder : PlainBinder' nm -> Core (PlainBinder' nm)
     goPlainBinder = traverseWName f
@@ -402,7 +402,7 @@ mapPTermM f = goPTerm where
 
     goPDecls : List (PDecl' nm) -> Core (List (PDecl' nm))
     goPDecls []          = pure []
-    goPDecls (d :: ds) = (::) <$> traverseFC goPDecl d <*> goPDecls ds
+    goPDecls (d :: ds) = (::) <$> traverse goPDecl d <*> goPDecls ds
 
     goPFieldUpdates : List (PFieldUpdate' nm) -> Core (List (PFieldUpdate' nm))
     goPFieldUpdates []          = pure []
@@ -410,7 +410,7 @@ mapPTermM f = goPTerm where
 
     goPFields : List (PField' nm) -> Core (List (PField' nm))
     goPFields []        = pure []
-    goPFields (f :: fs) = (::) <$> traverseFC goRecordField f <*> goPFields fs
+    goPFields (f :: fs) = (::) <$> traverse goRecordField f <*> goPFields fs
 
     goPFnOpts : List (PFnOpt' nm) -> Core (List (PFnOpt' nm))
     goPFnOpts []        = pure []
@@ -418,7 +418,7 @@ mapPTermM f = goPTerm where
 
     goPTypeDecls : List (PTypeDecl' nm) -> Core (List (PTypeDecl' nm))
     goPTypeDecls []        = pure []
-    goPTypeDecls (t :: ts) = (::) <$> traverseFC goPTypeDecl t <*> goPTypeDecls ts
+    goPTypeDecls (t :: ts) = (::) <$> traverse goPTypeDecl t <*> goPTypeDecls ts
 
 export
 mapPTerm : (PTerm' nm -> PTerm' nm) -> PTerm' nm -> PTerm' nm
@@ -429,9 +429,9 @@ mapPTerm f = goPTerm where
     goPTerm : PTerm' nm -> PTerm' nm
     goPTerm t@(PRef _ _) = f t
     goPTerm (Forall binderScope)
-      = Forall (mapFC (mapSnd f) binderScope)
+      = Forall (mapData (mapSnd f) binderScope)
     goPTerm (NewPi binderScope)
-      = NewPi (mapFC goPBinderScope binderScope)
+      = NewPi (mapData goPBinderScope binderScope)
     goPTerm (PPi fc x info z argTy retTy)
       = f $ PPi fc x (goPiInfo info) z (goPTerm argTy) (goPTerm retTy)
     goPTerm (PLam fc x info z argTy scope)
@@ -441,7 +441,7 @@ mapPTerm f = goPTerm where
     goPTerm (PCase fc opts x xs)
       = f $ PCase fc (goPFnOpt <$>  opts) (goPTerm x) (goPClause <$> xs)
     goPTerm (PLocal fc xs scope)
-      = f $ PLocal fc (mapFC goPDecl <$> xs) (goPTerm scope)
+      = f $ PLocal fc (mapData goPDecl <$> xs) (goPTerm scope)
     goPTerm (PUpdate fc xs)
       = f $ PUpdate fc (goPFieldUpdate <$> xs)
     goPTerm (PApp fc x y)
@@ -464,7 +464,7 @@ mapPTerm f = goPTerm where
       = f $ PQuote fc $ goPTerm x
     goPTerm t@(PQuoteName _ _) = f t
     goPTerm (PQuoteDecl fc x)
-      = f $ PQuoteDecl fc (mapFC goPDecl <$> x)
+      = f $ PQuoteDecl fc (mapData goPDecl <$> x)
     goPTerm (PUnquote fc x)
       = f $ PUnquote fc $ goPTerm x
     goPTerm (PRunElab fc x)
@@ -478,7 +478,7 @@ mapPTerm f = goPTerm where
     goPTerm t@(PImplicit _) = f t
     goPTerm t@(PInfer _) = f t
     goPTerm (POp fc autoBindInfo opName z)
-      = f $ POp fc (mapFC (map f) autoBindInfo) opName (goPTerm z)
+      = f $ POp fc (mapData (map f) autoBindInfo) opName (goPTerm z)
     goPTerm (PPrefixOp fc x y)
       = f $ PPrefixOp fc x $ goPTerm y
     goPTerm (PSectionL fc x y)
@@ -543,7 +543,7 @@ mapPTerm f = goPTerm where
       = DoLet fc lhsFC n c (goPTerm t) (goPTerm scope)
     goPDo (DoLetPat fc pat t scope cls)
       = DoLetPat fc (goPTerm pat) (goPTerm t) (goPTerm scope) (goPClause <$> cls)
-    goPDo (DoLetLocal fc decls) = DoLetLocal fc $ mapFC goPDecl <$> decls
+    goPDo (DoLetLocal fc decls) = DoLetLocal fc $ mapData goPDecl <$> decls
     goPDo (DoRewrite fc t) = DoRewrite fc $ goPTerm t
 
     goPWithProblem : PWithProblem' nm -> PWithProblem' nm
@@ -551,13 +551,13 @@ mapPTerm f = goPTerm where
 
     goPClause : PClause' nm -> PClause' nm
     goPClause (MkPatClause fc lhs rhs wh)
-      = MkPatClause fc (goPTerm lhs) (goPTerm rhs) (mapFC goPDecl <$> wh)
+      = MkPatClause fc (goPTerm lhs) (goPTerm rhs) (mapData goPDecl <$> wh)
     goPClause (MkWithClause fc lhs wps flags cls)
       = MkWithClause fc (goPTerm lhs) (goPWithProblem <$> wps) flags (goPClause <$> cls)
     goPClause (MkImpossible fc lhs) = MkImpossible fc $ goPTerm lhs
 
     goPClaim : PClaimData' nm -> PClaimData' nm
-    goPClaim (MkPClaim c v opts tdecl) = MkPClaim c v (goPFnOpt <$> opts) (mapFC goPTypeDecl tdecl)
+    goPClaim (MkPClaim c v opts tdecl) = MkPClaim c v (goPFnOpt <$> opts) (mapData goPTypeDecl tdecl)
 
     goPlainBinder : PlainBinder' nm -> PlainBinder' nm
     goPlainBinder = mapWName goPTerm
@@ -572,23 +572,23 @@ mapPTerm f = goPTerm where
     goPDecl (PDef cls) = PDef $ (map goPClause) cls
     goPDecl (PData doc v mbt d) = PData doc v mbt $ goPDataDecl d
     goPDecl (PParameters nts ps)
-      = PParameters (bimap (map goPlainBinder) (map goPBinder) nts) (mapFC goPDecl <$> ps)
+      = PParameters (bimap (map goPlainBinder) (map goPBinder) nts) (mapData goPDecl <$> ps)
     goPDecl (PUsing mnts ps)
-      = PUsing (goPairedPTerms mnts) (mapFC goPDecl <$> ps)
+      = PUsing (goPairedPTerms mnts) (mapData goPDecl <$> ps)
     goPDecl (PInterface v mnts n doc nrts ns mn ps)
-      = PInterface v (goPairedPTerms mnts) n doc (goBasicMultiBinder <$> nrts) ns mn (mapFC goPDecl <$> ps)
+      = PInterface v (goPairedPTerms mnts) n doc (goBasicMultiBinder <$> nrts) ns mn (mapData goPDecl <$> ps)
     goPDecl (PImplementation v opts p is cs n ts mn ns mps)
       = PImplementation v opts p (goImplicits is) (goPairedPTerms cs)
-           n (goPTerm <$> ts) mn ns (map (mapFC goPDecl <$>) mps)
+           n (goPTerm <$> ts) mn ns (map (mapData goPDecl <$>) mps)
     goPDecl (PRecord doc v tot (MkPRecord n nts opts mn fs))
       = PRecord doc v tot
-          (MkPRecord n (map goPBinder nts) opts mn (map (mapFC goRecordField) fs))
+          (MkPRecord n (map goPBinder nts) opts mn (map (mapData goRecordField) fs))
     goPDecl (PRecord doc v tot (MkPRecordLater n nts))
       = PRecord doc v tot (MkPRecordLater n (goPBinder <$> nts ))
-    goPDecl (PFail msg ps) = PFail msg $ mapFC goPDecl <$> ps
-    goPDecl (PMutual ps) = PMutual $ map (mapFC goPDecl) ps
+    goPDecl (PFail msg ps) = PFail msg $ mapData goPDecl <$> ps
+    goPDecl (PMutual ps) = PMutual $ map (mapData goPDecl) ps
     goPDecl (PFixity p) = PFixity p
-    goPDecl (PNamespace strs ps) = PNamespace strs $ mapFC goPDecl <$> ps
+    goPDecl (PNamespace strs ps) = PNamespace strs $ mapData goPDecl <$> ps
     goPDecl (PTransform n a b) = PTransform n (goPTerm a) (goPTerm b)
     goPDecl (PRunElabDecl a) = PRunElabDecl $ goPTerm a
     goPDecl (PDirective d) = PDirective d
@@ -610,12 +610,12 @@ mapPTerm f = goPTerm where
 
     goPDataDecl : PDataDecl' nm -> PDataDecl' nm
     goPDataDecl (MkPData fc n t opts tdecls)
-      = MkPData fc n (map goPTerm t) opts (mapFC goPTypeDecl <$> tdecls)
+      = MkPData fc n (map goPTerm t) opts (mapData goPTypeDecl <$> tdecls)
     goPDataDecl (MkPLater fc n t) = MkPLater fc n $ goPTerm t
 
     goPRecordDeclLet : PRecordDeclLet' nm -> PRecordDeclLet' nm
-    goPRecordDeclLet (RecordClaim claim) = RecordClaim $ mapFC goPClaim claim
-    goPRecordDeclLet (RecordClause clause) = RecordClause $ mapFC goPClause clause
+    goPRecordDeclLet (RecordClaim claim) = RecordClaim $ mapData goPClaim claim
+    goPRecordDeclLet (RecordClause clause) = RecordClause $ mapData goPClause clause
 
     goRecordField : RecordField' nm -> RecordField' nm
     goRecordField (MkRecordField doc c info n t)

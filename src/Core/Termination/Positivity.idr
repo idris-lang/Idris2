@@ -11,6 +11,7 @@ import Core.Termination.References
 import Data.String
 
 import Libraries.Data.NameMap
+import Libraries.Data.NatSet
 
 %default covering
 
@@ -43,6 +44,7 @@ nameIn defs tyns (NDCon _ n _ _ args)
     = anyM (nameIn defs tyns)
            !(traverse (evalClosure defs . snd) args)
 nameIn defs tyns (NDelayed fc lr ty) = nameIn defs tyns ty
+nameIn defs tyns (NDelay fc lr ty tm) = nameIn defs tyns !(evalClosure defs tm)
 nameIn defs tyns _ = pure False
 
 -- Check an argument type doesn't contain a negative occurrence of any of
@@ -67,23 +69,13 @@ posArg defs tyns nf@(NTCon loc tc _ _ args) =
      testargs <- case !(lookupDefExact tc (gamma defs)) of
                     Just (TCon _ _ params _ _ _ _ _) => do
                          log "totality.positivity" 50 $
-                           unwords [show tc, "has", show (length params), "parameters"]
-                         pure $ splitParams 0 params (map snd args)
+                           unwords [show tc, "has", show (size params), "parameters"]
+                         pure $ NatSet.partition params (map snd args)
                     _ => throw (GenericMsg loc (show tc ++ " not a data type"))
      let (params, indices) = testargs
      False <- anyM (nameIn defs tyns) !(traverse (evalClosure defs) indices)
        | True => pure (NotTerminating NotStrictlyPositive)
      posArgs defs tyns params
-  where
-    splitParams : Nat -> List Nat -> List ClosedClosure ->
-        ( List ClosedClosure -- parameters (to be checked for strict positivity)
-        , List ClosedClosure -- indices    (to be checked for no mention at all)
-        )
-    splitParams i ps [] = ([], [])
-    splitParams i ps (x :: xs)
-        = if i `elem` ps
-             then mapFst (x ::) (splitParams (S i) ps xs)
-             else mapSnd (x ::) (splitParams (S i) ps xs)
 -- a tyn can not appear as part of ty
 posArg defs tyns nf@(NBind fc x (Pi _ _ e ty) sc)
   = do logNF "totality.positivity" 50 "Found a Pi-type" Env.empty nf

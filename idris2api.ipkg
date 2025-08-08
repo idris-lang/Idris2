@@ -105,6 +105,7 @@ modules =
     Core.Unify,
     Core.UnifyState,
     Core.Value,
+    Core.WithData,
 
     Core.SchemeEval.Builtins,
     Core.SchemeEval.Compile,
@@ -187,9 +188,11 @@ modules =
     Libraries.Data.List.LengthMatch,
     Libraries.Data.List.Quantifiers.Extra,
     Libraries.Data.List.SizeOf,
+    Libraries.Data.List.Thin,
     Libraries.Data.List1,
     Libraries.Data.NameMap,
     Libraries.Data.NameMap.Traversable,
+    Libraries.Data.NatSet,
     Libraries.Data.Ordering.Extra,
     Libraries.Data.PosMap,
     Libraries.Data.SnocList.Extra,
@@ -209,6 +212,8 @@ modules =
     Libraries.Data.UserNameMap,
     Libraries.Data.Version,
     Libraries.Data.WithDefault,
+    Libraries.Data.WithData,
+    Libraries.Data.Record,
 
     Libraries.System.Directory.Tree,
 

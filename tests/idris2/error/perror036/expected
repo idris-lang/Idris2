@@ -1,0 +1,21 @@
+1/1: Building Main (Main.idr)
+Error: Bracket is not properly closed.
+
+Main:4:28--4:29
+ 1 | main : IO ()
+ 2 | main = do
+ 3 |   let foo = 10
+ 4 |   printLn "foo = \{show foo"
+                                ^
+
+1/1: Building Issue3594 (Issue3594.idr)
+Error: Bracket is not properly closed.
+
+Issue3594:8:14--8:15
+ 4 |   Red : Color
+ 5 |   Blue : Color
+ 6 | 
+ 7 | implementation Show Color where
+ 8 |   show Red = "red
+                  ^
+

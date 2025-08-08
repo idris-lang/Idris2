@@ -527,9 +527,9 @@ mutual
   toPDecl : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
             ImpDecl' KindedName -> Core (Maybe (PDecl' KindedName))
-  toPDecl (IClaim (MkFCVal fc $ MkIClaimData rig vis opts ty))
+  toPDecl (IClaim (MkWithData fc $ MkIClaimData rig vis opts ty))
       = do opts' <- traverse toPFnOpt opts
-           pure (Just (MkFCVal fc $ PClaim (MkPClaim rig vis opts' !(toPTypeDecl ty))))
+           pure (Just (MkWithData fc $ PClaim (MkPClaim rig vis opts' !(toPTypeDecl ty))))
   toPDecl (IData fc vis mbtot d)
       = pure (Just (MkFCVal fc $ PData "" vis mbtot !(toPData d)))
   toPDecl (IDef fc n cs)
@@ -600,13 +600,13 @@ cleanPTerm ptm
     cleanNode (PRef fc nm)    =
       PRef fc <$> cleanKindedName nm
     cleanNode (POp fc abi op y) =
-      (\ op => POp fc abi op y) <$> traverseFC (traverseOp @{Functor.CORE} cleanKindedName) op
+      (\ op => POp fc abi op y) <$> traverse (traverseOp @{Functor.CORE} cleanKindedName) op
     cleanNode (PPrefixOp fc op x) =
-      (\ op => PPrefixOp fc op x) <$> traverseFC (traverseOp @{Functor.CORE} cleanKindedName) op
+      (\ op => PPrefixOp fc op x) <$> traverse (traverseOp @{Functor.CORE} cleanKindedName) op
     cleanNode (PSectionL fc op x) =
-      (\ op => PSectionL fc op x) <$> traverseFC (traverseOp @{Functor.CORE} cleanKindedName) op
+      (\ op => PSectionL fc op x) <$> traverse (traverseOp @{Functor.CORE} cleanKindedName) op
     cleanNode (PSectionR fc x op) =
-      PSectionR fc x <$> traverseFC (traverseOp @{Functor.CORE} cleanKindedName) op
+      PSectionR fc x <$> traverse (traverseOp @{Functor.CORE} cleanKindedName) op
     cleanNode (PPi fc rig vis (Just n) arg ret) =
       (\ n => PPi fc rig vis n arg ret) <$> (cleanBinderName vis n)
     cleanNode tm = pure tm

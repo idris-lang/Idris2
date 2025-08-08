@@ -27,6 +27,7 @@ import Data.List1
 import Data.Maybe
 import Data.Nat
 import Libraries.Data.NameMap
+import Libraries.Data.NatSet
 import Libraries.Data.StringMap
 import Libraries.Data.UserNameMap
 import Libraries.Data.WithDefault
@@ -331,10 +332,10 @@ newDef fc n rig vars ty vis def
         { location = fc
         , fullname = n
         , type = ty
-        , eraseArgs = []
-        , safeErase = []
-        , specArgs = []
-        , inferrable = []
+        , eraseArgs = NatSet.empty
+        , safeErase = NatSet.empty
+        , specArgs = NatSet.empty
+        , inferrable = NatSet.empty
         , multiplicity = rig
         , localVars = vars
         , visibility = vis
@@ -817,7 +818,7 @@ HasNames Error where
   full gam (FailingDidNotFail fc) = pure (FailingDidNotFail fc)
   full gam (FailingWrongError fc x err) = FailingWrongError fc x <$> traverseList1 (full gam) err
   full gam (InType fc n err) = InType fc <$> full gam n <*> full gam err
-  full gam (InCon n err) = InCon <$> traverseFC (full gam) n <*> full gam err
+  full gam (InCon n err) = InCon <$> traverse (full gam) n <*> full gam err
   full gam (InLHS fc n err) = InLHS fc <$> full gam n <*> full gam err
   full gam (InRHS fc n err) = InRHS fc <$> full gam n <*> full gam err
   full gam (MaybeMisspelling err xs) = MaybeMisspelling <$> full gam err <*> pure xs
@@ -915,7 +916,7 @@ HasNames Error where
   resolved gam (FailingDidNotFail fc) = pure (FailingDidNotFail fc)
   resolved gam (FailingWrongError fc x err) = FailingWrongError fc x <$> traverseList1 (resolved gam) err
   resolved gam (InType fc n err) = InType fc <$> resolved gam n <*> resolved gam err
-  resolved gam (InCon n err) = InCon <$> traverseFC (resolved gam) n <*> resolved gam err
+  resolved gam (InCon n err) = InCon <$> traverse (resolved gam) n <*> resolved gam err
   resolved gam (InLHS fc n err) = InLHS fc <$> resolved gam n <*> resolved gam err
   resolved gam (InRHS fc n err) = InRHS fc <$> resolved gam n <*> resolved gam err
   resolved gam (MaybeMisspelling err xs) = MaybeMisspelling <$> resolved gam err <*> pure xs
@@ -1349,10 +1350,10 @@ addBuiltin n ty tot op
          { location = emptyFC
          , fullname = n
          , type = ty
-         , eraseArgs = []
-         , safeErase = []
-         , specArgs = []
-         , inferrable = []
+         , eraseArgs = NatSet.empty
+         , safeErase = NatSet.empty
+         , specArgs = NatSet.empty
+         , inferrable = NatSet.empty
          , multiplicity = top
          , localVars = Scope.empty
          , visibility = specified Public
@@ -1713,7 +1714,7 @@ public export
 record SearchData where
   constructor MkSearchData
   ||| determining argument positions
-  detArgs : List Nat
+  detArgs : NatSet
   ||| Name of functions to use as hints, and whether ambiguity is allowed
   |||
   ||| In proof search, for every group of names
@@ -1745,7 +1746,7 @@ getSearchData fc defaults target
             then let defns = map fst !(filterM (\x => pure $ isDefault x
                                                  && !(notHidden x (gamma defs)))
                                              (toList (autoHints defs))) in
-                     pure (MkSearchData [] [(False, defns)])
+                     pure (MkSearchData NatSet.empty [(False, defns)])
             else let opens = map fst !(filterM (\x => notHidden x (gamma defs))
                                              (toList (openHints defs)))
                      autos = map fst !(filterM (\x => pure $ not (isDefault x)
@@ -1807,19 +1808,19 @@ setDetermining fc tyn args
   where
     -- Type isn't normalised, but the argument names refer to those given
     -- explicitly in the type, so there's no need.
-    getPos : Nat -> List Name -> Term vs -> Core (List Nat)
+    getPos : Nat -> List Name -> Term vs -> Core NatSet
     getPos i ns (Bind _ x (Pi _ _ _ _) sc)
         = if x `elem` ns
              then do rest <- getPos (1 + i) (filter (/=x) ns) sc
-                     pure $ i :: rest
+                     pure $ insert i rest
              else getPos (1 + i) ns sc
-    getPos _ [] _ = pure []
+    getPos _ [] _ = pure NatSet.empty
     getPos _ ns ty = throw (GenericMsg fc ("Unknown determining arguments: "
                            ++ showSep ", " (map show ns)))
 
 export
 setDetags : {auto c : Ref Ctxt Defs} ->
-            FC -> Name -> Maybe (List Nat) -> Core ()
+            FC -> Name -> Maybe NatSet -> Core ()
 setDetags fc tyn args
     = do defs <- get Ctxt
          Just g <- lookupCtxtExact tyn (gamma defs)

@@ -32,6 +32,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * The `idris2 --exec` command now takes an arbitrary expression, not just the
   function name.
 
+* Command-line arguments beginning with `--` which are not a known flag now
+  produce an error.
+
 ### Building/Packaging changes
 
 * The Nix flake's `buildIdris` function now returns a set with `executable` and
@@ -89,6 +92,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Fixed unification and conversion of binders with different `PiInfo`.
 
+* `failing` statements with multi-line strings must now use `"""` for the string.
+
 ### Compiler changes
 
 * The compiler now differentiates between "package search path" and "package
@@ -132,6 +137,7 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * Fixed a bug that caused `ttc` size to grow exponentially.
 
 * Removes `prim__void` primitive.
+* Fixed `assert_total` operation with coinductive calls
 
 ### Backend changes
 

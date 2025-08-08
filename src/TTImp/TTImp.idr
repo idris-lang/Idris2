@@ -504,7 +504,7 @@ mutual
   export
   covering
   Show nm => Show (ImpDecl' nm) where
-    show (IClaim (MkFCVal _ $ MkIClaimData c _ opts ty))
+    show (IClaim (MkWithData _ $ MkIClaimData c _ opts ty))
         = show opts ++ " " ++ show c ++ " " ++ show ty
     show (IData _ _ _ d) = show d
     show (IDef _ n cs) = "(%def " ++ show n ++ " " ++ show cs ++ ")"
