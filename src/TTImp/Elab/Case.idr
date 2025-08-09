@@ -337,7 +337,7 @@ caseBlock {vars} rigc elabinfo fc nest env opts scr scrtm scrty caseRig alts exp
     -- Names used in the pattern we're matching on, so don't bind them
     -- in the generated case block
     usedIn : RawImp -> List Name
-    usedIn (IBindVar _ n) = [UN $ Basic n]
+    usedIn (IBindVar _ n) = [n]
     usedIn (IApp _ f a) = usedIn f ++ usedIn a
     usedIn (IAs _ _ _ n a) = n :: usedIn a
     usedIn (IAlternative _ _ alts) = concatMap usedIn alts

@@ -138,6 +138,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Fixed `assert_total` operation with coinductive calls
 
+* `IBindVar` supports arbitrary names. `String` in the signature is replaced
+  by `Name`.
+
 ### Backend changes
 
 #### RefC Backend

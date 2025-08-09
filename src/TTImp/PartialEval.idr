@@ -144,25 +144,25 @@ getSpecPats fc pename fn stk fnty args sargs pats
         rhs <- mkRHSargs fnty (IVar fc fn) dynnames args
         pure (Just [PatClause fc lhs rhs])
   where
-    mkDynNames : Int -> List (Nat, ArgMode) -> List String
+    mkDynNames : Int -> List (Nat, ArgMode) -> List Name
     mkDynNames i [] = []
     mkDynNames i ((_, Dynamic) :: as)
-        = ("_pe" ++ show i) :: mkDynNames (1 + i) as
+        = (UN $ Basic $ "_pe" ++ show i) :: mkDynNames (1 + i) as
     mkDynNames i (_ :: as) = mkDynNames i as
 
     -- Build a RHS from the type of the function to be specialised, the
     -- dynamic argument names, and the list of given arguments. We assume
     -- the latter two correspond appropriately.
-    mkRHSargs : ClosedNF -> RawImp -> List String -> List (Nat, ArgMode) ->
+    mkRHSargs : ClosedNF -> RawImp -> List Name -> List (Nat, ArgMode) ->
                 Core RawImp
     mkRHSargs (NBind _ x (Pi _ _ Explicit _) sc) app (a :: as) ((_, Dynamic) :: ds)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
-             mkRHSargs sc' (IApp fc app (IVar fc (UN $ Basic a))) as ds
+             mkRHSargs sc' (IApp fc app (IVar fc a)) as ds
     mkRHSargs (NBind _ x (Pi _ _ _ _) sc) app (a :: as) ((_, Dynamic) :: ds)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
-             mkRHSargs sc' (INamedApp fc app x (IVar fc (UN $ Basic a))) as ds
+             mkRHSargs sc' (INamedApp fc app x (IVar fc a)) as ds
     mkRHSargs (NBind _ x (Pi _ _ Explicit _) sc) app as ((_, Static tm) :: ds)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
@@ -181,7 +181,7 @@ getSpecPats fc pename fn stk fnty args sargs pats
     -- Type will depend on the value here (we assume a variadic function) but
     -- the argument names are still needed
     mkRHSargs ty app (a :: as) ((_, Dynamic) :: ds)
-        = mkRHSargs ty (IApp fc app (IVar fc (UN $ Basic a))) as ds
+        = mkRHSargs ty (IApp fc app (IVar fc a)) as ds
     mkRHSargs _ app _ _
         = pure app
 

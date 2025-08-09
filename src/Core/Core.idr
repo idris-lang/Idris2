@@ -71,7 +71,7 @@ data Warning : Type where
      ParserWarning : FC -> String -> Warning
      UnreachableClause : {vars : _} ->
                          FC -> Env Term vars -> Term vars -> Warning
-     ShadowingGlobalDefs : FC -> List1 (String, List1 Name) -> Warning
+     ShadowingGlobalDefs : FC -> List1 (Name, List1 Name) -> Warning
      ||| Soft-breaking change, make an error later.
      ||| @ original Originally declared visibility on forward decl
      ||| @ new      Incompatible new visibility on actual declaration.
