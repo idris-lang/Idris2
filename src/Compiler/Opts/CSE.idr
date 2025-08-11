@@ -173,7 +173,9 @@ mutual
 
   dropConAlt : Drop CConAlt
   dropConAlt inn (MkConAlt x y tag args z) =
-    MkConAlt x y tag args . embed <$> dropCExp (mkSizeOf args) z
+    MkConAlt x y tag args <$>
+        dropCExp (mkSizeOf args + inn)
+        (replace {p = CExp} (appendAssociative args inner outer) z)
 
   dropConstAlt : Drop CConstAlt
   dropConstAlt inn (MkConstAlt x y) = MkConstAlt x <$> dropCExp inn y
