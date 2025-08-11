@@ -623,7 +623,7 @@ lhsInCurrentNS nest (IVar loc n)
 lhsInCurrentNS nest tm = pure tm
 
 export
-findIBinds : RawImp' nm -> List Name
+findIBinds : RawImp' nm -> List String
 findIBinds (IPi fc rig p mn aty retty)
     = findIBinds aty ++ findIBinds retty
 findIBinds (ILam fc rig p n aty sc)
@@ -636,7 +636,7 @@ findIBinds (INamedApp _ fn _ av)
     = findIBinds fn ++ findIBinds av
 findIBinds (IWithApp fc fn av)
     = findIBinds fn ++ findIBinds av
-findIBinds (IAs fc _ _ n@(UN (Basic _)) pat)
+findIBinds (IAs fc _ _ (UN (Basic n)) pat)
     = n :: findIBinds pat
 findIBinds (IAs fc _ _ n pat)
     = findIBinds pat
@@ -651,7 +651,7 @@ findIBinds (IQuote fc tm) = findIBinds tm
 findIBinds (IUnquote fc tm) = findIBinds tm
 findIBinds (IRunElab fc _ tm) = findIBinds tm
 findIBinds (IBindHere _ _ tm) = findIBinds tm
-findIBinds (IBindVar _ n) = [n]
+findIBinds (IBindVar _ (UN (Basic n))) = [n]
 findIBinds (IUpdate fc updates tm)
     = findIBinds tm ++ concatMap (findIBinds . getFieldUpdateTerm) updates
 -- We've skipped lambda, case, let and local - rather than guess where the
@@ -659,8 +659,8 @@ findIBinds (IUpdate fc updates tm)
 findIBinds tm = []
 
 export
-findImplicits : RawImp' nm -> List Name
-findImplicits (IPi fc rig p (Just mn@(UN (Basic _))) aty retty)
+findImplicits : RawImp' nm -> List String
+findImplicits (IPi fc rig p (Just (UN (Basic mn))) aty retty)
     = mn :: findImplicits aty ++ findImplicits retty
 findImplicits (IPi fc rig p mn aty retty)
     = findImplicits aty ++ findImplicits retty
@@ -686,7 +686,7 @@ findImplicits (IForce fc tm) = findImplicits tm
 findImplicits (IQuote fc tm) = findImplicits tm
 findImplicits (IUnquote fc tm) = findImplicits tm
 findImplicits (IRunElab fc _ tm) = findImplicits tm
-findImplicits (IBindVar _ n) = [n]
+findImplicits (IBindVar _ (UN (Basic n))) = [n]
 findImplicits (IUpdate fc updates tm)
     = findImplicits tm ++ concatMap (findImplicits . getFieldUpdateTerm) updates
 findImplicits tm = []
@@ -703,7 +703,7 @@ implicitsAs : {auto c : Ref Ctxt Defs} ->
 implicitsAs n defs ns tm
   = do let implicits = findIBinds tm
        log "declare.def.lhs.implicits" 30 $ "Found implicits: " ++ show implicits
-       setAs (map Just (ns ++ implicits)) [] tm
+       setAs (map Just (ns ++ map (UN . Basic) implicits)) [] tm
   where
     -- Takes the function application expression which is the lhs of a clause
     -- and decomposes it into the underlying function symbol and the variables
