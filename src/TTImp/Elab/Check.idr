@@ -228,7 +228,7 @@ strengthenedEState {n} {vars} c e fc env
          pure $ { subEnv := svs
                 , boundNames := bns
                 , toBind := todo
-                , linearUsed $= VarSet.dropLater
+                , linearUsed $= VarSet.dropFirst
                 , polyMetavars := [] -- no binders on LHS
                 } est
 

@@ -60,8 +60,8 @@ toList = mapMaybe (`isDeBruijn` vs) . NatSet.toList
 -- other positions by -1 (useful when coming back from under
 -- a binder)
 export %inline
-dropLater : VarSet (v :: vs) -> VarSet vs
-dropLater = NatSet.popZ
+dropFirst : VarSet (v :: vs) -> VarSet vs
+dropFirst = NatSet.popZ
 
 -- Add a 'new' Zero (not in the set) and shift all the
 -- other positions by +1 (useful when going under a binder)

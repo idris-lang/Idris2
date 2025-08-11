@@ -80,7 +80,7 @@ updateMults vars env
     = (if MkVar First `VarSet.elem` vars
         then setMultiplicity b erased
         else b)
-    :: updateMults (VarSet.dropLater vars) env
+    :: updateMults (VarSet.dropFirst vars) env
 
 findImpsIn : {vars : _} ->
              FC -> Env Term vars -> List (Name, Term vars) -> Term vars ->
