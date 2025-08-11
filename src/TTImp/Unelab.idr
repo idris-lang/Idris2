@@ -13,6 +13,8 @@ import TTImp.TTImp
 import Data.List
 import Data.String
 
+import Libraries.Data.VarSet
+
 import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.SizeOf
 
@@ -93,15 +95,15 @@ mutual
       findArgPos _ = Nothing
 
       -- TODO: some utility like this should probably be implemented in Core
-      substVars : List (List (Var vs), Term vs) -> Term vs -> Term vs
+      substVars : List (VarSet vs, Term vs) -> Term vs -> Term vs
       substVars xs tm@(Local fc _ idx prf)
-          = case find (any ((idx ==) . varIdx) . fst) xs of
+          = case find ((MkVar prf `VarSet.elem`) . fst) xs of
                  Just (_, new) => new
                  Nothing => tm
       substVars xs (Meta fc n i args)
           = Meta fc n i (map (substVars xs) args)
       substVars xs (Bind fc y b scope)
-          = Bind fc y (map (substVars xs) b) (substVars (map (bimap (map weaken) weaken) xs) scope)
+          = Bind fc y (map (substVars xs) b) (substVars (map (bimap VarSet.weaken weaken) xs) scope)
       substVars xs (App fc fn arg)
           = App fc (substVars xs fn) (substVars xs arg)
       substVars xs (As fc s as pat)
@@ -114,18 +116,18 @@ mutual
           = TForce fc r (substVars xs y)
       substVars xs tm = tm
 
-      substArgs : SizeOf vs -> List (List (Var vs), Term vars) -> Term vs -> Term (vs ++ vars)
+      substArgs : SizeOf vs -> List (VarSet vs, Term vars) -> Term vs -> Term (vs ++ vars)
       substArgs p substs tm =
         let
-          substs' = map (bimap (map $ embed {outer = vars}) (weakenNs p)) substs
+          substs' = map (bimap (embed {tm = VarSet} {outer = vars}) (weakenNs p)) substs
           tm' = embed tm
         in
           substVars substs' tm'
 
-      argVars : {vs : _} -> Term vs -> List (Var vs)
-      argVars (As _ _ as pat) = argVars as ++ argVars pat
-      argVars (Local _ _ _ p) = [MkVar p]
-      argVars _ = []
+      argVars : {0 vs : _} -> VarSet vs -> Term vs -> VarSet vs
+      argVars acc (As _ _ as pat) = argVars (argVars acc as) pat
+      argVars acc (Local _ _ _ p) = VarSet.insert (MkVar p) acc
+      argVars acc _ = acc
 
       mkClause : FC -> Nat ->
                  List (Term vars) ->
@@ -136,7 +138,7 @@ mutual
                let patArgs = snd (getFnArgs lhs)
                    Just pat = getAt argpos patArgs
                      | _ => pure Nothing
-                   rhs = substArgs (mkSizeOf vs) (zip (map argVars patArgs) args) rhs
+                   rhs = substArgs (mkSizeOf vs) (zip (map (argVars (VarSet.empty {vs})) patArgs) args) rhs
                logTerm "unelab.case.clause" 20 "Unelaborating LHS" pat
                lhs' <- unelabTy Full nest clauseEnv pat
                logTerm "unelab.case.clause" 20 "Unelaborating RHS" rhs

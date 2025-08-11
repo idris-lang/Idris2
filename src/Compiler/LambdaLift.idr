@@ -21,6 +21,7 @@ import Data.SnocList.Operations
 import Data.Vect
 
 import Libraries.Data.SnocList.Extra
+import Libraries.Data.SnocList.SizeOf
 
 %default covering
 
@@ -540,16 +541,18 @@ mutual
            pure $ LUnderApp fc n (length bound) (allVars fc vars unused)
     where
 
-        allPrfs : (vs : Scope) -> (unused : Vect (length vs) Bool) -> List (Var vs)
-        allPrfs [] _ = []
-        allPrfs (v :: vs) (False::uvs) = MkVar First :: map weaken (allPrfs vs uvs)
-        allPrfs (v :: vs) (True::uvs) = map weaken (allPrfs vs uvs)
+        allPrfs : (vs : Scope) -> SizeOf seen ->
+                  (unused : Vect (length vs) Bool) ->
+                  List (Var (seen <>> vs))
+        allPrfs [] _ _ = []
+        allPrfs (v :: vs) p (False::uvs) = mkVarChiply p :: allPrfs vs (p :< _) uvs
+        allPrfs (v :: vs) p (True::uvs) = allPrfs vs (p :< _) uvs
 
         -- apply to all the variables. 'First' will be first in the last, which
         -- is good, because the most recently bound name is the first argument to
         -- the resulting function
         allVars : FC -> (vs : Scope) -> (unused : Vect (length vs) Bool) -> List (Lifted vs)
-        allVars fc vs unused = map (\ (MkVar p) => LLocal fc p) (allPrfs vs unused)
+        allVars fc vs unused = map (\ (MkVar p) => LLocal fc p) (allPrfs vs [<] unused)
 
 -- if doLazyAnnots = True then annotate function application with laziness
 -- otherwise use old behaviour (thunk is a function)

@@ -208,8 +208,8 @@ mutual
           = findUsedArgs env (findUsed env u a) as
   findUsed env used (Bind fc x b tm)
       = assert_total $
-          VarSet.popZ (findUsed (b :: env)
-                          (VarSet.addZ (findUsedInBinder env used b))
+          VarSet.dropLater (findUsed (b :: env)
+                          (VarSet.weaken (findUsedInBinder env used b))
                           tm)
   findUsed env used (App fc fn arg)
       = findUsed env (findUsed env used fn) arg
@@ -245,7 +245,7 @@ mkShrinkSub [] els
          then (_ ** Keep Refl)
          else (_ ** Drop Refl)
 mkShrinkSub (x :: xs) els
-    = let (_ ** subRest) = mkShrinkSub xs (popZ els) in
+    = let (_ ** subRest) = mkShrinkSub xs (VarSet.dropLater els) in
       if MkVar First `VarSet.elem` els
         then (_ ** Keep subRest)
         else (_ ** Drop subRest)

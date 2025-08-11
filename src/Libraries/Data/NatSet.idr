@@ -51,11 +51,11 @@ size = go 0
       let acc = acc + popCount (the Int64 (cast n)) in
       go acc (assert_smaller n (shiftR n 64))
 
-export
+export %inline
 Cast NatSet Integer where
   cast ns = ns
 
-export
+export %inline
 Cast Integer NatSet where
   cast n = n
 

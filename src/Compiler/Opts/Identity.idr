@@ -10,13 +10,8 @@ import Data.Vect
 import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.SizeOf
 
--- TODO reduce quadratic weakening
 makeArgs : (args : Scope) -> List (Var (args ++ vars))
-makeArgs args = makeArgs' args id
-  where
-    makeArgs' : (args : Scope) -> (Var (args ++ vars) -> a) -> List a
-    makeArgs' [] f = []
-    makeArgs' (x :: xs) f = f (MkVar First) :: makeArgs' xs (f . weaken)
+makeArgs args = embed @{ListFreelyEmbeddable} (Var.allVars args)
 
 parameters (fn1 : Name) (idIdx : Nat)
   mutual
@@ -118,7 +113,7 @@ checkIdentity fn (v :: vs) exp idx = if cexpIdentity fn idx v Nothing Nothing ex
     else checkIdentity fn vs exp (S idx)
 
 calcIdentity : (fullName : Name) -> CDef -> Maybe Nat
-calcIdentity fn (MkFun args exp) = checkIdentity fn (makeArgs {vars=Scope.empty} args) (rewrite appendNilRightNeutral args in exp) Z
+calcIdentity fn (MkFun args exp) = checkIdentity fn (Var.allVars args) exp Z
 calcIdentity _ _ = Nothing
 
 getArg : FC -> Nat -> (args : Scope) -> Maybe (CExp args)

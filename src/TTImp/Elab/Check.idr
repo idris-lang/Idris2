@@ -202,7 +202,7 @@ weakenedEState {e}
                    { subEnv $= Drop
                    , boundNames $= map wknTms
                    , toBind $= map wknTms
-                   , linearUsed $= VarSet.addZ
+                   , linearUsed $= VarSet.weaken
                    , polyMetavars := [] -- no binders on LHS
                    } est
          pure eref
@@ -228,7 +228,7 @@ strengthenedEState {n} {vars} c e fc env
          pure $ { subEnv := svs
                 , boundNames := bns
                 , toBind := todo
-                , linearUsed $= VarSet.popZ
+                , linearUsed $= VarSet.dropLater
                 , polyMetavars := [] -- no binders on LHS
                 } est
 

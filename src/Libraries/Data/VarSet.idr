@@ -1,10 +1,14 @@
 module Libraries.Data.VarSet
 
+import Data.Bits
+
 import Libraries.Data.NatSet
 
 import Core.Name
 import Core.Name.Scoped
 import Core.TT.Var
+
+import Libraries.Data.List.SizeOf
 
 %default total
 
@@ -33,6 +37,10 @@ insert : Var vs -> VarSet vs -> VarSet vs
 insert (MkVar {varIdx} _) = NatSet.insert varIdx
 
 export %inline
+singleton : Var vs -> VarSet vs
+singleton v = VarSet.insert v (VarSet.empty {vs})
+
+export %inline
 intersection : VarSet vs -> VarSet vs -> VarSet vs
 intersection = NatSet.intersection
 
@@ -52,11 +60,18 @@ toList = mapMaybe (`isDeBruijn` vs) . NatSet.toList
 -- other positions by -1 (useful when coming back from under
 -- a binder)
 export %inline
-popZ : VarSet (v :: vs) -> VarSet vs
-popZ = NatSet.popZ
+dropLater : VarSet (v :: vs) -> VarSet vs
+dropLater = NatSet.popZ
 
 -- Add a 'new' Zero (not in the set) and shift all the
 -- other positions by +1 (useful when going under a binder)
 export %inline
-addZ : VarSet vs -> VarSet (v :: vs)
-addZ = NatSet.addZ
+weaken : VarSet vs -> VarSet (v :: vs)
+weaken = NatSet.addZ
+
+export %inline
+weakenNs : SizeOf inner -> VarSet vs -> VarSet (inner ++ vs)
+weakenNs inn vs = cast (cast {to = Integer} vs `shiftL` inn.size)
+
+export
+FreelyEmbeddable VarSet
