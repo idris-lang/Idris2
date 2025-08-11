@@ -97,6 +97,10 @@ intersection : NatSet -> NatSet -> NatSet
 intersection = (.&.)
 
 export
+union : NatSet -> NatSet -> NatSet
+union = (.|.)
+
+export
 intersectAll : List NatSet -> NatSet
 intersectAll [] = empty
 intersectAll (x::xs) = foldr intersection x xs

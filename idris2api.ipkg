@@ -195,6 +195,7 @@ modules =
     Libraries.Data.NatSet,
     Libraries.Data.Ordering.Extra,
     Libraries.Data.PosMap,
+    Libraries.Data.Record,
     Libraries.Data.SnocList.Extra,
     Libraries.Data.SnocList.HasLength,
     Libraries.Data.SnocList.LengthMatch,
@@ -210,10 +211,10 @@ modules =
     Libraries.Data.StringTrie,
     Libraries.Data.Tap,
     Libraries.Data.UserNameMap,
+    Libraries.Data.VarSet,
     Libraries.Data.Version,
     Libraries.Data.WithDefault,
     Libraries.Data.WithData,
-    Libraries.Data.Record,
 
     Libraries.System.Directory.Tree,
 
