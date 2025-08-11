@@ -130,7 +130,7 @@ localHelper {vars} nest env nestdecls_in func
 
     updateName : NestedNames vars -> ImpDecl -> ImpDecl
     updateName nest (IClaim claim)
-         = IClaim $ mapData ({type $= updateTyName nest}) claim
+         = IClaim $ mapData {type $= updateTyName nest} claim
     updateName nest (IDef loc' n cs)
          = IDef loc' (mapNestedName nest n) cs
     updateName nest (IData loc' vis mbt d)

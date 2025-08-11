@@ -24,17 +24,17 @@ getDecl AsType d@(MkWithData _ $ PClaim _) = Just d
 getDecl AsType (MkWithData fc $ PData doc vis mbtot (MkPData dfc tyn (Just tyc) _ _))
     = Just (MkWithData fc $ PData doc vis mbtot (MkPLater dfc tyn tyc))
 getDecl AsType d@(MkWithData _ $ PInterface _ _ _ _ _ _ _ _) = Just d
-getDecl AsType (MkWithData fc $ PRecord doc vis mbtot (MkPRecord n ps _ _ _))
+getDecl AsType d@(MkWithData fc $ PRecord doc vis mbtot (MkPRecord n ps _ _ _))
                          -- the `bind` variable should be used here in `PData` to carry along
                          -- the fact that the type constructor might be binding
-    = Just (MkWithData fc $ PData doc vis mbtot (MkPLater (get "fc" fc) n (mkRecType ps)))
+    = Just (MkWithData fc $ PData doc vis mbtot (MkPLater d.fc n (mkRecType ps)))
   where
     mkRecType : List PBinder -> PTerm
-    mkRecType [] = PType (get "fc" fc)
+    mkRecType [] = PType d.fc
     mkRecType (MkPBinder p (MkBasicMultiBinder c (n ::: []) t) :: ts)
-      = PPi (get "fc" fc) c p (Just n.val) t (mkRecType ts)
+      = PPi d.fc c p (Just n.val) t (mkRecType ts)
     mkRecType (MkPBinder p (MkBasicMultiBinder c (n ::: x :: xs) t) :: ts)
-      = PPi (get "fc" fc) c p (Just n.val) t
+      = PPi d.fc c p (Just n.val) t
           (assert_total $ mkRecType (MkPBinder p (MkBasicMultiBinder c (x ::: xs) t) :: ts))
 getDecl AsType d@(MkWithData _ $ PFixity _ ) = Just d
 getDecl AsType d@(MkWithData _ $ PDirective _) = Just d

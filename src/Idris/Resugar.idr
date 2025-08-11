@@ -362,8 +362,8 @@ mutual
            bracket p appPrec (PWithApp fc fn' arg')
   toPTerm p (IBindingApp fn bind arg)
       = pure $ PBindingApp fn
-          !(traverseData (traverseBindingInfo (toPTerm p)) bind)
-          !(traverseData (toPTerm p) arg)
+          !(traverse (traverse (toPTerm p)) bind)
+          !(traverse (toPTerm p) arg)
   toPTerm p (INamedApp fc fn n arg)
       = do arg' <- toPTerm startPrec arg
            app <- toPTermApp fn [(fc, Just (Just n), arg')]
@@ -508,7 +508,7 @@ mutual
                    , Maybe (DocBindFC Name)
                    , List (PField' KindedName))
   toPRecord (MkImpRecord fc n ps opts con fs)
-      = do ps' <- traverse (traverseData $ \ (MkGenericBinder p ty) =>
+      = do ps' <- traverse (traverse $ \ (MkGenericBinder p ty) =>
                                    do ty' <- toPTerm startPrec ty
                                       p' <- mapPiInfo p
                                       pure (MkGenericBinder p' ty')) ps
@@ -534,7 +534,7 @@ mutual
             ImpDecl' KindedName -> Core (Maybe (PDecl' KindedName))
   toPDecl (IClaim (MkWithData fc $ MkIClaimData rig vis opts ty))
       = do opts' <- traverse toPFnOpt opts
-           newTy <- (toPTypeDecl ty)
+           newTy <- toPTypeDecl ty
            pure (Just (MkWithData fc $ PClaim (MkPClaim rig vis opts' newTy)))
   toPDecl (IData fc vis mbtot d)
       = pure (Just (MkFCVal fc $ PData "" vis mbtot !(toPData d)))
@@ -604,13 +604,13 @@ cleanPTerm ptm
     cleanNode (PRef fc nm)    =
       PRef fc <$> cleanKindedName nm
     cleanNode (POp fc abi op y) =
-      (\ op => POp fc abi op y) <$> traverseFC (traverseOp @{Functor.CORE} cleanKindedName) op
+      (\ op => POp fc abi op y) <$> traverse (traverseOp @{Functor.CORE} cleanKindedName) op
     cleanNode (PPrefixOp fc op x) =
-      (\ op => PPrefixOp fc op x) <$> traverseFC (traverseOp @{Functor.CORE} cleanKindedName) op
+      (\ op => PPrefixOp fc op x) <$> traverse (traverseOp @{Functor.CORE} cleanKindedName) op
     cleanNode (PSectionL fc op x) =
-      (\ op => PSectionL fc op x) <$> traverseFC (traverseOp @{Functor.CORE} cleanKindedName) op
+      (\ op => PSectionL fc op x) <$> traverse (traverseOp @{Functor.CORE} cleanKindedName) op
     cleanNode (PSectionR fc x op) =
-      PSectionR fc x <$> traverseFC (traverseOp @{Functor.CORE} cleanKindedName) op
+      PSectionR fc x <$> traverse (traverseOp @{Functor.CORE} cleanKindedName) op
     cleanNode (PPi fc rig vis (Just n) arg ret) =
       (\ n => PPi fc rig vis n arg ret) <$> (cleanBinderName vis n)
     cleanNode tm = pure tm

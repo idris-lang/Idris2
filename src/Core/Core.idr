@@ -19,6 +19,9 @@ import Libraries.Data.WithData
 import public Data.IORef
 import System.File
 
+%hide Libraries.Data.Record.KeyVal.label
+%hide Libraries.Data.Record.LabelledValue.label
+
 %default covering
 
 public export
@@ -859,13 +862,10 @@ namespace SnocList
   traverse_ : (a -> Core b) -> SnocList a -> Core ()
   traverse_ f xs = traverse_' f (reverse xs)
 
-%inline export
-traverseData : (ty -> Core sy) -> WithData fs ty -> Core (WithData fs sy)
-traverseData f (MkWithData extra val) = MkWithData extra <$> f val
-
-%inline export
-traverseFC : (a -> Core b) -> WithFC a -> Core (WithFC b)
-traverseFC = traverseData
+namespace WithData
+  %inline export
+  traverse : (ty -> Core sy) -> WithData fs ty -> Core (WithData fs sy)
+  traverse f (MkWithData extra val) = MkWithData extra <$> f val
 
 namespace PiInfo
   export
@@ -885,12 +885,13 @@ namespace Binder
   traverse f (PLet fc c val ty) = pure $ PLet fc c !(f val) !(f ty)
   traverse f (PVTy fc c ty) = pure $ PVTy fc c !(f ty)
 
-export
-traverseBindingInfo : (a -> Core b) -> BindingInfo a -> Core (BindingInfo b)
-traverseBindingInfo f (BindType name type) = BindType <$> f name <*> f type
-traverseBindingInfo f (BindExpr name expr) = BindExpr <$> f name <*> f expr
-traverseBindingInfo f (BindExplicitType name type expr)
-  = BindExplicitType <$> f name <*> f type <*> f expr
+namespace BindingInfo
+  export
+  traverse : (a -> Core b) -> BindingInfo a -> Core (BindingInfo b)
+  traverse f (BindType name type) = BindType <$> f name <*> f type
+  traverse f (BindExpr name expr) = BindExpr <$> f name <*> f expr
+  traverse f (BindExplicitType name type expr)
+    = BindExplicitType <$> f name <*> f type <*> f expr
 
 export
 mapTermM : ({vars : _} -> Term vars -> Core (Term vars)) ->

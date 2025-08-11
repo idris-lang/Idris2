@@ -388,7 +388,7 @@ mutual
   substNamesDecl' : Bool -> List Name -> List (Name, RawImp ) ->
                    ImpDecl -> ImpDecl
   substNamesDecl' bvar bound ps (IClaim claim)
-      = IClaim $ mapData ({type $= mapData (substNames' bvar bound ps)}) claim
+      = IClaim $ map {type $= map (substNames' bvar bound ps)} claim
   substNamesDecl' bvar bound ps (IDef fc n cs)
       = IDef fc n (map (substNamesClause' bvar bound ps) cs)
   substNamesDecl' bvar bound ps (IData fc vis mbtot d)
@@ -488,7 +488,7 @@ mutual
 
   substLocDecl : FC -> ImpDecl -> ImpDecl
   substLocDecl fc' (IClaim (MkWithData _ $ MkIClaimData r vis opts td))
-      = IClaim (MkWithData ["fc" :- fc'] $ MkIClaimData r vis opts (substLocTy fc' td))
+      = IClaim (Mk [fc'] $ MkIClaimData r vis opts (substLocTy fc' td))
   substLocDecl fc' (IDef fc n cs)
       = IDef fc' n (map (substLocClause fc') cs)
   substLocDecl fc' (IData fc vis mbtot d)

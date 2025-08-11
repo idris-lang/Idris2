@@ -1,6 +1,7 @@
 module TTImp.TTImp.Functor
 
 import Core.TT
+import Core.WithData
 import TTImp.TTImp
 import Core.FC
 

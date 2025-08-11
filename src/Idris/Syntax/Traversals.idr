@@ -18,9 +18,9 @@ mapPTermM f = goPTerm where
     goPTerm : PTerm' nm -> Core (PTerm' nm)
     goPTerm t@(PRef _ _) = f t
     goPTerm (NewPi x) =
-      NewPi <$> traverseData goPBinderScope x
+      NewPi <$> traverse goPBinderScope x
     goPTerm (Forall x) =
-      Forall <$> traverseData (\(a, b) => MkPair a <$> goPTerm b) x
+      Forall <$> traverse (\(a, b) => MkPair a <$> goPTerm b) x
     goPTerm (PPi fc x info z argTy retTy) =
       PPi fc x <$> goPiInfo info
                <*> pure z
@@ -46,7 +46,7 @@ mapPTermM f = goPTerm where
                <*> goPClauses xs
       >>= f
     goPTerm (PLocal fc xs scope) =
-      PLocal fc <$> traverse (traverseData goPDecl) xs
+      PLocal fc <$> traverse (traverse goPDecl) xs
                 <*> goPTerm scope
       >>= f
     goPTerm (PUpdate fc xs) =
@@ -65,8 +65,8 @@ mapPTermM f = goPTerm where
                          <*> goPTerm y
       >>= f
     goPTerm (PBindingApp fn bind scope) =
-      PBindingApp fn <$> traverseData goBinderInfo bind
-                     <*> traverseData goPTerm scope
+      PBindingApp fn <$> traverse goBinderInfo bind
+                     <*> traverse goPTerm scope
       >>= f
     goPTerm (PNamedApp fc x n y) =
       PNamedApp fc <$> goPTerm x
@@ -109,7 +109,7 @@ mapPTermM f = goPTerm where
     goPTerm t@(PInfer _) = f t
     goPTerm (POp fc bind op right) =
       POp fc
-          <$> traverseData goOpBinder bind
+          <$> traverse goOpBinder bind
           <*> pure op
           <*> goPTerm right
       >>= f
@@ -235,8 +235,8 @@ mapPTermM f = goPTerm where
     goPDo (DoRewrite fc t) = DoRewrite fc <$> goPTerm t
 
     goPRecordDeclLet : PRecordDeclLet' nm -> Core (PRecordDeclLet' nm)
-    goPRecordDeclLet (RecordClaim x) = RecordClaim <$> traverseData goPClaim x
-    goPRecordDeclLet (RecordClause x) = RecordClause <$> traverseData goPClause x
+    goPRecordDeclLet (RecordClaim x) = RecordClaim <$> traverse goPClaim x
+    goPRecordDeclLet (RecordClause x) = RecordClause <$> traverse goPClause x
 
     goPClause : PClause' nm -> Core (PClause' nm)
     goPClause (MkPatClause fc lhs rhs wh) =
@@ -257,10 +257,7 @@ mapPTermM f = goPTerm where
     goPClaim : PClaimData' nm -> Core (PClaimData' nm)
     goPClaim (MkPClaim c v opts tdecl) =
       MkPClaim c v <$> goPFnOpts opts
-                   <*> traverseData goPTypeDecl tdecl
-
-    goPlainBinder : PlainBinder' nm -> Core (PlainBinder' nm)
-    goPlainBinder = traverseData f
+                   <*> traverse goPTypeDecl tdecl
 
     goBasicMultiBinder : BasicMultiBinder' nm -> Core (BasicMultiBinder' nm)
     goBasicMultiBinder (MkBasicMultiBinder rig names type)
@@ -274,16 +271,14 @@ mapPTermM f = goPTerm where
     goPBinderScope (MkPBinderScope binder scope)
       = MkPBinderScope <$> goPBinder binder <*> goPTerm scope
 
-    -- goParamArgs :
-
     goPDecl : PDeclNoFC' nm -> Core (PDeclNoFC' nm)
     goPDecl (PClaim claim) =
       PClaim <$> goPClaim claim
     goPDecl (PDef cls) = PDef <$> goPClauses cls
     goPDecl (PData doc v mbt d) = PData doc v mbt <$> goPDataDecl d
     goPDecl (PParameters nts ps) =
-      PParameters <$> either (\x => Left <$> traverseList1 goPlainBinder x)
-                             (\x => Right <$> traverseList1 goPBinder x) nts -- go4TupledPTerms nts
+      PParameters <$> either (\x => Left <$> traverseList1 (traverse goPTerm) x)
+                             (\x => Right <$> traverseList1 goPBinder x) nts
                   <*> goPDecls ps
     goPDecl (PUsing mnts ps) =
       PUsing <$> goPairedPTerms mnts
@@ -327,7 +322,7 @@ mapPTermM f = goPTerm where
     goPDataDecl (MkPData fc n t opts tdecls) =
       MkPData fc n <$> goMPTerm t
                    <*> pure opts
-                   <*> traverse (traverseData goPTypeDecl) tdecls
+                   <*> traverse (traverse goPTypeDecl) tdecls
     goPDataDecl (MkPLater fc n t) = MkPLater fc n <$> goPTerm t
 
     goRecordField : RecordField' nm -> Core (RecordField' nm)
@@ -410,7 +405,7 @@ mapPTermM f = goPTerm where
 
     goPDecls : List (PDecl' nm) -> Core (List (PDecl' nm))
     goPDecls []          = pure []
-    goPDecls (d :: ds) = (::) <$> traverseData goPDecl d <*> goPDecls ds
+    goPDecls (d :: ds) = (::) <$> traverse goPDecl d <*> goPDecls ds
 
     goPFieldUpdates : List (PFieldUpdate' nm) -> Core (List (PFieldUpdate' nm))
     goPFieldUpdates []          = pure []
@@ -418,7 +413,7 @@ mapPTermM f = goPTerm where
 
     goPFields : List (PField' nm) -> Core (List (PField' nm))
     goPFields []        = pure []
-    goPFields (f :: fs) = (::) <$> traverseData goRecordField f <*> goPFields fs
+    goPFields (f :: fs) = (::) <$> traverse goRecordField f <*> goPFields fs
 
     goPFnOpts : List (PFnOpt' nm) -> Core (List (PFnOpt' nm))
     goPFnOpts []        = pure []
@@ -426,7 +421,7 @@ mapPTermM f = goPTerm where
 
     goPTypeDecls : List (PTypeDecl' nm) -> Core (List (PTypeDecl' nm))
     goPTypeDecls []        = pure []
-    goPTypeDecls (t :: ts) = (::) <$> traverseData goPTypeDecl t <*> goPTypeDecls ts
+    goPTypeDecls (t :: ts) = (::) <$> traverse goPTypeDecl t <*> goPTypeDecls ts
 
 export
 mapPTerm : (PTerm' nm -> PTerm' nm) -> PTerm' nm -> PTerm' nm

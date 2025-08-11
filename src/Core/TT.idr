@@ -184,7 +184,7 @@ data FixityDeclarationInfo = UndeclaredFixity | DeclaredFixity FixityInfo
 -- - bind expressions with an inferred type such that `(x := v)`
 -- - bind an expression with an explicit type annotation `(x : a := v)`
 public export
-data BindingInfo : tm -> Type where
+data BindingInfo : (tm : Type) -> Type where
   -- (name : type)
   BindType : (name : tm) -> (type : tm) -> BindingInfo tm
   -- (name := expr)

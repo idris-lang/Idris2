@@ -55,8 +55,8 @@ elabRecord : {vars : _} ->
              List IField ->
              Core ()
 elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conName_in fields
-    = do tn <- traverseData inCurrentNS tn_in
-         conName <- traverseData inCurrentNS conName_in
+    = do tn <- traverse inCurrentNS tn_in
+         conName <- traverse inCurrentNS conName_in
          params <- preElabAsData tn
          log "declare.record.parameters" 100 $
            unlines ("New list of parameters:" :: map (("  " ++) . displayParam) params)

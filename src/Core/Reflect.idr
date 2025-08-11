@@ -887,9 +887,9 @@ Reify a => Reify (WithFC a) where
 
 export
 Reflect a => Reflect (WithFC a) where
-  reflect fc defs lhs env (MkWithData loc val)
-      = do loc' <- reflect fc defs lhs env (get "fc" loc)
-           val' <- reflect fc defs lhs env val
+  reflect fc defs lhs env value
+      = do loc' <- reflect fc defs lhs env value.fc
+           val' <- reflect fc defs lhs env value.val
            appCon fc defs (reflectiontt "MkFCVal") [Erased fc Placeholder, loc', val']
 
 -- -- Records are reflected into Data.List.Quantifier.All

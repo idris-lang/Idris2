@@ -182,18 +182,21 @@ mutual
       = prettyRig rig <++> commaSep (forget $ map (prettyBinder . val) names)
       <++> colon <++> pretty type
 
+  Pretty IdrisSyntax (PBinder' KindedName) where
+    prettyPrec d (MkPBinder Implicit bind) =
+      lcurly <+> pretty bind <+> rcurly
+    prettyPrec d (MkPBinder Explicit bind) =
+      lparen <+> pretty bind <+> rparen
+    prettyPrec d (MkPBinder AutoImplicit bind)  =
+      lcurly <+> auto_ <++> pretty bind <+> rcurly
+    prettyPrec d (MkPBinder (DefImplicit x) bind)  =
+      lcurly <+> default_ <++> prettyPrec appPrec x <+> rcurly
+
   export
   Pretty IdrisSyntax IPTerm where
     prettyPrec d (PRef _ nm) = annotateM (kindAnn nm) $ cast $ prettyOp False nm.rawName
-    prettyPrec d (NewPi (MkWithData fc (MkPBinderScope (MkPBinder Implicit bind) scope))) =
-      lcurly <+> pretty bind <+> rcurly <++> arrow <++> prettyPrec d scope
-    prettyPrec d (NewPi (MkWithData fc (MkPBinderScope (MkPBinder Explicit bind) scope))) =
-      lparen <+> pretty bind <+> rparen <++> arrow <++> prettyPrec d scope
-    prettyPrec d (NewPi (MkWithData fc (MkPBinderScope (MkPBinder AutoImplicit bind) scope))) =
-      lcurly <+> auto_ <++> pretty bind <+> rcurly <++> arrow <++> prettyPrec d scope
-    prettyPrec d (NewPi (MkWithData fc (MkPBinderScope (MkPBinder (DefImplicit x) bind) scope))) =
-      lcurly <+> default_ <++> prettyPrec appPrec x
-      <++> pretty bind <+> rcurly <++> arrow <++> prettyPrec d scope
+    prettyPrec d (NewPi (MkWithData fc (MkPBinderScope binder scope))) =
+      prettyPrec d binder <++> arrow <++> prettyPrec d scope
     prettyPrec d (Forall (MkWithData fc (names, scope))) =
       parenthesise (d > startPrec) $ group $
         forall_ <++> commaSep (map (prettyBinder . val) (forget names)) <++> dot <++> pretty scope

@@ -1334,10 +1334,10 @@ mkTyConType fname fc (x :: xs)
 
 mkDataConType : PTerm -> List (WithFC ArgType) -> Maybe PTerm
 mkDataConType ret [] = Just ret
-mkDataConType ret (MkWithData loc (UnnamedExpArg x) :: xs)
-    = PPi (get "fc" loc) top Explicit Nothing x <$> mkDataConType ret xs
-mkDataConType ret (MkWithData loc (UnnamedAutoArg x) :: xs)
-    = PPi (get "fc" loc) top AutoImplicit Nothing x <$> mkDataConType ret xs
+mkDataConType ret (con@(MkWithData _ (UnnamedExpArg x)) :: xs)
+    = PPi con.fc top Explicit Nothing x <$> mkDataConType ret xs
+mkDataConType ret (con@(MkWithData _ (UnnamedAutoArg x)) :: xs)
+    = PPi con.fc top AutoImplicit Nothing x <$> mkDataConType ret xs
 mkDataConType _ _ -- with and named applications not allowed in simple ADTs
     = Nothing
 
@@ -1980,12 +1980,12 @@ topDecl fname indents
 -- Declared at the top.
 -- collectDefs : List PDecl -> List PDecl
 collectDefs [] = []
-collectDefs (MkWithData annot (PDef cs) :: ds)
+collectDefs (def@(MkWithData _ (PDef cs)) :: ds)
     = let (csWithFC, rest) = spanBy isPDef ds
           cs' = cs ++ concat (map val csWithFC)
-          annot' = foldr {t = List}
+          annot' = foldr {t=List}
                    (\fc1, fc2 => fromMaybe EmptyFC (mergeFC fc1 fc2))
-                   (get "fc" annot)
+                   def.fc
                    (map (.fc) csWithFC)
       in
           MkFCVal annot' (PDef cs') :: assert_total (collectDefs rest)

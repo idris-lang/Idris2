@@ -124,7 +124,7 @@ mutual
                      ImpRecord ->
                      Core ImpRecord
   getUnquoteRecord (MkImpRecord fc n ps opts cn fs)
-      = pure $ MkImpRecord fc n !(traverse (traverseData unqImpParam) ps) opts cn
+      = pure $ MkImpRecord fc n !(traverse (traverse unqImpParam) ps) opts cn
                            !(traverse getUnquoteField fs)
     where
       unqPair : (Name, RigCount, PiInfo RawImp, RawImp) ->
@@ -138,7 +138,7 @@ mutual
                    Core ImpData
   getUnquoteData (MkImpData fc n tc opts cs)
       = pure $ MkImpData fc n !(traverseOpt getUnquote tc) opts
-                         !(traverse (traverseData getUnquote) cs)
+                         !(traverse (traverse getUnquote) cs)
   getUnquoteData (MkImpLater fc n tc)
       = pure $ MkImpLater fc n !(getUnquote tc)
 
@@ -148,14 +148,14 @@ mutual
                    ImpDecl ->
                    Core ImpDecl
   getUnquoteDecl (IClaim (MkWithData fc (MkIClaimData c v opts ty)))
-      = pure $ IClaim (MkWithData fc (MkIClaimData c v opts !(traverseData getUnquote ty)))
+      = pure $ IClaim (MkWithData fc (MkIClaimData c v opts !(traverse getUnquote ty)))
   getUnquoteDecl (IData fc v mbt d)
       = pure $ IData fc v mbt !(getUnquoteData d)
   getUnquoteDecl (IDef fc v d)
       = pure $ IDef fc v !(traverse getUnquoteClause d)
   getUnquoteDecl (IParameters fc ps ds)
       = pure $ IParameters fc
-                           !(traverseList1 (traverseData unqImpParam) ps)
+                           !(traverseList1 (traverse unqImpParam) ps)
                            !(traverse getUnquoteDecl ds)
     where
 
