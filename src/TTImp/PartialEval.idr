@@ -122,6 +122,7 @@ dropSpec i sargs (x :: xs)
            Just _ => dropSpec (1 + i) sargs xs
 
 getSpecPats : {auto c : Ref Ctxt Defs} ->
+              {auto u : Ref UST UState} ->
               FC -> Name ->
               (fn : Name) -> (stk : List (FC, Term vars)) ->
               ClosedNF -> -- Type of 'fn'
@@ -139,16 +140,15 @@ getSpecPats fc pename fn stk fnty args sargs pats
         -- Otherwise, build a new definition by taking the remaining arguments
         -- on the lhs, and using the specialised function application on the rhs.
         -- Then, this will get evaluated on elaboration.
-        let dynnames = mkDynNames 0 args
+        dynnames <- mkDynNames args
         let lhs = apply (IVar fc pename) (map (IBindVar fc) dynnames)
         rhs <- mkRHSargs fnty (IVar fc fn) dynnames args
         pure (Just [PatClause fc lhs rhs])
   where
-    mkDynNames : Int -> List (Nat, ArgMode) -> List Name
-    mkDynNames i [] = []
-    mkDynNames i ((_, Dynamic) :: as)
-        = (UN $ Basic $ "_pe" ++ show i) :: mkDynNames (1 + i) as
-    mkDynNames i (_ :: as) = mkDynNames i as
+    mkDynNames : List (Nat, ArgMode) -> Core (List Name)
+    mkDynNames [] = pure []
+    mkDynNames ((_, Dynamic) :: as) = [| genVarName "_pe" :: mkDynNames as |]
+    mkDynNames (_ :: as) = mkDynNames as
 
     -- Build a RHS from the type of the function to be specialised, the
     -- dynamic argument names, and the list of given arguments. We assume
