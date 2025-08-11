@@ -1,7 +1,5 @@
 module Libraries.Data.VarSet
 
-import Data.Bits
-
 import Libraries.Data.NatSet
 
 import Core.Name
