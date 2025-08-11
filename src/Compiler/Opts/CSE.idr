@@ -42,6 +42,8 @@ import Data.Vect
 import Libraries.Data.SortedSet
 import Libraries.Data.SortedMap
 
+import Libraries.Data.Erased
+import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.Extra
 
 ||| Maping from a pairing of closed terms together with
@@ -120,59 +122,62 @@ store sz exp =
 --          Strengthening of Expressions
 --------------------------------------------------------------------------------
 
-dropVar :  (pre : Scope)
-        -> (n : Nat)
-        -> (0 p : IsVar x n (pre ++ ns))
-        -> Maybe (IsVar x n pre)
-dropVar [] _ _        = Nothing
-dropVar (y :: xs) 0 First = Just First
-dropVar (y :: xs) (S k) (Later p) =
-  case dropVar xs k p of
-    Just p' => Just $ Later p'
-    Nothing => Nothing
+dropVar : SizeOf inner
+        -> {n : Nat}
+        -> (0 p : IsVar x n (inner ++ outer))
+        -> Maybe (Erased (IsVar x n inner))
+dropVar inn p = case locateIsVar inn p of
+  Left p => Just p
+  Right p => Nothing
+
+
+-- Tries to 'strengthen' an expression by removing an `outer` context.
+-- This is typically invoked with `{inner = []}` which then grows when
+-- going under binders.
+0 Drop : Scoped -> Type
+Drop tm
+  = {0 inner, outer : Scope} ->
+    SizeOf inner ->
+    tm (inner ++ outer) ->
+    Maybe (tm inner)
+
 
 mutual
-  -- tries to 'strengthen' an expression by removing
-  -- a prefix of bound variables. typically, this is invoked
-  -- with `{pre = []}`.
-  dropEnv : {pre : Scope} -> CExp (pre ++ ns) -> Maybe (CExp pre)
-  dropEnv (CLocal {idx} fc p) = (\q => CLocal fc q) <$> dropVar pre idx p
-  dropEnv (CRef fc x) = Just (CRef fc x)
-  dropEnv (CLam fc x y) = CLam fc x <$> dropEnv y
-  dropEnv (CLet fc x inlineOK y z) =
-    CLet fc x inlineOK <$> dropEnv y <*> dropEnv z
-  dropEnv (CApp fc x xs) = CApp fc <$> dropEnv x <*> traverse dropEnv xs
-  dropEnv (CCon fc x y tag xs) = CCon fc x y tag <$> traverse dropEnv xs
-  dropEnv (COp fc x xs) = COp fc x <$> traverse dropEnv xs
-  dropEnv (CExtPrim fc p xs) = CExtPrim fc p <$> traverse dropEnv xs
-  dropEnv (CForce fc x y) = CForce fc x <$> dropEnv y
-  dropEnv (CDelay fc x y) = CDelay fc x <$> dropEnv y
-  dropEnv (CConCase fc sc xs x) =
-    CConCase fc            <$>
-    dropEnv sc             <*>
-    traverse dropConAlt xs <*>
-    traverse dropEnv x
+  dropCExp : Drop CExp
+  dropCExp inn (CLocal {idx} fc p) = (\ q => CLocal fc (runErased q)) <$> dropVar inn p
+  dropCExp inn (CRef fc x) = Just (CRef fc x)
+  dropCExp inn (CLam fc x y) = CLam fc x <$> dropCExp (suc inn) y
+  dropCExp inn (CLet fc x inlineOK y z) =
+    CLet fc x inlineOK <$> dropCExp inn y <*> dropCExp (suc inn) z
+  dropCExp inn (CApp fc x xs) = CApp fc <$> dropCExp inn x <*> traverse (dropCExp inn) xs
+  dropCExp inn (CCon fc x y tag xs) = CCon fc x y tag <$> traverse (dropCExp inn) xs
+  dropCExp inn (COp fc x xs) = COp fc x <$> traverse (dropCExp inn) xs
+  dropCExp inn (CExtPrim fc p xs) = CExtPrim fc p <$> traverse (dropCExp inn) xs
+  dropCExp inn (CForce fc x y) = CForce fc x <$> dropCExp inn y
+  dropCExp inn (CDelay fc x y) = CDelay fc x <$> dropCExp inn y
+  dropCExp inn (CConCase fc sc xs x) =
+    CConCase fc                  <$>
+    dropCExp inn sc              <*>
+    traverse (dropConAlt inn) xs <*>
+    traverse (dropCExp inn) x
 
-  dropEnv (CConstCase fc sc xs x) =
-    CConstCase fc            <$>
-    dropEnv sc               <*>
-    traverse dropConstAlt xs <*>
-    traverse dropEnv x
+  dropCExp inn (CConstCase fc sc xs x) =
+    CConstCase fc                  <$>
+    dropCExp inn sc                <*>
+    traverse (dropConstAlt inn) xs <*>
+    traverse (dropCExp inn) x
 
-  dropEnv (CPrimVal fc x) = Just $ CPrimVal fc x
-  dropEnv (CErased fc) = Just $ CErased fc
-  dropEnv (CCrash fc x) = Just $ CCrash fc x
+  dropCExp inn (CPrimVal fc x) = Just $ CPrimVal fc x
+  dropCExp inn (CErased fc) = Just $ CErased fc
+  dropCExp inn (CCrash fc x) = Just $ CCrash fc x
 
-  dropConAlt :  {pre : Scope}
-             -> CConAlt (pre ++ ns)
-             -> Maybe (CConAlt pre)
-  dropConAlt (MkConAlt x y tag args z) =
-    MkConAlt x y tag args . embed <$> dropEnv z
+  dropConAlt : Drop CConAlt
+  dropConAlt inn (MkConAlt x y tag args z) =
+    MkConAlt x y tag args . embed <$> dropCExp (mkSizeOf args) z
 
-  dropConstAlt :  {pre : Scope}
-               -> CConstAlt (pre ++ ns)
-               -> Maybe (CConstAlt pre)
-  dropConstAlt (MkConstAlt x y) = MkConstAlt x <$> dropEnv y
+  dropConstAlt : Drop CConstAlt
+  dropConstAlt inn (MkConstAlt x y) = MkConstAlt x <$> dropCExp inn y
+
 
 --------------------------------------------------------------------------------
 --          Analysis
@@ -206,7 +211,7 @@ mutual
 
   analyze exp = do
     (sze, exp') <- analyzeSubExp exp
-    case dropEnv {pre = Scope.empty} exp' of
+    case dropCExp zero exp' of
       Just e0 => do
         Just nm <- store sze e0
           | Nothing => pure (sze, exp')
