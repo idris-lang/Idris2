@@ -23,6 +23,7 @@ import TTImp.TTImp
 
 import Data.List
 import Libraries.Data.NameMap
+import Libraries.Data.SnocList.SizeOf
 
 %default covering
 
@@ -83,15 +84,16 @@ mkPatternHole {vars'} loc rig n topenv imode (Just expty_in)
               Nothing => mkPatternHole loc rig n topenv imode Nothing
               Just exp' =>
                   do tm <- implBindVar loc rig env n exp'
-                     pure (apply loc (thin tm sub) (mkArgs sub),
+                     pure (apply loc (thin tm sub) (mkArgs [<] sub),
                            expected,
                            thin exp' sub)
   where
-    -- TODO: generalise and get rid of (map weaken)
-    mkArgs : {vs : _} -> Thin newvars vs -> List (Term vs)
-    mkArgs Refl = []
-    mkArgs (Drop p) = Local loc Nothing 0 First :: map weaken (mkArgs p)
-    mkArgs _ = []
+    mkArgs : {0 vs : _} -> SizeOf seen -> Thin newvars vs -> List (Term (seen <>> vs))
+    mkArgs p Refl = []
+    mkArgs p (Drop th) =
+      let MkVar v := mkVarChiply p in
+      Local loc Nothing _ v :: mkArgs (p :< _) th
+    mkArgs p _ = []
 
     -- This is for the specific situation where we're pattern matching on
     -- function types, which is realistically the only time we'll legitimately

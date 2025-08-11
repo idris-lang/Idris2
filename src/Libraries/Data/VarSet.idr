@@ -63,15 +63,10 @@ export %inline
 dropFirst : VarSet (v :: vs) -> VarSet vs
 dropFirst = NatSet.popZ
 
--- Add a 'new' Zero (not in the set) and shift all the
--- other positions by +1 (useful when going under a binder)
-export %inline
-weaken : VarSet vs -> VarSet (v :: vs)
-weaken = NatSet.addZ
+export %hint
+varSetFreelyEmbeddable : FreelyEmbeddable VarSet
+varSetFreelyEmbeddable = MkFreelyEmbeddable id
 
-export %inline
-weakenNs : SizeOf inner -> VarSet vs -> VarSet (inner ++ vs)
-weakenNs inn vs = cast (cast {to = Integer} vs `shiftL` inn.size)
-
-export
-FreelyEmbeddable VarSet
+export %hint
+varSetWeaken : Weaken VarSet
+varSetWeaken = MkWeaken NatSet.addZ (\ inn, vs => cast (cast {to = Integer} vs `shiftL` inn.size))

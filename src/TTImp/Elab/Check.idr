@@ -202,7 +202,7 @@ weakenedEState {e}
                    { subEnv $= Drop
                    , boundNames $= map wknTms
                    , toBind $= map wknTms
-                   , linearUsed $= VarSet.weaken
+                   , linearUsed $= weaken {tm = VarSet}
                    , polyMetavars := [] -- no binders on LHS
                    } est
          pure eref

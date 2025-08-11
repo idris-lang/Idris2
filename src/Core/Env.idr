@@ -209,7 +209,7 @@ mutual
   findUsed env used (Bind fc x b tm)
       = assert_total $
           VarSet.dropFirst (findUsed (b :: env)
-                          (VarSet.weaken (findUsedInBinder env used b))
+                          (weaken {tm = VarSet} (findUsedInBinder env used b))
                           tm)
   findUsed env used (App fc fn arg)
       = findUsed env (findUsed env used fn) arg

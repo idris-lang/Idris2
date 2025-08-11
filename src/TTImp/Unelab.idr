@@ -103,7 +103,7 @@ mutual
       substVars xs (Meta fc n i args)
           = Meta fc n i (map (substVars xs) args)
       substVars xs (Bind fc y b scope)
-          = Bind fc y (map (substVars xs) b) (substVars (map (bimap VarSet.weaken weaken) xs) scope)
+          = Bind fc y (map (substVars xs) b) (substVars (map (bimap (weaken {tm = VarSet}) weaken) xs) scope)
       substVars xs (App fc fn arg)
           = App fc (substVars xs fn) (substVars xs arg)
       substVars xs (As fc s as pat)
