@@ -1,6 +1,8 @@
 . ../../../testutils.sh
 
+{
 check Issue1031.idr
 check Issue1031-2.idr
 check Issue1031-3.idr
 check Issue1031-4.idr
+} | clean_names

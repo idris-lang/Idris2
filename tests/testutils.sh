@@ -55,14 +55,32 @@ _awk_clean_name='
 #   Foo.Bar:NN:NN--NN:NN
 #   P:xyz:NNNNN
 {
+    idPat = "[_a-zA-Z][_a-zA-Z0-9]*"
+    numPat = "[0-9]+"
+    namePat = idPat "([.]" idPat ")*"
+
+    mainPat = "P:" idPat ":" numPat \
+          "|" "[{]" idPat ":" numPat \
+          "|" "ttc[\\\\/]" numPat \
+          "|" "[$]resolved" numPat \
+          "|" namePat ":" numPat ":" numPat "--" numPat ":" numPat \
+          "|" namePat "[.]" numPat ":" numPat
+
+    prefixPat = "P:" idPat ":" \
+            "|" "[{]" idPat ":" \
+            "|" "ttc[\\\\/]" \
+            "|" "[$]resolved" \
+            "|" namePat ":" \
+            "|" namePat "[.]"
+
     out = ""
     # the last one is FC
-    while (match($0, /(P:[A-z]+:|\{[A-z]+:|ttc[\\\/]|[$]resolved)[0-9]+|[A-z.]+:[0-9]+:[0-9]+--[0-9]+:[0-9]+|[A-z]+[.][0-9]+:[0-9]+/)) {
+    while (match($0, mainPat)) {
         rs = RSTART
         rl = RLENGTH
         m = substr($0, rs, rl)
         pfx = "XXX"
-        if (match(m, /^(P:[A-z]+:|\{[A-z]+:|ttc[\\\/]|[$]resolved|[A-z.]+:|[A-z]+[.])/)) { pfx = substr(m, RSTART, RLENGTH) }
+        if (match(m, prefixPat)) { pfx = substr(m, RSTART, RLENGTH) }
         if (!(m in mapping)) {
             # scope the count to the prefix so we can add more without breaking tests
             if (!count[pfx]) { count[pfx] = 1 }
