@@ -1,11 +1,11 @@
 1/1: Building Implicit (Implicit.idr)
 Error: Expected '}'.
 
-Implicit:6:15--6:17
- 2 | 
- 3 | myReverse : Vect n el -> Vect n el
- 4 | myReverse [] = []
- 5 | myReverse {n = S k} (x :: xs) =
- 6 |     replace {p=\n => Vect n el} (plusCommutative k 1) (myReverse xs ++ [x])
-                   ^^
+Implicit:9:17--9:19
+ 5 | 
+ 6 | myReverse : Vect n el -> Vect n el
+ 7 | myReverse [] = []
+ 8 | myReverse {n = S k} (x :: xs) =
+ 9 |     myReplace {p=\n => Vect n el} (plusCommutative k 1) (myReverse xs ++ [x])
+                     ^^
 
