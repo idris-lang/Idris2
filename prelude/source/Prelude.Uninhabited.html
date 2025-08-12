@@ -133,34 +133,31 @@
 <div id="line12"><a href="#line12" class="IdrisLineNumber"> 12 | </a><span class="IdrisComment">&nbsp;&nbsp;|||&nbsp;@&nbsp;t&nbsp;the&nbsp;uninhabited&nbsp;type</span></div>
 <div id="line13"><a href="#line13" class="IdrisLineNumber"> 13 | </a>&nbsp;&nbsp;<span class="IdrisFunction">uninhabited</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisBound">t</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisType">Void</span></div>
 <div id="line14"><a href="#line14" class="IdrisLineNumber"> 14 | </a></div>
-<div id="line15"><a href="#line15" class="IdrisLineNumber"> 15 | </a><span class="IdrisKeyword">%extern</span></div>
-<div id="line16"><a href="#line16" class="IdrisLineNumber"> 16 | </a><span class="IdrisFunction">prim__void</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">(0</span>&nbsp;<span class="IdrisBound">x</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Void</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">a</span></div>
-<div id="line17"><a href="#line17" class="IdrisLineNumber"> 17 | </a></div>
-<div id="line18"><a href="#line18" class="IdrisLineNumber"> 18 | </a><span class="IdrisComment">|||&nbsp;The&nbsp;eliminator&nbsp;for&nbsp;the&nbsp;`Void`&nbsp;type.</span></div>
-<div id="line19"><a href="#line19" class="IdrisLineNumber"> 19 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
-<div id="line20"><a href="#line20" class="IdrisLineNumber"> 20 | </a><span class="IdrisFunction">void</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">(0</span>&nbsp;<span class="IdrisBound">x</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Void</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">a</span></div>
-<div id="line21"><a href="#line21" class="IdrisLineNumber"> 21 | </a><span class="IdrisFunction">void</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">prim__void</span></div>
-<div id="line22"><a href="#line22" class="IdrisLineNumber"> 22 | </a></div>
-<div id="line23"><a href="#line23" class="IdrisLineNumber"> 23 | </a><span class="IdrisKeyword">export</span></div>
-<div id="line24"><a href="#line24" class="IdrisLineNumber"> 24 | </a><span class="IdrisType">Uninhabited</span>&nbsp;<span class="IdrisType">Void</span>&nbsp;<span class="IdrisKeyword">where</span></div>
-<div id="line25"><a href="#line25" class="IdrisLineNumber"> 25 | </a>&nbsp;&nbsp;<span class="IdrisFunction">uninhabited</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">id</span></div>
-<div id="line26"><a href="#line26" class="IdrisLineNumber"> 26 | </a></div>
-<div id="line27"><a href="#line27" class="IdrisLineNumber"> 27 | </a><span class="IdrisComment">|||&nbsp;Use&nbsp;an&nbsp;absurd&nbsp;assumption&nbsp;to&nbsp;discharge&nbsp;a&nbsp;proof&nbsp;obligation.</span></div>
-<div id="line28"><a href="#line28" class="IdrisLineNumber"> 28 | </a><span class="IdrisComment">|||&nbsp;@&nbsp;t&nbsp;some&nbsp;empty&nbsp;type</span></div>
-<div id="line29"><a href="#line29" class="IdrisLineNumber"> 29 | </a><span class="IdrisComment">|||&nbsp;@&nbsp;a&nbsp;the&nbsp;goal&nbsp;type</span></div>
-<div id="line30"><a href="#line30" class="IdrisLineNumber"> 30 | </a><span class="IdrisComment">|||&nbsp;@&nbsp;h&nbsp;the&nbsp;contradictory&nbsp;hypothesis</span></div>
-<div id="line31"><a href="#line31" class="IdrisLineNumber"> 31 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
-<div id="line32"><a href="#line32" class="IdrisLineNumber"> 32 | </a><span class="IdrisFunction">absurd</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Uninhabited</span>&nbsp;<span class="IdrisBound">t</span>&nbsp;<span class="IdrisKeyword">=&gt;</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">h</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisBound">t</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">a</span></div>
-<div id="line33"><a href="#line33" class="IdrisLineNumber"> 33 | </a><span class="IdrisFunction">absurd</span>&nbsp;<span class="IdrisBound">h</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">void</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">uninhabited</span>&nbsp;<span class="IdrisBound">h</span><span class="IdrisKeyword">)</span></div>
-<div id="line34"><a href="#line34" class="IdrisLineNumber"> 34 | </a></div>
-<div id="line35"><a href="#line35" class="IdrisLineNumber"> 35 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
-<div id="line36"><a href="#line36" class="IdrisLineNumber"> 36 | </a><span class="IdrisType">Uninhabited</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisData">True</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">False</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">where</span></div>
-<div id="line37"><a href="#line37" class="IdrisLineNumber"> 37 | </a>&nbsp;&nbsp;<span class="IdrisFunction">uninhabited</span>&nbsp;Refl&nbsp;<span class="IdrisKeyword">impossible</span></div>
-<div id="line38"><a href="#line38" class="IdrisLineNumber"> 38 | </a></div>
-<div id="line39"><a href="#line39" class="IdrisLineNumber"> 39 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
-<div id="line40"><a href="#line40" class="IdrisLineNumber"> 40 | </a><span class="IdrisType">Uninhabited</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisData">False</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">True</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">where</span></div>
-<div id="line41"><a href="#line41" class="IdrisLineNumber"> 41 | </a>&nbsp;&nbsp;<span class="IdrisFunction">uninhabited</span>&nbsp;Refl&nbsp;<span class="IdrisKeyword">impossible</span></div>
-<div id="line42"><a href="#line42" class="IdrisLineNumber"> 42 | </a></div>
+<div id="line15"><a href="#line15" class="IdrisLineNumber"> 15 | </a><span class="IdrisComment">|||&nbsp;The&nbsp;eliminator&nbsp;for&nbsp;the&nbsp;`Void`&nbsp;type.</span></div>
+<div id="line16"><a href="#line16" class="IdrisLineNumber"> 16 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line17"><a href="#line17" class="IdrisLineNumber"> 17 | </a><span class="IdrisFunction">void</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisKeyword">(0</span>&nbsp;<span class="IdrisBound">x</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Void</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">a</span></div>
+<div id="line18"><a href="#line18" class="IdrisLineNumber"> 18 | </a><span class="IdrisFunction">void</span>&nbsp;<span class="IdrisKeyword">_</span>&nbsp;<span class="IdrisKeyword">impossible</span></div>
+<div id="line19"><a href="#line19" class="IdrisLineNumber"> 19 | </a></div>
+<div id="line20"><a href="#line20" class="IdrisLineNumber"> 20 | </a><span class="IdrisKeyword">export</span></div>
+<div id="line21"><a href="#line21" class="IdrisLineNumber"> 21 | </a><span class="IdrisType">Uninhabited</span>&nbsp;<span class="IdrisType">Void</span>&nbsp;<span class="IdrisKeyword">where</span></div>
+<div id="line22"><a href="#line22" class="IdrisLineNumber"> 22 | </a>&nbsp;&nbsp;<span class="IdrisFunction">uninhabited</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">id</span></div>
+<div id="line23"><a href="#line23" class="IdrisLineNumber"> 23 | </a></div>
+<div id="line24"><a href="#line24" class="IdrisLineNumber"> 24 | </a><span class="IdrisComment">|||&nbsp;Use&nbsp;an&nbsp;absurd&nbsp;assumption&nbsp;to&nbsp;discharge&nbsp;a&nbsp;proof&nbsp;obligation.</span></div>
+<div id="line25"><a href="#line25" class="IdrisLineNumber"> 25 | </a><span class="IdrisComment">|||&nbsp;@&nbsp;t&nbsp;some&nbsp;empty&nbsp;type</span></div>
+<div id="line26"><a href="#line26" class="IdrisLineNumber"> 26 | </a><span class="IdrisComment">|||&nbsp;@&nbsp;a&nbsp;the&nbsp;goal&nbsp;type</span></div>
+<div id="line27"><a href="#line27" class="IdrisLineNumber"> 27 | </a><span class="IdrisComment">|||&nbsp;@&nbsp;h&nbsp;the&nbsp;contradictory&nbsp;hypothesis</span></div>
+<div id="line28"><a href="#line28" class="IdrisLineNumber"> 28 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line29"><a href="#line29" class="IdrisLineNumber"> 29 | </a><span class="IdrisFunction">absurd</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisType">Uninhabited</span>&nbsp;<span class="IdrisBound">t</span>&nbsp;<span class="IdrisKeyword">=&gt;</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisBound">h</span>&nbsp;<span class="IdrisKeyword">:</span>&nbsp;<span class="IdrisBound">t</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">-&gt;</span>&nbsp;<span class="IdrisBound">a</span></div>
+<div id="line30"><a href="#line30" class="IdrisLineNumber"> 30 | </a><span class="IdrisFunction">absurd</span>&nbsp;<span class="IdrisBound">h</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisFunction">void</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisFunction">uninhabited</span>&nbsp;<span class="IdrisBound">h</span><span class="IdrisKeyword">)</span></div>
+<div id="line31"><a href="#line31" class="IdrisLineNumber"> 31 | </a></div>
+<div id="line32"><a href="#line32" class="IdrisLineNumber"> 32 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line33"><a href="#line33" class="IdrisLineNumber"> 33 | </a><span class="IdrisType">Uninhabited</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisData">True</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">False</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">where</span></div>
+<div id="line34"><a href="#line34" class="IdrisLineNumber"> 34 | </a>&nbsp;&nbsp;<span class="IdrisFunction">uninhabited</span>&nbsp;Refl&nbsp;<span class="IdrisKeyword">impossible</span></div>
+<div id="line35"><a href="#line35" class="IdrisLineNumber"> 35 | </a></div>
+<div id="line36"><a href="#line36" class="IdrisLineNumber"> 36 | </a><span class="IdrisKeyword">public</span>&nbsp;<span class="IdrisKeyword">export</span></div>
+<div id="line37"><a href="#line37" class="IdrisLineNumber"> 37 | </a><span class="IdrisType">Uninhabited</span>&nbsp;<span class="IdrisKeyword">(</span><span class="IdrisData">False</span>&nbsp;<span class="IdrisKeyword">=</span>&nbsp;<span class="IdrisData">True</span><span class="IdrisKeyword">)</span>&nbsp;<span class="IdrisKeyword">where</span></div>
+<div id="line38"><a href="#line38" class="IdrisLineNumber"> 38 | </a>&nbsp;&nbsp;<span class="IdrisFunction">uninhabited</span>&nbsp;Refl&nbsp;<span class="IdrisKeyword">impossible</span></div>
+<div id="line39"><a href="#line39" class="IdrisLineNumber"> 39 | </a></div>
 </code>
 </body>
 </html>
