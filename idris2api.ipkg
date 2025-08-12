@@ -212,6 +212,7 @@ modules =
     Libraries.Data.Tap,
     Libraries.Data.UserNameMap,
     Libraries.Data.VarSet,
+    Libraries.Data.VarSet.Core,
     Libraries.Data.Version,
     Libraries.Data.WithDefault,
     Libraries.Data.WithData,

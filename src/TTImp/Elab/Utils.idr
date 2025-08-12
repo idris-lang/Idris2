@@ -15,6 +15,9 @@ import Data.List.Quantifiers
 import Data.SnocList
 
 import Libraries.Data.NatSet
+import Libraries.Data.VarSet
+
+import Libraries.Data.List.SizeOf
 import Libraries.Data.List.Quantifiers.Extra as Lib
 
 %default covering
@@ -131,45 +134,52 @@ data ArgUsed = Used1 -- been used
              | Used0 -- not used
              | LocalVar -- don't care if it's used
 
-Usage : Scoped
-Usage = All (\_ => ArgUsed)
+record Usage (vs : Scope) where
+  constructor MkUsage
+  isUsedSet : VarSet vs -- whether it's been used
+  isLocalSet : VarSet vs -- don't care if it's used
 
-initUsed : (xs : Scope) -> Usage xs
-initUsed = Lib.tabulate (\_ => Used0)
+initUsed : Usage vs
+initUsed = MkUsage
+  { isUsedSet = VarSet.empty
+  , isLocalSet = VarSet.empty
+  }
 
-initUsedCase : (xs : Scope) -> Usage xs
-initUsedCase [] = []
-initUsedCase [x] = [Used0]
-initUsedCase (x :: xs) = LocalVar :: initUsedCase xs
+initUsedCase : SizeOf vs -> Usage vs
+initUsedCase p = MkUsage
+  { isUsedSet = VarSet.empty
+  , isLocalSet = maybe id VarSet.delete (last p) (VarSet.full p)
+  }
 
-setUsedVar : {idx : _} ->
-             (0 _ : IsVar n idx xs) -> Usage xs -> Usage xs
-setUsedVar First (Used0 :: us) = Used1 :: us
-setUsedVar (Later p) (x :: us) = x :: setUsedVar p us
-setUsedVar First us = us
+setUsedVar : Var vs -> Usage vs -> Usage vs
+setUsedVar v us@(MkUsage isUsedSet isLocalSet)
+  = -- if we don't care then we don't change anything
+    if v `VarSet.elem` isLocalSet then us
+    -- otherwise we record the variable usage
+    else MkUsage { isUsedSet = VarSet.insert v isUsedSet
+                 , isLocalSet }
 
-isUsed : {idx : _} ->
-         (0 _ : IsVar n idx xs) -> Usage xs -> Bool
-isUsed First (Used1 :: us) = True
-isUsed First (_ :: us) = False
-isUsed (Later p) (_ :: us) = isUsed p us
+isUsed : Var vs -> Usage vs -> Bool
+isUsed v us = v `VarSet.elem` isUsedSet us
 
 data Used : Type where
 
-setUsed : {idx : _} ->
-          {auto u : Ref Used (Usage vars)} ->
-          (0 _ : IsVar n idx vars) -> Core ()
+setUsed : {auto u : Ref Used (Usage vars)} ->
+          Var vars -> Core ()
 setUsed p = update Used $ setUsedVar p
 
-extendUsed : ArgUsed -> (new : List Name) -> Usage vars -> Usage (new ++ vars)
-extendUsed a [] x = x
-extendUsed a (y :: xs) x = a :: extendUsed a xs x
+extendUsed : ArgUsed -> SizeOf inner -> Usage vars -> Usage (inner ++ vars)
+extendUsed LocalVar p (MkUsage iu il)
+  = MkUsage (weakenNs {tm = VarSet} p iu) (append p (full p) il)
+extendUsed Used0 p (MkUsage iu il)
+  = MkUsage (weakenNs {tm = VarSet} p iu) (weakenNs {tm = VarSet} p il)
+extendUsed Used1 p (MkUsage iu il)
+  = MkUsage (append p (full p) iu) (weakenNs {tm = VarSet} p il)
 
-dropUsed : (new : List Name) -> Usage (new ++ vars) -> Usage vars
-dropUsed [] x = x
-dropUsed (x :: xs) (u :: us) = dropUsed xs us
+dropUsed : SizeOf inner -> Usage (inner ++ vars) -> Usage vars
+dropUsed p (MkUsage iu il) = MkUsage (VarSet.dropInner p iu) (dropInner p il)
 
-inExtended : ArgUsed -> (new : List Name) ->
+inExtended : ArgUsed -> SizeOf new ->
              {auto u : Ref Used (Usage vars)} ->
              (Ref Used (Usage (new ++ vars)) -> Core a) ->
              Core a
@@ -180,28 +190,26 @@ inExtended a new sc
          put Used (dropUsed new !(get Used @{u'}))
          pure res
 
-termInlineSafe : {vars : _} ->
-                 {auto u : Ref Used (Usage vars)} ->
-                 Term vars -> Core Bool
+0 InlineSafe : Scoped -> Type
+InlineSafe tm
+  = {0 vars : Scope} -> {auto u : Ref Used (Usage vars)} ->
+    tm vars -> Core Bool
+
+termsInlineSafe : InlineSafe (List . Term)
+
+termInlineSafe : InlineSafe Term
 termInlineSafe (Local fc isLet idx p)
-   = if isUsed p !(get Used)
+   = let v := MkVar p in
+     if isUsed v !(get Used)
         then pure False
-         else do setUsed p
+         else do setUsed v
                  pure True
 termInlineSafe (Meta fc x y xs)
-    = allInlineSafe xs
-  where
-    allInlineSafe : List (Term vars) -> Core Bool
-    allInlineSafe [] = pure True
-    allInlineSafe (x :: xs)
-        = do xok <- termInlineSafe x
-             if xok
-                then allInlineSafe xs
-                else pure False
+    = termsInlineSafe xs
 termInlineSafe (Bind fc x b scope)
    = do bok <- binderInlineSafe b
         if bok
-           then inExtended LocalVar [x] (\u' => termInlineSafe scope)
+           then inExtended LocalVar (suc zero) (\u' => termInlineSafe scope)
            else pure False
   where
     binderInlineSafe : Binder (Term vars) -> Core Bool
@@ -218,38 +226,43 @@ termInlineSafe (TDelay fc x ty arg) = termInlineSafe arg
 termInlineSafe (TForce fc x val) = termInlineSafe val
 termInlineSafe _ = pure True
 
+termsInlineSafe [] = pure True
+termsInlineSafe (x :: xs)
+    = do xok <- termInlineSafe x
+         if xok
+            then termsInlineSafe xs
+            else pure False
+
 mutual
-  caseInlineSafe : {vars : _} ->
-                   {auto u : Ref Used (Usage vars)} ->
-                   CaseTree vars -> Core Bool
+  caseInlineSafe : InlineSafe CaseTree
   caseInlineSafe (Case idx p scTy xs)
-      = if isUsed p !(get Used)
+      = let v := MkVar p in
+        if isUsed v !(get Used)
            then pure False
-           else do setUsed p
-                   altsSafe xs
-    where
-      altsSafe : List (CaseAlt vars) -> Core Bool
-      altsSafe [] = pure True
-      altsSafe (a :: as)
-          = do u <- get Used
-               aok <- caseAltInlineSafe a
-               if aok
-                  then do -- We can reset the usage information, because we're
-                          -- only going to use one alternative at a time
-                          put Used u
-                          altsSafe as
-                  else pure False
+           else do setUsed v
+                   caseAltsInlineSafe xs
   caseInlineSafe (STerm x tm) = termInlineSafe tm
   caseInlineSafe (Unmatched msg) = pure True
   caseInlineSafe Impossible = pure True
 
-  caseAltInlineSafe : {vars : _} ->
-                      {auto u : Ref Used (Usage vars)} ->
-                      CaseAlt vars -> Core Bool
+  caseAltsInlineSafe : InlineSafe (List . CaseAlt)
+  caseAltsInlineSafe [] = pure True
+  caseAltsInlineSafe (a :: as)
+      = do u <- get Used
+           True <- caseAltInlineSafe a
+             | False => pure False
+           -- We can reset the usage information, because we're
+           -- only going to use one alternative at a time
+           put Used u
+           caseAltsInlineSafe as
+
+  caseAltInlineSafe : InlineSafe CaseAlt
   caseAltInlineSafe (ConCase x tag args sc)
-      = inExtended Used0 args (\u' => caseInlineSafe sc)
+      -- should these be local vars?
+      = inExtended Used0 (mkSizeOf args) (\u' => caseInlineSafe sc)
   caseAltInlineSafe (DelayCase ty arg sc)
-      = inExtended Used0 [ty, arg] (\u' => caseInlineSafe sc)
+      -- should these be local vars?
+      = inExtended Used0 (mkSizeOf [ty, arg]) (\u' => caseInlineSafe sc)
   caseAltInlineSafe (ConstCase x sc) = caseInlineSafe sc
   caseAltInlineSafe (DefaultCase sc) = caseInlineSafe sc
 
@@ -257,10 +270,9 @@ mutual
 -- which means that there's no risk of an input being evaluated more than
 -- once after the definition is expanded.
 export
-inlineSafe : {vars : _} ->
-             CaseTree vars -> Core Bool
+inlineSafe : CaseTree vars -> Core Bool
 inlineSafe t
-    = do u <- newRef Used (initUsed vars)
+    = do u <- newRef Used initUsed
          caseInlineSafe t
 
 export
@@ -282,5 +294,5 @@ canInlineCaseBlock n
     = do defs <- get Ctxt
          Just (PMDef _ vars _ rtree _) <- lookupDefExact n (gamma defs)
              | _ => pure False
-         u <- newRef Used (initUsedCase vars)
+         u <- newRef Used (initUsedCase (mkSizeOf vars))
          caseInlineSafe rtree

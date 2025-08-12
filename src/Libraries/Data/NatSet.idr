@@ -64,6 +64,10 @@ insert : Nat -> NatSet -> NatSet
 insert = flip setBit
 
 export
+delete : Nat -> NatSet -> NatSet
+delete = flip clearBit
+
+export
 toList : NatSet -> List Nat
 toList = go 0
   where
@@ -135,6 +139,10 @@ overwrite c ds xs = go 0 xs
 export %inline
 popZ : NatSet -> NatSet
 popZ = (`shiftR` 1)
+
+export %inline
+popNs : Nat -> NatSet -> NatSet
+popNs = flip shiftR
 
 -- Add a 'new' Zero (not in the set) and shift all the
 -- other positions by +1 (useful when going under a binder)
