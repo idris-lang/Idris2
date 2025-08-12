@@ -34,7 +34,7 @@ Finally, `pack` also makes it easy to download, and keep updated version of, [id
 ### Books
   - [_Type-Driven Development with Idris_](https://www.manning.com/books/type-driven-development-with-idris), Edwin brady. This was written for Idris1. If you are using Idris2, you should make [these changes](https://idris2.readthedocs.io/en/latest/typedd/typedd.html)
 ### Tutorials
-  - [_Functional Programming in Idris 2_](https://github.com/stefan-hoeck/idris2-tutorial)
+  - [_Functional Programming in Idris 2_](https://github.com/idris-community/idris2-tutorial)
   - [_A Tutorial on Elaborator Reflection in Idris 2_](https://github.com/stefan-hoeck/idris2-elab-util/blob/main/src/Doc/Index.md), accompanied by [library utilities](https://github.com/stefan-hoeck/idris2-elab-util)
   - [_An attempt at explaining Decidable Equality_](https://teh6.eu/en/post/intro-to-decidable-equality/)
 ### Official talks
