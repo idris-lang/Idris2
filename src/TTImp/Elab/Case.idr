@@ -27,6 +27,7 @@ import Data.Maybe
 import Data.String
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
+import Libraries.Data.VarSet
 import Libraries.Data.WithDefault
 
 %default covering
@@ -54,12 +55,6 @@ changeVar old new (TForce fc r p)
     = TForce fc r (changeVar old new p)
 changeVar old new tm = tm
 
-findLater : (x : Name) -> (newer : Scope) -> Var (newer ++ x :: older)
-findLater x [] = MkVar First
-findLater {older} x (_ :: xs)
-    = let MkVar p = findLater {older} x xs in
-          MkVar (Later p)
-
 toRig1 : {idx : Nat} -> (0 p : IsVar nm idx vs) -> Env Term vs -> Env Term vs
 toRig1 First (b :: bs)
     = if isErased (multiplicity b)
@@ -67,25 +62,25 @@ toRig1 First (b :: bs)
          else b :: bs
 toRig1 (Later p) (b :: bs) = b :: toRig1 p bs
 
-toRig0 : {idx : Nat} -> (0 p : IsVar nm idx vs) -> Env Term vs -> Env Term vs
-toRig0 First (b :: bs) = setMultiplicity b erased :: bs
-toRig0 (Later p) (b :: bs) = b :: toRig0 p bs
-
--- When we abstract over the evironment, pi needs to be explicit
-explicitPi : Env Term vs -> Env Term vs
-explicitPi (Pi fc c _ ty :: env) = Pi fc c Explicit ty :: explicitPi env
-explicitPi (b :: env) = b :: explicitPi env
-explicitPi [] = []
-
 allow : Maybe (Var vs) -> Env Term vs -> Env Term vs
 allow Nothing env = env
 allow (Just (MkVar p)) env = toRig1 p env
 
 -- If the name is used elsewhere, update its multiplicity so it's
 -- not required to be used in the case block
-updateMults : List (Var vs) -> Env Term vs -> Env Term vs
-updateMults [] env = env
-updateMults (MkVar p :: us) env = updateMults us (toRig0 p env)
+updateMults : VarSet vs -> Env Term vs -> Env Term vs
+updateMults vars env
+  = -- shortcircuiting the call if the set of vars to erase is now empty
+    if VarSet.isEmpty vars then env else go vars env
+  where
+
+  go : {0 vs : Scope} -> VarSet vs -> Env Term vs -> Env Term vs
+  go vars [] = []
+  go vars (b :: env)
+    = (if first `VarSet.elem` vars
+        then setMultiplicity b erased
+        else b)
+    :: updateMults (VarSet.dropFirst vars) env
 
 findImpsIn : {vars : _} ->
              FC -> Env Term vars -> List (Name, Term vars) -> Term vars ->
@@ -102,30 +97,23 @@ findImpsIn fc env ns ty
     = when (not (isNil ns)) $
            throw (TryWithImplicits fc env (reverse ns))
 
--- TODO should these be sets?
-merge : {vs : Scope} ->
-        List (Var vs) -> List (Var vs) -> List (Var vs)
-merge [] xs = xs
-merge (v :: vs) xs
-    = merge vs (v :: filter (v /=) xs)
-
 -- Extend the list of variables we need in the environment so far, removing
 -- duplicates
 extendNeeded : {vs : _} ->
                Binder (Term vs) ->
-               Env Term vs -> List (Var vs) -> List (Var vs)
+               Env Term vs -> VarSet vs -> VarSet vs
 extendNeeded (Let _ _ ty val) env needed
-    = merge (findUsedLocs env ty) (merge (findUsedLocs env val) needed)
+    = VarSet.union (findUsedLocs env ty) (VarSet.union (findUsedLocs env val) needed)
 extendNeeded (PLet _ _ ty val) env needed
-    = merge (findUsedLocs env ty) (merge (findUsedLocs env val) needed)
+    = VarSet.union (findUsedLocs env ty) (VarSet.union (findUsedLocs env val) needed)
 extendNeeded b env needed
-    = merge (findUsedLocs env (binderType b)) needed
+    = VarSet.union (findUsedLocs env (binderType b)) needed
 
 findScrutinee : {vs : _} ->
                 Env Term vs -> RawImp -> Maybe (Var vs)
 findScrutinee {vs = n' :: _} (b :: bs) (IVar loc' n)
     = if n' == n && not (isLet b)
-         then Just (MkVar First)
+         then Just first
          else do MkVar p <- findScrutinee bs (IVar loc' n)
                  Just (MkVar (Later p))
 findScrutinee _ _ = Nothing
@@ -213,7 +201,7 @@ caseBlock {vars} rigc elabinfo fc nest env opts scr scrtm scrty caseRig alts exp
          (caseretty, _) <- bindImplicits fc (implicitMode elabinfo) defs env
                                          fullImps caseretty_in (TType fc u)
          let casefnty
-               = abstractFullEnvType fc (allow splitOn (explicitPi env))
+               = abstractFullEnvType fc (allow splitOn (mkExplicit env))
                             (maybe (Bind fc scrn (Pi fc caseRig Explicit scrty)
                                        (weaken caseretty))
                                    (const caseretty) splitOn)

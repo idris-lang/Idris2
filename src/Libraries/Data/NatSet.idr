@@ -51,17 +51,21 @@ size = go 0
       let acc = acc + popCount (the Int64 (cast n)) in
       go acc (assert_smaller n (shiftR n 64))
 
-export
+export %inline
 Cast NatSet Integer where
   cast ns = ns
 
-export
+export %inline
 Cast Integer NatSet where
   cast n = n
 
 export
 insert : Nat -> NatSet -> NatSet
 insert = flip setBit
+
+export
+delete : Nat -> NatSet -> NatSet
+delete = flip clearBit
 
 export
 toList : NatSet -> List Nat
@@ -95,6 +99,10 @@ partition ps = go 0
 export
 intersection : NatSet -> NatSet -> NatSet
 intersection = (.&.)
+
+export
+union : NatSet -> NatSet -> NatSet
+union = (.|.)
 
 export
 intersectAll : List NatSet -> NatSet
@@ -131,6 +139,10 @@ overwrite c ds xs = go 0 xs
 export %inline
 popZ : NatSet -> NatSet
 popZ = (`shiftR` 1)
+
+export %inline
+popNs : Nat -> NatSet -> NatSet
+popNs = flip shiftR
 
 -- Add a 'new' Zero (not in the set) and shift all the
 -- other positions by +1 (useful when going under a binder)

@@ -22,6 +22,7 @@ import Data.SnocList
 import Data.Maybe
 
 import Libraries.Data.NatSet
+import Libraries.Data.VarSet
 import Libraries.Data.WithDefault
 
 %default covering
@@ -61,7 +62,7 @@ getNameType elabMode rigc env fc x
                  log "metadata.names" 7 $ "getNameType is adding ↓"
                  addNameType fc x env bty
 
-                 when (isLinear rigb) $ update EST { linearUsed $= ((MkVar lv) :: ) }
+                 when (isLinear rigb) $ update EST { linearUsed $= VarSet.insert (MkVar lv) }
                  log "ide-mode.highlight" 8
                      $ "getNameType is trying to add Bound: "
                       ++ show x ++ " (" ++ show fc ++ ")"

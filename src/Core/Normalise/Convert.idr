@@ -157,7 +157,7 @@ mutual
                         | Nothing => pure Nothing
                    -- drop the prefix from cargs/cargs' since they won't
                    -- be in the caller
-                   pure (Just (mapMaybe (dropP cargs cargs') ms))
+                   pure (Just (mapMaybe (dropP (mkSizeOf cargs) (mkSizeOf cargs')) ms))
            else pure Nothing
     where
       weakenP : {0 c, c' : _} -> {0 args, args' : Scope} ->
@@ -171,20 +171,13 @@ mutual
       extend [] [] ms = pure ms
       extend (c :: cs) (c' :: cs') ms
           = do rest <- extend cs cs' ms
-               pure ((MkVar First, MkVar First) :: map weakenP rest)
+               pure ((first, first) :: map weakenP rest)
       extend _ _ _ = Nothing
 
-      dropV : forall args .
-              (cs : List Name) -> Var (cs ++ args) -> Maybe (Var args)
-      dropV [] v = Just v
-      dropV (c :: cs) (MkVar First) = Nothing
-      dropV (c :: cs) (MkVar (Later x))
-          = dropV cs (MkVar x)
-
-      dropP : (cs : List Name) -> (cs' : List Name) ->
+      dropP : SizeOf cs -> SizeOf cs' ->
               (Var (cs ++ args), Var (cs' ++ args')) ->
               Maybe (Var args, Var args')
-      dropP cs cs' (x, y) = pure (!(dropV cs x), !(dropV cs' y))
+      dropP cs cs' (x, y) = pure (!(strengthenNs cs x), !(strengthenNs cs' y))
 
   getMatchingVarAlt defs ms (ConstCase c t) (ConstCase c' t')
       = if c == c'

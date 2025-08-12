@@ -66,7 +66,7 @@ etaExpand i Z exp args = mkApp exp (map (mkLocal (getFC exp)) (reverse args))
 etaExpand i (S k) exp args
     = CLam (getFC exp) (MN "eta" i)
              (etaExpand (i + 1) k (weaken exp)
-                  (MkVar First :: map weakenVar args))
+                  (first :: map weakenVar args))
 
 export
 expandToArity : {vars : _} ->
@@ -389,7 +389,7 @@ mkArgList i (S k)
 -- TODO has quadratic runtime
 getVars : ArgList k ns -> Vect k (Var ns)
 getVars Z = []
-getVars (S rest) = MkVar First :: map weakenVar (getVars rest)
+getVars (S rest) = first :: map weakenVar (getVars rest)
 
 data NArgs : Type where
      User : Name -> List ClosedClosure -> NArgs

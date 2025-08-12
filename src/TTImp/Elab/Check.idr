@@ -30,6 +30,8 @@ import Libraries.Data.WithDefault
 import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.SizeOf
 
+import Libraries.Data.VarSet
+
 %default covering
 
 public export
@@ -151,7 +153,7 @@ record EState (vars : Scope) where
                   -- of elaboration. If they aren't, it means we're trying to
                   -- pattern match on a type that we don't have available.
   delayDepth : Nat -- if it gets too deep, it gets slow, so fail quicker
-  linearUsed : List (Var vars)
+  linearUsed : VarSet vars
   saveHoles : NameMap () -- things we'll need to save to TTC, even if solved
 
   unambiguousNames : UserNameMap (Name, Int, GlobalDef)
@@ -176,7 +178,7 @@ initEStateSub n env sub = MkEState
     , allPatVars = []
     , polyMetavars = []
     , delayDepth = Z
-    , linearUsed = []
+    , linearUsed = VarSet.empty
     , saveHoles = empty
     , unambiguousNames = empty
     }
@@ -200,7 +202,7 @@ weakenedEState {e}
                    { subEnv $= Drop
                    , boundNames $= map wknTms
                    , toBind $= map wknTms
-                   , linearUsed $= map weaken
+                   , linearUsed $= weaken {tm = VarSet}
                    , polyMetavars := [] -- no binders on LHS
                    } est
          pure eref
@@ -226,7 +228,7 @@ strengthenedEState {n} {vars} c e fc env
          pure $ { subEnv := svs
                 , boundNames := bns
                 , toBind := todo
-                , linearUsed $= mapMaybe dropTop
+                , linearUsed $= VarSet.dropFirst
                 , polyMetavars := [] -- no binders on LHS
                 } est
 
@@ -284,10 +286,6 @@ strengthenedEState {n} {vars} c e fc env
                (Just p', Just x', Just y', Just z') =>
                     pure (f, AsBinding c p' x' y' z')
                _ => throw (BadUnboundImplicit fc env f y)
-
-    dropTop : (Var (n :: vs)) -> Maybe (Var vs)
-    dropTop (MkVar First) = Nothing
-    dropTop (MkVar (Later p)) = Just (MkVar p)
 
 export
 inScope : {n, vars : _} ->
