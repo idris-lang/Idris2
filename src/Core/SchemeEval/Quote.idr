@@ -83,7 +83,7 @@ mutual
       findName None = Nothing
       findName (Add x n' ns)
           = if n == n'
-               then Just (MkVar First)
+               then Just first
                else do MkVar p <-findName ns
                        Just (MkVar (Later p))
   quoteHead q fc bounds env (SMeta n i args)

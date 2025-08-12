@@ -520,7 +520,7 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
         = later <$> updateIVar rest new
     updateIVar (ICons (Just old) rest) new
         = if new == old
-             then Just (MkVar First)
+             then Just first
              else later <$> updateIVar rest new
     updateIVar _ _ = Nothing
 
@@ -534,7 +534,7 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
         = pure $ Meta fc n i !(traverse (updateIVars ivs) args)
     updateIVars {vs} ivs (Bind fc x b sc)
         = do b' <- updateIVarsB ivs b
-             sc' <- updateIVars (ICons (Just (MkVar First)) (weaken ivs)) sc
+             sc' <- updateIVars (ICons (Just first) (weaken ivs)) sc
              Just (Bind fc x b' sc')
       where
         updateIVarsPi : {vs, newvars : _} ->

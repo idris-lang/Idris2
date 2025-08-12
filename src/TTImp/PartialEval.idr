@@ -542,7 +542,7 @@ mutual
       findName (Add x (MN n' i') ns)
           = if i == i' -- this uniquely identifies it, given how we
                        -- generated the names, and is a faster test!
-               then Just (MkVar First)
+               then Just first
                else do MkVar p <-findName ns
                        Just (MkVar (Later p))
       findName (Add x _ ns)

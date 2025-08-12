@@ -460,12 +460,12 @@ dropIdx : {vars : _} ->
           (unused : Vect (length vars) Bool) ->
           (0 p : IsVar x idx (outer ++ vars)) ->
           Var (outer ++ (dropped vars unused))
-dropIdx [] (False::_) First = MkVar First
+dropIdx [] (False::_) First = first
 dropIdx [] (True::_) First = assert_total $
   idris_crash "INTERNAL ERROR: Referenced variable marked as unused"
 dropIdx [] (False::rest) (Later p) = Var.later $ dropIdx Scope.empty rest p
 dropIdx [] (True::rest) (Later p) = dropIdx Scope.empty rest p
-dropIdx (_::xs) unused First = MkVar First
+dropIdx (_::xs) unused First = first
 dropIdx (_::xs) unused (Later p) = Var.later $ dropIdx xs unused p
 
 dropUnused : {vars : _} ->

@@ -19,7 +19,7 @@ parameters (fn1 : Name) (idIdx : Nat)
     isUnsucc : Var vars -> CExp vars -> Maybe (Constant, Var (x :: vars))
     isUnsucc var (COp _ (Sub _) [CLocal _ p, CPrimVal _ c]) =
         if var == MkVar p
-            then Just (c, MkVar First)
+            then Just (c, first)
             else Nothing
     isUnsucc _ _ = Nothing
 

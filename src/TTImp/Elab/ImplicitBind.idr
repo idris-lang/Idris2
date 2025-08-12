@@ -180,14 +180,14 @@ swapIsVarH (Later p) = swapP p -- it'd be nice to do this all at the top
   where
     swapP : forall name . {idx : _} -> (0 p : IsVar name idx (y :: xs)) ->
             Var (y :: x :: xs)
-    swapP First = MkVar First
+    swapP First = first
     swapP (Later x) = MkVar (Later (Later x))
 
 swapIsVar : (vs : Scope) ->
             {idx : Nat} -> (0 p : IsVar nm idx (vs ++ x :: y :: xs)) ->
             Var (vs ++ y :: x :: xs)
 swapIsVar [] prf = swapIsVarH prf
-swapIsVar (x :: xs) First = MkVar First
+swapIsVar (x :: xs) First = first
 swapIsVar (x :: xs) (Later p)
     = let MkVar p' = swapIsVar xs p in MkVar (Later p')
 

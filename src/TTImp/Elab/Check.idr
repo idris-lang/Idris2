@@ -287,10 +287,6 @@ strengthenedEState {n} {vars} c e fc env
                     pure (f, AsBinding c p' x' y' z')
                _ => throw (BadUnboundImplicit fc env f y)
 
-    dropTop : (Var (n :: vs)) -> Maybe (Var vs)
-    dropTop (MkVar First) = Nothing
-    dropTop (MkVar (Later p)) = Just (MkVar p)
-
 export
 inScope : {n, vars : _} ->
           {auto c : Ref Ctxt Defs} ->

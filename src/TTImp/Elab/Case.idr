@@ -77,7 +77,7 @@ updateMults vars env
   go : {0 vs : Scope} -> VarSet vs -> Env Term vs -> Env Term vs
   go vars [] = []
   go vars (b :: env)
-    = (if MkVar First `VarSet.elem` vars
+    = (if first `VarSet.elem` vars
         then setMultiplicity b erased
         else b)
     :: updateMults (VarSet.dropFirst vars) env
@@ -113,7 +113,7 @@ findScrutinee : {vs : _} ->
                 Env Term vs -> RawImp -> Maybe (Var vs)
 findScrutinee {vs = n' :: _} (b :: bs) (IVar loc' n)
     = if n' == n && not (isLet b)
-         then Just (MkVar First)
+         then Just first
          else do MkVar p <- findScrutinee bs (IVar loc' n)
                  Just (MkVar (Later p))
 findScrutinee _ _ = Nothing

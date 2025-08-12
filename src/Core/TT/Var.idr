@@ -199,7 +199,7 @@ thinFromVars [] els
     = (_ ** Refl)
 thinFromVars (x :: xs) els
     = let (vs ** subRest) = thinFromVars xs (dropFirst els) in
-      if MkVar First `elem` els
+      if first `elem` els
         then (x :: vs ** Keep subRest)
         else (vs ** Drop subRest)
 
@@ -263,7 +263,7 @@ dropNVar (MkNVar p) = dropIsVar ns p
 
 export
 isDeBruijn : Nat -> (vars : List Name) -> Maybe (Var vars)
-isDeBruijn Z (_ :: _) = pure (MkVar First)
+isDeBruijn Z (_ :: _) = pure first
 isDeBruijn (S k) (_ :: vs) = later <$> isDeBruijn k vs
 isDeBruijn _ _ = Nothing
 
@@ -404,7 +404,7 @@ thinIsVar : {idx : Nat} -> (0 p : IsVar name idx xs) ->
   Thin xs ys -> Var ys
 thinIsVar p Refl = MkVar p
 thinIsVar p (Drop th) = later (thinIsVar p th)
-thinIsVar First (Keep th) = MkVar First
+thinIsVar First (Keep th) = first
 thinIsVar (Later p) (Keep th) = later (thinIsVar p th)
 
 export
@@ -413,7 +413,7 @@ shrinkIsVar : {idx : Nat} -> (0 p : IsVar name idx xs) ->
 shrinkIsVar prf Refl = Just (MkVar prf)
 shrinkIsVar First (Drop p) = Nothing
 shrinkIsVar (Later x) (Drop p) = shrinkIsVar x p
-shrinkIsVar First (Keep p) = Just (MkVar First)
+shrinkIsVar First (Keep p) = Just first
 shrinkIsVar (Later x) (Keep p) = later <$> shrinkIsVar x p
 
 ------------------------------------------------------------------------

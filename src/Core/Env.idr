@@ -241,12 +241,12 @@ mkShrinkSub : {n : _} ->
               (vars : _) -> VarSet (n :: vars) ->
               (newvars ** Thin newvars (n :: vars))
 mkShrinkSub [] els
-    = if MkVar First `VarSet.elem` els
+    = if first `VarSet.elem` els
          then (_ ** Keep Refl)
          else (_ ** Drop Refl)
 mkShrinkSub (x :: xs) els
     = let (_ ** subRest) = mkShrinkSub xs (VarSet.dropFirst els) in
-      if MkVar First `VarSet.elem` els
+      if first `VarSet.elem` els
         then (_ ** Keep subRest)
         else (_ ** Drop subRest)
 
