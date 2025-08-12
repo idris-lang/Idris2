@@ -64,24 +64,24 @@ mutual
       = mismatchNF defs !(evalClosure defs x) !(evalClosure defs y)
 
   -- NPrimVal is apart from NDCon, NTCon, NBind, and NType
-  mismatchNF defs (NPrimVal _ _) (NDCon _ _ _ _ _) = pure True
-  mismatchNF defs (NDCon _ _ _ _ _) (NPrimVal _ _) = pure True
-  mismatchNF defs (NPrimVal _ _) (NBind _ _ _ _) = pure True
-  mismatchNF defs (NBind _ _ _ _) (NPrimVal _ _) = pure True
-  mismatchNF defs (NPrimVal _ _) (NTCon _ _ _ _) = pure True
-  mismatchNF defs (NTCon _ _ _ _) (NPrimVal _ _) = pure True
-  mismatchNF defs (NPrimVal _ _) (NType _ _) = pure True
-  mismatchNF defs (NType _ _) (NPrimVal _ _) = pure True
+  mismatchNF defs (NPrimVal {}) (NDCon {}) = pure True
+  mismatchNF defs (NDCon {}) (NPrimVal {}) = pure True
+  mismatchNF defs (NPrimVal {}) (NBind {}) = pure True
+  mismatchNF defs (NBind {}) (NPrimVal {}) = pure True
+  mismatchNF defs (NPrimVal {}) (NTCon {}) = pure True
+  mismatchNF defs (NTCon {}) (NPrimVal {}) = pure True
+  mismatchNF defs (NPrimVal {}) (NType {}) = pure True
+  mismatchNF defs (NType {}) (NPrimVal {}) = pure True
 
 -- NTCon is apart from NBind, and NType
-  mismatchNF defs (NTCon _ _ _ _) (NBind _ _ _ _) = pure True
-  mismatchNF defs (NBind _ _ _ _) (NTCon _ _ _ _) = pure True
-  mismatchNF defs (NTCon _ _ _ _) (NType _ _) = pure True
-  mismatchNF defs (NType _ _) (NTCon _ _ _ _) = pure True
+  mismatchNF defs (NTCon {}) (NBind {}) = pure True
+  mismatchNF defs (NBind {}) (NTCon {}) = pure True
+  mismatchNF defs (NTCon {}) (NType {}) = pure True
+  mismatchNF defs (NType {}) (NTCon {}) = pure True
 
 -- NBind is apart from NType
-  mismatchNF defs (NBind _ _ _ _) (NType _ _) = pure True
-  mismatchNF defs (NType _ _) (NBind _ _ _ _) = pure True
+  mismatchNF defs (NBind {}) (NType {}) = pure True
+  mismatchNF defs (NType {}) (NBind {}) = pure True
 
   mismatchNF _ _ _ = pure False
 
@@ -110,24 +110,24 @@ impossibleOK defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
 impossibleOK defs (NPrimVal _ x) (NPrimVal _ y) = pure (x /= y)
 
 -- NPrimVal is apart from NDCon, NTCon, NBind, and NType
-impossibleOK defs (NPrimVal _ _) (NDCon _ _ _ _ _) = pure True
-impossibleOK defs (NDCon _ _ _ _ _) (NPrimVal _ _) = pure True
-impossibleOK defs (NPrimVal _ _) (NBind _ _ _ _) = pure True
-impossibleOK defs (NBind _ _ _ _) (NPrimVal _ _) = pure True
-impossibleOK defs (NPrimVal _ _) (NTCon _ _ _ _) = pure True
-impossibleOK defs (NTCon _ _ _ _) (NPrimVal _ _) = pure True
-impossibleOK defs (NPrimVal _ _) (NType _ _) = pure True
-impossibleOK defs (NType _ _) (NPrimVal _ _) = pure True
+impossibleOK defs (NPrimVal {}) (NDCon {}) = pure True
+impossibleOK defs (NDCon {}) (NPrimVal {}) = pure True
+impossibleOK defs (NPrimVal {}) (NBind {}) = pure True
+impossibleOK defs (NBind {}) (NPrimVal {}) = pure True
+impossibleOK defs (NPrimVal {}) (NTCon {}) = pure True
+impossibleOK defs (NTCon {}) (NPrimVal {}) = pure True
+impossibleOK defs (NPrimVal {}) (NType {}) = pure True
+impossibleOK defs (NType {}) (NPrimVal {}) = pure True
 
 -- NTCon is apart from NBind, and NType
-impossibleOK defs (NTCon _ _ _ _) (NBind _ _ _ _) = pure True
-impossibleOK defs (NBind _ _ _ _) (NTCon _ _ _ _) = pure True
-impossibleOK defs (NTCon _ _ _ _) (NType _ _) = pure True
-impossibleOK defs (NType _ _) (NTCon _ _ _ _) = pure True
+impossibleOK defs (NTCon {}) (NBind {}) = pure True
+impossibleOK defs (NBind {}) (NTCon {}) = pure True
+impossibleOK defs (NTCon {}) (NType {}) = pure True
+impossibleOK defs (NType {}) (NTCon {}) = pure True
 
 -- NBind is apart from NType
-impossibleOK defs (NBind _ _ _ _) (NType _ _) = pure True
-impossibleOK defs (NType _ _) (NBind _ _ _ _) = pure True
+impossibleOK defs (NBind {}) (NType {}) = pure True
+impossibleOK defs (NType {}) (NBind {}) = pure True
 
 impossibleOK defs x y = pure False
 
@@ -165,17 +165,17 @@ recoverable defs (NTCon _ xn xa xargs) (NTCon _ yn ya yargs)
          then pure False
          else pure $ not !(anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs))
 -- Type constructor vs. primitive type
-recoverable defs (NTCon _ _ _ _) (NPrimVal _ _) = pure False
-recoverable defs (NPrimVal _ _) (NTCon _ _ _ _) = pure False
+recoverable defs (NTCon {}) (NPrimVal {}) = pure False
+recoverable defs (NPrimVal {}) (NTCon {}) = pure False
 -- Type constructor vs. type
-recoverable defs (NTCon _ _ _ _) (NType _ _) = pure False
-recoverable defs (NType _ _) (NTCon _ _ _ _) = pure False
+recoverable defs (NTCon {}) (NType {}) = pure False
+recoverable defs (NType {}) (NTCon {}) = pure False
 -- Type constructor vs. binder
-recoverable defs (NTCon _ _ _ _) (NBind _ _ _ _) = pure False
-recoverable defs (NBind _ _ _ _) (NTCon _ _ _ _) = pure False
+recoverable defs (NTCon {}) (NBind {}) = pure False
+recoverable defs (NBind {}) (NTCon {}) = pure False
 
-recoverable defs (NTCon _ _ _ _) _ = pure True
-recoverable defs _ (NTCon _ _ _ _) = pure True
+recoverable defs (NTCon {}) _ = pure True
+recoverable defs _ (NTCon {}) = pure True
 
 -- DATA CONSTRUCTORS
 recoverable defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
@@ -183,11 +183,11 @@ recoverable defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
          then pure False
          else pure $ not !(anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs))
 -- Data constructor vs. primitive constant
-recoverable defs (NDCon _ _ _ _ _) (NPrimVal _ _) = pure False
-recoverable defs (NPrimVal _ _) (NDCon _ _ _ _ _) = pure False
+recoverable defs (NDCon {}) (NPrimVal {}) = pure False
+recoverable defs (NPrimVal {}) (NDCon {}) = pure False
 
-recoverable defs (NDCon _ _ _ _ _) _ = pure True
-recoverable defs _ (NDCon _ _ _ _ _) = pure True
+recoverable defs (NDCon {}) _ = pure True
+recoverable defs _ (NDCon {}) = pure True
 
 -- FUNCTION CALLS
 recoverable defs (NApp _ (NRef _ f) fargs) (NApp _ (NRef _ g) gargs)
@@ -196,8 +196,8 @@ recoverable defs (NApp _ (NRef _ f) fargs) (NApp _ (NRef _ g) gargs)
 -- PRIMITIVES
 recoverable defs (NPrimVal _ x) (NPrimVal _ y) = pure (x == y)
 -- primitive vs. binder
-recoverable defs (NPrimVal _ _) (NBind _ _ _ _) = pure False
-recoverable defs (NBind _ _ _ _) (NPrimVal _ _) = pure False
+recoverable defs (NPrimVal {}) (NBind {}) = pure False
+recoverable defs (NBind {}) (NPrimVal {}) = pure False
 
 -- OTHERWISE: no
 recoverable defs x y = pure False

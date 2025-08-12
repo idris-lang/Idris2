@@ -398,12 +398,12 @@ parameters (defs : Defs) (topopts : EvalOpts)
               else pure GotStuck
       where
         concrete : NF free -> Bool
-        concrete (NDCon _ _ _ _ _) = True
-        concrete (NTCon _ _ _ _) = True
-        concrete (NPrimVal _ _) = True
-        concrete (NBind _ _ _ _) = True
-        concrete (NType _ _) = True
-        concrete (NDelay _ _ _ _) = True
+        concrete (NDCon {}) = True
+        concrete (NTCon {}) = True
+        concrete (NPrimVal {}) = True
+        concrete (NBind {}) = True
+        concrete (NType {}) = True
+        concrete (NDelay {}) = True
         concrete _ = False
     tryAlt _ _ _ _ _ _ _ = pure GotStuck
 

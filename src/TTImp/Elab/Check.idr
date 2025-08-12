@@ -314,13 +314,13 @@ mustBePoly fc env tm ty = update EST { polyMetavars $= ((fc, env, tm, ty) :: ) }
 -- elaborating them, which might help us disambiguate things more easily.
 export
 concrete : Defs -> Env Term vars -> NF vars -> Core Bool
-concrete defs env (NBind fc _ (Pi _ _ _ _) sc)
+concrete defs env (NBind fc _ (Pi {}) sc)
     = do sc' <- sc defs (toClosure defaultOpts env (Erased fc Placeholder))
          concrete defs env sc'
-concrete defs env (NDCon _ _ _ _ _) = pure True
-concrete defs env (NTCon _ _ _ _) = pure True
-concrete defs env (NPrimVal _ _) = pure True
-concrete defs env (NType _ _) = pure True
+concrete defs env (NDCon {}) = pure True
+concrete defs env (NTCon {}) = pure True
+concrete defs env (NPrimVal {}) = pure True
+concrete defs env (NType {}) = pure True
 concrete defs env _ = pure False
 
 export

@@ -213,8 +213,8 @@ mutual
     let (f, args) = getFnArgs t in
     let (g, args') = getFnArgs s in
     case f of
-      Ref _ (TyCon _) cn => case g of
-        Ref _ (TyCon _) cn' => if cn == cn'
+      Ref _ (TyCon {}) cn => case g of
+        Ref _ (TyCon {}) cn' => if cn == cn'
             then (Unknown /=) <$> sizeCompareProdConArgs fuel args' args
             else pure False
         _ => pure False

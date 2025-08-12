@@ -28,10 +28,10 @@ nameDecoration nm nt
   where
 
   nameTypeDecoration : NameType -> Decoration
-  nameTypeDecoration Bound         = Bound
-  nameTypeDecoration Func          = Function
-  nameTypeDecoration (DataCon _ _) = Data
-  nameTypeDecoration (TyCon _)     = Typ
+  nameTypeDecoration Bound        = Bound
+  nameTypeDecoration Func         = Function
+  nameTypeDecoration (DataCon {}) = Data
+  nameTypeDecoration (TyCon {})   = Typ
 
 
 public export
