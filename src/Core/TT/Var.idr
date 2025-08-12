@@ -184,25 +184,6 @@ export
 Eq (Var xs) where
   v == w = varIdx v == varIdx w
 
-
-||| Removing var 0, strengthening all the other ones
-export
-dropFirst : List (Var (Scope.bind vs n)) -> List (Var vs)
-dropFirst = List.mapMaybe isLater
-
-||| Manufacturing a thinning from a list of variables to keep
-export
-thinFromVars :
-  (vars : _) -> List (Var vars) ->
-  (newvars ** Thin newvars vars)
-thinFromVars [] els
-    = (_ ** Refl)
-thinFromVars (x :: xs) els
-    = let (vs ** subRest) = thinFromVars xs (dropFirst els) in
-      if first `elem` els
-        then (x :: vs ** Keep subRest)
-        else (vs ** Drop subRest)
-
 export
 Show (Var ns) where
   show v = show (varIdx v)

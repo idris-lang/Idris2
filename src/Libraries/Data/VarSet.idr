@@ -24,3 +24,12 @@ export %inline
 append : SizeOf inner -> VarSet inner -> VarSet outer ->
          VarSet (inner ++ outer)
 append p inn out = union (embed {tm = VarSet} inn) (weakenNs {tm = VarSet} p out)
+
+export
+fromVarSet : (vars : Scope) -> VarSet vars -> (newvars ** Thin newvars vars)
+fromVarSet [] xs = (Scope.empty ** Refl)
+fromVarSet (n :: ns) xs =
+    let (_ ** svs) = fromVarSet ns (VarSet.dropFirst xs) in
+    if first `VarSet.elem` xs
+      then (_ ** Keep svs)
+      else (_ ** Drop svs)

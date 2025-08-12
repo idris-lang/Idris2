@@ -301,17 +301,6 @@ getVars = go [<] VarSet.empty where
   go acc got (NAs _ _ _ p :: xs) = go acc got (p :: xs)
   go acc _ (_ :: xs) = Nothing
 
--- Make a sublist representing the variables used in the application.
--- We'll use this to ensure that local variables which appear in a term
--- are all arguments to a metavariable application for pattern unification
-toThin : (vars : Scope) -> VarSet vars -> (newvars ** Thin newvars vars)
-toThin [] xs = (Scope.empty ** Refl)
-toThin (n :: ns) xs =
-    let (_ ** svs) = toThin ns (VarSet.dropFirst xs) in
-    if first `VarSet.elem` xs
-      then (_ ** Keep svs)
-      else (_ ** Drop svs)
-
 -- Update the variable list to point into the sub environment
 -- (All of these will succeed because the Thin we have comes from
 -- the list of variable uses! It's not stated in the type, though.)
@@ -347,7 +336,7 @@ patternEnv {vars} env args
            case getVars args' of
              Nothing => Nothing
              Just (vslist, vsset) =>
-               let (newvars ** svs) = toThin _ vsset in
+               let (newvars ** svs) = fromVarSet _ vsset in
                  Just (newvars ** (updateVars vslist svs, svs))
 
 getVarsTm : List (Term vars) -> Maybe (List (Var vars), VarSet vars)
@@ -375,7 +364,7 @@ patternEnvTm {vars} env args
          pure $ case getVarsTm args of
            Nothing => Nothing
            Just (vslist, vsset) =>
-             let (newvars ** svs) = toThin _ vsset in
+             let (newvars ** svs) = fromVarSet _ vsset in
                  Just (newvars ** (updateVars vslist svs, svs))
 
 -- Check that the metavariable name doesn't occur in the solution.
