@@ -285,35 +285,38 @@ unifyArgs mode loc env _ _ = ufail loc ""
 -- are not variables, fail if there's any repetition of variables
 -- We use this to check that the pattern unification rule is applicable
 -- when solving a metavariable applied to arguments
-getVars : VarSet vars -> List (NF vars) -> Maybe (VarSet vars)
-getVars got [] = Just got
-getVars got (NErased fc (Dotted t) :: xs) = getVars got (t :: xs)
-getVars got (NApp fc (NLocal r idx p) [] :: xs)
+-- We return a list (because the order matters) and a set (for easy
+-- querying)
+getVars : List (NF vars) -> Maybe (List (Var vars), VarSet vars)
+getVars = go [<] VarSet.empty where
+
+  go : SnocList (Var vars) -> VarSet vars ->
+       List (NF vars) -> Maybe (List (Var vars), VarSet vars)
+  go acc got [] = Just (acc <>> [], got)
+  go acc got (NErased fc (Dotted t) :: xs) = go acc got (t :: xs)
+  go acc got (NApp fc (NLocal r idx p) [] :: xs)
     = let v := MkVar p in
       if v `VarSet.elem` got then Nothing
-         else do getVars (VarSet.insert v got) xs
-getVars got (NAs _ _ _ p :: xs) = getVars got (p :: xs)
-getVars _ (_ :: xs) = Nothing
+         else go (acc :< v) (VarSet.insert v got) xs
+  go acc got (NAs _ _ _ p :: xs) = go acc got (p :: xs)
+  go acc _ (_ :: xs) = Nothing
 
 -- Make a sublist representing the variables used in the application.
 -- We'll use this to ensure that local variables which appear in a term
 -- are all arguments to a metavariable application for pattern unification
 toThin : (vars : Scope) -> VarSet vars -> (newvars ** Thin newvars vars)
-toThin vars xs = if isEmpty xs then (_ ** Refl) else go vars xs where
-
- go : (vars : Scope) -> VarSet vars -> (newvars ** Thin newvars vars)
- go [] xs = (Scope.empty ** Refl)
- go (n :: ns) xs =
-   let (_ ** svs) = toThin ns (VarSet.dropFirst xs) in
-   if first `VarSet.elem` xs
-     then (_ ** Keep svs)
-     else (_ ** Drop svs)
+toThin [] xs = (Scope.empty ** Refl)
+toThin (n :: ns) xs =
+    let (_ ** svs) = toThin ns (VarSet.dropFirst xs) in
+    if first `VarSet.elem` xs
+      then (_ ** Keep svs)
+      else (_ ** Drop svs)
 
 -- Update the variable list to point into the sub environment
 -- (All of these will succeed because the Thin we have comes from
 -- the list of variable uses! It's not stated in the type, though.)
-updateVars : {vars : Scope} -> VarSet vars -> Thin newvars vars -> List (Var newvars)
-updateVars vs th = mapMaybe (\ v => shrink v th) (VarSet.toList vs)
+updateVars : List (Var {a = Name} vars) -> Thin newvars vars -> List (Var newvars)
+updateVars vs th = mapMaybe (\ v => shrink v th) vs
 
 {- Applying the pattern unification rule is okay if:
    * Arguments are all distinct local variables
@@ -341,19 +344,23 @@ patternEnv {vars} env args
          empty <- clearDefs defs
          args' <- traverse (evalArg empty) args
          pure $
-           case getVars VarSet.empty args' of
+           case getVars args' of
              Nothing => Nothing
-             Just vs =>
-               let (newvars ** svs) = toThin _ vs in
-                 Just (newvars ** (updateVars vs svs, svs))
+             Just (vslist, vsset) =>
+               let (newvars ** svs) = toThin _ vsset in
+                 Just (newvars ** (updateVars vslist svs, svs))
 
-getVarsTm : VarSet vars -> List (Term vars) -> Maybe (VarSet vars)
-getVarsTm got [] = Just got
-getVarsTm got (Local fc r idx p :: xs)
+getVarsTm : List (Term vars) -> Maybe (List (Var vars), VarSet vars)
+getVarsTm = go [<] VarSet.empty where
+
+  go : SnocList (Var vars) -> VarSet vars ->
+       List (Term vars) -> Maybe (List (Var vars), VarSet vars)
+  go acc got [] = Just (acc <>> [], got)
+  go acc got (Local fc r idx p :: xs)
     = let v := MkVar p in
       if v `VarSet.elem` got then Nothing
-         else getVarsTm (VarSet.insert v got) xs
-getVarsTm _ (_ :: xs) = Nothing
+         else go (acc :< v) (VarSet.insert v got) xs
+  go acc _ (_ :: xs) = Nothing
 
 export
 patternEnvTm : {auto c : Ref Ctxt Defs} ->
@@ -365,11 +372,11 @@ patternEnvTm : {auto c : Ref Ctxt Defs} ->
 patternEnvTm {vars} env args
     = do defs <- get Ctxt
          empty <- clearDefs defs
-         pure $ case getVarsTm VarSet.empty args of
+         pure $ case getVarsTm args of
            Nothing => Nothing
-           Just vs =>
-             let (newvars ** svs) = toThin _ vs in
-                 Just (newvars ** (updateVars vs svs, svs))
+           Just (vslist, vsset) =>
+             let (newvars ** svs) = toThin _ vsset in
+                 Just (newvars ** (updateVars vslist svs, svs))
 
 -- Check that the metavariable name doesn't occur in the solution.
 -- If it does, normalising might help. If it still does, that's an error.
