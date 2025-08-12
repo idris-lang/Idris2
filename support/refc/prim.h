@@ -32,8 +32,6 @@ Value *idris2_Data_IOArray_Prims_prim__arraySet(Value *, Value *, Value *,
 Value *idris2_Prelude_IO_prim__onCollect(Value *, Value *, Value *, Value *);
 Value *idris2_Prelude_IO_prim__onCollectAny(Value *, Value *, Value *);
 
-#define idris2_Prelude_Uninhabited_prim__void(x, y) (NULL)
-
 // Threads
 Value *System_Concurrency_Raw_prim__mutexRelease(Value *, Value *);
 

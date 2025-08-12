@@ -203,7 +203,6 @@ public export
 data ExtPrim = NewIORef | ReadIORef | WriteIORef
              | NewArray | ArrayGet | ArraySet
              | GetField | SetField
-             | VoidElim
              | SysOS | SysCodegen
              | OnCollect
              | OnCollectAny
@@ -219,7 +218,6 @@ Show ExtPrim where
   show ArraySet = "ArraySet"
   show GetField = "GetField"
   show SetField = "SetField"
-  show VoidElim = "VoidElim"
   show SysOS = "SysOS"
   show SysCodegen = "SysCodegen"
   show OnCollect = "OnCollect"
@@ -237,7 +235,6 @@ toPrim pn@(NS _ n)
             (n == UN (Basic "prim__arraySet"), ArraySet),
             (n == UN (Basic "prim__getField"), GetField),
             (n == UN (Basic "prim__setField"), SetField),
-            (n == UN (Basic "prim__void"), VoidElim),
             (n == UN (Basic "prim__os"), SysOS),
             (n == UN (Basic "prim__codegen"), SysCodegen),
             (n == UN (Basic "prim__onCollect"), OnCollect),
@@ -659,8 +656,6 @@ parameters (constants : SortedSet Name)
       = pure $ mkWorld $ "(vector-set! " ++ !(schExp i arr) ++ " "
                                          ++ !(schExp i pos) ++ " "
                                          ++ !(schExp i val) ++ ")"
-  schExtCommon i VoidElim [_, _]
-      = pure "(display \"Error: Executed 'void'\")"
   schExtCommon i SysOS []
       = pure $ "(blodwen-os)"
   schExtCommon i (Unknown n) args

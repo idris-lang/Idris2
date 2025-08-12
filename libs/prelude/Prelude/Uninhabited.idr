@@ -13,13 +13,10 @@ interface Uninhabited t where
   ||| @ t the uninhabited type
   uninhabited : t -> Void
 
-%extern
-prim__void : (0 x : Void) -> a
-
 ||| The eliminator for the `Void` type.
 public export
 void : (0 x : Void) -> a
-void = prim__void
+void _ impossible
 
 export
 Uninhabited Void where
