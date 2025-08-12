@@ -94,7 +94,6 @@ addData : {auto c : Ref Ctxt Defs} ->
           Scope -> Visibility -> Int -> DataDef -> Core Int
 addData vars vis tidx (MkData (MkCon dfc tyn arity tycon) datacons)
     = do defs <- get Ctxt
-         tag <- getNextTypeTag
          let allPos = NatSet.allLessThan arity
          -- In case there are no constructors, all the positions are parameter positions!
          let paramPositions = fromMaybe allPos !(paramPos (Resolved tidx) (map type datacons))
@@ -102,7 +101,7 @@ addData vars vis tidx (MkData (MkCon dfc tyn arity tycon) datacons)
             "Positions of parameters for datatype" ++ show tyn ++
             ": " ++ show paramPositions
          let tydef = newDef dfc tyn top vars tycon (specified vis)
-                            (TCon tag arity
+                            (TCon arity
                                   paramPositions
                                   allPos
                                   defaultFlags [] (Just $ map name datacons) Nothing)

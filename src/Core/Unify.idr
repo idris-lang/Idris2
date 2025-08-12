@@ -743,10 +743,10 @@ mutual
                  (margs' : List (Closure vars)) ->
                  NF vars ->
                  Core UnifyResult
-  unifyHoleApp swap mode loc env mname mref margs margs' (NTCon nfc n t a args')
+  unifyHoleApp swap mode loc env mname mref margs margs' (NTCon nfc n a args')
       = do defs <- get Ctxt
            mty <- lookupTyExact n (gamma defs)
-           unifyInvertible swap (lower mode) loc env mname mref margs margs' mty (NTCon nfc n t a) args'
+           unifyInvertible swap (lower mode) loc env mname mref margs margs' mty (NTCon nfc n a) args'
   unifyHoleApp swap mode loc env mname mref margs margs' (NDCon nfc n t a args')
       = do defs <- get Ctxt
            mty <- lookupTyExact n (gamma defs)
@@ -933,7 +933,7 @@ mutual
       = convertErrorS swap loc env (NApp xfc (NLocal rx x xp) args) y
   unifyApp swap mode loc env xfc (NLocal rx x xp) args y@(NDCon _ _ _ _ _)
       = convertErrorS swap loc env (NApp xfc (NLocal rx x xp) args) y
-  unifyApp swap mode loc env xfc (NLocal rx x xp) args y@(NTCon _ _ _ _ _)
+  unifyApp swap mode loc env xfc (NLocal rx x xp) args y@(NTCon _ _ _ _)
       = convertErrorS swap loc env (NApp xfc (NLocal rx x xp) args) y
   unifyApp swap mode loc env xfc (NLocal rx x xp) args y@(NPrimVal _ _)
       = convertErrorS swap loc env (NApp xfc (NLocal rx x xp) args) y
@@ -1172,7 +1172,7 @@ mutual
              else convertError loc env
                        (NDCon xfc x tagx ax xs)
                        (NDCon yfc y tagy ay ys)
-  unifyNoEta mode loc env (NTCon xfc x tagx ax xs) (NTCon yfc y tagy ay ys)
+  unifyNoEta mode loc env (NTCon xfc x ax xs) (NTCon yfc y ay ys)
    = do logC "unify" 20 $ do
           x <- toFullNames x
           y <- toFullNames y
@@ -1191,11 +1191,11 @@ mutual
              -- constraint. But before then, we need some way to decide
              -- what's injective...
              -- gallais: really? We don't mind being anticlassical do we?
---                then postpone True loc mode env (quote empty env (NTCon x tagx ax xs))
---                                           (quote empty env (NTCon y tagy ay ys))
+--                then postpone True loc mode env (quote empty env (NTCon x ax xs))
+--                                           (quote empty env (NTCon y ay ys))
            else convertError loc env
-                     (NTCon xfc x tagx ax xs)
-                     (NTCon yfc y tagy ay ys)
+                     (NTCon xfc x ax xs)
+                     (NTCon yfc y ay ys)
   unifyNoEta mode loc env (NDelayed xfc _ x) (NDelayed yfc _ y)
       = unify (lower mode) loc env x y
   unifyNoEta mode loc env (NDelay xfc _ xty x) (NDelay yfc _ yty y)

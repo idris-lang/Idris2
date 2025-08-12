@@ -586,8 +586,8 @@ HasNames Def where
       fullNamesPat (_ ** (env, lhs, rhs))
           = pure $ (_ ** (!(full gam env),
                           !(full gam lhs), !(full gam rhs)))
-  full gam (TCon t a ps ds u ms mcs det)
-      = pure $ TCon t a ps ds u !(traverse (full gam) ms)
+  full gam (TCon a ps ds u ms mcs det)
+      = pure $ TCon a ps ds u !(traverse (full gam) ms)
                                 !(traverseOpt (traverse (full gam)) mcs) det
   full gam (BySearch c d def)
       = pure $ BySearch c d !(full gam def)
@@ -604,8 +604,8 @@ HasNames Def where
       resolvedNamesPat (_ ** (env, lhs, rhs))
           = pure $ (_ ** (!(resolved gam env),
                           !(resolved gam lhs), !(resolved gam rhs)))
-  resolved gam (TCon t a ps ds u ms mcs det)
-      = pure $ TCon t a ps ds u !(traverse (resolved gam) ms)
+  resolved gam (TCon a ps ds u ms mcs det)
+      = pure $ TCon a ps ds u !(traverse (resolved gam) ms)
                                 !(traverseOpt (traverse (full gam)) mcs) det
   resolved gam (BySearch c d def)
       = pure $ BySearch c d !(resolved gam def)
@@ -993,7 +993,6 @@ record Defs where
   nestedNS : List Namespace -- other nested namespaces we can look in
   options : Options
   toSave : NameMap ()
-  nextTag : Int
   typeHints : NameMap (List (Name, Bool))
      -- ^ a mapping from type names to hints (and a flag setting whether it's
      -- a "direct" hint). Direct hints are searched first (as part of a group)
@@ -1084,7 +1083,6 @@ initDefs
            , nestedNS = []
            , options = opts
            , toSave = empty
-           , nextTag = 100
            , typeHints = empty
            , autoHints = empty
            , openHints = empty
@@ -1737,7 +1735,7 @@ getSearchData : {auto c : Ref Ctxt Defs} ->
                 Core SearchData
 getSearchData fc defaults target
     = do defs <- get Ctxt
-         Just (TCon _ _ _ dets u _ _ _) <- lookupDefExact target (gamma defs)
+         Just (TCon _ _ dets u _ _ _) <- lookupDefExact target (gamma defs)
               | _ => undefinedName fc target
          hs <- case lookup !(toFullNames target) (typeHints defs) of
                        Just hs => filterM (\x => notHidden x (gamma defs)) hs
@@ -1780,9 +1778,9 @@ setMutWith fc tn tns
     = do defs <- get Ctxt
          Just g <- lookupCtxtExact tn (gamma defs)
               | _ => undefinedName fc tn
-         let TCon t a ps dets u _ cons det = definition g
+         let TCon a ps dets u _ cons det = definition g
               | _ => throw (GenericMsg fc (show (fullname g) ++ " is not a type constructor [setMutWith]"))
-         updateDef tn (const (Just (TCon t a ps dets u tns cons det)))
+         updateDef tn (const (Just (TCon a ps dets u tns cons det)))
 
 export
 addMutData : {auto c : Ref Ctxt Defs} ->
@@ -1801,10 +1799,10 @@ setDetermining fc tyn args
     = do defs <- get Ctxt
          Just g <- lookupCtxtExact tyn (gamma defs)
               | _ => undefinedName fc tyn
-         let TCon t a ps _ u cons ms det = definition g
+         let TCon a ps _ u cons ms det = definition g
               | _ => throw (GenericMsg fc (show (fullname g) ++ " is not a type constructor [setDetermining]"))
          apos <- getPos 0 (forget args) (type g)
-         updateDef tyn (const (Just (TCon t a ps apos u cons ms det)))
+         updateDef tyn (const (Just (TCon a ps apos u cons ms det)))
   where
     -- Type isn't normalised, but the argument names refer to those given
     -- explicitly in the type, so there's no need.
@@ -1825,9 +1823,9 @@ setDetags fc tyn args
     = do defs <- get Ctxt
          Just g <- lookupCtxtExact tyn (gamma defs)
               | _ => undefinedName fc tyn
-         let TCon t a ps det u cons ms _ = definition g
+         let TCon a ps det u cons ms _ = definition g
               | _ => throw (GenericMsg fc (show (fullname g) ++ " is not a type constructor [setDetermining]"))
-         updateDef tyn (const (Just (TCon t a ps det u cons ms args)))
+         updateDef tyn (const (Just (TCon a ps det u cons ms args)))
 
 export
 setUniqueSearch : {auto c : Ref Ctxt Defs} ->
@@ -1836,10 +1834,10 @@ setUniqueSearch fc tyn u
     = do defs <- get Ctxt
          Just g <- lookupCtxtExact tyn (gamma defs)
               | _ => undefinedName fc tyn
-         let TCon t a ps ds fl cons ms det = definition g
+         let TCon a ps ds fl cons ms det = definition g
               | _ => throw (GenericMsg fc (show (fullname g) ++ " is not a type constructor [setDetermining]"))
          let fl' = { uniqueAuto := u } fl
-         updateDef tyn (const (Just (TCon t a ps ds fl' cons ms det)))
+         updateDef tyn (const (Just (TCon a ps ds fl' cons ms det)))
 
 export
 setExternal : {auto c : Ref Ctxt Defs} ->
@@ -1848,10 +1846,10 @@ setExternal fc tyn u
     = do defs <- get Ctxt
          Just g <- lookupCtxtExact tyn (gamma defs)
               | _ => undefinedName fc tyn
-         let TCon t a ps ds fl cons ms det = definition g
+         let TCon a ps ds fl cons ms det = definition g
               | _ => throw (GenericMsg fc (show (fullname g) ++ " is not a type constructor [setDetermining]"))
          let fl' = { external := u } fl
-         updateDef tyn (const (Just (TCon t a ps ds fl' cons ms det)))
+         updateDef tyn (const (Just (TCon a ps ds fl' cons ms det)))
 
 export
 addHintFor : {auto c : Ref Ctxt Defs} ->
@@ -1995,14 +1993,6 @@ getDirectives cg
   where
     getDir : (CG, String) -> Maybe String
     getDir (x', str) = if cg == x' then Just str else Nothing
-
-export
-getNextTypeTag : {auto c : Ref Ctxt Defs} ->
-                 Core Int
-getNextTypeTag
-    = do defs <- get Ctxt
-         put Ctxt ({ nextTag $= (+1) } defs)
-         pure (nextTag defs)
 
 -- Add a new nested namespace to the current namespace for new definitions
 -- e.g. extendNS ["Data"] when namespace is "Prelude.List" leads to

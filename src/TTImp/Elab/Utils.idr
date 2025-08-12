@@ -24,8 +24,8 @@ import Libraries.Data.List.Quantifiers.Extra as Lib
 
 detagSafe : {auto c : Ref Ctxt Defs} ->
             Defs -> ClosedNF -> Core Bool
-detagSafe defs (NTCon _ n _ _ args)
-    = do Just (TCon _ _ _ _ _ _ _ (Just detags)) <- lookupDefExact n (gamma defs)
+detagSafe defs (NTCon _ n _ args)
+    = do Just (TCon _ _ _ _ _ _ (Just detags)) <- lookupDefExact n (gamma defs)
               | _ => pure False
          args' <- traverse (evalClosure defs . snd) args
          pure $ NatSet.isEmpty detags || notErased 0 detags args'

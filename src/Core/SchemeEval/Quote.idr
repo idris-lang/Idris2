@@ -110,9 +110,9 @@ mutual
   quoteGen q bound env (SDCon fc n t ar args)
       = do args' <- quoteArgs q bound env args
            pure $ apply fc (Ref fc (DataCon t ar) n) args'
-  quoteGen q bound env (STCon fc n t ar args)
+  quoteGen q bound env (STCon fc n ar args)
       = do args' <- quoteArgs q bound env args
-           pure $ apply fc (Ref fc (TyCon t ar) n) args'
+           pure $ apply fc (Ref fc (TyCon ar) n) args'
   quoteGen q bound env (SDelayed fc r arg)
       = do argQ <- quoteGen q bound env arg
            pure (TDelayed fc r argQ)

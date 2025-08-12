@@ -202,7 +202,7 @@ checkCaseLocal {vars} rig elabinfo nest env fc uname iname args sc expty
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact iname (gamma defs)
               | Nothing => check rig elabinfo nest env sc expty
-         let nt = fromMaybe Func (defNameType $ definition def)
+         let nt = getDefNameType def
          let name = Ref fc nt iname
          (app, args) <- getLocalTerm fc env name args
          log "elab.local" 5 $ "Updating case local " ++ show uname ++ " " ++ show args
