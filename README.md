@@ -32,22 +32,22 @@ Finally, `pack` also makes it easy to download, and keep updated version of, [id
 ## Resources to Learn Idris 2
 
 ### Books
-  - [_Type-Driven Development with Idris_](https://www.manning.com/books/type-driven-development-with-idris), Edwin brady. This was written for Idris1. If you are using Idris2, you should make [these changes](https://idris2.readthedocs.io/en/latest/typedd/typedd.html)
+- [_Type-Driven Development with Idris_](https://www.manning.com/books/type-driven-development-with-idris), Edwin brady. This was written for Idris1. If you are using Idris2, you should make [these changes](https://idris2.readthedocs.io/en/latest/typedd/typedd.html)
 ### Tutorials
-  - [_Functional Programming in Idris 2_](https://github.com/idris-community/idris2-tutorial)
-  - [_A Tutorial on Elaborator Reflection in Idris 2_](https://github.com/stefan-hoeck/idris2-elab-util/blob/main/src/Doc/Index.md), accompanied by [library utilities](https://github.com/stefan-hoeck/idris2-elab-util)
-  - [_An attempt at explaining Decidable Equality_](https://teh6.eu/en/post/intro-to-decidable-equality/)
+- [_Functional Programming in Idris 2_](https://github.com/idris-community/idris2-tutorial)
+- [_A Tutorial on Elaborator Reflection in Idris 2_](https://github.com/stefan-hoeck/idris2-elab-util/blob/main/src/Doc/Index.md), accompanied by [library utilities](https://github.com/stefan-hoeck/idris2-elab-util)
+- [_An attempt at explaining Decidable Equality_](https://teh6.eu/en/post/intro-to-decidable-equality/)
 ### Official talks
-  - [_What's New in Idris 2_](https://www.youtube.com/watch?v=nbClauMCeds), Edwin Brady, Berlin Functional Programming Group
-  - [Scheme Workshop Keynote](https://www.youtube.com/watch?v=h9YAOaBWuIk), Edwin Brady, ACM SIGPLAN
-  - [_Idris 2 - Type-driven Development of Idris_](https://www.youtube.com/watch?v=DRq2NgeFcO0), Edwin Brady, Curry On! 2019
-  - [_Idris 2: Type-driven development of Idris_](https://www.youtube.com/watch?v=mOtKD7ml0NU), Edwin Brady, Code Mesh LDN 18
-  - [_The implementation of Idris 2_](https://www.youtube.com/playlist?list=PLmYPUe8PWHKqBRJfwBr4qga7WIs7r60Ql), Edwin Brady, SPLV'20 and [accompanying code](https://github.com/edwinb/SPLV20)
+- [_What's New in Idris 2_](https://www.youtube.com/watch?v=nbClauMCeds), Edwin Brady, Berlin Functional Programming Group
+- [Scheme Workshop Keynote](https://www.youtube.com/watch?v=h9YAOaBWuIk), Edwin Brady, ACM SIGPLAN
+- [_Idris 2 - Type-driven Development of Idris_](https://www.youtube.com/watch?v=DRq2NgeFcO0), Edwin Brady, Curry On! 2019
+- [_Idris 2: Type-driven development of Idris_](https://www.youtube.com/watch?v=mOtKD7ml0NU), Edwin Brady, Code Mesh LDN 18
+- [_The implementation of Idris 2_](https://www.youtube.com/playlist?list=PLmYPUe8PWHKqBRJfwBr4qga7WIs7r60Ql), Edwin Brady, SPLV'20 and [accompanying code](https://github.com/edwinb/SPLV20)
 ### Community talks
-  - [_Domain Driven Design Made Dependently Typed_](https://www.youtube.com/watch?v=QBj-4K-l-sg), Andor Penzes, Aug '21
-  - [_Extending RefC - Making Idris 2 backends while avoiding most of the work_](https://www.youtube.com/watch?v=i-_U6US3bBk), Robert Wright, Sept '21
-  - [_Introduction to JVM backend for Idris 2_](https://www.youtube.com/watch?v=kSIUsBQS3EE), Marimuthu Madasamy, Oct '21
-  - [_Idris Data Science Infrastructure - Because sometimes we have to consider the real world_](https://www.youtube.com/watch?v=4jDlYJf9_34),  Robert Wright, Dec '21
+- [_Domain Driven Design Made Dependently Typed_](https://www.youtube.com/watch?v=QBj-4K-l-sg), Andor Penzes, Aug '21
+- [_Extending RefC - Making Idris 2 backends while avoiding most of the work_](https://www.youtube.com/watch?v=i-_U6US3bBk), Robert Wright, Sept '21
+- [_Introduction to JVM backend for Idris 2_](https://www.youtube.com/watch?v=kSIUsBQS3EE), Marimuthu Madasamy, Oct '21
+- [_Idris Data Science Infrastructure - Because sometimes we have to consider the real world_](https://www.youtube.com/watch?v=4jDlYJf9_34),  Robert Wright, Dec '21
 
 ## Documentation
 
@@ -61,9 +61,9 @@ Finally, `pack` also makes it easy to download, and keep updated version of, [id
 
 - Multi-arch, multi-distro Docker [images](https://github.com/joshuanianji/idris-2-docker) for Idris 2
 - Official [images](https://github.com/stefan-hoeck/idris2-pack/pkgs/container/idris2-pack) for the Pack package manager
-- https://github.com/alexhumphreys/idris2-dockerfile
-- https://github.com/mattpolzin/idris-docker
-- https://github.com/dgellow/idris-docker-image
+- [alexhumphreys/idris2-dockerfile](https://github.com/alexhumphreys/idris2-dockerfile)
+- [mattpolzin/idris-docker](https://github.com/mattpolzin/idris-docker)
+- [dgellow/idris-docker-image](https://github.com/dgellow/idris-docker-image)
 
 ## Things still missing
 
