@@ -396,7 +396,7 @@ mutual
   RecordBody nm = WithName $ WithOpts $ List (IField' nm)
 
   ||| A record is defined by its header containing the name and parameters, and its body
-  ||| containing the constructor name, optios, and a list of fields
+  ||| containing the constructor name, options, and a list of fields
   public export
   record ImpRecordData (nm : Type) where
     constructor MkImpRecord
