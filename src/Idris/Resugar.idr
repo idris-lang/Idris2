@@ -20,6 +20,7 @@ import Data.Maybe
 import Data.String
 import Libraries.Data.StringMap
 import Libraries.Data.ANameMap
+import Libraries.Data.NameSet
 
 %default covering
 
@@ -289,9 +290,9 @@ mutual
       needsBind : Maybe Name -> Bool
       needsBind (Just nm@(UN (Basic t)))
           = let ret = map rawName ret
-                ns = findBindableNames False [] [] ret
-                allNs = findAllNames [] ret in
-                (nm `elem` allNs) && not (t `elem` (map Builtin.fst ns))
+                ns = findBindableNames False empty [] ret
+                allNs = findAllNames empty ret in
+                (nm `elem` allNs) && not (t `elem` (map fst ns))
       needsBind _ = False
   toPTerm p (IPi fc rig pt n arg ret)
       = do arg' <- toPTerm appPrec arg

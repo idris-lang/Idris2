@@ -19,6 +19,7 @@ import TTImp.Unelab
 import TTImp.Utils
 
 import Libraries.Data.WithDefault
+import Libraries.Data.NameSet
 
 import Data.List
 import Data.String
@@ -142,7 +143,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                     Core (List ImpParameter) -- New telescope of parameters, including missing bindings
     preElabAsData tn
         = do let fc = virtualiseFC fc
-             let dataTy = IBindHere fc (PI erased) !(bindTypeNames fc [] (toList vars) (mkDataTy fc params0))
+             let dataTy = IBindHere fc (PI erased) !(bindTypeNames fc [] (fromList vars) (mkDataTy fc params0))
              defs <- get Ctxt
              -- Create a forward declaration if none exists
              when (isNothing !(lookupTyExact tn (gamma defs))) $ do
@@ -219,9 +220,9 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
         = do let fc = virtualiseFC fc
              let conty = mkTy (paramTelescope params) $
                          mkTy (map farg fields) (recTy tn params)
-             let boundNames = paramNames params ++ map fname fields ++ (toList vars)
+             let boundNames = paramNames params ++ map fname fields ++ (toList vars) -- TODO: sets all around?
              let con = MkImpTy (virtualiseFC fc) (NoFC cname)
-                       !(bindTypeNames fc [] boundNames conty)
+                       !(bindTypeNames fc [] (fromList boundNames) conty)
              let dt = MkImpData fc tn Nothing opts [con]
              log "declare.record" 5 $ "Record data type " ++ show dt
              processDecl [] nest env (IData fc def_vis mbtot dt)
@@ -261,13 +262,13 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                    unNameNS <- inCurrentNS (UN $ Basic fldNameStr)
 
                    ty <- unelabNest (NoSugar True) !nestDrop tyenv ty_chk
-                   let ty' = substNames (toList vars) upds $ map rawName ty
+                   let ty' = substNames (fromList vars) upds $ map rawName ty
                    log "declare.record.field" 5 $ "Field type: " ++ show ty'
                    let rname = MN "rec" 0
 
                    -- Claim the projection type
                    projTy <- bindTypeNames fc []
-                                 (paramNames ++ map fname fields ++ toList vars) $
+                                 (fromList (paramNames ++ map fname fields ++ toList vars)) $
                                       mkTy (paramTelescope params) $
                                       IPi bfc top Explicit (Just rname) (recTy tn params) ty'
                    let fc' = virtualiseFC fc

@@ -37,6 +37,7 @@ import TTImp.TTImp
 import TTImp.Utils
 
 import Libraries.Data.IMaybe
+import Libraries.Data.NameSet
 import Libraries.Data.WithDefault
 import Libraries.Utils.Shunting
 import Libraries.Text.PrettyPrint.Prettyprinter
@@ -300,7 +301,7 @@ DesugarInto src tgt =
   {auto u : Ref UST UState} ->
   {auto m : Ref MD Metadata} ->
   {auto o : Ref ROpts REPLOpts} ->
-  List Name -> src -> Core tgt
+  NameSet -> src -> Core tgt
 
 mutual
   desugarB : {auto b : Ref Bang BangData} ->
@@ -317,13 +318,13 @@ mutual
   desugarB side ps (Forall (MkWithData _ (names, scope)))
         = desugarForallNames ps (forget names)
       where
-        desugarForallNames : (ctx : List Name) ->
+        desugarForallNames : (ctx : NameSet) ->
                              (names : List (WithFC Name)) -> Core RawImp
         desugarForallNames ctx [] = desugarB side ctx scope
         desugarForallNames ctx (x :: xs)
           = IPi x.fc erased Implicit (Just x.val)
           <$> desugarB side ps (PImplicit x.fc)
-          <*> desugarForallNames (x.val :: ctx) xs
+          <*> desugarForallNames (insert x.val ctx) xs
 
   -- Desugaring (n1, n2, n3 : t) -> s into
   -- (n1 : t) -> (n2 : t) -> (n3 : t) -> s
@@ -332,11 +333,11 @@ mutual
           (MkPBinderScope (MkPBinder info (MkBasicMultiBinder rig names type)) scope)))
         = desugarMultiBinder ps (forget names)
       where
-        desugarMultiBinder : (ctx : List Name) -> List (WithFC Name) -> Core RawImp
+        desugarMultiBinder : (ctx : NameSet) -> List (WithFC Name) -> Core RawImp
         desugarMultiBinder ctx []
           = desugarB side ctx scope
         desugarMultiBinder ctx (name :: xs)
-          = let extendedCtx = name.val :: ps
+          = let extendedCtx = insert name.val ps
             in IPi binder.fc rig
               <$> mapDesugarPiInfo extendedCtx info
               <*> (pure (Just name.val))
@@ -344,7 +345,7 @@ mutual
               <*> desugarMultiBinder extendedCtx xs
 
   desugarB side ps (PPi fc rig p mn argTy retTy)
-      = let ps' = maybe ps (:: ps) mn in
+      = let ps' = maybe ps (flip insert ps) mn in
             pure $ IPi fc rig !(traverse (desugar side ps') p)
                               mn !(desugarB side ps argTy)
                                  !(desugarB side ps' retTy)
@@ -354,7 +355,7 @@ mutual
                      => addSemanticDecorations [(nfc, Bound, Just n)]
                    pure $ ILam fc rig !(traverse (desugar AnyExpr ps) p)
                            (Just n) !(desugarB AnyExpr ps argTy)
-                                    !(desugar AnyExpr (n :: ps) scope)
+                                    !(desugar AnyExpr (insert n ps) scope)
            else pure $ ILam EmptyFC rig !(traverse (desugar AnyExpr ps) p)
                    (Just (MN "lamc" 0)) !(desugarB AnyExpr ps argTy) $
                  ICase fc [] (IVar EmptyFC (MN "lamc" 0)) (Implicit fc False)
@@ -362,7 +363,7 @@ mutual
   desugarB side ps (PLam fc rig p (PRef _ n@(MN _ _)) argTy scope)
       = pure $ ILam fc rig !(traverse (desugar AnyExpr ps) p)
                            (Just n) !(desugarB AnyExpr ps argTy)
-                                    !(desugar AnyExpr (n :: ps) scope)
+                                    !(desugar AnyExpr (insert n ps) scope)
   desugarB side ps (PLam fc rig p (PImplicit _) argTy scope)
       = pure $ ILam fc rig !(traverse (desugar AnyExpr ps) p)
                            Nothing !(desugarB AnyExpr ps argTy)
@@ -376,7 +377,7 @@ mutual
       = do whenJust (isConcreteFC prefFC) $ \nfc =>
              addSemanticDecorations [(nfc, Bound, Just n)]
            pure $ ILet fc prefFC rig n !(desugarB side ps nTy) !(desugarB side ps nVal)
-                                       !(desugar side (n :: ps) scope)
+                                       !(desugar side (insert n ps) scope)
   desugarB side ps (PLet fc rig pat nTy nVal scope alts)
       = pure $ ICase fc [] !(desugarB side ps nVal) !(desugarB side ps nTy)
                         !(traverse (map snd . desugarClause True ps)
@@ -388,7 +389,7 @@ mutual
            cls <- traverse (map snd . desugarClause True ps) cls
            pure $ ICase fc opts scr scrty cls
   desugarB side ps (PLocal fc xs scope)
-      = let ps' = definedIn (map val xs) ++ ps in
+      = let ps' = definedInAcc (map val xs) ps in
             pure $ ILocal fc (concat !(traverse (desugarDecl ps') xs))
                              !(desugar side ps' scope)
   desugarB side ps (PApp pfc (PUpdate fc fs) rec)
@@ -759,7 +760,7 @@ mutual
            (newps, bpat) <- bindNames False pat'
            exp' <- desugarDo side ns ps exp
            alts' <- traverse (map snd . desugarClause True ps) alts
-           let ps' = newps ++ ps
+           let ps' = insertFrom newps ps
            let fcOriginal = fc
            let fc = virtualiseFC fc
            let patFC = virtualiseFC (getFC bpat)
@@ -790,7 +791,7 @@ mutual
            (newps, bpat) <- bindNames False pat'
            tm' <- desugarB side ps tm
            alts' <- traverse (map snd . desugarClause True ps) alts
-           let ps' = newps ++ ps
+           let ps' = insertFrom newps ps
            rest' <- expandDo side topfc ns ps' rest
            bd <- get Bang
            let fc = virtualiseFC fc
@@ -808,7 +809,7 @@ mutual
            pure $ IRewrite fc rule' rest'
 
   -- Replace all operator by function application
-  desugarTree : Side -> List Name ->
+  desugarTree : Side -> NameSet ->
                 Tree (OpStr, Maybe $ OperatorLHSInfo PTerm) PTerm ->
                 Core PTerm
   desugarTree side ps (Infix loc eqFC (OpSymbols $ UN $ Basic "=", _) l r) -- special case since '=' is special syntax
@@ -925,7 +926,7 @@ mutual
            (nm, bound, lhs') <- desugarLHS arg ps lhs
 
            -- desugar rhs, putting where clauses as local definitions
-           rhs' <- desugar AnyExpr (bound ++ ps) rhs
+           rhs' <- desugar AnyExpr (insertFrom bound ps) rhs
            let rhs' = case ws of
                         [] => rhs'
                         _ => ILocal fc (concat ws) rhs'
@@ -935,7 +936,7 @@ mutual
   desugarClause arg ps (MkWithClause fc lhs wps flags cs)
       = do cs' <- traverse (map snd . desugarClause arg ps) cs
            (nm, bound, lhs') <- desugarLHS arg ps lhs
-           wps' <- traverseList1 (desugarWithProblem (bound ++ ps)) wps
+           wps' <- traverseList1 (desugarWithProblem (insertFrom bound ps)) wps
            pure (nm, mkWithClause fc lhs' wps' flags cs')
 
   desugarClause arg ps (MkImpossible fc lhs)
@@ -1063,7 +1064,7 @@ mutual
            params' <- getArgs params
            let paramList = forget params'
            let paramNames = map (\x => x.name.val) paramList
-           let ps' = paramNames ++ ps
+           let ps' = insertFrom paramNames ps
            pds' <- traverse (desugarDecl ps') pds
            -- Look for implicitly bindable names in the parameters
            pnames <- ifThenElse (not !isUnboundImplicits) (pure [])
@@ -1103,7 +1104,7 @@ mutual
            let paramNames = concatMap (map val . forget . names) params
 
            let cons = concatMap expandConstraint cons_in
-           let ps1 = paramNames ++ ps
+           let ps1 = insertFrom paramNames ps
            cons' <- traverse (\ ntm => do tm' <- desugar AnyExpr ps1 (snd ntm)
                                           pure (fst ntm, tm')) cons
            params' <- concat <$> traverse (\ (MkBasicMultiBinder rig nm tm) =>
@@ -1114,7 +1115,7 @@ mutual
            -- Look for bindable names in all the constraints and parameters
            let mnames = map dropNS (toList $ definedIn (map val body))
 
-           let ps2 = mnames ++ ps1
+           let ps2 = insertFrom mnames ps1
            bnames <- ifThenElse (not !isUnboundImplicits) (pure [])
              $ map concat
              $ for (map Builtin.snd cons' ++ map (snd . snd) params')
@@ -1209,7 +1210,7 @@ mutual
            let _ = the (List Name) fnames
            -- Look for bindable names in the parameters
 
-           let ps' = fnames ++ paramNames ++ ps
+           let ps' = insertFrom fnames $ insertFrom paramNames ps
 
            let bnames = if !isUnboundImplicits
                         then concatMap (findBindableNames True ps' [])
@@ -1320,7 +1321,7 @@ mutual
            pure [INamespace n.fc ns (concat ds)]
   desugarDecl ps ts@(MkWithData _ $ PTransform n lhs rhs)
       = do (bound, blhs) <- bindNames False !(desugar LHS ps lhs)
-           rhs' <- desugar AnyExpr (bound ++ ps) rhs
+           rhs' <- desugar AnyExpr (insertFrom bound ps) rhs
            pure [ITransform ts.fc (UN $ Basic n) blhs rhs']
   desugarDecl ps el@(MkWithData _ $ PRunElabDecl tm)
       = do tm' <- desugar AnyExpr ps tm

@@ -11,6 +11,9 @@ import Control.Monad.State
 
 import Data.List
 
+import Libraries.Data.NameSet
+import Libraries.Data.DList
+
 %default covering
 
 -- Rename the IBindVars in a term. Anything which appears in the list 'renames'
@@ -23,7 +26,7 @@ renameIBinds rs us (IPi fc c p (Just un@(UN (Basic n))) ty sc)
     = if n `elem` rs
          then let n' = genUniqueStr (rs ++ us) n
                   un' = UN (Basic n')
-                  sc' = substNames (map (UN . Basic) (filter (/= n) us))
+                  sc' = substNames (fromList $ map (UN . Basic) (filter (/= n) us))
                                    [(un, IVar fc un')] sc in
              do scr <- renameIBinds rs (n' :: us) sc'
                 ty' <- renameIBinds rs us ty
@@ -127,7 +130,7 @@ bindNames : {auto c : Ref Ctxt Defs} ->
             (arg : Bool) -> RawImp -> Core (List Name, RawImp)
 bindNames arg tm
     = if !isUnboundImplicits
-         then do let ns = nub (findBindableNames arg [] [] tm)
+         then do let ns = nub (findBindableNames arg empty [] tm)
                  log "elab.bindnames" 10 $ "Found names :" ++ show ns
                  pure (map (UN . Basic) (map snd ns), doBind ns tm)
          else pure ([], tm)
@@ -143,15 +146,15 @@ getUsing n ((t, Just n', ty) :: us) -- implicit binder
          then (t, (erased, Implicit, Just n, ty)) :: getUsing n us
          else getUsing n us
 getUsing n ((t, Nothing, ty) :: us) -- autoimplicit binder
-    = let ns = nub (findIBindVars ty) in
+    = let ns = findIBindVars ty in
           if n `elem` ns
              then (t, (top, AutoImplicit, Nothing, ty)) ::
                       getUsing n us
              else getUsing n us
 
-getUsings : List Name -> List (Int, Maybe Name, RawImp) ->
+getUsings : NameSet -> List (Int, Maybe Name, RawImp) ->
             List (Int, (RigCount, PiInfo RawImp, Maybe Name, RawImp))
-getUsings ns u = concatMap (flip getUsing u) ns
+getUsings ns u = concatMap (\ n => getUsing n u) (toList ns)
 
 bindUsings : List (RigCount, PiInfo RawImp, Maybe Name, RawImp) -> RawImp -> RawImp
 bindUsings [] tm = tm
@@ -161,7 +164,7 @@ bindUsings ((rig, p, mn, ty) :: us) tm
 addUsing : List (Maybe Name, RawImp) ->
            RawImp -> RawImp
 addUsing uimpls tm
-    = let ns = nub (findIBindVars tm)
+    = let ns = findIBindVars tm
           bs = nubBy (\x, y => fst x == fst y)
                      (getUsings ns (tag 0 uimpls)) in
           bindUsings (map snd bs) tm
@@ -172,7 +175,7 @@ addUsing uimpls tm
 export
 bindTypeNames : {auto c : Ref Ctxt Defs} ->
                 FC -> List (Maybe Name, RawImp) ->
-                List Name -> RawImp-> Core RawImp
+                NameSet -> RawImp-> Core RawImp
 bindTypeNames fc uimpls env tm
     = if !isUnboundImplicits
              then do ns <- findUniqueBindableNames fc True env [] tm
@@ -182,7 +185,7 @@ bindTypeNames fc uimpls env tm
 
 export
 bindTypeNamesUsed : {auto c : Ref Ctxt Defs} ->
-                    FC -> List String -> List Name -> RawImp -> Core RawImp
+                    FC -> List String -> NameSet -> RawImp -> Core RawImp
 bindTypeNamesUsed fc used env tm
     = if !isUnboundImplicits
          then do ns <- findUniqueBindableNames fc True env used tm
@@ -191,7 +194,7 @@ bindTypeNamesUsed fc used env tm
 
 export
 piBindNames : {auto c : Ref Ctxt Defs} ->
-              FC -> List Name -> RawImp -> Core RawImp
+              FC -> NameSet -> RawImp -> Core RawImp
 piBindNames loc env tm
     = do ns <- findUniqueBindableNames loc True env [] tm
          pure $ piBind (map fst ns) tm

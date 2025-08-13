@@ -25,6 +25,7 @@ import Data.List
 import Data.SnocList
 import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
+import Libraries.Data.NameSet
 
 %default covering
 
@@ -87,7 +88,7 @@ addDefaults fc impName params allms defs body
                     -- to be referring to unbound variables otherwise.
                     -- (See test idris2/interface018 for an example!)
                     let mupdates = params ++ map specialiseMeth allms
-                        cs' = map (substNamesClause [] mupdates) cs in
+                        cs' = map (substNamesClause empty mupdates) cs in
                         extendBody ms ns
                              (IDef fc n (map (substLocClause fc) cs') :: body)
 
@@ -141,7 +142,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
          -- alias for something
          syn <- get Syn
          defs <- get Ctxt
-         let varsList = toList vars -- TODO change list in findBindableNames?
+         let varsSet = fromList vars
          inames <- lookupCtxtName iname (gamma defs)
          let [cndata] = concatMap (\n => lookupName n (ifaces syn))
                                   (map fst inames)
@@ -180,7 +181,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
          let initTy = bindImpls is $ bindConstraints vfc AutoImplicit cons
                          (apply (IVar vfc iname) ps)
          let paramBinds = if !isUnboundImplicits
-                          then findBindableNames True varsList [] initTy
+                          then findBindableNames True varsSet [] initTy
                           else []
          let impTy = doBind paramBinds initTy
 
@@ -407,27 +408,27 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
         = do -- Get the specialised type by applying the method to the
              -- parameters
              n <- inCurrentNS (methName meth.name)
-             let varsList = toList vars
+             let varsSet = fromList vars
 
              -- Avoid any name clashes between parameters and method types by
              -- renaming IBindVars in the method types which appear in the
              -- parameters
              let upds' = !(traverse (applyCon impName) allmeths)
-             let mty_in = substNames varsList upds' meth.type
+             let mty_in = substNames varsSet upds' meth.type
              let (upds, mty_in) = runState Prelude.Nil (renameIBinds impsp (findImplicits mty_in) mty_in)
              -- Finally update the method type so that implicits from the
              -- parameters are passed through to any earlier methods which
              -- appear in the type
-             let mty_in = substNames varsList methupds mty_in
+             let mty_in = substNames varsSet  methupds mty_in
 
              -- Substitute _ in for the implicit parameters, then
              -- substitute in the explicit parameters.
              let mty_iparams
-                   = substBindVars varsList
+                   = substBindVars varsSet
                                 (map (\n => (n, Implicit vfc False)) imppnames)
                                 mty_in
              let mty_params
-                   = substNames varsList (zip pnames ps) mty_iparams
+                   = substNames varsSet (zip pnames ps) mty_iparams
              log "elab.implementation" 5 $ "Substitute implicits " ++ show imppnames ++
                      " parameters " ++ show (zip pnames ps) ++
                      " "  ++ show mty_in ++ " is " ++
@@ -438,7 +439,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
                          mty_params
              let ibound = findImplicits mbase
 
-             mty <- bindTypeNamesUsed ifc ibound varsList mbase
+             mty <- bindTypeNamesUsed ifc ibound varsSet mbase
 
              log "elab.implementation" 3 $
                      "Method " ++ show meth.name ++ " ==> " ++

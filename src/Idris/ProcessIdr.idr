@@ -42,6 +42,7 @@ import Idris.Doc.String
 import Data.List
 import Data.SnocList
 import Data.String
+import Libraries.Data.NameSet
 import Libraries.Data.SortedMap
 
 import System.File
@@ -87,7 +88,7 @@ processDecl (MkWithData _ $ PMutual ps)
       processDecls (tys ++ defs)
 
 processDecl decl
-    = catch (do impdecls <- desugarDecl [] decl
+    = catch (do impdecls <- desugarDecl empty decl
                 traverse_ (Check.processDecl [] (MkNested []) Env.empty) impdecls
                 pure [])
             (\err => do giveUpConstraints -- or we'll keep trying...

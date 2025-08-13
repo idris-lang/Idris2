@@ -328,3 +328,13 @@ export
 foldlNames : (acc -> Name -> acc) -> acc -> NameSet -> acc
 foldlNames f z Empty = z
 foldlNames f z (M _ t) = treeFoldl f z t
+
+treeSize : Tree _ -> Nat -> Nat
+treeSize (Leaf n) = S
+treeSize (Branch2 t1 _ t2) = treeSize t1 . treeSize t2
+treeSize (Branch3 t1 _ t2 _ t3) = treeSize t1 . treeSize t2 . treeSize t3
+
+export
+size : NameSet -> Nat
+size Empty = 0
+size (M _ t) = treeSize t 0

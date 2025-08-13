@@ -19,6 +19,8 @@ import Libraries.Data.NameSet
 import Libraries.Data.WithDefault
 import Libraries.Data.SnocList.SizeOf
 
+import Libraries.Data.NameSet
+
 %default covering
 
 -- Information about names in nested blocks
@@ -820,9 +822,8 @@ implicitsAs n defs ns tm
 ||| receive the additional arguments introduced by a Parameters directive
 export
 definedInBlock : Namespace -> -- namespace to resolve names
-                 List ImpDecl -> List Name
-definedInBlock ns decls =
-    toList $ defNames ns decls empty
+                 List ImpDecl -> NameSet -> NameSet
+definedInBlock = defNames
   where
     getName : ImpTy -> Name
     getName (MkImpTy _ n _) = n.val

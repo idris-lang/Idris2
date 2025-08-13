@@ -64,8 +64,9 @@ import TTImp.ProcessDecls
 import Data.List
 import Data.List1
 import Data.Maybe
-import Libraries.Data.NatSet
 import Libraries.Data.NameMap
+import Libraries.Data.NameSet
+import Libraries.Data.NatSet
 import Libraries.Data.PosMap
 import Data.Stream
 import Data.String
@@ -424,7 +425,7 @@ inferAndElab :
   Env Term vars ->
   Core (TermWithType vars)
 inferAndElab emode itm env
-  = do ttimp <- desugar AnyExpr (toList vars) itm
+  = do ttimp <- desugar AnyExpr (fromList vars) itm
        let ttimpWithIt = ILocal replFC !getItDecls ttimp
        inidx <- resolveName (UN $ Basic "[input]")
        -- a TMP HACK to prioritise list syntax for List: hide
@@ -598,7 +599,7 @@ processEdit (Refine upd line hole e)
                     let pcall = papply replFC e new_holes
 
                     -- We're desugaring it to the corresponding TTImp
-                    icall <- desugar AnyExpr (lhsCtxt <>> []) pcall
+                    icall <- desugar AnyExpr (fromList $ lhsCtxt <>> []) pcall
 
                     -- We're checking this term full of holes against the type of the hole
                     -- TODO: branch before checking the expression fits
@@ -747,7 +748,7 @@ prepareExp :
     {auto o : Ref ROpts REPLOpts} ->
     PTerm -> Core ClosedTerm
 prepareExp ctm
-    = do ttimp <- desugar AnyExpr [] (PApp replFC (PRef replFC (UN $ Basic "unsafePerformIO")) ctm)
+    = do ttimp <- desugar AnyExpr empty (PApp replFC (PRef replFC (UN $ Basic "unsafePerformIO")) ctm)
          let ttimpWithIt = ILocal replFC !getItDecls ttimp
          inidx <- resolveName (UN $ Basic "[input]")
          (tm, ty) <- elabTerm inidx InExpr [] (MkNested [])
@@ -800,7 +801,7 @@ execDecls decls = do
   where
     execDecl : PDecl -> Core ()
     execDecl decl = do
-      i <- desugarDecl [] decl
+      i <- desugarDecl empty decl
       inidx <- resolveName (UN $ Basic "[defs]")
       _ <- newRef EST (initEStateSub inidx Env.empty Refl)
       processLocal [] (MkNested []) Env.empty !getItDecls i
@@ -992,8 +993,8 @@ process (TypeSearch searchTerm)
     = do defs <- branch
          let curr = currentNS defs
          let ctxt = gamma defs
-         rawTy <- desugar AnyExpr [] searchTerm
-         bound <- piBindNames replFC [] rawTy
+         rawTy <- desugar AnyExpr empty searchTerm
+         bound <- piBindNames replFC empty rawTy
          (ty, _) <- elabTerm 0 InType [] (MkNested []) Env.empty bound Nothing
          ty' <- toResolvedNames ty
          filteredDefs <-
