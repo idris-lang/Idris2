@@ -199,7 +199,7 @@ export
 factorLteNumber : Factor p n -> {auto positN : LTE 1 n} -> LTE p n
 factorLteNumber (CofactorExists Z prf) =
         let nIsZero = trans prf $ multCommutative p 0
-            oneLteZero = replace {p = LTE 1} nIsZero positN
+            oneLteZero = replace (LTE 1) nIsZero positN
         in
         absurd $ succNotLTEzero oneLteZero
 factorLteNumber (CofactorExists (S k) prf) =
@@ -258,7 +258,7 @@ minusFactor (CofactorExists qab prfAB) (CofactorExists qa prfA) =
             rewrite multDistributesOverMinusRight p qab qa in
             rewrite sym prfA in
             rewrite sym prfAB in
-            replace {p = \x => b = minus (a + b) x} (plusZeroRightNeutral a) $
+            replace (\x => b = minus (a + b) x) (plusZeroRightNeutral a) $
             rewrite plusMinusLeftCancel a b 0 in
             rewrite minusZeroRight b in
             Refl
@@ -459,15 +459,15 @@ export
 divByGcdGcdOne : {a, b, c : Nat} -> GCD a (a * b) (a * c) -> GCD 1 b c
 divByGcdGcdOne {a = Z} (MkGCD _ _) impossible
 divByGcdGcdOne {a = S a} {b = Z} {c = Z} (MkGCD {notBothZero} _ _) =
-        case replace {p = \x => NotBothZero x x} (multZeroRightZero (S a)) notBothZero of
+        case replace (\x => NotBothZero x x) (multZeroRightZero (S a)) notBothZero of
             LeftIsNotZero impossible
             RightIsNotZero impossible
 divByGcdGcdOne {a = S a} {b = Z} {c = S c} gcdPrf@(MkGCD {notBothZero} _ _) =
-        case replace {p = \x => NotBothZero x (S a * S c)} (multZeroRightZero (S a)) notBothZero of
+        case replace (\x => NotBothZero x (S a * S c)) (multZeroRightZero (S a)) notBothZero of
             LeftIsNotZero impossible
             RightIsNotZero => symmetric $ divByGcdHelper a c Z $ symmetric gcdPrf
 divByGcdGcdOne {a = S a} {b = S b} {c = Z} gcdPrf@(MkGCD {notBothZero} _ _) =
-        case replace {p = \x => NotBothZero (S a * S b) x} (multZeroRightZero (S a)) notBothZero of
+        case replace (\x => NotBothZero (S a * S b) x) (multZeroRightZero (S a)) notBothZero of
             RightIsNotZero impossible
             LeftIsNotZero => divByGcdHelper a b Z gcdPrf
 divByGcdGcdOne {a = S a} {b = S b} {c = S c} gcdPrf =

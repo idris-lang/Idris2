@@ -60,7 +60,7 @@ never equal to a successor:
 .. code-block:: idris
 
     disjoint : (n : Nat) -> Z = S n -> Void
-    disjoint n prf = replace {p = disjointTy} prf ()
+    disjoint n prf = replace disjointTy prf ()
       where
         disjointTy : Nat -> Type
         disjointTy Z = ()
