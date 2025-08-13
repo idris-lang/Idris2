@@ -1133,7 +1133,7 @@ mutual
       = do
            params' <- getArgs params
            let paramList = forget params'
-           let paramNames = map (\x => x.name.val) paramList
+           let paramNames = map (.name.val) paramList
            pds' <- traverse (desugarDecl (ps ++ paramNames)) pds
            -- Look for implicitly bindable names in the parameters
            pnames <- ifThenElse (not !isUnboundImplicits) (pure [])

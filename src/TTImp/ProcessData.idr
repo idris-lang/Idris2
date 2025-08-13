@@ -327,7 +327,7 @@ calcEnum : {auto c : Ref Ctxt Defs} ->
            FC -> List Constructor -> Core Bool
 calcEnum fc cs
     = if !(allM isNullary cs)
-         then do traverse_ (\c => setFlag fc c (ConType (ENUM $ length cs))) (map (\x => x.name.val) cs)
+         then do traverse_ (\c => setFlag fc c (ConType (ENUM $ length cs))) (map (.name.val) cs)
                  pure True
          else pure False
   where
@@ -557,7 +557,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
          log "declare.data" 10 $
            "Saving from " ++ show n ++ ": " ++ show metas
 
-         let connames = map (\x => x.name.val) cons
+         let connames = map (.name.val) cons
          unless (NoHints `elem` opts) $
               traverse_ (\x => addHintFor fc (Resolved tidx) x True False) connames
 
@@ -567,4 +567,4 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
          -- #1404
          whenJust tot $ \ tot => do
              log "declare.data" 5 $ "setting totality flag for \{show n} and its constructors"
-             for_ (n :: map (\x => x.name.val) cons) $ \ n => setFlag fc n (SetTotal tot)
+             for_ (n :: map (.name.val) cons) $ \ n => setFlag fc n (SetTotal tot)

@@ -121,7 +121,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
         apply f ((n, arg, _       ) :: xs) = apply (INamedApp (getFC f) f n arg) xs
 
     paramNames : List ImpParameter -> List Name
-    paramNames params = map (\x => x.name.val) params
+    paramNames params = map (.name.val) params
 
     mkDataTy : FC -> List ImpParameter -> RawImp
     mkDataTy fc [] = IType fc

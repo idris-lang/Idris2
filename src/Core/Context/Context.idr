@@ -25,6 +25,9 @@ import Libraries.Data.SparseMatrix
 import Libraries.Utils.Binary
 import Libraries.Utils.Scheme
 
+%hide LabelledValue.label
+%hide KeyVal.label
+
 public export
 data Ref : (l : label) -> Type -> Type where
      [search l]

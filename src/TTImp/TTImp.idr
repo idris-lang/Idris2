@@ -395,8 +395,8 @@ mutual
   RecordBody : Type -> Type -- The name is the data constructor's name
   RecordBody nm = WithName $ WithOpts $ List (IField' nm)
 
-  ||| A record is defined by its header containing the name, options and parameters, and its body
-  ||| containing the constructor name and a list of fields
+  ||| A record is defined by its header containing the name and parameters, and its body
+  ||| containing the constructor name, optios, and a list of fields
   public export
   record ImpRecordData (nm : Type) where
     constructor MkImpRecord
