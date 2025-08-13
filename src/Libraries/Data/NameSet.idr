@@ -17,116 +17,65 @@ Key = Name
 private
 data Tree : Nat -> Type where
   Leaf : Key -> Tree Z
+  Leaf2 : Key -> Key -> Tree Z
   Branch2 : Tree n -> Key -> Tree n -> Tree (S n)
   Branch3 : Tree n -> Key -> Tree n -> Key -> Tree n -> Tree (S n)
 
 Show (Tree n) where
   show (Leaf k) = "Leaf: " ++ show k ++ "\n"
+  show (Leaf2 k1 k2) = "Leaf2: " ++ show k1 ++ ", " ++ show k2 ++ "\n"
   show (Branch2 t1 k t2) = "Branch2: " ++ show t1 ++ "\n < " ++ show k ++ "\n" ++ show t2 ++ "\n"
   show (Branch3 t1 k1 t2 k2 t3) = "Branch3: " ++ show t1 ++ "\n < " ++ show k1 ++ "\n" ++ show t2 ++ "\n < " ++ show k2 ++ "\n" ++ show t3 ++ "\n"
 
-branch4 :
-  Tree n -> Key ->
-  Tree n -> Key ->
-  Tree n -> Key ->
-  Tree n ->
-  Tree (S (S n))
-branch4 a b c d e f g =
-  Branch2 (Branch2 a b c) d (Branch2 e f g)
-
-branch5 :
-  Tree n -> Key ->
-  Tree n -> Key ->
-  Tree n -> Key ->
-  Tree n -> Key ->
-  Tree n ->
-  Tree (S (S n))
-branch5 a b c d e f g h i =
-  Branch2 (Branch2 a b c) d (Branch3 e f g h i)
-
-branch6 :
-  Tree n -> Key ->
-  Tree n -> Key ->
-  Tree n -> Key ->
-  Tree n -> Key ->
-  Tree n -> Key ->
-  Tree n ->
-  Tree (S (S n))
-branch6 a b c d e f g h i j k =
-  Branch3 (Branch2 a b c) d (Branch2 e f g) h (Branch2 i j k)
-
-branch7 :
-  Tree n -> Key ->
-  Tree n -> Key ->
-  Tree n -> Key ->
-  Tree n -> Key ->
-  Tree n -> Key ->
-  Tree n -> Key ->
-  Tree n ->
-  Tree (S (S n))
-branch7 a b c d e f g h i j k l m =
-  Branch3 (Branch3 a b c d e) f (Branch2 g h i) j (Branch2 k l m)
-
-merge1 : Tree n -> Key -> Tree (S n) -> Key -> Tree (S n) -> Tree (S (S n))
-merge1 a b (Branch2 c d e) f (Branch2 g h i) = branch5 a b c d e f g h i
-merge1 a b (Branch2 c d e) f (Branch3 g h i j k) = branch6 a b c d e f g h i j k
-merge1 a b (Branch3 c d e f g) h (Branch2 i j k) = branch6 a b c d e f g h i j k
-merge1 a b (Branch3 c d e f g) h (Branch3 i j k l m) = branch7 a b c d e f g h i j k l m
-
-merge2 : Tree (S n) -> Key -> Tree n -> Key -> Tree (S n) -> Tree (S (S n))
-merge2 (Branch2 a b c) d e f (Branch2 g h i) = branch5 a b c d e f g h i
-merge2 (Branch2 a b c) d e f (Branch3 g h i j k) = branch6 a b c d e f g h i j k
-merge2 (Branch3 a b c d e) f g h (Branch2 i j k) = branch6 a b c d e f g h i j k
-merge2 (Branch3 a b c d e) f g h (Branch3 i j k l m) = branch7 a b c d e f g h i j k l m
-
-merge3 : Tree (S n) -> Key -> Tree (S n) -> Key -> Tree n -> Tree (S (S n))
-merge3 (Branch2 a b c) d (Branch2 e f g) h i = branch5 a b c d e f g h i
-merge3 (Branch2 a b c) d (Branch3 e f g h i) j k = branch6 a b c d e f g h i j k
-merge3 (Branch3 a b c d e) f (Branch2 g h i) j k = branch6 a b c d e f g h i j k
-merge3 (Branch3 a b c d e) f (Branch3 g h i j k) l m = branch7 a b c d e f g h i j k l m
-
 treeLookup : Key -> Tree n -> Bool
 treeLookup k (Leaf k') = k == k'
-treeLookup k (Branch2 t1 k' t2) =
-  if k <= k' then
-    treeLookup k t1
-  else
-    treeLookup k t2
-treeLookup k (Branch3 t1 k1 t2 k2 t3) =
-  if k <= k1 then
-    treeLookup k t1
-  else if k <= k2 then
-    treeLookup k t2
-  else
-    treeLookup k t3
+treeLookup k (Leaf2 k1 k2) = case compare k k1 of
+  LT => False
+  EQ => True
+  GT => k == k2
+treeLookup k (Branch2 t1 k' t2) = case compare k k' of
+  LT => treeLookup k t1
+  EQ => True
+  GT => treeLookup k t2
+treeLookup k (Branch3 t1 k1 t2 k2 t3) = case compare k k1 of
+  LT => treeLookup k t1
+  EQ => True
+  GT => case compare k k2 of
+    LT => treeLookup k t2
+    EQ => True
+    GT => treeLookup k t3
 
 treeInsert' : Key -> Tree n -> Either (Tree n) (Tree n, Key, Tree n)
-treeInsert' k (Leaf k') =
-  case compare k k' of
-    LT => Right (Leaf k, k, Leaf k')
-    EQ => Left (Leaf k)
-    GT => Right (Leaf k', k', Leaf k)
-treeInsert' k (Branch2 t1 k' t2) =
-  if k <= k' then
-    case treeInsert' k t1 of
+treeInsert' k t@(Leaf k') = case compare k k' of
+    LT => Left (Leaf2 k k')
+    EQ => Left t
+    GT => Left (Leaf2 k' k)
+treeInsert' k t@(Leaf2 k1 k2) = case compare k k1 of
+  LT => Right (Leaf k, k1, Leaf k2)
+  EQ => Left t
+  GT => case compare k k2 of
+    LT => Right (Leaf k1, k, Leaf k2)
+    EQ => Left t
+    GT => Right (Leaf k1, k2, Leaf k)
+treeInsert' k t@(Branch2 t1 k' t2) = case compare k k' of
+  LT => case treeInsert' k t1 of
       Left t1' => Left (Branch2 t1' k' t2)
       Right (a, b, c) => Left (Branch3 a b c k' t2)
-  else
-    case treeInsert' k t2 of
+  EQ => Left t
+  GT => case treeInsert' k t2 of
       Left t2' => Left (Branch2 t1 k' t2')
       Right (a, b, c) => Left (Branch3 t1 k' a b c)
-treeInsert' k (Branch3 t1 k1 t2 k2 t3) =
-  if k <= k1 then
-    case treeInsert' k t1 of
+treeInsert' k t@(Branch3 t1 k1 t2 k2 t3) = case compare k k1 of
+  LT => case treeInsert' k t1 of
       Left t1' => Left (Branch3 t1' k1 t2 k2 t3)
       Right (a, b, c) => Right (Branch2 a b c, k1, Branch2 t2 k2 t3)
-  else
-    if k <= k2 then
-      case treeInsert' k t2 of
+  EQ => Left t
+  GT => case compare k k2 of
+    LT => case treeInsert' k t2 of
         Left t2' => Left (Branch3 t1 k1 t2' k2 t3)
         Right (a, b, c) => Right (Branch2 t1 k1 a, b, Branch2 c k2 t3)
-    else
-      case treeInsert' k t3 of
+    EQ => Left t
+    GT => case treeInsert' k t3 of
         Left t3' => Left (Branch3 t1 k1 t2 k2 t3')
         Right (a, b, c) => Right (Branch2 t1 k1 t2, k2, Branch2 a b c)
 
@@ -136,77 +85,22 @@ treeInsert k t =
     Left t' => Left t'
     Right (a, b, c) => Right (Branch2 a b c)
 
-delType : Nat -> Type
-delType Z = ()
-delType (S n) = Tree n
-
-treeDelete : {n : _} ->
-             Key -> Tree n -> Either (Tree n) (delType n)
-treeDelete k (Leaf k') =
-  if k == k' then
-    Right ()
-  else
-    Left (Leaf k')
-treeDelete {n=S Z} k (Branch2 t1 k' t2) =
-  if k <= k' then
-    case treeDelete k t1 of
-      Left t1' => Left (Branch2 t1' k' t2)
-      Right () => Right t2
-  else
-    case treeDelete k t2 of
-      Left t2' => Left (Branch2 t1 k' t2')
-      Right () => Right t1
-treeDelete {n=S Z} k (Branch3 t1 k1 t2 k2 t3) =
-  if k <= k1 then
-    case treeDelete k t1 of
-      Left t1' => Left (Branch3 t1' k1 t2 k2 t3)
-      Right () => Left (Branch2 t2 k2 t3)
-  else if k <= k2 then
-    case treeDelete k t2 of
-      Left t2' => Left (Branch3 t1 k1 t2' k2 t3)
-      Right () => Left (Branch2 t1 k1 t3)
-  else
-    case treeDelete k t3 of
-      Left t3' => Left (Branch3 t1 k1 t2 k2 t3')
-      Right () => Left (Branch2 t1 k1 t2)
-treeDelete {n=S (S _)} k (Branch2 t1 k' t2) =
-  if k <= k' then
-    case treeDelete k t1 of
-      Left t1' => Left (Branch2 t1' k' t2)
-      Right t1' =>
-        case t2 of
-          Branch2 a b c => Right (Branch3 t1' k' a b c)
-          Branch3 a b c d e => Left (branch4 t1' k' a b c d e)
-  else
-    case treeDelete k t2 of
-      Left t2' => Left (Branch2 t1 k' t2')
-      Right t2' =>
-        case t1 of
-          Branch2 a b c => Right (Branch3 a b c k' t2')
-          Branch3 a b c d e => Left (branch4 a b c d e k' t2')
-treeDelete {n=(S (S _))} k (Branch3 t1 k1 t2 k2 t3) =
-  if k <= k1 then
-    case treeDelete k t1 of
-      Left t1' => Left (Branch3 t1' k1 t2 k2 t3)
-      Right t1' => Left (merge1 t1' k1 t2 k2 t3)
-  else if k <= k2 then
-    case treeDelete k t2 of
-      Left t2' => Left (Branch3 t1 k1 t2' k2 t3)
-      Right t2' => Left (merge2 t1 k1 t2' k2 t3)
-  else
-    case treeDelete k t3 of
-      Left t3' => Left (Branch3 t1 k1 t2 k2 t3')
-      Right t3' => Left (merge3 t1 k1 t2 k2 t3')
-
 treeToList : Tree n -> List Key
-treeToList = treeToList' []
+treeToList t = treeToList' t []
   where
-    treeToList' : forall n . List Key -> Tree n -> List Key
-    treeToList' rest (Leaf k) = k :: rest
-    treeToList' rest (Branch2 t1 _ t2)
-        = treeToList' (treeToList' rest t2) t1
-    treeToList' rest (Branch3 t1 _ t2 _ t3)
-        = treeToList' (treeToList' (treeToList' rest t3) t2) t1
+    treeToList' : Tree _ -> List Key -> List Key
+    treeToList' (Leaf k) = (k ::)
+    treeToList' (Leaf2 k1 k2) = ([k1,k2] ++)
+    treeToList' (Branch2 t1 k t2)
+        = treeToList' t1
+        . (k ::)
+        . treeToList' t2
+    treeToList' (Branch3 t1 k1 t2 k2 t3)
+        = treeToList' t1
+        . (k1 ::)
+        . treeToList' t2
+        . (k2 ::)
+        . treeToList' t3
 
 export
 data NameSet : Type where
@@ -249,18 +143,6 @@ insertFrom : List Name -> NameSet -> NameSet
 insertFrom = flip $ foldl $ flip insert
 
 export
-delete : Name -> NameSet -> NameSet
-delete _ Empty = Empty
-delete k (M Z t) =
-  case treeDelete k t of
-    Left t' => (M _ t')
-    Right () => Empty
-delete k (M (S _) t) =
-  case treeDelete k t of
-    Left t' => (M _ t')
-    Right t' => (M _ t')
-
-export
 fromList : List Name -> NameSet
 fromList l = insertFrom l empty
 
@@ -283,30 +165,47 @@ Monoid NameSet where
 
 
 treeFilterBy : (Key -> Bool) -> Tree n -> NameSet
-treeFilterBy test = loop empty where
+treeFilterBy test t = loop t empty where
 
-  loop : NameSet -> Tree _ -> NameSet
-  loop acc (Leaf k)
-    = let True = test k | _ => acc in
-      insert k acc
-  loop acc (Branch2 t1 _ t2)
-    = loop (loop acc t1) t2
-  loop acc (Branch3 t1 _ t2 _ t3)
-    = loop (loop (loop acc t1) t2) t3
+  loop : Tree _ -> NameSet -> NameSet
+  loop (Leaf k)
+    = ifThenElse (test k) (insert k) id
+  loop (Leaf2 k1 k2)
+    = ifThenElse (test k1) (insert k1) id
+    . ifThenElse (test k2) (insert k2) id
+  loop (Branch2 t1 k t2)
+    = loop t2
+    . ifThenElse (test k) (insert k) id
+    . loop t1
+  loop (Branch3 t1 k1 t2 k2 t3)
+    = loop t3
+    . ifThenElse (test k2) (insert k2) id
+    . loop t2
+    . ifThenElse (test k1) (insert k1) id
+    . loop t1
 
 treeFilterByM : Monad m => (Key -> m Bool) -> Tree n -> m NameSet
 treeFilterByM test = loop empty where
 
   loop : NameSet -> Tree _ -> m NameSet
   loop acc (Leaf k)
-    = do True <- test k | _ => pure acc
-         pure (insert k acc)
-  loop acc (Branch2 t1 _ t2)
+    = pure
+    $ ifThenElse !(test k) (insert k) id
+    $ acc
+  loop acc (Leaf2 k1 k2)
+    = pure
+    $ ifThenElse !(test k1) (insert k1) id
+    $ ifThenElse !(test k2) (insert k2) id
+    $ acc
+  loop acc (Branch2 t1 k t2)
     = do acc <- loop acc t1
+         let acc = ifThenElse !(test k) (insert k) id acc
          loop acc t2
-  loop acc (Branch3 t1 _ t2 _ t3)
+  loop acc (Branch3 t1 k1 t2 k2 t3)
     = do acc <- loop acc t1
+         let acc = ifThenElse !(test k1) (insert k1) id acc
          acc <- loop acc t2
+         let acc = ifThenElse !(test k2) (insert k2) id acc
          loop acc t3
 
 export
@@ -321,8 +220,10 @@ filterByM test (M _ t) = treeFilterByM test t
 
 treeFoldl : (acc -> Name -> acc) -> acc -> Tree _ -> acc
 treeFoldl f z (Leaf k) = f z k
-treeFoldl f z (Branch2 l _ r) = treeFoldl f (treeFoldl f z l) r
-treeFoldl f z (Branch3 l _ m _ r) = treeFoldl f (treeFoldl f (treeFoldl f z l) m) r
+treeFoldl f z (Leaf2 k1 k2) = f (f z k1) k2
+treeFoldl f z (Branch2 l k r) = treeFoldl f (f (treeFoldl f z l) k) r
+treeFoldl f z (Branch3 l k1 m k2 r)
+  = treeFoldl f (f (treeFoldl f (f (treeFoldl f z l) k1) m) k2) r
 
 export
 foldlNames : (acc -> Name -> acc) -> acc -> NameSet -> acc
@@ -331,8 +232,9 @@ foldlNames f z (M _ t) = treeFoldl f z t
 
 treeSize : Tree _ -> Nat -> Nat
 treeSize (Leaf n) = S
-treeSize (Branch2 t1 _ t2) = treeSize t1 . treeSize t2
-treeSize (Branch3 t1 _ t2 _ t3) = treeSize t1 . treeSize t2 . treeSize t3
+treeSize (Leaf2 _ _) = (2+)
+treeSize (Branch2 t1 _ t2) = treeSize t1 . treeSize t2 . (1+)
+treeSize (Branch3 t1 _ t2 _ t3) = treeSize t1 . treeSize t2 . treeSize t3 . (2+)
 
 export
 size : NameSet -> Nat
