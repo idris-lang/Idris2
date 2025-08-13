@@ -83,7 +83,7 @@ StrError10:3:1--3:2
      ^
 
 1/1: Building StrError11 (StrError11.idr)
-Error: Multi-line string is expected to begin with """.
+Error: Bracket is not properly closed.
 
 StrError11:2:7--2:8
  1 | foo : String

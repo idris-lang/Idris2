@@ -19,6 +19,7 @@ import Data.String
 import System.File
 
 import Libraries.Data.NameMap
+import Libraries.Data.NatSet
 
 import public Libraries.Utils.Binary
 
@@ -29,7 +30,7 @@ import public Libraries.Utils.Binary
 ||| version number if you're changing the version more than once in the same day.
 export
 ttcVersion : Int
-ttcVersion = 2025_07_24_00
+ttcVersion = 2025_08_08_00
 
 export
 checkTTCVersion : String -> Int -> Int -> Core ()

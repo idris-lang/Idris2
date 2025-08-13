@@ -270,12 +270,12 @@ export
 mainWithCodegens : List (String, Codegen) -> IO ()
 mainWithCodegens cgs = do
   Right opts <- getCmdOpts
-    | Left err => do putStrLn err
-                     putStrLn usage
+    | Left err => do ignore $ fPutStrLn stderr $ "Error: " ++ err
+                     exitWith (ExitFailure 1)
   continue <- quitOpts opts
   when continue $ do
     setupTerm
     coreRun (stMain cgs opts)
-      (\err : Error => do putStrLn ("Uncaught error: " ++ show err)
+      (\err : Error => do ignore $ fPutStrLn stderr $ "Uncaught error: " ++ show err
                           exitWith (ExitFailure 1))
       (\res => pure ())

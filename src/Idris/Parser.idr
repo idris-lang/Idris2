@@ -28,6 +28,9 @@ import Idris.Parser.Let
 fcBounds : OriginDesc => Rule a -> Rule (WithFC a)
 fcBounds a = (.withFC) <$> bounds a
 
+addFCBounds : OriginDesc => Rule (WithData ls a) -> Rule (WithData (FC' :: ls) a)
+addFCBounds a = (.addFC) <$> bounds a
+
 decorate : {a : Type} -> OriginDesc -> Decoration -> Rule a -> Rule a
 decorate fname decor rule = do
   res <- bounds rule
@@ -365,7 +368,7 @@ mutual
                        pure $
                          let fc = boundToFC fname (mergeBounds l r)
                              opFC = virtualiseFC fc -- already been highlighted: we don't care
-                         in POp fc (mapData NoBinder l.withFC)
+                         in POp fc (map NoBinder l.withFC)
                                    (MkFCVal opFC (OpSymbols $ UN $ Basic "="))
                                    r.val
                else fail "= not allowed")
@@ -379,7 +382,7 @@ mutual
                         pure (op, e)
                  (op, r) <- pure b.val
                  let fc = boundToFC fname (mergeBounds l b)
-                 pure (POp fc (mapData NoBinder l.withFC) op r))
+                 pure (POp fc (map NoBinder l.withFC) op r))
                <|> pure l.val
 
   opExpr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
@@ -1192,7 +1195,7 @@ plainBinder : (fname : OriginDesc) => (indents : IndentInfo) => Rule PlainBinder
 plainBinder = do name <- fcBounds (decoratedSimpleBinderUName fname)
                  decoratedSymbol fname ":"
                  ty <- typeExpr pdef fname indents
-                 pure $ MkWithName name ty
+                 pure $ Mk [name] ty
 
 ||| A binder with multiple names and one type
 ||| BNF:
@@ -1606,7 +1609,7 @@ parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
            col <- column
            decoratedKeyword fname "failing"
            commit
-           msg <- optional (decorate fname Data simpleStr)
+           msg <- optional (decorate fname Data (simpleMultiStr <|> simpleStr ))
            ds <- nonEmptyBlockAfter col (topDecl fname)
            pure $ PFail msg (collectDefs $ forget ds)
 
@@ -1697,25 +1700,25 @@ constraints fname indents
          pure ((Just n, tm) :: more)
   <|> pure []
 
-implBinds : OriginDesc -> IndentInfo -> (namedImpl : Bool) -> EmptyRule (List (FC, RigCount, Name, PiInfo PTerm, PTerm))
+implBinds : OriginDesc -> IndentInfo -> (namedImpl : Bool) ->
+            EmptyRule (List (AddFC (ImpParameter' PTerm)))
 implBinds fname indents namedImpl = concatMap (map adjust) <$> go where
 
-  adjust : (RigCount, WithFC Name, a) -> (FC, RigCount, Name, a)
-  adjust (r, wn, ty) = (virtualiseFC wn.fc, r, wn.val, ty)
+  adjust : ImpParameter' PTerm -> AddFC (ImpParameter' PTerm)
+  adjust param = virtualiseFC param.name.fc :+ param
 
   isDefaultImplicit : PiInfo a -> Bool
   isDefaultImplicit (DefImplicit _) = True
   isDefaultImplicit _               = False
 
-  go : EmptyRule (List (List (RigCount, WithFC Name, PiInfo PTerm, PTerm)))
+  go : EmptyRule (List (List (ImpParameter' PTerm)))
   go = do decoratedSymbol fname "{"
           piInfo <- bounds $ option Implicit $ defImplicitField fname indents
           when (not namedImpl && isDefaultImplicit piInfo.val) $
             fatalLoc piInfo.bounds "Default implicits are allowed only for named implementations"
-          ns <- map
-                    (\case (MkBasicMultiBinder rig names type) => map (\nm => (rig, nm, piInfo.val, type)) (forget names))
+          ns <- map (\case (MkBasicMultiBinder rig names type) => map (\nm => Mk [rig, nm] (MkPiBindData piInfo.val type)) (forget names))
                     (pibindListName fname indents)
-          let ns = the (List (ZeroOneOmega, (WithFC Name, (PiInfo (PTerm' Name), PTerm' Name)))) ns
+          let ns = the (List (ImpParameter' PTerm)) ns
           commitSymbol fname "}"
           commitSymbol fname "->"
           more <- go
@@ -1728,27 +1731,25 @@ fieldDecl indents
            decoratedSymbol fname "{"
            commit
            impl <- option Implicit (autoImplicitField fname indents <|> defImplicitField fname indents)
-           fs <- fieldBody doc impl
+           fs <- addFCBounds (fieldBody doc impl)
            decoratedSymbol fname "}"
            atEnd indents
            pure fs
     <|> do doc <- optDocumentation fname
-           fs <- fieldBody doc Explicit
+           fs <- addFCBounds (fieldBody doc Explicit)
            atEnd indents
            pure fs
   where
-    fieldBody : String -> PiInfo PTerm -> Rule (PField)
+    fieldBody : String -> PiInfo PTerm -> Rule (RecordField' Name)
     fieldBody doc p
-        = do b <- bounds (do
-                    rig <- multiplicity fname
-                    ns <- sepBy1 (decoratedSymbol fname ",")
-                            (decorate fname Function name
-                               <|> (do b <- bounds (symbol "_")
-                                       fatalLoc {c = True} b.bounds "Fields have to be named"))
-                    decoratedSymbol fname ":"
-                    ty <- typeExpr pdef fname indents
-                    pure (MkRecordField doc rig p (forget ns) ty))
-             pure b.withFC
+        = do rig <- multiplicity fname
+             ns <- sepBy1 (decoratedSymbol fname ",")
+                     (fcBounds (decorate fname Function name
+                        <|> (do b <- bounds (symbol "_")
+                                fatalLoc {c = True} b.bounds "Fields have to be named")))
+             decoratedSymbol fname ":"
+             ty <- typeExpr pdef fname indents
+             pure (Mk [doc, rig, forget ns] (MkPiBindData p ty))
 
 parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
 
@@ -1910,7 +1911,7 @@ parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
                              ops <- sepBy1 (decoratedSymbol fname ",") iOperator
                              pure (MkPFixityData vis binding fixity (fromInteger prec) ops)
                        )
-           pure (mapData PFixity b)
+           pure (map PFixity b)
 
 -- The compiler cannot infer the values for c1 and c2 so I had to write it
 -- this way.

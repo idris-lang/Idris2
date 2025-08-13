@@ -25,6 +25,7 @@ import Data.String
 
 import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
+import Libraries.Data.NatSet
 import Libraries.Data.SortedSet
 import Libraries.Data.SortedMap
 import Libraries.Data.StringMap as S
@@ -421,7 +422,7 @@ getDocsForName fc n config
            PMDef _ _ _ _ _ => pure ( Nothing
                                    , catMaybes [ showTotal (totality d)
                                                , pure (showVisible (collapseDefault $ visibility d))])
-           TCon _ _ _ _ _ _ cons _ =>
+           TCon _ _ _ _ _ cons _ =>
              do let tot = catMaybes [ showTotal (totality d)
                                     , pure (showVisible (collapseDefault $ visibility d))]
                 cdocs <- traverse (getDConDoc <=< toFullNames) (fromMaybe [] cons)

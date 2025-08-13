@@ -18,6 +18,8 @@ import Data.Maybe
 
 import Libraries.Data.List.SizeOf
 
+import Libraries.Data.VarSet
+
 import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 import Libraries.Data.SnocList.SizeOf
@@ -283,44 +285,21 @@ unifyArgs mode loc env _ _ = ufail loc ""
 -- are not variables, fail if there's any repetition of variables
 -- We use this to check that the pattern unification rule is applicable
 -- when solving a metavariable applied to arguments
-getVars : {vars : _} ->
-          List Nat -> List (NF vars) -> Maybe (List (Var vars))
-getVars got [] = Just []
-getVars got (NErased fc (Dotted t) :: xs) = getVars got (t :: xs)
-getVars got (NApp fc (NLocal r idx v) [] :: xs)
-    = if inArgs idx got then Nothing
-         else do xs' <- getVars (idx :: got) xs
-                 pure (MkVar v :: xs')
-  where
-    -- Save the overhead of the call to APPLY, and the fact that == on
-    -- Nat is linear time in Idris 1!
-    inArgs : Nat -> List Nat -> Bool
-    inArgs n [] = False
-    inArgs n (n' :: ns)
-        = natToInteger n == natToInteger n' || inArgs n ns
-getVars got (NAs _ _ _ p :: xs) = getVars got (p :: xs)
-getVars _ (_ :: xs) = Nothing
+-- We return a list (because the order matters) and a set (for easy
+-- querying)
+getVars : List (NF vars) -> Maybe (List (Var vars), VarSet vars)
+getVars = go [<] VarSet.empty where
 
--- Make a sublist representing the variables used in the application.
--- We'll use this to ensure that local variables which appear in a term
--- are all arguments to a metavariable application for pattern unification
-toThin : (vars : Scope) -> List (Var vars) ->
-            (newvars ** Thin newvars vars)
-toThin [] xs = (Scope.empty ** Refl)
-toThin (n :: ns) xs
-     -- If there's a proof 'First' in 'xs', then 'n' should be kept,
-     -- otherwise dropped
-     -- (Remember: 'n' might be shadowed; looking for 'First' ensures we
-     -- get the *right* proof that the name is in scope!)
-     = let (_ ** svs) = toThin ns (dropFirst xs) in
-           if anyFirst xs
-              then (_ ** Keep svs)
-              else (_ ** Drop svs)
-  where
-    anyFirst : List (Var (n :: ns)) -> Bool
-    anyFirst [] = False
-    anyFirst (MkVar First :: xs) = True
-    anyFirst (MkVar (Later p) :: xs) = anyFirst xs
+  go : SnocList (Var vars) -> VarSet vars ->
+       List (NF vars) -> Maybe (List (Var vars), VarSet vars)
+  go acc got [] = Just (acc <>> [], got)
+  go acc got (NErased fc (Dotted t) :: xs) = go acc got (t :: xs)
+  go acc got (NApp fc (NLocal r idx p) [] :: xs)
+    = let v := MkVar p in
+      if v `VarSet.elem` got then Nothing
+         else go (acc :< v) (VarSet.insert v got) xs
+  go acc got (NAs _ _ _ p :: xs) = go acc got (p :: xs)
+  go acc _ (_ :: xs) = Nothing
 
 -- Update the variable list to point into the sub environment
 -- (All of these will succeed because the Thin we have comes from
@@ -354,19 +333,23 @@ patternEnv {vars} env args
          empty <- clearDefs defs
          args' <- traverse (evalArg empty) args
          pure $
-           case getVars [] args' of
+           case getVars args' of
              Nothing => Nothing
-             Just vs =>
-               let (newvars ** svs) = toThin _ vs in
-                 Just (newvars ** (updateVars vs svs, svs))
+             Just (vslist, vsset) =>
+               let (newvars ** svs) = fromVarSet _ vsset in
+                 Just (newvars ** (updateVars vslist svs, svs))
 
-getVarsTm : List Nat -> List (Term vars) -> Maybe (List (Var vars))
-getVarsTm got [] = Just []
-getVarsTm got (Local fc r idx v :: xs)
-    = if idx `elem` got then Nothing
-         else do xs' <- getVarsTm (idx :: got) xs
-                 pure (MkVar v :: xs')
-getVarsTm _ (_ :: xs) = Nothing
+getVarsTm : List (Term vars) -> Maybe (List (Var vars), VarSet vars)
+getVarsTm = go [<] VarSet.empty where
+
+  go : SnocList (Var vars) -> VarSet vars ->
+       List (Term vars) -> Maybe (List (Var vars), VarSet vars)
+  go acc got [] = Just (acc <>> [], got)
+  go acc got (Local fc r idx p :: xs)
+    = let v := MkVar p in
+      if v `VarSet.elem` got then Nothing
+         else go (acc :< v) (VarSet.insert v got) xs
+  go acc _ (_ :: xs) = Nothing
 
 export
 patternEnvTm : {auto c : Ref Ctxt Defs} ->
@@ -378,11 +361,11 @@ patternEnvTm : {auto c : Ref Ctxt Defs} ->
 patternEnvTm {vars} env args
     = do defs <- get Ctxt
          empty <- clearDefs defs
-         pure $ case getVarsTm [] args of
+         pure $ case getVarsTm args of
            Nothing => Nothing
-           Just vs =>
-             let (newvars ** svs) = toThin _ vs in
-                 Just (newvars ** (updateVars vs svs, svs))
+           Just (vslist, vsset) =>
+             let (newvars ** svs) = fromVarSet _ vsset in
+                 Just (newvars ** (updateVars vslist svs, svs))
 
 -- Check that the metavariable name doesn't occur in the solution.
 -- If it does, normalising might help. If it still does, that's an error.
@@ -520,7 +503,7 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
         = later <$> updateIVar rest new
     updateIVar (ICons (Just old) rest) new
         = if new == old
-             then Just (MkVar First)
+             then Just first
              else later <$> updateIVar rest new
     updateIVar _ _ = Nothing
 
@@ -534,7 +517,7 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
         = pure $ Meta fc n i !(traverse (updateIVars ivs) args)
     updateIVars {vs} ivs (Bind fc x b sc)
         = do b' <- updateIVarsB ivs b
-             sc' <- updateIVars (ICons (Just (MkVar First)) (weaken ivs)) sc
+             sc' <- updateIVars (ICons (Just first) (weaken ivs)) sc
              Just (Bind fc x b' sc')
       where
         updateIVarsPi : {vs, newvars : _} ->
@@ -760,10 +743,10 @@ mutual
                  (margs' : List (Closure vars)) ->
                  NF vars ->
                  Core UnifyResult
-  unifyHoleApp swap mode loc env mname mref margs margs' (NTCon nfc n t a args')
+  unifyHoleApp swap mode loc env mname mref margs margs' (NTCon nfc n a args')
       = do defs <- get Ctxt
            mty <- lookupTyExact n (gamma defs)
-           unifyInvertible swap (lower mode) loc env mname mref margs margs' mty (NTCon nfc n t a) args'
+           unifyInvertible swap (lower mode) loc env mname mref margs margs' mty (NTCon nfc n a) args'
   unifyHoleApp swap mode loc env mname mref margs margs' (NDCon nfc n t a args')
       = do defs <- get Ctxt
            mty <- lookupTyExact n (gamma defs)
@@ -950,7 +933,7 @@ mutual
       = convertErrorS swap loc env (NApp xfc (NLocal rx x xp) args) y
   unifyApp swap mode loc env xfc (NLocal rx x xp) args y@(NDCon _ _ _ _ _)
       = convertErrorS swap loc env (NApp xfc (NLocal rx x xp) args) y
-  unifyApp swap mode loc env xfc (NLocal rx x xp) args y@(NTCon _ _ _ _ _)
+  unifyApp swap mode loc env xfc (NLocal rx x xp) args y@(NTCon _ _ _ _)
       = convertErrorS swap loc env (NApp xfc (NLocal rx x xp) args) y
   unifyApp swap mode loc env xfc (NLocal rx x xp) args y@(NPrimVal _ _)
       = convertErrorS swap loc env (NApp xfc (NLocal rx x xp) args) y
@@ -1189,7 +1172,7 @@ mutual
              else convertError loc env
                        (NDCon xfc x tagx ax xs)
                        (NDCon yfc y tagy ay ys)
-  unifyNoEta mode loc env (NTCon xfc x tagx ax xs) (NTCon yfc y tagy ay ys)
+  unifyNoEta mode loc env (NTCon xfc x ax xs) (NTCon yfc y ay ys)
    = do logC "unify" 20 $ do
           x <- toFullNames x
           y <- toFullNames y
@@ -1208,11 +1191,11 @@ mutual
              -- constraint. But before then, we need some way to decide
              -- what's injective...
              -- gallais: really? We don't mind being anticlassical do we?
---                then postpone True loc mode env (quote empty env (NTCon x tagx ax xs))
---                                           (quote empty env (NTCon y tagy ay ys))
+--                then postpone True loc mode env (quote empty env (NTCon x ax xs))
+--                                           (quote empty env (NTCon y ay ys))
            else convertError loc env
-                     (NTCon xfc x tagx ax xs)
-                     (NTCon yfc y tagy ay ys)
+                     (NTCon xfc x ax xs)
+                     (NTCon yfc y ay ys)
   unifyNoEta mode loc env (NDelayed xfc _ x) (NDelayed yfc _ y)
       = unify (lower mode) loc env x y
   unifyNoEta mode loc env (NDelay xfc _ xty x) (NDelay yfc _ yty y)

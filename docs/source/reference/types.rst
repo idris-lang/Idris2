@@ -23,7 +23,7 @@ Implicits
 Implicit arguments, can take three forms.
 The first one, ``{x : a} -> b`` is the most basic form of implicit arguments, that is
  ``x`` should be inferred *syntactically*.
-This is the equivalent of implicit ``forall`` in Haskell or Rocq, where we might state that ``vectorMap`` on a vector might be:
+This is the equivalent [#f3]_ of implicit ``forall`` in Haskell or Rocq, where we might state that ``vectorMap`` on a vector might be:
 
 .. code:: idris
 
@@ -289,5 +289,9 @@ Reference
 .. [#f1] Assuming ``List`` is in scope
 
 .. [#f2] With many steps omitted for brevity
+
+.. [#f3] Dependent types with implicits is not exactly the same as polymorphism, see `here`_ for more information   
+
+.. _here: https://idris2.readthedocs.io/en/latest/tutorial/miscellany.html#implicit-arguments
 
 .. _records: https://idris2.readthedocs.io/en/latest/reference/records.html

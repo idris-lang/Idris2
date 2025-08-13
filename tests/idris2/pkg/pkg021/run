@@ -15,7 +15,7 @@ cp -R "${INSTALL_DIR}" ./secondary_install/
 mv "${INSTALL_DIR}/${TTC_VERSION}" "${INSTALL_DIR}/12345"
 
 echo "expect error:"
-idris2 -p testpkg < input
+idris2 -p testpkg < input 2>&1
 append_package_path ./secondary_install
 echo ""
 echo "expect success:"

@@ -24,7 +24,7 @@ import Libraries.Data.SortedSet
 %default covering
 
 getRecordType : Env Term vars -> NF vars -> Maybe Name
-getRecordType env (NTCon _ n _ _ _) = Just n
+getRecordType env (NTCon _ n _ _) = Just n
 getRecordType env _ = Nothing
 
 getNames : {auto c : Ref Ctxt Defs} -> Defs -> ClosedNF -> Core $ SortedSet Name
@@ -38,7 +38,7 @@ getNames defs (NApp _ hd args)
 getNames defs (NDCon _ _ _ _ args)
     = do eargs <- traverse (evalClosure defs . snd) args
          pure $ concat !(traverse (getNames defs) eargs)
-getNames defs (NTCon _ _ _ _ args)
+getNames defs (NTCon _ _ _ args)
   = do eargs <- traverse (evalClosure defs . snd) args
        pure $ concat !(traverse (getNames defs) eargs)
 getNames defs (NDelayed _ _ tm) = getNames defs tm
@@ -80,7 +80,7 @@ toRHS fc r = snd (toRHS' fc r)
 findConName : Defs -> Name -> Core (Maybe Name)
 findConName defs tyn
     = case !(lookupDefExact tyn (gamma defs)) of
-           Just (TCon _ _ _ _ _ _ (Just [con]) _) => pure (Just con)
+           Just (TCon _ _ _ _ _ (Just [con]) _) => pure (Just con)
            _ => pure Nothing
 
 findFieldsAndTypeArgs : {auto c : Ref Ctxt Defs} ->

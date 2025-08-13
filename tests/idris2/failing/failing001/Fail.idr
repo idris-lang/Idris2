@@ -38,8 +38,7 @@ failing "Last statement in do block must be an expression"
   invalidDoBlock = do
     x <- m <$ guard (m <= n)
 
-failing #"Expected "Invalid" but got:
-Unknown operator '&&&'"#
+failing #"Expected "Invalid" but got: Unknown operator '&&&'"#
 
   failing "Invalid"
     test : Nat

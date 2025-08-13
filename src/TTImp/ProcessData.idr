@@ -25,6 +25,7 @@ import Data.DPair
 import Data.List
 import Data.SnocList
 import Libraries.Data.NameMap
+import Libraries.Data.NatSet
 import Libraries.Data.WithDefault
 
 %default covering
@@ -64,7 +65,7 @@ checkFamily loc cn tn env nf
     = checkRetType env nf $
          \case
            NType _ _ => throw $ BadDataConType loc cn tn
-           NTCon _ n' _ _ _ =>
+           NTCon _ n' _ _ =>
                  if tn == n'
                     then pure ()
                     else throw $ BadDataConType loc cn tn
@@ -142,20 +143,19 @@ getIndexPats tm
     getRetType defs t = pure t
 
     getPats : Defs -> ClosedNF -> Core (List ClosedNF)
-    getPats defs (NTCon fc _ _ _ args)
+    getPats defs (NTCon fc _ _ args)
         = do args' <- traverse (evalClosure defs . snd) args
              pure (toList args')
     getPats defs _ = pure [] -- Can't happen if we defined the type successfully!
 
 getDetags : {auto c : Ref Ctxt Defs} ->
-            FC -> List ClosedTerm -> Core (Maybe (List Nat))
-getDetags fc [] = pure (Just []) -- empty type, trivially detaggable
-getDetags fc [t] = pure (Just []) -- one constructor, trivially detaggable
+            FC -> List ClosedTerm -> Core (Maybe NatSet)
+getDetags fc [] = pure (Just NatSet.empty) -- empty type, trivially detaggable
+getDetags fc [t] = pure (Just NatSet.empty) -- one constructor, trivially detaggable
 getDetags fc tys
    = do ps <- traverse getIndexPats tys
-        case !(getDisjointPos 0 (transpose ps)) of
-             [] => pure $ Nothing
-             xs => pure $ Just xs
+        ds <- getDisjointPos 0 (transpose ps)
+        pure $ ds <$ guard (not (isEmpty ds))
   where
     mutual
       disjointArgs : List ClosedNF -> List ClosedNF -> Core Bool
@@ -174,7 +174,7 @@ getDetags fc tys
                        argsnf <- traverse (evalClosure defs . snd) args
                        args'nf <- traverse (evalClosure defs . snd) args'
                        disjointArgs argsnf args'nf
-      disjoint (NTCon _ n _ _ args) (NDCon _ n' _ _ args')
+      disjoint (NTCon _ n _ args) (NTCon _ n' _ args')
           = if n /= n'
                then pure True
                else do defs <- get Ctxt
@@ -201,12 +201,12 @@ getDetags fc tys
                    else pure False
 
     -- Which argument positions have completely disjoint contructors
-    getDisjointPos : Nat -> List (List ClosedNF) -> Core (List Nat)
-    getDisjointPos i [] = pure []
+    getDisjointPos : Nat -> List (List ClosedNF) -> Core NatSet
+    getDisjointPos i [] = pure NatSet.empty
     getDisjointPos i (args :: argss)
         = do rest <- getDisjointPos (1 + i) argss
              if !(allDisjoint args)
-                then pure (i :: rest)
+                then pure (NatSet.insert i rest)
                 else pure rest
 
 -- If exactly one argument is unerased, return its position
@@ -271,7 +271,7 @@ firstArg (Bind _ _ (Pi _ c _ val) sc)
 firstArg tm = Nothing
 
 typeCon : Term vs -> Maybe Name
-typeCon (Ref _ (TyCon _ _) n) = Just n
+typeCon (Ref _ (TyCon _) n) = Just n
 typeCon (App _ fn _) = typeCon fn
 typeCon _ = Nothing
 
@@ -428,7 +428,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpLater dfc n_in ty_raw)
 
          -- Add the type constructor as a placeholder
          tidx <- addDef n (newDef fc n top vars fullty def_vis
-                          (TCon 0 arity [] [] defaultFlags [] Nothing Nothing))
+                          (TCon arity NatSet.empty NatSet.empty defaultFlags [] Nothing Nothing))
          addMutData (Resolved tidx)
          defs <- get Ctxt
          traverse_ (\n => setMutWith fc n (mutData defs)) (mutData defs)
@@ -501,7 +501,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
                       _ => pure $ mbtot <|> declTot
 
                     case definition ndef of
-                      TCon _ _ _ _ flags mw Nothing _ => case mfullty of
+                      TCon _ _ _ flags mw Nothing _ => case mfullty of
                         Nothing => pure (mw, vis, tot, type ndef)
                         Just fullty =>
                             do ok <- convert defs Env.empty fullty (type ndef)
@@ -518,7 +518,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
          -- Add the type constructor as a placeholder while checking
          -- data constructors
          tidx <- addDef n (newDef fc n linear vars fullty (specified vis)
-                          (TCon 0 arity [] [] defaultFlags [] Nothing Nothing))
+                          (TCon arity NatSet.empty NatSet.empty defaultFlags [] Nothing Nothing))
          case vis of
               Private => pure ()
               _ => do addHashWithNames n

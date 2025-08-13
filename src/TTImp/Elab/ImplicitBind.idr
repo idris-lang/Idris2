@@ -23,6 +23,7 @@ import TTImp.TTImp
 
 import Data.List
 import Libraries.Data.NameMap
+import Libraries.Data.SnocList.SizeOf
 
 %default covering
 
@@ -83,15 +84,16 @@ mkPatternHole {vars'} loc rig n topenv imode (Just expty_in)
               Nothing => mkPatternHole loc rig n topenv imode Nothing
               Just exp' =>
                   do tm <- implBindVar loc rig env n exp'
-                     pure (apply loc (thin tm sub) (mkArgs sub),
+                     pure (apply loc (thin tm sub) (mkArgs [<] sub),
                            expected,
                            thin exp' sub)
   where
-    -- TODO: generalise and get rid of (map weaken)
-    mkArgs : {vs : _} -> Thin newvars vs -> List (Term vs)
-    mkArgs Refl = []
-    mkArgs (Drop p) = Local loc Nothing 0 First :: map weaken (mkArgs p)
-    mkArgs _ = []
+    mkArgs : {0 vs : _} -> SizeOf seen -> Thin newvars vs -> List (Term (seen <>> vs))
+    mkArgs p Refl = []
+    mkArgs p (Drop th) =
+      let MkVar v := mkVarChiply p in
+      Local loc Nothing _ v :: mkArgs (p :< _) th
+    mkArgs p _ = []
 
     -- This is for the specific situation where we're pattern matching on
     -- function types, which is realistically the only time we'll legitimately
@@ -178,14 +180,14 @@ swapIsVarH (Later p) = swapP p -- it'd be nice to do this all at the top
   where
     swapP : forall name . {idx : _} -> (0 p : IsVar name idx (y :: xs)) ->
             Var (y :: x :: xs)
-    swapP First = MkVar First
+    swapP First = first
     swapP (Later x) = MkVar (Later (Later x))
 
 swapIsVar : (vs : Scope) ->
             {idx : Nat} -> (0 p : IsVar nm idx (vs ++ x :: y :: xs)) ->
             Var (vs ++ y :: x :: xs)
 swapIsVar [] prf = swapIsVarH prf
-swapIsVar (x :: xs) First = MkVar First
+swapIsVar (x :: xs) First = first
 swapIsVar (x :: xs) (Later p)
     = let MkVar p' = swapIsVar xs p in MkVar (Later p')
 

@@ -78,7 +78,7 @@ lookup fc (MkVar p) rho = case go p rho of
   go p         (Wk ws  rho) = case sizedView ws of
     Z => go p rho
     S ws' => case i of
-      Z => Left (MkVar First)
+      Z => Left first
       S i' => bimap later weaken (go (dropLater p) (Wk ws' rho))
 
 replace : CExp vars -> Bool

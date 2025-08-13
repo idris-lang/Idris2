@@ -8,6 +8,7 @@ import Core.Context.TTC
 
 import TTImp.TTImp
 
+import Libraries.Data.NatSet
 import Libraries.Data.WithDefault
 
 %default covering
@@ -306,16 +307,6 @@ mutual
                        tycon <- fromBuf
                        pure (MkImpLater fc n tycon)
                _ => corrupt "ImpData"
-
-  export
-  TTC IField where
-    toBuf (MkIField fc c p n ty)
-        = do toBuf fc; toBuf c; toBuf p; toBuf n; toBuf ty
-
-    fromBuf
-        = do fc <- fromBuf; c <- fromBuf; p <- fromBuf
-             n <- fromBuf; ty <- fromBuf
-             pure (MkIField fc c p n ty)
 
   export
   TTC ImpRecord where

@@ -280,7 +280,7 @@ parameters (fc : FC) (mutualWith : List Name)
     = apply fc (IVar fc (UN $ Basic "bitraverseFst"))
       (traverseFun (assert <|> Just True) sp rec f Nothing
       :: toList t)
-  traverseFun assert (TIFree y) rec f t = `(mempty)
+  traverseFun assert (TIFree y) rec f t = `(neutral)
 
 ------------------------------------------------------------------------------
 -- User-facing: Traversable deriving

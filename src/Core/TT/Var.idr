@@ -15,6 +15,8 @@ import Libraries.Data.SnocList.HasLength
 import Libraries.Data.SnocList.SizeOf
 
 import Data.List.HasLength
+import Data.DPair
+
 import Libraries.Data.List.HasLength
 import Libraries.Data.List.SizeOf
 
@@ -37,6 +39,12 @@ data IsVar : a -> Nat -> List a -> Type where
      Later : IsVar n i ns -> IsVar n (S i) (m :: ns)
 
 %name IsVar idx
+
+export
+0 Last : HasLength (S n) vs -> Exists (\ nm => IsVar nm n vs)
+Last {vs = []} p impossible
+Last (S Z) = Evidence _ First
+Last (S (S p)) = bimap id Later (Last (S p))
 
 export
 finIdx : {idx : _} -> (0 prf : IsVar x idx vars) ->
@@ -138,6 +146,10 @@ record Var {0 a : Type} (vars : List a) where
 namespace Var
 
   export
+  first : Var (n :: ns)
+  first = MkVar First
+
+  export
   later : Var ns -> Var (n :: ns)
   later (MkVar p) = MkVar (Later p)
 
@@ -145,6 +157,11 @@ namespace Var
   isLater : Var (n :: vs) -> Maybe (Var vs)
   isLater (MkVar First) = Nothing
   isLater (MkVar (Later p)) = Just (MkVar p)
+
+  export
+  last : SizeOf vs -> Maybe (Var vs)
+  last (MkSizeOf Z p) = Nothing
+  last (MkSizeOf (S n) p) = Just (MkVar (snd $ Last p))
 
 export
 mkVar : SizeOf inner -> Var (inner ++ nm :: outer)
@@ -167,25 +184,6 @@ export
 Eq (Var xs) where
   v == w = varIdx v == varIdx w
 
-
-||| Removing var 0, strengthening all the other ones
-export
-dropFirst : List (Var (Scope.bind vs n)) -> List (Var vs)
-dropFirst = List.mapMaybe isLater
-
-||| Manufacturing a thinning from a list of variables to keep
-export
-thinFromVars :
-  (vars : _) -> List (Var vars) ->
-  (newvars ** Thin newvars vars)
-thinFromVars [] els
-    = (_ ** Refl)
-thinFromVars (x :: xs) els
-    = let (vs ** subRest) = thinFromVars xs (dropFirst els) in
-      if MkVar First `elem` els
-        then (x :: vs ** Keep subRest)
-        else (vs ** Drop subRest)
-
 export
 Show (Var ns) where
   show v = show (varIdx v)
@@ -200,6 +198,11 @@ record NVar {0 a : Type} (nm : a) (vars : List a) where
   0 nvarPrf : IsVar nm nvarIdx vars
 
 namespace NVar
+
+  export
+  first : NVar n (n :: ns)
+  first = MkNVar First
+
   export
   later : NVar nm ns -> NVar nm (n :: ns)
   later (MkNVar p) = MkNVar (Later p)
@@ -241,7 +244,7 @@ dropNVar (MkNVar p) = dropIsVar ns p
 
 export
 isDeBruijn : Nat -> (vars : List Name) -> Maybe (Var vars)
-isDeBruijn Z (_ :: _) = pure (MkVar First)
+isDeBruijn Z (_ :: _) = pure first
 isDeBruijn (S k) (_ :: vs) = later <$> isDeBruijn k vs
 isDeBruijn _ _ = Nothing
 
@@ -382,7 +385,7 @@ thinIsVar : {idx : Nat} -> (0 p : IsVar name idx xs) ->
   Thin xs ys -> Var ys
 thinIsVar p Refl = MkVar p
 thinIsVar p (Drop th) = later (thinIsVar p th)
-thinIsVar First (Keep th) = MkVar First
+thinIsVar First (Keep th) = first
 thinIsVar (Later p) (Keep th) = later (thinIsVar p th)
 
 export
@@ -391,7 +394,7 @@ shrinkIsVar : {idx : Nat} -> (0 p : IsVar name idx xs) ->
 shrinkIsVar prf Refl = Just (MkVar prf)
 shrinkIsVar First (Drop p) = Nothing
 shrinkIsVar (Later x) (Drop p) = shrinkIsVar x p
-shrinkIsVar First (Keep p) = Just (MkVar First)
+shrinkIsVar First (Keep p) = Just first
 shrinkIsVar (Later x) (Keep p) = later <$> shrinkIsVar x p
 
 ------------------------------------------------------------------------

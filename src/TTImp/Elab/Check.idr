@@ -30,6 +30,8 @@ import Libraries.Data.WithDefault
 import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.SizeOf
 
+import Libraries.Data.VarSet
+
 %default covering
 
 public export
@@ -151,7 +153,7 @@ record EState (vars : Scope) where
                   -- of elaboration. If they aren't, it means we're trying to
                   -- pattern match on a type that we don't have available.
   delayDepth : Nat -- if it gets too deep, it gets slow, so fail quicker
-  linearUsed : List (Var vars)
+  linearUsed : VarSet vars
   saveHoles : NameMap () -- things we'll need to save to TTC, even if solved
 
   unambiguousNames : UserNameMap (Name, Int, GlobalDef)
@@ -176,7 +178,7 @@ initEStateSub n env sub = MkEState
     , allPatVars = []
     , polyMetavars = []
     , delayDepth = Z
-    , linearUsed = []
+    , linearUsed = VarSet.empty
     , saveHoles = empty
     , unambiguousNames = empty
     }
@@ -200,7 +202,7 @@ weakenedEState {e}
                    { subEnv $= Drop
                    , boundNames $= map wknTms
                    , toBind $= map wknTms
-                   , linearUsed $= map weaken
+                   , linearUsed $= weaken {tm = VarSet}
                    , polyMetavars := [] -- no binders on LHS
                    } est
          pure eref
@@ -226,7 +228,7 @@ strengthenedEState {n} {vars} c e fc env
          pure $ { subEnv := svs
                 , boundNames := bns
                 , toBind := todo
-                , linearUsed $= mapMaybe dropTop
+                , linearUsed $= VarSet.dropFirst
                 , polyMetavars := [] -- no binders on LHS
                 } est
 
@@ -285,10 +287,6 @@ strengthenedEState {n} {vars} c e fc env
                     pure (f, AsBinding c p' x' y' z')
                _ => throw (BadUnboundImplicit fc env f y)
 
-    dropTop : (Var (n :: vs)) -> Maybe (Var vs)
-    dropTop (MkVar First) = Nothing
-    dropTop (MkVar (Later p)) = Just (MkVar p)
-
 export
 inScope : {n, vars : _} ->
           {auto c : Ref Ctxt Defs} ->
@@ -314,13 +312,13 @@ mustBePoly fc env tm ty = update EST { polyMetavars $= ((fc, env, tm, ty) :: ) }
 -- elaborating them, which might help us disambiguate things more easily.
 export
 concrete : Defs -> Env Term vars -> NF vars -> Core Bool
-concrete defs env (NBind fc _ (Pi _ _ _ _) sc)
+concrete defs env (NBind fc _ (Pi {}) sc)
     = do sc' <- sc defs (toClosure defaultOpts env (Erased fc Placeholder))
          concrete defs env sc'
-concrete defs env (NDCon _ _ _ _ _) = pure True
-concrete defs env (NTCon _ _ _ _ _) = pure True
-concrete defs env (NPrimVal _ _) = pure True
-concrete defs env (NType _ _) = pure True
+concrete defs env (NDCon {}) = pure True
+concrete defs env (NTCon {}) = pure True
+concrete defs env (NPrimVal {}) = pure True
+concrete defs env (NType {}) = pure True
 concrete defs env _ = pure False
 
 export
@@ -465,7 +463,7 @@ searchVar fc rig depth def env nest n ty
              defs <- get Ctxt
              Just ndef <- lookupCtxtExact n' (gamma defs)
                  | Nothing => pure (vs ** (f, env'))
-             let nt = fromMaybe Func (defNameType $ definition ndef)
+             let nt = getDefNameType ndef
              let app = tmf fc nt
              let tyenv = useVars (getArgs app) (embed (type ndef))
              let binder = Let fc top (weakenNs (mkSizeOf vs) app)

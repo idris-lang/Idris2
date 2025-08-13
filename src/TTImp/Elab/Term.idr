@@ -265,7 +265,7 @@ checkTerm rig elabinfo nest env (IWithUnambigNames fc ns rhs) exp
           case rns of
             [rn@(_, _, def)] =>
                 do whenJust (isConcreteFC nfc) $ \nfc => do
-                     let nt = fromMaybe Func (defNameType $ definition def)
+                     let nt = getDefNameType def
                      let decor = nameDecoration def.fullname nt
                      log "ide-mode.highlight" 7
                        $ "`with' unambiguous name is adding " ++ show decor ++ ": " ++ show def.fullname

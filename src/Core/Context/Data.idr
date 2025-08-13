@@ -9,6 +9,7 @@ import Core.Normalise
 import Data.List
 import Data.Maybe
 
+import Libraries.Data.NatSet
 import Libraries.Data.WithDefault
 
 %default covering
@@ -62,18 +63,18 @@ getPs acc tyn tm
                  else pure acc
            _ => pure acc
 
-toPos : Maybe (List (Maybe a)) -> List Nat
-toPos Nothing = []
-toPos (Just ns) = justPos 0 ns
+toPos : Maybe (List (Maybe a)) -> NatSet
+toPos Nothing = NatSet.empty
+toPos (Just ns) = justPos 0 ns NatSet.empty
   where
-    justPos : Nat -> List (Maybe a) -> List Nat
-    justPos i [] = []
-    justPos i (Just x :: xs) = i :: justPos (1 + i) xs
-    justPos i (Nothing :: xs) = justPos (1 + i) xs
+    justPos : Nat -> List (Maybe a) -> NatSet -> NatSet
+    justPos i [] acc = acc
+    justPos i (Just x :: xs) acc = justPos (1 + i) xs (insert i acc)
+    justPos i (Nothing :: xs) acc = justPos (1 + i) xs acc
 
 getConPs : {auto _ : Ref Ctxt Defs} -> {vars : _} ->
            Maybe (List (Maybe (Term vars))) -> Name -> Term vars ->
-           Core (List Nat)
+           Core NatSet
 getConPs acc tyn (Bind _ x (Pi _ _ _ ty) sc)
     = do bacc <- getPs acc tyn ty
          getConPs (map (map (map weaken)) bacc) tyn sc
@@ -82,26 +83,25 @@ getConPs acc tyn (Bind _ x (Let _ _ v ty) sc)
 getConPs acc tyn tm = toPos <$> getPs acc tyn tm
 
 paramPos : {auto _ : Ref Ctxt Defs} -> Name -> (dcons : List ClosedTerm) ->
-           Core (Maybe (List Nat))
+           Core (Maybe NatSet)
 paramPos tyn [] = pure Nothing -- no constructor!
 paramPos tyn dcons = do
   candidates <- traverse (getConPs Nothing tyn) dcons
-  pure $ Just $ intersectAll candidates
+  pure $ Just $ NatSet.intersectAll candidates
 
 export
 addData : {auto c : Ref Ctxt Defs} ->
           Scope -> Visibility -> Int -> DataDef -> Core Int
 addData vars vis tidx (MkData (MkCon dfc tyn arity tycon) datacons)
     = do defs <- get Ctxt
-         tag <- getNextTypeTag
-         let allPos = allDet arity
+         let allPos = NatSet.allLessThan arity
          -- In case there are no constructors, all the positions are parameter positions!
          let paramPositions = fromMaybe allPos !(paramPos (Resolved tidx) (map type datacons))
          log "declare.data.parameters" 20 $
             "Positions of parameters for datatype" ++ show tyn ++
-            ": [" ++ showSep ", " (map show paramPositions) ++ "]"
+            ": " ++ show paramPositions
          let tydef = newDef dfc tyn top vars tycon (specified vis)
-                            (TCon tag arity
+                            (TCon arity
                                   paramPositions
                                   allPos
                                   defaultFlags [] (Just $ map name datacons) Nothing)
@@ -110,10 +110,6 @@ addData vars vis tidx (MkData (MkCon dfc tyn arity tycon) datacons)
          put Ctxt ({ gamma := gam'' } defs)
          pure idx
   where
-    allDet : Nat -> List Nat
-    allDet Z = []
-    allDet (S k) = [0..k]
-
     conVisibility : Visibility -> Visibility
     conVisibility Export = Private
     conVisibility x = x
