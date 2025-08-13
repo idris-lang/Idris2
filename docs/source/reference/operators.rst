@@ -339,3 +339,16 @@ the full syntax: ``(name : type := expr) op body`` which is desugared into
 
 Like ``typebind``, ``autobind`` operators cannot be used as regular operators anymore
 , additionally an ``autobind`` operator cannot use the ``typebind`` syntax either.
+
+
+.. note::
+    Operators may only contain the following charecters: ``:``, ``!``, ``#``, ``$``, ``%``, ``&``, ``*``, ``+``, ``.``, ``/``, ``<``, ``=``, ``>``, ``?``, ``@``, ``\``, ``^``, ``|``, ``-``, and ``~`` .
+    
+    In addition, it may *not* be one of these symbols ``%``, ``\``, ``:``, ``=``, ``:=``, ``$=``, ``|``, ``|||``, ``<-``, ``->``, ``=>``, ``?``, ``!``, ``&``, ``**``, ``..``, ``~``, ``@``.
+
+.. note::
+
+    While not strictly part of the syntax, the symbols defined in Prelude should be mentioned, those being:
+    ``.``, ``.:``, ``|>``, ``<|``, ``||``, ``&&``, ``::``, ``:<``
+    ``==``, ``/=``, ``<``, ``<=``, ``>``, ``>=``
+    <+>``, ``<$>``, ``<*>``, ``<$``, ``$>``, ``<*>``, ``<*``, ``*>``, ``<|>``, ``>>=``, ``=<<``, ``>>``, ``>=>``, ``<=<``, ``+``, ``*``, ``-``, ``/``, ``$``, ``++``, ``#``, ``===``, ``~=~``
