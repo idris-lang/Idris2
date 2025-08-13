@@ -373,21 +373,33 @@ mutual
   IField = IField' Name
 
   public export
-  data IField' : Type -> Type where
-       MkIField : FC -> RigCount -> PiInfo (RawImp' nm) ->
-                  (name : Name) -> (ty : RawImp' nm) ->
-                  IField' nm
-
-  %name IField' fld
+  IField' : Type -> Type
+  IField' nm = AddFC $ ImpParameter' (RawImp' nm)
 
   public export
   ImpParameter : Type
-  ImpParameter = ImpParameter' Name
+  ImpParameter = ImpParameter' (RawImp' Name)
 
-  -- TODO: turn into a proper datatype
   public export
   ImpParameter' : Type -> Type
-  ImpParameter' nm = (Name, RigCount, PiInfo (RawImp' nm), RawImp' nm)
+  ImpParameter' nm = WithRig $ WithName $ PiBindData nm
+
+  -- old datatype for ImpParameter, used for elabreflection compatibility
+  public export
+  OldParameters' : Type -> Type
+  OldParameters' nm = (Name, RigCount, PiInfo (RawImp' nm), RawImp' nm)
+
+  public export
+  toOldParams : ImpParameter' (RawImp' nm) -> OldParameters' nm
+  toOldParams bind = (bind.name.val, bind.rig, bind.val.info, bind.val.boundType)
+
+  public export
+  fromOldParams : OldParameters' nm -> ImpParameter' (RawImp' nm)
+  fromOldParams (nm, rig, info,type) = Mk [rig, NoFC nm] (MkPiBindData info type)
+
+  export
+  Show nm => Show (ImpParameter' nm) where
+    show x = "\{show x.rig}\{show x.name.val} \{show x.val.boundType}"
 
   public export
   ImpRecord : Type
@@ -396,7 +408,7 @@ mutual
   public export
   data ImpRecord' : Type -> Type where
        MkImpRecord : FC -> (n : Name) ->
-                     (params : List (ImpParameter' nm)) ->
+                     (params : List (ImpParameter' (RawImp' nm))) ->
                      (opts : List DataOpt) ->
                      (conName : Name) ->
                      (fields : List (IField' nm)) ->
@@ -407,8 +419,8 @@ mutual
   export
   covering
   Show nm => Show (IField' nm) where
-    show (MkIField _ c Explicit n ty) = show n ++ " : " ++ show ty
-    show (MkIField _ c _ n ty) = "{" ++ show n ++ " : " ++ show ty ++ "}"
+    show f@(MkWithData _ (MkPiBindData Explicit ty)) = show f.name.val ++ " : " ++ show ty
+    show f@(MkWithData _ ty) = "{" ++ show f.name.val ++ " : " ++ show ty.boundType ++ "}"
 
   export
   covering
@@ -479,7 +491,7 @@ mutual
                Maybe TotalReq -> ImpData' nm -> ImpDecl' nm
        IDef : FC -> Name -> List (ImpClause' nm) -> ImpDecl' nm
        IParameters : FC ->
-                     List1 (ImpParameter' nm) ->
+                     List1 (ImpParameter' (RawImp' nm)) ->
                      List (ImpDecl' nm) -> ImpDecl' nm
        IRecord : FC ->
                  Maybe String -> -- nested namespace
@@ -816,7 +828,7 @@ definedInBlock ns decls =
     getName (MkImpTy _ n _) = n.val
 
     getFieldName : IField -> Name
-    getFieldName (MkIField _ _ _ n _) = n
+    getFieldName f = f.name.val
 
     expandNS : Namespace -> Name -> Name
     expandNS ns n
