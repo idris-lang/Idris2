@@ -125,7 +125,7 @@ checkCon {vars} opts nest env vis tn_in tn (MkImpTy fc cn_in ty_raw)
                            addHashWithNames fullty
                            log "module.hash" 15 "Adding hash for data constructor: \{show cn}"
               _ => pure ()
-         pure (MkCon fc cn !(getArity defs Env.empty fullty) fullty)
+         pure (Mk [fc, NoFC cn, !(getArity defs Env.empty fullty)] fullty)
 
 -- Get the indices of the constructor type (with non-constructor parts erased)
 getIndexPats : {auto c : Ref Ctxt Defs} ->
@@ -242,9 +242,9 @@ findNewtype : {auto c : Ref Ctxt Defs} ->
               List Constructor -> Core ()
 findNewtype [con]
     = do defs <- get Ctxt
-         Just arg <- getRelevantArg defs 0 Nothing True !(nf defs Env.empty (type con))
+         Just arg <- getRelevantArg defs 0 Nothing True !(nf defs Env.empty con.val)
               | Nothing => pure ()
-         updateDef (name con) $
+         updateDef con.name.val $
                \case
                  DCon t a _ => Just $ DCon t a $ Just arg
                  _ => Nothing
@@ -281,8 +281,8 @@ shaped : {auto c : Ref Ctxt Defs} ->
 shaped as [] = pure Nothing
 shaped as (c :: cs)
     = do defs <- get Ctxt
-         if as !(normalise defs Env.empty (type c))
-            then pure (Just (name c))
+         if as !(normalise defs Env.empty c.val)
+            then pure (Just c.name.val)
             else shaped as cs
 
 -- Calculate whether the list of constructors gives a list-shaped type
@@ -327,19 +327,19 @@ calcEnum : {auto c : Ref Ctxt Defs} ->
            FC -> List Constructor -> Core Bool
 calcEnum fc cs
     = if !(allM isNullary cs)
-         then do traverse_ (\c => setFlag fc c (ConType (ENUM $ length cs))) (map name cs)
+         then do traverse_ (\c => setFlag fc c (ConType (ENUM $ length cs))) (map (\x => x.name.val) cs)
                  pure True
          else pure False
   where
     isNullary : Constructor -> Core Bool
     isNullary c
         = do defs <- get Ctxt
-             pure $ hasArgs 0 !(normalise defs Env.empty (type c))
+             pure $ hasArgs 0 !(normalise defs Env.empty c.val)
 
 calcRecord : {auto c : Ref Ctxt Defs} ->
              FC -> List Constructor -> Core Bool
 calcRecord fc [c]
-    = do setFlag fc (name c) (ConType RECORD)
+    = do setFlag fc c.name.val (ConType RECORD)
          pure True
 calcRecord _ _ = pure False
 
@@ -353,9 +353,9 @@ calcNaty fc tyCon cs@[_, _]
               | Nothing => pure False
          Just succ <- shaped (hasArgs 1) cs
               | Nothing => pure False
-         let Just succCon = find (\con => name con == succ) cs
+         let Just succCon = find (\con => con.name.val == succ) cs
               | Nothing => pure False
-         let Just (Evidence _ succArgTy) = firstArg (type succCon)
+         let Just (Evidence _ succArgTy) = firstArg succCon.val
               | Nothing => pure False
          let Just succArgCon = typeCon succArgTy
               | Nothing => pure False
@@ -530,7 +530,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
          let cvis = if vis == Export then Private else vis
          cons <- traverse (checkCon eopts nest env cvis n_in (Resolved tidx)) cons_raw
 
-         let ddef = MkData (MkCon dfc n arity fullty) cons
+         let ddef = MkData (Mk [dfc, NoFC n, arity] fullty) cons
          ignore $ addData vars vis tidx ddef
 
          -- Flag data type as a newtype, if possible (See `findNewtype` for criteria).
@@ -549,7 +549,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
          traverse_ (processDataOpt fc (Resolved tidx)) opts
          dropMutData (Resolved tidx)
 
-         detags <- getDetags fc (map type cons)
+         detags <- getDetags fc (map val cons)
          setDetags fc (Resolved tidx) detags
 
          traverse_ addToSave metas
@@ -557,7 +557,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
          log "declare.data" 10 $
            "Saving from " ++ show n ++ ": " ++ show metas
 
-         let connames = map name cons
+         let connames = map (\x => x.name.val) cons
          unless (NoHints `elem` opts) $
               traverse_ (\x => addHintFor fc (Resolved tidx) x True False) connames
 
@@ -567,4 +567,4 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
          -- #1404
          whenJust tot $ \ tot => do
              log "declare.data" 5 $ "setting totality flag for \{show n} and its constructors"
-             for_ (n :: map name cons) $ \ n => setFlag fc n (SetTotal tot)
+             for_ (n :: map (\x => x.name.val) cons) $ \ n => setFlag fc n (SetTotal tot)

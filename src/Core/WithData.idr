@@ -22,6 +22,45 @@ export
     (0 inRange : NameInRange "bind" fields === Just (n, BindingModifier)) =>
     WithData fields a -> BindingModifier
 (.bind) = WithData.get "bind"
+------------------------------------------------------------------------------------------
+-- Arity information
+------------------------------------------------------------------------------------------
+||| function arity
+public export
+Arity' : KeyVal
+Arity' = "arity" :-: Nat
+
+public export
+WithArity : Type -> Type
+WithArity = AddMetadata Arity'
+
+||| Obtain totality information from the metadata
+export
+(.arity) :
+    {n : Nat} ->
+    (0 inRange : NameInRange "arity" fields === Just (n, Nat)) =>
+    WithData fields a -> Nat
+(.arity) = WithData.get "arity"
+
+------------------------------------------------------------------------------------------
+-- Options information
+------------------------------------------------------------------------------------------
+||| data constructor options
+public export
+Opts' : KeyVal
+Opts' = "opts" :-: List DataOpt
+
+public export
+WithOpts : Type -> Type
+WithOpts = AddMetadata Opts'
+
+||| Obtain totality information from the metadata
+export
+(.opts) :
+    {n : Nat} ->
+    (0 inRange : NameInRange "opts" fields === Just (n, List DataOpt)) =>
+    WithData fields a -> List DataOpt
+(.opts) = WithData.get "opts"
 
 ------------------------------------------------------------------------------------------
 -- Totality information

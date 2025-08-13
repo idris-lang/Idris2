@@ -113,13 +113,12 @@ localHelper {vars} nest env nestdecls_in func
     updateFieldName nest field
         = update "name" (map (mapNestedName nest)) field
 
-    updateRecordName : NestedNames vars -> ImpRecord -> ImpRecord
-    updateRecordName nest (MkImpRecord fc n params opts conName fields)
-        = MkImpRecord fc (mapNestedName nest n)
-                         params
-                         opts
-                         (mapNestedName nest conName)
-                         (map (updateFieldName nest) fields)
+    updateRecordName : NestedNames vars -> ImpRecordData Name -> ImpRecordData Name
+    updateRecordName nest (MkImpRecord header body)
+        = let updatedTyName = (update "name" (map (mapNestedName nest)) header)
+              updatedConName = (update "name" (map (mapNestedName nest)) body)
+              updatedParameters = (map (map (updateFieldName nest)) updatedConName)
+          in MkImpRecord updatedTyName updatedParameters
 
     updateRecordNS : NestedNames vars -> Maybe String -> Maybe String
     updateRecordNS _    Nothing   = Nothing
@@ -133,7 +132,7 @@ localHelper {vars} nest env nestdecls_in func
     updateName nest (IData loc' vis mbt d)
          = IData loc' vis mbt (updateDataName nest d)
     updateName nest (IRecord loc' ns vis mbt imprecord)
-         = IRecord loc' (updateRecordNS nest ns) vis mbt (updateRecordName nest imprecord)
+         = IRecord loc' (updateRecordNS nest ns) vis mbt (map (updateRecordName nest) imprecord)
     updateName nest i = i
 
     setPublic : ImpDecl -> ImpDecl

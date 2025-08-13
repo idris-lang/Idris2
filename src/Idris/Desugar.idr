@@ -1295,7 +1295,7 @@ mutual
            whenJust (fst <$> conname_in) (addDocString conname)
            let _ = the Name conname
            pure [IRecord rec.fc (Just recName)
-                         vis mbtot (MkImpRecord rec.fc tn paramsb opts conname (concat fields'))]
+                         vis mbtot (Mk [rec.fc] $ MkImpRecord (Mk [NoFC tn] paramsb) (Mk [NoFC conname, opts] (concat fields')))]
     where
       getfname : PField -> List Name
       getfname x = map val x.names
