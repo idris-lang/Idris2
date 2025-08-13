@@ -6,6 +6,9 @@ import Core.Name
 -- Unlike SortedSet:
 -- 1. we don't store values of type () in the leaves
 -- 2. we don't have the (Ord a =>) indirection
+-- 3. the pivots are actually considered part of the set
+--    (lookup becomes O(log n) rather than Ω(log n))
+
 
 %default total
 
