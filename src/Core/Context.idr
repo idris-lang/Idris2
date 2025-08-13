@@ -456,6 +456,8 @@ HasNames (Term vars) where
       = do Just gdef <- lookupCtxtExact (Resolved i) gam
                 | Nothing => pure (TType fc (Resolved i))
            pure (TType fc (fullname gdef))
+  full gam (Erased fc (Dotted t))
+      = pure (Erased fc (Dotted !(full gam t)))
   full gam tm = pure tm
 
   resolved gam (Ref fc x n)
@@ -483,6 +485,8 @@ HasNames (Term vars) where
       = do let Just i = getNameID n gam
                 | Nothing => pure (TType fc n)
            pure (TType fc (Resolved i))
+  resolved gam (Erased fc (Dotted t))
+      = pure (Erased fc (Dotted !(resolved gam t)))
   resolved gam tm = pure tm
 
 export
