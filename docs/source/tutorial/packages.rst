@@ -37,8 +37,8 @@ package file would be:
 Running ``idris2 --init`` will interactively create a new package file in the current directory. The generated package file lists all configurable fields with a brief description.
 
 Other examples of package files can be found in the ``libs`` directory
-of the main Idris repository, and in `third-party libraries
-<https://github.com/idris-lang/Idris-dev/wiki/Libraries>`_.
+of the main Idris repository, in the `pack collection<https://github.com/stefan-hoeck/idris2-pack-db/blob/main/collections/HEAD.toml>`_
+, and in `third-party libraries<https://github.com/idris-lang/Idris2/wiki/Third-party-Libraries>`_.
 
 
 Using Package files

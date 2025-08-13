@@ -33,7 +33,7 @@ When installed, this will be in a directory ``test-0.1``. If the version
 number is missing, it will default to ``0``.
 
 Other examples of package files can be found in the ``libs`` directory
-of the main Idris repository, and in `third-party libraries <https://github.com/idris-lang/Idris-dev/wiki/Libraries>`_.
+of the main Idris repository, and in `third-party libraries <https://github.com/idris-lang/Idris2/wiki/Third-party-Libraries>`_.
 
 Metadata
 --------
