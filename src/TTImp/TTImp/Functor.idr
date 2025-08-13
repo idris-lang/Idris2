@@ -103,7 +103,7 @@ mutual
     map f (IParameters fc ps ds)
       = IParameters fc (map (map (map (map f))) ps) (map (map f) ds)
     map f (IRecord fc cs vis mbtot rec)
-      = IRecord fc cs vis mbtot (map f rec)
+      = IRecord fc cs vis mbtot (map (map f) rec)
     map f (IFail fc msg ds)
       = IFail fc msg (map (map f) ds)
     map f (INamespace fc ns ds)
@@ -146,10 +146,10 @@ mutual
       = MkImpLater fc n (map f tycon)
 
   export
-  Functor ImpRecord' where
-    map f (MkImpRecord fc n params opts conName fields)
-      = MkImpRecord fc n (map (map (map (map f))) params)
-                    opts conName (map (map (map (map f))) fields)
+  Functor ImpRecordData where
+    map f (MkImpRecord header body)
+      = MkImpRecord (map (map (map (map (map f)))) header)
+                    (map (map (map (map (map f)))) body)
 
   export
   Functor IFieldUpdate' where

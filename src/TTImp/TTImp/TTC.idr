@@ -309,14 +309,13 @@ mutual
                _ => corrupt "ImpData"
 
   export
-  TTC ImpRecord where
-    toBuf (MkImpRecord fc n ps opts con fs)
-        = do toBuf fc; toBuf n; toBuf ps; toBuf opts; toBuf con; toBuf fs
+  TTC (ImpRecordData Name) where
+    toBuf (MkImpRecord header body)
+        = do toBuf header; toBuf body;
 
     fromBuf
-        = do fc <- fromBuf; n <- fromBuf; ps <- fromBuf
-             opts <- fromBuf; con <- fromBuf; fs <- fromBuf
-             pure (MkImpRecord fc n ps opts con fs)
+        = do header <- fromBuf; body <- fromBuf;
+             pure (MkImpRecord header body)
 
   export
   TTC FnOpt where

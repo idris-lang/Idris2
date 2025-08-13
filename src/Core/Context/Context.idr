@@ -6,6 +6,7 @@ import        Core.Env
 import public Core.Name
 import public Core.Options.Log
 import public Core.TT
+import public Core.WithData
 
 import public Algebra.SizeChange
 
@@ -23,6 +24,9 @@ import Libraries.Data.WithDefault
 import Libraries.Data.SparseMatrix
 import Libraries.Utils.Binary
 import Libraries.Utils.Scheme
+
+%hide LabelledValue.label
+%hide KeyVal.label
 
 public export
 data Ref : (l : label) -> Type -> Type where
@@ -172,13 +176,12 @@ Show Def where
   show Delayed = "Delayed"
 
 public export
-record Constructor where
-  constructor MkCon
-  loc : FC
-  name : Name
-  arity : Nat
-  type : ClosedTerm
-%name Constructor cons
+Constructor' : Type -> Type
+Constructor' = AddFC . WithName . WithArity
+
+public export
+Constructor : Type
+Constructor = Constructor' ClosedTerm
 
 public export
 data DataDef : Type where

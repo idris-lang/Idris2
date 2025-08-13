@@ -659,18 +659,18 @@ recordDecl fname indents
          col <- column
          keyword "record"
          commit
-         n <- name
+         n <- withFC name
          paramss <- many (recordParam fname indents)
          let params = concat paramss
          keyword "where"
          opts <- dataOpts
          exactIdent "constructor"
-         dc <- name
+         dc <- withFC name
          flds <- assert_total (blockAfter col (fieldDecl fname))
          end <- location
-         pure (let fc = MkFC fname start end in
-                   IRecord fc Nothing vis mbtot
-                           (MkImpRecord fc n params opts dc (concat flds)))
+         pure (let fc = MkFC fname start end
+                in IRecord fc Nothing vis mbtot
+                           (Mk [fc] $ MkImpRecord (Mk [n] params) (Mk [dc, opts] (concat flds))))
 
 namespaceDecl : Rule Namespace
 namespaceDecl

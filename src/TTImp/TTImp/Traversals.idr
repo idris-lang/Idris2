@@ -53,10 +53,10 @@ parameters (f : RawImp' nm -> RawImp' nm)
   mapImpData (MkImpLater fc n tycon) = MkImpLater fc n (mapTTImp tycon)
 
   export
-  mapImpRecord : ImpRecord' nm -> ImpRecord' nm
-  mapImpRecord (MkImpRecord fc n params opts conName fields)
-    = MkImpRecord fc n (map (map (map mapTTImp)) params) opts conName
-        (map (map (map mapTTImp)) fields)
+  mapImpRecord : ImpRecordData nm -> ImpRecordData nm
+  mapImpRecord (MkImpRecord header body)
+    = MkImpRecord (map (map (map (map mapTTImp))) header)
+                  (map (map (map (map mapTTImp))) body)
 
   export
   mapImpDecl : ImpDecl' nm -> ImpDecl' nm
@@ -65,7 +65,7 @@ parameters (f : RawImp' nm -> RawImp' nm)
   mapImpDecl (IData fc vis mtreq dat) = IData fc vis mtreq (mapImpData dat)
   mapImpDecl (IDef fc n cls) = IDef fc n (map mapImpClause cls)
   mapImpDecl (IParameters fc params xs) = IParameters fc params (assert_total $ map mapImpDecl xs)
-  mapImpDecl (IRecord fc mstr x y rec) = IRecord fc mstr x y (mapImpRecord rec)
+  mapImpDecl (IRecord fc mstr x y rec) = IRecord fc mstr x y (map mapImpRecord rec)
   mapImpDecl (IFail fc mstr xs) = IFail fc mstr (assert_total $ map mapImpDecl xs)
   mapImpDecl (INamespace fc mi xs) = INamespace fc mi (assert_total $ map mapImpDecl xs)
   mapImpDecl (ITransform fc n t u) = ITransform fc n (mapTTImp t) (mapTTImp u)

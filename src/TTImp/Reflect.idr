@@ -372,13 +372,14 @@ mutual
     reify defs val@(NDCon _ n _ _ args)
         = case (dropAllNS !(full (gamma defs) n), map snd args) of
                (UN (Basic "MkRecord"), [v,w,x,y,z,a])
-                    => do v' <- reify defs !(evalClosure defs v)
-                          w' <- reify defs !(evalClosure defs w)
-                          x' <- reify defs !(evalClosure defs x)
-                          y' <- reify defs !(evalClosure defs y)
-                          z' <- reify defs !(evalClosure defs z)
-                          a' <- reify defs !(evalClosure defs a)
-                          pure (MkImpRecord v' w' (map fromOldParams x') y' z' a')
+                    => do fc <- reify defs !(evalClosure defs v)
+                          tyName <- reify defs !(evalClosure defs w)
+                          params <- reify defs !(evalClosure defs x)
+                          opts <- reify defs !(evalClosure defs y)
+                          conName <- reify defs !(evalClosure defs z)
+                          fields <- reify defs !(evalClosure defs a)
+                          pure (Mk [fc] $ MkImpRecord (Mk [NoFC tyName] (map fromOldParams params))
+                                                      (Mk [NoFC conName, opts] fields))
                _ => cantReify val "Record"
     reify defs val = cantReify val "Record"
 
@@ -735,16 +736,15 @@ mutual
              y' <- reflect fc defs lhs env field.name.val
              z' <- reflect fc defs lhs env field.val.boundType
              appCon fc defs (reflectionttimp "MkIField") [v', w', x', y', z']
-
   export
   Reflect ImpRecord where
-    reflect fc defs lhs env (MkImpRecord v w x y z a)
-        = do v' <- reflect fc defs lhs env v
-             w' <- reflect fc defs lhs env w
-             x' <- reflect fc defs lhs env (map toOldParams x)
-             y' <- reflect fc defs lhs env y
-             z' <- reflect fc defs lhs env z
-             a' <- reflect fc defs lhs env a
+    reflect fc defs lhs env r@(MkWithData _ $ MkImpRecord header body)
+        = do v' <- reflect fc defs lhs env r.fc
+             w' <- reflect fc defs lhs env header.name.val
+             x' <- reflect fc defs lhs env (map toOldParams header.val)
+             y' <- reflect fc defs lhs env body.opts
+             z' <- reflect fc defs lhs env body.name.val
+             a' <- reflect fc defs lhs env body.val
              appCon fc defs (reflectionttimp "MkRecord") [v', w', x', y', z', a']
 
   export

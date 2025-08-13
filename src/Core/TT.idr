@@ -105,6 +105,24 @@ Ord Visibility where
   compare Public Export = GT
 
 public export
+data DataOpt : Type where
+     SearchBy : List1 Name -> DataOpt -- determining arguments
+     NoHints : DataOpt -- Don't generate search hints for constructors
+     UniqueSearch : DataOpt -- auto implicit search must check result is unique
+     External : DataOpt -- implemented externally
+     NoNewtype : DataOpt -- don't apply newtype optimisation
+%name DataOpt dopt
+
+export
+Eq DataOpt where
+  (==) (SearchBy xs) (SearchBy ys) = xs == ys
+  (==) NoHints NoHints = True
+  (==) UniqueSearch UniqueSearch = True
+  (==) External External = True
+  (==) NoNewtype NoNewtype = True
+  (==) _ _ = False
+
+public export
 data Fixity = InfixL | InfixR | Infix | Prefix
 
 export
