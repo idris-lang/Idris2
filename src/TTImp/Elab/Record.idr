@@ -19,6 +19,8 @@ import TTImp.TTImp
 
 import Data.List
 import Data.SnocList
+
+import Libraries.Data.NameSet
 import Libraries.Data.SortedSet
 
 %default covering
@@ -27,22 +29,35 @@ getRecordType : Env Term vars -> NF vars -> Maybe Name
 getRecordType env (NTCon _ n _ _) = Just n
 getRecordType env _ = Nothing
 
-getNames : {auto c : Ref Ctxt Defs} -> Defs -> ClosedNF -> Core $ SortedSet Name
-getNames defs (NApp _ hd args)
+0 GetNamesIn : Type -> Type
+GetNamesIn t = {auto c : Ref Ctxt Defs} -> Defs -> t -> NameSet -> Core NameSet
+
+getNamesNFAcc : GetNamesIn ClosedNF
+
+getNamesNFsAcc : GetNamesIn (List ClosedNF)
+getNamesNFsAcc defs [] acc = pure acc
+getNamesNFsAcc defs (nf :: nfs) acc = do
+   acc <- getNamesNFAcc defs nf acc
+   getNamesNFsAcc defs nfs acc
+
+getNamesNFAcc defs (NApp _ hd args) acc
     = do eargs <- traverse (evalClosure defs . snd) args
-         pure $ nheadNames hd `union` concat !(traverse (getNames defs) eargs)
+         getNamesNFsAcc defs eargs (nheadNames hd acc)
   where
-    nheadNames : NHead Scope.empty -> SortedSet Name
-    nheadNames (NRef Bound n) = singleton n
-    nheadNames _ = empty
-getNames defs (NDCon _ _ _ _ args)
+    nheadNames : NHead Scope.empty -> NameSet -> NameSet
+    nheadNames (NRef Bound n) = insert n
+    nheadNames _ = id
+getNamesNFAcc defs (NDCon _ _ _ _ args) acc
     = do eargs <- traverse (evalClosure defs . snd) args
-         pure $ concat !(traverse (getNames defs) eargs)
-getNames defs (NTCon _ _ _ args)
+         getNamesNFsAcc defs eargs acc
+getNamesNFAcc defs (NTCon _ _ _ args) acc
   = do eargs <- traverse (evalClosure defs . snd) args
-       pure $ concat !(traverse (getNames defs) eargs)
-getNames defs (NDelayed _ _ tm) = getNames defs tm
-getNames {} = pure empty
+       getNamesNFsAcc defs eargs acc
+getNamesNFAcc defs (NDelayed _ _ tm) acc = getNamesNFAcc defs tm acc
+getNamesNFAcc defs _ acc = pure acc
+
+getNames : {auto c : Ref Ctxt Defs} -> Defs -> ClosedNF -> Core NameSet
+getNames defs t = getNamesNFAcc defs t empty
 
 data Rec : Type where
      Field : Maybe Name -> -- implicit argument name, if any
@@ -85,25 +100,25 @@ findConName defs tyn
 
 findFieldsAndTypeArgs : {auto c : Ref Ctxt Defs} ->
                         Defs -> Name ->
-                        Core $ Maybe (List (String, Maybe Name, Maybe Name), SortedSet Name)
+                        Core $ Maybe (List (String, Maybe Name, Maybe Name), NameSet)
 findFieldsAndTypeArgs defs con
     = case !(lookupTyExact con (gamma defs)) of
            Just t => pure (Just !(getExpNames empty [] !(nf defs Env.empty t)))
            _ => pure Nothing
   where
-    getExpNames : SortedSet Name ->
+    getExpNames : NameSet ->
                   List (String, Maybe Name, Maybe Name) ->
                   ClosedNF ->
-                  Core (List (String, Maybe Name, Maybe Name), SortedSet Name)
+                  Core (List (String, Maybe Name, Maybe Name), NameSet)
     getExpNames names expNames (NBind fc x (Pi _ _ p ty) sc)
         = do let imp = case p of
                             Explicit => Nothing
                             _ => Just x
              nfty <- evalClosure defs ty
-             let names = !(getNames defs nfty) `union` names
+             names <- getNamesNFAcc defs nfty names
              let expNames = (nameRoot x, imp, getRecordType Env.empty nfty) :: expNames
              getExpNames names expNames !(sc defs (toClosure defaultOpts Env.empty (Ref fc Bound x)))
-    getExpNames names expNames nfty = pure (reverse expNames, (!(getNames defs nfty) `union` names))
+    getExpNames names expNames nfty = pure (reverse expNames, (!(getNamesNFAcc defs nfty names)))
 
 genFieldName : {auto u : Ref UST UState} ->
                String -> Core String
@@ -143,14 +158,14 @@ findPath loc (p :: ps) full (Just tyn) val (Field mn n v)
         findPath loc (p :: ps) full (Just tyn) val rec'
   where
     mkArgs : List (String, Maybe Name, Maybe Name) ->
-             SortedSet Name ->
+             NameSet ->
              Core (List (String, Rec))
     mkArgs [] _ = pure []
     mkArgs ((p, imp, _) :: ps) tyArgs
         = do fldn <- genFieldName p
              args' <- mkArgs ps tyArgs
              -- If other types depend on that implicit argument, leave it as _ by default
-             let arg = case (flip contains tyArgs) <$> imp of
+             let arg = case (flip elem tyArgs) <$> imp of
                   Just True => Implicit loc False
                   _ => IVar (virtualiseFC loc) (UN $ Basic fldn)
              pure ((p, Field imp fldn arg) :: args')

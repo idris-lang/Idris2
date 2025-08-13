@@ -11,6 +11,8 @@ import Data.List
 import Data.List.Quantifiers
 import Data.SnocList
 import Data.Vect
+
+import Libraries.Data.NameSet
 import Libraries.Data.SortedSet
 import Libraries.Data.SnocList.Extra
 
@@ -312,7 +314,7 @@ freeVariables (AConstCase _ sc alts mDef) =
 freeVariables _ = empty
 
 export
-usedConstructors : ANF -> SortedSet Name
+usedConstructors : ANF -> NameSet
 usedConstructors (AV _ x) = empty
 usedConstructors (AAppName _ _ n args) = empty
 usedConstructors (AUnderApp _ n _ args) = empty
@@ -324,7 +326,7 @@ usedConstructors (AExtPrim _ _ _ args) = empty
 usedConstructors (AConCase _ sc alts mDef) =
     let altsAnf =
         map (\(MkAConAlt _ _ _ args caseBody) => usedConstructors caseBody) alts in
-    let anfs : List (SortedSet Name) = case mDef of
+    let anfs : List (NameSet) = case mDef of
                 Just anf => usedConstructors anf :: altsAnf
                 Nothing => altsAnf in
     concat anfs

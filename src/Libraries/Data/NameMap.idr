@@ -1,6 +1,8 @@
 module Libraries.Data.NameMap
 
 import Core.Name
+import Libraries.Data.NameSet
+
 
 -- Hand specialised map, for efficiency...
 
@@ -404,3 +406,12 @@ export
 foldlNames : (acc -> Name -> v -> acc) -> acc -> NameMap v -> acc
 foldlNames f z Empty = z
 foldlNames f z (M _ t) = treeFoldl f z t
+
+export
+differenceMap : NameMap v -> NameSet -> NameMap v
+differenceMap Empty _ = Empty
+differenceMap m s = foldlNames (\ m, k => delete k m) m s
+
+export
+intersectionMap : NameMap v -> NameSet -> NameMap v
+intersectionMap m s = filterBy (`elem` s) m
