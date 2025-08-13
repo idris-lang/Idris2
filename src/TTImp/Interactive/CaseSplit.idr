@@ -113,18 +113,18 @@ findCons n lhs
                                            !(traverse toFullNames $ fromMaybe [] cons)))
 
 findAllVars : Term vars -> List Name
-findAllVars (Bind _ x (PVar _ _ _ _) sc)
+findAllVars (Bind _ x (PVar {}) sc)
     = x :: findAllVars sc
-findAllVars (Bind _ x (Let _ _ _ _) sc)
+findAllVars (Bind _ x (Let {}) sc)
     = x :: findAllVars sc
-findAllVars (Bind _ x (PLet _ _ _ _) sc)
+findAllVars (Bind _ x (PLet {}) sc)
     = x :: findAllVars sc
 -- #2640 also grab the name of the function being defined
 findAllVars t = toList (dropNS <$> getDefining t)
 
 export
 explicitlyBound : Defs -> ClosedNF -> Core (List Name)
-explicitlyBound defs (NBind fc x (Pi _ _ _ _) sc)
+explicitlyBound defs (NBind fc x (Pi {}) sc)
     = pure $ x :: !(explicitlyBound defs
                     !(sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))))
 explicitlyBound defs _ = pure []

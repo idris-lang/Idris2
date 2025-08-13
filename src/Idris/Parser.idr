@@ -1580,11 +1580,11 @@ namespaceHead fname
 parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
   namespaceDecl : Rule PDeclNoFC
   namespaceDecl
-      = do doc   <- optDocumentation fname -- documentation is not recoded???
-           col   <- column
-           ns    <- namespaceHead fname
-           ds    <- blockAfter col (topDecl fname)
-           pure (PNamespace  ns (collectDefs ds))
+      = do doc <- optDocumentation fname -- documentation is not recoded???
+           col <- column
+           ns  <- namespaceHead fname
+           ds  <- blockAfter col (topDecl fname)
+           pure (PNamespace ns (collectDefs ds))
 
   transformDecl : Rule PDeclNoFC
   transformDecl

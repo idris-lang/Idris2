@@ -42,7 +42,7 @@ checkIfGuarded fc n
         = do Just gdef <- lookupCtxtExact n (gamma defs)
                   | Nothing => pure False
              case definition gdef of
-                  DCon _ _ _ => pure True
+                  DCon {} => pure True
                   _ => pure (multiplicity gdef == erased
                               || (AllGuarded `elem` flags gdef))
 

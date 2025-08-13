@@ -39,7 +39,7 @@ mkClosedElab {vars = x :: vars} fc (b :: env) elab
     -- everything except 'Let', so make the appropriate corresponding binder
     -- here
     newBinder : Binder (Term vars) -> Binder (Term vars)
-    newBinder b@(Let _ _ _ _) = b
+    newBinder b@(Let {}) = b
     newBinder b = Lam (binderLoc b) (multiplicity b) Explicit (binderType b)
 
 deeper : {auto e : Ref EST (EState vars)} ->
@@ -147,9 +147,9 @@ delayElab {vars} fc rig env exp pri elab
 
 export
 ambiguous : Error -> Bool
-ambiguous (AmbiguousElab _ _ _) = True
-ambiguous (AmbiguousName _ _) = True
-ambiguous (AmbiguityTooDeep _ _ _) = True
+ambiguous (AmbiguousElab {}) = True
+ambiguous (AmbiguousName {}) = True
+ambiguous (AmbiguityTooDeep {}) = True
 ambiguous (InType _ _ err) = ambiguous err
 ambiguous (InCon _ err) = ambiguous err
 ambiguous (InLHS _ _ err) = ambiguous err
@@ -194,8 +194,8 @@ contra defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
          then pure True
          else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
 contra defs (NPrimVal _ x) (NPrimVal _ y) = pure (x /= y)
-contra defs (NDCon _ _ _ _ _) (NPrimVal _ _) = pure True
-contra defs (NPrimVal _ _) (NDCon _ _ _ _ _) = pure True
+contra defs (NDCon {}) (NPrimVal {}) = pure True
+contra defs (NPrimVal {}) (NDCon {}) = pure True
 contra defs x y = pure False
 
 -- Errors that might be recoverable later if we try again. Generally -
@@ -211,8 +211,8 @@ recoverable (CantSolveEq _ gam env l r)
    = do defs <- get Ctxt
         let defs = { gamma := gam } defs
         pure $ not !(contra defs !(nf defs env l) !(nf defs env r))
-recoverable (UndefinedName _ _) = pure False
-recoverable (LinearMisuse _ _ _ _) = pure False
+recoverable (UndefinedName {}) = pure False
+recoverable (LinearMisuse {}) = pure False
 recoverable (InType _ _ err) = recoverable err
 recoverable (InCon _ err) = recoverable err
 recoverable (InLHS _ _ err) = recoverable err
@@ -279,8 +279,8 @@ retryDelayed' errmode p acc (d@(_, i, hints, elab) :: ds)
                                (\err' => throw (better err err')))
   where
     better : Error -> Error -> Error
-    better e (GenericMsg _ _) = e
-    better (GenericMsg _ _) e = e
+    better e (GenericMsg {}) = e
+    better (GenericMsg {}) e = e
     better e _ = e
 
 export

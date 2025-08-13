@@ -74,7 +74,7 @@ checkDelay rig elabinfo nest env fc tm mexpected
                                throw (GenericMsg fc ("Can't infer delay type")))
   where
     delayError : Error -> Bool
-    delayError (GenericMsg _ _) = True
+    delayError (GenericMsg {}) = True
     delayError _ = False
 
 export

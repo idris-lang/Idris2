@@ -28,7 +28,7 @@ styleAnn : IdrisDocAnn -> AnsiStyle
 styleAnn Header        = underline
 styleAnn Deprecation   = bold
 styleAnn Declarations  = []
-styleAnn (Decl{})      = []
+styleAnn (Decl {})     = []
 styleAnn DocStringBody = []
 styleAnn UserDocString = []
 styleAnn (Syntax syn)  = syntaxAnn syn

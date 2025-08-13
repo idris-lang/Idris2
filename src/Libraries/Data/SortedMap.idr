@@ -289,7 +289,7 @@ implementation Foldable (SortedMap k) where
   foldl f z = foldl f z . values
 
   null Empty = True
-  null (M _ _) = False
+  null (M {}) = False
 
 export
 implementation Traversable (SortedMap k) where
@@ -313,7 +313,7 @@ export
 merge : Semigroup v => SortedMap k v -> SortedMap k v -> SortedMap k v
 merge = mergeWith (<+>)
 
-||| Left-biased merge, also keeps the ordering specified  by the left map.
+||| Left-biased merge, also keeps the ordering specified by the left map.
 export
 mergeLeft : SortedMap k v -> SortedMap k v -> SortedMap k v
 mergeLeft = mergeWith const

@@ -16,7 +16,7 @@ mapPTermM f = goPTerm where
   mutual
 
     goPTerm : PTerm' nm -> Core (PTerm' nm)
-    goPTerm t@(PRef _ _) = f t
+    goPTerm t@(PRef {}) = f t
     goPTerm (NewPi x) =
       NewPi <$> traverse goPBinderScope x
     goPTerm (Forall x) =
@@ -78,12 +78,12 @@ mapPTermM f = goPTerm where
     goPTerm (PForce fc x) =
       PForce fc <$> goPTerm x
       >>= f
-    goPTerm t@(PSearch _ _) = f t
-    goPTerm t@(PPrimVal _ _) = f t
+    goPTerm t@(PSearch {}) = f t
+    goPTerm t@(PPrimVal {}) = f t
     goPTerm (PQuote fc x) =
       PQuote fc <$> goPTerm x
       >>= f
-    goPTerm t@(PQuoteName _ _) = f t
+    goPTerm t@(PQuoteName {}) = f t
     goPTerm (PQuoteDecl fc x) =
       PQuoteDecl fc <$> goPDecls x
       >>= f
@@ -93,16 +93,16 @@ mapPTermM f = goPTerm where
     goPTerm (PRunElab fc x) =
       PRunElab fc <$> goPTerm x
       >>= f
-    goPTerm t@(PHole _ _ _) = f t
-    goPTerm t@(PType _) = f t
+    goPTerm t@(PHole {}) = f t
+    goPTerm t@(PType {}) = f t
     goPTerm (PAs fc nameFC x pat) =
       PAs fc nameFC x <$> goPTerm pat
       >>= f
     goPTerm (PDotted fc x) =
       PDotted fc <$> goPTerm x
       >>= f
-    goPTerm t@(PImplicit _) = f t
-    goPTerm t@(PInfer _) = f t
+    goPTerm t@(PImplicit {}) = f t
+    goPTerm t@(PInfer {}) = f t
     goPTerm (POp fc bind op right) =
       POp fc
           <$> traverse goOpBinder bind
@@ -157,7 +157,7 @@ mapPTermM f = goPTerm where
                 <*> goPTerm y
                 <*> goPTerm z
       >>= f
-    goPTerm t@(PUnit _) = f t
+    goPTerm t@(PUnit {}) = f t
     goPTerm (PIfThenElse fc x y z) =
       PIfThenElse fc <$> goPTerm x
                      <*> goPTerm y
@@ -305,7 +305,7 @@ mapPTermM f = goPTerm where
     goPDecl (PTransform n a b) = PTransform n <$> goPTerm a <*> goPTerm b
     goPDecl (PRunElabDecl a) = PRunElabDecl <$> goPTerm a
     goPDecl (PDirective d) = pure (PDirective d)
-    goPDecl p@(PBuiltin _ _) = pure p
+    goPDecl p@(PBuiltin {}) = pure p
 
     goPTypeDecl : PTypeDeclData' nm -> Core (PTypeDeclData' nm)
     goPTypeDecl (MkPTy n d t) = MkPTy n d <$> goPTerm t
@@ -322,7 +322,7 @@ mapPTermM f = goPTerm where
     goPiInfo t = pure t
 
     goPFnOpt : PFnOpt' nm -> Core (PFnOpt' nm)
-    goPFnOpt o@(IFnOpt _) = pure o
+    goPFnOpt o@(IFnOpt {}) = pure o
     goPFnOpt (PForeign ts) = PForeign <$> goPTerms ts
     goPFnOpt (PForeignExport ts) = PForeignExport <$> goPTerms ts
 
@@ -409,7 +409,7 @@ mapPTerm f = goPTerm where
   mutual
 
     goPTerm : PTerm' nm -> PTerm' nm
-    goPTerm t@(PRef _ _) = f t
+    goPTerm t@(PRef {}) = f t
     goPTerm (Forall binderScope)
       = Forall (map (mapSnd f) binderScope)
     goPTerm (NewPi binderScope)
@@ -440,25 +440,25 @@ mapPTerm f = goPTerm where
       = f $ PDelay fc $ goPTerm x
     goPTerm (PForce fc x)
       = f $ PForce fc $ goPTerm x
-    goPTerm t@(PSearch _ _) = f t
-    goPTerm t@(PPrimVal _ _) = f t
+    goPTerm t@(PSearch {}) = f t
+    goPTerm t@(PPrimVal {}) = f t
     goPTerm (PQuote fc x)
       = f $ PQuote fc $ goPTerm x
-    goPTerm t@(PQuoteName _ _) = f t
+    goPTerm t@(PQuoteName {}) = f t
     goPTerm (PQuoteDecl fc x)
       = f $ PQuoteDecl fc (map goPDecl <$> x)
     goPTerm (PUnquote fc x)
       = f $ PUnquote fc $ goPTerm x
     goPTerm (PRunElab fc x)
       = f $ PRunElab fc $ goPTerm x
-    goPTerm t@(PHole _ _ _) = f t
-    goPTerm t@(PType _) = f t
+    goPTerm t@(PHole {}) = f t
+    goPTerm t@(PType {}) = f t
     goPTerm (PAs fc nameFC x pat)
       = f $ PAs fc nameFC x $ goPTerm pat
     goPTerm (PDotted fc x)
       = f $ PDotted fc $ goPTerm x
-    goPTerm t@(PImplicit _) = f t
-    goPTerm t@(PInfer _) = f t
+    goPTerm t@(PImplicit {}) = f t
+    goPTerm t@(PInfer {}) = f t
     goPTerm (POp fc autoBindInfo opName z)
       = f $ POp fc (map (map f) autoBindInfo) opName (goPTerm z)
     goPTerm (PPrefixOp fc x y)
@@ -489,7 +489,7 @@ mapPTerm f = goPTerm where
       = f $ PPair fc (goPTerm x) (goPTerm y)
     goPTerm (PDPair fc opFC x y z)
       = f $ PDPair fc opFC (goPTerm x) (goPTerm y) (goPTerm z)
-    goPTerm t@(PUnit _) = f t
+    goPTerm t@(PUnit {}) = f t
     goPTerm (PIfThenElse fc x y z)
       = f $ PIfThenElse fc (goPTerm x) (goPTerm y) (goPTerm z)
     goPTerm (PComprehension fc x xs)
@@ -571,7 +571,7 @@ mapPTerm f = goPTerm where
     goPDecl (PTransform n a b) = PTransform n (goPTerm a) (goPTerm b)
     goPDecl (PRunElabDecl a) = PRunElabDecl $ goPTerm a
     goPDecl (PDirective d) = PDirective d
-    goPDecl p@(PBuiltin _ _) = p
+    goPDecl p@(PBuiltin {}) = p
 
     goPBinder : PBinder' nm -> PBinder' nm
     goPBinder (MkPBinder info bind) = MkPBinder (goPiInfo info) (goBasicMultiBinder bind)
@@ -601,7 +601,7 @@ mapPTerm f = goPTerm where
     goPiInfo t = t
 
     goPFnOpt : PFnOpt' nm -> PFnOpt' nm
-    goPFnOpt o@(IFnOpt _) = o
+    goPFnOpt o@(IFnOpt {}) = o
     goPFnOpt (PForeign ts) = PForeign $ goPTerm <$> ts
     goPFnOpt (PForeignExport ts) = PForeignExport $ goPTerm <$> ts
 

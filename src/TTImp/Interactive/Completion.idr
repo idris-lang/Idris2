@@ -87,7 +87,7 @@ pragmaCompletion Nothing pref = pure $ do
 pragmaCompletion (Just kw) pref = go (pragmaArgs kw) (break isSpace pref) where
 
   go : List PragmaArg -> (String, String) -> Core (Maybe (String, List String))
-  go (AName{} :: _) (here, "") = do
+  go (AName {} :: _) (here, "") = do
     ns@(_ :: _) <- nameCompletion here
       | _ => pure Nothing
     pure (Just ("", ns))

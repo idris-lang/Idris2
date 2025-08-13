@@ -11,8 +11,8 @@ import Libraries.Data.NameMap
 export
 checkTotalityOK : {auto c : Ref Ctxt Defs} ->
                   Name -> Core (Maybe Error)
-checkTotalityOK (NS _ (MN _ _)) = pure Nothing -- not interested in generated names
-checkTotalityOK (NS _ (CaseBlock _ _)) = pure Nothing -- case blocks checked elsewhere
+checkTotalityOK (NS _ (MN {})) = pure Nothing -- not interested in generated names
+checkTotalityOK (NS _ (CaseBlock {})) = pure Nothing -- case blocks checked elsewhere
 checkTotalityOK n
     = do defs <- get Ctxt
          Just gdef <- lookupCtxtExact n (gamma defs)
@@ -24,7 +24,7 @@ checkTotalityOK n
          -- #524: need to check positivity even if we're not in a total context
          -- because a definition coming later may need to know it is positive
          case definition gdef of
-           (TCon {}) => ignore $ checkPositive fc n
+           TCon {} => ignore $ checkPositive fc n
            _ => pure ()
 
          -- Once that is done, we build up errors if necessary

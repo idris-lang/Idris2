@@ -250,9 +250,9 @@ postpone loc mode logstr env x y
     undefinedN n
         = do defs <- get Ctxt
              pure $ case !(lookupDefExact n (gamma defs)) of
-                  Just (Hole _ _) => True
-                  Just (BySearch _ _ _) => True
-                  Just (Guess _ _ _) => True
+                  Just (Hole {}) => True
+                  Just (BySearch {}) => True
+                  Just (Guess {}) => True
                   _ => False
 
 postponeS : {vars : _} ->
@@ -480,20 +480,20 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
     noMeta : Term vs -> Nat -> Bool
     noMeta (App _ f a) (S k) = noMeta f k && noMeta a k
     noMeta (Bind _ _ b sc) (S k) = noMeta (binderType b) k && noMeta sc k
-    noMeta (Meta _ _ _ _) d = False
+    noMeta (Meta {}) d = False
     noMeta (TDelayed _ _ t) d = noMeta t d
     noMeta (TDelay _ _ t a) d = noMeta t d && noMeta a d
     noMeta (TForce _ _ t) d = noMeta t d
     noMeta (As _ _ a p) d = noMeta a d && noMeta p d
-    noMeta (Local _ _ _ _) _ = True
-    noMeta (Ref _ _ _) _ = True
-    noMeta (PrimVal _ _) _ = True
-    noMeta (TType _ _) _ = True
+    noMeta (Local {}) _ = True
+    noMeta (Ref {}) _ = True
+    noMeta (PrimVal {}) _ = True
+    noMeta (TType {}) _ = True
     noMeta _ _ = False
 
     isSimple : Term vs -> Bool
-    isSimple (Meta _ _ _ _) = True
-    isSimple (Bind _ _ (Lam _ _ _ _) sc) = isSimple sc
+    isSimple (Meta {}) = True
+    isSimple (Bind _ _ (Lam {}) sc) = isSimple sc
     isSimple (App _ f a) = noMeta f 6 && noMeta a 3
     isSimple tm = noMeta tm 0
 
@@ -609,7 +609,7 @@ solveIfUndefined : {vars : _} ->
                    Env Term vars -> Term vars -> Term vars -> Core Bool
 solveIfUndefined env metavar@(Meta fc mname idx args) soln
     = do defs <- get Ctxt
-         Just (Hole _ _) <- lookupDefExact (Resolved idx) (gamma defs)
+         Just (Hole {}) <- lookupDefExact (Resolved idx) (gamma defs)
               | _ => pure False
          updateSolution env metavar soln
 solveIfUndefined env (Erased _ (Dotted metavar)) soln
@@ -766,7 +766,7 @@ mutual
                              (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs') tm
     where
       isPatName : Name -> Bool
-      isPatName (PV _ _) = True
+      isPatName (PV {}) = True
       isPatName _ = False
 
   unifyHoleApp swap mode loc env mname mref margs margs' tm
@@ -929,15 +929,15 @@ mutual
                             env (NApp xfc (NLocal rx x xp) [])
                                 (NApp yfc (NLocal ry y yp) [])
   -- A local against something canonical (binder or constructor) is bad
-  unifyApp swap mode loc env xfc (NLocal rx x xp) args y@(NBind _ _ _ _)
+  unifyApp swap mode loc env xfc (NLocal rx x xp) args y@(NBind {})
       = convertErrorS swap loc env (NApp xfc (NLocal rx x xp) args) y
-  unifyApp swap mode loc env xfc (NLocal rx x xp) args y@(NDCon _ _ _ _ _)
+  unifyApp swap mode loc env xfc (NLocal rx x xp) args y@(NDCon {})
       = convertErrorS swap loc env (NApp xfc (NLocal rx x xp) args) y
-  unifyApp swap mode loc env xfc (NLocal rx x xp) args y@(NTCon _ _ _ _)
+  unifyApp swap mode loc env xfc (NLocal rx x xp) args y@(NTCon {})
       = convertErrorS swap loc env (NApp xfc (NLocal rx x xp) args) y
-  unifyApp swap mode loc env xfc (NLocal rx x xp) args y@(NPrimVal _ _)
+  unifyApp swap mode loc env xfc (NLocal rx x xp) args y@(NPrimVal {})
       = convertErrorS swap loc env (NApp xfc (NLocal rx x xp) args) y
-  unifyApp swap mode loc env xfc (NLocal rx x xp) args y@(NType _ _)
+  unifyApp swap mode loc env xfc (NLocal rx x xp) args y@(NType {})
       = convertErrorS swap loc env (NApp xfc (NLocal rx x xp) args) y
   -- If they're already convertible without metavariables, we're done,
   -- otherwise postpone
@@ -1001,7 +1001,7 @@ mutual
                                            (NApp xfc (NMeta xn xi xargs) xargs')
     where
       pv : Name -> Bool
-      pv (PV _ _) = True
+      pv (PV {}) = True
       pv _ = False
 
       localsIn : List (Closure vars) -> Core Nat
@@ -1009,7 +1009,7 @@ mutual
       localsIn (c :: cs)
           = do defs <- get Ctxt
                case !(evalClosure defs c) of
-                 NApp _ (NLocal _ _ _) _ => pure $ S !(localsIn cs)
+                 NApp _ (NLocal {}) _ => pure $ S !(localsIn cs)
                  _ => localsIn cs
 
   unifyBothApps mode loc env xfc (NMeta xn xi xargs) xargs' yfc fy yargs'
@@ -1204,8 +1204,8 @@ mutual
       = do cs <- unify (lower mode) loc env x y
            cs' <- unifyArgs mode loc env (map snd axs) (map snd ays)
            pure (union cs cs')
-  unifyNoEta mode loc env x@(NApp xfc fx@(NMeta _ _ _) axs)
-                          y@(NApp yfc fy@(NMeta _ _ _) ays)
+  unifyNoEta mode loc env x@(NApp xfc fx@(NMeta {}) axs)
+                          y@(NApp yfc fy@(NMeta {}) ays)
       = do defs <- get Ctxt
            if !(convert defs env x y)
                then pure success
@@ -1234,11 +1234,11 @@ mutual
       -- postpone and come back to it so we can insert the implicit
       -- Force/Delay later
       isDelay : NF vars -> Bool
-      isDelay (NDelayed _ _ _) = True
+      isDelay (NDelayed {}) = True
       isDelay _ = False
 
   isHoleApp : NF vars -> Bool
-  isHoleApp (NApp _ (NMeta _ _ _) _) = True
+  isHoleApp (NApp _ (NMeta {}) _) = True
   isHoleApp _ = False
 
   export
@@ -1333,7 +1333,7 @@ mutual
                      -- all
                      case (xnf, ynf) of
                          -- They might be equal, don't want to make a cycle
-                         (NApp _ (NMeta _ _ _) _, NApp _ (NMeta _ _ _) _)
+                         (NApp _ (NMeta {}) _, NApp _ (NMeta {}) _)
                                => unify mode loc env xnf ynf
                          (NApp _ (NMeta _ i _) _, _) =>
                             do ynf' <- evalClosure empty y
@@ -1422,7 +1422,7 @@ forceMeta r envb tm = TForce (getLoc tm) r tm
 
 -- Check whether it's worth trying a search again, based on what went wrong
 recoverable : Error -> Bool
-recoverable (UndefinedName _ _) = False
+recoverable (UndefinedName {}) = False
 recoverable (InType _ _ err) = recoverable err
 recoverable (InCon _ err) = recoverable err
 recoverable (InLHS _ _ err) = recoverable err
@@ -1556,9 +1556,9 @@ giveUpConstraints
     constraintToHole (hid, (_, _))
         = do defs <- get Ctxt
              case !(lookupDefExact (Resolved hid) (gamma defs)) of
-                  Just (BySearch _ _ _) =>
+                  Just (BySearch {}) =>
                          updateDef (Resolved hid) (const (Just (Hole 0 (holeInit False))))
-                  Just (Guess _ _ _) =>
+                  Just (Guess {}) =>
                          updateDef (Resolved hid) (const (Just (Hole 0 (holeInit False))))
                   _ => pure ()
 
@@ -1642,7 +1642,7 @@ checkDots
                             (\n => do Just ndef <- lookupDefExact n (gamma defs)
                                            | Nothing => undefinedName fc n
                                       pure $ case ndef of
-                                           Hole _ _ => False
+                                           Hole {} => False
                                            _ => True)
                             oldholen
 

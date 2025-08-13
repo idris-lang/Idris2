@@ -390,7 +390,7 @@ mutual
         = do tag 8; toBuf n
     toBuf (IBuiltin fc type name)
         = do tag 9; toBuf fc; toBuf type; toBuf name
-    toBuf (IFail _ _ _)
+    toBuf (IFail {})
         = pure ()
 
     fromBuf

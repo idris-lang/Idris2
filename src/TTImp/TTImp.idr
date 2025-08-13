@@ -521,7 +521,7 @@ mutual
         = "%transform " ++ show n ++ " " ++ show lhs ++ " ==> " ++ show rhs
     show (IRunElabDecl _ tm)
         = "%runElab " ++ show tm
-    show (IPragma _ _ _) = "[externally defined pragma]"
+    show (IPragma {}) = "[externally defined pragma]"
     show (ILog Nothing) = "%logging off"
     show (ILog (Just (topic, lvl))) = "%logging " ++ case topic of
       [] => show lvl
@@ -597,7 +597,7 @@ lhsInCurrentNS nest (INamedApp loc f n a)
 lhsInCurrentNS nest (IWithApp loc f a)
     = do f' <- lhsInCurrentNS nest f
          pure (IWithApp loc f' a)
-lhsInCurrentNS nest tm@(IVar loc (NS _ _)) = pure tm -- leave explicit NS alone
+lhsInCurrentNS nest tm@(IVar loc (NS {})) = pure tm -- leave explicit NS alone
 lhsInCurrentNS nest (IVar loc n)
     = case lookup n (names nest) of
            Nothing =>
@@ -754,7 +754,7 @@ implicitsAs n defs ns tm
         -- Parameter blocks also introduce additional telescope of implicit, auto,
         -- and explicit variables. So we first peel off all of the quantifiers
         -- corresponding to these variables.
-        findImps ns es (_ :: locals) (NBind fc x (Pi _ _ _ _) sc)
+        findImps ns es (_ :: locals) (NBind fc x (Pi {}) sc)
           = do body <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
                findImps ns es locals body
                -- ^ TODO? check that name of the pi matches name of local?
@@ -821,9 +821,9 @@ definedInBlock ns decls =
     expandNS : Namespace -> Name -> Name
     expandNS ns n
        = if ns == emptyNS then n else case n of
-           UN _ => NS ns n
-           MN _ _ => NS ns n
-           DN _ _ => NS ns n
+           UN {} => NS ns n
+           MN {} => NS ns n
+           DN {} => NS ns n
            _ => n
 
     defName : Namespace -> SortedSet Name -> ImpDecl -> SortedSet Name

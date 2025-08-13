@@ -131,7 +131,7 @@ inferLambda rig elabinfo nest env fc rigl info n argTy scope expTy
 getTyNF : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
           Env Term vars -> Term vars -> Core (Term vars)
-getTyNF env x@(Bind _ _ _ _) = pure x
+getTyNF env x@(Bind {}) = pure x
 getTyNF env x
     = do defs <- get Ctxt
          xnf <- nf defs env x

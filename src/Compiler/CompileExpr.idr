@@ -109,7 +109,7 @@ applyNewType arity pos fn args
 
 dropPos : NatSet -> CExp vs -> CExp vs
 dropPos epos (CLam fc x sc) = CLam fc x (dropPos epos sc)
-dropPos epos (CApp fc tm@(CApp _ _ _) args')
+dropPos epos (CApp fc tm@(CApp {}) args')
     = CApp fc (dropPos epos tm) args'
 dropPos epos (CApp fc f args) = CApp fc f (drop epos args)
 dropPos epos (CCon fc c ci a args) = CCon fc c ci a (drop epos args)
@@ -146,7 +146,7 @@ dconFlag n
   where
     ciFlags : Def -> List DefFlag -> ConInfo
     ciFlags def [] = case def of
-      TCon{} => TYCON
+      TCon {} => TYCON
       _ => DATACON
     ciFlags def (ConType ci :: xs) = ci
     ciFlags def (x :: xs) = ciFlags def xs
@@ -175,7 +175,7 @@ toCExpTm n (Ref fc _ fn)
          pure $ CApp fc (CRef fc full) []
 toCExpTm n (Meta fc mn i args)
     = pure $ CApp fc (CRef fc mn) !(traverse (toCExp n) args)
-toCExpTm n (Bind fc x (Lam _ _ _ _) sc)
+toCExpTm n (Bind fc x (Lam {}) sc)
     = pure $ CLam fc x !(toCExp n sc)
 toCExpTm n (Bind fc x (Let _ rig val _) sc)
     = do sc' <- toCExp n sc
@@ -242,7 +242,7 @@ mutual
                            else pure $ MkConAlt xn !(dconFlag xn) Nothing args' (shrinkCExp sub sc') :: ns'
     where
       dcon : Def -> Bool
-      dcon (DCon _ _ _) = True
+      dcon (DCon {}) = True
       dcon _ = False
   conCases n (_ :: ns) = conCases n ns
 
@@ -494,9 +494,9 @@ nfToCFType _ (NTCon fc n_in _ args) s
                 do narg <- evalClosure defs uarg
                    carg <- nfToCFType fc narg s
                    pure (CFIORes carg)
-nfToCFType _ (NType _ _) s
+nfToCFType _ (NType {}) s
     = pure (CFUser (UN (Basic "Type")) [])
-nfToCFType _ (NErased _ _) s
+nfToCFType _ (NErased {}) s
     = pure (CFUser (UN (Basic "__")) [])
 nfToCFType fc t s
     = do defs <- get Ctxt
@@ -592,13 +592,13 @@ toCDef n _ _ (TCon arity _ _ _ _ _ _)
     = pure $ MkCon Nothing arity Nothing
 -- We do want to be able to compile these, but also report an error at run time
 -- (and, TODO: warn at compile time)
-toCDef n ty _ (Hole _ _)
+toCDef n ty _ (Hole {})
     = pure $ MkError $ CCrash emptyFC ("Encountered unimplemented hole " ++
                                        show !(getFullName n))
-toCDef n ty _ (Guess _ _ _)
+toCDef n ty _ (Guess {})
     = pure $ MkError $ CCrash emptyFC ("Encountered constrained hole " ++
                                        show !(getFullName n))
-toCDef n ty _ (BySearch _ _ _)
+toCDef n ty _ (BySearch {})
     = pure $ MkError $ CCrash emptyFC ("Encountered incomplete proof search " ++
                                        show !(getFullName n))
 toCDef n ty _ def

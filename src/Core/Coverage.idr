@@ -35,18 +35,18 @@ conflictMatch ((x, tm) :: ms) = conflictArgs x tm ms || conflictMatch ms
     clash (Ref _ (TyCon _) n) (Ref _ (TyCon _) n')
         = if n /= n' then Distinct else Same
     clash (PrimVal _ c) (PrimVal _ c') = if c /= c' then Distinct else Same
-    clash (Ref _ t _) (PrimVal _ _) = if isJust (isCon t) then Distinct else Incomparable
-    clash (PrimVal _ _) (Ref _ t _) = if isJust (isCon t) then Distinct else Incomparable
-    clash (Ref _ t _) (TType _ _)   = if isJust (isCon t) then Distinct else Incomparable
-    clash (TType _ _) (Ref _ t _)   = if isJust (isCon t) then Distinct else Incomparable
-    clash (TType _ _) (PrimVal _ _) = Distinct
-    clash (PrimVal _ _) (TType _ _) = Distinct
+    clash (Ref _ t _) (PrimVal {}) = if isJust (isCon t) then Distinct else Incomparable
+    clash (PrimVal {}) (Ref _ t _) = if isJust (isCon t) then Distinct else Incomparable
+    clash (Ref _ t _) (TType {})   = if isJust (isCon t) then Distinct else Incomparable
+    clash (TType {}) (Ref _ t _)   = if isJust (isCon t) then Distinct else Incomparable
+    clash (TType {}) (PrimVal {})  = Distinct
+    clash (PrimVal {}) (TType {})  = Distinct
     clash _ _ = Incomparable
 
     findN : Nat -> Term vars -> Bool
     findN i (Local _ _ i' _) = i == i'
     findN i tm
-        = let (Ref _ (DataCon _ _) _, args) = getFnArgs tm
+        = let (Ref _ (DataCon {}) _, args) = getFnArgs tm
                    | _ => False in
               any (findN i) args
 
@@ -54,11 +54,11 @@ conflictMatch ((x, tm) :: ms) = conflictArgs x tm ms || conflictMatch ms
     -- a name appearing strong rigid in the other term
     conflictTm : Term vars -> Term vars -> Bool
     conflictTm (Local _ _ i _) tm
-        = let (Ref _ (DataCon _ _) _, args) = getFnArgs tm
+        = let (Ref _ (DataCon {}) _, args) = getFnArgs tm
                    | _ => False in
               any (findN i) args
     conflictTm tm (Local _ _ i _)
-        = let (Ref _ (DataCon _ _) _, args) = getFnArgs tm
+        = let (Ref _ (DataCon {}) _, args) = getFnArgs tm
                    | _ => False in
               any (findN i) args
     conflictTm tm tm'
@@ -113,7 +113,7 @@ conflict defs env nfty n
                    Core (Maybe (List (Name, Term vars)))
       conflictNF i t (NBind fc x b sc)
           -- invent a fresh name, in case a user has bound the same name
-          -- twice somehow both references appear in the result  it's unlikely
+          -- twice somehow both references appear in the result it's unlikely
           -- put possible
           = let x' = MN (show x) i in
                 conflictNF (i + 1) t
@@ -178,7 +178,7 @@ getMissingAlts fc defs (NPrimVal _ c) alts
                  pure []
          else pure [DefaultCase (Unmatched "Coverage check")]
 -- Similarly for types
-getMissingAlts fc defs (NType _ _) alts
+getMissingAlts fc defs (NType {}) alts
     = do log "coverage.missing" 50 "Looking for missing alts at type Type"
          if any isDefault alts
            then do log "coverage.missing" 20 "Found default"
@@ -232,8 +232,8 @@ addNot v t ((v', ts) :: xs)
 
 tagIsNot : List Int -> CaseAlt vars -> Bool
 tagIsNot ts (ConCase _ t' _ _) = not (t' `elem` ts)
-tagIsNot ts (ConstCase _ _) = True
-tagIsNot ts (DelayCase _ _ _) = True
+tagIsNot ts (ConstCase {}) = True
+tagIsNot ts (DelayCase {}) = True
 tagIsNot ts (DefaultCase _) = False
 
 -- Replace a default case with explicit branches for the constructors.
@@ -245,8 +245,8 @@ replaceDefaults : {auto c : Ref Ctxt Defs} ->
                   Core (List (CaseAlt vars))
 -- Leave it alone if it's a primitive type though, since we need the catch
 -- all case there
-replaceDefaults fc defs (NPrimVal _ _) cs = pure cs
-replaceDefaults fc defs (NType _ _) cs = pure cs
+replaceDefaults fc defs (NPrimVal {}) cs = pure cs
+replaceDefaults fc defs (NType {}) cs = pure cs
 replaceDefaults fc defs nfty cs
     = do cs' <- traverse rep cs
          pure (dropRep (concat cs'))
@@ -372,7 +372,7 @@ getNonCoveringRefs fc n
   where
     isCase : Name -> Bool
     isCase (NS _ n) = isCase n
-    isCase (CaseBlock _ _) = True
+    isCase (CaseBlock {}) = True
     isCase _ = False
 
     noAssert : (Name, Bool) -> Maybe Name
@@ -403,9 +403,9 @@ match (TForce _ _ t) (TForce _ _ t') = match t t'
 match (PrimVal _ c) (PrimVal _ c') = c == c'
 match (Erased _ (Dotted t)) u = match t u
 match t (Erased _ (Dotted u)) = match t u
-match (Erased _ _) _ = True
-match _ (Erased _ _) = True
-match (TType _ _) (TType _ _) = True
+match (Erased {}) _ = True
+match _ (Erased {}) = True
+match (TType {}) (TType {}) = True
 match _ _ = False
 
 -- Erase according to argument position

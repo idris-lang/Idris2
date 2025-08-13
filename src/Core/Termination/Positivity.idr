@@ -15,7 +15,7 @@ import Libraries.Data.NatSet
 
 %default covering
 
-isAssertTotal : Ref Ctxt Defs => NHead{} -> Core Bool
+isAssertTotal : Ref Ctxt Defs => NHead vars -> Core Bool
 isAssertTotal (NRef _ fn_in) =
   do fn <- getFullName fn_in
      pure (fn == NS builtinNS (UN $ Basic "assert_total"))

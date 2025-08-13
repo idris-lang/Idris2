@@ -277,7 +277,7 @@ conAlt (MkTcGroup tcIx funs) (MkTcFunction n ix args exp) =
            Nothing => tcDone x
        toTc (NmConCase fc sc a d) = NmConCase fc sc (map con a) (map toTc d)
        toTc (NmConstCase fc sc a d) = NmConstCase fc sc (map const a) (map toTc d)
-       toTc x@(NmCrash _ _) = x
+       toTc x@(NmCrash {}) = x
        toTc x = tcDone x
 
        con : NamedConAlt -> NamedConAlt

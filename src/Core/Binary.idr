@@ -366,7 +366,7 @@ addGlobalDef modns filens asm (n, def)
     completeDef (Just def)
         = case definition def of
                None => False
-               Hole _ _ => False
+               Hole {} => False
                _ => True
 
 addTypeHint : {auto c : Ref Ctxt Defs} ->

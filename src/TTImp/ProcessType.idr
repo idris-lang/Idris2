@@ -189,7 +189,7 @@ processType {vars} eopts nest env fc rig vis opts (MkImpTy tfc n_in ty_raw)
          log "declare.type" 2 $ "Setting options for " ++ show n ++ ": " ++ show opts
          let name = Resolved idx
          let isNested : Name -> Bool
-             isNested (Nested _ _) = True
+             isNested (Nested {}) = True
              isNested (NS _ n) = isNested n
              isNested _ = False
          let nested = not (isNested n)

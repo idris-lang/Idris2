@@ -90,13 +90,13 @@ mutual
       = Bind fc n (Pi fc' c x ty) scopety
   discharge fc n (Let fc' c val ty) bindty scopety
       = Bind fc n (Let fc' c val ty) scopety
-  discharge fc n (Pi _ _ _ _) bindty scopety
+  discharge fc n (Pi {}) bindty scopety
       = bindty
   discharge fc n (PVar fc' c p ty) bindty scopety
       = Bind fc n (PVTy fc' c ty) scopety
   discharge fc n (PLet fc' c val ty) bindty scopety
       = Bind fc n (PLet fc' c val ty) scopety
-  discharge fc n (PVTy _ _ _) bindty scopety
+  discharge fc n (PVTy {}) bindty scopety
       = bindty
 
   chkConstant : FC -> Constant -> Term vars

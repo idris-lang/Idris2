@@ -388,8 +388,8 @@ Eq UConstraint where
 
 export
 Ord UConstraint where
-  compare (ULE _ _) (ULT _ _) = LT
-  compare (ULT _ _) (ULE _ _) = GT
+  compare (ULE {}) (ULT {}) = LT
+  compare (ULT {}) (ULE {}) = GT
   compare (ULE x y) (ULE x' y')
       = case compare x x' of
              EQ => compare y y'

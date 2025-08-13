@@ -215,8 +215,8 @@ covering
   show (NTCon _ n _ args) = show n ++ " [" ++ show (length args) ++ " closures]"
   show (NAs _ _ n tm) = show n ++ "@" ++ show tm
   show (NDelayed _ _ tm) = "%Delayed " ++ show tm
-  show (NDelay _ _ _ _) = "%Delay [closure]"
+  show (NDelay {}) = "%Delay [closure]"
   show (NForce _ _ tm args) = "%Force " ++ show tm ++ " [" ++ show (length args) ++ " closures]"
   show (NPrimVal _ c) = show c
-  show (NErased _ _) = "[__]"
-  show (NType _ _) = "Type"
+  show (NErased {}) = "[__]"
+  show (NType {}) = "Type"

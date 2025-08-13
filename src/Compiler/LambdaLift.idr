@@ -450,9 +450,9 @@ usedVars used (LConstCase fc sc alts def) =
     usedConstAlt : {default Nothing lazy : Maybe LazyReason} ->
                     Used vars -> LiftedConstAlt vars -> Used vars
     usedConstAlt used (MkLConstAlt c sc) = usedVars used sc
-usedVars used (LPrimVal _ _) = used
-usedVars used (LErased _) = used
-usedVars used (LCrash _ _) = used
+usedVars used (LPrimVal {}) = used
+usedVars used (LErased {})  = used
+usedVars used (LCrash {})   = used
 
 dropIdx : {vars : _} ->
           {idx : _} ->

@@ -818,7 +818,7 @@ makeDoc pkg opts =
   where
     visible : GlobalDef -> Bool
     visible def = case definition def of
-      (DCon _ _ _) => False
+      DCon {} => False
       _ => (collapseDefault (visibility def) /= Private)
 
     fileError : String -> FileError -> Core (List Error)

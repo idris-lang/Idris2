@@ -312,7 +312,7 @@ addPolyConstraint : {vars : _} ->
                     {auto u : Ref UST UState} ->
                     FC -> Env Term vars -> Term vars -> NF vars -> NF vars ->
                     Core ()
-addPolyConstraint fc env arg x@(NApp _ (NMeta _ _ _) _) y
+addPolyConstraint fc env arg x@(NApp _ (NMeta {}) _) y
     = update UST { polyConstraints $= ((MkPolyConstraint fc env arg x y) ::) }
 addPolyConstraint fc env arg x y
     = pure ()
@@ -581,7 +581,7 @@ checkValidHole base (idx, (fc, n))
          Just gdef <- lookupCtxtExact (Resolved idx) (gamma defs)
               | Nothing => pure ()
          case definition gdef of
-              BySearch _ _ _ =>
+              BySearch {} =>
                   do defs <- get Ctxt
                      Just ty <- lookupTyExact n (gamma defs)
                           | Nothing => pure ()

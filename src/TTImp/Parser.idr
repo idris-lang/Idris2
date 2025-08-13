@@ -617,7 +617,7 @@ recordParam fname indents
   <|> do symbol "{"
          commit
          start <- location
-         info <- (pure  AutoImplicit <* keyword "auto"
+         info <- (pure AutoImplicit <* keyword "auto"
               <|>(do
                   keyword "default"
                   t <- simpleExpr fname indents

@@ -1083,7 +1083,7 @@ process Quit
 process NOP
     = pure Done
 process ShowVersion
-    = pure $ VersionIs  version
+    = pure $ VersionIs version
 process (ImportPackage package) = do
   defs <- get Ctxt
   searchDirs <- extraSearchDirectories

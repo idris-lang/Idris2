@@ -206,10 +206,10 @@ mutual
   -- am being conservative here,
   -- not daring to inadvertently change the semantics
   -- of the program.
-  analyze c@(COp _ _ _)      = analyzeSubExp c
-  analyze c@(CExtPrim _ _ _) = analyzeSubExp c
-  analyze c@(CForce _ _ _)   = analyzeSubExp c
-  analyze c@(CDelay _ _ _)   = analyzeSubExp c
+  analyze c@(COp {})      = analyzeSubExp c
+  analyze c@(CExtPrim {}) = analyzeSubExp c
+  analyze c@(CForce {})   = analyzeSubExp c
+  analyze c@(CDelay {})   = analyzeSubExp c
 
   analyze exp = do
     (sze, exp') <- analyzeSubExp exp
@@ -238,8 +238,8 @@ mutual
 
 
   analyzeSubExp : Ref Sts St => CExp ns -> Core (Integer, CExp ns)
-  analyzeSubExp e@(CLocal _ _)         = pure (1, e)
-  analyzeSubExp e@(CRef _ _)           = pure (1, e)
+  analyzeSubExp e@(CLocal {}) = pure (1, e)
+  analyzeSubExp e@(CRef {})   = pure (1, e)
   analyzeSubExp (CLam f n y)  = do
     (sy, y') <- analyze y
     pure (sy + 1, CLam f n y')
@@ -289,9 +289,9 @@ mutual
     (sx, x')   <- analyzeMaybe x
     pure (ssc + sum sxs + sx + 1, CConstCase f sc' xs' x')
 
-  analyzeSubExp c@(CPrimVal _ _) = pure (1, c)
-  analyzeSubExp c@(CErased _)    = pure (1, c)
-  analyzeSubExp c@(CCrash _ _)   = pure (1, c)
+  analyzeSubExp c@(CPrimVal {}) = pure (1, c)
+  analyzeSubExp c@(CErased {})  = pure (1, c)
+  analyzeSubExp c@(CCrash {})   = pure (1, c)
 
   analyzeConAlt :  { auto c : Ref Sts St }
                 -> CConAlt ns
@@ -306,10 +306,10 @@ mutual
     pure (sy + 1, MkConstAlt c y')
 
 analyzeDef : Ref Sts St => CDef -> Core CDef
-analyzeDef (MkFun args x)      = MkFun args . snd <$> analyze x
-analyzeDef d@(MkCon _ _ _)     = pure d
-analyzeDef d@(MkForeign _ _ _) = pure d
-analyzeDef d@(MkError _)       = pure d
+analyzeDef (MkFun args x)   = MkFun args . snd <$> analyze x
+analyzeDef d@(MkCon {})     = pure d
+analyzeDef d@(MkForeign {}) = pure d
+analyzeDef d@(MkError {})   = pure d
 
 compileName :  Ref Ctxt Defs
             => Name
@@ -422,9 +422,9 @@ mutual
              => (parentCount : Integer)
              -> CExp ns
              -> Core (CExp ns)
-  replaceExp _ e@(CLocal _ _)  = pure e
-  replaceExp pc (CRef f n)     = replaceRef pc f n
-  replaceExp pc (CLam f n y)   = CLam f n <$> replaceExp pc y
+  replaceExp _ e@(CLocal {}) = pure e
+  replaceExp pc (CRef f n)   = replaceRef pc f n
+  replaceExp pc (CLam f n y) = CLam f n <$> replaceExp pc y
   replaceExp pc (CLet f n i y z) =
     CLet f n i <$> replaceExp pc y <*> replaceExp pc z
   replaceExp pc (CApp f x xs) =
@@ -451,9 +451,9 @@ mutual
     traverse (replaceConstAlt pc) xs <*>
     traverseOpt (replaceExp pc) x
 
-  replaceExp _ c@(CPrimVal _ _) = pure c
-  replaceExp _ c@(CErased _)    = pure c
-  replaceExp _ c@(CCrash _ _)   = pure c
+  replaceExp _ c@(CPrimVal {}) = pure c
+  replaceExp _ c@(CErased {})  = pure c
+  replaceExp _ c@(CCrash {})   = pure c
 
   replaceConAlt :  Ref ReplaceMap ReplaceMap
                 => Ref Ctxt Defs
@@ -477,9 +477,9 @@ replaceDef :  Ref ReplaceMap ReplaceMap
            -> Core (Name, FC, CDef)
 replaceDef (n, fc, MkFun args x) =
   (\x' => (n, fc, MkFun args x')) <$> replaceExp 1 x
-replaceDef (n, fc, d@(MkCon _ _ _))     = pure (n, fc, d)
-replaceDef (n, fc, d@(MkForeign _ _ _)) = pure (n, fc, d)
-replaceDef (n, fc, d@(MkError _))       = pure (n, fc, d)
+replaceDef (n, fc, d@(MkCon {}))     = pure (n, fc, d)
+replaceDef (n, fc, d@(MkForeign {})) = pure (n, fc, d)
+replaceDef (n, fc, d@(MkError {}))   = pure (n, fc, d)
 
 newToplevelDefs : ReplaceMap -> List (Name, FC, CDef)
 newToplevelDefs rm = mapMaybe toDef $ SortedMap.toList rm

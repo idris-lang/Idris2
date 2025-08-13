@@ -29,7 +29,7 @@ import Libraries.Data.ANameMap
 -- readability).
 
 unbracketApp : PTerm' nm -> PTerm' nm
-unbracketApp (PBracketed _ tm@(PApp _ _ _)) = tm
+unbracketApp (PBracketed _ tm@(PApp {})) = tm
 unbracketApp tm = tm
 
 -- TODO: Deal with precedences
@@ -88,19 +88,19 @@ addBracket : FC -> PTerm' nm -> PTerm' nm
 addBracket fc tm = if needed tm then PBracketed fc tm else tm
   where
     needed : PTerm' nm -> Bool
-    needed (PBracketed _ _) = False
-    needed (PRef _ _) = False
-    needed (PPair _ _ _) = False
-    needed (PDPair _ _ _ _ _) = False
-    needed (PUnit _) = False
-    needed (PComprehension _ _ _) = False
-    needed (PList _ _ _) = False
-    needed (PSnocList _ _ _) = False
-    needed (PRange{}) = False
-    needed (PRangeStream{}) = False
-    needed (PPrimVal _ _) = False
-    needed (PIdiom{}) = False
-    needed (PBang{}) = False
+    needed (PBracketed {}) = False
+    needed (PRef {}) = False
+    needed (PPair {}) = False
+    needed (PDPair {}) = False
+    needed (PUnit {}) = False
+    needed (PComprehension {}) = False
+    needed (PList {}) = False
+    needed (PSnocList {}) = False
+    needed (PRange {}) = False
+    needed (PRangeStream {}) = False
+    needed (PPrimVal {}) = False
+    needed (PIdiom {}) = False
+    needed (PBang {}) = False
     needed tm = True
 
 bracket : {auto c : Ref Ctxt Defs} ->
@@ -540,7 +540,7 @@ mutual
                                   !(toPTerm startPrec rhs)))
   toPDecl (IRunElabDecl fc tm)
       = pure (Just (MkFCVal fc $ PRunElabDecl !(toPTerm startPrec tm)))
-  toPDecl (IPragma _ _ _) = pure Nothing
+  toPDecl (IPragma {}) = pure Nothing
   toPDecl (ILog _) = pure Nothing
   toPDecl (IBuiltin fc type name) = pure $ Just $ MkFCVal fc $ PBuiltin type name
 

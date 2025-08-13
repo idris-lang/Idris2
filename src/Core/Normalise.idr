@@ -23,7 +23,7 @@ normalisePis : {auto c : Ref Ctxt Defs} ->
 normalisePis defs env tm
     = do tmnf <- nf defs env tm
          case tmnf of
-              NBind _ _ (Pi _ _ _ _) _ => quoteWithPi defs env tmnf
+              NBind _ _ (Pi {}) _ => quoteWithPi defs env tmnf
               _ => pure tm
 
 export
@@ -139,7 +139,7 @@ etaContract tm = do
     act tm = do
       logTerm "eval.eta" 10 "  Considering" tm
       case tm of
-        (Bind _ x (Lam _ _ _ _) (App _ fn (Local _ _ Z _))) => do
+        (Bind _ x (Lam {}) (App _ fn (Local _ _ Z _))) => do
           logTerm "eval.eta" 10 "  Shrinking candidate" fn
           let shrunk = shrink fn (Drop Refl)
           case shrunk of
@@ -153,7 +153,7 @@ etaContract tm = do
 
 export
 getValArity : Defs -> Env Term vars -> NF vars -> Core Nat
-getValArity defs env (NBind fc x (Pi _ _ _ _) sc)
+getValArity defs env (NBind fc x (Pi {}) sc)
     = pure (S !(getValArity defs env !(sc defs (toClosure defaultOpts env (Erased fc Placeholder)))))
 getValArity defs env val = pure 0
 

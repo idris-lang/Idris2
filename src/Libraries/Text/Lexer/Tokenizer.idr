@@ -118,7 +118,7 @@ tokenise reject tokenizer line col acc str
               (midToks, (reason, line'', col'', rest'')) =
                     assert_total $ tokenise end middle line' col' [] rest
            in case reason of
-                   (ComposeNotClosing _ _) => Left reason
+                   ComposeNotClosing {} => Left reason
                    _ => let Just (endTok', lineEnd, colEnd, restEnd) =
                                 getNext end line'' col'' rest''
                               | _ => Left $ ComposeNotClosing (line, col) (line', col')
@@ -127,7 +127,7 @@ tokenise reject tokenizer line col acc str
     getFirstMatch (Alt t1 t2) str
         = case getFirstMatch t1 str of
                Right result => Right result
-               Left reason@(ComposeNotClosing _ _) => Left reason
+               Left reason@(ComposeNotClosing {}) => Left reason
                Left _ => getFirstMatch t2 str
 
 export

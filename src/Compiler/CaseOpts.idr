@@ -148,13 +148,13 @@ tryLiftDef _ _ = Nothing
 
 allLams : List (CConAlt vars) -> Bool
 allLams [] = True
-allLams (MkConAlt n ci t args (CLam _ _ _) :: as)
+allLams (MkConAlt n ci t args (CLam {}) :: as)
    = allLams as
 allLams _ = False
 
 allLamsConst : List (CConstAlt vars) -> Bool
 allLamsConst [] = True
-allLamsConst (MkConstAlt c (CLam _ _ _) :: as)
+allLamsConst (MkConstAlt c (CLam {}) :: as)
    = allLamsConst as
 allLamsConst _ = False
 
@@ -197,7 +197,7 @@ mutual
     where
       defLam : Maybe (CExp vars) -> Bool
       defLam Nothing = True
-      defLam (Just (CLam _ _ _)) = True
+      defLam (Just (CLam {})) = True
       defLam _ = False
   -- Next case is pretty much as above. There's a boring amount of repetition
   -- here because ConstCase is just a little bit different.
@@ -221,7 +221,7 @@ mutual
     where
       defLam : Maybe (CExp vars) -> Bool
       defLam Nothing = True
-      defLam (Just (CLam _ _ _)) = True
+      defLam (Just (CLam {})) = True
       defLam _ = False
   -- Structural recursive cases
   caseLam (CLam fc x sc)

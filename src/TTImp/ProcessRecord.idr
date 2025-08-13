@@ -176,7 +176,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                    , "  Remaining type: \{show !(toFullNames ty)}"
                    ]
                pure (_ ** (env, ty))
-        dropLeadingPis (var :: vars) (Bind fc n b@(Pi _ _ _ _) ty) env
+        dropLeadingPis (var :: vars) (Bind fc n b@(Pi {}) ty) env
           = dropLeadingPis vars ty (b :: env)
         dropLeadingPis _ ty _ = throw (InternalError "Malformed record type \{show ty}")
 
@@ -229,7 +229,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
 
     countExp : Term vs -> Nat
     countExp (Bind _ _ (Pi _ _ Explicit _) sc) = S (countExp sc)
-    countExp (Bind _ _ (Pi _ _ _ _) sc) = countExp sc
+    countExp (Bind _ _ (Pi {}) sc) = countExp sc
     countExp _ = 0
 
     -- Generate getters from the elaborated record constructor type
@@ -301,7 +301,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                    let piNames = collectPiNames ty_chk
 
                    let namesToRawImp : List (Bool, Name) -> (fn : RawImp) -> RawImp
-                       namesToRawImp ((True,  nm@(UN{})) :: xs) fn = namesToRawImp xs (INamedApp fc fn nm (IVar fc' nm))
+                       namesToRawImp ((True,  nm@(UN {})) :: xs) fn = namesToRawImp xs (INamedApp fc fn nm (IVar fc' nm))
                        namesToRawImp _ fn = fn
 
                    -- Then apply names for each argument to the lhs

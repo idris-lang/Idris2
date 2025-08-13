@@ -284,7 +284,7 @@ schArglist xs = sepBy " " $ map schName xs
 mutual
   used : Name -> NamedCExp -> Bool
   used n (NmLocal fc n') = n == n'
-  used n (NmRef _ _) = False
+  used n (NmRef {}) = False
   used n (NmLam _ _ sc) = used n sc
   used n (NmLet _ _ v sc) = used n v || used n sc
   used n (NmApp _ f args) = used n f || any (used n) args
@@ -308,7 +308,7 @@ mutual
   usedConst n (MkNConstAlt _ sc) = used n sc
 
 var : NamedCExp -> Bool
-var (NmLocal _ _) = True
+var (NmLocal {}) = True
 var _ = False
 
 getScrutineeTemp : Nat -> Builder
@@ -542,7 +542,7 @@ parameters (constants : SortedSet Name)
     schExp i (NmLocal fc n) = pure $ schName n
     schExp i (NmRef fc n) = pure $ schName n
     schExp i (NmLam fc x sc)
-       = do sc' <- schExp i  sc
+       = do sc' <- schExp i sc
             pure $ "(lambda (" ++ schName x ++ ") " ++ sc' ++ ")"
     schExp i (NmLet fc x val sc)
        = do val' <- schExp i val
@@ -576,7 +576,7 @@ parameters (constants : SortedSet Name)
         = schOp op !(schArgs i args)
     schExp i (NmExtPrim fc p args)
         = schExtPrim i (toPrim p) args
-    schExp i (NmForce _ _ (NmApp fc x@(NmRef _ _) []))
+    schExp i (NmForce _ _ (NmApp fc x@(NmRef {}) []))
        = pure $ "(force " ++ !(schExp i x) ++ ")" -- Special version for memoized toplevel lazy definitions
     schExp i (NmForce fc lr t) = pure $ schLazy.processForce !(schExp i t)
     schExp i (NmDelay fc lr t) = pure $ schLazy.processDelay !(schExp i t)
@@ -682,7 +682,7 @@ parameters (constants : SortedSet Name)
                       ++ !(schExp 0 exp) ++ "))\n"
   schDef n (MkNmError exp)
      = pure $ "(define (" ++ schName !(getFullName n) ++ " . any-args) " ++ !(schExp 0 exp) ++ ")\n"
-  schDef n (MkNmForeign _ _ _) = pure "" -- compiled by specific back end
+  schDef n (MkNmForeign {}) = pure "" -- compiled by specific back end
   schDef n (MkNmCon t a _) = pure "" -- Nothing to compile here
 
 -- Convert the name to scheme code

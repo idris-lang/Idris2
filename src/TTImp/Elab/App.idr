@@ -160,7 +160,7 @@ getVarType elabMode rigc nest env fc x
       useVars _ sc = sc -- Can't happen?
 
 isHole : NF vars -> Bool
-isHole (NApp _ (NMeta _ _ _) _) = True
+isHole (NApp _ (NMeta {}) _) = True
 isHole _ = False
 
 mutual
@@ -311,13 +311,13 @@ mutual
   needsDelayExpr True (IApp _ f _) = needsDelayExpr True f
   needsDelayExpr True (IAutoApp _ f _) = needsDelayExpr True f
   needsDelayExpr True (INamedApp _ f _ _) = needsDelayExpr True f
-  needsDelayExpr True (ILam _ _ _ _ _ _) = pure True
-  needsDelayExpr True (ICase _ _ _ _ _) = pure True
-  needsDelayExpr True (ILocal _ _ _) = pure True
-  needsDelayExpr True (IUpdate _ _ _) = pure True
-  needsDelayExpr True (IAlternative _ _ _) = pure True
-  needsDelayExpr True (ISearch _ _) = pure True
-  needsDelayExpr True (IRewrite _ _ _) = pure True
+  needsDelayExpr True (ILam {}) = pure True
+  needsDelayExpr True (ICase {}) = pure True
+  needsDelayExpr True (ILocal {}) = pure True
+  needsDelayExpr True (IUpdate {}) = pure True
+  needsDelayExpr True (IAlternative {}) = pure True
+  needsDelayExpr True (ISearch {}) = pure True
+  needsDelayExpr True (IRewrite {}) = pure True
   needsDelayExpr True _ = pure False
 
   -- On the LHS, for any concrete thing, we need to make sure we know
@@ -329,10 +329,10 @@ mutual
   needsDelayLHS (IApp _ f _) = needsDelayLHS f
   needsDelayLHS (IAutoApp _ f _) = needsDelayLHS f
   needsDelayLHS (INamedApp _ f _ _) = needsDelayLHS f
-  needsDelayLHS (IAlternative _ _ _) = pure True
+  needsDelayLHS (IAlternative {}) = pure True
   needsDelayLHS (IAs _ _ _ _ t) = needsDelayLHS t
-  needsDelayLHS (ISearch _ _) = pure True
-  needsDelayLHS (IPrimVal _ _) = pure True
+  needsDelayLHS (ISearch {}) = pure True
+  needsDelayLHS (IPrimVal {}) = pure True
   needsDelayLHS (IType _) = pure True
   needsDelayLHS (IWithUnambigNames _ _ t) = needsDelayLHS t
   needsDelayLHS _ = pure False
@@ -356,7 +356,7 @@ mutual
   checkValidPattern rig env fc tm ty
     = do log "elab.app.lhs" 50 $ "Checking that " ++ show tm ++ " is a valid pattern"
          case tm of
-           Bind _ _ (Lam _ _ _ _)  _ => registerDot rig env fc NotConstructor tm ty
+           Bind _ _ (Lam {}) _ => registerDot rig env fc NotConstructor tm ty
            _ => pure (tm, ty)
 
   dotErased : {vars : _} ->
@@ -404,11 +404,11 @@ mutual
       dotTerm : RawImp -> RawImp
       dotTerm tm
           = case tm of
-                 IMustUnify _ _ _ => tm
-                 IBindVar _ _ => tm
-                 Implicit _ _ => tm
-                 IAs _ _ _ _ (IBindVar _ _) => tm
-                 IAs _ _ _ _ (Implicit _ _) => tm
+                 IMustUnify {} => tm
+                 IBindVar {} => tm
+                 Implicit {} => tm
+                 IAs _ _ _ _ (IBindVar {}) => tm
+                 IAs _ _ _ _ (Implicit {}) => tm
                  IAs fc nameFC p t arg => IAs fc nameFC p t (IMustUnify fc ErasedArg tm)
                  _ => IMustUnify (getFC tm) ErasedArg tm
   dotErased _ _ _ _ _ tm = pure tm
@@ -462,7 +462,7 @@ mutual
              else checkLtoR kr arg
     where
       invalidArg : Error -> Bool
-      invalidArg (InvalidArgs{}) = True
+      invalidArg (InvalidArgs {}) = True
       invalidArg _ = False
 
       checkRtoL : Bool -> -- return type is known
@@ -576,7 +576,7 @@ mutual
   findBindAllExpPattern = lookup (UN Underscore)
 
   isImplicitAs : RawImp -> Bool
-  isImplicitAs (IAs _ _ UseLeft _ (Implicit _ _)) = True
+  isImplicitAs (IAs _ _ UseLeft _ (Implicit {})) = True
   isImplicitAs _ = False
 
   isBindAllExpPattern : Name -> Bool

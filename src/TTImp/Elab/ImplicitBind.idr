@@ -160,7 +160,7 @@ bindUnsolved {vars} fc elabmode _
                      (Env Term vars', PiInfo (Term vars'), Term vars', Term vars', Thin outer vars'))) ->
                  Core ()
     mkImplicit defs outerEnv subEnv (n, loc, rig, (vs ** (env, p, tm, exp, sub)))
-        = do Just (Hole _ _) <- lookupDefExact n (gamma defs)
+        = do Just (Hole {}) <- lookupDefExact n (gamma defs)
                   | _ => pure ()
              bindtm <- makeBoundVar n loc rig p outerEnv
                                     sub subEnv
@@ -235,7 +235,7 @@ liftImps (PI _) (tm, TType fc u) = (liftImps' tm, TType fc u)
                 Term vars -> Term vars
     liftImps' (Bind fc (PV n i) b@(Pi _ _ Implicit _) sc)
         = Bind fc (PV n i) b (liftImps' sc)
-    liftImps' (Bind fc n b@(Pi _ _ _ _) sc)
+    liftImps' (Bind fc n b@(Pi {}) sc)
         = push fc n b (liftImps' sc)
     liftImps' tm = tm
 liftImps _ x = x
@@ -306,7 +306,7 @@ implicitBind : {auto c : Ref Ctxt Defs} ->
                Name -> Core ()
 implicitBind n
     = do defs <- get Ctxt
-         Just (Hole _ _) <- lookupDefExact n (gamma defs)
+         Just (Hole {}) <- lookupDefExact n (gamma defs)
              | _ => pure ()
          updateDef n (const (Just ImpBind))
          removeHoleName n
@@ -507,7 +507,7 @@ checkPolyConstraint (MkPolyConstraint fc env arg x y)
          -- argument
          xnf <- continueNF defs env x
          case xnf of
-              NApp _ (NMeta _ _ _) _ =>
+              NApp _ (NMeta {}) _ =>
                    do ynf <- continueNF defs env y
                       if !(concrete defs env ynf)
                          then do empty <- clearDefs defs
@@ -524,7 +524,7 @@ solvePolyConstraint (MkPolyConstraint fc env arg x y)
          -- If the LHS of the constraint isn't a metavariable, we can solve
          -- the constraint
          case !(continueNF defs env x) of
-              xnf@(NApp _ (NMeta _ _ _) _) => pure ()
+              xnf@(NApp _ (NMeta {}) _) => pure ()
               t => do res <- unify inLHS fc env t !(continueNF defs env y)
                       -- If there's any constraints, it just means we didn't
                       -- solve anything and it won't help the check

@@ -64,7 +64,7 @@ localHelper {vars} nest env nestdecls_in func
          -- ensuring the nested definition is used exactly once
          let env' = eraseLinear env
          -- We don't want to keep rechecking delayed elaborators in the
-         -- locals  block, because they're not going to make progress until
+         -- locals block, because they're not going to make progress until
          -- we come out again, so save them
          ust <- get UST
          let olddelayed = delayedElab ust

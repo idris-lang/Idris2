@@ -85,7 +85,7 @@ parameters (f : RawImp' nm -> RawImp' nm)
   mapAltType Unique = Unique
   mapAltType (UniqueDefault t) = UniqueDefault (mapTTImp t)
 
-  mapTTImp t@(IVar _ _) = f t
+  mapTTImp t@(IVar {}) = f t
   mapTTImp (IPi fc rig pinfo x argTy retTy)
     = f $ IPi fc rig (mapPiInfo pinfo) x (mapTTImp argTy) (mapTTImp retTy)
   mapTTImp (ILam fc rig pinfo x argTy lamTy)

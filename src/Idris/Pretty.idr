@@ -27,9 +27,9 @@ import Idris.Syntax
 export
 syntaxToDecoration : IdrisSyntax -> Maybe Decoration
 syntaxToDecoration Hole     = Nothing
-syntaxToDecoration (TCon{}) = pure Typ
-syntaxToDecoration (DCon{}) = pure Data
-syntaxToDecoration (Fun{})  = pure Function
+syntaxToDecoration (TCon {}) = pure Typ
+syntaxToDecoration (DCon {}) = pure Data
+syntaxToDecoration (Fun {})  = pure Function
 syntaxToDecoration Bound    = pure Bound
 syntaxToDecoration Keyword  = pure Keyword
 syntaxToDecoration Pragma   = Nothing
@@ -41,8 +41,8 @@ kindAnn (MkKindedName mcat fn nm) = do
     pure $ case cat of
       Bound     => Bound
       Func      => Fun fn
-      DataCon{} => DCon (Just fn)
-      TyCon{}   => TCon (Just fn)
+      DataCon {} => DCon (Just fn)
+      TyCon {}   => TCon (Just fn)
 
 export
 showCategory : (IdrisSyntax -> ann) -> GlobalDef -> Doc ann -> Doc ann
@@ -67,9 +67,9 @@ annToDecoration _ = Nothing
 export
 syntaxAnn : IdrisSyntax -> AnsiStyle
 syntaxAnn Hole = color BrightGreen
-syntaxAnn (TCon{}) = color BrightBlue
-syntaxAnn (DCon{}) = color BrightRed
-syntaxAnn (Fun{})  = color BrightGreen
+syntaxAnn (TCon {}) = color BrightBlue
+syntaxAnn (DCon {}) = color BrightRed
+syntaxAnn (Fun {})  = color BrightGreen
 syntaxAnn Bound    = italic
 syntaxAnn Keyword  = color BrightWhite
 syntaxAnn Pragma   = color BrightMagenta
@@ -345,7 +345,7 @@ mutual
     prettyPrec d (PNamedApp _ f n a) =
       parenthesise (d > startPrec) $ group $
         prettyPrec leftAppPrec f <++> braces (pretty0 n <++> equals <++> prettyPrec d a)
-    prettyPrec d (PSearch _ _) = pragma "%search"
+    prettyPrec d (PSearch {}) = pragma "%search"
     prettyPrec d (PQuote _ tm) = parenthesise (d > startPrec) $ "`" <+> parens (pretty tm)
     prettyPrec d (PQuoteName _ n) = parenthesise (d > startPrec) $ "`" <+> braces (pretty0 n)
     prettyPrec d (PQuoteDecl _ tm) =

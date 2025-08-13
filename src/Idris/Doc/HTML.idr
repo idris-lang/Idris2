@@ -24,7 +24,7 @@ getNS (NS ns _) = show ns
 getNS _ = ""
 
 hasNS : Name -> Bool
-hasNS (NS _ _) = True
+hasNS (NS {}) = True
 hasNS _ = False
 
 tryCanonicalName : {auto c : Ref Ctxt Defs} ->
