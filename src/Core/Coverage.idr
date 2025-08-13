@@ -23,7 +23,7 @@ import Libraries.Text.PrettyPrint.Prettyprinter
 %default covering
 
 -- Return whether any of the name matches conflict
-conflictMatch : {vars : _} -> List (Name, Term vars) -> Bool
+conflictMatch : List (Name, Term vars) -> Bool
 conflictMatch [] = False
 conflictMatch ((x, tm) :: ms) = conflictArgs x tm ms || conflictMatch ms
   where

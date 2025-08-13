@@ -50,8 +50,7 @@ numArgs _ tm = pure (Arity 0)
 weakenVar : Var ns -> Var (a :: ns)
 weakenVar (MkVar p) = (MkVar (Later p))
 
-etaExpand : {vars : _} ->
-            Int -> Nat -> CExp vars -> List (Var vars) -> CExp vars
+etaExpand : Int -> Nat -> CExp vars -> List (Var vars) -> CExp vars
 etaExpand i Z exp args = mkApp exp (map (mkLocal (getFC exp)) (reverse args))
   where
     mkLocal : FC -> (Var vars) -> CExp vars
@@ -69,8 +68,7 @@ etaExpand i (S k) exp args
                   (first :: map weakenVar args))
 
 export
-expandToArity : {vars : _} ->
-                Nat -> CExp vars -> List (CExp vars) -> CExp vars
+expandToArity : Nat -> CExp vars -> List (CExp vars) -> CExp vars
 -- No point in applying to anything
 expandToArity _ (CErased fc) _ = CErased fc
 -- Overapplied; apply everything as single arguments
@@ -89,8 +87,7 @@ expandToArity (S k) f (a :: args) = expandToArity k (addArg f a) args
 -- Underapplied, saturate with lambdas
 expandToArity num fn [] = etaExpand 0 num fn []
 
-applyNewType : {vars : _} ->
-               Nat -> Nat -> CExp vars -> List (CExp vars) -> CExp vars
+applyNewType : Nat -> Nat -> CExp vars -> List (CExp vars) -> CExp vars
 applyNewType arity pos fn args
     = let fn' = expandToArity arity fn args in
           keepArg fn' -- fn' might be lambdas, after eta expansion
@@ -115,8 +112,7 @@ dropPos epos (CApp fc f args) = CApp fc f (drop epos args)
 dropPos epos (CCon fc c ci a args) = CCon fc c ci a (drop epos args)
 dropPos epos tm = tm
 
-eraseConArgs : {vars : _} ->
-               Nat -> NatSet -> CExp vars -> List (CExp vars) -> CExp vars
+eraseConArgs : Nat -> NatSet -> CExp vars -> List (CExp vars) -> CExp vars
 eraseConArgs arity epos fn args
     = let fn' = expandToArity arity fn args in
           if isEmpty epos
@@ -151,12 +147,10 @@ dconFlag n
     ciFlags def (ConType ci :: xs) = ci
     ciFlags def (x :: xs) = ciFlags def xs
 
-toCExpTm : {vars : _} ->
-           {auto c : Ref Ctxt Defs} ->
+toCExpTm : {auto c : Ref Ctxt Defs} ->
            Name -> Term vars ->
            Core (CExp vars)
-toCExp : {vars : _} ->
-         {auto c : Ref Ctxt Defs} ->
+toCExp : {auto c : Ref Ctxt Defs} ->
          Name -> Term vars ->
          Core (CExp vars)
 

@@ -29,7 +29,7 @@ checkIfGuarded fc n
          t <- allGuarded pats
          when t $ setFlag fc n AllGuarded
   where
-    guardedNF : {vars : _} -> Defs -> Env Term vars -> NF vars -> Core Bool
+    guardedNF : Defs -> Env Term vars -> NF vars -> Core Bool
     guardedNF defs env (NDCon _ _ _ _ args) = pure True
     guardedNF defs env (NApp _ (NRef _ n) args)
         = do Just gdef <- lookupCtxtExact n (gamma defs)

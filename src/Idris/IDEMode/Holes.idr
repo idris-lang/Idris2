@@ -93,10 +93,10 @@ showName _ = True
 
 export
 extractHoleData : {vars : _} ->
-          {auto c : Ref Ctxt Defs} ->
-          {auto s : Ref Syn SyntaxInfo} ->
-          Defs -> Env Term vars -> Name -> Nat -> Term vars ->
-          Core Holes.Data
+                  {auto c : Ref Ctxt Defs} ->
+                  {auto s : Ref Syn SyntaxInfo} ->
+                  Defs -> Env Term vars -> Name -> Nat -> Term vars ->
+                  Core Holes.Data
 extractHoleData defs env fn (S args) (Bind fc x (Let _ c val ty) sc)
   = extractHoleData defs env fn args (subst val sc)
 extractHoleData defs env fn (S args) (Bind fc x b sc)

@@ -443,8 +443,7 @@ mutual
       = do us <- traverse (getPUsage ty) pats
            pure (map snd !(combine us))
     where
-      getCaseUsage : {vs : _} ->
-                     Term ns -> Env Term vs -> List (Term vs) ->
+      getCaseUsage : Term ns -> Env Term vs -> List (Term vs) ->
                      Usage vs -> Term vs ->
                      Core (List (Name, ArgUsage))
       getCaseUsage ty env (As _ _ _ p :: args) used rhs

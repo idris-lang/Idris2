@@ -346,8 +346,7 @@ mutual
 -- the LHS to avoid needlessly making a closure) so fix them up here. This
 -- needs to be right because typically back ends need to know whether a
 -- name is under- or over-applied
-fixArityTm : {vars : _} ->
-             {auto c : Ref Ctxt Defs} ->
+fixArityTm : {auto c : Ref Ctxt Defs} ->
              CExp vars -> List (CExp vars) -> Core (CExp vars)
 fixArityTm (CRef fc n) args
     = do defs <- get Ctxt
@@ -376,8 +375,7 @@ fixArityTm (CCon fc n ci t args) []
 fixArityTm (COp fc op args) []
     = pure $ COp fc op !(traverseArgs args)
   where
-    traverseArgs : {vs : _} ->
-                   Vect n (CExp vs) -> Core (Vect n (CExp vs))
+    traverseArgs : Vect n (CExp vs) -> Core (Vect n (CExp vs))
     traverseArgs [] = pure []
     traverseArgs (a :: as) = pure $ !(fixArityTm a []) :: !(traverseArgs as)
 fixArityTm (CExtPrim fc p args) []
@@ -408,8 +406,7 @@ fixArityTm t [] = pure t
 fixArityTm t args = pure $ expandToArity Z t args
 
 export
-fixArityExp : {vars : _} ->
-              {auto c : Ref Ctxt Defs} ->
+fixArityExp : {auto c : Ref Ctxt Defs} ->
               CExp vars -> Core (CExp vars)
 fixArityExp tm = fixArityTm tm []
 

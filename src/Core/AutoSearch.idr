@@ -157,8 +157,7 @@ successful (elab :: elabs)
                            elabs' <- successful elabs
                            pure (Left err :: elabs'))
 
-anyOne : {vars : _} ->
-         {auto c : Ref Ctxt Defs} ->
+anyOne : {auto c : Ref Ctxt Defs} ->
          {auto u : Ref UST UState} ->
          FC -> Env Term vars -> (topTy : ClosedTerm) ->
          List (Core (Term vars)) ->
@@ -204,12 +203,11 @@ exactlyOne {vars} fc env top target all
 -- because something is apparently available now, it will be available by the
 -- time we get to linearity checking.
 -- It's also fine to use anything if we're working at multiplicity 0
-getUsableEnv : {vars : _} ->
-                FC -> RigCount ->
-                SizeOf done ->
-                Env Term vars ->
-                -- TODO this will be `vars <>< done` after refactoring
-                List (Term (done ++ vars), Term (done ++ vars))
+getUsableEnv : FC -> RigCount ->
+               SizeOf done ->
+               Env Term vars ->
+               -- TODO this will be `vars <>< done` after refactoring
+               List (Term (done ++ vars), Term (done ++ vars))
 getUsableEnv fc rigc p [] = []
 getUsableEnv {vars = v :: vs} {done} fc rigc p (b :: env)
    = let rest = getUsableEnv fc rigc (sucR p) env in
