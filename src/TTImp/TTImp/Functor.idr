@@ -3,6 +3,8 @@ module TTImp.TTImp.Functor
 import Core.TT
 import Core.WithData
 import TTImp.TTImp
+import Core.FC
+
 
 %default covering
 
@@ -33,6 +35,8 @@ mutual
       = INamedApp fc (map f fn) nm (map f t)
     map f (IWithApp fc fn t)
       = IWithApp fc (map f fn) (map f t)
+    map f (IBindingApp fn bn sc)
+      = IBindingApp fn (map (map (map f)) bn) (map (map f) sc)
     map f (ISearch fc n)
       = ISearch fc n
     map f (IAlternative fc alt ts)
@@ -90,7 +94,7 @@ mutual
   export
   Functor IClaimData where
     map f (MkIClaimData rig vis opts ty)
-      = MkIClaimData rig vis (map (map f) opts) (map f ty)
+      = MkIClaimData rig vis (map (map f) opts) (map (map f) ty)
 
   export
   Functor ImpDecl' where
@@ -132,16 +136,12 @@ mutual
     map f (Totality tot) = Totality tot
     map f Macro = Macro
     map f (SpecArgs ns) = SpecArgs ns
-
-  export
-  Functor ImpTy' where
-    map f (MkImpTy fc n ty)
-      = MkImpTy fc n (map f ty)
+    map f (Binding b) = Binding b
 
   export
   Functor ImpData' where
     map f (MkImpData fc n tycon opts datacons)
-      = MkImpData fc n (map (map f) tycon) opts (map (map f) datacons)
+      = MkImpData fc n (map (map f) tycon) opts (map {f = List} (map (map f)) datacons)
     map f (MkImpLater fc n tycon)
       = MkImpLater fc n (map f tycon)
 

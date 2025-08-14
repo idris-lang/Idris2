@@ -26,6 +26,8 @@ getDecl AsType (MkWithData fc $ PData doc vis mbtot (MkPData dfc tyn (Just tyc) 
     = Just (MkWithData fc $ PData doc vis mbtot (MkPLater dfc tyn tyc))
 getDecl AsType d@(MkWithData _ $ PInterface _ _ _ _ _ _ _ _) = Just d
 getDecl AsType d@(MkWithData fc $ PRecord doc vis mbtot (MkPRecord n ps _ _ _))
+                         -- the `bind` variable should be used here in `PData` to carry along
+                         -- the fact that the type constructor might be binding
     = Just (MkWithData fc $ PData doc vis mbtot (MkPLater d.fc n (mkRecType ps)))
   where
     mkRecType : List PBinder -> PTerm

@@ -551,6 +551,9 @@ sequence : Applicative f => Traversable t => t (f a) -> f (t a)
 sequence = traverse id
 
 ||| Like `traverse` but with the arguments flipped.
+||| You can call this function using binding syntax.
+||| Instead of writing `for xs (\x => f x)` you can write
+||| `for (x := xs) ; f x`
 %inline %tcinline public export
 for : Applicative f => Traversable t => t a -> (a -> f b) -> f (t b)
 for = flip traverse
