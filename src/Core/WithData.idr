@@ -199,14 +199,12 @@ public export
 TyName' : KeyVal
 TyName' = "name" :-: FCBind Name
 
-namespace TypeName
-  ||| Extract the "tyname" value from the metadata record
-  export
-  (.tyName) : {n : Nat} ->
-            (inRange : NameInRange "name" fields === Just (n, FCBind Name)) =>
-            WithData fields a -> FCBind Name
-  (.tyName) = WithData.get "name" @{inRange}
-
+||| Extract the "tyname" value from the metadata record
+export
+(.tyName) : {n : Nat} ->
+          (inRange : NameInRange "name" fields === Just (n, FCBind Name)) =>
+          WithData fields a -> FCBind Name
+(.tyName) = WithData.get "name" @{inRange}
 
 ||| Attach documentation, binding and location information to a type
 public export

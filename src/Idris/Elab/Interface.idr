@@ -190,7 +190,7 @@ getMethToplevel {vars} env vis iname cname constraints allmeths bindNames params
          let tydecl = IClaim (MkFCVal vfc $ MkIClaimData sig.count vis (if sig.isData then [Inline, Invertible]
                                             else [Inline])
                                       (Mk [vfc, NotBinding :+ cn] ty_imp))
-         let conapp = apply (IVar vfc cname) (map (IBindVar EmptyFC) allmeths)
+         let conapp = apply (IVar vfc cname) (map (IBindVar EmptyFC) bindNames)
          let argns = getExplicitArgs 0 sig.type
          -- eta expand the RHS so that we put implicits in the right place
          let fnclause = PatClause vfc
