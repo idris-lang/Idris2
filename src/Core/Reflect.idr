@@ -10,6 +10,7 @@ import Core.TT
 import Core.Value
 
 import Libraries.Data.WithDefault
+import Libraries.Data.WithData
 
 %default covering
 
@@ -70,6 +71,10 @@ reflectiontt n = NS reflectionTTNS (UN $ Basic n)
 export
 reflectionttimp : String -> Name
 reflectionttimp n = NS reflectionTTImpNS (UN $ Basic n)
+
+export
+listAll : String -> Name
+listAll n = NS allQuantifiersNS (UN $ Basic n)
 
 export
 cantReify : Ref Ctxt Defs => {vars : _} -> NF vars -> String -> Core a
@@ -884,6 +889,13 @@ Reflect a => Reflect (WithFC a) where
       = do loc' <- reflect fc defs lhs env value.fc
            val' <- reflect fc defs lhs env value.val
            appCon fc defs (reflectiontt "MkFCVal") [Erased fc Placeholder, loc', val']
+
+export
+Reflect BindingModifier where
+  reflect fc defs lhs env NotBinding = getCon fc defs (reflectiontt "NotBinding")
+  reflect fc defs lhs env Autobind = getCon fc defs (reflectiontt "Autobind")
+  reflect fc defs lhs env Typebind = getCon fc defs (reflectiontt "Typebind")
+
 
 {-
 -- Reflection of well typed terms: We don't reify terms because that involves

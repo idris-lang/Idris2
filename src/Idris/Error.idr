@@ -634,7 +634,7 @@ perrorRaw (OperatorBindingMismatch fc {print=p} expected actual opName rhs candi
        <+> line <+> !(ploc fc)
        <+> "Explanation: regular, typebind and autobind operators all use a slightly different"
        <++> "syntax, typebind looks like this: '(name : type)" <++> infixOpName
-       <++> "expr', autobind looks like this: '(name := expr)" <++> infixOpName
+       <++> "expr', autobind looks like this: '(name <- expr)" <++> infixOpName
        <++> "expr'."
        <+> line <+> line
        <+> "Possible solutions:" <+> line

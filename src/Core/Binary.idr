@@ -30,7 +30,7 @@ import public Libraries.Utils.Binary
 ||| version number if you're changing the version more than once in the same day.
 export
 ttcVersion : Int
-ttcVersion = 2025_08_13_00
+ttcVersion = 2025_08_14_16
 
 export
 checkTTCVersion : String -> Int -> Int -> Core ()

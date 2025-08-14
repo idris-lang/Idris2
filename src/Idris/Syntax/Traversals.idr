@@ -64,6 +64,10 @@ mapPTermM f = goPTerm where
       PAutoApp fc <$> goPTerm x
                          <*> goPTerm y
       >>= f
+    goPTerm (PBindingApp fn bind scope) =
+      PBindingApp fn <$> traverse goBinderInfo bind
+                     <*> traverse goPTerm scope
+      >>= f
     goPTerm (PNamedApp fc x n y) =
       PNamedApp fc <$> goPTerm x
                    <*> pure n
@@ -192,12 +196,16 @@ mapPTermM f = goPTerm where
       PWithUnambigNames fc ns <$> goPTerm rhs
       >>= f
 
+    export
+    goBinderInfo : BindingInfo (PTerm' nm) -> Core (BindingInfo (PTerm' nm))
+    goBinderInfo (BindType name ty) = BindType <$> goPTerm name <*> goPTerm ty
+    goBinderInfo (BindExpr name expr) = BindExpr <$> goPTerm name <*> goPTerm expr
+    goBinderInfo (BindExplicitType name type expr)
+      = BindExplicitType <$> goPTerm name <*> goPTerm type <*> goPTerm expr
+
     goOpBinder : OperatorLHSInfo (PTerm' nm) -> Core (OperatorLHSInfo (PTerm' nm))
     goOpBinder (NoBinder lhs) = NoBinder <$> goPTerm lhs
-    goOpBinder (BindType name ty) = BindType <$> goPTerm name <*> goPTerm ty
-    goOpBinder (BindExpr name expr) = BindExpr <$> goPTerm name <*> goPTerm expr
-    goOpBinder (BindExplicitType name type expr)
-      = BindExplicitType <$> goPTerm name <*> goPTerm type <*> goPTerm expr
+    goOpBinder (LHSBinder lhs) = LHSBinder <$> goBinderInfo lhs
 
     goPFieldUpdate : PFieldUpdate' nm -> Core (PFieldUpdate' nm)
     goPFieldUpdate (PSetField p t)    = PSetField p <$> goPTerm t
@@ -314,7 +322,7 @@ mapPTermM f = goPTerm where
     goPDataDecl (MkPData fc n t opts tdecls) =
       MkPData fc n <$> goMPTerm t
                    <*> pure opts
-                   <*> goPTypeDecls tdecls
+                   <*> traverse (traverse goPTypeDecl) tdecls
     goPDataDecl (MkPLater fc n t) = MkPLater fc n <$> goPTerm t
 
     goPiInfo : PiInfo (PTerm' nm) -> Core (PiInfo (PTerm' nm))
@@ -432,6 +440,8 @@ mapPTerm f = goPTerm where
       = f $ PWithApp fc (goPTerm x) (goPTerm y)
     goPTerm (PAutoApp fc x y)
       = f $ PAutoApp fc (goPTerm x) (goPTerm y)
+    goPTerm (PBindingApp x bind y)
+      = f $ PBindingApp x (map (map goPTerm) bind) (map goPTerm y)
     goPTerm (PNamedApp fc x n y)
       = f $ PNamedApp fc (goPTerm x) n (goPTerm y)
     goPTerm (PDelayed fc x y)
@@ -580,10 +590,6 @@ mapPTerm f = goPTerm where
     goBasicMultiBinder (MkBasicMultiBinder rig names type)
       = MkBasicMultiBinder rig names (goPTerm type)
 
-    goBasicBinder : BasicBinder' nm -> BasicBinder' nm
-    goBasicBinder (MkBasicBinder rig name type)
-      = MkBasicBinder rig name (goPTerm type)
-
     goPTypeDecl : PTypeDeclData' nm -> PTypeDeclData' nm
     goPTypeDecl (MkPTy n d t) = MkPTy n d $ goPTerm t
 
@@ -635,6 +641,7 @@ substFC fc = mapPTerm $ \case
   PUpdate _ xs => PUpdate fc xs
   PApp _ x y => PApp fc x y
   PWithApp _ x y => PWithApp fc x y
+  PBindingApp x n y => PBindingApp x n y
   PNamedApp _ x n y => PNamedApp fc x n y
   PAutoApp _ x y => PAutoApp fc x y
   PDelayed _ x y => PDelayed fc x y

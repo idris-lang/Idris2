@@ -304,3 +304,7 @@ dpairNS = mkNamespace "Builtin.DPair"
 export
 natNS : Namespace
 natNS = mkNamespace "Data.Nat"
+
+export
+allQuantifiersNS : Namespace
+allQuantifiersNS = mkNamespace "Data.List.Quantifiers.All"

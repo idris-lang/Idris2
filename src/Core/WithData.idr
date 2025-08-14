@@ -112,7 +112,7 @@ setFC fc = WithData.set "fc" fc @{inRange}
 ||| Attach binding and file context information to a type
 public export
 FCBind : Type -> Type
-FCBind = WithData [ Bind', FC' ]
+FCBind = AddMetadata Bind' . AddMetadata FC'
 
 ||| A wrapper for a value with a file context.
 public export
@@ -185,8 +185,8 @@ Name' = "name" :-: WithFC Name
 ||| Extract the name out of the metadata.
 export
 (.name) : {n : Nat} ->
-          (inRange : NameInRange "name" fields === Just (n, WithFC Name)) =>
-          WithData fields a -> WithFC Name
+          (inRange : NameInRange "name" fields === Just (n, nm)) =>
+          WithData fields a -> nm
 (.name) = WithData.get "name" @{inRange}
 
 ||| Attach name and file context information to a type
@@ -197,20 +197,21 @@ WithName = AddMetadata Name'
 ||| the "tyname" label containing a `FCBind Name` for metadata records
 public export
 TyName' : KeyVal
-TyName' = "tyname" :-: FCBind Name
+TyName' = "name" :-: FCBind Name
 
-||| Extract the "tyname" value from the metadata record
-export
-(.tyName) : {n : Nat} ->
-            (inRange : NameInRange "tyname" fields === Just (n, FCBind Name)) =>
+namespace TypeName
+  ||| Extract the "tyname" value from the metadata record
+  export
+  (.tyName) : {n : Nat} ->
+            (inRange : NameInRange "name" fields === Just (n, FCBind Name)) =>
             WithData fields a -> FCBind Name
-(.tyName) = WithData.get "tyname" @{inRange}
+  (.tyName) = WithData.get "name" @{inRange}
 
 
 ||| Attach documentation, binding and location information to a type
 public export
 DocBindFC : Type -> Type
-DocBindFC = WithData [ Doc', Bind', FC' ]
+DocBindFC = AddMetadata Doc' . AddMetadata Bind' . AddMetadata FC'
 
 ||| the "mname" label containing a `Maybe (WithFC Name)` for metadata records
 public export

@@ -48,6 +48,8 @@ mutual
         = do tag 12; toBuf fc; toBuf x; toBuf y
     toBuf (ICoerced fc y)
         = do tag 13; toBuf fc; toBuf y
+    toBuf (IBindingApp fn bind arg)
+        = do tag 14; toBuf fn; toBuf bind; toBuf arg
 
     toBuf (IBindHere fc m y)
         = do tag 14; toBuf fc; toBuf m; toBuf y
@@ -234,14 +236,6 @@ mutual
                _ => corrupt "AltType"
 
   export
-  TTC ImpTy where
-    toBuf (MkImpTy fc n ty)
-        = do toBuf fc;  toBuf n; toBuf ty
-    fromBuf
-        = do fc <- fromBuf; n <- fromBuf; ty <- fromBuf
-             pure (MkImpTy fc n ty)
-
-  export
   TTC ImpClause where
     toBuf (PatClause fc lhs rhs)
         = do tag 0; toBuf fc; toBuf lhs; toBuf rhs
@@ -335,6 +329,7 @@ mutual
     toBuf Unsafe = tag 13
     toBuf Deprecate = tag 14
     toBuf (ForeignExport cs) = do tag 15; toBuf cs
+    toBuf (Binding b) = do tag 16 ; toBuf b
 
     fromBuf
         = case !getTag of
