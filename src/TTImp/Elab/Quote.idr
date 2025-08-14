@@ -114,12 +114,12 @@ mutual
   getUnquoteRecord : {auto c : Ref Ctxt Defs} ->
                      {auto q : Ref Unq (List (Name, FC, RawImp))} ->
                      {auto u : Ref UST UState} ->
-                     ImpRecord ->
-                     Core ImpRecord
-  getUnquoteRecord (MkImpRecord fc n ps opts cn fs)
+                     ImpRecordData Name ->
+                     Core (ImpRecordData Name)
+  getUnquoteRecord (MkImpRecord header body)
         -- unlike before, we are also unquoting the default value, maybe this is important?
-      = pure $ MkImpRecord fc n !(traverse (traverse (traverse getUnquote)) ps) opts cn
-                           !(traverse (traverse (traverse getUnquote)) fs)
+      = pure $ MkImpRecord !(traverse (traverse (traverse (traverse getUnquote))) header)
+                           !(traverse (traverse (traverse (traverse getUnquote))) body)
 
   getUnquoteData : {auto c : Ref Ctxt Defs} ->
                    {auto q : Ref Unq (List (Name, FC, RawImp))} ->
@@ -148,7 +148,7 @@ mutual
                            !(traverseList1 (traverse (traverse getUnquote)) ps)
                            !(traverse getUnquoteDecl ds)
   getUnquoteDecl (IRecord fc ns v mbt d)
-      = pure $ IRecord fc ns v mbt !(getUnquoteRecord d)
+      = pure $ IRecord fc ns v mbt !(traverse getUnquoteRecord d)
   getUnquoteDecl (INamespace fc ns ds)
       = pure $ INamespace fc ns !(traverse getUnquoteDecl ds)
   getUnquoteDecl (ITransform fc n l r)

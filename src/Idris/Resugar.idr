@@ -520,11 +520,11 @@ mutual
                     type' <- toPTerm startPrec binder.val.boundType
                     pure (MkFullBinder info' binder.rig binder.name type')) ps
            pure (Just (MkFCVal fc (PParameters (Right args) (catMaybes ds'))))
-  toPDecl (IRecord fc _ vis mbtot (MkImpRecord _ n ps opts con fs))
-      = do ps' <- traverse (traverse (traverse (toPTerm startPrec))) ps
-           fs' <- traverse toPField fs
+  toPDecl (IRecord fc _ vis mbtot (MkWithData _ $ MkImpRecord header body))
+      = do ps' <- traverse (traverse (traverse (toPTerm startPrec))) header.val
+           fs' <- traverse toPField body.val
            pure (Just (MkFCVal fc $ PRecord "" vis mbtot
-                          (MkPRecord n (map toBinder ps') opts (Just ("", con)) fs')))
+                          (MkPRecord header.name.val (map toBinder ps') body.opts (Just ("", body.name.val)) fs')))
            where
              toBinder : ImpParameter' (PTerm' KindedName) -> PBinder' KindedName
              toBinder binder

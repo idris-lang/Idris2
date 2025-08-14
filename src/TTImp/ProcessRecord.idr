@@ -47,7 +47,8 @@ elabRecord : {vars : _} ->
              List ElabOpt -> FC -> Env Term vars ->
              NestedNames vars -> Maybe String ->
              WithDefault Visibility Private ->
-             Maybe TotalReq -> Name ->
+             Maybe TotalReq ->
+             (tyName : Name) ->
              (params : List ImpParameter) ->
              (opts : List DataOpt) ->
              (conName : Name) ->
@@ -121,7 +122,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
         apply f ((n, arg, _       ) :: xs) = apply (INamedApp (getFC f) f n arg) xs
 
     paramNames : List ImpParameter -> List Name
-    paramNames params = map (\x => x.name.val) params
+    paramNames params = map (.name.val) params
 
     mkDataTy : FC -> List ImpParameter -> RawImp
     mkDataTy fc [] = IType fc
@@ -360,5 +361,5 @@ processRecord : {vars : _} ->
                 Env Term vars -> Maybe String ->
                 WithDefault Visibility Private -> Maybe TotalReq ->
                 ImpRecord -> Core ()
-processRecord eopts nest env newns def_vis mbtot (MkImpRecord fc n ps opts cons fs)
-    = do elabRecord eopts fc env nest newns def_vis mbtot n ps opts cons fs
+processRecord eopts nest env newns def_vis mbtot rec@(MkWithData _ $ MkImpRecord header body)
+    = elabRecord eopts rec.fc env nest newns def_vis mbtot header.name.val header.val body.opts body.name.val body.val

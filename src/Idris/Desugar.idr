@@ -1063,7 +1063,7 @@ mutual
       = do
            params' <- getArgs params
            let paramList = forget params'
-           let paramNames = map (\x => x.name.val) paramList
+           let paramNames = map (.name.val) paramList
            let ps' = insertFrom paramNames ps
            pds' <- traverse (desugarDecl ps') pds
            -- Look for implicitly bindable names in the parameters
@@ -1227,7 +1227,7 @@ mutual
            whenJust (fst <$> conname_in) (addDocString conname)
            let _ = the Name conname
            pure [IRecord rec.fc (Just recName)
-                         vis mbtot (MkImpRecord rec.fc tn paramsb opts conname (concat fields'))]
+                         vis mbtot (Mk [rec.fc] $ MkImpRecord (Mk [NoFC tn] paramsb) (Mk [NoFC conname, opts] (concat fields')))]
     where
       getfname : PField -> List Name
       getfname x = map val x.names

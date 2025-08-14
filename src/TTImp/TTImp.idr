@@ -327,24 +327,6 @@ mutual
     show (MkImpTy fc n ty) = "(%claim " ++ show n.val ++ " " ++ show ty ++ ")"
 
   public export
-  data DataOpt : Type where
-       SearchBy : List1 Name -> DataOpt -- determining arguments
-       NoHints : DataOpt -- Don't generate search hints for constructors
-       UniqueSearch : DataOpt -- auto implicit search must check result is unique
-       External : DataOpt -- implemented externally
-       NoNewtype : DataOpt -- don't apply newtype optimisation
-  %name DataOpt dopt
-
-  export
-  Eq DataOpt where
-    (==) (SearchBy xs) (SearchBy ys) = xs == ys
-    (==) NoHints NoHints = True
-    (==) UniqueSearch UniqueSearch = True
-    (==) External External = True
-    (==) NoNewtype NoNewtype = True
-    (==) _ _ = False
-
-  public export
   ImpData : Type
   ImpData = ImpData' Name
 
@@ -403,20 +385,25 @@ mutual
   Show nm => Show (ImpParameter' nm) where
     show x = "\{show x.rig}\{show x.name.val} \{show x.val.boundType}"
 
-  public export
+  public export 0
   ImpRecord : Type
-  ImpRecord = ImpRecord' Name
+  ImpRecord = AddFC $ ImpRecordData Name
 
+  public export 0
+  DataHeader : Type -> Type -- the name is the type constructor's name
+  DataHeader nm = WithName $ List (ImpParameter' (RawImp' nm))
+
+  public export 0
+  RecordBody : Type -> Type -- The name is the data constructor's name
+  RecordBody nm = WithName $ WithOpts $ List (IField' nm)
+
+  ||| A record is defined by its header containing the name and parameters, and its body
+  ||| containing the constructor name, options, and a list of fields
   public export
-  data ImpRecord' : Type -> Type where
-       MkImpRecord : FC -> (n : Name) ->
-                     (params : List (ImpParameter' (RawImp' nm))) ->
-                     (opts : List DataOpt) ->
-                     (conName : Name) ->
-                     (fields : List (IField' nm)) ->
-                     ImpRecord' nm
-
-  %name ImpRecord' rec
+  record ImpRecordData (nm : Type) where
+    constructor MkImpRecord
+    header : DataHeader nm
+    body : RecordBody nm
 
   export
   covering
@@ -426,11 +413,11 @@ mutual
 
   export
   covering
-  Show nm => Show (ImpRecord' nm) where
-    show (MkImpRecord _ n params opts con fields)
-        = "record " ++ show n ++ " " ++ show params ++
-          " " ++ show con ++ "\n\t" ++
-          showSep "\n\t" (map show fields) ++ "\n"
+  Show nm => Show (ImpRecordData nm) where
+    show (MkImpRecord header body)
+        = "record " ++ show header.name.val ++ " " ++ show header.val ++
+          " " ++ show body.name.val ++ "\n\t" ++
+          showSep "\n\t" (map show body.val) ++ "\n"
 
   public export
   data WithFlag
@@ -499,7 +486,7 @@ mutual
                  Maybe String -> -- nested namespace
                  WithDefault Visibility Private ->
                  Maybe TotalReq ->
-                 ImpRecord' nm -> ImpDecl' nm
+                 AddFC (ImpRecordData nm) -> ImpDecl' nm
        IFail : FC -> Maybe String -> List (ImpDecl' nm) -> ImpDecl' nm
        INamespace : FC -> Namespace -> List (ImpDecl' nm) -> ImpDecl' nm
        ITransform : FC -> Name -> RawImp' nm -> RawImp' nm -> ImpDecl' nm
@@ -525,7 +512,7 @@ mutual
     show (IParameters _ ps ds)
         = "parameters " ++ show ps ++ "\n\t" ++
           showSep "\n\t" (assert_total $ map show ds)
-    show (IRecord _ _ _ _ d) = show d
+    show (IRecord _ _ _ _ d) = show d.val
     show (IFail _ msg decls)
         = "fail" ++ maybe "" ((" " ++) . show) msg ++ "\n" ++
           showSep "\n" (assert_total $ map (("  " ++) . show) decls)
@@ -853,8 +840,8 @@ definedInBlock = defNames
     defName ns (IParameters _ _ pds) = defNames ns pds
     defName ns (IFail _ _ nds) = defNames ns nds
     defName ns (INamespace _ n nds) = defNames (ns <.> n) nds
-    defName ns (IRecord _ fldns _ _ (MkImpRecord _ n _ opts con flds))
-        = insertFrom $ expandNS ns con :: all
+    defName ns (IRecord _ fldns _ _ rec)
+        = insertFrom $ expandNS ns rec.val.body.name.val :: all
       where
         fldns' : Namespace
         fldns' = maybe ns (\ f => ns <.> mkNamespace f) fldns
@@ -864,7 +851,7 @@ definedInBlock = defNames
         toRF n = n
 
         fnsUN : List Name
-        fnsUN = map getFieldName flds
+        fnsUN = map getFieldName rec.val.body.val
 
         fnsRF : List Name
         fnsRF = map toRF fnsUN
@@ -877,7 +864,7 @@ definedInBlock = defNames
         -- inside the parameter block)
         -- so let's just declare all of them and some may go unused.
         all : List Name
-        all = expandNS ns n :: map (expandNS fldns') (fnsRF ++ fnsUN)
+        all = expandNS ns rec.val.header.name.val :: map (expandNS fldns') (fnsRF ++ fnsUN)
 
     defName ns (IPragma _ pns _) = insertFrom $ map (expandNS ns) pns
     defName _ _ = id

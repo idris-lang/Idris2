@@ -37,9 +37,10 @@ rawImpFromDecl decl = case decl of
     IData fc1 y _ (MkImpLater fc2 n tycon) => [tycon]
     IDef fc1 y ys => getFromClause !ys
     IParameters fc1 ys zs => rawImpFromDecl !zs ++ map getParamTy (forget ys)
-    IRecord fc1 y z _ (MkImpRecord fc n params opts conName fields) => do
-        binder <- map val params
-        getFromPiInfo binder.info ++ [binder.boundType] ++ getFromIField !fields
+    IRecord fc1 y z _ (MkWithData _  (MkImpRecord header body)) => do
+        binder <- header.val
+        field <- body.val
+        getFromPiInfo binder.val.info ++ [binder.val.boundType] ++ getFromIField field
     IFail fc1 msg zs => rawImpFromDecl !zs
     INamespace fc1 ys zs => rawImpFromDecl !zs
     ITransform fc1 y z w => [z, w]
