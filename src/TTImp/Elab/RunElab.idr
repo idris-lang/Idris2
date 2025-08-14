@@ -44,13 +44,8 @@ lookupNameInfo : Name -> Context -> Core (List (Name, NameInfo))
 lookupNameInfo n ctxt
     = do res <- lookupCtxtName n ctxt
          pure (map (\ (n, i, gd) =>
-                      (n, MkNameInfo { nametype = getNameType (definition gd) } ))
+                      (n, MkNameInfo { nametype = getDefNameType gd } ))
                    res)
-  where
-    getNameType : Def -> NameType
-    getNameType (DCon t a _) = DataCon t a
-    getNameType (TCon t a _ _ _ _ _ _) = TyCon t a
-    getNameType _ = Func
 
 Reflect NameInfo where
   reflect fc defs lhs env inf
@@ -318,7 +313,7 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
     elabCon defs "GetCons" [n]
         = do n' <- evalClosure defs n
              cn <- reify defs n'
-             Just (TCon _ _ _ _ _ _ cons _) <-
+             Just (TCon _ _ _ _ _ cons _) <-
                      lookupDefExact cn (gamma defs)
                  | _ => failWith defs $ show cn ++ " is not a type"
              scriptRet $ fromMaybe [] cons

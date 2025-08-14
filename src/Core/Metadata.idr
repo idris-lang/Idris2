@@ -12,6 +12,7 @@ import Core.TTC
 
 import Data.List
 import System.File
+import Libraries.Data.NatSet
 import Libraries.Data.PosMap
 import Libraries.Utils.Binary
 
@@ -27,10 +28,10 @@ nameDecoration nm nt
   where
 
   nameTypeDecoration : NameType -> Decoration
-  nameTypeDecoration Bound         = Bound
-  nameTypeDecoration Func          = Function
-  nameTypeDecoration (DataCon _ _) = Data
-  nameTypeDecoration (TyCon _ _  ) = Typ
+  nameTypeDecoration Bound        = Bound
+  nameTypeDecoration Func         = Function
+  nameTypeDecoration (DataCon {}) = Data
+  nameTypeDecoration (TyCon {})   = Typ
 
 
 public export

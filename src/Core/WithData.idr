@@ -22,6 +22,45 @@ export
     (0 inRange : NameInRange "bind" fields === Just (n, BindingModifier)) =>
     WithData fields a -> BindingModifier
 (.bind) = WithData.get "bind"
+------------------------------------------------------------------------------------------
+-- Arity information
+------------------------------------------------------------------------------------------
+||| function arity
+public export
+Arity' : KeyVal
+Arity' = "arity" :-: Nat
+
+public export
+WithArity : Type -> Type
+WithArity = AddMetadata Arity'
+
+||| Obtain totality information from the metadata
+export
+(.arity) :
+    {n : Nat} ->
+    (0 inRange : NameInRange "arity" fields === Just (n, Nat)) =>
+    WithData fields a -> Nat
+(.arity) = WithData.get "arity"
+
+------------------------------------------------------------------------------------------
+-- Options information
+------------------------------------------------------------------------------------------
+||| data constructor options
+public export
+Opts' : KeyVal
+Opts' = "opts" :-: List DataOpt
+
+public export
+WithOpts : Type -> Type
+WithOpts = AddMetadata Opts'
+
+||| Obtain totality information from the metadata
+export
+(.opts) :
+    {n : Nat} ->
+    (0 inRange : NameInRange "opts" fields === Just (n, List DataOpt)) =>
+    WithData fields a -> List DataOpt
+(.opts) = WithData.get "opts"
 
 ------------------------------------------------------------------------------------------
 -- Totality information
@@ -54,6 +93,10 @@ public export
 WithFC : Type -> Type
 WithFC = WithData [ FC' ]
 
+public export
+AddFC : Type -> Type
+AddFC = AddMetadata FC'
+
 ||| Obtain file context information from the metadata
 export
 (.fc) : {n : Nat} ->
@@ -69,7 +112,7 @@ setFC fc = WithData.set "fc" fc @{inRange}
 ||| Attach binding and file context information to a type
 public export
 FCBind : Type -> Type
-FCBind = WithData [ Bind', FC' ]
+FCBind = AddMetadata Bind' . AddMetadata FC'
 
 ||| A wrapper for a value with a file context.
 public export
@@ -85,6 +128,10 @@ export
 (.withFC) : (o : OriginDesc) => WithBounds t -> WithFC t
 x.withFC = MkFCVal x.toFC x.val
 
+export
+(.addFC) : (o : OriginDesc) => WithBounds (WithData ls t) -> WithData (FC' :: ls) t
+(.addFC) x = x.toFC :+ x.val
+
 ------------------------------------------------------------------------------------------
 -- Helpers for documentation information
 ------------------------------------------------------------------------------------------
@@ -93,6 +140,10 @@ x.withFC = MkFCVal x.toFC x.val
 public export
 Doc' : KeyVal
 Doc' = "doc" :-: String
+
+public export
+WithDoc : Type -> Type
+WithDoc = AddMetadata Doc'
 
 ||| Obtain documentation information from the metadata
 export
@@ -109,6 +160,10 @@ export
 public export
 Rig' : KeyVal
 Rig' = "rig" :-: RigCount
+
+public export
+WithRig : Type -> Type
+WithRig = AddMetadata Rig'
 
 ||| Obtain quantity information from the metadata
 export
@@ -130,37 +185,63 @@ Name' = "name" :-: WithFC Name
 ||| Extract the name out of the metadata.
 export
 (.name) : {n : Nat} ->
-          (inRange : NameInRange "name" fields === Just (n, WithFC Name)) =>
-          WithData fields a -> WithFC Name
+          (inRange : NameInRange "name" fields === Just (n, nm)) =>
+          WithData fields a -> nm
 (.name) = WithData.get "name" @{inRange}
 
 ||| Attach name and file context information to a type
 public export
 WithName : Type -> Type
-WithName = WithData [ Name']
-
-||| Smart constructor to add a name and location to a type
-export
-MkWithName : WithFC Name -> ty -> WithName ty
-MkWithName x y = Mk [x] y
+WithName = AddMetadata Name'
 
 ||| the "tyname" label containing a `FCBind Name` for metadata records
 public export
 TyName' : KeyVal
-TyName' = "tyname" :-: FCBind Name
+TyName' = "name" :-: FCBind Name
 
-||| Extract the "tyname" value from the metadata record
-export
-(.tyName) : {n : Nat} ->
-            (inRange : NameInRange "tyname" fields === Just (n, FCBind Name)) =>
+namespace TypeName
+  ||| Extract the "tyname" value from the metadata record
+  export
+  (.tyName) : {n : Nat} ->
+            (inRange : NameInRange "name" fields === Just (n, FCBind Name)) =>
             WithData fields a -> FCBind Name
-(.tyName) = WithData.get "tyname" @{inRange}
+  (.tyName) = WithData.get "name" @{inRange}
 
 
 ||| Attach documentation, binding and location information to a type
 public export
 DocBindFC : Type -> Type
-DocBindFC = WithData [ Doc', Bind', FC' ]
+DocBindFC = AddMetadata Doc' . AddMetadata Bind' . AddMetadata FC'
+
+||| the "mname" label containing a `Maybe (WithFC Name)` for metadata records
+public export
+MName' : KeyVal
+MName' = "mname" :-: Maybe (WithFC Name)
+
+public export
+WithMName : Type -> Type
+WithMName = AddMetadata MName'
+
+export
+(.mName) : {n : Nat} ->
+            (inRange : NameInRange "mname" fields === Just (n, Maybe (WithFC Name))) =>
+            WithData fields a -> Maybe (WithFC Name)
+(.mName) = WithData.get "mname" @{inRange}
+
+||| the "names" label containing a `List (WithFC Name)` for metadata records
+public export
+Names' : KeyVal
+Names' = "names" :-: List (WithFC Name)
+
+public export
+WithNames : Type -> Type
+WithNames = AddMetadata Names'
+
+export
+(.names) : {n : Nat} ->
+            (inRange : NameInRange "names" fields === Just (n, List (WithFC Name))) =>
+            WithData fields a -> List (WithFC Name)
+(.names) = WithData.get "names" @{inRange}
 
 ------------------------------------------------------------------------
 -- Default instances for metadata

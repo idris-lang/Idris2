@@ -249,7 +249,7 @@ mutual
            let used_in = count 0 usedsc
            holeFound <- if not erase && isLinear (multiplicity b)
                            then updateHoleUsage (used_in == 0)
-                                         (MkVar First)
+                                         first
                                          (map weaken (getErased env'))
                                          sc'
                            else pure False

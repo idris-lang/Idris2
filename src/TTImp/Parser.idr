@@ -11,6 +11,13 @@ import Data.List
 import Data.List1
 import Libraries.Data.WithDefault
 
+withFC : (fname : OriginDesc) => Rule a -> Rule (WithFC a)
+withFC parser = do
+  start <- location
+  parsed <- parser
+  end <- location
+  pure (Mk [MkFC fname start end] parsed)
+
 topDecl : OriginDesc -> IndentInfo -> Rule ImpDecl
 -- All the clauses get parsed as one-clause definitions. Collect any
 -- neighbouring clauses with the same function name into one definition.
@@ -235,11 +242,11 @@ mutual
   getMult Nothing = pure top
   getMult _ = fatalError "Invalid multiplicity (must be 0 or 1)"
 
-  pibindAll : FC -> PiInfo RawImp -> List (RigCount, Maybe Name, RawImp) ->
+  pibindAll : FC -> PiInfo RawImp -> List (WithRig $ WithMName RawImp) ->
               RawImp -> RawImp
   pibindAll fc p [] scope = scope
-  pibindAll fc p ((rig, n, ty) :: rest) scope
-           = IPi fc rig p n ty (pibindAll fc p rest scope)
+  pibindAll fc p (ty :: rest) scope
+           = IPi fc ty.rig p (map val ty.mName) ty.val (pibindAll fc p rest scope)
 
   bindList : OriginDesc -> FilePos -> IndentInfo ->
              Rule (List (RigCount, Name, RawImp))
@@ -257,28 +264,28 @@ mutual
 
 
   pibindListName : OriginDesc -> FilePos -> IndentInfo ->
-                   Rule (List (RigCount, Name, RawImp))
+                   Rule (List (WithRig $ AddMetadata ("name" :-: DocBindFC Name) RawImp))
   pibindListName fname start indents
        = do rigc <- multiplicity
-            ns <- sepBy1 (symbol ",") unqualifiedName
+            ns <- sepBy1 (symbol ",") (withFC unqualifiedName)
             symbol ":"
             ty <- expr fname indents
             atEnd indents
             rig <- getMult rigc
-            pure (map (\n => (rig, UN (Basic n), ty)) (forget ns))
+            pure (map (\n => Mk [rig, AddDef $ AddDef $ map (UN . Basic) n] ty) (forget ns))
      <|> forget <$> sepBy1 (symbol ",")
                            (do rigc <- multiplicity
-                               n <- name
+                               n <- withFC name
                                symbol ":"
                                ty <- expr fname indents
                                rig <- getMult rigc
-                               pure (rig, n, ty))
+                               pure (Mk [rig, AddDef $ AddDef n] ty))
 
   pibindList : OriginDesc -> FilePos -> IndentInfo ->
-               Rule (List (RigCount, Maybe Name, RawImp))
+               Rule (List (WithRig $ WithMName RawImp))
   pibindList fname start indents
     = do params <- pibindListName fname start indents
-         pure $ map (\(rig, n, ty) => (rig, Just n, ty)) params
+         pure $ map (\ty => Mk [ty.rig, Just ty.name.drop.drop] ty.val) params
 
 
   autoImplicitPi : OriginDesc -> IndentInfo -> Rule RawImp
@@ -300,12 +307,12 @@ mutual
            keyword "forall"
            commit
            nstart <- location
-           ns <- sepBy1 (symbol ",") unqualifiedName
+           ns <- sepBy1 (symbol ",") (withFC unqualifiedName)
            nend <- location
            let nfc = MkFC fname nstart nend
-           let binders = map (\n => ( erased {a=RigCount}
-                                    , Just (UN $ Basic n)
-                                    , Implicit nfc False))
+           let binders = map (\n => Mk [erased {a=RigCount}
+                                       , Just (map (UN . Basic) n)]
+                                       (Implicit nfc False))
                              (forget ns)
            symbol "."
            scope <- typeExpr fname indents
@@ -604,13 +611,13 @@ dataDecl fname indents
          end <- location
          pure (MkImpData (MkFC fname start end) (MkDef n) (Just ty) opts cs)
 
-recordParam : OriginDesc -> IndentInfo -> Rule (List (AddMetadata Name' $ AddMetadata Rig' $ ImpParameterBase Name))
+recordParam : OriginDesc -> IndentInfo -> Rule (List (ImpParameter' RawImp))
 recordParam fname indents
     = do symbol "("
          start <- location
          params <- pibindListName fname start indents
          symbol ")"
-         pure $ map (\(c, n, tm) => Mk [NoFC n, c] (MkGenericBinder Explicit tm)) params
+         pure (map (map (MkPiBindData Explicit)) params)
   <|> do symbol "{"
          commit
          start <- location
@@ -622,11 +629,9 @@ recordParam fname indents
               <|> pure      Implicit)
          params <- pibindListName fname start indents
          symbol "}"
-         pure $ map (\(c, n, tm) => Mk [NoFC n, c] (MkGenericBinder info tm)) params
-  <|> do start <- location
-         n <- name
-         end <- location
-         pure [Mk [NoFC n, top] (MkGenericBinder Explicit (Implicit (MkFC fname start end) False))]
+         pure (map (map (MkPiBindData Explicit)) params)
+  <|> do n <- withFC name
+         pure [ Mk [top, AddDef $ AddDef n] (MkPiBindData Explicit (Implicit n.fc False)) ]
 
 fieldDecl : OriginDesc -> IndentInfo -> Rule (List IField)
 fieldDecl fname indents
@@ -643,12 +648,13 @@ fieldDecl fname indents
     fieldBody : PiInfo RawImp -> Rule (List IField)
     fieldBody p
         = do start <- location
-             ns <- sepBy1 (symbol ",") unqualifiedName
+             ns <- sepBy1 (symbol ",") (withFC (map (UN . Basic) unqualifiedName))
              symbol ":"
              ty <- expr fname indents
              end <- location
-             pure (map (\n => MkIField (MkFC fname start end)
-                                       linear p (UN $ Basic n) ty) (forget ns))
+             pure (map (\n : WithFC Name =>
+                             Mk [MkFC fname start end, linear, AddDef (AddDef n)]
+                                 (MkPiBindData p ty)) (forget ns))
 
 recordDecl : OriginDesc -> IndentInfo -> Rule ImpDecl
 recordDecl fname indents
@@ -666,12 +672,9 @@ recordDecl fname indents
          dc <- name
          flds <- assert_total (blockAfter col (fieldDecl fname))
          end <- location
-         pure (let fc = MkFC fname start end in
-                   IRecord fc Nothing vis mbtot
-                           (MkImpRecord fc (MkDef n) params opts (MkDef dc) (concat flds)))
-                           --               ^^^^^^^               ^^^^^^^^
-                           -- TTImp syntax does not allow to define binding type constructors
-                           -- The default `NotBinding` value is used here
+         pure (let fc = MkFC fname start end
+                in IRecord fc Nothing vis mbtot
+                           (Mk [fc] $ MkImpRecord (Mk [MkDef n] params) (Mk [MkDef dc, opts] (concat flds))))
 
 namespaceDecl : Rule Namespace
 namespaceDecl

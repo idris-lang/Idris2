@@ -200,11 +200,10 @@ compileStk svs stk (Ref fc (DataCon t a) name)
                        (toScheme !(toResolvedNames name) ::
                         toScheme fc :: stk)
          else pure $ unload (Apply (Var (schName name)) []) stk
-compileStk svs stk (Ref fc (TyCon t a) name)
+compileStk svs stk (Ref fc (TyCon a) name)
     = if length stk == a -- inline it if it's fully applied
          then pure $ Vector (-1)
-                       (IntegerVal (cast t) ::
-                        StringVal (show name) ::
+                       (StringVal (show name) ::
                         toScheme !(toResolvedNames name) ::
                         toScheme fc :: stk)
          else pure $ unload (Apply (Var (schName name)) []) stk
@@ -528,16 +527,14 @@ compileBody _ n (DCon tag arity newtypeArg)
     mkArgNs : Int -> Nat -> List Name
     mkArgNs i Z = []
     mkArgNs i (S k) = MN "arg" i :: mkArgNs (i+1) k
-compileBody _ n (TCon tag Z parampos detpos flags mutwith datacons detagabbleBy)
-    = pure $ Vector (-1) [IntegerVal (cast tag), StringVal (show n),
-                          toScheme n, toScheme emptyFC]
-compileBody _ n (TCon tag arity parampos detpos flags mutwith datacons detagabbleBy)
+compileBody _ n (TCon Z parampos detpos flags mutwith datacons detagabbleBy)
+    = pure $ Vector (-1) [StringVal (show n), toScheme n, toScheme emptyFC]
+compileBody _ n (TCon arity parampos detpos flags mutwith datacons detagabbleBy)
     = do let args = mkArgNs 0 arity
          argvs <- mkArgs args
          let body
                = Vector (-1)
-                        (IntegerVal (cast tag) ::
-                         StringVal (show n) ::
+                        (StringVal (show n) ::
                           toScheme n :: toScheme emptyFC ::
                             map (Var . schVarName) args)
          pure (bindArgs n argvs [] body)

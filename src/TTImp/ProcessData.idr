@@ -25,6 +25,7 @@ import Data.DPair
 import Data.List
 import Data.SnocList
 import Libraries.Data.NameMap
+import Libraries.Data.NatSet
 import Libraries.Data.WithDefault
 
 %default covering
@@ -64,7 +65,7 @@ checkFamily loc cn tn env nf
     = checkRetType env nf $
          \case
            NType _ _ => throw $ BadDataConType loc cn tn
-           NTCon _ n' _ _ _ =>
+           NTCon _ n' _ _ =>
                  if tn == n'
                     then pure ()
                     else throw $ BadDataConType loc cn tn
@@ -95,13 +96,13 @@ checkCon : {vars : _} ->
            (nameType : ImpTy) ->
            Core Constructor
 checkCon {vars} opts nest env vis tn_in tn ty_raw
-    = do let conName : FCBind Name = get "tyname" ty_raw
-         cn <- inCurrentNS conName.val
+    = do cn' <- traverse inCurrentNS ty_raw.name
+         let cn = cn'.val
          let fc = ty_raw.fc
          let ty_raw = updateNS tn_in tn ty_raw.val
          log "declare.data.constructor" 5 $ "Checking constructor type " ++ show cn ++ " : " ++ show ty_raw
          log "declare.data.constructor" 10 $ "Updated " ++ show (tn_in, tn)
-         log "declare.data.constructor" 10 $ "Binding info:  " ++ show conName.bind
+         log "declare.data.constructor" 10 $ "Binding info:  " ++ show cn'.bind
 
          defs <- get Ctxt
          -- Check 'cn' is undefined
@@ -109,7 +110,7 @@ checkCon {vars} opts nest env vis tn_in tn ty_raw
              | Just gdef => throw (AlreadyDefined fc cn)
          u <- uniVar fc
          ty <-
-             wrapErrorC opts (InCon conName.drop) $
+             wrapErrorC opts (InCon cn'.drop) $
                    checkTerm !(resolveName cn) InType opts nest env
                               (IBindHere fc (PI erased) ty_raw)
                               (gType fc u)
@@ -128,7 +129,7 @@ checkCon {vars} opts nest env vis tn_in tn ty_raw
                            addHashWithNames fullty
                            log "module.hash" 15 "Adding hash for data constructor: \{show cn}"
               _ => pure ()
-         pure (MkCon fc cn conName.bind !(getArity defs Env.empty fullty) fullty)
+         pure (Mk [fc, cn'.drop, !(getArity defs Env.empty fullty), cn'.bind] fullty)
 
 -- Get the indices of the constructor type (with non-constructor parts erased)
 getIndexPats : {auto c : Ref Ctxt Defs} ->
@@ -146,20 +147,19 @@ getIndexPats tm
     getRetType defs t = pure t
 
     getPats : Defs -> ClosedNF -> Core (List ClosedNF)
-    getPats defs (NTCon fc _ _ _ args)
+    getPats defs (NTCon fc _ _ args)
         = do args' <- traverse (evalClosure defs . snd) args
              pure (toList args')
     getPats defs _ = pure [] -- Can't happen if we defined the type successfully!
 
 getDetags : {auto c : Ref Ctxt Defs} ->
-            FC -> List ClosedTerm -> Core (Maybe (List Nat))
-getDetags fc [] = pure (Just []) -- empty type, trivially detaggable
-getDetags fc [t] = pure (Just []) -- one constructor, trivially detaggable
+            FC -> List ClosedTerm -> Core (Maybe NatSet)
+getDetags fc [] = pure (Just NatSet.empty) -- empty type, trivially detaggable
+getDetags fc [t] = pure (Just NatSet.empty) -- one constructor, trivially detaggable
 getDetags fc tys
    = do ps <- traverse getIndexPats tys
-        case !(getDisjointPos 0 (transpose ps)) of
-             [] => pure $ Nothing
-             xs => pure $ Just xs
+        ds <- getDisjointPos 0 (transpose ps)
+        pure $ ds <$ guard (not (isEmpty ds))
   where
     mutual
       disjointArgs : List ClosedNF -> List ClosedNF -> Core Bool
@@ -178,7 +178,7 @@ getDetags fc tys
                        argsnf <- traverse (evalClosure defs . snd) args
                        args'nf <- traverse (evalClosure defs . snd) args'
                        disjointArgs argsnf args'nf
-      disjoint (NTCon _ n _ _ args) (NDCon _ n' _ _ args')
+      disjoint (NTCon _ n _ args) (NTCon _ n' _ args')
           = if n /= n'
                then pure True
                else do defs <- get Ctxt
@@ -205,12 +205,12 @@ getDetags fc tys
                    else pure False
 
     -- Which argument positions have completely disjoint contructors
-    getDisjointPos : Nat -> List (List ClosedNF) -> Core (List Nat)
-    getDisjointPos i [] = pure []
+    getDisjointPos : Nat -> List (List ClosedNF) -> Core NatSet
+    getDisjointPos i [] = pure NatSet.empty
     getDisjointPos i (args :: argss)
         = do rest <- getDisjointPos (1 + i) argss
              if !(allDisjoint args)
-                then pure (i :: rest)
+                then pure (NatSet.insert i rest)
                 else pure rest
 
 -- If exactly one argument is unerased, return its position
@@ -246,9 +246,9 @@ findNewtype : {auto c : Ref Ctxt Defs} ->
               List Constructor -> Core ()
 findNewtype [con]
     = do defs <- get Ctxt
-         Just arg <- getRelevantArg defs 0 Nothing True !(nf defs Env.empty (type con))
+         Just arg <- getRelevantArg defs 0 Nothing True !(nf defs Env.empty con.val)
               | Nothing => pure ()
-         updateDef (name con) $
+         updateDef con.name.val $
                \case
                  DCon t a _ => Just $ DCon t a $ Just arg
                  _ => Nothing
@@ -275,7 +275,7 @@ firstArg (Bind _ _ (Pi _ c _ val) sc)
 firstArg tm = Nothing
 
 typeCon : Term vs -> Maybe Name
-typeCon (Ref _ (TyCon _ _) n) = Just n
+typeCon (Ref _ (TyCon _) n) = Just n
 typeCon (App _ fn _) = typeCon fn
 typeCon _ = Nothing
 
@@ -285,8 +285,8 @@ shaped : {auto c : Ref Ctxt Defs} ->
 shaped as [] = pure Nothing
 shaped as (c :: cs)
     = do defs <- get Ctxt
-         if as !(normalise defs Env.empty (type c))
-            then pure (Just (name c))
+         if as !(normalise defs Env.empty c.val)
+            then pure (Just c.name.val)
             else shaped as cs
 
 -- Calculate whether the list of constructors gives a list-shaped type
@@ -331,19 +331,19 @@ calcEnum : {auto c : Ref Ctxt Defs} ->
            FC -> List Constructor -> Core Bool
 calcEnum fc cs
     = if !(allM isNullary cs)
-         then do traverse_ (\c => setFlag fc c (ConType (ENUM $ length cs))) (map name cs)
+         then do traverse_ (\c => setFlag fc c (ConType (ENUM $ length cs))) (map (.name.val) cs)
                  pure True
          else pure False
   where
     isNullary : Constructor -> Core Bool
     isNullary c
         = do defs <- get Ctxt
-             pure $ hasArgs 0 !(normalise defs Env.empty (type c))
+             pure $ hasArgs 0 !(normalise defs Env.empty c.val)
 
 calcRecord : {auto c : Ref Ctxt Defs} ->
              FC -> List Constructor -> Core Bool
 calcRecord fc [c]
-    = do setFlag fc (name c) (ConType RECORD)
+    = do setFlag fc c.name.val (ConType RECORD)
          pure True
 calcRecord _ _ = pure False
 
@@ -357,9 +357,9 @@ calcNaty fc tyCon cs@[_, _]
               | Nothing => pure False
          Just succ <- shaped (hasArgs 1) cs
               | Nothing => pure False
-         let Just succCon = find (\con => name con == succ) cs
+         let Just succCon = find (\con => con.name.val == succ) cs
               | Nothing => pure False
-         let Just (Evidence _ succArgTy) = firstArg (type succCon)
+         let Just (Evidence _ succArgTy) = firstArg succCon.val
               | Nothing => pure False
          let Just succArgCon = typeCon succArgTy
               | Nothing => pure False
@@ -432,7 +432,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpLater dfc n_in ty_raw)
 
          -- Add the type constructor as a placeholder
          tidx <- addDef n (newDef {bind = n_in.bind} fc n top vars fullty def_vis
-                          (TCon 0 arity [] [] defaultFlags [] Nothing Nothing))
+                          (TCon arity NatSet.empty NatSet.empty defaultFlags [] Nothing Nothing))
          addMutData (Resolved tidx)
          defs <- get Ctxt
          traverse_ (\n => setMutWith fc n (mutData defs)) (mutData defs)
@@ -452,7 +452,8 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpLater dfc n_in ty_raw)
              setFlag fc n (SetTotal tot)
 
 processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw opts cons_raw)
-    = do typeName <- inCurrentNS n_in.val
+    = do typeName' <- traverse inCurrentNS n_in
+         let typeName = typeName'.val
 
          log "declare.data" 1 $ "Processing " ++ show typeName
          defs <- get Ctxt
@@ -505,7 +506,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
                       _ => pure $ mbtot <|> declTot
 
                     case definition ndef of
-                      TCon _ _ _ _ flags mw Nothing _ => case mfullty of
+                      TCon _ _ _ flags mw Nothing _ => case mfullty of
                         Nothing => pure (mw, vis, tot, type ndef)
                         Just fullty =>
                             do ok <- convert defs Env.empty fullty (type ndef)
@@ -521,9 +522,8 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
 
          -- Add the type constructor as a placeholder while checking
          -- data constructors
-         tidx <- addDef typeName
-                     (newDef {bind = n_in.bind} fc typeName linear vars fullty (specified vis)
-                          (TCon 0 arity [] [] defaultFlags [] Nothing Nothing))
+         tidx <- addDef typeName (newDef {bind = n_in.bind} fc typeName linear vars fullty (specified vis)
+                          (TCon arity NatSet.empty NatSet.empty defaultFlags [] Nothing Nothing))
          case vis of
               Private => pure ()
               _ => do addHashWithNames typeName
@@ -537,7 +537,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
          cons <- traverse (checkCon eopts nest env cvis n_in.val (Resolved tidx))
                      (cons_raw)
 
-         let ddef = MkData (MkCon dfc {- This shoud be the location of typeName -} typeName n_in.bind arity fullty) cons
+         let ddef = MkData (Mk [dfc, typeName'.drop , arity, n_in.bind] fullty) cons
          ignore $ addData vars vis tidx ddef
 
          -- Flag data type as a newtype, if possible (See `findNewtype` for criteria).
@@ -556,7 +556,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
          traverse_ (processDataOpt fc (Resolved tidx)) opts
          dropMutData (Resolved tidx)
 
-         detags <- getDetags fc (map type cons)
+         detags <- getDetags fc (map val cons)
          setDetags fc (Resolved tidx) detags
 
          traverse_ addToSave metas
@@ -564,7 +564,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
          log "declare.data" 10 $
            "Saving from " ++ show typeName ++ ": " ++ show metas
 
-         let connames = map name cons
+         let connames = map (.name.val) cons
          unless (NoHints `elem` opts) $
               traverse_ (\x => addHintFor fc (Resolved tidx) x True False) connames
 
@@ -574,4 +574,4 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
          -- #1404
          whenJust tot $ \ tot => do
              log "declare.data" 5 $ "setting totality flag for \{show typeName} and its constructors"
-             for_ (typeName :: map name cons) $ \ n => setFlag fc n (SetTotal tot)
+             for_ (typeName :: map (.name.val) cons) $ \ n => setFlag fc n (SetTotal tot)

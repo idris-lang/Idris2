@@ -10,6 +10,7 @@ import Idris.Syntax
 
 import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
+import Libraries.Data.NatSet
 import Libraries.Data.SortedMap
 import Libraries.Data.StringMap
 

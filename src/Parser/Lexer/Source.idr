@@ -291,7 +291,9 @@ mutual
       = let escapeChars = "\\" ++ replicate hashtag '#'
             interpStart = escapeChars ++ "{"
             escapeLexer = escape (exact escapeChars) any
-            charLexer = non $ exact (if multi then multilineEnd hashtag else stringEnd hashtag)
+            charLexer = if multi
+                           then non $ exact (multilineEnd hashtag)
+                           else non (newline <|> exact (stringEnd hashtag))
           in
             match (someUntil (exact interpStart) (escapeLexer <|> charLexer)) (\x => StringLit x)
         <|> compose (exact interpStart)

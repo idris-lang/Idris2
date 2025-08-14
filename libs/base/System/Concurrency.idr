@@ -6,6 +6,8 @@
 ||| primitives that back ends should support.
 module System.Concurrency
 
+import System.Info
+
 %default total
 
 
@@ -224,13 +226,20 @@ channelGetNonBlocking : HasIO io => (chan : Channel a) -> io (Maybe a)
 channelGetNonBlocking chan = primIO (prim__channelGetNonBlocking chan)
 
 ||| Timeout version of channelGet (chez backend).
+||| Clamps minimum timeout to 25 ms on windows.
 |||
 ||| @ chan the channel to receive on
 ||| @ milliseconds how many milliseconds to wait until timeout
 partial
 export
 channelGetWithTimeout : HasIO io => (chan : Channel a) -> (milliseconds : Nat) -> io (Maybe a)
-channelGetWithTimeout chan milliseconds = primIO (prim__channelGetWithTimeout chan (cast milliseconds))
+channelGetWithTimeout chan milliseconds =
+  case os of
+    "windows" =>
+      let clampedms = if milliseconds > 25 then cast milliseconds else 25
+        in primIO (prim__channelGetWithTimeout chan clampedms)
+    _         =>
+      primIO (prim__channelGetWithTimeout chan (cast milliseconds))
 
 ||| Puts a value on the given channel.
 |||

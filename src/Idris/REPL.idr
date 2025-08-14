@@ -64,6 +64,7 @@ import TTImp.ProcessDecls
 import Data.List
 import Data.List1
 import Data.Maybe
+import Libraries.Data.NatSet
 import Libraries.Data.NameMap
 import Libraries.Data.PosMap
 import Data.Stream
@@ -125,10 +126,10 @@ prettyInfo (n, idx, d)
            , def
            ] ++
            catMaybes
-           [ (\ args => header "Erasable args" <++> byShow args) <$> ifNotNull (eraseArgs d)
-           , (\ args => header "Detaggable arg types" <++> byShow args) <$> ifNotNull (safeErase d)
-           , (\ args => header "Specialise args" <++> byShow args) <$> ifNotNull (specArgs d)
-           , (\ args => header "Inferrable args" <++> byShow args) <$> ifNotNull (inferrable d)
+           [ (\ args => header "Erasable args" <++> byShow args) <$> ifNotEmpty (eraseArgs d)
+           , (\ args => header "Detaggable arg types" <++> byShow args) <$> ifNotEmpty (safeErase d)
+           , (\ args => header "Specialise args" <++> byShow args) <$> ifNotEmpty (specArgs d)
+           , (\ args => header "Inferrable args" <++> byShow args) <$> ifNotEmpty (inferrable d)
            , (\ expr => header "Compiled" <++> pretty expr) <$> compexpr d
            , (\ nms  => header "Refers to" <++> enum pretty0 nms) <$> ifNotNull referCT
            , (\ nms  => header "Refers to (runtime)" <++> enum pretty0 nms) <$> ifNotNull referRT
@@ -139,6 +140,9 @@ prettyInfo (n, idx, d)
   where
     ifNotNull : List a -> Maybe (List a)
     ifNotNull xs = xs <$ guard (not $ null xs)
+
+    ifNotEmpty : NatSet -> Maybe NatSet
+    ifNotEmpty xs = xs <$ guard (not $ isEmpty xs)
 
     enum : (a -> Doc IdrisDocAnn) -> List a -> Doc IdrisDocAnn
     enum p xs = hsep $ punctuate "," $ p <$> xs

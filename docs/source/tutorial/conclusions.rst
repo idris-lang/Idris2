@@ -13,24 +13,23 @@ dependent types in general, can be obtained from various sources:
 *  The Idris web site (https://www.idris-lang.org/) and by asking
    questions on the mailing list.
 
+*  The `discord server<https://discord.gg/UX68fDs2jc>`_.
+
 *  The IRC channel ``#idris``, on
    `webchat.freenode.net <https://webchat.freenode.net/>`__.
 
-*  The wiki (https://github.com/idris-lang/Idris-dev/wiki/) has further
+*  The wiki (https://github.com/idris-lang/Idris2/wiki) has further
    user provided information, in particular:
 
-   * https://github.com/idris-lang/Idris-dev/wiki/Manual
+   * https://github.com/idris-lang/Idris2/wiki/Resources
 
-   * https://github.com/idris-lang/Idris-dev/wiki/Language-Features
+   * https://github.com/idris-lang/Idris2/wiki/Editor-Support
 
-*  Examining the prelude and exploring the ``samples`` in the
-   distribution. The Idris 2 source can be found online at:
+   * https://github.com/idris-lang/Idris2/wiki/Third-party-Libraries
 
-   * https://github.com/edwinb/Idris2.
+*  Existing projects on the ``Idris Community`` web space:
 
-*  Existing projects on the ``Idris Hackers`` web space:
-
-   * https://idris-hackers.github.io.
+   * https://github.com/idris-community
 
 *  Various papers (e.g. [#BradyHammond2012]_, [#Brady]_, and [#BradyHammond2010]_).  Although these mostly
    describe older versions of Idris.

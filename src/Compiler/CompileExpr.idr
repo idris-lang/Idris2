@@ -18,6 +18,7 @@ import Data.SnocList
 import Data.Maybe
 import Data.Vect
 
+import Libraries.Data.NatSet
 import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.SizeOf
 import Libraries.Data.SnocList.Extra
@@ -26,13 +27,13 @@ import Libraries.Data.SnocList.Extra
 
 data Args
     = NewTypeBy Nat Nat
-    | EraseArgs Nat (List Nat)
+    | EraseArgs Nat NatSet
     | Arity Nat
 
 ||| Extract the number of arguments from a term, or return that it's
 ||| a newtype by a given argument position
 numArgs : Defs -> Term vars -> Core Args
-numArgs defs (Ref _ (TyCon tag arity) n) = pure (Arity arity)
+numArgs defs (Ref _ (TyCon arity) n) = pure (Arity arity)
 numArgs defs (Ref _ _ n)
     = do Just gdef <- lookupCtxtExact n (gamma defs)
               | Nothing => pure (Arity 0)
@@ -45,15 +46,6 @@ numArgs defs (Ref _ _ n)
            Builtin {arity} f => pure (Arity arity)
            _ => pure (Arity 0)
 numArgs _ tm = pure (Arity 0)
-
-mkSub : Nat -> (ns : Scope) -> List Nat -> (ns' ** Thin ns' ns)
-mkSub i _ [] = (_ ** Refl)
-mkSub i [] ns = (_ ** Refl)
-mkSub i (x :: xs) es
-    = let (ns' ** p) = mkSub (S i) xs es in
-          if i `elem` es
-             then (ns' ** Drop p)
-             else (x :: ns' ** Keep p)
 
 weakenVar : Var ns -> Var (a :: ns)
 weakenVar (MkVar p) = (MkVar (Later p))
@@ -74,7 +66,7 @@ etaExpand i Z exp args = mkApp exp (map (mkLocal (getFC exp)) (reverse args))
 etaExpand i (S k) exp args
     = CLam (getFC exp) (MN "eta" i)
              (etaExpand (i + 1) k (weaken exp)
-                  (MkVar First :: map weakenVar args))
+                  (first :: map weakenVar args))
 
 export
 expandToArity : {vars : _} ->
@@ -115,30 +107,23 @@ applyNewType arity pos fn args
     keepArg (CCon fc _ _ _ args) = keep 0 args
     keepArg tm = CErased (getFC fn)
 
-dropFrom : List Nat -> Nat -> List (CExp vs) -> List (CExp vs)
-dropFrom epos i [] = []
-dropFrom epos i (x :: xs)
-    = if i `elem` epos
-         then dropFrom epos (1 + i) xs
-         else x :: dropFrom epos (1 + i) xs
-
-dropPos : List Nat -> CExp vs -> CExp vs
+dropPos : NatSet -> CExp vs -> CExp vs
 dropPos epos (CLam fc x sc) = CLam fc x (dropPos epos sc)
 dropPos epos (CApp fc tm@(CApp _ _ _) args')
     = CApp fc (dropPos epos tm) args'
-dropPos epos (CApp fc f args) = CApp fc f (dropFrom epos 0 args)
-dropPos epos (CCon fc c ci a args) = CCon fc c ci a (dropFrom epos 0 args)
+dropPos epos (CApp fc f args) = CApp fc f (drop epos args)
+dropPos epos (CCon fc c ci a args) = CCon fc c ci a (drop epos args)
 dropPos epos tm = tm
 
 eraseConArgs : {vars : _} ->
-               Nat -> List Nat -> CExp vars -> List (CExp vars) -> CExp vars
+               Nat -> NatSet -> CExp vars -> List (CExp vars) -> CExp vars
 eraseConArgs arity epos fn args
     = let fn' = expandToArity arity fn args in
-          if not (isNil epos)
-             then dropPos epos fn' -- fn' might be lambdas, after eta expansion
-             else fn'
+          if isEmpty epos
+             then fn'
+             else dropPos epos fn' -- fn' might be lambdas, after eta expansion
 
-mkDropSubst : Nat -> List Nat ->
+mkDropSubst : Nat -> NatSet ->
               (rest : List Name) ->
               (vars : List Name) ->
               (vars' ** Thin (vars' ++ rest) (vars ++ rest))
@@ -182,7 +167,7 @@ toCExpTm n (Ref fc (DataCon tag arity) fn)
          cn <- getFullName fn
          fl <- dconFlag cn
          pure $ CCon fc cn fl (Just tag) []
-toCExpTm n (Ref fc (TyCon tag arity) fn)
+toCExpTm n (Ref fc (TyCon arity) fn)
     = pure $ CCon fc fn TYCON Nothing []
 toCExpTm n (Ref fc _ fn)
     = do full <- getFullName fn
@@ -404,7 +389,7 @@ mkArgList i (S k)
 -- TODO has quadratic runtime
 getVars : ArgList k ns -> Vect k (Var ns)
 getVars Z = []
-getVars (S rest) = MkVar First :: map weakenVar (getVars rest)
+getVars (S rest) = first :: map weakenVar (getVars rest)
 
 data NArgs : Type where
      User : Name -> List ClosedClosure -> NArgs
@@ -458,45 +443,46 @@ getNArgs defs (NS _ (UN $ Basic "Struct")) [n, args]
          pure (Struct n' !(getFieldArgs defs args))
 getNArgs defs n args = pure $ User n args
 
+-- The order of the arguments have a big effect on case-tree size
 nfToCFType : {auto c : Ref Ctxt Defs} ->
-             FC -> (inStruct : Bool) -> ClosedNF -> Core CFType
-nfToCFType _ _ (NPrimVal _ $ PrT IntType) = pure CFInt
-nfToCFType _ _ (NPrimVal _ $ PrT IntegerType) = pure CFInteger
-nfToCFType _ _ (NPrimVal _ $ PrT Bits8Type) = pure CFUnsigned8
-nfToCFType _ _ (NPrimVal _ $ PrT Bits16Type) = pure CFUnsigned16
-nfToCFType _ _ (NPrimVal _ $ PrT Bits32Type) = pure CFUnsigned32
-nfToCFType _ _ (NPrimVal _ $ PrT Bits64Type) = pure CFUnsigned64
-nfToCFType _ _ (NPrimVal _ $ PrT Int8Type) = pure CFInt8
-nfToCFType _ _ (NPrimVal _ $ PrT Int16Type) = pure CFInt16
-nfToCFType _ _ (NPrimVal _ $ PrT Int32Type) = pure CFInt32
-nfToCFType _ _ (NPrimVal _ $ PrT Int64Type) = pure CFInt64
-nfToCFType _ False (NPrimVal _ $ PrT StringType) = pure CFString
-nfToCFType fc True (NPrimVal _ $ PrT StringType)
+             FC -> ClosedNF -> (inStruct : Bool) -> Core CFType
+nfToCFType _ (NPrimVal _ $ PrT IntType) _ = pure CFInt
+nfToCFType _ (NPrimVal _ $ PrT IntegerType) _ = pure CFInteger
+nfToCFType _ (NPrimVal _ $ PrT Bits8Type) _ = pure CFUnsigned8
+nfToCFType _ (NPrimVal _ $ PrT Bits16Type) _ = pure CFUnsigned16
+nfToCFType _ (NPrimVal _ $ PrT Bits32Type) _ = pure CFUnsigned32
+nfToCFType _ (NPrimVal _ $ PrT Bits64Type) _ = pure CFUnsigned64
+nfToCFType _ (NPrimVal _ $ PrT Int8Type) _ = pure CFInt8
+nfToCFType _ (NPrimVal _ $ PrT Int16Type) _ = pure CFInt16
+nfToCFType _ (NPrimVal _ $ PrT Int32Type) _ = pure CFInt32
+nfToCFType _ (NPrimVal _ $ PrT Int64Type) _ = pure CFInt64
+nfToCFType _ (NPrimVal _ $ PrT StringType) False = pure CFString
+nfToCFType fc (NPrimVal _ $ PrT StringType) True
     = throw (GenericMsg fc "String not allowed in a foreign struct")
-nfToCFType _ _ (NPrimVal _ $ PrT DoubleType) = pure CFDouble
-nfToCFType _ _ (NPrimVal _ $ PrT CharType) = pure CFChar
-nfToCFType _ _ (NPrimVal _ $ PrT WorldType) = pure CFWorld
-nfToCFType _ False (NBind fc _ (Pi _ _ _ ty) sc)
+nfToCFType _ (NPrimVal _ $ PrT DoubleType) _ = pure CFDouble
+nfToCFType _ (NPrimVal _ $ PrT CharType) _ = pure CFChar
+nfToCFType _ (NPrimVal _ $ PrT WorldType) _ = pure CFWorld
+nfToCFType _ (NBind fc _ (Pi _ _ _ ty) sc) False
     = do defs <- get Ctxt
-         sty <- nfToCFType fc False !(evalClosure defs ty)
+         sty <- nfToCFType fc !(evalClosure defs ty) False
          sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
-         tty <- nfToCFType fc False sc'
+         tty <- nfToCFType fc sc' False
          pure (CFFun sty tty)
-nfToCFType _ True (NBind fc _ _ _)
+nfToCFType _ (NBind fc _ _ _) True
     = throw (GenericMsg fc "Function types not allowed in a foreign struct")
-nfToCFType _ s (NTCon fc n_in _ _ args)
+nfToCFType _ (NTCon fc n_in _ args) s
     = do defs <- get Ctxt
          n <- toFullNames n_in
          case !(getNArgs defs n $ map snd args) of
               User un uargs =>
                 do nargs <- traverse (evalClosure defs) uargs
-                   cargs <- traverse (nfToCFType fc s) nargs
+                   cargs <- traverse (\ arg => nfToCFType fc arg s) nargs
                    pure (CFUser n cargs)
               Struct n fs =>
                 do fs' <- traverse
                              (\ (n, ty) =>
                                     do tynf <- evalClosure defs ty
-                                       tycf <- nfToCFType fc True tynf
+                                       tycf <- nfToCFType fc tynf False
                                        pure (n, tycf)) fs
                    pure (CFStruct n fs')
               NUnit => pure CFUnit
@@ -506,13 +492,13 @@ nfToCFType _ s (NTCon fc n_in _ _ args)
               NForeignObj => pure CFForeignObj
               NIORes uarg =>
                 do narg <- evalClosure defs uarg
-                   carg <- nfToCFType fc s narg
+                   carg <- nfToCFType fc narg s
                    pure (CFIORes carg)
-nfToCFType _ s (NType _ _)
+nfToCFType _ (NType _ _) s
     = pure (CFUser (UN (Basic "Type")) [])
-nfToCFType _ s (NErased _ _)
+nfToCFType _ (NErased _ _) s
     = pure (CFUser (UN (Basic "__")) [])
-nfToCFType fc s t
+nfToCFType fc t s
     = do defs <- get Ctxt
          ty <- quote defs Env.empty t
          throw (GenericMsg (getLoc t)
@@ -524,11 +510,11 @@ getCFTypes : {auto c : Ref Ctxt Defs} ->
              Core (List CFType, CFType)
 getCFTypes args (NBind fc _ (Pi _ _ _ ty) sc)
     = do defs <- get Ctxt
-         aty <- nfToCFType fc False !(evalClosure defs ty)
+         aty <- nfToCFType fc !(evalClosure defs ty) False
          sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
          getCFTypes (aty :: args) sc'
 getCFTypes args t
-    = pure (reverse args, !(nfToCFType (getLoc t) False t))
+    = pure (reverse args, !(nfToCFType (getLoc t) t False))
 
 lamRHSenv : Int -> FC -> (ns : Scope) -> (SizeOf ns, SubstCEnv ns Scope.empty)
 lamRHSenv i fc [] = (zero, Subst.empty)
@@ -567,14 +553,14 @@ toArgExp : (Var ns) -> CExp ns
 toArgExp (MkVar p) = CLocal emptyFC p
 
 toCDef : Ref Ctxt Defs => Ref NextMN Int =>
-         Name -> ClosedTerm -> List Nat -> Def ->
+         Name -> ClosedTerm -> NatSet -> Def ->
          Core CDef
 toCDef n ty _ None
     = pure $ MkError $ CCrash emptyFC ("Encountered undefined name " ++ show !(getFullName n))
 toCDef n ty erased (PMDef pi args _ tree _)
-    = do let (args' ** p) = mkSub 0 args erased
+    = do let (args' ** p) = fromNatSet erased args
          comptree <- toCExpTree n tree
-         pure $ toLam (externalDecl pi) $ if isNil erased
+         pure $ toLam (externalDecl pi) $ if isEmpty erased
             then MkFun args comptree
             else MkFun args' (shrinkCExp p comptree)
   where
@@ -599,10 +585,10 @@ toCDef n _ _ (DCon tag arity pos)
          args <- numArgs {vars = Scope.empty} defs (Ref EmptyFC (DataCon tag arity) n)
          let arity' = case args of
                  NewTypeBy ar _ => ar
-                 EraseArgs ar erased => ar `minus` length erased
+                 EraseArgs ar erased => ar `minus` size erased
                  Arity ar => ar
          pure $ MkCon (Just tag) arity' nt
-toCDef n _ _ (TCon tag arity _ _ _ _ _ _)
+toCDef n _ _ (TCon arity _ _ _ _ _ _)
     = pure $ MkCon Nothing arity Nothing
 -- We do want to be able to compile these, but also report an error at run time
 -- (and, TODO: warn at compile time)

@@ -13,6 +13,7 @@ import Core.Value
 import Data.List
 import Data.SnocList
 
+import Libraries.Data.NatSet
 import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.HasLength
 import Libraries.Data.SnocList.SizeOf
@@ -117,7 +118,7 @@ mutual
       quickConvArg _ (NBind{}) = True
       quickConvArg (NApp _ h _) (NApp _ h' _) = quickConvHead h h'
       quickConvArg (NDCon _ _ t _ _) (NDCon _ _ t' _ _) = t == t'
-      quickConvArg (NTCon _ n _ _ _) (NTCon _ n' _ _ _) = n == n'
+      quickConvArg (NTCon _ n _ _) (NTCon _ n' _ _) = n == n'
       quickConvArg (NAs _ _ _ t) (NAs _ _ _ t') = quickConvArg t t'
       quickConvArg (NDelayed _ _ t) (NDelayed _ _ t') = quickConvArg t t'
       quickConvArg (NDelay _ _ _ _) (NDelay _ _ _ _) = True
@@ -156,7 +157,7 @@ mutual
                         | Nothing => pure Nothing
                    -- drop the prefix from cargs/cargs' since they won't
                    -- be in the caller
-                   pure (Just (mapMaybe (dropP cargs cargs') ms))
+                   pure (Just (mapMaybe (dropP (mkSizeOf cargs) (mkSizeOf cargs')) ms))
            else pure Nothing
     where
       weakenP : {0 c, c' : _} -> {0 args, args' : Scope} ->
@@ -170,20 +171,13 @@ mutual
       extend [] [] ms = pure ms
       extend (c :: cs) (c' :: cs') ms
           = do rest <- extend cs cs' ms
-               pure ((MkVar First, MkVar First) :: map weakenP rest)
+               pure ((first, first) :: map weakenP rest)
       extend _ _ _ = Nothing
 
-      dropV : forall args .
-              (cs : List Name) -> Var (cs ++ args) -> Maybe (Var args)
-      dropV [] v = Just v
-      dropV (c :: cs) (MkVar First) = Nothing
-      dropV (c :: cs) (MkVar (Later x))
-          = dropV cs (MkVar x)
-
-      dropP : (cs : List Name) -> (cs' : List Name) ->
+      dropP : SizeOf cs -> SizeOf cs' ->
               (Var (cs ++ args), Var (cs' ++ args')) ->
               Maybe (Var args, Var args')
-      dropP cs cs' (x, y) = pure (!(dropV cs x), !(dropV cs' y))
+      dropP cs cs' (x, y) = pure (!(strengthenNs cs x), !(strengthenNs cs' y))
 
   getMatchingVarAlt defs ms (ConstCase c t) (ConstCase c' t')
       = if c == c'
@@ -379,25 +373,17 @@ mutual
     convGen q inf defs env (NApp fc val args) (NApp _ val' args')
         = if !(chkConvHead q inf defs env val val')
              then do i <- getInfPos val
-                     allConv q inf defs env (dropInf 0 i args1) (dropInf 0 i args2)
+                     allConv q inf defs env (drop i args1) (drop i args2)
              else chkConvCaseBlock fc q inf defs env val args1 val' args2
         where
-          getInfPos : NHead vars -> Core (List Nat)
+          getInfPos : NHead vars -> Core NatSet
           getInfPos (NRef _ n)
               = if inf
                    then do Just gdef <- lookupCtxtExact n (gamma defs)
-                                | _ => pure []
+                                | _ => pure NatSet.empty
                            pure (inferrable gdef)
-                   else pure []
-          getInfPos _ = pure []
-
-          dropInf : Nat -> List Nat -> List a -> List a
-          dropInf _ [] xs = xs
-          dropInf _ _ [] = []
-          dropInf i ds (x :: xs)
-              = if i `elem` ds
-                   then dropInf (S i) ds xs
-                   else x :: dropInf (S i) ds xs
+                   else pure NatSet.empty
+          getInfPos _ = pure NatSet.empty
 
           -- Discard file context information irrelevant for conversion checking
           args1 : List (Closure vars)
@@ -410,7 +396,7 @@ mutual
         = if tag == tag'
              then allConv q i defs env (map snd args) (map snd args')
              else pure False
-    convGen q i defs env (NTCon _ nm tag _ args) (NTCon _ nm' tag' _ args')
+    convGen q i defs env (NTCon _ nm _ args) (NTCon _ nm' _ args')
         = if nm == nm'
              then allConv q i defs env (map snd args) (map snd args')
              else pure False

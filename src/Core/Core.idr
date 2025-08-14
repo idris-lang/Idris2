@@ -875,6 +875,11 @@ namespace PiInfo
   traverse f AutoImplicit = pure AutoImplicit
   traverse f (DefImplicit t) = pure (DefImplicit !(f t))
 
+namespace PiBindData
+  export
+  traverse : (a -> Core b) -> PiBindData a -> Core (PiBindData b)
+  traverse f (MkPiBindData info boundType) = MkPiBindData <$> traverse f info <*> f boundType
+
 namespace Binder
   export
   traverse : (a -> Core b) -> Binder a -> Core (Binder b)

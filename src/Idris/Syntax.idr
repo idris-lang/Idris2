@@ -330,10 +330,6 @@ mutual
     bind : BasicMultiBinder' nm
 
   public export
-  PImpBinder' : (nm : Type) -> Type
-  PImpBinder' = GenericBinder . PTerm'
-
-  public export
   PBinderScope : Type
   PBinderScope = PBinderScope' Name
 
@@ -346,7 +342,6 @@ mutual
   public export
   MkFullBinder : PiInfo (PTerm' nm) -> RigCount -> WithFC Name -> PTerm' nm -> PBinder' nm
   MkFullBinder info rig x y = MkPBinder info (MkBasicMultiBinder rig (singleton x) y)
-
 
   export
   getLoc : PDo' nm -> FC
@@ -486,15 +481,9 @@ mutual
        -- There is no nm on Directive
        ForeignImpl : Name -> List PTerm -> Directive
 
-
   public export
-  record RecordField' (nm : Type) where
-    constructor MkRecordField
-    doc : String
-    rig : RigCount
-    piInfo : PiInfo (PTerm' nm)
-    names : List Name -- See #3409
-    type : PTerm' nm
+  RecordField' : Type -> Type
+  RecordField' nm = WithDoc $ WithRig $ WithNames $ PiBindData (PTerm' nm)
 
   public export
   PField : Type
@@ -502,7 +491,7 @@ mutual
 
   public export
   PField' : Type -> Type
-  PField' nm = WithFC (RecordField' nm)
+  PField' nm = AddFC (RecordField' nm)
 
   public export
   0 PRecordDeclLet : Type
@@ -589,7 +578,7 @@ mutual
                     List (PDecl' nm) ->
                     PDeclNoFC' nm
        PImplementation : Visibility -> List PFnOpt -> Pass ->
-                         (implicits : List (FC, RigCount, Name, PiInfo (PTerm' nm), PTerm' nm)) ->
+                         (implicits : List (AddFC (ImpParameter' (PTerm' nm)))) ->
                          (constraints : List (Maybe Name, PTerm' nm)) ->
                          Name ->
                          (params : List (PTerm' nm)) ->
@@ -1042,7 +1031,7 @@ export
 covering
 Show Method where
   show m
-    = "[" ++ show m.totReq ++ "] " ++ show m.rig ++ " " ++ show m.name.val ++ " : " ++ show m.val
+    = "[" ++ show m.totReq ++ "] " ++ show m.rig ++ " " ++ show {ty = Name} m.name.val ++ " : " ++ show m.val
 
 public export
 record IFaceInfo where

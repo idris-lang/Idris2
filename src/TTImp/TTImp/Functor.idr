@@ -36,7 +36,7 @@ mutual
     map f (IWithApp fc fn t)
       = IWithApp fc (map f fn) (map f t)
     map f (IBindingApp fn bn sc)
-      = IBindingApp fn (mapData (map (map f)) bn) (mapData (map f) sc)
+      = IBindingApp fn (map (map (map f)) bn) (map (map f) sc)
     map f (ISearch fc n)
       = ISearch fc n
     map f (IAlternative fc alt ts)
@@ -94,20 +94,20 @@ mutual
   export
   Functor IClaimData where
     map f (MkIClaimData rig vis opts ty)
-      = MkIClaimData rig vis (map (map f) opts) (mapData (map f) ty)
+      = MkIClaimData rig vis (map (map f) opts) (map (map f) ty)
 
   export
   Functor ImpDecl' where
     map f (IClaim c)
-      = IClaim (mapData (map f) c)
+      = IClaim (map (map f) c)
     map f (IData fc vis mbtot dt)
       = IData fc vis mbtot (map f dt)
     map f (IDef fc nm cls)
       = IDef fc nm (map (map f) cls)
     map f (IParameters fc ps ds)
-      = IParameters fc (map (mapData (map (map f))) ps) (map (map f) ds)
+      = IParameters fc (map (map (map (map f))) ps) (map (map f) ds)
     map f (IRecord fc cs vis mbtot rec)
-      = IRecord fc cs vis mbtot (map f rec)
+      = IRecord fc cs vis mbtot (map (map f) rec)
     map f (IFail fc msg ds)
       = IFail fc msg (map (map f) ds)
     map f (INamespace fc ns ds)
@@ -141,24 +141,15 @@ mutual
   export
   Functor ImpData' where
     map f (MkImpData fc n tycon opts datacons)
-      = MkImpData fc n (map (map f) tycon) opts (map {f = List} (mapData (map f)) datacons)
+      = MkImpData fc n (map (map f) tycon) opts (map {f = List} (map (map f)) datacons)
     map f (MkImpLater fc n tycon)
       = MkImpLater fc n (map f tycon)
 
   export
-  Functor IField' where
-    map f (MkIField fc rig info n t)
-      = MkIField fc rig (map (map f) info) n (map f t)
-
-  export
-  Functor ImpRecord' where
-    map f (MkImpRecord fc n params opts conName fields)
-      = MkImpRecord fc n (map (mapData (map (map f))) params)
-                    opts conName (map (map f) fields)
-
-  export
-  Functor GenericBinder where
-    map f (MkGenericBinder info t) = MkGenericBinder (map f info) (f t)
+  Functor ImpRecordData where
+    map f (MkImpRecord header body)
+      = MkImpRecord (map (map (map (map (map f)))) header)
+                    (map (map (map (map (map f)))) body)
 
   export
   Functor IFieldUpdate' where

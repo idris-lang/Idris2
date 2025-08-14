@@ -9,13 +9,14 @@ import Core.Value
 import TTImp.TTImp
 
 import Libraries.Data.NameMap
+import Libraries.Data.NatSet
 
 import Data.SnocList
 
 getRetTy : Defs -> ClosedNF -> Core Name
 getRetTy defs (NBind fc _ (Pi _ _ _ _) sc)
     = getRetTy defs !(sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder)))
-getRetTy defs (NTCon _ n _ _ _) = pure n
+getRetTy defs (NTCon _ n _ _) = pure n
 getRetTy defs ty
     = throw (GenericMsg (getLoc ty)
              "Can only add hints for concrete return types")
@@ -89,17 +90,17 @@ processFnOpt fc _ ndef (SpecArgs ns)
          nty <- nf defs Env.empty (type gdef)
          ps <- getNamePos 0 nty
          ddeps <- collectDDeps nty
-         specs <- collectSpec [] ddeps ps nty
+         specs <- collectSpec NatSet.empty ddeps ps nty
          ignore $ addDef ndef ({ specArgs := specs } gdef)
   where
-    insertDeps : List Nat -> List (Name, Nat) -> List Name -> List Nat
+    insertDeps : NatSet -> List (Name, Nat) -> List Name -> NatSet
     insertDeps acc ps [] = acc
     insertDeps acc ps (n :: ns)
         = case lookup n ps of
                Nothing => insertDeps acc ps ns
                Just pos => if pos `elem` acc
                               then insertDeps acc ps ns
-                              else insertDeps (pos :: acc) ps ns
+                              else insertDeps (NatSet.insert pos acc) ps ns
 
     -- Collect the argument names which the dynamic args depend on
     collectDDeps : ClosedNF -> Core (List Name)
@@ -144,35 +145,25 @@ processFnOpt fc _ ndef (SpecArgs ns)
       getDeps inparam (NDCon _ n t a args) ns
           = do defs <- get Ctxt
                getDepsArgs False !(traverse (evalClosure defs . snd) args) ns
-      getDeps inparam (NTCon _ n t a args) ns
+      getDeps inparam (NTCon _ n a args) ns
           = do defs <- get Ctxt
                params <- case !(lookupDefExact n (gamma defs)) of
-                              Just (TCon _ _ ps _ _ _ _ _) => pure ps
-                              _ => pure []
-               let (ps, ds) = splitPs 0 params (map snd args)
+                              Just (TCon _ ps _ _ _ _ _) => pure ps
+                              _ => pure NatSet.empty
+               let (ps, ds) = NatSet.partition params (map snd args)
                ns' <- getDepsArgs True !(traverse (evalClosure defs) ps) ns
                getDepsArgs False !(traverse (evalClosure defs) ds) ns'
-        where
-          -- Split into arguments in parameter position, and others
-          splitPs : Nat -> List Nat -> List ClosedClosure ->
-                    (List ClosedClosure, List ClosedClosure)
-          splitPs n params [] = ([], [])
-          splitPs n params (x :: xs)
-              = let (ps', ds') = splitPs (1 + n) params xs in
-                    if n `elem` params
-                       then (x :: ps', ds')
-                       else (ps', x :: ds')
       getDeps inparam (NDelayed _ _ t) ns = getDeps inparam t ns
       getDeps inparams nf ns = pure ns
 
     -- If the name of an argument is in the list of specialisable arguments,
     -- record the position. Also record the position of anything the argument
     -- depends on which is only dependend on by declared static arguments.
-    collectSpec : List Nat -> -- specialisable so far
+    collectSpec : NatSet    -> -- specialisable so far
                   List Name -> -- things depended on by dynamic args
                                -- We're assuming  it's a short list, so just use
                                -- List and don't worry about duplicates.
-                  List (Name, Nat) -> ClosedNF -> Core (List Nat)
+                  List (Name, Nat) -> ClosedNF -> Core NatSet
     collectSpec acc ddeps ps (NBind tfc x (Pi _ _ _ nty) sc)
         = do defs <- get Ctxt
              empty <- clearDefs defs

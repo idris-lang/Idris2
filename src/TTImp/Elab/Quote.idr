@@ -104,32 +104,15 @@ mutual
   getUnquoteUpdate (ISetField p t) = pure $ ISetField p !(getUnquote t)
   getUnquoteUpdate (ISetFieldApp p t) = pure $ ISetFieldApp p !(getUnquote t)
 
-  getUnquoteField : {auto c : Ref Ctxt Defs} ->
-                    {auto q : Ref Unq (List (Name, FC, RawImp))} ->
-                    {auto u : Ref UST UState} ->
-                    IField ->
-                    Core IField
-  getUnquoteField (MkIField fc c p n ty)
-      = pure $ MkIField fc c p n !(getUnquote ty)
-
-  unqImpParam : {auto c : Ref Ctxt Defs} ->
-                {auto q : Ref Unq (List (Name, FC, RawImp))} ->
-                {auto u : Ref UST UState} ->
-                ImpParameterBase Name -> Core (ImpParameterBase Name)
-  unqImpParam (MkGenericBinder i t) = MkGenericBinder i <$> getUnquote t
-
   getUnquoteRecord : {auto c : Ref Ctxt Defs} ->
                      {auto q : Ref Unq (List (Name, FC, RawImp))} ->
                      {auto u : Ref UST UState} ->
-                     ImpRecord ->
-                     Core ImpRecord
-  getUnquoteRecord (MkImpRecord fc n ps opts cn fs)
-      = pure $ MkImpRecord fc n !(traverse (traverse unqImpParam) ps) opts cn
-                           !(traverse getUnquoteField fs)
-    where
-      unqPair : (Name, RigCount, PiInfo RawImp, RawImp) ->
-                Core (Name, RigCount, PiInfo RawImp, RawImp)
-      unqPair (n, c, p, t) = pure (n, c, p, !(getUnquote t))
+                     ImpRecordData Name ->
+                     Core (ImpRecordData Name)
+  getUnquoteRecord (MkImpRecord header body)
+        -- unlike before, we are also unquoting the default value, maybe this is important?
+      = pure $ MkImpRecord !(traverse (traverse (traverse (traverse getUnquote))) header)
+                           !(traverse (traverse (traverse (traverse getUnquote))) body)
 
   getUnquoteData : {auto c : Ref Ctxt Defs} ->
                    {auto q : Ref Unq (List (Name, FC, RawImp))} ->
@@ -154,13 +137,11 @@ mutual
   getUnquoteDecl (IDef fc v d)
       = pure $ IDef fc v !(traverse getUnquoteClause d)
   getUnquoteDecl (IParameters fc ps ds)
-      = pure $ IParameters fc
-                           !(traverseList1 (traverse unqImpParam) ps)
+      = pure $ IParameters fc -- We also unquote default arguments here too
+                           !(traverseList1 (traverse (traverse getUnquote)) ps)
                            !(traverse getUnquoteDecl ds)
-    where
-
   getUnquoteDecl (IRecord fc ns v mbt d)
-      = pure $ IRecord fc ns v mbt !(getUnquoteRecord d)
+      = pure $ IRecord fc ns v mbt !(traverse getUnquoteRecord d)
   getUnquoteDecl (INamespace fc ns ds)
       = pure $ INamespace fc ns !(traverse getUnquoteDecl ds)
   getUnquoteDecl (ITransform fc n l r)
@@ -184,7 +165,7 @@ bindUnqs ((qvar, fc, esctm) :: qs) rig elabinfo nest env tm
          Just (idx, gdef) <- lookupCtxtExactI (reflectionttimp "TTImp") (gamma defs)
               | _ => throw (UndefinedName fc (reflectionttimp "TTImp"))
          (escv, escty) <- check rig elabinfo nest env esctm
-                                (Just (gnf env (Ref fc (TyCon 0 0)
+                                (Just (gnf env (Ref fc (TyCon 0)
                                            (Resolved idx))))
          sc <- bindUnqs qs rig elabinfo nest env tm
          pure (Bind fc qvar (Let fc (rigMult top rig) escv !(getTerm escty))

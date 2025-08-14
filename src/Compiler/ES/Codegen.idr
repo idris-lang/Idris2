@@ -560,8 +560,6 @@ jsPrim nm docs = case (dropAllNS nm, docs) of
   (UN (Basic "prim__newArray"), [_,s,v,_]) => pure $ hcat ["(Array(", fromBigInt s, ").fill(", v, "))"]
   (UN (Basic "prim__arrayGet"), [_,x,p,_]) => pure $ hcat ["(", x, "[", fromBigInt p, "])"]
   (UN (Basic "prim__arraySet"), [_,x,p,v,_]) => pure $ hcat ["(", x, "[", fromBigInt p, "]=", v, ")"]
-  (UN (Basic "void"), [_, _]) => pure . jsCrashExp $ jsStringDoc "Error: Executed 'void'"
-  (UN (Basic "prim__void"), [_, _]) => pure . jsCrashExp $ jsStringDoc "Error: Executed 'void'"
   (UN (Basic "prim__codegen"), []) => do
     (cg :: _) <- ccTypes <$> get ESs
         | _ => pure "\"javascript\""

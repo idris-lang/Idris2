@@ -34,10 +34,11 @@ rawImpFromDecl decl = case decl of
         => maybe id (::) tycon $ map val datacons
     IData fc1 y _ (MkImpLater fc2 n tycon) => [tycon]
     IDef fc1 y ys => getFromClause !ys
-    IParameters fc1 ys zs => rawImpFromDecl !zs ++ map (type . val) (forget ys)
-    IRecord fc1 y z _ (MkImpRecord fc n params opts conName fields) => do
-        (MkGenericBinder info ty) <- map val params
-        getFromPiInfo info ++ [ty] ++ getFromIField !fields
+    IParameters fc1 ys zs => rawImpFromDecl !zs ++ map getParamTy (forget ys)
+    IRecord fc1 y z _ (MkWithData _  (MkImpRecord header body)) => do
+        binder <- header.val
+        field <- body.val
+        getFromPiInfo binder.val.info ++ [binder.val.boundType] ++ getFromIField field
     IFail fc1 msg zs => rawImpFromDecl !zs
     INamespace fc1 ys zs => rawImpFromDecl !zs
     ITransform fc1 y z w => [z, w]
@@ -45,7 +46,8 @@ rawImpFromDecl decl = case decl of
     IPragma _ _ f => []
     ILog k => []
     IBuiltin _ _ _ => []
-  where
+  where getParamTy : ImpParameter' RawImp -> RawImp
+        getParamTy binder = binder.val.boundType
         getFromClause : ImpClause -> List RawImp
         getFromClause (PatClause fc1 lhs rhs) = [lhs, rhs]
         getFromClause (WithClause fc1 lhs rig wval prf flags ys) = [wval, lhs] ++ getFromClause !ys
@@ -54,7 +56,7 @@ rawImpFromDecl decl = case decl of
         getFromPiInfo (DefImplicit x) = [x]
         getFromPiInfo _ = []
         getFromIField : IField -> List RawImp
-        getFromIField (MkIField fc x y z w) = getFromPiInfo y ++ [w]
+        getFromIField field = getFromPiInfo field.val.info ++ [field.val.boundType]
 
 
 -- Identify lower case names in argument position, which we can bind later.
@@ -381,7 +383,7 @@ mutual
                     ImpData -> ImpData
   substNamesData' bvar bound ps (MkImpData fc n con opts dcons)
       = MkImpData fc n (map (substNames' bvar bound ps) con) opts
-                  (map (mapData (substNames' bvar bound ps)) dcons)
+                  (map (map (substNames' bvar bound ps)) dcons)
   substNamesData' bvar bound ps (MkImpLater fc n con)
       = MkImpLater fc n (substNames' bvar bound ps con)
 
@@ -594,7 +596,7 @@ getArgName defs x bound allvars ty
     findNamesM : NF vars -> Core (Maybe (List String))
     findNamesM (NBind _ x (Pi _ _ _ _) _)
         = pure (Just ["f", "g"])
-    findNamesM (NTCon _ n _ d [(_, v)]) = do
+    findNamesM (NTCon _ n d [(_, v)]) = do
           case dropNS !(full (gamma defs) n) of
             UN (Basic "List") =>
               do nf <- evalClosure defs v
@@ -612,7 +614,7 @@ getArgName defs x bound allvars ty
                    Nothing => namesFor n
                    Just ns => pure (Just (map ("s" ++) ns))
             _ => namesFor n
-    findNamesM (NTCon _ n _ _ _) = namesFor n
+    findNamesM (NTCon _ n _ _) = namesFor n
     findNamesM (NPrimVal fc c) = do
           let defaultPos = Just ["m", "n", "p", "q"]
           let defaultInts = Just ["i", "j", "k", "l"]

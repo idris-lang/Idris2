@@ -9,6 +9,7 @@ import Core.Normalise
 import Data.List
 import Data.Maybe
 
+import Libraries.Data.NatSet
 import Libraries.Data.WithDefault
 
 %default covering
@@ -62,18 +63,18 @@ getPs acc tyn tm
                  else pure acc
            _ => pure acc
 
-toPos : Maybe (List (Maybe a)) -> List Nat
-toPos Nothing = []
-toPos (Just ns) = justPos 0 ns
+toPos : Maybe (List (Maybe a)) -> NatSet
+toPos Nothing = NatSet.empty
+toPos (Just ns) = justPos 0 ns NatSet.empty
   where
-    justPos : Nat -> List (Maybe a) -> List Nat
-    justPos i [] = []
-    justPos i (Just x :: xs) = i :: justPos (1 + i) xs
-    justPos i (Nothing :: xs) = justPos (1 + i) xs
+    justPos : Nat -> List (Maybe a) -> NatSet -> NatSet
+    justPos i [] acc = acc
+    justPos i (Just x :: xs) acc = justPos (1 + i) xs (insert i acc)
+    justPos i (Nothing :: xs) acc = justPos (1 + i) xs acc
 
 getConPs : {auto _ : Ref Ctxt Defs} -> {vars : _} ->
            Maybe (List (Maybe (Term vars))) -> Name -> Term vars ->
-           Core (List Nat)
+           Core NatSet
 getConPs acc tyn (Bind _ x (Pi _ _ _ ty) sc)
     = do bacc <- getPs acc tyn ty
          getConPs (map (map (map weaken)) bacc) tyn sc
@@ -82,38 +83,34 @@ getConPs acc tyn (Bind _ x (Let _ _ v ty) sc)
 getConPs acc tyn tm = toPos <$> getPs acc tyn tm
 
 paramPos : {auto _ : Ref Ctxt Defs} -> Name -> (dcons : List ClosedTerm) ->
-           Core (Maybe (List Nat))
+           Core (Maybe NatSet)
 paramPos tyn [] = pure Nothing -- no constructor!
 paramPos tyn dcons = do
   candidates <- traverse (getConPs Nothing tyn) dcons
-  pure $ Just $ intersectAll candidates
+  pure $ Just $ NatSet.intersectAll candidates
 
 export
 addData : {auto c : Ref Ctxt Defs} ->
           Scope -> Visibility -> Int -> DataDef -> Core Int
-addData vars vis tidx (MkData (MkCon dfc tyn bind arity tycon) datacons)
+addData vars vis tidx (MkData con datacons)
     = do defs <- get Ctxt
-         tag <- getNextTypeTag
-         let allPos = allDet arity
+         let tyName = con.name.val
+         let allPos = NatSet.allLessThan con.arity
          -- In case there are no constructors, all the positions are parameter positions!
-         let paramPositions = fromMaybe allPos !(paramPos (Resolved tidx) (map type datacons))
+         let paramPositions = fromMaybe allPos !(paramPos (Resolved tidx) (map val datacons))
          log "declare.data.parameters" 20 $
-            "Positions of parameters for datatype" ++ show tyn ++
-            ": [" ++ showSep ", " (map show paramPositions) ++ "]"
-         let tydef = newDef {bind} dfc tyn top vars tycon (specified vis)
-                            (TCon tag arity
+            "Positions of parameters for datatype" ++ show tyName ++
+            ": " ++ show paramPositions
+         let tydef = newDef {bind = con.bind} con.fc tyName top vars con.val (specified vis)
+                            (TCon con.arity
                                   paramPositions
                                   allPos
-                                  defaultFlags [] (Just $ map name datacons) Nothing)
-         (idx, gam') <- addCtxt tyn tydef (gamma defs)
+                                  defaultFlags [] (Just $ map (.name.val) datacons) Nothing)
+         (idx, gam') <- addCtxt tyName tydef (gamma defs)
          gam'' <- addDataConstructors 0 datacons gam'
          put Ctxt ({ gamma := gam'' } defs)
          pure idx
   where
-    allDet : Nat -> List Nat
-    allDet Z = []
-    allDet (S k) = [0..k]
-
     conVisibility : Visibility -> Visibility
     conVisibility Export = Private
     conVisibility x = x
@@ -121,10 +118,11 @@ addData vars vis tidx (MkData (MkCon dfc tyn bind arity tycon) datacons)
     addDataConstructors : (tag : Int) -> List Constructor ->
                           Context -> Core Context
     addDataConstructors tag [] gam = pure gam
-    addDataConstructors tag (MkCon fc n bind a ty :: cs) gam
-        = do let condef = newDef {bind = bind} fc n top vars ty (specified $ conVisibility vis) (DCon tag a Nothing)
+    addDataConstructors tag (con :: cs) gam
+        = do let conName = con.name.val
+             let condef = newDef {bind = con.bind} con.fc conName top vars con.val (specified $ conVisibility vis) (DCon tag con.arity Nothing)
              -- Check 'n' is undefined
-             Nothing <- lookupCtxtExact n gam
-                 | Just gdef => throw (AlreadyDefined fc n)
-             (idx, gam') <- addCtxt n condef gam
+             Nothing <- lookupCtxtExact conName gam
+                 | Just gdef => throw (AlreadyDefined con.fc conName)
+             (idx, gam') <- addCtxt conName condef gam
              addDataConstructors (tag + 1) cs gam'

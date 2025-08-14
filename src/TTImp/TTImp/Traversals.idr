@@ -46,22 +46,14 @@ parameters (f : RawImp' nm -> RawImp' nm)
   export
   mapImpData : ImpData' nm -> ImpData' nm
   mapImpData (MkImpData fc n tycon opts datacons)
-    = MkImpData fc n (map mapTTImp tycon) opts (map (mapData mapTTImp) datacons)
+    = MkImpData fc n (map mapTTImp tycon) opts (map (map mapTTImp) datacons)
   mapImpData (MkImpLater fc n tycon) = MkImpLater fc n (mapTTImp tycon)
 
   export
-  mapIField : IField' nm -> IField' nm
-  mapIField (MkIField fc rig pinfo n t) = MkIField fc rig (mapPiInfo pinfo) n (mapTTImp t)
-
-  export
-  mapImpBinder : ImpParameterBase nm -> ImpParameterBase nm
-  mapImpBinder (MkGenericBinder info type) = MkGenericBinder (mapPiInfo info) (mapTTImp type)
-
-  export
-  mapImpRecord : ImpRecord' nm -> ImpRecord' nm
-  mapImpRecord (MkImpRecord fc n params opts conName fields)
-    = MkImpRecord fc n (map (mapData mapImpBinder) params) opts conName (map mapIField fields)
-
+  mapImpRecord : ImpRecordData nm -> ImpRecordData nm
+  mapImpRecord (MkImpRecord header body)
+    = MkImpRecord (map (map (map (map mapTTImp))) header)
+                  (map (map (map (map mapTTImp))) body)
 
   export
   mapImpDecl : ImpDecl' nm -> ImpDecl' nm
@@ -70,7 +62,7 @@ parameters (f : RawImp' nm -> RawImp' nm)
   mapImpDecl (IData fc vis mtreq dat) = IData fc vis mtreq (mapImpData dat)
   mapImpDecl (IDef fc n cls) = IDef fc n (map mapImpClause cls)
   mapImpDecl (IParameters fc params xs) = IParameters fc params (assert_total $ map mapImpDecl xs)
-  mapImpDecl (IRecord fc mstr x y rec) = IRecord fc mstr x y (mapImpRecord rec)
+  mapImpDecl (IRecord fc mstr x y rec) = IRecord fc mstr x y (map mapImpRecord rec)
   mapImpDecl (IFail fc mstr xs) = IFail fc mstr (assert_total $ map mapImpDecl xs)
   mapImpDecl (INamespace fc mi xs) = INamespace fc mi (assert_total $ map mapImpDecl xs)
   mapImpDecl (ITransform fc n t u) = ITransform fc n (mapTTImp t) (mapTTImp u)
@@ -107,7 +99,7 @@ parameters (f : RawImp' nm -> RawImp' nm)
   mapTTImp (IAutoApp fc t u) = f $ IAutoApp fc (mapTTImp t) (mapTTImp u)
   mapTTImp (INamedApp fc t n u) = f $ INamedApp fc (mapTTImp t) n (mapTTImp u)
   mapTTImp (IWithApp fc t u) = f $ IWithApp fc (mapTTImp t) (mapTTImp u)
-  mapTTImp (IBindingApp fn b s) = assert_total $ f $ IBindingApp fn (mapData (map mapTTImp) b) (mapData mapTTImp s)
+  mapTTImp (IBindingApp fn b s) = assert_total $ f $ IBindingApp fn (map (map mapTTImp) b) (map mapTTImp s)
   mapTTImp (ISearch fc depth) = f $ ISearch fc depth
   mapTTImp (IAlternative fc alt ts) = f $ IAlternative fc (mapAltType alt) (assert_total map mapTTImp ts)
   mapTTImp (IRewrite fc t u) = f $ IRewrite fc (mapTTImp t) (mapTTImp u)

@@ -93,8 +93,12 @@ mutual
       = findSC defs env InDelay pats tm
   findSC defs env g pats (TDelay _ _ _ tm)
       = findSC defs env g pats tm
+  findSC defs env g pats (TForce _ _ tm)
+      = findSC defs env Unguarded pats tm
   findSC defs env g pats tm
       = do let (fn, args) = getFnArgs tm
+           False <- isAssertTotal fn
+               | True => pure []
            -- if it's a 'case' or 'if' just go straight into the arguments
            Nothing <- handleCase fn args
                | Just res => pure res
@@ -130,6 +134,11 @@ mutual
                     then Just <$> findSCcall defs env g pats fc n args
                     else pure Nothing
         handleCase _ _ = pure Nothing
+
+        isAssertTotal : Term vars -> Core Bool
+        isAssertTotal (Ref fc Func fn)
+            = pure $ !(toFullNames fn) == NS builtinNS (UN $ Basic "assert_total")
+        isAssertTotal tm = pure False
 
         conIfGuarded : Term vars -> Core (Term vars)
         conIfGuarded (Ref fc Func n)
@@ -204,8 +213,8 @@ mutual
     let (f, args) = getFnArgs t in
     let (g, args') = getFnArgs s in
     case f of
-      Ref _ (TyCon _ _) cn => case g of
-        Ref _ (TyCon _ _) cn' => if cn == cn'
+      Ref _ (TyCon {}) cn => case g of
+        Ref _ (TyCon {}) cn' => if cn == cn'
             then (Unknown /=) <$> sizeCompareProdConArgs fuel args' args
             else pure False
         _ => pure False
@@ -360,19 +369,17 @@ mutual
       = do fn <- getFullName fn_in
            logC "totality.termination.sizechange" 10 $ do pure $ "Looking under " ++ show !(toFullNames fn)
            aSmaller <- resolved (gamma defs) (NS builtinNS (UN $ Basic "assert_smaller"))
-           cond [(fn == NS builtinNS (UN $ Basic "assert_total"), pure [])
-                ,(caseFn fn,
-                    do scs1 <- traverse (findSC defs env g pats) args
-                       mps  <- getCasePats defs fn pats args
-                       scs2 <- traverse (findInCase defs g) $ fromMaybe [] mps
-                       pure (concat (scs1 ++ scs2)))
-              ]
-              (do scs <- traverse (findSC defs env g pats) args
-                  pure ([MkSCCall fn
-                           (fromListList
-                                !(traverse (mkChange defs aSmaller pats) args))
-                           fc]
-                           ++ concat scs))
+           if caseFn fn
+              then do scs1 <- traverse (findSC defs env g pats) args
+                      mps  <- getCasePats defs fn pats args
+                      scs2 <- traverse (findInCase defs g) $ fromMaybe [] mps
+                      pure (concat (scs1 ++ scs2))
+              else do scs <- traverse (findSC defs env g pats) args
+                      pure $ [MkSCCall fn
+                               (fromListList
+                                    !(traverse (mkChange defs aSmaller pats) args))
+                               fc]
+                               ++ concat scs
 
   findInCase : {auto c : Ref Ctxt Defs} ->
                Defs -> Guardedness ->

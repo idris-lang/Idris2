@@ -21,6 +21,8 @@ import Data.List
 import Data.SnocList
 import Data.Maybe
 
+import Libraries.Data.NatSet
+import Libraries.Data.VarSet
 import Libraries.Data.WithDefault
 
 %default covering
@@ -60,7 +62,7 @@ getNameType elabMode rigc env fc x
                  log "metadata.names" 7 $ "getNameType is adding ↓"
                  addNameType fc x env bty
 
-                 when (isLinear rigb) $ update EST { linearUsed $= ((MkVar lv) :: ) }
+                 when (isLinear rigb) $ update EST { linearUsed $= VarSet.insert (MkVar lv) }
                  log "ide-mode.highlight" 8
                      $ "getNameType is trying to add Bound: "
                       ++ show x ++ " (" ++ show fc ++ ")"
@@ -78,7 +80,7 @@ getNameType elabMode rigc env fc x
                  when (not $ onLHS elabMode) $
                    checkDeprecation fc def
                  rigSafe (multiplicity def) rigc
-                 let nt = fromMaybe Func (defNameType $ definition def)
+                 let nt = getDefNameType def
 
                  log "ide-mode.highlight" 8
                      $ "getNameType is trying to add something for: "
@@ -125,7 +127,7 @@ getVarType elabMode rigc nest env fc x
                  case !(lookupCtxtExact n' (gamma defs)) of
                       Nothing => undefinedName fc n'
                       Just ndef =>
-                         let nt = fromMaybe Func (defNameType $ definition ndef)
+                         let nt = getDefNameType ndef
                              tm = tmf fc nt
                              tyenv = useVars (getArgs tm)
                                              (embed (type ndef)) in
@@ -388,12 +390,12 @@ mutual
       -- meta, shouldn't we delay the check instead of declaring the tm dotted?
       ||| Count the constructors of a fully applied concrete datatype
       countConstructors : NF vars -> Core (Maybe Nat)
-      countConstructors (NTCon _ tycName _ n args) =
+      countConstructors (NTCon _ tycName n args) =
         if length args == n
         then do defs <- get Ctxt
                 Just gdef <- lookupCtxtExact tycName (gamma defs)
                 | Nothing => pure Nothing
-                let (TCon _ _ _ _ _ _ datacons _) = gdef.definition
+                let (TCon _ _ _ _ _ datacons _) = gdef.definition
                 | _ => pure Nothing
                 pure (length <$> datacons)
         else pure Nothing
@@ -791,7 +793,7 @@ mutual
                | Nothing => pure res
          let (Ref _ t _, args) = getFnArgs (fst res)
                | _ => pure res
-         let Just (_, a) = isCon t
+         let Just a = isCon t
                | _ => pure res
          if a == length args
            then pure res

@@ -8,6 +8,8 @@ import Data.SnocList
 import Libraries.Data.List.SizeOf
 import Libraries.Data.List.HasLength
 
+import Libraries.Data.VarSet
+
 import Libraries.Data.SnocList.Extra
 import Libraries.Data.SnocList.SizeOf
 import Libraries.Data.SnocList.HasLength
@@ -67,12 +69,15 @@ eraseLinear (b :: bs)
          else b :: eraseLinear bs
 
 export
-getErased : {vs : _} -> Env tm vs -> List (Var vs)
-getErased [] = []
-getErased (b :: bs)
+getErased : {0 vs : _} -> Env tm vs -> List (Var vs)
+getErased env = go env [<] where
+
+  go : Env tm vars -> SizeOf seen -> List (Var (seen <>> vars))
+  go [] p = []
+  go (b :: bs) p
     = if isErased (multiplicity b)
-         then MkVar First :: map weaken (getErased bs)
-         else map weaken (getErased bs)
+         then mkVarChiply p :: go bs (p :< _)
+         else go bs (p :< _)
 
 public export
 data IsDefined : Name -> Scope -> Type where
@@ -186,36 +191,26 @@ letToLam (Let fc c val ty :: env) = Lam fc c Explicit ty :: letToLam env
 letToLam (b :: env) = b :: letToLam env
 
 mutual
-  -- TODO turn list into set of nats throughout
-
-  -- Quicker, if less safe, to store variables as a Nat, for quick comparison
   findUsed : {vars : _} ->
-             Env Term vars -> List Nat -> Term vars -> List Nat
+             Env Term vars -> VarSet vars -> Term vars -> VarSet vars
   findUsed env used (Local fc r idx p)
-      = if elemBy eqNat idx used
+      = let v := MkVar p in
+        if v `elem` used
            then used
-           else assert_total (findUsedInBinder env (idx :: used)
+           else assert_total (findUsedInBinder env (VarSet.insert v used)
                                                (getBinder p env))
-    where
-      eqNat : Nat -> Nat -> Bool
-      eqNat i j = natToInteger i == natToInteger j
   findUsed env used (Meta _ _ _ args)
       = findUsedArgs env used args
     where
-      findUsedArgs : Env Term vars -> List Nat -> List (Term vars) -> List Nat
+      findUsedArgs : Env Term vars -> VarSet vars -> List (Term vars) -> VarSet vars
       findUsedArgs env u [] = u
       findUsedArgs env u (a :: as)
           = findUsedArgs env (findUsed env u a) as
   findUsed env used (Bind fc x b tm)
       = assert_total $
-          dropS (findUsed (b :: env)
-                          (map S (findUsedInBinder env used b))
+          VarSet.dropFirst (findUsed (b :: env)
+                          (weaken {tm = VarSet} (findUsedInBinder env used b))
                           tm)
-    where
-      dropS : List Nat -> List Nat
-      dropS [] = []
-      dropS (Z :: xs) = dropS xs
-      dropS (S p :: xs) = p :: dropS xs
   findUsed env used (App fc fn arg)
       = findUsed env (findUsed env used fn) arg
   findUsed env used (As fc s a p)
@@ -229,46 +224,34 @@ mutual
   findUsed env used _ = used
 
   findUsedInBinder : {vars : _} ->
-                     Env Term vars -> List Nat ->
-                     Binder (Term vars) -> List Nat
+                     Env Term vars -> VarSet vars ->
+                     Binder (Term vars) -> VarSet vars
   findUsedInBinder env used (Let _ _ val ty)
     = findUsed env (findUsed env used val) ty
   findUsedInBinder env used (PLet _ _ val ty)
     = findUsed env (findUsed env used val) ty
   findUsedInBinder env used b = findUsed env used (binderType b)
 
-toVar : (vars : Scope) -> Nat -> Maybe (Var vars)
-toVar (v :: vs) Z = Just (MkVar First)
-toVar (v :: vs) (S k)
-   = do MkVar prf <- toVar vs k
-        Just (MkVar (Later prf))
-toVar _ _ = Nothing
-
 export
 findUsedLocs : {vars : _} ->
-               Env Term vars -> Term vars -> List (Var vars)
-findUsedLocs env tm
-    = mapMaybe (toVar _) (findUsed env [] tm)
-
-isUsed : Nat -> List (Var vars) -> Bool
-isUsed n [] = False
-isUsed n (v :: vs) = n == varIdx v || isUsed n vs
+               Env Term vars -> Term vars -> VarSet vars
+findUsedLocs env tm = findUsed env VarSet.empty tm
 
 mkShrinkSub : {n : _} ->
-              (vars : _) -> List (Var (n :: vars)) ->
+              (vars : _) -> VarSet (n :: vars) ->
               (newvars ** Thin newvars (n :: vars))
 mkShrinkSub [] els
-    = if isUsed 0 els
+    = if first `VarSet.elem` els
          then (_ ** Keep Refl)
          else (_ ** Drop Refl)
 mkShrinkSub (x :: xs) els
-    = let (_ ** subRest) = mkShrinkSub xs (dropFirst els) in
-      if isUsed 0 els
+    = let (_ ** subRest) = mkShrinkSub xs (VarSet.dropFirst els) in
+      if first `VarSet.elem` els
         then (_ ** Keep subRest)
         else (_ ** Drop subRest)
 
 mkShrink : {vars : _} ->
-           List (Var vars) ->
+           VarSet vars ->
            (newvars ** Thin newvars vars)
 mkShrink {vars = []} xs = (_ ** Refl)
 mkShrink {vars = v :: vs} xs = mkShrinkSub _ xs
@@ -347,15 +330,26 @@ uniqifyEnv env = uenv [] env
                   (v :: vs' ** (b' :: env', Ext compat))
 
 export
-allVars : {vars : _} -> Env Term vars -> List (Var vars)
-allVars [] = []
-allVars (v :: vs) = MkVar First :: map weaken (allVars vs)
+allVars : {0 vars : _} -> Env Term vars -> List (Var vars)
+allVars env = go env [<] where
+
+  go :  {0 vars : _} -> Env Term vars ->
+        {0 seen : SnocList Name} -> SizeOf seen ->
+        List (Var (seen <>> vars))
+  go [] _ = []
+  go (v :: vs) p = mkVarChiply p :: go vs (p :< _)
+
 
 export
-allVarsNoLet : {vars : _} -> Env Term vars -> List (Var vars)
-allVarsNoLet [] = []
-allVarsNoLet (Let _ _ _ _ :: vs) = map weaken (allVars vs)
-allVarsNoLet (v :: vs) = MkVar First :: map weaken (allVars vs)
+allVarsNoLet : {0 vars : _} -> Env Term vars -> List (Var vars)
+allVarsNoLet env = go env [<] where
+
+  go :  {0 vars : _} -> Env Term vars ->
+        {0 seen : SnocList Name} -> SizeOf seen ->
+        List (Var (seen <>> vars))
+  go [] _ = []
+  go (Let _ _ _ _ :: vs) p = go vs (p :< _)
+  go (v :: vs) p = mkVarChiply p :: go vs (p :< _)
 
 export
 close : FC -> String -> Env Term vars -> Term vars -> ClosedTerm

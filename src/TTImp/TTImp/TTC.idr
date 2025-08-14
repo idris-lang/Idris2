@@ -8,6 +8,7 @@ import Core.Context.TTC
 
 import TTImp.TTImp
 
+import Libraries.Data.NatSet
 import Libraries.Data.WithDefault
 
 %default covering
@@ -302,31 +303,13 @@ mutual
                _ => corrupt "ImpData"
 
   export
-  TTC IField where
-    toBuf (MkIField fc c p n ty)
-        = do toBuf fc; toBuf c; toBuf p; toBuf n; toBuf ty
+  TTC (ImpRecordData Name) where
+    toBuf (MkImpRecord header body)
+        = do toBuf header; toBuf body;
 
     fromBuf
-        = do fc <- fromBuf; c <- fromBuf; p <- fromBuf
-             n <- fromBuf; ty <- fromBuf
-             pure (MkIField fc c p n ty)
-  export
-  TTC a => TTC (GenericBinder a) where
-    toBuf (MkGenericBinder info type)
-        = do toBuf info ; toBuf type
-    fromBuf = do info <- fromBuf
-                 type <- fromBuf
-                 pure (MkGenericBinder info type)
-
-  export
-  TTC ImpRecord where
-    toBuf (MkImpRecord fc n ps opts con fs)
-        = do toBuf fc; toBuf n; toBuf ps; toBuf opts; toBuf con; toBuf fs
-
-    fromBuf
-        = do fc <- fromBuf; n <- fromBuf; ps <- fromBuf
-             opts <- fromBuf; con <- fromBuf; fs <- fromBuf
-             pure (MkImpRecord fc n ps opts con fs)
+        = do header <- fromBuf; body <- fromBuf;
+             pure (MkImpRecord header body)
 
   export
   TTC FnOpt where

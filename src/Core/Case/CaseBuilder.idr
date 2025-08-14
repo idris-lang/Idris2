@@ -824,7 +824,7 @@ sameType {ns} fc phase fn env (p :: xs)
 
     headEq : NF ns -> NF ns -> Phase -> Bool
     headEq (NBind _ _ (Pi _ _ _ _) _) (NBind _ _ (Pi _ _ _ _) _) _ = True
-    headEq (NTCon _ n _ _ _) (NTCon _ n' _ _ _) _ = n == n'
+    headEq (NTCon _ n _ _) (NTCon _ n' _ _) _ = n == n'
     headEq (NPrimVal _ c) (NPrimVal _ c') _ = c == c'
     headEq (NType _ _) (NType _ _) _ = True
     headEq (NApp _ (NRef _ n) _) (NApp _ (NRef _ n') _) RunTime = n == n'
@@ -976,12 +976,12 @@ mutual
            case mix of
              Nothing =>
                do log "compile.casetree.intermediate" 25 "match: No clauses"
-                  pure (Unmatched "No clauses")
+                  pure (Unmatched "No clauses in \{show fn}")
              Just m =>
                do log "compile.casetree.intermediate" 25 $ "match: new case tree " ++ show m
                   Core.pure m
   match {todo = []} fc fn phase [] err
-       = maybe (pure (Unmatched "No patterns"))
+       = maybe (pure (Unmatched "No patterns in \{show fn}"))
                pure err
   match {todo = []} fc fn phase ((MkPatClause pvars [] pid (Erased _ Impossible)) :: _) err
        = pure Impossible
@@ -1023,7 +1023,7 @@ mutual
             List (PatClause vars (a :: todo)) ->
             Maybe (CaseTree vars) ->
             Core (CaseTree vars)
-  conRule fc fn phase [] err = maybe (pure (Unmatched "No constructor clauses")) pure err
+  conRule fc fn phase [] err = maybe (pure (Unmatched "No constructor clauses in \{show fn}")) pure err
   -- ASSUMPTION, not expressed in the type, that the patterns all have
   -- the same variable (pprf) for the first argument. If not, the result
   -- will be a broken case tree... so we should find a way to express this
@@ -1086,7 +1086,7 @@ export
 mkPat : {auto c : Ref Ctxt Defs} -> List Pat -> ClosedTerm -> ClosedTerm -> Core Pat
 mkPat [] orig (Ref fc Bound n) = pure $ PLoc fc n
 mkPat args orig (Ref fc (DataCon t a) n) = pure $ PCon fc n t a args
-mkPat args orig (Ref fc (TyCon t a) n) = pure $ PTyCon fc n a args
+mkPat args orig (Ref fc (TyCon a) n) = pure $ PTyCon fc n a args
 mkPat args orig (Ref fc Func n)
   = do prims <- getPrimitiveNames
        mtm <- normalisePrims (const True) isPConst True prims n args orig Env.empty
@@ -1176,7 +1176,7 @@ patCompile : {auto c : Ref Ctxt Defs} ->
              Maybe (CaseTree Scope.empty) ->
              Core (args ** CaseTree args)
 patCompile fc fn phase ty [] def
-    = maybe (pure (Scope.empty ** Unmatched "No definition"))
+    = maybe (pure (Scope.empty ** Unmatched "\{show fn} not defined"))
             (\e => pure (Scope.empty ** e))
             def
 patCompile fc fn phase ty (p :: ps) def
@@ -1338,7 +1338,7 @@ getPMDef : {auto c : Ref Ctxt Defs} ->
 getPMDef fc phase fn ty []
     = do log "compile.casetree.getpmdef" 20 "getPMDef: No clauses!"
          defs <- get Ctxt
-         pure (!(getArgs 0 !(nf defs Env.empty ty)) ** (Unmatched "No clauses", []))
+         pure (!(getArgs 0 !(nf defs Env.empty ty)) ** (Unmatched "No clauses in \{show fn}", []))
   where
     getArgs : Int -> ClosedNF -> Core (List Name)
     getArgs i (NBind fc x (Pi _ _ _ _) sc)

@@ -6,6 +6,7 @@ import        Core.Env
 import public Core.Name
 import public Core.Options.Log
 import public Core.TT
+import public Core.WithData
 
 import public Algebra.SizeChange
 
@@ -17,11 +18,15 @@ import Data.SnocList
 import Libraries.Data.IntMap
 import Libraries.Data.IOArray
 import Libraries.Data.NameMap
+import Libraries.Data.NatSet
 import Libraries.Data.UserNameMap
 import Libraries.Data.WithDefault
 import Libraries.Data.SparseMatrix
 import Libraries.Utils.Binary
 import Libraries.Utils.Scheme
+
+%hide LabelledValue.label
+%hide KeyVal.label
 
 public export
 data Ref : (l : label) -> Type -> Type where
@@ -97,13 +102,13 @@ data Def : Type where
                -- that the value is inspected, to make sure external effects
                -- happen)
            Def -- data constructor
-    TCon : (tag : Int) -> (arity : Nat) ->
-           (parampos : List Nat) -> -- parameters
-           (detpos : List Nat) -> -- determining arguments
+    TCon : (arity : Nat) ->
+           (parampos : NatSet) -> -- parameters
+           (detpos : NatSet) -> -- determining arguments
            (flags : TypeFlags) -> -- should 'auto' implicits check
            (mutwith : List Name) -> -- TODO morally `Set Name`
            (datacons : Maybe (List Name)) ->
-           (detagabbleBy : Maybe (List Nat)) ->
+           (detagabbleBy : Maybe NatSet) ->
                     -- argument positions which can be used for
                     -- detagging, if it's possible (to check if it's
                     -- safe to erase)
@@ -134,7 +139,7 @@ defNameType (ExternDef {}) = Just Func
 defNameType (ForeignDef {}) = Just Func
 defNameType (Builtin {}) = Just Func
 defNameType (DCon tag ar _) = Just (DataCon tag ar)
-defNameType (TCon tag ar _ _ _ _ _ _) = Just (TyCon tag ar)
+defNameType (TCon ar _ _ _ _ _ _) = Just (TyCon ar)
 defNameType (Hole {}) = Just Func
 defNameType (BySearch {}) = Nothing
 defNameType (Guess {}) = Nothing
@@ -154,8 +159,8 @@ Show Def where
   show (DCon t a nt)
       = "DataCon " ++ show t ++ " " ++ show a
            ++ maybe "" (\n => " (newtype by " ++ show n ++ ")") nt
-  show (TCon t a ps ds u ms cons det)
-      = "TyCon " ++ show t ++ " " ++ show a ++ " params: " ++ show ps ++
+  show (TCon a ps ds u ms cons det)
+      = "TyCon " ++ show a ++ " params: " ++ show ps ++
         " constructors: " ++ show cons ++
         " mutual with: " ++ show ms ++
         " detaggable by: " ++ show det
@@ -171,14 +176,12 @@ Show Def where
   show Delayed = "Delayed"
 
 public export
-record Constructor where
-  constructor MkCon
-  loc : FC
-  name : Name
-  bind : BindingModifier
-  arity : Nat
-  type : ClosedTerm
-%name Constructor cons
+Constructor' : Type -> Type
+Constructor' = AddFC . WithName . WithArity . AddMetadata Bind'
+
+public export
+Constructor : Type
+Constructor = Constructor' ClosedTerm
 
 public export
 data DataDef : Type where
@@ -302,12 +305,12 @@ record GlobalDef where
   location : FC
   fullname : Name -- original unresolved name
   type : ClosedTerm
-  eraseArgs : List Nat -- which argument positions to erase at runtime
-  safeErase : List Nat -- which argument positions are safe to assume
+  eraseArgs : NatSet -- which argument positions to erase at runtime
+  safeErase : NatSet -- which argument positions are safe to assume
                        -- erasable without 'dotting', because their types
                        -- are collapsible relative to non-erased arguments
-  specArgs : List Nat -- arguments to specialise by
-  inferrable : List Nat -- arguments which can be inferred from elsewhere in the type
+  specArgs : NatSet -- arguments to specialise by
+  inferrable : NatSet -- arguments which can be inferred from elsewhere in the type
   multiplicity : RigCount
   localVars : Scope -- environment name is defined in
   visibility : WithDefault Visibility Private
@@ -329,6 +332,10 @@ record GlobalDef where
   sizeChange : List SCCall
   schemeExpr : Maybe (SchemeMode, SchemeObj Write)
   bindingMode : BindingModifier
+
+export
+getDefNameType : GlobalDef -> NameType
+getDefNameType = fromMaybe Func . defNameType . definition
 
 export
 gDefKindedName : GlobalDef -> KindedName
