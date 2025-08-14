@@ -65,7 +65,7 @@ LOG derive.foldable.clauses:1:
   foldMapIVect : {0 m : _} -> {0 a, b : Type} -> Monoid b => (a -> b) -> IVect {n = m} a -> b
   foldMapIVect f (MkIVect x2) = foldMap f x2
 LOG derive.foldable.clauses:1: 
-  foldMapEqMap : {0 key, eq : _} -> {0 a, b : Type} -> Monoid b => (a -> b) -> EqMap key {{conArg:5699} = eq} a -> b
+  foldMapEqMap : {0 key, eq : _} -> {0 a, b : Type} -> Monoid b => (a -> b) -> EqMap key {{conArg:1} = eq} a -> b
   foldMapEqMap f (MkEqMap x3) = foldMap (foldMap f) x3
 LOG derive.foldable.clauses:1: 
   foldMapTree : {0 l : _} -> {0 a, b : Type} -> Monoid b => (a -> b) -> Tree l a -> b

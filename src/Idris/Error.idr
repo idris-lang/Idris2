@@ -272,7 +272,7 @@ pwarningRaw (ShadowingGlobalDefs fc ns)
    :: map pshadowing (forget ns)
    `snoc` !(ploc fc)
   where
-    pshadowing : (String, List1 Name) -> Doc IdrisAnn
+    pshadowing : (Name, List1 Name) -> Doc IdrisAnn
     pshadowing (n, ns) = indent 2 $ hsep $
                            pretty0 n
                         :: reflow "is shadowing"

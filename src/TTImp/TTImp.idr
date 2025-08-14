@@ -106,7 +106,7 @@ mutual
        -- the given binder
        IBindHere : FC -> BindMode -> RawImp' nm -> RawImp' nm
        -- A name which should be implicitly bound
-       IBindVar : FC -> String -> RawImp' nm
+       IBindVar : FC -> Name -> RawImp' nm
        -- An 'as' pattern, valid on the LHS of a clause only
        IAs : FC -> (nameFC : FC) -> UseSide -> Name -> RawImp' nm -> RawImp' nm
        -- A 'dot' pattern, i.e. one which must also have the given value
@@ -201,7 +201,7 @@ mutual
 
       show (IBindHere fc b sc)
          = "(%bindhere " ++ show sc ++ ")"
-      show (IBindVar fc n) = "$" ++ n
+      show (IBindVar fc n) = "$" ++ show n
       show (IAs fc _ _ n tm) = show n ++ "@(" ++ show tm ++ ")"
       show (IMustUnify fc r tm) = ".(" ++ show tm ++ ")"
       show (IDelayed fc r tm) = "(%delayed " ++ show tm ++ ")"
@@ -535,9 +535,10 @@ mkWithClause : FC -> RawImp' nm -> List1 (RigCount, RawImp' nm, Maybe (RigCount,
 mkWithClause fc lhs ((rig, wval, prf) ::: []) flags cls
   = WithClause fc lhs rig wval prf flags cls
 mkWithClause fc lhs ((rig, wval, prf) ::: wp :: wps) flags cls
-  = let vfc = virtualiseFC fc in
-    WithClause fc lhs rig wval prf flags
-      [mkWithClause fc (IApp vfc lhs (IBindVar vfc "arg")) (wp ::: wps) flags cls]
+  = let vfc = virtualiseFC fc
+        arg = UN $ Basic "arg"
+     in WithClause fc lhs rig wval prf flags
+          [mkWithClause fc (IApp vfc lhs $ IBindVar vfc arg) (wp ::: wps) flags cls]
 
 -- Extract the RawImp term from a FieldUpdate.
 export
@@ -637,7 +638,7 @@ findIBinds (IQuote fc tm) = findIBinds tm
 findIBinds (IUnquote fc tm) = findIBinds tm
 findIBinds (IRunElab fc _ tm) = findIBinds tm
 findIBinds (IBindHere _ _ tm) = findIBinds tm
-findIBinds (IBindVar _ n) = [n]
+findIBinds (IBindVar _ (UN (Basic n))) = [n]
 findIBinds (IUpdate fc updates tm)
     = findIBinds tm ++ concatMap (findIBinds . getFieldUpdateTerm) updates
 -- We've skipped lambda, case, let and local - rather than guess where the
@@ -672,7 +673,7 @@ findImplicits (IForce fc tm) = findImplicits tm
 findImplicits (IQuote fc tm) = findImplicits tm
 findImplicits (IUnquote fc tm) = findImplicits tm
 findImplicits (IRunElab fc _ tm) = findImplicits tm
-findImplicits (IBindVar _ n) = [n]
+findImplicits (IBindVar _ (UN (Basic n))) = [n]
 findImplicits (IUpdate fc updates tm)
     = findImplicits tm ++ concatMap (findImplicits . getFieldUpdateTerm) updates
 findImplicits tm = []
@@ -786,9 +787,9 @@ implicitsAs n defs ns tm
 
         impAs : FC -> List (Name, PiInfo RawImp) -> RawImp -> RawImp
         impAs loc' [] tm = tm
-        impAs loc' ((nm@(UN (Basic n)), AutoImplicit) :: ns) tm
+        impAs loc' ((nm@(UN (Basic _)), AutoImplicit) :: ns) tm
             = impAs loc' ns $
-                 INamedApp loc' tm nm (IBindVar loc' n)
+                 INamedApp loc' tm nm (IBindVar loc' nm)
 
         impAs loc' ((n, Implicit) :: ns) tm
             = impAs loc' ns $
@@ -869,7 +870,7 @@ isIVar (IVar fc v) = Just (fc, v)
 isIVar _ = Nothing
 
 export
-isIBindVar : RawImp' nm -> Maybe (FC, String)
+isIBindVar : RawImp' nm -> Maybe (FC, Name)
 isIBindVar (IBindVar fc v) = Just (fc, v)
 isIBindVar _ = Nothing
 

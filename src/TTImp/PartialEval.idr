@@ -122,6 +122,7 @@ dropSpec i sargs (x :: xs)
            Just _ => dropSpec (1 + i) sargs xs
 
 getSpecPats : {auto c : Ref Ctxt Defs} ->
+              {auto u : Ref UST UState} ->
               FC -> Name ->
               (fn : Name) -> (stk : List (FC, Term vars)) ->
               ClosedNF -> -- Type of 'fn'
@@ -139,30 +140,29 @@ getSpecPats fc pename fn stk fnty args sargs pats
         -- Otherwise, build a new definition by taking the remaining arguments
         -- on the lhs, and using the specialised function application on the rhs.
         -- Then, this will get evaluated on elaboration.
-        let dynnames = mkDynNames 0 args
+        dynnames <- mkDynNames args
         let lhs = apply (IVar fc pename) (map (IBindVar fc) dynnames)
         rhs <- mkRHSargs fnty (IVar fc fn) dynnames args
         pure (Just [PatClause fc lhs rhs])
   where
-    mkDynNames : Int -> List (Nat, ArgMode) -> List String
-    mkDynNames i [] = []
-    mkDynNames i ((_, Dynamic) :: as)
-        = ("_pe" ++ show i) :: mkDynNames (1 + i) as
-    mkDynNames i (_ :: as) = mkDynNames i as
+    mkDynNames : List (Nat, ArgMode) -> Core (List Name)
+    mkDynNames [] = pure []
+    mkDynNames ((_, Dynamic) :: as) = [| genVarName "_pe" :: mkDynNames as |]
+    mkDynNames (_ :: as) = mkDynNames as
 
     -- Build a RHS from the type of the function to be specialised, the
     -- dynamic argument names, and the list of given arguments. We assume
     -- the latter two correspond appropriately.
-    mkRHSargs : ClosedNF -> RawImp -> List String -> List (Nat, ArgMode) ->
+    mkRHSargs : ClosedNF -> RawImp -> List Name -> List (Nat, ArgMode) ->
                 Core RawImp
     mkRHSargs (NBind _ x (Pi _ _ Explicit _) sc) app (a :: as) ((_, Dynamic) :: ds)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
-             mkRHSargs sc' (IApp fc app (IVar fc (UN $ Basic a))) as ds
+             mkRHSargs sc' (IApp fc app (IVar fc a)) as ds
     mkRHSargs (NBind _ x (Pi _ _ _ _) sc) app (a :: as) ((_, Dynamic) :: ds)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
-             mkRHSargs sc' (INamedApp fc app x (IVar fc (UN $ Basic a))) as ds
+             mkRHSargs sc' (INamedApp fc app x (IVar fc a)) as ds
     mkRHSargs (NBind _ x (Pi _ _ Explicit _) sc) app as ((_, Static tm) :: ds)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
@@ -181,7 +181,7 @@ getSpecPats fc pename fn stk fnty args sargs pats
     -- Type will depend on the value here (we assume a variadic function) but
     -- the argument names are still needed
     mkRHSargs ty app (a :: as) ((_, Dynamic) :: ds)
-        = mkRHSargs ty (IApp fc app (IVar fc (UN $ Basic a))) as ds
+        = mkRHSargs ty (IApp fc app (IVar fc a)) as ds
     mkRHSargs _ app _ _
         = pure app
 

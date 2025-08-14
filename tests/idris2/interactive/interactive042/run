@@ -1,6 +1,8 @@
 . ../../../testutils.sh
 
+{
 idris2 Issue35.idr < input
 check Issue35-2.idr || true
 check --show-machine-names Issue35-2.idr || true
 check --show-namespaces --show-machine-names Issue35-2.idr || true
+} | clean_names

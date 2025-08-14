@@ -5,14 +5,14 @@ LOG totality.requirement:20: Got covering and expected total: we should rebuild
 1/1: Building Issue1828 (Issue1828.idr)
 Error: caseTest is not total, possibly not terminating due to call to Main.dummy
 
-Issue1828:2:3--2:25
+Issue1828:1
  1 | mutual
  2 |   caseTest : Nat -> Bool
        ^^^^^^^^^^^^^^^^^^^^^^
 
 Error: dummy is not total, possibly not terminating due to recursive path Main.caseTest -> Main.dummy
 
-Issue1828:6:3--6:14
+Issue1828:2
  2 |   caseTest : Nat -> Bool
  3 |   caseTest p with (dummy)
  4 |    caseTest p | _ = True
@@ -22,14 +22,14 @@ Issue1828:6:3--6:14
 
 Error: caseTest is not total, possibly not terminating due to call to Main.dummy
 
-Issue1828:2:3--2:25
+Issue1828:1
  1 | mutual
  2 |   caseTest : Nat -> Bool
        ^^^^^^^^^^^^^^^^^^^^^^
 
 Error: dummy is not total, possibly not terminating due to recursive path Main.caseTest -> Main.dummy
 
-Issue1828:6:3--6:14
+Issue1828:2
  2 |   caseTest : Nat -> Bool
  3 |   caseTest p with (dummy)
  4 |    caseTest p | _ = True
