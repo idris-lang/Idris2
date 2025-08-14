@@ -311,18 +311,13 @@ mutual
   ImpTy = ImpTy' Name
 
   public export
-  record ImpTy' (nm : Type) where
-      constructor MkImpTy
-      loc : FC
-      name : WithFC Name
-      type : RawImp' nm
-
-  %name ImpTy' ty
+  ImpTy' : Type -> Type
+  ImpTy' = AddMetadata FC' . AddMetadata TyName' . RawImp'
 
   export
   covering
   Show nm => Show (ImpTy' nm) where
-    show (MkImpTy fc n ty) = "(%claim " ++ show n.val ++ " " ++ show ty ++ ")"
+    show ty = "(%claim " ++ show ty.tyName.val ++ " " ++ show ty.val ++ ")"
 
   public export
   ImpData : Type
@@ -813,7 +808,7 @@ definedInBlock ns decls =
     Prelude.toList $ foldl (defName ns) empty decls
   where
     getName : ImpTy -> Name
-    getName (MkImpTy _ n _) = n.val
+    getName = (.tyName.val)
 
     getFieldName : IField -> Name
     getFieldName f = f.name.val

@@ -90,7 +90,7 @@ mutual
   export
   Functor IClaimData where
     map f (MkIClaimData rig vis opts ty)
-      = MkIClaimData rig vis (map (map f) opts) (map f ty)
+      = MkIClaimData rig vis (map (map f) opts) (map (map f) ty)
 
   export
   Functor ImpDecl' where
@@ -134,14 +134,9 @@ mutual
     map f (SpecArgs ns) = SpecArgs ns
 
   export
-  Functor ImpTy' where
-    map f (MkImpTy fc n ty)
-      = MkImpTy fc n (map f ty)
-
-  export
   Functor ImpData' where
     map f (MkImpData fc n tycon opts datacons)
-      = MkImpData fc n (map (map f) tycon) opts (map (map f) datacons)
+      = MkImpData fc n (map (map f) tycon) opts (map (map (map f)) datacons)
     map f (MkImpLater fc n tycon)
       = MkImpLater fc n (map f tycon)
 

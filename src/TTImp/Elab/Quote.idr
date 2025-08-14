@@ -104,13 +104,6 @@ mutual
   getUnquoteUpdate (ISetField p t) = pure $ ISetField p !(getUnquote t)
   getUnquoteUpdate (ISetFieldApp p t) = pure $ ISetFieldApp p !(getUnquote t)
 
-  getUnquoteTy : {auto c : Ref Ctxt Defs} ->
-                 {auto q : Ref Unq (List (Name, FC, RawImp))} ->
-                 {auto u : Ref UST UState} ->
-                 ImpTy ->
-                 Core ImpTy
-  getUnquoteTy (MkImpTy fc n t) = pure $ MkImpTy fc n !(getUnquote t)
-
   getUnquoteRecord : {auto c : Ref Ctxt Defs} ->
                      {auto q : Ref Unq (List (Name, FC, RawImp))} ->
                      {auto u : Ref UST UState} ->
@@ -128,7 +121,7 @@ mutual
                    Core ImpData
   getUnquoteData (MkImpData fc n tc opts cs)
       = pure $ MkImpData fc n !(traverseOpt getUnquote tc) opts
-                         !(traverse getUnquoteTy cs)
+                         !(traverse (traverse getUnquote) cs)
   getUnquoteData (MkImpLater fc n tc)
       = pure $ MkImpLater fc n !(getUnquote tc)
 
@@ -138,7 +131,7 @@ mutual
                    ImpDecl ->
                    Core ImpDecl
   getUnquoteDecl (IClaim (MkWithData fc (MkIClaimData c v opts ty)))
-      = pure $ IClaim (MkWithData fc (MkIClaimData c v opts !(getUnquoteTy ty)))
+      = pure $ IClaim (MkWithData fc (MkIClaimData c v opts !(traverse getUnquote ty)))
   getUnquoteDecl (IData fc v mbt d)
       = pure $ IData fc v mbt !(getUnquoteData d)
   getUnquoteDecl (IDef fc v d)

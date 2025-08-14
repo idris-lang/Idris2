@@ -51,12 +51,12 @@ namePis i (IBindHere fc m ty) = IBindHere fc m (namePis i ty)
 namePis i ty = ty
 
 getSig : ImpDecl -> Maybe Signature
-getSig (IClaim (MkWithData _ $ MkIClaimData c _ opts (MkImpTy fc n ty)))
+getSig (IClaim (MkWithData _ $ MkIClaimData c _ opts ty))
     = Just $ MkSignature { count    = c
                          , flags    = opts
-                         , name     = n
+                         , name     = ty.tyName
                          , isData   = False
-                         , type     = namePis 0 ty
+                         , type     = namePis 0 ty.val
                          }
 getSig (IData _ _ _ (MkImpLater fc n ty))
     = Just $ MkSignature { count    = erased
@@ -121,7 +121,7 @@ mkIfaceData {vars} ifc def_vis env constraints n conName ps dets meths
           conty = mkTy vfc Implicit (map jname ps) $
                   mkTy vfc AutoImplicit (map bhere constraints) $
                   mkTy vfc Explicit (map bname meths) retty
-          con = MkImpTy vfc (NoFC conName) !(bindTypeNames ifc [] (pNames ++ map fst meths ++ toList vars) conty)
+          con = Mk [vfc, NoFC conName] !(bindTypeNames ifc [] (pNames ++ map fst meths ++ toList vars) conty)
           bound = pNames ++ map fst meths ++ toList vars in
 
           pure $ IData vfc def_vis Nothing {- ?? -}
@@ -189,7 +189,7 @@ getMethToplevel {vars} env vis iname cname constraints allmeths bindNames params
          cn <- traverse inCurrentNS sig.name
          let tydecl = IClaim (MkFCVal vfc $ MkIClaimData sig.count vis (if sig.isData then [Inline, Invertible]
                                             else [Inline])
-                                      (MkImpTy vfc cn ty_imp))
+                                      (Mk [vfc, cn] ty_imp))
          let conapp = apply (IVar vfc cname) (map (IBindVar EmptyFC) bindNames)
          let argns = getExplicitArgs 0 sig.type
          -- eta expand the RHS so that we put implicits in the right place
@@ -250,7 +250,7 @@ getConstraintHint {vars} fc env vis iname cname constraints meths params (cn, co
                            (UN (Basic $ "__" ++ show iname ++ "_" ++ show con))
 
          let tydecl = IClaim (MkFCVal fc $ MkIClaimData top vis [Inline, Hint False]
-                             (MkImpTy EmptyFC (NoFC hintname) ty_imp))
+                             (Mk [EmptyFC, NoFC hintname] ty_imp))
 
          let conapp = apply (impsBind (IVar fc cname) constraints)
                             (map (const (Implicit fc True)) meths)
@@ -436,7 +436,7 @@ elabInterface {vars} ifc def_vis env nest constraints iname params dets mcon bod
 
              let dtydecl = IClaim $ MkFCVal vdfc
                                   $ MkIClaimData rig (collapseDefault def_vis) []
-                                  $ MkImpTy EmptyFC (NoFC dn) dty_imp
+                                  $ Mk [EmptyFC, NoFC dn] dty_imp
 
              processDecl [] nest env dtydecl
 
