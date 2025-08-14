@@ -26,6 +26,7 @@ import TTImp.Utils
 
 import Data.List
 
+import Libraries.Data.NameSet
 import Libraries.Data.Tap
 
 %default covering
@@ -266,11 +267,11 @@ makeDef p n
 
 -- Given a clause, return the bindable names, and the ones that were used in
 -- the rhs
-bindableUsed : ImpClause -> Maybe (List Name, List Name)
+bindableUsed : ImpClause -> Maybe (NameSet, NameSet)
 bindableUsed (PatClause fc lhs rhs)
     = let lhsns = findIBindVars lhs
-          rhsns = findAllNames [] rhs in
-          Just (lhsns, filter (\x => x `elem` lhsns) rhsns)
+          rhsns = findAllNames empty rhs in
+          Just (lhsns, filterBy (\x => x `elem` lhsns) rhsns)
 bindableUsed _ = Nothing
 
 propBindableUsed : List ImpClause -> Double
@@ -286,7 +287,7 @@ propBindableUsed def
         = let (b, u) = getProp xs in
               case bindableUsed c of
                    Nothing => (b, u)
-                   Just (b', u') => (b + length (nub b'), u + length (nub u'))
+                   Just (b', u') => (b + size b', u + size u')
 
 -- Sort by highest proportion of bound variables used. This recalculates every
 -- time it looks, which might seem expensive, but it's only inspecting (not

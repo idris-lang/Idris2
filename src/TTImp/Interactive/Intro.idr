@@ -21,6 +21,7 @@ import TTImp.Utils
 
 import Data.SnocList
 
+import Libraries.Data.NameSet
 import Libraries.Data.NatSet
 
 %default covering
@@ -63,7 +64,7 @@ parameters
       let pcons = papply replFC (PRef replFC cons) new_holes
       res <- catch
         (do -- We're desugaring it to the corresponding TTImp
-            icons <- desugar AnyExpr (toList lhsCtxt) pcons
+            icons <- desugar AnyExpr (fromList lhsCtxt) pcons
             ccons <- checkTerm hidx {-is this correct?-} InExpr [] (MkNested []) env icons gty
             newdefs <- get Ctxt
             ncons <- normaliseHoles newdefs env ccons

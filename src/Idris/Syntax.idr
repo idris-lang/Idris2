@@ -19,6 +19,7 @@ import public Idris.Syntax.Pragmas
 
 import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
+import Libraries.Data.NameSet
 import Libraries.Data.SortedMap
 import Libraries.Data.String.Extra
 import Libraries.Data.StringMap
@@ -628,19 +629,23 @@ isPDef (MkWithData fc (PDef cs)) = Just (MkWithData fc cs)
 isPDef _ = Nothing
 
 
-definedInData : PDataDecl -> List Name
-definedInData (MkPData _ n _ _ cons) = n :: concatMap (.nameList) cons
-definedInData (MkPLater _ n _) = [n]
+definedInDataAcc : PDataDecl -> NameSet -> NameSet
+definedInDataAcc (MkPData _ n _ _ cons) = insertFrom (n :: concatMap (.nameList) cons)
+definedInDataAcc (MkPLater _ n _) = insert n
 
 export
-definedIn : List PDeclNoFC -> List Name
-definedIn [] = []
-definedIn (PClaim claim :: ds) = claim.type.nameList ++ definedIn ds
-definedIn (PData _ _ _ d :: ds) = definedInData d ++ definedIn ds
-definedIn (PParameters _ pds :: ds) = definedIn (map val pds) ++ definedIn ds
-definedIn (PUsing _ pds :: ds) = definedIn (map val pds) ++ definedIn ds
-definedIn (PNamespace _ ns :: ds) = definedIn (map val ns) ++ definedIn ds
-definedIn (_ :: ds) = definedIn ds
+definedInAcc : List PDeclNoFC -> NameSet -> NameSet
+definedInAcc [] = id
+definedInAcc (PClaim claim :: ds) = insertFrom claim.type.nameList . definedInAcc ds
+definedInAcc (PData _ _ _ d :: ds) = definedInDataAcc d . definedInAcc ds
+definedInAcc (PParameters _ pds :: ds) = definedInAcc (map val pds) . definedInAcc ds
+definedInAcc (PUsing _ pds :: ds) = definedInAcc (map val pds) . definedInAcc ds
+definedInAcc (PNamespace _ ns :: ds) = definedInAcc (map val ns) . definedInAcc ds
+definedInAcc (_ :: ds) = definedInAcc ds
+
+export
+definedIn : List PDeclNoFC -> NameSet
+definedIn ts = definedInAcc ts empty
 
 public export
 data REPLEval : Type where
@@ -1236,4 +1241,3 @@ Show PDeclNoFC where
   show (PRunElabDecl{}) = "PRunElabDecl"
   show (PDirective{}) = "PDirective"
   show (PBuiltin{}) = "PBuiltin"
-

@@ -16,6 +16,7 @@ import TTImp.Elab.Check
 import TTImp.TTImp
 
 import Libraries.Data.NameMap
+import Libraries.Data.NameSet
 import Data.List
 import Libraries.Data.WithDefault
 
@@ -54,8 +55,8 @@ localHelper {vars} nest env nestdecls_in func
               then map setErased nestdeclsVis
               else nestdeclsVis
 
-         let defNames = definedInBlock emptyNS nestdeclsMult
-         names' <- traverse (applyEnv f) defNames
+         let defNames = definedInBlock emptyNS nestdeclsMult empty
+         names' <- traverse (applyEnv f) (toList defNames)
          let nest' = { names $= (names' ++) } nest
          -- TODO is this comment still up-to-date?
          -- For the local definitions, don't allow access to linear things
@@ -83,6 +84,7 @@ localHelper {vars} nest env nestdecls_in func
          update Ctxt { localHints := oldhints }
          pure res
   where
+
     applyEnv : Int -> Name ->
                Core (Name, (Maybe Name, List (Var vars), FC -> NameType -> Term vars))
     applyEnv outer inner

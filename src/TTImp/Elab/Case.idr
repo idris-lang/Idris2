@@ -26,6 +26,7 @@ import Data.List
 import Data.Maybe
 import Data.String
 import Libraries.Data.NameMap
+import Libraries.Data.NameSet
 import Libraries.Data.NatSet
 import Libraries.Data.VarSet
 import Libraries.Data.WithDefault
@@ -341,7 +342,7 @@ caseBlock {vars} rigc elabinfo fc nest env opts scr scrtm scrty caseRig alts exp
     applyNested : NestedNames vars -> RawImp -> RawImp
     applyNested nest lhs
         = let fc = getFC lhs in
-              substNames [] (map (nestLHS fc) (names nest)) lhs
+              substNames empty (map (nestLHS fc) (names nest)) lhs
 
     updateClause : Name -> Maybe (Var vars) ->
                    NestedNames vars ->

@@ -15,9 +15,11 @@ import Data.Maybe
 
 import Libraries.Data.List.SizeOf
 
-import Libraries.Data.SortedSet
+import Libraries.Data.NameSet
 import Libraries.Data.WithDefault
 import Libraries.Data.SnocList.SizeOf
+
+import Libraries.Data.NameSet
 
 %default covering
 
@@ -808,9 +810,8 @@ implicitsAs n defs ns tm
 ||| receive the additional arguments introduced by a Parameters directive
 export
 definedInBlock : Namespace -> -- namespace to resolve names
-                 List ImpDecl -> List Name
-definedInBlock ns decls =
-    Prelude.toList $ foldl (defName ns) empty decls
+                 List ImpDecl -> NameSet -> NameSet
+definedInBlock = defNames
   where
     getName : ImpTy -> Name
     getName (MkImpTy _ n _) = n.val
@@ -826,17 +827,22 @@ definedInBlock ns decls =
            DN _ _ => NS ns n
            _ => n
 
-    defName : Namespace -> SortedSet Name -> ImpDecl -> SortedSet Name
-    defName ns acc (IClaim c) = insert (expandNS ns (getName c.val.type)) acc
-    defName ns acc (IDef _ nm _) = insert (expandNS ns nm) acc
-    defName ns acc (IData _ _ _ (MkImpData _ n _ _ cons))
-        = foldl (flip insert) acc $ expandNS ns n :: map (expandNS ns . getName) cons
-    defName ns acc (IData _ _ _ (MkImpLater _ n _)) = insert (expandNS ns n) acc
-    defName ns acc (IParameters _ _ pds) = foldl (defName ns) acc pds
-    defName ns acc (IFail _ _ nds) = foldl (defName ns) acc nds
-    defName ns acc (INamespace _ n nds) = foldl (defName (ns <.> n)) acc nds
-    defName ns acc (IRecord _ fldns _ _ rec)
-        = foldl (flip insert) acc $ expandNS ns rec.val.body.name.val :: all
+    defName : Namespace -> ImpDecl -> NameSet -> NameSet
+    defNames : Namespace -> List ImpDecl -> NameSet -> NameSet
+
+    defNames ns [] = id
+    defNames ns (i :: is) = defNames ns is . defName ns i
+
+    defName ns (IClaim c) = insert (expandNS ns (getName c.val.type))
+    defName ns (IDef _ nm _) = insert (expandNS ns nm)
+    defName ns (IData _ _ _ (MkImpData _ n _ _ cons))
+        = insertFrom $ expandNS ns n :: map (expandNS ns . getName) cons
+    defName ns (IData _ _ _ (MkImpLater _ n _)) = insert (expandNS ns n)
+    defName ns (IParameters _ _ pds) = defNames ns pds
+    defName ns (IFail _ _ nds) = defNames ns nds
+    defName ns (INamespace _ n nds) = defNames (ns <.> n) nds
+    defName ns (IRecord _ fldns _ _ rec)
+        = insertFrom $ expandNS ns rec.val.body.name.val :: all
       where
         fldns' : Namespace
         fldns' = maybe ns (\ f => ns <.> mkNamespace f) fldns
@@ -861,8 +867,9 @@ definedInBlock ns decls =
         all : List Name
         all = expandNS ns rec.val.header.name.val :: map (expandNS fldns') (fnsRF ++ fnsUN)
 
-    defName ns acc (IPragma _ pns _) = foldl (flip insert) acc $ map (expandNS ns) pns
-    defName _ acc _ = acc
+    defName ns (IPragma _ pns _) = insertFrom $ map (expandNS ns) pns
+    defName _ _ = id
+
 
 export
 isIVar : RawImp' nm -> Maybe (FC, nm)

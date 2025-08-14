@@ -35,6 +35,7 @@ import Data.List
 import Data.Maybe
 import Data.String
 import Libraries.Data.NameMap
+import Libraries.Data.NameSet
 import Libraries.Text.PrettyPrint.Prettyprinter.Doc
 
 %default covering
@@ -172,22 +173,22 @@ processTTImpDecls {vars} nest env decls
   where
     bindConNames : ImpTy -> Core ImpTy
     bindConNames (MkImpTy fc n ty)
-        = do ty' <- bindTypeNames fc [] (toList vars) ty
+        = do ty' <- bindTypeNames fc [] (fromList vars) ty
              pure (MkImpTy fc n ty')
 
     bindDataNames : ImpData -> Core ImpData
     bindDataNames (MkImpData fc n t opts cons)
-        = do t' <- traverseOpt (bindTypeNames fc [] (toList vars)) t
+        = do t' <- traverseOpt (bindTypeNames fc [] (fromList vars)) t
              cons' <- traverse bindConNames cons
              pure (MkImpData fc n t' opts cons')
     bindDataNames (MkImpLater fc n t)
-        = do t' <- bindTypeNames fc [] (toList vars) t
+        = do t' <- bindTypeNames fc [] (fromList vars) t
              pure (MkImpLater fc n t')
 
     -- bind implicits to make raw TTImp source a bit friendlier
     bindNames : ImpDecl -> Core ImpDecl
     bindNames (IClaim dat@(MkWithData fc (MkIClaimData c vis opts (MkImpTy tfc n ty))))
-        = do ty' <- bindTypeNames dat.fc [] (toList vars) ty
+        = do ty' <- bindTypeNames dat.fc [] (fromList vars) ty
              pure (IClaim (MkWithData fc (MkIClaimData c vis opts (MkImpTy tfc n ty'))))
     bindNames (IData fc vis mbtot d)
         = do d' <- bindDataNames d
