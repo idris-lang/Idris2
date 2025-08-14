@@ -1,7 +1,7 @@
 1/1: Building Issue1031 (Issue1031.idr)
 Error: ? is not a valid pattern
 
-Issue1031:4:13--4:14
+Issue1031:1
  1 | %default total
  2 | 
  3 | ohNo : Void
@@ -30,7 +30,7 @@ Issue1031-3:4:6--4:7
 
 1/1: Building Issue1031-4 (Issue1031-4.idr)
 Error: While processing left hand side of nice. Unsolved holes:
-Main.{dotTm:815} introduced at: 
+Main.{dotTm:1} introduced at: 
 Issue1031-4:4:6--4:10
  1 | %default total
  2 | 

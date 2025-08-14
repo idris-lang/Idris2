@@ -352,6 +352,10 @@ unqualifiedName : Rule String
 unqualifiedName = identPart
 
 export
+userName : Rule Name
+userName = UN . Basic <$> unqualifiedName
+
+export
 holeName : Rule String
 holeName
     = terminal "Expected hole name" $

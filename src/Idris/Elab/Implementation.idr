@@ -249,18 +249,17 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
                traverse_ (processDecl [] nest env) (map mkTopMethDecl fns)
 
                -- 3. Build the record for the implementation
-               let mtops = map (Builtin.fst . snd) fns
+               let mtops = map (fst . snd) fns
                let con = iconstructor cdata
                let ilhs = impsApply (IVar EmptyFC impName)
-                                    (map (\x => (x, IBindVar vfc (show x)))
-                                              (map fst methImps))
+                                    (map (\(x, _) => (x, IBindVar vfc x)) methImps)
                -- RHS is the constructor applied to a search for the necessary
                -- parent constraints, then the method implementations
                defs <- get Ctxt
                let fldTys = getFieldArgs !(normaliseHoles defs Env.empty conty)
                log "elab.implementation" 5 $ "Field types " ++ show fldTys
                let irhs = apply (autoImpsApply (IVar vfc con) $ map (const (ISearch vfc 500)) (parents cdata))
-                                  (map (mkMethField methImps fldTys) fns)
+                                (map (mkMethField methImps fldTys) fns)
                let impFn = IDef vfc impName [PatClause vfc ilhs irhs]
                log "elab.implementation" 5 $ "Implementation record: " ++ show impFn
 
@@ -367,7 +366,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
               mkLam argns
                     (impsApply
                          (applyTo (IVar EmptyFC n) argns)
-                         (map (\n => (n, IVar vfc (UN (Basic $ show n)))) imps))
+                         (map (\n => (n, IVar vfc n)) imps))
       where
         applyUpdate : (Name, RigCount, PiInfo RawImp) ->
                       (Name, RigCount, PiInfo RawImp)
@@ -415,7 +414,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
              -- parameters
              let upds' = !(traverse (applyCon impName) allmeths)
              let mty_in = substNames varsSet upds' meth.type
-             let (upds, mty_in) = runState Prelude.Nil (renameIBinds impsp (findImplicits mty_in) mty_in)
+             let (upds, mty_in) = runState [] (renameIBinds impsp (findImplicits mty_in) mty_in)
              -- Finally update the method type so that implicits from the
              -- parameters are passed through to any earlier methods which
              -- appear in the type
@@ -453,7 +452,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
              let ibinds = map fst methImps
              let methupds' = if isNil ibinds then []
                              else [(n, impsApply (IVar vfc n)
-                                     (map (\x => (x, IBindVar vfc (show x))) ibinds))]
+                                     (map (\x => (x, IBindVar vfc x)) ibinds))]
 
              pure ((meth.name, n, upds, meth.count, meth.totalReq, mty), methupds')
 

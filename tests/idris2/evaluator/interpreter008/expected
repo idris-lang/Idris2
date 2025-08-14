@@ -1,7 +1,7 @@
 1/1: Building Issue2041 (Issue2041.idr)
 Error: Unsolved holes:
-Main.{n:820} introduced at: 
-Issue2041:5:17--5:19
+Main.{n:1} introduced at: 
+Issue2041:1
  1 | ex : {n : Nat} -> String
  2 | ex {n} = "hello" ++ show n
  3 | 
@@ -9,9 +9,9 @@ Issue2041:5:17--5:19
  5 | main = putStrLn ex
                      ^^
 
-Main> Encountered unimplemented hole Main.{n:820}
-Warning: compiling hole Main.{n:820}
-Main> Encountered unimplemented hole Main.{n:4}
-Warning: compiling hole Main.{n:4}
+Main> Encountered unimplemented hole Main.{n:1}
+Warning: compiling hole Main.{n:1}
+Main> Encountered unimplemented hole Main.{n:2}
+Warning: compiling hole Main.{n:2}
 Main> 
 Bye for now!

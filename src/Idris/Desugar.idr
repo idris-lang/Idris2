@@ -1216,7 +1216,7 @@ mutual
                         then concatMap (findBindableNames True ps' [])
                                        (map (boundType . val) params')
                         else []
-           let _ = the (List (String, String)) bnames
+           let _ = the (List (Name, Name)) bnames
 
            let paramsb = map (map (mapType (doBind bnames))) params'
            let _ = the (List ImpParameter) paramsb

@@ -68,7 +68,7 @@ rawImpFromDecl decl = case decl of
 
 public export
 0 FindBindableNamesIn : Type -> Type
-FindBindableNamesIn t = (env : NameSet) -> (used : List String) -> t -> List (String, String)
+FindBindableNamesIn t = (env : NameSet) -> (used : List String) -> t -> List (Name, Name)
 
 -- arg: Is the current expression in argument position?
 --      (We don't want to implicitly bind funtions.)
@@ -82,7 +82,7 @@ findBindableNamesQuot : FindBindableNamesIn RawImp
 findBindableNames True env used (IVar fc nm@(UN (Basic n)))
       -- If the identifier is not bound locally and begins with a lowercase letter..
     = if not (nm `elem` env) && lowerFirst n
-         then [(n, genUniqueStr used n)]
+         then [(nm, UN $ Basic $ genUniqueStr used n)]
          else []
 findBindableNames arg env used (IPi fc rig p mn aty retty)
     = let env' = case mn of
@@ -104,8 +104,8 @@ findBindableNames arg env used (IAutoApp fc fn av)
     = findBindableNames False env used fn ++ findBindableNames True env used av
 findBindableNames arg env used (IWithApp fc fn av)
     = findBindableNames False env used fn ++ findBindableNames True env used av
-findBindableNames arg env used (IAs fc _ _ (UN (Basic n)) pat)
-    = (n, genUniqueStr used n) :: findBindableNames arg env used pat
+findBindableNames arg env used (IAs fc _ _ nm@(UN (Basic n)) pat)
+    = (nm, UN $ Basic $ genUniqueStr used n) :: findBindableNames arg env used pat
 findBindableNames arg env used (IAs fc _ _ n pat)
     = findBindableNames arg env used pat
 findBindableNames arg env used (IMustUnify fc r pat)
@@ -197,14 +197,14 @@ export
 findUniqueBindableNames :
   {auto c : Ref Ctxt Defs} ->
   FC -> (arg : Bool) -> (env : NameSet) -> (used : List String) ->
-  RawImp -> Core (List (String, String))
+  RawImp -> Core (List (Name, Name))
 findUniqueBindableNames fc arg env used t
   = do let assoc = nub (findBindableNames arg env used t)
        when (showShadowingWarning !getSession) $
          do defs <- get Ctxt
             let ctxt = gamma defs
             ns <- map catMaybes $ for assoc $ \ (n, _) => do
-                    ns <- lookupCtxtName (UN (Basic n)) ctxt
+                    ns <- lookupCtxtName n ctxt
                     let ns = flip List.mapMaybe ns $ \(n, _, d) =>
                                case definition d of
                                 -- do not warn about holes: `?a` is not actually
@@ -282,7 +282,7 @@ findIBindVarsAcc (IAutoApp fc fn av)
 findIBindVarsAcc (IWithApp fc fn av)
     = findIBindVarsAcc fn . findIBindVarsAcc av
 findIBindVarsAcc (IBindVar fc v)
-    = insert (UN (Basic v))
+    = insert v
 findIBindVarsAcc (IDelayed fc r t)
     = findIBindVarsAcc t
 findIBindVarsAcc (IDelay fc t)
@@ -315,8 +315,8 @@ mutual
                      _ => IVar fc n
            else IVar fc n
   substNames' True bound ps (IBindVar fc n)
-      = if not (UN (Basic n) `elem` bound)
-           then case lookup (UN $ Basic n) ps of
+      = if not (n `elem` bound)
+           then case lookup n ps of
                      Just t => t
                      _ => IBindVar fc n
            else IBindVar fc n
@@ -371,15 +371,15 @@ mutual
   substNamesClause' : SubstNamesIn ImpClause
   substNamesClause' bvar bound ps (PatClause fc lhs rhs)
       = let bound' = insertFrom
-                     (map (UN . Basic) (map snd (findBindableNames True bound [] lhs)))
+                     (map snd (findBindableNames True bound [] lhs))
                      (union (findIBindVars lhs) bound)
         in
             PatClause fc (substNames' bvar empty [] lhs)
                          (substNames' bvar bound' ps rhs)
   substNamesClause' bvar bound ps (WithClause fc lhs rig wval prf flags cs)
       = let bound' = insertFrom
-                         (map (UN . Basic) (map snd (findBindableNames True bound [] lhs)))
-                         (union (findIBindVars lhs) bound)
+                     (map snd (findBindableNames True bound [] lhs))
+                     (union (findIBindVars lhs) bound)
         in
             WithClause fc (substNames' bvar empty [] lhs) rig
                           (substNames' bvar bound' ps wval) prf flags cs

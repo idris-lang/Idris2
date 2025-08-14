@@ -6,8 +6,8 @@ LOG specialise:5: Attempting to specialise:
 ((Main.smult (Prelude.Types.S Prelude.Types.Z)) n) = n
 ((Main.smult (Prelude.Types.S m)) n) = ((((Prelude.Num.(+) [ty = Prelude.Types.Nat]) [__con = Prelude.Types.Num implementation at Prelude.Types:1]) n) ((Main.smult m) n))
 LOG specialise:5: New patterns for _PE.PE_smult_4e8901402355876e:
-(_PE.PE_smult_4e8901402355876e $_pe0) = (($resolved1 (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S Prelude.Types.Z)))) _pe0)
-LOG specialise:5: New RHS: (Prelude.Types.plus _pe0[0] (Prelude.Types.plus _pe0[0] _pe0[0]))
+(_PE.PE_smult_4e8901402355876e ${_pe:1}) = (($resolved1 (Prelude.Types.S (Prelude.Types.S (Prelude.Types.S Prelude.Types.Z)))) {_pe:1})
+LOG specialise:5: New RHS: (Prelude.Types.plus {_pe:1}[0] (Prelude.Types.plus {_pe:1}[0] {_pe:1}[0]))
 LOG specialise:5: Already specialised _PE.PE_smult_4e8901402355876e
 /* Main.main : IO () */
 function Main_main($0) {

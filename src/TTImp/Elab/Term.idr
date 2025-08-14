@@ -185,7 +185,7 @@ checkTerm rig elabinfo nest env (ICoerced fc tm) exp
 checkTerm rig elabinfo nest env (IBindHere fc binder sc) exp
     = checkBindHere rig elabinfo nest env fc binder sc exp
 checkTerm rig elabinfo nest env (IBindVar fc n) exp
-    = checkBindVar rig elabinfo nest env fc (Basic n) exp
+    = checkBindVar rig elabinfo nest env fc n exp
 checkTerm rig elabinfo nest env (IAs fc nameFC side n_in tm) exp
     = checkAs rig elabinfo nest env fc nameFC side n_in tm exp
 checkTerm rig elabinfo nest env (IMustUnify fc reason tm) exp
