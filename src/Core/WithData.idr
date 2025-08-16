@@ -197,13 +197,13 @@ WithName = AddMetadata Name'
 ||| the "tyname" label containing a `FCBind Name` for metadata records
 public export
 TyName' : KeyVal
-TyName' = "tyname" :-: FCBind Name
+TyName' = "tyname" :-: WithFC Name
 
 ||| Extract the "tyname" value from the metadata record
 export
 (.tyName) : {n : Nat} ->
-            (inRange : NameInRange "tyname" fields === Just (n, FCBind Name)) =>
-            WithData fields a -> FCBind Name
+            (inRange : NameInRange "tyname" fields === Just (n, WithFC Name)) =>
+            WithData fields a -> WithFC Name
 (.tyName) = WithData.get "tyname" @{inRange}
 
 

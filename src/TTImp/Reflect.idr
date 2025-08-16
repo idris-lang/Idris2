@@ -313,10 +313,10 @@ mutual
     reify defs val@(NDCon _ n _ _ args)
         = case (dropAllNS !(full (gamma defs) n), map snd args) of
                (UN (Basic "MkTy"), [w, y, z])
-                    => do w' <- reify defs !(evalClosure defs w)
-                          y' <- reify defs !(evalClosure defs y)
-                          z' <- reify defs !(evalClosure defs z)
-                          pure (MkImpTy w' y' z')
+                    => do fc' <- reify defs !(evalClosure defs w)
+                          name' <- the (Core (WithFC Name)) (reify defs !(evalClosure defs y))
+                          term' <- reify defs !(evalClosure defs z)
+                          pure (Mk [fc', name'] term')
                _ => cantReify val "ITy"
     reify defs val = cantReify val "ITy"
 
@@ -696,10 +696,10 @@ mutual
 
   export
   Reflect ImpTy where
-    reflect fc defs lhs env (MkImpTy w x z)
-        = do w' <- reflect fc defs lhs env w
-             x' <- reflect fc defs lhs env x
-             z' <- reflect fc defs lhs env z
+    reflect fc defs lhs env ty
+        = do w' <- reflect fc defs lhs env ty.fc
+             x' <- reflect fc defs lhs env ty.tyName
+             z' <- reflect fc defs lhs env ty.val
              appCon fc defs (reflectionttimp "MkTy") [w', x', z']
 
   export
