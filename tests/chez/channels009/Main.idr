@@ -32,7 +32,7 @@ main = do
         _ =>
           fork (consumer c)
 
-  () <- usleep 10000
+  -- () <- usleep 10000
 
   -- Start 5 producers
   p1 <- fork $ producer c 0
@@ -41,12 +41,11 @@ main = do
   p4 <- fork $ producer c 3
   p5 <- fork $ producer c 4
 
-  -- Wait for all consumer and producers
+  -- Wait for all consumers and producers
   threadWait p1
   threadWait p2
   threadWait p3
   threadWait p4
   threadWait p5
   ignore $ traverse (\t => threadWait t) consumerThreads
-  usleep 100000
 
