@@ -42,10 +42,10 @@ main = do
   p5 <- fork $ producer c 4
 
   -- Wait for all consumer and producers
+  ignore $ traverse (\t => threadWait t) consumerThreads
   threadWait p1
   threadWait p2
   threadWait p3
   threadWait p4
   threadWait p5
-  ignore $ traverse (\t => threadWait t) consumerThreads
 
