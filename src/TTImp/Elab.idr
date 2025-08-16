@@ -29,7 +29,7 @@ findPLetRenames : {vars : _} ->
                   Term vars -> List (Name, (RigCount, Name))
 findPLetRenames (Bind fc n (PLet _ c (Local _ _ idx p) ty) sc)
     = case nameAt p of
-           x@(MN _ _) => (x, (c, n)) :: findPLetRenames sc
+           x@(MN {}) => (x, (c, n)) :: findPLetRenames sc
            _ => findPLetRenames sc
 findPLetRenames (Bind fc n _ sc) = findPLetRenames sc
 findPLetRenames tm = []
@@ -37,7 +37,7 @@ findPLetRenames tm = []
 doPLetRenames : {vars : _} ->
                 List (Name, (RigCount, Name)) ->
                 List Name -> Term vars -> Term vars
-doPLetRenames ns drops (Bind fc n b@(PLet _ _ _ _) sc)
+doPLetRenames ns drops (Bind fc n b@(PLet {}) sc)
     = if n `elem` drops
          then subst (Erased fc Placeholder) (doPLetRenames ns drops sc)
          else Bind fc n b (doPLetRenames ns drops sc)
@@ -77,7 +77,7 @@ normaliseHoleTypes
     normaliseH defs i
         = whenJust !(lookupCtxtExact (Resolved i) (gamma defs)) $ \ gdef =>
             case definition gdef of
-              Hole _ _ => updateType defs i gdef
+              Hole {} => updateType defs i gdef
               _ => pure ()
 
 export
@@ -263,16 +263,14 @@ checkTermSub defining mode opts nest env env' sub tm ty
 
          pure (fst res)
   where
-    bindImps' : {vs : _} ->
-                FC -> Env Term vs -> List (Name, Term vs) -> RawImp ->
+    bindImps' : FC -> Env Term vs -> List (Name, Term vs) -> RawImp ->
                 Core RawImp
     bindImps' loc env [] ty = pure ty
     bindImps' loc env ((n, ty) :: ntys) sc
         = pure $ IPi loc erased Implicit (Just n)
                      (Implicit loc True) !(bindImps' loc env ntys sc)
 
-    bindImps : {vs : _} ->
-               FC -> Env Term vs -> List (Name, Term vs) -> RawImp ->
+    bindImps : FC -> Env Term vs -> List (Name, Term vs) -> RawImp ->
                Core RawImp
     bindImps loc env ns (IBindHere fc m ty)
         = pure $ IBindHere fc m !(bindImps' loc env ns ty)

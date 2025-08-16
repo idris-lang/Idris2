@@ -288,8 +288,8 @@ isAbsolute' : Path -> Bool
 isAbsolute' path =
   if isWindows then
     case path.volume of
-      Just (UNC _ _) => True
-      Just (Disk _) => path.hasRoot
+      Just (UNC {})  => True
+      Just (Disk {}) => path.hasRoot
       Nothing => False
   else
     path.hasRoot

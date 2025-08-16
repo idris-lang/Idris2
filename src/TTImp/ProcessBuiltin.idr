@@ -35,7 +35,7 @@ showDefType Delayed = "delayed"
 getReturnType : {vars : _} -> Term vars -> Maybe (vars ** Term vars)
 getReturnType tm@(Bind _ x b scope) = case b of
     Let _ _ val _ => getReturnType $ subst {x} val scope
-    Pi _ _ _ _ => getReturnType scope
+    Pi {} => getReturnType scope
     _ => Nothing
 getReturnType tm = Just (vars ** tm)
 
@@ -115,25 +115,25 @@ termConMatch tm0 (TDelayed _ _ tm1) = termConMatch tm0 tm1
 termConMatch (TDelay _ _ tm0 x0) (TDelay _ _ tm1 x1) = termConMatch tm0 tm1 && termConMatch x0 x1
 termConMatch (TForce _ _ tm0) tm1 = termConMatch tm0 tm1
 termConMatch tm0 (TForce _ _ tm1) = termConMatch tm0 tm1
-termConMatch (PrimVal _ _) (PrimVal _ _) = True -- no constructor to check.
-termConMatch (Erased _ _) (Erased _ _) = True -- return type can't erased?
-termConMatch (TType _ _) (TType _ _) = True
+termConMatch (PrimVal {}) (PrimVal {}) = True -- no constructor to check.
+termConMatch (Erased {}) (Erased {}) = True -- return type can't erased?
+termConMatch (TType {}) (TType {}) = True
 termConMatch _ _ = False
 
 ||| Check a type is strict.
 isStrict : Term vs -> Bool
-isStrict (Local _ _ _ _) = True
-isStrict (Ref _ _ _) = True
+isStrict (Local {}) = True
+isStrict (Ref {}) = True
 isStrict (Meta _ _ i args) = all isStrict args
 isStrict (Bind _ _ b s) = isStrict (binderType b) && isStrict s
 isStrict (App _ f x) = isStrict f && isStrict x
 isStrict (As _ _ a p) = isStrict a && isStrict p
-isStrict (TDelayed _ _ _) = False
+isStrict (TDelayed {}) = False
 isStrict (TDelay _ _ f x) = isStrict f && isStrict x
 isStrict (TForce _ _ tm) = isStrict tm
-isStrict (PrimVal _ _) = True
-isStrict (Erased _ _) = True
-isStrict (TType _ _) = True
+isStrict (PrimVal {}) = True
+isStrict (Erased {}) = True
+isStrict (TType {}) = True
 
 ||| Get the name and definition of a list of names.
 getConsGDef :

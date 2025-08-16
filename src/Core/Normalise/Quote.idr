@@ -196,7 +196,7 @@ mutual
            pure $ applyStackWithFC f' args'
     where
       isRef : NHead vars -> Bool
-      isRef (NRef{}) = True
+      isRef (NRef {}) = True
       isRef _ = False
   quoteGenNF q opts defs bound env (NDCon fc n t ar args)
       = do args' <- quoteArgsWithFC q opts defs bound env args

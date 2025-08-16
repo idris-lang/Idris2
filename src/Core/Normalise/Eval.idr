@@ -162,7 +162,7 @@ parameters (defs : Defs) (topopts : EvalOpts)
                    {free : _} ->
                    Env Term free ->
                    NF free -> Stack free -> Core (NF free)
-    applyToStack env (NBind fc _ (Lam _ _ _ _) sc) (arg :: stk)
+    applyToStack env (NBind fc _ (Lam {}) sc) (arg :: stk)
         = do arg' <- sc defs $ snd arg
              applyToStack env arg' stk
     applyToStack env (NBind fc x b@(Let _ r val ty) sc) stk
@@ -370,9 +370,9 @@ parameters (defs : Defs) (topopts : EvalOpts)
                    else pure NoMatch
              _ => pure NoMatch
     -- Type of type matching, in typecase
-    tryAlt env loc opts fc stk (NType _ _) (ConCase (UN (Basic "Type")) tag [] sc)
+    tryAlt env loc opts fc stk (NType {}) (ConCase (UN (Basic "Type")) tag [] sc)
          = evalTree env loc opts fc stk sc
-    tryAlt env loc opts fc stk (NType _ _) (ConCase _ _ _ _)
+    tryAlt env loc opts fc stk (NType {}) (ConCase {})
          = pure NoMatch
     -- Arrow matching, in typecase
     tryAlt {more}

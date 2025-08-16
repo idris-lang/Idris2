@@ -35,7 +35,7 @@ rawImpFromDecl decl = case decl of
     IData fc1 y _ (MkImpLater fc2 n tycon) => [tycon]
     IDef fc1 y ys => getFromClause !ys
     IParameters fc1 ys zs => rawImpFromDecl !zs ++ map getParamTy (forget ys)
-    IRecord fc1 y z _ (MkWithData _  (MkImpRecord header body)) => do
+    IRecord fc1 y z _ (MkWithData _ (MkImpRecord header body)) => do
         binder <- header.val
         field <- body.val
         getFromPiInfo binder.val.info ++ [binder.val.boundType] ++ getFromIField field
@@ -45,7 +45,7 @@ rawImpFromDecl decl = case decl of
     IRunElabDecl fc1 y => [] -- Not sure about this either
     IPragma _ _ f => []
     ILog k => []
-    IBuiltin _ _ _ => []
+    IBuiltin {} => []
   where getParamTy : ImpParameter' RawImp -> RawImp
         getParamTy binder = binder.val.boundType
         getFromClause : ImpClause -> List RawImp
@@ -205,7 +205,7 @@ findUniqueBindableNames fc arg env used t
                                 -- do not warn about holes: `?a` is not actually
                                 -- getting shadowed as it will not become a
                                 -- toplevel declaration
-                                 Hole _ _ => Nothing
+                                 Hole {} => Nothing
                                  _ => pure n
                     pure $ MkPair n <$> fromList ns
             whenJust (fromList ns) $ recordWarning . ShadowingGlobalDefs fc
@@ -591,7 +591,7 @@ getArgName defs x bound allvars ty
     namesFor n = lookupName n (NameMap.toList (namedirectives defs))
 
     findNamesM : NF vars -> Core (Maybe (List String))
-    findNamesM (NBind _ x (Pi _ _ _ _) _)
+    findNamesM (NBind _ x (Pi {}) _)
         = pure (Just ["f", "g"])
     findNamesM (NTCon _ n d [(_, v)]) = do
           case dropNS !(full (gamma defs) n) of

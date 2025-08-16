@@ -103,7 +103,7 @@ SExpable Reply where
   toSExp (Intermediate payload id) = SExpList [SymbolAtom "output",
                                                       toSExp payload, toSExp id]
   toSExp (WriteString str id) = SExpList [SymbolAtom "write-string", toSExp str, toSExp id]
-  toSExp (SetPrompt str   id) = SExpList [SymbolAtom "set-prompt"  , toSExp str, toSExp id]
+  toSExp (SetPrompt   str id) = SExpList [SymbolAtom "set-prompt"  , toSExp str, toSExp id]
   toSExp (Warning fc str spans id) = SExpList [SymbolAtom "warning",
     SExpList $ toSExp fc.file :: toSExp (fc.range.startLine, fc.range.startCol)
                               :: toSExp (fc.range.endLine  , fc.range.endCol  )
@@ -126,8 +126,8 @@ FromSExpable Reply where
      do Just $ SetPrompt !(fromSExp str) !(fromSExp iden)
   fromSExp (SExpList [SymbolAtom "warning"
     , SExpList [filename, SExpList [startLine, startCol]
-                      , SExpList [endLine  , endCol  ]
-                      , str]
+                        , SExpList [endLine  , endCol  ]
+                        , str]
     , iden]) = do
       pure $ Warning (MkFileContext
            { file = !(fromSExp filename)

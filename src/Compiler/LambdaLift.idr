@@ -393,8 +393,8 @@ markUsed {vars} {prf} idx (MkUsed us) =
   MkUsed newUsed
     where
     finIdx : {vars : _} -> {idx : _} ->
-               (0 prf : IsVar x idx vars) ->
-               Fin (length vars)
+             (0 prf : IsVar x idx vars) ->
+             Fin (length vars)
     finIdx {idx=Z} First = FZ
     finIdx {idx=S x} (Later l) = FS (finIdx l)
 
@@ -411,10 +411,10 @@ dropped (x::xs) (False::us) = x::(dropped xs us)
 dropped (x::xs) (True::us) = dropped xs us
 
 usedVars : {vars : _} ->
-            {auto l : Ref Lifts LDefs} ->
-            Used vars ->
-            Lifted vars ->
-            Used vars
+           {auto l : Ref Lifts LDefs} ->
+           Used vars ->
+           Lifted vars ->
+           Used vars
 usedVars used (LLocal {idx} fc prf) =
   markUsed {prf} idx used
 usedVars used (LAppName fc lazy n args) =
@@ -450,9 +450,9 @@ usedVars used (LConstCase fc sc alts def) =
     usedConstAlt : {default Nothing lazy : Maybe LazyReason} ->
                     Used vars -> LiftedConstAlt vars -> Used vars
     usedConstAlt used (MkLConstAlt c sc) = usedVars used sc
-usedVars used (LPrimVal _ _) = used
-usedVars used (LErased _) = used
-usedVars used (LCrash _ _) = used
+usedVars used (LPrimVal {}) = used
+usedVars used (LErased {})  = used
+usedVars used (LCrash {})   = used
 
 dropIdx : {vars : _} ->
           {idx : _} ->
@@ -469,11 +469,11 @@ dropIdx (_::xs) unused First = first
 dropIdx (_::xs) unused (Later p) = Var.later $ dropIdx xs unused p
 
 dropUnused : {vars : _} ->
-              {auto _ : Ref Lifts LDefs} ->
-              {outer : Scope} ->
-              (unused : Vect (length vars) Bool) ->
-              (l : Lifted (outer ++ vars)) ->
-              Lifted (outer ++ (dropped vars unused))
+             {auto _ : Ref Lifts LDefs} ->
+             {outer : Scope} ->
+             (unused : Vect (length vars) Bool) ->
+             (l : Lifted (outer ++ vars)) ->
+             Lifted (outer ++ (dropped vars unused))
 dropUnused _ (LPrimVal fc val) = LPrimVal fc val
 dropUnused _ (LErased fc) = LErased fc
 dropUnused _ (LCrash fc msg) = LCrash fc msg
@@ -521,8 +521,8 @@ dropUnused {vars} {outer} unused (LConstCase fc sc alts def) =
     dropConstCase (MkLConstAlt c val) = MkLConstAlt c (dropUnused unused val)
 
 mutual
-  makeLam : {auto l : Ref Lifts LDefs} ->
-            {vars : _} ->
+  makeLam : {vars : _} ->
+            {auto l : Ref Lifts LDefs} ->
             {doLazyAnnots : Bool} ->
             {default Nothing lazy : Maybe LazyReason} ->
             FC -> (bound : Scope) ->

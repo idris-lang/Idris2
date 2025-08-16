@@ -125,7 +125,7 @@ getZBranch (x :: xs) = tryZBranch x <|> getZBranch xs
 nat : {auto s : Ref NextMN Int} -> CExp vars -> Core (Maybe (CExp vars))
 nat (CCon fc _ ZERO _ []) = pure $ Just $ CPrimVal fc (BI 0)
 nat (CCon fc _ SUCC _ [x]) = pure $ Just $ COp fc (Add IntegerType) [CPrimVal fc (BI 1), x]
-nat (CConCase fc sc@(CLocal _ _) alts def) =
+nat (CConCase fc sc@(CLocal {}) alts def) =
     pure $ if any natBranch alts
             then
                 let defb = fromMaybe (CCrash fc "Nat case not covered") def
@@ -175,7 +175,7 @@ unitTree exp@(CConCase fc sc alts def) =
     let [MkConAlt _ UNIT _ [] e] = alts
             | _ => pure Nothing
     in case sc of -- TODO: Check scrutinee has no effect, and skip let binding
-        CLocal _ _ => pure $ Just e
+        CLocal {} => pure $ Just e
         _ => pure $ Just $ CLet fc !(newMN "_unit") NotInline sc (weaken e)
 unitTree t = pure Nothing
 

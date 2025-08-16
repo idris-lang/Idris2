@@ -38,7 +38,7 @@ record HoleData where
 export
 SExpable HoleData where
   toSExp hole = SExpList
-    [ StringAtom (show  hole.name)
+    [ StringAtom (show hole.name)
     , toSExp hole.context
     , SExpList [ toSExp hole.type   -- Conclusion
                , SExpList[]]        -- TODO: Highlighting information

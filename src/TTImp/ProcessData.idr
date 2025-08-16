@@ -56,7 +56,7 @@ checkIsType : {auto c : Ref Ctxt Defs} ->
 checkIsType loc n env nf
     = checkRetType env nf $
          \case
-           NType _ _ => pure ()
+           NType {} => pure ()
            _ => throw $ BadTypeConType loc n
 
 checkFamily : {auto c : Ref Ctxt Defs} ->
@@ -64,7 +64,7 @@ checkFamily : {auto c : Ref Ctxt Defs} ->
 checkFamily loc cn tn env nf
     = checkRetType env nf $
          \case
-           NType _ _ => throw $ BadDataConType loc cn tn
+           NType {} => throw $ BadDataConType loc cn tn
            NTCon _ n' _ _ =>
                  if tn == n'
                     then pure ()
@@ -137,7 +137,7 @@ getIndexPats tm
          getPats defs ret
   where
     getRetType : Defs -> ClosedNF -> Core ClosedNF
-    getRetType defs (NBind fc _ (Pi _ _ _ _) sc)
+    getRetType defs (NBind fc _ (Pi {}) sc)
         = do sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
              getRetType defs sc'
     getRetType defs t = pure t
@@ -186,7 +186,7 @@ getDetags fc tys
 
     allDisjointWith : ClosedNF -> List ClosedNF -> Core Bool
     allDisjointWith val [] = pure True
-    allDisjointWith (NErased _ _) _ = pure False
+    allDisjointWith (NErased {}) _ = pure False
     allDisjointWith val (nf :: nfs)
         = do ok <- disjoint val nf
              if ok then allDisjointWith val nfs

@@ -190,16 +190,14 @@ mlet fc val sc
          pure $ ALet fc i val (sc (ALocal i))
 
 mutual
-  anfArgs : {vars : _} ->
-            {auto v : Ref Next Int} ->
+  anfArgs : {auto v : Ref Next Int} ->
             FC -> AVars vars ->
             List (Lifted vars) -> (List AVar -> ANF) -> Core ANF
   anfArgs fc vs args f
       = do args' <- traverse (anf vs) args
            letBind fc args' f
 
-  anf : {vars : _} ->
-        {auto v : Ref Next Int} ->
+  anf : {auto v : Ref Next Int} ->
         AVars vars -> Lifted vars -> Core ANF
   anf vs (LLocal fc p) = pure $ AV fc (ALocal (lookup p vs))
   anf vs (LAppName fc lazy n args)
@@ -239,8 +237,7 @@ mutual
   anf vs (LErased fc) = pure $ AErased fc
   anf vs (LCrash fc err) = pure $ ACrash fc err
 
-  anfConAlt : {vars : _} ->
-              {auto v : Ref Next Int} ->
+  anfConAlt : {auto v : Ref Next Int} ->
               AVars vars -> LiftedConAlt vars -> Core AConAlt
   anfConAlt vs (MkLConAlt n ci t args sc)
       = do (is, vs') <- bindArgs args vs
@@ -254,8 +251,7 @@ mutual
                (is, vs') <- bindArgs ns vs
                pure (i :: is, i :: vs')
 
-  anfConstAlt : {vars : _} ->
-                {auto v : Ref Next Int} ->
+  anfConstAlt : {auto v : Ref Next Int} ->
                 AVars vars -> LiftedConstAlt vars -> Core AConstAlt
   anfConstAlt vs (MkLConstAlt c sc)
       = pure $ MkAConstAlt c !(anf vs sc)

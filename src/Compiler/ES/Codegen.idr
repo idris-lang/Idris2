@@ -587,17 +587,17 @@ jsPrim nm docs = case (dropAllNS nm, docs) of
 -- whether it needs to be lifted to the surrounding scope and assigned
 -- to a new variable.
 isArg : CGMode -> Exp -> Bool
-isArg Pretty (ELam _ $ Block _ _)           = False
-isArg Pretty (ELam _ $ ConSwitch _ _ _ _)   = False
-isArg Pretty (ELam _ $ ConstSwitch _ _ _ _) = False
-isArg Pretty (ELam _ $ Error _)             = False
-isArg _      _                              = True
+isArg Pretty (ELam _ $ Block {})       = False
+isArg Pretty (ELam _ $ ConSwitch {})   = False
+isArg Pretty (ELam _ $ ConstSwitch {}) = False
+isArg Pretty (ELam _ $ Error {})       = False
+isArg _      _                         = True
 
 -- like `isArg` but for function expressions, which we are about
 -- to apply
 isFun : Exp -> Bool
-isFun (ELam _ _) = False
-isFun _          = True
+isFun (ELam {}) = False
+isFun _         = True
 
 -- creates a JS switch statment from the given scrutinee and
 -- case blocks (the first entry in a pair is the value belonging
@@ -648,10 +648,10 @@ mutual
       -> Exp
       -> Core Doc
   exp (EMinimal x) = pure $ minimal !(get NoMangleMap) x
-  exp (ELam xs (Return $ y@(ECon _ _ _))) = do
+  exp (ELam xs (Return y@(ECon {}))) = do
      nm <- get NoMangleMap
      map (\e => lambdaArgs nm xs <+> paren e) (exp y)
-  exp (ELam xs (Return $ y)) = do
+  exp (ELam xs (Return y)) = do
      nm <- get NoMangleMap
      (lambdaArgs nm xs <+> ) <$> exp y
   exp (ELam xs y) = do

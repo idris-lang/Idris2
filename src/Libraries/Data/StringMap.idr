@@ -297,7 +297,7 @@ export
 merge : Semigroup v => StringMap v -> StringMap v -> StringMap v
 merge = mergeWith (<+>)
 
-||| Left-biased merge, also keeps the ordering specified  by the left map.
+||| Left-biased merge, also keeps the ordering specified by the left map.
 export
 mergeLeft : StringMap v -> StringMap v -> StringMap v
 mergeLeft x y = mergeWith const x y

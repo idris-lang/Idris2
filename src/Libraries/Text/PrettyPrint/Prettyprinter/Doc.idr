@@ -609,7 +609,7 @@ removeTrailingWhitespace = fromMaybe internalError . go (RecordedWithespace [] 0
       if l > 1
          then SAnnPop <$> go (AnnotationLevel (l - 1)) rest
          else SAnnPop <$> go (RecordedWithespace [] 0) rest
-    go (RecordedWithespace _ _) SEmpty = pure SEmpty
+    go (RecordedWithespace {}) SEmpty = pure SEmpty
     go (RecordedWithespace lines spaces) (SChar ' ' rest) = go (RecordedWithespace lines (spaces + 1)) rest
     go (RecordedWithespace lines spaces) (SChar c rest) =
       do rest' <- go (RecordedWithespace [] 0) rest
@@ -684,7 +684,7 @@ layoutWadlerLeijen fits pageWidth_ doc = best 0 0 (Cons 0 doc Nil)
     best nl cc (Cons i Line ds) = let x = best i i ds
                                       i' = case x of
                                                 SEmpty => 0
-                                                SLine _ _ => 0
+                                                SLine {} => 0
                                                 _ => i in
                                       SLine i' x
     best nl cc c@(Cons i (FlatAlt x y) ds) = best nl cc $ assert_smaller c (Cons i x ds)

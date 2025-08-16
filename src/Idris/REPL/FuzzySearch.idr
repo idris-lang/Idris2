@@ -158,5 +158,5 @@ fuzzySearch expr = do
             -> GlobalDef
             -> Core Bool
   predicate neg pos def = case definition def of
-    Hole{} => pure False
+    Hole {} => pure False
     _ => fuzzyMatch neg pos def.type

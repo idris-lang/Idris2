@@ -221,9 +221,9 @@ mutual
   mightMatch : {auto c : Ref Ctxt Defs} ->
                {vars : _} ->
                Defs -> NF vars -> ClosedNF -> Core TypeMatch
-  mightMatch defs target (NBind fc n (Pi _ _ _ _) sc)
+  mightMatch defs target (NBind fc n (Pi {}) sc)
       = mightMatchD defs target !(sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder)))
-  mightMatch defs (NBind _ _ _ _) (NBind _ _ _ _) = pure Poly -- lambdas might match
+  mightMatch defs (NBind {}) (NBind {}) = pure Poly -- lambdas might match
   mightMatch defs (NTCon _ n a args) (NTCon _ n' a' args')
       = if n == n'
            then do amatch <- mightMatchArgs defs (map snd args) (map snd args')
@@ -236,11 +236,11 @@ mutual
            else pure NoMatch
   mightMatch defs (NPrimVal _ x) (NPrimVal _ y)
       = if x == y then pure Concrete else pure NoMatch
-  mightMatch defs (NType _ _) (NType _ _) = pure Concrete
-  mightMatch defs (NApp _ _ _) _ = pure Poly
-  mightMatch defs (NErased _ _) _ = pure Poly
-  mightMatch defs _ (NApp _ _ _) = pure Poly
-  mightMatch defs _ (NErased _ _) = pure Poly
+  mightMatch defs (NType {}) (NType {}) = pure Concrete
+  mightMatch defs (NApp {}) _ = pure Poly
+  mightMatch defs (NErased {}) _ = pure Poly
+  mightMatch defs _ (NApp {}) = pure Poly
+  mightMatch defs _ (NErased {}) = pure Poly
   mightMatch _ _ _ = pure NoMatch
 
 -- Return true if the given name could return something of the given target type
@@ -256,7 +256,7 @@ couldBeFn : {auto c : Ref Ctxt Defs} ->
             {vars : _} ->
             Defs -> NF vars -> RawImp -> Core TypeMatch
 couldBeFn defs ty (IVar _ n) = couldBeName defs ty n
-couldBeFn defs ty (IAlternative _ _ _) = pure Concrete
+couldBeFn defs ty (IAlternative {}) = pure Concrete
 couldBeFn defs ty _ = pure Poly
 
 -- Returns Nothing if there's no possibility the expression's type matches
@@ -271,12 +271,12 @@ couldBe {vars} defs ty@(NTCon _ n _ _) app
           Concrete => pure $ Just (True, app)
           Poly => pure $ Just (False, app)
           NoMatch => pure Nothing
-couldBe {vars} defs ty@(NPrimVal _ _) app
+couldBe {vars} defs ty@(NPrimVal {}) app
    = case !(couldBeFn {vars} defs ty (getFn app)) of
           Concrete => pure $ Just (True, app)
           Poly => pure $ Just (False, app)
           NoMatch => pure Nothing
-couldBe {vars} defs ty@(NType _ _) app
+couldBe {vars} defs ty@(NType {}) app
    = case !(couldBeFn {vars} defs ty (getFn app)) of
           Concrete => pure $ Just (True, app)
           Poly => pure $ Just (False, app)

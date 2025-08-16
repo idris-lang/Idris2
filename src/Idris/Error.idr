@@ -144,7 +144,7 @@ keyword = annotate (Syntax Keyword)
 pShowMN : {vars : _} -> Term vars -> Env t vars -> Doc IdrisAnn -> Doc IdrisAnn
 pShowMN t env acc = case t of
   Local fc _ idx p => case dropAllNS (nameAt p) of
-      MN _ _ => acc <++> parens ("implicitly bound at" <++> pretty0 (getBinderLoc p env))
+      MN {} => acc <++> parens ("implicitly bound at" <++> pretty0 (getBinderLoc p env))
       _ => acc
   _ => acc
 
@@ -476,8 +476,8 @@ perrorRaw (AllFailed ts)
 
     allUndefined : List (Maybe Name, Error) -> Maybe Error
     allUndefined [] = Nothing
-    allUndefined [(_, err@(UndefinedName _ _))] = Just err
-    allUndefined ((_, err@(UndefinedName _ _)) :: es) = allUndefined es
+    allUndefined [(_, err@(UndefinedName {}))] = Just err
+    allUndefined ((_, err@(UndefinedName {})) :: es) = allUndefined es
     allUndefined _ = Nothing
 perrorRaw (RecordTypeNeeded fc _)
     = pure $ errorDesc (reflow "Can't infer type for this record update.") <+> line <+> !(ploc fc)
@@ -533,8 +533,8 @@ perrorRaw (CantSolveGoal fc gam env g reason)
     dropEnv : {vars : _} ->
               Env Term vars -> Term vars ->
               (ns ** (Env Term ns, Term ns))
-    dropEnv env (Bind _ n b@(Pi _ _ _ _) sc) = dropEnv (b :: env) sc
-    dropEnv env (Bind _ n b@(Let _ _ _ _) sc) = dropEnv (b :: env) sc
+    dropEnv env (Bind _ n b@(Pi {}) sc) = dropEnv (b :: env) sc
+    dropEnv env (Bind _ n b@(Let {}) sc) = dropEnv (b :: env) sc
     dropEnv env tm = (_ ** (env, tm))
 
 perrorRaw (DeterminingArg fc n i env g)

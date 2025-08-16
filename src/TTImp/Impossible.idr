@@ -29,14 +29,14 @@ match nty (n, i, rty)
          sameRet nty rtynf
   where
     sameRet : ClosedNF -> ClosedNF -> Core Bool
-    sameRet _ (NApp _ _ _) = pure True
-    sameRet _ (NErased _ _) = pure True
-    sameRet (NApp _ _ _) _ = pure True
-    sameRet (NErased _ _) _ = pure True
+    sameRet _ (NApp {}) = pure True
+    sameRet _ (NErased {}) = pure True
+    sameRet (NApp {}) _ = pure True
+    sameRet (NErased {}) _ = pure True
     sameRet (NTCon _ n _ _) (NTCon _ n' _ _) = pure (n == n')
     sameRet (NPrimVal _ c) (NPrimVal _ c') = pure (c == c')
-    sameRet (NType _ _) (NType _ _) = pure True
-    sameRet nf (NBind fc _ (Pi _ _ _ _) sc)
+    sameRet (NType {}) (NType {}) = pure True
+    sameRet nf (NBind fc _ (Pi {}) sc)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
              sameRet nf sc'

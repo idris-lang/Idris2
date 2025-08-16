@@ -143,7 +143,7 @@ impossibleErrOK defs (CantSolveEq fc gam env l r)
          impossibleOK defs !(nf defs env l)
                            !(nf defs env r)
 impossibleErrOK defs (BadDotPattern _ _ ErasedArg _ _) = pure True
-impossibleErrOK defs (CyclicMeta _ _ _ _) = pure True
+impossibleErrOK defs (CyclicMeta {}) = pure True
 impossibleErrOK defs (AllFailed errs)
     = anyM (impossibleErrOK defs) (map snd errs)
 impossibleErrOK defs (WhenUnifying _ _ _ _ _ err)
@@ -222,9 +222,9 @@ recoverableErr defs (CantSolveEq fc gam env l r)
        recoverable defs !(nf defs env l)
                         !(nf defs env r)
 recoverableErr defs (BadDotPattern _ _ ErasedArg _ _) = pure True
-recoverableErr defs (CyclicMeta _ _ _ _) = pure False
+recoverableErr defs (CyclicMeta {}) = pure False
 -- Don't mark a case as impossible because we can't see the constructor.
-recoverableErr defs (InvisibleName _ _ _) = pure True
+recoverableErr defs (InvisibleName {}) = pure True
 recoverableErr defs (AllFailed errs)
     = anyM (recoverableErr defs) (map snd errs)
 recoverableErr defs (WhenUnifying _ _ _ _ _ err)
@@ -245,16 +245,16 @@ extendEnv : {vars : _} ->
                     (Thin inner vars',
                      Env Term vars', NestedNames vars',
                      Term vars', Term vars'))
-extendEnv env p nest (Bind _ n (PVar fc c pi tmty) sc) (Bind _ n' (PVTy _ _ _) tysc) with (nameEq n n')
-  extendEnv env p nest (Bind _ n (PVar fc c pi tmty) sc) (Bind _ n' (PVTy _ _ _) tysc) | Nothing
+extendEnv env p nest (Bind _ n (PVar fc c pi tmty) sc) (Bind _ n' (PVTy {}) tysc) with (nameEq n n')
+  extendEnv env p nest (Bind _ n (PVar fc c pi tmty) sc) (Bind _ n' (PVTy {}) tysc) | Nothing
       = throw (InternalError "Can't happen: names don't match in pattern type")
-  extendEnv env p nest (Bind _ n (PVar fc c pi tmty) sc) (Bind _ n (PVTy _ _ _) tysc) | (Just Refl)
+  extendEnv env p nest (Bind _ n (PVar fc c pi tmty) sc) (Bind _ n (PVTy {}) tysc) | (Just Refl)
       = extendEnv (PVar fc c pi tmty :: env) (Drop p) (weaken nest) sc tysc
-extendEnv env p nest (Bind _ n (PLet fc c tmval tmty) sc) (Bind _ n' (PLet _ _ _ _) tysc) with (nameEq n n')
-  extendEnv env p nest (Bind _ n (PLet fc c tmval tmty) sc) (Bind _ n' (PLet _ _ _ _) tysc) | Nothing
+extendEnv env p nest (Bind _ n (PLet fc c tmval tmty) sc) (Bind _ n' (PLet {}) tysc) with (nameEq n n')
+  extendEnv env p nest (Bind _ n (PLet fc c tmval tmty) sc) (Bind _ n' (PLet {}) tysc) | Nothing
       = throw (InternalError "Can't happen: names don't match in pattern type")
   -- PLet on the left becomes Let on the right, to give it computational force
-  extendEnv env p nest (Bind _ n (PLet fc c tmval tmty) sc) (Bind _ n (PLet _ _ _ _) tysc) | (Just Refl)
+  extendEnv env p nest (Bind _ n (PLet fc c tmval tmty) sc) (Bind _ n (PLet {}) tysc) | (Just Refl)
       = extendEnv (Let fc c tmval tmty :: env) (Drop p) (weaken nest) sc tysc
 extendEnv env p nest tm ty
       = pure (_ ** (p, env, nest, tm, ty))
@@ -314,11 +314,11 @@ findLinear top bound rig tm
       findLinArg _ _ [] = pure []
 
 setLinear : List (Name, RigCount) -> Term vars -> Term vars
-setLinear vs (Bind fc x b@(PVar _ _ _ _) sc)
+setLinear vs (Bind fc x b@(PVar {}) sc)
     = case lookup x vs of
            Just c' => Bind fc x (setMultiplicity b c') (setLinear vs sc)
            _ => Bind fc x b (setLinear vs sc)
-setLinear vs (Bind fc x b@(PVTy _ _ _) sc)
+setLinear vs (Bind fc x b@(PVTy {}) sc)
     = case lookup x vs of
            Just c' => Bind fc x (setMultiplicity b c') (setLinear vs sc)
            _ => Bind fc x b (setLinear vs sc)
@@ -489,7 +489,7 @@ checkClause mult vis totreq hashit n opts nest env (ImpossibleClause fc lhs)
                   else throw (ValidCase fc env (Left lhs)))
            (\err =>
               case err of
-                   ValidCase _ _ _ => throw err
+                   ValidCase {} => throw err
                    _ => do defs <- get Ctxt
                            if !(impossibleErrOK defs err)
                               then pure (Left lhs_raw)
@@ -515,7 +515,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env (PatClause fc lhs_in r
          -- If the rhs is a hole, record the lhs in the metadata because we
          -- might want to split it interactively
          case rhstm of
-              Meta _ _ _ _ =>
+              Meta {} =>
                  addLHS (getFC lhs_in) (length env) env' lhstm'
               _ => pure ()
 
@@ -831,7 +831,7 @@ mkRunTime fc n
     noInline _ = True
 
     caseName : Name -> Bool
-    caseName (CaseBlock _ _) = True
+    caseName (CaseBlock {}) = True
     caseName (NS _ n) = caseName n
     caseName _ = False
 
@@ -1063,8 +1063,8 @@ processDef opts nest env fc n_in cs_in
 
 
     simplePat : forall vars . Term vars -> Bool
-    simplePat (Local _ _ _ _) = True
-    simplePat (Erased _ _) = True
+    simplePat (Local {}) = True
+    simplePat (Erased {}) = True
     simplePat (As _ _ _ p) = simplePat p
     simplePat _ = False
 
@@ -1111,7 +1111,7 @@ processDef opts nest env fc n_in cs_in
                               else pure (Just tm))
       where
         closeEnv : Defs -> ClosedNF -> Core ClosedTerm
-        closeEnv defs (NBind _ x (PVar _ _ _ _) sc)
+        closeEnv defs (NBind _ x (PVar {}) sc)
             = closeEnv defs !(sc defs (toClosure defaultOpts Env.empty (Ref fc Bound x)))
         closeEnv defs nf = quote defs Env.empty nf
 
