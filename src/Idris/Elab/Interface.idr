@@ -72,7 +72,7 @@ getSig _ = Nothing
 
 record Declaration where
   constructor MkDeclaration
-  name   : Name
+  name   : WithFC Name
   count  : RigCount
   flags  : List FnOpt
   isData : Bool
@@ -80,7 +80,7 @@ record Declaration where
 
 sigToDecl : Signature -> Declaration
 sigToDecl sig = MkDeclaration
-  { name = sig.name.val
+  { name = sig.name
   , count = sig.count
   , flags = sig.flags
   , isData = sig.isData
@@ -293,11 +293,7 @@ updateIfaceSyn iname cn impps ps cs ms ds
     totMeth : Declaration -> Core Method
     totMeth decl
         = do let treq = findTotality decl.flags
-             pure $ MkMethod { name = decl.name
-                             , count = decl.count
-                             , totalReq = treq
-                             , type = decl.type
-                             }
+             pure $ Mk [decl.name, decl.count, treq] decl.type
 
 -- Read the implicitly added parameters from an interface type, so that we
 -- know to substitute an implicit in when defining the implementation
@@ -331,7 +327,7 @@ elabInterface {vars} ifc def_vis env nest constraints iname params dets mcon bod
          whenJust (fst <$> mcon) (addDocString conName)
          let meth_sigs = mapMaybe getSig body
          let meth_decls = map sigToDecl meth_sigs
-         let meth_names = map name meth_decls
+         let meth_names = map (val . name) meth_decls
          let defaults = mapMaybe getDefault body
 
          elabAsData conName meth_names meth_sigs
@@ -339,7 +335,7 @@ elabInterface {vars} ifc def_vis env nest constraints iname params dets mcon bod
          elabMethods conName meth_names meth_sigs
          ds <- traverse (elabDefault meth_decls) defaults
 
-         ns_meths <- traverse (\mt => do n <- inCurrentNS mt.name
+         ns_meths <- traverse (\mt => do n <- traverse inCurrentNS mt.name
                                          pure ({ name := n } mt)) meth_decls
          defs <- get Ctxt
          Just ty <- lookupTyExact ns_iname (gamma defs)
@@ -414,7 +410,7 @@ elabInterface {vars} ifc def_vis env nest constraints iname params dets mcon bod
              dn <- inCurrentNS dn_in
 
              (rig, dty) <-
-                       case findBy (\ d => d <$ guard (n == d.name)) tydecls of
+                       case findBy (\ d => d <$ guard (n == d.name.val)) tydecls of
                           Just d => pure (d.count, d.type)
                           Nothing => throw (GenericMsg dfc ("No method named " ++ show n ++ " in interface " ++ show iname))
 
@@ -423,7 +419,7 @@ elabInterface {vars} ifc def_vis env nest constraints iname params dets mcon bod
              -- Substitute the method names with their top level function
              -- name, so they don't get implicitly bound in the name
              methNameMap <- traverse (\d =>
-                                do let n = d.name
+                                do let n = d.name.val
                                    cn <- inCurrentNS n
                                    pure (n, applyParams (IVar vdfc cn) paramNames))
                                tydecls
@@ -431,7 +427,7 @@ elabInterface {vars} ifc def_vis env nest constraints iname params dets mcon bod
                      $ bindIFace vdfc ity -- bind interface (?!)
                      $ substNames (toList vars) methNameMap dty
 
-             dty_imp <- bindTypeNames dfc [] (map name tydecls ++ toList vars) dty
+             dty_imp <- bindTypeNames dfc [] (map (val . name) tydecls ++ toList vars) dty
              log "elab.interface.default" 5 $ "Default method " ++ show dn ++ " : " ++ show dty_imp
 
              let dtydecl = IClaim $ MkFCVal vdfc

@@ -34,7 +34,7 @@ public export
 WithArity : Type -> Type
 WithArity = AddMetadata Arity'
 
-||| Obtain totality information from the metadata
+||| Obtain arity information from the metadata
 export
 (.arity) :
     {n : Nat} ->
@@ -54,7 +54,7 @@ public export
 WithOpts : Type -> Type
 WithOpts = AddMetadata Opts'
 
-||| Obtain totality information from the metadata
+||| Obtain data options from the metadata
 export
 (.opts) :
     {n : Nat} ->
@@ -188,6 +188,13 @@ export
           (inRange : NameInRange "name" fields === Just (n, WithFC Name)) =>
           WithData fields a -> WithFC Name
 (.name) = WithData.get "name" @{inRange}
+
+||| Extract the name out of the metadata.
+export
+(.nameVal) : {n : Nat} ->
+          (inRange : NameInRange "name" fields === Just (n, WithFC Name)) =>
+          WithData fields a -> Name
+(.nameVal) x = x.name.val
 
 ||| Attach name and file context information to a type
 public export
