@@ -63,7 +63,7 @@ _awk_clean_name='
           "|" "[{]" idPat ":" numPat \
           "|" "ttc[\\\\/]" numPat \
           "|" "[$]resolved" numPat \
-          "|" namePat ":" numPat ":" numPat "--" numPat ":" numPat \
+          "|" "(" namePat ":" numPat ":" numPat "--" numPat ":" numPat ")" \
           "|" namePat "[.]" numPat ":" numPat
 
     prefixPat = "P:" idPat ":" \
@@ -75,9 +75,17 @@ _awk_clean_name='
 
     out = ""
     # the last one is FC
-    while (match($0, mainPat)) {
+    while (match($0, mainPat, matched)) {
         rs = RSTART
         rl = RLENGTH
+
+        # do not replace the FC in error messages
+        if (matched[1] != "" && rs == 1) {
+            out = out substr($0, 1, rs + rl - 1)
+            $0 = substr($0, rs + rl)
+            continue
+        }
+
         m = substr($0, rs, rl)
         pfx = "XXX"
         if (match(m, prefixPat)) { pfx = substr(m, RSTART, RLENGTH) }
