@@ -38,6 +38,9 @@ record Signature where
   isData   : Bool
   type     : RawImp
 
+constructorBindName : Name
+constructorBindName = UN (Basic "__con")
+
 -- Give implicit Pi bindings explicit names, if they don't have one already,
 -- because we need them to be consistent everywhere we refer to them
 namePis : Int -> RawImp -> RawImp
@@ -147,7 +150,7 @@ getMethDecl {vars} env nest params mnames (c, nm, ty)
 -- bind the auto implicit for the interface - put it first, as it may be needed
 -- in other method variables, including implicit variables
 bindIFace : FC -> RawImp -> RawImp -> RawImp
-bindIFace fc ity sc = IPi fc top AutoImplicit (Just (UN $ Basic "__con")) ity sc
+bindIFace fc ity sc = IPi fc top AutoImplicit (Just constructorBindName) ity sc
 
 -- Get the top level function for implementing a method
 getMethToplevel : {vars : _} ->
@@ -176,7 +179,7 @@ getMethToplevel {vars} env vis iname cname allmeths bindNames params (mname, sig
 
          let lhs = INamedApp vfc
                              (IVar cn.fc cn.val) -- See #3409
-                             (UN $ Basic "__con")
+                             constructorBindName
                              conapp
          let rhs = IVar EmptyFC mname
 
@@ -200,8 +203,8 @@ getMethToplevel {vars} env vis iname cname allmeths bindNames params (mname, sig
         = IPi (getFC pty) rig Implicit (Just n) pty (bindPs ps ty)
 
     applyCon : Name -> (Name, RawImp)
-    applyCon n = let name = UN (Basic "__con") in
-                 (n, INamedApp vfc (IVar vfc n) name (IVar vfc name))
+    applyCon n
+      = (n, INamedApp vfc (IVar vfc n) constructorBindName (IVar vfc constructorBindName))
 
 -- Get the function for chasing a constraint. This is one of the
 -- arguments to the record, appearing before the method arguments.
@@ -325,10 +328,10 @@ elabInterface {vars} ifc def_vis env nest constraints iname params dets mcon bod
     paramNames : List Name
     paramNames = map fst params
 
-    nameCons : List (Maybe Name, RawImp) -> Core (List (Name, RawImp))
-    nameCons [] = pure []
-    nameCons ((_, ty) :: rest)
-        = pure $ (!(genVarName "__con"), ty) :: !(nameCons rest)
+    nameConstraints : List (Maybe Name, RawImp) -> Core (List (Name, RawImp))
+    nameConstraints [] = pure []
+    nameConstraints ((_, ty) :: rest)
+        = pure $ (!(genVarName "constraint"), ty) :: !(nameConstraints rest)
 
     -- Elaborate the data declaration part of the interface
     elabAsData : (conName : Name) -> List Name ->
@@ -467,7 +470,7 @@ elabInterface {vars} ifc def_vis env nest constraints iname params dets mcon bod
     elabConstraintHints : (conName : Name) -> List Name ->
                           Core ()
     elabConstraintHints conName meth_names
-        = do nconstraints <- nameCons constraints
+        = do nconstraints <- nameConstraints constraints
              chints <- traverse (getConstraintHint vfc env (collapseDefault def_vis)
                                                  iname conName
                                                  (map fst nconstraints)
