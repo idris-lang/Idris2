@@ -109,11 +109,6 @@ setFC : {n : Nat} ->
         WithData fields a -> WithData fields a
 setFC fc = WithData.set "fc" fc @{inRange}
 
-||| Attach binding and file context information to a type
-public export
-FCBind : Type -> Type
-FCBind = WithData [ Bind', FC' ]
-
 ||| A wrapper for a value with a file context.
 public export
 MkFCVal : FC -> ty -> WithFC ty
@@ -194,16 +189,16 @@ public export
 WithName : Type -> Type
 WithName = AddMetadata Name'
 
-||| the "tyname" label containing a `FCBind Name` for metadata records
+||| the "tyname" label containing a `WithFC Name` for metadata records. Typically used for type names.
 public export
 TyName' : KeyVal
-TyName' = "tyname" :-: FCBind Name
+TyName' = "tyname" :-: WithFC Name
 
 ||| Extract the "tyname" value from the metadata record
 export
 (.tyName) : {n : Nat} ->
-            (inRange : NameInRange "tyname" fields === Just (n, FCBind Name)) =>
-            WithData fields a -> FCBind Name
+            (inRange : NameInRange "tyname" fields === Just (n, WithFC Name)) =>
+            WithData fields a -> WithFC Name
 (.tyName) = WithData.get "tyname" @{inRange}
 
 

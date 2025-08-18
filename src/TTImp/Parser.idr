@@ -501,13 +501,14 @@ mutual
 tyDecl : OriginDesc -> IndentInfo -> Rule ImpTy
 tyDecl fname indents
     = do start <- location
-         n <- name
+         n <- withFC name
          nameEnd <- location
          symbol ":"
          ty <- expr fname indents
          end <- location
          atEnd indents
-         pure (MkImpTy (MkFC fname start end) (MkFCVal (MkFC fname start nameEnd) n) ty)
+         let fc = MkFC fname start end
+         pure (Mk [fc, n] ty)
 
 mutual
   parseRHS : (withArgs : Nat) ->
