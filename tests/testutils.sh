@@ -58,9 +58,11 @@ _awk_clean_name='
 #   ttc/NNNNNNNNNN
 #   Foo.Bar:NN:NN--NN:NN
 #   P:xyz:NNNNN
+#   PE_xyz_HEX
 {
     idPat = "[-_'\''a-zA-Z][-_'\''a-zA-Z0-9]*"
     numPat = "[0-9]+"
+    hexPat = "[0-9a-f]+"
     namePat = idPat "([.]" idPat ")*"
 
     mainPat = "P:" idPat ":" numPat \
@@ -68,14 +70,16 @@ _awk_clean_name='
           "|" "ttc[\\\\/]" numPat \
           "|" "[$]resolved" numPat \
           "|" "(" namePat ":" numPat ":" numPat "--" numPat ":" numPat ")" \
-          "|" namePat "[.]" numPat ":" numPat
+          "|" namePat "[.]" numPat ":" numPat \
+          "|" "PE_" idPat "_" hexPat
 
     prefixPat = "P:" idPat ":" \
             "|" "[{]" idPat ":" \
             "|" "ttc[\\\\/]" \
             "|" "[$]resolved" \
             "|" namePat ":" \
-            "|" namePat "[.]"
+            "|" namePat "[.]" \
+            "|" "PE_" idPat "_"
 
     out = ""
     # the last one is FC
