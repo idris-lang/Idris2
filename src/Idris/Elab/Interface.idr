@@ -68,26 +68,6 @@ getSig (IData _ _ _ (MkImpLater fc n ty))
 getSig _ = Nothing
 
 ------------------------------------------------------------------------
--- Declaration
-
-record Declaration where
-  constructor MkDeclaration
-  name   : WithFC Name
-  count  : RigCount
-  flags  : List FnOpt
-  isData : Bool
-  type   : RawImp
-
-sigToDecl : Signature -> Declaration
-sigToDecl sig = MkDeclaration
-  { name = sig.name
-  , count = sig.count
-  , flags = sig.flags
-  , isData = sig.isData
-  , type = sig.type
-  }
-
-------------------------------------------------------------------------
 
 
 -- TODO: Check all the parts of the body are legal
@@ -282,7 +262,7 @@ mkCon loc n
 updateIfaceSyn : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
                  Name -> Name -> List Name -> List Name -> List RawImp ->
-                 List Declaration -> List (Name, List ImpClause) ->
+                 List Signature -> List (Name, List ImpClause) ->
                  Core ()
 updateIfaceSyn iname cn impps ps cs ms ds
     = do ms' <- traverse totMeth ms
@@ -290,7 +270,7 @@ updateIfaceSyn iname cn impps ps cs ms ds
          update Syn { ifaces     $= addName iname info,
                       saveIFaces $= (iname :: ) }
  where
-    totMeth : Declaration -> Core Method
+    totMeth : Signature -> Core Method
     totMeth decl
         = do let treq = findTotality decl.flags
              pure $ Mk [decl.name, decl.count, treq] decl.type
@@ -326,7 +306,7 @@ elabInterface {vars} ifc def_vis env nest constraints iname params dets mcon bod
          conName <- inCurrentNS conName_in
          whenJust (fst <$> mcon) (addDocString conName)
          let meth_sigs = mapMaybe getSig body
-         let meth_decls = map sigToDecl meth_sigs
+         let meth_decls = meth_sigs
          let meth_names = map (val . name) meth_decls
          let defaults = mapMaybe getDefault body
 
@@ -400,7 +380,7 @@ elabInterface {vars} ifc def_vis env nest constraints iname params dets mcon bod
     -- Check that a default definition is correct. We just discard it here once
     -- we know it's okay, since we'll need to re-elaborate it for each
     -- instance, to specialise it
-    elabDefault : List Declaration ->
+    elabDefault : List Signature ->
                   (FC, List FnOpt, Name, List ImpClause) ->
                   Core (Name, List ImpClause)
     elabDefault tydecls (dfc, opts, n, cs)
