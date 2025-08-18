@@ -109,11 +109,6 @@ setFC : {n : Nat} ->
         WithData fields a -> WithData fields a
 setFC fc = WithData.set "fc" fc @{inRange}
 
-||| Attach binding and file context information to a type
-public export
-FCBind : Type -> Type
-FCBind = WithData [ Bind', FC' ]
-
 ||| A wrapper for a value with a file context.
 public export
 MkFCVal : FC -> ty -> WithFC ty
