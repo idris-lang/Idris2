@@ -17,8 +17,12 @@ else
     unset VALGRIND
 fi
 
-idris2() {
+idris2_no_clean() {
     $idris2 --no-banner --console-width 0 --no-color "$@"
+}
+
+idris2() {
+    idris2_no_clean "$@" | clean_names
 }
 
 check() {

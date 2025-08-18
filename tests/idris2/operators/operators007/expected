@@ -12,8 +12,8 @@ Explanation: regular, typebind and autobind operators all use a slightly differe
 
 Possible solutions:
  - Write the expression using regular syntax: 'm >>= Just (x + y)'.
- - Change the fixity defined at Prelude.Ops:20:8--20:44 to 'export autobind infixl 1 >>='.
- - Hide or remove the fixity at Prelude.Ops:20:8--20:44 and import a module that exports a compatible fixity.
+ - Change the fixity defined at Prelude.Ops:1 to 'export autobind infixl 1 >>='.
+ - Hide or remove the fixity at Prelude.Ops:1 and import a module that exports a compatible fixity.
  - Did you mean '>>' ?
 1/1: Building Test2 (Test2.idr)
 Error: Operator >>= is a regular operator, but is used as an automatically-binding (autobind) operator.
@@ -29,6 +29,6 @@ Explanation: regular, typebind and autobind operators all use a slightly differe
 
 Possible solutions:
  - Write the expression using regular syntax: 'm >>= Just (x + y)'.
- - Change the fixity defined at Prelude.Ops:20:8--20:44 to 'export autobind infixl 1 >>='.
- - Hide or remove the fixity at Prelude.Ops:20:8--20:44 and import a module that exports a compatible fixity.
+ - Change the fixity defined at Prelude.Ops:1 to 'export autobind infixl 1 >>='.
+ - Hide or remove the fixity at Prelude.Ops:1 and import a module that exports a compatible fixity.
  - Did you mean either of: '>=', '>>' ?

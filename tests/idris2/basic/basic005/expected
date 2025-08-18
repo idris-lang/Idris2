@@ -1,6 +1,6 @@
 1/1: Building NoInfer (NoInfer.idr)
 Error: Unsolved holes:
-Main.{_:3} introduced at: 
+Main.{_:1} introduced at: 
 NoInfer:1:7--1:8
  1 | foo : ? -> Int
            ^
