@@ -11,5 +11,5 @@ Issue3313:5:18--5:23
                       ^^^^^
 
 Possible correct results:
-    conArg (implicitly bound at Issue3313:5:7--5:10)
-    conArg (implicitly bound at Issue3313:5:1--5:5)
+    conArg (implicitly bound at Issue3313:1)
+    conArg (implicitly bound at Issue3313:2)

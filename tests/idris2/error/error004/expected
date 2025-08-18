@@ -22,8 +22,8 @@ Error2:13:38--13:45
                                            ^^^^^^^
 
 Possible correct results:
-    Show implementation at Error2:11:1--13:45
-    Show implementation at Error2:7:1--9:45
+    Show implementation at Error2:1
+    Show implementation at Error2:2
 Error: While processing right hand side of wrong. Multiple solutions found in search of:
     Show (Vect 1 Integer)
 
@@ -36,5 +36,5 @@ Error2:16:9--16:34
               ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Possible correct results:
-    Show implementation at Error2:11:1--13:45
-    Show implementation at Error2:7:1--9:45
+    Show implementation at Error2:1
+    Show implementation at Error2:2
