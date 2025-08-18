@@ -1,8 +1,8 @@
 1/1: Building Inlining (Inlining.idr)
 Main> Main.leaveAlone
-Arguments [{arg:0}]
-Compile time tree: {arg:0} ++ "!"
-Compiled: \ {arg:0} => {arg:0} ++ "!"
+Arguments [{arg:1}]
+Compile time tree: {arg:1} ++ "!"
+Compiled: \ {arg:1} => {arg:1} ++ "!"
 Refers to: Prelude.Types.String.(++)
 Flags: covering
 Size change:
@@ -11,17 +11,17 @@ Size change:
   r +--
   0 | =
 Main> Main.forceInline
-Arguments [{arg:0}]
-Compile time tree: {arg:0} + 10
-Compiled: \ {arg:0} => {arg:0} + 10
-Refers to: Prelude.Types.Num implementation at Prelude.Types:66:1--71:33, Prelude.Types.Z, Prelude.Types.S, Prelude.Types.Nat, Prelude.Num.(+)
+Arguments [{arg:1}]
+Compile time tree: {arg:1} + 10
+Compiled: \ {arg:1} => {arg:1} + 10
+Refers to: Prelude.Types.Num implementation at Prelude.Types:1, Prelude.Types.Z, Prelude.Types.S, Prelude.Types.Nat, Prelude.Num.(+)
 Flags: covering, inline
 Size change:
   Prelude.Num.(+):
     l 0
   r +--
   2 | =
-  Prelude.Types.Num implementation at Prelude.Types:66:1--71:33:
+  Prelude.Types.Num implementation at Prelude.Types:1:
     l
   r +
 Main> Main.forceNoInline

@@ -3,13 +3,13 @@ Written TTC
 Yaffle> Bye for now!
 Processing as TTImp
 Dot2:15:1--16:1:When elaborating left hand side of Main.half:
-Dot2:15:28--15:30:Pattern variable {P:n:393} unifies with ?{P:m:393}_[]
+Dot2:15:28--15:30:Pattern variable {P:n:1} unifies with ?{P:m:1}_[]
 Yaffle> Bye for now!
 Processing as TTImp
 Dot3:18:1--19:1:When elaborating left hand side of Main.addBaz3:
-Dot3:18:10--18:15:Can't match on ($resolved365 ?{P:x:404}_[] ?{P:x:404}_[]) (Not a constructor application or primitive) - it elaborates to ($resolved365 ?Main.{_:53}_[] ?Main.{_:54}_[])
+Dot3:18:10--18:15:Can't match on ($resolved1 ?{P:x:1}_[] ?{P:x:1}_[]) (Not a constructor application or primitive) - it elaborates to ($resolved1 ?Main.{_:1}_[] ?Main.{_:2}_[])
 Yaffle> Bye for now!
 Processing as TTImp
 Dot4:17:1--18:1:When elaborating left hand side of Main.addBaz4:
-Dot4:17:33--17:34:Can't match on ?{P:x:406}_[] (Non linear pattern variable) - it elaborates to ?Main.{dotTm:55}_[]
+Dot4:17:33--17:34:Can't match on ?{P:x:1}_[] (Non linear pattern variable) - it elaborates to ?Main.{dotTm:1}_[]
 Yaffle> Bye for now!

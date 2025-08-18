@@ -1,5 +1,5 @@
 Processing as TTImp
 Written TTC
-Yaffle> ((Main.Refl [{a:34} = Main.Nat]) [x = (Main.S (Main.S (Main.S (Main.S Main.Z))))])
+Yaffle> ((Main.Refl [{a:1} = Main.Nat]) [x = (Main.S (Main.S (Main.S (Main.S Main.Z))))])
 Yaffle> Main.etaGood1 : ((((Main.Eq [b = (%pi RigW Explicit Nothing Integer (%pi RigW Explicit Nothing Integer Main.Test))]) [a = (%pi RigW Explicit Nothing Integer (%pi RigW Explicit Nothing Integer Main.Test))]) Main.MkTest) (%lam RigW Explicit (Just x) Integer (%lam RigW Explicit (Just y) Integer ((Main.MkTest x) y))))
 Yaffle> Bye for now!
