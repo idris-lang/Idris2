@@ -55,7 +55,7 @@ _awk_clean_name='
 #   Foo.Bar:NN:NN--NN:NN
 #   P:xyz:NNNNN
 {
-    idPat = "[_a-zA-Z][_a-zA-Z0-9]*"
+    idPat = "[-_'\''a-zA-Z][-_'\''a-zA-Z0-9]*"
     numPat = "[0-9]+"
     namePat = idPat "([.]" idPat ")*"
 
