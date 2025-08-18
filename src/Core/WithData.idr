@@ -194,7 +194,7 @@ public export
 WithName : Type -> Type
 WithName = AddMetadata Name'
 
-||| the "tyname" label containing a `FCBind Name` for metadata records
+||| the "tyname" label containing a `WithFC Name` for metadata records. Typically used for type names.
 public export
 TyName' : KeyVal
 TyName' = "tyname" :-: WithFC Name
