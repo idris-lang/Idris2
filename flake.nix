@@ -68,7 +68,6 @@
           idris2ApiPkg = pkgs.callPackage ./nix/idris2Api.nix {
             inherit idris2Version buildIdris;
           };
-          stdenv' = with pkgs; if stdenv.isDarwin then overrideSDK stdenv "11.0" else stdenv;
         in {
           checks = import ./nix/test.nix {
             inherit (pkgs) system stdenv runCommand lib;
@@ -84,7 +83,7 @@
             inherit pkgs idris-emacs-src idris2Pkg;
           });
           inherit buildIdris;
-          devShells.default = pkgs.mkShell.override { stdenv = stdenv'; } {
+          devShells.default = pkgs.mkShell{
             packages = idris2Pkg.buildInputs;
           };
         };
