@@ -522,7 +522,7 @@ mutual
       = do ps' <- traverse (traverse (traverse (toPTerm startPrec))) header.val
            fs' <- traverse toPField body.val
            pure (Just (MkFCVal fc $ PRecord "" vis mbtot
-                          (MkPRecord header.name.val (map toBinder ps') body.opts (Just ("", body.name.val)) fs')))
+                          (MkPRecord header.name.val (map toBinder ps') body.opts (Just (AddDef body.name)) fs')))
            where
              toBinder : ImpParameter' (PTerm' KindedName) -> PBinder' KindedName
              toBinder binder

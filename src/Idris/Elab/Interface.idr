@@ -295,16 +295,16 @@ elabInterface : {vars : _} ->
                 Name ->
                 (params : List (Name, (RigCount, RawImp))) ->
                 (dets : Maybe (List1 Name)) ->
-                (conName : Maybe (String, Name)) ->
+                (conName : Maybe (WithDoc $ AddFC Name)) ->
                 List ImpDecl ->
                 Core ()
 elabInterface {vars} ifc def_vis env nest constraints iname params dets mcon body
     = do fullIName <- getFullName iname
          ns_iname <- inCurrentNS fullIName
-         let conName_in = maybe (mkCon vfc fullIName) snd mcon
+         let conName_in = maybe (mkCon vfc fullIName) val mcon
          -- Machine generated names need to be qualified when looking them up
          conName <- inCurrentNS conName_in
-         whenJust (fst <$> mcon) (addDocString conName)
+         whenJust (get "doc" <$> mcon) (addDocString conName)
          let meth_sigs = mapMaybe getSig body
          let meth_decls = meth_sigs
          let meth_names = map (val . name) meth_decls
