@@ -11,7 +11,7 @@ Test:13:8--13:22
 
 Possible solutions:
  - Add brackets around every use of -:-
- - Change the fixity of -:- at Test:1 to `infixl` or `infixr`
+ - Change the fixity of -:- at Test:2:9--2:20 to `infixl` or `infixr`
 Error: Operator :-: is non-associative
 
 Test:16:9--16:23
@@ -24,4 +24,4 @@ Test:16:9--16:23
 
 Possible solutions:
  - Add brackets around every use of :-:
- - Change the fixity of :-: at Test:2 to `infixl` or `infixr`
+ - Change the fixity of :-: at Test:4:9--4:20 to `infixl` or `infixr`

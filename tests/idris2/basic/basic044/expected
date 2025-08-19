@@ -21,11 +21,11 @@ LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
-LOG unify.meta:5: Adding new meta ({P:cut:1}, (Term:1, Rig0))
-LOG unify.meta:5: Adding new meta ({P:vars:1}, (Term:2, Rig0))
+LOG unify.meta:5: Adding new meta ({P:cut:1}, (Term:11:15--11:18, Rig0))
+LOG unify.meta:5: Adding new meta ({P:vars:1}, (Term:11:19--11:23, Rig0))
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
-LOG unify.meta:5: Adding new meta ({P:cut:2}, (Term:3, Rig0))
-LOG unify.meta:5: Adding new meta ({P:vars:2}, (Term:4, Rig0))
+LOG unify.meta:5: Adding new meta ({P:cut:2}, (Term:12:15--12:18, Rig0))
+LOG unify.meta:5: Adding new meta ({P:vars:2}, (Term:12:19--12:23, Rig0))
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG declare.data:1: Processing Term.Chk
@@ -33,14 +33,14 @@ LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
-LOG unify.meta:5: Adding new meta ({P:cut:3}, (Term:5, Rig0))
-LOG unify.meta:5: Adding new meta ({P:vars:3}, (Term:6, Rig0))
+LOG unify.meta:5: Adding new meta ({P:cut:3}, (Term:16:15--16:18, Rig0))
+LOG unify.meta:5: Adding new meta ({P:vars:3}, (Term:16:19--16:23, Rig0))
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
-LOG unify.meta:5: Adding new meta ({P:cut:4}, (Term:7, Rig0))
-LOG unify.meta:5: Adding new meta ({P:vars:4}, (Term:8, Rig0))
-LOG unify.meta:5: Adding new meta ({P:n:1}, (Term:9, Rig0))
+LOG unify.meta:5: Adding new meta ({P:cut:4}, (Term:17:15--17:18, Rig0))
+LOG unify.meta:5: Adding new meta ({P:vars:4}, (Term:17:19--17:23, Rig0))
+LOG unify.meta:5: Adding new meta ({P:n:1}, (Term:17:35--17:36, Rig0))
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG declare.data:1: Processing Term.Syn
@@ -48,16 +48,16 @@ LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
-LOG unify.meta:5: Adding new meta ({P:vars:5}, (Term:10, Rig0))
-LOG unify.meta:5: Adding new meta ({P:cut:5}, (Term:11, Rig0))
+LOG unify.meta:5: Adding new meta ({P:vars:5}, (Term:22:15--22:19, Rig0))
+LOG unify.meta:5: Adding new meta ({P:cut:5}, (Term:22:27--22:30, Rig0))
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
-LOG unify.meta:5: Adding new meta ({P:cut:6}, (Term:12, Rig0))
-LOG unify.meta:5: Adding new meta ({P:vars:6}, (Term:13, Rig0))
+LOG unify.meta:5: Adding new meta ({P:cut:6}, (Term:23:15--23:18, Rig0))
+LOG unify.meta:5: Adding new meta ({P:vars:6}, (Term:23:19--23:23, Rig0))
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
-LOG unify.meta:5: Adding new meta ({P:vars:7}, (Term:14, Rig0))
+LOG unify.meta:5: Adding new meta ({P:vars:7}, (Term:24:20--24:24, Rig0))
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
@@ -105,53 +105,53 @@ LOG declare.def:2: Case tree for Vec.(::): case {arg:4}[4] : (Data.Fin.Fin (Prel
  | Data.Fin.FS {e:2} {e:3} => [1] ({arg:6}[5] {e:3}[1])
  }
 LOG declare.type:1: Processing Vec.test
-LOG elab.ambiguous:5: Ambiguous elaboration at Vec:1:
+LOG elab.ambiguous:5: Ambiguous elaboration at Vec:20:23--20:24:
   ($resolved1 2)
   ($resolved2 2)
 With default. Target type : Prelude.Types.Nat
-LOG elab.ambiguous:5: Ambiguous elaboration (kept 3 out of 3 candidates) (not delayed) at Vec:2:
+LOG elab.ambiguous:5: Ambiguous elaboration (kept 3 out of 3 candidates) (not delayed) at Vec:21:8--21:9:
 (($resolved3 Nil) ((:: ((:: (fromInteger 0)) Nil)) Nil))
 (($resolved4 Nil) ((:: ((:: (fromInteger 0)) Nil)) Nil))
 (($resolved5 Nil) ((:: ((:: (fromInteger 0)) Nil)) Nil))
 Target type : ({arg:1} : (Data.Fin.Fin (Prelude.Types.S (Prelude.Types.S Prelude.Types.Z)))) -> (Prelude.Basics.List Prelude.Types.Nat)
-LOG elab.ambiguous:5: Ambiguous elaboration (kept 2 out of 2 candidates) (not delayed) at Vec:3:
+LOG elab.ambiguous:5: Ambiguous elaboration (kept 2 out of 2 candidates) (not delayed) at Vec:21:9--21:11:
 $resolved6
 $resolved7
 Target type : ?Vec.{a:1}_[]
-LOG elab.ambiguous:5: Ambiguous elaboration (kept 3 out of 3 candidates) (not delayed) at Vec:4:
+LOG elab.ambiguous:5: Ambiguous elaboration (kept 3 out of 3 candidates) (not delayed) at Vec:21:11--21:12:
 (($resolved3 ((:: (fromInteger 0)) Nil)) Nil)
 (($resolved4 ((:: (fromInteger 0)) Nil)) Nil)
 (($resolved5 ((:: (fromInteger 0)) Nil)) Nil)
 Target type : (Vec.Vec ?Vec.{a:1}_[] ?Vec.{n:1}_[])
-LOG elab.ambiguous:5: Ambiguous elaboration (kept 3 out of 3 candidates) (not delayed) at Vec:5:
+LOG elab.ambiguous:5: Ambiguous elaboration (kept 3 out of 3 candidates) (not delayed) at Vec:21:13--21:14:
 (($resolved3 (fromInteger 0)) Nil)
 (($resolved4 (fromInteger 0)) Nil)
 (($resolved5 (fromInteger 0)) Nil)
 Target type : ?Vec.{a:2}_[]
-LOG elab.ambiguous:5: Ambiguous elaboration at Vec:6:
+LOG elab.ambiguous:5: Ambiguous elaboration at Vec:21:14--21:15:
   ($resolved1 0)
   ($resolved2 0)
 With default. Target type : ?Vec.{a:3}_[]
-LOG elab.ambiguous:5: Ambiguous elaboration (kept 2 out of 2 candidates) (not delayed) at Vec:7:
+LOG elab.ambiguous:5: Ambiguous elaboration (kept 2 out of 2 candidates) (not delayed) at Vec:21:15--21:16:
 $resolved6
 $resolved7
 Target type : (Vec.Vec ?Vec.{a:3}_[] ?Vec.{n:2}_[])
-LOG elab.ambiguous:5: Ambiguous elaboration at Vec:6:
+LOG elab.ambiguous:5: Ambiguous elaboration at Vec:21:14--21:15:
   ($resolved1 0)
   ($resolved2 0)
 With default. Target type : ?Vec.{a:4}_[]
-LOG elab.ambiguous:5: Ambiguous elaboration (kept 2 out of 2 candidates) (not delayed) at Vec:8:
+LOG elab.ambiguous:5: Ambiguous elaboration (kept 2 out of 2 candidates) (not delayed) at Vec:21:16--21:17:
 $resolved6
 $resolved7
 Target type : (Vec.Vec ?Vec.{a:2}_[] ?Vec.{n:3}_[])
-LOG elab.ambiguous:5: Ambiguous elaboration (kept 1 out of 3 candidates) (delayed) at Vec:5:
+LOG elab.ambiguous:5: Ambiguous elaboration (kept 1 out of 3 candidates) (delayed) at Vec:21:13--21:14:
 (($resolved4 (fromInteger 0)) Nil)
 Target type : (Prelude.Basics.List Prelude.Types.Nat)
-LOG elab.ambiguous:5: Ambiguous elaboration at Vec:6:
+LOG elab.ambiguous:5: Ambiguous elaboration at Vec:21:14--21:15:
   ($resolved1 0)
   ($resolved2 0)
 With default. Target type : Prelude.Types.Nat
-LOG elab.ambiguous:5: Ambiguous elaboration (kept 1 out of 2 candidates) (delayed) at Vec:3:
+LOG elab.ambiguous:5: Ambiguous elaboration (kept 1 out of 2 candidates) (delayed) at Vec:21:9--21:11:
 $resolved7
 Target type : (Prelude.Basics.List Prelude.Types.Nat)
 LOG declare.def:2: Case tree for Vec.test: [0] (Vec.(::) (Prelude.Types.S Prelude.Types.Z) (Prelude.Basics.List Prelude.Types.Nat) (Prelude.Basics.Nil Prelude.Types.Nat) (Vec.(::) Prelude.Types.Z (Prelude.Basics.List Prelude.Types.Nat) (Prelude.Basics.(::) Prelude.Types.Nat Prelude.Types.Z (Prelude.Basics.Nil Prelude.Types.Nat)) (Vec.Nil (Prelude.Basics.List Prelude.Types.Nat))))

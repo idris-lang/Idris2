@@ -11,5 +11,5 @@ Issue34:9:5--9:53
          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Possible correct results:
-    conArg (implicitly bound at Issue34:1)
-    conArg (implicitly bound at Issue34:2)
+    conArg (implicitly bound at Issue34:8:12--8:16)
+    conArg (implicitly bound at Issue34:8:27--8:31)
