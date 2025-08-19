@@ -20,7 +20,6 @@ import Data.String
 import Data.Vect
 import Libraries.Data.List.SizeOf
 import Libraries.Data.List.LengthMatch
-import Libraries.Data.List.Quantifiers.Extra as Lib
 import Libraries.Data.SortedSet
 import Libraries.Data.SnocList.SizeOf
 import Libraries.Data.SnocList.LengthMatch
@@ -102,14 +101,15 @@ a type anywhere.
 -}
 
 -- TODO swap arguments to make it `Scoped`
-NamedPats : Scope -> -- local scope
-            List Name -> -- the pattern variables still to process, in order
-            Type
-NamedPats vars
-  = All (\pvar => PatInfo pvar vars)
-               -- ^ a pattern, where its variable appears in the vars list,
-               -- and its type. The type has no variable names; any names it
-               -- refers to are explicit
+data NamedPats : Scope -> -- local scope
+                 List Name -> -- the pattern variables still to process, in order
+                 Type where
+     Nil : NamedPats vars []
+     (::) : PatInfo pvar vars ->
+            -- ^ a pattern, where its variable appears in the vars list,
+            -- and its type. The type has no variable names; any names it
+            -- refers to are explicit
+            NamedPats vars ns -> NamedPats vars (pvar :: ns)
 
 getPatInfo : NamedPats vars todo -> List Pat
 getPatInfo [] = []
@@ -236,6 +236,13 @@ weakenNs : SizeOf ns ->
 weakenNs ns [] = []
 weakenNs ns (p :: ps)
     = weakenNs ns p :: weakenNs ns ps
+
+(++) : NamedPats vars ms -> NamedPats vars ns -> NamedPats vars (ms ++ ns)
+(++) [] ys = ys
+(++) (x :: xs) ys = x :: xs ++ ys
+
+tail : NamedPats vars (p :: ps) -> NamedPats vars ps
+tail (x :: xs) = xs
 
 data PatClause : (vars : Scope) -> (todo : List Name) -> Type where
      MkPatClause : List Name -> -- names matched so far (from original lhs)
@@ -531,7 +538,7 @@ groupCons fc fn pvars = foldlC gc []
              -- explicit dependencies in types accurate)
              let pats' = updatePatNames (updateNames (zip patnames pargs))
                                         (weakenNs l pats)
-             let clause = MkPatClause pvars (newargs `Lib.(++)` pats') pid (weakenNs l rhs)
+             let clause = MkPatClause pvars (newargs ++ pats') pid (weakenNs l rhs)
              pure [ConGroup n tag [clause]]
     addConG n tag pargs pats pid rhs (g :: gs) with (checkGroupMatch (CName n tag) pargs g)
       addConG n tag pargs pats pid rhs
@@ -540,7 +547,7 @@ groupCons fc fn pvars = foldlC gc []
              let l = mkSizeOf newargs
              let pats' = updatePatNames (updateNames (zip newargs pargs))
                                         (weakenNs l pats)
-             let newclause = MkPatClause pvars (newps `Lib.(++)` pats') pid (weakenNs l rhs)
+             let newclause = MkPatClause pvars (newps ++ pats') pid (weakenNs l rhs)
              -- put the new clause at the end of the group, since we
              -- match the clauses top to bottom.
              pure $ ConGroup n tag (MkPatClause pvars ps tid tm :: rest ++ [newclause]) :: gs
@@ -568,7 +575,7 @@ groupCons fc fn pvars = foldlC gc []
              let pats' = updatePatNames (updateNames [(tyname, pty),
                                                       (argname, parg)])
                                         (weakenNs l pats)
-             let clause = MkPatClause pvars (newargs `Lib.(++)` pats') pid (weakenNs l rhs)
+             let clause = MkPatClause pvars (newargs ++ pats') pid (weakenNs l rhs)
              pure [DelayGroup [clause]]
     addDelayG pty parg pats pid rhs (g :: gs) with (checkGroupMatch CDelay [] g)
       addDelayG pty parg pats pid rhs
@@ -578,7 +585,7 @@ groupCons fc fn pvars = foldlC gc []
              let pats' = updatePatNames (updateNames [(tyarg, pty),
                                                       (valarg, parg)])
                                         (weakenNs l pats)
-             let newclause = MkPatClause pvars (newps `Lib.(++)` pats') pid (weakenNs l rhs)
+             let newclause = MkPatClause pvars (newps ++ pats') pid (weakenNs l rhs)
              pure $ DelayGroup (MkPatClause pvars ps tid tm :: rest ++ [newclause]) :: gs
       addDelayG pty parg pats pid rhs (g :: gs) | NoMatch
         = (g ::) <$> addDelayG pty parg pats pid rhs gs
@@ -860,7 +867,7 @@ pickNextViable {ps = q :: qs} fc phase fn npss
          then pure (_ ** MkNVar First)
          else case !(getScore fc phase fn npss) of
                    Right () => pure (_ ** MkNVar First)
-                   _ => do (_ ** MkNVar var) <- pickNextViable fc phase fn (map Lib.tail npss)
+                   _ => do (_ ** MkNVar var) <- pickNextViable fc phase fn (map tail npss)
                            pure (_ ** MkNVar (Later var))
 
 moveFirst : {idx : Nat} -> (0 el : IsVar nm idx ps) -> NamedPats ns ps ->
