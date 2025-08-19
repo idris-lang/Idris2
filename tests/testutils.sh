@@ -53,34 +53,42 @@ windows_path_tweaks() {
 _awk_clean_name='
 #!/bin/awk -f
 # consistently replace numbers to make golden tests more stable. Currently handles:
-#   {xyz:NNN
-#   $resolvedNNN
-#   ttc/NNNNNNNNNN
-#   Foo.Bar:NN:NN--NN:NN
 #   P:xyz:NNNNN
+#   {xyz:NNN
+#   ttc/NNNNNNNNNN
+#   $resolvedNNN
 #   PE_xyz_HEX
+#   Foo.Bar.NNN:NNN
+#   Foo.Bar:NN:NN--NN:NN
 {
     idPat = "[-_'\''a-zA-Z][-_'\''a-zA-Z0-9]*"
     numPat = "[0-9]+"
     hexPat = "[0-9a-f]+"
     namePat = idPat "([.]" idPat ")*"
+    locPat = numPat ":" numPat "--" numPat ":" numPat
+
+    # clean FC in LOG messages and in implementations/case blocks/with blocks
+    if ($0 ~ /^LOG/) {
+        cleanLocPrefix = ""
+    } else {
+        cleanLocPrefix = "(" "implementation" "|" "case block in " idPat "|" "with block in " idPat ") at "
+    }
 
     mainPat = "P:" idPat ":" numPat \
           "|" "[{]" idPat ":" numPat \
           "|" "ttc[\\\\/]" numPat \
           "|" "[$]resolved" numPat \
-          "|" "(" "implementation" "|" "case block in " idPat "|" "with block in " idPat ") at " \
-              namePat ":" numPat ":" numPat "--" numPat ":" numPat \
+          "|" "PE_" idPat "_" hexPat \
           "|" namePat "[.]" numPat ":" numPat \
-          "|" "PE_" idPat "_" hexPat
+          "|" cleanLocPrefix namePat ":" locPat
 
     prefixPat = "P:" idPat ":" \
             "|" "[{]" idPat ":" \
             "|" "ttc[\\\\/]" \
             "|" "[$]resolved" \
-            "|" "(" "implementation" "|" "case block in " idPat "|" "with block in " idPat ") at " namePat ":" \
+            "|" "PE_" idPat "_" \
             "|" namePat "[.]" \
-            "|" "PE_" idPat "_"
+            "|" cleanLocPrefix namePat ":"
 
     out = ""
     while (match($0, mainPat)) {
