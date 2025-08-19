@@ -189,6 +189,7 @@ modules =
     Libraries.Data.List.Quantifiers.Extra,
     Libraries.Data.List.SizeOf,
     Libraries.Data.List.Thin,
+    Libraries.Data.List01,
     Libraries.Data.List1,
     Libraries.Data.NameMap,
     Libraries.Data.NameMap.Traversable,
