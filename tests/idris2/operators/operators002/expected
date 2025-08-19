@@ -12,8 +12,8 @@ Explanation: regular, typebind and autobind operators all use a slightly differe
 
 Possible solutions:
  - Write the expression using typebind syntax: '(x : ty) =@ S x'.
- - Change the fixity defined at Errors:1 to 'private autobind infixr 0 =@'.
- - Hide or remove the fixity at Errors:1 and import a module that exports a compatible fixity.
+ - Change the fixity defined at Errors:2:18--2:29 to 'private autobind infixr 0 =@'.
+ - Hide or remove the fixity at Errors:2:18--2:29 and import a module that exports a compatible fixity.
 1/1: Building Errors2 (Errors2.idr)
 Error: Operator =@ is an automatically-binding (autobind) operator, but is used as a regular operator.
 
@@ -28,8 +28,8 @@ Explanation: regular, typebind and autobind operators all use a slightly differe
 
 Possible solutions:
  - Write the expression using autobind syntax: '(_ := a) =@ a'.
- - Change the fixity defined at Errors2:1 to 'private infixr 0 =@'.
- - Hide or remove the fixity at Errors2:1 and import a module that exports a compatible fixity.
+ - Change the fixity defined at Errors2:2:18--2:29 to 'private infixr 0 =@'.
+ - Hide or remove the fixity at Errors2:2:18--2:29 and import a module that exports a compatible fixity.
 1/1: Building Errors3 (Errors3.idr)
 Error: Operator =@ is a type-binding (typebind) operator, but is used as a regular operator.
 
@@ -44,8 +44,8 @@ Explanation: regular, typebind and autobind operators all use a slightly differe
 
 Possible solutions:
  - Write the expression using typebind syntax: '(_ : a) =@ a'.
- - Change the fixity defined at Errors3:1 to 'private infixr 0 =@'.
- - Hide or remove the fixity at Errors3:1 and import a module that exports a compatible fixity.
+ - Change the fixity defined at Errors3:2:18--2:29 to 'private infixr 0 =@'.
+ - Hide or remove the fixity at Errors3:2:18--2:29 and import a module that exports a compatible fixity.
 1/1: Building Errors4 (Errors4.idr)
 Error: Operator =@ is a regular operator, but is used as a type-binding (typebind) operator.
 
@@ -60,8 +60,8 @@ Explanation: regular, typebind and autobind operators all use a slightly differe
 
 Possible solutions:
  - Write the expression using regular syntax: 'ty =@ S x'.
- - Change the fixity defined at Errors4:1 to 'private typebind infixr 0 =@'.
- - Hide or remove the fixity at Errors4:1 and import a module that exports a compatible fixity.
+ - Change the fixity defined at Errors4:2:9--2:20 to 'private typebind infixr 0 =@'.
+ - Hide or remove the fixity at Errors4:2:9--2:20 and import a module that exports a compatible fixity.
 1/1: Building Errors5 (Errors5.idr)
 Error: Operator =@ is a regular operator, but is used as an automatically-binding (autobind) operator.
 
@@ -76,8 +76,8 @@ Explanation: regular, typebind and autobind operators all use a slightly differe
 
 Possible solutions:
  - Write the expression using regular syntax: 'ty =@ S x'.
- - Change the fixity defined at Errors5:1 to 'private autobind infixr 0 =@'.
- - Hide or remove the fixity at Errors5:1 and import a module that exports a compatible fixity.
+ - Change the fixity defined at Errors5:3:9--3:20 to 'private autobind infixr 0 =@'.
+ - Hide or remove the fixity at Errors5:3:9--3:20 and import a module that exports a compatible fixity.
 1/2: Building Lin (Lin.idr)
 2/2: Building LinImport (LinImport.idr)
 Error: Operator =@ is a type-binding (typebind) operator, but is used as an automatically-binding (autobind) operator.
@@ -93,5 +93,5 @@ Explanation: regular, typebind and autobind operators all use a slightly differe
 
 Possible solutions:
  - Write the expression using typebind syntax: '(x : ty) =@ S x'.
- - Change the fixity defined at Lin:1 to 'export autobind infixr 0 =@'.
- - Hide or remove the fixity at Lin:1 and import a module that exports a compatible fixity.
+ - Change the fixity defined at Lin:3:17--3:28 to 'export autobind infixr 0 =@'.
+ - Hide or remove the fixity at Lin:3:17--3:28 and import a module that exports a compatible fixity.
