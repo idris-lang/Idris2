@@ -5,6 +5,7 @@ import Core.Options
 import Core.TT
 import Core.Env
 import Core.Value
+import Core.UnifyState
 import TTImp.TTImp
 
 import Data.List
@@ -646,3 +647,27 @@ getArgNames defs bound allvars env (NBind fc x (Pi _ _ p ty) sc)
          sc' <- sc defs (toClosure defaultOpts env (Erased fc Placeholder))
          pure $ ns ++ !(getArgNames defs bound (map (UN . Basic) ns ++ allvars) env sc')
 getArgNames defs bound allvars env val = pure []
+
+export
+etaExpandImplicits : {auto c : Ref Ctxt Defs} ->
+                     {auto u : Ref UST UState} ->
+                     FC -> (ty, lhs, rhs : RawImp) ->
+                     Core (RawImp, RawImp)
+etaExpandImplicits fc ty lhs rhs
+    = do let imps = collectImplicits ty
+         namedImps <- for imps $ \nm => (nm,) <$> genVarName "arg"
+         let lhsArgs = namedImps <&> makeArg True
+         let rhsArgs = namedImps <&> makeArg False
+         pure (apply lhs lhsArgs, apply rhs rhsArgs)
+  where
+    collectImplicits : RawImp -> List Name
+    collectImplicits (IPi _ _ Explicit _        _ ty) = []
+    collectImplicits (IPi _ _ _        (Just n) _ ty) = n :: collectImplicits ty
+    collectImplicits _                                = []
+
+    ivar : (bind : Bool) -> Name -> RawImp
+    ivar True  = IBindVar fc
+    ivar False = IVar fc
+
+    makeArg : (bind : Bool) -> (Name, Name) -> Arg
+    makeArg bind (n, bindName) = Named fc n $ ivar bind bindName
