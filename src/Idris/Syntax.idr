@@ -296,19 +296,6 @@ mutual
     type : PTerm' nm
 
   public export
-  BasicBinder : Type
-  BasicBinder = BasicBinder' Name
-
-  ||| A binder with quantity information attached
-  ||| basicBinder := qty plainBinder
-  public export
-  record BasicBinder' (nm : Type) where
-    constructor MkBasicBinder
-    rig : RigCount
-    name : WithFC Name
-    type : PTerm' nm
-
-  public export
   PBinder : Type
   PBinder = PBinder' Name
 
