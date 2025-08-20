@@ -402,7 +402,7 @@ mutual
        MkPRecord : (tyname : Name) ->
                    (params : List (PBinder' nm)) ->
                    (opts : List DataOpt) ->
-                   (conName : Maybe (String, Name)) ->
+                   (conName : Maybe (WithDoc $ AddFC Name)) ->
                    (decls : List (PField' nm)) ->
                    PRecordDecl' nm
        MkPRecordLater : (tyname : Name) ->
@@ -568,7 +568,7 @@ mutual
                     (doc : String) ->
                     (params : List (BasicMultiBinder' nm)) ->
                     (det : Maybe (List1 Name)) ->
-                    (conName : Maybe (String, Name)) ->
+                    (conName : Maybe (WithDoc $ AddFC Name)) ->
                     List (PDecl' nm) ->
                     PDeclNoFC' nm
        PImplementation : Visibility -> List PFnOpt -> Pass ->
@@ -1014,19 +1014,9 @@ covering
 Show IPTerm where
   showPrec = showPTermPrec rawName
 
-public export
-record Method where
-  constructor MkMethod
-  name     : Name
-  count    : RigCount
-  totalReq : Maybe TotalReq
-  type     : RawImp
-
-export
-covering
-Show Method where
-  show (MkMethod n c treq ty)
-    = "[" ++ show treq ++ "] " ++ show c ++ " " ++ show n ++ " : " ++ show ty
+public export 0
+Method : Type
+Method = WithName $ WithRig $ AddMetadata Tot' $ RawImp
 
 public export
 record IFaceInfo where
