@@ -175,7 +175,7 @@ checkLambda rig_in elabinfo nest env fc rigl info n argTy scope (Just expty_in)
                     let env' : Env Term (n :: _) = Lam fc rigb info' tyv :: env
                     ignore $ convert fc elabinfo env (gnf env tyv) (gnf env pty)
                     let nest' = weaken (dropName n nest)
-                    pscnf <- normalise defs env' $ compat psc
+                    pscnf <- normaliseHoles defs env' $ compat psc
                     (scopev, scopet) <-
                        inScope fc env' (\e' =>
                           check {e=e'} rig elabinfo nest' env' scope
