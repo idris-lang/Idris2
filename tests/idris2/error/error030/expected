@@ -5,3 +5,16 @@ Issue1236:4:1--5:22
  4 | public export
  5 | data Foo : Type where
 
+1/1: Building Issue1236-2 (Issue1236-2.idr)
+Warning: Main.Mismatched1 has been forward-declared with private visibility, cannot change to export. This will be an error in a later release.
+
+Issue1236-2:3:1--4:30
+ 3 | export
+ 4 | data Mismatched1 : Type where
+
+Warning: Main.Mismatched2 has been forward-declared with public export visibility, cannot change to export. This will be an error in a later release.
+
+Issue1236-2:8:1--9:30
+ 8 | export
+ 9 | data Mismatched2 : Type where
+
