@@ -690,28 +690,24 @@ headConsPenalty p (PDelay _ _ _ w)        = headConsPenalty p w
 headConsPenalty _ (PLoc {})               = 0
 headConsPenalty _ (PUnmatchable {})       = 0
 
+splitColumn : (nps : List (NamedPats (p :: ps) ns)) -> (Vect (length nps) (PatInfo p ns), List (NamedPats ps ns))
+splitColumn [] = ([], [])
+splitColumn ((w :: ws) :: nps) = bimap (w ::) (ws ::) $ splitColumn nps
+
 ||| Apply the given function that scores a pattern to all patterns and then
 ||| sum up the column scores and add to the ScoredPats passed in.
 consScoreHeuristic : {ps : _} -> (scorePat : Pat -> Int) -> ScoredPats ps ns -> ScoredPats ps ns
 consScoreHeuristic _ sps@(Scored [] _) = sps -- can't update scores without any patterns
 consScoreHeuristic scorePat (Scored xs ys) =
-  let columnScores = sum <$> scoreColumns xs
+  let columnScores = scoreColumns xs
       ys' = zipWith (+) ys columnScores
   in  Scored xs ys'
   where
-    -- also returns NamePats of remaining columns while its in there
-    -- scoring the first column.
-    scoreFirstColumn : (nps : List (NamedPats (p' :: ps') ns)) -> (res : List (NamedPats ps' ns) ** (LengthMatch nps res, Vect (length nps) Int))
-    scoreFirstColumn [] = ([] ** (NilMatch, []))
-    scoreFirstColumn ((w :: ws) :: nps) =
-      let (ws' ** (prf, scores)) = scoreFirstColumn nps
-      in  (ws :: ws' ** (ConsMatch prf, scorePat (pat w) :: scores))
-
-    scoreColumns : {ps' : _} -> (nps : List (NamedPats ps' ns)) -> Vect (length ps') (Vect (length nps) Int)
+    scoreColumns : {ps' : _} -> (nps : List (NamedPats ps' ns)) -> Vect (length ps') Int
     scoreColumns {ps' = []} nps = []
     scoreColumns {ps' = w :: ws} nps =
-      let (rest ** (prf, firstColScore)) = scoreFirstColumn nps
-      in  firstColScore :: (rewrite lengthsMatch prf in scoreColumns rest)
+      let (col, nps') = splitColumn nps
+       in sum (scorePat . pat <$> col) :: scoreColumns nps'
 
 ||| Add 1 to each non-default pat in the first row.
 ||| This favors constructive matching first and reduces tree depth on average.
