@@ -580,10 +580,6 @@ mapPTerm f = goPTerm where
     goBasicMultiBinder (MkBasicMultiBinder rig names type)
       = MkBasicMultiBinder rig names (goPTerm type)
 
-    goBasicBinder : BasicBinder' nm -> BasicBinder' nm
-    goBasicBinder (MkBasicBinder rig name type)
-      = MkBasicBinder rig name (goPTerm type)
-
     goPTypeDecl : PTypeDeclData' nm -> PTypeDeclData' nm
     goPTypeDecl (MkPTy n d t) = MkPTy n d $ goPTerm t
 
