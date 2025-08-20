@@ -745,8 +745,8 @@ mutual
            defs <- get Ctxt
            fnty <- nf defs env retTy -- (Bind fc argn (Let RigW argv argTy) retTy)
            let expfnty = gnf env (Bind fc argn (Pi fc top Explicit argTy) (weaken retTy))
-           logGlue "elab.with" 10 "Expected function type" env expfnty
-           whenJust expty (logGlue "elab.with" 10 "Expected result type" env)
+           logGlue "elab.with" 10 "Expected function type" expfnty
+           whenJust expty (logGlue "elab.with" 10 "Expected result type")
            res <- checkAppWith' rig elabinfo nest env fc fntm fnty (n, 1 + argpos) expargs autoargs namedargs kr expty
            cres <- Check.convert fc elabinfo env (glueBack defs env ty) expfnty
            let [] = constraints cres
