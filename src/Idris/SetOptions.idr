@@ -553,7 +553,7 @@ postOptions : {auto c : Ref Ctxt Defs} ->
               {auto o : Ref ROpts REPLOpts} ->
               REPLResult -> List CLOpt -> Core Bool
 postOptions _ [] = pure True
-postOptions res@(ErrorLoadingFile _ _) (OutputFile _ :: rest)
+postOptions res@(ErrorLoadingFile {}) (OutputFile _ :: rest)
     = do ignore $ postOptions res rest
          pure False
 postOptions res (OutputFile outfile :: rest)

@@ -498,13 +498,13 @@ getErrorLoc (BadMultiline loc _) = Just loc
 getErrorLoc (Timeout _) = Nothing
 getErrorLoc (InType _ _ err) = getErrorLoc err
 getErrorLoc (InCon _ err) = getErrorLoc err
-getErrorLoc (FailingDidNotFail fc) = pure fc
-getErrorLoc (FailingWrongError fc _ _) = pure fc
+getErrorLoc (FailingDidNotFail loc) = Just loc
+getErrorLoc (FailingWrongError loc _ _) = Just loc
 getErrorLoc (InLHS _ _ err) = getErrorLoc err
 getErrorLoc (InRHS _ _ err) = getErrorLoc err
 getErrorLoc (MaybeMisspelling err _) = getErrorLoc err
 getErrorLoc (WarningAsError warn) = Just (getWarningLoc warn)
-getErrorLoc (OperatorBindingMismatch fc _ _ _ _ _) = Just fc
+getErrorLoc (OperatorBindingMismatch loc _ _ _ _ _) = Just loc
 
 export
 killWarningLoc : Warning -> Warning
@@ -896,8 +896,8 @@ mapTermM : ({vars : _} -> Term vars -> Core (Term vars)) ->
 mapTermM f = goTerm where
 
     goTerm : {vars : _} -> Term vars -> Core (Term vars)
-    goTerm tm@(Local _ _ _ _) = f tm
-    goTerm tm@(Ref _ _ _) = f tm
+    goTerm tm@(Local {}) = f tm
+    goTerm tm@(Ref {}) = f tm
     goTerm (Meta fc n i args) = f =<< Meta fc n i <$> traverse goTerm args
     goTerm (Bind fc x bd sc) = f =<< Bind fc x <$> traverse goTerm bd <*> goTerm sc
     goTerm (App fc fn arg) = f =<< App fc <$> goTerm fn <*> goTerm arg
@@ -905,9 +905,9 @@ mapTermM f = goTerm where
     goTerm (TDelayed fc la d) = f =<< TDelayed fc la <$> goTerm d
     goTerm (TDelay fc la ty arg) = f =<< TDelay fc la <$> goTerm ty <*> goTerm arg
     goTerm (TForce fc la t) = f =<< TForce fc la <$> goTerm t
-    goTerm tm@(PrimVal _ _) = f tm
-    goTerm tm@(Erased _ _) = f tm
-    goTerm tm@(TType _ _) = f tm
+    goTerm tm@(PrimVal {}) = f tm
+    goTerm tm@(Erased {}) = f tm
+    goTerm tm@(TType {}) = f tm
 
 
 export

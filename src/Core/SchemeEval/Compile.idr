@@ -259,7 +259,7 @@ compileStk svs [] (Bind fc x (Lam _ rig p ty) scope)
          p' <- compilePiInfo svs p
          pure $ Vector (-8) [Lambda [x'] sc', toScheme rig, toSchemePi p',
                                               ty', toScheme x]
-compileStk svs (s :: stk) (Bind fc x (Lam _ _ _ _) scope)
+compileStk svs (s :: stk) (Bind fc x (Lam {}) scope)
     = do i <- nextName
          let x' = schVarName x ++ "-" ++ show i
          sc' <- compileStk (Bound x' :: svs) stk scope
@@ -329,8 +329,8 @@ compileCase blk svs (Case idx p scTy xs)
              Just gdef <- lookupCtxtExact x (gamma defs)
                   | Nothing => pure TYCON -- primitive type match
              case definition gdef of
-                  DCon{} => pure CON
-                  TCon{} => pure TYCON
+                  DCon {} => pure CON
+                  TCon {} => pure TYCON
                   _ => pure CON -- or maybe throw?
     caseType (DelayCase ty arg x :: xs) = pure DELAY
     caseType (ConstCase x y :: xs) = pure CONST

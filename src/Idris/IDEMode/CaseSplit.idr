@@ -46,13 +46,13 @@ toStrUpdate (UN (Basic n), term)
          pure [(n, show (bracket clause))]
   where
     bracket : PTerm' nm -> PTerm' nm
-    bracket tm@(PRef _ _) = tm
-    bracket tm@(PList _ _ _) = tm
-    bracket tm@(PSnocList _ _ _) = tm
-    bracket tm@(PPair _ _ _) = tm
-    bracket tm@(PUnit _) = tm
-    bracket tm@(PComprehension _ _ _) = tm
-    bracket tm@(PPrimVal _ _) = tm
+    bracket tm@(PRef {}) = tm
+    bracket tm@(PList {}) = tm
+    bracket tm@(PSnocList {}) = tm
+    bracket tm@(PPair {}) = tm
+    bracket tm@(PUnit {}) = tm
+    bracket tm@(PComprehension {}) = tm
+    bracket tm@(PPrimVal {}) = tm
     bracket tm = PBracketed emptyFC tm
 toStrUpdate _ = pure [] -- can't replace non user names
 

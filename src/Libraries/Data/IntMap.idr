@@ -290,7 +290,7 @@ export
 merge : Semigroup v => IntMap v -> IntMap v -> IntMap v
 merge = mergeWith (<+>)
 
-||| Left-biased merge, also keeps the ordering specified  by the left map.
+||| Left-biased merge, also keeps the ordering specified by the left map.
 export
 mergeLeft : IntMap v -> IntMap v -> IntMap v
 mergeLeft = mergeWith const

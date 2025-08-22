@@ -30,7 +30,7 @@ import public Libraries.Utils.Binary
 ||| version number if you're changing the version more than once in the same day.
 export
 ttcVersion : Int
-ttcVersion = 2025_08_13_00
+ttcVersion = 2025_08_16_00
 
 export
 checkTTCVersion : String -> Int -> Int -> Core ()
@@ -366,7 +366,7 @@ addGlobalDef modns filens asm (n, def)
     completeDef (Just def)
         = case definition def of
                None => False
-               Hole _ _ => False
+               Hole {} => False
                _ => True
 
 addTypeHint : {auto c : Ref Ctxt Defs} ->

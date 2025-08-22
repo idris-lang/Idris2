@@ -85,21 +85,21 @@ mutual
         e1 `compare` e2 = compare (tag e1) (tag e2)
           where
             tag : forall vars . CExp vars -> Int
-            tag (CLocal _ _) = 0
-            tag (CRef _ _) = 1
-            tag (CLam _ _ _) = 2
-            tag (CLet _ _ _ _ _) = 3
-            tag (CApp _ _ _) = 4
-            tag (CCon _ _ _ _ _) = 5
-            tag (COp _ _ _) = 6
-            tag (CExtPrim _ _ _) = 7
-            tag (CForce _ _ _) = 8
-            tag (CDelay _ _ _) = 9
-            tag (CConCase _ _ _ _) = 10
-            tag (CConstCase _ _ _ _) = 11
-            tag (CPrimVal _ _) = 12
-            tag (CErased _) = 13
-            tag (CCrash _ _) = 14
+            tag (CLocal {}) = 0
+            tag (CRef {}) = 1
+            tag (CLam {}) = 2
+            tag (CLet {}) = 3
+            tag (CApp {}) = 4
+            tag (CCon {}) = 5
+            tag (COp {}) = 6
+            tag (CExtPrim {}) = 7
+            tag (CForce {}) = 8
+            tag (CDelay {}) = 9
+            tag (CConCase {}) = 10
+            tag (CConstCase {}) = 11
+            tag (CPrimVal {}) = 12
+            tag (CErased {}) = 13
+            tag (CCrash {}) = 14
 
     export
     covering

@@ -206,7 +206,7 @@ compileToSS c chez appdir tm = do
       let exports = sepBy " " $ catMaybes
             -- constructors don't generate Scheme definitions
             [ case d of
-                MkNmCon _ _ _ => Nothing
+                MkNmCon {} => Nothing
                 _ => Just $ schName dn
             | (dn, fc, d) <- cu.definitions
             ]

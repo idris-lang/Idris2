@@ -456,6 +456,8 @@ HasNames (Term vars) where
       = do Just gdef <- lookupCtxtExact (Resolved i) gam
                 | Nothing => pure (TType fc (Resolved i))
            pure (TType fc (fullname gdef))
+  full gam (Erased fc (Dotted t))
+      = pure (Erased fc (Dotted !(full gam t)))
   full gam tm = pure tm
 
   resolved gam (Ref fc x n)
@@ -483,6 +485,8 @@ HasNames (Term vars) where
       = do let Just i = getNameID n gam
                 | Nothing => pure (TType fc n)
            pure (TType fc (Resolved i))
+  resolved gam (Erased fc (Dotted t))
+      = pure (Erased fc (Dotted !(resolved gam t)))
   resolved gam tm = pure tm
 
 export
@@ -493,7 +497,7 @@ HasNames Pat where
      = [| PCon (pure fc) (full gam n) (pure i) (pure ar) (traverse (full gam) ps) |]
   full gam (PTyCon fc n ar ps)
      = [| PTyCon (pure fc) (full gam n) (pure ar) (traverse (full gam) ps) |]
-  full gam p@(PConst _ _) = pure p
+  full gam p@(PConst {}) = pure p
   full gam (PArrow fc x p q)
      = [| PArrow (pure fc) (full gam x) (full gam p) (full gam q) |]
   full gam (PDelay fc laz p q)
@@ -507,7 +511,7 @@ HasNames Pat where
      = [| PCon (pure fc) (resolved gam n) (pure i) (pure ar) (traverse (resolved gam) ps) |]
   resolved gam (PTyCon fc n ar ps)
      = [| PTyCon (pure fc) (resolved gam n) (pure ar) (traverse (resolved gam) ps) |]
-  resolved gam p@(PConst _ _) = pure p
+  resolved gam p@(PConst {}) = pure p
   resolved gam (PArrow fc x p q)
      = [| PArrow (pure fc) (resolved gam x) (resolved gam p) (resolved gam q) |]
   resolved gam (PDelay fc laz p q)
@@ -717,7 +721,7 @@ HasNames Warning where
   full gam (ShadowingGlobalDefs fc xs)
     = ShadowingGlobalDefs fc <$> traverseList1 (traversePair (traverseList1 (full gam))) xs
   full gam (IncompatibleVisibility fc x y n) = IncompatibleVisibility fc x y <$> full gam n
-  full gam w@(ShadowingLocalBindings _ _) = pure w
+  full gam w@(ShadowingLocalBindings {}) = pure w
   full gam (Deprecated fc x y) = Deprecated fc x <$> traverseOpt (traversePair (full gam)) y
   full gam (GenericWarn fc x) = pure (GenericWarn fc x)
 
@@ -726,7 +730,7 @@ HasNames Warning where
   resolved gam (ShadowingGlobalDefs fc xs)
     = ShadowingGlobalDefs fc <$> traverseList1 (traversePair (traverseList1 (resolved gam))) xs
   resolved gam (IncompatibleVisibility fc x y n) = IncompatibleVisibility fc x y <$> resolved gam n
-  resolved gam w@(ShadowingLocalBindings _ _) = pure w
+  resolved gam w@(ShadowingLocalBindings {}) = pure w
   resolved gam (Deprecated fc x y) = Deprecated fc x <$> traverseOpt (traversePair (resolved gam)) y
   resolved gam (GenericWarn fc x) = pure (GenericWarn fc x)
 
@@ -1302,7 +1306,7 @@ getUserHoles
                   | Nothing => pure True
              pure $ case definition def of
                   None => True
-                  Hole _ _ => True
+                  Hole {} => True
                   _ => False
 
 export
@@ -1314,7 +1318,7 @@ addDef n def
          put Ctxt ({ gamma := gam' } defs)
          case definition def of
               None => pure ()
-              Hole _ _ => pure ()
+              Hole {} => pure ()
               _ => clearUserHole (fullname def)
          pure idx
 
@@ -1807,7 +1811,7 @@ setDetermining fc tyn args
     -- Type isn't normalised, but the argument names refer to those given
     -- explicitly in the type, so there's no need.
     getPos : Nat -> List Name -> Term vs -> Core NatSet
-    getPos i ns (Bind _ x (Pi _ _ _ _) sc)
+    getPos i ns (Bind _ x (Pi {}) sc)
         = if x `elem` ns
              then do rest <- getPos (1 + i) (filter (/=x) ns) sc
                      pure $ insert i rest
@@ -2025,19 +2029,19 @@ inCurrentNS : {auto c : Ref Ctxt Defs} ->
 inCurrentNS (UN n)
     = do defs <- get Ctxt
          pure (NS (currentNS defs) (UN n))
-inCurrentNS n@(CaseBlock _ _)
+inCurrentNS n@(CaseBlock {})
     = do defs <- get Ctxt
          pure (NS (currentNS defs) n)
-inCurrentNS n@(WithBlock _ _)
+inCurrentNS n@(WithBlock {})
     = do defs <- get Ctxt
          pure (NS (currentNS defs) n)
-inCurrentNS n@(Nested _ _)
+inCurrentNS n@(Nested {})
     = do defs <- get Ctxt
          pure (NS (currentNS defs) n)
-inCurrentNS n@(MN _ _)
+inCurrentNS n@(MN {})
     = do defs <- get Ctxt
          pure (NS (currentNS defs) n)
-inCurrentNS n@(DN _ _)
+inCurrentNS n@(DN {})
     = do defs <- get Ctxt
          pure (NS (currentNS defs) n)
 inCurrentNS n = pure n

@@ -305,11 +305,11 @@ applyStackWithFC fn ((fc, arg) :: args) = applyStackWithFC (App fc fn arg) args
 
 -- Build a simple function type
 export
-fnType : {vars : _} -> FC -> Term vars -> Term vars -> Term vars
+fnType : FC -> Term vars -> Term vars -> Term vars
 fnType fc arg scope = Bind emptyFC (MN "_" 0) (Pi fc top Explicit arg) (weaken scope)
 
 export
-linFnType : {vars : _} -> FC -> Term vars -> Term vars -> Term vars
+linFnType : FC -> Term vars -> Term vars -> Term vars
 linFnType fc arg scope = Bind emptyFC (MN "_" 0) (Pi fc linear Explicit arg) (weaken scope)
 
 export
@@ -397,7 +397,7 @@ StripNamespace (Term vars) where
 
 export
 isErased : Term vars -> Bool
-isErased (Erased _ _) = True
+isErased (Erased {}) = True
 isErased _ = False
 
 export
@@ -465,7 +465,7 @@ eqTerm (TDelay _ _ t x) (TDelay _ _ t' x') = eqTerm t t' && eqTerm x x'
 eqTerm (TForce _ _ t) (TForce _ _ t') = eqTerm t t'
 eqTerm (PrimVal _ c) (PrimVal _ c') = c == c'
 eqTerm (Erased _ i) (Erased _ i') = assert_total (eqWhyErasedBy eqTerm i i')
-eqTerm (TType _ _) (TType _ _) = True
+eqTerm (TType {}) (TType {}) = True
 eqTerm _ _ = False
 
 export
@@ -547,14 +547,14 @@ covering
       showApp (Bind _ x (PVTy _ c ty) sc) []
           = "pty " ++ showCount c ++ show x ++ " : " ++ show ty ++
             " => " ++ show sc
-      showApp (App _ _ _) [] = "[can't happen]"
+      showApp (App {}) [] = "[can't happen]"
       showApp (As _ _ n tm) [] = show n ++ "@" ++ show tm
       showApp (TDelayed _ _ tm) [] = "%Delayed " ++ show tm
       showApp (TDelay _ _ _ tm) [] = "%Delay " ++ show tm
       showApp (TForce _ _ tm) [] = "%Force " ++ show tm
       showApp (PrimVal _ c) [] = show c
       showApp (Erased _ (Dotted t)) [] = ".(" ++ show t ++ ")"
-      showApp (Erased _ _) [] = "[__]"
+      showApp (Erased {}) [] = "[__]"
       showApp (TType _ u) [] = "Type"
       showApp _ [] = "???"
       showApp f args = "(" ++ assert_total (show f) ++ " " ++

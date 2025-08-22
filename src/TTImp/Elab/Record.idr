@@ -243,7 +243,7 @@ recUpdate rigc elabinfo iloc nest env flds rec grecty
     mkClause rec = PatClause vloc (toLHS vloc rec) (toRHS vloc rec)
 
 needType : Error -> Bool
-needType (RecordTypeNeeded _ _) = True
+needType (RecordTypeNeeded {}) = True
 needType (InType _ _ err) = needType err
 needType (InCon _ err) = needType err
 needType (InLHS _ _ err) = needType err

@@ -24,7 +24,7 @@ getDecl p (MkWithData fc $ PNamespace ns ds)
 getDecl AsType d@(MkWithData _ $ PClaim _) = Just d
 getDecl AsType (MkWithData fc $ PData doc vis mbtot (MkPData dfc tyn (Just tyc) _ _))
     = Just (MkWithData fc $ PData doc vis mbtot (MkPLater dfc tyn tyc))
-getDecl AsType d@(MkWithData _ $ PInterface _ _ _ _ _ _ _ _) = Just d
+getDecl AsType d@(MkWithData _ $ PInterface {}) = Just d
 getDecl AsType d@(MkWithData fc $ PRecord doc vis mbtot (MkPRecord n ps _ _ _))
     = Just (MkWithData fc $ PData doc vis mbtot (MkPLater d.fc n (mkRecType ps)))
   where
@@ -40,9 +40,9 @@ getDecl AsType d@(MkWithData _ $ PDirective _) = Just d
 getDecl AsType d = Nothing
 
 getDecl AsDef (MkWithData _ $ PClaim _) = Nothing
-getDecl AsDef d@(MkWithData _ $ PData _ _ _ (MkPLater _ _ _)) = Just d
-getDecl AsDef (MkWithData _ $ PInterface _ _ _ _ _ _ _ _) = Nothing
-getDecl AsDef d@(MkWithData _ $ PRecord _ _ _ (MkPRecordLater _ _)) = Just d
+getDecl AsDef d@(MkWithData _ $ PData _ _ _ (MkPLater {})) = Just d
+getDecl AsDef (MkWithData _ $ PInterface {}) = Nothing
+getDecl AsDef d@(MkWithData _ $ PRecord _ _ _ (MkPRecordLater {})) = Just d
 getDecl AsDef (MkWithData _ $ PFixity _ ) = Nothing
 getDecl AsDef (MkWithData _ $ PDirective _) = Nothing
 getDecl AsDef d = Just d

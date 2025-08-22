@@ -14,7 +14,7 @@ import Libraries.Data.NatSet
 import Data.SnocList
 
 getRetTy : Defs -> ClosedNF -> Core Name
-getRetTy defs (NBind fc _ (Pi _ _ _ _) sc)
+getRetTy defs (NBind fc _ (Pi {}) sc)
     = getRetTy defs !(sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder)))
 getRetTy defs (NTCon _ n _ _) = pure n
 getRetTy defs ty
@@ -155,7 +155,7 @@ processFnOpt fc _ ndef (SpecArgs ns)
     -- depends on which is only dependend on by declared static arguments.
     collectSpec : NatSet    -> -- specialisable so far
                   List Name -> -- things depended on by dynamic args
-                               -- We're assuming  it's a short list, so just use
+                               -- We're assuming it's a short list, so just use
                                -- List and don't worry about duplicates.
                   List (Name, Nat) -> ClosedNF -> Core NatSet
     collectSpec acc ddeps ps (NBind tfc x (Pi _ _ _ nty) sc)
@@ -177,7 +177,7 @@ processFnOpt fc _ ndef (SpecArgs ns)
     collectSpec acc ddeps ps _ = pure acc
 
     getNamePos : Nat -> ClosedNF -> Core (List (Name, Nat))
-    getNamePos i (NBind tfc x (Pi _ _ _ _) sc)
+    getNamePos i (NBind tfc x (Pi {}) sc)
         = do defs <- get Ctxt
              ns' <- getNamePos (1 + i) !(sc defs (toClosure defaultOpts Env.empty (Erased tfc Placeholder)))
              pure ((x, i) :: ns')

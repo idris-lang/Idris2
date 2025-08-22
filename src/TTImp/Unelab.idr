@@ -147,8 +147,8 @@ mutual
                pure $ Just $ (PatClause fc (fst lhs') (fst rhs'))
 
       ||| mkCase looks up the value passed as the scrutinee of the case-block.
-      ||| @ argpos  is the index of the case-block's scrutinee in args
-      ||| @ args    is the list of arguments at the call site of the case-block
+      ||| @ argpos is the index of the case-block's scrutinee in args
+      ||| @ args   is the list of arguments at the call site of the case-block
       |||
       ||| Once we have the scrutinee `e`, we can form `case e of` and so focus
       ||| on manufacturing the clauses.

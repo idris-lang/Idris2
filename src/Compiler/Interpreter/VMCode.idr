@@ -25,9 +25,9 @@ data Object : Type where
     Null : Object
 
 showType : Object -> String
-showType (Closure _ _ _) = "Closure"
-showType (Constructor _ _) = "Constructor"
-showType (Const _) = "Constant"
+showType (Closure {}) = "Closure"
+showType (Constructor {}) = "Constructor"
+showType (Const {}) = "Constant"
 showType Null = "Null"
 
 mutual
@@ -273,7 +273,7 @@ parameters {auto c : Ref Ctxt Defs}
                 is' <- beginFunction (zip as args) is (foldl max (-1) as)
                 traverse_ (step stk') is'
                 getReg stk' RVal
-            Just (MkVMForeign _ _ _) => case lookup fn knownForeign of
+            Just (MkVMForeign {}) => case lookup fn knownForeign of
                 Nothing => interpError stk $ "Unkown foreign function: " ++ show fn
                 Just (ar ** op) => case toVect ar args of
                     Nothing => interpError stk $ "Wrong number of arguments, found: " ++ show (length args) ++ ", expected: " ++ show ar

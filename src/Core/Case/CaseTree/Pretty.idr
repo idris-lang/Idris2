@@ -20,7 +20,7 @@ namespace Raw
 
   prettyTree (Case {name} idx prf ty alts)
       = let ann = case ty of
-                    Erased _ _ => ""
+                    Erased {} => ""
                     _ => space <+> keyword ":" <++> byShow ty
         in case_ <++> annotate Bound (pretty0 name) <+> ann <++> of_
          <+> nest 2 (hardline
@@ -71,7 +71,7 @@ namespace Resugared
 
   prettyTree env (Case {name} idx prf ty alts) = do
     ann <- case ty of
-             Erased _ _ => pure ""
+             Erased {} => pure ""
              _ => do ty <- resugar env ty
                      pure (space <+> keyword ":" <++> pretty ty)
     alts <- assert_total (traverse (prettyAlt env) alts)

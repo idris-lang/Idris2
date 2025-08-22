@@ -116,8 +116,8 @@ mutual
   lambda : {auto c : Ref ESs ESSt} -> Name -> NamedCExp -> Core Exp
   lambda n x = go [n] x
     where go : List Name -> NamedCExp -> Core Exp
-          go ns (NmLam _  n x) = go (n :: ns) x
-          go ns x              = do
+          go ns (NmLam _ n x) = go (n :: ns) x
+          go ns x             = do
             vs <- traverse registerLocal (reverse ns)
             ELam vs <$> stmt Returns x
 
@@ -186,7 +186,7 @@ mutual
 
   -- No need for a `switch` statement if we only have
   -- a `default` branch.
-  stmt e (NmConCase _ _  [] (Just x)) = stmt e x
+  stmt e (NmConCase _ _ [] (Just x)) = stmt e x
 
   -- Create a `switch` statement from a pattern match
   -- on constructors. The scrutinee is lifted to the
@@ -199,8 +199,8 @@ mutual
 
   -- Pattern matches on constants behave very similar
   -- to the ones on constructors.
-  stmt e (NmConstCase _ _  [x] Nothing) = body <$> constAlt e x
-  stmt e (NmConstCase _ _  [] (Just x)) = stmt e x
+  stmt e (NmConstCase _ _ [x] Nothing) = body <$> constAlt e x
+  stmt e (NmConstCase _ _ [] (Just x)) = stmt e x
   stmt e (NmConstCase _ sc xs x) = do
     (mbx, ex) <- liftArg sc
     alts      <- traverse (constAlt e) xs

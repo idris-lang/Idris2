@@ -409,7 +409,7 @@ getItDecls
               let it = UN $ Basic "it" in
               pure [ IClaim
                        (MkFCVal replFC $ MkIClaimData top Private []
-                                       $ MkImpTy replFC (NoFC it) (Implicit replFC False))
+                                       $ Mk [replFC, NoFC it] (Implicit replFC False))
                   , IDef replFC it [PatClause replFC (IVar replFC it) (IVar replFC n)]]
 
 ||| Produce the elaboration of a PTerm, along with its inferred type
@@ -850,8 +850,8 @@ loadMainFile f
 ||| produce the normalization function that normalizes terms
 ||| using that evaluation mode
 replEval : {auto c : Ref Ctxt Defs} ->
-  {vs : _} ->
-  REPLEval -> Defs -> Env Term vs -> Term vs -> Core (Term vs)
+           {vs : _} ->
+           REPLEval -> Defs -> Env Term vs -> Term vs -> Core (Term vs)
 replEval NormaliseAll = normaliseOpts ({ strategy := CBV } withAll)
 replEval _ = normalise
 
@@ -1084,7 +1084,7 @@ process Quit
 process NOP
     = pure Done
 process ShowVersion
-    = pure $ VersionIs  version
+    = pure $ VersionIs version
 process (ImportPackage package) = do
   defs <- get Ctxt
   searchDirs <- extraSearchDirectories

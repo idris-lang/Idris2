@@ -19,9 +19,7 @@ record DataCon where
 ||| Given a normalised type, get all the possible constructors for that
 ||| type family, with their type, name, tag, and arity.
 export
-getCons : {auto c : Ref Ctxt Defs} ->
-          {vars : _} ->
-          Defs -> NF vars -> Core (List DataCon)
+getCons : Defs -> NF vars -> Core (List DataCon)
 getCons defs (NTCon _ tn _ _)
     = case !(lookupDefExact tn (gamma defs)) of
            Just (TCon _ _ _ _ _ cons _) =>
@@ -51,8 +49,7 @@ emptyRHS fc (STerm i s) = STerm i (Erased fc Placeholder)
 emptyRHS fc sc = sc
 
 export
-mkAlt : {vars : _} ->
-        FC -> CaseTree vars -> DataCon -> CaseAlt vars
+mkAlt : FC -> CaseTree vars -> DataCon -> CaseAlt vars
 mkAlt fc sc (MkDataCon cn t ar)
     = ConCase cn t (map (MN "m") (take ar [0..]))
               (weakenNs (map take) (emptyRHS fc sc))
@@ -60,6 +57,6 @@ mkAlt fc sc (MkDataCon cn t ar)
 export
 tagIs : Int -> CaseAlt vars -> Bool
 tagIs t (ConCase _ t' _ _) = t == t'
-tagIs t (ConstCase _ _) = False
-tagIs t (DelayCase _ _ _) = False
+tagIs t (ConstCase {}) = False
+tagIs t (DelayCase {}) = False
 tagIs t (DefaultCase _) = True

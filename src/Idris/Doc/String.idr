@@ -310,7 +310,7 @@ getDocsForName fc n config
     getMethDoc : Method -> Core (List (Doc IdrisDocAnn))
     getMethDoc meth
         = do syn <- get Syn
-             let [nstr] = lookupName meth.name (defDocstrings syn)
+             let [nstr] = lookupName meth.name.val (defDocstrings syn)
                   | _ => pure []
              pure <$> showDoc methodsConfig nstr
 
@@ -419,7 +419,7 @@ getDocsForName fc n config
              | [ifacedata] => (Just "interface",) . pure <$> getIFaceDoc ifacedata
              | _ => pure (Nothing, []) -- shouldn't happen, we've resolved ambiguity by now
          case definition d of
-           PMDef _ _ _ _ _ => pure ( Nothing
+           PMDef {} => pure ( Nothing
                                    , catMaybes [ showTotal (totality d)
                                                , pure (showVisible (collapseDefault $ visibility d))])
            TCon _ _ _ _ _ cons _ =>
@@ -560,23 +560,23 @@ getDocsForPTerm (PType _) = pure $ vcat
   [ "Type : Type"
   , indent 2 "The type of all types is Type. The type of Type is Type."
   ]
-getDocsForPTerm (PString _ _ _) = pure $ vcat
+getDocsForPTerm (PString {}) = pure $ vcat
   [ "String Literal"
   , indent 2 "Desugars to a fromString call"
   ]
-getDocsForPTerm (PList _ _ _) = pure $ vcat
+getDocsForPTerm (PList {}) = pure $ vcat
   [ "List Literal"
   , indent 2 "Desugars to (::) and Nil"
   ]
-getDocsForPTerm (PSnocList _ _ _) = pure $ vcat
+getDocsForPTerm (PSnocList {}) = pure $ vcat
   [ "SnocList Literal"
   , indent 2 "Desugars to (:<) and Lin"
   ]
-getDocsForPTerm (PPair _ _ _) = pure $ vcat
+getDocsForPTerm (PPair {}) = pure $ vcat
   [ "Pair Literal"
   , indent 2 "Desugars to MkPair or Pair"
   ]
-getDocsForPTerm (PDPair _ _ _ _ _) = pure $ vcat
+getDocsForPTerm (PDPair {}) = pure $ vcat
   [ "Dependant Pair Literal"
   , indent 2 "Desugars to MkDPair or DPair"
   ]
@@ -584,7 +584,7 @@ getDocsForPTerm (PUnit _) = pure $ vcat
   [ "Unit Literal"
   , indent 2 "Desugars to MkUnit or Unit"
   ]
-getDocsForPTerm (PUnquote _ _) = pure $ vcat $
+getDocsForPTerm (PUnquote {}) = pure $ vcat $
   header "Unquotes" :: ""
   :: map (indent 2) [
   """
@@ -627,7 +627,7 @@ getDocsForPTerm (PDelayed _ LInf  _) = pure $ vcat $
   structure. This can be disabled using the `%auto_lazy off` pragma.
   """
   ]
-getDocsForPTerm (PDelay _ _) = pure $ vcat $
+getDocsForPTerm (PDelay {}) = pure $ vcat $
   header "Laziness compiler primitive" :: ""
   :: map (indent 2) [
   """
@@ -639,7 +639,7 @@ getDocsForPTerm (PDelay _ _) = pure $ vcat $
   Automatically inserted by the compiler unless `%auto_lazy off` is set.
   """
   ]
-getDocsForPTerm (PForce _ _) = pure $ vcat $
+getDocsForPTerm (PForce {}) = pure $ vcat $
   header "Laziness compiler primitive" :: ""
   :: map (indent 2) [
   """

@@ -31,13 +31,13 @@ genUniqueStr xs x = if x `elem` xs then genUniqueStr xs (x ++ "'") else x
 -- Used in findBindableNames{,Quot}
 rawImpFromDecl : ImpDecl -> List RawImp
 rawImpFromDecl decl = case decl of
-    IClaim (MkWithData fc1 $ MkIClaimData y z ys ty) => [ty.type]
+    IClaim (MkWithData fc1 $ MkIClaimData y z ys ty) => [ty.val]
     IData fc1 y _ (MkImpData fc2 n tycon opts datacons)
-        => maybe id (::) tycon $ map type datacons
+        => maybe id (::) tycon $ map val datacons
     IData fc1 y _ (MkImpLater fc2 n tycon) => [tycon]
     IDef fc1 y ys => getFromClause !ys
     IParameters fc1 ys zs => rawImpFromDecl !zs ++ map getParamTy (forget ys)
-    IRecord fc1 y z _ (MkWithData _  (MkImpRecord header body)) => do
+    IRecord fc1 y z _ (MkWithData _ (MkImpRecord header body)) => do
         binder <- header.val
         field <- body.val
         getFromPiInfo binder.val.info ++ [binder.val.boundType] ++ getFromIField field
@@ -47,7 +47,7 @@ rawImpFromDecl decl = case decl of
     IRunElabDecl fc1 y => [] -- Not sure about this either
     IPragma _ _ f => []
     ILog k => []
-    IBuiltin _ _ _ => []
+    IBuiltin {} => []
   where getParamTy : ImpParameter' RawImp -> RawImp
         getParamTy binder = binder.val.boundType
         getFromClause : ImpClause -> List RawImp
@@ -210,7 +210,7 @@ findUniqueBindableNames fc arg env used t
                                 -- do not warn about holes: `?a` is not actually
                                 -- getting shadowed as it will not become a
                                 -- toplevel declaration
-                                 Hole _ _ => Nothing
+                                 Hole {} => Nothing
                                  _ => pure n
                     pure $ MkPair n <$> fromList ns
             whenJust (fromList ns) $ recordWarning . ShadowingGlobalDefs fc
@@ -386,20 +386,16 @@ mutual
   substNamesClause' bvar bound ps (ImpossibleClause fc lhs)
       = ImpossibleClause fc (substNames' bvar bound [] lhs)
 
-  substNamesTy' : SubstNamesIn ImpTy
-  substNamesTy' bvar bound ps (MkImpTy fc n ty)
-      = MkImpTy fc n (substNames' bvar bound ps ty)
-
   substNamesData' : SubstNamesIn ImpData
   substNamesData' bvar bound ps (MkImpData fc n con opts dcons)
       = MkImpData fc n (map (substNames' bvar bound ps) con) opts
-                  (map (substNamesTy' bvar bound ps) dcons)
+                  (map (map (substNames' bvar bound ps)) dcons)
   substNamesData' bvar bound ps (MkImpLater fc n con)
       = MkImpLater fc n (substNames' bvar bound ps con)
 
   substNamesDecl' : SubstNamesIn ImpDecl
   substNamesDecl' bvar bound ps (IClaim claim)
-      = IClaim $ map {type $= substNamesTy' bvar bound ps} claim
+      = IClaim $ map {type $= map (substNames' bvar bound ps)} claim
   substNamesDecl' bvar bound ps (IDef fc n cs)
       = IDef fc n (map (substNamesClause' bvar bound ps) cs)
   substNamesDecl' bvar bound ps (IData fc vis mbtot d)
@@ -486,20 +482,16 @@ mutual
   substLocClause fc' (ImpossibleClause fc lhs)
       = ImpossibleClause fc' (substLoc fc' lhs)
 
-  substLocTy : FC -> ImpTy -> ImpTy
-  substLocTy fc' (MkImpTy fc n ty)
-      = MkImpTy fc' (set "fc" fc' n) (substLoc fc' ty)
-
   substLocData : FC -> ImpData -> ImpData
   substLocData fc' (MkImpData fc n con opts dcons)
       = MkImpData fc' n (map (substLoc fc') con) opts
-                        (map (substLocTy fc') dcons)
+                        (map (map (substLoc fc') . set "fc" fc') dcons)
   substLocData fc' (MkImpLater fc n con)
       = MkImpLater fc' n (substLoc fc' con)
 
   substLocDecl : FC -> ImpDecl -> ImpDecl
   substLocDecl fc' (IClaim (MkWithData _ $ MkIClaimData r vis opts td))
-      = IClaim (MkFCVal fc' $ MkIClaimData r vis opts (substLocTy fc' td))
+      = IClaim (MkFCVal fc' $ MkIClaimData r vis opts (map (substLoc fc') (set "fc" fc' td)))
   substLocDecl fc' (IDef fc n cs)
       = IDef fc' n (map (substLocClause fc') cs)
   substLocDecl fc' (IData fc vis mbtot d)
@@ -603,7 +595,7 @@ getArgName defs x bound allvars ty
     namesFor n = lookupName n (NameMap.toList (namedirectives defs))
 
     findNamesM : NF vars -> Core (Maybe (List String))
-    findNamesM (NBind _ x (Pi _ _ _ _) _)
+    findNamesM (NBind _ x (Pi {}) _)
         = pure (Just ["f", "g"])
     findNamesM (NTCon _ n d [(_, v)]) = do
           case dropNS !(full (gamma defs) n) of

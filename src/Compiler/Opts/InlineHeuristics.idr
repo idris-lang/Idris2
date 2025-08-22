@@ -8,17 +8,17 @@ import Libraries.Data.WithDefault
 
 parameters (fn : Name)
     isVar : CExp vars -> Bool
-    isVar (CLocal _ _) = True
-    isVar (CRef _ _) = True
+    isVar (CLocal {}) = True
+    isVar (CRef {}) = True
     isVar (CForce _ _ x) = isVar x
     isVar (CDelay _ _ x) = isVar x
     isVar _ = False
 
     simple : CExp vars -> Bool
-    simple (CLocal _ _) = True
-    simple (CRef _ _) = True
-    simple (CLam _ _ _) = False
-    simple (CLet _ _ _ _ _) = False
+    simple (CLocal {}) = True
+    simple (CRef {}) = True
+    simple (CLam {}) = False
+    simple (CLet {}) = False
     simple (CApp _ (CRef _ fn') xs) = not (fn == fn') && all isVar xs
     simple (CApp _ fn xs) = isVar fn && all isVar xs
     simple (CCon _ _ _ _ xs) = all isVar xs
@@ -26,11 +26,11 @@ parameters (fn : Name)
     simple (CExtPrim _ _ xs) = all isVar xs
     simple (CForce _ _ y) = simple y
     simple (CDelay _ _ y) = simple y
-    simple (CConCase _ _ _ _) = False
-    simple (CConstCase _ _ _ _) = False
-    simple (CPrimVal _ _) = True
-    simple (CErased _) = True
-    simple (CCrash _ _) = False
+    simple (CConCase {}) = False
+    simple (CConstCase {}) = False
+    simple (CPrimVal {}) = True
+    simple (CErased {}) = True
+    simple (CCrash {}) = False
 
     inlineCDef : CDef -> Bool
     inlineCDef (MkFun args exp) =

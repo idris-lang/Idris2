@@ -191,7 +191,7 @@ HasNamespaces VMInst where
 export
 HasNamespaces VMDef where
   nsRefs (MkVMFun args is) = concatMap nsRefs is
-  nsRefs (MkVMForeign _ _ _) = empty
+  nsRefs (MkVMForeign {}) = empty
   nsRefs (MkVMError is) = concatMap nsRefs is
 
 

@@ -296,7 +296,7 @@ Show PartialReason where
   show (BadCall ns)
       = "possibly not terminating due to calls to " ++ showSep ", " (map show ns)
   show (BadPath [_] n)
-      = "possibly not terminating due to call  to " ++ show n
+      = "possibly not terminating due to call to " ++ show n
   show (BadPath init n)
       = "possibly not terminating due to function " ++ show n ++ " being reachable via " ++ showSep " -> " (map show init)
   show (RecPath loop)

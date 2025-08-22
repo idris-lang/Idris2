@@ -34,7 +34,7 @@ public export
 WithArity : Type -> Type
 WithArity = AddMetadata Arity'
 
-||| Obtain totality information from the metadata
+||| Obtain arity information from the metadata
 export
 (.arity) :
     {n : Nat} ->
@@ -54,7 +54,7 @@ public export
 WithOpts : Type -> Type
 WithOpts = AddMetadata Opts'
 
-||| Obtain totality information from the metadata
+||| Obtain data options from the metadata
 export
 (.opts) :
     {n : Nat} ->
@@ -108,11 +108,6 @@ setFC : {n : Nat} ->
         (inRange : NameInRange "fc" fields === Just (n, FC)) => FC ->
         WithData fields a -> WithData fields a
 setFC fc = WithData.set "fc" fc @{inRange}
-
-||| Attach binding and file context information to a type
-public export
-FCBind : Type -> Type
-FCBind = WithData [ Bind', FC' ]
 
 ||| A wrapper for a value with a file context.
 public export
@@ -189,21 +184,28 @@ export
           WithData fields a -> WithFC Name
 (.name) = WithData.get "name" @{inRange}
 
+||| Extract the name out of the metadata.
+export
+(.nameVal) : {n : Nat} ->
+          (inRange : NameInRange "name" fields === Just (n, WithFC Name)) =>
+          WithData fields a -> Name
+(.nameVal) x = x.name.val
+
 ||| Attach name and file context information to a type
 public export
 WithName : Type -> Type
 WithName = AddMetadata Name'
 
-||| the "tyname" label containing a `FCBind Name` for metadata records
+||| the "tyname" label containing a `WithFC Name` for metadata records. Typically used for type names.
 public export
 TyName' : KeyVal
-TyName' = "tyname" :-: FCBind Name
+TyName' = "tyname" :-: WithFC Name
 
 ||| Extract the "tyname" value from the metadata record
 export
 (.tyName) : {n : Nat} ->
-            (inRange : NameInRange "tyname" fields === Just (n, FCBind Name)) =>
-            WithData fields a -> FCBind Name
+            (inRange : NameInRange "tyname" fields === Just (n, WithFC Name)) =>
+            WithData fields a -> WithFC Name
 (.tyName) = WithData.get "tyname" @{inRange}
 
 

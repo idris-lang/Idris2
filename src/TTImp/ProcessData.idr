@@ -57,7 +57,7 @@ checkIsType : {auto c : Ref Ctxt Defs} ->
 checkIsType loc n env nf
     = checkRetType env nf $
          \case
-           NType _ _ => pure ()
+           NType {} => pure ()
            _ => throw $ BadTypeConType loc n
 
 checkFamily : {auto c : Ref Ctxt Defs} ->
@@ -65,7 +65,7 @@ checkFamily : {auto c : Ref Ctxt Defs} ->
 checkFamily loc cn tn env nf
     = checkRetType env nf $
          \case
-           NType _ _ => throw $ BadDataConType loc cn tn
+           NType {} => throw $ BadDataConType loc cn tn
            NTCon _ n' _ _ =>
                  if tn == n'
                     then pure ()
@@ -95,9 +95,11 @@ checkCon : {vars : _} ->
            List ElabOpt -> NestedNames vars ->
            Env Term vars -> Visibility -> (orig : Name) -> (resolved : Name) ->
            ImpTy -> Core Constructor
-checkCon {vars} opts nest env vis tn_in tn (MkImpTy fc cn_in ty_raw)
-    = do cn <- inCurrentNS cn_in.val
-         let ty_raw = updateNS tn_in tn ty_raw
+checkCon {vars} opts nest env vis tn_in tn ty_raw
+    = do let cn_in = ty_raw.tyName
+         let fc = ty_raw.fc
+         cn <- inCurrentNS cn_in.val
+         let ty_raw = updateNS tn_in tn ty_raw.val
          log "declare.data.constructor" 5 $ "Checking constructor type " ++ show cn ++ " : " ++ show ty_raw
          log "declare.data.constructor" 10 $ "Updated " ++ show (tn_in, tn)
 
@@ -138,7 +140,7 @@ getIndexPats tm
          getPats defs ret
   where
     getRetType : Defs -> ClosedNF -> Core ClosedNF
-    getRetType defs (NBind fc _ (Pi _ _ _ _) sc)
+    getRetType defs (NBind fc _ (Pi {}) sc)
         = do sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
              getRetType defs sc'
     getRetType defs t = pure t
@@ -187,7 +189,7 @@ getDetags fc tys
 
     allDisjointWith : ClosedNF -> List ClosedNF -> Core Bool
     allDisjointWith val [] = pure True
-    allDisjointWith (NErased _ _) _ = pure False
+    allDisjointWith (NErased {}) _ = pure False
     allDisjointWith val (nf :: nfs)
         = do ok <- disjoint val nf
              if ok then allDisjointWith val nfs

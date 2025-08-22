@@ -68,7 +68,7 @@ data Out : Type where
 
 output : List (Tree op a) -> Tok op a ->
          Core (List (Tree op a))
-output [] (Op _ _ _ _) = throw (InternalError "Invalid input to shunting")
+output [] (Op {}) = throw (InternalError "Invalid input to shunting")
 output (x :: stk) (Op loc opFC str (Prefix _)) = pure $ Pre loc opFC str x :: stk
 output (x :: y :: stk) (Op loc opFC str _) = pure $ Infix loc opFC str y x :: stk
 output stk (Expr a) = pure $ Leaf a :: stk

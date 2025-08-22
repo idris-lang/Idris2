@@ -234,14 +234,6 @@ mutual
                _ => corrupt "AltType"
 
   export
-  TTC ImpTy where
-    toBuf (MkImpTy fc n ty)
-        = do toBuf fc;  toBuf n; toBuf ty
-    fromBuf
-        = do fc <- fromBuf; n <- fromBuf; ty <- fromBuf
-             pure (MkImpTy fc n ty)
-
-  export
   TTC ImpClause where
     toBuf (PatClause fc lhs rhs)
         = do tag 0; toBuf fc; toBuf lhs; toBuf rhs
@@ -390,7 +382,7 @@ mutual
         = do tag 8; toBuf n
     toBuf (IBuiltin fc type name)
         = do tag 9; toBuf fc; toBuf type; toBuf name
-    toBuf (IFail _ _ _)
+    toBuf (IFail {})
         = pure ()
 
     fromBuf

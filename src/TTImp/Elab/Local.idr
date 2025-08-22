@@ -65,7 +65,7 @@ localHelper {vars} nest env nestdecls_in func
          -- ensuring the nested definition is used exactly once
          let env' = eraseLinear env
          -- We don't want to keep rechecking delayed elaborators in the
-         -- locals  block, because they're not going to make progress until
+         -- locals block, because they're not going to make progress until
          -- we come out again, so save them
          ust <- get UST
          let olddelayed = delayedElab ust
@@ -101,8 +101,8 @@ localHelper {vars} nest env nestdecls_in func
     -- When we encounter the names in elaboration, we'll update to an
     -- application of the nested name.
     updateTyName : NestedNames vars -> ImpTy -> ImpTy
-    updateTyName nest (MkImpTy loc' n ty)
-        = MkImpTy loc' (map (mapNestedName nest) n) ty
+    updateTyName nest ty
+        = update "tyname" (map (mapNestedName nest)) ty
 
     updateDataName : NestedNames vars -> ImpData -> ImpData
     updateDataName nest (MkImpData loc' n tycons dopts dcons)

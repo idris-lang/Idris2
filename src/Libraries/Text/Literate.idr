@@ -176,7 +176,7 @@ lexLiterate (MkLitStyle delims markers exts) str =
 ||| literate source file (`litStr`) that follows the presented style.
 |||
 ||| @specification The literate specification to use.
-||| @litStr  The literate source file.
+||| @litStr The literate source file.
 |||
 ||| Returns a `LiterateError` if the literate file contains malformed
 ||| code blocks or code lines.

@@ -1580,11 +1580,11 @@ namespaceHead fname
 parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
   namespaceDecl : Rule PDeclNoFC
   namespaceDecl
-      = do doc   <- optDocumentation fname -- documentation is not recoded???
-           col   <- column
-           ns    <- namespaceHead fname
-           ds    <- blockAfter col (topDecl fname)
-           pure (PNamespace  ns (collectDefs ds))
+      = do doc <- optDocumentation fname -- documentation is not recoded???
+           col <- column
+           ns  <- namespaceHead fname
+           ds  <- blockAfter col (topDecl fname)
+           pure (PNamespace ns (collectDefs ds))
 
   transformDecl : Rule PDeclNoFC
   transformDecl
@@ -1664,12 +1664,12 @@ getVisibility (Just vis) (Left x :: xs)
    = fatalError "Multiple visibility modifiers"
 getVisibility v (_ :: xs) = getVisibility v xs
 
-recordConstructor : OriginDesc -> Rule (String, Name)
+recordConstructor : OriginDesc -> Rule (WithDoc $ AddFC Name)
 recordConstructor fname
   = do doc <- optDocumentation fname
        decorate fname Keyword $ exactIdent "constructor"
-       n <- mustWork $ decoratedDataConstructorName fname
-       pure (doc, n)
+       n <- fcBounds $ mustWork $ decoratedDataConstructorName fname
+       pure (doc :+ n)
 
 autoImplicitField : OriginDesc -> IndentInfo -> Rule (PiInfo t)
 autoImplicitField fname _ = AutoImplicit <$ decoratedKeyword fname "auto"

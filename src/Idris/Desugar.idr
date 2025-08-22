@@ -256,7 +256,7 @@ initBangs : Maybe Namespace -> BangData
 initBangs = MkBangData 0 []
 
 addNS : Maybe Namespace -> Name -> Name
-addNS (Just ns) n@(NS _ _) = n
+addNS (Just ns) n@(NS {}) = n
 addNS (Just ns) n = NS ns n
 addNS _ n = n
 
@@ -360,7 +360,7 @@ mutual
                    (Just (MN "lamc" 0)) !(desugarB AnyExpr ps argTy) $
                  ICase fc [] (IVar EmptyFC (MN "lamc" 0)) (Implicit fc False)
                      [snd !(desugarClause True ps (MkPatClause fc pat scope []))]
-  desugarB side ps (PLam fc rig p (PRef _ n@(MN _ _)) argTy scope)
+  desugarB side ps (PLam fc rig p (PRef _ n@(MN {})) argTy scope)
       = pure $ ILam fc rig !(traverse (desugar AnyExpr ps) p)
                            (Just n) !(desugarB AnyExpr ps argTy)
                                     !(desugar AnyExpr (insert n ps) scope)
@@ -678,7 +678,7 @@ mutual
 
       notEmpty : PStr -> Bool
       notEmpty (StrLiteral _ str) = str /= ""
-      notEmpty (StrInterp _ _) = True
+      notEmpty (StrInterp {}) = True
 
       strInterpolate : List RawImp -> RawImp
       strInterpolate []
@@ -702,7 +702,7 @@ mutual
       trimLast fc lines with (snocList lines)
         trimLast fc [] | Empty = throw $ BadMultiline fc "Expected new line"
         trimLast _ (initLines `snoc` []) | Snoc [] initLines _ = pure lines
-        trimLast _ (initLines `snoc` [StrLiteral fc str]) | Snoc [(StrLiteral _ _)] initLines _
+        trimLast _ (initLines `snoc` [StrLiteral fc str]) | Snoc [(StrLiteral {})] initLines _
             = if any (not . isSpace) (fastUnpack str)
                      then throw $ BadMultiline fc "Closing delimiter of multiline strings cannot be preceded by non-whitespace characters"
                      else pure initLines
@@ -882,7 +882,7 @@ mutual
       = flip Core.traverse (forget names) $ \(doc, n) : (String, WithFC Name) =>
           do addDocString n.val (d ++ doc)
              syn <- get Syn
-             pure $ MkImpTy pty.fc n !(bindTypeNames pty.fc (usingImpl syn)
+             pure $ Mk [pty.fc, n] !(bindTypeNames pty.fc (usingImpl syn)
                                                  ps !(desugar AnyExpr ps ty))
 
   -- Attempt to get the function name from a function pattern. For example,
@@ -990,10 +990,10 @@ mutual
   mapDesugarPiInfo ps = PiInfo.traverse (desugar AnyExpr ps)
 
   displayFixity : Maybe Visibility -> BindingModifier -> Fixity -> Nat -> OpStr -> String
-  displayFixity Nothing NotBinding fix prec op = "\{show fix} \{show  prec} \{show op}"
-  displayFixity Nothing bind fix prec op = "\{show bind} \{show fix} \{show  prec} \{show op}"
-  displayFixity (Just vis) NotBinding fix prec op = "\{show vis} \{show fix} \{show  prec} \{show op}"
-  displayFixity (Just vis) bind fix prec op = "\{show vis} \{show bind} \{show fix} \{show  prec} \{show op}"
+  displayFixity Nothing NotBinding fix prec op = "\{show fix} \{show prec} \{show op}"
+  displayFixity Nothing bind fix prec op = "\{show bind} \{show fix} \{show prec} \{show op}"
+  displayFixity (Just vis) NotBinding fix prec op = "\{show vis} \{show fix} \{show prec} \{show op}"
+  displayFixity (Just vis) bind fix prec op = "\{show vis} \{show bind} \{show fix} \{show prec} \{show op}"
 
   verifyTotalityModifiers : {auto c : Ref Ctxt Defs} ->
                             FC -> List FnOpt -> Core ()
@@ -1128,7 +1128,7 @@ mutual
            let consb = map (\ (nm, tm) => (nm, doBind bnames tm)) cons'
 
            body' <- traverse (desugarDecl ps2) body
-           pure [IPragma int.fc (maybe [tn] (\n => [tn, snd n]) conname)
+           pure [IPragma int.fc (maybe [tn] (\n => [tn, n.val]) conname)
                             (\nest, env =>
                               elabInterface int.fc vis env nest consb
                                             tn paramsb det conname
@@ -1223,8 +1223,8 @@ mutual
            let recName = nameRoot tn
            fields' <- traverse (desugarField (mkNamespace recName) ps') fields
            let _ = the (List $ List IField) fields'
-           let conname = maybe (mkConName tn) snd conname_in
-           whenJust (fst <$> conname_in) (addDocString conname)
+           let conname = maybe (mkConName tn) val conname_in
+           whenJust (get "doc" <$> conname_in) (addDocString conname)
            let _ = the Name conname
            pure [IRecord rec.fc (Just recName)
                          vis mbtot (Mk [rec.fc] $ MkImpRecord (Mk [NoFC tn] paramsb) (Mk [NoFC conname, opts] (concat fields')))]

@@ -389,23 +389,23 @@ tryRecursive fc rig opts hints env ty topty rdata
       -- one where there's a local in another, or that constructor applications
       -- differ somewhere)
       argDiff : Term vs -> Term vs' -> Bool
-      argDiff (Local _ _ _ _) _ = False
+      argDiff (Local {}) _ = False
       argDiff (Ref _ _ fn) (Ref _ _ fn') = fn /= fn'
-      argDiff (Bind _ _ _ _) _ = False
-      argDiff _ (Bind _ _ _ _) = False
+      argDiff (Bind {}) _ = False
+      argDiff _ (Bind {}) = False
       argDiff (App _ f a) (App _ f' a')
          = structDiff f f' || structDiff a a'
       argDiff (PrimVal _ c) (PrimVal _ c') = c /= c'
-      argDiff (Erased _ _) _ = False
-      argDiff _ (Erased _ _) = False
-      argDiff (TType _ _) (TType _ _) = False
+      argDiff (Erased {}) _ = False
+      argDiff _ (Erased {}) = False
+      argDiff (TType {}) (TType {}) = False
       argDiff (As _ _ _ x) y = argDiff x y
       argDiff x (As _ _ _ y) = argDiff x y
       argDiff _ _ = True
 
       appsDiff : Term vs -> Term vs' -> List (Term vs) -> List (Term vs') ->
                  Bool
-      appsDiff (Ref _ (DataCon _ _) f) (Ref _ (DataCon _ _) f') args args'
+      appsDiff (Ref _ (DataCon {}) f) (Ref _ (DataCon {}) f') args args'
          = f /= f' || any (uncurry argDiff) (zip args args')
       appsDiff (Ref _ (TyCon _) f) (Ref _ (TyCon _) f') args args'
          = f /= f' || any (uncurry argDiff) (zip args args')
@@ -413,8 +413,8 @@ tryRecursive fc rig opts hints env ty topty rdata
          = f == f'
            && length args == length args'
            && any (uncurry argDiff) (zip args args')
-      appsDiff (Ref _ (DataCon _ _) f) (Local _ _ _ _) _ _ = True
-      appsDiff (Local _ _ _ _) (Ref _ (DataCon _ _) f) _ _ = True
+      appsDiff (Ref _ (DataCon {}) f) (Local {}) _ _ = True
+      appsDiff (Local {}) (Ref _ (DataCon {}) f) _ _ = True
       appsDiff f f' [] [] = argDiff f f'
       appsDiff _ _ _ _ = False -- can't be sure...
 
@@ -430,7 +430,7 @@ tryRecursive fc rig opts hints env ty topty rdata
 
 -- A local is usable as long as its type isn't a hole
 usableLocal : FC -> Env Term vars -> NF vars -> Bool
-usableLocal loc env (NApp _ (NMeta _ _ _) args) = False
+usableLocal loc env (NApp _ (NMeta {}) args) = False
 usableLocal loc _ _ = True
 
 searchLocalWith : {vars : _} ->
@@ -603,10 +603,10 @@ tryIntermediateWith fc rig opts hints env ((p, pty) :: rest) ty topty
                                             topty]
   where
     matchable : Defs -> NF vars -> Core Bool
-    matchable defs (NBind fc x (Pi _ _ _ _) sc)
+    matchable defs (NBind fc x (Pi {}) sc)
         = matchable defs !(sc defs (toClosure defaultOpts env
                                               (Erased fc Placeholder)))
-    matchable defs (NTCon _ _ _ _) = pure True
+    matchable defs (NTCon {}) = pure True
     matchable _ _ = pure False
 
     applyLocal : Defs -> Term vars ->
@@ -672,7 +672,7 @@ tryIntermediateRec fc rig opts hints env ty topty (Just rd)
          makeHelper fc rig opts' env letty ty recsearch
   where
     isSingleCon : Defs -> ClosedNF -> Core Bool
-    isSingleCon defs (NBind fc x (Pi _ _ _ _) sc)
+    isSingleCon defs (NBind fc x (Pi {}) sc)
         = isSingleCon defs !(sc defs (toClosure defaultOpts Env.empty
                                               (Erased fc Placeholder)))
     isSingleCon defs (NTCon _ n _ _)
@@ -774,7 +774,7 @@ search fc rig opts hints topty n_in
                    -- if it's arising from an auto implicit
                    case definition gdef of
                         Hole locs _ => searchHole fc rig opts hints n locs topty defs gdef
-                        BySearch _ _ _ => searchHole fc rig opts hints n
+                        BySearch {} => searchHole fc rig opts hints n
                                                    !(getArity defs Env.empty (type gdef))
                                                    topty defs gdef
                         _ => do log "interaction.search" 10 $ show n_in ++ " not a hole"
@@ -799,8 +799,8 @@ getLHSData defs (Just tm)
     = pure $ getLHS !(toFullNames !(normaliseHoles defs Env.empty tm))
   where
     getLHS : {vars : _} -> Term vars -> Maybe RecData
-    getLHS (Bind _ _ (PVar _ _ _ _) sc) = getLHS sc
-    getLHS (Bind _ _ (PLet _ _ _ _) sc) = getLHS sc
+    getLHS (Bind _ _ (PVar {}) sc) = getLHS sc
+    getLHS (Bind _ _ (PLet {}) sc) = getLHS sc
     getLHS sc
         = case getFn sc of
                Ref _ _ n => Just (MkRecData n sc)

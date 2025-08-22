@@ -78,7 +78,7 @@ mutual
   prettyPrecNamedCExp d (NmExtPrim _ p xs)
       = parenthesise (d > Open) $
           sep (annotate (Fun p) (pretty0 p) :: map (prettyPrecNamedCExp App) xs)
-  prettyPrecNamedCExp d (NmForce _  lr x)
+  prettyPrecNamedCExp d (NmForce _ lr x)
       = parenthesise (d > Open) $
           sep [keyword "Force", byShow lr, prettyPrecNamedCExp App x]
   prettyPrecNamedCExp d (NmDelay _ lr x)

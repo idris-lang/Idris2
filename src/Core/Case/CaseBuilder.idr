@@ -149,7 +149,7 @@ substInPatInfo {pvar} {vars} fc n tm p ps
                 do defs <- get Ctxt
                    tynf <- nf defs (mkEnv fc _) ty
                    case tynf of
-                        NApp _ _ _ =>
+                        NApp {} =>
                            pure ({ argType := Known c (substName n tm ty) } p, ps)
                         -- Got a concrete type, and that's all we need, so stop
                         _ => pure (p, ps)
@@ -342,7 +342,7 @@ clauseType phase (MkPatClause pvars (MkInfo arg _ ty :: rest) pid rhs)
     clauseType' (PTyCon _ _ a xs) = splitCon a xs
     clauseType' (PConst _ x)      = ConClause
     clauseType' (PArrow _ _ s t)  = ConClause
-    clauseType' (PDelay _ _ _ _)  = ConClause
+    clauseType' (PDelay {})       = ConClause
     clauseType' _                 = VarClause
 
     getClauseType : Phase -> Pat -> ArgType vars -> ClauseType
@@ -462,7 +462,7 @@ nextNames {vars} fc root (p :: pats) fty
                    Just (NBind pfc _ (Pi _ c _ fargc) fsc) =>
                       do farg <- evalClosure defs fargc
                          case farg of
-                              NErased _ _ =>
+                              NErased {} =>
                                 pure (Just !(fsc defs (toClosure defaultOpts env (Ref pfc Bound n))),
                                   Unknown)
                               _ => pure (Just !(fsc defs (toClosure defaultOpts env (Ref pfc Bound n))),
@@ -721,11 +721,11 @@ headConsPenalty : (penality : Nat -> Int) -> Pat -> Int
 headConsPenalty p (PAs _ _ w)        = headConsPenalty p w
 headConsPenalty p (PCon _ n _ arity pats) = p arity
 headConsPenalty p (PTyCon _ _ arity _)    = p arity
-headConsPenalty _ (PConst _ _)       = 0
-headConsPenalty _ (PArrow _ _ _ _)   = 0
-headConsPenalty p (PDelay _ _ _ w)   = headConsPenalty p w
-headConsPenalty _ (PLoc _ _)         = 0
-headConsPenalty _ (PUnmatchable _ _) = 0
+headConsPenalty _ (PConst {})       = 0
+headConsPenalty _ (PArrow {})       = 0
+headConsPenalty p (PDelay _ _ _ w)  = headConsPenalty p w
+headConsPenalty _ (PLoc {})         = 0
+headConsPenalty _ (PUnmatchable {}) = 0
 
 ||| Apply the given function that scores a pattern to all patterns and then
 ||| sum up the column scores and add to the ScoredPats passed in.
@@ -760,7 +760,7 @@ heuristicF (Scored (x :: xs) ys) =
   in  Scored (x :: xs) ys'
   where
     isBlank : Pat -> Bool
-    isBlank (PLoc _ _) = True
+    isBlank (PLoc {}) = True
     isBlank _ = False
 
     scores : NamedPats ns' ps' -> Vect (length ps') Int
@@ -823,13 +823,13 @@ sameType {ns} fc phase fn env (p :: xs)
     firstPat (pinf :: _) = pat pinf
 
     headEq : NF ns -> NF ns -> Phase -> Bool
-    headEq (NBind _ _ (Pi _ _ _ _) _) (NBind _ _ (Pi _ _ _ _) _) _ = True
+    headEq (NBind _ _ (Pi {}) _) (NBind _ _ (Pi {}) _) _ = True
     headEq (NTCon _ n _ _) (NTCon _ n' _ _) _ = n == n'
     headEq (NPrimVal _ c) (NPrimVal _ c') _ = c == c'
-    headEq (NType _ _) (NType _ _) _ = True
+    headEq (NType {}) (NType {}) _ = True
     headEq (NApp _ (NRef _ n) _) (NApp _ (NRef _ n') _) RunTime = n == n'
-    headEq (NErased _ _) _ RunTime = True
-    headEq _ (NErased _ _) RunTime = True
+    headEq (NErased {}) _ RunTime = True
+    headEq _ (NErased {}) RunTime = True
     headEq _ _ _ = False
 
     sameTypeAs : Phase -> NF ns -> List (ArgType ns) -> Core ()
@@ -877,10 +877,10 @@ countDiff xs = length (distinct [] (map getFirstCon xs))
   where
     isVar : Pat -> Bool
     isVar (PAs _ _ p) = isVar p
-    isVar (PCon _ _ _ _ _) = False
-    isVar (PTyCon _ _ _ _) = False
-    isVar (PConst _ _) = False
-    isVar (PArrow _ _ _ _) = False
+    isVar (PCon {}) = False
+    isVar (PTyCon {}) = False
+    isVar (PConst {}) = False
+    isVar (PArrow {}) = False
     isVar (PDelay _ _ _ p) = False
     isVar _ = True
 
@@ -891,8 +891,8 @@ countDiff xs = length (distinct [] (map getFirstCon xs))
     sameCase (PCon _ _ t _ _) (PCon _ _ t' _ _) = t == t'
     sameCase (PTyCon _ t _ _) (PTyCon _ t' _ _) = t == t'
     sameCase (PConst _ c) (PConst _ c') = c == c'
-    sameCase (PArrow _ _ _ _) (PArrow _ _ _ _) = True
-    sameCase (PDelay _ _ _ _) (PDelay _ _ _ _) = True
+    sameCase (PArrow {}) (PArrow {}) = True
+    sameCase (PDelay {}) (PDelay {}) = True
     sameCase x y = isVar x && isVar y
 
     distinct : List Pat -> List Pat -> List Pat
@@ -1104,7 +1104,7 @@ mkPat args orig (Ref fc Func n)
 mkPat args orig (Bind fc x (Pi _ _ _ s) t)
     -- For (b:Nat) -> b, the codomain looks like b [__], but we want `b` as the pattern
     = case subst (Erased fc Placeholder) t of
-        App _ t'@(Ref fc Bound n) (Erased _ _) =>  pure $ PArrow fc x !(mkPat [] s s) !(mkPat [] t' t')
+        App _ t'@(Ref fc Bound n) (Erased {}) =>  pure $ PArrow fc x !(mkPat [] s s) !(mkPat [] t' t')
         t' =>  pure $ PArrow fc x !(mkPat [] s s) !(mkPat [] t' t')
 mkPat args orig (App fc fn arg)
     = do parg <- mkPat [] arg arg
@@ -1265,8 +1265,8 @@ identifyUnreachableDefaults : {auto c : Ref Ctxt Defs} ->
                               Core (SortedSet Int)
 -- Leave it alone if it's a primitive type though, since we need the catch
 -- all case there
-identifyUnreachableDefaults fc defs (NPrimVal _ _) cs = pure empty
-identifyUnreachableDefaults fc defs (NType _ _) cs = pure empty
+identifyUnreachableDefaults fc defs (NPrimVal {}) cs = pure empty
+identifyUnreachableDefaults fc defs (NType {}) cs = pure empty
 identifyUnreachableDefaults fc defs nfty cs
     = do cs' <- traverse rep cs
          let (cs'', extraClauseIdxs) = dropRep (concat cs') empty
@@ -1341,7 +1341,7 @@ getPMDef fc phase fn ty []
          pure (!(getArgs 0 !(nf defs Env.empty ty)) ** (Unmatched "No clauses in \{show fn}", []))
   where
     getArgs : Int -> ClosedNF -> Core (List Name)
-    getArgs i (NBind fc x (Pi _ _ _ _) sc)
+    getArgs i (NBind fc x (Pi {}) sc)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
              pure (MN "arg" i :: !(getArgs i sc'))

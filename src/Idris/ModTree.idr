@@ -90,10 +90,10 @@ mkModTree loc done modFP mod
                 -- Couldn't find source, assume it's in a package directory
                 (\err =>
                     case err of
-                         CyclicImports _ => throw err
-                         ParseFail _ => throw err
-                         LexFail _ _ => throw err
-                         LitFail _ => throw err
+                         CyclicImports {} => throw err
+                         ParseFail {} => throw err
+                         LexFail {} => throw err
+                         LitFail {} => throw err
                          _ => pure (MkModTree mod Nothing []))
 
 data DoneMod : Type where

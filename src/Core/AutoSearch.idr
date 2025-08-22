@@ -157,8 +157,7 @@ successful (elab :: elabs)
                            elabs' <- successful elabs
                            pure (Left err :: elabs'))
 
-anyOne : {vars : _} ->
-         {auto c : Ref Ctxt Defs} ->
+anyOne : {auto c : Ref Ctxt Defs} ->
          {auto u : Ref UST UState} ->
          FC -> Env Term vars -> (topTy : ClosedTerm) ->
          List (Core (Term vars)) ->
@@ -167,8 +166,8 @@ anyOne fc env top [] = throw (CantSolveGoal fc (gamma !(get Ctxt)) Env.empty top
 anyOne fc env top [elab]
     = catch elab $
          \case
-           err@(CantSolveGoal _ _ _ _ _) => throw err
-           err@(AmbiguousSearch _ _ _ _) => throw err
+           err@(CantSolveGoal {})   => throw err
+           err@(AmbiguousSearch {}) => throw err
            _ => throw $ CantSolveGoal fc (gamma !(get Ctxt)) Env.empty top Nothing
 anyOne fc env top (elab :: elabs)
     = tryUnify elab (anyOne fc env top elabs)
@@ -182,7 +181,7 @@ exactlyOne : {vars : _} ->
 exactlyOne fc env top target [elab]
     = catch elab $
          \case
-           err@(CantSolveGoal _ _ _ _ _) => throw err
+           err@(CantSolveGoal {}) => throw err
            _ => throw $ CantSolveGoal fc (gamma !(get Ctxt)) Env.empty top Nothing
 exactlyOne {vars} fc env top target all
     = do elabs <- successful all
@@ -204,12 +203,11 @@ exactlyOne {vars} fc env top target all
 -- because something is apparently available now, it will be available by the
 -- time we get to linearity checking.
 -- It's also fine to use anything if we're working at multiplicity 0
-getUsableEnv : {vars : _} ->
-                FC -> RigCount ->
-                SizeOf done ->
-                Env Term vars ->
-                -- TODO this will be `vars <>< done` after refactoring
-                List (Term (done ++ vars), Term (done ++ vars))
+getUsableEnv : FC -> RigCount ->
+               SizeOf done ->
+               Env Term vars ->
+               -- TODO this will be `vars <>< done` after refactoring
+               List (Term (done ++ vars), Term (done ++ vars))
 getUsableEnv fc rigc p [] = []
 getUsableEnv {vars = v :: vs} {done} fc rigc p (b :: env)
    = let rest = getUsableEnv fc rigc (sucR p) env in
@@ -227,9 +225,9 @@ usableLocal : {vars : _} ->
               FC -> (defaults : Bool) ->
               Env Term vars -> (locTy : NF vars) -> Core Bool
 -- pattern variables count as concrete things!
-usableLocal loc defaults env (NApp fc (NMeta (PV _ _) _ _) args)
+usableLocal loc defaults env (NApp fc (NMeta (PV {}) _ _) args)
     = pure True
-usableLocal loc defaults env (NApp fc (NMeta _ _ _) args)
+usableLocal loc defaults env (NApp fc (NMeta {}) args)
     = pure False
 usableLocal {vars} loc defaults env (NTCon _ n _ args)
     = do sd <- getSearchData loc (not defaults) n
@@ -252,16 +250,16 @@ usableLocal loc defaults env (NDCon _ n _ _ args)
          us <- traverse (usableLocal loc defaults env)
                         !(traverse (evalClosure defs) $ map snd args)
          pure (all id us)
-usableLocal loc defaults env (NApp _ (NLocal _ _ _) args)
+usableLocal loc defaults env (NApp _ (NLocal {}) args)
     = do defs <- get Ctxt
          us <- traverse (usableLocal loc defaults env)
                         !(traverse (evalClosure defs) $ map snd args)
          pure (all id us)
-usableLocal loc defaults env (NBind fc x (Pi _ _ _ _) sc)
+usableLocal loc defaults env (NBind fc x (Pi {}) sc)
     = do defs <- get Ctxt
          usableLocal loc defaults env
                 !(sc defs (toClosure defaultOpts env (Erased fc Placeholder)))
-usableLocal loc defaults env (NErased _ _) = pure False
+usableLocal loc defaults env (NErased {}) = pure False
 usableLocal loc _ _ _ = pure True
 
 searchLocalWith : {vars : _} ->
@@ -374,7 +372,7 @@ isPairNF : {auto c : Ref Ctxt Defs} ->
            Env Term vars -> NF vars -> Defs -> Core Bool
 isPairNF env (NTCon _ n _ _) defs
     = isPairType n
-isPairNF env (NBind fc b (Pi _ _ _ _) sc) defs
+isPairNF env (NBind fc b (Pi {}) sc) defs
     = isPairNF env !(sc defs (toClosure defaultOpts env (Erased fc Placeholder))) defs
 isPairNF _ _ _ = pure False
 

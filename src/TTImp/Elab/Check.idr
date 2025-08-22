@@ -394,7 +394,7 @@ metaVarI fc rig env n ty
     = do defs <- get Ctxt
          tynf <- nf defs env ty
          let hinf = case tynf of
-                         NApp _ (NMeta _ _ _) _ =>
+                         NApp _ (NMeta {}) _ =>
                               { precisetype := True } (holeInit False)
                          _ => holeInit False
          newMeta fc rig env n ty (Hole (length env) hinf) True
@@ -595,7 +595,7 @@ successful allowCons ((tm, elab) :: elabs)
     -- Some errors, it's not worth trying all the possibilities because
     -- something serious has gone wrong, so just give up immediately.
     abandon : Error -> Bool
-    abandon (UndefinedName _ _) = True
+    abandon (UndefinedName {}) = True
     abandon (InType _ _ err) = abandon err
     abandon (InCon _ err) = abandon err
     abandon (InLHS _ _ err) = abandon err
@@ -637,7 +637,7 @@ exactlyOne' {vars} allowCons fc env all
     getRes ((tm, _), defs, thisst) = (gamma defs, tm)
 
     getDepthError : Error -> Maybe Error
-    getDepthError e@(AmbiguityTooDeep _ _ _) = Just e
+    getDepthError e@(AmbiguityTooDeep {}) = Just e
     getDepthError _ = Nothing
 
     depthError : List (Maybe Name, Error) -> Maybe Error

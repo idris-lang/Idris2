@@ -125,7 +125,7 @@ mutual
                 | Nothing => updateHoleUsageArgs useInHole var zs args
            -- only update for holes with no definition yet
            case definition gdef of
-                Hole _ _ =>
+                Hole {} =>
                    do let ty = type gdef
                       ty' <- updateHoleType useInHole var zs ty args
                       updateTy i ty'
@@ -198,10 +198,10 @@ mutual
                 | _ => undefinedName fc n
            let expand = branchZero
                           (case type gdef of
-                                Erased _ _ => True -- defined elsewhere, need to expand
+                                Erased {} => True -- defined elsewhere, need to expand
                                 _ => False)
                           (case definition gdef of
-                                (PMDef _ _ _ _ _) => True
+                                PMDef {} => True
                                 _ => False)
                           rig
            logC "quantity" 10 $ do
@@ -216,7 +216,7 @@ mutual
               then expandMeta rig erase env n idx (definition gdef) args
               else do let ty : ClosedTerm
                              = case definition gdef of
-                                    Hole _ _ => unusedHoleArgs args (type gdef)
+                                    Hole {} => unusedHoleArgs args (type gdef)
                                     _ => type gdef
                       nty <- nf defs env (embed ty)
                       lcheckMeta rig erase env fc n idx args [] nty
@@ -241,7 +241,7 @@ mutual
            -- checking in general context
            let env' = if rig_in == top
                          then case b of
-                              (Lam _ _ _ _) => eraseLinear env
+                              Lam {} => eraseLinear env
                               _ => env
                          else env
            (sc', sct, usedsc) <- lcheck rig erase (b' :: env') sc
@@ -268,11 +268,11 @@ mutual
     where
       rig : RigCount
       rig = case b of
-                 Pi _ _ _ _ =>
+                 Pi {} =>
                       if isErased rig_in
                          then erased
                          else top -- checking as if an inspectable run-time type
-                 Let _ _ _ _ => rig_in
+                 Let {} => rig_in
                  _ => if isErased rig_in
                          then erased
                          else linear
@@ -443,8 +443,7 @@ mutual
       = do us <- traverse (getPUsage ty) pats
            pure (map snd !(combine us))
     where
-      getCaseUsage : {vs : _} ->
-                     Term ns -> Env Term vs -> List (Term vs) ->
+      getCaseUsage : Term ns -> Env Term vs -> List (Term vs) ->
                      Usage vs -> Term vs ->
                      Core (List (Name, ArgUsage))
       getCaseUsage ty env (As _ _ _ p :: args) used rhs

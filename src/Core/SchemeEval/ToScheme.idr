@@ -68,7 +68,7 @@ Scheme OriginDesc where
 
   fromScheme (Vector 0 [i]) = Just (PhysicalIdrSrc !(fromScheme i))
   fromScheme (Vector 1 [i]) = Just (PhysicalPkgSrc !(fromScheme i))
-  fromScheme (Vector _ _) = Nothing
+  fromScheme (Vector {}) = Nothing
   fromScheme _ = Just (Virtual Interactive)
 
 export

@@ -112,7 +112,7 @@ data Binder : Type -> Type where
 
 export
 isLet : Binder t -> Bool
-isLet (Let _ _ _ _) = True
+isLet (Let {}) = True
 isLet _ = False
 
 export

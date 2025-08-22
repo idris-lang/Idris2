@@ -159,7 +159,7 @@ getSpecPats fc pename fn stk fnty args sargs pats
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
              mkRHSargs sc' (IApp fc app (IVar fc a)) as ds
-    mkRHSargs (NBind _ x (Pi _ _ _ _) sc) app (a :: as) ((_, Dynamic) :: ds)
+    mkRHSargs (NBind _ x (Pi {}) sc) app (a :: as) ((_, Dynamic) :: ds)
         = do defs <- get Ctxt
              sc' <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
              mkRHSargs sc' (INamedApp fc app x (IVar fc a)) as ds

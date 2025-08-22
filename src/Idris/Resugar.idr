@@ -30,7 +30,7 @@ import Libraries.Data.NameSet
 -- readability).
 
 unbracketApp : PTerm' nm -> PTerm' nm
-unbracketApp (PBracketed _ tm@(PApp _ _ _)) = tm
+unbracketApp (PBracketed _ tm@(PApp {})) = tm
 unbracketApp tm = tm
 
 -- TODO: Deal with precedences
@@ -89,19 +89,19 @@ addBracket : FC -> PTerm' nm -> PTerm' nm
 addBracket fc tm = if needed tm then PBracketed fc tm else tm
   where
     needed : PTerm' nm -> Bool
-    needed (PBracketed _ _) = False
-    needed (PRef _ _) = False
-    needed (PPair _ _ _) = False
-    needed (PDPair _ _ _ _ _) = False
-    needed (PUnit _) = False
-    needed (PComprehension _ _ _) = False
-    needed (PList _ _ _) = False
-    needed (PSnocList _ _ _) = False
-    needed (PRange{}) = False
-    needed (PRangeStream{}) = False
-    needed (PPrimVal _ _) = False
-    needed (PIdiom{}) = False
-    needed (PBang{}) = False
+    needed (PBracketed {}) = False
+    needed (PRef {}) = False
+    needed (PPair {}) = False
+    needed (PDPair {}) = False
+    needed (PUnit {}) = False
+    needed (PComprehension {}) = False
+    needed (PList {}) = False
+    needed (PSnocList {}) = False
+    needed (PRange {}) = False
+    needed (PRangeStream {}) = False
+    needed (PPrimVal {}) = False
+    needed (PIdiom {}) = False
+    needed (PBang {}) = False
     needed tm = True
 
 bracket : {auto c : Ref Ctxt Defs} ->
@@ -474,8 +474,8 @@ mutual
   toPTypeDecl : {auto c : Ref Ctxt Defs} ->
                 {auto s : Ref Syn SyntaxInfo} ->
                 ImpTy' KindedName -> Core (PTypeDecl' KindedName)
-  toPTypeDecl (MkImpTy fc n ty)
-      = pure (MkFCVal fc $ MkPTy (pure ("", n)) "" !(toPTerm startPrec ty))
+  toPTypeDecl impTy
+      = pure (MkFCVal impTy.fc $ MkPTy (pure ("", impTy.tyName)) "" !(toPTerm startPrec impTy.val))
 
   toPData : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
@@ -523,7 +523,7 @@ mutual
       = do ps' <- traverse (traverse (traverse (toPTerm startPrec))) header.val
            fs' <- traverse toPField body.val
            pure (Just (MkFCVal fc $ PRecord "" vis mbtot
-                          (MkPRecord header.name.val (map toBinder ps') body.opts (Just ("", body.name.val)) fs')))
+                          (MkPRecord header.name.val (map toBinder ps') body.opts (Just (AddDef body.name)) fs')))
            where
              toBinder : ImpParameter' (PTerm' KindedName) -> PBinder' KindedName
              toBinder binder
@@ -541,7 +541,7 @@ mutual
                                   !(toPTerm startPrec rhs)))
   toPDecl (IRunElabDecl fc tm)
       = pure (Just (MkFCVal fc $ PRunElabDecl !(toPTerm startPrec tm)))
-  toPDecl (IPragma _ _ _) = pure Nothing
+  toPDecl (IPragma {}) = pure Nothing
   toPDecl (ILog _) = pure Nothing
   toPDecl (IBuiltin fc type name) = pure $ Just $ MkFCVal fc $ PBuiltin type name
 

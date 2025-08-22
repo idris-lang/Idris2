@@ -53,8 +53,8 @@ getRewriteTerms loc defs ty err
     = throw err
 
 rewriteErr : Error -> Bool
-rewriteErr (NotRewriteRule _ _ _) = True
-rewriteErr (RewriteNoChange _ _ _ _) = True
+rewriteErr (NotRewriteRule {}) = True
+rewriteErr (RewriteNoChange {}) = True
 rewriteErr (InType _ _ err) = rewriteErr err
 rewriteErr (InCon _ err) = rewriteErr err
 rewriteErr (InLHS _ _ err) = rewriteErr err
