@@ -269,12 +269,12 @@ substInClause fc (MkPatClause pvars (MkInfo pat pprf fty :: pats) pid rhs)
     = do pats' <- substInPats fc a (mkTerm vars pat) pats
          pure (MkPatClause pvars (MkInfo pat pprf fty :: pats') pid rhs)
 
-data Partitions : List (PatClause vars todo) -> Type where
-     ConClauses : {todo, vars, ps : _} ->
-                  (cs : List (PatClause vars todo)) ->
+data Partitions : List (PatClause vars (a :: todo)) -> Type where
+     ConClauses : {a, todo, vars, ps : _} ->
+                  (cs : List (PatClause vars (a :: todo))) ->
                   Partitions ps -> Partitions (cs ++ ps)
-     VarClauses : {todo, vars, ps : _} ->
-                  (vs : List (PatClause vars todo)) ->
+     VarClauses : {a, todo, vars, ps : _} ->
+                  (vs : List (PatClause vars (a :: todo))) ->
                   Partitions ps -> Partitions (vs ++ ps)
      NoClauses : Partitions []
 
