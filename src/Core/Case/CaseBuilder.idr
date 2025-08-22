@@ -13,6 +13,7 @@ import Core.Value
 
 import Idris.Pretty.Annotations
 
+import Data.DPair
 import Data.List
 import Data.List.Quantifiers
 import Data.SnocList
@@ -22,6 +23,7 @@ import Libraries.Data.IMaybe
 import Libraries.Data.List.SizeOf
 import Libraries.Data.List.LengthMatch
 import Libraries.Data.List01
+import Libraries.Data.List01.Quantifiers
 import Libraries.Data.SortedSet
 import Libraries.Data.SnocList.SizeOf
 import Libraries.Data.SnocList.LengthMatch
@@ -264,18 +266,22 @@ HasNames (PatClause todo vars) where
   resolved gam (MkPatClause ns nps i rhs)
      = [| MkPatClause (traverse (resolved gam) ns) (resolved gam nps) (pure i) (resolved gam rhs) |]
 
+0 IsConClause : PatClause (a :: todo) vars -> Type
+IsConClause (MkPatClause _ (MkInfo pat _ _ :: _) _ _) = IsConPat pat
+
 substInClause : {a, vars, todo : _} ->
                 {auto c : Ref Ctxt Defs} ->
-                FC -> PatClause (a :: todo) vars ->
-                Core (PatClause (a :: todo) vars)
-substInClause fc (MkPatClause pvars (MkInfo pat pprf fty :: pats) pid rhs)
+                FC -> Subset (PatClause (a :: todo) vars) IsConClause ->
+                Core (Subset (PatClause (a :: todo) vars) IsConClause)
+substInClause fc (Element (MkPatClause pvars (MkInfo pat pprf fty :: pats) pid rhs) isCons)
     = do pats' <- substInPats fc a (mkTerm vars pat) pats
-         pure (MkPatClause pvars (MkInfo pat pprf fty :: pats') pid rhs)
+         pure $ Element (MkPatClause pvars (MkInfo pat pprf fty :: pats') pid rhs) isCons
 
 data Partitions : List01 ne (PatClause (a :: todo) vars) -> Type where
      ConClauses : {a, todo, vars : _} ->
                   {ps : List01 ne   (PatClause (a :: todo) vars)} ->
                   (cs : List01 True (PatClause (a :: todo) vars )) ->
+                  (0 isCons : All IsConClause cs) =>
                   Partitions ps -> Partitions (cs ++ ps)
      VarClauses : {a, todo, vars : _} ->
                   {ps : List01 ne   (PatClause (a :: todo) vars)} ->
@@ -293,7 +299,9 @@ covering
     ++ "\n, " ++ show rest
   show NoClauses = "NONE"
 
-data ClauseType = ConClause | VarClause
+data ClauseType : PatClause (a :: todo) vars -> Type where
+     ConClause : (0 isCon : IsConClause p) => ClauseType p
+     VarClause : ClauseType p
 
 namesIn : List Name -> Pat -> Bool
 namesIn pvars (PAs _ n p) = (n `elem` pvars) && namesIn pvars p
@@ -313,39 +321,38 @@ namesFrom (PDelay _ _ t p) = namesFrom t ++ namesFrom p
 namesFrom (PLoc _ n) = [n]
 namesFrom _ = []
 
-clauseType : Phase -> PatClause (a :: as) vars -> ClauseType
+clauseType : Phase -> (p : PatClause (a :: as) vars) -> ClauseType p
 -- If it's irrelevant, a constructor, and there's no names we haven't seen yet
 -- and don't see later, treat it as a variable
 -- Or, if we're compiling for runtime we won't be able to split on it, so
 -- also treat it as a variable
 -- Or, if it's an under-applied constructor then do NOT attempt to split on it!
 clauseType phase (MkPatClause pvars (MkInfo arg _ ty :: rest) pid rhs)
-    = getClauseType phase arg ty
+    = maybe VarClause (\isCon => ConClause @{isCon}) $ getClauseType phase arg ty
   where
     -- used when we are tempted to split on a constructor: is
     -- this actually a fully applied one?
-    splitCon : Nat -> List Pat -> ClauseType
-    splitCon arity xs
-      = if arity == length xs then ConClause else VarClause
+    splitCon : Nat -> List Pat -> Maybe (So True)
+    splitCon arity xs = toMaybe (arity == length xs) Oh
 
     -- used to get the remaining clause types
-    clauseType' : Pat -> ClauseType
+    clauseType' : (p : Pat) -> Maybe (IsConPat p)
     clauseType' (PCon _ _ _ a xs) = splitCon a xs
     clauseType' (PTyCon _ _ a xs) = splitCon a xs
-    clauseType' (PConst _ x)      = ConClause
-    clauseType' (PArrow _ _ s t)  = ConClause
-    clauseType' (PDelay {})       = ConClause
-    clauseType' _                 = VarClause
+    clauseType' (PConst _ x)      = Just Oh
+    clauseType' (PArrow _ _ s t)  = Just Oh
+    clauseType' (PDelay {})       = Just Oh
+    clauseType' _                 = Nothing
 
-    getClauseType : Phase -> Pat -> ArgType vars -> ClauseType
+    getClauseType : Phase -> (p : Pat) -> ArgType vars -> Maybe (IsConPat p)
     getClauseType (CompileTime cr) (PCon _ _ _ a xs) (Known r t)
         = if (isErased r && not (isErased cr) &&
              all (namesIn (pvars ++ concatMap namesFrom (getPatInfo rest))) xs)
-             then VarClause
+             then Nothing
              else splitCon a xs
     getClauseType phase (PAs _ _ p) t = getClauseType phase p t
     getClauseType phase l (Known r t) = if isErased r
-      then VarClause
+      then Nothing
       else clauseType' l
     getClauseType phase l _ = clauseType' l
 
@@ -507,9 +514,11 @@ groupCons : {a, vars, todo : _} ->
             {auto ct : Ref Ctxt Defs} ->
             FC -> Name ->
             List Name ->
-            List01 True (PatClause (a :: todo) vars) ->
+            (cs : List01 True (PatClause (a :: todo) vars)) ->
+            (0 isCons : All IsConClause cs) =>
             Core (List01 True (Group todo vars))
-groupCons fc fn pvars (x :: xs) = foldlC gc !(gc [] x) xs
+groupCons fc fn pvars (x :: xs) {isCons = p :: ps}
+    = foldlC (uncurry . gc) !(gc [] x p) $ pushIn xs ps
   where
     addConG : {vars', todo' : _} ->
               Name -> (tag : Int) ->
@@ -603,7 +612,8 @@ groupCons fc fn pvars (x :: xs) = foldlC gc !(gc [] x) xs
         = (g ::) <$> addConstG c pats pid rhs gs
 
     addGroup : {vars, todo, idx : _} ->
-               Pat -> (0 p : IsVar nm idx vars) ->
+               (pat : Pat) -> (0 _ : IsConPat pat) =>
+               (0 p : IsVar nm idx vars) ->
                NamedPats todo vars -> Int -> Term vars ->
                List01 ne (Group todo vars) ->
                Core (List01 True (Group todo vars))
@@ -627,14 +637,13 @@ groupCons fc fn pvars (x :: xs) = foldlC gc !(gc [] x) xs
          = addDelayG pty parg pats pid rhs acc
     addGroup (PConst _ c) pprf pats pid rhs acc
          = addConstG c pats pid rhs acc
-    addGroup _ pprf pats pid rhs acc = pure $ believe_me acc  -- Can't happen, not a constructor
-         -- FIXME: Is this possible to rule out with a type? Probably.
 
     gc : {a, vars, todo : _} ->
          List01 ne (Group todo vars) ->
-         PatClause (a :: todo) vars ->
+         (p : PatClause (a :: todo) vars) ->
+         (0 _ : IsConClause p) ->
          Core (List01 True (Group todo vars))
-    gc acc (MkPatClause _ (MkInfo pat pprf _ :: pats) pid rhs)
+    gc acc (MkPatClause _ (MkInfo pat pprf _ :: pats) pid rhs) isCon
         = addGroup pat pprf pats pid rhs acc
 
 getFirstPat : NamedPats (p :: ps) ns -> Pat
@@ -935,7 +944,8 @@ mutual
             {auto i : Ref PName Int} ->
             {auto c : Ref Ctxt Defs} ->
             FC -> Name -> Phase ->
-            List01 True (PatClause (a :: todo) vars) ->
+            (cs : List01 True (PatClause (a :: todo) vars)) ->
+            (0 isCons : All IsConClause cs) =>
             IMaybe ne (CaseTree vars) ->
             Core (CaseTree vars)
   -- ASSUMPTION, not expressed in the type, that the patterns all have
@@ -943,7 +953,7 @@ mutual
   -- will be a broken case tree... so we should find a way to express this
   -- in the type if we can.
   conRule {a} fc fn phase cs@(MkPatClause pvars (MkInfo pat pprf fty :: pats) pid rhs :: rest) err
-      = do refinedcs <- traverseList01 (substInClause fc) cs
+      = do Element refinedcs _ <- pullOut <$> traverseList01 (substInClause fc) (pushIn cs isCons)
            groups <- groupCons fc fn pvars refinedcs
            ty <- case fty of
                       Known _ t => pure t
