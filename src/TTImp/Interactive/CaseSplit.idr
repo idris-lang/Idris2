@@ -24,6 +24,7 @@ import TTImp.Utils
 
 import Data.List
 import Libraries.Data.NameMap
+import Libraries.Data.NameSet
 
 %default covering
 
@@ -214,7 +215,7 @@ recordUpdate : {auto u : Ref UPD Updates} ->
 recordUpdate fc n tm
     = do u <- get UPD
          let nupdates = mapSnd (IVar fc) <$> namemap u
-         put UPD ({ updates $= ((n, substNames [] nupdates tm) ::) } u)
+         put UPD ({ updates $= ((n, substNames empty nupdates tm) ::) } u)
 
 findUpdates : {auto u : Ref UPD Updates} ->
               Defs -> RawImp -> RawImp -> Core ()
