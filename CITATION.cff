@@ -1,0 +1,30 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: Idris2
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - name: The Idris Community
+repository-code: 'https://github.com/idris-lang/Idris2/'
+url: 'https://www.idris-lang.org'
+keywords:
+  - dependent types
+  - functional programming
+license: BSD-3-Clause
+preferred-citation:
+  type: conference-paper
+  authors:
+  - family-names: "Brady"
+    given-names: "Edwin"
+  doi: "10.4230/LIPICS.ECOOP.2021.9"
+  journal: "35th European Conference on Object-Oriented Programming, {ECOOP} 2021,
+                  July 11-17, 2021, Aarhus, Denmark (Virtual Conference)"
+  start: 9:1 # First page number
+  end: 9:26 # Last page number
+  title: "Idris 2: Quantitative Type Theory in Practice"
+  volume: 194
+  year: 2021
