@@ -39,8 +39,8 @@ kindAnn : KindedName -> Maybe IdrisSyntax
 kindAnn (MkKindedName mcat fn nm) = do
     cat <- mcat
     pure $ case cat of
-      Bound     => Bound
-      Func      => Fun fn
+      Bound      => Bound
+      Func       => Fun fn
       DataCon {} => DCon (Just fn)
       TyCon {}   => TCon (Just fn)
 

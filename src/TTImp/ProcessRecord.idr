@@ -262,7 +262,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                    rfNameNS <- inCurrentNS (UN $ Field fldNameStr)
                    unNameNS <- inCurrentNS unName
 
-                   ty <- unelabNest (NoSugar True) !nestDrop tyenv ty_chk
+                   ty <- unelabNest (NoSugar False) !nestDrop tyenv ty_chk
                    let ty' = substNames (toList vars) upds $ map rawName ty
                    log "declare.record.field" 5 $ "Field type: " ++ show ty'
                    let rname = MN "rec" 0
@@ -278,7 +278,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                           in IClaim (MkFCVal bfc (MkIClaimData rig isVis [Inline] ty))
 
                    log "declare.record.projection.claim" 5 $
-                      "Projection " ++ show rfNameNS ++ " : " ++ show projTy
+                      "Projection " ++ show rfNameNS ++ ": " ++ show projTy
                    processDecl [] nest env (mkProjClaim rfNameNS)
 
                    -- Define the LHS and RHS
@@ -298,16 +298,8 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
 
                    -- EtaExpand implicits on both sides:
                    -- First, obtain all the implicit names in the prefix of
-                   let piNames = collectPiNames ty_chk
-
-                   let namesToRawImp : List (Bool, Name) -> (fn : RawImp) -> RawImp
-                       namesToRawImp ((True,  nm@(UN {})) :: xs) fn = namesToRawImp xs (INamedApp fc fn nm (IVar fc' nm))
-                       namesToRawImp _ fn = fn
-
-                   -- Then apply names for each argument to the lhs
-                   let lhs = namesToRawImp piNames lhs
-                   -- Do the same for the rhs
-                   let rhs = namesToRawImp piNames rhs
+                   -- See idris-lang/Idris2#3467
+                   (lhs, rhs) <- etaExpandImplicits fc' ty' lhs rhs
 
                    log "declare.record.projection.clause" 5 $ "Projection " ++ show lhs ++ " = " ++ show rhs
                    processDecl [] nest env
