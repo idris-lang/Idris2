@@ -4,6 +4,7 @@ import Core.TT
 
 import Data.List
 import Data.SnocList
+import Data.So
 import Data.String
 import Idris.Pretty.Annotations
 
@@ -117,6 +118,20 @@ export
 isPConst : Pat -> Maybe Constant
 isPConst (PConst _ c) = Just c
 isPConst _ = Nothing
+
+public export
+0 isConPat : Pat -> Bool
+isConPat (PAs _ _ p) = isConPat p
+isConPat (PCon {}) = True
+isConPat (PTyCon {}) = True
+isConPat (PConst {}) = True
+isConPat (PArrow {}) = True
+isConPat (PDelay {}) = True
+isConPat _ = False
+
+public export
+0 IsConPat : Pat -> Type
+IsConPat = So . isConPat
 
 showCT : {vars : _} -> (indent : String) -> CaseTree vars -> String
 showCA : {vars : _} -> (indent : String) -> CaseAlt vars  -> String

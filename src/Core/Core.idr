@@ -9,6 +9,7 @@ import Data.List1
 import Data.SnocList
 import Data.Vect
 
+import Libraries.Data.List01
 import Libraries.Data.IMaybe
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
@@ -808,6 +809,11 @@ export
 traverseVect : (a -> Core b) -> Vect n a -> Core (Vect n b)
 traverseVect f [] = pure []
 traverseVect f (x :: xs) = [| f x :: traverseVect f xs |]
+
+export
+traverseList01 : (a -> Core b) -> List01 ne a -> Core (List01 ne b)
+traverseList01 f [] = pure []
+traverseList01 f (x :: xs) = [| f x :: traverseList01 f xs |]
 
 %inline
 export

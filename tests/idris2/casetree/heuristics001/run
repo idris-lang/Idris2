@@ -1,0 +1,7 @@
+. ../../../testutils.sh
+
+idris2 Main.idr < input
+echo "------"
+
+rm -rf build
+idris2 Main.idr -Xcase-tree-opt < input
