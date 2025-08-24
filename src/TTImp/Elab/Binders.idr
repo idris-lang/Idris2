@@ -121,7 +121,7 @@ inferLambda rig elabinfo nest env fc rigl info n argTy scope expTy
                                 check {e=e'} rig elabinfo
                                       nest' env' scope Nothing)
          let lamty = gnf env (Bind fc n (Pi fc rigb info' tyv) !(getTerm scopet))
-         logGlue "elab.binder" 5 "Inferred lambda type" env lamty
+         logGlue "elab.binder" 5 "Inferred lambda type" lamty
          maybe (pure ())
                (logGlueNF "elab.binder" 5 "Expected lambda type" env) expTy
          checkExp rig elabinfo env fc
@@ -175,10 +175,11 @@ checkLambda rig_in elabinfo nest env fc rigl info n argTy scope (Just expty_in)
                     let env' : Env Term (n :: _) = Lam fc rigb info' tyv :: env
                     ignore $ convert fc elabinfo env (gnf env tyv) (gnf env pty)
                     let nest' = weaken (dropName n nest)
+                    pscnf <- normaliseHoles defs env' $ compat psc
                     (scopev, scopet) <-
                        inScope fc env' (\e' =>
                           check {e=e'} rig elabinfo nest' env' scope
-                                (Just (gnf env' (compat psc))))
+                                (Just $ gnf env' pscnf))
                     logTermNF "elab.binder" 10 "Lambda type" env exptynf
                     logGlueNF "elab.binder" 10 "Got scope type" env' scopet
 
