@@ -365,11 +365,11 @@ mutual
            <++> prettyOp op.val.toName
            <++> pretty right
     prettyPrec d (POp _ (MkWithData _ $ BindExpr nm left) op right) =
-        group $ parens (prettyPrec d nm <++> ":=" <++> pretty left)
+        group $ parens (prettyPrec d nm <++> "<-" <++> pretty left)
            <++> prettyOp op.val.toName
            <++> pretty right
     prettyPrec d (POp _ (MkWithData _ $ BindExplicitType nm ty left) op right) =
-        group $ parens (prettyPrec d nm <++> ":" <++> pretty ty <++> ":=" <++> pretty left)
+        group $ parens (prettyPrec d nm <++> ":" <++> pretty ty <++> "<-" <++> pretty left)
            <++> prettyOp op.val.toName
            <++> pretty right
     prettyPrec d (POp _ (MkWithData _ $ NoBinder x) op y) =

@@ -6,9 +6,9 @@ Errors:8:19--8:21
  5 | (=@) a f = (1 x : a) -> f x
  6 | 
  7 | data S : {ty : Type} -> (x : ty) -> Type where
- 8 |   MkS : (x := ty) =@ S x
+ 8 |   MkS : (x <- ty) =@ S x
                        ^^
-Explanation: regular, typebind and autobind operators all use a slightly different syntax, typebind looks like this: '(name : type) =@ expr', autobind looks like this: '(name := expr) =@ expr'.
+Explanation: regular, typebind and autobind operators all use a slightly different syntax, typebind looks like this: '(name : type) =@ expr', autobind looks like this: '(name <- expr) =@ expr'.
 
 Possible solutions:
  - Write the expression using typebind syntax: '(x : ty) =@ S x'.
@@ -24,10 +24,10 @@ Errors2:7:29--7:31
  6 | 
  7 | wrongId : {0 a : Type} -> a =@ a
                                  ^^
-Explanation: regular, typebind and autobind operators all use a slightly different syntax, typebind looks like this: '(name : type) =@ expr', autobind looks like this: '(name := expr) =@ expr'.
+Explanation: regular, typebind and autobind operators all use a slightly different syntax, typebind looks like this: '(name : type) =@ expr', autobind looks like this: '(name <- expr) =@ expr'.
 
 Possible solutions:
- - Write the expression using autobind syntax: '(_ := a) =@ a'.
+ - Write the expression using autobind syntax: '(_ <- a) =@ a'.
  - Change the fixity defined at Errors2:2:18--2:29 to 'private infixr 0 =@'.
  - Hide or remove the fixity at Errors2:2:18--2:29 and import a module that exports a compatible fixity.
 1/1: Building Errors3 (Errors3.idr)
@@ -40,7 +40,7 @@ Errors3:7:29--7:31
  6 | 
  7 | wrongId : {0 a : Type} -> a =@ a
                                  ^^
-Explanation: regular, typebind and autobind operators all use a slightly different syntax, typebind looks like this: '(name : type) =@ expr', autobind looks like this: '(name := expr) =@ expr'.
+Explanation: regular, typebind and autobind operators all use a slightly different syntax, typebind looks like this: '(name : type) =@ expr', autobind looks like this: '(name <- expr) =@ expr'.
 
 Possible solutions:
  - Write the expression using typebind syntax: '(_ : a) =@ a'.
@@ -56,7 +56,7 @@ Errors4:9:18--9:20
  8 | data S : {ty : Type} -> (x : ty) -> Type where
  9 |   MkS : (x : ty) =@ S x
                       ^^
-Explanation: regular, typebind and autobind operators all use a slightly different syntax, typebind looks like this: '(name : type) =@ expr', autobind looks like this: '(name := expr) =@ expr'.
+Explanation: regular, typebind and autobind operators all use a slightly different syntax, typebind looks like this: '(name : type) =@ expr', autobind looks like this: '(name <- expr) =@ expr'.
 
 Possible solutions:
  - Write the expression using regular syntax: 'ty =@ S x'.
@@ -70,9 +70,9 @@ Errors5:10:19--10:21
  07 | 
  08 | 
  09 | data S : {ty : Type} -> (x : ty) -> Type where
- 10 |   MkS : (x := ty) =@ S x
+ 10 |   MkS : (x <- ty) =@ S x
                         ^^
-Explanation: regular, typebind and autobind operators all use a slightly different syntax, typebind looks like this: '(name : type) =@ expr', autobind looks like this: '(name := expr) =@ expr'.
+Explanation: regular, typebind and autobind operators all use a slightly different syntax, typebind looks like this: '(name : type) =@ expr', autobind looks like this: '(name <- expr) =@ expr'.
 
 Possible solutions:
  - Write the expression using regular syntax: 'ty =@ S x'.
@@ -87,9 +87,9 @@ LinImport:8:19--8:21
  5 | (=@) a f = (1 x : a) -> f x
  6 | 
  7 | data S : {ty : Type} -> (x : ty) -> Type where
- 8 |   MkS : (x := ty) =@ S x
+ 8 |   MkS : (x <- ty) =@ S x
                        ^^
-Explanation: regular, typebind and autobind operators all use a slightly different syntax, typebind looks like this: '(name : type) =@ expr', autobind looks like this: '(name := expr) =@ expr'.
+Explanation: regular, typebind and autobind operators all use a slightly different syntax, typebind looks like this: '(name : type) =@ expr', autobind looks like this: '(name <- expr) =@ expr'.
 
 Possible solutions:
  - Write the expression using typebind syntax: '(x : ty) =@ S x'.

@@ -5,5 +5,5 @@ private typebind infixr 0 =@
 (=@) a f = (1 x : a) -> f x
 
 data S : {ty : Type} -> (x : ty) -> Type where
-  MkS : (x := ty) =@ S x
+  MkS : (x <- ty) =@ S x
 

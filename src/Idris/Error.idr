@@ -634,7 +634,7 @@ perrorRaw (OperatorBindingMismatch fc {print=p} expected actual opName rhs candi
        <+> line <+> !(ploc fc)
        <+> "Explanation: regular, typebind and autobind operators all use a slightly different"
        <++> "syntax, typebind looks like this: '(name : type)" <++> infixOpName
-       <++> "expr', autobind looks like this: '(name := expr)" <++> infixOpName
+       <++> "expr', autobind looks like this: '(name <- expr)" <++> infixOpName
        <++> "expr'."
        <+> line <+> line
        <+> "Possible solutions:" <+> line
@@ -677,7 +677,7 @@ perrorRaw (OperatorBindingMismatch fc {print=p} expected actual opName rhs candi
                     NotBinding =>
                        printE actual.getLhs <++> infixOpName <++> printE rhs
                     Autobind =>
-                       parens (maybe "_" printE actual.getBoundPat <++> ":="
+                       parens (maybe "_" printE actual.getBoundPat <++> "<-"
                                <++> printE actual.getLhs)
                        <++> infixOpName <++> printE rhs
                     Typebind =>

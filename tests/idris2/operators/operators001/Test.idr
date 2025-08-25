@@ -55,10 +55,10 @@ MyLet : (val) -> (val -> rest) -> rest
 MyLet arg fn = fn arg
 
 program : Nat
-program = (n := 3) `MyLet` 2 + n
+program = (n <- 3) `MyLet` 2 + n
 
 program2 : Nat
-program2 = (n : Nat := 3) `MyLet` 2 + n
+program2 = (n : Nat <- 3) `MyLet` 2 + n
 
 private typebind infixr 0 |>
 
