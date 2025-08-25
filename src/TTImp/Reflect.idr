@@ -321,9 +321,9 @@ mutual
         = case (dropAllNS !(full (gamma defs) n), map snd args) of
                (UN (Basic "MkTy"), [w, y, z])
                     => do fc' <- reify defs !(evalClosure defs w)
-                          name' <- reify defs !(evalClosure defs y)
+                          name' <- the (Core (WithFC Name)) (reify defs !(evalClosure defs y))
                           term' <- reify defs !(evalClosure defs z)
-                          pure (Mk [fc', MkDef name'] term')
+                          pure (Mk [fc', AddDef name'] term')
                _ => cantReify val "ITy"
     reify defs val = cantReify val "ITy"
 
