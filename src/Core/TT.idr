@@ -187,61 +187,84 @@ Eq FixityInfo where
 public export
 data FixityDeclarationInfo = UndeclaredFixity | DeclaredFixity FixityInfo
 
--- Left-hand-side information for operators, carries autobind information
--- an operator can either be
--- - not autobind, a regular operator
--- - binding types, such that `(nm : ty) =@ fn nm` desugars into `(=@) ty (\(nm : ty) => fn nm)`
--- - binding expressing with an inferred type such that
---   `(nm := exp) =@ fn nm` desugars into `(=@) exp (\(nm : ?) => fn nm)`
--- - binding both types and expression such that
---   `(nm : ty := exp) =@ fn nm` desugars into `(=@) exp (\(nm : ty) => fn nm)`
+-- Binding information for binding application and binding operators
+-- A binder can either
+-- - bind types `(t : a)`
+-- - bind expressions with an inferred type such that `(x := v)`
+-- - bind an expression with an explicit type annotation `(x : a := v)`
 public export
-data OperatorLHSInfo : tm -> Type where
-  -- Traditional operator wihtout binding, carries the lhs
-  NoBinder : (lhs : tm) -> OperatorLHSInfo tm
-  -- (nm : ty) =@ fn x
-  BindType : (name : tm) -> (ty : tm) -> OperatorLHSInfo tm
-  -- (nm := exp) =@ fn nm
-  BindExpr : (name : tm) -> (expr : tm) -> OperatorLHSInfo tm
-  -- (nm : ty := exp) =@ fn nm
-  BindExplicitType : (name : tm) ->  (type, expr : tm) -> OperatorLHSInfo tm
+data BindingInfo : (tm : Type) -> Type where
+  -- (name : type)
+  BindType : (name : tm) -> (type : tm) -> BindingInfo tm
+  -- (name := expr)
+  BindExpr : (name : tm) -> (expr : tm) -> BindingInfo tm
+  -- (name : type := expr)
+  BindExplicitType : (name : tm) ->  (type, expr : tm) -> BindingInfo tm
+
 
 export
-Show (OperatorLHSInfo tm) where
-  show (NoBinder lhs)                    = "regular"
+Show (BindingInfo tm) where
   show (BindType name ty)                = "type-binding (typebind)"
   show (BindExpr name expr)              = "automatically-binding (autobind)"
   show (BindExplicitType name type expr) = "automatically-binding (autobind)"
 
-%name OperatorLHSInfo opInfo
+%name BindingInfo opInfo
 
 export
-Functor OperatorLHSInfo where
-  map f (NoBinder lhs) = NoBinder $ f lhs
+Functor BindingInfo where
   map f (BindType nm lhs) = BindType (f nm) (f lhs)
   map f (BindExpr nm lhs) = BindExpr (f nm) (f lhs)
   map f (BindExplicitType nm ty lhs) = BindExplicitType (f nm) (f ty) (f lhs)
 
+||| Left-hand-side of a binary operator. Could be either a term or a binder
+public export
+data OperatorLHSInfo tm =
+  NoBinder tm | LHSBinder (BindingInfo tm)
+
+export
+Show (OperatorLHSInfo tm) where
+  show (NoBinder lhs) = "regular"
+  show (LHSBinder bd) = show bd
+
+export
+Functor OperatorLHSInfo where
+  map f (NoBinder x) = NoBinder (f x)
+  map f (LHSBinder bd) = LHSBinder (map f bd)
+
+export
+(.getBoundName) : BindingInfo tm -> tm
+(.getBoundName) (BindExpr n _) = n
+(.getBoundName) (BindType n _) = n
+(.getBoundName) (BindExplicitType n _ _) = n
+
+export
+(.getBoundExpr) : BindingInfo tm -> tm
+(.getBoundExpr) (BindExpr _ t) = t
+(.getBoundExpr) (BindType _ t) = t
+(.getBoundExpr) (BindExplicitType _ _ t) = t
+
+export
+(.getBindingMode) : BindingInfo tm -> BindingModifier
+(.getBindingMode) (BindType name ty) = Typebind
+(.getBindingMode) (BindExpr name expr) = Autobind
+(.getBindingMode) (BindExplicitType name type expr) = Autobind
+
 export
 (.getLhs) : OperatorLHSInfo tm -> tm
 (.getLhs) (NoBinder lhs) = lhs
-(.getLhs) (BindExpr _ lhs) = lhs
-(.getLhs) (BindType _ lhs) = lhs
-(.getLhs) (BindExplicitType _ _ lhs) = lhs
+(.getLhs) (LHSBinder lhs) = lhs.getBoundExpr
 
 export
 (.getBoundPat) : OperatorLHSInfo tm -> Maybe tm
 (.getBoundPat) (NoBinder lhs) = Nothing
-(.getBoundPat) (BindType name ty) = Just name
-(.getBoundPat) (BindExpr name expr) = Just name
-(.getBoundPat) (BindExplicitType name type expr) = Just name
+(.getBoundPat) (LHSBinder $ BindType name ty) = Just name
+(.getBoundPat) (LHSBinder $ BindExpr name expr) = Just name
+(.getBoundPat) (LHSBinder $ BindExplicitType name type expr) = Just name
 
 export
 (.getBinder) : OperatorLHSInfo tm -> BindingModifier
 (.getBinder) (NoBinder lhs) = NotBinding
-(.getBinder) (BindType name ty) = Typebind
-(.getBinder) (BindExpr name expr) = Autobind
-(.getBinder) (BindExplicitType name type expr) = Autobind
+(.getBinder) (LHSBinder lhs) = lhs.getBindingMode
 
 public export
 data TotalReq = Total | CoveringOnly | PartialOK

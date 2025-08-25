@@ -4,6 +4,7 @@ import Core.Context.Log
 import Core.Env
 import Core.Normalise
 import Core.Value
+import public Core.WithData
 
 import public Data.List1
 import Data.SortedSet
@@ -88,6 +89,8 @@ mutual
        IAutoApp : FC -> RawImp' nm -> RawImp' nm -> RawImp' nm
        INamedApp : FC -> RawImp' nm -> Name -> RawImp' nm -> RawImp' nm
        IWithApp : FC -> RawImp' nm -> RawImp' nm -> RawImp' nm
+       IBindingApp : (fn : WithFC Name) -> (bound : WithFC (BindingInfo (RawImp' nm))) ->
+                     (scope : WithFC (RawImp' nm)) -> RawImp' nm
 
        ISearch : FC -> (depth : Nat) -> RawImp' nm
        IAlternative : FC -> AltType' nm -> List (RawImp' nm) -> RawImp' nm
@@ -183,6 +186,14 @@ mutual
          = "(" ++ show f ++ " [" ++ show a ++ "])"
       show (IWithApp fc f a)
          = "(" ++ show f ++ " | " ++ show a ++ ")"
+      show (IBindingApp nm binder scope)
+         = case binder.val of
+                (BindType name type) =>
+                    "\{show nm.val} (\{show name} : \{show type}) | \{show scope.val}"
+                (BindExpr name expr) =>
+                    "\{show nm.val} (\{show name} := \{show expr}) | \{show scope.val}"
+                (BindExplicitType name type expr) =>
+                    "\{show nm.val} (\{show name} : \{show type} := \{show expr}) | \{show scope.val}"
       show (ISearch fc d)
          = "%search"
       show (IAlternative fc ty alts)
@@ -245,6 +256,8 @@ mutual
        Totality : TotalReq -> FnOpt' nm
        Macro : FnOpt' nm
        SpecArgs : List Name -> FnOpt' nm
+       Binding : BindingModifier -> FnOpt' nm
+
   %name FnOpt' fopt
 
   public export
@@ -280,6 +293,7 @@ mutual
     show (Totality PartialOK) = "partial"
     show Macro = "%macro"
     show (SpecArgs ns) = "%spec " ++ showSep " " (map show ns)
+    show (Binding b) = show b
 
   export
   Eq FnOpt where
@@ -317,13 +331,13 @@ mutual
 
   public export
   data ImpData' : Type -> Type where
-       MkImpData : FC -> (n : Name) ->
+       MkImpData : FC -> (tyName : FCBind Name) ->
                    -- if we have already declared the type using `MkImpLater`,
                    -- we are allowed to leave the telescope out here.
                    (tycon : Maybe (RawImp' nm)) ->
                    (opts : List DataOpt) ->
                    (datacons : List (ImpTy' nm)) -> ImpData' nm
-       MkImpLater : FC -> (n : Name) -> (tycon : RawImp' nm) -> ImpData' nm
+       MkImpLater : FC -> (n : FCBind Name) -> (tycon : RawImp' nm) -> ImpData' nm
 
   %name ImpData' dat
 
@@ -331,11 +345,11 @@ mutual
   covering
   Show nm => Show (ImpData' nm) where
     show (MkImpData fc n (Just tycon) _ cons)
-        = "(%data " ++ show n ++ " " ++ show tycon ++ " " ++ show cons ++ ")"
+        = "(%data " ++ show n.val ++ " " ++ show tycon ++ " " ++ show (map val cons) ++ ")"
     show (MkImpData fc n Nothing _ cons)
-        = "(%data " ++ show n ++ " " ++ show cons ++ ")"
+        = "(%data " ++ show n.val ++ " " ++ show (map val cons) ++ ")"
     show (MkImpLater fc n tycon)
-        = "(%datadecl " ++ show n ++ " " ++ show tycon ++ ")"
+        = "(%datadecl " ++ show n.val ++ " " ++ show tycon ++ ")"
 
   public export
   IField : Type
@@ -351,7 +365,7 @@ mutual
 
   public export
   ImpParameter' : Type -> Type
-  ImpParameter' nm = WithRig $ WithName $ PiBindData nm
+  ImpParameter' nm = WithRig $ AddMetadata ("name" :-: DocBindFC Name) $ PiBindData nm
 
   -- old datatype for ImpParameter, used for elabreflection compatibility
   public export
@@ -364,11 +378,7 @@ mutual
 
   public export
   fromOldParams : OldParameters' nm -> ImpParameter' (RawImp' nm)
-  fromOldParams (nm, rig, info,type) = Mk [rig, NoFC nm] (MkPiBindData info type)
-
-  export
-  Show nm => Show (ImpParameter' nm) where
-    show x = "\{show x.rig}\{show x.name.val} \{show x.val.boundType}"
+  fromOldParams (nm, rig, info,type) = Mk [rig, MkDef nm] (MkPiBindData info type)
 
   public export 0
   ImpRecord : Type
@@ -376,11 +386,11 @@ mutual
 
   public export 0
   DataHeader : Type -> Type -- the name is the type constructor's name
-  DataHeader nm = WithName $ List (ImpParameter' (RawImp' nm))
+  DataHeader nm = AddMetadata TyName' $ List (ImpParameter' (RawImp' nm))
 
   public export 0
   RecordBody : Type -> Type -- The name is the data constructor's name
-  RecordBody nm = WithName $ WithOpts $ List (IField' nm)
+  RecordBody nm = AddMetadata TyName' $ WithOpts $ List (IField' nm)
 
   ||| A record is defined by its header containing the name and parameters, and its body
   ||| containing the constructor name, options, and a list of fields
@@ -393,15 +403,15 @@ mutual
   export
   covering
   Show nm => Show (IField' nm) where
-    show f@(MkWithData _ (MkPiBindData Explicit ty)) = show f.name.val ++ " : " ++ show ty
-    show f@(MkWithData _ ty) = "{" ++ show f.name.val ++ " : " ++ show ty.boundType ++ "}"
+    show f@(MkWithData _ (MkPiBindData Explicit ty)) = show {ty = Name} f.name.val ++ " : " ++ show ty
+    show f@(MkWithData _ ty) = "{" ++ show {ty = Name} f.name.val ++ " : " ++ show ty.boundType ++ "}"
 
   export
   covering
   Show nm => Show (ImpRecordData nm) where
     show (MkImpRecord header body)
-        = "record " ++ show header.name.val ++ " " ++ show header.val ++
-          " " ++ show body.name.val ++ "\n\t" ++
+        = "record " ++ show header.tyName.val ++ " " ++ show header.val ++
+          " " ++ show body.tyName.val ++ "\n\t" ++
           showSep "\n\t" (map show body.val) ++ "\n"
 
   public export
@@ -489,9 +499,14 @@ mutual
 
   export
   covering
+  Show nm => Show (ImpParameter' nm) where
+    show params = "\{show params.rig} \{show params.val.info} \{show params.val.boundType}"
+
+  export
+  covering
   Show nm => Show (ImpDecl' nm) where
     show (IClaim (MkWithData _ $ MkIClaimData c _ opts ty))
-        = show opts ++ " " ++ show c ++ " " ++ show ty
+        = show opts ++ " " ++ show c ++ " " ++ show ty.val
     show (IData _ _ _ d) = show d
     show (IDef _ n cs) = "(%def " ++ show n ++ " " ++ show cs ++ ")"
     show (IParameters _ ps ds)
@@ -817,13 +832,13 @@ definedInBlock ns decls =
     defName ns acc (IClaim c) = insert (expandNS ns (getName c.val.type)) acc
     defName ns acc (IDef _ nm _) = insert (expandNS ns nm) acc
     defName ns acc (IData _ _ _ (MkImpData _ n _ _ cons))
-        = foldl (flip insert) acc $ expandNS ns n :: map (expandNS ns . getName) cons
-    defName ns acc (IData _ _ _ (MkImpLater _ n _)) = insert (expandNS ns n) acc
+        = foldl (flip insert) acc $ expandNS ns n.val :: map (expandNS ns . getName) cons
+    defName ns acc (IData _ _ _ (MkImpLater _ n _)) = insert (expandNS ns n.val) acc
     defName ns acc (IParameters _ _ pds) = foldl (defName ns) acc pds
     defName ns acc (IFail _ _ nds) = foldl (defName ns) acc nds
     defName ns acc (INamespace _ n nds) = foldl (defName (ns <.> n)) acc nds
     defName ns acc (IRecord _ fldns _ _ rec)
-        = foldl (flip insert) acc $ expandNS ns rec.val.body.name.val :: all
+        = foldl (flip insert) acc $ expandNS ns rec.val.body.tyName.val :: all
       where
         fldns' : Namespace
         fldns' = maybe ns (\ f => ns <.> mkNamespace f) fldns
@@ -846,7 +861,7 @@ definedInBlock ns decls =
         -- inside the parameter block)
         -- so let's just declare all of them and some may go unused.
         all : List Name
-        all = expandNS ns rec.val.header.name.val :: map (expandNS fldns') (fnsRF ++ fnsUN)
+        all = expandNS ns rec.val.header.tyName.val :: map (expandNS fldns') (fnsRF ++ fnsUN)
 
     defName ns acc (IPragma _ pns _) = foldl (flip insert) acc $ map (expandNS ns) pns
     defName _ acc _ = acc
@@ -875,6 +890,7 @@ getFC (IApp x _ _) = x
 getFC (INamedApp x _ _ _) = x
 getFC (IAutoApp x _ _) = x
 getFC (IWithApp x _ _) = x
+getFC (IBindingApp x _ y) = fromMaybe EmptyFC (mergeFC x.fc y.fc)
 getFC (ISearch x _) = x
 getFC (IAlternative x _ _) = x
 getFC (IRewrite x _ _) = x

@@ -148,7 +148,7 @@ getMinimalDef (Coded ns bin)
              = MkGlobalDef fc name (Erased fc Placeholder) NatSet.empty NatSet.empty NatSet.empty NatSet.empty mul
                            Scope.empty (specified Public) (MkTotality Unchecked IsCovering) False
                            [] Nothing refsR False False True
-                           None cdef Nothing [] Nothing
+                           None cdef Nothing [] Nothing NotBinding
          pure (def, Just (ns, bin))
 
 -- ||| Recursively get all calls in a function definition

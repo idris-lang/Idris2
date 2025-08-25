@@ -14,6 +14,7 @@ import TTImp.Elab.Ambiguity
 import TTImp.Elab.App
 import TTImp.Elab.As
 import TTImp.Elab.Binders
+import TTImp.Elab.BindingApp
 import TTImp.Elab.Case
 import TTImp.Elab.Check
 import TTImp.Elab.Dot
@@ -156,6 +157,8 @@ checkTerm rig elabinfo nest env (IAutoApp fc fn arg) exp
     = checkApp rig elabinfo nest env fc fn [] [arg] []  exp
 checkTerm rig elabinfo nest env (IWithApp fc fn arg) exp
     = throw (GenericMsg fc "with application not implemented yet")
+checkTerm rig elabinfo nest env (IBindingApp fn bind arg) exp
+    = checkBindingApplication rig elabinfo nest env fn bind arg exp
 checkTerm rig elabinfo nest env (INamedApp fc fn nm arg) exp
     = checkApp rig elabinfo nest env fc fn [] [] [(nm, arg)] exp
 checkTerm rig elabinfo nest env (ISearch fc depth) (Just gexpty)

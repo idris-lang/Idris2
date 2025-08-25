@@ -230,3 +230,4 @@ Pretty Void FC where
   pretty (MkVirtualFC ident startPos endPos) = byShow ident <+> colon
                  <+> prettyPos startPos <+> pretty "--"
                  <+> prettyPos endPos
+
