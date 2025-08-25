@@ -4,6 +4,9 @@ import System
 import System.Directory
 import System.File
 
+import Data.List
+import Data.Maybe
+
 import Test.Golden
 
 %default covering
@@ -80,21 +83,23 @@ idrisTestsAllSchemes cg = testsInDir "allschemes"
       ("Test across all scheme backends: " ++ show cg ++ " instance")
       {codegen = Just cg}
 
-idrisTestsAllBackends : Requirement -> TestPool
-idrisTestsAllBackends cg = MkTestPool
+idrisTestsAllBackends : Requirement -> IO TestPool
+idrisTestsAllBackends cg = testsInDir "allbackends"
       ("Test across all backends: " ++ show cg ++ " instance")
-      [] (Just cg)
-       -- RefC implements IEEE standard and distinguishes between 0.0 and -0.0
-       -- unlike other backends. So turn this test for now.
-      $ ([ "issue2362" ] <* guard (cg /= C))
-      ++ ([ "popen2" ] <* guard (cg /= Node))
-      ++ [ -- Evaluator
-       "evaluator004",
-       -- Unfortunately the behaviour of Double is platform dependent so the
-       -- following test is turned off.
-       -- "evaluator005",
-       "basic048",
-       "perf006"]
+      {codegen = Just cg}
+      {pred = not . (`elem` exclude)}
+  where
+    -- tests that do not run at this backend
+    exclude : List String
+    exclude = catMaybes
+      [ -- RefC implements IEEE standard and distinguishes between 0.0 and -0.0
+        -- unlike other backends. So turn this test for now.
+        toMaybe (cg == C) "issue2362"
+      , toMaybe (cg == Node) "popen2"
+        -- Unfortunately the behaviour of Double is platform dependent so the
+        -- following test is turned off.
+      , Just "evaluator005"
+      ]
 
 ||| Totality checking, including positivity
 idrisTestsTotality : IO TestPool
@@ -118,39 +123,8 @@ idrisTestsOperators = testsInDir "idris2/operators" "Operator and fixities"
 idrisTestsIPKG : IO TestPool
 idrisTestsIPKG = testsInDir "idris2/pkg" "Package and .ipkg files"
 
-idrisTests : TestPool
-idrisTests = MkTestPool "Misc" [] Nothing
-       -- Documentation strings
-      ["docs001", "docs002", "docs003", "docs004", "docs005",
-       -- Eta equality
-       "eta001",
-       -- Modules and imports
-       "import001", "import002", "import003", "import004", "import005", "import006",
-       "import007", "import008", "import009",
-       -- Implicit laziness, lazy evaluation
-       "lazy001", "lazy002", "lazy003", "lazy004", "lazy005",
-       -- Namespace blocks
-       "namespace001", "namespace002", "namespace003", "namespace004", "namespace005",
-       -- Parameters blocks
-       "params001", "params002", "params003", "params004",
-       -- Larger programs arising from real usage. Typically things with
-       -- interesting interactions between features
-       "real001", "real002",
-       -- Inlining
-       "inlining001",
-       -- with-disambiguation
-       "with003",
-       -- pretty printing
-       "pretty001", "pretty002",
-       -- PrimIO
-       "primloop",
-       -- golden file testing
-       "golden001",
-       -- quantifiers
-       "quantifiers001",
-       -- unification
-       "unification001"
-       ]
+idrisTestsMisc : IO TestPool
+idrisTestsMisc = testsInDir "idris2/misc" "Misc"
 
 typeddTests : IO TestPool
 typeddTests = testsInDir "typedd-book" "Type Driven Development"
@@ -203,53 +177,47 @@ commandLineTests : IO TestPool
 commandLineTests = testsInDir "cli" "Command-line interface"
 
 main : IO ()
-main = runner $
-  [ !ttimpTests
-  , !idrisTestsBasic
-  , !idrisTestsCoverage
-  , !idrisTestsTermination
-  , !idrisTestsCasetree
-  , !idrisTestsError
-  , !idrisTestsFailing
-  , !idrisTestsWarning
-  , !idrisTestsInteractive
-  , !idrisTestsInterface
-  , !idrisTestsLiterate
-  , !idrisTestsLinear
-  , !idrisTestsPerformance
-  , !idrisTestsRegression
-  , !idrisTestsData
-  , !idrisTestsBuiltin
-  , !idrisTestsEvaluator
-  , !idrisTestsREPL
-  , !idrisTestsTotality
-  , !idrisTestsSchemeEval
-  , !idrisTestsReflection
-  , !idrisTestsWith
-  , !idrisTestsOperators
-  , !idrisTestsDebug
-  , !idrisTestsIPKG
-  , testPaths "idris2/misc" idrisTests
-  , !typeddTests
-  , !ideModeTests
-  , !preludeTests
-  , !baseLibraryTests
-  , !linearLibraryTests
-  , !contribLibraryTests
-  , !chezTests
-  , !refcTests
-  , !racketTests
-  , !nodeTests
-  , !vmcodeInterpTests
-  , !templateTests
-  , !codegenTests
-  , !commandLineTests
+main = (runner =<<) $ sequence $
+  [ ttimpTests
+  , idrisTestsBasic
+  , idrisTestsCoverage
+  , idrisTestsTermination
+  , idrisTestsCasetree
+  , idrisTestsError
+  , idrisTestsFailing
+  , idrisTestsWarning
+  , idrisTestsInteractive
+  , idrisTestsInterface
+  , idrisTestsLiterate
+  , idrisTestsLinear
+  , idrisTestsPerformance
+  , idrisTestsRegression
+  , idrisTestsData
+  , idrisTestsBuiltin
+  , idrisTestsEvaluator
+  , idrisTestsREPL
+  , idrisTestsTotality
+  , idrisTestsSchemeEval
+  , idrisTestsReflection
+  , idrisTestsWith
+  , idrisTestsOperators
+  , idrisTestsDebug
+  , idrisTestsIPKG
+  , idrisTestsMisc
+  , typeddTests
+  , ideModeTests
+  , preludeTests
+  , baseLibraryTests
+  , linearLibraryTests
+  , contribLibraryTests
+  , chezTests
+  , refcTests
+  , racketTests
+  , nodeTests
+  , vmcodeInterpTests
+  , templateTests
+  , codegenTests
+  , commandLineTests
   ]
-  ++ !(traverse idrisTestsAllSchemes [Chez, Racket])
-  ++ map (testPaths "allbackends" . idrisTestsAllBackends) [Chez, Node, Racket, C]
-
-
-    where
-
-    testPaths : String -> TestPool -> TestPool
-    testPaths dir = { testCases $= map ((dir ++ "/") ++) }
+  ++ map idrisTestsAllSchemes [Chez, Racket]
+  ++ map idrisTestsAllBackends [Chez, Node, Racket, C]

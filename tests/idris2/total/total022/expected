@@ -1,25 +1,25 @@
 1/1: Building Dot (Dot.idr)
 Main> Main.f
-Arguments [{arg:0}, {arg:1}, {arg:2}, {arg:3}]
-Compile time tree: case {arg:0} of
-  Nil {e:4} => case {arg:3} of
-    Nothing {e:8} => ()
-    _ => case {arg:3} of
-      Just {e:0} {e:1} => case {e:1} of
-        Refl {e:2} {e:3} => f {arg:2} {arg:1} {arg:2} Nothing
-  (::) {e:5} {e:6} {e:7} => case {arg:3} of
-    Nothing {e:9} => f {e:7} {arg:1} {arg:2} Nothing
-    _ => case {arg:3} of
-      Just {e:0} {e:1} => case {e:1} of
-        Refl {e:2} {e:3} => f {arg:2} {arg:1} {arg:2} Nothing
-  _ => case {arg:3} of
-    Just {e:0} {e:1} => case {e:1} of
-      Refl {e:2} {e:3} => f {arg:2} {arg:1} {arg:2} Nothing
-Compiled: \ {arg:0}, {arg:1}, {arg:2}, {arg:3} => case {arg:0} of
-  { _builtin.NIL {tag = 0} [nil] => case {arg:3} of  { _builtin.NOTHING {tag = 0} [nothing] => ___; _ => case {arg:3} of  { _builtin.JUST {tag = 1} [just] {e:1} => Main.f {arg:2} {arg:1} {arg:2} (_builtin.NOTHING {tag = 0} [nothing])}}
-  ; _builtin.CONS {tag = 1} [cons] {e:6} {e:7} => case {arg:3} of  { _builtin.NOTHING {tag = 0} [nothing] => Main.f {e:7} {arg:1} {arg:2} (_builtin.NOTHING {tag = 0} [nothing]); _ => case {arg:3} of  { _builtin.JUST {tag = 1} [just] {e:1} => Main.f {arg:2} {arg:1} {arg:2} (_builtin.NOTHING {tag = 0} [nothing])}}
-  ; _ => case {arg:3} of
-           { _builtin.JUST {tag = 1} [just] {e:1} => Main.f {arg:2} {arg:1} {arg:2} (_builtin.NOTHING {tag = 0} [nothing])
+Arguments [{arg:1}, {arg:2}, {arg:3}, {arg:4}]
+Compile time tree: case {arg:1} of
+  Nil {e:1} => case {arg:4} of
+    Nothing {e:2} => ()
+    _ => case {arg:4} of
+      Just {e:3} {e:4} => case {e:4} of
+        Refl {e:5} {e:6} => f {arg:3} {arg:2} {arg:3} Nothing
+  (::) {e:7} {e:8} {e:9} => case {arg:4} of
+    Nothing {e:10} => f {e:9} {arg:2} {arg:3} Nothing
+    _ => case {arg:4} of
+      Just {e:3} {e:4} => case {e:4} of
+        Refl {e:5} {e:6} => f {arg:3} {arg:2} {arg:3} Nothing
+  _ => case {arg:4} of
+    Just {e:3} {e:4} => case {e:4} of
+      Refl {e:5} {e:6} => f {arg:3} {arg:2} {arg:3} Nothing
+Compiled: \ {arg:1}, {arg:2}, {arg:3}, {arg:4} => case {arg:1} of
+  { _builtin.NIL {tag = 0} [nil] => case {arg:4} of  { _builtin.NOTHING {tag = 0} [nothing] => ___; _ => case {arg:4} of  { _builtin.JUST {tag = 1} [just] {e:4} => Main.f {arg:3} {arg:2} {arg:3} (_builtin.NOTHING {tag = 0} [nothing])}}
+  ; _builtin.CONS {tag = 1} [cons] {e:8} {e:9} => case {arg:4} of  { _builtin.NOTHING {tag = 0} [nothing] => Main.f {e:9} {arg:2} {arg:3} (_builtin.NOTHING {tag = 0} [nothing]); _ => case {arg:4} of  { _builtin.JUST {tag = 1} [just] {e:4} => Main.f {arg:3} {arg:2} {arg:3} (_builtin.NOTHING {tag = 0} [nothing])}}
+  ; _ => case {arg:4} of
+           { _builtin.JUST {tag = 1} [just] {e:4} => Main.f {arg:3} {arg:2} {arg:3} (_builtin.NOTHING {tag = 0} [nothing])
            }
   }
 Refers to: Main.f, Prelude.Basics.List, Prelude.Basics.(::), Builtin.MkUnit, Builtin.(===), Prelude.Types.Nothing
