@@ -1,0 +1,8 @@
+1/1: Building Test (Test.idr)
+SHould warn about declaring typebind instead of autobind
+1/1: Building Test2 (Test2.idr)
+Shouwl warn about autobind instead of typebind
+1/1: Building Test3 (Test3.idr)
+should warn about using typebind insteaf of autobind
+1/1: Building Test4 (Test4.idr)
+should warn about declaring auto instead of typebind
