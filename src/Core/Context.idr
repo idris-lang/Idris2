@@ -834,6 +834,8 @@ HasNames Error where
   full gam (OperatorBindingMismatch {print} fc expected actual (Right opName) rhs candidates)
       = OperatorBindingMismatch {print} fc expected actual
           <$> (Right <$> full gam opName) <*> pure rhs <*> pure candidates
+  full gam (BindingApplicationMismatch fc used bind others)
+      = BindingApplicationMismatch fc used <$> traverse (full gam) bind <*> traverse (full gam) others
 
   resolved gam (Fatal err) = Fatal <$> resolved gam err
   resolved _ (CantConvert fc gam rho s t)
@@ -933,7 +935,8 @@ HasNames Error where
   resolved gam (OperatorBindingMismatch {print} fc expected actual (Right opName) rhs candidates)
       = OperatorBindingMismatch {print} fc expected actual
           <$> (Right <$> resolved gam opName) <*> pure rhs <*> pure candidates
-
+  resolved gam (BindingApplicationMismatch fc used bind others)
+      = BindingApplicationMismatch fc used <$> traverse (resolved gam) bind <*> traverse (resolved gam) others
 export
 HasNames Totality where
   full gam (MkTotality t c) = pure $ MkTotality !(full gam t) !(full gam c)

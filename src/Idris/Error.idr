@@ -623,7 +623,7 @@ perrorRaw (GenericMsgSol fc header solutionHeader solutions)
        <+> indent 1 (vsep (map (\s => "-" <++> pretty0 s) solutions))
 perrorRaw (OperatorBindingMismatch fc {print=p} expected actual opName rhs candidates)
     = pure $ "Operator" <++> pretty0 !(getFullName (fromEither opName)) <++> "is"
-       <++> printBindingInfo expected-- .bindingInfo
+       <++> printBindingInfo expected
        <++> "operator, but is used as" <++> printBindingModifier actual.getBinder
        <++> "operator."
        <+> line <+> !(ploc fc)
@@ -698,7 +698,23 @@ perrorRaw (OperatorBindingMismatch fc {print=p} expected actual opName rhs candi
       printBindingInfo : FixityDeclarationInfo -> Doc IdrisAnn
       printBindingInfo UndeclaredFixity = "a regular"
       printBindingInfo (DeclaredFixity x) = printBindingModifier x.bindingInfo
-
+perrorRaw (BindingApplicationMismatch fc used bind others)
+   = pure $ errorDesc $ reflow "Using \{show used} syntax but no function in scope is marked \{show used}"
+   <+> line
+   <+> !(ploc fc)
+   <+> line
+   <+> footer bind others
+   where
+     footer : List Name -> List Name -> Doc IdrisAnn
+     footer [] [] = reflow "There are no functions in scope that could match the current situation"
+     footer [] (x :: xs) =
+       reflow "Did you mean any of:"
+       <++> concatWith (surround (comma <+> space)) (map (code . pretty0) xs)
+       <+> comma <++> "or" <++> code (pretty0 x) <+> "?"
+     footer (x :: xs) ns1 =
+       reflow "Did you mean any of:"
+       <++> concatWith (surround (comma <+> space)) (map (code . pretty0) xs)
+       <+> comma <++> "or" <++> code (pretty0 x) <+> "?"
 
 perrorRaw (TTCError msg)
     = pure $ errorDesc (reflow "Error in TTC file" <+> colon <++> byShow msg)

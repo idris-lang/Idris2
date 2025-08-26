@@ -9,6 +9,8 @@ import Core.Metadata
 import Core.Name
 import Core.Normalise
 
+import Data.List
+
 import TTImp.Elab.Check
 import TTImp.Elab.App
 import TTImp.TTImp
@@ -16,26 +18,44 @@ import TTImp.TTImp
 import Idris.REPL.Opts
 import Idris.Syntax
 
-keepBinding : BindingModifier -> List GlobalDef -> List GlobalDef
-keepBinding mode = filter (\x => x.bindingMode == mode)
 
-parameters (originalName : WithFC Name) {auto c : Ref Ctxt Defs}
-  checkUnique : List GlobalDef -> Core GlobalDef
-  checkUnique [ def ] = pure def
-  checkUnique [] = throw $ UndefinedName originalName.fc originalName.val
-  checkUnique defs = throw $ AmbiguousName originalName.fc (map fullname defs)
+
+record BindingModes (a : Type) where
+  constructor MkBindingModes
+  everythingMatches : List a
+  bindingDoesNotMatch : List a
+  notBinding : List a
+
+keepBinding : BindingModifier -> List GlobalDef -> BindingModes GlobalDef
+keepBinding mode = foldl sortBinding (MkBindingModes [] [] [])
+  where
+    sortBinding : BindingModes GlobalDef -> GlobalDef -> BindingModes GlobalDef
+    sortBinding modes def = if def.bindingMode == mode
+                               then {everythingMatches $= (def ::)} modes
+                               else if def.bindingMode == NotBinding
+                               then {notBinding $= (def ::)} modes
+                               else {bindingDoesNotMatch $= (def ::)} modes
+
+
+parameters (originalName : WithFC Name) (mode : BindingModifier) {auto c : Ref Ctxt Defs}
+  checkUnique : BindingModes GlobalDef -> Core GlobalDef
+  checkUnique (MkBindingModes [ def ] _ _ ) = pure def
+  checkUnique (MkBindingModes [] may others) = do
+      coreLift $ putStrLn (show $ map fullname others)
+      throw $ BindingApplicationMismatch originalName.fc mode (map fullname may) (map fullname others)
+  checkUnique (MkBindingModes defs _ _) = throw $ AmbiguousName originalName.fc (map fullname defs)
 
   typecheckCandidates : List GlobalDef -> Core (List GlobalDef)
-  typecheckCandidates xs = pure xs -- todo
+  typecheckCandidates xs = pure xs -- todo: emit errors when the type doesn't match
 
-  checkBinding : (mode : BindingModifier) -> (candidates : List GlobalDef) -> Core GlobalDef
-  checkBinding mode candidates = do
+  checkBinding : (candidates : List GlobalDef) -> Core GlobalDef
+  checkBinding candidates = do
     log "elab.bindApp"  10 $ "Potential candidates for binding identifer : \{show (map fullname candidates)}"
     log "elab.bindApp"  10 $ "Checking if candidates have binding \{show mode}"
-    let bindingCandidates = keepBinding mode candidates
-    log "elab.bindApp"  10 $ "Final list of binding identifers : \{show (map fullname bindingCandidates)}"
-    wellTypedCandidates <- typecheckCandidates bindingCandidates
-    checkUnique bindingCandidates
+    let candidates = keepBinding mode candidates
+    log "elab.bindApp"  10 $ "Final list of binding identifers : \{show (map fullname candidates.everythingMatches)}"
+    -- wellTypedCandidates <- typecheckCandidates bindingCandidates
+    checkUnique candidates
 
 typeForBinder : BindingInfo RawImp -> FC -> RawImp
 typeForBinder (BindType name type) = const type
