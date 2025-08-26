@@ -1,8 +1,32 @@
 1/1: Building Test (Test.idr)
-SHould warn about declaring typebind instead of autobind
+Should warn about declaring typebind instead of autobind
 1/1: Building Test2 (Test2.idr)
-Shouwl warn about autobind instead of typebind
+[]
+Error: While processing right hand side of List. Using autobind syntax but no function in scope is marked autobind
+
+Test2:12:10--12:15
+ 08 |   p2 : sy p1
+ 09 |
+ 10 |
+ 11 | List : Type -> Type
+ 12 | List a = Sigma (n <- Nat) | Fin n -> a
+               ^^^^^
+
+Did you mean to write: `Sigma (x : range)` using `Sigma` from module `Test3` on line 6?
 1/1: Building Test3 (Test3.idr)
-should warn about using typebind insteaf of autobind
+[Prelude.Interfaces.for]
+Error: While processing right hand side of main. Using typebind syntax but no function in scope is marked typebind
+
+Test3:10:8--10:11
+ 06 | range : List Nat
+ 07 | range = [1 .. 10]
+ 08 |
+ 09 | main : IO ()
+ 10 | main = for (x : range) | printLn x
+             ^^^
+
+Possible fixes :
+- Use autobind syntax `for (x <- range)` using `Test3.for`
+- Use regular syntax `for range` using `Prelude.for`
 1/1: Building Test4 (Test4.idr)
-should warn about declaring auto instead of typebind
+Should warn about declaring autobind instead of typebind

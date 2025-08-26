@@ -176,6 +176,12 @@ data Error : Type where
          FC -> (expectedFixity : FixityDeclarationInfo) -> (use_site : OperatorLHSInfo a) ->
          -- left: backticked, right: op symbolds
          (opName : Either Name Name) -> (rhs : a) -> (candidates : List String) -> Error
+     BindingApplicationMismatch :
+       FC ->
+       (bindingUsed : BindingModifier) ->
+       (bindingCandidates : List Name) ->
+       (nonBindingCandidates : List Name) ->
+       Error
      TTCError : TTCErrorMsg -> Error
      FileErr : String -> FileError -> Error
      CantFindPackage : String -> Error
@@ -415,6 +421,8 @@ Show Error where
   show (OperatorBindingMismatch fc UndeclaredFixity actual opName rhs _)
        = show fc ++ ": Operator " ++ show opName ++ " has no declared fixity"
        ++ " but used as a " ++ show actual ++ " operator"
+  show (BindingApplicationMismatch fc used binding notBinding)
+       = show fc ++ ": Application used \{show used} syntax but no such function exists"
 
 export
 getWarningLoc : Warning -> FC
@@ -506,6 +514,7 @@ getErrorLoc (InRHS _ _ err) = getErrorLoc err
 getErrorLoc (MaybeMisspelling err _) = getErrorLoc err
 getErrorLoc (WarningAsError warn) = Just (getWarningLoc warn)
 getErrorLoc (OperatorBindingMismatch loc _ _ _ _ _) = Just loc
+getErrorLoc (BindingApplicationMismatch loc _ _ _) = Just loc
 
 export
 killWarningLoc : Warning -> Warning
@@ -597,7 +606,8 @@ killErrorLoc (MaybeMisspelling err xs) = MaybeMisspelling (killErrorLoc err) xs
 killErrorLoc (WarningAsError wrn) = WarningAsError (killWarningLoc wrn)
 killErrorLoc (OperatorBindingMismatch {print} fc expected actual opName rhs candidates)
              = OperatorBindingMismatch {print} emptyFC expected actual opName rhs candidates
-
+killErrorLoc (BindingApplicationMismatch _ a b c)
+  = BindingApplicationMismatch emptyFC a b c
 
 -- Core is a wrapper around IO that is specialised for efficiency.
 export
