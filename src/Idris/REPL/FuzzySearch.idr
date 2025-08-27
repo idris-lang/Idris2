@@ -32,7 +32,7 @@ fuzzySearch expr = do
     | _ => pure (REPLError ("Bad expression, expected"
                        <++> code "B"
                        <++> "or"
-                       <++> code "_ -> B"
+                       <++> code "A -> _"
                        <++> "or"
                        <++> code "A -> B"
                        <+> ", where"
