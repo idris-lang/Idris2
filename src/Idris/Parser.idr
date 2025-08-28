@@ -2269,7 +2269,26 @@ knownCommands =
       """
     )
   ] ++
-  explain ["fs", "fsearch"] "Search for global definitions by sketching the names distribution of the wanted type(s)."
+  explain ["fs", "fsearch"] """
+    Search for global definitions by sketching the names distribution of the wanted type(s).
+
+    The parameter must be in one of the forms A -> B, A -> _, or B, where A and B are space-delimited lists of global names.
+
+    Idris will return all of the entries in the context that have all of the names in A
+    in some argument and all of the names in B within the return type.
+
+    For example:
+
+      :fs List Maybe -> List
+
+    will match (among other things):
+
+      Prelude.List.mapMaybe : (a -> Maybe b) -> List a -> List b
+
+    Note that the query 'List Nat -> String' does not describe the type 'List Nat',
+    rather it describes both 'List a' and 'Nat' in the arguments.
+
+    """
   where
     explain : List String -> String -> List (String, String)
     explain cmds expl = map (\s => (s, expl)) cmds
