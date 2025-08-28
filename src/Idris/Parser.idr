@@ -2285,8 +2285,8 @@ knownCommands =
 
       Prelude.List.mapMaybe : (a -> Maybe b) -> List a -> List b
 
-Note that the query 'List Nat -> String' does not describe the type 'List Nat',
-rather it describes both 'List a' and 'Nat' in the arguments.
+    Note that the query 'List Nat -> String' does not describe the type 'List Nat',
+    rather it describes both 'List a' and 'Nat' in the arguments.
 
     """
   where
