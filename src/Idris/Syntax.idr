@@ -364,7 +364,7 @@ mutual
       constructor MkPTy
       -- List of names and their associated documentation
       -- If no documentation is provided the first projection is `""`
-      names : List1 (String, WithFC Name)
+      names : List1 (WithDoc $ WithFC Name)
       type : PTerm' nm -- probably need `WithFC` here to fix #3408
 
   public export
@@ -373,7 +373,7 @@ mutual
 
   export
   (.nameList) : PTypeDecl' nm -> List Name
-  (.nameList) = forget . map (val . snd) . names . val
+  (.nameList) = forget . map val . names . val
 
   public export
   PDataDecl : Type
