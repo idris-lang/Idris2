@@ -896,9 +896,9 @@ mutual
                 {auto m : Ref MD Metadata} ->
                 {auto o : Ref ROpts REPLOpts} ->
                 List Name -> AddMetadata Bind' PTypeDecl -> Core (List ImpTy)
-  desugarType ps pty@(MkWithData _ $ MkPTy names d ty)
+  desugarType ps pty@(MkWithData _ $ MkPTy names ty)
       = flip Core.traverse (forget names) $ \(doc, n) : (String, WithFC Name) =>
-          do addDocString n.val (d ++ doc)
+          do addDocString n.val (pty.doc ++ doc)
              syn <- get Syn
              pure $ Mk [pty.fc, NotBinding :+ n] !(bindTypeNames pty.fc (usingImpl syn)
                                                  ps !(desugar AnyExpr ps ty))

@@ -467,7 +467,7 @@ mutual
                 {auto s : Ref Syn SyntaxInfo} ->
                 ImpTy' KindedName -> Core (AddMetadata Bind' (PTypeDecl' KindedName))
   toPTypeDecl impTy
-      = pure $ Mk [impTy.tyName.bind, impTy.fc] (MkPTy (pure ("", drop $ impTy.tyName)) "" !(toPTerm startPrec impTy.val))
+      = pure $ Mk [impTy.tyName.bind, "", impTy.fc] (MkPTy (pure ("", drop $ impTy.tyName)) !(toPTerm startPrec impTy.val))
 
   toPData : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->

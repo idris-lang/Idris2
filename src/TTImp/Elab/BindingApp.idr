@@ -22,8 +22,11 @@ import Idris.Syntax
 
 record BindingModes (a : Type) where
   constructor MkBindingModes
+  -- Definition where the binding matches
   everythingMatches : List a
+  -- Definitions that are binding but not the correct type of binding
   bindingDoesNotMatch : List a
+  -- Definitions that are binding at all
   notBinding : List a
 
 keepBinding : BindingModifier -> List GlobalDef -> BindingModes GlobalDef
@@ -46,7 +49,7 @@ parameters (originalName : WithFC Name) (mode : BindingModifier) {auto c : Ref C
   checkUnique (MkBindingModes defs _ _) = throw $ AmbiguousName originalName.fc (map fullname defs)
 
   typecheckCandidates : List GlobalDef -> Core (List GlobalDef)
-  typecheckCandidates xs = pure xs -- todo: emit errors when the type doesn't match
+  typecheckCandidates xs = pure xs -- todo: filter definitions with the wrong type
 
   checkBinding : (candidates : List GlobalDef) -> Core GlobalDef
   checkBinding candidates = do
@@ -54,8 +57,8 @@ parameters (originalName : WithFC Name) (mode : BindingModifier) {auto c : Ref C
     log "elab.bindApp"  10 $ "Checking if candidates have binding \{show mode}"
     let candidates = keepBinding mode candidates
     log "elab.bindApp"  10 $ "Final list of binding identifers : \{show (map fullname candidates.everythingMatches)}"
-    -- wellTypedCandidates <- typecheckCandidates bindingCandidates
-    checkUnique candidates
+    wellTypedCandidates <- typecheckCandidates candidates.everythingMatches
+    checkUnique ({everythingMatches := wellTypedCandidates} candidates)
 
 typeForBinder : BindingInfo RawImp -> FC -> RawImp
 typeForBinder (BindType name type) = const type

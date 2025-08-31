@@ -1221,17 +1221,23 @@ visibility fname = parseDefault (visOption fname)
 exportVisibility : OriginDesc -> EmptyRule (WithDefault Visibility Export)
 exportVisibility fname = parseDefault (visOption fname)
 
-tyDecls : Rule Name -> String -> OriginDesc -> IndentInfo -> Rule PTypeDecl
-tyDecls declName predoc fname indents
-    = do bs <- bounds $ do
-                  docns <- sepBy1 (decoratedSymbol fname ",")
-                                  [| (optDocumentation fname, fcBounds declName) |]
-                  b <- bounds $ decoratedSymbol fname ":"
-                  mustWorkBecause b.bounds "Expected a type declaration" $ do
-                    ty <- the (Rule PTerm) (typeExpr pdef fname indents)
-                    pure $ MkPTy docns predoc ty
+tyDeclsData : Rule Name -> OriginDesc -> IndentInfo -> Rule (PTypeDeclData' Name)
+tyDeclsData declName fname indents
+    = do
+         docns <- sepBy1 (decoratedSymbol fname ",")
+                         [| (optDocumentation fname, fcBounds declName) |]
+         b <- bounds $ decoratedSymbol fname ":"
+         ty <- mustWorkBecause b.bounds "Expected a type declaration" $
+                   the (Rule PTerm) (typeExpr pdef fname indents)
+         pure $ MkPTy docns ty
+
+tyDecls : Rule Name -> OriginDesc -> IndentInfo -> Rule PTypeDecl
+tyDecls declName fname indents
+    = do doc <- optDocumentation fname
+         decl <- fcBounds (tyDeclsData declName fname indents)
          atEnd indents
-         pure $ bs.withFC
+         pure (doc :+ decl)
+
 
 withFlags : OriginDesc -> EmptyRule (List WithFlag)
 withFlags fname
@@ -1349,10 +1355,10 @@ simpleCon fname ret indents
                          let conType = the (Maybe PTerm) (mkDataConType ret
                                                             (concat (map distribData params)))
                          fromMaybe (fatalError "Named arguments not allowed in ADT constructors")
-                                   (pure . MkPTy (singleton ("", cname)) cdoc <$> conType)
+                                   (pure . MkPTy (singleton ("", cname)) <$> conType)
                          )
          atEnd indents
-         pure b.withFC
+         pure ("" :+ b.withFC)
 
 simpleData : OriginDesc -> WithBounds t ->
              FCBind Name -> IndentInfo -> Rule PDataDecl
@@ -1397,7 +1403,7 @@ dataBody fname mincol start n indents ty
   <|> do b <- bounds (do (mustWork $ decoratedKeyword fname "where")
                          opts <- dataOpts fname
                          bind <- operatorBindingKeyword
-                         cs <- blockAfter mincol (tyDecls (mustWork $ decoratedDataConstructorName fname) "" fname)
+                         cs <- blockAfter mincol (tyDecls (mustWork $ decoratedDataConstructorName fname) fname)
                          pure (opts, map (bind :+) cs))
          (opts, cs) <- pure (the (Pair ? ?) b.val)
          pure (MkPData (boundToFC fname (mergeBounds start b)) n ty opts cs)
@@ -1823,10 +1829,9 @@ parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
            visOpts <- many (visOpt fname)
            vis     <- getVisibility Nothing visOpts
            let opts = mapMaybe getRight visOpts
-           bind    <- operatorBindingKeyword
+           bind <- operatorBindingKeyword
            rig  <- multiplicity fname
-           cls  <- tyDecls (decorate fname Function name)
-                           doc fname indents
+           cls  <- tyDecls (decorate fname Function name) fname indents
            pure $ MkPClaim rig vis opts (bind :+ cls)
 
 

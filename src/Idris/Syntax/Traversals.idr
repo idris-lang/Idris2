@@ -313,7 +313,7 @@ mapPTermM f = goPTerm where
     goPDecl p@(PBuiltin {}) = pure p
 
     goPTypeDecl : PTypeDeclData' nm -> Core (PTypeDeclData' nm)
-    goPTypeDecl (MkPTy n d t) = MkPTy n d <$> goPTerm t
+    goPTypeDecl (MkPTy n t) = MkPTy n <$> goPTerm t
 
     goPDataDecl : PDataDecl' nm -> Core (PDataDecl' nm)
     goPDataDecl (MkPData fc n t opts tdecls) =
@@ -588,7 +588,7 @@ mapPTerm f = goPTerm where
       = MkBasicMultiBinder rig names (goPTerm type)
 
     goPTypeDecl : PTypeDeclData' nm -> PTypeDeclData' nm
-    goPTypeDecl (MkPTy n d t) = MkPTy n d $ goPTerm t
+    goPTypeDecl (MkPTy n t) = MkPTy n $ goPTerm t
 
     goPDataDecl : PDataDecl' nm -> PDataDecl' nm
     goPDataDecl (MkPData fc n t opts tdecls)

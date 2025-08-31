@@ -355,12 +355,11 @@ mutual
       -- List of names and their associated documentation
       -- If no documentation is provided the first projection is `""`
       names : List1 (String, WithFC Name)
-      doc: String
       type : PTerm' nm -- probably need `WithFC` here to fix #3408
 
   public export
   PTypeDecl' : Type -> Type
-  PTypeDecl' nm = WithFC (PTypeDeclData' nm)
+  PTypeDecl' nm = WithData [Doc', FC'] (PTypeDeclData' nm)
 
   export
   (.nameList) : PTypeDecl' nm -> List Name

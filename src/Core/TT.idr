@@ -190,15 +190,15 @@ data FixityDeclarationInfo = UndeclaredFixity | DeclaredFixity FixityInfo
 -- Binding information for binding application and binding operators
 -- A binder can either
 -- - bind types `(t : a)`
--- - bind expressions with an inferred type such that `(x := v)`
--- - bind an expression with an explicit type annotation `(x : a := v)`
+-- - bind expressions with an inferred type such that `(x <- v)`
+-- - bind an expression with an explicit type annotation `(x : a <- v)`
 public export
 data BindingInfo : (tm : Type) -> Type where
   -- (name : type)
   BindType : (name : tm) -> (type : tm) -> BindingInfo tm
-  -- (name := expr)
+  -- (name <- expr)
   BindExpr : (name : tm) -> (expr : tm) -> BindingInfo tm
-  -- (name : type := expr)
+  -- (name : type <- expr)
   BindExplicitType : (name : tm) ->  (type, expr : tm) -> BindingInfo tm
 
 
