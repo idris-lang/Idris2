@@ -191,9 +191,9 @@ mutual
                 (BindType name type) =>
                     "\{show nm.val} (\{show name} : \{show type}) | \{show scope.val}"
                 (BindExpr name expr) =>
-                    "\{show nm.val} (\{show name} := \{show expr}) | \{show scope.val}"
+                    "\{show nm.val} (\{show name} <- \{show expr}) | \{show scope.val}"
                 (BindExplicitType name type expr) =>
-                    "\{show nm.val} (\{show name} : \{show type} := \{show expr}) | \{show scope.val}"
+                    "\{show nm.val} (\{show name} : \{show type} <- \{show expr}) | \{show scope.val}"
       show (ISearch fc d)
          = "%search"
       show (IAlternative fc ty alts)
