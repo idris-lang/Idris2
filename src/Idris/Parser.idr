@@ -1225,7 +1225,7 @@ tyDeclsData : Rule Name -> OriginDesc -> IndentInfo -> Rule (PTypeDeclData' Name
 tyDeclsData declName fname indents
     = do
          docns <- sepBy1 (decoratedSymbol fname ",")
-                         [| (optDocumentation fname, fcBounds declName) |]
+                         [| (optDocumentation fname :+ fcBounds declName) |]
          b <- bounds $ decoratedSymbol fname ":"
          ty <- mustWorkBecause b.bounds "Expected a type declaration" $
                    the (Rule PTerm) (typeExpr pdef fname indents)
@@ -1351,11 +1351,11 @@ simpleCon fname ret indents
     = do b <- bounds (do cdoc   <- optDocumentation fname
                          cname  <- fcBounds $ decoratedDataConstructorName fname
                          params <- the (EmptyRule $ List $ WithFC $ List ArgType)
-                                     $ many (fcBounds $ argExpr plhs fname indents)
+                                    $ many (fcBounds $ argExpr plhs fname indents)
                          let conType = the (Maybe PTerm) (mkDataConType ret
                                                             (concat (map distribData params)))
                          fromMaybe (fatalError "Named arguments not allowed in ADT constructors")
-                                   (pure . MkPTy (singleton ("", cname)) <$> conType)
+                                   (pure . MkPTy (singleton ("" :+ cname)) <$> conType)
                          )
          atEnd indents
          pure ("" :+ b.withFC)

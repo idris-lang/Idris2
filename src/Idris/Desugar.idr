@@ -897,10 +897,10 @@ mutual
                 {auto o : Ref ROpts REPLOpts} ->
                 List Name -> AddMetadata Bind' PTypeDecl -> Core (List ImpTy)
   desugarType ps pty@(MkWithData _ $ MkPTy names ty)
-      = flip Core.traverse (forget names) $ \(doc, n) : (String, WithFC Name) =>
-          do addDocString n.val (pty.doc ++ doc)
+      = flip Core.traverse (forget names) $ \n : (WithDoc (WithFC Name)) =>
+          do addDocString n.val (pty.doc ++ n.doc)
              syn <- get Syn
-             pure $ Mk [pty.fc, NotBinding :+ n] !(bindTypeNames pty.fc (usingImpl syn)
+             pure $ Mk [pty.fc, NotBinding :+ n.drop] !(bindTypeNames pty.fc (usingImpl syn)
                                                  ps !(desugar AnyExpr ps ty))
 
   -- Attempt to get the function name from a function pattern. For example,
