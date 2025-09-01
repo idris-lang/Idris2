@@ -49,8 +49,8 @@ windows_path_tweaks() {
 }
 
 # used below to normalise machine names
-# shellcheck disable=SC2016
-_awk_clean_name='
+_awk_clean_name=$(
+    cat <<'EOF'
 #!/bin/awk -f
 # consistently replace numbers to make golden tests more stable. Currently handles:
 #   P:xyz:NNNNN
@@ -61,7 +61,7 @@ _awk_clean_name='
 #   Foo.Bar.NNN:NNN
 #   Foo.Bar:NN:NN--NN:NN
 {
-    idPat = "[-_'\''a-zA-Z][-_'\''a-zA-Z0-9]*"
+    idPat = "[-_'a-zA-Z][-_'a-zA-Z0-9]*"
     numPat = "[0-9]+"
     hexPat = "[0-9a-f]+"
     namePat = idPat "([.]" idPat ")*"
@@ -108,7 +108,8 @@ _awk_clean_name='
     }
     print out $0
 }
-'
+EOF
+)
 
 # normalise machine names
 clean_names() {
