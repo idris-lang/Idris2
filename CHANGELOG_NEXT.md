@@ -231,6 +231,8 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 #### Base
 
+* Added `Control.Monad`, which re-exports all the monad modules for easy access
+
 * `Data.Vect.Views.Extra` was moved from `contrib` to `base`.
 
 * `Data.List.Lazy` was moved from `contrib` to `base`.
