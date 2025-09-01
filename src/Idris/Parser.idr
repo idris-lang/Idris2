@@ -1231,12 +1231,13 @@ tyDeclsData declName fname indents
                    the (Rule PTerm) (typeExpr pdef fname indents)
          pure $ MkPTy docns ty
 
-tyDecls : Rule Name -> OriginDesc -> IndentInfo -> Rule PTypeDecl
+tyDecls : Rule Name -> OriginDesc -> IndentInfo -> Rule (AddMetadata Bind' PTypeDecl)
 tyDecls declName fname indents
     = do doc <- optDocumentation fname
+         bind <- operatorBindingKeyword
          decl <- fcBounds (tyDeclsData declName fname indents)
          atEnd indents
-         pure (doc :+ decl)
+         pure (bind :+ doc :+ decl)
 
 
 withFlags : OriginDesc -> EmptyRule (List WithFlag)
@@ -1402,9 +1403,8 @@ dataBody fname mincol start n indents ty
          pure (MkPLater (boundToFC fname start) n ty)
   <|> do b <- bounds (do (mustWork $ decoratedKeyword fname "where")
                          opts <- dataOpts fname
-                         bind <- operatorBindingKeyword
                          cs <- blockAfter mincol (tyDecls (mustWork $ decoratedDataConstructorName fname) fname)
-                         pure (opts, map (bind :+) cs))
+                         pure (opts, cs))
          (opts, cs) <- pure (the (Pair ? ?) b.val)
          pure (MkPData (boundToFC fname (mergeBounds start b)) n ty opts cs)
 
@@ -1829,10 +1829,9 @@ parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
            visOpts <- many (visOpt fname)
            vis     <- getVisibility Nothing visOpts
            let opts = mapMaybe getRight visOpts
-           bind <- operatorBindingKeyword
            rig  <- multiplicity fname
            cls  <- tyDecls (decorate fname Function name) fname indents
-           pure $ MkPClaim rig vis opts (bind :+ cls)
+           pure $ MkPClaim rig vis opts cls
 
 
   -- A Single binder with multiple names
