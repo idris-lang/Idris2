@@ -8,7 +8,7 @@ import Decidable.Equality
 %default total
 ||| namespace, stored in reverse order
 public export
-data Namespace = MkNS (List String) 
+data Namespace = MkNS (List String)
 
 %name Namespace ns
 ||| module identifier, stored in reverse order
@@ -198,21 +198,21 @@ data UserName
 
 ||| A name in a Idris program
 public export
-data Name =
-          ||| A qualified name
-          NS Namespace Name
-          ||| A user defined name
-          | UN UserName
-          ||| A machine generated name
-          | MN String Int
-          ||| A name with a display string
-          | DN String Name
-          ||| Nested function name
-          | Nested (Int, Int) Name
-          ||| Case block nested in (resolved) name
-          | CaseBlock String Int
-          ||| With block nested in (resolved) name
-          | WithBlock String Int
+data Name : Type where
+  ||| A qualified name
+  NS : Namespace -> Name -> Name
+  ||| A user defined name
+  UN : UserName -> Name
+  ||| A machine generated name
+  MN : String -> Int -> Name
+  ||| A name with a display string
+  DN : String -> Name -> Name
+  ||| Nested function name
+  Nested : (Int, Int) -> Name -> Name
+  ||| Case block nested in (resolved) name
+  CaseBlock : String -> Int -> Name
+  ||| With block nested in (resolved) name
+  WithBlock : String -> Int -> Name
 
 %name Name nm
 
@@ -263,13 +263,13 @@ record NameInfo where
 
 ||| A multiplicity
 public export
-data Count =
+data Count : Type where
   ||| 0 (erased)
-  M0 |
+  M0 : Count
   ||| 1 (linear)
-  M1 |
+  M1 : Count
   ||| ω (unrestricted)
-  MW
+  MW : Count
 %name Count rig
 
 export
