@@ -1,0 +1,21 @@
+1/1: Building LetError (LetError.idr)
+Error: While processing right hand side of blah. No type declaration for foo.
+
+LetError:4:8--4:16
+ 1 | blah : Nat
+ 2 | blah =
+ 3 |    let fox : ()
+ 4 |        foo = ()
+            ^^^^^^^^
+Did you mean: fox?
+1/1: Building WhereError (WhereError.idr)
+Error: While processing right hand side of blah. No type declaration for foo.
+
+WhereError:5:9--5:17
+ 1 | blah : Nat
+ 2 | blah = 3
+ 3 |     where
+ 4 |         fox : ()
+ 5 |         foo = ()
+             ^^^^^^^^
+Did you mean: fox?

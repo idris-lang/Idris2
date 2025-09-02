@@ -1,0 +1,4 @@
+. ../../../testutils.sh
+
+check LetError.idr
+check WhereError.idr

@@ -1145,6 +1145,30 @@ getSimilarNames : {auto c : Ref Ctxt Defs} ->
                   -- Sometime we might want to hide names that we know make no sense.
                   {default Nothing keepPredicate : Maybe ((Name, GlobalDef) -> Core Bool)} ->
                   Name -> Core (Maybe (String, List (Name, Visibility, Nat)))
+getSimilarNames (NS ns (Nested (outer,_) inner)) = case show <$> userNameRoot inner of
+  Nothing => pure Nothing
+  Just str => if length str <= 1 then pure (Just (str, [])) else
+    do defs <- get Ctxt
+       let threshold : Nat := max 1 (assert_total (divNat (length str) 3))
+       let test : Name -> Core (Maybe (Visibility, Nat)) := \ nm => do
+               let (Just str') = checkName nm
+                   | _ => pure Nothing
+               dist <- coreLift $ Levenshtein.compute str str'
+               let True = dist <= threshold
+                   | False => pure Nothing
+               Just def <- lookupCtxtExact nm (gamma defs)
+                   | Nothing => pure Nothing -- should be impossible
+               let predicate = fromMaybe (\_ => pure True) keepPredicate
+               True <- predicate (nm, def)
+                   | False => pure Nothing
+               pure (Just (collapseDefault $ visibility def, dist))
+       kept <- NameMap.mapMaybeM @{CORE} test (resolvedAs (gamma defs))
+       pure $ Just (str, toList kept)
+    where
+      checkName : Name -> Maybe String
+      checkName (NS ns' (Nested (outer',_) inner')) =
+        if ns' == ns && outer == outer' then show <$> userNameRoot inner' else Nothing
+      checkName _ = Nothing
 getSimilarNames nm = case show <$> userNameRoot nm of
   Nothing => pure Nothing
   Just str => if length str <= 1 then pure (Just (str, [])) else

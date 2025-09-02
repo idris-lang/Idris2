@@ -938,7 +938,7 @@ lookupOrAddAlias eopts nest env fc n [cl@(PatClause _ lhs _)]
                       | _ => pure Nothing
                     pure (Just (cand, vis, weight))
                 pure $ showSimilarNames (currentNS defs) n str $ catMaybes decls
-          | (x :: xs) => throw (MaybeMisspelling (NoDeclaration fc n) (x ::: xs))
+          | (x :: xs) => throw (MaybeMisspelling (NoDeclaration fc $ unnest n) (x ::: xs))
        --   3) declare an alias
        log "declare.def" 5 "Not a misspelling: go ahead and declare it!"
        processType eopts nest env fc top Public []
@@ -948,6 +948,10 @@ lookupOrAddAlias eopts nest env fc n [cl@(PatClause _ lhs _)]
        lookupCtxtExact n (gamma defs)
 
   where
+    unnest : Name -> Name
+    unnest (NS ns (Nested (outer,_) inner)) = inner
+    unnest nm = nm
+
     holeyType : List (FC, Name) -> RawImp
     holeyType [] = Implicit fc False
     holeyType ((xfc, x) :: xs)
