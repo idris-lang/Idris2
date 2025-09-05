@@ -6,9 +6,9 @@ Test:10:28--10:31
  07 | (>>) = (>>=)
  08 | 
  09 | both : Maybe (Nat, Nat) -> Maybe Nat
- 10 | both m = (MkPair x y := m) >>= Just (x + y)
+ 10 | both m = (MkPair x y <- m) >>= Just (x + y)
                                  ^^^
-Explanation: regular, typebind and autobind operators all use a slightly different syntax, typebind looks like this: '(name : type) >>= expr', autobind looks like this: '(name := expr) >>= expr'.
+Explanation: regular, typebind and autobind operators all use a slightly different syntax, typebind looks like this: '(name : type) >>= expr', autobind looks like this: '(name <- expr) >>= expr'.
 
 Possible solutions:
  - Write the expression using regular syntax: 'm >>= Just (x + y)'.
@@ -23,9 +23,9 @@ Test2:14:28--14:31
  11 | (>=) = (>>=)
  12 | 
  13 | both : Maybe (Nat, Nat) -> Maybe Nat
- 14 | both m = (MkPair x y := m) >>= Just (x + y)
+ 14 | both m = (MkPair x y <- m) >>= Just (x + y)
                                  ^^^
-Explanation: regular, typebind and autobind operators all use a slightly different syntax, typebind looks like this: '(name : type) >>= expr', autobind looks like this: '(name := expr) >>= expr'.
+Explanation: regular, typebind and autobind operators all use a slightly different syntax, typebind looks like this: '(name : type) >>= expr', autobind looks like this: '(name <- expr) >>= expr'.
 
 Possible solutions:
  - Write the expression using regular syntax: 'm >>= Just (x + y)'.
