@@ -55,6 +55,21 @@ FromSExpable REPLOption where
   fromSExp _ = Nothing
 
 public export
+record CompletionItem where
+  constructor MkCompletionItem
+  name    : String
+  import_ : Maybe String
+
+SExpable CompletionItem where
+  toSExp (MkCompletionItem n Nothing) = StringAtom n
+  toSExp (MkCompletionItem n (Just i)) = SExpList [StringAtom n, StringAtom i]
+
+FromSExpable CompletionItem where
+  fromSExp (StringAtom n) = Just $ MkCompletionItem n Nothing
+  fromSExp (SExpList [StringAtom n, StringAtom i]) = Just $ MkCompletionItem n (Just i)
+  fromSExp _ = Nothing
+
+public export
 record MetaVarLemma where
   constructor MkMetaVarLemma
   application, lemma : String
@@ -109,7 +124,7 @@ data Result =
   | AMetaVarLemma MetaVarLemma
   | ANameLocList (List (String, FileContext))
   | AHoleList (List HoleData)
-  | ACompletionList (List String) String
+  | ACompletionList (List CompletionItem) String
   | ANameList (List String)
   | AnOptionList (List REPLOption)
   | AnIntroList (List1 String)
@@ -123,7 +138,7 @@ SExpable Result where
   toSExp (ANameLocList fcs) = toSExp fcs
   toSExp (AHoleList holes) = toSExp holes
   toSExp (ANameList names) = SExpList (map StringAtom names)
-  toSExp (ACompletionList names str) = SExpList [SExpList (map StringAtom names), StringAtom str]
+  toSExp (ACompletionList completions str) = SExpList [SExpList (map toSExp completions), StringAtom str]
   toSExp (AnOptionList opts) = toSExp opts
   toSExp (AnIntroList iss) = toSExp iss
 
