@@ -69,7 +69,7 @@ nameCompletion pref = do
   let cns = currentNS ctxtDefs
 
   -- Look among already imported names:
-  ctxtNamesWithPrefix <- filter hasPrefix <$> allNames (gamma ctxtDefs)
+  ctxtNamesWithPrefix <- filter validCompletion <$> allNames (gamma ctxtDefs)
   ctxtVisibleGDefs <- filter (isVisible cns) <$> mapMaybeM (lookupName ctxtDefs) ctxtNamesWithPrefix
   let ctxtVisibleNames = nub $ fst <$> ctxtVisibleGDefs
   let ctxCompletions = simpleCompletion . unqualName <$> ctxtVisibleNames
@@ -77,20 +77,28 @@ nameCompletion pref = do
   -- If we have an index, look there as well
   Just ideIndex <- ideIndex <$> get ROpts
     | Nothing => pure ctxCompletions
-  let idxDefs = filter (hasPrefix . fullname) $ indexedDefs ideIndex
-  let idxNames = filter (not . (`elem` ctxtVisibleNames)) $ fullname <$> idxDefs
-  let idxCompletions = autoImport <$> idxNames
+  let idxDefs = filter (validCompletion . fullname . def) $ indexedDefs ideIndex
+  let idxUnseenDefs = filter (not . (`elem` ctxtVisibleNames) . fullname . def) idxDefs
+  let idxCompletions = autoImport <$> idxUnseenDefs
   pure (ctxCompletions ++ idxCompletions)
 
   where
     unqualName : Name -> String
     unqualName = nameRoot . snd . splitNS
 
-    autoImport : Name -> Completion
-    autoImport n = autoImportCompletion (unqualName n) (show $ fst $ splitNS n)
+    moduleOf : GlobalDef -> String
+    moduleOf d = let n = fullname d in case n of
+      NS ns _ => show ns
+      otherwise => ""
 
-    hasPrefix : Name -> Bool
-    hasPrefix = isPrefixOf pref . unqualName
+    autoImport : IndexedDef -> Completion
+    autoImport d = autoImportCompletion (unqualName $ fullname $ def d) (show $ moduleNS d)
+
+    validIdentifier : String -> Bool
+    validIdentifier = all (\c => isAlphaNum c || c == '_' || c == '.' || c > chr 160) . unpack
+
+    validCompletion : Name -> Bool
+    validCompletion n = let n' = unqualName n in isPrefixOf pref n' && validIdentifier n'
 
     lookupName : Defs -> Name -> Core (Maybe (Name, GlobalDef))
     lookupName defs nsn = do

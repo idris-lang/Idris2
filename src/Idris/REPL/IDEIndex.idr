@@ -11,11 +11,17 @@ import Libraries.Data.WithDefault
 import Libraries.Utils.Path
 import System.Directory
 
+public export
+record IndexedDef where
+  constructor MkIndexedDef
+  moduleNS : Namespace
+  def      : GlobalDef
+
 ||| An index of exported definitions from modules of available packages.
 public export
 record IDEIndex where
   constructor MkIDEIndex
-  indexedDefs : List GlobalDef
+  indexedDefs : List IndexedDef
 
 findFiles : (String -> Bool) -> String -> Core (List String)
 findFiles pred dir = do
@@ -48,21 +54,24 @@ defIfVisible nsn = do
     then pure (Just def)
     else pure Nothing
 
-allExportedDefs : Ref Ctxt Defs => Core (List GlobalDef)
-allExportedDefs = do
-  allNames <- allNames (gamma $ !(get Ctxt))
-  let names = filter (isJust . userNameRoot) allNames
-  mapMaybeM defIfVisible names
+indexDefsOfTtc : String -> Core (List IndexedDef)
+indexDefsOfTtc ttcFile = do
+  _ <- newRef Ctxt !initDefs
+  ttc <- readTtcFile ttcFile
+  let ttcModNS = currentNS ttc
+  modNS <- nsAsModuleIdent <$> getNS
+  traverse_ (addGlobalDef modNS ttcModNS Nothing) (context ttc)
+  names <- filter (isJust . userNameRoot) <$> allNames (gamma !(get Ctxt))
+  visibleDefs <- mapMaybeM defIfVisible names
+  pure $ MkIndexedDef ttcModNS <$> visibleDefs
 
+||| Builds an IDE index from all TTC files found in the given package directories.
 export
 mkIdeIndex : List String -> Core IDEIndex
 mkIdeIndex pkg_dirs = do
   let pkgTtcDirs = pkg_dirs <&> (</> show ttcVersion)
   pkgTtcFiles <- concat <$> traverse (findFiles $ isSuffixOf ".ttc") pkgTtcDirs
-  _ <- newRef Ctxt !initDefs
-  ttcs <- traverse readTtcFile pkgTtcFiles
-  modNS <- nsAsModuleIdent <$> getNS
-  traverse_ (\x => traverse_ (addGlobalDef modNS (currentNS x) Nothing) (context x)) ttcs
-  pure $ MkIDEIndex (!allExportedDefs)
+  indexedDefs <- concat <$> traverse indexDefsOfTtc pkgTtcFiles
+  pure $ MkIDEIndex indexedDefs
                                                
   
