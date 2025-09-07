@@ -4,6 +4,7 @@ import Core.Binary
 import Core.Core
 import Core.Context
 import Core.Name.Namespace
+import Core.UnifyState
 import Data.String
 import Idris.Syntax
 import Idris.Syntax.TTC
@@ -23,25 +24,28 @@ record IDEIndex where
   constructor MkIDEIndex
   indexedDefs : List IndexedDef
 
-findFiles : (String -> Bool) -> String -> Core (List String)
-findFiles pred dir = do
-  Right list <- coreLift $ listDir dir
-    | Left _ => pure []
-  let list = (dir </>) <$> filter (\f => not $ f == "." || f == "..") list
-  concat <$> traverse go list
+||| Recursively finds all TTC files in the given directory and returns
+||| their full paths along with their corresponding namespaces.
+findTtcFiles : String -> Core (List (String, Namespace))
+findTtcFiles dir = go dir (mkNamespace "")
   where
-    go : String -> Core (List String)
-    go file = do
-      if pred file
-        then pure [file]
-        else findFiles pred file
+    mkItem : String -> Namespace -> String -> (String, Namespace)
+    mkItem dir ns f
+      = ( dir </> f
+        , maybe ns (mkNestedNamespace (Just ns)) (fileStem f)
+        )
 
-readTtcFile : Ref Ctxt Defs => String -> Core (TTCFile SyntaxInfo)
-readTtcFile fname = do
-  Right buffer <- coreLift $ readFromFile fname
-    | Left err => throw (InternalError (fname ++ ": " ++ show err))
-  bin <- newRef Bin buffer -- for reading the file into
-  readTTCFile True fname Nothing bin
+    go : String -> Namespace -> Core (List (String, Namespace))
+    go dir ns = do
+      Right entries <- coreLift $ listDir dir
+        | Left _ => pure []
+      let entries = filter (\f => not $ f == "." || f == "..") entries
+      let ttcFiles = mkItem dir ns <$> filter (".ttc" `isSuffixOf`) entries
+      let subdirs = filter (not . isInfixOf ".") entries
+      subdirFiles <- concat <$> traverse
+        (\dir' => go (dir </> dir') (mkNestedNamespace (Just ns) dir'))
+        subdirs
+      pure $ ttcFiles ++ subdirFiles
 
 defIfVisible : Ref Ctxt Defs => Name -> Core (Maybe GlobalDef)
 defIfVisible nsn = do
@@ -54,13 +58,20 @@ defIfVisible nsn = do
     then pure (Just def)
     else pure Nothing
 
-indexDefsOfTtc : String -> Core (List IndexedDef)
-indexDefsOfTtc ttcFile = do
+indexDefsOfTtc : (String, Namespace) -> Core (List IndexedDef)
+indexDefsOfTtc (ttcFile, ttcModNS) = do
   _ <- newRef Ctxt !initDefs
-  ttc <- readTtcFile ttcFile
-  let ttcModNS = currentNS ttc
+  _ <- newRef UST initUState
+  Just (syntaxInfo, _, imports) <- readFromTTC {extra = SyntaxInfo}
+          False -- don't set nested namespaces (irrelevant for us)
+          EmptyFC
+          False -- don't import as public (irrelevant to us)
+          ttcFile -- file to read
+          (nsAsModuleIdent ttcModNS) -- module identifier
+          (ttcModNS) -- "importAs" (irrelevant to us)
+    | Nothing => pure []
+
   modNS <- nsAsModuleIdent <$> getNS
-  traverse_ (addGlobalDef modNS ttcModNS Nothing) (context ttc)
   names <- filter (isJust . userNameRoot) <$> allNames (gamma !(get Ctxt))
   visibleDefs <- mapMaybeM defIfVisible names
   pure $ MkIndexedDef ttcModNS <$> visibleDefs
@@ -70,8 +81,6 @@ export
 mkIdeIndex : List String -> Core IDEIndex
 mkIdeIndex pkg_dirs = do
   let pkgTtcDirs = pkg_dirs <&> (</> show ttcVersion)
-  pkgTtcFiles <- concat <$> traverse (findFiles $ isSuffixOf ".ttc") pkgTtcDirs
+  pkgTtcFiles <- concat <$> traverse findTtcFiles pkgTtcDirs
   indexedDefs <- concat <$> traverse indexDefsOfTtc pkgTtcFiles
   pure $ MkIDEIndex indexedDefs
-                                               
-  

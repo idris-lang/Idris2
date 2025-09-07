@@ -37,7 +37,6 @@ checkTTCVersion : String -> Int -> Int -> Core ()
 checkTTCVersion file ver exp
   = when (ver /= exp) (throw $ TTCError $ Format file ver exp)
 
-public export
 record TTCFile extra where
   constructor MkTTCFile
   version : Int
@@ -221,7 +220,6 @@ writeTTCFile b file_in
            toBuf (transforms file)
            toBuf (foreignExports file)
 
-export
 readTTCFile : TTC extra =>
               {auto c : Ref Ctxt Defs} ->
               Bool -> String -> Maybe (Namespace) ->
@@ -341,7 +339,6 @@ writeToTTC extradata sourceFileName ttcFileName
                | Left err => throw (InternalError (ttcFileName ++ ": " ++ show err))
          pure ()
 
-export
 addGlobalDef : {auto c : Ref Ctxt Defs} ->
                (modns : ModuleIdent) -> Namespace ->
                (importAs : Maybe Namespace) ->

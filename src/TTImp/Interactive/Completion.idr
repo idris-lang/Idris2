@@ -86,11 +86,6 @@ nameCompletion pref = do
     unqualName : Name -> String
     unqualName = nameRoot . snd . splitNS
 
-    moduleOf : GlobalDef -> String
-    moduleOf d = let n = fullname d in case n of
-      NS ns _ => show ns
-      otherwise => ""
-
     autoImport : IndexedDef -> Completion
     autoImport d = autoImportCompletion (unqualName $ fullname $ def d) (show $ moduleNS d)
 
