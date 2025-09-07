@@ -79,15 +79,25 @@ nameCompletion pref = do
     | Nothing => pure ctxCompletions
   let idxDefs = filter (validCompletion . fullname . def) $ indexedDefs ideIndex
   let idxUnseenDefs = filter (not . (`elem` ctxtVisibleNames) . fullname . def) idxDefs
-  let idxCompletions = autoImport <$> idxUnseenDefs
+  let idxCompletions = concat $ autoImport (reexports ideIndex) <$> idxUnseenDefs
   pure (ctxCompletions ++ idxCompletions)
 
   where
+    ||| The actual string that would be pasted at the completion site.
     unqualName : Name -> String
     unqualName = nameRoot . snd . splitNS
 
-    autoImport : IndexedDef -> Completion
-    autoImport d = autoImportCompletion (unqualName $ fullname $ def d) (show $ moduleNS d)
+    ||| If a module is re-exported by another module, suggest both modules as auto-imports.
+    unfoldReExports : ModuleIdent -> List ReExport -> List ReExport -> List ModuleIdent
+    unfoldReExports modId orig []                       = [modId]
+    unfoldReExports modId orig ((to, from, as) :: rest) = if modId == from
+              then (unfoldReExports to orig orig) ++ (unfoldReExports modId orig rest)
+              else unfoldReExports modId orig rest
+
+    
+    autoImport : List ReExport -> IndexedDef -> List Completion
+    autoImport reexps d = unfoldReExports (nsAsModuleIdent $ moduleNS d) reexps reexps
+                            <&> (\m => autoImportCompletion (unqualName $ fullname $ def d) (show m))
 
     validIdentifier : String -> Bool
     validIdentifier = all (\c => isAlphaNum c || c == '_' || c == '.' || c > chr 160) . unpack

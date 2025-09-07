@@ -169,7 +169,7 @@ stMain cgs opts
                                      """
          update ROpts { mainfile := fname }
          if ideIndex
-           then update ROpts { ideIndex := Just (MkIDEIndex []) }
+           then update ROpts { ideIndex := Just initIDEIndex }
            else pure ()
 
          -- start by going over the pre-options, and stop if we do not need to
