@@ -142,6 +142,9 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * `IBindVar` supports arbitrary names. `String` in the signature is replaced
   by `Name`.
 
+* Fixes an issue where a local function defined in `where` or `let` takes
+  precedence over pattern variables in subsequent definitions.
+
 ### Backend changes
 
 #### RefC Backend
