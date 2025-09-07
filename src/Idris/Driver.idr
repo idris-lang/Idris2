@@ -155,6 +155,7 @@ stMain cgs opts
          let ide = ideMode opts || (ideIndex && not ideSocket)
          let outmode = if ide then IDEMode 0 stdin stdout else REPL InfoLvl
          o <- newRef ROpts (REPL.Opts.defaultOpts Nothing outmode cgs)
+         when ideIndex $ update ROpts { ideIndex := Just initIDEIndex }
          updateEnv
          fname <- case (findInputs opts) of
                        Just (fname ::: Nil) => pure $ Just fname
@@ -168,9 +169,6 @@ stMain cgs opts
                                      \{renderedSuggestion}
                                      """
          update ROpts { mainfile := fname }
-         if ideIndex
-           then update ROpts { ideIndex := Just initIDEIndex }
-           else pure ()
 
          -- start by going over the pre-options, and stop if we do not need to
          -- continue
