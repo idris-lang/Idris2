@@ -94,7 +94,6 @@ nameCompletion pref = do
               then (unfoldReExports to orig orig) ++ (unfoldReExports modId orig rest)
               else unfoldReExports modId orig rest
 
-    
     autoImport : List ReExport -> IndexedDef -> List Completion
     autoImport reexps d = unfoldReExports (nsAsModuleIdent $ moduleNS d) reexps reexps
                             <&> (\m => autoImportCompletion (unqualName $ fullname $ def d) (show m))

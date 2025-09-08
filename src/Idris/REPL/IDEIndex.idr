@@ -90,7 +90,7 @@ indexDefsOfTtc (ttcFile, ttcModNS) = do
           ttcModNS -- "importAs" (irrelevant to us)
     | Nothing => pure ([], [])
 
-  let reexports = mapMaybe 
+  let reexports = mapMaybe
                   (\(impModId, pub, as) => if pub
                     then Just (ttcModId, impModId, as)
                     else Nothing)
