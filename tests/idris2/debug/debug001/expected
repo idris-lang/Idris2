@@ -1,10 +1,10 @@
 1/1: Building TypePat (TypePat.idr)
 Main> Main.isNat
-Arguments [{arg:0}]
-Compile time tree: case {arg:0} of
+Arguments [{arg:1}]
+Compile time tree: case {arg:1} of
   Nat => True
   _ => False
-Compiled: \ {arg:0} => case {arg:0} of
+Compiled: \ {arg:1} => case {arg:1} of
   { Prelude.Types.Nat [tycon] => 1
   ; _ => 0
   }
@@ -19,11 +19,11 @@ Size change:
     l
   r +
 Main> Main.isInt32
-Arguments [{arg:0}]
-Compile time tree: case {arg:0} of
+Arguments [{arg:1}]
+Compile time tree: case {arg:1} of
   Int32 => True
   _ => False
-Compiled: \ {arg:0} => case {arg:0} of
+Compiled: \ {arg:1} => case {arg:1} of
   { Int32 [tycon] => 1
   ; _ => 0
   }
@@ -38,14 +38,14 @@ Size change:
     l
   r +
 Main> Prelude.Types.plus
-Arguments [{arg:0}, {arg:1}]
-Compile time tree: case {arg:0} of
-  Z => {arg:1}
-  S {e:0} => S (plus {e:0} {arg:1})
-Compiled: \ {arg:0}, {arg:1} => case {arg:0} of
-  { 0 => {arg:1}
-  ; _ => let {e:0} = {arg:0} - 1 in
-         ({e:0} + {arg:1}) + 1
+Arguments [{arg:1}, {arg:2}]
+Compile time tree: case {arg:1} of
+  Z => {arg:2}
+  S {e:1} => S (plus {e:1} {arg:2})
+Compiled: \ {arg:1}, {arg:2} => case {arg:1} of
+  { 0 => {arg:2}
+  ; _ => let {e:1} = {arg:1} - 1 in
+         ({e:1} + {arg:2}) + 1
   }
 Refers to: Prelude.Types.plus, Prelude.Types.S
 Flags: total
@@ -59,25 +59,25 @@ Size change:
   0 | <
   1 |   =
 Main> Prelude.Types.minus
-Arguments [{arg:0}, {arg:1}]
-Compile time tree: case {arg:0} of
+Arguments [{arg:1}, {arg:2}]
+Compile time tree: case {arg:1} of
   Z => 0
-  _ => case {arg:1} of
-    Z => {arg:0}
-    _ => case {arg:0} of
-      S {e:0} => case {arg:1} of
-        S {e:1} => minus {e:0} {e:1}
-Compiled: \ {arg:0}, {arg:1} => case {arg:0} of
+  _ => case {arg:2} of
+    Z => {arg:1}
+    _ => case {arg:1} of
+      S {e:1} => case {arg:2} of
+        S {e:2} => minus {e:1} {e:2}
+Compiled: \ {arg:1}, {arg:2} => case {arg:1} of
   { 0 => 0
-  ; _ => case {arg:1} of
-           { 0 => {arg:0}
-           ; _ => case {arg:0} of
+  ; _ => case {arg:2} of
+           { 0 => {arg:1}
+           ; _ => case {arg:1} of
                     { 0 => crash "Nat case not covered"
-                    ; _ => let {e:0} = {arg:0} - 1 in
-                           case {arg:1} of
+                    ; _ => let {e:1} = {arg:1} - 1 in
+                           case {arg:2} of
                              { 0 => crash "Nat case not covered"
-                             ; _ => let {e:1} = {arg:1} - 1 in
-                                    Prelude.Types.prim__integerToNat ({e:0} - {e:1})
+                             ; _ => let {e:2} = {arg:2} - 1 in
+                                    Prelude.Types.prim__integerToNat ({e:1} - {e:2})
                              }
                     }
            }
@@ -95,15 +95,15 @@ Size change:
   0 | <
   1 |   <
 Main> Prelude.Types.SnocList.filter
-Arguments [{arg:0}, {arg:1}, {arg:2}]
-Compile time tree: case {arg:2} of
-  Lin {e:0} => [<]
-  (:<) {e:1} {e:2} {e:3} => let rest = filter {arg:1} {e:2} in if {arg:1} {e:3} then rest :< {e:3} else rest
+Arguments [{arg:1}, {arg:2}, {arg:3}]
+Compile time tree: case {arg:3} of
+  Lin {e:1} => [<]
+  (:<) {e:2} {e:3} {e:4} => let rest = filter {arg:2} {e:3} in if {arg:2} {e:4} then rest :< {e:4} else rest
 Erasable args: [0]
 Inferrable args: [0]
-Compiled: \ {arg:1}, {arg:2} => case {arg:2} of
+Compiled: \ {arg:2}, {arg:3} => case {arg:3} of
   { _builtin.NIL {tag = 0} [nil] => _builtin.NIL {tag = 0} [nil]
-  ; _builtin.CONS {tag = 1} [cons] {e:2} {e:3} => let rest = Prelude.Types.SnocList.filter {arg:1} {e:2} incase {arg:1} {e:3} of  { 1 => _builtin.CONS {tag = 1} [cons] rest {e:3}; 0 => rest}
+  ; _builtin.CONS {tag = 1} [cons] {e:3} {e:4} => let rest = Prelude.Types.SnocList.filter {arg:2} {e:3} incase {arg:2} {e:4} of  { 1 => _builtin.CONS {tag = 1} [cons] rest {e:4}; 0 => rest}
   }
 Refers to: Prelude.Basics.SnocList, Prelude.Basics.Lin, Prelude.Types.SnocList.case block in filter, Prelude.Types.SnocList.filter
 Refers to (runtime): _builtin.CONS, _builtin.NIL, Prelude.Types.SnocList.filter

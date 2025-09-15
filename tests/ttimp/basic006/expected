@@ -2,5 +2,5 @@ Processing as TTImp
 Written TTC
 Yaffle> ((Main.Just [a = ((Main.Vect.Vect (Main.S Main.Z)) Integer)]) ((((Main.Vect.Cons [k = Main.Z]) [a = Integer]) 1) (Main.Vect.Nil [a = Integer])))
 Yaffle> ((Main.MkInfer [a = (Main.List.List Integer)]) (((Main.List.Cons [a = Integer]) 1) (Main.List.Nil [a = Integer])))
-Yaffle> (Interactive):1:9--1:12:Ambiguous elaboration [($resolved425 ?Main.{a:131}_[]), ($resolved385 ?Main.{a:131}_[])]
+Yaffle> (Interactive):1:9--1:12:Ambiguous elaboration [($resolved1 ?Main.{a:1}_[]), ($resolved2 ?Main.{a:1}_[])]
 Yaffle> Bye for now!
