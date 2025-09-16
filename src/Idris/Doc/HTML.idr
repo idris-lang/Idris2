@@ -215,7 +215,7 @@ renderDocIndex pkg moddocstrs = fastConcat $
       moduleLink (mod, filename) moddocstrs =
         let cmoddocstr  = case lookup mod moddocstrs of
                             Nothing          => ""
-                            Just cmoddocstr' => cmoddocstr'
+                            Just cmoddocstr' => unlines $ takeWhile (/= "") $ lines $ cmoddocstr'
         in """
            <li>
              <div class="index-wrapper">
