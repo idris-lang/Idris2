@@ -1,0 +1,10 @@
+. ../../../testutils.sh
+
+idris2 --mkdoc test.ipkg
+cat build/docs/index.html | sed -e '1,/<\/header>/d' -e 's/footer.*\/footer//'
+for i in `ls build/docs/docs/Test*.html | sort`; do
+  echo ""
+  echo "---------"
+  echo "File: $i"
+  cat $i | sed -e '1,/<\/header>/d' -e 's/footer.*\/footer//'
+done
