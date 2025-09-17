@@ -162,6 +162,8 @@ mutual
      = mkTerm fn mty exps (arg :: autos) named
   mkTerm (INamedApp fc fn nm arg) mty exps autos named
      = mkTerm fn mty exps autos ((nm, arg) :: named)
+  mkTerm (IMustUnify fc r tm) mty exps autos named
+     = Erased fc . Dotted <$> mkTerm tm mty exps autos named
   mkTerm (IPrimVal fc c) _ _ _ _ = pure (PrimVal fc c)
   mkTerm (IAlternative _ (UniqueDefault tm) _) mty exps autos named
      = mkTerm tm mty exps autos named
