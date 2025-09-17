@@ -4,12 +4,29 @@ import Core.Context
 import Core.Context.Log
 import Core.Core
 
-import Idris.Syntax
 import Idris.Parser
+import Idris.REPL.IDEIndex
+import Idris.REPL.Opts
+import Idris.Syntax
 
 import Data.String
 
 import Libraries.Data.WithDefault
+
+||| A single suggested completion.
+||| If import_ is Just, it's a module namespace that has to be imported
+||| to access the name.
+public export
+record Completion where
+  constructor MkCompletion
+  name    : String
+  import_ : Maybe String
+
+simpleCompletion : String -> Completion
+simpleCompletion = flip MkCompletion Nothing
+
+autoImportCompletion : String -> String -> Completion
+autoImportCompletion n = MkCompletion n . Just
 
 ||| Completion tasks are varied:
 ||| are we trying to fill in a name, a REPL command, a pragma?
@@ -43,31 +60,66 @@ parseTask line =
 
 ||| Name completion receives the prefix of the name to be completed
 nameCompletion : {auto c : Ref Ctxt Defs} ->
-                 (pref : String) -> Core (List String)
+                 {auto o : Ref ROpts REPLOpts} ->
+                 (pref : String) -> Core (List Completion)
 nameCompletion pref = do
   log "ide-mode.completion" 30 $ "Looking at name completions for \{show pref}"
-  defs <- get Ctxt
-  let cns = currentNS defs
-  nms <- flip mapMaybeM !(allNames (gamma defs)) $ \ nsn => do
-    -- the name better be a completion
-    log "ide-mode.completion" 50 $ "Looking at \{show nsn}"
-    let (ns, n) = splitNS nsn
-    let True = pref `isPrefixOf` nameRoot n
-      | False => pure Nothing
-    -- and it better be visible
-    Just def <- lookupCtxtExact nsn (gamma defs)
-      | Nothing => pure Nothing
-    let True = visibleIn cns nsn (collapseDefault $ visibility def)
-      | False => pure Nothing
-    pure (Just n)
-  pure (map show $ nub nms)
+
+  ctxtDefs <- get Ctxt
+  let cns = currentNS ctxtDefs
+
+  -- Look among already imported names:
+  ctxtNamesWithPrefix <- filter validCompletion <$> allNames (gamma ctxtDefs)
+  ctxtVisibleGDefs <- filter (isVisible cns) <$> mapMaybeM (lookupName ctxtDefs) ctxtNamesWithPrefix
+  let ctxtVisibleNames = nub $ fst <$> ctxtVisibleGDefs
+  let ctxCompletions = simpleCompletion . unqualName <$> ctxtVisibleNames
+
+  -- If we have an index, look there as well
+  Just ideIndex <- ideIndex <$> get ROpts
+    | Nothing => pure ctxCompletions
+  let idxDefs = filter (validCompletion . fullname . def) $ indexedDefs ideIndex
+  let idxUnseenDefs = filter (not . (`elem` ctxtVisibleNames) . fullname . def) idxDefs
+  let idxCompletions = concat $ autoImport (reexports ideIndex) <$> idxUnseenDefs
+  pure (ctxCompletions ++ idxCompletions)
+
+  where
+    ||| The actual string that would be pasted at the completion site.
+    unqualName : Name -> String
+    unqualName = nameRoot . snd . splitNS
+
+    ||| If a module is re-exported by another module, suggest both modules as auto-imports.
+    unfoldReExports : ModuleIdent -> List ReExport -> List ReExport -> List ModuleIdent
+    unfoldReExports modId orig []                       = [modId]
+    unfoldReExports modId orig ((to, from, as) :: rest) = if modId == from
+              then (unfoldReExports to orig orig) ++ (unfoldReExports modId orig rest)
+              else unfoldReExports modId orig rest
+
+    autoImport : List ReExport -> IndexedDef -> List Completion
+    autoImport reexps d = unfoldReExports (nsAsModuleIdent $ moduleNS d) reexps reexps
+                            <&> (\m => autoImportCompletion (unqualName $ fullname $ def d) (show m))
+
+    validIdentifier : String -> Bool
+    validIdentifier = all (\c => isAlphaNum c || c == '_' || c == '.' || c > chr 160) . unpack
+
+    validCompletion : Name -> Bool
+    validCompletion n = let n' = unqualName n in isPrefixOf pref n' && validIdentifier n'
+
+    lookupName : Defs -> Name -> Core (Maybe (Name, GlobalDef))
+    lookupName defs nsn = do
+      Just def <- lookupCtxtExact nsn (gamma defs)
+        | Nothing => pure Nothing
+      pure (Just (nsn, def))
+
+    isVisible : Namespace -> (Name, GlobalDef) -> Bool
+    isVisible cns gdef = visibleIn cns (fst gdef) (collapseDefault $ visibility (snd gdef))
+
 
 ||| Completion among a list of constants
-oneOfCompletion : String -> List String -> Maybe (List String)
+oneOfCompletion : String -> List String -> Maybe (List Completion)
 oneOfCompletion pref candidates = do
     let cs@(_ :: _) = filter (pref `isPrefixOf`) candidates
       | _ => Nothing
-    pure cs
+    pure $ simpleCompletion <$> cs
 
 ||| Pragma completion receives everything on the line following the % character
 ||| and completes either the pragma itself of one of its arguments
@@ -75,18 +127,19 @@ oneOfCompletion pref candidates = do
 ||| %default to  -> %default total
 ||| %logging "id -> %logging "ide-mode.(...)" with all the valid topics!
 pragmaCompletion : {auto c : Ref Ctxt Defs} ->
+                   {auto o : Ref ROpts REPLOpts} ->
                    (prag : Maybe KwPragma) -> (pref : String) ->
-                   Core (Maybe (String, List String))
+                   Core (Maybe (String, List Completion))
 pragmaCompletion Nothing pref = pure $ do
   let ps@(_ :: _) = flip List.mapMaybe allPragmas $ \ prag => do
                       let prag = show prag
                       guard ("%" ++ pref `isPrefixOf` prag)
                       pure prag
     | _ => Nothing
-  pure ("", ps)
+  pure ("", simpleCompletion <$> ps)
 pragmaCompletion (Just kw) pref = go (pragmaArgs kw) (break isSpace pref) where
 
-  go : List PragmaArg -> (String, String) -> Core (Maybe (String, List String))
+  go : List PragmaArg -> (String, String) -> Core (Maybe (String, List Completion))
   go (AName {} :: _) (here, "") = do
     ns@(_ :: _) <- nameCompletion here
       | _ => pure Nothing
@@ -97,7 +150,7 @@ pragmaCompletion (Just kw) pref = go (pragmaArgs kw) (break isSpace pref) where
       | _ => pure Nothing
     let lvls@(_ :: _) = filter ((here `isPrefixOf`) . fst) knownTopics
       | _ => pure Nothing
-    pure (Just ("", map (show . fst) lvls))
+    pure (Just ("", map (simpleCompletion . show . fst) lvls))
   go (ALangExt :: _) (here, "") = pure (("",) <$> oneOfCompletion here (map show allLangExts))
   go (ATotalityLevel :: _) (here, "") = pure (("",) <$> oneOfCompletion here ["partial", "covering", "total"])
   go (_ :: args) (skip, rest) =
@@ -110,7 +163,8 @@ pragmaCompletion (Just kw) pref = go (pragmaArgs kw) (break isSpace pref) where
 ||| 2. the list of possible completions
 export
 completion : {auto c : Ref Ctxt Defs} ->
-             (line : String) -> Core (Maybe (String, List String))
+             {auto o : Ref ROpts REPLOpts} ->
+             (line : String) -> Core (Maybe (String, List Completion))
 completion line = do
   let Just (ctxt, task) = parseTask line
     | _ => pure Nothing
@@ -118,8 +172,8 @@ completion line = do
     NameCompletion pref => (Just . (ctxt,)) <$> nameCompletion pref
     PragmaCompletion mprag pref => map (mapFst (ctxt ++)) <$> pragmaCompletion mprag pref
     CommandCompletion pref => case words pref of
-      ["logging"] => pure $ Just (ctxt ++ ":logging", map ((" " ++) . show . fst) knownTopics)
+      ["logging"] => pure $ Just (ctxt ++ ":logging", map (simpleCompletion . (" " ++) . show . fst) knownTopics)
       [pref] => let commands = concatMap fst parserCommandsForHelp in
-                pure $ map ((ctxt,) . map (":" ++)) $ oneOfCompletion pref commands
+                pure $ map ((ctxt,) . map ({ name $= (":" ++)})) $ oneOfCompletion pref commands
       ["logging", w] => pure $ map (ctxt ++ ":logging ",) (oneOfCompletion w (map (show . fst) knownTopics))
       _ => pure Nothing

@@ -16,6 +16,7 @@ import Idris.IDEMode.REPL
 import Idris.Package
 import Idris.ProcessIdr
 import Idris.REPL
+import Idris.REPL.IDEIndex
 import Idris.SetOptions
 import Idris.Syntax
 import Idris.Version
@@ -149,10 +150,12 @@ stMain cgs opts
          when (ignoreMissingIpkg opts) $
             setSession ({ ignoreMissingPkg := True } !getSession)
 
-         let ide = ideMode opts
+         let ideIndex = ideIndex opts
          let ideSocket = ideModeSocket opts
+         let ide = ideMode opts || (ideIndex && not ideSocket)
          let outmode = if ide then IDEMode 0 stdin stdout else REPL InfoLvl
          o <- newRef ROpts (REPL.Opts.defaultOpts Nothing outmode cgs)
+         when ideIndex $ update ROpts { ideIndex := Just initIDEIndex }
          updateEnv
          fname <- case (findInputs opts) of
                        Just (fname ::: Nil) => pure $ Just fname

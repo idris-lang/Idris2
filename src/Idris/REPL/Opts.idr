@@ -1,6 +1,7 @@
 module Idris.REPL.Opts
 
 import Compiler.Common
+import Idris.REPL.IDEIndex
 import Idris.Syntax
 import Parser.Unlit
 import TTImp.TTImp
@@ -52,6 +53,8 @@ record REPLOpts where
   -- TODO: Move extraCodegens from here, it doesn't belong, but there's nowhere
   -- better to stick it now.
   extraCodegens : List (String, Codegen)
+  -- TODO: Ditto for the ideIndex.
+  ideIndex : Maybe IDEIndex
   consoleWidth : Maybe Nat -- Nothing is auto
   color : Bool
   synHighlightOn : Bool
@@ -78,6 +81,7 @@ defaultOpts fname outmode cgs
         , gdResult = Nothing
         , evalResultName = Nothing
         , extraCodegens = cgs
+        , ideIndex = Nothing
         , consoleWidth = Nothing
         , color = True
         , synHighlightOn = True

@@ -131,6 +131,8 @@ data CLOpt
   IdeMode |
    ||| Whether or not to run IdeMode (using a socket instead of stdin/stdout)
   IdeModeSocket String |
+   ||| Index all available modules to extend IdeMode functionality
+  IdeIndex |
    ||| Run as a checker for the core language TTImp
   Yaffle String |
    ||| Dump metadata from a .ttm file
@@ -324,6 +326,8 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
            MkOpt ["--ide-mode-socket"] [Optional "host:port"]
                  (\hp => [IdeModeSocket $ fromMaybe (formatSocketAddress (ideSocketModeAddress [])) hp])
               (Just $ "Run the ide socket mode on given host and port (random open socket by default)"),
+           MkOpt ["--ide-index"] [] [IdeIndex]
+              (Just "Index all available modules to extend IdeMode functionality"),
 
            optSeparator,
            MkOpt ["--client"] [Required "REPL command"] (\f => [RunREPL f])

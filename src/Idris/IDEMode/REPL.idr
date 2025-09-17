@@ -11,6 +11,7 @@ import Idris.Package
 import Idris.Parser
 import Idris.Pretty
 import Idris.REPL
+import Idris.REPL.IDEIndex
 import Idris.Syntax
 import Idris.Version
 import Idris.Doc.String
@@ -124,7 +125,7 @@ todoCmd cmdName = iputStrLn $ reflow $ cmdName ++ ": command not yet implemented
 
 data IDEResult
   = REPL REPLResult
-  | CompletionList (List String) String
+  | CompletionList (List Completion) String
   | NameList (List Name)
   | FoundHoles (List Holes.Data)
   | Term String   -- should be a PTerm + metadata, or SExp.
@@ -393,7 +394,10 @@ displayIDEResult outf i (REPL $ (Edited (MadeCase lit cstr)))
 displayIDEResult outf i (FoundHoles holes)
   = printIDEResult outf i $ AHoleList $ map holeIDE holes
 displayIDEResult outf i (CompletionList ns r)
-  = printIDEResult outf i $ ACompletionList ns r
+  = printIDEResult outf i $ ACompletionList (map toCompletionItem ns) r
+  where
+    toCompletionItem : Completion -> CompletionItem
+    toCompletionItem (MkCompletion n i) = MkCompletionItem n i
 displayIDEResult outf i (NameList ns)
   = printIDEResult outf i $ ANameList (map show ns)
 displayIDEResult outf i (Term t)
@@ -504,6 +508,13 @@ replIDE : {auto c : Ref Ctxt Defs} ->
           Core ()
 replIDE
     = do res <- getOutput
+         ropts <- get ROpts
+         if isJust ropts.ideIndex
+           then do
+             d <- getDirs
+             ideIndex <- mkIdeIndex d.package_dirs
+             update ROpts { ideIndex := Just ideIndex }
+           else pure ()
          case res of
               REPL _ => printError $ reflow "Running idemode but output isn't"
               IDEMode _ inf outf => do

@@ -32,6 +32,11 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 * The `idris2 --exec` command now takes an arbitrary expression, not just the
   function name.
 
+* A new `idris2 --ide-index` option reads all modules from dependencies and
+  uses them to provide completion for symbols that aren't yet imported.
+  If neither `--ide-mode` nor `--ide-mode-socket` is set, this option
+  automatically enables `--ide-mode`.
+
 * Command-line arguments beginning with `--` which are not a known flag now
   produce an error.
 
