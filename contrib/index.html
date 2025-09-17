@@ -228,21 +228,6 @@ The exported interface should however be safe.
     <div class="index-namespace-doc">
       Contains:
 
-1. Tail recursive versions of the list processing functions from
-   List.
-
-2. Extensional equality proofs that these variants are
-   (extensionally) equivalent to their non-tail-recursive
-   counterparts.
-
-Note:
-
-1. Written in one sitting, feel free to refactor
-
-2. The proofs below also work on non-publicly exported
-   definitions.  This could be due to a bug, and will need to be
-   moved elsewhere if it's fixed.
-
     </div>
   </div>
 </li><li>
@@ -471,14 +456,6 @@ Note:
       This module is not intended to be imported directly.
 Please use Data.Seq or Data.Seq.Seq' instead.
 
-The implementation of fingertree comes from
-<http://hackage.haskell.org/package/containers-0.2.0.1/docs/src/Data-Sequence.html>
-
-The original code is under a BSD-style license, compatible with this project.
-
-Original Copyrights: Copyright 2004, The University Court of the University of Glasgow
-                     (c) Ross Paterson 2005
-
     </div>
   </div>
 </li><li>
@@ -490,8 +467,6 @@ Original Copyrights: Copyright 2004, The University Court of the University of G
       General purpose two-end finite sequences,
 with length in its type.
 
-This is implemented by finger tree.
-
     </div>
   </div>
 </li><li>
@@ -501,8 +476,6 @@ This is implemented by finger tree.
     </div>
     <div class="index-namespace-doc">
       General purpose two-end finite sequences.
-
-This is implemented by finger tree.
 
     </div>
   </div>
@@ -584,18 +557,6 @@ characters
       A telescope is the variable context in a dependently typed program.
 Dependent types with free variables  are really only well-defined in a telescope.
 
-A segment of a telescope is a tuple of types in that
-telescope. These are usually implicit in formal developments, but
-seem to be crucial to get a compositional account. Here we use
-them to get 'n-ary dependent function' (compare with `Data.Fun`
-and `Data.Rel`).
-
-I've learned this from Conor McBride on an SPLV'19 bus ride.
-A literary reference would be welcome. This paper is a start:
-Unifiers as Equivalences: Proof-Relevant Unification of Dependently Typed Data.
-Jesper Cockx, Dominique Devriese, Frank Piessens, ICFP'16.
-but they don't seem to have segments and their left action on contexts.
-
     </div>
   </div>
 </li><li>
@@ -605,9 +566,6 @@ but they don't seem to have segments and their left action on contexts.
     </div>
     <div class="index-namespace-doc">
       The telescope data structures.
-
-Indexing telescopes by their length (hopefully) helps inform the
-type-checker during inference.
 
     </div>
   </div>
@@ -624,9 +582,6 @@ So telescopes are convenient for well-bracketing dependencies,
 but segments are convenient for processing telescopes from left
 to right.
 
-As with telescopes, indexing segments by their length (hopefully)
-helps the type-checker infer stuff.
-
     </div>
   </div>
 </li><li>
@@ -637,9 +592,6 @@ helps the type-checker infer stuff.
     <div class="index-namespace-doc">
       N-ary dependent functions using telescopes
 
-Compare with `base/Data.Fun` and:
-Guillaume Allais. 2019. Generic level polymorphic n-ary functions. TyDe 2019.
-
     </div>
   </div>
 </li><li>
@@ -649,9 +601,6 @@ Guillaume Allais. 2019. Generic level polymorphic n-ary functions. TyDe 2019.
     </div>
     <div class="index-namespace-doc">
       N-ary simple (non-dependent) functions using telescopes
-
-Compare with `base/Data.Fun` and `contrib/Data.Fun.Extra` and with:
-Guillaume Allais. 2019. Generic level polymorphic n-ary functions. TyDe 2019.
 
     </div>
   </div>
@@ -712,17 +661,6 @@ Guillaume Allais. 2019. Generic level polymorphic n-ary functions. TyDe 2019.
     </div>
     <div class="index-namespace-doc">
       
-
-foldr is the unique solution to the equation:
-
-  h f e [] = e
-  h f e (x :: xs) = x `h` (foldr f e xs)
-
-(This fact is called 'the universal property of foldr'.)
-
-Since the prelude defines foldr tail-recursively, this fact isn't immediate
-and we need some lemmata to prove it.
-
     </div>
   </div>
 </li><li>
@@ -989,28 +927,6 @@ in a standalone program. It is essentially an Idris port of the GNU getopt libra
     <div class="index-namespace-doc">
       A simple module to process 'literate' documents.
 
-The module uses a lexer to split the document into code blocks,
-delineated by user-defined markers, and code lines that are
-indicated be a line marker. The lexer returns a document stripped
-of non-code elements but preserving the original document's line
-count. Column numbering of code lines are not preserved.
-
-The underlying tokeniser is greedy.
-
-Once it identifies a line marker it reads a prettifying space then
-consumes until the end of line. Once identifies a starting code
-block marker, the lexer will consume input until the next
-identifiable end block is encountered. Any other content is
-treated as part of the original document.
-
-Thus, the input literate files *must* be well-formed w.r.t
-to code line markers and code blocks.
-
-A further restriction is that literate documents cannot contain
-the markers within the document's main text: This will confuse the
-lexer.
-
-
     </div>
   </div>
 </li><li>
@@ -1048,9 +964,6 @@ lexer.
     <div class="index-namespace-doc">
       A Idris port of the prettyprinter library [1] and
 the ANSI terminal backend [2].
-
-[1] https://hackage.haskell.org/package/prettyprinter
-[2] https://hackage.haskell.org/package/prettyprinter-ansi-terminal
 
     </div>
   </div>
@@ -1135,4 +1048,4 @@ the ANSI terminal backend [2].
       
     </div>
   </div>
-</li></ul></div><footer>Produced by Idris 2 version 0.7.0-fc11b0305</footer></body></html>
+</li></ul></div><footer>Produced by Idris 2 version 0.7.0-b5398ab10</footer></body></html>

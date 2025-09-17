@@ -326,11 +326,6 @@ functions like `writer` or `listen`.
 relation is intended to proceed in some direction, though not
 necessarily with a unique path.
 
-Orders are often defined simply as bundles of binary relation
-properties.
-
-A prominent example of an order relation is LTE over Nat.
-
     </div>
   </div>
 </li><li>
@@ -340,11 +335,6 @@ A prominent example of an order relation is LTE over Nat.
     </div>
     <div class="index-namespace-doc">
       A binary relation is a function of type (ty -> ty -> Type).
-
-A prominent example of a binary relation is LTE over Nat.
-
-This module defines some interfaces for describing properties of
-binary relations. It also proves somes relations among relations.
 
     </div>
   </div>
@@ -364,24 +354,6 @@ binary relations. It also proves somes relations among relations.
     </div>
     <div class="index-namespace-doc">
       Defines well-founded induction and recursion.
-
-Induction is way to consume elements of recursive types where each step of
-the computation has access to the previous steps.
-Normally, induction is structural: the previous steps are the children of
-the current element.
-Well-founded induction generalises this as follows: each step has access to
-any value that is less than the current element, based on a relation.
-
-Well-founded induction is implemented in terms of accessibility: an element
-is accessible (with respect to a given relation) if every element less than
-it is also accessible. This can only terminate at minimum elements.
-
-This corresponds to the idea that for a computation to terminate, there
-must be a finite path to an element from which there is no way to recurse.
-
-Many instances of well-founded induction are actually induction over
-natural numbers that are derived from the elements being inducted over. For
-this purpose, the `Sized` interface and related functions are provided.
 
     </div>
   </div>
@@ -615,11 +587,6 @@ this purpose, the `Sized` interface and related functions are provided.
     <div class="index-namespace-doc">
       Indexing into Lists.
 
-`Elem` proofs give existential quantification that a given element
-*is* in the list, but not where in the list it is!  Here we give a
-predicate that presents proof that a given index in a list, given
-by a natural number, will return a certain element.
-
     </div>
   </div>
 </li><li>
@@ -639,24 +606,6 @@ by a natural number, will return a certain element.
     <div class="index-namespace-doc">
       This module implements a relation between a natural number and a list.
 The relation witnesses the fact the number is the length of the list.
-
-It is meant to be used in a runtime-irrelevant fashion in computations
-manipulating data indexed over lists where the computation actually only
-depends on the length of said lists.
-
-Instead of writing:
-```idris example
-f0 : (xs : List a) -> P xs
-```
-
-We would write either of:
-```idris example
-f1 : (n : Nat) -> (0 _ : HasLength n xs) -> P xs
-f2 : (n : Subset n (flip HasLength xs)) -> P xs
-```
-
-See `sucR` for an example where the update to the runtime-relevant Nat is O(1)
-but the update to the list (were we to keep it around) an O(n) traversal.
 
     </div>
   </div>
@@ -801,9 +750,6 @@ thus the core of `List1` must not import `Data.List`.
       This module is inspired by the open union used in the paper
 Freer Monads, More Extensible Effects
 by Oleg Kiselyov and Hiromi Ishii
-
-By using an AtIndex proof, we are able to get rid of all of
-the unsafe coercions in the original module.
 
     </div>
   </div>
@@ -980,18 +926,6 @@ ambiguities, so import with care
     </div>
     <div class="index-namespace-doc">
       Indexing Vectors.
-
-`Elem` proofs give existential quantification that a given element
-*is* in the list, but not where in the list it is!  Here we give a
-predicate that presents proof that a given index of a vector,
-given by a `Fin` instance, will return a certain element.
-
-Two decidable decision procedures are presented:
-
-1. Check that a given index points to the provided element in the
-   presented vector.
-
-2. Find the element at the given index in the presented vector.
 
     </div>
   </div>
@@ -1242,11 +1176,6 @@ poor-man's equational reasoning
     <div class="index-namespace-doc">
       Concurrency primitives, e.g. threads, mutexes, etc.
 
-N.B.: At the moment this is pretty fundamentally tied to the Scheme RTS.
-Given that different back ends will have entirely different threading
-models, it might be unavoidable, but we might want to think about possible
-primitives that back ends should support.
-
     </div>
   </div>
 </li><li>
@@ -1425,12 +1354,6 @@ primitives that back ends should support.
     <div class="index-namespace-doc">
       Signal raising and handling.
 
-NOTE that there are important differences between
-what can be done out-of-box in Windows and POSIX based
-operating systems. This module tries to honor both
-by putting things only available in POSIX environments
-into appropriately named namespaces or data types.
-
     </div>
   </div>
 </li><li>
@@ -1442,4 +1365,4 @@ into appropriately named namespaces or data types.
       
     </div>
   </div>
-</li></ul></div><footer>Produced by Idris 2 version 0.7.0-fc11b0305</footer></body></html>
+</li></ul></div><footer>Produced by Idris 2 version 0.7.0-b5398ab10</footer></body></html>
