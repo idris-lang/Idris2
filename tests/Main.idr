@@ -118,6 +118,9 @@ idrisTestsOperators = testsInDir "idris2/operators" "Operator and fixities"
 idrisTestsIPKG : IO TestPool
 idrisTestsIPKG = testsInDir "idris2/pkg" "Package and .ipkg files"
 
+idrisTestsMkdoc : IO TestPool
+idrisTestsMkdoc = testsInDir "idris2/mkdoc" "HTML documentation generator"
+
 idrisTests : TestPool
 idrisTests = MkTestPool "Misc" [] Nothing
        -- Documentation strings
@@ -229,6 +232,7 @@ main = runner $
   , !idrisTestsOperators
   , !idrisTestsDebug
   , !idrisTestsIPKG
+  , !idrisTestsMkdoc
   , testPaths "idris2/misc" idrisTests
   , !typeddTests
   , !ideModeTests

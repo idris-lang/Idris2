@@ -388,3 +388,4 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
 
 * Module docstrings are now displayed for namespace indexes when documentation is built via `--mkdoc`.
 * Generated documentation are now removed via `--clean`.
+* Module docstrings are now limited to the first paragraph in the `--mkdoc`-generated documentation's `index.html` page.
