@@ -288,7 +288,7 @@ pwarningRaw (IncompatibleVisibility fc vx vy n)
 pwarningRaw (ShadowingLocalBindings fc ns)
     = pure $ vcat
     [ reflow "You may be unintentionally shadowing the following local bindings:"
-    , indent 2 $ hcat $ pretty0 . fst <$> (forget ns)
+    , indent 2 $ concatWith (surround (comma <+> space)) $ map (code . pretty0 . fst) $ forget ns
     , !(ploc fc)
     ]
 

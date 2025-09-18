@@ -103,7 +103,7 @@ Fld:176:1--176:57
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Warning: You may be unintentionally shadowing the following local bindings:
-  aa
+  a
 
 Fld:181:1--181:74
  177 | sameNamesOk {a {- = a-}, a = b} = (a, b)

@@ -1,2 +1,24 @@
 1/1: Building RecordParam (RecordParam.idr)
+Warning: You may be unintentionally shadowing the following local bindings:
+  x
+
+RecordParam:23:3--23:87
+ 19 | record Record7 where
+ 20 |   f : {_ : Type} -> Type
+ 21 | 
+ 22 | record Record8 where
+ 23 |   f : {x : Type} -> {x : Int} -> {_ : String} -> (x : Double) => {x : Integer} -> Type
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Warning: You may be unintentionally shadowing the following local bindings:
+  x
+
+RecordParam:23:3--23:87
+ 19 | record Record7 where
+ 20 |   f : {_ : Type} -> Type
+ 21 | 
+ 22 | record Record8 where
+ 23 |   f : {x : Type} -> {x : Int} -> {_ : String} -> (x : Double) => {x : Integer} -> Type
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 1/1: Building Issue3501 (Issue3501.idr)
