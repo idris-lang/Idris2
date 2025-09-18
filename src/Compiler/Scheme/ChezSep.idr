@@ -50,8 +50,8 @@ schHeader libs compilationUnits = fromString """
 schFooter : Builder
 schFooter = """
 
-  (collect 4)
-  (blodwen-run-finalisers)
+  (collect-request-handler (lambda () (collect (collect-maximum-generation)) (blodwen-run-finalisers)))
+  (collect-rendezvous)
   """
 
 startChez : String -> String -> String -> String
