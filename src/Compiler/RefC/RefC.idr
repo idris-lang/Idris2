@@ -16,6 +16,8 @@ import Idris.Syntax
 import Data.List
 import Libraries.Data.DList
 import Data.Nat
+import Libraries.Data.NameMap
+import Libraries.Data.NameSet
 import Libraries.Data.SortedSet
 import Libraries.Data.SortedMap
 import Data.Vect
@@ -209,7 +211,7 @@ constantName = \case
   where go : String -> String -> String
         go x y = "idris2_constant_\{x}_\{y}"
 
-ReuseMap = SortedMap Name String
+ReuseMap = NameMap String
 Owned = SortedSet AVar
 
 ||| Environment for precise reference counting.
@@ -396,7 +398,7 @@ data TailPositionStatus = InTailPosition | NotInTailPosition
 
 ||| The function takes as arguments the current ReuseMap and the constructors that will be used.
 ||| Returns constructor variables to remove and constructors to reuse.
-dropUnusedReuseCons : ReuseMap -> SortedSet Name -> (List String, ReuseMap)
+dropUnusedReuseCons : ReuseMap -> NameSet -> (List String, ReuseMap)
 dropUnusedReuseCons reuseMap usedCons =
     -- if there is no constructor named by that name, then the reuse constructor is deleted
     let dropReuseMap = differenceMap reuseMap usedCons in
@@ -419,15 +421,15 @@ addReuseConstructor : {auto a : Ref ArgCounter Nat}
                     -> String
                     -> Name
                     -> List String
-                    -> SortedSet Name
+                    -> NameSet
                     -> List String
-                    -> SortedMap Name String
-                    -> Core (List String, SortedMap Name String)
+                    -> NameMap String
+                    -> Core (List String, NameMap String)
 addReuseConstructor reuseMap sc conName conArgs consts shouldDrop actualReuseConsts =
     -- to avoid conflicts, we check that there is no constructor with the same name in reuse map
     -- we also check that the constructor will be used later and that the variable will be deleted
-    if (isNothing $ SortedMap.lookup conName reuseMap)
-       && contains conName consts
+    if (isNothing $ lookup conName reuseMap)
+       && (conName `NameSet.elem` consts)
        && (isJust $ find (== sc) shouldDrop) then do
         let constr = "constructor_" ++ !(getNextCounter)
         emit EmptyFC $ "Value_Constructor* " ++ constr ++ " = NULL;"
@@ -526,7 +528,7 @@ mutual
                                  ++ ", "  ++ maybe "-1" show tag  ++ ");"
 
                 emit fc " // constructor \{show n}"
-                constr <- case SortedMap.lookup n $ reuseMap env of
+                constr <- case lookup n $ reuseMap env of
                     Just constr => do
                         emit fc "if (! \{constr}) {"
                         increaseIndentation
