@@ -873,8 +873,7 @@ mutual
                                           tmnf
                      let qopts = MkQuoteOpts False False
                                              (Just defs.options.elabDirectives.nfThreshold)
-                     tm <- catch (quoteOpts qopts
-                                            empty env tmnf)
+                     tm <- catch (quoteOpts qopts empty env tmnf)
                                  (\err => quote defs env tmnf)
                      Just tm <- occursCheck loc env mode mname tm
                          | _ => postponeS swap loc mode "Occurs check failed" env
@@ -884,8 +883,8 @@ mutual
                      let solveOrElsePostpone : Term newvars -> Core UnifyResult
                          solveOrElsePostpone stm = do
                            mbResult <- solveHole fc mode env mname mref
-                                            margs margs' locs submv
-                                            tm stm tmnf
+                                                 margs margs' locs submv
+                                                 tm stm tmnf
                            flip fromMaybe (pure <$> mbResult) $
                              postponeS swap loc mode "Can't instantiate" env
                                        (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs') tmnf
@@ -896,8 +895,8 @@ mutual
                             do tm' <- quote defs env tmnf
                                case shrink tm' submv of
                                     Nothing => postponeS swap loc mode "Can't shrink" env
-                                                 (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs')
-                                                 tmnf
+                                                         (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs')
+                                                         tmnf
                                     Just stm => solveOrElsePostpone stm
 
   -- Unify an application with something else
