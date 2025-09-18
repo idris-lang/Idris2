@@ -161,8 +161,8 @@ rewrite__impl p Refl prf = prf
 ||| Perform substitution in a term according to some equality.
 %inline
 public export
-replace : forall x, y, p . (0 rule : x = y) -> (1 _ : p x) -> p y
-replace Refl prf = prf
+replace : forall x, y . (0 p : _) -> (0 rule : x = y) -> (1 _ : p x) -> p y
+replace _ Refl prf = prf
 
 ||| Symmetry of propositional equality.
 %inline
