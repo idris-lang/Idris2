@@ -165,8 +165,9 @@ modules =
     Idris.IDEMode.TokenLine,
 
     Idris.REPL.Common,
-    Idris.REPL.Opts,
     Idris.REPL.FuzzySearch,
+    Idris.REPL.IDEIndex,
+    Idris.REPL.Opts,
 
     Libraries.Control.ANSI,
     Libraries.Control.ANSI.CSI,

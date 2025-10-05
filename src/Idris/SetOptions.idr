@@ -408,6 +408,9 @@ preOptions (IdeMode :: opts)
 preOptions (IdeModeSocket _ :: opts)
     = do setSession ({ nobanner := True } !getSession)
          preOptions opts
+preOptions (IdeIndex :: opts)
+    = do setSession ({ nobanner := True } !getSession)
+         preOptions opts
 preOptions (CheckOnly :: opts)
     = do setSession ({ nobanner := True } !getSession)
          preOptions opts
@@ -580,6 +583,12 @@ ideMode : List CLOpt -> Bool
 ideMode [] = False
 ideMode (IdeMode :: _) = True
 ideMode (_ :: xs) = ideMode xs
+
+export
+ideIndex : List CLOpt -> Bool
+ideIndex [] = False
+ideIndex (IdeIndex :: _) = True
+ideIndex (_ :: xs) = ideIndex xs
 
 export
 ideModeSocket : List CLOpt -> Bool
