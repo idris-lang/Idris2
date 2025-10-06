@@ -127,32 +127,30 @@ checkConflictingFixities : {auto s : Ref Syn SyntaxInfo} ->
                            WithFC (OpStr' Name) -> Core (OpPrec, FixityDeclarationInfo)
 checkConflictingFixities isPrefix opn
   = do let op = nameRoot opn.val.toName
-       foundFixities <- getFixityInfo op
+       foundFixities@(_::_) <- getFixityInfo op
+         | [] => do
+           -- If we do not find any fixity, and it is a backticked operator, then we
+           -- return the default fixity and associativity for backticked operators
+           -- Otherwise, it's an unknown operator.
+           case opn.val of
+              OpSymbols _ => throw (GenericMsg opn.fc "Unknown operator '\{op}'")
+              Backticked _ =>  pure (NonAssoc 1, UndeclaredFixity) -- Backticks are non associative by default
+
        let (pre, inf) = partition ((== Prefix) . fix . snd) foundFixities
-       case (isPrefix, pre, inf) of
-            -- If we do not find any fixity, and it is a backticked operator, then we
-            -- return the default fixity and associativity for backticked operators
-            -- Otherwise, it's an unknown operator.
-            (_, [], []) => case opn.val of
-                              OpSymbols _ => throw (GenericMsg opn.fc "Unknown operator '\{op}'")
-                              Backticked _ =>  pure (NonAssoc 1, UndeclaredFixity) -- Backticks are non associative by default
+       if isPrefix
+         then do
+           let (fxName, fx) :: _ = pre | [] => throw (GenericMsg opn.fc $ "'\{op}' is not a prefix operator")
+           -- in the prefix case, remove conflicts with infix (-)
+           let extraFixities = pre ++ (filter (\(nm, _) => not $ nameRoot nm == "-") inf)
+           unless (isCompatible fx extraFixities) $ warnConflict fxName extraFixities
+           pure (mkPrec fx.fix fx.precedence, DeclaredFixity fx)
 
-            (True, ((fxName, fx) :: _), _) => do
-                -- in the prefix case, remove conflicts with infix (-)
-                let extraFixities = pre ++ (filter (\(nm, _) => not $ nameRoot nm == "-") inf)
-                unless (isCompatible fx extraFixities) $ warnConflict fxName extraFixities
-                pure (mkPrec fx.fix fx.precedence, DeclaredFixity fx)
-            -- Could not find any prefix operator fixities, there may still be conflicts with
-            -- the infix ones.
-            (True, [] , _) => throw (GenericMsg opn.fc $ "'\{op}' is not a prefix operator")
-
-            (False, _, ((fxName, fx) :: _)) => do
-                -- In the infix case, remove conflicts with prefix (-)
-                let extraFixities = (filter (\(nm, _) => not $ nm == UN (Basic "-")) pre) ++ inf
-                unless (isCompatible fx extraFixities) $ warnConflict fxName extraFixities
-                pure (mkPrec fx.fix fx.precedence, DeclaredFixity fx)
-            -- Could not find any infix operator fixities, there may be prefix ones
-            (False, _, []) => throw (GenericMsg opn.fc $ "'\{op}' is not an infix operator")
+         else do
+           let (fxName, fx) :: _ = inf | [] => throw (GenericMsg opn.fc $ "'\{op}' is not an infix operator")
+           -- In the infix case, remove conflicts with prefix (-)
+           let extraFixities = (filter (\(nm, _) => not $ nm == UN (Basic "-")) pre) ++ inf
+           unless (isCompatible fx extraFixities) $ warnConflict fxName extraFixities
+           pure (mkPrec fx.fix fx.precedence, DeclaredFixity fx)
   where
     -- Fixities are compatible with all others of the same name that share the same
     -- fixity, precedence, and binding information
