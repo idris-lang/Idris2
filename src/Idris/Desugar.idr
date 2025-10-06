@@ -136,17 +136,12 @@ checkConflictingFixities isPrefix opn
               OpSymbols _ => throw (GenericMsg opn.fc "Unknown operator '\{op}'")
               Backticked _ =>  pure (NonAssoc 1, UndeclaredFixity) -- Backticks are non associative by default
 
-       let (pre, inf) = partition ((== Prefix) . fix . snd) foundFixities
-       if isPrefix
-         then do
-           let (fxName, fx) :: _ = pre | [] => throw (GenericMsg opn.fc $ "'\{op}' is not a prefix operator")
-           unless (isCompatible fx pre) $ warnConflict fxName pre
-           pure (mkPrec fx.fix fx.precedence, DeclaredFixity fx)
+       let (opType, f) : (String, _) = if isPrefix then ("a prefix", (== Prefix) . fix) else ("an infix", (/= Prefix) . fix)
+       let ops = filter (f . snd) foundFixities
 
-         else do
-           let (fxName, fx) :: _ = inf | [] => throw (GenericMsg opn.fc $ "'\{op}' is not an infix operator")
-           unless (isCompatible fx inf) $ warnConflict fxName inf
-           pure (mkPrec fx.fix fx.precedence, DeclaredFixity fx)
+       let (fxName, fx) :: _ = ops | [] => throw (GenericMsg opn.fc $ "'\{op}' is not \{opType} operator")
+       unless (isCompatible fx ops) $ warnConflict fxName ops
+       pure (mkPrec fx.fix fx.precedence, DeclaredFixity fx)
   where
     -- Fixities are compatible with all others of the same name that share the same
     -- fixity, precedence, and binding information
