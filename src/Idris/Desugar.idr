@@ -158,9 +158,10 @@ checkConflictingBinding opName foundFixity use_site rhs
 -- Once conflicts are handled we return the operator precedence we found.
 checkConflictingFixities : {auto s : Ref Syn SyntaxInfo} ->
                            {auto c : Ref Ctxt Defs} ->
-                           (usageType : Maybe BindingModifier) -> -- `Nothing` for prefix
+                           (side : Side) ->
+                           (usageType : Maybe (OperatorLHSInfo PTerm, PTerm)) -> -- `Nothing` for prefix
                            WithFC (OpStr' Name) -> Core (OpPrec, FixityDeclarationInfo)
-checkConflictingFixities usageType opn
+checkConflictingFixities side usageType opn
   = do let op = nameRoot opn.val.toName
        foundFixities@(_::_) <- getFixityInfo op
          | [] => do
@@ -172,13 +173,25 @@ checkConflictingFixities usageType opn
               Backticked _ =>  pure (NonAssoc 1, UndeclaredFixity) -- Backticks are non associative by default
 
        let (opType, f) : (String, _) = case usageType of
-                                         Nothing => ("a prefix", (== Prefix) . fix)
-                                         Just b  => ("a \{show b} infix", \op => op.fix /= Prefix && op.bindingInfo == b)
+                                         Nothing     => ("a prefix", (== Prefix) . fix)
+                                         Just (b, _) => do
+                                           let b = b.getBinder
+                                           ("a \{show b} infix", \op => op.fix /= Prefix && (op.bindingInfo == b || side == LHS))
        let ops = filter (f . snd) foundFixities
 
-       let (fxName, fx) :: _ = ops | [] => throw (GenericMsg opn.fc $ "'\{op}' is not \{opType} operator")
-       unless (isCompatible fx ops) $ warnConflict fxName ops
-       pure (mkPrec fx.fix fx.precedence, DeclaredFixity fx)
+       case ops of
+         [] => do
+           unless (side == LHS) $ -- do not check for conflicting fixity on the LHS
+                                  -- This is because we do not parse binders on the lhs
+                                  -- and so, if we check, we will find uses of regular
+                                  -- operator when binding is expected.
+             whenJust usageType $ \(l, r) => do
+               whenJust (head' $ filter ((/= Prefix) . fix . snd) foundFixities) $ \(_, fx) =>
+                 checkConflictingBinding opn (DeclaredFixity fx) l r
+           throw (GenericMsg opn.fc $ "'\{op}' is not \{opType} operator")
+         (fxName, fx) :: _ => do
+           unless (isCompatible fx ops) $ warnConflict fxName ops
+           pure (mkPrec fx.fix fx.precedence, DeclaredFixity fx)
   where
     -- Fixities are compatible with all others of the same name that share the same
     -- fixity, precedence, and binding information
@@ -222,16 +235,11 @@ parameters (side : Side)
               {auto c : Ref Ctxt Defs} ->
               PTerm -> Core (List (Tok ((OpStr, FixityDeclarationInfo), Maybe (OperatorLHSInfo PTerm)) PTerm))
   toTokList (POp fc (MkWithData _ l) opn r)
-      = do (precInfo, fixInfo) <- checkConflictingFixities (Just l.getBinder) opn
-           unless (side == LHS) -- do not check for conflicting fixity on the LHS
-                                -- This is because we do not parse binders on the lhs
-                                -- and so, if we check, we will find uses of regular
-                                -- operator when binding is expected.
-                  (checkConflictingBinding opn fixInfo l r)
+      = do (precInfo, fixInfo) <- checkConflictingFixities side (Just (l, r)) opn
            rtoks <- toTokList r
            pure (Expr l.getLhs :: Op fc opn.fc ((opn.val, fixInfo), Just l) precInfo :: rtoks)
   toTokList (PPrefixOp fc opn arg)
-      = do (precInfo, fixInfo) <- checkConflictingFixities Nothing opn
+      = do (precInfo, fixInfo) <- checkConflictingFixities side Nothing opn
            rtoks <- toTokList arg
            pure (Op fc opn.fc ((opn.val, fixInfo), Nothing) precInfo :: rtoks)
   toTokList t = pure [Expr t]
