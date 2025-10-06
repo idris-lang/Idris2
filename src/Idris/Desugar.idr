@@ -116,6 +116,41 @@ mkPrec Prefix = Prefix
   show ((x, DeclaredFixity y), _) = show x ++ " at " ++ show y.fc
   show ((x, UndeclaredFixity), _) = show x
 
+checkConflictingBinding : Ref Ctxt Defs =>
+                          Ref Syn SyntaxInfo =>
+                          WithFC OpStr -> (foundFixity : FixityDeclarationInfo) ->
+                          (usage : OperatorLHSInfo PTerm) -> (rhs : PTerm) -> Core ()
+checkConflictingBinding opName foundFixity use_site rhs
+    = if isCompatible foundFixity use_site
+         then pure ()
+         else throw $ OperatorBindingMismatch
+             {print = byShow} opName.fc foundFixity use_site (opNameToEither opName.val) rhs !candidates
+    where
+
+      isCompatible : FixityDeclarationInfo -> OperatorLHSInfo PTerm -> Bool
+      isCompatible UndeclaredFixity (NoBinder lhs) = True
+      isCompatible UndeclaredFixity _ = False
+      isCompatible (DeclaredFixity fixInfo) (NoBinder lhs) = fixInfo.bindingInfo == NotBinding
+      isCompatible (DeclaredFixity fixInfo) (BindType name ty) = fixInfo.bindingInfo == Typebind
+      isCompatible (DeclaredFixity fixInfo) (BindExpr name expr) = fixInfo.bindingInfo == Autobind
+      isCompatible (DeclaredFixity fixInfo) (BindExplicitType name type expr)
+          = fixInfo.bindingInfo == Autobind
+
+      keepCompatibleBinding : BindingModifier -> (Name, GlobalDef) -> Core Bool
+      keepCompatibleBinding compatibleBinder (name, def) = do
+        fixities <- getFixityInfo (nameRoot name)
+        let compatible = any (\(_, fx) => fx.bindingInfo == use_site.getBinder) fixities
+        pure compatible
+
+      candidates : Core (List String)
+      candidates = do let DeclaredFixity fxInfo = foundFixity
+                        | _ => pure [] -- if there is no declared fixity we can't know what's
+                                       -- supposed to go there.
+                      Just (nm, cs) <- getSimilarNames {keepPredicate = Just (keepCompatibleBinding fxInfo.bindingInfo)} opName.val.toName
+                        | Nothing => pure []
+                      ns <- currentNS <$> get Ctxt
+                      pure (showSimilarNames ns opName.val.toName nm cs)
+
 -- Check that an operator does not have any conflicting fixities in scope.
 -- Each operator can have its fixity defined multiple times across multiple
 -- modules as long as the fixities are consistent. If they aren't, the fixity
@@ -162,41 +197,6 @@ checkConflictingFixities usageType opn
                    To remove this warning, use `%hide` with the fixity to remove
                    For example: %hide \{show fxName}
                    """
-
-checkConflictingBinding : Ref Ctxt Defs =>
-                          Ref Syn SyntaxInfo =>
-                          WithFC OpStr -> (foundFixity : FixityDeclarationInfo) ->
-                          (usage : OperatorLHSInfo PTerm) -> (rhs : PTerm) -> Core ()
-checkConflictingBinding opName foundFixity use_site rhs
-    = if isCompatible foundFixity use_site
-         then pure ()
-         else throw $ OperatorBindingMismatch
-             {print = byShow} opName.fc foundFixity use_site (opNameToEither opName.val) rhs !candidates
-    where
-
-      isCompatible : FixityDeclarationInfo -> OperatorLHSInfo PTerm -> Bool
-      isCompatible UndeclaredFixity (NoBinder lhs) = True
-      isCompatible UndeclaredFixity _ = False
-      isCompatible (DeclaredFixity fixInfo) (NoBinder lhs) = fixInfo.bindingInfo == NotBinding
-      isCompatible (DeclaredFixity fixInfo) (BindType name ty) = fixInfo.bindingInfo == Typebind
-      isCompatible (DeclaredFixity fixInfo) (BindExpr name expr) = fixInfo.bindingInfo == Autobind
-      isCompatible (DeclaredFixity fixInfo) (BindExplicitType name type expr)
-          = fixInfo.bindingInfo == Autobind
-
-      keepCompatibleBinding : BindingModifier -> (Name, GlobalDef) -> Core Bool
-      keepCompatibleBinding compatibleBinder (name, def) = do
-        fixities <- getFixityInfo (nameRoot name)
-        let compatible = any (\(_, fx) => fx.bindingInfo == use_site.getBinder) fixities
-        pure compatible
-
-      candidates : Core (List String)
-      candidates = do let DeclaredFixity fxInfo = foundFixity
-                        | _ => pure [] -- if there is no declared fixity we can't know what's
-                                       -- supposed to go there.
-                      Just (nm, cs) <- getSimilarNames {keepPredicate = Just (keepCompatibleBinding fxInfo.bindingInfo)} opName.val.toName
-                        | Nothing => pure []
-                      ns <- currentNS <$> get Ctxt
-                      pure (showSimilarNames ns opName.val.toName nm cs)
 
 checkValidFixity : BindingModifier -> Fixity -> Nat -> Bool
 
