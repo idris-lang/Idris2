@@ -140,16 +140,12 @@ checkConflictingFixities isPrefix opn
        if isPrefix
          then do
            let (fxName, fx) :: _ = pre | [] => throw (GenericMsg opn.fc $ "'\{op}' is not a prefix operator")
-           -- in the prefix case, remove conflicts with infix (-)
-           let extraFixities = pre ++ (filter (\(nm, _) => not $ nameRoot nm == "-") inf)
-           unless (isCompatible fx extraFixities) $ warnConflict fxName extraFixities
+           unless (isCompatible fx pre) $ warnConflict fxName pre
            pure (mkPrec fx.fix fx.precedence, DeclaredFixity fx)
 
          else do
            let (fxName, fx) :: _ = inf | [] => throw (GenericMsg opn.fc $ "'\{op}' is not an infix operator")
-           -- In the infix case, remove conflicts with prefix (-)
-           let extraFixities = (filter (\(nm, _) => not $ nm == UN (Basic "-")) pre) ++ inf
-           unless (isCompatible fx extraFixities) $ warnConflict fxName extraFixities
+           unless (isCompatible fx inf) $ warnConflict fxName inf
            pure (mkPrec fx.fix fx.precedence, DeclaredFixity fx)
   where
     -- Fixities are compatible with all others of the same name that share the same

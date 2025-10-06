@@ -34,21 +34,6 @@ MainFail:7:27--7:30
                                ^^^
 
 2/2: Building Main3 (Main3.idr)
-Warning: operator fixity is ambiguous, we are picking Main3.prefix.(%%%) out of :
- - Main3.prefix.(%%%), precedence level 4
- - Lib1.infixr.(%%%), precedence level 5
-
-To remove this warning, use `%hide` with the fixity to remove
-For example: %hide Main3.prefix.(%%%)
-
-Main3:12:29--12:32
- 08 | (%%%) : Nat -> Nat
- 09 | (%%%) = S
- 10 | 
- 11 | main : IO ()
- 12 | main = do printLn (the Nat (%%% 4))
-                                  ^^^
-
 Warning: operator fixity is ambiguous, we are picking Prelude.Ops.infixl.(-) out of :
  - Prelude.Ops.infixl.(-), precedence level 8
  - Main3.infixr.(-), precedence level 8
