@@ -123,9 +123,9 @@ mkPrec Prefix = Prefix
 -- Once conflicts are handled we return the operator precedence we found.
 checkConflictingFixities : {auto s : Ref Syn SyntaxInfo} ->
                            {auto c : Ref Ctxt Defs} ->
-                           (isPrefix : Bool) ->
+                           (usageType : Maybe BindingModifier) -> -- `Nothing` for prefix
                            WithFC (OpStr' Name) -> Core (OpPrec, FixityDeclarationInfo)
-checkConflictingFixities isPrefix opn
+checkConflictingFixities usageType opn
   = do let op = nameRoot opn.val.toName
        foundFixities@(_::_) <- getFixityInfo op
          | [] => do
@@ -136,7 +136,9 @@ checkConflictingFixities isPrefix opn
               OpSymbols _ => throw (GenericMsg opn.fc "Unknown operator '\{op}'")
               Backticked _ =>  pure (NonAssoc 1, UndeclaredFixity) -- Backticks are non associative by default
 
-       let (opType, f) : (String, _) = if isPrefix then ("a prefix", (== Prefix) . fix) else ("an infix", (/= Prefix) . fix)
+       let (opType, f) : (String, _) = case usageType of
+                                         Nothing => ("a prefix", (== Prefix) . fix)
+                                         Just b  => ("a \{show b} infix", \op => op.fix /= Prefix && op.bindingInfo == b)
        let ops = filter (f . snd) foundFixities
 
        let (fxName, fx) :: _ = ops | [] => throw (GenericMsg opn.fc $ "'\{op}' is not \{opType} operator")
@@ -220,7 +222,7 @@ parameters (side : Side)
               {auto c : Ref Ctxt Defs} ->
               PTerm -> Core (List (Tok ((OpStr, FixityDeclarationInfo), Maybe (OperatorLHSInfo PTerm)) PTerm))
   toTokList (POp fc (MkWithData _ l) opn r)
-      = do (precInfo, fixInfo) <- checkConflictingFixities False opn
+      = do (precInfo, fixInfo) <- checkConflictingFixities (Just l.getBinder) opn
            unless (side == LHS) -- do not check for conflicting fixity on the LHS
                                 -- This is because we do not parse binders on the lhs
                                 -- and so, if we check, we will find uses of regular
@@ -229,7 +231,7 @@ parameters (side : Side)
            rtoks <- toTokList r
            pure (Expr l.getLhs :: Op fc opn.fc ((opn.val, fixInfo), Just l) precInfo :: rtoks)
   toTokList (PPrefixOp fc opn arg)
-      = do (precInfo, fixInfo) <- checkConflictingFixities True opn
+      = do (precInfo, fixInfo) <- checkConflictingFixities Nothing opn
            rtoks <- toTokList arg
            pure (Op fc opn.fc ((opn.val, fixInfo), Nothing) precInfo :: rtoks)
   toTokList t = pure [Expr t]
