@@ -118,23 +118,20 @@ mkPrec Prefix = Prefix
 
 checkConflictingBinding : Ref Ctxt Defs =>
                           Ref Syn SyntaxInfo =>
-                          WithFC OpStr -> (foundFixity : FixityDeclarationInfo) ->
+                          WithFC OpStr -> (foundFixity : FixityInfo) ->
                           (usage : OperatorLHSInfo PTerm) -> (rhs : PTerm) -> Core ()
 checkConflictingBinding opName foundFixity use_site rhs
     = if isCompatible foundFixity use_site
          then pure ()
          else throw $ OperatorBindingMismatch
-             {print = byShow} opName.fc foundFixity use_site (opNameToEither opName.val) rhs !candidates
+             {print = byShow} opName.fc (DeclaredFixity foundFixity) use_site (opNameToEither opName.val) rhs !candidates
     where
 
-      isCompatible : FixityDeclarationInfo -> OperatorLHSInfo PTerm -> Bool
-      isCompatible UndeclaredFixity (NoBinder lhs) = True
-      isCompatible UndeclaredFixity _ = False
-      isCompatible (DeclaredFixity fixInfo) (NoBinder lhs) = fixInfo.bindingInfo == NotBinding
-      isCompatible (DeclaredFixity fixInfo) (BindType name ty) = fixInfo.bindingInfo == Typebind
-      isCompatible (DeclaredFixity fixInfo) (BindExpr name expr) = fixInfo.bindingInfo == Autobind
-      isCompatible (DeclaredFixity fixInfo) (BindExplicitType name type expr)
-          = fixInfo.bindingInfo == Autobind
+      isCompatible : FixityInfo -> OperatorLHSInfo PTerm -> Bool
+      isCompatible fixInfo (NoBinder lhs) = fixInfo.bindingInfo == NotBinding
+      isCompatible fixInfo (BindType name ty) = fixInfo.bindingInfo == Typebind
+      isCompatible fixInfo (BindExpr name expr) = fixInfo.bindingInfo == Autobind
+      isCompatible fixInfo (BindExplicitType name type expr) = fixInfo.bindingInfo == Autobind
 
       keepCompatibleBinding : BindingModifier -> (Name, GlobalDef) -> Core Bool
       keepCompatibleBinding compatibleBinder (name, def) = do
@@ -143,10 +140,7 @@ checkConflictingBinding opName foundFixity use_site rhs
         pure compatible
 
       candidates : Core (List String)
-      candidates = do let DeclaredFixity fxInfo = foundFixity
-                        | _ => pure [] -- if there is no declared fixity we can't know what's
-                                       -- supposed to go there.
-                      Just (nm, cs) <- getSimilarNames {keepPredicate = Just (keepCompatibleBinding fxInfo.bindingInfo)} opName.val.toName
+      candidates = do Just (nm, cs) <- getSimilarNames {keepPredicate = Just (keepCompatibleBinding foundFixity.bindingInfo)} opName.val.toName
                         | Nothing => pure []
                       ns <- currentNS <$> get Ctxt
                       pure (showSimilarNames ns opName.val.toName nm cs)
@@ -187,7 +181,7 @@ checkConflictingFixities side usageType opn
                                   -- operator when binding is expected.
              whenJust usageType $ \(l, r) => do
                whenJust (head' $ filter ((/= Prefix) . fix . snd) foundFixities) $ \(_, fx) =>
-                 checkConflictingBinding opn (DeclaredFixity fx) l r
+                 checkConflictingBinding opn fx l r
            throw (GenericMsg opn.fc $ "'\{op}' is not \{opType} operator")
          (fxName, fx) :: _ => do
            unless (isCompatible fx ops) $ warnConflict fxName ops
