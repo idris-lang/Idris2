@@ -67,6 +67,10 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   customise the syntax of operator to look more like a binder.
   See [#3113](https://github.com/idris-lang/Idris2/issues/3113).
 
+* Autobind and Typebind modifiers on functions, type constructors and
+  data constructors allow the user to overload function application to
+  look like a binder. See [#3582](https://github.com/idris-lang/Idris2/issues/3582)
+
 * Fixity declarations without an export modifier now emit a warning in peparation
   for a future version where they will become private by default.
 

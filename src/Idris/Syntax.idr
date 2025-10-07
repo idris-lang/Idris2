@@ -7,6 +7,7 @@ import public Core.FC
 import public Core.Normalise
 import public Core.Options
 import public Core.TT
+import public Core.WithData
 
 import TTImp.TTImp
 
@@ -23,6 +24,7 @@ import Libraries.Data.SortedMap
 import Libraries.Data.String.Extra
 import Libraries.Data.StringMap
 import Libraries.Data.WithDefault
+import public Libraries.Data.WithData
 import Libraries.Text.PrettyPrint.Prettyprinter
 
 import Parser.Lexer.Source
@@ -96,9 +98,11 @@ mutual
        -- Direct (more or less) translations to RawImp
 
        PRef : FC -> nm -> PTerm' nm
+       -- Pi-types with an arbitrary complex binder
        NewPi : WithFC (PBinderScope' nm) -> PTerm' nm
        Forall : WithFC (List1 (WithFC Name), PTerm' nm) -> PTerm' nm
 
+       -- Simple pi-types, translates directly into IPi, this should be replaced in favor of `NewPi`
        PPi : FC -> RigCount -> PiInfo (PTerm' nm) -> Maybe Name ->
              (argTy : PTerm' nm) -> (retTy : PTerm' nm) -> PTerm' nm
        PLam : FC -> RigCount -> PiInfo (PTerm' nm) -> (pat : PTerm' nm) ->
@@ -112,6 +116,7 @@ mutual
        PApp : FC -> PTerm' nm -> PTerm' nm -> PTerm' nm
        PWithApp : FC -> PTerm' nm -> PTerm' nm -> PTerm' nm
        PNamedApp : FC -> PTerm' nm -> Name -> PTerm' nm -> PTerm' nm
+       PBindingApp : (function : WithFC Name) -> (binder : WithFC (BindingInfo (PTerm' nm))) -> (scope : WithFC (PTerm' nm)) -> PTerm' nm
        PAutoApp : FC -> PTerm' nm -> PTerm' nm -> PTerm' nm
 
        PDelayed : FC -> LazyReason -> PTerm' nm -> PTerm' nm
@@ -188,6 +193,7 @@ mutual
   getPTermLoc (PWithApp fc _ _) = fc
   getPTermLoc (PAutoApp fc _ _) = fc
   getPTermLoc (PNamedApp fc _ _ _) = fc
+  getPTermLoc (PBindingApp s _ w) = fromMaybe EmptyFC (mergeFC s.fc w.fc)
   getPTermLoc (PDelayed fc _ _) = fc
   getPTermLoc (PDelay fc _) = fc
   getPTermLoc (PForce fc _) = fc
@@ -358,17 +364,16 @@ mutual
       constructor MkPTy
       -- List of names and their associated documentation
       -- If no documentation is provided the first projection is `""`
-      names : List1 (String, WithFC Name)
-      doc: String
+      names : List1 (WithDoc $ WithFC Name)
       type : PTerm' nm -- probably need `WithFC` here to fix #3408
 
   public export
   PTypeDecl' : Type -> Type
-  PTypeDecl' nm = WithFC (PTypeDeclData' nm)
+  PTypeDecl' nm = WithData [Doc', FC'] (PTypeDeclData' nm)
 
   export
   (.nameList) : PTypeDecl' nm -> List Name
-  (.nameList) = forget . map (val . snd) . names . val
+  (.nameList) = forget . map val . names . val
 
   public export
   PDataDecl : Type
@@ -376,23 +381,23 @@ mutual
 
   public export
   data PDataDecl' : Type -> Type where
-       MkPData : FC -> (tyname : Name) ->
+       MkPData : FC -> (tyname : FCBind Name) ->
                  -- if we have already declared the type earlier using `MkPLater`,
                  -- we are allowed to leave the telescope out here
                  (tycon : Maybe (PTerm' nm)) ->
                  (opts : List DataOpt) ->
-                 (datacons : List (PTypeDecl' nm)) -> PDataDecl' nm
-       MkPLater : FC -> (tyname : Name) -> (tycon : PTerm' nm) -> PDataDecl' nm
+                 (datacons : List (AddMetadata Bind' (PTypeDecl' nm))) -> PDataDecl' nm
+       MkPLater : FC -> (tyname : FCBind Name) -> (tycon : PTerm' nm) -> PDataDecl' nm
 
   public export
   data PRecordDecl' : Type -> Type where
-       MkPRecord : (tyname : Name) ->
+       MkPRecord : (tyname : FCBind Name) ->
                    (params : List (PBinder' nm)) ->
                    (opts : List DataOpt) ->
-                   (conName : Maybe (WithDoc $ AddFC Name)) ->
+                   (conName : Maybe (DocBindFC Name)) ->
                    (decls : List (PField' nm)) ->
                    PRecordDecl' nm
-       MkPRecordLater : (tyname : Name) ->
+       MkPRecordLater : (tyname : FCBind Name) ->
                         (params : List (PBinder' nm)) ->
                         PRecordDecl' nm
 
@@ -523,7 +528,7 @@ mutual
     qty : RigCount
     vis : Visibility
     opts : List (PFnOpt' nm)
-    type : PTypeDecl' nm
+    type : AddMetadata Bind' (PTypeDecl' nm)
 
   public export
   record PFixityData where
@@ -551,11 +556,11 @@ mutual
                 List (PDecl' nm) -> PDeclNoFC' nm
        PInterface : WithDefault Visibility Private ->
                     (constraints : List (Maybe Name, PTerm' nm)) ->
-                    Name ->
-                    (doc : String) ->
+                    (typeName : Name) -> -- Those two should be merged into
+                    (doc : String) ->    --  WithData [Doc', FC'] Name
                     (params : List (BasicMultiBinder' nm)) ->
                     (det : Maybe (List1 Name)) ->
-                    (conName : Maybe (WithDoc $ AddFC Name)) ->
+                    (conName : Maybe (DocBindFC Name)) ->
                     List (PDecl' nm) ->
                     PDeclNoFC' nm
        PImplementation : Visibility -> List PFnOpt -> Pass ->
@@ -616,13 +621,13 @@ isPDef _ = Nothing
 
 
 definedInData : PDataDecl -> List Name
-definedInData (MkPData _ n _ _ cons) = n :: concatMap (.nameList) cons
-definedInData (MkPLater _ n _) = [n]
+definedInData (MkPData _ n _ _ cons) = n.val :: concatMap ((.nameList) . drop) cons
+definedInData (MkPLater _ n _) = [n.val]
 
 export
 definedIn : List PDeclNoFC -> List Name
 definedIn [] = []
-definedIn (PClaim claim :: ds) = claim.type.nameList ++ definedIn ds
+definedIn (PClaim claim :: ds) = claim.type.drop.nameList ++ definedIn ds
 definedIn (PData _ _ _ d :: ds) = definedInData d ++ definedIn ds
 definedIn (PParameters _ pds :: ds) = definedIn (map val pds) ++ definedIn ds
 definedIn (PUsing _ pds :: ds) = definedIn (map val pds) ++ definedIn ds
@@ -913,6 +918,8 @@ parameters {0 nm : Type} (toName : nm -> Name)
              else showPTermPrec d f ++ " {" ++ showPrec d n ++ " = " ++ showPrec d (toName a) ++ "}"
   showPTermPrec d (PNamedApp _ f n a)
         = showPTermPrec d f ++ " {" ++ showPrec d n ++ " = " ++ showPTermPrec d a ++ "}"
+  showPTermPrec d (PBindingApp fn bind scope)
+        = ?TODO1
   showPTermPrec _ (PSearch {}) = "%search"
   showPTermPrec d (PQuote _ tm) = "`(" ++ showPTermPrec d tm ++ ")"
   showPTermPrec d (PQuoteName _ n) = "`{" ++ showPrec d n ++ "}"
@@ -928,11 +935,11 @@ parameters {0 nm : Type} (toName : nm -> Name)
   showPTermPrec _ (PInfer _) = "?"
   showPTermPrec d (POp _ (MkWithData _ $ NoBinder left) op right)
         = showPTermPrec d left ++ " " ++ showOpPrec d op.val ++ " " ++ showPTermPrec d right
-  showPTermPrec d (POp _ (MkWithData _ $ BindType nm left) op right)
+  showPTermPrec d (POp _ (MkWithData _ $ LHSBinder $ BindType nm left) op right)
         = "(" ++ showPTermPrec d nm ++ " : " ++ showPTermPrec d left ++ " " ++ showOpPrec d op.val ++ " " ++ showPTermPrec d right ++ ")"
-  showPTermPrec d (POp _ (MkWithData _ $ BindExpr nm left) op right)
+  showPTermPrec d (POp _ (MkWithData _ $ LHSBinder $ BindExpr nm left) op right)
         = "(" ++ showPTermPrec d nm ++ " := " ++ showPTermPrec d left ++ " " ++ showOpPrec d op.val ++ " " ++ showPTermPrec d right ++ ")"
-  showPTermPrec d (POp _ (MkWithData _ $ BindExplicitType nm ty left) op right)
+  showPTermPrec d (POp _ (MkWithData _ $ LHSBinder $ BindExplicitType nm ty left) op right)
         = "(" ++ showPTermPrec d nm ++ " : " ++ showPTermPrec d ty ++ ":=" ++ showPTermPrec d left ++ " " ++ showOpPrec d op.val ++ " " ++ showPTermPrec d right ++ ")"
   showPTermPrec d (PPrefixOp _ op x) = showOpPrec d op.val ++ showPTermPrec d x
   showPTermPrec d (PSectionL _ op x) = "(" ++ showOpPrec d op.val ++ " " ++ showPTermPrec d x ++ ")"
@@ -1191,7 +1198,7 @@ Show PClause where
 export
 covering
 Show PClaimData where
-  show (MkPClaim rig _ _ sig) = showCount rig ++ show sig
+  show (MkPClaim rig _ _ sig) = showCount rig ++ show sig.drop
 
 -- TODO: finish writing this instance
 export

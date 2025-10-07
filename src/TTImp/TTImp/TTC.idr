@@ -48,7 +48,6 @@ mutual
         = do tag 12; toBuf fc; toBuf x; toBuf y
     toBuf (ICoerced fc y)
         = do tag 13; toBuf fc; toBuf y
-
     toBuf (IBindHere fc m y)
         = do tag 14; toBuf fc; toBuf m; toBuf y
     toBuf (IBindVar fc y)
@@ -92,6 +91,9 @@ mutual
         = do tag 30; toBuf fc; toBuf ns; toBuf rhs
     toBuf (IAutoApp fc fn arg)
         = do tag 31; toBuf fc; toBuf fn; toBuf arg
+    toBuf (IBindingApp fn bind arg)
+        = do tag 32; toBuf fn; toBuf bind; toBuf arg
+
 
     fromBuf
         = case !getTag of
@@ -186,6 +188,10 @@ mutual
                31 => do fc <- fromBuf; fn <- fromBuf
                         arg <- fromBuf
                         pure (IAutoApp fc fn arg)
+               32 => do fn <- fromBuf
+                        bind <- fromBuf
+                        arg <- fromBuf
+                        pure (IBindingApp fn bind arg)
                _ => corrupt "RawImp"
 
   export
@@ -327,6 +333,7 @@ mutual
     toBuf Unsafe = tag 13
     toBuf Deprecate = tag 14
     toBuf (ForeignExport cs) = do tag 15; toBuf cs
+    toBuf (Binding b) = do tag 16 ; toBuf b
 
     fromBuf
         = case !getTag of
