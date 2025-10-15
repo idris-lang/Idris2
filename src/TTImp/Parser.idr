@@ -2,7 +2,7 @@ module TTImp.Parser
 
 import Core.Context
 import Core.TT
-import Parser.Source
+import Idris.Parser.Core.Source
 import TTImp.TTImp
 
 import public Libraries.Text.Parser

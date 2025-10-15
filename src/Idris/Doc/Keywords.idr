@@ -1,7 +1,7 @@
 module Idris.Doc.Keywords
 
 import Decidable.Equality
-import Parser.Lexer.Source
+import Idris.Parser.Core.Lexer.Source
 import Data.List.Quantifiers
 import Data.String
 

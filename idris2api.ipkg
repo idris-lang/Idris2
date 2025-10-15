@@ -247,18 +247,18 @@ modules =
     Libraries.Utils.Shunting,
     Libraries.Utils.String,
 
-    Parser.Package,
-    Parser.Source,
-    Parser.Support,
-    Parser.Support.Escaping,
-    Parser.Unlit,
+    Idris.Parser.Core.Package,
+    Idris.Parser.Core.Source,
+    Idris.Parser.Core.Support,
+    Idris.Parser.Core.Support.Escaping,
+    Idris.Parser.Core.Unlit,
 
-    Parser.Lexer.Common,
-    Parser.Lexer.Package,
-    Parser.Lexer.Source,
+    Idris.Parser.Core.Lexer.Common,
+    Idris.Parser.Core.Lexer.Package,
+    Idris.Parser.Core.Lexer.Source,
 
-    Parser.Rule.Package,
-    Parser.Rule.Source,
+    Idris.Parser.Core.Rule.Package,
+    Idris.Parser.Core.Rule.Source,
 
     Protocol.IDE,
     Protocol.IDE.Command,

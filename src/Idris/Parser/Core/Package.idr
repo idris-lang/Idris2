@@ -1,10 +1,10 @@
-module Parser.Package
+module Idris.Parser.Core.Package
 
-import public Parser.Lexer.Package
-import public Parser.Rule.Package
+import public Idris.Parser.Core.Lexer.Package
+import public Idris.Parser.Core.Rule.Package
 import public Libraries.Text.Lexer
 import public Libraries.Text.Parser
-import public Parser.Support
+import public Idris.Parser.Core.Support
 
 import Core.Core
 import Core.FC

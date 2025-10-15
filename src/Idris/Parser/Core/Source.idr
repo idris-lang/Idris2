@@ -1,8 +1,8 @@
-module Parser.Source
+module Idris.Parser.Core.Source
 
-import public Parser.Lexer.Source
-import public Parser.Rule.Source
-import public Parser.Unlit
+import public Idris.Parser.Core.Lexer.Source
+import public Idris.Parser.Core.Rule.Source
+import public Idris.Parser.Core.Unlit
 
 import Core.Core
 import Core.Name
