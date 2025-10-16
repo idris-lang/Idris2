@@ -10,13 +10,14 @@ dependent types in general, can be obtained from various sources:
 *  `Type-Driven Development with Idris <https://www.manning.com/books/type-driven-development-with-idris>`_
    by Edwin Brady, available from `Manning <https://www.manning.com>`_.
 
-*  The Idris web site (https://www.idris-lang.org/) and by asking
-   questions on the mailing list.
+*  The Idris website (https://www.idris-lang.org/) and by asking
+   questions on
+   `the mailing list <https://groups.google.com/forum/#!forum/idris-lang>`_.
 
-*  The `discord server<https://discord.gg/UX68fDs2jc>`_.
+*  The `discord server <https://discord.gg/UX68fDs2jc>`_.
 
 *  The IRC channel ``#idris``, on
-   `webchat.freenode.net <https://webchat.freenode.net/>`__.
+   `libera.chat <https://libera.chat/>`__.
 
 *  The wiki (https://github.com/idris-lang/Idris2/wiki) has further
    user provided information, in particular:
