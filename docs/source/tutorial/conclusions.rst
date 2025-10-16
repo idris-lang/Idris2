@@ -10,6 +10,9 @@ dependent types in general, can be obtained from various sources:
 *  `Type-Driven Development with Idris <https://www.manning.com/books/type-driven-development-with-idris>`_
    by Edwin Brady, available from `Manning <https://www.manning.com>`_.
 
+*  `The community Idris2 tutorial <https://idris-community.github.io/idris2-tutorial/>`_,
+   originally written by Stefan Höck, now maintained by the community.
+
 *  The Idris website (https://www.idris-lang.org/) has pointers to a broad range
    of resources.
 
