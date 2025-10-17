@@ -38,7 +38,7 @@ dependent types in general, can be obtained from various sources:
    * https://github.com/idris-community
 
 *  The papers describing Idris2 [#Brady2021]_ and the older Idris1
-   [#Brady2011]_ [#Brady2013]_.  There is a wider (non-exhaustive) list of
+   [#Brady2013]_ [#Brady2011]_.  There is a wider (non-exhaustive) list of
    papers involving Idris
    `on the website <https://www.idris-lang.org/pages/papers.html>`_.
 
