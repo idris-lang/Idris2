@@ -113,8 +113,8 @@ schHeader chez libs whole
 schFooter : Bool -> Bool -> Builder
 schFooter prof whole = fromString """
 
-    (collect 4)
-    (blodwen-run-finalisers)
+    (collect-request-handler (lambda () (collect (collect-maximum-generation)) (blodwen-run-finalisers)))
+    (collect-rendezvous)
     \{ ifThenElse prof "(profile-dump-html)" "" }
     \{ ifThenElse whole ")" "" }
   """

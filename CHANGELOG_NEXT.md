@@ -205,6 +205,10 @@ This CHANGELOG describes the merged but unreleased changes. Please see [CHANGELO
   memoised. That is, once accessed, they are allowed to be not re-evaluated until garbage
   collector wipes them.
 
+* Fixed the "cannot collect when multiple threads are active" error at the end
+  of a program by using the thread-safe function `collect-rendezvous` to pause all threads
+  before starting the final GC.
+
 #### Racket
 
 * Fixed CSE soundness bug that caused delayed expressions to sometimes be eagerly
