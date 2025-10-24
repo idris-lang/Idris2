@@ -201,18 +201,18 @@ data FixityDeclarationInfo = UndeclaredFixity | DeclaredFixity FixityInfo
 -- - not autobind, a regular operator
 -- - binding types, such that `(nm : ty) =@ fn nm` desugars into `(=@) ty (\(nm : ty) => fn nm)`
 -- - binding expressing with an inferred type such that
---   `(nm := exp) =@ fn nm` desugars into `(=@) exp (\(nm : ?) => fn nm)`
+--   `(nm <- exp) =@ fn nm` desugars into `(=@) exp (\(nm : ?) => fn nm)`
 -- - binding both types and expression such that
---   `(nm : ty := exp) =@ fn nm` desugars into `(=@) exp (\(nm : ty) => fn nm)`
+--   `(nm : ty <- exp) =@ fn nm` desugars into `(=@) exp (\(nm : ty) => fn nm)`
 public export
 data OperatorLHSInfo : tm -> Type where
   -- Traditional operator wihtout binding, carries the lhs
   NoBinder : (lhs : tm) -> OperatorLHSInfo tm
   -- (nm : ty) =@ fn x
   BindType : (name : tm) -> (ty : tm) -> OperatorLHSInfo tm
-  -- (nm := exp) =@ fn nm
+  -- (nm <- exp) =@ fn nm
   BindExpr : (name : tm) -> (expr : tm) -> OperatorLHSInfo tm
-  -- (nm : ty := exp) =@ fn nm
+  -- (nm : ty <- exp) =@ fn nm
   BindExplicitType : (name : tm) ->  (type, expr : tm) -> OperatorLHSInfo tm
 
 export
