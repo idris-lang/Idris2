@@ -1,8 +1,8 @@
 Processing as TTImp
 Written TTC
-Yaffle> Main.foo : (%pi Rig0 Explicit (Just m) Main.Nat (%pi Rig0 Explicit (Just a) %type (%pi Rig0 Explicit (Just {k:63}) Main.Nat (%pi RigW Explicit Nothing a (%pi RigW Explicit Nothing ((Main.Vect {k:63}) a) (%pi RigW Explicit Nothing ((Main.Vect m) a) (%pi Rig0 Explicit (Just _) Main.Nat ((Main.Vect ((Main.plus {k:63}) m)) a))))))))
+Yaffle> Main.foo : (%pi Rig0 Explicit (Just m) Main.Nat (%pi Rig0 Explicit (Just a) %type (%pi Rig0 Explicit (Just {k:1}) Main.Nat (%pi RigW Explicit Nothing a (%pi RigW Explicit Nothing ((Main.Vect {k:1}) a) (%pi RigW Explicit Nothing ((Main.Vect m) a) (%pi Rig0 Explicit (Just _) Main.Nat ((Main.Vect ((Main.plus {k:1}) m)) a))))))))
 Yaffle> Bye for now!
 Processing as TTC
 Read TTC
-Yaffle> Main.foo : (%pi Rig0 Explicit (Just m) Main.Nat (%pi Rig0 Explicit (Just a) %type (%pi Rig0 Explicit (Just {k:63}) Main.Nat (%pi RigW Explicit Nothing a (%pi RigW Explicit Nothing ((Main.Vect {k:63}) a) (%pi RigW Explicit Nothing ((Main.Vect m) a) (%pi Rig0 Explicit (Just _) Main.Nat ((Main.Vect ((Main.plus {k:63}) m)) a))))))))
+Yaffle> Main.foo : (%pi Rig0 Explicit (Just m) Main.Nat (%pi Rig0 Explicit (Just a) %type (%pi Rig0 Explicit (Just {k:1}) Main.Nat (%pi RigW Explicit Nothing a (%pi RigW Explicit Nothing ((Main.Vect {k:1}) a) (%pi RigW Explicit Nothing ((Main.Vect m) a) (%pi Rig0 Explicit (Just _) Main.Nat ((Main.Vect ((Main.plus {k:1}) m)) a))))))))
 Yaffle> Bye for now!
