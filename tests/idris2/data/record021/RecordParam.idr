@@ -21,3 +21,9 @@ record Record7 where
 
 record Record8 where
   f : {x : Type} -> {x : Int} -> {_ : String} -> (x : Double) => {x : Integer} -> Type
+
+record Record9 where
+  f : (_ : Type) => () -> () -> ()
+
+record Record10 where
+  f : {default Int _ : Type} -> () -> () -> ()

@@ -21,3 +21,9 @@ interface Iface7 where
 
 interface Iface8 where
   method8 : {x : Type} -> {x : Int} -> {_ : String} -> (x : Double) => {x : Integer} -> Type
+
+interface Iface9 where
+  method9 : (_ : Type) => () -> () -> ()
+
+interface Iface10 where
+  method10 : {default Int _ : Type} -> () -> () -> ()
