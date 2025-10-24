@@ -44,14 +44,14 @@ constructorBindName = UN (Basic "__con")
 -- Give implicit Pi bindings explicit names, if they don't have one already,
 -- because we need them to be consistent everywhere we refer to them
 namePis : Int -> RawImp -> RawImp
-namePis i (IPi fc r AutoImplicit Nothing ty sc)
-    = IPi fc r AutoImplicit (Just (MN "i_con" i)) ty (namePis (i + 1) sc)
-namePis i (IPi fc r Implicit Nothing ty sc)
-    = IPi fc r Implicit (Just (MN "i_imp" i)) ty (namePis (i + 1) sc)
-namePis i (IPi fc r Implicit (Just (UN Underscore)) ty sc)
-    = IPi fc r Implicit (Just (MN "i_imp" i)) ty (namePis (i + 1) sc)
-namePis i (IPi fc r p n ty sc)
-    = IPi fc r p n ty (namePis i sc)
+namePis i (IPi fc r info n ty sc)
+    = let (n', i') = if isImplicit info && isUnnamed n
+                        then (Just (MN "i_con" i), i + 1)
+                        else (n, i)
+       in IPi fc r info n' ty (namePis i' sc)
+  where
+    isUnnamed : Maybe Name -> Bool
+    isUnnamed = maybe True isUnderscoreName
 namePis i (IBindHere fc m ty) = IBindHere fc m (namePis i ty)
 namePis i ty = ty
 
