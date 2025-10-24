@@ -24,7 +24,7 @@ import TTImp.ProcessDecls
 import TTImp.TTImp
 import TTImp.Unelab
 
-import Parser.Source
+import Idris.Parser.Core.Source
 
 %default covering
 

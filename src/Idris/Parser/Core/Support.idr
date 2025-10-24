@@ -1,4 +1,4 @@
-module Parser.Support
+module Idris.Parser.Core.Support
 
 import public Libraries.Text.Lexer.Tokenizer
 import public Libraries.Text.Lexer
@@ -9,8 +9,8 @@ import public Libraries.Text.PrettyPrint.Prettyprinter
 import Core.TT
 import Core.Core
 import Data.List
-import Parser.Unlit
-import public Parser.Support.Escaping
+import Idris.Parser.Core.Unlit
+import public Idris.Parser.Core.Support.Escaping
 
 %default total
 

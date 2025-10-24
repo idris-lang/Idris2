@@ -4,7 +4,7 @@ import Data.List
 
 import Protocol.SExp
 
-import Parser.Lexer.Common
+import Idris.Parser.Core.Lexer.Common
 import Libraries.Text.Token
 import Libraries.Text.Lexer.Tokenizer
 import Libraries.Text.Parser
@@ -12,7 +12,7 @@ import Libraries.Text.PrettyPrint.Prettyprinter.Symbols
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 import Libraries.Text.PrettyPrint.Prettyprinter.Doc
 
-import Parser.Support.Escaping
+import Idris.Parser.Core.Support.Escaping
 
 %default total
 
@@ -180,7 +180,7 @@ sexp
          pure (StringAtom str)
   <|> do symbol ":"; x <- identifierSExp
          pure (SymbolAtom x)
-  <|> do Parser.symbol "("
+  <|> do symbol "("
          xs <- many sexp
          symbol ")"
          pure (SExpList xs)

@@ -9,7 +9,7 @@ import Core.FC
 import Protocol.SExp
 import Protocol.SExp.Parser
 
-import Parser.Source
+import Idris.Parser.Core.Source
 
 Cast SExpError Error where
   cast (LexError    err) = fromLexError                   (Virtual Interactive) err

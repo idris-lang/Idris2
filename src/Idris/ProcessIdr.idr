@@ -22,7 +22,7 @@ import Core.Metadata
 import Core.Options
 import Core.Unify
 
-import Parser.Unlit
+import Idris.Parser.Core.Unlit
 
 import TTImp.Elab.Check
 import TTImp.ProcessDecls

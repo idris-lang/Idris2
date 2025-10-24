@@ -1,4 +1,4 @@
-module Parser.Unlit
+module Idris.Parser.Core.Unlit
 
 import Libraries.Utils.Path
 import public Libraries.Text.Literate

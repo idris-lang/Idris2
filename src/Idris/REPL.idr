@@ -24,7 +24,7 @@ import Core.Value
 
 import Core.SchemeEval
 
-import Parser.Unlit
+import Idris.Parser.Core.Unlit
 
 import Idris.CommandLine
 import Idris.Desugar

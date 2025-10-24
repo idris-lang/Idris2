@@ -9,7 +9,7 @@ import Core.Options
 
 import Idris.Version
 
-import Parser.Unlit
+import Idris.Parser.Core.Unlit
 
 import Libraries.Data.Version
 import Libraries.Utils.Path

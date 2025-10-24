@@ -8,7 +8,7 @@ import Data.String
 import Libraries.Control.ANSI.SGR
 import Libraries.Data.String.Extra
 
-import Parser.Lexer.Source
+import Idris.Parser.Core.Lexer.Source
 
 import public Idris.Pretty.Annotations
 import public Idris.Pretty.Render

@@ -25,7 +25,7 @@ import Libraries.Data.StringMap
 import Libraries.Data.WithDefault
 import Libraries.Text.PrettyPrint.Prettyprinter
 
-import Parser.Lexer.Source
+import Idris.Parser.Core.Lexer.Source
 
 %default covering
 
