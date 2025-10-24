@@ -126,14 +126,18 @@ findInferrable defs ty = fi 0 0 [] NatSet.empty ty
              pure rest
     fi pos i args acc ret = findInf acc args ret
 
-checkForShadowing : (env : StringMap FC) -> RawImp -> List (String, FC, FC)
-checkForShadowing env (IPi fc _ _ (Just (UN (Basic name))) argTy retTy) =
-    let argShadowing = checkForShadowing empty argTy
-     in (case lookup name env of
-        Just origFc => (name, origFc, fc) :: checkForShadowing env retTy
-        Nothing => checkForShadowing (insert name fc env) retTy)
-        ++ argShadowing
-checkForShadowing env t = []
+checkForShadowing : (env : StringMap FC) -> RawImp -> StringMap (FC, FC)
+checkForShadowing env (IPi fc _ _ nm argTy retTy)
+    = do let argShadowing = checkForShadowing empty argTy
+         let retShadowing =
+            case nm of
+              (Just (UN (Basic name))) =>
+                case lookup name env of
+                  Just origFc => insert name (origFc, fc) $ checkForShadowing env retTy
+                  Nothing => checkForShadowing (insert name fc env) retTy
+              _ => checkForShadowing env retTy
+         argShadowing `mergeLeft` retShadowing
+checkForShadowing env _ = empty
 
 export
 processType : {vars : _} ->
@@ -216,5 +220,5 @@ processType {vars} eopts nest env fc rig vis opts ty_raw
                  log "module.hash" 15 "Adding hash for type with name \{show n}"
 
          when (showShadowingWarning !getSession) $
-            whenJust (fromList (checkForShadowing StringMap.empty ty_raw.val))
+            whenJust (fromList $ toList $ checkForShadowing StringMap.empty ty_raw.val)
                 $ recordWarning . ShadowingLocalBindings fc
