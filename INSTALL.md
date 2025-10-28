@@ -9,20 +9,31 @@
 You can install Idris 2 with any one of a number of package managers.
 
 ### Installing with [Pack](https://github.com/stefan-hoeck/idris2-pack)
-Pack comes with an installation of Idris 2 and allows to update your idris2 version easily. It also enables the use of packages in the [pack-collection](https://github.com/stefan-hoeck/idris2-pack-db) and easy installation of programs such as [`idris2-lsp`](https://github.com/idris-community/idris2-lsp).
 
-It is the recommended way to get started. See [the installation instructions](https://github.com/stefan-hoeck/idris2-pack/blob/main/INSTALL.md)
+Pack comes with an installation of Idris 2 and allows to update your idris2
+version easily. It also enables the use of packages in the
+[pack-collection](https://github.com/stefan-hoeck/idris2-pack-db)
+and easy installation of programs such as
+[`idris2-lsp`](https://github.com/idris-community/idris2-lsp).
+
+It is the recommended way to get started. See
+[the installation instructions](https://github.com/stefan-hoeck/idris2-pack/blob/main/INSTALL.md)
 on GitHub.
 
 ### Installing with [Homebrew](https://brew.sh/)
+
 ```sh
 brew install idris2
 ```
+
 ### Installing with [Nix](https://nixos.org/features.html)
+
 ```sh
 nix-env -i idris2
 ```
+
 ### Installing with [Nix Flakes](https://nixos.wiki/wiki/Flakes)
+
 ```sh
 nix profile install github:idris-lang/Idris2
 ```
