@@ -1,24 +1,34 @@
-[ ] Change version number (MAJOR, MINOR, PATCH) in Makefile
-[ ] Change version numbers in doc listings
-    [ ] idris-prompt-helloworld
-    [ ] idris-prompt-interp
-    [ ] idris-prompt-start
-[ ] Change version numbers in prelude, base, contrib, linear, network, papers,
-    and test ipkgs
-[ ] Change version number in idris2api.ipkg
-[ ] Change version number in flake.nix
-[ ] Change version number in tests pkg010 and pkg017  (TODO: make this step unnecessary!)
-    N.B. There are 2 instances of these: tests/idris2/ and tests/idris2/pkg/
-[ ] Make sure INSTALL.md gives the correct minimum Idris version
-[ ] Move CHANGELOG_NEXT.md entries into CHANGELOG.md under a heading for the upcoming release version. Reset CHANGELOG_NEXT.md.
-    release version, leaving the next "Next version" blank.
-[ ] Update bootstrap chez and racket (built with new version)
-    [ ] Compile Idris2 with the appropriate CG
-    [ ] Copy the resulting files from build/ to bootstrap/idris2_app/
-[ ] Change `IdrisPaths-yprefix` in the bootstrap sources to be defined as the
+- [x] Change version number (MAJOR, MINOR, PATCH) in Makefile
+- [x] Change version numbers in doc listings
+    - [x] idris-prompt-helloworld
+    - [x] idris-prompt-interp
+    - [x] idris-prompt-start
+- [x] Change version numbers in `libs/`
+    - [x] `prelude/prelude.ipkg`
+    - [x] `base/base.ipkg`
+    - [x] `contrib/contrib.ipkg`
+    - [x] `linear/linear.ipkg`
+    - [x] `network/network.ipkg`
+    - [x] `papers/papers.ipkg`
+    - [x] `test/test.ipkg`
+- [x] Change version number in idris2api.ipkg
+- [x] Change version number in flake.nix
+- [x] Change version number in the test outputs (TODO: make this step unnecessary!)
+  - [x] `tests/idris2/pkg/pkg006/expected`
+  - [x] `tests/idris2/pkg/pkg010/expected`
+  - [x] `tests/idris2/pkg/pkg015/expected`
+  - [x] `tests/idris2/pkg/pkg017/expected`
+  - [x] `tests/idris2/pkg/pkg020/expected`
+- [ ] Move CHANGELOG_NEXT.md entries into CHANGELOG.md under a heading for the
+     upcoming release version. Reset CHANGELOG_NEXT.md, leaving the
+     "[Next version]"-heading blank.
+- [ ] Update bootstrap chez and racket (built with new version)
+    - [ ] Compile Idris2 with the appropriate CG
+    - [ ] Copy the resulting files from build/ to bootstrap/idris2_app/
+- [ ] Change `IdrisPaths-yprefix` in the bootstrap sources to be defined as the
     string "__PREFIX__" rather than your local prefix
-[ ] Remove __collect_safe from generated chez (to avoid need for chez >9.5)
-[ ] Tag on github with version number (in the form vX.Y.Z)
-[ ] Make libdocs and upload to idris-lang.org
-[ ] Run the `mkdist.sh` script with the version number as its argument (without
+- [ ] Remove __collect_safe from generated chez (to avoid need for chez >9.5)
+- [ ] Tag on github with version number (in the form vX.Y.Z)
+- [ ] Make libdocs and upload to idris-lang.org
+- [ ] Run the `mkdist.sh` script with the version number as its argument (without
     the leading `v`, only the numbers).
