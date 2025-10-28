@@ -19,7 +19,7 @@
   - [x] `tests/idris2/pkg/pkg015/expected`
   - [x] `tests/idris2/pkg/pkg017/expected`
   - [x] `tests/idris2/pkg/pkg020/expected`
-- [ ] Move CHANGELOG_NEXT.md entries into CHANGELOG.md under a heading for the
+- [x] Move CHANGELOG_NEXT.md entries into CHANGELOG.md under a heading for the
      upcoming release version. Reset CHANGELOG_NEXT.md, leaving the
      "[Next version]"-heading blank.
 - [ ] Update bootstrap chez and racket (built with new version)
