@@ -171,19 +171,17 @@ tokenise pred line col acc tmap str
                            line', col', rest)
                Nothing => getFirstToken ts str
 
-||| Given a mapping from lexers to token generating functions (the
-||| TokenMap a) and an input string, return a list of recognised tokens,
-||| and the line, column, and remainder of the input at the first point in the
-||| string where there are no recognised tokens.
-export
-lex : TokenMap a -> String -> (List (WithBounds a), (Int, Int, String))
-lex tmap str
-    = let (ts, (l, c, str')) = tokenise (const False) 0 0 [] tmap (unpack str) in
-          (ts, (l, c, pack str'))
-
 export
 lexTo : (a -> Bool) ->
         TokenMap a -> String -> (List (WithBounds a), (Int, Int, String))
 lexTo pred tmap str
     = let (ts, (l, c, str')) = tokenise pred 0 0 [] tmap (unpack str) in
           (ts, (l, c, pack str'))
+
+||| Given a mapping from lexers to token generating functions (the
+||| TokenMap a) and an input string, return a list of recognised tokens,
+||| and the line, column, and remainder of the input at the first point in the
+||| string where there are no recognised tokens.
+export
+lex : TokenMap a -> String -> (List (WithBounds a), (Int, Int, String))
+lex = lexTo (const False)
