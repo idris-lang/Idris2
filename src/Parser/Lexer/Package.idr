@@ -100,8 +100,8 @@ rawTokens : TokenMap Token
 rawTokens =
   [ (comment, Comment . drop 2)
   , (blockComment, Comment . shrink 2)
+  , (identAllowDashes <+> reject dot, DotSepIdent Nothing)
   , (namespacedIdent, uncurry DotSepIdent . mkNamespacedIdent)
-  , (identAllowDashes, DotSepIdent Nothing)
   , (separator, const Separator)
   , (dot, const Dot)
   , (lte, const LTE)

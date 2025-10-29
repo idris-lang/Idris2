@@ -7,3 +7,6 @@ should target this file (`CHANGELOG_NEXT`).
 
 ## [Next version]
 
+### Building/Packaging changes
+
+* Fix parsing of capitalised package names containing hyphens.
