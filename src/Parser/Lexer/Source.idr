@@ -362,7 +362,7 @@ mutual
                                             _ => str
 
       removeUnderscores : String -> String
-      removeUnderscores s = fastPack $ filter (/= '_') (fastUnpack s)
+      removeUnderscores s = pack $ filter (/= '_') (unpack s)
 
 export
 lexTo : Lexer ->
