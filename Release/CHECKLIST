@@ -53,4 +53,7 @@
 - [ ] Update `IDRIS2_MINIMUM_COMPAT_VERSION` in
   `.github/workflows/ci-idris2-and-libs.yml` to point to the new release
   version.
+- [x] If not already pending, create a PR to against
+  `idris2-pack-db/collections/HEAD.toml` so that it uses the latest release
+  version.
 - [ ] Clear the release checklist
