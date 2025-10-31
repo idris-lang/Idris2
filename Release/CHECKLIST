@@ -50,7 +50,7 @@
   - [x] Update the website's `content/pages/download.rst` page, moving the now
     previous release to the list of historic releases, and updating the version
     numbers, links, and dates in the main text to match the new release.
-- [ ] Update `IDRIS2_MINIMUM_COMPAT_VERSION` in
+- [x] Update `IDRIS2_MINIMUM_COMPAT_VERSION` in
   `.github/workflows/ci-idris2-and-libs.yml` to point to the new release
   version.
 - [x] If not already pending, create a PR to against
