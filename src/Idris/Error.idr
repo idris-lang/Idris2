@@ -11,7 +11,7 @@ import Idris.Resugar
 import Idris.Syntax
 import Idris.Pretty
 
-import Parser.Source
+import Idris.Parser.Core.Source
 
 import Data.List
 import Data.Either

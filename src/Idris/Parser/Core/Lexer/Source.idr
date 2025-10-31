@@ -1,6 +1,6 @@
-module Parser.Lexer.Source
+module Idris.Parser.Core.Lexer.Source
 
-import public Parser.Lexer.Common
+import public Idris.Parser.Core.Lexer.Common
 
 import Data.Either
 import Data.List

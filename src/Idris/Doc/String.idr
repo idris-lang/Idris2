@@ -35,7 +35,7 @@ import Libraries.Data.WithDefault
 import public Libraries.Text.PrettyPrint.Prettyprinter
 import public Libraries.Text.PrettyPrint.Prettyprinter.Util
 
-import Parser.Lexer.Source
+import Idris.Parser.Core.Lexer.Source
 
 import public Idris.Doc.Annotations
 import Idris.Doc.Keywords

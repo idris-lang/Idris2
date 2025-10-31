@@ -13,7 +13,7 @@ import Core.Value
 
 import Idris.REPL.Opts
 import Idris.Syntax
-import Parser.Lexer.Source
+import Idris.Parser.Core.Lexer.Source
 
 import TTImp.Elab
 import TTImp.Elab.Check

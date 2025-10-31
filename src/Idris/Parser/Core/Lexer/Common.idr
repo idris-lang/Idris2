@@ -1,4 +1,4 @@
-module Parser.Lexer.Common
+module Idris.Parser.Core.Lexer.Common
 
 import public Libraries.Text.Lexer
 
