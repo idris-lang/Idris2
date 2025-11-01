@@ -75,6 +75,15 @@ by running following command::
 
     yay -S idris2
 
+Installing Using DNF
+--------------------
+
+If you are using a Fedora based distro or EPEL you can install idris2 with::
+
+    sudo dnf install idris2
+
+See the `Fedora package page <https://src.fedoraproject.org/rpms/idris2>`_ for details.
+
 Checking Installation
 =====================
 
