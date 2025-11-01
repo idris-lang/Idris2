@@ -114,17 +114,17 @@ unescape' escapeChars (x::xs)
                                                              !(unescape' escapeChars rest)
                    xs => case span isDigit xs of
                               ([], (a :: b :: c :: rest)) =>
-                                case getEsc (pack [a, b, c]) of
+                                case getEsc (fastPack [a, b, c]) of
                                      Just v => Just (v :: !(unescape' escapeChars rest))
-                                     Nothing => case getEsc (pack [a, b]) of
+                                     Nothing => case getEsc (fastPack [a, b]) of
                                                      Just v => Just (v :: !(unescape' escapeChars (c :: rest)))
                                                      Nothing => unescape' escapeChars xs
                               ([], (a :: b :: [])) =>
-                                case getEsc (pack [a, b]) of
+                                case getEsc (fastPack [a, b]) of
                                      Just v => Just (v :: [])
                                      Nothing => unescape' escapeChars xs
                               ([], rest) => unescape' escapeChars rest
-                              (ds, rest) => Just $ cast (cast {to=Int} (pack ds)) ::
+                              (ds, rest) => Just $ cast (cast {to=Int} (fastPack ds)) ::
                                               !(unescape' escapeChars rest)
          else Just $ x :: !(unescape' escapeChars xs)
   where
@@ -141,4 +141,4 @@ unescape' escapeChars (x::xs)
 export
 unescape : Nat -> String -> Maybe String
 unescape hashtag x = let escapeChars = '\\' :: replicate hashtag '#' in
-                       pack <$> (unescape' escapeChars (unpack x))
+                       fastPack <$> (unescape' escapeChars (unpack x))

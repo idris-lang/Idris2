@@ -167,7 +167,7 @@ tokenise pred line col acc tmap str
                Just (tok, rest) =>
                  let line' = line + cast (countNLs tok)
                      col' = getCols tok col in
-                     Just (MkBounded (fn (pack (reverse tok))) False (MkBounds line col line' col'),
+                     Just (MkBounded (fn (fastPack (reverse tok))) False (MkBounds line col line' col'),
                            line', col', rest)
                Nothing => getFirstToken ts str
 
@@ -176,7 +176,7 @@ lexTo : (a -> Bool) ->
         TokenMap a -> String -> (List (WithBounds a), (Int, Int, String))
 lexTo pred tmap str
     = let (ts, (l, c, str')) = tokenise pred 0 0 [] tmap (unpack str) in
-          (ts, (l, c, pack str'))
+          (ts, (l, c, fastPack str'))
 
 ||| Given a mapping from lexers to token generating functions (the
 ||| TokenMap a) and an input string, return a list of recognised tokens,
