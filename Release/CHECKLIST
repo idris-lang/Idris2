@@ -13,12 +13,6 @@
     - [x] `test/test.ipkg`
 - [x] Change version number in idris2api.ipkg
 - [x] Change version number in flake.nix
-- [x] Change version number in the test outputs (TODO: make this step unnecessary!)
-  - [x] `tests/idris2/pkg/pkg006/expected`
-  - [x] `tests/idris2/pkg/pkg010/expected`
-  - [x] `tests/idris2/pkg/pkg015/expected`
-  - [x] `tests/idris2/pkg/pkg017/expected`
-  - [x] `tests/idris2/pkg/pkg020/expected`
 - [x] Move CHANGELOG_NEXT.md entries into CHANGELOG.md under a heading for the
      upcoming release version. Reset CHANGELOG_NEXT.md, leaving the
      "[Next version]"-heading blank.
