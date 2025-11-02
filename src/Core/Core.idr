@@ -6,6 +6,7 @@ import public Core.WithData
 
 import Data.List1
 import Data.SnocList
+import Data.String
 import Data.Vect
 
 import Libraries.Data.List01
@@ -265,11 +266,11 @@ Show Error where
             case cov of
                  IsCovering => "Oh yes it is (Internal error!)"
                  MissingCases cs => "Missing cases:\n\t" ++
-                                           showSep "\n\t" (map show cs)
+                                           joinBy "\n\t" (map show cs)
                  NonCoveringCall ns => "Calls non covering function"
                                            ++ (case ns of
                                                    [fn] => " " ++ show fn
-                                                   _ => "s: " ++ showSep ", " (map show ns))
+                                                   _ => "s: " ++ joinBy ", " (map show ns))
 
   show (NotTotal fc n r)
        = show fc ++ ":" ++ show n ++ " is not total"
@@ -315,12 +316,12 @@ Show Error where
   show (NotRecordType fc ty)
       = show fc ++ ":" ++ show ty ++ " is not a record type"
   show (IncompatibleFieldUpdate fc flds)
-      = show fc ++ ":Field update " ++ showSep "->" flds ++ " not compatible with other updates"
+      = show fc ++ ":Field update " ++ joinBy "->" flds ++ " not compatible with other updates"
   show (InvalidArgs fc env ns tm)
      = show fc ++ ":" ++ show ns ++ " are not valid arguments in " ++ show tm
   show (TryWithImplicits fc env imps)
      = show fc ++ ":Need to bind implicits "
-          ++ showSep "," (map (\x => show (fst x) ++ " : " ++ show (snd x)) imps)
+          ++ joinBy "," (map (\x => show (fst x) ++ " : " ++ show (snd x)) imps)
           ++ "\n(The front end should probably have done this for you. Please report!)"
   show (BadUnboundImplicit fc env n ty)
       = show fc ++ ":Can't bind name " ++ nameRoot n ++
@@ -380,7 +381,7 @@ Show Error where
   show (ModuleNotFound fc ns)
       = show fc ++ ":" ++ show ns ++ " not found"
   show (CyclicImports ns)
-      = "Module imports form a cycle: " ++ showSep " -> " (map show ns)
+      = "Module imports form a cycle: " ++ joinBy " -> " (map show ns)
   show ForceNeeded = "Internal error when resolving implicit laziness"
   show (InternalError str) = "INTERNAL ERROR: " ++ str
   show (UserError str) = "Error: " ++ str
@@ -411,7 +412,7 @@ Show Error where
   show (MaybeMisspelling err ns)
        = show err ++ "\nDid you mean" ++ case ns of
            (n ::: []) => ": " ++ n ++ "?"
-           _ => " any of: " ++ showSep ", " (map show (forget ns)) ++ "?"
+           _ => " any of: " ++ joinBy ", " (map show (forget ns)) ++ "?"
   show (WarningAsError w) = show w
   show (OperatorBindingMismatch fc (DeclaredFixity expected) actual opName rhs _)
        = show fc ++ ": Operator " ++ show opName ++ " is " ++ show expected

@@ -5,6 +5,7 @@ module Core.CompileExpr
 import Core.TT
 
 import Data.List
+import Data.String
 import Data.Vect
 
 import Libraries.Data.List.SizeOf
@@ -397,8 +398,8 @@ Show CFType where
   show CFWorld = "%World"
   show (CFFun s t) = show s ++ " -> " ++ show t
   show (CFIORes t) = "IORes " ++ show t
-  show (CFStruct n args) = "struct " ++ show n ++ " " ++ showSep " " (map show args)
-  show (CFUser n args) = show n ++ " " ++ showSep " " (map show args)
+  show (CFStruct n args) = "struct " ++ show n ++ " " ++ joinBy " " (map show args)
+  show (CFUser n args) = show n ++ " " ++ joinBy " " (map show args)
 
 export
 covering
