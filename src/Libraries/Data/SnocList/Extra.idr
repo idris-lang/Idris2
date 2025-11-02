@@ -2,6 +2,7 @@ module Libraries.Data.SnocList.Extra
 
 import Data.Nat
 import Data.SnocList
+
 import Syntax.PreorderReasoning
 
 -- TODO left-to-right reversal of the stream
@@ -49,3 +50,26 @@ lengthDistributesOverFish sx (y :: ys) = Calc $
   ~~ S (length sx) + length ys    ...( Refl )
   ~~ length sx + S (length ys)    ...( plusSuccRightSucc _ _ )
   ~~ length sx + length (y :: ys) ...( Refl )
+
+||| Insert some separator between the elements of a snoc-list.
+|||
+||| @ sep the value to intersperse
+||| @ xs  the snoc-list of elements to intersperse with the separator
+|||
+||| ```idris example
+||| > with SnocList (intersperse ',' [<'a', 'b', 'c', 'd', 'e'])
+||| [<'a', ',', 'b', ',', 'c', ',', 'd', ',', 'e']
+||| ```
+public export
+intersperse : (sep : a) -> (xs : SnocList a) -> SnocList a
+intersperse sep [<]     = [<]
+intersperse sep [<x]    = [<x]
+intersperse sep (xs:<x) = intersperse sep xs :< sep :< x
+
+||| Joins the strings using the provided separator
+||| ```idris example
+||| joinBy ", " [<"A", "BC", "D"] === "A, BC, D"
+||| ```
+public export
+joinBy : String -> SnocList String -> String
+joinBy sep ws = concat (intersperse sep ws)
