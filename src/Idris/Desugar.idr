@@ -13,7 +13,6 @@ import Core.Unify
 import Libraries.Data.List.Extra
 import Libraries.Data.StringMap
 import Libraries.Data.ANameMap
-import Libraries.Data.SortedMap
 
 import Idris.Doc.String
 import Idris.Error
@@ -44,6 +43,7 @@ import Libraries.Text.PrettyPrint.Prettyprinter
 import Data.Maybe
 import Data.List
 import Data.List.Views
+import Data.SortedMap
 import Data.String
 
 -- Convert high level Idris declarations (PDecl from Idris.Syntax) into

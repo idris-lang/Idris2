@@ -10,13 +10,13 @@ import public Core.WithData
 
 import public Algebra.SizeChange
 
+import Data.IOArray
 import Data.IORef
-import Data.String
 import Data.List1
 import Data.SnocList
+import Data.String
 
 import Libraries.Data.IntMap
-import Libraries.Data.IOArray
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
 import Libraries.Data.UserNameMap

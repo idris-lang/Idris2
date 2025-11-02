@@ -18,7 +18,6 @@ import Libraries.Data.NatSet
 import Libraries.Data.VarSet
 
 import Libraries.Data.List.SizeOf
-import Libraries.Data.List.Quantifiers.Extra as Lib
 
 %default covering
 

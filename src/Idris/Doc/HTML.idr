@@ -5,8 +5,8 @@ import Core.Core
 import Core.Directory
 
 import Data.String
+import Data.SortedMap
 
-import Libraries.Data.SortedMap
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Render.HTML
 import Libraries.Text.PrettyPrint.Prettyprinter.SimpleDocTree

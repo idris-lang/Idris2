@@ -11,11 +11,11 @@ import Core.Name
 import Core.Options
 import Core.TT
 
+import Data.IOArray
 import Data.List1
 import Data.Vect
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
-import Libraries.Data.IOArray
 import Libraries.Data.SparseMatrix
 import Libraries.Data.WithDefault
 
@@ -1209,6 +1209,6 @@ Core.Context.decode gam idx update (Coded ns bin)
          let a = getContent gam
          arr <- get Arr
          def' <- resolved gam (restoreNS ns def)
-         when update $ coreLift $ writeArray arr idx (Decoded def')
+         when update $ coreLift_ $ writeArray arr idx (Decoded def')
          pure def'
 Core.Context.decode gam idx update (Decoded def) = pure def
