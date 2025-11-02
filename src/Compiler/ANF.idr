@@ -5,6 +5,7 @@ import Compiler.LambdaLift
 import Core.CompileExpr
 import Core.Context
 
+import Data.String
 import Data.SortedSet
 import Data.Vect
 
@@ -82,26 +83,26 @@ mutual
   Show ANF where
     show (AV _ v) = show v
     show (AAppName fc lazy n args)
-        = show n ++ showLazy lazy ++ "(" ++ showSep ", " (map show args) ++ ")"
+        = show n ++ showLazy lazy ++ "(" ++ joinBy ", " (map show args) ++ ")"
     show (AUnderApp fc n m args)
         = "<" ++ show n ++ " underapp " ++ show m ++ ">(" ++
-          showSep ", " (map show args) ++ ")"
+          joinBy ", " (map show args) ++ ")"
     show (AApp fc lazy c arg)
         = show c ++ showLazy lazy ++ " @ (" ++ show arg ++ ")"
     show (ALet fc x val sc)
         = "%let v" ++ show x ++ " = (" ++ show val ++ ") in (" ++ show sc ++ ")"
     show (ACon fc n _ t args)
-        = "%con " ++ show n ++ "(" ++ showSep ", " (map show args) ++ ")"
+        = "%con " ++ show n ++ "(" ++ joinBy ", " (map show args) ++ ")"
     show (AOp fc lazy op args)
-        = "%op " ++ show op ++ showLazy lazy ++ "(" ++ showSep ", " (toList (map show args)) ++ ")"
+        = "%op " ++ show op ++ showLazy lazy ++ "(" ++ joinBy ", " (toList (map show args)) ++ ")"
     show (AExtPrim fc lazy p args)
-        = "%extprim " ++ show p ++ showLazy lazy ++ "(" ++ showSep ", " (map show args) ++ ")"
+        = "%extprim " ++ show p ++ showLazy lazy ++ "(" ++ joinBy ", " (map show args) ++ ")"
     show (AConCase fc sc alts def)
         = "%case " ++ show sc ++ " of { "
-             ++ showSep "| " (map show alts) ++ " " ++ show def ++ " }"
+             ++ joinBy "| " (map show alts) ++ " " ++ show def ++ " }"
     show (AConstCase fc sc alts def)
         = "%case " ++ show sc ++ " of { "
-             ++ showSep "| " (map show alts) ++ " " ++ show def ++ " }"
+             ++ joinBy "| " (map show alts) ++ " " ++ show def ++ " }"
     show (APrimVal _ x) = show x
     show (AErased _) = "___"
     show (ACrash _ x) = "%CRASH(" ++ show x ++ ")"
@@ -111,7 +112,7 @@ mutual
   Show AConAlt where
     show (MkAConAlt n _ t args sc)
         = "%conalt " ++ show n ++
-             "(" ++ showSep ", " (map showArg args) ++ ") => " ++ show sc
+             "(" ++ joinBy ", " (map showArg args) ++ ") => " ++ show sc
       where
         showArg : Int -> String
         showArg i = "v" ++ show i

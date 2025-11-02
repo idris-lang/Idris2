@@ -123,7 +123,7 @@ Show Path where
       sep = String.singleton dirSeparator
       showVol = maybe "" show path.volume
       showRoot = if path.hasRoot then sep else ""
-      showBody = join sep $ map show path.body
+      showBody = joinBy sep $ map show path.body
       showTrail = if path.hasTrailSep then sep else ""
     in
       showVol ++ showRoot ++ showBody ++ showTrail

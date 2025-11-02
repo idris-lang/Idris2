@@ -8,19 +8,20 @@ import Compiler.Scheme.Common
 
 import Core.Directory
 import Protocol.Hex
-import Libraries.Data.String.Builder
-import Libraries.Utils.Path
+
+import Idris.Env
+import Idris.Syntax
 
 import Data.Maybe
 import Data.String
 import Data.SortedSet
 
-import Idris.Env
-import Idris.Syntax
-
 import System
 import System.Directory
 import System.Info
+
+import Libraries.Data.String.Builder
+import Libraries.Utils.Path
 
 %default covering
 
@@ -161,7 +162,7 @@ getLibVers libspec
                         (root, rest) => (root, "")
            (fn :: vers) =>
                (fst (span (/='.') fn),
-                  "'(" ++ showSep " " (map show vers) ++ " #f)" )
+                  "'(" ++ joinBy " " (map show vers) ++ " #f)" )
 
 cToRkt : CFType -> Builder -> Builder
 cToRkt CFChar op = "(integer->char " ++ op ++ ")"

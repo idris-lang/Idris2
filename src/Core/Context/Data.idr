@@ -5,6 +5,8 @@ module Core.Context.Data
 import Core.Context.Log
 import Core.Normalise
 
+import Data.String
+
 import Libraries.Data.NatSet
 import Libraries.Data.WithDefault
 

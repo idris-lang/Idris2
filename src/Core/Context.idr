@@ -11,17 +11,21 @@ import        Core.Options
 import public Core.Options.Log
 import public Core.TT
 
-import Libraries.Utils.Binary
-import Libraries.Utils.Path
-import Libraries.Utils.Scheme
-import Libraries.Text.PrettyPrint.Prettyprinter
-
 import Idris.Syntax.Pragmas
 
 import Data.Either
 import Data.IOArray
 import Data.List1
 import Data.Nat
+import Data.String
+
+import System.Clock
+import System.Directory
+
+import Libraries.Utils.Binary
+import Libraries.Utils.Path
+import Libraries.Utils.Scheme
+import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
@@ -29,9 +33,6 @@ import Libraries.Data.StringMap
 import Libraries.Data.UserNameMap
 import Libraries.Data.WithDefault
 import Libraries.Text.Distance.Levenshtein
-
-import System.Clock
-import System.Directory
 
 %default covering
 
@@ -1817,7 +1818,7 @@ setDetermining fc tyn args
              else getPos (1 + i) ns sc
     getPos _ [] _ = pure NatSet.empty
     getPos _ ns ty = throw (GenericMsg fc ("Unknown determining arguments: "
-                           ++ showSep ", " (map show ns)))
+                           ++ joinBy ", " (map show ns)))
 
 export
 setDetags : {auto c : Ref Ctxt Defs} ->
