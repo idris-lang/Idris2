@@ -1176,11 +1176,10 @@ mutual
            cons' <- traverse (\ ntm => do tm' <- desugar AnyExpr (ps ++ paramNames)
                                                          (snd ntm)
                                           pure (fst ntm, tm')) cons
-           params' <- concat <$> traverse (\ (MkBasicMultiBinder rig nm tm) =>
-                         do tm' <- desugar AnyExpr ps tm
-                            pure $ map (\n => (n, (rig, tm'))) (forget nm))
-                      params
-           let _ = the (List (WithFC Name, RigCount, RawImp)) params'
+           params' : List (WithFC Name, RigCount, RawImp) <-
+                        map concat $ for params $ \ (MkBasicMultiBinder rig nm tm) =>
+                           do tm' <- desugar AnyExpr ps tm
+                              pure $ map (, rig, tm') (forget nm)
            -- Look for bindable names in all the constraints and parameters
            let mnames = map dropNS (definedIn (map val body))
            bnames <- ifThenElse (not !isUnboundImplicits) (pure [])
@@ -1224,8 +1223,7 @@ mutual
            cons' <- for cons $ \ (n, tm) =>
                      do tm' <- desugar AnyExpr ps tm
                         pure (n, tm')
-           params' <- traverse (desugar AnyExpr ps) params
-           let _ = the (List RawImp) params'
+           params' : List RawImp <- traverse (desugar AnyExpr ps) params
            -- Look for bindable names in all the constraints and parameters
            bnames <- ifThenElse (not !isUnboundImplicits) (pure [])
              $ map concat
@@ -1265,35 +1263,28 @@ mutual
         = PPi rec.fc c p (Just n.val) t (mkRecType (MkPBinder p (MkBasicMultiBinder c (x ::: xs) t) :: ts))
   desugarDecl ps rec@(MkWithData _ $ PRecord doc vis mbtot (MkPRecord tn params opts conname_in fields))
       = do addDocString tn doc
-           params' <- concat <$> traverse (\ (MkPBinder info (MkBasicMultiBinder rig names tm)) =>
-                          do tm' <- desugar AnyExpr ps tm
-                             p'  <- mapDesugarPiInfo ps info
-                             let allBinders = map (\nm => Mk [rig, nm] (MkPiBindData p' tm')) (forget names)
-                             pure allBinders)
-                        params
-           let _ = the (List ImpParameter) params'
-           let fnames = concat $ map getfname fields
-           let paramNames = concatMap (map val . forget . names . bind) params
-           let _ = the (List Name) fnames
+           params' : List ImpParameter <-
+              map concat $ for params $ \ (MkPBinder info (MkBasicMultiBinder rig names tm)) =>
+                 do tm' <- desugar AnyExpr ps tm
+                    p'  <- mapDesugarPiInfo ps info
+                    let allBinders = map (\nm => Mk [rig, nm] (MkPiBindData p' tm')) (forget names)
+                    pure allBinders
+           let fnames : List Name = concatMap getfname fields
+           let paramNames : List Name = concatMap (map val . forget . names . bind) params
+
            -- Look for bindable names in the parameters
+           let bnames : List (Name, Name) =
+                if !isUnboundImplicits
+                   then concatMap (findBindableNames True (ps ++ fnames ++ paramNames) [])
+                                  (map (boundType . val) params')
+                   else []
 
-           let bnames = if !isUnboundImplicits
-                        then concatMap (findBindableNames True
-                                         (ps ++ fnames ++ paramNames) [])
-                                       (map (boundType . val) params')
-                        else []
-           let _ = the (List (Name, Name)) bnames
-
-           let paramsb = map (map (mapType (doBind bnames))) params'
-           let _ = the (List ImpParameter) paramsb
+           let paramsb : List ImpParameter = map (map $ mapType $ doBind bnames) params'
            let recName = nameRoot tn
-           fields' <- traverse (desugarField (ps ++ fnames ++ paramNames)
-                                             (mkNamespace recName))
-                               fields
-           let _ = the (List $ List IField) fields'
-           let conname = maybe (mkConName tn) val conname_in
+           fields' : List (List IField) <- for fields (desugarField (ps ++ fnames ++ paramNames)
+                                                                    (mkNamespace recName))
+           let conname : Name = maybe (mkConName tn) val conname_in
            whenJust (get "doc" <$> conname_in) (addDocString conname)
-           let _ = the Name conname
            pure [IRecord rec.fc (Just recName)
                          vis mbtot (Mk [rec.fc] $ MkImpRecord (Mk [NoFC tn] paramsb) (Mk [NoFC conname, opts] (concat fields')))]
     where
