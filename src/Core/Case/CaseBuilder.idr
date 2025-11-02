@@ -17,6 +17,7 @@ import Data.DPair
 import Data.List
 import Data.List.Quantifiers
 import Data.SnocList
+import Data.SortedSet
 import Data.String
 import Data.Vect
 import Libraries.Data.IMaybe
@@ -24,7 +25,6 @@ import Libraries.Data.List.SizeOf
 import Libraries.Data.List.LengthMatch
 import Libraries.Data.List01
 import Libraries.Data.List01.Quantifiers
-import Libraries.Data.SortedSet
 import Libraries.Data.SnocList.SizeOf
 import Libraries.Data.SnocList.LengthMatch
 import Libraries.Data.SnocList.HasLength

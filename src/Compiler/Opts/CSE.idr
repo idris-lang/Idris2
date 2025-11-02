@@ -38,9 +38,9 @@ import Core.TT
 import Core.Ord
 import Data.List
 import Data.String
+import Data.SortedSet
+import Data.SortedMap
 import Data.Vect
-import Libraries.Data.SortedSet
-import Libraries.Data.SortedMap
 
 import Libraries.Data.Erased
 import Libraries.Data.List.SizeOf

@@ -21,13 +21,13 @@ import TTImp.Elab.Prim
 import Data.List
 import Data.List1
 import Data.Maybe
+import Data.SortedSet
+import Data.SortedMap
 import Data.String
 
 import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
-import Libraries.Data.SortedSet
-import Libraries.Data.SortedMap
 import Libraries.Data.StringMap as S
 import Libraries.Data.String.Extra
 import Libraries.Data.WithDefault
