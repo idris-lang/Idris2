@@ -17,6 +17,8 @@ import TTImp.Unelab
 
 import Protocol.Hex
 
+import Data.String
+
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
 import Libraries.Data.WithDefault
@@ -268,7 +270,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
                                       pure (show (i, arg'))) sargs
                       pure $ "Specialising " ++ show fnfull ++
                              " (" ++ show fn ++ ") -> \{show pename} by " ++
-                             showSep ", " args'
+                             joinBy ", " args'
            let sty = specialiseTy 0 staticargs (type gdef)
            logTermNF "specialise" 3 ("Specialised type " ++ show pename) Env.empty sty
 
@@ -298,13 +300,13 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
            logC "specialise" 5 $
                    do inpats <- traverse unelabDef pats
                       pure $ "Attempting to specialise:\n" ++
-                             showSep "\n" (map showPat inpats)
+                             joinBy "\n" (map showPat inpats)
 
            Just newpats <- getSpecPats fc pename fn stk !(nf defs Env.empty (type gdef))
                                        sargs staticargs pats
                 | Nothing => pure (applyStackWithFC (Ref fc Func fn) stk)
            log "specialise" 5 $ "New patterns for " ++ show pename ++ ":\n" ++
-                    showSep "\n" (map showPat newpats)
+                    joinBy "\n" (map showPat newpats)
            processDecl [InPartialEval] (MkNested []) Env.empty
                        (IDef fc (Resolved peidx) newpats)
            setAllPublic False

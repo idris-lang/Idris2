@@ -8,15 +8,13 @@ import Compiler.Scheme.Common
 
 import Core.Directory
 import Protocol.Hex
-import Libraries.Utils.Path
-import Libraries.Data.String.Builder
+
+import Idris.Env
+import Idris.Syntax
 
 import Data.Maybe
 import Data.SortedSet
 import Data.String
-
-import Idris.Env
-import Idris.Syntax
 
 import System
 import System.Directory
@@ -24,6 +22,8 @@ import System.Info
 
 import Libraries.Data.Version
 import Libraries.Utils.String
+import Libraries.Utils.Path
+import Libraries.Data.String.Builder
 
 %default covering
 
@@ -93,7 +93,7 @@ schHeader chez libs whole
       [(i3nt ti3nt a6nt ta6nt) (load-shared-object "msvcrt.dll")]
       [else (load-shared-object "libc.so")])
 
-    \{ showSep "\n" (map (\x => "(load-shared-object \"" ++ escapeStringChez x ++ "\")") libs) }
+    \{ joinBy "\n" (map (\x => "(load-shared-object \"" ++ escapeStringChez x ++ "\")") libs) }
 
     \{ ifThenElse whole
                   "(let ()"

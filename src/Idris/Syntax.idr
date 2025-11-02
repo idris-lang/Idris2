@@ -7,10 +7,10 @@ import public Core.Options
 
 import TTImp.TTImp
 
+import public Idris.Syntax.Pragmas
+
 import Data.SortedMap
 import Data.String
-
-import public Idris.Syntax.Pragmas
 
 import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
@@ -819,8 +819,8 @@ parameters {0 nm : Type} (toName : nm -> Name)
   showPStr (StrLiteral _ str) = show str
   showPStr (StrInterp _ tm) = showPTerm tm
 
-  showUpdate (PSetField p v) = showSep "." p ++ " = " ++ showPTerm v
-  showUpdate (PSetFieldApp p v) = showSep "." p ++ " $= " ++ showPTerm v
+  showUpdate (PSetField p v) = joinBy "." p ++ " = " ++ showPTerm v
+  showUpdate (PSetFieldApp p v) = joinBy "." p ++ " $= " ++ showPTerm v
 
   showBasicMultiBinder (MkBasicMultiBinder rig names type)
         = "\{showCount rig} \{showNames}: \{showPTerm type}"
@@ -869,7 +869,7 @@ parameters {0 nm : Type} (toName : nm -> Name)
                  " in " ++ showPTermPrec d sc
   showPTermPrec _ (PCase _ _ tm cs)
         = "case " ++ showPTerm tm ++ " of { " ++
-            showSep " ; " (map showCase cs) ++ " }"
+            joinBy " ; " (map showCase cs) ++ " }"
       where
         showCase : PClause' nm -> String
         showCase (MkPatClause _ lhs rhs _) = showPTerm lhs ++ " => " ++ showPTerm rhs
@@ -878,7 +878,7 @@ parameters {0 nm : Type} (toName : nm -> Name)
   showPTermPrec d (PLocal _ ds sc) -- We'll never see this when displaying a normal form...
         = "let { << definitions >>  } in " ++ showPTermPrec d sc
   showPTermPrec d (PUpdate _ fs)
-        = "record { " ++ showSep ", " (map showUpdate fs) ++ " }"
+        = "record { " ++ joinBy ", " (map showUpdate fs) ++ " }"
   showPTermPrec d (PApp _ f a) =
       let catchall : Lazy String := showPTermPrec App f ++ " " ++ showPTermPrec App a in
       case f of
@@ -933,14 +933,14 @@ parameters {0 nm : Type} (toName : nm -> Name)
   showPTermPrec d (PString _ _ xs) = join " ++ " $ showPStr <$> xs
   showPTermPrec d (PMultiline _ _ indent xs) = "multiline (" ++ (join " ++ " $ showPStr <$> concat xs) ++ ")"
   showPTermPrec d (PDoBlock _ ns ds)
-        = "do " ++ showSep " ; " (map showDo ds)
+        = "do " ++ joinBy " ; " (map showDo ds)
   showPTermPrec d (PBang _ tm) = "!" ++ showPTermPrec d tm
   showPTermPrec d (PIdiom _ Nothing tm) = "[|" ++ showPTermPrec d tm ++ "|]"
   showPTermPrec d (PIdiom _ (Just ns) tm) = show ns ++ ".[|" ++ showPTermPrec d tm ++ "|]"
   showPTermPrec d (PList _ _ xs)
-        = "[" ++ showSep ", " (map (showPTermPrec d . snd) xs) ++ "]"
+        = "[" ++ joinBy ", " (map (showPTermPrec d . snd) xs) ++ "]"
   showPTermPrec d (PSnocList _ _ xs)
-        = "[<" ++ showSep ", " (map (showPTermPrec d . snd) (xs <>> [])) ++ "]"
+        = "[<" ++ joinBy ", " (map (showPTermPrec d . snd) (xs <>> [])) ++ "]"
   showPTermPrec d (PPair _ l r) = "(" ++ showPTermPrec d l ++ ", " ++ showPTermPrec d r ++ ")"
   showPTermPrec d (PDPair _ _ l (PImplicit _) r) = "(" ++ showPTermPrec d l ++ " ** " ++ showPTermPrec d r ++ ")"
   showPTermPrec d (PDPair _ _ l ty r) = "(" ++ showPTermPrec d l ++ " : " ++ showPTermPrec d ty ++
@@ -950,7 +950,7 @@ parameters {0 nm : Type} (toName : nm -> Name)
                                  " else " ++ showPTermPrec d e
   showPTermPrec d (PComprehension _ ret es)
         = "[" ++ showPTermPrec d (dePure ret) ++ " | " ++
-                 showSep ", " (map (showDo . deGuard) es) ++ "]"
+                 joinBy ", " (map (showDo . deGuard) es) ++ "]"
       where
         dePure : PTerm' nm -> PTerm' nm
         dePure tm@(PApp _ (PRef _ n) arg)

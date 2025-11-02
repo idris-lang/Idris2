@@ -6,14 +6,15 @@ import Idris.Syntax.Traversals
 import public Parser.Source
 import TTImp.TTImp
 
-import public Libraries.Text.Parser
 import Data.Either
-import Libraries.Data.IMaybe
 import Data.List.Quantifiers
 import Data.List1
 import Data.Maybe
 import Data.Nat
 import Data.String
+
+import public Libraries.Text.Parser
+import Libraries.Data.IMaybe
 import Libraries.Utils.String
 import Libraries.Data.WithDefault
 
@@ -2148,7 +2149,7 @@ mutual
   Show CmdArg where
     show NoArg = ""
     show OnOffArg = "(on|off)"
-    show (Args args) = showSep " " (map show args)
+    show (Args args) = joinBy " " (map show args)
     show arg = "<" ++ showCmdArg arg ++ ">"
 
 public export

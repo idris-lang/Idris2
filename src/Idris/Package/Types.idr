@@ -2,10 +2,13 @@ module Idris.Package.Types
 
 import Core.FC
 import Core.Name.Namespace
+
+import Idris.Version
+
 import Data.List
 import Data.Maybe
 import Data.String
-import Idris.Version
+
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
@@ -19,7 +22,7 @@ data PkgVersion = MkPkgVersion (List1 Nat)
 
 export
 Show PkgVersion where
-  show (MkPkgVersion vs) = showSep "." (map show (forget vs))
+  show (MkPkgVersion vs) = joinBy "." (map show (forget vs))
 
 export
 Pretty Void PkgVersion where
