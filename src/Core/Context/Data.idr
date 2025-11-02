@@ -8,6 +8,7 @@ import Core.Normalise
 
 import Data.List
 import Data.Maybe
+import Data.String
 
 import Libraries.Data.NatSet
 import Libraries.Data.WithDefault

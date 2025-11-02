@@ -419,7 +419,7 @@ unelabNest mode nest env (Meta fc n i args)
 
     showNScope : List Name -> String
     showNScope [] = "[no locals in scope]"
-    showNScope ns = "[locals in scope: " ++ showSep ", " (map show (nub ns)) ++ "]"
+    showNScope ns = "[locals in scope: " ++ joinBy ", " (map show (nub ns)) ++ "]"
 
     showScope : List (Term vars) -> String
     showScope ts = " " ++ showNScope (mapMaybe toName ts)

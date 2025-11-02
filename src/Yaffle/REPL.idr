@@ -24,6 +24,8 @@ import TTImp.ProcessDecls
 import TTImp.TTImp
 import TTImp.Unelab
 
+import Data.String
+
 import Parser.Source
 
 %default covering
@@ -107,13 +109,13 @@ process (Missing n_in)
                              case isCovering tot of
                                   MissingCases cs =>
                                      coreLift_ (putStrLn (show fn ++ ":\n" ++
-                                                 showSep "\n" (map show cs)))
+                                                 joinBy "\n" (map show cs)))
                                   NonCoveringCall ns =>
                                      coreLift_ (putStrLn
                                          (show fn ++ ": Calls non covering function"
                                            ++ case ns of
                                                    [fn] => " " ++ show fn
-                                                   _ => "s: " ++ showSep ", " (map show ns)))
+                                                   _ => "s: " ++ joinBy ", " (map show ns)))
                                   _ => coreLift_ $ putStrLn (show fn ++ ": All cases covered"))
                         (map fst ts)
                        pure True

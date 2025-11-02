@@ -101,7 +101,7 @@ schHeader chez libs whole
       [(i3nt ti3nt a6nt ta6nt) (load-shared-object "msvcrt.dll")]
       [else (load-shared-object "libc.so")])
 
-    \{ showSep "\n" (map (\x => "(load-shared-object \"" ++ escapeStringChez x ++ "\")") libs) }
+    \{ joinBy "\n" (map (\x => "(load-shared-object \"" ++ escapeStringChez x ++ "\")") libs) }
 
     \{ ifThenElse whole
                   "(let ()"

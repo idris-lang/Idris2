@@ -139,7 +139,7 @@ showCA : {vars : _} -> (indent : String) -> CaseAlt vars  -> String
 showCT indent (Case {name} idx prf ty alts)
   = "case " ++ show name ++ "[" ++ show idx ++ "] : " ++ show ty ++ " of"
   ++ "\n" ++ indent ++ " { "
-  ++ showSep ("\n" ++ indent ++ " | ")
+  ++ joinBy ("\n" ++ indent ++ " | ")
              (assert_total (map (showCA ("  " ++ indent)) alts))
   ++ "\n" ++ indent ++ " }"
 showCT indent (STerm i tm) = "[" ++ show i ++ "] " ++ show tm
@@ -147,7 +147,7 @@ showCT indent (Unmatched msg) = "Error: " ++ show msg
 showCT indent Impossible = "Impossible"
 
 showCA indent (ConCase n tag args sc)
-        = showSep " " (map show (n :: args)) ++ " => " ++
+        = joinBy " " (map show (n :: args)) ++ " => " ++
           showCT indent sc
 showCA indent (DelayCase _ arg sc)
         = "Delay " ++ show arg ++ " => " ++ showCT indent sc

@@ -1146,7 +1146,7 @@ processDef opts nest env fc n_in cs_in
                      do mc <- traverse toFullNames missCase
                         pure ("Initially missing in " ++
                                  show !(getFullName (Resolved n)) ++ ":\n" ++
-                                showSep "\n" (map show mc))
+                                joinBy "\n" (map show mc))
              -- Filter out the ones which are impossible
              missImp <- traverse (checkImpossible n mult) missCase
              -- Filter out the ones which are actually matched (perhaps having

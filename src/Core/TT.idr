@@ -294,13 +294,13 @@ Show PartialReason where
   show (BadCall [n])
       = "possibly not terminating due to call to " ++ show n
   show (BadCall ns)
-      = "possibly not terminating due to calls to " ++ showSep ", " (map show ns)
+      = "possibly not terminating due to calls to " ++ joinBy ", " (map show ns)
   show (BadPath [_] n)
       = "possibly not terminating due to call to " ++ show n
   show (BadPath init n)
-      = "possibly not terminating due to function " ++ show n ++ " being reachable via " ++ showSep " -> " (map show init)
+      = "possibly not terminating due to function " ++ show n ++ " being reachable via " ++ joinBy " -> " (map show init)
   show (RecPath loop)
-      = "possibly not terminating due to recursive path " ++ showSep " -> " (map (show . snd) loop)
+      = "possibly not terminating due to recursive path " ++ joinBy " -> " (map (show . snd) loop)
 
 export
 Pretty Void PartialReason where
@@ -349,7 +349,7 @@ Show Covering where
   show (NonCoveringCall [f])
      = "not covering due to call to function " ++ show f
   show (NonCoveringCall cs)
-     = "not covering due to calls to functions " ++ showSep ", " (map show cs)
+     = "not covering due to calls to functions " ++ joinBy ", " (map show cs)
 
 export
 Pretty Void Covering where

@@ -23,6 +23,7 @@ import TTImp.Utils
 import Control.Monad.State
 import Data.List
 import Data.SnocList
+import Data.String
 import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
 
@@ -44,7 +45,7 @@ mkImplName : FC -> Name -> List RawImp -> Name
 mkImplName fc n ps
     = DN (show n ++ " implementation at " ++ replaceSep (show fc))
          (UN $ Basic ("__Impl_" ++ show n ++ "_" ++
-          showSep "_" (map show ps)))
+          joinBy "_" (map show ps)))
 
 bindConstraints : FC -> PiInfo RawImp ->
                   List (Maybe Name, RawImp) -> RawImp -> RawImp
@@ -233,7 +234,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
                log "elab.implementation" 5 $ "Missing methods: " ++ show missing
                when (not (isNil missing)) $
                  throw (GenericMsg ifc ("Missing methods in " ++ show iname ++ ": "
-                                        ++ showSep ", " (map show missing)))
+                                        ++ joinBy ", " (map show missing)))
 
                -- Add the 'using' hints
                defs <- get Ctxt
@@ -382,7 +383,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
         = DN (show n)
              (UN $ Basic (show n ++ "_" ++ show iname ++ "_" ++
                      (if named then show impName_in else "") ++
-                     showSep "_" (map show ps)))
+                     joinBy "_" (map show ps)))
 
     applyCon : Name -> Name -> Core (Name, RawImp)
     applyCon impl n

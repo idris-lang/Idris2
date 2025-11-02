@@ -506,7 +506,7 @@ mutual
                       RigCount ->
                       Env Term vars -> Usage (vars ++ done) ->
                       List (Term (vars ++ done)) ->
-                      Term (vars ++ done) -> Core ()
+                      Term (Scope.addInner vars done) -> Core ()
       checkEnvUsage s rig [<] usage args tm = pure ()
       checkEnvUsage s rig {done} {vars = xs :< nm} (env :< b) usage args tm
           = do let pos = mkVar s

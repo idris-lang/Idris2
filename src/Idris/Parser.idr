@@ -2152,7 +2152,7 @@ mutual
   Show CmdArg where
     show NoArg = ""
     show OnOffArg = "(on|off)"
-    show (Args args) = showSep " " (map show args)
+    show (Args args) = joinBy " " (map show args)
     show arg = "<" ++ showCmdArg arg ++ ">"
 
 public export
