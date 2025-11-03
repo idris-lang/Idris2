@@ -42,22 +42,25 @@ void idris2_dumpMemoryStats(void) {
 void idris2_dumpMemoryStats() {}
 #endif
 
-Value *idris2_newValue(size_t size)
-{
+Value *idris2_newValue(size_t size) {
   /* Try to get memory aligned to pointer-size. Prefer C11 aligned_alloc
-    (not available on some platforms like older macOS), then posix_memalign,
-    and finally fall back to malloc which typically returns pointer-aligned
-    memory suitable for our needs. */
-#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) && \
+     (not available on some platforms like older macOS), then posix_memalign,
+     and finally fall back to malloc which typically returns pointer-aligned
+     memory suitable for our needs. */
+#if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) &&              \
     !defined(__APPLE__) && !defined(_WIN32)
-  Value *retVal = (Value *)aligned_alloc(sizeof(void *),
-                                        ((size + sizeof(void *) - 1) / sizeof(void *)) * sizeof(void *));
-#elif ( (defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L)) || \
-        (defined(_XOPEN_SOURCE) && (_XOPEN_SOURCE >= 600))            ) && \
+  Value *retVal = (Value *)aligned_alloc(
+      sizeof(void *),
+      ((size + sizeof(void *) - 1) / sizeof(void *)) * sizeof(void *));
+#elif ((defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L)) ||           \
+       (defined(_XOPEN_SOURCE) && (_XOPEN_SOURCE >= 600))) &&                  \
     !defined(_WIN32)
   Value *retVal = NULL;
-  IDRIS2_REFC_VERIFY(posix_memalign((void**)&retVal, sizeof(void *), 
-        ((size + sizeof(void *) - 1) / sizeof(void *)) * sizeof(void *)) == 0, "posix_memalign failed");
+  IDRIS2_REFC_VERIFY(
+      posix_memalign((void **)&retVal, sizeof(void *),
+                     ((size + sizeof(void *) - 1) / sizeof(void *)) *
+                         sizeof(void *)) == 0,
+      "posix_memalign failed");
 #else
   Value *retVal = (Value *)malloc(size);
 #endif
