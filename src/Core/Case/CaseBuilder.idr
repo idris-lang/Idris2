@@ -4,17 +4,14 @@ import Core.Case.CaseTree
 import Core.Case.Util
 import Core.Context
 import Core.Context.Log
-import Core.Core
 import Core.Env
 import Core.Normalise
 import Core.Options
-import Core.TT
 import Core.Value
 
 import Idris.Pretty.Annotations
 
 import Data.DPair
-import Data.List
 import Data.List.Quantifiers
 import Data.SortedSet
 import Data.String

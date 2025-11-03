@@ -1,12 +1,8 @@
 module TTImp.ProcessParams
 
-import Core.Context
-import Core.Context.Log
 import Core.Env
-import Core.TT
-import Core.Unify
+import Core.UnifyState
 import Core.Metadata
-import Core.Normalise
 
 import Idris.REPL.Opts
 import Idris.Syntax

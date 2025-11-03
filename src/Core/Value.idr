@@ -1,9 +1,7 @@
 module Core.Value
 
 import Core.Context
-import Core.Core
 import Core.Env
-import Core.TT
 
 import Data.List.Quantifiers
 

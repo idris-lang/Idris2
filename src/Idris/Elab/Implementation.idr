@@ -1,11 +1,7 @@
 module Idris.Elab.Implementation
 
-import Core.Context
-import Core.Context.Log
-import Core.Core
 import Core.Env
 import Core.Metadata
-import Core.TT
 import Core.Unify
 
 import Idris.REPL.Opts
@@ -21,7 +17,6 @@ import TTImp.Unelab
 import TTImp.Utils
 
 import Control.Monad.State
-import Data.List
 import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
 

@@ -9,7 +9,6 @@ import Idris.Pretty.Annotations
 
 import Libraries.Data.NameMap
 import Libraries.Text.PrettyPrint.Prettyprinter
-import Libraries.Data.String.Extra -- needed for boostrapping
 import Libraries.Data.List.SizeOf
 
 %default covering

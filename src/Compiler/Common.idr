@@ -5,22 +5,15 @@ import Compiler.ANF
 import Compiler.CompileExpr
 import Compiler.Inline
 import Compiler.LambdaLift
-import Compiler.NoMangle
 import Compiler.Opts.Constructor
 import Compiler.Opts.CSE
 import Compiler.VMCode
 
 import Core.Binary.Prims
-import Core.Context
-import Core.Context.Log
 import Core.Directory
-import Core.Options
-import Core.TT
 import Core.TTC
 
 import Data.IOArray
-import Data.List
-import Data.List1
 import Data.String as String
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
@@ -28,9 +21,8 @@ import Libraries.Data.WithDefault
 import Libraries.Utils.Scheme
 
 import Idris.Syntax
-import Idris.Env
 
-import System.Directory
+import System.File
 import System.Info
 
 %default covering

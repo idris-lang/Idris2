@@ -1,8 +1,6 @@
 ||| Messages exchanged during the IDE protocol
 module Protocol.IDE
 
-import Protocol.SExp
-
 import public Libraries.Data.Span
 
 import public Protocol.IDE.Command     as Protocol.IDE

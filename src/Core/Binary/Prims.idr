@@ -4,10 +4,8 @@ import Core.Context.Context
 import Core.Core
 
 import Data.Buffer
-import Data.List
 import Data.List.Elem
 import Data.List1
-import Data.Nat
 import Data.String
 import Data.Vect
 

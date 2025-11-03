@@ -8,7 +8,6 @@ import public Libraries.Text.PrettyPrint.Prettyprinter
 
 import Core.TT
 import Core.Core
-import Data.List
 import Parser.Unlit
 import public Parser.Support.Escaping
 

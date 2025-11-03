@@ -12,7 +12,6 @@ import Libraries.Data.String.Extra
 import Libraries.Text.Token
 import Libraries.Text.Lexer
 import Libraries.Text.Parser
-import Libraries.Text.Quantity
 
 import System.Info
 import System.File

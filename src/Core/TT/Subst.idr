@@ -4,8 +4,6 @@ import Core.Name
 import Core.Name.Scoped
 import Core.TT.Var
 
-import Data.List
-
 import Libraries.Data.List.SizeOf
 
 %default total

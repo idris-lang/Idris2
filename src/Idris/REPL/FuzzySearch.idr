@@ -1,22 +1,15 @@
 module Idris.REPL.FuzzySearch
 
-import Core.Context
 import Core.Metadata
-import Core.TT
-import Core.Unify
 
 import Idris.Doc.String
-import Idris.IDEMode.Commands
 import Idris.Pretty
 import Idris.Syntax
 
 import public Idris.REPL.Common
 
-import Data.List
-import Data.Maybe
 import Data.String
 import Libraries.Data.List.Extra
-import Libraries.Data.String.Extra
 import Libraries.Data.WithDefault
 
 %default covering

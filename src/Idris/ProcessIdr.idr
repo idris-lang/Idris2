@@ -12,14 +12,10 @@ import Compiler.Inline
 import Compiler.Interpreter.VMCode
 
 import Core.Binary
-import Core.Context
-import Core.Core
-import Core.Context.Log
 import Core.Directory
 import Core.Env
 import Core.Hash
 import Core.Metadata
-import Core.Options
 import Core.Unify
 
 import Parser.Unlit
@@ -33,13 +29,11 @@ import Idris.Desugar
 import Idris.Desugar.Mutual
 import Idris.Parser
 import Idris.REPL.Common
-import Idris.REPL.Opts
 import Idris.Syntax
 import Idris.Syntax.TTC
 import Idris.Pretty
 import Idris.Doc.String
 
-import Data.List
 import Data.SortedMap
 import Data.String
 

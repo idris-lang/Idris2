@@ -1,7 +1,6 @@
 module Idris.IDEMode.Holes
 
 import Core.Env
-import Core.Context.Log
 
 import Data.String
 
@@ -10,8 +9,6 @@ import Idris.Syntax
 import Idris.Pretty
 
 import Idris.IDEMode.Commands
-
-import Libraries.Data.String.Extra as L
 
 %default covering
 

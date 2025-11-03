@@ -5,12 +5,8 @@ import public Core.Normalise.Quote
 
 import Core.Case.CaseTree
 import Core.Context
-import Core.Core
 import Core.Env
-import Core.TT
 import Core.Value
-
-import Data.List
 
 import Libraries.Data.NatSet
 import Libraries.Data.List.SizeOf

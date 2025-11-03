@@ -1,10 +1,7 @@
 module TTImp.Interactive.Intro
 
-import Core.Core
-import Core.Context
 import Core.Env
 import Core.Metadata
-import Core.TT
 import Core.TT.Views
 import Core.Unify
 

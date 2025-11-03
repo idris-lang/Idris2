@@ -6,17 +6,11 @@ import Compiler.Inline
 import Core.Case.CaseTree
 import Core.CompileExpr
 import Core.CompileExpr.Pretty
-import Core.Context
-import Core.Context.Log
 import Core.Context.Pretty
 import Core.Directory
 import Core.Env
-import Core.FC
 import Core.LinearCheck
 import Core.Metadata
-import Core.Normalise
-import Core.Options
-import Core.TT
 import Core.TT.Views
 import Core.Termination
 import Core.Unify
@@ -61,20 +55,15 @@ import TTImp.Utils
 import TTImp.BindImplicits
 import TTImp.ProcessDecls
 
-import Data.List
-import Data.List1
 import Data.Maybe
 import Libraries.Data.NatSet
 import Libraries.Data.NameMap
 import Libraries.Data.PosMap
 import Data.Stream
 import Data.String
-import Libraries.Data.List.Extra
 import Libraries.Data.SparseMatrix
-import Libraries.Data.String.Extra
 import Libraries.Data.Tap
 import Libraries.Data.WithDefault
-import Libraries.Text.PrettyPrint.Prettyprinter.Util
 import Libraries.Utils.Path
 import Libraries.System.Directory.Tree
 

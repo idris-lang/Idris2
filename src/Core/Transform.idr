@@ -2,7 +2,6 @@ module Core.Transform
 
 import Core.Context
 import Core.Env
-import Core.TT
 
 import Libraries.Data.NameMap
 

@@ -3,7 +3,6 @@ module Core.Name
 import Data.Maybe
 import Data.String
 import Decidable.Equality
-import Libraries.Data.String.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 import Libraries.Utils.String

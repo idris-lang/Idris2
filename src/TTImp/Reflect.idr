@@ -4,7 +4,6 @@ import Core.Context
 import Core.Env
 import Core.Normalise
 import Core.Reflect
-import Core.TT
 import Core.Value
 
 import TTImp.TTImp

@@ -1,14 +1,10 @@
 module TTImp.ProcessData
 
 import Core.CompileExpr
-import Core.Context
 import Core.Context.Data
-import Core.Context.Log
-import Core.Core
 import Core.Env
 import Core.Hash
 import Core.Metadata
-import Core.Normalise
 import Core.UnifyState
 import Core.Value
 
@@ -22,7 +18,6 @@ import TTImp.Elab
 import TTImp.TTImp
 
 import Data.DPair
-import Data.List
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
 import Libraries.Data.WithDefault

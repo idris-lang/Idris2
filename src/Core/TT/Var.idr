@@ -2,14 +2,11 @@ module Core.TT.Var
 
 import Data.Fin
 import Data.List
-import Data.Nat
 import Data.So
 import Data.SnocList
-import Data.Vect
 
 import Core.Name
 import Core.Name.Scoped
-import Core.Name.CompatibleVars
 
 import Libraries.Data.SnocList.HasLength
 import Libraries.Data.SnocList.SizeOf
@@ -17,7 +14,6 @@ import Libraries.Data.SnocList.SizeOf
 import Data.List.HasLength
 import Data.DPair
 
-import Libraries.Data.List.HasLength
 import Libraries.Data.List.SizeOf
 
 import Libraries.Data.Erased

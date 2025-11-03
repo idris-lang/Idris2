@@ -1,11 +1,8 @@
 module Core.Normalise.Quote
 
 import Core.Context
-import Core.Context.Log
-import Core.Core
 import Core.Env
 import Core.Normalise.Eval
-import Core.TT
 import Core.Value
 
 %default covering

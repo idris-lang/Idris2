@@ -3,13 +3,10 @@ module TTImp.Impossible
 import Core.Context
 import Core.Env
 import Core.Normalise
-import Core.TT
 import Core.Value
 
 import TTImp.TTImp
 import TTImp.Elab.App
-
-import Data.List
 
 %default covering
 

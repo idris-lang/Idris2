@@ -3,15 +3,11 @@ module Core.LinearCheck
 import Core.Case.CaseTree
 import Core.Context
 import Core.Context.Log
-import Core.Core
 import Core.Env
 import Core.Normalise
 import Core.Options
 import Core.UnifyState
 import Core.Value
-import Core.TT
-
-import Data.List
 
 import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.SizeOf

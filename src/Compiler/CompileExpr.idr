@@ -6,15 +6,11 @@ import public Core.CompileExpr
 import Core.Context
 import Core.Context.Log
 import Core.Env
-import Core.Name
 import Core.Normalise
 import Core.Options
-import Core.TT
 import Core.Value
 
-import Data.List
 import Data.List.HasLength
-import Data.Maybe
 import Data.Vect
 
 import Libraries.Data.NatSet

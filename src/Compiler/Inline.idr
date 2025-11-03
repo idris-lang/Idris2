@@ -6,16 +6,11 @@ import Compiler.Opts.ConstantFold
 import Compiler.Opts.Identity
 import Compiler.Opts.InlineHeuristics
 
-import Core.CompileExpr
 import Core.Context
 import Core.Context.Log
-import Core.FC
 import Core.Hash
 import Core.Options
-import Core.TT
 
-import Data.Maybe
-import Data.List
 import Data.List.Quantifiers
 import Data.Vect
 

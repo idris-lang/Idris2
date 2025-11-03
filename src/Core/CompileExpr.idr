@@ -2,8 +2,6 @@
 -- Type erased, explicit case trees
 module Core.CompileExpr
 
-import Core.FC
-import Core.Name
 import Core.TT
 
 import Data.List

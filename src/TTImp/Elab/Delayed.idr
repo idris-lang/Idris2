@@ -3,19 +3,16 @@ module TTImp.Elab.Delayed
 import Core.Case.CaseTree
 import Core.Context
 import Core.Context.Log
-import Core.Core
 import Core.Env
 import Core.Metadata
 import Core.Normalise
 import Core.Unify
-import Core.TT
 import Core.Value
 
 import TTImp.Elab.Check
 
 import Libraries.Data.IntMap
 import Libraries.Data.NameMap
-import Data.List
 
 %default covering
 

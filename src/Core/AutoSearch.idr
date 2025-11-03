@@ -2,20 +2,16 @@ module Core.AutoSearch
 
 import Core.Context
 import Core.Context.Log
-import Core.Core
 import Core.Env
 import Core.Normalise
-import Core.TT
 import Core.Unify
 import Core.Value
 
 import Data.Either
-import Data.List
 import Data.Maybe
 
 import Libraries.Data.NatSet
 import Libraries.Data.List.SizeOf
-
 import Libraries.Data.WithDefault
 
 %default covering

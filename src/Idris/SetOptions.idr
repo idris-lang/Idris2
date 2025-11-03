@@ -3,10 +3,8 @@ module Idris.SetOptions
 import Compiler.Common
 
 import Core.Binary
-import Core.Context
 import Core.Directory
 import Core.Metadata
-import Core.Options
 import Core.Unify
 import Libraries.Utils.Path
 import Libraries.Data.List.Extra
@@ -20,7 +18,6 @@ import Idris.REPL
 import Idris.Syntax
 import Idris.Version
 
-import Data.List
 import Data.List1
 import Data.String
 

@@ -9,8 +9,6 @@ import Compiler.Common
 import Compiler.CompileExpr
 
 import Core.Context
-import Core.Name
-import Core.TT
 
 import Libraries.Data.String.Builder
 

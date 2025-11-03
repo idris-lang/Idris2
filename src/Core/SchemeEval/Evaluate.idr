@@ -2,13 +2,9 @@ module Core.SchemeEval.Evaluate
 
 import Core.Context
 import Core.Context.Log
-import Core.Core
 import Core.Env
 import Core.SchemeEval.Compile
 import Core.SchemeEval.ToScheme
-import Core.TT
-
-import Data.List.Quantifiers
 
 import Libraries.Data.NameMap
 import Libraries.Utils.Scheme

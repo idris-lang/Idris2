@@ -1,13 +1,8 @@
 module TTImp.Elab.Binders
 
-import Core.Context
-import Core.Context.Log
-import Core.Core
 import Core.Env
 import Core.Metadata
-import Core.Normalise
 import Core.Unify
-import Core.TT
 import Core.Value
 
 import Idris.REPL.Opts

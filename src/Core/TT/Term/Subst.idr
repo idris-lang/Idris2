@@ -8,8 +8,6 @@ import Core.TT.Subst
 import Core.TT.Term
 import Core.TT.Var
 
-import Data.List
-
 import Libraries.Data.List.SizeOf
 
 %default total

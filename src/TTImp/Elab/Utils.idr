@@ -2,16 +2,12 @@ module TTImp.Elab.Utils
 
 import Core.Case.CaseTree
 import Core.Context
-import Core.Core
 import Core.Env
 import Core.Normalise
-import Core.TT
 import Core.Value
 
 import TTImp.Elab.Check
 import TTImp.TTImp
-
-import Data.List.Quantifiers
 
 import Libraries.Data.NatSet
 import Libraries.Data.VarSet

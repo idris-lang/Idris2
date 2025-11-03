@@ -10,7 +10,6 @@ import Core.Termination.References
 
 import Data.String
 
-import Libraries.Data.NameMap
 import Libraries.Data.NatSet
 
 %default covering

@@ -2,18 +2,11 @@ module Idris.Package
 
 import Compiler.Common
 
-import Core.Context
-import Core.Context.Log
-import Core.Core
 import Core.Directory
 import Core.Metadata
-import Core.Name.Namespace
-import Core.Options
 import Core.Unify
 
-import Data.List
 import Data.Maybe
-import Data.SnocList
 import Data.SortedMap
 import Data.String
 import Data.These
@@ -39,8 +32,6 @@ import Idris.ModTree
 import Idris.Pretty
 import Idris.ProcessIdr
 import Idris.REPL
-import Idris.REPL.Common
-import Idris.REPL.Opts
 import Idris.SetOptions
 import Idris.Syntax
 import Idris.Version

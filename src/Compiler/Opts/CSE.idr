@@ -30,15 +30,10 @@ module Compiler.Opts.CSE
 import Core.CompileExpr
 import Core.Context
 import Core.Context.Log
-import Core.Core
-import Core.Name
 import Core.Options
-import Core.TT
 
 import Core.Ord
-import Data.List
 import Data.String
-import Data.SortedSet
 import Data.SortedMap
 import Data.Vect
 

@@ -3,7 +3,6 @@ module Libraries.Text.Lexer.Tokenizer
 import Data.List
 
 import Libraries.Text.Lexer.Core
-import Libraries.Text.Lexer
 import Libraries.Text.PrettyPrint.Prettyprinter
 
 import public Libraries.Control.Delayed

@@ -6,7 +6,6 @@ import Data.List
 import Data.Maybe
 import Data.String
 import Idris.Version
-import Libraries.Data.String.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 

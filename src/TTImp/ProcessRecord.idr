@@ -1,8 +1,5 @@
 module TTImp.ProcessRecord
 
-import Core.Context
-import Core.Context.Log
-import Core.Core
 import Core.Env
 import Core.Metadata
 import Core.UnifyState
@@ -20,7 +17,6 @@ import TTImp.Utils
 
 import Libraries.Data.WithDefault
 
-import Data.List
 import Data.String
 
 %default covering

@@ -6,10 +6,7 @@ import public Core.Normalise.Quote
 
 import Core.Context
 import Core.Context.Log
-import Core.Core
 import Core.Env
-import Core.Options
-import Core.TT
 import Core.Value
 
 %default covering

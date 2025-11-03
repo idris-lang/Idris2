@@ -3,17 +3,10 @@ module Core.Normalise.Eval
 import Core.Case.CaseTree
 import Core.Context
 import Core.Context.Log
-import Core.Core
 import Core.Env
 import Core.Primitives
-import Core.TT
 import Core.Value
 
-import Data.List
-import Data.List.Quantifiers
-import Data.Maybe
-import Data.Nat
-import Data.String
 import Data.Vect
 
 import Libraries.Data.WithDefault

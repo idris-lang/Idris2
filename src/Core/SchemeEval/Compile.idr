@@ -13,13 +13,10 @@ Advanced TODO (possibly not worth it...):
 
 import Core.Case.CaseTree
 import Core.Context
-import Core.Core
 import Core.Directory
 import Core.SchemeEval.Builtins
 import Core.SchemeEval.ToScheme
-import Core.TT
 
-import Data.List
 import Data.List.Quantifiers
 
 import Libraries.Utils.Scheme

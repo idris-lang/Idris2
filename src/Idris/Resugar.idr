@@ -1,9 +1,6 @@
 module Idris.Resugar
 
-import Core.Context
-import Core.Context.Log
 import Core.Env
-import Core.Options
 
 import Idris.Syntax
 import Idris.Syntax.Traversals
@@ -13,12 +10,7 @@ import TTImp.TTImp.Functor
 import TTImp.Unelab
 import TTImp.Utils
 
-
-import Data.List1
-import Data.List
-import Data.Maybe
 import Data.String
-import Libraries.Data.StringMap
 import Libraries.Data.ANameMap
 
 %default covering

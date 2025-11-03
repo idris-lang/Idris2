@@ -1,17 +1,11 @@
 module Idris.Desugar
 
-import Core.Context
-import Core.Context.Log
 import Core.CompileExpr
-import Core.Core
 import Core.Env
 import Core.Metadata
-import Core.Options
-import Core.TT
 import Core.Unify
 
 import Libraries.Data.List.Extra
-import Libraries.Data.StringMap
 import Libraries.Data.ANameMap
 
 import Idris.Doc.String
@@ -26,8 +20,7 @@ import Idris.Elab.Interface
 
 import Idris.Desugar.Mutual
 
-import Parser.Lexer.Source
-import Parser.Support
+import Parser.Support.Escaping
 
 import TTImp.BindImplicits
 import TTImp.Parser
@@ -38,10 +31,7 @@ import TTImp.Utils
 import Libraries.Data.IMaybe
 import Libraries.Data.WithDefault
 import Libraries.Utils.Shunting
-import Libraries.Text.PrettyPrint.Prettyprinter
 
-import Data.Maybe
-import Data.List
 import Data.List.Views
 import Data.SortedMap
 import Data.String

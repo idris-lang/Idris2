@@ -4,19 +4,11 @@ import public Core.FC
 import public Core.Name
 import public Core.Name.Scoped
 
-import Idris.Pretty.Annotations
-
-import Data.List
-import Data.Nat
-import Data.String
-import Data.Vect
-import Decidable.Equality
+import Data.Maybe
 
 import Libraries.Data.NameMap
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
-import Libraries.Text.Bounded
-import Libraries.Data.String.Extra
 
 import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.SizeOf

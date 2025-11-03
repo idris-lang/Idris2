@@ -2,7 +2,6 @@
 ||| See [semver](https://semver.org/) for proper definition of semantic versioning
 module Libraries.Data.Version
 
-import Data.List
 import Data.String
 
 import Libraries.Text.Parser

@@ -1,10 +1,7 @@
 module Idris.IDEMode.CaseSplit
 
-import Core.Context
-import Core.Context.Log
 import Core.Env
 import Core.Metadata
-import Core.TT
 import Core.Value
 
 import Parser.Lexer.Source
@@ -20,10 +17,7 @@ import Idris.REPL.Opts
 import Idris.Resugar
 import Idris.Syntax
 
-import Data.List
-import Data.List1
 import Data.List.Views
-import Data.SnocList
 import Libraries.Data.List.Extra
 import Data.String
 import System.File

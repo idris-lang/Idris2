@@ -1,12 +1,8 @@
 module TTImp.PartialEval
 
-import Core.Context
-import Core.Context.Log
-import Core.Core
 import Core.Env
 import Core.Hash
 import Core.Metadata
-import Core.Normalise
 import Core.Value
 import Core.UnifyState
 
@@ -21,7 +17,6 @@ import TTImp.Unelab
 
 import Protocol.Hex
 
-import Data.List
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
 import Libraries.Data.WithDefault

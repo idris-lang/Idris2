@@ -2,13 +2,9 @@ module TTImp.Elab.Term
 
 import Libraries.Data.UserNameMap
 
-import Core.Context
-import Core.Core
 import Core.Env
 import Core.Metadata
-import Core.Normalise
-import Core.Unify
-import Core.TT
+import Core.UnifyState
 import Core.Value
 
 import Idris.REPL.Opts

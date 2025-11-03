@@ -2,13 +2,8 @@ module Compiler.ES.Codegen
 
 import Compiler.Common
 import Core.CompileExpr
-import Core.Context
-import Core.Context.Log
 import Core.Directory
-import Core.Options
 import Core.Env
-import Core.Normalise
-import Data.List1
 import Data.String
 import Data.SortedMap
 import Compiler.ES.Ast

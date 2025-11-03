@@ -3,18 +3,13 @@ module Core.Metadata
 import Core.Binary
 import Core.Context
 import Core.Context.Log
-import Core.Core
 import Core.Env
-import Core.FC
 import Core.Normalise
-import Core.TT
 import Core.TTC
 
-import Data.List
 import System.File
 import Libraries.Data.NatSet
 import Libraries.Data.PosMap
-import Libraries.Utils.Binary
 
 import public Protocol.IDE.Decoration as Protocol.IDE
 

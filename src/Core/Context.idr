@@ -19,13 +19,10 @@ import Libraries.Text.PrettyPrint.Prettyprinter
 import Idris.Syntax.Pragmas
 
 import Data.Either
-import Data.Fin
 import Data.IOArray
-import Libraries.Data.IntMap
-import Data.List
 import Data.List1
-import Data.Maybe
 import Data.Nat
+import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
 import Libraries.Data.StringMap

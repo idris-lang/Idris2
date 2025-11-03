@@ -1,9 +1,8 @@
 module Compiler.Opts.Identity
 
-import Compiler.CompileExpr
+import Core.CompileExpr
 import Core.Context
 import Core.Context.Log
-import Data.List
 import Data.Vect
 
 import Libraries.Data.List.SizeOf

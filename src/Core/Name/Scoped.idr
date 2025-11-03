@@ -1,7 +1,6 @@
 module Core.Name.Scoped
 
 import Core.Name
-import Core.Name.CompatibleVars
 
 import Libraries.Data.List.SizeOf
 

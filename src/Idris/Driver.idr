@@ -3,12 +3,10 @@ module Idris.Driver
 import Compiler.Common
 
 import Core.Binary
-import Core.Context.Log
-import Core.Core
 import Core.Directory
 import Core.InitPrimitives
 import Core.Metadata
-import Core.Unify
+import Core.UnifyState
 
 import Idris.CommandLine
 import Idris.Env
@@ -24,7 +22,6 @@ import Idris.Error
 
 import IdrisPaths
 
-import Data.List
 import Data.String
 import System
 import System.Directory

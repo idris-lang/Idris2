@@ -6,7 +6,6 @@ import public Libraries.Text.Parser
 import public Libraries.Text.Bounded
 import Libraries.Text.PrettyPrint.Prettyprinter
 
-import Data.List
 import Data.String
 import Libraries.Data.String.Extra
 import Libraries.Utils.String

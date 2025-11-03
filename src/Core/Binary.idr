@@ -6,14 +6,10 @@ module Core.Binary
 import public Core.Binary.Prims
 import Core.Context
 import Core.Context.Log
-import Core.Core
-import Core.Name.Namespace
 import Core.Options
-import Core.TT
 import Core.TTC
 import Core.UnifyState
 
-import Data.List
 import Data.String
 
 import System.File

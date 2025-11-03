@@ -2,15 +2,12 @@
 -- If we get more builtins it might be wise to move each builtin to its own file.
 module TTImp.ProcessBuiltin
 
-import Data.List
 import Libraries.Data.NatSet
 
-import Core.Core
 import Core.Context
 import Core.Context.Log
 import Core.CompileExpr
 import Core.Env
-import Core.TT
 
 import TTImp.TTImp
 

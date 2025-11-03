@@ -7,15 +7,11 @@ import Compiler.CompileExpr
 import Compiler.ANF
 import Compiler.Generated
 
-import Core.Context
-import Core.Context.Log
 import Core.Directory
 
 import Idris.Syntax
 
-import Data.List
 import Libraries.Data.DList
-import Data.Nat
 import Data.SortedSet
 import Data.SortedMap
 import Data.Vect

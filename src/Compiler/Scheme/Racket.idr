@@ -6,21 +6,14 @@ import Compiler.Generated
 import Compiler.Opts.ToplevelConstants
 import Compiler.Scheme.Common
 
-import Core.Options
-import Core.Context
-import Core.Context.Log
 import Core.Directory
-import Core.Name
-import Core.TT
 import Protocol.Hex
 import Libraries.Data.String.Builder
 import Libraries.Utils.Path
 
-import Data.List
 import Data.Maybe
 import Data.String
 import Data.SortedSet
-import Data.Vect
 
 import Idris.Env
 import Idris.Syntax

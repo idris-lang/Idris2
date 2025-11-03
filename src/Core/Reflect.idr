@@ -5,7 +5,6 @@ import Data.List1
 import Core.Context
 import Core.Env
 import Core.Normalise
-import Core.TT
 import Core.Value
 
 import Libraries.Data.WithDefault

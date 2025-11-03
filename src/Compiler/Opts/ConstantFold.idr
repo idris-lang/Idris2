@@ -1,13 +1,10 @@
 module Compiler.Opts.ConstantFold
 
-import Compiler.CompileExpr
+import Core.CompileExpr
 import Core.Context
 import Core.Context.Log
 import Core.Primitives
 import Core.Value
-import Core.Name
-import Data.List
-import Data.SnocList
 import Data.Vect
 
 import Data.List.HasLength

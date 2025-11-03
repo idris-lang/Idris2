@@ -1,9 +1,6 @@
 module Idris.Error
 
-import Core.Core
-import Core.Context
 import Core.Env
-import Core.Options
 
 import Idris.Doc.String
 import Idris.REPL.Opts
@@ -11,15 +8,12 @@ import Idris.Resugar
 import Idris.Syntax
 import Idris.Pretty
 
-import Parser.Source
-
 import Data.List
 import Data.Either
 import Data.List1
 import Data.String
 
 import Libraries.Data.List.Extra
-import Libraries.Data.String.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import System.File

@@ -1,12 +1,7 @@
 module Idris.Elab.Interface
 
-import Core.Context
-import Core.Context.Log
-import Core.Core
-import Core.Name
 import Core.Env
 import Core.Metadata
-import Core.TT
 import Core.Unify
 
 import Idris.Doc.String
@@ -21,7 +16,6 @@ import TTImp.Utils
 
 import Libraries.Data.ANameMap
 import Libraries.Data.List.Extra
-import Data.List
 import Libraries.Data.WithDefault
 
 %default covering

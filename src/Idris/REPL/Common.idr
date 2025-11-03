@@ -1,13 +1,10 @@
 module Idris.REPL.Common
 
-import Core.Context.Log
 import Core.Directory
 import Core.Env
 import Core.InitPrimitives
 import Core.Metadata
-import Core.TT
 import Core.Unify
-import Core.UnifyState
 
 import Idris.Doc.Annotations
 import Idris.Doc.String
@@ -22,7 +19,6 @@ import Idris.Syntax
 import Idris.Version
 
 import Libraries.Data.ANameMap
-import Libraries.Data.String.Extra
 
 import Data.String
 import System.File

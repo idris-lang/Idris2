@@ -1,9 +1,5 @@
 module TTImp.Interactive.Completion
 
-import Core.Context
-import Core.Context.Log
-import Core.Core
-
 import Idris.Syntax
 import Idris.Parser
 

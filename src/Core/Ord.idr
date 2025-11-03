@@ -2,7 +2,6 @@
 module Core.Ord
 
 import Core.CompileExpr
-import Core.Name
 import Core.TT
 import Data.Vect
 

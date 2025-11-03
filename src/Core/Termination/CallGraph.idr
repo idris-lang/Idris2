@@ -7,11 +7,8 @@ import Core.Env
 import Core.Normalise
 import Core.Options
 import Core.Value
-import Core.Name.CompatibleVars
 
 import Libraries.Data.List.SizeOf
-
-import Libraries.Data.IntMap
 import Libraries.Data.SparseMatrix
 
 import Data.String

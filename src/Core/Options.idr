@@ -1,7 +1,6 @@
 module Core.Options
 
 import Core.Core
-import Core.Name
 import public Core.Options.Log
 import Core.TT
 

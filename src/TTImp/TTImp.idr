@@ -4,18 +4,12 @@ import Core.Context
 import Core.Context.Log
 import Core.Env
 import Core.Normalise
-import Core.Options
-import Core.Options.Log
-import Core.TT
 import Core.Value
 
-import Data.List
 import public Data.List1
-import Data.Maybe
 import Data.SortedSet
 
 import Libraries.Data.List.SizeOf
-
 import Libraries.Data.WithDefault
 
 %default covering

@@ -12,14 +12,9 @@ module TTImp.Interactive.ExprSearch
 
 import Core.AutoSearch
 import Core.Case.CaseTree
-import Core.Context
-import Core.Context.Log
 import Core.Env
 import Core.LinearCheck
 import Core.Metadata
-import Core.Normalise
-import Core.Options
-import Core.TT
 import Core.Unify
 import Core.Value
 
@@ -32,10 +27,7 @@ import TTImp.TTImp.Functor
 import TTImp.Unelab
 import TTImp.Utils
 
-import Data.List
-
 import Libraries.Data.List.SizeOf
-
 import Libraries.Data.Tap
 import Libraries.Data.WithDefault
 

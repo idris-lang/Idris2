@@ -2,7 +2,6 @@ module Core.Core
 
 import Core.Context.Context
 import Core.Env
-import Core.TT
 import public Core.WithData
 
 import Data.List1
@@ -13,7 +12,6 @@ import Libraries.Data.List01
 import Libraries.Data.IMaybe
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
-import Libraries.Text.PrettyPrint.Prettyprinter.Doc
 import Libraries.Data.Tap
 import Libraries.Data.WithData
 

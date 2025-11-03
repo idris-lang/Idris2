@@ -1,6 +1,5 @@
 module Core.Primitives
 
-import Core.Context
 import Core.TT
 import Core.Value
 import Libraries.Utils.String

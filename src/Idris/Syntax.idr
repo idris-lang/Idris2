@@ -2,17 +2,11 @@ module Idris.Syntax
 
 import public Core.Context
 import public Core.Context.Log
-import public Core.Core
-import public Core.FC
 import public Core.Normalise
 import public Core.Options
-import public Core.TT
 
 import TTImp.TTImp
 
-import Data.List
-import Data.Maybe
-import Data.SnocList
 import Data.SortedMap
 import Data.String
 
@@ -21,11 +15,8 @@ import public Idris.Syntax.Pragmas
 import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
 import Libraries.Data.String.Extra
-import Libraries.Data.StringMap
 import Libraries.Data.WithDefault
 import Libraries.Text.PrettyPrint.Prettyprinter
-
-import Parser.Lexer.Source
 
 %default covering
 

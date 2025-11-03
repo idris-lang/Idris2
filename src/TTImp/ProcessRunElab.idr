@@ -1,11 +1,7 @@
 module TTImp.ProcessRunElab
 
-import Core.Context
-import Core.Core
 import Core.Env
 import Core.Metadata
-import Core.Options
-import Core.Normalise
 import Core.Reflect
 import Core.UnifyState
 import Core.Value

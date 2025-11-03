@@ -1,14 +1,9 @@
 module TTImp.Elab.Rewrite
 
-import Core.Context
-import Core.Context.Log
-import Core.Core
 import Core.Env
 import Core.GetType
 import Core.Metadata
-import Core.Normalise
 import Core.Unify
-import Core.TT
 import Core.Value
 
 import Idris.REPL.Opts
@@ -18,7 +13,6 @@ import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.TTImp
 
-import Data.List
 import Libraries.Data.List.SizeOf
 
 %default covering

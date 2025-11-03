@@ -6,9 +6,6 @@ import Core.Context
 import Core.Context.Log
 import Core.Normalise
 
-import Data.List
-import Data.Maybe
-
 import Libraries.Data.NatSet
 import Libraries.Data.WithDefault
 

@@ -3,16 +3,10 @@ module Core.UnifyState
 
 import Core.Context
 import Core.Context.Log
-import Core.Core
 import Core.Env
-import Core.FC
 import Core.Normalise
-import Core.Options
-import Core.TT
-import Core.TTC
 import Core.Value
 
-import Data.List
 import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 import Libraries.Data.WithDefault
