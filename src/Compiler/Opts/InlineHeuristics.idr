@@ -1,7 +1,6 @@
 module Compiler.Opts.InlineHeuristics
 
 import Core.CompileExpr
-import Core.Context
 import Core.Context.Log
 import Data.Vect
 import Libraries.Data.WithDefault

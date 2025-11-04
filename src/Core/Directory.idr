@@ -1,7 +1,6 @@
 module Core.Directory
 
 import Core.Binary
-import Core.Context
 import Core.Context.Log
 import Core.Options
 

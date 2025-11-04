@@ -1,6 +1,5 @@
 module TTImp.BindImplicits
 
-import Core.Context
 import Core.Context.Log
 import TTImp.TTImp
 import TTImp.Utils

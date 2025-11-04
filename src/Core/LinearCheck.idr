@@ -1,7 +1,6 @@
 module Core.LinearCheck
 
 import Core.Case.CaseTree
-import Core.Context
 import Core.Context.Log
 import Core.Env
 import Core.Normalise

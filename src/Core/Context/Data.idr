@@ -2,7 +2,6 @@
 
 module Core.Context.Data
 
-import Core.Context
 import Core.Context.Log
 import Core.Normalise
 

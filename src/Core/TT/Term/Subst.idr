@@ -1,6 +1,5 @@
 module Core.TT.Term.Subst
 
-import Core.Name
 import Core.Name.Scoped
 
 import Core.TT.Binder

@@ -1,6 +1,5 @@
 module TTImp.TTImp
 
-import Core.Context
 import Core.Context.Log
 import Core.Env
 import Core.Normalise

@@ -3,7 +3,6 @@ module Compiler.CompileExpr
 import Compiler.Opts.Constructor
 import Core.Case.CaseTree
 import public Core.CompileExpr
-import Core.Context
 import Core.Context.Log
 import Core.Env
 import Core.Normalise

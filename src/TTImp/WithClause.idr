@@ -1,6 +1,5 @@
 module TTImp.WithClause
 
-import Core.Context
 import Core.Context.Log
 import Core.Metadata
 

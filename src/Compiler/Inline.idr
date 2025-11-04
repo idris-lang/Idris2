@@ -6,7 +6,6 @@ import Compiler.Opts.ConstantFold
 import Compiler.Opts.Identity
 import Compiler.Opts.InlineHeuristics
 
-import Core.Context
 import Core.Context.Log
 import Core.Hash
 import Core.Options

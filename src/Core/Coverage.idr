@@ -2,7 +2,6 @@ module Core.Coverage
 
 import Core.Case.CaseTree
 import Core.Case.Util
-import Core.Context
 import Core.Context.Log
 import Core.Env
 import Core.Normalise

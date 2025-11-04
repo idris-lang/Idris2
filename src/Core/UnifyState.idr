@@ -1,7 +1,6 @@
 
 module Core.UnifyState
 
-import Core.Context
 import Core.Context.Log
 import Core.Env
 import Core.Normalise

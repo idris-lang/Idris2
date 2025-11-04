@@ -1,7 +1,6 @@
 module Compiler.Opts.Identity
 
 import Core.CompileExpr
-import Core.Context
 import Core.Context.Log
 import Data.Vect
 

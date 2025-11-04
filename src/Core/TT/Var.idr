@@ -5,7 +5,6 @@ import Data.List
 import Data.So
 import Data.SnocList
 
-import Core.Name
 import Core.Name.Scoped
 
 import Libraries.Data.SnocList.HasLength

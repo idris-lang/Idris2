@@ -1,6 +1,5 @@
 module Core.SchemeEval.Evaluate
 
-import Core.Context
 import Core.Context.Log
 import Core.Env
 import Core.SchemeEval.Compile

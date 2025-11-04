@@ -4,7 +4,6 @@ module TTImp.ProcessBuiltin
 
 import Libraries.Data.NatSet
 
-import Core.Context
 import Core.Context.Log
 import Core.CompileExpr
 import Core.Env

@@ -1,6 +1,5 @@
 module Core.Termination.Positivity
 
-import Core.Context
 import Core.Context.Log
 import Core.Env
 import Core.Normalise

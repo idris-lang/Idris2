@@ -1,6 +1,5 @@
 module TTImp.Elab.Hole
 
-import Core.Context
 import Core.Context.Log
 import Core.Env
 import Core.Metadata

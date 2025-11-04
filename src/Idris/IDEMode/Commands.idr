@@ -1,6 +1,5 @@
 module Idris.IDEMode.Commands
 
-import Core.Context
 import Core.Context.Log
 import public Idris.REPL.Opts
 import Protocol.Hex

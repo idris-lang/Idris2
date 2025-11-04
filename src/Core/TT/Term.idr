@@ -4,7 +4,6 @@ import Algebra
 
 import Core.FC
 
-import Core.Name
 import Core.Name.Scoped
 import Core.TT.Binder
 import Core.TT.Primitive

@@ -28,7 +28,6 @@
 module Compiler.Opts.CSE
 
 import Core.CompileExpr
-import Core.Context
 import Core.Context.Log
 import Core.Options
 

@@ -1,6 +1,5 @@
 module Core.Termination.SizeChange
 
-import Core.Context
 import Core.Context.Log
 
 import Core.Termination.References

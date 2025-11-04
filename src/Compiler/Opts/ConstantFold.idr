@@ -1,7 +1,6 @@
 module Compiler.Opts.ConstantFold
 
 import Core.CompileExpr
-import Core.Context
 import Core.Context.Log
 import Core.Primitives
 import Core.Value
