@@ -13,7 +13,6 @@ import Libraries.Data.List.SizeOf
 
 import Libraries.Data.IntMap
 import Libraries.Data.SparseMatrix
-import Libraries.Data.SnocList.SizeOf
 
 import Data.String
 

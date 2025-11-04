@@ -8,9 +8,6 @@ import Core.Normalise.Eval
 import Core.TT
 import Core.Value
 
-import Data.SnocList
-import Libraries.Data.SnocList.SizeOf
-
 %default covering
 
 export

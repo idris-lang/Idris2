@@ -5,7 +5,6 @@ import Core.CompileExpr
 import Core.Name
 import Core.TT
 import Data.Vect
-import Data.SnocList
 
 import Libraries.Data.Ordering.Extra
 

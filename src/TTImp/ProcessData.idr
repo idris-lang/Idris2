@@ -23,7 +23,6 @@ import TTImp.TTImp
 
 import Data.DPair
 import Data.List
-import Data.SnocList
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
 import Libraries.Data.WithDefault

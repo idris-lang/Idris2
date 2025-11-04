@@ -11,8 +11,6 @@ import TTImp.TTImp
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
 
-import Data.SnocList
-
 getRetTy : Defs -> ClosedNF -> Core Name
 getRetTy defs (NBind fc _ (Pi {}) sc)
     = getRetTy defs !(sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder)))

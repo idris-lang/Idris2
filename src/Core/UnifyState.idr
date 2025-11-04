@@ -13,7 +13,6 @@ import Core.TTC
 import Core.Value
 
 import Data.List
-import Data.SnocList
 import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 import Libraries.Data.WithDefault

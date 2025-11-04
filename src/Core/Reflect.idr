@@ -1,7 +1,6 @@
 module Core.Reflect
 
 import Data.List1
-import Data.SnocList
 
 import Core.Context
 import Core.Env

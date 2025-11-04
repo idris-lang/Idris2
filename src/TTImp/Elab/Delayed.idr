@@ -16,7 +16,6 @@ import TTImp.Elab.Check
 import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 import Data.List
-import Data.SnocList
 
 %default covering
 

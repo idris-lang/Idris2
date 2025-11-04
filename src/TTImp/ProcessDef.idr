@@ -43,7 +43,6 @@ import Libraries.Data.NameMap
 import Libraries.Data.WithDefault
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Data.List.SizeOf
-import Libraries.Data.SnocList.SizeOf
 
 %default covering
 

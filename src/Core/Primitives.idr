@@ -6,7 +6,6 @@ import Core.Value
 import Libraries.Utils.String
 
 import Data.Vect
-import Data.SnocList
 
 %default covering
 

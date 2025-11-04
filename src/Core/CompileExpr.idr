@@ -7,12 +7,10 @@ import Core.Name
 import Core.TT
 
 import Data.List
-import Data.SnocList
 import Data.Vect
 
 import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.SizeOf
-import Libraries.Data.SnocList.Extra
 
 %default covering
 

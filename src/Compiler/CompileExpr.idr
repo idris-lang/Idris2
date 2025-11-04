@@ -14,14 +14,11 @@ import Core.Value
 
 import Data.List
 import Data.List.HasLength
-import Data.SnocList
 import Data.Maybe
 import Data.Vect
 
 import Libraries.Data.NatSet
 import Libraries.Data.List.SizeOf
-import Libraries.Data.SnocList.SizeOf
-import Libraries.Data.SnocList.Extra
 
 %default covering
 

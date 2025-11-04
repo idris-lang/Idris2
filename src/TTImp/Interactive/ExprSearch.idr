@@ -33,13 +33,11 @@ import TTImp.Unelab
 import TTImp.Utils
 
 import Data.List
-import Data.SnocList
 
 import Libraries.Data.List.SizeOf
 
 import Libraries.Data.Tap
 import Libraries.Data.WithDefault
-import Libraries.Data.SnocList.SizeOf
 
 %default covering
 

@@ -16,7 +16,6 @@ import Data.String
 import Libraries.Data.VarSet
 
 import Libraries.Data.List.SizeOf
-import Libraries.Data.SnocList.SizeOf
 
 %default covering
 

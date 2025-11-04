@@ -12,7 +12,6 @@ import Core.Value
 import Core.TT
 
 import Data.List
-import Data.SnocList
 
 import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.SizeOf

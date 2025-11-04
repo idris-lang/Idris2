@@ -12,7 +12,6 @@ import Data.Vect
 
 import Data.List.HasLength
 import Libraries.Data.List.SizeOf
-import Libraries.Data.SnocList.SizeOf
 
 
 findConstAlt : Constant -> List (CConstAlt vars) ->

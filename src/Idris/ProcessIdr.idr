@@ -40,7 +40,6 @@ import Idris.Pretty
 import Idris.Doc.String
 
 import Data.List
-import Data.SnocList
 import Data.SortedMap
 import Data.String
 

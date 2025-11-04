@@ -14,7 +14,6 @@ import TTImp.TTImp.Functor
 import TTImp.Utils
 
 import Data.List
-import Data.SnocList
 
 %default covering
 

@@ -32,8 +32,6 @@ import TTImp.Unelab
 
 import System.File.Meta
 
-import Data.SnocList
-
 %default covering
 
 record NameInfo where

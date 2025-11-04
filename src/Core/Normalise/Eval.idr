@@ -11,13 +11,11 @@ import Core.Value
 
 import Data.List
 import Data.List.Quantifiers
-import Data.SnocList
 import Data.Maybe
 import Data.Nat
 import Data.String
 import Data.Vect
 
-import Libraries.Data.SnocList.Extra
 import Libraries.Data.WithDefault
 
 %default covering

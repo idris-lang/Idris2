@@ -17,7 +17,6 @@ import Libraries.Data.NameMap
 import Libraries.Data.NatSet
 import Libraries.Data.String.Extra
 import Libraries.Data.List.SizeOf
-import Libraries.Data.SnocList.SizeOf
 import Libraries.Text.PrettyPrint.Prettyprinter
 
 %default covering

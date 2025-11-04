@@ -5,10 +5,8 @@ import Core.Name.Scoped
 import Core.TT.Var
 
 import Data.List
-import Data.SnocList
 
 import Libraries.Data.List.SizeOf
-import Libraries.Data.SnocList.SizeOf
 
 %default total
 

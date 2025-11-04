@@ -10,9 +10,7 @@ import Libraries.Data.List.HasLength
 
 import Libraries.Data.VarSet
 
-import Libraries.Data.SnocList.Extra
 import Libraries.Data.SnocList.SizeOf
-import Libraries.Data.SnocList.HasLength
 
 %default total
 

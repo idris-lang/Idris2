@@ -13,7 +13,6 @@ import public Core.UnifyState
 import Core.Value
 
 import Data.List
-import Data.SnocList
 import Data.Maybe
 
 import Libraries.Data.List.SizeOf
@@ -22,7 +21,6 @@ import Libraries.Data.VarSet
 
 import Libraries.Data.IntMap
 import Libraries.Data.NameMap
-import Libraries.Data.SnocList.SizeOf
 
 %default covering
 

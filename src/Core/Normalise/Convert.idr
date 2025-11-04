@@ -11,12 +11,9 @@ import Core.TT
 import Core.Value
 
 import Data.List
-import Data.SnocList
 
 import Libraries.Data.NatSet
 import Libraries.Data.List.SizeOf
-import Libraries.Data.SnocList.HasLength
-import Libraries.Data.SnocList.SizeOf
 
 %default covering
 

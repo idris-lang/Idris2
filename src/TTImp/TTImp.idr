@@ -17,7 +17,6 @@ import Data.SortedSet
 import Libraries.Data.List.SizeOf
 
 import Libraries.Data.WithDefault
-import Libraries.Data.SnocList.SizeOf
 
 %default covering
 

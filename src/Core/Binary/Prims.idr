@@ -7,7 +7,6 @@ import Data.Buffer
 import Data.List
 import Data.List.Elem
 import Data.List1
-import Data.SnocList
 import Data.Nat
 import Data.String
 import Data.Vect

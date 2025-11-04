@@ -28,7 +28,6 @@ import Libraries.Data.UserNameMap
 import Libraries.Data.WithDefault
 
 import Libraries.Data.List.SizeOf
-import Libraries.Data.SnocList.SizeOf
 
 import Libraries.Data.VarSet
 

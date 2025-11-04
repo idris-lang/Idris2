@@ -3,7 +3,6 @@ module Core.Case.CaseTree
 import Core.TT
 
 import Data.List
-import Data.SnocList
 import Data.So
 import Data.String
 import Idris.Pretty.Annotations
@@ -11,8 +10,6 @@ import Idris.Pretty.Annotations
 import Libraries.Data.NameMap
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Data.String.Extra -- needed for boostrapping
-import Libraries.Data.SnocList.SizeOf
-import Libraries.Data.SnocList.Extra
 import Libraries.Data.List.SizeOf
 
 %default covering

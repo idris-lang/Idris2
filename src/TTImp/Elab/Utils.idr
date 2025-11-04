@@ -12,7 +12,6 @@ import TTImp.Elab.Check
 import TTImp.TTImp
 
 import Data.List.Quantifiers
-import Data.SnocList
 
 import Libraries.Data.NatSet
 import Libraries.Data.VarSet

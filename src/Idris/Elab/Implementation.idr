@@ -22,7 +22,6 @@ import TTImp.Utils
 
 import Control.Monad.State
 import Data.List
-import Data.SnocList
 import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
 

@@ -16,8 +16,6 @@ import TTImp.Elab
 import TTImp.Elab.Check
 import TTImp.TTImp
 
-import Data.SnocList
-
 %default covering
 
 extend : {extvs : _} ->

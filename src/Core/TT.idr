@@ -7,7 +7,6 @@ import public Core.Name.Scoped
 import Idris.Pretty.Annotations
 
 import Data.List
-import Data.SnocList
 import Data.Nat
 import Data.String
 import Data.Vect
