@@ -10,3 +10,11 @@ should target this file (`CHANGELOG_NEXT`).
 ### Building/Packaging changes
 
 * Fix parsing of capitalised package names containing hyphens.
+
+### Backend changes
+
+#### RefC Backend
+
+* Fixed an issue to do with `alligned_alloc` not existing on older MacOS
+  versions, causing builds targeting PowerPC to fail (#3662).  For these
+  systems, the compiler will now use `posix_memalign`.
