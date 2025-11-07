@@ -116,6 +116,10 @@ clean_names() {
     awk "$_awk_clean_name"
 }
 
+clean_version() {
+    sed -e "s/$NAME_VERSION/idris2-x.y.z/g"
+}
+
 append_package_path() {
     export IDRIS2_PACKAGE_PATH="$IDRIS2_PACKAGE_PATH$SEP$1"
 }
