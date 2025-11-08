@@ -565,9 +565,9 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
             List (Var newvars) ->
             IVars vs newvars -> Term newvars -> Term vs ->
             Core (Maybe (Term vs))
-    mkDef (v :: vs) vars soln (Bind bfc x (Pi fc c _ ty) sc)
+    mkDef (v :: vs) vars soln (Bind bfc x (Pi fc c info ty) sc)
        = do sc' <- mkDef vs (ICons (Just v) vars) soln sc
-            pure $ (Bind bfc x (Lam fc c Explicit (Erased bfc Placeholder)) <$> sc')
+            pure $ (Bind bfc x (Lam fc c info (Erased bfc Placeholder)) <$> sc')
     mkDef vs vars soln (Bind bfc x b@(Let _ c val ty) sc)
        = do mbsc' <- mkDef vs (ICons Nothing vars) soln sc
             flip traverseOpt mbsc' $ \sc' =>
