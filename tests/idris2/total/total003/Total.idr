@@ -18,10 +18,6 @@ matchInt : (0 x : Integer) -> (n : Nat) -> IntNat x n -> String
 matchInt 0 Z IsZero = "Zero"
 matchInt 1 (S k) IsSuc = "Non Zero"
 
--- Should be identified as covering but isn't yet since the checker requires
--- a catch all case. This does at least test that the declared 'impossible'
--- case really is impossible; we can update it when the checker improves!
 matchInt' : (x : Integer) -> (n : Nat) -> IntNat x n -> String
 matchInt' 0 Z IsZero = "Zero"
 matchInt' 1 (S k) IsSuc = "Non Zero"
-matchInt' 0 (S k) x impossible

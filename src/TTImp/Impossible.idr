@@ -19,7 +19,7 @@ import Data.List
 -- only guessing! But we can still do some type-directed disambiguation of
 -- names.
 -- Constants (fromInteger/fromString etc) won't be supported, because in general
--- they involve resoling interfaces - they'll just become unmatchable patterns.
+-- they involve resolving interfaces - they'll just become unmatchable patterns.
 
 match : {auto c : Ref Ctxt Defs} ->
         ClosedNF -> (Name, Int, ClosedTerm) -> Core Bool
@@ -57,11 +57,11 @@ nextVar fc
          put QVar (i + 1)
          pure (Ref fc Bound (MN "imp" i))
 
-badClause : ClosedTerm -> List RawImp -> List RawImp -> List (Name, RawImp) -> Core a
+badClause : {auto c : Ref Ctxt Defs} -> ClosedTerm -> List RawImp -> List RawImp -> List (Name, RawImp) -> Core a
 badClause fn exps autos named
    = throw (GenericMsg (getLoc fn)
             ("Badly formed impossible clause "
-               ++ show (fn, exps, autos, named)))
+               ++ show (!(toFullNames fn), exps, autos, named)))
 
 mutual
   processArgs : {auto c : Ref Ctxt Defs} ->
@@ -115,6 +115,8 @@ mutual
                            processArgs (App fc fn e') !(sc defs (toClosure defaultOpts Env.empty e'))
                                        exps [] named'
   processArgs fn ty [] [] [] = pure fn
+  processArgs fn ty (x :: _) autos named
+     = throw $ GenericMsg (getFC x) "Too many arguments"
   processArgs fn ty exps autos named
      = badClause fn exps autos named
 
@@ -129,11 +131,15 @@ mutual
       = do defs <- get Ctxt
            prims <- getPrimitiveNames
            when (n `elem` prims) $
-               throw (InternalError "Can't deal with constants here yet")
+               throw (GenericMsg fc "Can't deal with \{show n} in impossible clauses yet")
 
            gdefs <- lookupNameBy id n (gamma defs)
-           [(n', i, gdef)] <- dropNoMatch !(traverseOpt (evalClosure defs) mty) gdefs
-              | ts => ambiguousName fc n (map fst ts)
+           mty' <- traverseOpt (evalClosure defs) mty
+           [(n', i, gdef)] <- dropNoMatch mty' gdefs
+              | [] => if length gdefs == 0
+                        then undefinedName fc n
+                        else throw $ GenericMsg fc "\{show n} does not match expected type"
+              | ts => throw $ AmbiguousName fc (map fst ts)
            tynf <- nf defs Env.empty (type gdef)
            -- #899 we need to make sure that type & data constructors are marked
            -- as such so that the coverage checker actually uses the matches in
@@ -165,6 +171,9 @@ mutual
   mkTerm (IMustUnify fc r tm) mty exps autos named
      = Erased fc . Dotted <$> mkTerm tm mty exps autos named
   mkTerm (IPrimVal fc c) _ _ _ _ = pure (PrimVal fc c)
+  -- We're taking UniqueDefault here, _and_ we're falling through to nextVar otherwise, which is sketchy.
+  -- On option is to try each and emit an AmbiguousElab?  We maybe should respect `UniqueDefault` if there
+  -- is no evidence (mty), but we should _try_ to resolve here if there is an mty.
   mkTerm (IAlternative _ (UniqueDefault tm) _) mty exps autos named
      = mkTerm tm mty exps autos named
   mkTerm tm _ _ _ _ = nextVar (getFC tm)

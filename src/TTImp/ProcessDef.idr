@@ -1122,6 +1122,7 @@ processDef opts nest env fc n_in cs_in
                     log "declare.def.impossible" 3 $ "Generated impossible LHS: " ++ show lhsp
                     pure $ Just $ MkClause Env.empty lhsp (Erased (getFC rawlhs) Impossible))
                 (\e => do log "declare.def" 5 $ "Error in getClause " ++ show e
+                          recordWarning $ GenericWarn (fromMaybe (getFC rawlhs) $ getErrorLoc e) (show e)
                           pure Nothing)
     getClause (Right c) = pure (Just c)
 

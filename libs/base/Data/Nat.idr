@@ -288,7 +288,6 @@ gt left right = lt right left
 
 export
 lteReflectsLTE : (k : Nat) -> (n : Nat) -> lte k n === True -> k `LTE` n
-lteReflectsLTE (S k)  0    _ impossible
 lteReflectsLTE 0      0    _   = LTEZero
 lteReflectsLTE 0     (S k) _   = LTEZero
 lteReflectsLTE (S k) (S j) prf = LTESucc (lteReflectsLTE k j prf)
@@ -305,8 +304,6 @@ public export
 ltOpReflectsLT : (m,n : Nat) -> So (m < n) -> LT m n
 ltOpReflectsLT 0     (S k) prf = LTESucc LTEZero
 ltOpReflectsLT (S k) (S j) prf = LTESucc (ltOpReflectsLT k j prf)
-ltOpReflectsLT (S k) 0     prf impossible
-ltOpReflectsLT 0 0         prf impossible
 
 export
 gtReflectsGT : (k : Nat) -> (n : Nat) -> gt k n === True -> k `GT` n
