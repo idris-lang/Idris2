@@ -13,6 +13,12 @@ should target this file (`CHANGELOG_NEXT`).
 
 ### Backend changes
 
+### Compiler changes
+
+* The compiler now warns the user when `impossible` clauses are ignored. This
+  typically happens when a numeric literal or an ambiguous name appears in an
+  `impossible` clause.
+
 #### RefC Backend
 
 * Fixed an issue to do with `alligned_alloc` not existing on older MacOS

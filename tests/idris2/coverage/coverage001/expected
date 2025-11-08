@@ -15,3 +15,13 @@ Vect2:8:1--8:21
      ^^^^^^^^^^^^^^^^^^^^
 
 1/1: Building Vect3 (Vect3.idr)
+Warning: Vect3:9:8--9:9:Z does not match expected type
+
+Vect3:9:8--9:9
+ 5 |      Nil  : Vect Z a
+ 6 |      (::) : a -> Vect k a -> Vect (S k) a
+ 7 | 
+ 8 | zip : Vect n a -> Vect n b -> Vect n (a, b)
+ 9 | zip [] Z impossible
+            ^
+

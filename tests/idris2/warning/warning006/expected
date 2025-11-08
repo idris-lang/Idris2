@@ -1,0 +1,56 @@
+1/1: Building Main (Main.idr)
+Warning: Main:6:6--6:7:Can't deal with fromInteger in impossible clauses yet
+
+Main:6:6--6:7
+ 2 | import Data.Vect
+ 3 | 
+ 4 | -- fromInteger on LHS
+ 5 | head : (n : Nat) -> {auto 0 prf : IsSucc n} -> Vect n a -> a
+ 6 | head 0 _ impossible
+          ^
+
+Warning: Main:13:9--13:10:Z does not match expected type
+
+Main:13:9--13:10
+ 09 | data Foo = Z | S Foo
+ 10 | 
+ 11 | -- No matching constuctor of a known type
+ 12 | head' : (n : Nat) -> {auto 0 prf : IsSucc n} -> (Foo,Foo) -> Vect n a -> a
+ 13 | head' Z Z _ impossible
+              ^
+
+Warning: Main:18:11--18:12:Ambiguous name [Main.Z, Prelude.Types.Z]
+
+Main:18:11--18:12
+ 14 | head' (S k) _ (x :: xs) = x
+ 15 | 
+ 16 | -- Ambiguous constructor of unknown type
+ 17 | head'' : (n : Nat) -> {auto 0 prf : IsSucc n} -> (Foo,Foo) -> Vect n a -> a
+ 18 | head'' Z (Z,_) _ impossible
+                ^
+
+1/1: Building Issue2325 (Issue2325.idr)
+Warning: Issue2325:2:5--2:6:Can't deal with fromInteger in impossible clauses yet
+
+Issue2325:2:5--2:6
+ 1 | fnc : (a : Nat) -> (b : Nat) -> (a > b) = True -> Type
+ 2 | fnc 0 0 Refl impossible
+         ^
+
+Warning: Issue2325:3:5--3:6:Can't deal with fromInteger in impossible clauses yet
+
+Issue2325:3:5--3:6
+ 1 | fnc : (a : Nat) -> (b : Nat) -> (a > b) = True -> Type
+ 2 | fnc 0 0 Refl impossible
+ 3 | fnc 0 (S _) Refl impossible
+         ^
+
+Error: fnc is not covering.
+
+Issue2325:1:1--1:55
+ 1 | fnc : (a : Nat) -> (b : Nat) -> (a > b) = True -> Type
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Missing cases:
+    fnc 0 _ _
+
