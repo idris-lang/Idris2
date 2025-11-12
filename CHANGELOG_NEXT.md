@@ -13,6 +13,10 @@ should target this file (`CHANGELOG_NEXT`).
 
 ### Backend changes
 
+### Compiler changes
+
+* Fixes an issue when unifying labmda terms with implicits
+
 #### RefC Backend
 
 * Fixed an issue to do with `alligned_alloc` not existing on older MacOS
