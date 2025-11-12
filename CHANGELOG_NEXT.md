@@ -7,6 +7,12 @@ should target this file (`CHANGELOG_NEXT`).
 
 ## [Next version]
 
+### Compiler changes
+
+* Fixed missing handling of dotted patterns See
+  [#3669](https://github.com/idris-lang/Idris2/issues/3669),
+  [comment](https://github.com/idris-lang/Idris2/issues/3644#issuecomment-3286320272).
+
 ### Building/Packaging changes
 
 * Fix parsing of capitalised package names containing hyphens.
