@@ -30,18 +30,16 @@ should target this file (`CHANGELOG_NEXT`).
   - `Libraries.Data.List.Quantifiers.Extra.tabulate`.
   - `Libraries.Utils.Binary.nonEmptyRev`
   - `Libraries.Utils.String.dotSep`
+* Fixes an issue when unifying labmda terms with implicits (#3670)
+* The compiler now warns the user when `impossible` clauses are ignored. This
+  typically happens when a numeric literal or an ambiguous name appears in an
+  `impossible` clause.
 
 ### Building/Packaging changes
 
 * Fix parsing of capitalised package names containing hyphens.
 
 ### Backend changes
-
-### Compiler changes
-
-* The compiler now warns the user when `impossible` clauses are ignored. This
-  typically happens when a numeric literal or an ambiguous name appears in an
-  `impossible` clause.
 
 #### RefC Backend
 
