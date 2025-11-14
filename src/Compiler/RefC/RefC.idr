@@ -16,8 +16,8 @@ import Idris.Syntax
 import Data.List
 import Libraries.Data.DList
 import Data.Nat
-import Libraries.Data.SortedSet
-import Libraries.Data.SortedMap
+import Data.SortedSet
+import Data.SortedMap
 import Data.Vect
 
 import System

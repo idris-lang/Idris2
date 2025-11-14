@@ -8,10 +8,11 @@ import TTImp.TTImp.TTC
 
 import Idris.Syntax
 
+import Data.SortedMap
+
 import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
-import Libraries.Data.SortedMap
 import Libraries.Data.StringMap
 
 %default covering

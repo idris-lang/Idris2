@@ -1,6 +1,6 @@
 module Libraries.Data.String.Iterator
 
-import public Libraries.Data.List.Lazy
+import public Data.List.Lazy
 
 import Control.Monad.Identity
 

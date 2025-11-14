@@ -12,9 +12,9 @@ import Core.Context
 import Core.Name
 import Core.TT
 
-import Libraries.Data.SortedSet
 import Libraries.Data.String.Builder
 
+import Data.SortedSet
 import Data.Vect
 
 %default covering

@@ -19,7 +19,7 @@ import TTImp.TTImp
 
 import Data.List
 import Data.SnocList
-import Libraries.Data.SortedSet
+import Data.SortedSet
 
 %default covering
 

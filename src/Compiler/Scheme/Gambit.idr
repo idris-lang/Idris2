@@ -13,11 +13,11 @@ import Core.Options
 import Core.TT
 import Protocol.Hex
 import Libraries.Utils.Path
-import Libraries.Data.SortedSet
 import Libraries.Data.String.Builder
 
 import Data.List
 import Data.Maybe
+import Data.SortedSet
 import Data.Vect
 
 import Idris.Env

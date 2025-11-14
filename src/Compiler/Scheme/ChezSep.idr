@@ -14,7 +14,7 @@ import Core.Context.Log
 import Core.Directory
 import Core.Options
 import Core.TT
-import Libraries.Data.SortedSet
+import Data.SortedSet
 import Libraries.Data.String.Builder
 import Libraries.Utils.Path
 

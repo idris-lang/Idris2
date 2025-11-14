@@ -1,9 +1,8 @@
 module Libraries.Data.Graph
 
-import Libraries.Data.SortedMap
-import Libraries.Data.SortedSet
-
 import Data.List1
+import Data.SortedMap
+import Data.SortedSet
 
 -- Mechanically transcribed from
 -- https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm#The_algorithm_in_pseudocode
@@ -52,7 +51,7 @@ tarjan {cuid} deps = loop initial (SortedMap.keys deps)
             [] => { impossibleHappened := True } ts
             w :: ws =>
               let ts' : TarjanState cuid = {
-                      vertices $= SortedMap.adjust w { inStack := False },
+                      vertices $= updateExisting { inStack := False } w,
                       stack := ws
                     } ts
                 in if w == v
@@ -67,11 +66,11 @@ tarjan {cuid} deps = loop initial (SortedMap.keys deps)
               Nothing => let ts' = strongConnect ts w in
                 case SortedMap.lookup w ts'.vertices of
                   Nothing => { impossibleHappened := True } ts'
-                  Just wtv => { vertices $= SortedMap.adjust v { lowlink $= min wtv.lowlink } } ts'
+                  Just wtv => { vertices $= updateExisting { lowlink $= min wtv.lowlink } v } ts'
 
               Just wtv => case wtv.inStack of
                 False => ts  -- nothing to do
-                True => { vertices $= SortedMap.adjust v { lowlink $= min wtv.index } } ts
+                True => { vertices $= updateExisting { lowlink $= min wtv.index } v } ts
           ) ws
 
         ts' : TarjanState cuid
