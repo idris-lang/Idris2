@@ -15,7 +15,7 @@ should target this file (`CHANGELOG_NEXT`).
 
 ### Compiler changes
 
-* Fixes an issue when unifying labmda terms with implicits
+* Fixes an issue when unifying labmda terms with implicits (#3670)
 
 #### RefC Backend
 
