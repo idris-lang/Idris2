@@ -17,6 +17,7 @@ import Data.DPair
 import Data.List
 import Data.List.Quantifiers
 import Data.SnocList
+import Data.SortedSet
 import Data.String
 import Data.Vect
 import Libraries.Data.IMaybe
@@ -24,7 +25,6 @@ import Libraries.Data.List.SizeOf
 import Libraries.Data.List.LengthMatch
 import Libraries.Data.List01
 import Libraries.Data.List01.Quantifiers
-import Libraries.Data.SortedSet
 import Libraries.Data.SnocList.SizeOf
 import Libraries.Data.SnocList.LengthMatch
 import Libraries.Data.SnocList.HasLength
@@ -798,6 +798,8 @@ sameType {ns} fc phase fn env (p :: xs)
     headEq (NPrimVal _ c) (NPrimVal _ c') _ = c == c'
     headEq (NType {}) (NType {}) _ = True
     headEq (NApp _ (NRef _ n) _) (NApp _ (NRef _ n') _) RunTime = n == n'
+    headEq (NErased _ (Dotted x)) y ph = headEq x y ph
+    headEq x (NErased _ (Dotted y)) ph = headEq x y ph
     headEq (NErased {}) _ RunTime = True
     headEq _ (NErased {}) RunTime = True
     headEq _ _ _ = False

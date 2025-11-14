@@ -24,8 +24,6 @@ import Data.List
 import Data.List1
 import Data.String
 
-import Libraries.Data.List1 as Lib
-
 import System
 import System.Directory
 
@@ -60,7 +58,7 @@ pkgDir dirName ttcDirs =
    -- For reasons of backwards compatibility, we also
    -- accept hyphenated directory names without a part
    -- corresponding to a version number.
-   case Lib.unsnoc $ split (== '-') dirName of
+   case unsnoc $ split (== '-') dirName of
      (Nil, last) => MkPkgDir dirName last Nothing ttcDirs
      (init,last) =>
        case toVersion last of

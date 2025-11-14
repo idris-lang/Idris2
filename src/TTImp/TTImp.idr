@@ -12,10 +12,10 @@ import Core.Value
 import Data.List
 import public Data.List1
 import Data.Maybe
+import Data.SortedSet
 
 import Libraries.Data.List.SizeOf
 
-import Libraries.Data.SortedSet
 import Libraries.Data.WithDefault
 import Libraries.Data.SnocList.SizeOf
 

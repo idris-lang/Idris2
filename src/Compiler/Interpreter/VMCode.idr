@@ -11,7 +11,7 @@ import Compiler.VMCode
 
 import Idris.Syntax
 
-import Libraries.Data.IOArray
+import Data.IOArray
 import Libraries.Data.NameMap
 import Data.Nat
 import Data.SnocList
@@ -95,7 +95,7 @@ setReg stk RVal obj = update State $ { returnObj := Just obj }
 setReg stk (Loc i) obj = do
     ls <- locals <$> get State
     when (i >= max ls) $ interpError stk $ "Attempt to set register: " ++ show i ++ ", size of locals: " ++ show (max ls)
-    coreLift $ writeArray ls i obj
+    coreLift_ $ writeArray ls i obj
 setReg stk Discard _ = pure ()
 
 saveLocals : Ref State InterpState => Core a -> Core a
@@ -174,7 +174,7 @@ beginFunction args (DECLARE (Loc i) :: is) maxLoc = beginFunction args is (Prelu
 beginFunction args (DECLARE _ :: is) maxLoc = beginFunction args is maxLoc
 beginFunction args (START :: is) maxLoc = do
     locals <- coreLift $ newArray (maxLoc + 1)
-    ignore $ traverse (\(idx, arg) => coreLift $ writeArray locals idx arg) args
+    traverse_ (\(idx, arg) => coreLift $ writeArray locals idx arg) args
     update State $ { locals := locals, returnObj := Nothing }
     pure is
 beginFunction args is maxLoc = pure is

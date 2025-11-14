@@ -20,7 +20,7 @@ import Idris.Syntax.Pragmas
 
 import Data.Either
 import Data.Fin
-import Libraries.Data.IOArray
+import Data.IOArray
 import Libraries.Data.IntMap
 import Data.List
 import Data.List1
@@ -147,7 +147,7 @@ addCtxt n val ctxt_in
          then do (idx, ctxt) <- getPosition n ctxt_in
                  let a = content ctxt
                  arr <- get Arr
-                 coreLift $ writeArray arr idx (Decoded val)
+                 coreLift_ $ writeArray arr idx (Decoded val)
                  pure (idx, ctxt)
          else do (idx, ctxt) <- getPosition n ctxt_in
                  pure (idx, { staging $= insert idx (Decoded val) } ctxt)
@@ -159,7 +159,7 @@ addEntry n entry ctxt_in
          then do (idx, ctxt) <- getPosition n ctxt_in
                  let a = content ctxt
                  arr <- get Arr
-                 coreLift $ writeArray arr idx entry
+                 coreLift_ $ writeArray arr idx entry
                  pure (idx, ctxt)
          else do (idx, ctxt) <- getPosition n ctxt_in
                  pure (idx, { staging $= insert idx entry } ctxt)
@@ -313,7 +313,7 @@ commitCtxt ctxt
     commitStaged : List (Int, ContextEntry) -> IOArray ContextEntry -> IO ()
     commitStaged [] arr = pure ()
     commitStaged ((idx, val) :: rest) arr
-        = do writeArray arr idx val
+        = do ignore $ writeArray arr idx val
              commitStaged rest arr
 
 ||| Produce a new global definition with a lot of default values
