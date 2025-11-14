@@ -798,6 +798,8 @@ sameType {ns} fc phase fn env (p :: xs)
     headEq (NPrimVal _ c) (NPrimVal _ c') _ = c == c'
     headEq (NType {}) (NType {}) _ = True
     headEq (NApp _ (NRef _ n) _) (NApp _ (NRef _ n') _) RunTime = n == n'
+    headEq (NErased _ (Dotted x)) y ph = headEq x y ph
+    headEq x (NErased _ (Dotted y)) ph = headEq x y ph
     headEq (NErased {}) _ RunTime = True
     headEq _ (NErased {}) RunTime = True
     headEq _ _ _ = False

@@ -9,6 +9,9 @@ should target this file (`CHANGELOG_NEXT`).
 
 ### Compiler changes
 
+* Fixed missing handling of dotted patterns See
+  [#3669](https://github.com/idris-lang/Idris2/issues/3669),
+  [comment](https://github.com/idris-lang/Idris2/issues/3644#issuecomment-3286320272).
 * Removed modules and functions moved to `base`:
   - `Libraries.Data.Fin` → `Data.Fin`
   - `Libraries.Data.IOArray` → `Data.IOArray`
@@ -22,7 +25,6 @@ should target this file (`CHANGELOG_NEXT`).
   - `Libraries.Data.SortedMap` → `Data.SortedMap`
   - `Libraries.Data.SortedSet` → `Data.SortedSet`
   - `Libraries.Utils.Binary.bufferData'` → `Data.Buffer.bufferData'`
-
 * Removed unused functions:
   - `Libraries.Data.List.Extra`: `breakAfter`, `splitAfter` and `zipMaybe`
   - `Libraries.Data.List.Quantifiers.Extra.tabulate`.
