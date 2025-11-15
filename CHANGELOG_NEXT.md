@@ -31,6 +31,7 @@ should target this file (`CHANGELOG_NEXT`).
   - `Libraries.Utils.Binary.nonEmptyRev`
   - `Libraries.Utils.String.dotSep`
 * Fixes an issue when unifying labmda terms with implicits (#3670)
+* The "With clause does not match parent" error now points to the correct location
 * The compiler now warns the user when `impossible` clauses are ignored. This
   typically happens when a numeric literal or an ambiguous name appears in an
   `impossible` clause.

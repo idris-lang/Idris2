@@ -96,7 +96,7 @@ mutual
       = matchFail fc
   -- Alternatives are okay as long as the alternatives correspond, and
   -- one of them is okay
-  getMatch lhs (IAlternative fc _ as) (IAlternative _ _ as')
+  getMatch lhs (IAlternative _ _ as) (IAlternative fc _ as')
       = matchAny fc lhs (zip as as')
   getMatch lhs (IAs _ _ _ nm@(UN (Basic _)) p) (IAs _ fc _ nm'@(UN (Basic _)) p')
       = do ms <- getMatch lhs p p'
@@ -110,8 +110,8 @@ mutual
   getMatch lhs (IPrimVal fc c) (IPrimVal fc' c') =
     if c == c'
     then pure []
-    else matchFail fc
-  getMatch lhs pat spec = matchFail (getFC pat)
+    else matchFail fc'
+  getMatch lhs pat spec = matchFail (getFC spec)
 
   matchAny : {auto m : Ref MD Metadata} ->
              {auto c : Ref Ctxt Defs} ->

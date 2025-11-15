@@ -1,0 +1,31 @@
+1/1: Building WithMatch (WithMatch.idr)
+Error: With clause does not match parent
+
+WithMatch:16:16--16:17
+ 12 |   f [_] | _ = 1
+ 13 |   f (x::y::zs) | Access r =
+ 14 |     if x /= y
+ 15 |        then f (x::zs) | r _ reflexive
+ 16 |        else S (f (x::zs)) | r _ reflexive
+                     ^
+
+Error: With clause does not match parent
+
+WithMatch:22:27--22:32
+ 18 | -- IAlternative case
+ 19 | test : () -> Nat -> Nat
+ 20 | test () x with (x)
+ 21 |   test () x | Z = Z
+ 22 |   test () x | S k = test (Z = Z) x | k
+                                ^^^^^
+
+Error: With clause does not match parent
+
+WithMatch:28:32--28:33
+ 24 | -- IPrimVal case
+ 25 | test2 : (x : Int) -> x = 1 -> Nat -> Nat
+ 26 | test2 1 Refl y with (y)
+ 27 |   test2 1 Refl y | 0 = 42
+ 28 |   test2 1 Refl y | S k = test2 2 Refl y | k
+                                     ^
+
