@@ -14,7 +14,7 @@ import Core.Context.Log
 import Core.Directory
 import Core.Options
 import Core.TT
-import Libraries.Data.SortedSet
+import Data.SortedSet
 import Libraries.Data.String.Builder
 import Libraries.Utils.Path
 
@@ -50,8 +50,8 @@ schHeader libs compilationUnits = fromString """
 schFooter : Builder
 schFooter = """
 
-  (collect 4)
-  (blodwen-run-finalisers)
+  (collect-request-handler (lambda () (collect (collect-maximum-generation)) (blodwen-run-finalisers)))
+  (collect-rendezvous)
   """
 
 startChez : String -> String -> String -> String

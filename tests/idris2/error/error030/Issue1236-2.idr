@@ -1,5 +1,3 @@
-module Issue1236
-
 private
 data Mismatched1 : Type
 export

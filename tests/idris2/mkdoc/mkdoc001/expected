@@ -1,0 +1,69 @@
+1/4: Building Test4 (Test4.idr)
+2/4: Building Test3 (Test3.idr)
+3/4: Building Test2 (Test2.idr)
+4/4: Building Test1 (Test1.idr)
+<div class="container"><h1>Package test - Namespaces</h1><ul class="names"><li>
+  <div class="index-wrapper">
+    <div class="index-namespace-url">
+      <a class="code" href="docs/Test1.html">Test1</a>
+    </div>
+    <div class="index-namespace-doc">
+      Single-line
+
+    </div>
+  </div>
+</li><li>
+  <div class="index-wrapper">
+    <div class="index-namespace-url">
+      <a class="code" href="docs/Test2.html">Test2</a>
+    </div>
+    <div class="index-namespace-doc">
+      Multi-
+line
+
+    </div>
+  </div>
+</li><li>
+  <div class="index-wrapper">
+    <div class="index-namespace-url">
+      <a class="code" href="docs/Test3.html">Test3</a>
+    </div>
+    <div class="index-namespace-doc">
+      Single-line
+
+    </div>
+  </div>
+</li><li>
+  <div class="index-wrapper">
+    <div class="index-namespace-url">
+      <a class="code" href="docs/Test4.html">Test4</a>
+    </div>
+    <div class="index-namespace-doc">
+      Multi-
+line
+
+    </div>
+  </div>
+</li></ul></div><></body></html>
+---------
+File: build/docs/docs/Test1.html
+<div class="container"><div id="module-header"><h1>Test1</h1><pre>Single-line
+</pre></div><code></code></div><></body></html>
+---------
+File: build/docs/docs/Test2.html
+<div class="container"><div id="module-header"><h1>Test2</h1><pre>Multi-
+line
+</pre></div><code></code></div><></body></html>
+---------
+File: build/docs/docs/Test3.html
+<div class="container"><div id="module-header"><h1>Test3</h1><pre>Single-line
+
+Cutoff
+</pre></div><code></code></div><></body></html>
+---------
+File: build/docs/docs/Test4.html
+<div class="container"><div id="module-header"><h1>Test4</h1><pre>Multi-
+line
+
+Cutoff
+</pre></div><code></code></div><></body></html>

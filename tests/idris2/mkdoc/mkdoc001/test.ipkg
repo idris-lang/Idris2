@@ -1,0 +1,4 @@
+package test
+version = 0.1.0
+
+modules = Test1, Test2, Test3, Test4

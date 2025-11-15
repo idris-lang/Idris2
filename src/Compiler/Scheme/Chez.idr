@@ -14,12 +14,12 @@ import Core.Options
 import Core.TT
 import Protocol.Hex
 import Libraries.Utils.Path
-import Libraries.Data.SortedSet
 import Libraries.Data.String.Builder
 
 import Data.List
 import Data.List1
 import Data.Maybe
+import Data.SortedSet
 import Data.String
 import Data.Vect
 
@@ -113,8 +113,8 @@ schHeader chez libs whole
 schFooter : Bool -> Bool -> Builder
 schFooter prof whole = fromString """
 
-    (collect 4)
-    (blodwen-run-finalisers)
+    (collect-request-handler (lambda () (collect (collect-maximum-generation)) (blodwen-run-finalisers)))
+    (collect-rendezvous)
     \{ ifThenElse prof "(profile-dump-html)" "" }
     \{ ifThenElse whole ")" "" }
   """

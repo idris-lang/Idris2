@@ -565,9 +565,9 @@ tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
             List (Var newvars) ->
             IVars vs newvars -> Term newvars -> Term vs ->
             Core (Maybe (Term vs))
-    mkDef (v :: vs) vars soln (Bind bfc x (Pi fc c _ ty) sc)
+    mkDef (v :: vs) vars soln (Bind bfc x (Pi fc c info ty) sc)
        = do sc' <- mkDef vs (ICons (Just v) vars) soln sc
-            pure $ (Bind bfc x (Lam fc c Explicit (Erased bfc Placeholder)) <$> sc')
+            pure $ (Bind bfc x (Lam fc c info (Erased bfc Placeholder)) <$> sc')
     mkDef vs vars soln (Bind bfc x b@(Let _ c val ty) sc)
        = do mbsc' <- mkDef vs (ICons Nothing vars) soln sc
             flip traverseOpt mbsc' $ \sc' =>
@@ -873,8 +873,7 @@ mutual
                                           tmnf
                      let qopts = MkQuoteOpts False False
                                              (Just defs.options.elabDirectives.nfThreshold)
-                     tm <- catch (quoteOpts qopts
-                                            empty env tmnf)
+                     tm <- catch (quoteOpts qopts empty env tmnf)
                                  (\err => quote defs env tmnf)
                      Just tm <- occursCheck loc env mode mname tm
                          | _ => postponeS swap loc mode "Occurs check failed" env
@@ -884,8 +883,8 @@ mutual
                      let solveOrElsePostpone : Term newvars -> Core UnifyResult
                          solveOrElsePostpone stm = do
                            mbResult <- solveHole fc mode env mname mref
-                                            margs margs' locs submv
-                                            tm stm tmnf
+                                                 margs margs' locs submv
+                                                 tm stm tmnf
                            flip fromMaybe (pure <$> mbResult) $
                              postponeS swap loc mode "Can't instantiate" env
                                        (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs') tmnf
@@ -896,8 +895,8 @@ mutual
                             do tm' <- quote defs env tmnf
                                case shrink tm' submv of
                                     Nothing => postponeS swap loc mode "Can't shrink" env
-                                                 (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs')
-                                                 tmnf
+                                                         (NApp loc (NMeta mname mref margs) $ map (EmptyFC,) margs')
+                                                         tmnf
                                     Just stm => solveOrElsePostpone stm
 
   -- Unify an application with something else

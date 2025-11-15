@@ -13,7 +13,7 @@ fix_path() {
   windows_path_tweaks | sed "s#$TEST_FOLDER_PREFIX#[...]#g"
 }
 
-idris2 --build test.ipkg --log package.depends:10 2>&1 | fix_path
+idris2 --build test.ipkg --log package.depends:10 2>&1 | fix_path | clean_version
 
 for folder in ./depends/*; do
   rmdir "${folder}/${TTC_VERSION}"

@@ -214,15 +214,14 @@ parameters (Lbls, Sts : Type)
             -> AlwaysUntil f g d t
             -> AlwaysUntil f g (S d) t
         prf (Here au) = Here (diQ au)
-        prf (There au aus) = There (diP au) (mapAllAU prf aus)
+        prf (There au aus) = There (diP au) (mapAllAU aus)
           where
             -- `All.mapProperty` erases the list and so won't work here
             mapAllAU :  {d : _} -> {lt : _}
-                     -> (prf : AlwaysUntil f g d t -> AlwaysUntil f g (S d) t)
                      -> All (AlwaysUntil f g d) lt
                      -> All (AlwaysUntil f g (S d)) lt
-            mapAllAU prf [] = []
-            mapAllAU prf (au :: aus) = (prf au) :: mapAllAU prf aus
+            mapAllAU [] = []
+            mapAllAU (au :: aus) = (prf au) :: mapAllAU aus
 
 
   ------------------------------------------------------------------------
@@ -255,15 +254,14 @@ parameters (Lbls, Sts : Type)
             -> ExistsUntil f g d t
             -> ExistsUntil f g (S d) t
         prf (Here eu) = Here (diQ eu)
-        prf (There eu eus) = There (diP eu) (mapAnyEU prf eus)
+        prf (There eu eus) = There (diP eu) (mapAnyEU eus)
           where
             -- `Any.mapProperty` erases the list and so won't work here
             mapAnyEU :  {d : _} -> {lt : _}
-                     -> (prf : ExistsUntil f g d t -> ExistsUntil f g (S d) t)
                      -> Any (ExistsUntil f g d) lt
                      -> Any (ExistsUntil f g (S d)) lt
-            mapAnyEU prf (Here x) = Here (prf x)
-            mapAnyEU prf (There x) = There (mapAnyEU prf x)
+            mapAnyEU (Here y) = Here (prf y)
+            mapAnyEU (There x) = There (mapAnyEU x)
 
 
   ------------------------------------------------------------------------

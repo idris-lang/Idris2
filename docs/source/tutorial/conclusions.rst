@@ -10,13 +10,19 @@ dependent types in general, can be obtained from various sources:
 *  `Type-Driven Development with Idris <https://www.manning.com/books/type-driven-development-with-idris>`_
    by Edwin Brady, available from `Manning <https://www.manning.com>`_.
 
-*  The Idris web site (https://www.idris-lang.org/) and by asking
-   questions on the mailing list.
+*  `The community Idris2 tutorial <https://idris-community.github.io/idris2-tutorial/>`_,
+   originally written by Stefan Höck, now maintained by the community.
 
-*  The `discord server<https://discord.gg/UX68fDs2jc>`_.
+*  The Idris website (https://www.idris-lang.org/) has pointers to a broad range
+   of resources.
+
+*  By asking questions on the `discord server <https://discord.gg/UX68fDs2jc>`_,
+   or `the mailing list <https://groups.google.com/forum/#!forum/idris-lang>`_
+   (the discord server is currently the most active place for interactive
+   discussion).
 
 *  The IRC channel ``#idris``, on
-   `webchat.freenode.net <https://webchat.freenode.net/>`__.
+   `libera.chat <https://libera.chat/>`__.
 
 *  The wiki (https://github.com/idris-lang/Idris2/wiki) has further
    user provided information, in particular:
@@ -31,28 +37,26 @@ dependent types in general, can be obtained from various sources:
 
    * https://github.com/idris-community
 
-*  Various papers (e.g. [#BradyHammond2012]_, [#Brady]_, and [#BradyHammond2010]_).  Although these mostly
-   describe older versions of Idris.
+*  The papers describing Idris2 [#Brady2021]_ and the older Idris1
+   [#Brady2013]_ [#Brady2011]_.  There is a wider (non-exhaustive) list of
+   papers involving Idris
+   `on the website <https://www.idris-lang.org/pages/papers.html>`_.
 
-.. [#BradyHammond2012] Edwin Brady and Kevin Hammond. 2012. Resource-Safe systems
-       programming with embedded domain specific languages. In
-       Proceedings of the 14th international conference on Practical
-       Aspects of Declarative Languages (PADL'12), Claudio Russo and
-       Neng-Fa Zhou (Eds.). Springer-Verlag, Berlin, Heidelberg,
-       242-257. DOI=10.1007/978-3-642-27694-1_18
-       https://dx.doi.org/10.1007/978-3-642-27694-1_18
 
-.. [#Brady] Edwin C. Brady. 2011. IDRIS ---: systems programming meets full
+.. [#Brady2021] Edwin Brady. Idris 2: Quantitative Type Theory in Practice. In
+       35th European Conference on Object-Oriented Programming (ECOOP 2021).
+       Leibniz International Proceedings in Informatics (LIPIcs), Volume 194,
+       pp. 9:1-9:26, Schloss Dagstuhl - Leibniz-Zentrum für Informatik (2021)
+       https://doi.org/10.4230/LIPIcs.ECOOP.2021.9
+
+.. [#Brady2013] E. BRADY, "Idris, a general-purpose dependently typed
+       programming language: Design and implementation," Journal of Functional
+       Programming, vol. 23, no. 5, pp. 552-593, 2013.
+       doi:10.1017/S095679681300018X https://doi.org/10.1017/S095679681300018X 
+
+.. [#Brady2011] Edwin C. Brady. 2011. IDRIS ---: systems programming meets full
        dependent types. In Proceedings of the 5th ACM workshop on
        Programming languages meets program verification (PLPV
        '11). ACM, New York, NY, USA,
        43-54. DOI=10.1145/1929529.1929536
        https://doi.acm.org/10.1145/1929529.1929536
-
-.. [#BradyHammond2010] Edwin C. Brady and Kevin Hammond. 2010. Scrapping your
-       inefficient engine: using partial evaluation to improve
-       domain-specific language implementation. In Proceedings of the
-       15th ACM SIGPLAN international conference on Functional
-       programming (ICFP '10). ACM, New York, NY, USA,
-       297-308. DOI=10.1145/1863543.1863587
-       https://doi.acm.org/10.1145/1863543.1863587

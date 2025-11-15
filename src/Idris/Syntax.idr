@@ -13,13 +13,13 @@ import TTImp.TTImp
 import Data.List
 import Data.Maybe
 import Data.SnocList
+import Data.SortedMap
 import Data.String
 
 import public Idris.Syntax.Pragmas
 
 import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
-import Libraries.Data.SortedMap
 import Libraries.Data.String.Extra
 import Libraries.Data.StringMap
 import Libraries.Data.WithDefault

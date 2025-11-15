@@ -200,8 +200,8 @@ export
 logGlue : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
           LogTopic ->
-          Nat -> Lazy String -> Env Term vars -> Glued vars -> Core ()
-logGlue s n msg env gtm
+          Nat -> Lazy String -> Glued vars -> Core ()
+logGlue s n msg gtm
     = when !(logging s n) $
         do defs <- get Ctxt
            tm <- getTerm gtm

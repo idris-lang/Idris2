@@ -100,8 +100,8 @@ rawTokens : TokenMap Token
 rawTokens =
   [ (comment, Comment . drop 2)
   , (blockComment, Comment . shrink 2)
+  , (identAllowDashes <+> reject dot, DotSepIdent Nothing)
   , (namespacedIdent, uncurry DotSepIdent . mkNamespacedIdent)
-  , (identAllowDashes, DotSepIdent Nothing)
   , (separator, const Separator)
   , (dot, const Dot)
   , (lte, const LTE)
@@ -119,7 +119,7 @@ rawTokens =
 export
 lex : String -> Either (Int, Int, String) (List (WithBounds Token))
 lex str =
-  case lexTo (const False) rawTokens str of
+  case lex rawTokens str of
        (tokenData, (l, c, "")) =>
          Right $ (filter (useful . val) tokenData)
           ++ [MkBounded EndOfInput False (MkBounds l c l c)]

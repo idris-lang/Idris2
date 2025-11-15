@@ -15,3 +15,8 @@ Functor (IMaybe b) where
 export
 fromJust : IMaybe True a -> a
 fromJust (Just x) = x
+
+export
+toList : IMaybe b a -> List a
+toList Nothing = []
+toList (Just x) = [x]

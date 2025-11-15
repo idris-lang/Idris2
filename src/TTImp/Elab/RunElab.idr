@@ -229,8 +229,7 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
              scriptRet ()
     elabCon defs "ResugarTerm" [maxLineWidth, tm]
         = do ptm <- pterm . map defaultKindedName =<< reify defs !(evalClosure defs tm)
-             mlw <- reify defs !(evalClosure defs maxLineWidth)
-             let _ : Maybe Nat = mlw
+             mlw : Maybe Nat <- reify defs !(evalClosure defs maxLineWidth)
              let pw = maybe Unbounded (\w => AvailablePerLine (cast w) 1) mlw
              scriptRet $ render' pw Nothing $ pretty {ann=IdrisSyntax} ptm
     elabCon defs "Check" [exp, ttimp]

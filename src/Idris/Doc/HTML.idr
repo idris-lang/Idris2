@@ -5,8 +5,8 @@ import Core.Core
 import Core.Directory
 
 import Data.String
+import Data.SortedMap
 
-import Libraries.Data.SortedMap
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Render.HTML
 import Libraries.Text.PrettyPrint.Prettyprinter.SimpleDocTree
@@ -215,7 +215,7 @@ renderDocIndex pkg moddocstrs = fastConcat $
       moduleLink (mod, filename) moddocstrs =
         let cmoddocstr  = case lookup mod moddocstrs of
                             Nothing          => ""
-                            Just cmoddocstr' => cmoddocstr'
+                            Just cmoddocstr' => unlines $ takeWhile (/= "") $ lines $ cmoddocstr'
         in """
            <li>
              <div class="index-wrapper">

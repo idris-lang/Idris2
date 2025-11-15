@@ -80,7 +80,6 @@ modFin :  (n : Nat)
        -> (m : Nat)
        -> {auto mNZ : NonZero m}
        -> Fin m
-modFin n 0 impossible
 modFin 0 (S k) = FZ
 modFin (S j) (S k) =
   let n' : Nat

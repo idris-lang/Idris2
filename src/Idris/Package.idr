@@ -14,6 +14,7 @@ import Core.Unify
 import Data.List
 import Data.Maybe
 import Data.SnocList
+import Data.SortedMap
 import Data.String
 import Data.These
 
@@ -23,7 +24,6 @@ import System.Directory
 import Libraries.System.Directory.Tree
 import System.File
 
-import Libraries.Data.SortedMap
 import Libraries.Data.StringMap
 import Libraries.Data.StringTrie
 import Libraries.Data.WithDefault

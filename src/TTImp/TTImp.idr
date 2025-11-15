@@ -12,10 +12,10 @@ import Core.Value
 import Data.List
 import public Data.List1
 import Data.Maybe
+import Data.SortedSet
 
 import Libraries.Data.List.SizeOf
 
-import Libraries.Data.SortedSet
 import Libraries.Data.WithDefault
 import Libraries.Data.SnocList.SizeOf
 
@@ -985,7 +985,7 @@ gapply f [] = f
 gapply f (x :: xs) = gapply (uncurry (app f) x) xs where
 
   app : RawImp' nm -> Maybe Name -> RawImp' nm -> RawImp' nm
-  app f Nothing x =  IApp (getFC f) f x
+  app f Nothing   x = IApp (getFC f) f x
   app f (Just nm) x = INamedApp (getFC f) f nm x
 
 

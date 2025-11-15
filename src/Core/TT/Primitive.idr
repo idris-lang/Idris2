@@ -10,7 +10,6 @@ import Decidable.Equality
 import Idris.Pretty.Annotations
 
 import Libraries.Data.Ordering.Extra
-import Libraries.Data.String.Extra -- compatibility
 import Libraries.Text.PrettyPrint.Prettyprinter
 
 %default total

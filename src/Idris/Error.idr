@@ -19,7 +19,6 @@ import Data.List1
 import Data.String
 
 import Libraries.Data.List.Extra
-import Libraries.Data.List1 as Lib
 import Libraries.Data.String.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
@@ -288,7 +287,7 @@ pwarningRaw (IncompatibleVisibility fc vx vy n)
 pwarningRaw (ShadowingLocalBindings fc ns)
     = pure $ vcat
     [ reflow "You may be unintentionally shadowing the following local bindings:"
-    , indent 2 $ hcat $ pretty0 . fst <$> (forget ns)
+    , indent 2 $ concatWith (surround (comma <+> space)) $ map (code . pretty0 . fst) $ forget ns
     , !(ploc fc)
     ]
 
@@ -788,7 +787,7 @@ perrorRaw (InRHS fc n err)
 
 perrorRaw (MaybeMisspelling err ns) = pure $ !(perrorRaw err) <+> case ns of
   (n ::: []) => reflow "Did you mean:" <++> code (pretty0 n) <+> "?"
-  _ => let (xs, x) = Lib.unsnoc ns in
+  _ => let (xs, x) = unsnoc ns in
        reflow "Did you mean any of:"
        <++> concatWith (surround (comma <+> space)) (map (code . pretty0) xs)
        <+> comma <++> "or" <++> code (pretty0 x) <+> "?"
