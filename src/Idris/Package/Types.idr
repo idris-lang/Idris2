@@ -20,7 +20,7 @@ data PkgVersion = MkPkgVersion (List1 Nat)
 
 export
 Show PkgVersion where
-  show (MkPkgVersion vs) = showSep "." (map show (forget vs))
+  show (MkPkgVersion vs) = joinBy "." (map show (forget vs))
 
 export
 Pretty Void PkgVersion where

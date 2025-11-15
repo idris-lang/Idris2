@@ -839,6 +839,6 @@ compileToES c s cg tm ccTypes = do
 
   -- complete preamble, including content from additional
   -- support files (if any)
-  let pre = showSep "\n" $ static_preamble :: (values $ preamble st)
+  let pre = joinBy "\n" $ static_preamble :: (values $ preamble st)
 
   pure $ fastUnlines [pre,allDecls,main]

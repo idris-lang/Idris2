@@ -100,15 +100,15 @@ findInferrable defs ty = fi 0 0 [] NatSet.empty ty
       -- inferrable if it's guarded by a constructor, or on its own
       findInf : NatSet -> List (Name, Nat) ->
                 ClosedNF -> Core NatSet
-      findInf acc pos (NApp _ (NRef Bound n) [])
+      findInf acc pos (NApp _ (NRef Bound n) [<])
           = case lookup n pos of
                  Nothing => pure acc
                  Just p => if p `elem` acc then pure acc else pure (NatSet.insert p acc)
       findInf acc pos (NDCon _ _ _ _ args)
-          = do args' <- traverse (evalClosure defs . snd) args
+          = do args' <- traverse (evalClosure defs . snd) (toList args)
                findInfs acc pos args'
       findInf acc pos (NTCon _ _ _ args)
-          = do args' <- traverse (evalClosure defs . snd) args
+          = do args' <- traverse (evalClosure defs . snd) (toList args)
                findInfs acc pos args'
       findInf acc pos (NDelayed _ _ t) = findInf acc pos t
       findInf acc _ _ = pure acc

@@ -168,7 +168,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
         -- We'll use the `env` thus obtained to unelab the remaining scope
         dropLeadingPis : {vs : _} -> (vars : Scope) -> Term vs -> Env Term vs ->
                          Core (vars' : Scope ** (Env Term vars', Term vars'))
-        dropLeadingPis [] ty env
+        dropLeadingPis [<] ty env
           = do unless (null vars) $
                  logC "declare.record.parameters" 60 $ pure $ unlines
                    [ "We elaborated \{show tn} in a non-empty local context."
@@ -176,8 +176,8 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                    , "  Remaining type: \{show !(toFullNames ty)}"
                    ]
                pure (_ ** (env, ty))
-        dropLeadingPis (var :: vars) (Bind fc n b@(Pi {}) ty) env
-          = dropLeadingPis vars ty (b :: env)
+        dropLeadingPis (vars :< var) (Bind fc n b@(Pi {}) ty) env
+          = dropLeadingPis vars ty (Env.bind env b)
         dropLeadingPis _ ty _ = throw (InternalError "Malformed record type \{show ty}")
 
         getParameters :
@@ -255,7 +255,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
              then elabGetters tn con params
                               (if imp == Explicit && not (n `elem` vars)
                                   then S done else done)
-                              upds (b :: tyenv) sc
+                              upds (Env.bind tyenv b) sc
              else
                 do let fldNameStr = nameRoot n
                    let unName = UN $ Basic fldNameStr
@@ -338,7 +338,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                    elabGetters tn con params
                                (if imp == Explicit
                                    then S done else done)
-                               upds' (b :: tyenv) sc
+                               upds' (Env.bind tyenv b) sc
 
     elabGetters tn con _ done upds _ _ = pure ()
 

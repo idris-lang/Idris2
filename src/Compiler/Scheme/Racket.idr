@@ -168,7 +168,7 @@ getLibVers libspec
                         (root, rest) => (root, "")
            (fn :: vers) =>
                (fst (span (/='.') fn),
-                  "'(" ++ showSep " " (map show vers) ++ " #f)" )
+                  "'(" ++ joinBy " " (map show vers) ++ " #f)" )
 
 cToRkt : CFType -> Builder -> Builder
 cToRkt CFChar op = "(integer->char " ++ op ++ ")"

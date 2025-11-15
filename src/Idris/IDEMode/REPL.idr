@@ -356,11 +356,11 @@ displayIDEResult outf i  (REPL $ ProofFound x)
   = printIDEResult outf i $ AString $ show x
 displayIDEResult outf i  (REPL $ Missed cases)
   = printIDEResult outf i
-  $ AString $ showSep "\n"
+  $ AString $ joinBy "\n"
   $ map handleMissing' cases
 displayIDEResult outf i  (REPL $ CheckedTotal xs)
   = printIDEResult outf i
-  $ AString $ showSep "\n"
+  $ AString $ joinBy "\n"
   $ map (\ (fn, tot) => (show fn ++ " is " ++ show tot)) xs
 displayIDEResult outf i  (REPL $ LogLevelSet k)
   = printIDEResult outf i
@@ -386,10 +386,10 @@ displayIDEResult outf i (REPL $ Edited (MadeLemma lit name pty pappstr))
       }
 displayIDEResult outf i (REPL $ Edited (MadeWith lit wapp))
   = printIDEResult outf i
-  $ AString $ showSep "\n" (map (relit lit) wapp)
+  $ AString $ joinBy "\n" (map (relit lit) wapp)
 displayIDEResult outf i (REPL $ (Edited (MadeCase lit cstr)))
   = printIDEResult outf i
-  $ AString $ showSep "\n" (map (relit lit) cstr)
+  $ AString $ joinBy "\n" (map (relit lit) cstr)
 displayIDEResult outf i (FoundHoles holes)
   = printIDEResult outf i $ AHoleList $ map holeIDE holes
 displayIDEResult outf i (CompletionList ns r)

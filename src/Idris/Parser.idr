@@ -1118,7 +1118,7 @@ mutual
           let fc = boundToFC fname x in
           toLines xs [< StrLiteral fc (last strs)]
             $ acc :< (line <>> [StrLiteral fc str])
-            <>< map (\str => [StrLiteral fc str]) (init strs)
+            <>< (the (List _) $ map (\str => [StrLiteral fc str]) (init strs))
 
   fnDirectOpt : OriginDesc -> Rule PFnOpt
   fnDirectOpt fname
@@ -2152,7 +2152,7 @@ mutual
   Show CmdArg where
     show NoArg = ""
     show OnOffArg = "(on|off)"
-    show (Args args) = showSep " " (map show args)
+    show (Args args) = joinBy " " (map show args)
     show arg = "<" ++ showCmdArg arg ++ ">"
 
 public export
