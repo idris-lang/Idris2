@@ -210,11 +210,6 @@ showK {a} xs = show (map aString xs)
     aString (MkVar v, t) = (nameAt v, t)
 
 -- TODO re-use `Thinnable`
-weakenNs : SizeOf args -> KnownVars vars a -> KnownVars (Scope.addInner vars args) a
-weakenNs args [] = []
-weakenNs args ((v, t) :: xs)
-  = (weakenNs args v, t) :: weakenNs args xs
-
 weakensN : SizeOf args -> KnownVars vars a -> KnownVars (Scope.ext vars args) a
 weakensN args [] = []
 weakensN args ((v, t) :: xs)
