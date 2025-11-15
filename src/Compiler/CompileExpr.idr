@@ -129,7 +129,7 @@ mkDropSubst (S i) es rest (xs :< x)
 -- Next case can't happen if called with the right Nat from mkDropSubst
 -- FIXME: rule it out with a type!
 -- Dupe see: Libraries.Data.List.Thin.fromNatSet
--- Dupe see: Libraries.Data.NatSet.partition
+-- Dupe see: Libraries.Data.NatSet.drop
 mkDropSubst Z es rest (xs :< x) = let (vs ** sub) = mkDropSubst Z es rest xs in (vs ** Drop sub)
 
 -- See if the constructor is a special constructor type, e.g a nil or cons

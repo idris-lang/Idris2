@@ -351,7 +351,7 @@ patternEnv {vars} env args
              Nothing => Nothing
              Just (vslist, vsset) =>
                let (newvars ** svs) = fromVarSet _ vsset in
-                 Just (newvars ** (updateVars vslist svs, svs))
+                 Just (newvars ** (updateVars (reverse vslist) svs, svs))
 
 getVarsTm : SnocList (Term vars) -> Maybe (SnocList (Var vars), VarSet vars)
 getVarsTm = go [<] VarSet.empty where
@@ -379,7 +379,7 @@ patternEnvTm {vars} env args
            Nothing => Nothing
            Just (vslist, vsset) =>
              let (newvars ** svs) = fromVarSet _ vsset in
-                 Just (newvars ** (updateVars vslist svs, svs))
+                 Just (newvars ** (updateVars (reverse vslist) svs, svs))
 
 -- Check that the metavariable name doesn't occur in the solution.
 -- If it does, normalising might help. If it still does, that's an error.

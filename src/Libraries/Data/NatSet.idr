@@ -33,14 +33,19 @@ namespace SnocList
   export
   drop : NatSet -> SnocList a -> SnocList a
   drop 0  xs = xs
-  drop ds xs = go 0 xs
+  drop ds xs = go (length xs) xs
     where
       go : Nat -> SnocList a -> SnocList a
       go _ [<] = [<]
-      go i (xs :< x)
+      go (S i) (xs :< x)
           = if i `elem` ds
-              then go (S i) xs
-              else go (S i) xs :< x
+              then go i xs
+              else go i xs :< x
+      -- Next case can't happen if called with the right Nat from drop
+      -- FIXME: rule it out with a type!
+      -- Dupe see: Compiler.CompileExpr.mkDropSubst
+      -- Dupe see: Libraries.Data.List.Thin.fromNatSet
+      go Z (xs :< x) = go Z xs
 
 export %inline
 take : NatSet -> List a -> List a
@@ -97,7 +102,7 @@ Show NatSet where
 
 export
 partition : NatSet -> SnocList a -> (SnocList a , SnocList a)
-partition ps = go 0
+partition ps l = go (length l) l
   where
     go : Nat -> SnocList a -> (SnocList a , SnocList a)
     go i [<] = ([<], [<])
@@ -106,11 +111,11 @@ partition ps = go 0
         if i `elem` ps
            then (ps' :< x, ds')
            else (ps', ds' :< x)
-    -- Next case can't happen if called with the right Nat from fromNatSet
+    -- Next case can't happen if called with the right Nat from drop
     -- FIXME: rule it out with a type!
     -- Dupe see: Compiler.CompileExpr.mkDropSubst
     -- Dupe see: Libraries.Data.List.Thin.fromNatSet
-    go Z (xs :< x) = let (ps', ds') = go Z xs in (ps' :< x, ds')
+    go Z (xs :< x) = go Z xs
 
 export
 intersection : NatSet -> NatSet -> NatSet
@@ -138,14 +143,19 @@ allLessThanSpecNonEmpty = Refl
 export
 overwrite : a -> NatSet -> SnocList a -> SnocList a
 overwrite c 0  xs = xs
-overwrite c ds xs = go 0 xs
+overwrite c ds xs = go (length xs) xs
   where
     go : Nat -> SnocList a -> SnocList a
     go _ [<] = [<]
-    go i (xs :< x)
+    go (S i) (xs :< x)
         = if i `elem` ds
-             then go (S i) xs :< c
-             else go (S i) xs :< x
+             then go i xs :< c
+             else go i xs :< x
+    -- Next case can't happen if called with the right Nat from drop
+    -- FIXME: rule it out with a type!
+    -- Dupe see: Compiler.CompileExpr.mkDropSubst
+    -- Dupe see: Libraries.Data.List.Thin.fromNatSet
+    go Z (xs :< x) = go Z xs
 
 
 

@@ -53,5 +53,5 @@ fromNatSet ns xs =
     -- Next case can't happen if called with the right Nat from fromNatSet
     -- FIXME: rule it out with a type!
     -- Dupe see: Compiler.CompileExpr.mkDropSubst
-    -- Dupe see: Libraries.Data.NatSet.partition
+    -- Dupe see: Libraries.Data.NatSet.drop
     go Z (xs :< x) = let (xs' ** th) = go Z xs in (xs' ** Drop th)
