@@ -120,15 +120,11 @@ argPrec = 1000
 
 showImplicits : {auto c : Ref Ctxt Defs} ->
                 Core Bool
-showImplicits
-    = do pp <- getPPrint
-         pure (showImplicits pp)
+showImplicits = showImplicits <$> getPPrint
 
 showFullEnv : {auto c : Ref Ctxt Defs} ->
               Core Bool
-showFullEnv
-    = do pp <- getPPrint
-         pure (showFullEnv pp)
+showFullEnv = showFullEnv <$> getPPrint
 
 unbracket : PTerm' nm -> PTerm' nm
 unbracket (PBracketed _ tm) = tm

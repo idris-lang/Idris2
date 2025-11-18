@@ -165,14 +165,11 @@ setOpt : {auto c : Ref Ctxt Defs} ->
          {auto o : Ref ROpts REPLOpts} ->
          REPLOpt -> Core ()
 setOpt (ShowImplicits t)
-    = do pp <- getPPrint
-         setPPrint ({ showImplicits := t } pp)
+    = updatePPrint { showImplicits := t }
 setOpt (ShowNamespace t)
-    = do pp <- getPPrint
-         setPPrint ({ fullNamespace := t } pp)
+    = updatePPrint { fullNamespace := t }
 setOpt (ShowMachineNames t)
-    = do pp <- getPPrint
-         setPPrint ({ showMachineNames := t } pp)
+    = updatePPrint { showMachineNames := t }
 setOpt (ShowTypes t)
     = update ROpts { showTypes := t }
 setOpt (EvalMode m)

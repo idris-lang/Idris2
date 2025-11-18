@@ -221,7 +221,21 @@ defaultDirs = MkDirs "." Nothing "build" "depends" Nothing
                      "/usr/local" ["."] [] [] [] []
 
 defaultPPrint : PPrinter
-defaultPPrint = MkPPOpts False False True False
+defaultPPrint = MkPPOpts
+    { showImplicits = False
+    , showMachineNames = False
+    , showFullEnv = True
+    , fullNamespace = False
+    }
+
+export
+docsPPrint : PPrinter
+docsPPrint = MkPPOpts
+    { showImplicits = False
+    , showMachineNames = True
+    , showFullEnv = False
+    , fullNamespace = False
+    }
 
 export
 defaultSession : Session

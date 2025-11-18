@@ -720,7 +720,7 @@ makeDoc pkg opts =
        Right () <- coreLift $ mkdirAll docDir
          | Left err => fileError docDir err
        u <- newRef UST initUState
-       setPPrint (MkPPOpts False True False False)
+       setPPrint docsPPrint
 
        [] <- concat <$> for (modules pkg) (\(mod, filename) => do
            -- load dependencies
