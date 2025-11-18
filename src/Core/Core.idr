@@ -836,15 +836,10 @@ namespace List
   for_ : List a -> (a -> Core ()) -> Core ()
   for_ = flip traverse_
 
-  %inline
   export
   sequence : List (Core a) -> Core (List a)
-  sequence (x :: xs)
-     = do
-          x' <- x
-          xs' <- sequence xs
-          pure (x' :: xs')
   sequence [] = pure []
+  sequence (x :: xs) = [| x :: sequence xs |]
 
 -- TODO put in namespace `List1`
 export
