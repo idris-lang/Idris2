@@ -3,7 +3,7 @@
 
   inputs.flake-utils.url = "github:numtide/flake-utils";
   inputs.idris-emacs-src = {
-    url = "github:redfish64/idris2-mode";
+    url = "github:idris-community/idris2-mode";
     flake = false;
   };
   inputs.nixpkgs.url = "github:NixOS/nixpkgs";
