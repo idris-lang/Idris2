@@ -320,6 +320,15 @@ insertNVar p v = case locateNVar p v of
   Right v => embedNVar v
 
 export
+insertNVarFishy : SizeOf inner ->
+             NVar nm (outer <>< inner) ->
+             NVar nm (outer :< n <>< inner)
+insertNVarFishy p v
+  = rewrite fishAsSnocAppend (outer :< n) inner in
+    insertNVar (zero <>< p)
+  $ replace {p = NVar nm} (fishAsSnocAppend outer inner) v
+
+export
 insertNVarNames : GenWeakenable (NVar name)
 insertNVarNames p q v = case locateNVar q v of
   Left v => weakenNVar q (weakenNVar p v)
@@ -463,6 +472,14 @@ shiftUnderNs : SizeOf {a = Name} args ->
                NVar n (vars :< x ++ args)
 shiftUnderNs s First = weakenNs s (MkNVar First)
 shiftUnderNs s (Later p) = insertNVar s (MkNVar p)
+
+export
+shiftUndersN : SizeOf {a = Name} args ->
+               {idx : _} ->
+               (0 p : IsVar n idx (vars <>< args :< x)) ->
+               NVar n (vars :< x <>< args)
+shiftUndersN s First = weakensN s (MkNVar First)
+shiftUndersN s (Later p) = insertNVarFishy s (MkNVar p)
 
 namespace IsVar
   export

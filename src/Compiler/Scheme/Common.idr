@@ -474,7 +474,7 @@ parameters (constants : SortedSet Name)
 
         getConsCode : Builder -> List NamedConAlt -> Core (Maybe Builder)
         getConsCode n [] = pure Nothing
-        getConsCode n (MkNConAlt _ CONS _ [<x,xs] sc :: _)
+        getConsCode n (MkNConAlt _ CONS _ [x,xs] sc :: _)
             = do sc' <- schExp (i + 1) sc
                  pure $ Just $ bindArgs [(x, "car"), (xs, "cdr")] sc'
           where
@@ -524,7 +524,7 @@ parameters (constants : SortedSet Name)
 
         getJustCode : Builder -> List NamedConAlt -> Core (Maybe Builder)
         getJustCode n [] = pure Nothing
-        getJustCode n (MkNConAlt _ JUST _ [<x] sc :: _)
+        getJustCode n (MkNConAlt _ JUST _ [x] sc :: _)
             = do sc' <- schExp (i + 1) sc
                  pure $ Just $ bindArg x sc'
           where

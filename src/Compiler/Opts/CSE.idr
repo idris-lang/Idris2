@@ -167,9 +167,9 @@ mutual
   dropConAlt : Drop CConAlt
   dropConAlt inn (MkConAlt x y tag args z) =
     MkConAlt x y tag args <$>
-        dropCExp
-          (inn + mkSizeOf args)
-          (replace {p = CExp} (sym $ appendAssociative outer inner args) z)
+        dropCExp {outer=outer}
+          (rewrite fishAsSnocAppend inner args in inn + mkSizeOf (cast args))
+          (rewrite sym $ snocAppendFishAssociative outer inner args in z)
 
   dropConstAlt : Drop CConstAlt
   dropConstAlt inn (MkConstAlt x y) = MkConstAlt x <$> dropCExp inn y

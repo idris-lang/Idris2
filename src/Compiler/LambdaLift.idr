@@ -190,8 +190,7 @@ mutual
        ||| @ body is the expression that is evaluated as the consequence of
        |||   this branch matching.
        MkLConAlt : (n : Name) -> (info : ConInfo) -> (tag : Maybe Int) ->
-                   -- TODO should args be a List?
-                   (args : Scope) -> (body : Lifted (Scope.addInner vars args)) ->
+                   (args : List Name) -> (body : Lifted (Scope.ext vars args)) ->
                    LiftedConAlt vars
 
   ||| A branch of an "LConst" (constant expression) case statement.
@@ -228,8 +227,8 @@ data LiftedDef : Type where
      -- (Sorry for the awkward API - it's to do with how the indices are
      -- arranged for the variables, and it could be expensive to reshuffle them!
      -- See Compiler.ANF for an example of how they get resolved to names)
-     MkLFun : (args : Scope) -> (scope : Scope) ->
-              (body : Lifted (Scope.addInner args scope)) -> LiftedDef
+     MkLFun : (args : List Name) -> (scope : Scope) ->
+              (body : Lifted (Scope.addInner (cast args) scope)) -> LiftedDef
 
      ||| Constructs a definition of a constructor for a compound data type.
      |||
@@ -450,7 +449,7 @@ usedVars used (LConCase fc sc alts def) =
     usedConAlt : {default Nothing lazy : Maybe LazyReason} ->
                   Used vars -> LiftedConAlt vars -> Used vars
     usedConAlt used (MkLConAlt n ci tag args sc) =
-      contractUsedMany {remove=args} (usedVars (weakenUsed used) sc)
+      contractUsedManyFish {remove=args} (usedVars (weakenUsedFish used) sc)
 
 usedVars used (LConstCase fc sc alts def) =
     let defUsed = maybe used (usedVars used {vars}) def
@@ -549,7 +548,7 @@ dropUnused inn unused (LConstCase fc sc alts def) =
       LConstCase fc (dropUnused inn unused sc) alts' (map (dropUnused inn unused) def)
 
 dropConCase inn unused (MkLConAlt n ci t args sc) =
-  MkLConAlt n ci t args (underBinders Lifted (\inn => dropUnused inn unused) inn (mkSizeOf args) sc)
+  MkLConAlt n ci t args (underBinderz Lifted (\inn => dropUnused inn unused) inn (mkSizeOf args) sc)
 
 dropConstCase inn unused (MkLConstAlt c val) = MkLConstAlt c (dropUnused inn unused val)
 
@@ -571,8 +570,10 @@ mutual
                unused = getUnused unusedContracted
                scl' = dropUnused (mkSizeOf bound) unused scl
            n <- genName
-           update Lifts { defs $= ((n, MkLFun (dropped vars unused) bound scl') ::) }
-           pure $ LUnderApp fc n (length bound) (allVars fc vars unused)
+           let scl'' : Lifted ((cast (toList $ dropped vars unused)) ++ bound)
+                     := rewrite castToList (dropped vars unused) in scl'
+           update Lifts { defs $= ((n, MkLFun (toList $ dropped vars unused) bound scl'') ::) }
+           pure $  LUnderApp fc n (length bound) (reverse $ allVars fc vars unused)
     where
 
         allPrfs : (vs : Scope) -> SizeOf inner -> (unused : Vect (length vs) Bool) -> List (Var (vs <>< inner))
@@ -646,7 +647,7 @@ export
 lambdaLiftDef : (doLazyAnnots : Bool) -> Name -> CDef -> Core (List (Name, LiftedDef))
 lambdaLiftDef doLazyAnnots n (MkFun args exp)
     = do (expl, defs) <- liftBody {doLazyAnnots} n exp
-         pure ((n, MkLFun args Scope.empty expl) :: defs)
+         pure ((n, MkLFun (toList args) Scope.empty (rewrite castToList args in expl)) :: defs)
 lambdaLiftDef _ n (MkCon t a nt) = pure [(n, MkLCon t a nt)]
 lambdaLiftDef _ n (MkForeign ccs fargs ty) = pure [(n, MkLForeign ccs fargs ty)]
 lambdaLiftDef doLazyAnnots n (MkError exp)

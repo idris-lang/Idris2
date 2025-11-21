@@ -124,7 +124,7 @@ mutual
   usedCon : {free : _} ->
             {idx : Nat} -> (0 p : IsVar n idx free) -> CConAlt free -> Int
   usedCon n (MkConAlt _ _ _ args sc)
-      = let MkVar n' = weakenNs (mkSizeOf args) (MkVar n) in
+      = let MkVar n' = weakensN (mkSizeOf args) (MkVar n) in
             used n' sc
 
   usedConst : {free : _} ->
@@ -300,9 +300,13 @@ mutual
             FC -> List Name -> EEnv free vars -> Stack free -> CConAlt (Scope.addInner free vars) ->
             Core (CConAlt free)
   evalAlt {free} {vars} fc rec env stk (MkConAlt n ci t args sc)
-      = do (bs, env') <- extendLoc fc env args
-           scEval <- eval rec env' stk (rewrite appendAssociative free vars args in sc)
-           pure $ MkConAlt n ci t args (refsToLocals bs scEval)
+      = do (bs, env') <- extendLoc fc env (cast args)
+           scEval <- eval rec env' stk $
+                do rewrite appendAssociative free vars (cast args)
+                   rewrite sym $ fishAsSnocAppend (free ++ vars) (args)
+                   sc
+           let sc'' = rewrite snocAppendFishAssociative free Scope.empty args in refsToLocals bs scEval
+           pure $ MkConAlt n ci t args sc''
 
   evalConstAlt : {vars, free : _} ->
                  {auto c : Ref Ctxt Defs} ->
@@ -329,10 +333,7 @@ mutual
                      Just m =>
                          do let env' = extend env (toList args') args m
                             pure $ Just !(eval rec env' stk
-                                    (do rewrite sym $ snocAppendFishAssociative free vars (toList args')
-                                        rewrite sym $ snocAppendAsFish (free ++ vars) args'
-                                        sc
-                                    ))
+                                    (rewrite sym $ snocAppendFishAssociative free vars args' in sc))
            else pickAlt rec env stk con alts def
     where
       matches : Name -> Maybe Int -> Name -> Maybe Int -> Bool

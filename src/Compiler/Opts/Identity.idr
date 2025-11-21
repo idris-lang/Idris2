@@ -8,12 +8,18 @@ import Data.SnocList
 
 import Libraries.Data.List.SizeOf
 
+-- TODO reduce quadratic weakening
 makeArgs : (args : Scope) -> List (Var (Scope.addInner vars args))
 makeArgs args = makeArgs' args id
   where
     makeArgs' : (args : Scope) -> (Var (Scope.addInner vars args) -> a) -> List a
     makeArgs' [<] f = []
     makeArgs' (xs :< x) f = f first :: makeArgs' xs (f . weaken)
+
+makeArgz : (args : List Name) -> List (Var (Scope.ext vars args))
+makeArgz args
+  = embedFishily @{ListFreelyEmbeddable}
+  $ reverse $ allVars ([<] <>< args)
 
 parameters (fn1 : Name) (idIdx : Nat)
   mutual
@@ -87,8 +93,8 @@ parameters (fn1 : Name) (idIdx : Nat)
         altEq : CConAlt vars -> Bool
         altEq (MkConAlt y _ _ args exp) =
             cexpIdentity
-                (weakenNs (mkSizeOf args) var)
-                (Just (y, makeArgs args))
+                (weakensN (mkSizeOf args) var)
+                (Just (y, makeArgz args))
                 const
                 exp
     cexpIdentity var con const (CConstCase fc sc xs x) =

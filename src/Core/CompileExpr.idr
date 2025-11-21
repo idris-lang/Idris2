@@ -114,9 +114,8 @@ mutual
        -- If no tag, then match by constructor name. Back ends might want to
        -- convert names to a unique integer for performance.
        --
-       -- TODO should args be a List?
-       MkConAlt : Name -> ConInfo -> (tag : Maybe Int) -> (args : Scope) ->
-                  CExp (Scope.addInner vars args) -> CConAlt vars
+       MkConAlt : Name -> ConInfo -> (tag : Maybe Int) -> (args : List Name) ->
+                  CExp (Scope.ext vars args) -> CConAlt vars
 
   public export
   data CConstAlt : Scoped where
@@ -169,7 +168,7 @@ mutual
 
   public export
   data NamedConAlt : Type where
-       MkNConAlt : Name -> ConInfo -> (tag : Maybe Int) -> (args : Scope) -> -- TODO should args be a List?
+       MkNConAlt : Name -> ConInfo -> (tag : Maybe Int) -> (args : List Name) ->
                    NamedCExp -> NamedConAlt
 
   public export
@@ -325,6 +324,12 @@ conArgz : (args : SnocList Name) -> Names (Scope.addInner vars args) -> SnocList
 conArgz [<] ns = [<]
 conArgz (as :< a) (ns :< n) = conArgz as ns :< n
 
+conArgs : (args : List Name) -> Names (Scope.ext vars args) -> List Name
+conArgs args ns
+  = let ns' : Names (vars ++ cast args)
+      := rewrite sym $ fishAsSnocAppend vars args in ns
+    in conArgz ([<] <>< args) ns' <>> []
+
 mutual
   forgetExp : Names vars -> CExp vars -> NamedCExp
   forgetExp locs (CLocal fc p) = NmLocal fc (lookup locs p)
@@ -361,8 +366,8 @@ mutual
 
   forgetConAlt : Names vars -> CConAlt vars -> NamedConAlt
   forgetConAlt locs (MkConAlt n ci t args exp)
-      = let args' = addLocz args locs in
-            MkNConAlt n ci t (conArgz args args') (forgetExp args' exp)
+      = let args' = addLocs args locs in
+            MkNConAlt n ci t (conArgs args args') (forgetExp args' exp)
 
   forgetConstAlt : Names vars -> CConstAlt vars -> NamedConstAlt
   forgetConstAlt locs (MkConstAlt c exp)
@@ -473,7 +478,7 @@ mutual
 
   insertNamesConAlt : GenWeakenable CConAlt
   insertNamesConAlt mid inn (MkConAlt x ci tag args sc)
-        = MkConAlt x ci tag args (underBinders CExp (CompileExpr.insertNames mid) inn (mkSizeOf args) sc)
+        = MkConAlt x ci tag args (underBinderz CExp (CompileExpr.insertNames mid) inn (mkSizeOf args) sc)
 
   insertNamesConstAlt : GenWeakenable CConstAlt
   insertNamesConstAlt outer ns (MkConstAlt x sc) = MkConstAlt x (insertNames outer ns sc)
@@ -521,7 +526,7 @@ mutual
 
   shrinkConAlt : Thin newvars vars -> CConAlt vars -> CConAlt newvars
   shrinkConAlt sub (MkConAlt x ci tag args sc)
-        = MkConAlt x ci tag args (shrinkCExp (keeps args sub) sc)
+        = MkConAlt x ci tag args (shrinkCExp (keepz args sub) sc)
 
   shrinkConstAlt : Thin newvars vars -> CConstAlt vars -> CConstAlt newvars
   shrinkConstAlt sub (MkConstAlt x sc) = MkConstAlt x (shrinkCExp sub sc)
@@ -573,7 +578,7 @@ mutual
 
   substConAlt : Substitutable CExp CConAlt
   substConAlt {outer} {dropped} {inner} drp inn env (MkConAlt x ci tag args sc)
-    = MkConAlt x ci tag args (underBinders CExp (\inn => substEnv drp inn env) inn (mkSizeOf args) sc)
+    = MkConAlt x ci tag args (underBinderz CExp (\inn => substEnv drp inn env) inn (mkSizeOf args) sc)
 
   substConstAlt : Substitutable CExp CConstAlt
   substConstAlt outer dropped env (MkConstAlt x sc) = MkConstAlt x (substEnv outer dropped env sc)
@@ -631,7 +636,7 @@ mutual
                    CConAlt (Scope.addInner outer inner) ->
                    CConAlt ((outer ++ bound) ++ inner)
   mkLocalsConAlt bs inn (MkConAlt x ci tag args sc)
-      =  MkConAlt x ci tag args (underBinders CExp (mkLocals bs) inn (mkSizeOf args) sc)
+      =  MkConAlt x ci tag args (underBinderz CExp (mkLocals bs) inn (mkSizeOf args) sc)
 
   mkLocalsConstAlt : Bounds bound ->
                      SizeOf inner ->
