@@ -46,6 +46,10 @@ extensions = [
 #    'sphinx.ext.pngmath', # imgmath is not supported on readthedocs.
     'sphinx.ext.ifconfig',
     "sphinx_rtd_theme",
+    'myst_parser', # https://myst-parser.readthedocs.io/
+    'sphinx_copybutton',
+#    'sphinxcontrib.bibtex' # https://github.com/mcmtroffaes/sphinxcontrib-bibtex
+
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -57,6 +61,20 @@ templates_path = ['_templates']
 exclude_patterns = []
 
 
+# -- Options for MyST output -------------------------------------------------
+
+myst_title_to_header = True
+myst_enable_extensions = [
+    'amsmath',
+    'attrs_block',
+    'attrs_inline',
+    'deflist',
+    'html_admonition',
+    'dollarmath',
+    'replacements',
+    'smartquotes'
+]
+
 # -- Options for HTML output -------------------------------------------------
 
 # The master toctree document.
@@ -65,15 +83,14 @@ master_doc = 'index'
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 # # Read The Docs Themes specific settings
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'sphinx_book_theme'
 html_theme_options = {
     'display_version': True,
     'prev_next_buttons_location': 'bottom'
 }
 
-
-
-
+html_title = 'Idris 2.0 Documentation'
+html_logo = '../../icons/idris-128x128.png'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
