@@ -69,6 +69,15 @@ scopeEq (xs :< x) (ys :< y)
          Just Refl
 scopeEq _ _ = Nothing
 
+export
+localEq : (xs, ys : List Name) -> Maybe (xs = ys)
+localEq [] [] = Just Refl
+localEq (x :: xs) (y :: ys)
+    = do Refl <- nameEq x y
+         Refl <- localEq xs ys
+         Just Refl
+localEq _ _ = Nothing
+
 ------------------------------------------------------------------------
 -- Generate a fresh name (for a given scope)
 

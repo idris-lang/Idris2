@@ -224,7 +224,7 @@ mutual
            Just gdef <- lookupCtxtExact x (gamma defs)
                 | Nothing => -- primitive type match
                      do xn <- getFullName x
-                        pure $ MkConAlt xn TYCON Nothing (cast args) !(toCExpTree n (rewrite sym $ fishAsSnocAppend vars args in sc))
+                        pure $ MkConAlt xn TYCON Nothing (cast args) !(toCExpTree n sc)
                                   :: !(conCases n ns)
            case (definition gdef) of
                 DCon _ arity (Just pos) => conCases n ns -- skip it
@@ -235,8 +235,8 @@ mutual
                         sc' <- toCExpTree n sc
                         ns' <- conCases n ns
                         if dcon (definition gdef)
-                           then pure $ MkConAlt xn !(dconFlag xn) (Just tag) args' (shrinkCExp subList sc') :: ns'
-                           else pure $ MkConAlt xn !(dconFlag xn) Nothing args' (shrinkCExp subList sc') :: ns'
+                           then pure $ MkConAlt xn !(dconFlag xn) (Just tag) (cast args') (rewrite sym $ snocAppendAsFish vars args' in shrinkCExp subList sc') :: ns'
+                           else pure $ MkConAlt xn !(dconFlag xn) Nothing (cast args') (rewrite sym $ snocAppendAsFish vars args' in shrinkCExp subList sc') :: ns'
     where
       dcon : Def -> Bool
       dcon (DCon {}) = True
