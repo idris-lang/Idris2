@@ -69,6 +69,7 @@ import Libraries.Data.NameMap
 import Libraries.Data.PosMap
 import Data.Stream
 import Data.String
+import Libraries.Data.String as L
 import Libraries.Data.List.Extra
 import Libraries.Data.SparseMatrix
 import Libraries.Data.String.Extra
@@ -256,20 +257,17 @@ updateFile update
          coreLift_ $ writeFile f (unlines (update (lines content)))
          pure (DisplayEdit emptyDoc)
 
-rtrim : String -> String
-rtrim str = reverse (ltrim (reverse str))
-
 addClause : String -> Nat -> List String -> List String
-addClause c Z [] = rtrim c :: []
+addClause c Z [] = L.rtrim c :: []
 addClause c Z (x :: xs)
     = if all isSpace (unpack x)
-         then rtrim c :: x :: xs
+         then L.rtrim c :: x :: xs
          else x :: addClause c Z xs
 addClause c (S k) (x :: xs) = x :: addClause c k xs
 addClause c (S k) [] = [c]
 
 caseSplit : String -> Nat -> List String -> List String
-caseSplit c Z (x :: xs) = rtrim c :: xs
+caseSplit c Z (x :: xs) = L.rtrim c :: xs
 caseSplit c (S k) (x :: xs) = x :: caseSplit c k xs
 caseSplit c _ [] = [c]
 
