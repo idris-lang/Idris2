@@ -1,4 +1,4 @@
-# Documentation for the Idris Language.
+# Documentation for the Idris Language
 
 
 This manual has been prepared using ReStructured Text and the [Sphinx Documentation Generator](https://www.sphinx-doc.org) for future inclusion on [Read The Docs](https://readthedocs.org).

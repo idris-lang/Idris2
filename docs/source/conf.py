@@ -16,24 +16,27 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
+from typing import List
+
 import os
 import sys
 import sphinx_rtd_theme
-# sys.path.insert(0, os.path.abspath('.'))
+
+sys.path.insert(0, os.path.abspath('.'))
 
 
 # -- Project information -----------------------------------------------------
 
 # General information about the project.
-project = 'Idris2'
-copyright = '2020-2023, The Idris Community'
-author = 'The Idris Community'
+project = "Idris2"
+copyright = "2020-2023, The Idris Community"
+author = "The Idris Community"
 
 # The short X.Y version.
-version = '0.0'
+version = "0.0"
 
 # The full version, including alpha/beta/rc tags
-release = '0.0'
+release = "0.0"
 
 
 # -- General configuration ---------------------------------------------------
@@ -42,12 +45,12 @@ release = '0.0'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.todo',
+    "sphinx.ext.todo",
 #    'sphinx.ext.pngmath', # imgmath is not supported on readthedocs.
-    'sphinx.ext.ifconfig',
+    "sphinx.ext.ifconfig",
     "sphinx_rtd_theme",
-    'myst_parser', # https://myst-parser.readthedocs.io/
-    'sphinx_copybutton',
+    "myst_parser", # https://myst-parser.readthedocs.io/
+    "sphinx_copybutton",
 #    'sphinxcontrib.bibtex' # https://github.com/mcmtroffaes/sphinxcontrib-bibtex
 
 ]
@@ -58,50 +61,50 @@ templates_path = ['_templates']
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
+exclude_patterns : List[str] = []
 
 
 # -- Options for MyST output -------------------------------------------------
 
 myst_title_to_header = True
 myst_enable_extensions = [
-    'amsmath',
-    'attrs_block',
-    'attrs_inline',
-    'deflist',
-    'html_admonition',
-    'dollarmath',
-    'replacements',
-    'smartquotes'
+    "amsmath",
+    "attrs_block",
+    "attrs_inline",
+    "deflist",
+    "html_admonition",
+    "dollarmath",
+    "replacements",
+    "smartquotes"
 ]
 
 # -- Options for HTML output -------------------------------------------------
 
 # The master toctree document.
-master_doc = 'index'
+master_doc = "index"
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 # # Read The Docs Themes specific settings
-html_theme = 'sphinx_book_theme'
+html_theme = "sphinx_book_theme"
 html_theme_options = {
-    'display_version': True,
-    'prev_next_buttons_location': 'bottom'
+    "display_version": True,
+    "prev_next_buttons_location": "bottom"
 }
 
-html_title = 'Idris 2.0 Documentation'
-html_logo = '../../icons/idris-128x128.png'
+html_title = "Idris 2.0 Documentation"
+html_logo = "../../icons/idris-128x128.png"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ["_static"]
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'IdrisManualdoc'
+htmlhelp_basename = "IdrisManualdoc"
 
 # -- Options for LaTeX output ---------------------------------------------
 
-latex_title_page = r'''
+latex_title_page = r"""
 \begin{titlepage}
     \vspace*{\fill}
     \begin{center}
@@ -113,22 +116,22 @@ latex_title_page = r'''
     \end{center}
     \vspace*{\fill}
 \end{titlepage}
-'''
+"""
 
 latex_elements = {
-# The paper size ('letterpaper' or 'a4paper').
-'papersize': 'a4paper',
+# The paper size ("letterpaper" or "a4paper").
+"papersize": "a4paper",
 
-'fontpkg': '',
-'inputenc': '',
-'utf8extra': '',
-'releasename': 'Version',
+"fontpkg": "",
+"inputenc": "",
+"utf8extra": "",
+"releasename": "Version",
 
-# The font size ('10pt', '11pt' or '12pt').
-'pointsize': '10pt',
+# The font size ("10pt", "11pt" or "12pt").
+"pointsize": "10pt",
 
 # Additional stuff for the LaTeX preamble.
-'preamble': r'''
+"preamble": r"""
 \usepackage{lmodern}
 \usepackage[T1]{fontenc}
 \usepackage[utf8x]{inputenc}
@@ -167,45 +170,45 @@ latex_elements = {
 %
 \hypersetup{colorlinks = false}
 \definecolor{VerbatimBorderColor}{rgb}{1,1,1}
-''',
+""",
 
-'maketitle': latex_title_page,
-'tableofcontents': "\\tableofcontents"
+"maketitle": latex_title_page,
+"tableofcontents": "\\tableofcontents"
 # Latex figure (float) alignment
-#'figure_align': 'htbp',
+#"figure_align": "htbp",
 }
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-#  ('index',  'idris-documentation-complete.tex',  u'Documentation for the Idris Language',    u'The Idris Community', 'report'),
-   ('tutorial/index',  'idris-tutorial.tex',  u'The Idris Tutorial',    u'The Idris Community', 'howto'),
+#  ("index",  "idris-documentation-complete.tex",  u"Documentation for the Idris Language",    u"The Idris Community", "report"),
+   ("tutorial/index",  "idris-tutorial.tex",  u"The Idris Tutorial",    u"The Idris Community", "howto"),
 ]
 
 
 latex_show_pagerefs = True
-latex_show_url = 'footnote'
+latex_show_url = "footnote"
 
 # The name of an image file (relative to this directory) to place at the top of
 # the title page.
-latex_logo = '../../icons/idris-512x512.png'
+latex_logo = "../../icons/idris-512x512.png"
 
 # For "manual" documents, if this is true, then toplevel headings are parts,
 # not chapters.
-#latex_use_parts = True
+# latex_use_parts = True
 
 # If true, show page references after internal links.
-#latex_show_pagerefs = False
+# latex_show_pagerefs = False
 
 # If true, show URL addresses after external links.
-#latex_show_urls = False
+# latex_show_urls = False
 
 # Documents to append as an appendix to all manuals.
-#latex_appendices = []
+# latex_appendices = []
 
 # If false, no module index is generated.
-#latex_domain_indices = True
+# latex_domain_indices = True
 
 
 # -- Options for manual page output ---------------------------------------
@@ -213,12 +216,12 @@ latex_logo = '../../icons/idris-512x512.png'
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'idrismanual', u'Idris Manual Documentation',
+    (master_doc, "idrismanual", u"Idris Manual Documentation",
      [author], 1)
 ]
 
 # If true, show URL addresses after external links.
-#man_show_urls = False
+# man_show_urls = False
 
 
 # -- Options for Texinfo output -------------------------------------------
@@ -227,22 +230,22 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  (master_doc, 'IdrisManual', u'Idris Manual Documentation',
-   author, 'IdrisManual', 'One line description of project.',
-   'Miscellaneous'),
+  (master_doc, "IdrisManual", u"Idris Manual Documentation",
+   author, "IdrisManual", "One line description of project.",
+   "Miscellaneous"),
 ]
 
 # Documents to append as an appendix to all manuals.
-#texinfo_appendices = []
+# texinfo_appendices = []
 
 # If false, no module index is generated.
-#texinfo_domain_indices = True
+# texinfo_domain_indices = True
 
-# How to display URL addresses: 'footnote', 'no', or 'inline'.
-#texinfo_show_urls = 'footnote'
+# How to display URL addresses: "footnote", "no", or "inline".
+# texinfo_show_urls = "footnote"
 
-# If true, do not generate a @detailmenu in the "Top" node's menu.
-#texinfo_no_detailmenu = False
+# If true, do not generate a @detailmenu in the "Top" node"s menu.
+# texinfo_no_detailmenu = False
 
 
 # -- Options for Epub output ----------------------------------------------
@@ -254,62 +257,62 @@ epub_publisher = author
 epub_copyright = copyright
 
 # The basename for the epub file. It defaults to the project name.
-#epub_basename = project
+# epub_basename = project
 
 # The HTML theme for the epub output. Since the default themes are not optimized
 # for small screen space, using the same theme for HTML and epub output is
-# usually not wise. This defaults to 'epub', a theme designed to save visual
+# usually not wise. This defaults to "epub", a theme designed to save visual
 # space.
-#epub_theme = 'epub'
+# epub_theme = "epub"
 
 # The language of the text. It defaults to the language option
-# or 'en' if the language is not set.
-#epub_language = ''
+# or "en" if the language is not set.
+# epub_language = ""
 
 # The scheme of the identifier. Typical schemes are ISBN or URL.
-#epub_scheme = ''
+# epub_scheme = ""
 
 # The unique identifier of the text. This can be a ISBN number
 # or the project homepage.
-#epub_identifier = ''
+# epub_identifier = ""
 
 # A unique identification for the text.
-#epub_uid = ''
+# epub_uid = ""
 
 # A tuple containing the cover image and cover page html template filenames.
-#epub_cover = ()
+# epub_cover = ()
 
 # A sequence of (type, uri, title) tuples for the guide element of content.opf.
-#epub_guide = ()
+# epub_guide = ()
 
 # HTML files that should be inserted before the pages created by sphinx.
 # The format is a list of tuples containing the path and title.
-#epub_pre_files = []
+# epub_pre_files = []
 
 # HTML files shat should be inserted after the pages created by sphinx.
 # The format is a list of tuples containing the path and title.
-#epub_post_files = []
+# epub_post_files = []
 
 # A list of files that should not be packed into the epub file.
-epub_exclude_files = ['search.html']
+epub_exclude_files = ["search.html"]
 
 # The depth of the table of contents in toc.ncx.
-#epub_tocdepth = 3
+# epub_tocdepth = 3
 
 # Allow duplicate toc entries.
-#epub_tocdup = True
+# epub_tocdup = True
 
-# Choose between 'default' and 'includehidden'.
-#epub_tocscope = 'default'
+# Choose between "default" and "includehidden".
+# epub_tocscope = "default"
 
 # Fix unsupported image types using the Pillow.
-#epub_fix_images = False
+# epub_fix_images = False
 
 # Scale large images.
-#epub_max_image_width = 0
+# epub_max_image_width = 0
 
-# How to display URL addresses: 'footnote', 'no', or 'inline'.
-#epub_show_urls = 'inline'
+# How to display URL addresses: "footnote", "no", or "inline".
+# epub_show_urls = "inline"
 
 # If false, no index is generated.
-#epub_use_index = True
+# epub_use_index = True
