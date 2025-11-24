@@ -10,19 +10,20 @@
 # list see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
+
+import os
+import sys
+from typing import List
+
+# import sphinx_rtd_theme
+
 # -- Path setup --------------------------------------------------------------
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-from typing import List
-
-import os
-import sys
-import sphinx_rtd_theme
-
-sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath("."))
 
 
 # -- Project information -----------------------------------------------------
@@ -46,22 +47,21 @@ release = "0.0"
 # ones.
 extensions = [
     "sphinx.ext.todo",
-#    'sphinx.ext.pngmath', # imgmath is not supported on readthedocs.
+    #  "sphinx.ext.pngmath",  # imgmath is not supported on readthedocs.
     "sphinx.ext.ifconfig",
     "sphinx_rtd_theme",
-    "myst_parser", # https://myst-parser.readthedocs.io/
+    "myst_parser",  # https://myst-parser.readthedocs.io/
     "sphinx_copybutton",
-#    'sphinxcontrib.bibtex' # https://github.com/mcmtroffaes/sphinxcontrib-bibtex
-
+    #  "sphinxcontrib.bibtex"  # https://github.com/mcmtroffaes/sphinxcontrib-bibtex
 ]
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns : List[str] = []
+exclude_patterns: List[str] = []
 
 
 # -- Options for MyST output -------------------------------------------------
@@ -75,7 +75,7 @@ myst_enable_extensions = [
     "html_admonition",
     "dollarmath",
     "replacements",
-    "smartquotes"
+    "smartquotes",
 ]
 
 # -- Options for HTML output -------------------------------------------------
@@ -87,10 +87,7 @@ master_doc = "index"
 # a list of builtin themes.
 # # Read The Docs Themes specific settings
 html_theme = "sphinx_book_theme"
-html_theme_options = {
-    "display_version": True,
-    "prev_next_buttons_location": "bottom"
-}
+html_theme_options = {"display_version": True, "prev_next_buttons_location": "bottom"}
 
 html_title = "Idris 2.0 Documentation"
 html_logo = "../../icons/idris-128x128.png"
@@ -119,19 +116,30 @@ latex_title_page = r"""
 """
 
 latex_elements = {
-# The paper size ("letterpaper" or "a4paper").
-"papersize": "a4paper",
-
-"fontpkg": "",
-"inputenc": "",
-"utf8extra": "",
-"releasename": "Version",
-
-# The font size ("10pt", "11pt" or "12pt").
-"pointsize": "10pt",
-
-# Additional stuff for the LaTeX preamble.
-"preamble": r"""
+    #
+    # The paper size ("letterpaper" or "a4paper").
+    #
+    "papersize": "a4paper",
+    "fontpkg": "",
+    "inputenc": "",
+    "utf8extra": "",
+    "releasename": "Version",
+    #
+    # The font size ("10pt", "11pt" or "12pt").
+    #
+    "pointsize": "10pt",
+    #
+    # Additional stuff for the LaTeX preamble.
+    #
+    "maketitle": latex_title_page,
+    "tableofcontents": "\\tableofcontents",
+    #
+    # Latex figure (float) alignment
+    # "figure_align": "htbp",
+    #
+    # The preamble itself
+    #
+    "preamble": r"""
 \usepackage{lmodern}
 \usepackage[T1]{fontenc}
 \usepackage[utf8x]{inputenc}
@@ -171,19 +179,25 @@ latex_elements = {
 \hypersetup{colorlinks = false}
 \definecolor{VerbatimBorderColor}{rgb}{1,1,1}
 """,
-
-"maketitle": latex_title_page,
-"tableofcontents": "\\tableofcontents"
-# Latex figure (float) alignment
-#"figure_align": "htbp",
 }
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-#  ("index",  "idris-documentation-complete.tex",  u"Documentation for the Idris Language",    u"The Idris Community", "report"),
-   ("tutorial/index",  "idris-tutorial.tex",  u"The Idris Tutorial",    u"The Idris Community", "howto"),
+    #   (
+    #       "index",
+    #       "idris-documentation-complete.tex",
+    #       "Documentation for the Idris Language",
+    #       "The Idris Community", "report"
+    #   ),
+    (
+        "tutorial/index",
+        "idris-tutorial.tex",
+        "The Idris Tutorial",
+        "The Idris Community",
+        "howto",
+    ),
 ]
 
 
@@ -215,10 +229,7 @@ latex_logo = "../../icons/idris-512x512.png"
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [
-    (master_doc, "idrismanual", u"Idris Manual Documentation",
-     [author], 1)
-]
+man_pages = [(master_doc, "idrismanual", "Idris Manual Documentation", [author], 1)]
 
 # If true, show URL addresses after external links.
 # man_show_urls = False
@@ -230,9 +241,15 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  (master_doc, "IdrisManual", u"Idris Manual Documentation",
-   author, "IdrisManual", "One line description of project.",
-   "Miscellaneous"),
+    (
+        master_doc,
+        "IdrisManual",
+        "Idris Manual Documentation",
+        author,
+        "IdrisManual",
+        "One line description of project.",
+        "Miscellaneous",
+    ),
 ]
 
 # Documents to append as an appendix to all manuals.
