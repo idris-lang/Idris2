@@ -200,6 +200,7 @@ modules =
     Libraries.Data.SnocList.SizeOf,
     Libraries.Data.Span,
     Libraries.Data.SparseMatrix,
+    Libraries.Data.String,
     Libraries.Data.String.Builder,
     Libraries.Data.String.Extra,
     Libraries.Data.String.Iterator,

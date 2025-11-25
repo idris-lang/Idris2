@@ -31,6 +31,7 @@ should target this file (`CHANGELOG_NEXT`).
   - `Libraries.Utils.Binary.nonEmptyRev`
   - `Libraries.Utils.String.dotSep`
 * Fixes an issue when unifying labmda terms with implicits (#3670)
+* The "With clause does not match parent" error now points to the correct location
 * The compiler now warns the user when `impossible` clauses are ignored. This
   typically happens when a numeric literal or an ambiguous name appears in an
   `impossible` clause.
@@ -39,6 +40,8 @@ should target this file (`CHANGELOG_NEXT`).
 ### Building/Packaging changes
 
 * Fix parsing of capitalised package names containing hyphens.
+* Change `flake.nix` to point at `idris-community/idris2-mode` as the URL for
+  `inputs.idris-emacs-src` (from the user fork `redfish64/idris2-mode`).
 
 ### Backend changes
 
@@ -47,3 +50,9 @@ should target this file (`CHANGELOG_NEXT`).
 * Fixed an issue to do with `alligned_alloc` not existing on older MacOS
   versions, causing builds targeting PowerPC to fail (#3662).  For these
   systems, the compiler will now use `posix_memalign`.
+
+### Library changes
+
+#### Base
+
+* Added `rtrim` to `Data.String`.

@@ -166,10 +166,15 @@ ltrim str with (asList str)
   ltrim ""  | [] = ""
   ltrim str@_ | x :: xs = if isSpace x then ltrim _ | xs else str
 
+||| Trim whitespace on the right of the string
+public export
+rtrim : String -> String
+rtrim = reverse . ltrim . reverse
+
 ||| Trim whitespace on both sides of the string
 public export
 trim : String -> String
-trim = ltrim . reverse . ltrim . reverse
+trim = ltrim . rtrim
 
 ||| Splits the string into a part before the predicate
 ||| returns False and the rest of the string.
