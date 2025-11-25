@@ -59,6 +59,7 @@ import Data.Maybe
 import Libraries.Data.NatSet
 import Libraries.Data.NameMap
 import Libraries.Data.PosMap
+import Libraries.Data.String as L
 import Data.Stream
 import Data.String
 import Libraries.Data.SparseMatrix
