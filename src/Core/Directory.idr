@@ -1,10 +1,7 @@
 module Core.Directory
 
 import Core.Binary
-import Core.Context
 import Core.Context.Log
-import Core.Core
-import Core.FC
 import Core.Options
 
 import Idris.Version
@@ -14,9 +11,7 @@ import Parser.Unlit
 import Libraries.Data.Version
 import Libraries.Utils.Path
 
-import Data.List
 import Data.SnocList
-import Data.Maybe
 
 import System.Directory
 

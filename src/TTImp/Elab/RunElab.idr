@@ -1,16 +1,10 @@
 module TTImp.Elab.RunElab
 
-import Core.Context
-import Core.Context.Log
-import Core.Core
 import Core.Directory
 import Core.Env
 import Core.Metadata
-import Core.Normalise
-import Core.Options
 import Core.Reflect
 import Core.Unify
-import Core.TT
 import Core.Value
 
 import Idris.Resugar
@@ -31,8 +25,6 @@ import TTImp.TTImp.Functor
 import TTImp.Unelab
 
 import System.File.Meta
-
-import Data.SnocList
 
 %default covering
 

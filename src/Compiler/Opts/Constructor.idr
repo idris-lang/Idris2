@@ -19,8 +19,6 @@ module Compiler.Opts.Constructor
 
 import Core.CompileExpr
 import Core.Context
-import Core.Name
-import Core.TT
 import Data.Vect
 
 export

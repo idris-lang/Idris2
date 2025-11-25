@@ -5,9 +5,6 @@ import Compiler.ES.Codegen
 
 import Compiler.Common
 
-import Core.Context
-import Core.TT
-import Core.Options
 import Libraries.Utils.Path
 
 import Idris.Syntax

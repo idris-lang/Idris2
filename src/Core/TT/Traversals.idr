@@ -1,10 +1,8 @@
 module Core.TT.Traversals
 
 import Core.TT
-import Core.Ord
 
 import Data.DPair
-import Data.SnocList
 import Data.SortedSet
 import Libraries.Data.NameMap
 

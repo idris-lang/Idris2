@@ -1,9 +1,6 @@
 module Idris.Syntax.Traversals
 
-import Data.List1
-
 import Idris.Syntax
-import Core.Core
 
 import TTImp.TTImp
 

@@ -1,8 +1,5 @@
 module Compiler.Interpreter.VMCode
 
-import Core.Core
-import Core.Context
-import Core.Context.Log
 import Core.Primitives
 import Core.Value
 
@@ -12,10 +9,8 @@ import Compiler.VMCode
 import Idris.Syntax
 
 import Data.IOArray
-import Libraries.Data.NameMap
-import Data.Nat
-import Data.SnocList
 import Data.Vect
+import Libraries.Data.NameMap
 
 public export
 data Object : Type where

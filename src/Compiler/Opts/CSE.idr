@@ -28,23 +28,16 @@
 module Compiler.Opts.CSE
 
 import Core.CompileExpr
-import Core.Context
 import Core.Context.Log
-import Core.Core
-import Core.Name
 import Core.Options
-import Core.TT
 
 import Core.Ord
-import Data.List
 import Data.String
-import Data.SortedSet
 import Data.SortedMap
 import Data.Vect
 
 import Libraries.Data.Erased
 import Libraries.Data.List.SizeOf
-import Libraries.Data.SnocList.Extra
 
 ||| Maping from a pairing of closed terms together with
 ||| their size (for efficiency) to the number of

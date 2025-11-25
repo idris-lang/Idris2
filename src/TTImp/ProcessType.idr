@@ -1,13 +1,8 @@
 module TTImp.ProcessType
 
-import Core.Context
-import Core.Context.Log
-import Core.Core
 import Core.Env
 import Core.Hash
 import Core.Metadata
-import Core.Normalise
-import Core.TT
 import Core.UnifyState
 import Core.Value
 
@@ -20,8 +15,6 @@ import TTImp.Elab
 import TTImp.ProcessFnOpt
 import TTImp.TTImp
 
-import Data.List
-import Data.List1
 import Data.String
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet

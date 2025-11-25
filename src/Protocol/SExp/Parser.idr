@@ -1,7 +1,5 @@
 module Protocol.SExp.Parser
 
-import Data.List
-
 import Protocol.SExp
 
 import Parser.Lexer.Common

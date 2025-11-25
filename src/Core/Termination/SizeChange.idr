@@ -1,8 +1,6 @@
 module Core.Termination.SizeChange
 
-import Core.Context
 import Core.Context.Log
-import Core.Name
 
 import Core.Termination.References
 
@@ -10,10 +8,7 @@ import Libraries.Data.NameMap
 
 import Libraries.Data.SparseMatrix
 
-import Data.Nat
-import Data.List
 import Data.List1
-import Data.SortedMap
 import Data.SortedSet
 
 %default covering

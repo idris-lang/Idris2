@@ -116,13 +116,10 @@
 ||| where the things described above can be expressed.
 module Compiler.ES.TailRec
 
-import Data.List
 import Data.List1
 import Data.SortedSet
 import Data.SortedMap as M
 import Libraries.Data.Graph
-import Libraries.Data.List.Extra as L
-import Core.Name
 import Core.CompileExpr
 import Core.Context
 

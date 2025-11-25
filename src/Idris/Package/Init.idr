@@ -4,7 +4,6 @@ import Core.FC
 import Core.Name.Namespace
 import Core.Directory
 
-import Data.List
 import Data.Maybe
 import Data.String
 
@@ -12,7 +11,6 @@ import Idris.Package.Types
 import System.Directory
 import Control.App.FileIO
 
-import Libraries.Text.Lexer
 import Libraries.Utils.Path
 import Libraries.System.Directory.Tree
 

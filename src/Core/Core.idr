@@ -2,7 +2,6 @@ module Core.Core
 
 import Core.Context.Context
 import Core.Env
-import Core.TT
 import public Core.WithData
 
 import Data.List1
@@ -13,7 +12,6 @@ import Libraries.Data.List01
 import Libraries.Data.IMaybe
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
-import Libraries.Text.PrettyPrint.Prettyprinter.Doc
 import Libraries.Data.Tap
 import Libraries.Data.WithData
 
@@ -838,15 +836,10 @@ namespace List
   for_ : List a -> (a -> Core ()) -> Core ()
   for_ = flip traverse_
 
-  %inline
   export
   sequence : List (Core a) -> Core (List a)
-  sequence (x :: xs)
-     = do
-          x' <- x
-          xs' <- sequence xs
-          pure (x' :: xs')
   sequence [] = pure []
+  sequence (x :: xs) = [| x :: sequence xs |]
 
 -- TODO put in namespace `List1`
 export

@@ -5,8 +5,6 @@ import Idris.Syntax
 import Parser.Unlit
 import TTImp.TTImp
 
-import Data.List
-import Data.List1
 import Libraries.Data.List.Extra
 import Libraries.Data.Tap
 import Data.String

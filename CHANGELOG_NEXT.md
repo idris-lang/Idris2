@@ -35,6 +35,7 @@ should target this file (`CHANGELOG_NEXT`).
 * The compiler now warns the user when `impossible` clauses are ignored. This
   typically happens when a numeric literal or an ambiguous name appears in an
   `impossible` clause.
+* Do not inline `Core.sequence`, because it is recursively defined.
 
 ### Building/Packaging changes
 

@@ -2,21 +2,16 @@ module Core.Case.CaseBuilder
 
 import Core.Case.CaseTree
 import Core.Case.Util
-import Core.Context
 import Core.Context.Log
-import Core.Core
 import Core.Env
 import Core.Normalise
 import Core.Options
-import Core.TT
 import Core.Value
 
 import Idris.Pretty.Annotations
 
 import Data.DPair
-import Data.List
 import Data.List.Quantifiers
-import Data.SnocList
 import Data.SortedSet
 import Data.String
 import Data.Vect
@@ -25,10 +20,6 @@ import Libraries.Data.List.SizeOf
 import Libraries.Data.List.LengthMatch
 import Libraries.Data.List01
 import Libraries.Data.List01.Quantifiers
-import Libraries.Data.SnocList.SizeOf
-import Libraries.Data.SnocList.LengthMatch
-import Libraries.Data.SnocList.HasLength
-import Libraries.Data.SnocList.Extra
 
 import Decidable.Equality
 

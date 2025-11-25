@@ -13,7 +13,6 @@ import public Algebra.SizeChange
 import Data.IOArray
 import Data.IORef
 import Data.List1
-import Data.SnocList
 import Data.String
 
 import Libraries.Data.IntMap

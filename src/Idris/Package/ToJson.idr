@@ -5,7 +5,6 @@ import Libraries.Data.String.Extra
 import Data.List
 import Core.FC
 import Core.Name.Namespace
-import Data.Maybe
 
 %default total
 

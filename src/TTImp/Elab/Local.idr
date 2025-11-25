@@ -1,13 +1,8 @@
 module TTImp.Elab.Local
 
-import Core.Context
-import Core.Context.Log
-import Core.Core
 import Core.Env
 import Core.Metadata
-import Core.Normalise
 import Core.Unify
-import Core.TT
 
 import Idris.REPL.Opts
 import Idris.Syntax
@@ -16,7 +11,6 @@ import TTImp.Elab.Check
 import TTImp.TTImp
 
 import Libraries.Data.NameMap
-import Data.List
 import Libraries.Data.WithDefault
 
 %default covering

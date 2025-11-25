@@ -1,13 +1,10 @@
 module TTImp.Parser
 
 import Core.Context
-import Core.TT
 import Parser.Source
 import TTImp.TTImp
 
 import public Libraries.Text.Parser
-import Data.List
-import Data.List1
 import Libraries.Data.WithDefault
 
 withFC : (fname : OriginDesc) => Rule a -> Rule (WithFC a)

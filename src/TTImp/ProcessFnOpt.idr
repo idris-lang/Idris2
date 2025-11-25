@@ -1,6 +1,5 @@
 module TTImp.ProcessFnOpt
 
-import Core.Context
 import Core.Context.Log
 import Core.Env
 import Core.Normalise
@@ -10,8 +9,6 @@ import TTImp.TTImp
 
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
-
-import Data.SnocList
 
 getRetTy : Defs -> ClosedNF -> Core Name
 getRetTy defs (NBind fc _ (Pi {}) sc)

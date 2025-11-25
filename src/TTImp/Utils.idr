@@ -1,15 +1,10 @@
 module TTImp.Utils
 
-import Core.Context
-import Core.Options
-import Core.TT
 import Core.Env
 import Core.Value
 import Core.UnifyState
 import TTImp.TTImp
 
-import Data.List
-import Data.List1
 import Data.String
 
 import Idris.Syntax

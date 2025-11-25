@@ -1,10 +1,6 @@
 module Idris.Doc.String
 
-import Core.Context
-import Core.Context.Log
-import Core.Core
 import Core.Env
-import Core.TT
 import Core.TT.Traversals
 
 import Idris.Doc.Display
@@ -18,8 +14,6 @@ import TTImp.TTImp
 import TTImp.TTImp.Functor
 import TTImp.Elab.Prim
 
-import Data.List
-import Data.List1
 import Data.Maybe
 import Data.SortedSet
 import Data.SortedMap
@@ -28,14 +22,10 @@ import Data.String
 import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
-import Libraries.Data.StringMap as S
-import Libraries.Data.String.Extra
 import Libraries.Data.WithDefault
 
 import public Libraries.Text.PrettyPrint.Prettyprinter
 import public Libraries.Text.PrettyPrint.Prettyprinter.Util
-
-import Parser.Lexer.Source
 
 import public Idris.Doc.Annotations
 import Idris.Doc.Keywords

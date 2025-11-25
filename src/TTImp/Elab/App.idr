@@ -1,13 +1,8 @@
 module TTImp.Elab.App
 
-import Core.Context
-import Core.Context.Log
-import Core.Core
 import Core.Env
 import Core.Metadata
-import Core.Normalise
 import Core.Unify
-import Core.TT
 import Core.Value
 
 import Idris.REPL.Opts
@@ -18,7 +13,6 @@ import TTImp.Elab.Dot
 import TTImp.TTImp
 
 import Data.List
-import Data.SnocList
 import Data.Maybe
 
 import Libraries.Data.NatSet

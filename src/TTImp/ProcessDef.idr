@@ -3,15 +3,11 @@ module TTImp.ProcessDef
 import Core.Case.CaseBuilder
 import Core.Case.CaseTree
 import Core.Case.CaseTree.Pretty
-import Core.Context
-import Core.Context.Log
-import Core.Core
 import Core.Coverage
 import Core.Env
 import Core.Hash
 import Core.LinearCheck
 import Core.Metadata
-import Core.Normalise
 import Core.Termination
 import Core.Termination.CallGraph
 import Core.Transform
@@ -43,7 +39,6 @@ import Libraries.Data.NameMap
 import Libraries.Data.WithDefault
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Data.List.SizeOf
-import Libraries.Data.SnocList.SizeOf
 
 %default covering
 

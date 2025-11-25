@@ -1,12 +1,8 @@
 module Idris.ModTree
 
 import Core.Binary
-import Core.Context
-import Core.Context.Log
-import Core.Core
 import Core.Directory
 import Core.Metadata
-import Core.Options
 import Core.InitPrimitives
 import Core.UnifyState
 
@@ -16,14 +12,12 @@ import Idris.REPL.Common
 import Idris.Syntax
 import Idris.Pretty
 
-import Data.List
 import Data.Either
 import Data.String
 
 import System.Directory
 
 import Libraries.Data.StringMap
-import Libraries.Data.String.Extra as Extra
 
 %default covering
 

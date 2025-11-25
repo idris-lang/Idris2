@@ -4,15 +4,9 @@ import Compiler.LambdaLift
 
 import Core.CompileExpr
 import Core.Context
-import Core.Core
-import Core.TT
 
-import Data.List
-import Data.List.Quantifiers
-import Data.SnocList
 import Data.SortedSet
 import Data.Vect
-import Libraries.Data.SnocList.Extra
 
 %default covering
 

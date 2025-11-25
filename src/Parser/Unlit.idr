@@ -3,11 +3,8 @@ module Parser.Unlit
 import Libraries.Utils.Path
 import public Libraries.Text.Literate
 import Data.String
-import Data.List
 import Data.List1
 import Data.Maybe
-
-import Libraries.Data.List.Extra as Lib
 
 %default total
 

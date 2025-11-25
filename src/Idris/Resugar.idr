@@ -1,9 +1,6 @@
 module Idris.Resugar
 
-import Core.Context
-import Core.Context.Log
 import Core.Env
-import Core.Options
 
 import Idris.Syntax
 import Idris.Syntax.Traversals
@@ -13,12 +10,7 @@ import TTImp.TTImp.Functor
 import TTImp.Unelab
 import TTImp.Utils
 
-
-import Data.List1
-import Data.List
-import Data.Maybe
 import Data.String
-import Libraries.Data.StringMap
 import Libraries.Data.ANameMap
 
 %default covering
@@ -128,15 +120,11 @@ argPrec = 1000
 
 showImplicits : {auto c : Ref Ctxt Defs} ->
                 Core Bool
-showImplicits
-    = do pp <- getPPrint
-         pure (showImplicits pp)
+showImplicits = showImplicits <$> getPPrint
 
 showFullEnv : {auto c : Ref Ctxt Defs} ->
               Core Bool
-showFullEnv
-    = do pp <- getPPrint
-         pure (showFullEnv pp)
+showFullEnv = showFullEnv <$> getPPrint
 
 unbracket : PTerm' nm -> PTerm' nm
 unbracket (PBracketed _ tm) = tm

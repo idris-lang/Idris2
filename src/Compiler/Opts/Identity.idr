@@ -1,14 +1,10 @@
 module Compiler.Opts.Identity
 
-import Compiler.CompileExpr
-import Core.Context
+import Core.CompileExpr
 import Core.Context.Log
-import Data.List
-import Data.SnocList
 import Data.Vect
 
 import Libraries.Data.List.SizeOf
-import Libraries.Data.SnocList.SizeOf
 
 makeArgs : (args : Scope) -> List (Var (args ++ vars))
 makeArgs args = embed @{ListFreelyEmbeddable} (Var.allVars args)

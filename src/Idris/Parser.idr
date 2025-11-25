@@ -1,6 +1,5 @@
 module Idris.Parser
 
-import Core.Options
 import Core.Metadata
 import Idris.Syntax
 import Idris.Syntax.Traversals
@@ -10,13 +9,10 @@ import TTImp.TTImp
 import public Libraries.Text.Parser
 import Data.Either
 import Libraries.Data.IMaybe
-import Data.List
 import Data.List.Quantifiers
 import Data.List1
 import Data.Maybe
-import Data.So
 import Data.Nat
-import Data.SnocList
 import Data.String
 import Libraries.Utils.String
 import Libraries.Data.WithDefault

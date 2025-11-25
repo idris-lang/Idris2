@@ -1,9 +1,6 @@
 module Libraries.Data.NatSet
 
 import Data.Bits
-import Data.List
-import Data.SnocList
-import Libraries.Data.SnocList.Extra
 
 %default total
 

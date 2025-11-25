@@ -1,19 +1,14 @@
 module Core.Unify
 
 import Core.Case.CaseTree
-import Core.Context
 import Core.Context.Log
-import Core.Core
 import Core.Env
 import Core.GetType
 import Core.Normalise
 import Core.Options
-import Core.TT
 import public Core.UnifyState
 import Core.Value
 
-import Data.List
-import Data.SnocList
 import Data.Maybe
 
 import Libraries.Data.List.SizeOf
@@ -22,7 +17,6 @@ import Libraries.Data.VarSet
 
 import Libraries.Data.IntMap
 import Libraries.Data.NameMap
-import Libraries.Data.SnocList.SizeOf
 
 %default covering
 

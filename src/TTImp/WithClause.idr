@@ -1,16 +1,11 @@
 module TTImp.WithClause
 
-import Core.Context
 import Core.Context.Log
 import Core.Metadata
-import Core.TT
 
 import TTImp.BindImplicits
 import TTImp.TTImp
 import TTImp.Elab.Check
-
-import Data.List
-import Data.Maybe
 
 %default covering
 

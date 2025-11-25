@@ -4,12 +4,8 @@ import Core.Binary.Prims
 import Core.Case.CaseTree
 import Core.CompileExpr
 import Core.Context
-import Core.Core
 import Core.Env
-import Core.FC
-import Core.Name
 import Core.Options
-import Core.TT
 
 import Data.IOArray
 import Data.List1

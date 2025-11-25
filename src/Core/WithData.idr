@@ -1,7 +1,5 @@
 module Core.WithData
 
-import Core.Name
-import Core.FC
 import Core.TT
 import public Libraries.Data.WithData
 import Libraries.Text.Bounded

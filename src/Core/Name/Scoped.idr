@@ -1,11 +1,7 @@
 module Core.Name.Scoped
 
-import Core.Name
-import Core.Name.CompatibleVars
+import public Core.Name
 
-import Data.SnocList
-import Libraries.Data.SnocList.HasLength
-import Libraries.Data.SnocList.SizeOf
 import Libraries.Data.List.SizeOf
 
 import public Libraries.Data.List.Thin

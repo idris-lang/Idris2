@@ -1,12 +1,8 @@
 module TTImp.ProcessDecls
 
-import Core.Context
-import Core.Context.Log
-import Core.Core
 import Core.Directory
 import Core.Env
 import Core.Metadata
-import Core.Options
 import Core.Termination
 import Core.UnifyState
 
@@ -31,10 +27,6 @@ import TTImp.TTImp
 
 import TTImp.ProcessDecls.Totality
 
-import Data.List
-import Data.Maybe
-import Data.String
-import Libraries.Data.NameMap
 import Libraries.Text.PrettyPrint.Prettyprinter.Doc
 
 %default covering

@@ -1,6 +1,6 @@
 module Core.Context.Log
 
-import Core.Context
+import public Core.Context
 import Core.Options
 
 import Data.String

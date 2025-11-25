@@ -1,18 +1,13 @@
 module Core.Env
 
 import Core.TT
-import Core.Name.CompatibleVars
 import Data.List
-import Data.SnocList
 
 import Libraries.Data.List.SizeOf
-import Libraries.Data.List.HasLength
 
 import Libraries.Data.VarSet
 
-import Libraries.Data.SnocList.Extra
 import Libraries.Data.SnocList.SizeOf
-import Libraries.Data.SnocList.HasLength
 
 %default total
 

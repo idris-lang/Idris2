@@ -2,22 +2,17 @@ module Core.Coverage
 
 import Core.Case.CaseTree
 import Core.Case.Util
-import Core.Context
 import Core.Context.Log
 import Core.Env
 import Core.Normalise
-import Core.TT
 import Core.Value
 
-import Data.List
 import Data.Maybe
-import Data.String
 
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
 import Libraries.Data.String.Extra
 import Libraries.Data.List.SizeOf
-import Libraries.Data.SnocList.SizeOf
 import Libraries.Text.PrettyPrint.Prettyprinter
 
 %default covering

@@ -1,15 +1,12 @@
 module Core.Case.CaseTree.Pretty
 
-import Core.Context
-import Core.Env
-import Core.TT
 import Core.Case.CaseTree
+import Core.Env
 import Idris.Syntax
 import Idris.Pretty
 import Idris.Resugar
 
 import Data.String
-import Libraries.Data.String.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter
 
 namespace Raw

@@ -1,12 +1,7 @@
 module TTImp.Interactive.CaseSplit
 
-import Core.Context
-import Core.Context.Log
-import Core.Core
 import Core.Env
 import Core.Metadata
-import Core.Normalise
-import Core.TT
 import Core.UnifyState
 import Core.Value
 
@@ -16,14 +11,10 @@ import Idris.Syntax
 import TTImp.Elab
 import TTImp.Elab.Check
 import TTImp.ProcessDef
-import TTImp.ProcessDecls
 import TTImp.TTImp
 import TTImp.TTImp.Functor
 import TTImp.Unelab
 import TTImp.Utils
-
-import Data.List
-import Libraries.Data.NameMap
 
 %default covering
 

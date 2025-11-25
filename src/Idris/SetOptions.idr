@@ -3,10 +3,8 @@ module Idris.SetOptions
 import Compiler.Common
 
 import Core.Binary
-import Core.Context
 import Core.Directory
 import Core.Metadata
-import Core.Options
 import Core.Unify
 import Libraries.Utils.Path
 import Libraries.Data.List.Extra
@@ -20,7 +18,6 @@ import Idris.REPL
 import Idris.Syntax
 import Idris.Version
 
-import Data.List
 import Data.List1
 import Data.String
 
@@ -489,16 +486,13 @@ preOptions (ConsoleWidth n :: opts)
     = do setConsoleWidth n
          preOptions opts
 preOptions (ShowImplicits :: opts)
-    = do pp <- getPPrint
-         setPPrint ({ showImplicits := True } pp)
+    = do updatePPrint { showImplicits := True }
          preOptions opts
 preOptions (ShowMachineNames :: opts)
-    = do pp <- getPPrint
-         setPPrint ({ showMachineNames := True } pp)
+    = do updatePPrint { showMachineNames := True }
          preOptions opts
 preOptions (ShowNamespaces :: opts)
-    = do pp <- getPPrint
-         setPPrint ({ fullNamespace := True } pp)
+    = do updatePPrint { fullNamespace := True }
          preOptions opts
 preOptions (Color b :: opts)
     = do setColor b

@@ -3,7 +3,6 @@ module Libraries.Text.PrettyPrint.Prettyprinter.Doc
 import Data.List
 import public Data.List1
 import Data.Maybe
-import Data.SnocList
 import Data.String
 import public Libraries.Data.Span
 import Libraries.Data.String.Extra
