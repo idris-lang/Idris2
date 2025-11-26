@@ -1,4 +1,4 @@
 . ../../testutils.sh
 
-idris2 --cg refc Issue1843.idr -o test
+idris2 Issue1843.idr -o test
 $VALGRIND ./build/exec/test
