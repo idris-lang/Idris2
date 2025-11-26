@@ -362,7 +362,6 @@ jobs:
   ubuntu-self-host-racket:
     needs: ubuntu-bootstrap-racket
     runs-on: ubuntu-latest
-    if: false
     env:
       IDRIS2_CG: racket
     steps:
