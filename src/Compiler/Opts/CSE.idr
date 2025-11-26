@@ -38,6 +38,7 @@ import Data.Vect
 
 import Libraries.Data.Erased
 import Libraries.Data.SnocList.SizeOf
+import Libraries.Data.SnocList.Extra
 
 ||| Maping from a pairing of closed terms together with
 ||| their size (for efficiency) to the number of
