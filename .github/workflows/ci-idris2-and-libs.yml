@@ -362,6 +362,7 @@ jobs:
   ubuntu-self-host-racket:
     needs: ubuntu-bootstrap-racket
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     env:
       IDRIS2_CG: racket
     steps:
