@@ -1,2 +1,27 @@
 1
 0
+------
+Main> Main.toNat
+Arguments [{arg:1}, {arg:2}]
+Compile time tree: case {arg:1} of
+  Z => case {arg:2} of
+    MkUnit => 1
+    _ => 0
+  _ => 0
+Detaggable arg types: [1]
+Compiled: \ {arg:1}, {arg:2} => case {arg:1} of
+  { 0 => 1
+  ; _ => 0
+  }
+Refers to: Prelude.Types.Z, Prelude.Types.S
+Flags: allguarded, covering
+Size change:
+  Prelude.Types.S:
+    l 0
+  r +--
+  0 | =
+  Prelude.Types.Z:
+    l
+  r +
+Main> 
+Bye for now!
