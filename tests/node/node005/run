@@ -1,3 +1,3 @@
 . ../../testutils.sh
 
-idris2 --cg node Filter.idr < input
+idris2 Filter.idr < input
