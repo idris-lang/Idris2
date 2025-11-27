@@ -1,4 +1,4 @@
 . ../../testutils.sh
 
-idris2 nomangle1.idr -o test --cg node
-idris2 nomangle2.idr -o test --cg node
+idris2 nomangle1.idr -o test
+idris2 nomangle2.idr -o test
