@@ -1,0 +1,7 @@
+1/1: Building Issue3687 (Issue3687.idr)
+Main>    b : ()
+ 0 m : Nat
+------------------------------
+hole : Nat
+Main> 
+Bye for now!
