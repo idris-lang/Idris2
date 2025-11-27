@@ -16,13 +16,9 @@ import Idris.Doc.Annotations
 
 %hide Core.Name.prettyOp
 
-%hide CompileExpr.(::)
-%hide CompileExpr.Nil
 %hide String.(::)
 %hide String.Nil
 %hide Doc.Nil
-%hide Subst.(::)
-%hide Subst.Nil
 %hide CList.(::)
 %hide CList.Nil
 %hide Stream.(::)
@@ -96,7 +92,7 @@ mutual
 
   prettyNamedConAlt : NamedConAlt -> Doc IdrisSyntax
   prettyNamedConAlt (MkNConAlt x ci tag args exp)
-        = sep (prettyCon x ci tag :: map prettyName args ++ [fatArrow <+> softline <+> align (prettyNamedCExp exp) ])
+        = sep (prettyCon x ci tag :: map prettyName (toList args) ++ [fatArrow <+> softline <+> align (prettyNamedCExp exp) ])
 
   prettyNamedConstAlt : NamedConstAlt -> Doc IdrisSyntax
   prettyNamedConstAlt (MkNConstAlt x exp)
@@ -114,7 +110,7 @@ prettyCExp : {args : _} -> CExp args -> Doc IdrisSyntax
 prettyCExp = prettyNamedCExp . forget
 
 prettyCDef : CDef -> Doc IdrisDocAnn
-prettyCDef (MkFun [] exp) = reAnnotate Syntax $ prettyCExp exp
+prettyCDef (MkFun [<] exp) = reAnnotate Syntax $ prettyCExp exp
 prettyCDef (MkFun args exp) = reAnnotate Syntax $
   keyword "\\" <++> concatWith (\ x, y => x <+> keyword "," <++> y) (map prettyName $ toList args)
        <++> fatArrow <++> prettyCExp exp
