@@ -140,7 +140,7 @@ impossibleErrOK defs (CantSolveEq fc gam env l r)
                            !(nf defs env r)
 impossibleErrOK defs (CyclicMeta {}) = pure True
 impossibleErrOK defs (AllFailed errs)
-    = anyM (impossibleErrOK defs) (map snd errs)
+    = allM (impossibleErrOK defs) (map snd errs)
 impossibleErrOK defs (WhenUnifying _ _ _ _ _ err)
     = impossibleErrOK defs err
 impossibleErrOK defs ImpossibleCase = pure True
