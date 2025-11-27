@@ -66,6 +66,7 @@ should target this file (`CHANGELOG_NEXT`).
   `impossible` clause.
 * Do not inline `Core.sequence`, because it is recursively defined.
 * Fixed coverage checker issues (#1800, #1998, #2318, #2822, #3679).
+* Fixed incorrect argument multiplicity when using an as-pattern (#3687).
 
 ### Building/Packaging changes
 

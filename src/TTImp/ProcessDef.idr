@@ -229,14 +229,17 @@ findLinear top bound rig tm
       findLinArg _ _ [] = pure []
 
 setLinear : List (Name, RigCount) -> Term vars -> Term vars
-setLinear vs (Bind fc x b@(PVar {}) sc)
-    = case lookup x vs of
-           Just c' => Bind fc x (setMultiplicity b c') (setLinear vs sc)
-           _ => Bind fc x b (setLinear vs sc)
-setLinear vs (Bind fc x b@(PVTy {}) sc)
-    = case lookup x vs of
-           Just c' => Bind fc x (setMultiplicity b c') (setLinear vs sc)
-           _ => Bind fc x b (setLinear vs sc)
+setLinear vs tm@(Bind fc x b sc)
+    = if isPatternBinder b
+         then let b' = maybe b (setMultiplicity b) (lookup x vs)
+               in Bind fc x b' (setLinear vs sc)
+         else tm
+  where
+    isPatternBinder : Binder a -> Bool
+    isPatternBinder (PVar {}) = True
+    isPatternBinder (PVTy {}) = True
+    isPatternBinder (PLet {}) = True
+    isPatternBinder _ = False
 setLinear vs tm = tm
 
 -- Combining multiplicities on LHS:
