@@ -146,32 +146,6 @@ impossibleErrOK defs (WhenUnifying _ _ _ _ _ err)
 impossibleErrOK defs ImpossibleCase = pure True
 impossibleErrOK defs _ = pure False
 
-export
-notRecoverableErr : {auto c : Ref Ctxt Defs} ->
-                    Defs -> Error -> Core Bool
-notRecoverableErr defs (CantConvert fc gam env l r)
-  = do let defs = { gamma := gam } defs
-       l <- nf defs env l
-       r <- nf defs env r
-       log "coverage.recover" 10 $ unlines
-         [ "Recovering from CantConvert?"
-         , "Checking:"
-         , "  " ++ show l
-         , "  " ++ show r
-         ]
-       impossibleOK defs l r
-notRecoverableErr defs (CantSolveEq fc gam env l r)
-  = do let defs = { gamma := gam } defs
-       impossibleOK defs !(nf defs env l)
-                         !(nf defs env r)
-notRecoverableErr defs (CyclicMeta {}) = pure True
-notRecoverableErr defs (AllFailed errs)
-    = allM (notRecoverableErr defs) (map snd errs)
-notRecoverableErr defs (WhenUnifying _ _ _ _ _ err)
-    = notRecoverableErr defs err
-notRecoverableErr defs ImpossibleCase = pure True
-notRecoverableErr defs _ = pure False
-
 -- Given a type checked LHS and its type, return the environment in which we
 -- should check the RHS, the LHS and its type in that environment,
 -- and a function which turns a checked RHS into a
@@ -1045,7 +1019,7 @@ processDef opts nest env fc n_in cs_in
                               put Ctxt ctxt
                               pure (Just rtm))
                (\err => do defs <- get Ctxt
-                           if !(notRecoverableErr defs err)
+                           if !(impossibleErrOK defs err)
                               then do
                                 log "declare.def.impossible" 5 "impossible because \{show err}"
                                 pure Nothing
