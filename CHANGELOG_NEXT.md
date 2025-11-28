@@ -36,6 +36,7 @@ should target this file (`CHANGELOG_NEXT`).
   typically happens when a numeric literal or an ambiguous name appears in an
   `impossible` clause.
 * Do not inline `Core.sequence`, because it is recursively defined.
+* Fixed totality checking in namespace and mutual blocks
 
 ### Building/Packaging changes
 

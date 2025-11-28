@@ -56,12 +56,12 @@ missingIncremental ttcFile
                   pure False)
           (\error => pure False)
 
-processDecls : {auto c : Ref Ctxt Defs} ->
-               {auto u : Ref UST UState} ->
-               {auto s : Ref Syn SyntaxInfo} ->
-               {auto m : Ref MD Metadata} ->
-               {auto o : Ref ROpts REPLOpts} ->
-               List PDecl -> Core (List Error)
+processDecls' : {auto c : Ref Ctxt Defs} ->
+                {auto u : Ref UST UState} ->
+                {auto s : Ref Syn SyntaxInfo} ->
+                {auto m : Ref MD Metadata} ->
+                {auto o : Ref ROpts REPLOpts} ->
+                List PDecl -> Core (List Error)
 
 processDecl : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
@@ -74,10 +74,10 @@ processDecl : {auto c : Ref Ctxt Defs} ->
 -- This should give us better error recovery (the whole block won't fail
 -- as soon as one of the definitions fails)
 processDecl (MkWithData _ $ PNamespace ns ps)
-    = withExtendedNS ns $ processDecls ps
+    = withExtendedNS ns $ processDecls' ps
 processDecl (MkWithData _ $ PMutual ps)
     = let (tys, defs) = splitMutual ps in
-      processDecls (tys ++ defs)
+      processDecls' (tys ++ defs)
 
 processDecl decl
     = catch (do impdecls <- desugarDecl [] decl
@@ -86,12 +86,22 @@ processDecl decl
             (\err => do giveUpConstraints -- or we'll keep trying...
                         pure [err])
 
+processDecls' decls
+    = do errs <- concat <$> traverse processDecl decls
+         Just err <- checkDelayedHoles
+             | Nothing => pure errs
+         pure $ if null errs then [err] else errs
+
+processDecls : {auto c : Ref Ctxt Defs} ->
+               {auto u : Ref UST UState} ->
+               {auto s : Ref Syn SyntaxInfo} ->
+               {auto m : Ref MD Metadata} ->
+               {auto o : Ref ROpts REPLOpts} ->
+               List PDecl -> Core (List Error)
 processDecls decls
-    = do xs <- concat <$> traverse processDecl decls
-         Nothing <- checkDelayedHoles
-             | Just err => pure (if null xs then [err] else xs)
-         errs <- logTime 3 ("Totality check overall") getTotalityErrors
-         pure (xs ++ errs)
+    = do errs <- processDecls' decls
+         totErrs <- logTime 3 ("Totality check overall") getTotalityErrors
+         pure (errs ++ totErrs)
 
 readModule : {auto c : Ref Ctxt Defs} ->
              {auto u : Ref UST UState} ->
