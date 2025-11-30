@@ -8,6 +8,7 @@ import Core.Normalise
 import Core.Value
 
 import Data.Maybe
+import Data.String
 
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
@@ -333,18 +334,25 @@ buildArgs fc defs known not ps Impossible
 export
 getMissing : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
-             FC -> Name -> CaseTree vars ->
+             FC -> Name -> ClosedTerm ->
+             CaseTree vars ->
              Core (List ClosedTerm)
-getMissing fc n ctree
+getMissing fc n ty ctree
    = do defs <- get Ctxt
         let psIn = map (Ref fc Bound) vars
-        patss <- buildArgs fc defs [] [] psIn ctree
-        let pats = concat patss
+        pats <- buildArgs fc defs [] [] psIn ctree
+        pats <- for pats $ trimArgs defs [<] !(nf defs Env.empty ty)
         unless (null pats) $
-          logC "coverage.missing" 20 $ map (join "\n") $
-            flip traverse pats $ \ pat =>
-              show <$> toFullNames pat
-        pure (map (apply fc (Ref fc Func n)) patss)
+          logC "coverage.missing" 20 $ map unlines $
+            for pats $ map show . traverse toFullNames
+        pure (map (apply fc (Ref fc Func n)) pats)
+  where
+    trimArgs : Defs ->
+               SnocList ClosedTerm -> ClosedNF ->
+               List ClosedTerm -> Core (List ClosedTerm)
+    trimArgs defs acc (NBind _ n (Pi {}) sc) (x :: xs)
+        = trimArgs defs (acc :< x) !(sc defs $ toClosure defaultOpts Env.empty x) xs
+    trimArgs _ acc _ _ = pure $ toList acc
 
 -- For the given name, get the names it refers to which are not themselves
 -- covering.
