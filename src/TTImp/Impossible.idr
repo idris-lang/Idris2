@@ -173,7 +173,10 @@ mutual
   -- is no evidence (mty), but we should _try_ to resolve here if there is an mty.
   mkTerm (IAlternative _ (UniqueDefault tm) _) mty exps autos named
      = mkTerm tm mty exps autos named
-  mkTerm tm _ _ _ _ = nextVar (getFC tm)
+  mkTerm (Implicit fc _) _ _ _ _ = nextVar fc
+  mkTerm (IBindVar fc _) _ _ _ _ = nextVar fc
+  mkTerm tm _ _ _ _
+    = throw $ GenericMsg (getFC tm) "Unsupported term in impossible clause: \{show tm}"
 
 -- Given an LHS that is declared 'impossible', build a term to match from,
 -- so that when we build the case tree for checking coverage, we take into
