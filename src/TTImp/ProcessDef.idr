@@ -1055,7 +1055,7 @@ processDef opts nest env fc n_in cs_in
              missCase <- if any catchAll covcs
                             then do logC "declare.def" 3 $ do pure "Catch all case in \{show !(getFullName (Resolved n))}"
                                     pure []
-                            else getMissing fc (Resolved n) ctree
+                            else getMissing fc (Resolved n) ty ctree
              logC "declare.def" 3 $
                      do mc <- traverse toFullNames missCase
                         pure ("Initially missing in " ++
