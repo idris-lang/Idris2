@@ -1,12 +1,14 @@
 module TTImp.Impossible
 
-import Core.Context
 import Core.Env
-import Core.Normalise
 import Core.Value
 
 import TTImp.TTImp
+import TTImp.TTImp.Functor
 import TTImp.Elab.App
+
+import Idris.Syntax
+import Idris.Resugar
 
 %default covering
 
@@ -62,6 +64,7 @@ badClause fn exps autos named
 
 mutual
   processArgs : {auto c : Ref Ctxt Defs} ->
+                {auto s : Ref Syn SyntaxInfo} ->
                 {auto q : Ref QVar Int} ->
                 ClosedTerm -> ClosedNF ->
                 (expargs : List RawImp) ->
@@ -118,6 +121,7 @@ mutual
      = badClause fn exps autos named
 
   buildApp : {auto c : Ref Ctxt Defs} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              {auto q : Ref QVar Int} ->
              FC -> Name -> Maybe ClosedClosure ->
              (expargs : List RawImp) ->
@@ -147,6 +151,7 @@ mutual
            processArgs (Ref fc (getDefNameType gdef) (Resolved i)) tynf exps autos named
 
   mkTerm : {auto c : Ref Ctxt Defs} ->
+           {auto s : Ref Syn SyntaxInfo} ->
            {auto q : Ref QVar Int} ->
            RawImp -> Maybe ClosedClosure ->
            (expargs : List RawImp) ->
@@ -176,7 +181,8 @@ mutual
   mkTerm (Implicit fc _) _ _ _ _ = nextVar fc
   mkTerm (IBindVar fc _) _ _ _ _ = nextVar fc
   mkTerm tm _ _ _ _
-    = throw $ GenericMsg (getFC tm) "Unsupported term in impossible clause: \{show tm}"
+    = do tm' <- pterm (map defaultKindedName tm) -- hack
+         throw $ GenericMsg (getFC tm) "Unsupported term in impossible clause: \{show tm'}"
 
 -- Given an LHS that is declared 'impossible', build a term to match from,
 -- so that when we build the case tree for checking coverage, we take into
@@ -184,6 +190,7 @@ mutual
 export
 getImpossibleTerm : {vars : _} ->
                     {auto c : Ref Ctxt Defs} ->
+                    {auto s : Ref Syn SyntaxInfo} ->
                     Env Term vars -> NestedNames vars -> RawImp -> Core ClosedTerm
 getImpossibleTerm env nest tm
     = do q <- newRef QVar (the Int 0)

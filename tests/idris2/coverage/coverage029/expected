@@ -1,5 +1,5 @@
 1/1: Building Main (Main.idr)
-Warning: Main:4:11--4:15:Unsupported term in impossible clause: %type
+Warning: Main:4:11--4:15:Unsupported term in impossible clause: Type
 
 Main:4:11--4:15
  1 | import Language.Reflection
@@ -8,7 +8,7 @@ Main:4:11--4:15
  4 | matchType Type impossible
                ^^^^
 
-Warning: Main:7:12--7:20:Unsupported term in impossible clause: (%quote ((+ (fromInteger 1)) (fromInteger 1)))
+Warning: Main:7:12--7:20:Unsupported term in impossible clause: `((fromInteger 1 + fromInteger 1))
 
 Main:7:12--7:20
  3 | matchType : Bool -> Void
@@ -18,7 +18,7 @@ Main:7:12--7:20
  7 | matchQuote `(1 + 1) impossible
                 ^^^^^^^^
 
-Warning: Main:10:12--10:31:Unsupported term in impossible clause: (%case ((|Unit,MkUnit|) : ?) [(|Unit,MkUnit|) = (|Unit,MkUnit|)])
+Warning: Main:10:12--10:31:Unsupported term in impossible clause: let _ = _ in _
 
 Main:10:12--10:31
  06 | matchQuote : Bool -> Void
@@ -28,7 +28,7 @@ Main:10:12--10:31
  10 | matchCase (case () of () => ()) impossible
                  ^^^^^^^^^^^^^^^^^^^
 
-Warning: Main:13:15--13:21:Unsupported term in impossible clause: (%let RigW  x _ (|Unit,MkUnit|) x)
+Warning: Main:13:15--13:21:Unsupported term in impossible clause: let x = _ in x
 
 Main:13:15--13:21
  09 | matchCase : Bool -> Void
@@ -38,7 +38,7 @@ Main:13:15--13:21
  13 | matchLet (let x = () in x) impossible
                     ^^^^^^
 
-Warning: Main:16:17--16:23:Unsupported term in impossible clause: (%local ([[] RigW (%claim x (|Unit,MkUnit|))]) x)
+Warning: Main:16:17--16:23:Unsupported term in impossible clause: let { << definitions >>  } in x
 
 Main:16:17--16:23
  12 | matchLet : Bool -> Void
@@ -48,7 +48,7 @@ Main:16:17--16:23
  16 | matchLocal (let x : () in x) impossible
                       ^^^^^^
 
-Warning: Main:19:16--19:27:Unsupported term in impossible clause: (%lam RigW Explicit (Just {rec:1}) _ (%record x = (|Unit,MkUnit|) {rec:1}))
+Warning: Main:19:16--19:27:Unsupported term in impossible clause: \rec => record { x = _ } rec
 
 Main:19:16--19:27
  15 | matchLocal : Bool -> Void
@@ -58,7 +58,7 @@ Main:19:16--19:27
  19 | matchSetField ({ x := () }) impossible
                      ^^^^^^^^^^^
 
-Warning: Main:22:16--22:27:Unsupported term in impossible clause: (%lam RigW Explicit (Just {rec:1}) _ (%record x $= (|Unit,MkUnit|) {rec:1}))
+Warning: Main:22:16--22:27:Unsupported term in impossible clause: \rec => record { x $= _ } rec
 
 Main:22:16--22:27
  18 | matchSetField : Bool -> Void
@@ -68,7 +68,7 @@ Main:22:16--22:27
  22 | matchAppField ({ x $= () }) impossible
                      ^^^^^^^^^^^
 
-Warning: Main:25:12--25:26:Unsupported term in impossible clause: (%with [(Main:25:17--25:23, MkUnit)] (|Unit,MkUnit|))
+Warning: Main:25:12--25:26:Unsupported term in impossible clause: with [(Main:25:17--25:23, MkUnit)] _
 
 Main:25:12--25:26
  21 | matchAppField : Bool -> Void
