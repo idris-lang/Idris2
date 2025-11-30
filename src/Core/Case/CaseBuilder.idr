@@ -1000,50 +1000,51 @@ mutual
       = pure err
 
 export
-mkPat : {auto c : Ref Ctxt Defs} -> List Pat -> ClosedTerm -> ClosedTerm -> Core Pat
-mkPat [] orig (Ref fc Bound n) = pure $ PLoc fc n
-mkPat args orig (Ref fc (DataCon t a) n) = pure $ PCon fc n t a args
-mkPat args orig (Ref fc (TyCon a) n) = pure $ PTyCon fc n a args
-mkPat args orig (Ref fc Func n)
+mkPat : {auto c : Ref Ctxt Defs} ->
+        (matchable : Bool) -> List Pat -> ClosedTerm -> ClosedTerm -> Core Pat
+mkPat _ [] orig (Ref fc Bound n) = pure $ PLoc fc n
+mkPat True args orig (Ref fc (DataCon t a) n) = pure $ PCon fc n t a args
+mkPat True args orig (Ref fc (TyCon a) n) = pure $ PTyCon fc n a args
+mkPat True args orig (Ref fc Func n)
   = do prims <- getPrimitiveNames
        mtm <- normalisePrims (const True) isPConst True prims n args orig Env.empty
        case mtm of
          Just tm => if tm /= orig -- check we made progress; if there's an
                                   -- unresolved interface, we might be stuck
                                   -- and we'd loop forever
-                       then mkPat [] tm tm
+                       then mkPat True [] tm tm
                        else -- Possibly this should be an error instead?
                             pure $ PUnmatchable (getLoc orig) orig
          Nothing =>
            do log "compile.casetree" 10 $
                 "Unmatchable function: " ++ show n
               pure $ PUnmatchable (getLoc orig) orig
-mkPat args orig (Bind fc x (Pi _ _ _ s) t)
+mkPat True args orig (Bind fc x (Pi _ _ _ s) t)
     -- For (b:Nat) -> b, the codomain looks like b [__], but we want `b` as the pattern
     = case subst (Erased fc Placeholder) t of
-        App _ t'@(Ref fc Bound n) (Erased {}) =>  pure $ PArrow fc x !(mkPat [] s s) !(mkPat [] t' t')
-        t' =>  pure $ PArrow fc x !(mkPat [] s s) !(mkPat [] t' t')
-mkPat args orig (App fc fn arg)
-    = do parg <- mkPat [] arg arg
-         mkPat (parg :: args) orig fn
-mkPat args orig (As fc _ (Ref _ Bound n) ptm)
-    = pure $ PAs fc n !(mkPat [] ptm ptm)
-mkPat args orig (As fc _ _ ptm)
-    = mkPat [] orig ptm
-mkPat args orig (TDelay fc r ty p)
-    = pure $ PDelay fc r !(mkPat [] orig ty) !(mkPat [] orig p)
-mkPat args orig (PrimVal fc $ PrT c) -- Primitive type constant
+        App _ t'@(Ref fc Bound n) (Erased {}) => pure $ PArrow fc x !(mkPat True [] s s) !(mkPat False [] t' t')
+        t' => pure $ PArrow fc x !(mkPat True [] s s) !(mkPat False [] t' t')
+mkPat True args orig (App fc fn arg)
+    = do parg <- mkPat True [] arg arg
+         mkPat True (parg :: args) orig fn
+mkPat True args orig (As fc _ (Ref _ Bound n) ptm)
+    = pure $ PAs fc n !(mkPat True [] ptm ptm)
+mkPat True args orig (As fc _ _ ptm)
+    = mkPat True [] orig ptm
+mkPat True args orig (TDelay fc r ty p)
+    = pure $ PDelay fc r !(mkPat True [] orig ty) !(mkPat True [] orig p)
+mkPat True args orig (PrimVal fc $ PrT c) -- Primitive type constant
     = pure $ PTyCon fc (UN (Basic $ show c)) 0 []
-mkPat args orig (PrimVal fc c) = pure $ PConst fc c -- Non-type constant
-mkPat args orig (TType fc _) = pure $ PTyCon fc (UN $ Basic "Type") 0 []
-mkPat args orig tm
+mkPat True args orig (PrimVal fc c) = pure $ PConst fc c -- Non-type constant
+mkPat True args orig (TType fc _) = pure $ PTyCon fc (UN $ Basic "Type") 0 []
+mkPat _ args orig tm
    = do log "compile.casetree" 10 $
           "Catchall: marking " ++ show tm ++ " as unmatchable"
         pure $ PUnmatchable (getLoc orig) orig
 
 export
 argToPat : {auto c : Ref Ctxt Defs} -> ClosedTerm -> Core Pat
-argToPat tm = mkPat [] tm tm
+argToPat tm = mkPat True [] tm tm
 
 mkPatClause : {auto c : Ref Ctxt Defs} ->
               FC -> Name ->

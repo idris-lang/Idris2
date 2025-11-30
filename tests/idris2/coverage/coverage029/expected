@@ -1,0 +1,182 @@
+1/1: Building Main (Main.idr)
+Warning: Main:4:11--4:15:Unsupported term in impossible clause: %type
+
+Main:4:11--4:15
+ 1 | import Language.Reflection
+ 2 | 
+ 3 | matchType : Bool -> Void
+ 4 | matchType Type impossible
+               ^^^^
+
+Warning: Main:7:12--7:20:Unsupported term in impossible clause: (%quote ((+ (fromInteger 1)) (fromInteger 1)))
+
+Main:7:12--7:20
+ 3 | matchType : Bool -> Void
+ 4 | matchType Type impossible
+ 5 | 
+ 6 | matchQuote : Bool -> Void
+ 7 | matchQuote `(1 + 1) impossible
+                ^^^^^^^^
+
+Warning: Main:10:12--10:31:Unsupported term in impossible clause: (%case ((|Unit,MkUnit|) : ?) [(|Unit,MkUnit|) = (|Unit,MkUnit|)])
+
+Main:10:12--10:31
+ 06 | matchQuote : Bool -> Void
+ 07 | matchQuote `(1 + 1) impossible
+ 08 | 
+ 09 | matchCase : Bool -> Void
+ 10 | matchCase (case () of () => ()) impossible
+                 ^^^^^^^^^^^^^^^^^^^
+
+Warning: Main:13:15--13:21:Unsupported term in impossible clause: (%let RigW  x _ (|Unit,MkUnit|) x)
+
+Main:13:15--13:21
+ 09 | matchCase : Bool -> Void
+ 10 | matchCase (case () of () => ()) impossible
+ 11 | 
+ 12 | matchLet : Bool -> Void
+ 13 | matchLet (let x = () in x) impossible
+                    ^^^^^^
+
+Warning: Main:16:17--16:23:Unsupported term in impossible clause: (%local ([[] RigW (%claim x (|Unit,MkUnit|))]) x)
+
+Main:16:17--16:23
+ 12 | matchLet : Bool -> Void
+ 13 | matchLet (let x = () in x) impossible
+ 14 | 
+ 15 | matchLocal : Bool -> Void
+ 16 | matchLocal (let x : () in x) impossible
+                      ^^^^^^
+
+Warning: Main:19:16--19:27:Unsupported term in impossible clause: (%lam RigW Explicit (Just {rec:1}) _ (%record x = (|Unit,MkUnit|) {rec:1}))
+
+Main:19:16--19:27
+ 15 | matchLocal : Bool -> Void
+ 16 | matchLocal (let x : () in x) impossible
+ 17 | 
+ 18 | matchSetField : Bool -> Void
+ 19 | matchSetField ({ x := () }) impossible
+                     ^^^^^^^^^^^
+
+Warning: Main:22:16--22:27:Unsupported term in impossible clause: (%lam RigW Explicit (Just {rec:1}) _ (%record x $= (|Unit,MkUnit|) {rec:1}))
+
+Main:22:16--22:27
+ 18 | matchSetField : Bool -> Void
+ 19 | matchSetField ({ x := () }) impossible
+ 20 | 
+ 21 | matchAppField : Bool -> Void
+ 22 | matchAppField ({ x $= () }) impossible
+                     ^^^^^^^^^^^
+
+Warning: Main:25:12--25:26:Unsupported term in impossible clause: (%with [(Main:25:17--25:23, MkUnit)] (|Unit,MkUnit|))
+
+Main:25:12--25:26
+ 21 | matchAppField : Bool -> Void
+ 22 | matchAppField ({ x $= () }) impossible
+ 23 | 
+ 24 | matchWith : Bool -> Void
+ 25 | matchWith (with MkUnit ()) impossible
+                 ^^^^^^^^^^^^^^
+
+Error: matchAppField is not covering.
+
+Main:21:1--21:29
+ 17 | 
+ 18 | matchSetField : Bool -> Void
+ 19 | matchSetField ({ x := () }) impossible
+ 20 | 
+ 21 | matchAppField : Bool -> Void
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Missing cases:
+    matchAppField _
+
+Error: matchCase is not covering.
+
+Main:9:1--9:25
+ 5 | 
+ 6 | matchQuote : Bool -> Void
+ 7 | matchQuote `(1 + 1) impossible
+ 8 | 
+ 9 | matchCase : Bool -> Void
+     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+Missing cases:
+    matchCase _
+
+Error: matchLet is not covering.
+
+Main:12:1--12:24
+ 08 | 
+ 09 | matchCase : Bool -> Void
+ 10 | matchCase (case () of () => ()) impossible
+ 11 | 
+ 12 | matchLet : Bool -> Void
+      ^^^^^^^^^^^^^^^^^^^^^^^
+
+Missing cases:
+    matchLet _
+
+Error: matchLocal is not covering.
+
+Main:15:1--15:26
+ 11 | 
+ 12 | matchLet : Bool -> Void
+ 13 | matchLet (let x = () in x) impossible
+ 14 | 
+ 15 | matchLocal : Bool -> Void
+      ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Missing cases:
+    matchLocal _
+
+Error: matchQuote is not covering.
+
+Main:6:1--6:26
+ 2 | 
+ 3 | matchType : Bool -> Void
+ 4 | matchType Type impossible
+ 5 | 
+ 6 | matchQuote : Bool -> Void
+     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Missing cases:
+    matchQuote _
+
+Error: matchSetField is not covering.
+
+Main:18:1--18:29
+ 14 | 
+ 15 | matchLocal : Bool -> Void
+ 16 | matchLocal (let x : () in x) impossible
+ 17 | 
+ 18 | matchSetField : Bool -> Void
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Missing cases:
+    matchSetField _
+
+Error: matchType is not covering.
+
+Main:3:1--3:25
+ 1 | import Language.Reflection
+ 2 | 
+ 3 | matchType : Bool -> Void
+     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+Missing cases:
+    matchType _
+
+Error: matchWith is not covering.
+
+Main:24:1--24:25
+ 20 | 
+ 21 | matchAppField : Bool -> Void
+ 22 | matchAppField ({ x $= () }) impossible
+ 23 | 
+ 24 | matchWith : Bool -> Void
+      ^^^^^^^^^^^^^^^^^^^^^^^^
+
+Missing cases:
+    matchWith _
+

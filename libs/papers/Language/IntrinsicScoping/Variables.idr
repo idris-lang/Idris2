@@ -189,8 +189,7 @@ namespace Level
       view {ctx = nm :: ctx} (MkLevel .(length ctx) .(H Refl))
         | Yes Refl | Refl = Z
     view (MkLevel l p) | No neq = viewAux p _ (snd (invertT p neq))
-  view (MkLevel _ (H prf)) impossible
-  view (MkLevel _ (T x)) impossible
+  view {ctx = []} (MkLevel _ _) impossible
 
   export
   irrelevantAtLevel :

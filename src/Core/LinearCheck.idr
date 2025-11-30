@@ -280,7 +280,7 @@ mutual
            (f', gfty, fused) <- lcheck rig erase env f
            defs <- get Ctxt
            fty <- getNF gfty
-           case fty of
+           case undot fty of
                 NBind _ _ (Pi _ rigf _ ty) scdone =>
                      -- if the argument is borrowed, it's okay to use it in
                      -- unrestricted context, because we'll be out of the
@@ -323,6 +323,10 @@ mutual
         do tfty <- getTerm gfty
            throw (GenericMsg fc ("Linearity checking failed on " ++ show !(toFullNames f) ++
                  " (" ++ show !(toFullNames tfty) ++ " not a function type)"))
+
+      undot : NF vars -> NF vars
+      undot (NErased _ (Dotted tm)) = tm
+      undot tm = tm
 
   lcheck rig erase env (As fc s as pat)
       = do log "quantity" 15 "lcheck As"

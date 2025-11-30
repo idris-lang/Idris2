@@ -8,6 +8,7 @@ import Core.Normalise
 import Core.Value
 
 import Data.Maybe
+import Data.String
 
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
@@ -333,18 +334,25 @@ buildArgs fc defs known not ps Impossible
 export
 getMissing : {vars : _} ->
              {auto c : Ref Ctxt Defs} ->
-             FC -> Name -> CaseTree vars ->
+             FC -> Name -> ClosedTerm ->
+             CaseTree vars ->
              Core (List ClosedTerm)
-getMissing fc n ctree
+getMissing fc n ty ctree
    = do defs <- get Ctxt
         let psIn = map (Ref fc Bound) vars
-        patss <- buildArgs fc defs [] [] psIn ctree
-        let pats = concat patss
+        pats <- buildArgs fc defs [] [] psIn ctree
+        pats <- for pats $ trimArgs defs [<] !(nf defs Env.empty ty)
         unless (null pats) $
-          logC "coverage.missing" 20 $ map (join "\n") $
-            flip traverse pats $ \ pat =>
-              show <$> toFullNames pat
-        pure (map (apply fc (Ref fc Func n)) patss)
+          logC "coverage.missing" 20 $ map unlines $
+            for pats $ map show . traverse toFullNames
+        pure (map (apply fc (Ref fc Func n)) pats)
+  where
+    trimArgs : Defs ->
+               SnocList ClosedTerm -> ClosedNF ->
+               List ClosedTerm -> Core (List ClosedTerm)
+    trimArgs defs acc (NBind _ n (Pi {}) sc) (x :: xs)
+        = trimArgs defs (acc :< x) !(sc defs $ toClosure defaultOpts Env.empty x) xs
+    trimArgs _ acc _ _ = pure $ toList acc
 
 -- For the given name, get the names it refers to which are not themselves
 -- covering.
@@ -425,20 +433,26 @@ eraseApps {vs} tm
 -- because we've already got it. Ignore anything in erased position.
 clauseMatches : {vars : _} ->
                 {auto c : Ref Ctxt Defs} ->
-                Env Term vars -> Term vars ->
+                (erase : Bool) -> Env Term vars -> Term vars ->
                 ClosedTerm -> Core Bool
-clauseMatches env tm trylhs
-    = let lhs = !(eraseApps (close (getLoc tm) "cov" env tm)) in
-          pure $ match !(toResolvedNames lhs) !(toResolvedNames trylhs)
+clauseMatches erase env tm trylhs
+    = do let lhs = close (getLoc tm) "cov" env tm
+         lhs <- if erase
+                   then eraseApps lhs
+                   else pure lhs
+         pure $ match !(toResolvedNames lhs) !(toResolvedNames trylhs)
 
 export
 checkMatched : {auto c : Ref Ctxt Defs} ->
-               List Clause -> ClosedTerm -> Core (Maybe ClosedTerm)
-checkMatched cs ulhs
+               (erase : Bool) -> List Clause -> ClosedTerm -> Core (Maybe ClosedTerm)
+checkMatched erase cs ulhs
     = do logTerm "coverage" 5 "Checking coverage for" ulhs
          logC "coverage" 10 $ pure $ "(raw term: " ++ show !(toFullNames ulhs) ++ ")"
-         ulhs <- eraseApps ulhs
-         logTerm "coverage" 5 "Erased to" ulhs
+         ulhs <- if erase
+                    then do ulhs <- eraseApps ulhs
+                            logTerm "coverage" 5 "Erased to" ulhs
+                            pure ulhs
+                    else pure ulhs
          logC "coverage" 5 $ do
             cs <- traverse toFullNames cs
             pure $ "Against clauses:\n" ++
@@ -450,7 +464,7 @@ checkMatched cs ulhs
         = do logTermNF "coverage" 10 "Nothing matches" Env.empty ulhs
              pure $ Just ulhs
     tryClauses (MkClause env lhs _ :: cs) ulhs
-        = if !(clauseMatches env lhs ulhs)
+        = if !(clauseMatches erase env lhs ulhs)
              then do logTermNF "coverage" 10 "Yes" env lhs
                      pure Nothing -- something matches, discared it
              else do logTermNF "coverage" 10 "No match" env lhs

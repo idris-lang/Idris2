@@ -1,0 +1,20 @@
+1/1: Building Issue1998 (Issue1998.idr)
+Error: falseIsTrue is not covering.
+
+Issue1998:4:1--4:27
+ 1 | 0 proveit : (0 c : Bool) -> c = True
+ 2 | proveit True = Refl
+ 3 | 
+ 4 | falseIsTrue : False = True
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Calls non covering function Main.proveit
+Error: proveit is not covering.
+
+Issue1998:1:1--1:37
+ 1 | 0 proveit : (0 c : Bool) -> c = True
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Missing cases:
+    proveit False
+

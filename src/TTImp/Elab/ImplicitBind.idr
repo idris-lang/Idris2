@@ -346,14 +346,14 @@ getToBind {vars} fc elabmode impmode env excepts
         = do case impmode of
                   COVERAGE => do tynf <- nf defs env ty
                                  when !(isEmpty defs env tynf) $
-                                    throw (InternalError "Empty pattern in coverage check")
+                                    throw ImpossibleCase
                   _ => pure ()
              pure $ NameBinding loc c p tm !(normaliseType defs env ty)
     normBindingTy defs (AsBinding c p tm ty pat)
         = do case impmode of
                   COVERAGE => do tynf <- nf defs env ty
                                  when !(isEmpty defs env tynf) $
-                                    throw (InternalError "Empty pattern in coverage check")
+                                    throw ImpossibleCase
                   _ => pure ()
              pure $ AsBinding c p tm !(normaliseType defs env ty)
                                      !(normaliseHoles defs env pat)

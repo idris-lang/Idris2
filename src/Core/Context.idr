@@ -752,6 +752,7 @@ HasNames Error where
   full gam (BadDataConType fc n n') = BadDataConType fc <$> full gam n <*> full gam n'
   full gam (NotCovering fc n cov) = NotCovering fc <$> full gam n <*> full gam cov
   full gam (NotTotal fc n pr) = NotTotal fc <$> full gam n <*> full gam pr
+  full gam ImpossibleCase = pure ImpossibleCase
   full gam (LinearUsed fc k n) = LinearUsed fc k <$> full gam n
   full gam (LinearMisuse fc n x y) = LinearMisuse fc <$> full gam n <*> pure x <*> pure y
   full gam (BorrowPartial fc rho s t) = BorrowPartial fc <$> full gam rho <*> full gam s <*> full gam t
@@ -850,6 +851,7 @@ HasNames Error where
   resolved gam (BadDataConType fc n n') = BadDataConType fc <$> resolved gam n <*> resolved gam n'
   resolved gam (NotCovering fc n cov) = NotCovering fc <$> resolved gam n <*> resolved gam cov
   resolved gam (NotTotal fc n pr) = NotTotal fc <$> resolved gam n <*> resolved gam pr
+  resolved gam ImpossibleCase = pure ImpossibleCase
   resolved gam (LinearUsed fc k n) = LinearUsed fc k <$> resolved gam n
   resolved gam (LinearMisuse fc n x y) = LinearMisuse fc <$> resolved gam n <*> pure x <*> pure y
   resolved gam (BorrowPartial fc rho s t) = BorrowPartial fc <$> resolved gam rho <*> resolved gam s <*> resolved gam t

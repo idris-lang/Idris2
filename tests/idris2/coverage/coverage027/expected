@@ -1,0 +1,57 @@
+1/1: Building Main (Main.idr)
+Error: Impossible pattern gives an error:
+Can't match on X1 (Erased argument).
+
+Main:4:3--4:5
+ 1 | data X = X1 | X2
+ 2 | 
+ 3 | f : (0 _ : X) -> Void
+ 4 | f X1 impossible
+       ^^
+
+Error: Impossible pattern gives an error:
+Can't match on X1 (Erased argument).
+
+Main:7:3--7:5
+ 3 | f : (0 _ : X) -> Void
+ 4 | f X1 impossible
+ 5 | 
+ 6 | g : (0 _ : X) -> Void
+ 7 | g X1 impossible
+       ^^
+
+Error: Impossible pattern gives an error:
+Can't match on Y1 ?_ (Erased argument).
+
+Main:14:4--14:8
+ 10 | 
+ 11 | data Y = Y1 Void | Y2
+ 12 | 
+ 13 | h : (0 _ : Y) -> Void
+ 14 | h (Y1 _) impossible
+         ^^^^
+
+1/1: Building Issue1800 (Issue1800.idr)
+Error: Impossible pattern gives an error:
+Can't match on ?search [no locals in scope] (Erased argument).
+
+Issue1800:22:8--22:15
+ 18 | total
+ 19 | mycase : {0 s : String} -> (0 prf : s `Elem` Example) -> (single : Singleton prf) -> Nat
+ 20 | mycase .(Here) (Is "String1") = 0
+ 21 | mycase .(There $ There Here) (Is "LastString") = 2
+ 22 | mycase %search n impossible
+             ^^^^^^^
+
+1/1: Building Issue1800Shrinked (Issue1800Shrinked.idr)
+Error: Impossible pattern gives an error:
+Can't match on 0 (Erased argument).
+
+Issue1800Shrinked:7:11--7:18
+ 3 | data View : Nat -> Type where
+ 4 |   Plus : (k, l : Nat) -> View (k + l)
+ 5 | 
+ 6 | view : View m -> Void
+ 7 | view {m = %search} v impossible
+               ^^^^^^^
+

@@ -1,0 +1,5 @@
+. ../../../testutils.sh
+
+# expect a coverage error
+check Issue2822.idr
+check DiffArgsCounts.idr
