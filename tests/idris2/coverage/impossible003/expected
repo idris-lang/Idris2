@@ -1,0 +1,17 @@
+1/1: Building Main (Main.idr)
+Warning: Main:2:5--2:6:Badly formed impossible clause (Prelude.Types.S, ([], ([], [])))
+
+Main:2:5--2:6
+ 1 | foo : Nat -> Nat
+ 2 | foo S impossible
+         ^
+
+Error: foo is not covering.
+
+Main:1:1--1:17
+ 1 | foo : Nat -> Nat
+     ^^^^^^^^^^^^^^^^
+
+Missing cases:
+    foo (S _)
+

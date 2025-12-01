@@ -66,58 +66,67 @@ mutual
   processArgs : {auto c : Ref Ctxt Defs} ->
                 {auto s : Ref Syn SyntaxInfo} ->
                 {auto q : Ref QVar Int} ->
+                Bool -> -- should be fully applied
                 ClosedTerm -> ClosedNF ->
                 (expargs : List RawImp) ->
                 (autoargs : List RawImp) ->
                 (namedargs : List (Name, RawImp)) ->
                 Core ClosedTerm
   -- unnamed takes priority
-  processArgs fn (NBind fc x (Pi _ _ Explicit ty) sc) (e :: exps) autos named
+  processArgs con fn (NBind fc x (Pi _ _ Explicit ty) sc) (e :: exps) autos named
      = do e' <- mkTerm e (Just ty) [] [] []
           defs <- get Ctxt
-          processArgs (App fc fn e') !(sc defs (toClosure defaultOpts Env.empty e'))
+          processArgs con (App fc fn e')
+                      !(sc defs (toClosure defaultOpts Env.empty e'))
                       exps autos named
-  processArgs fn (NBind fc x (Pi _ _ Explicit ty) sc) [] autos named
+  processArgs con fn (NBind fc x (Pi _ _ Explicit ty) sc) [] autos named
      = do defs <- get Ctxt
           case findNamed x named of
             Just ((_, e), named') =>
                do e' <- mkTerm e (Just ty) [] [] []
-                  processArgs (App fc fn e') !(sc defs (toClosure defaultOpts Env.empty e'))
+                  processArgs con (App fc fn e')
+                              !(sc defs (toClosure defaultOpts Env.empty e'))
                               [] autos named'
-            Nothing => badClause fn [] autos named
-  processArgs fn (NBind fc x (Pi _ _ Implicit ty) sc) exps autos named
+            Nothing => -- Expected an explicit argument, but only implicits left
+                       if not con && null autos && null named
+                          then pure fn
+                          else badClause fn [] autos named
+  processArgs con fn (NBind fc x (Pi _ _ Implicit ty) sc) exps autos named
      = do defs <- get Ctxt
           case findNamed x named of
             Nothing => do e' <- nextVar fc
-                          processArgs (App fc fn e')
+                          processArgs con (App fc fn e')
                                       !(sc defs (toClosure defaultOpts Env.empty e'))
                                       exps autos named
             Just ((_, e), named') =>
                do e' <- mkTerm e (Just ty) [] [] []
-                  processArgs (App fc fn e') !(sc defs (toClosure defaultOpts Env.empty e'))
+                  processArgs con (App fc fn e')
+                              !(sc defs (toClosure defaultOpts Env.empty e'))
                               exps autos named'
-  processArgs fn (NBind fc x (Pi _ _ AutoImplicit ty) sc) exps autos named
+  processArgs con fn (NBind fc x (Pi _ _ AutoImplicit ty) sc) exps autos named
      = do defs <- get Ctxt
           case autos of
                (e :: autos') => -- unnamed takes priority
                    do e' <- mkTerm e (Just ty) [] [] []
-                      processArgs (App fc fn e') !(sc defs (toClosure defaultOpts Env.empty e'))
+                      processArgs con (App fc fn e')
+                                  !(sc defs (toClosure defaultOpts Env.empty e'))
                                   exps autos' named
                [] =>
                   case findNamed x named of
                      Nothing =>
                         do e' <- nextVar fc
-                           processArgs (App fc fn e')
+                           processArgs con (App fc fn e')
                                        !(sc defs (toClosure defaultOpts Env.empty e'))
                                        exps [] named
                      Just ((_, e), named') =>
                         do e' <- mkTerm e (Just ty) [] [] []
-                           processArgs (App fc fn e') !(sc defs (toClosure defaultOpts Env.empty e'))
+                           processArgs con (App fc fn e')
+                                       !(sc defs (toClosure defaultOpts Env.empty e'))
                                        exps [] named'
-  processArgs fn ty [] [] [] = pure fn
-  processArgs fn ty (x :: _) autos named
+  processArgs _ fn _ [] [] [] = pure fn
+  processArgs _ fn _ (x :: _) autos named
      = throw $ GenericMsg (getFC x) "Too many arguments"
-  processArgs fn ty exps autos named
+  processArgs _ fn _ exps autos named
      = badClause fn exps autos named
 
   buildApp : {auto c : Ref Ctxt Defs} ->
@@ -148,7 +157,10 @@ mutual
            -- When `head` is `Func`, the pattern will be marked as forced and
            -- the coverage checker will considers that all the cases have been
            -- covered!
-           processArgs (Ref fc (getDefNameType gdef) (Resolved i)) tynf exps autos named
+           let nameType = getDefNameType gdef
+           processArgs (isJust $ isCon nameType)
+                       (Ref fc nameType (Resolved i))
+                       tynf exps autos named
 
   mkTerm : {auto c : Ref Ctxt Defs} ->
            {auto s : Ref Syn SyntaxInfo} ->
