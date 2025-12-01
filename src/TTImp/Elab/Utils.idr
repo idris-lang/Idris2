@@ -146,7 +146,9 @@ initUsed = MkUsage
 initUsedCase : SizeOf vs -> Usage vs
 initUsedCase p = MkUsage
   { isUsedSet = VarSet.empty
-  , isLocalSet = maybe id VarSet.delete (last p) (VarSet.full p)
+  , isLocalSet = case sizedView p of
+    Z => VarSet.empty
+    S _ => VarSet.delete first (VarSet.full p)
   }
 
 setUsedVar : Var vs -> Usage vs -> Usage vs
