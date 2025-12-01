@@ -88,9 +88,13 @@ mutual
                               !(sc defs (toClosure defaultOpts Env.empty e'))
                               [] autos named'
             Nothing => -- Expected an explicit argument, but only implicits left
-                       if not con && null autos && null named
-                          then pure fn
-                          else badClause fn [] autos named
+                       do let False = con
+                            | True => throw $ GenericMsg (getLoc fn) $
+                                                "Cannot match on a partialy applied constructor: "
+                                                ++ show !(toFullNames fn)
+                          let True = null autos && null named
+                            | False => badClause fn [] autos named -- unexpected arguments
+                          pure fn
   processArgs con fn (NBind fc x (Pi _ _ Implicit ty) sc) exps autos named
      = do defs <- get Ctxt
           case findNamed x named of
