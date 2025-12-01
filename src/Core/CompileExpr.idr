@@ -328,7 +328,7 @@ conArgs : (args : List Name) -> Names (Scope.ext vars args) -> List Name
 conArgs args ns
   = let ns' : Names (vars ++ cast args)
       := rewrite sym $ fishAsSnocAppend vars args in ns
-    in conArgz ([<] <>< args) ns' <>> []
+    in toList $ conArgz (cast {to=Scope} args) ns'
 
 mutual
   forgetExp : Names vars -> CExp vars -> NamedCExp
