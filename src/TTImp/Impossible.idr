@@ -74,7 +74,7 @@ mutual
                 Core ClosedTerm
   -- unnamed takes priority
   processArgs con fn (NBind fc x (Pi _ _ Explicit ty) sc) (e :: exps) autos named
-     = do e' <- mkTerm e (Just ty) [] [] []
+     = do e' <- mkTerm e (Just ty)
           defs <- get Ctxt
           processArgs con (App fc fn e')
                       !(sc defs (toClosure defaultOpts Env.empty e'))
@@ -83,7 +83,7 @@ mutual
      = do defs <- get Ctxt
           case findNamed x named of
             Just ((_, e), named') =>
-               do e' <- mkTerm e (Just ty) [] [] []
+               do e' <- mkTerm e (Just ty)
                   processArgs con (App fc fn e')
                               !(sc defs (toClosure defaultOpts Env.empty e'))
                               [] autos named'
@@ -99,7 +99,7 @@ mutual
                                       !(sc defs (toClosure defaultOpts Env.empty e'))
                                       exps autos named
             Just ((_, e), named') =>
-               do e' <- mkTerm e (Just ty) [] [] []
+               do e' <- mkTerm e (Just ty)
                   processArgs con (App fc fn e')
                               !(sc defs (toClosure defaultOpts Env.empty e'))
                               exps autos named'
@@ -107,7 +107,7 @@ mutual
      = do defs <- get Ctxt
           case autos of
                (e :: autos') => -- unnamed takes priority
-                   do e' <- mkTerm e (Just ty) [] [] []
+                   do e' <- mkTerm e (Just ty)
                       processArgs con (App fc fn e')
                                   !(sc defs (toClosure defaultOpts Env.empty e'))
                                   exps autos' named
@@ -119,7 +119,7 @@ mutual
                                        !(sc defs (toClosure defaultOpts Env.empty e'))
                                        exps [] named
                      Just ((_, e), named') =>
-                        do e' <- mkTerm e (Just ty) [] [] []
+                        do e' <- mkTerm e (Just ty)
                            processArgs con (App fc fn e')
                                        !(sc defs (toClosure defaultOpts Env.empty e'))
                                        exps [] named'
@@ -166,35 +166,39 @@ mutual
            {auto s : Ref Syn SyntaxInfo} ->
            {auto q : Ref QVar Int} ->
            RawImp -> Maybe ClosedClosure ->
-           (expargs : List RawImp) ->
-           (autoargs : List RawImp) ->
-           (namedargs : List (Name, RawImp)) ->
            Core ClosedTerm
-  mkTerm (IVar fc n) mty exps autos named
-     = buildApp fc n mty exps autos named
-  mkTerm (IAs fc fc' u n pat) mty exps autos named
-     = mkTerm pat mty exps autos named
-  mkTerm (IApp fc fn arg) mty exps autos named
-     = mkTerm fn mty (arg :: exps) autos named
-  mkTerm (IWithApp fc fn arg) mty exps autos named
-     = mkTerm fn mty (arg :: exps) autos named
-  mkTerm (IAutoApp fc fn arg) mty exps autos named
-     = mkTerm fn mty exps (arg :: autos) named
-  mkTerm (INamedApp fc fn nm arg) mty exps autos named
-     = mkTerm fn mty exps autos ((nm, arg) :: named)
-  mkTerm (IMustUnify fc r tm) mty exps autos named
-     = Erased fc . Dotted <$> mkTerm tm mty exps autos named
-  mkTerm (IPrimVal fc c) _ _ _ _ = pure (PrimVal fc c)
-  -- We're taking UniqueDefault here, _and_ we're falling through to nextVar otherwise, which is sketchy.
-  -- On option is to try each and emit an AmbiguousElab?  We maybe should respect `UniqueDefault` if there
-  -- is no evidence (mty), but we should _try_ to resolve here if there is an mty.
-  mkTerm (IAlternative _ (UniqueDefault tm) _) mty exps autos named
-     = mkTerm tm mty exps autos named
-  mkTerm (Implicit fc _) _ _ _ _ = nextVar fc
-  mkTerm (IBindVar fc _) _ _ _ _ = nextVar fc
-  mkTerm tm _ _ _ _
-    = do tm' <- pterm (map defaultKindedName tm) -- hack
-         throw $ GenericMsg (getFC tm) "Unsupported term in impossible clause: \{show tm'}"
+  mkTerm tm mty = go tm [] [] []
+    where
+      go : RawImp ->
+          (expargs : List RawImp) ->
+          (autoargs : List RawImp) ->
+          (namedargs : List (Name, RawImp)) ->
+          Core ClosedTerm
+      go (IVar fc n) exps autos named
+        = buildApp fc n mty exps autos named
+      go (IAs fc fc' u n pat) exps autos named
+        = go pat exps autos named
+      go (IApp fc fn arg) exps autos named
+        = go fn (arg :: exps) autos named
+      go (IWithApp fc fn arg) exps autos named
+        = go fn (arg :: exps) autos named
+      go (IAutoApp fc fn arg) exps autos named
+        = go fn exps (arg :: autos) named
+      go (INamedApp fc fn nm arg) exps autos named
+        = go fn exps autos ((nm, arg) :: named)
+      go (IMustUnify fc r tm) exps autos named
+        = Erased fc . Dotted <$> go tm exps autos named
+      go (IPrimVal fc c) _ _ _ = pure (PrimVal fc c)
+      -- We're taking UniqueDefault here, _and_ we're falling through to nextVar otherwise, which is sketchy.
+      -- On option is to try each and emit an AmbiguousElab?  We maybe should respect `UniqueDefault` if there
+      -- is no evidence (mty), but we should _try_ to resolve here if there is an mty.
+      go (IAlternative _ (UniqueDefault tm) _) exps autos named
+        = go tm exps autos named
+      go (Implicit fc _) _ _ _ = nextVar fc
+      go (IBindVar fc _) _ _ _ = nextVar fc
+      go tm _ _ _
+        = do tm' <- pterm (map defaultKindedName tm) -- hack
+             throw $ GenericMsg (getFC tm) "Unsupported term in impossible clause: \{show tm'}"
 
 -- Given an LHS that is declared 'impossible', build a term to match from,
 -- so that when we build the case tree for checking coverage, we take into
@@ -206,7 +210,7 @@ getImpossibleTerm : {vars : _} ->
                     Env Term vars -> NestedNames vars -> RawImp -> Core ClosedTerm
 getImpossibleTerm env nest tm
     = do q <- newRef QVar (the Int 0)
-         mkTerm (applyEnv tm) Nothing [] [] []
+         mkTerm (applyEnv tm) Nothing
   where
     addEnv : {vars : _} ->
              FC -> Env Term vars -> List RawImp
