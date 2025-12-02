@@ -6,14 +6,14 @@ import public Data.String
 import Decidable.Equality
 
 %default total
-
+||| namespace, stored in reverse order
 public export
-data Namespace = MkNS (List String) -- namespace, stored in reverse order
+data Namespace = MkNS (List String)
 
 %name Namespace ns
-
+||| module identifier, stored in reverse order
 public export
-data ModuleIdent = MkMI (List String) -- module identifier, stored in reverse order
+data ModuleIdent = MkMI (List String)
 
 %name ModuleIdent mi
 
@@ -27,9 +27,9 @@ export
 Show Namespace where
   show (MkNS ns) = showSep "." (reverse ns)
 
--- 'FilePos' represents the position of
--- the source information in the file (or REPL).
--- in the form of '(line-no, column-no)'.
+||| 'FilePos' represents the position of
+||| the source information in the file (or REPL).
+||| in the form of '(line-no, column-no)'.
 public export
 FilePos : Type
 FilePos = (Int, Int)
@@ -187,6 +187,7 @@ Show Constant where
   show (PrT x) = show x
   show WorldVal = "%World"
 
+||| Any name that a user can assign to
 public export
 data UserName
   = Basic String -- default name constructor       e.g. map
@@ -195,14 +196,23 @@ data UserName
 
 %name UserName un
 
+||| A name in a Idris program
 public export
-data Name = NS Namespace Name -- name in a namespace
-          | UN UserName -- user defined name
-          | MN String Int -- machine generated name
-          | DN String Name -- a name and how to display it
-          | Nested (Int, Int) Name -- nested function name
-          | CaseBlock String Int -- case block nested in (resolved) name
-          | WithBlock String Int -- with block nested in (resolved) name
+data Name : Type where
+  ||| A qualified name
+  NS : Namespace -> Name -> Name
+  ||| A user defined name
+  UN : UserName -> Name
+  ||| A machine generated name
+  MN : String -> Int -> Name
+  ||| A name with a display string
+  DN : String -> Name -> Name
+  ||| Nested function name
+  Nested : (Int, Int) -> Name -> Name
+  ||| Case block nested in (resolved) name
+  CaseBlock : String -> Int -> Name
+  ||| With block nested in (resolved) name
+  WithBlock : String -> Int -> Name
 
 %name Name nm
 
@@ -251,8 +261,15 @@ record NameInfo where
   constructor MkNameInfo
   nametype : NameType
 
+||| A multiplicity
 public export
-data Count = M0 | M1 | MW
+data Count : Type where
+  ||| 0 (erased)
+  M0 : Count
+  ||| 1 (linear)
+  M1 : Count
+  ||| ω (unrestricted)
+  MW : Count
 %name Count rig
 
 export
