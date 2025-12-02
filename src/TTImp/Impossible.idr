@@ -90,7 +90,7 @@ mutual
             Nothing => -- Expected an explicit argument, but only implicits left
                        do let False = con
                             | True => throw $ GenericMsg (getLoc fn) $
-                                                "Cannot match on a partialy applied constructor: "
+                                                "Cannot match on a partially applied constructor: "
                                                 ++ show !(toFullNames fn)
                           let True = null autos && null named
                             | False => badClause fn [] autos named -- unexpected arguments
