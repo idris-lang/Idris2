@@ -62,6 +62,7 @@ LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG declare.def.lhs:3: LHS term: Term.Typ
+LOG declare.def.lhs:3: LHS term after extension: Term.Typ
 LOG unify.equal:10: Skipped unification (equal already): (vars : $resolved1) -> Type and (vars : $resolved1) -> Type
 LOG declare.def.clause:3: RHS term: Term.Chk
 LOG declare.def:2: Case tree for Term.Typ: [0] Term.Chk
@@ -74,6 +75,7 @@ LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG declare.def.lhs:3: LHS term: Term.Term
+LOG declare.def.lhs:3: LHS term after extension: Term.Term
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG declare.def.clause:3: RHS term: (Term.Chk Prelude.Basics.True)
 LOG declare.def:2: Case tree for Term.Term: [0] (Term.Chk Prelude.Basics.True)
@@ -86,6 +88,7 @@ LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG declare.def.lhs:3: LHS term: Term.NF
+LOG declare.def.lhs:3: LHS term after extension: Term.NF
 LOG unify.equal:10: Skipped unification (equal already): Type and Type
 LOG declare.def.clause:3: RHS term: (Term.Chk Prelude.Basics.False)
 LOG declare.def:2: Case tree for Term.NF: [0] (Term.Chk Prelude.Basics.False)

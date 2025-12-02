@@ -27,6 +27,7 @@ import TTImp.Impossible
 import TTImp.PartialEval
 import TTImp.TTImp
 import TTImp.TTImp.Functor
+import TTImp.ProcessDef.Dot
 import TTImp.ProcessType
 import TTImp.Unelab
 import TTImp.WithClause
@@ -285,7 +286,7 @@ checkLHS : {vars : _} ->
            {auto u : Ref UST UState} ->
            {auto s : Ref Syn SyntaxInfo} ->
            {auto o : Ref ROpts REPLOpts} ->
-           Bool -> -- in transform
+           (trans : Bool) -> -- in transform
            (mult : RigCount) ->
            Int -> List ElabOpt -> NestedNames vars -> Env Term vars ->
            FC -> RawImp ->
@@ -311,7 +312,8 @@ checkLHS {vars} trans mult n opts nest env fc lhs_in
                    then pure lhs_bound
                    else implicitsAs n defs vars lhs_bound
 
-         logC "declare.def.lhs" 5 $ do pure $ "Checking LHS of " ++ show !(getFullName (Resolved n))
+         fullname <- getFullName (Resolved n)
+         log "declare.def.lhs" 5 $ "Checking LHS of " ++ show fullname
 -- todo: add Pretty RawImp instance
 --         logC "declare.def.lhs" 5 $ do pure $ show $ indent {ann = ()} 2 $ pretty lhs
          log "declare.def.lhs" 10 $ show lhs
@@ -320,7 +322,7 @@ checkLHS {vars} trans mult n opts nest env fc lhs_in
                           then InTransform
                           else InLHS mult
          (lhstm, lhstyg) <-
-             wrapErrorC opts (InLHS fc !(getFullName (Resolved n))) $
+             wrapErrorC opts (InLHS fc fullname) $
                      elabTerm n lhsMode opts nest env
                                 (IBindHere fc PATTERN lhs) Nothing
          logTerm "declare.def.lhs" 5 "Checked LHS term" lhstm
@@ -336,6 +338,7 @@ checkLHS {vars} trans mult n opts nest env fc lhs_in
          lhsty <- normaliseHoles defs env lhsty
          linvars_in <- findLinear True 0 linear lhstm
          logTerm "declare.def.lhs" 10 "Checked LHS term after normalise" lhstm
+
          log "declare.def.lhs" 5 $ "Linearity of names in " ++ show n ++ ": " ++
                  show linvars_in
 
@@ -347,8 +350,18 @@ checkLHS {vars} trans mult n opts nest env fc lhs_in
          logTerm "declare.def.lhs" 5 "LHS type" lhsty_lin
          setHoleLHS (bindEnv fc env lhstm_lin)
 
-         ext <- extendEnv env Refl nest lhstm_lin lhsty_lin
-         pure (lhs, ext)
+         (vars'  ** (sub', env', nest', lhstm', lhsty')) <-
+           extendEnv env Refl nest lhstm_lin lhsty_lin
+         logTerm "declare.def.lhs" 3 "LHS term after extension" lhstm'
+
+         lhstm' <- if trans || not (isErased mult)
+                      then pure lhstm'
+                      else do res <- wrapErrorC opts (InLHS fc fullname) $
+                                       dotInferred (thinNestedNames nest sub') lhs lhstm'
+                              logTerm "declare.def.lhs" 3 "LHS term after dotting" res
+                              pure res
+
+         pure (lhs, (vars'  ** (sub', env', nest', lhstm', lhsty')))
 
 -- Return whether any of the pattern variables are in a trivially empty
 -- type, where trivally empty means one of:

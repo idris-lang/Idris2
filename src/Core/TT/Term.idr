@@ -318,6 +318,15 @@ getFnArgs tm = getFA [] tm
     getFA args tm = (tm, args)
 
 export
+getFnArgsWithFC : Term vars -> (Term vars, List (FC, Term vars))
+getFnArgsWithFC tm = getFA [] tm
+  where
+    getFA : List (FC, Term vars) -> Term vars ->
+            (Term vars, List (FC, Term vars))
+    getFA args (App fc f a) = getFA ((fc, a) :: args) f
+    getFA args tm = (tm, args)
+
+export
 getFn : Term vars -> Term vars
 getFn (App _ f a) = getFn f
 getFn tm = tm

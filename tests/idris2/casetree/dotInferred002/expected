@@ -1,7 +1,7 @@
 1/1: Building Main (Main.idr)
 Main> 0 Main.foo
-Arguments [{arg:1}, {arg:2}, {arg:3}]
-Compile time tree: case {arg:3} of
+Arguments [{arg:1}, {arg:2}, {arg:3}, {arg:4}]
+Compile time tree: case {arg:4} of
   (::) {e:1} {e:2} {e:3} {e:4} => case {e:1} of
     S {e:5} => case {e:5} of
       S {e:6} => case {e:6} of
@@ -22,8 +22,8 @@ Compile time tree: case {arg:3} of
       _ => 2
     _ => 2
   _ => 2
-Erasable args: [0, 1]
-Inferrable args: [0, 1]
+Erasable args: [1, 2]
+Inferrable args: [1, 2]
 Flags: covering
 Main> 
 Bye for now!
