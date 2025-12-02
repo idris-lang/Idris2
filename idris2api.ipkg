@@ -279,6 +279,7 @@ modules =
     TTImp.ProcessDecls,
     TTImp.ProcessDecls.Totality,
     TTImp.ProcessDef,
+    TTImp.ProcessDef.Dot,
     TTImp.ProcessFnOpt,
     TTImp.ProcessParams,
     TTImp.ProcessRecord,
