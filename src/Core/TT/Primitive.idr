@@ -53,6 +53,26 @@ data Constant
 
 %name Constant cst
 
+-- Return the primitive type of a constant.
+-- For PrT, return Nothing.
+export
+primType : Constant -> Maybe PrimType
+primType (I {})   = Just IntType
+primType (I8 {})  = Just Int8Type
+primType (I16 {}) = Just Int16Type
+primType (I32 {}) = Just Int32Type
+primType (I64 {}) = Just Int64Type
+primType (BI {})  = Just IntegerType
+primType (B8 {})  = Just Bits8Type
+primType (B16 {}) = Just Bits16Type
+primType (B32 {}) = Just Bits32Type
+primType (B64 {}) = Just Bits64Type
+primType (Str {}) = Just StringType
+primType (Ch {})  = Just CharType
+primType (Db {})  = Just DoubleType
+primType (PrT {}) = Nothing
+primType WorldVal = Just WorldType
+
 export
 isConstantType : Name -> Maybe PrimType
 isConstantType (UN (Basic n)) = case n of

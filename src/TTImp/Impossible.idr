@@ -192,8 +192,26 @@ mutual
         = go fn exps autos ((nm, arg) :: named)
       go (IMustUnify fc r tm) exps autos named
         = Erased fc . Dotted <$> go tm exps autos named
-      go (IPrimVal fc c) _ _ _ = pure (PrimVal fc c)
-      go (IType fc) _ _ _ = pure (TType fc $ MN "top" 0)
+      go (IPrimVal fc c) _ _ _
+          = do let tm = PrimVal fc c
+               True <- isValidPrimType
+                 | _ => throw $ GenericMsg fc "\{show tm} does not match expected type"
+               pure tm
+        where
+          isValidPrimType : Core Bool
+          isValidPrimType
+            = do defs <- get Ctxt
+                 Just ty <- traverseOpt (evalClosure defs) mty
+                   | _ => pure False
+                 case (primType c, ty) of
+                      (Nothing, NType {}) => pure True
+                      (Just t1, NPrimVal _ (PrT t2)) => pure (t1 == t2)
+                      _ => pure False
+      go (IType fc) _ _ _
+          = do defs <- get Ctxt
+               Just (NType {}) <- traverseOpt (evalClosure defs) mty
+                 | _ => throw $ GenericMsg fc "Type does not match expected type"
+               pure (TType fc $ MN "top" 0)
       -- We're taking UniqueDefault here, _and_ we're falling through to error otherwise, which is sketchy.
       -- One option is to try each and emit an AmbiguousElab? We maybe should respect `UniqueDefault` if there
       -- is no evidence (mty), but we should _try_ to resolve here if there is an mty.
