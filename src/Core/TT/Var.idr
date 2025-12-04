@@ -35,6 +35,10 @@ data IsVar : a -> Nat -> List a -> Type where
 
 %name IsVar idx
 
+-- `vs` is available in the erased fragment, and the case builder
+-- pattern-matches on it. To simplify the case tree and help the
+-- coverage checker, we use an explicit dot pattern here.
+-- TODO: remove `{vs = .(_)}` once the compiler generates more optimal case trees.
 export
 0 Last : HasLength (S n) vs -> Exists (\ nm => IsVar nm n vs)
 Last {vs = .(_)} (S Z) = Evidence _ First
