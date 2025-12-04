@@ -193,8 +193,9 @@ mutual
       go (IMustUnify fc r tm) exps autos named
         = Erased fc . Dotted <$> go tm exps autos named
       go (IPrimVal fc c) _ _ _ = pure (PrimVal fc c)
-      -- We're taking UniqueDefault here, _and_ we're falling through to nextVar otherwise, which is sketchy.
-      -- On option is to try each and emit an AmbiguousElab?  We maybe should respect `UniqueDefault` if there
+      go (IType fc) _ _ _ = pure (TType fc $ MN "top" 0)
+      -- We're taking UniqueDefault here, _and_ we're falling through to error otherwise, which is sketchy.
+      -- One option is to try each and emit an AmbiguousElab? We maybe should respect `UniqueDefault` if there
       -- is no evidence (mty), but we should _try_ to resolve here if there is an mty.
       go (IAlternative _ (UniqueDefault tm) _) exps autos named
         = go tm exps autos named
