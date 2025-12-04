@@ -1,0 +1,10 @@
+1/1: Building Issue3692 (Issue3692.idr)
+Error: bad is not covering.
+
+Issue3692:1:1--1:17
+ 1 | bad : Bool -> ()
+     ^^^^^^^^^^^^^^^^
+
+Missing cases:
+    bad False
+

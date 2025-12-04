@@ -1,0 +1,38 @@
+1/1: Building Issue2868 (Issue2868.idr)
+Error: bar is not total, possibly not terminating due to call to Main.Foo.foo
+
+Issue2868:9:3--11:11
+ 09 |   public export
+ 10 |   total
+ 11 |   bar : ()
+
+Error: foo is not total, possibly not terminating due to recursive path Main.Bar.bar -> Main.Foo.foo
+
+Issue2868:4:3--6:11
+ 4 |   public export
+ 5 |   total
+ 6 |   foo : ()
+
+1/1: Building ProofOfFalse (ProofOfFalse.idr)
+Error: bar is not total, possibly not terminating due to call to Main.Foo.foo
+
+ProofOfFalse:8:3--9:13
+ 8 |   public export
+ 9 |   bar : Void
+
+Error: boom is not total, possibly not terminating due to call to Main.Foo.foo
+
+ProofOfFalse:15:1--15:12
+ 11 | 
+ 12 | namespace Foo
+ 13 |   foo = bar
+ 14 | 
+ 15 | boom : Void
+      ^^^^^^^^^^^
+
+Error: foo is not total, possibly not terminating due to recursive path Main.Bar.bar -> Main.Foo.foo
+
+ProofOfFalse:4:3--5:13
+ 4 |   public export
+ 5 |   foo : Void
+
