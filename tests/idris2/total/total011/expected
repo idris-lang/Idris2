@@ -62,22 +62,3 @@ Issue1828:8:3--8:14
  8 |   dummy : Nat
        ^^^^^^^^^^^
 
-Error: caseTest is not total, possibly not terminating due to call to Main.dummy
-
-Issue1828:4:3--4:25
- 1 | %default total
- 2 | 
- 3 | mutual
- 4 |   caseTest : Nat -> Bool
-       ^^^^^^^^^^^^^^^^^^^^^^
-
-Error: dummy is not total, possibly not terminating due to recursive path Main.caseTest -> Main.dummy
-
-Issue1828:8:3--8:14
- 4 |   caseTest : Nat -> Bool
- 5 |   caseTest p with (dummy)
- 6 |    caseTest p | _ = True
- 7 | 
- 8 |   dummy : Nat
-       ^^^^^^^^^^^
-
