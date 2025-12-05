@@ -1,12 +1,14 @@
 module TTImp.Impossible
 
-import Core.Context
 import Core.Env
-import Core.Normalise
 import Core.Value
 
 import TTImp.TTImp
+import TTImp.TTImp.Functor
 import TTImp.Elab.App
+
+import Idris.Syntax
+import Idris.Resugar
 
 %default covering
 
@@ -62,62 +64,77 @@ badClause fn exps autos named
 
 mutual
   processArgs : {auto c : Ref Ctxt Defs} ->
+                {auto s : Ref Syn SyntaxInfo} ->
                 {auto q : Ref QVar Int} ->
+                Bool -> -- should be fully applied
                 ClosedTerm -> ClosedNF ->
                 (expargs : List RawImp) ->
                 (autoargs : List RawImp) ->
                 (namedargs : List (Name, RawImp)) ->
                 Core ClosedTerm
   -- unnamed takes priority
-  processArgs fn (NBind fc x (Pi _ _ Explicit ty) sc) (e :: exps) autos named
-     = do e' <- mkTerm e (Just ty) [] [] []
+  processArgs con fn (NBind fc x (Pi _ _ Explicit ty) sc) (e :: exps) autos named
+     = do e' <- mkTerm e (Just ty)
           defs <- get Ctxt
-          processArgs (App fc fn e') !(sc defs (toClosure defaultOpts Env.empty e'))
+          processArgs con (App fc fn e')
+                      !(sc defs (toClosure defaultOpts Env.empty e'))
                       exps autos named
-  processArgs fn (NBind fc x (Pi _ _ Explicit ty) sc) [] autos named
+  processArgs con fn (NBind fc x (Pi _ _ Explicit ty) sc) [] autos named
      = do defs <- get Ctxt
           case findNamed x named of
             Just ((_, e), named') =>
-               do e' <- mkTerm e (Just ty) [] [] []
-                  processArgs (App fc fn e') !(sc defs (toClosure defaultOpts Env.empty e'))
+               do e' <- mkTerm e (Just ty)
+                  processArgs con (App fc fn e')
+                              !(sc defs (toClosure defaultOpts Env.empty e'))
                               [] autos named'
-            Nothing => badClause fn [] autos named
-  processArgs fn (NBind fc x (Pi _ _ Implicit ty) sc) exps autos named
+            Nothing => -- Expected an explicit argument, but only implicits left
+                       do let False = con
+                            | True => throw $ GenericMsg (getLoc fn) $
+                                                "Cannot match on a partially applied constructor: "
+                                                ++ show !(toFullNames fn)
+                          let True = null autos && null named
+                            | False => badClause fn [] autos named -- unexpected arguments
+                          pure fn
+  processArgs con fn (NBind fc x (Pi _ _ Implicit ty) sc) exps autos named
      = do defs <- get Ctxt
           case findNamed x named of
             Nothing => do e' <- nextVar fc
-                          processArgs (App fc fn e')
+                          processArgs con (App fc fn e')
                                       !(sc defs (toClosure defaultOpts Env.empty e'))
                                       exps autos named
             Just ((_, e), named') =>
-               do e' <- mkTerm e (Just ty) [] [] []
-                  processArgs (App fc fn e') !(sc defs (toClosure defaultOpts Env.empty e'))
+               do e' <- mkTerm e (Just ty)
+                  processArgs con (App fc fn e')
+                              !(sc defs (toClosure defaultOpts Env.empty e'))
                               exps autos named'
-  processArgs fn (NBind fc x (Pi _ _ AutoImplicit ty) sc) exps autos named
+  processArgs con fn (NBind fc x (Pi _ _ AutoImplicit ty) sc) exps autos named
      = do defs <- get Ctxt
           case autos of
                (e :: autos') => -- unnamed takes priority
-                   do e' <- mkTerm e (Just ty) [] [] []
-                      processArgs (App fc fn e') !(sc defs (toClosure defaultOpts Env.empty e'))
+                   do e' <- mkTerm e (Just ty)
+                      processArgs con (App fc fn e')
+                                  !(sc defs (toClosure defaultOpts Env.empty e'))
                                   exps autos' named
                [] =>
                   case findNamed x named of
                      Nothing =>
                         do e' <- nextVar fc
-                           processArgs (App fc fn e')
+                           processArgs con (App fc fn e')
                                        !(sc defs (toClosure defaultOpts Env.empty e'))
                                        exps [] named
                      Just ((_, e), named') =>
-                        do e' <- mkTerm e (Just ty) [] [] []
-                           processArgs (App fc fn e') !(sc defs (toClosure defaultOpts Env.empty e'))
+                        do e' <- mkTerm e (Just ty)
+                           processArgs con (App fc fn e')
+                                       !(sc defs (toClosure defaultOpts Env.empty e'))
                                        exps [] named'
-  processArgs fn ty [] [] [] = pure fn
-  processArgs fn ty (x :: _) autos named
+  processArgs _ fn _ [] [] [] = pure fn
+  processArgs _ fn _ (x :: _) autos named
      = throw $ GenericMsg (getFC x) "Too many arguments"
-  processArgs fn ty exps autos named
+  processArgs _ fn _ exps autos named
      = badClause fn exps autos named
 
   buildApp : {auto c : Ref Ctxt Defs} ->
+             {auto s : Ref Syn SyntaxInfo} ->
              {auto q : Ref QVar Int} ->
              FC -> Name -> Maybe ClosedClosure ->
              (expargs : List RawImp) ->
@@ -144,36 +161,67 @@ mutual
            -- When `head` is `Func`, the pattern will be marked as forced and
            -- the coverage checker will considers that all the cases have been
            -- covered!
-           processArgs (Ref fc (getDefNameType gdef) (Resolved i)) tynf exps autos named
+           let nameType = getDefNameType gdef
+           processArgs (isJust $ isCon nameType)
+                       (Ref fc nameType (Resolved i))
+                       tynf exps autos named
 
   mkTerm : {auto c : Ref Ctxt Defs} ->
+           {auto s : Ref Syn SyntaxInfo} ->
            {auto q : Ref QVar Int} ->
            RawImp -> Maybe ClosedClosure ->
-           (expargs : List RawImp) ->
-           (autoargs : List RawImp) ->
-           (namedargs : List (Name, RawImp)) ->
            Core ClosedTerm
-  mkTerm (IVar fc n) mty exps autos named
-     = buildApp fc n mty exps autos named
-  mkTerm (IAs fc fc' u n pat) mty exps autos named
-     = mkTerm pat mty exps autos named
-  mkTerm (IApp fc fn arg) mty exps autos named
-     = mkTerm fn mty (arg :: exps) autos named
-  mkTerm (IWithApp fc fn arg) mty exps autos named
-     = mkTerm fn mty (arg :: exps) autos named
-  mkTerm (IAutoApp fc fn arg) mty exps autos named
-     = mkTerm fn mty exps (arg :: autos) named
-  mkTerm (INamedApp fc fn nm arg) mty exps autos named
-     = mkTerm fn mty exps autos ((nm, arg) :: named)
-  mkTerm (IMustUnify fc r tm) mty exps autos named
-     = Erased fc . Dotted <$> mkTerm tm mty exps autos named
-  mkTerm (IPrimVal fc c) _ _ _ _ = pure (PrimVal fc c)
-  -- We're taking UniqueDefault here, _and_ we're falling through to nextVar otherwise, which is sketchy.
-  -- On option is to try each and emit an AmbiguousElab?  We maybe should respect `UniqueDefault` if there
-  -- is no evidence (mty), but we should _try_ to resolve here if there is an mty.
-  mkTerm (IAlternative _ (UniqueDefault tm) _) mty exps autos named
-     = mkTerm tm mty exps autos named
-  mkTerm tm _ _ _ _ = nextVar (getFC tm)
+  mkTerm tm mty = go tm [] [] []
+    where
+      go : RawImp ->
+          (expargs : List RawImp) ->
+          (autoargs : List RawImp) ->
+          (namedargs : List (Name, RawImp)) ->
+          Core ClosedTerm
+      go (IVar fc n) exps autos named
+        = buildApp fc n mty exps autos named
+      go (IAs fc fc' u n pat) exps autos named
+        = go pat exps autos named
+      go (IApp fc fn arg) exps autos named
+        = go fn (arg :: exps) autos named
+      go (IWithApp fc fn arg) exps autos named
+        = go fn (arg :: exps) autos named
+      go (IAutoApp fc fn arg) exps autos named
+        = go fn exps (arg :: autos) named
+      go (INamedApp fc fn nm arg) exps autos named
+        = go fn exps autos ((nm, arg) :: named)
+      go (IMustUnify fc r tm) exps autos named
+        = Erased fc . Dotted <$> go tm exps autos named
+      go (IPrimVal fc c) _ _ _
+          = do let tm = PrimVal fc c
+               True <- isValidPrimType
+                 | _ => throw $ GenericMsg fc "\{show tm} does not match expected type"
+               pure tm
+        where
+          isValidPrimType : Core Bool
+          isValidPrimType
+            = do defs <- get Ctxt
+                 Just ty <- traverseOpt (evalClosure defs) mty
+                   | _ => pure False
+                 case (primType c, ty) of
+                      (Nothing, NType {}) => pure True
+                      (Just t1, NPrimVal _ (PrT t2)) => pure (t1 == t2)
+                      _ => pure False
+      go (IType fc) _ _ _
+          = do defs <- get Ctxt
+               Just (NType {}) <- traverseOpt (evalClosure defs) mty
+                 | _ => throw $ GenericMsg fc "Type does not match expected type"
+               pure (TType fc $ MN "top" 0)
+      -- We're taking UniqueDefault here, _and_ we're falling through to error otherwise, which is sketchy.
+      -- One option is to try each and emit an AmbiguousElab? We maybe should respect `UniqueDefault` if there
+      -- is no evidence (mty), but we should _try_ to resolve here if there is an mty.
+      go (IAlternative _ (UniqueDefault tm) _) exps autos named
+        = go tm exps autos named
+      go (Implicit fc _) _ _ _ = nextVar fc
+      go (IBindVar fc _) _ _ _ = nextVar fc
+      go tm _ _ _
+        = do tm' <- pterm (map defaultKindedName tm) -- hack
+             throw $ GenericMsg (getFC tm) "Unsupported term in impossible clause: \{show tm'}"
 
 -- Given an LHS that is declared 'impossible', build a term to match from,
 -- so that when we build the case tree for checking coverage, we take into
@@ -181,10 +229,11 @@ mutual
 export
 getImpossibleTerm : {vars : _} ->
                     {auto c : Ref Ctxt Defs} ->
+                    {auto s : Ref Syn SyntaxInfo} ->
                     Env Term vars -> NestedNames vars -> RawImp -> Core ClosedTerm
 getImpossibleTerm env nest tm
     = do q <- newRef QVar (the Int 0)
-         mkTerm (applyEnv tm) Nothing [] [] []
+         mkTerm (applyEnv tm) Nothing
   where
     addEnv : {vars : _} ->
              FC -> Env Term vars -> List RawImp

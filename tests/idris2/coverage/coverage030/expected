@@ -1,0 +1,31 @@
+1/1: Building Issue2822 (Issue2822.idr)
+Error: f2 is not covering.
+
+Issue2822:4:1--4:10
+ 1 | fn : (x : Bool) -> if x then (Nat -> Nat) else Void
+ 2 | fn True x = x
+ 3 | 
+ 4 | f2 : Void
+     ^^^^^^^^^
+
+Calls non covering function Main.fn
+Error: fn is not covering.
+
+Issue2822:1:1--1:52
+ 1 | fn : (x : Bool) -> if x then (Nat -> Nat) else Void
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Missing cases:
+    fn False
+
+1/1: Building DiffArgsCounts (DiffArgsCounts.idr)
+Error: fn is not covering.
+
+DiffArgsCounts:1:1--1:50
+ 1 | fn : (x : Bool) -> if x then Bool -> () else Void
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Missing cases:
+    fn True False
+    fn False
+
