@@ -113,7 +113,6 @@ mutual
   data CConAlt : Scoped where
        -- If no tag, then match by constructor name. Back ends might want to
        -- convert names to a unique integer for performance.
-       --
        MkConAlt : Name -> ConInfo -> (tag : Maybe Int) -> (args : List Name) ->
                   CExp (Scope.ext vars args) -> CConAlt vars
 

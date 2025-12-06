@@ -487,16 +487,6 @@ dropIdx inn unused p =
     Left v => weakenNs inn (unsafeDropVar _ unused v)
     Right v => embed v
 
-{-
-dropIdx [<] (False::_) First = MkVar First
-dropIdx [<] (True::_) First = assert_total $
-  idris_crash "INTERNAL ERROR: Referenced variable marked as unused"
-dropIdx [<] (False::rest) (Later p) = Var.later $ dropIdx Scope.empty rest p
-dropIdx [<] (True::rest) (Later p) = dropIdx Scope.empty rest p
-dropIdx (xs :< _) unused First = first
-dropIdx (xs :< _) unused (Later p) = Var.later $ dropIdx xs unused p
--}
-
 -- TODO this is morally a `Shrinkable`. Replace!
 0 DropUnused : Scoped -> Type
 DropUnused tm =

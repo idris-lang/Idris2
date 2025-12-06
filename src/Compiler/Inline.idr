@@ -326,12 +326,11 @@ mutual
   pickAlt rec env stk (CCon fc n ci t args) [] def
       = traverseOpt (eval rec env stk) def
   pickAlt {vars} {free} rec env stk con@(CCon fc n ci t args) (MkConAlt n' _ t' args' sc :: alts) def
-      = let args'' = toList args' in
-        if matches n t n' t'
-           then case checkLengthMatch (toList args') args of
+      = if matches n t n' t'
+           then case checkLengthMatch args' args of
                      Nothing => pure Nothing
                      Just m =>
-                         do let env' = extend env (toList args') args m
+                         do let env' = extend env args' args m
                             pure $ Just !(eval rec env' stk
                                     (rewrite sym $ snocAppendFishAssociative free vars args' in sc))
            else pickAlt rec env stk con alts def
