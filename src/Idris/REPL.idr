@@ -56,20 +56,21 @@ import TTImp.BindImplicits
 import TTImp.ProcessDecls
 
 import Data.Maybe
+import Data.Stream
+import Data.String
+
+import System
+import System.File
+
 import Libraries.Data.NatSet
 import Libraries.Data.NameMap
 import Libraries.Data.PosMap
 import Libraries.Data.String as L
-import Data.Stream
-import Data.String
 import Libraries.Data.SparseMatrix
 import Libraries.Data.Tap
 import Libraries.Data.WithDefault
 import Libraries.Utils.Path
 import Libraries.System.Directory.Tree
-
-import System
-import System.File
 
 %default covering
 
@@ -96,7 +97,7 @@ showInfo (n, idx, d)
             let scinfo = map (\s => show (fnCall s) ++ ": " ++
                                     show (fnArgs s)) !(traverse toFullNames (sizeChange d)) in
                 coreLift_ $ putStrLn $
-                        "Size change: " ++ showSep ", " scinfo
+                        "Size change: " ++ joinBy ", " scinfo
 
 prettyInfo : {auto c : Ref Ctxt Defs} ->
              {auto s : Ref Syn SyntaxInfo} ->
@@ -150,7 +151,7 @@ getEnvTerm : {vars : _} ->
              (vars' ** (Env Term vars', Term vars'))
 getEnvTerm (n :: ns) env (Bind fc x b sc)
     = if n == x
-         then getEnvTerm ns (b :: env) sc
+         then getEnvTerm ns (Env.bind env b) sc
          else (_ ** (env, Bind fc x b sc))
 getEnvTerm _ env tm = (_ ** (env, tm))
 
@@ -221,7 +222,7 @@ printClause l i (WithClause _ lhsraw rig wvraw prf flags csraw)
                    -- TODO: remove `the` after fix idris-lang/Idris2#3418
                 ++ maybe "" (the (_ -> _) $ \(rg, nm) => " proof " ++ showCount rg ++ show nm) prf
                 ++ "\n")
-               ++ showSep "\n" cs)
+               ++ joinBy "\n" cs)
 printClause l i (ImpossibleClause _ lhsraw)
     = do lhs <- pterm $ map defaultKindedName lhsraw -- hack
          pure (relit l (pack (replicate i ' ') ++ show lhs ++ " impossible"))
@@ -340,7 +341,7 @@ dropLamsTm : {vars : _} ->
              Nat -> Env Term vars -> Term vars ->
              (vars' ** (Env Term vars', Term vars'))
 dropLamsTm Z env tm = (_ ** (env, tm))
-dropLamsTm (S k) env (Bind _ _ b sc) = dropLamsTm k (b :: env) sc
+dropLamsTm (S k) env (Bind _ _ b sc) = dropLamsTm k (Env.bind env b) sc
 dropLamsTm _ env tm = (_ ** (env, tm))
 
 findInTree : FilePos -> Name -> PosMap (NonEmptyFC, Name) -> Maybe Name
@@ -582,7 +583,7 @@ processEdit (Refine upd line hole e)
                     let pcall = papply replFC e new_holes
 
                     -- We're desugaring it to the corresponding TTImp
-                    icall <- desugar AnyExpr (lhsCtxt <>> []) pcall
+                    icall <- desugar AnyExpr lhsCtxt pcall
 
                     -- We're checking this term full of holes against the type of the hole
                     -- TODO: branch before checking the expression fits
@@ -620,7 +621,7 @@ processEdit (ExprSearch upd line name hints)
                      if upd
                         then updateFile (proofSearch name (show itm') (integerToNat (cast (line - 1))))
                         else pure $ DisplayEdit (prettyBy Syntax itm')
-              [(n, nidx, PMDef pi [] (STerm _ tm) _ _)] =>
+              [(n, nidx, PMDef pi [<] (STerm _ tm) _ _)] =>
                   case holeInfo pi of
                        NotHole => pure $ EditError "Not a searchable hole"
                        SolvedHole locs =>
@@ -1190,11 +1191,11 @@ mutual
 
   export
   handleMissing' : MissedResult -> String
-  handleMissing' (CasesMissing x xs) = show x ++ ":\n" ++ showSep "\n" xs
+  handleMissing' (CasesMissing x xs) = show x ++ ":\n" ++ joinBy "\n" xs
   handleMissing' (CallsNonCovering fn ns) = (show fn ++ ": Calls non covering function"
                                            ++ (case ns of
                                                  [f] => " " ++ show f
-                                                 _ => "s: " ++ showSep ", " (map show ns)))
+                                                 _ => "s: " ++ joinBy ", " (map show ns)))
   handleMissing' (AllCasesCovered fn) = show fn ++ ": All cases covered"
 
   export
@@ -1267,9 +1268,9 @@ mutual
   displayResult (Edited (EditError x)) = printResult x
   displayResult (Edited (MadeLemma lit name pty pappstr))
     = printResult $ pretty0 (relit lit (show name ++ " : " ++ show pty ++ "\n") ++ pappstr)
-  displayResult (Edited (MadeWith lit wapp)) = printResult $ pretty0 $ showSep "\n" (map (relit lit) wapp)
-  displayResult (Edited (MadeCase lit cstr)) = printResult $ pretty0 $ showSep "\n" (map (relit lit) cstr)
-  displayResult (Edited (MadeIntro is)) = printResult $ pretty0 $ showSep "\n" (toList is)
+  displayResult (Edited (MadeWith lit wapp)) = printResult $ pretty0 $ joinBy "\n" (map (relit lit) wapp)
+  displayResult (Edited (MadeCase lit cstr)) = printResult $ pretty0 $ joinBy "\n" (map (relit lit) cstr)
+  displayResult (Edited (MadeIntro is)) = printResult $ pretty0 $ joinBy "\n" (toList is)
   displayResult (OptionsSet opts) = printResult (vsep (pretty0 <$> opts))
 
   -- do not use a catchall so that we are warned when a new constructor is added
@@ -1281,7 +1282,7 @@ mutual
   export
   displayHelp : String
   displayHelp =
-    showSep "\n" $ map cmdInfo help
+    joinBy "\n" $ map cmdInfo help
     where
       makeSpace : Nat -> String
       makeSpace n = pack $ take n (repeat ' ')
@@ -1292,7 +1293,7 @@ mutual
         m ++ (makeSpace $ c2 `minus` length m) ++ r
 
       cmdInfo : (List String, CmdArg, String) -> String
-      cmdInfo (cmds, args, text) = " " ++ col 18 36 (showSep " " cmds) (show args) text
+      cmdInfo (cmds, args, text) = " " ++ col 18 36 (joinBy " " cmds) (show args) text
 
   ||| Display errors that may occur when starting the REPL.
   ||| Does not force the REPL to exit, just prints the error(s).

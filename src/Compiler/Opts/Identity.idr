@@ -2,17 +2,20 @@ module Compiler.Opts.Identity
 
 import Core.CompileExpr
 import Core.Context.Log
+
 import Data.Vect
+import Data.SnocList
 
 import Libraries.Data.List.SizeOf
 
-makeArgs : (args : Scope) -> List (Var (args ++ vars))
-makeArgs args = embed @{ListFreelyEmbeddable} (Var.allVars args)
+makeArgz : (args : List Name) -> List (Var (Scope.ext vars args))
+makeArgz args
+  = embedFishily @{ListFreelyEmbeddable} $ reverse $ Var.allVars ([<] <>< args)
 
 parameters (fn1 : Name) (idIdx : Nat)
   mutual
     -- special case for matching on 'Nat'-shaped things
-    isUnsucc : Var vars -> CExp vars -> Maybe (Constant, Var (x :: vars))
+    isUnsucc : Var vars -> CExp vars -> Maybe (Constant, Var (Scope.bind vars x))
     isUnsucc var (COp _ (Sub _) [CLocal _ p, CPrimVal _ c]) =
         if var == MkVar p
             then Just (c, first)
@@ -81,8 +84,8 @@ parameters (fn1 : Name) (idIdx : Nat)
         altEq : CConAlt vars -> Bool
         altEq (MkConAlt y _ _ args exp) =
             cexpIdentity
-                (weakenNs (mkSizeOf args) var)
-                (Just (y, makeArgs args))
+                (weakensN (mkSizeOf args) var)
+                (Just (y, makeArgz args))
                 const
                 exp
     cexpIdentity var con const (CConstCase fc sc xs x) =
@@ -113,9 +116,9 @@ calcIdentity fn (MkFun args exp) = checkIdentity fn (Var.allVars args) exp Z
 calcIdentity _ _ = Nothing
 
 getArg : FC -> Nat -> (args : Scope) -> Maybe (CExp args)
-getArg _ _ [] = Nothing
-getArg fc Z (a :: _) = Just $ CLocal fc First
-getArg fc (S k) (_ :: as) = weaken <$> getArg fc k as
+getArg _ _ [<] = Nothing
+getArg fc Z (_ :< a) = Just $ CLocal fc First
+getArg fc (S k) (as :< _) = weaken <$> getArg fc k as
 
 idCDef : Nat -> CDef -> Maybe CDef
 idCDef idx (MkFun args exp) = MkFun args <$> getArg (getFC exp) idx args

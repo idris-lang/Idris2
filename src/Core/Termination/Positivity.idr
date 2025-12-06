@@ -32,15 +32,15 @@ nameIn defs tyns (NApp _ nh args)
     = do False <- isAssertTotal nh
            | True => pure False
          anyM (nameIn defs tyns)
-           !(traverse (evalClosure defs . snd) args)
+           !(traverse (evalClosure defs . snd) (toList args))
 nameIn defs tyns (NTCon _ n _ args)
     = if n `elem` tyns
          then pure True
-         else do args' <- traverse (evalClosure defs . snd) args
+         else do args' <- traverse (evalClosure defs . snd) (toList args)
                  anyM (nameIn defs tyns) args'
 nameIn defs tyns (NDCon _ n _ _ args)
     = anyM (nameIn defs tyns)
-           !(traverse (evalClosure defs . snd) args)
+           !(traverse (evalClosure defs . snd) (toList args))
 nameIn defs tyns (NDelayed fc lr ty) = nameIn defs tyns ty
 nameIn defs tyns (NDelay fc lr ty tm) = nameIn defs tyns !(evalClosure defs tm)
 nameIn defs tyns _ = pure False
@@ -73,7 +73,7 @@ posArg defs tyns nf@(NTCon loc tc _ args) =
      let (params, indices) = testargs
      False <- anyM (nameIn defs tyns) !(traverse (evalClosure defs) indices)
        | True => pure (NotTerminating NotStrictlyPositive)
-     posArgs defs tyns params
+     posArgs defs tyns (toList params)
 -- a tyn can not appear as part of ty
 posArg defs tyns nf@(NBind fc x (Pi _ _ e ty) sc)
   = do logNF "totality.positivity" 50 "Found a Pi-type" Env.empty nf
@@ -88,7 +88,7 @@ posArg defs tyns nf@(NApp fc nh args)
            | True => do logNF "totality.positivity" 50 "Trusting an assertion" Env.empty nf
                         pure IsTerminating
          logNF "totality.positivity" 50 "Found an application" Env.empty nf
-         args <- traverse (evalClosure defs . snd) args
+         args <- traverse (evalClosure defs . snd) (toList args)
          pure $ if !(anyM (nameIn defs tyns) args)
            then NotTerminating NotStrictlyPositive
            else IsTerminating
