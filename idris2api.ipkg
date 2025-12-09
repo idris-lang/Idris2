@@ -214,6 +214,8 @@ modules =
     Libraries.Data.WithDefault,
     Libraries.Data.WithData,
 
+    Libraries.Decidable.Equality,
+
     Libraries.System.Directory.Tree,
 
     Libraries.Text.Bounded,
