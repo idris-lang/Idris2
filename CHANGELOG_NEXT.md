@@ -87,3 +87,5 @@ should target this file (`CHANGELOG_NEXT`).
 #### Base
 
 * Added `rtrim` to `Data.String`.
+* Added `decToMaybe`, `maybeCong` and `maybeCong2` to `Data.Maybe`.
+* Added `maybeEq` to `Decidable.Equality`.

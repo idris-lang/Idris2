@@ -2,7 +2,7 @@ module Core.Name
 
 import Data.Maybe
 import Data.String
-import Libraries.Decidable.Equality
+import Libraries.Decidable.Equality as L
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 import Libraries.Utils.String
@@ -394,29 +394,29 @@ Ord Name where
 
 export
 userNameEq : (x, y : UserName) -> Maybe (x = y)
-userNameEq (Basic x) (Basic y) = maybeCong Basic (maybeEq x y)
-userNameEq (Field x) (Field y) = maybeCong Field (maybeEq x y)
+userNameEq (Basic x) (Basic y) = L.maybeCong Basic (L.maybeEq x y)
+userNameEq (Field x) (Field y) = L.maybeCong Field (L.maybeEq x y)
 userNameEq Underscore Underscore = Just Refl
 userNameEq _ _ = Nothing
 
 
 export
 nameEq : (x : Name) -> (y : Name) -> Maybe (x = y)
-nameEq (NS xs x) (NS ys y) = maybeCong2 NS (maybeEq xs ys) (nameEq x y)
-nameEq (UN x) (UN y) = maybeCong UN (userNameEq x y)
-nameEq (MN x t) (MN x' t') = maybeCong2 MN (maybeEq x x') (maybeEq t t')
-nameEq (PV x t) (PV y t') = maybeCong2 PV (nameEq x y) (maybeEq t t')
-nameEq (DN x t) (DN y t') = maybeCong2 DN (maybeEq x y) (nameEq t t')
-nameEq (Nested x y) (Nested x' y') = maybeCong2 Nested (maybeEq x x') (nameEq y y')
-nameEq (CaseBlock x y) (CaseBlock x' y') = maybeCong2 CaseBlock (maybeEq x x') (maybeEq y y')
-nameEq (WithBlock x y) (WithBlock x' y') = maybeCong2 WithBlock (maybeEq x x') (maybeEq y y')
-nameEq (Resolved x) (Resolved y) = maybeCong Resolved (maybeEq x y)
+nameEq (NS xs x) (NS ys y) = L.maybeCong2 NS (L.maybeEq xs ys) (nameEq x y)
+nameEq (UN x) (UN y) = L.maybeCong UN (userNameEq x y)
+nameEq (MN x t) (MN x' t') = L.maybeCong2 MN (L.maybeEq x x') (L.maybeEq t t')
+nameEq (PV x t) (PV y t') = L.maybeCong2 PV (nameEq x y) (L.maybeEq t t')
+nameEq (DN x t) (DN y t') = L.maybeCong2 DN (L.maybeEq x y) (nameEq t t')
+nameEq (Nested x y) (Nested x' y') = L.maybeCong2 Nested (L.maybeEq x x') (nameEq y y')
+nameEq (CaseBlock x y) (CaseBlock x' y') = L.maybeCong2 CaseBlock (L.maybeEq x x') (L.maybeEq y y')
+nameEq (WithBlock x y) (WithBlock x' y') = L.maybeCong2 WithBlock (L.maybeEq x x') (L.maybeEq y y')
+nameEq (Resolved x) (Resolved y) = L.maybeCong Resolved (L.maybeEq x y)
 nameEq _ _ = Nothing
 
 export
 namesEq : (xs, ys : List Name) -> Maybe (xs = ys)
 namesEq [] [] = Just Refl
-namesEq (x :: xs) (y :: ys) = maybeCong2 (::) (nameEq x y) (namesEq xs ys)
+namesEq (x :: xs) (y :: ys) = L.maybeCong2 (::) (nameEq x y) (namesEq xs ys)
 namesEq _ _ = Nothing
 
 ||| Generate the next machine name
