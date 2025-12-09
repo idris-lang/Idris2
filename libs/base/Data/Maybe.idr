@@ -51,6 +51,11 @@ toMaybe : Bool -> Lazy a -> Maybe a
 toMaybe True  j = Just j
 toMaybe False _ = Nothing
 
+public export
+decToMaybe : Dec a -> Maybe a
+decToMaybe (Yes a) = Just a
+decToMaybe (No _)  = Nothing
+
 export
 Injective Just where
   injective Refl = Refl
@@ -97,3 +102,17 @@ Zippable Maybe where
 
   unzipWith3 f Nothing  = (Nothing, Nothing, Nothing)
   unzipWith3 f (Just x) = let (a, b, c) = f x in (Just a, Just b, Just c)
+
+--------------------------------------------------------------------------------
+-- Proof helpers
+--------------------------------------------------------------------------------
+
+%inline
+public export
+maybeCong : (f : a -> b) -> Maybe (x = y) -> Maybe (f x = f y)
+maybeCong f = map (\eq => cong f eq)
+
+%inline
+public export
+maybeCong2 : (f : a -> b -> c) -> Maybe (x = y) -> Maybe (v = w) -> Maybe (f x v = f y w)
+maybeCong2 f mxy mvw = (\xy, vw => cong2 f xy vw) <$> mxy <*> mvw

@@ -1,3 +1,4 @@
+-- Remove as soon as 0.9.0 is released
 module Libraries.Decidable.Equality
 
 import public Decidable.Equality
