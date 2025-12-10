@@ -178,10 +178,31 @@ jobs:
         run: |
           brew update
           brew install --overwrite python@3.12
-          brew install node
-          brew install chezscheme
-          brew install coreutils
+          brew install node@24
+
+          # Pinning versions at Brew for packages which does not support version selection
+          # See: https://www.ericbariaux.com/posts/brew_rollback/
+          brew tap-new idris2-ci-macos/core-local
+
+          brew tap homebrew/core --force
+          brew extract --git-revision=a51847b50de2a3c6d31cb459f5e60e039f775617 chezscheme idris2-ci-macos/core-local
+          brew install --build-from-source idris2-ci-macos/core-local/chezscheme@10.3.0
+
+          brew extract --git-revision=d62ffcbcdcfb84618c994e2cce054b8ab28bef51 coreutils idris2-ci-macos/core-local
+          brew install idris2-ci-macos/core-local/coreutils@9.9
+
+          # For pinning cask need another repository
+          # See: https://emmer.dev/blog/installing-old-homebrew-cask-versions/
+          brew tap --force homebrew/cask
+          # Unfortunately brew extract does not support Casks
+          mkdir -p "$(brew --repository idris2-ci-macos/core-local)/Casks/r"
+          pushd "$(brew --repository homebrew/cask)"
+          git show "d602a9e79bab276995832c476a849a9e6b9105c7:Casks/r/racket.rb" > "$(brew --repository idris2-ci-macos/core-local)/Casks/r/racket.rb"
+          popd
+          brew install --cask idris2-ci-macos/core-local/racket
+
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          echo "/opt/homebrew/bin" >> "$GITHUB_PATH"
       - name: Make bootstrap folder readonly
         run: chmod -R a-w bootstrap
       - name: Build Idris 2 from bootstrap
@@ -345,10 +366,26 @@ jobs:
         run: |
           brew update
           brew install --overwrite python@3.12
-          brew install chezscheme
-          brew install node
-          brew install coreutils
+          brew install node@24
+
+          # See notes at "macos-bootstrap-chez"
+          brew tap homebrew/core --force
+          brew tap-new idris2-ci-macos/core-local
+          brew extract --git-revision=a51847b50de2a3c6d31cb459f5e60e039f775617 chezscheme idris2-ci-macos/core-local
+          brew install --build-from-source idris2-ci-macos/core-local/chezscheme@10.3.0
+
+          brew extract --git-revision=d62ffcbcdcfb84618c994e2cce054b8ab28bef51 coreutils idris2-ci-macos/core-local
+          brew install idris2-ci-macos/core-local/coreutils@9.9
+
+          brew tap --force homebrew/cask
+          mkdir -p "$(brew --repository idris2-ci-macos/core-local)/Casks/r"
+          pushd "$(brew --repository homebrew/cask)"
+          git show "d602a9e79bab276995832c476a849a9e6b9105c7:Casks/r/racket.rb" > "$(brew --repository idris2-ci-macos/core-local)/Casks/r/racket.rb"
+          popd
+          brew install --cask idris2-ci-macos/core-local/racket
+
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          echo "/opt/homebrew/bin" >> "$GITHUB_PATH"
           chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Build self-hosted
         run: make all IDRIS2_BOOT="idris2 -Werror" && make install
