@@ -8,9 +8,11 @@ import Core.Value
 
 import Data.Either
 import Data.Maybe
+import Data.SnocList
 
 import Libraries.Data.NatSet
 import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
 import Libraries.Data.WithDefault
 
 %default covering
@@ -200,17 +202,17 @@ getUsableEnv : FC -> RigCount ->
                SizeOf done ->
                Env Term vars ->
                -- TODO this will be `vars <>< done` after refactoring
-               List (Term (done ++ vars), Term (done ++ vars))
-getUsableEnv fc rigc p [] = []
-getUsableEnv {vars = v :: vs} {done} fc rigc p (b :: env)
-   = let rest = getUsableEnv fc rigc (sucR p) env in
+               List (Term (Scope.addInner vars done), Term (Scope.addInner vars done))
+getUsableEnv fc rigc p [<] = []
+getUsableEnv {vars = vs :< v} {done} fc rigc p (env :< b)
+   = let rest = getUsableEnv fc rigc (sucL p) env in
          if (multiplicity b == top || isErased rigc)
             then let 0 var = mkIsVar (hasLength p) in
                      (Local (binderLoc b) Nothing _ var,
-                       rewrite appendAssociative done (Scope.single v) vs in
-                          weakenNs (sucR p) (binderType b)) ::
-                               rewrite appendAssociative done (Scope.single v) vs in rest
-            else rewrite appendAssociative done (Scope.single v) vs in rest
+                       rewrite sym (appendAssociative vs (Scope.single v) done) in
+                          weakenNs (sucL p) (binderType b)) ::
+                               rewrite sym (appendAssociative vs (Scope.single v) done) in rest
+            else rewrite sym (appendAssociative vs (Scope.single v) done) in rest
 
 -- A local is usable if it contains no holes in a determining argument position
 usableLocal : {vars : _} ->
@@ -224,7 +226,7 @@ usableLocal loc defaults env (NApp fc (NMeta {}) args)
     = pure False
 usableLocal {vars} loc defaults env (NTCon _ n _ args)
     = do sd <- getSearchData loc (not defaults) n
-         usableLocalArg 0 (detArgs sd) (map snd args)
+         usableLocalArg 0 (detArgs sd) (toList $ map snd args)
   -- usable if none of the determining arguments of the local's type are
   -- holes
   where
@@ -271,9 +273,9 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
   where
     clearEnvType : {idx : Nat} -> (0 p : IsVar nm idx vs) ->
                    FC -> Env Term vs -> Env Term vs
-    clearEnvType First fc (b :: env)
-        = Lam (binderLoc b) (multiplicity b) Explicit (Erased fc Placeholder) :: env
-    clearEnvType (Later p) fc (b :: env) = b :: clearEnvType p fc env
+    clearEnvType First fc (env :< b)
+        = env :< Lam (binderLoc b) (multiplicity b) Explicit (Erased fc Placeholder)
+    clearEnvType (Later p) fc (env :< b) = Env.bind (clearEnvType p fc env) b
 
     clearEnv : Term vars -> Env Term vars -> Env Term vars
     clearEnv (Local fc _ idx p) env
@@ -315,7 +317,7 @@ searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) targe
               NF vars ->  -- local's type
               (target : NF vars) ->
               Core (Term vars)
-    findPos defs f nty@(NTCon pfc pn _ [(_, xty), (_, yty)]) target
+    findPos defs f nty@(NTCon pfc pn _ [<(_, xty), (_, yty)]) target
         = tryUnifyUnambig (findDirect defs f nty target) $
              do fname <- maybe (throw (CantSolveGoal fc (gamma defs) Env.empty top Nothing))
                                pure
@@ -389,7 +391,7 @@ searchName fc rigc defaults trying depth def top env target (n, ndef)
 
          let ty = type ndef
          when (isErased ty) $
-            throw (CantSolveGoal fc (gamma defs) [] top Nothing)
+            throw (CantSolveGoal fc (gamma defs) Env.empty top Nothing)
 
          nty <- nf defs env (embed ty)
          logNF "auto" 10 ("Searching Name " ++ show n) env nty
@@ -459,7 +461,7 @@ concreteDets {vars} fc defaults env top pos dets (arg :: args)
              concrete defs scnf False
     concrete defs (NTCon nfc n a args) atTop
         = do sd <- getSearchData nfc False n
-             let args' = NatSet.take (detArgs sd) args
+             let args' = NatSet.take (detArgs sd) (cast {to = List (FC, Closure vars)} args)
              traverse_ (\ parg => do argnf <- evalClosure defs parg
                                      concrete defs argnf False) (map snd args')
     concrete defs (NDCon nfc n t a args) atTop
@@ -487,19 +489,19 @@ checkConcreteDets fc defaults env top (NTCon tfc tyn a args)
     = do defs <- get Ctxt
          if !(isPairType tyn)
             then case args of
-                      [(_, aty), (_, bty)] =>
+                      [<(_, aty), (_, bty)] =>
                           do anf <- evalClosure defs aty
                              bnf <- evalClosure defs bty
                              checkConcreteDets fc defaults env top anf
                              checkConcreteDets fc defaults env top bnf
                       _ => do sd <- getSearchData fc defaults tyn
-                              concreteDets fc defaults env top 0 (detArgs sd) (map snd args)
+                              concreteDets fc defaults env top 0 (detArgs sd) (toList $ map snd args)
             else
               do sd <- getSearchData fc defaults tyn
                  log "auto.determining" 10 $
                    "Determining arguments for " ++ show !(toFullNames tyn)
                    ++ " " ++ show (detArgs sd)
-                 concreteDets fc defaults env top 0 (detArgs sd) (map snd args)
+                 concreteDets fc defaults env top 0 (detArgs sd) (toList $ map snd args)
 checkConcreteDets fc defaults env top _
     = pure ()
 
@@ -518,11 +520,11 @@ abandonIfCycle env tm (ty :: tys)
 searchType fc rigc defaults trying depth def checkdets top env (Bind nfc x b@(Pi fc' c p ty) sc)
     = pure (Bind nfc x (Lam fc' c p ty)
              !(searchType fc rigc defaults [] depth def checkdets top
-                          (b :: env) sc))
+                          (Env.bind env b) sc))
 searchType fc rigc defaults trying depth def checkdets top env (Bind nfc x b@(Let fc' c val ty) sc)
     = pure (Bind nfc x b
              !(searchType fc rigc defaults [] depth def checkdets top
-                          (b :: env) sc))
+                          (Env.bind env b) sc))
 searchType {vars} fc rigc defaults trying depth def checkdets top env target
     = do defs <- get Ctxt
          abandonIfCycle env target trying
