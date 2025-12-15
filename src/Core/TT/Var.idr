@@ -201,14 +201,20 @@ export
 mkVarFishily : SizeOf inner -> Var (outer :< nm <>< inner)
 mkVarFishily (MkSizeOf s p) = MkVar (isVarFishily p)
 
-||| Generate all variables
-export
-allVars : (vars : Scope) -> List (Var vars)
-allVars = go zero where
+namespace SnocList
+  ||| Generate all variables
+  export
+  allVars : (vars : Scope) -> Scopeable (Var vars)
+  allVars = go zero where
+    go : SizeOf inner -> (vs : Scope) -> Scopeable (Var (vs <>< inner))
+    go s [<] = [<]
+    go s (vs :< v) = go (suc s) vs :< mkVarFishily s
 
-  go : SizeOf inner -> (vs : Scope) -> List (Var (vs <>< inner))
-  go s [<] = []
-  go s (vs :< v) = mkVarFishily s :: go (suc s) vs
+namespace List
+  ||| Generate all variables
+  export
+  allVars : (vars : List Name) -> List (Var ([<] <>< vars))
+  allVars vs = toList $ SnocList.allVars (cast vs)
 
 export
 Eq (Var xs) where

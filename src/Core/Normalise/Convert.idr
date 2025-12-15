@@ -21,8 +21,8 @@ extend : {args, args' : List Name} ->
      Maybe (List (Var (Scope.ext vars args), Var (Scope.ext vars' args')))
 extend s s' ms
   = do guard (Libraries.Data.List.SizeOf.SizeOf.size s == size s')
-       let vs  = embedFishily @{ListFreelyEmbeddable} (Var.allVars (cast args))
-       let vs' = embedFishily @{ListFreelyEmbeddable} (Var.allVars (cast args'))
+       let vs  = embedFishily @{ListFreelyEmbeddable} (Var.List.allVars args)
+       let vs' = embedFishily @{ListFreelyEmbeddable} (Var.List.allVars args')
        pure $ zip vs vs' ++ map (bimap (weakensN s) (weakensN s')) ms
 
 findIdx : List (Var vars, Var vars') -> Nat -> Maybe (Var vars')

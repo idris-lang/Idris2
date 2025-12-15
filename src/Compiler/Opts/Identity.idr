@@ -10,7 +10,7 @@ import Libraries.Data.List.SizeOf
 
 makeArgz : (args : List Name) -> List (Var (Scope.ext vars args))
 makeArgz args
-  = embedFishily @{ListFreelyEmbeddable} $ reverse $ Var.allVars ([<] <>< args)
+  = embedFishily @{ListFreelyEmbeddable} $ Var.List.allVars args
 
 parameters (fn1 : Name) (idIdx : Nat)
   mutual
@@ -105,14 +105,14 @@ parameters (fn1 : Name) (idIdx : Nat)
     maybeVarEq _ _ _ Nothing = True
     maybeVarEq var con const (Just exp) = cexpIdentity var con const exp
 
-checkIdentity : (fullName : Name) -> List (Var vars) -> CExp vars -> Nat -> Maybe Nat
-checkIdentity _ [] _ _ = Nothing
-checkIdentity fn (v :: vs) exp idx = if cexpIdentity fn idx v Nothing Nothing exp
+checkIdentity : (fullName : Name) -> Scopeable (Var vars) -> CExp vars -> Nat -> Maybe Nat
+checkIdentity _ [<] _ _ = Nothing
+checkIdentity fn (vs :< v) exp idx = if cexpIdentity fn idx v Nothing Nothing exp
     then Just idx
     else checkIdentity fn vs exp (S idx)
 
 calcIdentity : (fullName : Name) -> CDef -> Maybe Nat
-calcIdentity fn (MkFun args exp) = checkIdentity fn (Var.allVars args) exp Z
+calcIdentity fn (MkFun args exp) = checkIdentity fn (Var.SnocList.allVars args) exp Z
 calcIdentity _ _ = Nothing
 
 getArg : FC -> Nat -> (args : Scope) -> Maybe (CExp args)
