@@ -1,4 +1,4 @@
 . ../../testutils.sh
 
-idris2 --cg node TypeCase.idr < input
-check --cg node TypeCase2.idr
+idris2 TypeCase.idr < input
+check TypeCase2.idr
