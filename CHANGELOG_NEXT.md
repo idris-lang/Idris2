@@ -83,6 +83,10 @@ should target this file (`CHANGELOG_NEXT`).
   versions, causing builds targeting PowerPC to fail (#3662).  For these
   systems, the compiler will now use `posix_memalign`.
 
+#### Chez Backend
+
+* Use fixnums for multiplication up to Bits16 and addition/subtraction up to Bits32.
+
 ### Library changes
 
 #### Base
