@@ -69,17 +69,33 @@ boolop : String -> List Builder -> Builder
 boolop o args = "(or (and " ++ op o args ++ " 1) 0)"
 
 add : Maybe IntKind -> Builder -> Builder -> Builder
+add (Just $ Signed $ P 8)   x y = op "bs+-fast" [x, y, showB 7]
+add (Just $ Signed $ P 16)  x y = op "bs+-fast" [x, y, showB 15]
+add (Just $ Signed $ P 32)  x y = op "bs+-fast" [x, y, showB 31]
 add (Just $ Signed $ P n)   x y = op "bs+" [x, y, showB (n-1)]
+add (Just $ Unsigned 8)     x y = op "bu+-fast" [x, y, showB 8]
+add (Just $ Unsigned 16)    x y = op "bu+-fast" [x, y, showB 16]
+add (Just $ Unsigned 32)    x y = op "bu+-fast" [x, y, showB 32]
 add (Just $ Unsigned n)     x y = op "bu+" [x, y, showB n]
 add _                       x y = op "+" [x, y]
 
 sub : Maybe IntKind -> Builder -> Builder -> Builder
+sub (Just $ Signed $ P 8)   x y = op "bs--fast" [x, y, showB 7]
+sub (Just $ Signed $ P 16)  x y = op "bs--fast" [x, y, showB 15]
+sub (Just $ Signed $ P 32)  x y = op "bs--fast" [x, y, showB 31]
 sub (Just $ Signed $ P n)   x y = op "bs-" [x, y, showB (n-1)]
+sub (Just $ Unsigned 8)     x y = op "bu--fast" [x, y, showB 8]
+sub (Just $ Unsigned 16)    x y = op "bu--fast" [x, y, showB 16]
+sub (Just $ Unsigned 32)    x y = op "bu--fast" [x, y, showB 32]
 sub (Just $ Unsigned n)     x y = op "bu-" [x, y, showB n]
 sub _                       x y = op "-" [x, y]
 
 mul : Maybe IntKind -> Builder -> Builder -> Builder
+mul (Just $ Signed $ P 8)   x y = op "bs*-fast" [x, y, showB 7]
+mul (Just $ Signed $ P 16)  x y = op "bs*-fast" [x, y, showB 15]
 mul (Just $ Signed $ P n)   x y = op "bs*" [x, y, showB (n-1)]
+mul (Just $ Unsigned 8)     x y = op "bu*-fast" [x, y, showB 8]
+mul (Just $ Unsigned 16)    x y = op "bu*-fast" [x, y, showB 16]
 mul (Just $ Unsigned n)     x y = op "bu*" [x, y, showB n]
 mul _                       x y = op "*" [x, y]
 
@@ -94,7 +110,6 @@ shl (Just $ Signed $ P n) x y = op "blodwen-bits-shl-signed"
                                    [x, y, showB (n-1)]
 shl (Just $ Unsigned n)   x y = op "blodwen-bits-shl" [x, y, showB n]
 shl _                     x y = op "blodwen-shl" [x, y]
-
 
 constPrimitives : ConstantPrimitives' Builder
 constPrimitives = MkConstantPrimitives {
@@ -275,9 +290,6 @@ schCaseDef (Just tm) = "(else " ++ tm ++ ")"
 export
 schArglist : List Name -> Builder
 schArglist xs = sepBy " " $ map schName xs
--- schArglist [] = ""
--- schArglist [x] = schName x
--- schArglist (x :: xs) = schName x ++ " " ++ schArglist xs
 
 mutual
   used : Name -> NamedCExp -> Bool
@@ -369,8 +381,6 @@ parameters (constants : SortedSet Name)
     -- oops, no traverse for Vect in Core
     schArgs : Nat -> Vect n NamedCExp -> Core (Vect n Builder)
     schArgs i xs = traverseVect (schExp i) xs
-    -- schArgs i [] = pure []
-    -- schArgs i (arg :: args) = pure $ !(schExp i arg) :: !(schArgs i args)
 
     schCaseTree : Nat -> NamedCExp -> List NamedConAlt -> Maybe NamedCExp ->
                   Core Builder

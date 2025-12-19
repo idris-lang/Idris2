@@ -447,7 +447,6 @@ getIncCompileData doLazyAnnots phase
 
 -- Some things missing from Prelude.File
 
-
 ||| check to see if a given file exists
 export
 exists : String -> IO Bool
@@ -456,6 +455,7 @@ exists f
              | Left err => pure False
          closeFile ok
          pure True
+
 -- Select the most preferred target from an ordered list of choices and
 -- parse the calling convention into a backend/target for the call, and
 -- a comma separated list of any other location data. For example

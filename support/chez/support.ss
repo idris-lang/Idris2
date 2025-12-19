@@ -72,13 +72,19 @@
 ; Bits
 
 (define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
+(define (bu+-fast x y bits) (let ([r (+ x y)]) (if (< r (ash 1 bits)) r (- r (ash 1 bits)))))
 (define bu- (lambda (x y bits) (blodwen-toUnsignedInt (- x y) bits)))
+(define (bu--fast x y bits) (let ([r (- x y)]) (if (>= r 0) r (+ r (ash 1 bits)))))
 (define bu* (lambda (x y bits) (blodwen-toUnsignedInt (* x y) bits)))
+(define (bu*-fast x y bits) (let ([r (* x y)]) (if (< r (ash 1 bits)) r (mod r (ash 1 bits)))))
 (define bu/ (lambda (x y bits) (blodwen-toUnsignedInt (quotient x y) bits)))
 
 (define bs+ (lambda (x y bits) (blodwen-toSignedInt (+ x y) bits)))
+(define (bs+-fast x y bits) (let* ([half (ash 1 (sub1 bits))] [full (ash 1 bits)] [r (+ x y)]) (cond [(>= r half) (- r full)] [(< r (- half)) (+ r full)] [else r])))
 (define bs- (lambda (x y bits) (blodwen-toSignedInt (- x y) bits)))
+(define (bs--fast x y bits) (let* ([half (ash 1 (sub1 bits))] [full (ash 1 bits)] [r (- x y)]) (cond [(>= r half) (- r full)] [(< r (- half)) (+ r full)] [else r])))
 (define bs* (lambda (x y bits) (blodwen-toSignedInt (* x y) bits)))
+(define (bs*-fast x y bits) (let* ([half (ash 1 (sub1 bits))] [full (ash 1 bits)] [r (* x y)]) (cond [(>= r half) (- r full)] [(< r (- half)) (+ r full)] [else r])))
 (define bs/ (lambda (x y bits) (blodwen-toSignedInt (blodwen-euclidDiv x y) bits)))
 
 (define (integer->bits8 x) (logand x (sub1 (ash 1 8))))
