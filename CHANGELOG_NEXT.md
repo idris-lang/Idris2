@@ -85,7 +85,7 @@ should target this file (`CHANGELOG_NEXT`).
 
 #### Chez Backend
 
-* Use fixnums for multiplication up to Bits16 and addition/subtraction up to Bits32.
+* Use fixnums for multiplication up to Bits16 and addition/subtraction up to Bits32 (when it's safe to do so).
 
 ### Library changes
 
