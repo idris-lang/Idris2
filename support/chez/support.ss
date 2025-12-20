@@ -72,19 +72,19 @@
 ; Bits
 
 (define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
-(define (bu+-fast x y bits) (if (< bits 32) (let* ([r (fx+ x y)] [mask (fx- (fxarithmetic-shift-left 1 bits) 1)]) (fxand r mask)) (blodwen-toUnsignedInt (+ x y) bits)))
+(define (bu+-fast x y bits) (let* ([modulus (ash 1 bits)] [x0 (mod x modulus)] [y0 (mod y modulus)]) (if (<= bits (fixnum-width)) (let ([r (fx+ x0 y0)]) (fxmod r modulus)) (mod (+ x0 y0) modulus))))
 (define bu- (lambda (x y bits) (blodwen-toUnsignedInt (- x y) bits)))
-(define (bu--fast x y bits) (if (< bits 32) (let* ([r (fx- x y)] [mask (fx- (fxarithmetic-shift-left 1 bits) 1)]) (fxand r mask)) (blodwen-toUnsignedInt (- x y) bits)))
+(define (bu--fast x y bits) (let* ([modulus (ash 1 bits)] [x0 (mod x modulus)] [y0 (mod y modulus)]) (if (<= bits (fixnum-width)) (let ([r (fx- x0 y0)]) (fxmod r modulus)) (mod (- x0 y0) modulus))))
 (define bu* (lambda (x y bits) (blodwen-toUnsignedInt (* x y) bits)))
-(define (bu*-fast x y bits) (let* ([r (fx* x y)] [mask (fx- (fxarithmetic-shift-left 1 bits) 1)]) (fxand r mask)))
+(define (bu*-fast x y bits) (let* ([modulus (ash 1 bits)] [x0 (mod x modulus)] [y0 (mod y modulus)]) (if (<= bits (quotient (fixnum-width) 2)) (let ([r (fx* x0 y0)]) (fxmod r modulus)) (mod (* x0 y0) modulus))))
 (define bu/ (lambda (x y bits) (blodwen-toUnsignedInt (quotient x y) bits)))
 
 (define bs+ (lambda (x y bits) (blodwen-toSignedInt (+ x y) bits)))
-(define (bs+-fast x y bits) (let* ([full (fxarithmetic-shift-left 1 bits)] [half (fxarithmetic-shift-left 1 (fx- bits 1))] [mask (fx- full 1)] [x0 (fxand x mask)] [y0 (fxand y mask)] [x1 (if (fx>= x0 half) (fx- x0 full) x0)] [y1 (if (fx>= y0 half) (fx- y0 full) y0)] [r (fx+ x1 y1)] [r0 (fxand r mask)]) (if (fx>= r0 half) (fx- r0 full) r0)))
+(define (bs+-fast x y bits) (let* ([modulus (ash 1 bits)] [half (ash 1 (- bits 1))] [x0 (mod x modulus)] [y0 (mod y modulus)] [x1 (if (>= x0 half) (- x0 modulus) x0)] [y1 (if (>= y0 half) (- y0 modulus) y0)]) (if (<= bits (fixnum-width)) (let* ([r  (fx+ x1 y1) [r0 (fxmod r modulus)]) (if (>= r0 half) (- r0 modulus) r0)) (let* ([r (+ x1 y1)] [r0 (mod r modulus)]) (if (>= r0 half) (- r0 modulus) r0)))))
 (define bs- (lambda (x y bits) (blodwen-toSignedInt (- x y) bits)))
-(define (bs--fast x y bits) (let* ([full (fxarithmetic-shift-left 1 bits)] [half (fxarithmetic-shift-left 1 (fx- bits 1))] [mask (fx- full 1)] [x0 (fxand x mask)] [y0 (fxand y mask)] [x1 (if (fx>= x0 half) (fx- x0 full) x0)] [y1 (if (fx>= y0 half) (fx- y0 full) y0)] [r (fx- x1 y1)] [r0 (fxand r mask)]) (if (fx>= r0 half) (fx- r0 full) r0)))
+(define (bs--fast x y bits) let* ([modulus (ash 1 bits)] [half (ash 1 (- bits 1))] [x0 (mod x modulus)] [y0 (mod y modulus)] [x1 (if (>= x0 half) (- x0 modulus) x0)] [y1 (if (>= y0 half) (- y0 modulus) y0)]) (if (<= bits (fixnum-width)) (let* ([r (fx- x1 y1)] [r0 (fxmod r modulus)]) (if (>= r0 half) (- r0 modulus) r0)) (let* ([r (- x1 y1)] [r0 (mod r modulus)]) (if (>= r0 half) (- r0 modulus) r0)))))
 (define bs* (lambda (x y bits) (blodwen-toSignedInt (* x y) bits)))
-(define (bs*-fast x y bits) (let* ([full (fxarithmetic-shift-left 1 bits)] [half (fxarithmetic-shift-left 1 (fx- bits 1))] [mask (fx- full 1)] [x0 (fxand x mask)] [y0 (fxand y mask)] [x1 (if (fx>= x0 half) (fx- x0 full) x0)] [y1 (if (fx>= y0 half) (fx- y0 full) y0)] [r  (fx* x1 y1)] [r0 (fxand r mask)]) (if (fx>= r0 half) (fx- r0 full) r0)))
+(define (bs*-fast x y bits) (let* ([modulus (ash 1 bits)] [half (ash 1 (- bits 1))] [x0 (mod x modulus)] [y0 (mod y modulus)] [x1 (if (>= x0 half) (- x0 modulus) x0)] [y1 (if (>= y0 half) (- y0 modulus) y0)]) (if (<= bits (quotient (fixnum-width) 2)) (let* ([r (fx* x1 y1)] [r0 (fxmod r modulus)]) (if (>= r0 half) (- r0 modulus) r0)) (let* ([r (* x1 y1)] [r0 (mod r modulus)]) (if (>= r0 half) (- r0 modulus) r0)))))
 (define bs/ (lambda (x y bits) (blodwen-toSignedInt (blodwen-euclidDiv x y) bits)))
 
 (define (integer->bits8 x) (logand x (sub1 (ash 1 8))))
