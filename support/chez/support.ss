@@ -84,7 +84,8 @@
 (define bs- (lambda (x y bits) (blodwen-toSignedInt (- x y) bits)))
 (define (bs--fast x y bits) (if (< (+ bits 1) (fixnum-width)) (let* ([half (ash 1 (sub1 bits))] [full (ash 1 bits)] [r (fx- x y)]) (cond [(fx>= r half) (fx- r full)] [(fx< r (fx- half)) (fx+ r full)] [else r])) (blodwen-toSignedInt (- x y) bits)))
 (define bs* (lambda (x y bits) (blodwen-toSignedInt (* x y) bits)))
-(define (bs*-fast x y bits) (if (< (* 2 bits) (fixnum-width)) (let* ([half (ash 1 (sub1 bits))] [full (ash 1 bits)] [r (fx* x y)]) (cond [(fx>= r half) (fx- r full)] [(fx< r (fx- half)) (fx+ r full)] [else r])) (blodwen-toSignedInt (* x y) bits)))
+(define (bs*-fast x y bits) (if (< (- (* 2 bits) 1) (fixnum-width)) (let* ([half (ash 1 (sub1 bits))] [full (ash 1 bits)] [r (fx* x y)]) (cond [(fx>= r half) (fx- r full)] [(fx< r (fx- half)) (fx+ r full)] [else r])) (blodwen-toSignedInt (* x y) bits)))
+
 (define bs/ (lambda (x y bits) (blodwen-toSignedInt (blodwen-euclidDiv x y) bits)))
 
 (define (integer->bits8 x) (logand x (sub1 (ash 1 8))))
