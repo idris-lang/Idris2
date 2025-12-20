@@ -72,19 +72,19 @@
 ; Bits
 
 (define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
-(define (bu+-fast x y width) (fxand (+ x y) (- (fx-expt 2 bits) 1)))
+(define (bu+-fast x y bits) (cond [(= bits 8) (fxand (+ x y) 255)] [(= bits 16) (fxand (+ x y) 65535)] [else (fxand (+ x y) 4294967295)]))
 (define bu- (lambda (x y bits) (blodwen-toUnsignedInt (- x y) bits)))
-(define (bu--fast x y bits) (fxand (- x y) (- (fx-expt 2 bits) 1)))
+(define (bu--fast x y bits) (cond [(= bits 8) (fxand (- x y) 255)] [(= bits 16) (fxand (- x y) 65535)] [else (fxand (- x y) 4294967295)]))
 (define bu* (lambda (x y bits) (blodwen-toUnsignedInt (* x y) bits)))
-(define (bu*-fast x y bits) (fxand (* x y) (- (fx-expt 2 bits) 1)))
+(define (bu*-fast x y bits) (cond [(= bits 8) (fxand (* x y) 255)] [else (fxand (* x y) 65535)]))
 (define bu/ (lambda (x y bits) (blodwen-toUnsignedInt (quotient x y) bits)))
 
 (define bs+ (lambda (x y bits) (blodwen-toSignedInt (+ x y) bits)))
-(define (bs+-fast x y bits) (let* ([mod (fx-expt 2 bits)] [half (fx-expt 2 (- bits 1))] [r (modulo (+ x y) mod)]) (if (>= r half) (- r mod) r)))
+(define (bs+-fast x y bits) (cond [(= bits 8) (let* ([mod 256] [half 128] [sum (+ x y)]) (if (and (fx>= sum -128) (fx< sum 128)) sum (let ([r (modulo sum mod)]) (if (>= r half) (- r mod) r))))] [(= bits 16) (let* ([mod 65536] [half 32768] [sum (+ x y)]) (if (and (fx>= sum -32768) (fx< sum 32768)) sum (let ([r (modulo sum mod)]) (if (>= r half) (- r mod) r))))] [else (let* ([mod 4294967296] [half 2147483648] [sum (+ x y)]) (if (and (fx>= sum -2147483648) (fx< sum 2147483648)) sum (let ([r (modulo sum mod)]) (if (>= r half) (- r mod) r))))]))
 (define bs- (lambda (x y bits) (blodwen-toSignedInt (- x y) bits)))
-(define (bs--fast x y bits) (let* ([mod (fx-expt 2 bits)] [half (fx-expt 2 (- bits 1))] [r (modulo (- x y) mod)]) (if (>= r half) (- r mod) r)))
+(define (bs--fast x y bits) (cond [(= bits 8) (let* ([mod 256] [half 128] [diff (- x y)]) (if (and (fx>= diff -128) (fx< diff 128)) diff (let ([r (modulo diff mod)]) (if (>= r half) (- r mod) r))))] [(= bits 16) (let* ([mod 65536] [half 32768] [diff (- x y)]) (if (and (fx>= diff -32768) (fx< diff 32768)) diff (let ([r (modulo diff mod)]) (if (>= r half) (- r mod) r))))] [else (let* ([mod 4294967296] [half 2147483648] [diff (- x y)]) (if (and (fx>= diff -2147483648) (fx< diff 2147483648)) diff (let ([r (modulo diff mod)]) (if (>= r half) (- r mod) r))))]))
 (define bs* (lambda (x y bits) (blodwen-toSignedInt (* x y) bits)))
-(define (bs*-fast x y bits) (let* ([mod (fx-expt 2 bits)] [half (fx-expt 2 (- bits 1))] [r (modulo (* x y) mod)]) (if (>= r half) (- r mod) r)))
+(define (bs*-fast x y bits) (cond [(= bits 8) (let* ([mod 256] [half 128] [prod (* x y)]) (if (and (fx>= prod -128) (fx< prod 128)) prod (let ([r (modulo prod mod)]) (if (>= r half) (- r mod) r))))] [else (let* ([mod 65536] [half 32768] [prod (* x y)]) (if (and (fx>= prod -32768) (fx< prod 32768)) prod (let ([r (modulo prod mod)]) (if (>= r half) (- r mod) r))))]))
 (define bs/ (lambda (x y bits) (blodwen-toSignedInt (blodwen-euclidDiv x y) bits)))
 
 (define (integer->bits8 x) (logand x (sub1 (ash 1 8))))
