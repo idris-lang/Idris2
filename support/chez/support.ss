@@ -72,19 +72,19 @@
 ; Bits
 
 (define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
-(define (bu+-fast x y bits) (let* ([limit (ash 1 bits)] [r (fx+ x y)]) (if (fx< r limit) r (fx- r limit))))
+(define (bu+-fast x y bits) (if (< (+ bits 1) (fixnum-width)) (let* ([limit (ash 1 bits)] [r (fx+ x y)]) (if (fx< r limit) r (fx- r limit))) (blodwen-toUnsignedInt (+ x y) bits)))
 (define bu- (lambda (x y bits) (blodwen-toUnsignedInt (- x y) bits)))
-(define (bu--fast x y bits) (let* ([limit (ash 1 bits)] [r (fx- x y)]) (if (fx>= r 0) r (fx+ r limit))))
+(define (bu--fast x y bits) (if (< (+ bits 1) (fixnum-width)) (let* ([limit (ash 1 bits)] [r (fx- x y)]) (if (fx>= r 0) r (fx+ r limit))) (blodwen-toUnsignedInt (- x y) bits)))
 (define bu* (lambda (x y bits) (blodwen-toUnsignedInt (* x y) bits)))
-(define (bu*-fast x y bits) (let* ([limit (ash 1 bits)] [r (fx* x y)]) (if (fx< r limit) r (fxmod r limit))))
+(define (bu*-fast x y bits) (if (< (* 2 bits) (fixnum-width)) (let* ([limit (ash 1 bits)] [r (fx* x y)]) (if (fx< r limit) r (fxmod r limit))) (blodwen-toUnsignedInt (* x y) bits)))
 (define bu/ (lambda (x y bits) (blodwen-toUnsignedInt (quotient x y) bits)))
 
 (define bs+ (lambda (x y bits) (blodwen-toSignedInt (+ x y) bits)))
-(define (bs+-fast x y bits) (let* ([half (ash 1 (sub1 bits))] [full (ash 1 bits)] [r (fx+ x y)]) (cond [(fx>= r half) (fx- r full)] [(fx< r (fx- half)) (fx+ r full)] [else r])))
+(define (bs+-fast x y bits) (if (< (+ bits 1) (fixnum-width)) (let* ([half (ash 1 (sub1 bits))] [full (ash 1 bits)] [r (fx+ x y)]) (cond [(fx>= r half) (fx- r full)] [(fx< r (fx- half)) (fx+ r full)] [else r])) (blodwen-toSignedInt (+ x y) bits)))
 (define bs- (lambda (x y bits) (blodwen-toSignedInt (- x y) bits)))
-(define (bs--fast x y bits) (let* ([half (ash 1 (sub1 bits))] [full (ash 1 bits)] [r (fx- x y)]) (cond [(fx>= r half) (fx- r full)] [(fx< r (fx- half)) (fx+ r full)] [else r])))
+(define (bs--fast x y bits) (if (< (+ bits 1) (fixnum-width)) (let* ([half (ash 1 (sub1 bits))] [full (ash 1 bits)] [r (fx- x y)]) (cond [(fx>= r half) (fx- r full)] [(fx< r (fx- half)) (fx+ r full)] [else r])) (blodwen-toSignedInt (- x y) bits)))
 (define bs* (lambda (x y bits) (blodwen-toSignedInt (* x y) bits)))
-(define (bs*-fast x y bits) (let* ([half (ash 1 (sub1 bits))] [full (ash 1 bits)] [r (fx* x y)]) (cond [(fx>= r half) (fx- r full)] [(fx< r (fx- half)) (fx+ r full)] [else r])))
+(define (bs*-fast x y bits) (if (< (* 2 bits) (fixnum-width)) (let* ([half (ash 1 (sub1 bits))] [full (ash 1 bits)] [r (fx* x y)]) (cond [(fx>= r half) (fx- r full)] [(fx< r (fx- half)) (fx+ r full)] [else r])) (blodwen-toSignedInt (* x y) bits)))
 (define bs/ (lambda (x y bits) (blodwen-toSignedInt (blodwen-euclidDiv x y) bits)))
 
 (define (integer->bits8 x) (logand x (sub1 (ash 1 8))))
