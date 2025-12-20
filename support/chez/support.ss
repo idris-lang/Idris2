@@ -80,11 +80,11 @@
 (define bu/ (lambda (x y bits) (blodwen-toUnsignedInt (quotient x y) bits)))
 
 (define bs+ (lambda (x y bits) (blodwen-toSignedInt (+ x y) bits)))
-(define (bs+-fast x y bits) (let* ([r (fx+ x y)] [half (fxarithmetic-shift-left 1 (fx- bits 1))] [full (fxarithmetic-shift-left 1 bits)]) (cond [(fx>= r half) (fx- r full)] [(fx< r (fx- half)) (fx+ r full)] [else r])))
+(define (bs+-fast x y bits) (let* ([r (fx+ x y)] [full (fxarithmetic-shift-left 1 bits)] [half (fxarithmetic-shift-left 1 (fx- bits 1))] [r0 (fxand r (fx- full 1))]) (if (fx>= r0 half) (fx- r0 full) r0)))
 (define bs- (lambda (x y bits) (blodwen-toSignedInt (- x y) bits)))
-(define (bs--fast x y bits) (let* ([r (fx- x y)] [half (fxarithmetic-shift-left 1 (fx- bits 1))] [full (fxarithmetic-shift-left 1 bits)]) (cond [(fx>= r half) (fx- r full)] [(fx< r (fx- half)) (fx+ r full)] [else r])))
+(define (bs--fast x y bits) (let* ([r (fx- x y)] [full (fxarithmetic-shift-left 1 bits)] [half (fxarithmetic-shift-left 1 (fx- bits 1))] [r0 (fxand r (fx- full 1))]) (if (fx>= r0 half) (fx- r0 full) r0)))
 (define bs* (lambda (x y bits) (blodwen-toSignedInt (* x y) bits)))
-(define (bs*-fast x y bits) (let* ([r (fx* x y)] [half (fxarithmetic-shift-left 1 (fx- bits 1))] [full (fxarithmetic-shift-left 1 bits)]) (cond [(fx>= r half) (fx- r full)] [(fx< r (fx- half)) (fx+ r full)] [else r])))
+(define (bs*-fast x y bits) (let* ([r (fx* x y)] [full (fxarithmetic-shift-left 1 bits)] [half (fxarithmetic-shift-left 1 (fx- bits 1))] [r0 (fxand r (fx- full 1))]) (if (fx>= r0 half) (fx- r0 full) r0)))
 (define bs/ (lambda (x y bits) (blodwen-toSignedInt (blodwen-euclidDiv x y) bits)))
 
 (define (integer->bits8 x) (logand x (sub1 (ash 1 8))))
