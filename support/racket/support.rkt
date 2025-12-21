@@ -77,7 +77,7 @@
 (define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
 (define (bu+-fast x y bits) (blodwen-toUnsignedInt (if (and (fixnum? x) (fixnum? y) (<= bits 32)) (fx+ x y) (+ x y)) bits))
 (define bu- (lambda (x y bits) (blodwen-toUnsignedInt (- x y) bits)))
-(define (bu+-fast x y bits) (blodwen-toUnsignedInt (if (and (fixnum? x) (fixnum? y) (<= bits 32)) (fx+ x y) (+ x y)) bits))
+(define (bu--fast x y bits) (blodwen-toUnsignedInt (if (and (fixnum? x) (fixnum? y) (<= bits 32)) (fx- x y) (- x y)) bits))
 (define bu* (lambda (x y bits) (blodwen-toUnsignedInt (* x y) bits)))
 (define (bu*-fast x y bits) (blodwen-toUnsignedInt (if (and (fixnum? x) (fixnum? y) (<= bits 16)) (fx* x y) (* x y)) bits))
 (define bu/ (lambda (x y bits) (blodwen-toUnsignedInt (quotient x y) bits)))
