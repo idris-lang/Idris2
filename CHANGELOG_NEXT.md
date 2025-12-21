@@ -87,6 +87,14 @@ should target this file (`CHANGELOG_NEXT`).
 
 * Use fixnums for multiplication up to Bits16 and addition/subtraction up to Bits32 (when it's safe to do so).
 
+#### Gambit Backend
+
+* Use fixnums for multiplication up to Bits16 and addition/subtraction up to Bits32 (when it's safe to do so).
+
+#### Racket Backend
+
+* Use fixnums for multiplication up to Bits16 and addition/subtraction up to Bits32 (when it's safe to do so).
+
 ### Library changes
 
 #### Base
