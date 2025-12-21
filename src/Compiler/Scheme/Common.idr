@@ -106,14 +106,11 @@ div (Just $ Unsigned n)       x y = op "bu/" [x, y, showB n]
 div _                         x y = op "/" [x, y]
 
 shl : Maybe IntKind -> Builder -> Builder -> Builder
-shl (Just $ Signed $ P 8)  x y = op "blodwen-bits-shl-signed-fast"
-                                    [x, y, showB 7]
-shl (Just $ Signed $ P 16) x y = op "blodwen-bits-shl-signed-fast"
-                                    [x, y, showB 15]
-shl (Just $ Signed $ P n)  x y = op "blodwen-bits-shl-signed"
-                                    [x, y, showB (n-1)]
-shl (Just $ Unsigned 8)    x y = op "blodwen-bits-shl-fast" [x, y, showB 8]
-shl (Just $ Unsigned 16)   x y = op "blodwen-bits-shl-fast" [x, y, showB 16]
+shl (Just $ Signed $ P 8)  x y = op "blodwen-bits-shl-signed8" [x, y]
+shl (Just $ Signed $ P 16) x y = op "blodwen-bits-shl-signed16" [x, y]
+shl (Just $ Signed $ P n)  x y = op "blodwen-bits-shl-signed" [x, y, showB (n-1)]
+shl (Just $ Unsigned 8)    x y = op "blodwen-bits-shl8" [x, y]
+shl (Just $ Unsigned 16)   x y = op "blodwen-bits-shl16" [x, y]
 shl (Just $ Unsigned n)    x y = op "blodwen-bits-shl" [x, y, showB n]
 shl _                      x y = op "blodwen-shl" [x, y]
 

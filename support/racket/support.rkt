@@ -36,6 +36,30 @@
 (define (blodwen-toUnsignedInt x bits)
   (bitwise-and x (sub1 (arithmetic-shift 1 bits))))
 
+(define (blodwen-toUnsignedInt8 x)
+  (fxand x 255))
+
+(define (blodwen-toUnsignedInt16 x)
+  (fxand x 65535))
+
+(define (blodwen-toUnsignedInt32 x)
+  (fxand x 4294967295))
+
+(define (blodwen-toSignedInt8 x)
+  (if (fxbit-set? x 8)
+      (fxior x (fxlshift -1 8))
+      (fxand x 255))) ; 2^8 - 1
+
+(define (blodwen-toSignedInt16 x)
+  (if (fxbit-set? x 16)
+      (fxior x (fxlshift -1 16))
+      (fxand x 65535))) ; 2^16 - 1
+
+(define (blodwen-toSignedInt32 x)
+  (if (fxbit-set? x 32)
+      (fxior x (fxlshift -1 32))
+      (fxand x 4294967295))) ; 2^32 - 1
+
 (define (blodwen-euclidDiv a b)
   (let ((q (quotient a b))
         (r (remainder a b)))
@@ -75,19 +99,29 @@
 ; Bits
 
 (define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
-(define (bu+-fast x y bits) (blodwen-toUnsignedInt (if (and (fixnum? x) (fixnum? y) (<= bits 32)) (fx+ x y) (+ x y)) bits))
+(define (bu8+-fast x y)  (blodwen-toUnsignedInt8 (fx+ x y)))
+(define (bu16+-fast x y) (blodwen-toUnsignedInt16 (fx+ x y)))
+(define (bu32+-fast x y) (blodwen-toUnsignedInt32 (fx+ x y)))
 (define bu- (lambda (x y bits) (blodwen-toUnsignedInt (- x y) bits)))
-(define (bu--fast x y bits) (blodwen-toUnsignedInt (if (and (fixnum? x) (fixnum? y) (<= bits 32)) (fx- x y) (- x y)) bits))
+(define (bu8--fast x y)  (blodwen-toUnsignedInt8 (fx- x y)))
+(define (bu16--fast x y) (blodwen-toUnsignedInt16 (fx- x y)))
+(define (bu32--fast x y) (blodwen-toUnsignedInt32 (fx- x y)))
 (define bu* (lambda (x y bits) (blodwen-toUnsignedInt (* x y) bits)))
-(define (bu*-fast x y bits) (blodwen-toUnsignedInt (if (and (fixnum? x) (fixnum? y) (<= bits 16)) (fx* x y) (* x y)) bits))
+(define (bu8*-fast x y)  (blodwen-toUnsignedInt8 (fx* x y)))
+(define (bu16*-fast x y) (blodwen-toUnsignedInt16 (fx* x y)))
 (define bu/ (lambda (x y bits) (blodwen-toUnsignedInt (quotient x y) bits)))
 
 (define bs+ (lambda (x y bits) (blodwen-toSignedInt (+ x y) bits)))
-(define (bs+-fast x y bits) (blodwen-toSignedInt (if (and (fixnum? x) (fixnum? y) (<= bits 32)) (fx+ x y) (+ x y)) bits))
+(define (bs8+-fast x y)  (blodwen-toSignedInt8 (fx+ x y)))
+(define (bs16+-fast x y) (blodwen-toSignedInt16 (fx+ x y)))
+(define (bs32+-fast x y) (blodwen-toSignedInt32 (fx+ x y)))
 (define bs- (lambda (x y bits) (blodwen-toSignedInt (- x y) bits)))
-(define (bs--fast x y bits) (blodwen-toSignedInt (if (and (fixnum? x) (fixnum? y) (<= bits 32)) (fx- x y) (- x y)) bits))
+(define (bs8--fast x y)  (blodwen-toSignedInt8 (fx- x y)))
+(define (bs16--fast x y) (blodwen-toSignedInt16 (fx- x y)))
+(define (bs32--fast x y) (blodwen-toSignedInt32 (fx- x y)))
 (define bs* (lambda (x y bits) (blodwen-toSignedInt (* x y) bits)))
-(define (bs*-fast x y bits) (blodwen-toSignedInt (if (and (fixnum? x) (fixnum? y) (<= bits 16)) (fx* x y) (* x y)) bits))
+(define (bs8*-fast x y)  (blodwen-toSignedInt8 (fx* x y)))
+(define (bs16*-fast x y) (blodwen-toSignedInt16 (fx* x y)))
 (define bs/ (lambda (x y bits) (blodwen-toSignedInt (blodwen-euclidDiv x y) bits)))
 
 ; To match Chez
@@ -107,7 +141,8 @@
 (define (bits64->bits32 x) (bitwise-and x #xffffffff))
 
 (define blodwen-bits-shl (lambda (x y bits) (remainder (arithmetic-shift x y) (arithmetic-shift 1 bits))))
-(define (blodwen-bits-shl-fast x y bits) (define mask (sub1 (arithmetic-shift 1 bits))) (bitwise-and (if (and (fixnum? x) (fixnum? y)) (fxlshift x y) (arithmetic-shift x y)) mask))
+(define (blodwen-bits-shl8 x y) (fxlshift x y) (bitwise-and (fxlshift x y) #xff))
+(define (blodwen-bits-shl16 x y) (bitwise-and (fxlshift x y) #xffff))
 (define blodwen-shl (lambda (x y) (arithmetic-shift x y)))
 (define blodwen-shr (lambda (x y) (arithmetic-shift x (- y))))
 (define blodwen-and (lambda (x y) (bitwise-and x y)))
@@ -119,7 +154,8 @@
     (inexact->exact (floor x))))
 
 (define blodwen-bits-shl-signed (lambda (x y bits) (blodwen-toSignedInt (arithmetic-shift x y) bits)))
-(define (blodwen-bits-shl-signed-fast x y bits) (blodwen-toSignedInt (if (and (fixnum? x) (fixnum? y)) (fxarithmetic-shift x y) (ash x y)) bits))
+(define (blodwen-bits-shl-signed8 x y) (blodwen-toSignedInt8 (fxlshift x y)))
+(define (blodwen-bits-shl-signed16 x y) (blodwen-toSignedInt16 (fxlshift x y)))
 
 (define exact-truncate
   (lambda (x)
