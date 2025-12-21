@@ -109,6 +109,7 @@
 (define (bits64->bits32 x) (bitwise-and x #xffffffff))
 
 (define blodwen-bits-shl (lambda (x y bits) (remainder (arithmetic-shift x y) (arithmetic-shift 1 bits))))
+(define (blodwen-bits-shl-fast x y bits) (logand (if (and (fixnum? x) (fixnum? y)) (fxarithmetic-shift x y) (ash x y)) (sub1 (ash 1 bits))))
 (define blodwen-shl (lambda (x y) (arithmetic-shift x y)))
 (define blodwen-shr (lambda (x y) (arithmetic-shift x (- y))))
 (define blodwen-and (lambda (x y) (bitwise-and x y)))
@@ -119,8 +120,8 @@
   (lambda (x)
     (inexact->exact (floor x))))
 
-(define blodwen-bits-shl-signed
-  (lambda (x y bits) (blodwen-toSignedInt (arithmetic-shift x y) bits)))
+(define blodwen-bits-shl-signed (lambda (x y bits) (blodwen-toSignedInt (arithmetic-shift x y) bits)))
+(define (blodwen-bits-shl-signed-fast x y bits) (blodwen-toSignedInt (if (and (fixnum? x) (fixnum? y)) (fxarithmetic-shift x y) (ash x y)) bits))
 
 (define exact-truncate
   (lambda (x)

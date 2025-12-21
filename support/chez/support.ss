@@ -100,8 +100,10 @@
 (define (bits64->bits32 x) (logand x (sub1 (ash 1 32))))
 
 (define (blodwen-bits-shl-signed x y bits) (blodwen-toSignedInt (ash x y) bits))
+(define (blodwen-bits-shl-signed-fast x y bits) (blodwen-toSignedInt (if (and (fixnum? x) (fixnum? y)) (fxarithmetic-shift x y) (ash x y)) bits))
 
 (define (blodwen-bits-shl x y bits) (logand (ash x y) (sub1 (ash 1 bits))))
+(define (blodwen-bits-shl-fast x y bits) (logand (if (and (fixnum? x) (fixnum? y)) (fxarithmetic-shift x y) (ash x y)) (sub1 (ash 1 bits))))
 
 (define blodwen-shl (lambda (x y) (ash x y)))
 (define blodwen-shr (lambda (x y) (ash x (- y))))

@@ -86,16 +86,14 @@
 (define (bits64->bits16 x) (bitwise-and x #xffff))
 (define (bits64->bits32 x) (bitwise-and x #xffffffff))
 
-(define blodwen-bits-shl-signed
-  (lambda (x y bits) (blodwen-toSignedInt (arithmetic-shift x y) bits)))
-
+(define blodwen-bits-shl-signed (lambda (x y bits) (blodwen-toSignedInt (arithmetic-shift x y) bits)))
+(define (blodwen-bits-shl-signed-fast x y bits) (blodwen-toSignedInt (if (and (fixnum? x) (fixnum? y)) (fxarithmetic-shift x y) (ash x y)) bits))
 
 (define-macro (blodwen-and . args) `(bitwise-and ,@args))
 (define-macro (blodwen-or . args) `(bitwise-ior ,@args))
 (define-macro (blodwen-xor . args) `(bitwise-xor ,@args))
-(define-macro (blodwen-bits-shl x y bits)
-                   `(remainder (arithmetic-shift ,x ,y)
-                               (arithmetic-shift 1 ,bits)))
+(define-macro (blodwen-bits-shl x y bits) `(remainder (arithmetic-shift ,x ,y) (arithmetic-shift 1 ,bits)))
+(define (blodwen-bits-shl-fast x y bits) (logand (if (and (fixnum? x) (fixnum? y)) (fxarithmetic-shift x y) (ash x y)) (sub1 (ash 1 bits))))
 (define-macro (blodwen-shl x y) `(arithmetic-shift ,x ,y))
 (define-macro (blodwen-shr x y) `(arithmetic-shift ,x (- ,y)))
 
