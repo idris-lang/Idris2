@@ -1,5 +1,3 @@
-(require racket/fixnum)
-
 (define (blodwen-os)
   (case (system-type 'os)
     [(unix) "unix"]
