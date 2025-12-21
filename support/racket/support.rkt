@@ -107,7 +107,7 @@
 (define (bits64->bits32 x) (bitwise-and x #xffffffff))
 
 (define blodwen-bits-shl (lambda (x y bits) (remainder (arithmetic-shift x y) (arithmetic-shift 1 bits))))
-(define (blodwen-bits-shl-fast x y bits) (logand (if (and (fixnum? x) (fixnum? y)) (fxarithmetic-shift x y) (ash x y)) (sub1 (ash 1 bits))))
+(define (blodwen-bits-shl-fast x y bits) (define mask (sub1 (arithmetic-shift 1 bits))) (bitwise-and (if (and (fixnum? x) (fixnum? y)) (fxarithmetic-shift x y) (arithmetic-shift x y)) mask))
 (define blodwen-shl (lambda (x y) (arithmetic-shift x y)))
 (define blodwen-shr (lambda (x y) (arithmetic-shift x (- y))))
 (define blodwen-and (lambda (x y) (bitwise-and x y)))
