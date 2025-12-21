@@ -75,13 +75,19 @@
 ; Bits
 
 (define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
+(define (bu+-fast x y bits) (blodwen-toUnsignedInt (if (and (fixnum? x) (fixnum? y) (<= bits 32)) (fx+ x y) (+ x y)) bits))
 (define bu- (lambda (x y bits) (blodwen-toUnsignedInt (- x y) bits)))
+(define (bu+-fast x y bits) (blodwen-toUnsignedInt (if (and (fixnum? x) (fixnum? y) (<= bits 32)) (fx+ x y) (+ x y)) bits))
 (define bu* (lambda (x y bits) (blodwen-toUnsignedInt (* x y) bits)))
+(define (bu*-fast x y bits) (blodwen-toUnsignedInt (if (and (fixnum? x) (fixnum? y) (<= bits 16)) (fx* x y) (* x y)) bits))
 (define bu/ (lambda (x y bits) (blodwen-toUnsignedInt (quotient x y) bits)))
 
 (define bs+ (lambda (x y bits) (blodwen-toSignedInt (+ x y) bits)))
+(define (bs+-fast x y bits) (blodwen-toSignedInt (if (and (fixnum? x) (fixnum? y) (<= bits 32)) (fx+ x y) (+ x y)) bits))
 (define bs- (lambda (x y bits) (blodwen-toSignedInt (- x y) bits)))
+(define (bs--fast x y bits) (blodwen-toSignedInt (if (and (fixnum? x) (fixnum? y) (<= bits 32)) (fx- x y) (- x y)) bits))
 (define bs* (lambda (x y bits) (blodwen-toSignedInt (* x y) bits)))
+(define (bs*-fast x y bits) (blodwen-toSignedInt (if (and (fixnum? x) (fixnum? y) (<= bits 16)) (fx* x y) (* x y)) bits))
 (define bs/ (lambda (x y bits) (blodwen-toSignedInt (blodwen-euclidDiv x y) bits)))
 
 ; To match Chez
