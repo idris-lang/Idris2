@@ -36,29 +36,26 @@
 (define (blodwen-toUnsignedInt x bits)
   (bitwise-and x (sub1 (arithmetic-shift 1 bits))))
 
-(define (blodwen-toUnsignedInt8 x)
-  (fxand x 255))
-
-(define (blodwen-toUnsignedInt16 x)
-  (fxand x 65535))
-
-(define (blodwen-toUnsignedInt32 x)
-  (fxand x 4294967295))
-
 (define (blodwen-toSignedInt8 x)
-  (if (fxbit-set? x 8)
-      (fxior x (fxlshift -1 8))
-      (fxand x 255))) ; 2^8 - 1
+  (let ([v (bitwise-and x #xFF)])
+    (if (>= v 128) (- v 256) v)))
 
 (define (blodwen-toSignedInt16 x)
-  (if (fxbit-set? x 16)
-      (fxior x (fxlshift -1 16))
-      (fxand x 65535))) ; 2^16 - 1
+  (let ([v (bitwise-and x #xFFFF)])
+    (if (>= v 32768) (- v 65536) v)))
 
 (define (blodwen-toSignedInt32 x)
-  (if (fxbit-set? x 32)
-      (fxior x (fxlshift -1 32))
-      (fxand x 4294967295))) ; 2^32 - 1
+  (let ([v (bitwise-and x #xFFFFFFFF)])
+    (if (>= v 2147483648) (- v 4294967296) v)))
+
+(define (blodwen-toUnsignedInt8 x)
+  (bitwise-and x #xFF))
+
+(define (blodwen-toUnsignedInt16 x)
+  (bitwise-and x #xFFFF))
+
+(define (blodwen-toUnsignedInt32 x)
+  (bitwise-and x #xFFFFFFFF))
 
 (define (blodwen-euclidDiv a b)
   (let ((q (quotient a b))
@@ -141,8 +138,8 @@
 (define (bits64->bits32 x) (bitwise-and x #xffffffff))
 
 (define blodwen-bits-shl (lambda (x y bits) (remainder (arithmetic-shift x y) (arithmetic-shift 1 bits))))
-(define (blodwen-bits-shl8 x y) (fxlshift x y) (bitwise-and (fxlshift x y) #xff))
-(define (blodwen-bits-shl16 x y) (bitwise-and (fxlshift x y) #xffff))
+(define (blodwen-bits-shl8 x y) (bitwise-and (fxlshift x y) #xFF))
+(define (blodwen-bits-shl16 x y) (bitwise-and (fxlshift x y) #xFFFF))
 (define blodwen-shl (lambda (x y) (arithmetic-shift x y)))
 (define blodwen-shr (lambda (x y) (arithmetic-shift x (- y))))
 (define blodwen-and (lambda (x y) (bitwise-and x y)))
