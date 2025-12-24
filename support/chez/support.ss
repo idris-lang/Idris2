@@ -41,21 +41,15 @@
 
 (define (blodwen-toSignedInt8 x)
   (let ([x (fxlogand x 255)])
-    (if (fxbit-set? x 7)
-      (fx- x 256)
-      x)))
+    (fx- (fxlogxor x 128) 128)))
 
 (define (blodwen-toSignedInt16 x)
   (let ([x (fxlogand x 65535)])
-    (if (fxbit-set? x 15)
-      (fx- x 65536)
-      x)))
+    (fx- (fxlogxor x 32768) 32768)))
 
 (define (blodwen-toSignedInt32 x)
   (let ([x (fxlogand x 4294967295)])
-    (if (fxbit-set? x 31)
-      (fx- x 4294967296)
-      x)))
+    (fx- (fxlogxor x 2147483648) 2147483648)))
 
 (define (blodwen-toUnsignedInt8 x)
   (fxlogand x 255))
