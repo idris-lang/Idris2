@@ -69,9 +69,6 @@ boolop : String -> List Builder -> Builder
 boolop o args = "(or (and " ++ op o args ++ " 1) 0)"
 
 add : Maybe IntKind -> Builder -> Builder -> Builder
-add (Just $ Signed $ P 8)   x y = op "bs8+-fast" [x, y]
-add (Just $ Signed $ P 16)  x y = op "bs16+-fast" [x, y]
-add (Just $ Signed $ P 32)  x y = op "bs32+-fast" [x, y]
 add (Just $ Signed $ P n)   x y = op "bs+" [x, y, showB (n-1)]
 add (Just $ Unsigned 8)     x y = op "bu8+-fast" [x, y]
 add (Just $ Unsigned 16)    x y = op "bu16+-fast" [x, y]
@@ -80,9 +77,6 @@ add (Just $ Unsigned n)     x y = op "bu+" [x, y, showB n]
 add _                       x y = op "+" [x, y]
 
 sub : Maybe IntKind -> Builder -> Builder -> Builder
-sub (Just $ Signed $ P 8)   x y = op "bs8--fast" [x, y]
-sub (Just $ Signed $ P 16)  x y = op "bs16--fast" [x, y]
-sub (Just $ Signed $ P 32)  x y = op "bs32--fast" [x, y]
 sub (Just $ Signed $ P n)   x y = op "bs-" [x, y, showB (n-1)]
 sub (Just $ Unsigned 8)     x y = op "bu8--fast" [x, y]
 sub (Just $ Unsigned 16)    x y = op "bu16--fast" [x, y]
@@ -106,11 +100,7 @@ div (Just $ Unsigned n)       x y = op "bu/" [x, y, showB n]
 div _                         x y = op "/" [x, y]
 
 shl : Maybe IntKind -> Builder -> Builder -> Builder
-shl (Just $ Signed $ P 8)  x y = op "blodwen-bits-shl-signed8" [x, y]
-shl (Just $ Signed $ P 16) x y = op "blodwen-bits-shl-signed16" [x, y]
 shl (Just $ Signed $ P n)  x y = op "blodwen-bits-shl-signed" [x, y, showB (n-1)]
-shl (Just $ Unsigned 8)    x y = op "blodwen-bits-shl8" [x, y]
-shl (Just $ Unsigned 16)   x y = op "blodwen-bits-shl16" [x, y]
 shl (Just $ Unsigned n)    x y = op "blodwen-bits-shl" [x, y, showB n]
 shl _                      x y = op "blodwen-shl" [x, y]
 

@@ -39,17 +39,13 @@
 (define (blodwen-toUnsignedInt x bits)
   (bitwise-and x (sub1 (arithmetic-shift 1 bits))))
 
-(define (blodwen-toSignedInt8 x)
+(define (blodwen-toSignedInt8-mul x)
   (let ([x (fxlogand x 255)])
     (fx- (fxlogxor x 128) 128)))
 
-(define (blodwen-toSignedInt16 x)
+(define (blodwen-toSignedInt16-mul x)
   (let ([x (fxlogand x 65535)])
     (fx- (fxlogxor x 32768) 32768)))
-
-(define (blodwen-toSignedInt32 x)
-  (let ([x (fxlogand x 4294967295)])
-    (fx- (fxlogxor x 2147483648) 2147483648)))
 
 (define (blodwen-toUnsignedInt8 x)
   (fxlogand x 255))
@@ -87,16 +83,10 @@
 (define bu/ (lambda (x y bits) (blodwen-toUnsignedInt (quotient x y) bits)))
 
 (define bs+ (lambda (x y bits) (blodwen-toSignedInt (+ x y) bits)))
-(define (bs8+-fast x y) (blodwen-toSignedInt8 (fx+ x y)))
-(define (bs16+-fast x y) (blodwen-toSignedInt16 (fx+ x y)))
-(define (bs32+-fast x y) (blodwen-toSignedInt32 (fx+ x y)))
 (define bs- (lambda (x y bits) (blodwen-toSignedInt (- x y) bits)))
-(define (bs8--fast x y) (blodwen-toSignedInt8 (fx- x y)))
-(define (bs16--fast x y) (blodwen-toSignedInt16 (fx- x y)))
-(define (bs32--fast x y) (blodwen-toSignedInt32 (fx- x y)))
 (define bs* (lambda (x y bits) (blodwen-toSignedInt (* x y) bits)))
-(define (bs8*-fast x y) (blodwen-toSignedInt8 (fx* x y)))
-(define (bs16*-fast x y) (blodwen-toSignedInt16 (fx* x y)))
+(define (bs8*-fast x y) (blodwen-toSignedInt8-mul (fx* x y)))
+(define (bs16*-fast x y) (blodwen-toSignedInt16-mul (fx* x y)))
 (define bs/ (lambda (x y bits) (blodwen-toSignedInt (blodwen-euclidDiv x y) bits)))
 
 ; To match Chez
@@ -118,15 +108,11 @@
 (define (bits64->bits32 x) (bitwise-and x #xffffffff))
 
 (define blodwen-bits-shl-signed (lambda (x y bits) (blodwen-toSignedInt (arithmetic-shift x y) bits)))
-(define (blodwen-bits-shl-signed8 x y) (blodwen-toSignedInt8 (fxarithmetic-shift (blodwen-toSignedInt8 x) y)))
-(define (blodwen-bits-shl-signed16 x y) (blodwen-toSignedInt16 (fxarithmetic-shift (blodwen-toSignedInt16 x) y)))
 
 (define-macro (blodwen-and . args) `(bitwise-and ,@args))
 (define-macro (blodwen-or . args) `(bitwise-ior ,@args))
 (define-macro (blodwen-xor . args) `(bitwise-xor ,@args))
 (define-macro (blodwen-bits-shl x y bits) `(remainder (arithmetic-shift ,x ,y) (arithmetic-shift 1 ,bits)))
-(define (blodwen-bits-shl8 x y) (fxlogand (fxarithmetic-shift (blodwen-toUnsignedInt8 x) y) 255))
-(define (blodwen-bits-shl16 x y) (fxlogand (fxarithmetic-shift (blodwen-toUnsignedInt16 x) y) 65535))
 (define-macro (blodwen-shl x y) `(arithmetic-shift ,x ,y))
 (define-macro (blodwen-shr x y) `(arithmetic-shift ,x (- ,y)))
 
