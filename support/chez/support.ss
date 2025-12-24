@@ -39,6 +39,24 @@
 (define (blodwen-toUnsignedInt x bits)
   (logand x (sub1 (ash 1 bits))))
 
+(define (blodwen-toSignedInt8 x)
+  (let ([x (fxlogand x 255)])
+    (if (fxbit-set? x 7)
+      (fx- x 256)
+      x)))
+
+(define (blodwen-toSignedInt16 x)
+  (let ([x (fxlogand x 65535)])
+    (if (fxbit-set? x 15)
+      (fx- x 65536)
+      x)))
+
+(define (blodwen-toSignedInt32 x)
+  (let ([x (fxlogand x 4294967295)])
+    (if (fxbit-set? x 31)
+      (fx- x 4294967296)
+      x)))
+
 (define (blodwen-toUnsignedInt8 x)
   (fxlogand x 255))
 
@@ -47,24 +65,6 @@
 
 (define (blodwen-toUnsignedInt32 x)
   (fxlogand x 4294967295))
-
-(define (blodwen-toSignedInt8 x)
-  (let ([x (fxlogand x 255)])
-    (if (fxbit-set? x 7)
-        (fx- x 256)
-        x)))
-
-(define (blodwen-toSignedInt16 x)
-  (let ([x (fxlogand x 65535)])
-    (if (fxbit-set? x 15)
-        (fx- x 65536)
-        x)))
-
-(define (blodwen-toSignedInt32 x)
-  (let ([x (fxlogand x 4294967295)])
-    (if (fxbit-set? x 31)
-        (fx- x 4294967296)
-        x)))
 
 (define (blodwen-euclidDiv a b)
   (let ((q (quotient a b))
