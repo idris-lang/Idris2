@@ -85,8 +85,6 @@ sub (Just $ Unsigned n)     x y = op "bu-" [x, y, showB n]
 sub _                       x y = op "-" [x, y]
 
 mul : Maybe IntKind -> Builder -> Builder -> Builder
-mul (Just $ Signed $ P 8)   x y = op "bs8*-fast" [x, y]
-mul (Just $ Signed $ P 16)  x y = op "bs16*-fast" [x, y]
 mul (Just $ Signed $ P n)   x y = op "bs*" [x, y, showB (n-1)]
 mul (Just $ Unsigned 8)     x y = op "bu8*-fast" [x, y]
 mul (Just $ Unsigned 16)    x y = op "bu16*-fast" [x, y]

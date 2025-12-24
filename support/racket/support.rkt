@@ -36,14 +36,6 @@
 (define (blodwen-toUnsignedInt x bits)
   (bitwise-and x (sub1 (arithmetic-shift 1 bits))))
 
-(define (blodwen-toSignedInt8-mul x)
-  (let ([x (fxlogand x 255)])
-    (fx- (fxlogxor x 128) 128)))
-
-(define (blodwen-toSignedInt16-mul x)
-  (let ([x (fxlogand x 65535)])
-    (fx- (fxlogxor x 32768) 32768)))
-
 (define (blodwen-toUnsignedInt8 x)
   (bitwise-and x #xFF))
 
@@ -107,8 +99,6 @@
 (define bs+ (lambda (x y bits) (blodwen-toSignedInt (+ x y) bits)))
 (define bs- (lambda (x y bits) (blodwen-toSignedInt (- x y) bits)))
 (define bs* (lambda (x y bits) (blodwen-toSignedInt (* x y) bits)))
-(define (bs8*-fast x y)  (blodwen-toSignedInt8 (fx* x y)))
-(define (bs16*-fast x y) (blodwen-toSignedInt16 (fx* x y)))
 (define bs/ (lambda (x y bits) (blodwen-toSignedInt (blodwen-euclidDiv x y) bits)))
 
 ; To match Chez
