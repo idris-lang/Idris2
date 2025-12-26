@@ -807,7 +807,7 @@ firstLinearOK fc [] = noResult
 firstLinearOK fc ((t, ds) :: next)
     = handleUnify
             (do unless (isNil ds) $
-                   traverse_ (processDecl [InCase] (MkNested []) Env.empty) ds
+                   traverse_ (processDecl [InCase] (NestedNames.empty) Env.empty) ds
                 ignore $ linearCheck fc linear False Env.empty t
                 defs <- get Ctxt
                 nft <- normaliseHoles defs Env.empty t

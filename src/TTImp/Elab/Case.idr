@@ -242,7 +242,7 @@ caseBlock {vars} rigc elabinfo fc nest env opts scr scrtm scrty caseRig alts exp
 
          -- Start with empty nested names, since we've extended the rhs with
          -- ICaseLocal so they'll get rebuilt with the right environment
-         let nest' = MkNested []
+         let nest' = NestedNames.empty
          ust <- get UST
          -- We don't want to keep rechecking delayed elaborators in the
          -- case block, because they're not going to make progress until
@@ -328,7 +328,7 @@ caseBlock {vars} rigc elabinfo fc nest env opts scr scrtm scrty caseRig alts exp
     -- the constructors are applied to the environment in the case block)
     nestLHS : FC -> (Name, (Maybe Name, List (Var vars), a)) -> (Name, RawImp)
     nestLHS fc (n, (mn, ns, t))
-        = (n, apply (IVar fc (fromMaybe n mn))
+        = (n, TTImp.TTImp.apply (IVar fc (fromMaybe n mn))
                     (map (const (Implicit fc False)) ns))
 
     applyNested : NestedNames vars -> RawImp -> RawImp

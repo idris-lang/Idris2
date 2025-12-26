@@ -38,7 +38,7 @@ process : {auto c : Ref Ctxt Defs} ->
           {auto o : Ref ROpts REPLOpts} ->
           ImpREPL -> Core Bool
 process (Eval ttimp)
-    = do (tm, _) <- elabTerm 0 InExpr [] (MkNested []) Env.empty ttimp Nothing
+    = do (tm, _) <- elabTerm 0 InExpr [] (NestedNames.empty) Env.empty ttimp Nothing
          defs <- get Ctxt
          tmnf <- normalise defs Env.empty tm
          coreLift_ (printLn !(unelab Env.empty tmnf))
@@ -56,7 +56,7 @@ process (Check (IVar _ n))
              coreLift_ $ putStrLn $ show n ++ " : " ++
                                     show !(unelab Env.empty ty)
 process (Check ttimp)
-    = do (tm, gty) <- elabTerm 0 InExpr [] (MkNested []) Env.empty ttimp Nothing
+    = do (tm, gty) <- elabTerm 0 InExpr [] (NestedNames.empty) Env.empty ttimp Nothing
          defs <- get Ctxt
          tyh <- getTerm gty
          ty <- normaliseHoles defs Env.empty tyh
