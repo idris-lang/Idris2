@@ -92,8 +92,8 @@
 (define (bu16--fast x y) (blodwen-toUnsignedInt16 (fx- x y)))
 (define (bu32--fast x y) (blodwen-toUnsignedInt32 (fx- x y)))
 (define bu* (lambda (x y bits) (blodwen-toUnsignedInt (* x y) bits)))
-(define (bu8*-fast x y)  (blodwen-toUnsignedInt8 (fx* x y)))
-(define (bu16*-fast x y) (blodwen-toUnsignedInt16 (fx* x y)))
+(define (bu8*-fast x y)  (blodwen-toUnsignedInt8 (fx*/wraparound x y)))
+(define (bu16*-fast x y) (blodwen-toUnsignedInt16 (fx*/wraparound x y)))
 (define bu/ (lambda (x y bits) (blodwen-toUnsignedInt (quotient x y) bits)))
 
 (define bs+ (lambda (x y bits) (blodwen-toSignedInt (+ x y) bits)))
