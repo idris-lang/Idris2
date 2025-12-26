@@ -264,7 +264,7 @@ mkCase {c} {u} fn orig lhs_raw
                -- be an erased name in a case block (which will be bound elsewhere
                -- once split and turned into a pattern)
                (lhs, _) <- elabTerm {c} {m} {u}
-                                    fn (InLHS erased) [] (MkNested [])
+                                    fn (InLHS erased) [] (NestedNames.empty)
                                     Env.empty (IBindHere (getFC lhs_raw) PATTERN lhs_raw)
                                     Nothing
                -- Revert all public back to false

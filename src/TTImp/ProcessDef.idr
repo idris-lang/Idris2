@@ -1009,7 +1009,7 @@ processDef opts nest env fc n_in cs_in
                    setUnboundImplicits True
                    (_, lhstm) <- bindNames False itm
                    setUnboundImplicits autoimp
-                   (lhstm, _) <- elabTerm n (InLHS mult) [] (MkNested []) Env.empty
+                   (lhstm, _) <- elabTerm n (InLHS mult) [] (NestedNames.empty) Env.empty
                                     (IBindHere fc COVERAGE lhstm) Nothing
                    defs <- get Ctxt
                    lhs <- normaliseHoles defs Env.empty lhstm

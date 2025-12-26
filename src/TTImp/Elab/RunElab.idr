@@ -320,7 +320,7 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
     elabCon defs "Declare" [d]
         = do d' <- evalClosure defs d
              decls <- reify defs d'
-             List.traverse_ (processDecl [] (MkNested []) Env.empty) decls
+             List.traverse_ (processDecl [] (NestedNames.empty) Env.empty) decls
              scriptRet ()
     elabCon defs "ReadFile" [lk, pth]
         = do pathPrefix <- lookupDir defs !(evalClosure defs lk)

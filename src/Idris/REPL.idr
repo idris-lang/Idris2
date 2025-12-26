@@ -419,7 +419,7 @@ inferAndElab emode itm env
        catch (do hide replFC (NS primIONS (UN $ Basic "::"))
                  hide replFC (NS primIONS (UN $ Basic "Nil")))
              (\err => pure ())
-       (tm , gty) <- elabTerm inidx emode [] (MkNested []) env ttimpWithIt Nothing
+       (tm , gty) <- elabTerm inidx emode [] (NestedNames.empty) env ttimpWithIt Nothing
        ty <- getTerm gty
        pure (tm `WithType` ty)
 
@@ -589,7 +589,7 @@ processEdit (Refine upd line hole e)
                     -- TODO: branch before checking the expression fits
                     --       so that we can cleanly recover in case of error
                     let gty = gnf env htyInLhsCtxt
-                    ccall <- checkTerm hidx {-is this correct?-} InExpr [] (MkNested []) env icall gty
+                    ccall <- checkTerm hidx {-is this correct?-} InExpr [] (NestedNames.empty) env icall gty
 
                     -- And then we normalise, unelab, resugar the resulting term so
                     -- that solved holes are replaced with their solutions
@@ -735,7 +735,7 @@ prepareExp ctm
     = do ttimp <- desugar AnyExpr [] (PApp replFC (PRef replFC (UN $ Basic "unsafePerformIO")) ctm)
          let ttimpWithIt = ILocal replFC !getItDecls ttimp
          inidx <- resolveName (UN $ Basic "[input]")
-         (tm, ty) <- elabTerm inidx InExpr [] (MkNested [])
+         (tm, ty) <- elabTerm inidx InExpr [] (NestedNames.empty)
                                  Env.empty ttimpWithIt Nothing
          tm_erased <- linearCheck replFC linear True Env.empty tm
          compileAndInlineAll
@@ -788,7 +788,7 @@ execDecls decls = do
       i <- desugarDecl [] decl
       inidx <- resolveName (UN $ Basic "[defs]")
       _ <- newRef EST (initEStateSub inidx Env.empty Refl)
-      processLocal [] (MkNested []) Env.empty !getItDecls i
+      processLocal [] (NestedNames.empty) Env.empty !getItDecls i
 
 export
 compileExp : {auto c : Ref Ctxt Defs} ->
@@ -979,7 +979,7 @@ process (TypeSearch searchTerm)
          let ctxt = gamma defs
          rawTy <- desugar AnyExpr [] searchTerm
          bound <- piBindNames replFC [] rawTy
-         (ty, _) <- elabTerm 0 InType [] (MkNested []) Env.empty bound Nothing
+         (ty, _) <- elabTerm 0 InType [] (NestedNames.empty) Env.empty bound Nothing
          ty' <- toResolvedNames ty
          filteredDefs <-
            do names   <- allNames ctxt

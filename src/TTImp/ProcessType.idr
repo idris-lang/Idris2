@@ -34,7 +34,7 @@ getFnString tm
     = do inidx <- resolveName (UN $ Basic "[foreign]")
          let fc = getFC tm
          let gstr = gnf Env.empty (PrimVal fc $ PrT StringType)
-         etm <- checkTerm inidx InExpr [] (MkNested []) Env.empty tm gstr
+         etm <- checkTerm inidx InExpr [] (NestedNames.empty) Env.empty tm gstr
          defs <- get Ctxt
          case !(nf defs Env.empty etm) of
               NPrimVal fc (Str st) => pure st
