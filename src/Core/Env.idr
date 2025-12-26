@@ -9,6 +9,7 @@ import Data.SnocList.Quantifiers
 import Libraries.Data.VarSet
 import Libraries.Data.SnocList.SizeOf
 import Libraries.Data.SnocList.Extra
+import public Libraries.Data.VarSet as VarSet
 
 %default total
 
@@ -324,17 +325,19 @@ uniqifyEnv env = uenv Scope.empty env
                       b' = map (compatNs compat) b in
                   (vs' :< v ** (env' :< b', Ext compat))
 
-export
-allVars : {0 vars : _} -> Env Term vars -> List (Var vars)
-allVars [<] = []
-allVars (vs :< v) = first :: map weaken (allVars vs)
-
+sizeOf : {0 vars : _} -> Env Term vars -> SizeOf vars
+sizeOf [<] = zero
+sizeOf (env :< _) = suc (sizeOf env)
 
 export
-allVarsNoLet : {0 vars : _} -> Env Term vars -> List (Var vars)
-allVarsNoLet [<] = []
-allVarsNoLet (vs :< Let _ _ _ _) = map weaken (allVars vs)
-allVarsNoLet (vs :< v) = MkVar First :: map weaken (allVars vs)
+allVars : {0 vars : _} -> Env Term vars -> VarSet vars
+allVars env = VarSet.full (sizeOf env)
+
+export
+allVarsNoLet : {0 vars : _} -> Env Term vars -> VarSet vars
+allVarsNoLet [<] = VarSet.empty
+allVarsNoLet (vs :< Let {}) = weaken @{varSetWeaken} $ allVars vs
+allVarsNoLet a@(vs :< _) = allVars a
 
 export
 close : FC -> String -> Env Term vars -> Term vars -> ClosedTerm

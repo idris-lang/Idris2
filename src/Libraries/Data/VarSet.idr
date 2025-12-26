@@ -32,3 +32,8 @@ fromVarSet (ns :< n) xs =
     if first `VarSet.elem` xs
       then (_ ** Keep svs)
       else (_ ** Drop svs)
+
+-- If it was constructed from SnocList-like structure
+export %inline
+asList : {vs : Scope} -> VarSet vs -> List (Var vs)
+asList = reverse . Core.toList

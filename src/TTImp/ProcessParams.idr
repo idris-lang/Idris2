@@ -67,6 +67,6 @@ processParams {vars} {c} {m} {u} nest env fc ps ds
                Core (Name, (Maybe Name, List (Var vs), FC -> NameType -> Term vs))
     applyEnv {vs} env n
           = do n' <- resolveName n -- it'll be Resolved by expandAmbigName
-               pure (Resolved n', (Nothing, reverse (allVars env),
+               pure (Resolved n', (Nothing, VarSet.asList $ allVars env,
                         \fc, nt => applyToFull fc
                                (Ref fc nt (Resolved n')) env))

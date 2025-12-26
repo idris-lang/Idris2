@@ -309,7 +309,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
                Core (Name, (Maybe Name, List (Var vars), FC -> NameType -> Term vars))
     applyEnv n
         = do n' <- resolveName n
-             pure (Resolved n', (Nothing, reverse (allVars env),
+             pure (Resolved n', (Nothing, VarSet.asList $ allVars env,
                       \fn, nt => applyToFull vfc
                                      (Ref vfc nt (Resolved n')) env))
 

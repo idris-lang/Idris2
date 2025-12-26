@@ -371,7 +371,7 @@ applyEnv : {vars : _} ->
            Core (Name, (Maybe Name, List (Var vars), FC -> NameType -> Term vars))
 applyEnv env withname
     = do n' <- resolveName withname
-         pure (withname, (Just withname, reverse (allVarsNoLet env),
+         pure (withname, (Just withname, VarSet.asList $ allVarsNoLet env,
                   \fc, nt => applyTo fc
                          (Ref fc nt (Resolved n')) env))
 
