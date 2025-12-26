@@ -307,7 +307,7 @@ mkSpecDef {vars} fc gdef pename sargs fn stk
                 | Nothing => pure (applyStackWithFC (Ref fc Func fn) stk)
            log "specialise" 5 $ "New patterns for " ++ show pename ++ ":\n" ++
                     joinBy "\n" (map showPat newpats)
-           processDecl [InPartialEval] (MkNested []) Env.empty
+           processDecl [InPartialEval] (NestedNames.empty) Env.empty
                        (IDef fc (Resolved peidx) newpats)
            setAllPublic False
            pure peapp)
