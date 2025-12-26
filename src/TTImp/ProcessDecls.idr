@@ -203,7 +203,7 @@ processTTImpFile fname
                                 pure False
          traverse_ recordWarning ws
          logTime 0 "Elaboration" $
-            catch (do ignore $ processTTImpDecls (MkNested []) Env.empty tti
+            catch (do ignore $ processTTImpDecls (NestedNames.empty) Env.empty tti
                       Nothing <- checkDelayedHoles
                           | Just err => throw err
                       pure True)

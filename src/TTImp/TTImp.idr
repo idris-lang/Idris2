@@ -26,6 +26,11 @@ record NestedNames (vars : Scope) where
                        List (Var vars), -- names used from the environment
                        FC -> NameType -> Term vars))
 
+namespace NestedNames
+  public export
+  empty : NestedNames vars
+  empty = MkNested []
+
 export
 Weaken NestedNames where
   weakenNs {ns = wkns} s (MkNested ns) = MkNested (map wknName ns)

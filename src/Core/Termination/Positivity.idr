@@ -67,7 +67,7 @@ posArg defs tyns nf@(NTCon loc tc _ args) =
      testargs <- case !(lookupDefExact tc (gamma defs)) of
                     Just (TCon _ params _ _ _ _ _) => do
                          log "totality.positivity" 50 $
-                           unwords [show tc, "has", show (size params), "parameters"]
+                           unwords [show tc, "has", show (NatSet.size params), "parameters"]
                          pure $ NatSet.partition params (map snd args)
                     _ => throw (GenericMsg loc (show tc ++ " not a data type"))
      let (params, indices) = testargs
