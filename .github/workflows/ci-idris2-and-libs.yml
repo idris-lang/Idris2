@@ -93,7 +93,7 @@ jobs:
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
       - name: Configure and Build Chez Scheme
         run: |
-          cd ChezScheme && ./configure --threads && make"
+          cd ChezScheme && ./configure --threads && make
       - name: Install Chez Scheme
         run: |
           sudo make install
@@ -161,7 +161,7 @@ jobs:
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
       - name: Configure and Build Chez Scheme
         run: |
-          cd ChezScheme && ./configure --threads && make"
+          cd ChezScheme && ./configure --threads && make
       - name: Install Chez Scheme
         run: |
           sudo make install
@@ -199,7 +199,7 @@ jobs:
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
       - name: Configure and Build Chez Scheme
         run: |
-          cd ChezScheme && ./configure --threads && make"
+          cd ChezScheme && ./configure --threads && make
       - name: Install Chez Scheme
         run: |
           sudo make install
@@ -352,7 +352,7 @@ jobs:
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
       - name: Configure and Build Chez Scheme
         run: |
-          cd ChezScheme && ./configure --threads && make"
+          cd ChezScheme && ./configure --threads && make
       - name: Install Chez Scheme
         run: |
           sudo make install
@@ -387,7 +387,7 @@ jobs:
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
       - name: Configure and Build Chez Scheme
         run: |
-          cd ChezScheme && ./configure --threads && make"
+          cd ChezScheme && ./configure --threads && make
       - name: Install Chez Scheme
         run: |
           sudo make install
@@ -460,7 +460,7 @@ jobs:
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
       - name: Configure and Build Chez Scheme
         run: |
-          cd ChezScheme && ./configure --threads && make"
+          cd ChezScheme && ./configure --threads && make
       - name: Install Chez Scheme
         run: |
           sudo make install
@@ -560,7 +560,7 @@ jobs:
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
       - name: Configure and Build Chez Scheme
         run: |
-          cd ChezScheme && ./configure --threads && make"
+          cd ChezScheme && ./configure --threads && make
       - name: Install Chez Scheme
         run: |
           sudo make install
@@ -609,7 +609,7 @@ jobs:
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
       - name: Configure and Build Chez Scheme
         run: |
-          cd ChezScheme && ./configure --threads && make"
+          cd ChezScheme && ./configure --threads && make
       - name: Install Chez Scheme
         run: |
           sudo make install
@@ -651,7 +651,7 @@ jobs:
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
       - name: Configure and Build Chez Scheme
         run: |
-          cd ChezScheme && ./configure --threads && make"
+          cd ChezScheme && ./configure --threads && make
       - name: Install Chez Scheme
         run: |
           sudo make install
@@ -696,7 +696,7 @@ jobs:
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
       - name: Configure and Build Chez Scheme
         run: |
-          cd ChezScheme && ./configure --threads && make"
+          cd ChezScheme && ./configure --threads && make
       - name: Install Chez Scheme
         run: |
           sudo make install
@@ -838,7 +838,7 @@ jobs:
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
       - name: Configure and Build Chez Scheme
         run: |
-          cd ChezScheme && ./configure --threads && make"
+          cd ChezScheme && ./configure --threads && make
       - name: Install Chez Scheme
         run: |
           sudo make install
