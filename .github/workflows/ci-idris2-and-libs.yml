@@ -101,6 +101,7 @@ jobs:
       - name: Install Chez Scheme
         run: |
           sudo make install
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Test Scheme
         run: |
           scheme --version
@@ -170,6 +171,7 @@ jobs:
       - name: Install Chez Scheme
         run: |
           sudo make install
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Test Scheme
         run: |
           scheme --version
@@ -209,6 +211,7 @@ jobs:
       - name: Install Chez Scheme
         run: |
           sudo make install
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Test Scheme
         run: |
           scheme --version
@@ -362,6 +365,7 @@ jobs:
       - name: Install Chez Scheme
         run: |
           sudo make install
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Test Scheme
         run: |
           scheme --version
@@ -397,6 +401,7 @@ jobs:
       - name: Install Chez Scheme
         run: |
           sudo make install
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Test Scheme
         run: |
           scheme --version
@@ -470,6 +475,7 @@ jobs:
       - name: Install Chez Scheme
         run: |
           sudo make install
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Test Scheme
         run: |
           scheme --version
@@ -570,6 +576,7 @@ jobs:
       - name: Install Chez Scheme
         run: |
           sudo make install
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Test Scheme
         run: |
           scheme --version
@@ -619,6 +626,7 @@ jobs:
       - name: Install Chez Scheme
         run: |
           sudo make install
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Test Scheme
         run: |
           scheme --version
@@ -661,6 +669,7 @@ jobs:
       - name: Install Chez Scheme
         run: |
           sudo make install
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Test Scheme
         run: |
           scheme --version
@@ -706,6 +715,7 @@ jobs:
       - name: Install Chez Scheme
         run: |
           sudo make install
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Test Scheme
         run: |
           scheme --version
@@ -848,6 +858,7 @@ jobs:
       - name: Install Chez Scheme
         run: |
           sudo make install
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Test Scheme
         run: |
           scheme --version
