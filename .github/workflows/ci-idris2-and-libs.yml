@@ -104,9 +104,6 @@ jobs:
       - name: Test Scheme
         run: |
           scheme --version
-      - name: Set Idris2 Path
-        run: |
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
 
       # Get our hands on the released version either by using the cache
       # or by rebuilding it if necessary.
@@ -176,9 +173,6 @@ jobs:
       - name: Test Scheme
         run: |
           scheme --version
-      - name: Set Idris2 Path
-        run: |
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Make bootstrap folder readonly
         run: chmod -R a-w bootstrap
       - name: Build from bootstrap
@@ -189,6 +183,9 @@ jobs:
           include-hidden-files: true
           name: ubuntu-installed-bootstrapped-idris2-chez
           path: ~/.idris2/
+      - name: Set Idris2 Path
+        run: |
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
 
   macos-bootstrap-chez:
     needs: [initialise, quick-check]
@@ -371,14 +368,14 @@ jobs:
       - name: Test Scheme
         run: |
           scheme --version
-      - name: Set Idris2 Path
-        run: |
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
-          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Build self-hosted
         run: make all IDRIS2_BOOT="idris2 -Werror" && make install
       - name: Test self-hosted
         run: make ci-ubuntu-test INTERACTIVE=''
+      - name: Set Idris2 Path
+        run: |
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
 
   macos-self-host-chez:
     needs: macos-bootstrap-chez
@@ -410,10 +407,6 @@ jobs:
       - name: Test Scheme
         run: |
           scheme --version
-      - name: Set Idris2 Path
-        run: |
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
-          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Install build dependencies
         run: |
           brew update
@@ -426,6 +419,10 @@ jobs:
       - name: Test self-hosted
         run: make ci-macos-test INTERACTIVE=''
         shell: bash
+      - name: Set Idris2 Path
+        run: |
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
 
   # RACKET
 
@@ -487,10 +484,6 @@ jobs:
       - name: Test Scheme
         run: |
           scheme --version
-      - name: Set Idris2 Path
-        run: |
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
-          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Build self-hosted from previous version
         run: make all IDRIS2_BOOT="idris2 -Werror" && make install
       - name: Test self-hosted from previous version
@@ -501,6 +494,10 @@ jobs:
           include-hidden-files: true
           name: idris2-nightly-chez
           path: ~/.idris2/
+      - name: Set Idris2 Path
+        run: |
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
 
   windows-self-host-racket:
     needs: [initialise, windows-bootstrap-chez]
@@ -591,16 +588,17 @@ jobs:
       - name: Test Scheme
         run: |
           scheme --version
-      - name: Set Idris2 Path
-        run: |
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
-          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Build API
         run: make install-api
         shell: bash
       - name: Test API
         run: cd tests/idris2/api/api001 && ./run "$HOME/.idris2/bin/idris2"
         shell: bash
+      - name: Set Idris2 Path
+        run: |
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
+          
 
   ######################################################################
   # Testing some libraries on Ubuntu and pack.
@@ -644,10 +642,6 @@ jobs:
       - name: Test Scheme
         run: |
           scheme --version
-      - name: Set Idris2 Path
-        run: |
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
-          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -655,6 +649,10 @@ jobs:
       - name: Build Collie
         run: |
           make
+      - name: Set Idris2 Path
+        run: |
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
 
   ########################################################################
   # Test that we can build Frex
@@ -690,10 +688,6 @@ jobs:
       - name: Test Scheme
         run: |
           scheme --version
-      - name: Set Idris2 Path
-        run: |
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
-          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -702,6 +696,10 @@ jobs:
         run: |
           make
           make test
+      - name: Set Idris2 Path
+        run: |
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
 
   ######################################################################
   # Test that we can build Stefan Höck's elab-util and pack
@@ -739,10 +737,6 @@ jobs:
       - name: Test Scheme
         run: |
           scheme --version
-      - name: Set Idris2 Path
-        run: |
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
-          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -750,6 +744,10 @@ jobs:
       - name: Build idris2-elab-util
         run: |
           make all
+      - name: Set Idris2 Path
+        run: |
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
 
   # PACK
   #
@@ -885,10 +883,6 @@ jobs:
       - name: Test Scheme
         run: |
           scheme --version
-      - name: Set Idris2 Path
-        run: |
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
-          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Install build dependencies
         run: |
           sudo apt-get update
@@ -950,3 +944,7 @@ jobs:
           branch: gh-pages
           folder: .github/scripts/html/
           git-config-name: Github Actions
+      - name: Set Idris2 Path
+        run: |
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
