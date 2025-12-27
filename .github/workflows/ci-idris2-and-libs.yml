@@ -88,11 +88,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Install build dependencies
+      - name: Install chez scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y chezscheme
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          sudo apt-get install -y libx11-dev libncurses-dev
+      - name: Get Chez Scheme
+        run: |
+          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
+      - name: Configure and Build Chez Scheme
+        run: |
+          cd ChezScheme && ./configure --threads && make
+      - name: Install Chez Scheme
+        run: |
+          sudo make install
+      - name: Test Scheme
+        run: |
+          scheme --version
 
       # Get our hands on the released version either by using the cache
       # or by rebuilding it if necessary.
@@ -146,11 +157,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Install build dependencies
+      - name: Install chez scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y chezscheme
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          sudo apt-get install -y libx11-dev libncurses-dev
+      - name: Get Chez Scheme
+        run: |
+          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
+      - name: Configure and Build Chez Scheme
+        run: |
+          cd ChezScheme && ./configure --threads && make
+      - name: Install Chez Scheme
+        run: |
+          sudo make install
+      - name: Test Scheme
+        run: |
+          scheme --version
       - name: Make bootstrap folder readonly
         run: chmod -R a-w bootstrap
       - name: Build from bootstrap
@@ -174,12 +196,27 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Install chez scheme dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libncurses-dev
+      - name: Get Chez Scheme
+        run: |
+          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
+      - name: Configure and Build Chez Scheme
+        run: |
+          cd ChezScheme && ./configure --threads && make
+      - name: Install Chez Scheme
+        run: |
+          sudo make install
+      - name: Test Scheme
+        run: |
+          scheme --version
       - name: Install build dependencies
         run: |
           brew update
           brew install --overwrite python@3.12
           brew install node
-          brew install chezscheme
           brew install coreutils
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Make bootstrap folder readonly
@@ -316,12 +353,18 @@ jobs:
         with:
           name: ubuntu-installed-bootstrapped-idris2-chez
           path: ~/.idris2/
-      - name: Install build dependencies
+      - name: Get Chez Scheme
         run: |
-          sudo apt-get update
-          sudo apt-get install -y chezscheme
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
-          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
+          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
+      - name: Configure and Build Chez Scheme
+        run: |
+          cd ChezScheme && ./configure --threads && make
+      - name: Install Chez Scheme
+        run: |
+          sudo make install
+      - name: Test Scheme
+        run: |
+          scheme --version
       - name: Build self-hosted
         run: make all IDRIS2_BOOT="idris2 -Werror" && make install
       - name: Test self-hosted
@@ -341,15 +384,28 @@ jobs:
         with:
           name: macos-installed-bootstrapped-idris2-chez
           path: ~/.idris2/
+      - name: Install chez scheme dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libncurses-dev
+      - name: Get Chez Scheme
+        run: |
+          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
+      - name: Configure and Build Chez Scheme
+        run: |
+          cd ChezScheme && ./configure --threads && make
+      - name: Install Chez Scheme
+        run: |
+          sudo make install
+      - name: Test Scheme
+        run: |
+          scheme --version
       - name: Install build dependencies
         run: |
           brew update
           brew install --overwrite python@3.12
-          brew install chezscheme
           brew install node
           brew install coreutils
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
-          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Build self-hosted
         run: make all IDRIS2_BOOT="idris2 -Werror" && make install
         shell: bash
@@ -401,12 +457,22 @@ jobs:
         with:
           name: ubuntu-installed-idris2-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}-chez
           path: ~/.idris2/
-      - name: Install build dependencies
+      - name: Install chez scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y chezscheme
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
-          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
+          sudo apt-get install -y libx11-dev libncurses-dev
+      - name: Get Chez Scheme
+        run: |
+          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
+      - name: Configure and Build Chez Scheme
+        run: |
+          cd ChezScheme && ./configure --threads && make
+      - name: Install Chez Scheme
+        run: |
+          sudo make install
+      - name: Test Scheme
+        run: |
+          scheme --version
       - name: Build self-hosted from previous version
         run: make all IDRIS2_BOOT="idris2 -Werror" && make install
       - name: Test self-hosted from previous version
@@ -491,12 +557,22 @@ jobs:
         with:
           name: ubuntu-installed-bootstrapped-idris2-chez
           path: ~/.idris2/
-      - name: Install build dependencies
+      - name: Install chez scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y chezscheme
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
-          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
+          sudo apt-get install -y libx11-dev libncurses-dev
+      - name: Get Chez Scheme
+        run: |
+          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
+      - name: Configure and Build Chez Scheme
+        run: |
+          cd ChezScheme && ./configure --threads && make
+      - name: Install Chez Scheme
+        run: |
+          sudo make install
+      - name: Test Scheme
+        run: |
+          scheme --version
       - name: Build API
         run: make install-api
         shell: bash
@@ -530,12 +606,22 @@ jobs:
         with:
           name: idris2-nightly-chez
           path: ~/.idris2/
-      - name: Install build dependencies
+      - name: Install chez scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y chezscheme
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
-          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
+          sudo apt-get install -y libx11-dev libncurses-dev
+      - name: Get Chez Scheme
+        run: |
+          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
+      - name: Configure and Build Chez Scheme
+        run: |
+          cd ChezScheme && ./configure --threads && make
+      - name: Install Chez Scheme
+        run: |
+          sudo make install
+      - name: Test Scheme
+        run: |
+          scheme --version
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -562,12 +648,22 @@ jobs:
         with:
           name: idris2-nightly-chez
           path: ~/.idris2/
-      - name: Install build dependencies
+      - name: Install chez scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y chezscheme
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
-          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
+          sudo apt-get install -y libx11-dev libncurses-dev
+      - name: Get Chez Scheme
+        run: |
+          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
+      - name: Configure and Build Chez Scheme
+        run: |
+          cd ChezScheme && ./configure --threads && make
+      - name: Install Chez Scheme
+        run: |
+          sudo make install
+      - name: Test Scheme
+        run: |
+          scheme --version
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -597,12 +693,22 @@ jobs:
         with:
           name: idris2-nightly-chez
           path: ~/.idris2/
-      - name: Install build dependencies
+      - name: Install chez scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y chezscheme
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
-          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
+          sudo apt-get install -y libx11-dev libncurses-dev
+      - name: Get Chez Scheme
+        run: |
+          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
+      - name: Configure and Build Chez Scheme
+        run: |
+          cd ChezScheme && ./configure --threads && make
+      - name: Install Chez Scheme
+        run: |
+          sudo make install
+      - name: Test Scheme
+        run: |
+          scheme --version
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -729,12 +835,26 @@ jobs:
         with:
           name: idris2-nightly-chez
           path: ~/.idris2/
+      - name: Install chez scheme dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libncurses-dev
+      - name: Get Chez Scheme
+        run: |
+          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
+      - name: Configure and Build Chez Scheme
+        run: |
+          cd ChezScheme && ./configure --threads && make
+      - name: Install Chez Scheme
+        run: |
+          sudo make install
+      - name: Test Scheme
+        run: |
+          scheme --version
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y chezscheme markdown
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
-          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
+          sudo apt-get install -y markdown
       - name: Checkout idris2
         uses: actions/checkout@v4
       - name: Build API
