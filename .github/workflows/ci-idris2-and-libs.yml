@@ -88,6 +88,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Install chez scheme dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libncurses-dev
       - name: Get Chez Scheme
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -156,6 +160,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Install chez scheme dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libncurses-dev
       - name: Get Chez Scheme
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -194,6 +202,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Install chez scheme dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libncurses-dev
       - name: Get Chez Scheme
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -382,6 +394,10 @@ jobs:
         with:
           name: macos-installed-bootstrapped-idris2-chez
           path: ~/.idris2/
+      - name: Install chez scheme dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libncurses-dev
       - name: Get Chez Scheme
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -455,6 +471,10 @@ jobs:
         with:
           name: ubuntu-installed-idris2-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}-chez
           path: ~/.idris2/
+      - name: Install chez scheme dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libncurses-dev
       - name: Get Chez Scheme
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -555,6 +575,10 @@ jobs:
         with:
           name: ubuntu-installed-bootstrapped-idris2-chez
           path: ~/.idris2/
+      - name: Install chez scheme dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libncurses-dev
       - name: Get Chez Scheme
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -604,6 +628,10 @@ jobs:
         with:
           name: idris2-nightly-chez
           path: ~/.idris2/
+      - name: Install chez scheme dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libncurses-dev
       - name: Get Chez Scheme
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -646,6 +674,10 @@ jobs:
         with:
           name: idris2-nightly-chez
           path: ~/.idris2/
+      - name: Install chez scheme dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libncurses-dev
       - name: Get Chez Scheme
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -691,6 +723,10 @@ jobs:
         with:
           name: idris2-nightly-chez
           path: ~/.idris2/
+      - name: Install chez scheme dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libncurses-dev
       - name: Get Chez Scheme
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -833,6 +869,10 @@ jobs:
         with:
           name: idris2-nightly-chez
           path: ~/.idris2/
+      - name: Install chez scheme dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libncurses-dev
       - name: Get Chez Scheme
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
