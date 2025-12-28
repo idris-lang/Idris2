@@ -123,11 +123,13 @@ jobs:
           cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
           make bootstrap
           cd ..
-      - name: Install previous version
+      - name: Build previous Idris2 (compile only)
+        if: steps.previous-version-cache.outputs.cache-hit != 'true'
         run: |
+          wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
+          tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
           cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
-          make install
-          cd ..
+          make bootstrap SCHEME=scheme
 
       # Build the current version and save the installation.
       - name: Build current version
