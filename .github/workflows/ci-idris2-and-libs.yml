@@ -115,14 +115,6 @@ jobs:
         with:
           path: Idris2-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}
           key: ${{ runner.os }}-idris2-bootstrapped-chez-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}
-      - name : Build previous version
-        if: steps.previous-version-cache.outputs.cache-hit != 'true'
-        run: |
-          wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
-          tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
-          cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
-          make bootstrap
-          cd ..
       - name: Build previous Idris2 (compile only)
         if: steps.previous-version-cache.outputs.cache-hit != 'true'
         run: |
@@ -130,6 +122,7 @@ jobs:
           tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
           cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
           make bootstrap SCHEME=scheme
+          cd ..
 
       # Build the current version and save the installation.
       - name: Build current version
