@@ -115,24 +115,27 @@ jobs:
         with:
           path: Idris2-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}
           key: ${{ runner.os }}-idris2-bootstrapped-chez-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}
-      - name : Build previous version
-        if: steps.previous-version-cache.outputs.cache-hit != 'true'
+      #- name : Build previous version
+      #  if: steps.previous-version-cache.outputs.cache-hit != 'true'
+      #  run: |
+      #    wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
+      #    tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
+      #    cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
+      #    make bootstrap
+      #    cd ..
+      - name: Grab Idris2 and build with Chez Scheme (v10.3.0)
         run: |
           wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
           tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
           cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
           make bootstrap
-          cd ..
-      - name: Install previous version
-        run: |
-          cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
           make install
-          cd ..
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
 
       # Build the current version and save the installation.
-      - name: Build current version
-        run: |
-          make && make install
+      #- name: Build current version
+      #  run: |
+      #    make && make install
       - name: Artifact Idris2 from previous version
         uses: actions/upload-artifact@v4
         with:
