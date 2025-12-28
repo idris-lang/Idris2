@@ -394,6 +394,8 @@ jobs:
           make install
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
           chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
+      - name: Build self-hosted
+        run: make all IDRIS2_BOOT="idris2 -Werror" && make install
       - name: Test self-hosted
         run: make ci-ubuntu-test INTERACTIVE=''
 
@@ -445,6 +447,9 @@ jobs:
           brew install --overwrite python@3.12
           brew install node
           brew install coreutils
+      - name: Build self-hosted
+        run: make all IDRIS2_BOOT="idris2 -Werror" && make install
+        shell: bash
       - name: Test self-hosted
         run: make ci-macos-test INTERACTIVE=''
         shell: bash
@@ -521,6 +526,8 @@ jobs:
           make install
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
           chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
+      - name: Build self-hosted from previous version
+        run: make all IDRIS2_BOOT="idris2 -Werror" && make install
       - name: Test self-hosted from previous version
         run: make ci-ubuntu-test INTERACTIVE=''
       - name: Artifact Idris2
