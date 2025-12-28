@@ -353,7 +353,7 @@ jobs:
   # CHEZ
 
   ubuntu-self-host-chez:
-    needs: ubuntu-bootstrap-chez
+    #needs: ubuntu-bootstrap-chez
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
@@ -398,7 +398,7 @@ jobs:
         run: make ci-ubuntu-test INTERACTIVE=''
 
   macos-self-host-chez:
-    needs: macos-bootstrap-chez
+    #needs: macos-bootstrap-chez
     runs-on: macos-latest
     timeout-minutes: 45
     env:
@@ -476,7 +476,7 @@ jobs:
         run: make ci-ubuntu-test INTERACTIVE=''
 
   ubuntu-self-host-previous-version:
-    needs: [initialise, quick-check]
+    #needs: [initialise, quick-check]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     if: |
