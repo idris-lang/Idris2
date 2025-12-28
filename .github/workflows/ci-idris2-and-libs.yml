@@ -131,6 +131,15 @@ jobs:
         run: |
           echo "Previous Idris2 restored from cache, skipping make install."
 
+      - name: Ensure previous Idris2 is on PATH
+        run: |
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+
+      - name: Verify previous Idris2
+        run: |
+          which idris2
+          idris2 --version
+
       # Build the current version
       - name: Build Current Idris2
         run: make && make install
