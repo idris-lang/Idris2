@@ -387,6 +387,7 @@ jobs:
           make bootstrap
           make install
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       #- name: Build self-hosted
       #  run: make all IDRIS2_BOOT="idris2 -Werror" && make install
       - name: Test self-hosted
@@ -432,6 +433,7 @@ jobs:
           make bootstrap
           make install
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Install build dependencies
         run: |
           brew update
@@ -515,6 +517,7 @@ jobs:
           make bootstrap
           make install
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       #- name: Build self-hosted from previous version
       #  run: make all IDRIS2_BOOT="idris2 -Werror" && make install
       - name: Test self-hosted from previous version
@@ -625,6 +628,7 @@ jobs:
           make bootstrap
           make install
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Build API
         run: make install-api
         shell: bash
@@ -684,6 +688,7 @@ jobs:
           make bootstrap
           make install
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -736,6 +741,7 @@ jobs:
           make bootstrap
           make install
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -791,6 +797,7 @@ jobs:
           make bootstrap
           make install
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -943,6 +950,7 @@ jobs:
           make bootstrap
           make install
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Install build dependencies
         run: |
           sudo apt-get update
