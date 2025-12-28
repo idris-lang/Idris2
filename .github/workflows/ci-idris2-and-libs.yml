@@ -91,7 +91,7 @@ jobs:
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential
+          sudo apt-get install -y build-essential libx11-dev libncurses-dev
       - name: Build Chez Scheme (v10.3.0)
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -162,7 +162,7 @@ jobs:
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential
+          sudo apt-get install -y build-essential libx11-dev libncurses-dev
       - name: Build Chez Scheme (v10.3.0)
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -203,7 +203,7 @@ jobs:
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential
+          sudo apt-get install -y build-essential libx11-dev libncurses-dev
       - name: Build Chez Scheme (v10.3.0)
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -361,7 +361,7 @@ jobs:
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential
+          sudo apt-get install -y build-essential libx11-dev libncurses-dev
       - name: Build Chez Scheme (v10.3.0)
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -398,7 +398,7 @@ jobs:
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential
+          sudo apt-get install -y build-essential libx11-dev libncurses-dev
       - name: Build Chez Scheme (v10.3.0)
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -473,7 +473,7 @@ jobs:
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential
+          sudo apt-get install -y build-essential libx11-dev libncurses-dev
       - name: Build Chez Scheme (v10.3.0)
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -575,7 +575,7 @@ jobs:
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential
+          sudo apt-get install -y build-essential libx11-dev libncurses-dev
       - name: Build Chez Scheme (v10.3.0)
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -626,7 +626,7 @@ jobs:
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential
+          sudo apt-get install -y build-essential libx11-dev libncurses-dev
       - name: Build Chez Scheme (v10.3.0)
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -670,7 +670,7 @@ jobs:
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential
+          sudo apt-get install -y build-essential libx11-dev libncurses-dev
       - name: Build Chez Scheme (v10.3.0)
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -717,7 +717,7 @@ jobs:
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential
+          sudo apt-get install -y build-essential libx11-dev libncurses-dev
       - name: Build Chez Scheme (v10.3.0)
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -861,7 +861,7 @@ jobs:
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential
+          sudo apt-get install -y build-essential libx11-dev libncurses-dev
       - name: Build Chez Scheme (v10.3.0)
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
