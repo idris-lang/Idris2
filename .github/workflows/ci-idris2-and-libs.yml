@@ -362,11 +362,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      #- name: Download Idris2 Artifact
-      #  uses: actions/download-artifact@v4
-      #  with:
-      #    name: ubuntu-installed-bootstrapped-idris2-chez
-      #    path: ~/.idris2/
+      - name: Download Idris2 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ubuntu-installed-bootstrapped-idris2-chez
+          path: ~/.idris2/
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
@@ -406,11 +406,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      #- name: Download Idris2 Artifact
-      #  uses: actions/download-artifact@v4
-      #  with:
-      #    name: macos-installed-bootstrapped-idris2-chez
-      #    path: ~/.idris2/
+      - name: Download Idris2 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-installed-bootstrapped-idris2-chez
+          path: ~/.idris2/
       - name: Install Chez Scheme dependencies
         run: |
           brew update
@@ -476,8 +476,7 @@ jobs:
         run: make ci-ubuntu-test INTERACTIVE=''
 
   ubuntu-self-host-previous-version:
-    #needs: [initialise, quick-check]
-    needs: [initialise]
+    needs: [initialise, quick-check]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     if: |
@@ -490,11 +489,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      #- name: Download Idris2 Artifact
-      #  uses: actions/download-artifact@v4
-      #  with:
-      #    name: ubuntu-installed-idris2-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}-chez
-      #    path: ~/.idris2/
+      - name: Download Idris2 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ubuntu-installed-idris2-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}-chez
+          path: ~/.idris2/
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
@@ -600,11 +599,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      #- name: Download Idris2 Artifact
-      #  uses: actions/download-artifact@v4
-      #  with:
-      #    name: ubuntu-installed-bootstrapped-idris2-chez
-      #    path: ~/.idris2/
+      - name: Download Idris2 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ubuntu-installed-bootstrapped-idris2-chez
+          path: ~/.idris2/
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
@@ -661,11 +660,11 @@ jobs:
       IDRIS2_CG: chez
       SCHEME: scheme
     steps:
-      #- name: Download Idris2 Artifact
-      #  uses: actions/download-artifact@v4
-      #  with:
-      #    name: idris2-nightly-chez
-      #    path: ~/.idris2/
+      - name: Download Idris2 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: idris2-nightly-chez
+          path: ~/.idris2/
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
@@ -715,11 +714,11 @@ jobs:
       IDRIS2_CG: chez
       SCHEME: scheme
     steps:
-      #- name: Download Idris2 Artifact
-      #  uses: actions/download-artifact@v4
-      #  with:
-      #    name: idris2-nightly-chez
-      #    path: ~/.idris2/
+      - name: Download Idris2 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: idris2-nightly-chez
+          path: ~/.idris2/
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
@@ -772,11 +771,11 @@ jobs:
       IDRIS2_CG: chez
       SCHEME: scheme
     steps:
-      #- name: Download Idris2 Artifact
-      #  uses: actions/download-artifact@v4
-      #  with:
-      #    name: idris2-nightly-chez
-      #    path: ~/.idris2/
+      - name: Download Idris2 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: idris2-nightly-chez
+          path: ~/.idris2/
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
@@ -926,11 +925,11 @@ jobs:
              echo "IDRIS2_DEPLOY=true" >> "$GITHUB_ENV"
           fi
 
-      #- name: Download Idris2 Artifact
-      #  uses: actions/download-artifact@v4
-      #  with:
-      #    name: idris2-nightly-chez
-      #    path: ~/.idris2/
+      - name: Download Idris2 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: idris2-nightly-chez
+          path: ~/.idris2/
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
