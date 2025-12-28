@@ -191,7 +191,7 @@ jobs:
       || contains(needs.initialise.outputs.commit_message, '[ci: macos]')
       || contains(needs.initialise.outputs.commit_message, '[ci: chez]')
     env:
-      SCHEME: chez
+      SCHEME: scheme
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -399,7 +399,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 45
     env:
-      SCHEME: chez
+      SCHEME: scheme
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -485,6 +485,7 @@ jobs:
       || contains(needs.initialise.outputs.commit_message, '[ci: libs]')
     env:
       IDRIS2_CG: chez
+      SCHEME: scheme
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -596,6 +597,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       IDRIS2_CG: chez
+      SCHEME: scheme
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -658,6 +660,7 @@ jobs:
       || contains(needs.initialise.outputs.commit_message, '[ci: libs]')
     env:
       IDRIS2_CG: chez
+      SCHEME: scheme
     steps:
       - name: Download Idris2 Artifact
         uses: actions/download-artifact@v4
@@ -711,6 +714,7 @@ jobs:
       || contains(needs.initialise.outputs.commit_message, '[ci: libs]')
     env:
       IDRIS2_CG: chez
+      SCHEME: scheme
     steps:
       - name: Download Idris2 Artifact
         uses: actions/download-artifact@v4
@@ -767,6 +771,7 @@ jobs:
       || contains(needs.initialise.outputs.commit_message, '[ci: libs]')
     env:
       IDRIS2_CG: chez
+      SCHEME: scheme
     steps:
       - name: Download Idris2 Artifact
         uses: actions/download-artifact@v4
@@ -913,6 +918,7 @@ jobs:
       || contains(needs.initialise.outputs.commit_message, '[ci: html]')
     env:
       IDRIS2_CG: chez
+      SCHEME: scheme
     steps:
 
       - name: Initialise DEPLOY variable
