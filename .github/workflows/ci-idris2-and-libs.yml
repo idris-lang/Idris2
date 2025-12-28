@@ -123,18 +123,36 @@ jobs:
           cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
           make bootstrap SCHEME=scheme
           make install    # only run when building fresh
-      
-      # Use previous Idris2 from cache
-      - name: Use previous Idris2 from cache
+
+      # Install previous Idris2 from cache
+      - name: Install previous Idris2 from cache
         if: steps.previous-version-cache.outputs.cache-hit == 'true'
         run: |
-          echo "Previous Idris2 restored from cache, skipping make install."
+          set -euo pipefail
+          cd "Idris2-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}"
 
+          export PATH="$HOME/chez/bin:$PATH"
+
+          echo "Installing previous Idris2 from cached source tree"
+          make install || echo "make install failed, checking build artifacts"
+
+          # Verify build artifacts; rebuild if missing
+          if [ ! -f build/exec/idris2 ] || \
+             [ ! -d build/exec/idris2_app ] || \
+             [ -z "$(ls -A build/exec/idris2_app 2>/dev/null)" ]; then
+            echo "Cached tree incomplete — rebuilding previous Idris2"
+            make bootstrap SCHEME=scheme
+            make install
+          fi
+
+          idris2 --version
+      
       # Build the current version
       - name: Build Current Idris2
         run: |
           export PATH="$HOME/chez/bin:$HOME/.idris2/bin:$PATH"
-          make && make install
+          make
+          make install
 
       # Artifact for downstream jobs
       - name: Upload Artifact
