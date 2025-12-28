@@ -123,7 +123,6 @@ jobs:
           cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
           make bootstrap SCHEME=scheme
           make install    # only run when building fresh
-          cd ..
       
       # Use previous Idris2 from cache
       - name: Use previous Idris2 from cache
@@ -131,18 +130,11 @@ jobs:
         run: |
           echo "Previous Idris2 restored from cache, skipping make install."
 
-      - name: Ensure previous Idris2 is on PATH
-        run: |
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
-
-      - name: Verify previous Idris2
-        run: |
-          which idris2
-          idris2 --version
-
       # Build the current version
       - name: Build Current Idris2
-        run: make && make install
+        run: |
+          export PATH="$HOME/chez/bin:$HOME/.idris2/bin:$PATH"
+          make && make install
 
       # Artifact for downstream jobs
       - name: Upload Artifact
