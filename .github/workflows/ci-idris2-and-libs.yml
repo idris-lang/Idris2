@@ -122,16 +122,14 @@ jobs:
           tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
           cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
           make bootstrap SCHEME=scheme
-          make install    # ensure it's installed
+          make install    # only run when building fresh
           cd ..
-
-      # Install previous Idris2 even if cache hit
-      - name: Install Previous Idris2 from Cache
+      
+      # Use previous Idris2 from cache
+      - name: Use previous Idris2 from cache
         if: steps.previous-version-cache.outputs.cache-hit == 'true'
         run: |
-          cd "Idris2-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}"
-          make install
-          cd ..
+          echo "Previous Idris2 restored from cache, skipping make install."
 
       # Build the current version
       - name: Build Current Idris2
