@@ -77,73 +77,73 @@ jobs:
   # 2. If it fails then there is no point in trying the rest
   ######################################################################
 
-quick-check:
-  needs: initialise
-  runs-on: ubuntu-latest
-  if: |
-    !contains(needs.initialise.outputs.commit_message, '[ci: skip]')
-  env:
-    IDRIS2_CG: chez
-    SCHEME: scheme
-  steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-    - name: Install Chez Scheme dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential libx11-dev libncurses-dev
-    - name: Build Chez Scheme (v10.3.0)
-      run: |
-        git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
-        cd ChezScheme
-        ./configure --threads --prefix="$HOME/chez"
-        make
-        make install
-    - name: Set PATH
-      run: |
-        echo "$HOME/chez/bin" >> "$GITHUB_PATH"
-        echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
-    - name: Test Scheme
-      run: scheme --version
+  quick-check:
+    needs: initialise
+    runs-on: ubuntu-latest
+    if: |
+      !contains(needs.initialise.outputs.commit_message, '[ci: skip]')
+    env:
+      IDRIS2_CG: chez
+      SCHEME: scheme
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Chez Scheme dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libx11-dev libncurses-dev
+      - name: Build Chez Scheme (v10.3.0)
+        run: |
+          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
+          cd ChezScheme
+          ./configure --threads --prefix="$HOME/chez"
+          make
+          make install
+      - name: Set PATH
+        run: |
+          echo "$HOME/chez/bin" >> "$GITHUB_PATH"
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+      - name: Test Scheme
+        run: scheme --version
 
-    # Try to restore previous Idris2 from cache
-    - name: Cache Previous Idris2
-      id: previous-version-cache
-      uses: actions/cache@v4
-      with:
-        path: Idris2-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}
-        key: ${{ runner.os }}-idris2-bootstrapped-chez-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}
+      # Try to restore previous Idris2 from cache
+      - name: Cache Previous Idris2
+        id: previous-version-cache
+        uses: actions/cache@v4
+        with:
+          path: Idris2-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}
+          key: ${{ runner.os }}-idris2-bootstrapped-chez-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}
 
-    # Rebuild previous Idris2 if cache missed
-    - name: Build Previous Idris2 (if cache miss)
-      if: steps.previous-version-cache.outputs.cache-hit != 'true'
-      run: |
-        wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
-        tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
-        cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
-        make bootstrap SCHEME=scheme
-        make install    # ensure it's installed
-        cd ..
+      # Rebuild previous Idris2 if cache missed
+      - name: Build Previous Idris2 (if cache miss)
+        if: steps.previous-version-cache.outputs.cache-hit != 'true'
+        run: |
+          wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
+          tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
+          cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
+          make bootstrap SCHEME=scheme
+          make install    # ensure it's installed
+          cd ..
 
-    # Install previous Idris2 even if cache hit
-    - name: Install Previous Idris2 from Cache
-      if: steps.previous-version-cache.outputs.cache-hit == 'true'
-      run: |
-        cd "Idris2-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}"
-        make install
-        cd ..
+      # Install previous Idris2 even if cache hit
+      - name: Install Previous Idris2 from Cache
+        if: steps.previous-version-cache.outputs.cache-hit == 'true'
+        run: |
+          cd "Idris2-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}"
+          make install
+          cd ..
 
-    # Build the current version
-    - name: Build Current Idris2
-      run: make && make install
+      # Build the current version
+      - name: Build Current Idris2
+        run: make && make install
 
-    # Artifact for downstream jobs
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        include-hidden-files: true
-        name: ubuntu-installed-idris2-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}-chez
-        path: ~/.idris2/
+      # Artifact for downstream jobs
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          include-hidden-files: true
+          name: ubuntu-installed-idris2-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}-chez
+          path: ~/.idris2/
 
   ######################################################################
   # Bootstrapping builds
