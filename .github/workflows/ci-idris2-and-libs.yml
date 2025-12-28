@@ -88,74 +88,39 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Install Chez Scheme dependencies
+      - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libx11-dev libncurses-dev
-      - name: Build Chez Scheme (v10.3.0)
-        run: |
-          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
-          cd ChezScheme
-          ./configure --threads --prefix="$HOME/chez"
-          make
-          make install
-      - name: Set PATH
-        run: |
-          echo "$HOME/chez/bin" >> "$GITHUB_PATH"
+          sudo apt-get install -y chezscheme
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
-      - name: Test Scheme
-        run: scheme --version
 
-      # Try to restore previous Idris2 from cache
-      - name: Cache Previous Idris2
+      # Get our hands on the released version either by using the cache
+      # or by rebuilding it if necessary.
+      - name: Cache Chez Previous Version
         id: previous-version-cache
         uses: actions/cache@v4
         with:
           path: Idris2-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}
           key: ${{ runner.os }}-idris2-bootstrapped-chez-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}
-
-      # Rebuild previous Idris2 if cache missed
-      - name: Build Previous Idris2 (if cache miss)
+      - name : Build previous version
         if: steps.previous-version-cache.outputs.cache-hit != 'true'
         run: |
           wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
           tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
           cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
-          make bootstrap SCHEME=scheme
-          make install    # only run when building fresh
-
-      # Install previous Idris2 from cache
-      - name: Install previous Idris2 from cache
-        if: steps.previous-version-cache.outputs.cache-hit == 'true'
+          make bootstrap
+          cd ..
+      - name: Install previous version
         run: |
-          set -euo pipefail
-          cd "Idris2-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}"
-
-          export PATH="$HOME/chez/bin:$PATH"
-
-          echo "Installing previous Idris2 from cached source tree"
-          make install || echo "make install failed, checking build artifacts"
-
-          # Verify build artifacts; rebuild if missing
-          if [ ! -f build/exec/idris2 ] || \
-             [ ! -d build/exec/idris2_app ] || \
-             [ -z "$(ls -A build/exec/idris2_app 2>/dev/null)" ]; then
-            echo "Cached tree incomplete — rebuilding previous Idris2"
-            make bootstrap SCHEME=scheme
-            make install
-          fi
-
-          idris2 --version
-      
-      # Build the current version
-      - name: Build Current Idris2
-        run: |
-          export PATH="$HOME/chez/bin:$HOME/.idris2/bin:$PATH"
-          make
+          cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
           make install
+          cd ..
 
-      # Artifact for downstream jobs
-      - name: Upload Artifact
+      # Build the current version and save the installation.
+      - name: Build current version
+        run: |
+          make && make install
+      - name: Artifact Idris2 from previous version
         uses: actions/upload-artifact@v4
         with:
           include-hidden-files: true
@@ -184,7 +149,7 @@ jobs:
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libx11-dev libncurses-dev
+          sudo apt-get install -y libx11-dev libncurses-dev
       - name: Build Chez Scheme (v10.3.0)
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -192,17 +157,25 @@ jobs:
           ./configure --threads --prefix="$HOME/chez"
           make
           make install
-      - name: Set PATH
+          cd ..
+      - name: Add Chez Scheme to PATH
         run: |
           echo "$HOME/chez/bin" >> "$GITHUB_PATH"
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Test Scheme
         run: |
           scheme --version
-      - name: Make bootstrap folder readonly
-        run: chmod -R a-w bootstrap
-      - name: Build from bootstrap
-        run: make bootstrap && make install
+      - name: Grab Idris2 and build with Chez Scheme (v10.3.0)
+        run: |
+          wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
+          tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
+          cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
+          make bootstrap
+          make install
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+      #- name: Make bootstrap folder readonly
+      #  run: chmod -R a-w bootstrap
+      #- name: Build from bootstrap
+      #  run: make bootstrap && make install
       - name: Artifact Bootstrapped Idris2
         uses: actions/upload-artifact@v4
         with:
@@ -225,7 +198,7 @@ jobs:
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libx11-dev libncurses-dev
+          sudo apt-get install -y libx11-dev libncurses-dev
       - name: Build Chez Scheme (v10.3.0)
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -233,13 +206,20 @@ jobs:
           ./configure --threads --prefix="$HOME/chez"
           make
           make install
-      - name: Set PATH
+          cd ..
+      - name: Add Chez Scheme to PATH
         run: |
           echo "$HOME/chez/bin" >> "$GITHUB_PATH"
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Test Scheme
         run: |
           scheme --version
+      - name: Grab Idris2 and build with Chez Scheme (v10.3.0)
+        run: |
+          wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
+          tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
+          cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
+          make bootstrap
+          make install
       - name: Install build dependencies
         run: |
           brew update
@@ -247,11 +227,11 @@ jobs:
           brew install node
           brew install coreutils
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
-      - name: Make bootstrap folder readonly
-        run: chmod -R a-w bootstrap
-      - name: Build Idris 2 from bootstrap
-        run: make bootstrap && make install
-        shell: bash
+      #- name: Make bootstrap folder readonly
+      #  run: chmod -R a-w bootstrap
+      #- name: Build Idris 2 from bootstrap
+      #  run: make bootstrap && make install
+      #  shell: bash
       - name: Artifact Bootstrapped Idris2
         uses: actions/upload-artifact@v4
         with:
@@ -384,7 +364,7 @@ jobs:
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libx11-dev libncurses-dev
+          sudo apt-get install -y libx11-dev libncurses-dev
       - name: Build Chez Scheme (v10.3.0)
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -392,15 +372,23 @@ jobs:
           ./configure --threads --prefix="$HOME/chez"
           make
           make install
-      - name: Set PATH
+          cd ..
+      - name: Add Chez Scheme to PATH
         run: |
           echo "$HOME/chez/bin" >> "$GITHUB_PATH"
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Test Scheme
         run: |
           scheme --version
-      - name: Build self-hosted
-        run: make all IDRIS2_BOOT="idris2 -Werror" && make install
+      - name: Grab Idris2 and build with Chez Scheme (v10.3.0)
+        run: |
+          wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
+          tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
+          cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
+          make bootstrap
+          make install
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+      #- name: Build self-hosted
+      #  run: make all IDRIS2_BOOT="idris2 -Werror" && make install
       - name: Test self-hosted
         run: make ci-ubuntu-test INTERACTIVE=''
 
@@ -421,7 +409,7 @@ jobs:
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libx11-dev libncurses-dev
+          sudo apt-get install -y libx11-dev libncurses-dev
       - name: Build Chez Scheme (v10.3.0)
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -429,22 +417,30 @@ jobs:
           ./configure --threads --prefix="$HOME/chez"
           make
           make install
-      - name: Set PATH
+          cd ..
+      - name: Add Chez Scheme to PATH
         run: |
           echo "$HOME/chez/bin" >> "$GITHUB_PATH"
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Test Scheme
         run: |
           scheme --version
+      - name: Grab Idris2 and build with Chez Scheme (v10.3.0)
+        run: |
+          wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
+          tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
+          cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
+          make bootstrap
+          make install
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Install build dependencies
         run: |
           brew update
           brew install --overwrite python@3.12
           brew install node
           brew install coreutils
-      - name: Build self-hosted
-        run: make all IDRIS2_BOOT="idris2 -Werror" && make install
-        shell: bash
+      #- name: Build self-hosted
+      #  run: make all IDRIS2_BOOT="idris2 -Werror" && make install
+      #  shell: bash
       - name: Test self-hosted
         run: make ci-macos-test INTERACTIVE=''
         shell: bash
@@ -496,7 +492,7 @@ jobs:
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libx11-dev libncurses-dev
+          sudo apt-get install -y libx11-dev libncurses-dev
       - name: Build Chez Scheme (v10.3.0)
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -504,15 +500,23 @@ jobs:
           ./configure --threads --prefix="$HOME/chez"
           make
           make install
-      - name: Set PATH
+          cd ..
+      - name: Add Chez Scheme to PATH
         run: |
           echo "$HOME/chez/bin" >> "$GITHUB_PATH"
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Test Scheme
         run: |
           scheme --version
-      - name: Build self-hosted from previous version
-        run: make all IDRIS2_BOOT="idris2 -Werror" && make install
+      - name: Grab Idris2 and build with Chez Scheme (v10.3.0)
+        run: |
+          wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
+          tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
+          cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
+          make bootstrap
+          make install
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+      #- name: Build self-hosted from previous version
+      #  run: make all IDRIS2_BOOT="idris2 -Werror" && make install
       - name: Test self-hosted from previous version
         run: make ci-ubuntu-test INTERACTIVE=''
       - name: Artifact Idris2
@@ -598,7 +602,7 @@ jobs:
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libx11-dev libncurses-dev
+          sudo apt-get install -y libx11-dev libncurses-dev
       - name: Build Chez Scheme (v10.3.0)
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -606,13 +610,21 @@ jobs:
           ./configure --threads --prefix="$HOME/chez"
           make
           make install
-      - name: Set PATH
+          cd ..
+      - name: Add Chez Scheme to PATH
         run: |
           echo "$HOME/chez/bin" >> "$GITHUB_PATH"
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Test Scheme
         run: |
           scheme --version
+      - name: Grab Idris2 and build with Chez Scheme (v10.3.0)
+        run: |
+          wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
+          tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
+          cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
+          make bootstrap
+          make install
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Build API
         run: make install-api
         shell: bash
@@ -649,7 +661,7 @@ jobs:
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libx11-dev libncurses-dev
+          sudo apt-get install -y libx11-dev libncurses-dev
       - name: Build Chez Scheme (v10.3.0)
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -657,13 +669,21 @@ jobs:
           ./configure --threads --prefix="$HOME/chez"
           make
           make install
-      - name: Set PATH
+          cd ..
+      - name: Add Chez Scheme to PATH
         run: |
           echo "$HOME/chez/bin" >> "$GITHUB_PATH"
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Test Scheme
         run: |
           scheme --version
+      - name: Grab Idris2 and build with Chez Scheme (v10.3.0)
+        run: |
+          wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
+          tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
+          cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
+          make bootstrap
+          make install
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -693,7 +713,7 @@ jobs:
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libx11-dev libncurses-dev
+          sudo apt-get install -y libx11-dev libncurses-dev
       - name: Build Chez Scheme (v10.3.0)
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -701,13 +721,21 @@ jobs:
           ./configure --threads --prefix="$HOME/chez"
           make
           make install
-      - name: Set PATH
+          cd ..
+      - name: Add Chez Scheme to PATH
         run: |
           echo "$HOME/chez/bin" >> "$GITHUB_PATH"
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Test Scheme
         run: |
           scheme --version
+      - name: Grab Idris2 and build with Chez Scheme (v10.3.0)
+        run: |
+          wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
+          tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
+          cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
+          make bootstrap
+          make install
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -740,7 +768,7 @@ jobs:
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libx11-dev libncurses-dev
+          sudo apt-get install -y libx11-dev libncurses-dev
       - name: Build Chez Scheme (v10.3.0)
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -748,13 +776,21 @@ jobs:
           ./configure --threads --prefix="$HOME/chez"
           make
           make install
-      - name: Set PATH
+          cd ..
+      - name: Add Chez Scheme to PATH
         run: |
           echo "$HOME/chez/bin" >> "$GITHUB_PATH"
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Test Scheme
         run: |
           scheme --version
+      - name: Grab Idris2 and build with Chez Scheme (v10.3.0)
+        run: |
+          wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
+          tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
+          cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
+          make bootstrap
+          make install
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -884,7 +920,7 @@ jobs:
       - name: Install Chez Scheme dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libx11-dev libncurses-dev
+          sudo apt-get install -y libx11-dev libncurses-dev
       - name: Build Chez Scheme (v10.3.0)
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -892,13 +928,21 @@ jobs:
           ./configure --threads --prefix="$HOME/chez"
           make
           make install
-      - name: Set PATH
+          cd ..
+      - name: Add Chez Scheme to PATH
         run: |
           echo "$HOME/chez/bin" >> "$GITHUB_PATH"
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Test Scheme
         run: |
           scheme --version
+      - name: Grab Idris2 and build with Chez Scheme (v10.3.0)
+        run: |
+          wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
+          tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
+          cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
+          make bootstrap
+          make install
+          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
       - name: Install build dependencies
         run: |
           sudo apt-get update
