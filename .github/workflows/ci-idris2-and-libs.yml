@@ -197,8 +197,9 @@ jobs:
         uses: actions/checkout@v4
       - name: Install Chez Scheme dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libx11-dev libncurses-dev
+          brew update
+          brew install libx11
+          brew install ncurses
       - name: Build Chez Scheme (v10.3.0)
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
@@ -409,8 +410,9 @@ jobs:
           path: ~/.idris2/
       - name: Install Chez Scheme dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libx11-dev libncurses-dev
+          brew update
+          brew install libx11
+          brew install ncurses
       - name: Build Chez Scheme (v10.3.0)
         run: |
           git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
