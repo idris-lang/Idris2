@@ -832,6 +832,7 @@ jobs:
     env:
       IDRIS2_CG: chez
       PACK_DIR: /root/.pack
+      SCHEME: scheme
     strategy:
       fail-fast: false
     # N.B.:
@@ -877,6 +878,7 @@ jobs:
     env:
       IDRIS2_CG: chez
       PACK_DIR: /root/.pack
+      SCHEME: scheme
     # LSP is vastly easier to build using pack, so do that
     container: ghcr.io/stefan-hoeck/idris2-pack:latest
     strategy:

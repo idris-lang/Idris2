@@ -75,6 +75,13 @@ should target this file (`CHANGELOG_NEXT`).
 * Change `flake.nix` to point at `idris-community/idris2-mode` as the URL for
   `inputs.idris-emacs-src` (from the user fork `redfish64/idris2-mode`).
 
+### CI changes
+
+* Altered the ci-idris2-and-libs GitHub workflow so that Chez Scheme v10.3.0 is
+  now explicited built against (instead of using the Chez Scheme available via the package manager).
+  This provides the fx*/wraparound function
+  that is now utilized for Bitx16/Bits32 multiplication in PR #3704.
+
 ### Backend changes
 
 #### RefC Backend

@@ -70,24 +70,24 @@ boolop o args = "(or (and " ++ op o args ++ " 1) 0)"
 
 add : Maybe IntKind -> Builder -> Builder -> Builder
 add (Just $ Signed $ P n)   x y = op "bs+" [x, y, showB (n-1)]
-add (Just $ Unsigned 8)     x y = op "bu8+-fast" [x, y]
-add (Just $ Unsigned 16)    x y = op "bu16+-fast" [x, y]
-add (Just $ Unsigned 32)    x y = op "bu32+-fast" [x, y]
+add (Just $ Unsigned 8)     x y = op "bu8+" [x, y]
+add (Just $ Unsigned 16)    x y = op "bu16+" [x, y]
+add (Just $ Unsigned 32)    x y = op "bu32+" [x, y]
 add (Just $ Unsigned n)     x y = op "bu+" [x, y, showB n]
 add _                       x y = op "+" [x, y]
 
 sub : Maybe IntKind -> Builder -> Builder -> Builder
 sub (Just $ Signed $ P n)   x y = op "bs-" [x, y, showB (n-1)]
-sub (Just $ Unsigned 8)     x y = op "bu8--fast" [x, y]
-sub (Just $ Unsigned 16)    x y = op "bu16--fast" [x, y]
-sub (Just $ Unsigned 32)    x y = op "bu32--fast" [x, y]
+sub (Just $ Unsigned 8)     x y = op "bu8-" [x, y]
+sub (Just $ Unsigned 16)    x y = op "bu16-" [x, y]
+sub (Just $ Unsigned 32)    x y = op "bu32-" [x, y]
 sub (Just $ Unsigned n)     x y = op "bu-" [x, y, showB n]
 sub _                       x y = op "-" [x, y]
 
 mul : Maybe IntKind -> Builder -> Builder -> Builder
 mul (Just $ Signed $ P n)   x y = op "bs*" [x, y, showB (n-1)]
-mul (Just $ Unsigned 8)     x y = op "bu8*-fast" [x, y]
-mul (Just $ Unsigned 16)    x y = op "bu16*-fast" [x, y]
+mul (Just $ Unsigned 8)     x y = op "bu8*" [x, y]
+mul (Just $ Unsigned 16)    x y = op "bu16*" [x, y]
 mul (Just $ Unsigned n)     x y = op "bu*" [x, y, showB n]
 mul _                       x y = op "*" [x, y]
 
