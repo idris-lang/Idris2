@@ -106,29 +106,11 @@ jobs:
       - name: Test Scheme
         run: |
           scheme --version
-
-      # Get our hands on the released version either by using the cache
-      # or by rebuilding it if necessary.
-      #- name: Cache Chez Previous Version
-      #  id: previous-version-cache
-      #  uses: actions/cache@v4
-      #  with:
-      #    path: Idris2-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}
-      #    key: ${{ runner.os }}-idris2-bootstrapped-chez-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}
-      #- name : Build previous version
-      #  if: steps.previous-version-cache.outputs.cache-hit != 'true'
-      #  run: |
-      #    wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
-      #    tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
-      #    cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
-      #    make bootstrap
-      #    cd ..
       - name: Grab Idris2 and build with Chez Scheme (v10.3.0)
         run: |
           wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
           tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
           cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
-
       # Build the current version and save the installation.
       - name: Build current version
         run: |
@@ -629,13 +611,8 @@ jobs:
       - name: Test Scheme
         run: |
           scheme --version
-      - name: Grab Idris2 and build with Chez Scheme (v10.3.0)
+      - name: Add Idris2 to PATH
         run: |
-          wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
-          tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
-          cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
-          make bootstrap
-          make install
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
           chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Build API
@@ -690,13 +667,8 @@ jobs:
       - name: Test Scheme
         run: |
           scheme --version
-      - name: Grab Idris2 and build with Chez Scheme (v10.3.0)
+      - name: Add Idris2 to PATH
         run: |
-          wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
-          tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
-          cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
-          make bootstrap
-          make install
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
           chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Checkout
@@ -744,13 +716,8 @@ jobs:
       - name: Test Scheme
         run: |
           scheme --version
-      - name: Grab Idris2 and build with Chez Scheme (v10.3.0)
+      - name: Add Idris2 to PATH
         run: |
-          wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
-          tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
-          cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
-          make bootstrap
-          make install
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
           chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Checkout
@@ -801,13 +768,8 @@ jobs:
       - name: Test Scheme
         run: |
           scheme --version
-      - name: Grab Idris2 and build with Chez Scheme (v10.3.0)
+      - name: Add Idris2 to PATH
         run: |
-          wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
-          tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
-          cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
-          make bootstrap
-          make install
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
           chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Checkout
@@ -847,14 +809,6 @@ jobs:
         with:
           name: idris2-nightly-chez
           path: ~/.idris2/
-      # by default, pack uses the main idris2 head, not the current job's one
-      #- name: Toml setup
-      #  run: |
-      #    { echo "[idris2]"
-      #      echo "url = \"https://github.com/${GITHUB_REPOSITORY}\""
-      #      echo "commit = \"latest:${GITHUB_REF_NAME}\""
-      #      echo "bootstrap  = true"
-      #    } > pack.toml
       - name: Fetching bleeding-edge state of libraries
         run: pack switch HEAD
       - name: Build idris2-pack
@@ -898,13 +852,6 @@ jobs:
         with:
           name: idris2-nightly-chez
           path: ~/.idris2/
-      #- name: Toml setup
-      #  run: |
-      #    { echo "[idris2]"
-      #      echo "url = \"https://github.com/${GITHUB_REPOSITORY}\""
-      #      echo "commit = \"latest:${GITHUB_REF_NAME}\""
-      #      echo "bootstrap  = true"
-      #    } > pack.toml
       - name: Fetching bleeding-edge state of libraries
         run: pack switch HEAD
       # make sure pack is running the PR's Idris2 before building LSP
