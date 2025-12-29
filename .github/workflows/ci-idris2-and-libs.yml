@@ -842,6 +842,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: 'stefan-hoeck/idris2-pack'
+      - name: Download Idris2 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: idris2-nightly-chez
+          path: ~/.idris2/
       # by default, pack uses the main idris2 head, not the current job's one
       #- name: Toml setup
       #  run: |
@@ -850,33 +855,6 @@ jobs:
       #      echo "commit = \"latest:${GITHUB_REF_NAME}\""
       #      echo "bootstrap  = true"
       #    } > pack.toml
-      - name: Install Chez Scheme dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libx11-dev libncurses-dev
-      - name: Build Chez Scheme (v10.3.0)
-        run: |
-          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
-          cd ChezScheme
-          ./configure --threads --prefix="$HOME/chez"
-          make
-          make install
-          cd ..
-      - name: Add Chez Scheme to PATH
-        run: |
-          echo "$HOME/chez/bin" >> "$GITHUB_PATH"
-      - name: Test Scheme
-        run: |
-          scheme --version
-      - name: Grab Idris2 and build with Chez Scheme (v10.3.0)
-        run: |
-          wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
-          tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
-          cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
-          make bootstrap
-          make install
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
-          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Fetching bleeding-edge state of libraries
         run: pack switch HEAD
       - name: Build idris2-pack
@@ -915,6 +893,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: 'idris-community/idris2-lsp'
+      - name: Download Idris2 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: idris2-nightly-chez
+          path: ~/.idris2/
       #- name: Toml setup
       #  run: |
       #    { echo "[idris2]"
@@ -922,33 +905,6 @@ jobs:
       #      echo "commit = \"latest:${GITHUB_REF_NAME}\""
       #      echo "bootstrap  = true"
       #    } > pack.toml
-      - name: Install Chez Scheme dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libx11-dev libncurses-dev
-      - name: Build Chez Scheme (v10.3.0)
-        run: |
-          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
-          cd ChezScheme
-          ./configure --threads --prefix="$HOME/chez"
-          make
-          make install
-          cd ..
-      - name: Add Chez Scheme to PATH
-        run: |
-          echo "$HOME/chez/bin" >> "$GITHUB_PATH"
-      - name: Test Scheme
-        run: |
-          scheme --version
-      - name: Grab Idris2 and build with Chez Scheme (v10.3.0)
-        run: |
-          wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
-          tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
-          cd "Idris2-$IDRIS2_MINIMUM_COMPAT_VERSION"
-          make bootstrap
-          make install
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
-          chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Fetching bleeding-edge state of libraries
         run: pack switch HEAD
       # make sure pack is running the PR's Idris2 before building LSP
