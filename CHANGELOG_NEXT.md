@@ -80,7 +80,7 @@ should target this file (`CHANGELOG_NEXT`).
 * Alter the ci-idris2-and-libs GitHub workflow so that Chez Scheme v10.3.0 is
   explicitly built against (instead of using the Chez Scheme available via the package manager).
   Chez Scheme v10.3.0 provides the fx*/wraparound function
-  that is utilized for Bits16/Bits32 multiplication in PR #3704.
+  that is utilized for Bits8/Bits16 multiplication in PR #3704.
 
 ### Backend changes
 
