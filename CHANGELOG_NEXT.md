@@ -75,6 +75,13 @@ should target this file (`CHANGELOG_NEXT`).
 * Change `flake.nix` to point at `idris-community/idris2-mode` as the URL for
   `inputs.idris-emacs-src` (from the user fork `redfish64/idris2-mode`).
 
+### CI changes
+
+* Alter the ci-idris2-and-libs GitHub workflow so that Chez Scheme v10.3.0 is
+  explicitly built against (instead of using the Chez Scheme available via the package manager).
+  Chez Scheme v10.3.0 provides the fx*/wraparound function
+  that is utilized for Bits8/Bits16 multiplication in PR #3704.
+
 ### Backend changes
 
 #### RefC Backend
@@ -82,6 +89,18 @@ should target this file (`CHANGELOG_NEXT`).
 * Fixed an issue to do with `alligned_alloc` not existing on older MacOS
   versions, causing builds targeting PowerPC to fail (#3662).  For these
   systems, the compiler will now use `posix_memalign`.
+
+#### Chez Backend
+
+* Use fixnums for multiplication up to Bits16 and addition/subtraction up to Bits32 (when it's safe to do so).
+
+#### Gambit Backend
+
+* Use fixnums for multiplication up to Bits16 and addition/subtraction up to Bits32 (when it's safe to do so).
+
+#### Racket Backend
+
+* Use fixnums for multiplication up to Bits16 and addition/subtraction up to Bits32 (when it's safe to do so).
 
 ### Library changes
 
