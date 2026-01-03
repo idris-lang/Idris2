@@ -10,6 +10,7 @@ import Core.Value
 
 import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.SizeOf
+import Libraries.Data.VarSet.Core as VarSet
 
 %default covering
 
@@ -31,7 +32,7 @@ mutual
                         {auto c : Ref Ctxt Defs} ->
                         {auto u : Ref UST UState} ->
                         (useInHole : Bool) ->
-                        Var vars -> List (Var vars) ->
+                        Var vars -> VarSet vars ->
                         List (Term vars) -> Core Bool
   updateHoleUsageArgs useInHole var zs [] = pure False
   updateHoleUsageArgs useInHole var zs (a :: as)
@@ -46,7 +47,7 @@ mutual
                    {auto c : Ref Ctxt Defs} ->
                    {auto u : Ref UST UState} ->
                    (useInHole : Bool) ->
-                   Var vars -> List (Var vars) ->
+                   Var vars -> VarSet vars ->
                    Term vs -> List (Term vars) ->
                    Core (Term vs)
   updateHoleType useInHole var zs (Bind bfc nm (Pi fc' c e ty) sc) (Local _ r v _ :: as)
@@ -57,7 +58,7 @@ mutual
            then do scty <- updateHoleType False var zs sc as
                    let c' = if useInHole then c else erased
                    pure (Bind bfc nm (Pi fc' c' e ty) scty)
-           else if elem v (map varIdx zs)
+           else if VarSet.elemNat v zs
                 then do scty <- updateHoleType useInHole var zs sc as
                         pure (Bind bfc nm (Pi fc' erased e ty) scty)
                 else do scty <- updateHoleType useInHole var zs sc as
@@ -82,7 +83,7 @@ mutual
            log "quantity.hole" 10 $ "At positions " ++ show argpos
            -- Find what it's position is in env by looking at the lhs args
            let vars = mapMaybe (findLocal (getArgs lhs)) argpos
-           hs <- traverse (\vsel => updateHoleUsage useInHole vsel [] rhs)
+           hs <- traverse (\vsel => updateHoleUsage useInHole vsel VarSet.empty rhs)
                           vars
            pure (any id hs)
     where
@@ -105,14 +106,14 @@ mutual
                     {auto c : Ref Ctxt Defs} ->
                     {auto u : Ref UST UState} ->
                     (useInHole : Bool) ->
-                    Var vars -> List (Var vars) ->
+                    Var vars -> VarSet vars ->
                     Term vars -> Core Bool
   updateHoleUsage useInHole (MkVar var) zs (Bind _ _ (Let _ _ val _) sc)
       = do h <- updateHoleUsage useInHole (MkVar var) zs val
-           h' <- updateHoleUsage useInHole (MkVar (Later var)) (map weaken zs) sc
+           h' <- updateHoleUsage useInHole (MkVar (Later var)) (weaken @{varSetWeaken} zs) sc
            pure (h || h')
   updateHoleUsage useInHole (MkVar var) zs (Bind _ n b sc)
-      = updateHoleUsage useInHole (MkVar (Later var)) (map weaken zs) sc
+      = updateHoleUsage useInHole (MkVar (Later var)) (weaken @{varSetWeaken} zs) sc
   updateHoleUsage useInHole var zs (Meta fc n i args)
       = do defs <- get Ctxt
            Just gdef <- lookupCtxtExact (Resolved i) (gamma defs)
@@ -244,7 +245,7 @@ mutual
            holeFound <- if not erase && isLinear (multiplicity b)
                            then updateHoleUsage (used_in == 0)
                                          first
-                                         (map weaken (getErased env'))
+                                         (weaken @{varSetWeaken} (getErased env'))
                                          sc'
                            else pure False
 
@@ -452,7 +453,7 @@ mutual
                          (Local _ _ idx p) =>
                            do rest <- getCaseUsage sc env args used rhs
                               let used_in = count idx used
-                              holeFound <- updateHoleUsage (used_in == 0) (MkVar p) [] rhs
+                              holeFound <- updateHoleUsage (used_in == 0) (MkVar p) VarSet.empty rhs
                               let ause
                                   = if holeFound && used_in == 0
                                             then UseUnknown
@@ -500,7 +501,7 @@ mutual
                let used_in = count (varIdx pos) usage
 
                holeFound <- if isLinear (multiplicity b)
-                               then updateHoleUsage (used_in == 0) pos [] tm
+                               then updateHoleUsage (used_in == 0) pos VarSet.empty tm
                                else pure False
                let used = if isLinear ((multiplicity b) |*| rig) &&
                              holeFound && used_in == 0
@@ -673,7 +674,7 @@ checkEnvUsage fc s rig {vars = nm :: xs} (b :: env) usage tm
          let used_in = count (varIdx pos) usage
 
          holeFound <- if isLinear (multiplicity b)
-                         then updateHoleUsage (used_in == 0) pos [] tm
+                         then updateHoleUsage (used_in == 0) pos VarSet.empty tm
                          else pure False
          let used = if isLinear ((multiplicity b) |*| rig) &&
                        holeFound && used_in == 0
