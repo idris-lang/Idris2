@@ -24,6 +24,10 @@ elem : Var vs -> VarSet vs -> Bool
 elem (MkVar {varIdx} _) = NatSet.elem varIdx
 
 export %inline
+elemNat : Nat -> VarSet vs -> Bool
+elemNat v = NatSet.elem v
+
+export %inline
 isEmpty : VarSet vs -> Bool
 isEmpty = NatSet.isEmpty
 

@@ -64,15 +64,15 @@ eraseLinear (b :: bs)
          else b :: eraseLinear bs
 
 export
-getErased : {0 vs : _} -> Env tm vs -> List (Var vs)
-getErased env = go env [<] where
+getErased : {0 vs : _} -> Env tm vs -> VarSet vs
+getErased env = go env zero where
 
-  go : Env tm vars -> SizeOf seen -> List (Var (seen <>> vars))
-  go [] p = []
-  go (b :: bs) p
-    = if isErased (multiplicity b)
-         then mkVarChiply p :: go bs (p :< _)
-         else go bs (p :< _)
+  go : Env tm vars -> SizeOf seen -> VarSet (seen <>> vars)
+  go [] p = VarSet.empty
+  go {seen} (b :: bs) p
+      = if isErased (multiplicity b)
+          then VarSet.insert (mkVarChiply {inner=seen} p) (go bs (suc p))
+          else go bs (suc p)
 
 public export
 data IsDefined : Name -> Scope -> Type where
