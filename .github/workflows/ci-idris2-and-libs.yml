@@ -92,9 +92,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libx11-dev libncurses-dev
-      - name: Build Chez Scheme (v10.3.0)
+      - name: Build Chez Scheme (v10.0.0)
         run: |
-          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
+          git clone --depth 1 --branch v10.0.0 https://github.com/cisco/ChezScheme
           cd ChezScheme
           ./configure --threads --prefix="$HOME/chez"
           make
@@ -106,7 +106,7 @@ jobs:
       - name: Test Scheme
         run: |
           scheme --version
-      - name: Grab Idris2 and build with Chez Scheme (v10.3.0)
+      - name: Grab Idris2 and build with Chez Scheme (v10.0.0)
         run: |
           wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
           tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
@@ -146,9 +146,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libx11-dev libncurses-dev
-      - name: Build Chez Scheme (v10.3.0)
+      - name: Build Chez Scheme (v10.0.0)
         run: |
-          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
+          git clone --depth 1 --branch v10.0.0 https://github.com/cisco/ChezScheme
           cd ChezScheme
           ./configure --threads --prefix="$HOME/chez"
           make
@@ -160,7 +160,7 @@ jobs:
       - name: Test Scheme
         run: |
           scheme --version
-      - name: Grab Idris2 and build with Chez Scheme (v10.3.0)
+      - name: Grab Idris2 and build with Chez Scheme (v10.0.0)
         run: |
           wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
           tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
@@ -192,9 +192,9 @@ jobs:
           brew update
           brew install libx11
           brew install ncurses
-      - name: Build Chez Scheme (v10.3.0)
+      - name: Build Chez Scheme (v10.0.0)
         run: |
-          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
+          git clone --depth 1 --branch v10.0.0 https://github.com/cisco/ChezScheme
           cd ChezScheme
           ./configure --threads --prefix="$HOME/chez"
           make
@@ -206,7 +206,7 @@ jobs:
       - name: Test Scheme
         run: |
           scheme --version
-      - name: Grab Idris2 and build with Chez Scheme (v10.3.0)
+      - name: Grab Idris2 and build with Chez Scheme (v10.0.0)
         run: |
           wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
           tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
@@ -247,9 +247,9 @@ jobs:
           git config --global core.autocrlf false
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Get Chez Scheme (v10.3.0)
+      - name: Get Chez Scheme (v10.0.0)
         run: |
-          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
+          git clone --depth 1 --branch v10.0.0 https://github.com/cisco/ChezScheme
           c:\msys64\usr\bin\bash -l -c "pacman -S --noconfirm tar make mingw-w64-x86_64-gcc"
           echo "PWD=$(c:\msys64\usr\bin\cygpath -u $(pwd))" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Configure and Build Chez Scheme
@@ -353,9 +353,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libx11-dev libncurses-dev
-      - name: Build Chez Scheme (v10.3.0)
+      - name: Build Chez Scheme (v10.0.0)
         run: |
-          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
+          git clone --depth 1 --branch v10.0.0 https://github.com/cisco/ChezScheme
           cd ChezScheme
           ./configure --threads --prefix="$HOME/chez"
           make
@@ -367,7 +367,7 @@ jobs:
       - name: Test Scheme
         run: |
           scheme --version
-      - name: Grab Idris2 and build with Chez Scheme (v10.3.0)
+      - name: Grab Idris2 and build with Chez Scheme (v10.0.0)
         run: |
           wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
           tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
@@ -400,9 +400,9 @@ jobs:
           brew update
           brew install libx11
           brew install ncurses
-      - name: Build Chez Scheme (v10.3.0)
+      - name: Build Chez Scheme (v10.0.0)
         run: |
-          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
+          git clone --depth 1 --branch v10.0.0 https://github.com/cisco/ChezScheme
           cd ChezScheme
           ./configure --threads --prefix="$HOME/chez"
           make
@@ -414,7 +414,7 @@ jobs:
       - name: Test Scheme
         run: |
           scheme --version
-      - name: Grab Idris2 and build with Chez Scheme (v10.3.0)
+      - name: Grab Idris2 and build with Chez Scheme (v10.0.0)
         run: |
           wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
           tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
@@ -485,9 +485,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libx11-dev libncurses-dev
-      - name: Build Chez Scheme (v10.3.0)
+      - name: Build Chez Scheme (v10.0.0)
         run: |
-          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
+          git clone --depth 1 --branch v10.0.0 https://github.com/cisco/ChezScheme
           cd ChezScheme
           ./configure --threads --prefix="$HOME/chez"
           make
@@ -499,7 +499,7 @@ jobs:
       - name: Test Scheme
         run: |
           scheme --version
-      - name: Grab Idris2 and build with Chez Scheme (v10.3.0)
+      - name: Grab Idris2 and build with Chez Scheme (v10.0.0)
         run: |
           wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
           tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
@@ -539,9 +539,9 @@ jobs:
           echo "PWD=$(c:\msys64\usr\bin\cygpath -u $(pwd))" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Get Chez Scheme (v10.3.0)
+      - name: Get Chez Scheme (v10.0.0)
         run: |
-          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
+          git clone --depth 1 --branch v10.0.0 https://github.com/cisco/ChezScheme
           c:\msys64\usr\bin\bash -l -c "pacman -S --noconfirm tar make mingw-w64-x86_64-gcc"
           echo "PWD=$(c:\msys64\usr\bin\cygpath -u $(pwd))" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Configure and Build Chez Scheme
@@ -597,9 +597,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libx11-dev libncurses-dev
-      - name: Build Chez Scheme (v10.3.0)
+      - name: Build Chez Scheme (v10.0.0)
         run: |
-          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
+          git clone --depth 1 --branch v10.0.0 https://github.com/cisco/ChezScheme
           cd ChezScheme
           ./configure --threads --prefix="$HOME/chez"
           make
@@ -653,9 +653,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libx11-dev libncurses-dev
-      - name: Build Chez Scheme (v10.3.0)
+      - name: Build Chez Scheme (v10.0.0)
         run: |
-          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
+          git clone --depth 1 --branch v10.0.0 https://github.com/cisco/ChezScheme
           cd ChezScheme
           ./configure --threads --prefix="$HOME/chez"
           make
@@ -702,9 +702,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libx11-dev libncurses-dev
-      - name: Build Chez Scheme (v10.3.0)
+      - name: Build Chez Scheme (v10.0.0)
         run: |
-          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
+          git clone --depth 1 --branch v10.0.0 https://github.com/cisco/ChezScheme
           cd ChezScheme
           ./configure --threads --prefix="$HOME/chez"
           make
@@ -754,9 +754,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libx11-dev libncurses-dev
-      - name: Build Chez Scheme (v10.3.0)
+      - name: Build Chez Scheme (v10.0.0)
         run: |
-          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
+          git clone --depth 1 --branch v10.0.0 https://github.com/cisco/ChezScheme
           cd ChezScheme
           ./configure --threads --prefix="$HOME/chez"
           make
@@ -900,9 +900,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libx11-dev libncurses-dev
-      - name: Build Chez Scheme (v10.3.0)
+      - name: Build Chez Scheme (v10.0.0)
         run: |
-          git clone --depth 1 --branch v10.3.0 https://github.com/cisco/ChezScheme
+          git clone --depth 1 --branch v10.0.0 https://github.com/cisco/ChezScheme
           cd ChezScheme
           ./configure --threads --prefix="$HOME/chez"
           make
@@ -914,7 +914,7 @@ jobs:
       - name: Test Scheme
         run: |
           scheme --version
-      - name: Grab Idris2 and build with Chez Scheme (v10.3.0)
+      - name: Grab Idris2 and build with Chez Scheme (v10.0.0)
         run: |
           wget "https://github.com/idris-lang/Idris2/archive/refs/tags/v$IDRIS2_MINIMUM_COMPAT_VERSION.tar.gz" -O "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
           tar zxvf "idris2-$IDRIS2_MINIMUM_COMPAT_VERSION.tgz"
