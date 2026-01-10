@@ -187,9 +187,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Install Chez Scheme dependencies
+      - name: Pin Homebrew core
         run: |
           brew update
+          cd "$(brew --repository homebrew/core)"
+          git fetch origin
+          git checkout a51847b50de2a3c6d31cb459f5e60e039f775617
+      - name: Install Chez Scheme dependencies
+        run: |
           brew install libx11
           brew install ncurses
       - name: Build Chez Scheme (v10.3.0)
@@ -395,9 +400,14 @@ jobs:
         with:
           name: macos-installed-bootstrapped-idris2-chez
           path: ~/.idris2/
-      - name: Install Chez Scheme dependencies
+      - name: Pin Homebrew core
         run: |
           brew update
+          cd "$(brew --repository homebrew/core)"
+          git fetch origin
+          git checkout a51847b50de2a3c6d31cb459f5e60e039f775617
+      - name: Install Chez Scheme dependencies
+        run: |
           brew install libx11
           brew install ncurses
       - name: Build Chez Scheme (v10.3.0)
@@ -425,7 +435,6 @@ jobs:
           chmod +x "$HOME/.idris2/bin/idris2" "$HOME/.idris2/bin/idris2_app/"*
       - name: Install build dependencies
         run: |
-          brew update
           brew install --overwrite python@3.12
           brew install node
           brew install coreutils
