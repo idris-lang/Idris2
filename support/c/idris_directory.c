@@ -1,10 +1,7 @@
 #include "idris_directory.h"
-#include "idris_support.h"
 
 #include <dirent.h>
 #include <errno.h>
-#include <pthread.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -32,9 +29,6 @@ int idris2_createDir(char *dir) {
 
 typedef struct {
   DIR *dirptr;
-  // Attempt to fix failed to list XXX: Cannot allocate memory
-  // readdir_r is deprecated, so, we should use a mutex
-  pthread_mutex_t mutex;
 } DirInfo;
 
 void *idris2_openDir(char *dir) {
@@ -46,21 +40,12 @@ void *idris2_openDir(char *dir) {
     IDRIS2_VERIFY(di, "malloc failed");
     di->dirptr = d;
 
-    if (pthread_mutex_init(&di->mutex, NULL) != 0) {
-      closedir(d);
-      free(di);
-      IDRIS2_VERIFY(0, "idris2_openDir mutex init failed");
-      return NULL;
-    }
-
     return (void *)di;
   }
 }
 
 void idris2_closeDir(void *d) {
   DirInfo *di = (DirInfo *)d;
-
-  pthread_mutex_destroy(&di->mutex);
 
   IDRIS2_VERIFY(closedir(di->dirptr) == 0, "closedir failed: %s",
                 strerror(errno));
@@ -71,34 +56,11 @@ int idris2_removeDir(char *path) { return rmdir(path); }
 
 char *idris2_nextDirEntry(void *d) {
   DirInfo *di = (DirInfo *)d;
-
-  // Going to avoid the usage of pthread_mutex_lock(&di->mutex);
-  // to prevent silent deadlocks
-
-  int rc;
-  unsigned int attempts = 0;
-
-  while ((rc = pthread_mutex_trylock(&di->mutex)) == EBUSY) {
-    attempts++;
-
-    if (attempts % 100 == 0) {
-      fprintf(stderr, "idris2_nextDirEntry: Still waiting for mutex (%u)\n",
-              attempts);
-    }
-
-    idris2_usleep(10000);
-  }
-
-  IDRIS2_VERIFY(rc == 0, "idris2_nextDirEntry: Unexpected mutex error: %s",
-                strerror(rc));
-
   // `readdir` keeps `errno` unchanged on end of stream
   // so we need to reset `errno` to distinguish between
   // end of stream and failure.
   errno = 0;
   struct dirent *de = readdir(di->dirptr);
-
-  pthread_mutex_unlock(&di->mutex);
 
   if (de == NULL) {
     return NULL;
