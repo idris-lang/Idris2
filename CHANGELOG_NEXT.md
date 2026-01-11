@@ -77,6 +77,10 @@ should target this file (`CHANGELOG_NEXT`).
 
 ### Backend changes
 
+#### Chez Backend
+
+* Added support for UTF-8 characters in project paths during code generation.
+
 #### RefC Backend
 
 * Fixed an issue to do with `alligned_alloc` not existing on older MacOS
