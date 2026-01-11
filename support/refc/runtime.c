@@ -159,10 +159,6 @@ void idris2_removeReuseConstructor(Value_Constructor *constr) {
 
 int idris2_extractInt(Value *v) {
   if (idris2_vp_is_unboxed(v))
-    // FIX: For unboxed values, always extract via shift operation.
-    // The original idris2_vp_to_Int32 macro may incorrectly dereference
-    // the unboxed pointer as a Value_Int32* on 32-bit platforms (WASM32)
-    // when UINTPTR_WIDTH is not defined.
     return (int)((uintptr_t)(v) >> idris2_vp_int_shift);
 
   switch (v->header.tag) {
