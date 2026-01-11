@@ -5,6 +5,7 @@ import public Core.Name
 import public Core.Name.Scoped
 
 import Data.Maybe
+import Data.String
 
 import Libraries.Data.NameMap
 import Libraries.Text.PrettyPrint.Prettyprinter
@@ -285,13 +286,13 @@ Show PartialReason where
   show (BadCall [n])
       = "possibly not terminating due to call to " ++ show n
   show (BadCall ns)
-      = "possibly not terminating due to calls to " ++ showSep ", " (map show ns)
+      = "possibly not terminating due to calls to " ++ joinBy ", " (map show ns)
   show (BadPath [_] n)
       = "possibly not terminating due to call to " ++ show n
   show (BadPath init n)
-      = "possibly not terminating due to function " ++ show n ++ " being reachable via " ++ showSep " -> " (map show init)
+      = "possibly not terminating due to function " ++ show n ++ " being reachable via " ++ joinBy " -> " (map show init)
   show (RecPath loop)
-      = "possibly not terminating due to recursive path " ++ showSep " -> " (map (show . snd) loop)
+      = "possibly not terminating due to recursive path " ++ joinBy " -> " (map (show . snd) loop)
 
 export
 Pretty Void PartialReason where
@@ -340,7 +341,7 @@ Show Covering where
   show (NonCoveringCall [f])
      = "not covering due to call to function " ++ show f
   show (NonCoveringCall cs)
-     = "not covering due to calls to functions " ++ showSep ", " (map show cs)
+     = "not covering due to calls to functions " ++ joinBy ", " (map show cs)
 
 export
 Pretty Void Covering where
@@ -395,98 +396,109 @@ namespace Bounds
   public export
   data Bounds : Scoped where
        None : Bounds Scope.empty
-       Add : (x : Name) -> Name -> Bounds xs -> Bounds (x :: xs)
+       Add : (x : Name) -> Name -> Bounds xs -> Bounds (Scope.bind xs x)
        -- TODO add diagonal constructor
 
   export
-  sizeOf : Bounds xs -> SizeOf xs
+  sizeOf : Bounds xs -> Libraries.Data.SnocList.SizeOf.SizeOf xs
   sizeOf None        = zero
   sizeOf (Add _ _ b) = suc (sizeOf b)
 
 export
-addVars : SizeOf outer -> Bounds bound ->
-          NVar name (outer ++ vars) ->
-          NVar name (outer ++ (bound ++ vars))
-addVars p = insertNVarNames p . sizeOf
+addVars : Bounds bound ->
+          SizeOf inner ->
+          NVar name (Scope.addInner outer inner) ->
+          NVar name (Scope.addInner (outer ++ bound) inner)
+addVars = insertNVarNames . sizeOf
 
 export
-resolveRef : SizeOf outer ->
-             SizeOf done ->
-             Bounds bound -> FC -> Name ->
-             Maybe (Var (outer ++ (done <>> bound ++ vars)))
-resolveRef _ _ None _ _ = Nothing
-resolveRef {outer} {vars} {done} p q (Add {xs} new old bs) fc n
-    = if n == old
-         then Just (weakenNs p (mkVarChiply q))
-         else resolveRef p (q :< new) bs fc n
+findBound : Name ->
+            Bounds bound ->
+            SizeOf done ->
+            Maybe (Var (Scope.ext bound done))
+findBound _ None _ = Nothing
+findBound nm (Add {xs} new old bs) p
+    = if nm == old
+        then Just (mkVarFishily p)
+        else findBound nm bs (suc p)
 
-mkLocals : SizeOf outer -> Bounds bound ->
-           Term (outer ++ vars) -> Term (outer ++ (bound ++ vars))
-mkLocals outer bs (Local fc r idx p)
-    = let MkNVar p' = addVars outer bs (MkNVar p) in Local fc r _ p'
-mkLocals outer bs (Ref fc Bound name)
+export
+resolveRef : Name ->
+             Bounds bound ->
+             SizeOf inner ->
+             Maybe (Var (Scope.addInner (outer ++ bound) inner))
+resolveRef nm bs inn = weakenNs inn . embed <$> (findBound nm bs zero)
+
+mkLocals : SizeOf inner -> Bounds bound ->
+           Term (Scope.addInner outer inner) -> Term (Scope.addInner (outer ++ bound) inner)
+mkLocals inn bs (Local fc r idx p)
+    = let MkNVar p' = addVars bs inn (MkNVar p) in Local fc r _ p'
+mkLocals inn bs (Ref fc Bound name)
     = fromMaybe (Ref fc Bound name) $ do
-        MkVar p <- resolveRef outer [<] bs fc name
+        MkVar p <- resolveRef name bs inn
         pure (Local fc Nothing _ p)
-mkLocals outer bs (Ref fc nt name)
+mkLocals inn bs (Ref fc nt name)
     = Ref fc nt name
-mkLocals outer bs (Meta fc name y xs)
-    = fromMaybe (Meta fc name y (map (mkLocals outer bs) xs)) $ do
-        MkVar p <- resolveRef outer [<] bs fc name
+mkLocals inn bs (Meta fc name y xs)
+    = fromMaybe (Meta fc name y (map (mkLocals inn bs) xs)) $ do
+        MkVar p <- resolveRef name bs inn
         pure (Local fc Nothing _ p)
-mkLocals outer bs (Bind fc x b scope)
-    = Bind fc x (map (mkLocals outer bs) b)
-           (mkLocals (suc outer) bs scope)
-mkLocals outer bs (App fc fn arg)
-    = App fc (mkLocals outer bs fn) (mkLocals outer bs arg)
-mkLocals outer bs (As fc s as tm)
-    = As fc s (mkLocals outer bs as) (mkLocals outer bs tm)
-mkLocals outer bs (TDelayed fc x y)
-    = TDelayed fc x (mkLocals outer bs y)
-mkLocals outer bs (TDelay fc x t y)
-    = TDelay fc x (mkLocals outer bs t) (mkLocals outer bs y)
-mkLocals outer bs (TForce fc r x)
-    = TForce fc r (mkLocals outer bs x)
-mkLocals outer bs (PrimVal fc c) = PrimVal fc c
-mkLocals outer bs (Erased fc Impossible) = Erased fc Impossible
-mkLocals outer bs (Erased fc Placeholder) = Erased fc Placeholder
-mkLocals outer bs (Erased fc (Dotted t)) = Erased fc (Dotted (mkLocals outer bs t))
-mkLocals outer bs (TType fc u) = TType fc u
+mkLocals inn bs (Bind fc x b scope)
+    = Bind fc x (map (mkLocals inn bs) b)
+           (mkLocals (suc inn) bs scope)
+mkLocals inn bs (App fc fn arg)
+    = App fc (mkLocals inn bs fn) (mkLocals inn bs arg)
+mkLocals inn bs (As fc s as tm)
+    = As fc s (mkLocals inn bs as) (mkLocals inn bs tm)
+mkLocals inn bs (TDelayed fc x y)
+    = TDelayed fc x (mkLocals inn bs y)
+mkLocals inn bs (TDelay fc x t y)
+    = TDelay fc x (mkLocals inn bs t) (mkLocals inn bs y)
+mkLocals inn bs (TForce fc r x)
+    = TForce fc r (mkLocals inn bs x)
+mkLocals inn bs (PrimVal fc c) = PrimVal fc c
+mkLocals inn bs (Erased fc Impossible) = Erased fc Impossible
+mkLocals inn bs (Erased fc Placeholder) = Erased fc Placeholder
+mkLocals inn bs (Erased fc (Dotted t)) = Erased fc (Dotted (mkLocals inn bs t))
+mkLocals inn bs (TType fc u) = TType fc u
 
 export
-refsToLocals : Bounds bound -> Term vars -> Term (bound ++ vars)
+refsToLocals : Bounds bound -> Term vars -> Term (Scope.addInner vars bound)
 refsToLocals None y = y
-refsToLocals bs y = mkLocals zero  bs y
+refsToLocals bs y = mkLocals zero bs y
 
 -- Replace any reference to 'x' with a locally bound name 'new'
 export
-refToLocal : (x : Name) -> (new : Name) -> Term vars -> Term (new :: vars)
+refToLocal : (x : Name) -> (new : Name) -> Term vars -> Term (Scope.bind vars new)
 refToLocal x new tm = refsToLocals (Add new x None) tm
 
 -- Replace an explicit name with a term
 export
-substName : Name -> Term vars -> Term vars -> Term vars
-substName x new (Ref fc nt name)
+substName : SizeOf local -> Name -> Term vars -> Term (Scope.addInner vars local) -> Term (Scope.addInner vars local)
+substName s x new (Ref fc nt name)
     = case nameEq x name of
            Nothing => Ref fc nt name
-           Just Refl => new
-substName x new (Meta fc n i xs)
-    = Meta fc n i (map (substName x new) xs)
+           Just Refl => weakenNs s new
+substName s x new (Meta fc n i xs)
+    = Meta fc n i (map (substName s x new) xs)
 -- ASSUMPTION: When we substitute under binders, the name has always been
 -- resolved to a Local, so no need to check that x isn't shadowing
-substName x new (Bind fc y b scope)
-    = Bind fc y (map (substName x new) b) (substName x (weaken new) scope)
-substName x new (App fc fn arg)
-    = App fc (substName x new fn) (substName x new arg)
-substName x new (As fc s as pat)
-    = As fc s as (substName x new pat)
-substName x new (TDelayed fc y z)
-    = TDelayed fc y (substName x new z)
-substName x new (TDelay fc y t z)
-    = TDelay fc y (substName x new t) (substName x new z)
-substName x new (TForce fc r y)
-    = TForce fc r (substName x new y)
-substName x new tm = tm
+substName s x new (Bind fc y b scope)
+    = Bind fc y (map (substName s x new) b) (substName (suc s) x new scope)
+substName s x new (App fc fn arg)
+    = App fc (substName s x new fn) (substName s x new arg)
+substName s x new (As fc use as pat)
+    = As fc use (substName s x new as) (substName s x new pat)
+substName s x new (TDelayed fc y z)
+    = TDelayed fc y (substName s x new z)
+substName s x new (TDelay fc y t z)
+    = TDelay fc y (substName s x new t) (substName s x new z)
+substName s x new (TForce fc r y)
+    = TForce fc r (substName s x new y)
+substName s x new tm@(Local{}) = tm
+substName s x new tm@(PrimVal{}) = tm
+substName s x new (Erased fc why) = Erased fc (substName s x new <$> why)
+substName s x new tm@(TType{}) = tm
 
 export
 addMetas : (usingResolved : Bool) -> NameMap Bool -> Term vars -> NameMap Bool
