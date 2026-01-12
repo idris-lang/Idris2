@@ -535,6 +535,7 @@ uniqueHoleNames defs = go [] where
     hole' <- uniqueHoleName defs acc hole
     go (hole' :: acc) n hole'
 
+-- concatenation of the first two arguments must not be empty, or else we loop forever
 unique : List String -> List String -> Int -> List Name -> String
 unique [] supply suff usedns = unique supply supply (suff + 1) usedns
 unique (str :: next) supply suff usedns
@@ -627,6 +628,7 @@ getArgName defs x bound allvars ty
       -- # 1742 Uppercase names are not valid for pattern variables
       let candidate = ifThenElse (lowerFirst n) n (toLower n) in
       unique (candidate :: defs) (candidate :: defs) 0 used
+    getName _ [] used = unique defaultNames defaultNames 0 $ used ++ bound
     getName _ defs used = unique defs defs 0 used
 
 export
