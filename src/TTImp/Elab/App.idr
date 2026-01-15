@@ -573,6 +573,7 @@ mutual
   isImplicitAs (IAs _ _ UseLeft _ (Implicit {})) = True
   isImplicitAs _ = False
 
+  export
   isBindAllExpPattern : Name -> Bool
   isBindAllExpPattern (UN Underscore) = True
   isBindAllExpPattern _ = False

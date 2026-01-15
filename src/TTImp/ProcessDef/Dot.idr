@@ -47,8 +47,10 @@ addDots acc ((fc, arg) :: args) (Bind _ n (Pi _ _ AutoImplicit _) sc) exps (rawA
     = addDots (acc :< (fc, dotIfInferred fc rawArg arg)) args sc exps autos named
 addDots acc ((fc, arg) :: args) (Bind _ n (Pi _ _ Explicit _) sc) [] autos named
     = do case findNamed n named of
-            Nothing =>
-                throw $ InternalError "Impossible happened: explicit argument not found."
+            Nothing => case findBindAllExpPattern named of
+                Nothing => throw $ InternalError "Impossible happened: explicit argument not found."
+                Just rawArg =>
+                    addDots (acc :< (fc, dotIfInferred fc rawArg arg)) args sc [] autos named
             Just ((_, rawArg), named) =>
                 addDots (acc :< (fc, dotIfInferred fc rawArg arg)) args sc [] autos named
 addDots acc ((fc, arg) :: args) (Bind _ n (Pi _ _ AutoImplicit _) sc) exps [] named
@@ -69,7 +71,10 @@ addDots acc ((fc, arg) :: args) (Bind _ n (Pi _ _ (DefImplicit defArg) _) sc) ex
                addDots (acc :< (fc, dot fc arg)) args sc exps [] named
            Just ((_, rawArg), named) =>
                addDots (acc :< (fc, dotIfInferred fc rawArg arg)) args sc exps autos named
-addDots acc [] ty [] [] [] = pure $ toList acc
+addDots acc [] ty [] [] named
+    = if null $ filter (not . isBindAllExpPattern . fst) named
+         then pure $ toList acc
+         else throw $ InternalError "Impossible happened: arguments mismatch."
 addDots _ _ _ _ _ _
     = throw $ InternalError $ "Impossible happened: arguments mismatch."
 
