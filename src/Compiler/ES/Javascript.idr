@@ -7,6 +7,7 @@ import Compiler.Common
 
 import Libraries.Utils.Path
 
+import Idris.Env
 import Idris.Syntax
 
 import Data.String
@@ -19,6 +20,16 @@ compileToJS :
   Ref Syn SyntaxInfo ->
   ClosedTerm -> Core String
 compileToJS c s tm = compileToES c s Javascript tm ["browser", "javascript"]
+
+||| Compile a TT expression to Javascript with source map
+compileToJSWithSourceMap :
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  ClosedTerm ->
+  (outfile : String) ->
+  Core (String, String)
+compileToJSWithSourceMap c s tm outfile =
+  compileToESWithSourceMap c s Javascript tm ["browser", "javascript"] outfile
 
 htmlHeader : String
 htmlHeader = """
@@ -55,11 +66,21 @@ compileExpr :
   (outfile : String) ->
   Core (Maybe String)
 compileExpr c s tmpDir outputDir tm outfile =
-  do es <- compileToJS c s tm
-     let res = addHeaderAndFooter outfile es
+  do -- Check for sourcemap directive
+     directives <- getDirectives Javascript
      let out = outputDir </> outfile
-     Core.writeFile out res
-     pure (Just out)
+     if "sourcemap" `elem` directives
+       then do
+         (es, sourceMap) <- compileToJSWithSourceMap c s tm outfile
+         let res = addHeaderAndFooter outfile es
+         Core.writeFile out res
+         Core.writeFile (out ++ ".map") sourceMap
+         pure (Just out)
+       else do
+         es <- compileToJS c s tm
+         let res = addHeaderAndFooter outfile es
+         Core.writeFile out res
+         pure (Just out)
 
 ||| Node implementation of the `executeExpr` interface.
 executeExpr :

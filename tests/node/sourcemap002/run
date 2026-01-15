@@ -1,0 +1,7 @@
+. ../../testutils.sh
+
+# Compile with javascript backend (no shebang, browser-compatible)
+idris2 --cg javascript --directive sourcemap -o browser_app BrowserApp.idr
+
+# Verify source map using node backend
+run --cg node Check.idr
