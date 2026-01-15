@@ -1,0 +1,113 @@
+. ../../testutils.sh
+
+idris2 --cg javascript --directive sourcemap -o browser_test BrowserApp.idr
+
+# E2E Source Map Verification for --cg javascript (browser target)
+# Uses pure JavaScript (no external deps) to decode VLQ and verify mappings
+if command -v node >/dev/null 2>&1; then
+  node -e "
+    const fs = require('fs');
+
+    // === VLQ Decoder (Source Map v3 standard) ===
+    const BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+    function decodeVLQ(encoded) {
+      const values = [];
+      let shift = 0;
+      let value = 0;
+
+      for (let i = 0; i < encoded.length; i++) {
+        const digit = BASE64.indexOf(encoded[i]);
+        if (digit === -1) continue;
+
+        const hasContinuation = digit & 32;
+        value += (digit & 31) << shift;
+
+        if (hasContinuation) {
+          shift += 5;
+        } else {
+          const negative = value & 1;
+          value >>= 1;
+          values.push(negative ? -value : value);
+          value = 0;
+          shift = 0;
+        }
+      }
+      return values;
+    }
+
+    // === Parse Source Map ===
+    const sm = JSON.parse(fs.readFileSync('build/exec/browser_test.map', 'utf8'));
+    const jsContent = fs.readFileSync('build/exec/browser_test', 'utf8');
+
+    // Decode all mappings
+    const mappings = [];
+    let genLine = 0;
+    let srcCol = 0, srcLine = 0, srcIdx = 0;
+
+    for (const line of sm.mappings.split(';')) {
+      if (line) {
+        let genCol = 0;
+        for (const segment of line.split(',')) {
+          const decoded = decodeVLQ(segment);
+          if (decoded.length >= 4) {
+            genCol += decoded[0];
+            srcIdx += decoded[1];
+            srcLine += decoded[2];
+            srcCol += decoded[3];
+            mappings.push({
+              genLine: genLine + 1,
+              genCol: genCol + 1,
+              srcLine: srcLine + 1,
+              srcCol: srcCol + 1,
+              srcFile: sm.sources[srcIdx]
+            });
+          }
+        }
+      }
+      genLine++;
+    }
+
+    // === Browser-specific Checks ===
+    console.log('=== E2E Source Map Verification (--cg javascript) ===');
+    console.log('');
+
+    // Check 1: No shebang (browser JS must not have #!/usr/bin/env node)
+    const hasShebang = jsContent.startsWith('#!');
+    console.log('No shebang (browser-compatible):', !hasShebang ? 'PASS' : 'FAIL');
+
+    // Check 2: Has sourceMappingURL
+    const hasSourceMapURL = jsContent.includes('//# sourceMappingURL=');
+    console.log('sourceMappingURL present:', hasSourceMapURL ? 'PASS' : 'FAIL');
+
+    // Check 3: Source file referenced
+    const hasBrowserApp = sm.sources.some(s => s.includes('BrowserApp.idr'));
+    console.log('Source file in sources array:', hasBrowserApp ? 'PASS' : 'FAIL');
+
+    // Check 4: Reasonable mapping density (threshold-based for stability)
+    const density = mappings.length / 50;
+    const densityOk = density >= 0.5;
+    console.log('Mapping density >= 0.5:', densityOk ? 'PASS' : 'FAIL');
+
+    // Check 5: Source line range coverage (threshold-based for stability)
+    const srcLines = [...new Set(mappings.map(m => m.srcLine))].sort((a,b) => a-b);
+    const maxLine = Math.max(...srcLines);
+    const rangeCoverage = maxLine >= 40;
+    console.log('Source line range covers main (max >= 40):', rangeCoverage ? 'PASS' : 'FAIL');
+
+    // Check 6: Key function mappings exist (at least 4 of 7 key areas)
+    const keyLines = [8, 12, 17, 22, 27, 32, 41];  // createElement, handleClick, updateState, renderButton, renderList, buildPage, main
+    const coveredKeys = keyLines.filter(kl => srcLines.some(sl => Math.abs(sl - kl) <= 2));
+    const keysCovered = coveredKeys.length >= 4;
+    console.log('Key function areas covered (>= 4/7):', keysCovered ? 'PASS' : 'FAIL');
+
+    // Check 7: All mappings valid
+    const validMappings = mappings.every(m => m.srcLine > 0 && m.genLine > 0);
+    console.log('All mappings have valid line numbers:', validMappings ? 'PASS' : 'FAIL');
+
+    // Summary
+    console.log('');
+    const allPassed = !hasShebang && hasSourceMapURL && hasBrowserApp && densityOk && rangeCoverage && keysCovered && validMappings;
+    console.log('Overall E2E result:', allPassed ? 'PASS' : 'FAIL');
+  "
+fi

@@ -4,10 +4,12 @@ import Compiler.Common
 import Core.CompileExpr
 import Core.Directory
 import Core.Env
+import Core.FC
 import Data.String
 import Data.SortedMap
 import Compiler.ES.Ast
 import Compiler.ES.Doc
+import Compiler.ES.SourceMap
 import Compiler.ES.ToAst
 import Compiler.ES.TailRec
 import Compiler.ES.State
@@ -720,14 +722,14 @@ printDoc Pretty y = pretty (y <+> LineBreak)
 printDoc Compact y = compact y
 printDoc Minimal y = compact y
 
--- generate code for the given toplevel function.
-def :  {auto c : Ref Ctxt Defs}
-    -> {auto s : Ref Syn SyntaxInfo}
-    -> {auto e : Ref ESs ESSt}
-    -> {auto nm : Ref NoMangleMap NoMangleMap}
-    -> Function
-    -> Core String
-def (MkFunction n as body) = do
+-- generate code Doc for the given toplevel function.
+defDoc :  {auto c : Ref Ctxt Defs}
+       -> {auto s : Ref Syn SyntaxInfo}
+       -> {auto e : Ref ESs ESSt}
+       -> {auto nm : Ref NoMangleMap NoMangleMap}
+       -> Function
+       -> Core Doc
+defDoc (MkFunction fc n as body) = do
   reset
   defs <- get Ctxt
   mty <- do log "compiler.javascript.doc" 50 $ "Looking up \{show n}"
@@ -739,20 +741,33 @@ def (MkFunction n as body) = do
             pure (Just (shown ty))
   ref  <- getOrRegisterRef n
   args <- traverse registerLocal as
-  mde  <- mode <$> get ESs
   b    <- stmt Returns body >>= stmt
   let cmt = comment $ hsep (shown n :: toList ((":" <++>) <$> mty))
+  -- Wrap function definition with Loc for source map support
+  let wrapLoc = Loc fc
   if null args && n /= mainExpr
     -- zero argument toplevel functions are converted to
     -- lazily evaluated constants (except the main expression).
-    then pure $ printDoc mde $ vcat
+    then pure $ wrapLoc $ vcat
           [ cmt
           , constant (var !(get NoMangleMap) ref)
                ("__lazy(" <+> function neutral [] b <+> ")") ]
-    else pure $ printDoc mde $ vcat
+    else pure $ wrapLoc $ vcat
           [ cmt
           , function (var !(get NoMangleMap) ref)
                (map (var !(get NoMangleMap)) args) b ]
+
+-- generate code for the given toplevel function (as String).
+def :  {auto c : Ref Ctxt Defs}
+    -> {auto s : Ref Syn SyntaxInfo}
+    -> {auto e : Ref ESs ESSt}
+    -> {auto nm : Ref NoMangleMap NoMangleMap}
+    -> Function
+    -> Core String
+def f = do
+  d   <- defDoc f
+  mde <- mode <$> get ESs
+  pure $ printDoc mde d
 
 -- generate code for the given foreign function definition
 foreign :  {auto c : Ref ESs ESSt}
@@ -837,3 +852,83 @@ compileToES c s cg tm ccTypes = do
   let pre = showSep "\n" $ static_preamble :: (values $ preamble st)
 
   pure $ fastUnlines [pre,allDecls,main]
+
+||| Compiles the given `ClosedTerm` for the list of supported
+||| backends to JS code, with source map generation.
+||| Returns (JS code, Source Map JSON).
+export
+compileToESWithSourceMap : Ref Ctxt Defs -> Ref Syn SyntaxInfo ->
+              (cg : CG) -> ClosedTerm -> List String -> (outputFile : String)
+              -> Core (String, String)
+compileToESWithSourceMap c s cg tm ccTypes outFile = do
+  _ <- initNoMangle ccTypes validJSName
+
+  cdata <- getCompileDataWith ccTypes False Cases tm
+
+  -- always use Pretty mode for source maps (minification loses mappings)
+  directives <- getDirectives cg
+  let mode = Pretty
+
+  -- initialize the state used in the code generator
+  s <- newRef ESs $ init mode (isArg mode) isFun ccTypes !(get NoMangleMap)
+
+  -- register the toplevel `__tailRec` function to make sure
+  -- it is not mangled in `Minimal` mode
+  addRef tailRec (VName tailRec)
+
+  -- the list of all toplevel definitions (including the main
+  -- function)
+  let allDefs =  (mainExpr, EmptyFC, MkNmFun [] $ forget cdata.mainExpr)
+              :: cdata.namedDefs
+
+      -- tail-call optimized set of toplevel functions
+      defs    = TailRec.functions tailRec allDefs
+
+  -- collect Docs for all toplevel function definitions
+  defDocs <- traverse defDoc defs
+
+  -- pretty printed toplevel FFI definitions (no source locations)
+  foreigns <- concat <$> traverse foreign allDefs
+
+  -- lookup the (possibly mangled) name of the main function
+  mainName <- compact . var !(get NoMangleMap) <$> getOrRegisterRef mainExpr
+
+  -- main function call
+  let main =  "try{"
+           ++ mainName
+           ++ "()}catch(e){if(e instanceof IdrisError){console.log('ERROR: ' + e.message)}else{throw e} }"
+
+  st <- get ESs
+
+  -- main preamble containing primops implementations
+  static_preamble <- readDataFile ("js/support.js")
+
+  -- complete preamble, including content from additional
+  -- support files (if any)
+  let pre = showSep "\n" $ static_preamble :: (values $ preamble st)
+
+  -- combine all Docs for function definitions
+  let allDefDocs = vcat defDocs
+
+  -- render with source mappings
+  let (renderedDefs, mappings) = prettyWithMappings (allDefDocs <+> LineBreak)
+
+  -- Calculate line offset: count lines in preamble and foreigns
+  let preLines = cast {to=Int} $ length $ lines pre
+  let foreignLines = cast {to=Int} $ length foreigns
+  let lineOffset = preLines + foreignLines
+
+  -- Adjust mapping line numbers by offset
+  let adjustedMappings = map (\m => { genLine := m.genLine + lineOffset } m) mappings
+
+  -- combine foreigns (no mappings) with rendered defs
+  let allDecls = fastUnlines foreigns ++ renderedDefs
+
+  -- generate source map JSON with adjusted mappings
+  let sourceMap = generateSourceMap outFile adjustedMappings
+
+  -- add source map reference comment
+  let jsCode = fastUnlines [pre, allDecls, main]
+            ++ "\n//# sourceMappingURL=" ++ outFile ++ ".map\n"
+
+  pure (jsCode, sourceMap)

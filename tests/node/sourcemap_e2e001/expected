@@ -1,0 +1,17 @@
+=== E2E Source Map Verification ===
+
+Source file in sources array: PASS
+Mapping density >= 0.5: PASS
+Source line range covers main (max >= 40): PASS
+Key function areas covered (>= 3/5): PASS
+All mappings have valid line numbers: PASS
+
+Overall E2E result: PASS
+
+--- Program Output ---
+Hello, World
+many: 5
+negative
+Sum: 30
+Doubled: 12
+Area: 12.56636

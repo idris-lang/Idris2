@@ -1,0 +1,38 @@
+. ../../testutils.sh
+
+idris2 --cg node --directive sourcemap -o precision_test Precision.idr
+
+# Parse source map and verify key mappings exist
+# The source map should reference Precision.idr
+if command -v node >/dev/null 2>&1; then
+  node -e "
+    const fs = require('fs');
+    const sm = JSON.parse(fs.readFileSync('build/exec/precision_test.map', 'utf8'));
+    
+    // Check source file is referenced
+    const hasSource = sm.sources.some(s => s.includes('Precision.idr'));
+    console.log('Source file referenced:', hasSource ? 'YES' : 'NO');
+    
+    // Decode mappings to verify they're non-trivial
+    // VLQ segments separated by ; (lines) and , (segments)
+    const lines = sm.mappings.split(';');
+    const nonEmptyLines = lines.filter(l => l.length > 0).length;
+    const hasEnoughLines = nonEmptyLines >= 10;  // Should have at least 10 mapped output lines
+    console.log('Mapped output lines >= 10:', hasEnoughLines ? 'YES' : 'NO');
+
+    // Count total segments (each is a mapping point)
+    const totalSegments = lines.reduce((acc, l) => acc + (l ? l.split(',').length : 0), 0);
+    const hasEnoughSegments = totalSegments >= 15;  // Should have at least 15 segments
+    console.log('Total mapping segments >= 15:', hasEnoughSegments ? 'YES' : 'NO');
+
+    // Quality metric: segments per source line (should be > 0 for meaningful coverage)
+    // Source has ~17 lines of code
+    const coverage = totalSegments / 17;
+    const coverageOk = coverage >= 1.0;  // Minimum threshold: at least 1 segment per source line
+    console.log('Coverage threshold met (>= 1.0 seg/line):', coverageOk ? 'YES' : 'NO');
+  "
+fi
+
+# Run program to verify correctness
+echo "--- Output ---"
+run Precision.idr

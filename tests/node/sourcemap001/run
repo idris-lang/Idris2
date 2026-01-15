@@ -1,0 +1,33 @@
+. ../../testutils.sh
+
+# Build with source map directive
+idris2 --cg node --directive sourcemap -o sourcemap_test SourceMapTest.idr
+
+# Check that source map file was generated
+if [ -f build/exec/sourcemap_test.map ]; then
+  echo "Source map file generated: YES"
+else
+  echo "Source map file generated: NO"
+fi
+
+# Check that JS file contains sourceMappingURL
+if grep -q "sourceMappingURL" build/exec/sourcemap_test; then
+  echo "sourceMappingURL in JS: YES"
+else
+  echo "sourceMappingURL in JS: NO"
+fi
+
+# Check source map is valid JSON with expected fields
+if command -v node >/dev/null 2>&1; then
+  node -e "
+    const fs = require('fs');
+    const sm = JSON.parse(fs.readFileSync('build/exec/sourcemap_test.map', 'utf8'));
+    console.log('Source map version:', sm.version);
+    console.log('Has sources:', Array.isArray(sm.sources) && sm.sources.length > 0 ? 'YES' : 'NO');
+    console.log('Has mappings:', typeof sm.mappings === 'string' && sm.mappings.length > 0 ? 'YES' : 'NO');
+  "
+fi
+
+# Run the actual program to verify it still works
+echo "--- Program output ---"
+run SourceMapTest.idr

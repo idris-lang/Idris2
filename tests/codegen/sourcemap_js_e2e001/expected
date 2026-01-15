@@ -1,0 +1,11 @@
+=== E2E Source Map Verification (--cg javascript) ===
+
+No shebang (browser-compatible): PASS
+sourceMappingURL present: PASS
+Source file in sources array: PASS
+Mapping density >= 0.5: PASS
+Source line range covers main (max >= 40): PASS
+Key function areas covered (>= 4/7): PASS
+All mappings have valid line numbers: PASS
+
+Overall E2E result: PASS

@@ -1,0 +1,111 @@
+. ../../testutils.sh
+
+idris2 --cg node --directive sourcemap -o multi_test MultiModule.idr
+
+# E2E Source Map Verification
+# Uses pure JavaScript (no external deps) to decode VLQ and verify mappings
+if command -v node >/dev/null 2>&1; then
+  node -e "
+    const fs = require('fs');
+
+    // === VLQ Decoder (Source Map v3 standard) ===
+    const BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+    function decodeVLQ(encoded) {
+      const values = [];
+      let shift = 0;
+      let value = 0;
+
+      for (let i = 0; i < encoded.length; i++) {
+        const digit = BASE64.indexOf(encoded[i]);
+        if (digit === -1) continue;
+
+        const hasContinuation = digit & 32;
+        value += (digit & 31) << shift;
+
+        if (hasContinuation) {
+          shift += 5;
+        } else {
+          const negative = value & 1;
+          value >>= 1;
+          values.push(negative ? -value : value);
+          value = 0;
+          shift = 0;
+        }
+      }
+      return values;
+    }
+
+    // === Parse Source Map ===
+    const sm = JSON.parse(fs.readFileSync('build/exec/multi_test.map', 'utf8'));
+    const jsContent = fs.readFileSync('build/exec/multi_test', 'utf8').split('\n');
+
+    // Decode all mappings
+    const mappings = [];
+    let genLine = 0;
+    let srcCol = 0, srcLine = 0, srcIdx = 0;
+
+    for (const line of sm.mappings.split(';')) {
+      if (line) {
+        let genCol = 0;
+        for (const segment of line.split(',')) {
+          const decoded = decodeVLQ(segment);
+          if (decoded.length >= 4) {
+            genCol += decoded[0];
+            srcIdx += decoded[1];
+            srcLine += decoded[2];
+            srcCol += decoded[3];
+            mappings.push({
+              genLine: genLine + 1,  // 1-indexed
+              genCol: genCol + 1,
+              srcLine: srcLine + 1,  // 1-indexed
+              srcCol: srcCol + 1,
+              srcFile: sm.sources[srcIdx]
+            });
+          }
+        }
+      }
+      genLine++;
+    }
+
+    // === Verification Checks ===
+    console.log('=== E2E Source Map Verification ===');
+    console.log('');
+
+    // Check 1: Source file referenced
+    const hasMultiModule = sm.sources.some(s => s.includes('MultiModule.idr'));
+    console.log('Source file in sources array:', hasMultiModule ? 'PASS' : 'FAIL');
+
+    // Check 2: Reasonable mapping density (threshold-based for stability)
+    const density = mappings.length / 50;  // ~50 source lines
+    const densityOk = density >= 0.5;
+    console.log('Mapping density >= 0.5:', densityOk ? 'PASS' : 'FAIL');
+
+    // Check 3: Source line range coverage (threshold-based for stability)
+    const srcLines = [...new Set(mappings.map(m => m.srcLine))].sort((a,b) => a-b);
+    const maxLine = Math.max(...srcLines);
+    const rangeCoverage = maxLine >= 40;  // Should cover up to main (line ~43+)
+    console.log('Source line range covers main (max >= 40):', rangeCoverage ? 'PASS' : 'FAIL');
+
+    // Check 4: Key function mappings exist (at least 3 of 5 key areas)
+    // We expect mappings for lines around: 8 (greet), 12-14 (describe), 18-21 (classify), 25-29 (processNumbers), 43+ (main)
+    const keyLines = [8, 12, 18, 25, 43];
+    const coveredKeys = keyLines.filter(kl => srcLines.some(sl => Math.abs(sl - kl) <= 2));
+    const keysCovered = coveredKeys.length >= 3;
+    console.log('Key function areas covered (>= 3/5):', keysCovered ? 'PASS' : 'FAIL');
+
+    // Check 5: No obviously wrong mappings (negative lines, etc)
+    const validMappings = mappings.every(m => m.srcLine > 0 && m.genLine > 0);
+    console.log('All mappings have valid line numbers:', validMappings ? 'PASS' : 'FAIL');
+
+    // Summary
+    console.log('');
+    const allPassed = hasMultiModule && densityOk && rangeCoverage && keysCovered && validMappings;
+    console.log('Overall E2E result:', allPassed ? 'PASS' : 'FAIL');
+  "
+fi
+
+# Run program to verify correctness
+echo ""
+echo "--- Program Output ---"
+run MultiModule.idr

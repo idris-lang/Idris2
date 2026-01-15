@@ -37,6 +37,20 @@ compileToNode c s tm = do
     shebang : String
     shebang = "#!\{envNode}\n"
 
+||| Compile a TT expression to Node with source map
+compileToNodeWithSourceMap :
+  Ref Ctxt Defs ->
+  Ref Syn SyntaxInfo ->
+  ClosedTerm ->
+  (outfile : String) ->
+  Core (String, String)
+compileToNodeWithSourceMap c s tm outfile = do
+  (js, sourceMap) <- compileToESWithSourceMap c s Node tm ["node", "javascript"] outfile
+  pure (shebang ++ js, sourceMap)
+  where
+    shebang : String
+    shebang = "#!\{envNode}\n"
+
 ||| Node implementation of the `compileExpr` interface.
 compileExpr :
   Ref Ctxt Defs ->
@@ -47,11 +61,21 @@ compileExpr :
   (outfile : String) ->
   Core (Maybe String)
 compileExpr c s tmpDir outputDir tm outfile =
-  do es <- compileToNode c s tm
+  do -- Check for sourcemap directive
+     directives <- getDirectives Node
      let out = outputDir </> outfile
-     Core.writeFile out es
-     coreLift_ $ chmodRaw out 0o755
-     pure (Just out)
+     if "sourcemap" `elem` directives
+       then do
+         (es, sourceMap) <- compileToNodeWithSourceMap c s tm outfile
+         Core.writeFile out es
+         Core.writeFile (out ++ ".map") sourceMap
+         coreLift_ $ chmodRaw out 0o755
+         pure (Just out)
+       else do
+         es <- compileToNode c s tm
+         Core.writeFile out es
+         coreLift_ $ chmodRaw out 0o755
+         pure (Just out)
 
 ||| Node implementation of the `executeExpr` interface.
 executeExpr :

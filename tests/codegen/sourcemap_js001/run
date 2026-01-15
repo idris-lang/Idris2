@@ -1,0 +1,47 @@
+. ../../testutils.sh
+
+# Build with javascript backend and source map directive
+idris2 --cg javascript --directive sourcemap -o sourcemap_test SourceMapTest.idr
+
+# Check that source map file was generated
+if [ -f build/exec/sourcemap_test.map ]; then
+  echo "Source map file generated: YES"
+else
+  echo "Source map file generated: NO"
+fi
+
+# Check that JS file contains sourceMappingURL
+if grep -q "sourceMappingURL" build/exec/sourcemap_test; then
+  echo "sourceMappingURL in JS: YES"
+else
+  echo "sourceMappingURL in JS: NO"
+fi
+
+# Verify source map is valid JSON (use node if available, otherwise basic check)
+if command -v node >/dev/null 2>&1; then
+  node -e "
+    const fs = require('fs');
+    const sm = JSON.parse(fs.readFileSync('build/exec/sourcemap_test.map', 'utf8'));
+    console.log('Source map version:', sm.version);
+    console.log('Has sources:', Array.isArray(sm.sources) && sm.sources.length > 0 ? 'YES' : 'NO');
+    console.log('Has mappings:', typeof sm.mappings === 'string' && sm.mappings.length > 0 ? 'YES' : 'NO');
+  "
+else
+  # Fallback: basic JSON structure check
+  if grep -q '"version":3' build/exec/sourcemap_test.map && \
+     grep -q '"sources"' build/exec/sourcemap_test.map && \
+     grep -q '"mappings"' build/exec/sourcemap_test.map; then
+    echo "Source map version: 3"
+    echo "Has sources: YES"
+    echo "Has mappings: YES"
+  else
+    echo "Source map structure: INVALID"
+  fi
+fi
+
+# Verify JS file does NOT have Node.js shebang (should be browser JS)
+if head -1 build/exec/sourcemap_test | grep -q "#!/usr/bin/env node"; then
+  echo "Is browser JS (no shebang): NO"
+else
+  echo "Is browser JS (no shebang): YES"
+fi
