@@ -346,10 +346,30 @@ bashCompletionScript fun = let fun' = "_" ++ fun in """
   """
 
 zshCompletionScript : (fun : String) -> String
-zshCompletionScript fun = """
-  autoload -U +X compinit && compinit
-  autoload -U +X bashcompinit && bashcompinit
-  \{ bashCompletionScript fun }
+zshCompletionScript fun = let fun' = "_" ++ fun in """
+  #compdef idris2
+  compdef \{fun'} idris2
+
+  \{fun'}()
+  {
+    PREV_IDX=$((CURRENT-1))
+
+    CURRENT_PARTIAL=$([[ -z ${PREFIX} ]] && echo "--" || echo "${PREFIX}")
+    PREVIOUS="${words[$PREV_IDX]}"
+
+    REPLY=($(idris2 --bash-completion "$CURRENT_PARTIAL" "$PREVIOUS"))
+
+    if [[ -z $REPLY ]]; then
+      _files
+    else
+      _describe 'idris2' REPLY
+    fi
+  }
+
+  # don't run the completion function when being source-ed or eval-ed
+  if [ "$funcstack[1]" = "\{fun'}" ]; then
+    \{fun'}
+  fi
   """
 
 --------------------------------------------------------------------------------
