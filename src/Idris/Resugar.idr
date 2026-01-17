@@ -175,22 +175,15 @@ sugarPrimAppM : {auto c : Ref Ctxt Defs} ->
                 IPTerm -> Core (Maybe IPTerm)
 sugarPrimAppM (PApp fc (PApp fc' (PRef opFC (MkKindedName nt (UN $ Basic n) rn)) l) r) = do
   defs <- get Ctxt
-  ttt <- lookupCtxtExact rn defs.gamma
-  case ttt of
-      Just ttt2 =>
-        case ttt2.definition of
-            (Builtin {arity} f) => do
-              case arity of
-                   2 =>
-                     let nm' = (UN $ Basic $ show @{Sugared} f)
-                         l'  = (MkFCVal fc' $ NoBinder l)
-                         op' = (MkFCVal opFC (OpSymbols $ (MkKindedName nt nm' nm')))
-                         in  do log "resugar.var" 80 $
-                                  "Resugaring primitive op \{show n} to \{show nm'}"
-                                pure $ Just $ POp fc l' op' r
-                   _ => pure Nothing
-            _ => pure Nothing
-      Nothing => pure Nothing
+  case definition <$> !(lookupCtxtExact rn defs.gamma) of
+      Just (Builtin {arity=2} f) =>
+         let nm' = (UN $ Basic $ show @{Sugared} f)
+             l'  = (MkFCVal fc' $ NoBinder l)
+             op' = (MkFCVal opFC (OpSymbols $ (MkKindedName nt nm' nm')))
+             in  do log "resugar.var" 80
+                          "Resugaring primitive op \{show n} to \{show nm'}"
+                    pure . Just $ POp fc l' op' r
+      _ => pure Nothing
 sugarPrimAppM _ = pure Nothing
 
 sugarPrimApp : {auto c : Ref Ctxt Defs} ->
