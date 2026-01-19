@@ -1,3 +1,3 @@
 . ../../testutils.sh
 
-run --cg node IORef.idr
+run IORef.idr

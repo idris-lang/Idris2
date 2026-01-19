@@ -1,3 +1,3 @@
 . ../../testutils.sh
 
-run --cg node FastConcat.idr
+run FastConcat.idr

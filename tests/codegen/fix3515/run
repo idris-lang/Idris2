@@ -1,5 +1,5 @@
 . ../../testutils.sh
 
-idris2 -o main Main.idr
-
-./build/exec/main
+run Main.idr
+echo "------"
+idris2 Main.idr < input
