@@ -1,0 +1,6 @@
+. ../../../testutils.sh
+
+check Pos0.idr
+check Pos1.idr
+check Pos2.idr
+check Neg.idr

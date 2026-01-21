@@ -106,6 +106,35 @@ mkPrec Prefix = Prefix
   show ((x, DeclaredFixity y), _) = show x ++ " at " ++ show y.fc
   show ((x, UndeclaredFixity), _) = show x
 
+checkConflictingBinding : Ref Ctxt Defs =>
+                          Ref Syn SyntaxInfo =>
+                          WithFC OpStr -> (foundFixity : FixityInfo) ->
+                          (usage : OperatorLHSInfo PTerm) -> (rhs : PTerm) -> Core ()
+checkConflictingBinding opName foundFixity use_site rhs
+    = if isCompatible foundFixity use_site
+         then pure ()
+         else throw $ OperatorBindingMismatch
+             {print = byShow} opName.fc (DeclaredFixity foundFixity) use_site (opNameToEither opName.val) rhs !candidates
+    where
+
+      isCompatible : FixityInfo -> OperatorLHSInfo PTerm -> Bool
+      isCompatible fixInfo (NoBinder lhs) = fixInfo.bindingInfo == NotBinding
+      isCompatible fixInfo (BindType name ty) = fixInfo.bindingInfo == Typebind
+      isCompatible fixInfo (BindExpr name expr) = fixInfo.bindingInfo == Autobind
+      isCompatible fixInfo (BindExplicitType name type expr) = fixInfo.bindingInfo == Autobind
+
+      keepCompatibleBinding : BindingModifier -> (Name, GlobalDef) -> Core Bool
+      keepCompatibleBinding compatibleBinder (name, def) = do
+        fixities <- getFixityInfo (nameRoot name)
+        let compatible = any (\(_, fx) => fx.bindingInfo == use_site.getBinder) fixities
+        pure compatible
+
+      candidates : Core (List String)
+      candidates = do Just (nm, cs) <- getSimilarNames {keepPredicate = Just (keepCompatibleBinding foundFixity.bindingInfo)} opName.val.toName
+                        | Nothing => pure []
+                      ns <- currentNS <$> get Ctxt
+                      pure (showSimilarNames ns opName.val.toName nm cs)
+
 -- Check that an operator does not have any conflicting fixities in scope.
 -- Each operator can have its fixity defined multiple times across multiple
 -- modules as long as the fixities are consistent. If they aren't, the fixity
@@ -113,36 +142,40 @@ mkPrec Prefix = Prefix
 -- Once conflicts are handled we return the operator precedence we found.
 checkConflictingFixities : {auto s : Ref Syn SyntaxInfo} ->
                            {auto c : Ref Ctxt Defs} ->
-                           (isPrefix : Bool) ->
+                           (side : Side) ->
+                           (usageType : Maybe (OperatorLHSInfo PTerm, PTerm)) -> -- `Nothing` for prefix
                            WithFC (OpStr' Name) -> Core (OpPrec, FixityDeclarationInfo)
-checkConflictingFixities isPrefix opn
+checkConflictingFixities side usageType opn
   = do let op = nameRoot opn.val.toName
-       foundFixities <- getFixityInfo op
-       let (pre, inf) = partition ((== Prefix) . fix . snd) foundFixities
-       case (isPrefix, pre, inf) of
-            -- If we do not find any fixity, and it is a backticked operator, then we
-            -- return the default fixity and associativity for backticked operators
-            -- Otherwise, it's an unknown operator.
-            (_, [], []) => case opn.val of
-                              OpSymbols _ => throw (GenericMsg opn.fc "Unknown operator '\{op}'")
-                              Backticked _ =>  pure (NonAssoc 1, UndeclaredFixity) -- Backticks are non associative by default
+       foundFixities@(_::_) <- getFixityInfo op
+         | [] => do
+           -- If we do not find any fixity, and it is a backticked operator, then we
+           -- return the default fixity and associativity for backticked operators
+           -- Otherwise, it's an unknown operator.
+           case opn.val of
+              OpSymbols _ => throw (GenericMsg opn.fc "Unknown operator '\{op}'")
+              Backticked _ =>  pure (NonAssoc 1, UndeclaredFixity) -- Backticks are non associative by default
 
-            (True, ((fxName, fx) :: _), _) => do
-                -- in the prefix case, remove conflicts with infix (-)
-                let extraFixities = pre ++ (filter (\(nm, _) => not $ nameRoot nm == "-") inf)
-                unless (isCompatible fx extraFixities) $ warnConflict fxName extraFixities
-                pure (mkPrec fx.fix fx.precedence, DeclaredFixity fx)
-            -- Could not find any prefix operator fixities, there may still be conflicts with
-            -- the infix ones.
-            (True, [] , _) => throw (GenericMsg opn.fc $ "'\{op}' is not a prefix operator")
+       let (opType, f) : (String, _) = case usageType of
+                                         Nothing     => ("a prefix", (== Prefix) . fix)
+                                         Just (b, _) => do
+                                           let b = b.getBinder
+                                           ("a \{show b} infix", \op => op.fix /= Prefix && (op.bindingInfo == b || side == LHS))
+       let ops = filter (f . snd) foundFixities
 
-            (False, _, ((fxName, fx) :: _)) => do
-                -- In the infix case, remove conflicts with prefix (-)
-                let extraFixities = (filter (\(nm, _) => not $ nm == UN (Basic "-")) pre) ++ inf
-                unless (isCompatible fx extraFixities) $ warnConflict fxName extraFixities
-                pure (mkPrec fx.fix fx.precedence, DeclaredFixity fx)
-            -- Could not find any infix operator fixities, there may be prefix ones
-            (False, _, []) => throw (GenericMsg opn.fc $ "'\{op}' is not an infix operator")
+       case ops of
+         [] => do
+           unless (side == LHS) $ -- do not check for conflicting fixity on the LHS
+                                  -- This is because we do not parse binders on the lhs
+                                  -- and so, if we check, we will find uses of regular
+                                  -- operator when binding is expected.
+             whenJust usageType $ \(l, r) => do
+               whenJust (head' $ filter ((/= Prefix) . fix . snd) foundFixities) $ \(_, fx) =>
+                 checkConflictingBinding opn fx l r
+           throw (GenericMsg opn.fc $ "'\{op}' is not \{opType} operator")
+         (fxName, fx) :: _ => do
+           unless (isCompatible fx ops) $ warnConflict fxName ops
+           pure (mkPrec fx.fix fx.precedence, DeclaredFixity fx)
   where
     -- Fixities are compatible with all others of the same name that share the same
     -- fixity, precedence, and binding information
@@ -161,41 +194,6 @@ checkConflictingFixities isPrefix opn
                    To remove this warning, use `%hide` with the fixity to remove
                    For example: %hide \{show fxName}
                    """
-
-checkConflictingBinding : Ref Ctxt Defs =>
-                          Ref Syn SyntaxInfo =>
-                          WithFC OpStr -> (foundFixity : FixityDeclarationInfo) ->
-                          (usage : OperatorLHSInfo PTerm) -> (rhs : PTerm) -> Core ()
-checkConflictingBinding opName foundFixity use_site rhs
-    = if isCompatible foundFixity use_site
-         then pure ()
-         else throw $ OperatorBindingMismatch
-             {print = byShow} opName.fc foundFixity use_site (opNameToEither opName.val) rhs !candidates
-    where
-
-      isCompatible : FixityDeclarationInfo -> OperatorLHSInfo PTerm -> Bool
-      isCompatible UndeclaredFixity (NoBinder lhs) = True
-      isCompatible UndeclaredFixity _ = False
-      isCompatible (DeclaredFixity fixInfo) (NoBinder lhs) = fixInfo.bindingInfo == NotBinding
-      isCompatible (DeclaredFixity fixInfo) (BindType name ty) = fixInfo.bindingInfo == Typebind
-      isCompatible (DeclaredFixity fixInfo) (BindExpr name expr) = fixInfo.bindingInfo == Autobind
-      isCompatible (DeclaredFixity fixInfo) (BindExplicitType name type expr)
-          = fixInfo.bindingInfo == Autobind
-
-      keepCompatibleBinding : BindingModifier -> (Name, GlobalDef) -> Core Bool
-      keepCompatibleBinding compatibleBinder (name, def) = do
-        fixities <- getFixityInfo (nameRoot name)
-        let compatible = any (\(_, fx) => fx.bindingInfo == use_site.getBinder) fixities
-        pure compatible
-
-      candidates : Core (List String)
-      candidates = do let DeclaredFixity fxInfo = foundFixity
-                        | _ => pure [] -- if there is no declared fixity we can't know what's
-                                       -- supposed to go there.
-                      Just (nm, cs) <- getSimilarNames {keepPredicate = Just (keepCompatibleBinding fxInfo.bindingInfo)} opName.val.toName
-                        | Nothing => pure []
-                      ns <- currentNS <$> get Ctxt
-                      pure (showSimilarNames ns opName.val.toName nm cs)
 
 checkValidFixity : BindingModifier -> Fixity -> Nat -> Bool
 
@@ -221,16 +219,11 @@ parameters (side : Side)
               {auto c : Ref Ctxt Defs} ->
               PTerm -> Core (List (Tok ((OpStr, FixityDeclarationInfo), Maybe (OperatorLHSInfo PTerm)) PTerm))
   toTokList (POp fc (MkWithData _ l) opn r)
-      = do (precInfo, fixInfo) <- checkConflictingFixities False opn
-           unless (side == LHS) -- do not check for conflicting fixity on the LHS
-                                -- This is because we do not parse binders on the lhs
-                                -- and so, if we check, we will find uses of regular
-                                -- operator when binding is expected.
-                  (checkConflictingBinding opn fixInfo l r)
+      = do (precInfo, fixInfo) <- checkConflictingFixities side (Just (l, r)) opn
            rtoks <- toTokList r
            pure (Expr l.getLhs :: Op fc opn.fc ((opn.val, fixInfo), Just l) precInfo :: rtoks)
   toTokList (PPrefixOp fc opn arg)
-      = do (precInfo, fixInfo) <- checkConflictingFixities True opn
+      = do (precInfo, fixInfo) <- checkConflictingFixities side Nothing opn
            rtoks <- toTokList arg
            pure (Op fc opn.fc ((opn.val, fixInfo), Nothing) precInfo :: rtoks)
   toTokList t = pure [Expr t]
