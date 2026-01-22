@@ -2,24 +2,12 @@
 Main> 0 Main.foo
 Arguments [{arg:1}, {arg:2}, {arg:3}, {arg:4}]
 Compile time tree: case {arg:3} of
-  (::) {e:1} {e:2} {e:3} {e:4} => case {e:1} of
-    S {e:5} => case {e:5} of
-      S {e:6} => case {e:6} of
-        Z => case {e:4} of
-          (::) {e:7} {e:8} {e:9} {e:10} => case {e:7} of
-            S {e:11} => case {e:11} of
-              Z => case {e:10} of
-                (::) {e:12} {e:13} {e:14} {e:15} => case {e:12} of
-                  Z => case {e:15} of
-                    Nil {e:16} => case {arg:4} of
-                      True => 1
-                      False => 2
-                      _ => 3
-                    _ => 3
-                  _ => 3
-                _ => 3
-              _ => 3
-            _ => 3
+  (::) {e:1} {e:2} {e:3} {e:4} => case {e:4} of
+    (::) {e:5} {e:6} {e:7} {e:8} => case {e:8} of
+      (::) {e:9} {e:10} {e:11} {e:12} => case {e:12} of
+        Nil {e:13} => case {arg:4} of
+          True => 1
+          False => 2
           _ => 3
         _ => 3
       _ => 3

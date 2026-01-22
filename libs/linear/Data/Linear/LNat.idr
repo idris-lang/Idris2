@@ -10,7 +10,8 @@ import Data.Linear.Interface
 public export
 data LNat : Type where
   Zero : LNat
-  Succ : LNat -@ LNat
+  -- TODO: replace with `-@` after adding normalisation in `TTImp.ProcessDef.Dot`
+  Succ : (1 _ : LNat) -> LNat
 
 ||| Convert a linear nat to an unrestricted Nat, only usable at the type level
 ||| because we cannot call `S` with an argument that is expected to be used exactly once
