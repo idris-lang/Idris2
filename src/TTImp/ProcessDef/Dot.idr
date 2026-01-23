@@ -33,6 +33,7 @@ dot fc tm = if isPattern tm
 export
 dotInferred : Ref Ctxt Defs =>
               {vars : _} ->
+              (topLevel : Bool) ->
               NestedNames vars ->
               RawImp ->
               Term vars ->
@@ -46,7 +47,7 @@ dotIfInferred : Ref Ctxt Defs =>
 dotIfInferred nest fc rawArg arg
     = if isImplicit rawArg
          then pure $ dot fc arg
-         else dotInferred nest rawArg arg
+         else dotInferred False nest rawArg arg
 
 addDots : Ref Ctxt Defs =>
           {vars : _} ->
@@ -106,8 +107,14 @@ skipArgs (S n) acc (arg :: args) (Bind _ _ (Pi {}) sc)
 skipArgs _ _ _ _
     = throw $ InternalError "Impossible happened: expected nested argument."
 
-dotInferred nest raw tm = go raw [] [] []
+dotInferred topLevel nest raw tm = go raw [] [] []
   where
+    -- Don't dot primitives functions in argument position
+    needsDot : Name -> Core Bool
+    needsDot nm = if topLevel
+                     then pure $ True
+                     else pure $ not $ isPrimName !getPrimitiveNames nm
+
     go : RawImp ->
          (expargs : List RawImp) ->
          (autoargs : List RawImp) ->
@@ -127,9 +134,7 @@ dotInferred nest raw tm = go raw [] [] []
              defs <- get Ctxt
              Just def <- lookupCtxtExact nm (gamma defs)
                | Nothing => undefinedName fc nm
-             prims <- getPrimitiveNames
-             -- Don't dot primitives functions
-             let False = isPrimName prims rawName
+             True <- needsDot rawName
                | _ => pure tm
              -- TODO: remove `the` after fix idris-lang/Idris2#3418
              let skip = maybe 0 (the (_ -> _) $ \(_, n, _) => length n) $
