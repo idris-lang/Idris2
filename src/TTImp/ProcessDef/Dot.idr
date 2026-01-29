@@ -17,6 +17,7 @@ isPattern (Ref {}) = True
 isPattern (TDelay {}) = True
 isPattern (PrimVal {}) = True
 isPattern (TType {}) = True
+isPattern (Bind _ _ (Pi {}) _) = True
 isPattern _ = False
 
 isImplicit : RawImp -> Bool
@@ -147,4 +148,11 @@ parameters {auto c : Ref Ctxt Defs} {vars : Scope}
                (skipped, rest, ty') <- skipArgs skip [<] args tynf
                args' <- addDots skipped ty' rest exps autos named
                pure $ applyStackWithFC fn args'
+      go (IPi _ _ _ _ aty _) [] [] []
+         = case tm of
+                Bind fc n (Pi bfc r p ty) sc
+                   => pure $ Bind fc n (Pi bfc r p !(dotIfInferred bfc aty ty)) sc
+                _ => throw $ InternalError "Expected Pi type, got \{show tm}"
+      go (IPi _ _ _ _ aty _) exps autos named
+         = throw $ InternalError "Unexpected arguments Pi-type with arguments: \{show raw}"
       go _ _ _ _ = pure tm
