@@ -3,6 +3,7 @@ module TTImp.ProcessDef.Dot
 import Core.Context
 import Core.Env
 import Core.Normalise
+import Core.Value
 
 import TTImp.TTImp
 import TTImp.Elab.App
@@ -35,6 +36,7 @@ dotInferred : Ref Ctxt Defs =>
               {vars : _} ->
               (topLevel : Bool) ->
               NestedNames vars ->
+              Env Term vars ->
               RawImp ->
               Term vars ->
               Core (Term vars)
@@ -42,72 +44,116 @@ dotInferred : Ref Ctxt Defs =>
 dotIfInferred : Ref Ctxt Defs =>
                 {vars : _} ->
                 NestedNames vars ->
+                Env Term vars ->
                 FC -> RawImp -> Term vars ->
                 Core (Term vars)
-dotIfInferred nest fc rawArg arg
+dotIfInferred nest env fc rawArg arg
     = if isImplicit rawArg
          then pure $ dot fc arg
-         else dotInferred False nest rawArg arg
+         else dotInferred False nest env rawArg arg
 
 addDots : Ref Ctxt Defs =>
           {vars : _} ->
+          Defs ->
           NestedNames vars ->
+          Env Term vars ->
           (acc : SnocList (FC, Term vars)) ->
           (args : List (FC, Term vars)) ->
-          (ty : Term vars') ->
+          (ty : NF vars) ->
           (expargs : List RawImp) ->
           (autoargs : List RawImp) ->
           (namedargs : List (Name, RawImp)) ->
           Core (List (FC, Term vars))
-addDots nest acc ((fc, arg) :: args) (Bind _ n (Pi _ _ Explicit _) sc) (rawArg :: exps) autos named
-    = addDots nest (acc :< (fc, !(dotIfInferred nest fc rawArg arg))) args sc exps autos named
-addDots nest acc ((fc, arg) :: args) (Bind _ n (Pi _ _ AutoImplicit _) sc) exps (rawArg :: autos) named
-    = addDots nest (acc :< (fc, !(dotIfInferred nest fc rawArg arg))) args sc exps autos named
-addDots nest acc ((fc, arg) :: args) (Bind _ n (Pi _ _ Explicit _) sc) [] autos named
+addDots defs nest env acc ((fc, arg) :: args) (NBind _ n (Pi _ _ Explicit _) sc) (rawArg :: exps) autos named
+    = addDots defs nest env
+              (acc :< (fc, !(dotIfInferred nest env fc rawArg arg)))
+              args
+              !(sc defs $ toClosure defaultOpts env arg)
+              exps autos named
+addDots defs nest env acc ((fc, arg) :: args) (NBind _ n (Pi _ _ AutoImplicit _) sc) exps (rawArg :: autos) named
+    = addDots defs nest env
+              (acc :< (fc, !(dotIfInferred nest env fc rawArg arg)))
+              args
+              !(sc defs $ toClosure defaultOpts env arg)
+              exps autos named
+addDots defs nest env acc ((fc, arg) :: args) (NBind _ n (Pi _ _ Explicit _) sc) [] autos named
     = do case findNamed n named of
             Nothing => case findBindAllExpPattern named of
                 Nothing => throw $ InternalError "Impossible happened: explicit argument not found."
                 Just rawArg =>
-                    addDots nest (acc :< (fc, !(dotIfInferred nest fc rawArg arg))) args sc [] autos named
+                    addDots defs nest env
+                            (acc :< (fc, !(dotIfInferred nest env fc rawArg arg)))
+                            args
+                            !(sc defs $ toClosure defaultOpts env arg)
+                            [] autos named
             Just ((_, rawArg), named) =>
-                addDots nest (acc :< (fc, !(dotIfInferred nest fc rawArg arg))) args sc [] autos named
-addDots nest acc ((fc, arg) :: args) (Bind _ n (Pi _ _ AutoImplicit _) sc) exps [] named
+                addDots defs nest env
+                        (acc :< (fc, !(dotIfInferred nest env fc rawArg arg)))
+                        args
+                        !(sc defs $ toClosure defaultOpts env arg)
+                        [] autos named
+addDots defs nest env acc ((fc, arg) :: args) (NBind _ n (Pi _ _ AutoImplicit _) sc) exps [] named
     = case findNamed n named of
             Nothing => do
-                addDots nest (acc :< (fc, dot fc arg)) args sc exps [] named
+                addDots defs nest env
+                        (acc :< (fc, dot fc arg))
+                        args
+                        !(sc defs $ toClosure defaultOpts env arg)
+                        exps [] named
             Just ((_, rawArg), named) =>
-                addDots nest (acc :< (fc, !(dotIfInferred nest fc rawArg arg))) args sc exps [] named
-addDots nest acc ((fc, arg) :: args) (Bind _ n (Pi _ _ Implicit _) sc) exps autos named
+                addDots defs nest env
+                        (acc :< (fc, !(dotIfInferred nest env fc rawArg arg)))
+                        args
+                        !(sc defs $ toClosure defaultOpts env arg)
+                        exps [] named
+addDots defs nest env acc ((fc, arg) :: args) (NBind _ n (Pi _ _ Implicit _) sc) exps autos named
     = case findNamed n named of
            Nothing =>
-               addDots nest (acc :< (fc, dot fc arg)) args sc exps [] named
+               addDots defs nest env
+                       (acc :< (fc, dot fc arg))
+                       args
+                       !(sc defs $ toClosure defaultOpts env arg)
+                       exps [] named
            Just ((_, rawArg), named) =>
-               addDots nest (acc :< (fc, !(dotIfInferred nest fc rawArg arg))) args sc exps autos named
-addDots nest acc ((fc, arg) :: args) (Bind _ n (Pi _ _ (DefImplicit defArg) _) sc) exps autos named
+               addDots defs nest env
+                       (acc :< (fc, !(dotIfInferred nest env fc rawArg arg)))
+                       args
+                       !(sc defs $ toClosure defaultOpts env arg)
+                       exps autos named
+addDots defs nest env acc ((fc, arg) :: args) (NBind _ n (Pi _ _ (DefImplicit defArg) _) sc) exps autos named
     = case findNamed n named of
            Nothing =>
-               addDots nest (acc :< (fc, dot fc arg)) args sc exps [] named
+               addDots defs nest env
+                       (acc :< (fc, dot fc arg))
+                       args
+                       !(sc defs $ toClosure defaultOpts env arg)
+                       exps [] named
            Just ((_, rawArg), named) =>
-               addDots nest (acc :< (fc, !(dotIfInferred nest fc rawArg arg))) args sc exps autos named
-addDots nest acc [] ty [] [] named
+               addDots defs nest env
+                       (acc :< (fc, !(dotIfInferred nest env fc rawArg arg)))
+                       args
+                       !(sc defs $ toClosure defaultOpts env arg)
+                       exps autos named
+addDots defs nest env acc [] ty [] [] named
     = if null $ filter (not . isBindAllExpPattern . fst) named
          then pure $ toList acc
          else throw $ InternalError "Impossible happened: arguments mismatch."
-addDots _ _ _ _ _ _ _
+addDots _ _ _ _ _ _ _ _ _
     = throw $ InternalError $ "Impossible happened: arguments mismatch."
 
-skipArgs : Nat ->
+skipArgs : Defs -> Nat ->
+           Env Term vars ->
            (acc : SnocList (FC, Term vars)) ->
            (args : List (FC, Term vars)) ->
-           (ty : Term vars') ->
-           Core (SnocList (FC, Term vars), List (FC, Term vars), Exists Term)
-skipArgs Z acc args ty = pure (acc, args, Evidence _ ty)
-skipArgs (S n) acc (arg :: args) (Bind _ _ (Pi {}) sc)
-    = skipArgs n (acc :< arg) args sc
-skipArgs _ _ _ _
+           (ty : NF vars) ->
+           Core (SnocList (FC, Term vars), List (FC, Term vars), NF vars)
+skipArgs _ Z env acc args ty = pure (acc, args, ty)
+skipArgs defs (S n) env acc ((fc, arg) :: args) (NBind _ _ (Pi {}) sc)
+    = skipArgs defs n env (acc :< (fc, arg)) args !(sc defs $ toClosure defaultOpts env arg)
+skipArgs _ _ _ _  __
     = throw $ InternalError "Impossible happened: expected nested argument."
 
-dotInferred topLevel nest raw tm = go raw [] [] []
+dotInferred topLevel nest env raw tm = go raw [] [] []
   where
     -- Don't dot primitives functions in argument position
     needsDot : Name -> Core Bool
@@ -142,8 +188,8 @@ dotInferred topLevel nest raw tm = go raw [] [] []
                              -- ^ Local block put raw name in `NestedNames`
                              --   while parameters put `Resolved`.
                              --   So, we need to check both
-             tynf <- normalise defs Env.empty (type def)
-             (skipped, rest, Evidence _ ty') <- skipArgs skip [<] args tynf
-             args' <- addDots nest skipped rest ty' exps autos named
+             tynf <- nf defs env $ embed $ type def
+             (skipped, rest, ty') <- skipArgs defs skip env [<] args tynf
+             args' <- addDots defs nest env skipped rest ty' exps autos named
              pure $ applyStackWithFC fn args'
     go _ _ _ _ = pure tm
