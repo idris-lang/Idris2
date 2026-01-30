@@ -26,7 +26,6 @@ isImplicit (IAs _ _ _ _ tm) = isImplicit tm
 isImplicit _ = False
 
 dot : FC -> Term vars -> Term vars
-dot fc (As fc' s n tm) = As fc' s n $ dot fc tm
 dot _ tm@(Erased {}) = tm
 dot fc tm = if isPattern tm
                then Erased fc $ Dotted tm
@@ -42,6 +41,8 @@ parameters {auto c : Ref Ctxt Defs} {vars : Scope}
 
   dotIfInferred : FC -> RawImp -> Term vars ->
                   Core (Term vars)
+  dotIfInferred fc (IAs _ _ _ _ rawArg) (As fc' s n arg)
+      = As fc' s n <$> dotIfInferred fc rawArg arg
   dotIfInferred fc rawArg arg
       = if isImplicit rawArg
            then pure $ dot fc arg
