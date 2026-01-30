@@ -111,6 +111,21 @@ parameters {auto c : Ref Ctxt Defs} {vars : Scope}
   skipArgs _ _  __
       = throw $ InternalError "Impossible happened: expected nested argument."
 
+  dotInferred topLevel (IAlternative fc ty alts) tm
+      = do let (Ref _ _ nm) = getFn tm
+             | _ => pure tm
+           let Just alt = pickAlt !(toFullNames nm) alts
+             | _ => pure tm
+           dotInferred topLevel alt tm
+    where
+      pickAlt : Name -> List RawImp -> Maybe RawImp
+      pickAlt nm [] = Nothing
+      pickAlt nm (x :: xs)
+          = do let (IVar _ nm') = getFn x
+                 | _ => Nothing
+               if nm == nm'
+                  then Just x
+                  else pickAlt nm xs
   dotInferred topLevel raw tm = go raw [] [] []
     where
       -- Don't dot primitives functions in argument position
