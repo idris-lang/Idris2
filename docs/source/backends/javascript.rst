@@ -184,7 +184,7 @@ and the we wrap the result in the ``DomNode`` type using the ``MkNode`` data con
 Primitive values originated in JavaScript
 -----------------------------------------
 
-As a countinuation of the previous example, the ``width`` attribute of a DOM element can be
+As a continuation of the previous example, the ``width`` attribute of a DOM element can be
 retrieved via the FFI.
 
 .. code-block:: idris
@@ -219,7 +219,7 @@ Directives
 ----------
 
 The javascript code generators accepts three different directives
-about how compact and obfusacted the generated code should be.
+about how compact and obfuscated the generated code should be.
 The following examples show the code generated for the ``putStr``
 function from the prelude for each of the three directives.
 (``--cg node`` is used in the examples below, but the behavior is

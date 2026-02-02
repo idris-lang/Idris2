@@ -296,7 +296,7 @@ Type constructors
 ~~~~~~~~~~~~~~~~~
 
 Type and data constructors that are not relevant for the program's runtime
-behaviour may be used at compile butand will be erased from the intermediate
+behaviour may be used at compile time but will be erased from the intermediate
 representation.
 
 However some type constructors need to be kept around even at runtime
@@ -695,7 +695,7 @@ How to embed code snippets?
 
 A possible motivation for implementing a custom back-end for Idris is to
 generate code that is meant to be used in a larger project. This project
-may be bound to another language that has many useful librarie  but could
+may be bound to another language that has many useful libraries  but could
 benefit from relying on Idris' strong type system in places.
 
 When writing a code generator for this purpose, the interoperability of the
