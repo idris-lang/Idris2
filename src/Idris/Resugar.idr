@@ -12,6 +12,7 @@ import TTImp.Utils
 
 import Data.String
 import Libraries.Data.ANameMap
+import Libraries.Data.WithData
 
 %default covering
 
@@ -347,6 +348,10 @@ mutual
       = do arg' <- toPTerm startPrec arg
            fn' <- toPTerm startPrec fn
            bracket p appPrec (PWithApp fc fn' arg')
+  toPTerm p (IBindingApp fn bind arg)
+      = pure $ PBindingApp fn
+          !(traverse (traverse (toPTerm p)) bind)
+          !(traverse (toPTerm p) arg)
   toPTerm p (INamedApp fc fn n arg)
       = do arg' <- toPTerm startPrec arg
            app <- toPTermApp fn [(fc, Just (Just n), arg')]
@@ -460,9 +465,9 @@ mutual
 
   toPTypeDecl : {auto c : Ref Ctxt Defs} ->
                 {auto s : Ref Syn SyntaxInfo} ->
-                ImpTy' KindedName -> Core (PTypeDecl' KindedName)
+                ImpTy' KindedName -> Core (AddMetadata Bind' (PTypeDecl' KindedName))
   toPTypeDecl impTy
-      = pure (MkFCVal impTy.fc $ MkPTy (pure ("", impTy.tyName)) "" !(toPTerm startPrec impTy.val))
+      = pure $ Mk [impTy.tyName.bind, "", impTy.fc] (MkPTy (pure ("" :+ drop impTy.tyName)) !(toPTerm startPrec impTy.val))
 
   toPData : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
@@ -478,7 +483,7 @@ mutual
              IField' KindedName -> Core (PField' KindedName)
   toPField field
       = do bind' <- traverse (toPTerm startPrec) field.val
-           pure (Mk [field.fc , "", field.rig, [field.name]] bind')
+           pure (Mk [field.fc , "", field.rig, [field.name.drop.drop]] bind')
 
   toPFnOpt : {auto c : Ref Ctxt Defs} ->
              {auto s : Ref Syn SyntaxInfo} ->
@@ -493,7 +498,8 @@ mutual
             ImpDecl' KindedName -> Core (Maybe (PDecl' KindedName))
   toPDecl (IClaim (MkWithData fc $ MkIClaimData rig vis opts ty))
       = do opts' <- traverse toPFnOpt opts
-           pure (Just (MkWithData fc $ PClaim (MkPClaim rig vis opts' !(toPTypeDecl ty))))
+           newTy <- toPTypeDecl ty
+           pure (Just (MkWithData fc $ PClaim (MkPClaim rig vis opts' newTy)))
   toPDecl (IData fc vis mbtot d)
       = pure (Just (MkFCVal fc $ PData "" vis mbtot !(toPData d)))
   toPDecl (IDef fc n cs)
@@ -504,17 +510,17 @@ mutual
              traverseList1 (\binder =>
                  do info' <- traverse (toPTerm startPrec) binder.val.info
                     type' <- toPTerm startPrec binder.val.boundType
-                    pure (MkFullBinder info' binder.rig binder.name type')) ps
+                    pure (MkFullBinder info' binder.rig binder.name.drop.drop type')) ps
            pure (Just (MkFCVal fc (PParameters (Right args) (catMaybes ds'))))
   toPDecl (IRecord fc _ vis mbtot (MkWithData _ $ MkImpRecord header body))
       = do ps' <- traverse (traverse (traverse (toPTerm startPrec))) header.val
            fs' <- traverse toPField body.val
            pure (Just (MkFCVal fc $ PRecord "" vis mbtot
-                          (MkPRecord header.name.val (map toBinder ps') body.opts (Just (AddDef body.name)) fs')))
+                          (MkPRecord header.tyName (map toBinder ps') body.opts (Just (AddDef body.tyName)) fs')))
            where
              toBinder : ImpParameter' (PTerm' KindedName) -> PBinder' KindedName
              toBinder binder
-               = MkFullBinder binder.val.info binder.rig binder.name binder.val.boundType
+               = MkFullBinder binder.val.info binder.rig binder.name.drop.drop binder.val.boundType
 
   toPDecl (IFail fc msg ds)
       = do ds' <- traverse toPDecl ds
