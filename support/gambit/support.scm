@@ -39,6 +39,15 @@
 (define (blodwen-toUnsignedInt x bits)
   (bitwise-and x (sub1 (arithmetic-shift 1 bits))))
 
+(define (blodwen-toUnsignedInt8 x)
+  (fxlogand x 255))
+
+(define (blodwen-toUnsignedInt16 x)
+  (fxlogand x 65535))
+
+(define (blodwen-toUnsignedInt32 x)
+  (fxlogand x 4294967295))
+
 (define (blodwen-euclidDiv a b)
   (let ((q (quotient a b))
         (r (remainder a b)))
@@ -53,8 +62,16 @@
       r)))
 
 (define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
+(define (bu8+ x y) (blodwen-toUnsignedInt8 (fx+ x y)))
+(define (bu16+ x y) (blodwen-toUnsignedInt16 (fx+ x y)))
+(define (bu32+ x y) (blodwen-toUnsignedInt32 (fx+ x y)))
 (define bu- (lambda (x y bits) (blodwen-toUnsignedInt (- x y) bits)))
+(define (bu8- x y) (blodwen-toUnsignedInt8 (fx- x y)))
+(define (bu16- x y) (blodwen-toUnsignedInt16 (fx- x y)))
+(define (bu32- x y) (blodwen-toUnsignedInt32 (fx- x y)))
 (define bu* (lambda (x y bits) (blodwen-toUnsignedInt (* x y) bits)))
+(define (bu8* x y) (blodwen-toUnsignedInt8 (fxwrap* x y)))
+(define (bu16* x y) (blodwen-toUnsignedInt16 (fxwrap* x y)))
 (define bu/ (lambda (x y bits) (blodwen-toUnsignedInt (quotient x y) bits)))
 
 (define bs+ (lambda (x y bits) (blodwen-toSignedInt (+ x y) bits)))
@@ -80,16 +97,12 @@
 (define (bits64->bits16 x) (bitwise-and x #xffff))
 (define (bits64->bits32 x) (bitwise-and x #xffffffff))
 
-(define blodwen-bits-shl-signed
-  (lambda (x y bits) (blodwen-toSignedInt (arithmetic-shift x y) bits)))
-
+(define blodwen-bits-shl-signed (lambda (x y bits) (blodwen-toSignedInt (arithmetic-shift x y) bits)))
 
 (define-macro (blodwen-and . args) `(bitwise-and ,@args))
 (define-macro (blodwen-or . args) `(bitwise-ior ,@args))
 (define-macro (blodwen-xor . args) `(bitwise-xor ,@args))
-(define-macro (blodwen-bits-shl x y bits)
-                   `(remainder (arithmetic-shift ,x ,y)
-                               (arithmetic-shift 1 ,bits)))
+(define-macro (blodwen-bits-shl x y bits) `(remainder (arithmetic-shift ,x ,y) (arithmetic-shift 1 ,bits)))
 (define-macro (blodwen-shl x y) `(arithmetic-shift ,x ,y))
 (define-macro (blodwen-shr x y) `(arithmetic-shift ,x (- ,y)))
 
