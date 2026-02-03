@@ -68,6 +68,8 @@ should target this file (`CHANGELOG_NEXT`).
 * Fixed coverage checker issues (#1800, #1998, #2318, #2822, #3679).
 * Fixed totality checking in namespace and mutual blocks (#2868, #3692).
 * Fixed incorrect argument multiplicity when using an as-pattern (#3687).
+* Type inspection now resugars primitive functions to more likely
+  names/operators (#3712)
 
 ### Building/Packaging changes
 
