@@ -599,25 +599,24 @@ getArgName defs x bound allvars ty
                    Just ns => pure (Just (map ("s" ++) ns))
             _ => namesFor n
     findNamesM (NTCon _ n _ _) = namesFor n
-    findNamesM (NPrimVal fc c) = do
-          let defaultPos = Just ["m", "n", "p", "q"]
-          let defaultInts = Just ["i", "j", "k", "l"]
-          pure $ map (filter notBound) $ case c of
-            PrT IntType => defaultInts
-            PrT Int8Type => defaultInts
-            PrT Int16Type => defaultInts
-            PrT Int32Type => defaultInts
-            PrT Int64Type => defaultInts
-            PrT IntegerType => defaultInts
-            PrT Bits8Type => defaultPos
-            PrT Bits16Type => defaultPos
-            PrT Bits32Type => defaultPos
-            PrT Bits64Type => defaultPos
-            PrT StringType => Just ["str"]
-            PrT CharType => Just ["c","d"]
-            PrT DoubleType => Just ["dbl"]
-            PrT WorldType => Just ["wrld", "w"]
-            _ => Nothing -- impossible
+    findNamesM (NPrimVal fc $ PrT c) = do
+          let defaultPos = ["m", "n", "p", "q"]
+          let defaultInts = ["i", "j", "k", "l"]
+          pure $ Just $ filter notBound $ case c of
+            IntType => defaultInts
+            Int8Type => defaultInts
+            Int16Type => defaultInts
+            Int32Type => defaultInts
+            Int64Type => defaultInts
+            IntegerType => defaultInts
+            Bits8Type => defaultPos
+            Bits16Type => defaultPos
+            Bits32Type => defaultPos
+            Bits64Type => defaultPos
+            StringType => ["str"]
+            CharType => ["c","d"]
+            DoubleType => ["dbl"]
+            WorldType => ["wrld", "w"]
     findNamesM ty = pure Nothing
 
     findNames : NF vars -> Core (List String)
