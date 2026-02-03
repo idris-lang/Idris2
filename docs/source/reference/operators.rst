@@ -9,7 +9,7 @@ Instead, it expands on the abilities of infix operators to enable library design
 to write Domain Specific Languages (DSLs) while keeping error messages under control.
 
 Because operators are not linked to function definitions, they are also part of the
-file namespacing and follow the same rules as other defintions.
+file namespacing and follow the same rules as other definitions.
 
 .. warning::
    Operators can and will make some code less legible. Use with taste and caution.
@@ -157,7 +157,7 @@ declaring a fixity ``private`` rather than ``export``.
 Private record fixity pattern
 -----------------------------
 
-Private fixity declarations are useful in conjuction with records. When
+Private fixity declarations are useful in conjunction with records. When
 you declare a record with operators as fields, it is helpful to write
 them in infix position. However, the compiler will also synthesize a
 projection function for the field that takes as first argument the
