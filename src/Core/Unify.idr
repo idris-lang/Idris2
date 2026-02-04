@@ -10,11 +10,11 @@ import public Core.UnifyState
 import Core.Value
 
 import Data.Maybe
+import Data.SnocList
+import Data.SnocList.Quantifiers
 
-import Libraries.Data.List.SizeOf
-
+import Libraries.Data.SnocList.SizeOf
 import Libraries.Data.VarSet
-
 import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 
@@ -275,31 +275,51 @@ unifyArgs mode loc env (cx :: cxs) (cy :: cys)
          pure (union res cs)
 unifyArgs mode loc env _ _ = ufail loc ""
 
+unifySpine : (Unify tm, Quote tm) =>
+             {vars : _} ->
+             {auto c : Ref Ctxt Defs} ->
+             {auto u : Ref UST UState} ->
+             UnifyInfo -> FC -> Env Term vars ->
+             SnocList (tm vars) -> SnocList (tm vars) ->
+             Core UnifyResult
+unifySpine mode loc env [<] [<] = pure success
+unifySpine mode loc env (cxs :< cx) (cys :< cy)
+    = do -- Do later arguments first, since they may depend on earlier
+         -- arguments and use their solutions.
+         res <- unify (lower mode) loc env cx cy
+         cs <- unifySpine mode loc env cxs cys
+         pure (union cs res)
+unifySpine mode loc env _ _ = ufail loc ""
+
 -- Get the variables in an application argument list; fail if any arguments
 -- are not variables, fail if there's any repetition of variables
 -- We use this to check that the pattern unification rule is applicable
 -- when solving a metavariable applied to arguments
 -- We return a list (because the order matters) and a set (for easy
 -- querying)
-getVars : List (NF vars) -> Maybe (List (Var vars), VarSet vars)
+getVars : SnocList (NF vars) -> Maybe (SnocList (Var vars), VarSet vars)
 getVars = go [<] VarSet.empty where
 
   go : SnocList (Var vars) -> VarSet vars ->
-       List (NF vars) -> Maybe (List (Var vars), VarSet vars)
-  go acc got [] = Just (acc <>> [], got)
-  go acc got (NErased fc (Dotted t) :: xs) = go acc got (t :: xs)
-  go acc got (NApp fc (NLocal r idx p) [] :: xs)
+       SnocList (NF vars) -> Maybe (SnocList (Var vars), VarSet vars)
+  go acc got [<] = Just (acc, got)
+  go acc got (xs :< NErased fc (Dotted t)) = go acc got (xs :< t)
+  go acc got (xs :< NApp fc (NLocal r idx p) [<])
     = let v := MkVar p in
       if v `VarSet.elem` got then Nothing
          else go (acc :< v) (VarSet.insert v got) xs
-  go acc got (NAs _ _ _ p :: xs) = go acc got (p :: xs)
-  go acc _ (_ :: xs) = Nothing
+  go acc got (xs :< NAs _ _ _ p) = go acc got (xs :< p)
+  go acc _ (xs :< _) = Nothing
 
 -- Update the variable list to point into the sub environment
 -- (All of these will succeed because the Thin we have comes from
 -- the list of variable uses! It's not stated in the type, though.)
-updateVars : List (Var {a = Name} vars) -> Thin newvars vars -> List (Var newvars)
-updateVars vs th = mapMaybe (\ v => shrink v th) vs
+updateVars : SnocList (Var {a = Name} vars) -> Thin newvars vars -> SnocList (Var newvars)
+updateVars [<] svs = [<]
+updateVars (ps :< p) svs
+    = case shrink p svs of
+            Nothing => updateVars ps svs
+            Just p' => updateVars ps svs :< p'
 
 {- Applying the pattern unification rule is okay if:
    * Arguments are all distinct local variables
@@ -319,8 +339,8 @@ updateVars vs th = mapMaybe (\ v => shrink v th) vs
 patternEnv : {auto c : Ref Ctxt Defs} ->
              {auto u : Ref UST UState} ->
              {vars : _} ->
-             Env Term vars -> List (Closure vars) ->
-             Core (Maybe (newvars ** (List (Var newvars),
+             Env Term vars -> SnocList (Closure vars) ->
+             Core (Maybe (newvars ** (SnocList (Var newvars),
                                      Thin newvars vars)))
 patternEnv {vars} env args
     = do defs <- get Ctxt
@@ -331,26 +351,26 @@ patternEnv {vars} env args
              Nothing => Nothing
              Just (vslist, vsset) =>
                let (newvars ** svs) = fromVarSet _ vsset in
-                 Just (newvars ** (updateVars vslist svs, svs))
+                 Just (newvars ** (updateVars (reverse vslist) svs, svs))
 
-getVarsTm : List (Term vars) -> Maybe (List (Var vars), VarSet vars)
+getVarsTm : SnocList (Term vars) -> Maybe (SnocList (Var vars), VarSet vars)
 getVarsTm = go [<] VarSet.empty where
 
   go : SnocList (Var vars) -> VarSet vars ->
-       List (Term vars) -> Maybe (List (Var vars), VarSet vars)
-  go acc got [] = Just (acc <>> [], got)
-  go acc got (Local fc r idx p :: xs)
+       SnocList (Term vars) -> Maybe (SnocList (Var vars), VarSet vars)
+  go acc got [<] = Just (acc, got)
+  go acc got (xs :< Local fc r idx p)
     = let v := MkVar p in
       if v `VarSet.elem` got then Nothing
          else go (acc :< v) (VarSet.insert v got) xs
-  go acc _ (_ :: xs) = Nothing
+  go acc _ (xs :< _) = Nothing
 
 export
 patternEnvTm : {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
                {vars : _} ->
-               Env Term vars -> List (Term vars) ->
-               Core (Maybe (newvars ** (List (Var newvars),
+               Env Term vars -> SnocList (Term vars) ->
+               Core (Maybe (newvars ** (SnocList (Var newvars),
                                        Thin newvars vars)))
 patternEnvTm {vars} env args
     = do defs <- get Ctxt
@@ -359,7 +379,7 @@ patternEnvTm {vars} env args
            Nothing => Nothing
            Just (vslist, vsset) =>
              let (newvars ** svs) = fromVarSet _ vsset in
-                 Just (newvars ** (updateVars vslist svs, svs))
+                 Just (newvars ** (updateVars (reverse vslist) svs, svs))
 
 -- Check that the metavariable name doesn't occur in the solution.
 -- If it does, normalising might help. If it still does, that's an error.
@@ -404,7 +424,7 @@ occursCheck fc env mode mname tm
 data IVars : Scope -> Scoped where
      INil : IVars Scope.empty newvars
      ICons : Maybe (Var newvars) -> IVars vs newvars ->
-             IVars (v :: vs) newvars
+             IVars (Scope.bind vs v) newvars
 
 Weaken (IVars vs) where
   weakenNs s INil = INil
@@ -584,7 +604,7 @@ updateSolution : {vars : _} ->
                  Env Term vars -> Term vars -> Term vars -> Core Bool
 updateSolution env (Meta fc mname idx args) soln
     = do defs <- get Ctxt
-         case !(patternEnvTm env args) of
+         case !(patternEnvTm env (cast args)) of
               Nothing => pure False
               Just (newvars ** (locs, submv)) =>
                   case shrink soln submv of
@@ -637,13 +657,13 @@ mutual
 
   getArgTypes : {vars : _} ->
                 {auto c : Ref Ctxt Defs} ->
-                Defs -> (fnType : NF vars) -> List (Closure vars) ->
-                Core (Maybe (List (NF vars)))
-  getArgTypes defs (NBind _ n (Pi _ _ _ ty) sc) (a :: as)
+                Defs -> (fnType : NF vars) -> SnocList (Closure vars) ->
+                Core (Maybe (SnocList (NF vars)))
+  getArgTypes defs (NBind _ n (Pi _ _ _ ty) sc) (as :< a)
      = do Just scTys <- getArgTypes defs !(sc defs a) as
                | Nothing => pure Nothing
-          pure (Just (!(evalClosure defs ty) :: scTys))
-  getArgTypes _ _ [] = pure (Just [])
+          pure (Just (scTys :< !(evalClosure defs ty)))
+  getArgTypes _ _ [<] = pure (Just [<])
   getArgTypes _ _ _ = pure Nothing
 
   headsConvert : {vars : _} ->
@@ -651,11 +671,11 @@ mutual
                  {auto u : Ref UST UState} ->
                  UnifyInfo ->
                  FC -> Env Term vars ->
-                 Maybe (List (NF vars)) -> Maybe (List (NF vars)) ->
+                 Maybe (SnocList (NF vars)) -> Maybe (SnocList (NF vars)) ->
                  Core Bool
   headsConvert mode fc env (Just vs) (Just ns)
       = case (reverse vs, reverse ns) of
-             (v :: _, n :: _) =>
+             (_ :< v, _ :< n) =>
                 do logNF "unify.head" 10 "Unifying head" env v
                    logNF "unify.head" 10 ".........with" env n
                    res <- unify mode fc env v n
@@ -673,11 +693,11 @@ mutual
                     (swaporder : Bool) ->
                     UnifyInfo -> FC -> Env Term vars ->
                     (metaname : Name) -> (metaref : Int) ->
-                    (margs : List (Closure vars)) ->
-                    (margs' : List (Closure vars)) ->
+                    (margs : SnocList (Closure vars)) ->
+                    (margs' : SnocList (Closure vars)) ->
                     Maybe ClosedTerm ->
-                    (List (FC, Closure vars) -> NF vars) ->
-                    List (FC, Closure vars) ->
+                    (SnocList (FC, Closure vars) -> NF vars) ->
+                    SnocList (FC, Closure vars) ->
                     Core UnifyResult
   unifyInvertible swap mode fc env mname mref margs margs' nty con args'
       = do defs <- get Ctxt
@@ -685,9 +705,9 @@ mutual
            -- argument types match up
            Just vty <- lookupTyExact (Resolved mref) (gamma defs)
                 | Nothing => ufail fc ("No such metavariable " ++ show mname)
-           vargTys <- getArgTypes defs !(nf defs env (embed vty)) (margs ++ margs')
+           vargTys <- getArgTypes defs !(nf defs env (embed vty)) (reverse $ margs ++ margs')
            nargTys <- maybe (pure Nothing)
-                            (\ty => getArgTypes defs !(nf defs env (embed ty)) $ map snd args')
+                            (\ty => getArgTypes defs !(nf defs env (embed ty)) $ (reverse $ map snd args'))
                             nty
            -- If the rightmost arguments have the same type, or we don't
            -- know the types of the arguments, we'll get on with it.
@@ -695,24 +715,24 @@ mutual
               then
                 -- Unify the rightmost arguments, with the goal of turning the
                 -- hole application into a pattern form
-                case (reverse margs', reverse args') of
-                     (h :: hargs, f :: fargs) =>
+                case (margs', args') of
+                     (hargs :< h, fargs :< f) =>
                         tryUnify
                           (if not swap then
                               do log "unify.invertible" 10 "Unifying invertible"
                                  ures <- unify mode fc env h (snd f)
                                  log "unify.invertible" 10 $ "Constraints " ++ show (constraints ures)
                                  uargs <- unify mode fc env
-                                       (NApp fc (NMeta mname mref margs) (reverse $ map (EmptyFC,) hargs))
-                                       (con (reverse fargs))
+                                       (NApp fc (NMeta mname mref margs) (map (EmptyFC,) hargs))
+                                       (con fargs)
                                  pure (union ures uargs)
                              else
                               do log "unify.invertible" 10 "Unifying invertible"
                                  ures <- unify mode fc env (snd f) h
                                  log "unify.invertible" 10 $ "Constraints " ++ show (constraints ures)
                                  uargs <- unify mode fc env
-                                       (con (reverse fargs))
-                                       (NApp fc (NMeta mname mref margs) (reverse $ map (EmptyFC,) hargs))
+                                       (con fargs)
+                                       (NApp fc (NMeta mname mref margs) (map (EmptyFC,) hargs))
                                  pure (union ures uargs))
                           (postponeS swap fc mode "Postponing hole application [1]" env
                                 (NApp fc (NMeta mname mref margs) $ map (EmptyFC,) margs')
@@ -733,8 +753,8 @@ mutual
                  (swaporder : Bool) ->
                  UnifyInfo -> FC -> Env Term vars ->
                  (metaname : Name) -> (metaref : Int) ->
-                 (margs : List (Closure vars)) ->
-                 (margs' : List (Closure vars)) ->
+                 (margs : SnocList (Closure vars)) ->
+                 (margs' : SnocList (Closure vars)) ->
                  NF vars ->
                  Core UnifyResult
   unifyHoleApp swap mode loc env mname mref margs margs' (NTCon nfc n a args')
@@ -773,8 +793,8 @@ mutual
                    (swaporder : Bool) ->
                    UnifyInfo -> FC -> Env Term vars ->
                    (metaname : Name) -> (metaref : Int) ->
-                   (margs : List (Closure vars)) ->
-                   (margs' : List (Closure vars)) ->
+                   (margs : SnocList (Closure vars)) ->
+                   (margs' : SnocList (Closure vars)) ->
                    (soln : NF vars) ->
                    Core UnifyResult
   postponePatVar swap mode loc env mname mref margs margs' tm
@@ -790,9 +810,9 @@ mutual
               {newvars, vars : _} ->
               FC -> UnifyInfo -> Env Term vars ->
               (metaname : Name) -> (metaref : Int) ->
-              (margs : List (Closure vars)) ->
-              (margs' : List (Closure vars)) ->
-              List (Var newvars) ->
+              (margs : SnocList (Closure vars)) ->
+              (margs' : SnocList (Closure vars)) ->
+              SnocList (Var newvars) ->
               Thin newvars vars ->
               (solfull : Term vars) -> -- Original solution
               (soln : Term newvars) -> -- Solution with shrunk environment
@@ -835,14 +855,14 @@ mutual
               (swaporder : Bool) ->
               UnifyInfo -> FC -> Env Term vars ->
               FC -> (metaname : Name) -> (metaref : Int) ->
-              (args : List (Closure vars)) ->
-              (args' : List (Closure vars)) ->
+              (args : SnocList (Closure vars)) ->
+              (args' : SnocList (Closure vars)) ->
               (soln : NF vars) ->
               Core UnifyResult
   unifyHole swap mode loc env fc mname mref margs margs' tmnf
       = do defs <- get Ctxt
            empty <- clearDefs defs
-           let args = if isNil margs' then margs else margs ++ margs'
+           let args = if isLin margs' then cast margs else cast margs ++ margs'
            logC "unify.hole" 10
                    (do args' <- traverse (evalArg empty) args
                        qargs <- traverse (quote empty env) args'
@@ -900,7 +920,7 @@ mutual
              (swaporder : Bool) -> -- swap the order when postponing
                                    -- (this is to preserve second arg being expected type)
              UnifyInfo -> FC -> Env Term vars -> FC ->
-             NHead vars -> List (FC, Closure vars) -> NF vars ->
+             NHead vars -> SnocList (FC, Closure vars) -> NF vars ->
              Core UnifyResult
   unifyApp swap mode loc env fc (NMeta n i margs) args tm
       = unifyHole swap mode loc env fc n i margs (map snd args) tm
@@ -915,12 +935,12 @@ mutual
            if not swap
               then unifyIfEq True loc mode env (NApp fc (NRef nt n) args) tm
               else unifyIfEq True loc mode env tm (NApp fc (NRef nt n) args)
-  unifyApp swap mode loc env xfc (NLocal rx x xp) [] (NApp yfc (NLocal ry y yp) [])
+  unifyApp swap mode loc env xfc (NLocal rx x xp) [<] (NApp yfc (NLocal ry y yp) [<])
       = do gam <- get Ctxt
            if x == y then pure success
              else postponeS swap loc mode "Postponing var"
-                            env (NApp xfc (NLocal rx x xp) [])
-                                (NApp yfc (NLocal ry y yp) [])
+                            env (NApp xfc (NLocal rx x xp) [<])
+                                (NApp yfc (NLocal ry y yp) [<])
   -- A local against something canonical (binder or constructor) is bad
   unifyApp swap mode loc env xfc (NLocal rx x xp) args y@(NBind {})
       = convertErrorS swap loc env (NApp xfc (NLocal rx x xp) args) y
@@ -951,19 +971,19 @@ mutual
                   {auto u : Ref UST UState} ->
                   {vars : _} ->
                   UnifyInfo -> FC -> Env Term vars ->
-                  FC -> NHead vars -> List (FC, Closure vars) ->
-                  FC -> NHead vars -> List (FC, Closure vars) ->
+                  FC -> NHead vars -> SnocList (FC, Closure vars) ->
+                  FC -> NHead vars -> SnocList (FC, Closure vars) ->
                   Core UnifyResult
-  unifyBothApps mode loc env xfc (NLocal xr x xp) [] yfc (NLocal yr y yp) []
+  unifyBothApps mode loc env xfc (NLocal xr x xp) [<] yfc (NLocal yr y yp) [<]
       = if x == y
            then pure success
-           else convertError loc env (NApp xfc (NLocal xr x xp) [])
-                                     (NApp yfc (NLocal yr y yp) [])
+           else convertError loc env (NApp xfc (NLocal xr x xp) [<])
+                                     (NApp yfc (NLocal yr y yp) [<])
   -- Locally bound things, in a term (not LHS). Since we have to unify
   -- for *all* possible values, we can safely unify the arguments.
   unifyBothApps mode@(MkUnifyInfo p InTerm) loc env xfc (NLocal xr x xp) xargs yfc (NLocal yr y yp) yargs
       = if x == y
-           then unifyArgs mode loc env (map snd xargs) (map snd yargs)
+           then unifySpine mode loc env (map snd xargs) (map snd yargs)
            else postpone loc mode "Postponing local app"
                          env (NApp xfc (NLocal xr x xp) xargs)
                              (NApp yfc (NLocal yr y yp) yargs)
@@ -977,8 +997,8 @@ mutual
            if xi == yi && (invx || umode mode == InSearch)
                                -- Invertible, (from auto implicit search)
                                -- so we can also unify the arguments.
-              then unifyArgs mode loc env (xargs ++ map snd xargs')
-                                          (yargs ++ map snd yargs')
+              then unifySpine mode loc env (Scope.addInner (map snd xargs') xargs)
+                                           (Scope.addInner (map snd yargs') yargs)
               else do xlocs <- localsIn xargs
                       ylocs <- localsIn yargs
                       -- Solve the one with the bigger context, and if they're
@@ -997,9 +1017,9 @@ mutual
       pv (PV {}) = True
       pv _ = False
 
-      localsIn : List (Closure vars) -> Core Nat
-      localsIn [] = pure 0
-      localsIn (c :: cs)
+      localsIn : SnocList (Closure vars) -> Core Nat
+      localsIn [<] = pure 0
+      localsIn (cs :< c)
           = do defs <- get Ctxt
                case !(evalClosure defs c) of
                  NApp _ (NLocal {}) _ => pure $ S !(localsIn cs)
@@ -1016,7 +1036,7 @@ mutual
                                         (NApp yfc (NMeta yn yi yargs) yargs')
   unifyBothApps mode@(MkUnifyInfo p InSearch) loc env xfc fx@(NRef xt hdx) xargs yfc fy@(NRef yt hdy) yargs
       = if hdx == hdy
-           then unifyArgs mode loc env (map snd xargs) (map snd yargs)
+           then unifySpine mode loc env (map snd xargs) (map snd yargs)
            else unifyApp False mode loc env xfc fx xargs (NApp yfc fy yargs)
   unifyBothApps mode@(MkUnifyInfo p InMatch) loc env xfc fx@(NRef xt hdx) xargs yfc fy@(NRef yt hdy) yargs
       = if hdx == hdy
@@ -1025,7 +1045,7 @@ mutual
                               xs <- traverse (quote defs env) (map snd xargs)
                               ys <- traverse (quote defs env) (map snd yargs)
                               pure ("Matching args " ++ show xs ++ " " ++ show ys))
-                   unifyArgs mode loc env (map snd xargs) (map snd yargs)
+                   unifySpine mode loc env (map snd xargs) (map snd yargs)
            else unifyApp False mode loc env xfc fx xargs (NApp yfc fy yargs)
   unifyBothApps mode loc env xfc fx ax yfc fy ay
       = unifyApp False mode loc env xfc fx ax (NApp yfc fy ay)
@@ -1067,8 +1087,8 @@ mutual
                                    pure ("Unifying arg types " ++ show tx' ++ " and " ++ show ty'))
                      ct <- unify (lower mode) loc env tx ty
                      xn <- genVarName "x"
-                     let env' : Env Term (x :: _)
-                              = Pi fcy cy Explicit tx' :: env
+                     let env' : Env Term (_ :< x)
+                              = Env.bind env $ Pi fcy cy Explicit tx'
                      case constraints ct of
                          [] => -- No constraints, check the scope
                             do tscx <- scx defs (toClosure defaultOpts env (Ref loc Bound xn))
@@ -1107,8 +1127,8 @@ mutual
                      ct <- unify (lower mode) loc env tx ty
                      xn <- genVarName "x"
                      txtm <- quote empty env tx
-                     let env' : Env Term (x :: _)
-                              = Lam fcx cx Explicit txtm :: env
+                     let env' : Env Term (_ :< x)
+                              = Env.bind env $ Lam fcx cx Explicit txtm
 
                      tscx <- scx defs (toClosure defaultOpts env (Ref loc Bound xn))
                      tscy <- scy defs (toClosure defaultOpts env (Ref loc Bound xn))
@@ -1161,7 +1181,7 @@ mutual
                            log "unify" 20 "WITH:"
                            traverse_ (dumpArg env) ys
                      -}
-                     unifyArgs mode loc env (map snd xs) (map snd ys)
+                     unifySpine mode loc env (map snd xs) (map snd ys)
              else convertError loc env
                        (NDCon xfc x tagx ax xs)
                        (NDCon yfc y tagy ay ys)
@@ -1178,7 +1198,7 @@ mutual
                      pure $ "Constructor " ++ show x
                    logC "unify" 20 $ map (const "") $ traverse_ (dumpArg env) xs
                    logC "unify" 20 $ map (const "") $ traverse_ (dumpArg env) ys
-                   unifyArgs mode loc env xs ys
+                   unifySpine mode loc env xs ys
              -- TODO: Type constructors are not necessarily injective.
              -- If we don't know it's injective, need to postpone the
              -- constraint. But before then, we need some way to decide
@@ -1195,7 +1215,7 @@ mutual
       = unifyArgs mode loc env [xty, x] [yty, y]
   unifyNoEta mode loc env (NForce xfc _ x axs) (NForce yfc _ y ays)
       = do cs <- unify (lower mode) loc env x y
-           cs' <- unifyArgs mode loc env (map snd axs) (map snd ays)
+           cs' <- unifySpine mode loc env (map snd axs) (map snd ays)
            pure (union cs cs')
   unifyNoEta mode loc env x@(NApp xfc fx@(NMeta {}) axs)
                           y@(NApp yfc fy@(NMeta {}) ays)
@@ -1564,7 +1584,7 @@ checkArgsSame : {auto u : Ref UST UState} ->
 checkArgsSame [] = pure False
 checkArgsSame (x :: xs)
     = do defs <- get Ctxt
-         Just (PMDef _ [] (STerm 0 def) _ _) <-
+         Just (PMDef _ [<] (STerm 0 def) _ _) <-
                     lookupDefExact (Resolved x) (gamma defs)
               | _ => checkArgsSame xs
          s <- anySame def xs
@@ -1576,7 +1596,7 @@ checkArgsSame (x :: xs)
     anySame tm [] = pure False
     anySame tm (t :: ts)
         = do defs <- get Ctxt
-             Just (PMDef _ [] (STerm 0 def) _ _) <-
+             Just (PMDef _ [<] (STerm 0 def) _ _) <-
                         lookupDefExact (Resolved t) (gamma defs)
                  | _ => anySame tm ts
              if !(convert defs Env.empty tm def)

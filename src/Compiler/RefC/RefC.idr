@@ -1,7 +1,6 @@
 module Compiler.RefC.RefC
 
 import Compiler.RefC.CC
-
 import Compiler.Common
 import Compiler.CompileExpr
 import Compiler.ANF
@@ -11,15 +10,16 @@ import Core.Directory
 
 import Idris.Syntax
 
-import Libraries.Data.DList
 import Data.SortedSet
 import Data.SortedMap
 import Data.Vect
+import Data.String
 
 import System
 import System.File
 
 import Protocol.Hex
+import Libraries.Data.DList
 import Libraries.Utils.Path
 
 %default covering
@@ -179,7 +179,7 @@ cOp StrAppend     [x, y]    = "strAppend(" ++ x ++ ", " ++ y ++ ")"
 cOp StrSubstr     [x, y, z] = "strSubstr(" ++ x ++ ", " ++ y  ++ ", " ++ z ++ ")"
 cOp BelieveMe     [_, _, x] = "idris2_newReference(" ++ x ++ ")"
 cOp Crash         [_, msg]  = "idris2_crash(" ++ msg ++ ");"
-cOp fn args = show fn ++ "(" ++ (showSep ", " $ toList args) ++ ")"
+cOp fn args = show fn ++ "(" ++ (joinBy ", " $ toList args) ++ ")"
 
 varName : AVar -> String
 varName (ALocal i) = "var_" ++ (show i)
@@ -561,7 +561,7 @@ mutual
                unless (elem pn prims) $ throw $ InternalError $ "[refc] Unknown primitive: " ++ cName p
             _ => throw $ InternalError $ "[refc] Unknown primitive: " ++ cName p
         emit fc $ "// call to external primitive " ++ cName p
-        pure $ "idris2_\{cName p}("++ showSep ", " (map varName args) ++")"
+        pure $ "idris2_\{cName p}("++ joinBy ", " (map varName args) ++")"
 
     cStatementsFromANF (AConCase fc sc alts mDef) tailPosition = do
         let sc' = varName sc
@@ -812,7 +812,7 @@ createCFunctions n (MkAFun args anf) = do
     let fn = "Value *\{cName !(getFullName n)}"
             ++ (if nargs == 0 then "(void)"
                else if nargs > MaxExtractFunArgs then "(Value *var_arglist[\{show nargs}])"
-               else ("\n(\n" ++ (showSep "\n" $ addCommaToList (map (\i =>  "  Value * var_" ++ (show i)) args))) ++ "\n)")
+               else ("\n(\n" ++ (joinBy "\n" $ addCommaToList (map (\i =>  "  Value * var_" ++ (show i)) args))) ++ "\n)")
     update FunctionDefinitions $ \otherDefs => (fn ++ ";\n") :: otherDefs
 
     let argsVars = fromList $ ALocal <$> args
@@ -861,7 +861,7 @@ createCFunctions n (MkAForeign ccs fargs ret) = do
                       [lib, header] => update HeaderFiles $ insert header
                       _ => pure ()
              else emit EmptyFC $ additionalFFIStub fctName fargs ret
-          let fnDef = "Value *" ++ (cName n) ++ "(" ++ showSep ", " (replicate (length fargs) "Value *") ++ ");"
+          let fnDef = "Value *" ++ (cName n) ++ "(" ++ joinBy ", " (replicate (length fargs) "Value *") ++ ");"
           update FunctionDefinitions $ \otherDefs => (fnDef ++ "\n") :: otherDefs
           typeVarNameArgList <- createFFIArgList fargs
 
@@ -874,21 +874,21 @@ createCFunctions n (MkAForeign ccs fargs ret) = do
               CFIORes CFUnit => do
                   emit EmptyFC $ cName fctName
                               ++ "("
-                              ++ showSep ", " (map (\(_, vn, vt) => extractValue cLang vt vn) (discardLastArgument typeVarNameArgList))
+                              ++ joinBy ", " (map (\(_, vn, vt) => extractValue cLang vt vn) (discardLastArgument typeVarNameArgList))
                               ++ ");"
                   removeVarsArgList
                   emit EmptyFC "return NULL;"
               CFIORes ret => do
                   emit EmptyFC $ cTypeOfCFType ret ++ " retVal = " ++ cName fctName
                               ++ "("
-                              ++ showSep ", " (map (\(_, vn, vt) => extractValue cLang vt vn) (discardLastArgument typeVarNameArgList))
+                              ++ joinBy ", " (map (\(_, vn, vt) => extractValue cLang vt vn) (discardLastArgument typeVarNameArgList))
                               ++ ");"
                   removeVarsArgList
                   emit EmptyFC $ "return (Value*)" ++ packCFType ret "retVal" ++ ";"
               _ => do
                   emit EmptyFC $ cTypeOfCFType ret ++ " retVal = " ++ cName fctName
                               ++ "("
-                              ++ showSep ", " (map (\(_, vn, vt) => extractValue cLang vt vn) typeVarNameArgList)
+                              ++ joinBy ", " (map (\(_, vn, vt) => extractValue cLang vt vn) typeVarNameArgList)
                               ++ ");"
                   removeVarsArgList
                   emit EmptyFC $ "return (Value*)" ++ packCFType ret "retVal" ++ ";"

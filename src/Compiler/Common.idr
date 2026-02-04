@@ -348,7 +348,7 @@ getCompileDataWith exports doLazyAnnots phase_in tm_in
                               traverse (lambdaLift doLazyAnnots) cseDefs
                          else pure []
 
-         let lifted = (mainname, MkLFun Scope.empty Scope.empty liftedtm) ::
+         let lifted = (mainname, MkLFun [] Scope.empty liftedtm) ::
                       (ldefs ++ concat lifted_in)
 
          anf <- if phase >= ANF

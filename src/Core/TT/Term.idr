@@ -3,15 +3,15 @@ module Core.TT.Term
 import Algebra
 
 import Core.FC
-
 import Core.Name.Scoped
+import Core.Name.CompatibleVars
 import Core.TT.Binder
 import Core.TT.Primitive
 import Core.TT.Var
 
-import Data.List
+import Data.String
 
-import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
 
 %default total
 
@@ -125,35 +125,34 @@ data Term : Scoped where
 
 public export
 ClosedTerm : Type
-ClosedTerm = Term []
+ClosedTerm = Term Scope.empty
 
 ------------------------------------------------------------------------
 -- Weakening
-
 export covering
 insertNames : GenWeakenable Term
-insertNames out ns (Local fc r idx prf)
-   = let MkNVar prf' = insertNVarNames out ns (MkNVar prf) in
+insertNames mid inn (Local fc r idx prf)
+   = let MkNVar prf' = insertNVarNames mid inn (MkNVar prf) in
      Local fc r _ prf'
-insertNames out ns (Ref fc nt name) = Ref fc nt name
-insertNames out ns (Meta fc name idx args)
-    = Meta fc name idx (map (insertNames out ns) args)
-insertNames out ns (Bind fc x b scope)
-    = Bind fc x (assert_total (map (insertNames out ns) b))
-           (insertNames (suc out) ns scope)
-insertNames out ns (App fc fn arg)
-    = App fc (insertNames out ns fn) (insertNames out ns arg)
-insertNames out ns (As fc s as tm)
-    = As fc s (insertNames out ns as) (insertNames out ns tm)
-insertNames out ns (TDelayed fc r ty) = TDelayed fc r (insertNames out ns ty)
-insertNames out ns (TDelay fc r ty tm)
-    = TDelay fc r (insertNames out ns ty) (insertNames out ns tm)
-insertNames out ns (TForce fc r tm) = TForce fc r (insertNames out ns tm)
-insertNames out ns (PrimVal fc c) = PrimVal fc c
-insertNames out ns (Erased fc Impossible) = Erased fc Impossible
-insertNames out ns (Erased fc Placeholder) = Erased fc Placeholder
-insertNames out ns (Erased fc (Dotted t)) = Erased fc (Dotted (insertNames out ns t))
-insertNames out ns (TType fc u) = TType fc u
+insertNames mid inn (Ref fc nt name) = Ref fc nt name
+insertNames mid inn (Meta fc name idx args)
+    = Meta fc name idx (map (insertNames mid inn) args)
+insertNames mid inn (Bind fc x b scope)
+    = Bind fc x (assert_total (map (insertNames mid inn) b))
+           (insertNames mid (suc inn) scope)
+insertNames mid inn (App fc fn arg)
+    = App fc (insertNames mid inn fn) (insertNames mid inn arg)
+insertNames mid inn (As fc s as tm)
+    = As fc s (insertNames mid inn as) (insertNames mid inn tm)
+insertNames mid inn (TDelayed fc r ty) = TDelayed fc r (insertNames mid inn ty)
+insertNames mid inn (TDelay fc r ty tm)
+    = TDelay fc r (insertNames mid inn ty) (insertNames mid inn tm)
+insertNames mid inn (TForce fc r tm) = TForce fc r (insertNames mid inn tm)
+insertNames mid inn (PrimVal fc c) = PrimVal fc c
+insertNames mid inn (Erased fc Impossible) = Erased fc Impossible
+insertNames mid inn (Erased fc Placeholder) = Erased fc Placeholder
+insertNames mid inn (Erased fc (Dotted t)) = Erased fc (Dotted (insertNames mid inn t))
+insertNames mid inn (TType fc u) = TType fc u
 
 export
 compatTerm : CompatibleVars xs ys -> Term xs -> Term ys
@@ -287,6 +286,11 @@ apply : FC -> Term vars -> List (Term vars) -> Term vars
 apply loc fn [] = fn
 apply loc fn (a :: args) = apply loc (App loc fn a) args
 
+export
+applySpine : FC -> Term vars -> SnocList (Term vars) -> Term vars
+applySpine loc fn [<] = fn
+applySpine loc fn (args :< a) = App loc (applySpine loc fn args) a
+
 -- Creates a chain of `App` nodes, each with its own file context
 export
 applySpineWithFC : Term vars -> SnocList (FC, Term vars) -> Term vars
@@ -316,6 +320,13 @@ getFnArgs tm = getFA [] tm
             (Term vars, List (Term vars))
     getFA args (App _ f a) = getFA (a :: args) f
     getFA args tm = (tm, args)
+
+export
+getFnArgsSpine : Term vars -> (Term vars, SnocList (Term vars))
+getFnArgsSpine (App _ f a)
+    = let (fn, sp) = getFnArgsSpine f in
+          (fn, sp :< a)
+getFnArgsSpine tm = (tm, [<])
 
 export
 getFn : Term vars -> Term vars
@@ -490,7 +501,7 @@ mutual
   resolveNames vars (Meta fc n i xs)
       = Meta fc n i (resolveNamesTerms vars xs)
   resolveNames vars (Bind fc x b scope)
-      = Bind fc x (resolveNamesBinder vars b) (resolveNames (x :: vars) scope)
+      = Bind fc x (resolveNamesBinder vars b) (resolveNames (Scope.bind vars x) scope)
   resolveNames vars (App fc fn arg)
       = App fc (resolveNames vars fn) (resolveNames vars arg)
   resolveNames vars (As fc s as pat)
@@ -554,5 +565,5 @@ covering
       showApp (TType _ u) [] = "Type"
       showApp _ [] = "???"
       showApp f args = "(" ++ assert_total (show f) ++ " " ++
-                        assert_total (showSep " " (map show args))
+                        assert_total (joinBy " " (map show args))
                      ++ ")"

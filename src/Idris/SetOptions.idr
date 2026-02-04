@@ -6,8 +6,6 @@ import Core.Binary
 import Core.Directory
 import Core.Metadata
 import Core.Unify
-import Libraries.Utils.Path
-import Libraries.Data.List.Extra
 
 import Idris.CommandLine
 import Idris.Package.Types
@@ -23,6 +21,9 @@ import Data.String
 
 import System
 import System.Directory
+
+import Libraries.Utils.Path
+import Libraries.Data.List.Extra
 
 %default covering
 
@@ -397,7 +398,7 @@ setIncrementalCG failOnError cgn
               if failOnError
                  then do coreLift $ putStrLn "No such code generator"
                          coreLift $ putStrLn $ "Code generators available: " ++
-                                         showSep ", " (map fst (availableCGs (options defs)))
+                                         joinBy ", " (map fst (availableCGs (options defs)))
                          coreLift $ exitWith (ExitFailure 1)
                  else pure ()
 
@@ -443,7 +444,7 @@ preOptions (SetCG e :: opts)
             Nothing =>
               do coreLift $ putStrLn "No such code generator"
                  coreLift $ putStrLn $ "Code generators available: " ++
-                                 showSep ", " (map fst (availableCGs (options defs)))
+                                 joinBy ", " (map fst (availableCGs (options defs)))
                  coreLift $ exitWith (ExitFailure 1)
 preOptions (Directive d :: opts)
     = do setSession ({ directives $= (d::) } !getSession)

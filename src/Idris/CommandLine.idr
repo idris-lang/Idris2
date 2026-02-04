@@ -398,14 +398,9 @@ options = [MkOpt ["--check", "-c"] [] [CheckOnly]
 
 optShow : OptDesc -> (String, Maybe String)
 optShow (MkOpt [] _ _ _) = ("", Just "")
-optShow (MkOpt flags argdescs action help) = (showSep ", " flags ++ " " ++
-                                              showSep " " (map show argdescs),
+optShow (MkOpt flags argdescs action help) = (joinBy ", " flags ++ " " ++
+                                              joinBy " " (map show argdescs),
                                               help)
-  where
-    showSep : String -> List String -> String
-    showSep sep [] = ""
-    showSep sep [x] = x
-    showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
 
 firstColumnWidth : Nat
 firstColumnWidth = let maxOpt = foldr max 0 $ map (length . fst . optShow) options

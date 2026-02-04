@@ -81,7 +81,7 @@ processDecl (MkWithData _ $ PMutual ps)
 
 processDecl decl
     = catch (do impdecls <- desugarDecl [] decl
-                traverse_ (Check.processDecl [] (MkNested []) Env.empty) impdecls
+                traverse_ (Check.processDecl [] (NestedNames.empty) Env.empty) impdecls
                 pure [])
             (\err => do giveUpConstraints -- or we'll keep trying...
                         pure [err])
