@@ -62,49 +62,49 @@ data Elab : Type -> Type where
 
      ResugarTerm : (maxLineWidth : Maybe Nat) -> TTImp -> Elab String
 
-     -- Elaborate a TTImp term to a concrete value
+     ||| Elaborate a TTImp term to a concrete value
      Check : TTImp -> Elab expected
-     -- Quote a concrete expression back to a TTImp
+     ||| Quote a concrete expression back to a TTImp
      Quote : (0 _ : val) -> Elab TTImp
 
-     -- Elaborate under a lambda
+     ||| Elaborate under a lambda
      Lambda : (0 x : Type) ->
               {0 ty : x -> Type} ->
               ((val : x) -> Elab (ty val)) -> Elab ((val : x) -> (ty val))
 
-     -- Get the current goal type, if known
-     -- (it might need to be inferred from the solution)
+     ||| Get the current goal type, if known
+     ||| (it might need to be inferred from the solution)
      Goal : Elab (Maybe TTImp)
-     -- Get the names of local variables in scope
+     ||| Get the names of local variables in scope
      LocalVars : Elab (List Name)
-     -- Generate a new unique name, based on the given string
+     ||| Generate a new unique name, based on the given string
      GenSym : String -> Elab Name
-     -- Put a name in the current namespace
+     ||| Put a name in the current namespace
      InCurrentNS : Name -> Elab Name
-     -- Get the types of every name which matches.
-     -- There may be ambiguities - returns a list of fully explicit names
-     -- and their types. If there's no results, the name is undefined.
+     ||| Get the types of every name which matches.
+     ||| There may be ambiguities - returns a list of fully explicit names
+     ||| and their types. If there's no results, the name is undefined.
      GetType : Name -> Elab (List (Name, TTImp))
-     -- Get the metadata associated with a name
+     ||| Get the metadata associated with a name
      GetInfo : Name -> Elab (List (Name, NameInfo))
-     -- Get the visibility associated with a name
+     ||| Get the visibility associated with a name
      GetVis : Name -> Elab (List (Name, Visibility))
-     -- Get the type of a local variable
+     ||| Get the type of a local variable
      GetLocalType : Name -> Elab TTImp
-     -- Get the constructors of a data type. The name must be fully resolved.
+     ||| Get the constructors of a data type. The name must be fully resolved.
      GetCons : Name -> Elab (List Name)
-     -- Get all function definition names referred in a definition. The name must be fully resolved.
+     ||| Get all function definition names referred in a definition. The name must be fully resolved.
      GetReferredFns : Name -> Elab (List Name)
-     -- Get the name of the current and outer functions, if it is applicable
+     ||| Get the name of the current and outer functions, if it is applicable
      GetCurrentFn : Elab (SnocList Name)
-     -- Check a group of top level declarations
+     ||| Check a group of top level declarations
      Declare : List Decl -> Elab ()
 
-     -- Read the contents of a file, if it is present
+     ||| Read the contents of a file, if it is present
      ReadFile : LookupDir -> (path : String) -> Elab $ Maybe String
-     -- Writes to a file, replacing existing contents, if were present
+     ||| Writes to a file, replacing existing contents, if were present
      WriteFile : LookupDir -> (path : String) -> (contents : String) -> Elab ()
-     -- Returns the specified type of dir related to the current idris project
+     ||| Returns the specified type of dir related to the current idris project
      IdrisDir : LookupDir -> Elab String
 
 export

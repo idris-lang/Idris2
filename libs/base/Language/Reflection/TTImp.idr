@@ -29,66 +29,96 @@ mutual
                  | UnderAppliedCon
   %name DotReason dr
 
+  ||| The elaborator representation of an Idris term
+  ||| All of these take a file context `FC` as their first argument
   public export
   data TTImp : Type where
+       ||| A variable reference, by name
        IVar : FC -> Name -> TTImp
-       IPi : FC -> Count -> PiInfo TTImp -> Maybe Name ->
+       ||| A function type, of the form `(mult binder : argTy) -> retTy`, with implicitness determined by `info`
+       IPi : FC -> (mult : Count) -> (info : PiInfo TTImp) -> (binder : Maybe Name) ->
              (argTy : TTImp) -> (retTy : TTImp) -> TTImp
-       ILam : FC -> Count -> PiInfo TTImp -> Maybe Name ->
+       ||| A lambda abstraction, of the form`\(mult binder : argTy) => retTy`, with implicitness determined by `info`
+       ILam : FC -> (mult : Count) -> (info : PiInfo TTImp) -> (binder : Maybe Name) ->
               (argTy : TTImp) -> (lamTy : TTImp) -> TTImp
-       ILet : FC -> (lhsFC : FC) -> Count -> Name ->
+       ||| A let binding, of the form `let mult var : nTy = nVal in scope`
+       ILet : FC -> (lhsFC : FC) -> (mult : Count) -> (var : Name) ->
               (nTy : TTImp) -> (nVal : TTImp) ->
               (scope : TTImp) -> TTImp
-       ICase : FC -> List FnOpt -> TTImp -> (ty : TTImp) ->
-               List Clause -> TTImp
-       ILocal : FC -> List Decl -> TTImp -> TTImp
-       IUpdate : FC -> List IFieldUpdate -> TTImp -> TTImp
+       ||| A case expression `case val : ty of clauses`
+       ICase : FC -> (opts : List FnOpt) -> (val : TTImp) -> (ty : TTImp) ->
+               (clauses : List Clause) -> TTImp
+       ||| A list of full declarations local to a term
+       ILocal : FC -> (context : List Decl) -> (term : TTImp) -> TTImp
+       ||| An update to a record value, `{ updates } val`
+       IUpdate : FC -> (updates : List IFieldUpdate) -> (val : TTImp) -> TTImp
 
-       IApp : FC -> TTImp -> TTImp -> TTImp
-       INamedApp : FC -> TTImp -> Name -> TTImp -> TTImp
-       IAutoApp : FC -> TTImp -> TTImp -> TTImp
+       ||| A function application, `f x`
+       IApp : FC -> (f : TTImp) -> (x : TTImp) -> TTImp
+       ||| A named function application (for named parameters), e.g, `f {arg=x}`
+       INamedApp : FC -> (f : TTImp) -> (arg : Name) -> (x : TTImp) -> TTImp
+       ||| An explicitly inserted auto implicit, `f @{x}`
+       IAutoApp : FC -> (f : TTImp) -> (x : TTImp) -> TTImp
+       ||| A view in a `with` rule
        IWithApp : FC -> TTImp -> TTImp -> TTImp
 
+       ||| `%search`
        ISearch : FC -> (depth : Nat) -> TTImp
+       ||| This operation is for expression that tries to typecheck expression in the list according to the given AltType and return either one of them, or default one (if present in the AltType), or fails
        IAlternative : FC -> AltType -> List TTImp -> TTImp
-       IRewrite : FC -> TTImp -> TTImp -> TTImp
+       ||| A rewrite expression, `rewrite eq in exp`
+       IRewrite : FC -> (eq : TTImp) -> (exp : TTImp) -> TTImp
 
-       -- Any implicit bindings in the scope should be bound here, using
-       -- the given binder
+       ||| Any implicit bindings in the scope should be bound here, using
+       ||| the given binder
        IBindHere : FC -> BindMode -> TTImp -> TTImp
-       -- A name which should be implicitly bound
+       ||| A name which should be implicitly bound
        IBindVar : FC -> Name -> TTImp
-       -- An 'as' pattern, valid on the LHS of a clause only
-       IAs : FC -> (nameFC : FC) -> UseSide -> Name -> TTImp -> TTImp
-       -- A 'dot' pattern, i.e. one which must also have the given value
-       -- by unification
+       ||| An 'as' pattern, valid on the LHS of a clause only, `group@pat`
+       IAs : FC -> (nameFC : FC) -> UseSide -> (group : Name) -> (pat : TTImp) -> TTImp
+       ||| A 'dot' pattern, i.e. one which must also have the given value
+       ||| by unification, `.(...)`
        IMustUnify : FC -> DotReason -> TTImp -> TTImp
 
        -- Laziness annotations
-       IDelayed : FC -> LazyReason -> TTImp -> TTImp -- the type
-       IDelay : FC -> TTImp -> TTImp -- delay constructor
+       ||| The delay type, `Delay t`
+       IDelayed : FC -> LazyReason -> TTImp -> TTImp
+       ||| The constructor of `Delay`, `delay t`
+       IDelay : FC -> TTImp -> TTImp
+       ||| `force`
        IForce : FC -> TTImp -> TTImp
 
-       -- Quasiquotation
+       ||| Quasi-quotation of expression (`( ... ))
        IQuote : FC -> TTImp -> TTImp
+       ||| Quasi-quotation of a name (`{ ... })
        IQuoteName : FC -> Name -> TTImp
+       ||| Quasi-quotation of a list of declarations (`[ ... ])
        IQuoteDecl : FC -> List Decl -> TTImp
+       ||| Unquote of an expression (~e)
        IUnquote : FC -> TTImp -> TTImp
-
+       ||| A primitive value, such as an integer or string constant.
+       ||| Also any primitive *type*, apart from `Type` itself
        IPrimVal : FC -> (c : Constant) -> TTImp
+       ||| The type `Type`
        IType : FC -> TTImp
+       ||| A named hole
        IHole : FC -> String -> TTImp
 
-       -- An implicit value, solved by unification, but which will also be
-       -- bound (either as a pattern variable or a type variable) if unsolved
-       -- at the end of elaborator
+       ||| An implicit value, solved by unification, but which will also be
+       ||| bound (either as a pattern variable or a type variable) if unsolved
+       ||| at the end of elaborator.
+       ||| Note that `Implicit False` is `?`, while `Implicit True` is `_`
        Implicit : FC -> (bindIfUnsolved : Bool) -> TTImp
-       IWithUnambigNames : FC -> List (FC, Name) -> TTImp -> TTImp
+       ||| `with name exp`
+       IWithUnambigNames : FC -> (name : List (FC, Name)) -> (exp : TTImp) -> TTImp
   %name TTImp s, t, u
 
+  ||| A record field update
   public export
   data IFieldUpdate : Type where
+       ||| `path := val`
        ISetField : (path : List String) -> TTImp -> IFieldUpdate
+       ||| `path $= val`
        ISetFieldApp : (path : List String) -> TTImp -> IFieldUpdate
 
   %name IFieldUpdate upd
@@ -105,22 +135,23 @@ mutual
        NoInline : FnOpt
        Deprecate : FnOpt
        TCInline : FnOpt
-       -- Flag means the hint is a direct hint, not a function which might
-       -- find the result (e.g. chasing parent interface dictionaries)
+       ||| Flag means the hint is a direct hint, not a function which might
+       ||| find the result (e.g. chasing parent interface dictionaries)
        Hint : Bool -> FnOpt
-       -- Flag means to use as a default if all else fails
+       ||| `%globalhint` if true, `%defaulthint` if false
        GlobalHint : Bool -> FnOpt
        ExternFn : FnOpt
-       -- Defined externally, list calling conventions
+       ||| Defined externally, list calling conventions
        ForeignFn : List TTImp -> FnOpt
-       -- Mark for export to a foreign language, list calling conventions
+       ||| Mark for export to a foreign language, list calling conventions
        ForeignExport : List TTImp -> FnOpt
-       -- assume safe to cancel arguments in unification
+       ||| assume safe to cancel arguments in unification
        Invertible : FnOpt
        Totality : TotalReq -> FnOpt
+       ||| `%macro`
        Macro : FnOpt
        SpecArgs : List Name -> FnOpt
-
+  ||| A name with an associated type
   public export
   data ITy : Type where
        MkTy : FC -> (n : WithFC Name) -> (ty : TTImp) -> ITy
@@ -129,11 +160,16 @@ mutual
 
   public export
   data DataOpt : Type where
-       SearchBy : List1 Name -> DataOpt -- determining arguments
-       NoHints : DataOpt -- Don't generate search hints for constructors
-       UniqueSearch : DataOpt -- auto implicit search must check result is unique
-       External : DataOpt -- implemented externally
-       NoNewtype : DataOpt -- don't apply newtype optimisation
+       ||| Determining arguments
+       SearchBy : List1 Name -> DataOpt
+       ||| Don't generate search hints for constructors
+       NoHints : DataOpt
+       ||| Auto implicit search must check result is unique
+       UniqueSearch : DataOpt
+       ||| Implemented externally
+       External : DataOpt
+       ||| Don't apply newtype optimization
+       NoNewtype : DataOpt
 
   %name DataOpt dopt
 
@@ -165,15 +201,18 @@ mutual
 
   public export
   data WithFlag = Syntactic
-
+  ||| A clause in a function definition
   public export
   data Clause : Type where
+       ||| A simple pattern
        PatClause : FC -> (lhs : TTImp) -> (rhs : TTImp) -> Clause
+       ||| A pattern with views
        WithClause : FC -> (lhs : TTImp) ->
                     (rig : Count) -> (wval : TTImp) -> -- with'd expression (& quantity)
                     (prf : Maybe (Count, Name)) -> -- optional name for the proof (& quantity)
                     (flags : List WithFlag) ->
                     List Clause -> Clause
+       ||| An impossible pattern
        ImpossibleClause : FC -> (lhs : TTImp) -> Clause
 
   %name Clause cl
@@ -209,22 +248,34 @@ mutual
                    (opts : List FnOpt) ->
                    (type : ITy) ->
                    IClaimData
-
+  ||| A top-level declaration
   public export
   data Decl : Type where
-       IClaim : WithFC IClaimData -> Decl
-       IData : FC -> WithDefault Visibility Private -> Maybe TotalReq -> Data -> Decl
-       IDef : FC -> Name -> (cls : List Clause) -> Decl
+       ||| A type ascription, `a : b`.
+       ||| Called a claim because of Curry Howard, the statement `x : p` is equivalent to `x` is a proof of `p`.
+       IClaim : (claim : WithFC IClaimData) -> Decl
+       ||| A data declaration
+       IData : FC -> (vis : WithDefault Visibility Private) -> Maybe TotalReq -> (cons : Data) -> Decl
+       ||| A function definition by its clauses
+       IDef : FC -> (f : Name) -> (cls : List Clause) -> Decl
+       ||| A parameter block
        IParameters : FC -> (params : List (Name, Count, PiInfo TTImp, TTImp)) ->
                      (decls : List Decl) -> Decl
+       ||| A record declaration
+       ||| @ ns Nested namespace
        IRecord : FC ->
-                 Maybe String -> -- nested namespace
-                 WithDefault Visibility Private ->
-                 Maybe TotalReq -> Record -> Decl
+                 (ns : Maybe String) ->
+                 (vis : WithDefault Visibility Private) ->
+                 (totality : Maybe TotalReq) -> (rec : Record) -> Decl
+       ||| A namespace declaration, `namespace ns where decls`
        INamespace : FC -> Namespace -> (decls : List Decl) -> Decl
+       ||| A transformation declaration
        ITransform : FC -> Name -> TTImp -> TTImp -> Decl
+       ||| A top-level elaboration run
        IRunElabDecl : FC -> TTImp -> Decl
+       ||| A logging directive
        ILog : Maybe (List String, Nat) -> Decl
+       ||| A builtin declaration, `%builtin type name`
        IBuiltin : FC -> BuiltinType -> Name -> Decl
 
   %name Decl decl
