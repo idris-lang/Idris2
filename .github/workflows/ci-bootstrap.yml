@@ -1,30 +1,23 @@
-######################################################################
-# Unlike the main yml file this uses the LTS version of chezscheme,
-# not the hirsute one. The main purpose is to make sure that
-# `make bootstrap` does not rely on `__collect_safe`.
-#
-# Note that we are *not* running on ubuntu-latest so this needs manual
-# upgrades if we want to jump on a newer github actions environment.
-######################################################################
+# Check bootstrap with the minimum supported Chez Scheme version.
 
 name: Bootstrap
 
+env:
+  MIN_CHEZ_VERSION: 9.5.1
+
 on:
   push:
-    paths:
+    paths: &paths
       - 'bootstrap/idris2_app/idris2.ss'
       - '.github/workflows/ci-bootstrap.yml'
   pull_request:
-    paths:
-      - 'bootstrap/idris2_app/idris2.ss'
-      - '.github/workflows/ci-bootstrap.yml'
+    paths: *paths
 
 jobs:
-
   initialise:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     steps:
-      - name: Checkout Project
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           # for pull_request so we can do HEAD^2
@@ -45,19 +38,31 @@ jobs:
 
   bootstrap:
     needs: initialise
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     if: |
       !contains(needs.initialise.outputs.commit_message, '[ci: skip]')
     env:
       IDRIS2_CG: chez
       SCHEME: scheme
     steps:
-      - name: Checkout
+      - name: Checkout project
         uses: actions/checkout@v4
-      - name: Install build dependencies (LTS versions)
+
+      - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y chezscheme
-          echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          sudo apt-get install -y uuid-dev
+
+      - name: Build and Install Chez Scheme
+        run: |
+          git clone --depth 1 --branch "v${MIN_CHEZ_VERSION}" https://github.com/cisco/ChezScheme.git
+          cd ChezScheme
+          # Newer GCC reports maybe-uninitialized in Chez 9.5.1
+          ./configure --threads --disable-x11 CFLAGS=-Wno-error=maybe-uninitialized
+          make -j$(nproc)
+          sudo make install
+          cd ..
+          rm -rf ChezScheme
+
       - name: Build bootstrap
         run: make bootstrap
