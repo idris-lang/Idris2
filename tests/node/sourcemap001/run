@@ -1,0 +1,14 @@
+. ../../testutils.sh
+
+# Build with source map directive
+idris2 --cg node --directive sourcemap -o sourcemap_test SourceMapTest.idr
+
+# Check that source map file was generated
+if [ -f build/exec/sourcemap_test.map ]; then
+  echo "Source map file generated: YES"
+else
+  echo "Source map file generated: NO"
+fi
+
+# Run the program (it reads the map file from hardcoded path)
+run --cg node SourceMapTest.idr

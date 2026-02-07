@@ -122,6 +122,7 @@ import Data.SortedMap as M
 import Libraries.Data.Graph
 import Core.CompileExpr
 import Core.Context
+import Core.FC
 
 --------------------------------------------------------------------------------
 --          Utilities
@@ -221,6 +222,7 @@ tailCallGroups funs =
 public export
 record Function where
   constructor MkFunction
+  fc   : FC       -- Source location for source map support
   name : Name
   args : List Name
   body : NamedCExp
@@ -293,7 +295,7 @@ convertTcGroup loop g@(MkTcGroup gindex fs) =
   let functions = sortBy (comparing index) $ values fs
       branches  = map (conAlt g) functions
       switch    = NmConCase EmptyFC (local tcArgName) branches Nothing
-   in MkFunction tcFun [tcArgName] switch :: map toFun functions
+   in MkFunction EmptyFC tcFun [tcArgName] switch :: map toFun functions
 
   where tcFun : Name
         tcFun = tcFunction gindex
@@ -308,25 +310,26 @@ convertTcGroup loop g@(MkTcGroup gindex fs) =
                         DATACON (Just ix) exps
               tcFun = NmRef EmptyFC tcFun
               body  = NmApp EmptyFC (NmRef EmptyFC loop) [tcFun,tcArg]
-           in MkFunction n args body
+           -- Tail-call optimized functions lose their original FC
+           in MkFunction EmptyFC n args body
 
 -- Tail recursion optimizations: Converts all groups of
 -- mutually tail recursive functions to an imperative loop.
 tailRecOptim :  List TcGroup
              -> (tcOptimized : SortedSet Name)
              -> (tcLoopName : Name)
-             -> List (Name,List Name,NamedCExp)
+             -> List (Name,FC,List Name,NamedCExp)
              -> List Function
 tailRecOptim groups names loop ts =
   let regular = mapMaybe toFun ts
       tailOpt = concatMap (convertTcGroup loop) groups
    in tailOpt ++ regular
 
-  where toFun : (Name,List Name,NamedCExp) -> Maybe Function
-        toFun (n,args,exp) =
+  where toFun : (Name,FC,List Name,NamedCExp) -> Maybe Function
+        toFun (n,fc,args,exp) =
           if contains n names
              then Nothing
-             else Just $ MkFunction n args exp
+             else Just $ MkFunction fc n args exp
 
 ||| Converts a list of toplevel definitions (potentially
 ||| several groups of mutually tail-recursive functions)
@@ -339,9 +342,13 @@ functions :  (tcLoopName : Name)
           -> List Function
 functions loop dfs =
   let ts     = mapMaybe def dfs
-      groups = tailCallGroups ts
+      groups = tailCallGroups (map dropFC ts)
       names  = SortedSet.fromList $ concatMap (keys . functions) groups
    in tailRecOptim groups names loop ts
-   where def : (Name,FC,NamedDef) -> Maybe (Name,List Name,NamedCExp)
-         def (n,_,MkNmFun args x) = Just (n,args,x)
-         def _                    = Nothing
+   where def : (Name,FC,NamedDef) -> Maybe (Name,FC,List Name,NamedCExp)
+         def (n,fc,MkNmFun args x) = Just (n,fc,args,x)
+         def _                     = Nothing
+
+         -- tailCallGroups expects tuples without FC
+         dropFC : (Name,FC,List Name,NamedCExp) -> (Name,List Name,NamedCExp)
+         dropFC (n,_,args,x) = (n,args,x)
