@@ -43,7 +43,10 @@ nix profile install github:idris-lang/Idris2
 The easiest way to install from source is via the existing generated Scheme
 code. The requirements are:
 
-- A Scheme compiler; either Chez Scheme (default), or Racket.
+- A Scheme compiler. One of
+  - Chez Scheme (default).\
+    Version `9.5.1` or newer; on Apple Silicon `10.0.0` or newer.
+  - Racket.
 - `bash`, `GNU make`, `gcc` or `clang`, `sha256sum` and `GMP`.  On Linux, you probably already
   have these.  On macOS and major BSD flavours, you can install them using a
   package manager: for instance, on macOS, you can install with the
