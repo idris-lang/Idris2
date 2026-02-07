@@ -1,0 +1,11 @@
+. ../../../testutils.sh
+
+# This test must complete within 5 seconds.
+# Without the fix for codata unification, it would hang indefinitely
+# trying to unify eta-equivalent functions in codata context.
+timeout 5 $idris2 --no-banner --no-color --console-width 0 --check CoDataEta.idr
+
+if [ $? -eq 124 ]; then
+    echo "TIMEOUT: Unification hung (this indicates the bug is present)"
+    exit 1
+fi
