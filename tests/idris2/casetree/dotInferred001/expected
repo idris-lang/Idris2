@@ -1,0 +1,17 @@
+1/1: Building Main (Main.idr)
+Main> 0 Main.foo
+Arguments [{arg:1}, {arg:2}, {arg:3}]
+Compile time tree: case {arg:3} of
+  (::) {e:1} {e:2} {e:3} {e:4} => case {e:4} of
+    (::) {e:5} {e:6} {e:7} {e:8} => case {e:8} of
+      (::) {e:9} {e:10} {e:11} {e:12} => case {e:12} of
+        Nil {e:13} => 1
+        _ => 2
+      _ => 2
+    _ => 2
+  _ => 2
+Erasable args: [0, 1]
+Inferrable args: [0, 1]
+Flags: covering
+Main> 
+Bye for now!
