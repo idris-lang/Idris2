@@ -176,12 +176,22 @@ assert_hasImplementation = TrustMeHI
 export
 hasImplementation : Elaboration m => (intf : a -> Type) -> (t : TTImp) ->
                     m (Maybe (HasImplementation intf t))
-hasImplementation c t = catch $ do
-  prf <- isType t
-  intf <- quote c
-  ty <- check {expected = Type} $ withParams emptyFC (const Nothing) prf.parameterNames `(~(intf) ~(t))
-  ignore $ check {expected = ty} `(%search)
-  pure TrustMeHI
+hasImplementation c t = do
+  Just prf <- catch $ isType t
+    | _ => Nothing <$ logMsg "derive.common.hasImplementation" 100
+                         "\{show t} is not a Type"
+  Just intf <- catch $ quote c
+    | _ => Nothing <$ logMsg "derive.common.hasImplementation" 100
+                         "Could not quote constraint"
+  Just ty <- catch $ check {expected = Type} $
+               withParams emptyFC (const Nothing) prf.parameterNames `(~(intf) ~(t))
+    | _ => Nothing <$ logMsg "derive.common.hasImplementation" 100
+                         "\{show (`(~(intf) ~(t)))} is not a Type"
+
+  Just _ <- catch $ check {expected = ty} `(%search)
+    | _ => Nothing <$ logMsg "derive.common.hasImplementation" 100
+                         "Could not find an implementation of \{show (`(~(intf) ~(t)))}"
+  pure (Just TrustMeHI)
 
 ------------------------------------------------------------------------------
 -- Utils
