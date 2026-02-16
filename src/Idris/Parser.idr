@@ -172,10 +172,14 @@ continueWith : IndentInfo -> String -> Rule ()
 continueWith indents req
     = mustContinue indents (Just req) *> symbol req
 
-iOperator : Rule OpStr
-iOperator
-    = OpSymbols <$> operator
-  <|> Backticked <$> (symbol "`" *> name <* symbol "`")
+symOperator : Rule OpStr
+symOperator = OpSymbols <$> operator
+
+backtickedOperator : Rule OpStr
+backtickedOperator = Backticked <$> (symbol "`" *> name <* symbol "`")
+
+generalOperator : Rule OpStr
+generalOperator = symOperator <|> backtickedOperator
 
 data ArgType
     = UnnamedExpArg PTerm
@@ -232,7 +236,7 @@ mutual
     <|> do b <- bounds (MkPair <$> simpleExpr fname indents <*> many (argExpr q fname indents))
            (f, args) <- pure b.val
            pure (applyExpImp (start b) (end b) f (concat args))
-    <|> do b <- fcBounds (MkPair <$> fcBounds iOperator <*> expr pdef fname indents)
+    <|> do b <- fcBounds (MkPair <$> fcBounds symOperator <*> expr pdef fname indents)
            (op, arg) <- pure b.val
            pure (PPrefixOp b.fc op arg)
     <|> fail "Expected 'case', 'if', 'do', application or operator expression"
@@ -348,7 +352,7 @@ mutual
       = do b <- fcBounds $ do
              binder <- fcBounds $ parens fname (opBinder fname indents)
              continue indents
-             op <- fcBounds iOperator
+             op <- fcBounds generalOperator
              commit
              e <- expr q fname indents
              pure (binder, op, e)
@@ -371,7 +375,7 @@ mutual
              <|>
              (do b <- bounds $ do
                         continue indents
-                        op <- fcBounds iOperator
+                        op <- fcBounds generalOperator
                         e <- case op.val of
                                OpSymbols (UN (Basic "$")) => typeExpr q fname indents
                                _ => expr q fname indents
@@ -417,7 +421,7 @@ mutual
       -- left section. This may also be a prefix operator, but we'll sort
       -- that out when desugaring: if the operator is infix, treat it as a
       -- section otherwise treat it as prefix
-      = do b <- bounds (do op <- fcBounds iOperator
+      = do b <- bounds (do op <- fcBounds generalOperator
                            e <- expr pdef fname indents
                            continueWithDecorated fname indents ")"
                            pure (op, e))
@@ -447,7 +451,7 @@ mutual
                             (PImplicit (boundToFC fname (mergeBounds s rest)))
                             rest.val)) <|>
              -- right sections
-             ((do op <- bounds (fcBounds iOperator <* decoratedSymbol fname ")")
+             ((do op <- bounds (fcBounds generalOperator <* decoratedSymbol fname ")")
                   actD (toNonEmptyFC $ boundToFC fname s, Keyword, Nothing)
                   let fc = boundToFC fname (mergeBounds s op)
                   pure (PSectionR fc e.val op.val)
@@ -1901,7 +1905,7 @@ parameters {auto fname : OriginDesc} {auto indents : IndentInfo}
            b <- fcBounds (do fixity <- decorate fname Keyword $ fix
                              commit
                              prec <- decorate fname Keyword $ intLit
-                             ops <- sepBy1 (decoratedSymbol fname ",") iOperator
+                             ops <- sepBy1 (decoratedSymbol fname ",") generalOperator
                              pure (MkPFixityData vis binding fixity (fromInteger prec) ops)
                        )
            pure (map PFixity b)
