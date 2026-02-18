@@ -1066,7 +1066,7 @@ mutual
      <|> opExpr q fname indents
 
   interpBlock : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
-  interpBlock q fname idents = interpBegin *> (mustWork $ expr q fname idents) <* interpEnd
+  interpBlock q fname idents = interpBegin *> (mustWork $ expr q fname idents <* interpEnd)
 
   export
   singlelineStr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
