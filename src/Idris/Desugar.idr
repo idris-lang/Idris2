@@ -230,9 +230,18 @@ parameters (side : Side)
            rtoks <- toTokList r
            pure (Expr l.getLhs :: Op fc opn.fc ((opn.val, fixInfo), Just l) precInfo :: rtoks)
   toTokList (PPrefixOp fc opn arg)
-      = do (precInfo, fixInfo) <- checkConflictingFixities True opn
-           rtoks <- toTokList arg
-           pure (Op fc opn.fc ((opn.val, fixInfo), Nothing) precInfo :: rtoks)
+      = case opn.val of
+             Backticked nm
+               => throw $ GenericMsgSol opn.fc
+                            "Cannot use backticked name as a prefix operator"
+                            "Possible solutions"
+                            [ "Use section: " ++ show (PSectionL fc opn arg)
+                            , "Use application: " ++ show (PApp fc (PRef opn.fc nm) arg)
+                            ]
+             OpSymbols {}
+               => do (precInfo, fixInfo) <- checkConflictingFixities True opn
+                     rtoks <- toTokList arg
+                     pure (Op fc opn.fc ((opn.val, fixInfo), Nothing) precInfo :: rtoks)
   toTokList t = pure [Expr t]
 
 record BangData where

@@ -236,7 +236,7 @@ mutual
     <|> do b <- bounds (MkPair <$> simpleExpr fname indents <*> many (argExpr q fname indents))
            (f, args) <- pure b.val
            pure (applyExpImp (start b) (end b) f (concat args))
-    <|> do b <- fcBounds (MkPair <$> fcBounds symOperator <*> expr pdef fname indents)
+    <|> do b <- fcBounds (MkPair <$> fcBounds generalOperator <*> expr pdef fname indents)
            (op, arg) <- pure b.val
            pure (PPrefixOp b.fc op arg)
     <|> fail "Expected 'case', 'if', 'do', application or operator expression"
