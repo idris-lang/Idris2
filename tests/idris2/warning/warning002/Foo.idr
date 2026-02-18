@@ -20,4 +20,3 @@ dep3 x = x ++ "!"
 public export
 0 foo : (0 a : Type) -> Type
 foo x = List x
-

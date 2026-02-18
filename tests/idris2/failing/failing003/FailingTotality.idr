@@ -20,4 +20,3 @@ failing "D is not total, not strictly positive"
 
   data D : Type where
     Lam : (D -> D) -> D
-

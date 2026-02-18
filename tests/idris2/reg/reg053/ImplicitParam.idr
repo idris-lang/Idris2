@@ -4,4 +4,3 @@ import Data.Vect
 parameters {n : Nat}
     foo : Vect m Nat -> Nat
     foo xs = ?hole
-

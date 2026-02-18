@@ -257,7 +257,7 @@ conAlt (MkTcGroup tcIx funs) (MkTcFunction n ix args exp) =
        tcDone : NamedCExp -> NamedCExp
        tcDone x = NmCon EmptyFC (tcDoneName tcIx) DATACON (Just 0) [x]
 
-       -- this is returned in case we arrived at a resursive call
+       -- this is returned in case we arrived at a recursive call
        -- in tail position. The index indicates the next "function"
        -- to call, the list of expressions are the function's
        -- arguments.

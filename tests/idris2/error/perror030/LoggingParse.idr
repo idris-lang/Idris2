@@ -4,4 +4,3 @@ import Data.Vect
 
 [Named] {n : Nat} -> Show (Vect n a) where
   show x = "whatever"
-

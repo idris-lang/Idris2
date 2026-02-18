@@ -37,6 +37,8 @@ idris2docs_venv
 # NixOS
 /result
 
+node_modules
+
 # Editor/IDE Related
 # WARNING:
 #   do not put comments on the same line as a regex

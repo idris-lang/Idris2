@@ -9,4 +9,3 @@ main =
   do m <- makeMutex
      mutexRelease m
      putStrLn "Released w/o acquiring (SHOULDN'T HAPPEN)"
-

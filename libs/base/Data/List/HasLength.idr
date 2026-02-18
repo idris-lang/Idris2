@@ -156,4 +156,3 @@ natTerminating : (n : Nat) -> (0 p : HasLength n xs ) -> P xs
 natTerminating n p = case view n p of
   Z => PNil
   S n p => PCon (natTerminating n (map id p))
-

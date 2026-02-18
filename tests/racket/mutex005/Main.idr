@@ -18,4 +18,3 @@ main =
      mutexRelease m
      putStrLn "Main released mutex"
      threadWait t
-

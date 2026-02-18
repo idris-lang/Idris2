@@ -134,7 +134,7 @@ candidateDirs dname pkgName bounds = do
 ||| will be sorted with the latest package version first.
 |||
 ||| All package _search paths_ will be searched for package
-||| _directories_ that fit the requested critera.
+||| _directories_ that fit the requested criteria.
 |||
 ||| Only packages with build artifacts for the correct TTC version for the
 ||| compiler will be considered.

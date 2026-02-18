@@ -415,4 +415,3 @@ r10Proof : Models ((), ()) Nat
               (ExistsFinally ((), ()) Nat
                   (Guarded ((), ()) Nat (\ st, _ => st === 10)))
 r10Proof = diModels ((), ()) Nat (reaches10.evidence Oh)
-

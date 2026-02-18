@@ -1,4 +1,4 @@
-||| Result-type changing `Fin` arithmetics
+||| Result-type changing `Fin` arithmetic
 module Data.Fin.Arith
 
 import public Data.Fin

@@ -7,4 +7,3 @@ willCasesplitAutoImplicit @{a} b = ?willCasesplitAutoImplicit_rhs
 
 willCasesplitAutoThenNonImplicit : Bool => Bool -> ()
 willCasesplitAutoThenNonImplicit @{a} b = ?willCasesplitAutoThenNonImplicit_rhs
-

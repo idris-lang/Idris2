@@ -122,7 +122,7 @@ mkDropSubst i es rest (x :: xs)
              then (vs ** Drop sub)
              else (x :: vs ** Keep sub)
 
--- See if the constructor is a special constructor type, e.g a nil or cons
+-- See if the constructor is a special constructor type, e.g. a nil or cons
 -- shaped thing.
 dconFlag : {auto c : Ref Ctxt Defs} ->
            Name -> Core ConInfo

@@ -11,4 +11,3 @@ omega = Abs (\x => app x x)
 total
 Omega : Void
 Omega = app omega omega
-

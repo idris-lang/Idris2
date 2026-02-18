@@ -194,7 +194,7 @@ export
 negAnyAll : {xs : List1 a} -> Not (Any p xs) -> All (Not . p) xs
 negAnyAll {xs=x:::xs} f = (f . Here) ::: negAnyAll (f . There)
 
-||| If there exists an element that doesn't satify the property, then it is
+||| If there exists an element that doesn't satisfy the property, then it is
 ||| not the case that all elements satisfy it.
 export
 anyNegAll : {xs : List1 _} -> Any (Not . p) xs -> Not (All p xs)
@@ -289,4 +289,3 @@ decide dec (x :: xs) = case dec x of
   Right px => Right (Here px)
 
 -}
-

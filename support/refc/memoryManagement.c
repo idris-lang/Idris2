@@ -300,7 +300,7 @@ void idris2_removeReference(Value *elem) {
 }
 
 // /////////////////////////////////////////////////////////////////////////
-// PRE-DEFINED VLAUES
+// PRE-DEFINED VALUES
 
 #define IDRIS2_MK_PREDEFINED_INT_10(t, n)                                      \
   {IDRIS2_STOCKVAL(t), (n + 0)}, {IDRIS2_STOCKVAL(t), (n + 1)},                \

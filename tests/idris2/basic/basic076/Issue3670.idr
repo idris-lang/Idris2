@@ -33,4 +33,3 @@ LawfulChain Vect Modification where
   apply input (Apply prev (Insert idx it)) = insertAt idx it (apply input prev)
   apply input (Apply prev (Delete idx)) = deleteAt idx (apply input prev)
   applyCorrect input chain = ?applyCorrect_rhs
-

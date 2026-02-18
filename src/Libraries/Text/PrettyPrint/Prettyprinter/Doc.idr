@@ -41,7 +41,7 @@ public export
 data FusionDepth : Type where
   ||| Do not dive deep into nested documents.
   Shallow : FusionDepth
-  ||| Recurse into all parts of the `Doc`. May impact performace.
+  ||| Recurse into all parts of the `Doc`. May impact performance.
   Deep : FusionDepth
 
 ||| This data type represents pretty documents that have
@@ -366,7 +366,7 @@ Functor Doc where
 |||
 ||| Pro tips:
 ||| 1. use `prettyBy` if a subprinter uses a different type of annotations
-||| 2. use a variable `ann` rather than `Void` if no annnotation is needed
+||| 2. use a variable `ann` rather than `Void` if no annotation is needed
 |||    (to avoid needless calls to `prettyBy absurd`)
 public export
 interface Pretty ann a | a where

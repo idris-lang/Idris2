@@ -70,7 +70,7 @@ log' lvl msg
 ||| If you want to use some `Core` computation to produce a message string, use `logC`.
 ||| I.e. instead of `log "topic" 10 "message \{show !(toFullNames fn)}"` use
 ||| `logC "topic" 10 $ do pure ""message \{show !(toFullNames fn)}""`.
-||| This will enfore that additional computation happends only when needed.
+||| This will enforce that additional computation happens only when needed.
 ||| `do` before `pure` in this case ensures the correct bounds.
 export
 log : {auto c : Ref Ctxt Defs} ->

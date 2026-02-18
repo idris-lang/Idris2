@@ -12,4 +12,3 @@ import Data.String
 public export
 rtrim : String -> String
 rtrim = reverse . ltrim . reverse
-

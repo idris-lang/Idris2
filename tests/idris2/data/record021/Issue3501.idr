@@ -4,4 +4,3 @@ record Foo (th : Vect n a) where
   vectIsEmpty : (th ===)
                  $ replace {p = \ n => Vect n a} (sym nIsZero)
                  $ Nil
-

@@ -1,6 +1,6 @@
 ||| Code common to all the scheme backend
 |||
-||| In most cases the inital `Nat` argument
+||| In most cases the initial `Nat` argument
 ||| is the number of cases a given expression is under.
 ||| it is used to generate new unique names for the scrutinee of a case block
 module Compiler.Scheme.Common

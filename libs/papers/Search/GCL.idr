@@ -433,4 +433,3 @@ checkDekkers =
   efSearch _ _
     (now _ _ (\p, _ => (fromDec $ IsTT (p.inCS1 && p.inCS2))))
     (model _ _ dekkers init) 100
-

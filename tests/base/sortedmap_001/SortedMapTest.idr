@@ -53,5 +53,3 @@ main =
   do
     ignore $ traverse printLn testLookupBetween
     ignore $ traverse printLn testLeftRight
-
-

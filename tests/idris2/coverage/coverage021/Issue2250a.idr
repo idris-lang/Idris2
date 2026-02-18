@@ -16,4 +16,3 @@ Bug Refl impossible
 
 Yikes : Void
 Yikes = Bug Ex1
-

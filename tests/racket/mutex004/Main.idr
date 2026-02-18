@@ -13,4 +13,3 @@ main =
      putStrLn "1st release"
      mutexRelease m
      putStrLn "2nd release (SHOULDN'T HAPPEN)"
-

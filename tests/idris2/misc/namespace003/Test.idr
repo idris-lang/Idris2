@@ -30,4 +30,3 @@ testFailing2 f a =
 testSucceeding2 : (a -> b) -> IO a -> IO b
 testSucceeding2 f a = B.do
   [| f a |]
-

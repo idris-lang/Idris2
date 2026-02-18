@@ -422,7 +422,7 @@ export
 Show LazyReason where
     show LInf = "Inf"
     show LLazy = "Lazy"
-    show LUnknown = "Unkown"
+    show LUnknown = "Unknown"
 
 export
 compatible : LazyReason -> LazyReason -> Bool

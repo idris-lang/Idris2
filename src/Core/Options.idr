@@ -249,7 +249,7 @@ defaultElab : ElabDirectives
 defaultElab = MkElabDirectives True True CoveringOnly 3 50 25 5 True
 
 -- FIXME: This turns out not to be reliably portable, since different systems
--- may have tools with the same name but different required arugments. We
+-- may have tools with the same name but different required arguments. We
 -- probably need another way (perhaps our own internal hash function, although
 -- that's not going to be as good as sha256).
 export

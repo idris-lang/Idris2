@@ -217,5 +217,3 @@ set :
     (newVal : out) ->
     Record fields -> Record fields
 set field newVal rec = update field (const newVal) rec
-
-

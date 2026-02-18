@@ -542,12 +542,12 @@ processEdit (Refine upd line hole e)
                syn <- get Syn
                md <- get MD
                defs <- branch
-               infered <- inferAndElab InExpr e env
+               inferred <- inferAndElab InExpr e env
                put UST ust
                put Syn syn
                put MD md
                put Ctxt defs
-               let tele = underPis (-1) env $ typeOf infered
+               let tele = underPis (-1) env $ typeOf inferred
                pure (lengthExplicitPi $ fst $ snd tele)
 
          -- Now that we have a hole & a function to use inside it,

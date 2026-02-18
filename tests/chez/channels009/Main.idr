@@ -48,4 +48,3 @@ main = do
   threadWait p4
   threadWait p5
   ignore $ traverse (\t => threadWait t) consumerThreads
-

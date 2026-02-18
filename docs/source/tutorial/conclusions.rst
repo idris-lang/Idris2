@@ -52,7 +52,7 @@ dependent types in general, can be obtained from various sources:
 .. [#Brady2013] E. BRADY, "Idris, a general-purpose dependently typed
        programming language: Design and implementation," Journal of Functional
        Programming, vol. 23, no. 5, pp. 552-593, 2013.
-       doi:10.1017/S095679681300018X https://doi.org/10.1017/S095679681300018X 
+       doi:10.1017/S095679681300018X https://doi.org/10.1017/S095679681300018X
 
 .. [#Brady2011] Edwin C. Brady. 2011. IDRIS ---: systems programming meets full
        dependent types. In Proceedings of the 5th ACM workshop on

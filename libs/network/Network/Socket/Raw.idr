@@ -24,7 +24,7 @@ data BufPtr = BPtr AnyPtr
 public export
 data SockaddrPtr = SAPtr AnyPtr
 
--- ---------------------------------------------------------- [ Socket Utilies ]
+-- ---------------------------------------------------------- [ Socket Utilities ]
 
 ||| Put a value in a buffer
 export

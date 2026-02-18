@@ -5,4 +5,3 @@ lteZeroSuccAbsurd y = absurd y
 
 lteSuccAbsurd : LTE (S x) x -> Void
 lteSuccAbsurd y = succNotLTEpred y
-

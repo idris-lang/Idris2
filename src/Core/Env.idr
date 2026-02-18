@@ -304,7 +304,7 @@ uniqifyEnv env = uenv [] env
     uniqueLocal : List Name -> Name -> Name
     uniqueLocal vs n
        = if n `elem` vs
-                 -- we'll find a new name eventualy since the list of names
+                 -- we'll find a new name eventually since the list of names
                  -- is empty, and next generates something new. But next has
                  -- to be correct... an exercise for someone: this could
                  -- probebly be done without an assertion by making a stream of

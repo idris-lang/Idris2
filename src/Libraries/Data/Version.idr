@@ -108,7 +108,7 @@ versionParser = do
 ||| <major>.<minor>.<patch>(-<tag>)?
 ||| ```
 ||| where <major>, <minor> and <patch> are natural integers and tag is an optional
-||| alpha-numeric string.
+||| alphanumeric string.
 export
 parseVersion : String -> Maybe Version
 parseVersion str =

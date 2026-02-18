@@ -25,4 +25,3 @@ negNaN = negate nan
 -- NaNs are never equal
 nansNotEq : Bool
 nansNotEq = nan == nan
-

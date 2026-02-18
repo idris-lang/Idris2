@@ -88,7 +88,7 @@ data Def : Type where
     ExternDef : (arity : Nat) -> Def
     ForeignDef : (arity : Nat) ->
                  List String -> -- supported calling conventions,
-                                -- e.g "C:printf,libc,stdlib.h", "scheme:display", ...
+                                -- e.g. "C:printf,libc,stdlib.h", "scheme:display", ...
                  Def
     Builtin : {arity : Nat} -> PrimFn arity -> Def
     DCon : (tag : Int) -> (arity : Nat) ->
@@ -219,7 +219,7 @@ data DefFlag
     | SetTotal TotalReq
     | BlockedHint -- a hint, but blocked for the moment (so don't use)
     | Macro
-    | PartialEval (List (Name, Nat)) -- Partially evaluate on completing defintion.
+    | PartialEval (List (Name, Nat)) -- Partially evaluate on completing definition.
          -- This means the definition is standing for a specialisation so we
          -- should evaluate the RHS, with reduction limits on the given names,
          -- and ensure the name has made progress in doing so (i.e. has reduced

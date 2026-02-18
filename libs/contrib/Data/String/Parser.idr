@@ -413,4 +413,3 @@ export
 ntimes : Monad m => (n : Nat) -> ParseT m a -> ParseT m (Vect n a)
 ntimes    Z  p = pure Vect.Nil
 ntimes (S n) p = [| p :: (ntimes n p) |]
-

@@ -47,4 +47,3 @@ nestedEarlyDefault A B = 2
 nestedEarlyDefault B A = 3
 nestedEarlyDefault _ _ = 4
 nestedEarlyDefault B B = 5
-

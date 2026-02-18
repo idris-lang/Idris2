@@ -242,7 +242,7 @@ stMain cgs opts
     coreLift (die msg)
 
 -- Run any options (such as --version or --help) which imply printing a
--- message then exiting. Returns wheter the program should continue
+-- message then exiting. Returns whether the program should continue
 
 quitOpts : List CLOpt -> IO Bool
 quitOpts [] = pure True

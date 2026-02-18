@@ -154,4 +154,3 @@ fPoll (FHandle f)
 export
 isTTY : HasIO io => (h : File) -> io Bool
 isTTY (FHandle f) = (/= 0) <$> primIO (prim__fileIsTTY f)
-

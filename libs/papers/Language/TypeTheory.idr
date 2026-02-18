@@ -676,7 +676,7 @@ namespace Section4
     NVar : Name -> Stuck
     ||| An application whose function is stuck is also stuck
     NApp : Stuck -> Value -> Stuck
-    ||| An induction principle applied to a stuck natural numnber is stuck
+    ||| An induction principle applied to a stuck natural number is stuck
     NRec : (pred, pz, ps : Value) -> Stuck -> Stuck
 
   ||| Types are just values in TT

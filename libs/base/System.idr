@@ -49,7 +49,7 @@ sleep sec = primIO (prim__sleep sec)
 
 ||| Sleep for the specified number of microseconds or, if signals are supported,
 ||| until an un-ignored signal arrives.
-||| The exact wall-clock time slept might slighly differ depending on how busy
+||| The exact wall-clock time slept might slightly differ depending on how busy
 ||| the system is and the resolution of the system's clock.
 |||
 ||| @ usec the number of microseconds to sleep for
@@ -62,7 +62,7 @@ usleep usec = primIO (prim__usleep usec)
 --       with the path to the `node` executable. This is
 --       inconsistent with other backends, which only list
 --       the path to the running program. For reasons of
---       consistency across backends, this first argument ist
+--       consistency across backends, this first argument is
 --       dropped on the node backend.
 %foreign "scheme:blodwen-arg-count"
          supportC "idris2_getArgCount"

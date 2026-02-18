@@ -207,7 +207,7 @@ parameters {auto c : Ref Ctxt Defs}
         res <- callPrim stk fn argObjs
         setReg stk target res
     step stk (EXTPRIM target fn args) = case lookup fn knownExtern of
-        Nothing => interpError stk $ "EXTPRIM: Unkown foreign function: " ++ show fn
+        Nothing => interpError stk $ "EXTPRIM: Unknown foreign function: " ++ show fn
         Just (ar ** op) => case toVect ar args of
             Nothing => interpError stk $ "EXTPRIM: Wrong number of arguments, found: " ++ show (length args) ++ ", expected: " ++ show ar
             Just argsVect => do
@@ -269,7 +269,7 @@ parameters {auto c : Ref Ctxt Defs}
                 traverse_ (step stk') is'
                 getReg stk' RVal
             Just (MkVMForeign {}) => case lookup fn knownForeign of
-                Nothing => interpError stk $ "Unkown foreign function: " ++ show fn
+                Nothing => interpError stk $ "Unknown foreign function: " ++ show fn
                 Just (ar ** op) => case toVect ar args of
                     Nothing => interpError stk $ "Wrong number of arguments, found: " ++ show (length args) ++ ", expected: " ++ show ar
                     Just argsVect => op stk argsVect
@@ -283,7 +283,7 @@ compileExpr :
   Ref Ctxt Defs ->
   Ref Syn SyntaxInfo ->
   String -> String -> ClosedTerm -> String -> Core (Maybe String)
-compileExpr _ _ _ _ _ _ = throw (InternalError "compile not implemeted for vmcode-interp")
+compileExpr _ _ _ _ _ _ = throw (InternalError "compile not implemented for vmcode-interp")
 
 executeExpr :
   Ref Ctxt Defs ->

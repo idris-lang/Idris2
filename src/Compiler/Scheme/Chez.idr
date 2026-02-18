@@ -678,7 +678,7 @@ incCompile c s sourceFile
          let ndefs = namedDefs cdata
          if isNil ndefs
             then pure (Just ("", []))
-                      -- ^ no code to generate, but still recored that the
+                      -- ^ no code to generate, but still recorded that the
                       -- module has been compiled, with no output needed.
             else do
                l <- newRef {t = List String} Loaded ["libc", "libc 6"]

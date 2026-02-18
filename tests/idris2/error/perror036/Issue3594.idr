@@ -7,4 +7,3 @@ data Color : Type where
 implementation Show Color where
   show Red = "red
   show Blue = "blue"
-

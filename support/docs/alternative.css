@@ -126,7 +126,7 @@ pre {
   margin-bottom: 8px;
 }
 
-.decls > dd > dl:not(.decls):not(:first-child) {
+.decls > dd > dl:not(.decls, :first-child) {
   padding-top: 5px;
   border-top: 1px solid #eee;
 }
@@ -260,7 +260,7 @@ body.index .container a:hover {
   flex: 1;
 }
 
-@media (max-width: 800px) {
+@media (width <= 800px) {
   .index-wrapper {
     flex-direction: column;
   }

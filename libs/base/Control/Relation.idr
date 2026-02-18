@@ -3,7 +3,7 @@
 ||| A prominent example of a binary relation is LTE over Nat.
 |||
 ||| This module defines some interfaces for describing properties of
-||| binary relations. It also proves somes relations among relations.
+||| binary relations. It also proves some relations among relations.
 
 module Control.Relation
 

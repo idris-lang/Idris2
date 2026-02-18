@@ -1,0 +1,5 @@
+[codespell]
+# Skip Idris 2 source files as they contain many short variable names
+# that cause false positives (e.g., `numer`, `delt`, `inh`)
+skip = *.rst,*.idr,*.ss,*.rkt,*.scm,*.lock,*package-lock.json
+ignore-words-list = clos,WTH

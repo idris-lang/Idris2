@@ -15,4 +15,3 @@ main = printLn $ filter (not . roundTrips) chars
            in case parse (show v) of
                    Just (JString x) => x == s
                    _                => False
-

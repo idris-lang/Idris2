@@ -14,4 +14,3 @@ int = parseInteger "-123"
 
 integerProof : Main.int === Just (-123)
 integerProof = Refl
-

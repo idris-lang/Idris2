@@ -209,7 +209,7 @@ data Stuck : LContext -> Type where
   NVar : Level nm f -> Stuck f
   ||| An application whose function is stuck is also stuck
   NApp : Stuck f -> Value f -> Stuck f
-  ||| An induction principle applied to a stuck natural numnber is stuck
+  ||| An induction principle applied to a stuck natural number is stuck
   NRec : (pred, pz, ps : Value f) -> Stuck f -> Stuck f
 
 Kripke f = (0 ext : _) -> Value (ext ++ f) -> Value (ext ++ f)

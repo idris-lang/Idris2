@@ -1,0 +1,5 @@
+---
+rules:
+  unpinned-uses:
+    # Allow referencing actions by tags instead of commit SHAs
+    disable: true

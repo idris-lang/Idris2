@@ -449,4 +449,3 @@ closeMatch (NS pathTest nameTest) (NS pathRef nameRef)
     in map ((<= closeNamespaceDistance) . sum) tests
 closeMatch (UN (Basic test)) (UN (Basic ref)) = closeDistance test ref
 closeMatch _ _ = pure False
-

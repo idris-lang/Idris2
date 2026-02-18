@@ -227,7 +227,7 @@
           (> xval yval))))
 
 ; casts
-; when targetting integers, we add the Vector on the Idris side
+; when targeting integers, we add the Vector on the Idris side
 
 (define ct-cast-num
   (lambda (x)

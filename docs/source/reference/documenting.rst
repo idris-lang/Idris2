@@ -61,13 +61,13 @@ italics correctly). A comprehensive set of examples is given below.
     ||| Add some numbers.
     |||
     ||| Addition is really great. This paragraph is not part of the overview.
-    ||| Still the same paragraph. 
+    ||| Still the same paragraph.
     |||
     ||| You can even provide examples which are inlined in the documentation:
     ||| ```idris example
     ||| add 4 5
     ||| ```
-    ||| 
+    |||
     ||| Lists are also nifty:
     ||| * Really nifty!
     ||| * Yep!

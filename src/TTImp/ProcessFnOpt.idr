@@ -149,7 +149,7 @@ processFnOpt fc _ ndef (SpecArgs ns)
 
     -- If the name of an argument is in the list of specialisable arguments,
     -- record the position. Also record the position of anything the argument
-    -- depends on which is only dependend on by declared static arguments.
+    -- depends on which is only depended on by declared static arguments.
     collectSpec : NatSet    -> -- specialisable so far
                   List Name -> -- things depended on by dynamic args
                                -- We're assuming it's a short list, so just use

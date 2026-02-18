@@ -6,4 +6,3 @@ import Lin
 
 data S : {ty : Type} -> (x : ty) -> Type where
   MkS : (x <- ty) =@ S x
-

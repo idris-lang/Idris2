@@ -36,7 +36,7 @@ public export
 data FusionDepth : Type where
   ||| Do not dive deep into nested documents.
   Shallow : FusionDepth
-  ||| Recurse into all parts of the `Doc`. May impact performace.
+  ||| Recurse into all parts of the `Doc`. May impact performance.
   Deep : FusionDepth
 
 ||| This data type represents pretty documents that have

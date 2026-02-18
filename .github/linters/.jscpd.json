@@ -1,0 +1,13 @@
+{
+  "threshold": 10,
+  "gitignore": true,
+  "ignore": [
+    "**/tests/*/**",
+    "**/support/**",
+    "**/bootstrap/**",
+    "**/benchmark/benchmarks/**"
+  ],
+  "formatsExts": {
+    "haskell": ["idr"]
+  }
+}

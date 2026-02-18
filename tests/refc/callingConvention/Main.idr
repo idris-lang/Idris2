@@ -14,4 +14,3 @@ main = do
   flip for_ (printLn . (`last` 0))
      $ [] :: map (\ x => [1..x]) [1..5]
   printLn $ dupargs 9999
-

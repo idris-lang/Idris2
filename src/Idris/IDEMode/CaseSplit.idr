@@ -240,7 +240,7 @@ getCaseStmtType toks
               foldr (\e,a => a + (length . toString) e) 0 preOf
 
 
-||| Given a list of characters reprsenting an update string, drop its last
+||| Given a list of characters representing an update string, drop its last
 ||| element.
 dropLast : (updChars : List Char) -> List Char
 dropLast updChars with (snocList updChars)
@@ -285,7 +285,7 @@ handleOnelineParen indentation upds with (snocList upds)
     handleMiddle (u :: us)
       = (parenTrim $ onelineIndent indentation u) :: handleMiddle us
 
-||| A `HoleName` folled by a parenthesis needs to have the parenthesis removed
+||| A `HoleName` followed by a parenthesis needs to have the parenthesis removed
 ||| from every update apart from the final one.
 handleHoleNameParen : (upds : List String) -> List String
 handleHoleNameParen upds with (snocList upds)

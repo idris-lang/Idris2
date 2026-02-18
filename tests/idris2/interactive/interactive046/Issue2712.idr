@@ -22,4 +22,3 @@ failing "Cycle detected in solution of metavariable"
   foo' CMD_INCR = ?foo_bis_rhs_1
   foo' (Pure x) = ?foo_bis_rhs_2
   foo' (x >>= f) = ?foo_bis_rhs_3
-

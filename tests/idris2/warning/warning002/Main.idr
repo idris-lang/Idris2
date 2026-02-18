@@ -16,4 +16,3 @@ testErasedFunction xs = xs
 
 0 testInErasedContext : Type
 testInErasedContext = foo Int
-

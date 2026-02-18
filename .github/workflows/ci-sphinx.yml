@@ -1,26 +1,30 @@
+---
 name: Sphinx
+
+permissions:
+  contents: read
 
 on:
   push:
     branches:
-      - '*'
+      - "*"
     tags:
-      - '*'
+      - "*"
   pull_request:
     branches:
       - main
 jobs:
-
   sphinx-doc-check:
     name: Sphinx
     runs-on: ubuntu-latest
     steps:
-
-    - name: Checkout
-      uses: actions/checkout@v4
-    - name: Build docs
-      run: |
-        sudo apt-get install -y python3-sphinx
-        pip3 install -r docs/requirements.txt
-        cd docs
-        make html
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false # https://docs.zizmor.sh/audits/#artipacked
+      - name: Build docs
+        run: |
+          sudo apt-get install -y python3-sphinx
+          pip3 install -r docs/requirements.txt
+          cd docs
+          make html

@@ -2659,7 +2659,7 @@ hide fc n
          put Ctxt ({ gamma $= hideName nsn } defs)
 
 -- Set a name as Public that was previously hidden
--- Note: this is here at the bottom only becuase `recordWarning` is defined just above.
+-- Note: this is here at the bottom only because `recordWarning` is defined just above.
 export
 unhide : {auto c : Ref Ctxt Defs} ->
        FC -> Name -> Core ()

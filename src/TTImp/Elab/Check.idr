@@ -675,7 +675,7 @@ anyOne fc es = anyOneErrs es [<] where
     Right res => pure res
     Left err  => anyOneErrs es $ errs :< (tm, err)
 
--- Implemented in TTImp.Elab.Term; delaring just the type allows us to split
+-- Implemented in TTImp.Elab.Term; declaring just the type allows us to split
 -- the elaborator over multiple files more easily
 export
 check : {vars : _} ->

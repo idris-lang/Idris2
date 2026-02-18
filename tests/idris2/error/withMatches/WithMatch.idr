@@ -26,5 +26,3 @@ test2 : (x : Int) -> x = 1 -> Nat -> Nat
 test2 1 Refl y with (y)
   test2 1 Refl y | 0 = 42
   test2 1 Refl y | S k = test2 2 Refl y | k
-
-

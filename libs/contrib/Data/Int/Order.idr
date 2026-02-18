@@ -246,7 +246,7 @@ namespace LTE
   strictLTE (MkLT p) q = strictRefl p q
   strictLTE (MkEQ p) q = strictRefl p q
 
-  ||| LTE is decidable by virture of both LT and EQ being decidable
+  ||| LTE is decidable by virtue of both LT and EQ being decidable
   export
   decide : (a, b : Int) -> Dec (LTE a b)
   decide a b with (LT.decide a b)

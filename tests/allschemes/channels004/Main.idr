@@ -15,4 +15,3 @@ main =
      if s == 50500
         then putStrLn "Success!"
         else putStrLn "How did we get here?"
-

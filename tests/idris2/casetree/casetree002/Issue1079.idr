@@ -11,4 +11,3 @@ h3 = do
   (x, y) <- f
     | _ => pure 5
   pure x
-

@@ -54,7 +54,7 @@ getTypeArgs (Bind _ x b tm) = case b of
     _ => []
 getTypeArgs _ = []
 
-||| Get all non-erased aruments.
+||| Get all non-erased arguments.
 getNEArgs : {vars : _} -> Term vars -> List (vars ** Term vars)
 getNEArgs (Bind _ x b tm) = case b of
     Let _ _ val _ => getNEArgs $ subst {x} val tm
@@ -245,7 +245,7 @@ processNatToInteger fc fn = do
         | _ => throw $ GenericMsg fc $ "More than 1 non-erased arguments found for " ++ show_fn ++ "."
     let Just tyCon = getTypeCons arg
         | Nothing => throw $ GenericMsg fc
-            $ "No type constructor found for non-erased arguement of " ++ show_fn ++ "."
+            $ "No type constructor found for non-erased argument of " ++ show_fn ++ "."
     True <- isNatural fc tyCon
         | False => throw $ GenericMsg fc $ "Non-erased argument is not a 'Nat'-like type."
     let Just natIdx = getNEIndex type

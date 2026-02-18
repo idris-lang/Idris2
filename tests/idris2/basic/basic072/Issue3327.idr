@@ -32,5 +32,3 @@ test6 = do
   Just x : Maybe Nat <- bar
     | Nothing => pure ()
   printLn x
-
-

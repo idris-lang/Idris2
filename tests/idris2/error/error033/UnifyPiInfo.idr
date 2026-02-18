@@ -73,4 +73,3 @@ namespace DA
   f : Type -> {default Int _ : Type} -> Type
   g : Type -> {auto _ : Type} -> Type
   g = f
-

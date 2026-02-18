@@ -196,7 +196,7 @@ getDetags fc tys
              if ok then allDisjointWith nf nfs
                    else pure False
 
-    -- Which argument positions have completely disjoint contructors
+    -- Which argument positions have completely disjoint constructors
     getDisjointPos : Nat -> List (List ClosedNF) -> Core NatSet
     getDisjointPos i [] = pure NatSet.empty
     getDisjointPos i (args :: argss)
@@ -284,7 +284,7 @@ shaped as (c :: cs)
 -- Calculate whether the list of constructors gives a list-shaped type
 -- If there's two constructors, one with no unerased arguments and one
 -- with two unerased arguments, then it's listy.
--- If there's one constructor, with two unerased arugments, we can also
+-- If there's one constructor, with two unerased arguments, we can also
 -- treat that as a cons cell, which will be cheaper for pairs.
 -- Note they don't have to be recursive! It's just about whether we can
 -- pair cheaply.

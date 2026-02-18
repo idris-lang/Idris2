@@ -235,7 +235,7 @@ namespace Cont
   cont2' : Functor (Cont2' r e)
   cont2' = %runElab derive
 
-  ||| Throw in lazyness
+  ||| Throw in laziness
   data Cont2'' r e a = MkCont2'' (Lazy ((Lazy a -> r), (e -> r)) -> r)
 
   cont2'' : Functor (Cont2'' r e)

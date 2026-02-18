@@ -72,7 +72,7 @@ export
 symDifference : (x, y : SortedSet k) -> SortedSet k
 symDifference x y = union (difference x y) (difference y x)
 
-||| Set intersection. Implemented as the difference of the union and the symetric difference.
+||| Set intersection. Implemented as the difference of the union and the symmetric difference.
 export
 intersection : (x, y : SortedSet k) -> SortedSet k
 intersection x y = difference x (difference x y)

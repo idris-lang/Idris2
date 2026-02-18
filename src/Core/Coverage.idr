@@ -103,7 +103,7 @@ conflict defs env nfty n
       -- then there may be a way to construct it, so return the matches in
       -- the indices.
       -- If any of those matches clash, the constructor is not valid
-      -- e.g, Eq x x matches Eq Z (S Z), with x = Z and x = S Z
+      -- e.g. Eq x x matches Eq Z (S Z), with x = Z and x = S Z
       -- conflictNF returns the list of matches, for checking
       conflictNF : Int -> NF vars -> ClosedNF ->
                    Core (Maybe (List (Name, Term vars)))
@@ -466,6 +466,6 @@ checkMatched erase cs ulhs
     tryClauses (MkClause env lhs _ :: cs) ulhs
         = if !(clauseMatches erase env lhs ulhs)
              then do logTermNF "coverage" 10 "Yes" env lhs
-                     pure Nothing -- something matches, discared it
+                     pure Nothing -- something matches, discard it
              else do logTermNF "coverage" 10 "No match" env lhs
                      tryClauses cs ulhs

@@ -16,4 +16,3 @@ main =
      sleep 1
      conditionBroadcast cv
      threadWait t
-

@@ -1,15 +1,17 @@
-# Configuration file for the Sphinx documentation builder.
-#
-# Idris Manual documentation build configuration file, created by
-# sphinx-quickstart on Apr 13, 2020.
-#
-# This file is execfile()d with the current directory set to its
-# containing dir.
-#
-# This file only contains a selection of the most common options. For a full
-# list see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
+# pylint: disable=invalid-name, redefined-builtin
+"""
+Configuration file for the Sphinx documentation builder.
 
+Idris Manual documentation build configuration file, created by
+sphinx-quickstart on Apr 13, 2020.
+
+This file is execfile()d with the current directory set to its
+containing dir.
+
+This file only contains a selection of the most common options. For a full
+list see the documentation:
+https://www.sphinx-doc.org/en/master/usage/configuration.html
+"""
 
 import os
 import sys
@@ -306,7 +308,7 @@ epub_copyright = copyright
 # The format is a list of tuples containing the path and title.
 # epub_pre_files = []
 
-# HTML files shat should be inserted after the pages created by sphinx.
+# HTML files that should be inserted after the pages created by sphinx.
 # The format is a list of tuples containing the path and title.
 # epub_post_files = []
 

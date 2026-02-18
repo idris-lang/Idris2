@@ -6,7 +6,7 @@
 ||| As such, the functionality provided by this module should
 ||| be considered a form of whole program optimization.
 ||| To keep things simple, it operates only on closed terms right
-||| now, which are - in case of several occurences - introduced
+||| now, which are - in case of several occurrences - introduced
 ||| as new zero-argument toplevel functions.
 |||
 ||| The procedure is very simple: In an analysis step, we
@@ -22,7 +22,7 @@
 ||| generated name with the count of its parent expression.
 ||| If they are the same, the name is dropped and replaces with
 ||| a CSE optimized version of the original expression, otherwise
-||| the name is kept and a new zero argumet function of the
+||| the name is kept and a new zero argument function of the
 ||| given name is added to the toplevel, thus eliminating the
 ||| duplicate expressions.
 module Compiler.Opts.CSE
@@ -39,9 +39,9 @@ import Data.Vect
 import Libraries.Data.Erased
 import Libraries.Data.List.SizeOf
 
-||| Maping from a pairing of closed terms together with
+||| Mapping from a pairing of closed terms together with
 ||| their size (for efficiency) to the number of
-||| occurences in toplevel definitions and flag for
+||| occurrences in toplevel definitions and flag for
 ||| whether it was encountered in delayed subexpression.
 public export
 UsageMap : Type
@@ -53,8 +53,8 @@ UsageMap = SortedMap (Integer, ClosedCExp) (Name, Integer, Bool)
 |||  `Many` : The expression occurs more than once.
 |||  `C n`  : The expression has been counted `n` times
 |||           but we will have to compare this value
-|||           with the number of occurences of its parent
-|||           expression to decide whether it occured
+|||           with the number of occurrences of its parent
+|||           expression to decide whether it occurred
 |||           only once or several times.
 |||
 public export
@@ -181,7 +181,7 @@ mutual
 mutual
   -- Tries to convert an expression and its
   -- sub-expression to closed terms (`CExp []`).
-  -- Every occurence of a closed term will be replaced by
+  -- Every occurrence of a closed term will be replaced by
   -- a machine generated name and its count in the `UsageMap`
   -- will be increased by one.
   --
@@ -345,7 +345,7 @@ mutual
   -- it will also get a count of 2 in the `UsageMap`.
   -- We therefore compare the count of each child expression
   -- with the count of their parent expression, lifting
-  -- a child only if it was counted mor often than its parent.
+  -- a child only if it was counted more often than its parent.
   replaceRef :  Ref ReplaceMap ReplaceMap
              => Ref Ctxt Defs
              => (parentCount : Integer)
@@ -388,12 +388,12 @@ mutual
       Just (exp, C c, d)  => do
         log "compiler.cse" 10 $  "  expression of unknown quantity ("
                               ++ show c
-                              ++ " occurences)"
+                              ++ " occurrences)"
         -- We first have to replace all child expressions.
         exp' <- replaceExp c exp
         if c > pc
            -- This is a common subexpression. We set its count to `Many`
-           -- and inspect its occurence in delay to check whether it
+           -- and inspect its occurrence in delay to check whether it
            -- should be replaced or not.
            then do
              log "compiler.cse" 10 $ show n ++ " assigned quantity \"Many\""
@@ -486,7 +486,7 @@ undefinedCount (_, _, Once) = False
 undefinedCount (_, _, Many) = False
 undefinedCount (_, _, C x)  = True
 
-||| Runs the CSE alorithm on all provided names and
+||| Runs the CSE algorithm on all provided names and
 ||| the given main expression.
 export
 cse :  Ref Ctxt Defs

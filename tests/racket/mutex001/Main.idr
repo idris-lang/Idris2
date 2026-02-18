@@ -10,4 +10,3 @@ main =
      putStrLn "Mutex acquired"
      mutexRelease m
      putStrLn "Mutex released"
-

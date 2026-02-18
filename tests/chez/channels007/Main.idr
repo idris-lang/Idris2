@@ -21,4 +21,3 @@ main = do
     Nothing   => putStrLn "Nothing"
     Just val' => putStrLn val'
   sleep 1
-

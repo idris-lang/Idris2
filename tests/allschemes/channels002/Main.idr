@@ -12,4 +12,3 @@ main =
      if v0 == 0 && v1 == 1 && v2 == 2
         then putStrLn "Success!"
         else putStrLn "At least one value changed in transmission."
-

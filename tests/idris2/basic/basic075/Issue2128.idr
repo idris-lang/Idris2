@@ -7,4 +7,3 @@ main = do
         add zzz = zzz + zzz
         res : Int
         res = add 1
-

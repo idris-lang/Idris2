@@ -674,7 +674,7 @@ highScoreIdx (Scored xs (y :: ys)) = highScore {prev = []} (p :: ps) (y :: ys) (
 
 ||| Apply the penalty function to the head constructor's
 ||| arity. Produces 0 for all non-head-constructors.
-headConsPenalty : (penality : Nat -> Int) -> Pat -> Int
+headConsPenalty : (penalty : Nat -> Int) -> Pat -> Int
 headConsPenalty p (PAs _ _ w)             = headConsPenalty p w
 headConsPenalty p (PCon _ n _ arity pats) = p arity
 headConsPenalty p (PTyCon _ _ arity _)    = p arity
@@ -1198,7 +1198,7 @@ identifyUnreachableDefaults fc defs nfty cs
           in  (c :: rest', extra')
 
 ||| Find unreachable default paths through the tree for each clause.
-||| This is accomplished by expanding default clases into all concrete constructions
+||| This is accomplished by expanding default clauses into all concrete constructions
 ||| and then listing the clauses reached.
 ||| This list of clauses can be substracted from the list of "reachable" clauses
 ||| and if it turns out that the number of unreachable ways to use a clause is equal

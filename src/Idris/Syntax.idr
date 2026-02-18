@@ -1204,4 +1204,3 @@ Show PDeclNoFC where
   show (PRunElabDecl {}) = "PRunElabDecl"
   show (PDirective {}) = "PDirective"
   show (PBuiltin {}) = "PBuiltin"
-

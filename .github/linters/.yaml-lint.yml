@@ -1,0 +1,37 @@
+---
+extends: default
+
+rules:
+  anchors:
+    forbid-undeclared-aliases: true
+    forbid-duplicated-anchors: true
+    forbid-unused-anchors: true
+  braces:
+    forbid: non-empty
+    min-spaces-inside-empty: 0
+    max-spaces-inside-empty: 0
+  brackets:
+    min-spaces-inside-empty: 0
+    max-spaces-inside-empty: 0
+  comments:
+    min-spaces-from-content: 1
+  comments-indentation: disable
+  document-end:
+    present: false
+  empty-lines:
+    max: 1
+  float-values:
+    require-numeral-before-decimal: true
+  hyphens:
+    max-spaces-after: 1
+  indentation:
+    spaces: 2
+  line-length:
+    max: 120
+    level: warning
+  quoted-strings:
+    quote-type: double
+    required: false
+  trailing-spaces: enable
+  truthy:
+    check-keys: false

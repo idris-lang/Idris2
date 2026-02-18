@@ -53,7 +53,7 @@ record WithData (additional : List KeyVal) (payload : Type) where
   val : payload
 
 ||| Add some metadata to a type given a label and a type for the metadata
-||| This function matches on the type and add it to the metadata record if it is alread a `WithData`
+||| This function matches on the type and add it to the metadata record if it is already a `WithData`
 |||
 ||| example:
 ||| ```idris example
@@ -86,7 +86,7 @@ get :
     (0 label : String) ->
     -- ^ The field we are accessing
     {n : Nat} ->
-    -- ^ The index of the field, this can usually be infered
+    -- ^ The index of the field, this can usually be inferred
     (0 inRange : NameInRange label fields === Just (n, out)) =>
     -- ^ A proof that the field is in the record, its position matches the index `n` and the type at that location is `out`
     WithData fields a ->
@@ -104,7 +104,7 @@ export
     (0 field : String) ->
     -- ^ The field we are accessing
     {n : Nat} ->
-    -- ^ The index of the field, this can usually be infered
+    -- ^ The index of the field, this can usually be inferred
     (0 inRange : NameInRange field fields === Just (n, out)) =>
     -- ^ A proof that the field is in the record, its position matches the index `n` and the type at that location is `out`
     out
@@ -134,7 +134,7 @@ update :
     (0 label : String) ->
     -- ^ The field we want to update
     {n : Nat} ->
-    -- ^ The index of the field, this can usually be infered
+    -- ^ The index of the field, this can usually be inferred
     (0 inRange : NameInRange label fields === Just (n, out)) =>
     -- ^ A proof that the field is in the record, its position matches the index `n` and the type at that location is `out`
     (f : out -> out) ->
@@ -147,7 +147,7 @@ update label f = {metadata $= update label f}
 ||| Override the value at the given index.
 ||| @ n The index at which we replace our value.
 ||| @ inRange A proof that index is in range.
-||| @ newVal The new value remplacing the existing one.
+||| @ newVal The new value replacing the existing one.
 export
 setAt :
     (n : Nat) ->
@@ -164,7 +164,7 @@ setAt n v = {metadata $= setAt n v}
 ||| Override the value matching the given label
 ||| @ label The label of the value we are overriding.
 ||| @ inRange A proof that the label is in the record at the appropriate index with the appropriate type.
-||| @ newVal The new value remplacing the existing one.
+||| @ newVal The new value replacing the existing one.
 export
 set :
     (0 label : String) -> {n : Nat} ->
@@ -259,4 +259,3 @@ export
 export
 (eq : All (Eq . KeyVal.type) fs) => Eq a => Eq (WithData fs a) where
   x == y = x.val == y.val && x.metadata == y.metadata
-

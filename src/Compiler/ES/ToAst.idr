@@ -106,7 +106,7 @@ mutual
   -- not a `Minimal` expression, an additional assignment statement is
   -- generated. This is used to lift the scrutinees of
   -- constructor case expressions to make sure they are
-  -- only evluated once (see also PR #1494).
+  -- only evaluated once (see also PR #1494).
   liftMinimal : { auto c : Ref ESs ESSt }
               -> NamedCExp
               -> Core (List (Stmt Nothing), Minimal)

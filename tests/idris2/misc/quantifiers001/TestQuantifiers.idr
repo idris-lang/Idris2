@@ -51,4 +51,3 @@ namespace SnocList
   testAny : {auto 0 prf : IsYes (SnocList.Quantifiers.Any.any Data.Nat.isItSucc Main.SnocList.aSnocList)}
           -> ()
   testAny = ()
-

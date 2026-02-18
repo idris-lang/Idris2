@@ -59,7 +59,7 @@ rawImpFromDecl decl = case decl of
 -- Don't go under case, let, or local bindings, or IAlternative.
 --
 -- arg: Is the current expression in argument position? (We don't want to implicitly
---      bind funtions.)
+--      bind functions.)
 --
 -- env: Local names in scope. We only want to bind free variables, so we need this.
 export

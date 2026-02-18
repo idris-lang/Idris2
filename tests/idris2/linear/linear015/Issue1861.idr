@@ -15,5 +15,3 @@ consNonLin u us = rewrite lemmaPlusOneRight n in u `consLin` us
 
 consLin2 : (1 _ : Unit) -> (1 _ : Vect n Unit) -> Vect (n+1) Unit
 consLin2 u us = rewrite lemmaPlusOneRight n in u `consLin` us
-
-

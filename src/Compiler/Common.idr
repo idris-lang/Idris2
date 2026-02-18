@@ -110,7 +110,7 @@ compile {c} {s} cg tm out
              compileExpr cg c s tmpDir outputDir tm out
 
 ||| execute
-||| As with `compile`, produce a functon that executes
+||| As with `compile`, produce a function that executes
 ||| the `executeExpr` method of the given Codegen
 export
 execute : {auto c : Ref Ctxt Defs} ->

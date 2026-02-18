@@ -9,4 +9,3 @@ foo = higherOrder (+)
 
 maybePls : Maybe Int -> Maybe Int -> Maybe Int
 maybePls x y = pure {f=Maybe} pls <*> x <*> y
-

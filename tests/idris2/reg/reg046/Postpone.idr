@@ -28,4 +28,3 @@ ac g = (\x => fst (g x) ** \x => snd (g x))
 ------------- Example 3 ----------------
 idid1 : forall A. (f : A -> A ** (x : A) -> f x = x)
 idid1 = MkDPair id (\x => Refl)
-

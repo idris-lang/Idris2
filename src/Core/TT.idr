@@ -51,7 +51,7 @@ covering
     showCon d "MkKindedName" $ showArg nm ++ showArg @{Raw} fn ++ showArg @{Raw} rn
 
 namespace CList
-  -- A list correspoding to another list
+  -- A list corresponding to another list
   public export
   data CList : List a -> Type -> Type where
        Nil : CList [] ty
@@ -197,7 +197,7 @@ data FixityDeclarationInfo = UndeclaredFixity | DeclaredFixity FixityInfo
 --   `(nm : ty := exp) =@ fn nm` desugars into `(=@) exp (\(nm : ty) => fn nm)`
 public export
 data OperatorLHSInfo : tm -> Type where
-  -- Traditional operator wihtout binding, carries the lhs
+  -- Traditional operator without binding, carries the lhs
   NoBinder : (lhs : tm) -> OperatorLHSInfo tm
   -- (nm : ty) =@ fn x
   BindType : (name : tm) -> (ty : tm) -> OperatorLHSInfo tm

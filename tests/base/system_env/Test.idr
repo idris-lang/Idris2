@@ -15,4 +15,3 @@ main = do
   printLn !(getEnv "WORLD")
 
   printLn !(getEnv "UNSET")
-

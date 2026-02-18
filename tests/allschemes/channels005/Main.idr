@@ -25,4 +25,3 @@ main =
      ignore $ for (replicate nConsumers 0) $ \_ => channelPut c Z
      ignore $ traverse (\t => threadWait t) cTIDs
      putStrLn "SUCCESS!!!"
-

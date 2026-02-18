@@ -16,4 +16,3 @@ in_app_iff {l = (y::xs)} {l' = (z::ys)} (Right prf) =
                                           case induc of
                                                 (Left l) => Left $ Right l
                                                 (Right r) => Right r
-

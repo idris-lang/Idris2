@@ -1,3 +1,4 @@
+---
 ###################################
 ###################################
 ## Natural language Linter rules ##
@@ -9,4 +10,3 @@ rules:
   terminology:
     # AST: https://github.com/textlint/textlint/blob/master/docs/txtnode.md
     skip: ["BlockQuote", "Link", "Code", "CodeBlock"]
-

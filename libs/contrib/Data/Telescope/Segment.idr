@@ -71,7 +71,7 @@ succLemma x y = Calc $
   ~~ (1 + x)+ y  ...(cong (+y) $ plusCommutative x 1)
   ~~ 1 + (x + y) ...(sym $ plusAssociative 1 x y)
 
--- Should go somehwere in stdlib
+-- Should go somewhere in stdlib
 public export
 keep : (0 prf : a ~=~ b) -> a ~=~ b
 keep Refl = Refl

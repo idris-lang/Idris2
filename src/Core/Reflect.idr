@@ -400,7 +400,7 @@ Reify UserName where
              (NS _ (UN _), _)
                  => cantReify val "Name, reifying it is unimplemented or intentionally internal"
              _ => cantReify val "Name, the name was not found in context"
-  reify defs val = cantReify val "Name, value is not an NDCon interally"
+  reify defs val = cantReify val "Name, value is not an NDCon internally"
 
 export
 Reflect UserName where
@@ -447,7 +447,7 @@ Reify Name where
              (NS _ (UN _), _)
                  => cantReify val "Name, reifying it is unimplemented or intentionally internal"
              _ => cantReify val "Name, the name was not found in context"
-  reify defs val = cantReify val "Name, value is not an NDCon interally"
+  reify defs val = cantReify val "Name, value is not an NDCon internally"
 
 export
 Reflect Name where

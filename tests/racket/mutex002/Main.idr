@@ -11,4 +11,3 @@ main =
                     mutexRelease m
                     putStrLn "Child released mutex"
      threadWait t
-

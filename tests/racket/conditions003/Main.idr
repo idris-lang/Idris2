@@ -19,4 +19,3 @@ main =
      conditionSignal cv
      -- don't threadWait since we don't know which thread got signalled
      sleep 1
-

@@ -15,4 +15,3 @@ names s = execState [] $ mapMTTImp addName s
 
 checkNames : names `(x * y) = ["y", "x", "*"]
 checkNames = Refl
-

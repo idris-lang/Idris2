@@ -12,4 +12,3 @@ public export
 %hint
 HintZeroA : A
 HintZeroA = ZeroA
-

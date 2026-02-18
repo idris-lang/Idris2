@@ -15,7 +15,7 @@ data FastDerivation : (leq : a -> a -> Type) -> (x : a) -> (y : a) -> Type where
          -> FastDerivation leq x y -> {0 z : a} -> (step : Step leq y z)
          -> FastDerivation leq x z
 
--- Using a McKinna-McBride view records the depenencies on the type of derivation
+-- Using a McKinna-McBride view records the dependencies on the type of derivation
 -- the additional benefits for pattern-matching aren't used here
 public export
 data DerivationType : FastDerivation leq x y -> Type where

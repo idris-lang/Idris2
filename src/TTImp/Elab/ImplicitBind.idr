@@ -481,7 +481,7 @@ checkBindVar rig elabinfo nest env fc nm topexp
                   AsBinding _ p tm ty pat => (bn, AsBinding c p tm ty pat) :: bs
              else (bn, r) :: updateRig n c bs
 
-    -- Two variables are incompatble if at least one of them appears in a linear position
+    -- Two variables are incompatible if at least one of them appears in a linear position
     -- and their sum is bigger than 1
     isIncompatible : RigCount -> RigCount -> Bool
     isIncompatible l r = (isLinear l || isLinear r) && linear < l |+| r

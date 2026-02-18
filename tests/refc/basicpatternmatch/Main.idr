@@ -102,5 +102,3 @@ main = do
   --
   printLn $ map show [D0, D1 99, D2, D3]
   pure ()
-
-

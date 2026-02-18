@@ -198,7 +198,7 @@ Show SocketAddress where
 export
 parseIPv4 : String -> SocketAddress
 parseIPv4 str =
-    case splitted of
+    case octets of
       (i1 ::: i2 :: i3 :: i4 :: _) => IPv4Addr i1 i2 i3 i4
       _ => InvalidAddress
   where
@@ -208,8 +208,8 @@ parseIPv4 str =
     toInt : String -> Int
     toInt s = fromInteger $ toInt' s
 
-    splitted : List1 Int
-    splitted = map toInt (split (\c => c == '.') str)
+    octets : List1 Int
+    octets = map toInt (split (\c => c == '.') str)
 
 -- --------------------------------------------------------- [ UDP Information ]
 

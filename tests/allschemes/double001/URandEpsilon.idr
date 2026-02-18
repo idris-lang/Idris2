@@ -16,4 +16,3 @@ testURComm = testOnePlusUR == testURPlusOne
 
 testEps2UR : Bool
 testEps2UR = epsilon == unitRoundoff * 2.0
-

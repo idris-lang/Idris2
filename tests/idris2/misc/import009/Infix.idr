@@ -7,4 +7,3 @@ infix 6 !!
 [] !! _ = Nothing
 (x :: _) !! Z = Just x
 (_ :: xs) !! (S n) = xs !! n
-

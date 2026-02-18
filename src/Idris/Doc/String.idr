@@ -567,7 +567,7 @@ getDocsForPTerm (PPair {}) = pure $ vcat
   , indent 2 "Desugars to MkPair or Pair"
   ]
 getDocsForPTerm (PDPair {}) = pure $ vcat
-  [ "Dependant Pair Literal"
+  [ "Dependent Pair Literal"
   , indent 2 "Desugars to MkDPair or DPair"
   ]
 getDocsForPTerm (PUnit _) = pure $ vcat

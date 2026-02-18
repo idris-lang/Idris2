@@ -13,4 +13,3 @@ implementation IsEven Nat where
 implementation Show Nat => IsOdd Nat where
     isOdd 0 = True
     isOdd (S k) = not $ isEven k
-

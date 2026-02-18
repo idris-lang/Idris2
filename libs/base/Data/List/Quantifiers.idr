@@ -285,14 +285,14 @@ namespace All
 ------------------------------------------------------------------------
 -- Relationship between all and any
 
-||| If there does not exist an element that satifies the property, then it is
+||| If there does not exist an element that satisfies the property, then it is
 ||| the case that all elements do not satisfy it.
 export
 negAnyAll : {xs : List a} -> Not (Any p xs) -> All (Not . p) xs
 negAnyAll {xs=Nil}   _ = Nil
 negAnyAll {xs=x::xs} f = (f . Here) :: negAnyAll (f . There)
 
-||| If there exists an element that doesn't satify the property, then it is
+||| If there exists an element that doesn't satisfy the property, then it is
 ||| not the case that all elements satisfy it.
 export
 anyNegAll : Any (Not . p) xs -> Not (All p xs)

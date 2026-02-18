@@ -16,4 +16,3 @@ main =
      ignore $ for [1..7] $ \_ => channelPut c Z
      ignore $ traverse (\t => threadWait t) tids
      putStrLn "Success!"
-

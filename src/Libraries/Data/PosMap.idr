@@ -31,7 +31,7 @@ Show RMFileRange where
   showPrec p (MkRange low high) = showCon p "MkRange" $ showArg low ++ showArg high
 
 Semigroup RMFileRange where
-  -- The semigroup operation on righmost intervals is the composition of two
+  -- The semigroup operation on rightmost intervals is the composition of two
   -- monoids applied to each component:
   -- 1) the operation on low endpoints always returns the last key it contains,
   --    assuming the keys are ordered (enforced by the insertion function), the

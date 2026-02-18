@@ -771,7 +771,7 @@ makeDoc pkg opts =
              ]
            log "doc.module" 100 $ "from: " ++ show (modDocstrings syn)
 
-           -- grab publically re-exported modules
+           -- grab publicly re-exported modules
            let mreexports = do docs <- lookup mod $ modDocexports syn
                                guard (not $ null docs)
                                pure docs

@@ -823,7 +823,7 @@ suffixOfBy match left right
 |||
 ||| @ eq    a custom equality function for comparing the elements
 ||| @ left  the list which might be a suffix of `right`
-||| @ right the list of elements to compare againts
+||| @ right the list of elements to compare against
 public export
 isSuffixOfBy : (eq : a -> b -> Bool) ->
                (left : List a) -> (right : List b) -> Bool

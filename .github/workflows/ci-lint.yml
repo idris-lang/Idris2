@@ -1,20 +1,214 @@
-name: Lint the sources
+---
+name: Lint Code Base
+
+permissions:
+  contents: read
+
 on:
   push:
     branches:
-      - '*'
+      - "*"
     tags:
-      - '*'
+      - "*"
   pull_request:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build:
+    name: Super-linter
+    runs-on: ubuntu-latest
+
+    permissions:
+      statuses: write
+      pull-requests: write # Required for write report in PR
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          # Full git history is needed to get a proper list of changed files
+          # within `super-linter`
+          fetch-depth: 0
+          persist-credentials: false # https://docs.zizmor.sh/audits/#artipacked
+
+      - name: Check if linter configs changed
+        id: linter-changes
+        if: github.event_name != 'workflow_dispatch' # Always run full scan if manually triggered
+        uses: dorny/paths-filter@v3
+        with:
+          # Ignored for pull requests — compares with PR target branch
+          base: ${{ github.event.before }}
+          filters: |
+            linters:
+              - ".editorconfig"
+              - ".github/linters/**"
+              - ".github/workflows/ci-lint.yml"
+
+      - name: Log scan mode
+        env:
+          EVENT: ${{ github.event_name }}
+          CHANGES: ${{ steps.linter-changes.outputs.linters }}
+        run: |
+          if   [[ "$EVENT" == "workflow_dispatch" ]]; then
+            echo "🚀 Manual trigger — performing full codebase scan"
+          elif [[ "$CHANGES" == "true" ]]; then
+            echo "🔍 Linter configs changed — performing full codebase scan"
+          else
+            echo "⚡ Incremental scan — changed files only"
+          fi
+
+      - name: Lint Code Base
+        uses: super-linter/super-linter/slim@v8
+        env:
+          # Lint all files if linter configs changed or if manually triggered via workflow_dispatch
+          # Otherwise, only lint changed files
+          VALIDATE_ALL_CODEBASE: >-
+            ${{ github.event_name == 'workflow_dispatch' || steps.linter-changes.outputs.linters == 'true' }}
+
+          VALIDATE_CPP: false # Incompatible with C; clang-format is preferred
+          VALIDATE_BIOME_LINT: false # Avoid conflict: Prettier is preferred
+          VALIDATE_BIOME_FORMAT: false # Avoid conflict: Prettier is preferred
+          VALIDATE_PYTHON_BLACK: false # Avoid conflict: Ruff is preferred
+          VALIDATE_GIT_COMMITLINT: false
+
+          # Don't lint the following files
+          FILTER_REGEX_EXCLUDE: "CONTRIBUTORS|tests/[^/]+/.*|benchmark/benchmarks"
+
+          SAVE_SUPER_LINTER_SUMMARY: true # Required for generating linting reports in PR
+
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IGNORE_GENERATED_FILES: true
+
+  idris-lint:
+    name: Idris linter
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout Code
         uses: actions/checkout@v4
-      - name: Lint the sources
-        run: python3 lint/lint.py
+        with:
+          persist-credentials: false # https://docs.zizmor.sh/audits/#artipacked
+
+      - name: Run Idris linter
+        id: idris
+        run: |
+          set -o pipefail
+          python lint/idris_lint.py 2>&1 | tee idris.log
+
+      - name: Generate report
+        if: always()
         shell: bash
+        env:
+          IDRIS_OUTCOME: ${{ steps.idris.outcome }}
+        run: |
+          # Parse stats from log
+          files_checked=$(awk '/Files checked:/ {print $NF}' idris.log || echo "0")
+          files_failed=$(awk '/Files with issues:/ {print $NF}' idris.log || echo "0")
+          trailing_ws=$(awk '/Trailing whitespace:/ {print $NF}' idris.log || echo "0")
+          missing_nl=$(awk '/Missing newlines:/ {print $NF}' idris.log || echo "0")
+          too_many_nl=$(awk '/Too many newlines:/ {print $NF}' idris.log || echo "0")
+          invalid_encoding=$(awk '/Invalid encoding:/ {print $NF}' idris.log || echo "0")
+          total_issues=$(awk '/Total issues:/ {print $NF}' idris.log || echo "0")
+
+          if [[ "$IDRIS_OUTCOME" == "success" ]]; then
+            status="Pass ✅"
+          else
+            status="Fail ❌"
+          fi
+
+          {
+            echo "## 🔮 Idris Lint Summary"
+            echo
+            echo "| Metric | Count |"
+            echo "|--------|------:|"
+            echo "| **Status** | $status |"
+            echo "| Files checked | $files_checked |"
+            echo "| Files with issues | $files_failed |"
+            echo "| Trailing whitespace | $trailing_ws |"
+            echo "| Missing newlines | $missing_nl |"
+            echo "| Too many newlines | $too_many_nl |"
+            echo "| Invalid encoding | $invalid_encoding |"
+            echo "| **Total issues** | $total_issues |"
+            echo
+            echo "<details>"
+            echo "<summary>📄 Full output</summary>"
+            echo
+            echo '```'
+            head -n 100 idris.log
+            if [[ $(wc -l < idris.log) -gt 100 ]]; then
+              echo "... (truncated)"
+            fi
+            echo '```'
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  remark-lint:
+    name: remark-lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false # https://docs.zizmor.sh/audits/#artipacked
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6 # zizmor: ignore[cache-poisoning]
+        with:
+          node-version: "24"
+          cache-dependency-path: .github/linters/remark/package-lock.json
+
+      - name: Install Dependencies
+        run: npm --prefix .github/linters/remark install
+
+      - name: Run remark-lint
+        id: remark
+        run: |
+          set -o pipefail
+          npm -C .github/linters/remark exec -- \
+              remark . \
+              --rc-path .github/linters/remark/remarkrc.mjs \
+              --ignore-path .github/linters/remark/remarkignore \
+              --ignore-path-resolve-from cwd \
+              --frail \
+              --no-color \
+              2>&1 | tee remark.log
+
+      - name: Generate report
+        if: always()
+        shell: bash
+        env:
+          REMARK_OUTCOME: ${{ steps.remark.outcome }}
+        run: |
+          # Parse stats from log
+          files_checked=$(grep -cE '\.md(: no issues found)?$' remark.log || echo "0")
+          files_ok=$(grep -cE ': no issues found$' remark.log || echo "0")
+          files_with_issues=$((files_checked - files_ok))
+          warn_count=$(grep -oP '^⚠[[:space:]]*\K[0-9]+(?= warnings?)' remark.log | tail -n 1 || echo "0")
+          warn_count="${warn_count:-0}"
+
+          if [[ "$REMARK_OUTCOME" == "success" ]]; then
+            status="Pass ✅"
+          else
+            status="Fail ❌"
+          fi
+
+          {
+            echo "## 📝 Remark Lint Summary"
+            echo
+            echo "| Metric | Count |"
+            echo "|--------|------:|"
+            echo "| **Status** | $status |"
+            echo "| Files checked | $files_checked |"
+            echo "| Files with issues | $files_with_issues |"
+            echo "| Warnings | $warn_count |"
+            echo
+            echo "<details>"
+            echo "<summary>📄 Full output</summary>"
+            echo
+            echo '```'
+            cat remark.log
+            echo '```'
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"

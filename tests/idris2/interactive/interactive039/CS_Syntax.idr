@@ -40,4 +40,3 @@ n k m = case k of foo => case toTest m of
 o : Nat -> Nat -> Unit
 o n m = (case n of foo => case toTest m of
                                case_val => ?o_rhs   )
-

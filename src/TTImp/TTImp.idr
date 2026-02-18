@@ -728,7 +728,7 @@ implicitsAs n defs ns tm
         -- Finds the missing implicits which should be added to the lhs of the
         -- original pattern clause.
         --
-        -- The first argument, `ns`, specifies which implicit variables alredy
+        -- The first argument, `ns`, specifies which implicit variables already
         -- appear in the lhs, and therefore need not be added.
         -- The second argument, `es`, specifies which *explicit* variables appear
         -- in the lhs: this is used to determine when to stop searching for further

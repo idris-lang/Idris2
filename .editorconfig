@@ -4,48 +4,45 @@ root = true
 # Defaults for every file
 [*]
 end_of_line = lf
+indent_style = space
 insert_final_newline = true
 trim_trailing_whitespace = true
 charset = utf-8
 
 # Idris source files
 [*.{idr,ipkg,tex,yaff,lidr}]
-indent_style = space
 indent_size = 2
 
 # Various configuration files
-[{*.yml,.ecrc}]
-indent_style = space
+[*.yml]
 indent_size = 2
 
 [*.py]
-indent_style = space
 indent_size = 4
+
+[*.{js,mjs}]
+indent_size = 2
 
 [*.{c,h}]
-indent_style = space
-indent_size = 4
+indent_size = 2
 
 [*.{md,rst}]
-indent_style = space
 indent_size = 2
 
 [*.sh]
-indent_style = space
 indent_size = 4
-shell_variant = posix
 switch_case_indent = true
 
-[*.bat]
-indent_style = space
+[*.{bat,cmd}]
+end_of_line = crlf
 indent_size = 4
 
 [{Makefile,*.mk}]
 indent_style = tab
 
 [*.nix]
-indent_style = space
 indent_size = 2
 
 [expected]
+indent_style = unset
 trim_trailing_whitespace = false

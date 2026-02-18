@@ -6,4 +6,3 @@ implementation IsOdd Bool where
 
 implementation IsOdd Bool where
   isOdd b = b
-

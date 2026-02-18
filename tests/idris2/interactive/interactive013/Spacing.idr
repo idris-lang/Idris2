@@ -58,4 +58,3 @@ weirdSpacedA {  n= a } = ?weirdSpacedA_rhs
 
 weirdSpacedB : {n : Nat} -> Nat
 weirdSpacedB {  n =b } = ?weirdSpacedB_rhs
-

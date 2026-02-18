@@ -6,5 +6,3 @@ data Tup : (a,b : Type) -> Type where
 
 f : Tup a b -> a
 f (MkTup f s) = f
-
-

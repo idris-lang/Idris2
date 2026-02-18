@@ -8,4 +8,3 @@ f (LTESucc x) = f x
 
 x : Void
 x = f $ LTEZero {right=Z}
-

@@ -89,7 +89,7 @@ mutual
     ||| dealing with forcing a delayed computation.
     EApp      : Exp -> List Exp -> Exp
 
-    ||| Saturated construtor application.
+    ||| Saturated constructor application.
     |||
     ||| The tag either represents the name of a type constructor
     ||| (when we are pattern matching on types) or the index

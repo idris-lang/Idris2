@@ -9,4 +9,3 @@ noIndent c = ?noIndent_rhs
 
 Uninhabited (MyElem a []) where
   uninhabited c = ?uninhabited_rhs
-

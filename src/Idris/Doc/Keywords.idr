@@ -468,7 +468,7 @@ autobindDoc = """
     use it on the right-hand-side.
 
     `autobind` differs from `typebind` in the syntax it allows and the way
-    it desugars. Delcaring an operator as `autobind infixr 0 =|>` allows
+    it desugars. Declaring an operator as `autobind infixr 0 =|>` allows
     you to use it with the syntax `(x := e) =|> f x`, `(x : t := e) =|> f x`.
 
 

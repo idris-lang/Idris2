@@ -17,9 +17,9 @@ using the functions below:
     throw : HasErr err es => err -> App es a
     catch : HasErr err es => App es a -> (err -> App es a) -> App es a
 
-We can use ``throw`` and ``catch`` for some exception type ``err`` as 
-long as the exception type exists in the list of errors, ``es``, as 
-checked by the ``HasErr`` predicate, also defined in ``Control.App`` 
+We can use ``throw`` and ``catch`` for some exception type ``err`` as
+long as the exception type exists in the list of errors, ``es``, as
+checked by the ``HasErr`` predicate, also defined in ``Control.App``
 (Also, note that ``Exception`` is a synonym for ``HasErr``):
 
 .. code-block:: idris
@@ -27,7 +27,7 @@ checked by the ``HasErr`` predicate, also defined in ``Control.App``
     data HasErr : Error -> List Error -> Type where
          Here : HasErr e (e :: es)
          There : HasErr e es -> HasErr e (e' :: es)
-    
+
     Exception : Error -> List Error -> Type
     Exception = HasErr
 

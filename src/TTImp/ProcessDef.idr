@@ -351,7 +351,7 @@ checkLHS {vars} trans mult n opts nest env fc lhs_in
          pure (lhs, ext)
 
 -- Return whether any of the pattern variables are in a trivially empty
--- type, where trivally empty means one of:
+-- type, where trivially empty means one of:
 --  * No constructors
 --  * Every constructor of the family has a return type which conflicts with
 --    the given constructor's type
@@ -487,7 +487,7 @@ checkClause {vars} mult vis totreq hashit n opts nest env
                                  (weakenNs (mkSizeOf wargs) notreqty))
          let bNotReq = binder wtyScope
 
-         -- The environment has some implicit and some explcit args, potentially,
+         -- The environment has some implicit and some explicit args, potentially,
          -- which is inconvenient since we have to know which is which when
          -- elaborating the application of the rhs function. So it's easier
          -- if we just make them all explicit - this type isn't visible to

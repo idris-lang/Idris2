@@ -34,7 +34,7 @@ mkOp tm@(PApp fc (PApp _ (PRef opFC kn) x) y)
        -- to check if the name is an operator we use the root name as a basic
        -- user name. This is because if the name is qualified with the namespace
        -- looking the fixity context will fail. A qualified operator would look
-       -- like this: `M1.M2.(++)` which would not match its fixity namesapce
+       -- like this: `M1.M2.(++)` which would not match its fixity namespace
        -- that looks like this: `M1.M2.infixl.(++)`. However, since we only want
        -- to know if the name is an operator or not, it's enough to check
        -- that the fixity context contains the name `(++)`

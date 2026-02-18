@@ -76,7 +76,7 @@ extendSyn newsyn
               ++ show (modDocstrings newsyn)
            ]
 
-         -- Before we merge the two syntax environement, we remove the
+         -- Before we merge the two syntax environment, we remove the
          -- private fixities from the one we are importing.
          -- We keep the local private fixities since they are visible in the
          -- current file.
@@ -719,14 +719,14 @@ mutual
       trimLeft : Nat -> List PStr -> Core (List PStr)
       trimLeft indent [] = pure []
       trimLeft indent [StrLiteral fc str]
-          = let (trimed, rest) = splitAt indent (fastUnpack str) in
-            if any (not . isSpace) trimed
+          = let (trimmed, rest) = splitAt indent (fastUnpack str) in
+            if any (not . isSpace) trimmed
               then throw $ BadMultiline fc "Line is less indented than the closing delimiter"
               else let str = if null rest then "\n" else fastPack rest in
                    pure [StrLiteral fc str]
       trimLeft indent (StrLiteral fc str :: xs)
-          = let (trimed, rest) = splitAt indent (fastUnpack str) in
-            if any (not . isSpace) trimed || length trimed < indent
+          = let (trimmed, rest) = splitAt indent (fastUnpack str) in
+            if any (not . isSpace) trimmed || length trimmed < indent
               then throw $ BadMultiline fc "Line is less indented than the closing delimiter"
              else pure $ (StrLiteral fc (fastPack rest))::xs
       trimLeft indent xs = throw $ BadMultiline fc "Line is less indented than the closing delimiter"

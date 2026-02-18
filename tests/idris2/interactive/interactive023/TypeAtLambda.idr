@@ -29,4 +29,3 @@ f5 = (\(Just x) => (x, r))
   where
     r : Nat
     r = 0
-

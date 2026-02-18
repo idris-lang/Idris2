@@ -10,4 +10,3 @@ parameters {n : Nat}
 
   prf : (b : Bool) -> Int -> func b
   prf b i = let i1 = getType b in ?whut
-

@@ -19,4 +19,3 @@ main =
      conditionBroadcast cv
      ignore $ for ts $ \t => threadWait t
      sleep 1
-

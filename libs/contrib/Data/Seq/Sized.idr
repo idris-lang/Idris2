@@ -202,7 +202,7 @@ implementation Zippable (Seq n) where
   unzipWith3 f (MkSeq ws) = let (xs, ys, zs) = unzipWith3' f ws in (MkSeq xs, MkSeq ys, MkSeq zs)
 
 ||| This implementation works like a ZipList,
-||| and is differnt from that of Seq.Unsized.
+||| and is different from that of Seq.Unsized.
 public export
 implementation {n : Nat} -> Applicative (Seq n) where
   pure = replicate n

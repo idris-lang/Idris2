@@ -17,4 +17,3 @@ main =
      sleep 1
      conditionSignal cv
      threadWait t
-

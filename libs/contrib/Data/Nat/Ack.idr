@@ -36,7 +36,7 @@ ackRec (S k) (S j) = ackRec k $ ackRec (S k) j
 -- The so-called "base rule" and "prime rule" work together to ensure
 -- termination. Happily, the Idris totality checker has no issues.
 
--- An unusual "repeating" defintion of the function is given in the
+-- An unusual "repeating" definition of the function is given in the
 -- book The Little Typer:
 
 ackRep : Nat -> Nat -> Nat

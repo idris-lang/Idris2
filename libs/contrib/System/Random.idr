@@ -79,4 +79,3 @@ rndSelect' xs = pure $ Vect.index !(rndFin k) xs
 public export
 rndSelect : HasIO io => (elems : List a) -> (0 _ : NonEmpty elems) => io a
 rndSelect (x :: xs) = rndSelect' $ fromList (x :: xs)
-

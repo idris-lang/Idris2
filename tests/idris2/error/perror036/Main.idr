@@ -4,4 +4,3 @@ main = do
   printLn "foo = \{show foo"
   let bar = 10 * (1 + foo)
   printLn "bar = \{show bar}"
-

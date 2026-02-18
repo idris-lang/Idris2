@@ -70,7 +70,7 @@ Show a => Show (LazyList a) where
   show []       = "[]"
   show (h :: t) = "[" ++ show' "" h t ++ "]"
     where
-      -- Idris didn't like the lazyness involved when using the
+      -- Idris didn't like the laziness involved when using the
       -- same implementation as for `List`, therefore, this was
       -- adjusted to first force the head and tail of the list.
       show' : String -> a -> LazyList a -> String

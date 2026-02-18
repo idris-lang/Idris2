@@ -10,7 +10,7 @@ export infix 1 `Copies`
 
 ||| Carries multiple linear copies of the same value. Usage: m `Copies` x
 ||| reads as "m copies of value x". This data structure is necessary to implement
-||| algorithms that rely on linearity but also interact with Nat indicies, like
+||| algorithms that rely on linearity but also interact with Nat indices, like
 ||| Vect and Fin.
 ||| This data structure can be found in the paper "How to Take the Inverse of a Type" by
 ||| Daniel Marshall and Dominic Orchard where it's described as an exponent operator

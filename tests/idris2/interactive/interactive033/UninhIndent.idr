@@ -6,4 +6,3 @@
 
            Uninhabited (MyElem a []) where
              uninhabited c = ?uninhabited_rhs
-

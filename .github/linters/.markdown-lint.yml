@@ -1,10 +1,4 @@
 ---
-###########################
-###########################
-## Markdown Linter rules ##
-###########################
-###########################
-
 # Linter rules doc:
 # - https://github.com/DavidAnson/markdownlint
 #
@@ -15,30 +9,30 @@
 #   <!-- markdownlint-restore -->
 #
 
-###############
-# Rules by id #
-###############
-MD001: false
-MD003: false
-MD004: false                  # Unordered list style
-MD007:
-  indent: 2                   # Unordered list indentation
-MD013:
-  line_length: 400            # Line length 80 is far to short
-MD024:
-  siblings_only: true         # allow duplicate headings in CHANGELOG
-MD026:
-  punctuation: ".,;:。，；:"   # List of not allowed
-MD029: false                  # Ordered list item prefix
-MD033: false                  # Allow inline HTML
-MD036: false                  # Emphasis used instead of a heading
-MD041: false                  # First line in file should be a top level heading
-MD044:                        # Proper names should have the correct capitalization
-  code_blocks: false
-  html_elements: false
-MD046: false                  # Idented code block instead of fenced off
-
-#################
-# Rules by tags #
-#################
-blank_lines: false  # Error on blank lines
+heading-style:
+  style: atx
+ul-style:
+  style: dash
+no-hard-tabs:
+  spaces_per_tab: 2
+line-length:
+  # Semantic Line Breaks strategy: One clause per line.
+  # Prioritize logical structure and readable diffs over strict wrapping.
+  # https://sembr.org/
+  line_length: 80
+  severity: warning
+no-duplicate-heading:
+  siblings_only: true # Allow duplicate headings in CHANGELOG
+no-trailing-punctuation:
+  punctuation: ".,;:。，；:" # List of not allowed
+no-bare-urls: false
+first-line-h1:
+  allow_preamble: true
+code-block-style:
+  style: fenced
+code-fence-style:
+  style: backtick
+emphasis-style:
+  style: underscore
+strong-style:
+  style: asterisk

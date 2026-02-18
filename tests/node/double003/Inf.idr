@@ -49,4 +49,3 @@ negInfIsNegInf = -inf == pow (-inf) 3
 -- pos-inf is not neg-inf
 posInfEqNegInf : Bool
 posInfEqNegInf = inf == -inf
-

@@ -11,4 +11,3 @@ private infixr 8 -
 main : IO ()
 main = do printLn (the Nat (%%% 4))
           printLn (1 - 1 - 1)
-

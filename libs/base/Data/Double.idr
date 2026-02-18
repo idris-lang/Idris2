@@ -31,4 +31,3 @@ nan : Double
          "node:lambda:()=>Infinity"
 export
 inf : Double
-

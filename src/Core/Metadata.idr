@@ -89,7 +89,7 @@ record Metadata where
        ||| Posmap of known semantic decorations
        semanticHighlighting : PosMap ASemanticDecoration
 
-       ||| Posmap of aliases (in `with` clauses the LHS disapear during
+       ||| Posmap of aliases (in `with` clauses the LHS disappear during
        ||| elaboration after making sure that they match their parents'
        semanticAliases : PosMap (NonEmptyFC, NonEmptyFC)
 

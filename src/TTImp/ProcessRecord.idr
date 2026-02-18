@@ -324,7 +324,7 @@ elabRecord {vars} eopts fc env nest newns def_vis mbtot tn_in params0 opts conNa
                    -- but only when prefix record projections are enabled, otherwise
                    -- dependent records won't typecheck!
                    --
-                   -- With the braching on this flag, this change of using `rfNamesNS` remains backward compatible
+                   -- With the branching on this flag, this change of using `rfNamesNS` remains backward compatible
                    -- (though the only difference I'm aware is in the output of the `:doc` command)
                    prefix_flag <- isPrefixRecordProjections
                    let upds' = if prefix_flag

@@ -20,4 +20,3 @@ main =
      vals <- for [0..11] $ \_ => channelGetWithTimeout c 15000
      ignore $ traverse (\t => threadWait t) tids
      putStrLn $ show $ sum $ fromMaybe 0 <$> vals
-

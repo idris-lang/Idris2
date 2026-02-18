@@ -41,7 +41,7 @@ interface (PartialOrder ty rel, Connex ty rel) => LinearOrder ty rel where
 public export
 [EP] Equivalence ty rel => Preorder ty rel where
 
---- Derivaties of order-based stuff ---
+--- Derivatives of order-based stuff ---
 
 ||| Gives the leftmost of a strongly connex relation among the given two elements, generalisation of `min`.
 |||

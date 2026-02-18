@@ -4,4 +4,3 @@ data The : (a : Type) -> a -> Type where
 tcase : Type -> Type
 tcase (The a _) = a
 tcase a = a
-

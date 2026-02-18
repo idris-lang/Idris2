@@ -1,4 +1,5 @@
 # Test
+
 The test package exposes the same test framework(s) the Idris 2 compiler
 uses for its test suite.
 
@@ -14,12 +15,13 @@ add `depends = test` to your test suite's package file.
 ## Golden
 
 Golden facilitates testing by way of comparing a test's output to a
-predetermined expecation. The module is well documented in its own source code
+predetermined expectation. The module is well documented in its own source code
 but the following is a primer.
 
 You first import the `Test.Golden` module and write an `IO` function to serve as
 the entrypoint for your test suite. This function must at some point call into
 Golden's `runner`.
+
 ```idris
 -- your_project/tests/Main.idr
 
@@ -36,6 +38,7 @@ main = do
 
 You populate the `TestPool` list that the `runner` expects with one entry per
 pool of tests you want to run. Within each pool, tests are run concurrently.
+
 ```idris
 tests : TestPool
 tests = MkTestPool "Description of the test pool" [] Nothing [
@@ -60,10 +63,10 @@ The third argument to `MkTestPool` is an optional backend. In the example we
 did not specify any but if you want to use the reference counting C backend
 you could for instance use `Just C`.
 
-
 The last argument is a list of directory names that can be found relative to
 your `Main.idr` file. This directory will have some combination of the following
 files.
+
 ```Shell
 my_great_test/
   Test.idr
@@ -74,11 +77,20 @@ my_great_test/
 ```
 
 These files define:
+
 1. Any Idris 2 source code needed for the test
-  (Test.idr, which can be named anything you'd like and is not limited to 1 file).
+   (Test.idr,
+   which can be named anything you'd like
+   and is not limited to 1 file).
+
 2. Any package information needed to build those source files (test.ipkg).
-3. The command run at the shell to execute your test (run, use `$1` in place of the name of the idris2 executable).
+
+3. The command run at the shell
+   to execute your test
+   (run, use `$1` in place of the name of the idris2 executable).
+
 4. Optional input passed to your test case (input).
+
 5. The expected output of running your test (expected).
 
 See the [documentation](./Test/Golden.idr#L12) in `Test/Golden.idr` and
@@ -104,4 +116,3 @@ test case as the expectation.
 If you'd like to make a `TestPool` that automatically picks up all the tests
 from a particular directory, you can use the `testsInDir` helper function from
 the `Test.Golden` module.
-

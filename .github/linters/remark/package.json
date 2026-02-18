@@ -1,0 +1,10 @@
+{
+  "name": "ci-remark-lint",
+  "private": true,
+  "devDependencies": {
+    "remark-cli": "^12.0.0",
+    "remark-gfm": "^4.0.0",
+    "remark-lint-list-item-spacing": "^5.0.0",
+    "remark-preset-lint-recommended": "^7.0.0"
+  }
+}

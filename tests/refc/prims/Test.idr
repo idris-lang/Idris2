@@ -19,6 +19,3 @@ main = do
   do
     -- printLn os
     printLn codegen
-
-
-

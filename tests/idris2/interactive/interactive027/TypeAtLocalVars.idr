@@ -33,4 +33,3 @@ f a b c d =
     -- In the type signature of the Where
     v2 : Vect x Nat
     v2 = ?vect2
-

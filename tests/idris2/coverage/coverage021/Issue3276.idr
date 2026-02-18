@@ -18,4 +18,3 @@ prf1 = MkDigit 51
 
 dis0 : Digit 51 -> Void
 dis0 (MkDigit _ {prf1=Refl}) impossible
-
