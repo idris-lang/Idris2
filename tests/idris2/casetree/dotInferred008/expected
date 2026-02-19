@@ -1,0 +1,57 @@
+1/1: Building Main (Main.idr)
+Main> 0 Main.pair
+Arguments [{arg:1}]
+Compile time tree: case {arg:1} of
+  MkPair {e:1} {e:2} {e:3} {e:4} => 1
+Detaggable arg types: [0]
+Flags: covering
+Main> 0 Main.pairVect
+Arguments [{arg:1}, {arg:2}, {arg:3}]
+Compile time tree: case {arg:3} of
+  MkPair {e:1} {e:2} {e:3} {e:4} => case {e:3} of
+    (::) {e:5} {e:6} {e:7} {e:8} => case {e:8} of
+      (::) {e:9} {e:10} {e:11} {e:12} => case {e:12} of
+        Nil {e:13} => case {e:4} of
+          (::) {e:14} {e:15} {e:16} {e:17} => case {e:17} of
+            (::) {e:18} {e:19} {e:20} {e:21} => case {e:21} of
+              Nil {e:22} => 1
+              _ => 2
+            _ => 2
+          _ => 2
+        _ => 2
+      _ => 2
+    _ => 2
+  _ => 2
+Erasable args: [0, 1]
+Detaggable arg types: [2]
+Inferrable args: [0, 1]
+Flags: covering
+Main> 0 Main.dpair
+Arguments [{arg:1}]
+Compile time tree: case {arg:1} of
+  MkDPair {e:1} {e:2} {e:3} {e:4} => case {e:3} of
+    Bool => case {e:4} of
+      Just {e:5} {e:6} => 1
+      _ => 2
+    _ => 2
+  _ => 2
+Detaggable arg types: [0]
+Flags: covering
+Main> 0 Main.dpairVect
+Arguments [{arg:1}, {arg:2}]
+Compile time tree: case {arg:2} of
+  MkDPair {e:1} {e:2} {e:3} {e:4} => case {e:3} of
+    Bool => case {e:4} of
+      (::) {e:5} {e:6} {e:7} {e:8} => case {e:8} of
+        (::) {e:9} {e:10} {e:11} {e:12} => case {e:12} of
+          Nil {e:13} => 1
+          _ => 2
+        _ => 2
+      _ => 2
+    _ => 2
+  _ => 2
+Erasable args: [0]
+Detaggable arg types: [1]
+Flags: covering
+Main> 
+Bye for now!

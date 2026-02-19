@@ -34,6 +34,12 @@ Weaken NestedNames where
       wknName (n, (mn, vars, rep))
           = (n, (mn, map (weakenNs s) vars, \fc, nt => weakenNs s (rep fc nt)))
 
+export
+thinNestedNames : Thinnable NestedNames
+thinNestedNames (MkNested ns) sub
+    = MkNested $ ns <&> \(n, nm, vars, rep) =>
+        (n, nm, flip thin sub <$> vars, flip thin sub .: rep)
+
 -- replace nested name with full name
 export
 mapNestedName : NestedNames vars -> Name -> Name

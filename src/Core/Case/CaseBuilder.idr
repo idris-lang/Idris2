@@ -342,9 +342,14 @@ clauseType phase (MkPatClause pvars (MkInfo arg _ ty :: rest) pid rhs)
              then Nothing
              else splitCon a xs
     getClauseType phase (PAs _ _ p) t = getClauseType phase p t
-    getClauseType phase l (Known r t) = if isErased r
-      then Nothing
-      else clauseType' l
+    getClauseType (CompileTime cr) l (Known r t)
+        = if isErased r && not (isErased cr)
+             then Nothing
+             else clauseType' l
+    getClauseType phase l (Known r t)
+        = if isErased r
+             then Nothing
+             else clauseType' l
     getClauseType phase l _ = clauseType' l
 
 partition : {a, as, vars : _} ->

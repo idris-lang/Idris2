@@ -1,0 +1,118 @@
+1/1: Building Issue3357 (Issue3357.idr)
+Error: boom is not covering.
+
+Issue3357:5:3--5:14
+ 1 | namespace PrimInt
+ 2 |   0 oops : (0 x : Int) -> if x == 0 then Unit else Void
+ 3 |   oops 0 = ()
+ 4 | 
+ 5 |   boom : Void
+       ^^^^^^^^^^^
+
+Calls non covering function Main.PrimInt.oops
+Error: boom is not covering.
+
+Issue3357:12:3--12:14
+ 08 | namespace PrimString
+ 09 |   0 oops : (0 x : String) -> if x == "" then Unit else Void
+ 10 |   oops "" = ()
+ 11 | 
+ 12 |   boom : Void
+        ^^^^^^^^^^^
+
+Calls non covering function Main.PrimString.oops
+Error: boom is not covering.
+
+Issue3357:19:3--19:14
+ 15 | namespace PrimTy
+ 16 |   0 oops : (0 a : Type) -> a
+ 17 |   oops Int = 0
+ 18 | 
+ 19 |   boom : Void
+        ^^^^^^^^^^^
+
+Calls non covering function Main.PrimTy.oops
+Error: boom is not covering.
+
+Issue3357:26:3--26:14
+ 22 | namespace TyCon
+ 23 |   0 oops : (0 a : Type) -> a
+ 24 |   oops Nat = Z
+ 25 | 
+ 26 |   boom : Void
+        ^^^^^^^^^^^
+
+Calls non covering function Main.TyCon.oops
+Error: boom is not covering.
+
+Issue3357:33:3--33:14
+ 29 | namespace Type
+ 30 |   0 oops : (0 a : Type) -> a
+ 31 |   oops Type = Type
+ 32 | 
+ 33 |   boom : Void
+        ^^^^^^^^^^^
+
+Calls non covering function Main.Type.oops
+Error: oops is not covering.
+
+Issue3357:2:3--2:56
+ 1 | namespace PrimInt
+ 2 |   0 oops : (0 x : Int) -> if x == 0 then Unit else Void
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Missing cases:
+    oops _
+
+Error: oops is not covering.
+
+Issue3357:9:3--9:60
+ 5 |   boom : Void
+ 6 |   boom = void (oops 1)
+ 7 | 
+ 8 | namespace PrimString
+ 9 |   0 oops : (0 x : String) -> if x == "" then Unit else Void
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Missing cases:
+    oops _
+
+Error: oops is not covering.
+
+Issue3357:16:3--16:29
+ 12 |   boom : Void
+ 13 |   boom = void (oops "foo")
+ 14 | 
+ 15 | namespace PrimTy
+ 16 |   0 oops : (0 a : Type) -> a
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Missing cases:
+    oops _
+
+Error: oops is not covering.
+
+Issue3357:23:3--23:29
+ 19 |   boom : Void
+ 20 |   boom = void (oops Void)
+ 21 | 
+ 22 | namespace TyCon
+ 23 |   0 oops : (0 a : Type) -> a
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Missing cases:
+    oops _
+
+Error: oops is not covering.
+
+Issue3357:30:3--30:29
+ 26 |   boom : Void
+ 27 |   boom = void (oops Void)
+ 28 | 
+ 29 | namespace Type
+ 30 |   0 oops : (0 a : Type) -> a
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Missing cases:
+    oops _
+

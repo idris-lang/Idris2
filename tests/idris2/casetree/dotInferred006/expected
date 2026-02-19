@@ -1,0 +1,42 @@
+1/1: Building Main (Main.idr)
+Main> 0 Main.foo
+Arguments [{arg:1}, {arg:2}, {arg:3}]
+Compile time tree: case {arg:1} of
+  (->) {e:1} {e:2} => case {arg:3} of
+    Refl {e:3} {e:4} => 1
+    _ => 2
+  _ => 2
+Detaggable arg types: [2]
+Flags: covering
+Main> 0 Main.bar
+Arguments [{arg:1}, {arg:2}, {arg:3}]
+Compile time tree: case {arg:1} of
+  (->) {e:1} {e:2} => case {e:1} of
+    Int => case {arg:2} of
+      (->) {e:3} {e:4} => case {arg:3} of
+        Refl {e:5} {e:6} => 1
+        _ => 2
+      _ => 2
+    _ => 2
+  _ => 2
+Detaggable arg types: [2]
+Flags: covering
+Main> 0 Main.baz
+Arguments [{arg:1}, {arg:2}, {arg:3}]
+Compile time tree: case {arg:1} of
+  (->) {e:1} {e:2} => case {e:1} of
+    Maybe {e:3} => case {e:3} of
+      Nat => case {arg:2} of
+        (->) {e:4} {e:5} => case {e:4} of
+          Maybe {e:6} => case {arg:3} of
+            Refl {e:7} {e:8} => 1
+            _ => 2
+          _ => 2
+        _ => 2
+      _ => 2
+    _ => 2
+  _ => 2
+Detaggable arg types: [2]
+Flags: covering
+Main> 
+Bye for now!
