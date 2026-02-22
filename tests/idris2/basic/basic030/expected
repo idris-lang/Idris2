@@ -7,7 +7,7 @@ Mismatch between: Nat -> MyN and MyN.
 
 arity:4:16--4:21
  1 | data MyN = MkN Nat Nat
- 2 | 
+ 2 |
  3 | foo : Nat -> Nat -> Nat
  4 | foo x y = case MkN x of
                     ^^^^^

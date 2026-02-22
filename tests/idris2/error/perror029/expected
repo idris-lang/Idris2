@@ -2,7 +2,7 @@
 Error: Delay only takes one argument.
 
 DelayParse:13:44--13:46
- 09 | 
+ 09 |
  10 | public export
  11 | go : a -> (a -> a) -> MyStream
  12 | go initA fn =

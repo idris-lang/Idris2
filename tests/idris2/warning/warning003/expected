@@ -6,7 +6,7 @@ Warning: DEPRECATED: old record update syntax.
 Main:11:14--11:37
  07 | testRec : TestRecord
  08 | testRec = MkTestRecord 0
- 09 | 
+ 09 |
  10 | updatedRec : TestRecord
  11 | updatedRec = record { recField = 1 } testRec
                    ^^^^^^^^^^^^^^^^^^^^^^^

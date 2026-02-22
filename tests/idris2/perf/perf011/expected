@@ -5,9 +5,9 @@ Error: While processing type of foo. Can't find an implementation for BFromInteg
 
 C:5:7--5:14
  1 | module C
- 2 | 
+ 2 |
  3 | import B
- 4 | 
+ 4 |
  5 | foo : BFunc x
            ^^^^^^^
 
@@ -15,18 +15,18 @@ Possible cause: Undefined name A.BFromInteger.
 
 C:5:7--5:14
  1 | module C
- 2 | 
+ 2 |
  3 | import B
- 4 | 
+ 4 |
  5 | foo : BFunc x
            ^^^^^^^
 Did you mean: fromInteger?
 Error: While processing type of foo1. Can't find an implementation for BFromInteger ?x.
 
 C:6:8--6:15
- 2 | 
+ 2 |
  3 | import B
- 4 | 
+ 4 |
  5 | foo : BFunc x
  6 | foo1 : BFunc x
             ^^^^^^^
@@ -34,9 +34,9 @@ C:6:8--6:15
 Possible cause: Undefined name A.BFromInteger. 
 
 C:6:8--6:15
- 2 | 
+ 2 |
  3 | import B
- 4 | 
+ 4 |
  5 | foo : BFunc x
  6 | foo1 : BFunc x
             ^^^^^^^
@@ -45,7 +45,7 @@ Error: While processing type of foo2. Can't find an implementation for BFromInte
 
 C:7:8--7:15
  3 | import B
- 4 | 
+ 4 |
  5 | foo : BFunc x
  6 | foo1 : BFunc x
  7 | foo2 : BFunc x
@@ -55,7 +55,7 @@ Possible cause: Undefined name A.BFromInteger.
 
 C:7:8--7:15
  3 | import B
- 4 | 
+ 4 |
  5 | foo : BFunc x
  6 | foo1 : BFunc x
  7 | foo2 : BFunc x
@@ -64,7 +64,7 @@ Did you mean: fromInteger?
 Error: While processing type of foo3. Can't find an implementation for BFromInteger ?x.
 
 C:8:8--8:15
- 4 | 
+ 4 |
  5 | foo : BFunc x
  6 | foo1 : BFunc x
  7 | foo2 : BFunc x
@@ -74,7 +74,7 @@ C:8:8--8:15
 Possible cause: Undefined name A.BFromInteger. 
 
 C:8:8--8:15
- 4 | 
+ 4 |
  5 | foo : BFunc x
  6 | foo1 : BFunc x
  7 | foo2 : BFunc x

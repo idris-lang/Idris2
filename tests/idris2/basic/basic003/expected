@@ -8,7 +8,7 @@ Error: While processing right hand side of keepUnique. Ambiguous elaboration. Po
 Ambig2:26:21--26:27
  22 |   export
  23 |   fromList : List a -> Set a
- 24 | 
+ 24 |
  25 | keepUnique : List b -> List b
  26 | keepUnique {b} xs = toList (fromList xs)
                           ^^^^^^

@@ -3,7 +3,7 @@ Warning: Main:6:6--6:7:Can't deal with fromInteger in impossible clauses yet
 
 Main:6:6--6:7
  2 | import Data.Vect
- 3 | 
+ 3 |
  4 | -- fromInteger on LHS
  5 | head : (n : Nat) -> {auto 0 prf : IsSucc n} -> Vect n a -> a
  6 | head 0 _ impossible
@@ -13,7 +13,7 @@ Warning: Main:13:9--13:10:Z does not match expected type
 
 Main:13:9--13:10
  09 | data Foo = Z | S Foo
- 10 | 
+ 10 |
  11 | -- No matching constuctor of a known type
  12 | head' : (n : Nat) -> {auto 0 prf : IsSucc n} -> (Foo,Foo) -> Vect n a -> a
  13 | head' Z Z _ impossible
@@ -23,7 +23,7 @@ Warning: Main:18:11--18:12:Ambiguous name [Main.Z, Prelude.Types.Z]
 
 Main:18:11--18:12
  14 | head' (S k) _ (x :: xs) = x
- 15 | 
+ 15 |
  16 | -- Ambiguous constructor of unknown type
  17 | head'' : (n : Nat) -> {auto 0 prf : IsSucc n} -> (Foo,Foo) -> Vect n a -> a
  18 | head'' Z (Z,_) _ impossible

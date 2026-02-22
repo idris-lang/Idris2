@@ -13,7 +13,7 @@ For example: %hide Lib2.infixl.(%%%)
 MainFail:7:20--7:23
  3 | import Lib2
  4 | import Lib1
- 5 | 
+ 5 |
  6 | main : IO ()
  7 | main = printLn (10 %%% 10 %%% 1)
                         ^^^
@@ -28,7 +28,7 @@ For example: %hide Lib2.infixl.(%%%)
 MainFail:7:27--7:30
  3 | import Lib2
  4 | import Lib1
- 5 | 
+ 5 |
  6 | main : IO ()
  7 | main = printLn (10 %%% 10 %%% 1)
                                ^^^
@@ -44,7 +44,7 @@ For example: %hide Main3.prefix.(%%%)
 Main3:12:29--12:32
  08 | (%%%) : Nat -> Nat
  09 | (%%%) = S
- 10 | 
+ 10 |
  11 | main : IO ()
  12 | main = do printLn (the Nat (%%% 4))
                                   ^^^
@@ -58,7 +58,7 @@ For example: %hide Prelude.Ops.infixl.(-)
 
 Main3:13:22--13:23
  09 | (%%%) = S
- 10 | 
+ 10 |
  11 | main : IO ()
  12 | main = do printLn (the Nat (%%% 4))
  13 |           printLn (1 - 1 - 1)
@@ -73,7 +73,7 @@ For example: %hide Prelude.Ops.infixl.(-)
 
 Main3:13:26--13:27
  09 | (%%%) = S
- 10 | 
+ 10 |
  11 | main : IO ()
  12 | main = do printLn (the Nat (%%% 4))
  13 |           printLn (1 - 1 - 1)

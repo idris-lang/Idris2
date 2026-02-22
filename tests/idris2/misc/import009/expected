@@ -5,7 +5,7 @@ Error: Unknown operator '~:>'
 Import:11:3--11:6
  07 | (|>) : (s : HasComp x) => {0 a, b, c : x} -> a ~> b -> b ~> c -> a ~> c
  08 | a |> b = comp s a b
- 09 | 
+ 09 |
  10 | (~:>) : Type -> Type -> Type
  11 | a ~:> b = Pair a b
         ^^^
@@ -19,7 +19,7 @@ Mismatch between: Either ((!!) a) ((!!) b) and Either a ?b -> Void.
 
 Prefix:12:17--12:27
  08 | (!!) = Not
- 09 | 
+ 09 |
  10 | export
  11 | test : Either (!! a) (!! b) -> !! (a, b)
  12 | test f (x, y) = f (Left x)

@@ -8,7 +8,7 @@ Mismatch between: Int and String.
 Error1:5:17--5:26
  1 | foo : Int -> IO Int
  2 | foo x = pure x
- 3 | 
+ 3 |
  4 | main : IO ()
  5 | main = putStrLn !(foo 10)
                      ^^^^^^^^^

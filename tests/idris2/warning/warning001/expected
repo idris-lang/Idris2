@@ -4,10 +4,10 @@ You may be unintentionally shadowing the associated global definitions:
   idF is shadowing Main.idF
 
 Issue539:10:1--10:39
- 06 | 
+ 06 |
  07 | leftIdPoint : (f : a -> b) -> (x : a) -> idF (f x) = f x
  08 | leftIdPoint f x = Refl
- 09 | 
+ 09 |
  10 | leftId : (f : a -> b) -> (idF . f = f)
       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -18,10 +18,10 @@ You may be unintentionally shadowing the associated global definitions:
   a2 is shadowing Main.a2
 
 Issue621:8:1--8:17
- 4 | 
+ 4 |
  5 | a2 : Char
  6 | a2 = 'a'
- 7 | 
+ 7 |
  8 | whyNot : a1 = a2
      ^^^^^^^^^^^^^^^^
 
@@ -44,7 +44,7 @@ PR1407:7:3--7:79
  3 |   f : Either a b -> Either b a
  4 |   f (Left a) = Right a
  5 |   f (Right b) = Left b
- 6 | 
+ 6 |
  7 |   natural : (xs : Either a b) -> ((f . f) . map g) xs === (map g . (f . f)) xs
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -53,10 +53,10 @@ You may be unintentionally shadowing the associated global definitions:
   g is shadowing Main.g
 
 PR1407:15:3--15:14
- 11 | 
+ 11 |
  12 |   g : h === h
  13 |   g = Refl
- 14 | 
+ 14 |
  15 |   h : g === g
         ^^^^^^^^^^^
 

@@ -5,7 +5,7 @@ Error: While processing right hand side of U. Name Main.X.foo is private.
 parambad:7:7--7:10
  3 |     foo : Bool
  4 |     foo = True
- 5 | 
+ 5 |
  6 |   U : Bool
  7 |   U = foo
            ^^^

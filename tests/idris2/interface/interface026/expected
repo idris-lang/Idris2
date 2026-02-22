@@ -4,7 +4,7 @@ Error: While processing right hand side of lkup3Bad. Can't find an implementatio
 UninhabitedRec:30:12--30:21
  26 | lkup2Good : String
  27 | lkup2Good = fff xxs 2
- 28 | 
+ 28 |
  29 | lkup3Bad : String
  30 | lkup3Bad = fff xxs 3
                  ^^^^^^^^^
@@ -14,7 +14,7 @@ Error: While processing right hand side of uniqBad. Can't find an implementation
 UninhabitedRec:49:11--49:12
  45 | uniqGood : Uniq Nat
  46 | uniqGood = [1, 2, 3]
- 47 | 
+ 47 |
  48 | uniqBad : Uniq Nat
  49 | uniqBad = [1, 2, 1]
                 ^

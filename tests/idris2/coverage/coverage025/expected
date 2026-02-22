@@ -5,7 +5,7 @@ ErasedBind:14:1--14:12
  10 | g : (a : Type) -> ErasedBind a -> Maybe Void
  11 | g (a -> b) e = Just (f e)
  12 | g _ _ = Nothing
- 13 | 
+ 13 |
  14 | boom : Void
       ^^^^^^^^^^^
 
@@ -16,7 +16,7 @@ ErasedBind:7:1--7:50
  3 | data ErasedBind : Type -> Type where
  4 |   Impossible : Void => ErasedBind a
  5 |   Erased     : forall b. ErasedBind ((0 x : a) -> b x)
- 6 | 
+ 6 |
  7 | f : forall b. ErasedBind ((x : a) -> b x) -> Void
      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -26,10 +26,10 @@ Missing cases:
 Error: g is not covering.
 
 ErasedBind:10:1--10:45
- 06 | 
+ 06 |
  07 | f : forall b. ErasedBind ((x : a) -> b x) -> Void
  08 | f Impossible impossible
- 09 | 
+ 09 |
  10 | g : (a : Type) -> ErasedBind a -> Maybe Void
       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -41,7 +41,7 @@ NonDependentBind:14:1--14:12
  10 | g : (a : Type) -> NonDependentBind a -> Maybe Void
  11 | g (a -> b) e = Just (f e)
  12 | g _ _ = Nothing
- 13 | 
+ 13 |
  14 | boom : Void
       ^^^^^^^^^^^
 
@@ -52,7 +52,7 @@ NonDependentBind:7:1--7:56
  3 | data NonDependentBind : Type -> Type where
  4 |   Impossible   : Void => NonDependentBind a
  5 |   NonDependent : NonDependentBind (a -> b)
- 6 | 
+ 6 |
  7 | f : forall b. NonDependentBind ((x : a) -> b x) -> Void
      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -62,10 +62,10 @@ Missing cases:
 Error: g is not covering.
 
 NonDependentBind:10:1--10:51
- 06 | 
+ 06 |
  07 | f : forall b. NonDependentBind ((x : a) -> b x) -> Void
  08 | f Impossible impossible
- 09 | 
+ 09 |
  10 | g : (a : Type) -> NonDependentBind a -> Maybe Void
       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -74,10 +74,10 @@ Calls non covering function Main.f
 Error: bad is not covering.
 
 Issue2318:20:1--20:11
- 16 | 
+ 16 |
  17 | oopsie : P a -> Q a -> Void
  18 | oopsie C U impossible
- 19 | 
+ 19 |
  20 | bad : Void
       ^^^^^^^^^^
 
@@ -88,7 +88,7 @@ Issue2318:17:1--17:28
  13 | data Q : A -> Type where
  14 |     U : Q Z
  15 |     V : Q (S a)
- 16 | 
+ 16 |
  17 | oopsie : P a -> Q a -> Void
       ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

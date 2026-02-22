@@ -23,10 +23,10 @@ ProofOfFalse:8:3--9:13
 Error: boom is not total, possibly not terminating due to call to Main.Foo.foo
 
 ProofOfFalse:15:1--15:12
- 11 | 
+ 11 |
  12 | namespace Foo
  13 |   foo = bar
- 14 | 
+ 14 |
  15 | boom : Void
       ^^^^^^^^^^^
 

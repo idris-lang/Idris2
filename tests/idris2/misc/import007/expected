@@ -6,7 +6,7 @@ Error: While processing right hand side of main. Undefined name foo.
 Mod:5:16--5:19
  1 | import Mod1
  2 | import Mod2
- 3 | 
+ 3 |
  4 | main : IO ()
  5 | main = printLn foo
                     ^^^

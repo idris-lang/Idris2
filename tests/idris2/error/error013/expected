@@ -3,9 +3,9 @@ Error: main is not total, possibly not terminating due to function Main.(==) bei
 
 Issue361:7:1--7:13
  3 | data S = T | F
- 4 | 
+ 4 |
  5 | Eq S where
- 6 | 
+ 6 |
  7 | main : IO ()
      ^^^^^^^^^^^^
 
@@ -13,9 +13,9 @@ Error: /= is not total, possibly not terminating due to call to Main.Eq implemen
 
 Issue361:5:1--5:11
  1 | %default total
- 2 | 
+ 2 |
  3 | data S = T | F
- 4 | 
+ 4 |
  5 | Eq S where
      ^^^^^^^^^^
 
@@ -23,9 +23,9 @@ Error: == is not total, possibly not terminating due to recursive path Main.(/=)
 
 Issue361:5:1--5:11
  1 | %default total
- 2 | 
+ 2 |
  3 | data S = T | F
- 4 | 
+ 4 |
  5 | Eq S where
      ^^^^^^^^^^
 

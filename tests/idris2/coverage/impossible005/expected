@@ -11,7 +11,7 @@ Warning: Main:5:12--5:18:%World does not match expected type
 Main:5:12--5:18
  1 | matchInt : () -> Void
  2 | matchInt Int impossible
- 3 | 
+ 3 |
  4 | matchWorld : () -> Void
  5 | matchWorld %World impossible
                 ^^^^^^
@@ -30,7 +30,7 @@ Error: matchWorld is not covering.
 Main:4:1--4:24
  1 | matchInt : () -> Void
  2 | matchInt Int impossible
- 3 | 
+ 3 |
  4 | matchWorld : () -> Void
      ^^^^^^^^^^^^^^^^^^^^^^^
 

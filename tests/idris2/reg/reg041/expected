@@ -11,7 +11,7 @@ Error: While processing left hand side of odd. Can't match on () as it must have
 tuple:5:5--5:7
  1 | tupleBug : Pair () a -> ()
  2 | tupleBug (_, (_, _)) = ()
- 3 | 
+ 3 |
  4 | odd : a -> Bool
  5 | odd () = False
          ^^

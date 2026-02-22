@@ -8,9 +8,9 @@ You may be unintentionally shadowing the associated global definitions:
 
 refleq:5:1--5:35
  1 | import Language.Reflection
- 2 | 
+ 2 |
  3 | %language ElabReflection
- 4 | 
+ 4 |
  5 | solveReflected : TTImp -> Elab any
      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -21,7 +21,7 @@ You may be unintentionally shadowing the associated global definitions:
 refleq:15:1--15:17
  11 |     = do logTerm "" 0 "Goal" g
  12 |          fail "I don't know how to prove this"
- 13 | 
+ 13 |
  14 | %macro
  15 | prove : Elab any
       ^^^^^^^^^^^^^^^^
@@ -31,7 +31,7 @@ Error: While processing right hand side of commutes. Error during reflection: No
 refleq:24:16--24:21
  20 |          logMsg "" 0 (show env)
  21 |          solveReflected g
- 22 | 
+ 22 |
  23 | commutes : (x, y : Nat) -> plus x y = plus y x
  24 | commutes x y = prove
                      ^^^^^

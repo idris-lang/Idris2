@@ -8,7 +8,7 @@ Mismatch between: String -> InterpFormat (format [assert_total (prim__strIndex (
 unpack:39:11--39:55
  35 | printf : (s : String) -> InterpFormat (formatString s)
  36 | printf s = toFunction (formatString s) ""
- 37 | 
+ 37 |
  38 | message : String
  39 | message = printf "My name is %s and I am %d years old"
                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

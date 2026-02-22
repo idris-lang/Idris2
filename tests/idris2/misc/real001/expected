@@ -6,7 +6,7 @@ You may be unintentionally shadowing the associated global definitions:
 
 Channel:63:6--63:41
  59 | AsServer proto = ServerK proto (\res => Close)
- 60 | 
+ 60 |
  61 | public export
  62 | data QueueEntry : Type where
  63 |      Entry : (1 val : any) -> QueueEntry

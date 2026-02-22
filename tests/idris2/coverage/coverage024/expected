@@ -4,7 +4,7 @@ Error: boom is not covering.
 Issue2690:4:1--4:12
  1 | trythis : (mb : Maybe Bool) -> mb === Just True -> Void
  2 | trythis Nothing ab = absurd ab
- 3 | 
+ 3 |
  4 | boom : Void
      ^^^^^^^^^^^
 

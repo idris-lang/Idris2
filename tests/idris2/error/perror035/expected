@@ -3,9 +3,9 @@ Error: Imports must go before any declarations or directives.
 
 ParseError:5:1--5:7
  1 | module ParseError
- 2 | 
+ 2 |
  3 | %default total
- 4 | 
+ 4 |
  5 | import Data.Nat
      ^^^^^^
 
