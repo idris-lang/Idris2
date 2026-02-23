@@ -59,7 +59,7 @@ Warning: Issue3733:4:6--4:11:Cannot match on a partially applied constructor: (M
 
 Issue3733:4:6--4:11
  1 | data X = MkX Int String
- 2 | 
+ 2 |
  3 | foo : X -> Int
  4 | foo (MkX x) impossible
           ^^^^^
@@ -67,7 +67,7 @@ Issue3733:4:6--4:11
 Warning: Issue3733:6:6--6:15:Too many arguments
 
 Issue3733:6:6--6:15
- 2 | 
+ 2 |
  3 | foo : X -> Int
  4 | foo (MkX x) impossible
  5 | foo (MkX x s) = x
