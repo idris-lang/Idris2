@@ -24,6 +24,15 @@ fromLexError origin (ComposeNotClosing begin end, _, _, _)
 fromLexError origin (_, l, c, _)
     = LexFail (MkFC origin (l, c) (l, c + 1)) "Can't recognise token."
 
+addDot : String -> String
+addDot msg
+  = case strUncons $ reverse msg of
+      Nothing => msg
+      Just (c, _) => if isPunct c then msg else msg +> '.'
+  where
+    isPunct : Char -> Bool
+    isPunct c = c == '.' || c == '?' || c == '!'
+
 export
 fromParsingErrors : (Show token, Pretty ann token) =>
                     OriginDesc -> List1 (ParsingError token) -> Error
@@ -31,13 +40,13 @@ fromParsingErrors origin = ParseFail . (map fromError)
   where
     fromError : ParsingError token -> (FC, String)
     fromError (Error msg Nothing)
-        = (MkFC origin (0, 0) (0, 0), msg +> '.')
+        = (MkFC origin (0, 0) (0, 0), addDot msg)
     fromError (Error msg (Just t))
         = let start = startBounds t; end = endBounds t in
             let fc = if start == end
                       then MkFC origin start (mapSnd (+1) start)
                       else MkFC origin start end
-            in (fc, msg +> '.')
+            in (fc, addDot msg)
 
 export
 getCharLit : String -> Maybe Char

@@ -1,0 +1,22 @@
+1/1: Building Issue3550 (Issue3550.idr)
+Error: Cannot use backticked name as a prefix operator
+
+Issue3550:2:19--2:25
+ 1 | CharacterExcept : Type
+ 2 | CharacterExcept = `Elem` _ . fst
+                       ^^^^^^
+
+Possible solutions:
+ - Use section: (`Elem` _ . fst)
+ - Use application: Elem _ . fst
+1/1: Building Issue3739 (Issue3739.idr)
+Error: Cannot use backticked name as a prefix operator
+
+Issue3739:2:7--2:14
+ 1 | foo : Nat -> Nat
+ 2 | foo = `minus` 5
+           ^^^^^^^
+
+Possible solutions:
+ - Use section: (`minus` 5)
+ - Use application: minus 5
