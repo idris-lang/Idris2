@@ -2,10 +2,10 @@
 Error: test10 is not covering.
 
 Issue1022-Generated:34:1--34:26
- 30 | 
+ 30 |
  31 | test9 : Not (MyEq a 'a')
  32 | test9 Impossible impossible
- 33 | 
+ 33 |
  34 | test10 : Not (MyEq a Nat)
       ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -15,10 +15,10 @@ Missing cases:
 Error: test11 is not covering.
 
 Issue1022-Generated:37:1--37:24
- 33 | 
+ 33 |
  34 | test10 : Not (MyEq a Nat)
  35 | test10 Impossible impossible
- 36 | 
+ 36 |
  37 | test11 : Not (MyEq 3 a)
       ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -29,9 +29,9 @@ Error: test8 is not covering.
 
 Issue1022-Generated:28:1--28:26
  24 | test7 Impossible impossible
- 25 | 
+ 25 |
  26 | -- The following ones are actually possible
- 27 | 
+ 27 |
  28 | test8 : Not (MyEq a Type)
       ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -41,10 +41,10 @@ Missing cases:
 Error: test9 is not covering.
 
 Issue1022-Generated:31:1--31:25
- 27 | 
+ 27 |
  28 | test8 : Not (MyEq a Type)
  29 | test8 Impossible impossible
- 30 | 
+ 30 |
  31 | test9 : Not (MyEq a 'a')
       ^^^^^^^^^^^^^^^^^^^^^^^^
 

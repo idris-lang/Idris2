@@ -42,7 +42,7 @@ from each line of the text.
 
         We hope you enjoy your stay
           This line will remain indented with 2 spaces
-        This line has no intendation
+        This line has no indentation
         """
 
 printing the variable `welcome` will result in the following text:
@@ -53,7 +53,7 @@ printing the variable `welcome` will result in the following text:
 
     We hope you enjoy your stay
       This line will remain indented with 2 spaces
-    This line has no intendation
+    This line has no indentation
 
 As you can see, each line has been stripped of its leading 4 space, that is because the closing
 delimiter was indented with 4 spaces.
@@ -61,7 +61,7 @@ delimiter was indented with 4 spaces.
 In order to use multiline string literals, remember the following:
 
 - The starting delimited must be followed by a line return
-- The ending delimiter's intendation level must not exceed the indentation of any line
+- The ending delimiter's indentation level must not exceed the indentation of any line
 
 Raw string literals
 -------------------

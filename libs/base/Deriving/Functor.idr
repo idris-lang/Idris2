@@ -177,18 +177,22 @@ parameters
             Positive => pure $ Left (FIRec prf sp)
             Negative => throwError (NegativeOccurrence t (IApp fc f arg))
           No diff => case !(hasImplementation Functor f) of
-            Just prf => pure (Left (FIFun isFO prf sp))
-            Nothing => case lookup hd ps of
-              Just n => do
-                -- record that the nth parameter should be functorial
-                ns <- gets asFunctors
-                let ns = ifThenElse (n `elem` ns) ns (n :: ns)
-                modify { asFunctors := ns }
-                -- and happily succeed
-                logMsg "derive.functor.assumption" 10 $
-                  "I am assuming that the parameter \{show hd} is a Functor"
-                pure (Left (FIFun isFO assert_hasImplementation sp))
-              Nothing => throwError (NotAFunctor f)
+            Just prf => do
+              logMsg "derive.functor.search" 50 $ "Found a (Functor \{show f}) instance"
+              pure (Left (FIFun isFO prf sp))
+            Nothing => do
+              logMsg "derive.functor.search" 50 $ "Could not find a (Functor \{show f}) instance"
+              case lookup hd ps of
+                Just n => do
+                  -- record that the nth parameter should be functorial
+                  ns <- gets asFunctors
+                  let ns = ifThenElse (n `elem` ns) ns (n :: ns)
+                  modify { asFunctors := ns }
+                  -- and happily succeed
+                  logMsg "derive.functor.assumption" 10 $
+                    "I am assuming that the parameter \{show hd} is a Functor"
+                  pure (Left (FIFun isFO assert_hasImplementation sp))
+                Nothing => throwError (NotAFunctor f)
       -- Otherwise it better be the case that f is also free of x so that
       -- we can mark the whole type as being x-free.
       Right fo => do

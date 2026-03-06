@@ -3,7 +3,7 @@ Error: foo x is not a valid impossible case.
 
 Test:5:1--5:17
  1 | data Bar : Type
- 2 | 
+ 2 |
  3 | total
  4 | foo : Bar -> a
  5 | foo x impossible
@@ -23,7 +23,7 @@ Issue3457:6:1--6:20
  2 | data Bar : Type
  3 | data Foo : Type where
  4 |   MkFoo : Three -> Bar -> Foo
- 5 | 
+ 5 |
  6 | fun : Foo -> String
      ^^^^^^^^^^^^^^^^^^^
 

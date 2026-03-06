@@ -9,7 +9,7 @@ Error: zip [] [] is not a valid impossible case.
 Vect2:8:1--8:21
  4 |      Nil  : Vect Z a
  5 |      (::) : a -> Vect k a -> Vect (S k) a
- 6 | 
+ 6 |
  7 | zip : Vect n a -> Vect n b -> Vect n (a, b)
  8 | zip [] [] impossible
      ^^^^^^^^^^^^^^^^^^^^
@@ -20,7 +20,7 @@ Warning: Vect3:9:8--9:9:Z does not match expected type
 Vect3:9:8--9:9
  5 |      Nil  : Vect Z a
  6 |      (::) : a -> Vect k a -> Vect (S k) a
- 7 | 
+ 7 |
  8 | zip : Vect n a -> Vect n b -> Vect n (a, b)
  9 | zip [] Z impossible
             ^

@@ -3,7 +3,7 @@ Error: zeroImpossible is not covering.
 
 Issue899:3:1--3:46
  1 | %default total
- 2 | 
+ 2 |
  3 | zeroImpossible : (k : Nat) -> k === Z -> Void
      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -17,7 +17,7 @@ Issue484:10:1--10:41
  06 | getType Vrai = Unit
  07 | getType Faux = Unit
  08 | getType Indef = Void
- 09 | 
+ 09 |
  10 | swap : (t : Three) -> getType t -> Three
       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

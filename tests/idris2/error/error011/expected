@@ -9,7 +9,7 @@ Error: Main.D is already defined.
 
 ConstructorDuplicate:5:3--5:15
  1 | data A = B | B
- 2 | 
+ 2 |
  3 | data C : Type -> Type where
  4 |   D : C Int
  5 |   D : C String

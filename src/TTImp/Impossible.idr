@@ -56,11 +56,19 @@ nextVar fc
          put QVar (i + 1)
          pure (Ref fc Bound (MN "imp" i))
 
-badClause : {auto c : Ref Ctxt Defs} -> ClosedTerm -> List RawImp -> List RawImp -> List (Name, RawImp) -> Core a
+badClause : {auto c : Ref Ctxt Defs} ->
+            ClosedTerm ->
+            List (WithFC RawImp) ->
+            List (WithFC RawImp) ->
+            List (Name, WithFC RawImp) ->
+            Core a
 badClause fn exps autos named
    = throw (GenericMsg (getLoc fn)
             ("Badly formed impossible clause "
-               ++ show (!(toFullNames fn), exps, autos, named)))
+               ++ show (!(toFullNames fn),
+                        (.val) <$> exps,
+                        (.val) <$> autos,
+                        mapSnd (.val) <$> named)))
 
 mutual
   processArgs : {auto c : Ref Ctxt Defs} ->
@@ -68,23 +76,23 @@ mutual
                 {auto q : Ref QVar Int} ->
                 Bool -> -- should be fully applied
                 ClosedTerm -> ClosedNF ->
-                (expargs : List RawImp) ->
-                (autoargs : List RawImp) ->
-                (namedargs : List (Name, RawImp)) ->
+                (expargs : List (WithFC RawImp)) ->
+                (autoargs : List (WithFC RawImp)) ->
+                (namedargs : List (Name, WithFC RawImp)) ->
                 Core ClosedTerm
   -- unnamed takes priority
-  processArgs con fn (NBind fc x (Pi _ _ Explicit ty) sc) (e :: exps) autos named
-     = do e' <- mkTerm e (Just ty)
+  processArgs con fn (NBind _ x (Pi _ _ Explicit ty) sc) (e :: exps) autos named
+     = do e' <- mkTerm e.val (Just ty)
           defs <- get Ctxt
-          processArgs con (App fc fn e')
+          processArgs con (App e.fc fn e')
                       !(sc defs (toClosure defaultOpts Env.empty e'))
                       exps autos named
-  processArgs con fn (NBind fc x (Pi _ _ Explicit ty) sc) [] autos named
+  processArgs con fn (NBind _ x (Pi _ _ Explicit ty) sc) [] autos named
      = do defs <- get Ctxt
           case findNamed x named of
             Just ((_, e), named') =>
-               do e' <- mkTerm e (Just ty)
-                  processArgs con (App fc fn e')
+               do e' <- mkTerm e.val (Just ty)
+                  processArgs con (App e.fc fn e')
                               !(sc defs (toClosure defaultOpts Env.empty e'))
                               [] autos named'
             Nothing => -- Expected an explicit argument, but only implicits left
@@ -95,41 +103,43 @@ mutual
                           let True = null autos && null named
                             | False => badClause fn [] autos named -- unexpected arguments
                           pure fn
-  processArgs con fn (NBind fc x (Pi _ _ Implicit ty) sc) exps autos named
+  processArgs con fn (NBind _ x (Pi _ _ Implicit ty) sc) exps autos named
      = do defs <- get Ctxt
           case findNamed x named of
-            Nothing => do e' <- nextVar fc
+            Nothing => do let fc = getLoc fn
+                          e' <- nextVar fc
                           processArgs con (App fc fn e')
                                       !(sc defs (toClosure defaultOpts Env.empty e'))
                                       exps autos named
             Just ((_, e), named') =>
-               do e' <- mkTerm e (Just ty)
-                  processArgs con (App fc fn e')
+               do e' <- mkTerm e.val (Just ty)
+                  processArgs con (App e.fc fn e')
                               !(sc defs (toClosure defaultOpts Env.empty e'))
                               exps autos named'
-  processArgs con fn (NBind fc x (Pi _ _ AutoImplicit ty) sc) exps autos named
+  processArgs con fn (NBind _ x (Pi _ _ AutoImplicit ty) sc) exps autos named
      = do defs <- get Ctxt
           case autos of
                (e :: autos') => -- unnamed takes priority
-                   do e' <- mkTerm e (Just ty)
-                      processArgs con (App fc fn e')
+                   do e' <- mkTerm e.val (Just ty)
+                      processArgs con (App e.fc fn e')
                                   !(sc defs (toClosure defaultOpts Env.empty e'))
                                   exps autos' named
                [] =>
                   case findNamed x named of
                      Nothing =>
-                        do e' <- nextVar fc
+                        do let fc = getLoc fn
+                           e' <- nextVar fc
                            processArgs con (App fc fn e')
                                        !(sc defs (toClosure defaultOpts Env.empty e'))
                                        exps [] named
                      Just ((_, e), named') =>
-                        do e' <- mkTerm e (Just ty)
-                           processArgs con (App fc fn e')
+                        do e' <- mkTerm e.val (Just ty)
+                           processArgs con (App e.fc fn e')
                                        !(sc defs (toClosure defaultOpts Env.empty e'))
                                        exps [] named'
   processArgs _ fn _ [] [] [] = pure fn
   processArgs _ fn _ (x :: _) autos named
-     = throw $ GenericMsg (getFC x) "Too many arguments"
+     = throw $ GenericMsg x.fc "Too many arguments"
   processArgs _ fn _ exps autos named
      = badClause fn exps autos named
 
@@ -137,9 +147,9 @@ mutual
              {auto s : Ref Syn SyntaxInfo} ->
              {auto q : Ref QVar Int} ->
              FC -> Name -> Maybe ClosedClosure ->
-             (expargs : List RawImp) ->
-             (autoargs : List RawImp) ->
-             (namedargs : List (Name, RawImp)) ->
+             (expargs : List (WithFC RawImp)) ->
+             (autoargs : List (WithFC RawImp)) ->
+             (namedargs : List (Name, WithFC RawImp)) ->
              Core ClosedTerm
   buildApp fc n mty exps autos named
       = do defs <- get Ctxt
@@ -174,22 +184,22 @@ mutual
   mkTerm tm mty = go tm [] [] []
     where
       go : RawImp ->
-          (expargs : List RawImp) ->
-          (autoargs : List RawImp) ->
-          (namedargs : List (Name, RawImp)) ->
+          (expargs : List (WithFC RawImp)) ->
+          (autoargs : List (WithFC RawImp)) ->
+          (namedargs : List (Name, WithFC RawImp)) ->
           Core ClosedTerm
       go (IVar fc n) exps autos named
         = buildApp fc n mty exps autos named
       go (IAs fc fc' u n pat) exps autos named
         = go pat exps autos named
       go (IApp fc fn arg) exps autos named
-        = go fn (arg :: exps) autos named
+        = go fn (MkFCVal fc arg :: exps) autos named
       go (IWithApp fc fn arg) exps autos named
-        = go fn (arg :: exps) autos named
+        = go fn (MkFCVal fc arg :: exps) autos named
       go (IAutoApp fc fn arg) exps autos named
-        = go fn exps (arg :: autos) named
+        = go fn exps (MkFCVal fc arg :: autos) named
       go (INamedApp fc fn nm arg) exps autos named
-        = go fn exps autos ((nm, arg) :: named)
+        = go fn exps autos ((nm, MkFCVal fc arg) :: named)
       go (IMustUnify fc r tm) exps autos named
         = Erased fc . Dotted <$> go tm exps autos named
       go (IPrimVal fc c) _ _ _

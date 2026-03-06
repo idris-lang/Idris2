@@ -5,7 +5,7 @@ Test:9:1--9:35
  5 | natToInt : MyNat -> Integer
  6 | natToInt Z = 0
  7 | natToInt (S k _) = 1 + natToInt k
- 8 | 
+ 8 |
  9 | %builtin NaturalToInteger natToInt
      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

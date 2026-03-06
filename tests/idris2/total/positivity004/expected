@@ -9,7 +9,7 @@ Error: MkFix is not total, not strictly positive
 
 Issue1771-1:4:3--4:29
  1 | %default total
- 2 | 
+ 2 |
  3 | data Fix : (Type -> Type) -> Type where
  4 |   MkFix : f (Fix f) -> Fix f
        ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -17,30 +17,30 @@ Issue1771-1:4:3--4:29
 Error: argh is not total, possibly not terminating due to function Main.MkFix being reachable via Main.yesF -> Main.MkFix
 
 Issue1771-1:15:1--15:12
- 11 | 
+ 11 |
  12 | notF : Not F
  13 | notF (MkFix f) = f (yesF f)
- 14 | 
+ 14 |
  15 | argh : Void
       ^^^^^^^^^^^
 
 Error: notF is not total, possibly not terminating due to call to Main.yesF
 
 Issue1771-1:12:1--12:13
- 08 | 
+ 08 |
  09 | yesF : Not F -> F
  10 | yesF nf = MkFix nf
- 11 | 
+ 11 |
  12 | notF : Not F
       ^^^^^^^^^^^^
 
 Error: yesF is not total, possibly not terminating due to call to Main.MkFix
 
 Issue1771-1:9:1--9:18
- 5 | 
+ 5 |
  6 | F : Type
  7 | F = Fix Not
- 8 | 
+ 8 |
  9 | yesF : Not F -> F
      ^^^^^^^^^^^^^^^^^
 
@@ -55,7 +55,7 @@ Error: MkFix is not total, not strictly positive
 
 Issue1771-2:4:3--4:58
  1 | %default total
- 2 | 
+ 2 |
  3 | data F : Type where
  4 |   MkFix : ((0 g : Type -> Type) -> g === Not -> g F) -> F
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -66,27 +66,27 @@ Issue1771-2:14:1--14:12
  10 | notF (MkFix f) =
  11 |   let g = f Not Refl in
  12 |   g (yesF g)
- 13 | 
+ 13 |
  14 | argh : Void
       ^^^^^^^^^^^
 
 Error: notF is not total, possibly not terminating due to call to Main.yesF
 
 Issue1771-2:9:1--9:13
- 5 | 
+ 5 |
  6 | yesF : Not F -> F
  7 | yesF nf = MkFix (\ g, Refl => nf)
- 8 | 
+ 8 |
  9 | notF : Not F
      ^^^^^^^^^^^^
 
 Error: yesF is not total, possibly not terminating due to call to Main.MkFix
 
 Issue1771-2:6:1--6:18
- 2 | 
+ 2 |
  3 | data F : Type where
  4 |   MkFix : ((0 g : Type -> Type) -> g === Not -> g F) -> F
- 5 | 
+ 5 |
  6 | yesF : Not F -> F
      ^^^^^^^^^^^^^^^^^
 
@@ -102,7 +102,7 @@ Error: MkF is not total, not strictly positive
 Issue1771-3:10:3--10:26
  06 | unwrap : Wrap a -> a
  07 | unwrap (MkWrap v) = v
- 08 | 
+ 08 |
  09 | data F : Type where
  10 |   MkF : Wrap (Not F) -> F
         ^^^^^^^^^^^^^^^^^^^^^^^
@@ -110,30 +110,30 @@ Issue1771-3:10:3--10:26
 Error: argh is not total, possibly not terminating due to function Main.MkF being reachable via Main.yesF -> Main.MkF
 
 Issue1771-3:18:1--18:12
- 14 | 
+ 14 |
  15 | notF : Not F
  16 | notF (MkF f) = unwrap f (yesF $ unwrap f)
- 17 | 
+ 17 |
  18 | argh : Void
       ^^^^^^^^^^^
 
 Error: notF is not total, possibly not terminating due to calls to Main.F, Main.yesF
 
 Issue1771-3:15:1--15:13
- 11 | 
+ 11 |
  12 | yesF : Not F -> F
  13 | yesF = MkF . MkWrap
- 14 | 
+ 14 |
  15 | notF : Not F
       ^^^^^^^^^^^^
 
 Error: yesF is not total, possibly not terminating due to call to Main.MkF
 
 Issue1771-3:12:1--12:18
- 08 | 
+ 08 |
  09 | data F : Type where
  10 |   MkF : Wrap (Not F) -> F
- 11 | 
+ 11 |
  12 | yesF : Not F -> F
       ^^^^^^^^^^^^^^^^^
 

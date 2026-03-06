@@ -4,7 +4,7 @@ Error: badeq x y p is not a valid impossible case.
 eq:27:1--27:23
  23 | eqL2 : (xs : List a) -> (x :: xs = x :: y :: xs) -> Nat
  24 | eqL2 xs p impossible
- 25 | 
+ 25 |
  26 | badeq : (x : Nat) -> (y : Nat) -> (S (S x) = S y) -> Nat
  27 | badeq x y p impossible
       ^^^^^^^^^^^^^^^^^^^^^^
@@ -14,7 +14,7 @@ Error: badeqL xs ys p is not a valid impossible case.
 eq:30:1--30:26
  26 | badeq : (x : Nat) -> (y : Nat) -> (S (S x) = S y) -> Nat
  27 | badeq x y p impossible
- 28 | 
+ 28 |
  29 | badeqL : (xs : List a) -> (ys : List a) -> (x :: xs = x :: y :: ys) -> Nat
  30 | badeqL xs ys p impossible
       ^^^^^^^^^^^^^^^^^^^^^^^^^

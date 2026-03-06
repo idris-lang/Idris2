@@ -4,7 +4,7 @@ Error: While processing right hand side of y. Bad elaborator script ?someHole [n
 BadElabScript:14:5--14:15
  10 |   ?someHole
  11 |   check `(%search)
- 12 | 
+ 12 |
  13 | y : Nat
  14 | y = %runElab x
           ^^^^^^^^^^
@@ -12,7 +12,7 @@ BadElabScript:14:5--14:15
 Stuck place in the script:
 
 BadElabScript:10:3--10:12
- 06 | 
+ 06 |
  07 | x : Elab Nat
  08 | x = do
  09 |   ignore $ check {expected=Type} `(Nat)

@@ -4,7 +4,7 @@ Error: While processing right hand side of bar. Main.test is not accessible in t
 ZFun:13:7--13:11
  09 | 0 baz : Nat
  10 | baz = test foo -- fine!
- 11 | 
+ 11 |
  12 | bar : Nat
  13 | bar = test foo -- bad!
             ^^^^

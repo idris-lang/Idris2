@@ -6,7 +6,7 @@ You may be unintentionally shadowing the associated global definitions:
 
 Matrix:3:1--3:48
  1 | import Data.Vect
- 2 | 
+ 2 |
  3 | createEmpties : {n : _} -> Vect n (Vect 0 elem)
      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -18,7 +18,7 @@ Matrix:7:1--7:101
  3 | createEmpties : {n : _} -> Vect n (Vect 0 elem)
  4 | createEmpties {n = Z} = []
  5 | createEmpties {n = (S k)} = [] :: createEmpties
- 6 | 
+ 6 |
  7 | transposeHelper : (x : Vect n elem) -> (xs_trans : Vect n (Vect k elem)) -> Vect n (Vect (S k) elem)
      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -30,7 +30,7 @@ Matrix:11:1--11:71
  07 | transposeHelper : (x : Vect n elem) -> (xs_trans : Vect n (Vect k elem)) -> Vect n (Vect (S k) elem)
  08 | transposeHelper [] [] = []
  09 | transposeHelper (x :: xs) (y :: ys) = (x :: y) :: transposeHelper xs ys
- 10 | 
+ 10 |
  11 | transposeMat : {n : _} -> Vect m (Vect n elem) -> Vect n (Vect m elem)
       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -41,7 +41,7 @@ You may be unintentionally shadowing the associated global definitions:
 
 VecSort:3:1--3:79
  1 | import Data.Vect
- 2 | 
+ 2 |
  3 | insert : Ord elem => (x : elem) -> (xsSorted : Vect k elem) -> Vect (S k) elem
      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -53,7 +53,7 @@ VecSort:9:1--9:49
  5 | insert x (y :: xs) = case x < y of
  6 |                           False => y :: insert x xs
  7 |                           True => x :: y :: xs
- 8 | 
+ 8 |
  9 | insSort : Ord elem => Vect n elem -> Vect n elem
      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

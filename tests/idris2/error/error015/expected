@@ -4,7 +4,7 @@ Error: Declaration name (f) shadowed by a pattern variable.
 Issue110:8:1--8:14
  4 | data Tup : (a,b : Type) -> Type where
  5 |   MkTup : (1 f : a) -> (1 s : b) -> Tup a b
- 6 | 
+ 6 |
  7 | f : Tup a b -> a
  8 | f (MkTup f s) = f
      ^^^^^^^^^^^^^

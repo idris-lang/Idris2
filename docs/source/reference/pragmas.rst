@@ -59,7 +59,7 @@ definition.
 ``%ambiguity_depth``
 --------------------
 
-Set how deep nested ambiguous names can be before Idris gives up. The default is 3, increashing this
+Set how deep nested ambiguous names can be before Idris gives up. The default is 3, increasing this
 will effect compiler performance. For more details, see :ref:`ambiguous-name-resolution`.
 
 ``%totality_depth``
@@ -232,7 +232,7 @@ Instruct the compiler to inline the function during totality checking.
 ``%hide``
 --------------------
 
-Hide a definition from imports. This is particularly useful when you are re-definiing functions or types from
+Hide a definition from imports. This is particularly useful when you are re-defining functions or types from
 a module but still need to import it.
 
 .. code-block:: idris

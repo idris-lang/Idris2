@@ -4,7 +4,7 @@ Error: While processing right hand side of main. Can't solve constraint between:
 lazybug:5:22--5:34
  1 | bools : List Bool
  2 | bools = [True, False]
- 3 | 
+ 3 |
  4 | main : IO ()
  5 | main = printLn $ or (map id bools)
                           ^^^^^^^^^^^^
@@ -14,7 +14,7 @@ Error: While processing right hand side of main2. Can't solve constraint between
 lazybug:8:23--8:42
  4 | main : IO ()
  5 | main = printLn $ or (map id bools)
- 6 | 
+ 6 |
  7 | main2 : IO ()
  8 | main2 = printLn $ or (map (\x => x) bools)
                            ^^^^^^^^^^^^^^^^^^^
@@ -24,7 +24,7 @@ Error: While processing right hand side of main4. Can't solve constraint between
 lazybug:14:22--14:27
  10 | main3 : IO ()
  11 | main3 = printLn $ or (map (\x => Delay x) bools)
- 12 | 
+ 12 |
  13 | main4 : IO ()
  14 | main4 = printLn $ or bools
                            ^^^^^

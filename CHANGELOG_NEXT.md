@@ -59,7 +59,7 @@ should target this file (`CHANGELOG_NEXT`).
   - `Libraries.Data.List.Quantifiers.Extra.tabulate`.
   - `Libraries.Utils.Binary.nonEmptyRev`
   - `Libraries.Utils.String.dotSep`
-* Fixes an issue when unifying labmda terms with implicits (#3670)
+* Fixes an issue when unifying lambda terms with implicits (#3670)
 * The "With clause does not match parent" error now points to the correct location
 * The compiler now warns the user when `impossible` clauses are ignored. This
   typically happens when a numeric literal or an ambiguous name appears in an
@@ -70,6 +70,7 @@ should target this file (`CHANGELOG_NEXT`).
 * Fixed incorrect argument multiplicity when using an as-pattern (#3687).
 * Type inspection now resugars primitive functions to more likely
   names/operators (#3712)
+* Better messages for errors inside string interpolation.
 
 ### Building/Packaging changes
 
@@ -96,3 +97,4 @@ should target this file (`CHANGELOG_NEXT`).
 * Added `rtrim` to `Data.String`.
 * Added `decToMaybe`, `maybeCong` and `maybeCong2` to `Data.Maybe`.
 * Added `maybeEq` to `Decidable.Equality`.
+* Removed `writeIORef1`, which unsafely allowed a linear value to become unrestricted.

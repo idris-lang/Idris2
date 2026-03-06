@@ -4,7 +4,7 @@ Can't match on X1 (Erased argument).
 
 Main:4:3--4:5
  1 | data X = X1 | X2
- 2 | 
+ 2 |
  3 | f : (0 _ : X) -> Void
  4 | f X1 impossible
        ^^
@@ -15,7 +15,7 @@ Can't match on X1 (Erased argument).
 Main:7:3--7:5
  3 | f : (0 _ : X) -> Void
  4 | f X1 impossible
- 5 | 
+ 5 |
  6 | g : (0 _ : X) -> Void
  7 | g X1 impossible
        ^^
@@ -24,9 +24,9 @@ Error: Impossible pattern gives an error:
 Can't match on Y1 ?_ (Erased argument).
 
 Main:14:4--14:8
- 10 | 
+ 10 |
  11 | data Y = Y1 Void | Y2
- 12 | 
+ 12 |
  13 | h : (0 _ : Y) -> Void
  14 | h (Y1 _) impossible
          ^^^^
@@ -36,7 +36,7 @@ Error: Impossible pattern gives an error:
 Can't match on ?search [no locals in scope] (Erased argument).
 
 Issue1800:19:8--19:15
- 15 | 
+ 15 |
  16 | mycase : {0 s : String} -> (0 prf : s `Elem` Example) -> (single : Singleton prf) -> Nat
  17 | mycase .(Here) (Is "String1") = 0
  18 | mycase .(There $ There Here) (Is "LastString") = 2
@@ -50,7 +50,7 @@ Can't match on 0 (Erased argument).
 Issue1800Shrinked:5:11--5:18
  1 | data View : Nat -> Type where
  2 |   Plus : (k, l : Nat) -> View (k + l)
- 3 | 
+ 3 |
  4 | view : View m -> Void
  5 | view {m = %search} v impossible
                ^^^^^^^

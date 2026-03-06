@@ -14,7 +14,7 @@ Error: Bracket is not properly closed.
 Issue3594:8:14--8:15
  4 |   Red : Color
  5 |   Blue : Color
- 6 | 
+ 6 |
  7 | implementation Show Color where
  8 |   show Red = "red
                   ^

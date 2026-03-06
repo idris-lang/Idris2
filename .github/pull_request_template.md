@@ -10,7 +10,7 @@ the proposed change. -->
 
 <!-- /!\ Please delete sections that do not apply -->
 - [ ] This is my first time contributing, I've carefully read [`CONTRIBUTING.md`](https://github.com/idris-lang/Idris2/blob/main/CONTRIBUTING.md)
-      and I've updated [`CONTRIBUTORS.md`](https://github.com/idris-lang/Idris2/blob/main/CONTRIBUTORS.md) with my name.
+      and I've updated [`CONTRIBUTORS`](https://github.com/idris-lang/Idris2/blob/main/CONTRIBUTORS) with my name.
 - [ ] If this is a fix, user-facing change, a compiler change, or a new paper
       implementation, I have updated [`CHANGELOG_NEXT.md`](https://github.com/idris-lang/Idris2/blob/main/CHANGELOG_NEXT.md)
 

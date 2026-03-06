@@ -3,7 +3,7 @@ Error: Expected ',' or '.'.
 
 Micro:3:14--3:15
  1 | module Micro
- 2 | 
+ 2 |
  3 | f : forall a b. (Unit -> Unit) -> Unit -> Unit
                   ^
 

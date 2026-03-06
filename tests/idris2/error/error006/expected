@@ -4,7 +4,7 @@ Error: While processing right hand side of test. Can't find an implementation fo
 IfErr:15:10--15:30
  11 | -- hard to achieve and this way is better than displaying the whole
  12 | -- top level search when only part of it is relevant)
- 13 | 
+ 13 |
  14 | test : Int -> String
  15 | test x = showIfEq MkFoo MkBar
                ^^^^^^^^^^^^^^^^^^^^
@@ -14,7 +14,7 @@ Error: While processing right hand side of test2. Can't find an implementation f
 IfErr:23:9--23:29
  19 |   MkBar == MkBar = True
  20 |   _ == _ = False
- 21 | 
+ 21 |
  22 | test2 : String
  23 | test2 = showIfEq MkFoo MkBar
               ^^^^^^^^^^^^^^^^^^^^

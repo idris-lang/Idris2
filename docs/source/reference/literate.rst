@@ -13,7 +13,7 @@ Idris2 also provides support for recognising both 'visible' and 'invisible' code
 
 A literate style consists of:
 
-+ a list of String encoded code block deliminators;
++ a list of String encoded code block delimiters;
 + a list of line indicators; and
 + a list of valid file extensions.
 

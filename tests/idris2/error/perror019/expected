@@ -3,7 +3,7 @@ Error: Implementation body can only contain definitions
 
 ImplError:5:3--5:4
  1 | data Foo = Bar
- 2 | 
+ 2 |
  3 | implementation Show Foo where
  4 |   show Bar = "a Foo"
  5 |   f

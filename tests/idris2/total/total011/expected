@@ -10,7 +10,7 @@ Error: nonproductive is not total, possibly not terminating due to recursive pat
 
 Issue1460:3:1--3:43
  1 | %default total
- 2 | 
+ 2 |
  3 | nonproductive : Stream a -> (Stream a, ())
      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -19,7 +19,7 @@ Error: fix is not total, possibly not terminating due to recursive path Main.fix
 
 Issue1859:3:1--3:11
  1 | %default total
- 2 | 
+ 2 |
  3 | fix : Void
      ^^^^^^^^^^
 
@@ -30,7 +30,7 @@ Issue1859-2:8:1--8:15
  4 | tailRecId f a = case f a of
  5 |   Left a2 => tailRecId f a2
  6 |   Right b => b
- 7 | 
+ 7 |
  8 | iamvoid : Void
      ^^^^^^^^^^^^^^
 
@@ -38,7 +38,7 @@ Error: tailRecId is not total, possibly not terminating due to recursive path Ma
 
 Issue1859-2:3:1--3:40
  1 | %default total
- 2 | 
+ 2 |
  3 | tailRecId : (a -> Either a b) -> a -> b
      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -47,7 +47,7 @@ Error: caseTest is not total, possibly not terminating due to call to Main.dummy
 
 Issue1828:4:3--4:25
  1 | %default total
- 2 | 
+ 2 |
  3 | mutual
  4 |   caseTest : Nat -> Bool
        ^^^^^^^^^^^^^^^^^^^^^^
@@ -58,7 +58,7 @@ Issue1828:8:3--8:14
  4 |   caseTest : Nat -> Bool
  5 |   caseTest p with (dummy)
  6 |    caseTest p | _ = True
- 7 | 
+ 7 |
  8 |   dummy : Nat
        ^^^^^^^^^^^
 

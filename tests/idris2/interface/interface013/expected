@@ -4,7 +4,7 @@ Error: While processing constructor MkRecord. Can't find an implementation for I
 TypeInt:14:25--14:49
  10 | 0 DependentValue : Interface s => Value s -> Type
  11 | DependentValue v = concrete (specifier v)
- 12 | 
+ 12 |
  13 | data Record : s -> Type where
  14 |   MkRecord : Value s -> DependentValue {s} value -> Record s
                               ^^^^^^^^^^^^^^^^^^^^^^^^

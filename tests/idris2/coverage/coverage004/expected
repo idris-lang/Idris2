@@ -2,7 +2,7 @@
 Error: While processing left hand side of bad. Can't match on Just 0 as it must have a polymorphic type.
 
 Cover:14:6--14:12
- 10 | 
+ 10 |
  11 | bad : a -> Foo a -> Bool
  12 | bad Z IsNat = False
  13 | bad True IsBool = True

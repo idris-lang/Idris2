@@ -4,7 +4,7 @@ Error: While processing right hand side of bar. Can't find an implementation for
 Fin:34:7--34:8
  30 | foo : Fin 5
  31 | foo = 3
- 32 | 
+ 32 |
  33 | bar : Fin 5
  34 | bar = 8
             ^

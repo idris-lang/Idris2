@@ -3,7 +3,7 @@ Error: foo is not covering.
 
 Missing:3:1--3:37
  1 | import Data.Vect
- 2 | 
+ 2 |
  3 | foo : {n : Nat} -> Vect n Nat -> Nat
      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

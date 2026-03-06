@@ -6,7 +6,7 @@ Error: While processing right hand side of testFailing1. Ambiguous elaboration. 
 Test:20:16--20:20
  16 |   (<*>) : IO (a -> b) -> IO a -> IO b
  17 |   (<*>) = (<*>) @{%search}
- 18 | 
+ 18 |
  19 | testFailing1 : IO ()
  20 | testFailing1 = pure ()
                      ^^^^
@@ -17,7 +17,7 @@ Error: While processing right hand side of testFailing2. Ambiguous elaboration. 
 
 Test:28:3--28:12
  24 |   pure ()
- 25 | 
+ 25 |
  26 | testFailing2 : (a -> b) -> IO a -> IO b
  27 | testFailing2 f a =
  28 |   [| f a |]

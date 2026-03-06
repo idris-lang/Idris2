@@ -2,3 +2,4 @@
 
 check Main.idr
 check Issue2325.idr
+check Issue3733.idr

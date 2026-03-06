@@ -2,9 +2,9 @@
 Error: test8 eq is not a valid impossible case.
 
 Issue1022:25:1--25:20
- 21 | 
+ 21 |
  22 | -- The following ones are actually possible
- 23 | 
+ 23 |
  24 | test8 : Not (a = Type)
  25 | test8 eq impossible
       ^^^^^^^^^^^^^^^^^^^
@@ -14,7 +14,7 @@ Error: test9 eq is not a valid impossible case.
 Issue1022:28:1--28:20
  24 | test8 : Not (a = Type)
  25 | test8 eq impossible
- 26 | 
+ 26 |
  27 | test9 : Not (a = 'a')
  28 | test9 eq impossible
       ^^^^^^^^^^^^^^^^^^^
@@ -24,7 +24,7 @@ Error: test10 eq is not a valid impossible case.
 Issue1022:31:1--31:21
  27 | test9 : Not (a = 'a')
  28 | test9 eq impossible
- 29 | 
+ 29 |
  30 | test10 : Not (a = Nat)
  31 | test10 eq impossible
       ^^^^^^^^^^^^^^^^^^^^
@@ -34,7 +34,7 @@ Error: test11 eq is not a valid impossible case.
 Issue1022:34:1--34:21
  30 | test10 : Not (a = Nat)
  31 | test10 eq impossible
- 32 | 
+ 32 |
  33 | test11 : Not (3 = a)
  34 | test11 eq impossible
       ^^^^^^^^^^^^^^^^^^^^
@@ -43,9 +43,9 @@ Issue1022:34:1--34:21
 Error: test8 Refl is not a valid impossible case.
 
 Issue1022-Refl:25:1--25:22
- 21 | 
+ 21 |
  22 | -- The following ones are actually possible
- 23 | 
+ 23 |
  24 | test8 : Not (a = Type)
  25 | test8 Refl impossible
       ^^^^^^^^^^^^^^^^^^^^^
@@ -55,7 +55,7 @@ Error: test9 Refl is not a valid impossible case.
 Issue1022-Refl:28:1--28:22
  24 | test8 : Not (a = Type)
  25 | test8 Refl impossible
- 26 | 
+ 26 |
  27 | test9 : Not (a = 'a')
  28 | test9 Refl impossible
       ^^^^^^^^^^^^^^^^^^^^^
@@ -65,7 +65,7 @@ Error: test10 Refl is not a valid impossible case.
 Issue1022-Refl:31:1--31:23
  27 | test9 : Not (a = 'a')
  28 | test9 Refl impossible
- 29 | 
+ 29 |
  30 | test10 : Not (a = Nat)
  31 | test10 Refl impossible
       ^^^^^^^^^^^^^^^^^^^^^^
@@ -75,7 +75,7 @@ Error: test11 Refl is not a valid impossible case.
 Issue1022-Refl:34:1--34:23
  30 | test10 : Not (a = Nat)
  31 | test10 Refl impossible
- 32 | 
+ 32 |
  33 | test11 : Not (3 = a)
  34 | test11 Refl impossible
       ^^^^^^^^^^^^^^^^^^^^^^

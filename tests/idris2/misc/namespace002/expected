@@ -6,9 +6,9 @@ and:
 Mismatch between: Int -> Int -> Int and Int.
 
 Issue1313:9:17--9:18
- 5 | 
+ 5 |
  6 | namespace Y
- 7 | 
+ 7 |
  8 |   g : Int -> Int -> Int
  9 |   g x y = x + f g
                      ^

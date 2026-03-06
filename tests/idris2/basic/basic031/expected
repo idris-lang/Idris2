@@ -3,7 +3,7 @@ Error: While processing left hand side of nameOf. Can't match on Bool (Erased ar
 
 erased:7:17--7:21
  3 |   MyJust : a -> MyMaybe a
- 4 | 
+ 4 |
  5 | -- Should fail since type argument is deleted
  6 | nameOf : Type -> String
  7 | nameOf (MyMaybe Bool) = "MyMaybe Bool"

@@ -4,7 +4,7 @@ Error: While processing left hand side of bad. Can't match on False (Erased argu
 Erase:5:5--5:10
  1 | myReplace : forall p . (0 rule : x = y) -> (1 val : p y) -> p x
  2 | myReplace Refl prf = prf
- 3 | 
+ 3 |
  4 | bad : (0 x : Bool) -> Bool
  5 | bad False = True
          ^^^^^
@@ -13,7 +13,7 @@ Error: While processing left hand side of minusBad. Can't match on LeZ (Erased a
 
 Erase:19:18--19:21
  15 | minus (S k) (S j) (LeS p) = minus k j p
- 16 | 
+ 16 |
  17 | -- y is used in the run time case tree, so erasure not okay
  18 | minusBad : (x : Nat) -> (0 y : Nat) -> (0 prf : LT y x) -> Nat
  19 | minusBad (S k) Z LeZ = S k

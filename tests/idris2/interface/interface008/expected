@@ -5,7 +5,7 @@ You may be unintentionally shadowing the associated global definitions:
 
 Deps:15:3--15:28
  11 |   to = id
- 12 | 
+ 12 |
  13 | interface BadFinite t where
  14 |   badcard   : Nat
  15 |   badto     : t -> Fin card
@@ -16,7 +16,7 @@ Error: While processing right hand side of badcard. k is not accessible in this 
 Deps:18:13--18:14
  14 |   badcard   : Nat
  15 |   badto     : t -> Fin card
- 16 | 
+ 16 |
  17 | implementation BadFinite (Fin k) where
  18 |   badcard = k
                   ^

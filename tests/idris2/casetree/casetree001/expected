@@ -4,7 +4,7 @@ Error: While processing left hand side of fail. Can't match on S (Under-applied 
 
 IsS:31:14--31:15
  27 | --              ^ forced by Refl
- 28 | 
+ 28 |
  29 | -- If you don't: too bad!
  30 | fail : IsS s -> s === S
  31 | fail (Indeed S eq) = eq
