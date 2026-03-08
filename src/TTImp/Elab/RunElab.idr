@@ -372,8 +372,9 @@ checkRunElab rig elabinfo nest env fc reqExt script exp
                            check rig elabinfo nest env script (Just (gnf env elabtt))
          solveConstraints inTerm Normal
          defs <- get Ctxt -- checking might have resolved some holes
-         ntm <- elabScript rig fc nest env
-                           !(nfOpts withAll defs env stm) (Just (gnf env expected))
+         nfstm <- nfOpts withAll defs env stm
+         ntm <- logTime 2 "Elaboration script" $
+                  elabScript rig fc nest env nfstm $ Just (gnf env expected)
          defs <- get Ctxt -- might have updated as part of the script
          empty <- clearDefs defs
          pure (!(quote empty env ntm), gnf env expected)
