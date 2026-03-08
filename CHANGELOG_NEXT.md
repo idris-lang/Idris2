@@ -71,6 +71,7 @@ should target this file (`CHANGELOG_NEXT`).
 * Type inspection now resugars primitive functions to more likely
   names/operators (#3712)
 * Better messages for errors inside string interpolation.
+* Added execution time logging for elaboration scripts.
 
 ### Building/Packaging changes
 
