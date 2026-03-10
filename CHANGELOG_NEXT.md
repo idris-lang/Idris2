@@ -72,6 +72,7 @@ should target this file (`CHANGELOG_NEXT`).
   names/operators (#3712)
 * Better messages for errors inside string interpolation.
 * Added execution time logging for elaboration scripts.
+* Optimised the passing of local variables during compile-time normalisation.
 
 ### Building/Packaging changes
 
