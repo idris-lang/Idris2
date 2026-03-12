@@ -86,6 +86,7 @@ should target this file (`CHANGELOG_NEXT`).
   The `idris2_extractInt` function incorrectly used `idris2_vp_to_Int32` for
   unboxed values, which dereferences unboxed pointers as `Value_Int32*` on
   32-bit platforms when `UINTPTR_WIDTH` is not defined (common in Emscripten).
+* Fix missing support for sized, signed integers in FFI.
 
 ### Library changes
 
