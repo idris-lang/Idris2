@@ -263,7 +263,7 @@ namespace BifoldableFail
     tree' : Foldable Tree'
     tree' = %runElab derive
 
-failing "Prelude.Basics.id is a function name rather than a type constructor"
+failing "Unable to normalise Prelude.Basics.id to type constructor"
 
   total
   foldable : Foldable Prelude.id

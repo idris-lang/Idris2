@@ -62,17 +62,54 @@ wording Func = "a function name"
 wording (DataCon tag arity) = "a data constructor"
 wording (TyCon tag arity) = "a type constructor"
 
-isTypeCon : Elaboration m => FC -> Name -> m (List (Name, TTImp))
+normaliseName : Elaboration m => FC -> Name -> m (Maybe TTImp)
+normaliseName fc n = do
+  [(_, typeFun)] <- getType n
+    | _ => failAt fc "\{show n} is ambiguous"
+
+  Just typedFun <- catch $ check {expected = Type} typeFun
+    | _ => failAt fc "\{show n} is not a Type declaration"
+
+  Just checkedTy <- catch $ check {expected = typedFun} $ IVar fc n
+    | _ => failAt fc "\{show n} has a different type than checked: \{show !(quote typedFun)}"
+
+  normalisedTy <- quote checkedTy
+
+  -- nn is meaning "normalised name"
+  let tyq@(_, Just nn) = getHeadName normalisedTy
+    | (broken, _) => failAt fc "Failed to extract type name from \{show n} (\{show normalisedTy}) at \{show broken}"
+
+  pure $ if dropNS nn == dropNS n
+    then Nothing
+    else Just normalisedTy
+  where
+    getHeadName : TTImp -> (TTImp, Maybe Name)
+    getHeadName t@(IVar _ n) = (t, pure n)
+    getHeadName (IApp _ n _) = getHeadName n
+    getHeadName (INamedApp _ n _ _) = getHeadName n
+    getHeadName (IAutoApp _ n _) = getHeadName n
+    getHeadName (IWithApp _ n _) = getHeadName n
+    getHeadName (IPi _ _ _ _ _ retTy) = getHeadName retTy
+    getHeadName (ILam _ _ _ _ _ retTy) = getHeadName retTy
+    getHeadName t = (t, Nothing)
+
+isTypeCon : Elaboration m => FC -> Name -> m (Either TTImp (List (Name, TTImp)))
 isTypeCon fc ty = do
     [(_, MkNameInfo (TyCon _ _))] <- getInfo ty
+      | [(fullName, MkNameInfo Func)] => do
+        Just normalised <- normaliseName fc fullName
+          | _ => failAt fc "Unable to normalise \{show ty} to type constructor"
+
+        pure $ Left normalised
       | [] => failAt fc "\{show ty} out of scope"
       | [(_, MkNameInfo nt)] => failAt fc "\{show ty} is \{wording nt} rather than a type constructor"
       | _ => failAt fc "\{show ty} is ambiguous"
     cs <- getCons ty
-    for cs $ \ n => do
+    res <- for cs $ \ n => do
       [(_, ty)] <- getType n
          | _ => failAt fc "\{show n} is ambiguous"
       pure (n, ty)
+    pure $ Right res
 
 toTypeParameter : Elaboration m => TTImp -> m TypeParameter
 toTypeParameter (IType _) = pure MkTPIType
@@ -89,7 +126,10 @@ export
 isFamily : Elaboration m => TTImp -> m IsFamily
 isFamily = go Z [] where
   go : Nat -> List (Argument TypeParameter, Nat) -> TTImp -> m IsFamily
-  go idx acc (IVar fc n) = MkIsFamily n (map (map (minus idx . S)) acc) <$> isTypeCon fc n
+  go idx acc (IVar fc n) = do
+    case !(isTypeCon fc n) of
+      Right tcons => pure $ MkIsFamily n (map (map (minus idx . S)) acc) tcons
+      Left normalised => assert_total $ isFamily normalised
   go idx acc (IApp fc t arg) = go (S idx) ((Arg fc !(toTypeParameter arg), idx) :: acc) t
   go idx acc (INamedApp fc t nm arg) = go (S idx) ((NamedArg fc nm !(toTypeParameter arg), idx) :: acc) t
   go idx acc (IAutoApp fc t arg) = go (S idx) ((AutoArg fc !(toTypeParameter arg), idx) :: acc) t

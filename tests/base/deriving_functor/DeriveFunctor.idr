@@ -286,13 +286,13 @@ namespace BifunctorFail
     tree' : Functor Tree'
     tree' = %runElab derive
 
-failing "Prelude.Basics.id is a function name rather than a type constructor"
+failing "Unable to normalise Prelude.Basics.id to type constructor"
 
   total
   functor : Functor Prelude.id
   functor = %runElab derive
 
-failing "id is a function name rather than a type constructor"
+failing "Unable to normalise id to type constructor"
 
   total
   functor : Functor id
@@ -347,9 +347,8 @@ namespace FunctionType
   data A2 : Type -> Type where
       A2' : WithD (C a) -> (A2 a)
 
-  failing "Couldn't find a `Functor' instance for the type constructor DeriveFunctor.FunctionType.WithD"
-    aa2F : Functor A2
-    aa2F = %runElab derive
+  aa2F : Functor A2
+  aa2F = %runElab derive
 
 namespace FunctionTypeNonPublic
   data D a b = MkD b
@@ -359,7 +358,7 @@ namespace FunctionTypeNonPublic
     WithD : Type -> Type
     WithD = D Int
 
-  failing "DeriveFunctor.FunctionTypeNonPublic.ExportNonPublic.WithD is a function name rather than a type constructor"
+  failing "Can't solve constraint"
     withDF : Functor WithD
     withDF = %runElab derive
 
