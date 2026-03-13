@@ -101,4 +101,16 @@ LOG derive.functor.clauses:1:
 LOG derive.functor.clauses:1: 
   mapTriple : {0 a, b : _} -> {0 a0, b0 : Type} -> (a0 -> b0) -> Triple a b a0 -> Triple a b b0
   mapTriple f (MkTriple x3 x4 x5) = MkTriple x3 x4 (f x5)
+LOG derive.functor.clauses:1: 
+  mapTypedContainer : {0 a : _} -> {0 a0, b : Type} -> (a0 -> b) -> TypedContainer a a0 -> TypedContainer a b
+  mapTypedContainer f Nil = Nil
+  mapTypedContainer f (x2 :: x3) = (f x2) :: (mapTypedContainer f x3)
+LOG derive.functor.clauses:1: 
+  mapTypedContainer : {0 a : _} -> {0 a0, b : Type} -> (a0 -> b) -> TypedContainer a a0 -> TypedContainer a b
+  mapTypedContainer f Nil = Nil
+  mapTypedContainer f (x2 :: x3) = (f x2) :: (mapTypedContainer f x3)
+LOG derive.functor.clauses:1: 
+  mapTypedContainer : {0 a : _} -> {0 a0, b : Type} -> (a0 -> b) -> TypedContainer a a0 -> TypedContainer a b
+  mapTypedContainer f Nil = Nil
+  mapTypedContainer f (x2 :: x3) = (f x2) :: (mapTypedContainer f x3)
 1/1: Building Search (Search.idr)

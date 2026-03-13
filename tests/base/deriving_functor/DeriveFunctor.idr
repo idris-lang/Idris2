@@ -292,6 +292,12 @@ failing "Expected a type constructor, got: Prelude.Basics.id {a = Type}"
   functor : Functor Prelude.id
   functor = %runElab derive
 
+failing "id is a function name rather than a type constructor"
+
+  total
+  functor : Functor id
+  functor = %runElab derive
+
 namespace Triple
 
   data Triple a b c = MkTriple a b c
@@ -317,3 +323,96 @@ namespace WriterList
 
     wlist : Functor (WList w ())
     wlist = %runElab derive
+
+namespace FunctionType
+  data D a b = MkD b
+
+  Functor (D Int) where
+      map f (MkD b) = MkD (f b)
+
+  data C a = MkC a
+
+  Functor C where
+      map f (MkC a) = MkC (f a)
+
+  data A : Type -> Type where
+      A' : (D Int) (C a) -> (A a)
+
+  failing "Couldn't find a `Functor' instance for the type constructor DeriveFunctor.FunctionType.D Int"
+    aaF : Functor A
+    aaF = %runElab derive
+
+  WithD : Type -> Type
+  WithD = D Int
+
+  data A2 : Type -> Type where
+      A2' : WithD (C a) -> (A2 a)
+
+  failing "Couldn't find a `Functor' instance for the type constructor DeriveFunctor.FunctionType.WithD"
+    aa2F : Functor A2
+    aa2F = %runElab derive
+
+namespace FunctionTypeNonPublic
+  data D a b = MkD b
+
+  namespace ExportNonPublic
+    export
+    WithD : Type -> Type
+    WithD = D Int
+
+  failing "DeriveFunctor.FunctionTypeNonPublic.ExportNonPublic.WithD is a function name rather than a type constructor"
+    withDF : Functor WithD
+    withDF = %runElab derive
+
+namespace DataConstructorValue
+  data TypedContainer : Nat -> Type -> Type where
+    Nil : TypedContainer p v
+    (::) : v -> TypedContainer p v -> TypedContainer p v
+
+  namespace General
+    derivedF : Functor (TypedContainer a)
+    derivedF = %runElab derive
+
+    failing "Expected a type constructor, got: DeriveFunctor.DataConstructorValue.TypedContainer"
+      derivedF2 : Functor (TypedContainer $ a + b)
+      derivedF2 = %runElab derive
+
+  namespace Specific
+    failing "Expected a type constructor, got: DeriveFunctor.DataConstructorValue.TypedContainer"
+      derivedF : Functor (TypedContainer 2)
+      derivedF = %runElab derive
+
+    failing "Expected a type constructor, got: DeriveFunctor.DataConstructorValue.TypedContainer"
+      derivedF2 : Functor (TypedContainer $ 2 + x)
+      derivedF2 = %runElab derive
+
+namespace PrimValue
+  data TypedContainer : String -> Type -> Type where
+    Nil : TypedContainer p v
+    (::) : v -> TypedContainer p v -> TypedContainer p v
+
+  namespace General
+    derivedF : Functor (TypedContainer a)
+    derivedF = %runElab derive
+
+    failing "Expected a type constructor, got: DeriveFunctor.PrimValue.TypedContainer"
+      derivedF2 : Functor (TypedContainer $ hello ++ world)
+      derivedF2 = %runElab derive
+
+  namespace Specific
+    failing "Expected a type constructor, got: DeriveFunctor.PrimValue.TypedContainer"
+      derivedF : Functor (TypedContainer "Hello")
+      derivedF = %runElab derive
+
+    failing "Expected a type constructor, got: DeriveFunctor.PrimValue.TypedContainer"
+      derivedF2 : Functor (TypedContainer $ "Hello" ++ world)
+      derivedF2 = %runElab derive
+
+namespace DepType
+  data TypedContainer : Nat -> Type -> Type where
+    Nil : TypedContainer Z v
+    (::) : v -> TypedContainer p v -> TypedContainer (S p) v
+
+  namespace General
+    derivedF : Functor (TypedContainer a)
+    derivedF = %runElab derive
