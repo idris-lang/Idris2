@@ -322,7 +322,7 @@ namespace Foldable
 
     -- t should be a type constructor
     logMsg "derive.foldable" 1 "Deriving Foldable for \{showPrec App $ mapTTImp cleanup t}"
-    MkIsType f params cs <- isType t
+    MkIsFamily f params cs <- isFamily t
     logMsg "derive.foldable.constructors" 1 $
       joinBy "\n" $ "" :: map (\ (n, ty) => "  \{showPrefix True $ dropNS n} : \{show $ mapTTImp cleanup ty}") cs
 

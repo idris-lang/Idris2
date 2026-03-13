@@ -390,7 +390,7 @@ namespace BitraversableFail
     tree' : Traversable Tree'
     tree' = %runElab derive
 
-failing "Expected a type constructor, got: Prelude.Basics.id {a = Type}"
+failing "Prelude.Basics.id is a function name rather than a type constructor"
 
   total
   traverable : Traversable Prelude.id
