@@ -690,6 +690,10 @@ getArgsNrList (x :: xs) k = k :: getArgsNrList xs (S k)
 cTypeOfCFType : CFType -> String
 cTypeOfCFType CFUnit          = "void"
 cTypeOfCFType CFInt           = "int64_t"
+cTypeOfCFType CFInt8          = "int8_t"
+cTypeOfCFType CFInt16         = "int16_t"
+cTypeOfCFType CFInt32         = "int32_t"
+cTypeOfCFType CFInt64         = "int64_t"
 cTypeOfCFType CFUnsigned8     = "uint8_t"
 cTypeOfCFType CFUnsigned16    = "uint16_t"
 cTypeOfCFType CFUnsigned32    = "uint32_t"
