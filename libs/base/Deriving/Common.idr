@@ -62,6 +62,23 @@ wording Func = "a function name"
 wording (DataCon tag arity) = "a data constructor"
 wording (TyCon tag arity) = "a type constructor"
 
+checkAccessToDefinition : Elaboration m => (given, candidate : Name) -> m Bool
+checkAccessToDefinition g c =
+  pure $ isParentOf (getNS g) (getNS c) || !(isPublic g)
+  where
+    getNS : Name -> Namespace
+    getNS (NS ns nm) = ns
+    getNS nm = TT.MkNS []
+
+    isParentOf : (given, candidate : Namespace) -> Bool
+    isParentOf (MkNS ms) (MkNS ns)
+      = List.isSuffixOf ms ns
+
+    isPublic : Name -> m Bool
+    isPublic n = pure $ case !(getVis g) of
+      [(_, Public)] => True
+      _ => False
+
 normaliseName : Elaboration m => FC -> Name -> m (Maybe TTImp)
 normaliseName fc n = do
   [(_, typeFun)] <- getType n
@@ -93,10 +110,13 @@ normaliseName fc n = do
     getHeadName (ILam _ _ _ _ _ retTy) = getHeadName retTy
     getHeadName t = (t, Nothing)
 
-isTypeCon : Elaboration m => FC -> Name -> m (Either TTImp (List (Name, TTImp)))
-isTypeCon fc ty = do
+isTypeCon : Elaboration m => Name -> FC -> Name -> m (Either TTImp (List (Name, TTImp)))
+isTypeCon currentFnName fc ty = do
     [(_, MkNameInfo (TyCon _ _))] <- getInfo ty
       | [(fullName, MkNameInfo Func)] => do
+        unless !(checkAccessToDefinition fullName currentFnName) $
+          failAt fc "Make sure \{show fullName} has public export visibility"
+
         Just normalised <- normaliseName fc fullName
           | _ => failAt fc "Unable to normalise \{show ty} to type constructor"
 
@@ -122,19 +142,25 @@ toTypeParameter arg with (appView arg)
     typedArgs <- assert_total $ traverse @{Compose} toTypeParameter args
     pure $ MkTPApp (h, typedArgs)
 
-export
-isFamily : Elaboration m => TTImp -> m IsFamily
-isFamily = go Z [] where
+isFamily' : Elaboration m => Name -> TTImp -> m IsFamily
+isFamily' currentFnName = go Z [] where
   go : Nat -> List (Argument TypeParameter, Nat) -> TTImp -> m IsFamily
   go idx acc (IVar fc n) = do
-    case !(isTypeCon fc n) of
+    case !(isTypeCon currentFnName fc n) of
       Right tcons => pure $ MkIsFamily n (map (map (minus idx . S)) acc) tcons
-      Left normalised => assert_total $ isFamily normalised
+      Left normalised => assert_total $ isFamily' currentFnName normalised
   go idx acc (IApp fc t arg) = go (S idx) ((Arg fc !(toTypeParameter arg), idx) :: acc) t
   go idx acc (INamedApp fc t nm arg) = go (S idx) ((NamedArg fc nm !(toTypeParameter arg), idx) :: acc) t
   go idx acc (IAutoApp fc t arg) = go (S idx) ((AutoArg fc !(toTypeParameter arg), idx) :: acc) t
   go idx acc t = failAt (getFC t) "Expected a type constructor, got: \{show t}"
 
+export
+isFamily : Elaboration m => TTImp -> m IsFamily
+isFamily t = do
+  let (Just currentName) = leftMost !getCurrentFn
+  | _ => failAt (getFC t) "Deriving requires a function declaration, not a top level"
+
+  isFamily' currentName t
 ------------------------------------------------------------------------------
 -- Being a (data) constructor with a parameter
 -- TODO: generalise?

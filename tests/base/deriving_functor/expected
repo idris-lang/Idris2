@@ -108,9 +108,6 @@ LOG derive.functor.clauses:1:
   mapA2 : {0 a, b : Type} -> (a -> b) -> A2 a -> A2 b
   mapA2 f (A2' x1) = A2' (map (map f) x1)
 LOG derive.functor.clauses:1: 
-  mapD : {0 a, b : Type} -> (a -> b) -> WithD a -> WithD b
-  mapD f (MkD x2) = MkD (f x2)
-LOG derive.functor.clauses:1: 
   mapTypedContainer : {0 a : _} -> {0 a0, b : Type} -> (a0 -> b) -> TypedContainer a a0 -> TypedContainer a b
   mapTypedContainer f Nil = Nil
   mapTypedContainer f (x2 :: x3) = (f x2) :: (mapTypedContainer f x3)

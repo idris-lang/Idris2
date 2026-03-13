@@ -358,7 +358,7 @@ namespace FunctionTypeNonPublic
     WithD : Type -> Type
     WithD = D Int
 
-  failing "Can't solve constraint"
+  failing "Make sure DeriveFunctor.FunctionTypeNonPublic.ExportNonPublic.WithD has public export visibility"
     withDF : Functor WithD
     withDF = %runElab derive
 
