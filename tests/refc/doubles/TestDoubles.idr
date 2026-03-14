@@ -19,3 +19,4 @@ main = do
 
     put $ floor 1.5
     put $ ceiling 1.5
+    put $ negate  (-1.5)
