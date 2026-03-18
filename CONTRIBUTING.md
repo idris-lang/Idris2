@@ -132,6 +132,16 @@ could be any other knowledgable community member.
   several people have. The backends in this repository are limited to those we
   are able to commit to maintaining.
 
+## Things We Will Not Accept
+
+Any contribution done by, or using, autonomous coding agents, Large Language
+Models and/or generative AI  will be rejected. That is to say, issues, pull
+requests, commits, and comments are all to be written and submitted by humans.
+Idris is a primarily academic project with roots in human-driven understanding
+and experience, designed to improve the human experience of programming and we
+want our processes to reflect that.
+
+
 ## Other possible contributions
 
 There's plenty of other things that might be good ideas. If it isn't covered
