@@ -1,5 +1,6 @@
 module Compiler.RefC.CC
 
+import Core.Context
 import Core.Context.Log
 import Core.Options
 import Core.Directory
@@ -71,10 +72,12 @@ compileCObjectFile {asLibrary} sourceFile objectFile =
      refcDir <- findDataFile "refc"
      cDir <- findDataFile "c"
 
+     directives <- getDirectives RefC
+     let debugFlag = if elem "debug" directives then ["-g"] else []
      let libraryFlag = if asLibrary then ["-fpic"] else []
 
      let runccobj = (escapeCmd $
-         [cc, "-Werror", "-c"] ++ libraryFlag ++ [sourceFile,
+         [cc, "-Werror", "-c"] ++ debugFlag ++ libraryFlag ++ [sourceFile,
               "-o", objectFile,
               "-I" ++ refcDir,
               "-I" ++ cDir])
@@ -103,10 +106,12 @@ compileCFile {asShared} objectFile outFile =
      refcDir <- findDataFile "refc"
      supportFile <- findLibraryFile "libidris2_support.a"
 
+     directives <- getDirectives RefC
+     let debugFlag = if elem "debug" directives then ["-g"] else []
      let sharedFlag = if asShared then ["-shared"] else []
 
      let runcc = (escapeCmd $
-         [cc, "-Werror"] ++ sharedFlag ++ [objectFile,
+         [cc, "-Werror"] ++ debugFlag ++ sharedFlag ++ [objectFile,
               "-o", outFile,
               supportFile,
               "-lidris2_refc",

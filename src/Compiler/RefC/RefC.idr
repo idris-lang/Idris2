@@ -270,6 +270,14 @@ emit EmptyFC line = do
     indent <- indentation
     update OutfileText (flip snoc (indent ++ line))
 emit fc line = do
+    -- Emit a #line directive for concrete source locations (MkFC only, not virtual).
+    -- This lets C compilers and debuggers (gdb/lldb) map generated C back to the
+    -- original Idris source file and line.
+    case fc of
+        MkFC origin (startLine, _) _ =>
+            update OutfileText $ flip snoc $
+                "#line " ++ show (startLine + 1) ++ " " ++ cStringQuoted (show origin)
+        _ => pure ()
     let comment = "// " ++ show fc
     indent <- indentation
     let indentedLine = indent ++ line

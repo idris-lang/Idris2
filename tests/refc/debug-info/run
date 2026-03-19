@@ -1,0 +1,11 @@
+. ../../testutils.sh
+
+# Test 1: generated C contains #line directives mapping back to Idris source
+idris2 --cg refc -o refc_debuginfo TestDebugInfo.idr
+# Show the first unique #line directive that references TestDebugInfo
+grep "^#line" build/exec/refc_debuginfo.c | grep "TestDebugInfo" | head -1
+./build/exec/refc_debuginfo
+
+# Test 2: --directive debug produces a valid debug build (passes -g to cc)
+idris2 --cg refc --directive debug -o refc_debuginfo_g TestDebugInfo.idr
+./build/exec/refc_debuginfo_g
