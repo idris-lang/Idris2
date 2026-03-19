@@ -57,8 +57,8 @@ Value_String const idris2_predefined_codegenstring = {
 
 Value *idris2_crash(Value *msg) {
   Value_String *str = (Value_String *)msg;
-  printf("ERROR: %s\n", str->str);
-  exit(-1);
+  fprintf(stderr, "ERROR: %s\n", str->str);
+  exit(1);
 }
 
 //

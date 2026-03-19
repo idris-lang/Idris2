@@ -1,0 +1,7 @@
+ERROR: test crash message
+exit: 1
+ERROR: FFI function not implemented for the RefC backend:
+  Main.prim__schemeOnlyFunc
+(Add a "C:" or "RefC:" %foreign binding.)
+about to call unimplemented FFI
+exit: 1

@@ -1,0 +1,9 @@
+. ../../testutils.sh
+
+# Test 1: idris_crash sends message to stderr and exits with code 1
+idris2 --cg refc -o refc_crashtest TestCrash.idr
+./build/exec/refc_crashtest 2>&1; echo "exit: $?"
+
+# Test 2: scheme-only FFI prints the function name and exits cleanly
+idris2 --cg refc -o refc_missingffi TestMissingFFI.idr
+./build/exec/refc_missingffi 2>&1; echo "exit: $?"

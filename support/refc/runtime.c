@@ -3,8 +3,13 @@
 #include "refc_util.h"
 
 void idris2_missing_ffi() {
-  fprintf(stderr, "Foreign function declared, but not defined.\n"
-                  "Cannot call missing FFI - aborting.\n");
+  fprintf(stderr,
+          "ERROR: A foreign function was called that has no implementation\n"
+          "for the RefC backend.  Add a\n"
+          "  %%foreign \"C:your_function_name\"\n"
+          "or\n"
+          "  %%foreign \"RefC:your_function_name\"\n"
+          "declaration to provide an implementation.\n");
   exit(1);
 }
 

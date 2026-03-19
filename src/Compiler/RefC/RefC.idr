@@ -793,12 +793,29 @@ discardLastArgument : List ty -> List ty
 discardLastArgument [] = []
 discardLastArgument xs@(_ :: _) = init xs
 
+-- Emit just the static `_refc_unimplemented` helper function (used in the
+-- `_ =>` fallback case where the full Value*-wrapper is emitted separately).
+additionalFFIHelper : Name -> List CFType -> CFType -> String
+additionalFFIHelper name argTypes (CFIORes retType) = additionalFFIHelper name (discardLastArgument argTypes) retType
+additionalFFIHelper name argTypes retType =
+    "static " ++ cTypeOfCFType retType ++
+    " " ++ cName name ++ "_refc_unimplemented(" ++
+    (concat $ intersperse ", " $ map cTypeOfCFType argTypes) ++ ") {\n" ++
+    "  fprintf(stderr, \"ERROR: FFI function not implemented for the RefC backend:\\n" ++
+    "  %s\\n(Add a \\\"C:\\\" or \\\"RefC:\\\" %%foreign binding.)\\n\", \"" ++
+    show name ++ "\");\n" ++
+    "  exit(1);\n}\n"
+
+-- Emit the static helper plus a function pointer that can be called by name
+-- (used for non-standard FFI langs like "scheme:" where the generated wrapper
+-- calls `cName fctName` directly).
 additionalFFIStub : Name -> List CFType -> CFType -> String
 additionalFFIStub name argTypes (CFIORes retType) = additionalFFIStub name (discardLastArgument argTypes) retType
 additionalFFIStub name argTypes retType =
+    additionalFFIHelper name argTypes retType ++
     cTypeOfCFType retType ++
     " (*" ++ cName name ++ ")(" ++
-    (concat $ intersperse ", " $ map cTypeOfCFType argTypes) ++ ") = (void*)idris2_missing_ffi;\n"
+    (concat $ intersperse ", " $ map cTypeOfCFType argTypes) ++ ") = (void*)" ++ cName name ++ "_refc_unimplemented;\n"
 
 createCFunctions : {auto c : Ref Ctxt Defs}
                 -> {auto a : Ref ArgCounter Nat}
@@ -899,8 +916,25 @@ createCFunctions n (MkAForeign ccs fargs ret) = do
 
           decreaseIndentation
           emit EmptyFC "}"
-      _ => throw $ InternalError "[refc] FFI not found for \{cName n}"
-          -- not really total but this way this internal error does not contaminate everything else
+      _ => do
+          -- No C/RefC binding found. Emit a named stub so that if the function
+          -- is called at runtime the error names the Idris function rather than
+          -- printing a generic "missing FFI" message.
+          -- Use additionalFFIHelper (not additionalFFIStub) to avoid emitting a
+          -- function pointer that would conflict with the Value* forward declaration.
+          emit EmptyFC $ additionalFFIHelper n fargs ret
+          let fnDef = "Value *" ++ (cName n) ++ "(" ++ showSep ", " (replicate (length fargs) "Value *") ++ ");"
+          update FunctionDefinitions $ \otherDefs => (fnDef ++ "\n") :: otherDefs
+          typeVarNameArgList <- createFFIArgList fargs
+          emitFDef n typeVarNameArgList
+          emit EmptyFC "{"
+          increaseIndentation
+          emit EmptyFC $ cName n ++ "_refc_unimplemented(" ++
+                         showSep ", " (map (\(_, vn, vt) => extractValue CLangC vt vn)
+                                           (discardLastArgument typeVarNameArgList)) ++ ");"
+          emit EmptyFC "return NULL;"
+          decreaseIndentation
+          emit EmptyFC "}"
 
 createCFunctions n (MkAError exp) = throw $ InternalError "[refc] Error with expression: \{show exp}"
 -- not really total but this way this internal error does not contaminate everything else
