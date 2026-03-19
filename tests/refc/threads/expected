@@ -1,0 +1,6 @@
+hello from thread
+main: thread done
+thread 1
+thread 2
+main: both done
+main: silent thread done

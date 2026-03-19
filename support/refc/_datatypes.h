@@ -2,6 +2,7 @@
 
 #include <gmp.h>
 #include <pthread.h>
+#include <stdatomic.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,13 +30,15 @@
 
 #define MUTEX_TAG 30
 #define CONDITION_TAG 31
+#define THREAD_TAG 32
 
 typedef struct {
   // Objects that reach the maximum reference count will be immortalized.
   // This 'immortalization' feature is also utilized to prevent statically
   // allocated objects from being destroyed.
+  // The counter is atomic so that concurrent threads can share Values safely.
 #define IDRIS2_VP_REFCOUNTER_MAX UINT16_MAX
-  uint16_t refCounter;
+  _Atomic uint16_t refCounter;
   uint8_t tag;
   uint8_t reserved;
 } Value_header;
@@ -190,5 +193,10 @@ typedef struct {
   Value_header header;
   pthread_cond_t *cond;
 } Value_Condition;
+
+typedef struct {
+  Value_header header;
+  pthread_t thread;
+} Value_Thread;
 
 void idris2_dumpMemoryStats(void);

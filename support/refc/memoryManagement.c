@@ -205,10 +205,12 @@ Value *idris2_newReference(Value *source) {
   IDRIS2_INC_MEMSTAT(n_newReference);
   // note that we explicitly allow NULL as source (for erased arguments)
   if (source && !idris2_vp_is_unboxed(source) &&
-      source->header.refCounter != IDRIS2_VP_REFCOUNTER_MAX) {
+      atomic_load_explicit(&source->header.refCounter,
+                           memory_order_relaxed) != IDRIS2_VP_REFCOUNTER_MAX) {
     IDRIS2_INC_MEMSTAT(n_actualNewReference);
-    ++source->header.refCounter;
-    if (source->header.refCounter == IDRIS2_VP_REFCOUNTER_MAX)
+    uint16_t prev = atomic_fetch_add_explicit(&source->header.refCounter, 1,
+                                              memory_order_relaxed);
+    if (prev + 1 == IDRIS2_VP_REFCOUNTER_MAX)
       IDRIS2_INC_MEMSTAT(n_immortalized);
   }
   return source;
@@ -218,11 +220,13 @@ void idris2_removeReference(Value *elem) {
   IDRIS2_INC_MEMSTAT(n_removeReference);
   if (!elem || idris2_vp_is_unboxed(elem))
     return;
-  else if (elem->header.refCounter == IDRIS2_VP_REFCOUNTER_MAX) {
+  else if (atomic_load_explicit(&elem->header.refCounter,
+                                memory_order_relaxed) ==
+           IDRIS2_VP_REFCOUNTER_MAX) {
     IDRIS2_INC_MEMSTAT(n_tried_to_kill_immortals);
     return;
-  } else if (elem->header.refCounter != 1) {
-    --elem->header.refCounter;
+  } else if (atomic_fetch_sub_explicit(&elem->header.refCounter, 1,
+                                       memory_order_acq_rel) != 1) {
     return;
   } else {
     IDRIS2_INC_MEMSTAT(n_freed);
@@ -290,6 +294,10 @@ void idris2_removeReference(Value *elem) {
       idris2_removeReference((Value *)vPtr->p);
       break;
     }
+
+    case THREAD_TAG:
+      /* pthread_t is embedded by value; nothing extra to free. */
+      break;
 
     default:
       break;

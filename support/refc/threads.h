@@ -2,3 +2,4 @@
 #include "cBackend.h"
 
 Value *refc_fork(Value_Closure *fct);
+Value *refc_threadWait(Value *threadID);

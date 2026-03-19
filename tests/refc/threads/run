@@ -1,0 +1,4 @@
+. ../../testutils.sh
+
+idris2 --cg refc -o refc_threads TestThreads.idr
+$VALGRIND ./build/exec/refc_threads
