@@ -26,9 +26,8 @@ conditionLoop ref cond m = do
   ready <- readIORef ref
   if ready
     then mutexRelease m
-    else do conditionWait cond m
-            mutexAcquire m
-            conditionLoop ref cond m
+    else do conditionWait cond m  -- releases mutex, waits, reacquires mutex
+            conditionLoop ref cond m  -- mutex already held again on return
 
 testCondition : IO ()
 testCondition = do
