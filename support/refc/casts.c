@@ -1,6 +1,14 @@
 #include "casts.h"
+#include "utf8.h"
 
 #include <inttypes.h>
+
+Value *idris2_cast_String_to_Char_impl(Value *s) {
+  const char *str = ((Value_String *)s)->str;
+  uint32_t cp;
+  utf8_decode(str, &cp);
+  return idris2_mkChar(cp);
+}
 
 /*  conversions from Int8  */
 Value *idris2_cast_Int8_to_Integer(Value *input) {
@@ -286,7 +294,7 @@ Value *idris2_cast_Integer_to_Double(Value *input) {
 
 Value *idris2_cast_Integer_to_Char(Value *input) {
   Value_Integer *from = (Value_Integer *)input;
-  return (Value *)idris2_mkChar((unsigned char)mpz_get_lsb(from->i, 8));
+  return (Value *)idris2_mkChar((uint32_t)mpz_get_lsb(from->i, 21));
 }
 
 Value *idris2_cast_Integer_to_string(Value *input) {

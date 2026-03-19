@@ -2,10 +2,11 @@
 
 #include "cBackend.h"
 #include "casts.h"
+#include "utf8.h"
 
-/* stringLength : String -> Int64!? WTH!. do you have over 4Gbytes text on
- * memory!? */
-#define stringLength(x) (idris2_mkInt64(strlen(((Value_String *)(x))->str)))
+/* stringLength returns the number of Unicode code points, not bytes. */
+#define stringLength(x) \
+  (idris2_mkInt64((int64_t)utf8_cp_count(((Value_String *)(x))->str)))
 #define head(x) (idris2_cast_String_to_Char(x))
 Value *tail(Value *str);
 Value *reverse(Value *str);

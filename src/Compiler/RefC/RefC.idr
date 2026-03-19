@@ -92,7 +92,7 @@ cName (Resolved i) = "fn__" ++ cCleanString (show i)
 escapeChar : Char -> String
 escapeChar c = if isAlphaNum c || isNL c
                   then show c
-                  else "(char)" ++ show (ord c)
+                  else "UINT32_C(" ++ show (ord c) ++ ")"
 
 cStringQuoted : String -> String
 cStringQuoted cs = strCons '"' (showCString (unpack cs) "\"")
@@ -716,7 +716,7 @@ cTypeOfCFType CFUnsigned32    = "uint32_t"
 cTypeOfCFType CFUnsigned64    = "uint64_t"
 cTypeOfCFType CFString        = "char *"
 cTypeOfCFType CFDouble        = "double"
-cTypeOfCFType CFChar          = "char"
+cTypeOfCFType CFChar          = "int"
 cTypeOfCFType CFPtr           = "void *"
 cTypeOfCFType CFGCPtr         = "void *"
 cTypeOfCFType CFBuffer        = "void *"

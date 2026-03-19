@@ -1,48 +1,77 @@
 #include "stringOps.h"
 #include "refc_util.h"
+#include "utf8.h"
 
 Value *tail(Value *input) {
-  Value_String *tailStr = IDRIS2_NEW_VALUE(Value_String);
-  tailStr->header.tag = STRING_TAG;
   Value_String *s = (Value_String *)input;
-  int l = strlen(s->str);
-  if (l == 0)
+  if (s->str[0] == '\0')
     return (Value *)&idris2_predefined_nullstring;
 
-  tailStr->str = malloc(l);
-  IDRIS2_REFC_VERIFY(tailStr->str, "malloc failed");
-  memset(tailStr->str, 0, l);
-  memcpy(tailStr->str, s->str + 1, l - 1);
-  return (Value *)tailStr;
+  int skip = utf8_seq_len(s->str);
+  int rest = strlen(s->str + skip);
+
+  if (rest == 0)
+    return (Value *)&idris2_predefined_nullstring;
+
+  Value_String *retVal = idris2_mkEmptyString(rest + 1);
+  memcpy(retVal->str, s->str + skip, rest);
+  return (Value *)retVal;
 }
 
 Value *reverse(Value *str) {
-  Value_String *retVal = IDRIS2_NEW_VALUE(Value_String);
-  retVal->header.tag = STRING_TAG;
   Value_String *input = (Value_String *)str;
-  int l = strlen(input->str);
-  retVal->str = malloc(l + 1);
-  IDRIS2_REFC_VERIFY(retVal->str, "malloc failed");
-  memset(retVal->str, 0, l + 1);
-  char *p = retVal->str;
-  char *q = input->str + (l - 1);
-  for (int i = 0; i < l; i++) {
-    *p++ = *q--;
+  const char *s = input->str;
+  int byteLen = strlen(s);
+
+  if (byteLen == 0)
+    return (Value *)&idris2_predefined_nullstring;
+
+  /* Collect code points */
+  size_t cpCount = utf8_cp_count(s);
+  uint32_t *cps = malloc(cpCount * sizeof(uint32_t));
+  int *widths = malloc(cpCount * sizeof(int));
+  IDRIS2_REFC_VERIFY(cps, "malloc failed");
+  IDRIS2_REFC_VERIFY(widths, "malloc failed");
+
+  const char *p = s;
+  for (size_t i = 0; i < cpCount; i++) {
+    widths[i] = utf8_decode(p, &cps[i]);
+    p += widths[i];
   }
+
+  /* Re-encode in reverse order */
+  Value_String *retVal = idris2_mkEmptyString(byteLen + 1);
+  char *out = retVal->str;
+  for (size_t i = cpCount; i > 0; i--) {
+    out += utf8_encode(cps[i - 1], out);
+  }
+  *out = '\0';
+
+  free(cps);
+  free(widths);
   return (Value *)retVal;
 }
 
 Value *strIndex(Value *str, Value *i) {
-  char *s = ((Value_String *)str)->str;
-  int idx = idris2_vp_to_Int64(i);
-  return (Value *)idris2_mkChar(s[idx]);
+  const char *s = ((Value_String *)str)->str;
+  size_t idx = (size_t)idris2_vp_to_Int64(i);
+  size_t byteOff = utf8_cp_to_byte_offset(s, idx);
+  uint32_t cp;
+  utf8_decode(s + byteOff, &cp);
+  return (Value *)idris2_mkChar(cp);
 }
 
 Value *strCons(Value *c, Value *str) {
-  int l = strlen(((Value_String *)str)->str);
-  Value_String *retVal = idris2_mkEmptyString(l + 2);
-  retVal->str[0] = idris2_vp_to_Char(c);
-  memcpy(retVal->str + 1, ((Value_String *)str)->str, l);
+  uint32_t cp = idris2_vp_to_Char(c);
+  const char *rest = ((Value_String *)str)->str;
+  int restLen = strlen(rest);
+
+  char cpBuf[4];
+  int cpLen = utf8_encode(cp, cpBuf);
+
+  Value_String *retVal = idris2_mkEmptyString(cpLen + restLen + 1);
+  memcpy(retVal->str, cpBuf, cpLen);
+  memcpy(retVal->str + cpLen, rest, restLen);
   return (Value *)retVal;
 }
 
@@ -56,62 +85,65 @@ Value *strAppend(Value *a, Value *b) {
 }
 
 Value *strSubstr(Value *start, Value *len, Value *s) {
-  char *input = ((Value_String *)s)->str;
-  int offset = idris2_vp_to_Int64(start); /* start and len was come from Nat. */
-  int l = idris2_vp_to_Int64(len);
+  const char *input = ((Value_String *)s)->str;
+  size_t offset = (size_t)idris2_vp_to_Int64(start);
+  size_t cpLen  = (size_t)idris2_vp_to_Int64(len);
 
-  int tailLen = strlen(input) - offset;
-  if (tailLen < l) {
-    l = tailLen;
-  }
+  size_t byteStart = utf8_cp_to_byte_offset(input, offset);
+  size_t byteEnd   = utf8_cp_to_byte_offset(input + byteStart, cpLen);
 
-  Value_String *retVal = idris2_mkEmptyString(l + 1);
-  memcpy(retVal->str, input + offset, l);
+  if (byteEnd == 0)
+    return (Value *)&idris2_predefined_nullstring;
 
+  Value_String *retVal = idris2_mkEmptyString(byteEnd + 1);
+  memcpy(retVal->str, input + byteStart, byteEnd);
   return (Value *)retVal;
 }
 
 char *fastPack(Value *charList) {
-  Value_Constructor *current;
-
-  int l = 0;
-  current = (Value_Constructor *)charList;
-  while (current != NULL) {
-    l++;
-    current = (Value_Constructor *)current->args[1];
+  /* First pass: compute total byte length */
+  size_t totalBytes = 0;
+  Value_Constructor *cur = (Value_Constructor *)charList;
+  while (cur != NULL) {
+    uint32_t cp = idris2_vp_to_Char(cur->args[0]);
+    char buf[4];
+    totalBytes += utf8_encode(cp, buf);
+    cur = (Value_Constructor *)cur->args[1];
   }
 
-  char *retVal = malloc(l + 1);
-  retVal[l] = 0;
+  char *retVal = malloc(totalBytes + 1);
+  retVal[totalBytes] = '\0';
 
-  int i = 0;
-  current = (Value_Constructor *)charList;
-  while (current != NULL) {
-    retVal[i++] = idris2_vp_to_Char(current->args[0]);
-    current = (Value_Constructor *)current->args[1];
+  char *p = retVal;
+  cur = (Value_Constructor *)charList;
+  while (cur != NULL) {
+    uint32_t cp = idris2_vp_to_Char(cur->args[0]);
+    p += utf8_encode(cp, p);
+    cur = (Value_Constructor *)cur->args[1];
   }
 
   return retVal;
 }
 
 Value *fastUnpack(char *str) {
-  if (str[0] == '\0') {
+  if (str[0] == '\0')
     return NULL;
-  }
+
+  uint32_t cp;
+  int w = utf8_decode(str, &cp);
 
   Value_Constructor *retVal = idris2_newConstructor(2, 1);
-  retVal->args[0] = idris2_mkChar(str[0]);
+  retVal->args[0] = idris2_mkChar(cp);
 
-  int i = 1;
-  Value_Constructor *current = (Value_Constructor *)retVal;
-  Value_Constructor *next;
-  while (str[i] != '\0') {
-    next = idris2_newConstructor(2, 1);
-    next->args[0] = idris2_mkChar(str[i]);
+  Value_Constructor *current = retVal;
+  const char *p = str + w;
+  while (*p != '\0') {
+    w = utf8_decode(p, &cp);
+    Value_Constructor *next = idris2_newConstructor(2, 1);
+    next->args[0] = idris2_mkChar(cp);
     current->args[1] = (Value *)next;
-
-    i++;
     current = next;
+    p += w;
   }
   current->args[1] = NULL;
 
@@ -184,16 +216,18 @@ Value *stringIteratorToString(void *a, char *str, Value *it_p,
 //   (str : String) -> (1 it : StringIterator str) -> UnconsResult str
 Value *stringIteratorNext(char *s, Value *it_p) {
   String_Iterator *it = (String_Iterator *)((Value_GCPointer *)it_p)->p->p;
-  char c = it->str[it->pos];
+  char *p = it->str + it->pos;
 
-  if (c == '\0')
+  if (*p == '\0')
     return NULL; // EOF [nil]
 
-  it->pos++; // Ok to do this as StringIterator linear
+  uint32_t cp;
+  int w = utf8_decode(p, &cp);
+  it->pos += w; // advance by full code-point width (StringIterator is linear)
 
   // Character [cons]
   Value_Constructor *retVal = (Value_Constructor *)idris2_newConstructor(2, 1);
-  retVal->args[0] = idris2_mkChar(c);
+  retVal->args[0] = idris2_mkChar(cp);
   retVal->args[1] = idris2_newReference(it_p);
 
   return (Value *)retVal;

@@ -1,0 +1,4 @@
+. ../../testutils.sh
+
+idris2 --cg refc -p contrib -o refc_unicode TestUnicode.idr
+$VALGRIND ./build/exec/refc_unicode
