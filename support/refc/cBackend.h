@@ -16,3 +16,4 @@
 #include "stringOps.h"
 #include "threads.h"
 #include "concurrency.h"
+#include "struct_support.h"

@@ -190,6 +190,7 @@ data EnvTracker : Type where
 data FunctionDefinitions : Type where
 data IndentLevel : Type where
 data HeaderFiles : Type where
+data StructDecls : Type where
 data ConstDef
   = CDI64 String
   | CDB64 String
@@ -572,12 +573,13 @@ mutual
             ["prim__newIORef", "prim__readIORef", "prim__writeIORef", "prim__newArray",
              "prim__arrayGet", "prim__arraySet", "prim__getField", "prim__setField",
              "prim__os", "prim__codegen", "prim__onCollect", "prim__onCollectAny" ]
-        case p of
+        pn <- case p of
             NS _ (UN (Basic pn)) =>
-               unless (elem pn prims) $ throw $ InternalError $ "[refc] Unknown primitive: " ++ cName p
+               if elem pn prims then pure pn
+               else throw $ InternalError $ "[refc] Unknown primitive: " ++ cName p
             _ => throw $ InternalError $ "[refc] Unknown primitive: " ++ cName p
-        emit fc $ "// call to external primitive " ++ cName p
-        pure $ "idris2_\{cName p}("++ showSep ", " (map varName args) ++")"
+        emit fc $ "// call to external primitive " ++ pn
+        pure $ "idris2_\{pn}("++ showSep ", " (map varName args) ++")"
 
     cStatementsFromANF (AConCase fc sc alts mDef) tailPosition = do
         let sc' = varName sc
@@ -703,6 +705,90 @@ getArgsNrList [] _ = []
 getArgsNrList (x :: xs) k = k :: getArgsNrList xs (S k)
 
 
+-- -------------------------------------------------------------------------
+-- CFStruct descriptor code generation
+-- -------------------------------------------------------------------------
+
+||| Collect all CFStruct types reachable from a CFType.
+||| The returned map is (struct_name → field_list) for every unique struct.
+collectCFStructs : CFType -> SortedMap String (List (String, CFType))
+collectCFStructs (CFStruct n flds) =
+    let inner = foldl (\m, (_, ft) => mergeWith const m (collectCFStructs ft))
+                      (the (SortedMap String (List (String, CFType))) empty) flds
+    in mergeWith const (singleton n flds) inner
+collectCFStructs (CFIORes t)  = collectCFStructs t
+collectCFStructs (CFFun a b)  = mergeWith const (collectCFStructs a) (collectCFStructs b)
+collectCFStructs _            = empty
+
+||| Map a CFType to its IDRIS2_FIELD_* enum constant (for struct descriptors).
+cFieldKind : CFType -> String
+cFieldKind CFInt         = "IDRIS2_FIELD_INT"
+cFieldKind CFInt8        = "IDRIS2_FIELD_INT8"
+cFieldKind CFInt16       = "IDRIS2_FIELD_INT16"
+cFieldKind CFInt32       = "IDRIS2_FIELD_INT32"
+cFieldKind CFInt64       = "IDRIS2_FIELD_INT64"
+cFieldKind CFUnsigned8   = "IDRIS2_FIELD_BITS8"
+cFieldKind CFUnsigned16  = "IDRIS2_FIELD_BITS16"
+cFieldKind CFUnsigned32  = "IDRIS2_FIELD_BITS32"
+cFieldKind CFUnsigned64  = "IDRIS2_FIELD_BITS64"
+cFieldKind CFDouble      = "IDRIS2_FIELD_DOUBLE"
+cFieldKind CFChar        = "IDRIS2_FIELD_CHAR"
+cFieldKind CFString      = "IDRIS2_FIELD_STRING"
+cFieldKind CFPtr         = "IDRIS2_FIELD_PTR"
+cFieldKind CFGCPtr       = "IDRIS2_FIELD_PTR"
+cFieldKind (CFStruct _ _) = "IDRIS2_FIELD_STRUCT"
+cFieldKind _             = "IDRIS2_FIELD_PTR"  -- fallback for unusual types
+
+||| Emit the static field-descriptor array and struct-descriptor for one struct.
+||| Requires that the struct header has been #include-d already (for offsetof).
+emitOneStructDescriptor
+    : {auto oft : Ref OutfileText Output}
+   -> {auto il  : Ref IndentLevel Nat}
+   -> (name   : String)
+   -> (fields : List (String, CFType))
+   -> Core ()
+emitOneStructDescriptor name flds = do
+    let fvar = "idris2_struct_fields_" ++ name
+    let dvar = "idris2_struct_desc_"   ++ name
+    emit EmptyFC $ "static idris2_field_t " ++ fvar ++ "[] = {"
+    for_ flds $ \(fn, ft) => do
+        let nested = case ft of
+                       CFStruct n _ => "\"" ++ n ++ "\""
+                       _            => "NULL"
+        emit EmptyFC $
+            "  {\"" ++ fn ++ "\","
+            ++ " offsetof(" ++ name ++ ", " ++ fn ++ "),"
+            ++ " " ++ cFieldKind ft ++ ","
+            ++ " " ++ nested ++ "},"
+    emit EmptyFC "  {NULL, 0, 0, NULL}"
+    emit EmptyFC "};"
+    emit EmptyFC $ "static idris2_struct_t " ++ dvar ++ " = {"
+    emit EmptyFC $
+        "  \"" ++ name ++ "\","
+        ++ " " ++ fvar ++ ","
+        ++ " " ++ show (length flds) ++ ","
+        ++ " sizeof(" ++ name ++ ")"
+    emit EmptyFC "};"
+
+||| Emit all struct descriptors and the idris2_register_all_structs() function.
+emitStructCode
+    : {auto oft : Ref OutfileText Output}
+   -> {auto il  : Ref IndentLevel Nat}
+   -> {auto sd  : Ref StructDecls (SortedMap String (List (String, CFType)))}
+   -> Core ()
+emitStructCode = do
+    structs <- get StructDecls
+    let decls = SortedMap.toList structs
+    emit EmptyFC "// --- struct descriptors (generated) ---"
+    traverse_ (uncurry emitOneStructDescriptor) decls
+    emit EmptyFC "static void idris2_register_all_structs(void) {"
+    traverse_ (\(n, _) =>
+        emit EmptyFC $ "  idris2_register_struct(&idris2_struct_desc_" ++ n ++ ");")
+        decls
+    emit EmptyFC "}"
+
+-- -------------------------------------------------------------------------
+
 cTypeOfCFType : CFType -> String
 cTypeOfCFType CFUnit          = "void"
 cTypeOfCFType CFInt           = "int64_t"
@@ -723,7 +809,7 @@ cTypeOfCFType CFBuffer        = "void *"
 cTypeOfCFType CFWorld         = "void *"
 cTypeOfCFType (CFFun x y)     = "void *"
 cTypeOfCFType (CFIORes x)     = "void *"
-cTypeOfCFType (CFStruct x ys) = "void *"
+cTypeOfCFType (CFStruct x ys) = x ++ " *"
 cTypeOfCFType (CFUser x ys)   = "void *"
 cTypeOfCFType n = assert_total $ idris_crash ("INTERNAL ERROR: Unknown FFI type in C backend: " ++ show n)
 
@@ -776,7 +862,7 @@ extractValue CLangRefC CFBuffer varName = "((Value_Buffer*)" ++ varName ++ ")->b
 extractValue _ CFWorld          _       = "(Value *)NULL"
 extractValue _ (CFFun x y)      varName = "(Value_Closure*)" ++ varName
 extractValue c (CFIORes x)      varName = extractValue c x varName
-extractValue _ (CFStruct x xs)  varName = assert_total $ idris_crash ("INTERNAL ERROR: Struct access not implemented: " ++ varName)
+extractValue _ (CFStruct x xs)  varName = "((Value_Pointer*)" ++ varName ++ ")->p"
 -- not really total but this way this internal error does not contaminate everything else
 extractValue _ (CFUser x xs)    varName = "(Value*)" ++ varName
 extractValue _ n _ = assert_total $ idris_crash ("INTERNAL ERROR: Unknown FFI type in C backend: " ++ show n)
@@ -801,7 +887,7 @@ packCFType CFBuffer        varName = "idris2_makeBuffer(" ++ varName ++ ")"
 packCFType CFWorld         _       = "(Value *)NULL"
 packCFType (CFFun x y)     varName = "makeFunction(" ++ varName ++ ")"
 packCFType (CFIORes x)     varName = packCFType x varName
-packCFType (CFStruct x xs) varName = "makeStruct(" ++ varName ++ ")"
+packCFType (CFStruct x xs) varName = "idris2_makePointer(" ++ varName ++ ")"
 packCFType (CFUser x xs)   varName = varName
 packCFType n _ = assert_total $ idris_crash ("INTERNAL ERROR: Unknown FFI type in C backend: " ++ show n)
 
@@ -840,6 +926,7 @@ createCFunctions : {auto c : Ref Ctxt Defs}
                 -> {auto oft : Ref OutfileText Output}
                 -> {auto il : Ref IndentLevel Nat}
                 -> {auto h : Ref HeaderFiles (SortedSet String)}
+                -> {auto sd : Ref StructDecls (SortedMap String (List (String, CFType)))}
                 -> {default [] additionalFFILangs : List String}
                 -> Name
                 -> ANFDef
@@ -884,6 +971,11 @@ createCFunctions n (MkACon tag arity nt) = do
 
 
 createCFunctions n (MkAForeign ccs fargs ret) = do
+  -- Collect any CFStruct types from args and return type for descriptor codegen
+  let allStructs = foldl (\m, ft => mergeWith const m (collectCFStructs ft))
+                         empty (ret :: fargs)
+  update StructDecls (mergeWith const allStructs)
+
   case parseCC (additionalFFILangs ++ ["RefC", "C"]) ccs of
       Just (lang, fctForeignName :: extLibOpts) => do
           let cLang = if lang == "RefC"
@@ -1009,6 +1101,7 @@ footer = do
                         "idris2_setArgs(argc, argv);"
                         ""
           }
+          idris2_register_all_structs();
           Value *mainExprVal = __mainExpression_0();
           idris2_trampoline(mainExprVal);
           return 0; // bye bye
@@ -1028,7 +1121,9 @@ generateCSourceFile defs outn =
      _ <- newRef OutfileText DList.Nil
      _ <- newRef HeaderFiles empty
      _ <- newRef IndentLevel 0
+     _ <- newRef StructDecls (the (SortedMap String (List (String, CFType))) empty)
      traverse_ (uncurry $ createCFunctions {additionalFFILangs}) defs
+     emitStructCode
      header -- added after the definition traversal in order to add all encountered function defintions
      footer
      fileContent <- get OutfileText

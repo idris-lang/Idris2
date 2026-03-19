@@ -1,0 +1,13 @@
+. ../../testutils.sh
+
+# Compile the struct C library
+${CC:-cc} -c struct.c -o struct.o
+ar rcs libstruct.a struct.o
+
+export CPPFLAGS="-I. ${CPPFLAGS}"
+export LDFLAGS="-L. ${LDFLAGS}"
+export LDLIBS="-lstruct"
+
+idris2 --cg refc -o ffi_struct_test Struct.idr
+
+./build/exec/ffi_struct_test
