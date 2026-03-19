@@ -2,7 +2,7 @@
 #include "_datatypes.h"
 #include "refc_util.h"
 
-void idris2_missing_ffi() {
+void idris2_missing_ffi(void) {
   fprintf(stderr,
           "ERROR: A foreign function was called that has no implementation\n"
           "for the RefC backend.  Add a\n"
@@ -13,7 +13,7 @@ void idris2_missing_ffi() {
   exit(1);
 }
 
-typedef Value *(*const FUN0)();
+typedef Value *(*const FUN0)(void);
 typedef Value *(*const FUN1)(Value *);
 typedef Value *(*const FUN2)(Value *, Value *);
 typedef Value *(*const FUN3)(Value *, Value *, Value *);
@@ -50,6 +50,17 @@ typedef Value *(*const FUN16)(Value *, Value *, Value *, Value *, Value *,
                               Value *);
 typedef Value *(*const FUNStar)(Value **);
 
+/* The closure dispatch below intentionally casts ClosureFun to FUN1..FUN16 to
+ * implement runtime-arity dispatch.  This is a well-known C idiom that is
+ * undefined behaviour in the standard but works on all targeted platforms;
+ * suppress the compiler's cast-function-type warning for this function only. */
+#if defined(__clang__)
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
+#elif defined(__GNUC__)
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wcast-function-type"
+#endif
 static inline Value *idris2_dispatch_closure(Value_Closure *clo) {
   Value **const xs = clo->args;
 
@@ -105,6 +116,11 @@ static inline Value *idris2_dispatch_closure(Value_Closure *clo) {
                             xs[14], xs[15]);
   }
 }
+#if defined(__clang__)
+#  pragma clang diagnostic pop
+#elif defined(__GNUC__)
+#  pragma GCC diagnostic pop
+#endif
 
 Value *idris2_trampoline(Value *it) {
   while (it && !idris2_vp_is_unboxed(it) && it->header.tag == CLOSURE_TAG) {

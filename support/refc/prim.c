@@ -3,16 +3,19 @@
 #include <string.h>
 #include <unistd.h>
 
-Value *idris2_Data_IORef_prim__newIORef(Value *erased, Value *input_value,
-                                        Value *_world) {
+Value *idris2_Data_IORef_prim__newIORef(Value *IDRIS2_UNUSED erased,
+                                        Value *input_value,
+                                        Value *IDRIS2_UNUSED _world) {
   Value_IORef *ioRef = IDRIS2_NEW_VALUE(Value_IORef);
   ioRef->header.tag = IOREF_TAG;
   ioRef->v = idris2_newReference(input_value);
   return (Value *)ioRef;
 }
 
-Value *idris2_Data_IORef_prim__writeIORef(Value *erased, Value *_ioref,
-                                          Value *new_value, Value *_world) {
+Value *idris2_Data_IORef_prim__writeIORef(Value *IDRIS2_UNUSED erased,
+                                          Value *_ioref,
+                                          Value *new_value,
+                                          Value *IDRIS2_UNUSED _world) {
   Value_IORef *ioref = (Value_IORef *)_ioref;
   idris2_newReference(new_value);
   Value *old = ioref->v;
@@ -68,8 +71,10 @@ Value *idris2_crash(Value *msg) {
 // //         Array operations
 // // -----------------------------------
 
-Value *idris2_Data_IOArray_Prims_prim__newArray(Value *erased, Value *_length,
-                                                Value *v, Value *_word) {
+Value *idris2_Data_IOArray_Prims_prim__newArray(Value *IDRIS2_UNUSED erased,
+                                                Value *_length,
+                                                Value *v,
+                                                Value *IDRIS2_UNUSED _word) {
   int length = idris2_vp_to_Int64(_length);
   Value_Array *a = idris2_makeArray(length);
 
@@ -80,9 +85,10 @@ Value *idris2_Data_IOArray_Prims_prim__newArray(Value *erased, Value *_length,
   return (Value *)a;
 }
 
-Value *idris2_Data_IOArray_Prims_prim__arraySet(Value *erased, Value *_array,
+Value *idris2_Data_IOArray_Prims_prim__arraySet(Value *IDRIS2_UNUSED erased,
+                                                Value *_array,
                                                 Value *index, Value *v,
-                                                Value *_word) {
+                                                Value *IDRIS2_UNUSED _word) {
   Value_Array *a = (Value_Array *)_array;
   idris2_removeReference(a->arr[idris2_vp_to_Int64(index)]);
   a->arr[idris2_vp_to_Int64(index)] = idris2_newReference(v);
@@ -94,9 +100,10 @@ Value *idris2_Data_IOArray_Prims_prim__arraySet(Value *erased, Value *_array,
 //      Pointer operations
 // -----------------------------------
 
-Value *idris2_Prelude_IO_prim__onCollect(Value *_erased, Value *_anyPtr,
+Value *idris2_Prelude_IO_prim__onCollect(Value *IDRIS2_UNUSED _erased,
+                                         Value *_anyPtr,
                                          Value *_freeingFunction,
-                                         Value *_world) {
+                                         Value *IDRIS2_UNUSED _world) {
   Value_GCPointer *retVal = IDRIS2_NEW_VALUE(Value_GCPointer);
   retVal->header.tag = GC_POINTER_TAG;
   retVal->p = (Value_Pointer *)idris2_newReference(_anyPtr);
@@ -106,7 +113,7 @@ Value *idris2_Prelude_IO_prim__onCollect(Value *_erased, Value *_anyPtr,
 
 Value *idris2_Prelude_IO_prim__onCollectAny(Value *_anyPtr,
                                             Value *_freeingFunction,
-                                            Value *_world) {
+                                            Value *IDRIS2_UNUSED _world) {
   Value_GCPointer *retVal = IDRIS2_NEW_VALUE(Value_GCPointer);
   retVal->header.tag = GC_POINTER_TAG;
   retVal->p = (Value_Pointer *)idris2_newReference(_anyPtr);
@@ -120,7 +127,7 @@ Value *idris2_Prelude_IO_prim__onCollectAny(Value *_anyPtr,
 // prim__makeMutex : PrimIO Mutex
 // using pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t
 // *attr)
-Value *System_Concurrency_Raw_prim__makeMutex(Value *_world) {
+Value *System_Concurrency_Raw_prim__makeMutex(Value *IDRIS2_UNUSED _world) {
   Value_Mutex *mut = IDRIS2_NEW_VALUE(Value_Mutex);
   mut->header.tag = MUTEX_TAG;
   mut->mutex = (pthread_mutex_t *)malloc(sizeof(pthread_mutex_t));
@@ -132,7 +139,7 @@ Value *System_Concurrency_Raw_prim__makeMutex(Value *_world) {
 // %foreign "scheme:blodwen-lock"
 // prim__mutexAcquire : Mutex -> PrimIO ()
 // using pthread_mutex_lock(pthread_mutex_t *mutex)
-Value *System_Concurrency_Raw_prim__mutexAcquire(Value *_mutex, Value *_world) {
+Value *System_Concurrency_Raw_prim__mutexAcquire(Value *_mutex, Value *IDRIS2_UNUSED _world) {
   int r = pthread_mutex_lock(((Value_Mutex *)_mutex)->mutex);
   IDRIS2_REFC_VERIFY(!r, "pthread_mutex_lock failed: %s", strerror(r));
   return NULL;
@@ -141,7 +148,7 @@ Value *System_Concurrency_Raw_prim__mutexAcquire(Value *_mutex, Value *_world) {
 // %foreign "scheme:blodwen-unlock"
 // prim__mutexRelease : Mutex -> PrimIO ()
 // using int pthread_mutex_unlock(pthread_mutex_t *mutex)
-Value *System_Concurrency_Raw_prim__mutexRelease(Value *_mutex, Value *_world) {
+Value *System_Concurrency_Raw_prim__mutexRelease(Value *_mutex, Value *IDRIS2_UNUSED _world) {
   int r = pthread_mutex_unlock(((Value_Mutex *)_mutex)->mutex);
   IDRIS2_REFC_VERIFY(!r, "pthread_mutex_unlock failed: %s", strerror(r));
   return NULL;
@@ -151,7 +158,7 @@ Value *System_Concurrency_Raw_prim__mutexRelease(Value *_mutex, Value *_world) {
 // prim__makeCondition : PrimIO Condition
 // using int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t
 // *attr) with standard initialisation
-Value *System_Concurrency_Raw_prim__makeCondition(Value *_world) {
+Value *System_Concurrency_Raw_prim__makeCondition(Value *IDRIS2_UNUSED _world) {
   // typedef struct{
   //     Value_header header;
   //     pthread_cond_t *cond;
@@ -171,7 +178,7 @@ Value *System_Concurrency_Raw_prim__makeCondition(Value *_world) {
 // using int pthread_cond_wait(pthread_cond_t *, pthread_mutex_t *mutex)
 Value *System_Concurrency_Raw_prim__conditionWait(Value *_condition,
                                                   Value *_mutex,
-                                                  Value *_world) {
+                                                  Value *IDRIS2_UNUSED _world) {
   Value_Condition *cond = (Value_Condition *)_condition;
   Value_Mutex *mutex = (Value_Mutex *)_mutex;
   int r = pthread_cond_wait(cond->cond, mutex->mutex);
@@ -186,7 +193,7 @@ Value *System_Concurrency_Raw_prim__conditionWait(Value *_condition,
 Value *System_Concurrency_Raw_prim__conditionWaitTimeout(Value *_condition,
                                                          Value *_mutex,
                                                          Value *_timeout,
-                                                         Value *_world) {
+                                                         Value *IDRIS2_UNUSED _world) {
   Value_Condition *cond = (Value_Condition *)_condition;
   Value_Mutex *mutex = (Value_Mutex *)_mutex;
   int64_t timeout = idris2_vp_to_Int64(_timeout);
@@ -202,7 +209,7 @@ Value *System_Concurrency_Raw_prim__conditionWaitTimeout(Value *_condition,
 // prim__conditionSignal : Condition -> PrimIO ()
 // using int pthread_cond_signal(pthread_cond_t *cond)
 Value *System_Concurrency_Raw_prim__conditionSignal(Value *_condition,
-                                                    Value *_world) {
+                                                    Value *IDRIS2_UNUSED _world) {
   Value_Condition *cond = (Value_Condition *)_condition;
   int r = pthread_cond_signal(cond->cond);
   IDRIS2_REFC_VERIFY(!r, "pthread_cond_signal failed: %s", strerror(r));
@@ -213,7 +220,7 @@ Value *System_Concurrency_Raw_prim__conditionSignal(Value *_condition,
 // prim__conditionBroadcast : Condition -> PrimIO ()
 // using int pthread_cond_broadcast(pthread_cond_t *cond)
 Value *System_Concurrency_Raw_prim__conditionBroadcast(Value *_condition,
-                                                       Value *_mutex) {
+                                                       Value *IDRIS2_UNUSED _mutex) {
   Value_Condition *cond = (Value_Condition *)_condition;
   int r = pthread_cond_broadcast(cond->cond);
   IDRIS2_REFC_VERIFY(!r, "pthread_cond_broadcast failed: %s", strerror(r));

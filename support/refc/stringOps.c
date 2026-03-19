@@ -193,20 +193,34 @@ Value *stringIteratorNew(char *str) {
   it->pos = 0;
   memcpy(it->str, str, l + 1); // Take a copy of str, in case it gets GCed
 
+  /* onCollectStringIterator has a concrete signature but is stored as ClosureFun
+   * for later dispatch — suppress the cast-function-type warning intentionally. */
+#if defined(__clang__)
+#  pragma clang diagnostic push
+#  pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
+#elif defined(__GNUC__)
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wcast-function-type"
+#endif
   return (Value *)idris2_makeGCPointer(
       it, (Value_Closure *)idris2_mkClosure(
-              (Value * (*)()) onCollectStringIterator, 2, 0));
+              (ClosureFun) onCollectStringIterator, 2, 0));
+#if defined(__clang__)
+#  pragma clang diagnostic pop
+#elif defined(__GNUC__)
+#  pragma GCC diagnostic pop
+#endif
 }
 
-Value *onCollectStringIterator(Value_Pointer *ptr, void *null) {
+Value *onCollectStringIterator(Value_Pointer *ptr, void *IDRIS2_UNUSED null) {
   String_Iterator *it = (String_Iterator *)ptr->p;
   free(it->str);
   free(it);
   return NULL;
 }
 
-Value *stringIteratorToString(void *a, char *str, Value *it_p,
-                              Value_Closure *f) {
+Value *stringIteratorToString(void *IDRIS2_UNUSED a, char *IDRIS2_UNUSED str,
+                              Value *it_p, Value_Closure *f) {
   String_Iterator *it = ((Value_GCPointer *)it_p)->p->p;
   Value *strVal = (Value *)idris2_mkString(it->str + it->pos);
   return idris2_apply_closure(idris2_newReference((Value *)f), strVal);
@@ -214,7 +228,7 @@ Value *stringIteratorToString(void *a, char *str, Value *it_p,
 
 // contrib/Data.String.Iterator.uncons :
 //   (str : String) -> (1 it : StringIterator str) -> UnconsResult str
-Value *stringIteratorNext(char *s, Value *it_p) {
+Value *stringIteratorNext(char *IDRIS2_UNUSED s, Value *it_p) {
   String_Iterator *it = (String_Iterator *)((Value_GCPointer *)it_p)->p->p;
   char *p = it->str + it->pos;
 

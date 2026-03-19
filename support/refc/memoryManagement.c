@@ -39,7 +39,7 @@ void idris2_dumpMemoryStats(void) {
 #define IDRIS2_INC_MEMSTAT(x)
 // don't inline this, Because IDRIS2_MEMSTAT works only at compiling support
 // libraries to suppressing overhead.
-void idris2_dumpMemoryStats() {}
+void idris2_dumpMemoryStats(void) {}
 #endif
 
 Value *idris2_newValue(size_t size) {
@@ -81,7 +81,7 @@ Value_Constructor *idris2_newConstructor(int total, int tag) {
   return retVal;
 }
 
-Value_Closure *idris2_mkClosure(Value *(*f)(), uint8_t arity, uint8_t filled) {
+Value_Closure *idris2_mkClosure(ClosureFun f, uint8_t arity, uint8_t filled) {
   Value_Closure *retVal = (Value_Closure *)idris2_newValue(
       sizeof(Value_Closure) + sizeof(Value *) * filled);
   retVal->header.tag = CLOSURE_TAG;
@@ -132,7 +132,7 @@ Value *idris2_mkInt64(int64_t i) {
   return (Value *)retVal;
 }
 
-Value_Integer *idris2_mkInteger() {
+Value_Integer *idris2_mkInteger(void) {
   Value_Integer *retVal = IDRIS2_NEW_VALUE(Value_Integer);
   retVal->header.tag = INTEGER_TAG;
   mpz_init(retVal->i);

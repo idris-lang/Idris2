@@ -3,22 +3,22 @@
 #define NSEC_PER_SEC 1000000000
 #define CLOCKS_PER_NSEC ((float)CLOCKS_PER_SEC / NSEC_PER_SEC)
 
-Value *clockTimeMonotonic() { return clockTimeUtc(); }
+Value *clockTimeMonotonic(void) { return clockTimeUtc(); }
 
-Value *clockTimeUtc() {
+Value *clockTimeUtc(void) {
   return (Value *)idris2_mkBits64(time(NULL) * NSEC_PER_SEC);
 }
 
-Value *clockTimeProcess() {
+Value *clockTimeProcess(void) {
   uint64_t time_ns = clock() / CLOCKS_PER_NSEC;
   return (Value *)idris2_mkBits64(time_ns);
 }
 
-Value *clockTimeThread() { return clockTimeProcess(); }
+Value *clockTimeThread(void) { return clockTimeProcess(); }
 
-Value *clockTimeGcCpu() { return NULL; }
+Value *clockTimeGcCpu(void) { return NULL; }
 
-Value *clockTimeGcReal() { return NULL; }
+Value *clockTimeGcReal(void) { return NULL; }
 
 int clockValid(Value *clock) { return clock != NULL; }
 

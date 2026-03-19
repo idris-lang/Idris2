@@ -150,10 +150,18 @@ typedef struct {
   Value *args[];
 } Value_Constructor;
 
+/* ClosureFun: canonical storage type for closure function pointers.
+ * Full typedef lives in memoryManagement.h; replicated here so
+ * Value_Closure is self-contained without a forward-declaration cycle. */
+#ifndef CLOSUREFUN_DEFINED
+#define CLOSUREFUN_DEFINED
+typedef Value *(*ClosureFun)(void);
+#endif
+
 typedef struct {
   Value_header header;
   // function type depends on arity, see idris2_dispatch_closure
-  void *f;
+  ClosureFun f;
   uint8_t arity;
   uint8_t filled; // length of args.
   Value *args[];
