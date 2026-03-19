@@ -295,9 +295,37 @@ void idris2_removeReference(Value *elem) {
       break;
     }
 
+    case MUTEX_TAG: {
+      Value_Mutex *m = (Value_Mutex *)elem;
+      pthread_mutex_destroy(m->mutex);
+      free(m->mutex);
+      break;
+    }
+
+    case CONDITION_TAG: {
+      Value_Condition *c = (Value_Condition *)elem;
+      pthread_cond_destroy(c->cond);
+      free(c->cond);
+      break;
+    }
+
     case THREAD_TAG:
       /* pthread_t is embedded by value; nothing extra to free. */
       break;
+
+    case SEMAPHORE_TAG: {
+      Value_Semaphore *s = (Value_Semaphore *)elem;
+      pthread_cond_destroy(&s->cond);
+      pthread_mutex_destroy(&s->mutex);
+      break;
+    }
+
+    case BARRIER_TAG: {
+      Value_Barrier *b = (Value_Barrier *)elem;
+      pthread_cond_destroy(&b->cond);
+      pthread_mutex_destroy(&b->mutex);
+      break;
+    }
 
     default:
       break;

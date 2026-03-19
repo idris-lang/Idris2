@@ -44,10 +44,13 @@ export
 data Mutex : Type where [external]
 
 %foreign "scheme:blodwen-make-mutex"
+         "C:refc_makeMutex, concurrency.h"
 prim__makeMutex : PrimIO Mutex
 %foreign "scheme:blodwen-mutex-acquire"
+         "C:refc_mutexAcquire, concurrency.h"
 prim__mutexAcquire : Mutex -> PrimIO ()
 %foreign "scheme:blodwen-mutex-release"
+         "C:refc_mutexRelease, concurrency.h"
 prim__mutexRelease : Mutex -> PrimIO ()
 
 ||| Creates and returns a new mutex.
@@ -80,18 +83,23 @@ data Condition : Type where [external]
 
 %foreign "scheme,racket:blodwen-make-cv"
          "scheme,chez:blodwen-make-condition"
+         "C:refc_makeCondition, concurrency.h"
 prim__makeCondition : PrimIO Condition
 %foreign "scheme,racket:blodwen-cv-wait"
          "scheme,chez:blodwen-condition-wait"
+         "C:refc_conditionWait, concurrency.h"
 prim__conditionWait : Condition -> Mutex -> PrimIO ()
 %foreign "scheme,chez:blodwen-condition-wait-timeout"
 --         "scheme,racket:blodwen-cv-wait-timeout"
+         "C:refc_conditionWaitTimeout, concurrency.h"
 prim__conditionWaitTimeout : Condition -> Mutex -> Int -> PrimIO ()
 %foreign "scheme,racket:blodwen-cv-signal"
          "scheme,chez:blodwen-condition-signal"
+         "C:refc_conditionSignal, concurrency.h"
 prim__conditionSignal : Condition -> PrimIO ()
 %foreign "scheme,racket:blodwen-cv-broadcast"
          "scheme,chez:blodwen-condition-broadcast"
+         "C:refc_conditionBroadcast, concurrency.h"
 prim__conditionBroadcast : Condition -> PrimIO ()
 
 
@@ -134,10 +142,13 @@ export
 data Semaphore : Type where [external]
 
 %foreign "scheme:blodwen-make-semaphore"
+         "C:refc_makeSemaphore, concurrency.h"
 prim__makeSemaphore : Int -> PrimIO Semaphore
 %foreign "scheme:blodwen-semaphore-post"
+         "C:refc_semaphorePost, concurrency.h"
 prim__semaphorePost : Semaphore -> PrimIO ()
 %foreign "scheme:blodwen-semaphore-wait"
+         "C:refc_semaphoreWait, concurrency.h"
 prim__semaphoreWait : Semaphore -> PrimIO ()
 
 
@@ -166,8 +177,10 @@ export
 data Barrier : Type where [external]
 
 %foreign "scheme:blodwen-make-barrier"
+         "C:refc_makeBarrier, concurrency.h"
 prim__makeBarrier : Int -> PrimIO Barrier
 %foreign "scheme:blodwen-barrier-wait"
+         "C:refc_barrierWait, concurrency.h"
 prim__barrierWait : Barrier -> PrimIO ()
 
 ||| Creates a new barrier that can block a given number of threads.

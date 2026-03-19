@@ -31,6 +31,8 @@
 #define MUTEX_TAG 30
 #define CONDITION_TAG 31
 #define THREAD_TAG 32
+#define SEMAPHORE_TAG 33
+#define BARRIER_TAG 34
 
 typedef struct {
   // Objects that reach the maximum reference count will be immortalized.
@@ -198,5 +200,22 @@ typedef struct {
   Value_header header;
   pthread_t thread;
 } Value_Thread;
+
+/* Semaphore implemented via mutex + condvar for portability (pthread_barrier_t
+   and unnamed sem_t are not available on all platforms, e.g. macOS). */
+typedef struct {
+  Value_header header;
+  pthread_mutex_t mutex;
+  pthread_cond_t cond;
+  int count;
+} Value_Semaphore;
+
+typedef struct {
+  Value_header header;
+  pthread_mutex_t mutex;
+  pthread_cond_t cond;
+  int total;    /* number of threads that must arrive */
+  int arrived;  /* number that have arrived so far */
+} Value_Barrier;
 
 void idris2_dumpMemoryStats(void);

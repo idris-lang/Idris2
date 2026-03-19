@@ -1,0 +1,4 @@
+mutex counter = 2
+consumer: got signal
+semaphore: received 2 posts
+barrier: all three met
