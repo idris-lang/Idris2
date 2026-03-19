@@ -1,0 +1,4 @@
+countDown 1000000 = 0
+isEven 1000000 = True
+cpsCounting 1000000 = 0
+loop17 1000000 = 136

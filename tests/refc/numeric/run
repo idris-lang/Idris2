@@ -1,0 +1,6 @@
+. ../../testutils.sh
+
+# Numeric edge-case tests: bounds, overflow wrapping, large Integer (GMP),
+# and IEEE 754 Double special values (Inf, NaN).
+idris2 --cg refc -o refc_numeric TestNumeric.idr
+$VALGRIND ./build/exec/refc_numeric

@@ -358,8 +358,16 @@ makeClosure fc n args missing = do
     pure closure
 
 -- When changing this number, also change idris2_dispatch_closure in runtime.c.
--- Increasing this number will worsen stack consumption and increase the codesize of idris2_dispatch_closure.
--- In C89, the maximum number of arguments is 31, so it should not be larger than 31. 127 is safe in C99, but I do not recommend it.
+-- Functions with arity ≤ MaxExtractFunArgs are called with individual Value*
+-- arguments (FUN0…FUN16 in runtime.c), which lets the C compiler use
+-- registers and inline calls.  Functions with arity > MaxExtractFunArgs use
+-- the FUNStar calling convention: Value *f(Value **xs).  Both paths are
+-- TCO-correct: tail calls return a fully-applied closure that the outermost
+-- idris2_trampoline loop dispatches without growing the C stack.
+--
+-- Raising this limit requires adding corresponding FUNn typedefs and switch
+-- cases to support/refc/runtime.c.  In C89 the maximum parameter count is 31;
+-- C99 allows at least 127.  The current value of 16 is a practical sweet-spot.
 MaxExtractFunArgs : Nat
 MaxExtractFunArgs = 16
 

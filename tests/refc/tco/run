@@ -1,0 +1,13 @@
+. ../../testutils.sh
+
+# TCO stress tests: each case recurses 1 000 000 times.
+# A stack overflow would crash the process; success means TCO is working.
+#
+# Tests:
+#   1. Direct self-recursion
+#   2. Mutual recursion (isEven / isOdd)
+#   3. CPS (higher-order tail calls through closures)
+#   4. >16-argument function (FUNStar / var_arglist dispatch path)
+
+idris2 --cg refc -o refc_tco TestTCO.idr
+$VALGRIND ./build/exec/refc_tco
