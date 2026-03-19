@@ -1,0 +1,6 @@
+sum squares 0..4 = 30
+sum id 0..4 = 10
+sum double 0..4 = 20
+sum (+100) 0..2 = 303
+sum_two (*2) (*3) 0..2 = 15
+done

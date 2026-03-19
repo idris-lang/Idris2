@@ -52,6 +52,7 @@ findLDLIBS
          | Just ldlibs => pure ldlibs
        pure ""
 
+
 clibdirs : List String -> List String
 clibdirs ds = map (\d => "-L" ++ d) ds
 
@@ -117,7 +118,7 @@ compileCFile {asShared} objectFile outFile =
               "-lidris2_refc",
               "-L" ++ refcDir
               ] ++ clibdirs (lib_dirs dirs) ++ [
-              "-lgmp", "-lm"])
+              "-lgmp", "-lm", "-lffi"])
               ++ " " ++ (unwords [cFlags, ldFlags, ldLibs])
 
      log "compiler.refc.cc" 10 runcc

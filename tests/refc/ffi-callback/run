@@ -1,0 +1,12 @@
+. ../../testutils.sh
+
+${CC:-cc} -c callback.c -o callback.o
+ar rcs libcallback.a callback.o
+
+export CPPFLAGS="-I. ${CPPFLAGS}"
+export LDFLAGS="-L. ${LDFLAGS}"
+export LDLIBS="-lcallback"
+
+idris2 --cg refc -o cb_test Callback.idr
+
+./build/exec/cb_test

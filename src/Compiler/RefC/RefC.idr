@@ -191,6 +191,7 @@ data FunctionDefinitions : Type where
 data IndentLevel : Type where
 data HeaderFiles : Type where
 data StructDecls : Type where
+data CallbackDecls : Type where
 data ConstDef
   = CDI64 String
   | CDB64 String
@@ -788,6 +789,61 @@ emitStructCode = do
     emit EmptyFC "}"
 
 -- -------------------------------------------------------------------------
+-- CFFun (callback) trampoline code generation
+-- -------------------------------------------------------------------------
+
+||| Flatten a nested CFFun into (argTypes, retType, hasWorld).
+||| hasWorld is True when the inner return is CFIORes, meaning the closure
+||| expects an extra World argument that C callers don't pass.
+flattenCFFun : CFType -> (List CFType, CFType, Bool)
+flattenCFFun (CFFun a b) =
+    let (args, ret, hw) = flattenCFFun b
+    in (a :: args, ret, hw)
+flattenCFFun (CFIORes t) = ([], t, True)
+flattenCFFun t           = ([], t, False)
+
+||| Short type-name suffix used in generated trampoline identifiers.
+cbSuffix : CFType -> String
+cbSuffix CFUnit         = "void"
+cbSuffix CFInt          = "i64"
+cbSuffix CFInt8         = "i8"
+cbSuffix CFInt16        = "i16"
+cbSuffix CFInt32        = "i32"
+cbSuffix CFInt64        = "i64"
+cbSuffix CFUnsigned8    = "u8"
+cbSuffix CFUnsigned16   = "u16"
+cbSuffix CFUnsigned32   = "u32"
+cbSuffix CFUnsigned64   = "u64"
+cbSuffix CFDouble       = "f64"
+cbSuffix CFChar         = "char"
+cbSuffix CFString       = "str"
+cbSuffix CFPtr          = "ptr"
+cbSuffix CFGCPtr        = "ptr"
+cbSuffix CFWorld        = "world"
+cbSuffix (CFFun _ _)    = "ptr"
+cbSuffix (CFIORes t)    = cbSuffix t
+cbSuffix (CFStruct n _) = n
+cbSuffix (CFUser n _)   = "ptr"
+cbSuffix _              = "ptr"
+
+||| Unique key for a callback signature: argSuffix1_..._argSuffixN_retSuffix.
+cbKey : List CFType -> CFType -> String
+cbKey args ret = fastConcat (intersperse "_" (map cbSuffix args)) ++ "_" ++ cbSuffix ret
+
+||| Collect all CFFun signatures reachable from a CFType.
+||| Returns a map from key to (args, ret, hasWorld).
+collectCFFuns : CFType -> SortedMap String (List CFType, CFType, Bool)
+collectCFFuns ft@(CFFun a b) =
+    let (args, ret, hw) = flattenCFFun ft
+        key = cbKey args ret
+        inner = mergeWith (\x, _ => x) (collectCFFuns a) (collectCFFuns b)
+    in mergeWith (\x, _ => x) (singleton key (args, ret, hw)) inner
+collectCFFuns (CFIORes t)       = collectCFFuns t
+collectCFFuns (CFStruct _ flds) =
+    foldl (\m, (_, ft) => mergeWith (\x, _ => x) m (collectCFFuns ft)) empty flds
+collectCFFuns _ = empty
+
+-- -------------------------------------------------------------------------
 
 cTypeOfCFType : CFType -> String
 cTypeOfCFType CFUnit          = "void"
@@ -860,7 +916,9 @@ extractValue _ CFGCPtr          varName = "((Value_GCPointer*)" ++ varName ++ ")
 extractValue CLangC    CFBuffer varName = "((Value_Buffer*)" ++ varName ++ ")->buffer->data"
 extractValue CLangRefC CFBuffer varName = "((Value_Buffer*)" ++ varName ++ ")->buffer"
 extractValue _ CFWorld          _       = "(Value *)NULL"
-extractValue _ (CFFun x y)      varName = "(Value_Closure*)" ++ varName
+extractValue _ (CFFun x y)      varName =
+    let (args, ret, hw) = flattenCFFun (CFFun x y)
+    in "idris2_make_cb_" ++ cbKey args ret ++ "(" ++ varName ++ ")"
 extractValue c (CFIORes x)      varName = extractValue c x varName
 extractValue _ (CFStruct x xs)  varName = "((Value_Pointer*)" ++ varName ++ ")->p"
 -- not really total but this way this internal error does not contaminate everything else
@@ -885,11 +943,175 @@ packCFType CFPtr           varName = "idris2_makePointer(" ++ varName ++ ")"
 packCFType CFGCPtr         varName = "idris2_makePointer(" ++ varName ++ ")"
 packCFType CFBuffer        varName = "idris2_makeBuffer(" ++ varName ++ ")"
 packCFType CFWorld         _       = "(Value *)NULL"
-packCFType (CFFun x y)     varName = "makeFunction(" ++ varName ++ ")"
+packCFType (CFFun x y)     varName = "idris2_makePointer((void *)" ++ varName ++ ")"
 packCFType (CFIORes x)     varName = packCFType x varName
 packCFType (CFStruct x xs) varName = "idris2_makePointer(" ++ varName ++ ")"
 packCFType (CFUser x xs)   varName = varName
 packCFType n _ = assert_total $ idris_crash ("INTERNAL ERROR: Unknown FFI type in C backend: " ++ show n)
+
+-- -------------------------------------------------------------------------
+-- CFFun trampoline emitters (placed after cTypeOfCFType/extractValue/packCFType)
+-- -------------------------------------------------------------------------
+
+||| Emit the static TLS closure slot, trampoline function, and maker for one
+||| callback signature.  `key` is used in all generated names.
+emitOneCallback
+    : {auto oft : Ref OutfileText Output}
+   -> {auto il  : Ref IndentLevel Nat}
+   -> (key      : String)
+   -> (args     : List CFType)
+   -> (ret      : CFType)
+   -> (hasWorld : Bool)
+   -> Core ()
+emitOneCallback key args ret hasWorld = do
+    let handlerFn = "idris2_cb_handler_" ++ key
+    let argtypesV = "idris2_cb_argtypes_" ++ key
+    let cifV      = "idris2_cb_cif_"      ++ key
+    let cifReadyV = "idris2_cb_cif_ready_" ++ key
+    let makerFn   = "idris2_make_cb_"     ++ key
+    let isVoidRet = case ret of { CFUnit => True; CFWorld => True; _ => False }
+    let retCType  = if isVoidRet then "void" else cTypeOfCFType ret
+    let indexedArgs = zipWith MkPair [0 .. length args `minus` 1] args
+    let n = length args
+
+    -- (1) libffi handler: called by libffi when the C caller invokes the closure.
+    -- _args[i] is a void* pointing to the i-th argument value.
+    -- _user_data is the Idris closure pointer.
+    emit EmptyFC $ "static void " ++ handlerFn
+               ++ "(ffi_cif *_cif, void *_ret, void **_args, void *_user_data) {"
+    emit EmptyFC "  Value *_clo = (Value *)_user_data;"
+    case indexedArgs of
+      [] =>
+        if hasWorld
+          then do
+            emit EmptyFC $ "  Value *_v0 = idris2_apply_closure(idris2_newReference(_clo), NULL);"
+            unless isVoidRet $
+              emit EmptyFC $ "  *((" ++ retCType ++ "*)_ret) = " ++ extractResult ret "_v0" ++ ";"
+          else
+            unless isVoidRet $
+              emit EmptyFC $ "  *((" ++ retCType ++ "*)_ret) = " ++ extractResult ret
+                "idris2_apply_closure(idris2_newReference(_clo), NULL)" ++ ";"
+      ((i0, t0) :: rest) => do
+        emit EmptyFC $ "  Value *_v0 = idris2_apply_closure(idris2_newReference(_clo), "
+                     ++ packFromPtr t0 0 ++ ");"
+        _ <- foldlC (\_, (i, t) => do
+                emit EmptyFC $ "  Value *_v" ++ show i ++ " = idris2_apply_closure(_v"
+                             ++ show (minus i 1) ++ ", " ++ packFromPtr t i ++ ");"
+                pure ()
+              ) () rest
+        let lastV = "_v" ++ show (minus n 1)
+        if hasWorld
+          then do
+            emit EmptyFC $ "  Value *_vw = idris2_apply_closure(" ++ lastV ++ ", NULL);"
+            unless isVoidRet $
+              emit EmptyFC $ "  *((" ++ retCType ++ "*)_ret) = " ++ extractResult ret "_vw" ++ ";"
+          else
+            unless isVoidRet $
+              emit EmptyFC $ "  *((" ++ retCType ++ "*)_ret) = " ++ extractResult ret lastV ++ ";"
+    emit EmptyFC "}"
+
+    -- (2) Static libffi CIF for this signature (initialised once, then reused).
+    let ffiArgtypes = map ffiType args
+    emit EmptyFC $ "static ffi_type *" ++ argtypesV ++ "[] = {"
+                ++ showSep ", " ffiArgtypes ++ ", NULL};"
+    emit EmptyFC $ "static ffi_cif " ++ cifV ++ ";"
+    emit EmptyFC $ "static int "     ++ cifReadyV ++ " = 0;"
+
+    -- (3) Maker: allocate a libffi closure per-call so re-entrant callbacks
+    -- each get their own function pointer and capture their own closure.
+    let fpArgsStr = if null args then "void" else showSep ", " (map cTypeOfCFType args)
+    emit EmptyFC $ "static " ++ retCType ++ " (*" ++ makerFn ++ "(Value *_clo))(" ++ fpArgsStr ++ ") {"
+    emit EmptyFC $ "  if (!" ++ cifReadyV ++ ") {"
+    emit EmptyFC $ "    ffi_prep_cif(&" ++ cifV ++ ", FFI_DEFAULT_ABI, " ++ show n ++ ","
+    emit EmptyFC $ "                 " ++ ffiType ret ++ ", " ++ argtypesV ++ ");"
+    emit EmptyFC $ "    " ++ cifReadyV ++ " = 1;"
+    emit EmptyFC   "  }"
+    emit EmptyFC   "  ffi_closure *_fc;"
+    emit EmptyFC   "  void *_fn_ptr;"
+    emit EmptyFC   "  _fc = ffi_closure_alloc(sizeof(ffi_closure), &_fn_ptr);"
+    emit EmptyFC $ "  ffi_prep_closure_loc(_fc, &" ++ cifV ++ ", " ++ handlerFn ++ ", _clo, _fn_ptr);"
+    emit EmptyFC $ "  return (" ++ retCType ++ " (*)(" ++ fpArgsStr ++ "))_fn_ptr;"
+    emit EmptyFC   "}"
+  where
+    -- Pack a C arg (passed as void* in libffi) into a Value*
+    packFromPtr : CFType -> Nat -> String
+    packFromPtr CFInt        i = "idris2_mkInt64(*(int64_t *)_args["  ++ show i ++ "])"
+    packFromPtr CFInt8       i = "idris2_mkInt8(*(int8_t *)_args["    ++ show i ++ "])"
+    packFromPtr CFInt16      i = "idris2_mkInt16(*(int16_t *)_args["  ++ show i ++ "])"
+    packFromPtr CFInt32      i = "idris2_mkInt32(*(int32_t *)_args["  ++ show i ++ "])"
+    packFromPtr CFInt64      i = "idris2_mkInt64(*(int64_t *)_args["  ++ show i ++ "])"
+    packFromPtr CFUnsigned8  i = "idris2_mkBits8(*(uint8_t *)_args["  ++ show i ++ "])"
+    packFromPtr CFUnsigned16 i = "idris2_mkBits16(*(uint16_t *)_args[" ++ show i ++ "])"
+    packFromPtr CFUnsigned32 i = "idris2_mkBits32(*(uint32_t *)_args[" ++ show i ++ "])"
+    packFromPtr CFUnsigned64 i = "idris2_mkBits64(*(uint64_t *)_args[" ++ show i ++ "])"
+    packFromPtr CFDouble     i = "idris2_mkDouble(*(double *)_args["   ++ show i ++ "])"
+    packFromPtr CFChar       i = "idris2_mkChar(*(int *)_args["        ++ show i ++ "])"
+    packFromPtr CFString     i = "idris2_mkString(*(char **)_args["    ++ show i ++ "])"
+    packFromPtr CFPtr        i = "idris2_makePointer(*(void **)_args["  ++ show i ++ "])"
+    packFromPtr CFGCPtr      i = "idris2_makePointer(*(void **)_args["  ++ show i ++ "])"
+    packFromPtr _            i = "(Value *)*(void **)_args["            ++ show i ++ "]"
+
+    extractResult : CFType -> String -> String
+    extractResult CFInt        v = "idris2_vp_to_Int64("  ++ v ++ ")"
+    extractResult CFInt8       v = "idris2_vp_to_Int8("   ++ v ++ ")"
+    extractResult CFInt16      v = "idris2_vp_to_Int16("  ++ v ++ ")"
+    extractResult CFInt32      v = "idris2_vp_to_Int32("  ++ v ++ ")"
+    extractResult CFInt64      v = "idris2_vp_to_Int64("  ++ v ++ ")"
+    extractResult CFUnsigned8  v = "idris2_vp_to_Bits8("  ++ v ++ ")"
+    extractResult CFUnsigned16 v = "idris2_vp_to_Bits16(" ++ v ++ ")"
+    extractResult CFUnsigned32 v = "idris2_vp_to_Bits32(" ++ v ++ ")"
+    extractResult CFUnsigned64 v = "idris2_vp_to_Bits64(" ++ v ++ ")"
+    extractResult CFDouble     v = "idris2_vp_to_Double(" ++ v ++ ")"
+    extractResult CFChar       v = "idris2_vp_to_Char("   ++ v ++ ")"
+    extractResult CFPtr        v = "((Value_Pointer *)"   ++ v ++ ")->p"
+    extractResult _            v = "(intptr_t)"           ++ v
+
+    -- Map CFType to the libffi ffi_type pointer expression
+    ffiType : CFType -> String
+    ffiType CFUnit        = "&ffi_type_void"
+    ffiType CFInt         = "&ffi_type_sint64"
+    ffiType CFInt8        = "&ffi_type_sint8"
+    ffiType CFInt16       = "&ffi_type_sint16"
+    ffiType CFInt32       = "&ffi_type_sint32"
+    ffiType CFInt64       = "&ffi_type_sint64"
+    ffiType CFUnsigned8   = "&ffi_type_uint8"
+    ffiType CFUnsigned16  = "&ffi_type_uint16"
+    ffiType CFUnsigned32  = "&ffi_type_uint32"
+    ffiType CFUnsigned64  = "&ffi_type_uint64"
+    ffiType CFDouble      = "&ffi_type_double"
+    ffiType CFChar        = "&ffi_type_sint32"
+    ffiType CFWorld       = "&ffi_type_void"
+    ffiType _             = "&ffi_type_pointer"
+
+||| Emit all callback trampolines and add their forward declarations to the
+||| FunctionDefinitions header so callers see the declaration before the body.
+emitCallbackCode
+    : {auto oft : Ref OutfileText Output}
+   -> {auto il  : Ref IndentLevel Nat}
+   -> {auto h   : Ref HeaderFiles (SortedSet String)}
+   -> {auto f   : Ref FunctionDefinitions (List String)}
+   -> {auto cb  : Ref CallbackDecls (SortedMap String (List CFType, CFType, Bool))}
+   -> Core ()
+emitCallbackCode = do
+    entries <- SortedMap.toList <$> get CallbackDecls
+    unless (null entries) $ do
+        -- ffi.h location varies by platform; emit a portable include block
+        -- into the function-definitions preamble rather than using HeaderFiles.
+        -- (HeaderFiles always wraps entries in <...> which may miss ffi/ffi.h)
+        update FunctionDefinitions $ \ds =>
+            "#if __has_include(<ffi.h>)\n#include <ffi.h>\n#elif __has_include(<ffi/ffi.h>)\n#include <ffi/ffi.h>\n#else\n#error \"libffi not found — install libffi-dev or set CPPFLAGS\"\n#endif\n" :: ds
+        emit EmptyFC "// --- callback trampolines (generated, using libffi for re-entrancy) ---"
+        traverse_ (\(key, (args, ret, hw)) => do
+            -- Forward-declare the maker so FFI wrappers (emitted before the trampolines)
+            -- can call it without an implicit declaration.
+            let isVoidRet = case ret of { CFUnit => True; CFWorld => True; _ => False }
+            let retCType  = if isVoidRet then "void" else cTypeOfCFType ret
+            let fpArgsStr = if null args then "void" else showSep ", " (map cTypeOfCFType args)
+            let makerFn   = "idris2_make_cb_" ++ key
+            let fwdDecl = "static " ++ retCType ++ " (*" ++ makerFn ++ "(Value *))(" ++ fpArgsStr ++ ");\n"
+            update FunctionDefinitions (fwdDecl ::)
+            emitOneCallback key args ret hw
+          ) entries
 
 discardLastArgument : List ty -> List ty
 discardLastArgument [] = []
@@ -927,6 +1149,7 @@ createCFunctions : {auto c : Ref Ctxt Defs}
                 -> {auto il : Ref IndentLevel Nat}
                 -> {auto h : Ref HeaderFiles (SortedSet String)}
                 -> {auto sd : Ref StructDecls (SortedMap String (List (String, CFType)))}
+                -> {auto cb : Ref CallbackDecls (SortedMap String (List CFType, CFType, Bool))}
                 -> {default [] additionalFFILangs : List String}
                 -> Name
                 -> ANFDef
@@ -971,10 +1194,13 @@ createCFunctions n (MkACon tag arity nt) = do
 
 
 createCFunctions n (MkAForeign ccs fargs ret) = do
-  -- Collect any CFStruct types from args and return type for descriptor codegen
+  -- Collect CFStruct and CFFun types for descriptor / trampoline codegen
   let allStructs = foldl (\m, ft => mergeWith const m (collectCFStructs ft))
                          empty (ret :: fargs)
   update StructDecls (mergeWith const allStructs)
+  let allCbs = foldl (\m, ft => mergeWith (\x, _ => x) m (collectCFFuns ft))
+                     empty (ret :: fargs)
+  update CallbackDecls (mergeWith (\x, _ => x) allCbs)
 
   case parseCC (additionalFFILangs ++ ["RefC", "C"]) ccs of
       Just (lang, fctForeignName :: extLibOpts) => do
@@ -1122,7 +1348,9 @@ generateCSourceFile defs outn =
      _ <- newRef HeaderFiles empty
      _ <- newRef IndentLevel 0
      _ <- newRef StructDecls (the (SortedMap String (List (String, CFType))) empty)
+     _ <- newRef CallbackDecls (the (SortedMap String (List CFType, CFType, Bool)) empty)
      traverse_ (uncurry $ createCFunctions {additionalFFILangs}) defs
+     emitCallbackCode
      emitStructCode
      header -- added after the definition traversal in order to add all encountered function defintions
      footer
