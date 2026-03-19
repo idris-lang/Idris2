@@ -134,12 +134,14 @@ could be any other knowledgable community member.
 
 ## Things We Will Not Accept
 
-Any contribution done by, or using, autonomous coding agents, Large Language
-Models and/or generative AI  will be rejected. That is to say, issues, pull
-requests, commits, and comments are all to be written and submitted by humans.
 Idris is a primarily academic project with roots in human-driven understanding
-and experience, designed to improve the human experience of programming and we
-want our processes to reflect that.
+and experience, designed to improve the human experience of programming, and we
+want our processes to reflect that. Generative AI can reduce, and ultimately
+remove, the human-element. Within the Idris Project, we want issues, pull
+requests, commits, and comments to be written and submitted by humans. As such,
+all contributions that arise from Generative AI or Large Language Models,
+including contributions made by Autonomous Coding Agents that use 'Agentic
+Coding', will not be considered.
 
 
 ## Other possible contributions
