@@ -18,6 +18,7 @@ We cannot guarantee your proposal will be implemented in a timely manner (or at 
 
 - [ ] I have read [CONTRIBUTING.md](https://github.com/idris-lang/Idris2/blob/main/CONTRIBUTING.md).
 - [ ] I have checked that there is no existing PR/issue about my proposal.
+- [ ] I am a human, not an AI, my contribution is human-written and designed for human consumption.
 
 ## Summary
 
