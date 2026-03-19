@@ -34,6 +34,27 @@ C, you will need to arrange for them to be accessible via ``LD_LIBRARY_PATH``
 when running the executable. The default Idris 2 support libraries are
 statically linked.
 
+Further Reading
+===============
+
+The following guides (in ``docs/`` at the repository root) cover the
+RefC backend internals in more detail:
+
+- `refc-runtime-architecture.md <../../refc-runtime-architecture.md>`_ —
+  Value representation, tag values, unboxed integers, the trampoline and
+  tail-call optimisation, and the memory management lifecycle.
+
+- `refc-ffi-guide.md <../../refc-ffi-guide.md>`_ —
+  Step-by-step guide to writing C bindings: ``%foreign`` declaration syntax,
+  type mapping table, the ``C:`` and ``RefC:`` calling conventions, strings,
+  pointers, unimplemented stubs, and the debug build.
+
+- `refc-refcounting-contract.md <../../refc-refcounting-contract.md>`_ —
+  Precise ownership and reference counting rules: when to call
+  ``idris2_newReference`` / ``idris2_removeReference``, FFI-specific
+  obligations for ``C:`` and ``RefC:`` functions, the ``idris2_isUnique``
+  fast path, and a table of common mistakes.
+
 Extending RefC
 ==============
 
