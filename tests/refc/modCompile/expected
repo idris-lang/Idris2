@@ -1,4 +1,5 @@
 Hello, world!
 7
+Note [refc]: incremental compilation requested but not active. The standard libraries must be compiled with IDRIS2_INC_CGS=refc before per-module .o files can be used (run: make libs IDRIS2_INC_CGS=refc).
 Hello, world!
 7

@@ -19,6 +19,9 @@ import Data.Vect
 import System
 import System.File
 
+import Data.String
+import Idris.Env
+
 import Protocol.Hex
 import Libraries.Utils.Path
 
@@ -1464,7 +1467,18 @@ compileExpr ANF c s _ outputDir tm outfile = do
     sesh <- getSession
     if not (wholeProgram sesh) && (RefC `elem` incrementalCGs sesh)
        then compileExprInc c s outputDir tm outfile
-       else compileExprWhole c s outputDir tm outfile
+       else do
+         -- Warn when the user requested refc incremental builds but the CG
+         -- was removed from incrementalCGs (most likely because the standard
+         -- libraries have not yet been compiled with IDRIS2_INC_CGS=refc).
+         mInc <- coreLift $ idrisGetEnv "IDRIS2_INC_CGS"
+         let requestedInc = maybe False (isInfixOf "refc") mInc
+         when (requestedInc && not (wholeProgram sesh)) $
+           coreLift $ putStrLn $
+             "Note [refc]: incremental compilation requested but not active. " ++
+             "The standard libraries must be compiled with IDRIS2_INC_CGS=refc " ++
+             "before per-module .o files can be used (run: make libs IDRIS2_INC_CGS=refc)."
+         compileExprWhole c s outputDir tm outfile
 
 compileExpr _ _ _ _ _ _ _ = pure Nothing
 
