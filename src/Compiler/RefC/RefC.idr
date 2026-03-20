@@ -932,6 +932,7 @@ extractValue _ CFGCPtr          varName = "((Value_GCPointer*)" ++ varName ++ ")
 extractValue CLangC    CFBuffer varName = "((Value_Buffer*)" ++ varName ++ ")->buffer->data"
 extractValue CLangRefC CFBuffer varName = "((Value_Buffer*)" ++ varName ++ ")->buffer"
 extractValue _ CFWorld          _       = "(Value *)NULL"
+extractValue CLangRefC (CFFun _ _) varName = "(Value_Closure *)(" ++ varName ++ ")"
 extractValue _ (CFFun x y)      varName =
     let (args, ret, hw) = flattenCFFun (CFFun x y)
     in "idris2_make_cb_" ++ cbKey args ret ++ "(" ++ varName ++ ")"
@@ -1138,13 +1139,16 @@ discardLastArgument xs@(_ :: _) = init xs
 additionalFFIHelper : Name -> List CFType -> CFType -> String
 additionalFFIHelper name argTypes (CFIORes retType) = additionalFFIHelper name (discardLastArgument argTypes) retType
 additionalFFIHelper name argTypes retType =
-    "static " ++ cTypeOfCFType retType ++
-    " " ++ cName name ++ "_refc_unimplemented(" ++
-    (concat $ intersperse ", " $ map cTypeOfCFType argTypes) ++ ") {\n" ++
-    "  fprintf(stderr, \"ERROR: FFI function not implemented for the RefC backend:\\n" ++
-    "  %s\\n(Add a \\\"C:\\\" or \\\"RefC:\\\" %%foreign binding.)\\n\", \"" ++
-    show name ++ "\");\n" ++
-    "  exit(1);\n}\n"
+    -- Give each parameter a name (_p0, _p1, …) so the definition is valid C99.
+    let params = map (\(i, t) => cTypeOfCFType t ++ " _p" ++ show i)
+                     (zipWith MkPair [0 .. length argTypes `minus` 1] argTypes)
+    in "static " ++ cTypeOfCFType retType ++
+       " " ++ cName name ++ "_refc_unimplemented(" ++
+       (concat $ intersperse ", " params) ++ ") {\n" ++
+       "  fprintf(stderr, \"ERROR: FFI function not implemented for the RefC backend:\\n" ++
+       "  %s\\n(Add a \\\"C:\\\" or \\\"RefC:\\\" %%foreign binding.)\\n\", \"" ++
+       show name ++ "\");\n" ++
+       "  exit(1);\n}\n"
 
 -- Emit the static helper plus a function pointer that can be called by name
 -- (used for non-standard FFI langs like "scheme:" where the generated wrapper
@@ -1210,13 +1214,19 @@ createCFunctions n (MkACon tag arity nt) = do
 
 
 createCFunctions n (MkAForeign ccs fargs ret) = do
-  -- Collect CFStruct and CFFun types for descriptor / trampoline codegen
+  -- Collect CFStruct types for struct descriptor codegen (always).
   let allStructs = foldl (\m, ft => mergeWith const m (collectCFStructs ft))
                          empty (ret :: fargs)
   update StructDecls (mergeWith const allStructs)
-  let allCbs = foldl (\m, ft => mergeWith (\x, _ => x) m (collectCFFuns ft))
-                     empty (ret :: fargs)
-  update CallbackDecls (mergeWith (\x, _ => x) allCbs)
+  -- Collect CFFun types for libffi trampolines only for "C:" bindings.
+  -- "RefC:" bindings receive Value_Closure* directly and don't need libffi.
+  let isRefCBinding = case parseCC (additionalFFILangs ++ ["RefC", "C"]) ccs of
+        Just ("RefC", _) => True
+        _                => False
+  unless isRefCBinding $ do
+    let allCbs = foldl (\m, ft => mergeWith (\x, _ => x) m (collectCFFuns ft))
+                       empty (ret :: fargs)
+    update CallbackDecls (mergeWith (\x, _ => x) allCbs)
 
   case parseCC (additionalFFILangs ++ ["RefC", "C"]) ccs of
       Just (lang, fctForeignName :: extLibOpts) => do
@@ -1230,6 +1240,8 @@ createCFunctions n (MkAForeign ccs fargs ret) = do
           if isStandardFFI
              then case extLibOpts of
                       [lib, header] => update HeaderFiles $ insert header
+                      -- "C:funcname, header.h" — one field, treat as header if it ends in ".h"
+                      [h] => when (isSuffixOf ".h" h) $ update HeaderFiles $ insert h
                       _ => pure ()
              else emit EmptyFC $ additionalFFIStub fctName fargs ret
           let fnDef = "Value *" ++ (cName n) ++ "(" ++ showSep ", " (replicate (length fargs) "Value *") ++ ");"
