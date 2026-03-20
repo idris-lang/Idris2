@@ -21,7 +21,7 @@ Value *idris2_cast_Int8_to_Integer(Value *input) {
   return (Value *)retVal;
 }
 
-Value *idris2_cast_Int8_to_string(Value *input) {
+Value *idris2_cast_Int8_to_String(Value *input) {
   int8_t x = idris2_vp_to_Int8(input);
 
   int l = snprintf(NULL, 0, "%" PRId8 "", x);
@@ -42,7 +42,7 @@ Value *idris2_cast_Int16_to_Integer(Value *input) {
   return (Value *)retVal;
 }
 
-Value *idris2_cast_Int16_to_string(Value *input) {
+Value *idris2_cast_Int16_to_String(Value *input) {
   int16_t x = idris2_vp_to_Int16(input);
 
   int l = snprintf(NULL, 0, "%" PRId16 "", x);
@@ -63,7 +63,7 @@ Value *idris2_cast_Int32_to_Integer(Value *input) {
   return (Value *)retVal;
 }
 
-Value *idris2_cast_Int32_to_string(Value *input) {
+Value *idris2_cast_Int32_to_String(Value *input) {
   int32_t x = idris2_vp_to_Int32(input);
 
   int l = snprintf(NULL, 0, "%" PRId32 "", x);
@@ -84,7 +84,7 @@ Value *idris2_cast_Int64_to_Integer(Value *input) {
   return (Value *)retVal;
 }
 
-Value *idris2_cast_Int64_to_string(Value *input) {
+Value *idris2_cast_Int64_to_String(Value *input) {
   int64_t from = idris2_vp_to_Int64(input);
   int l = snprintf(NULL, 0, "%" PRId64 "", from);
   Value_String *retVal = idris2_mkEmptyString(l + 1);
@@ -103,7 +103,7 @@ Value *idris2_cast_Double_to_Integer(Value *input) {
   return (Value *)retVal;
 }
 
-Value *idris2_cast_Double_to_string(Value *input) {
+Value *idris2_cast_Double_to_String(Value *input) {
   double x = idris2_vp_to_Double(input);
 
   int l = snprintf(NULL, 0, "%f", x);
@@ -123,7 +123,7 @@ Value *idris2_cast_Char_to_Integer(Value *input) {
   return (Value *)retVal;
 }
 
-Value *idris2_cast_Char_to_string(Value *input) {
+Value *idris2_cast_Char_to_String(Value *input) {
   Value_String *retVal = idris2_mkEmptyString(2);
   retVal->str[0] = idris2_vp_to_Char(input);
 
@@ -197,7 +197,7 @@ Value *idris2_cast_Bits8_to_Integer(Value *input) {
   return (Value *)retVal;
 }
 
-Value *idris2_cast_Bits8_to_string(Value *input) {
+Value *idris2_cast_Bits8_to_String(Value *input) {
   uint8_t x = idris2_vp_to_Bits8(input);
 
   int l = snprintf(NULL, 0, "%" PRIu8 "", x);
@@ -218,7 +218,7 @@ Value *idris2_cast_Bits16_to_Integer(Value *input) {
   return (Value *)retVal;
 }
 
-Value *idris2_cast_Bits16_to_string(Value *input) {
+Value *idris2_cast_Bits16_to_String(Value *input) {
   uint16_t x = idris2_vp_to_Bits16(input);
 
   int l = snprintf(NULL, 0, "%" PRIu16 "", x);
@@ -239,7 +239,7 @@ Value *idris2_cast_Bits32_to_Integer(Value *input) {
   return (Value *)retVal;
 }
 
-Value *idris2_cast_Bits32_to_string(Value *input) {
+Value *idris2_cast_Bits32_to_String(Value *input) {
   uint32_t x = idris2_vp_to_Bits32(input);
 
   int l = snprintf(NULL, 0, "%" PRIu32 "", x);
@@ -260,7 +260,7 @@ Value *idris2_cast_Bits64_to_Integer(Value *input) {
   return (Value *)retVal;
 }
 
-Value *idris2_cast_Bits64_to_string(Value *input) {
+Value *idris2_cast_Bits64_to_String(Value *input) {
   uint64_t x = idris2_vp_to_Bits64(input);
 
   int l = snprintf(NULL, 0, "%" PRIu64 "", x);
@@ -377,7 +377,7 @@ Value *idris2_cast_Integer_to_Char(Value *input) {
 #endif
 }
 
-Value *idris2_cast_Integer_to_string(Value *input) {
+Value *idris2_cast_Integer_to_String(Value *input) {
   Value_Integer *from = (Value_Integer *)input;
 
   Value_String *retVal = IDRIS2_NEW_VALUE(Value_String);

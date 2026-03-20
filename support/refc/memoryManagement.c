@@ -589,6 +589,24 @@ static void collectWhite(Value *v) {
     freeValueDirect(v);
 }
 
+// ---- cc_roots bookkeeping helpers -------------------------------------
+
+// Remove v from cc_roots if it is currently buffered there.
+// Call this before directly free()-ing a Value that bypasses
+// idris2_removeReference (e.g. the fast paths in idris2_trampoline /
+// idris2_tailcall_apply_closure).
+void idris2_cc_remove_if_buffered(Value *v) {
+    if (!v || idris2_vp_is_unboxed(v) || !CC_GET_BUFFERED(v)) return;
+    for (size_t i = 0; i < cc_roots_len; i++) {
+        if (cc_roots[i] == v) {
+            cc_roots[i] = cc_roots[cc_roots_len - 1];
+            cc_roots_len--;
+            break;
+        }
+    }
+    CC_CLR_BUFFERED(v);
+}
+
 // ---- Main entry point --------------------------------------------------
 
 void idris2_collectCycles(void) {
@@ -602,24 +620,16 @@ void idris2_collectCycles(void) {
     //     scanBlack or mark them WHITE for collection.  Do NOT free them here —
     //     their rc was decremented by the parent's markGrey traversal and may
     //     still be restored to > 0 by a subsequent scanBlack call.
-    //   - All other colours (BLACK/WHITE): dead-in-buffer — their last external
-    //     reference was dropped via a normal removeReference path before we ran;
-    //     clear the buffered flag and physically free if rc == 0.
+    //   - All other colours (BLACK/WHITE): stale entry — the object was already
+    //     removed from cc_roots and freed by removeReference when its rc reached
+    //     0.  This branch should be unreachable now, but guard it defensively.
     for (size_t i = 0; i < cc_roots_len; i++) {
         Value *v = cc_roots[i];
         if (CC_GET_COLOUR(v) == CC_PURPLE) {
             markGrey(v);
-        } else if (CC_GET_COLOUR(v) != CC_GREY) {
-            // Dead-in-buffer: not a fresh cycle-root candidate and not
-            // currently mid-trial-deletion.  Safe to physically reclaim now.
-            CC_CLR_BUFFERED(v);
-            cc_roots[i] = NULL; // exclude from scan/collect phases
-            if (atomic_load_explicit(&v->header.refCounter,
-                                     memory_order_relaxed) == 0) {
-                IDRIS2_FREE(v); // physical deallocation of dead-in-buffer object
-            }
         }
         // GREY: leave in cc_roots for Phase 2 scan() to handle.
+        // (BLACK/WHITE entries are removed by removeReference before they get here.)
     }
 
     // Phase 2 (Scan): restore live objects, mark confirmed garbage WHITE.
@@ -638,7 +648,6 @@ void idris2_collectCycles(void) {
 
     for (size_t i = 0; i < old_len; i++) {
         Value *v = old_roots[i];
-        if (!v) continue; // dead-in-buffer, already physically freed above
         CC_CLR_BUFFERED(v); // must clear before collectWhite checks it
         collectWhite(v);
     }
@@ -771,13 +780,10 @@ void idris2_removeReference(Value *elem) {
     default:
       break;
     }
-    // Mark as logically freed (children decremented, resources cleaned up).
-    CC_SET_COLOUR(elem, CC_BLACK);
-    // If this object is waiting in cc_roots (buffered), defer the physical
-    // free until collectCycles processes it.  Otherwise free now.
-    if (!CC_GET_BUFFERED(elem)) {
-      IDRIS2_FREE(elem);
-    }
+    // If this object is in cc_roots (buffered), remove it first so the
+    // cycle collector doesn't see a dangling pointer.
+    idris2_cc_remove_if_buffered(elem);
+    IDRIS2_FREE(elem);
     idris2_removeRef_depth--;
     /* Now that we've fully unwound to the outermost call, run any deferred
      * cycle collection that was held back to avoid mid-recursion corruption. */

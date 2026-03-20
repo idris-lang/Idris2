@@ -1,6 +1,7 @@
 #include "runtime.h"
 #include "_datatypes.h"
 #include "refc_util.h"
+#include "memoryManagement.h"
 
 void idris2_missing_ffi(void) {
   fprintf(stderr,
@@ -129,10 +130,12 @@ Value *idris2_trampoline(Value *it) {
       break;
 
     it = idris2_dispatch_closure(clos);
-    if (idris2_isUnique(clos))
+    if (idris2_isUnique(clos)) {
+      idris2_cc_remove_if_buffered((Value *)clos);
       free(clos);
-    else
+    } else {
       --clos->header.refCounter;
+    }
   }
   return it;
 }
@@ -154,6 +157,7 @@ Value *idris2_tailcall_apply_closure(Value *_clos, Value *arg) {
   newclos->args[clos->filled] = arg; // add argument to new arglist
 
   if (idris2_isUnique(clos)) {
+    idris2_cc_remove_if_buffered((Value *)clos);
     free(clos);
   } else {
     --clos->header.refCounter;

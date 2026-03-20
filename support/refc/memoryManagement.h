@@ -88,3 +88,8 @@ void idris2_dumpMemoryStats(void);
 // Called automatically when the candidate buffer fills; also called at the end
 // of main() (injected by the code generator) to free any remaining cycles.
 void idris2_collectCycles(void);
+
+// Remove v from the cycle-collector's candidate buffer (cc_roots) if it is
+// currently buffered.  Must be called before directly free()-ing a Value that
+// bypasses idris2_removeReference (e.g. the fast-path in idris2_trampoline).
+void idris2_cc_remove_if_buffered(Value *v);

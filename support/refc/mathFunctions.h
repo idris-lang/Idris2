@@ -158,7 +158,7 @@ Value *idris2_xor_Integer(Value *x, Value *y);
   (idris2_mkBool(idris2_cmp_Integer(l, r) < 0))
 #define idris2_lt_Double(l, r) (idris2_cmpop(Double, <, l, r))
 #define idris2_lt_Char(l, r) (idris2_cmpop(Char, <, l, r))
-#define idris2_lt_string(l, r)                                                 \
+#define idris2_lt_String(l, r)                                                 \
   (idris2_mkBool(                                                              \
       strcmp(((Value_String *)(l))->str, ((Value_String *)(r))->str) < 0))
 
@@ -175,7 +175,7 @@ Value *idris2_xor_Integer(Value *x, Value *y);
   (idris2_mkBool(idris2_cmp_Integer(l, r) > 0))
 #define idris2_gt_Double(l, r) (idris2_cmpop(Double, >, l, r))
 #define idris2_gt_Char(l, r) (idris2_cmpop(Char, >, l, r))
-#define idris2_gt_string(l, r)                                                 \
+#define idris2_gt_String(l, r)                                                 \
   (idris2_mkBool(                                                              \
       strcmp(((Value_String *)(l))->str, ((Value_String *)(r))->str) > 0))
 
@@ -192,7 +192,7 @@ Value *idris2_xor_Integer(Value *x, Value *y);
   (idris2_mkBool(idris2_cmp_Integer(l, r) == 0))
 #define idris2_eq_Double(l, r) (idris2_cmpop(Double, ==, l, r))
 #define idris2_eq_Char(l, r) (idris2_cmpop(Char, ==, l, r))
-#define idris2_eq_string(l, r)                                                 \
+#define idris2_eq_String(l, r)                                                 \
   (idris2_mkBool(                                                              \
       strcmp(((Value_String *)(l))->str, ((Value_String *)(r))->str) == 0))
 
@@ -209,7 +209,7 @@ Value *idris2_xor_Integer(Value *x, Value *y);
   (idris2_mkBool(idris2_cmp_Integer(l, r) <= 0))
 #define idris2_lte_Double(l, r) (idris2_cmpop(Double, <=, l, r))
 #define idris2_lte_Char(l, r) (idris2_cmpop(Char, <=, l, r))
-#define idris2_lte_string(l, r)                                                \
+#define idris2_lte_String(l, r)                                                \
   (idris2_mkBool(                                                              \
       strcmp(((Value_String *)(l))->str, ((Value_String *)(r))->str) <= 0))
 
@@ -226,6 +226,6 @@ Value *idris2_xor_Integer(Value *x, Value *y);
   (idris2_mkBool(idris2_cmp_Integer(l, r) >= 0))
 #define idris2_gte_Double(l, r) (idris2_cmpop(Double, >=, l, r))
 #define idris2_gte_Char(l, r) (idris2_cmpop(Char, >=, l, r))
-#define idris2_gte_string(l, r)                                                \
+#define idris2_gte_String(l, r)                                                \
   (idris2_mkBool(                                                              \
       strcmp(((Value_String *)(l))->str, ((Value_String *)(r))->str) >= 0))

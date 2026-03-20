@@ -22,7 +22,7 @@ Value *idris2_cast_Int8_to_Integer(Value *);
   (idris2_mkDouble((double)idris2_vp_to_Int8(x)))
 #define idris2_cast_Int8_to_Char(x)                                            \
   (idris2_mkChar((uint32_t)(uint8_t)idris2_vp_to_Int8(x)))
-Value *idris2_cast_Int8_to_string(Value *);
+Value *idris2_cast_Int8_to_String(Value *);
 
 #define idris2_cast_Int16_to_Bits8(x)                                          \
   (idris2_mkBits8((uint8_t)idris2_vp_to_Int16(x)))
@@ -40,7 +40,7 @@ Value *idris2_cast_Int16_to_Integer(Value *);
   (idris2_mkDouble((double)idris2_vp_to_Int16(x)))
 #define idris2_cast_Int16_to_Char(x)                                           \
   (idris2_mkChar((uint32_t)(uint16_t)idris2_vp_to_Int16(x)))
-Value *idris2_cast_Int16_to_string(Value *);
+Value *idris2_cast_Int16_to_String(Value *);
 
 #define idris2_cast_Int32_to_Bits8(x)                                          \
   (idris2_mkBits8((uint8_t)idris2_vp_to_Int32(x)))
@@ -60,7 +60,7 @@ Value *idris2_cast_Int32_to_Integer(Value *);
   (idris2_mkDouble((double)idris2_vp_to_Int32(x)))
 #define idris2_cast_Int32_to_Char(x)                                           \
   (idris2_mkChar((uint32_t)idris2_vp_to_Int32(x)))
-Value *idris2_cast_Int32_to_string(Value *);
+Value *idris2_cast_Int32_to_String(Value *);
 
 #define idris2_cast_Int64_to_Bits8(x)                                          \
   (idris2_mkBits8((uint8_t)idris2_vp_to_Int64(x)))
@@ -82,7 +82,7 @@ Value *idris2_cast_Int64_to_Integer(Value *);
   (idris2_mkDouble((double)idris2_vp_to_Int64(x)))
 #define idris2_cast_Int64_to_Char(x)                                           \
   (idris2_mkChar((uint32_t)idris2_vp_to_Int64(x)))
-Value *idris2_cast_Int64_to_string(Value *);
+Value *idris2_cast_Int64_to_String(Value *);
 
 #define idris2_cast_Double_to_Bits8(x)                                         \
   (idris2_mkBits8((uint8_t)idris2_vp_to_Double(x)))
@@ -103,7 +103,7 @@ Value *idris2_cast_Int64_to_string(Value *);
 Value *idris2_cast_Double_to_Integer(Value *);
 #define idris2_cast_Double_to_Char(x)                                          \
   (idris2_mkChar((uint32_t)idris2_vp_to_Double(x)))
-Value *idris2_cast_Double_to_string(Value *);
+Value *idris2_cast_Double_to_String(Value *);
 
 #define idris2_cast_Char_to_Bits8(x)                                           \
   (idris2_mkBits8((uint8_t)idris2_vp_to_Char(x)))
@@ -124,7 +124,7 @@ Value *idris2_cast_Double_to_string(Value *);
 Value *idris2_cast_Char_to_Integer(Value *);
 #define idris2_cast_Char_to_Double(x)                                          \
   (idris2_mkDouble((double)idris2_vp_to_Char(x)))
-Value *idris2_cast_Char_to_string(Value *);
+Value *idris2_cast_Char_to_String(Value *);
 
 Value *idris2_cast_String_to_Bits8(Value *);
 Value *idris2_cast_String_to_Bits16(Value *);
@@ -154,7 +154,7 @@ Value *idris2_cast_Bits8_to_Integer(Value *input);
   (idris2_mkDouble((double)idris2_vp_to_Bits8(x)))
 #define idris2_cast_Bits8_to_Char(x)                                           \
   (idris2_mkChar((uint32_t)idris2_vp_to_Bits8(x)))
-Value *idris2_cast_Bits8_to_string(Value *input);
+Value *idris2_cast_Bits8_to_String(Value *input);
 
 #define idris2_cast_Bits16_to_Bits8(x)                                         \
   (idris2_mkBits8((uint8_t)idris2_vp_to_Bits16(x)))
@@ -175,7 +175,7 @@ Value *idris2_cast_Bits16_to_Integer(Value *input);
   (idris2_mkDouble((double)idris2_vp_to_Bits16(x)))
 #define idris2_cast_Bits16_to_Char(x)                                          \
   (idris2_mkChar((uint32_t)idris2_vp_to_Bits16(x)))
-Value *idris2_cast_Bits16_to_string(Value *input);
+Value *idris2_cast_Bits16_to_String(Value *input);
 
 #define idris2_cast_Bits32_to_Bits8(x)                                         \
   (idris2_mkBits8((uint8_t)idris2_vp_to_Bits32(x)))
@@ -196,7 +196,7 @@ Value *idris2_cast_Bits32_to_Integer(Value *input);
   (idris2_mkDouble((double)idris2_vp_to_Bits32(x)))
 #define idris2_cast_Bits32_to_Char(x)                                          \
   (idris2_mkChar((uint32_t)idris2_vp_to_Bits32(x)))
-Value *idris2_cast_Bits32_to_string(Value *input);
+Value *idris2_cast_Bits32_to_String(Value *input);
 
 #define idris2_cast_Bits64_to_Bits8(x)                                         \
   (idris2_mkBits8((uint8_t)idris2_vp_to_Bits64(x)))
@@ -217,7 +217,7 @@ Value *idris2_cast_Bits64_to_Integer(Value *input);
   (idris2_mkDouble((double)idris2_vp_to_Bits64(x)))
 #define idris2_cast_Bits64_to_Char(x)                                          \
   (idris2_mkChar((uint32_t)idris2_vp_to_Bits64(x)))
-Value *idris2_cast_Bits64_to_string(Value *input);
+Value *idris2_cast_Bits64_to_String(Value *input);
 
 Value *idris2_cast_Integer_to_Bits8(Value *input);
 Value *idris2_cast_Integer_to_Bits16(Value *input);
@@ -229,4 +229,4 @@ Value *idris2_cast_Integer_to_Int32(Value *input);
 Value *idris2_cast_Integer_to_Int64(Value *input);
 Value *idris2_cast_Integer_to_Double(Value *input);
 Value *idris2_cast_Integer_to_Char(Value *input);
-Value *idris2_cast_Integer_to_string(Value *input);
+Value *idris2_cast_Integer_to_String(Value *input);

@@ -1,0 +1,4 @@
+. ../../testutils.sh
+
+idris2 --cg refc --package network -o refc_network TestSocket.idr
+$VALGRIND ./build/exec/refc_network
