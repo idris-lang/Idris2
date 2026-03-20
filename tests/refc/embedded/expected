@@ -1,0 +1,3 @@
+no-gmp build: OK
+no-threads build: OK
+embedded build: OK

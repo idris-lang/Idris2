@@ -1,6 +1,10 @@
 #pragma once
 
-#include <pthread.h>
+#include "idris2_config.h"
+
+#ifndef IDRIS2_NO_THREADS
+#  include <pthread.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

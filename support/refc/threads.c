@@ -3,6 +3,8 @@
 
 #include <string.h>
 
+#ifndef IDRIS2_NO_THREADS
+
 /*
  * Thread entry point.
  *
@@ -61,3 +63,5 @@ Value *refc_threadWait(Value *threadID) {
   IDRIS2_REFC_VERIFY(!r, "pthread_join failed: %s", strerror(r));
   return NULL;
 }
+
+#endif /* IDRIS2_NO_THREADS */

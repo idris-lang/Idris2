@@ -4,6 +4,8 @@
 #include <string.h>
 #include <time.h>
 
+#ifndef IDRIS2_NO_THREADS
+
 /*
  * NOTE: These C functions must NOT call idris2_removeReference on their
  * arguments.  The RefC codegen emits removeReference calls for every
@@ -149,3 +151,5 @@ Value *refc_barrierWait(Value *barrier) {
   pthread_mutex_unlock(&b->mutex);
   return NULL;
 }
+
+#endif /* IDRIS2_NO_THREADS */

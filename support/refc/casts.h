@@ -1,7 +1,9 @@
 #pragma once
 
 #include "cBackend.h"
-#include <gmp.h>
+#ifndef IDRIS2_NO_GMP
+#  include <gmp.h>
+#endif
 #include <stdio.h>
 
 #define idris2_cast_Int8_to_Bits8(x) (x)

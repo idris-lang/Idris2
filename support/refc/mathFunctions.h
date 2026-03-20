@@ -1,8 +1,21 @@
 #pragma once
 
 #include "cBackend.h"
-#include <gmp.h>
+#ifndef IDRIS2_NO_GMP
+#  include <gmp.h>
+#endif
 #include <math.h>
+
+/* Helper: compare two Value_Integer values.
+ * Returns negative / zero / positive like memcmp / strcmp. */
+#ifndef IDRIS2_NO_GMP
+#  define idris2_cmp_Integer(l, r) \
+     mpz_cmp(((Value_Integer *)(l))->i, ((Value_Integer *)(r))->i)
+#else
+#  define idris2_cmp_Integer(l, r) \
+     (((Value_Integer *)(l))->i < ((Value_Integer *)(r))->i ? -1 : \
+      ((Value_Integer *)(l))->i > ((Value_Integer *)(r))->i ?  1 : 0)
+#endif
 
 #define idris2_binop(ty, op, l, r)                                             \
   ((Value *)idris2_mk##ty(idris2_vp_to_##ty(l) op idris2_vp_to_##ty(r)))
@@ -142,8 +155,7 @@ Value *idris2_xor_Integer(Value *x, Value *y);
 #define idris2_lt_Int32(l, r) (idris2_cmpop(Int32, <, l, r))
 #define idris2_lt_Int64(l, r) (idris2_cmpop(Int64, <, l, r))
 #define idris2_lt_Integer(l, r)                                                \
-  (idris2_mkBool(                                                              \
-      mpz_cmp(((Value_Integer *)(l))->i, ((Value_Integer *)(r))->i) < 0))
+  (idris2_mkBool(idris2_cmp_Integer(l, r) < 0))
 #define idris2_lt_Double(l, r) (idris2_cmpop(Double, <, l, r))
 #define idris2_lt_Char(l, r) (idris2_cmpop(Char, <, l, r))
 #define idris2_lt_string(l, r)                                                 \
@@ -160,8 +172,7 @@ Value *idris2_xor_Integer(Value *x, Value *y);
 #define idris2_gt_Int32(l, r) (idris2_cmpop(Int32, >, l, r))
 #define idris2_gt_Int64(l, r) (idris2_cmpop(Int64, >, l, r))
 #define idris2_gt_Integer(l, r)                                                \
-  (idris2_mkBool(                                                              \
-      mpz_cmp(((Value_Integer *)(l))->i, ((Value_Integer *)(r))->i) > 0))
+  (idris2_mkBool(idris2_cmp_Integer(l, r) > 0))
 #define idris2_gt_Double(l, r) (idris2_cmpop(Double, >, l, r))
 #define idris2_gt_Char(l, r) (idris2_cmpop(Char, >, l, r))
 #define idris2_gt_string(l, r)                                                 \
@@ -178,8 +189,7 @@ Value *idris2_xor_Integer(Value *x, Value *y);
 #define idris2_eq_Int32(l, r) (idris2_cmpop(Int32, ==, l, r))
 #define idris2_eq_Int64(l, r) (idris2_cmpop(Int64, ==, l, r))
 #define idris2_eq_Integer(l, r)                                                \
-  (idris2_mkBool(                                                              \
-      mpz_cmp(((Value_Integer *)(l))->i, ((Value_Integer *)(r))->i) == 0))
+  (idris2_mkBool(idris2_cmp_Integer(l, r) == 0))
 #define idris2_eq_Double(l, r) (idris2_cmpop(Double, ==, l, r))
 #define idris2_eq_Char(l, r) (idris2_cmpop(Char, ==, l, r))
 #define idris2_eq_string(l, r)                                                 \
@@ -196,8 +206,7 @@ Value *idris2_xor_Integer(Value *x, Value *y);
 #define idris2_lte_Int32(l, r) (idris2_cmpop(Int32, <=, l, r))
 #define idris2_lte_Int64(l, r) (idris2_cmpop(Int64, <=, l, r))
 #define idris2_lte_Integer(l, r)                                               \
-  (idris2_mkBool(                                                              \
-      mpz_cmp(((Value_Integer *)(l))->i, ((Value_Integer *)(r))->i) <= 0))
+  (idris2_mkBool(idris2_cmp_Integer(l, r) <= 0))
 #define idris2_lte_Double(l, r) (idris2_cmpop(Double, <=, l, r))
 #define idris2_lte_Char(l, r) (idris2_cmpop(Char, <=, l, r))
 #define idris2_lte_string(l, r)                                                \
@@ -214,8 +223,7 @@ Value *idris2_xor_Integer(Value *x, Value *y);
 #define idris2_gte_Int32(l, r) (idris2_cmpop(Int32, >=, l, r))
 #define idris2_gte_Int64(l, r) (idris2_cmpop(Int64, >=, l, r))
 #define idris2_gte_Integer(l, r)                                               \
-  (idris2_mkBool(                                                              \
-      mpz_cmp(((Value_Integer *)(l))->i, ((Value_Integer *)(r))->i) >= 0))
+  (idris2_mkBool(idris2_cmp_Integer(l, r) >= 0))
 #define idris2_gte_Double(l, r) (idris2_cmpop(Double, >=, l, r))
 #define idris2_gte_Char(l, r) (idris2_cmpop(Char, >=, l, r))
 #define idris2_gte_string(l, r)                                                \

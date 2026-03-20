@@ -55,6 +55,24 @@ test-tsan:
 	$(MAKE) clean
 	$(MAKE) build CFLAGS="$(CFLAGS) -fsanitize=thread -fno-omit-frame-pointer -g"
 
+# Build variants for embedded/bare-metal targets.
+# IDRIS2_NO_GMP: replace GMP Integer with int64_t (no -lgmp needed)
+# IDRIS2_NO_THREADS: stub out all pthread usage (no -lpthread needed)
+.PHONY: build-no-gmp
+build-no-gmp:
+	$(MAKE) clean
+	$(MAKE) build CPPFLAGS="$(CPPFLAGS) -DIDRIS2_NO_GMP"
+
+.PHONY: build-no-threads
+build-no-threads:
+	$(MAKE) clean
+	$(MAKE) build CPPFLAGS="$(CPPFLAGS) -DIDRIS2_NO_THREADS"
+
+.PHONY: build-embedded
+build-embedded:
+	$(MAKE) clean
+	$(MAKE) build CPPFLAGS="$(CPPFLAGS) -DIDRIS2_NO_GMP -DIDRIS2_NO_THREADS"
+
 .PHONY: install
 install: build
 	mkdir -p ${DESTDIR}${PREFIX}/idris2-${IDRIS2_VERSION}/support/refc

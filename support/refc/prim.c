@@ -123,6 +123,8 @@ Value *idris2_Prelude_IO_prim__onCollectAny(Value *_anyPtr,
 
 // Threads
 
+#ifndef IDRIS2_NO_THREADS
+
 // %foreign "scheme:blodwen-mutex"
 // prim__makeMutex : PrimIO Mutex
 // using pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t
@@ -226,6 +228,8 @@ Value *System_Concurrency_Raw_prim__conditionBroadcast(Value *_condition,
   IDRIS2_REFC_VERIFY(!r, "pthread_cond_broadcast failed: %s", strerror(r));
   return NULL;
 }
+
+#endif /* IDRIS2_NO_THREADS */
 
 char const idris2_constr_Int[] = "Int";
 char const idris2_constr_Int8[] = "Int8";

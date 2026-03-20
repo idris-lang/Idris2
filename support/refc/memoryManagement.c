@@ -62,7 +62,7 @@ Value *idris2_newValue(size_t size) {
                          sizeof(void *)) == 0,
       "posix_memalign failed");
 #else
-  Value *retVal = (Value *)malloc(size);
+  Value *retVal = (Value *)IDRIS2_MALLOC(size);
 #endif
   IDRIS2_REFC_VERIFY(retVal && !idris2_vp_is_unboxed(retVal), "malloc failed");
   IDRIS2_INC_MEMSTAT(n_newValue);
@@ -136,13 +136,21 @@ Value *idris2_mkInt64(int64_t i) {
 Value_Integer *idris2_mkInteger(void) {
   Value_Integer *retVal = IDRIS2_NEW_VALUE(Value_Integer);
   retVal->header.tag = INTEGER_TAG;
+#ifndef IDRIS2_NO_GMP
   mpz_init(retVal->i);
+#else
+  retVal->i = 0;
+#endif
   return retVal;
 }
 
 Value *idris2_mkIntegerLiteral(char *i) {
   Value_Integer *retVal = idris2_mkInteger();
+#ifndef IDRIS2_NO_GMP
   mpz_set_str(retVal->i, i, 10);
+#else
+  retVal->i = (int64_t)strtoll(i, NULL, 10);
+#endif
   return (Value *)retVal;
 }
 
@@ -152,7 +160,7 @@ Value_String *idris2_mkEmptyString(size_t l) {
 
   Value_String *retVal = IDRIS2_NEW_VALUE(Value_String);
   retVal->header.tag = STRING_TAG;
-  retVal->str = malloc(l);
+  retVal->str = (char *)IDRIS2_MALLOC(l);
   memset(retVal->str, 0, l);
   return retVal;
 }
@@ -164,7 +172,7 @@ Value_String *idris2_mkString(char *s) {
   Value_String *retVal = IDRIS2_NEW_VALUE(Value_String);
   int l = strlen(s);
   retVal->header.tag = STRING_TAG;
-  retVal->str = malloc(l + 1);
+  retVal->str = (char *)IDRIS2_MALLOC(l + 1);
   memset(retVal->str, 0, l + 1);
   memcpy(retVal->str, s, l);
   return retVal;
@@ -197,7 +205,7 @@ Value_Array *idris2_makeArray(int length) {
   Value_Array *a = IDRIS2_NEW_VALUE(Value_Array);
   a->header.tag = ARRAY_TAG;
   a->capacity = length;
-  a->arr = (Value **)malloc(sizeof(Value *) * length);
+  a->arr = (Value **)IDRIS2_MALLOC(sizeof(Value *) * length);
   memset(a->arr, 0, sizeof(Value *) * length);
   return a;
 }
@@ -256,7 +264,7 @@ static size_t  cc_roots_cap = 0;
 static void cc_roots_push(Value *v) {
     if (cc_roots_len == cc_roots_cap) {
         cc_roots_cap = cc_roots_cap ? cc_roots_cap * 2 : 64;
-        cc_roots = (Value **)realloc(cc_roots, cc_roots_cap * sizeof(Value *));
+        cc_roots = (Value **)IDRIS2_REALLOC(cc_roots, cc_roots_cap * sizeof(Value *));
         IDRIS2_REFC_VERIFY(cc_roots != NULL, "cc_roots realloc failed");
     }
     cc_roots[cc_roots_len++] = v;
@@ -469,7 +477,9 @@ static void scan(Value *v) {
 static void freeValueDirect(Value *v) {
     switch (v->header.tag) {
     case INTEGER_TAG:
+#ifndef IDRIS2_NO_GMP
         mpz_clear(((Value_Integer *)v)->i);
+#endif
         break;
     case STRING_TAG:
         free(((Value_String *)v)->str);
@@ -481,6 +491,7 @@ static void freeValueDirect(Value *v) {
         // arr entries were freed by the collectWhite recursion; free the array itself.
         free(((Value_Array *)v)->arr);
         break;
+#ifndef IDRIS2_NO_THREADS
     case MUTEX_TAG: {
         Value_Mutex *m = (Value_Mutex *)v;
         pthread_mutex_destroy(m->mutex);
@@ -505,10 +516,11 @@ static void freeValueDirect(Value *v) {
         pthread_mutex_destroy(&b->mutex);
         break;
     }
+#endif /* IDRIS2_NO_THREADS */
     default:
         break;
     }
-    free(v);
+    IDRIS2_FREE(v);
 }
 
 static void collectWhite(Value *v) {
@@ -573,7 +585,7 @@ void idris2_collectCycles(void) {
             cc_roots[i] = NULL; // exclude from scan/collect phases
             if (atomic_load_explicit(&v->header.refCounter,
                                      memory_order_relaxed) == 0) {
-                free(v); // physical deallocation of dead-in-buffer object
+                IDRIS2_FREE(v); // physical deallocation of dead-in-buffer object
             }
         }
     }
@@ -598,7 +610,7 @@ void idris2_collectCycles(void) {
         CC_CLR_BUFFERED(v); // must clear before collectWhite checks it
         collectWhite(v);
     }
-    free(old_roots);
+    IDRIS2_FREE(old_roots);
 }
 
 void idris2_removeReference(Value *elem) {
@@ -626,7 +638,9 @@ void idris2_removeReference(Value *elem) {
       /* nothing to delete, added for sake of completeness */
       break;
     case INTEGER_TAG:
+#ifndef IDRIS2_NO_GMP
       mpz_clear(((Value_Integer *)elem)->i);
+#endif
       break;
 
     case DOUBLE_TAG:
@@ -683,6 +697,7 @@ void idris2_removeReference(Value *elem) {
       break;
     }
 
+#ifndef IDRIS2_NO_THREADS
     case MUTEX_TAG: {
       Value_Mutex *m = (Value_Mutex *)elem;
       pthread_mutex_destroy(m->mutex);
@@ -714,6 +729,7 @@ void idris2_removeReference(Value *elem) {
       pthread_mutex_destroy(&b->mutex);
       break;
     }
+#endif /* IDRIS2_NO_THREADS */
 
     default:
       break;
@@ -723,7 +739,7 @@ void idris2_removeReference(Value *elem) {
     // If this object is waiting in cc_roots (buffered), defer the physical
     // free until collectCycles processes it.  Otherwise free now.
     if (!CC_GET_BUFFERED(elem)) {
-      free(elem);
+      IDRIS2_FREE(elem);
     }
   }
 }
@@ -779,9 +795,12 @@ Value *idris2_getPredefinedInteger(int n) {
       idris2_predefined_Integer[i].header.refCounter = IDRIS2_VP_REFCOUNTER_MAX;
       idris2_predefined_Integer[i].header.tag = INTEGER_TAG;
       idris2_predefined_Integer[i].header.reserved = 0;
-
+#ifndef IDRIS2_NO_GMP
       mpz_init(idris2_predefined_Integer[i].i);
       mpz_set_si(idris2_predefined_Integer[i].i, i);
+#else
+      idris2_predefined_Integer[i].i = (int64_t)i;
+#endif
     }
   }
   return (Value *)&idris2_predefined_Integer[n];

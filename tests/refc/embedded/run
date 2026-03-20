@@ -1,0 +1,51 @@
+. ../../testutils.sh
+
+# Verify that the RefC runtime support library compiles with embedded feature flags.
+# These flags are intended for bare-metal / embedded targets:
+#   IDRIS2_NO_GMP     -- use int64_t for Integer instead of GMP mpz_t
+#   IDRIS2_NO_THREADS -- stub out all pthread usage
+
+# The support/refc source directory relative to this test.
+REFC_SRC="$(cd "$(dirname "$0")/../../../support/refc" && pwd)"
+
+if [ ! -d "$REFC_SRC" ]; then
+    echo "ERROR: refc source directory not found at ${REFC_SRC}"
+    exit 1
+fi
+
+SRCS=$(ls "${REFC_SRC}"/*.c 2>/dev/null)
+if [ -z "$SRCS" ]; then
+    echo "ERROR: no .c files found in ${REFC_SRC}"
+    exit 1
+fi
+
+CC_CMD="${CC:-cc}"
+BASE_FLAGS="-std=c11 -I${REFC_SRC} -Wall -Wextra -Werror -c -o /dev/null"
+
+compile_all() {
+    local extra_flags="$1"
+    for src in $SRCS; do
+        if ! ${CC_CMD} ${BASE_FLAGS} ${extra_flags} "${src}" 2>&1; then
+            return 1
+        fi
+    done
+    return 0
+}
+
+if compile_all "-DIDRIS2_NO_GMP"; then
+    echo "no-gmp build: OK"
+else
+    echo "no-gmp build: FAILED"
+fi
+
+if compile_all "-DIDRIS2_NO_THREADS"; then
+    echo "no-threads build: OK"
+else
+    echo "no-threads build: FAILED"
+fi
+
+if compile_all "-DIDRIS2_NO_GMP -DIDRIS2_NO_THREADS"; then
+    echo "embedded build: OK"
+else
+    echo "embedded build: FAILED"
+fi

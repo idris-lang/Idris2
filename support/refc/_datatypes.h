@@ -1,7 +1,17 @@
 #pragma once
 
-#include <gmp.h>
-#include <pthread.h>
+#include "idris2_config.h"
+
+#ifndef IDRIS2_NO_GMP
+#  include <gmp.h>
+#else
+#  include <stdint.h>
+#endif
+
+#ifndef IDRIS2_NO_THREADS
+#  include <pthread.h>
+#endif
+
 #include <stdatomic.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -129,7 +139,11 @@ typedef struct {
 
 typedef struct {
   Value_header header;
+#ifndef IDRIS2_NO_GMP
   mpz_t i;
+#else
+  int64_t i;   /* IDRIS2_NO_GMP: Integer backed by 64-bit signed integer */
+#endif
 } Value_Integer;
 
 typedef struct {
@@ -194,6 +208,8 @@ typedef struct {
   Buffer *buffer;
 } Value_Buffer;
 
+/* Thread-related types: require <pthread.h> or the stub types from
+ * idris2_config.h (when IDRIS2_NO_THREADS is defined). */
 typedef struct {
   Value_header header;
   pthread_mutex_t *mutex;

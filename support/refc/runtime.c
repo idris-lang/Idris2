@@ -192,7 +192,11 @@ int idris2_extractInt(Value *v) {
   case INT64_TAG:
     return (int)idris2_vp_to_Int64(v);
   case INTEGER_TAG:
+#ifndef IDRIS2_NO_GMP
     return (int)mpz_get_si(((Value_Integer *)v)->i);
+#else
+    return (int)((Value_Integer *)v)->i;
+#endif
   case DOUBLE_TAG:
     return (int)idris2_vp_to_Double(v);
   default:

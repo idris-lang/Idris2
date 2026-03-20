@@ -5,28 +5,44 @@
 /* add */
 Value *idris2_add_Integer(Value *x, Value *y) {
   Value_Integer *retVal = idris2_mkInteger();
+#ifndef IDRIS2_NO_GMP
   mpz_add(retVal->i, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
+#else
+  retVal->i = ((Value_Integer *)x)->i + ((Value_Integer *)y)->i;
+#endif
   return (Value *)retVal;
 }
 
 /* sub */
 Value *idris2_sub_Integer(Value *x, Value *y) {
   Value_Integer *retVal = idris2_mkInteger();
+#ifndef IDRIS2_NO_GMP
   mpz_sub(retVal->i, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
+#else
+  retVal->i = ((Value_Integer *)x)->i - ((Value_Integer *)y)->i;
+#endif
   return (Value *)retVal;
 }
 
 /* negate */
 Value *idris2_negate_Integer(Value *x) {
   Value_Integer *retVal = idris2_mkInteger();
+#ifndef IDRIS2_NO_GMP
   mpz_neg(retVal->i, ((Value_Integer *)x)->i);
+#else
+  retVal->i = -((Value_Integer *)x)->i;
+#endif
   return (Value *)retVal;
 }
 
 /* mul */
 Value *idris2_mul_Integer(Value *x, Value *y) {
   Value_Integer *retVal = idris2_mkInteger();
+#ifndef IDRIS2_NO_GMP
   mpz_mul(retVal->i, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
+#else
+  retVal->i = ((Value_Integer *)x)->i * ((Value_Integer *)y)->i;
+#endif
   return (Value *)retVal;
 }
 
@@ -78,17 +94,21 @@ Value *idris2_div_Int64(Value *x, Value *y) {
 }
 
 Value *idris2_div_Integer(Value *x, Value *y) {
+  Value_Integer *retVal = idris2_mkInteger();
+#ifndef IDRIS2_NO_GMP
   mpz_t rem, yq;
   mpz_inits(rem, yq, NULL);
-
   mpz_mod(rem, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
   mpz_sub(yq, ((Value_Integer *)x)->i, rem);
-
-  Value_Integer *retVal = idris2_mkInteger();
   mpz_divexact(retVal->i, yq, ((Value_Integer *)y)->i);
-
   mpz_clears(rem, yq, NULL);
-
+#else
+  int64_t xi = ((Value_Integer *)x)->i;
+  int64_t yi = ((Value_Integer *)y)->i;
+  int64_t rem = xi % yi;
+  if (rem < 0) rem += (yi < 0) ? -yi : yi;
+  retVal->i = (xi - rem) / yi;
+#endif
   return (Value *)retVal;
 }
 
@@ -120,43 +140,74 @@ Value *idris2_mod_Int64(Value *x, Value *y) {
 }
 Value *idris2_mod_Integer(Value *x, Value *y) {
   Value_Integer *retVal = idris2_mkInteger();
+#ifndef IDRIS2_NO_GMP
   mpz_mod(retVal->i, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
+#else
+  int64_t xi = ((Value_Integer *)x)->i;
+  int64_t yi = ((Value_Integer *)y)->i;
+  int64_t rem = xi % yi;
+  if (rem < 0) rem += (yi < 0) ? -yi : yi;
+  retVal->i = rem;
+#endif
   return (Value *)retVal;
 }
 
 /* shiftl */
 Value *idris2_shiftl_Integer(Value *x, Value *y) {
   Value_Integer *retVal = idris2_mkInteger();
+#ifndef IDRIS2_NO_GMP
   mp_bitcnt_t cnt = (mp_bitcnt_t)mpz_get_ui(((Value_Integer *)y)->i);
   mpz_mul_2exp(retVal->i, ((Value_Integer *)x)->i, cnt);
+#else
+  int64_t cnt = ((Value_Integer *)y)->i;
+  retVal->i = (cnt <= 0 || cnt >= 63) ? 0 : ((Value_Integer *)x)->i << cnt;
+#endif
   return (Value *)retVal;
 }
 
 /* shiftr */
 Value *idris2_shiftr_Integer(Value *x, Value *y) {
   Value_Integer *retVal = idris2_mkInteger();
+#ifndef IDRIS2_NO_GMP
   mp_bitcnt_t cnt = (mp_bitcnt_t)mpz_get_ui(((Value_Integer *)y)->i);
   mpz_fdiv_q_2exp(retVal->i, ((Value_Integer *)x)->i, cnt);
+#else
+  int64_t cnt = ((Value_Integer *)y)->i;
+  int64_t xi  = ((Value_Integer *)x)->i;
+  retVal->i = (cnt <= 0) ? xi : (cnt >= 63) ? (xi < 0 ? -1 : 0) : xi >> cnt;
+#endif
   return (Value *)retVal;
 }
 
 /* and */
 Value *idris2_and_Integer(Value *x, Value *y) {
   Value_Integer *retVal = idris2_mkInteger();
+#ifndef IDRIS2_NO_GMP
   mpz_and(retVal->i, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
+#else
+  retVal->i = ((Value_Integer *)x)->i & ((Value_Integer *)y)->i;
+#endif
   return (Value *)retVal;
 }
 
 /* or */
 Value *idris2_or_Integer(Value *x, Value *y) {
   Value_Integer *retVal = idris2_mkInteger();
+#ifndef IDRIS2_NO_GMP
   mpz_ior(retVal->i, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
+#else
+  retVal->i = ((Value_Integer *)x)->i | ((Value_Integer *)y)->i;
+#endif
   return (Value *)retVal;
 }
 
 /* xor */
 Value *idris2_xor_Integer(Value *x, Value *y) {
   Value_Integer *retVal = idris2_mkInteger();
+#ifndef IDRIS2_NO_GMP
   mpz_xor(retVal->i, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
+#else
+  retVal->i = ((Value_Integer *)x)->i ^ ((Value_Integer *)y)->i;
+#endif
   return (Value *)retVal;
 }

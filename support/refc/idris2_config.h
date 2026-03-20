@@ -1,0 +1,63 @@
+#pragma once
+
+/*
+ * idris2_config.h — compile-time feature flags for the RefC runtime.
+ *
+ * All flags are OFF by default (full-featured hosted build).
+ * Pass -D<FLAG> to the C compiler to enable them, e.g. in CC.idr via
+ * the directive mechanism or in the runtime Makefile via CPPFLAGS.
+ *
+ * IDRIS2_NO_GMP
+ *   Replace arbitrary-precision Integer (GMP mpz_t) with a 64-bit
+ *   signed integer (int64_t).  Integer literals that overflow 63 bits
+ *   will silently wrap.  Removes the -lgmp link dependency.
+ *   Use for embedded targets or environments where GMP is unavailable.
+ *
+ * IDRIS2_NO_THREADS
+ *   Disable all pthread usage.  Calling fork/mutex/condvar primitives
+ *   will abort at runtime with an explanatory message.  Removes the
+ *   -lpthread link dependency and avoids _Atomic / stdatomic costs on
+ *   single-threaded platforms.
+ *
+ * IDRIS2_MALLOC / IDRIS2_REALLOC / IDRIS2_FREE
+ *   Override the heap allocator.  Define all three before including any
+ *   RefC header to redirect every allocation through your own functions,
+ *   e.g. a pool allocator or a platform-specific heap on bare metal.
+ *   Default: the standard-library malloc / realloc / free.
+ *
+ * IDRIS2_ABORT
+ *   Override the fatal-error handler used by IDRIS2_REFC_VERIFY.
+ *   Should not return.  Default: abort() from <stdlib.h>.
+ */
+
+/* -----------------------------------------------------------------------
+ * Memory allocator hooks
+ * -------------------------------------------------------------------- */
+
+#ifndef IDRIS2_MALLOC
+#  include <stdlib.h>
+#  define IDRIS2_MALLOC(sz)       malloc(sz)
+#  define IDRIS2_REALLOC(p, sz)   realloc((p), (sz))
+#  define IDRIS2_FREE(p)          free(p)
+#endif
+
+#ifndef IDRIS2_ABORT
+#  include <stdlib.h>
+#  define IDRIS2_ABORT()          abort()
+#endif
+
+/* -----------------------------------------------------------------------
+ * pthread stub types (used by _datatypes.h when IDRIS2_NO_THREADS)
+ * -------------------------------------------------------------------- */
+
+#ifdef IDRIS2_NO_THREADS
+/* Provide harmless placeholder types so struct definitions compile even
+ * when <pthread.h> is absent.  The actual functions are stubbed in
+ * threads.c / concurrency.c and abort at runtime if ever called. */
+#  ifndef IDRIS2_PTHREAD_STUBS_DEFINED
+#  define IDRIS2_PTHREAD_STUBS_DEFINED
+typedef struct { int _unused; } pthread_mutex_t;
+typedef struct { int _unused; } pthread_cond_t;
+typedef unsigned long          pthread_t;
+#  endif
+#endif

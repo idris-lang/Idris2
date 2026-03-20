@@ -13,8 +13,11 @@ Value *idris2_cast_String_to_Char_impl(Value *s) {
 /*  conversions from Int8  */
 Value *idris2_cast_Int8_to_Integer(Value *input) {
   Value_Integer *retVal = idris2_mkInteger();
+#ifndef IDRIS2_NO_GMP
   mpz_set_si(retVal->i, idris2_vp_to_Int8(input));
-
+#else
+  retVal->i = (int64_t)idris2_vp_to_Int8(input);
+#endif
   return (Value *)retVal;
 }
 
@@ -31,8 +34,11 @@ Value *idris2_cast_Int8_to_string(Value *input) {
 /*  conversions from Int16  */
 Value *idris2_cast_Int16_to_Integer(Value *input) {
   Value_Integer *retVal = idris2_mkInteger();
+#ifndef IDRIS2_NO_GMP
   mpz_set_si(retVal->i, idris2_vp_to_Int16(input));
-
+#else
+  retVal->i = (int64_t)idris2_vp_to_Int16(input);
+#endif
   return (Value *)retVal;
 }
 
@@ -49,8 +55,11 @@ Value *idris2_cast_Int16_to_string(Value *input) {
 /*  conversions from Int32  */
 Value *idris2_cast_Int32_to_Integer(Value *input) {
   Value_Integer *retVal = idris2_mkInteger();
+#ifndef IDRIS2_NO_GMP
   mpz_set_si(retVal->i, idris2_vp_to_Int32(input));
-
+#else
+  retVal->i = (int64_t)idris2_vp_to_Int32(input);
+#endif
   return (Value *)retVal;
 }
 
@@ -67,8 +76,11 @@ Value *idris2_cast_Int32_to_string(Value *input) {
 /*  conversions from Int64  */
 Value *idris2_cast_Int64_to_Integer(Value *input) {
   Value_Integer *retVal = idris2_mkInteger();
+#ifndef IDRIS2_NO_GMP
   mpz_set_si(retVal->i, idris2_vp_to_Int64(input));
-
+#else
+  retVal->i = idris2_vp_to_Int64(input);
+#endif
   return (Value *)retVal;
 }
 
@@ -83,8 +95,11 @@ Value *idris2_cast_Int64_to_string(Value *input) {
 
 Value *idris2_cast_Double_to_Integer(Value *input) {
   Value_Integer *retVal = idris2_mkInteger();
+#ifndef IDRIS2_NO_GMP
   mpz_set_d(retVal->i, idris2_vp_to_Double(input));
-
+#else
+  retVal->i = (int64_t)idris2_vp_to_Double(input);
+#endif
   return (Value *)retVal;
 }
 
@@ -100,8 +115,11 @@ Value *idris2_cast_Double_to_string(Value *input) {
 
 Value *idris2_cast_Char_to_Integer(Value *input) {
   Value_Integer *retVal = idris2_mkInteger();
+#ifndef IDRIS2_NO_GMP
   mpz_set_si(retVal->i, idris2_vp_to_Char(input));
-
+#else
+  retVal->i = (int64_t)idris2_vp_to_Char(input);
+#endif
   return (Value *)retVal;
 }
 
@@ -156,8 +174,11 @@ Value *idris2_cast_String_to_Integer(Value *input) {
   Value_String *from = (Value_String *)input;
 
   Value_Integer *retVal = idris2_mkInteger();
+#ifndef IDRIS2_NO_GMP
   mpz_set_str(retVal->i, from->str, 10);
-
+#else
+  retVal->i = (int64_t)strtoll(from->str, NULL, 10);
+#endif
   return (Value *)retVal;
 }
 
@@ -168,8 +189,11 @@ Value *idris2_cast_String_to_Double(Value *input) {
 /*  conversions from Bits8  */
 Value *idris2_cast_Bits8_to_Integer(Value *input) {
   Value_Integer *retVal = idris2_mkInteger();
+#ifndef IDRIS2_NO_GMP
   mpz_set_ui(retVal->i, idris2_vp_to_Bits8(input));
-
+#else
+  retVal->i = (int64_t)idris2_vp_to_Bits8(input);
+#endif
   return (Value *)retVal;
 }
 
@@ -186,8 +210,11 @@ Value *idris2_cast_Bits8_to_string(Value *input) {
 /*  conversions from Bits16  */
 Value *idris2_cast_Bits16_to_Integer(Value *input) {
   Value_Integer *retVal = idris2_mkInteger();
+#ifndef IDRIS2_NO_GMP
   mpz_set_ui(retVal->i, idris2_vp_to_Bits16(input));
-
+#else
+  retVal->i = (int64_t)idris2_vp_to_Bits16(input);
+#endif
   return (Value *)retVal;
 }
 
@@ -204,8 +231,11 @@ Value *idris2_cast_Bits16_to_string(Value *input) {
 /*  conversions from Bits32  */
 Value *idris2_cast_Bits32_to_Integer(Value *input) {
   Value_Integer *retVal = idris2_mkInteger();
+#ifndef IDRIS2_NO_GMP
   mpz_set_ui(retVal->i, idris2_vp_to_Bits32(input));
-
+#else
+  retVal->i = (int64_t)idris2_vp_to_Bits32(input);
+#endif
   return (Value *)retVal;
 }
 
@@ -222,8 +252,11 @@ Value *idris2_cast_Bits32_to_string(Value *input) {
 /*  conversions from Bits64  */
 Value *idris2_cast_Bits64_to_Integer(Value *input) {
   Value_Integer *retVal = idris2_mkInteger();
+#ifndef IDRIS2_NO_GMP
   mpz_set_ui(retVal->i, idris2_vp_to_Bits64(input));
-
+#else
+  retVal->i = (int64_t)idris2_vp_to_Bits64(input);
+#endif
   return (Value *)retVal;
 }
 
@@ -238,7 +271,8 @@ Value *idris2_cast_Bits64_to_string(Value *input) {
 }
 
 /*  conversions from Integer */
-uint64_t mpz_get_lsb(mpz_t i, mp_bitcnt_t b) {
+#ifndef IDRIS2_NO_GMP
+static uint64_t mpz_get_lsb(mpz_t i, mp_bitcnt_t b) {
   mpz_t r;
   mpz_init(r);
   mpz_fdiv_r_2exp(r, i, b);
@@ -246,55 +280,101 @@ uint64_t mpz_get_lsb(mpz_t i, mp_bitcnt_t b) {
   mpz_clear(r);
   return retVal;
 }
+#else
+static uint64_t int64_get_lsb(int64_t i, unsigned b) {
+  if (b >= 64) return (uint64_t)i;
+  return (uint64_t)i & ((1ULL << b) - 1);
+}
+#endif
 
 Value *idris2_cast_Integer_to_Bits8(Value *input) {
   Value_Integer *from = (Value_Integer *)input;
+#ifndef IDRIS2_NO_GMP
   return (Value *)idris2_mkBits8((uint8_t)mpz_get_lsb(from->i, 8));
+#else
+  return (Value *)idris2_mkBits8((uint8_t)int64_get_lsb(from->i, 8));
+#endif
 }
 
 Value *idris2_cast_Integer_to_Bits16(Value *input) {
   Value_Integer *from = (Value_Integer *)input;
+#ifndef IDRIS2_NO_GMP
   return (Value *)idris2_mkBits16((uint16_t)mpz_get_lsb(from->i, 16));
+#else
+  return (Value *)idris2_mkBits16((uint16_t)int64_get_lsb(from->i, 16));
+#endif
 }
 
 Value *idris2_cast_Integer_to_Bits32(Value *input) {
   Value_Integer *from = (Value_Integer *)input;
+#ifndef IDRIS2_NO_GMP
   return (Value *)idris2_mkBits32((uint32_t)mpz_get_lsb(from->i, 32));
+#else
+  return (Value *)idris2_mkBits32((uint32_t)int64_get_lsb(from->i, 32));
+#endif
 }
 
 Value *idris2_cast_Integer_to_Bits64(Value *input) {
   Value_Integer *from = (Value_Integer *)input;
+#ifndef IDRIS2_NO_GMP
   return (Value *)idris2_mkBits64((uint64_t)mpz_get_lsb(from->i, 64));
+#else
+  return (Value *)idris2_mkBits64((uint64_t)from->i);
+#endif
 }
 
 Value *idris2_cast_Integer_to_Int8(Value *input) {
   Value_Integer *from = (Value_Integer *)input;
+#ifndef IDRIS2_NO_GMP
   return (Value *)idris2_mkInt8((int8_t)mpz_get_lsb(from->i, 8));
+#else
+  return (Value *)idris2_mkInt8((int8_t)from->i);
+#endif
 }
 
 Value *idris2_cast_Integer_to_Int16(Value *input) {
   Value_Integer *from = (Value_Integer *)input;
+#ifndef IDRIS2_NO_GMP
   return (Value *)idris2_mkInt16((int16_t)mpz_get_lsb(from->i, 16));
+#else
+  return (Value *)idris2_mkInt16((int16_t)from->i);
+#endif
 }
 
 Value *idris2_cast_Integer_to_Int32(Value *input) {
   Value_Integer *from = (Value_Integer *)input;
+#ifndef IDRIS2_NO_GMP
   return (Value *)idris2_mkInt32((int32_t)mpz_get_lsb(from->i, 32));
+#else
+  return (Value *)idris2_mkInt32((int32_t)from->i);
+#endif
 }
 
 Value *idris2_cast_Integer_to_Int64(Value *input) {
   Value_Integer *from = (Value_Integer *)input;
+#ifndef IDRIS2_NO_GMP
   return (Value *)idris2_mkInt64((int64_t)mpz_get_lsb(from->i, 64));
+#else
+  return (Value *)idris2_mkInt64(from->i);
+#endif
 }
 
 Value *idris2_cast_Integer_to_Double(Value *input) {
   Value_Integer *from = (Value_Integer *)input;
+#ifndef IDRIS2_NO_GMP
   return (Value *)idris2_mkDouble(mpz_get_d(from->i));
+#else
+  return (Value *)idris2_mkDouble((double)from->i);
+#endif
 }
 
 Value *idris2_cast_Integer_to_Char(Value *input) {
   Value_Integer *from = (Value_Integer *)input;
+#ifndef IDRIS2_NO_GMP
   return (Value *)idris2_mkChar((uint32_t)mpz_get_lsb(from->i, 21));
+#else
+  return (Value *)idris2_mkChar((uint32_t)(from->i & 0x1FFFFF));
+#endif
 }
 
 Value *idris2_cast_Integer_to_string(Value *input) {
@@ -302,7 +382,12 @@ Value *idris2_cast_Integer_to_string(Value *input) {
 
   Value_String *retVal = IDRIS2_NEW_VALUE(Value_String);
   retVal->header.tag = STRING_TAG;
+#ifndef IDRIS2_NO_GMP
   retVal->str = mpz_get_str(NULL, 10, from->i);
-
+#else
+  int l = snprintf(NULL, 0, "%" PRId64 "", from->i);
+  retVal->str = (char *)malloc(l + 1);
+  sprintf(retVal->str, "%" PRId64 "", from->i);
+#endif
   return (Value *)retVal;
 }
