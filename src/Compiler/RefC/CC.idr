@@ -126,3 +126,42 @@ compileCFile {asShared} objectFile outFile =
        | _ => pure Nothing
 
      pure (Just outFile)
+
+||| Link several pre-compiled object files into a single executable.
+||| Used by the incremental compilation path, where each module has
+||| already been compiled to a `.o` and we just need to stitch them
+||| together with the support libraries.
+export
+compileCFileInc : {auto c : Ref Ctxt Defs}
+               -> (objectFiles : List String)
+               -> (outFile : String)
+               -> Core (Maybe String)
+compileCFileInc [] _ = pure Nothing
+compileCFileInc objectFiles outFile =
+  do cc <- coreLift findCC
+     cFlags <- coreLift findCFLAGS
+     ldFlags <- coreLift findLDFLAGS
+     ldLibs <- coreLift findLDLIBS
+
+     dirs <- getDirs
+     refcDir <- findDataFile "refc"
+     supportFile <- findLibraryFile "libidris2_support.a"
+
+     directives <- getDirectives RefC
+     let debugFlag = if elem "debug" directives then ["-g"] else []
+
+     let runcc = (escapeCmd $
+         [cc, "-Werror"] ++ debugFlag ++ objectFiles ++
+              ["-o", outFile,
+              supportFile,
+              "-lidris2_refc",
+              "-L" ++ refcDir
+              ] ++ clibdirs (lib_dirs dirs) ++ [
+              "-lgmp", "-lm", "-lffi"])
+              ++ " " ++ (unwords [cFlags, ldFlags, ldLibs])
+
+     log "compiler.refc.cc" 10 runcc
+     0 <- coreLift $ system runcc
+       | _ => pure Nothing
+
+     pure (Just outFile)

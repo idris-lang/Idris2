@@ -775,18 +775,27 @@ emitOneStructDescriptor name flds = do
         ++ " sizeof(" ++ name ++ ")"
     emit EmptyFC "};"
 
-||| Emit all struct descriptors and the idris2_register_all_structs() function.
+||| Emit all struct descriptors and a struct-registration function.
+||| In whole-program mode (`modular = False`) the function is named
+||| `idris2_register_all_structs` and called explicitly from `main()`.
+||| In modular mode (`modular = True`) a static
+||| `__attribute__((constructor))` function is emitted instead so that
+||| each translation unit self-registers its structs when loaded.
 emitStructCode
     : {auto oft : Ref OutfileText Output}
    -> {auto il  : Ref IndentLevel Nat}
    -> {auto sd  : Ref StructDecls (SortedMap String (List (String, CFType)))}
+   -> (modular : Bool)
    -> Core ()
-emitStructCode = do
+emitStructCode modular = do
     structs <- get StructDecls
     let decls = SortedMap.toList structs
     emit EmptyFC "// --- struct descriptors (generated) ---"
     traverse_ (uncurry emitOneStructDescriptor) decls
-    emit EmptyFC "static void idris2_register_all_structs(void) {"
+    let fnDecl = if modular
+                   then "__attribute__((constructor)) static void idris2_register_structs(void)"
+                   else "static void idris2_register_all_structs(void)"
+    emit EmptyFC $ fnDecl ++ " {"
     traverse_ (\(n, _) =>
         emit EmptyFC $ "  idris2_register_struct(&idris2_struct_desc_" ++ n ++ ");")
         decls
@@ -1342,6 +1351,7 @@ footer = do
 export
 generateCSourceFile : {auto c : Ref Ctxt Defs}
                    -> {default [] additionalFFILangs : List String}
+                   -> {default True withMain : Bool}
                    -> List (Name, ANFDef)
                    -> (outn : String)
                    -> Core ()
@@ -1356,14 +1366,90 @@ generateCSourceFile defs outn =
      _ <- newRef CallbackDecls (the (SortedMap String (List CFType, CFType, Bool)) empty)
      traverse_ (uncurry $ createCFunctions {additionalFFILangs}) defs
      emitCallbackCode
-     emitStructCode
+     emitStructCode (not withMain) -- modular = True when no main, False for whole-program
      header -- added after the definition traversal in order to add all encountered function defintions
-     footer
+     when withMain footer
      fileContent <- get OutfileText
      let code = fastConcat (map (++ "\n") (reify fileContent))
 
      coreLift_ $ writeFile outn code
      log "compiler.refc" 10 $ "Generated C file " ++ outn
+
+compileExprWhole : Ref Ctxt Defs
+                -> Ref Syn SyntaxInfo
+                -> (outputDir : String)
+                -> ClosedTerm
+                -> (outfile : String)
+                -> Core (Maybe String)
+compileExprWhole c s outputDir tm outfile = do
+    let outn   = outputDir </> outfile ++ ".c"
+    let outobj = outputDir </> outfile ++ ".o"
+    let outexec = outputDir </> outfile
+    coreLift_ $ mkdirAll outputDir
+    cdata <- getCompileData False ANF tm
+    let defs = anf cdata
+    generateCSourceFile defs outn
+    Just _ <- compileCObjectFile outn outobj
+      | Nothing => pure Nothing
+    compileCFile outobj outexec
+
+||| Incremental-link entry point: link all pre-compiled module .o files
+||| together with a generated main-only stub.
+compileExprInc : Ref Ctxt Defs
+              -> Ref Syn SyntaxInfo
+              -> (outputDir : String)
+              -> ClosedTerm
+              -> (outfile : String)
+              -> Core (Maybe String)
+compileExprInc c s outputDir tm outfile = do
+    defs <- get Ctxt
+    case lookup RefC (allIncData defs) of
+      Nothing => do
+        coreLift $ putStrLn "Missing incremental compile data for refc, reverting to whole program compilation"
+        compileExprWhole c s outputDir tm outfile
+      Just (mods, _) => do
+        -- Generate a tiny main-only C file that calls into the pre-compiled modules.
+        let mainCFile = outputDir </> outfile ++ "__main.c"
+        let mainOFile = outputDir </> outfile ++ "__main.o"
+        let outexec   = outputDir </> outfile
+        coreLift_ $ mkdirAll outputDir
+        let mainCode = """
+              #include <runtime.h>
+              #include <idris_support.h>
+              /* \{ generatedString "RefC" } (incremental main) */
+
+              // main function
+              int main(int argc, char *argv[])
+              {
+                  idris2_setArgs(argc, argv);
+                  Value *mainExprVal = __mainExpression_0();
+                  idris2_trampoline(mainExprVal);
+                  idris2_collectCycles();
+                  return 0;
+              }
+              """
+        Right () <- coreLift $ writeFile mainCFile mainCode
+          | Left err => throw (FileErr mainCFile err)
+        Just _ <- compileCObjectFile mainCFile mainOFile
+          | Nothing => pure Nothing
+        compileCFileInc (mainOFile :: mods) outexec
+
+||| Compile a single Idris source module to a C object file (.o) for
+||| later incremental linking.  No `main()` is emitted; structs
+||| self-register via `__attribute__((constructor))`.
+incCompile : Ref Ctxt Defs
+          -> Ref Syn SyntaxInfo
+          -> (sourceFile : String)
+          -> Core (Maybe (String, List String))
+incCompile c s sourceFile = do
+    cFile <- getTTCFileName sourceFile "c"
+    oFile <- getTTCFileName sourceFile "o"
+    cdata <- getIncCompileData False ANF
+    let defs = anf cdata
+    generateCSourceFile {withMain = False} defs cFile
+    Just _ <- compileCObjectFile cFile oFile
+      | Nothing => pure Nothing
+    pure (Just (oFile, []))
 
 export
 compileExpr : UsePhase
@@ -1374,19 +1460,11 @@ compileExpr : UsePhase
            -> ClosedTerm
            -> (outfile : String)
            -> Core (Maybe String)
-compileExpr ANF c s _ outputDir tm outfile =
-  do let outn = outputDir </> outfile ++ ".c"
-     let outobj = outputDir </> outfile ++ ".o"
-     let outexec = outputDir </> outfile
-
-     coreLift_ $ mkdirAll outputDir
-     cdata <- getCompileData False ANF tm
-     let defs = anf cdata
-
-     generateCSourceFile defs outn
-     Just _ <- compileCObjectFile outn outobj
-       | Nothing => pure Nothing
-     compileCFile outobj outexec
+compileExpr ANF c s _ outputDir tm outfile = do
+    sesh <- getSession
+    if not (wholeProgram sesh) && (RefC `elem` incrementalCGs sesh)
+       then compileExprInc c s outputDir tm outfile
+       else compileExprWhole c s outputDir tm outfile
 
 compileExpr _ _ _ _ _ _ _ = pure Nothing
 
@@ -1403,4 +1481,4 @@ executeExpr c s tmpDir tm = do
 
 export
 codegenRefC : Codegen
-codegenRefC = MkCG (compileExpr ANF) executeExpr Nothing Nothing
+codegenRefC = MkCG (compileExpr ANF) executeExpr (Just incCompile) (Just "o")

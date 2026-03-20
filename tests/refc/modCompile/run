@@ -1,0 +1,14 @@
+. ../../testutils.sh
+
+# Whole-program compilation (baseline)
+export IDRIS2_INC_CGS=
+idris2 --cg refc -o test_whole Main.idr
+./build/exec/test_whole
+
+# With IDRIS2_INC_CGS=refc set, compilation falls back to whole-program when
+# the standard library TTCs lack refc incremental data (which requires a
+# dedicated `make libs` pass with IDRIS2_INC_CGS=refc).  The executable
+# should still build and produce correct output.
+export IDRIS2_INC_CGS=refc
+idris2 --cg refc -o test_inc Main.idr
+./build/exec/test_inc
