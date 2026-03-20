@@ -39,6 +39,8 @@ envs = [
     MkEnvDesc "IDRIS2_CPPFLAGS"      "RefC backend: C preprocessor flags.",
     MkEnvDesc "IDRIS2_LDFLAGS"       "RefC backend: C linker flags.",
     MkEnvDesc "IDRIS2_LDLIBS"        "RefC backend: C linker library names or flags.",
+    MkEnvDesc "IDRIS2_CROSS_TRIPLE"  "RefC backend: target triple for cross-compilation (e.g. aarch64-linux-gnu), passed as --target=<triple>.",
+    MkEnvDesc "IDRIS2_SYSROOT"       "RefC backend: sysroot path for cross-compilation, passed as --sysroot=<path>.",
     MkEnvDesc "CC"                   "RefC backend: C compiler executable (IDRIS2_CC takes precedence).",
     MkEnvDesc "CFLAGS"               "RefC backend: C compiler flags (IDRIS2_CFLAGS takes precedence).",
     MkEnvDesc "CPPFLAGS"             "RefC backend: C preprocessor flags (IDRIS2_CPPFLAGS takes precedence).",

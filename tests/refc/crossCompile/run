@@ -1,0 +1,41 @@
+. ../../testutils.sh
+
+# These tests verify that cross-compilation flags are plumbed through to the
+# C compiler invocation.  We use a fake CC wrapper that records all arguments
+# to a log file so we can check for the expected flags without needing an
+# actual cross-compiler installed.
+
+LOG="$(pwd)/cc_calls.log"
+WRAPPER="$(pwd)/cc_wrapper.sh"
+
+# Test 1: --directive target=<triple> produces --target=<triple> in CC args
+rm -f "$LOG"
+CC_LOG_FILE="$LOG" IDRIS2_CC="$WRAPPER" \
+    idris2 --cg refc --directive "target=aarch64-unknown-linux" -o test_target Main.idr \
+    >/dev/null 2>&1
+grep -q -- '--target=aarch64-unknown-linux' "$LOG" \
+    && echo "directive target: OK" || echo "directive target: MISSING"
+
+# Test 2: IDRIS2_CROSS_TRIPLE env var produces --target=<triple> in CC args
+rm -f "$LOG"
+CC_LOG_FILE="$LOG" IDRIS2_CC="$WRAPPER" IDRIS2_CROSS_TRIPLE=aarch64-unknown-linux \
+    idris2 --cg refc -o test_triple Main.idr \
+    >/dev/null 2>&1
+grep -q -- '--target=aarch64-unknown-linux' "$LOG" \
+    && echo "env CROSS_TRIPLE: OK" || echo "env CROSS_TRIPLE: MISSING"
+
+# Test 3: --directive sysroot=<path> produces --sysroot=<path> in CC args
+rm -f "$LOG"
+CC_LOG_FILE="$LOG" IDRIS2_CC="$WRAPPER" \
+    idris2 --cg refc --directive "sysroot=/opt/fake_sysroot" -o test_sysroot Main.idr \
+    >/dev/null 2>&1
+grep -q -- '--sysroot=/opt/fake_sysroot' "$LOG" \
+    && echo "directive sysroot: OK" || echo "directive sysroot: MISSING"
+
+# Test 4: IDRIS2_SYSROOT env var produces --sysroot=<path> in CC args
+rm -f "$LOG"
+CC_LOG_FILE="$LOG" IDRIS2_CC="$WRAPPER" IDRIS2_SYSROOT=/opt/fake_sysroot \
+    idris2 --cg refc -o test_sysroot2 Main.idr \
+    >/dev/null 2>&1
+grep -q -- '--sysroot=/opt/fake_sysroot' "$LOG" \
+    && echo "env SYSROOT: OK" || echo "env SYSROOT: MISSING"

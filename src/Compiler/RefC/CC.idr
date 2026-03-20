@@ -59,6 +59,29 @@ clibdirs ds = map (\d => "-L" ++ d) ds
 -- cincdirs : List String -> String
 -- cincdirs ds = concat (map (\d => "-I" ++ d ++ " ") ds)
 
+-- Extract the value after "key=" from a directive string, or Nothing.
+directiveValue : String -> String -> Maybe String
+directiveValue key d =
+    if isPrefixOf (key ++ "=") d
+    then Just (substr (length (key ++ "=")) (length d) d)
+    else Nothing
+
+-- Build cross-compilation flags from directives and environment variables:
+--   directive "target=<triple>"  / env IDRIS2_CROSS_TRIPLE -> "--target=<triple>"
+--   directive "sysroot=<path>"   / env IDRIS2_SYSROOT      -> "--sysroot=<path>"
+-- These flags are passed to both the compile and link invocations so that
+-- clang/gcc can generate code and find libraries for the target system.
+crossCompileFlags : {auto c : Ref Ctxt Defs} -> List String -> Core (List String)
+crossCompileFlags directives = do
+    target  <- case mapMaybe (directiveValue "target")  directives of
+                 (t :: _) => pure (Just t)
+                 []       => coreLift $ idrisGetEnv "IDRIS2_CROSS_TRIPLE"
+    sysroot <- case mapMaybe (directiveValue "sysroot") directives of
+                 (s :: _) => pure (Just s)
+                 []       => coreLift $ idrisGetEnv "IDRIS2_SYSROOT"
+    pure $ maybe [] (\t => ["--target=" ++ t]) target
+        ++ maybe [] (\s => ["--sysroot=" ++ s]) sysroot
+
 export
 compileCObjectFile : {auto c : Ref Ctxt Defs}
                   -> {default False asLibrary : Bool}
@@ -76,9 +99,10 @@ compileCObjectFile {asLibrary} sourceFile objectFile =
      directives <- getDirectives RefC
      let debugFlag = if elem "debug" directives then ["-g"] else []
      let libraryFlag = if asLibrary then ["-fpic"] else []
+     crossFlags <- crossCompileFlags directives
 
      let runccobj = (escapeCmd $
-         [cc, "-Werror", "-c"] ++ debugFlag ++ libraryFlag ++ [sourceFile,
+         [cc, "-Werror", "-c"] ++ debugFlag ++ libraryFlag ++ crossFlags ++ [sourceFile,
               "-o", objectFile,
               "-I" ++ refcDir,
               "-I" ++ cDir])
@@ -110,9 +134,10 @@ compileCFile {asShared} objectFile outFile =
      directives <- getDirectives RefC
      let debugFlag = if elem "debug" directives then ["-g"] else []
      let sharedFlag = if asShared then ["-shared"] else []
+     crossFlags <- crossCompileFlags directives
 
      let runcc = (escapeCmd $
-         [cc, "-Werror"] ++ debugFlag ++ sharedFlag ++ [objectFile,
+         [cc, "-Werror"] ++ debugFlag ++ sharedFlag ++ crossFlags ++ [objectFile,
               "-o", outFile,
               supportFile,
               "-lidris2_refc",
@@ -149,9 +174,10 @@ compileCFileInc objectFiles outFile =
 
      directives <- getDirectives RefC
      let debugFlag = if elem "debug" directives then ["-g"] else []
+     crossFlags <- crossCompileFlags directives
 
      let runcc = (escapeCmd $
-         [cc, "-Werror"] ++ debugFlag ++ objectFiles ++
+         [cc, "-Werror"] ++ debugFlag ++ crossFlags ++ objectFiles ++
               ["-o", outFile,
               supportFile,
               "-lidris2_refc",

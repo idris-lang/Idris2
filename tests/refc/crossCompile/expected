@@ -1,0 +1,4 @@
+directive target: OK
+env CROSS_TRIPLE: OK
+directive sysroot: OK
+env SYSROOT: OK
