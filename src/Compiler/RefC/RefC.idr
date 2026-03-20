@@ -990,6 +990,9 @@ emitOneCallback key args ret hasWorld = do
     let retCType  = if isVoidRet then "void" else cTypeOfCFType ret
     let indexedArgs = zipWith MkPair [0 .. length args `minus` 1] args
     let n = length args
+    let fpArgsStr = if null args then "void" else showSep ", " (map cTypeOfCFType args)
+
+    emit EmptyFC "#if IDRIS2_HAS_FFI"
 
     -- (1) libffi handler: called by libffi when the C caller invokes the closure.
     -- _args[i] is a void* pointing to the i-th argument value.
@@ -1036,7 +1039,6 @@ emitOneCallback key args ret hasWorld = do
 
     -- (3) Maker: allocate a libffi closure per-call so re-entrant callbacks
     -- each get their own function pointer and capture their own closure.
-    let fpArgsStr = if null args then "void" else showSep ", " (map cTypeOfCFType args)
     emit EmptyFC $ "static " ++ retCType ++ " (*" ++ makerFn ++ "(Value *_clo))(" ++ fpArgsStr ++ ") {"
     emit EmptyFC $ "  if (!" ++ cifReadyV ++ ") {"
     emit EmptyFC $ "    ffi_prep_cif(&" ++ cifV ++ ", FFI_DEFAULT_ABI, " ++ show n ++ ","
@@ -1049,6 +1051,19 @@ emitOneCallback key args ret hasWorld = do
     emit EmptyFC $ "  ffi_prep_closure_loc(_fc, &" ++ cifV ++ ", " ++ handlerFn ++ ", _clo, _fn_ptr);"
     emit EmptyFC $ "  return (" ++ retCType ++ " (*)(" ++ fpArgsStr ++ "))_fn_ptr;"
     emit EmptyFC   "}"
+
+    emit EmptyFC "#else"
+
+    -- Fallback: libffi is not available.  The maker compiles fine but aborts at
+    -- runtime if a CFFun callback is actually invoked.  Programs that only use
+    -- "RefC:" bindings (which pass Value_Closure* directly) are unaffected.
+    emit EmptyFC $ "static " ++ retCType ++ " (*" ++ makerFn ++ "(Value *_clo))(" ++ fpArgsStr ++ ") {"
+    emit EmptyFC   "  (void)_clo;"
+    emit EmptyFC   "  idris2_missing_ffi();"
+    emit EmptyFC   "  return NULL;"
+    emit EmptyFC   "}"
+
+    emit EmptyFC "#endif"
   where
     -- Pack a C arg (passed as void* in libffi) into a Value*
     packFromPtr : CFType -> Nat -> String
@@ -1116,8 +1131,8 @@ emitCallbackCode = do
         -- into the function-definitions preamble rather than using HeaderFiles.
         -- (HeaderFiles always wraps entries in <...> which may miss ffi/ffi.h)
         update FunctionDefinitions $ \ds =>
-            "#if __has_include(<ffi.h>)\n#include <ffi.h>\n#elif __has_include(<ffi/ffi.h>)\n#include <ffi/ffi.h>\n#else\n#error \"libffi not found — install libffi-dev or set CPPFLAGS\"\n#endif\n" :: ds
-        emit EmptyFC "// --- callback trampolines (generated, using libffi for re-entrancy) ---"
+            "#if __has_include(<ffi.h>)\n#include <ffi.h>\n#define IDRIS2_HAS_FFI 1\n#elif __has_include(<ffi/ffi.h>)\n#include <ffi/ffi.h>\n#define IDRIS2_HAS_FFI 1\n#else\n#define IDRIS2_HAS_FFI 0\n#endif\n" :: ds
+        emit EmptyFC "// --- callback trampolines (requires libffi when IDRIS2_HAS_FFI=1, stubs otherwise) ---"
         traverse_ (\(key, (args, ret, hw)) => do
             -- Forward-declare the maker so FFI wrappers (emitted before the trampolines)
             -- can call it without an implicit declaration.
