@@ -144,6 +144,16 @@ ci-macos-test: test
 ci-windows-test:
 	@${MAKE} test except="idris2/repl005"
 
+# Run only the RefC backend tests.
+# Note: callingConvention and ffi-struct are excluded via refcTests pred in tests/Main.idr
+# because struct-passing is not yet supported by the RefC backend.
+ci-refc-test: testenv
+	@echo
+	@echo "NOTE: \`${MAKE} ci-refc-test\` does not rebuild Idris or the libraries packaged with it; to do that run \`${MAKE}\`"
+	@if [ ! -x "${TARGET}" ]; then echo "ERROR: Missing IDRIS2 executable. Cannot run tests!\n"; exit 1; fi
+	@echo
+	@${MAKE} -C tests only=refc IDRIS2=${TARGET} IDRIS2_PREFIX=${TEST_PREFIX} CPPFLAGS="${CPPFLAGS}" LDFLAGS="${LDFLAGS}"
+
 test: testenv
 	@echo
 	@echo "NOTE: \`${MAKE} test\` does not rebuild Idris or the libraries packaged with it; to do that run \`${MAKE}\`"

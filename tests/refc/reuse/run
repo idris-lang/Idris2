@@ -2,4 +2,4 @@
 
 idris2 --cg refc -o main Main.idr
 $VALGRIND ./build/exec/main
-awk -v RS= '/Value \*Main_insert/' build/exec/main.c
+awk -v RS= '/Value \*Main_insert/' build/exec/main.c | grep -v '^#line '
