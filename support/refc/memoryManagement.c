@@ -254,12 +254,38 @@ Value *idris2_newReference(Value *source) {
 #define CC_SET_BUFFERED(v)  ((v)->header.reserved |= CC_BUFFERED_BIT)
 #define CC_CLR_BUFFERED(v)  ((v)->header.reserved &= (uint8_t)~CC_BUFFERED_BIT)
 
+/* Immortal values (refCounter == UINT16_MAX) may reside in read-only memory
+ * (e.g. predefined constants in .rodata on macOS/arm64).  Any attempt to
+ * atomically modify their refCounter causes EXC_BAD_ACCESS / Bus error.
+ * These helpers perform the modification only for non-immortal values. */
+#define CC_CHILD_DEC(c)                                                         \
+    do {                                                                        \
+        if (atomic_load_explicit(&(c)->header.refCounter,                       \
+                                 memory_order_relaxed) != IDRIS2_VP_REFCOUNTER_MAX) \
+            atomic_fetch_sub_explicit(&(c)->header.refCounter, 1,               \
+                                      memory_order_relaxed);                    \
+    } while (0)
+#define CC_CHILD_INC(c)                                                         \
+    do {                                                                        \
+        if (atomic_load_explicit(&(c)->header.refCounter,                       \
+                                 memory_order_relaxed) != IDRIS2_VP_REFCOUNTER_MAX) \
+            atomic_fetch_add_explicit(&(c)->header.refCounter, 1,               \
+                                      memory_order_relaxed);                    \
+    } while (0)
+
 // Trigger a collection run when this many roots have accumulated.
 #define CC_ROOTS_THRESHOLD 256
 
 static Value **cc_roots     = NULL;
 static size_t  cc_roots_len = 0;
 static size_t  cc_roots_cap = 0;
+
+/* Nesting depth of idris2_removeReference.  The cycle collector must only be
+ * invoked at depth 1 (the outermost call), never from within a recursive free
+ * traversal.  Triggering it mid-recursion lets markGrey trial-decrement
+ * refcounts of objects that the ongoing recursion is still iterating over,
+ * which corrupts the traversal and causes double-frees. */
+static int idris2_removeRef_depth = 0;
 
 static void cc_roots_push(Value *v) {
     if (cc_roots_len == cc_roots_cap) {
@@ -311,7 +337,7 @@ static void markGrey(Value *v) {
         for (int i = 0; i < cl->filled; i++) {
             Value *c = cl->args[i];
             if (!c || idris2_vp_is_unboxed(c)) continue;
-            atomic_fetch_sub_explicit(&c->header.refCounter, 1, memory_order_relaxed);
+            CC_CHILD_DEC(c);
             markGrey(c);
         }
         break;
@@ -321,7 +347,7 @@ static void markGrey(Value *v) {
         for (int i = 0; i < co->total; i++) {
             Value *c = co->args[i];
             if (!c || idris2_vp_is_unboxed(c)) continue;
-            atomic_fetch_sub_explicit(&c->header.refCounter, 1, memory_order_relaxed);
+            CC_CHILD_DEC(c);
             markGrey(c);
         }
         break;
@@ -329,7 +355,7 @@ static void markGrey(Value *v) {
     case IOREF_TAG: {
         Value *c = ((Value_IORef *)v)->v;
         if (c && !idris2_vp_is_unboxed(c)) {
-            atomic_fetch_sub_explicit(&c->header.refCounter, 1, memory_order_relaxed);
+            CC_CHILD_DEC(c);
             markGrey(c);
         }
         break;
@@ -339,7 +365,7 @@ static void markGrey(Value *v) {
         for (int i = 0; i < a->capacity; i++) {
             Value *c = a->arr[i];
             if (!c || idris2_vp_is_unboxed(c)) continue;
-            atomic_fetch_sub_explicit(&c->header.refCounter, 1, memory_order_relaxed);
+            CC_CHILD_DEC(c);
             markGrey(c);
         }
         break;
@@ -347,13 +373,11 @@ static void markGrey(Value *v) {
     case GC_POINTER_TAG: {
         Value_GCPointer *gcp = (Value_GCPointer *)v;
         if (gcp->p) {
-            atomic_fetch_sub_explicit(&((Value *)gcp->p)->header.refCounter, 1,
-                                      memory_order_relaxed);
+            CC_CHILD_DEC((Value *)gcp->p);
             markGrey((Value *)gcp->p);
         }
         if (gcp->onCollectFct) {
-            atomic_fetch_sub_explicit(&((Value *)gcp->onCollectFct)->header.refCounter,
-                                      1, memory_order_relaxed);
+            CC_CHILD_DEC((Value *)gcp->onCollectFct);
             markGrey((Value *)gcp->onCollectFct);
         }
         break;
@@ -376,7 +400,7 @@ static void scanBlack(Value *v) {
         for (int i = 0; i < cl->filled; i++) {
             Value *c = cl->args[i];
             if (!c || idris2_vp_is_unboxed(c)) continue;
-            atomic_fetch_add_explicit(&c->header.refCounter, 1, memory_order_relaxed);
+            CC_CHILD_INC(c);
             if (CC_GET_COLOUR(c) != CC_BLACK) scanBlack(c);
         }
         break;
@@ -386,7 +410,7 @@ static void scanBlack(Value *v) {
         for (int i = 0; i < co->total; i++) {
             Value *c = co->args[i];
             if (!c || idris2_vp_is_unboxed(c)) continue;
-            atomic_fetch_add_explicit(&c->header.refCounter, 1, memory_order_relaxed);
+            CC_CHILD_INC(c);
             if (CC_GET_COLOUR(c) != CC_BLACK) scanBlack(c);
         }
         break;
@@ -394,7 +418,7 @@ static void scanBlack(Value *v) {
     case IOREF_TAG: {
         Value *c = ((Value_IORef *)v)->v;
         if (c && !idris2_vp_is_unboxed(c)) {
-            atomic_fetch_add_explicit(&c->header.refCounter, 1, memory_order_relaxed);
+            CC_CHILD_INC(c);
             if (CC_GET_COLOUR(c) != CC_BLACK) scanBlack(c);
         }
         break;
@@ -404,7 +428,7 @@ static void scanBlack(Value *v) {
         for (int i = 0; i < a->capacity; i++) {
             Value *c = a->arr[i];
             if (!c || idris2_vp_is_unboxed(c)) continue;
-            atomic_fetch_add_explicit(&c->header.refCounter, 1, memory_order_relaxed);
+            CC_CHILD_INC(c);
             if (CC_GET_COLOUR(c) != CC_BLACK) scanBlack(c);
         }
         break;
@@ -412,13 +436,11 @@ static void scanBlack(Value *v) {
     case GC_POINTER_TAG: {
         Value_GCPointer *gcp = (Value_GCPointer *)v;
         if (gcp->p) {
-            atomic_fetch_add_explicit(&((Value *)gcp->p)->header.refCounter, 1,
-                                      memory_order_relaxed);
+            CC_CHILD_INC((Value *)gcp->p);
             if (CC_GET_COLOUR((Value *)gcp->p) != CC_BLACK) scanBlack((Value *)gcp->p);
         }
         if (gcp->onCollectFct) {
-            atomic_fetch_add_explicit(&((Value *)gcp->onCollectFct)->header.refCounter,
-                                      1, memory_order_relaxed);
+            CC_CHILD_INC((Value *)gcp->onCollectFct);
             if (CC_GET_COLOUR((Value *)gcp->onCollectFct) != CC_BLACK)
                 scanBlack((Value *)gcp->onCollectFct);
         }
@@ -574,13 +596,22 @@ void idris2_collectCycles(void) {
 
     // Phase 1 (MarkRoots + MarkGrey):
     //   - PURPLE roots: begin trial deletion via markGrey.
-    //   - Non-PURPLE (dead-in-buffer) roots: freed logically by removeReference;
-    //     clear buffered flag and physically free the allocation now.
+    //   - GREY roots: already visited by markGrey() as a child of another root
+    //     in this same pass.  Leave them in cc_roots so Phase 2 (scan) can
+    //     inspect their trial-decremented refcount and either restore them via
+    //     scanBlack or mark them WHITE for collection.  Do NOT free them here —
+    //     their rc was decremented by the parent's markGrey traversal and may
+    //     still be restored to > 0 by a subsequent scanBlack call.
+    //   - All other colours (BLACK/WHITE): dead-in-buffer — their last external
+    //     reference was dropped via a normal removeReference path before we ran;
+    //     clear the buffered flag and physically free if rc == 0.
     for (size_t i = 0; i < cc_roots_len; i++) {
         Value *v = cc_roots[i];
         if (CC_GET_COLOUR(v) == CC_PURPLE) {
             markGrey(v);
-        } else {
+        } else if (CC_GET_COLOUR(v) != CC_GREY) {
+            // Dead-in-buffer: not a fresh cycle-root candidate and not
+            // currently mid-trial-deletion.  Safe to physically reclaim now.
             CC_CLR_BUFFERED(v);
             cc_roots[i] = NULL; // exclude from scan/collect phases
             if (atomic_load_explicit(&v->header.refCounter,
@@ -588,6 +619,7 @@ void idris2_collectCycles(void) {
                 IDRIS2_FREE(v); // physical deallocation of dead-in-buffer object
             }
         }
+        // GREY: leave in cc_roots for Phase 2 scan() to handle.
     }
 
     // Phase 2 (Scan): restore live objects, mark confirmed garbage WHITE.
@@ -625,10 +657,15 @@ void idris2_removeReference(Value *elem) {
   } else if (atomic_fetch_sub_explicit(&elem->header.refCounter, 1,
                                        memory_order_acq_rel) != 1) {
     possibleCycleRoot(elem);
-    if (cc_roots_len >= CC_ROOTS_THRESHOLD)
+    /* Only trigger the cycle collector at the outermost removeReference call.
+     * Triggering it mid-recursion lets markGrey trial-decrement refcounts of
+     * objects that the ongoing recursive free is still iterating over, leading
+     * to double-frees and use-after-free errors. */
+    if (cc_roots_len >= CC_ROOTS_THRESHOLD && idris2_removeRef_depth == 0)
       idris2_collectCycles();
     return;
   } else {
+    idris2_removeRef_depth++;
     IDRIS2_INC_MEMSTAT(n_freed);
     switch (elem->header.tag) {
     case BITS32_TAG:
@@ -741,6 +778,11 @@ void idris2_removeReference(Value *elem) {
     if (!CC_GET_BUFFERED(elem)) {
       IDRIS2_FREE(elem);
     }
+    idris2_removeRef_depth--;
+    /* Now that we've fully unwound to the outermost call, run any deferred
+     * cycle collection that was held back to avoid mid-recursion corruption. */
+    if (idris2_removeRef_depth == 0 && cc_roots_len >= CC_ROOTS_THRESHOLD)
+      idris2_collectCycles();
   }
 }
 

@@ -54,3 +54,4 @@ idris2docs_venv
 
 # macOS
 .DS_Store
+tests/refc/crossCompile/cc_calls.log
