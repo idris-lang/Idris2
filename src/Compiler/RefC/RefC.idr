@@ -574,13 +574,17 @@ mutual
             ["prim__newIORef", "prim__readIORef", "prim__writeIORef", "prim__newArray",
              "prim__arrayGet", "prim__arraySet", "prim__getField", "prim__setField",
              "prim__os", "prim__codegen", "prim__onCollect", "prim__onCollectAny" ]
+        -- CFStruct stubs are generated without a namespace prefix, so use pn.
+        -- All other primitives match the support library's fully-qualified names.
+        let cfstructPrims : List String = ["prim__getField", "prim__setField"]
         pn <- case p of
             NS _ (UN (Basic pn)) =>
                if elem pn prims then pure pn
                else throw $ InternalError $ "[refc] Unknown primitive: " ++ cName p
             _ => throw $ InternalError $ "[refc] Unknown primitive: " ++ cName p
-        emit fc $ "// call to external primitive " ++ pn
-        pure $ "idris2_\{pn}("++ showSep ", " (map varName args) ++")"
+        let callName = if elem pn cfstructPrims then pn else cName p
+        emit fc $ "// call to external primitive " ++ callName
+        pure $ "idris2_\{callName}("++ showSep ", " (map varName args) ++")"
 
     cStatementsFromANF (AConCase fc sc alts mDef) tailPosition = do
         let sc' = varName sc
@@ -1330,6 +1334,7 @@ footer = do
           idris2_register_all_structs();
           Value *mainExprVal = __mainExpression_0();
           idris2_trampoline(mainExprVal);
+          idris2_collectCycles();
           return 0; // bye bye
       }
       """

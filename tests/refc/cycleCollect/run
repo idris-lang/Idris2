@@ -1,0 +1,4 @@
+. ../../testutils.sh
+
+idris2 --cg refc -o cycle_test CycleCollect.idr
+$VALGRIND ./build/exec/cycle_test

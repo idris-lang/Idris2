@@ -83,3 +83,8 @@ extern Value_String const idris2_predefined_nullstring;
 
 // You need uncomment a debugging code in memoryManagement.c to use this.
 void idris2_dumpMemoryStats(void);
+
+// Run the Bacon-Rajan trial-deletion cycle collector.
+// Called automatically when the candidate buffer fills; also called at the end
+// of main() (injected by the code generator) to free any remaining cycles.
+void idris2_collectCycles(void);
