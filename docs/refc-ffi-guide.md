@@ -126,11 +126,13 @@ This is the most important rule for FFI functions:
 ### What this means in practice
 
 For `C:` functions (primitive extraction):
+
 - You receive extracted C values (`int64_t`, `char *`, etc.), not `Value *`.
 - You never touch reference counts — the wrapper does it for you.
 - Return a freshly allocated `Value *` (refcount = 1) or an unboxed value.
 
 For `RefC:` functions (raw `Value *`):
+
 - The wrapper **does NOT call removeReference** on args — you own each arg.
 - You must call `idris2_removeReference(arg)` for every arg you do not
   store or return. Failing to do so leaks memory.

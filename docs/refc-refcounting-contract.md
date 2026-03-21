@@ -204,6 +204,7 @@ are no-ops. You never need to special-case static values in FFI code —
 the runtime handles it transparently.
 
 Common static values:
+
 - Predefined small integers (`idris2_predefined_Int64`)
 - Compile-time string literals (`IDRIS2_STOCKVAL`)
 - Predefined constructors: `True`, `False`, `Nothing`, `()`, `Nil`

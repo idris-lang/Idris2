@@ -13,12 +13,9 @@
   mpz_cmp(((Value_Integer *)(l))->i, ((Value_Integer *)(r))->i)
 #else
 #define idris2_cmp_Integer(l, r)                                               \
-  (((Value_Integer *)(l))                                                      \
-           ->i<((Value_Integer *)(r))->i ? -1 : ((Value_Integer *)(l))->i>(    \
-               (Value_Integer *)(r))                                           \
-           ->i                                                                 \
-       ? 1                                                                     \
-       : 0)
+  (((Value_Integer *)(l))->i < ((Value_Integer *)(r))->i   ? -1                \
+   : ((Value_Integer *)(l))->i > ((Value_Integer *)(r))->i ? 1                 \
+                                                           : 0)
 #endif
 
 #define idris2_binop(ty, op, l, r)                                             \

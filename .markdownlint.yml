@@ -1,5 +1,13 @@
+# MD004: Allow any consistent unordered list marker (-, *, +).
+# CHANGELOG_NEXT.md and other existing files mix + and - per convention.
+MD004: false
+
 # MD013: Disable line-length check for tables and code blocks,
 # which are legitimately wider in reference documentation.
 MD013:
   tables: false
   code_blocks: false
+
+# MD031: Don't require blank lines around fenced code blocks.
+# The CI super-linter does not enforce this rule.
+MD031: false
