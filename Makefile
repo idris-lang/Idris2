@@ -168,11 +168,12 @@ ci-refc-test: testenv
 #   IDRIS2_CC=emcc \
 #   IDRIS2_REFC_LIB_DIR=build/wasm \
 #   IDRIS2_REFC_SUPPORT_LIB=build/wasm/libidris2_support.a \
-#     idris2 --cg refc --directive "target=wasm32-emscripten no-gmp no-ffi no-threads" \
+#     idris2 --cg refc --directive "target=wasm32-unknown-emscripten" \
+#            --directive "no-gmp" --directive "no-ffi" --directive "no-threads" \
 #            -o MyProg MyProg.idr
 
 WASM_CC     ?= emcc
-WASM_TRIPLE ?= wasm32-emscripten
+WASM_TRIPLE ?= wasm32-unknown-emscripten
 WASM_CFLAGS ?= -O2
 WASM_DIR    := ${IDRIS2_CURDIR}/build/wasm
 WASM_CPPFLAGS := -DIDRIS2_NO_GMP -DIDRIS2_NO_THREADS --target=${WASM_TRIPLE}
