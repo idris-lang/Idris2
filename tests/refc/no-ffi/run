@@ -1,0 +1,4 @@
+. ../../testutils.sh
+
+idris2 --cg refc --directive no-ffi -o refc_noffi NoFFI.idr
+$VALGRIND ./build/exec/refc_noffi
