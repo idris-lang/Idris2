@@ -1,6 +1,9 @@
 #include "mathFunctions.h"
 #include "memoryManagement.h"
+#include "refc_util.h"
 #include "runtime.h"
+#include <inttypes.h>
+#include <stdint.h>
 
 /* add */
 Value *idris2_add_Integer(Value *x, Value *y) {
@@ -8,7 +11,21 @@ Value *idris2_add_Integer(Value *x, Value *y) {
 #ifndef IDRIS2_NO_GMP
   mpz_add(retVal->i, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
 #else
-  retVal->i = ((Value_Integer *)x)->i + ((Value_Integer *)y)->i;
+  int64_t xi = ((Value_Integer *)x)->i;
+  int64_t yi = ((Value_Integer *)y)->i;
+  int64_t result;
+#if defined(__GNUC__) || defined(__clang__)
+  IDRIS2_REFC_VERIFY(!__builtin_add_overflow(xi, yi, &result),
+                     "Integer addition overflow (IDRIS2_NO_GMP): "
+                     "%" PRId64 " + %" PRId64, xi, yi);
+#else
+  /* Portable check: overflow iff both operands share a sign that the
+   * result does not. */
+  result = xi + yi;
+  IDRIS2_REFC_VERIFY(!((xi ^ result) & (yi ^ result) & INT64_MIN),
+                     "Integer addition overflow (IDRIS2_NO_GMP)");
+#endif
+  retVal->i = result;
 #endif
   return (Value *)retVal;
 }
@@ -19,7 +36,21 @@ Value *idris2_sub_Integer(Value *x, Value *y) {
 #ifndef IDRIS2_NO_GMP
   mpz_sub(retVal->i, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
 #else
-  retVal->i = ((Value_Integer *)x)->i - ((Value_Integer *)y)->i;
+  int64_t xi = ((Value_Integer *)x)->i;
+  int64_t yi = ((Value_Integer *)y)->i;
+  int64_t result;
+#if defined(__GNUC__) || defined(__clang__)
+  IDRIS2_REFC_VERIFY(!__builtin_sub_overflow(xi, yi, &result),
+                     "Integer subtraction overflow (IDRIS2_NO_GMP): "
+                     "%" PRId64 " - %" PRId64, xi, yi);
+#else
+  /* Portable check: overflow iff operands differ in sign and the result
+   * differs in sign from the minuend. */
+  result = xi - yi;
+  IDRIS2_REFC_VERIFY(!((xi ^ yi) & (xi ^ result) & INT64_MIN),
+                     "Integer subtraction overflow (IDRIS2_NO_GMP)");
+#endif
+  retVal->i = result;
 #endif
   return (Value *)retVal;
 }
@@ -30,7 +61,11 @@ Value *idris2_negate_Integer(Value *x) {
 #ifndef IDRIS2_NO_GMP
   mpz_neg(retVal->i, ((Value_Integer *)x)->i);
 #else
-  retVal->i = -((Value_Integer *)x)->i;
+  int64_t xi = ((Value_Integer *)x)->i;
+  /* -INT64_MIN has no representation in int64_t. */
+  IDRIS2_REFC_VERIFY(xi != INT64_MIN,
+                     "Integer negation overflow (IDRIS2_NO_GMP): INT64_MIN");
+  retVal->i = -xi;
 #endif
   return (Value *)retVal;
 }
@@ -41,7 +76,20 @@ Value *idris2_mul_Integer(Value *x, Value *y) {
 #ifndef IDRIS2_NO_GMP
   mpz_mul(retVal->i, ((Value_Integer *)x)->i, ((Value_Integer *)y)->i);
 #else
-  retVal->i = ((Value_Integer *)x)->i * ((Value_Integer *)y)->i;
+  int64_t xi = ((Value_Integer *)x)->i;
+  int64_t yi = ((Value_Integer *)y)->i;
+  int64_t result;
+#if defined(__GNUC__) || defined(__clang__)
+  IDRIS2_REFC_VERIFY(!__builtin_mul_overflow(xi, yi, &result),
+                     "Integer multiplication overflow (IDRIS2_NO_GMP): "
+                     "%" PRId64 " * %" PRId64, xi, yi);
+#else
+  /* Portable fallback: detect via divide-and-check. */
+  result = xi * yi;
+  IDRIS2_REFC_VERIFY(xi == 0 || result / xi == yi,
+                     "Integer multiplication overflow (IDRIS2_NO_GMP)");
+#endif
+  retVal->i = result;
 #endif
   return (Value *)retVal;
 }
