@@ -92,26 +92,73 @@ isWasmTarget directives = do
         Just t  => isPrefixOf "wasm32" t || isPrefixOf "wasm64" t
         Nothing => False
 
--- True when GMP should be disabled: explicit directive, WASM target, or env var.
+-- True when the effective target triple looks like a bare-metal target.
+-- Recognises triples ending in none-eabi / none-eabihf / none-elf, and
+-- well-known prefixes (arm-none, thumb-none, aarch64-none, riscv*-none,
+-- xtensa-esp*, riscv32-esp).
+isBaremetalTarget : List String -> IO Bool
+isBaremetalTarget directives = do
+    triple <- case mapMaybe (directiveValue "target") directives of
+                (t :: _) => pure (Just t)
+                []       => idrisGetEnv "IDRIS2_CROSS_TRIPLE"
+    pure $ case triple of
+        Nothing => False
+        Just t  =>
+            isSuffixOf "none-eabi"    t ||
+            isSuffixOf "none-eabihf"  t ||
+            isSuffixOf "none-elf"     t ||
+            isPrefixOf "arm-none"     t ||
+            isPrefixOf "thumb-none"   t ||
+            isPrefixOf "aarch64-none" t ||
+            isPrefixOf "riscv32-none" t ||
+            isPrefixOf "riscv64-none" t ||
+            isPrefixOf "xtensa-esp"   t ||
+            isPrefixOf "riscv32-esp"  t
+
+-- True when GMP should be disabled: explicit directive, WASM/baremetal target, or env var.
 needsNoGmp : List String -> IO Bool
 needsNoGmp directives = do
-    wasm <- isWasmTarget directives
-    env  <- idrisGetEnv "IDRIS2_NO_GMP"
-    pure $ wasm || elem "no-gmp" directives || isJust env
+    wasm      <- isWasmTarget directives
+    baremetal <- isBaremetalTarget directives
+    env       <- idrisGetEnv "IDRIS2_NO_GMP"
+    pure $ wasm || baremetal || elem "no-gmp" directives || isJust env
 
 -- True when libffi should be omitted from the link.
 needsNoFfi : List String -> IO Bool
 needsNoFfi directives = do
-    wasm <- isWasmTarget directives
-    env  <- idrisGetEnv "IDRIS2_NO_FFI"
-    pure $ wasm || elem "no-ffi" directives || isJust env
+    wasm      <- isWasmTarget directives
+    baremetal <- isBaremetalTarget directives
+    env       <- idrisGetEnv "IDRIS2_NO_FFI"
+    pure $ wasm || baremetal || elem "no-ffi" directives || isJust env
 
 -- True when pthreads should be disabled.
 needsNoThreads : List String -> IO Bool
 needsNoThreads directives = do
-    wasm <- isWasmTarget directives
-    env  <- idrisGetEnv "IDRIS2_NO_THREADS"
-    pure $ wasm || elem "no-threads" directives || isJust env
+    wasm      <- isWasmTarget directives
+    baremetal <- isBaremetalTarget directives
+    env       <- idrisGetEnv "IDRIS2_NO_THREADS"
+    pure $ wasm || baremetal || elem "no-threads" directives || isJust env
+
+-- True when stdio (fprintf/printf) should be excluded from the runtime.
+needsNoStdio : List String -> IO Bool
+needsNoStdio directives = do
+    baremetal <- isBaremetalTarget directives
+    env       <- idrisGetEnv "IDRIS2_NO_STDIO"
+    pure $ baremetal || elem "no-stdio" directives || isJust env
+
+-- True when POSIX clock/time calls should be stubbed out.
+needsNoClock : List String -> IO Bool
+needsNoClock directives = do
+    baremetal <- isBaremetalTarget directives
+    env       <- idrisGetEnv "IDRIS2_NO_CLOCK"
+    pure $ baremetal || elem "no-clock" directives || isJust env
+
+-- True when libidris2_support should not be linked (bare-metal or explicit opt-out).
+needsNoSupportLib : List String -> IO Bool
+needsNoSupportLib directives = do
+    baremetal <- isBaremetalTarget directives
+    env       <- idrisGetEnv "IDRIS2_NO_SUPPORT_LIB"
+    pure $ baremetal || elem "no-support-lib" directives || isJust env
 
 -- Find the directory containing libidris2_refc, with optional override.
 -- directive "refc-lib-dir=<path>"  / env IDRIS2_REFC_LIB_DIR override the
@@ -160,12 +207,16 @@ compileCObjectFile {asLibrary} sourceFile objectFile =
      crossFlags <- crossCompileFlags directives
      noGmp     <- coreLift $ needsNoGmp     directives
      noThreads <- coreLift $ needsNoThreads directives
+     noStdio   <- coreLift $ needsNoStdio   directives
+     noClock   <- coreLift $ needsNoClock   directives
      let noGmpFlag     = if noGmp     then ["-DIDRIS2_NO_GMP"]     else []
      let noThreadsFlag = if noThreads then ["-DIDRIS2_NO_THREADS"] else []
+     let noStdioFlag   = if noStdio   then ["-DIDRIS2_NO_STDIO"]   else []
+     let noClockFlag   = if noClock   then ["-DIDRIS2_NO_CLOCK"]   else []
 
      let runccobj = (escapeCmd $
          [cc, "-Werror", "-c"] ++ debugFlag ++ libraryFlag ++ crossFlags
-              ++ noGmpFlag ++ noThreadsFlag
+              ++ noGmpFlag ++ noThreadsFlag ++ noStdioFlag ++ noClockFlag
               ++ [sourceFile,
                   "-o", objectFile,
                   "-I" ++ refcDir,
@@ -199,16 +250,18 @@ compileCFile {asShared} objectFile outFile =
      let debugFlag = if elem "debug" directives then ["-g"] else []
      let sharedFlag = if asShared then ["-shared"] else []
      crossFlags <- crossCompileFlags directives
-     noGmp <- coreLift $ needsNoGmp directives
-     noFfi <- coreLift $ needsNoFfi directives
-     let gmpLib = if noGmp then [] else ["-lgmp"]
-     let ffiLib = if noFfi then [] else ["-lffi"]
+     noGmp       <- coreLift $ needsNoGmp       directives
+     noFfi       <- coreLift $ needsNoFfi       directives
+     noSupportLib <- coreLift $ needsNoSupportLib directives
+     let gmpLib     = if noGmp        then [] else ["-lgmp"]
+     let ffiLib     = if noFfi        then [] else ["-lffi"]
+     let supportArg = if noSupportLib then [] else [supportFile]
 
      let runcc = (escapeCmd $
          [cc, "-Werror"] ++ debugFlag ++ sharedFlag ++ crossFlags ++ [objectFile,
-              "-o", outFile,
-              supportFile,
-              "-lidris2_refc",
+              "-o", outFile
+              ] ++ supportArg ++
+              ["-lidris2_refc",
               "-L" ++ refcLibDir
               ] ++ clibdirs (lib_dirs dirs) ++ ["-lm"]
                 ++ gmpLib ++ ffiLib)
@@ -243,16 +296,18 @@ compileCFileInc objectFiles outFile =
 
      let debugFlag = if elem "debug" directives then ["-g"] else []
      crossFlags <- crossCompileFlags directives
-     noGmp <- coreLift $ needsNoGmp directives
-     noFfi <- coreLift $ needsNoFfi directives
-     let gmpLib = if noGmp then [] else ["-lgmp"]
-     let ffiLib = if noFfi then [] else ["-lffi"]
+     noGmp        <- coreLift $ needsNoGmp        directives
+     noFfi        <- coreLift $ needsNoFfi        directives
+     noSupportLib <- coreLift $ needsNoSupportLib directives
+     let gmpLib     = if noGmp        then [] else ["-lgmp"]
+     let ffiLib     = if noFfi        then [] else ["-lffi"]
+     let supportArg = if noSupportLib then [] else [supportFile]
 
      let runcc = (escapeCmd $
          [cc, "-Werror"] ++ debugFlag ++ crossFlags ++ objectFiles ++
-              ["-o", outFile,
-              supportFile,
-              "-lidris2_refc",
+              ["-o", outFile
+              ] ++ supportArg ++
+              ["-lidris2_refc",
               "-L" ++ refcLibDir
               ] ++ clibdirs (lib_dirs dirs) ++ ["-lm"]
                 ++ gmpLib ++ ffiLib)
