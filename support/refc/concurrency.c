@@ -1,3 +1,8 @@
+/* clock_gettime / CLOCK_REALTIME require POSIX.1b on Linux */
+#if !defined(_POSIX_C_SOURCE) || _POSIX_C_SOURCE < 199309L
+#define _POSIX_C_SOURCE 199309L
+#endif
+
 #include "concurrency.h"
 #include "refc_util.h"
 

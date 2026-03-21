@@ -1,4 +1,4 @@
-{ stdenv, lib, chez, clang, gmp, makeWrapper, installShellFiles, support, idris2Version
+{ stdenv, lib, chez, clang, gmp, libffi, makeWrapper, installShellFiles, support, idris2Version
 , srcRev, gambit, nodejs, zsh, idris2Bootstrap ? null }:
 
 # Uses scheme to bootstrap the build of idris2
@@ -22,7 +22,7 @@ stdenv.mkDerivation rec {
   nativeBuildInputs = [ makeWrapper installShellFiles clang chez ]
     ++ lib.optional stdenv.isDarwin [ zsh ]
     ++ lib.optional (!bootstrap) [ idris2Bootstrap ];
-  buildInputs = [ chez gmp support ];
+  buildInputs = [ chez gmp libffi support ];
 
   # For bootstrap builds the Makefile will try to
   # rebuild the support library if we don't patch

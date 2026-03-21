@@ -62,7 +62,7 @@ Value *idris2_crash(Value *msg) {
   IDRIS2_WRITE_STDERR("ERROR: ");
   IDRIS2_WRITE_STDERR(str->str);
   IDRIS2_WRITE_STDERR("\n");
-  IDRIS2_ABORT();
+  exit(1);
 }
 
 //

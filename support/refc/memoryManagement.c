@@ -36,7 +36,7 @@ void idris2_dumpMemoryStats(void) {
 }
 
 #else
-#define IDRIS2_INC_MEMSTAT(x)
+#define IDRIS2_INC_MEMSTAT(x) ((void)0)
 // don't inline this, Because IDRIS2_MEMSTAT works only at compiling support
 // libraries to suppressing overhead.
 void idris2_dumpMemoryStats(void) {}
