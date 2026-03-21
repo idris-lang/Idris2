@@ -1,0 +1,7 @@
+. ../../testutils.sh
+
+idris2 --cg refc -o refc_dir dir.idr
+$VALGRIND ./build/exec/refc_dir | filter_test_dir
+
+cat testdir/test.txt
+rm -rf testdir
