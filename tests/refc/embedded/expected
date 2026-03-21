@@ -1,3 +1,5 @@
 no-gmp build: OK
 no-threads build: OK
+no-stdio build: OK
+no-clock build: OK
 embedded build: OK

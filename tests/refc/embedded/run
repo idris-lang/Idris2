@@ -4,6 +4,8 @@
 # These flags are intended for bare-metal / embedded targets:
 #   IDRIS2_NO_GMP     -- use int64_t for Integer instead of GMP mpz_t
 #   IDRIS2_NO_THREADS -- stub out all pthread usage
+#   IDRIS2_NO_STDIO   -- exclude fprintf/vsnprintf from the runtime
+#   IDRIS2_NO_CLOCK   -- stub time()/clock() to return 0
 
 # The support/refc source directory relative to this test.
 REFC_SRC="$(cd "$(dirname "$0")/../../../support/refc" && pwd)"
@@ -44,7 +46,19 @@ else
     echo "no-threads build: FAILED"
 fi
 
-if compile_all "-DIDRIS2_NO_GMP -DIDRIS2_NO_THREADS"; then
+if compile_all "-DIDRIS2_NO_STDIO"; then
+    echo "no-stdio build: OK"
+else
+    echo "no-stdio build: FAILED"
+fi
+
+if compile_all "-DIDRIS2_NO_CLOCK"; then
+    echo "no-clock build: OK"
+else
+    echo "no-clock build: FAILED"
+fi
+
+if compile_all "-DIDRIS2_NO_GMP -DIDRIS2_NO_THREADS -DIDRIS2_NO_STDIO -DIDRIS2_NO_CLOCK"; then
     echo "embedded build: OK"
 else
     echo "embedded build: FAILED"
