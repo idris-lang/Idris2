@@ -182,7 +182,6 @@ cOp StrAppend     [x, y]    = "strAppend(" ++ x ++ ", " ++ y ++ ")"
 cOp StrSubstr     [x, y, z] = "strSubstr(" ++ x ++ ", " ++ y  ++ ", " ++ z ++ ")"
 cOp BelieveMe     [_, _, x] = "idris2_newReference(" ++ x ++ ")"
 cOp Crash         [_, msg]  = "idris2_crash(" ++ msg ++ ");"
-cOp fn args = show fn ++ "(" ++ (showSep ", " $ toList args) ++ ")"
 
 varName : AVar -> String
 varName (ALocal i) = "var_" ++ (show i)
