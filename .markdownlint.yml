@@ -1,0 +1,5 @@
+# MD013: Disable line-length check for tables and code blocks,
+# which are legitimately wider in reference documentation.
+MD013:
+  tables: false
+  code_blocks: false

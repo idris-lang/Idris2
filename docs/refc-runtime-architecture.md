@@ -28,6 +28,7 @@ so any `Value *` can safely be cast to the appropriate concrete type
 once the `tag` field has been inspected.
 
 **Reference counter semantics:**
+
 - `refCounter == 0` — the value is *static* (never freed). Used for
   compile-time constants such as string literals and predefined integers.
 - `refCounter == 1` — the value is *unique* (owned by exactly one slot).
@@ -43,11 +44,11 @@ Defined in `_datatypes.h`:
 
 | Tag constant        | Value | Concrete type          | Description                         |
 |---------------------|------:|------------------------|-------------------------------------|
-| `OBJECT_TAG`        |     0 | `Value_Constructor`    | Algebraic data type constructor      |
+| `OBJECT_TAG`        |     0 | `Value_Constructor`    | Algebraic data type constructor     |
 | `INT_TAG`           |     1 | *(unboxed — see §3)*   | Small `Int` (pointer-tagged)        |
 | `DOUBLE_TAG`        |     2 | `Value_Double`         | IEEE 754 double                     |
 | `STRING_TAG`        |     3 | `Value_String`         | NUL-terminated UTF-8 string         |
-| `CLOSURE_TAG`       |     5 | `Value_Closure`        | Partially or fully applied function  |
+| `CLOSURE_TAG`       |     5 | `Value_Closure`        | Partially or fully applied function |
 | `BITS32_TAG`        |     7 | `Value_Bits32`         | 32-bit unsigned integer             |
 | `BITS64_TAG`        |     8 | `Value_Bits64`         | 64-bit unsigned integer             |
 | `INTEGER_TAG`       |     9 | `Value_Integer`        | Arbitrary-precision integer (GMP)   |
@@ -169,7 +170,7 @@ iteration with O(1) C stack depth.
 
 ## 6. Memory Management Lifecycle
 
-```
+```text
 Allocation   idris2_newConstructor / idris2_mkClosure / IDRIS2_NEW_VALUE
                  refCounter = 1
 
@@ -185,6 +186,7 @@ Unique test  idris2_isUnique(v)
 ```
 
 `idris2_isUnique` enables several optimisations:
+
 - In `idris2_tailcall_apply_closure`: if the closure is unique, its
   args are moved (no `newReference`); otherwise args are copied with
   `newReference`.
@@ -196,6 +198,7 @@ Unique test  idris2_isUnique(v)
 ## 7. Static Values
 
 Values with `refCounter == 0` are never freed. These are used for:
+
 - Compile-time string constants (`IDRIS2_STOCKVAL`)
 - Predefined small integers (`idris2_predefined_Int64`)
 - Predefined constructors for `True`, `False`, `Nothing`, etc.
