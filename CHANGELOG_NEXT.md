@@ -92,6 +92,7 @@ should target this file (`CHANGELOG_NEXT`).
   unboxed values, which dereferences unboxed pointers as `Value_Int32*` on
   32-bit platforms when `UINTPTR_WIDTH` is not defined (common in Emscripten).
 * Fix missing support for sized, signed integers in FFI.
+* Fix headers for numeric negation.
 
 ### Library changes
 

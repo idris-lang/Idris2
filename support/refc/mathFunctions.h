@@ -32,12 +32,12 @@ Value *idris2_sub_Integer(Value *x, Value *y);
 #define idris2_sub_Double(l, r) (idris2_binop(Double, -, l, r))
 
 /* negate */
-#define idris2_nagate_Int8(x) (idris2_mkInt8(-(idris2_vp_to_Int8(x))))
-#define idris2_nagate_Int16(x) (idris2_mkInt16(-(idris2_vp_to_Int16(x))))
-#define idris2_nagate_Int32(x) (idris2_mkInt32(-(idris2_vp_to_Int32(x))))
-#define idris2_nagate_Int64(x) (idris2_mkInt64(-(idris2_vp_to_Int64(x))))
+#define idris2_negate_Int8(x) (idris2_mkInt8(-(idris2_vp_to_Int8(x))))
+#define idris2_negate_Int16(x) (idris2_mkInt16(-(idris2_vp_to_Int16(x))))
+#define idris2_negate_Int32(x) (idris2_mkInt32(-(idris2_vp_to_Int32(x))))
+#define idris2_negate_Int64(x) (idris2_mkInt64(-(idris2_vp_to_Int64(x))))
 Value *idris2_negate_Integer(Value *x);
-#define idris2_nagate_Double(x) (idris2_mkDouble(-(idris2_vp_to_Double(x))))
+#define idris2_negate_Double(x) (idris2_mkDouble(-(idris2_vp_to_Double(x))))
 
 /* mul */
 #define idris2_mul_Bits8(l, r) (idris2_binop(Bits8, *, l, r))
