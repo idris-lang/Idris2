@@ -2,16 +2,17 @@
 #include "_datatypes.h"
 #include "refc_util.h"
 #include "memoryManagement.h"
+#include "idris2_config.h"
 
 void idris2_missing_ffi(void) {
-  fprintf(stderr,
-          "ERROR: A foreign function was called that has no implementation\n"
-          "for the RefC backend.  Add a\n"
-          "  %%foreign \"C:your_function_name\"\n"
-          "or\n"
-          "  %%foreign \"RefC:your_function_name\"\n"
-          "declaration to provide an implementation.\n");
-  exit(1);
+  IDRIS2_WRITE_STDERR(
+      "ERROR: A foreign function was called that has no implementation\n"
+      "for the RefC backend.  Add a\n"
+      "  %foreign \"C:your_function_name\"\n"
+      "or\n"
+      "  %foreign \"RefC:your_function_name\"\n"
+      "declaration to provide an implementation.\n");
+  IDRIS2_ABORT();
 }
 
 typedef Value *(*const FUN0)(void);
@@ -132,7 +133,7 @@ Value *idris2_trampoline(Value *it) {
     it = idris2_dispatch_closure(clos);
     if (idris2_isUnique(clos)) {
       idris2_cc_remove_if_buffered((Value *)clos);
-      free(clos);
+      IDRIS2_FREE(clos);
     } else {
       --clos->header.refCounter;
     }
@@ -158,7 +159,7 @@ Value *idris2_tailcall_apply_closure(Value *_clos, Value *arg) {
 
   if (idris2_isUnique(clos)) {
     idris2_cc_remove_if_buffered((Value *)clos);
-    free(clos);
+    IDRIS2_FREE(clos);
   } else {
     --clos->header.refCounter;
   }
@@ -178,7 +179,7 @@ void idris2_removeReuseConstructor(Value_Constructor *constr) {
                      (long long)constr->header.refCounter);
   constr->header.refCounter--;
   if (constr->header.refCounter == 0) {
-    free(constr);
+    IDRIS2_FREE(constr);
   }
 }
 

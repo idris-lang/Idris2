@@ -504,26 +504,26 @@ static void freeValueDirect(Value *v) {
 #endif
         break;
     case STRING_TAG:
-        free(((Value_String *)v)->str);
+        IDRIS2_FREE(((Value_String *)v)->str);
         break;
     case BUFFER_TAG:
-        free(((Value_Buffer *)v)->buffer);
+        IDRIS2_FREE(((Value_Buffer *)v)->buffer);
         break;
     case ARRAY_TAG:
         // arr entries were freed by the collectWhite recursion; free the array itself.
-        free(((Value_Array *)v)->arr);
+        IDRIS2_FREE(((Value_Array *)v)->arr);
         break;
 #ifndef IDRIS2_NO_THREADS
     case MUTEX_TAG: {
         Value_Mutex *m = (Value_Mutex *)v;
         pthread_mutex_destroy(m->mutex);
-        free(m->mutex);
+        IDRIS2_FREE(m->mutex);
         break;
     }
     case CONDITION_TAG: {
         Value_Condition *c = (Value_Condition *)v;
         pthread_cond_destroy(c->cond);
-        free(c->cond);
+        IDRIS2_FREE(c->cond);
         break;
     }
     case SEMAPHORE_TAG: {
@@ -694,7 +694,7 @@ void idris2_removeReference(Value *elem) {
       break;
 
     case STRING_TAG:
-      free(((Value_String *)elem)->str);
+      IDRIS2_FREE(((Value_String *)elem)->str);
       break;
 
     case CLOSURE_TAG: {
@@ -717,7 +717,7 @@ void idris2_removeReference(Value *elem) {
 
     case BUFFER_TAG: {
       Value_Buffer *b = (Value_Buffer *)elem;
-      free(b->buffer);
+      IDRIS2_FREE(b->buffer);
       break;
     }
 
@@ -726,7 +726,7 @@ void idris2_removeReference(Value *elem) {
       for (int i = 0; i < a->capacity; i++) {
         idris2_removeReference(a->arr[i]);
       }
-      free(a->arr);
+      IDRIS2_FREE(a->arr);
       break;
     }
     case POINTER_TAG:
@@ -747,14 +747,14 @@ void idris2_removeReference(Value *elem) {
     case MUTEX_TAG: {
       Value_Mutex *m = (Value_Mutex *)elem;
       pthread_mutex_destroy(m->mutex);
-      free(m->mutex);
+      IDRIS2_FREE(m->mutex);
       break;
     }
 
     case CONDITION_TAG: {
       Value_Condition *c = (Value_Condition *)elem;
       pthread_cond_destroy(c->cond);
-      free(c->cond);
+      IDRIS2_FREE(c->cond);
       break;
     }
 

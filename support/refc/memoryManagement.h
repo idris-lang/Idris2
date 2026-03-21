@@ -47,7 +47,7 @@ Value *idris2_mkDouble(double d);
 
 #elif UINTPTR_WIDTH >= 32
 #define idris2_mkBits32(x) (idris2_mkBits32_Boxed(x))
-#define idris2_mkInt32(x) (idris2_mkInt32_Boxed(x)))
+#define idris2_mkInt32(x) (idris2_mkInt32_Boxed(x))
 
 #else
 #error "unsupported uintptr_t width"

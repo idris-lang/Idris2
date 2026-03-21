@@ -1,7 +1,7 @@
 #include "prim.h"
 #include "refc_util.h"
+#include "idris2_config.h"
 #include <string.h>
-#include <unistd.h>
 
 Value *idris2_Data_IORef_prim__newIORef(Value *IDRIS2_UNUSED erased,
                                         Value *input_value,
@@ -60,8 +60,10 @@ Value_String const idris2_predefined_codegenstring = {
 
 Value *idris2_crash(Value *msg) {
   Value_String *str = (Value_String *)msg;
-  fprintf(stderr, "ERROR: %s\n", str->str);
-  exit(1);
+  IDRIS2_WRITE_STDERR("ERROR: ");
+  IDRIS2_WRITE_STDERR(str->str);
+  IDRIS2_WRITE_STDERR("\n");
+  IDRIS2_ABORT();
 }
 
 //

@@ -14,7 +14,9 @@
 
 #include <stdatomic.h>
 #include <stdint.h>
-#include <stdio.h>
+#ifndef IDRIS2_NO_STDIO
+#  include <stdio.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 
@@ -208,8 +210,8 @@ typedef struct {
   Buffer *buffer;
 } Value_Buffer;
 
-/* Thread-related types: require <pthread.h> or the stub types from
- * idris2_config.h (when IDRIS2_NO_THREADS is defined). */
+#ifndef IDRIS2_NO_THREADS
+/* Thread-related types: only compiled when threading is enabled. */
 typedef struct {
   Value_header header;
   pthread_mutex_t *mutex;
@@ -241,5 +243,6 @@ typedef struct {
   int total;    /* number of threads that must arrive */
   int arrived;  /* number that have arrived so far */
 } Value_Barrier;
+#endif /* IDRIS2_NO_THREADS */
 
 void idris2_dumpMemoryStats(void);

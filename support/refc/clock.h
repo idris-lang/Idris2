@@ -1,6 +1,8 @@
 #pragma once
 
-#include <time.h>
+#ifndef IDRIS2_NO_CLOCK
+#  include <time.h>
+#endif
 
 #include "cBackend.h"
 

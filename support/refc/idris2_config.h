@@ -19,6 +19,21 @@
  *   -lpthread link dependency and avoids _Atomic / stdatomic costs on
  *   single-threaded platforms.
  *
+ * IDRIS2_NO_STDIO
+ *   Exclude all <stdio.h> / fprintf / vsnprintf usage from the runtime.
+ *   Fatal-error messages are suppressed (only IDRIS2_ABORT fires).
+ *   Override IDRIS2_WRITE_STDERR below to route diagnostics to a UART
+ *   or other bare-metal output channel.
+ *   Implied automatically for bare-metal target triples (arm-none-eabi
+ *   etc.) when using --directive "target=<triple>" in CC.idr.
+ *
+ * IDRIS2_NO_CLOCK
+ *   Stub out time() / clock() calls in clock.c.  All clock functions
+ *   return 0.  Use on bare-metal targets that have no POSIX time source.
+ *   Override the stubs by providing your own implementation of the
+ *   clockTime* symbols after linking libidris2_refc.
+ *   Implied automatically for bare-metal target triples in CC.idr.
+ *
  * IDRIS2_MALLOC / IDRIS2_REALLOC / IDRIS2_FREE
  *   Override the heap allocator.  Define all three before including any
  *   RefC header to redirect every allocation through your own functions,
@@ -28,6 +43,13 @@
  * IDRIS2_ABORT
  *   Override the fatal-error handler used by IDRIS2_REFC_VERIFY.
  *   Should not return.  Default: abort() from <stdlib.h>.
+ *
+ * IDRIS2_WRITE_STDERR(msg)
+ *   Override the diagnostic output channel.  msg is a const char *.
+ *   Default: fputs(msg, stderr) when IDRIS2_NO_STDIO is not set,
+ *   no-op when IDRIS2_NO_STDIO is set.
+ *   Example for a UART-based bare-metal target:
+ *     #define IDRIS2_WRITE_STDERR(msg) uart_puts(msg)
  */
 
 /* -----------------------------------------------------------------------
@@ -47,17 +69,15 @@
 #endif
 
 /* -----------------------------------------------------------------------
- * pthread stub types (used by _datatypes.h when IDRIS2_NO_THREADS)
+ * Diagnostic output hook
  * -------------------------------------------------------------------- */
 
-#ifdef IDRIS2_NO_THREADS
-/* Provide harmless placeholder types so struct definitions compile even
- * when <pthread.h> is absent.  The actual functions are stubbed in
- * threads.c / concurrency.c and abort at runtime if ever called. */
-#  ifndef IDRIS2_PTHREAD_STUBS_DEFINED
-#  define IDRIS2_PTHREAD_STUBS_DEFINED
-typedef struct { int _unused; } pthread_mutex_t;
-typedef struct { int _unused; } pthread_cond_t;
-typedef unsigned long          pthread_t;
+#ifndef IDRIS2_WRITE_STDERR
+#  ifdef IDRIS2_NO_STDIO
+#    define IDRIS2_WRITE_STDERR(msg) ((void)(msg))
+#  else
+#    include <stdio.h>
+#    define IDRIS2_WRITE_STDERR(msg) fputs((msg), stderr)
 #  endif
 #endif
+

@@ -1,12 +1,12 @@
 #include "buffer.h"
+#include "idris2_config.h"
 #include "refc_util.h"
 #include <string.h>
-#include <sys/stat.h>
 
 void *newBuffer(int bytes) {
   size_t size = sizeof(Buffer) + bytes * sizeof(uint8_t);
 
-  Buffer *buf = malloc(size);
+  Buffer *buf = (Buffer *)IDRIS2_MALLOC(size);
   if (buf == NULL) {
     return NULL;
   }
@@ -85,7 +85,7 @@ char *getBufferString(void *buffer, int loc, int len) {
   Buffer *b = buffer;
   assert_valid_range(b, loc, len);
   char *s = (char *)(b->data + loc);
-  char *rs = malloc(len + 1);
+  char *rs = (char *)IDRIS2_MALLOC(len + 1);
   strncpy(rs, s, len);
   rs[len] = '\0';
   return rs;
