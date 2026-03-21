@@ -87,10 +87,10 @@ Value *strAppend(Value *a, Value *b) {
 Value *strSubstr(Value *start, Value *len, Value *s) {
   const char *input = ((Value_String *)s)->str;
   size_t offset = (size_t)idris2_vp_to_Int64(start);
-  size_t cpLen  = (size_t)idris2_vp_to_Int64(len);
+  size_t cpLen = (size_t)idris2_vp_to_Int64(len);
 
   size_t byteStart = utf8_cp_to_byte_offset(input, offset);
-  size_t byteEnd   = utf8_cp_to_byte_offset(input + byteStart, cpLen);
+  size_t byteEnd = utf8_cp_to_byte_offset(input + byteStart, cpLen);
 
   if (byteEnd == 0)
     return (Value *)&idris2_predefined_nullstring;
@@ -193,22 +193,23 @@ Value *stringIteratorNew(char *str) {
   it->pos = 0;
   memcpy(it->str, str, l + 1); // Take a copy of str, in case it gets GCed
 
-  /* onCollectStringIterator has a concrete signature but is stored as ClosureFun
-   * for later dispatch — suppress the cast-function-type warning intentionally. */
+  /* onCollectStringIterator has a concrete signature but is stored as
+   * ClosureFun for later dispatch — suppress the cast-function-type warning
+   * intentionally. */
 #if defined(__clang__)
-#  pragma clang diagnostic push
-#  pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
 #elif defined(__GNUC__)
-#  pragma GCC diagnostic push
-#  pragma GCC diagnostic ignored "-Wcast-function-type"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type"
 #endif
   return (Value *)idris2_makeGCPointer(
-      it, (Value_Closure *)idris2_mkClosure(
-              (ClosureFun) onCollectStringIterator, 2, 0));
+      it, (Value_Closure *)idris2_mkClosure((ClosureFun)onCollectStringIterator,
+                                            2, 0));
 #if defined(__clang__)
-#  pragma clang diagnostic pop
+#pragma clang diagnostic pop
 #elif defined(__GNUC__)
-#  pragma GCC diagnostic pop
+#pragma GCC diagnostic pop
 #endif
 }
 

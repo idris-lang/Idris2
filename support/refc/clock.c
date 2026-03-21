@@ -9,9 +9,9 @@
  * application if the target has an RTC or cycle counter. */
 
 Value *clockTimeMonotonic(void) { return (Value *)idris2_mkBits64(0); }
-Value *clockTimeUtc(void)       { return (Value *)idris2_mkBits64(0); }
-Value *clockTimeProcess(void)   { return (Value *)idris2_mkBits64(0); }
-Value *clockTimeThread(void)    { return (Value *)idris2_mkBits64(0); }
+Value *clockTimeUtc(void) { return (Value *)idris2_mkBits64(0); }
+Value *clockTimeProcess(void) { return (Value *)idris2_mkBits64(0); }
+Value *clockTimeThread(void) { return (Value *)idris2_mkBits64(0); }
 
 #else /* !IDRIS2_NO_CLOCK */
 
@@ -33,7 +33,7 @@ Value *clockTimeThread(void) { return clockTimeProcess(); }
 
 #endif /* IDRIS2_NO_CLOCK */
 
-Value *clockTimeGcCpu(void)  { return NULL; }
+Value *clockTimeGcCpu(void) { return NULL; }
 Value *clockTimeGcReal(void) { return NULL; }
 
 int clockValid(Value *clock) { return clock != NULL; }

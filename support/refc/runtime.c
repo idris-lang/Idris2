@@ -1,8 +1,8 @@
 #include "runtime.h"
 #include "_datatypes.h"
-#include "refc_util.h"
-#include "memoryManagement.h"
 #include "idris2_config.h"
+#include "memoryManagement.h"
+#include "refc_util.h"
 
 void idris2_missing_ffi(void) {
   IDRIS2_WRITE_STDERR(
@@ -57,11 +57,11 @@ typedef Value *(*const FUNStar)(Value **);
  * undefined behaviour in the standard but works on all targeted platforms;
  * suppress the compiler's cast-function-type warning for this function only. */
 #if defined(__clang__)
-#  pragma clang diagnostic push
-#  pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wcast-function-type-mismatch"
 #elif defined(__GNUC__)
-#  pragma GCC diagnostic push
-#  pragma GCC diagnostic ignored "-Wcast-function-type"
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-function-type"
 #endif
 static inline Value *idris2_dispatch_closure(Value_Closure *clo) {
   Value **const xs = clo->args;
@@ -119,9 +119,9 @@ static inline Value *idris2_dispatch_closure(Value_Closure *clo) {
   }
 }
 #if defined(__clang__)
-#  pragma clang diagnostic pop
+#pragma clang diagnostic pop
 #elif defined(__GNUC__)
-#  pragma GCC diagnostic pop
+#pragma GCC diagnostic pop
 #endif
 
 Value *idris2_trampoline(Value *it) {

@@ -7,9 +7,9 @@
 /* Mark a parameter or variable as intentionally unused.
  * Use in declarations: Value *func(Value *IDRIS2_UNUSED world) { ... } */
 #if defined(__clang__) || defined(__GNUC__)
-#  define IDRIS2_UNUSED __attribute__((unused))
+#define IDRIS2_UNUSED __attribute__((unused))
 #else
-#  define IDRIS2_UNUSED
+#define IDRIS2_UNUSED
 #endif
 
 // Crash if the condition is false.

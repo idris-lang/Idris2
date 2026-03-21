@@ -3,19 +3,19 @@
 #include "idris2_config.h"
 
 #ifndef IDRIS2_NO_GMP
-#  include <gmp.h>
+#include <gmp.h>
 #else
-#  include <stdint.h>
+#include <stdint.h>
 #endif
 
 #ifndef IDRIS2_NO_THREADS
-#  include <pthread.h>
+#include <pthread.h>
 #endif
 
 #include <stdatomic.h>
 #include <stdint.h>
 #ifndef IDRIS2_NO_STDIO
-#  include <stdio.h>
+#include <stdio.h>
 #endif
 #include <stdlib.h>
 #include <string.h>
@@ -56,8 +56,7 @@ typedef struct {
   uint8_t tag;
   uint8_t reserved;
 } Value_header;
-#define IDRIS2_STOCKVAL(t)                                                     \
-  { IDRIS2_VP_REFCOUNTER_MAX, t, 0 }
+#define IDRIS2_STOCKVAL(t) {IDRIS2_VP_REFCOUNTER_MAX, t, 0}
 
 typedef struct {
   Value_header header;
@@ -76,7 +75,7 @@ pretending to be pointers cannot have that tag, so use that flag to identify
 them first. Of course, this flag is not used if it is clear that Value* is
 actually an Int. But places like newReference/removeReference require this flag.
  */
-#define idris2_vp_is_unboxed(p) ((uintptr_t)(p)&3)
+#define idris2_vp_is_unboxed(p) ((uintptr_t)(p) & 3)
 
 #define idris2_vp_int_shift                                                    \
   ((sizeof(uintptr_t) >= 8 && sizeof(Value *) >= 8) ? 32 : 16)
@@ -114,8 +113,7 @@ actually an Int. But places like newReference/removeReference require this flag.
 #define idris2_vp_to_Int64(p) (((Value_Int64 *)(p))->i64)
 #define idris2_vp_to_Int16(p) ((int16_t)((uintptr_t)(p) >> idris2_vp_int_shift))
 #define idris2_vp_to_Int8(p) ((int8_t)((uintptr_t)(p) >> idris2_vp_int_shift))
-#define idris2_vp_to_Char(p)                                                   \
-  ((uint32_t)((uintptr_t)(p) >> idris2_vp_int_shift))
+#define idris2_vp_to_Char(p) ((uint32_t)((uintptr_t)(p) >> idris2_vp_int_shift))
 #define idris2_vp_to_Double(p) (((Value_Double *)(p))->d)
 #define idris2_vp_to_Bool(p) (idris2_vp_to_Int8(p))
 
@@ -144,7 +142,7 @@ typedef struct {
 #ifndef IDRIS2_NO_GMP
   mpz_t i;
 #else
-  int64_t i;   /* IDRIS2_NO_GMP: Integer backed by 64-bit signed integer */
+  int64_t i; /* IDRIS2_NO_GMP: Integer backed by 64-bit signed integer */
 #endif
 } Value_Integer;
 
@@ -240,8 +238,8 @@ typedef struct {
   Value_header header;
   pthread_mutex_t mutex;
   pthread_cond_t cond;
-  int total;    /* number of threads that must arrive */
-  int arrived;  /* number that have arrived so far */
+  int total;   /* number of threads that must arrive */
+  int arrived; /* number that have arrived so far */
 } Value_Barrier;
 #endif /* IDRIS2_NO_THREADS */
 

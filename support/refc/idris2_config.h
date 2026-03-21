@@ -57,15 +57,15 @@
  * -------------------------------------------------------------------- */
 
 #ifndef IDRIS2_MALLOC
-#  include <stdlib.h>
-#  define IDRIS2_MALLOC(sz)       malloc(sz)
-#  define IDRIS2_REALLOC(p, sz)   realloc((p), (sz))
-#  define IDRIS2_FREE(p)          free(p)
+#include <stdlib.h>
+#define IDRIS2_MALLOC(sz) malloc(sz)
+#define IDRIS2_REALLOC(p, sz) realloc((p), (sz))
+#define IDRIS2_FREE(p) free(p)
 #endif
 
 #ifndef IDRIS2_ABORT
-#  include <stdlib.h>
-#  define IDRIS2_ABORT()          abort()
+#include <stdlib.h>
+#define IDRIS2_ABORT() abort()
 #endif
 
 /* -----------------------------------------------------------------------
@@ -73,11 +73,10 @@
  * -------------------------------------------------------------------- */
 
 #ifndef IDRIS2_WRITE_STDERR
-#  ifdef IDRIS2_NO_STDIO
-#    define IDRIS2_WRITE_STDERR(msg) ((void)(msg))
-#  else
-#    include <stdio.h>
-#    define IDRIS2_WRITE_STDERR(msg) fputs((msg), stderr)
-#  endif
+#ifdef IDRIS2_NO_STDIO
+#define IDRIS2_WRITE_STDERR(msg) ((void)(msg))
+#else
+#include <stdio.h>
+#define IDRIS2_WRITE_STDERR(msg) fputs((msg), stderr)
 #endif
-
+#endif

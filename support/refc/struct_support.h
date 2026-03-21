@@ -16,7 +16,8 @@
  * IDRIS2_FIELD_INT32 — int32_t  (Idris Int32)
  * …etc.
  * IDRIS2_FIELD_PTR   — void *   (Idris Ptr t / AnyPtr)
- * IDRIS2_FIELD_STRUCT — void *  (Idris Struct, field holds pointer to nested struct)
+ * IDRIS2_FIELD_STRUCT — void *  (Idris Struct, field holds pointer to nested
+ * struct)
  */
 typedef enum {
   IDRIS2_FIELD_INT,
@@ -36,17 +37,17 @@ typedef enum {
 } idris2_field_kind_t;
 
 typedef struct {
-  const char         *name;
-  size_t              offset;
+  const char *name;
+  size_t offset;
   idris2_field_kind_t kind;
-  const char         *struct_name; /* non-NULL only for IDRIS2_FIELD_STRUCT */
+  const char *struct_name; /* non-NULL only for IDRIS2_FIELD_STRUCT */
 } idris2_field_t;
 
 typedef struct {
-  const char      *name;
-  idris2_field_t  *fields; /* sentinel-terminated: last entry has name==NULL */
-  int              nfields;
-  size_t           size;
+  const char *name;
+  idris2_field_t *fields; /* sentinel-terminated: last entry has name==NULL */
+  int nfields;
+  size_t size;
 } idris2_struct_t;
 
 /* Register a struct descriptor.  Call once per struct type before any
@@ -55,10 +56,9 @@ void idris2_register_struct(idris2_struct_t *desc);
 
 /* External primitives called by generated Idris glue code. */
 Value *idris2_prim__getField(Value *struct_name, Value *_e1, Value *_e2,
-                              Value *struct_ptr,  Value *field_name,
-                              Value *_proof);
+                             Value *struct_ptr, Value *field_name,
+                             Value *_proof);
 
 Value *idris2_prim__setField(Value *struct_name, Value *_e1, Value *_e2,
-                              Value *struct_ptr,  Value *field_name,
-                              Value *_proof,
-                              Value *val,         Value *_world);
+                             Value *struct_ptr, Value *field_name,
+                             Value *_proof, Value *val, Value *_world);

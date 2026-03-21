@@ -3,7 +3,7 @@
 
 #include <stdarg.h>
 #ifndef IDRIS2_NO_STDIO
-#  include <stdio.h>
+#include <stdio.h>
 #endif
 
 void idris2_refc_verify_failed(const char *file, int line, const char *cond,
@@ -27,7 +27,10 @@ void idris2_refc_verify_failed(const char *file, int line, const char *cond,
   IDRIS2_WRITE_STDERR(message);
   IDRIS2_WRITE_STDERR("\n");
 #else
-  (void)file; (void)line; (void)cond; (void)fmt;
+  (void)file;
+  (void)line;
+  (void)cond;
+  (void)fmt;
   IDRIS2_WRITE_STDERR("Idris2 runtime assertion failed\n");
 #endif
   IDRIS2_ABORT();

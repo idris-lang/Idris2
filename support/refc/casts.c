@@ -282,7 +282,8 @@ static uint64_t mpz_get_lsb(mpz_t i, mp_bitcnt_t b) {
 }
 #else
 static uint64_t int64_get_lsb(int64_t i, unsigned b) {
-  if (b >= 64) return (uint64_t)i;
+  if (b >= 64)
+    return (uint64_t)i;
   return (uint64_t)i & ((1ULL << b) - 1);
 }
 #endif

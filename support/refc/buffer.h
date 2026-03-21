@@ -60,12 +60,14 @@ uint64_t getBufferUIntLE(void *buffer, int loc, size_t len);
 #define getBufferUInt64LE(b, l) ((uint64_t)getBufferUIntLE(b, l, 8))
 
 #define getBufferByte(b, l) ((int64_t)getBufferUIntLE(b, l, 1))
-#define getBufferInt8(b, l)   ((int8_t)getBufferUIntLE(b, l, 1))
+#define getBufferInt8(b, l) ((int8_t)getBufferUIntLE(b, l, 1))
 #define getBufferInt16LE(b, l) ((int16_t)getBufferUIntLE(b, l, 2))
 #define getBufferInt32LE(b, l) ((int32_t)getBufferUIntLE(b, l, 4))
 #define getBufferInt64LE(b, l) ((int64_t)getBufferUIntLE(b, l, 8))
 
-#define setBufferInt8(b, l, v) \
-  do { setBufferUIntLE(b, l, (uint64_t)(uint8_t)(int8_t)(v), 1); } while (0)
+#define setBufferInt8(b, l, v)                                                 \
+  do {                                                                         \
+    setBufferUIntLE(b, l, (uint64_t)(uint8_t)(int8_t)(v), 1);                  \
+  } while (0)
 double getBufferDouble(void *buffer, int loc);
 char *getBufferString(void *buffer, int loc, int len);

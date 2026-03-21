@@ -2,7 +2,7 @@
 
 #include "cBackend.h"
 #ifndef IDRIS2_NO_GMP
-#  include <gmp.h>
+#include <gmp.h>
 #endif
 #include <stdio.h>
 
@@ -13,9 +13,11 @@
  *   - above the Unicode maximum 0x10FFFF
  * Otherwise returns the codepoint unchanged. */
 static inline uint32_t idris2_validCodePoint(uint32_t cp) {
-    if (cp > 0x10FFFFu) return 0u;
-    if (cp >= 0xD800u && cp <= 0xDFFFu) return 0u;
-    return cp;
+  if (cp > 0x10FFFFu)
+    return 0u;
+  if (cp >= 0xD800u && cp <= 0xDFFFu)
+    return 0u;
+  return cp;
 }
 
 #define idris2_cast_Int8_to_Bits8(x) (x)
@@ -33,7 +35,8 @@ Value *idris2_cast_Int8_to_Integer(Value *);
 #define idris2_cast_Int8_to_Double(x)                                          \
   (idris2_mkDouble((double)idris2_vp_to_Int8(x)))
 #define idris2_cast_Int8_to_Char(x)                                            \
-  (idris2_mkChar(idris2_validCodePoint((uint32_t)(int32_t)idris2_vp_to_Int8(x))))
+  (idris2_mkChar(                                                              \
+      idris2_validCodePoint((uint32_t)(int32_t)idris2_vp_to_Int8(x))))
 Value *idris2_cast_Int8_to_String(Value *);
 
 #define idris2_cast_Int16_to_Bits8(x)                                          \
@@ -51,7 +54,8 @@ Value *idris2_cast_Int16_to_Integer(Value *);
 #define idris2_cast_Int16_to_Double(x)                                         \
   (idris2_mkDouble((double)idris2_vp_to_Int16(x)))
 #define idris2_cast_Int16_to_Char(x)                                           \
-  (idris2_mkChar(idris2_validCodePoint((uint32_t)(int32_t)idris2_vp_to_Int16(x))))
+  (idris2_mkChar(                                                              \
+      idris2_validCodePoint((uint32_t)(int32_t)idris2_vp_to_Int16(x))))
 Value *idris2_cast_Int16_to_String(Value *);
 
 #define idris2_cast_Int32_to_Bits8(x)                                          \
@@ -71,7 +75,8 @@ Value *idris2_cast_Int32_to_Integer(Value *);
 #define idris2_cast_Int32_to_Double(x)                                         \
   (idris2_mkDouble((double)idris2_vp_to_Int32(x)))
 #define idris2_cast_Int32_to_Char(x)                                           \
-  (idris2_mkChar(idris2_validCodePoint((uint32_t)(int32_t)idris2_vp_to_Int32(x))))
+  (idris2_mkChar(                                                              \
+      idris2_validCodePoint((uint32_t)(int32_t)idris2_vp_to_Int32(x))))
 Value *idris2_cast_Int32_to_String(Value *);
 
 #define idris2_cast_Int64_to_Bits8(x)                                          \
@@ -93,7 +98,8 @@ Value *idris2_cast_Int64_to_Integer(Value *);
 #define idris2_cast_Int64_to_Double(x)                                         \
   (idris2_mkDouble((double)idris2_vp_to_Int64(x)))
 #define idris2_cast_Int64_to_Char(x)                                           \
-  (idris2_mkChar(idris2_validCodePoint((uint32_t)(int64_t)idris2_vp_to_Int64(x))))
+  (idris2_mkChar(                                                              \
+      idris2_validCodePoint((uint32_t)(int64_t)idris2_vp_to_Int64(x))))
 Value *idris2_cast_Int64_to_String(Value *);
 
 #define idris2_cast_Double_to_Bits8(x)                                         \
@@ -118,7 +124,8 @@ Value *idris2_cast_Int64_to_String(Value *);
   (idris2_mkInt64((int64_t)idris2_vp_to_Double(x)))
 Value *idris2_cast_Double_to_Integer(Value *);
 #define idris2_cast_Double_to_Char(x)                                          \
-  (idris2_mkChar(idris2_validCodePoint((uint32_t)(int64_t)idris2_vp_to_Double(x))))
+  (idris2_mkChar(                                                              \
+      idris2_validCodePoint((uint32_t)(int64_t)idris2_vp_to_Double(x))))
 Value *idris2_cast_Double_to_String(Value *);
 
 #define idris2_cast_Char_to_Bits8(x)                                           \
@@ -152,8 +159,7 @@ Value *idris2_cast_String_to_Int32(Value *);
 Value *idris2_cast_String_to_Int64(Value *);
 Value *idris2_cast_String_to_Integer(Value *);
 Value *idris2_cast_String_to_Double(Value *);
-#define idris2_cast_String_to_Char(x)                                          \
-  (idris2_cast_String_to_Char_impl(x))
+#define idris2_cast_String_to_Char(x) (idris2_cast_String_to_Char_impl(x))
 Value *idris2_cast_String_to_Char_impl(Value *s);
 
 #define idris2_cast_Bits8_to_Bits16(x) (x)

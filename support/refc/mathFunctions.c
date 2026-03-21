@@ -17,7 +17,8 @@ Value *idris2_add_Integer(Value *x, Value *y) {
 #if defined(__GNUC__) || defined(__clang__)
   IDRIS2_REFC_VERIFY(!__builtin_add_overflow(xi, yi, &result),
                      "Integer addition overflow (IDRIS2_NO_GMP): "
-                     "%" PRId64 " + %" PRId64, xi, yi);
+                     "%" PRId64 " + %" PRId64,
+                     xi, yi);
 #else
   /* Portable check: overflow iff both operands share a sign that the
    * result does not. */
@@ -42,7 +43,8 @@ Value *idris2_sub_Integer(Value *x, Value *y) {
 #if defined(__GNUC__) || defined(__clang__)
   IDRIS2_REFC_VERIFY(!__builtin_sub_overflow(xi, yi, &result),
                      "Integer subtraction overflow (IDRIS2_NO_GMP): "
-                     "%" PRId64 " - %" PRId64, xi, yi);
+                     "%" PRId64 " - %" PRId64,
+                     xi, yi);
 #else
   /* Portable check: overflow iff operands differ in sign and the result
    * differs in sign from the minuend. */
@@ -82,7 +84,8 @@ Value *idris2_mul_Integer(Value *x, Value *y) {
 #if defined(__GNUC__) || defined(__clang__)
   IDRIS2_REFC_VERIFY(!__builtin_mul_overflow(xi, yi, &result),
                      "Integer multiplication overflow (IDRIS2_NO_GMP): "
-                     "%" PRId64 " * %" PRId64, xi, yi);
+                     "%" PRId64 " * %" PRId64,
+                     xi, yi);
 #else
   /* Portable fallback: detect via divide-and-check. */
   result = xi * yi;
@@ -154,7 +157,8 @@ Value *idris2_div_Integer(Value *x, Value *y) {
   int64_t xi = ((Value_Integer *)x)->i;
   int64_t yi = ((Value_Integer *)y)->i;
   int64_t rem = xi % yi;
-  if (rem < 0) rem += (yi < 0) ? -yi : yi;
+  if (rem < 0)
+    rem += (yi < 0) ? -yi : yi;
   retVal->i = (xi - rem) / yi;
 #endif
   return (Value *)retVal;
@@ -194,7 +198,8 @@ Value *idris2_mod_Integer(Value *x, Value *y) {
   int64_t xi = ((Value_Integer *)x)->i;
   int64_t yi = ((Value_Integer *)y)->i;
   int64_t rem = xi % yi;
-  if (rem < 0) rem += (yi < 0) ? -yi : yi;
+  if (rem < 0)
+    rem += (yi < 0) ? -yi : yi;
   retVal->i = rem;
 #endif
   return (Value *)retVal;
@@ -221,7 +226,7 @@ Value *idris2_shiftr_Integer(Value *x, Value *y) {
   mpz_fdiv_q_2exp(retVal->i, ((Value_Integer *)x)->i, cnt);
 #else
   int64_t cnt = ((Value_Integer *)y)->i;
-  int64_t xi  = ((Value_Integer *)x)->i;
+  int64_t xi = ((Value_Integer *)x)->i;
   retVal->i = (cnt <= 0) ? xi : (cnt >= 63) ? (xi < 0 ? -1 : 0) : xi >> cnt;
 #endif
   return (Value *)retVal;

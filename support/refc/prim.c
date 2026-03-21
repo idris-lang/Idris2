@@ -1,6 +1,6 @@
 #include "prim.h"
-#include "refc_util.h"
 #include "idris2_config.h"
+#include "refc_util.h"
 #include <string.h>
 
 Value *idris2_Data_IORef_prim__newIORef(Value *IDRIS2_UNUSED erased,
@@ -13,8 +13,7 @@ Value *idris2_Data_IORef_prim__newIORef(Value *IDRIS2_UNUSED erased,
 }
 
 Value *idris2_Data_IORef_prim__writeIORef(Value *IDRIS2_UNUSED erased,
-                                          Value *_ioref,
-                                          Value *new_value,
+                                          Value *_ioref, Value *new_value,
                                           Value *IDRIS2_UNUSED _world) {
   Value_IORef *ioref = (Value_IORef *)_ioref;
   idris2_newReference(new_value);
@@ -74,8 +73,7 @@ Value *idris2_crash(Value *msg) {
 // // -----------------------------------
 
 Value *idris2_Data_IOArray_Prims_prim__newArray(Value *IDRIS2_UNUSED erased,
-                                                Value *_length,
-                                                Value *v,
+                                                Value *_length, Value *v,
                                                 Value *IDRIS2_UNUSED _word) {
   int length = idris2_vp_to_Int64(_length);
   Value_Array *a = idris2_makeArray(length);
@@ -88,8 +86,8 @@ Value *idris2_Data_IOArray_Prims_prim__newArray(Value *IDRIS2_UNUSED erased,
 }
 
 Value *idris2_Data_IOArray_Prims_prim__arraySet(Value *IDRIS2_UNUSED erased,
-                                                Value *_array,
-                                                Value *index, Value *v,
+                                                Value *_array, Value *index,
+                                                Value *v,
                                                 Value *IDRIS2_UNUSED _word) {
   Value_Array *a = (Value_Array *)_array;
   idris2_removeReference(a->arr[idris2_vp_to_Int64(index)]);
@@ -143,7 +141,8 @@ Value *System_Concurrency_Raw_prim__makeMutex(Value *IDRIS2_UNUSED _world) {
 // %foreign "scheme:blodwen-lock"
 // prim__mutexAcquire : Mutex -> PrimIO ()
 // using pthread_mutex_lock(pthread_mutex_t *mutex)
-Value *System_Concurrency_Raw_prim__mutexAcquire(Value *_mutex, Value *IDRIS2_UNUSED _world) {
+Value *System_Concurrency_Raw_prim__mutexAcquire(Value *_mutex,
+                                                 Value *IDRIS2_UNUSED _world) {
   int r = pthread_mutex_lock(((Value_Mutex *)_mutex)->mutex);
   IDRIS2_REFC_VERIFY(!r, "pthread_mutex_lock failed: %s", strerror(r));
   return NULL;
@@ -152,7 +151,8 @@ Value *System_Concurrency_Raw_prim__mutexAcquire(Value *_mutex, Value *IDRIS2_UN
 // %foreign "scheme:blodwen-unlock"
 // prim__mutexRelease : Mutex -> PrimIO ()
 // using int pthread_mutex_unlock(pthread_mutex_t *mutex)
-Value *System_Concurrency_Raw_prim__mutexRelease(Value *_mutex, Value *IDRIS2_UNUSED _world) {
+Value *System_Concurrency_Raw_prim__mutexRelease(Value *_mutex,
+                                                 Value *IDRIS2_UNUSED _world) {
   int r = pthread_mutex_unlock(((Value_Mutex *)_mutex)->mutex);
   IDRIS2_REFC_VERIFY(!r, "pthread_mutex_unlock failed: %s", strerror(r));
   return NULL;
@@ -194,10 +194,9 @@ Value *System_Concurrency_Raw_prim__conditionWait(Value *_condition,
 // prim__conditionWaitTimeout : Condition -> Mutex -> Int -> PrimIO ()
 // using int pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t
 // *mutex, const struct timespec *abstime)
-Value *System_Concurrency_Raw_prim__conditionWaitTimeout(Value *_condition,
-                                                         Value *_mutex,
-                                                         Value *_timeout,
-                                                         Value *IDRIS2_UNUSED _world) {
+Value *System_Concurrency_Raw_prim__conditionWaitTimeout(
+    Value *_condition, Value *_mutex, Value *_timeout,
+    Value *IDRIS2_UNUSED _world) {
   Value_Condition *cond = (Value_Condition *)_condition;
   Value_Mutex *mutex = (Value_Mutex *)_mutex;
   int64_t timeout = idris2_vp_to_Int64(_timeout);
@@ -212,8 +211,9 @@ Value *System_Concurrency_Raw_prim__conditionWaitTimeout(Value *_condition,
 // %foreign "scheme:blodwen-condition-signal"
 // prim__conditionSignal : Condition -> PrimIO ()
 // using int pthread_cond_signal(pthread_cond_t *cond)
-Value *System_Concurrency_Raw_prim__conditionSignal(Value *_condition,
-                                                    Value *IDRIS2_UNUSED _world) {
+Value *
+System_Concurrency_Raw_prim__conditionSignal(Value *_condition,
+                                             Value *IDRIS2_UNUSED _world) {
   Value_Condition *cond = (Value_Condition *)_condition;
   int r = pthread_cond_signal(cond->cond);
   IDRIS2_REFC_VERIFY(!r, "pthread_cond_signal failed: %s", strerror(r));
@@ -223,8 +223,9 @@ Value *System_Concurrency_Raw_prim__conditionSignal(Value *_condition,
 // %foreign "scheme:blodwen-condition-broadcast"
 // prim__conditionBroadcast : Condition -> PrimIO ()
 // using int pthread_cond_broadcast(pthread_cond_t *cond)
-Value *System_Concurrency_Raw_prim__conditionBroadcast(Value *_condition,
-                                                       Value *IDRIS2_UNUSED _mutex) {
+Value *
+System_Concurrency_Raw_prim__conditionBroadcast(Value *_condition,
+                                                Value *IDRIS2_UNUSED _mutex) {
   Value_Condition *cond = (Value_Condition *)_condition;
   int r = pthread_cond_broadcast(cond->cond);
   IDRIS2_REFC_VERIFY(!r, "pthread_cond_broadcast failed: %s", strerror(r));

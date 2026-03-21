@@ -5,7 +5,7 @@
 #include "utf8.h"
 
 /* stringLength returns the number of Unicode code points, not bytes. */
-#define stringLength(x) \
+#define stringLength(x)                                                        \
   (idris2_mkInt64((int64_t)utf8_cp_count(((Value_String *)(x))->str)))
 #define head(x) (idris2_cast_String_to_Char(x))
 Value *tail(Value *str);

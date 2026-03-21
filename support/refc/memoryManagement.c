@@ -214,8 +214,8 @@ Value *idris2_newReference(Value *source) {
   IDRIS2_INC_MEMSTAT(n_newReference);
   // note that we explicitly allow NULL as source (for erased arguments)
   if (source && !idris2_vp_is_unboxed(source) &&
-      atomic_load_explicit(&source->header.refCounter,
-                           memory_order_relaxed) != IDRIS2_VP_REFCOUNTER_MAX) {
+      atomic_load_explicit(&source->header.refCounter, memory_order_relaxed) !=
+          IDRIS2_VP_REFCOUNTER_MAX) {
     IDRIS2_INC_MEMSTAT(n_actualNewReference);
     uint16_t prev = atomic_fetch_add_explicit(&source->header.refCounter, 1,
                                               memory_order_relaxed);
@@ -239,46 +239,47 @@ Value *idris2_newReference(Value *source) {
 //   WHITE  - confirmed garbage (all refs internal to cycle)
 //   PURPLE - potential cycle root (refcount fell but did not reach 0)
 
-#define CC_BLACK   0u
-#define CC_GREY    1u
-#define CC_WHITE   2u
-#define CC_PURPLE  3u
+#define CC_BLACK 0u
+#define CC_GREY 1u
+#define CC_WHITE 2u
+#define CC_PURPLE 3u
 
-#define CC_COLOUR_MASK  0x03u
+#define CC_COLOUR_MASK 0x03u
 #define CC_BUFFERED_BIT 0x04u
 
-#define CC_GET_COLOUR(v)    ((v)->header.reserved & CC_COLOUR_MASK)
-#define CC_SET_COLOUR(v, c) \
-    ((v)->header.reserved = (uint8_t)(((v)->header.reserved & ~CC_COLOUR_MASK) | (c)))
-#define CC_GET_BUFFERED(v)  ((v)->header.reserved & CC_BUFFERED_BIT)
-#define CC_SET_BUFFERED(v)  ((v)->header.reserved |= CC_BUFFERED_BIT)
-#define CC_CLR_BUFFERED(v)  ((v)->header.reserved &= (uint8_t)~CC_BUFFERED_BIT)
+#define CC_GET_COLOUR(v) ((v)->header.reserved & CC_COLOUR_MASK)
+#define CC_SET_COLOUR(v, c)                                                    \
+  ((v)->header.reserved =                                                      \
+       (uint8_t)(((v)->header.reserved & ~CC_COLOUR_MASK) | (c)))
+#define CC_GET_BUFFERED(v) ((v)->header.reserved & CC_BUFFERED_BIT)
+#define CC_SET_BUFFERED(v) ((v)->header.reserved |= CC_BUFFERED_BIT)
+#define CC_CLR_BUFFERED(v) ((v)->header.reserved &= (uint8_t)~CC_BUFFERED_BIT)
 
 /* Immortal values (refCounter == UINT16_MAX) may reside in read-only memory
  * (e.g. predefined constants in .rodata on macOS/arm64).  Any attempt to
  * atomically modify their refCounter causes EXC_BAD_ACCESS / Bus error.
  * These helpers perform the modification only for non-immortal values. */
-#define CC_CHILD_DEC(c)                                                         \
-    do {                                                                        \
-        if (atomic_load_explicit(&(c)->header.refCounter,                       \
-                                 memory_order_relaxed) != IDRIS2_VP_REFCOUNTER_MAX) \
-            atomic_fetch_sub_explicit(&(c)->header.refCounter, 1,               \
-                                      memory_order_relaxed);                    \
-    } while (0)
-#define CC_CHILD_INC(c)                                                         \
-    do {                                                                        \
-        if (atomic_load_explicit(&(c)->header.refCounter,                       \
-                                 memory_order_relaxed) != IDRIS2_VP_REFCOUNTER_MAX) \
-            atomic_fetch_add_explicit(&(c)->header.refCounter, 1,               \
-                                      memory_order_relaxed);                    \
-    } while (0)
+#define CC_CHILD_DEC(c)                                                        \
+  do {                                                                         \
+    if (atomic_load_explicit(&(c)->header.refCounter, memory_order_relaxed) != \
+        IDRIS2_VP_REFCOUNTER_MAX)                                              \
+      atomic_fetch_sub_explicit(&(c)->header.refCounter, 1,                    \
+                                memory_order_relaxed);                         \
+  } while (0)
+#define CC_CHILD_INC(c)                                                        \
+  do {                                                                         \
+    if (atomic_load_explicit(&(c)->header.refCounter, memory_order_relaxed) != \
+        IDRIS2_VP_REFCOUNTER_MAX)                                              \
+      atomic_fetch_add_explicit(&(c)->header.refCounter, 1,                    \
+                                memory_order_relaxed);                         \
+  } while (0)
 
 // Trigger a collection run when this many roots have accumulated.
 #define CC_ROOTS_THRESHOLD 256
 
-static Value **cc_roots     = NULL;
-static size_t  cc_roots_len = 0;
-static size_t  cc_roots_cap = 0;
+static Value **cc_roots = NULL;
+static size_t cc_roots_len = 0;
+static size_t cc_roots_cap = 0;
 
 /* Nesting depth of idris2_removeReference.  The cycle collector must only be
  * invoked at depth 1 (the outermost call), never from within a recursive free
@@ -288,38 +289,40 @@ static size_t  cc_roots_cap = 0;
 static int idris2_removeRef_depth = 0;
 
 static void cc_roots_push(Value *v) {
-    if (cc_roots_len == cc_roots_cap) {
-        cc_roots_cap = cc_roots_cap ? cc_roots_cap * 2 : 64;
-        cc_roots = (Value **)IDRIS2_REALLOC(cc_roots, cc_roots_cap * sizeof(Value *));
-        IDRIS2_REFC_VERIFY(cc_roots != NULL, "cc_roots realloc failed");
-    }
-    cc_roots[cc_roots_len++] = v;
+  if (cc_roots_len == cc_roots_cap) {
+    cc_roots_cap = cc_roots_cap ? cc_roots_cap * 2 : 64;
+    cc_roots =
+        (Value **)IDRIS2_REALLOC(cc_roots, cc_roots_cap * sizeof(Value *));
+    IDRIS2_REFC_VERIFY(cc_roots != NULL, "cc_roots realloc failed");
+  }
+  cc_roots[cc_roots_len++] = v;
 }
 
 // Only objects whose tag kind can contain Value* children can form cycles.
 static bool cc_can_be_root(Value *v) {
-    switch (v->header.tag) {
-    case CLOSURE_TAG:
-    case CONSTRUCTOR_TAG:
-    case IOREF_TAG:
-    case ARRAY_TAG:
-    case GC_POINTER_TAG:
-        return true;
-    default:
-        return false;
-    }
+  switch (v->header.tag) {
+  case CLOSURE_TAG:
+  case CONSTRUCTOR_TAG:
+  case IOREF_TAG:
+  case ARRAY_TAG:
+  case GC_POINTER_TAG:
+    return true;
+  default:
+    return false;
+  }
 }
 
 // Called when an object's refcount was decremented but did not reach 0.
 static void possibleCycleRoot(Value *v) {
-    if (!cc_can_be_root(v)) return;
-    if (CC_GET_COLOUR(v) != CC_PURPLE) {
-        CC_SET_COLOUR(v, CC_PURPLE);
-        if (!CC_GET_BUFFERED(v)) {
-            CC_SET_BUFFERED(v);
-            cc_roots_push(v);
-        }
+  if (!cc_can_be_root(v))
+    return;
+  if (CC_GET_COLOUR(v) != CC_PURPLE) {
+    CC_SET_COLOUR(v, CC_PURPLE);
+    if (!CC_GET_BUFFERED(v)) {
+      CC_SET_BUFFERED(v);
+      cc_roots_push(v);
     }
+  }
 }
 
 // ---- Phase 1: MarkGrey -------------------------------------------------
@@ -327,169 +330,190 @@ static void possibleCycleRoot(Value *v) {
 // decrementing child refcounts and marking every reachable node grey.
 
 static void markGrey(Value *v) {
-    if (!v || idris2_vp_is_unboxed(v)) return;
-    if (v->header.refCounter == IDRIS2_VP_REFCOUNTER_MAX) return;
-    if (CC_GET_COLOUR(v) == CC_GREY) return;
-    CC_SET_COLOUR(v, CC_GREY);
-    switch (v->header.tag) {
-    case CLOSURE_TAG: {
-        Value_Closure *cl = (Value_Closure *)v;
-        for (int i = 0; i < cl->filled; i++) {
-            Value *c = cl->args[i];
-            if (!c || idris2_vp_is_unboxed(c)) continue;
-            CC_CHILD_DEC(c);
-            markGrey(c);
-        }
-        break;
+  if (!v || idris2_vp_is_unboxed(v))
+    return;
+  if (v->header.refCounter == IDRIS2_VP_REFCOUNTER_MAX)
+    return;
+  if (CC_GET_COLOUR(v) == CC_GREY)
+    return;
+  CC_SET_COLOUR(v, CC_GREY);
+  switch (v->header.tag) {
+  case CLOSURE_TAG: {
+    Value_Closure *cl = (Value_Closure *)v;
+    for (int i = 0; i < cl->filled; i++) {
+      Value *c = cl->args[i];
+      if (!c || idris2_vp_is_unboxed(c))
+        continue;
+      CC_CHILD_DEC(c);
+      markGrey(c);
     }
-    case CONSTRUCTOR_TAG: {
-        Value_Constructor *co = (Value_Constructor *)v;
-        for (int i = 0; i < co->total; i++) {
-            Value *c = co->args[i];
-            if (!c || idris2_vp_is_unboxed(c)) continue;
-            CC_CHILD_DEC(c);
-            markGrey(c);
-        }
-        break;
+    break;
+  }
+  case CONSTRUCTOR_TAG: {
+    Value_Constructor *co = (Value_Constructor *)v;
+    for (int i = 0; i < co->total; i++) {
+      Value *c = co->args[i];
+      if (!c || idris2_vp_is_unboxed(c))
+        continue;
+      CC_CHILD_DEC(c);
+      markGrey(c);
     }
-    case IOREF_TAG: {
-        Value *c = ((Value_IORef *)v)->v;
-        if (c && !idris2_vp_is_unboxed(c)) {
-            CC_CHILD_DEC(c);
-            markGrey(c);
-        }
-        break;
+    break;
+  }
+  case IOREF_TAG: {
+    Value *c = ((Value_IORef *)v)->v;
+    if (c && !idris2_vp_is_unboxed(c)) {
+      CC_CHILD_DEC(c);
+      markGrey(c);
     }
-    case ARRAY_TAG: {
-        Value_Array *a = (Value_Array *)v;
-        for (int i = 0; i < a->capacity; i++) {
-            Value *c = a->arr[i];
-            if (!c || idris2_vp_is_unboxed(c)) continue;
-            CC_CHILD_DEC(c);
-            markGrey(c);
-        }
-        break;
+    break;
+  }
+  case ARRAY_TAG: {
+    Value_Array *a = (Value_Array *)v;
+    for (int i = 0; i < a->capacity; i++) {
+      Value *c = a->arr[i];
+      if (!c || idris2_vp_is_unboxed(c))
+        continue;
+      CC_CHILD_DEC(c);
+      markGrey(c);
     }
-    case GC_POINTER_TAG: {
-        Value_GCPointer *gcp = (Value_GCPointer *)v;
-        if (gcp->p) {
-            CC_CHILD_DEC((Value *)gcp->p);
-            markGrey((Value *)gcp->p);
-        }
-        if (gcp->onCollectFct) {
-            CC_CHILD_DEC((Value *)gcp->onCollectFct);
-            markGrey((Value *)gcp->onCollectFct);
-        }
-        break;
+    break;
+  }
+  case GC_POINTER_TAG: {
+    Value_GCPointer *gcp = (Value_GCPointer *)v;
+    if (gcp->p) {
+      CC_CHILD_DEC((Value *)gcp->p);
+      markGrey((Value *)gcp->p);
     }
-    default:
-        break;
+    if (gcp->onCollectFct) {
+      CC_CHILD_DEC((Value *)gcp->onCollectFct);
+      markGrey((Value *)gcp->onCollectFct);
     }
+    break;
+  }
+  default:
+    break;
+  }
 }
 
 // ---- Phase 2a: ScanBlack -----------------------------------------------
 // Restore refcounts for objects that are still externally referenced.
 
 static void scanBlack(Value *v) {
-    if (!v || idris2_vp_is_unboxed(v)) return;
-    if (v->header.refCounter == IDRIS2_VP_REFCOUNTER_MAX) return;
-    CC_SET_COLOUR(v, CC_BLACK);
-    switch (v->header.tag) {
-    case CLOSURE_TAG: {
-        Value_Closure *cl = (Value_Closure *)v;
-        for (int i = 0; i < cl->filled; i++) {
-            Value *c = cl->args[i];
-            if (!c || idris2_vp_is_unboxed(c)) continue;
-            CC_CHILD_INC(c);
-            if (CC_GET_COLOUR(c) != CC_BLACK) scanBlack(c);
-        }
-        break;
+  if (!v || idris2_vp_is_unboxed(v))
+    return;
+  if (v->header.refCounter == IDRIS2_VP_REFCOUNTER_MAX)
+    return;
+  CC_SET_COLOUR(v, CC_BLACK);
+  switch (v->header.tag) {
+  case CLOSURE_TAG: {
+    Value_Closure *cl = (Value_Closure *)v;
+    for (int i = 0; i < cl->filled; i++) {
+      Value *c = cl->args[i];
+      if (!c || idris2_vp_is_unboxed(c))
+        continue;
+      CC_CHILD_INC(c);
+      if (CC_GET_COLOUR(c) != CC_BLACK)
+        scanBlack(c);
     }
-    case CONSTRUCTOR_TAG: {
-        Value_Constructor *co = (Value_Constructor *)v;
-        for (int i = 0; i < co->total; i++) {
-            Value *c = co->args[i];
-            if (!c || idris2_vp_is_unboxed(c)) continue;
-            CC_CHILD_INC(c);
-            if (CC_GET_COLOUR(c) != CC_BLACK) scanBlack(c);
-        }
-        break;
+    break;
+  }
+  case CONSTRUCTOR_TAG: {
+    Value_Constructor *co = (Value_Constructor *)v;
+    for (int i = 0; i < co->total; i++) {
+      Value *c = co->args[i];
+      if (!c || idris2_vp_is_unboxed(c))
+        continue;
+      CC_CHILD_INC(c);
+      if (CC_GET_COLOUR(c) != CC_BLACK)
+        scanBlack(c);
     }
-    case IOREF_TAG: {
-        Value *c = ((Value_IORef *)v)->v;
-        if (c && !idris2_vp_is_unboxed(c)) {
-            CC_CHILD_INC(c);
-            if (CC_GET_COLOUR(c) != CC_BLACK) scanBlack(c);
-        }
-        break;
+    break;
+  }
+  case IOREF_TAG: {
+    Value *c = ((Value_IORef *)v)->v;
+    if (c && !idris2_vp_is_unboxed(c)) {
+      CC_CHILD_INC(c);
+      if (CC_GET_COLOUR(c) != CC_BLACK)
+        scanBlack(c);
     }
-    case ARRAY_TAG: {
-        Value_Array *a = (Value_Array *)v;
-        for (int i = 0; i < a->capacity; i++) {
-            Value *c = a->arr[i];
-            if (!c || idris2_vp_is_unboxed(c)) continue;
-            CC_CHILD_INC(c);
-            if (CC_GET_COLOUR(c) != CC_BLACK) scanBlack(c);
-        }
-        break;
+    break;
+  }
+  case ARRAY_TAG: {
+    Value_Array *a = (Value_Array *)v;
+    for (int i = 0; i < a->capacity; i++) {
+      Value *c = a->arr[i];
+      if (!c || idris2_vp_is_unboxed(c))
+        continue;
+      CC_CHILD_INC(c);
+      if (CC_GET_COLOUR(c) != CC_BLACK)
+        scanBlack(c);
     }
-    case GC_POINTER_TAG: {
-        Value_GCPointer *gcp = (Value_GCPointer *)v;
-        if (gcp->p) {
-            CC_CHILD_INC((Value *)gcp->p);
-            if (CC_GET_COLOUR((Value *)gcp->p) != CC_BLACK) scanBlack((Value *)gcp->p);
-        }
-        if (gcp->onCollectFct) {
-            CC_CHILD_INC((Value *)gcp->onCollectFct);
-            if (CC_GET_COLOUR((Value *)gcp->onCollectFct) != CC_BLACK)
-                scanBlack((Value *)gcp->onCollectFct);
-        }
-        break;
+    break;
+  }
+  case GC_POINTER_TAG: {
+    Value_GCPointer *gcp = (Value_GCPointer *)v;
+    if (gcp->p) {
+      CC_CHILD_INC((Value *)gcp->p);
+      if (CC_GET_COLOUR((Value *)gcp->p) != CC_BLACK)
+        scanBlack((Value *)gcp->p);
     }
-    default:
-        break;
+    if (gcp->onCollectFct) {
+      CC_CHILD_INC((Value *)gcp->onCollectFct);
+      if (CC_GET_COLOUR((Value *)gcp->onCollectFct) != CC_BLACK)
+        scanBlack((Value *)gcp->onCollectFct);
     }
+    break;
+  }
+  default:
+    break;
+  }
 }
 
 // ---- Phase 2: Scan -----------------------------------------------------
 // Mark WHITE nodes whose refcount stayed at 0 (garbage); restore live ones.
 
 static void scan(Value *v) {
-    if (!v || idris2_vp_is_unboxed(v)) return;
-    if (CC_GET_COLOUR(v) != CC_GREY) return;
-    if (atomic_load_explicit(&v->header.refCounter, memory_order_relaxed) > 0) {
-        scanBlack(v);
-    } else {
-        CC_SET_COLOUR(v, CC_WHITE);
-        switch (v->header.tag) {
-        case CLOSURE_TAG: {
-            Value_Closure *cl = (Value_Closure *)v;
-            for (int i = 0; i < cl->filled; i++) scan(cl->args[i]);
-            break;
-        }
-        case CONSTRUCTOR_TAG: {
-            Value_Constructor *co = (Value_Constructor *)v;
-            for (int i = 0; i < co->total; i++) scan(co->args[i]);
-            break;
-        }
-        case IOREF_TAG:
-            scan(((Value_IORef *)v)->v);
-            break;
-        case ARRAY_TAG: {
-            Value_Array *a = (Value_Array *)v;
-            for (int i = 0; i < a->capacity; i++) scan(a->arr[i]);
-            break;
-        }
-        case GC_POINTER_TAG: {
-            Value_GCPointer *gcp = (Value_GCPointer *)v;
-            scan((Value *)gcp->p);
-            scan((Value *)gcp->onCollectFct);
-            break;
-        }
-        default:
-            break;
-        }
+  if (!v || idris2_vp_is_unboxed(v))
+    return;
+  if (CC_GET_COLOUR(v) != CC_GREY)
+    return;
+  if (atomic_load_explicit(&v->header.refCounter, memory_order_relaxed) > 0) {
+    scanBlack(v);
+  } else {
+    CC_SET_COLOUR(v, CC_WHITE);
+    switch (v->header.tag) {
+    case CLOSURE_TAG: {
+      Value_Closure *cl = (Value_Closure *)v;
+      for (int i = 0; i < cl->filled; i++)
+        scan(cl->args[i]);
+      break;
     }
+    case CONSTRUCTOR_TAG: {
+      Value_Constructor *co = (Value_Constructor *)v;
+      for (int i = 0; i < co->total; i++)
+        scan(co->args[i]);
+      break;
+    }
+    case IOREF_TAG:
+      scan(((Value_IORef *)v)->v);
+      break;
+    case ARRAY_TAG: {
+      Value_Array *a = (Value_Array *)v;
+      for (int i = 0; i < a->capacity; i++)
+        scan(a->arr[i]);
+      break;
+    }
+    case GC_POINTER_TAG: {
+      Value_GCPointer *gcp = (Value_GCPointer *)v;
+      scan((Value *)gcp->p);
+      scan((Value *)gcp->onCollectFct);
+      break;
+    }
+    default:
+      break;
+    }
+  }
 }
 
 // ---- Phase 3: CollectWhite ---------------------------------------------
@@ -497,96 +521,103 @@ static void scan(Value *v) {
 // Free non-Value internal resources of v, then free(v) itself.
 // Children have already been freed by the collectWhite recursion.
 static void freeValueDirect(Value *v) {
-    switch (v->header.tag) {
-    case INTEGER_TAG:
+  switch (v->header.tag) {
+  case INTEGER_TAG:
 #ifndef IDRIS2_NO_GMP
-        mpz_clear(((Value_Integer *)v)->i);
+    mpz_clear(((Value_Integer *)v)->i);
 #endif
-        break;
-    case STRING_TAG:
-        IDRIS2_FREE(((Value_String *)v)->str);
-        break;
-    case BUFFER_TAG:
-        IDRIS2_FREE(((Value_Buffer *)v)->buffer);
-        break;
-    case ARRAY_TAG:
-        // arr entries were freed by the collectWhite recursion; free the array itself.
-        IDRIS2_FREE(((Value_Array *)v)->arr);
-        break;
+    break;
+  case STRING_TAG:
+    IDRIS2_FREE(((Value_String *)v)->str);
+    break;
+  case BUFFER_TAG:
+    IDRIS2_FREE(((Value_Buffer *)v)->buffer);
+    break;
+  case ARRAY_TAG:
+    // arr entries were freed by the collectWhite recursion; free the array
+    // itself.
+    IDRIS2_FREE(((Value_Array *)v)->arr);
+    break;
 #ifndef IDRIS2_NO_THREADS
-    case MUTEX_TAG: {
-        Value_Mutex *m = (Value_Mutex *)v;
-        pthread_mutex_destroy(m->mutex);
-        IDRIS2_FREE(m->mutex);
-        break;
-    }
-    case CONDITION_TAG: {
-        Value_Condition *c = (Value_Condition *)v;
-        pthread_cond_destroy(c->cond);
-        IDRIS2_FREE(c->cond);
-        break;
-    }
-    case SEMAPHORE_TAG: {
-        Value_Semaphore *s = (Value_Semaphore *)v;
-        pthread_cond_destroy(&s->cond);
-        pthread_mutex_destroy(&s->mutex);
-        break;
-    }
-    case BARRIER_TAG: {
-        Value_Barrier *b = (Value_Barrier *)v;
-        pthread_cond_destroy(&b->cond);
-        pthread_mutex_destroy(&b->mutex);
-        break;
-    }
+  case MUTEX_TAG: {
+    Value_Mutex *m = (Value_Mutex *)v;
+    pthread_mutex_destroy(m->mutex);
+    IDRIS2_FREE(m->mutex);
+    break;
+  }
+  case CONDITION_TAG: {
+    Value_Condition *c = (Value_Condition *)v;
+    pthread_cond_destroy(c->cond);
+    IDRIS2_FREE(c->cond);
+    break;
+  }
+  case SEMAPHORE_TAG: {
+    Value_Semaphore *s = (Value_Semaphore *)v;
+    pthread_cond_destroy(&s->cond);
+    pthread_mutex_destroy(&s->mutex);
+    break;
+  }
+  case BARRIER_TAG: {
+    Value_Barrier *b = (Value_Barrier *)v;
+    pthread_cond_destroy(&b->cond);
+    pthread_mutex_destroy(&b->mutex);
+    break;
+  }
 #endif /* IDRIS2_NO_THREADS */
-    default:
-        break;
-    }
-    IDRIS2_FREE(v);
+  default:
+    break;
+  }
+  IDRIS2_FREE(v);
 }
 
 static void collectWhite(Value *v) {
-    if (!v || idris2_vp_is_unboxed(v)) return;
-    if (CC_GET_COLOUR(v) != CC_WHITE || CC_GET_BUFFERED(v)) return;
-    CC_SET_COLOUR(v, CC_BLACK); // prevent re-entry
+  if (!v || idris2_vp_is_unboxed(v))
+    return;
+  if (CC_GET_COLOUR(v) != CC_WHITE || CC_GET_BUFFERED(v))
+    return;
+  CC_SET_COLOUR(v, CC_BLACK); // prevent re-entry
 
-    // For GC_POINTER, invoke the finalizer before children are freed.
-    if (v->header.tag == GC_POINTER_TAG) {
-        Value_GCPointer *gcp = (Value_GCPointer *)v;
-        Value *c1 = idris2_apply_closure((Value *)gcp->onCollectFct, (Value *)gcp->p);
-        idris2_apply_closure(c1, NULL);
-    }
+  // For GC_POINTER, invoke the finalizer before children are freed.
+  if (v->header.tag == GC_POINTER_TAG) {
+    Value_GCPointer *gcp = (Value_GCPointer *)v;
+    Value *c1 =
+        idris2_apply_closure((Value *)gcp->onCollectFct, (Value *)gcp->p);
+    idris2_apply_closure(c1, NULL);
+  }
 
-    switch (v->header.tag) {
-    case CLOSURE_TAG: {
-        Value_Closure *cl = (Value_Closure *)v;
-        for (int i = 0; i < cl->filled; i++) collectWhite(cl->args[i]);
-        break;
-    }
-    case CONSTRUCTOR_TAG: {
-        Value_Constructor *co = (Value_Constructor *)v;
-        for (int i = 0; i < co->total; i++) collectWhite(co->args[i]);
-        break;
-    }
-    case IOREF_TAG:
-        collectWhite(((Value_IORef *)v)->v);
-        break;
-    case ARRAY_TAG: {
-        Value_Array *a = (Value_Array *)v;
-        for (int i = 0; i < a->capacity; i++) collectWhite(a->arr[i]);
-        break;
-    }
-    case GC_POINTER_TAG: {
-        Value_GCPointer *gcp = (Value_GCPointer *)v;
-        collectWhite((Value *)gcp->p);
-        collectWhite((Value *)gcp->onCollectFct);
-        break;
-    }
-    default:
-        break;
-    }
+  switch (v->header.tag) {
+  case CLOSURE_TAG: {
+    Value_Closure *cl = (Value_Closure *)v;
+    for (int i = 0; i < cl->filled; i++)
+      collectWhite(cl->args[i]);
+    break;
+  }
+  case CONSTRUCTOR_TAG: {
+    Value_Constructor *co = (Value_Constructor *)v;
+    for (int i = 0; i < co->total; i++)
+      collectWhite(co->args[i]);
+    break;
+  }
+  case IOREF_TAG:
+    collectWhite(((Value_IORef *)v)->v);
+    break;
+  case ARRAY_TAG: {
+    Value_Array *a = (Value_Array *)v;
+    for (int i = 0; i < a->capacity; i++)
+      collectWhite(a->arr[i]);
+    break;
+  }
+  case GC_POINTER_TAG: {
+    Value_GCPointer *gcp = (Value_GCPointer *)v;
+    collectWhite((Value *)gcp->p);
+    collectWhite((Value *)gcp->onCollectFct);
+    break;
+  }
+  default:
+    break;
+  }
 
-    freeValueDirect(v);
+  freeValueDirect(v);
 }
 
 // ---- cc_roots bookkeeping helpers -------------------------------------
@@ -596,62 +627,66 @@ static void collectWhite(Value *v) {
 // idris2_removeReference (e.g. the fast paths in idris2_trampoline /
 // idris2_tailcall_apply_closure).
 void idris2_cc_remove_if_buffered(Value *v) {
-    if (!v || idris2_vp_is_unboxed(v) || !CC_GET_BUFFERED(v)) return;
-    for (size_t i = 0; i < cc_roots_len; i++) {
-        if (cc_roots[i] == v) {
-            cc_roots[i] = cc_roots[cc_roots_len - 1];
-            cc_roots_len--;
-            break;
-        }
+  if (!v || idris2_vp_is_unboxed(v) || !CC_GET_BUFFERED(v))
+    return;
+  for (size_t i = 0; i < cc_roots_len; i++) {
+    if (cc_roots[i] == v) {
+      cc_roots[i] = cc_roots[cc_roots_len - 1];
+      cc_roots_len--;
+      break;
     }
-    CC_CLR_BUFFERED(v);
+  }
+  CC_CLR_BUFFERED(v);
 }
 
 // ---- Main entry point --------------------------------------------------
 
 void idris2_collectCycles(void) {
-    if (cc_roots_len == 0) return;
+  if (cc_roots_len == 0)
+    return;
 
-    // Phase 1 (MarkRoots + MarkGrey):
-    //   - PURPLE roots: begin trial deletion via markGrey.
-    //   - GREY roots: already visited by markGrey() as a child of another root
-    //     in this same pass.  Leave them in cc_roots so Phase 2 (scan) can
-    //     inspect their trial-decremented refcount and either restore them via
-    //     scanBlack or mark them WHITE for collection.  Do NOT free them here —
-    //     their rc was decremented by the parent's markGrey traversal and may
-    //     still be restored to > 0 by a subsequent scanBlack call.
-    //   - All other colours (BLACK/WHITE): stale entry — the object was already
-    //     removed from cc_roots and freed by removeReference when its rc reached
-    //     0.  This branch should be unreachable now, but guard it defensively.
-    for (size_t i = 0; i < cc_roots_len; i++) {
-        Value *v = cc_roots[i];
-        if (CC_GET_COLOUR(v) == CC_PURPLE) {
-            markGrey(v);
-        }
-        // GREY: leave in cc_roots for Phase 2 scan() to handle.
-        // (BLACK/WHITE entries are removed by removeReference before they get here.)
+  // Phase 1 (MarkRoots + MarkGrey):
+  //   - PURPLE roots: begin trial deletion via markGrey.
+  //   - GREY roots: already visited by markGrey() as a child of another root
+  //     in this same pass.  Leave them in cc_roots so Phase 2 (scan) can
+  //     inspect their trial-decremented refcount and either restore them via
+  //     scanBlack or mark them WHITE for collection.  Do NOT free them here —
+  //     their rc was decremented by the parent's markGrey traversal and may
+  //     still be restored to > 0 by a subsequent scanBlack call.
+  //   - All other colours (BLACK/WHITE): stale entry — the object was already
+  //     removed from cc_roots and freed by removeReference when its rc reached
+  //     0.  This branch should be unreachable now, but guard it defensively.
+  for (size_t i = 0; i < cc_roots_len; i++) {
+    Value *v = cc_roots[i];
+    if (CC_GET_COLOUR(v) == CC_PURPLE) {
+      markGrey(v);
     }
+    // GREY: leave in cc_roots for Phase 2 scan() to handle.
+    // (BLACK/WHITE entries are removed by removeReference before they get
+    // here.)
+  }
 
-    // Phase 2 (Scan): restore live objects, mark confirmed garbage WHITE.
-    for (size_t i = 0; i < cc_roots_len; i++) {
-        if (cc_roots[i]) scan(cc_roots[i]);
-    }
+  // Phase 2 (Scan): restore live objects, mark confirmed garbage WHITE.
+  for (size_t i = 0; i < cc_roots_len; i++) {
+    if (cc_roots[i])
+      scan(cc_roots[i]);
+  }
 
-    // Phase 3 (CollectRoots/CollectWhite): free garbage cycles.
-    // Swap out the roots array first so that possibleCycleRoot calls from
-    // finalizers (during CollectWhite) go to a fresh list.
-    size_t    old_len   = cc_roots_len;
-    Value   **old_roots = cc_roots;
-    cc_roots     = NULL;
-    cc_roots_len = 0;
-    cc_roots_cap = 0;
+  // Phase 3 (CollectRoots/CollectWhite): free garbage cycles.
+  // Swap out the roots array first so that possibleCycleRoot calls from
+  // finalizers (during CollectWhite) go to a fresh list.
+  size_t old_len = cc_roots_len;
+  Value **old_roots = cc_roots;
+  cc_roots = NULL;
+  cc_roots_len = 0;
+  cc_roots_cap = 0;
 
-    for (size_t i = 0; i < old_len; i++) {
-        Value *v = old_roots[i];
-        CC_CLR_BUFFERED(v); // must clear before collectWhite checks it
-        collectWhite(v);
-    }
-    IDRIS2_FREE(old_roots);
+  for (size_t i = 0; i < old_len; i++) {
+    Value *v = old_roots[i];
+    CC_CLR_BUFFERED(v); // must clear before collectWhite checks it
+    collectWhite(v);
+  }
+  IDRIS2_FREE(old_roots);
 }
 
 void idris2_removeReference(Value *elem) {

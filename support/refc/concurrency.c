@@ -60,10 +60,11 @@ Value *refc_conditionWait(Value *cond, Value *mutex) {
   return NULL;
 }
 
-Value *refc_conditionWaitTimeout(Value *cond, Value *mutex, int64_t timeout_us) {
+Value *refc_conditionWaitTimeout(Value *cond, Value *mutex,
+                                 int64_t timeout_us) {
   struct timespec t;
   clock_gettime(CLOCK_REALTIME, &t);
-  t.tv_sec  += timeout_us / 1000000;
+  t.tv_sec += timeout_us / 1000000;
   t.tv_nsec += (timeout_us % 1000000) * 1000;
   if (t.tv_nsec >= 1000000000L) {
     t.tv_sec++;
@@ -128,7 +129,7 @@ Value *refc_semaphoreWait(Value *sema) {
 Value *refc_makeBarrier(int64_t numThreads) {
   Value_Barrier *b = IDRIS2_NEW_VALUE(Value_Barrier);
   b->header.tag = BARRIER_TAG;
-  b->total   = (int)numThreads;
+  b->total = (int)numThreads;
   b->arrived = 0;
   int r = pthread_mutex_init(&b->mutex, NULL);
   IDRIS2_REFC_VERIFY(!r, "pthread_mutex_init failed: %s", strerror(r));
@@ -154,24 +155,76 @@ Value *refc_barrierWait(Value *barrier) {
 
 #else /* IDRIS2_NO_THREADS */
 
-#define IDRIS2_NO_THREADS_STUB(fn) \
-  IDRIS2_REFC_VERIFY(0, fn ": concurrency not available " \
-                        "(compiled with IDRIS2_NO_THREADS)")
+#define IDRIS2_NO_THREADS_STUB(fn)                                             \
+  IDRIS2_REFC_VERIFY(0, fn ": concurrency not available "                      \
+                           "(compiled with IDRIS2_NO_THREADS)")
 
-Value *refc_makeMutex(void)                                  { IDRIS2_NO_THREADS_STUB("refc_makeMutex");           return NULL; }
-Value *refc_mutexAcquire(Value *m)                           { (void)m; IDRIS2_NO_THREADS_STUB("refc_mutexAcquire"); return NULL; }
-Value *refc_mutexRelease(Value *m)                           { (void)m; IDRIS2_NO_THREADS_STUB("refc_mutexRelease"); return NULL; }
-Value *refc_makeCondition(void)                              { IDRIS2_NO_THREADS_STUB("refc_makeCondition");        return NULL; }
-Value *refc_conditionWait(Value *c, Value *m)                { (void)c; (void)m; IDRIS2_NO_THREADS_STUB("refc_conditionWait"); return NULL; }
-Value *refc_conditionWaitTimeout(Value *c, Value *m,
-                                 int64_t t)                  { (void)c; (void)m; (void)t; IDRIS2_NO_THREADS_STUB("refc_conditionWaitTimeout"); return NULL; }
-Value *refc_conditionSignal(Value *c)                        { (void)c; IDRIS2_NO_THREADS_STUB("refc_conditionSignal"); return NULL; }
-Value *refc_conditionBroadcast(Value *c)                     { (void)c; IDRIS2_NO_THREADS_STUB("refc_conditionBroadcast"); return NULL; }
-Value *refc_makeSemaphore(int64_t n)                         { (void)n; IDRIS2_NO_THREADS_STUB("refc_makeSemaphore"); return NULL; }
-Value *refc_semaphorePost(Value *s)                          { (void)s; IDRIS2_NO_THREADS_STUB("refc_semaphorePost"); return NULL; }
-Value *refc_semaphoreWait(Value *s)                          { (void)s; IDRIS2_NO_THREADS_STUB("refc_semaphoreWait"); return NULL; }
-Value *refc_makeBarrier(int64_t n)                           { (void)n; IDRIS2_NO_THREADS_STUB("refc_makeBarrier"); return NULL; }
-Value *refc_barrierWait(Value *b)                            { (void)b; IDRIS2_NO_THREADS_STUB("refc_barrierWait"); return NULL; }
+Value *refc_makeMutex(void) {
+  IDRIS2_NO_THREADS_STUB("refc_makeMutex");
+  return NULL;
+}
+Value *refc_mutexAcquire(Value *m) {
+  (void)m;
+  IDRIS2_NO_THREADS_STUB("refc_mutexAcquire");
+  return NULL;
+}
+Value *refc_mutexRelease(Value *m) {
+  (void)m;
+  IDRIS2_NO_THREADS_STUB("refc_mutexRelease");
+  return NULL;
+}
+Value *refc_makeCondition(void) {
+  IDRIS2_NO_THREADS_STUB("refc_makeCondition");
+  return NULL;
+}
+Value *refc_conditionWait(Value *c, Value *m) {
+  (void)c;
+  (void)m;
+  IDRIS2_NO_THREADS_STUB("refc_conditionWait");
+  return NULL;
+}
+Value *refc_conditionWaitTimeout(Value *c, Value *m, int64_t t) {
+  (void)c;
+  (void)m;
+  (void)t;
+  IDRIS2_NO_THREADS_STUB("refc_conditionWaitTimeout");
+  return NULL;
+}
+Value *refc_conditionSignal(Value *c) {
+  (void)c;
+  IDRIS2_NO_THREADS_STUB("refc_conditionSignal");
+  return NULL;
+}
+Value *refc_conditionBroadcast(Value *c) {
+  (void)c;
+  IDRIS2_NO_THREADS_STUB("refc_conditionBroadcast");
+  return NULL;
+}
+Value *refc_makeSemaphore(int64_t n) {
+  (void)n;
+  IDRIS2_NO_THREADS_STUB("refc_makeSemaphore");
+  return NULL;
+}
+Value *refc_semaphorePost(Value *s) {
+  (void)s;
+  IDRIS2_NO_THREADS_STUB("refc_semaphorePost");
+  return NULL;
+}
+Value *refc_semaphoreWait(Value *s) {
+  (void)s;
+  IDRIS2_NO_THREADS_STUB("refc_semaphoreWait");
+  return NULL;
+}
+Value *refc_makeBarrier(int64_t n) {
+  (void)n;
+  IDRIS2_NO_THREADS_STUB("refc_makeBarrier");
+  return NULL;
+}
+Value *refc_barrierWait(Value *b) {
+  (void)b;
+  IDRIS2_NO_THREADS_STUB("refc_barrierWait");
+  return NULL;
+}
 
 #undef IDRIS2_NO_THREADS_STUB
 

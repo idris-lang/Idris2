@@ -13,7 +13,8 @@ Value_Constructor *idris2_newConstructor(int total, int tag);
 /* Canonical storage type for closure function pointers.
  * All closures use FUN0..FUN16 or FUNStar at call sites; this type is used
  * only for storing the pointer in Value_Closure and passing it around.
- * Guard matches _datatypes.h so the two headers can be included independently. */
+ * Guard matches _datatypes.h so the two headers can be included independently.
+ */
 #ifndef CLOSUREFUN_DEFINED
 #define CLOSUREFUN_DEFINED
 typedef Value *(*ClosureFun)(void);
