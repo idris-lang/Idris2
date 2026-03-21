@@ -1,0 +1,4 @@
+. ../../testutils.sh
+
+idris2 --cg refc --directive no-gmp -o refc_nogmp NoGMP.idr
+$VALGRIND ./build/exec/refc_nogmp
