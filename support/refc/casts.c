@@ -147,7 +147,7 @@ Value *idris2_cast_String_to_Bits32(Value *input) {
 
 Value *idris2_cast_String_to_Bits64(Value *input) {
   Value_String *from = (Value_String *)input;
-  return (Value *)idris2_mkBits64((uint64_t)atoi(from->str));
+  return (Value *)idris2_mkBits64((uint64_t)strtoull(from->str, NULL, 10));
 }
 
 Value *idris2_cast_String_to_Int8(Value *input) {
@@ -167,7 +167,7 @@ Value *idris2_cast_String_to_Int32(Value *input) {
 
 Value *idris2_cast_String_to_Int64(Value *input) {
   Value_String *from = (Value_String *)input;
-  return (Value *)idris2_mkInt64((int64_t)atoi(from->str));
+  return (Value *)idris2_mkInt64((int64_t)strtoll(from->str, NULL, 10));
 }
 
 Value *idris2_cast_String_to_Integer(Value *input) {
@@ -370,11 +370,21 @@ Value *idris2_cast_Integer_to_Double(Value *input) {
 
 Value *idris2_cast_Integer_to_Char(Value *input) {
   Value_Integer *from = (Value_Integer *)input;
+  uint32_t cp;
 #ifndef IDRIS2_NO_GMP
-  return (Value *)idris2_mkChar((uint32_t)mpz_get_lsb(from->i, 21));
+  if (mpz_sgn(from->i) < 0) {
+    cp = UINT32_MAX; /* will fail validCodePoint check → '\0' */
+  } else {
+    cp = (uint32_t)mpz_get_ui(from->i);
+  }
 #else
-  return (Value *)idris2_mkChar((uint32_t)(from->i & 0x1FFFFF));
+  if (from->i < 0) {
+    cp = UINT32_MAX;
+  } else {
+    cp = (uint32_t)from->i;
+  }
 #endif
+  return (Value *)idris2_mkChar(idris2_validCodePoint(cp));
 }
 
 Value *idris2_cast_Integer_to_String(Value *input) {

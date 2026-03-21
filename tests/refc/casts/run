@@ -1,0 +1,4 @@
+. ../../testutils.sh
+
+idris2 --cg refc -o refc_casts Casts.idr
+$VALGRIND ./build/exec/refc_casts
