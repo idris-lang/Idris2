@@ -1,0 +1,4 @@
+. ../../testutils.sh
+
+idris2 --cg refc -o refc_tailrec tailrec.idr
+$VALGRIND ./build/exec/refc_tailrec
