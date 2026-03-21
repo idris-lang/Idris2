@@ -137,7 +137,6 @@ chezTests = testsInDir "chez" "Chez backend" {codegen = Just Chez}
 
 refcTests : IO TestPool
 refcTests = testsInDir "refc" "Reference counting C backend" {codegen = Just C}
-  { pred = not . (`elem` ["callingConvention", "ffi-struct"]) }
 
 racketTests : IO TestPool
 racketTests = testsInDir "racket" "Racket backend" {codegen = Just Racket}
