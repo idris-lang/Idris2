@@ -92,6 +92,41 @@ should target this file (`CHANGELOG_NEXT`).
   unboxed values, which dereferences unboxed pointers as `Value_Int32*` on
   32-bit platforms when `UINTPTR_WIDTH` is not defined (common in Emscripten).
 * Fix missing support for sized, signed integers in FFI.
+* Fixed several cast bugs in `support/refc/casts.h` and `casts.c`:
+  - Added `idris2_cast_Double_to_Int8` (was missing).
+  - Fixed `idris2_cast_Double_to_Int`, which was mistakenly using `mkInt8`
+    and `int8_t` (a copy-paste error); it now correctly uses `mkInt64`/`int64_t`.
+  - Fixed `Double_to_Int16` and `Double_to_Int32` to cast through `int64_t`
+    first, avoiding C undefined behaviour for out-of-range doubles.
+  - Fixed all `*_to_Char` macros to validate the codepoint using a new
+    `idris2_validCodePoint()` helper, so that negative values, surrogates
+    (U+D800–U+DFFF), and values above U+10FFFF are mapped to `'\0'`.
+  - Fixed `String_to_Int64` and `String_to_Bits64` to use `strtoll`/`strtoull`
+    instead of `atoi`, which cannot represent 64-bit values.
+  - Fixed `Integer_to_Char` to check the sign of the GMP value and apply
+    `idris2_validCodePoint()`, replacing the old bitmask that silently passed
+    surrogates and out-of-range codepoints.
+* Removed the catch-all clause from `cOp` in `Compiler/RefC/RefC.idr`.
+  All `PrimFn` constructors are now explicitly handled; adding a new
+  primitive without a corresponding C implementation now produces a coverage
+  error at Idris2-compile time instead of silently generating invalid C.
+* Added `--directive no-gmp` support (backed by `int64_t` instead of GMP
+  `mpz_t`) and a runtime test confirming in-range `Integer` arithmetic is
+  identical to the GMP build.
+* Added `--directive no-ffi` support to omit `-lffi` from the link step,
+  enabling compilation for targets where libffi is unavailable.
+* Added WebAssembly / cross-compilation support via `--directive wasm32`.
+* Added bare-metal / embedded target support (`--directive baremetal`),
+  including stubs for stdio, clock, and pthread, and allocator override hooks.
+* Added CFFun (FFI callback) support via libffi closures.
+* Added CFStruct FFI support with a runtime descriptor registry.
+* Added modular/incremental compilation support.
+* Added Bacon-Rajan trial-deletion cycle collector.
+* Added the RefC backend to the CI matrix.
+* New test coverage: lazy evaluation (Stream, LazyList, Delay/Force),
+  primitive casts, bitwise operations, no-gmp mode, no-ffi mode,
+  `System.Directory`, constant folding, and tail-call-optimised library
+  functions (List/SnocList operations on 50 000 elements).
 
 ### Library changes
 
