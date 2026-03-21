@@ -152,4 +152,27 @@ Value *refc_barrierWait(Value *barrier) {
   return NULL;
 }
 
+#else /* IDRIS2_NO_THREADS */
+
+#define IDRIS2_NO_THREADS_STUB(fn) \
+  IDRIS2_REFC_VERIFY(0, fn ": concurrency not available " \
+                        "(compiled with IDRIS2_NO_THREADS)")
+
+Value *refc_makeMutex(void)                                  { IDRIS2_NO_THREADS_STUB("refc_makeMutex");           return NULL; }
+Value *refc_mutexAcquire(Value *m)                           { (void)m; IDRIS2_NO_THREADS_STUB("refc_mutexAcquire"); return NULL; }
+Value *refc_mutexRelease(Value *m)                           { (void)m; IDRIS2_NO_THREADS_STUB("refc_mutexRelease"); return NULL; }
+Value *refc_makeCondition(void)                              { IDRIS2_NO_THREADS_STUB("refc_makeCondition");        return NULL; }
+Value *refc_conditionWait(Value *c, Value *m)                { (void)c; (void)m; IDRIS2_NO_THREADS_STUB("refc_conditionWait"); return NULL; }
+Value *refc_conditionWaitTimeout(Value *c, Value *m,
+                                 int64_t t)                  { (void)c; (void)m; (void)t; IDRIS2_NO_THREADS_STUB("refc_conditionWaitTimeout"); return NULL; }
+Value *refc_conditionSignal(Value *c)                        { (void)c; IDRIS2_NO_THREADS_STUB("refc_conditionSignal"); return NULL; }
+Value *refc_conditionBroadcast(Value *c)                     { (void)c; IDRIS2_NO_THREADS_STUB("refc_conditionBroadcast"); return NULL; }
+Value *refc_makeSemaphore(int64_t n)                         { (void)n; IDRIS2_NO_THREADS_STUB("refc_makeSemaphore"); return NULL; }
+Value *refc_semaphorePost(Value *s)                          { (void)s; IDRIS2_NO_THREADS_STUB("refc_semaphorePost"); return NULL; }
+Value *refc_semaphoreWait(Value *s)                          { (void)s; IDRIS2_NO_THREADS_STUB("refc_semaphoreWait"); return NULL; }
+Value *refc_makeBarrier(int64_t n)                           { (void)n; IDRIS2_NO_THREADS_STUB("refc_makeBarrier"); return NULL; }
+Value *refc_barrierWait(Value *b)                            { (void)b; IDRIS2_NO_THREADS_STUB("refc_barrierWait"); return NULL; }
+
+#undef IDRIS2_NO_THREADS_STUB
+
 #endif /* IDRIS2_NO_THREADS */

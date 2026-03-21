@@ -64,4 +64,20 @@ Value *refc_threadWait(Value *threadID) {
   return NULL;
 }
 
+#else /* IDRIS2_NO_THREADS */
+
+Value *refc_fork(Value_Closure *fct) {
+  (void)fct;
+  IDRIS2_REFC_VERIFY(0, "refc_fork: threads not available "
+                        "(compiled with IDRIS2_NO_THREADS)");
+  return NULL;
+}
+
+Value *refc_threadWait(Value *threadID) {
+  (void)threadID;
+  IDRIS2_REFC_VERIFY(0, "refc_threadWait: threads not available "
+                        "(compiled with IDRIS2_NO_THREADS)");
+  return NULL;
+}
+
 #endif /* IDRIS2_NO_THREADS */

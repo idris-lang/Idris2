@@ -82,6 +82,64 @@ crossCompileFlags directives = do
     pure $ maybe [] (\t => ["--target=" ++ t]) target
         ++ maybe [] (\s => ["--sysroot=" ++ s]) sysroot
 
+-- True when the effective target triple looks like a WebAssembly target.
+isWasmTarget : List String -> IO Bool
+isWasmTarget directives = do
+    triple <- case mapMaybe (directiveValue "target") directives of
+                (t :: _) => pure (Just t)
+                []       => idrisGetEnv "IDRIS2_CROSS_TRIPLE"
+    pure $ case triple of
+        Just t  => isPrefixOf "wasm32" t || isPrefixOf "wasm64" t
+        Nothing => False
+
+-- True when GMP should be disabled: explicit directive, WASM target, or env var.
+needsNoGmp : List String -> IO Bool
+needsNoGmp directives = do
+    wasm <- isWasmTarget directives
+    env  <- idrisGetEnv "IDRIS2_NO_GMP"
+    pure $ wasm || elem "no-gmp" directives || isJust env
+
+-- True when libffi should be omitted from the link.
+needsNoFfi : List String -> IO Bool
+needsNoFfi directives = do
+    wasm <- isWasmTarget directives
+    env  <- idrisGetEnv "IDRIS2_NO_FFI"
+    pure $ wasm || elem "no-ffi" directives || isJust env
+
+-- True when pthreads should be disabled.
+needsNoThreads : List String -> IO Bool
+needsNoThreads directives = do
+    wasm <- isWasmTarget directives
+    env  <- idrisGetEnv "IDRIS2_NO_THREADS"
+    pure $ wasm || elem "no-threads" directives || isJust env
+
+-- Find the directory containing libidris2_refc, with optional override.
+-- directive "refc-lib-dir=<path>"  / env IDRIS2_REFC_LIB_DIR override the
+-- installed refc data directory so WASM (or other cross) builds can supply
+-- their own pre-built runtime.
+findRefcLibDir : {auto c : Ref Ctxt Defs} -> List String -> Core String
+findRefcLibDir directives =
+    case mapMaybe (directiveValue "refc-lib-dir") directives of
+        (d :: _) => pure d
+        [] => do
+            env <- coreLift $ idrisGetEnv "IDRIS2_REFC_LIB_DIR"
+            case env of
+                Just d  => pure d
+                Nothing => findDataFile "refc"
+
+-- Find libidris2_support.a, with optional override.
+-- directive "support-lib=<path>"  / env IDRIS2_REFC_SUPPORT_LIB let a WASM
+-- (or cross) build supply a pre-compiled version of the support library.
+findSupportLib : {auto c : Ref Ctxt Defs} -> List String -> Core String
+findSupportLib directives =
+    case mapMaybe (directiveValue "support-lib") directives of
+        (d :: _) => pure d
+        [] => do
+            env <- coreLift $ idrisGetEnv "IDRIS2_REFC_SUPPORT_LIB"
+            case env of
+                Just d  => pure d
+                Nothing => findLibraryFile "libidris2_support.a"
+
 export
 compileCObjectFile : {auto c : Ref Ctxt Defs}
                   -> {default False asLibrary : Bool}
@@ -100,12 +158,18 @@ compileCObjectFile {asLibrary} sourceFile objectFile =
      let debugFlag = if elem "debug" directives then ["-g"] else []
      let libraryFlag = if asLibrary then ["-fpic"] else []
      crossFlags <- crossCompileFlags directives
+     noGmp     <- coreLift $ needsNoGmp     directives
+     noThreads <- coreLift $ needsNoThreads directives
+     let noGmpFlag     = if noGmp     then ["-DIDRIS2_NO_GMP"]     else []
+     let noThreadsFlag = if noThreads then ["-DIDRIS2_NO_THREADS"] else []
 
      let runccobj = (escapeCmd $
-         [cc, "-Werror", "-c"] ++ debugFlag ++ libraryFlag ++ crossFlags ++ [sourceFile,
-              "-o", objectFile,
-              "-I" ++ refcDir,
-              "-I" ++ cDir])
+         [cc, "-Werror", "-c"] ++ debugFlag ++ libraryFlag ++ crossFlags
+              ++ noGmpFlag ++ noThreadsFlag
+              ++ [sourceFile,
+                  "-o", objectFile,
+                  "-I" ++ refcDir,
+                  "-I" ++ cDir])
               ++ " " ++ cppFlags ++ " " ++ cFlags
 
 
@@ -128,22 +192,26 @@ compileCFile {asShared} objectFile outFile =
      ldLibs <- coreLift findLDLIBS
 
      dirs <- getDirs
-     refcDir <- findDataFile "refc"
-     supportFile <- findLibraryFile "libidris2_support.a"
-
      directives <- getDirectives RefC
+     refcLibDir  <- findRefcLibDir directives
+     supportFile <- findSupportLib directives
+
      let debugFlag = if elem "debug" directives then ["-g"] else []
      let sharedFlag = if asShared then ["-shared"] else []
      crossFlags <- crossCompileFlags directives
+     noGmp <- coreLift $ needsNoGmp directives
+     noFfi <- coreLift $ needsNoFfi directives
+     let gmpLib = if noGmp then [] else ["-lgmp"]
+     let ffiLib = if noFfi then [] else ["-lffi"]
 
      let runcc = (escapeCmd $
          [cc, "-Werror"] ++ debugFlag ++ sharedFlag ++ crossFlags ++ [objectFile,
               "-o", outFile,
               supportFile,
               "-lidris2_refc",
-              "-L" ++ refcDir
-              ] ++ clibdirs (lib_dirs dirs) ++ [
-              "-lgmp", "-lm", "-lffi"])
+              "-L" ++ refcLibDir
+              ] ++ clibdirs (lib_dirs dirs) ++ ["-lm"]
+                ++ gmpLib ++ ffiLib)
               ++ " " ++ (unwords [cFlags, ldFlags, ldLibs])
 
      log "compiler.refc.cc" 10 runcc
@@ -169,21 +237,25 @@ compileCFileInc objectFiles outFile =
      ldLibs <- coreLift findLDLIBS
 
      dirs <- getDirs
-     refcDir <- findDataFile "refc"
-     supportFile <- findLibraryFile "libidris2_support.a"
-
      directives <- getDirectives RefC
+     refcLibDir  <- findRefcLibDir directives
+     supportFile <- findSupportLib directives
+
      let debugFlag = if elem "debug" directives then ["-g"] else []
      crossFlags <- crossCompileFlags directives
+     noGmp <- coreLift $ needsNoGmp directives
+     noFfi <- coreLift $ needsNoFfi directives
+     let gmpLib = if noGmp then [] else ["-lgmp"]
+     let ffiLib = if noFfi then [] else ["-lffi"]
 
      let runcc = (escapeCmd $
          [cc, "-Werror"] ++ debugFlag ++ crossFlags ++ objectFiles ++
               ["-o", outFile,
               supportFile,
               "-lidris2_refc",
-              "-L" ++ refcDir
-              ] ++ clibdirs (lib_dirs dirs) ++ [
-              "-lgmp", "-lm", "-lffi"])
+              "-L" ++ refcLibDir
+              ] ++ clibdirs (lib_dirs dirs) ++ ["-lm"]
+                ++ gmpLib ++ ffiLib)
               ++ " " ++ (unwords [cFlags, ldFlags, ldLibs])
 
      log "compiler.refc.cc" 10 runcc
