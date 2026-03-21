@@ -4,5 +4,5 @@
 : "${CC_LOG_FILE:=./cc_calls.log}"
 for arg in "$@"; do
     printf '%s\n' "$arg"
-done >> "$CC_LOG_FILE"
+done >>"$CC_LOG_FILE"
 exit 0
