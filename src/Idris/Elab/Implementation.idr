@@ -49,7 +49,7 @@ bindConstraints fc p ((n, ty) :: rest) sc
 bindImpls : List (AddFC (ImpParameter' RawImp)) -> RawImp -> RawImp
 bindImpls [] ty = ty
 bindImpls (binder :: rest) sc
-    = IPi binder.fc binder.rig binder.val.info (Just binder.nameVal) binder.val.boundType (bindImpls rest sc)
+    = IPi binder.fc binder.rig binder.val.info (Just binder.name.val) binder.val.boundType (bindImpls rest sc)
 
 addDefaults : FC -> Name ->
               (params : List (Name, RawImp)) -> -- parameters have been specialised, use them!
@@ -182,7 +182,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
          let impTy = doBind paramBinds initTy
 
          let impTyDecl
-             = IClaim (MkFCVal vfc $ MkIClaimData top vis opts (Mk [EmptyFC, NoFC impName] impTy))
+             = IClaim (MkFCVal vfc $ MkIClaimData top vis opts (Mk [EmptyFC, MkDef impName] impTy))
 
          log "elab.implementation" 5 $ "Implementation type: " ++ show impTy
 
@@ -469,7 +469,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
         = do let opts = if isJust $ findTotality opts_in
                           then opts_in
                           else maybe opts_in (\t => Totality t :: opts_in) treq
-             IClaim $ MkFCVal vfc $ MkIClaimData c vis opts $ Mk [EmptyFC, NoFC n] mty
+             IClaim $ MkFCVal vfc $ MkIClaimData c vis opts $ Mk [EmptyFC, MkDef n] mty
 
     -- Given the method type (result of topMethType) return the mapping from
     -- top level method name to current implementation's method name

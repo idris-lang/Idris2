@@ -89,19 +89,12 @@ localHelper {vars} nest env nestdecls_in func
                         \fc, nt => applyToFull fc
                                (Ref fc nt (Resolved n')) env))
 
-    -- Update the names in the declarations to the new 'nested' names.
-    -- When we encounter the names in elaboration, we'll update to an
-    -- application of the nested name.
-    updateTyName : NestedNames vars -> ImpTy -> ImpTy
-    updateTyName nest ty
-        = update "tyname" (map (mapNestedName nest)) ty
-
     updateDataName : NestedNames vars -> ImpData -> ImpData
     updateDataName nest (MkImpData loc' n tycons dopts dcons)
-        = MkImpData loc' (mapNestedName nest n) tycons dopts
-                         (map (updateTyName nest) dcons)
+        = MkImpData loc' (map (mapNestedName nest) n) tycons dopts
+                         (map (update "tyname" (WithData.map (mapNestedName nest))) dcons)
     updateDataName nest (MkImpLater loc' n tycons)
-        = MkImpLater loc' (mapNestedName nest n) tycons
+        = MkImpLater loc' (map (mapNestedName nest) n) tycons
 
     updateFieldName : NestedNames vars -> IField -> IField
     updateFieldName nest field
@@ -109,8 +102,8 @@ localHelper {vars} nest env nestdecls_in func
 
     updateRecordName : NestedNames vars -> ImpRecordData Name -> ImpRecordData Name
     updateRecordName nest (MkImpRecord header body)
-        = let updatedTyName = (update "name" (map (mapNestedName nest)) header)
-              updatedConName = (update "name" (map (mapNestedName nest)) body)
+        = let updatedTyName = (update "tyname" (map (mapNestedName nest)) header)
+              updatedConName = (update "tyname" (map (mapNestedName nest)) body)
               updatedParameters = (map (map (updateFieldName nest)) updatedConName)
           in MkImpRecord updatedTyName updatedParameters
 
@@ -120,7 +113,7 @@ localHelper {vars} nest env nestdecls_in func
 
     updateName : NestedNames vars -> ImpDecl -> ImpDecl
     updateName nest (IClaim claim)
-         = IClaim $ map {type $= updateTyName nest} claim
+         = IClaim $ map {type $= update "tyname" (map (mapNestedName nest))} claim
     updateName nest (IDef loc' n cs)
          = IDef loc' (mapNestedName nest n) cs
     updateName nest (IData loc' vis mbt d)

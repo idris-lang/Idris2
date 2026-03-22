@@ -330,6 +330,7 @@ mutual
     prettyPrec d (PForce _ tm) = parenthesise (d > startPrec) $ "Force" <++> prettyPrec appPrec tm
     prettyPrec d (PAutoApp _ f a) =
       parenthesise (d > startPrec) $ group $ prettyPrec leftAppPrec f <++> "@" <+> braces (pretty a)
+    prettyPrec d (PBindingApp fn bind scope) = ?TODO2
     prettyPrec d (PNamedApp _ f n (PRef _ a)) =
       parenthesise (d > startPrec) $ group $
         if n == rawName a
@@ -353,15 +354,15 @@ mutual
     prettyPrec d (PDotted _ p) = dot <+> prettyPrec d p
     prettyPrec d (PImplicit _) = "_"
     prettyPrec d (PInfer _) = annotate Hole $ "?"
-    prettyPrec d (POp _ (MkWithData _ $ BindType nm left) op right) =
+    prettyPrec d (POp _ (MkWithData _ $ LHSBinder $ BindType nm left) op right) =
         group $ parens (prettyPrec d nm <++> ":" <++> pretty left)
            <++> prettyOp op.val.toName
            <++> pretty right
-    prettyPrec d (POp _ (MkWithData _ $ BindExpr nm left) op right) =
+    prettyPrec d (POp _ (MkWithData _ $ LHSBinder $ BindExpr nm left) op right) =
         group $ parens (prettyPrec d nm <++> "<-" <++> pretty left)
            <++> prettyOp op.val.toName
            <++> pretty right
-    prettyPrec d (POp _ (MkWithData _ $ BindExplicitType nm ty left) op right) =
+    prettyPrec d (POp _ (MkWithData _ $ LHSBinder $ BindExplicitType nm ty left) op right) =
         group $ parens (prettyPrec d nm <++> ":" <++> pretty ty <++> "<-" <++> pretty left)
            <++> prettyOp op.val.toName
            <++> pretty right
