@@ -31,6 +31,7 @@ modules =
     Compiler.ES.Doc,
     Compiler.ES.Javascript,
     Compiler.ES.Node,
+    Compiler.ES.SourceMap,
     Compiler.ES.State,
     Compiler.ES.TailRec,
     Compiler.ES.ToAst,

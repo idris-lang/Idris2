@@ -1,0 +1,8 @@
+Source map file generated: YES
+--- Program output ---
+Source map test
+3
+--- Source map verification ---
+Has version 3: True
+Has sources: True
+Has mappings: True
