@@ -8,10 +8,36 @@ import Core.Context
 import Core.Env
 import Core.Value
 
+import Data.SnocList
+
 import Libraries.Data.NatSet
 import Libraries.Data.List.SizeOf
 
 %default covering
+
+extend : {args, args' : List Name} ->
+     SizeOf args -> SizeOf args' ->
+     (List (Var vars, Var vars')) ->
+     Maybe (List (Var (Scope.ext vars args), Var (Scope.ext vars' args')))
+extend s s' ms
+  = do guard (Libraries.Data.List.SizeOf.SizeOf.size s == size s')
+       let vs  = embedFishily @{ListFreelyEmbeddable} (Var.List.allVars args)
+       let vs' = embedFishily @{ListFreelyEmbeddable} (Var.List.allVars args')
+       pure $ zip vs vs' ++ map (bimap (weakensN s) (weakensN s')) ms
+
+findIdx : List (Var vars, Var vars') -> Nat -> Maybe (Var vars')
+findIdx [] _ = Nothing
+findIdx ((MkVar {varIdx = i} _, v) :: ps) n
+    = if i == n then Just v else findIdx ps n
+
+dropP : {0 args, args' : List Name} ->
+  SizeOf args -> SizeOf args' ->
+  (Var (Scope.ext vars args), Var (Scope.ext vars' args')) ->
+  Maybe (Var vars, Var vars')
+dropP s s' (x, y)
+  = do x' <- strengthensN s x
+       y' <- strengthensN s' y
+       pure (x', y')
 
 public export
 interface Convert tm where
@@ -44,13 +70,8 @@ tryUpdate : {vars, vars' : _} ->
             List (Var vars, Var vars') ->
             Term vars -> Maybe (Term vars')
 tryUpdate ms (Local fc l idx p)
-    = do MkVar p' <- findIdx ms (MkVar p)
+    = do MkVar p' <- findIdx ms idx
          pure $ Local fc l _ p'
-  where
-    findIdx : List (Var vars, Var vars') -> Var vars -> Maybe (Var vars')
-    findIdx [] _ = Nothing
-    findIdx ((old, v) :: ps) n
-        = if old == n then Just v else findIdx ps n
 tryUpdate ms (Ref fc nt n) = pure $ Ref fc nt n
 tryUpdate ms (Meta fc n i args) = pure $ Meta fc n i !(traverse (tryUpdate ms) args)
 tryUpdate ms (Bind fc x b sc)
@@ -70,7 +91,7 @@ tryUpdate ms (Bind fc x b sc)
     tryUpdateB _ = Nothing
 
     weakenP : {n : _} -> (Var vars, Var vars') ->
-              (Var (n :: vars), Var (n :: vars'))
+              (Var (Scope.bind vars n), Var (Scope.bind vars' n))
     weakenP (v, vs) = (weaken v, weaken vs)
 tryUpdate ms (App fc f a) = pure $ App fc !(tryUpdate ms f) !(tryUpdate ms a)
 tryUpdate ms (As fc s a p) = pure $ As fc s !(tryUpdate ms a) !(tryUpdate ms p)
@@ -85,9 +106,9 @@ mutual
   allConvNF : {auto c : Ref Ctxt Defs} ->
               {vars : _} ->
               Ref QVar Int -> Bool -> Defs -> Env Term vars ->
-              List (NF vars) -> List (NF vars) -> Core Bool
-  allConvNF q i defs env [] [] = pure True
-  allConvNF q i defs env (x :: xs) (y :: ys)
+              SnocList (NF vars) -> SnocList (NF vars) -> Core Bool
+  allConvNF q i defs env [<] [<] = pure True
+  allConvNF q i defs env (xs :< x) (ys :< y)
       = do ok <- allConvNF q i defs env xs ys
            if ok then convGen q i defs env x y
                  else pure False
@@ -96,9 +117,9 @@ mutual
   -- return False if anything differs at the head, to quickly find
   -- conversion failures without going deeply into all the arguments.
   -- True means they might still match
-  quickConv : List (NF vars) -> List (NF vars) -> Bool
-  quickConv [] [] = True
-  quickConv (x :: xs) (y :: ys) = quickConvArg x y && quickConv xs ys
+  quickConv : SnocList (NF vars) -> SnocList (NF vars) -> Bool
+  quickConv [<] [<] = True
+  quickConv (xs :< x) (ys :< y) = quickConvArg x y && quickConv xs ys
     where
       quickConvHead : NHead vars -> NHead vars -> Bool
       quickConvHead (NLocal {}) (NLocal {}) = True
@@ -126,7 +147,7 @@ mutual
   allConv : {auto c : Ref Ctxt Defs} ->
             {vars : _} ->
             Ref QVar Int -> Bool -> Defs -> Env Term vars ->
-            List (Closure vars) -> List (Closure vars) -> Core Bool
+            SnocList (Closure vars) -> SnocList (Closure vars) -> Core Bool
   allConv q i defs env xs ys
       = do xsnf <- traverse (evalClosure defs) xs
            ysnf <- traverse (evalClosure defs) ys
@@ -144,33 +165,21 @@ mutual
                       Core (Maybe (List (Var args, Var args')))
   getMatchingVarAlt defs ms (ConCase n tag cargs t) (ConCase n' tag' cargs' t')
       = if n == n'
-           then do let Just ms' = extend cargs cargs' ms
+           then do let s = mkSizeOf cargs
+                   let s' = mkSizeOf cargs'
+                   let Just ms' = extend s s' ms
                         | Nothing => pure Nothing
                    Just ms <- getMatchingVars defs ms' t t'
                         | Nothing => pure Nothing
                    -- drop the prefix from cargs/cargs' since they won't
                    -- be in the caller
-                   pure (Just (mapMaybe (dropP (mkSizeOf cargs) (mkSizeOf cargs')) ms))
+                   pure (Just (mapMaybe (dropP s s') ms))
            else pure Nothing
     where
       weakenP : {0 c, c' : _} -> {0 args, args' : Scope} ->
                 (Var args, Var args') ->
-                (Var (c :: args), Var (c' :: args'))
+                (Var (args :< c), Var (args' :< c'))
       weakenP (v, vs) = (weaken v, weaken vs)
-
-      extend : (cs : List Name) -> (cs' : List Name) ->
-               (List (Var args, Var args')) ->
-               Maybe (List (Var (cs ++ args), Var (cs' ++ args')))
-      extend [] [] ms = pure ms
-      extend (c :: cs) (c' :: cs') ms
-          = do rest <- extend cs cs' ms
-               pure ((first, first) :: map weakenP rest)
-      extend _ _ _ = Nothing
-
-      dropP : SizeOf cs -> SizeOf cs' ->
-              (Var (cs ++ args), Var (cs' ++ args')) ->
-              Maybe (Var args, Var args')
-      dropP cs cs' (x, y) = pure (!(strengthenNs cs x), !(strengthenNs cs' y))
 
   getMatchingVarAlt defs ms (ConstCase c t) (ConstCase c' t')
       = if c == c'
@@ -215,7 +224,7 @@ mutual
                 {vars : _} ->
                 Ref QVar Int -> Bool -> Defs -> Env Term vars ->
                 Name -> Name ->
-                List (Closure vars) -> List (Closure vars) -> Core Bool
+                SnocList (Closure vars) -> SnocList (Closure vars) -> Core Bool
   chkSameDefs q i defs env n n' nargs nargs'
      = do Just (PMDef _ args ct rt _) <- lookupDefExact n (gamma defs)
                | _ => pure False
@@ -231,10 +240,10 @@ mutual
      where
        -- We've only got the index into the argument list, and the indices
        -- don't match up, which is annoying. But it'll always be there!
-       getArgPos : Nat -> List (Closure vars) -> Maybe (Closure vars)
-       getArgPos _ [] = Nothing
-       getArgPos Z (c :: cs) = pure c
-       getArgPos (S k) (c :: cs) = getArgPos k cs
+       getArgPos : Nat -> SnocList (Closure vars) -> Maybe (Closure vars)
+       getArgPos _ [<] = Nothing
+       getArgPos Z (cs :< c) = pure c
+       getArgPos (S k) (cs :< c) = getArgPos k cs
 
        convertMatches : {vs, vs' : _} ->
                         List (Var vs, Var vs') ->
@@ -253,8 +262,8 @@ mutual
   chkConvCaseBlock : {auto c : Ref Ctxt Defs} ->
                      {vars : _} ->
                      FC -> Ref QVar Int -> Bool -> Defs -> Env Term vars ->
-                     NHead vars -> List (Closure vars) ->
-                     NHead vars -> List (Closure vars) -> Core Bool
+                     NHead vars -> SnocList (Closure vars) ->
+                     NHead vars -> SnocList (Closure vars) -> Core Bool
   chkConvCaseBlock fc q i defs env (NRef _ n) nargs (NRef _ n') nargs'
       = do NS _ (CaseBlock {}) <- full (gamma defs) n
               | _ => pure False
@@ -280,9 +289,9 @@ mutual
                 | Nothing => pure False
            let Just scpos' = findArgPos tree'
                 | Nothing => pure False
-           let Just sc = getScrutinee scpos nargs
+           let Just sc = getScrutinee ((length nargs) `minus` scpos + 1) nargs
                 | Nothing => pure False
-           let Just sc' = getScrutinee scpos' nargs'
+           let Just sc' = getScrutinee ((length nargs') `minus` scpos' + 1) nargs'
                 | Nothing => pure False
            ignore $ convGen q i defs env sc sc'
            pure (location def == location def')
@@ -293,9 +302,9 @@ mutual
       findArgPos (Case idx p _ _) = Just idx
       findArgPos _ = Nothing
 
-      getScrutinee : Nat -> List (Closure vs) -> Maybe (Closure vs)
-      getScrutinee Z (x :: xs) = Just x
-      getScrutinee (S k) (x :: xs) = getScrutinee k xs
+      getScrutinee : Nat -> SnocList (Closure vs) -> Maybe (Closure vs)
+      getScrutinee Z (xs :< x) = Just x
+      getScrutinee (S k) (xs :< x) = getScrutinee k xs
       getScrutinee _ _ = Nothing
   chkConvCaseBlock _ _ _ _ _ _ _ _ _ = pure False
 
@@ -379,10 +388,10 @@ mutual
           getInfPos _ = pure NatSet.empty
 
           -- Discard file context information irrelevant for conversion checking
-          args1 : List (Closure vars)
+          args1 : SnocList (Closure vars)
           args1 = map snd args
 
-          args2 : List (Closure vars)
+          args2 : SnocList (Closure vars)
           args2 = map snd args'
 
     convGen q i defs env (NDCon _ nm tag _ args) (NDCon _ nm' tag' _ args')
