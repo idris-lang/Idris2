@@ -286,10 +286,16 @@ namespace BifunctorFail
     tree' : Functor Tree'
     tree' = %runElab derive
 
-failing "Expected a type constructor, got: Prelude.Basics.id {a = Type}"
+failing "Unable to normalise Prelude.Basics.id to type constructor"
 
   total
   functor : Functor Prelude.id
+  functor = %runElab derive
+
+failing "Unable to normalise id to type constructor"
+
+  total
+  functor : Functor id
   functor = %runElab derive
 
 namespace Triple
@@ -317,3 +323,88 @@ namespace WriterList
 
     wlist : Functor (WList w ())
     wlist = %runElab derive
+
+namespace FunctionType
+  data D a b = MkD b
+
+  Functor (D Int) where
+      map f (MkD b) = MkD (f b)
+
+  data C a = MkC a
+
+  Functor C where
+      map f (MkC a) = MkC (f a)
+
+  data A : Type -> Type where
+      A' : (D Int) (C a) -> (A a)
+
+  aaF : Functor A
+  aaF = %runElab derive
+
+  WithD : Type -> Type
+  WithD = D Int
+
+  data A2 : Type -> Type where
+      A2' : WithD (C a) -> (A2 a)
+
+  aa2F : Functor A2
+  aa2F = %runElab derive
+
+namespace FunctionTypeNonPublic
+  data D a b = MkD b
+
+  namespace ExportNonPublic
+    export
+    WithD : Type -> Type
+    WithD = D Int
+
+  failing "Make sure DeriveFunctor.FunctionTypeNonPublic.ExportNonPublic.WithD has public export visibility"
+    withDF : Functor WithD
+    withDF = %runElab derive
+
+namespace DataConstructorValue
+  data TypedContainer : Nat -> Type -> Type where
+    Nil : TypedContainer p v
+    (::) : v -> TypedContainer p v -> TypedContainer p v
+
+  namespace General
+    derivedF : Functor (TypedContainer a)
+    derivedF = %runElab derive
+
+    derivedF2 : Functor (TypedContainer $ a + b)
+    derivedF2 = %runElab derive
+
+  namespace Specific
+    derivedF : Functor (TypedContainer 2)
+    derivedF = %runElab derive
+
+    derivedF2 : Functor (TypedContainer $ 2 + x)
+    derivedF2 = %runElab derive
+
+namespace PrimValue
+  data TypedContainer : String -> Type -> Type where
+    Nil : TypedContainer p v
+    (::) : v -> TypedContainer p v -> TypedContainer p v
+
+  namespace General
+    derivedF : Functor (TypedContainer a)
+    derivedF = %runElab derive
+
+    derivedF2 : Functor (TypedContainer $ hello ++ world)
+    derivedF2 = %runElab derive
+
+  namespace Specific
+    derivedF : Functor (TypedContainer "Hello")
+    derivedF = %runElab derive
+
+    derivedF2 : Functor (TypedContainer $ "Hello" ++ world)
+    derivedF2 = %runElab derive
+
+namespace DepType
+  data TypedContainer : Nat -> Type -> Type where
+    Nil : TypedContainer Z v
+    (::) : v -> TypedContainer p v -> TypedContainer (S p) v
+
+  namespace General
+    derivedF : Functor (TypedContainer a)
+    derivedF = %runElab derive

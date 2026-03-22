@@ -36,10 +36,24 @@ isFreeOf x ty
 -- Being a (data) type
 
 public export
-record IsType where
-  constructor MkIsType
+data TypeParameter
+  = MkTPLocal Name
+  | MkTPPrim Constant
+  | MkTPApp (Name, SnocList (Argument TypeParameter))
+  | MkTPIType
+
+export
+Show TypeParameter where
+  show (MkTPLocal a) = "MkTPLocal \{show a}"
+  show (MkTPPrim c) = "MkTPPrim \{show c}"
+  show (MkTPApp a) = "MkTPApp \{assert_total $ show (map (map unArg) a)}"
+  show MkTPIType = "MkTPIType"
+
+public export
+record IsFamily where
+  constructor MkIsFamily
   typeConstructor  : Name
-  parameterNames   : List (Argument Name, Nat)
+  parameterNames   : List (Argument TypeParameter, Nat)
   dataConstructors : List (Name, TTImp)
 
 wording : NameType -> String
@@ -48,38 +62,105 @@ wording Func = "a function name"
 wording (DataCon tag arity) = "a data constructor"
 wording (TyCon tag arity) = "a type constructor"
 
-isTypeCon : Elaboration m => FC -> Name -> m (List (Name, TTImp))
-isTypeCon fc ty = do
+checkAccessToDefinition : Elaboration m => (given, candidate : Name) -> m Bool
+checkAccessToDefinition g c =
+  pure $ isParentOf (getNS g) (getNS c) || !(isPublic g)
+  where
+    getNS : Name -> Namespace
+    getNS (NS ns nm) = ns
+    getNS nm = TT.MkNS []
+
+    isParentOf : (given, candidate : Namespace) -> Bool
+    isParentOf (MkNS ms) (MkNS ns)
+      = List.isSuffixOf ms ns
+
+    isPublic : Name -> m Bool
+    isPublic n = pure $ case !(getVis g) of
+      [(_, Public)] => True
+      _ => False
+
+normaliseName : Elaboration m => FC -> Name -> m (Maybe TTImp)
+normaliseName fc n = do
+  [(_, typeFun)] <- getType n
+    | _ => failAt fc "\{show n} is ambiguous"
+
+  Just typedFun <- catch $ check {expected = Type} typeFun
+    | _ => failAt fc "\{show n} is not a Type declaration"
+
+  Just checkedTy <- catch $ check {expected = typedFun} $ IVar fc n
+    | _ => failAt fc "\{show n} has a different type than checked: \{show !(quote typedFun)}"
+
+  normalisedTy <- quote checkedTy
+
+  -- nn is meaning "normalised name"
+  let tyq@(_, Just nn) = getHeadName normalisedTy
+    | (broken, _) => failAt fc "Failed to extract type name from \{show n} (\{show normalisedTy}) at \{show broken}"
+
+  pure $ if dropNS nn == dropNS n
+    then Nothing
+    else Just normalisedTy
+  where
+    getHeadName : TTImp -> (TTImp, Maybe Name)
+    getHeadName t@(IVar _ n) = (t, pure n)
+    getHeadName (IApp _ n _) = getHeadName n
+    getHeadName (INamedApp _ n _ _) = getHeadName n
+    getHeadName (IAutoApp _ n _) = getHeadName n
+    getHeadName (IWithApp _ n _) = getHeadName n
+    getHeadName (IPi _ _ _ _ _ retTy) = getHeadName retTy
+    getHeadName (ILam _ _ _ _ _ retTy) = getHeadName retTy
+    getHeadName t = (t, Nothing)
+
+isTypeCon : Elaboration m => Name -> FC -> Name -> m (Either TTImp (List (Name, TTImp)))
+isTypeCon currentFnName fc ty = do
     [(_, MkNameInfo (TyCon _ _))] <- getInfo ty
+      | [(fullName, MkNameInfo Func)] => do
+        unless !(checkAccessToDefinition fullName currentFnName) $
+          failAt fc "Make sure \{show fullName} has public export visibility"
+
+        Just normalised <- normaliseName fc fullName
+          | _ => failAt fc "Unable to normalise \{show ty} to type constructor"
+
+        pure $ Left normalised
       | [] => failAt fc "\{show ty} out of scope"
       | [(_, MkNameInfo nt)] => failAt fc "\{show ty} is \{wording nt} rather than a type constructor"
       | _ => failAt fc "\{show ty} is ambiguous"
     cs <- getCons ty
-    for cs $ \ n => do
+    res <- for cs $ \ n => do
       [(_, ty)] <- getType n
          | _ => failAt fc "\{show n} is ambiguous"
       pure (n, ty)
+    pure $ Right res
 
-export
-isType : Elaboration m => TTImp -> m IsType
-isType = go Z [] where
+toTypeParameter : Elaboration m => TTImp -> m TypeParameter
+toTypeParameter (IType _) = pure MkTPIType
+toTypeParameter (IPrimVal _ c) = pure (MkTPPrim c)
+-- Unqualified: that's a local variable
+toTypeParameter (IVar _ nm@(UN (Basic _))) = pure (MkTPLocal nm)
+toTypeParameter arg with (appView arg)
+  toTypeParameter t | Nothing = failAt (getFC t) "Unexpected a type parameter, got: \{show t}"
+  toTypeParameter _ | (Just $ MkAppView (fc, h) args _) = do
+    typedArgs <- assert_total $ traverse @{Compose} toTypeParameter args
+    pure $ MkTPApp (h, typedArgs)
 
-  go : Nat -> List (Argument Name, Nat) -> TTImp -> m IsType
-  go idx acc (IVar fc n) = MkIsType n (map (map (minus idx . S)) acc) <$> isTypeCon fc n
-  go idx acc (IApp _ t (IVar _ nm)) = case nm of
-    -- Unqualified: that's a local variable
-    UN (Basic _) => go (S idx) ((Arg emptyFC nm, idx) :: acc) t
-    _ => go (S idx) acc t
-  go idx acc (INamedApp _ t nm (IVar _ nm')) = case nm' of
-    -- Unqualified: that's a local variable
-    UN (Basic _) => go (S idx) ((NamedArg emptyFC nm nm', idx) :: acc) t
-    _ => go (S idx) acc t
-  go idx acc (IAutoApp _ t (IVar _ nm)) = case nm of
-    -- Unqualified: that's a local variable
-    UN (Basic _) => go (S idx) ((AutoArg emptyFC nm, idx) :: acc) t
-    _ => go (S idx) acc t
+isFamily' : Elaboration m => Name -> TTImp -> m IsFamily
+isFamily' currentFnName = go Z [] where
+  go : Nat -> List (Argument TypeParameter, Nat) -> TTImp -> m IsFamily
+  go idx acc (IVar fc n) = do
+    case !(isTypeCon currentFnName fc n) of
+      Right tcons => pure $ MkIsFamily n (map (map (minus idx . S)) acc) tcons
+      Left normalised => assert_total $ isFamily' currentFnName normalised
+  go idx acc (IApp fc t arg) = go (S idx) ((Arg fc !(toTypeParameter arg), idx) :: acc) t
+  go idx acc (INamedApp fc t nm arg) = go (S idx) ((NamedArg fc nm !(toTypeParameter arg), idx) :: acc) t
+  go idx acc (IAutoApp fc t arg) = go (S idx) ((AutoArg fc !(toTypeParameter arg), idx) :: acc) t
   go idx acc t = failAt (getFC t) "Expected a type constructor, got: \{show t}"
 
+export
+isFamily : Elaboration m => TTImp -> m IsFamily
+isFamily t = do
+  let (Just currentName) = leftMost !getCurrentFn
+  | _ => failAt (getFC t) "Deriving requires a function declaration, not a top level"
+
+  isFamily' currentName t
 ------------------------------------------------------------------------------
 -- Being a (data) constructor with a parameter
 -- TODO: generalise?
@@ -114,7 +195,7 @@ constructorView f = do
 -- convenience functions.
 
 export
-withParams : FC -> (Nat -> Maybe TTImp) -> List (Argument Name, Nat) -> TTImp -> TTImp
+withParams : FC -> (Nat -> Maybe TTImp) -> List (Argument TypeParameter, Nat) -> TTImp -> TTImp
 withParams fc params nms t = go nms where
 
   addConstraint : Maybe TTImp -> Name -> TTImp -> TTImp
@@ -123,13 +204,16 @@ withParams fc params nms t = go nms where
      let ty = IApp fc cst (IVar fc nm) in
      IPi fc MW AutoImplicit Nothing ty
 
-  go : List (Argument Name, Nat) -> TTImp
+  go : List (Argument TypeParameter, Nat) -> TTImp
   go [] = t
-  go ((arg, pos) :: nms)
-    = let nm = unArg arg in
+  go ((arg, pos) :: nms) with (unArg arg)
+    go ((arg, pos) :: nms) | MkTPLocal nm =
       IPi fc M0 ImplicitArg (Just nm) (Implicit fc True)
-    $ addConstraint (params pos) nm
-    $ go nms
+      $ addConstraint (params pos) nm
+      $ go nms
+    go ((arg, pos) :: nms) | MkTPPrim _ = go nms
+    go ((arg, pos) :: nms) | MkTPApp _ = go nms
+    go ((arg, pos) :: nms) | MkTPIType  = go nms
 
 ||| Type of proofs that something has a given type
 export
@@ -177,7 +261,7 @@ export
 hasImplementation : Elaboration m => (intf : a -> Type) -> (t : TTImp) ->
                     m (Maybe (HasImplementation intf t))
 hasImplementation c t = do
-  Just prf <- catch $ isType t
+  Just prf <- catch $ isFamily t
     | _ => Nothing <$ logMsg "derive.common.hasImplementation" 100
                          "\{show t} is not a Type"
   Just intf <- catch $ quote c
@@ -219,16 +303,25 @@ cleanup = \case
 
 ||| Create fresh names
 export
-freshName : List Name -> String -> String
-freshName ns a = assert_total $ go (basicNames ns) Nothing where
+freshName : List TypeParameter -> String -> String
+freshName ns a = assert_total $ go (basicNames $ concatMap typeParameterNames ns) Nothing where
+  typeParameterNames : TypeParameter -> List Name
+  typeParameterNames (MkTPLocal a) = [a]
+  typeParameterNames (MkTPPrim c) = []
+  typeParameterNames (MkTPApp (n, tp)) = assert_total
+    $ n :: concatMap (typeParameterNames . unArg) tp
+  typeParameterNames MkTPIType = []
 
   basicNames : List Name -> List String
-  basicNames = mapMaybe $ \ nm => case dropNS nm of
-    UN (Basic str) => Just str
-    _ => Nothing
+  basicNames names = mapMaybe (toBasic . dropNS) names where
+    toBasic : Name -> Maybe String
+    toBasic (UN (Basic str)) = Just str
+    toBasic _ = Nothing
 
   covering
   go : List String -> Maybe Nat -> String
-  go ns mi =
-    let nm = a ++ maybe "" show mi in
-    ifThenElse (nm `elem` ns) (go ns (Just $ maybe 0 S mi)) nm
+  go names counter =
+    let name = a ++ maybe "" show counter in
+    if name `elem` names
+      then go names (Just $ maybe 0 S counter)
+      else name
