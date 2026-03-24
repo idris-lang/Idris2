@@ -132,6 +132,18 @@ could be any other knowledgable community member.
   several people have. The backends in this repository are limited to those we
   are able to commit to maintaining.
 
+## Things We Will Not Accept
+
+Idris is a primarily academic project with roots in human-driven understanding
+and experience, designed to improve the human experience of programming, and we
+want our processes to reflect that. Generative AI can reduce, and ultimately
+remove, the human-element. Within the Idris Project, we want issues, pull
+requests, commits, and comments to be written and submitted by humans. As such,
+all contributions that arise from Generative AI or Large Language Models,
+including contributions made by Autonomous Coding Agents that use 'Agentic
+Coding', will not be considered.
+
+
 ## Other possible contributions
 
 There's plenty of other things that might be good ideas. If it isn't covered
