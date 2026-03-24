@@ -303,7 +303,7 @@ Pretty Void PkgDesc where
     verSeqField nm = field {printEquals=False} nm . map pretty
 
     strField : String -> Maybe String -> Doc Void
-    strField nm = field nm . map (pretty . show)
+    strField nm = field nm . map (dquotes . pretty)
 
     seqField : Pretty Void a => String -> List a -> Doc Void
     seqField nm [] = hsep [ pretty "--", pretty nm, equals ]

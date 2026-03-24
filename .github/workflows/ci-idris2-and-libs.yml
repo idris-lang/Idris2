@@ -500,8 +500,11 @@ jobs:
       - name: Build API
         run: make install-api
         shell: bash
-      - name: Test API
+      - name: Test API 001
         run: cd tests/idris2/api/api001 && ./run "$HOME/.idris2/bin/idris2"
+        shell: bash
+      - name: Test API 002
+        run: cd tests/idris2/api/api002 && ./run "$HOME/.idris2/bin/idris2"
         shell: bash
 
   ######################################################################
