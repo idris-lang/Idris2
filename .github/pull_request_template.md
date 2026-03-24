@@ -13,4 +13,4 @@ the proposed change. -->
       and I've updated [`CONTRIBUTORS`](https://github.com/idris-lang/Idris2/blob/main/CONTRIBUTORS) with my name.
 - [ ] If this is a fix, user-facing change, a compiler change, or a new paper
       implementation, I have updated [`CHANGELOG_NEXT.md`](https://github.com/idris-lang/Idris2/blob/main/CHANGELOG_NEXT.md)
-- [ ] I am a human, not an AI, my contribution is human-written and designed for human consumption.
+- [ ] I confirm that this contribution did not involve GenerativeAI nor Large Language Models.
