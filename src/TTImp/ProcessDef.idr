@@ -164,6 +164,7 @@ impossibleErrOK (AllFailed errs)
     = anyM impossibleErrOK (map snd errs)
 impossibleErrOK (WhenUnifying _ _ _ _ _ err)
     = impossibleErrOK err
+impossibleErrOK ImpossibleCase = pure True
 impossibleErrOK _ = pure False
 
 -- If it's a clause we've generated, see if the error is recoverable. That
