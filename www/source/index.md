@@ -50,7 +50,7 @@ keywords (`module`, `:`, `=`, `private`, etc.) and hopefully get helpful informa
 
 Here are links to the automatically generated documentation for the libraries shipped with the
 **bleeding edge** version of the compiler. The documentation for the latest **released** version
-is available on the [idris-lang.org](https://www.idris-lang.org/pages/documentation.html) site.
+is available on the [www.idris-lang.org](https://www.idris-lang.org/pages/documentation.html) site.
 
 #### [Prelude](https://idris-lang.github.io/Idris2/prelude)
 
