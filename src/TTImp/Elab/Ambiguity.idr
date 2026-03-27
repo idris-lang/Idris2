@@ -220,9 +220,9 @@ mutual
   mightMatch : {auto c : Ref Ctxt Defs} ->
                {vars : _} ->
                NF vars -> ClosedNF -> Core TypeMatch
-  mightMatch target (VBind fc n (Pi _ _ _ _) sc)
+  mightMatch target (VBind fc n (Pi {}) sc)
       = mightMatchD target !(expand !(sc (pure (VErased fc Placeholder))))
-  mightMatch (VBind{}) (VBind{}) = pure Poly -- lambdas might match
+  mightMatch (VBind {}) (VBind {}) = pure Poly -- lambdas might match
   mightMatch (VTCon _ n a args) (VTCon _ n' a' args')
       = if n == n'
            then do amatch <- mightMatchArgs (map value args) (map value args')
