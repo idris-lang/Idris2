@@ -110,6 +110,19 @@ Matrix : Type -> Type
 Matrix a = Vector (Vector1 a)
 
 export
+fromSparseList : List (Maybe (Nat, a)) -> Matrix a
+fromSparseList xs =
+    let inner_vector = withIndex $ map (Data.List1.fromList . toList) xs
+    in mapMaybe (\(i, m) => map (i,) m) inner_vector
+  where
+    withIndex : List b -> List (Nat, b)
+    withIndex = go 0
+      where
+        go : Nat -> List b -> List (Nat, b)
+        go _ [] = []
+        go i (x :: xs) = (i, x) :: go (S i) xs
+
+export
 fromListList : (Eq a, Semiring a) => List (List a) -> Matrix a
 fromListList = mapMaybe (\(i, xs) => map (i,) (Vector1.fromList xs)) . withIndex
   where

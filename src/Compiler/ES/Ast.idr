@@ -7,6 +7,8 @@ import Data.Vect
 
 %default total
 
+%hide Core.TT.Term.Tag
+
 public export
 data Tag : Type where
   ||| A data constructor. Use the tag to dispatch / construct.

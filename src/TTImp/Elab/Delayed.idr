@@ -1,14 +1,17 @@
 module TTImp.Elab.Delayed
 
-import Core.Case.CaseTree
 import Core.Context.Log
 import Core.Env
 import Core.Metadata
-import Core.Normalise
 import Core.Unify
-import Core.Value
+import Core.Evaluate.Value
+import Core.Evaluate.Normalise
+import Core.Evaluate.Expand
+import Core.Evaluate
 
 import TTImp.Elab.Check
+
+import Data.SnocList
 
 import Libraries.Data.IntMap
 import Libraries.Data.NameMap
@@ -21,10 +24,10 @@ mkClosedElab : {vars : _} ->
                FC -> Env Term vars ->
                (Core (Term vars, Glued vars)) ->
                Core ClosedTerm
-mkClosedElab fc [] elab
+mkClosedElab fc [<] elab
     = do (tm, _) <- elab
          pure tm
-mkClosedElab {vars = x :: vars} fc (b :: env) elab
+mkClosedElab {vars = vars :< x} fc (env :< b) elab
     = mkClosedElab fc env
           (do (sc', _) <- elab
               let b' = newBinder b
@@ -73,10 +76,10 @@ delayOnFailure fc rig env exp pred pri elab
                  if pred err
                     then
                       do nm <- genName "delayed"
-                         (ci, dtm) <- newDelayed fc linear env nm !(getTerm expected)
-                         logGlueNF "elab.delay" 5 ("Postponing elaborator " ++ show nm ++
-                                      " at " ++ show fc ++
-                                      " for") env expected
+                         (ci, dtm) <- newDelayed fc linear env nm !(quote env expected)
+                         logNF "elab.delay" 5 ("Postponing elaborator " ++ show nm ++
+                                       " at " ++ show fc ++
+                                       " for") env expected
                          log "elab.delay" 10 ("Due to error " ++ show err)
                          defs <- get Ctxt
                          update UST { delayedElab $=
@@ -99,7 +102,7 @@ delayOnFailure fc rig env exp pred pri elab
         = do nm <- genName "delayTy"
              u <- uniVar fc
              ty <- metaVar fc erased env nm (TType fc u)
-             pure (gnf env ty)
+             nf env ty
 
 export
 delayElab : {vars : _} ->
@@ -117,9 +120,8 @@ delayElab {vars} fc rig env exp pri elab
          let nos = noSolve ust -- remember the holes we shouldn't solve
          nm <- genName "delayed"
          expected <- mkExpected exp
-         (ci, dtm) <- newDelayed fc linear env nm !(getTerm expected)
-         logGlueNF "elab.delay" 5 ("Postponing elaborator " ++ show nm ++
-                      " for") env expected
+         (ci, dtm) <- newDelayed fc linear env nm !(quote env expected)
+         logNF "elab.delay" 5 ("Postponing elaborator " ++ show nm ++ " for") env expected
          defs <- get Ctxt
          update UST { delayedElab $=
                  ((pri, ci, localHints defs, mkClosedElab fc env
@@ -138,7 +140,7 @@ delayElab {vars} fc rig env exp pri elab
         = do nm <- genName "delayTy"
              u <- uniVar fc
              ty <- metaVar fc erased env nm (TType fc u)
-             pure (gnf env ty)
+             nf env ty
 
 export
 ambiguous : Error -> Bool
@@ -152,46 +154,54 @@ ambiguous (InRHS _ _ err) = ambiguous err
 ambiguous (WhenUnifying _ _ _ _ _ err) = ambiguous err
 ambiguous _ = False
 
+zipArgs : {vars: _} -> {auto c : Ref Ctxt Defs} ->
+          Spine vars -> Spine vars -> Core (List (NF vars, NF vars))
+zipArgs [<] _ = pure []
+zipArgs _ [<] = pure []
+zipArgs (as :< a) (bs :< b)
+   = do sp <- zipArgs as bs
+        pure $ (!(spineVal a), !(spineVal b)) :: sp
+
 mutual
   mismatchNF : {auto c : Ref Ctxt Defs} ->
                {vars : _} ->
-               Defs -> NF vars -> NF vars -> Core Bool
-  mismatchNF defs (NTCon _ xn _ xargs) (NTCon _ yn _ yargs)
+               NF vars -> NF vars -> Core Bool
+  mismatchNF (VTCon _ xn _ xargs) (VTCon _ yn _ yargs)
       = if xn /= yn
            then pure True
-           else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
-  mismatchNF defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
+           else anyM mismatch !(zipArgs xargs yargs)
+  mismatchNF (VDCon _ _ xt _ xargs) (VDCon _ _ yt _ yargs)
       = if xt /= yt
            then pure True
-           else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
-  mismatchNF defs (NPrimVal _ xc) (NPrimVal _ yc) = pure (xc /= yc)
-  mismatchNF defs (NDelayed _ _ x) (NDelayed _ _ y) = mismatchNF defs x y
-  mismatchNF defs (NDelay _ _ _ x) (NDelay _ _ _ y)
-      = mismatchNF defs !(evalClosure defs x) !(evalClosure defs y)
-  mismatchNF _ _ _ = pure False
+           else anyM mismatch !(zipArgs xargs yargs)
+  mismatchNF (VPrimVal _ xc) (VPrimVal _ yc) = pure (xc /= yc)
+  mismatchNF (VDelayed _ _ x) (VDelayed _ _ y)
+      = mismatchNF !(expand x) !(expand y)
+  mismatchNF (VDelay _ _ _ x) (VDelay _ _ _ y)
+      = mismatchNF !(expand x) !(expand y)
+  mismatchNF _ _ = pure False
 
   mismatch : {auto c : Ref Ctxt Defs} ->
              {vars : _} ->
-             Defs -> (Closure vars, Closure vars) -> Core Bool
-  mismatch defs (x, y)
-      = mismatchNF defs !(evalClosure defs x) !(evalClosure defs y)
+             (NF vars, NF vars) -> Core Bool
+  mismatch (x, y) = mismatchNF x y
 
 contra : {auto c : Ref Ctxt Defs} ->
          {vars : _} ->
-         Defs -> NF vars -> NF vars -> Core Bool
+         NF vars -> NF vars -> Core Bool
 -- Unlike 'impossibleOK', any mismatch indicates an unrecoverable error
-contra defs (NTCon _ xn xa xargs) (NTCon _ yn ya yargs)
+contra (VTCon _ xn xa xargs) (VTCon _ yn ya yargs)
     = if xn /= yn
          then pure True
-         else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
-contra defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
+         else anyM mismatch !(zipArgs xargs yargs)
+contra (VDCon _ _ xt _ xargs) (VDCon _ _ yt _ yargs)
     = if xt /= yt
          then pure True
-         else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
-contra defs (NPrimVal _ x) (NPrimVal _ y) = pure (x /= y)
-contra defs (NDCon {}) (NPrimVal {}) = pure True
-contra defs (NPrimVal {}) (NDCon {}) = pure True
-contra defs x y = pure False
+         else anyM mismatch !(zipArgs xargs yargs)
+contra (VPrimVal _ x) (VPrimVal _ y) = pure (x /= y)
+contra (VDCon {}) (VPrimVal {}) = pure True
+contra (VPrimVal {}) (VDCon {}) = pure True
+contra x y = pure False
 
 -- Errors that might be recoverable later if we try again. Generally -
 -- ambiguity errors, type inference errors
@@ -200,12 +210,18 @@ recoverable : {auto c : Ref Ctxt Defs} ->
               Error -> Core Bool
 recoverable (CantConvert _ gam env l r)
    = do defs <- get Ctxt
-        let defs = { gamma := gam } defs
-        pure $ not !(contra defs !(nf defs env l) !(nf defs env r))
+        let defs_from_err = { gamma := gam } defs
+        put Ctxt defs_from_err
+        let res = not !(contra !(expand !(nf env l)) !(expand !(nf env r)))
+        put Ctxt defs
+        pure res
 recoverable (CantSolveEq _ gam env l r)
    = do defs <- get Ctxt
-        let defs = { gamma := gam } defs
-        pure $ not !(contra defs !(nf defs env l) !(nf defs env r))
+        let defs_from_err = { gamma := gam } defs
+        put Ctxt defs_from_err
+        let res = not !(contra !(expand !(nf env l)) !(expand !(nf env r)))
+        put Ctxt defs
+        pure res
 recoverable (UndefinedName {}) = pure False
 recoverable (LinearMisuse {}) = pure False
 recoverable (InType _ _ err) = recoverable err
@@ -253,8 +269,7 @@ retryDelayed' errmode p acc (d@(_, i, hints, elab) :: ds)
                let ds' = reverse (delayedElab ust) ++ ds
 
                updateDef (Resolved i) (const (Just
-                    (PMDef (MkPMDefInfo NotHole True False)
-                           Scope.empty (STerm 0 tm) (STerm 0 tm) [])))
+                    (Function (MkPMDefInfo NotHole True False) tm tm Nothing)))
                logTerm "elab.update" 5 ("Resolved delayed hole " ++ show i) tm
                logTermNF "elab.update" 5 ("Resolved delayed hole NF " ++ show i) Env.empty tm
                removeHole i

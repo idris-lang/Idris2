@@ -3,9 +3,11 @@ module TTImp.Elab.Hole
 import Core.Context.Log
 import Core.Env
 import Core.Metadata
-import Core.Normalise
 import Core.Unify
-import Core.Value
+import Core.Evaluate.Value
+import Core.Evaluate.Quote
+import Core.Evaluate.Normalise
+import Core.Evaluate.Expand
 
 import TTImp.Elab.Check
 import TTImp.TTImp
@@ -17,7 +19,7 @@ import TTImp.TTImp
 -- for the hole
 mkPrecise : {auto c : Ref Ctxt Defs} ->
             NF vars -> Core ()
-mkPrecise (NApp _ (NMeta n i _) _)
+mkPrecise (VMeta _ n i _ _ _)
     = updateDef (Resolved i)
                 (\case
                     Hole i p => Just (Hole i ({ precisetype := True} p))
@@ -40,14 +42,14 @@ checkHole rig elabinfo nest env fc n_in (Just gexpty)
          Nothing <- lookupCtxtExact nm (gamma defs)
              | _ => do log "elab.hole" 1 $ show nm ++ " already defined"
                        throw (AlreadyDefined fc nm)
-         expty <- getTerm gexpty
+         expty <- quote env gexpty
          -- Turn lets into lambda before making the hole so that they
          -- get abstracted over in the hole (it's fine here, unlike other
          -- holes, because we're not trying to unify it so it's okay if
          -- applying the metavariable isn't a pattern form)
          let env' = letToLam env
          (idx, metaval) <- metaVarI fc rig env' nm expty
-         mkPrecise !(getNF gexpty)
+         mkPrecise !(expand gexpty)
          -- Record the LHS for this hole in the metadata
          withCurrentLHS (Resolved idx)
          addNameLoc fc nm
@@ -61,7 +63,7 @@ checkHole rig elabinfo nest env fc n_in exp
          ty <- metaVar fc erased env' nmty (TType fc u)
          nm <- inCurrentNS (UN n_in)
          defs <- get Ctxt
-         mkPrecise !(nf defs env' ty)
+         mkPrecise !(expand !(nf env' ty))
 
          Nothing <- lookupCtxtExact nm (gamma defs)
              | _ => do log "elab.hole" 1 $ show nm ++ " already defined"
@@ -71,4 +73,4 @@ checkHole rig elabinfo nest env fc n_in exp
          addNameLoc fc nm
          addUserHole False nm
          saveHole nm
-         pure (metaval, gnf env ty)
+         pure (metaval, !(nf env' ty))

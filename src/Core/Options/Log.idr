@@ -53,6 +53,8 @@ knownTopics = [
     ("compile.casetree.missing", Just "Log when we add an error case for uncovered branches."),
     ("compile.casetree.partition", Nothing),
     ("compile.casetree.pick", Nothing),
+    ("compile.casetree.subst", Nothing),
+    ("compile.casetree.updateVar", Nothing),
     ("compiler.const-fold", Just "Log definitions before and after constant folding."),
     ("compiler.cse", Just "Log information about common sub-expression elimination."),
     ("compiler.identity", Just "Log definitions that are equivalent to identity at runtime."),

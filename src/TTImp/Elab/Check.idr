@@ -6,7 +6,9 @@ module TTImp.Elab.Check
 import Core.Env
 import Core.Metadata
 import Core.Unify
-import Core.Value
+import Core.Evaluate.Value
+import Core.Evaluate.Expand
+import Core.Evaluate
 
 import Idris.REPL.Opts
 import Idris.Syntax
@@ -18,9 +20,7 @@ import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 import Libraries.Data.UserNameMap
 import Libraries.Data.WithDefault
-
-import Libraries.Data.List.SizeOf
-
+import Libraries.Data.SnocList.SizeOf
 import Libraries.Data.VarSet
 
 %default covering
@@ -73,6 +73,14 @@ covering
 Show (ImplBinding vars) where
   show (NameBinding _ c p tm ty) = show (tm, ty)
   show (AsBinding c p tm ty pat) = show (tm, ty) ++ "@" ++ show tm
+
+export
+HasNames (ImplBinding vars) where
+  full gam (NameBinding fc c p tm ty) = pure (NameBinding fc c p !(full gam tm) !(full gam ty))
+  full gam (AsBinding c p tm ty pat) = pure (AsBinding c p tm !(full gam ty) !(full gam pat))
+
+  resolved gam (NameBinding fc c p tm ty) = pure (NameBinding fc c p !(resolved gam tm) !(resolved gam ty))
+  resolved gam (AsBinding c p tm ty pat) = pure (AsBinding c p tm !(resolved gam ty) !(resolved gam pat))
 
 export
 bindingMetas : ImplBinding vars -> NameMap Bool
@@ -186,7 +194,7 @@ saveHole n = update EST { saveHoles $= insert n () }
 
 weakenedEState : {n, vars : _} ->
                  {auto e : Ref EST (EState vars)} ->
-                 Core (Ref EST (EState (n :: vars)))
+                 Core (Ref EST (EState (vars :< n)))
 weakenedEState {e}
     = do est <- get EST
          eref <- newRef EST $
@@ -199,7 +207,7 @@ weakenedEState {e}
          pure eref
   where
     wknTms : (Name, ImplBinding vs) ->
-             (Name, ImplBinding (n :: vs))
+             (Name, ImplBinding (vs :< n))
     wknTms (f, NameBinding fc c p x y)
         = (f, NameBinding fc c (map weaken p) (weaken x) (weaken y))
     wknTms (f, AsBinding c p x y z)
@@ -207,15 +215,14 @@ weakenedEState {e}
 
 strengthenedEState : {n, vars : _} ->
                      Ref Ctxt Defs ->
-                     Ref EST (EState (n :: vars)) ->
-                     FC -> Env Term (n :: vars) ->
+                     Ref EST (EState (Scope.bind vars n)) ->
+                     FC -> Env Term (Scope.bind vars n) ->
                      Core (EState vars)
 strengthenedEState {n} {vars} c e fc env
     = do est <- get EST
-         defs <- get Ctxt
          svs <- dropSub (subEnv est)
-         bns <- traverse (strTms defs) (boundNames est)
-         todo <- traverse (strTms defs) (toBind est)
+         bns <- traverse (strTms) (boundNames est)
+         todo <- traverse (strTms) (toBind est)
          pure $ { subEnv := svs
                 , boundNames := bns
                 , toBind := todo
@@ -224,7 +231,7 @@ strengthenedEState {n} {vars} c e fc env
                 } est
 
   where
-    dropSub : Thin xs (y :: ys) -> Core (Thin xs ys)
+    dropSub : Thin xs (ys :< y) -> Core (Thin xs ys)
     dropSub (Drop sub) = pure sub
     dropSub _ = throw (InternalError "Badly formed weakened environment")
 
@@ -235,41 +242,42 @@ strengthenedEState {n} {vars} c e fc env
     -- never actualy *use* that hole - this process is only to ensure that the
     -- unbound implicit doesn't depend on any variables it doesn't have
     -- in scope.
-    removeArgVars : List (Term (n :: vs)) -> Maybe (List (Term vs))
-    removeArgVars [] = pure []
-    removeArgVars (Local fc r (S k) p :: args)
+    removeArgVars : SnocList (RigCount, Term (Scope.bind vs n)) ->
+                    Maybe (SnocList (RigCount, Term vs))
+    removeArgVars [<] = pure [<]
+    removeArgVars (args :< (c, Local fc r (S k) p))
         = do args' <- removeArgVars args
-             pure (Local fc r _ (dropLater p) :: args')
-    removeArgVars (Local fc r Z p :: args)
+             pure (args' :< (c, Local fc r _ (dropLater p)))
+    removeArgVars (args :< (_, Local fc r Z p))
         = removeArgVars args
-    removeArgVars (a :: args)
+    removeArgVars (args :< (c, a))
         = do a' <- shrink a (Drop Refl)
              args' <- removeArgVars args
-             pure (a' :: args')
+             pure (args' :< (c, a'))
 
-    removeArg : Term (n :: vs) -> Maybe (Term vs)
+    removeArg : Term (vs :< n) -> Maybe (Term vs)
     removeArg tm
-        = case getFnArgs tm of
+        = case getFnArgsSpine tm of
                (f, args) =>
                    do args' <- removeArgVars args
                       f' <- shrink f (Drop Refl)
-                      pure (apply (getLoc f) f' args')
+                      pure (applySpine (getLoc f) f' args')
 
-    strTms : Defs -> (Name, ImplBinding (n :: vars)) ->
+    strTms : (Name, ImplBinding (Scope.bind vars n)) ->
              Core (Name, ImplBinding vars)
-    strTms defs (f, NameBinding fc c p x y)
-        = do xnf <- normaliseHoles defs env x
-             ynf <- normaliseHoles defs env y
+    strTms (f, NameBinding fc c p x y)
+        = do xnf <- normaliseHoles env x
+             ynf <- normaliseHoles env y
              case (shrinkPi p (Drop Refl),
                    removeArg xnf,
                    shrink ynf (Drop Refl)) of
                (Just p', Just x', Just y') =>
                     pure (f, NameBinding fc c p' x' y')
                _ => throw (BadUnboundImplicit fc env f y)
-    strTms defs (f, AsBinding c p x y z)
-        = do xnf <- normaliseHoles defs env x
-             ynf <- normaliseHoles defs env y
-             znf <- normaliseHoles defs env z
+    strTms (f, AsBinding c p x y z)
+        = do xnf <- normaliseHoles env x
+             ynf <- normaliseHoles env y
+             znf <- normaliseHoles env z
              case (shrinkPi p (Drop Refl),
                    shrink xnf (Drop Refl),
                    shrink ynf (Drop Refl),
@@ -282,8 +290,8 @@ export
 inScope : {n, vars : _} ->
           {auto c : Ref Ctxt Defs} ->
           {auto e : Ref EST (EState vars)} ->
-          FC -> Env Term (n :: vars) ->
-          (Ref EST (EState (n :: vars)) -> Core a) ->
+          FC -> Env Term (Scope.bind vars n) ->
+          (Ref EST (EState (Scope.bind vars n)) -> Core a) ->
           Core a
 inScope {c} {e} fc env elab
     = do e' <- weakenedEState
@@ -302,15 +310,16 @@ mustBePoly fc env tm ty = update EST { polyMetavars $= ((fc, env, tm, ty) :: ) }
 -- type. If we know this, we can possibly infer some argument types before
 -- elaborating them, which might help us disambiguate things more easily.
 export
-concrete : Defs -> Env Term vars -> NF vars -> Core Bool
-concrete defs env (NBind fc _ (Pi {}) sc)
-    = do sc' <- sc defs (toClosure defaultOpts env (Erased fc Placeholder))
-         concrete defs env sc'
-concrete defs env (NDCon {}) = pure True
-concrete defs env (NTCon {}) = pure True
-concrete defs env (NPrimVal {}) = pure True
-concrete defs env (NType {}) = pure True
-concrete defs env _ = pure False
+concrete : {vars: _} -> {auto c : Ref Ctxt Defs} ->
+           Env Term vars -> NF vars -> Core Bool
+concrete env (VBind fc _ (Pi {}) sc)
+    = do sc' <- sc (pure (VErased fc Placeholder))
+         concrete env !(expand sc')
+concrete env (VDCon {}) = pure True
+concrete env (VTCon {}) = pure True
+concrete env (VPrimVal {}) = pure True
+concrete env (VType {}) = pure True
+concrete env _ = pure False
 
 export
 updateEnv : {new : _} ->
@@ -383,12 +392,7 @@ metaVarI : {vars : _} ->
            Env Term vars -> Name -> Term vars -> Core (Int, Term vars)
 metaVarI fc rig env n ty
     = do defs <- get Ctxt
-         tynf <- nf defs env ty
-         let hinf = case tynf of
-                         NApp _ (NMeta {}) _ =>
-                              { precisetype := True } (holeInit False)
-                         _ => holeInit False
-         newMeta fc rig env n ty (Hole (length env) hinf) True
+         newMeta fc rig env n ty (Hole (length env) (holeInit False)) True
 
 export
 argVar : {vars : _} ->
@@ -444,7 +448,7 @@ searchVar fc rig depth def env nest n ty
                                          else find x xs
 
     envHints : List Name -> Env Term vars ->
-               Core (vars' ** (Term (vars' ++ vars) -> Term vars, Env Term (vars' ++ vars)))
+               Core (vars' ** (Term (Scope.addInner vars vars') -> Term vars, Env Term (Scope.addInner vars vars')))
     envHints [] env = pure (Scope.empty ** (id, env))
     envHints (n :: ns) env
         = do (vs ** (f, env')) <- envHints ns env
@@ -460,9 +464,9 @@ searchVar fc rig depth def env nest n ty
              let binder = Let fc top (weakenNs (mkSizeOf vs) app)
                                      (weakenNs (mkSizeOf vs) tyenv)
              varn <- toFullNames n'
-             pure ((varn :: vs) **
+             pure ((Scope.bind vs varn) **
                     (\t => f (Bind fc varn binder t),
-                       binder :: env'))
+                       Env.bind env' binder))
 
 -- Elaboration info (passed to recursive calls)
 public export
@@ -732,30 +736,24 @@ convertWithLazy withLazy fc elabinfo env x y
                        _ => inTerm in
           catch
             (do let lazy = !isLazyActive && withLazy
-                logGlueNF "elab.unify" 5 ("Unifying " ++ show withLazy ++ " "
+                logNF "elab.unify" 5 ("Unifying " ++ show lazy ++ " "
                              ++ show (elabMode elabinfo)) env x
-                logGlueNF "elab.unify" 5 "....with" env y
-                vs <- if isFromTerm x && isFromTerm y
-                         then do xtm <- getTerm x
-                                 ytm <- getTerm y
-                                 if lazy
-                                    then unifyWithLazy umode fc env xtm ytm
-                                    else unify umode fc env xtm ytm
-                         else do xnf <- getNF x
-                                 ynf <- getNF y
-                                 if lazy
-                                    then unifyWithLazy umode fc env xnf ynf
-                                    else unify umode fc env xnf ynf
+                logNF "elab.unify" 5 "....with" env y
+                logEnv "elab.unify" 5 "convertWithLazy in Env" env
+                vs <- if lazy
+                         then logDepth $ unifyWithLazy umode fc env x y
+                         else logDepth $ unify umode fc env x y
+                logC "elab.unify" 5 $ pure "....result: \{show vs}"
                 when (holesSolved vs) $
                     solveConstraints umode Normal
                 pure vs)
             (\err =>
-               do xtm <- getTerm x
-                  ytm <- getTerm y
-                  -- See if we can improve the error message by
+               do -- See if we can improve the error message by
                   -- resolving any more constraints
                   catch (solveConstraints umode Normal)
                         (\err => pure ())
+                  xtm <- logQuiet $ quote env x
+                  ytm <- logQuiet $ quote env y
                   -- We need to normalise the known holes before
                   -- throwing because they may no longer be known
                   -- by the time we look at the error
@@ -785,26 +783,25 @@ checkExp : {vars : _} ->
            Core (Term vars, Glued vars)
 checkExp rig elabinfo env fc tm got (Just exp)
     = do vs <- convertWithLazy True fc elabinfo env got exp
+         logC "elab" 10 $ pure "checkExp vs: \{show vs}"
          case (constraints vs) of
               [] => case addLazy vs of
                          NoLazy => do logTerm "elab" 5 "Solved" tm
                                       pure (tm, got)
                          AddForce r => do logTerm "elab" 5 "Force" tm
-                                          logGlue "elab" 5 "Got" got
-                                          logGlue "elab" 5 "Exp" exp
+                                          logNF "elab" 5 "Got" env got
+                                          logNF "elab" 5 "Exp" env exp
                                           pure (TForce fc r tm, exp)
-                         AddDelay r => do ty <- getTerm got
+                         AddDelay r => do ty <- quote env got
                                           logTerm "elab" 5 "Delay" tm
                                           pure (TDelay fc r ty tm, exp)
               cs => do logTerm "elab" 5 "Not solved" tm
-                       defs <- get Ctxt
-                       empty <- clearDefs defs
-                       cty <- getTerm exp
+                       cty <- logQuiet $ quote env exp
                        ctm <- newConstant fc rig env tm cty cs
                        dumpConstraints "elab" 5 False
                        case addLazy vs of
                             NoLazy => pure (ctm, got)
                             AddForce r => pure (TForce fc r tm, exp)
-                            AddDelay r => do ty <- getTerm got
+                            AddDelay r => do ty <- quote env got
                                              pure (TDelay fc r ty tm, exp)
 checkExp rig elabinfo env fc tm got Nothing = pure (tm, got)

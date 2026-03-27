@@ -2,6 +2,7 @@ module Idris.Doc.String
 
 import Core.Env
 import Core.TT.Traversals
+import Core.Evaluate
 
 import Idris.Doc.Display
 import Idris.Pretty
@@ -78,8 +79,7 @@ prettyType : {auto c : Ref Ctxt Defs} ->
              {auto s : Ref Syn SyntaxInfo} ->
              (IdrisSyntax -> ann) -> ClosedTerm -> Core (Doc ann)
 prettyType syn ty = do
-  defs <- get Ctxt
-  ty <- normaliseHoles defs Env.empty ty
+  ty <- normaliseHoles Env.empty ty
   ty <- toFullNames ty
   ty <- resugar Env.empty ty
   pure (prettyBy syn ty)
@@ -99,7 +99,7 @@ getImplDocs keep
               let Just Func = defNameType (definition def)
                 | _ => pure []
               -- Check that the type mentions the name of interest
-              ty <- toFullNames !(normaliseHoles defs Env.empty (type def))
+              ty <- toFullNames !(normaliseHoles Env.empty (type def))
               True <- keep ty
                 | False => pure []
               ty <- resugar Env.empty ty
@@ -409,7 +409,7 @@ getDocsForName fc n config
              | [ifacedata] => (Just "interface",) . pure <$> getIFaceDoc ifacedata
              | _ => pure (Nothing, []) -- shouldn't happen, we've resolved ambiguity by now
          case definition d of
-           PMDef {} => pure ( Nothing
+           Function {} => pure ( Nothing
                                    , catMaybes [ showTotal (totality d)
                                                , pure (showVisible (collapseDefault $ visibility d))])
            TCon _ _ _ _ _ cons _ =>
@@ -442,7 +442,7 @@ getDocsForName fc n config
                                (pure (Nothing, []))
 
              -- Then form the type declaration
-             ty <- resugar Env.empty =<< normaliseHoles defs Env.empty (type def)
+             ty <- resugar Env.empty =<< normaliseHoles Env.empty (type def)
              -- when printing e.g. interface methods there is no point in
              -- repeating the interface's name
              let ty = ifThenElse (not dropFirst) ty $ case ty of
@@ -495,7 +495,7 @@ getDocsForImplementation t = do
     -- get the return type of all the candidate hints
     Just (ix, def) <- lookupCtxtExactI hint (gamma defs)
       | Nothing => pure Nothing
-    ty <- resugar Env.empty =<< normaliseHoles defs Env.empty (type def)
+    ty <- resugar Env.empty =<< normaliseHoles Env.empty (type def)
     let (_, retTy) = underPis ty
     -- try to see whether it approximates what we are looking for
     -- we throw the head away because it'll be the interface name (I)
@@ -536,7 +536,7 @@ getDocsForImplementation t = do
     pure (Just (hint, ix, def))
   case impls of
     [] => pure $ Just $ "Could not find an implementation for" <++> pretty0 (show t) --hack
-    _ => do ds <- traverse (displayImpl defs) impls
+    _ => do ds <- traverse displayImpl impls
             pure $ Just $ vcat ds
 
 export

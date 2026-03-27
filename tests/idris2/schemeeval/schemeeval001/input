@@ -1,6 +1,0 @@
-:set eval scheme
-\x, y => plus x y
-\x : Nat, y => y + x
-\x => plus (S (S x)) x
-\x => plus x (S (S x))
-:q

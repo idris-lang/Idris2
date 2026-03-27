@@ -3,8 +3,11 @@ module Core.Metadata
 import Core.Binary
 import Core.Context.Log
 import Core.Env
-import Core.Normalise
 import Core.TTC
+
+import Core.Evaluate.Normalise
+import Core.Evaluate.Value
+import Core.Evaluate.Quote
 
 import System.File
 import Libraries.Data.NatSet
@@ -200,9 +203,9 @@ addLHS loc outerenvlen env tm
 
   where
     toPat : Env Term vs -> Env Term vs
-    toPat (Lam fc c p ty :: bs) = PVar fc c p ty :: toPat bs
-    toPat (b :: bs) = b :: toPat bs
-    toPat [] = []
+    toPat (bs :< Lam fc c p ty) = Env.bind (toPat bs) $ PVar fc c p ty
+    toPat (bs :< b) = Env.bind (toPat bs) b
+    toPat [<] = Env.empty
 
 -- For giving local variable names types, just substitute the name
 -- rather than storing the whole environment, otherwise we'll repeatedly
@@ -214,8 +217,8 @@ addLHS loc outerenvlen env tm
 -- types directly!
 substEnv : {vars : _} ->
            FC -> Env Term vars -> (tm : Term vars) -> ClosedTerm
-substEnv loc [] tm = tm
-substEnv {vars = x :: _} loc (b :: env) tm
+substEnv loc [<] tm = tm
+substEnv {vars = _ :< x} loc (env :< b) tm
     = substEnv loc env (subst (Ref loc Bound x) tm)
 
 export
@@ -352,7 +355,8 @@ normaliseTypes
     nfType : Defs -> (NonEmptyFC, (Name, Nat, ClosedTerm)) ->
              Core (NonEmptyFC, (Name, Nat, ClosedTerm))
     nfType defs (loc, (n, len, ty))
-       = pure (loc, (n, len, !(normaliseArgHoles defs Env.empty ty)))
+      -- See nfHolesArgs at elabTermSub of TTImp.Elab
+       = pure (loc, (n, len, !(quote Env.empty !(nfHolesArgs Env.empty ty))))
 
 record TTMFile where
   constructor MkTTMFile

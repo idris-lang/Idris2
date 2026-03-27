@@ -3,7 +3,9 @@ module TTImp.Interactive.CaseSplit
 import Core.Env
 import Core.Metadata
 import Core.UnifyState
-import Core.Value
+import Core.Evaluate.Value
+import Core.Evaluate.Normalise
+import Core.Evaluate.Expand
 
 import Idris.REPL.Opts
 import Idris.Syntax
@@ -65,12 +67,12 @@ findTyName : {vars : _} ->
 findTyName defs env n (Bind _ x b@(PVar _ c p ty) sc)
       -- Take the first one, which is the most recently bound
     = if n == x
-         then do tynf <- nf defs env ty
+         then do tynf <- expand !(nf env ty)
                  case tynf of
-                      NTCon _ tyn _ _ => pure $ Just tyn
+                      VTCon _ tyn _ _ => pure $ Just tyn
                       _ => pure Nothing
-         else findTyName defs (b :: env) n sc
-findTyName defs env n (Bind _ x b sc) = findTyName defs (b :: env) n sc
+         else findTyName defs (env :< b) n sc
+findTyName defs env n (Bind _ x b sc) = findTyName defs (Env.bind env b) n sc
 findTyName _ _ _ _ = pure Nothing
 
 getDefining : Term vars -> Maybe Name
@@ -114,18 +116,19 @@ findAllVars (Bind _ x (PLet {}) sc)
 findAllVars t = toList (dropNS <$> getDefining t)
 
 export
-explicitlyBound : Defs -> ClosedNF -> Core (List Name)
-explicitlyBound defs (NBind fc x (Pi {}) sc)
+explicitlyBound : {auto c : Ref Ctxt Defs} ->
+                  Defs -> ClosedNF -> Core (List Name)
+explicitlyBound defs (VBind fc x (Pi {}) sc)
     = pure $ x :: !(explicitlyBound defs
-                    !(sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))))
+                    !(expand !(sc (pure (VErased fc Placeholder)))))
 explicitlyBound defs _ = pure []
 
 export
 getEnvArgNames : {auto c : Ref Ctxt Defs} ->
                  Defs -> Nat -> ClosedNF -> Core (List String)
 getEnvArgNames defs Z sc = getArgNames defs !(explicitlyBound defs sc) [] Env.empty sc
-getEnvArgNames defs (S k) (NBind fc n _ sc)
-    = getEnvArgNames defs k !(sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder)))
+getEnvArgNames defs (S k) (VBind fc n _ sc)
+    = getEnvArgNames defs k !(expand !(sc (pure (VErased fc Placeholder))))
 getEnvArgNames defs n ty = pure []
 
 expandCon : {auto c : Ref Ctxt Defs} ->
@@ -137,7 +140,7 @@ expandCon fc usedvars con
          pure (apply (IVar fc con)
                 (map (IBindVar fc . UN . Basic)
                      !(getArgNames defs [] usedvars Env.empty
-                                   !(nf defs Env.empty ty))))
+                                   !(expand !(nf Env.empty ty)))))
 
 updateArg : {auto c : Ref Ctxt Defs} ->
             List Name -> -- all the variable names
@@ -264,7 +267,7 @@ mkCase {c} {u} fn orig lhs_raw
                -- be an erased name in a case block (which will be bound elsewhere
                -- once split and turned into a pattern)
                (lhs, _) <- elabTerm {c} {m} {u}
-                                    fn (InLHS erased) [] (MkNested [])
+                                    fn (InLHS erased) [] (NestedNames.empty)
                                     Env.empty (IBindHere (getFC lhs_raw) PATTERN lhs_raw)
                                     Nothing
                -- Revert all public back to false
@@ -282,9 +285,8 @@ mkCase {c} {u} fn orig lhs_raw
                   put UST ust
                   case err of
                        WhenUnifying _ gam env l r err
-                         => do let defs = { gamma := gam } defs
-                               if !(impossibleOK defs !(nf defs env l)
-                                                      !(nf defs env r))
+                         => do if !(impossibleOK !(expand !(nf env l))
+                                                 !(expand !(nf env r)))
                                   then pure (Impossible lhs_raw)
                                   else pure Invalid
                        _ => pure Invalid)
@@ -325,7 +327,16 @@ getSplitsLHS fc envlen lhs_in n
 
          let Just idx = getNameID fn (gamma defs)
              | Nothing => undefinedName fc fn
+
+         gdef <- lookupCtxtExact (Resolved idx) (gamma defs)
+         updateDef (Resolved idx)
+            (\d => case d of
+                        Function fi ct rt cs =>
+                          Just (Function ({ alwaysReduce := False } fi) ct rt cs)
+                        _ => Just d)
          cases <- traverse (mkCase idx rawlhs) trycases
+         updateDef (Resolved idx) $ const $ definition <$> gdef
+
          log "interaction.casesplit" 3 $ "Found cases: " ++ show cases
 
          pure (combine cases [])

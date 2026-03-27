@@ -5,6 +5,7 @@ import Core.Env
 import Core.InitPrimitives
 import Core.Metadata
 import Core.Unify
+import Core.Evaluate
 
 import Idris.Doc.Annotations
 import Idris.Doc.String
@@ -254,7 +255,7 @@ docsOrSignature fc n
     typeSummary : Defs -> Core (Doc IdrisDocAnn)
     typeSummary defs = do Just def <- lookupCtxtExact n (gamma defs)
                             | Nothing => pure ""
-                          ty <- resugar Env.empty !(normaliseHoles defs Env.empty (type def))
+                          ty <- resugar Env.empty !(normaliseHoles Env.empty (type def))
                           pure $ pretty0 n <++> ":" <++> prettyBy Syntax ty
 
 export
@@ -267,7 +268,7 @@ equivTypes ty1 ty2 =
           | _ => pure False
      logTerm "typesearch.equiv" 10 "Candidate: " ty1
      defs <- get Ctxt
-     True <- pure (!(getArity defs Env.empty ty1) == !(getArity defs Env.empty ty2))
+     True <- pure (!(getArity Env.empty ty1) == !(getArity Env.empty ty2))
        | False => pure False
      _ <- newRef UST initUState
      b <- catch

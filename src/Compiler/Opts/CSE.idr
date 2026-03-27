@@ -37,7 +37,8 @@ import Data.SortedMap
 import Data.Vect
 
 import Libraries.Data.Erased
-import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
+import Libraries.Data.SnocList.Extra
 
 ||| Maping from a pairing of closed terms together with
 ||| their size (for efficiency) to the number of
@@ -117,11 +118,11 @@ store sz exp =
 
 dropVar : SizeOf inner
         -> {n : Nat}
-        -> (0 p : IsVar x n (inner ++ outer))
+        -> (0 p : IsVar x n (Scope.addInner outer inner))
         -> Maybe (Erased (IsVar x n inner))
 dropVar inn p = case locateIsVar inn p of
-  Left p => Just p
-  Right p => Nothing
+  Right p => Just p
+  Left p => Nothing
 
 
 -- Tries to 'strengthen' an expression by removing an `outer` context.
@@ -131,7 +132,7 @@ dropVar inn p = case locateIsVar inn p of
 Drop tm
   = {0 inner, outer : Scope} ->
     SizeOf inner ->
-    tm (inner ++ outer) ->
+    tm (Scope.addInner outer inner) ->
     Maybe (tm inner)
 
 
@@ -164,11 +165,12 @@ mutual
   dropCExp inn (CErased fc) = Just $ CErased fc
   dropCExp inn (CCrash fc x) = Just $ CCrash fc x
 
+  dropCaseScope : Drop CCaseScope
+  dropCaseScope inn (CRHS z) = CRHS <$> dropCExp inn z
+  dropCaseScope inn (CArg x sc) = CArg x <$> dropCaseScope (suc inn) sc
+
   dropConAlt : Drop CConAlt
-  dropConAlt inn (MkConAlt x y tag args z) =
-    MkConAlt x y tag args <$>
-        dropCExp (mkSizeOf args + inn)
-        (replace {p = CExp} (appendAssociative args inner outer) z)
+  dropConAlt inn (MkConAlt x y t z) = MkConAlt x y t <$> dropCaseScope inn z
 
   dropConstAlt : Drop CConstAlt
   dropConstAlt inn (MkConstAlt x y) = MkConstAlt x <$> dropCExp inn y
@@ -286,12 +288,22 @@ mutual
   analyzeSubExp c@(CErased {})  = pure (1, c)
   analyzeSubExp c@(CCrash {})   = pure (1, c)
 
+  analyzeCaseScope :  { auto c : Ref Sts St }
+                -> CCaseScope ns
+                -> Core (Integer, CCaseScope ns)
+  analyzeCaseScope (CRHS tm)
+      = do (sz, tm') <- analyze tm
+           pure (sz, CRHS tm')
+  analyzeCaseScope (CArg x sc)
+      = do (sz, sc') <- analyzeCaseScope sc
+           pure (sz, CArg x sc')
+
   analyzeConAlt :  { auto c : Ref Sts St }
                 -> CConAlt ns
                 -> Core (Integer, CConAlt ns)
-  analyzeConAlt (MkConAlt n c t as z) = do
-    (sz, z') <- analyze z
-    pure (sz + 1, MkConAlt n c t as z')
+  analyzeConAlt (MkConAlt n c t z) = do
+    (sz, z') <- analyzeCaseScope z
+    pure (sz + 1, MkConAlt n c t z')
 
   analyzeConstAlt : Ref Sts St => CConstAlt ns -> Core (Integer, CConstAlt ns)
   analyzeConstAlt (MkConstAlt c y) = do
@@ -448,13 +460,20 @@ mutual
   replaceExp _ c@(CErased {})  = pure c
   replaceExp _ c@(CCrash {})   = pure c
 
+  replaceCaseScope :  Ref ReplaceMap ReplaceMap
+                => Ref Ctxt Defs
+                => (parentCount : Integer)
+                -> CCaseScope ns
+                -> Core (CCaseScope ns)
+  replaceCaseScope pc (CRHS tm) = CRHS <$> replaceExp pc tm
+  replaceCaseScope pc (CArg x sc) = CArg x <$> replaceCaseScope pc sc
+
   replaceConAlt :  Ref ReplaceMap ReplaceMap
                 => Ref Ctxt Defs
                 => (parentCount : Integer)
                 -> CConAlt ns
                 -> Core (CConAlt ns)
-  replaceConAlt pc (MkConAlt n c t as z) =
-    MkConAlt n c t as <$> replaceExp pc z
+  replaceConAlt pc (MkConAlt n c t z) = MkConAlt n c t <$> replaceCaseScope pc z
 
   replaceConstAlt :  Ref ReplaceMap ReplaceMap
                   => Ref Ctxt Defs
