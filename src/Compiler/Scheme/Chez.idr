@@ -255,9 +255,17 @@ cCall fc cfn clib args ret collectSafe
          argTypes <- traverse (cftySpec fc . snd) args
          retType <- cftySpec fc ret
          let callConv : Builder = if collectSafe then " __collect_safe" else ""
-         let call = "((foreign-procedure" ++ callConv ++ " " ++ showB cfn ++ " ("
-                      ++ sepBy " " argTypes ++ ") " ++ retType ++ ") "
-                      ++ sepBy " " !(traverse buildArg args) ++ ")"
+         let builded_args = !(traverse buildArg args)
+         let call = if cfn == "idris2_nextDirEntry"
+                      then
+                        "(with-interrupts-disabled "
+                          ++ "((foreign-procedure" ++ callConv ++ " " ++ showB cfn ++ " ("
+                          ++ sepBy " " argTypes ++ ") " ++ retType ++ ") "
+                          ++ sepBy " " builded_args ++ "))"
+                      else
+                        "((foreign-procedure" ++ callConv ++ " " ++ showB cfn ++ " ("
+                          ++ sepBy " " argTypes ++ ") " ++ retType ++ ") "
+                          ++ sepBy " " builded_args ++ ")"
 
          pure (lib, case ret of
                          CFIORes _ => handleRet ret call
