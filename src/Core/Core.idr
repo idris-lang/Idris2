@@ -267,7 +267,7 @@ Show Error where
             case cov of
                  IsCovering => "Oh yes it is (Internal error!)"
                  MissingCases cs => "Missing cases:\n\t" ++
-                                           joinBy "\n\t" (toList $ map show cs)
+                                           joinBy "\n\t" (map show cs)
                  NonCoveringCall ns => "Calls non covering function"
                                            ++ (case ns of
                                                    [fn] => " " ++ show fn
@@ -975,7 +975,7 @@ allM f (x :: xs)
 namespace SnocList
   export
   allM : (a -> Core Bool) -> SnocList a -> Core Bool
-  allM f [<] = pure False
+  allM f [<] = pure True
   allM f (xs :< x)
       = if !(f x)
          then allM f xs
