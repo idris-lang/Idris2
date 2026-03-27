@@ -75,6 +75,14 @@ Show (ImplBinding vars) where
   show (AsBinding c p tm ty pat) = show (tm, ty) ++ "@" ++ show tm
 
 export
+HasNames (ImplBinding vars) where
+  full gam (NameBinding fc c p tm ty) = pure (NameBinding fc c p !(full gam tm) !(full gam ty))
+  full gam (AsBinding c p tm ty pat) = pure (AsBinding c p tm !(full gam ty) !(full gam pat))
+
+  resolved gam (NameBinding fc c p tm ty) = pure (NameBinding fc c p !(resolved gam tm) !(resolved gam ty))
+  resolved gam (AsBinding c p tm ty pat) = pure (AsBinding c p tm !(resolved gam ty) !(resolved gam pat))
+
+export
 bindingMetas : ImplBinding vars -> NameMap Bool
 bindingMetas (NameBinding _ c p tm ty) = getMetas ty
 bindingMetas (AsBinding c p tm ty pat)
