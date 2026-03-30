@@ -18,7 +18,7 @@ packaging==25.0
 pybtex==0.25.1
 pybtex-docutils==1.0.3
 pydata-sphinx-theme==0.15.4
-pygments==2.19.2
+pygments==2.20.0
 pyyaml==6.0.3
 requests==2.32.5
 snowballstemmer==3.0.1
