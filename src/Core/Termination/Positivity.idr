@@ -40,6 +40,7 @@ nameIn tyns (VDCon _ n _ _ args)
     = Core.Core.anyM (nameIn tyns)
            (cast !(traverseSnocList spineVal args))
 nameIn tyns (VDelayed fc lr ty) = nameIn tyns !(expand ty)
+nameIn tyns (VDelay fc lr ty tm) = nameIn tyns !(expand tm)
 nameIn tyns _ = pure False
 
 -- Check an argument type doesn't contain a negative occurrence of any of
