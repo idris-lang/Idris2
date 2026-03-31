@@ -237,8 +237,12 @@ mutual
       = if x == y then pure Concrete else pure NoMatch
   mightMatch (VType{}) (VType{}) = pure Concrete
   mightMatch (VApp{}) _ = pure Poly
+  mightMatch (VMeta{}) _ = pure Poly
+  mightMatch (VLocal{}) _ = pure Poly
   mightMatch (VErased{}) _ = pure Poly
   mightMatch _ (VApp{}) = pure Poly
+  mightMatch _ (VMeta{}) = pure Poly
+  mightMatch _ (VLocal{}) = pure Poly
   mightMatch _ (VErased{}) = pure Poly
   mightMatch _ _ = pure NoMatch
 
