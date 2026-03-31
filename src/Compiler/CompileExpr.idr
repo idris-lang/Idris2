@@ -195,6 +195,7 @@ conCases n (ConCase fc x tag sc :: ns)
     dcon : Def -> Bool
     dcon (DCon _ _ _) = True
     dcon _ = False
+
 conCases n (_ :: ns) = conCases n ns
 
 constCases : {auto c : Ref Ctxt Defs} ->

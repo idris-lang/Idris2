@@ -325,7 +325,7 @@ mutual
   findSC g eqs pats (VDelay _ _ _ tm)
       = findSC g eqs pats tm
   findSC g eqs pats (VForce _ _ v sp)
-      = do vCalls <- findSC g eqs pats v
+      = do vCalls <- findSC Unguarded eqs pats v
            spCalls <- findSCspine Unguarded eqs pats sp
            pure (vCalls ++ spCalls)
   findSC g eqs args (VCase fc ct c (VApp _ Bound n [<] _) scTy alts)
