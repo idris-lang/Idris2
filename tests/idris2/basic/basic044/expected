@@ -1,467 +1,245 @@
 1/1: Building Term (Term.idr)
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
 LOG declare.type:1: Processing Term.Typ
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
 LOG declare.data:1: Processing Term.Bdr
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
 LOG unify.meta:5: Adding new meta ({P:cut:1}, (Term:1, Rig0))
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool
- and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool and Prelude.Basics.Bool
 LOG unify.meta:5: Adding new meta ({P:vars:1}, (Term:2, Rig0))
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
 LOG unify.meta:5: Adding new meta ({P:cut:2}, (Term:3, Rig0))
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool
- and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool and Prelude.Basics.Bool
 LOG unify.meta:5: Adding new meta ({P:vars:2}, (Term:4, Rig0))
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
 LOG declare.data:1: Processing Term.Chk
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
 LOG unify.meta:5: Adding new meta ({P:cut:3}, (Term:5, Rig0))
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool
- and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool and Prelude.Basics.Bool
 LOG unify.meta:5: Adding new meta ({P:vars:3}, (Term:6, Rig0))
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
 LOG unify.meta:5: Adding new meta ({P:cut:4}, (Term:7, Rig0))
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool
- and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool and Prelude.Basics.Bool
 LOG unify.meta:5: Adding new meta ({P:vars:4}, (Term:8, Rig0))
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool
- and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool and Prelude.Basics.Bool
 LOG unify.meta:5: Adding new meta ({P:n:1}, (Term:9, Rig0))
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
 LOG declare.data:1: Processing Term.Syn
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
 LOG unify.meta:5: Adding new meta ({P:vars:5}, (Term:10, Rig0))
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
 LOG unify.meta:5: Adding new meta ({P:cut:5}, (Term:11, Rig0))
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
 LOG unify.meta:5: Adding new meta ({P:cut:6}, (Term:12, Rig0))
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool
- and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool and Prelude.Basics.Bool
 LOG unify.meta:5: Adding new meta ({P:vars:6}, (Term:13, Rig0))
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool
- and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool and Prelude.Basics.Bool
 LOG unify.meta:5: Adding new meta ({P:vars:7}, (Term:14, Rig0))
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
 LOG declare.def.lhs:3: LHS term: Term.Typ
-LOG unify.equal:10: Begin unification (non-application) True: (cut : Prelude.Basics.Bool) -> (vars : Prelude.Types.Nat) -> Type
- and (cut : Prelude.Basics.Bool) -> (vars : Prelude.Types.Nat) -> Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: (cut : Prelude.Basics.Bool) -> (vars : Prelude.Types.Nat) -> Type
- and (cut : Prelude.Basics.Bool) -> (vars : Prelude.Types.Nat) -> Type
-LOG unify.equal:10: Begin unification (non-application) False: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) False expanded: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) False: (vars : Prelude.Types.Nat) -> Type
- and (vars : Prelude.Types.Nat) -> Type
-LOG unify.equal:10: Begin unification (non-application) False expanded: (vars : Prelude.Types.Nat) -> Type
- and (vars : Prelude.Types.Nat) -> Type
-LOG unify.equal:10: Begin unification (non-application) False: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) False expanded: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) False: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) False expanded: Type
- and Type
+LOG unify.equal:10: Begin unification (non-application) True: (cut : Prelude.Basics.Bool) -> (vars : Prelude.Types.Nat) -> Type and (cut : Prelude.Basics.Bool) -> (vars : Prelude.Types.Nat) -> Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: (cut : Prelude.Basics.Bool) -> (vars : Prelude.Types.Nat) -> Type and (cut : Prelude.Basics.Bool) -> (vars : Prelude.Types.Nat) -> Type
+LOG unify.equal:10: Begin unification (non-application) False: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) False expanded: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) False: (vars : Prelude.Types.Nat) -> Type and (vars : Prelude.Types.Nat) -> Type
+LOG unify.equal:10: Begin unification (non-application) False expanded: (vars : Prelude.Types.Nat) -> Type and (vars : Prelude.Types.Nat) -> Type
+LOG unify.equal:10: Begin unification (non-application) False: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) False expanded: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) False: Type and Type
+LOG unify.equal:10: Begin unification (non-application) False expanded: Type and Type
 LOG declare.def.clause:3: RHS term: Term.Chk
 LOG declare.def:2: Compile time tree for Term.Typ:
   Term.Chk
@@ -471,39 +249,23 @@ LOG declare.def:3: Catch all case in Term.Typ
 LOG declare.def:3: Initially missing in Term.Typ:
 
 LOG declare.type:1: Processing Term.Term
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
 LOG declare.def.lhs:3: LHS term: Term.Term
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) True: (vars : Prelude.Types.Nat) -> Type
- and ({arg:1} : Prelude.Types.Nat) -> Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: (vars : Prelude.Types.Nat) -> Type
- and ({arg:1} : Prelude.Types.Nat) -> Type
-LOG unify.equal:10: Begin unification (non-application) False: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) False expanded: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) False: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) False expanded: Type
- and Type
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True: (vars : Prelude.Types.Nat) -> Type and ({arg:1} : Prelude.Types.Nat) -> Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: (vars : Prelude.Types.Nat) -> Type and ({arg:1} : Prelude.Types.Nat) -> Type
+LOG unify.equal:10: Begin unification (non-application) False: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) False expanded: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) False: Type and Type
+LOG unify.equal:10: Begin unification (non-application) False expanded: Type and Type
 LOG declare.def.clause:3: RHS term: (Term.Chk (RigW, Prelude.Basics.True))
 LOG declare.def:2: Compile time tree for Term.Term:
   (Term.Chk (RigW, Prelude.Basics.True))
@@ -513,39 +275,23 @@ LOG declare.def:3: Catch all case in Term.Term
 LOG declare.def:3: Initially missing in Term.Term:
 
 LOG declare.type:1: Processing Term.NF
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: Type
- and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True: Type and Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: Type and Type
 LOG declare.def.lhs:3: LHS term: Term.NF
-LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool
- and Prelude.Basics.Bool
-LOG unify.equal:10: Begin unification (non-application) True: (vars : Prelude.Types.Nat) -> Type
- and ({arg:2} : Prelude.Types.Nat) -> Type
-LOG unify.equal:10: Begin unification (non-application) True expanded: (vars : Prelude.Types.Nat) -> Type
- and ({arg:2} : Prelude.Types.Nat) -> Type
-LOG unify.equal:10: Begin unification (non-application) False: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) False expanded: Prelude.Types.Nat
- and Prelude.Types.Nat
-LOG unify.equal:10: Begin unification (non-application) False: Type
- and Type
-LOG unify.equal:10: Begin unification (non-application) False expanded: Type
- and Type
+LOG unify.equal:10: Begin unification (non-application) True: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True expanded: Prelude.Basics.Bool and Prelude.Basics.Bool
+LOG unify.equal:10: Begin unification (non-application) True: (vars : Prelude.Types.Nat) -> Type and ({arg:2} : Prelude.Types.Nat) -> Type
+LOG unify.equal:10: Begin unification (non-application) True expanded: (vars : Prelude.Types.Nat) -> Type and ({arg:2} : Prelude.Types.Nat) -> Type
+LOG unify.equal:10: Begin unification (non-application) False: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) False expanded: Prelude.Types.Nat and Prelude.Types.Nat
+LOG unify.equal:10: Begin unification (non-application) False: Type and Type
+LOG unify.equal:10: Begin unification (non-application) False expanded: Type and Type
 LOG declare.def.clause:3: RHS term: (Term.Chk (RigW, Prelude.Basics.False))
 LOG declare.def:2: Compile time tree for Term.NF:
   (Term.Chk (RigW, Prelude.Basics.False))
@@ -565,56 +311,75 @@ LOG declare.def:2: Compile time tree for Vec.Nil:
   \({arg:1} : [__]) => (Prelude.Uninhabited.absurd (Rig0, {arg:1}[0]) (Rig0, (Data.Fin.Fin (RigW, Prelude.Types.Z))) (RigW, Data.Fin.Uninhabited implementation at Data.Fin:1))
 
 LOG declare.type:1: Processing Vec.(::)
+LOG elab.ambiguous:5: checkAlternative exp_backtick: (Data.Fin.Fin (RigW, (Prelude.Types.S (RigW, ?Vec.{_:1}_[]))))
+LOG elab.ambiguous:5: checkAlternative exp_backtick: (Data.Fin.Fin (RigW, (Prelude.Types.S (RigW, ?Vec.{_:2}_[]))))
 LOG declare.def:2: Compile time tree for Vec.(::):
-  \({arg:1} : [__]) => \({arg:2} : [__]) => \({arg:4} : [__]) => \({arg:5} : [__]) => \({arg:6} : [__]) => case RigW {arg:6}[0] : (Data.Fin.Fin (RigW, (Prelude.Types.S (RigW, {arg:1}[4])))) of [Data.Fin.FZ {e:0} => [(0, {arg:1}[5])] {arg:4}[3], Data.Fin.FS {e:1} {e:2} => [(1, {arg:1}[6])] ({arg:5}[3] (RigW, {e:2}[0]))]
+  \({arg:1} : [__]) => \({arg:2} : [__]) => \({arg:4} : [__]) => \({arg:5} : [__]) => \({arg:6} : [__]) => case RigW {arg:6}[0] : (Data.Fin.Fin (RigW, (Prelude.Types.S (RigW, {arg:1}[4])))) of [Data.Fin.FZ {e:1} => [(0, {arg:1}[5])] {arg:4}[3], Data.Fin.FS {e:2} {e:3} => [(1, {arg:1}[6])] ({arg:5}[3] (RigW, {e:3}[0]))]
 
 LOG declare.type:1: Processing Vec.test
 LOG elab.ambiguous:5: Ambiguous elaboration at Vec:1:
   ($resolved1 2)
   ($resolved2 2)
 With default. Target type : Prelude.Types.Nat
+LOG elab.ambiguous:5: checkAlternative exp_backtick: ({arg:3} : (Data.Fin.Fin (RigW, (Prelude.Types.S (RigW, (Prelude.Types.S (RigW, Prelude.Types.Z))))))) -> (Prelude.Basics.List (RigW, Prelude.Types.Nat))
+LOG elab.ambiguous:5: checkAlternative delayOnFailure exp_backtick: ({arg:3} : (Data.Fin.Fin (RigW, (Prelude.Types.S (RigW, (Prelude.Types.S (RigW, Prelude.Types.Z))))))) -> (Prelude.Basics.List (RigW, Prelude.Types.Nat))
 LOG elab.ambiguous:5: Ambiguous elaboration (kept 3 out of 3 candidates) (not delayed) at Vec:2:
 (($resolved3 Nil) ((:: ((:: (fromInteger 0)) Nil)) Nil))
 (($resolved4 Nil) ((:: ((:: (fromInteger 0)) Nil)) Nil))
 (($resolved5 Nil) ((:: ((:: (fromInteger 0)) Nil)) Nil))
 Target type : ({arg:3} : (Data.Fin.Fin (RigW, (Prelude.Types.S (RigW, (Prelude.Types.S (RigW, Prelude.Types.Z))))))) -> (Prelude.Basics.List (RigW, Prelude.Types.Nat))
+LOG elab.ambiguous:5: checkAlternative exp_backtick: ?Vec.{a:1}_[]
+LOG elab.ambiguous:5: checkAlternative delayOnFailure exp_backtick: ?Vec.{a:1}_[]
 LOG elab.ambiguous:5: Ambiguous elaboration (kept 2 out of 2 candidates) (not delayed) at Vec:3:
 $resolved6
 $resolved7
-Target type : ?Vec.{a:4919}_[]
+Target type : ?Vec.{a:1}_[]
+LOG elab.ambiguous:5: checkAlternative exp_backtick: (Vec.Vec (RigW, ?Vec.{a:1}_[]) (RigW, ?Vec.{n:1}_[]))
+LOG elab.ambiguous:5: checkAlternative delayOnFailure exp_backtick: (Vec.Vec (RigW, ?Vec.{a:1}_[]) (RigW, ?Vec.{n:1}_[]))
 LOG elab.ambiguous:5: Ambiguous elaboration (kept 3 out of 3 candidates) (not delayed) at Vec:4:
 (($resolved3 ((:: (fromInteger 0)) Nil)) Nil)
 (($resolved4 ((:: (fromInteger 0)) Nil)) Nil)
 (($resolved5 ((:: (fromInteger 0)) Nil)) Nil)
-Target type : (Vec.Vec (RigW, ?Vec.{a:4919}_[]) (RigW, ?Vec.{n:4918}_[]))
+Target type : (Vec.Vec (RigW, ?Vec.{a:1}_[]) (RigW, ?Vec.{n:1}_[]))
+LOG elab.ambiguous:5: checkAlternative exp_backtick: ?Vec.{a:2}_[]
+LOG elab.ambiguous:5: checkAlternative delayOnFailure exp_backtick: ?Vec.{a:2}_[]
 LOG elab.ambiguous:5: Ambiguous elaboration (kept 3 out of 3 candidates) (not delayed) at Vec:5:
 (($resolved3 (fromInteger 0)) Nil)
 (($resolved4 (fromInteger 0)) Nil)
 (($resolved5 (fromInteger 0)) Nil)
-Target type : ?Vec.{a:4922}_[]
+Target type : ?Vec.{a:2}_[]
 LOG elab.ambiguous:5: Ambiguous elaboration at Vec:6:
   ($resolved1 0)
   ($resolved2 0)
-With default. Target type : ?Vec.{a:4924}_[]
+With default. Target type : ?Vec.{a:3}_[]
+LOG elab.ambiguous:5: checkAlternative exp_backtick: (Vec.Vec (RigW, ?Vec.{a:3}_[]) (RigW, ?Vec.{n:2}_[]))
+LOG elab.ambiguous:5: checkAlternative delayOnFailure exp_backtick: (Vec.Vec (RigW, ?Vec.{a:3}_[]) (RigW, ?Vec.{n:2}_[]))
 LOG elab.ambiguous:5: Ambiguous elaboration (kept 2 out of 2 candidates) (not delayed) at Vec:7:
 $resolved6
 $resolved7
-Target type : (Vec.Vec (RigW, ?Vec.{a:4924}_[]) (RigW, ?Vec.{n:4923}_[]))
+Target type : (Vec.Vec (RigW, ?Vec.{a:3}_[]) (RigW, ?Vec.{n:2}_[]))
+LOG elab.ambiguous:5: checkAlternative exp_backtick: (Prelude.Basics.List (RigW, ?Vec.{a:4}_[]))
 LOG elab.ambiguous:5: Ambiguous elaboration at Vec:6:
   ($resolved1 0)
   ($resolved2 0)
-With default. Target type : ?Vec.{a:4923}_[]
+With default. Target type : ?Vec.{a:4}_[]
+LOG elab.ambiguous:5: checkAlternative exp_backtick: %Delayed (Prelude.Types.Stream.Stream (RigW, ?Vec.{a:4}_[]))
+LOG elab.ambiguous:5: checkAlternative exp_backtick: (Vec.Vec (RigW, ?Vec.{a:2}_[]) (RigW, ?Vec.{n:3}_[]))
+LOG elab.ambiguous:5: checkAlternative delayOnFailure exp_backtick: (Vec.Vec (RigW, ?Vec.{a:2}_[]) (RigW, ?Vec.{n:3}_[]))
 LOG elab.ambiguous:5: Ambiguous elaboration (kept 2 out of 2 candidates) (not delayed) at Vec:8:
 $resolved6
 $resolved7
-Target type : (Vec.Vec (RigW, ?Vec.{a:4922}_[]) (RigW, ?Vec.{n:4921}_[]))
+Target type : (Vec.Vec (RigW, ?Vec.{a:2}_[]) (RigW, ?Vec.{n:3}_[]))
+LOG elab.ambiguous:5: checkAlternative delayOnFailure exp_backtick: (Prelude.Basics.List (RigW, Prelude.Types.Nat))
 LOG elab.ambiguous:5: Ambiguous elaboration (kept 1 out of 3 candidates) (delayed) at Vec:5:
 (($resolved4 (fromInteger 0)) Nil)
 Target type : (Prelude.Basics.List (RigW, Prelude.Types.Nat))
+LOG elab.ambiguous:5: checkAlternative exp_backtick: (Prelude.Basics.List (RigW, Prelude.Types.Nat))
 LOG elab.ambiguous:5: Ambiguous elaboration at Vec:6:
   ($resolved1 0)
   ($resolved2 0)
 With default. Target type : Prelude.Types.Nat
+LOG elab.ambiguous:5: checkAlternative delayOnFailure exp_backtick: (Prelude.Basics.List (RigW, Prelude.Types.Nat))
 LOG elab.ambiguous:5: Ambiguous elaboration (kept 1 out of 2 candidates) (delayed) at Vec:3:
 $resolved7
 Target type : (Prelude.Basics.List (RigW, Prelude.Types.Nat))
