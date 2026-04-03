@@ -41,13 +41,13 @@ parameters {auto c : Ref Ctxt Defs}
   export
   normaliseAll : {vars: _} -> Env Term vars -> Term vars -> Core (Term vars)
   normaliseAll env tm
-      = do val <- nf env tm
+      = do val <- expandFull !(nf env tm)
            quoteNFall env val
 
   export
   normaliseHNFall : {vars: _} -> Env Term vars -> Term vars -> Core (Term vars)
   normaliseHNFall env tm
-      = do val <- nf env tm
+      = do val <- expandFull !(nf env tm)
            quoteHNFall env val
 
   export
