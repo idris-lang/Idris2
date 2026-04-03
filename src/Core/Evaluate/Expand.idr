@@ -135,7 +135,7 @@ expand' mode@Full (VPrimOp fc op args)
            Just res => do logC "eval.def.stuck" 50 $ pure "Reduced full VPrimOp op: \{show op} to \{show !(toFullNames res)}"
                           pure res
            Nothing => do logC "eval.def.stuck" 50 $ pure "Reduced only args VPrimOp op: \{show op} \{show $ !(traverse toFullNames $ toList args')}"
-                         pure $ VPrimOp fc op args
+                         pure $ VPrimOp fc op (believe_me args')
 expand' mode (VErased fc (Dotted t))
     = do t' <- expand' mode t
          pure (VErased fc (Dotted t'))
