@@ -317,6 +317,8 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
     elabCon defs "GetCurrentFn" []
         = do defs <- get Ctxt
              scriptRet defs.defsStack
+    elabCon defs "GetFC" []
+        = scriptRet fc
     elabCon defs "Declare" [d]
         = do d' <- evalClosure defs d
              decls <- reify defs d'

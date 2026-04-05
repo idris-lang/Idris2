@@ -73,6 +73,8 @@ should target this file (`CHANGELOG_NEXT`).
 * Better messages for errors inside string interpolation.
 * Added execution time logging for elaboration scripts.
 * Optimised the passing of local variables during compile-time normalisation.
+* Added `getFC` to elaborator reflection, exposing the macro call-site source
+  location.
 
 ### Building/Packaging changes
 
