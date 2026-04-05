@@ -61,8 +61,7 @@ findErased : {auto c : Ref Ctxt Defs} ->
              ClosedTerm -> Core (NatSet, NatSet)
 findErased tm
     = do defs <- get Ctxt
-         tmnf <- nf Env.empty tm
-         findErasedFrom defs 0 !(expand tmnf)
+         findErasedFrom defs 0 !(expand !(nf Env.empty tm))
 
 export
 updateErasable : {auto c : Ref Ctxt Defs} ->

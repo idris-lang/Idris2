@@ -53,18 +53,18 @@ checkRetType env nf chk = chk nf
 
 checkIsType : {auto c : Ref Ctxt Defs} ->
               {vars: _} ->
-              FC -> Name -> Env Term vars -> Glued vars -> Core ()
-checkIsType loc n env nf
-    = checkRetType env !(expand nf) $
+              FC -> Name -> Env Term vars -> Term vars -> Core ()
+checkIsType loc n env ty
+    = checkRetType env !(expand !(nf env ty)) $
          \case
            VType {} => pure ()
            _ => throw $ BadTypeConType loc n
 
 checkFamily : {auto c : Ref Ctxt Defs} ->
               {vars: _} ->
-              FC -> Name -> Name -> Env Term vars -> Glued vars -> Core ()
-checkFamily loc cn tn env nf
-    = checkRetType env !(expand nf) $
+              FC -> Name -> Name -> Env Term vars -> Term vars -> Core ()
+checkFamily loc cn tn env ty
+    = checkRetType env !(expand !(nf env ty)) $
          \case
            VType {} => throw $ BadDataConType loc cn tn
            VTCon _ n' _ _ =>
@@ -116,7 +116,7 @@ checkCon {vars} opts nest env vis tn_in tn ty_raw
                               (gType fc u)
 
          -- Check 'ty' returns something in the right family
-         checkFamily fc cn tn env !(nf env ty)
+         checkFamily fc cn tn env ty
          let fullty = abstractEnvType fc env ty
          logTermNF "declare.data.constructor" 5 ("Constructor " ++ show cn) Env.empty fullty
 
@@ -136,8 +136,7 @@ getIndexPats : {auto c : Ref Ctxt Defs} ->
                ClosedTerm -> Core (List ClosedNF)
 getIndexPats tm
     = do defs <- get Ctxt
-         tmnf <- nf Env.empty tm
-         ret <- getRetType defs !(expand tmnf)
+         ret <- getRetType defs !(expand !(nf Env.empty tm))
          getPats defs ret
   where
     getRetType : Defs -> ClosedNF -> Core ClosedNF
@@ -427,7 +426,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpLater dfc n_in ty_raw)
          let fullty = abstractEnvType dfc env ty
          logTermNF "declare.data" 5 ("data " ++ show n) Env.empty fullty
 
-         checkIsType fc n env !(nf env ty)
+         checkIsType fc n env ty
          arity <- getArity Env.empty fullty
 
          -- Add the type constructor as a placeholder
@@ -466,7 +465,7 @@ processData {vars} eopts nest env fc def_vis mbtot (MkImpData dfc n_in mty_raw o
                       elabTerm !(resolveName n) InType eopts nest env
                                 (IBindHere fc (PI erased) ty_raw)
                                 (Just (gType dfc u))
-           checkIsType fc n env !(nf env ty)
+           checkIsType fc n env ty
 
            pure (keys (getMetas ty), abstractEnvType dfc env ty)
 

@@ -17,7 +17,7 @@ import Libraries.Data.WithDefault
 export
 Reify BindMode where
   reify defs val@(VDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+      = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
              (UN (Basic "PI"), [c])
                  => do c' <- reify defs !(expandFull c)
                        pure (PI c')
@@ -91,7 +91,7 @@ mutual
   export
   Reify RawImp where
     reify defs val@(VDCon _ n _ _ args)
-        = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+        = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
                (UN (Basic "IVar"), [fc, n])
                     => do fc' <- reify defs !(expandFull fc)
                           n' <- reify defs !(expandFull n)
@@ -249,7 +249,7 @@ mutual
   export
   Reify IFieldUpdate where
     reify defs val@(VDCon _ n _ _ args)
-        = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+        = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
                (UN (Basic "ISetField"), [x, y])
                     => do x' <- reify defs !(expandFull x)
                           y' <- reify defs !(expandFull y)
@@ -264,7 +264,7 @@ mutual
   export
   Reify AltType where
     reify defs val@(VDCon _ n _ _ args)
-        = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+        = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
                (UN (Basic "FirstSuccess"), _)
                     => pure FirstSuccess
                (UN (Basic "Unique"), _)
@@ -278,7 +278,7 @@ mutual
   export
   Reify FnOpt where
     reify defs val@(VDCon _ n _ _ args)
-        = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+        = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
                (UN (Basic "Inline"), _) => pure Inline
                (UN (Basic "Unsafe"), _) => pure Unsafe
                (UN (Basic "NoInline"), _) => pure NoInline
@@ -311,7 +311,7 @@ mutual
   export
   Reify ImpTy where
     reify defs val@(VDCon _ n _ _ args)
-        = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+        = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
                (UN (Basic "MkTy"), [w, y, z])
                     => do fc' <- reify defs !(expandFull w)
                           name' <- the (Core (WithFC Name)) (reify defs !(expandFull y))
@@ -323,7 +323,7 @@ mutual
   export
   Reify DataOpt where
     reify defs val@(VDCon _ n _ _ args)
-        = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+        = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
                (UN (Basic "SearchBy"), [x])
                     => do x' <- reify defs !(expandFull x)
                           pure (SearchBy x')
@@ -337,7 +337,7 @@ mutual
   export
   Reify ImpData where
     reify defs val@(VDCon _ n _ _ args)
-        = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+        = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
                (UN (Basic "MkData"), [v,w,x,y,z])
                     => do v' <- reify defs !(expandFull v)
                           w' <- reify defs !(expandFull w)
@@ -356,7 +356,7 @@ mutual
   export
   Reify IField where
     reify defs val@(VDCon _ n _ _ args)
-        = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+        = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
                (UN (Basic "MkIField"), [v,w,x,y,z])
                     => do fc <- reify defs !(expandFull v)
                           rig <- reify defs !(expandFull w)
@@ -370,7 +370,7 @@ mutual
   export
   Reify ImpRecord where
     reify defs val@(VDCon _ n _ _ args)
-        = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+        = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
                (UN (Basic "MkRecord"), [v,w,x,y,z,a])
                     => do fc <- reify defs !(expandFull v)
                           tyName <- reify defs !(expandFull w)
@@ -386,7 +386,7 @@ mutual
   export
   Reify WithFlag where
     reify defs val@(VDCon _ n _ _ args)
-        = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+        = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
                (UN (Basic "Syntactic"), [])
                     => pure Syntactic
                _ => cantReify val "WithFlag"
@@ -395,7 +395,7 @@ mutual
   export
   Reify ImpClause where
     reify defs val@(VDCon _ n _ _ args)
-        = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+        = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
                (UN (Basic "PatClause"), [x,y,z])
                     => do x' <- reify defs !(expandFull x)
                           y' <- reify defs !(expandFull y)
@@ -420,7 +420,7 @@ mutual
   export
   Reify (IClaimData Name) where
     reify defs val@(VDCon _ n _ _ args)
-        = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+        = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
                (UN (Basic "MkIClaimData"), [w,x,y,z])
                     => do w' <- reify defs !(expandFull w)
                           x' <- reify defs !(expandFull x)
@@ -433,7 +433,7 @@ mutual
   export
   Reify ImpDecl where
     reify defs val@(VDCon _ n _ _ args)
-        = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+        = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
                (UN (Basic "IClaim"), [v])
                     => do v' <- reify defs !(expandFull v)
                           pure (IClaim v')
