@@ -47,11 +47,10 @@ expand' : {auto c : Ref Ctxt Defs} ->
           ExpandMode -> Value f vars -> Core (NF vars)
 expand' mode v@(VApp fc nt n sp val)
     = do vis <- getVisibilityWeaked fc n
-         m_mult <- getMultiplicityWeaked fc n
          full_name <- toFullNames n
          defs <- get Ctxt
          let ns = currentNS defs :: nestedNS defs
-         logC "eval.def.stuck" 50 $ pure "expand App \{show mode} ns: \{show ns}, n: \{show n}, vis: \{show $ collapseDefault vis}, mult: \{show m_mult}, full_name: \{show full_name}"
+         logC "eval.def.stuck" 50 $ pure "expand App \{show mode} ns: \{show ns}, n: \{show n}, vis: \{show $ collapseDefault vis}, full_name: \{show full_name}"
          if mode > Cases || reducibleInAny ns (if mode < Cases then full_name else n) (collapseDefault vis)
             -- If we are in Cases we are still needed to confirm that a name can be reduced.
             -- If a name has no namespace (i.e. Resolved _) it will be reduced
@@ -59,20 +58,13 @@ expand' mode v@(VApp fc nt n sp val)
                Just val' <- logDepth val
                     | Nothing => pure (believe_me v)
                logC "eval.def.stuck" 50 $ do val' <- toFullNames val'
-                                             pure "Reduced \{show full_name} to \{show val'}"
+                                             pure "Reduced VApp \{show mode} \{show full_name} to \{show val'}"
                if mode >= Cases
                   then expand' mode val'
                   else if !(blockedApp val')
                           then pure (believe_me v)
                           else expand' mode val'
             else pure (believe_me v)
-  where
-    blockedApp : forall f . Value f vars -> Core Bool
-    blockedApp (VBind fc _ (Lam {}) sc)
-        = blockedApp !(sc $ pure $ VErased fc Placeholder)
-    blockedApp (VCase _ PatMatch _ _ _ _) = pure True
-    blockedApp (VPrimOp{}) = pure True
-    blockedApp _ = pure False
 
 expand' mode@Full v@(VCase fc t r sc ty alts)
     = do sc' <- logDepth $ expand' mode sc
@@ -145,7 +137,7 @@ expand' mode v@(VMeta fc n i args sp val)
               | Nothing => pure (believe_me v)
          logC "eval.def.stuck" 50 $ do n' <- toFullNames n
                                        val' <- toFullNames val'
-                                       pure "Reduced \{show n'} to \{show val'}"
+                                       pure "Reduced VMeta \{show mode} \{show n'} to \{show val'}"
          expand' mode val'
 expand' mode val = pure (believe_me val)
 
