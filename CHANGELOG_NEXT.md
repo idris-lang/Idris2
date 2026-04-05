@@ -79,6 +79,7 @@ should target this file (`CHANGELOG_NEXT`).
 * Fix parsing of capitalised package names containing hyphens.
 * Change `flake.nix` to point at `idris-community/idris2-mode` as the URL for
   `inputs.idris-emacs-src` (from the user fork `redfish64/idris2-mode`).
+* Fix UTF-8 character handling in package description fields.
 
 ### Backend changes
 
