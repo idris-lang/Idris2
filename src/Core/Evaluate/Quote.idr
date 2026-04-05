@@ -54,6 +54,14 @@ applySpine : Term vars -> SnocList (FC, RigCount, Term vars) -> Term vars
 applySpine tm [<] = tm
 applySpine tm (args :< (fc, q, arg)) = App fc (applySpine tm args) q arg
 
+export
+blockedApp : forall f . Value f vars -> Core Bool
+blockedApp (VBind fc _ (Lam {}) sc)
+  = blockedApp !(sc $ pure $ VErased fc Placeholder)
+blockedApp (VCase _ PatMatch _ _ _ _) = pure True
+blockedApp (VPrimOp{}) = pure True
+blockedApp _ = pure False
+
 parameters {auto c : Ref Ctxt Defs} {auto q : Ref QVar Int}
 
   quoteGen : {bound, vars : _} ->
@@ -235,13 +243,6 @@ parameters {auto c : Ref Ctxt Defs} {auto q : Ref QVar Int}
       isBinder : forall f . Value f vars -> Core Bool
       isBinder (VBind{}) = pure True
       isBinder _ = pure False
-
-      blockedApp : forall f . Value f vars -> Core Bool
-      blockedApp (VBind fc _ (Lam {}) sc)
-          = blockedApp !(sc $ pure $ VErased fc Placeholder)
-      blockedApp (VCase _ PatMatch _ _ _ _) = pure True
-      blockedApp (VPrimOp{}) = pure True
-      blockedApp _ = pure False
   quoteGen {bound} bounds env (VLocal fc idx p sp) s
       = do sp' <- quoteSpine s bounds env sp
            let MkVar p' = addLater bound p

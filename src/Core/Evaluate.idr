@@ -341,13 +341,6 @@ parameters {auto c : Ref Ctxt Defs}
                    Just gdef <- lookupCtxtExact fn (gamma defs)
                         | Nothing => pure []
                    pure (flags gdef)
-
-          blockedApp : forall f . Value f vars -> Core Bool
-          blockedApp (VBind fc _ (Lam {}) sc)
-              = blockedApp !(sc $ pure $ VErased fc Placeholder)
-          blockedApp (VCase _ PatMatch _ _ _ _) = pure True
-          blockedApp (VPrimOp{}) = pure True
-          blockedApp _ = pure False
       repSub (VLocal fc idx p args)
           = do (args', u) <- repArgAll args
                pure (applyStackWithFC (Local fc Nothing idx p) (toList args'), u)
