@@ -713,8 +713,7 @@ implicitsAs n defs ns tm
                     "Could not find variable " ++ show n
                   pure $ IVar loc nm
             Just ty =>
-               do ty' <- nf Env.empty ty
-                  implicits <- findImps is es ns !(expand ty')
+               do implicits <- findImps is es ns !(expand !(nf Env.empty ty))
                   log "declare.def.lhs.implicits" 30 $
                     "\n  In the type of " ++ show n ++ ": " ++ show ty ++
                     "\n  Using locals: " ++ show ns ++

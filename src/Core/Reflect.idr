@@ -28,9 +28,9 @@ interface Reflect a where
             Env Term vars -> a -> Core (Term vars)
 
 export
-spine : {vars: _} -> {auto c : Ref Ctxt Defs} ->
+spineFull : {vars: _} -> {auto c : Ref Ctxt Defs} ->
         Spine vars -> Core (List (NF vars))
-spine sp = pure $ cast !(traverseSnocList spineValFull sp)
+spineFull sp = pure $ cast !(traverseSnocList spineValFull sp)
 
 export
 getCon : {vars : _} ->
@@ -241,7 +241,7 @@ Reflect Bool where
 export
 Reify Nat where
   reify defs val@(VDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+      = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
              (UN (Basic "Z"), _) => pure Z
              (UN (Basic "S"), [k])
                  => do k' <- reify defs !(expandFull k)
@@ -259,7 +259,7 @@ Reflect Nat where
 export
 Reify a => Reify (List a) where
   reify defs val@(VDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+      = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
              (UN (Basic "Nil"), _) => pure []
              (UN (Basic "::"), [_, x, xs])
                   => do x' <- reify defs !(expandFull x)
@@ -281,7 +281,7 @@ Reflect a => Reflect (List a) where
 export
 Reify a => Reify (List1 a) where
   reify defs val@(VDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+      = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
              (UN (Basic ":::"), [_, x, xs])
                   => do x' <- reify defs !(expandFull x)
                         xs' <- reify defs !(expandFull xs)
@@ -301,7 +301,7 @@ Reflect a => Reflect (List1 a) where
 export
 Reify a => Reify (SnocList a) where
   reify defs val@(VDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+      = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
              (UN (Basic "Lin"), _) => pure [<]
              (UN (Basic ":<"), [_, sx, x])
                   => do sx' <- reify defs !(expandFull sx)
@@ -321,7 +321,7 @@ Reflect a => Reflect (SnocList a) where
 export
 Reify a => Reify (Maybe a) where
   reify defs val@(VDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+      = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
              (UN (Basic "Nothing"), _) => pure Nothing
              (UN (Basic "Just"), [_, x])
                   => do x' <- reify defs !(expandFull x)
@@ -341,7 +341,7 @@ Reflect a => Reflect (Maybe a) where
 export
 Reify a => Reify (WithDefault a def) where
   reify defs val@(VDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+      = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
              (UN (Basic "DefaultedValue"), _) => pure defaulted
              (UN (Basic "SpecifiedValue"), [_, _, x]) => do x' <- reify defs !(expandFull x)
                                                             pure (specified x')
@@ -359,7 +359,7 @@ Reflect a => Reflect (WithDefault a def) where
 export
 (Reify a, Reify b) => Reify (a, b) where
   reify defs val@(VDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+      = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
              (UN (Basic "MkPair"), [_, _, x, y])
                  => do x' <- reify defs !(expandFull x)
                        y' <- reify defs !(expandFull y)
@@ -378,7 +378,7 @@ export
 export
 Reify Namespace where
   reify defs val@(VDCon _ n _ _ args)
-    = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+    = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
         (UN (Basic "MkNS"), [ns])
           => do ns' <- reify defs !(expandFull ns)
                 pure (unsafeFoldNamespace ns')
@@ -394,7 +394,7 @@ Reflect Namespace where
 export
 Reify ModuleIdent where
   reify defs val@(VDCon _ n _ _ args)
-    = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+    = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
         (UN (Basic "MkMI"), [ns])
           => do ns' <- reify defs !(expandFull ns)
                 pure (unsafeFoldModuleIdent ns')
@@ -410,7 +410,7 @@ Reflect ModuleIdent where
 export
 Reify UserName where
   reify defs val@(VDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+      = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
              (UN (Basic "Basic"), [str])
                  => do str' <- reify defs !(expandFull str)
                        pure (Basic str')
@@ -438,7 +438,7 @@ Reflect UserName where
 export
 Reify Name where
   reify defs val@(VDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+      = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
              (UN (Basic "UN"), [str])
                  => do str' <- reify defs !(expandFull str)
                        pure (UN str')
@@ -511,7 +511,7 @@ Reflect Name where
 export
 Reify NameType where
   reify defs val@(VDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+      = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
              (UN (Basic "Bound"), _) => pure Bound
              (UN (Basic "Func"), _) => pure Func
              (UN (Basic "DataCon"), [t, i])
@@ -539,7 +539,7 @@ Reflect NameType where
 export
 Reify PrimType where
   reify defs val@(VDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+      = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
              (UN (Basic "IntType"), [])
                   => pure IntType
              (UN (Basic "Int8Type"), [])
@@ -574,7 +574,7 @@ Reify PrimType where
 export
 Reify Constant where
   reify defs val@(VDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+      = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
              (UN (Basic "I"), [x])
                   => do x' <- reify defs !(expandFull x)
                         pure (I x')
@@ -753,7 +753,7 @@ Reflect RigCount where
 export
 Reify t => Reify (PiInfo t) where
   reify defs val@(VDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+      = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
              (UN (Basic "ImplicitArg"), _) => pure Implicit
              (UN (Basic "ExplicitArg"), _) => pure Explicit
              (UN (Basic "AutoImplicit"), _) => pure AutoImplicit
@@ -830,7 +830,7 @@ Reflect VirtualIdent where
 export
 Reify OriginDesc where
   reify defs val@(VDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+      = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
              (UN (Basic "PhysicalIdrSrc"), [ident])
                    => do ident' <- reify defs !(expandFull ident)
                          pure (PhysicalIdrSrc ident')
@@ -858,7 +858,7 @@ Reflect OriginDesc where
 export
 Reify FC where
   reify defs val@(VDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+      = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
              (UN (Basic "MkFC"), [fn, start, end])
                    => do fn' <- reify defs !(expandFull fn)
                          start' <- reify defs !(expandFull start)
@@ -886,7 +886,7 @@ Reflect FC where
 export
 Reify a => Reify (WithFC a) where
   reify defs val@(VDCon _ n _ _ args)
-      = case (dropAllNS !(full (gamma defs) n), !(spine args)) of
+      = case (dropAllNS !(full (gamma defs) n), !(spineFull args)) of
              (UN (Basic "MkFCVal"), [fcterm, nestedVal]) => do
                  fc <- reify defs !(expandFull fcterm)
                  val <- reify defs !(expandFull nestedVal)

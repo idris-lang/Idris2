@@ -270,8 +270,7 @@ searchLocalWith : {vars : _} ->
                   (target : NF vars) -> Core (Term vars)
 searchLocalWith {vars} fc rigc defaults trying depth def top env (prf, ty) target
     = do defs <- get Ctxt
-         nty <- nf env ty
-         findPos defs prf pure !(expand nty) target
+         findPos defs prf pure !(expand !(nf env ty)) target
   where
     clearEnvType : {idx : Nat} -> (0 p : IsVar nm idx vs) ->
                    FC -> Env Term vs -> Env Term vs
