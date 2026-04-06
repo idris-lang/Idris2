@@ -275,7 +275,7 @@ parameters {auto c : Ref Ctxt Defs} (eflags : EvalFlags)
                        -- Don't expand in totality mode or we might reduce too
                        -- much
                        Totality => believe_me $ eval locs env sc
-                       _ => expand !(eval locs env sc)
+                       _ => expandApps !(eval locs env sc)
            logC "eval.casetree" 5 $ do
              xval <- toFullNames sc
              pure "Evaluated \{show t} \{show xval} to \{show !(toFullNames sc')}"
