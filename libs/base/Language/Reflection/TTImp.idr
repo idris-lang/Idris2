@@ -724,6 +724,18 @@ Functor Argument where
   map f (AutoArg fc a) = AutoArg fc (f a)
 
 public export
+Foldable Argument where
+  foldr f acc (Arg _ e) = f e acc
+  foldr f acc (NamedArg _ n e) = f e acc
+  foldr f acc (AutoArg _ e) = f e acc
+
+public export
+Traversable Argument where
+  traverse f (Arg fc e) = Arg fc <$> f e
+  traverse f (NamedArg fc n e) = NamedArg fc n <$> f e
+  traverse f (AutoArg fc e) = AutoArg fc <$> f e
+
+public export
 iApp : TTImp -> Argument TTImp -> TTImp
 iApp f (Arg fc t) = IApp fc f t
 iApp f (NamedArg fc nm t) = INamedApp fc f nm t
