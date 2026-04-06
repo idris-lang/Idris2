@@ -1,6 +1,8 @@
 module Libraries.Data.SnocList.SizeOf
 
 import Data.SnocList
+
+import Libraries.Data.SnocList.Extra
 import Libraries.Data.SnocList.HasLength
 
 ---------------------------------------
@@ -42,7 +44,7 @@ public export
 suc : SizeOf as -> SizeOf (as :< a)
 suc (MkSizeOf n p) = MkSizeOf (S n) (S p)
 
--- ||| suc but from the right
+-- ||| suc but from the left
 export
 sucL : SizeOf as -> SizeOf ([<a] ++ as)
 sucL (MkSizeOf n p) = MkSizeOf (S n) (sucL p)
@@ -79,11 +81,11 @@ map (MkSizeOf n p) = MkSizeOf n (cast (sym $ lengthMap sx) p) where
   lengthMap [<] = Refl
   lengthMap (sx :< x) = cong S (lengthMap sx)
 
-{-
+-- TODO left-to-right reversal of the stream
+--      is this what we want?
 public export
 take : {n : Nat} -> {0 sx : Stream a} -> SizeOf (take n sx)
 take = MkSizeOf n (take n sx)
--}
 
 namespace SizedView
 

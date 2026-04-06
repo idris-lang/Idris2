@@ -10,6 +10,8 @@ import Core.Value
 
 import TTImp.Elab.Check
 
+import Data.SnocList
+
 import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 
@@ -21,10 +23,10 @@ mkClosedElab : {vars : _} ->
                FC -> Env Term vars ->
                (Core (Term vars, Glued vars)) ->
                Core ClosedTerm
-mkClosedElab fc [] elab
+mkClosedElab fc [<] elab
     = do (tm, _) <- elab
          pure tm
-mkClosedElab {vars = x :: vars} fc (b :: env) elab
+mkClosedElab {vars = vars :< x} fc (env :< b) elab
     = mkClosedElab fc env
           (do (sc', _) <- elab
               let b' = newBinder b
