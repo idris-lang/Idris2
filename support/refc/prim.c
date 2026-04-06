@@ -173,7 +173,7 @@ Idris2_Value *System_Concurrency_Raw_prim__mutexRelease(
 // *attr) with standard initialisation
 Idris2_Value *System_Concurrency_Raw_prim__makeCondition(Idris2_Value *_world) {
   // typedef struct{
-  //     Value_header header;
+  //     Idris2_header header;
   //     pthread_cond_t *cond;
   // }Idris2_Condition;
 

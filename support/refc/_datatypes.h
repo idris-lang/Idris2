@@ -38,23 +38,23 @@ typedef struct {
   uint16_t refCounter;
   uint8_t tag;
   uint8_t reserved;
-} Value_header;
+} Idris2_header;
 #define IDRIS2_STOCKVAL(t)                                                     \
   { IDRIS2_VP_REFCOUNTER_MAX, t, 0 }
 
 typedef struct {
-  Value_header header;
+  Idris2_header header;
   // `Idris2_Value` is an "abstract" struct,
   // `Value_Xxx` structs have the same header
   // followed by type-specific payload.
 } Idris2_Value;
 
 /*
-We expect at least 4 bytes for `Value_header` alignment, to use bit0 and bit1 of
+We expect at least 4 bytes for `Idris2_header` alignment, to use bit0 and bit1 of
 pointer as flags.
 
 RefC does not have complete static tracking of type information, so types are
-identified at runtime using Value_Header's tag field. However, Int that are
+identified at runtime using Idris2_header's tag field. However, Int that are
 pretending to be pointers cannot have that tag, so use that flag to identify
 them first. Of course, this flag is not used if it is clear that Idris2_Value*
 is actually an Int. But places like newReference/removeReference require this flag.
@@ -103,42 +103,42 @@ is actually an Int. But places like newReference/removeReference require this fl
 #define idris2_vp_to_Bool(p) (idris2_vp_to_Int8(p))
 
 typedef struct {
-  Value_header header;
+  Idris2_header header;
   uint32_t ui32;
 } Idris2_Bits32;
 
 typedef struct {
-  Value_header header;
+  Idris2_header header;
   uint64_t ui64;
 } Idris2_Bits64;
 
 typedef struct {
-  Value_header header;
+  Idris2_header header;
   int32_t i32;
 } Idris2_Int32;
 
 typedef struct {
-  Value_header header;
+  Idris2_header header;
   int64_t i64;
 } Idris2_Int64;
 
 typedef struct {
-  Value_header header;
+  Idris2_header header;
   mpz_t i;
 } Idris2_Integer;
 
 typedef struct {
-  Value_header header;
+  Idris2_header header;
   double d;
 } Idris2_Double;
 
 typedef struct {
-  Value_header header;
+  Idris2_header header;
   char *str;
 } Idris2_String;
 
 typedef struct {
-  Value_header header;
+  Idris2_header header;
   int32_t total;
   int32_t tag;
   char const *name;
@@ -146,7 +146,7 @@ typedef struct {
 } Idris2_Constructor;
 
 typedef struct {
-  Value_header header;
+  Idris2_header header;
   // function type depends on arity, see idris2_dispatch_closure
   void *f;
   uint8_t arity;
@@ -155,39 +155,39 @@ typedef struct {
 } Idris2_Closure;
 
 typedef struct {
-  Value_header header;
+  Idris2_header header;
   Idris2_Value *v;
 } Idris2_IORef;
 
 typedef struct {
-  Value_header header;
+  Idris2_header header;
   void *p;
 } Idris2_Pointer;
 
 typedef struct {
-  Value_header header;
+  Idris2_header header;
   Idris2_Pointer *p;
   Idris2_Closure *onCollectFct;
 } Idris2_GCPointer;
 
 typedef struct {
-  Value_header header;
+  Idris2_header header;
   int capacity;
   Idris2_Value **arr;
 } Idris2_Array;
 
 typedef struct {
-  Value_header header;
+  Idris2_header header;
   Buffer *buffer;
 } Idris2_Buffer;
 
 typedef struct {
-  Value_header header;
+  Idris2_header header;
   pthread_mutex_t *mutex;
 } Idris2_Mutex;
 
 typedef struct {
-  Value_header header;
+  Idris2_header header;
   pthread_cond_t *cond;
 } Idris2_Condition;
 

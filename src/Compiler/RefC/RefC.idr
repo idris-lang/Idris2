@@ -930,7 +930,7 @@ header = do
   where
     go : ConstDef -> String -> String -> String -> String
     go cdef ty tag v =
-      "static Value_\{ty} const \{constantName cdef}"
+      "static Idris2_\{ty} const \{constantName cdef}"
         ++ " = { IDRIS2_STOCKVAL(\{tag}_TAG), \{v} };"
     genConstant : Constant -> ConstDef -> String
     genConstant c cdef = case c of
