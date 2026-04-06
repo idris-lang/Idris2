@@ -142,7 +142,7 @@ parameters {auto c : Ref Ctxt Defs} (eflags : EvalFlags)
   runOp : {ar, vars : _} ->
           FC -> PrimFn ar -> Vect ar (Glued vars) -> Core (NF vars)
   runOp fc op args
-      = do args' <- traverseVect expand args
+      = do args' <- traverseVect expandApps args
            -- If it gets stuck, return the glued args, not the values
            case getOp op args' of
              Just res => pure res
@@ -442,7 +442,7 @@ parameters {auto c : Ref Ctxt Defs} (eflags : EvalFlags)
               Core (Glued vars)
   evalForce locs env fc r tm =
       do val <- eval locs env tm
-         VDelay _ _ _ arg <- expand val
+         VDelay _ _ _ arg <- expandApps val
              | tm' => pure $ VForce fc r val [<]
          pure arg
 
