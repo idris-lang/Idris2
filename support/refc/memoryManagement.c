@@ -81,7 +81,9 @@ Idris2_Constructor *idris2_newConstructor(int total, int tag) {
   return retVal;
 }
 
-Idris2_Closure *idris2_mkClosure(Idris2_Value *(*f)(), uint8_t arity, uint8_t filled) {
+Idris2_Closure *idris2_mkClosure(
+  Idris2_Value *(*f)(), uint8_t arity, uint8_t filled
+) {
   Idris2_Closure *retVal = (Idris2_Closure *)idris2_newValue(
       sizeof(Idris2_Closure) + sizeof(Idris2_Value *) * filled);
   retVal->header.tag = CLOSURE_TAG;
@@ -284,8 +286,9 @@ void idris2_removeReference(Idris2_Value *elem) {
     case GC_POINTER_TAG: {
       /* maybe here we need to invoke onCollectAny */
       Idris2_GCPointer *vPtr = (Idris2_GCPointer *)elem;
-      Idris2_Value *closure1 =
-          idris2_apply_closure((Idris2_Value *)vPtr->onCollectFct, (Idris2_Value *)vPtr->p);
+      Idris2_Value *closure1 = idris2_apply_closure(
+          (Idris2_Value *)vPtr->onCollectFct, (Idris2_Value *)vPtr->p
+      );
       idris2_apply_closure(closure1, NULL);
       idris2_removeReference((Idris2_Value *)vPtr->p);
       break;

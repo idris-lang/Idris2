@@ -55,7 +55,9 @@ Idris2_Value *strAppend(Idris2_Value *a, Idris2_Value *b) {
   return (Idris2_Value *)retVal;
 }
 
-Idris2_Value *strSubstr(Idris2_Value *start, Idris2_Value *len, Idris2_Value *s) {
+Idris2_Value *strSubstr(
+  Idris2_Value *start, Idris2_Value *len, Idris2_Value *s
+) {
   char *input = ((Idris2_String *)s)->str;
   int offset = idris2_vp_to_Int64(start); /* start and len was come from Nat. */
   int l = idris2_vp_to_Int64(len);

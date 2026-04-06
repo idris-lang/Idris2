@@ -9,7 +9,9 @@ void idris2_removeReference(Idris2_Value *source);
 #define IDRIS2_NEW_VALUE(t) ((t *)idris2_newValue(sizeof(t)))
 
 Idris2_Constructor *idris2_newConstructor(int total, int tag);
-Idris2_Closure *idris2_mkClosure(Idris2_Value *(*f)(), uint8_t arity, uint8_t filled);
+Idris2_Closure *idris2_mkClosure(
+  Idris2_Value *(*f)(), uint8_t arity, uint8_t filled
+);
 
 Idris2_Value *idris2_mkDouble(double d);
 #define idris2_mkChar(x)                                                       \

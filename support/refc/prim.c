@@ -3,16 +3,21 @@
 #include <string.h>
 #include <unistd.h>
 
-Idris2_Value *idris2_Data_IORef_prim__newIORef(Idris2_Value *erased, Idris2_Value *input_value,
-                                        Idris2_Value *_world) {
+Idris2_Value *idris2_Data_IORef_prim__newIORef(
+  Idris2_Value *erased, Idris2_Value *input_value, Idris2_Value *_world
+) {
   Idris2_IORef *ioRef = IDRIS2_NEW_VALUE(Idris2_IORef);
   ioRef->header.tag = IOREF_TAG;
   ioRef->v = idris2_newReference(input_value);
   return (Idris2_Value *)ioRef;
 }
 
-Idris2_Value *idris2_Data_IORef_prim__writeIORef(Idris2_Value *erased, Idris2_Value *_ioref,
-                                          Idris2_Value *new_value, Idris2_Value *_world) {
+Idris2_Value *idris2_Data_IORef_prim__writeIORef(
+  Idris2_Value *erased,
+  Idris2_Value *_ioref,
+  Idris2_Value *new_value,
+  Idris2_Value *_world
+) {
   Idris2_IORef *ioref = (Idris2_IORef *)_ioref;
   idris2_newReference(new_value);
   Idris2_Value *old = ioref->v;
@@ -68,8 +73,12 @@ Idris2_Value *idris2_crash(Idris2_Value *msg) {
 // //         Array operations
 // // -----------------------------------
 
-Idris2_Value *idris2_Data_IOArray_Prims_prim__newArray(Idris2_Value *erased, Idris2_Value *_length,
-                                                Idris2_Value *v, Idris2_Value *_word) {
+Idris2_Value *idris2_Data_IOArray_Prims_prim__newArray(
+  Idris2_Value *erased,
+  Idris2_Value *_length,
+  Idris2_Value *v,
+  Idris2_Value *_word
+) {
   int length = idris2_vp_to_Int64(_length);
   Idris2_Array *a = idris2_makeArray(length);
 
@@ -80,9 +89,13 @@ Idris2_Value *idris2_Data_IOArray_Prims_prim__newArray(Idris2_Value *erased, Idr
   return (Idris2_Value *)a;
 }
 
-Idris2_Value *idris2_Data_IOArray_Prims_prim__arraySet(Idris2_Value *erased, Idris2_Value *_array,
-                                                Idris2_Value *index, Idris2_Value *v,
-                                                Idris2_Value *_word) {
+Idris2_Value *idris2_Data_IOArray_Prims_prim__arraySet(
+  Idris2_Value *erased,
+  Idris2_Value *_array,
+  Idris2_Value *index,
+  Idris2_Value *v,
+  Idris2_Value *_word
+) {
   Idris2_Array *a = (Idris2_Array *)_array;
   idris2_removeReference(a->arr[idris2_vp_to_Int64(index)]);
   a->arr[idris2_vp_to_Int64(index)] = idris2_newReference(v);
@@ -94,9 +107,12 @@ Idris2_Value *idris2_Data_IOArray_Prims_prim__arraySet(Idris2_Value *erased, Idr
 //      Pointer operations
 // -----------------------------------
 
-Idris2_Value *idris2_Prelude_IO_prim__onCollect(Idris2_Value *_erased, Idris2_Value *_anyPtr,
-                                         Idris2_Value *_freeingFunction,
-                                         Idris2_Value *_world) {
+Idris2_Value *idris2_Prelude_IO_prim__onCollect(
+  Idris2_Value *_erased,
+  Idris2_Value *_anyPtr,
+  Idris2_Value *_freeingFunction,
+  Idris2_Value *_world
+) {
   Idris2_GCPointer *retVal = IDRIS2_NEW_VALUE(Idris2_GCPointer);
   retVal->header.tag = GC_POINTER_TAG;
   retVal->p = (Idris2_Pointer *)idris2_newReference(_anyPtr);
@@ -104,9 +120,9 @@ Idris2_Value *idris2_Prelude_IO_prim__onCollect(Idris2_Value *_erased, Idris2_Va
   return (Idris2_Value *)retVal;
 }
 
-Idris2_Value *idris2_Prelude_IO_prim__onCollectAny(Idris2_Value *_anyPtr,
-                                            Idris2_Value *_freeingFunction,
-                                            Idris2_Value *_world) {
+Idris2_Value *idris2_Prelude_IO_prim__onCollectAny(
+  Idris2_Value *_anyPtr, Idris2_Value *_freeingFunction, Idris2_Value *_world
+) {
   Idris2_GCPointer *retVal = IDRIS2_NEW_VALUE(Idris2_GCPointer);
   retVal->header.tag = GC_POINTER_TAG;
   retVal->p = (Idris2_Pointer *)idris2_newReference(_anyPtr);
@@ -132,7 +148,9 @@ Idris2_Value *System_Concurrency_Raw_prim__makeMutex(Idris2_Value *_world) {
 // %foreign "scheme:blodwen-lock"
 // prim__mutexAcquire : Mutex -> PrimIO ()
 // using pthread_mutex_lock(pthread_mutex_t *mutex)
-Idris2_Value *System_Concurrency_Raw_prim__mutexAcquire(Idris2_Value *_mutex, Idris2_Value *_world) {
+Idris2_Value *System_Concurrency_Raw_prim__mutexAcquire(
+  Idris2_Value *_mutex, Idris2_Value *_world
+) {
   int r = pthread_mutex_lock(((Idris2_Mutex *)_mutex)->mutex);
   IDRIS2_REFC_VERIFY(!r, "pthread_mutex_lock failed: %s", strerror(r));
   return NULL;
@@ -141,7 +159,9 @@ Idris2_Value *System_Concurrency_Raw_prim__mutexAcquire(Idris2_Value *_mutex, Id
 // %foreign "scheme:blodwen-unlock"
 // prim__mutexRelease : Mutex -> PrimIO ()
 // using int pthread_mutex_unlock(pthread_mutex_t *mutex)
-Idris2_Value *System_Concurrency_Raw_prim__mutexRelease(Idris2_Value *_mutex, Idris2_Value *_world) {
+Idris2_Value *System_Concurrency_Raw_prim__mutexRelease(
+  Idris2_Value *_mutex, Idris2_Value *_world
+) {
   int r = pthread_mutex_unlock(((Idris2_Mutex *)_mutex)->mutex);
   IDRIS2_REFC_VERIFY(!r, "pthread_mutex_unlock failed: %s", strerror(r));
   return NULL;
@@ -169,9 +189,9 @@ Idris2_Value *System_Concurrency_Raw_prim__makeCondition(Idris2_Value *_world) {
 // %foreign "scheme:blodwen-condition-wait"
 // prim__conditionWait : Condition -> Mutex -> PrimIO ()
 // using int pthread_cond_wait(pthread_cond_t *, pthread_mutex_t *mutex)
-Idris2_Value *System_Concurrency_Raw_prim__conditionWait(Idris2_Value *_condition,
-                                                  Idris2_Value *_mutex,
-                                                  Idris2_Value *_world) {
+Idris2_Value *System_Concurrency_Raw_prim__conditionWait(
+  Idris2_Value *_condition, Idris2_Value *_mutex, Idris2_Value *_world
+) {
   Idris2_Condition *cond = (Idris2_Condition *)_condition;
   Idris2_Mutex *mutex = (Idris2_Mutex *)_mutex;
   int r = pthread_cond_wait(cond->cond, mutex->mutex);
@@ -183,10 +203,12 @@ Idris2_Value *System_Concurrency_Raw_prim__conditionWait(Idris2_Value *_conditio
 // prim__conditionWaitTimeout : Condition -> Mutex -> Int -> PrimIO ()
 // using int pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t
 // *mutex, const struct timespec *abstime)
-Idris2_Value *System_Concurrency_Raw_prim__conditionWaitTimeout(Idris2_Value *_condition,
-                                                         Idris2_Value *_mutex,
-                                                         Idris2_Value *_timeout,
-                                                         Idris2_Value *_world) {
+Idris2_Value *System_Concurrency_Raw_prim__conditionWaitTimeout(
+  Idris2_Value *_condition,
+  Idris2_Value *_mutex,
+  Idris2_Value *_timeout,
+  Idris2_Value *_world
+) {
   Idris2_Condition *cond = (Idris2_Condition *)_condition;
   Idris2_Mutex *mutex = (Idris2_Mutex *)_mutex;
   int64_t timeout = idris2_vp_to_Int64(_timeout);
@@ -201,8 +223,9 @@ Idris2_Value *System_Concurrency_Raw_prim__conditionWaitTimeout(Idris2_Value *_c
 // %foreign "scheme:blodwen-condition-signal"
 // prim__conditionSignal : Condition -> PrimIO ()
 // using int pthread_cond_signal(pthread_cond_t *cond)
-Idris2_Value *System_Concurrency_Raw_prim__conditionSignal(Idris2_Value *_condition,
-                                                    Idris2_Value *_world) {
+Idris2_Value *System_Concurrency_Raw_prim__conditionSignal(
+  Idris2_Value *_condition, Idris2_Value *_world
+) {
   Idris2_Condition *cond = (Idris2_Condition *)_condition;
   int r = pthread_cond_signal(cond->cond);
   IDRIS2_REFC_VERIFY(!r, "pthread_cond_signal failed: %s", strerror(r));
@@ -212,8 +235,9 @@ Idris2_Value *System_Concurrency_Raw_prim__conditionSignal(Idris2_Value *_condit
 // %foreign "scheme:blodwen-condition-broadcast"
 // prim__conditionBroadcast : Condition -> PrimIO ()
 // using int pthread_cond_broadcast(pthread_cond_t *cond)
-Idris2_Value *System_Concurrency_Raw_prim__conditionBroadcast(Idris2_Value *_condition,
-                                                       Idris2_Value *_mutex) {
+Idris2_Value *System_Concurrency_Raw_prim__conditionBroadcast(
+  Idris2_Value *_condition, Idris2_Value *_mutex
+) {
   Idris2_Condition *cond = (Idris2_Condition *)_condition;
   int r = pthread_cond_broadcast(cond->cond);
   IDRIS2_REFC_VERIFY(!r, "pthread_cond_broadcast failed: %s", strerror(r));
