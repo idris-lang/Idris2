@@ -1,11 +1,11 @@
 1/1: Building Issue660 (Issue660.idr)
-LOG eval.eta:5: Attempting to eta contract subterms of: \(n : Prelude.Types.Nat) => (value[1] n[0])
-LOG eval.eta:5: Evaluated to: \(n : Prelude.Types.Nat) => (value[1] n[0])
+LOG eval.eta:5: Attempting to eta contract subterms of: \(n : Prelude.Types.Nat) => (value[1] (RigW, n[0]))
+LOG eval.eta:5: Evaluated to: \(n : Prelude.Types.Nat) => (value[1] (RigW, n[0]))
 LOG eval.eta:10:   Considering: Prelude.Types.Nat
 LOG eval.eta:10:   Considering: value[1]
 LOG eval.eta:10:   Considering: n[0]
-LOG eval.eta:10:   Considering: (value[1] n[0])
-LOG eval.eta:10:   Considering: \(n : Prelude.Types.Nat) => (value[1] n[0])
+LOG eval.eta:10:   Considering: (value[1] (RigW, n[0]))
+LOG eval.eta:10:   Considering: \(n : Prelude.Types.Nat) => (value[1] (RigW, n[0]))
 LOG eval.eta:10:   Shrinking candidate: value[1]
 LOG eval.eta:10:   Success!: value[0]
 LOG eval.eta:5: Result of eta-contraction: value[0]

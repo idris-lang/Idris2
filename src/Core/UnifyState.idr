@@ -3,13 +3,15 @@ module Core.UnifyState
 
 import Core.Context.Log
 import Core.Env
-import Core.Normalise
-import Core.Value
+
+import Core.Evaluate.Value
+import Core.Evaluate
+
+import Data.SnocList
 
 import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 import Libraries.Data.WithDefault
-
 import Libraries.Data.SnocList.HasLength
 
 %default covering
@@ -22,7 +24,7 @@ data Constraint : Type where
                     FC ->
                     (withLazy : Bool) ->
                     (env : Env Term vars) ->
-                    (x : NF vars) -> (y : NF vars) ->
+                    (x : Term vars) -> (y : Term vars) ->
                     Constraint
      -- A resolved constraint
      Resolved : Constraint
@@ -36,8 +38,8 @@ data PolyConstraint : Type where
      MkPolyConstraint : {vars : _} ->
                         FC -> Env Term vars ->
                         (arg : Term vars) ->
-                        (expty : NF vars) ->
-                        (argty : NF vars) -> PolyConstraint
+                        (expty : Glued vars) ->
+                        (argty : Term vars) -> PolyConstraint
 
 -- Explanation for why an elaborator has been delayed. It's helpful to know
 -- the reason for a delay (I wish airlines and train companies knew this)
@@ -295,101 +297,46 @@ addDot : {vars : _} ->
          Core ()
 addDot fc env dotarg x reason y
     = do defs <- get Ctxt
-         xnf <- nf defs env x
-         ynf <- nf defs env y
-         update UST { dotConstraints $= ((dotarg, reason, MkConstraint fc False env xnf ynf) ::) }
+         update UST { dotConstraints $= ((dotarg, reason, MkConstraint fc False env x y) ::) }
 
 export
 addPolyConstraint : {vars : _} ->
                     {auto u : Ref UST UState} ->
-                    FC -> Env Term vars -> Term vars -> NF vars -> NF vars ->
+                    FC -> Env Term vars -> Term vars -> Glued vars -> Term vars ->
                     Core ()
-addPolyConstraint fc env arg x@(NApp _ (NMeta {}) _) y
+addPolyConstraint fc env arg x@(VMeta {} _ _ _) y
     = update UST { polyConstraints $= ((MkPolyConstraint fc env arg x y) ::) }
 addPolyConstraint fc env arg x y
     = pure ()
 
-mkLocal : {wkns : SnocList Name} -> FC -> Binder (Term vars) -> Term (wkns <>> x :: (vars ++ done))
-mkLocal fc b = Local fc (Just (isLet b)) _ (mkIsVarChiply (mkHasLength wkns))
+mkLocal : {wkns : SnocList Name} -> FC -> Binder (Term vars) -> Term (((done ++ vars) :< x ++ wkns))
+mkLocal fc b = Local fc (Just (isLet b)) _ (mkIsVar (mkHasLength wkns))
 
 mkConstantAppArgs : {vars : _} ->
                     Bool -> FC -> Env Term vars ->
                     (wkns : SnocList Name) ->
-                    List (Term (wkns <>> (vars ++ done)))
-mkConstantAppArgs lets fc [] wkns = []
-mkConstantAppArgs {done} {vars = x :: xs} lets fc (b :: env) wkns
-    = let rec = mkConstantAppArgs {done} lets fc env (wkns :< x) in
+                    List (RigCount, Term ((done ++ vars) ++ wkns))
+mkConstantAppArgs lets fc [<] wkns = []
+mkConstantAppArgs {done} {vars = xs :< x} lets fc (env :< b) wkns
+    = let rec = mkConstantAppArgs {done} lets fc env (cons x wkns) in
           if lets || not (isLet b)
-             then mkLocal fc b :: rec
-             else rec
-
-mkConstantAppArgsSub : {vars : _} ->
-                       Bool -> FC -> Env Term vars ->
-                       Thin smaller vars ->
-                       (wkns : SnocList Name) ->
-                       List (Term (wkns <>> (vars ++ done)))
-mkConstantAppArgsSub lets fc [] p wkns = []
-mkConstantAppArgsSub {done} {vars = x :: xs}
-                        lets fc (b :: env) Refl wkns
-    = mkConstantAppArgs lets fc env (wkns :< x)
-mkConstantAppArgsSub {done} {vars = x :: xs}
-                        lets fc (b :: env) (Drop p) wkns
-    = mkConstantAppArgsSub lets fc env p (wkns :< x)
-mkConstantAppArgsSub {done} {vars = x :: xs}
-                        lets fc (b :: env) (Keep p) wkns
-    = let rec = mkConstantAppArgsSub {done} lets fc env p (wkns :< x) in
-          if lets || not (isLet b)
-             then mkLocal fc b :: rec
-             else rec
-
-mkConstantAppArgsOthers : {vars : _} ->
-                          Bool -> FC -> Env Term vars ->
-                          Thin smaller vars ->
-                          (wkns : SnocList Name) ->
-                          List (Term (wkns <>> (vars ++ done)))
-mkConstantAppArgsOthers lets fc [] p wkns = []
-mkConstantAppArgsOthers {done} {vars = x :: xs}
-                        lets fc (b :: env) Refl wkns
-    = mkConstantAppArgsOthers lets fc env Refl (wkns :< x)
-mkConstantAppArgsOthers {done} {vars = x :: xs}
-                        lets fc (b :: env) (Keep p) wkns
-    = mkConstantAppArgsOthers lets fc env p (wkns :< x)
-mkConstantAppArgsOthers {done} {vars = x :: xs}
-                        lets fc (b :: env) (Drop p) wkns
-    = let rec = mkConstantAppArgsOthers {done} lets fc env p (wkns :< x) in
-          if lets || not (isLet b)
-             then mkLocal fc b :: rec
-             else rec
+             then (multiplicity b, mkLocal fc b) ::
+                rewrite sym $ appendAssociative (done ++ xs) [<x] wkns in rec
+             else rewrite sym $ appendAssociative (done ++ xs) [<x] wkns in rec
 
 export
 applyTo : {vars : _} ->
           FC -> Term vars -> Env Term vars -> Term vars
 applyTo fc tm env
   = let args = reverse (mkConstantAppArgs {done = Scope.empty} False fc env [<]) in
-        apply fc tm (rewrite sym (appendNilRightNeutral vars) in args)
+        apply fc tm (rewrite sym (appendLinLeftNeutral vars) in args)
 
 export
 applyToFull : {vars : _} ->
               FC -> Term vars -> Env Term vars -> Term vars
 applyToFull fc tm env
   = let args = reverse (mkConstantAppArgs {done = Scope.empty} True fc env [<]) in
-        apply fc tm (rewrite sym (appendNilRightNeutral vars) in args)
-
-export
-applyToSub : {vars : _} ->
-             FC -> Term vars -> Env Term vars ->
-             Thin smaller vars -> Term vars
-applyToSub fc tm env sub
-  = let args = reverse (mkConstantAppArgsSub {done = Scope.empty} True fc env sub [<]) in
-        apply fc tm (rewrite sym (appendNilRightNeutral vars) in args)
-
-export
-applyToOthers : {vars : _} ->
-                FC -> Term vars -> Env Term vars ->
-                Thin smaller vars -> Term vars
-applyToOthers fc tm env sub
-  = let args = reverse (mkConstantAppArgsOthers {done = Scope.empty} True fc env sub [<]) in
-        apply fc tm (rewrite sym (appendNilRightNeutral vars) in args)
+        apply fc tm (rewrite sym (appendLinLeftNeutral vars) in args)
 
 -- Create a new metavariable with the given name and return type,
 -- and return a term which is the metavariable applied to the environment
@@ -412,12 +359,14 @@ newMetaLets {vars} fc rig env n ty def nocyc lets
          log "unify.meta" 5 $ "Adding new meta " ++ show (n, fc, rig)
          logTerm "unify.meta" 10 ("New meta type " ++ show n) hty
          idx <- addDef n hole
+         let app = Meta fc n idx envArgs
+         logTerm "unify.meta" 10 ("New meta app " ++ show n) app
          addHoleName fc n idx
-         pure (idx, Meta fc n idx envArgs)
+         pure (idx, app)
   where
-    envArgs : List (Term vars)
+    envArgs : List (RigCount, Term vars)
     envArgs = let args = reverse (mkConstantAppArgs {done = Scope.empty} lets fc env [<]) in
-                  rewrite sym (appendNilRightNeutral vars) in args
+                  (rewrite sym (appendLinLeftNeutral vars) in args)
 
 export
 newMeta : {vars : _} ->
@@ -431,10 +380,10 @@ newMeta fc r env n ty def cyc = newMetaLets fc r env n ty def cyc False
 
 mkConstant : {vars : _} ->
              FC -> Env Term vars -> Term vars -> ClosedTerm
-mkConstant fc [] tm = tm
+mkConstant fc [<] tm = tm
 -- mkConstant {vars = x :: _} fc (Let c val ty :: env) tm
 --     = mkConstant fc env (Bind fc x (Let c val ty) tm)
-mkConstant {vars = x :: _} fc (b :: env) tm
+mkConstant {vars = _ :< x} fc (env :< b) tm
     = let ty = binderType b in
           mkConstant fc env (Bind fc x (Lam fc (multiplicity b) Explicit ty) tm)
 
@@ -461,9 +410,9 @@ newConstant {vars} fc rig env tm ty constrs
          addGuessName fc cn idx
          pure (Meta fc cn idx envArgs)
   where
-    envArgs : List (Term vars)
+    envArgs : List (RigCount, Term vars)
     envArgs = let args = reverse (mkConstantAppArgs {done = Scope.empty} True fc env [<]) in
-                  rewrite sym (appendNilRightNeutral vars) in args
+                  rewrite sym (appendLinLeftNeutral vars) in args
 
 -- Create a new search with the given name and return type,
 -- and return a term which is the name applied to the environment
@@ -483,9 +432,9 @@ newSearch {vars} fc rig depth def env n ty
          addGuessName fc n idx
          pure (idx, Meta fc n idx envArgs)
   where
-    envArgs : List (Term vars)
+    envArgs : List (RigCount, Term vars)
     envArgs = let args = reverse (mkConstantAppArgs {done = Scope.empty} False fc env [<]) in
-                  rewrite sym (appendNilRightNeutral vars) in args
+                  rewrite sym (appendLinLeftNeutral vars) in args
 
 -- Add a hole which stands for a delayed elaborator
 export
@@ -503,9 +452,9 @@ newDelayed {vars} fc rig env n ty
          addHoleName fc n idx
          pure (idx, Meta fc n idx envArgs)
   where
-    envArgs : List (Term vars)
+    envArgs : List (RigCount, Term vars)
     envArgs = let args = reverse (mkConstantAppArgs {done = Scope.empty} False fc env [<]) in
-                  rewrite sym (appendNilRightNeutral vars) in args
+                  rewrite sym (appendLinLeftNeutral vars) in args
 
 export
 tryErrorUnify : {auto c : Ref Ctxt Defs} ->
@@ -584,11 +533,8 @@ checkValidHole base (idx, (fc, n))
                           | Nothing => pure ()
                      case c of
                           MkConstraint fc l env x y =>
-                             do put UST ({ guesses := empty } ust)
-                                empty <- clearDefs defs
-                                xnf <- quote empty env x
-                                ynf <- quote empty env y
-                                throw (CantSolveEq fc (gamma defs) env xnf ynf)
+                            do put UST ({ guesses := empty } ust)
+                               throw (CantSolveEq fc (gamma defs) env x y)
                           _ => pure ()
               _ => traverse_ checkRef !(traverse getFullName
                                         ((keys (getRefs (Resolved (-1)) (type gdef)))))
@@ -612,7 +558,7 @@ checkUserHolesAfter base now
     = do gs_map <- getGuesses
          let gs = toList gs_map
          log "unify.unsolved" 10 $ "Unsolved guesses " ++ show gs
-         List.traverse_ (checkValidHole base) gs
+         Core.Core.List.traverse_ (checkValidHole base) gs
          hs_map <- getCurrentHoles
          let hs = toList hs_map
          let hs' = if any isUserName (map (snd . snd) hs)
@@ -645,58 +591,56 @@ dumpHole : {auto u : Ref UST UState} ->
 dumpHole s n hole
     = do ust <- get UST
          defs <- get Ctxt
+         depth <- getDepth
          case !(lookupCtxtExact (Resolved hole) (gamma defs)) of
           Nothing => pure ()
           Just gdef => case (definition gdef, type gdef) of
              (Guess tm envb constraints, ty) =>
-                  do logString s.topic n $
-                       "!" ++ show !(getFullName (Resolved hole)) ++ " : "
-                           ++ show !(toFullNames !(normaliseHoles defs Env.empty ty))
+                  do logString depth s.topic n $
+                       "! \{show hole} " ++ show !(getFullName (Resolved hole)) ++ " : "
+                           ++ show !(toFullNames !(logQuiet $ normaliseHoles Env.empty ty))
                        ++ "\n\t  = "
-                           ++ show !(normaliseHoles defs Env.empty tm)
+                           ++ show !(toFullNames !(logQuiet $ normaliseHoles Env.empty tm))
                            ++ "\n\twhen"
                      traverse_ dumpConstraint constraints
              (Hole _ p, ty) =>
-                  logString s.topic n $
-                    "?" ++ show (fullname gdef) ++ " : "
-                        ++ show !(normaliseHoles defs Env.empty ty)
+                  logString depth s.topic n $
+                    "? \{show hole} " ++ show (fullname gdef) ++ " : "
+                        ++ show !(toFullNames !(logQuiet $ normaliseHoles Env.empty ty))
                         ++ if implbind p then " (ImplBind)" else ""
                         ++ if invertible gdef then " (Invertible)" else ""
              (BySearch _ _ _, ty) =>
-                  logString s.topic n $
+                  logString depth s.topic n $
                      "Search " ++ show hole ++ " : " ++
-                     show !(toFullNames !(normaliseHoles defs Env.empty ty))
-             (PMDef _ args t _ _, ty) =>
+                     show !(toFullNames !(logQuiet $ normaliseHoles Env.empty ty))
+             (Function _ t _ _, ty) =>
                   log s 4 $
                      "Solved: " ++ show hole ++ " : " ++
-                     show !(normalise defs Env.empty ty) ++
-                     " = " ++ show !(normalise defs Env.empty (Ref emptyFC Func (Resolved hole)))
+                     show !(toFullNames !(logQuiet $ normalise Env.empty ty)) ++
+                     " = " ++ show !(toFullNames !(logQuiet $ normalise Env.empty (Ref emptyFC Func (Resolved hole))))
              (ImpBind, ty) =>
                   log s 4 $
                       "Bound: " ++ show hole ++ " : " ++
-                      show !(normalise defs Env.empty ty)
+                      show !(toFullNames !(logQuiet $ normalise Env.empty ty))
              (Delayed, ty) =>
                   log s 4 $
                      "Delayed elaborator : " ++
-                     show !(normalise defs Env.empty ty)
+                     show !(toFullNames !(logQuiet $ normalise Env.empty ty))
              _ => pure ()
   where
     dumpConstraint : Int -> Core ()
     dumpConstraint cid
         = do ust <- get UST
              defs <- get Ctxt
+             depth <- getDepth
              case lookup cid (constraints ust) of
-                  Nothing => pure ()
-                  Just Resolved => logString s.topic n "\tResolved"
-                  Just (MkConstraint _ lazy env x y) =>
-                    do logString s.topic n $
-                         "\t  " ++ show !(toFullNames !(quote defs env x))
-                                ++ " =?= " ++ show !(toFullNames !(quote defs env y))
-                       empty <- clearDefs defs
-                       log s 5 $
-                         "\t    from " ++ show !(toFullNames !(quote empty env x))
-                            ++ " =?= " ++ show !(toFullNames !(quote empty env y))
-                            ++ if lazy then "\n\t(lazy allowed)" else ""
+               Nothing => pure ()
+               Just Resolved => logString depth s.topic n "\tResolved"
+               Just (MkConstraint _ lazy env x y) =>
+                    logString depth s.topic n $
+                         "\t  " ++ show !(toFullNames x)
+                                ++ " =?= " ++ show !(toFullNames y)
+                                ++ if lazy then "\n\t(lazy allowed)" else ""
 
 export
 dumpConstraints : {auto u : Ref UST UState} ->
@@ -709,5 +653,6 @@ dumpConstraints s n all
            let hs = toList (guesses ust) ++
                     toList (if all then holes ust else currentHoles ust)
            unless (isNil hs) $
-             do logString s.topic n "--- CONSTRAINTS AND HOLES ---"
-                traverse_ (dumpHole s n) (map fst hs)
+             do depth <- getDepth
+                logString depth s.topic n "--- CONSTRAINTS AND HOLES ---"
+                logDepth $ traverse_ (dumpHole s n) (map fst hs)

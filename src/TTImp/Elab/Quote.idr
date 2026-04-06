@@ -4,6 +4,9 @@ import Core.Env
 import Core.Metadata
 import Core.Reflect
 import Core.UnifyState
+import Core.Evaluate.Value
+import Core.Evaluate.Normalise
+import Core.Evaluate
 
 import Idris.REPL.Opts
 import Idris.Syntax
@@ -161,10 +164,10 @@ bindUnqs ((qvar, fc, esctm) :: qs) rig elabinfo nest env tm
          Just (idx, gdef) <- lookupCtxtExactI (reflectionttimp "TTImp") (gamma defs)
               | _ => throw (UndefinedName fc (reflectionttimp "TTImp"))
          (escv, escty) <- check rig elabinfo nest env esctm
-                                (Just (gnf env (Ref fc (TyCon 0)
+                                (Just !(nf env (Ref fc (TyCon 0)
                                            (Resolved idx))))
          sc <- bindUnqs qs rig elabinfo nest env tm
-         pure (Bind fc qvar (Let fc (rigMult top rig) escv !(getTerm escty))
+         pure (Bind fc qvar (Let fc (rigMult top rig) escv !(quote env escty))
                     (refToLocal qvar qvar sc))
 
 onLHS : ElabMode -> Bool
@@ -191,8 +194,8 @@ checkQuote rig elabinfo nest env fc tm exp
          unqs <- get Unq
          qty <- getCon fc defs (reflectionttimp "TTImp")
          qtm <- bindUnqs unqs rig elabinfo nest env qtm
-         fullqtm <- normalise defs env qtm
-         checkExp rig elabinfo env fc fullqtm (gnf env qty) exp
+         fullqtm <- normalise env qtm
+         checkExp rig elabinfo env fc fullqtm !(nf env qty) exp
 
 export
 checkQuoteName : {vars : _} ->
@@ -206,7 +209,7 @@ checkQuoteName rig elabinfo nest env fc n exp
     = do defs <- get Ctxt
          qnm <- reflect fc defs (onLHS (elabMode elabinfo)) env n
          qty <- getCon fc defs (reflectiontt "Name")
-         checkExp rig elabinfo env fc qnm (gnf env qty) exp
+         checkExp rig elabinfo env fc qnm !(nf env qty) exp
 
 export
 checkQuoteDecl : {vars : _} ->
@@ -227,7 +230,7 @@ checkQuoteDecl rig elabinfo nest env fc ds exp
          qds <- reflect fc defs (onLHS (elabMode elabinfo)) env ds'
          unqs <- get Unq
          qd <- getCon fc defs (reflectionttimp "Decl")
-         qty <- appCon fc defs (basics "List") [qd]
+         qty <- appConTop fc defs (basics "List") [qd]
          checkExp rig elabinfo env fc
                   !(bindUnqs unqs rig elabinfo nest env qds)
-                  (gnf env qty) exp
+                  !(nf env qty) exp

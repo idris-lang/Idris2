@@ -1,5 +1,0 @@
-1/1: Building list (list.idr)
-Main> [scheme] Main> False :: (False :: (False :: (False :: (False :: (False :: (False :: (False :: (False :: (False :: ?help)))))))))
-[scheme] Main> S (S (S (S (S (S (S (S (S (S (length ?help))))))))))
-[scheme] Main> True
-[scheme] Main> Bye for now!

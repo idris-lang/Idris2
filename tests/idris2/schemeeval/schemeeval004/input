@@ -1,5 +1,0 @@
-:set eval scheme
-mkList False 10
-length (mkList False 10)
-isEven (length (replicate 200000 False))
-:q

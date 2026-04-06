@@ -2,13 +2,16 @@ module TTImp.TTImp
 
 import Core.Context.Log
 import Core.Env
-import Core.Normalise
-import Core.Value
 
+import Data.String
 import public Data.List1
 import Data.SortedSet
 
-import Libraries.Data.List.SizeOf
+import Core.Evaluate.Value
+import Core.Evaluate.Normalise
+import Core.Evaluate.Expand
+
+import Libraries.Data.SnocList.SizeOf
 import Libraries.Data.WithDefault
 
 %default covering
@@ -25,12 +28,17 @@ record NestedNames (vars : Scope) where
                        List (Var vars), -- names used from the environment
                        FC -> NameType -> Term vars))
 
+namespace NestedNames
+  public export
+  empty : NestedNames vars
+  empty = MkNested []
+
 export
 Weaken NestedNames where
-  weakenNs {ns = wkns} s (MkNested ns) = MkNested (map wknName ns)
+  weakenNs {inner = wkns} s (MkNested ns) = MkNested (map wknName ns)
     where
       wknName : (Name, (Maybe Name, List (Var vars), FC -> NameType -> Term vars)) ->
-                (Name, (Maybe Name, List (Var (wkns ++ vars)), FC -> NameType -> Term (wkns ++ vars)))
+                (Name, (Maybe Name, List (Var (Scope.addInner vars wkns)), FC -> NameType -> Term (Scope.addInner vars wkns)))
       wknName (n, (mn, vars, rep))
           = (n, (mn, map (weakenNs s) vars, \fc, nt => weakenNs s (rep fc nt)))
 
@@ -174,7 +182,7 @@ mutual
          = "(%caselocal (" ++ show uname ++ " " ++ show iname
                ++ " " ++ show args ++ ") " ++ show sc ++ ")"
       show (IUpdate _ flds rec)
-         = "(%record " ++ showSep ", " (map show flds) ++ " " ++ show rec ++ ")"
+         = "(%record " ++ joinBy ", " (map show flds) ++ " " ++ show rec ++ ")"
       show (IApp fc f a)
          = "(" ++ show f ++ " " ++ show a ++ ")"
       show (INamedApp fc f n a)
@@ -186,7 +194,7 @@ mutual
       show (ISearch fc d)
          = "%search"
       show (IAlternative fc ty alts)
-         = "(|" ++ showSep "," (map show alts) ++ "|)"
+         = "(|" ++ joinBy "," (map show alts) ++ "|)"
       show (IRewrite _ rule tm)
          = "(%rewrite (" ++ show rule ++ ") (" ++ show tm ++ "))"
       show (ICoerced _ tm) = "(%coerced " ++ show tm ++ ")"
@@ -215,8 +223,8 @@ mutual
   export
   covering
   Show nm => Show (IFieldUpdate' nm) where
-    show (ISetField p val) = showSep "->" p ++ " = " ++ show val
-    show (ISetFieldApp p val) = showSep "->" p ++ " $= " ++ show val
+    show (ISetField p val) = joinBy "->" p ++ " = " ++ show val
+    show (ISetFieldApp p val) = joinBy "->" p ++ " $= " ++ show val
 
   public export
   FnOpt : Type
@@ -272,14 +280,14 @@ mutual
     show (Hint t) = "%hint " ++ show t
     show (GlobalHint t) = "%globalhint " ++ show t
     show ExternFn = "%extern"
-    show (ForeignFn cs) = "%foreign " ++ showSep " " (map show cs)
-    show (ForeignExport cs) = "%export " ++ showSep " " (map show cs)
+    show (ForeignFn cs) = "%foreign " ++ joinBy " " (map show cs)
+    show (ForeignExport cs) = "%export " ++ joinBy " " (map show cs)
     show Invertible = "%invertible"
     show (Totality Total) = "total"
     show (Totality CoveringOnly) = "covering"
     show (Totality PartialOK) = "partial"
     show Macro = "%macro"
-    show (SpecArgs ns) = "%spec " ++ showSep " " (map show ns)
+    show (SpecArgs ns) = "%spec " ++ joinBy " " (map show ns)
 
   export
   Eq FnOpt where
@@ -402,7 +410,7 @@ mutual
     show (MkImpRecord header body)
         = "record " ++ show header.name.val ++ " " ++ show header.val ++
           " " ++ show body.name.val ++ "\n\t" ++
-          showSep "\n\t" (map show body.val) ++ "\n"
+          joinBy "\n\t" (map show body.val) ++ "\n"
 
   public export
   data WithFlag
@@ -496,14 +504,14 @@ mutual
     show (IDef _ n cs) = "(%def " ++ show n ++ " " ++ show cs ++ ")"
     show (IParameters _ ps ds)
         = "parameters " ++ show ps ++ "\n\t" ++
-          showSep "\n\t" (assert_total $ map show ds)
+          joinBy "\n\t" (assert_total $ map show ds)
     show (IRecord _ _ _ _ d) = show d.val
     show (IFail _ msg decls)
         = "fail" ++ maybe "" ((" " ++) . show) msg ++ "\n" ++
-          showSep "\n" (assert_total $ map (("  " ++) . show) decls)
+          joinBy "\n" (assert_total $ map (("  " ++) . show) decls)
     show (INamespace _ ns decls)
         = "namespace " ++ show ns ++
-          showSep "\n" (assert_total $ map show decls)
+          joinBy "\n" (assert_total $ map show decls)
     show (ITransform _ n lhs rhs)
         = "%transform " ++ show n ++ " " ++ show lhs ++ " ==> " ++ show rhs
     show (IRunElabDecl _ tm)
@@ -705,8 +713,7 @@ implicitsAs n defs ns tm
                     "Could not find variable " ++ show n
                   pure $ IVar loc nm
             Just ty =>
-               do ty' <- nf defs Env.empty ty
-                  implicits <- findImps is es ns ty'
+               do implicits <- findImps is es ns !(expand !(nf Env.empty ty))
                   log "declare.def.lhs.implicits" 30 $
                     "\n  In the type of " ++ show n ++ ": " ++ show ty ++
                     "\n  Using locals: " ++ show ns ++
@@ -734,20 +741,22 @@ implicitsAs n defs ns tm
         -- in the lhs: this is used to determine when to stop searching for further
         -- implicits to add.
         findImps : List (Maybe Name) -> List (Maybe Name) ->
-                   List Name -> ClosedNF ->
+                   List Name -> NF [<] ->
                    Core (List (Name, PiInfo RawImp))
         -- #834 When we are in a local definition, we have an explicit telescope
         -- corresponding to the variables bound in the parent function.
         -- Parameter blocks also introduce additional telescope of implicit, auto,
         -- and explicit variables. So we first peel off all of the quantifiers
         -- corresponding to these variables.
-        findImps ns es (_ :: locals) (NBind fc x (Pi {}) sc)
-          = do body <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
+        findImps ns es (_ :: locals) (VBind fc x (Pi {}) sc)
+          = do body <- sc (pure (VErased fc Placeholder))
+               body <- expand body
                findImps ns es locals body
                -- ^ TODO? check that name of the pi matches name of local?
         -- don't add implicits coming after explicits that aren't given
-        findImps ns es [] (NBind fc x (Pi _ _ Explicit _) sc)
-            = do body <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
+        findImps ns es [] (VBind fc x (Pi _ _ Explicit _) sc)
+            = do body <- sc (pure (VErased fc Placeholder))
+                 body <- expand body
                  case es of
                    -- Explicits were skipped, therefore all explicits are given anyway
                    Just (UN Underscore) :: _ => findImps ns es [] body
@@ -756,14 +765,16 @@ implicitsAs n defs ns tm
                           Nothing => pure [] -- explicit wasn't given
                           Just es' => findImps ns es' [] body
         -- if the implicit was given, skip it
-        findImps ns es [] (NBind fc x (Pi _ _ AutoImplicit _) sc)
-            = do body <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
+        findImps ns es [] (VBind fc x (Pi _ _ AutoImplicit _) sc)
+            = do body <- sc (pure (VErased fc Placeholder))
+                 body <- expand body
                  case updateNs x ns of
                    Nothing => -- didn't find explicit call
                       pure $ (x, AutoImplicit) :: !(findImps ns es [] body)
                    Just ns' => findImps ns' es [] body
-        findImps ns es [] (NBind fc x (Pi _ _ p _) sc)
-            = do body <- sc defs (toClosure defaultOpts Env.empty (Erased fc Placeholder))
+        findImps ns es [] (VBind fc x (Pi _ _ p _) sc)
+            = do body <- sc (pure (VErased fc Placeholder))
+                 body <- expand body
                  if Just x `elem` ns
                    then findImps ns es [] body
                    else pure $ (x, forgetDef p) :: !(findImps ns es [] body)

@@ -1,3 +1,0 @@
-:set eval scheme
-unpack "foo"
-:q
