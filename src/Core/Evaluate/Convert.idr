@@ -70,8 +70,8 @@ parameters {auto c : Ref Ctxt Defs}
   convertAppsNF s env x@(VApp _ nt n args _) y@(VApp _ nt' n' args' _)
       = if n == n'
            then convSpine s env args args'
-           else do x'@(VCase{}) <- expandCases x | _ => pure False
-                   y'@(VCase{}) <- expandCases y | _ => pure False
+           else do x'@(VCase{}) <- expandApps x | _ => pure False
+                   y'@(VCase{}) <- expandApps y | _ => pure False
                    -- See if the case blocks convert
                    convGen s env x' y'
   convertAppsNF s env (VApp{}) (VMeta{}) = pure False

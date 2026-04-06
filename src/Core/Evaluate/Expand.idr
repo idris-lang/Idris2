@@ -12,30 +12,38 @@ import Data.SnocList
 import Libraries.Data.WithDefault
 import Libraries.Data.SnocList.LengthMatch
 
-data ExpandMode
-  = OnlyVisible -- expand names to full names with namespaces to respect their visilibity
-  | Cases -- look into top level cases
+data ExpandDepth
+  = OnlyVisible -- expand applications with respect their visibility between namespaced names
+  | Apps -- expand applications regardless namespaced names visibility
+  | Cases -- expand cases too
   | Full -- reduce as much as possible regardless visibility and cases
 
-Show ExpandMode where
+Show ExpandDepth where
   show OnlyVisible = "OnlyVisible"
+  show Apps = "Apps"
   show Cases = "Cases"
   show Full = "Full"
 
-Eq ExpandMode where
+Eq ExpandDepth where
   (==) OnlyVisible OnlyVisible = True
+  (==) Apps Apps = True
   (==) Cases Cases = True
   (==) Full Full = True
   (==) _ _ = False
 
-Ord ExpandMode where
+Ord ExpandDepth where
   compare OnlyVisible OnlyVisible = EQ
-  compare OnlyVisible _ = LT
-  compare _ OnlyVisible = GT
+  compare Apps Apps = EQ
   compare Cases Cases = EQ
-  compare Cases Full = LT
-  compare Full Cases = GT
   compare Full Full = EQ
+
+  compare OnlyVisible _ = LT
+  compare Apps Cases = LT
+  compare _ Full = LT
+
+  compare _ OnlyVisible = GT
+  compare Cases Apps = GT
+  compare Full _ = GT
 
 -- If a value is an App or Meta node, then it might be reducible. Expand it
 -- just enough that we have the right top level node.
@@ -44,14 +52,14 @@ Ord ExpandMode where
 -- just to change a compile-time only index
 expand' : {auto c : Ref Ctxt Defs} ->
           {vars: _} ->
-          ExpandMode -> Value f vars -> Core (NF vars)
+          ExpandDepth -> Value f vars -> Core (NF vars)
 expand' mode v@(VApp fc nt n sp val)
     = do vis <- getVisibilityWeaked fc n
          full_name <- toFullNames n
          defs <- get Ctxt
          let ns = currentNS defs :: nestedNS defs
          logC "eval.def.stuck" 50 $ pure "expand App \{show mode} ns: \{show ns}, n: \{show n}, vis: \{show $ collapseDefault vis}, full_name: \{show full_name}"
-         if mode > Cases || reducibleInAny ns (if mode < Cases then full_name else n) (collapseDefault vis)
+         if mode == Full || reducibleInAny ns (if mode == OnlyVisible then full_name else n) (collapseDefault vis)
             -- If we are in Cases we are still needed to confirm that a name can be reduced.
             -- If a name has no namespace (i.e. Resolved _) it will be reduced
             then do
@@ -138,6 +146,9 @@ expand' mode v@(VMeta fc n i args sp val)
          logC "eval.def.stuck" 50 $ do n' <- toFullNames n
                                        val' <- toFullNames val'
                                        pure "Reduced VMeta \{show mode} \{show n'} to \{show val'}"
+        --  if !(blockedApp val')
+        --   then pure (believe_me v)
+        --   else expand' mode val'
          expand' mode val'
 expand' mode val = pure (believe_me val)
 
@@ -160,6 +171,15 @@ expand v = do
   logNF "eval.def.stuck" 50 "Begin Expand OnlyVisible for" v
   logDepth $ expand' OnlyVisible v
 
+export
+expandApps : {auto c : Ref Ctxt Defs} ->
+         {vars: _} ->
+         Value f vars -> Core (NF vars)
+expandApps v = do
+  logNF "eval.def.stuck" 50 "Begin Expand Apps for" v
+  logDepth $ expand' Apps v
+
+-- TODO: useless?
 export
 expandCases : {auto c : Ref Ctxt Defs} ->
              {vars: _} ->
