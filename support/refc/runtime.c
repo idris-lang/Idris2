@@ -44,6 +44,7 @@ typedef Idris2_Value *(*const FUN8)(
   Idris2_Value *,
   Idris2_Value *,
   Idris2_Value *,
+  Idris2_Value *,
   Idris2_Value *
 );
 typedef Idris2_Value *(*const FUN9)(
@@ -125,7 +126,7 @@ typedef Idris2_Value *(*const FUN14)(
   Idris2_Value *,
   Idris2_Value *,
   Idris2_Value *,
-  Idris2_Value *,
+  Idris2_Value *
 );
 typedef Idris2_Value *(*const FUN15)(
   Idris2_Value *,
