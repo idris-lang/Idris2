@@ -31,11 +31,13 @@ Idris2_Value *Main_insert
         if (! constructor_36) {                              // Main:7:22--7:26
             constructor_36 = idris2_newConstructor(0, 0);    // Main:7:22--7:26
         }                                                    // Main:7:22--7:26
-        Idris2_Value * var_3 = (Idris2_Value*)constructor_36;// Main:7:17--7:21
+        Idris2_Value * var_3 = (Idris2_Value*)constructor_36;
+                                                             // Main:7:17--7:21
          // constructor Main.Leaf                            // Main:7:29--7:33
         Idris2_Constructor* constructor_37 = idris2_newConstructor(0, 0);
                                                              // Main:7:29--7:33
-        Idris2_Value * var_4 = (Idris2_Value*)constructor_37;// Main:7:17--7:21
+        Idris2_Value * var_4 = (Idris2_Value*)constructor_37;
+                                                             // Main:7:17--7:21
          // constructor Main.Node                            // Main:7:17--7:21
         Idris2_Constructor* constructor_38 = idris2_newConstructor(3, 1);
                                                              // Main:7:17--7:21
