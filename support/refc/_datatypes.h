@@ -60,7 +60,7 @@ them first. Of course, this flag is not used if it is clear that Idris2_Value*
 is actually an Int. But places like newReference/removeReference require this
 flag.
  */
-#define idris2_vp_is_unboxed(p) ((uintptr_t)(p) & 3)
+#define idris2_vp_is_unboxed(p) ((uintptr_t)(p)&3)
 
 #define idris2_vp_int_shift                                                    \
   ((sizeof(uintptr_t) >= 8 && sizeof(Idris2_Value *) >= 8) ? 32 : 16)
