@@ -4,24 +4,24 @@
 5
 2
 4
-Value *Main_insert
+Idris2_Value *Main_insert
 (
-    Value * var_0
-,   Value * var_1
-,   Value * var_2
+    Idris2_Value * var_0
+,   Idris2_Value * var_1
+,   Idris2_Value * var_2
 );
-Value *Main_insert
+Idris2_Value *Main_insert
 (
-    Value * var_0
-,   Value * var_1
-,   Value * var_2
+    Idris2_Value * var_0
+,   Idris2_Value * var_1
+,   Idris2_Value * var_2
 )
 {
-    Value * tmp_35 = NULL;                                   // Main:6:24--6:31
-    if (((Value_Constructor *)var_2)->tag == 0 /* Main.Leaf */) {
-        Value_Constructor* constructor_36 = NULL;
+    Idris2_Value * tmp_35 = NULL;                            // Main:6:24--6:31
+    if (((Idris2_Constructor *)var_2)->tag == 0 /* Main.Leaf */) {
+        Idris2_Constructor* constructor_36 = NULL;
         if (idris2_isUnique(var_2)) {
-            constructor_36 = (Value_Constructor*)var_2;
+            constructor_36 = (Idris2_Constructor*)var_2;
         }
         else {
             idris2_removeReference(var_2);
@@ -31,25 +31,27 @@ Value *Main_insert
         if (! constructor_36) {                              // Main:7:22--7:26
             constructor_36 = idris2_newConstructor(0, 0);    // Main:7:22--7:26
         }                                                    // Main:7:22--7:26
-        Value * var_3 = (Value*)constructor_36;              // Main:7:17--7:21
+        Idris2_Value * var_3 = (Idris2_Value*)constructor_36;
+                                                             // Main:7:17--7:21
          // constructor Main.Leaf                            // Main:7:29--7:33
-        Value_Constructor* constructor_37 = idris2_newConstructor(0, 0);
+        Idris2_Constructor* constructor_37 = idris2_newConstructor(0, 0);
                                                              // Main:7:29--7:33
-        Value * var_4 = (Value*)constructor_37;              // Main:7:17--7:21
+        Idris2_Value * var_4 = (Idris2_Value*)constructor_37;
+                                                             // Main:7:17--7:21
          // constructor Main.Node                            // Main:7:17--7:21
-        Value_Constructor* constructor_38 = idris2_newConstructor(3, 1);
+        Idris2_Constructor* constructor_38 = idris2_newConstructor(3, 1);
                                                              // Main:7:17--7:21
         constructor_38->args[0] = var_3;
         constructor_38->args[1] = var_1;
         constructor_38->args[2] = var_4;
-        tmp_35 = (Value*)constructor_38;
-    } else if (((Value_Constructor *)var_2)->tag == 1 /* Main.Node */) {
-        Value *var_5 = ((Value_Constructor*)var_2)->args[0];
-        Value *var_6 = ((Value_Constructor*)var_2)->args[1];
-        Value *var_7 = ((Value_Constructor*)var_2)->args[2];
-        Value_Constructor* constructor_39 = NULL;
+        tmp_35 = (Idris2_Value*)constructor_38;
+    } else if (((Idris2_Constructor *)var_2)->tag == 1 /* Main.Node */) {
+        Idris2_Value *var_5 = ((Idris2_Constructor*)var_2)->args[0];
+        Idris2_Value *var_6 = ((Idris2_Constructor*)var_2)->args[1];
+        Idris2_Value *var_7 = ((Idris2_Constructor*)var_2)->args[2];
+        Idris2_Constructor* constructor_39 = NULL;
         if (idris2_isUnique(var_2)) {
-            constructor_39 = (Value_Constructor*)var_2;
+            constructor_39 = (Idris2_Constructor*)var_2;
         }
         else {
             idris2_newReference(var_5);
@@ -57,27 +59,27 @@ Value *Main_insert
             idris2_newReference(var_7);
             idris2_removeReference(var_2);
         }
-        Value * tmp_40 = NULL;                               // Prelude.EqOrd:121:3--121:6
-        if (((Value_Constructor *)var_0)->tag == 0 /* Prelude.EqOrd.MkOrd */) {
-            Value *var_8 = ((Value_Constructor*)var_0)->args[0];
-            Value *var_9 = ((Value_Constructor*)var_0)->args[1];
-            Value *var_10 = ((Value_Constructor*)var_0)->args[2];
-            Value *var_11 = ((Value_Constructor*)var_0)->args[3];
-            Value *var_12 = ((Value_Constructor*)var_0)->args[4];
-            Value *var_13 = ((Value_Constructor*)var_0)->args[5];
-            Value *var_14 = ((Value_Constructor*)var_0)->args[6];
-            Value *var_15 = ((Value_Constructor*)var_0)->args[7];
+        Idris2_Value * tmp_40 = NULL;                        // Prelude.EqOrd:121:3--121:6
+        if (((Idris2_Constructor *)var_0)->tag == 0 /* Prelude.EqOrd.MkOrd */) {
+            Idris2_Value *var_8 = ((Idris2_Constructor*)var_0)->args[0];
+            Idris2_Value *var_9 = ((Idris2_Constructor*)var_0)->args[1];
+            Idris2_Value *var_10 = ((Idris2_Constructor*)var_0)->args[2];
+            Idris2_Value *var_11 = ((Idris2_Constructor*)var_0)->args[3];
+            Idris2_Value *var_12 = ((Idris2_Constructor*)var_0)->args[4];
+            Idris2_Value *var_13 = ((Idris2_Constructor*)var_0)->args[5];
+            Idris2_Value *var_14 = ((Idris2_Constructor*)var_0)->args[6];
+            Idris2_Value *var_15 = ((Idris2_Constructor*)var_0)->args[7];
             idris2_newReference(var_10);
-            Value * var_16 = idris2_apply_closure(var_10, idris2_newReference(var_1));
+            Idris2_Value * var_16 = idris2_apply_closure(var_10, idris2_newReference(var_1));
                                                              // Prelude.EqOrd:121:3--121:6
             tmp_40 = idris2_apply_closure(var_16, idris2_newReference(var_6));
         }
-        Value * var_19 = tmp_40;
-        Value *tmp_41 = NULL;
+        Idris2_Value * var_19 = tmp_40;
+        Idris2_Value *tmp_41 = NULL;
         int64_t tmp_42 = idris2_extractInt(var_19);
         if (tmp_42 == UINT8_C(1)) {
             idris2_removeReference(var_19);
-            Value * var_17 = idris2_trampoline(Main_insert(var_0, var_1, var_5));
+            Idris2_Value * var_17 = idris2_trampoline(Main_insert(var_0, var_1, var_5));
                                                              // Main:8:42--8:46
              // constructor Main.Node                        // Main:8:42--8:46
             if (! constructor_39) {                          // Main:8:42--8:46
@@ -87,10 +89,10 @@ Value *Main_insert
             constructor_39->args[0] = var_17;
             constructor_39->args[1] = var_6;
             constructor_39->args[2] = var_7;
-            tmp_41 = (Value*)constructor_39;
+            tmp_41 = (Idris2_Value*)constructor_39;
         } else if (tmp_42 == UINT8_C(0)) {
             idris2_removeReference(var_19);
-            Value * var_18 = idris2_trampoline(Main_insert(var_0, var_1, var_7));
+            Idris2_Value * var_18 = idris2_trampoline(Main_insert(var_0, var_1, var_7));
                                                              // Main:9:42--9:46
              // constructor Main.Node                        // Main:9:42--9:46
             if (! constructor_39) {                          // Main:9:42--9:46
@@ -100,7 +102,7 @@ Value *Main_insert
             constructor_39->args[0] = var_5;
             constructor_39->args[1] = var_6;
             constructor_39->args[2] = var_18;
-            tmp_41 = (Value*)constructor_39;
+            tmp_41 = (Idris2_Value*)constructor_39;
         }
         tmp_35 = tmp_41;
     }

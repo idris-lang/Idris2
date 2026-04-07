@@ -8,45 +8,77 @@ void idris2_missing_ffi() {
   exit(1);
 }
 
-typedef Value *(*const FUN0)();
-typedef Value *(*const FUN1)(Value *);
-typedef Value *(*const FUN2)(Value *, Value *);
-typedef Value *(*const FUN3)(Value *, Value *, Value *);
-typedef Value *(*const FUN4)(Value *, Value *, Value *, Value *);
-typedef Value *(*const FUN5)(Value *, Value *, Value *, Value *, Value *);
-typedef Value *(*const FUN6)(Value *, Value *, Value *, Value *, Value *,
-                             Value *);
-typedef Value *(*const FUN7)(Value *, Value *, Value *, Value *, Value *,
-                             Value *, Value *);
-typedef Value *(*const FUN8)(Value *, Value *, Value *, Value *, Value *,
-                             Value *, Value *, Value *);
-typedef Value *(*const FUN9)(Value *, Value *, Value *, Value *, Value *,
-                             Value *, Value *, Value *, Value *);
-typedef Value *(*const FUN10)(Value *, Value *, Value *, Value *, Value *,
-                              Value *, Value *, Value *, Value *, Value *);
-typedef Value *(*const FUN11)(Value *, Value *, Value *, Value *, Value *,
-                              Value *, Value *, Value *, Value *, Value *,
-                              Value *);
-typedef Value *(*const FUN12)(Value *, Value *, Value *, Value *, Value *,
-                              Value *, Value *, Value *, Value *, Value *,
-                              Value *, Value *);
-typedef Value *(*const FUN13)(Value *, Value *, Value *, Value *, Value *,
-                              Value *, Value *, Value *, Value *, Value *,
-                              Value *, Value *, Value *);
-typedef Value *(*const FUN14)(Value *, Value *, Value *, Value *, Value *,
-                              Value *, Value *, Value *, Value *, Value *,
-                              Value *, Value *, Value *, Value *);
-typedef Value *(*const FUN15)(Value *, Value *, Value *, Value *, Value *,
-                              Value *, Value *, Value *, Value *, Value *,
-                              Value *, Value *, Value *, Value *, Value *);
-typedef Value *(*const FUN16)(Value *, Value *, Value *, Value *, Value *,
-                              Value *, Value *, Value *, Value *, Value *,
-                              Value *, Value *, Value *, Value *, Value *,
-                              Value *);
-typedef Value *(*const FUNStar)(Value **);
+typedef Idris2_Value *(*const FUN0)();
+typedef Idris2_Value *(*const FUN1)(Idris2_Value *);
+typedef Idris2_Value *(*const FUN2)(Idris2_Value *, Idris2_Value *);
+typedef Idris2_Value *(*const FUN3)(Idris2_Value *, Idris2_Value *,
+                                    Idris2_Value *);
+typedef Idris2_Value *(*const FUN4)(Idris2_Value *, Idris2_Value *,
+                                    Idris2_Value *, Idris2_Value *);
+typedef Idris2_Value *(*const FUN5)(Idris2_Value *, Idris2_Value *,
+                                    Idris2_Value *, Idris2_Value *,
+                                    Idris2_Value *);
+typedef Idris2_Value *(*const FUN6)(Idris2_Value *, Idris2_Value *,
+                                    Idris2_Value *, Idris2_Value *,
+                                    Idris2_Value *, Idris2_Value *);
+typedef Idris2_Value *(*const FUN7)(Idris2_Value *, Idris2_Value *,
+                                    Idris2_Value *, Idris2_Value *,
+                                    Idris2_Value *, Idris2_Value *,
+                                    Idris2_Value *);
+typedef Idris2_Value *(*const FUN8)(Idris2_Value *, Idris2_Value *,
+                                    Idris2_Value *, Idris2_Value *,
+                                    Idris2_Value *, Idris2_Value *,
+                                    Idris2_Value *, Idris2_Value *);
+typedef Idris2_Value *(*const FUN9)(Idris2_Value *, Idris2_Value *,
+                                    Idris2_Value *, Idris2_Value *,
+                                    Idris2_Value *, Idris2_Value *,
+                                    Idris2_Value *, Idris2_Value *,
+                                    Idris2_Value *);
+typedef Idris2_Value *(*const FUN10)(Idris2_Value *, Idris2_Value *,
+                                     Idris2_Value *, Idris2_Value *,
+                                     Idris2_Value *, Idris2_Value *,
+                                     Idris2_Value *, Idris2_Value *,
+                                     Idris2_Value *, Idris2_Value *);
+typedef Idris2_Value *(*const FUN11)(Idris2_Value *, Idris2_Value *,
+                                     Idris2_Value *, Idris2_Value *,
+                                     Idris2_Value *, Idris2_Value *,
+                                     Idris2_Value *, Idris2_Value *,
+                                     Idris2_Value *, Idris2_Value *,
+                                     Idris2_Value *);
+typedef Idris2_Value *(*const FUN12)(Idris2_Value *, Idris2_Value *,
+                                     Idris2_Value *, Idris2_Value *,
+                                     Idris2_Value *, Idris2_Value *,
+                                     Idris2_Value *, Idris2_Value *,
+                                     Idris2_Value *, Idris2_Value *,
+                                     Idris2_Value *, Idris2_Value *);
+typedef Idris2_Value *(*const FUN13)(Idris2_Value *, Idris2_Value *,
+                                     Idris2_Value *, Idris2_Value *,
+                                     Idris2_Value *, Idris2_Value *,
+                                     Idris2_Value *, Idris2_Value *,
+                                     Idris2_Value *, Idris2_Value *,
+                                     Idris2_Value *, Idris2_Value *,
+                                     Idris2_Value *);
+typedef Idris2_Value *(*const FUN14)(Idris2_Value *, Idris2_Value *,
+                                     Idris2_Value *, Idris2_Value *,
+                                     Idris2_Value *, Idris2_Value *,
+                                     Idris2_Value *, Idris2_Value *,
+                                     Idris2_Value *, Idris2_Value *,
+                                     Idris2_Value *, Idris2_Value *,
+                                     Idris2_Value *, Idris2_Value *);
+typedef Idris2_Value *(*const FUN15)(
+    Idris2_Value *, Idris2_Value *, Idris2_Value *, Idris2_Value *,
+    Idris2_Value *, Idris2_Value *, Idris2_Value *, Idris2_Value *,
+    Idris2_Value *, Idris2_Value *, Idris2_Value *, Idris2_Value *,
+    Idris2_Value *, Idris2_Value *, Idris2_Value *);
+typedef Idris2_Value *(*const FUN16)(
+    Idris2_Value *, Idris2_Value *, Idris2_Value *, Idris2_Value *,
+    Idris2_Value *, Idris2_Value *, Idris2_Value *, Idris2_Value *,
+    Idris2_Value *, Idris2_Value *, Idris2_Value *, Idris2_Value *,
+    Idris2_Value *, Idris2_Value *, Idris2_Value *, Idris2_Value *);
+typedef Idris2_Value *(*const FUNStar)(Idris2_Value **);
 
-static inline Value *idris2_dispatch_closure(Value_Closure *clo) {
-  Value **const xs = clo->args;
+static inline Idris2_Value *idris2_dispatch_closure(Idris2_Closure *clo) {
+  Idris2_Value **const xs = clo->args;
 
   switch (clo->arity) {
   default:
@@ -101,9 +133,9 @@ static inline Value *idris2_dispatch_closure(Value_Closure *clo) {
   }
 }
 
-Value *idris2_trampoline(Value *it) {
+Idris2_Value *idris2_trampoline(Idris2_Value *it) {
   while (it && !idris2_vp_is_unboxed(it) && it->header.tag == CLOSURE_TAG) {
-    Value_Closure *clos = (Value_Closure *)it;
+    Idris2_Closure *clos = (Idris2_Closure *)it;
     if (clos->filled < clos->arity)
       break;
 
@@ -116,14 +148,15 @@ Value *idris2_trampoline(Value *it) {
   return it;
 }
 
-Value *idris2_tailcall_apply_closure(Value *_clos, Value *arg) {
+Idris2_Value *idris2_tailcall_apply_closure(Idris2_Value *_clos,
+                                            Idris2_Value *arg) {
   // create a new closure and copy args.
-  Value_Closure *clos = (Value_Closure *)_clos;
-  Value_Closure *newclos = idris2_mkClosure(
+  Idris2_Closure *clos = (Idris2_Closure *)_clos;
+  Idris2_Closure *newclos = idris2_mkClosure(
       clos->f, clos->arity, clos->filled + 1 /* expanding a payload */);
 
   if (clos->header.refCounter <= 1) {
-    memcpy(newclos->args, clos->args, sizeof(Value *) * clos->filled);
+    memcpy(newclos->args, clos->args, sizeof(Idris2_Value *) * clos->filled);
   } else {
     // if the closure has multiple references, then apply newReference to
     // arguments to avoid premature clearing of arguments
@@ -138,14 +171,14 @@ Value *idris2_tailcall_apply_closure(Value *_clos, Value *arg) {
     --clos->header.refCounter;
   }
 
-  return (Value *)newclos;
+  return (Idris2_Value *)newclos;
 }
 
-Value *idris2_apply_closure(Value *_clos, Value *arg) {
+Idris2_Value *idris2_apply_closure(Idris2_Value *_clos, Idris2_Value *arg) {
   return idris2_trampoline(idris2_tailcall_apply_closure(_clos, arg));
 }
 
-void idris2_removeReuseConstructor(Value_Constructor *constr) {
+void idris2_removeReuseConstructor(Idris2_Constructor *constr) {
   if (!constr) {
     return;
   }
@@ -157,7 +190,7 @@ void idris2_removeReuseConstructor(Value_Constructor *constr) {
   }
 }
 
-int idris2_extractInt(Value *v) {
+int idris2_extractInt(Idris2_Value *v) {
   if (idris2_vp_is_unboxed(v))
     return (int)((uintptr_t)(v) >> idris2_vp_int_shift);
 
@@ -171,7 +204,7 @@ int idris2_extractInt(Value *v) {
   case INT64_TAG:
     return (int)idris2_vp_to_Int64(v);
   case INTEGER_TAG:
-    return (int)mpz_get_si(((Value_Integer *)v)->i);
+    return (int)mpz_get_si(((Idris2_Integer *)v)->i);
   case DOUBLE_TAG:
     return (int)idris2_vp_to_Double(v);
   default:

@@ -345,8 +345,8 @@ makeClosure : {auto a : Ref ArgCounter Nat}
 makeClosure fc n args missing = do
     let closure = "closure_\{!(getNextCounter)}"
     let nargs = length args
-    emit fc "Value *\{closure} = (Value *)idris2_mkClosure((Value *(*)())\{cName n}, \{show $ nargs + missing}, \{show nargs});"
-    fillArgs !(get EnvTracker) "((Value_Closure*)\{closure})->args" args 0
+    emit fc "Idris2_Value *\{closure} = (Idris2_Value *)idris2_mkClosure((Idris2_Value *(*)())\{cName n}, \{show $ nargs + missing}, \{show nargs});"
+    fillArgs !(get EnvTracker) "((Idris2_Closure*)\{closure})->args" args 0
     pure closure
 
 -- When changing this number, also change idris2_dispatch_closure in runtime.c.
@@ -426,11 +426,11 @@ addReuseConstructor reuseMap sc conName conArgs consts shouldDrop actualReuseCon
        && contains conName consts
        && (isJust $ find (== sc) shouldDrop) then do
         let constr = "constructor_" ++ !(getNextCounter)
-        emit EmptyFC $ "Value_Constructor* " ++ constr ++ " = NULL;"
+        emit EmptyFC $ "Idris2_Constructor* " ++ constr ++ " = NULL;"
         -- If the constructor variable is unique (has 1 reference), then assign it for reuse
         emit EmptyFC $ "if (idris2_isUnique(" ++ sc ++ ")) {"
         increaseIndentation
-        emit EmptyFC $ constr ++ " = (Value_Constructor*)" ++ sc ++ ";"
+        emit EmptyFC $ constr ++ " = (Idris2_Constructor*)" ++ sc ++ ";"
         decreaseIndentation
         emit EmptyFC "}"
         -- Otherwise, delete and duplicate constructor variables
@@ -458,7 +458,7 @@ mutual
     concaseBody env returnvar expr args body tailPosition = do
         increaseIndentation
         _ <- foldlC (\k, arg => do
-            emit emptyFC "Value *var_\{show arg} = ((Value_Constructor*)\{expr})->args[\{show k}];"
+            emit emptyFC "Idris2_Value *var_\{show arg} = ((Idris2_Constructor*)\{expr})->args[\{show k}];"
             pure (S k) ) 0 args
 
         let (shouldDrop, actualOwned) = dropUnusedOwnedVars env.owned (freeVariables body)
@@ -507,7 +507,7 @@ mutual
         -- When translating value into C, we borrow variables that will be used in body
         let valueEnv = { reuseMap $= (`intersectionMap` usedCons) } (moveFromOwnedToBorrowed env borrowVal)
         put EnvTracker valueEnv
-        emit fc $ "Value * var_\{show var} = \{!(cStatementsFromANF value NotInTailPosition)};"
+        emit fc $ "Idris2_Value * var_\{show var} = \{!(cStatementsFromANF value NotInTailPosition)};"
         unless (contains (ALocal var) usedVars) $ emit fc $ "idris2_removeReference(var_\{show var});"
         put EnvTracker ({ owned := owned', reuseMap $= (`differenceMap` usedCons) } env)
         cStatementsFromANF body tailPosition
@@ -532,11 +532,11 @@ mutual
                         pure constr
                     Nothing => do
                         let constr = "constructor_\{!(getNextCounter)}"
-                        emit fc $ "Value_Constructor* " ++ constr ++ createNewConstructor
+                        emit fc $ "Idris2_Constructor* " ++ constr ++ createNewConstructor
                         when (Nothing == tag) $ emit fc "\{constr}->name = idris2_constr_\{cName n};"
                         pure constr
                 fillArgs env "\{constr}->args" args 0
-                pure "(Value*)\{constr}"
+                pure "(Idris2_Value*)\{constr}"
 
     cStatementsFromANF (AOp fc _ op args) _ = do
         let resultVar = "primVar_" ++ !(getNextCounter)
@@ -546,7 +546,7 @@ mutual
               let ownedVars = if contains v env.owned then singleton v else empty
               in (avarToC env v) :: argsVect (moveFromOwnedToBorrowed env ownedVars) vars
 
-        emit fc $ "Value *" ++ resultVar ++ " = " ++ cOp op (argsVect !(get EnvTracker) args) ++ ";"
+        emit fc $ "Idris2_Value *" ++ resultVar ++ " = " ++ cOp op (argsVect !(get EnvTracker) args) ++ ";"
         -- Removing arguments that apply to primitive functions
         removeVars $ toList $ map varName args
         pure resultVar
@@ -566,7 +566,7 @@ mutual
     cStatementsFromANF (AConCase fc sc alts mDef) tailPosition = do
         let sc' = varName sc
         switchReturnVar <- getNewVarThatWillNotBeFreedAtEndOfBlock
-        emit fc "Value * \{switchReturnVar} = NULL;"
+        emit fc "Idris2_Value * \{switchReturnVar} = NULL;"
         env <- get EnvTracker
         _ <- foldlC (\els, (MkAConAlt name coninfo tag args body) => do
             let erased = coninfo == NIL || coninfo == NOTHING || coninfo == ZERO || coninfo == UNIT
@@ -575,8 +575,8 @@ mutual
                 then emit emptyFC "\{els}if (NULL != \{sc'} /* \{show name} \{show coninfo} */) {"
                 else do
                     case tag of
-                        Nothing   => emit emptyFC "\{els}if (! strcmp(((Value_Constructor *)\{sc'})->name, idris2_constr_\{cName name})) {"
-                        Just tag' => emit emptyFC "\{els}if (((Value_Constructor *)\{sc'})->tag == \{show tag'} /* \{show name} */) {"
+                        Nothing   => emit emptyFC "\{els}if (! strcmp(((Idris2_Constructor *)\{sc'})->name, idris2_constr_\{cName name})) {"
+                        Just tag' => emit emptyFC "\{els}if (((Idris2_Constructor *)\{sc'})->tag == \{show tag'} /* \{show name} */) {"
 
             let conArgs = ALocal <$> args
             let ownedWithArgs = union (fromList conArgs) $ if erased then delete sc env.owned else env.owned
@@ -585,7 +585,7 @@ mutual
             let (dropReuseCons, actualReuseMap) = dropUnusedReuseCons env.reuseMap usedCons
             increaseIndentation
             _ <- foldlC (\k, arg => do
-                emit emptyFC "Value *var_\{show arg} = ((Value_Constructor*)\{sc'})->args[\{show k}];"
+                emit emptyFC "Idris2_Value *var_\{show arg} = ((Idris2_Constructor*)\{sc'})->args[\{show k}];"
                 pure (S k) ) 0 args
             (shouldDrop, actualReuseMap) <- addReuseConstructor env.reuseMap sc' name (varName <$> conArgs) usedCons shouldDrop actualReuseMap
             removeVars shouldDrop
@@ -606,7 +606,7 @@ mutual
     cStatementsFromANF (AConstCase fc sc alts def) tailPosition = do
         let sc' = varName sc
         switchReturnVar <- getNewVarThatWillNotBeFreedAtEndOfBlock
-        emit fc "Value *\{switchReturnVar} = NULL;"
+        emit fc "Idris2_Value *\{switchReturnVar} = NULL;"
         env <- get EnvTracker
         case integer_switch alts of
             True => do
@@ -621,8 +621,8 @@ mutual
             False => do
                 _ <- foldlC (\els, (MkAConstAlt c body) => do
                     case c of
-                        Str x => emit emptyFC "\{els}if (! strcmp(\{cStringQuoted x}, ((Value_String *)\{sc'})->str)) {"
-                        Db  x => emit emptyFC "\{els}if (((Value_Double *)\{sc'})->d == \{show x}) {"
+                        Str x => emit emptyFC "\{els}if (! strcmp(\{cStringQuoted x}, ((Idris2_String *)\{sc'})->str)) {"
+                        Db  x => emit emptyFC "\{els}if (((Idris2_Double *)\{sc'})->d == \{show x}) {"
                         x => throw $ InternalError "[refc] AConstCase : unsupported type. \{show fc} \{show x}"
                     concaseBody env switchReturnVar "" [] body tailPosition
                     pure "} else ") "" alts
@@ -640,24 +640,24 @@ mutual
     cStatementsFromANF (APrimVal fc c) _ = do
       constdefs <- get ConstDef
       case lookup c constdefs of
-           Just cdef => pure "((Value*)&\{constantName cdef})" -- the constant already booked.
+           Just cdef => pure "((Idris2_Value*)&\{constantName cdef})" -- the constant already booked.
            Nothing => dyngen
      where
         orStagen : ConstDef -> Core String
         orStagen cdef = do -- booking the constant to generate later
             constdefs <- get ConstDef
             put ConstDef $ insert c cdef constdefs
-            pure "((Value*)&\{constantName cdef})" -- the constant already booked.
+            pure "((Idris2_Value*)&\{constantName cdef})" -- the constant already booked.
         dyngen : Core String
         dyngen = case c of
             I x => if x >= 0 && x < 100
-                then pure "(Value*)(&idris2_predefined_Int64[\{show x}])"
+                then pure "(Idris2_Value*)(&idris2_predefined_Int64[\{show x}])"
                 else orStagen $ CDI64 $ cCleanString $ show x
             I8 x  => pure "idris2_mkInt8(INT8_C(\{show x}))"
             I16 x => pure "idris2_mkInt16(INT16_C(\{show x}))"
             I32 x => pure "idris2_mkInt32(INT32_C(\{show x}))"
             I64 x => if x >= 0 && x < 100
-                then pure "(Value*)(&idris2_predefined_Int64[\{show x}])"
+                then pure "(Idris2_Value*)(&idris2_predefined_Int64[\{show x}])"
                 else orStagen $ CDI64 $ cCleanString $ show x
             BI x => if x >= 0 && x < 100
                 then pure "idris2_getPredefinedInteger(\{show x})"
@@ -666,7 +666,7 @@ mutual
             B16 x => pure "idris2_mkBits16(UINT16_C(\{show x}))"
             B32 x => pure "idris2_mkBits32(UINT32_C(\{show x}))"
             B64 x => if x >= 0 && x < 100
-               then pure "(Value*)(&idris2_predefined_Bits64[\{show x}])"
+               then pure "(Idris2_Value*)(&idris2_predefined_Bits64[\{show x}])"
                else orStagen $ CDB64 $ show x
             Db x => orStagen $ CDDb $ cCleanString $ show x
             Ch x  => pure "idris2_mkChar(\{escapeChar x})"
@@ -726,13 +726,13 @@ emitFDef : {auto oft : Ref OutfileText Output}
         -> (funcName:Name)
         -> (arglist:List (String, String, CFType))
         -> Core ()
-emitFDef funcName [] = emit EmptyFC $ "Value *" ++ cName funcName ++ "(void)"
+emitFDef funcName [] = emit EmptyFC $ "Idris2_Value *" ++ cName funcName ++ "(void)"
 emitFDef funcName ((varType, varName, varCFType) :: xs) = do
-    emit EmptyFC $ "Value *" ++ cName funcName
+    emit EmptyFC $ "Idris2_Value *" ++ cName funcName
     emit EmptyFC "("
     increaseIndentation
-    emit EmptyFC $ "  Value *" ++ varName
-    traverse_ (\(varType, varName, varCFType) => emit EmptyFC $ ", Value *" ++ varName) xs
+    emit EmptyFC $ "  Idris2_Value *" ++ varName
+    traverse_ (\(varType, varName, varCFType) => emit EmptyFC $ ", Idris2_Value *" ++ varName) xs
     decreaseIndentation
     emit EmptyFC ")"
 
@@ -750,23 +750,23 @@ extractValue _ CFUnsigned8      varName = "(idris2_vp_to_Bits8(" ++ varName ++ "
 extractValue _ CFUnsigned16     varName = "(idris2_vp_to_Bits16(" ++ varName ++ "))"
 extractValue _ CFUnsigned32     varName = "(idris2_vp_to_Bits32(" ++ varName ++ "))"
 extractValue _ CFUnsigned64     varName = "(idris2_vp_to_Bits64(" ++ varName ++ "))"
-extractValue _ CFString         varName = "((Value_String*)" ++ varName ++ ")->str"
+extractValue _ CFString         varName = "((Idris2_String*)" ++ varName ++ ")->str"
 extractValue _ CFDouble         varName = "(idris2_vp_to_Double(" ++ varName ++ "))"
 extractValue _ CFChar           varName = "(idris2_vp_to_Char(" ++ varName ++ "))"
-extractValue _ CFPtr            varName = "((Value_Pointer*)" ++ varName ++ ")->p"
-extractValue _ CFGCPtr          varName = "((Value_GCPointer*)" ++ varName ++ ")->p->p"
-extractValue CLangC    CFBuffer varName = "((Value_Buffer*)" ++ varName ++ ")->buffer->data"
-extractValue CLangRefC CFBuffer varName = "((Value_Buffer*)" ++ varName ++ ")->buffer"
-extractValue _ CFWorld          _       = "(Value *)NULL"
-extractValue _ (CFFun x y)      varName = "(Value_Closure*)" ++ varName
+extractValue _ CFPtr            varName = "((Idris2_Pointer*)" ++ varName ++ ")->p"
+extractValue _ CFGCPtr          varName = "((Idris2_GCPointer*)" ++ varName ++ ")->p->p"
+extractValue CLangC    CFBuffer varName = "((Idris2_Buffer*)" ++ varName ++ ")->buffer->data"
+extractValue CLangRefC CFBuffer varName = "((Idris2_Buffer*)" ++ varName ++ ")->buffer"
+extractValue _ CFWorld          _       = "(Idris2_Value *)NULL"
+extractValue _ (CFFun x y)      varName = "(Idris2_Closure*)" ++ varName
 extractValue c (CFIORes x)      varName = extractValue c x varName
 extractValue _ (CFStruct x xs)  varName = assert_total $ idris_crash ("INTERNAL ERROR: Struct access not implemented: " ++ varName)
 -- not really total but this way this internal error does not contaminate everything else
-extractValue _ (CFUser x xs)    varName = "(Value*)" ++ varName
+extractValue _ (CFUser x xs)    varName = "(Idris2_Value*)" ++ varName
 extractValue _ n _ = assert_total $ idris_crash ("INTERNAL ERROR: Unknown FFI type in C backend: " ++ show n)
 
 packCFType : (cfType:CFType) -> (varName:String) -> String
-packCFType CFUnit          varName = "((Value *)NULL)"
+packCFType CFUnit          varName = "((Idris2_Value *)NULL)"
 packCFType CFInt           varName = "idris2_mkInt64(" ++ varName ++ ")"
 packCFType CFInt8          varName = "idris2_mkInt8(" ++ varName ++ ")"
 packCFType CFInt16         varName = "idris2_mkInt16(" ++ varName ++ ")"
@@ -782,7 +782,7 @@ packCFType CFChar          varName = "idris2_mkChar(" ++ varName ++ ")"
 packCFType CFPtr           varName = "idris2_makePointer(" ++ varName ++ ")"
 packCFType CFGCPtr         varName = "idris2_makePointer(" ++ varName ++ ")"
 packCFType CFBuffer        varName = "idris2_makeBuffer(" ++ varName ++ ")"
-packCFType CFWorld         _       = "(Value *)NULL"
+packCFType CFWorld         _       = "(Idris2_Value *)NULL"
 packCFType (CFFun x y)     varName = "makeFunction(" ++ varName ++ ")"
 packCFType (CFIORes x)     varName = packCFType x varName
 packCFType (CFStruct x xs) varName = "makeStruct(" ++ varName ++ ")"
@@ -813,10 +813,10 @@ createCFunctions : {auto c : Ref Ctxt Defs}
                 -> Core ()
 createCFunctions n (MkAFun args anf) = do
     let nargs = length args
-    let fn = "Value *\{cName !(getFullName n)}"
+    let fn = "Idris2_Value *\{cName !(getFullName n)}"
             ++ (if nargs == 0 then "(void)"
-               else if nargs > MaxExtractFunArgs then "(Value *var_arglist[\{show nargs}])"
-               else ("\n(\n" ++ (showSep "\n" $ addCommaToList (map (\i =>  "  Value * var_" ++ (show i)) args))) ++ "\n)")
+               else if nargs > MaxExtractFunArgs then "(Idris2_Value *var_arglist[\{show nargs}])"
+               else ("\n(\n" ++ (showSep "\n" $ addCommaToList (map (\i =>  "  Idris2_Value * var_" ++ (show i)) args))) ++ "\n)")
     update FunctionDefinitions $ \otherDefs => (fn ++ ";\n") :: otherDefs
 
     let argsVars = fromList $ ALocal <$> args
@@ -828,7 +828,7 @@ createCFunctions n (MkAFun args anf) = do
     increaseIndentation
     when (nargs > MaxExtractFunArgs) $ do
       _ <- foldlC (\i, j => do
-         emit EmptyFC "Value *var_\{show j} = var_arglist[\{show i}];"
+         emit EmptyFC "Idris2_Value *var_\{show j} = var_arglist[\{show i}];"
          pure $ i + 1) 0 args
       pure ()
     removeVars (varName <$> Prelude.toList shouldDrop)
@@ -865,7 +865,7 @@ createCFunctions n (MkAForeign ccs fargs ret) = do
                       [lib, header] => update HeaderFiles $ insert header
                       _ => pure ()
              else emit EmptyFC $ additionalFFIStub fctName fargs ret
-          let fnDef = "Value *" ++ (cName n) ++ "(" ++ showSep ", " (replicate (length fargs) "Value *") ++ ");"
+          let fnDef = "Idris2_Value *" ++ (cName n) ++ "(" ++ showSep ", " (replicate (length fargs) "Idris2_Value *") ++ ");"
           update FunctionDefinitions $ \otherDefs => (fnDef ++ "\n") :: otherDefs
           typeVarNameArgList <- createFFIArgList fargs
 
@@ -888,14 +888,14 @@ createCFunctions n (MkAForeign ccs fargs ret) = do
                               ++ showSep ", " (map (\(_, vn, vt) => extractValue cLang vt vn) (discardLastArgument typeVarNameArgList))
                               ++ ");"
                   removeVarsArgList
-                  emit EmptyFC $ "return (Value*)" ++ packCFType ret "retVal" ++ ";"
+                  emit EmptyFC $ "return (Idris2_Value*)" ++ packCFType ret "retVal" ++ ";"
               _ => do
                   emit EmptyFC $ cTypeOfCFType ret ++ " retVal = " ++ cName fctName
                               ++ "("
                               ++ showSep ", " (map (\(_, vn, vt) => extractValue cLang vt vn) typeVarNameArgList)
                               ++ ");"
                   removeVarsArgList
-                  emit EmptyFC $ "return (Value*)" ++ packCFType ret "retVal" ++ ";"
+                  emit EmptyFC $ "return (Idris2_Value*)" ++ packCFType ret "retVal" ++ ";"
 
           decreaseIndentation
           emit EmptyFC "}"
@@ -930,7 +930,7 @@ header = do
   where
     go : ConstDef -> String -> String -> String -> String
     go cdef ty tag v =
-      "static Value_\{ty} const \{constantName cdef}"
+      "static Idris2_\{ty} const \{constantName cdef}"
         ++ " = { IDRIS2_STOCKVAL(\{tag}_TAG), \{v} };"
     genConstant : Constant -> ConstDef -> String
     genConstant c cdef = case c of
@@ -959,7 +959,7 @@ footer = do
                         "idris2_setArgs(argc, argv);"
                         ""
           }
-          Value *mainExprVal = __mainExpression_0();
+          Idris2_Value *mainExprVal = __mainExpression_0();
           idris2_trampoline(mainExprVal);
           return 0; // bye bye
       }
