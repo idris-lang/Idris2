@@ -81,9 +81,8 @@ Idris2_Constructor *idris2_newConstructor(int total, int tag) {
   return retVal;
 }
 
-Idris2_Closure *idris2_mkClosure(
-  Idris2_Value *(*f)(), uint8_t arity, uint8_t filled
-) {
+Idris2_Closure *idris2_mkClosure(Idris2_Value *(*f)(), uint8_t arity,
+                                 uint8_t filled) {
   Idris2_Closure *retVal = (Idris2_Closure *)idris2_newValue(
       sizeof(Idris2_Closure) + sizeof(Idris2_Value *) * filled);
   retVal->header.tag = CLOSURE_TAG;
@@ -179,7 +178,7 @@ Idris2_Pointer *idris2_makePointer(void *ptr_Raw) {
 }
 
 Idris2_GCPointer *idris2_makeGCPointer(void *ptr_Raw,
-                                      Idris2_Closure *onCollectFct) {
+                                       Idris2_Closure *onCollectFct) {
   Idris2_GCPointer *p = IDRIS2_NEW_VALUE(Idris2_GCPointer);
   p->header.tag = GC_POINTER_TAG;
   p->p = idris2_makePointer(ptr_Raw);
@@ -287,8 +286,7 @@ void idris2_removeReference(Idris2_Value *elem) {
       /* maybe here we need to invoke onCollectAny */
       Idris2_GCPointer *vPtr = (Idris2_GCPointer *)elem;
       Idris2_Value *closure1 = idris2_apply_closure(
-          (Idris2_Value *)vPtr->onCollectFct, (Idris2_Value *)vPtr->p
-      );
+          (Idris2_Value *)vPtr->onCollectFct, (Idris2_Value *)vPtr->p);
       idris2_apply_closure(closure1, NULL);
       idris2_removeReference((Idris2_Value *)vPtr->p);
       break;
@@ -338,7 +336,7 @@ Idris2_Bits64 const idris2_predefined_Bits64[100] = {
     IDRIS2_MK_PREDEFINED_INT_10(BITS64_TAG, 90)};
 
 Idris2_String const idris2_predefined_nullstring = {IDRIS2_STOCKVAL(STRING_TAG),
-                                                   ""};
+                                                    ""};
 
 static bool idris2_predefined_integer_initialized = false;
 Idris2_Integer idris2_predefined_Integer[100];

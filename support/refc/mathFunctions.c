@@ -74,7 +74,7 @@ Idris2_Value *idris2_div_Int64(Idris2_Value *x, Idris2_Value *y) {
   int64_t denom = idris2_vp_to_Int64(y);
   int64_t rem = num % denom;
   return (Idris2_Value *)idris2_mkInt64(num / denom +
-                                 ((rem < 0) ? (denom < 0) ? 1 : -1 : 0));
+                                        ((rem < 0) ? (denom < 0) ? 1 : -1 : 0));
 }
 
 Idris2_Value *idris2_div_Integer(Idris2_Value *x, Idris2_Value *y) {

@@ -55,9 +55,8 @@ Idris2_Value *strAppend(Idris2_Value *a, Idris2_Value *b) {
   return (Idris2_Value *)retVal;
 }
 
-Idris2_Value *strSubstr(
-  Idris2_Value *start, Idris2_Value *len, Idris2_Value *s
-) {
+Idris2_Value *strSubstr(Idris2_Value *start, Idris2_Value *len,
+                        Idris2_Value *s) {
   char *input = ((Idris2_String *)s)->str;
   int offset = idris2_vp_to_Int64(start); /* start and len was come from Nat. */
   int l = idris2_vp_to_Int64(len);
@@ -176,7 +175,7 @@ Idris2_Value *onCollectStringIterator(Idris2_Pointer *ptr, void *null) {
 }
 
 Idris2_Value *stringIteratorToString(void *a, char *str, Idris2_Value *it_p,
-                              Idris2_Closure *f) {
+                                     Idris2_Closure *f) {
   String_Iterator *it = ((Idris2_GCPointer *)it_p)->p->p;
   Idris2_Value *strVal = (Idris2_Value *)idris2_mkString(it->str + it->pos);
   return idris2_apply_closure(idris2_newReference((Idris2_Value *)f), strVal);
@@ -194,7 +193,8 @@ Idris2_Value *stringIteratorNext(char *s, Idris2_Value *it_p) {
   it->pos++; // Ok to do this as StringIterator linear
 
   // Character [cons]
-  Idris2_Constructor *retVal = (Idris2_Constructor *)idris2_newConstructor(2, 1);
+  Idris2_Constructor *retVal =
+      (Idris2_Constructor *)idris2_newConstructor(2, 1);
   retVal->args[0] = idris2_mkChar(c);
   retVal->args[1] = idris2_newReference(it_p);
 
