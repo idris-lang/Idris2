@@ -188,7 +188,6 @@ Pretty IdrisSyntax Constant where
   pretty (PrT x) = pretty x
   pretty v = annotate (DCon Nothing) $ pretty0 $ show v
 
-
 export
 Eq PrimType where
   IntType == IntType = True
