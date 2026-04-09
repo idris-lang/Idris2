@@ -296,9 +296,6 @@ canonicalise eqs (VType fc _)
     = pure $ (VTCon fc (UN (Basic "Type")) 0 [<])
 canonicalise eqs val = pure val
 
-isAssertTotal : Name -> Bool
-isAssertTotal = (== NS builtinNS (UN $ Basic "assert_total"))
-
 mutual
   findSC : {auto c : Ref Ctxt Defs} ->
            {auto v : Ref SCVar Int} ->
@@ -318,9 +315,7 @@ mutual
            pure $ !(findSCbinder b) ++ !(findSC g eqs args !(sc (pure v)))
     where
         findSCbinder : Binder (Glued [<]) -> Core (List SCCall)
-        findSCbinder (Let _ c val ty) = findSC Unguarded eqs args val
-        -- Idris2: findSCbinder (Let _ c val ty) = findSC g eqs args val
-        -- TODO: Why?
+        findSCbinder (Let _ c val ty) = findSC g eqs args val
         findSCbinder _ = pure [] -- only types, no need to look
   findSC g eqs pats (VDelay _ _ _ tm)
       = findSC g eqs pats tm
@@ -332,33 +327,49 @@ mutual
       = do altCalls <- traverse (findSCalt g eqs args (Just n)) alts
            pure (concat altCalls)
   findSC g eqs args (VCase _ ct c (VApp fc Func fn sp _) scTy alts)
-      = do allg <- allGuarded fn
-           -- If it has the all guarded flag, pretend it's a data constructor
-           -- Otherwise just carry on as normal
-           scCalls <- if allg
-              then findSCapp g eqs args (VDCon fc fn 0 0 sp)
-              else case g of
-                      -- constructor guarded and delayed, so just check the
-                      -- arguments
-                      InDelay => findSCspine Unguarded eqs args sp
-                      _ => do fn_args <- traverseSnocList value sp
-                              findSCcall Unguarded eqs args fc fn (cast fn_args)
+      = do scCalls <- findSCAppFunc g eqs args fc fn sp
 
            altCalls <- traverse (findSCalt g eqs args Nothing) alts
            pure (scCalls ++ concat altCalls)
-    where
-      allGuarded : Name -> Core Bool
-      allGuarded n
-          = do defs <- get Ctxt
-               Just gdef <- lookupCtxtExact n (gamma defs)
-                    | Nothing => pure False
-               pure (AllGuarded `elem` flags gdef)
 
   findSC g eqs args (VCase fc ct c sc scTy alts)
       = do altCalls <- traverse (findSCalt g eqs args Nothing) alts
            scCalls <- findSC Unguarded eqs args (asGlued sc)
            pure (scCalls ++ concat altCalls)
   findSC g eqs pats tm = findSCapp g eqs pats tm
+
+  findSCAppFunc : {auto c : Ref Ctxt Defs} ->
+                  {auto v : Ref SCVar Int} ->
+                  Guardedness ->
+                  ForcedEqs ->
+                  List (Nat, Glued [<]) -> -- LHS args and their position
+                  FC -> Name -> Spine [<] ->
+                  Core (List SCCall)
+  findSCAppFunc g eqs args fc fn sp = do
+      let False = isAssertTotal !(getFullName fn)
+        | _ => pure []
+
+      allg <- allGuarded fn
+      -- If it has the all guarded flag, pretend it's a data constructor
+      -- Otherwise just carry on as normal
+      if allg
+        then findSCapp g eqs args (VDCon fc fn 0 0 sp)
+        else case g of
+                -- constructor guarded and delayed, so just check the
+                -- arguments
+                InDelay => findSCspine Unguarded eqs args sp
+                _ => do fn_args <- traverseSnocList value sp
+                        findSCcall Unguarded eqs args fc fn (cast fn_args)
+    where
+      isAssertTotal : Name -> Bool
+      isAssertTotal = (== NS builtinNS (UN $ Basic "assert_total"))
+
+      allGuarded : Name -> Core Bool
+      allGuarded n
+          = do defs <- get Ctxt
+               Just gdef <- lookupCtxtExact n (gamma defs)
+                    | Nothing => pure False
+               pure (AllGuarded `elem` flags gdef)
 
   findSCapp : {auto c : Ref Ctxt Defs} ->
               {auto v : Ref SCVar Int} ->
@@ -371,6 +382,9 @@ mutual
   findSCapp g eqs pats (VLocal fc _ _ sp)
       = do args <- traverseSnocList value sp
            scs <- traverseSnocList (findSC g eqs pats) args
+           pure (concat scs)
+  findSCapp g eqs pats (VPrimOp _ _ sp)
+      = do scs <- traverse (findSC g eqs pats) (toList sp)
            pure (concat scs)
   findSCapp g eqs pats (VApp fc Bound _ sp _)
       = do args <- traverseSnocList value sp
@@ -506,14 +520,11 @@ mutual
                                 pure (n, !(toFullNames !(quote [<] t)))) pats
                     targs <- traverse (\t => toFullNames !(quote [<] t)) args
                     pure ("Under " ++ show under ++ "\n" ++ "Args " ++ show targs)
-             if isAssertTotal fn
-                then pure []
-                else
-                 do scs <- traverse (findSC g eqs pats) args
-                    pure ([MkSCCall fn
-                             (fromListList
-                                   !(traverse (mkChange eqs aSmaller pats) args))
-                             fc] ++ concat scs)
+             scs <- traverse (findSC g eqs pats) args
+             pure ([MkSCCall fn
+                   (fromListList
+                        !(traverse (mkChange eqs aSmaller pats) args))
+                   fc] ++ concat scs)
 
 findSCTop : {auto c : Ref Ctxt Defs} ->
             {auto v : Ref SCVar Int} ->
