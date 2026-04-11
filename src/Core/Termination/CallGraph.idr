@@ -14,6 +14,7 @@ import Data.SnocList.Quantifiers
 import Libraries.Data.SnocList.SizeOf
 import Libraries.Data.SparseMatrix
 import Data.SortedMap
+import Data.Vect
 
 %default covering
 
@@ -86,6 +87,7 @@ scEq' (VForce _ _ t [<]) (VForce _ _ t' [<]) = scEq t t'
 scEq' (VPrimVal _ c) (VPrimVal _ c') = pure $ c == c'
 -- traverse dotted LHS terms
 scEq' t (VErased _ (Dotted t')) = scEq t t' -- t' is no longer a pattern
+--scEq' (VErased _ _) (VErased _ _) = pure True
 scEq' (VErased _ _) (VErased _ _) = pure True
 scEq' (VUnmatched _ _) (VUnmatched _ _) = pure True
 scEq' (VType _ _) (VType _ _) = pure True
@@ -323,20 +325,25 @@ mutual
       = do vCalls <- findSC Unguarded eqs pats v
            spCalls <- findSCspine Unguarded eqs pats sp
            pure (vCalls ++ spCalls)
-  findSC g eqs args (VCase fc ct c (VApp _ Bound n [<] _) scTy alts)
-      = do altCalls <- traverse (findSCalt g eqs args (Just n)) alts
+  findSC g eqs args tm@(VCase fc ct c (VApp _ Bound n [<] _) scTy alts)
+      = do logNF "totality.termination.sizechange" 50 "findSC VCase VApp Bound ct=\{show ct} tm" [<] tm
+           altCalls <- traverse (findSCalt g eqs args (Just n)) alts
            pure (concat altCalls)
-  findSC g eqs args (VCase _ ct c (VApp fc Func fn sp _) scTy alts)
-      = do scCalls <- findSCAppFunc g eqs args fc fn sp
+  findSC g eqs args tm@(VCase _ ct c (VApp fc Func fn sp _) scTy alts)
+      = do logNF "totality.termination.sizechange" 50 "findSC VCase VApp Func ct=\{show ct} tm" [<] tm
+           scCalls <- findSCAppFunc g eqs args fc fn sp
 
            altCalls <- traverse (findSCalt g eqs args Nothing) alts
            pure (scCalls ++ concat altCalls)
 
-  findSC g eqs args (VCase fc ct c sc scTy alts)
-      = do altCalls <- traverse (findSCalt g eqs args Nothing) alts
+  findSC g eqs args tm@(VCase fc ct c sc scTy alts)
+      = do logNF "totality.termination.sizechange" 50 "findSC VCase VApp ? ct=\{show ct} tm" [<] tm
+           altCalls <- traverse (findSCalt g eqs args Nothing) alts
            scCalls <- findSC Unguarded eqs args (asGlued sc)
            pure (scCalls ++ concat altCalls)
-  findSC g eqs pats tm = findSCapp g eqs pats tm
+  findSC g eqs pats tm = do
+    logNF "totality.termination.sizechange" 50 "findSC findSCapp tm g=\{show g}" [<] tm
+    findSCapp g eqs pats tm
 
   findSCAppFunc : {auto c : Ref Ctxt Defs} ->
                   {auto v : Ref SCVar Int} ->
@@ -350,6 +357,8 @@ mutual
         | _ => pure []
 
       allg <- allGuarded fn
+
+      logC "totality.termination.sizechange" 50 $ pure "findSCAppFunc \{show !(toFullNames fn)}, g=\{show g}, allg=\{show allg}"
       -- If it has the all guarded flag, pretend it's a data constructor
       -- Otherwise just carry on as normal
       if allg
@@ -386,10 +395,14 @@ mutual
   findSCapp g eqs pats (VPrimOp _ _ sp)
       = do scs <- traverse (findSC g eqs pats) (toList sp)
            pure (concat scs)
-  findSCapp g eqs pats (VApp fc Bound _ sp _)
+  findSCapp g eqs pats (VApp fc Bound fn sp _)
       = do args <- traverseSnocList value sp
+           logC "totality.termination.sizechange" 50 $ pure "findSCapp VApp Bound \{show !(toFullNames fn)}"
+           for_ (toList args) $ \a =>
+             logNF "totality.termination.sizechange" 50 "findSCapp VApp Bound arg" [<] a
            scs <- traverseSnocList (findSC g eqs pats) args
            pure (concat scs)
+  findSCapp g eqs pats (VApp fc Func fn sp _) = findSCAppFunc g eqs pats fc fn sp
   -- If we're InDelay and find a constructor (or a function call which is
   -- guaranteed to return a constructor; AllGuarded set), continue as InDelay
   findSCapp InDelay eqs pats (VDCon fc n t a sp)
@@ -422,7 +435,7 @@ mutual
           let eqs' = eqsc ++ eqs
           args' <- maybe (pure args) (\v => replaceInArgs v pat args) var
           logNF "totality.termination.sizechange" 10 "RHS" [<] rhs
-          findSC g eqs'
+          logDepth $ findSC g eqs'
                  !(traverse (\ (n, arg) => pure (n, !(canonicalise eqs' arg))) args')
                  rhs
   findSCscope g eqs args var fc pat (cargs :< (c, xn)) sc
@@ -449,15 +462,15 @@ mutual
            varg <- nextVar
            let pat = VDelay fc LUnknown targ varg
            (eqs, rhs) <- tm (pure targ) (pure varg)
-           findSC g eqs !(expandForced eqs
+           logDepth $ findSC g eqs !(expandForced eqs
                        !(maybe (pure args)
                                (\v => replaceInArgs v pat args) var))
                     rhs
   findSCalt g eqs args var (VConstCase fc c tm)
-      = findSC g eqs !(maybe (pure args)
+      = logDepth $ findSC g eqs !(maybe (pure args)
                          (\v => replaceInArgs v (VPrimVal fc c) args) var)
                  tm
-  findSCalt g eqs args var (VDefaultCase fc tm) = findSC g eqs args tm
+  findSCalt g eqs args var (VDefaultCase fc tm) = logDepth $ findSC g eqs args tm
 
 
   findSCspine : {auto c : Ref Ctxt Defs} ->
@@ -520,7 +533,7 @@ mutual
                                 pure (n, !(toFullNames !(quote [<] t)))) pats
                     targs <- traverse (\t => toFullNames !(quote [<] t)) args
                     pure ("Under " ++ show under ++ "\n" ++ "Args " ++ show targs)
-             scs <- traverse (findSC g eqs pats) args
+             scs <- traverse (\x => logDepth $ findSC g eqs pats x) args
              pure ([MkSCCall fn
                    (fromListList
                         !(traverse (mkChange eqs aSmaller pats) args))
