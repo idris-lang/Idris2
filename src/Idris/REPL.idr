@@ -194,9 +194,11 @@ getOptions : {auto c : Ref Ctxt Defs} ->
 getOptions = do
   pp <- getPPrint
   opts <- get ROpts
-  pure $ [ ShowImplicits (showImplicits pp), ShowMachineNames (showMachineNames pp)
+  pure $ [ ShowImplicits (showImplicits pp)
+         , ShowMachineNames (showMachineNames pp)
          , ShowNamespace (fullNamespace pp)
-         , ShowTypes (showTypes opts), EvalMode (evalMode opts)
+         , ShowTypes (showTypes opts)
+         , EvalMode (evalMode opts)
          , Editor (editor opts)
          ]
 
