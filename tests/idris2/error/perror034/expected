@@ -19,7 +19,7 @@ Mismatch between: Type and ().
 Error:5:9--5:27
  1 | unnamed : ()
  2 | unnamed = (Nat) -> Nat
- 3 | 
+ 3 |
  4 | named : ()
  5 | named = (arg : Nat) -> Nat
              ^^^^^^^^^^^^^^^^^^

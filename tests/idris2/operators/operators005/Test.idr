@@ -13,7 +13,7 @@ const : Type -> Type -> Container
 const a b = (_ : a) :- b
 
 test : Maybe (List Double)
-test = (_ := ["1", "two", "3"]) `for` Just 3
+test = (_ <- ["1", "two", "3"]) `for` Just 3
 
 test2 : Maybe (List Double)
-test2 = (_ : String := ["1", "two", "3"]) `for` Just 3
+test2 = (_ : String <- ["1", "two", "3"]) `for` Just 3

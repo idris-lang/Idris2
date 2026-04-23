@@ -1,0 +1,6 @@
+. ../../../testutils.sh
+
+# expect a coverage error
+check ErasedBind.idr
+check NonDependentBind.idr
+check Issue2318.idr

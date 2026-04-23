@@ -1,6 +1,5 @@
 module Core.SchemeEval.Builtins
 
-import Core.Context
 import Core.SchemeEval.ToScheme
 import Core.TT
 

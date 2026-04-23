@@ -1,13 +1,8 @@
 module TTImp.Elab
 
-import Core.Context
-import Core.Context.Log
-import Core.Core
 import Core.Env
 import Core.LinearCheck
 import Core.Metadata
-import Core.Normalise
-import Core.UnifyState
 import Core.Unify
 
 import Idris.REPL.Opts
@@ -18,8 +13,6 @@ import TTImp.Elab.Delayed
 import TTImp.Elab.Term
 import TTImp.TTImp
 
-import Data.List
-import Data.Maybe
 import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 

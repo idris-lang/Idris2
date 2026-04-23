@@ -1,6 +1,5 @@
 module Idris.Parser
 
-import Core.Options
 import Core.Metadata
 import Idris.Syntax
 import Idris.Syntax.Traversals
@@ -10,13 +9,10 @@ import TTImp.TTImp
 import public Libraries.Text.Parser
 import Data.Either
 import Libraries.Data.IMaybe
-import Data.List
 import Data.List.Quantifiers
 import Data.List1
 import Data.Maybe
-import Data.So
 import Data.Nat
-import Data.SnocList
 import Data.String
 import Libraries.Utils.String
 import Libraries.Data.WithDefault
@@ -327,15 +323,15 @@ mutual
         pure (map (\ n => (boundToFC fname n, n.val)) $ forget ns)
 
   -- The different kinds of operator bindings `x : ty` for typebind
-  -- x := e and x : ty := e for autobind
+  -- x <- e and x : ty <- e for autobind
   opBinderTypes : OriginDesc -> IndentInfo -> WithBounds PTerm -> Rule (OperatorLHSInfo PTerm)
   opBinderTypes fname indents boundName =
            do decoratedSymbol fname ":"
               ty <- typeExpr pdef fname indents
-              decoratedSymbol fname ":="
+              decoratedSymbol fname "<-"
               exp <- expr pdef fname indents
               pure (BindExplicitType boundName.val ty exp)
-       <|> do decoratedSymbol fname ":="
+       <|> do decoratedSymbol fname "<-"
               exp <- expr pdef fname indents
               pure (BindExpr boundName.val exp)
        <|> do decoratedSymbol fname ":"
@@ -1070,7 +1066,7 @@ mutual
      <|> opExpr q fname indents
 
   interpBlock : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
-  interpBlock q fname idents = interpBegin *> (mustWork $ expr q fname idents) <* interpEnd
+  interpBlock q fname idents = interpBegin *> (mustWork $ expr q fname idents <* interpEnd)
 
   export
   singlelineStr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
@@ -2269,7 +2265,26 @@ knownCommands =
       """
     )
   ] ++
-  explain ["fs", "fsearch"] "Search for global definitions by sketching the names distribution of the wanted type(s)."
+  explain ["fs", "fsearch"] """
+    Search for global definitions by sketching the names distribution of the wanted type(s).
+
+    The parameter must be in one of the forms A -> B, A -> _, or B, where A and B are space-delimited lists of global names.
+
+    Idris will return all of the entries in the context that have all of the names in A
+    in some argument and all of the names in B within the return type.
+
+    For example:
+
+      :fs List Maybe -> List
+
+    will match (among other things):
+
+      Prelude.List.mapMaybe : (a -> Maybe b) -> List a -> List b
+
+    Note that the query 'List Nat -> String' does not describe the type 'List Nat',
+    rather it describes both 'List a' and 'Nat' in the arguments.
+
+    """
   where
     explain : List String -> String -> List (String, String)
     explain cmds expl = map (\s => (s, expl)) cmds

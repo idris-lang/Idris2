@@ -6,7 +6,6 @@ module Libraries.Data.VarSet
 -- Hence the split between (unsafe, bit-manipulating) `.Core`
 -- primitive definitions and type-safe derived notions
 
-import Core.Name
 import Core.Name.Scoped
 import Core.TT.Var
 

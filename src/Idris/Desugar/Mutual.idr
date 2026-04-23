@@ -1,7 +1,6 @@
 module Idris.Desugar.Mutual
 
 import Idris.Syntax
-import Data.List1
 import TTImp.TTImp
 
 %default total

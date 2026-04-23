@@ -1,13 +1,8 @@
 module Libraries.Data.List.Extra
 
 import public Data.List
-import Data.List1
 
 %default total
-
-export
-minimum : Ord a => (xs : List a) -> {auto 0 _ : NonEmpty xs} -> a
-minimum (x :: xs) = foldl min x xs
 
 ||| Fetches the element at a given position.
 ||| Returns `Nothing` if the position beyond the list's end.
@@ -26,27 +21,6 @@ findBy p (x :: xs)
       Just win => pure win
 
 export
-breakAfter : (a -> Bool) -> List a -> (List a, List a)
-breakAfter p [] = ([], [])
-breakAfter p (x::xs)
-    = if p x
-         then ([x], xs)
-         else let (ys, zs) = breakAfter p xs in (x::ys, zs)
-
-export
-splitAfter : (a -> Bool) -> List a -> List1 (List a)
-splitAfter p xs
-    = case breakAfter p xs of
-           (chunk, []) => singleton chunk
-           (chunk, rest@(_::_)) => cons chunk (splitAfter p (assert_smaller xs rest))
-
-export
-zipMaybe : List a -> List b -> Maybe (List (a, b))
-zipMaybe [] [] = pure []
-zipMaybe (a::as) (b::bs) = ((a, b) ::) <$> zipMaybe as bs
-zipMaybe _ _ = Nothing
-
-export
 findBy' : (a -> Bool) -> List a -> (List a, Maybe a, List a)
 findBy' f [] = ([], Nothing, [])
 findBy' f (x :: xs) =
@@ -55,6 +29,14 @@ findBy' f (x :: xs) =
     False =>
       let (pre, mb, post) = findBy' f xs in
       (x :: pre, mb, post)
+
+||| Returns first element that matches the predicate and the list without it
+export
+findAndDeleteBy : (a -> Bool) -> List a -> Maybe (a, List a)
+findAndDeleteBy f xs
+  = case findBy' f xs of
+      (pre, Just x, post) => Just (x, pre ++ post)
+      _                   => Nothing
 
 ||| Compute the difference of two lists by the given predicate.
 ||| Lists are treated as bags.

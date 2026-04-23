@@ -1,0 +1,16 @@
+1/1: Building Issue2159 (Issue2159.idr)
+Warning: Issue2159:2:19--2:20:Can't deal with fromInteger in impossible clauses yet
+
+Issue2159:2:19--2:20
+ 1 | plusRRNever1 : {r:Nat} -> plus r r = 1 -> Void
+ 2 | plusRRNever1 {r = 0} Refl impossible
+                       ^
+
+Warning: Issue2159:3:22--3:23:Can't deal with fromInteger in impossible clauses yet
+
+Issue2159:3:22--3:23
+ 1 | plusRRNever1 : {r:Nat} -> plus r r = 1 -> Void
+ 2 | plusRRNever1 {r = 0} Refl impossible
+ 3 | plusRRNever1 {r = (S 0)} Refl impossible
+                          ^
+

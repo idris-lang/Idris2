@@ -1,14 +1,7 @@
 module Idris.Pretty
 
 import Core.Metadata
-import Data.List
-import Data.SnocList
-import Data.Maybe
 import Data.String
-import Libraries.Control.ANSI.SGR
-import Libraries.Data.String.Extra
-
-import Parser.Lexer.Source
 
 import public Idris.Pretty.Annotations
 import public Idris.Pretty.Render
@@ -39,8 +32,8 @@ kindAnn : KindedName -> Maybe IdrisSyntax
 kindAnn (MkKindedName mcat fn nm) = do
     cat <- mcat
     pure $ case cat of
-      Bound     => Bound
-      Func      => Fun fn
+      Bound      => Bound
+      Func       => Fun fn
       DataCon {} => DCon (Just fn)
       TyCon {}   => TCon (Just fn)
 
@@ -365,11 +358,11 @@ mutual
            <++> prettyOp op.val.toName
            <++> pretty right
     prettyPrec d (POp _ (MkWithData _ $ BindExpr nm left) op right) =
-        group $ parens (prettyPrec d nm <++> ":=" <++> pretty left)
+        group $ parens (prettyPrec d nm <++> "<-" <++> pretty left)
            <++> prettyOp op.val.toName
            <++> pretty right
     prettyPrec d (POp _ (MkWithData _ $ BindExplicitType nm ty left) op right) =
-        group $ parens (prettyPrec d nm <++> ":" <++> pretty ty <++> ":=" <++> pretty left)
+        group $ parens (prettyPrec d nm <++> ":" <++> pretty ty <++> "<-" <++> pretty left)
            <++> prettyOp op.val.toName
            <++> pretty right
     prettyPrec d (POp _ (MkWithData _ $ NoBinder x) op y) =

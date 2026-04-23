@@ -1,0 +1,6 @@
+. ../../../testutils.sh
+
+# expect a coverage error
+check Main.idr
+check Issue1800.idr
+check Issue1800Shrinked.idr

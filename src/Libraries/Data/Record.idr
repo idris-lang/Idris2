@@ -3,9 +3,6 @@ module Libraries.Data.Record
 
 import public Data.List.Quantifiers
 import Data.Maybe
-import Data.List.Elem
-import Decidable.Equality
-import Data.DPair
 
 %hide Data.List.Quantifiers.Any.Any
 %hide Data.List.Quantifiers.Any.any

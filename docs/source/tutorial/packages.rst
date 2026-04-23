@@ -13,8 +13,10 @@ Package Descriptions
 
 A package description includes the following:
 
-+ A header, consisting of the keyword ``package`` followed by a package
-  name. Package names can be any valid Idris identifier. The iPKG
++ A header, consisting of the keyword ``package`` followed by the package name.
+  Package names are typically written in kebab-case (e.g. ``my-lib``,
+  ``idris2-json``), and may include hyphens (``-``). This is allowed even though
+  hyphens are not valid characters in ordinary Idris identifiers. The iPKG
   format also takes a quoted version that accepts any valid filename.
 
 + Fields describing package contents, ``<field> = <value>``.
@@ -37,8 +39,10 @@ package file would be:
 Running ``idris2 --init`` will interactively create a new package file in the current directory. The generated package file lists all configurable fields with a brief description.
 
 Other examples of package files can be found in the ``libs`` directory
-of the main Idris repository, in the `pack collection<https://github.com/stefan-hoeck/idris2-pack-db/blob/main/collections/HEAD.toml>`_
-, and in `third-party libraries<https://github.com/idris-lang/Idris2/wiki/Third-party-Libraries>`_.
+of the main Idris repository, in the
+`pack collection <https://github.com/stefan-hoeck/idris2-pack-db/blob/main/collections/HEAD.toml>`_,
+and in
+`third-party libraries <https://github.com/idris-lang/Idris2/wiki/Third-party-Libraries>`_.
 
 
 Using Package files

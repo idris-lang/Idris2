@@ -6,22 +6,14 @@ import Compiler.Generated
 import Compiler.Opts.ToplevelConstants
 import Compiler.Scheme.Common
 
-import Core.Context
-import Core.Context.Log
 import Core.Directory
-import Core.Name
-import Core.Options
-import Core.TT
 import Protocol.Hex
 import Libraries.Utils.Path
-import Libraries.Data.SortedSet
 import Libraries.Data.String.Builder
 
-import Data.List
-import Data.List1
 import Data.Maybe
+import Data.SortedSet
 import Data.String
-import Data.Vect
 
 import Idris.Env
 import Idris.Syntax
@@ -113,8 +105,8 @@ schHeader chez libs whole
 schFooter : Bool -> Bool -> Builder
 schFooter prof whole = fromString """
 
-    (collect 4)
-    (blodwen-run-finalisers)
+    (collect-request-handler (lambda () (collect (collect-maximum-generation)) (blodwen-run-finalisers)))
+    (collect-rendezvous)
     \{ ifThenElse prof "(profile-dump-html)" "" }
     \{ ifThenElse whole ")" "" }
   """

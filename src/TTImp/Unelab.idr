@@ -1,22 +1,18 @@
 module TTImp.Unelab
 
 import Core.Case.CaseTree
-import Core.Context
 import Core.Context.Log
 import Core.Env
 import Core.Normalise
 import Core.Value
-import Core.TT
 
 import TTImp.TTImp
 
-import Data.List
 import Data.String
 
 import Libraries.Data.VarSet
 
 import Libraries.Data.List.SizeOf
-import Libraries.Data.SnocList.SizeOf
 
 %default covering
 

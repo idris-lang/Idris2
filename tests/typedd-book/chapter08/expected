@@ -6,7 +6,7 @@ You may be unintentionally shadowing the associated global definitions:
 AppendVec:4:1--4:49
  1 | import Data.Nat
  2 | import Data.Vect
- 3 | 
+ 3 |
  4 | append_nil : Vect m elem -> Vect (plus m 0) elem
      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -15,10 +15,10 @@ You may be unintentionally shadowing the associated global definitions:
   elem is shadowing Prelude.Types.elem
 
 AppendVec:7:1--7:62
- 3 | 
+ 3 |
  4 | append_nil : Vect m elem -> Vect (plus m 0) elem
  5 | append_nil {m} xs = rewrite plusZeroRightNeutral m in xs
- 6 | 
+ 6 |
  7 | append_xs : Vect (S (m + k)) elem -> Vect (plus m (S k)) elem
      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -27,10 +27,10 @@ You may be unintentionally shadowing the associated global definitions:
   elem is shadowing Prelude.Types.elem
 
 AppendVec:10:1--10:57
- 06 | 
+ 06 |
  07 | append_xs : Vect (S (m + k)) elem -> Vect (plus m (S k)) elem
  08 | append_xs {m} {k} xs = rewrite sym (plusSuccRightSucc m k) in xs
- 09 | 
+ 09 |
  10 | append : Vect n elem -> Vect m elem -> Vect (m + n) elem
       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

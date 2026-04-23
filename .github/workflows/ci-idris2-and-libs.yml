@@ -44,7 +44,7 @@ env:
   # codebase, but an admirable longterm goal is to support building the
   # current version of the compiler with a previous version that is older
   # than its immediate predecessor.
-  IDRIS2_MINIMUM_COMPAT_VERSION: 0.7.0
+  IDRIS2_MINIMUM_COMPAT_VERSION: 0.8.0
 
 jobs:
 

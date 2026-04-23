@@ -4,7 +4,7 @@ Error: Bracket is not properly closed.
 PError:5:23--5:24
  1 | foo : Int -> Int
  2 | foo x = x
- 3 | 
+ 3 |
  4 | bar : Int -> Int
  5 | bar x = let y = 42 in (y + x
                            ^

@@ -1,15 +1,9 @@
 module Yaffle.REPL
 
 import Core.AutoSearch
-import Core.Context
-import Core.Context.Log
-import Core.Core
 import Core.Env
-import Core.FC
 import Core.Metadata
-import Core.Normalise
 import Core.Termination
-import Core.TT
 import Core.Unify
 
 import Idris.REPL.Opts

@@ -12,7 +12,7 @@ WithClause:2:25--2:28
 
 
 WithClause:11:3--11:4
- 07 | 
+ 07 |
  08 | pred : Nat -> Nat
  09 | pred n with (isS n)
  10 |   _ | Nothing = Z

@@ -1,13 +1,8 @@
 module TTImp.Elab.App
 
-import Core.Context
-import Core.Context.Log
-import Core.Core
 import Core.Env
 import Core.Metadata
-import Core.Normalise
 import Core.Unify
-import Core.TT
 import Core.Value
 
 import Idris.REPL.Opts
@@ -18,9 +13,9 @@ import TTImp.Elab.Dot
 import TTImp.TTImp
 
 import Data.List
-import Data.SnocList
 import Data.Maybe
 
+import Libraries.Data.List.Extra
 import Libraries.Data.NatSet
 import Libraries.Data.VarSet
 import Libraries.Data.WithDefault
@@ -566,10 +561,8 @@ mutual
                           fntm fnty (n, 1 + argpos) expargs autoargs namedargs kr expty
 
   export
-  findNamed : Name -> List (Name, RawImp) -> Maybe ((Name, RawImp), List (Name, RawImp))
-  findNamed n l = case partition ((== n) . fst) l of
-                       (x :: xs, ys) => Just (x, (xs ++ ys))
-                       _ => Nothing
+  findNamed : Name -> List (Name, a) -> Maybe ((Name, a), List (Name, a))
+  findNamed n = findAndDeleteBy $ (== n) . fst
 
   export
   findBindAllExpPattern : List (Name, RawImp) -> Maybe RawImp
@@ -745,8 +738,8 @@ mutual
            defs <- get Ctxt
            fnty <- nf defs env retTy -- (Bind fc argn (Let RigW argv argTy) retTy)
            let expfnty = gnf env (Bind fc argn (Pi fc top Explicit argTy) (weaken retTy))
-           logGlue "elab.with" 10 "Expected function type" env expfnty
-           whenJust expty (logGlue "elab.with" 10 "Expected result type" env)
+           logGlue "elab.with" 10 "Expected function type" expfnty
+           whenJust expty (logGlue "elab.with" 10 "Expected result type")
            res <- checkAppWith' rig elabinfo nest env fc fntm fnty (n, 1 + argpos) expargs autoargs namedargs kr expty
            cres <- Check.convert fc elabinfo env (glueBack defs env ty) expfnty
            let [] = constraints cres

@@ -1,0 +1,9 @@
+1/1: Building Issue490 (Issue490.idr)
+Main>    a : Type
+   x : a
+   xs : MyList a
+   l : MyList a
+------------------------------
+hole : ()
+Main> 
+Bye for now!

@@ -7,22 +7,14 @@ import Compiler.Scheme.Common
 import Compiler.Scheme.Chez
 import Compiler.Separate
 
-import Core.Core
 import Core.Hash
-import Core.Context
-import Core.Context.Log
 import Core.Directory
-import Core.Options
-import Core.TT
-import Libraries.Data.SortedSet
 import Libraries.Data.String.Builder
 import Libraries.Utils.Path
 
-import Data.List
 import Data.List1
 import Data.String
 
-import Idris.Env
 import Idris.Syntax
 
 import System
@@ -50,8 +42,8 @@ schHeader libs compilationUnits = fromString """
 schFooter : Builder
 schFooter = """
 
-  (collect 4)
-  (blodwen-run-finalisers)
+  (collect-request-handler (lambda () (collect (collect-maximum-generation)) (blodwen-run-finalisers)))
+  (collect-rendezvous)
   """
 
 startChez : String -> String -> String -> String

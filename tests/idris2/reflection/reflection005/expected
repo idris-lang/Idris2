@@ -6,9 +6,9 @@ and:
 Mismatch between: () and a.
 
 refdecl:13:16--13:29
- 09 | 
+ 09 |
  10 | %runElab mkDecls `(94)
- 11 | 
+ 11 |
  12 | bad : a
  13 | bad = %runElab mkDecls `(94)
                      ^^^^^^^^^^^^^

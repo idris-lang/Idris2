@@ -1,11 +1,21 @@
 1/1: Building Issue2250a (Issue2250a.idr)
+Warning: Issue2250a:15:5--15:9:Refl does not match expected type
+
+Issue2250a:15:5--15:9
+ 11 | Ex1 : 3 `LessThanOrEqualTo` 5
+ 12 | Ex1 = Choose 2
+ 13 |
+ 14 | Bug : Not (3 `LessThanOrEqualTo` 5)
+ 15 | Bug Refl impossible
+          ^^^^
+
 Error: Bug is not covering.
 
 Issue2250a:14:1--14:36
- 10 | 
+ 10 |
  11 | Ex1 : 3 `LessThanOrEqualTo` 5
  12 | Ex1 = Choose 2
- 13 | 
+ 13 |
  14 | Bug : Not (3 `LessThanOrEqualTo` 5)
       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -15,22 +25,32 @@ Missing cases:
 Error: Yikes is not covering.
 
 Issue2250a:17:1--17:13
- 13 | 
+ 13 |
  14 | Bug : Not (3 `LessThanOrEqualTo` 5)
  15 | Bug Refl impossible
- 16 | 
+ 16 |
  17 | Yikes : Void
       ^^^^^^^^^^^^
 
 Calls non covering function Main.Bug
 1/1: Building Issue2250b (Issue2250b.idr)
+Warning: Issue2250b:6:3--6:4:Z does not match expected type
+
+Issue2250b:6:3--6:4
+ 2 |
+ 3 | %default total
+ 4 |
+ 5 | f : n `LTE` m -> Void
+ 6 | f Z impossible
+       ^
+
 Error: f is not covering.
 
 Issue2250b:5:1--5:22
  1 | import Data.Nat
- 2 | 
+ 2 |
  3 | %default total
- 4 | 
+ 4 |
  5 | f : n `LTE` m -> Void
      ^^^^^^^^^^^^^^^^^^^^^
 
@@ -43,19 +63,28 @@ Issue2250b:9:1--9:9
  5 | f : n `LTE` m -> Void
  6 | f Z impossible
  7 | f (LTESucc x) = f x
- 8 | 
+ 8 |
  9 | x : Void
      ^^^^^^^^
 
 Calls non covering function Main.f
 1/1: Building Issue2250c (Issue2250c.idr)
+Warning: Issue2250c:4:3--4:5:MkUnit does not match expected type
+
+Issue2250c:4:3--4:5
+ 1 | %default total
+ 2 |
+ 3 | g : Not Bool
+ 4 | g () impossible
+       ^^
+
 Error: f is not covering.
 
 Issue2250c:6:1--6:9
- 2 | 
+ 2 |
  3 | g : Not Bool
  4 | g () impossible
- 5 | 
+ 5 |
  6 | f : Void
      ^^^^^^^^
 
@@ -64,7 +93,7 @@ Error: g is not covering.
 
 Issue2250c:3:1--3:13
  1 | %default total
- 2 | 
+ 2 |
  3 | g : Not Bool
      ^^^^^^^^^^^^
 
@@ -72,13 +101,23 @@ Missing cases:
     g _
 
 1/1: Building Issue3276 (Issue3276.idr)
+Warning: Issue3276:20:23--20:27:Refl does not match expected type
+
+Issue3276:20:23--20:27
+ 16 | prf1 : Digit 51
+ 17 | prf1 = MkDigit 51
+ 18 |
+ 19 | dis0 : Digit 51 -> Void
+ 20 | dis0 (MkDigit _ {prf1=Refl}) impossible
+                            ^^^^
+
 Error: dis0 is not covering.
 
 Issue3276:19:1--19:24
- 15 | 
+ 15 |
  16 | prf1 : Digit 51
  17 | prf1 = MkDigit 51
- 18 | 
+ 18 |
  19 | dis0 : Digit 51 -> Void
       ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -86,13 +125,23 @@ Missing cases:
     dis0 _
 
 1/1: Building Visibility (Visibility.idr)
+Warning: Visibility:8:6--8:7:Z does not match expected type
+
+Visibility:8:6--8:7
+ 4 |     data Foo : Type where
+ 5 |         MkFoo : Foo
+ 6 |
+ 7 | boom : Foo -> Void
+ 8 | boom Z impossible
+          ^
+
 Error: boom is not covering.
 
 Visibility:7:1--7:19
  3 |     export
  4 |     data Foo : Type where
  5 |         MkFoo : Foo
- 6 | 
+ 6 |
  7 | boom : Foo -> Void
      ^^^^^^^^^^^^^^^^^^
 
@@ -100,6 +149,25 @@ Missing cases:
     boom _
 
 1/1: Building Head (Head.idr)
+Warning: Head:4:6--4:8:MkUnit does not match expected type
+
+Head:4:6--4:8
+ 1 | total
+ 2 | head : List a -> a
+ 3 | head (x :: xs) = x
+ 4 | head () impossible
+          ^^
+
+Warning: Head:9:7--9:8:Z does not match expected type
+
+Head:9:7--9:8
+ 5 |
+ 6 | total
+ 7 | head' : List a -> a
+ 8 | head' (x :: xs) = x
+ 9 | head' Z impossible
+           ^
+
 Error: head is not covering.
 
 Head:1:1--2:19

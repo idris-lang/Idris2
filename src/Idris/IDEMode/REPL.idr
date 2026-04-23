@@ -1,9 +1,7 @@
 module Idris.IDEMode.REPL
 
-import Core.Context
 import Core.Directory
 import Core.Metadata
-import Core.Options
 import Core.Unify
 
 import Idris.Error
@@ -24,7 +22,6 @@ import Idris.IDEMode.Pretty
 import Protocol.Hex
 import Libraries.Utils.Path
 
-import Data.List
 import Data.String
 import System
 import System.File

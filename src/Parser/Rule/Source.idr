@@ -3,13 +3,10 @@ module Parser.Rule.Source
 import public Parser.Lexer.Source
 import public Parser.Support
 
-import Core.Context
-import Core.TT
 import Core.Metadata
 import Data.List1
 import Data.SnocList
 import Data.String
-import Libraries.Data.List.Extra
 import Idris.Syntax
 
 %hide Core.Core.(>>)

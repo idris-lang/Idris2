@@ -16,7 +16,7 @@ in rec {
       (idris2-mode :repo "redfish64/idris2-mode" :fetcher github)
     '';
   };
-  idris-emacs = emacsWithPackages [ idris2-mode ];
+  idris-emacs = emacs.pkgs.withPackages [ idris2-mode ];
   emacs-dev = makeEmacsWrapper "emacs-dev" idris-emacs init-file;
   emacs-with-idris = writeShellScriptBin "emacs-with-idris" ''
     export PATH=${idris2Pkg}/bin:$PATH

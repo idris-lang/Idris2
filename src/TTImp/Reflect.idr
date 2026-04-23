@@ -4,13 +4,10 @@ import Core.Context
 import Core.Env
 import Core.Normalise
 import Core.Reflect
-import Core.TT
 import Core.Value
 
 import TTImp.TTImp
 import Libraries.Data.WithDefault
-
-import Data.SnocList
 
 %default covering
 

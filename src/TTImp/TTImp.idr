@@ -1,23 +1,15 @@
 module TTImp.TTImp
 
-import Core.Context
 import Core.Context.Log
 import Core.Env
 import Core.Normalise
-import Core.Options
-import Core.Options.Log
-import Core.TT
 import Core.Value
 
-import Data.List
 import public Data.List1
-import Data.Maybe
+import Data.SortedSet
 
 import Libraries.Data.List.SizeOf
-
-import Libraries.Data.SortedSet
 import Libraries.Data.WithDefault
-import Libraries.Data.SnocList.SizeOf
 
 %default covering
 
@@ -985,7 +977,7 @@ gapply f [] = f
 gapply f (x :: xs) = gapply (uncurry (app f) x) xs where
 
   app : RawImp' nm -> Maybe Name -> RawImp' nm -> RawImp' nm
-  app f Nothing x =  IApp (getFC f) f x
+  app f Nothing   x = IApp (getFC f) f x
   app f (Just nm) x = INamedApp (getFC f) f nm x
 
 

@@ -1,7 +1,6 @@
 module Core.Context.TTC
 
 import Core.Binary
-import Core.TTC
 import Core.Context
 
 %default covering

@@ -5,7 +5,7 @@ Test:11:1--11:39
  07 | finToInteger : {k : _} -> Fin k -> Integer
  08 | finToInteger FZ = 0
  09 | finToInteger (FS k) = 1 + finToInteger k
- 10 | 
+ 10 |
  11 | %builtin NaturalToInteger finToInteger
       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

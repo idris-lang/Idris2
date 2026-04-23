@@ -2,7 +2,7 @@
 Error: Expected '}'.
 
 Implicit:6:15--6:17
- 2 | 
+ 2 |
  3 | myReverse : Vect n el -> Vect n el
  4 | myReverse [] = []
  5 | myReverse {n = S k} (x :: xs) =

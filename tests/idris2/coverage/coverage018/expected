@@ -1,20 +1,20 @@
 1/1: Building Issue1831_1 (Issue1831_1.idr)
 Issue1831_1> Issue1831_1.test2
-Arguments [{arg:0}]
-Compile time tree: case {arg:0} of
-  S {e:0} => case {e:0} of
-    S {e:1} => case {e:1} of
+Arguments [{arg:1}]
+Compile time tree: case {arg:1} of
+  S {e:1} => case {e:1} of
+    S {e:2} => case {e:2} of
       Z => True
       _ => False
     _ => False
   _ => False
-Compiled: \ {arg:0} => case {arg:0} of
+Compiled: \ {arg:1} => case {arg:1} of
   { 0 => 0
-  ; _ => let {e:0} = {arg:0} - 1 in
-         case {e:0} of
+  ; _ => let {e:1} = {arg:1} - 1 in
+         case {e:1} of
            { 0 => 0
-           ; _ => let {e:1} = {e:0} - 1 in
-                  case {e:1} of
+           ; _ => let {e:2} = {e:1} - 1 in
+                  case {e:2} of
                     { 0 => 1
                     ; _ => 0
                     }
@@ -33,21 +33,21 @@ Issue1831_1>
 Bye for now!
 1/1: Building Issue1831_2 (Issue1831_2.idr)
 Issue1831_2> Issue1831_2.test2
-Arguments [{arg:0}]
-Compile time tree: case {arg:0} of
-  S {e:0} => case {e:0} of
-    S {e:1} => case {e:1} of
+Arguments [{arg:1}]
+Compile time tree: case {arg:1} of
+  S {e:1} => case {e:1} of
+    S {e:2} => case {e:2} of
       Z => True
       _ => False
     _ => False
   _ => False
-Compiled: \ {arg:0} => case {arg:0} of
+Compiled: \ {arg:1} => case {arg:1} of
   { 0 => 0
-  ; _ => let {e:0} = {arg:0} - 1 in
-         case {e:0} of
+  ; _ => let {e:1} = {arg:1} - 1 in
+         case {e:1} of
            { 0 => 0
-           ; _ => let {e:1} = {e:0} - 1 in
-                  case {e:1} of
+           ; _ => let {e:2} = {e:1} - 1 in
+                  case {e:2} of
                     { 0 => 1
                     ; _ => 0
                     }

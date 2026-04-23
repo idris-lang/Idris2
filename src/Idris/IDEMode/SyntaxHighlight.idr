@@ -1,15 +1,11 @@
 module Idris.IDEMode.SyntaxHighlight
 
-import Core.Context
-import Core.Context.Log
 import Core.Directory
 import Core.Metadata
 
 import Idris.REPL
 import Idris.Syntax
 import Idris.IDEMode.Commands
-
-import Data.List
 
 import Libraries.Data.PosMap
 

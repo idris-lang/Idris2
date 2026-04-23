@@ -1,6 +1,5 @@
 module Core.Context.Pretty
 
-import Core.Context
 import Core.Env
 
 import Data.String
@@ -9,12 +8,9 @@ import Idris.Doc.Annotations
 import Idris.Syntax
 import Idris.Pretty
 
-import Core.Case.CaseTree
 import Core.Case.CaseTree.Pretty
-import Core.Context.Context
 
 import Libraries.Data.NatSet
-import Libraries.Data.String.Extra
 
 %hide Env.(::)
 %hide Env.Nil
@@ -28,7 +24,6 @@ import Libraries.Data.String.Extra
 %hide Stream.(::)
 %hide Symbols.equals
 %hide String.indent
-%hide Extra.indent
 %hide List1.(++)
 -- %hide SnocList.(++)
 %hide String.(++)

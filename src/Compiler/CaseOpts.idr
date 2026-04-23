@@ -2,20 +2,12 @@ module Compiler.CaseOpts
 
 -- Case block related transformations
 
-import Compiler.CompileExpr
-
 import Core.CompileExpr
 import Core.Context
-import Core.FC
-import Core.TT
 
-import Data.List
-import Data.SnocList
 import Data.Vect
 
 import Libraries.Data.List.SizeOf
-import Libraries.Data.SnocList.SizeOf
-import Libraries.Data.SnocList.Extra
 
 %default covering
 

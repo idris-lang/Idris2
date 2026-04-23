@@ -3,10 +3,8 @@ module Idris.SetOptions
 import Compiler.Common
 
 import Core.Binary
-import Core.Context
 import Core.Directory
 import Core.Metadata
-import Core.Options
 import Core.Unify
 import Libraries.Utils.Path
 import Libraries.Data.List.Extra
@@ -20,11 +18,8 @@ import Idris.REPL
 import Idris.Syntax
 import Idris.Version
 
-import Data.List
 import Data.List1
 import Data.String
-
-import Libraries.Data.List1 as Lib
 
 import System
 import System.Directory
@@ -60,7 +55,7 @@ pkgDir dirName ttcDirs =
    -- For reasons of backwards compatibility, we also
    -- accept hyphenated directory names without a part
    -- corresponding to a version number.
-   case Lib.unsnoc $ split (== '-') dirName of
+   case unsnoc $ split (== '-') dirName of
      (Nil, last) => MkPkgDir dirName last Nothing ttcDirs
      (init,last) =>
        case toVersion last of
@@ -351,10 +346,30 @@ bashCompletionScript fun = let fun' = "_" ++ fun in """
   """
 
 zshCompletionScript : (fun : String) -> String
-zshCompletionScript fun = """
-  autoload -U +X compinit && compinit
-  autoload -U +X bashcompinit && bashcompinit
-  \{ bashCompletionScript fun }
+zshCompletionScript fun = let fun' = "_" ++ fun in """
+  #compdef idris2
+  compdef \{fun'} idris2
+
+  \{fun'}()
+  {
+    PREV_IDX=$((CURRENT-1))
+
+    CURRENT_PARTIAL=$([[ -z ${PREFIX} ]] && echo "--" || echo "${PREFIX}")
+    PREVIOUS="${words[$PREV_IDX]}"
+
+    REPLY=($(idris2 --bash-completion "$CURRENT_PARTIAL" "$PREVIOUS"))
+
+    if [[ -z $REPLY ]]; then
+      _files
+    else
+      _describe 'idris2' REPLY
+    fi
+  }
+
+  # don't run the completion function when being source-ed or eval-ed
+  if [ "$funcstack[1]" = "\{fun'}" ]; then
+    \{fun'}
+  fi
   """
 
 --------------------------------------------------------------------------------
@@ -491,16 +506,13 @@ preOptions (ConsoleWidth n :: opts)
     = do setConsoleWidth n
          preOptions opts
 preOptions (ShowImplicits :: opts)
-    = do pp <- getPPrint
-         setPPrint ({ showImplicits := True } pp)
+    = do updatePPrint { showImplicits := True }
          preOptions opts
 preOptions (ShowMachineNames :: opts)
-    = do pp <- getPPrint
-         setPPrint ({ showMachineNames := True } pp)
+    = do updatePPrint { showMachineNames := True }
          preOptions opts
 preOptions (ShowNamespaces :: opts)
-    = do pp <- getPPrint
-         setPPrint ({ fullNamespace := True } pp)
+    = do updatePPrint { fullNamespace := True }
          preOptions opts
 preOptions (Color b :: opts)
     = do setColor b

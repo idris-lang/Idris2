@@ -3,12 +3,10 @@ module Compiler.VMCode
 import Compiler.ANF
 
 import Core.CompileExpr
-import Core.Context
 import Core.TT
 
 import Libraries.Data.IntMap
 import Data.List
-import Data.Maybe
 import Data.Vect
 
 %default covering

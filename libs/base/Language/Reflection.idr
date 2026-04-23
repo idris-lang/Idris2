@@ -100,6 +100,8 @@ data Elab : Type -> Type where
      GetReferredFns : Name -> Elab (List Name)
      -- Get the name of the current and outer functions, if it is applicable
      GetCurrentFn : Elab (SnocList Name)
+     -- Get the source location of the macro call site
+     GetFC : Elab FC
      -- Check a group of top level declarations
      Declare : List Decl -> Elab ()
 
@@ -209,6 +211,9 @@ interface Monad m => Elaboration m where
   ||| Get the name of the current and outer functions, if we are in a function
   getCurrentFn : m (SnocList Name)
 
+  ||| Get the source location of the macro call site.
+  getFC : m FC
+
   ||| Make some top level declarations
   declare : List Decl -> m ()
 
@@ -260,6 +265,7 @@ Elaboration Elab where
   getCons          = GetCons
   getReferredFns   = GetReferredFns
   getCurrentFn     = GetCurrentFn
+  getFC          = GetFC
   declare          = Declare
   readFile         = ReadFile
   writeFile        = WriteFile
@@ -289,6 +295,7 @@ Elaboration m => MonadTrans t => Monad (t m) => Elaboration (t m) where
   getCons             = lift . getCons
   getReferredFns      = lift . getReferredFns
   getCurrentFn        = lift getCurrentFn
+  getFC               = lift getFC
   declare             = lift . declare
   readFile            = lift .: readFile
   writeFile d         = lift .: writeFile d

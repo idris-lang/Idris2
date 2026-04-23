@@ -1,18 +1,13 @@
 module Core.Env
 
 import Core.TT
-import Core.Name.CompatibleVars
 import Data.List
-import Data.SnocList
 
 import Libraries.Data.List.SizeOf
-import Libraries.Data.List.HasLength
 
 import Libraries.Data.VarSet
 
-import Libraries.Data.SnocList.Extra
 import Libraries.Data.SnocList.SizeOf
-import Libraries.Data.SnocList.HasLength
 
 %default total
 
@@ -220,6 +215,8 @@ mutual
   findUsed env used (TDelay fc r ty tm)
       = findUsed env (findUsed env used ty) tm
   findUsed env used (TForce fc r tm)
+      = findUsed env used tm
+  findUsed env used (Erased fc (Dotted tm))
       = findUsed env used tm
   findUsed env used _ = used
 

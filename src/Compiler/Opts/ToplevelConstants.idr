@@ -2,14 +2,12 @@ module Compiler.Opts.ToplevelConstants
 
 import Core.CompileExpr
 import Core.Context
-import Core.Name
-import Core.TT
 
 import Data.List1
 import Data.Vect
+import Data.SortedSet
+import Data.SortedMap
 import Libraries.Data.Graph
-import Libraries.Data.SortedSet
-import Libraries.Data.SortedMap
 
 --------------------------------------------------------------------------------
 --          Call Graph

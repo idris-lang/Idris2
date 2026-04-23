@@ -1,14 +1,11 @@
 module Core.CompileExpr.Pretty
 
-import Core.Name
 import Core.CompileExpr
 import Core.TT
-import Data.List
 import Data.String
 import Data.Vect
 import Idris.Pretty
 import Idris.Doc.Annotations
-import Libraries.Data.String.Extra
 
 %default covering
 
@@ -32,7 +29,6 @@ import Libraries.Data.String.Extra
 %hide Symbols.equals
 %hide Fin.fromInteger
 %hide String.indent
-%hide Extra.indent
 %hide List1.(++)
 %hide SnocList.(++)
 %hide String.(++)

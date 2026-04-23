@@ -1,4 +1,4 @@
 . ../../../testutils.sh
 
-echo ":q" | idris2 --log unify.equal:10 --log unify:5 Term.idr | clean_names
-echo ":q" | idris2 --log unify:3 --log elab.ambiguous:5 Vec.idr | clean_names
+echo ":q" | idris2 --log unify.equal:10 --log unify:5 Term.idr
+echo ":q" | idris2 --log unify:3 --log elab.ambiguous:5 Vec.idr

@@ -1,10 +1,7 @@
 module Idris.IDEMode.CaseSplit
 
-import Core.Context
-import Core.Context.Log
 import Core.Env
 import Core.Metadata
-import Core.TT
 import Core.Value
 
 import Parser.Lexer.Source
@@ -20,12 +17,10 @@ import Idris.REPL.Opts
 import Idris.Resugar
 import Idris.Syntax
 
-import Data.List
-import Data.List1
 import Data.List.Views
-import Data.SnocList
 import Libraries.Data.List.Extra
 import Data.String
+import Libraries.Data.String as L
 import System.File
 import Data.Fin
 
@@ -252,10 +247,6 @@ dropLast updChars with (snocList updChars)
   dropLast [] | Empty = []
   dropLast (xs ++ [x]) | (Snoc x xs rec) = xs
 
-||| Trim whitespace to the right of the string
-rtrim : String -> String
-rtrim = reverse . ltrim . reverse
-
 -- remove last paren
 dropLastParen : SnocList Char -> SnocList Char
 dropLastParen Lin = Lin
@@ -264,7 +255,7 @@ dropLastParen (cs :< c) = dropLastParen cs :< c
 
 ||| Drop the closing parenthesis and any indentation preceding it.
 parenTrim : String -> String
-parenTrim = rtrim . fastPack . cast . dropLastParen . cast . fastUnpack
+parenTrim = L.rtrim . fastPack . cast . dropLastParen . cast . fastUnpack
 
 ||| Drop the number of letters equal to the indentation level to align
 ||| just after the `of`.

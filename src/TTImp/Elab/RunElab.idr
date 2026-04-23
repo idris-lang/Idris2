@@ -1,16 +1,10 @@
 module TTImp.Elab.RunElab
 
-import Core.Context
-import Core.Context.Log
-import Core.Core
 import Core.Directory
 import Core.Env
 import Core.Metadata
-import Core.Normalise
-import Core.Options
 import Core.Reflect
 import Core.Unify
-import Core.TT
 import Core.Value
 
 import Idris.Resugar
@@ -32,8 +26,6 @@ import TTImp.TTImp.Functor
 import TTImp.Unelab
 
 import System.File.Meta
-
-import Data.SnocList
 
 %default covering
 
@@ -230,8 +222,7 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
              scriptRet ()
     elabCon defs "ResugarTerm" [maxLineWidth, tm]
         = do ptm <- pterm . map defaultKindedName =<< reify defs !(evalClosure defs tm)
-             mlw <- reify defs !(evalClosure defs maxLineWidth)
-             let _ : Maybe Nat = mlw
+             mlw : Maybe Nat <- reify defs !(evalClosure defs maxLineWidth)
              let pw = maybe Unbounded (\w => AvailablePerLine (cast w) 1) mlw
              scriptRet $ render' pw Nothing $ pretty {ann=IdrisSyntax} ptm
     elabCon defs "Check" [exp, ttimp]
@@ -380,6 +371,8 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
     elabCon defs "GetCurrentFn" []
         = do defs <- get Ctxt
              scriptRet defs.defsStack
+    elabCon defs "GetFC" []
+        = scriptRet fc
     elabCon defs "Declare" [d]
         = do d' <- evalClosure defs d
              decls <- reify defs d'
@@ -435,8 +428,9 @@ checkRunElab rig elabinfo nest env fc reqExt script exp
                            check rig elabinfo nest env script (Just (gnf env elabtt))
          solveConstraints inTerm Normal
          defs <- get Ctxt -- checking might have resolved some holes
-         ntm <- elabScript rig fc nest env
-                           !(nfOpts withAll defs env stm) (Just (gnf env expected))
+         nfstm <- nfOpts withAll defs env stm
+         ntm <- logTime 2 "Elaboration script" $
+                  elabScript rig fc nest env nfstm $ Just (gnf env expected)
          defs <- get Ctxt -- might have updated as part of the script
          empty <- clearDefs defs
          pure (!(quote empty env ntm), gnf env expected)

@@ -265,8 +265,8 @@ An example of an operator table we'll be using for the calculator is:
       ]
     ]
 
-This table defines 4 operators for mulitiplication, division, addition and subtraction.
-Mulitiplication and division show up in the first table because they have higher precedence than
+This table defines 4 operators for multiplication, division, addition and subtraction.
+Multiplication and division show up in the first table because they have higher precedence than
 addition and subtraction, which show up in the second table. We're also defining them as infix operators,
 with a specific grammar and all being left associative via ``AssocLeft``.
 

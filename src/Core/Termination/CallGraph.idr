@@ -1,19 +1,14 @@
 module Core.Termination.CallGraph
 
 import Core.Case.CaseTree
-import Core.Context
 import Core.Context.Log
 import Core.Env
 import Core.Normalise
 import Core.Options
 import Core.Value
-import Core.Name.CompatibleVars
 
 import Libraries.Data.List.SizeOf
-
-import Libraries.Data.IntMap
 import Libraries.Data.SparseMatrix
-import Libraries.Data.SnocList.SizeOf
 
 import Data.String
 

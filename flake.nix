@@ -3,14 +3,14 @@
 
   inputs.flake-utils.url = "github:numtide/flake-utils";
   inputs.idris-emacs-src = {
-    url = "github:redfish64/idris2-mode";
+    url = "github:idris-community/idris2-mode";
     flake = false;
   };
   inputs.nixpkgs.url = "github:NixOS/nixpkgs";
 
   outputs = { self, nixpkgs, flake-utils, idris-emacs-src }:
     let
-      idris2Version = "0.7.0";
+      idris2Version = "0.8.0";
       lib = import ./nix/lib.nix;
       sys-agnostic = rec {
         templates.pkg = {

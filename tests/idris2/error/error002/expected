@@ -4,7 +4,7 @@ Error: While processing right hand side of wrong. Undefined name ys.
 Error:6:17--6:19
  2 |      Nil : Vect Z a
  3 |      (::) : a -> Vect k a -> Vect (S k) a
- 4 | 
+ 4 |
  5 | wrong : a -> Vect (S n) a -> Vect (S n) a
  6 | wrong xs = x :: ys
                      ^^

@@ -3,15 +3,9 @@ module TTImp.Elab.Check
 -- used by the checkers for each construct. Also some utility functions for
 -- reading and writing elaboration state
 
-import Core.Context
-import Core.Context.Log
-import Core.Core
 import Core.Env
 import Core.Metadata
-import Core.Normalise
 import Core.Unify
-import Core.UnifyState
-import Core.TT
 import Core.Value
 
 import Idris.REPL.Opts
@@ -20,15 +14,12 @@ import Idris.Syntax
 import TTImp.TTImp
 
 import Data.Either
-import Data.List
-import Data.SnocList
 import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 import Libraries.Data.UserNameMap
 import Libraries.Data.WithDefault
 
 import Libraries.Data.List.SizeOf
-import Libraries.Data.SnocList.SizeOf
 
 import Libraries.Data.VarSet
 
@@ -799,8 +790,8 @@ checkExp rig elabinfo env fc tm got (Just exp)
                          NoLazy => do logTerm "elab" 5 "Solved" tm
                                       pure (tm, got)
                          AddForce r => do logTerm "elab" 5 "Force" tm
-                                          logGlue "elab" 5 "Got" env got
-                                          logGlue "elab" 5 "Exp" env exp
+                                          logGlue "elab" 5 "Got" got
+                                          logGlue "elab" 5 "Exp" exp
                                           pure (TForce fc r tm, exp)
                          AddDelay r => do ty <- getTerm got
                                           logTerm "elab" 5 "Delay" tm

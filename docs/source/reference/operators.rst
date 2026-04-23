@@ -9,7 +9,7 @@ Instead, it expands on the abilities of infix operators to enable library design
 to write Domain Specific Languages (DSLs) while keeping error messages under control.
 
 Because operators are not linked to function definitions, they are also part of the
-file namespacing and follow the same rules as other defintions.
+file namespacing and follow the same rules as other definitions.
 
 .. warning::
    Operators can and will make some code less legible. Use with taste and caution.
@@ -157,7 +157,7 @@ declaring a fixity ``private`` rather than ``export``.
 Private record fixity pattern
 -----------------------------
 
-Private fixity declarations are useful in conjuction with records. When
+Private fixity declarations are useful in conjunction with records. When
 you declare a record with operators as fields, it is helpful to write
 them in infix position. However, the compiler will also synthesize a
 projection function for the field that takes as first argument the
@@ -311,7 +311,7 @@ where the constructor for ``Pi`` takes terms on the left and lambdas on the righ
 We would like to use a custom operator to build values using ``VPi``, but its
 signature does not follow the pattern that ``typebind`` uses. Instead, we use
 ``autobind`` to tell the compiler that the type of the lambda must be inferred.
-For this we use ``:=`` instead of ``:``:
+For this we use ``<-`` instead of ``:``:
 
 .. code-block:: idris
 
@@ -322,19 +322,19 @@ For this we use ``:=`` instead of ``:``:
 
     sig : Value
     sig =
-        (fstTy := VStar) =>>
-        (sndTy := (_ := fstTy) =>> VStar) =>>
-        (val1 := fstTy) =>>
-        (val2 := sndTy `vapp` val1) =>>
+        (fstTy <- VStar) =>>
+        (sndTy <- (_ <- fstTy) =>> VStar) =>>
+        (val1 <- fstTy) =>>
+        (val2 <- sndTy `vapp` val1) =>>
         VSigma fstTy sndTy
 
 This new syntax is much closer to what the code is meant to look like for users
 accustomed to dependently-typed programming languages.
 
 More technically, any ``autobind`` operator is called with the syntax
-``(name := expr) op body`` and is desugared into ``expr op (\name : ? => body)``.
+``(name <- expr) op body`` and is desugared into ``expr op (\name : ? => body)``.
 If you want, or need, to give the type explicitly, you can still do so by using
-the full syntax: ``(name : type := expr) op body`` which is desugared into
+the full syntax: ``(name : type <- expr) op body`` which is desugared into
 ``expr op (\name : type => body)``.
 
 Like ``typebind``, ``autobind`` operators cannot be used as regular operators anymore

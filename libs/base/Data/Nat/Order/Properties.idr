@@ -83,8 +83,6 @@ minusLTE (S a) (S b) =
 ||| Subtracting a positive number gives a strictly smaller number
 export
 minusPosLT : (a,b : Nat) -> 0 `LT` a -> a `LTE` b -> (b `minus` a) `LT` b
-minusPosLT 0     b     z_lt_z           a_lte_b impossible
-minusPosLT (S a) 0     z_lt_sa          a_lte_b impossible
 minusPosLT (S a) (S b) z_lt_sa          a_lte_b = LTESucc (minusLTE a b)
 
 -- This is the opposite of the convention in `Data.Nat`, but 'monotone on the left' means the below

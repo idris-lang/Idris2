@@ -3,9 +3,9 @@
 Error: While processing right hand side of broken. Can't find an implementation for VoidContainer.
 
 Main:8:10--8:17
- 4 | 
+ 4 |
  5 | %default total
- 6 | 
+ 6 |
  7 | broken : VoidContainer
  8 | broken = %search
               ^^^^^^^
