@@ -66,7 +66,7 @@ data Elab : Type -> Type where
      Check : TTImp -> Elab expected
 
     --  given a type constructor, get the pairs of data constructors that can have the same type. 
-     GetCompPairs : a -> Elab (List (String, String))
+     GetDecEqConPairs : a -> Elab (List (String, String))
      -- Quote a concrete expression back to a TTImp
      Quote : (0 _ : val) -> Elab TTImp
 
@@ -163,7 +163,7 @@ interface Monad m => Elaboration m where
 
   ||| Given a value, assumed to be a type constructor, returns as strings the pairs of data constructors that could potentially have the same type 
   ||| Util for automated derivation of decidable equality
-  getCompPairs : a -> m (List (String, String))
+  getDecEqConPairs : a -> m (List (String, String))
   ||| Return TTImp syntax of a given value
   quote : (0 _ : val) -> m TTImp
 
@@ -238,32 +238,32 @@ logGoal str n msg = whenJust !goal $ logTerm str n msg
 
 export
 Elaboration Elab where
-  failAt         = Fail
-  warnAt         = Warn
-  try            = Try
-  logMsg         = LogMsg
-  logTerm        = LogTerm
-  logSugaredTerm = LogSugaredTerm
-  resugarTerm    = ResugarTerm
-  check          = Check
-  getCompPairs   = GetCompPairs
-  quote          = Quote
-  lambda         = Lambda
-  goal           = Goal
-  localVars      = LocalVars
-  genSym         = GenSym
-  inCurrentNS    = InCurrentNS
-  getType        = GetType
-  getInfo        = GetInfo
-  getVis         = GetVis
-  getLocalType   = GetLocalType
-  getCons        = GetCons
-  getReferredFns = GetReferredFns
-  getCurrentFn   = GetCurrentFn
-  declare        = Declare
-  readFile       = ReadFile
-  writeFile      = WriteFile
-  idrisDir       = IdrisDir
+  failAt           = Fail
+  warnAt           = Warn
+  try              = Try
+  logMsg           = LogMsg
+  logTerm          = LogTerm
+  logSugaredTerm   = LogSugaredTerm
+  resugarTerm      = ResugarTerm
+  check            = Check
+  getDecEqConPairs = GetDecEqConPairs
+  quote            = Quote
+  lambda           = Lambda
+  goal             = Goal
+  localVars        = LocalVars
+  genSym           = GenSym
+  inCurrentNS      = InCurrentNS
+  getType          = GetType
+  getInfo          = GetInfo
+  getVis           = GetVis
+  getLocalType     = GetLocalType
+  getCons          = GetCons
+  getReferredFns   = GetReferredFns
+  getCurrentFn     = GetCurrentFn
+  declare          = Declare
+  readFile         = ReadFile
+  writeFile        = WriteFile
+  idrisDir         = IdrisDir
 
 public export
 Elaboration m => MonadTrans t => Monad (t m) => Elaboration (t m) where
@@ -275,7 +275,7 @@ Elaboration m => MonadTrans t => Monad (t m) => Elaboration (t m) where
   logSugaredTerm s n  = lift .: logSugaredTerm s n
   resugarTerm         = lift .: resugarTerm
   check               = lift . check
-  getCompPairs        = lift . getCompPairs
+  getDecEqConPairs    = lift . getDecEqConPairs
   quote v             = lift $ quote v
   lambda x            = lift . lambda x
   goal                = lift goal

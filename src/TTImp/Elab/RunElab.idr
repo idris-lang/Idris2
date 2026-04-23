@@ -244,7 +244,13 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
                            (Just (glueBack defs env exp'))
              empty <- clearDefs defs
              nf empty env checktm
-    elabCon defs "GetCompPairs" [_, x1]
+    {-
+    To enable automatic derivation of decidable equality:
+    For a given type constructor, 
+        get all pairs of data constructors that need a decEq clause, 
+        i.e. constructors that have the same type 
+     -}
+    elabCon defs "GetDecEqConPairs" [_, x1]
         = do 
         -- we want to be sure a type constructor was passed in
             NTCon _ n _ _ <- evalClosure defs x1
@@ -252,37 +258,45 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
             Just (TCon _ _ _ _ _ cons _) <- lookupDefExact n (gamma defs)
               | _ => failWith defs "not a type constructor"
             gdefs' <- traverse (\con => lookupCtxtExact con (gamma defs)) (fromMaybe [] cons)
-            let gdefs : List GlobalDef = catMaybes gdefs'
-            -- for the type of a constructor, go under all binders and get the final, fully applied type in an extended scope
-            let getLastTy : (v : Scope) -> Term v -> (v' ** List (Term v'))
+            let gdefs : List GlobalDef
+                gdefs = catMaybes gdefs'
+            -- traverse_ (logTerm "auto" 1 "con: ") (map (.type) gdefs)
+            let splitTys : (v : Scope) -> Term v -> Core (v' ** Term v')
+                splitTys v (Bind _ x (Pi _ _ info ty) sc) = ?sdfj
+                splitTys _ _ = ?wesdjfk
+                -- for the type of a constructor, go under all binders and get the final type as a list of applied terms in an extended scope
+                getLastTy : (v : Scope) -> Term v -> (v' ** List (Term v'))
                 getLastTy v (Bind _ nm _ sc) = getLastTy (Scope.bind v nm) sc 
                 getLastTy v x = let (f, args) = getFnArgs x in (v ** (f :: args))
-            -- list of (name, last ty) for each constructor
-            let cterms = map (\x => (show x.fullname, getLastTy [] x.type)) gdefs
-            -- all possible pairs of constructors. we remove identical terms by name, as terms themselves cannot be compared. we want permutations rather than combinations. 
-            let pairs : List ((String, (v ** List (Term v))), (String , (v' ** List (Term v')))) = nubBy (\x, y => (fst (fst x) == fst (fst y)) && (fst (snd x) == fst (snd y))) [(x, y) | x <- cterms, y <- cterms]
-            vals : List (List (String, String)) <- traverse (\((x1, (vy1 ** y1)), (x2, (vy2 ** y2))) =>
+                -- list of (name, last ty) for each constructor
+                cterms : List (String, (v ** List (Term v)))
+                cterms = map (\x => (show x.fullname, getLastTy [] x.type)) gdefs
+                -- all possible pairs of constructors. we remove identical terms by name, as terms themselves cannot be compared. we want permutations rather than combinations. 
+                pairs : List ((String, (v ** List (Term v))), (String , (v' ** List (Term v'))))
+                pairs = nubBy (\x, y => (fst (fst x) == fst (fst y)) && (fst (snd x) == fst (snd y))) [(x, y) | x <- cterms, y <- cterms]
+                -- vals : List (List (String, String)) 
+            vals <- traverse (\((x1, (vy1 ** y1)), (x2, (vy2 ** y2))) =>
                 -- for the same constructor, we do want to return it as a pair
                 if (x1 == x2) then pure [(x1, x2)] else do 
-                  -- unify the environments of both terms onto the existing global environment
-                  let env' : Env Term ((vy1 ++ vy2) ++ vars) = mkEnvOnto EmptyFC (vy1 ++ vy2) env
-                  -- resolve name clashes 
-                  let (vars' ** (uenv', comp)) = Env.uniqifyEnv {vars=((vy1 ++ vy2) ++ vars)} env'
-                  -- convert the terms to be in the same scope as the environment
-                  let y1' : List (Term vars') = map (compatNs comp) $ map (Scoped.embed {outer=vars}) $ map (Scoped.embed {outer=vy2}) y1
-                  let y2' : List (Term vars') = map (compatNs comp) $ map (Scoped.embed {outer=vars}) $ map (Scoped.weakenNs {ns = vy1} (mkSizeOf vy1)) y2
-                  -- whether two terms can be the same type. we want to be more general than the `convert` function: we assume local variables can always be unified, and recursively check for local variables in applications. 
-                  let doConv : (Term vars', Term vars') -> Core Bool
-                      doConv (Local _ _ _ _, Local _ _ _ _) = pure True 
-                      doConv (x@(App _ _ _), y@(App _ _ _)) = do 
-                        let x' = uncurry (::) $ getFnArgs x 
-                        let y' = uncurry (::) $ getFnArgs y
-                        res <- traverse doConv (zip x' y')
-                        pure $ all (== True) res
-                      doConv (x, y) = Core.Normalise.Convert.convert defs uenv' x y
-                  res <- traverse doConv (zip y1' y2')
-                  if (all (== True) res) then pure [(x1, x2)] else pure []
-                  ) pairs 
+                -- unify the environments of both terms onto the existing global environment
+                    let env' : Env Term ((vy1 ++ vy2) ++ vars) = mkEnvOnto EmptyFC (vy1 ++ vy2) env
+                    -- resolve name clashes 
+                    let (vars' ** (uenv', comp)) = Env.uniqifyEnv {vars=((vy1 ++ vy2) ++ vars)} env'
+                    -- convert the terms to be in the same scope as the environment
+                    let y1' : List (Term vars') = map (compatNs comp) $ map (Scoped.embed {outer=vars}) $ map (Scoped.embed {outer=vy2}) y1
+                    let y2' : List (Term vars') = map (compatNs comp) $ map (Scoped.embed {outer=vars}) $ map (Scoped.weakenNs {ns = vy1} (mkSizeOf vy1)) y2
+                    -- whether two terms can be the same type. we want to be more general than the `convert` function: we assume local variables can always be unified, and recursively check for local variables in applications. 
+                    let doConv : (Term vars', Term vars') -> Core Bool
+                        doConv (Local _ _ _ _, Local _ _ _ _) = pure True 
+                        doConv (x@(App _ _ _), y@(App _ _ _)) = do 
+                            let x' = uncurry (::) $ getFnArgs x 
+                            let y' = uncurry (::) $ getFnArgs y
+                            res <- traverse doConv (zip x' y')
+                            pure $ all (== True) res
+                        doConv (x, y) = Core.Normalise.Convert.convert defs uenv' x y
+                    res <- traverse doConv (zip y1' y2')
+                    if (all (== True) res) then pure [(x1, x2)] else pure []
+              ) pairs 
             scriptRet $ concat vals
     elabCon defs "Quote" [exp, tm]
         = do tm' <- evalClosure defs tm
