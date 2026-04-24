@@ -188,6 +188,7 @@ setOpt (Profile t)
 setOpt (EvalTiming t)
     = setEvalTiming t
 
+export
 getOptions : {auto c : Ref Ctxt Defs} ->
          {auto o : Ref ROpts REPLOpts} ->
          Core (List REPLOpt)
