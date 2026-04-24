@@ -251,16 +251,20 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
             let 
                 gdefs : List GlobalDef = catMaybes gdefs'
                 cNameTys = map (\x => (show x.fullname, getQualifiedType [] x.type)) gdefs
-                allPairs = [(x, y) | x <- cNameTys, y <- cNameTys, fst x /= fst y] ++ (map (\t => (t, t)) cNameTys)
-            let validatePair : ((String, (v ** List (Term v))), (String, (v' ** List (Term v')))) -> Core (Maybe (String, String))
+                allPairs = [(x, y) | x <- cNameTys, y <- cNameTys, fst x /= fst y] 
+                             ++ (map (\t => (t, t)) cNameTys)
+            let validatePair : ((String, (v ** List (Term v))), (String, (v' ** List (Term v')))) 
+                                  -> Core (Maybe (String, String))
                 validatePair ((x1, (vy1 ** y1)), (x2, (vy2 ** y2))) =
                     if (x1 == x2)
-                    then pure (Just (x1, x2))
+                    then pure $ Just (x1, x2)
                     else do
                         let env' : Env Term ((vy1 ++ vy2) ++ vars) = mkEnvOnto EmptyFC (vy1 ++ vy2) env
                             (vars' ** (uenv', comp)) = Env.uniqifyEnv {vars=((vy1 ++ vy2) ++ vars)} env'
-                            y1' : List (Term vars') = map (compatNs comp . Scoped.embed {outer=vars} . Scoped.embed {outer=vy2}) y1
-                            y2' : List (Term vars') = map (compatNs comp . Scoped.embed {outer=vars} . Scoped.weakenNs {ns = vy1} (mkSizeOf vy1)) y2
+                            y1' : List (Term vars') = map (compatNs comp . Scoped.embed {outer=vars} 
+                                                            . Scoped.embed {outer=vy2}) y1
+                            y2' : List (Term vars') = map (compatNs comp . Scoped.embed {outer=vars} 
+                                                            . Scoped.weakenNs {ns=vy1} (mkSizeOf vy1)) y2
                         let areCompatible : (Term vars', Term vars') -> Core Bool
                             areCompatible (Local _ _ _ _, Local _ _ _ _) = pure True 
                             areCompatible (x@(App _ _ _), y@(App _ _ _)) = do 
