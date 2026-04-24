@@ -276,7 +276,7 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
                         res <- Core.Core.traverse areCompatible (zip y1' y2')
                         pure $ toMaybe (and (map delay res)) (delay (x1, x2))
             vals <- Core.Core.traverse validatePair allPairs
-            scriptRet $ filter isJust vals
+            scriptRet $ catMaybes vals
     elabCon defs "Quote" [exp, tm]
         = do tm' <- evalClosure defs tm
              defs <- get Ctxt
