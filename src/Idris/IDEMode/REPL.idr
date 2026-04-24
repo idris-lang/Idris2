@@ -128,6 +128,7 @@ data IDEResult
   | TTTerm String -- should be a TT Term + metadata, or perhaps SExp
   | NameLocList (List (Name, FC))
   | VersionSExp Version
+  | OptionsSExp (List REPLOpt)
 
 replWrap : Core REPLResult -> Core IDEResult
 replWrap m = pure $ REPL !m
@@ -238,7 +239,8 @@ process Version
 process (Metavariables _)
     = FoundHoles <$> getUserHolesData
 process GetOptions
-    = replWrap $ Idris.REPL.process GetOpts
+    = do opts <- getOptions
+         pure $ OptionsSExp opts
 
 processCatch : {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
@@ -364,6 +366,9 @@ displayIDEResult outf i  (REPL $ LogLevelSet k)
   = printIDEResult outf i
   $ AString $ "Set loglevel to " ++ show k
 displayIDEResult outf i  (REPL $ OptionsSet opts)
+  = printIDEResult outf i
+  $ AString $ showSep "\n" $ map show opts
+displayIDEResult outf i  (OptionsSExp opts)
   = printIDEResult outf i $ AnOptionList $ map cast opts
 displayIDEResult outf i  (REPL $ VersionIs x)
   = printIDEResult outf i $ AString (showVersion True x)
