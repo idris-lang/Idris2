@@ -163,7 +163,8 @@ interface Monad m => Elaboration m where
   ||| Returns the type checked value
   check : TTImp -> m expected
 
-  ||| Given a value, assumed to be a type constructor, returns as strings the pairs of data constructors that could potentially have the same type 
+  ||| For a given type constructor, return pairs of data constructors that could have the same type 
+  ||| Returns a List of pairs of constructor names as strings 
   ||| Util for automated derivation of decidable equality
   getDecEqConPairs : a -> m (List (String, String))
   ||| Return TTImp syntax of a given value

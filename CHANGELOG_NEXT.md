@@ -75,6 +75,7 @@ should target this file (`CHANGELOG_NEXT`).
 * Optimised the passing of local variables during compile-time normalisation.
 * Added `getFC` to elaborator reflection, exposing the macro call-site source
   location.
+* Added `GetDecEqConPairs` as an elaboration script, as a utility for automated derivation of decidable equality (in external repository `stefan-hoeck/idris2-elab-util`)
 
 ### Building/Packaging changes
 
