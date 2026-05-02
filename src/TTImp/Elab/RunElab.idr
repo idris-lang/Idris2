@@ -1,7 +1,9 @@
 module TTImp.Elab.RunElab
 
+import Core.Case.Util
 import Core.Directory
 import Core.Env
+import Core.GetType
 import Core.Metadata
 import Core.Reflect
 import Core.Unify
@@ -17,6 +19,7 @@ import Idris.Syntax
 
 import Libraries.Data.List.SizeOf
 import Libraries.Data.NameMap
+import Libraries.Data.NatSet
 import Libraries.Data.WithDefault
 import Libraries.Text.PrettyPrint.Prettyprinter.Doc -- for PageWidth
 import Libraries.Utils.Path
@@ -31,6 +34,7 @@ import TTImp.Unelab
 import System.File.Meta
 
 %default covering
+%logging 1 
 
 record NameInfo where
   constructor MkNameInfo
@@ -242,39 +246,44 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
         = do
             NTCon _ n _ _ <- evalClosure defs x1
               | _ => failWith defs "not a type constructor"
-            Just (TCon _ _ _ _ _ cons _) <- lookupDefExact n (gamma defs)
+            Just (TCon arty params _ _ _ cons _) <- lookupDefExact n (gamma defs)
               | _ => failWith defs "not a type constructor"
             gdefs' <- traverse (\con => lookupCtxtExact con (gamma defs)) (fromMaybe [] cons)
-            let getQualifiedType : (v : Scope) -> Term v -> (v' ** List (Term v'))
-                getQualifiedType v (Bind _ nm _ sc) = getQualifiedType (Scope.bind v nm) sc 
-                getQualifiedType v x = let (f, args) = getFnArgs x in (v ** (f :: args))
-            let 
-                gdefs : List GlobalDef = catMaybes gdefs'
-                cNameTys = map (\x => (show x.fullname, getQualifiedType [] x.type)) gdefs
-                allPairs = [(x, y) | x <- cNameTys, y <- cNameTys, fst x /= fst y] 
-                             ++ (map (\t => (t, t)) cNameTys)
-            let validatePair : ((String, (v ** List (Term v))), (String, (v' ** List (Term v')))) 
+            let getNFArgs : NF [] -> Core (List (NF []))
+                getNFArgs (NBind fc _ (Pi _ _ _ _) sc) = do 
+                    res <- sc defs (MkClosure defaultOpts [] [] (Erased fc Placeholder))
+                    getNFArgs res 
+                getNFArgs (NTCon _ _ _ sp) = traverse (evalClosure defs) (toList (map snd sp))
+                getNFArgs x = pure [] 
+            let mkCon : GlobalDef -> Core (String, List (NF []))
+                mkCon condef = do 
+                    let name : String = show condef.fullname
+                    nfcon <- nf defs [] condef.type
+                    args <- getNFArgs nfcon 
+                    -- log "auto" 1 $ delay $ "-----------\nname: " ++ name ++ "\nargs: " ++ (concat (intersperse "," (map show args)))
+                    pure (name, args)
+            let gdefs : List GlobalDef = catMaybes gdefs'
+            cons : List (String, List (NF [])) <- traverse mkCon gdefs
+            let allPairs = [(x, y) | x <- cons, y <- cons, fst x /= fst y]
+                             ++ (map (\t => (t, t)) cons)
+            let validateNFArg : (NF [], NF []) -> Core Bool 
+                validateNFArg (NPrimVal _ x, NPrimVal _ y) = pure $ x == y 
+                validateNFArg (NDCon _ x _ _ xcls, NDCon _ y _ _ ycls) = case (x == y) of
+                    True => do 
+                        xargs <- traverse (evalClosure defs) (map Builtin.snd xcls)
+                        yargs <- traverse (evalClosure defs) (map Builtin.snd ycls)
+                        res <- traverse validateNFArg (zip xargs yargs)
+                        pure $ and (map delay res)
+                    False => pure False 
+                validateNFArg (_, _) = pure True 
+            let validatePair : ((String, List (NF [])), (String, List (NF [])))
                                   -> Core (Maybe (String, String))
-                validatePair ((x1, (vy1 ** y1)), (x2, (vy2 ** y2))) =
-                    if (x1 == x2)
-                    then pure $ Just (x1, x2)
-                    else do
-                        let env' : Env Term ((vy1 ++ vy2) ++ vars) = mkEnvOnto EmptyFC (vy1 ++ vy2) env
-                            (vars' ** (uenv', comp)) = Env.uniqifyEnv {vars=((vy1 ++ vy2) ++ vars)} env'
-                            y1' : List (Term vars') = map (compatNs comp . Scoped.embed {outer=vars} 
-                                                            . Scoped.embed {outer=vy2}) y1
-                            y2' : List (Term vars') = map (compatNs comp . Scoped.embed {outer=vars} 
-                                                            . Scoped.weakenNs {ns=vy1} (mkSizeOf vy1)) y2
-                        let areCompatible : (Term vars', Term vars') -> Core Bool
-                            areCompatible (Local _ _ _ _, Local _ _ _ _) = pure True 
-                            areCompatible (x@(App _ _ _), y@(App _ _ _)) = do 
-                                let x' = uncurry (::) $ getFnArgs x 
-                                    y' = uncurry (::) $ getFnArgs y
-                                res <- Core.Core.traverse areCompatible (zip x' y')
-                                pure $ and $ map delay res
-                            areCompatible (x, y) = convert {vars = vars'} defs uenv' x y
-                        res <- Core.Core.traverse areCompatible (zip y1' y2')
-                        pure $ toMaybe (and (map delay res)) (delay (x1, x2))
+                validatePair ((nx, xargs), (ny, yargs)) =
+                    if (nx == ny) 
+                    then pure (Just (nx, ny))
+                    else do 
+                        res <- traverse validateNFArg (zip xargs yargs)
+                        if (and (map delay res)) then pure (Just (nx, ny)) else pure Nothing 
             vals <- Core.Core.traverse validatePair allPairs
             scriptRet $ catMaybes vals
     elabCon defs "Quote" [exp, tm]

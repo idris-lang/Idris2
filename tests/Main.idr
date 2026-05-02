@@ -6,7 +6,7 @@ import System.File
 
 import Data.List
 import Data.Maybe
-
+import Language.Reflection
 import Test.Golden
 
 %default covering
