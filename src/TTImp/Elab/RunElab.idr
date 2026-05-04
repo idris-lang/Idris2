@@ -257,7 +257,7 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
                 getNFArgs x = pure [] 
             let mkCon : GlobalDef -> Core (String, List (NF []))
                 mkCon condef = do 
-                    let name : String = show condef.fullname
+                    let name : String = nameRoot condef.fullname
                     nfcon <- nf defs [] condef.type
                     args <- getNFArgs nfcon 
                     -- log "auto" 1 $ delay $ "-----------\nname: " ++ name ++ "\nargs: " ++ (concat (intersperse "," (map show args)))
@@ -285,7 +285,7 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
                         res <- traverse validateNFArg (zip xargs yargs)
                         if (and (map delay res)) then pure (Just (nx, ny)) else pure Nothing 
             vals <- Core.Core.traverse validatePair allPairs
-            scriptRet $ catMaybes vals
+            scriptRet $ (toList params, catMaybes vals)
     elabCon defs "Quote" [exp, tm]
         = do tm' <- evalClosure defs tm
              defs <- get Ctxt

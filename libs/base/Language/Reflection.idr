@@ -65,8 +65,8 @@ data Elab : Type -> Type where
      -- Elaborate a TTImp term to a concrete value
      Check : TTImp -> Elab expected
 
-    --  given a type constructor, get the pairs of data constructors that can have the same type. 
-     GetDecEqConPairs : a -> Elab (List (String, String))
+    --  given a type constructor, get positions of parameters in type, and the pairs of data constructors that can have the same type. 
+     GetDecEqConPairs : a -> Elab (List Nat, List (String, String))
      -- Quote a concrete expression back to a TTImp
      Quote : (0 _ : val) -> Elab TTImp
 
@@ -163,10 +163,10 @@ interface Monad m => Elaboration m where
   ||| Returns the type checked value
   check : TTImp -> m expected
 
-  ||| For a given type constructor, return pairs of data constructors that could have the same type 
-  ||| Returns a List of pairs of constructor names as strings 
+  ||| For a given type constructor, return param positions and pairs of data constructors that could have the same type 
+  ||| Returns a List of nats for parameter positions, and List of pairs of constructor names as strings 
   ||| Util for automated derivation of decidable equality
-  getDecEqConPairs : a -> m (List (String, String))
+  getDecEqConPairs : a -> m (List Nat, List (String, String))
   ||| Return TTImp syntax of a given value
   quote : (0 _ : val) -> m TTImp
 
