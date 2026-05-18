@@ -90,11 +90,6 @@ should target this file (`CHANGELOG_NEXT`).
 * Fixed an issue to do with `alligned_alloc` not existing on older MacOS
   versions, causing builds targeting PowerPC to fail (#3662).  For these
   systems, the compiler will now use `posix_memalign`.
-* Fixed integer comparison operators returning incorrect results on WASM32.
-  The `idris2_extractInt` function incorrectly used `idris2_vp_to_Int32` for
-  unboxed values, which dereferences unboxed pointers as `Idris2_Int32*`
-  (previously `Value_Int32*`) on 32-bit platforms when `UINTPTR_WIDTH` is not
-  defined (common in Emscripten).
 * Fix missing support for sized, signed integers in FFI.
 * Fix headers for numeric negation.
 * Prefix RefC Idris values with `Idris2_` to prevent name collisions with third

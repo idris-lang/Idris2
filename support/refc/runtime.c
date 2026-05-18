@@ -192,7 +192,7 @@ void idris2_removeReuseConstructor(Idris2_Constructor *constr) {
 
 int idris2_extractInt(Idris2_Value *v) {
   if (idris2_vp_is_unboxed(v))
-    return (int)((uintptr_t)(v) >> idris2_vp_int_shift);
+    return (int)idris2_vp_to_Int32(v);
 
   switch (v->header.tag) {
   case BITS32_TAG:
