@@ -79,6 +79,8 @@ should target this file (`CHANGELOG_NEXT`).
 * Removed `Borrowing` as a language extension.  This was never implemented in
   Idris2, so the only change is that `%language Borrowing` will now error rather
   than be accepted but do nothing.
+* HTML files generated using `--mkdoc` now contain attributes, that allow
+  external tools to insert links from documentation to source code.
 
 ### Building/Packaging changes
 
