@@ -32,21 +32,18 @@ data KwPragma
 public export
 data LangExt
   = ElabReflection
-  | Borrowing -- not yet implemented
 
 export
 allLangExts : List LangExt
-allLangExts = [ElabReflection, Borrowing]
+allLangExts = [ElabReflection]
 
 export
 Show LangExt where
   show ElabReflection = "ElabReflection"
-  show Borrowing = "Borrowing"
 
 export
 Eq LangExt where
   ElabReflection == ElabReflection = True
-  Borrowing == Borrowing = True
   _ == _ = False
 
 public export
