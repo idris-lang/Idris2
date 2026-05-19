@@ -260,7 +260,6 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
                     let name : String = nameRoot condef.fullname
                     nfcon <- nf defs [] condef.type
                     args <- getNFArgs nfcon 
-                    -- log "auto" 1 $ delay $ "-----------\nname: " ++ name ++ "\nargs: " ++ (concat (intersperse "," (map show args)))
                     pure (name, args)
             let gdefs : List GlobalDef = catMaybes gdefs'
             cons : List (String, List (NF [])) <- traverse mkCon gdefs
