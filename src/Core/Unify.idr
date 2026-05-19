@@ -1370,7 +1370,6 @@ Eq SolveMode where
   LastChance == LastChance = True
   _ == _ = False
 
-
 retry : {auto c : Ref Ctxt Defs} ->
         {auto u : Ref UST UState} ->
         UnifyInfo -> Int -> Core UnifyResult

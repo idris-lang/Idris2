@@ -1,0 +1,15 @@
+1/1: Building Y (Y.idr)
+Error: While processing right hand side of t. When unifying:
+    Void
+and:
+    Nat
+Mismatch between: Void and Nat.
+
+Y:8:22--8:23
+ 4 |   a : Pair Type Type
+ 5 |   b : fst a -> Void
+ 6 |
+ 7 | t : Test
+ 8 | t = K (Nat, Bool) (\ n : Void => n)
+                          ^
+
