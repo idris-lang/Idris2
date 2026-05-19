@@ -317,7 +317,7 @@ the ``Nothing`` cases is achieved by the ``>>=`` operator, hidden by the
 ::
 
     Main> m_add (Just 82) (Just 22)
-    Just 94
+    Just 104
     Main> m_add (Just 82) Nothing
     Nothing
 
