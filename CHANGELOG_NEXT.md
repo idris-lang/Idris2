@@ -76,6 +76,9 @@ should target this file (`CHANGELOG_NEXT`).
 * Optimised the passing of local variables during compile-time normalisation.
 * Added `getFC` to elaborator reflection, exposing the macro call-site source
   location.
+* Removed `Borrowing` as a language extension.  This was never implemented in
+  Idris2, so the only change is that `%language Borrowing` will now error rather
+  than be accepted but do nothing.
 
 ### Building/Packaging changes
 
