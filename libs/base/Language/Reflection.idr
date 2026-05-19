@@ -67,6 +67,7 @@ data Elab : Type -> Type where
 
     --  given a type constructor, get positions of parameters in type, and the pairs of data constructors that can have the same type. 
      GetDecEqConPairs : a -> Elab (List Nat, List (String, String))
+
      -- Quote a concrete expression back to a TTImp
      Quote : (0 _ : val) -> Elab TTImp
 
@@ -266,7 +267,7 @@ Elaboration Elab where
   getCons          = GetCons
   getReferredFns   = GetReferredFns
   getCurrentFn     = GetCurrentFn
-  getFC          = GetFC
+  getFC            = GetFC
   declare          = Declare
   readFile         = ReadFile
   writeFile        = WriteFile

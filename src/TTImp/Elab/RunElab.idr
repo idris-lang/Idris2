@@ -1,9 +1,7 @@
 module TTImp.Elab.RunElab
 
-import Core.Case.Util
 import Core.Directory
 import Core.Env
-import Core.GetType
 import Core.Metadata
 import Core.Reflect
 import Core.Unify
@@ -34,7 +32,6 @@ import TTImp.Unelab
 import System.File.Meta
 
 %default covering
-%logging 1 
 
 record NameInfo where
   constructor MkNameInfo
