@@ -44,7 +44,6 @@ Show LangExt where
 export
 Eq LangExt where
   ElabReflection == ElabReflection = True
-  _ == _ = False
 
 public export
 data PragmaArg
