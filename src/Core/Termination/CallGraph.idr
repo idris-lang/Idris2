@@ -308,8 +308,8 @@ mutual
                         -- the program as written (plus tcinlines)
            Core (List SCCall)
   -- If we're Guarded and find a Delay, continue with the argument as InDelay
-  findSC Guarded eqs pats (VDelay _ LInf _ tm)
-      = findSC InDelay eqs pats tm
+  findSC Guarded eqs args (VDelay _ LInf _ tm)
+      = findSC InDelay eqs args tm
   findSC g eqs args (VBind _ _ (Lam _ _ _ _) sc)
       = findSC g eqs args !(sc nextVar)
   findSC g eqs args (VBind fc n b sc)
@@ -319,11 +319,11 @@ mutual
         findSCbinder : Binder (Glued [<]) -> Core (List SCCall)
         findSCbinder (Let _ c val ty) = findSC g eqs args val
         findSCbinder _ = pure [] -- only types, no need to look
-  findSC g eqs pats (VDelay _ _ _ tm)
-      = findSC g eqs pats tm
-  findSC g eqs pats (VForce _ _ v sp)
-      = do vCalls <- findSC Unguarded eqs pats v
-           spCalls <- findSCspine Unguarded eqs pats sp
+  findSC g eqs args (VDelay _ _ _ tm)
+      = findSC g eqs args tm
+  findSC g eqs args (VForce _ _ v sp)
+      = do vCalls <- findSC Unguarded eqs args v
+           spCalls <- findSCspine Unguarded eqs args sp
            pure (vCalls ++ spCalls)
   findSC g eqs args tm@(VCase fc ct c (VApp _ Bound n [<] _) scTy alts)
       = do logNF "totality.termination.sizechange" 50 "findSC VCase VApp Bound ct=\{show ct} tm" [<] tm
@@ -343,9 +343,9 @@ mutual
            scCalls <- logDepth $ findSC Unguarded eqs args (asGlued sc)
            logC "totality.termination.sizechange" 50 $ pure "findSC VCase VApp ? scCalls: \{show scCalls}"
            pure (scCalls ++ concat altCalls)
-  findSC g eqs pats tm = do
+  findSC g eqs args tm = do
     logNF "totality.termination.sizechange" 50 "findSC findSCapp tm g=\{show g}" [<] tm
-    findSCapp g eqs pats tm
+    findSCapp g eqs args tm
 
   findSCAppFunc : {auto c : Ref Ctxt Defs} ->
                   {auto v : Ref SCVar Int} ->
@@ -487,7 +487,7 @@ mutual
       = logDepth $ findSC g eqs !(maybe (pure args)
                          (\v => replaceInArgs v (VPrimVal fc c) args) var)
                  tm
-  findSCalt g eqs args var (VDefaultCase fc tm) = logDepth $ findSC g eqs args tm
+  findSCalt g eqs args _ (VDefaultCase fc tm) = logDepth $ findSC g eqs args tm
 
 
   findSCspine : {auto c : Ref Ctxt Defs} ->
