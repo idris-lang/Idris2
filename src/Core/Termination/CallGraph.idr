@@ -338,8 +338,10 @@ mutual
 
   findSC g eqs args tm@(VCase fc ct c sc scTy alts)
       = do logNF "totality.termination.sizechange" 50 "findSC VCase VApp ? ct=\{show ct} tm" [<] tm
-           altCalls <- traverse (findSCalt g eqs args Nothing) alts
-           scCalls <- findSC Unguarded eqs args (asGlued sc)
+           altCalls <- logDepth $ traverse (findSCalt g eqs args Nothing) alts
+           logC "totality.termination.sizechange" 50 $ pure "findSC VCase VApp ? altCalls: \{show altCalls}"
+           scCalls <- logDepth $ findSC Unguarded eqs args (asGlued sc)
+           logC "totality.termination.sizechange" 50 $ pure "findSC VCase VApp ? scCalls: \{show scCalls}"
            pure (scCalls ++ concat altCalls)
   findSC g eqs pats tm = do
     logNF "totality.termination.sizechange" 50 "findSC findSCapp tm g=\{show g}" [<] tm
@@ -431,21 +433,36 @@ mutual
               (do tms <- traverse (\ (gx, gy) =>
                               pure (!(toFullNames !(quote [<] gx)),
                                     !(toFullNames !(quote [<] gy)))) eqsc
-                  pure ("Force equalities " ++ show tms))
+                  teqs <- traverse (\ (gx, gy) =>
+                              pure (!(toFullNames !(quote [<] gx)),
+                                    !(toFullNames !(quote [<] gy)))) eqs
+                  pure ("Force equalities eqsc=\{show tms}, eqs=\{show teqs}"))
           let eqs' = eqsc ++ eqs
+          logC "totality.termination.sizechange" 10 $ do
+            pat <- toFullNames !(quote [<] pat)
+            pure "findSCscope replaceInArgs for var=\{show !(toFullNames var)}, pat=\{show pat}"
+          logC "totality.termination.sizechange" 10 $ do
+            args <- traverse (\ (a, b) => pure (a, !(toFullNames !(quote [<] b)))) args
+            pure "findSCscope replaceInArgs for args=\{show args}"
           args' <- maybe (pure args) (\v => replaceInArgs v pat args) var
-          logNF "totality.termination.sizechange" 10 "RHS" [<] rhs
-          logDepth $ findSC g eqs'
-                 !(traverse (\ (n, arg) => pure (n, !(canonicalise eqs' arg))) args')
-                 rhs
+          logC "totality.termination.sizechange" 10 $ do
+            args' <- traverse (\ (a, b) => pure (a, !(toFullNames !(quote [<] b)))) args'
+            pure "findSCscope replaceInArgs for arg'=\{show args'}"
+          args'' <- traverse (\ (n, arg) => pure (n, !(canonicalise eqs' arg))) args'
+          logC "totality.termination.sizechange" 10 $ do
+            args'' <- traverse (\ (a, b) => pure (a, !(toFullNames !(quote [<] b)))) args''
+            pure "findSCscope replaceInArgs for args''=\{show args''}"
+          logNF "totality.termination.sizechange" 10 "RHS var=\{show !(toFullNames var)}" [<] rhs
+          logDepth $ findSC g eqs' args'' rhs
   findSCscope g eqs args var fc pat (cargs :< (c, xn)) sc
      = do varg <- nextVar
           pat' <- the (Core (Glued [<])) $ case pat of
                     VDCon vfc n t a sp =>
                         pure (VDCon vfc n t a (sp :< MkSpineEntry fc c (pure varg)))
                     _ => throw (InternalError "Not a data constructor in findSCscope")
+          logNF "totality.termination.sizechange" 10 "findSCscope varg=\{show varg} xn=\{show xn} pat" [<] pat
+          logNF "totality.termination.sizechange" 10 "findSCscope varg=\{show varg} xn=\{show xn} pat'" [<] pat'
           findSCscope g eqs args var fc pat' cargs (sc (pure varg))
-
 
   findSCalt : {auto c : Ref Ctxt Defs} ->
               {auto v : Ref SCVar Int} ->
@@ -549,8 +566,10 @@ findSCTop i args def = findSC Toplevel [] (reverse args) def
 
 getSC : {auto c : Ref Ctxt Defs} ->
         Defs -> Def -> Core (List SCCall)
-getSC defs (Function _ tm _ _)
-   = do ntm <- nfTotality [<] tm
+getSC defs (Function _ tm _ pats)
+   = do logTerm "totality.termination.sizechange" 5 "From term" tm
+        logC "totality.termination.sizechange" 5 $ pure "From pats \{show !(toFullNames pats)}"
+        ntm <- nfTotality [<] tm
         logNF "totality.termination.sizechange" 5 "From tree" [<] ntm
         v <- newRef SCVar 0
         sc <- findSCTop 0 [] ntm
