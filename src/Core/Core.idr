@@ -84,6 +84,10 @@ data Warning : Type where
      ||| A warning about a deprecated definition. Supply an FC and Name to
      ||| have the documentation for the definition printed with the warning.
      Deprecated : FC -> String -> Maybe (FC, Name) -> Warning
+     ||| A warning about a function which the compiler was explicitly told
+     ||| *should* be optimised to the identity function, but which didn't.
+     ||| Takes an `FC` and the showable name of the function.
+     EnsureIdFailed : FC -> Name -> Warning
      GenericWarn : FC -> String -> Warning
 
 %name Warning wrn
@@ -227,6 +231,7 @@ Show Warning where
     show (IncompatibleVisibility fc _ _ _) = show fc ++ ":Incompatible Visibility"
     show (ShadowingLocalBindings fc _) = show fc ++ ":Shadowing names"
     show (Deprecated fc name _) = show fc ++ ":Deprecated " ++ name
+    show (EnsureIdFailed fc name) = show fc ++ ":Function " ++ show name ++ " did not reduce to the identity function"
     show (GenericWarn fc msg) = show fc ++ msg
 
 
@@ -428,6 +433,7 @@ getWarningLoc (ShadowingGlobalDefs fc _) = fc
 getWarningLoc (IncompatibleVisibility loc _ _ _) = loc
 getWarningLoc (ShadowingLocalBindings fc _) = fc
 getWarningLoc (Deprecated fc _ fcAndName) = fromMaybe fc (fst <$> fcAndName)
+getWarningLoc (EnsureIdFailed fc _) = fc
 getWarningLoc (GenericWarn fc _) = fc
 
 export
@@ -512,6 +518,9 @@ getErrorLoc (MaybeMisspelling err _) = getErrorLoc err
 getErrorLoc (WarningAsError warn) = Just (getWarningLoc warn)
 getErrorLoc (OperatorBindingMismatch loc _ _ _ _ _) = Just loc
 
+||| Remove the file context (FC), i.e. location, from the given warning.  We do
+||| this, for example, when resolving `failing` blocks where all that matters is
+||| that the messages match; the FC would get in the way.
 export
 killWarningLoc : Warning -> Warning
 killWarningLoc (ParserWarning fc x) = ParserWarning emptyFC x
@@ -521,8 +530,13 @@ killWarningLoc (IncompatibleVisibility fc x y z) = IncompatibleVisibility emptyF
 killWarningLoc (ShadowingLocalBindings fc xs) =
     ShadowingLocalBindings emptyFC $ (\(n, _, _) => (n, emptyFC, emptyFC)) <$> xs
 killWarningLoc (Deprecated fc x y) = Deprecated emptyFC x (map ((emptyFC,) . snd) y)
+killWarningLoc (EnsureIdFailed fc x) = EnsureIdFailed emptyFC x
 killWarningLoc (GenericWarn fc x) = GenericWarn emptyFC x
 
+
+||| Remove the file context (FC), i.e. location, from the given error.  We do
+||| this, for example, when resolving `failing` blocks where all that matters
+||| is that the messages match; the FC would get in the way.
 export
 killErrorLoc : Error -> Error
 killErrorLoc (Fatal err) = Fatal (killErrorLoc err)

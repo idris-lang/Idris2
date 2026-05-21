@@ -3,12 +3,15 @@ module Compiler.Opts.Identity
 import Core.CompileExpr
 import Core.Context.Log
 import Data.Vect
+import Data.Maybe
 
 import Libraries.Data.List.SizeOf
 
 makeArgs : (args : Scope) -> List (Var (args ++ vars))
 makeArgs args = embed @{ListFreelyEmbeddable} (Var.allVars args)
 
+-- the ways we consider the given function's idIdx'th argument to evaluate to
+-- itself, thereby showing that the function is the identity function
 parameters (fn1 : Name) (idIdx : Nat)
   mutual
     -- special case for matching on 'Nat'-shaped things
@@ -102,12 +105,20 @@ parameters (fn1 : Name) (idIdx : Nat)
     maybeVarEq _ _ _ Nothing = True
     maybeVarEq var con const (Just exp) = cexpIdentity var con const exp
 
+||| For each variable in the list of variables which is the arguments of the
+||| function, check whether the idx'th variable is returned from the function
+||| unaltered (according to `cexpIdentity`).  If so, we have found the index of
+||| the argument (variable) which is identity.  If we check all variables and
+||| none of them are returned unaltered, then the function is not an identity
+||| function and there is no such "identity" index.
 checkIdentity : (fullName : Name) -> List (Var vars) -> CExp vars -> Nat -> Maybe Nat
 checkIdentity _ [] _ _ = Nothing
 checkIdentity fn (v :: vs) exp idx = if cexpIdentity fn idx v Nothing Nothing exp
     then Just idx
     else checkIdentity fn vs exp (S idx)
 
+||| Calculate the index of the function arguments which remains unchanged, i.e.
+||| confirms that this function is the identity function.
 calcIdentity : (fullName : Name) -> CDef -> Maybe Nat
 calcIdentity fn (MkFun args exp) = checkIdentity fn (Var.allVars args) exp Z
 calcIdentity _ _ = Nothing
@@ -148,8 +159,21 @@ setIdentity : Ref Ctxt Defs => Name -> Core ()
 setIdentity fn = do
     defs <- get Ctxt
     Just (fnIdx, gdef) <- lookupCtxtExactI fn defs.gamma
-        | Nothing => pure ()
+        | Nothing => do log "compiler.identity" 10 $ "did not find the function "
+                                                   ++ show !(getFullName fn)
+                                                   ++ " in the context definitions"
+                        pure ()
+    let ensureId = isJust $ find isEnsureId gdef.flags
     let Just idx = the _ $ gdef.compexpr >>= calcIdentity fn
-        | Nothing => pure ()
+        | Nothing => do log "compiler.identity" 10 $ "the function "
+                                                   ++ show !(getFullName fn)
+                                                   ++ " was not calculated to be the identity function"
+                        if ensureId
+                           then recordWarning $ EnsureIdFailed EmptyFC !(getFullName fn)
+                           else pure ()
     setFlag EmptyFC (Resolved fnIdx) (Identity idx)
     rewriteIdentityFlag (Resolved fnIdx)
+  where
+    isEnsureId : DefFlag -> Bool
+    isEnsureId EnsureIdentity = True
+    isEnsureId _ = False

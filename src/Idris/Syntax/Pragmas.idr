@@ -28,6 +28,7 @@ data KwPragma
   | KwAutoImplicitDepth
   | KwNfMetavarThreshold
   | KwSearchTimeOut
+  | KwEnsureIdentity
 
 public export
 data LangExt
@@ -99,6 +100,7 @@ pragmaArgs KwPrefixRecordProjections = [AnOnOff]
 pragmaArgs KwAutoImplicitDepth = [ANat]
 pragmaArgs KwNfMetavarThreshold = [ANat]
 pragmaArgs KwSearchTimeOut = [ANat]
+pragmaArgs KwEnsureIdentity = []
 
 export
 Show KwPragma where
@@ -125,6 +127,7 @@ Show KwPragma where
     KwAutoImplicitDepth => "%auto_implicit_depth"
     KwNfMetavarThreshold => "%nf_metavar_threshold"
     KwSearchTimeOut => "%search_timeout"
+    KwEnsureIdentity => "%ensure_identity"
 
 export
 allPragmas : List KwPragma
@@ -151,6 +154,7 @@ allPragmas =
   , KwAutoImplicitDepth
   , KwNfMetavarThreshold
   , KwSearchTimeOut
+  , KwEnsureIdentity
   ]
 
 export

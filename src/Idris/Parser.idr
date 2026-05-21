@@ -1139,6 +1139,8 @@ mutual
     <|> do decoratedPragma fname "tcinline"
            commit
            pure $ IFnOpt TCInline
+    <|> do decoratedPragma fname "ensure_identity"
+           pure $ IFnOpt EnsureIdentity
     <|> do decoratedPragma fname "extern"
            pure $ IFnOpt ExternFn
     <|> do decoratedPragma fname "macro"

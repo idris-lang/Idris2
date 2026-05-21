@@ -1,0 +1,4 @@
+1/1: Building TestEnsureId (TestEnsureId.idr)
+Warning: TestEnsureId.notId was explicitly annotated as reducing to the
+identity function, but the compiler did not optimise it as such.
+
