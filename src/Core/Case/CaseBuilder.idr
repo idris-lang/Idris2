@@ -301,6 +301,8 @@ Weaken PMappings where
       = { pvars $= map (\ (n, t) => (n, weakenNs s t)),
           pforced $= map (\ (l, r) => (weakenNs s l, weakenNs s r)) }
 
+FreelyEmbeddable PMappings where
+
 -- Substitute all the pattern variables into the right terms in the forced
 -- equalities
 substForced : List (Name, Var vars) -> List (Var vars, Term vars) ->
@@ -1270,7 +1272,7 @@ mutual
                logTerm "compile.casetree" 5 "updateVar-2 rhs'" rhs'
                pure $ MkPatClause (n :: pvars) pmaps'
                         !(substInPats fc a (Local pfc (Just False) _ prf) pats)
-                        pid (substName zero n (Local pfc (Just False) _ prf) rhs)
+                        pid rhs'
       -- If it's an as pattern, replace the name with the relevant variable on
       -- the rhs then continue with the inner pattern
       updateVar (MkPatClause pvars pmaps (MkInfo c (PAs pfc n pat) prf fty :: pats) pid rhs)
@@ -1615,20 +1617,9 @@ makePMDef fc ct phase fn ty clauses
     labelPat i [] = []
     labelPat i (x :: xs) = ("pat" ++ show i ++ ":", x) :: labelPat (i + 1) xs
 
-    mkSubstEnv : Int -> String -> Env Term vars -> SubstEnv vars [<]
-    mkSubstEnv i pname [<] = Lin
-    mkSubstEnv i pname (vs :< v)
-        = mkSubstEnv (i + 1) pname vs :< Ref fc Bound (MN pname i)
-
-    close : {vars : _} ->
-            Env Term vars -> String -> Term vars -> ClosedTerm
-    close {vars} env pname tm
-        = substs (mkSizeOf vars) (mkSubstEnv 0 pname env)
-                                 (rewrite appendLinLeftNeutral vars in tm)
-
     toClosed :  (String, Clause) -> (ClosedTerm, ClosedTerm)
     toClosed  (pname, MkClause env lhs rhs)
-        = (close env pname lhs, close env pname rhs)
+        = (close fc pname env lhs, close fc pname env rhs)
 
 -- Returns the case tree, and a list of the clauses that aren't reachable
 export
