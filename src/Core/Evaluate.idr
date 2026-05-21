@@ -226,7 +226,9 @@ parameters {auto c : Ref Ctxt Defs}
         (orig : Value f vars) -> (parg : Term vars) -> (tm : Value f' vars) ->
         Core (Term vars, Bool)
   replace' {vars} expand tmpi env orig parg tm
-      = do ok <- convert env orig tm
+      = do ok <- logDepth $ convert env orig tm
+           logC "eval.stuck" 50 $ do
+             pure $ "convert ok=\{show ok} expand=\{show expand} \{show !(toFullNames orig)} to \{show !(toFullNames tm)}"
            if ok
               then pure (parg, True)
               else repSub tm

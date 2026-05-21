@@ -576,6 +576,7 @@ tryInstantiate : {auto c : Ref Ctxt Defs} ->
               Core Bool -- postpone if the type is yet unknown
 tryInstantiate {newvars} loc mode env mname mref num mdef locs otm tm
     = do logTerm "unify.instantiate" 5 ("Instantiating in " ++ show !(traverse toFullNames (asList newvars))) !(toFullNames tm)
+         logTerm "unify.instantiate" 50 "Instantiating in loc=\{show loc}, (getLoc otm)=\{show $ getLoc otm} otm" !(toFullNames otm)
 --          let Hole _ _ = definition mdef
 --              | def => ufail {a=()} loc (show mname ++ " already resolved as " ++ show def)
          case fullname mdef of

@@ -183,7 +183,8 @@ sugarPrimAppM (PApp fc (PApp fc' (PRef opFC (MkKindedName nt (UN $ Basic n) rn))
              in  do log "resugar.var" 80
                           "Resugaring primitive op \{show n} to \{show nm'}"
                     pure . Just $ POp fc l' op' r
-      d => pure Nothing
+      d => do log "resugar.var" 80 "Failed attempt to resugar: \{show d}"
+              pure Nothing
 sugarPrimAppM _ = pure Nothing
 
 sugarPrimApp : {auto c : Ref Ctxt Defs} ->

@@ -147,6 +147,7 @@ isEmpty : {vars : _} ->
 isEmpty defs env (VTCon fc n a args)
   = do Just nty <- lookupDefExact n (gamma defs)
          | _ => pure False
+       log "elab.implicits" 50 $ "isEmpty nty: " ++ show !(toFullNames nty)
        case nty of
             TCon _ _ _ flags _ Nothing _ => pure False
             TCon _ _ _ flags _ (Just cons) _
