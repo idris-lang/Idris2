@@ -1,49 +1,22 @@
 1/1: Building Main (Main.idr)
 Main> Main.mergeLim
-Arguments [{arg:1}, {arg:2}, {arg:3}, {arg:4}]
-Compile time tree: case {arg:4} of
-  Z => {arg:2}
-  _ => case {arg:2} of
-    Nil {e:1} => case {arg:4} of
-      S {e:2} => {arg:3}
-      _ => case {arg:3} of
-        Nil {e:3} => case {arg:4} of
-          S {e:4} => {arg:2}
-          _ => case {arg:2} of
-            (::) {e:5} {e:6} {e:7} => case {arg:3} of
-              (::) {e:8} {e:9} {e:10} => case {arg:4} of
-                S {e:11} => {e:6} :: mergeLim {e:7} ({e:9} :: {e:10}) {e:11}
-        _ => case {arg:2} of
-          (::) {e:5} {e:6} {e:7} => case {arg:3} of
-            (::) {e:8} {e:9} {e:10} => case {arg:4} of
-              S {e:11} => {e:6} :: mergeLim {e:7} ({e:9} :: {e:10}) {e:11}
-    _ => case {arg:3} of
-      Nil {e:3} => case {arg:4} of
-        S {e:4} => {arg:2}
-        _ => case {arg:2} of
-          (::) {e:5} {e:6} {e:7} => case {arg:3} of
-            (::) {e:8} {e:9} {e:10} => case {arg:4} of
-              S {e:11} => {e:6} :: mergeLim {e:7} ({e:9} :: {e:10}) {e:11}
-      _ => case {arg:2} of
-        (::) {e:5} {e:6} {e:7} => case {arg:3} of
-          (::) {e:8} {e:9} {e:10} => case {arg:4} of
-            S {e:11} => {e:6} :: mergeLim {e:7} ({e:9} :: {e:10}) {e:11}
+Compile time tree: \{arg:1}, {arg:2}, {arg:3}, {arg:4} => case {arg:4} of { 0 => {arg:2} ; ? => case {arg:2} of { [] => case {arg:4} of { S {e:1} => {arg:3} ; ? => case {arg:3} of { [] => case {arg:4} of { S {e:2} => {arg:2} ; ? => let {e:3} :: {e:4} = {arg:2} in let {e:5} :: {e:6} = {arg:3} in let S {e:7} = {arg:4} in {e:3} :: mergeLim {e:4} ({e:5} :: {e:6}) {e:7} } ; ? => let {e:3} :: {e:4} = {arg:2} in let {e:5} :: {e:6} = {arg:3} in let S {e:7} = {arg:4} in {e:3} :: mergeLim {e:4} ({e:5} :: {e:6}) {e:7} } } ; ? => case {arg:3} of { [] => case {arg:4} of { S {e:2} => {arg:2} ; ? => let {e:3} :: {e:4} = {arg:2} in let {e:5} :: {e:6} = {arg:3} in let S {e:7} = {arg:4} in {e:3} :: mergeLim {e:4} ({e:5} :: {e:6}) {e:7} } ; ? => let {e:3} :: {e:4} = {arg:2} in let {e:5} :: {e:6} = {arg:3} in let S {e:7} = {arg:4} in {e:3} :: mergeLim {e:4} ({e:5} :: {e:6}) {e:7} } } }
 Erasable args: [0]
 Inferrable args: [0]
 Compiled: \ {arg:2}, {arg:3}, {arg:4} => case {arg:4} of
   { 0 => {arg:2}
   ; _ => case {arg:2} of
-           { _builtin.NIL {tag = 0} [nil] => case {arg:4} of  { 0 => case {arg:3} of  { _builtin.NIL {tag = 0} [nil] => case {arg:4} of  { 0 => case {arg:2} of  { _builtin.CONS {tag = 1} [cons] {e:6} {e:7} => case {arg:3} of  { _builtin.CONS {tag = 1} [cons] {e:9} {e:10} => case {arg:4} of  { 0 => crash "Nat case not covered"; _ => let {e:11} = {arg:4} - 1 in_builtin.CONS {tag = 1} [cons] {e:6} (Main.mergeLim {e:7} (_builtin.CONS {tag = 1} [cons] {e:9} {e:10}) {e:11})}}}; _ => {arg:2}}; _ => case {arg:2} of  { _builtin.CONS {tag = 1} [cons] {e:6} {e:7} => case {arg:3} of  { _builtin.CONS {tag = 1} [cons] {e:9} {e:10} => case {arg:4} of  { 0 => crash "Nat case not covered"; _ => let {e:11} = {arg:4} - 1 in_builtin.CONS {tag = 1} [cons] {e:6} (Main.mergeLim {e:7} (_builtin.CONS {tag = 1} [cons] {e:9} {e:10}) {e:11})}}}}; _ => {arg:3}}
+           { _builtin.NIL {tag = 0} [nil] => case {arg:4} of  { 0 => case {arg:3} of  { _builtin.NIL {tag = 0} [nil] => case {arg:4} of  { 0 => case {arg:2} of  { _builtin.CONS {tag = 1} [cons] {e:3} {e:4} => case {arg:3} of  { _builtin.CONS {tag = 1} [cons] {e:5} {e:6} => case {arg:4} of  { 0 => crash "Nat case not covered"; _ => let {e:7} = {arg:4} - 1 in_builtin.CONS {tag = 1} [cons] {e:3} (Main.mergeLim {e:4} (_builtin.CONS {tag = 1} [cons] {e:5} {e:6}) {e:7})}}}; _ => {arg:2}}; _ => case {arg:2} of  { _builtin.CONS {tag = 1} [cons] {e:3} {e:4} => case {arg:3} of  { _builtin.CONS {tag = 1} [cons] {e:5} {e:6} => case {arg:4} of  { 0 => crash "Nat case not covered"; _ => let {e:7} = {arg:4} - 1 in_builtin.CONS {tag = 1} [cons] {e:3} (Main.mergeLim {e:4} (_builtin.CONS {tag = 1} [cons] {e:5} {e:6}) {e:7})}}}}; _ => {arg:3}}
            ; _ => case {arg:3} of
-                    { _builtin.NIL {tag = 0} [nil] => case {arg:4} of  { 0 => case {arg:2} of  { _builtin.CONS {tag = 1} [cons] {e:6} {e:7} => case {arg:3} of  { _builtin.CONS {tag = 1} [cons] {e:9} {e:10} => case {arg:4} of  { 0 => crash "Nat case not covered"; _ => let {e:11} = {arg:4} - 1 in_builtin.CONS {tag = 1} [cons] {e:6} (Main.mergeLim {e:7} (_builtin.CONS {tag = 1} [cons] {e:9} {e:10}) {e:11})}}}; _ => {arg:2}}
+                    { _builtin.NIL {tag = 0} [nil] => case {arg:4} of  { 0 => case {arg:2} of  { _builtin.CONS {tag = 1} [cons] {e:3} {e:4} => case {arg:3} of  { _builtin.CONS {tag = 1} [cons] {e:5} {e:6} => case {arg:4} of  { 0 => crash "Nat case not covered"; _ => let {e:7} = {arg:4} - 1 in_builtin.CONS {tag = 1} [cons] {e:3} (Main.mergeLim {e:4} (_builtin.CONS {tag = 1} [cons] {e:5} {e:6}) {e:7})}}}; _ => {arg:2}}
                     ; _ => case {arg:2} of
-                             { _builtin.CONS {tag = 1} [cons] {e:6} {e:7} => case {arg:3} of  { _builtin.CONS {tag = 1} [cons] {e:9} {e:10} => case {arg:4} of  { 0 => crash "Nat case not covered"; _ => let {e:11} = {arg:4} - 1 in_builtin.CONS {tag = 1} [cons] {e:6} (Main.mergeLim {e:7} (_builtin.CONS {tag = 1} [cons] {e:9} {e:10}) {e:11})}}
+                             { _builtin.CONS {tag = 1} [cons] {e:3} {e:4} => case {arg:3} of  { _builtin.CONS {tag = 1} [cons] {e:5} {e:6} => case {arg:4} of  { 0 => crash "Nat case not covered"; _ => let {e:7} = {arg:4} - 1 in_builtin.CONS {tag = 1} [cons] {e:3} (Main.mergeLim {e:4} (_builtin.CONS {tag = 1} [cons] {e:5} {e:6}) {e:7})}}
                              }
                     }
            }
   }
 Refers to: Main.mergeLim, Prelude.Basics.(::)
-Refers to (runtime): _builtin.CONS, _builtin.NIL, Main.mergeLim
+Refers to (runtime): _builtin.CONS, Main.mergeLim
 Flags: covering
 Size change:
   Prelude.Basics.(::):
@@ -63,51 +36,24 @@ Bye for now!
 ------
 1/1: Building Main (Main.idr)
 Main> Main.mergeLim
-Arguments [{arg:1}, {arg:2}, {arg:3}, {arg:4}]
-Compile time tree: case {arg:4} of
-  Z => {arg:2}
-  _ => case {arg:2} of
-    Nil {e:1} => case {arg:4} of
-      S {e:2} => {arg:3}
-      _ => case {arg:3} of
-        Nil {e:3} => case {arg:4} of
-          S {e:4} => {arg:2}
-          _ => case {arg:2} of
-            (::) {e:5} {e:6} {e:7} => case {arg:3} of
-              (::) {e:8} {e:9} {e:10} => case {arg:4} of
-                S {e:11} => {e:6} :: mergeLim {e:7} ({e:9} :: {e:10}) {e:11}
-        _ => case {arg:2} of
-          (::) {e:5} {e:6} {e:7} => case {arg:3} of
-            (::) {e:8} {e:9} {e:10} => case {arg:4} of
-              S {e:11} => {e:6} :: mergeLim {e:7} ({e:9} :: {e:10}) {e:11}
-    _ => case {arg:3} of
-      Nil {e:3} => case {arg:4} of
-        S {e:4} => {arg:2}
-        _ => case {arg:2} of
-          (::) {e:5} {e:6} {e:7} => case {arg:3} of
-            (::) {e:8} {e:9} {e:10} => case {arg:4} of
-              S {e:11} => {e:6} :: mergeLim {e:7} ({e:9} :: {e:10}) {e:11}
-      _ => case {arg:2} of
-        (::) {e:5} {e:6} {e:7} => case {arg:3} of
-          (::) {e:8} {e:9} {e:10} => case {arg:4} of
-            S {e:11} => {e:6} :: mergeLim {e:7} ({e:9} :: {e:10}) {e:11}
+Compile time tree: \{arg:1}, {arg:2}, {arg:3}, {arg:4} => case {arg:4} of { 0 => {arg:2} ; ? => case {arg:2} of { [] => case {arg:4} of { S {e:1} => {arg:3} ; ? => case {arg:3} of { [] => case {arg:4} of { S {e:2} => {arg:2} ; ? => let {e:3} :: {e:4} = {arg:2} in let {e:5} :: {e:6} = {arg:3} in let S {e:7} = {arg:4} in {e:3} :: mergeLim {e:4} ({e:5} :: {e:6}) {e:7} } ; ? => let {e:3} :: {e:4} = {arg:2} in let {e:5} :: {e:6} = {arg:3} in let S {e:7} = {arg:4} in {e:3} :: mergeLim {e:4} ({e:5} :: {e:6}) {e:7} } } ; ? => case {arg:3} of { [] => case {arg:4} of { S {e:2} => {arg:2} ; ? => let {e:3} :: {e:4} = {arg:2} in let {e:5} :: {e:6} = {arg:3} in let S {e:7} = {arg:4} in {e:3} :: mergeLim {e:4} ({e:5} :: {e:6}) {e:7} } ; ? => let {e:3} :: {e:4} = {arg:2} in let {e:5} :: {e:6} = {arg:3} in let S {e:7} = {arg:4} in {e:3} :: mergeLim {e:4} ({e:5} :: {e:6}) {e:7} } } }
 Erasable args: [0]
 Inferrable args: [0]
 Compiled: \ {arg:2}, {arg:3}, {arg:4} => case {arg:4} of
   { 0 => {arg:2}
-  ; _ => let {e:5} = {arg:4} - 1 in
+  ; _ => let {e:8} = {arg:4} - 1 in
          case {arg:2} of
            { _builtin.NIL {tag = 0} [nil] => {arg:3}
            ; _ => case {arg:3} of
                     { _builtin.NIL {tag = 0} [nil] => {arg:2}
                     ; _ => case {arg:2} of
-                             { _builtin.CONS {tag = 1} [cons] {e:7} {e:8} => case {arg:3} of  { _builtin.CONS {tag = 1} [cons] {e:10} {e:11} => _builtin.CONS {tag = 1} [cons] {e:7} (Main.mergeLim {e:8} (_builtin.CONS {tag = 1} [cons] {e:10} {e:11}) {e:5})}
+                             { _builtin.CONS {tag = 1} [cons] {e:4} {e:9} => case {arg:3} of  { _builtin.CONS {tag = 1} [cons] {e:6} {e:7} => _builtin.CONS {tag = 1} [cons] {e:4} (Main.mergeLim {e:9} (_builtin.CONS {tag = 1} [cons] {e:6} {e:7}) {e:8})}
                              }
                     }
            }
   }
 Refers to: Main.mergeLim, Prelude.Basics.(::)
-Refers to (runtime): _builtin.CONS, _builtin.NIL, Main.mergeLim
+Refers to (runtime): _builtin.CONS, Main.mergeLim
 Flags: covering
 Size change:
   Prelude.Basics.(::):

@@ -312,6 +312,11 @@ mutual
       = findSC InDelay eqs args tm
   findSC g eqs args (VBind _ _ (Lam _ _ _ _) sc)
       = findSC g eqs args !(sc nextVar)
+  findSC g eqs args (VBind _ _ (Let _ erased (VAs _ UseRight (VApp _ Bound n [<] _) as) _) sc)
+      = do args' <- replaceInArgs n as args
+           -- No mix the following: $ !(findSC g eqs args as) ++ !(findSC g eqs args' !(sc nextVar))
+           -- because `as` came from erased, so, no actual structural decrease
+           findSC g eqs args' !(sc nextVar)
   findSC g eqs args (VBind fc n b sc)
       = do v <- nextVar
            pure $ !(findSCbinder b) ++ !(findSC g eqs args !(sc (pure v)))

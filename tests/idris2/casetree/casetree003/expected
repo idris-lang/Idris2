@@ -1,18 +1,15 @@
 1/1: Building ForcedPats (ForcedPats.idr)
 Main> Main.idL
-Arguments [{arg:1}, {arg:2}, {arg:3}]
-Compile time tree: case {arg:3} of
-  Nil {e:1} {e:2} => []
-  (::) {e:3} {e:4} {e:5} => {e:4} :: idL {e:5} (view {e:5})
+Compile time tree: \{arg:1}, {arg:2}, {arg:3} => case {arg:3} of { [] => [] ; {e:1} :: {e:2} => {e:1} :: idL {e:2} (view {e:2}) }
 Erasable args: [0]
 Detaggable arg types: [2]
 Inferrable args: [0, 1]
 Compiled: \ {arg:2}, {arg:3} => case {arg:3} of
-  { Main.Nil {tag = 0} {e:2} => _builtin.NIL {tag = 0} [nil]
-  ; Main.(::) {tag = 1} {e:4} {e:5} => _builtin.CONS {tag = 1} [cons] {e:4} (Main.idL {e:5} (Main.view {e:5}))
+  { Main.Nil {tag = 0} {e:3} => _builtin.NIL {tag = 0} [nil]
+  ; Main.(::) {tag = 1} {e:1} {e:2} => _builtin.CONS {tag = 1} [cons] {e:1} (Main.idL {e:2} (Main.view {e:2}))
   }
 Refers to: Main.view, Main.idL, Prelude.Basics.Nil, Prelude.Basics.(::)
-Refers to (runtime): _builtin.CONS, _builtin.NIL, Main.view, Main.idL, Main.Nil, Main.(::)
+Refers to (runtime): _builtin.CONS, _builtin.NIL, Main.view, Main.idL
 Flags: covering
 Size change:
   Prelude.Basics.Nil:

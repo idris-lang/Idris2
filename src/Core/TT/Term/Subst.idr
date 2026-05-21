@@ -3,10 +3,12 @@ module Core.TT.Term.Subst
 import Algebra
 import Core.Name.Scoped
 
+import Core.FC
 import Core.TT.Binder
 import Core.TT.Subst
 import Core.TT.Term
 import Core.TT.Var
+import Core.Name.Subst
 
 import Data.Vect
 import Data.SnocList.Quantifiers
@@ -90,16 +92,32 @@ substTaggedTerms drp inn env b
   = assert_total $ map @{Compose} (substTerm drp inn env) b
 
 substCaseScope drp inn env (RHS fs tm)
-  = RHS (substForced fs) (substTerm drp inn env tm)
+  = let (fs', tm') = applyForced fs (substTerm drp inn env tm)
+    in RHS fs' tm'
   where
-    -- If we substitute in the vars, the equality is no longer useful
-    substForced : List (Var (Scope.addInner (Scope.addInner outer dropped) inner), Term (Scope.addInner (Scope.addInner outer dropped) inner)) ->
-                  List (Var (Scope.addInner outer inner), Term (Scope.addInner outer inner))
-    substForced [] = []
-    substForced ((v, tm) :: fs)
+    applyForced : List (Var (Scope.addInner (Scope.addInner outer dropped) inner), Term (Scope.addInner (Scope.addInner outer dropped) inner)) ->
+                  Term (Scope.addInner outer inner) ->
+                  (List (Var (Scope.addInner outer inner), Term (Scope.addInner outer inner)), Term (Scope.addInner outer inner))
+    applyForced [] body = ([], body)
+    applyForced ((v, eq_tm) :: fs) body
         = case findVar inn v env of
-              Nothing => substForced fs
-              Just v' => ((v', substTerm drp inn env tm) :: substForced fs)
+              Just v' =>
+                let (restFs, finalBody) = applyForced fs body
+                in ((v', substTerm drp inn env eq_tm) :: restFs, finalBody)
+              -- If we can not substitute in the vars, the equality should be kept into erased for further
+              -- totality checker analysis
+              Nothing =>
+                let lhsTm = find (\(MkVar prf) => Local EmptyFC Nothing _ prf) drp inn v env
+                in case lhsTm of
+                  r@(Ref _ Bound _) =>
+                              let rhsTm = substTerm drp inn env eq_tm
+                                  bnd = Let EmptyFC erased (As EmptyFC UseRight r rhsTm) (Erased EmptyFC Placeholder)
+                                  -- no need to pass actual binder variable name because it is not in use by rhs actually
+                                  -- so UN Underscore is legit
+                                  newBody = Bind EmptyFC (UN Underscore) bnd (weaken body)
+                                  (restFs, finalBody) = applyForced fs newBody
+                              in (restFs, finalBody)
+                  _ => applyForced fs body
 
 substCaseScope drp inn env (Arg c x sc) = Arg c x (substCaseScope drp (suc inn) env sc)
 

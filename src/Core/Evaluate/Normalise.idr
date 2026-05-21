@@ -426,8 +426,12 @@ parameters {auto c : Ref Ctxt Defs} (eflags : EvalFlags)
       = pure $ VBind fc x (Lam bfc r !(evalPiInfo locs env p) !(eval locs env ty))
                         (\arg => eval (locs :< arg) env sc)
   evalBind locs env fc x b@(Let bfc c val ty) sc
-      = case eflags of
-             Holes _ =>
+      = case (eflags, c, val) of
+             -- establish connection with potentially missed forced eqs
+             (Totality, erased, (As _ UseRight _ _)) =>
+                  pure $ VBind fc x !(evalBinder locs env b)
+                               (\arg => eval (locs :< arg) env sc)
+             (Holes _, _, _) =>
                   pure $ VBind fc x !(evalBinder locs env b)
                                (\arg => eval (locs :< arg) env sc)
              _ => do val' <- eval locs env val
@@ -480,7 +484,11 @@ parameters {auto c : Ref Ctxt Defs} (eflags : EvalFlags)
                                          !(eval locs env pat)
              Holes _ => pure $ VAs fc use !(eval locs env as)
                                             !(eval locs env pat)
-             _ => eval locs env pat
+             _ => case (eflags, use) of
+                    -- establish connection with potentially missed forced eqs
+                    (Totality, UseRight) => pure $ VAs fc use !(eval locs env as)
+                                                !(eval locs env pat)
+                    _ => eval locs env pat
   eval locs env (Case fc t r sc ty alts)
       = evalCase locs env fc t r sc ty alts
   eval locs env (TDelayed fc r tm)
