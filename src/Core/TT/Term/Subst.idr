@@ -8,7 +8,6 @@ import Core.TT.Binder
 import Core.TT.Subst
 import Core.TT.Term
 import Core.TT.Var
-import Core.Name.Subst
 
 import Data.Vect
 import Data.SnocList.Quantifiers
