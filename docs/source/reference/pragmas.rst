@@ -362,7 +362,9 @@ result of the elaboration.
 
 Mark a function as expected to reduce / be optimised to the identity function by
 the compiler.  This will then raise a warning if the compiler does not
-automatically determine the function to be the identity function.
+automatically determine the function to be the identity function, also reporting
+which transformation pass this failed on (the compiler uses multiple passes as
+some transformations may reveal/enable further optimisations).
 
 .. code-block:: idris
 
@@ -377,8 +379,17 @@ automatically determine the function to be the identity function.
 
 .. code-block:: none
 
-   Warning: TestEnsureId.notId was explicitly annotated as reducing to the
-   identity function, but the compiler did not optimise it as such.
+   Warning: notId was explicitly annotated as reducing to the identity
+   function, but the compiler did not optimise it as such (transformation
+   pass 1/3).
+
+   Warning: notId was explicitly annotated as reducing to the identity
+   function, but the compiler did not optimise it as such (transformation
+   pass 2/3).
+
+   Warning: notId was explicitly annotated as reducing to the identity
+   function, but the compiler did not optimise it as such (transformation
+   pass 3/3).
 
 
 ``%start``

@@ -154,9 +154,14 @@ rewriteIdentityFlag fn = do
     isId (Identity _) = True
     isId _ = False
 
+||| Set the identity flag for the given function, if we calculate that it can be
+||| reduced/optimised to the identity function.
+|||
+||| The number of the current `transform` pass (for logging+warning purposes)
+||| And the function to examine
 export
-setIdentity : Ref Ctxt Defs => Name -> Core ()
-setIdentity fn = do
+setIdentity : Ref Ctxt Defs => Nat -> Name -> Core ()
+setIdentity tfNum fn = do
     defs <- get Ctxt
     Just (fnIdx, gdef) <- lookupCtxtExactI fn defs.gamma
         | Nothing => do log "compiler.identity" 10 $ "did not find the function "
@@ -165,11 +170,14 @@ setIdentity fn = do
                         pure ()
     let ensureId = isJust $ find isEnsureId gdef.flags
     let Just idx = the _ $ gdef.compexpr >>= calcIdentity fn
-        | Nothing => do log "compiler.identity" 10 $ "the function "
+        | Nothing => do let passNum = 4 `minus` tfNum
+                        log "compiler.identity" 10 $ "the function "
                                                    ++ show !(getFullName fn)
                                                    ++ " was not calculated to be the identity function"
+                                                   ++ " (transformation pass"
+                                                   ++ show passNum ++ "/3)"
                         if ensureId
-                           then recordWarning $ EnsureIdFailed EmptyFC !(getFullName fn)
+                           then recordWarning $ EnsureIdFailed EmptyFC !(getFullName fn) passNum
                            else pure ()
     setFlag EmptyFC (Resolved fnIdx) (Identity idx)
     rewriteIdentityFlag (Resolved fnIdx)

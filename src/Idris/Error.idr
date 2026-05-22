@@ -291,10 +291,11 @@ pwarningRaw (Deprecated fc s fcAndName)
                                  , reAnnotate (const Pretty.UserDocString) <$> docs
                                  ]
 
-pwarningRaw (EnsureIdFailed fc nm)
+pwarningRaw (EnsureIdFailed fc nm pn)
     = pure $ warning (code (pretty0 (sugarName nm))
         <++> reflow "was explicitly annotated as reducing to the identity"
-        <++> reflow "function, but the compiler did not optimise it as such.")
+        <++> reflow "function, but the compiler did not optimise it as such"
+        <++> reflow ("(transformation pass " ++ show pn ++ "/3)."))
         <+> line <+> !(ploc fc)
 
 pwarningRaw (GenericWarn fc s)

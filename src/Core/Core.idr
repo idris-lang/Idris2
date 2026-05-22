@@ -86,8 +86,9 @@ data Warning : Type where
      Deprecated : FC -> String -> Maybe (FC, Name) -> Warning
      ||| A warning about a function which the compiler was explicitly told
      ||| *should* be optimised to the identity function, but which didn't.
-     ||| Takes an `FC` and the showable name of the function.
-     EnsureIdFailed : FC -> Name -> Warning
+     ||| Takes an `FC`, the name of the function, and number of the `transform`
+     ||| pass where the optimisation failed.
+     EnsureIdFailed : FC -> (fullFnName : Name) -> (transformPassNum : Nat) -> Warning
      GenericWarn : FC -> String -> Warning
 
 %name Warning wrn
@@ -231,7 +232,10 @@ Show Warning where
     show (IncompatibleVisibility fc _ _ _) = show fc ++ ":Incompatible Visibility"
     show (ShadowingLocalBindings fc _) = show fc ++ ":Shadowing names"
     show (Deprecated fc name _) = show fc ++ ":Deprecated " ++ name
-    show (EnsureIdFailed fc name) = show fc ++ ":Function " ++ show name ++ " did not reduce to the identity function"
+    show (EnsureIdFailed fc name passNum)
+      = show fc ++ ":Function " ++ show name
+        ++ " did not reduce to the identity function (transformation pass "
+        ++ show passNum ++ "/3)"
     show (GenericWarn fc msg) = show fc ++ msg
 
 
@@ -433,7 +437,7 @@ getWarningLoc (ShadowingGlobalDefs fc _) = fc
 getWarningLoc (IncompatibleVisibility loc _ _ _) = loc
 getWarningLoc (ShadowingLocalBindings fc _) = fc
 getWarningLoc (Deprecated fc _ fcAndName) = fromMaybe fc (fst <$> fcAndName)
-getWarningLoc (EnsureIdFailed fc _) = fc
+getWarningLoc (EnsureIdFailed fc _ _) = fc
 getWarningLoc (GenericWarn fc _) = fc
 
 export
@@ -530,7 +534,7 @@ killWarningLoc (IncompatibleVisibility fc x y z) = IncompatibleVisibility emptyF
 killWarningLoc (ShadowingLocalBindings fc xs) =
     ShadowingLocalBindings emptyFC $ (\(n, _, _) => (n, emptyFC, emptyFC)) <$> xs
 killWarningLoc (Deprecated fc x y) = Deprecated emptyFC x (map ((emptyFC,) . snd) y)
-killWarningLoc (EnsureIdFailed fc x) = EnsureIdFailed emptyFC x
+killWarningLoc (EnsureIdFailed fc x n) = EnsureIdFailed emptyFC x n
 killWarningLoc (GenericWarn fc x) = GenericWarn emptyFC x
 
 
