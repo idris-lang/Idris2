@@ -182,14 +182,12 @@ checkLambda rig_in elabinfo nest env fc rigl info n argTy scope (Just expty_in)
                     let env' : Env Term (_ :< n) = Env.bind env $ Lam fc rigb info' tyv
                     lambdaUnifyResult <- convert fc elabinfo env !(nf env tyv) !(nf env pty)
                     let nest' = weaken (dropName n nest)
-                    let scopetTm = renameTop n psc
-                    scopet <- nf env' scopetTm
                     pscnf <- normaliseHoles env' $ compat psc
                     (scopev, scopet) <-
                        inScope fc env' (\e' =>
                           check {e=e'} rig elabinfo nest' env' scope
                                 (Just !(nf env' (compat psc))))
-                    let elaboratedPiType = Bind fc n (Pi fc' rigb info' tyv) scopetTm --!(getTerm scopet)
+                    let elaboratedPiType = Bind fc n (Pi fc' rigb info' tyv) !(quote env' scopet)
                     logTermNF "elab.binder" 10 "Lambda type" env expty
                     logNF "elab.binder" 10 "Got scope type" env' scopet
 

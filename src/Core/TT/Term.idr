@@ -493,26 +493,6 @@ varExtend : IsVar x idx xs -> IsVar x idx (ys ++ xs)
 -- we don't need its definition at compile time, so let's do it...
 varExtend p = believe_me p
 
-export
-renameVars : CompatibleVars xs ys -> Term xs -> Term ys
-renameVars compat tm = believe_me tm -- no names in term, so it's identity
-
-export
-renameNTopVar : (ms : SnocList Name) ->
-             LengthMatch ns ms ->
-             Var (vars ++ ns) -> Var (vars ++ ms)
-renameNTopVar ms ok v = believe_me v
-
-export
-renameNTop : (ms : SnocList Name) ->
-             LengthMatch ns ms ->
-             Term (vars ++ ns) -> Term (vars ++ ms)
-renameNTop ms ok tm = believe_me tm
-
-export
-renameTop : (m : Name) -> Term (vars :< n) -> Term (vars :< m)
-renameTop m tm = renameNTop {ns = [<n]} [<m] (SnocMatch LinMatch) tm
-
 ------------------------------------------------------------------------
 -- Namespace manipulations
 
