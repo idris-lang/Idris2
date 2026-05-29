@@ -847,6 +847,7 @@ TTC CFType where
   toBuf CFInt64 = tag 20
   toBuf CFForeignObj = tag 21
   toBuf CFInteger = tag 22
+  toBuf (CFUnion n a) = do tag 23; toBuf n; toBuf a
 
   fromBuf
       = case !getTag of
@@ -873,6 +874,7 @@ TTC CFType where
              20 => pure CFInt64
              21 => pure CFForeignObj
              22 => pure CFInteger
+             23 => do n <- fromBuf; a <- fromBuf; pure (CFUnion n a)
              _ => corrupt "CFType"
 
 export

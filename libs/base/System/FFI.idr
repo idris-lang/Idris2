@@ -14,6 +14,13 @@ data Struct : String -> -- C struct name
               List (String, Type) -> -- field names and types
               Type where
 
+||| A union with a name and a list of key-value pairs of case names and their
+||| types.
+export
+data Union : String -> -- C union name
+              List (String, Type) -> -- case names and types
+              Type where
+
 ||| A proof that the field exists as an entry in the list of field names and
 ||| their types.
 public export
@@ -46,6 +53,19 @@ prim__setField : {s : _} -> forall fs, ty .
                          Ptr (Struct s fs) -> (n : String) ->
                          FieldType (words n) ty fs -> ty -> PrimIO ()
 
+%extern
+prim__getCase : {u : _} -> forall fs, ty .
+                         Ptr (Union u fs) -> (n : String) ->
+                         FieldType (words n) ty fs -> ty
+%extern
+prim__getCasePtr : {u : _} -> forall fs, ty .
+                         Ptr (Union u fs) -> (n : String) ->
+                         FieldType (words n) ty fs -> Ptr ty
+%extern
+prim__setCase : {u : _} -> forall fs, ty .
+                         Ptr (Union u fs) -> (n : String) ->
+                         FieldType (words n) ty fs -> ty -> PrimIO ()
+
 ||| Retrieve the value of the specified field in the given `Struct`.
 |||
 ||| @ s the `Struct` to retrieve the value from
@@ -73,6 +93,34 @@ public export %inline
 setField : {sn : _} -> (s : Ptr (Struct sn fs)) -> (n : String) ->
            {auto fieldok : FieldType (words n) ty fs} -> (val : ty) -> IO ()
 setField s n val = primIO (prim__setField s n fieldok val)
+
+||| Retrieve the value of the specified case in the given `Union`.
+|||
+||| @ u the `Union` to retrieve the value from
+||| @ n the name of the case in the `Union`.
+public export %inline
+getCase : {sn : _} -> (u : Ptr (Union sn fs)) -> (n : String) ->
+           {auto fieldok : FieldType (words n) ty fs} -> ty
+getCase u n = prim__getCase u n fieldok
+
+||| Retrieve the value of the specified case in the given `Union` as a pointer.
+|||
+||| @ u the `Union` to retrieve the value from
+||| @ n the name of the case in the `Union`.
+public export %inline
+getCasePtr : {sn : _} -> (u : Ptr (Union sn fs)) -> (n : String) ->
+           {auto fieldok : FieldType (words n) ty fs} -> Ptr ty
+getCasePtr u n = prim__getCasePtr u n fieldok
+
+||| Set the value of the specified case in the given `Union`.
+|||
+||| @ u   the `Union` in which the case exists
+||| @ n   the name of the case to set
+||| @ val the value to set the case to
+public export %inline
+setCase : {sn : _} -> (u : Ptr (Union sn fs)) -> (n : String) ->
+           {auto fieldok : FieldType (words n) ty fs} -> (val : ty) -> IO ()
+setCase u n val = primIO (prim__setCase u n fieldok val)
 
 %foreign "C:idris2_malloc, libidris2_support, idris_memory.h"
 prim__malloc : (size : Int) -> PrimIO AnyPtr

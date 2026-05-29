@@ -135,6 +135,7 @@ cftySpec fc CFGCPtr = pure "_pointer"
 cftySpec fc CFBuffer = pure "_bytes"
 cftySpec fc (CFIORes t) = cftySpec fc t
 cftySpec fc (CFStruct n t) = pure $ "_" ++ fromString n ++ "-pointer"
+cftySpec fc (CFUnion n t) = throw (GenericMsg fc "Union types are not yet supported")
 cftySpec fc (CFFun s t) = funTySpec [s] t
   where
     funTySpec : List CFType -> CFType -> Core Builder
@@ -301,6 +302,9 @@ mkStruct (CFStruct n flds)
   where
     showFld : (String, CFType) -> Core Builder
     showFld (n, ty) = pure $ "[" ++ fromString n ++ " " ++ !(cftySpec emptyFC ty) ++ "]"
+mkStruct (CFUnion n flds)
+    -- TODO: add Union support
+    = pure ""
 mkStruct (CFPtr t) = mkStruct t
 mkStruct (CFIORes t) = mkStruct t
 mkStruct (CFFun a b) = [| mkStruct a ++ mkStruct b |]

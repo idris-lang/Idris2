@@ -176,7 +176,7 @@ chezExtPrim cs schLazy i prim args
 export
 data Loaded : Type where
 
--- Label for noting which struct types are declared
+-- Label for noting which struct and union types are declared
 export
 data Structs : Type where
 
@@ -196,6 +196,8 @@ cftySpec fc CFDouble = pure "double"
 cftySpec fc CFChar = pure "char"
 cftySpec fc (CFStruct n t) = pure $ fromString n
 cftySpec fc (CFPtr (CFStruct n t)) = pure $ "(* " ++ fromString n ++ ")"
+cftySpec fc (CFUnion n t) = pure $ "(* " ++ fromString n ++ ")"
+cftySpec fc (CFPtr (CFUnion n t)) = pure $ "(* " ++ fromString n ++ ")"
 cftySpec fc (CFPtr _) = pure "void*"
 cftySpec fc CFGCPtr = pure "void*"
 cftySpec fc CFBuffer = pure "u8*"
@@ -357,6 +359,17 @@ mkStruct (CFStruct n flds)
             then pure (concat defs)
             else do put Structs (n :: strs)
                     pure $ concat defs ++ "(define-ftype " ++ fromString n ++ " (struct\n\t"
+                           ++ sepBy "\n\t" !(traverse showFld flds) ++ "))\n"
+  where
+    showFld : (String, CFType) -> Core Builder
+    showFld (n, ty) = pure $ "[" ++ fromString n ++ " " ++ !(cftySpec emptyFC ty) ++ "]"
+mkStruct (CFUnion n flds)
+    = do defs <- traverse mkStruct (map snd flds)
+         strs <- get Structs
+         if n `elem` strs
+            then pure (concat defs)
+            else do put Structs (n :: strs)
+                    pure $ concat defs ++ "(define-ftype " ++ fromString n ++ " (union\n\t"
                            ++ sepBy "\n\t" !(traverse showFld flds) ++ "))\n"
   where
     showFld : (String, CFType) -> Core Builder

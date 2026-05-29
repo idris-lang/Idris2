@@ -273,6 +273,8 @@ Hashable CFType where
       h `hashWithSalt` 21
     CFInteger =>
       h `hashWithSalt` 22
+    CFUnion n fs =>
+      h `hashWithSalt` 23 `hashWithSalt` n `hashWithSalt` fs
 
 export
 Hashable PrimType where

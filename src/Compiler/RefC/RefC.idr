@@ -555,7 +555,8 @@ mutual
         let prims : List String =
             ["prim__newIORef", "prim__readIORef", "prim__writeIORef", "prim__newArray",
              "prim__arrayGet", "prim__arraySet", "prim__getField", "prim__setField",
-             "prim__os", "prim__codegen", "prim__onCollect", "prim__onCollectAny" ]
+             "prim__getCase", "prim__setCase", "prim__os", "prim__codegen",
+             "prim__onCollect", "prim__onCollectAny" ]
         case p of
             NS _ (UN (Basic pn)) =>
                unless (elem pn prims) $ throw $ InternalError $ "[refc] Unknown primitive: " ++ cName p
@@ -708,6 +709,7 @@ cTypeOfCFType CFWorld         = "void *"
 cTypeOfCFType (CFFun x y)     = "void *"
 cTypeOfCFType (CFIORes x)     = "void *"
 cTypeOfCFType (CFStruct x ys) = "void *"
+cTypeOfCFType (CFUnion x ys)  = "void *"
 cTypeOfCFType (CFUser x ys)   = "void *"
 cTypeOfCFType n = assert_total $ idris_crash ("INTERNAL ERROR: Unknown FFI type in C backend: " ++ show n)
 
@@ -761,6 +763,7 @@ extractValue _ CFWorld          _       = "(Idris2_Value *)NULL"
 extractValue _ (CFFun x y)      varName = "(Idris2_Closure*)" ++ varName
 extractValue c (CFIORes x)      varName = extractValue c x varName
 extractValue _ (CFStruct x xs)  varName = assert_total $ idris_crash ("INTERNAL ERROR: Struct access not implemented: " ++ varName)
+extractValue _ (CFUnion x xs)  varName = assert_total $ idris_crash ("INTERNAL ERROR: Union access not implemented: " ++ varName)
 -- not really total but this way this internal error does not contaminate everything else
 extractValue _ (CFUser x xs)    varName = "(Idris2_Value*)" ++ varName
 extractValue _ n _ = assert_total $ idris_crash ("INTERNAL ERROR: Unknown FFI type in C backend: " ++ show n)
@@ -786,6 +789,7 @@ packCFType CFWorld         _       = "(Idris2_Value *)NULL"
 packCFType (CFFun x y)     varName = "makeFunction(" ++ varName ++ ")"
 packCFType (CFIORes x)     varName = packCFType x varName
 packCFType (CFStruct x xs) varName = "makeStruct(" ++ varName ++ ")"
+packCFType (CFUnion x xs) varName = "makeUnion(" ++ varName ++ ")"
 packCFType (CFUser x xs)   varName = varName
 packCFType n _ = assert_total $ idris_crash ("INTERNAL ERROR: Unknown FFI type in C backend: " ++ show n)
 
