@@ -48,7 +48,7 @@ line
 ---------
 File: build/docs/docs/Test1.html
 <div class="container"><div id="module-header"><h1>Test1</h1><pre>Single-line
-</pre></div><code></code></div><></body></html>
+</pre></div><code></code><h2>Definitions</h2><dl class="decls"><dt id="Test1.identifier"><code><a class="type" href="Test1.html#Test1.identifier"><span class="name function">identifier</span></a>&ensp;:&ensp;()</code></dt><dd>  <b>Visibility</b>:&ensp;<span class="keyword">export</span></dd></dl></div><></body></html>
 ---------
 File: build/docs/docs/Test2.html
 <div class="container"><div id="module-header"><h1>Test2</h1><pre>Multi-
