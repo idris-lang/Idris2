@@ -233,6 +233,8 @@ toPrim pn@(NS _ n)
             (n == UN (Basic "prim__arraySet"), ArraySet),
             (n == UN (Basic "prim__getField"), GetField),
             (n == UN (Basic "prim__setField"), SetField),
+            (n == UN (Basic "prim__getUnionField"), GetField),
+            (n == UN (Basic "prim__setUnionField"), SetField),
             (n == UN (Basic "prim__os"), SysOS),
             (n == UN (Basic "prim__codegen"), SysCodegen),
             (n == UN (Basic "prim__onCollect"), OnCollect),

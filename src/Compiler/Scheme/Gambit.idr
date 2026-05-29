@@ -100,7 +100,7 @@ gambitPrim cs schLazy i prim args
 -- Reference label for keeping track of loaded external libraries
 data Loaded : Type where
 
--- Label for noting which struct types are declared
+-- Label for noting which struct and union types are declared
 data Structs : Type where
 
 notWorld : CFType -> Bool
@@ -116,6 +116,7 @@ cType fc CFChar = pure "char"
 cType fc CFPtr = pure "void *"
 cType fc (CFIORes t) = cType fc t
 cType fc (CFStruct n t) = pure $ "struct " ++ fromString n
+cType fc (CFUnion n t) = pure $ "union " ++ fromString n
 cType fc (CFFun s t) = funTySpec [s] t
   where
     funTySpec : List CFType -> CFType -> Core Builder
@@ -145,6 +146,7 @@ cftySpec fc CFChar = pure "char"
 cftySpec fc CFPtr = pure "(pointer void)"
 cftySpec fc (CFIORes t) = cftySpec fc t
 cftySpec fc (CFStruct n t) = pure $ fromString n ++ "*/nonnull"
+cftySpec fc (CFUnion n t) = throw (GenericMsg fc "Union types are not yet supported")
 cftySpec fc (CFFun s t) = funTySpec [s] t
   where
     funTySpec : List CFType -> CFType -> Core Builder
@@ -320,6 +322,9 @@ mkStruct (CFStruct n flds)
   where
     showFld : (String, CFType) -> Core Builder
     showFld (n, ty) = pure $ "(" ++ fromString n ++ " " ++ !(cftySpec emptyFC ty) ++ ")"
+mkStruct (CFUnion n flds)
+    -- TODO: add Union support
+    = pure ""
 mkStruct (CFIORes t) = mkStruct t
 mkStruct (CFFun a b) = [| mkStruct a ++ mkStruct b |]
 mkStruct _ = pure ""

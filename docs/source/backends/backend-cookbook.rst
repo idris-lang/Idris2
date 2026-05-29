@@ -613,6 +613,11 @@ The foreign types are:
   It represents a C like structure in the custom back-end.
   ``prim__getField`` and ``prim__setField`` primitives should be implemented
   to support this CFType.
+- ``CFUnion`` of type ``String -> List (String, CFType) -> CFType`` is the
+  foreign type associated with the ``System.FFI.Union``.
+  It represents a C like union in the custom back-end.
+  ``prim__getUnionField`` and ``prim__setUnionField`` primitives should be implemented
+  to support this CFType.
 - ``CFUser`` of type ``Name -> List CFType -> CFType``
   Types defined with [external] are represented with ``CFUser``. For example
   ``data MyType : Type where [external]`` will be represented as
