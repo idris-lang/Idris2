@@ -282,7 +282,7 @@ form:
 For an example, see the sample :ref:`sect-readline` bindings.
 
 Additionally, foreign functions can take *callbacks*, and take and return
-C ``struct`` pointers.
+C ``struct`` and ```union``` pointers.
 
 .. _sect-callbacks:
 
@@ -508,6 +508,17 @@ can convert between a ``void*`` and a ``char*`` in C:
     %foreign (pfn "getString")
     getString : Ptr String -> String
 
+Unions
+-------
+
+To work with unions is almost the same as with structs above with two differences:
+
+* To define a type for accessing a union in Idris, use ```Union``` type from ```System.FFI```
+* In place of ```getField``` and ```setField``` use ```getUnionField``` and ```setUnionField``` to get and set its fields respectively
+
+You must ensure that you are accessing the right union case yourself by e.g. means of a tagged union.
+
+Note that only Chez backend currently supports unions.
 
 Finalisers
 ----------
