@@ -103,6 +103,11 @@ should target this file (`CHANGELOG_NEXT`).
 * Prefix RefC Idris values with `Idris2_` to prevent name collisions with third
   partly libraries.
 
+#### Chez Backend
+
+* Added support for FFI C unions. Added `Union`, `getUnionField` and
+  `setUnionField` in `System.FFI`.
+
 ### Library changes
 
 #### Base
