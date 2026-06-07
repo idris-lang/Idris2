@@ -180,6 +180,7 @@ record PkgDesc where
   executable : Maybe String -- name of executable
   options : Maybe (FC, String)
   sourcedir : Maybe String
+  datadir : Maybe String
   builddir : Maybe String
   outputdir : Maybe String
   prebuild : Maybe (FC, String) -- Script to run before building
@@ -196,7 +197,7 @@ initPkgDesc pname
                 Nothing Nothing Nothing Nothing Nothing
                 [] []
                 Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
-                Nothing Nothing Nothing Nothing
+                Nothing Nothing Nothing Nothing Nothing
 
 export
 Show PkgDesc where
@@ -217,6 +218,7 @@ Show PkgDesc where
              maybe "" (\m => "Exec: " ++ m ++ "\n") (executable pkg) ++
              maybe "" (\m => "Opts: " ++ snd m ++ "\n") (options pkg) ++
              maybe "" (\m => "SourceDir: " ++ m ++ "\n") (sourcedir pkg) ++
+             maybe "" (\m => "DataDir: " ++ m ++ "\n") (datadir pkg) ++
              maybe "" (\m => "BuildDir: " ++ m ++ "\n") (builddir pkg) ++
              maybe "" (\m => "OutputDir: " ++ m ++ "\n") (outputdir pkg) ++
              maybe "" (\m => "Prebuild: " ++ snd m ++ "\n") (prebuild pkg) ++
@@ -256,6 +258,7 @@ Pretty Void PkgDesc where
     , strField "executable"  desc.executable
     , strField "opts"        (snd <$> desc.options)
     , strField "sourcedir"   desc.sourcedir
+    , strField "datadir"     desc.datadir
     , strField "builddir"    desc.builddir
     , strField "outputdir"   desc.outputdir
 

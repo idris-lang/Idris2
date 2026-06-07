@@ -65,6 +65,7 @@ data DescField  : Type where
   PExec         : String -> DescField
   POpts         : FC -> String -> DescField
   PSourceDir    : FC -> String -> DescField
+  PDataDir      : FC -> String -> DescField
   PBuildDir     : FC -> String -> DescField
   POutputDir    : FC -> String -> DescField
   PPrebuild     : FC -> String -> DescField
@@ -87,6 +88,7 @@ field fname
     <|> strField POpts "options"
     <|> strField POpts "opts"
     <|> strField PSourceDir "sourcedir"
+    <|> strField PDataDir "datadir"
     <|> strField PBuildDir "builddir"
     <|> strField POutputDir "outputdir"
     <|> strField PPrebuild "prebuild"
@@ -242,6 +244,7 @@ addField (PMainMod loc n)    pkg = do put MainMod (Just (loc, n))
 addField (PExec e)           pkg = pure $ { executable := Just e } pkg
 addField (POpts fc e)        pkg = pure $ { options := Just (fc, e) } pkg
 addField (PSourceDir fc a)   pkg = pure $ { sourcedir := Just a } pkg
+addField (PDataDir fc a)     pkg = pure $ { datadir := Just a } pkg
 addField (PBuildDir fc a)    pkg = pure $ { builddir := Just a } pkg
 addField (POutputDir fc a)   pkg = pure $ { outputdir := Just a } pkg
 addField (PPrebuild fc e)    pkg = pure $ { prebuild := Just (fc, e) } pkg
@@ -963,6 +966,7 @@ processPackage opts (cmd, mfile)
              setWorkingDir dir
              pkg <- parsePkgFile True filename
              whenJust (builddir pkg) setBuildDir
+             whenJust (datadir pkg) addDataDir
              setOutputDir (outputdir pkg)
              case cmd of
                   Build => do [] <- build pkg opts
