@@ -564,28 +564,28 @@ postOptions : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
               {auto m : Ref MD Metadata} ->
               {auto o : Ref ROpts REPLOpts} ->
-              REPLResult -> List CLOpt -> Core Bool
-postOptions _ [] = pure True
+              REPLResult -> List CLOpt -> Core ProgramProgress
+postOptions _ [] = pure Continue
 postOptions res@(ErrorLoadingFile {}) (OutputFile _ :: rest)
     = do ignore $ postOptions res rest
-         pure False
+         pure Abort
 postOptions res (OutputFile outfile :: rest)
     = do ignore $ compileExp (PRef EmptyFC (UN $ Basic "main")) outfile
          ignore $ postOptions res rest
-         pure False
+         pure Abort
 postOptions res (ExecFn expr :: rest)
     = do setCurrentElabSource expr
          let Right (_, _, e) = runParser (Virtual Interactive) Nothing expr $ aPTerm <* eoi
            | Left err => throw err
          ignore $ execExp e
          ignore $ postOptions res rest
-         pure False
+         pure Abort
 postOptions res (CheckOnly :: rest)
     = do ignore $ postOptions res rest
-         pure False
+         pure Abort
 postOptions res (RunREPL str :: rest)
     = do replCmd str
-         pure False
+         pure Abort
 postOptions res (_ :: rest) = postOptions res rest
 
 export

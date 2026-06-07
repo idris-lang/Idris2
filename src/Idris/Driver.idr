@@ -205,11 +205,16 @@ stMain cgs opts
                                 res <- loadMainFile f
                                 displayStartupErrors res
                                 pure res
-
-               doRepl <- catch (postOptions result opts)
-                               (\err => emitError err *> pure False)
-               if doRepl then
-                 if ide || ideSocket then
+               Continue <- catch (postOptions result opts)
+                               (\err => emitError err *> pure Abort)
+                | Abort => do
+                    -- exit with an error code if there was an error, otherwise
+                    -- just exit
+                     ropts <- get ROpts
+                     showTimeRecord
+                     whenJust (errorLine ropts) $ \ _ =>
+                       coreLift $ exitWith (ExitFailure 1)
+               if ide || ideSocket then
                    if not ideSocket
                     then do
                      setOutput (IDEMode 0 stdin stdout)
@@ -227,13 +232,6 @@ stMain cgs opts
                  else do
                      repl {c} {u} {m}
                      showTimeRecord
-                else
-                    -- exit with an error code if there was an error, otherwise
-                    -- just exit
-                  do ropts <- get ROpts
-                     showTimeRecord
-                     whenJust (errorLine ropts) $ \ _ =>
-                       coreLift $ exitWith (ExitFailure 1)
 
   where
 
