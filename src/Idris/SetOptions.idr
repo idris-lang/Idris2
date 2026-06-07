@@ -405,8 +405,8 @@ setIncrementalCG failOnError cgn
 export
 preOptions : {auto c : Ref Ctxt Defs} ->
              {auto o : Ref ROpts REPLOpts} ->
-             List CLOpt -> Core Bool
-preOptions [] = pure True
+             List CLOpt -> Core ProgramProgress
+preOptions [] = pure Continue
 preOptions (NoBanner :: opts)
     = do setSession ({ nobanner := True } !getSession)
          preOptions opts
@@ -441,10 +441,11 @@ preOptions (SetCG e :: opts)
             Just cg => do setCG cg
                           preOptions opts
             Nothing =>
-              do coreLift $ putStrLn "No such code generator"
-                 coreLift $ putStrLn $ "Code generators available: " ++
-                                 showSep ", " (map fst (availableCGs (options defs)))
-                 coreLift $ exitWith (ExitFailure 1)
+              do throw $ InternalError $ """
+                   No such code generator
+                   Code generators available: \{showSep ", " (map fst (availableCGs (options defs)))}
+                   """
+                 pure Abort
 preOptions (Directive d :: opts)
     = do setSession ({ directives $= (d::) } !getSession)
          preOptions opts
@@ -463,10 +464,10 @@ preOptions (OutputDir d :: opts)
 preOptions (Directory d :: opts)
     = do defs <- get Ctxt
          dirOption (dirs (options defs)) d
-         pure False
+         pure Abort
 preOptions (ListPackages :: opts)
     = do listPackages
-         pure False
+         pure Abort
 preOptions (Timing tm :: opts)
     = do setLogTimings (fromMaybe 10 tm)
          preOptions opts
@@ -540,13 +541,13 @@ preOptions (WholeProgram :: opts)
 preOptions (BashCompletion a b :: _)
     = do os <- opts a b
          coreLift $ putStr $ unlines os
-         pure False
+         pure Abort
 preOptions (BashCompletionScript fun :: _)
     = do coreLift $ putStrLn $ bashCompletionScript fun
-         pure False
+         pure Abort
 preOptions (ZshCompletionScript fun :: _)
     = do coreLift $ putStrLn $ zshCompletionScript fun
-         pure False
+         pure Abort
 preOptions (Total :: opts)
     = do updateSession ({ totalReq := Total })
          preOptions opts

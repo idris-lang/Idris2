@@ -170,8 +170,8 @@ stMain cgs opts
 
          -- start by going over the pre-options, and stop if we do not need to
          -- continue
-         True <- preOptions opts
-            | False => pure ()
+         Continue <- preOptions opts
+            | Abort => pure ()
 
          -- If there's a --build or --install, just do that then quit
          Continue <- flip catch quitWithError $ processPackageOpts opts
