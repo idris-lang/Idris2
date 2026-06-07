@@ -135,10 +135,14 @@ stMain cgs opts
             | True => pure ()
          False <- tryTTM opts
             | True => pure ()
+
          defs <- initDefs
+         -- Add the manually added codegens to the option set
          let updated = foldl (\o, (s, _) => addCG (s, Other s) o) (options defs) cgs
          c <- newRef Ctxt ({ options := updated } defs)
          s <- newRef Syn initSyntax
+         -- If we give a custom codegen, set that as the default,
+         -- otherwise, use Chez
          setCG {c} $ maybe Chez (Other . fst) (head' cgs)
          addPrimitives
 
@@ -244,23 +248,25 @@ stMain cgs opts
 -- Run any options (such as --version or --help) which imply printing a
 -- message then exiting. Returns wheter the program should continue
 
-quitOpts : List CLOpt -> IO Bool
-quitOpts [] = pure True
+data ProgramProgress = Continue | Abort
+
+quitOpts : List CLOpt -> IO ProgramProgress
+quitOpts [] = pure Continue
 quitOpts (Version :: _)
     = do putStrLn versionMsg
-         pure False
+         pure Abort
 quitOpts (TTCVersion :: _)
     = do printLn ttcVersion
-         pure False
+         pure Abort
 quitOpts (Help Nothing :: _)
     = do putStrLn usage
-         pure False
+         pure Abort
 quitOpts (Help (Just HelpLogging) :: _)
     = do putStrLn helpTopics
-         pure False
+         pure Abort
 quitOpts (Help (Just HelpPragma) :: _)
     = do putStrLn pragmaTopics
-         pure False
+         pure Abort
 quitOpts (_ :: opts) = quitOpts opts
 
 export
