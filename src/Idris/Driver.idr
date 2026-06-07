@@ -174,9 +174,10 @@ stMain cgs opts
             | False => pure ()
 
          -- If there's a --build or --install, just do that then quit
-         done <- flip catch quitWithError $ processPackageOpts opts
+         Continue <- flip catch quitWithError $ processPackageOpts opts
+            | Abort => pure ()
 
-         when (not done) $ flip catch quitWithError $
+         flip catch quitWithError $
             do when (checkVerbose opts) $ -- override Quiet if implicitly set
                    setOutput (REPL InfoLvl)
                u <- newRef UST initUState
@@ -248,8 +249,6 @@ stMain cgs opts
 -- Run any options (such as --version or --help) which imply printing a
 -- message then exiting. Returns wheter the program should continue
 
-data ProgramProgress = Continue | Abort
-
 quitOpts : List CLOpt -> IO ProgramProgress
 quitOpts [] = pure Continue
 quitOpts (Version :: _)
@@ -275,10 +274,10 @@ mainWithCodegens cgs = do
   Right opts <- getCmdOpts
     | Left err => do ignore $ fPutStrLn stderr $ "Error: " ++ err
                      exitWith (ExitFailure 1)
-  continue <- quitOpts opts
-  when continue $ do
-    setupTerm
-    coreRun (stMain cgs opts)
-      (\err : Error => do ignore $ fPutStrLn stderr $ "Uncaught error: " ++ show err
-                          exitWith (ExitFailure 1))
-      (\res => pure ())
+  Continue <- quitOpts opts
+    | Abort => pure ()
+  setupTerm
+  coreRun (stMain cgs opts)
+    (\err : Error => do ignore $ fPutStrLn stderr $ "Uncaught error: " ++ show err
+                        exitWith (ExitFailure 1))
+    (\res => pure ())

@@ -1063,14 +1063,14 @@ export
 processPackageOpts : {auto c : Ref Ctxt Defs} ->
                      {auto s : Ref Syn SyntaxInfo} ->
                      {auto o : Ref ROpts REPLOpts} ->
-                     List CLOpt -> Core Bool
+                     List CLOpt -> Core ProgramProgress
 processPackageOpts opts
     = do (MkPFR cmds@(_::_) opts' err) <- pure $ partitionOpts opts
-             | (MkPFR Nil opts' _) => pure False
+             | (MkPFR Nil opts' _) => pure Continue
          if err
            then coreLift $ putStrLn errorMsg
            else traverse_ (processPackage opts') cmds
-         pure True
+         pure Abort
 
 
 -- find an ipkg file in one of the parent directories
