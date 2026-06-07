@@ -1062,6 +1062,10 @@ errorMsg = unlines
 export
 processPackageOpts : {auto c : Ref Ctxt Defs} ->
                      {auto s : Ref Syn SyntaxInfo} ->
+                     -- we need repl opts because
+                     -- we can emit warnings and emitting a warning
+                     -- requires knowing if we're in IDE more or in the repl
+                     -- which is in REPLOpts as the `idemode : OutputMode` field
                      {auto o : Ref ROpts REPLOpts} ->
                      List CLOpt -> Core ProgramProgress
 processPackageOpts opts
