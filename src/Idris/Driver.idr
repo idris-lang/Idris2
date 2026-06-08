@@ -95,10 +95,10 @@ updateREPLOpts
     = do ed <- coreLift $ idrisGetEnv "EDITOR"
          whenJust ed $ \ e => update ROpts { editor := e }
 
-tryYaffle : List CLOpt -> Core Bool
-tryYaffle [] = pure False
+tryYaffle : List CLOpt -> Core ProgramProgress
+tryYaffle [] = pure Continue
 tryYaffle (Yaffle f :: _) = do yaffleMain f []
-                               pure True
+                               pure Abort
 tryYaffle (c :: cs) = tryYaffle cs
 
 ignoreMissingIpkg : List CLOpt -> Bool
@@ -106,10 +106,10 @@ ignoreMissingIpkg [] = False
 ignoreMissingIpkg (IgnoreMissingIPKG :: _) = True
 ignoreMissingIpkg (c :: cs) = ignoreMissingIpkg cs
 
-tryTTM : List CLOpt -> Core Bool
-tryTTM [] = pure False
+tryTTM : List CLOpt -> Core ProgramProgress
+tryTTM [] = pure Continue
 tryTTM (Metadata f :: _) = do dumpTTM f
-                              pure True
+                              pure Abort
 tryTTM (c :: cs) = tryTTM cs
 
 
@@ -131,10 +131,10 @@ checkVerbose (_ :: xs) = checkVerbose xs
 
 stMain : List (String, Codegen) -> List CLOpt -> Core ()
 stMain cgs opts
-    = do False <- tryYaffle opts
-            | True => pure ()
-         False <- tryTTM opts
-            | True => pure ()
+    = do Continue <- tryYaffle opts
+            | Abort => pure ()
+         Continue <- tryTTM opts
+            | Abort => pure ()
 
          defs <- initDefs
          -- Add the manually added codegens to the option set
