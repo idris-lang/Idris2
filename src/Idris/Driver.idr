@@ -34,6 +34,11 @@ import Yaffle.Main
 
 %default covering
 
+public export
+CustomBackends : Type
+CustomBackends = List (String, Codegen)
+
+
 findInputs : List CLOpt -> Maybe (List1 String)
 findInputs [] = Nothing
 findInputs (InputFile f :: fs) =
@@ -98,20 +103,26 @@ updateREPLOpts
 -- There are three ways to run the compiler
 -- Either run normall, or run in yaffle mode, or dump TTM
 data CLIMode
-  = Normal
+  = Normal CustomBackends (List CLOpt)
   | Yaffle String
   | TTM String
 
--- Yaffle and TTM are mutually incompatible so we parse the flags here and
--- report the error if it occurs. If neither flag is present we run in normal mode
-parseCompilerMode : List CLOpt -> Maybe CLIMode -> Either String CLIMode
-parseCompilerMode [] Nothing = pure Normal
-parseCompilerMode [] (Just m) = pure m
-parseCompilerMode (Yaffle f :: xs) Nothing = parseCompilerMode xs (Just $ Yaffle f)
-parseCompilerMode (Metadata f :: xs) Nothing = parseCompilerMode xs (Just $ TTM f)
-parseCompilerMode (Yaffle _ :: xs) (Just (TTM _)) = Left "Incompatible modes --ttm and --yaffle"
-parseCompilerMode (Metadata _ :: xs) (Just (Yaffle _)) = Left "Incompatible modes --ttm and --yaffle"
-parseCompilerMode (_ :: xs) m = parseCompilerMode xs m
+parameters (backends : CustomBackends) (allOpts : List CLOpt)
+
+  -- Yaffle and TTM are mutually incompatible so we parse the flags here and
+  -- report the error if it occurs. If neither flag is present we run in normal mode
+
+  parseCompilerMode' : List CLOpt -> Maybe CLIMode -> Either String CLIMode
+  parseCompilerMode' [] Nothing = pure $ Normal backends allOpts
+  parseCompilerMode' [] (Just m) = pure m
+  parseCompilerMode' (Yaffle f :: xs) Nothing = parseCompilerMode' xs (Just $ Yaffle f)
+  parseCompilerMode' (Metadata f :: xs) Nothing = parseCompilerMode' xs (Just $ TTM f)
+  parseCompilerMode' (Yaffle _ :: xs) (Just (TTM _)) = Left "Incompatible modes --ttm and --yaffle"
+  parseCompilerMode' (Metadata _ :: xs) (Just (Yaffle _)) = Left "Incompatible modes --ttm and --yaffle"
+  parseCompilerMode' (_ :: xs) m = parseCompilerMode' xs m
+
+  parseCompilerMode : Either String CLIMode
+  parseCompilerMode = parseCompilerMode' allOpts Nothing
 
 ignoreMissingIpkg : List CLOpt -> Bool
 ignoreMissingIpkg [] = False
@@ -247,10 +258,10 @@ stMain cgs opts
     msg <- render doc
     coreLift (die msg)
 
-allMain : List (String, Codegen) -> List CLOpt -> CLIMode -> Core ()
-allMain cgs opts Normal = stMain cgs opts
-allMain cgs opts (Yaffle f) = yaffleMain f []
-allMain cgs opts (TTM f) = dumpTTM f
+allMain : CLIMode -> Core ()
+allMain (Normal cgs opts) = stMain cgs opts
+allMain (Yaffle f) = yaffleMain f []
+allMain (TTM f) = dumpTTM f
 
 -- Run any options (such as --version or --help) which imply printing a
 -- message then exiting. Returns wheter the program should continue
@@ -283,10 +294,10 @@ mainWithCodegens cgs = do
   Continue <- quitOpts opts
     | Abort => pure ()
   setupTerm
-  let Right cliMode = parseCompilerMode opts Nothing
+  let Right cliMode = parseCompilerMode cgs opts
     | Left err => do ignore $ fPutStrLn stderr $ "Error: " ++ err
                      exitWith (ExitFailure 1)
-  coreRun (allMain cgs opts cliMode)
+  coreRun (allMain cliMode)
     (\err : Error => do ignore $ fPutStrLn stderr $ "Uncaught error: " ++ show err
                         exitWith (ExitFailure 1))
     (\res => pure ())
