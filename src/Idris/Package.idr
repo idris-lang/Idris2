@@ -1065,53 +1065,47 @@ errorMsg = unlines
   , "    --output-dir <dir>"
   ]
 
-export
-processPackageOpts : {auto c : Ref Ctxt Defs} ->
-                     {auto s : Ref Syn SyntaxInfo} ->
-                     -- we need repl opts because
-                     -- we can emit warnings and emitting a warning
-                     -- requires knowing if we're in IDE more or in the repl
-                     -- which is in REPLOpts as the `idemode : OutputMode` field
-                     {auto o : Ref ROpts REPLOpts} ->
-                     {auto _ : Ref PostS PostSession} ->
-                     List CLOpt -> Core ProgramProgress
-processPackageOpts opts
-    = do (MkPFR cmds@(_::_) opts' err) <- pure $ partitionOpts opts
-             | (MkPFR Nil opts' _) => pure Continue
-         if err
-           then coreLift $ putStrLn errorMsg
-           else traverse_ (processPackage opts') cmds
-         pure Abort
+parameters
+  {auto c : Ref Ctxt Defs}
+  {auto s : Ref Syn SyntaxInfo}
+  {auto o : Ref ROpts REPLOpts}
+  {auto p : Ref PostS PostSession}
+
+  export
+  processPackageOpts : List CLOpt -> Core ProgramProgress
+  processPackageOpts opts
+      = do (MkPFR cmds@(_::_) opts' err) <- pure $ partitionOpts opts
+               | (MkPFR Nil opts' _) => pure Continue
+           if err
+             then coreLift $ putStrLn errorMsg
+             else traverse_ (processPackage opts') cmds
+           pure Abort
 
 
--- find an ipkg file in one of the parent directories
--- If it exists, read it, set the current directory to the root of the source
--- tree, and set the relevant command line options before proceeding
-export
-findIpkg : {auto c : Ref Ctxt Defs} ->
-           {auto r : Ref ROpts REPLOpts} ->
-           {auto s : Ref Syn SyntaxInfo} ->
-           {auto _ : Ref PostS PostSession} ->
-           Maybe String -> Core (Maybe String)
-findIpkg fname
-   = do Just (dir, ipkgn, up) <- coreLift findIpkgFile
-             | Nothing => pure fname
-        coreLift_ $ changeDir dir
-        setWorkingDir dir
-        pkg <- parsePkgFile True ipkgn
-        maybe (pure ()) setBuildDir (builddir pkg)
-        setOutputDir (outputdir pkg)
-        processOptions (options pkg)
-        addDeps pkg
-        case fname of
-             Nothing => pure Nothing
-             Just srcpath  =>
-                do let src' = up </> srcpath
-                   setSource src'
-                   update ROpts { mainfile := Just src' }
-                   pure (Just src')
-  where
-    dropHead : String -> List String -> List String
-    dropHead str [] = []
-    dropHead str (x :: xs)
-        = if x == str then xs else x :: xs
+  -- find an ipkg file in one of the parent directories
+  -- If it exists, read it, set the current directory to the root of the source
+  -- tree, and set the relevant command line options before proceeding
+  export
+  findIpkg : Maybe String -> Core (Maybe String)
+  findIpkg fname
+     = do Just (dir, ipkgn, up) <- coreLift findIpkgFile
+               | Nothing => pure fname
+          coreLift_ $ changeDir dir
+          setWorkingDir dir
+          pkg <- parsePkgFile True ipkgn
+          maybe (pure ()) setBuildDir (builddir pkg)
+          setOutputDir (outputdir pkg)
+          processOptions (options pkg)
+          addDeps pkg
+          case fname of
+               Nothing => pure Nothing
+               Just srcpath  =>
+                  do let src' = up </> srcpath
+                     setSource src'
+                     update ROpts { mainfile := Just src' }
+                     pure (Just src')
+    where
+      dropHead : String -> List String -> List String
+      dropHead str [] = []
+      dropHead str (x :: xs)
+          = if x == str then xs else x :: xs
