@@ -25,6 +25,7 @@ authors = "Tomáš"
 -- executable =
 -- opts =
 -- sourcedir =
+-- datadir =
 -- builddir =
 -- outputdir =
 
