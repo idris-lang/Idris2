@@ -95,23 +95,28 @@ updateREPLOpts
     = do ed <- coreLift $ idrisGetEnv "EDITOR"
          whenJust ed $ \ e => update ROpts { editor := e }
 
-tryYaffle : List CLOpt -> Core ProgramProgress
-tryYaffle [] = pure Continue
-tryYaffle (Yaffle f :: _) = do yaffleMain f []
-                               pure Abort
-tryYaffle (c :: cs) = tryYaffle cs
+-- There are three ways to run the compiler
+-- Either run normall, or run in yaffle mode, or dump TTM
+data CLIMode
+  = Normal
+  | Yaffle String
+  | TTM String
+
+-- Yaffle and TTM are mutually incompatible so we parse the flags here and
+-- report the error if it occurs. If neither flag is present we run in normal mode
+parseCompilerMode : List CLOpt -> Maybe CLIMode -> Either String CLIMode
+parseCompilerMode [] Nothing = pure Normal
+parseCompilerMode [] (Just m) = pure m
+parseCompilerMode (Yaffle f :: xs) Nothing = parseCompilerMode xs (Just $ Yaffle f)
+parseCompilerMode (Metadata f :: xs) Nothing = parseCompilerMode xs (Just $ TTM f)
+parseCompilerMode (Yaffle _ :: xs) (Just (TTM _)) = Left "Incompatible modes --ttm and --yaffle"
+parseCompilerMode (Metadata _ :: xs) (Just (Yaffle _)) = Left "Incompatible modes --ttm and --yaffle"
+parseCompilerMode (_ :: xs) m = parseCompilerMode xs m
 
 ignoreMissingIpkg : List CLOpt -> Bool
 ignoreMissingIpkg [] = False
 ignoreMissingIpkg (IgnoreMissingIPKG :: _) = True
 ignoreMissingIpkg (c :: cs) = ignoreMissingIpkg cs
-
-tryTTM : List CLOpt -> Core ProgramProgress
-tryTTM [] = pure Continue
-tryTTM (Metadata f :: _) = do dumpTTM f
-                              pure Abort
-tryTTM (c :: cs) = tryTTM cs
-
 
 banner : String
 banner = #"""
@@ -131,12 +136,7 @@ checkVerbose (_ :: xs) = checkVerbose xs
 
 stMain : List (String, Codegen) -> List CLOpt -> Core ()
 stMain cgs opts
-    = do Continue <- tryYaffle opts
-            | Abort => pure ()
-         Continue <- tryTTM opts
-            | Abort => pure ()
-
-         defs <- initDefs
+    = do defs <- initDefs
          -- Add the manually added codegens to the option set
          let updated = foldl (\o, (s, _) => addCG (s, Other s) o) (options defs) cgs
          c <- newRef Ctxt ({ options := updated } defs)
@@ -247,6 +247,11 @@ stMain cgs opts
     msg <- render doc
     coreLift (die msg)
 
+allMain : List (String, Codegen) -> List CLOpt -> CLIMode -> Core ()
+allMain cgs opts Normal = stMain cgs opts
+allMain cgs opts (Yaffle f) = yaffleMain f []
+allMain cgs opts (TTM f) = dumpTTM f
+
 -- Run any options (such as --version or --help) which imply printing a
 -- message then exiting. Returns wheter the program should continue
 
@@ -278,7 +283,10 @@ mainWithCodegens cgs = do
   Continue <- quitOpts opts
     | Abort => pure ()
   setupTerm
-  coreRun (stMain cgs opts)
+  let Right cliMode = parseCompilerMode opts Nothing
+    | Left err => do ignore $ fPutStrLn stderr $ "Error: " ++ err
+                     exitWith (ExitFailure 1)
+  coreRun (allMain cgs opts cliMode)
     (\err : Error => do ignore $ fPutStrLn stderr $ "Uncaught error: " ++ show err
                         exitWith (ExitFailure 1))
     (\res => pure ())
