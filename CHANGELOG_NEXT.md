@@ -86,6 +86,8 @@ should target this file (`CHANGELOG_NEXT`).
 * Change `flake.nix` to point at `idris-community/idris2-mode` as the URL for
   `inputs.idris-emacs-src` (from the user fork `redfish64/idris2-mode`).
 * Fix UTF-8 character handling in package description fields.
+* A project's data directory can now be specified with the `datadir` entry in
+  an `ipkg` file.
 
 ### Backend changes
 
