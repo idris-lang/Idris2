@@ -29,7 +29,7 @@ import System.Info
 
 ||| Tag to indicate if the compiler needs to stop execution immediately
 public export
-data ProgramProgress = Continue | Abort
+data ControlFlow = Continue | Abort
 
 ||| Generic interface to some code generator
 public export

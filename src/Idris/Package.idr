@@ -1072,7 +1072,7 @@ parameters
   {auto p : Ref PostS PostSession}
 
   export
-  processPackageOpts : List CLOpt -> Core ProgramProgress
+  processPackageOpts : List CLOpt -> Core ControlFlow
   processPackageOpts opts
       = do (MkPFR cmds@(_::_) opts' err) <- pure $ partitionOpts opts
                | (MkPFR Nil opts' _) => pure Continue

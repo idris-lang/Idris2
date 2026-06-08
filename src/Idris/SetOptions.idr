@@ -406,7 +406,7 @@ export
 preOptions : {auto c : Ref Ctxt Defs} ->
              {auto o : Ref ROpts REPLOpts} ->
              {auto s : Ref PostS PostSession} ->
-             List CLOpt -> Core ProgramProgress
+             List CLOpt -> Core ControlFlow
 preOptions [] = pure Continue
 preOptions (NoBanner :: opts)
     = do setSession ({ nobanner := True } !getSession)
@@ -569,7 +569,8 @@ postOptions : {auto c : Ref Ctxt Defs} ->
               {auto s : Ref Syn SyntaxInfo} ->
               {auto o : Ref ROpts REPLOpts} ->
               {auto m : Ref MD Metadata} ->
-              REPLResult -> PostSession -> Core ProgramProgress
+              REPLResult -> PostSession -> Core ControlFlow
+-- In case of error loading the output file, we abort immediately without doing anything
 postOptions res@(ErrorLoadingFile {}) (MkPostSession _ (Just _) _ _)
     = pure Abort
 -- otherwise, we compile the file and
@@ -579,25 +580,25 @@ postOptions res@(ErrorLoadingFile {}) (MkPostSession _ (Just _) _ _)
 -- - run the REPL
 -- in this order, if either of those happened, we abort execution
 -- if none happened we continue
-postOptions res (MkPostSession check out ex runRepl)
-    = do controlFlow <- newRef ProgramProgress Continue
+postOptions _ (MkPostSession check out ex runRepl)
+    = do controlFlow <- newRef ControlFlow Continue
          whenJust out $ \ outfile => do
              ignore $ compileExp (PRef EmptyFC (UN $ Basic "main")) outfile
-             put ProgramProgress Abort
+             put ControlFlow Abort
          flip traverse_ (reverse ex) $ \ expr => do
              setCurrentElabSource expr
              let Right (_, _, e) = runParser (Virtual Interactive) Nothing expr $ aPTerm <* eoi
                    | Left err => throw err
              ignore $ execExp e
-             put ProgramProgress Abort
+             put ControlFlow Abort
          when check $
-             put ProgramProgress Abort
+             put ControlFlow Abort
          whenJust runRepl $ \cmd => do
              replCmd cmd
-             put ProgramProgress Abort
+             put ControlFlow Abort
          -- if we compiled the file earlier, we stop now
          -- otherwise, none of the options were set so we continue
-         get ProgramProgress
+         get ControlFlow
 
 export
 ideMode : List CLOpt -> Bool
