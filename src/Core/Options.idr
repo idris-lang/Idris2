@@ -133,6 +133,28 @@ record ElabDirectives where
   -- default: yes
   prefixRecordProjections : Bool
 
+||| Options relevant after running a typechecking session
+public export
+record PostSession where
+  constructor MkPostSession
+  checkOnly : Bool
+  outputFile : Maybe String
+  execExpr : Maybe String
+  runRepl : Maybe String
+
+export
+defaultPost : PostSession
+defaultPost = MkPostSession
+  { checkOnly = False
+  , outputFile = Nothing
+  , execExpr = Nothing
+  , runRepl = Nothing
+  }
+
+-- tag for PostSession
+export
+data PostS : Type where
+
 public export
 record Session where
   constructor MkSessionOpts
@@ -175,6 +197,7 @@ record Session where
      -- incremental CGs are set (intended for overriding any environment
      -- variables that set incremental compilation)
   caseTreeHeuristics : Bool -- apply heuristics to pick matches for case tree building
+
 
 public export
 record PPrinter where
@@ -243,6 +266,7 @@ defaultSession = MkSessionOpts False CoveringOnly False False Chez [] 1000 False
                                defaultLogLevel Nothing False Nothing Nothing
                                Nothing Nothing False 1 False False True
                                False [] False False
+
 
 export
 defaultElab : ElabDirectives

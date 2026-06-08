@@ -450,6 +450,7 @@ addDeps pkg = do
 
 processOptions : {auto c : Ref Ctxt Defs} ->
                  {auto o : Ref ROpts REPLOpts} ->
+                 {auto _ : Ref PostS PostSession} ->
                  Maybe (FC, String) -> Core ()
 processOptions Nothing = pure ()
 processOptions (Just (fc, opts))
@@ -489,6 +490,7 @@ withWarnings op = do o <- catch op $ \err =>
 prepareCompilation : {auto c : Ref Ctxt Defs} ->
                      {auto s : Ref Syn SyntaxInfo} ->
                      {auto o : Ref ROpts REPLOpts} ->
+                     {auto _ : Ref PostS PostSession} ->
                      PkgDesc ->
                      List CLOpt ->
                      Core (List Error)
@@ -517,6 +519,7 @@ export
 build : {auto c : Ref Ctxt Defs} ->
         {auto s : Ref Syn SyntaxInfo} ->
         {auto o : Ref ROpts REPLOpts} ->
+        {auto _ : Ref PostS PostSession} ->
         PkgDesc ->
         List CLOpt ->
         Core (List Error)
@@ -692,6 +695,7 @@ export
 check : {auto c : Ref Ctxt Defs} ->
         {auto s : Ref Syn SyntaxInfo} ->
         {auto o : Ref ROpts REPLOpts} ->
+        {auto _ : Ref PostS PostSession} ->
         PkgDesc ->
         List CLOpt ->
         Core (List Error)
@@ -706,6 +710,7 @@ check pkg opts =
 makeDoc : {auto c : Ref Ctxt Defs} ->
           {auto s : Ref Syn SyntaxInfo} ->
           {auto o : Ref ROpts REPLOpts} ->
+          {auto _ : Ref PostS PostSession} ->
           PkgDesc ->
           List CLOpt ->
           Core (List Error)
@@ -939,6 +944,7 @@ localPackageFile Nothing
 processPackage : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
                  {auto o : Ref ROpts REPLOpts} ->
+                 {auto _ : Ref PostS PostSession} ->
                  List CLOpt ->
                  (PkgCommand, Maybe String) ->
                  Core ()
@@ -1067,6 +1073,7 @@ processPackageOpts : {auto c : Ref Ctxt Defs} ->
                      -- requires knowing if we're in IDE more or in the repl
                      -- which is in REPLOpts as the `idemode : OutputMode` field
                      {auto o : Ref ROpts REPLOpts} ->
+                     {auto _ : Ref PostS PostSession} ->
                      List CLOpt -> Core ProgramProgress
 processPackageOpts opts
     = do (MkPFR cmds@(_::_) opts' err) <- pure $ partitionOpts opts
@@ -1084,6 +1091,7 @@ export
 findIpkg : {auto c : Ref Ctxt Defs} ->
            {auto r : Ref ROpts REPLOpts} ->
            {auto s : Ref Syn SyntaxInfo} ->
+           {auto _ : Ref PostS PostSession} ->
            Maybe String -> Core (Maybe String)
 findIpkg fname
    = do Just (dir, ipkgn, up) <- coreLift findIpkgFile

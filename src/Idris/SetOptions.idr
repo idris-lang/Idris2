@@ -405,17 +405,20 @@ setIncrementalCG failOnError cgn
 export
 preOptions : {auto c : Ref Ctxt Defs} ->
              {auto o : Ref ROpts REPLOpts} ->
+             {auto s : Ref PostS PostSession} ->
              List CLOpt -> Core ProgramProgress
 preOptions [] = pure Continue
 preOptions (NoBanner :: opts)
     = do setSession ({ nobanner := True } !getSession)
          preOptions opts
 -- These things are processed later, but imply nobanner too
-preOptions (OutputFile _ :: opts)
-    = do setSession ({ nobanner := True } !getSession)
+preOptions (OutputFile file :: opts)
+    = do setSession ({ nobanner := True} !getSession)
+         update PostS {outputFile := Just file}
          preOptions opts
-preOptions (ExecFn _ :: opts)
-    = do setSession ({ nobanner := True } !getSession)
+preOptions (ExecFn expr :: opts)
+    = do setSession ({ nobanner := True} !getSession)
+         update PostS {execExpr := Just expr}
          preOptions opts
 preOptions (IdeMode :: opts)
     = do setSession ({ nobanner := True } !getSession)
@@ -424,7 +427,8 @@ preOptions (IdeModeSocket _ :: opts)
     = do setSession ({ nobanner := True } !getSession)
          preOptions opts
 preOptions (CheckOnly :: opts)
-    = do setSession ({ nobanner := True } !getSession)
+    = do setSession ({ nobanner := True} !getSession)
+         update PostS {checkOnly := True}
          preOptions opts
 preOptions (Profile :: opts)
     = do setSession ({ profile := True } !getSession)
@@ -477,9 +481,10 @@ preOptions (DebugElabCheck :: opts)
 preOptions (AltErrorCount c :: opts)
     = do setSession ({ logErrorCount := c } !getSession)
          preOptions opts
-preOptions (RunREPL _ :: opts)
+preOptions (RunREPL expr :: opts)
     = do setOutput (REPL VerbosityLvl.ErrorLvl)
-         setSession ({ nobanner := True } !getSession)
+         setSession ({ nobanner := True} !getSession)
+         update PostS {runRepl := Just expr}
          preOptions opts
 preOptions (FindIPKG :: opts)
     = do setSession ({ findipkg := True } !getSession)
@@ -562,31 +567,37 @@ export
 postOptions : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
               {auto s : Ref Syn SyntaxInfo} ->
-              {auto m : Ref MD Metadata} ->
               {auto o : Ref ROpts REPLOpts} ->
-              REPLResult -> List CLOpt -> Core ProgramProgress
-postOptions _ [] = pure Continue
-postOptions res@(ErrorLoadingFile {}) (OutputFile _ :: rest)
-    = do ignore $ postOptions res rest
-         pure Abort
-postOptions res (OutputFile outfile :: rest)
-    = do ignore $ compileExp (PRef EmptyFC (UN $ Basic "main")) outfile
-         ignore $ postOptions res rest
-         pure Abort
-postOptions res (ExecFn expr :: rest)
-    = do setCurrentElabSource expr
-         let Right (_, _, e) = runParser (Virtual Interactive) Nothing expr $ aPTerm <* eoi
-           | Left err => throw err
-         ignore $ execExp e
-         ignore $ postOptions res rest
-         pure Abort
-postOptions res (CheckOnly :: rest)
-    = do ignore $ postOptions res rest
-         pure Abort
-postOptions res (RunREPL str :: rest)
-    = do replCmd str
-         pure Abort
-postOptions res (_ :: rest) = postOptions res rest
+              {auto m : Ref MD Metadata} ->
+              REPLResult -> PostSession -> Core ProgramProgress
+-- if we are expecting to load a file and there was an error loading the
+-- file we abort
+postOptions res@(ErrorLoadingFile {}) (MkPostSession _ (Just _) _ _)
+    = pure Abort
+-- otherwise, we compile the file and
+-- either :
+-- - execute the given expression
+-- - quit because the --check flag was given
+-- - run the REPL
+-- in this order, if either of those happened, we abort execution
+-- if none happened we continue
+postOptions res (MkPostSession check out ex runRepl)
+    = do whenJust out $ \outfile =>
+             ignore $ compileExp (PRef EmptyFC (UN $ Basic "main")) outfile
+         let Nothing = ex
+           | Just expr =>  do let Right (_, _, e) = runParser (Virtual Interactive) Nothing expr $ aPTerm <* eoi
+                                | Left err => throw err
+                              ignore $ execExp e
+                              pure Abort
+         let False = check
+           | True => pure Abort
+         let Nothing = runRepl
+           | Just cmd => replCmd cmd *> pure Abort
+         -- if we compiled the file earlier, we stop now
+         -- otherwise, none of the options were set so we continue
+         if isJust out
+            then pure Abort
+            else pure Continue
 
 export
 ideMode : List CLOpt -> Bool

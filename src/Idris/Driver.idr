@@ -168,6 +168,7 @@ stMain cgs opts
                                      """
          update ROpts { mainfile := fname }
 
+         s <- newRef PostS defaultPost
          -- start by going over the pre-options, and stop if we do not need to
          -- continue
          Continue <- preOptions opts
@@ -205,7 +206,9 @@ stMain cgs opts
                                 res <- loadMainFile f
                                 displayStartupErrors res
                                 pure res
-               Continue <- catch (postOptions result opts)
+
+               post <- get PostS
+               Continue <- catch (postOptions result post)
                                (\err => emitError err *> pure Abort)
                 | Abort => do
                     -- exit with an error code if there was an error, otherwise
