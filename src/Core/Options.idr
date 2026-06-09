@@ -139,7 +139,7 @@ record PostSession where
   constructor MkPostSession
   checkOnly : Bool
   outputFile : Maybe String
-  execExpr : Maybe String
+  execExpr : List String
   runRepl : Maybe String
 
 export
@@ -147,7 +147,7 @@ defaultPost : PostSession
 defaultPost = MkPostSession
   { checkOnly = False
   , outputFile = Nothing
-  , execExpr = Nothing
+  , execExpr = []
   , runRepl = Nothing
   }
 

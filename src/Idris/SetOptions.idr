@@ -418,7 +418,7 @@ preOptions (OutputFile file :: opts)
          preOptions opts
 preOptions (ExecFn expr :: opts)
     = do setSession ({ nobanner := True} !getSession)
-         update PostS {execExpr := Just expr}
+         update PostS {execExpr $= (expr ::)}
          preOptions opts
 preOptions (IdeMode :: opts)
     = do setSession ({ nobanner := True } !getSession)
@@ -570,8 +570,6 @@ postOptions : {auto c : Ref Ctxt Defs} ->
               {auto o : Ref ROpts REPLOpts} ->
               {auto m : Ref MD Metadata} ->
               REPLResult -> PostSession -> Core ProgramProgress
--- if we are expecting to load a file and there was an error loading the
--- file we abort
 postOptions res@(ErrorLoadingFile {}) (MkPostSession _ (Just _) _ _)
     = pure Abort
 -- otherwise, we compile the file and
@@ -582,22 +580,24 @@ postOptions res@(ErrorLoadingFile {}) (MkPostSession _ (Just _) _ _)
 -- in this order, if either of those happened, we abort execution
 -- if none happened we continue
 postOptions res (MkPostSession check out ex runRepl)
-    = do whenJust out $ \outfile =>
+    = do controlFlow <- newRef ProgramProgress Continue
+         whenJust out $ \ outfile => do
              ignore $ compileExp (PRef EmptyFC (UN $ Basic "main")) outfile
-         let Nothing = ex
-           | Just expr =>  do let Right (_, _, e) = runParser (Virtual Interactive) Nothing expr $ aPTerm <* eoi
-                                | Left err => throw err
-                              ignore $ execExp e
-                              pure Abort
-         let False = check
-           | True => pure Abort
-         let Nothing = runRepl
-           | Just cmd => replCmd cmd *> pure Abort
+             put ProgramProgress Abort
+         flip traverse_ (reverse ex) $ \ expr => do
+             setCurrentElabSource expr
+             let Right (_, _, e) = runParser (Virtual Interactive) Nothing expr $ aPTerm <* eoi
+                   | Left err => throw err
+             ignore $ execExp e
+             put ProgramProgress Abort
+         when check $
+             put ProgramProgress Abort
+         whenJust runRepl $ \cmd => do
+             replCmd cmd
+             put ProgramProgress Abort
          -- if we compiled the file earlier, we stop now
          -- otherwise, none of the options were set so we continue
-         if isJust out
-            then pure Abort
-            else pure Continue
+         get ProgramProgress
 
 export
 ideMode : List CLOpt -> Bool
