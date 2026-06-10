@@ -596,8 +596,6 @@ postOptions _ (MkPostSession check out ex runRepl)
          whenJust runRepl $ \cmd => do
              replCmd cmd
              put ControlFlow Abort
-         -- if we compiled the file earlier, we stop now
-         -- otherwise, none of the options were set so we continue
          get ControlFlow
 
 export

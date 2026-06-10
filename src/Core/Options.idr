@@ -198,7 +198,6 @@ record Session where
      -- variables that set incremental compilation)
   caseTreeHeuristics : Bool -- apply heuristics to pick matches for case tree building
 
-
 public export
 record PPrinter where
   constructor MkPPOpts
@@ -266,7 +265,6 @@ defaultSession = MkSessionOpts False CoveringOnly False False Chez [] 1000 False
                                defaultLogLevel Nothing False Nothing Nothing
                                Nothing Nothing False 1 False False True
                                False [] False False
-
 
 export
 defaultElab : ElabDirectives
