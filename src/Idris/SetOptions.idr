@@ -445,7 +445,7 @@ preOptions (SetCG e :: opts)
             Just cg => do setCG cg
                           preOptions opts
             Nothing =>
-              do throw $ InternalError $ """
+              do throw $ UserError $ """
                    No such code generator
                    Code generators available: \{showSep ", " (map fst (availableCGs (options defs)))}
                    """

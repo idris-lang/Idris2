@@ -38,7 +38,6 @@ public export
 CustomBackends : Type
 CustomBackends = List (String, Codegen)
 
-
 findInputs : List CLOpt -> Maybe (List1 String)
 findInputs [] = Nothing
 findInputs (InputFile f :: fs) =
@@ -70,7 +69,7 @@ updateEnv
          cg <- coreLift $ idrisGetEnv "IDRIS2_CG"
          whenJust cg $ \ e => case getCG (options defs) e of
            Just cg => setCG cg
-           Nothing => throw (UserError ("Unknown code generator " ++ show e))
+           Nothing => throw (InternalError ("Unknown code generator " ++ show e))
          inccgs <- coreLift $ idrisGetEnv "IDRIS2_INC_CGS"
          whenJust inccgs $ \ cgs =>
            traverseList1_ (setIncrementalCG False) $
