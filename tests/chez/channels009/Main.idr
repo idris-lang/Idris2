@@ -27,7 +27,7 @@ main = do
       case n of
         1 => do
           tid <- fork (consumer c)
-          usleep 2500000
+          usleep 3500000
           pure tid
         _ =>
           fork (consumer c)
