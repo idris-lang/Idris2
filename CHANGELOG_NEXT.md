@@ -76,6 +76,9 @@ should target this file (`CHANGELOG_NEXT`).
 * Optimised the passing of local variables during compile-time normalisation.
 * Added `getFC` to elaborator reflection, exposing the macro call-site source
   location.
+* Normalize through private definitions when evaluating `%foreign` and
+  `%foreign_impl` strings [#3790](https://github.com/idris-lang/Idris2/issues/3790)
+  * Improve related error messages
 
 ### Building/Packaging changes
 

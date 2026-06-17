@@ -36,9 +36,9 @@ getFnString tm
          let gstr = gnf Env.empty (PrimVal fc $ PrT StringType)
          etm <- checkTerm inidx InExpr [] (MkNested []) Env.empty tm gstr
          defs <- get Ctxt
-         case !(nf defs Env.empty etm) of
+         case !(nfOpts withAll defs Env.empty etm) of
               NPrimVal fc (Str st) => pure st
-              _ => throw (GenericMsg fc "%foreign calling convention must evaluate to a String")
+              x => throw (GenericMsg fc "%foreign calling convention must evaluate to a String (\{ show x })")
 
 -- If it's declared as externally defined, set the definition to
 -- ExternFn <arity>, where the arity is assumed to be fixed (i.e.
