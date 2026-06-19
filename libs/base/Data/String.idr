@@ -381,8 +381,8 @@ parseDouble = mkDouble . swfe . trim
     -- sign, whole, fractional, exponent
     swfe : String -> Maybe (Double, Double, Double, Integer)
     swfe cs = if isPrefixOf "-" cs
-             then (\(w, f, e) => (-1.0, w, f, e)) <$> wfe (assert_total $ strTail cs)
-             else (\(w, f, e) => ( 1.0, w, f, e)) <$> wfe cs
+             then (-1.0, ) <$> wfe (assert_total $ strTail cs)
+             else ( 1.0, ) <$> wfe cs
 
 public export
 null : String -> Bool
