@@ -79,6 +79,8 @@ should target this file (`CHANGELOG_NEXT`).
 * Removed `Borrowing` as a language extension.  This was never implemented in
   Idris2, so the only change is that `%language Borrowing` will now error rather
   than be accepted but do nothing.
+* Fixed `parseDouble` dropping "-" sign when whole part is "0"
+  [#3804](https://github.com/idris-lang/Idris2/issues/3804),
 
 ### Building/Packaging changes
 
