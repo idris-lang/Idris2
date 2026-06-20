@@ -89,6 +89,13 @@ should target this file (`CHANGELOG_NEXT`).
 * A project's data directory can now be specified with the `datadir` entry in
   an `ipkg` file.
 
+### CI changes
+
+* Alter the ci-idris2-and-libs GitHub workflow so that Chez Scheme v10.3.0 is
+  explicitly built against (instead of using the Chez Scheme available via the package manager).
+  Chez Scheme v10.3.0 provides the fx*/wraparound function
+  that is utilized for Bits8/Bits16 multiplication in PR #3704.
+
 ### Backend changes
 
 #### RefC Backend
@@ -105,6 +112,18 @@ should target this file (`CHANGELOG_NEXT`).
 * Fix headers for numeric negation.
 * Prefix RefC Idris values with `Idris2_` to prevent name collisions with third
   partly libraries.
+
+#### Chez Backend
+
+* Use fixnums for multiplication up to Bits16 and addition/subtraction up to Bits32 (when it's safe to do so).
+
+#### Gambit Backend
+
+* Use fixnums for multiplication up to Bits16 and addition/subtraction up to Bits32 (when it's safe to do so).
+
+#### Racket Backend
+
+* Use fixnums for multiplication up to Bits16 and addition/subtraction up to Bits32 (when it's safe to do so).
 
 ### Library changes
 

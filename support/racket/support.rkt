@@ -36,6 +36,15 @@
 (define (blodwen-toUnsignedInt x bits)
   (bitwise-and x (sub1 (arithmetic-shift 1 bits))))
 
+(define (blodwen-toUnsignedInt8 x)
+  (bitwise-and x #xFF))
+
+(define (blodwen-toUnsignedInt16 x)
+  (bitwise-and x #xFFFF))
+
+(define (blodwen-toUnsignedInt32 x)
+  (bitwise-and x #xFFFFFFFF))
+
 (define (blodwen-euclidDiv a b)
   (let ((q (quotient a b))
         (r (remainder a b)))
@@ -75,8 +84,16 @@
 ; Bits
 
 (define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
+(define (bu8+ x y)  (blodwen-toUnsignedInt8 (fx+ x y)))
+(define (bu16+ x y) (blodwen-toUnsignedInt16 (fx+ x y)))
+(define (bu32+ x y) (blodwen-toUnsignedInt32 (fx+ x y)))
 (define bu- (lambda (x y bits) (blodwen-toUnsignedInt (- x y) bits)))
+(define (bu8- x y)  (blodwen-toUnsignedInt8 (fx- x y)))
+(define (bu16- x y) (blodwen-toUnsignedInt16 (fx- x y)))
+(define (bu32- x y) (blodwen-toUnsignedInt32 (fx- x y)))
 (define bu* (lambda (x y bits) (blodwen-toUnsignedInt (* x y) bits)))
+(define (bu8* x y)  (blodwen-toUnsignedInt8 (fx*/wraparound x y)))
+(define (bu16* x y) (blodwen-toUnsignedInt16 (fx*/wraparound x y)))
 (define bu/ (lambda (x y bits) (blodwen-toUnsignedInt (quotient x y) bits)))
 
 (define bs+ (lambda (x y bits) (blodwen-toSignedInt (+ x y) bits)))
@@ -111,8 +128,7 @@
   (lambda (x)
     (inexact->exact (floor x))))
 
-(define blodwen-bits-shl-signed
-  (lambda (x y bits) (blodwen-toSignedInt (arithmetic-shift x y) bits)))
+(define blodwen-bits-shl-signed (lambda (x y bits) (blodwen-toSignedInt (arithmetic-shift x y) bits)))
 
 (define exact-truncate
   (lambda (x)

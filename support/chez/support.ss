@@ -39,6 +39,15 @@
 (define (blodwen-toUnsignedInt x bits)
   (logand x (sub1 (ash 1 bits))))
 
+(define (blodwen-toUnsignedInt8 x)
+  (fxlogand x 255))
+
+(define (blodwen-toUnsignedInt16 x)
+  (fxlogand x 65535))
+
+(define (blodwen-toUnsignedInt32 x)
+  (fxlogand x 4294967295))
+
 (define (blodwen-euclidDiv a b)
   (let ((q (quotient a b))
         (r (remainder a b)))
@@ -72,8 +81,16 @@
 ; Bits
 
 (define bu+ (lambda (x y bits) (blodwen-toUnsignedInt (+ x y) bits)))
+(define (bu8+ x y) (blodwen-toUnsignedInt8 (fx+ x y)))
+(define (bu16+ x y) (blodwen-toUnsignedInt16 (fx+ x y)))
+(define (bu32+ x y) (blodwen-toUnsignedInt32 (fx+ x y)))
 (define bu- (lambda (x y bits) (blodwen-toUnsignedInt (- x y) bits)))
+(define (bu8- x y) (blodwen-toUnsignedInt8 (fx- x y)))
+(define (bu16- x y) (blodwen-toUnsignedInt16 (fx- x y)))
+(define (bu32- x y) (blodwen-toUnsignedInt32 (fx- x y)))
 (define bu* (lambda (x y bits) (blodwen-toUnsignedInt (* x y) bits)))
+(define (bu8* x y) (blodwen-toUnsignedInt8 (fx*/wraparound x y)))
+(define (bu16* x y) (blodwen-toUnsignedInt16 (fx*/wraparound x y)))
 (define bu/ (lambda (x y bits) (blodwen-toUnsignedInt (quotient x y) bits)))
 
 (define bs+ (lambda (x y bits) (blodwen-toSignedInt (+ x y) bits)))

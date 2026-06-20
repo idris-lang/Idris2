@@ -51,6 +51,7 @@ schHeader prof libs = fromString """
   \{ ifThenElse prof "(require profile)" "" }
   (require racket/flonum)                ; for float-typed transcendental functions
   (require math/flonum)                  ; for flonum constants
+  (require racket/fixnum)                ; for fixnums
 
   """ ++ libs ++ """
 

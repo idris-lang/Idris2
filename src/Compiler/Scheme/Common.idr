@@ -70,16 +70,24 @@ boolop o args = "(or (and " ++ op o args ++ " 1) 0)"
 
 add : Maybe IntKind -> Builder -> Builder -> Builder
 add (Just $ Signed $ P n)   x y = op "bs+" [x, y, showB (n-1)]
+add (Just $ Unsigned 8)     x y = op "bu8+" [x, y]
+add (Just $ Unsigned 16)    x y = op "bu16+" [x, y]
+add (Just $ Unsigned 32)    x y = op "bu32+" [x, y]
 add (Just $ Unsigned n)     x y = op "bu+" [x, y, showB n]
 add _                       x y = op "+" [x, y]
 
 sub : Maybe IntKind -> Builder -> Builder -> Builder
 sub (Just $ Signed $ P n)   x y = op "bs-" [x, y, showB (n-1)]
+sub (Just $ Unsigned 8)     x y = op "bu8-" [x, y]
+sub (Just $ Unsigned 16)    x y = op "bu16-" [x, y]
+sub (Just $ Unsigned 32)    x y = op "bu32-" [x, y]
 sub (Just $ Unsigned n)     x y = op "bu-" [x, y, showB n]
 sub _                       x y = op "-" [x, y]
 
 mul : Maybe IntKind -> Builder -> Builder -> Builder
 mul (Just $ Signed $ P n)   x y = op "bs*" [x, y, showB (n-1)]
+mul (Just $ Unsigned 8)     x y = op "bu8*" [x, y]
+mul (Just $ Unsigned 16)    x y = op "bu16*" [x, y]
 mul (Just $ Unsigned n)     x y = op "bu*" [x, y, showB n]
 mul _                       x y = op "*" [x, y]
 
@@ -90,11 +98,9 @@ div (Just $ Unsigned n)       x y = op "bu/" [x, y, showB n]
 div _                         x y = op "/" [x, y]
 
 shl : Maybe IntKind -> Builder -> Builder -> Builder
-shl (Just $ Signed $ P n) x y = op "blodwen-bits-shl-signed"
-                                   [x, y, showB (n-1)]
-shl (Just $ Unsigned n)   x y = op "blodwen-bits-shl" [x, y, showB n]
-shl _                     x y = op "blodwen-shl" [x, y]
-
+shl (Just $ Signed $ P n)  x y = op "blodwen-bits-shl-signed" [x, y, showB (n-1)]
+shl (Just $ Unsigned n)    x y = op "blodwen-bits-shl" [x, y, showB n]
+shl _                      x y = op "blodwen-shl" [x, y]
 
 constPrimitives : ConstantPrimitives' Builder
 constPrimitives = MkConstantPrimitives {
@@ -275,9 +281,6 @@ schCaseDef (Just tm) = "(else " ++ tm ++ ")"
 export
 schArglist : List Name -> Builder
 schArglist xs = sepBy " " $ map schName xs
--- schArglist [] = ""
--- schArglist [x] = schName x
--- schArglist (x :: xs) = schName x ++ " " ++ schArglist xs
 
 mutual
   used : Name -> NamedCExp -> Bool
@@ -369,8 +372,6 @@ parameters (constants : SortedSet Name)
     -- oops, no traverse for Vect in Core
     schArgs : Nat -> Vect n NamedCExp -> Core (Vect n Builder)
     schArgs i xs = traverseVect (schExp i) xs
-    -- schArgs i [] = pure []
-    -- schArgs i (arg :: args) = pure $ !(schExp i arg) :: !(schArgs i args)
 
     schCaseTree : Nat -> NamedCExp -> List NamedConAlt -> Maybe NamedCExp ->
                   Core Builder
