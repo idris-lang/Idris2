@@ -28,6 +28,11 @@ rawSize buf = pure (prim__bufferSize buf)
          "node:lambda:s=>Buffer.alloc(s)"
 prim__newBuffer : Int -> PrimIO Buffer
 
+||| An empty buffer of size 0
+export
+emptyBuffer : HasIO io => io Buffer
+emptyBuffer = primIO $ prim__newBuffer 0
+
 export
 newBuffer : HasIO io => Int -> io (Maybe Buffer)
 newBuffer size
@@ -35,9 +40,6 @@ newBuffer size
             then do buf <- primIO (prim__newBuffer size)
                     pure $ Just buf
                  else pure Nothing
---          if prim__nullAnyPtr buf /= 0
---             then pure Nothing
---             else pure $ Just $ MkBuffer buf size 0
 
 
 ------------------------------------------------------------------------

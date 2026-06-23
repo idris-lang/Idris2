@@ -77,12 +77,18 @@ should target this file (`CHANGELOG_NEXT`).
 * Added `getFC` to elaborator reflection, exposing the macro call-site source
   location.
 * Fix exponential time issue in totality checking with large data on the left hand side (#3696).
+* Removed `Borrowing` as a language extension.  This was never implemented in
+  Idris2, so the only change is that `%language Borrowing` will now error rather
+  than be accepted but do nothing.
 
 ### Building/Packaging changes
 
 * Fix parsing of capitalised package names containing hyphens.
 * Change `flake.nix` to point at `idris-community/idris2-mode` as the URL for
   `inputs.idris-emacs-src` (from the user fork `redfish64/idris2-mode`).
+* Fix UTF-8 character handling in package description fields.
+* A project's data directory can now be specified with the `datadir` entry in
+  an `ipkg` file.
 
 ### Backend changes
 
@@ -105,6 +111,7 @@ should target this file (`CHANGELOG_NEXT`).
 
 #### Base
 
+* Added `emptyBuffer` to `Data.Buffer`
 * Added `rtrim` to `Data.String`.
 * Added `decToMaybe`, `maybeCong` and `maybeCong2` to `Data.Maybe`.
 * Added `maybeEq` to `Decidable.Equality`.
