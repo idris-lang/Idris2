@@ -73,6 +73,7 @@ namespace Package
             executable
             options
             sourcedir
+            datadir
             builddir
             outputdir
             prebuild
@@ -96,6 +97,7 @@ namespace Package
           , "executable"  ~~= executable
           , "opts"        ~~= snd <$> options
           , "sourcedir"   ~~= sourcedir
+          , "datadir"     ~~= datadir
           , "builddir"    ~~= builddir
           , "outputdir"   ~~= outputdir
           , "prebuild"    ~~= snd <$> prebuild
