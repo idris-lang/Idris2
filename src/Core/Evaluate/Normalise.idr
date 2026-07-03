@@ -445,10 +445,21 @@ parameters {auto c : Ref Ctxt Defs} (eflags : EvalFlags)
               FC -> LazyReason -> Term (vars ++ free) ->
               Core (Glued vars)
   evalForce locs env fc r tm =
-      do val <- eval locs env tm
-         VDelay _ _ _ arg <- expandApps val
-             | tm' => pure $ VForce fc r val [<]
-         pure arg
+      do
+         tmv <- eval locs env tm
+         let True = case tmv of
+                       (VApp _ Func nm [<] _) =>
+                         case tm of
+                           -- prevent inlining delayed names
+                           (Ref _ Func nm') => nm' == nm
+                           _ => False
+                       _ => False
+             | _ => do
+                    VDelay _ _ _ arg <- expand tmv
+                        | tm' => pure $ VForce fc r tmv [<]
+                    pure arg
+
+         pure $ VForce fc r tmv [<]
 
   evalPrimOp : {vars, free: _} -> {arity : _} ->
                LocalEnv free vars ->
