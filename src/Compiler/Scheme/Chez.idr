@@ -144,6 +144,12 @@ chezExtPrim cs schLazy i GetField [NmPrimVal _ (Str s), _, _, struct,
          pure $ "(ftype-ref " ++ fromString s ++ " (" ++ fromString fld ++ ") " ++ structsc ++ ")"
 chezExtPrim cs schLazy i GetField [_,_,_,_,_,_]
     = pure "(blodwen-error-quit \"bad getField\")"
+chezExtPrim cs schLazy i GetFieldPtr [NmPrimVal _ (Str s), _, _, struct,
+                                   NmPrimVal _ (Str fld), _]
+    = do structsc <- schExp cs (chezExtPrim cs schLazy) chezString schLazy 0 struct
+         pure $ "(ftype-&ref " ++ fromString s ++ " (" ++ fromString fld ++ ") " ++ structsc ++ ")"
+chezExtPrim cs schLazy i GetFieldPtr [_,_,_,_,_,_]
+    = pure "(blodwen-error-quit \"bad getFieldPtr\")"
 chezExtPrim cs schLazy i SetField [NmPrimVal _ (Str s), _, _, struct,
                         NmPrimVal _ (Str fld), _, val, world]
     = do structsc <- schExp cs (chezExtPrim cs schLazy) chezString schLazy 0 struct

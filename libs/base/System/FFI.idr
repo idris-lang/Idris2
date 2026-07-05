@@ -38,6 +38,10 @@ prim__getField : {s : _} -> forall fs, ty .
                          Ptr (Struct s fs) -> (n : String) ->
                          FieldType (words n) ty fs -> ty
 %extern
+prim__getFieldPtr : {s : _} -> forall fs, ty .
+                         Ptr (Struct s fs) -> (n : String) ->
+                         FieldType (words n) ty fs -> Ptr ty
+%extern
 prim__setField : {s : _} -> forall fs, ty .
                          Ptr (Struct s fs) -> (n : String) ->
                          FieldType (words n) ty fs -> ty -> PrimIO ()
@@ -50,6 +54,15 @@ public export %inline
 getField : {sn : _} -> (s : Ptr (Struct sn fs)) -> (n : String) ->
            {auto fieldok : FieldType (words n) ty fs} -> ty
 getField s n = prim__getField s n fieldok
+
+||| Retrieve the value of the specified field in the given `Struct` as a pointer.
+|||
+||| @ s the `Struct` to retrieve the value from
+||| @ n the name of the field in the `Struct`.
+public export %inline
+getFieldPtr : {sn : _} -> (s : Ptr (Struct sn fs)) -> (n : String) ->
+           {auto fieldok : FieldType (words n) ty fs} -> Ptr ty
+getFieldPtr s n = prim__getFieldPtr s n fieldok
 
 ||| Set the value of the specified field in the given `Struct`.
 |||

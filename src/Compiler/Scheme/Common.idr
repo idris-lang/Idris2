@@ -200,7 +200,7 @@ schOp Crash [_,msg] = pure $ "(blodwen-error-quit (string-append \"ERROR: \" " +
 public export
 data ExtPrim = NewIORef | ReadIORef | WriteIORef
              | NewArray | ArrayGet | ArraySet
-             | GetField | SetField
+             | GetField | GetFieldPtr | SetField
              | SysOS | SysCodegen
              | OnCollect
              | OnCollectAny
@@ -215,6 +215,7 @@ Show ExtPrim where
   show ArrayGet = "ArrayGet"
   show ArraySet = "ArraySet"
   show GetField = "GetField"
+  show GetFieldPtr = "GetFieldPtr"
   show SetField = "SetField"
   show SysOS = "SysOS"
   show SysCodegen = "SysCodegen"
@@ -232,6 +233,7 @@ toPrim pn@(NS _ n)
             (n == UN (Basic "prim__arrayGet"), ArrayGet),
             (n == UN (Basic "prim__arraySet"), ArraySet),
             (n == UN (Basic "prim__getField"), GetField),
+            (n == UN (Basic "prim__getFieldPtr"), GetFieldPtr),
             (n == UN (Basic "prim__setField"), SetField),
             (n == UN (Basic "prim__os"), SysOS),
             (n == UN (Basic "prim__codegen"), SysCodegen),
