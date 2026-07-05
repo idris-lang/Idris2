@@ -130,7 +130,7 @@ cftySpec fc CFUnsigned64 = pure "_uint64"
 cftySpec fc CFString = pure "_string/utf-8"
 cftySpec fc CFDouble = pure "_double"
 cftySpec fc CFChar = pure "_int8"
-cftySpec fc CFPtr = pure "_pointer"
+cftySpec fc (CFPtr t) = pure "_pointer"
 cftySpec fc CFGCPtr = pure "_pointer"
 cftySpec fc CFBuffer = pure "_bytes"
 cftySpec fc (CFIORes t) = cftySpec fc t
@@ -301,6 +301,7 @@ mkStruct (CFStruct n flds)
   where
     showFld : (String, CFType) -> Core Builder
     showFld (n, ty) = pure $ "[" ++ fromString n ++ " " ++ !(cftySpec emptyFC ty) ++ "]"
+mkStruct (CFPtr t) = mkStruct t
 mkStruct (CFIORes t) = mkStruct t
 mkStruct (CFFun a b) = [| mkStruct a ++ mkStruct b |]
 mkStruct _ = pure ""

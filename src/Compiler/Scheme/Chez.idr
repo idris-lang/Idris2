@@ -188,12 +188,13 @@ cftySpec fc CFUnsigned64 = pure "unsigned-64"
 cftySpec fc CFString = pure "string"
 cftySpec fc CFDouble = pure "double"
 cftySpec fc CFChar = pure "char"
-cftySpec fc CFPtr = pure "void*"
+cftySpec fc (CFStruct n t) = pure $ fromString n
+cftySpec fc (CFPtr (CFStruct n t)) = pure $ "(* " ++ fromString n ++ ")"
+cftySpec fc (CFPtr _) = pure "void*"
 cftySpec fc CFGCPtr = pure "void*"
 cftySpec fc CFBuffer = pure "u8*"
 cftySpec fc (CFFun s t) = pure "void*"
 cftySpec fc (CFIORes t) = cftySpec fc t
-cftySpec fc (CFStruct n t) = pure $ "(* " ++ fromString n ++ ")"
 cftySpec fc t = throw (GenericMsg fc ("Can't pass argument of type " ++ show t ++
                          " to foreign function"))
 
@@ -354,6 +355,7 @@ mkStruct (CFStruct n flds)
   where
     showFld : (String, CFType) -> Core Builder
     showFld (n, ty) = pure $ "[" ++ fromString n ++ " " ++ !(cftySpec emptyFC ty) ++ "]"
+mkStruct (CFPtr t) = mkStruct t
 mkStruct (CFIORes t) = mkStruct t
 mkStruct (CFFun a b) = do [| mkStruct a ++ mkStruct b |]
 mkStruct _ = pure ""

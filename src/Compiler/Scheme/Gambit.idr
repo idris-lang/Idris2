@@ -113,7 +113,7 @@ cType fc CFInt = pure "int"
 cType fc CFString = pure "char *"
 cType fc CFDouble = pure "double"
 cType fc CFChar = pure "char"
-cType fc CFPtr = pure "void *"
+cType fc (CFPtr t) = pure "void *"
 cType fc (CFIORes t) = cType fc t
 cType fc (CFStruct n t) = pure $ "struct " ++ fromString n
 cType fc (CFFun s t) = funTySpec [s] t
@@ -142,7 +142,7 @@ cftySpec fc CFUnsigned64 = pure "unsigned-long"
 cftySpec fc CFString = pure "UTF-8-string"
 cftySpec fc CFDouble = pure "double"
 cftySpec fc CFChar = pure "char"
-cftySpec fc CFPtr = pure "(pointer void)"
+cftySpec fc (CFPtr t) = pure "(pointer void)"
 cftySpec fc (CFIORes t) = cftySpec fc t
 cftySpec fc (CFStruct n t) = pure $ fromString n ++ "*/nonnull"
 cftySpec fc (CFFun s t) = funTySpec [s] t
@@ -320,6 +320,7 @@ mkStruct (CFStruct n flds)
   where
     showFld : (String, CFType) -> Core Builder
     showFld (n, ty) = pure $ "(" ++ fromString n ++ " " ++ !(cftySpec emptyFC ty) ++ ")"
+mkStruct (CFPtr t) = mkStruct t
 mkStruct (CFIORes t) = mkStruct t
 mkStruct (CFFun a b) = [| mkStruct a ++ mkStruct b |]
 mkStruct _ = pure ""

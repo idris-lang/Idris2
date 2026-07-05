@@ -381,7 +381,8 @@ data NArgs : Type where
      User : Name -> List ClosedClosure -> NArgs
      Struct : String -> List (String, ClosedClosure) -> NArgs
      NUnit : NArgs
-     NPtr : NArgs
+     NPtr : ClosedClosure -> NArgs
+     NAnyPtr : NArgs
      NGCPtr : NArgs
      NBuffer : NArgs
      NForeignObj : NArgs
@@ -416,8 +417,8 @@ getFieldArgs defs cl
 getNArgs : {auto c : Ref Ctxt Defs} ->
            Defs -> Name -> List ClosedClosure -> Core NArgs
 getNArgs defs (NS _ (UN $ Basic "IORes")) [arg] = pure $ NIORes arg
-getNArgs defs (NS _ (UN $ Basic "Ptr")) [arg] = pure NPtr
-getNArgs defs (NS _ (UN $ Basic "AnyPtr")) [] = pure NPtr
+getNArgs defs (NS _ (UN $ Basic "Ptr")) [arg] = pure $ NPtr arg
+getNArgs defs (NS _ (UN $ Basic "AnyPtr")) [] = pure NAnyPtr
 getNArgs defs (NS _ (UN $ Basic "GCPtr")) [arg] = pure NGCPtr
 getNArgs defs (NS _ (UN $ Basic "GCAnyPtr")) [] = pure NGCPtr
 getNArgs defs (NS _ (UN $ Basic "Buffer")) [] = pure NBuffer
@@ -472,7 +473,11 @@ nfToCFType _ (NTCon fc n_in _ args) s
                                        pure (n, tycf)) fs
                    pure (CFStruct n fs')
               NUnit => pure CFUnit
-              NPtr => pure CFPtr
+              NPtr uarg =>
+                do narg <- evalClosure defs uarg
+                   carg <- nfToCFType fc narg s
+                   pure $ CFPtr carg
+              NAnyPtr => pure $ CFPtr CFUnit
               NGCPtr => pure CFGCPtr
               NBuffer => pure CFBuffer
               NForeignObj => pure CFForeignObj

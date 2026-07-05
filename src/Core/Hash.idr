@@ -245,8 +245,8 @@ Hashable CFType where
       h `hashWithSalt` 7
     CFChar =>
       h `hashWithSalt` 8
-    CFPtr =>
-      h `hashWithSalt` 9
+    CFPtr t =>
+      h `hashWithSalt` 9 `hashWithSalt` t
     CFGCPtr =>
       h `hashWithSalt` 10
     CFBuffer =>

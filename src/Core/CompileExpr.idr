@@ -189,7 +189,7 @@ data CFType : Type where
      CFString : CFType
      CFDouble : CFType
      CFChar : CFType
-     CFPtr : CFType
+     CFPtr : CFType -> CFType
      CFGCPtr : CFType
      CFBuffer : CFType
      CFForeignObj : CFType
@@ -390,7 +390,7 @@ Show CFType where
   show CFString = "String"
   show CFDouble = "Double"
   show CFChar = "Char"
-  show CFPtr = "Ptr"
+  show (CFPtr t) = "Ptr " ++ show t
   show CFGCPtr = "GCPtr"
   show CFBuffer = "Buffer"
   show CFForeignObj = "ForeignObj"

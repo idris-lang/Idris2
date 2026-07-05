@@ -22,11 +22,11 @@ data FieldType : String -> Type -> List (String, Type) -> Type where
 
 %extern
 prim__getField : {s : _} -> forall fs, ty .
-                         Struct s fs -> (n : String) ->
+                         Ptr (Struct s fs) -> (n : String) ->
                          FieldType n ty fs -> ty
 %extern
 prim__setField : {s : _} -> forall fs, ty .
-                         Struct s fs -> (n : String) ->
+                         Ptr (Struct s fs) -> (n : String) ->
                          FieldType n ty fs -> ty -> PrimIO ()
 
 ||| Retrieve the value of the specified field in the given `Struct`.
@@ -34,7 +34,7 @@ prim__setField : {s : _} -> forall fs, ty .
 ||| @ s the `Struct` to retrieve the value from
 ||| @ n the name of the field in the `Struct`.
 public export %inline
-getField : {sn : _} -> (s : Struct sn fs) -> (n : String) ->
+getField : {sn : _} -> (s : Ptr (Struct sn fs)) -> (n : String) ->
            {auto fieldok : FieldType n ty fs} -> ty
 getField s n = prim__getField s n fieldok
 
@@ -44,7 +44,7 @@ getField s n = prim__getField s n fieldok
 ||| @ n   the name of the field to set
 ||| @ val the value to set the field to
 public export %inline
-setField : {sn : _} -> (s : Struct sn fs) -> (n : String) ->
+setField : {sn : _} -> (s : Ptr (Struct sn fs)) -> (n : String) ->
            {auto fieldok : FieldType n ty fs} -> (val : ty) -> IO ()
 setField s n val = primIO (prim__setField s n fieldok val)
 

@@ -833,7 +833,7 @@ TTC CFType where
   toBuf CFString = tag 6
   toBuf CFDouble = tag 7
   toBuf CFChar = tag 8
-  toBuf CFPtr = tag 9
+  toBuf (CFPtr t) = do tag 9; toBuf t
   toBuf CFWorld = tag 10
   toBuf (CFFun s t) = do tag 11; toBuf s; toBuf t
   toBuf (CFIORes t) = do tag 12; toBuf t
@@ -859,7 +859,7 @@ TTC CFType where
              6 => pure CFString
              7 => pure CFDouble
              8 => pure CFChar
-             9 => pure CFPtr
+             9 => do t <- fromBuf; pure (CFPtr t)
              10 => pure CFWorld
              11 => do s <- fromBuf; t <- fromBuf; pure (CFFun s t)
              12 => do t <- fromBuf; pure (CFIORes t)
