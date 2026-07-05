@@ -1,19 +1,27 @@
 #pragma once
 
 typedef struct {
-    int x;
-    int y;
+  int x;
+  int y;
 } point;
 
 typedef struct {
-    char* name;
-    point* pt;
+  char *name;
+  point *pt;
 } namedpoint;
 
-point* mkPoint(int x, int y);
-void freePoint(point* pt);
+typedef struct {
+  char *name;
+  point pt;
+} inlinedpoint;
 
-namedpoint* mkNamedPoint(char* str, point* p);
-void freeNamedPoint(namedpoint* np);
+point *mkPoint(int x, int y);
+void freePoint(point *pt);
 
-char* getString(void *p);
+namedpoint *mkNamedPoint(char *str, point *p);
+void freeNamedPoint(namedpoint *np);
+
+inlinedpoint *mkInlinedPoint(char *str, int x, int y);
+void freeInlinedPoint(inlinedpoint *it);
+
+char *getString(void *p);
