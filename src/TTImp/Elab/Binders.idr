@@ -273,7 +273,7 @@ checkLet rigc_in elabinfo nest env fc lhsFC rigl n nTy nVal scope expty {vars}
          (scopev, gscopet) <-
             inScope fc env' (\e' =>
               check {e=e'} rigc elabinfo nest' env' scope expScope)
-         scopet <- quote env' gscopet
+         scopet <- quoteBinders env' gscopet
 
          -- No need to 'checkExp' here - we've already checked scopet
          -- against the expected type when checking the scope, so just
