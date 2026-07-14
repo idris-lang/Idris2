@@ -446,20 +446,35 @@ parameters {auto c : Ref Ctxt Defs} (eflags : EvalFlags)
               Core (Glued vars)
   evalForce locs env fc r tm =
       do
-         tmv <- eval locs env tm
-         let True = case tmv of
-                       (VApp _ Func nm [<] _) =>
-                         case tm of
-                           -- prevent inlining delayed names
-                           (Ref _ Func nm') => nm' == nm
-                           _ => False
-                       _ => False
-             | _ => do
-                    VDelay _ _ _ arg <- expand tmv
-                        | tm' => pure $ VForce fc r tmv [<]
-                    pure arg
+         val <- eval locs env tm
 
-         pure $ VForce fc r tmv [<]
+         -- Refs should be returned without any expanding if they are non-inlinable functions
+         let (Ref fc' Func n, _) = getFnArgsSpine tm
+             | _ => fallback val
+
+         -- vRef-like is returned, need to check is evaluation was happened actually by check at next step
+         (VApp _ Func nm [<] _) <- evalRef locs env fc' Func n
+             | _ => fallback val
+
+         -- no evaluation is happened, so, we should skip expanding step
+         let True = n == nm
+             | _ => fallback val
+
+         keepForce val
+
+      where
+        keepForce : Glued vars -> Core (Glued vars)
+        keepForce val = pure $ VForce fc r val [<]
+
+        fallback : Glued vars -> Core (Glued vars)
+        fallback val =
+           -- we may get stuck by expanding value when it produces same function which was passed
+           -- to expand
+           do VDelay _ _ _ arg <- expand val
+                  | tm' => keepForce val
+
+              -- Force over Delay removes any delaying
+              pure arg
 
   evalPrimOp : {vars, free: _} -> {arity : _} ->
                LocalEnv free vars ->
