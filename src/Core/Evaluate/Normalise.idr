@@ -154,6 +154,21 @@ parameters {auto c : Ref Ctxt Defs} (eflags : EvalFlags)
          Env Term vars ->
          Term (vars ++ free) -> Core (Glued vars)
 
+  mkClosure : {vars, free : _} ->
+              LocalEnv free vars -> Env Term vars ->
+              Term (vars ++ free) -> Core (Glued vars)
+  mkClosure locs env tm@(Local _ _ idx prf)
+      = fromMaybe (eval locs env tm) (getLocal idx prf locs)
+    where
+      getLocal : {free : _} ->
+                 (idx : Nat) -> (0 p : IsVar nm idx (vars ++ free)) ->
+                 LocalEnv free vars ->
+                 Maybe (Core (Glued vars))
+      getLocal idx prf [<] = Nothing
+      getLocal Z First (locs :< x) = Just x
+      getLocal (S idx) (Later p) (locs :< _) = getLocal idx p locs
+  mkClosure locs env tm = eval locs env tm
+
   evalCaseAlt : {vars, free: _} -> LocalEnv free vars -> Env Term vars ->
                 CaseAlt (vars ++ free) ->
                 Core (VCaseAlt vars)
@@ -342,7 +357,7 @@ parameters {auto c : Ref Ctxt Defs} (eflags : EvalFlags)
              Core (Glued vars)
   evalMeta locs env fc n i scope
        = do scope' <- traverse (\ (q, val) =>
-                                     do let val' = eval locs env val
+                                     do let val' = mkClosure locs env val
                                         pure (q, val')) scope
             defs <- get Ctxt
             Just def <- lookupCtxtExact n (gamma defs)
@@ -503,7 +518,7 @@ parameters {auto c : Ref Ctxt Defs} (eflags : EvalFlags)
        = evalMeta locs env fc n i scope
   eval locs env (Bind fc x b sc) = evalBind locs env fc x b sc
   eval locs env tm@(App fc fn q arg)
-      = apply fc !(eval locs env fn) q (eval locs env arg)
+      = apply fc !(eval locs env fn) q (mkClosure locs env arg)
   eval locs env (As fc use as pat)
       = case eflags of
              KeepAs => pure $ VAs fc use !(eval locs env as)
