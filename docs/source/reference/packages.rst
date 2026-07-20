@@ -169,7 +169,7 @@ If package versions are omitted in directory names, they are treated as the vers
 Support file install directories
 ================================
 
-**Note**: Package manager _Pack_ uses a different mechanism for installing support files. See the
+**Note**: Package manager *Pack* uses a different mechanism for installing support files. See the
 Pack documentation for details.
 
 As noted above, packages can be installed globally or locally to be used as dependencies in
