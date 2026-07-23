@@ -1,0 +1,2 @@
+((:load-file "case.lidr") 1)
+((:make-case 2 "foo_rhs") 2)
