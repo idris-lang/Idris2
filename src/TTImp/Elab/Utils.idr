@@ -1,48 +1,53 @@
 module TTImp.Elab.Utils
 
-import Core.Case.CaseTree
 import Core.Context
+import Core.Context.Log
 import Core.Env
-import Core.Normalise
-import Core.Value
+import Core.Evaluate.Value
+import Core.Evaluate.Normalise
+import Core.Evaluate.Expand
 
 import TTImp.Elab.Check
 import TTImp.TTImp
 
+import Data.SnocList
+import Data.SnocList.Quantifiers
+
 import Libraries.Data.NatSet
 import Libraries.Data.VarSet
-
 import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
+import Libraries.Data.SnocList.Quantifiers.Extra as Lib
 
 %default covering
 
 detagSafe : {auto c : Ref Ctxt Defs} ->
             Defs -> ClosedNF -> Core Bool
-detagSafe defs (NTCon _ n _ args)
+detagSafe defs (VTCon _ n _ args)
     = do Just (TCon _ _ _ _ _ _ (Just detags)) <- lookupDefExact n (gamma defs)
               | _ => pure False
-         args' <- traverse (evalClosure defs . snd) args
+         args' <- traverseSnocList spineVal (reverse args)
          pure $ NatSet.isEmpty detags || notErased 0 detags args'
   where
     -- if any argument positions are in the non-empty(!) detaggable set, and unerased, then
     -- detagging is safe
-    notErased : Nat -> NatSet -> List ClosedNF -> Bool
-    notErased i ns [] = False
-    notErased i ns (NErased _ Impossible :: rest)
+    notErased : Nat -> NatSet -> SnocList (NF [<]) -> Bool
+    notErased i ns [<] = False
+    notErased i ns (rest :< VErased _ Impossible)
         = notErased (i + 1) ns rest -- Can't detag here, look elsewhere
-    notErased i ns (_ :: rest) -- Safe to detag via this argument
+    notErased i ns (rest :< _) -- Safe to detag via this argument
         = elem i ns || notErased (i + 1) ns rest
 detagSafe defs _ = pure False
 
 findErasedFrom : {auto c : Ref Ctxt Defs} ->
-                 Defs -> Nat -> ClosedNF -> Core (NatSet, NatSet)
-findErasedFrom defs pos (NBind fc x (Pi _ c _ aty) scf)
-    = do -- In the scope, use 'Erased fc Impossible' to mean 'argument is erased'.
+                 Defs -> Nat -> NF [<] -> Core (NatSet, NatSet)
+findErasedFrom defs pos (VBind fc x (Pi _ c _ aty) scf)
+    = do -- In the scope, use 'Erased fc True' to mean 'argument is erased'.
          -- It's handy here, because we can use it to tell if a detaggable
          -- argument position is available
-         sc <- scf defs (toClosure defaultOpts Env.empty (Erased fc (ifThenElse (isErased c) Impossible Placeholder)))
-         (erest, dtrest) <- findErasedFrom defs (1 + pos) sc
-         let dt' = if !(detagSafe defs !(evalClosure defs aty))
+         sc <- scf (pure (VErased fc (ifThenElse (isErased c) Impossible Placeholder)))
+         (erest, dtrest) <- findErasedFrom defs (1 + pos) !(expand sc)
+         let dt' = if !(detagSafe defs !(expand aty))
                       then (insert pos dtrest) else dtrest
          pure $ if isErased c
                    then (insert pos erest, dt')
@@ -56,8 +61,7 @@ findErased : {auto c : Ref Ctxt Defs} ->
              ClosedTerm -> Core (NatSet, NatSet)
 findErased tm
     = do defs <- get Ctxt
-         tmnf <- nf defs Env.empty tm
-         findErasedFrom defs 0 tmnf
+         findErasedFrom defs 0 !(expand !(nf Env.empty tm))
 
 export
 updateErasable : {auto c : Ref Ctxt Defs} ->
@@ -88,16 +92,16 @@ bindNotReq : {vs : _} ->
              FC -> Int -> Env Term vs -> (sub : Thin pre vs) ->
              List (PiInfo RawImp, Name) ->
              Term vs -> (List (PiInfo RawImp, Name), Term pre)
-bindNotReq fc i [] Refl ns tm = (ns, embed tm)
-bindNotReq fc i (b :: env) Refl ns tm
+bindNotReq fc i [<] Refl ns tm = (ns, embed tm)
+bindNotReq {vs = _ :< _} fc i (env :< b) Refl ns tm
    = let tmptm = subst (Ref fc Bound (MN "arg" i)) tm
          (ns', btm) = bindNotReq fc (1 + i) env Refl ns tmptm in
          (ns', refToLocal (MN "arg" i) _ btm)
-bindNotReq fc i (b :: env) (Keep p) ns tm
+bindNotReq {vs = _ :< _} fc i (env :< b) (Keep p) ns tm
    = let tmptm = subst (Ref fc Bound (MN "arg" i)) tm
          (ns', btm) = bindNotReq fc (1 + i) env p ns tmptm in
          (ns', refToLocal (MN "arg" i) _ btm)
-bindNotReq {vs = n :: _} fc i (b :: env) (Drop p) ns tm
+bindNotReq {vs = _ :< n} fc i (env :< b) (Drop p) ns tm
    = bindNotReq fc i env p ((plicit b, n) :: ns)
        (Bind fc _ (Pi (binderLoc b) (multiplicity b) Explicit (binderType b)) tm)
 
@@ -110,23 +114,31 @@ bindReq {vs} fc env Refl ns tm
     = pure (ns, notLets [] _ env, abstractEnvType fc env tm)
   where
     notLets : List Name -> (vars : Scope) -> Env Term vars -> List Name
-    notLets acc [] _ = acc
-    notLets acc (v :: vs) (b :: env) = if isLet b then notLets acc vs env
+    notLets acc [<] _ = acc
+    notLets acc (vs :< v) (env :< b) = if isLet b then notLets acc vs env
                                        else notLets (v :: acc) vs env
-bindReq {vs = n :: _} fc (b :: env) (Keep p) ns tm
+bindReq {vs = _ :< n} fc (env :< b) (Keep p) ns tm
     = do b' <- shrinkBinder b p
          bindReq fc env p ((plicit b, n) :: ns)
             (Bind fc _ (Pi (binderLoc b) (multiplicity b) Explicit (binderType b')) tm)
-bindReq fc (b :: env) (Drop p) ns tm
+bindReq {vs = _ :< _} fc (env :< b) (Drop p) ns tm
     = bindReq fc env p ns tm
 
 -- This machinery is to calculate whether any top level argument is used
 -- more than once in a case block, in which case inlining wouldn't be safe
 -- since it might duplicate work.
+-- TODO: Not sure the rest of this is needed any more. Will port if it turns
+-- out it is!
+{-
 
 data ArgUsed = Used1 -- been used
              | Used0 -- not used
              | LocalVar -- don't care if it's used
+
+Show ArgUsed where
+  show Used1 = "Used1"
+  show Used0 = "Used0"
+  show LocalVar = "LocalVar"
 
 record Usage (vs : Scope) where
   constructor MkUsage
@@ -142,7 +154,9 @@ initUsed = MkUsage
 initUsedCase : SizeOf vs -> Usage vs
 initUsedCase p = MkUsage
   { isUsedSet = VarSet.empty
-  , isLocalSet = maybe id VarSet.delete (last p) (VarSet.full p)
+  , isLocalSet = case sizedView p of
+    Z => VarSet.empty
+    S _ => VarSet.delete first (VarSet.full p)
   }
 
 setUsedVar : Var vs -> Usage vs -> Usage vs
@@ -162,20 +176,29 @@ setUsed : {auto u : Ref Used (Usage vars)} ->
           Var vars -> Core ()
 setUsed p = update Used $ setUsedVar p
 
-extendUsed : ArgUsed -> SizeOf inner -> Usage vars -> Usage (inner ++ vars)
+extendUsed : ArgUsed -> SizeOf inner -> Usage vars -> Usage (Scope.ext vars inner)
 extendUsed LocalVar p (MkUsage iu il)
-  = MkUsage (weakenNs {tm = VarSet} p iu) (append p (full p) il)
+  = let p' = cast p in
+    rewrite fishAsSnocAppend vars inner in
+    MkUsage (weakenNs {tm = VarSet} p' iu) (append p' (full p') il)
 extendUsed Used0 p (MkUsage iu il)
-  = MkUsage (weakenNs {tm = VarSet} p iu) (weakenNs {tm = VarSet} p il)
+  = let p' = cast p in
+    rewrite fishAsSnocAppend vars inner in
+    MkUsage (weakenNs {tm = VarSet} p' iu) (weakenNs {tm = VarSet} p' il)
 extendUsed Used1 p (MkUsage iu il)
-  = MkUsage (append p (full p) iu) (weakenNs {tm = VarSet} p il)
+  = let p' = cast p in
+    rewrite fishAsSnocAppend vars inner in
+    MkUsage (append p' (full p') iu) (weakenNs {tm = VarSet} p' il)
 
-dropUsed : SizeOf inner -> Usage (inner ++ vars) -> Usage vars
-dropUsed p (MkUsage iu il) = MkUsage (VarSet.dropInner p iu) (dropInner p il)
+dropUsed : SizeOf inner -> Usage (Scope.ext vars inner) -> Usage vars
+dropUsed p (MkUsage iu il) = let p' = cast p in
+                             MkUsage
+                               (VarSet.dropInner {vs = vars} p' (rewrite sym $ fishAsSnocAppend vars inner in iu))
+                               (dropInner {vs = vars} p' (rewrite sym $ fishAsSnocAppend vars inner in il))
 
 inExtended : ArgUsed -> SizeOf new ->
              {auto u : Ref Used (Usage vars)} ->
-             (Ref Used (Usage (new ++ vars)) -> Core a) ->
+             (Ref Used (Usage (Scope.ext vars new)) -> Core a) ->
              Core a
 inExtended a new sc
     = do used <- get Used
@@ -199,7 +222,7 @@ termInlineSafe (Local fc isLet idx p)
          else do setUsed v
                  pure True
 termInlineSafe (Meta fc x y xs)
-    = termsInlineSafe xs
+    = termsInlineSafe (map snd xs)
 termInlineSafe (Bind fc x b scope)
    = do bok <- binderInlineSafe b
         if bok
@@ -209,7 +232,7 @@ termInlineSafe (Bind fc x b scope)
     binderInlineSafe : Binder (Term vars) -> Core Bool
     binderInlineSafe (Let _ _ val _) = termInlineSafe val
     binderInlineSafe _ = pure True
-termInlineSafe (App fc fn arg)
+termInlineSafe (App fc fn _ arg)
     = do fok <- termInlineSafe fn
          if fok
             then termInlineSafe arg
@@ -289,4 +312,7 @@ canInlineCaseBlock n
          Just (PMDef _ vars _ rtree _) <- lookupDefExact n (gamma defs)
              | _ => pure False
          u <- newRef Used (initUsedCase (mkSizeOf vars))
-         caseInlineSafe rtree
+         log "compiler.inline.eval" 5 "canInlineCaseBlock init n: \{show n}, u: \{show (initUsedCase vars)}"
+         result <- caseInlineSafe rtree
+         log "compiler.inline.eval" 5 "canInlineCaseBlock updated n: \{show n}, result: \{show result}"
+         pure result

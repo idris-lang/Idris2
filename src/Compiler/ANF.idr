@@ -4,9 +4,14 @@ import Compiler.LambdaLift
 
 import Core.CompileExpr
 import Core.Context
+import Core.Context.Log
 
+import Data.SnocList.Quantifiers
+import Data.String
 import Data.SortedSet
 import Data.Vect
+
+import Libraries.Data.SnocList.Extra
 
 %default covering
 
@@ -82,26 +87,26 @@ mutual
   Show ANF where
     show (AV _ v) = show v
     show (AAppName fc lazy n args)
-        = show n ++ showLazy lazy ++ "(" ++ showSep ", " (map show args) ++ ")"
+        = show n ++ showLazy lazy ++ "(" ++ joinBy ", " (map show args) ++ ")"
     show (AUnderApp fc n m args)
         = "<" ++ show n ++ " underapp " ++ show m ++ ">(" ++
-          showSep ", " (map show args) ++ ")"
+          joinBy ", " (map show args) ++ ")"
     show (AApp fc lazy c arg)
         = show c ++ showLazy lazy ++ " @ (" ++ show arg ++ ")"
     show (ALet fc x val sc)
         = "%let v" ++ show x ++ " = (" ++ show val ++ ") in (" ++ show sc ++ ")"
     show (ACon fc n _ t args)
-        = "%con " ++ show n ++ "(" ++ showSep ", " (map show args) ++ ")"
+        = "%con " ++ show n ++ "(" ++ joinBy ", " (map show args) ++ ")"
     show (AOp fc lazy op args)
-        = "%op " ++ show op ++ showLazy lazy ++ "(" ++ showSep ", " (toList (map show args)) ++ ")"
+        = "%op " ++ show op ++ showLazy lazy ++ "(" ++ joinBy ", " (toList (map show args)) ++ ")"
     show (AExtPrim fc lazy p args)
-        = "%extprim " ++ show p ++ showLazy lazy ++ "(" ++ showSep ", " (map show args) ++ ")"
+        = "%extprim " ++ show p ++ showLazy lazy ++ "(" ++ joinBy ", " (map show args) ++ ")"
     show (AConCase fc sc alts def)
         = "%case " ++ show sc ++ " of { "
-             ++ showSep "| " (map show alts) ++ " " ++ show def ++ " }"
+             ++ joinBy "| " (map show alts) ++ " " ++ show def ++ " }"
     show (AConstCase fc sc alts def)
         = "%case " ++ show sc ++ " of { "
-             ++ showSep "| " (map show alts) ++ " " ++ show def ++ " }"
+             ++ joinBy "| " (map show alts) ++ " " ++ show def ++ " }"
     show (APrimVal _ x) = show x
     show (AErased _) = "___"
     show (ACrash _ x) = "%CRASH(" ++ show x ++ ")"
@@ -111,7 +116,7 @@ mutual
   Show AConAlt where
     show (MkAConAlt n _ t args sc)
         = "%conalt " ++ show n ++
-             "(" ++ showSep ", " (map showArg args) ++ ") => " ++ show sc
+             "(" ++ joinBy ", " (map showArg args) ++ ") => " ++ show sc
       where
         showArg : Int -> String
         showArg i = "v" ++ show i
@@ -136,6 +141,12 @@ Show ANFDef where
 AVars : Scope -> Type
 AVars = All (\_ => Int)
 
+namespace AVars
+  public export
+  empty : AVars Scope.empty
+  empty = [<]
+
+
 data Next : Type where
 
 nextVar : {auto v : Ref Next Int} ->
@@ -144,10 +155,6 @@ nextVar
     = do i <- get Next
          put Next (i + 1)
          pure i
-
-lookup : {idx : _} -> (0 p : IsVar x idx vs) -> AVars vs -> Int
-lookup First (x :: xs) = x
-lookup (Later p) (x :: xs) = lookup p xs
 
 bindArgs : {auto v : Ref Next Int} ->
            List ANF -> Core (List (AVar, Maybe ANF))
@@ -183,6 +190,15 @@ mlet fc val sc
     = do i <- nextVar
          pure $ ALet fc i val (sc (ALocal i))
 
+bindAsFresh :
+  {auto v : Ref Next Int} ->
+  (args : List Name) -> AVars vars' ->
+  Core (List Int, AVars (Scope.ext vars' args))
+bindAsFresh [] vs = pure ([], vs)
+bindAsFresh (n :: ns) vs
+    = do i <- nextVar
+         mapFst (i ::) <$> bindAsFresh ns (vs :< i)
+
 mutual
   anfArgs : {auto v : Ref Next Int} ->
             FC -> AVars vars ->
@@ -193,7 +209,7 @@ mutual
 
   anf : {auto v : Ref Next Int} ->
         AVars vars -> Lifted vars -> Core ANF
-  anf vs (LLocal fc p) = pure $ AV fc (ALocal (lookup p vs))
+  anf vs (LLocal fc p) = pure $ AV fc (ALocal (lookup vs p))
   anf vs (LAppName fc lazy n args)
       = anfArgs fc vs args (AAppName fc lazy n)
   anf vs (LUnderApp fc n m args)
@@ -205,7 +221,7 @@ mutual
                   _ => ACrash fc "Can't happen (AApp)"
   anf vs (LLet fc x val sc)
       = do i <- nextVar
-           let vs' = i :: vs
+           let vs' = vs :< i
            pure $ ALet fc i !(anf vs val) !(anf vs' sc)
   anf vs (LCon fc n ci t args)
       = anfArgs fc vs args (ACon fc n ci t)
@@ -231,19 +247,20 @@ mutual
   anf vs (LErased fc) = pure $ AErased fc
   anf vs (LCrash fc err) = pure $ ACrash fc err
 
+  anfConScope : {auto v : Ref Next Int} ->
+                AVars vars -> LiftedCaseScope vars ->
+                Core (List Int, ANF)
+  anfConScope vs (LRHS sc) = pure ([], !(anf vs sc))
+  anfConScope vs (LArg x sc)
+      = do i <- nextVar
+           (args, sc') <- anfConScope (vs :< i) sc
+           pure (i :: args, sc')
+
   anfConAlt : {auto v : Ref Next Int} ->
               AVars vars -> LiftedConAlt vars -> Core AConAlt
-  anfConAlt vs (MkLConAlt n ci t args sc)
-      = do (is, vs') <- bindArgs args vs
-           pure $ MkAConAlt n ci t is !(anf vs' sc)
-    where
-      bindArgs : (args : List Name) -> AVars vars' ->
-                 Core (List Int, AVars (args ++ vars'))
-      bindArgs [] vs = pure ([], vs)
-      bindArgs (n :: ns) vs
-          = do i <- nextVar
-               (is, vs') <- bindArgs ns vs
-               pure (i :: is, i :: vs')
+  anfConAlt vs (MkLConAlt n ci t sc)
+      = do (args, sc') <- anfConScope vs sc
+           pure $ MkAConAlt n ci t args sc'
 
   anfConstAlt : {auto v : Ref Next Int} ->
                 AVars vars -> LiftedConstAlt vars -> Core AConstAlt
@@ -251,28 +268,23 @@ mutual
       = pure $ MkAConstAlt c !(anf vs sc)
 
 export
-toANF : LiftedDef -> Core ANFDef
+toANF : {auto c : Ref Ctxt Defs} -> LiftedDef -> Core ANFDef
 toANF (MkLFun args scope sc)
     = do v <- newRef Next (the Int 0)
-         (iargs, vsNil) <- bindArgs args []
-         let vs : AVars args = rewrite sym (appendNilRightNeutral args) in
-                                      vsNil
-         (iargs', vs) <- bindArgs scope vs
-         pure $ MkAFun (iargs ++ reverse iargs') !(anf vs sc)
-  where
-    bindArgs : {auto v : Ref Next Int} ->
-               (args : List Name) -> AVars vars' ->
-               Core (List Int, AVars (args ++ vars'))
-    bindArgs [] vs = pure ([], vs)
-    bindArgs (n :: ns) vs
-        = do i <- nextVar
-             (is, vs') <- bindArgs ns vs
-             pure (i :: is, i :: vs')
+         log "compile.execute" 40 $ "toANF args: \{show $ toList args}, scope: \{show $ asList scope}, lifted: \{show sc}"
+         (iargs, vsNil) <- bindAsFresh args AVars.empty
+         (iargs', vs) <- bindAsFresh (toList scope) vsNil
+         sc' <- anf vs $
+            do rewrite fishAsSnocAppend (cast args) (toList scope)
+               rewrite castToList scope
+               sc
+         log "compile.execute" 40 $ "toANF iargs: \{show iargs}, iargs': \{show iargs'}, lifted: \{show sc'}"
+         pure $ MkAFun (iargs ++ iargs') sc'
 toANF (MkLCon t a ns) = pure $ MkACon t a ns
 toANF (MkLForeign ccs fargs t) = pure $ MkAForeign ccs fargs t
 toANF (MkLError err)
     = do v <- newRef Next (the Int 0)
-         pure $ MkAError !(anf [] err)
+         pure $ MkAError !(anf AVars.empty err)
 
 export
 freeVariables : ANF -> SortedSet AVar

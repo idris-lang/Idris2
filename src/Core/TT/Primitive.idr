@@ -436,6 +436,49 @@ Show (PrimFn arity) where
   show Crash = "crash"
 
 export
+sameFn : PrimFn x -> PrimFn y -> Bool
+sameFn (Add _) (Add _) = True
+sameFn (Sub _) (Sub _) = True
+sameFn (Mul _) (Mul _)= True
+sameFn (Div _) (Div _) = True
+sameFn (Mod _) (Mod _) = True
+sameFn (Neg _) (Neg _) = True
+sameFn (ShiftL _) (ShiftL _) = True
+sameFn (ShiftR _) (ShiftR _) = True
+sameFn (BAnd _) (BAnd _) = True
+sameFn (BOr _) (BOr _) = True
+sameFn (BXOr _) (BXOr _) = True
+sameFn (LT _) (LT _) = True
+sameFn (LTE _) (LTE _) = True
+sameFn (EQ _) (EQ _) = True
+sameFn (GTE _) (GTE _) = True
+sameFn (GT _) (GT _) = True
+sameFn StrLength StrLength = True
+sameFn StrHead StrHead = True
+sameFn StrTail StrTail = True
+sameFn StrIndex StrIndex = True
+sameFn StrCons StrCons = True
+sameFn StrAppend StrAppend = True
+sameFn StrReverse StrReverse = True
+sameFn StrSubstr StrSubstr = True
+sameFn DoubleExp DoubleExp = True
+sameFn DoubleLog DoubleLog = True
+sameFn DoublePow DoublePow = True
+sameFn DoubleSin DoubleSin = True
+sameFn DoubleCos DoubleCos = True
+sameFn DoubleTan DoubleTan = True
+sameFn DoubleASin DoubleASin = True
+sameFn DoubleACos DoubleACos = True
+sameFn DoubleATan DoubleATan = True
+sameFn DoubleSqrt DoubleSqrt = True
+sameFn DoubleFloor DoubleFloor = True
+sameFn DoubleCeiling DoubleCeiling = True
+sameFn (Cast{}) (Cast{}) = True
+sameFn BelieveMe BelieveMe = True
+sameFn Crash Crash = True
+sameFn _ _ = False
+
+export
 [Sugared] Show (PrimFn arity) where
   show (Add ty) = "+"
   show (Sub ty) = "-"

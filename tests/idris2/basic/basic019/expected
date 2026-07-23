@@ -1,7 +1,7 @@
 1/1: Building CaseBlock (CaseBlock.idr)
-Main> Main.foo : (x : Nat) -> (case x of { 0 => Nat -> Nat ; S k => Nat })
+Main> Main.foo : Nat -> (case x of { 0 => Nat -> Nat ; S e => Nat })
 Main> Prelude.elem : Foldable t => Eq a => a -> t a -> Bool
 elem = elemBy (==)
 Main> PrimIO.io_bind : (1 _ : IO a) -> (1 _ : (a -> IO b)) -> IO b
-io_bind (MkIO fn) k = MkIO (\1 w => let MkIORes x' w' = fn w in let MkIO res = k x' in res w')
+io_bind (MkIO fn) k = MkIO (\1 w => let 1 sc = fn w in let MkIORes e e = sc in let 1 sc = k e in let MkIO e = sc in e e)
 Main> Bye for now!

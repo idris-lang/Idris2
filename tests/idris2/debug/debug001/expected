@@ -1,15 +1,11 @@
 1/1: Building TypePat (TypePat.idr)
 Main> Main.isNat
-Arguments [{arg:1}]
-Compile time tree: case {arg:1} of
-  Nat => True
-  _ => False
+Compile time tree: \{arg:1} => case {arg:1} of { Nat => True ; ? => False }
 Compiled: \ {arg:1} => case {arg:1} of
   { Prelude.Types.Nat [tycon] => 1
   ; _ => 0
   }
 Refers to: Prelude.Basics.True, Prelude.Basics.False
-Refers to (runtime): Prelude.Types.Nat
 Flags: allguarded, covering
 Size change:
   Prelude.Basics.True:
@@ -19,16 +15,12 @@ Size change:
     l
   r +
 Main> Main.isInt32
-Arguments [{arg:1}]
-Compile time tree: case {arg:1} of
-  Int32 => True
-  _ => False
+Compile time tree: \{arg:1} => case {arg:1} of { Int32 => True ; ? => False }
 Compiled: \ {arg:1} => case {arg:1} of
   { Int32 [tycon] => 1
   ; _ => 0
   }
 Refers to: Prelude.Basics.True, Prelude.Basics.False
-Refers to (runtime): Int32
 Flags: allguarded, covering
 Size change:
   Prelude.Basics.True:
@@ -38,10 +30,7 @@ Size change:
     l
   r +
 Main> Prelude.Types.plus
-Arguments [{arg:1}, {arg:2}]
-Compile time tree: case {arg:1} of
-  Z => {arg:2}
-  S {e:1} => S (plus {e:1} {arg:2})
+Compile time tree: \{arg:1}, {arg:2} => case {arg:1} of { 0 => {arg:2} ; S {e:1} => S (plus {e:1} {arg:2}) }
 Compiled: \ {arg:1}, {arg:2} => case {arg:1} of
   { 0 => {arg:2}
   ; _ => let {e:1} = {arg:1} - 1 in
@@ -59,14 +48,7 @@ Size change:
   0 | <
   1 |   =
 Main> Prelude.Types.minus
-Arguments [{arg:1}, {arg:2}]
-Compile time tree: case {arg:1} of
-  Z => 0
-  _ => case {arg:2} of
-    Z => {arg:1}
-    _ => case {arg:1} of
-      S {e:1} => case {arg:2} of
-        S {e:2} => minus {e:1} {e:2}
+Compile time tree: \{arg:1}, {arg:2} => case {arg:1} of { 0 => 0 ; ? => case {arg:2} of { 0 => {arg:1} ; ? => let S {e:1} = {arg:1} in let S {e:2} = {arg:2} in minus {e:1} {e:2} } }
 Compiled: \ {arg:1}, {arg:2} => case {arg:1} of
   { 0 => 0
   ; _ => case {arg:2} of
@@ -95,17 +77,14 @@ Size change:
   0 | <
   1 |   <
 Main> Prelude.Types.SnocList.filter
-Arguments [{arg:1}, {arg:2}, {arg:3}]
-Compile time tree: case {arg:3} of
-  Lin {e:1} => [<]
-  (:<) {e:2} {e:3} {e:4} => let rest = filter {arg:2} {e:3} in if {arg:2} {e:4} then rest :< {e:4} else rest
+Compile time tree: \{arg:1}, {arg:2}, {arg:3} => case {arg:3} of { [<] => [<] ; {e:3} :< {e:4} => let rest = filter {arg:2} {e:3} in let {sc:1} = {arg:2} {e:4} in if {sc:1} then rest :< {e:4} else rest }
 Erasable args: [0]
 Inferrable args: [0]
 Compiled: \ {arg:2}, {arg:3} => case {arg:3} of
   { _builtin.NIL {tag = 0} [nil] => _builtin.NIL {tag = 0} [nil]
-  ; _builtin.CONS {tag = 1} [cons] {e:3} {e:4} => let rest = Prelude.Types.SnocList.filter {arg:2} {e:3} incase {arg:2} {e:4} of  { 1 => _builtin.CONS {tag = 1} [cons] rest {e:4}; 0 => rest}
+  ; _builtin.CONS {tag = 1} [cons] {e:3} {e:4} => let rest = Prelude.Types.SnocList.filter {arg:2} {e:3} inlet {sc:1} = {arg:2} {e:4} incase {sc:1} of  { 1 => _builtin.CONS {tag = 1} [cons] rest {e:4}; 0 => rest}
   }
-Refers to: Prelude.Basics.SnocList, Prelude.Basics.Lin, Prelude.Types.SnocList.case block in filter, Prelude.Types.SnocList.filter
+Refers to: Prelude.Basics.SnocList, Prelude.Basics.Lin, Prelude.Basics.Bool, Prelude.Basics.(:<), Prelude.Types.SnocList.case block in filter, Prelude.Types.SnocList.filter
 Refers to (runtime): _builtin.CONS, _builtin.NIL, Prelude.Types.SnocList.filter
 Flags: total
 Size change:
@@ -113,16 +92,16 @@ Size change:
     l 0 1 2
   r +------
   0 | =   <
+  Prelude.Basics.(:<):
+    l 0 1 2
+  r +------
+  0 | =   <
+  2 |     <
   Prelude.Types.SnocList.filter:
     l 0 1 2
   r +------
   0 | =   <
   1 |   =
-  2 |     <
-  Prelude.Basics.(:<):
-    l 0 1 2
-  r +------
-  0 | =   <
   2 |     <
 Main> 
 Bye for now!

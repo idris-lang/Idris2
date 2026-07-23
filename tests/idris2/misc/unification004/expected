@@ -1,0 +1,17 @@
+1/1: Building Good (Good.idr)
+1/1: Building Bad (Bad.idr)
+Error: While processing left hand side of foo. When unifying:
+    View W
+and:
+    View ?a
+Pattern variable a unifies with: W.
+
+Bad:6:12--10:8
+    |
+ 6 |   X : View W
+   |            ^
+ 07 |   Y : View U
+ 10 | foo a X = MkUnit
+    |       ^
+
+Suggestion: Use the same name for both pattern variables, since they unify.

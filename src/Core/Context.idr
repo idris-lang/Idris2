@@ -11,17 +11,21 @@ import        Core.Options
 import public Core.Options.Log
 import public Core.TT
 
-import Libraries.Utils.Binary
-import Libraries.Utils.Path
-import Libraries.Utils.Scheme
-import Libraries.Text.PrettyPrint.Prettyprinter
-
 import Idris.Syntax.Pragmas
 
 import Data.Either
 import Data.IOArray
 import Data.List1
 import Data.Nat
+import Data.String
+
+import System.Clock
+import System.Directory
+
+import Libraries.Utils.Binary
+import Libraries.Utils.Path
+import Libraries.Utils.Scheme
+import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
@@ -29,9 +33,6 @@ import Libraries.Data.StringMap
 import Libraries.Data.UserNameMap
 import Libraries.Data.WithDefault
 import Libraries.Text.Distance.Levenshtein
-
-import System.Clock
-import System.Directory
 
 %default covering
 
@@ -165,7 +166,7 @@ returnDef : Bool -> Int -> GlobalDef -> Maybe (Int, GlobalDef)
 returnDef False idx def = Just (idx, def)
 returnDef True idx def
     = case definition def of
-           PMDef pi _ _ _ _ =>
+           Function pi _ _ _ =>
                  if alwaysReduce pi
                     then Just (idx, def)
                     else Nothing
@@ -394,6 +395,37 @@ interface HasNames a where
   resolved : Context -> a -> Core a
 
 export
+HasNames a => HasNames (List a) where
+  full c ns = full_aux c [] ns
+    where full_aux : Context -> List a -> List a -> Core (List a)
+          full_aux c res [] = pure (reverse res)
+          full_aux c res (n :: ns) = full_aux c (!(full c n):: res) ns
+
+  resolved c ns = resolved_aux c [] ns
+    where resolved_aux : Context -> List a -> List a -> Core (List a)
+          resolved_aux c res [] = pure (reverse res)
+          resolved_aux c res (n :: ns) = resolved_aux c (!(resolved c n) :: res) ns
+
+export
+HasNames a => HasNames (SnocList a) where
+  full c ns = full_aux c [<] ns
+    where full_aux : Context -> SnocList a -> SnocList a -> Core (SnocList a)
+          full_aux c res [<] = pure (reverse res)
+          full_aux c res (ns :< n) = full_aux c (res :< !(full c n)) ns
+
+  resolved c ns = resolved_aux c [<] ns
+    where resolved_aux : Context -> SnocList a -> SnocList a -> Core (SnocList a)
+          resolved_aux c res [<] = pure (reverse res)
+          resolved_aux c res (ns :< n) = resolved_aux c (res :< !(resolved c n)) ns
+
+export
+HasNames a => HasNames (Maybe a) where
+  full gam Nothing = pure Nothing
+  full gam (Just x) = pure $ Just !(full gam x)
+  resolved gam Nothing = pure Nothing
+  resolved gam (Just x) = pure $ Just !(resolved gam x)
+
+export
 HasNames Name where
   full gam (Resolved i)
       = do Just gdef <- lookupCtxtExact (Resolved i) gam
@@ -427,6 +459,55 @@ HasNames UConstraint where
            pure (ULE x' y')
 
 export
+HasNames a => HasNames (RigCount, a) where
+  full gam (c, t) = pure $ (c, !(full gam t))
+  resolved gam (c, t) = pure $ (c, !(resolved gam t))
+
+export
+HasNames CaseType where
+  full gam PatMatch = pure PatMatch
+  full gam (CaseBlock n) = pure $ CaseBlock !(full gam n)
+
+  resolved gam PatMatch = pure PatMatch
+  resolved gam (CaseBlock n) = pure $ CaseBlock !(resolved gam n)
+
+export
+HasNames (Term vars)
+
+export
+HasNames (Var vars, Term vars) where
+  full gam (v, tm) = pure (v, !(full gam tm))
+  resolved gam (v, tm) = pure (v, !(resolved gam tm))
+
+export
+HasNames (CaseScope vars) where
+  full gam (RHS fs x) = pure (RHS !(full gam fs) !(full gam x))
+  full gam (Arg c x sc) = pure (Arg c x !(full gam sc))
+
+  resolved gam (RHS fs x) = pure (RHS !(resolved gam fs) !(resolved gam x))
+  resolved gam (Arg c x sc) = pure (Arg c x !(resolved gam sc))
+
+export
+HasNames (CaseAlt vars) where
+  full gam (ConCase fc x tag y)
+      = pure (ConCase fc !(full gam x) tag !(full gam y))
+  full gam (DelayCase fc ty arg x)
+      = pure (DelayCase fc ty arg !(full gam x))
+  full gam (ConstCase fc c x)
+      = pure (ConstCase fc c !(full gam x))
+  full gam (DefaultCase fc x)
+      = pure (DefaultCase fc !(full gam x))
+
+  resolved gam (ConCase fc x tag y)
+      = pure (ConCase fc !(resolved gam x) tag !(resolved gam y))
+  resolved gam (DelayCase fc ty arg x)
+      = pure (DelayCase fc ty arg !(resolved gam x))
+  resolved gam (ConstCase fc c x)
+      = pure (ConstCase fc c !(resolved gam x))
+  resolved gam (DefaultCase fc x)
+      = pure (DefaultCase fc !(resolved gam x))
+
+export
 HasNames (Term vars) where
   full gam (Ref fc x (Resolved i))
       = do Just gdef <- lookupCtxtExact (Resolved i) gam
@@ -439,10 +520,12 @@ HasNames (Term vars) where
              Just gdef => Meta fc (fullname gdef) i xs
   full gam (Bind fc x b scope)
       = pure (Bind fc x !(traverse (full gam) b) !(full gam scope))
-  full gam (App fc fn arg)
-      = pure (App fc !(full gam fn) !(full gam arg))
+  full gam (App fc fn c arg)
+      = pure (App fc !(full gam fn) c !(full gam arg))
   full gam (As fc s p tm)
       = pure (As fc s !(full gam p) !(full gam tm))
+  full gam (Case fc t c sc scTy alts)
+      = pure (Case fc !(full gam t) c !(full gam sc) !(full gam scTy) !(full gam alts))
   full gam (TDelayed fc x y)
       = pure (TDelayed fc x !(full gam y))
   full gam (TDelay fc x t y)
@@ -468,10 +551,12 @@ HasNames (Term vars) where
            pure (Meta fc x i xs')
   resolved gam (Bind fc x b scope)
       = pure (Bind fc x !(traverse (resolved gam) b) !(resolved gam scope))
-  resolved gam (App fc fn arg)
-      = pure (App fc !(resolved gam fn) !(resolved gam arg))
+  resolved gam (App fc fn c arg)
+      = pure (App fc !(resolved gam fn) c !(resolved gam arg))
   resolved gam (As fc s p tm)
       = pure (As fc s !(resolved gam p) !(resolved gam tm))
+  resolved gam (Case fc t c sc scTy alts)
+      = pure (Case fc !(resolved gam t) c !(resolved gam sc) !(resolved gam scTy) !(resolved gam alts))
   resolved gam (TDelayed fc x y)
       = pure (TDelayed fc x !(resolved gam y))
   resolved gam (TDelay fc x t y)
@@ -516,56 +601,15 @@ HasNames Pat where
   resolved gam (PLoc fc n) = PLoc fc <$> resolved gam n
   resolved gam (PUnmatchable fc t) = PUnmatchable fc <$> resolved gam t
 
-mutual
-  export
-  HasNames (CaseTree vars) where
-    full gam (Case i v ty alts)
-        = pure $ Case i v !(full gam ty) !(traverse (full gam) alts)
-    full gam (STerm i tm)
-        = pure $ STerm i !(full gam tm)
-    full gam t = pure t
-
-    resolved gam (Case i v ty alts)
-        = pure $ Case i v !(resolved gam ty) !(traverse (resolved gam) alts)
-    resolved gam (STerm i tm)
-        = pure $ STerm i !(resolved gam tm)
-    resolved gam t = pure t
-
-  export
-  HasNames (CaseAlt vars) where
-    full gam (ConCase n t args sc)
-        = do sc' <- full gam sc
-             Just gdef <- lookupCtxtExact n gam
-                | Nothing => pure (ConCase n t args sc')
-             pure $ ConCase (fullname gdef) t args sc'
-    full gam (DelayCase ty arg sc)
-        = pure $ DelayCase ty arg !(full gam sc)
-    full gam (ConstCase c sc)
-        = pure $ ConstCase c !(full gam sc)
-    full gam (DefaultCase sc)
-        = pure $ DefaultCase !(full gam sc)
-
-    resolved gam (ConCase n t args sc)
-        = do sc' <- resolved gam sc
-             let Just i = getNameID n gam
-                | Nothing => pure (ConCase n t args sc')
-             pure $ ConCase (Resolved i) t args sc'
-    resolved gam (DelayCase ty arg sc)
-        = pure $ DelayCase ty arg !(resolved gam sc)
-    resolved gam (ConstCase c sc)
-        = pure $ ConstCase c !(resolved gam sc)
-    resolved gam (DefaultCase sc)
-        = pure $ DefaultCase !(resolved gam sc)
-
 export
 HasNames (Env Term vars) where
-  full gam [] = pure Env.empty
-  full gam (b :: bs)
-      = pure $ !(traverse (full gam) b) :: !(full gam bs)
+  full gam [<] = pure Env.empty
+  full gam (bs :< b)
+      = pure $ !(full gam bs) :< !(traverse (full gam) b)
 
-  resolved gam [] = pure Env.empty
-  resolved gam (b :: bs)
-      = pure $ !(traverse (resolved gam) b) :: !(resolved gam bs)
+  resolved gam [<] = pure Env.empty
+  resolved gam (bs :< b)
+      = pure $ !(resolved gam bs) :< !(traverse (resolved gam) b)
 
 export
 HasNames Clause where
@@ -578,15 +622,8 @@ HasNames Clause where
 
 export
 HasNames Def where
-  full gam (PMDef r args ct rt pats)
-      = pure $ PMDef r args !(full gam ct) !(full gam rt)
-                     !(traverse fullNamesPat pats)
-    where
-      fullNamesPat : (vs ** (Env Term vs, Term vs, Term vs)) ->
-                     Core (vs ** (Env Term vs, Term vs, Term vs))
-      fullNamesPat (_ ** (env, lhs, rhs))
-          = pure $ (_ ** (!(full gam env),
-                          !(full gam lhs), !(full gam rhs)))
+  full gam (Function x ctm rtm cs)
+      = pure $ Function x !(full gam ctm) !(full gam rtm) !(full gam cs)
   full gam (TCon a ps ds u ms mcs det)
       = pure $ TCon a ps ds u !(traverse (full gam) ms)
                                 !(traverseOpt (traverse (full gam)) mcs) det
@@ -596,15 +633,8 @@ HasNames Def where
       = pure $ Guess !(full gam tm) b cs
   full gam t = pure t
 
-  resolved gam (PMDef r args ct rt pats)
-      = pure $ PMDef r args !(resolved gam ct) !(resolved gam rt)
-                     !(traverse resolvedNamesPat pats)
-    where
-      resolvedNamesPat : (vs ** (Env Term vs, Term vs, Term vs)) ->
-                         Core (vs ** (Env Term vs, Term vs, Term vs))
-      resolvedNamesPat (_ ** (env, lhs, rhs))
-          = pure $ (_ ** (!(resolved gam env),
-                          !(resolved gam lhs), !(resolved gam rhs)))
+  resolved gam (Function x ctm rtm cs)
+      = pure $ Function x !(resolved gam ctm) !(resolved gam rtm) !(resolved gam cs)
   resolved gam (TCon a ps ds u ms mcs det)
       = pure $ TCon a ps ds u !(traverse (resolved gam) ms)
                                 !(traverseOpt (traverse (full gam)) mcs) det
@@ -615,23 +645,21 @@ HasNames Def where
   resolved gam t = pure t
 
 export
+StripNamespace Clause where
+  trimNS gam (MkClause env lhs rhs)
+     = MkClause env (trimNS gam lhs) (trimNS gam rhs)
+
+  restoreNS gam (MkClause env lhs rhs)
+    = MkClause env (restoreNS gam lhs) (restoreNS gam rhs)
+
+export
 StripNamespace Def where
-  trimNS ns (PMDef i args ct rt pats)
-      = PMDef i args (trimNS ns ct) rt (map trimNSpat pats)
-    where
-      trimNSpat : (vs ** (Env Term vs, Term vs, Term vs)) ->
-                  (vs ** (Env Term vs, Term vs, Term vs))
-      trimNSpat (vs ** (env, lhs, rhs))
-          = (vs ** (env, trimNS ns lhs, trimNS ns rhs))
+  trimNS ns (Function x ctm rtm cs)
+      = Function x (trimNS ns ctm) rtm (trimNS ns cs)
   trimNS ns d = d
 
-  restoreNS ns (PMDef i args ct rt pats)
-      = PMDef i args (restoreNS ns ct) rt (map restoreNSpat pats)
-    where
-      restoreNSpat : (vs ** (Env Term vs, Term vs, Term vs)) ->
-                  (vs ** (Env Term vs, Term vs, Term vs))
-      restoreNSpat (vs ** (env, lhs, rhs))
-          = (vs ** (env, restoreNS ns lhs, restoreNS ns rhs))
+  restoreNS ns (Function x ctm rtm cs)
+      = Function x (restoreNS ns ctm) rtm (restoreNS ns cs)
   restoreNS ns d = d
 
 export
@@ -755,6 +783,7 @@ HasNames Error where
   full gam ImpossibleCase = pure ImpossibleCase
   full gam (LinearUsed fc k n) = LinearUsed fc k <$> full gam n
   full gam (LinearMisuse fc n x y) = LinearMisuse fc <$> full gam n <*> pure x <*> pure y
+  full gam (InconsistentUse fc ns) = InconsistentUse fc <$> traverse (traversePair $ traverse $ full gam) ns
   full gam (BorrowPartial fc rho s t) = BorrowPartial fc <$> full gam rho <*> full gam s <*> full gam t
   full gam (BorrowPartialType fc rho s) = BorrowPartialType fc <$> full gam rho <*> full gam s
   full gam (AmbiguousName fc xs) = AmbiguousName fc <$> traverse (full gam) xs
@@ -854,6 +883,7 @@ HasNames Error where
   resolved gam ImpossibleCase = pure ImpossibleCase
   resolved gam (LinearUsed fc k n) = LinearUsed fc k <$> resolved gam n
   resolved gam (LinearMisuse fc n x y) = LinearMisuse fc <$> resolved gam n <*> pure x <*> pure y
+  resolved gam (InconsistentUse fc ns) = InconsistentUse fc <$> traverse (traversePair $ traverse $ resolved gam) ns
   resolved gam (BorrowPartial fc rho s t) = BorrowPartial fc <$> resolved gam rho <*> resolved gam s <*> resolved gam t
   resolved gam (BorrowPartialType fc rho s) = BorrowPartialType fc <$> resolved gam rho <*> resolved gam s
   resolved gam (AmbiguousName fc xs) = AmbiguousName fc <$> traverse (resolved gam) xs
@@ -942,13 +972,6 @@ HasNames SCCall where
   resolved gam sc = pure $ { fnCall := !(resolved gam (fnCall sc)) } sc
 
 export
-HasNames a => HasNames (Maybe a) where
-  full gam Nothing = pure Nothing
-  full gam (Just x) = pure $ Just !(full gam x)
-  resolved gam Nothing = pure Nothing
-  resolved gam (Just x) = pure $ Just !(resolved gam x)
-
-export
 HasNames GlobalDef where
   full gam def
       = do
@@ -992,6 +1015,7 @@ record Defs where
   constructor MkDefs
   gamma : Context
   mutData : List Name -- Currently declared but undefined data types
+  uconstraints : List UConstraint
   currentNS : Namespace -- namespace for current definitions
   nestedNS : List Namespace -- other nested namespaces we can look in
   options : Options
@@ -1033,7 +1057,7 @@ record Defs where
   cgdirectives : List (CG, String)
      -- ^ Code generator directives, which are free form text and thus to
      -- be interpreted however the specific code generator requires
-  toCompileCase : List Name
+  toCompileCase : List (CaseType, Name)
      -- ^ Names which need to be compiled to run time case trees
   incData : List (CG, String, List String)
      -- ^ What we've compiled incrementally for this module: codegen,
@@ -1082,6 +1106,7 @@ initDefs
          pure $ MkDefs
            { gamma = gam
            , mutData = []
+           , uconstraints = []
            , currentNS = mainNS
            , nestedNS = []
            , options = opts
@@ -1192,7 +1217,7 @@ showSimilarNames ns nm str kept
       | _ => pure (full ++ adj)
     Nothing
 
-
+export
 getVisibility : {auto c : Ref Ctxt Defs} ->
                 FC -> Name -> Core (WithDefault Visibility Private)
 getVisibility fc n
@@ -1200,6 +1225,24 @@ getVisibility fc n
          Just def <- lookupCtxtExact n (gamma defs)
               | Nothing => throw (UndefinedName fc n)
          pure $ visibility def
+
+export
+getVisibilityWeaked : {auto c : Ref Ctxt Defs} ->
+                FC -> Name -> Core (WithDefault Visibility Private)
+getVisibilityWeaked fc n
+    = catch (getVisibility fc n) $ \e =>
+        case e of
+          UndefinedName _ _ => pure defaulted
+          x => throw x
+
+export
+getMultiplicityWeaked : {auto c : Ref Ctxt Defs} ->
+                  FC -> Name -> Core (Maybe RigCount)
+getMultiplicityWeaked fc n
+    = do defs <- get Ctxt
+         Just def <- lookupCtxtExact n (gamma defs)
+              | Nothing => pure Nothing
+         pure $ Just $ multiplicity def
 
 maybeMisspelling : {auto c : Ref Ctxt Defs} ->
                    Error -> Name -> Core a
@@ -1339,39 +1382,6 @@ addContextAlias alias full
              | _ => pure () -- Don't add the alias if the name exists already
          gam' <- newAlias alias full (gamma defs)
          put Ctxt ({ gamma := gam' } defs)
-
-export
-addBuiltin : {arity : _} ->
-             {auto x : Ref Ctxt Defs} ->
-             Name -> ClosedTerm -> Totality ->
-             PrimFn arity -> Core ()
-addBuiltin n ty tot op
-   = do ignore $
-       addDef n $ MkGlobalDef
-         { location = emptyFC
-         , fullname = n
-         , type = ty
-         , eraseArgs = NatSet.empty
-         , safeErase = NatSet.empty
-         , specArgs = NatSet.empty
-         , inferrable = NatSet.empty
-         , multiplicity = top
-         , localVars = Scope.empty
-         , visibility = specified Public
-         , totality = tot
-         , isEscapeHatch = False
-         , flags = [Inline]
-         , refersToM = Nothing
-         , refersToRuntimeM = Nothing
-         , invertible = False
-         , noCycles = False
-         , linearChecked = True
-         , definition = Builtin op
-         , compexpr = Nothing
-         , namedcompexpr = Nothing
-         , sizeChange = []
-         , schemeExpr = Nothing
-         }
 
 export
 updateDef : {auto c : Ref Ctxt Defs} ->
@@ -1817,7 +1827,7 @@ setDetermining fc tyn args
              else getPos (1 + i) ns sc
     getPos _ [] _ = pure NatSet.empty
     getPos _ ns ty = throw (GenericMsg fc ("Unknown determining arguments: "
-                           ++ showSep ", " (map show ns)))
+                           ++ joinBy ", " (map show ns)))
 
 export
 setDetags : {auto c : Ref Ctxt Defs} ->

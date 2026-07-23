@@ -1,54 +1,32 @@
 1/1: Building Dot (Dot.idr)
 Main> Main.f
-Arguments [{arg:1}, {arg:2}, {arg:3}, {arg:4}]
-Compile time tree: case {arg:1} of
-  Nil {e:1} => case {arg:4} of
-    Nothing {e:2} => ()
-    _ => case {arg:4} of
-      Just {e:3} {e:4} => case {e:4} of
-        Refl {e:5} {e:6} => f {arg:3} {arg:2} {arg:3} Nothing
-  (::) {e:7} {e:8} {e:9} => case {arg:4} of
-    Nothing {e:10} => f {e:9} {arg:2} {arg:3} Nothing
-    _ => case {arg:4} of
-      Just {e:3} {e:4} => case {e:4} of
-        Refl {e:5} {e:6} => f {arg:3} {arg:2} {arg:3} Nothing
-  _ => case {arg:4} of
-    Just {e:3} {e:4} => case {e:4} of
-      Refl {e:5} {e:6} => f {arg:3} {arg:2} {arg:3} Nothing
+Compile time tree: \{arg:1}, {arg:2}, {arg:3}, {arg:4} => case {arg:1} of { [] => case {arg:4} of { Nothing => () ; ? => let Just {e:1} = {arg:4} in let Refl = {e:1} in f {arg:3} {arg:2} {arg:3} Nothing } ; {e:2} :: {e:3} => case {arg:4} of { Nothing => f {e:3} {arg:2} {arg:3} Nothing ; ? => let Just {e:1} = {arg:4} in let Refl = {e:1} in f {arg:3} {arg:2} {arg:3} Nothing } ; ? => let Just {e:1} = {arg:4} in let Refl = {e:1} in f {arg:3} {arg:2} {arg:3} Nothing }
+Inferrable args: [0, 1, 2]
 Compiled: \ {arg:1}, {arg:2}, {arg:3}, {arg:4} => case {arg:1} of
-  { _builtin.NIL {tag = 0} [nil] => case {arg:4} of  { _builtin.NOTHING {tag = 0} [nothing] => ___; _ => case {arg:4} of  { _builtin.JUST {tag = 1} [just] {e:4} => Main.f {arg:3} {arg:2} {arg:3} (_builtin.NOTHING {tag = 0} [nothing])}}
-  ; _builtin.CONS {tag = 1} [cons] {e:8} {e:9} => case {arg:4} of  { _builtin.NOTHING {tag = 0} [nothing] => Main.f {e:9} {arg:2} {arg:3} (_builtin.NOTHING {tag = 0} [nothing]); _ => case {arg:4} of  { _builtin.JUST {tag = 1} [just] {e:4} => Main.f {arg:3} {arg:2} {arg:3} (_builtin.NOTHING {tag = 0} [nothing])}}
+  { _builtin.NIL {tag = 0} [nil] => case {arg:4} of  { _builtin.NOTHING {tag = 0} [nothing] => ___; _ => case {arg:4} of  { _builtin.JUST {tag = 1} [just] {e:1} => Main.f {arg:3} {arg:2} {arg:3} (_builtin.NOTHING {tag = 0} [nothing])}}
+  ; _builtin.CONS {tag = 1} [cons] {e:2} {e:3} => case {arg:4} of  { _builtin.NOTHING {tag = 0} [nothing] => Main.f {e:3} {arg:2} {arg:3} (_builtin.NOTHING {tag = 0} [nothing]); _ => case {arg:4} of  { _builtin.JUST {tag = 1} [just] {e:1} => Main.f {arg:3} {arg:2} {arg:3} (_builtin.NOTHING {tag = 0} [nothing])}}
   ; _ => case {arg:4} of
-           { _builtin.JUST {tag = 1} [just] {e:4} => Main.f {arg:3} {arg:2} {arg:3} (_builtin.NOTHING {tag = 0} [nothing])
+           { _builtin.JUST {tag = 1} [just] {e:1} => Main.f {arg:3} {arg:2} {arg:3} (_builtin.NOTHING {tag = 0} [nothing])
            }
   }
 Refers to: Main.f, Prelude.Basics.List, Prelude.Basics.(::), Builtin.MkUnit, Builtin.(===), Prelude.Types.Nothing
-Refers to (runtime): _builtin.CONS, _builtin.JUST, _builtin.NIL, _builtin.NOTHING, Main.f
+Refers to (runtime): _builtin.NOTHING, Main.f
 Flags: total
 Size change:
   Builtin.MkUnit:
     l
   r +
   Main.f:
-    l 0 1 2
-  r +------
-  0 | <
-  1 |   =
-  2 |     =
-  Builtin.(===):
-    l 0
-  r +--
-  1 | <
-  Main.f:
     l 0 1 2 3
   r +--------
   0 | <   = <
   1 | < =   <
   2 | <   = <
-  Builtin.(===):
+  Main.f:
     l 0 1 2 3
   r +--------
-  0 |       <
-  1 | <   = <
-  2 | =     <
+  0 | <
+  1 |   =
+  2 |     =
+  3 |       <
 Main> Bye for now!

@@ -10,24 +10,42 @@ import Core.Context.Log
 import Core.Hash
 import Core.Options
 
-import Data.List.Quantifiers
+import Data.SnocList
+import Data.SnocList.Quantifiers
 import Data.Vect
 
-import Libraries.Data.List.LengthMatch
 import Libraries.Data.NameMap
 import Libraries.Data.WithDefault
 import Libraries.Data.List.SizeOf
+import Libraries.Data.List.LengthMatch
+import Libraries.Data.SnocList.SizeOf
+import Libraries.Data.SnocList.Extra
 
 %default covering
 
-EEnv : Scope -> Scope -> Type
-EEnv free = All (\_ => CExp free)
+public export
+EEnv : Scope -> Scoped
+EEnv free ds = Subst CExp ds free
 
-extend : EEnv free vars -> (args : List (CExp free)) -> (args' : List Name) ->
-         LengthMatch args args' -> EEnv free (Scope.addInner vars args')
+namespace EEnv
+  public export
+  empty : EEnv free Scope.empty
+  empty = [<]
+
+public export
+covering
+[ShowEEnv] {free, vars : _} -> Show (EEnv free vars) where
+    show x = "EEnv [" ++ showAll x ++ "]{vars = " ++ show (asList vars) ++ ", free = " ++ show (toList free) ++ "}"
+        where
+            showAll : {free, vars : _} -> EEnv free vars -> String
+            showAll Lin = ""
+            showAll (Lin :< x) = show x
+            showAll (xx :< x) = show x ++ ", " ++ showAll xx
+
+extend : EEnv free vars -> (args : List Name) -> (args' : List (CExp free)) ->
+         LengthMatch args args' -> EEnv free (Scope.ext vars args)
 extend env [] [] NilMatch = env
-extend env (a :: xs) (n :: ns) (ConsMatch w)
-    = a :: extend env xs ns w
+extend env (_ :: ns) (v :: vs) (ConsMatch w) = extend (env :< v) ns vs w
 
 Stack : Scoped
 Stack vars = List (CExp vars)
@@ -45,13 +63,28 @@ getArity (MkCon _ arity _) = arity
 getArity (MkForeign _ args _) = length args
 getArity (MkError _) = 0
 
+getArgsFromStack : Stack free -> (args : Scope) ->
+                   List (CExp free) ->
+                   Maybe (List (CExp free), Stack free)
+getArgsFromStack (e :: es) (as :< a) acc
+    = getArgsFromStack es as (e :: acc)
+getArgsFromStack stk [<] acc = Just (acc, stk)
+getArgsFromStack _ _ _ = Nothing
+
+takeArgs : EEnv free vars -> List (CExp free) -> (args : Scope) ->
+           Maybe (EEnv free (Scope.addInner vars args))
+takeArgs env (e :: es) (as :< a)
+  = do env' <- takeArgs env es as
+       pure (env' :< e)
+takeArgs env stk [<] = pure env
+takeArgs env [] args = Nothing
+
 takeFromStack : EEnv free vars -> Stack free -> (args : Scope) ->
                 Maybe (EEnv free (Scope.addInner vars args), Stack free)
-takeFromStack env (e :: es) (a :: as)
-  = do (env', stk') <- takeFromStack env es as
-       pure (e :: env', stk')
-takeFromStack env stk [] = pure (env, stk)
-takeFromStack env [] args = Nothing
+takeFromStack env es as
+    = do (args, stk') <- getArgsFromStack es as []
+         env' <- takeArgs env args as
+         pure (env', stk')
 
 data LVar : Type where
 
@@ -62,8 +95,11 @@ genName n
          put LVar (i + 1)
          pure (MN n i)
 
-refToLocal : Name -> (x : Name) -> CExp vars -> CExp (x :: vars)
+refToLocal : Name -> (x : Name) -> CExp vars -> CExp (vars :< x)
 refToLocal x new tm = refsToLocals (Add new x None) tm
+
+refToLocalScope : Name -> (x : Name) -> CCaseScope vars -> CCaseScope (vars :< x)
+refToLocalScope x new tm = refsToLocalsScope (Add new x None) tm
 
 largest : Ord a => a -> List a -> a
 largest x [] = x
@@ -98,11 +134,15 @@ mutual
           largest (maybe 0 (used n) def) (map (usedConst n) alts)
   used _ tm = 0
 
+  usedCaseScope : {free : _} ->
+            {idx : Nat} -> (0 p : IsVar n idx free) -> CCaseScope free -> Int
+  usedCaseScope n (CRHS rhs) = used n rhs
+  usedCaseScope n (CArg x sc) = usedCaseScope (Later n) sc
+
   usedCon : {free : _} ->
             {idx : Nat} -> (0 p : IsVar n idx free) -> CConAlt free -> Int
-  usedCon n (MkConAlt _ _ _ args sc)
-      = let MkVar n' = weakenNs (mkSizeOf args) (MkVar n) in
-            used n' sc
+  usedCon n (MkConAlt _ _ _ sc)
+      = usedCaseScope n sc
 
   usedConst : {free : _} ->
               {idx : Nat} -> (0 p : IsVar n idx free) -> CConstAlt free -> Int
@@ -114,16 +154,19 @@ mutual
               {auto l : Ref LVar Int} ->
               FC -> List Name -> Stack free ->
               EEnv free vars ->
-              {idx : Nat} -> (0 p : IsVar x idx (vars ++ free)) ->
+              {idx : Nat} -> (0 p : IsVar x idx (Scope.addInner free vars)) ->
               Core (CExp free)
-  evalLocal {vars = []} fc rec stk env p
-      = pure $ unload stk (CLocal fc p)
-  evalLocal {vars = x :: xs} fc rec stk (v :: env) First
-      = case stk of
+  evalLocal {vars = [<]} fc rec stk env p
+      = do log "compiler.inline.io_bind" 50 $ "Attempting to evalLocal-1, stk: \{show stk}, p: \{show $ nameAt p}, env: \{show env}"
+           pure $ unload stk (CLocal fc p)
+  evalLocal {vars = xs :< x} fc rec stk (env :< v) First
+      = do log "compiler.inline.io_bind" 50 $ "Attempting to evalLocal-2, stk: \{show stk}, p: First, v: \{show v}, env: \{show @{ShowEEnv} env}"
+           case stk of
              [] => pure v
              _ => eval rec env stk (weakenNs (mkSizeOf xs) v)
-  evalLocal {vars = x :: xs} fc rec stk (_ :: env) (Later p)
-      = evalLocal fc rec stk env p
+  evalLocal {vars = xs :< x} fc rec stk (env :< _) (Later p)
+      = do log "compiler.inline.io_bind" 50 $ "Attempting to evalLocal-3, stk: \{show stk}, p: Later \{show $ nameAt p}, env: \{show @{ShowEEnv} env}"
+           logDepth $ evalLocal fc rec stk env p
 
   tryApply : {vars, free : _} ->
              {auto c : Ref Ctxt Defs} ->
@@ -131,11 +174,14 @@ mutual
              List Name -> Stack free -> EEnv free vars -> CDef ->
              Core (Maybe (CExp free))
   tryApply {free} {vars} rec stk env (MkFun args exp)
-      = do let Just (env', stk') = takeFromStack env stk args
+      = do log "compiler.inline.io_bind" 50 $ "tryApply args: \{show $ toList args}, exp: \{show exp}, stk: \{show stk}, env: \{show @{ShowEEnv} env}"
+           let Just (env', stk')
+               : Maybe (EEnv free (vars ++ args), List (CExp free))
+               = (takeFromStack env stk args)
                | Nothing => pure Nothing
-           res <- eval rec env' stk'
-                     (rewrite sym (appendAssociative args vars free) in
-                              embed {outer = vars ++ free} exp)
+           let exp' : CExp (free ++ (vars ++ args)) = (embed $ embed exp)
+           log "compiler.inline.io_bind" 50 $ "tryApply stk': \{show stk'}, env': \{show @{ShowEEnv} env'}, rec: \{show rec}, exp': \{show exp'}"
+           res <- eval rec env' stk' exp'
            pure (Just res)
   tryApply rec stk env _ = pure Nothing
 
@@ -143,22 +189,25 @@ mutual
          {auto c : Ref Ctxt Defs} ->
          {auto l : Ref LVar Int} ->
          List Name -> -- TODO should be a set
-         EEnv free vars -> Stack free -> CExp (vars ++ free) ->
+         EEnv free vars -> Stack free -> CExp (Scope.addInner free vars) ->
          Core (CExp free)
-  eval rec env stk (CLocal fc p) = evalLocal fc rec stk env p
+  eval rec env stk (CLocal fc p) =
+    do log "compiler.inline.io_bind" 50 $ "Attempting to CLocal, env: \{show @{ShowEEnv} env}, stk: \{show stk}, p: \{show $ nameAt p}"
+       evalLocal fc rec stk env p
   -- This is hopefully a temporary hack, giving a special case for io_bind.
   -- Currently the elaborator is a bit cautious about inlining case blocks
   -- in case they duplicate work. We should fix that, to decide more accurately
   -- whether they're safe to inline, but until then this gives such a huge
   -- boost by removing unnecessary lambdas that we'll keep the special case.
   eval rec env stk (CRef fc n) = do
+        log "compiler.inline.io_bind" 50 $ "Attempting to CRef, rec: \{show rec}, env: \{show @{ShowEEnv} env}, stk: \{show stk}, n: \{show n}"
         when (n == NS primIONS (UN $ Basic "io_bind")) $
           log "compiler.inline.io_bind" 50 $
             "Attempting to inline io_bind, its stack is: \{show stk}"
         case (n == NS primIONS (UN $ Basic "io_bind"), stk) of
           (True, act :: cont :: world :: stk) =>
                  do xn <- genName "act"
-                    sc <- eval rec [] [] (CApp fc cont [CRef fc xn, world])
+                    sc <- eval rec EEnv.empty [] (CApp fc cont [CRef fc xn, world])
                     pure $ unload stk $
                              CLet fc xn NotInline
                                (CApp fc act [world])
@@ -167,7 +216,7 @@ mutual
                  do wn <- genName "world"
                     xn <- genName "act"
                     let world : forall vars. CExp vars := CRef fc wn
-                    sc <- eval rec [] [] (CApp fc cont [CRef fc xn, world])
+                    sc <- eval rec EEnv.empty [] (CApp fc cont [CRef fc xn, world])
                     pure $ CLam fc wn
                          $ refToLocal wn wn
                          $ CLet fc xn NotInline (CApp fc act [world])
@@ -182,19 +231,24 @@ mutual
                 let arity = getArity def
                 let gdefFlags = flags gdef
                 if (Inline `elem` gdefFlags)
-                    && (not (n `elem` rec))
+                    && (not (n `elem` rec)) -- requires putting function name at `eval rec env stk (CApp fc f@(CRef nfc n) args)` to make it work
+                                            -- for mutually recursive invocations
                     && (not (NoInline `elem` gdefFlags))
-                   then do ap <- tryApply (n :: rec) stk env def
+                   then do log "compiler.inline.io_bind" 50 $ "Attempting to CRef Inline Apply, def: \{show def}, n: \{show n}, rec: \{show rec}"
+                           ap <- tryApply (n :: rec) stk env def
+                           log "compiler.inline.io_bind" 50 $ "Attempting to CRef Inline Apply, ap: \{show ap}"
                            pure $ fromMaybe (unloadApp arity stk (CRef fc n)) ap
                    else pure $ unloadApp arity stk (CRef fc n)
   eval {vars} {free} rec env [] (CLam fc x sc)
-      = do xn <- genName "lamv"
-           sc' <- eval rec (CRef fc xn :: env) [] sc
+      = do log "compiler.inline.io_bind" 50 $ "Attempting to CLam, rec: \{show rec}, env: \{show @{ShowEEnv} env}, x: \{show x}, sc: \{show sc}"
+           xn <- genName "lamv"
+           sc' <- logDepth $ eval rec (env :< CRef fc xn) [] sc
+           log "compiler.inline.io_bind" 50 $ "Attempting to CLam, sc': \{show sc'}"
            pure $ CLam fc x (refToLocal xn x sc')
-  eval rec env (e :: stk) (CLam fc x sc) = eval rec (e :: env) stk sc
+  eval rec env (e :: stk) (CLam fc x sc) = eval rec (env :< e) stk sc
   eval {vars} {free} rec env stk (CLet fc x NotInline val sc)
       = do xn <- genName "letv"
-           sc' <- eval rec (CRef fc xn :: env) [] sc
+           sc' <- eval rec (env :< CRef fc xn) [] sc
            val' <- eval rec env [] val
            pure (unload stk $ CLet fc x NotInline val' (refToLocal xn x sc'))
   eval {vars} {free} rec env stk (CLet fc x YesInline val sc)
@@ -203,9 +257,9 @@ mutual
                     -- are guaranteed not to duplicate work. (We don't know
                     -- that yet).
               then do val' <- eval rec env [] val
-                      eval rec (val' :: env) stk sc
+                      eval rec (env :< val') stk sc
               else do xn <- genName "letv"
-                      sc' <- eval rec (CRef fc xn :: env) stk sc
+                      sc' <- eval rec (env :< CRef fc xn) stk sc
                       val' <- eval rec env [] val
                       pure (CLet fc x YesInline val' (refToLocal xn x sc'))
   eval rec env stk (CApp fc f@(CRef nfc n) args)
@@ -213,103 +267,133 @@ mutual
            -- a name from another module where the job is already done
            defs <- get Ctxt
            Just gdef <- lookupCtxtExact n (gamma defs)
-                | Nothing => do args' <- traverse (eval rec env []) args
+                | Nothing => do log "compiler.inline.io_bind" 50 $ "Attempting to CApp CRef Nothing, rec: \{show rec}, env: \{show @{ShowEEnv} env}, args: \{show args}"
+                                -- Passing function name as `n` to determine recursive inlining
+                                args' <- logDepth $ traverse (eval (n :: rec) env []) args
+                                log "compiler.inline.io_bind" 50 $ "Attempting to CApp CRef Nothing, stk: \{show stk}, n: \{show n}, args': \{show args'}"
                                 pure (unload stk
                                           (CApp fc (CRef nfc n) args'))
-           eval rec env (!(traverse (eval rec env []) args) ++ stk) f
+           log "compiler.inline.io_bind" 50 $ "Attempting to CApp CRef, rec: \{show rec}, env: \{show @{ShowEEnv} env}, args: \{show args}"
+           -- Passing function name as `n` to determine recursive inlining
+           args' <- logDepth $ traverse (eval (n :: rec) env []) args
+           log "compiler.inline.io_bind" 50 $ "Attempting to CApp CRef, env: \{show @{ShowEEnv} env}, args': \{show args'}, stk: \{show stk}, f: \{show f}"
+           eval rec env (args' ++ stk) f
   eval rec env stk (CApp fc f args)
-      = eval rec env (!(traverse (eval rec env []) args) ++ stk) f
+      = do log "compiler.inline.io_bind" 50 $ "Attempting to CApp, f: \{show f}, args: \{show args}"
+           stk' <- logDepth $ traverse (eval rec env []) args
+           log "compiler.inline.io_bind" 50 $ "Attempting to CApp, stk': \{show stk'}, stk: \{show stk}"
+           eval rec env (stk' ++ stk) f
   eval rec env stk (CCon fc n ci t args)
-      = pure $ unload stk $ CCon fc n ci t !(traverse (eval rec env []) args)
+      = pure $ unload stk $ CCon fc n ci t !(logDepth $ traverse (eval rec env []) args)
   eval rec env stk (COp fc p args)
-      = pure $ unload stk $ COp fc p !(traverseVect (eval rec env []) args)
+      = pure $ unload stk $ COp fc p !(logDepth $ traverseVect (eval rec env []) args)
   eval rec env stk (CExtPrim fc p args)
-      = pure $ unload stk $ CExtPrim fc p !(traverse (eval rec env []) args)
+      = pure $ unload stk $ CExtPrim fc p !(logDepth $ traverse (eval rec env []) args)
   eval rec env stk (CForce fc lr e)
       = case !(eval rec env [] e) of
-             CDelay _ _ e' => eval rec [] stk e'
+             CDelay _ _ e' => eval rec EEnv.empty stk e'
              res => pure $ unload stk (CForce fc lr res) -- change this to preserve laziness semantics
   eval rec env stk (CDelay fc lr e)
       = pure $ unload stk (CDelay fc lr !(eval rec env [] e))
   eval rec env stk (CConCase fc sc alts def)
-      = do sc' <- eval rec env [] sc
+      = do log "compiler.inline.io_bind" 50 $ "Attempting to con case, env: \{show @{ShowEEnv} env}, sc: \{show sc}"
+           sc' <- logDepth $ eval rec env [] sc
            let env' = update sc env sc'
+           log "compiler.inline.io_bind" 50 $ "Attempting to con case, env': \{show @{ShowEEnv} env'}, stk: \{show stk}, sc': \{show sc'}, alts: \{show alts}, def: \{show def}"
            Nothing <- pickAlt rec env' stk sc' alts def | Just val => pure val
            def' <- traverseOpt (eval rec env' stk) def
-           pure $ caseOfCase $ CConCase fc sc'
-                     !(traverse (evalAlt fc rec env' stk) alts)
-                     def'
+           log "compiler.inline.io_bind" 50 $ "Attempting to con case, env': \{show @{ShowEEnv} env'}, stk: \{show stk}, alts: \{show alts}"
+           alts' <- logDepth $ traverse (evalAlt fc rec env' stk) alts
+           log "compiler.inline.io_bind" 50 $ "Attempting to con case, sc': \{show sc'}, alts': \{show alts'}, def': \{show def'}"
+           pure $ caseOfCase $ CConCase fc sc' alts' def'
     where
       updateLoc : {idx, vs : _} ->
-                  (0 p : IsVar x idx (vs ++ free)) ->
+                  (0 p : IsVar x idx (Scope.addInner free vs)) ->
                   EEnv free vs -> CExp free -> EEnv free vs
-      updateLoc {vs = []} p env val = env
-      updateLoc {vs = (x::xs)} First (e :: env) val = val :: env
-      updateLoc {vs = (y::xs)} (Later p) (e :: env) val = e :: updateLoc p env val
+      updateLoc {vs = [<]} p env val = env
+      updateLoc {vs = (xs :< x)} First (env :< e) val = env :< val
+      updateLoc {vs = (xs :< y)} (Later p) (env :< e) val = updateLoc p env val :< e
 
       update : {vs : _} ->
-               CExp (vs ++ free) -> EEnv free vs -> CExp free -> EEnv free vs
+               CExp (Scope.addInner free vs) -> EEnv free vs -> CExp free -> EEnv free vs
       update (CLocal _ p) env sc = updateLoc p env sc
       update _ env _ = env
 
   eval rec env stk (CConstCase fc sc alts def)
-      = do sc' <- eval rec env [] sc
+      = do sc' <- logDepth $ eval rec env [] sc
            Nothing <- pickConstAlt rec env stk sc' alts def | Just val => pure val
            def' <- traverseOpt (eval rec env stk) def
            pure $ caseOfCase $ CConstCase fc sc'
-                         !(traverse (evalConstAlt rec env stk) alts)
+                         !(logDepth $ traverse (evalConstAlt rec env stk) alts)
                          def'
   eval rec env stk (CPrimVal fc c) = pure $ unload stk $ CPrimVal fc c
   eval rec env stk (CErased fc) = pure $ unload stk $ CErased fc
   eval rec env stk (CCrash fc str) = pure $ unload stk $ CCrash fc str
 
-  extendLoc : {auto l : Ref LVar Int} ->
-              FC -> EEnv free vars -> (args' : List Name) ->
-              Core (Bounds args', EEnv free (args' ++ vars))
-  extendLoc fc env [] = pure (None, env)
-  extendLoc fc env (n :: ns)
+  evalScope : {vars, free : _} ->
+            {auto c : Ref Ctxt Defs} ->
+            {auto l : Ref LVar Int} ->
+            FC -> List Name -> EEnv free vars -> Stack free ->
+            CCaseScope (free ++ vars) ->
+            Core (CCaseScope free)
+  evalScope fc rec env stk (CRHS tm) = pure $ CRHS !(eval rec env stk tm)
+  evalScope fc rec env stk (CArg x sc)
+      = do xn <- genName "cv"
+           let env' = env :< CRef fc xn
+           sc' <- evalScope fc rec env' stk sc
+           pure (CArg x (refToLocalScope xn x sc'))
+
+  extendLoc : {vars, free : _} ->
+              {auto l : Ref LVar Int} ->
+              FC -> EEnv free vars -> (args' : Scope) ->
+              Core (Bounds args', EEnv free (Scope.addInner vars args'))
+  extendLoc fc env [<] = pure (None, env)
+  extendLoc fc env (ns :< n)
       = do xn <- genName "cv"
            (bs', env') <- extendLoc fc env ns
-           pure (Add n xn bs', CRef fc xn :: env')
+           pure (Add n xn bs', env' :< CRef fc xn)
 
   evalAlt : {vars, free : _} ->
             {auto c : Ref Ctxt Defs} ->
             {auto l : Ref LVar Int} ->
-            FC -> List Name -> EEnv free vars -> Stack free -> CConAlt (vars ++ free) ->
+            FC -> List Name -> EEnv free vars -> Stack free -> CConAlt (Scope.addInner free vars) ->
             Core (CConAlt free)
-  evalAlt {free} {vars} fc rec env stk (MkConAlt n ci t args sc)
-      = do (bs, env') <- extendLoc fc env args
-           scEval <- eval rec env' stk
-                          (rewrite sym (appendAssociative args vars free) in sc)
-           pure $ MkConAlt n ci t args (refsToLocals bs scEval)
+  evalAlt {free} {vars} fc rec env stk (MkConAlt n ci t sc)
+      = do log "compiler.inline.io_bind" 50 $ "Attempting to evalAlt, env: \{show @{ShowEEnv} env}, sc: \{show sc}"
+           pure $ MkConAlt n ci t !(evalScope fc rec env stk sc)
 
   evalConstAlt : {vars, free : _} ->
                  {auto c : Ref Ctxt Defs} ->
                  {auto l : Ref LVar Int} ->
-                 List Name -> EEnv free vars -> Stack free -> CConstAlt (vars ++ free) ->
+                 List Name -> EEnv free vars -> Stack free -> CConstAlt (Scope.addInner free vars) ->
                  Core (CConstAlt free)
   evalConstAlt rec env stk (MkConstAlt c sc)
       = MkConstAlt c <$> eval rec env stk sc
+
+  evalPickedAlt : {vars, free : _} ->
+            {auto c : Ref Ctxt Defs} ->
+            {auto l : Ref LVar Int} ->
+            List Name -> EEnv free vars -> Stack free ->
+            (args : List (CExp free)) ->
+            CCaseScope (free ++ vars) ->
+            Core (Maybe (CExp free))
+  evalPickedAlt rec env stk [] (CRHS tm) = pure $ Just !(eval rec env stk tm)
+  evalPickedAlt rec env stk (a :: args) (CArg x sc)
+      = evalPickedAlt rec (env :< a) stk args sc
+  evalPickedAlt rec env stk _ _ = pure Nothing
 
   pickAlt : {vars, free : _} ->
             {auto c : Ref Ctxt Defs} ->
             {auto l : Ref LVar Int} ->
             List Name -> EEnv free vars -> Stack free ->
-            CExp free -> List (CConAlt (vars ++ free)) ->
-            Maybe (CExp (vars ++ free)) ->
+            CExp free -> List (CConAlt (Scope.addInner free vars)) ->
+            Maybe (CExp (Scope.addInner free vars)) ->
             Core (Maybe (CExp free))
   pickAlt rec env stk (CCon fc n ci t args) [] def
       = traverseOpt (eval rec env stk) def
-  pickAlt {vars} {free} rec env stk con@(CCon fc n ci t args) (MkConAlt n' _ t' args' sc :: alts) def
+  pickAlt {vars} {free} rec env stk con@(CCon fc n ci t args) (MkConAlt n' _ t' sc :: alts) def
       = if matches n t n' t'
-           then case checkLengthMatch args args' of
-                     Nothing => pure Nothing
-                     Just m =>
-                         do let env' : EEnv free (args' ++ vars)
-                                   = extend env args args' m
-                            pure $ Just !(eval rec env' stk
-                                    (rewrite sym (appendAssociative args' vars free) in
-                                             sc))
+           then evalPickedAlt rec env stk args sc
            else pickAlt rec env stk con alts def
     where
       matches : Name -> Maybe Int -> Name -> Maybe Int -> Bool
@@ -322,15 +406,15 @@ mutual
                  {auto c : Ref Ctxt Defs} ->
                  {auto l : Ref LVar Int} ->
                  List Name -> EEnv free vars -> Stack free ->
-                 CExp free -> List (CConstAlt (vars ++ free)) ->
-                 Maybe (CExp (vars ++ free)) ->
+                 CExp free -> List (CConstAlt (Scope.addInner free vars)) ->
+                 Maybe (CExp (Scope.addInner free vars)) ->
                  Core (Maybe (CExp free))
   pickConstAlt rec env stk (CPrimVal fc c) [] def
       = traverseOpt (eval rec env stk) def
   pickConstAlt {vars} {free} rec env stk (CPrimVal fc c) (MkConstAlt c' sc :: alts) def
       = if c == c'
            then Just <$> eval rec env stk sc
-           else pickConstAlt rec env stk (CPrimVal fc c) alts def
+           else logDepth $ pickConstAlt rec env stk (CPrimVal fc c) alts def
   pickConstAlt rec env stk _ _ _ = pure Nothing
 
 -- Inlining may have messed with function arity (e.g. by adding lambdas to
@@ -381,9 +465,13 @@ fixArityTm (CConCase fc sc alts def) args
                            !(traverse fixArityAlt alts)
                            !(traverseOpt (\tm => fixArityTm tm []) def)) args
   where
+    fixArityScope : forall vars . CCaseScope vars -> Core (CCaseScope vars)
+    fixArityScope (CRHS tm) = pure $ CRHS !(fixArityTm tm [])
+    fixArityScope (CArg x sc) = pure $ CArg x !(fixArityScope sc)
+
     fixArityAlt : CConAlt vars -> Core (CConAlt vars)
-    fixArityAlt (MkConAlt n ci t a sc)
-        = pure $ MkConAlt n ci t a !(fixArityTm sc [])
+    fixArityAlt (MkConAlt n ci t sc)
+        = pure $ MkConAlt n ci t !(fixArityScope sc)
 fixArityTm (CConstCase fc sc alts def) args
     = pure $ expandToArity Z
               (CConstCase fc !(fixArityTm sc [])
@@ -409,36 +497,22 @@ fixArity d = pure d
 
 -- TODO: get rid of this `done` by making the return `args'` runtime irrelevant?
 getLams : {done : _} -> SizeOf done ->
-          Int -> SubstCEnv done args -> CExp (done ++ args) ->
-          (args' ** (SizeOf args', SubstCEnv args' args, CExp (args' ++ args)))
+          Int -> SubstCEnv done args -> CExp (Scope.addInner args done) ->
+          (args' ** (SizeOf args', SubstCEnv args' args, CExp (Scope.addInner args args')))
 getLams {done} d i env (CLam fc x sc)
-    = getLams {done = x :: done} (suc d) (i + 1) (CRef fc (MN "ext" i) :: env) sc
+    = getLams {done = done :< x} (suc d) (i + 1) (env :< CRef fc (MN "ext" i)) sc
 getLams {done} d i env sc = (done ** (d, env, sc))
 
 mkBounds : (xs : _) -> Bounds xs
-mkBounds [] = None
-mkBounds (x :: xs) = Add x x (mkBounds xs)
+mkBounds [<] = None
+mkBounds (xs :< x) = Add x x (mkBounds xs)
 
 -- TODO `getNewArgs` is always used in reverse, revisit!
 getNewArgs : {done : _} ->
              SubstCEnv done args -> Scope
-getNewArgs [] = []
-getNewArgs (CRef _ n :: xs) = n :: getNewArgs xs
-getNewArgs {done = x :: xs} (_ :: sub) = x :: getNewArgs sub
-
--- Move any lambdas in the body of the definition into the lhs list of vars.
--- Annoyingly, the indices will need fixing up because the order in the top
--- level definition goes left to right (i.e. first argument has lowest index,
--- not the highest, as you'd expect if they were all lambdas).
-mergeLambdas : (args : Scope) -> CExp args -> (args' ** CExp args')
-mergeLambdas args (CLam fc x sc)
-    = let (args' ** (s, env, exp')) = getLams zero 0 Subst.empty (CLam fc x sc)
-          expNs = substs s env exp'
-          newArgs = reverse $ getNewArgs env
-          expLocs = mkLocals (mkSizeOf args) {vars = []} (mkBounds newArgs)
-                             (rewrite appendNilRightNeutral args in expNs) in
-          (_ ** expLocs)
-mergeLambdas args exp = (args ** exp)
+getNewArgs [<] = [<]
+getNewArgs (xs :< CRef _ n) = getNewArgs xs :< n
+getNewArgs {done = xs :< x} (sub :< _) = getNewArgs sub :< x
 
 ||| Inline all inlinable functions into the given expression.
 ||| @ n the function name
@@ -448,8 +522,8 @@ doEval : {args : _} ->
          (n : Name) -> (exp : CExp args) -> Core (CExp args)
 doEval n exp
     = do l <- newRef LVar (the Int 0)
-         log "compiler.inline.eval" 10 (show n ++ ": " ++ show exp)
-         exp' <- eval [] [] [] exp
+         log "compiler.inline.eval" 10 ("Origin: " ++ show n ++ " args: " ++ show (toList args) ++ " exp: " ++ show exp)
+         exp' <- logDepth $ eval [] EEnv.empty [] exp
          log "compiler.inline.eval" 10 ("Inlined: " ++ show exp')
          pure exp'
 
@@ -463,7 +537,9 @@ inline n d = pure d
 mergeLam : {auto c : Ref Ctxt Defs} ->
            CDef -> Core CDef
 mergeLam (MkFun args def)
-    = do let (args' ** exp') = mergeLambdas args def
+    = do log "compiler.inline.io_bind" 50 "mergeLam, args: \{show $ toList args}, def: \{show def}"
+         let (args' ** exp') = mergeLambdas args def
+         log "compiler.inline.io_bind" 50 "mergeLam, args': \{show $ toList args'}, exp': \{show exp'}"
          pure $ MkFun args' exp'
 mergeLam d = pure d
 
@@ -490,10 +566,14 @@ mutual
   addRefsArgs ds [] = ds
   addRefsArgs ds (a :: as) = addRefsArgs (addRefs ds a) as
 
+  addRefsScope : NameMap Bool -> CCaseScope vars -> NameMap Bool
+  addRefsScope ds (CRHS tm) = addRefs ds tm
+  addRefsScope ds (CArg x sc) = addRefsScope ds sc
+
   addRefsConAlts : NameMap Bool -> List (CConAlt vars) -> NameMap Bool
   addRefsConAlts ds [] = ds
-  addRefsConAlts ds (MkConAlt n _ _ _ sc :: rest)
-      = addRefsConAlts (addRefs (insert n False ds) sc) rest
+  addRefsConAlts ds (MkConAlt _ _ _ sc :: rest)
+      = addRefsConAlts (addRefsScope ds sc) rest
 
   addRefsConstAlts : NameMap Bool -> List (CConstAlt vars) -> NameMap Bool
   addRefsConstAlts ds [] = ds
@@ -540,7 +620,7 @@ mergeLamDef n
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)
               | Nothing => pure ()
-         let PMDef pi _ _ _ _ = definition def
+         let Function pi _ _ _ = definition def
               | _ => pure ()
          if not (isNil (incrementalCGs !getSession)) &&
                 externalDecl pi -- better keep it at arity 0
@@ -569,17 +649,17 @@ compileAndInlineAll
          let ns = keys (toIR defs)
          cns <- filterM nonErased ns
 
-         traverse_ compileDef cns
-         traverse_ rewriteIdentityFlag cns
+         traverse_ (logDepthWrap compileDef) cns
+         traverse_ (logDepthWrap rewriteIdentityFlag) cns
          transform 3 cns -- number of rounds to run transformations.
                          -- This seems to be the point where not much useful
                          -- happens any more.
-         traverse_ updateCallGraph cns
+         traverse_ (logDepthWrap updateCallGraph) cns
          -- in incremental mode, add the arity of the definitions to the hash,
          -- because if these change we need to recompile dependencies
          -- accordingly
          unless (isNil (incrementalCGs !getSession)) $
-           traverse_ addArityHash cns
+           traverse_ (logDepthWrap addArityHash) cns
   where
     transform : Nat -> List Name -> Core ()
     transform Z cns = pure ()

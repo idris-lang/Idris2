@@ -18,6 +18,7 @@ LOG elab:0:   - Prelude.Num.(+)
 LOG elab:0:   - Prelude.Basics.intToBool
 LOG elab:0:   - Prelude.Basics.True
 LOG elab:0:   - Prelude.Basics.False
+LOG elab:0:   - Prelude.Basics.Bool
 LOG elab:0:   - Builtin.assert_total
 LOG elab:0: 
 LOG elab:0: Names `RefDefs.simpleRec` refers to:
@@ -57,6 +58,7 @@ LOG elab:0: === current fn: [< RefDefsDeep.n, RefDefsDeep.1:f] ===
 LOG elab:0: === current fn: [< RefDefsDeep.w, RefDefsDeep.with block in "w"] ===
 LOG elab:0: === current fn: [< RefDefsDeep.w, RefDefsDeep.with block in "w"] ===
 LOG elab:0: Names `RefDefsDeep.f` refers to:
+LOG elab:0:   - RefDefsDeep.case block in "f"
 LOG elab:0:   - prim__sub_Integer
 LOG elab:0:   - prim__lte_Integer
 LOG elab:0:   - Prelude.Types.case block in "integerToNat"
@@ -75,11 +77,13 @@ LOG elab:0:   - Prelude.Num.(+)
 LOG elab:0:   - Prelude.Basics.intToBool
 LOG elab:0:   - Prelude.Basics.True
 LOG elab:0:   - Prelude.Basics.False
+LOG elab:0:   - Prelude.Basics.Bool
 LOG elab:0:   - Builtin.assert_total
+LOG elab:0:   - Builtin.Unit
 LOG elab:0:   - Builtin.MkUnit
-LOG elab:0:   - RefDefsDeep.case block in "f"
 LOG elab:0: 
 LOG elab:0: Names `RefDefsDeep.f'` refers to:
+LOG elab:0:   - RefDefsDeep.case block in "f'"
 LOG elab:0:   - prim__sub_Integer
 LOG elab:0:   - prim__lte_Integer
 LOG elab:0:   - Prelude.Types.case block in "integerToNat"
@@ -98,36 +102,14 @@ LOG elab:0:   - Prelude.Num.(+)
 LOG elab:0:   - Prelude.Basics.intToBool
 LOG elab:0:   - Prelude.Basics.True
 LOG elab:0:   - Prelude.Basics.False
+LOG elab:0:   - Prelude.Basics.Bool
 LOG elab:0:   - Builtin.assert_total
+LOG elab:0:   - Builtin.Unit
 LOG elab:0:   - Builtin.MkUnit
-LOG elab:0:   - RefDefsDeep.case block in "f'"
 LOG elab:0: 
 LOG elab:0: Names `RefDefsDeep.f''` refers to:
-LOG elab:0:   - prim__sub_Integer
-LOG elab:0:   - prim__lte_Integer
-LOG elab:0:   - Prelude.Types.case block in "integerToNat"
-LOG elab:0:   - Prelude.Types.fromInteger
-LOG elab:0:   - Prelude.Types.Num implementation at Prelude.Types:1
-LOG elab:0:   - Prelude.Types.+
-LOG elab:0:   - Prelude.Types.*
-LOG elab:0:   - Prelude.Types.plus
-LOG elab:0:   - Prelude.Types.mult
-LOG elab:0:   - Prelude.Types.integerToNat
-LOG elab:0:   - Prelude.Types.Z
-LOG elab:0:   - Prelude.Types.S
-LOG elab:0:   - Prelude.Types.Nat
-LOG elab:0:   - Prelude.Num.MkNum
-LOG elab:0:   - Prelude.Num.(+)
-LOG elab:0:   - Prelude.Basics.intToBool
-LOG elab:0:   - Prelude.Basics.True
-LOG elab:0:   - Prelude.Basics.False
-LOG elab:0:   - Builtin.assert_total
-LOG elab:0:   - Builtin.MkUnit
-LOG elab:0:   - RefDefsDeep.f
 LOG elab:0:   - RefDefsDeep.case block in "f"
 LOG elab:0:   - RefDefsDeep.case block in "f''"
-LOG elab:0: 
-LOG elab:0: Names `RefDefsDeep.f'''` refers to:
 LOG elab:0:   - prim__sub_Integer
 LOG elab:0:   - prim__lte_Integer
 LOG elab:0:   - Prelude.Types.case block in "integerToNat"
@@ -146,14 +128,16 @@ LOG elab:0:   - Prelude.Num.(+)
 LOG elab:0:   - Prelude.Basics.intToBool
 LOG elab:0:   - Prelude.Basics.True
 LOG elab:0:   - Prelude.Basics.False
+LOG elab:0:   - Prelude.Basics.Bool
 LOG elab:0:   - Builtin.assert_total
+LOG elab:0:   - Builtin.Unit
 LOG elab:0:   - Builtin.MkUnit
 LOG elab:0:   - RefDefsDeep.f
+LOG elab:0: 
+LOG elab:0: Names `RefDefsDeep.f'''` refers to:
 LOG elab:0:   - RefDefsDeep.case block in "f"
 LOG elab:0:   - RefDefsDeep.case block in "f'''"
 LOG elab:0:   - RefDefsDeep.case block in "case block in f'''"
-LOG elab:0: 
-LOG elab:0: Names `RefDefsDeep.n` refers to:
 LOG elab:0:   - prim__sub_Integer
 LOG elab:0:   - prim__lte_Integer
 LOG elab:0:   - Prelude.Types.case block in "integerToNat"
@@ -172,37 +156,66 @@ LOG elab:0:   - Prelude.Num.(+)
 LOG elab:0:   - Prelude.Basics.intToBool
 LOG elab:0:   - Prelude.Basics.True
 LOG elab:0:   - Prelude.Basics.False
+LOG elab:0:   - Prelude.Basics.Bool
 LOG elab:0:   - Builtin.assert_total
-LOG elab:0:   - Builtin.MkUnit
-LOG elab:0:   - RefDefsDeep.1:f
-LOG elab:0:   - RefDefsDeep.case block in "n,f"
-LOG elab:0: 
-LOG elab:0: Names `RefDefsDeep.w` refers to:
-LOG elab:0:   - prim__sub_Integer
-LOG elab:0:   - prim__lte_Integer
-LOG elab:0:   - Prelude.Types.case block in "integerToNat"
-LOG elab:0:   - Prelude.Types.fromInteger
-LOG elab:0:   - Prelude.Types.Num implementation at Prelude.Types:1
-LOG elab:0:   - Prelude.Types.+
-LOG elab:0:   - Prelude.Types.*
-LOG elab:0:   - Prelude.Types.plus
-LOG elab:0:   - Prelude.Types.mult
-LOG elab:0:   - Prelude.Types.integerToNat
-LOG elab:0:   - Prelude.Types.Z
-LOG elab:0:   - Prelude.Types.S
-LOG elab:0:   - Prelude.Types.Nat
-LOG elab:0:   - Prelude.Num.MkNum
-LOG elab:0:   - Prelude.Num.(+)
-LOG elab:0:   - Prelude.Basics.intToBool
-LOG elab:0:   - Prelude.Basics.True
-LOG elab:0:   - Prelude.Basics.False
-LOG elab:0:   - Builtin.assert_total
+LOG elab:0:   - Builtin.Unit
 LOG elab:0:   - Builtin.MkUnit
 LOG elab:0:   - RefDefsDeep.f
+LOG elab:0: 
+LOG elab:0: Names `RefDefsDeep.n` refers to:
+LOG elab:0:   - RefDefsDeep.case block in "n,f"
+LOG elab:0:   - prim__sub_Integer
+LOG elab:0:   - prim__lte_Integer
+LOG elab:0:   - Prelude.Types.case block in "integerToNat"
+LOG elab:0:   - Prelude.Types.fromInteger
+LOG elab:0:   - Prelude.Types.Num implementation at Prelude.Types:1
+LOG elab:0:   - Prelude.Types.+
+LOG elab:0:   - Prelude.Types.*
+LOG elab:0:   - Prelude.Types.plus
+LOG elab:0:   - Prelude.Types.mult
+LOG elab:0:   - Prelude.Types.integerToNat
+LOG elab:0:   - Prelude.Types.Z
+LOG elab:0:   - Prelude.Types.S
+LOG elab:0:   - Prelude.Types.Nat
+LOG elab:0:   - Prelude.Num.MkNum
+LOG elab:0:   - Prelude.Num.(+)
+LOG elab:0:   - Prelude.Basics.intToBool
+LOG elab:0:   - Prelude.Basics.True
+LOG elab:0:   - Prelude.Basics.False
+LOG elab:0:   - Prelude.Basics.Bool
+LOG elab:0:   - Builtin.assert_total
+LOG elab:0:   - Builtin.Unit
+LOG elab:0:   - Builtin.MkUnit
+LOG elab:0:   - RefDefsDeep.1:f
+LOG elab:0: 
+LOG elab:0: Names `RefDefsDeep.w` refers to:
 LOG elab:0:   - RefDefsDeep.case block in "f"
+LOG elab:0:   - RefDefsDeep.case block in "with block in w"
+LOG elab:0:   - RefDefsDeep.case block in "with block in w"
+LOG elab:0:   - prim__sub_Integer
+LOG elab:0:   - prim__lte_Integer
+LOG elab:0:   - Prelude.Types.case block in "integerToNat"
+LOG elab:0:   - Prelude.Types.fromInteger
+LOG elab:0:   - Prelude.Types.Num implementation at Prelude.Types:1
+LOG elab:0:   - Prelude.Types.+
+LOG elab:0:   - Prelude.Types.*
+LOG elab:0:   - Prelude.Types.plus
+LOG elab:0:   - Prelude.Types.mult
+LOG elab:0:   - Prelude.Types.integerToNat
+LOG elab:0:   - Prelude.Types.Z
+LOG elab:0:   - Prelude.Types.S
+LOG elab:0:   - Prelude.Types.Nat
+LOG elab:0:   - Prelude.Num.MkNum
+LOG elab:0:   - Prelude.Num.(+)
+LOG elab:0:   - Prelude.Basics.intToBool
+LOG elab:0:   - Prelude.Basics.True
+LOG elab:0:   - Prelude.Basics.False
+LOG elab:0:   - Prelude.Basics.Bool
+LOG elab:0:   - Builtin.assert_total
+LOG elab:0:   - Builtin.Unit
+LOG elab:0:   - Builtin.MkUnit
+LOG elab:0:   - RefDefsDeep.f
 LOG elab:0:   - RefDefsDeep.with block in "w"
-LOG elab:0:   - RefDefsDeep.case block in "with block in w"
-LOG elab:0:   - RefDefsDeep.case block in "with block in w"
 LOG elab:0: 
 ------------
 1/1: Building InspectRec (InspectRec.idr)

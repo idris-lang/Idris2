@@ -1,6 +1,5 @@
 module Core.Hash
 
-import Core.Case.CaseTree
 import Core.CompileExpr
 import Core.TT
 
@@ -153,127 +152,6 @@ Hashable ty => Hashable (Binder ty) where
 Hashable (Var vars) where
   hashWithSalt h (MkVar {varIdx = i} _) = hashWithSalt h i
 
-mutual
-  export
-  Hashable (Term vars) where
-    hashWithSalt h (Local fc x idx y)
-        = h `hashWithSalt` 0 `hashWithSalt` idx
-    hashWithSalt h (Ref fc x name)
-        = h `hashWithSalt` 1 `hashWithSalt` name
-    hashWithSalt h (Meta fc x y xs)
-        = h `hashWithSalt` 2 `hashWithSalt` y `hashWithSalt` xs
-    hashWithSalt h (Bind fc x b scope)
-        = h `hashWithSalt` 3 `hashWithSalt` b `hashWithSalt` scope
-    hashWithSalt h (App fc fn arg)
-        = h `hashWithSalt` 4 `hashWithSalt` fn `hashWithSalt` arg
-    hashWithSalt h (As fc _ nm pat)
-        = h `hashWithSalt` 5 `hashWithSalt` nm `hashWithSalt` pat
-    hashWithSalt h (TDelayed fc x y)
-        = h `hashWithSalt` 6 `hashWithSalt` y
-    hashWithSalt h (TDelay fc x t y)
-        = h `hashWithSalt` 7 `hashWithSalt` t `hashWithSalt` y
-    hashWithSalt h (TForce fc r x)
-        = h `hashWithSalt` 8 `hashWithSalt` x
-    hashWithSalt h (PrimVal fc c)
-        = h `hashWithSalt` 9 `hashWithSalt` (show c)
-    hashWithSalt h (Erased fc _)
-        = hashWithSalt h 10
-    hashWithSalt h (TType fc u)
-        = hashWithSalt h 11 `hashWithSalt` u
-
-  export
-  Hashable Pat where
-    hashWithSalt h (PAs fc nm pat)
-        = h `hashWithSalt` 0 `hashWithSalt` nm `hashWithSalt` pat
-    hashWithSalt h (PCon fc x tag arity xs)
-        = h `hashWithSalt` 1 `hashWithSalt` x `hashWithSalt` xs
-    hashWithSalt h (PTyCon fc x arity xs)
-        = h `hashWithSalt` 2 `hashWithSalt` x `hashWithSalt` xs
-    hashWithSalt h (PConst fc c)
-        = h `hashWithSalt` 3 `hashWithSalt` (show c)
-    hashWithSalt h (PArrow fc x s t)
-        = h `hashWithSalt` 4 `hashWithSalt` s `hashWithSalt` t
-    hashWithSalt h (PDelay fc r t p)
-        = h `hashWithSalt` 5 `hashWithSalt` t `hashWithSalt` p
-    hashWithSalt h (PLoc fc x)
-        = h `hashWithSalt` 6 `hashWithSalt` x
-    hashWithSalt h (PUnmatchable fc x)
-        = h `hashWithSalt` 7 `hashWithSalt` x
-
-  export
-  Hashable (CaseTree vars) where
-    hashWithSalt h (Case idx x scTy xs)
-        = h `hashWithSalt` 0 `hashWithSalt` idx `hashWithSalt` xs
-    hashWithSalt h (STerm _ x)
-        = h `hashWithSalt` 1 `hashWithSalt` x
-    hashWithSalt h (Unmatched msg)
-        = h `hashWithSalt` 2
-    hashWithSalt h Impossible
-        = h `hashWithSalt` 3
-
-  export
-  Hashable (CaseAlt vars) where
-    hashWithSalt h (ConCase x tag args y)
-        = h `hashWithSalt` 0 `hashWithSalt` x `hashWithSalt` args
-            `hashWithSalt` y
-    hashWithSalt h (DelayCase t x y)
-        = h `hashWithSalt` 2 `hashWithSalt` (show t)
-            `hashWithSalt` (show x) `hashWithSalt` y
-    hashWithSalt h (ConstCase x y)
-        = h `hashWithSalt` 3 `hashWithSalt` (show x) `hashWithSalt` y
-    hashWithSalt h (DefaultCase x)
-        = h `hashWithSalt` 4 `hashWithSalt` x
-
-export
-Hashable CFType where
-  hashWithSalt h = \case
-    CFUnit =>
-      h `hashWithSalt` 0
-    CFInt =>
-      h `hashWithSalt` 1
-    CFUnsigned8 =>
-      h `hashWithSalt` 2
-    CFUnsigned16 =>
-      h `hashWithSalt` 3
-    CFUnsigned32 =>
-      h `hashWithSalt` 4
-    CFUnsigned64 =>
-      h `hashWithSalt` 5
-    CFString =>
-      h `hashWithSalt` 6
-    CFDouble =>
-      h `hashWithSalt` 7
-    CFChar =>
-      h `hashWithSalt` 8
-    CFPtr =>
-      h `hashWithSalt` 9
-    CFGCPtr =>
-      h `hashWithSalt` 10
-    CFBuffer =>
-      h `hashWithSalt` 11
-    CFWorld =>
-      h `hashWithSalt` 12
-    CFFun a b =>
-      h `hashWithSalt` 13 `hashWithSalt` a `hashWithSalt` b
-    CFIORes a =>
-      h `hashWithSalt` 14 `hashWithSalt` a
-    CFStruct n fs =>
-      h `hashWithSalt` 15 `hashWithSalt` n `hashWithSalt` fs
-    CFUser n xs =>
-      h `hashWithSalt` 16 `hashWithSalt` n `hashWithSalt` xs
-    CFInt8 =>
-      h `hashWithSalt` 17
-    CFInt16 =>
-      h `hashWithSalt` 18
-    CFInt32 =>
-      h `hashWithSalt` 19
-    CFInt64 =>
-      h `hashWithSalt` 20
-    CFForeignObj =>
-      h `hashWithSalt` 21
-    CFInteger =>
-      h `hashWithSalt` 22
-
 export
 Hashable PrimType where
   hashWithSalt h = \case
@@ -311,13 +189,6 @@ Hashable Constant where
     PrT x => h `hashWithSalt` 13 `hashWithSalt` x
 
     WorldVal => h `hashWithSalt` 14
-
-export
-Hashable LazyReason where
-  hashWithSalt h = \case
-    LInf => h `hashWithSalt` 0
-    LLazy => h `hashWithSalt` 1
-    LUnknown => h `hashWithSalt` 2
 
 export
 Hashable (PrimFn arity) where
@@ -406,6 +277,117 @@ Hashable (PrimFn arity) where
 
     DoublePow =>
       h `hashWithSalt` 38
+
+mutual
+  export
+  Hashable (Term vars) where
+    hashWithSalt h (Local fc x idx y)
+        = h `hashWithSalt` 0 `hashWithSalt` idx
+    hashWithSalt h (Ref fc x name)
+        = h `hashWithSalt` 1 `hashWithSalt` name
+    hashWithSalt h (Meta fc x y xs)
+        = h `hashWithSalt` 2 `hashWithSalt` y `hashWithSalt` xs
+    hashWithSalt h (Bind fc x b scope)
+        = h `hashWithSalt` 3 `hashWithSalt` b `hashWithSalt` scope
+    hashWithSalt h (App fc fn _ arg)
+        = h `hashWithSalt` 4 `hashWithSalt` fn `hashWithSalt` arg
+    hashWithSalt h (As fc _ nm pat)
+        = h `hashWithSalt` 5 `hashWithSalt` nm `hashWithSalt` pat
+    hashWithSalt h (Case fc _ _ sc ty alts)
+        = h `hashWithSalt` 6 `hashWithSalt` sc `hashWithSalt` ty
+            `hashWithSalt` alts
+    hashWithSalt h (TDelayed fc x y)
+        = h `hashWithSalt` 7 `hashWithSalt` y
+    hashWithSalt h (TDelay fc x t y)
+        = h `hashWithSalt` 8 `hashWithSalt` t `hashWithSalt` y
+    hashWithSalt h (TForce fc r x)
+        = h `hashWithSalt` 9 `hashWithSalt` x
+    hashWithSalt h (PrimVal fc c)
+        = h `hashWithSalt` 10 `hashWithSalt` (show c)
+    hashWithSalt h (PrimOp fc op t)
+        = h `hashWithSalt` 11 `hashWithSalt` op
+    hashWithSalt h (Erased fc _)
+        = hashWithSalt h 12
+    hashWithSalt h (Unmatched fc u)
+        = hashWithSalt h 13 `hashWithSalt` u
+    hashWithSalt h (TType fc u)
+        = hashWithSalt h 15 `hashWithSalt` u
+  export
+  Hashable (CaseScope vars) where
+    hashWithSalt h (RHS _ tm)
+        = hashWithSalt h 0 `hashWithSalt` tm
+    hashWithSalt h (Arg _ x sc)
+        = hashWithSalt h 1 `hashWithSalt` x `hashWithSalt` sc
+
+  export
+  Hashable (CaseAlt vars) where
+    hashWithSalt h (ConCase _ n t sc)
+        = hashWithSalt h 0 `hashWithSalt` n `hashWithSalt` t
+                           `hashWithSalt` sc
+    hashWithSalt h (DelayCase _ ty arg tm)
+        = hashWithSalt h 1 `hashWithSalt` ty `hashWithSalt` arg
+                           `hashWithSalt` tm
+    hashWithSalt h (ConstCase _ c tm)
+        = hashWithSalt h 2 `hashWithSalt` c `hashWithSalt` tm
+    hashWithSalt h (DefaultCase _ tm)
+        = hashWithSalt h 3 `hashWithSalt` tm
+
+export
+Hashable CFType where
+  hashWithSalt h = \case
+    CFUnit =>
+      h `hashWithSalt` 0
+    CFInt =>
+      h `hashWithSalt` 1
+    CFUnsigned8 =>
+      h `hashWithSalt` 2
+    CFUnsigned16 =>
+      h `hashWithSalt` 3
+    CFUnsigned32 =>
+      h `hashWithSalt` 4
+    CFUnsigned64 =>
+      h `hashWithSalt` 5
+    CFString =>
+      h `hashWithSalt` 6
+    CFDouble =>
+      h `hashWithSalt` 7
+    CFChar =>
+      h `hashWithSalt` 8
+    CFPtr =>
+      h `hashWithSalt` 9
+    CFGCPtr =>
+      h `hashWithSalt` 10
+    CFBuffer =>
+      h `hashWithSalt` 11
+    CFWorld =>
+      h `hashWithSalt` 12
+    CFFun a b =>
+      h `hashWithSalt` 13 `hashWithSalt` a `hashWithSalt` b
+    CFIORes a =>
+      h `hashWithSalt` 14 `hashWithSalt` a
+    CFStruct n fs =>
+      h `hashWithSalt` 15 `hashWithSalt` n `hashWithSalt` fs
+    CFUser n xs =>
+      h `hashWithSalt` 16 `hashWithSalt` n `hashWithSalt` xs
+    CFInt8 =>
+      h `hashWithSalt` 17
+    CFInt16 =>
+      h `hashWithSalt` 18
+    CFInt32 =>
+      h `hashWithSalt` 19
+    CFInt64 =>
+      h `hashWithSalt` 20
+    CFForeignObj =>
+      h `hashWithSalt` 21
+    CFInteger =>
+      h `hashWithSalt` 22
+
+export
+Hashable LazyReason where
+  hashWithSalt h = \case
+    LInf => h `hashWithSalt` 0
+    LLazy => h `hashWithSalt` 1
+    LUnknown => h `hashWithSalt` 2
 
 export
 Hashable ConInfo where

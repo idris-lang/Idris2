@@ -360,6 +360,7 @@ holeName
                  HoleIdent str => Just str
                  _ => Nothing
 
+export
 reservedNames : List String
 reservedNames
     = [ "Type", "Int", "Int8", "Int16", "Int32", "Int64", "Integer"

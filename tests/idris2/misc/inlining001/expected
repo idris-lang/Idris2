@@ -1,7 +1,6 @@
 1/1: Building Inlining (Inlining.idr)
 Main> Main.leaveAlone
-Arguments [{arg:1}]
-Compile time tree: {arg:1} ++ "!"
+Compile time tree: \{arg:1} => {arg:1} ++ "!"
 Compiled: \ {arg:1} => {arg:1} ++ "!"
 Refers to: Prelude.Types.String.(++)
 Flags: covering
@@ -11,21 +10,21 @@ Size change:
   r +--
   0 | =
 Main> Main.forceInline
-Arguments [{arg:1}]
-Compile time tree: {arg:1} + 10
+Compile time tree: \{arg:1} => {arg:1} + 10
 Compiled: \ {arg:1} => {arg:1} + 10
 Refers to: Prelude.Types.Num implementation at Prelude.Types:1, Prelude.Types.Z, Prelude.Types.S, Prelude.Types.Nat, Prelude.Num.(+)
 Flags: covering, inline
 Size change:
-  Prelude.Num.(+):
-    l 0
-  r +--
-  2 | =
   Prelude.Types.Num implementation at Prelude.Types:1:
     l
   r +
+  Prelude.Types.S:
+    l
+  r +
+  Prelude.Types.Z:
+    l
+  r +
 Main> Main.forceNoInline
-Arguments []
 Compile time tree: 10
 Compiled: 10
 Refers to: Prelude.Types.Z, Prelude.Types.S
@@ -38,7 +37,6 @@ Size change:
     l
   r +
 Main> Main.heuristicPublicInline
-Arguments []
 Compile time tree: 2
 Compiled: 2
 Refers to: Prelude.Types.Z, Prelude.Types.S
@@ -51,7 +49,6 @@ Size change:
     l
   r +
 Main> Main.exportedForced
-Arguments []
 Compile time tree: 33
 Compiled: 33
 Refers to: Prelude.Types.Z, Prelude.Types.S
@@ -64,7 +61,6 @@ Size change:
     l
   r +
 Main> Main.exportedUnforced
-Arguments []
 Compile time tree: 66
 Compiled: 66
 Refers to: Prelude.Types.Z, Prelude.Types.S

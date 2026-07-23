@@ -1,7 +1,7 @@
 module Compiler.Interpreter.VMCode
 
 import Core.Primitives
-import Core.Value
+import Core.Evaluate.Value
 
 import Compiler.Common
 import Compiler.VMCode
@@ -10,6 +10,7 @@ import Idris.Syntax
 
 import Data.IOArray
 import Data.Vect
+
 import Libraries.Data.NameMap
 
 public export
@@ -26,14 +27,14 @@ showType (Const {}) = "Constant"
 showType Null = "Null"
 
 mutual
-    showSep : Nat -> List Object -> String
-    showSep k [] = ""
-    showSep k [o] = showDepth k o
-    showSep k (o :: os) = showDepth k o ++ ", " ++ showSep k os
+    joinBy : Nat -> List Object -> String
+    joinBy k [] = ""
+    joinBy k [o] = showDepth k o
+    joinBy k (o :: os) = showDepth k o ++ ", " ++ joinBy k os
 
     showDepth : Nat -> Object -> String
-    showDepth (S k) (Closure mis args fn) = show fn ++ "-" ++ show mis ++ "(" ++ showSep k (args <>> []) ++ ")"
-    showDepth (S k) (Constructor (Left t) args) = "tag" ++ show t ++ "(" ++ showSep k args ++ ")"
+    showDepth (S k) (Closure mis args fn) = show fn ++ "-" ++ show mis ++ "(" ++ joinBy k (args <>> []) ++ ")"
+    showDepth (S k) (Constructor (Left t) args) = "tag" ++ show t ++ "(" ++ joinBy k args ++ ")"
     showDepth (S k) (Const c) = show c
     showDepth _ obj = showType obj
 
@@ -108,8 +109,8 @@ indexMaybe (x :: xs) idx = if idx <= 0 then Just x else indexMaybe xs (idx - 1)
 callPrim : Ref State InterpState => Stack -> PrimFn ar -> Vect ar Object -> Core Object
 callPrim stk BelieveMe [_, _, obj] = pure obj
 callPrim stk fn args = case the (Either Object (Vect ar Constant)) $ traverse getConst args of
-    Right args' => case getOp {vars=Scope.empty} fn (NPrimVal EmptyFC <$> args') of
-        Just (NPrimVal _ res) => pure $ Const res
+    Right args' => case getOp {vars=Scope.empty} fn (VPrimVal EmptyFC <$> args') of
+        Just (VPrimVal _ res) => pure $ Const res
         _ => interpError stk $ "OP: Error calling " ++ show (opName fn) ++ " with operands: " ++ show args'
     Left obj => interpError stk $ "OP: Expected Constant, found " ++ showType obj
   where

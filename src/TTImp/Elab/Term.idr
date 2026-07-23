@@ -5,7 +5,11 @@ import Libraries.Data.UserNameMap
 import Core.Env
 import Core.Metadata
 import Core.UnifyState
-import Core.Value
+import Core.Evaluate.Value
+import Core.Evaluate.Quote
+import Core.Evaluate.Normalise
+import Core.Evaluate.Expand
+import Core.Evaluate
 
 import Idris.REPL.Opts
 import Idris.Syntax
@@ -34,77 +38,37 @@ import TTImp.TTImp
 -- implicit lambdas if they aren't there already.
 insertImpLam : {auto c : Ref Ctxt Defs} ->
                {auto u : Ref UST UState} ->
+               {vars: _} ->
                Env Term vars ->
                (term : RawImp) -> (expected : Maybe (Glued vars)) ->
                Core RawImp
-insertImpLam {vars} env tm (Just ty) = bindLam tm ty
+insertImpLam {vars} env tm (Just ty) = bindLamNF tm !(expand ty)
   where
-    -- If we can decide whether we need implicit lambdas without looking
-    -- at the normal form, do so
-    bindLamTm : RawImp -> Term vs -> Core (Maybe RawImp)
-    bindLamTm tm@(ILam _ _ Implicit _ _ _) (Bind fc n (Pi _ _ Implicit _) sc)
-        = pure (Just tm)
-    bindLamTm tm@(ILam _ _ AutoImplicit _ _ _) (Bind fc n (Pi _ _ AutoImplicit _) sc)
-        = pure (Just tm)
-    bindLamTm tm@(ILam _ _ (DefImplicit _) _ _ _) (Bind fc n (Pi _ _ (DefImplicit _) _) sc)
-        = pure (Just tm)
-    bindLamTm tm (Bind fc n (Pi _ c Implicit ty) sc)
-        = do n' <- genVarName (nameRoot n)
-             Just sc' <- bindLamTm tm sc
-                 | Nothing => pure Nothing
-             pure $ Just (ILam fc c Implicit (Just n') (Implicit fc False) sc')
-    bindLamTm tm (Bind fc n (Pi _ c AutoImplicit ty) sc)
-        = do n' <- genVarName (nameRoot n)
-             Just sc' <- bindLamTm tm sc
-                 | Nothing => pure Nothing
-             pure $ Just (ILam fc c AutoImplicit (Just n') (Implicit fc False) sc')
-    bindLamTm tm (Bind fc n (Pi _ c (DefImplicit _) ty) sc)
-        = do n' <- genVarName (nameRoot n)
-             Just sc' <- bindLamTm tm sc
-                 | Nothing => pure Nothing
-             pure $ Just (ILam fc c (DefImplicit (Implicit fc False))
-                                    (Just n') (Implicit fc False) sc')
-    bindLamTm tm exp
-        = case getFn exp of
-               Ref _ Func _ => pure Nothing -- might still be implicit
-               TForce {} => pure Nothing
-               Bind _ _ (Lam {}) _ => pure Nothing
-               _ => pure $ Just tm
-
     bindLamNF : RawImp -> NF vars -> Core RawImp
-    bindLamNF tm@(ILam _ _ Implicit _ _ _) (NBind fc n (Pi _ _ Implicit _) sc)
+    bindLamNF tm@(ILam _ _ Implicit _ _ _) (VBind fc n (Pi _ _ Implicit _) sc)
         = pure tm
-    bindLamNF tm@(ILam _ _ AutoImplicit _ _ _) (NBind fc n (Pi _ _ AutoImplicit _) sc)
+    bindLamNF tm@(ILam _ _ AutoImplicit _ _ _) (VBind fc n (Pi _ _ AutoImplicit _) sc)
         = pure tm
-    bindLamNF tm (NBind fc n (Pi fc' c Implicit ty) sc)
+    bindLamNF tm (VBind fc n (Pi fc' c Implicit ty) sc)
         = do defs <- get Ctxt
              n' <- genVarName (nameRoot n)
-             sctm <- sc defs (toClosure defaultOpts env (Ref fc Bound n'))
+             sctm <- expand !(sc (pure (vRef fc Bound n')))
              sc' <- bindLamNF tm sctm
              pure $ ILam fc c Implicit (Just n') (Implicit fc False) sc'
-    bindLamNF tm (NBind fc n (Pi fc' c AutoImplicit ty) sc)
+    bindLamNF tm (VBind fc n (Pi fc' c AutoImplicit ty) sc)
         = do defs <- get Ctxt
              n' <- genVarName (nameRoot n)
-             sctm <- sc defs (toClosure defaultOpts env (Ref fc Bound n'))
+             sctm <- expand !(sc (pure (vRef fc Bound n')))
              sc' <- bindLamNF tm sctm
              pure $ ILam fc c AutoImplicit (Just n') (Implicit fc False) sc'
-    bindLamNF tm (NBind fc n (Pi _ c (DefImplicit _) ty) sc)
+    bindLamNF tm (VBind fc n (Pi _ c (DefImplicit _) ty) sc)
         = do defs <- get Ctxt
              n' <- genVarName (nameRoot n)
-             sctm <- sc defs (toClosure defaultOpts env (Ref fc Bound n'))
+             sctm <- expand !(sc (pure (vRef fc Bound n')))
              sc' <- bindLamNF tm sctm
              pure $ ILam fc c (DefImplicit (Implicit fc False))
                               (Just n') (Implicit fc False) sc'
     bindLamNF tm sc = pure tm
-
-    bindLam : RawImp -> Glued vars -> Core RawImp
-    bindLam tm gty
-        = do ty <- getTerm gty
-             Just tm' <- bindLamTm tm ty
-                | Nothing =>
-                    do nf <- getNF gty
-                       bindLamNF tm nf
-             pure tm'
 insertImpLam env tm _ = pure tm
 
 -- Main driver for checking terms, after implicits have been added.
@@ -161,7 +125,7 @@ checkTerm rig elabinfo nest env (INamedApp fc fn nm arg) exp
 checkTerm rig elabinfo nest env (ISearch fc depth) (Just gexpty)
     = do est <- get EST
          nm <- genName "search"
-         expty <- getTerm gexpty
+         expty <- quote env gexpty
          sval <- searchVar fc rig depth (Resolved (defining est)) env nest nm expty
          pure (sval, gexpty)
 checkTerm rig elabinfo nest env (ISearch fc depth) Nothing
@@ -171,7 +135,7 @@ checkTerm rig elabinfo nest env (ISearch fc depth) Nothing
          ty <- metaVar fc erased env nmty (TType fc u)
          nm <- genName "search"
          sval <- searchVar fc rig depth (Resolved (defining est)) env nest nm ty
-         pure (sval, gnf env ty)
+         pure (sval, !(nf env ty))
 checkTerm rig elabinfo nest env (IAlternative fc uniq alts) exp
     = checkAlternative rig elabinfo nest env fc uniq alts exp
 checkTerm rig elabinfo nest env (IRewrite fc rule tm) exp
@@ -204,7 +168,7 @@ checkTerm rig elabinfo nest env (IRunElab fc re tm) exp
     = checkRunElab rig elabinfo nest env fc re tm exp
 checkTerm {vars} rig elabinfo nest env (IPrimVal fc c) exp
     = do let (cval, cty) = checkPrim {vars} fc c
-         checkExp rig elabinfo env fc cval (gnf env cty) exp
+         checkExp rig elabinfo env fc cval !(nf env cty) exp
 checkTerm rig elabinfo nest env (IType fc) exp
     = do u <- uniVar fc
          checkExp rig elabinfo env fc (TType fc u) (gType fc u) exp
@@ -214,11 +178,11 @@ checkTerm rig elabinfo nest env (IUnifyLog fc lvl tm) exp
     = withLogLevel lvl $ check rig elabinfo nest env tm exp
 checkTerm rig elabinfo nest env (Implicit fc b) (Just gexpty)
     = do nm <- genName "_"
-         expty <- getTerm gexpty
+         expty <- quote env gexpty
          metaval <- metaVar fc rig env nm expty
          -- Add to 'bindIfUnsolved' if 'b' set
          when (b && bindingVars elabinfo) $
-            do expty <- getTerm gexpty
+            do expty <- quote env gexpty
                -- Explicit because it's an explicitly given thing!
                update EST $ addBindIfUnsolved nm fc rig Explicit env metaval expty
          pure (metaval, gexpty)
@@ -231,7 +195,7 @@ checkTerm rig elabinfo nest env (Implicit fc b) Nothing
          -- Add to 'bindIfUnsolved' if 'b' set
          when (b && bindingVars elabinfo) $
             update EST $ addBindIfUnsolved nm fc rig Explicit env metaval ty
-         pure (metaval, gnf env ty)
+         pure (metaval, !(nf env ty))
 checkTerm rig elabinfo nest env (IWithUnambigNames fc ns rhs) exp
     = do -- enter the scope -> add unambiguous names
          est <- get EST
@@ -294,10 +258,12 @@ TTImp.Elab.Check.check rigc elabinfo nest env tm@(IUpdate {}) exp
     = checkImp rigc elabinfo nest env tm exp
 TTImp.Elab.Check.check rigc elabinfo nest env tm_in exp
     = do tm <- expandAmbigName (elabMode elabinfo) nest env tm_in [] tm_in exp
+         logC "elab" 50 $ pure "expandAmbigName tm: \{show tm}"
          case elabMode elabinfo of
               InLHS _ => -- Don't expand implicit lambda on lhs
                  checkImp rigc elabinfo nest env tm exp
               _ => do tm' <- insertImpLam env tm exp
+                      logC "elab" 50 $ pure "insertImpLam tm_backtick: \{show tm'}"
                       checkImp rigc elabinfo nest env tm' exp
 
 onLHS : ElabMode -> Bool
@@ -324,5 +290,5 @@ TTImp.Elab.Check.checkImp rigc elabinfo nest env tm exp
             do let (argv, argt) = res
                let Just expty = exp
                         | Nothing => pure ()
-               addPolyConstraint (getFC tm) env argv !(getNF expty) !(getNF argt)
+               addPolyConstraint (getFC tm) env argv expty !(quote env argt)
          pure res

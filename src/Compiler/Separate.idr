@@ -17,6 +17,7 @@ import Data.List
 import Data.List1
 import Data.Vect
 import Data.Maybe
+import Data.SnocList
 
 %default covering
 
@@ -151,8 +152,13 @@ mutual
     nsRefs (LCrash fc msg) = SortedSet.empty
 
   export
+  HasNamespaces (LiftedCaseScope vars) where
+    nsRefs (LRHS vars) = nsRefs vars
+    nsRefs (LArg n sc) = nsRefs sc
+
+  export
   HasNamespaces (LiftedConAlt vars) where
-    nsRefs (MkLConAlt n ci tag args rhs) = nsRefs rhs
+    nsRefs (MkLConAlt n ci tag rhs) = nsRefs rhs
 
   export
   HasNamespaces (LiftedConstAlt vars) where

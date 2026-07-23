@@ -2,7 +2,9 @@ module Idris.IDEMode.CaseSplit
 
 import Core.Env
 import Core.Metadata
-import Core.Value
+import Core.Evaluate.Value
+import Core.Evaluate.Normalise
+import Core.Evaluate.Expand
 
 import Parser.Lexer.Source
 import Parser.Unlit
@@ -373,7 +375,7 @@ getClause l n
          Just (loc, nidx, envlen, ty) <- findTyDeclAt (\p, n => onLine (l-1) p)
              | Nothing => pure Nothing
          n <- getFullName nidx
-         argns <- getEnvArgNames defs envlen !(nf defs Env.empty ty)
+         argns <- getEnvArgNames defs envlen !(expand !(nf Env.empty ty))
          Just srcLine <- getSourceLine l
            | Nothing => pure Nothing
          let (mark, src) = isLitLine srcLine

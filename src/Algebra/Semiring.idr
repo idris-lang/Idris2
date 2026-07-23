@@ -56,3 +56,7 @@ branchOne yes no rig = if isLinear rig then yes else no
 export
 branchVal : (Semiring a, Eq a) => Lazy b -> Lazy b -> a -> b
 branchVal yes no rig = if isRigOther rig then yes else no
+
+export
+presence : Semiring a => Eq a => a -> a
+presence = elimSemi erased linear (const linear)

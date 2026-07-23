@@ -1,0 +1,15 @@
+1/1: Building NoInline (NoInline.idr)
+Main> Main.n1
+Compile time tree: Delay (Force n0 + Force n0)
+Compiled: Delay Lazy ((Force Lazy (Main.n0)) + (Force Lazy (Main.n0)))
+Refers to: Main.n0, Prelude.Types.Num implementation at Prelude.Types:1, Prelude.Types.Nat, Prelude.Num.(+)
+Refers to (runtime): Main.n0
+Flags: covering
+Size change:
+  Prelude.Types.Num implementation at Prelude.Types:1:
+    l
+  r +
+  Main.n0:
+    l
+  r +
+Main> Bye for now!

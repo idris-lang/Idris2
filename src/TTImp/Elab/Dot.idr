@@ -3,6 +3,8 @@ module TTImp.Elab.Dot
 import Core.Env
 import Core.Metadata
 import Core.UnifyState
+import Core.Evaluate.Value
+import Core.Evaluate.Quote
 
 import Idris.REPL.Opts
 import Idris.Syntax
@@ -22,7 +24,7 @@ registerDot : {vars : _} ->
               Core (Term vars, Glued vars)
 registerDot rig env fc reason wantedTm gexpty
     = do nm <- genName "dotTm"
-         expty <- getTerm gexpty
+         expty <- quote env gexpty
          metaval <- metaVar fc rig env nm expty
          addDot fc env nm wantedTm reason metaval
          let tm = case reason of

@@ -1,0 +1,12 @@
+1/1: Building DelayLam (DelayLam.idr)
+Main> Main.foo
+Compile time tree: Delay (\x => x)
+Compiled: Delay Inf (\x=> x)
+Refers to: Builtin.Unit
+Flags: covering
+Main> Main.bar
+Compile time tree: Delay (\x => x)
+Compiled: Delay Inf (\x=> x)
+Refers to: Builtin.Unit
+Flags: covering
+Main> Bye for now!

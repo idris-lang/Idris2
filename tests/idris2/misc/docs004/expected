@@ -120,7 +120,7 @@ neutral = []
 (++) : List a -> List a -> List a
 xs ++ ys = case xs of
   { [] => ys
-  ; x :: xs => let ih = xs ++ ys in x :: ih
+  ; e :: e => let ih = e ++ ys in e :: ih
   }
 List> 
 Bye for now!

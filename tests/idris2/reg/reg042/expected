@@ -1,7 +1,6 @@
 1/1: Building NatOpts (NatOpts.idr)
 Main> Main.doPlus
-Arguments [{arg:1}, {arg:2}]
-Compile time tree: plus {arg:1} {arg:2}
+Compile time tree: \{arg:1}, {arg:2} => plus {arg:1} {arg:2}
 Compiled: \ {arg:1}, {arg:2} => {arg:1} + {arg:2}
 Refers to: Prelude.Types.plus
 Flags: covering
@@ -12,8 +11,7 @@ Size change:
   0 | =
   1 |   =
 Main> Main.doMinus
-Arguments [{arg:1}, {arg:2}]
-Compile time tree: minus {arg:1} {arg:2}
+Compile time tree: \{arg:1}, {arg:2} => minus {arg:1} {arg:2}
 Compiled: \ {arg:1}, {arg:2} => Prelude.Types.prim__integerToNat ({arg:1} - {arg:2})
 Refers to: Prelude.Types.minus
 Refers to (runtime): Prelude.Types.prim__integerToNat
@@ -25,8 +23,7 @@ Size change:
   0 | =
   1 |   =
 Main> Main.doMult
-Arguments [{arg:1}, {arg:2}]
-Compile time tree: mult {arg:1} {arg:2}
+Compile time tree: \{arg:1}, {arg:2} => mult {arg:1} {arg:2}
 Compiled: \ {arg:1}, {arg:2} => {arg:1} * {arg:2}
 Refers to: Prelude.Types.mult
 Flags: covering
@@ -37,8 +34,7 @@ Size change:
   0 | =
   1 |   =
 Main> Main.doCompare
-Arguments [{arg:1}, {arg:2}]
-Compile time tree: compareNat {arg:1} {arg:2}
+Compile time tree: \{arg:1}, {arg:2} => compareNat {arg:1} {arg:2}
 Compiled: \ {arg:1}, {arg:2} => Prelude.EqOrd.compare {arg:1} {arg:2}
 Refers to: Prelude.Types.compareNat
 Refers to (runtime): Prelude.EqOrd.compare
@@ -50,8 +46,7 @@ Size change:
   0 | =
   1 |   =
 Main> Main.doEqual
-Arguments [{arg:1}, {arg:2}]
-Compile time tree: equalNat {arg:1} {arg:2}
+Compile time tree: \{arg:1}, {arg:2} => equalNat {arg:1} {arg:2}
 Compiled: \ {arg:1}, {arg:2} => {arg:1} == {arg:2}
 Refers to: Prelude.Types.equalNat
 Flags: covering

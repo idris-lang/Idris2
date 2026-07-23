@@ -1,7 +1,9 @@
 module TTImp.Utils
 
 import Core.Env
-import Core.Value
+import Core.Evaluate.Value
+import Core.Evaluate.Expand
+
 import Core.UnifyState
 import TTImp.TTImp
 
@@ -557,9 +559,9 @@ getArgName : {vars : _} ->
                           -- so we don't invent a default
                           -- name that duplicates it
              List Name -> -- names bound so far
-             NF vars -> Core String
+             Glued vars -> Core String
 getArgName defs x bound allvars ty
-    = do defnames <- findNames ty
+    = do defnames <- findNames !(expand ty)
          pure $ getName x defnames allvars
   where
     lookupName : Name -> List (Name, a) -> Core (Maybe a)
@@ -575,53 +577,34 @@ getArgName defs x bound allvars ty
     defaultNames : List String
     defaultNames = ["x", "y", "z", "w", "v", "s", "t", "u"]
 
-    namesFor : Name -> Core (Maybe (List String))
-    namesFor n = lookupName n (NameMap.toList (namedirectives defs))
-
-    findNamesM : NF vars -> Core (Maybe (List String))
-    findNamesM (NBind _ x (Pi {}) _)
-        = pure (Just ["f", "g"])
-    findNamesM (NTCon _ n d [(_, v)]) = do
-          case dropNS !(full (gamma defs) n) of
-            UN (Basic "List") =>
-              do nf <- evalClosure defs v
-                 case !(findNamesM nf) of
-                   Nothing => namesFor n
-                   Just ns => pure (Just (map (++ "s") ns))
-            UN (Basic "Maybe") =>
-              do nf <- evalClosure defs v
-                 case !(findNamesM nf) of
-                   Nothing => namesFor n
-                   Just ns => pure (Just (map ("m" ++) ns))
-            UN (Basic "SnocList") =>
-              do nf <- evalClosure defs v
-                 case !(findNamesM nf) of
-                   Nothing => namesFor n
-                   Just ns => pure (Just (map ("s" ++) ns))
-            _ => namesFor n
-    findNamesM (NTCon _ n _ _) = namesFor n
-    findNamesM (NPrimVal fc $ PrT c) = do
+    findNames : NF vars -> Core (List String)
+    findNames (VBind _ x (Pi {}) _)
+        = pure (filter notBound ["f", "g"])
+    findNames (VTCon _ n _ _)
+        = pure $ filter notBound
+        $ case !(lookupName n (NameMap.toList (namedirectives defs))) of
+               Nothing => defaultNames
+               Just ns => ns
+    findNames (VPrimVal fc c) = do
           let defaultPos = ["m", "n", "p", "q"]
           let defaultInts = ["i", "j", "k", "l"]
-          pure $ Just $ filter notBound $ case c of
-            IntType => defaultInts
-            Int8Type => defaultInts
-            Int16Type => defaultInts
-            Int32Type => defaultInts
-            Int64Type => defaultInts
-            IntegerType => defaultInts
-            Bits8Type => defaultPos
-            Bits16Type => defaultPos
-            Bits32Type => defaultPos
-            Bits64Type => defaultPos
-            StringType => ["str"]
-            CharType => ["c","d"]
-            DoubleType => ["dbl"]
-            WorldType => ["wrld", "w"]
-    findNamesM ty = pure Nothing
-
-    findNames : NF vars -> Core (List String)
-    findNames nf = pure $ filter notBound $ fromMaybe defaultNames !(findNamesM nf)
+          pure $ filter notBound $ case c of
+            PrT IntType => defaultInts
+            PrT Int8Type => defaultInts
+            PrT Int16Type => defaultInts
+            PrT Int32Type => defaultInts
+            PrT Int64Type => defaultInts
+            PrT IntegerType => defaultInts
+            PrT Bits8Type => defaultPos
+            PrT Bits16Type => defaultPos
+            PrT Bits32Type => defaultPos
+            PrT Bits64Type => defaultPos
+            PrT StringType => ["str"]
+            PrT CharType => ["c","d"]
+            PrT DoubleType => ["dbl"]
+            PrT WorldType => ["wrld", "w"]
+            _ => defaultNames -- impossible
+    findNames ty = pure (filter notBound defaultNames)
 
     getName : Name -> List String -> List Name -> String
     getName (UN (Basic n)) defs used =
@@ -636,11 +619,12 @@ getArgNames : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               Defs -> List Name -> List Name -> Env Term vars -> NF vars ->
               Core (List String)
-getArgNames defs bound allvars env (NBind fc x (Pi _ _ p ty) sc)
+getArgNames defs bound allvars env (VBind fc x (Pi _ _ p ty) sc)
     = do ns <- case p of
-                    Explicit => pure [!(getArgName defs x bound allvars !(evalClosure defs ty))]
+                    Explicit => pure [!(getArgName defs x bound allvars ty)]
                     _ => pure []
-         sc' <- sc defs (toClosure defaultOpts env (Erased fc Placeholder))
+         sc' <- sc (pure (VErased fc Placeholder))
+         sc' <- expand sc'
          pure $ ns ++ !(getArgNames defs bound (map (UN . Basic) ns ++ allvars) env sc')
 getArgNames defs bound allvars env val = pure []
 
