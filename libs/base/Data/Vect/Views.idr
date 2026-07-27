@@ -42,7 +42,7 @@ public export
 data SplitRec : Vect k a -> Type where
   SplitRecNil : SplitRec []
   SplitRecOne : SplitRec [x]
-  SplitRecPair : {n : Nat} -> {m : Nat} -> {xs : Vect (S n) a} -> {ys : Vect (S m) a} ->
+  SplitRecPair : {n : Nat} -> {m : Nat} -> (xs : Vect (S n) a) -> (ys : Vect (S m) a) ->
     (lrec : Lazy (SplitRec xs)) -> (rrec : Lazy (SplitRec ys)) -> SplitRec (xs ++ ys)
 
 smallerPlusL : (m : Nat) -> (k : Nat) -> LTE (S (S m)) (S (m + S k))
@@ -61,6 +61,6 @@ splitRec input with (sizeAccessible k)
     splitRec {k = 0} []  | acc | SplitNil = SplitRecNil
     splitRec {k = 1} [x] | acc | SplitOne = SplitRecOne
     splitRec {k = S nl + S nr} (x :: xs ++ y :: ys) | Access rec | SplitPair x xs y ys =
-      SplitRecPair
+      SplitRecPair _ _
         (splitRec {k = S nl} (x :: xs) | rec _ $ smallerPlusL nl nr)
         (splitRec {k = S nr} (y :: ys) | rec _ $ smallerPlusR nl nr)
