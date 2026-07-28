@@ -139,12 +139,13 @@ mutual
        ||| Flag means the hint is a direct hint, not a function which might
        ||| find the result (e.g. chasing parent interface dictionaries)
        Hint : Bool -> FnOpt
-       ||| `%globalhint` if true, `%defaulthint` if false
+       ||| A hint that is searched if direct hints search failed.
+       ||| `%globalhint` if the argument is `True`, `%defaulthint` if `False`.
        GlobalHint : Bool -> FnOpt
        ExternFn : FnOpt
-       ||| Defined externally, list calling conventions
+       ||| Defined externally, takes a list of calling conventions
        ForeignFn : List TTImp -> FnOpt
-       ||| Mark for export to a foreign language, list calling conventions
+       ||| Mark for export to a foreign language, takes a list of calling conventions
        ForeignExport : List TTImp -> FnOpt
        ||| assume safe to cancel arguments in unification
        Invertible : FnOpt
@@ -255,11 +256,11 @@ mutual
        ||| A type ascription, `a : b`.
        ||| Called a claim because of Curry Howard, the statement `x : p` is equivalent to `x` is a proof of `p`.
        IClaim : (claim : WithFC IClaimData) -> Decl
-       ||| A data declaration
+       ||| A data type declaration
        IData : FC -> (vis : WithDefault Visibility Private) -> Maybe TotalReq -> (cons : Data) -> Decl
-       ||| A function definition by its clauses
+       ||| A function body definition
        IDef : FC -> (f : Name) -> (cls : List Clause) -> Decl
-       ||| A parameter block
+       ||| A parameters block, e.g. `parameters {0 m : _} {auto _ : Monad m} (level : Nat)
        IParameters : FC -> (params : List (Name, Count, PiInfo TTImp, TTImp)) ->
                      (decls : List Decl) -> Decl
        ||| A record declaration
@@ -270,11 +271,11 @@ mutual
                  (totality : Maybe TotalReq) -> (rec : Record) -> Decl
        ||| A namespace declaration, `namespace ns where decls`
        INamespace : FC -> Namespace -> (decls : List Decl) -> Decl
-       ||| A transformation declaration
+       ||| A transformation rule declaration
        ITransform : FC -> Name -> TTImp -> TTImp -> Decl
-       ||| A top-level elaboration run
+       ||| A top-level elaborator script run, `%runElab`
        IRunElabDecl : FC -> TTImp -> Decl
-       ||| A logging directive
+       ||| A directive for enabling compile-time logging, `%logging "<topic>" <level>`
        ILog : Maybe (List String, Nat) -> Decl
        ||| A builtin declaration, `%builtin type name`
        IBuiltin : FC -> BuiltinType -> Name -> Decl
