@@ -1,5 +1,6 @@
 module Idris.Doc.Annotations
 
+import Core.FC
 import Core.Metadata
 import Core.Name
 
@@ -12,7 +13,7 @@ data IdrisDocAnn
   = Header
   | Deprecation
   | Declarations
-  | Decl Name
+  | Decl Name FC
   | DocStringBody
   | UserDocString
   | Syntax IdrisSyntax
