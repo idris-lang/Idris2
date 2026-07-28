@@ -1,6 +1,7 @@
 name: Idris2 and External Libs
 
 on:
+  merge_group:
   push:
     branches:
       - '*'
