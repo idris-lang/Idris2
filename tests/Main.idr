@@ -78,6 +78,10 @@ idrisTestsEvaluator = testsInDir "idris2/evaluator" "Evaluation"
 idrisTestsREPL : IO TestPool
 idrisTestsREPL = testsInDir "idris2/repl" "REPL commands and help"
 
+||| Regressions for proofs of false
+idrisTestsFalse : IO TestPool
+idrisTestsFalse = testsInDir "idris2/false" "Proof of false regressions"
+
 idrisTestsAllSchemes : Requirement -> IO TestPool
 idrisTestsAllSchemes cg = testsInDir "allschemes"
       ("Test across all scheme backends: " ++ show cg ++ " instance")
@@ -199,6 +203,7 @@ main = (runner =<<) $ sequence $
   , idrisTestsBuiltin
   , idrisTestsEvaluator
   , idrisTestsREPL
+  , idrisTestsFalse
   , idrisTestsTotality
   , idrisTestsSchemeEval
   , idrisTestsReflection

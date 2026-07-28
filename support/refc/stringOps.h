@@ -5,20 +5,21 @@
 
 /* stringLength : String -> Int64!? WTH!. do you have over 4Gbytes text on
  * memory!? */
-#define stringLength(x) (idris2_mkInt64(strlen(((Value_String *)(x))->str)))
+#define stringLength(x) (idris2_mkInt64(strlen(((Idris2_String *)(x))->str)))
 #define head(x) (idris2_cast_String_to_Char(x))
-Value *tail(Value *str);
-Value *reverse(Value *str);
-Value *strIndex(Value *str, Value *i);
-Value *strCons(Value *c, Value *str);
-Value *strAppend(Value *a, Value *b);
-Value *strSubstr(Value *s, Value *start, Value *len);
-char *fastPack(Value *charList);
-Value *fastUnpack(char *str);
-char *fastConcat(Value *strList);
+Idris2_Value *tail(Idris2_Value *str);
+Idris2_Value *reverse(Idris2_Value *str);
+Idris2_Value *strIndex(Idris2_Value *str, Idris2_Value *i);
+Idris2_Value *strCons(Idris2_Value *c, Idris2_Value *str);
+Idris2_Value *strAppend(Idris2_Value *a, Idris2_Value *b);
+Idris2_Value *strSubstr(Idris2_Value *s, Idris2_Value *start,
+                        Idris2_Value *len);
+char *fastPack(Idris2_Value *charList);
+Idris2_Value *fastUnpack(char *str);
+char *fastConcat(Idris2_Value *strList);
 
-Value *stringIteratorNew(char *str);
-Value *onCollectStringIterator(Value_Pointer *ptr, void *null);
-Value *stringIteratorToString(void *a, char *str, Value *it_p,
-                              Value_Closure *f);
-Value *stringIteratorNext(char *s, Value *it_p);
+Idris2_Value *stringIteratorNew(char *str);
+Idris2_Value *onCollectStringIterator(Idris2_Pointer *ptr, void *null);
+Idris2_Value *stringIteratorToString(void *a, char *str, Idris2_Value *it_p,
+                                     Idris2_Closure *f);
+Idris2_Value *stringIteratorNext(char *s, Idris2_Value *it_p);

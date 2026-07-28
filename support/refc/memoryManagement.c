@@ -42,27 +42,27 @@ void idris2_dumpMemoryStats(void) {
 void idris2_dumpMemoryStats() {}
 #endif
 
-Value *idris2_newValue(size_t size) {
+Idris2_Value *idris2_newValue(size_t size) {
   /* Try to get memory aligned to pointer-size. Prefer C11 aligned_alloc
      (not available on some platforms like older macOS), then posix_memalign,
      and finally fall back to malloc which typically returns pointer-aligned
      memory suitable for our needs. */
 #if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201112L) &&              \
     !defined(__APPLE__) && !defined(_WIN32)
-  Value *retVal = (Value *)aligned_alloc(
+  Idris2_Value *retVal = (Idris2_Value *)aligned_alloc(
       sizeof(void *),
       ((size + sizeof(void *) - 1) / sizeof(void *)) * sizeof(void *));
 #elif ((defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L)) ||           \
        (defined(_XOPEN_SOURCE) && (_XOPEN_SOURCE >= 600))) &&                  \
     !defined(_WIN32)
-  Value *retVal = NULL;
+  Idris2_Value *retVal = NULL;
   IDRIS2_REFC_VERIFY(
       posix_memalign((void **)&retVal, sizeof(void *),
                      ((size + sizeof(void *) - 1) / sizeof(void *)) *
                          sizeof(void *)) == 0,
       "posix_memalign failed");
 #else
-  Value *retVal = (Value *)malloc(size);
+  Idris2_Value *retVal = (Idris2_Value *)malloc(size);
 #endif
   IDRIS2_REFC_VERIFY(retVal && !idris2_vp_is_unboxed(retVal), "malloc failed");
   IDRIS2_INC_MEMSTAT(n_newValue);
@@ -71,9 +71,9 @@ Value *idris2_newValue(size_t size) {
   return retVal;
 }
 
-Value_Constructor *idris2_newConstructor(int total, int tag) {
-  Value_Constructor *retVal = (Value_Constructor *)idris2_newValue(
-      sizeof(Value_Constructor) + sizeof(Value *) * total);
+Idris2_Constructor *idris2_newConstructor(int total, int tag) {
+  Idris2_Constructor *retVal = (Idris2_Constructor *)idris2_newValue(
+      sizeof(Idris2_Constructor) + sizeof(Idris2_Value *) * total);
   retVal->header.tag = CONSTRUCTOR_TAG;
   retVal->total = total;
   retVal->tag = tag;
@@ -81,9 +81,10 @@ Value_Constructor *idris2_newConstructor(int total, int tag) {
   return retVal;
 }
 
-Value_Closure *idris2_mkClosure(Value *(*f)(), uint8_t arity, uint8_t filled) {
-  Value_Closure *retVal = (Value_Closure *)idris2_newValue(
-      sizeof(Value_Closure) + sizeof(Value *) * filled);
+Idris2_Closure *idris2_mkClosure(Idris2_Value *(*f)(), uint8_t arity,
+                                 uint8_t filled) {
+  Idris2_Closure *retVal = (Idris2_Closure *)idris2_newValue(
+      sizeof(Idris2_Closure) + sizeof(Idris2_Value *) * filled);
   retVal->header.tag = CLOSURE_TAG;
   retVal->f = f;
   retVal->arity = arity;
@@ -91,76 +92,76 @@ Value_Closure *idris2_mkClosure(Value *(*f)(), uint8_t arity, uint8_t filled) {
   return retVal; // caller must initialize args[].
 }
 
-Value *idris2_mkDouble(double d) {
-  Value_Double *retVal = IDRIS2_NEW_VALUE(Value_Double);
+Idris2_Value *idris2_mkDouble(double d) {
+  Idris2_Double *retVal = IDRIS2_NEW_VALUE(Idris2_Double);
   retVal->header.tag = DOUBLE_TAG;
   retVal->d = d;
-  return (Value *)retVal;
+  return (Idris2_Value *)retVal;
 }
 
-Value *idris2_mkBits32_Boxed(uint32_t i) {
-  Value_Bits32 *retVal = IDRIS2_NEW_VALUE(Value_Bits32);
+Idris2_Value *idris2_mkBits32_Boxed(uint32_t i) {
+  Idris2_Bits32 *retVal = IDRIS2_NEW_VALUE(Idris2_Bits32);
   retVal->header.tag = BITS32_TAG;
   retVal->ui32 = i;
-  return (Value *)retVal;
+  return (Idris2_Value *)retVal;
 }
 
-Value *idris2_mkBits64(uint64_t i) {
+Idris2_Value *idris2_mkBits64(uint64_t i) {
   if (i < 100)
-    return (Value *)&idris2_predefined_Bits64[i];
+    return (Idris2_Value *)&idris2_predefined_Bits64[i];
 
-  Value_Bits64 *retVal = IDRIS2_NEW_VALUE(Value_Bits64);
+  Idris2_Bits64 *retVal = IDRIS2_NEW_VALUE(Idris2_Bits64);
   retVal->header.tag = BITS64_TAG;
   retVal->ui64 = i;
-  return (Value *)retVal;
+  return (Idris2_Value *)retVal;
 }
 
-Value *idris2_mkInt32_Boxed(int32_t i) {
-  Value_Int32 *retVal = IDRIS2_NEW_VALUE(Value_Int32);
+Idris2_Value *idris2_mkInt32_Boxed(int32_t i) {
+  Idris2_Int32 *retVal = IDRIS2_NEW_VALUE(Idris2_Int32);
   retVal->header.tag = INT32_TAG;
   retVal->i32 = i;
-  return (Value *)retVal;
+  return (Idris2_Value *)retVal;
 }
 
-Value *idris2_mkInt64(int64_t i) {
+Idris2_Value *idris2_mkInt64(int64_t i) {
   if (i >= 0 && i < 100)
-    return (Value *)&idris2_predefined_Int64[i];
+    return (Idris2_Value *)&idris2_predefined_Int64[i];
 
-  Value_Int64 *retVal = IDRIS2_NEW_VALUE(Value_Int64);
+  Idris2_Int64 *retVal = IDRIS2_NEW_VALUE(Idris2_Int64);
   retVal->header.tag = INT64_TAG;
   retVal->i64 = i;
-  return (Value *)retVal;
+  return (Idris2_Value *)retVal;
 }
 
-Value_Integer *idris2_mkInteger() {
-  Value_Integer *retVal = IDRIS2_NEW_VALUE(Value_Integer);
+Idris2_Integer *idris2_mkInteger() {
+  Idris2_Integer *retVal = IDRIS2_NEW_VALUE(Idris2_Integer);
   retVal->header.tag = INTEGER_TAG;
   mpz_init(retVal->i);
   return retVal;
 }
 
-Value *idris2_mkIntegerLiteral(char *i) {
-  Value_Integer *retVal = idris2_mkInteger();
+Idris2_Value *idris2_mkIntegerLiteral(char *i) {
+  Idris2_Integer *retVal = idris2_mkInteger();
   mpz_set_str(retVal->i, i, 10);
-  return (Value *)retVal;
+  return (Idris2_Value *)retVal;
 }
 
-Value_String *idris2_mkEmptyString(size_t l) {
+Idris2_String *idris2_mkEmptyString(size_t l) {
   if (l == 1)
-    return (Value_String *)&idris2_predefined_nullstring;
+    return (Idris2_String *)&idris2_predefined_nullstring;
 
-  Value_String *retVal = IDRIS2_NEW_VALUE(Value_String);
+  Idris2_String *retVal = IDRIS2_NEW_VALUE(Idris2_String);
   retVal->header.tag = STRING_TAG;
   retVal->str = malloc(l);
   memset(retVal->str, 0, l);
   return retVal;
 }
 
-Value_String *idris2_mkString(char *s) {
+Idris2_String *idris2_mkString(char *s) {
   if (s[0] == '\0')
-    return (Value_String *)&idris2_predefined_nullstring;
+    return (Idris2_String *)&idris2_predefined_nullstring;
 
-  Value_String *retVal = IDRIS2_NEW_VALUE(Value_String);
+  Idris2_String *retVal = IDRIS2_NEW_VALUE(Idris2_String);
   int l = strlen(s);
   retVal->header.tag = STRING_TAG;
   retVal->str = malloc(l + 1);
@@ -169,39 +170,39 @@ Value_String *idris2_mkString(char *s) {
   return retVal;
 }
 
-Value_Pointer *idris2_makePointer(void *ptr_Raw) {
-  Value_Pointer *p = IDRIS2_NEW_VALUE(Value_Pointer);
+Idris2_Pointer *idris2_makePointer(void *ptr_Raw) {
+  Idris2_Pointer *p = IDRIS2_NEW_VALUE(Idris2_Pointer);
   p->header.tag = POINTER_TAG;
   p->p = ptr_Raw;
   return p;
 }
 
-Value_GCPointer *idris2_makeGCPointer(void *ptr_Raw,
-                                      Value_Closure *onCollectFct) {
-  Value_GCPointer *p = IDRIS2_NEW_VALUE(Value_GCPointer);
+Idris2_GCPointer *idris2_makeGCPointer(void *ptr_Raw,
+                                       Idris2_Closure *onCollectFct) {
+  Idris2_GCPointer *p = IDRIS2_NEW_VALUE(Idris2_GCPointer);
   p->header.tag = GC_POINTER_TAG;
   p->p = idris2_makePointer(ptr_Raw);
   p->onCollectFct = onCollectFct;
   return p;
 }
 
-Value_Buffer *idris2_makeBuffer(void *buf) {
-  Value_Buffer *b = IDRIS2_NEW_VALUE(Value_Buffer);
+Idris2_Buffer *idris2_makeBuffer(void *buf) {
+  Idris2_Buffer *b = IDRIS2_NEW_VALUE(Idris2_Buffer);
   b->header.tag = BUFFER_TAG;
   b->buffer = buf;
   return b;
 }
 
-Value_Array *idris2_makeArray(int length) {
-  Value_Array *a = IDRIS2_NEW_VALUE(Value_Array);
+Idris2_Array *idris2_makeArray(int length) {
+  Idris2_Array *a = IDRIS2_NEW_VALUE(Idris2_Array);
   a->header.tag = ARRAY_TAG;
   a->capacity = length;
-  a->arr = (Value **)malloc(sizeof(Value *) * length);
-  memset(a->arr, 0, sizeof(Value *) * length);
+  a->arr = (Idris2_Value **)malloc(sizeof(Idris2_Value *) * length);
+  memset(a->arr, 0, sizeof(Idris2_Value *) * length);
   return a;
 }
 
-Value *idris2_newReference(Value *source) {
+Idris2_Value *idris2_newReference(Idris2_Value *source) {
   IDRIS2_INC_MEMSTAT(n_newReference);
   // note that we explicitly allow NULL as source (for erased arguments)
   if (source && !idris2_vp_is_unboxed(source) &&
@@ -214,7 +215,7 @@ Value *idris2_newReference(Value *source) {
   return source;
 }
 
-void idris2_removeReference(Value *elem) {
+void idris2_removeReference(Idris2_Value *elem) {
   IDRIS2_INC_MEMSTAT(n_removeReference);
   if (!elem || idris2_vp_is_unboxed(elem))
     return;
@@ -234,7 +235,7 @@ void idris2_removeReference(Value *elem) {
       /* nothing to delete, added for sake of completeness */
       break;
     case INTEGER_TAG:
-      mpz_clear(((Value_Integer *)elem)->i);
+      mpz_clear(((Idris2_Integer *)elem)->i);
       break;
 
     case DOUBLE_TAG:
@@ -242,35 +243,35 @@ void idris2_removeReference(Value *elem) {
       break;
 
     case STRING_TAG:
-      free(((Value_String *)elem)->str);
+      free(((Idris2_String *)elem)->str);
       break;
 
     case CLOSURE_TAG: {
-      Value_Closure *cl = (Value_Closure *)elem;
+      Idris2_Closure *cl = (Idris2_Closure *)elem;
       for (int i = 0; i < cl->filled; ++i)
         idris2_removeReference(cl->args[i]);
       break;
     }
 
     case CONSTRUCTOR_TAG: {
-      Value_Constructor *constr = (Value_Constructor *)elem;
+      Idris2_Constructor *constr = (Idris2_Constructor *)elem;
       for (int i = 0; i < constr->total; i++) {
         idris2_removeReference(constr->args[i]);
       }
       break;
     }
     case IOREF_TAG:
-      idris2_removeReference(((Value_IORef *)elem)->v);
+      idris2_removeReference(((Idris2_IORef *)elem)->v);
       break;
 
     case BUFFER_TAG: {
-      Value_Buffer *b = (Value_Buffer *)elem;
+      Idris2_Buffer *b = (Idris2_Buffer *)elem;
       free(b->buffer);
       break;
     }
 
     case ARRAY_TAG: {
-      Value_Array *a = (Value_Array *)elem;
+      Idris2_Array *a = (Idris2_Array *)elem;
       for (int i = 0; i < a->capacity; i++) {
         idris2_removeReference(a->arr[i]);
       }
@@ -283,11 +284,11 @@ void idris2_removeReference(Value *elem) {
 
     case GC_POINTER_TAG: {
       /* maybe here we need to invoke onCollectAny */
-      Value_GCPointer *vPtr = (Value_GCPointer *)elem;
-      Value *closure1 =
-          idris2_apply_closure((Value *)vPtr->onCollectFct, (Value *)vPtr->p);
+      Idris2_GCPointer *vPtr = (Idris2_GCPointer *)elem;
+      Idris2_Value *closure1 = idris2_apply_closure(
+          (Idris2_Value *)vPtr->onCollectFct, (Idris2_Value *)vPtr->p);
       idris2_apply_closure(closure1, NULL);
-      idris2_removeReference((Value *)vPtr->p);
+      idris2_removeReference((Idris2_Value *)vPtr->p);
       break;
     }
 
@@ -310,7 +311,7 @@ void idris2_removeReference(Value *elem) {
       {IDRIS2_STOCKVAL(t), (n + 8)}, {                                         \
     IDRIS2_STOCKVAL(t), (n + 9)                                                \
   }
-Value_Int64 const idris2_predefined_Int64[100] = {
+Idris2_Int64 const idris2_predefined_Int64[100] = {
     IDRIS2_MK_PREDEFINED_INT_10(INT64_TAG, 0),
     IDRIS2_MK_PREDEFINED_INT_10(INT64_TAG, 10),
     IDRIS2_MK_PREDEFINED_INT_10(INT64_TAG, 20),
@@ -322,7 +323,7 @@ Value_Int64 const idris2_predefined_Int64[100] = {
     IDRIS2_MK_PREDEFINED_INT_10(INT64_TAG, 80),
     IDRIS2_MK_PREDEFINED_INT_10(INT64_TAG, 90)};
 
-Value_Bits64 const idris2_predefined_Bits64[100] = {
+Idris2_Bits64 const idris2_predefined_Bits64[100] = {
     IDRIS2_MK_PREDEFINED_INT_10(BITS64_TAG, 0),
     IDRIS2_MK_PREDEFINED_INT_10(BITS64_TAG, 10),
     IDRIS2_MK_PREDEFINED_INT_10(BITS64_TAG, 20),
@@ -334,13 +335,13 @@ Value_Bits64 const idris2_predefined_Bits64[100] = {
     IDRIS2_MK_PREDEFINED_INT_10(BITS64_TAG, 80),
     IDRIS2_MK_PREDEFINED_INT_10(BITS64_TAG, 90)};
 
-Value_String const idris2_predefined_nullstring = {IDRIS2_STOCKVAL(STRING_TAG),
-                                                   ""};
+Idris2_String const idris2_predefined_nullstring = {IDRIS2_STOCKVAL(STRING_TAG),
+                                                    ""};
 
 static bool idris2_predefined_integer_initialized = false;
-Value_Integer idris2_predefined_Integer[100];
+Idris2_Integer idris2_predefined_Integer[100];
 
-Value *idris2_getPredefinedInteger(int n) {
+Idris2_Value *idris2_getPredefinedInteger(int n) {
   IDRIS2_REFC_VERIFY(n >= 0 && n < 100,
                      "invalid range of predefined integers.");
 
@@ -355,5 +356,5 @@ Value *idris2_getPredefinedInteger(int n) {
       mpz_set_si(idris2_predefined_Integer[i].i, i);
     }
   }
-  return (Value *)&idris2_predefined_Integer[n];
+  return (Idris2_Value *)&idris2_predefined_Integer[n];
 }

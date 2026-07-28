@@ -34,6 +34,10 @@ import Yaffle.Main
 
 %default covering
 
+public export
+CustomBackends : Type
+CustomBackends = List (String, Codegen)
+
 findInputs : List CLOpt -> Maybe (List1 String)
 findInputs [] = Nothing
 findInputs (InputFile f :: fs) =
@@ -95,23 +99,34 @@ updateREPLOpts
     = do ed <- coreLift $ idrisGetEnv "EDITOR"
          whenJust ed $ \ e => update ROpts { editor := e }
 
-tryYaffle : List CLOpt -> Core Bool
-tryYaffle [] = pure False
-tryYaffle (Yaffle f :: _) = do yaffleMain f []
-                               pure True
-tryYaffle (c :: cs) = tryYaffle cs
+-- There are three ways to run the compiler
+-- Either run normally, or run in yaffle mode, or dump TTM
+data Entrypoint
+  = Normal CustomBackends (List CLOpt)
+  | Yaffle String
+  | TTM String
+
+parameters (backends : CustomBackends) (allOpts : List CLOpt)
+
+  -- Yaffle and TTM are mutually incompatible so we parse the flags here and
+  -- report the error if it occurs. If neither flag is present we run in normal mode
+
+  parseCompilerMode' : List CLOpt -> Maybe Entrypoint -> Either String Entrypoint
+  parseCompilerMode' [] Nothing = pure $ Normal backends allOpts
+  parseCompilerMode' [] (Just m) = pure m
+  parseCompilerMode' (Yaffle f :: xs) Nothing = parseCompilerMode' xs (Just $ Yaffle f)
+  parseCompilerMode' (Metadata f :: xs) Nothing = parseCompilerMode' xs (Just $ TTM f)
+  parseCompilerMode' (Yaffle _ :: xs) (Just (TTM _)) = Left "Incompatible modes --ttm and --yaffle"
+  parseCompilerMode' (Metadata _ :: xs) (Just (Yaffle _)) = Left "Incompatible modes --ttm and --yaffle"
+  parseCompilerMode' (_ :: xs) m = parseCompilerMode' xs m
+
+  parseCompilerMode : Either String Entrypoint
+  parseCompilerMode = parseCompilerMode' allOpts Nothing
 
 ignoreMissingIpkg : List CLOpt -> Bool
 ignoreMissingIpkg [] = False
 ignoreMissingIpkg (IgnoreMissingIPKG :: _) = True
 ignoreMissingIpkg (c :: cs) = ignoreMissingIpkg cs
-
-tryTTM : List CLOpt -> Core Bool
-tryTTM [] = pure False
-tryTTM (Metadata f :: _) = do dumpTTM f
-                              pure True
-tryTTM (c :: cs) = tryTTM cs
-
 
 banner : String
 banner = #"""
@@ -131,14 +146,13 @@ checkVerbose (_ :: xs) = checkVerbose xs
 
 stMain : List (String, Codegen) -> List CLOpt -> Core ()
 stMain cgs opts
-    = do False <- tryYaffle opts
-            | True => pure ()
-         False <- tryTTM opts
-            | True => pure ()
-         defs <- initDefs
+    = do defs <- initDefs
+         -- Add the manually added codegens to the option set
          let updated = foldl (\o, (s, _) => addCG (s, Other s) o) (options defs) cgs
          c <- newRef Ctxt ({ options := updated } defs)
          s <- newRef Syn initSyntax
+         -- If we give a custom codegen, set that as the default,
+         -- otherwise, use Chez
          setCG {c} $ maybe Chez (Other . fst) (head' cgs)
          addPrimitives
 
@@ -164,15 +178,17 @@ stMain cgs opts
                                      """
          update ROpts { mainfile := fname }
 
+         s <- newRef PostS defaultPost
          -- start by going over the pre-options, and stop if we do not need to
          -- continue
-         True <- preOptions opts
-            | False => pure ()
+         Continue <- preOptions opts
+            | Abort => pure ()
 
          -- If there's a --build or --install, just do that then quit
-         done <- flip catch quitWithError $ processPackageOpts opts
+         Continue <- flip catch quitWithError $ processPackageOpts opts
+            | Abort => pure ()
 
-         when (not done) $ flip catch quitWithError $
+         flip catch quitWithError $
             do when (checkVerbose opts) $ -- override Quiet if implicitly set
                    setOutput (REPL InfoLvl)
                u <- newRef UST initUState
@@ -201,10 +217,17 @@ stMain cgs opts
                                 displayStartupErrors res
                                 pure res
 
-               doRepl <- catch (postOptions result opts)
-                               (\err => emitError err *> pure False)
-               if doRepl then
-                 if ide || ideSocket then
+               post <- get PostS
+               Continue <- catch (postOptions result post)
+                               (\err => emitError err *> pure Abort)
+                | Abort => do
+                    -- exit with an error code if there was an error, otherwise
+                    -- just exit
+                     ropts <- get ROpts
+                     showTimeRecord
+                     whenJust (errorLine ropts) $ \ _ =>
+                       coreLift $ exitWith (ExitFailure 1)
+               if ide || ideSocket then
                    if not ideSocket
                     then do
                      setOutput (IDEMode 0 stdin stdout)
@@ -222,13 +245,6 @@ stMain cgs opts
                  else do
                      repl {c} {u} {m}
                      showTimeRecord
-                else
-                    -- exit with an error code if there was an error, otherwise
-                    -- just exit
-                  do ropts <- get ROpts
-                     showTimeRecord
-                     whenJust (errorLine ropts) $ \ _ =>
-                       coreLift $ exitWith (ExitFailure 1)
 
   where
 
@@ -241,26 +257,31 @@ stMain cgs opts
     msg <- render doc
     coreLift (die msg)
 
+allMain : Entrypoint -> Core ()
+allMain (Normal cgs opts) = stMain cgs opts
+allMain (Yaffle f) = yaffleMain f []
+allMain (TTM f) = dumpTTM f
+
 -- Run any options (such as --version or --help) which imply printing a
 -- message then exiting. Returns wheter the program should continue
 
-quitOpts : List CLOpt -> IO Bool
-quitOpts [] = pure True
+quitOpts : List CLOpt -> IO ControlFlow
+quitOpts [] = pure Continue
 quitOpts (Version :: _)
     = do putStrLn versionMsg
-         pure False
+         pure Abort
 quitOpts (TTCVersion :: _)
     = do printLn ttcVersion
-         pure False
+         pure Abort
 quitOpts (Help Nothing :: _)
     = do putStrLn usage
-         pure False
+         pure Abort
 quitOpts (Help (Just HelpLogging) :: _)
     = do putStrLn helpTopics
-         pure False
+         pure Abort
 quitOpts (Help (Just HelpPragma) :: _)
     = do putStrLn pragmaTopics
-         pure False
+         pure Abort
 quitOpts (_ :: opts) = quitOpts opts
 
 export
@@ -269,10 +290,13 @@ mainWithCodegens cgs = do
   Right opts <- getCmdOpts
     | Left err => do ignore $ fPutStrLn stderr $ "Error: " ++ err
                      exitWith (ExitFailure 1)
-  continue <- quitOpts opts
-  when continue $ do
-    setupTerm
-    coreRun (stMain cgs opts)
-      (\err : Error => do ignore $ fPutStrLn stderr $ "Uncaught error: " ++ show err
-                          exitWith (ExitFailure 1))
-      (\res => pure ())
+  Continue <- quitOpts opts
+    | Abort => pure ()
+  setupTerm
+  let Right cliMode = parseCompilerMode cgs opts
+    | Left err => do ignore $ fPutStrLn stderr $ "Error: " ++ err
+                     exitWith (ExitFailure 1)
+  coreRun (allMain cliMode)
+    (\err : Error => do ignore $ fPutStrLn stderr $ "Uncaught error: " ++ show err
+                        exitWith (ExitFailure 1))
+    (\res => pure ())

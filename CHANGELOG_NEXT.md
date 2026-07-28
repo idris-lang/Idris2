@@ -38,6 +38,7 @@ should target this file (`CHANGELOG_NEXT`).
 
 ### Compiler changes
 
+* Fixed ill-typed program where a typed lambda would not have its type checked #3771
 * Fixed missing handling of dotted patterns See
   [#3669](https://github.com/idris-lang/Idris2/issues/3669),
   [comment](https://github.com/idris-lang/Idris2/issues/3644#issuecomment-3286320272).
@@ -59,7 +60,7 @@ should target this file (`CHANGELOG_NEXT`).
   - `Libraries.Data.List.Quantifiers.Extra.tabulate`.
   - `Libraries.Utils.Binary.nonEmptyRev`
   - `Libraries.Utils.String.dotSep`
-* Fixes an issue when unifying labmda terms with implicits (#3670)
+* Fixes an issue when unifying lambda terms with implicits (#3670)
 * The "With clause does not match parent" error now points to the correct location
 * The compiler now warns the user when `impossible` clauses are ignored. This
   typically happens when a numeric literal or an ambiguous name appears in an
@@ -68,12 +69,33 @@ should target this file (`CHANGELOG_NEXT`).
 * Fixed coverage checker issues (#1800, #1998, #2318, #2822, #3679).
 * Fixed totality checking in namespace and mutual blocks (#2868, #3692).
 * Fixed incorrect argument multiplicity when using an as-pattern (#3687).
+* Type inspection now resugars primitive functions to more likely
+  names/operators (#3712)
+* Better messages for errors inside string interpolation.
+* Added execution time logging for elaboration scripts.
+* Optimised the passing of local variables during compile-time normalisation.
+* Added `getFC` to elaborator reflection, exposing the macro call-site source
+  location.
+* Normalize through private definitions when evaluating `%foreign` and
+  `%foreign_impl` strings [#3790](https://github.com/idris-lang/Idris2/issues/3790)
+  * Improve related error messages
+* Fix exponential time issue in totality checking with large data on the left hand side (#3696).
+* Removed `Borrowing` as a language extension.  This was never implemented in
+  Idris2, so the only change is that `%language Borrowing` will now error rather
+  than be accepted but do nothing.
+* HTML files generated using `--mkdoc` now contain attributes, that allow
+  external tools to insert links from documentation to source code.
+* Fixed `parseDouble` dropping "-" sign when whole part is "0"
+  [#3804](https://github.com/idris-lang/Idris2/issues/3804),
 
 ### Building/Packaging changes
 
 * Fix parsing of capitalised package names containing hyphens.
 * Change `flake.nix` to point at `idris-community/idris2-mode` as the URL for
   `inputs.idris-emacs-src` (from the user fork `redfish64/idris2-mode`).
+* Fix UTF-8 character handling in package description fields.
+* A project's data directory can now be specified with the `datadir` entry in
+  an `ipkg` file.
 
 ### Backend changes
 
@@ -84,13 +106,19 @@ should target this file (`CHANGELOG_NEXT`).
   systems, the compiler will now use `posix_memalign`.
 * Fixed integer comparison operators returning incorrect results on WASM32.
   The `idris2_extractInt` function incorrectly used `idris2_vp_to_Int32` for
-  unboxed values, which dereferences unboxed pointers as `Value_Int32*` on
-  32-bit platforms when `UINTPTR_WIDTH` is not defined (common in Emscripten).
+  unboxed values, which dereferences unboxed pointers as `Idris2_Int32*`
+  (previously `Value_Int32*`) on 32-bit platforms when `UINTPTR_WIDTH` is not
+  defined (common in Emscripten).
+* Fix missing support for sized, signed integers in FFI.
+* Fix headers for numeric negation.
+* Prefix RefC Idris values with `Idris2_` to prevent name collisions with third
+  partly libraries.
 
 ### Library changes
 
 #### Base
 
+* Added `emptyBuffer` to `Data.Buffer`
 * Added `rtrim` to `Data.String`.
 * Added `decToMaybe`, `maybeCong` and `maybeCong2` to `Data.Maybe`.
 * Added `maybeEq` to `Decidable.Equality`.

@@ -35,7 +35,7 @@ _ == _ = False
 (/=) : Eq a => List a -> List a -> Bool
 x /= y = not (x == y)
 Main> (==) : Double -> Double -> Bool
-x == y = intToBool (prim__eq_Double x y)
+x == y = intToBool (x == y)
 
 (/=) : Double -> Double -> Bool
 x /= y = not (x == y)
