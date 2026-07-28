@@ -1,6 +1,6 @@
-package project
+package package
 -- version =
--- authors =
+authors = "Tomáš"
 -- maintainers =
 -- license =
 -- brief =
@@ -16,7 +16,7 @@ package project
 -- depends =
 
 -- modules to install
-modules = A.A, A.AB, B.B, B.BA, Main
+-- modules =
 
 -- main file (i.e. file to load at REPL)
 -- main =
@@ -24,7 +24,7 @@ modules = A.A, A.AB, B.B, B.BA, Main
 -- name of executable
 -- executable =
 -- opts =
-sourcedir = "src/"
+-- sourcedir =
 -- datadir =
 -- builddir =
 -- outputdir =

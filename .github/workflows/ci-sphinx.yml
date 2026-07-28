@@ -20,6 +20,7 @@ jobs:
       uses: actions/checkout@v4
     - name: Build docs
       run: |
+        sudo apt-get update
         sudo apt-get install -y python3-sphinx
         pip3 install -r docs/requirements.txt
         cd docs

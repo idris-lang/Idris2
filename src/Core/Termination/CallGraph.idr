@@ -194,7 +194,7 @@ mutual
      = if !(sizeCompareTyCon fuel s t) then pure Same
        else if !(sizeCompareCon fuel s t)
           then pure Smaller
-          else knownOr (sizeCompareApp fuel s t) (pure $ if sizeEq s t then Same else Unknown)
+          else sizeCompareApp fuel s t
 
   sizeCompareProdConArgs : {auto defs : Defs} -> Nat -> List (Term vars) -> List (Term vars) -> Core SizeChange
   sizeCompareProdConArgs _ [] [] = pure Same
@@ -238,8 +238,16 @@ mutual
           Unknown => sizeCompareConArgs fuel s ts
           _ => pure True
 
-  sizeCompareApp fuel (App _ f _) t = sizeCompare fuel f t
-  sizeCompareApp _ _ t = pure Unknown
+  sizeCompareApp fuel f t =
+    let (f,args) = getFnArgs f
+        (t,args') = getFnArgs t
+    in if sizeEq f t then checkArgs args args' else pure Unknown
+    where
+      checkArgs : List (Term vars) -> List (Term vars) -> Core SizeChange
+      checkArgs Nil Nil = pure Same
+      checkArgs (s :: ss) Nil = pure Same
+      checkArgs (s :: ss) (t :: ts) = if sizeEq s t then checkArgs ss ts else pure Unknown
+      checkArgs _ (t :: ts) = pure Unknown
 
   sizeCompareAsserted : {auto defs : Defs} -> Nat -> Maybe (Term vars) -> Term vars -> Core SizeChange
   sizeCompareAsserted fuel (Just s) t
