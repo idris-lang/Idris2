@@ -324,7 +324,7 @@ parseInteger s = parseIntTrimmed (trim s)
 export -- it's a bit too slow at compile time
 covering
 parseDouble : String -> Maybe Double
-parseDouble = mkDouble . wfe . trim
+parseDouble = mkDouble . swfe . trim
   where
     intPow : Integer -> Integer -> Double
     intPow base exp = assert_total $ if exp > 0 then (num base exp) else 1 / (num base exp)
@@ -339,10 +339,11 @@ parseDouble = mkDouble . wfe . trim
     natpow x Z = 1
     natpow x (S n) = x * (natpow x n)
 
-    mkDouble : Maybe (Double, Double, Integer) -> Maybe Double
-    mkDouble (Just (w, f, e)) = let ex = intPow 10 e in
-                                Just $ (w * ex + f * ex)
+    mkDouble : Maybe (Double, Double, Double, Integer) -> Maybe Double
+    mkDouble (Just (s, w, f, e)) = let ex = intPow 10 e in
+                                Just $ s * (w * ex + f * ex)
     mkDouble Nothing = Nothing
+
 
     wfe : String -> Maybe (Double, Double, Integer)
     wfe cs = case split (== '.') cs of
@@ -350,12 +351,12 @@ parseDouble = mkDouble . wfe . trim
                  case split (\c => c == 'e' || c == 'E') wholeAndExp of
                    (whole:::exp::[]) =>
                      do
-                       w <- cast {from=Integer} <$> parseInteger whole
+                       w <- cast {from=Integer} <$> parsePositive whole
                        e <- parseInteger exp
                        pure (w, 0, e)
                    (whole:::[]) =>
                      do
-                       w <- cast {from=Integer} <$> parseInteger whole
+                       w <- cast {from=Integer} <$> parsePositive whole
                        pure (w, 0, 0)
                    _ => Nothing
                (whole:::fracAndExp::[]) =>
@@ -363,19 +364,25 @@ parseDouble = mkDouble . wfe . trim
                    ("":::exp::[]) => Nothing
                    (frac:::exp::[]) =>
                      do
-                       w <- cast {from=Integer} <$> parseInteger whole
+                       w <- cast {from=Integer} <$> parsePositive whole
                        f <- (/ (natpow 10 (length frac))) <$>
                             (cast <$> parseNumWithoutSign (unpack frac) 0)
                        e <- parseInteger exp
                        pure (w, if w < 0 then (-f) else f, e)
                    (frac:::[]) =>
                      do
-                       w <- cast {from=Integer} <$> parseInteger whole
+                       w <- cast {from=Integer} <$> parsePositive whole
                        f <- (/ (natpow 10 (length frac))) <$>
                             (cast <$> parseNumWithoutSign (unpack frac) 0)
                        pure (w, if w < 0 then (-f) else f, 0)
                    _ => Nothing
                _ => Nothing
+
+    -- sign, whole, fractional, exponent
+    swfe : String -> Maybe (Double, Double, Double, Integer)
+    swfe cs = if isPrefixOf "-" cs
+             then (-1.0, ) <$> wfe (assert_total $ strTail cs)
+             else ( 1.0, ) <$> wfe cs
 
 public export
 null : String -> Bool

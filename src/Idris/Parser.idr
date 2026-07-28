@@ -1435,8 +1435,7 @@ onoff
 extension : Rule LangExt
 extension
     = (exactIdent "ElabReflection" $> ElabReflection)
-  <|> (exactIdent "Borrowing" $> Borrowing)
-  <|> fail "expected either 'ElabReflection' or 'Borrowing'"
+  <|> fail "expected 'ElabReflection'"
 
 logLevel : OriginDesc -> Rule (Maybe LogLevel)
 logLevel fname

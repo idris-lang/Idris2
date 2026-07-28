@@ -27,6 +27,10 @@ import System.Info
 
 %default covering
 
+||| Tag to indicate if the compiler needs to stop execution immediately
+public export
+data ControlFlow = Continue | Abort
+
 ||| Generic interface to some code generator
 public export
 record Codegen where
