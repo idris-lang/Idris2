@@ -123,3 +123,4 @@ should target this file (`CHANGELOG_NEXT`).
 * Added `decToMaybe`, `maybeCong` and `maybeCong2` to `Data.Maybe`.
 * Added `maybeEq` to `Decidable.Equality`.
 * Removed `writeIORef1`, which unsafely allowed a linear value to become unrestricted.
+* Made `xs` and `ys` explicit arguments of `SplitRecPair` in `Data.Vect.Views`.

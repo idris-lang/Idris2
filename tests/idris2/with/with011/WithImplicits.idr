@@ -1,9 +1,11 @@
-import Data.Vect
-import Data.Vect.Views
+data Duo : List a -> Type where
+     MkDuo : {left, right : List a} ->
+             Duo (left ++ right)
 
-mergeSort : Ord a => {n : _} -> Vect n a -> Vect n a
-mergeSort input with (splitRec input)
-  mergeSort [] | SplitRecNil = []
-  mergeSort [x] | SplitRecOne = [x]
-  mergeSort (xs ++ ys) | (SplitRecPair {xs} {ys} xs_rec ys_rec) =
-    merge (mergeSort xs | xs_rec) (mergeSort ys | ys_rec)
+unconsView : (xs : List a) -> Duo xs
+unconsView []        = MkDuo {left = []} {right = []}
+unconsView (x :: xs) = MkDuo {left = [x]} {right = xs}
+
+getTail : (xs : List a) -> List a
+getTail xs with (unconsView xs)
+  getTail (left ++ right) | MkDuo {left} {right} = right
