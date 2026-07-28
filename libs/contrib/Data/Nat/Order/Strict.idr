@@ -8,7 +8,6 @@ import Decidable.Order.Strict
 
 public export
 Irreflexive Nat LT where
-  irreflexive {x = 0} _ impossible
   irreflexive {x = S _} (LTESucc prf) =
     irreflexive {rel = Nat.LT} prf
 

@@ -2,17 +2,16 @@ module Core.Core
 
 import Core.Context.Context
 import Core.Env
-import Core.TT
 import public Core.WithData
 
 import Data.List1
 import Data.SnocList
 import Data.Vect
 
+import Libraries.Data.List01
 import Libraries.Data.IMaybe
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
-import Libraries.Text.PrettyPrint.Prettyprinter.Doc
 import Libraries.Data.Tap
 import Libraries.Data.WithData
 
@@ -112,6 +111,10 @@ data Error : Type where
      BadDataConType : FC -> Name -> Name -> Error
      NotCovering : FC -> Name -> Covering -> Error
      NotTotal : FC -> Name -> PartialReason -> Error
+     ImpossibleCase : Error
+        -- ^ Not a true error.
+        -- Thrown deliberately to signal the coverage checker that a case is impossible
+        -- (e.g. pattern match against an empty type).
      LinearUsed : FC -> Nat -> Name -> Error
      LinearMisuse : FC -> Name -> RigCount -> RigCount -> Error
      BorrowPartial : {vars : _} ->
@@ -270,6 +273,8 @@ Show Error where
 
   show (NotTotal fc n r)
        = show fc ++ ":" ++ show n ++ " is not total"
+  show ImpossibleCase
+       = "Case is impossible (not an error)"
   show (LinearUsed fc count n)
       = show fc ++ ":There are " ++ show count ++ " uses of linear name " ++ show n
   show (LinearMisuse fc n exp ctx)
@@ -440,6 +445,7 @@ getErrorLoc (BadTypeConType loc _) = Just loc
 getErrorLoc (BadDataConType loc _ _) = Just loc
 getErrorLoc (NotCovering loc _ _) = Just loc
 getErrorLoc (NotTotal loc _ _) = Just loc
+getErrorLoc ImpossibleCase = Nothing
 getErrorLoc (LinearUsed loc _ _) = Just loc
 getErrorLoc (LinearMisuse loc _ _ _) = Just loc
 getErrorLoc (BorrowPartial loc _ _ _) = Just loc
@@ -531,6 +537,7 @@ killErrorLoc (InvisibleName fc x y) = InvisibleName emptyFC x y
 killErrorLoc (BadTypeConType fc x) = BadTypeConType emptyFC x
 killErrorLoc (BadDataConType fc x y) = BadDataConType emptyFC x y
 killErrorLoc (NotCovering fc x y) = NotCovering emptyFC x y
+killErrorLoc ImpossibleCase = ImpossibleCase
 killErrorLoc (NotTotal fc x y) = NotTotal emptyFC x y
 killErrorLoc (LinearUsed fc k x) = LinearUsed emptyFC k x
 killErrorLoc (LinearMisuse fc x y z) = LinearMisuse emptyFC x y z
@@ -809,6 +816,11 @@ traverseVect : (a -> Core b) -> Vect n a -> Core (Vect n b)
 traverseVect f [] = pure []
 traverseVect f (x :: xs) = [| f x :: traverseVect f xs |]
 
+export
+traverseList01 : (a -> Core b) -> List01 ne a -> Core (List01 ne b)
+traverseList01 f [] = pure []
+traverseList01 f (x :: xs) = [| f x :: traverseList01 f xs |]
+
 %inline
 export
 traverseOpt : (a -> Core b) -> Maybe a -> Core (Maybe b)
@@ -832,15 +844,10 @@ namespace List
   for_ : List a -> (a -> Core ()) -> Core ()
   for_ = flip traverse_
 
-  %inline
   export
   sequence : List (Core a) -> Core (List a)
-  sequence (x :: xs)
-     = do
-          x' <- x
-          xs' <- sequence xs
-          pure (x' :: xs')
   sequence [] = pure []
+  sequence (x :: xs) = [| x :: sequence xs |]
 
 -- TODO put in namespace `List1`
 export

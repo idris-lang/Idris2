@@ -3,7 +3,6 @@ module Libraries.Text.PrettyPrint.Prettyprinter.Doc
 import Data.List
 import public Data.List1
 import Data.Maybe
-import Data.SnocList
 import Data.String
 import public Libraries.Data.Span
 import Libraries.Data.String.Extra
@@ -138,6 +137,8 @@ export infixr 6 <++>
 ||| Concatenates two documents with a space in between.
 export
 (<++>) : Doc ann -> Doc ann -> Doc ann
+Empty <++> y = y
+x <++> Empty = x
 x <++> y = x <+> Chara ' ' <+> y
 
 ||| The empty document behaves like `pretty ""`, so it has a height of 1.

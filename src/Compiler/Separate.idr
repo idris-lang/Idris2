@@ -7,8 +7,8 @@ import public Core.CompileExpr
 import public Compiler.LambdaLift
 import public Compiler.VMCode
 import public Libraries.Data.Graph
-import public Libraries.Data.SortedMap
-import public Libraries.Data.SortedSet
+import public Data.SortedMap
+import public Data.SortedSet
 import public Libraries.Data.StringMap
 
 import Core.Hash

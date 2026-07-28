@@ -1,9 +1,6 @@
 module Idris.Error
 
-import Core.Core
-import Core.Context
 import Core.Env
-import Core.Options
 
 import Idris.Doc.String
 import Idris.REPL.Opts
@@ -11,16 +8,12 @@ import Idris.Resugar
 import Idris.Syntax
 import Idris.Pretty
 
-import Parser.Source
-
 import Data.List
 import Data.Either
 import Data.List1
 import Data.String
 
 import Libraries.Data.List.Extra
-import Libraries.Data.List1 as Lib
-import Libraries.Data.String.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter.Util
 
 import System.File
@@ -288,7 +281,7 @@ pwarningRaw (IncompatibleVisibility fc vx vy n)
 pwarningRaw (ShadowingLocalBindings fc ns)
     = pure $ vcat
     [ reflow "You may be unintentionally shadowing the following local bindings:"
-    , indent 2 $ hcat $ pretty0 . fst <$> (forget ns)
+    , indent 2 $ concatWith (surround (comma <+> space)) $ map (code . pretty0 . fst) $ forget ns
     , !(ploc fc)
     ]
 
@@ -403,6 +396,8 @@ perrorRaw (NotCovering fc n (NonCoveringCall ns))
 perrorRaw (NotTotal fc n r)
     = pure $ errorDesc (code (pretty0 !(prettyName n)) <++> reflow "is not total," <++> pretty0 r)
         <+> line <+> !(ploc fc)
+perrorRaw ImpossibleCase
+    = pure $ errorDesc (reflow "<ImpossibleCase: this should never be displayed>")
 perrorRaw (LinearUsed fc count n)
     = pure $ errorDesc (reflow "There are" <++> byShow count <++> reflow "uses of linear name"
         <++> code (pretty0 (sugarName n)) <+> dot)
@@ -634,7 +629,7 @@ perrorRaw (OperatorBindingMismatch fc {print=p} expected actual opName rhs candi
        <+> line <+> !(ploc fc)
        <+> "Explanation: regular, typebind and autobind operators all use a slightly different"
        <++> "syntax, typebind looks like this: '(name : type)" <++> infixOpName
-       <++> "expr', autobind looks like this: '(name := expr)" <++> infixOpName
+       <++> "expr', autobind looks like this: '(name <- expr)" <++> infixOpName
        <++> "expr'."
        <+> line <+> line
        <+> "Possible solutions:" <+> line
@@ -677,7 +672,7 @@ perrorRaw (OperatorBindingMismatch fc {print=p} expected actual opName rhs candi
                     NotBinding =>
                        printE actual.getLhs <++> infixOpName <++> printE rhs
                     Autobind =>
-                       parens (maybe "_" printE actual.getBoundPat <++> ":="
+                       parens (maybe "_" printE actual.getBoundPat <++> "<-"
                                <++> printE actual.getLhs)
                        <++> infixOpName <++> printE rhs
                     Typebind =>
@@ -788,7 +783,7 @@ perrorRaw (InRHS fc n err)
 
 perrorRaw (MaybeMisspelling err ns) = pure $ !(perrorRaw err) <+> case ns of
   (n ::: []) => reflow "Did you mean:" <++> code (pretty0 n) <+> "?"
-  _ => let (xs, x) = Lib.unsnoc ns in
+  _ => let (xs, x) = unsnoc ns in
        reflow "Did you mean any of:"
        <++> concatWith (surround (comma <+> space)) (map (code . pretty0) xs)
        <+> comma <++> "or" <++> code (pretty0 x) <+> "?"

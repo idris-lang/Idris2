@@ -5,7 +5,6 @@ import Libraries.Data.String.Extra
 import Data.List
 import Core.FC
 import Core.Name.Namespace
-import Data.Maybe
 
 %default total
 
@@ -74,6 +73,7 @@ namespace Package
             executable
             options
             sourcedir
+            datadir
             builddir
             outputdir
             prebuild
@@ -97,6 +97,7 @@ namespace Package
           , "executable"  ~~= executable
           , "opts"        ~~= snd <$> options
           , "sourcedir"   ~~= sourcedir
+          , "datadir"     ~~= datadir
           , "builddir"    ~~= builddir
           , "outputdir"   ~~= outputdir
           , "prebuild"    ~~= snd <$> prebuild

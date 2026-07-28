@@ -4,14 +4,12 @@ module Core.SchemeEval
 -- Drops back to the default slow evaluator if scheme isn't available
 
 import Core.Context
-import Core.Core
 import Core.Env
 import Core.Normalise
 import public Core.SchemeEval.Compile
 import public Core.SchemeEval.Evaluate
 import public Core.SchemeEval.Quote
 import public Core.SchemeEval.ToScheme
-import Core.TT
 
 {-
 

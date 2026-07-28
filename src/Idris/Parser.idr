@@ -1,6 +1,5 @@
 module Idris.Parser
 
-import Core.Options
 import Core.Metadata
 import Idris.Syntax
 import Idris.Syntax.Traversals
@@ -10,13 +9,10 @@ import TTImp.TTImp
 import public Libraries.Text.Parser
 import Data.Either
 import Libraries.Data.IMaybe
-import Data.List
 import Data.List.Quantifiers
 import Data.List1
 import Data.Maybe
-import Data.So
 import Data.Nat
-import Data.SnocList
 import Data.String
 import Libraries.Utils.String
 import Libraries.Data.WithDefault
@@ -327,15 +323,15 @@ mutual
         pure (map (\ n => (boundToFC fname n, n.val)) $ forget ns)
 
   -- The different kinds of operator bindings `x : ty` for typebind
-  -- x := e and x : ty := e for autobind
+  -- x <- e and x : ty <- e for autobind
   opBinderTypes : OriginDesc -> IndentInfo -> WithBounds PTerm -> Rule (OperatorLHSInfo PTerm)
   opBinderTypes fname indents boundName =
            do decoratedSymbol fname ":"
               ty <- typeExpr pdef fname indents
-              decoratedSymbol fname ":="
+              decoratedSymbol fname "<-"
               exp <- expr pdef fname indents
               pure (BindExplicitType boundName.val ty exp)
-       <|> do decoratedSymbol fname ":="
+       <|> do decoratedSymbol fname "<-"
               exp <- expr pdef fname indents
               pure (BindExpr boundName.val exp)
        <|> do decoratedSymbol fname ":"
@@ -1070,7 +1066,7 @@ mutual
      <|> opExpr q fname indents
 
   interpBlock : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
-  interpBlock q fname idents = interpBegin *> (mustWork $ expr q fname idents) <* interpEnd
+  interpBlock q fname idents = interpBegin *> (mustWork $ expr q fname idents <* interpEnd)
 
   export
   singlelineStr : ParseOpts -> OriginDesc -> IndentInfo -> Rule PTerm
@@ -1437,8 +1433,7 @@ onoff
 extension : Rule LangExt
 extension
     = (exactIdent "ElabReflection" $> ElabReflection)
-  <|> (exactIdent "Borrowing" $> Borrowing)
-  <|> fail "expected either 'ElabReflection' or 'Borrowing'"
+  <|> fail "expected 'ElabReflection'"
 
 logLevel : OriginDesc -> Rule (Maybe LogLevel)
 logLevel fname

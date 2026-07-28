@@ -8,7 +8,6 @@ import Idris.Pretty
 
 import Core.Options
 
-import Data.List
 import Data.Maybe
 import Data.String
 import Data.Either

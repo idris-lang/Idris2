@@ -4,7 +4,7 @@ Error: Operator -:- is non-associative
 Test:13:8--13:22
  09 | (:-:) : a -> List a -> List a
  10 | (:-:) = (::)
- 11 | 
+ 11 |
  12 | test : List Nat
  13 | test = 4 -:- 3 :-: []
              ^^^^^^^^^^^^^^
@@ -17,7 +17,7 @@ Error: Operator :-: is non-associative
 Test:16:9--16:23
  12 | test : List Nat
  13 | test = 4 -:- 3 :-: []
- 14 | 
+ 14 |
  15 | test2 : List Nat
  16 | test2 = 4 :-: 3 -:- []
               ^^^^^^^^^^^^^^

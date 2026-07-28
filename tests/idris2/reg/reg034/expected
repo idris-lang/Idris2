@@ -2,7 +2,7 @@
 Error: While processing left hand side of Calc. Can't match on ?y [no locals in scope] (Non linear pattern variable).
 
 void:18:19--18:20
- 14 | 
+ 14 |
  15 | public export
  16 | Calc : {x : a} -> {y : b} -> FastDerivation x y -> x = y
  17 | Calc (|~ x) = Refl

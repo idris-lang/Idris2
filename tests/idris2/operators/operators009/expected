@@ -5,7 +5,7 @@ To expose it outside of its module, write 'export infixr 0 =@'. If you
 intend to keep it private, write 'private infixr 0 =@'.
 
 Test:2:1--2:12
- 1 | 
+ 1 |
  2 | infixr 0 =@
      ^^^^^^^^^^^
 

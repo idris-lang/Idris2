@@ -8,15 +8,10 @@ import Compiler.ES.Codegen
 
 import Compiler.Common
 
-import Core.Context
-import Core.Options
-import Core.TT
 import Libraries.Utils.Path
 
 import System
 import System.File.Permissions
-
-import Data.Maybe
 
 %default covering
 

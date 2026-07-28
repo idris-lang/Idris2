@@ -4,12 +4,8 @@ import public Core.Normalise.Convert
 import public Core.Normalise.Eval
 import public Core.Normalise.Quote
 
-import Core.Context
 import Core.Context.Log
-import Core.Core
 import Core.Env
-import Core.Options
-import Core.TT
 import Core.Value
 
 %default covering
@@ -200,8 +196,8 @@ export
 logGlue : {vars : _} ->
           {auto c : Ref Ctxt Defs} ->
           LogTopic ->
-          Nat -> Lazy String -> Env Term vars -> Glued vars -> Core ()
-logGlue s n msg env gtm
+          Nat -> Lazy String -> Glued vars -> Core ()
+logGlue s n msg gtm
     = when !(logging s n) $
         do defs <- get Ctxt
            tm <- getTerm gtm

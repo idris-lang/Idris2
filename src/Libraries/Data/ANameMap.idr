@@ -3,7 +3,6 @@ module Libraries.Data.ANameMap
 
 import Core.Name
 
-import Data.List
 import Libraries.Data.NameMap
 import Libraries.Data.UserNameMap
 

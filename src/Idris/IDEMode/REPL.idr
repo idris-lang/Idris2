@@ -1,9 +1,7 @@
 module Idris.IDEMode.REPL
 
-import Core.Context
 import Core.Directory
 import Core.Metadata
-import Core.Options
 import Core.Unify
 
 import Idris.Error
@@ -24,7 +22,6 @@ import Idris.IDEMode.Pretty
 import Protocol.Hex
 import Libraries.Utils.Path
 
-import Data.List
 import Data.String
 import System
 import System.File
@@ -139,6 +136,7 @@ process : {auto c : Ref Ctxt Defs} ->
           {auto s : Ref Syn SyntaxInfo} ->
           {auto m : Ref MD Metadata} ->
           {auto o : Ref ROpts REPLOpts} ->
+          {auto _ : Ref PostS PostSession} ->
           IDECommand -> Core IDEResult
 process (Interpret cmd)
     = replWrap $ interpret cmd
@@ -247,6 +245,7 @@ processCatch : {auto c : Ref Ctxt Defs} ->
                {auto s : Ref Syn SyntaxInfo} ->
                {auto m : Ref MD Metadata} ->
                {auto o : Ref ROpts REPLOpts} ->
+               {auto p : Ref PostS PostSession} ->
                IDECommand -> Core IDEResult
 processCatch cmd
     = do c' <- branch
@@ -464,6 +463,7 @@ loop : {auto c : Ref Ctxt Defs} ->
        {auto s : Ref Syn SyntaxInfo} ->
        {auto m : Ref MD Metadata} ->
        {auto o : Ref ROpts REPLOpts} ->
+       {auto p : Ref PostS PostSession} ->
        Core ()
 loop
     = do res <- getOutput
@@ -501,6 +501,7 @@ replIDE : {auto c : Ref Ctxt Defs} ->
           {auto s : Ref Syn SyntaxInfo} ->
           {auto m : Ref MD Metadata} ->
           {auto o : Ref ROpts REPLOpts} ->
+          {auto p : Ref PostS PostSession} ->
           Core ()
 replIDE
     = do res <- getOutput

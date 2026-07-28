@@ -7,7 +7,7 @@ You may be unintentionally shadowing the associated global definitions:
 DataStore:23:6--23:42
  19 | setSchema : DataStore 0 -> Schema -> DataStore 0
  20 | setSchema (MkData schema []) schema' = MkData schema' []
- 21 | 
+ 21 |
  22 | data Command : Schema -> Type where
  23 |      SetSchema : Schema -> Command schema
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -18,7 +18,7 @@ You may be unintentionally shadowing the associated global definitions:
 
 DataStore:24:6--24:47
  20 | setSchema (MkData schema []) schema' = MkData schema' []
- 21 | 
+ 21 |
  22 | data Command : Schema -> Type where
  23 |      SetSchema : Schema -> Command schema
  24 |      Add : SchemaType schema -> Command schema
@@ -29,7 +29,7 @@ You may be unintentionally shadowing the associated global definitions:
   schema is shadowing Main.DataStore.schema
 
 DataStore:25:6--25:37
- 21 | 
+ 21 |
  22 | data Command : Schema -> Type where
  23 |      SetSchema : Schema -> Command schema
  24 |      Add : SchemaType schema -> Command schema

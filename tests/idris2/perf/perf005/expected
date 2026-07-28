@@ -20,7 +20,7 @@ Error: Couldn't parse any alternatives:
 
 Bad1:3:20--3:21
  1 | module Bad1
- 2 | 
+ 2 |
  3 | data Bad = BadDCon (x : Nat)
                         ^
 ... (2 others)
@@ -29,7 +29,7 @@ Error: Cannot return a named argument.
 
 Bad2:3:13--3:29
  1 | module Bad2
- 2 | 
+ 2 |
  3 | badReturn : (whatever : Int)
                  ^^^^^^^^^^^^^^^^
 
@@ -38,7 +38,7 @@ Error: Couldn't parse declaration.
 
 Bad3:4:1--4:8
  1 | module Bad3
- 2 | 
+ 2 |
  3 | badExpr : ()
  4 | badExpr (whatever : ())
      ^^^^^^^

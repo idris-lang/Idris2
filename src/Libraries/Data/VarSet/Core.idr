@@ -4,7 +4,6 @@ import Data.Bits
 
 import Libraries.Data.NatSet
 
-import Core.Name
 import Core.Name.Scoped
 import Core.TT.Var
 

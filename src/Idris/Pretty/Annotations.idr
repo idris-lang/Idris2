@@ -5,9 +5,6 @@ import Data.String
 import Core.Name
 import Libraries.Text.PrettyPrint.Prettyprinter
 
-
-import Libraries.Data.String.Extra -- otherwise bootstrapping complains
-
 %default total
 
 public export

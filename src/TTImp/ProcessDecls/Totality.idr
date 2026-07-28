@@ -1,6 +1,5 @@
 module TTImp.ProcessDecls.Totality
 
-import Core.Context
 import Core.Context.Log
 import Core.Termination
 

@@ -1,6 +1,5 @@
 module Core.Termination.References
 
-import Core.Context
 import Core.Context.Log
 
 import Libraries.Data.NameMap

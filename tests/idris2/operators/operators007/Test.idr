@@ -7,4 +7,4 @@ private autobind infixr 0 >>
 (>>) = (>>=)
 
 both : Maybe (Nat, Nat) -> Maybe Nat
-both m = (MkPair x y := m) >>= Just (x + y)
+both m = (MkPair x y <- m) >>= Just (x + y)

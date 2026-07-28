@@ -24,7 +24,7 @@ BSTree:6:1--6:44
  2 |      Empty : Ord elem => BSTree elem
  3 |      Node : Ord elem => (left : BSTree elem) -> (val : elem) ->
  4 |                         (right : BSTree elem) -> BSTree elem
- 5 | 
+ 5 |
  6 | insert : elem -> BSTree elem -> BSTree elem
      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -58,9 +58,9 @@ You may be unintentionally shadowing the associated global definitions:
 
 Tree:6:1--6:52
  2 |                | Node (Tree elem) elem (Tree elem)
- 3 | 
+ 3 |
  4 | %name Tree tree, tree1
- 5 | 
+ 5 |
  6 | insert : Ord elem => elem -> Tree elem -> Tree elem
      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -72,9 +72,9 @@ You may be unintentionally shadowing the associated global definitions:
 
 Vect:7:1--7:57
  3 |      (::) : (x : a) -> (xs : Vect k a) -> Vect (S k) a
- 4 | 
+ 4 |
  5 | %name Vect xs, ys, zs
- 6 | 
+ 6 |
  7 | append : Vect n elem -> Vect m elem -> Vect (n + m) elem
      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

@@ -16,10 +16,10 @@ quote:25:19--25:22
 Error: %language ElabReflection not enabled
 
 quote:33:1--33:21
- 29 | 
+ 29 |
  30 | noExtension : Elab ()
  31 | noExtension = fail "Should not print this message"
- 32 | 
+ 32 |
  33 | %runElab noExtension
       ^^^^^^^^^^^^^^^^^^^^
 
@@ -27,9 +27,9 @@ Error: Error during reflection: Should not print this message
 
 quote:37:1--37:21
  33 | %runElab noExtension
- 34 | 
+ 34 |
  35 | %language ElabReflection
- 36 | 
+ 36 |
  37 | %runElab noExtension
       ^^^^^^^^^^^^^^^^^^^^
 

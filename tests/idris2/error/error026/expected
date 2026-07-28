@@ -7,7 +7,7 @@ Mismatch between: Maybe Int and Either ?_ ?_.
 
 DoBlockFC:6:3--6:10
  2 | bar : Maybe Int
- 3 | 
+ 3 |
  4 | foo : Either String Int
  5 | foo = do
  6 |   Right n <- pure bar | _ => Left "fail"

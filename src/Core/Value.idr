@@ -1,9 +1,7 @@
 module Core.Value
 
 import Core.Context
-import Core.Core
 import Core.Env
-import Core.TT
 
 import Data.List.Quantifiers
 
@@ -27,19 +25,55 @@ record EvalOpts where
 
 export
 defaultOpts : EvalOpts
-defaultOpts = MkEvalOpts False False True False False Nothing [] CBN
+defaultOpts = MkEvalOpts
+    { holesOnly = False
+    , argHolesOnly = False
+    , removeAs = True
+    , evalAll = False
+    , tcInline = False
+    , fuel = Nothing
+    , reduceLimit = []
+    , strategy = CBN
+    }
 
 export
 withHoles : EvalOpts
-withHoles = MkEvalOpts True True False False False Nothing [] CBN
+withHoles = MkEvalOpts
+    { holesOnly = True
+    , argHolesOnly = True
+    , removeAs = False
+    , evalAll = False
+    , tcInline = False
+    , fuel = Nothing
+    , reduceLimit = []
+    , strategy = CBN
+    }
 
 export
 withAll : EvalOpts
-withAll = MkEvalOpts False False True True False Nothing [] CBN
+withAll = MkEvalOpts
+    { holesOnly = False
+    , argHolesOnly = False
+    , removeAs = True
+    , evalAll = True
+    , tcInline = False
+    , fuel = Nothing
+    , reduceLimit = []
+    , strategy = CBN
+    }
 
 export
 withArgHoles : EvalOpts
-withArgHoles = MkEvalOpts False True False False False Nothing [] CBN
+withArgHoles = MkEvalOpts
+    { holesOnly = False
+    , argHolesOnly = True
+    , removeAs = False
+    , evalAll = False
+    , tcInline = False
+    , fuel = Nothing
+    , reduceLimit = []
+    , strategy = CBN
+    }
 
 export
 tcOnly : EvalOpts
@@ -210,10 +244,10 @@ covering
   show (NBind _ x (PVTy _ c ty) _)
     = "pty " ++ showCount c ++ show x ++ " : " ++ show ty ++
       " => [closure]"
-  show (NApp _ hd args) = show hd ++ " [" ++ show (length args) ++ " closures]"
-  show (NDCon _ n _ _ args) = show n ++ " [" ++ show (length args) ++ " closures]"
-  show (NTCon _ n _ args) = show n ++ " [" ++ show (length args) ++ " closures]"
-  show (NAs _ _ n tm) = show n ++ "@" ++ show tm
+  show (NApp _ hd args) = "%NApp " ++ show hd ++ " [" ++ show (length args) ++ " closures]"
+  show (NDCon _ n _ _ args) = "%NDCon " ++ show n ++ " [" ++ show (length args) ++ " closures]"
+  show (NTCon _ n _ args) = "%NTCon " ++ show n ++ " [" ++ show (length args) ++ " closures]"
+  show (NAs _ _ n tm) = "%NAs " ++ show n ++ "@" ++ show tm
   show (NDelayed _ _ tm) = "%Delayed " ++ show tm
   show (NDelay {}) = "%Delay [closure]"
   show (NForce _ _ tm args) = "%Force " ++ show tm ++ " [" ++ show (length args) ++ " closures]"

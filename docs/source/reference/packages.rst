@@ -13,9 +13,12 @@ Package Descriptions
 
 A package description includes the following:
 
-+ A header, consisting of the keyword ``package`` followed by the package
-  name. Package names can be any valid Idris identifier. The iPKG
++ A header, consisting of the keyword ``package`` followed by the package name.
+  Package names are typically written in kebab-case (e.g. ``my-lib``,
+  ``idris2-json``), and may include hyphens (``-``). This is allowed even though
+  hyphens are not valid characters in ordinary Idris identifiers. The iPKG
   format also takes a quoted version that accepts any valid filename.
+
 + Fields describing package contents, ``<field> = <value>``
 
 Packages can describe libraries, executables, or both, and should include
@@ -166,6 +169,9 @@ If package versions are omitted in directory names, they are treated as the vers
 Support file install directories
 ================================
 
+**Note**: Package manager *Pack* uses a different directory structure for support files. See the
+Pack documentation for details.
+
 As noted above, packages can be installed globally or locally to be used as dependencies in
 other projects. In either case, there are two directories within a package's install root that
 Idris 2 treats specially when the package is depended upon by some other Idris package.
@@ -209,4 +215,3 @@ idris to look in any ``data`` directories it knows about for a ``js`` folder and
 ``my_lib.js`` within it. So, you can specify a post-install hook for your package that copies any
 needed support JS files into the ``pkgname-<version>/data/js`` folder to enable Idris to later build
 that support file into any JS executables that depend on your package.
-

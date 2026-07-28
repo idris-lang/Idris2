@@ -1,6 +1,5 @@
 module Compiler.RefC.CC
 
-import Core.Context
 import Core.Context.Log
 import Core.Options
 import Core.Directory

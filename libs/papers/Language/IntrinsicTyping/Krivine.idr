@@ -614,7 +614,6 @@ namespace Machine
           (trace (Element ctx (snd pctx)) sc (Element (arg :: env) (fst pctx, penv)) tr)
   trace (Element [] pctx) (Lam sc) env tr
     = case tr of
-        Beta {arg = Element _ _, ctx = Element _ _} _ impossible
         Done sc .(fst env) => rewrite irrelevantUnit pctx in Done
 
   public export

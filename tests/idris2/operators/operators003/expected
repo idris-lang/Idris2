@@ -3,7 +3,7 @@ Error: Invalid fixity, typebind operator must be infixr 0.
 
 Error1:3:10--3:21
  1 | module Error1
- 2 | 
+ 2 |
  3 | typebind infixl 0 =@
               ^^^^^^^^^^^
 
@@ -15,7 +15,7 @@ Error: Invalid fixity, typebind operator must be infixr 0.
 
 Error2:3:10--3:21
  1 | module Error2
- 2 | 
+ 2 |
  3 | typebind infixr 3 =@
               ^^^^^^^^^^^
 
@@ -27,7 +27,7 @@ Error: Invalid fixity, typebind operator must be infixr 0.
 
 Error3:3:10--3:21
  1 | module Error3
- 2 | 
+ 2 |
  3 | typebind infixl 3 =@
               ^^^^^^^^^^^
 

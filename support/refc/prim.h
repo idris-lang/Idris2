@@ -4,51 +4,71 @@
 
 // IORef
 
-Value *idris2_Data_IORef_prim__newIORef(Value *, Value *, Value *);
+Idris2_Value *idris2_Data_IORef_prim__newIORef(Idris2_Value *, Idris2_Value *,
+                                               Idris2_Value *);
 #define idris2_Data_IORef_prim__readIORef(erased, ioref, world)                \
-  (idris2_newReference(((Value_IORef *)ioref)->v))
+  (idris2_newReference(((Idris2_IORef *)ioref)->v))
 
-Value *idris2_Data_IORef_prim__writeIORef(Value *, Value *, Value *, Value *);
+Idris2_Value *idris2_Data_IORef_prim__writeIORef(Idris2_Value *, Idris2_Value *,
+                                                 Idris2_Value *,
+                                                 Idris2_Value *);
 
 // Sys
 
-extern Value_String const idris2_predefined_osstring;
-extern Value_String const idris2_predefined_codegenstring;
-#define idris2_System_Info_prim__os() ((Value *)&idris2_predefined_osstring)
+extern Idris2_String const idris2_predefined_osstring;
+extern Idris2_String const idris2_predefined_codegenstring;
+#define idris2_System_Info_prim__os()                                          \
+  ((Idris2_Value *)&idris2_predefined_osstring)
 #define idris2_System_Info_prim__codegen()                                     \
-  ((Value *)&idris2_predefined_codegenstring)
-Value *idris2_crash(Value *msg);
+  ((Idris2_Value *)&idris2_predefined_codegenstring)
+Idris2_Value *idris2_crash(Idris2_Value *msg);
 
 // Array
 
-Value *idris2_Data_IOArray_Prims_prim__newArray(Value *, Value *, Value *,
-                                                Value *);
+Idris2_Value *idris2_Data_IOArray_Prims_prim__newArray(Idris2_Value *,
+                                                       Idris2_Value *,
+                                                       Idris2_Value *,
+                                                       Idris2_Value *);
 #define idris2_Data_IOArray_Prims_prim__arrayGet(rased, array, i, word)        \
-  (idris2_newReference(((Value_Array *)(array))->arr[idris2_vp_to_Int64(i)]))
-Value *idris2_Data_IOArray_Prims_prim__arraySet(Value *, Value *, Value *,
-                                                Value *, Value *);
+  (idris2_newReference(((Idris2_Array *)(array))->arr[idris2_vp_to_Int64(i)]))
+Idris2_Value *idris2_Data_IOArray_Prims_prim__arraySet(Idris2_Value *,
+                                                       Idris2_Value *,
+                                                       Idris2_Value *,
+                                                       Idris2_Value *,
+                                                       Idris2_Value *);
 
 // Pointer
-Value *idris2_Prelude_IO_prim__onCollect(Value *, Value *, Value *, Value *);
-Value *idris2_Prelude_IO_prim__onCollectAny(Value *, Value *, Value *);
+Idris2_Value *idris2_Prelude_IO_prim__onCollect(Idris2_Value *, Idris2_Value *,
+                                                Idris2_Value *, Idris2_Value *);
+Idris2_Value *idris2_Prelude_IO_prim__onCollectAny(Idris2_Value *,
+                                                   Idris2_Value *,
+                                                   Idris2_Value *);
 
 // Threads
-Value *System_Concurrency_Raw_prim__mutexRelease(Value *, Value *);
+Idris2_Value *System_Concurrency_Raw_prim__mutexRelease(Idris2_Value *,
+                                                        Idris2_Value *);
 
-Value *System_Concurrency_Raw_prim__mutexAcquire(Value *, Value *);
+Idris2_Value *System_Concurrency_Raw_prim__mutexAcquire(Idris2_Value *,
+                                                        Idris2_Value *);
 
-Value *System_Concurrency_Raw_prim__makeMutex(Value *);
+Idris2_Value *System_Concurrency_Raw_prim__makeMutex(Idris2_Value *);
 
-Value *System_Concurrency_Raw_prim__makeCondition(Value *);
+Idris2_Value *System_Concurrency_Raw_prim__makeCondition(Idris2_Value *);
 
-Value *System_Concurrency_Raw_prim__conditionWait(Value *, Value *, Value *);
+Idris2_Value *System_Concurrency_Raw_prim__conditionWait(Idris2_Value *,
+                                                         Idris2_Value *,
+                                                         Idris2_Value *);
 
-Value *System_Concurrency_Raw_prim__conditionWaitTimeout(Value *, Value *,
-                                                         Value *, Value *);
+Idris2_Value *System_Concurrency_Raw_prim__conditionWaitTimeout(Idris2_Value *,
+                                                                Idris2_Value *,
+                                                                Idris2_Value *,
+                                                                Idris2_Value *);
 
-Value *System_Concurrency_Raw_prim__conditionSignal(Value *, Value *);
+Idris2_Value *System_Concurrency_Raw_prim__conditionSignal(Idris2_Value *,
+                                                           Idris2_Value *);
 
-Value *System_Concurrency_Raw_prim__conditionBroadcast(Value *, Value *);
+Idris2_Value *System_Concurrency_Raw_prim__conditionBroadcast(Idris2_Value *,
+                                                              Idris2_Value *);
 
 extern char const idris2_constr_Int[];
 extern char const idris2_constr_Int8[];

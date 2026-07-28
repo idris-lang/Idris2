@@ -1,0 +1,4 @@
+. ../../testutils.sh
+
+idris2 --cg refc -o refc_cmp TestCmp.idr
+$VALGRIND ./build/exec/refc_cmp

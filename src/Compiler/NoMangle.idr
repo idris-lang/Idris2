@@ -1,9 +1,7 @@
 ||| Utilities for dealing with %nomangle functions
 module Compiler.NoMangle
 
-import Core.Core
 import Core.Context
-import Data.List
 import Libraries.Data.NameMap
 import Libraries.Data.NameMap.Traversable
 

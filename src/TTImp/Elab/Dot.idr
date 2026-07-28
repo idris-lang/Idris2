@@ -1,12 +1,8 @@
 module TTImp.Elab.Dot
 
-import Core.Context
-import Core.Core
 import Core.Env
 import Core.Metadata
-import Core.Normalise
-import Core.Unify
-import Core.TT
+import Core.UnifyState
 
 import Idris.REPL.Opts
 import Idris.Syntax

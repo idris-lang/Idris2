@@ -2,9 +2,7 @@ module Yaffle.Main
 
 import Compiler.Common
 import Core.Binary
-import Core.Context
 import Core.Directory
-import Core.FC
 import Core.InitPrimitives
 import Core.Metadata
 import Core.UnifyState

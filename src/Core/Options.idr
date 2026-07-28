@@ -1,7 +1,6 @@
 module Core.Options
 
 import Core.Core
-import Core.Name
 import public Core.Options.Log
 import Core.TT
 
@@ -134,6 +133,28 @@ record ElabDirectives where
   -- default: yes
   prefixRecordProjections : Bool
 
+||| Options relevant after running a typechecking session
+public export
+record PostSession where
+  constructor MkPostSession
+  checkOnly : Bool
+  outputFile : Maybe String
+  execExpr : List String
+  runRepl : Maybe String
+
+export
+defaultPost : PostSession
+defaultPost = MkPostSession
+  { checkOnly = False
+  , outputFile = Nothing
+  , execExpr = []
+  , runRepl = Nothing
+  }
+
+-- tag for PostSession
+export
+data PostS : Type where
+
 public export
 record Session where
   constructor MkSessionOpts
@@ -222,7 +243,21 @@ defaultDirs = MkDirs "." Nothing "build" "depends" Nothing
                      "/usr/local" ["."] [] [] [] []
 
 defaultPPrint : PPrinter
-defaultPPrint = MkPPOpts False False True False
+defaultPPrint = MkPPOpts
+    { showImplicits = False
+    , showMachineNames = False
+    , showFullEnv = True
+    , fullNamespace = False
+    }
+
+export
+docsPPrint : PPrinter
+docsPPrint = MkPPOpts
+    { showImplicits = False
+    , showMachineNames = True
+    , showFullEnv = False
+    , fullNamespace = False
+    }
 
 export
 defaultSession : Session

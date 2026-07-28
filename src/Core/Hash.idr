@@ -5,7 +5,6 @@ import Core.CompileExpr
 import Core.TT
 
 import Data.List1
-import Data.SnocList
 import Libraries.Data.String.Iterator
 import Data.Vect
 

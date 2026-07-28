@@ -5,35 +5,31 @@ import Compiler.ANF
 import Compiler.CompileExpr
 import Compiler.Inline
 import Compiler.LambdaLift
-import Compiler.NoMangle
 import Compiler.Opts.Constructor
 import Compiler.Opts.CSE
 import Compiler.VMCode
 
 import Core.Binary.Prims
-import Core.Context
-import Core.Context.Log
 import Core.Directory
-import Core.Options
-import Core.TT
 import Core.TTC
 
-import Data.List
-import Data.List1
+import Data.IOArray
 import Data.String as String
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
-import Libraries.Data.IOArray
 import Libraries.Data.WithDefault
 import Libraries.Utils.Scheme
 
 import Idris.Syntax
-import Idris.Env
 
-import System.Directory
+import System.File
 import System.Info
 
 %default covering
+
+||| Tag to indicate if the compiler needs to stop execution immediately
+public export
+data ControlFlow = Continue | Abort
 
 ||| Generic interface to some code generator
 public export
@@ -183,7 +179,7 @@ getAllDesc (n@(Resolved i) :: rest) arr defs
                  ignore $ addDef n def
                  let refs = refersToRuntime def
                  if multiplicity def /= erased
-                    then do coreLift $ writeArray arr i (i, bin)
+                    then do coreLift_ $ writeArray arr i (i, bin)
                             let refs = refersToRuntime def
                             refs' <- traverse toResolvedNames (keys refs)
                             getAllDesc (refs' ++ rest) arr defs

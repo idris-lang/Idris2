@@ -2,21 +2,16 @@ module Compiler.ES.Codegen
 
 import Compiler.Common
 import Core.CompileExpr
-import Core.Context
-import Core.Context.Log
 import Core.Directory
-import Core.Options
 import Core.Env
-import Core.Normalise
-import Data.List1
 import Data.String
+import Data.SortedMap
 import Compiler.ES.Ast
 import Compiler.ES.Doc
 import Compiler.ES.ToAst
 import Compiler.ES.TailRec
 import Compiler.ES.State
 import Compiler.NoMangle
-import Libraries.Data.SortedMap
 import Protocol.Hex
 import Libraries.Data.String.Extra
 

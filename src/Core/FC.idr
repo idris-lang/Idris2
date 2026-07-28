@@ -15,6 +15,7 @@ public export
 FilePos : Type
 FilePos = (Int, Int)
 
+export
 showPos : FilePos -> String
 showPos (l, c) = show (l + 1) ++ ":" ++ show (c + 1)
 

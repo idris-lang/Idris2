@@ -1,13 +1,8 @@
 module TTImp.Elab.Binders
 
-import Core.Context
-import Core.Context.Log
-import Core.Core
 import Core.Env
 import Core.Metadata
-import Core.Normalise
 import Core.Unify
-import Core.TT
 import Core.Value
 
 import Idris.REPL.Opts
@@ -16,6 +11,8 @@ import Idris.Syntax
 import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.TTImp
+
+import Libraries.Data.IntMap
 
 %default covering
 
@@ -121,7 +118,7 @@ inferLambda rig elabinfo nest env fc rigl info n argTy scope expTy
                                 check {e=e'} rig elabinfo
                                       nest' env' scope Nothing)
          let lamty = gnf env (Bind fc n (Pi fc rigb info' tyv) !(getTerm scopet))
-         logGlue "elab.binder" 5 "Inferred lambda type" env lamty
+         logGlue "elab.binder" 5 "Inferred lambda type" lamty
          maybe (pure ())
                (logGlueNF "elab.binder" 5 "Expected lambda type" env) expTy
          checkExp rig elabinfo env fc
@@ -137,6 +134,16 @@ getTyNF env x
          xnf <- nf defs env x
          empty <- clearDefs defs
          quote empty env xnf
+
+-- Given a constraint id and a dictionary of constraints return
+-- if the constrain is resolved. If the key cannot be found then
+-- we assume the constraint is new
+export
+isResolved : IntMap Constraint -> (constraintId : Int) ->  Bool
+isResolved constraints key
+  = case lookup key constraints of
+         Just Resolved => True
+         _ => False
 
 export
 checkLambda : {vars : _} ->
@@ -171,14 +178,17 @@ checkLambda rig_in elabinfo nest env fc rigl info n argTy scope (Just expty_in)
                     (tyv, tyt) <- check erased elabinfo nest env
                                         argTy (Just (gType fc u))
                     info' <- checkPiInfo rigl elabinfo nest env info (Just (gnf env tyv))
+                    let originalPiType = Bind fc bn (Pi fc' c info' pty) psc
                     let rigb = rigl `glb` c
                     let env' : Env Term (n :: _) = Lam fc rigb info' tyv :: env
-                    ignore $ convert fc elabinfo env (gnf env tyv) (gnf env pty)
+                    lambdaUnifyResult <- convert fc elabinfo env (gnf env tyv) (gnf env pty)
                     let nest' = weaken (dropName n nest)
+                    pscnf <- normaliseHoles defs env' $ compat psc
                     (scopev, scopet) <-
                        inScope fc env' (\e' =>
                           check {e=e'} rig elabinfo nest' env' scope
-                                (Just (gnf env' (compat psc))))
+                                (Just $ gnf env' pscnf))
+                    let elaboratedPiType = Bind fc n (Pi fc' rigb info' tyv) !(getTerm scopet)
                     logTermNF "elab.binder" 10 "Lambda type" env exptynf
                     logGlueNF "elab.binder" 10 "Got scope type" env' scopet
 
@@ -192,10 +202,18 @@ checkLambda rig_in elabinfo nest env fc rigl info n argTy scope (Just expty_in)
                     -- so we just need to check multiplicities
                     when (rigb /= c) $
                         throw (CantConvert fc (gamma defs) env
-                                  (Bind fc n (Pi fc' rigb info' tyv) !(getTerm scopet))
-                                  (Bind fc bn (Pi fc' c info' pty) psc))
-                    pure (Bind fc n (Lam fc' rigb info' tyv) scopev,
-                          gnf env (Bind fc n (Pi fc' rigb info' tyv) !(getTerm scopet)))
+                                  elaboratedPiType
+                                  originalPiType)
+                    let lamTerm = Bind fc n (Lam fc' rigb info' tyv) scopev
+                    let lamType = gnf env elaboratedPiType
+                    let lambdaConstraints = constraints lambdaUnifyResult
+                    -- check if elaborating the body solved the constraints we collected earlied
+                    allCs <- constraints <$> get UST
+                    let prunedConstraints = filter (not . isResolved allCs) lambdaConstraints
+                    if null prunedConstraints
+                       then pure (lamTerm, lamType)
+                       else do ctm <- newConstant fc rig env lamTerm lamTerm prunedConstraints
+                               pure (ctm, lamType)
               _ => inferLambda rig elabinfo nest env fc rigl info n argTy scope (Just expty_in)
 
 weakenExp : {x, vars : _} ->

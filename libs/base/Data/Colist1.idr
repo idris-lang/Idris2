@@ -54,7 +54,6 @@ repeat v = v ::: repeat v
 ||| Create a `Colist1` of `n` replications of the given element.
 public export
 replicate : (n : Nat) -> {auto 0 prf : IsSucc n} -> a -> Colist1 a
-replicate 0     _ impossible
 replicate (S k) x = x ::: replicate k x
 
 ||| Produce a `Colist1` by repeating a sequence
@@ -133,7 +132,6 @@ tail (_ ::: t) = t
 ||| Take up to `n` elements from a `Colist1`
 public export
 take : (n : Nat) -> {auto 0 prf : IsSucc n} -> Colist1 a -> List1 a
-take 0     _          impossible
 take (S k) (x ::: xs) = x ::: take k xs
 
 ||| Take elements from a `Colist1` up to and including the

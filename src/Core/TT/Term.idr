@@ -4,18 +4,14 @@ import Algebra
 
 import Core.FC
 
-import Core.Name
 import Core.Name.Scoped
-import Core.Name.CompatibleVars
 import Core.TT.Binder
 import Core.TT.Primitive
 import Core.TT.Var
 
 import Data.List
-import Data.SnocList
 
 import Libraries.Data.List.SizeOf
-import Libraries.Data.SnocList.SizeOf
 
 %default total
 
@@ -560,10 +556,3 @@ covering
       showApp f args = "(" ++ assert_total (show f) ++ " " ++
                         assert_total (showSep " " (map show args))
                      ++ ")"
-
-||| Obtain the telescope of names and their types
-export
-collectPiNames : Term vars -> List (Bool, Name)
-collectPiNames (Bind _ nm (Pi _ _ Explicit ty) scope) = (False, nm) :: collectPiNames scope
-collectPiNames (Bind _ nm (Pi _ _ _ ty) scope) = (True, nm) :: (collectPiNames scope)
-collectPiNames _ = []

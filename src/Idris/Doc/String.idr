@@ -1,10 +1,6 @@
 module Idris.Doc.String
 
-import Core.Context
-import Core.Context.Log
-import Core.Core
 import Core.Env
-import Core.TT
 import Core.TT.Traversals
 
 import Idris.Doc.Display
@@ -18,24 +14,18 @@ import TTImp.TTImp
 import TTImp.TTImp.Functor
 import TTImp.Elab.Prim
 
-import Data.List
-import Data.List1
 import Data.Maybe
+import Data.SortedSet
+import Data.SortedMap
 import Data.String
 
 import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
-import Libraries.Data.SortedSet
-import Libraries.Data.SortedMap
-import Libraries.Data.StringMap as S
-import Libraries.Data.String.Extra
 import Libraries.Data.WithDefault
 
 import public Libraries.Text.PrettyPrint.Prettyprinter
 import public Libraries.Text.PrettyPrint.Prettyprinter.Util
-
-import Parser.Lexer.Source
 
 import public Idris.Doc.Annotations
 import Idris.Doc.Keywords
@@ -113,7 +103,7 @@ getImplDocs keep
               True <- keep ty
                 | False => pure []
               ty <- resugar Env.empty ty
-              pure [annotate (Decl impl) $ prettyBy Syntax ty]
+              pure [annotate (Decl impl (location def)) $ prettyBy Syntax ty]
          pure $ case concat docss of
            [] => []
            [doc] => [header "Hint" <++> annotate Declarations doc]
@@ -284,7 +274,7 @@ getDocsForName fc n config
              syn <- get Syn
              ty <- prettyType Syntax (type def)
              let conWithTypeDoc
-                   = annotate (Decl con)
+                   = annotate (Decl con (location def))
                    $ ifThenElse showType
                        (hsep [dCon con (prettyName con), colon, ty])
                        (dCon con (prettyName con))
@@ -305,7 +295,7 @@ getDocsForName fc n config
              Just def <- lookupCtxtExact n (gamma defs)
                   | Nothing => pure []
              ty <- prettyType Syntax (type def)
-             pure [annotate (Decl n) ty]
+             pure [annotate (Decl n (location def)) ty]
 
     getMethDoc : Method -> Core (List (Doc IdrisDocAnn))
     getMethDoc meth
@@ -383,7 +373,7 @@ getDocsForName fc n config
                 -- should never happen, since we know that the DCon exists:
                 | Nothing => pure Empty
            ty <- prettyType Syntax (type def)
-           let projDecl = annotate (Decl nm) $
+           let projDecl = annotate (Decl nm (location def)) $
                             reAnnotate Syntax (prettyRig def.multiplicity) <+> hsep
                             [ fun nm (prettyName nm), colon, ty ]
            case lookupName nm (defDocstrings syn) of
@@ -466,7 +456,7 @@ getDocsForName fc n config
              let deprecated = if Context.Deprecate `elem` def.flags
                                  then annotate Deprecation "=DEPRECATED=" <+> line else emptyDoc
              let docDecl = deprecated
-                     <+> annotate (Decl n) (hsep [prig <+> nm, colon, prettyBy Syntax ty])
+                     <+> annotate (Decl n (location def)) (hsep [prig <+> nm, colon, prettyBy Syntax ty])
 
              -- Finally add the user-provided docstring
              let docText = let docs = reflowDoc str in

@@ -1,9 +1,6 @@
 module Libraries.Data.SnocList.HasLength
 
 import Data.Nat
-
-import Libraries.Data.SnocList.Extra
-
 ---------------------------------------
 -- horrible hack
 import Data.List.HasLength as L

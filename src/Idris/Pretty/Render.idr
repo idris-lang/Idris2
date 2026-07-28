@@ -1,14 +1,12 @@
 module Idris.Pretty.Render
 
 import Core.Context
-import Core.Core
 
 import Idris.REPL.Opts
 
 import Libraries.Text.PrettyPrint.Prettyprinter
 import public Libraries.Text.PrettyPrint.Prettyprinter.Render.Terminal
 
-import System
 import System.Term
 
 %default total

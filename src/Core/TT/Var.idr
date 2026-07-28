@@ -2,14 +2,10 @@ module Core.TT.Var
 
 import Data.Fin
 import Data.List
-import Data.Nat
 import Data.So
 import Data.SnocList
-import Data.Vect
 
-import Core.Name
 import Core.Name.Scoped
-import Core.Name.CompatibleVars
 
 import Libraries.Data.SnocList.HasLength
 import Libraries.Data.SnocList.SizeOf
@@ -17,7 +13,6 @@ import Libraries.Data.SnocList.SizeOf
 import Data.List.HasLength
 import Data.DPair
 
-import Libraries.Data.List.HasLength
 import Libraries.Data.List.SizeOf
 
 import Libraries.Data.Erased
@@ -40,11 +35,14 @@ data IsVar : a -> Nat -> List a -> Type where
 
 %name IsVar idx
 
+-- `vs` is available in the erased fragment, and the case builder
+-- pattern-matches on it. To simplify the case tree and help the
+-- coverage checker, we use an explicit dot pattern here.
+-- TODO: remove `{vs = .(_)}` once the compiler generates more optimal case trees.
 export
 0 Last : HasLength (S n) vs -> Exists (\ nm => IsVar nm n vs)
-Last {vs = []} p impossible
-Last (S Z) = Evidence _ First
-Last (S (S p)) = bimap id Later (Last (S p))
+Last {vs = .(_)} (S Z) = Evidence _ First
+Last {vs = .(_)} (S (S p)) = bimap id Later (Last (S p))
 
 export
 finIdx : {idx : _} -> (0 prf : IsVar x idx vars) ->

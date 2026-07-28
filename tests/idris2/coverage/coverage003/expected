@@ -4,7 +4,7 @@ Error: While processing left hand side of badBar. Can't match on 0 as it must ha
 Cover:16:8--16:9
  12 | cty Nat (S _) = S Z
  13 | cty _ x = S (S Z)
- 14 | 
+ 14 |
  15 | badBar : a -> Nat
  16 | badBar Z = Z
              ^

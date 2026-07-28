@@ -1,12 +1,10 @@
 module Core.Primitives
 
-import Core.Context
 import Core.TT
 import Core.Value
 import Libraries.Utils.String
 
 import Data.Vect
-import Data.SnocList
 
 %default covering
 

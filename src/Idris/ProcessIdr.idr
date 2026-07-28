@@ -12,14 +12,10 @@ import Compiler.Inline
 import Compiler.Interpreter.VMCode
 
 import Core.Binary
-import Core.Context
-import Core.Core
-import Core.Context.Log
 import Core.Directory
 import Core.Env
 import Core.Hash
 import Core.Metadata
-import Core.Options
 import Core.Unify
 
 import Parser.Unlit
@@ -33,16 +29,13 @@ import Idris.Desugar
 import Idris.Desugar.Mutual
 import Idris.Parser
 import Idris.REPL.Common
-import Idris.REPL.Opts
 import Idris.Syntax
 import Idris.Syntax.TTC
 import Idris.Pretty
 import Idris.Doc.String
 
-import Data.List
-import Data.SnocList
+import Data.SortedMap
 import Data.String
-import Libraries.Data.SortedMap
 
 import System.File
 
@@ -94,11 +87,10 @@ processDecl decl
                         pure [err])
 
 processDecls decls
-    = do xs <- concat <$> traverse processDecl decls
+    = do errs <- concat <$> traverse processDecl decls
          Nothing <- checkDelayedHoles
-             | Just err => pure (if null xs then [err] else xs)
-         errs <- logTime 3 ("Totality check overall") getTotalityErrors
-         pure (xs ++ errs)
+             | Just err => pure (if null errs then [err] else errs)
+         pure errs
 
 readModule : {auto c : Ref Ctxt Defs} ->
              {auto u : Ref UST UState} ->
@@ -395,6 +387,9 @@ processMod sourceFileName ttcFileName msg sourcecode origin
                 setNS (miAsNamespace ns)
                 errs <- logTime 2 "Processing decls" $
                             processDecls (decls mod)
+                totErrs <- logTime 3 ("Totality check overall")
+                            getTotalityErrors
+                let errs = errs ++ totErrs
 --                 coreLift $ gc
 
                 when (isNil errs) $

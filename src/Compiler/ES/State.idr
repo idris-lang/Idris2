@@ -5,7 +5,7 @@ module Compiler.ES.State
 import Core.Context
 import Compiler.ES.Ast
 import Compiler.NoMangle
-import Libraries.Data.SortedMap
+import Data.SortedMap
 
 %default total
 

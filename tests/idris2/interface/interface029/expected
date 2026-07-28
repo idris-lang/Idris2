@@ -8,7 +8,7 @@ ForwardImpl2:13:1--15:33
  15 |     isOdd (S k) = not $ isEven k
 
 1/1: Building ForwardImpl3 (ForwardImpl3.idr)
-Error: Main.IsOdd implementation at ForwardImpl3:7:1--8:14 is already defined.
+Error: Main.IsOdd implementation at ForwardImpl3:1 is already defined.
 
 ForwardImpl3:7:1--8:14
  7 | implementation IsOdd Bool where

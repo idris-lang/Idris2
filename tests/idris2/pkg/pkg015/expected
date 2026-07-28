@@ -6,8 +6,8 @@ Error: Failed to resolve the dependencies for test:
 
 Searched for packages in:
   [...]/tests/idris2/pkg/pkg015/depends
-  [...]/tests/idris2/pkg/pkg015/prefix/idris2-0.7.0
-  [...]/build/env/idris2-0.7.0
+  [...]/tests/idris2/pkg/pkg015/prefix/idris2-x.y.z
+  [...]/build/env/idris2-x.y.z
 
 For more details on what packages Idris2 can locate, run `idris2 --list-packages`
 

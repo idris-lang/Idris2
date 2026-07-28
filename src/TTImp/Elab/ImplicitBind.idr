@@ -2,16 +2,10 @@ module TTImp.Elab.ImplicitBind
 -- Machinery needed for handling implicit name bindings (either pattern
 -- variables or unbound implicits as type variables)
 
-import Core.Context
-import Core.Context.Log
-import Core.Core
 import Core.Coverage
 import Core.Env
 import Core.Metadata
-import Core.Normalise
 import Core.Unify
-import Core.UnifyState
-import Core.TT
 import Core.Value
 
 import Idris.REPL.Opts
@@ -21,7 +15,6 @@ import TTImp.Elab.Check
 import TTImp.Elab.Delayed
 import TTImp.TTImp
 
-import Data.List
 import Libraries.Data.NameMap
 import Libraries.Data.SnocList.SizeOf
 
@@ -353,14 +346,14 @@ getToBind {vars} fc elabmode impmode env excepts
         = do case impmode of
                   COVERAGE => do tynf <- nf defs env ty
                                  when !(isEmpty defs env tynf) $
-                                    throw (InternalError "Empty pattern in coverage check")
+                                    throw ImpossibleCase
                   _ => pure ()
              pure $ NameBinding loc c p tm !(normaliseType defs env ty)
     normBindingTy defs (AsBinding c p tm ty pat)
         = do case impmode of
                   COVERAGE => do tynf <- nf defs env ty
                                  when !(isEmpty defs env tynf) $
-                                    throw (InternalError "Empty pattern in coverage check")
+                                    throw ImpossibleCase
                   _ => pure ()
              pure $ AsBinding c p tm !(normaliseType defs env ty)
                                      !(normaliseHoles defs env pat)

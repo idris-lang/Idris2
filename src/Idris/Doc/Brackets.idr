@@ -1,7 +1,6 @@
 module Idris.Doc.Brackets
 
 import Data.String
-import Libraries.Data.String.Extra
 
 import Idris.Doc.Annotations
 import Idris.Syntax

@@ -1,10 +1,7 @@
 module TTImp.Interactive.MakeLemma
 
-import Core.Context
 import Core.Env
 import Core.Metadata
-import Core.Normalise
-import Core.TT
 
 import Idris.Syntax
 
@@ -12,9 +9,6 @@ import TTImp.Unelab
 import TTImp.TTImp
 import TTImp.TTImp.Functor
 import TTImp.Utils
-
-import Data.List
-import Data.SnocList
 
 %default covering
 

@@ -1,11 +1,7 @@
 module Idris.Elab.Implementation
 
-import Core.Context
-import Core.Context.Log
-import Core.Core
 import Core.Env
 import Core.Metadata
-import Core.TT
 import Core.Unify
 
 import Idris.REPL.Opts
@@ -21,12 +17,13 @@ import TTImp.Unelab
 import TTImp.Utils
 
 import Control.Monad.State
-import Data.List
-import Data.SnocList
 import Libraries.Data.ANameMap
 import Libraries.Data.NameMap
 
 %default covering
+
+constructorBindName : Name
+constructorBindName = UN (Basic "__con")
 
 -- TODO move out of file, maybe make `show` instance for `FC` platform-independent
 replaceSep : String -> String
@@ -65,7 +62,7 @@ addDefaults fc impName params allms defs body
           extendBody [] missing body
   where
     specialiseMeth : Name -> (Name, RawImp)
-    specialiseMeth n = (n, INamedApp fc (IVar fc n) (UN $ Basic "__con") (IVar fc impName))
+    specialiseMeth n = (n, INamedApp fc (IVar fc n) constructorBindName (IVar fc impName))
     -- Given the list of missing names, if any are among the default definitions,
     -- add them to the body
     extendBody : List Name -> List Name -> List ImpDecl ->
@@ -540,7 +537,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
                      "Adding transform for " ++ show meth.nameVal ++ " : " ++ show meth.val ++
                      "\n\tfor " ++ show iname ++ " in " ++ show ns
              let lhs = INamedApp vfc (IVar vfc meth.name.val)
-                                     (UN $ Basic "__con")
+                                     constructorBindName
                                      (IVar vfc iname)
              let Just mname = lookup (dropNS meth.nameVal) ns
                  | Nothing => pure ()

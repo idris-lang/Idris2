@@ -3,15 +3,11 @@ module TTImp.ProcessDef
 import Core.Case.CaseBuilder
 import Core.Case.CaseTree
 import Core.Case.CaseTree.Pretty
-import Core.Context
-import Core.Context.Log
-import Core.Core
 import Core.Coverage
 import Core.Env
 import Core.Hash
 import Core.LinearCheck
 import Core.Metadata
-import Core.Normalise
 import Core.Termination
 import Core.Termination.CallGraph
 import Core.Transform
@@ -24,6 +20,7 @@ import Idris.Pretty.Annotations
 
 import TTImp.BindImplicits
 import TTImp.Elab
+import TTImp.Elab.Binders
 import TTImp.Elab.Check
 import TTImp.Elab.Utils
 import TTImp.Impossible
@@ -42,7 +39,6 @@ import Libraries.Data.NameMap
 import Libraries.Data.WithDefault
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Data.List.SizeOf
-import Libraries.Data.SnocList.SizeOf
 
 %default covering
 
@@ -142,94 +138,13 @@ impossibleErrOK defs (CantSolveEq fc gam env l r)
     = do let defs = { gamma := gam } defs
          impossibleOK defs !(nf defs env l)
                            !(nf defs env r)
-impossibleErrOK defs (BadDotPattern _ _ ErasedArg _ _) = pure True
 impossibleErrOK defs (CyclicMeta {}) = pure True
 impossibleErrOK defs (AllFailed errs)
-    = anyM (impossibleErrOK defs) (map snd errs)
+    = allM (impossibleErrOK defs) (map snd errs)
 impossibleErrOK defs (WhenUnifying _ _ _ _ _ err)
     = impossibleErrOK defs err
+impossibleErrOK defs ImpossibleCase = pure True
 impossibleErrOK defs _ = pure False
-
--- If it's a clause we've generated, see if the error is recoverable. That
--- is, if we have a concrete thing, and we're expecting the same concrete
--- thing, or a function of something, then we might have a match.
-export
-recoverable : {auto c : Ref Ctxt Defs} ->
-              {vars : _} ->
-              Defs -> NF vars -> NF vars -> Core Bool
--- Unlike the above, any mismatch will do
-
--- TYPE CONSTRUCTORS
-recoverable defs (NTCon _ xn xa xargs) (NTCon _ yn ya yargs)
-    = if xn /= yn
-         then pure False
-         else pure $ not !(anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs))
--- Type constructor vs. primitive type
-recoverable defs (NTCon {}) (NPrimVal {}) = pure False
-recoverable defs (NPrimVal {}) (NTCon {}) = pure False
--- Type constructor vs. type
-recoverable defs (NTCon {}) (NType {}) = pure False
-recoverable defs (NType {}) (NTCon {}) = pure False
--- Type constructor vs. binder
-recoverable defs (NTCon {}) (NBind {}) = pure False
-recoverable defs (NBind {}) (NTCon {}) = pure False
-
-recoverable defs (NTCon {}) _ = pure True
-recoverable defs _ (NTCon {}) = pure True
-
--- DATA CONSTRUCTORS
-recoverable defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
-    = if xt /= yt
-         then pure False
-         else pure $ not !(anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs))
--- Data constructor vs. primitive constant
-recoverable defs (NDCon {}) (NPrimVal {}) = pure False
-recoverable defs (NPrimVal {}) (NDCon {}) = pure False
-
-recoverable defs (NDCon {}) _ = pure True
-recoverable defs _ (NDCon {}) = pure True
-
--- FUNCTION CALLS
-recoverable defs (NApp _ (NRef _ f) fargs) (NApp _ (NRef _ g) gargs)
-    = pure True -- both functions; recoverable
-
--- PRIMITIVES
-recoverable defs (NPrimVal _ x) (NPrimVal _ y) = pure (x == y)
--- primitive vs. binder
-recoverable defs (NPrimVal {}) (NBind {}) = pure False
-recoverable defs (NBind {}) (NPrimVal {}) = pure False
-
--- OTHERWISE: no
-recoverable defs x y = pure False
-
-export
-recoverableErr : {auto c : Ref Ctxt Defs} ->
-                 Defs -> Error -> Core Bool
-recoverableErr defs (CantConvert fc gam env l r)
-  = do let defs = { gamma := gam } defs
-       l <- nf defs env l
-       r <- nf defs env r
-       log "coverage.recover" 10 $ unlines
-         [ "Recovering from CantConvert?"
-         , "Checking:"
-         , "  " ++ show l
-         , "  " ++ show r
-         ]
-       recoverable defs l r
-
-recoverableErr defs (CantSolveEq fc gam env l r)
-  = do let defs = { gamma := gam } defs
-       recoverable defs !(nf defs env l)
-                        !(nf defs env r)
-recoverableErr defs (BadDotPattern _ _ ErasedArg _ _) = pure True
-recoverableErr defs (CyclicMeta {}) = pure False
--- Don't mark a case as impossible because we can't see the constructor.
-recoverableErr defs (InvisibleName {}) = pure True
-recoverableErr defs (AllFailed errs)
-    = anyM (recoverableErr defs) (map snd errs)
-recoverableErr defs (WhenUnifying _ _ _ _ _ err)
-    = recoverableErr defs err
-recoverableErr defs _ = pure False
 
 -- Given a type checked LHS and its type, return the environment in which we
 -- should check the RHS, the LHS and its type in that environment,
@@ -249,13 +164,13 @@ extendEnv env p nest (Bind _ n (PVar fc c pi tmty) sc) (Bind _ n' (PVTy {}) tysc
   extendEnv env p nest (Bind _ n (PVar fc c pi tmty) sc) (Bind _ n' (PVTy {}) tysc) | Nothing
       = throw (InternalError "Can't happen: names don't match in pattern type")
   extendEnv env p nest (Bind _ n (PVar fc c pi tmty) sc) (Bind _ n (PVTy {}) tysc) | (Just Refl)
-      = extendEnv (PVar fc c pi tmty :: env) (Drop p) (weaken nest) sc tysc
+      = extendEnv (PVar fc c pi tmty :: env) (Drop p) (weaken (dropName n nest)) sc tysc
 extendEnv env p nest (Bind _ n (PLet fc c tmval tmty) sc) (Bind _ n' (PLet {}) tysc) with (nameEq n n')
   extendEnv env p nest (Bind _ n (PLet fc c tmval tmty) sc) (Bind _ n' (PLet {}) tysc) | Nothing
       = throw (InternalError "Can't happen: names don't match in pattern type")
   -- PLet on the left becomes Let on the right, to give it computational force
   extendEnv env p nest (Bind _ n (PLet fc c tmval tmty) sc) (Bind _ n (PLet {}) tysc) | (Just Refl)
-      = extendEnv (Let fc c tmval tmty :: env) (Drop p) (weaken nest) sc tysc
+      = extendEnv (Let fc c tmval tmty :: env) (Drop p) (weaken (dropName n nest)) sc tysc
 extendEnv env p nest tm ty
       = pure (_ ** (p, env, nest, tm, ty))
 
@@ -314,14 +229,17 @@ findLinear top bound rig tm
       findLinArg _ _ [] = pure []
 
 setLinear : List (Name, RigCount) -> Term vars -> Term vars
-setLinear vs (Bind fc x b@(PVar {}) sc)
-    = case lookup x vs of
-           Just c' => Bind fc x (setMultiplicity b c') (setLinear vs sc)
-           _ => Bind fc x b (setLinear vs sc)
-setLinear vs (Bind fc x b@(PVTy {}) sc)
-    = case lookup x vs of
-           Just c' => Bind fc x (setMultiplicity b c') (setLinear vs sc)
-           _ => Bind fc x b (setLinear vs sc)
+setLinear vs tm@(Bind fc x b sc)
+    = if isPatternBinder b
+         then let b' = maybe b (setMultiplicity b) (lookup x vs)
+               in Bind fc x b' (setLinear vs sc)
+         else tm
+  where
+    isPatternBinder : Binder a -> Bool
+    isPatternBinder (PVar {}) = True
+    isPatternBinder (PVTy {}) = True
+    isPatternBinder (PLet {}) = True
+    isPatternBinder _ = False
 setLinear vs tm = tm
 
 -- Combining multiplicities on LHS:
@@ -481,7 +399,7 @@ checkClause mult vis totreq hashit n opts nest env (ImpossibleClause fc lhs)
                logEnv "declare.def.clause.impossible" 5 "In env" env
                (lhstm, lhstyg) <-
                            elabTerm n (InLHS mult) opts nest env
-                                      (IBindHere fc PATTERN lhs) Nothing
+                                      (IBindHere fc COVERAGE lhs) Nothing
                defs <- get Ctxt
                lhs <- normaliseHoles defs env lhstm
                if !(hasEmptyPat defs env lhs)
@@ -1104,7 +1022,7 @@ processDef opts nest env fc n_in cs_in
                               put Ctxt ctxt
                               pure (Just rtm))
                (\err => do defs <- get Ctxt
-                           if not !(recoverableErr defs err)
+                           if !(impossibleErrOK defs err)
                               then do
                                 log "declare.def.impossible" 5 "impossible because \{show err}"
                                 pure Nothing
@@ -1121,6 +1039,7 @@ processDef opts nest env fc n_in cs_in
                     log "declare.def.impossible" 3 $ "Generated impossible LHS: " ++ show lhsp
                     pure $ Just $ MkClause Env.empty lhsp (Erased (getFC rawlhs) Impossible))
                 (\e => do log "declare.def" 5 $ "Error in getClause " ++ show e
+                          recordWarning $ GenericWarn (fromMaybe (getFC rawlhs) $ getErrorLoc e) (show e)
                           pure Nothing)
     getClause (Right c) = pure (Just c)
 
@@ -1139,7 +1058,7 @@ processDef opts nest env fc n_in cs_in
              missCase <- if any catchAll covcs
                             then do logC "declare.def" 3 $ do pure "Catch all case in \{show !(getFullName (Resolved n))}"
                                     pure []
-                            else getMissing fc (Resolved n) ctree
+                            else getMissing fc (Resolved n) ty ctree
              logC "declare.def" 3 $
                      do mc <- traverse toFullNames missCase
                         pure ("Initially missing in " ++
@@ -1149,7 +1068,9 @@ processDef opts nest env fc n_in cs_in
              missImp <- traverse (checkImpossible n mult) missCase
              -- Filter out the ones which are actually matched (perhaps having
              -- come up due to some overlapping patterns)
-             missMatch <- traverse (checkMatched covcs) (mapMaybe id missImp)
+             missMatch <- traverse (checkMatched (not $ isErased mult) covcs) (mapMaybe id missImp)
+                                              -- ^ Do not check coverage for erased arguments
+                                              -- only in non-erased functions (Issues #1998, #3357)
              let miss = catMaybes missMatch
              if isNil miss
                 then do [] <- getNonCoveringRefs fc (Resolved n)

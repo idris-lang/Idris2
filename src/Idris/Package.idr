@@ -2,18 +2,12 @@ module Idris.Package
 
 import Compiler.Common
 
-import Core.Context
-import Core.Context.Log
-import Core.Core
 import Core.Directory
 import Core.Metadata
-import Core.Name.Namespace
-import Core.Options
 import Core.Unify
 
-import Data.List
 import Data.Maybe
-import Data.SnocList
+import Data.SortedMap
 import Data.String
 import Data.These
 
@@ -23,7 +17,6 @@ import System.Directory
 import Libraries.System.Directory.Tree
 import System.File
 
-import Libraries.Data.SortedMap
 import Libraries.Data.StringMap
 import Libraries.Data.StringTrie
 import Libraries.Data.WithDefault
@@ -39,8 +32,6 @@ import Idris.ModTree
 import Idris.Pretty
 import Idris.ProcessIdr
 import Idris.REPL
-import Idris.REPL.Common
-import Idris.REPL.Opts
 import Idris.SetOptions
 import Idris.Syntax
 import Idris.Version
@@ -74,6 +65,7 @@ data DescField  : Type where
   PExec         : String -> DescField
   POpts         : FC -> String -> DescField
   PSourceDir    : FC -> String -> DescField
+  PDataDir      : FC -> String -> DescField
   PBuildDir     : FC -> String -> DescField
   POutputDir    : FC -> String -> DescField
   PPrebuild     : FC -> String -> DescField
@@ -96,6 +88,7 @@ field fname
     <|> strField POpts "options"
     <|> strField POpts "opts"
     <|> strField PSourceDir "sourcedir"
+    <|> strField PDataDir "datadir"
     <|> strField PBuildDir "builddir"
     <|> strField POutputDir "outputdir"
     <|> strField PPrebuild "prebuild"
@@ -251,6 +244,7 @@ addField (PMainMod loc n)    pkg = do put MainMod (Just (loc, n))
 addField (PExec e)           pkg = pure $ { executable := Just e } pkg
 addField (POpts fc e)        pkg = pure $ { options := Just (fc, e) } pkg
 addField (PSourceDir fc a)   pkg = pure $ { sourcedir := Just a } pkg
+addField (PDataDir fc a)     pkg = pure $ { datadir := Just a } pkg
 addField (PBuildDir fc a)    pkg = pure $ { builddir := Just a } pkg
 addField (POutputDir fc a)   pkg = pure $ { outputdir := Just a } pkg
 addField (PPrebuild fc e)    pkg = pure $ { prebuild := Just (fc, e) } pkg
@@ -459,6 +453,7 @@ addDeps pkg = do
 
 processOptions : {auto c : Ref Ctxt Defs} ->
                  {auto o : Ref ROpts REPLOpts} ->
+                 {auto _ : Ref PostS PostSession} ->
                  Maybe (FC, String) -> Core ()
 processOptions Nothing = pure ()
 processOptions (Just (fc, opts))
@@ -498,6 +493,7 @@ withWarnings op = do o <- catch op $ \err =>
 prepareCompilation : {auto c : Ref Ctxt Defs} ->
                      {auto s : Ref Syn SyntaxInfo} ->
                      {auto o : Ref ROpts REPLOpts} ->
+                     {auto _ : Ref PostS PostSession} ->
                      PkgDesc ->
                      List CLOpt ->
                      Core (List Error)
@@ -526,6 +522,7 @@ export
 build : {auto c : Ref Ctxt Defs} ->
         {auto s : Ref Syn SyntaxInfo} ->
         {auto o : Ref ROpts REPLOpts} ->
+        {auto _ : Ref PostS PostSession} ->
         PkgDesc ->
         List CLOpt ->
         Core (List Error)
@@ -701,6 +698,7 @@ export
 check : {auto c : Ref Ctxt Defs} ->
         {auto s : Ref Syn SyntaxInfo} ->
         {auto o : Ref ROpts REPLOpts} ->
+        {auto _ : Ref PostS PostSession} ->
         PkgDesc ->
         List CLOpt ->
         Core (List Error)
@@ -715,6 +713,7 @@ check pkg opts =
 makeDoc : {auto c : Ref Ctxt Defs} ->
           {auto s : Ref Syn SyntaxInfo} ->
           {auto o : Ref ROpts REPLOpts} ->
+          {auto _ : Ref PostS PostSession} ->
           PkgDesc ->
           List CLOpt ->
           Core (List Error)
@@ -729,7 +728,7 @@ makeDoc pkg opts =
        Right () <- coreLift $ mkdirAll docDir
          | Left err => fileError docDir err
        u <- newRef UST initUState
-       setPPrint (MkPPOpts False True False False)
+       setPPrint docsPPrint
 
        [] <- concat <$> for (modules pkg) (\(mod, filename) => do
            -- load dependencies
@@ -948,6 +947,7 @@ localPackageFile Nothing
 processPackage : {auto c : Ref Ctxt Defs} ->
                  {auto s : Ref Syn SyntaxInfo} ->
                  {auto o : Ref ROpts REPLOpts} ->
+                 {auto _ : Ref PostS PostSession} ->
                  List CLOpt ->
                  (PkgCommand, Maybe String) ->
                  Core ()
@@ -972,6 +972,7 @@ processPackage opts (cmd, mfile)
              setWorkingDir dir
              pkg <- parsePkgFile True filename
              whenJust (builddir pkg) setBuildDir
+             whenJust (datadir pkg) addDataDir
              setOutputDir (outputdir pkg)
              case cmd of
                   Build => do [] <- build pkg opts
@@ -1068,47 +1069,47 @@ errorMsg = unlines
   , "    --output-dir <dir>"
   ]
 
-export
-processPackageOpts : {auto c : Ref Ctxt Defs} ->
-                     {auto s : Ref Syn SyntaxInfo} ->
-                     {auto o : Ref ROpts REPLOpts} ->
-                     List CLOpt -> Core Bool
-processPackageOpts opts
-    = do (MkPFR cmds@(_::_) opts' err) <- pure $ partitionOpts opts
-             | (MkPFR Nil opts' _) => pure False
-         if err
-           then coreLift $ putStrLn errorMsg
-           else traverse_ (processPackage opts') cmds
-         pure True
+parameters
+  {auto c : Ref Ctxt Defs}
+  {auto s : Ref Syn SyntaxInfo}
+  {auto o : Ref ROpts REPLOpts}
+  {auto p : Ref PostS PostSession}
+
+  export
+  processPackageOpts : List CLOpt -> Core ControlFlow
+  processPackageOpts opts
+      = do (MkPFR cmds@(_::_) opts' err) <- pure $ partitionOpts opts
+               | (MkPFR Nil opts' _) => pure Continue
+           if err
+             then coreLift $ putStrLn errorMsg
+             else traverse_ (processPackage opts') cmds
+           pure Abort
 
 
--- find an ipkg file in one of the parent directories
--- If it exists, read it, set the current directory to the root of the source
--- tree, and set the relevant command line options before proceeding
-export
-findIpkg : {auto c : Ref Ctxt Defs} ->
-           {auto r : Ref ROpts REPLOpts} ->
-           {auto s : Ref Syn SyntaxInfo} ->
-           Maybe String -> Core (Maybe String)
-findIpkg fname
-   = do Just (dir, ipkgn, up) <- coreLift findIpkgFile
-             | Nothing => pure fname
-        coreLift_ $ changeDir dir
-        setWorkingDir dir
-        pkg <- parsePkgFile True ipkgn
-        maybe (pure ()) setBuildDir (builddir pkg)
-        setOutputDir (outputdir pkg)
-        processOptions (options pkg)
-        addDeps pkg
-        case fname of
-             Nothing => pure Nothing
-             Just srcpath  =>
-                do let src' = up </> srcpath
-                   setSource src'
-                   update ROpts { mainfile := Just src' }
-                   pure (Just src')
-  where
-    dropHead : String -> List String -> List String
-    dropHead str [] = []
-    dropHead str (x :: xs)
-        = if x == str then xs else x :: xs
+  -- find an ipkg file in one of the parent directories
+  -- If it exists, read it, set the current directory to the root of the source
+  -- tree, and set the relevant command line options before proceeding
+  export
+  findIpkg : Maybe String -> Core (Maybe String)
+  findIpkg fname
+     = do Just (dir, ipkgn, up) <- coreLift findIpkgFile
+               | Nothing => pure fname
+          coreLift_ $ changeDir dir
+          setWorkingDir dir
+          pkg <- parsePkgFile True ipkgn
+          maybe (pure ()) setBuildDir (builddir pkg)
+          setOutputDir (outputdir pkg)
+          processOptions (options pkg)
+          addDeps pkg
+          case fname of
+               Nothing => pure Nothing
+               Just srcpath  =>
+                  do let src' = up </> srcpath
+                     setSource src'
+                     update ROpts { mainfile := Just src' }
+                     pure (Just src')
+    where
+      dropHead : String -> List String -> List String
+      dropHead str [] = []
+      dropHead str (x :: xs)
+          = if x == str then xs else x :: xs

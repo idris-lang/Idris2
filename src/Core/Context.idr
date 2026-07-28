@@ -19,13 +19,10 @@ import Libraries.Text.PrettyPrint.Prettyprinter
 import Idris.Syntax.Pragmas
 
 import Data.Either
-import Data.Fin
-import Libraries.Data.IOArray
-import Libraries.Data.IntMap
-import Data.List
+import Data.IOArray
 import Data.List1
-import Data.Maybe
 import Data.Nat
+import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
 import Libraries.Data.StringMap
@@ -147,7 +144,7 @@ addCtxt n val ctxt_in
          then do (idx, ctxt) <- getPosition n ctxt_in
                  let a = content ctxt
                  arr <- get Arr
-                 coreLift $ writeArray arr idx (Decoded val)
+                 coreLift_ $ writeArray arr idx (Decoded val)
                  pure (idx, ctxt)
          else do (idx, ctxt) <- getPosition n ctxt_in
                  pure (idx, { staging $= insert idx (Decoded val) } ctxt)
@@ -159,7 +156,7 @@ addEntry n entry ctxt_in
          then do (idx, ctxt) <- getPosition n ctxt_in
                  let a = content ctxt
                  arr <- get Arr
-                 coreLift $ writeArray arr idx entry
+                 coreLift_ $ writeArray arr idx entry
                  pure (idx, ctxt)
          else do (idx, ctxt) <- getPosition n ctxt_in
                  pure (idx, { staging $= insert idx entry } ctxt)
@@ -313,7 +310,7 @@ commitCtxt ctxt
     commitStaged : List (Int, ContextEntry) -> IOArray ContextEntry -> IO ()
     commitStaged [] arr = pure ()
     commitStaged ((idx, val) :: rest) arr
-        = do writeArray arr idx val
+        = do ignore $ writeArray arr idx val
              commitStaged rest arr
 
 ||| Produce a new global definition with a lot of default values
@@ -755,6 +752,7 @@ HasNames Error where
   full gam (BadDataConType fc n n') = BadDataConType fc <$> full gam n <*> full gam n'
   full gam (NotCovering fc n cov) = NotCovering fc <$> full gam n <*> full gam cov
   full gam (NotTotal fc n pr) = NotTotal fc <$> full gam n <*> full gam pr
+  full gam ImpossibleCase = pure ImpossibleCase
   full gam (LinearUsed fc k n) = LinearUsed fc k <$> full gam n
   full gam (LinearMisuse fc n x y) = LinearMisuse fc <$> full gam n <*> pure x <*> pure y
   full gam (BorrowPartial fc rho s t) = BorrowPartial fc <$> full gam rho <*> full gam s <*> full gam t
@@ -853,6 +851,7 @@ HasNames Error where
   resolved gam (BadDataConType fc n n') = BadDataConType fc <$> resolved gam n <*> resolved gam n'
   resolved gam (NotCovering fc n cov) = NotCovering fc <$> resolved gam n <*> resolved gam cov
   resolved gam (NotTotal fc n pr) = NotTotal fc <$> resolved gam n <*> resolved gam pr
+  resolved gam ImpossibleCase = pure ImpossibleCase
   resolved gam (LinearUsed fc k n) = LinearUsed fc k <$> resolved gam n
   resolved gam (LinearMisuse fc n x y) = LinearMisuse fc <$> resolved gam n <*> pure x <*> pure y
   resolved gam (BorrowPartial fc rho s t) = BorrowPartial fc <$> resolved gam rho <*> resolved gam s <*> resolved gam t
@@ -2135,6 +2134,10 @@ getPPrint
 export
 setPPrint : {auto c : Ref Ctxt Defs} -> PPrinter -> Core ()
 setPPrint ppopts = update Ctxt { options->printing := ppopts }
+
+export
+updatePPrint : {auto c : Ref Ctxt Defs} -> (PPrinter -> PPrinter) -> Core ()
+updatePPrint f = update Ctxt { options->printing $= f }
 
 export
 setCG : {auto c : Ref Ctxt Defs} -> CG -> Core ()

@@ -21,15 +21,15 @@
     "idris-emacs-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1666078909,
-        "narHash": "sha256-oYNHFIpcrFfPb4sXJwEBFKeH+PB4AGCrAFrfBrSTCeo=",
-        "owner": "redfish64",
+        "lastModified": 1734683778,
+        "narHash": "sha256-8SIseFPHpdDO0uG3u65xJ0CHNfVu5O36meONZI7oorw=",
+        "owner": "idris-community",
         "repo": "idris2-mode",
-        "rev": "3bcb52a65c488f31c99d20f235f6050418a84c9d",
+        "rev": "5b4513692124de34aac13985bf48f756d9a8248f",
         "type": "github"
       },
       "original": {
-        "owner": "redfish64",
+        "owner": "idris-community",
         "repo": "idris2-mode",
         "type": "github"
       }

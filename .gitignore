@@ -51,6 +51,8 @@ idris2docs_venv
 .vscode/*
 # JetBrains IDEs
 .idea/
+# Zed editor
+.zed/
 
 # macOS
 .DS_Store

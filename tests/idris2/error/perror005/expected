@@ -2,10 +2,10 @@
 Error: Expected 'in'.
 
 PError:7:1--7:4
- 3 | 
+ 3 |
  4 | bar : Int -> Int
  5 | bar x = let y = 42
- 6 | 
+ 6 |
  7 | baz : Int -> Int
      ^^^
 
