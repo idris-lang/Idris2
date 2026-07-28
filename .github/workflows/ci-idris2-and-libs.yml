@@ -798,7 +798,7 @@ jobs:
 
   overall-success:
     needs:
-      [ ubuntu-self-host-racket
+      [ ubuntu-bootstrap-racket # ubuntu-self-host-racket
       , macos-self-host-chez
       , ub-pack-test-lsp
       , ub-pack-test-pack
@@ -808,7 +808,6 @@ jobs:
       , ub-test-katla-and-html
       , ubuntu-build-api
       , ubuntu-self-host-chez
-      , ubuntu-bootstrap-racket # ubuntu-self-host-racket
       # windows build currently broken , windows-self-host-racket
       ]
     runs-on: ubuntu-latest
