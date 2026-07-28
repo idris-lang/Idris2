@@ -59,12 +59,13 @@ mutual
        INamedApp : FC -> (f : TTImp) -> (arg : Name) -> (x : TTImp) -> TTImp
        ||| An explicitly inserted auto implicit, `f @{x}`
        IAutoApp : FC -> (f : TTImp) -> (x : TTImp) -> TTImp
-       ||| A view in a `with` rule
-       IWithApp : FC -> TTImp -> TTImp -> TTImp
+       ||| A `with` application `f | e`
+       IWithApp : FC -> (f : TTImp) -> (e : TTImp) -> TTImp
 
        ||| `%search`
        ISearch : FC -> (depth : Nat) -> TTImp
-       ||| This operation is for expression that tries to typecheck expression in the list according to the given AltType and return either one of them, or default one (if present in the AltType), or fails
+       ||| A list of potential desugarings of an ambiguous expression
+       ||| The success conditions of typechecking is determined by AltType
        IAlternative : FC -> AltType -> List TTImp -> TTImp
        ||| A rewrite expression, `rewrite eq in exp`
        IRewrite : FC -> (eq : TTImp) -> (exp : TTImp) -> TTImp
@@ -76,9 +77,9 @@ mutual
        IBindVar : FC -> Name -> TTImp
        ||| An 'as' pattern, valid on the LHS of a clause only, `group@pat`
        IAs : FC -> (nameFC : FC) -> UseSide -> (group : Name) -> (pat : TTImp) -> TTImp
-       ||| A 'dot' pattern, i.e. one which must also have the given value
-       ||| by unification, `.(...)`
-       IMustUnify : FC -> DotReason -> TTImp -> TTImp
+       ||| A 'dot' pattern, i.e. one which must be equal to the given value
+       ||| by unification, `.(e)`
+       IMustUnify : FC -> DotReason -> (e : TTImp) -> TTImp
 
        -- Laziness annotations
        ||| The delay type, `Delay t`
@@ -109,7 +110,7 @@ mutual
        ||| at the end of elaborator.
        ||| Note that `Implicit False` is `?`, while `Implicit True` is `_`
        Implicit : FC -> (bindIfUnsolved : Bool) -> TTImp
-       ||| `with name exp`
+       ||| An explicit disambiguation directive `with names exp`
        IWithUnambigNames : FC -> (name : List (FC, Name)) -> (exp : TTImp) -> TTImp
   %name TTImp s, t, u
 
