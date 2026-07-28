@@ -133,6 +133,28 @@ record ElabDirectives where
   -- default: yes
   prefixRecordProjections : Bool
 
+||| Options relevant after running a typechecking session
+public export
+record PostSession where
+  constructor MkPostSession
+  checkOnly : Bool
+  outputFile : Maybe String
+  execExpr : List String
+  runRepl : Maybe String
+
+export
+defaultPost : PostSession
+defaultPost = MkPostSession
+  { checkOnly = False
+  , outputFile = Nothing
+  , execExpr = []
+  , runRepl = Nothing
+  }
+
+-- tag for PostSession
+export
+data PostS : Type where
+
 public export
 record Session where
   constructor MkSessionOpts

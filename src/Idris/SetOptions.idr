@@ -405,17 +405,20 @@ setIncrementalCG failOnError cgn
 export
 preOptions : {auto c : Ref Ctxt Defs} ->
              {auto o : Ref ROpts REPLOpts} ->
-             List CLOpt -> Core Bool
-preOptions [] = pure True
+             {auto s : Ref PostS PostSession} ->
+             List CLOpt -> Core ControlFlow
+preOptions [] = pure Continue
 preOptions (NoBanner :: opts)
     = do setSession ({ nobanner := True } !getSession)
          preOptions opts
 -- These things are processed later, but imply nobanner too
-preOptions (OutputFile _ :: opts)
-    = do setSession ({ nobanner := True } !getSession)
+preOptions (OutputFile file :: opts)
+    = do setSession ({ nobanner := True} !getSession)
+         update PostS {outputFile := Just file}
          preOptions opts
-preOptions (ExecFn _ :: opts)
-    = do setSession ({ nobanner := True } !getSession)
+preOptions (ExecFn expr :: opts)
+    = do setSession ({ nobanner := True} !getSession)
+         update PostS {execExpr $= (expr ::)}
          preOptions opts
 preOptions (IdeMode :: opts)
     = do setSession ({ nobanner := True } !getSession)
@@ -424,7 +427,8 @@ preOptions (IdeModeSocket _ :: opts)
     = do setSession ({ nobanner := True } !getSession)
          preOptions opts
 preOptions (CheckOnly :: opts)
-    = do setSession ({ nobanner := True } !getSession)
+    = do setSession ({ nobanner := True} !getSession)
+         update PostS {checkOnly := True}
          preOptions opts
 preOptions (Profile :: opts)
     = do setSession ({ profile := True } !getSession)
@@ -441,10 +445,11 @@ preOptions (SetCG e :: opts)
             Just cg => do setCG cg
                           preOptions opts
             Nothing =>
-              do coreLift $ putStrLn "No such code generator"
-                 coreLift $ putStrLn $ "Code generators available: " ++
-                                 showSep ", " (map fst (availableCGs (options defs)))
-                 coreLift $ exitWith (ExitFailure 1)
+              do throw $ UserError $ """
+                   No such code generator
+                   Code generators available: \{showSep ", " (map fst (availableCGs (options defs)))}
+                   """
+                 pure Abort
 preOptions (Directive d :: opts)
     = do setSession ({ directives $= (d::) } !getSession)
          preOptions opts
@@ -463,10 +468,10 @@ preOptions (OutputDir d :: opts)
 preOptions (Directory d :: opts)
     = do defs <- get Ctxt
          dirOption (dirs (options defs)) d
-         pure False
+         pure Abort
 preOptions (ListPackages :: opts)
     = do listPackages
-         pure False
+         pure Abort
 preOptions (Timing tm :: opts)
     = do setLogTimings (fromMaybe 10 tm)
          preOptions opts
@@ -476,9 +481,10 @@ preOptions (DebugElabCheck :: opts)
 preOptions (AltErrorCount c :: opts)
     = do setSession ({ logErrorCount := c } !getSession)
          preOptions opts
-preOptions (RunREPL _ :: opts)
+preOptions (RunREPL expr :: opts)
     = do setOutput (REPL VerbosityLvl.ErrorLvl)
-         setSession ({ nobanner := True } !getSession)
+         setSession ({ nobanner := True} !getSession)
+         update PostS {runRepl := Just expr}
          preOptions opts
 preOptions (FindIPKG :: opts)
     = do setSession ({ findipkg := True } !getSession)
@@ -540,13 +546,13 @@ preOptions (WholeProgram :: opts)
 preOptions (BashCompletion a b :: _)
     = do os <- opts a b
          coreLift $ putStr $ unlines os
-         pure False
+         pure Abort
 preOptions (BashCompletionScript fun :: _)
     = do coreLift $ putStrLn $ bashCompletionScript fun
-         pure False
+         pure Abort
 preOptions (ZshCompletionScript fun :: _)
     = do coreLift $ putStrLn $ zshCompletionScript fun
-         pure False
+         pure Abort
 preOptions (Total :: opts)
     = do updateSession ({ totalReq := Total })
          preOptions opts
@@ -561,31 +567,36 @@ export
 postOptions : {auto c : Ref Ctxt Defs} ->
               {auto u : Ref UST UState} ->
               {auto s : Ref Syn SyntaxInfo} ->
-              {auto m : Ref MD Metadata} ->
               {auto o : Ref ROpts REPLOpts} ->
-              REPLResult -> List CLOpt -> Core Bool
-postOptions _ [] = pure True
-postOptions res@(ErrorLoadingFile {}) (OutputFile _ :: rest)
-    = do ignore $ postOptions res rest
-         pure False
-postOptions res (OutputFile outfile :: rest)
-    = do ignore $ compileExp (PRef EmptyFC (UN $ Basic "main")) outfile
-         ignore $ postOptions res rest
-         pure False
-postOptions res (ExecFn expr :: rest)
-    = do setCurrentElabSource expr
-         let Right (_, _, e) = runParser (Virtual Interactive) Nothing expr $ aPTerm <* eoi
-           | Left err => throw err
-         ignore $ execExp e
-         ignore $ postOptions res rest
-         pure False
-postOptions res (CheckOnly :: rest)
-    = do ignore $ postOptions res rest
-         pure False
-postOptions res (RunREPL str :: rest)
-    = do replCmd str
-         pure False
-postOptions res (_ :: rest) = postOptions res rest
+              {auto m : Ref MD Metadata} ->
+              REPLResult -> PostSession -> Core ControlFlow
+-- In case of error loading the output file, we abort immediately without doing anything
+postOptions res@(ErrorLoadingFile {}) (MkPostSession _ (Just _) _ _)
+    = pure Abort
+-- otherwise, we compile the file and
+-- either :
+-- - execute the given expression
+-- - quit because the --check flag was given
+-- - run the REPL
+-- in this order, if either of those happened, we abort execution
+-- if none happened we continue
+postOptions _ (MkPostSession check out ex runRepl)
+    = do controlFlow <- newRef ControlFlow Continue
+         whenJust out $ \ outfile => do
+             ignore $ compileExp (PRef EmptyFC (UN $ Basic "main")) outfile
+             put ControlFlow Abort
+         flip traverse_ (reverse ex) $ \ expr => do
+             setCurrentElabSource expr
+             let Right (_, _, e) = runParser (Virtual Interactive) Nothing expr $ aPTerm <* eoi
+                   | Left err => throw err
+             ignore $ execExp e
+             put ControlFlow Abort
+         when check $
+             put ControlFlow Abort
+         whenJust runRepl $ \cmd => do
+             replCmd cmd
+             put ControlFlow Abort
+         get ControlFlow
 
 export
 ideMode : List CLOpt -> Bool
