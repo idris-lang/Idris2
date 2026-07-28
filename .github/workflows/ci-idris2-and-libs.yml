@@ -1,6 +1,7 @@
 name: Idris2 and External Libs
 
 on:
+  merge_group:
   push:
     branches:
       - '*'
@@ -795,3 +796,22 @@ jobs:
           branch: gh-pages
           folder: .github/scripts/html/
           git-config-name: Github Actions
+
+  overall-success:
+    needs:
+      [ ubuntu-bootstrap-racket # ubuntu-self-host-racket
+      , macos-self-host-chez
+      , ub-pack-test-lsp
+      , ub-pack-test-pack
+      , ub-test-collie
+      , ub-test-elab-util
+      , ub-test-frex
+      , ub-test-katla-and-html
+      , ubuntu-build-api
+      , ubuntu-self-host-chez
+      # windows build currently broken , windows-self-host-racket
+      ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Success!
+        run: true
