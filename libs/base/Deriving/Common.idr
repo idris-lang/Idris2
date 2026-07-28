@@ -44,10 +44,10 @@ data TypeParameter
 
 export
 Show TypeParameter where
-  show (MkTPLocal a) = "MkTPLocal \{show a}"
-  show (MkTPPrim c) = "MkTPPrim \{show c}"
-  show (MkTPApp a) = "MkTPApp \{assert_total $ show (map (map unArg) a)}"
-  show MkTPIType = "MkTPIType"
+  showPrec d (MkTPLocal a) = showCon d "MkTPLocal" $ show a
+  showPrec d (MkTPPrim c) = showCon d "MkTPPrim" $ show c
+  showPrec d (MkTPApp a) = showCon d "MkTPApp" $ assert_total $ show (map (map unArg) a)
+  showPrec d MkTPIType = "MkTPIType"
 
 public export
 record IsFamily where
