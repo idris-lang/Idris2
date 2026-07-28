@@ -1,0 +1,5 @@
+package errno001
+
+modules = Main
+main = Main
+executable = run
