@@ -795,3 +795,18 @@ jobs:
           branch: gh-pages
           folder: .github/scripts/html/
           git-config-name: Github Actions
+
+  overall-success:
+    needs:
+      [ ub-pack-test-lsp
+      , ub-pack-test-pack
+      , ub-test-collie
+      , ub-test-elab-util
+      , ub-test-frex
+      , ub-test-katla-and-html
+      , ubuntu-build-api
+      , ubuntu-self-host-chez
+      , ubuntu-bootstrap-racket # ubuntu-self-host-racket
+      , windows-self-host-racket
+      ]
+    runs-on: ubuntu-latest
