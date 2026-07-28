@@ -76,9 +76,15 @@ should target this file (`CHANGELOG_NEXT`).
 * Optimised the passing of local variables during compile-time normalisation.
 * Added `getFC` to elaborator reflection, exposing the macro call-site source
   location.
+* Normalize through private definitions when evaluating `%foreign` and
+  `%foreign_impl` strings [#3790](https://github.com/idris-lang/Idris2/issues/3790)
+  * Improve related error messages
+* Fix exponential time issue in totality checking with large data on the left hand side (#3696).
 * Removed `Borrowing` as a language extension.  This was never implemented in
   Idris2, so the only change is that `%language Borrowing` will now error rather
   than be accepted but do nothing.
+* HTML files generated using `--mkdoc` now contain attributes, that allow
+  external tools to insert links from documentation to source code.
 * Fixed `parseDouble` dropping "-" sign when whole part is "0"
   [#3804](https://github.com/idris-lang/Idris2/issues/3804),
 
