@@ -10,6 +10,10 @@ import Decidable.Equality
 public export
 data Namespace = MkNS (List String) -- namespace, stored in reverse order
 
+export
+isParentOf : (given, candidate : Namespace) -> Bool
+isParentOf (MkNS ms) (MkNS ns) = List.isSuffixOf ms ns
+
 %name Namespace ns
 
 public export
@@ -216,6 +220,11 @@ export
 dropNS : Name -> Name
 dropNS (NS _ n) = dropNS n
 dropNS n = n
+
+export
+getNS : Name -> Namespace
+getNS (NS ns nm) = ns
+getNS nm = TT.MkNS []
 
 export
 isOp : Name -> Bool

@@ -63,21 +63,7 @@ wording (DataCon tag arity) = "a data constructor"
 wording (TyCon tag arity) = "a type constructor"
 
 checkAccessToDefinition : Elaboration m => (given, candidate : Name) -> m Bool
-checkAccessToDefinition g c =
-  pure $ isParentOf (getNS g) (getNS c) || !(isPublic g)
-  where
-    getNS : Name -> Namespace
-    getNS (NS ns nm) = ns
-    getNS nm = TT.MkNS []
-
-    isParentOf : (given, candidate : Namespace) -> Bool
-    isParentOf (MkNS ms) (MkNS ns)
-      = List.isSuffixOf ms ns
-
-    isPublic : Name -> m Bool
-    isPublic n = pure $ case !(getVis g) of
-      [(_, Public)] => True
-      _ => False
+checkAccessToDefinition g c = pure $ isParentOf (getNS g) (getNS c) || !(isPublic g)
 
 normaliseName : Elaboration m => FC -> Name -> m (Maybe TTImp)
 normaliseName fc n = do
