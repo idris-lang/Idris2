@@ -810,3 +810,6 @@ jobs:
       , windows-self-host-racket
       ]
     runs-on: ubuntu-latest
+    steps:
+      - name: Success!
+      - run: true
