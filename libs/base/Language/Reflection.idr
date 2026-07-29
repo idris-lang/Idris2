@@ -306,6 +306,6 @@ search ty = catch $ check {expected = ty} `(%search)
 
 export
 isPublic : Elaboration m => Name -> m Bool
-isPublic n = pure $ case !(getVis g) of
+isPublic n = pure $ case !(getVis n) of
   [(_, Public)] => True
   _ => False
