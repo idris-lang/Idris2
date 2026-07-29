@@ -214,7 +214,7 @@ namespace Show
 
     -- t should be a type constructor
     logMsg "derive.show" 1 "Deriving Show for \{showPrec App $ mapTTImp cleanup t}"
-    MkIsType f params cs <- isType t
+    MkIsFamily f params cs <- isFamily t
     logMsg "derive.show.constructors" 1 $
       joinBy "\n" $ "" :: map (\ (n, ty) => "  \{showPrefix True $ dropNS n} : \{show $ mapTTImp cleanup ty}") cs
 

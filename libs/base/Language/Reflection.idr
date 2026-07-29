@@ -303,3 +303,9 @@ catch elab = try (Just <$> elab) (pure Nothing)
 export
 search : Elaboration m => (0 ty : Type) -> m (Maybe ty)
 search ty = catch $ check {expected = ty} `(%search)
+
+export
+isPublic : Elaboration m => Name -> m Bool
+isPublic n = pure $ case !(getVis n) of
+  [(_, Public)] => True
+  _ => False
