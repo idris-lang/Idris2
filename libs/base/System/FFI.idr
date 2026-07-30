@@ -31,18 +31,28 @@ data FieldType : List String -> Type -> List (String, Type) -> Type where
   StructFieldPtr :
     FieldType ns t fields ->
     FieldType (n :: "*" :: ns) t ((n, Ptr (Struct name fields)) :: ts)
+  StructFieldGCPtr :
+    FieldType ns t fields ->
+    FieldType (n :: "*" :: ns) t ((n, GCPtr (Struct name fields)) :: ts)
   UnionCase :
     FieldType ns t cases ->
     FieldType (n :: ns) t ((n, Union name cases) :: ts)
   UnionFieldPtr :
     FieldType ns t fields ->
     FieldType (n :: "*" :: ns) t ((n, Ptr (Union name fields)) :: ts)
+  UnionFieldGCPtr :
+    FieldType ns t fields ->
+    FieldType (n :: "*" :: ns) t ((n, GCPtr (Union name fields)) :: ts)
   Here : FieldType (n :: []) t ((n, t) :: ts)
   There : FieldType ns t ts -> FieldType ns t (f :: ts)
 
 %extern
 prim__getField : {s : _} -> forall fs, ty .
                          Ptr (Struct s fs) -> (n : String) ->
+                         FieldType (words n) ty fs -> ty
+%extern
+prim__getGCField : {s : _} -> forall fs, ty .
+                         GCPtr (Struct s fs) -> (n : String) ->
                          FieldType (words n) ty fs -> ty
 %extern
 prim__getFieldPtr : {s : _} -> forall fs, ty .
@@ -52,10 +62,18 @@ prim__getFieldPtr : {s : _} -> forall fs, ty .
 prim__setField : {s : _} -> forall fs, ty .
                          Ptr (Struct s fs) -> (n : String) ->
                          FieldType (words n) ty fs -> ty -> PrimIO ()
+%extern
+prim__setGCField : {s : _} -> forall fs, ty .
+                         GCPtr (Struct s fs) -> (n : String) ->
+                         FieldType (words n) ty fs -> ty -> PrimIO ()
 
 %extern
 prim__getCase : {u : _} -> forall fs, ty .
                          Ptr (Union u fs) -> (n : String) ->
+                         FieldType (words n) ty fs -> ty
+%extern
+prim__getGCCase : {u : _} -> forall fs, ty .
+                         GCPtr (Union u fs) -> (n : String) ->
                          FieldType (words n) ty fs -> ty
 %extern
 prim__getCasePtr : {u : _} -> forall fs, ty .
@@ -64,6 +82,10 @@ prim__getCasePtr : {u : _} -> forall fs, ty .
 %extern
 prim__setCase : {u : _} -> forall fs, ty .
                          Ptr (Union u fs) -> (n : String) ->
+                         FieldType (words n) ty fs -> ty -> PrimIO ()
+%extern
+prim__setGCCase : {u : _} -> forall fs, ty .
+                         GCPtr (Union u fs) -> (n : String) ->
                          FieldType (words n) ty fs -> ty -> PrimIO ()
 
 ||| Retrieve the value of the specified field in the given `Struct`.
@@ -74,6 +96,15 @@ public export %inline
 getField : {sn : _} -> (s : Ptr (Struct sn fs)) -> (n : String) ->
            {auto fieldok : FieldType (words n) ty fs} -> ty
 getField s n = prim__getField s n fieldok
+
+||| Retrieve the value of the specified field in the given `Struct`.
+|||
+||| @ s the `Struct` to retrieve the value from
+||| @ n the name of the field in the `Struct`.
+public export %inline
+getGCField : {sn : _} -> (s : GCPtr (Struct sn fs)) -> (n : String) ->
+           {auto fieldok : FieldType (words n) ty fs} -> ty
+getGCField s n = prim__getGCField s n fieldok
 
 ||| Retrieve the value of the specified field in the given `Struct` as a pointer.
 |||
@@ -94,6 +125,16 @@ setField : {sn : _} -> (s : Ptr (Struct sn fs)) -> (n : String) ->
            {auto fieldok : FieldType (words n) ty fs} -> (val : ty) -> IO ()
 setField s n val = primIO (prim__setField s n fieldok val)
 
+||| Set the value of the specified field in the given `Struct`.
+|||
+||| @ s   the `Struct` in which the field exists
+||| @ n   the name of the field to set
+||| @ val the value to set the field to
+public export %inline
+setGCField : {sn : _} -> (s : GCPtr (Struct sn fs)) -> (n : String) ->
+           {auto fieldok : FieldType (words n) ty fs} -> (val : ty) -> IO ()
+setGCField s n val = primIO (prim__setGCField s n fieldok val)
+
 ||| Retrieve the value of the specified case in the given `Union`.
 |||
 ||| @ u the `Union` to retrieve the value from
@@ -102,6 +143,15 @@ public export %inline
 getCase : {sn : _} -> (u : Ptr (Union sn fs)) -> (n : String) ->
            {auto fieldok : FieldType (words n) ty fs} -> ty
 getCase u n = prim__getCase u n fieldok
+
+||| Retrieve the value of the specified case in the given `Union`.
+|||
+||| @ u the `Union` to retrieve the value from
+||| @ n the name of the case in the `Union`.
+public export %inline
+getGCCase : {sn : _} -> (u : GCPtr (Union sn fs)) -> (n : String) ->
+           {auto fieldok : FieldType (words n) ty fs} -> ty
+getGCCase u n = prim__getGCCase u n fieldok
 
 ||| Retrieve the value of the specified case in the given `Union` as a pointer.
 |||
@@ -121,6 +171,16 @@ public export %inline
 setCase : {sn : _} -> (u : Ptr (Union sn fs)) -> (n : String) ->
            {auto fieldok : FieldType (words n) ty fs} -> (val : ty) -> IO ()
 setCase u n val = primIO (prim__setCase u n fieldok val)
+
+||| Set the value of the specified case in the given `Union`.
+|||
+||| @ u   the `Union` in which the case exists
+||| @ n   the name of the case to set
+||| @ val the value to set the case to
+public export %inline
+setGCCase : {sn : _} -> (u : GCPtr (Union sn fs)) -> (n : String) ->
+           {auto fieldok : FieldType (words n) ty fs} -> (val : ty) -> IO ()
+setGCCase u n val = primIO (prim__setGCCase u n fieldok val)
 
 %foreign "C:idris2_malloc, libidris2_support, idris_memory.h"
 prim__malloc : (size : Int) -> PrimIO AnyPtr

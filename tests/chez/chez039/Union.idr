@@ -24,6 +24,10 @@ mkDouble : Double -> Ptr IntOrDouble
 %foreign (pfn "freeIntOrDouble")
 freeIntOrDouble : Ptr IntOrDouble -> PrimIO ()
 
+mkGCInt : Int -> IO (GCPtr IntOrDouble)
+mkGCInt x =
+  onCollect (mkInt x) (primIO . freeIntOrDouble)
+
 %foreign (pfn "mkTaggedUnion0")
 mkTaggedUnion0 : Int -> Ptr TaggedUnion
 
@@ -36,6 +40,11 @@ freeTaggedUnion : Ptr TaggedUnion -> PrimIO ()
 showInt : Ptr IntOrDouble -> String
 showInt u =
   let x : Int = getCase u "x"
+   in show x
+
+showGCInt : GCPtr IntOrDouble -> String
+showGCInt u =
+  let x : Int = getGCCase u "x"
    in show x
 
 showDouble : Ptr IntOrDouble -> String
@@ -65,11 +74,13 @@ main = do
     t0 = mkTaggedUnion0 24
     t1 = mkTaggedUnion1 3.14 42
 
+  u3 <- mkGCInt 7919
   setCase u0 "x" (the Int 40)
   setCase u1 "y" (the Double 3.14)
   putStrLn $ showInt u0
   putStrLn $ showDouble u1
   putStrLn $ showDouble u2
+  putStrLn $ showGCInt u3
 
   putStrLn $ showTaggedUnion t0
   putStrLn $ showTaggedUnion t1

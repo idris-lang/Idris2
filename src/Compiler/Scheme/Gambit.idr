@@ -84,6 +84,13 @@ gambitPrim cs schLazy i GetField [NmPrimVal _ (Str s), _, _, struct,
          pure $ "(" ++ fromString s ++ "-" ++ fromString fld ++ " " ++ structsc ++ ")"
 gambitPrim cs schLazy i GetField [_,_,_,_,_,_]
     = pure "(error \"bad getField\")"
+gambitPrim cs schLazy i GetGCField [NmPrimVal _ (Str s), _, _, struct,
+                       NmPrimVal _ (Str fld), _]
+    = do structsc <- schExp cs (gambitPrim cs schLazy) gambitString schLazy 0 struct
+         pure $ "(" ++ fromString s ++ "-" ++ fromString fld ++ " " ++
+         "(car " ++ structsc ++ "))"
+gambitPrim cs schLazy i GetGCField [_,_,_,_,_,_]
+    = pure "(error \"bad getGCField\")"
 gambitPrim cs schLazy i SetField [NmPrimVal _ (Str s), _, _, struct,
                        NmPrimVal _ (Str fld), _, val, world]
     = do structsc <- schExp cs (gambitPrim cs schLazy) gambitString schLazy 0 struct

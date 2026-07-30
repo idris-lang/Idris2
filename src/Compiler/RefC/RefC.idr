@@ -554,8 +554,9 @@ mutual
     cStatementsFromANF (AExtPrim fc _ p args) _ = do
         let prims : List String =
             ["prim__newIORef", "prim__readIORef", "prim__writeIORef", "prim__newArray",
-             "prim__arrayGet", "prim__arraySet", "prim__getField", "prim__setField",
-             "prim__getCase", "prim__setCase", "prim__os", "prim__codegen",
+             "prim__arrayGet", "prim__arraySet", "prim__getField", "prim__getgCField",
+             "prim__setField", "prim__setGCField", "prim__getCase", "prim__getGCCase",
+             "prim__setCase", "prim__setGCCase", "prim__os", "prim__codegen",
              "prim__onCollect", "prim__onCollectAny" ]
         case p of
             NS _ (UN (Basic pn)) =>

@@ -144,6 +144,13 @@ chezExtPrim cs schLazy i GetField [NmPrimVal _ (Str s), _, _, struct,
          pure $ "(ftype-ref " ++ fromString s ++ " (" ++ fromString fld ++ ") " ++ structsc ++ ")"
 chezExtPrim cs schLazy i GetField [_,_,_,_,_,_]
     = pure "(blodwen-error-quit \"bad getField\")"
+chezExtPrim cs schLazy i GetGCField [NmPrimVal _ (Str s), _, _, struct,
+                                   NmPrimVal _ (Str fld), _]
+    = do structsc <- schExp cs (chezExtPrim cs schLazy) chezString schLazy 0 struct
+         pure $ "(ftype-ref " ++ fromString s ++ " (" ++ fromString fld ++ ") " ++
+         "(car " ++ structsc ++ "))"
+chezExtPrim cs schLazy i GetGCField [_,_,_,_,_,_]
+    = pure "(blodwen-error-quit \"bad getGCField\")"
 chezExtPrim cs schLazy i GetFieldPtr [NmPrimVal _ (Str s), _, _, struct,
                                    NmPrimVal _ (Str fld), _]
     = do structsc <- schExp cs (chezExtPrim cs schLazy) chezString schLazy 0 struct
@@ -159,6 +166,15 @@ chezExtPrim cs schLazy i SetField [NmPrimVal _ (Str s), _, _, struct,
             " " ++ valsc ++ ")"
 chezExtPrim cs schLazy i SetField [_,_,_,_,_,_,_,_]
     = pure "(blodwen-error-quit \"bad setField\")"
+chezExtPrim cs schLazy i SetGCField [NmPrimVal _ (Str s), _, _, struct,
+                        NmPrimVal _ (Str fld), _, val, world]
+    = do structsc <- schExp cs (chezExtPrim cs schLazy) chezString schLazy 0 struct
+         valsc <- schExp cs (chezExtPrim cs schLazy) chezString schLazy 0 val
+         pure $ mkWorld $
+            "(ftype-set! " ++ fromString s ++ " (" ++ fromString fld ++ ") " ++
+            "(car" ++ structsc ++ ") " ++ valsc ++ ")"
+chezExtPrim cs schLazy i SetGCField [_,_,_,_,_,_,_,_]
+    = pure "(blodwen-error-quit \"bad setGCField\")"
 chezExtPrim cs schLazy i SysCodegen []
     = pure $ "\"chez\""
 chezExtPrim cs schLazy i OnCollect [_, p, c, world]

@@ -200,7 +200,7 @@ schOp Crash [_,msg] = pure $ "(blodwen-error-quit (string-append \"ERROR: \" " +
 public export
 data ExtPrim = NewIORef | ReadIORef | WriteIORef
              | NewArray | ArrayGet | ArraySet
-             | GetField | GetFieldPtr | SetField
+             | GetField | GetGCField | GetFieldPtr | SetField | SetGCField
              | SysOS | SysCodegen
              | OnCollect
              | OnCollectAny
@@ -215,8 +215,10 @@ Show ExtPrim where
   show ArrayGet = "ArrayGet"
   show ArraySet = "ArraySet"
   show GetField = "GetField"
+  show GetGCField = "GetGCField"
   show GetFieldPtr = "GetFieldPtr"
   show SetField = "SetField"
+  show SetGCField = "SetGCField"
   show SysOS = "SysOS"
   show SysCodegen = "SysCodegen"
   show OnCollect = "OnCollect"
@@ -233,11 +235,15 @@ toPrim pn@(NS _ n)
             (n == UN (Basic "prim__arrayGet"), ArrayGet),
             (n == UN (Basic "prim__arraySet"), ArraySet),
             (n == UN (Basic "prim__getField"), GetField),
+            (n == UN (Basic "prim__getGCField"), GetGCField),
             (n == UN (Basic "prim__getFieldPtr"), GetFieldPtr),
             (n == UN (Basic "prim__setField"), SetField),
+            (n == UN (Basic "prim__setGCField"), SetGCField),
             (n == UN (Basic "prim__getCase"), GetField),
+            (n == UN (Basic "prim__getGCCase"), GetGCField),
             (n == UN (Basic "prim__getCasePtr"), GetFieldPtr),
             (n == UN (Basic "prim__setCase"), SetField),
+            (n == UN (Basic "prim__setGCCase"), SetGCField),
             (n == UN (Basic "prim__os"), SysOS),
             (n == UN (Basic "prim__codegen"), SysCodegen),
             (n == UN (Basic "prim__onCollect"), OnCollect),

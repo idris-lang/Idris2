@@ -86,6 +86,13 @@ racketPrim cs schLazy i GetField [NmPrimVal _ (Str s), _, _, struct,
          pure $ "(" ++ fromString s ++ "-" ++ fromString fld ++ " " ++ structsc ++ ")"
 racketPrim cs schLazy i GetField [_,_,_,_,_,_]
     = pure "(error \"bad getField\")"
+racketPrim cs schLazy i GetGCField [NmPrimVal _ (Str s), _, _, struct,
+                       NmPrimVal _ (Str fld), _]
+    = do structsc <- schExp cs (racketPrim cs schLazy) racketString schLazy 0 struct
+         pure $ "(" ++ fromString s ++ "-" ++ fromString fld ++ " " ++
+         "( car " ++ structsc ++ "))"
+racketPrim cs schLazy i GetGCField [_,_,_,_,_,_]
+    = pure "(error \"bad getGCField\")"
 racketPrim cs schLazy i SetField [NmPrimVal _ (Str s), _, _, struct,
                        NmPrimVal _ (Str fld), _, val, world]
     = do structsc <- schExp cs (racketPrim cs schLazy) racketString schLazy 0 struct
