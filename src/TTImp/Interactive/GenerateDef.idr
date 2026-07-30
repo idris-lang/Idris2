@@ -57,7 +57,7 @@ expandClause : {auto c : Ref Ctxt Defs} ->
                Core (Search (List ImpClause))
 expandClause loc opts n c
     = do c <- uniqueRHS c
-         Right clause <- checkClause linear Private PartialOK False n [] (MkNested []) Env.empty c
+         Right clause <- checkClause linear Private PartialOK False n [] (NestedNames.empty) Env.empty c
             | Left err => noResult -- TODO: impossible clause, do something
                                    -- appropriate
 
@@ -152,7 +152,7 @@ generateSplits loc opts fn (ImpossibleClause fc lhs) = pure []
 generateSplits loc opts fn (WithClause fc lhs rig wval prf flags cs) = pure []
 generateSplits loc opts fn (PatClause fc lhs rhs)
     = do (lhstm, _) <-
-                elabTerm fn (InLHS linear) [] (MkNested []) Env.empty
+                elabTerm fn (InLHS linear) [] (NestedNames.empty) Env.empty
                          (IBindHere loc PATTERN lhs) Nothing
          let splitnames =
                  if ltor opts then splittableNames lhs

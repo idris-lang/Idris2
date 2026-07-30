@@ -1,5 +1,7 @@
 module Libraries.Utils.Scheme
 
+import Data.String
+
 export
 data ForeignObj : Type where [external]
 
@@ -202,11 +204,6 @@ evalSchemeObj obj
     = do let str = toString obj
          evalSchemeStr str
   where
-    showSep : String -> List String -> String
-    showSep sep [] = ""
-    showSep sep [x] = x
-    showSep sep (x :: xs) = x ++ sep ++ showSep sep xs
-
     toString : SchemeObj Write -> String
     toString Null = "'()"
     toString (Cons x y) = "(cons " ++ toString x ++ " " ++ toString y ++ ")"
@@ -218,19 +215,19 @@ evalSchemeObj obj
             then "#\\" ++ cast x
             else "(integer->char " ++ show (the Int (cast x)) ++ ")"
     toString (Symbol x) = "'" ++ x
-    toString (Vector i xs) = "(vector " ++ show i ++ " " ++ showSep " " (map toString xs) ++ ")"
+    toString (Vector i xs) = "(vector " ++ show i ++ " " ++ joinBy " " (map toString xs) ++ ")"
     toString (Box x) = "(box " ++ toString x ++ ")"
     toString (Define x body) = "(define (" ++ x ++ ") " ++ toString body ++ ")"
     toString (Var x) = x
     toString (Lambda xs x)
-        = "(lambda (" ++ showSep " " xs ++ ") " ++ toString x ++ ")"
+        = "(lambda (" ++ joinBy " " xs ++ ") " ++ toString x ++ ")"
     toString (Let var val x)
         = "(let ((" ++ var ++ " " ++ toString val ++ ")) " ++ toString x ++ ")"
     toString (If x t e)
         = "(if " ++ toString x ++ " " ++ toString t ++ " " ++ toString e ++ ")"
     toString (Case x alts def)
         = "(case " ++ toString x ++ " " ++
-              showSep " " (map showAlt alts) ++
+              joinBy " " (map showAlt alts) ++
               showDef def ++ ")"
       where
         showAlt : (SchemeObj Write, SchemeObj Write) -> String
@@ -242,7 +239,7 @@ evalSchemeObj obj
         showDef (Just e) = " (else " ++ toString e ++ ")"
     toString (Cond alts def)
         = "(cond " ++
-              showSep " " (map showAlt alts) ++
+              joinBy " " (map showAlt alts) ++
               showDef def ++ ")"
       where
         showAlt : (SchemeObj Write, SchemeObj Write) -> String
@@ -253,7 +250,7 @@ evalSchemeObj obj
         showDef Nothing = ""
         showDef (Just e) = " (else " ++ toString e ++ ")"
     toString (Apply x xs)
-        = "(" ++ toString x ++ " " ++ showSep " " (map toString xs) ++ ")"
+        = "(" ++ toString x ++ " " ++ joinBy " " (map toString xs) ++ ")"
 
 export
 decodeObj : ForeignObj -> SchemeObj Readback

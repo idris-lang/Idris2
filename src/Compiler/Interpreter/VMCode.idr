@@ -10,6 +10,7 @@ import Idris.Syntax
 
 import Data.IOArray
 import Data.Vect
+
 import Libraries.Data.NameMap
 
 public export
@@ -26,14 +27,14 @@ showType (Const {}) = "Constant"
 showType Null = "Null"
 
 mutual
-    showSep : Nat -> List Object -> String
-    showSep k [] = ""
-    showSep k [o] = showDepth k o
-    showSep k (o :: os) = showDepth k o ++ ", " ++ showSep k os
+    joinBy : Nat -> List Object -> String
+    joinBy k [] = ""
+    joinBy k [o] = showDepth k o
+    joinBy k (o :: os) = showDepth k o ++ ", " ++ joinBy k os
 
     showDepth : Nat -> Object -> String
-    showDepth (S k) (Closure mis args fn) = show fn ++ "-" ++ show mis ++ "(" ++ showSep k (args <>> []) ++ ")"
-    showDepth (S k) (Constructor (Left t) args) = "tag" ++ show t ++ "(" ++ showSep k args ++ ")"
+    showDepth (S k) (Closure mis args fn) = show fn ++ "-" ++ show mis ++ "(" ++ joinBy k (args <>> []) ++ ")"
+    showDepth (S k) (Constructor (Left t) args) = "tag" ++ show t ++ "(" ++ joinBy k args ++ ")"
     showDepth (S k) (Const c) = show c
     showDepth _ obj = showType obj
 

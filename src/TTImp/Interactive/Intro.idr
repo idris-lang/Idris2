@@ -16,6 +16,8 @@ import TTImp.TTImp
 import TTImp.Unelab
 import TTImp.Utils
 
+import Data.SnocList
+
 import Libraries.Data.NatSet
 
 %default covering
@@ -59,7 +61,7 @@ parameters
       res <- catch
         (do -- We're desugaring it to the corresponding TTImp
             icons <- desugar AnyExpr (toList lhsCtxt) pcons
-            ccons <- checkTerm hidx {-is this correct?-} InExpr [] (MkNested []) env icons gty
+            ccons <- checkTerm hidx {-is this correct?-} InExpr [] (NestedNames.empty) env icons gty
             newdefs <- get Ctxt
             ncons <- normaliseHoles newdefs env ccons
             icons <- unelab env ncons
