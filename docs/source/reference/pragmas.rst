@@ -214,7 +214,7 @@ force a function to be inlined when it is called, this pragma will force it.
 ``%noinline``
 --------------------
 
-Instruct the compiler _not_ to inline the following definition when it is applied. It is generally best to let the
+Instruct the compiler *not* to inline the following definition when it is applied. It is generally best to let the
 compiler and the backend you are using optimise code based on its predetermined rules, but if you want to
 force a function to never be inlined when it is called, this pragma will force it.
 
@@ -355,6 +355,42 @@ handled in the codegen. It is used for functions like ``prim__newIORef`` in the 
 Mark a function that returns the ``Elab`` monad as a macro. When the function is used in
 an expression, it will be run at compile time and the invocation will be replaced by the
 result of the elaboration.
+
+
+``%ensure_identity``
+--------------------
+
+Mark a function as expected to reduce / be optimised to the identity function by
+the compiler.  This will then raise a warning if the compiler does not
+automatically determine the function to be the identity function, also reporting
+which transformation pass this failed on (the compiler uses multiple passes as
+some transformations may reveal/enable further optimisations).
+
+.. code-block:: idris
+
+   -- this function is deliberately not the identity function,
+   -- to show that the pragma triggers the warning
+
+   %ensure_identity
+   notId : Nat -> Bool
+   notId 0 = True
+   notId _ = False
+
+
+.. code-block:: none
+
+   Warning: notId was explicitly annotated as reducing to the identity
+   function, but the compiler did not optimise it as such (transformation
+   pass 1/3).
+
+   Warning: notId was explicitly annotated as reducing to the identity
+   function, but the compiler did not optimise it as such (transformation
+   pass 2/3).
+
+   Warning: notId was explicitly annotated as reducing to the identity
+   function, but the compiler did not optimise it as such (transformation
+   pass 3/3).
+
 
 ``%start``
 --------------------
