@@ -1,4 +1,4 @@
 . ../../testutils.sh
 
-idris2 --cg node -o node_doubles.js Doubles.idr > /dev/null
+idris2 -o node_doubles.js Doubles.idr > /dev/null
 node build/exec/node_doubles.js

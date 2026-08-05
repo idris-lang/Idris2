@@ -1,4 +1,4 @@
 . ../../testutils.sh
 
-run --cg node OS.idr
+run OS.idr
 idris2 --cg javascript -o os.js OS.idr

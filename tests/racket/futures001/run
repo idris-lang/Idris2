@@ -1,9 +1,9 @@
 . ../../testutils.sh
 
-idris2 --cg racket Futures.idr -p contrib --exec constant
-idris2 --cg racket Futures.idr -p contrib --exec map
+idris2 Futures.idr -p contrib --exec constant
+idris2 Futures.idr -p contrib --exec map
 
 echo "----"
 
-idris2 --cg racket --directive lazy=weakMemo Futures.idr -p contrib --exec constant
-idris2 --cg racket --directive lazy=weakMemo Futures.idr -p contrib --exec map
+idris2 --directive lazy=weakMemo Futures.idr -p contrib --exec constant
+idris2 --directive lazy=weakMemo Futures.idr -p contrib --exec map

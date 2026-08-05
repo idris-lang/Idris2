@@ -1,5 +1,5 @@
 . ../../testutils.sh
 
-run --cg chez Specifiers.idr
-idris2 --cg chez Specifiers.idr -o build/foo
-idris2 --cg chez < input
+run Specifiers.idr
+idris2 Specifiers.idr -o build/foo
+idris2 < input
