@@ -15,6 +15,7 @@ import TTImp.TTImp
 import Data.List
 import Data.Maybe
 
+import Libraries.Data.List.Extra
 import Libraries.Data.NatSet
 import Libraries.Data.VarSet
 import Libraries.Data.WithDefault
@@ -560,10 +561,8 @@ mutual
                           fntm fnty (n, 1 + argpos) expargs autoargs namedargs kr expty
 
   export
-  findNamed : Name -> List (Name, RawImp) -> Maybe ((Name, RawImp), List (Name, RawImp))
-  findNamed n l = case partition ((== n) . fst) l of
-                       (x :: xs, ys) => Just (x, (xs ++ ys))
-                       _ => Nothing
+  findNamed : Name -> List (Name, a) -> Maybe ((Name, a), List (Name, a))
+  findNamed n = findAndDeleteBy $ (== n) . fst
 
   export
   findBindAllExpPattern : List (Name, RawImp) -> Maybe RawImp

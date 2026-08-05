@@ -4,7 +4,7 @@ Error: While processing right hand side of wrong. Can't find an implementation f
 Error1:8:9--8:40
  4 |      Nil : Vect Z a
  5 |      (::) : a -> Vect k a -> Vect (S k) a
- 6 | 
+ 6 |
  7 | wrong : String
  8 | wrong = show (the (Vect _ _) [1,2,3,4])
              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -15,7 +15,7 @@ Error: While processing right hand side of show. Multiple solutions found in sea
 
 Error2:13:38--13:45
  09 |   show (x :: xs) = show x ++ ", " ++ show xs
- 10 | 
+ 10 |
  11 | Show (Vect n Integer) where
  12 |   show [] = "END"
  13 |   show (x :: xs) = show x ++ ", " ++ show xs
@@ -30,7 +30,7 @@ Error: While processing right hand side of wrong. Multiple solutions found in se
 Error2:16:9--16:34
  12 |   show [] = "END"
  13 |   show (x :: xs) = show x ++ ", " ++ show xs
- 14 | 
+ 14 |
  15 | wrong : String
  16 | wrong = show (the (Vect _ _) [1])
               ^^^^^^^^^^^^^^^^^^^^^^^^^

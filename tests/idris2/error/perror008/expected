@@ -4,7 +4,7 @@ Error: Couldn't parse any alternatives:
 
 Issue710a:3:8--3:9
  1 | module Issue710a
- 2 | 
+ 2 |
  3 | record r where
             ^
 ... (1 others)
@@ -14,7 +14,7 @@ Error: Couldn't parse any alternatives:
 
 Issue710b:3:6--3:7
  1 | module Issue710b
- 2 | 
+ 2 |
  3 | data r : Type where
           ^
 ... (1 others)
@@ -24,7 +24,7 @@ Error: Couldn't parse any alternatives:
 
 Issue710c:5:3--5:7
  1 | infix 3 #
- 2 | 
+ 2 |
  3 | data T : Type where
  4 |   (#) : T -> T -> T
  5 |   leaf : T
@@ -44,7 +44,7 @@ Error: Expected a capitalised identifier, got: a.
 
 Issue710e:3:11--3:12
  1 | %default total
- 2 | 
+ 2 |
  3 | namespace a
                ^
 

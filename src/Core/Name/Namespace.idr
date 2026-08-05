@@ -199,15 +199,12 @@ export
 Ord ModuleIdent where
     compare (MkMI ms) (MkMI ns) = compare ms ns
 
-mkNSInjective : MkNS ms === MkNS ns -> ms === ns
-mkNSInjective Refl = Refl
+Injective MkNS where
+  injective Refl = Refl
 
 export
 DecEq Namespace where
-
-  decEq (MkNS ms) (MkNS ns) with (decEq ms ns)
-    decEq (MkNS ms) (MkNS ns) | No contra = No (contra . mkNSInjective)
-    decEq (MkNS ms) (MkNS ns) | Yes eqmsns = Yes (cong MkNS eqmsns)
+  decEq (MkNS ms) (MkNS ns) = decEqCong (decEq ms ns)
 
 -- TODO: move somewhere more appropriate
 export

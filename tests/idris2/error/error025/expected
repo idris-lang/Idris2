@@ -8,7 +8,7 @@ Mismatch between: Nat and Bool.
 
 IAlternativePrints:8:7--8:16
  4 | %default total
- 5 | 
+ 5 |
  6 | magicScript : Elab a
  7 | magicScript = check $ IAlternative EmptyFC FirstSuccess
  8 |   [ `(the Nat 5)
@@ -21,7 +21,7 @@ and:
 Mismatch between: String and Bool.
 
 IAlternativePrints:9:7--9:23
- 5 | 
+ 5 |
  6 | magicScript : Elab a
  7 | magicScript = check $ IAlternative EmptyFC FirstSuccess
  8 |   [ `(the Nat 5)

@@ -4,7 +4,7 @@ Error: showing (MkEvenMoreComplicated (MkMoreComplicated (MkComplicated (PtrAndS
 anyfail:21:1--21:48
  17 |         TooComplicatedToBeTrue
  18 |             (MkEvenMoreComplicated (MkMoreComplicated (MkComplicated (PtrAndSize addr len))))
- 19 | 
+ 19 |
  20 | showing  :  (something : EvenMoreComplicated) -> (TooComplicatedToBeTrue something) -> Void
  21 | showing _ SomethingVeryComplicatedIs impossible
       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

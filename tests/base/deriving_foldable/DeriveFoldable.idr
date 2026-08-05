@@ -263,7 +263,7 @@ namespace BifoldableFail
     tree' : Foldable Tree'
     tree' = %runElab derive
 
-failing "Expected a type constructor, got: Prelude.Basics.id {a = Type}"
+failing "Unable to normalise Prelude.Basics.id to type constructor"
 
   total
   foldable : Foldable Prelude.id

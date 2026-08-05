@@ -4,7 +4,7 @@ You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R1.R1.a
 
 Fld:68:11--68:20
- 64 | 
+ 64 |
  65 |   public export
  66 |   record R2 where
  67 |     constructor MkR
@@ -17,8 +17,8 @@ You may be unintentionally shadowing the associated global definitions:
 
 Fld:86:3--86:37
  82 |                                              -- constructor)
- 83 | 
- 84 | 
+ 83 |
+ 84 |
  85 | data MyDataImpl : a -> Type where            -- implementation of MyData
  86 |   MkMyData : (x : a) -> MyDataImpl x
         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -38,7 +38,7 @@ You may be unintentionally shadowing the associated global definitions:
 Fld:112:1--112:40
  108 | Show' String where
  109 |    show' = id
- 110 | 
+ 110 |
  111 | %hint
  112 | showMaybe' : Show' a => Show' (Maybe a)
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -51,7 +51,7 @@ You may be unintentionally shadowing the associated global definitions:
 Fld:141:3--141:57
  137 | setName : String -> OrdinaryDog -> OrdinaryDog
  138 | setName name' = {name := name'}
- 139 | 
+ 139 |
  140 | data Three : Type -> Type -> Type -> Type where
  141 |   MkThree : (x : a) -> (y : b) -> (z : c) -> Three a b c
          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -62,10 +62,10 @@ You may be unintentionally shadowing the associated global definitions:
   b is shadowing Main.Other.b
 
 Fld:143:1--143:74
- 139 | 
+ 139 |
  140 | data Three : Type -> Type -> Type -> Type where
  141 |   MkThree : (x : a) -> (y : b) -> (z : c) -> Three a b c
- 142 | 
+ 142 |
  143 | mapSetMap : (a -> a') -> b' -> (c -> c') -> Three a b c -> Three a' b' c'
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -73,9 +73,9 @@ Warning: You may be unintentionally shadowing the following local bindings:
   a
 
 Fld:154:1--154:70
- 150 | 
+ 150 |
  151 | --------- Applications in presence of duplicate names ----------
- 152 | 
+ 152 |
  153 | -- Duplicate names are ok and treated sequentially
  154 | testDuplicateNames : {auto a : String} -> {auto a : String} -> String
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -107,7 +107,7 @@ Warning: You may be unintentionally shadowing the following local bindings:
 
 Fld:181:1--181:74
  177 | sameNamesOk {a {- = a-}, a = b} = (a, b)
- 178 | 
+ 178 |
  179 | -- All arguments are named and are of different `plicities`. Binds occur sequentially.
  180 | -- Arguments are renamed on LHS
  181 | eachArgType : (a : String) -> {a : String} -> {auto a : String} -> String
@@ -121,7 +121,7 @@ Fld:219:15--219:21
  215 | dontCare2 : (x : Nat) -> Nat -> Nat -> Nat -> (y : Nat) -> x + y = y + x
  216 | dontCare2 {} = plusCommutative {}
  217 | -- dontCare2 _ _ _ _ _ = plusCommutative _ _
- 218 | 
+ 218 |
  219 | data Tree a = Leaf a | Node (Tree a) a (Tree a)
                      ^^^^^^
 
@@ -133,7 +133,7 @@ Fld:219:24--219:48
  215 | dontCare2 : (x : Nat) -> Nat -> Nat -> Nat -> (y : Nat) -> x + y = y + x
  216 | dontCare2 {} = plusCommutative {}
  217 | -- dontCare2 _ _ _ _ _ = plusCommutative _ _
- 218 | 
+ 218 |
  219 | data Tree a = Leaf a | Node (Tree a) a (Tree a)
                               ^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -143,9 +143,9 @@ You may be unintentionally shadowing the associated global definitions:
 
 Fld:221:1--221:24
  217 | -- dontCare2 _ _ _ _ _ = plusCommutative _ _
- 218 | 
+ 218 |
  219 | data Tree a = Leaf a | Node (Tree a) a (Tree a)
- 220 | 
+ 220 |
  221 | isNode : Tree a -> Bool
        ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -162,10 +162,10 @@ You may be unintentionally shadowing the associated global definitions:
   a is shadowing Main.R2.R2.a, Main.R1.R1.a
 
 Fld:228:1--228:43
- 224 | 
+ 224 |
  225 | data IsNode : Tree a -> Type where
  226 |   Is : IsNode (Node {})
- 227 | 
+ 227 |
  228 | decIsNode : (x : Tree a) -> Dec (IsNode x)
        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -176,7 +176,7 @@ Error: While processing right hand side of r2_shouldNotTypecheck1. Ambiguous ela
 Fld:74:26--74:29
  70 | r1 : R1 -- explicit fields access
  71 | r1 = MkR {field = "string"}
- 72 | 
+ 72 |
  73 | r2_shouldNotTypecheck1 : ?
  74 | r2_shouldNotTypecheck1 = MkR {field = the Nat 22} -- fail, impossible to disambiguate
                                ^^^

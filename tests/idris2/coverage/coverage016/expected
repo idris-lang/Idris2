@@ -3,7 +3,7 @@ Error: While processing left hand side of test. Can't match on \x => True (Not a
 
 Issue633:4:1--4:18
  1 | %default total
- 2 | 
+ 2 |
  3 | test : (f : () -> Bool) -> f () = True
  4 | test (\x => True) = Refl
      ^^^^^^^^^^^^^^^^^

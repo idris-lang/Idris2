@@ -30,6 +30,14 @@ findBy' f (x :: xs) =
       let (pre, mb, post) = findBy' f xs in
       (x :: pre, mb, post)
 
+||| Returns first element that matches the predicate and the list without it
+export
+findAndDeleteBy : (a -> Bool) -> List a -> Maybe (a, List a)
+findAndDeleteBy f xs
+  = case findBy' f xs of
+      (pre, Just x, post) => Just (x, pre ++ post)
+      _                   => Nothing
+
 ||| Compute the difference of two lists by the given predicate.
 ||| Lists are treated as bags.
 export

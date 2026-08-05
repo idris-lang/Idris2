@@ -4,7 +4,7 @@ Main.{n:1} introduced at:
 Issue2041:5:17--5:19
  1 | ex : {n : Nat} -> String
  2 | ex {n} = "hello" ++ show n
- 3 | 
+ 3 |
  4 | main : IO ()
  5 | main = putStrLn ex
                      ^^

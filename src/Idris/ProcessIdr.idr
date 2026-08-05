@@ -87,11 +87,10 @@ processDecl decl
                         pure [err])
 
 processDecls decls
-    = do xs <- concat <$> traverse processDecl decls
+    = do errs <- concat <$> traverse processDecl decls
          Nothing <- checkDelayedHoles
-             | Just err => pure (if null xs then [err] else xs)
-         errs <- logTime 3 ("Totality check overall") getTotalityErrors
-         pure (xs ++ errs)
+             | Just err => pure (if null errs then [err] else errs)
+         pure errs
 
 readModule : {auto c : Ref Ctxt Defs} ->
              {auto u : Ref UST UState} ->
@@ -388,6 +387,9 @@ processMod sourceFileName ttcFileName msg sourcecode origin
                 setNS (miAsNamespace ns)
                 errs <- logTime 2 "Processing decls" $
                             processDecls (decls mod)
+                totErrs <- logTime 3 ("Totality check overall")
+                            getTotalityErrors
+                let errs = errs ++ totErrs
 --                 coreLift $ gc
 
                 when (isNil errs) $

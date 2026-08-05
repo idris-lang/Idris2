@@ -3,7 +3,7 @@ Error: While processing right hand side of test. Undefined name B.A.(>>).
 
 QDo:27:10--27:11
  23 |     a >> f = a >>= const f
- 24 | 
+ 24 |
  25 | test : Nat
  26 | test = B.A.do
  27 |          5

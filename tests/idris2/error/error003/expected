@@ -9,7 +9,7 @@ Mismatch between: Nat and Vect ?n ?a.
 Error:12:18--12:19
  08 | length [] = Z
  09 | length (x :: xs) = S (length xs)
- 10 | 
+ 10 |
  11 | wrong : Nat -> Nat
  12 | wrong x = length x
                        ^
@@ -23,7 +23,7 @@ Mismatch between: Nat and List ?a.
 Error:12:18--12:19
  08 | length [] = Z
  09 | length (x :: xs) = S (length xs)
- 10 | 
+ 10 |
  11 | wrong : Nat -> Nat
  12 | wrong x = length x
                        ^
@@ -37,7 +37,7 @@ Mismatch between: Nat and SnocList ?a.
 Error:12:18--12:19
  08 | length [] = Z
  09 | length (x :: xs) = S (length xs)
- 10 | 
+ 10 |
  11 | wrong : Nat -> Nat
  12 | wrong x = length x
                        ^
@@ -51,7 +51,7 @@ Mismatch between: Nat and String.
 Error:12:18--12:19
  08 | length [] = Z
  09 | length (x :: xs) = S (length xs)
- 10 | 
+ 10 |
  11 | wrong : Nat -> Nat
  12 | wrong x = length x
                        ^

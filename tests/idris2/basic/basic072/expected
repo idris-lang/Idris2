@@ -2,7 +2,7 @@
 Error: While processing right hand side of test2. Trying to use linear name x in non-linear context.
 
 Issue3327:11:11--11:12
- 07 | 
+ 07 |
  08 | test2 : IO ()
  09 | test2 = do
  10 |   1 x : Nat <- foo
@@ -12,7 +12,7 @@ Issue3327:11:11--11:12
 Error: While processing right hand side of test3. x is not accessible in this context.
 
 Issue3327:16:11--16:12
- 12 | 
+ 12 |
  13 | test3 : IO ()
  14 | test3 = do
  15 |   0 x : Nat <- foo
@@ -22,7 +22,7 @@ Issue3327:16:11--16:12
 Error: While processing right hand side of test4. Trying to use linear name x in non-linear context.
 
 Issue3327:21:11--21:12
- 17 | 
+ 17 |
  18 | test4 : IO ()
  19 | test4 = do
  20 |   1 x <- foo
@@ -32,7 +32,7 @@ Issue3327:21:11--21:12
 Error: While processing right hand side of test5. x is not accessible in this context.
 
 Issue3327:26:11--26:12
- 22 | 
+ 22 |
  23 | test5 : IO ()
  24 | test5 = do
  25 |   0 x <- foo

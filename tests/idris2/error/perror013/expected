@@ -3,9 +3,9 @@ Error: Expected an indented non-empty block.
 
 EmptyFailing:5:1--5:2
  1 | module EmptyFailing
- 2 | 
+ 2 |
  3 | failing
- 4 | 
+ 4 |
  5 | x : Void
      ^
 
@@ -14,9 +14,9 @@ Error: Expected an indented non-empty block.
 
 EmptyMutual:5:1--5:2
  1 | module EmptyMutual
- 2 | 
+ 2 |
  3 | mutual
- 4 | 
+ 4 |
  5 | a : Nat
      ^
 
@@ -25,9 +25,9 @@ Error: Expected an indented non-empty block.
 
 EmptyUsing:5:1--5:2
  1 | module EmptyUsing
- 2 | 
+ 2 |
  3 | using (Eq a)
- 4 | 
+ 4 |
  5 | f : a -> a -> Bool
      ^
 
@@ -36,9 +36,9 @@ Error: Expected an indented non-empty block.
 
 EmptyParameters:5:1--5:2
  1 | module EmptyParameters
- 2 | 
+ 2 |
  3 | parameters (m : Nat -> Type)
- 4 | 
+ 4 |
  5 | f : (y : Nat) -> m y -> Unit
      ^
 

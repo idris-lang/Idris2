@@ -4,7 +4,7 @@ Error: f2 is not covering.
 Issue2822:4:1--4:10
  1 | fn : (x : Bool) -> if x then (Nat -> Nat) else Void
  2 | fn True x = x
- 3 | 
+ 3 |
  4 | f2 : Void
      ^^^^^^^^^
 

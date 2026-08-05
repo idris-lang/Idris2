@@ -1,4 +1,4 @@
 #pragma once
 #include "cBackend.h"
 
-Value *refc_fork(Value_Closure *fct);
+Idris2_Value *refc_fork(Idris2_Closure *fct);

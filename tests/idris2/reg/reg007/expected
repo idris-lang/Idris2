@@ -8,7 +8,7 @@ Mismatch between: [MN 0] and [].
 Main:27:27--27:36
  23 | dpairWithExtraInfoWorks : List (vars : List Name ** Expr vars)
  24 | dpairWithExtraInfoWorks = [([MN 0] ** CLocal {x=MN 0} (First {ns=[]}))]
- 25 | 
+ 25 |
  26 | dpairWithExtraInfoBad : List (vars : List Name ** Expr vars)
  27 | dpairWithExtraInfoBad = [([MN 0] ** CLocal {x=MN 0} (First {ns=[MN 0]}))]
                                 ^^^^^^^^^

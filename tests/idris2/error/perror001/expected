@@ -4,7 +4,7 @@ Error: Bracket is not properly closed.
 PError:4:7--4:8
  1 | foo : Int -> Int
  2 | foo x = x
- 3 | 
+ 3 |
  4 | bar : (Int -> Int
            ^
 

@@ -125,7 +125,7 @@ can use ``_`` instead of a name, as follows:
 
     duplicate : (1 _ : a) -> (a, a)
 
-The intution behind multiplicity ``1`` is that if we have a function with
+The intuition behind multiplicity ``1`` is that if we have a function with
 a type of the following form...
 
 .. code-block:: idris

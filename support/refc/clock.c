@@ -3,29 +3,29 @@
 #define NSEC_PER_SEC 1000000000
 #define CLOCKS_PER_NSEC ((float)CLOCKS_PER_SEC / NSEC_PER_SEC)
 
-Value *clockTimeMonotonic() { return clockTimeUtc(); }
+Idris2_Value *clockTimeMonotonic() { return clockTimeUtc(); }
 
-Value *clockTimeUtc() {
-  return (Value *)idris2_mkBits64(time(NULL) * NSEC_PER_SEC);
+Idris2_Value *clockTimeUtc() {
+  return (Idris2_Value *)idris2_mkBits64(time(NULL) * NSEC_PER_SEC);
 }
 
-Value *clockTimeProcess() {
+Idris2_Value *clockTimeProcess() {
   uint64_t time_ns = clock() / CLOCKS_PER_NSEC;
-  return (Value *)idris2_mkBits64(time_ns);
+  return (Idris2_Value *)idris2_mkBits64(time_ns);
 }
 
-Value *clockTimeThread() { return clockTimeProcess(); }
+Idris2_Value *clockTimeThread() { return clockTimeProcess(); }
 
-Value *clockTimeGcCpu() { return NULL; }
+Idris2_Value *clockTimeGcCpu() { return NULL; }
 
-Value *clockTimeGcReal() { return NULL; }
+Idris2_Value *clockTimeGcReal() { return NULL; }
 
-int clockValid(Value *clock) { return clock != NULL; }
+int clockValid(Idris2_Value *clock) { return clock != NULL; }
 
-uint64_t clockSecond(Value *clock) {
+uint64_t clockSecond(Idris2_Value *clock) {
   return idris2_vp_to_Bits64(clock) / NSEC_PER_SEC;
 }
 
-uint64_t clockNanosecond(Value *clock) {
+uint64_t clockNanosecond(Idris2_Value *clock) {
   return idris2_vp_to_Bits64(clock) % NSEC_PER_SEC;
 }

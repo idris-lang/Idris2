@@ -169,8 +169,28 @@ extractDouble tm = case tm of
   PBracketed _ t    => extractDouble t
   _                 => Nothing
 
-mutual
+||| Put the special names of primitive operations (+, *, ++, etc.) back as syntax.
+||| Returns `Nothing` in case there was nothing to resugar.
+sugarPrimAppM : {auto c : Ref Ctxt Defs} ->
+                IPTerm -> Core (Maybe IPTerm)
+sugarPrimAppM (PApp fc (PApp fc' (PRef opFC (MkKindedName nt (UN $ Basic n) rn)) l) r) = do
+  defs <- get Ctxt
+  case definition <$> !(lookupCtxtExact rn defs.gamma) of
+      Just (Builtin {arity=2} f) =>
+         let nm' = (UN $ Basic $ show @{Sugared} f)
+             l'  = (MkFCVal fc' $ NoBinder l)
+             op' = (MkFCVal opFC (OpSymbols $ (MkKindedName nt nm' nm')))
+             in  do log "resugar.var" 80
+                          "Resugaring primitive op \{show n} to \{show nm'}"
+                    pure . Just $ POp fc l' op' r
+      _ => pure Nothing
+sugarPrimAppM _ = pure Nothing
 
+sugarPrimApp : {auto c : Ref Ctxt Defs} ->
+               IPTerm -> Core IPTerm
+sugarPrimApp tm = pure $ fromMaybe tm !(sugarPrimAppM tm)
+
+mutual
   ||| Put the special names (Nil, ::, Pair, Z, S, etc) back as syntax
   ||| Returns `Nothing` in case there was nothing to resugar.
   sugarAppM : IPTerm -> Maybe IPTerm
@@ -232,7 +252,6 @@ mutual
         _ => Nothing
 
   ||| Put the special names (Nil, ::, Pair, Z, S, etc.) back as syntax
-
   sugarApp : IPTerm -> IPTerm
   sugarApp tm = fromMaybe tm (sugarAppM tm)
 
@@ -394,10 +413,10 @@ mutual
           Core IPTerm
   mkApp fn [] = pure fn
   mkApp fn ((fc, Nothing, arg) :: rest)
-      = do let ap = sugarApp (PApp fc fn arg)
+      = do ap <- sugarPrimApp $ sugarApp (PApp fc fn arg)
            mkApp ap rest
   mkApp fn ((fc, Just Nothing, arg) :: rest)
-      = do let ap = sugarApp (PAutoApp fc fn arg)
+      = do ap <- sugarPrimApp $ sugarApp (PAutoApp fc fn arg)
            mkApp ap rest
   mkApp fn ((fc, Just (Just n), arg) :: rest)
       = do imp <- showImplicits

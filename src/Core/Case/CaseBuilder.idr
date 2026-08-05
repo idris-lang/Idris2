@@ -369,16 +369,6 @@ data ConType : Type where
      CDelay : ConType
      CConst : Constant -> ConType
 
-conTypeEq : (x, y : ConType) -> Maybe (x = y)
-conTypeEq (CName x tag) (CName x' tag')
-   = do Refl <- nameEq x x'
-        case decEq tag tag' of
-             Yes Refl => Just Refl
-             No contra => Nothing
-conTypeEq CDelay CDelay = Just Refl
-conTypeEq (CConst x) (CConst y) = (\xy => cong CConst xy) <$> constantEq x y
-conTypeEq _ _ = Nothing
-
 data Group : List Name -> -- pattern variables still to process
              Scoped where
      ConGroup : {newargs : _} ->

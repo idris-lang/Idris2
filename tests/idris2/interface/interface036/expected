@@ -5,7 +5,7 @@ Warning: You may be unintentionally shadowing the following local bindings:
 Issue3474:23:3--23:10
  19 | interface Iface7 where
  20 |   method7 : {_ : Type} -> Type
- 21 | 
+ 21 |
  22 | interface Iface8 where
  23 |   method8 : {x : Type} -> {x : Int} -> {_ : String} -> (x : Double) => {x : Integer} -> Type
         ^^^^^^^

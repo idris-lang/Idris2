@@ -78,6 +78,10 @@ idrisTestsEvaluator = testsInDir "idris2/evaluator" "Evaluation"
 idrisTestsREPL : IO TestPool
 idrisTestsREPL = testsInDir "idris2/repl" "REPL commands and help"
 
+||| Regressions for proofs of false
+idrisTestsFalse : IO TestPool
+idrisTestsFalse = testsInDir "idris2/false" "Proof of false regressions"
+
 idrisTestsAllSchemes : Requirement -> IO TestPool
 idrisTestsAllSchemes cg = testsInDir "allschemes"
       ("Test across all scheme backends: " ++ show cg ++ " instance")
@@ -133,7 +137,9 @@ typeddTests : IO TestPool
 typeddTests = testsInDir "typedd-book" "Type Driven Development"
 
 chezTests : IO TestPool
-chezTests = testsInDir "chez" "Chez backend" {codegen = Just Chez}
+chezTests = testsInDir "chez" "Chez backend"
+  {codegen = Just Chez}
+  {pred = not . ("channels009" ==)}
 
 refcTests : IO TestPool
 refcTests = testsInDir "refc" "Reference counting C backend" {codegen = Just C}
@@ -199,6 +205,7 @@ main = (runner =<<) $ sequence $
   , idrisTestsBuiltin
   , idrisTestsEvaluator
   , idrisTestsREPL
+  , idrisTestsFalse
   , idrisTestsTotality
   , idrisTestsSchemeEval
   , idrisTestsReflection

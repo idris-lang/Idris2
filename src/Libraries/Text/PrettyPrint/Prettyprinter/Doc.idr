@@ -137,6 +137,8 @@ export infixr 6 <++>
 ||| Concatenates two documents with a space in between.
 export
 (<++>) : Doc ann -> Doc ann -> Doc ann
+Empty <++> y = y
+x <++> Empty = x
 x <++> y = x <+> Chara ' ' <+> y
 
 ||| The empty document behaves like `pretty ""`, so it has a height of 1.
