@@ -82,12 +82,25 @@ public export %tcinline
 apply : (a -> b) -> a -> b
 apply f = \a => f a
 
+||| Converts a function on pairs to a curried function that takes arguments separately.
+||| The curried form allows partial application.
+||| @ f the function to curry
+|||
+||| ```idris example
+||| (curry swap) x y = (y, x)
+||| ```
 public export
-curry : ((a, b) -> c) -> a -> b -> c
+curry : (f : (a, b) -> c) -> a -> b -> c
 curry f a b = f (a, b)
 
+||| Converts a curried function that takes arguments separately to a function on pairs.
+||| @ f the function to uncurry
+|||
+||| ```idris example
+||| (uncurry min) (x, y) = min x y
+||| ```
 public export
-uncurry : (a -> b -> c) -> (a, b) -> c
+uncurry : (f : a -> b -> c) -> (a, b) -> c
 uncurry f (a, b) = f a b
 
 ||| ($) is compiled specially to shortcut any tricky unification issues, but if
