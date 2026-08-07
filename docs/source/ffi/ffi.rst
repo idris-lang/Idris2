@@ -282,7 +282,7 @@ form:
 For an example, see the sample :ref:`sect-readline` bindings.
 
 Additionally, foreign functions can take *callbacks*, and take and return
-C ``struct`` pointers.
+C ``struct`` and ```union``` pointers.
 
 .. _sect-callbacks:
 
@@ -413,15 +413,15 @@ We can define a type for accessing ``point`` in Idris by importing
     Point = Struct "point" [("x", Int), ("y", Int)]
 
     %foreign (libsmall "mkPoint")
-    mkPoint : Int -> Int -> Point
+    mkPoint : Int -> Int -> Ptr Point
 
     %foreign (libsmall "freePoint")
-    prim__freePoint : Point -> PrimIO ()
+    prim__freePoint : Ptr Point -> PrimIO ()
 
-    freePoint : Point -> IO ()
+    freePoint : Ptr Point -> IO ()
     freePoint p = primIO $ prim__freePoint p
 
-The ``Point`` type in Idris now corresponds to ``point*`` in C.
+The ``Ptr Point`` type in Idris now corresponds to ``point*`` in C.
 
 **Important**: ``Struct`` types must define all fields of the C ``struct``.
 Partial definitions will fail with memory access errors.
@@ -430,9 +430,9 @@ Fields can be read and written using the following, also from ``System.FFI``:
 
 .. code-block:: idris
 
-    getField : Struct s fs -> (n : String) ->
+    getField : Ptr (Struct s fs) -> (n : String) ->
                FieldType n ty fs => ty
-    setField : Struct s fs -> (n : String) ->
+    setField : Ptr (Struct s fs) -> (n : String) ->
                FieldType n ty fs => ty -> IO ()
 
 Notice that fields are accessed by name, and must be available in the
@@ -442,7 +442,7 @@ So, we can display a ``Point`` as follows by accessing the fields directly:
 
 .. code-block:: idris
 
-    showPoint : Point -> String
+    showPoint : Ptr Point -> String
     showPoint pt
         = let x : Int = getField pt "x"
               y : Int = getField pt "y" in
@@ -469,7 +469,11 @@ The field types of a ``Struct`` can be any of the following:
 * ``Bits32``
 * ``Bits64``
 * ``Ptr a`` or ``AnyPtr`` (``void*`` in C)
-* Another ``Struct``, which is a pointer to a ``struct`` in C
+* Another ``Ptr Struct``, which is a pointer to a ``struct`` in C
+* Another ``Struct``, which is a non-pointer value of another ``struct`` in C
+* A ``Ptr Union``, which is a pointer to a ``union`` in C (see Section
+  :ref:`sect-unions`)
+* A ``Union``, which is a non-pointer value of a ``union`` in C
 
 Note that this doesn't include ``String`` or function types! This is primarily
 because these aren't directly supported by the Chez back end. However, you can
@@ -508,6 +512,74 @@ can convert between a ``void*`` and a ``char*`` in C:
     %foreign (pfn "getString")
     getString : Ptr String -> String
 
+Unions
+-------
+
+.. _sect-unions:
+
+To work with unions is almost the same as with structs above with two
+differences:
+
+* To define a type for accessing a union in Idris, use ``Union`` type from
+  ``System.FFI``
+* In place of ``getField`` and ``setField`` use ``getCase`` and ``setCase`` to
+  get and set union cases, respectively
+
+You must ensure that you are accessing the right union case yourself by e.g.
+means of a tagged union.
+
+Note that only Chez backend currently supports unions.
+
+Supported types for cases of a ``Union`` are the same as for the fields of a
+``Struct``.
+
+For example, add the following to the top of ``smallc.c``, and
+rebuild ``libsmall.so``:
+
+::
+
+    #include <stdlib.h>
+
+    typedef union {
+        int code;
+        char character;
+    } key;
+
+    key* mkKeyCode(int code) {
+        key* k = malloc(sizeof(key));
+        k->code = code;
+        return k;
+    }
+
+    key* mkKeyCharacter(char character) {
+        key* k = malloc(sizeof(key));
+        k->character = character;
+        return k;
+    }
+
+    void freeKey(key* k) {
+        free(k);
+    }
+
+We can define a type for accessing ``key`` in Idris by importing
+``System.FFI`` and using the ``Union`` type, as follows:
+
+.. code-block:: idris
+
+    Key : Type
+    Key = Union "key" [("code", Int), ("character", Char)]
+
+    %foreign (libsmall "mkKeyCode")
+    mkKeyCode : Int -> Ptr Key
+
+    %foreign (libsmall "mkKeyCharacter")
+    mkKeyCharacter : Char -> Ptr Key
+
+    %foreign (libsmall "freeKEy")
+    prim__freeKey : Ptr Key -> PrimIO ()
+
+    freeKey : Ptr Key -> IO ()
+    freeKey k = primIO $ prim__freeKey k
 
 Finalisers
 ----------

@@ -245,8 +245,8 @@ Hashable CFType where
       h `hashWithSalt` 7
     CFChar =>
       h `hashWithSalt` 8
-    CFPtr =>
-      h `hashWithSalt` 9
+    CFPtr t =>
+      h `hashWithSalt` 9 `hashWithSalt` t
     CFGCPtr =>
       h `hashWithSalt` 10
     CFBuffer =>
@@ -273,6 +273,8 @@ Hashable CFType where
       h `hashWithSalt` 21
     CFInteger =>
       h `hashWithSalt` 22
+    CFUnion n fs =>
+      h `hashWithSalt` 23 `hashWithSalt` n `hashWithSalt` fs
 
 export
 Hashable PrimType where

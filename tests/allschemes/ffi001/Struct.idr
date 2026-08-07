@@ -1,7 +1,7 @@
 import System.FFI
 
 PtrAST : Type
-PtrAST = Struct "AST" [("value", AnyPtr)]
+PtrAST = Ptr $ Struct "AST" [("value", AnyPtr)]
 
 %foreign "C:freeAST,foo"
 prim_freeAST : (PtrAST -> Int) -> PrimIO ()
