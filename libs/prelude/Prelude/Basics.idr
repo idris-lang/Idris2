@@ -87,7 +87,7 @@ apply f = \a => f a
 ||| @ f the function to curry
 |||
 ||| ```idris example
-||| (curry swap) x y = (y, x)
+||| (curry swap) 1 0 = swap (1, 0)
 ||| ```
 public export
 curry : (f : (a, b) -> c) -> a -> b -> c
@@ -97,7 +97,7 @@ curry f a b = f (a, b)
 ||| @ f the function to uncurry
 |||
 ||| ```idris example
-||| (uncurry min) (x, y) = min x y
+||| (uncurry min) (1, 0) = min 1 0
 ||| ```
 public export
 uncurry : (f : a -> b -> c) -> (a, b) -> c
