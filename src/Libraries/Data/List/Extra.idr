@@ -64,6 +64,7 @@ export
 sortedNub : Ord a => List a -> List a
 sortedNub = dedup . sort
 
+||| `List.length` is distributive over appending
 export
 lengthDistributesOverAppend
   : (xs, ys : List a)
