@@ -169,16 +169,29 @@ namespace Bifunctor
     mapFst = map . mapFst
     mapSnd = map . mapSnd
 
+||| A functor with application, providing operations to embed
+||| pure expressions ('pure') and sequence computations (`<*>`).
+||| Abstracts the notion of function application.
+||| @ f a parameterised type
 public export
 interface Functor f => Applicative f where
   constructor MkApplicative
+  ||| Lift a value into the structure.
+  ||| @ f the parameterised type
   pure : a -> f a
+
+  ||| Sequential application.
+  ||| @ f the parameterised type
   (<*>) : f (a -> b) -> f a -> f b
 
+||| Sequence actions, discarding the value of the second argument.
+||| @ f the parameterised type
 public export %tcinline
 (<*) : Applicative f => f a -> f b -> f a
 a <* b = map const a <*> b
 
+||| Sequence actions, discarding the value of the first argument.
+||| @ f the parameterised type
 public export %tcinline
 (*>) : Applicative f => f a -> f b -> f b
 a *> b = map (const id) a <*> b
