@@ -177,17 +177,17 @@ namespace Bifunctor
     mapSnd = map . mapSnd
 
 ||| A functor with application, providing operations to embed
-||| pure expressions ('pure') and sequence computations (`<*>`).
+||| pure expressions (`pure`) and sequence computations (`<*>`).
 ||| Abstracts the notion of function application.
 ||| @ f a parameterised type
 public export
 interface Functor f => Applicative f where
   constructor MkApplicative
-  ||| Lifts a value into the structure.
+  ||| Lift a value into the structure.
   ||| @ f the parameterised type
   pure : a -> f a
 
-  ||| Sequential application. Applies an `Applicative` of functions to
+  ||| Sequential application. Apply an `Applicative` of functions to
   ||| a second `Applicative`.
   |||
   ||| ```idris example
