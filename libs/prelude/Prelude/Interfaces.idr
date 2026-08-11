@@ -358,19 +358,25 @@ concatMap = foldMap
 
 namespace Bool.Lazy
   namespace Semigroup
+    ||| `Lazy Bool` is a semigroup with logical disjunction as an operation.
     public export
     [Any] Semigroup (Lazy Bool) where
       x <+> y = force x || y
 
+    ||| `Lazy Bool` is a semigroup with logical conjunction as an operation.
     public export
     [All] Semigroup (Lazy Bool) where
       x <+> y = force x && y
 
   namespace Monoid
+    ||| `Lazy Bool` is a monoid with logical disjunction as an operation and
+    ||| a delayed `False` as the neutral element.
     public export
     [Any] Monoid (Lazy Bool) using Semigroup.Any where
       neutral = delay False
 
+    ||| `Lazy Bool` is a monoid with logical conjunction as an operation and
+    ||| a delayed `True` as the neutral element.
     public export
     [All] Monoid (Lazy Bool) using Semigroup.All where
       neutral = delay True
@@ -391,19 +397,23 @@ or = force . concat @{Any}
 
 namespace Bool
   namespace Semigroup
+    ||| `Bool` is a semigroup with `||` as an operation.
     public export
     [Any] Semigroup Bool where
       x <+> y = x || delay y
 
+    ||| `Bool` is a semigroup with `&&` as an operation.
     public export
     [All] Semigroup Bool where
       x <+> y = x && delay y
 
   namespace Monoid
+    ||| `Bool` is a monoid with `||` as an operation and `False` as the neutral element.
     public export
     [Any] Monoid Bool using Bool.Semigroup.Any where
       neutral = False
 
+    ||| `Bool` is a monoid with `&&` as an operation and `True` as the neutral element.
     public export
     [All] Monoid Bool using Bool.Semigroup.All where
       neutral = True
@@ -422,19 +432,23 @@ all = foldMap @{%search} @{All}
 
 namespace Num
   namespace Semigroup
+    ||| `Num` types form a semigroup with addition as an operation.
     public export
     [Additive] Num a => Semigroup a where
       (<+>) = (+)
 
+    ||| `Num` types form a semigroup with multiplication as an operation.
     public export
     [Multiplicative] Num a => Semigroup a where
       (<+>) = (*)
 
   namespace Monoid
+    ||| `Num` types form a monoid with addition as an operation and `0` as the neutral element.
     public export
     [Additive] Num a => Monoid a using Semigroup.Additive where
       neutral = 0
 
+    ||| `Num` types form a monoid with multiplication as an operation and `1` as the neutral element.
     public export
     [Multiplicative] Num a => Monoid a using Semigroup.Multiplicative where
       neutral = 1
