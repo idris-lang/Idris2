@@ -602,6 +602,9 @@ namespace Bifoldable
     bifoldl = foldl .: bifoldl
     binull fp = null fp || all binull fp
 
+||| Functors representing data structures that can be transformed to
+||| structures of the same shape by applying an `Applicative`
+||| action on each element from left to right.
 public export
 interface (Functor t, Foldable t) => Traversable t where
   constructor MkTraversable
@@ -619,6 +622,9 @@ sequence = traverse id
 for : Applicative f => Traversable t => t a -> (a -> f b) -> f (t b)
 for = flip traverse
 
+||| Bifunctors representing data structures that can be transformed to
+||| structures of the same shape by applying `Applicative` actions
+||| on each element from left to right.
 public export
 interface (Bifunctor p, Bifoldable p) => Bitraversable p where
   constructor MkBitraversable
