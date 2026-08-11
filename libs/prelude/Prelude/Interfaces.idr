@@ -491,27 +491,40 @@ public export %tcinline
 for_ : Applicative f => Foldable t => t a -> (a -> f b) -> f ()
 for_ = flip traverse_
 
+||| `Applicative` structures over a `Semigroup` type form a semigroup
+||| by lifting the semigroup operation through the `Applicative` structure.
 public export
 [SemigroupApplicative] Applicative f => Semigroup a => Semigroup (f a) where
   x <+> y = [| x <+> y |]
 
+||| `Applicative` structures over a `Monoid` type form a monoid
+||| by lifting the monoid operation and the neutral element
+||| through the `Applicative` structure.
 public export
 [MonoidApplicative] Applicative f => Monoid a => Monoid (f a) using SemigroupApplicative where
   neutral = pure neutral
 
 namespace Lazy
+  ||| Lazy `Alternative` structures over an arbitrary type form a semigroup
+  ||| with `<|>` as an operation.
   public export
   [SemigroupAlternative] Alternative f => Semigroup (Lazy (f a)) where
     x <+> y = force x <|> y
 
+  ||| Lazy `Alternative` structures over an arbitrary type form a monoid
+  ||| with `<|>` as an operation and `empty` as the neutral element.
   public export
   [MonoidAlternative] Alternative f => Monoid (Lazy (f a)) using Lazy.SemigroupAlternative where
     neutral = delay empty
 
+||| `Alternative` structures over an arbitrary type form a semigroup
+||| with `<|>` as an operation.
 public export
 [SemigroupAlternative] Alternative f => Semigroup (f a) where
   x <+> y = x <|> delay y
 
+||| `Alternative` structures over an arbitrary type form a monoid
+||| with `<|>` as an operation and `empty` as the neutral element.
 public export
 [MonoidAlternative] Alternative f => Monoid (f a) using Interfaces.SemigroupAlternative where
   neutral = empty
