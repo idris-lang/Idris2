@@ -156,9 +156,16 @@ interface Bifunctor f where
   mapSnd : (b -> d) -> f a b -> f a d
   mapSnd = bimap id
 
+||| The action of the `Bifunctor` on morphisms pertaining to both objects.
+||| Applies the same morphism to the first and second objects.
+|||
+||| ```idris example
+||| mapHom (\x => x + 1) (5, 10) == (6, 11)
+||| ```
+||| @ func the morphism to apply
 public export %tcinline
-mapHom : Bifunctor f => (a -> b) -> f a a -> f b b
-mapHom f = bimap f f
+mapHom : Bifunctor f => (func : a -> b) -> f a a -> f b b
+mapHom func = bimap func func
 
 namespace Bifunctor
 
