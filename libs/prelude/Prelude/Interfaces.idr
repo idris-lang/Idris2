@@ -183,21 +183,37 @@ namespace Bifunctor
 public export
 interface Functor f => Applicative f where
   constructor MkApplicative
-  ||| Lift a value into the structure.
+  ||| Lifts a value into the structure.
   ||| @ f the parameterised type
   pure : a -> f a
 
-  ||| Sequential application.
+  ||| Sequential application. Applies an `Applicative` of functions to
+  ||| a second `Applicative`.
+  |||
+  ||| ```idris example
+  ||| ((Just \x => x + 1) <*> Just 5) == Just 6
+  ||| ```
   ||| @ f the parameterised type
   (<*>) : f (a -> b) -> f a -> f b
 
 ||| Sequence actions, discarding the value of the second argument.
+|||
+||| ```idris example
+||| (Just 5 <* Just 10) == Just 5
+||| ```
 ||| @ f the parameterised type
 public export %tcinline
 (<*) : Applicative f => f a -> f b -> f a
 a <* b = map const a <*> b
 
 ||| Sequence actions, discarding the value of the first argument.
+|||
+||| ```idris example
+||| (Just 5 *> Just 10) == Just 10
+||| ```
+||| ```idris example
+||| (Nothing *> Just 2) == Nothing
+||| ```
 ||| @ f the parameterised type
 public export %tcinline
 (*>) : Applicative f => f a -> f b -> f b
