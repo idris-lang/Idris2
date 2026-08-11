@@ -547,11 +547,25 @@ namespace Foldable
 public export
 interface Bifoldable p where
   constructor MkBifoldable
-  bifoldr : (a -> acc -> acc) -> (b -> acc -> acc) -> acc -> p a b -> acc
+  ||| Successively combine elements of two different types in a parameterised type using the
+  ||| provided functions, starting with the element that is in the final position,
+  ||| i.e. the right-most position.
+  ||| @ f     The function used to fold elements of the first type into the accumulated result
+  ||| @ g     The function used to fold elements of the second type into the accumulated result
+  ||| @ init  The starting value the results are being combined into
+  ||| @ input The parameterised type
+  bifoldr : (f : a -> acc -> acc) -> (g : b -> acc -> acc) -> (init : acc) -> (input : p a b) -> acc
 
-  bifoldl : (acc -> a -> acc) -> (acc -> b -> acc) -> acc -> p a b -> acc
+  ||| The same as `bifoldr` but begins folding from the element at the initial
+  ||| position in the data structure parameterised by two types, i.e. the left-most position.
+  ||| @ f     The function used to fold elements of the first type into the accumulated result
+  ||| @ g     The function used to fold elements of the second type into the accumulated result
+  ||| @ init  The starting value the results are being combined into
+  ||| @ input The parameterised type
+  bifoldl : (f : acc -> a -> acc) -> (g : acc -> b -> acc) -> (init : acc) -> (input : p a b) -> acc
   bifoldl f g z t = bifoldr (flip (.) . flip f) (flip (.) . flip g) id t z
 
+  ||| Test whether the structure parameterised by two types is empty.
   binull : p a b -> Bool
   binull t = bifoldr {acc = Lazy Bool} (\ _,_ => False) (\ _,_ => False) True t
 
