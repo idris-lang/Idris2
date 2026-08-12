@@ -104,47 +104,47 @@ Idris2_Value *idris2_cast_Char_to_string(Idris2_Value *input) {
   return (Idris2_Value *)retVal;
 }
 
-Idris2_Value *idris2_cast_String_to_Bits8(Idris2_Value *input) {
+Idris2_Value *idris2_cast_string_to_Bits8(Idris2_Value *input) {
   Idris2_String *from = (Idris2_String *)input;
   return (Idris2_Value *)idris2_mkBits8((uint8_t)atoi(from->str));
 }
 
-Idris2_Value *idris2_cast_String_to_Bits16(Idris2_Value *input) {
+Idris2_Value *idris2_cast_string_to_Bits16(Idris2_Value *input) {
   Idris2_String *from = (Idris2_String *)input;
   return (Idris2_Value *)idris2_mkBits16((uint16_t)atoi(from->str));
 }
 
-Idris2_Value *idris2_cast_String_to_Bits32(Idris2_Value *input) {
+Idris2_Value *idris2_cast_string_to_Bits32(Idris2_Value *input) {
   Idris2_String *from = (Idris2_String *)input;
   return (Idris2_Value *)idris2_mkBits32((uint32_t)atoi(from->str));
 }
 
-Idris2_Value *idris2_cast_String_to_Bits64(Idris2_Value *input) {
+Idris2_Value *idris2_cast_string_to_Bits64(Idris2_Value *input) {
   Idris2_String *from = (Idris2_String *)input;
   return (Idris2_Value *)idris2_mkBits64((uint64_t)atoi(from->str));
 }
 
-Idris2_Value *idris2_cast_String_to_Int8(Idris2_Value *input) {
+Idris2_Value *idris2_cast_string_to_Int8(Idris2_Value *input) {
   Idris2_String *from = (Idris2_String *)input;
   return (Idris2_Value *)idris2_mkInt8((int8_t)atoi(from->str));
 }
 
-Idris2_Value *idris2_cast_String_to_Int16(Idris2_Value *input) {
+Idris2_Value *idris2_cast_string_to_Int16(Idris2_Value *input) {
   Idris2_String *from = (Idris2_String *)input;
   return (Idris2_Value *)idris2_mkInt16((int16_t)atoi(from->str));
 }
 
-Idris2_Value *idris2_cast_String_to_Int32(Idris2_Value *input) {
+Idris2_Value *idris2_cast_string_to_Int32(Idris2_Value *input) {
   Idris2_String *from = (Idris2_String *)input;
   return (Idris2_Value *)idris2_mkInt32((int32_t)atoi(from->str));
 }
 
-Idris2_Value *idris2_cast_String_to_Int64(Idris2_Value *input) {
+Idris2_Value *idris2_cast_string_to_Int64(Idris2_Value *input) {
   Idris2_String *from = (Idris2_String *)input;
   return (Idris2_Value *)idris2_mkInt64((int64_t)atoi(from->str));
 }
 
-Idris2_Value *idris2_cast_String_to_Integer(Idris2_Value *input) {
+Idris2_Value *idris2_cast_string_to_Integer(Idris2_Value *input) {
   Idris2_String *from = (Idris2_String *)input;
 
   Idris2_Integer *retVal = idris2_mkInteger();
@@ -153,7 +153,7 @@ Idris2_Value *idris2_cast_String_to_Integer(Idris2_Value *input) {
   return (Idris2_Value *)retVal;
 }
 
-Idris2_Value *idris2_cast_String_to_Double(Idris2_Value *input) {
+Idris2_Value *idris2_cast_string_to_Double(Idris2_Value *input) {
   return (Idris2_Value *)idris2_mkDouble(atof(((Idris2_String *)input)->str));
 }
 

@@ -113,6 +113,10 @@ should target this file (`CHANGELOG_NEXT`).
 * Fix headers for numeric negation.
 * Prefix RefC Idris values with `Idris2_` to prevent name collisions with third
   partly libraries.
+* Fixed casts from `String` failing to compile
+  ([#3812](https://github.com/idris-lang/Idris2/issues/3812)): the support
+  library exported the cast helpers as `idris2_cast_String_to_*` while the
+  generated code calls `idris2_cast_string_to_*`.
 
 ### Library changes
 
