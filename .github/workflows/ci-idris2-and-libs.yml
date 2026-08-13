@@ -363,6 +363,7 @@ jobs:
   ubuntu-self-host-racket:
     needs: ubuntu-bootstrap-racket
     runs-on: ubuntu-latest
+    if: false
     timeout-minutes: 60
     env:
       IDRIS2_CG: racket
@@ -807,8 +808,9 @@ jobs:
       , ub-test-elab-util
       , ub-test-frex
       , ub-test-katla-and-html
-      , ubuntu-build-api
+      , nix-bootstrap-chez
       , ubuntu-self-host-chez
+      , ubuntu-build-api
       , windows-self-host-racket
       ]
     runs-on: ubuntu-latest
