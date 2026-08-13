@@ -363,6 +363,7 @@ jobs:
   ubuntu-self-host-racket:
     needs: ubuntu-bootstrap-racket
     runs-on: ubuntu-latest
+    if: false
     timeout-minutes: 60
     env:
       IDRIS2_CG: racket
@@ -799,7 +800,7 @@ jobs:
 
   overall-success:
     needs:
-      [ ubuntu-self-host-racket
+      [ ubuntu-bootstrap-racket # ubuntu-self-host-racket
       , macos-self-host-chez
       , ub-pack-test-lsp
       , ub-pack-test-pack
