@@ -427,7 +427,7 @@ next (UN n) = MN (show n) 0
 next (NS ns n) = NS ns (next n)
 next n = MN (show n) 0
 
-||| levenstein distance that needs to be reached in order for a
+||| levenshtein distance that needs to be reached in order for a
 ||| namespace path to closely match another one.
 closeNamespaceDistance : Nat
 closeNamespaceDistance = 3
