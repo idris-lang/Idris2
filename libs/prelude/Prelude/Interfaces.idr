@@ -201,6 +201,9 @@ interface Functor f => Applicative f where
 ||| ```idris example
 ||| (Just 5 <* Just 10) == Just 5
 ||| ```
+||| ```idris example
+||| (Just 2 <* Nothing) == Nothing
+||| ```
 ||| @ f the parameterised type
 public export %tcinline
 (<*) : Applicative f => f a -> f b -> f a
