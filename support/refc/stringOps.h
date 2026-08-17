@@ -6,7 +6,7 @@
 /* stringLength : String -> Int64!? WTH!. do you have over 4Gbytes text on
  * memory!? */
 #define stringLength(x) (idris2_mkInt64(strlen(((Idris2_String *)(x))->str)))
-#define head(x) (idris2_cast_String_to_Char(x))
+#define head(x) (idris2_cast_string_to_Char(x))
 Idris2_Value *tail(Idris2_Value *str);
 Idris2_Value *reverse(Idris2_Value *str);
 Idris2_Value *strIndex(Idris2_Value *str, Idris2_Value *i);
