@@ -24,19 +24,19 @@ data Tokenizer : (tokenType : Type) -> Type where
      Alt : Tokenizer tokenType -> Lazy (Tokenizer tokenType) -> Tokenizer tokenType
 
 ||| Alternative tokenizer rules.
-export
+export %inline
 (<|>) : Tokenizer t -> Lazy (Tokenizer t) -> Tokenizer t
 (<|>) = Alt
 
 ||| Match on a recogniser and cast the string to a token.
-export
+export %inline
 match : Lexer -> (String -> a) -> Tokenizer a
 match = Match
 
 ||| Compose other tokenizer. Language composition should be quoted between
 ||| a begin lexer and a end lexer. The begin token can be used to generate
 ||| the composition tokenizer and the end lexer.
-export
+export %inline
 compose : (begin : Lexer) ->
           (mapBegin : String -> a) ->
           (tagger : String -> tag) ->

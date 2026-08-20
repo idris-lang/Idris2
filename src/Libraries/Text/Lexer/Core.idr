@@ -38,37 +38,37 @@ export %inline
 
 ||| Alternative recognisers. If both consume, the combination is guaranteed
 ||| to consume a character.
-export
+export %inline
 (<|>) : Recognise c1 -> Recognise c2 -> Recognise (c1 && c2)
 (<|>) = Alt
 
 ||| A recogniser that always fails.
-export
+export %inline
 fail : Recognise c
 fail = Fail
 
 ||| Recognise no input (doesn't consume any input)
-export
+export %inline
 empty : Recognise False
 empty = Empty
 
 ||| Recognise end of input
-export
+export %inline
 eof : Recognise False
 eof = EOF
 
 ||| Recognise a character that matches a predicate
-export
+export %inline
 pred : (Char -> Bool) -> Lexer
 pred = Pred
 
 ||| Positive lookahead. Never consumes input.
-export
+export %inline
 expect : Recognise c -> Recognise False
 expect = Lookahead True
 
 ||| Negative lookahead. Never consumes input.
-export
+export %inline
 reject : Recognise c -> Recognise False
 reject = Lookahead False
 
