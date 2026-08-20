@@ -66,38 +66,31 @@ Pretty Void StopReason where
 
 tokenise : Lexer ->
            Tokenizer a ->
-           (line, col : Int) -> List (WithBounds a) ->
+           (line, col : Int) -> SnocList (WithBounds a) ->
            List Char ->
            (List (WithBounds a), (StopReason, Int, Int, List Char))
-tokenise reject tokenizer line col acc [] = (reverse acc, EndInput, (line, col, []))
+tokenise reject tokenizer line col acc [] = (acc <>> [], EndInput, (line, col, []))
 tokenise reject tokenizer line col acc str
-    = case scan reject [] str of
-           Just _ => (reverse acc, (EndInput, line, col, str))
+    = case scan reject [<] str of
+           Just _ => (acc <>> [], (EndInput, line, col, str))
            Nothing => case getFirstMatch tokenizer str of
                            Right (toks, line', col', rest) =>
                                -- assert total because getFirstMatch must consume something
-                               assert_total (tokenise reject tokenizer line' col' (toks ++ acc) rest)
-                           Left reason => (reverse acc, reason, (line, col, str))
+                               assert_total (tokenise reject tokenizer line' col' (acc <>< toks) rest)
+                           Left reason => (acc <>> [], reason, (line, col, str))
   where
-    countNLs : List Char -> Nat
-    countNLs str = List.length (filter (== '\n') str)
-
-    getCols : List Char -> Int -> Int
-    getCols x c
-        = case span (/= '\n') x of
-               (incol, []) => c + cast (length incol)
-               (incol, _) => cast (length incol)
 
     -- get the next lexeme using the `Lexer` in argument, its position and the input
     -- Returns the new position, the lexeme parsed and the rest of the input
     -- If parsing the lexer fails, this returns `Nothing`
-    getNext : (lexer : Lexer) ->  (line, col : Int) -> (input : List Char) -> Maybe (String, Int, Int, List Char)
+    getNext : (lexer : Lexer) -> (line, col : Int) ->
+              (input : List Char) -> Maybe (String, Int, Int, List Char)
     getNext lexer line col str =
-      let Just (token, rest) = scan lexer [] str
+      let Just (token, rest) = scan lexer [<] str
             | _ => Nothing
           line' = line + cast (countNLs token)
           col' = getCols token col
-          tokenStr = fastPack $ reverse token
+          tokenStr = fastPack $ token <>> []
        in pure (tokenStr, line', col', rest)
 
     getFirstMatch : Tokenizer a -> List Char ->
@@ -115,7 +108,7 @@ tokenise reject tokenizer line col acc str
               end = endFn tag
               beginTok'' = MkBounded (mapBegin beginTok') False (MkBounds line col line' col')
               (midToks, (reason, line'', col'', rest'')) =
-                    assert_total $ tokenise end middle line' col' [] rest
+                    assert_total $ tokenise end middle line' col' [<] rest
            in case reason of
                    ComposeNotClosing {} => Left reason
                    _ => let Just (endTok', lineEnd, colEnd, restEnd) =
@@ -136,7 +129,7 @@ lexTo : Lexer ->
         (List (WithBounds a), (StopReason, Int, Int, String))
 lexTo reject tokenizer str
     = let (ts, reason, (l, c, str')) =
-              tokenise reject tokenizer 0 0 [] (fastUnpack str) in
+              tokenise reject tokenizer 0 0 [<] (fastUnpack str) in
           (ts, reason, (l, c, fastPack str'))
 
 ||| Given a tokenizer and an input string, return a list of recognised tokens,
