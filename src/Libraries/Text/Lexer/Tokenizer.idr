@@ -68,16 +68,16 @@ tokenise : Lexer ->
            Tokenizer a ->
            (line, col : Int) -> SnocList (WithBounds a) ->
            List Char ->
-           (List (WithBounds a), (StopReason, Int, Int, List Char))
-tokenise reject tokenizer line col acc [] = (acc <>> [], EndInput, (line, col, []))
+           (SnocList (WithBounds a), (StopReason, Int, Int, List Char))
+tokenise reject tokenizer line col acc [] = (acc, EndInput, (line, col, []))
 tokenise reject tokenizer line col acc str
     = case scan reject [<] str of
-           Just _ => (acc <>> [], (EndInput, line, col, str))
-           Nothing => case getFirstMatch tokenizer str of
-                           Right (toks, line', col', rest) =>
+           Just _ => (acc, (EndInput, line, col, str))
+           Nothing => case getFirstMatch tokenizer acc str of
+                           Right (acc', line', col', rest) =>
                                -- assert total because getFirstMatch must consume something
-                               assert_total (tokenise reject tokenizer line' col' (acc <>< toks) rest)
-                           Left reason => (acc <>> [], reason, (line, col, str))
+                               assert_total (tokenise reject tokenizer line' col' acc' rest)
+                           Left reason => (acc, reason, (line, col, str))
   where
 
     -- get the next lexeme using the `Lexer` in argument, its position and the input
@@ -93,34 +93,34 @@ tokenise reject tokenizer line col acc str
           tokenStr = fastPack $ token <>> []
        in pure (tokenStr, line', col', rest)
 
-    getFirstMatch : Tokenizer a -> List Char ->
-                    Either StopReason (List (WithBounds a), Int, Int, List Char)
-    getFirstMatch (Match lex fn) str
+    getFirstMatch : Tokenizer a -> SnocList (WithBounds a) -> List Char ->
+                    Either StopReason (SnocList (WithBounds a), Int, Int, List Char)
+    getFirstMatch (Match lex fn) acc str
         = let Just (tok, line', col', rest) = getNext lex line col str
                 | _ => Left NoRuleApply
               tok' = MkBounded (fn tok) False (MkBounds line col line' col')
-           in Right ([tok'], line', col', rest)
-    getFirstMatch (Compose begin mapBegin tagger middleFn endFn mapEnd) str
+           in Right (acc :< tok', line', col', rest)
+    getFirstMatch (Compose begin mapBegin tagger middleFn endFn mapEnd) acc str
         = let Just (beginTok', line', col' , rest) = getNext begin line col str
                 | Nothing => Left NoRuleApply
               tag = tagger beginTok'
               middle = middleFn tag
               end = endFn tag
               beginTok'' = MkBounded (mapBegin beginTok') False (MkBounds line col line' col')
-              (midToks, (reason, line'', col'', rest'')) =
-                    assert_total $ tokenise end middle line' col' [<] rest
+              (acc', (reason, line'', col'', rest'')) =
+                    assert_total $ tokenise end middle line' col' (acc :< beginTok'') rest
            in case reason of
                    ComposeNotClosing {} => Left reason
                    _ => let Just (endTok', lineEnd, colEnd, restEnd) =
                                 getNext end line'' col'' rest''
                               | _ => Left $ ComposeNotClosing (line, col) (line', col')
                             endTok'' = MkBounded (mapEnd endTok') False (MkBounds line'' col'' lineEnd colEnd)
-                         in Right ([endTok''] ++ reverse midToks ++ [beginTok''], lineEnd, colEnd, restEnd)
-    getFirstMatch (Alt t1 t2) str
-        = case getFirstMatch t1 str of
+                         in Right (acc' :< endTok'', lineEnd, colEnd, restEnd)
+    getFirstMatch (Alt t1 t2) acc str
+        = case getFirstMatch t1 acc str of
                Right result => Right result
                Left reason@(ComposeNotClosing {}) => Left reason
-               Left _ => getFirstMatch t2 str
+               Left _ => getFirstMatch t2 acc str
 
 export
 lexTo : Lexer ->
@@ -130,7 +130,7 @@ lexTo : Lexer ->
 lexTo reject tokenizer str
     = let (ts, reason, (l, c, str')) =
               tokenise reject tokenizer 0 0 [<] (fastUnpack str) in
-          (ts, reason, (l, c, fastPack str'))
+          (ts <>> [], reason, (l, c, fastPack str'))
 
 ||| Given a tokenizer and an input string, return a list of recognised tokens,
 ||| and the line, column, and remainder of the input at the first point in the string
