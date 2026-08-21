@@ -144,6 +144,19 @@ chezExtPrim cs schLazy i GetField [NmPrimVal _ (Str s), _, _, struct,
          pure $ "(ftype-ref " ++ fromString s ++ " (" ++ fromString fld ++ ") " ++ structsc ++ ")"
 chezExtPrim cs schLazy i GetField [_,_,_,_,_,_]
     = pure "(blodwen-error-quit \"bad getField\")"
+chezExtPrim cs schLazy i GetGCField [NmPrimVal _ (Str s), _, _, struct,
+                                   NmPrimVal _ (Str fld), _]
+    = do structsc <- schExp cs (chezExtPrim cs schLazy) chezString schLazy 0 struct
+         pure $ "(ftype-ref " ++ fromString s ++ " (" ++ fromString fld ++ ") " ++
+         "(car " ++ structsc ++ "))"
+chezExtPrim cs schLazy i GetGCField [_,_,_,_,_,_]
+    = pure "(blodwen-error-quit \"bad getGCField\")"
+chezExtPrim cs schLazy i GetFieldPtr [NmPrimVal _ (Str s), _, _, struct,
+                                   NmPrimVal _ (Str fld), _]
+    = do structsc <- schExp cs (chezExtPrim cs schLazy) chezString schLazy 0 struct
+         pure $ "(ftype-&ref " ++ fromString s ++ " (" ++ fromString fld ++ ") " ++ structsc ++ ")"
+chezExtPrim cs schLazy i GetFieldPtr [_,_,_,_,_,_]
+    = pure "(blodwen-error-quit \"bad getFieldPtr\")"
 chezExtPrim cs schLazy i SetField [NmPrimVal _ (Str s), _, _, struct,
                         NmPrimVal _ (Str fld), _, val, world]
     = do structsc <- schExp cs (chezExtPrim cs schLazy) chezString schLazy 0 struct
@@ -153,6 +166,15 @@ chezExtPrim cs schLazy i SetField [NmPrimVal _ (Str s), _, _, struct,
             " " ++ valsc ++ ")"
 chezExtPrim cs schLazy i SetField [_,_,_,_,_,_,_,_]
     = pure "(blodwen-error-quit \"bad setField\")"
+chezExtPrim cs schLazy i SetGCField [NmPrimVal _ (Str s), _, _, struct,
+                        NmPrimVal _ (Str fld), _, val, world]
+    = do structsc <- schExp cs (chezExtPrim cs schLazy) chezString schLazy 0 struct
+         valsc <- schExp cs (chezExtPrim cs schLazy) chezString schLazy 0 val
+         pure $ mkWorld $
+            "(ftype-set! " ++ fromString s ++ " (" ++ fromString fld ++ ") " ++
+            "(car" ++ structsc ++ ") " ++ valsc ++ ")"
+chezExtPrim cs schLazy i SetGCField [_,_,_,_,_,_,_,_]
+    = pure "(blodwen-error-quit \"bad setGCField\")"
 chezExtPrim cs schLazy i SysCodegen []
     = pure $ "\"chez\""
 chezExtPrim cs schLazy i OnCollect [_, p, c, world]
@@ -170,7 +192,7 @@ chezExtPrim cs schLazy i prim args
 export
 data Loaded : Type where
 
--- Label for noting which struct types are declared
+-- Label for noting which struct and union types are declared
 export
 data Structs : Type where
 
@@ -188,12 +210,15 @@ cftySpec fc CFUnsigned64 = pure "unsigned-64"
 cftySpec fc CFString = pure "string"
 cftySpec fc CFDouble = pure "double"
 cftySpec fc CFChar = pure "char"
-cftySpec fc CFPtr = pure "void*"
+cftySpec fc (CFStruct n t) = pure $ fromString n
+cftySpec fc (CFPtr (CFStruct n t)) = pure $ "(* " ++ fromString n ++ ")"
+cftySpec fc (CFUnion n t) = pure $ "(* " ++ fromString n ++ ")"
+cftySpec fc (CFPtr (CFUnion n t)) = pure $ "(* " ++ fromString n ++ ")"
+cftySpec fc (CFPtr _) = pure "void*"
 cftySpec fc CFGCPtr = pure "void*"
 cftySpec fc CFBuffer = pure "u8*"
 cftySpec fc (CFFun s t) = pure "void*"
 cftySpec fc (CFIORes t) = cftySpec fc t
-cftySpec fc (CFStruct n t) = pure $ "(* " ++ fromString n ++ ")"
 cftySpec fc t = throw (GenericMsg fc ("Can't pass argument of type " ++ show t ++
                          " to foreign function"))
 
@@ -354,6 +379,18 @@ mkStruct (CFStruct n flds)
   where
     showFld : (String, CFType) -> Core Builder
     showFld (n, ty) = pure $ "[" ++ fromString n ++ " " ++ !(cftySpec emptyFC ty) ++ "]"
+mkStruct (CFUnion n flds)
+    = do defs <- traverse mkStruct (map snd flds)
+         strs <- get Structs
+         if n `elem` strs
+            then pure (concat defs)
+            else do put Structs (n :: strs)
+                    pure $ concat defs ++ "(define-ftype " ++ fromString n ++ " (union\n\t"
+                           ++ sepBy "\n\t" !(traverse showFld flds) ++ "))\n"
+  where
+    showFld : (String, CFType) -> Core Builder
+    showFld (n, ty) = pure $ "[" ++ fromString n ++ " " ++ !(cftySpec emptyFC ty) ++ "]"
+mkStruct (CFPtr t) = mkStruct t
 mkStruct (CFIORes t) = mkStruct t
 mkStruct (CFFun a b) = do [| mkStruct a ++ mkStruct b |]
 mkStruct _ = pure ""

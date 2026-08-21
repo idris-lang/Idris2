@@ -554,8 +554,10 @@ mutual
     cStatementsFromANF (AExtPrim fc _ p args) _ = do
         let prims : List String =
             ["prim__newIORef", "prim__readIORef", "prim__writeIORef", "prim__newArray",
-             "prim__arrayGet", "prim__arraySet", "prim__getField", "prim__setField",
-             "prim__os", "prim__codegen", "prim__onCollect", "prim__onCollectAny" ]
+             "prim__arrayGet", "prim__arraySet", "prim__getField", "prim__getgCField",
+             "prim__setField", "prim__setGCField", "prim__getCase", "prim__getGCCase",
+             "prim__setCase", "prim__setGCCase", "prim__os", "prim__codegen",
+             "prim__onCollect", "prim__onCollectAny" ]
         case p of
             NS _ (UN (Basic pn)) =>
                unless (elem pn prims) $ throw $ InternalError $ "[refc] Unknown primitive: " ++ cName p
@@ -701,13 +703,14 @@ cTypeOfCFType CFUnsigned64    = "uint64_t"
 cTypeOfCFType CFString        = "char *"
 cTypeOfCFType CFDouble        = "double"
 cTypeOfCFType CFChar          = "char"
-cTypeOfCFType CFPtr           = "void *"
+cTypeOfCFType (CFPtr _)       = "void *"
 cTypeOfCFType CFGCPtr         = "void *"
 cTypeOfCFType CFBuffer        = "void *"
 cTypeOfCFType CFWorld         = "void *"
 cTypeOfCFType (CFFun x y)     = "void *"
 cTypeOfCFType (CFIORes x)     = "void *"
 cTypeOfCFType (CFStruct x ys) = "void *"
+cTypeOfCFType (CFUnion x ys)  = "void *"
 cTypeOfCFType (CFUser x ys)   = "void *"
 cTypeOfCFType n = assert_total $ idris_crash ("INTERNAL ERROR: Unknown FFI type in C backend: " ++ show n)
 
@@ -753,7 +756,7 @@ extractValue _ CFUnsigned64     varName = "(idris2_vp_to_Bits64(" ++ varName ++ 
 extractValue _ CFString         varName = "((Idris2_String*)" ++ varName ++ ")->str"
 extractValue _ CFDouble         varName = "(idris2_vp_to_Double(" ++ varName ++ "))"
 extractValue _ CFChar           varName = "(idris2_vp_to_Char(" ++ varName ++ "))"
-extractValue _ CFPtr            varName = "((Idris2_Pointer*)" ++ varName ++ ")->p"
+extractValue _ (CFPtr t)        varName = "((Idris2_Pointer*)" ++ varName ++ ")->p"
 extractValue _ CFGCPtr          varName = "((Idris2_GCPointer*)" ++ varName ++ ")->p->p"
 extractValue CLangC    CFBuffer varName = "((Idris2_Buffer*)" ++ varName ++ ")->buffer->data"
 extractValue CLangRefC CFBuffer varName = "((Idris2_Buffer*)" ++ varName ++ ")->buffer"
@@ -761,6 +764,7 @@ extractValue _ CFWorld          _       = "(Idris2_Value *)NULL"
 extractValue _ (CFFun x y)      varName = "(Idris2_Closure*)" ++ varName
 extractValue c (CFIORes x)      varName = extractValue c x varName
 extractValue _ (CFStruct x xs)  varName = assert_total $ idris_crash ("INTERNAL ERROR: Struct access not implemented: " ++ varName)
+extractValue _ (CFUnion x xs)  varName = assert_total $ idris_crash ("INTERNAL ERROR: Union access not implemented: " ++ varName)
 -- not really total but this way this internal error does not contaminate everything else
 extractValue _ (CFUser x xs)    varName = "(Idris2_Value*)" ++ varName
 extractValue _ n _ = assert_total $ idris_crash ("INTERNAL ERROR: Unknown FFI type in C backend: " ++ show n)
@@ -779,13 +783,14 @@ packCFType CFUnsigned8     varName = "idris2_mkBits8(" ++ varName ++ ")"
 packCFType CFString        varName = "idris2_mkString(" ++ varName ++ ")"
 packCFType CFDouble        varName = "idris2_mkDouble(" ++ varName ++ ")"
 packCFType CFChar          varName = "idris2_mkChar(" ++ varName ++ ")"
-packCFType CFPtr           varName = "idris2_makePointer(" ++ varName ++ ")"
+packCFType (CFPtr t)       varName = "idris2_makePointer(" ++ varName ++ ")"
 packCFType CFGCPtr         varName = "idris2_makePointer(" ++ varName ++ ")"
 packCFType CFBuffer        varName = "idris2_makeBuffer(" ++ varName ++ ")"
 packCFType CFWorld         _       = "(Idris2_Value *)NULL"
 packCFType (CFFun x y)     varName = "makeFunction(" ++ varName ++ ")"
 packCFType (CFIORes x)     varName = packCFType x varName
 packCFType (CFStruct x xs) varName = "makeStruct(" ++ varName ++ ")"
+packCFType (CFUnion x xs) varName = "makeUnion(" ++ varName ++ ")"
 packCFType (CFUser x xs)   varName = varName
 packCFType n _ = assert_total $ idris_crash ("INTERNAL ERROR: Unknown FFI type in C backend: " ++ show n)
 

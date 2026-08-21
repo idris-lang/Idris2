@@ -86,6 +86,13 @@ racketPrim cs schLazy i GetField [NmPrimVal _ (Str s), _, _, struct,
          pure $ "(" ++ fromString s ++ "-" ++ fromString fld ++ " " ++ structsc ++ ")"
 racketPrim cs schLazy i GetField [_,_,_,_,_,_]
     = pure "(error \"bad getField\")"
+racketPrim cs schLazy i GetGCField [NmPrimVal _ (Str s), _, _, struct,
+                       NmPrimVal _ (Str fld), _]
+    = do structsc <- schExp cs (racketPrim cs schLazy) racketString schLazy 0 struct
+         pure $ "(" ++ fromString s ++ "-" ++ fromString fld ++ " " ++
+         "( car " ++ structsc ++ "))"
+racketPrim cs schLazy i GetGCField [_,_,_,_,_,_]
+    = pure "(error \"bad getGCField\")"
 racketPrim cs schLazy i SetField [NmPrimVal _ (Str s), _, _, struct,
                        NmPrimVal _ (Str fld), _, val, world]
     = do structsc <- schExp cs (racketPrim cs schLazy) racketString schLazy 0 struct
@@ -130,11 +137,12 @@ cftySpec fc CFUnsigned64 = pure "_uint64"
 cftySpec fc CFString = pure "_string/utf-8"
 cftySpec fc CFDouble = pure "_double"
 cftySpec fc CFChar = pure "_int8"
-cftySpec fc CFPtr = pure "_pointer"
+cftySpec fc (CFPtr t) = pure "_pointer"
 cftySpec fc CFGCPtr = pure "_pointer"
 cftySpec fc CFBuffer = pure "_bytes"
 cftySpec fc (CFIORes t) = cftySpec fc t
 cftySpec fc (CFStruct n t) = pure $ "_" ++ fromString n ++ "-pointer"
+cftySpec fc (CFUnion n t) = throw (GenericMsg fc "Union types are not yet supported")
 cftySpec fc (CFFun s t) = funTySpec [s] t
   where
     funTySpec : List CFType -> CFType -> Core Builder
@@ -301,6 +309,10 @@ mkStruct (CFStruct n flds)
   where
     showFld : (String, CFType) -> Core Builder
     showFld (n, ty) = pure $ "[" ++ fromString n ++ " " ++ !(cftySpec emptyFC ty) ++ "]"
+mkStruct (CFUnion n flds)
+    -- TODO: add Union support
+    = pure ""
+mkStruct (CFPtr t) = mkStruct t
 mkStruct (CFIORes t) = mkStruct t
 mkStruct (CFFun a b) = [| mkStruct a ++ mkStruct b |]
 mkStruct _ = pure ""

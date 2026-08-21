@@ -189,7 +189,7 @@ data CFType : Type where
      CFString : CFType
      CFDouble : CFType
      CFChar : CFType
-     CFPtr : CFType
+     CFPtr : CFType -> CFType
      CFGCPtr : CFType
      CFBuffer : CFType
      CFForeignObj : CFType
@@ -197,6 +197,7 @@ data CFType : Type where
      CFFun : CFType -> CFType -> CFType
      CFIORes : CFType -> CFType
      CFStruct : String -> List (String, CFType) -> CFType
+     CFUnion : String -> List (String, CFType) -> CFType
      CFUser : Name -> List CFType -> CFType
 
 public export
@@ -390,7 +391,7 @@ Show CFType where
   show CFString = "String"
   show CFDouble = "Double"
   show CFChar = "Char"
-  show CFPtr = "Ptr"
+  show (CFPtr t) = "Ptr " ++ show t
   show CFGCPtr = "GCPtr"
   show CFBuffer = "Buffer"
   show CFForeignObj = "ForeignObj"
@@ -398,6 +399,7 @@ Show CFType where
   show (CFFun s t) = show s ++ " -> " ++ show t
   show (CFIORes t) = "IORes " ++ show t
   show (CFStruct n args) = "struct " ++ show n ++ " " ++ showSep " " (map show args)
+  show (CFUnion n args) = "union " ++ show n ++ " " ++ showSep " " (map show args)
   show (CFUser n args) = show n ++ " " ++ showSep " " (map show args)
 
 export

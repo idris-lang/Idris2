@@ -7,15 +7,15 @@ Point : Type
 Point = Struct "point" [("x", Int), ("y", Int)]
 
 %foreign (libsmall "mkPoint")
-mkPoint : Int -> Int -> Point
+mkPoint : Int -> Int -> Ptr Point
 
 %foreign (libsmall "freePoint")
-prim__freePoint : Point -> PrimIO ()
+prim__freePoint : Ptr Point -> PrimIO ()
 
-freePoint : Point -> IO ()
+freePoint : Ptr Point -> IO ()
 freePoint p = primIO $ prim__freePoint p
 
-showPoint : Point -> String
+showPoint : Ptr Point -> String
 showPoint pt
     = let x : Int = getField pt "x"
           y : Int = getField pt "y" in

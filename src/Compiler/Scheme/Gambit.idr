@@ -84,6 +84,13 @@ gambitPrim cs schLazy i GetField [NmPrimVal _ (Str s), _, _, struct,
          pure $ "(" ++ fromString s ++ "-" ++ fromString fld ++ " " ++ structsc ++ ")"
 gambitPrim cs schLazy i GetField [_,_,_,_,_,_]
     = pure "(error \"bad getField\")"
+gambitPrim cs schLazy i GetGCField [NmPrimVal _ (Str s), _, _, struct,
+                       NmPrimVal _ (Str fld), _]
+    = do structsc <- schExp cs (gambitPrim cs schLazy) gambitString schLazy 0 struct
+         pure $ "(" ++ fromString s ++ "-" ++ fromString fld ++ " " ++
+         "(car " ++ structsc ++ "))"
+gambitPrim cs schLazy i GetGCField [_,_,_,_,_,_]
+    = pure "(error \"bad getGCField\")"
 gambitPrim cs schLazy i SetField [NmPrimVal _ (Str s), _, _, struct,
                        NmPrimVal _ (Str fld), _, val, world]
     = do structsc <- schExp cs (gambitPrim cs schLazy) gambitString schLazy 0 struct
@@ -100,7 +107,7 @@ gambitPrim cs schLazy i prim args
 -- Reference label for keeping track of loaded external libraries
 data Loaded : Type where
 
--- Label for noting which struct types are declared
+-- Label for noting which struct and union types are declared
 data Structs : Type where
 
 notWorld : CFType -> Bool
@@ -113,9 +120,10 @@ cType fc CFInt = pure "int"
 cType fc CFString = pure "char *"
 cType fc CFDouble = pure "double"
 cType fc CFChar = pure "char"
-cType fc CFPtr = pure "void *"
+cType fc (CFPtr t) = pure "void *"
 cType fc (CFIORes t) = cType fc t
 cType fc (CFStruct n t) = pure $ "struct " ++ fromString n
+cType fc (CFUnion n t) = pure $ "union " ++ fromString n
 cType fc (CFFun s t) = funTySpec [s] t
   where
     funTySpec : List CFType -> CFType -> Core Builder
@@ -142,9 +150,10 @@ cftySpec fc CFUnsigned64 = pure "unsigned-long"
 cftySpec fc CFString = pure "UTF-8-string"
 cftySpec fc CFDouble = pure "double"
 cftySpec fc CFChar = pure "char"
-cftySpec fc CFPtr = pure "(pointer void)"
+cftySpec fc (CFPtr t) = pure "(pointer void)"
 cftySpec fc (CFIORes t) = cftySpec fc t
 cftySpec fc (CFStruct n t) = pure $ fromString n ++ "*/nonnull"
+cftySpec fc (CFUnion n t) = throw (GenericMsg fc "Union types are not yet supported")
 cftySpec fc (CFFun s t) = funTySpec [s] t
   where
     funTySpec : List CFType -> CFType -> Core Builder
@@ -320,6 +329,10 @@ mkStruct (CFStruct n flds)
   where
     showFld : (String, CFType) -> Core Builder
     showFld (n, ty) = pure $ "(" ++ fromString n ++ " " ++ !(cftySpec emptyFC ty) ++ ")"
+mkStruct (CFUnion n flds)
+    -- TODO: add Union support
+    = pure ""
+mkStruct (CFPtr t) = mkStruct t
 mkStruct (CFIORes t) = mkStruct t
 mkStruct (CFFun a b) = [| mkStruct a ++ mkStruct b |]
 mkStruct _ = pure ""

@@ -128,3 +128,13 @@ should target this file (`CHANGELOG_NEXT`).
 * Added `maybeEq` to `Decidable.Equality`.
 * Removed `writeIORef1`, which unsafely allowed a linear value to become unrestricted.
 * Made `xs` and `ys` explicit arguments of `SplitRecPair` in `Data.Vect.Views`.
+* `System.FFI` improvements and additions:
+  - Added support for FFI C unions. Added `Union`, `getCase` and
+    `setCase`
+  - `Struct` and `Union` have to use an explicit `Ptr` when dealing with
+    pointers to allow to distinguish them from non-pointer ones. `getField`,
+    `setField`, `getCase` and `setCase` now require a `Ptr Struct`/`Ptr Union`
+    in place of `Struct`/`Union`
+  - Added `getFieldPtr` and `getCasePtr` to get a field of a nested non-pointer
+    `Struct` field or `Union` case, respectively, as a pointer
+  - Added support to get or set a nested `Struct` field or `Union` case

@@ -833,7 +833,7 @@ TTC CFType where
   toBuf CFString = tag 6
   toBuf CFDouble = tag 7
   toBuf CFChar = tag 8
-  toBuf CFPtr = tag 9
+  toBuf (CFPtr t) = do tag 9; toBuf t
   toBuf CFWorld = tag 10
   toBuf (CFFun s t) = do tag 11; toBuf s; toBuf t
   toBuf (CFIORes t) = do tag 12; toBuf t
@@ -847,6 +847,7 @@ TTC CFType where
   toBuf CFInt64 = tag 20
   toBuf CFForeignObj = tag 21
   toBuf CFInteger = tag 22
+  toBuf (CFUnion n a) = do tag 23; toBuf n; toBuf a
 
   fromBuf
       = case !getTag of
@@ -859,7 +860,7 @@ TTC CFType where
              6 => pure CFString
              7 => pure CFDouble
              8 => pure CFChar
-             9 => pure CFPtr
+             9 => do t <- fromBuf; pure (CFPtr t)
              10 => pure CFWorld
              11 => do s <- fromBuf; t <- fromBuf; pure (CFFun s t)
              12 => do t <- fromBuf; pure (CFIORes t)
@@ -873,6 +874,7 @@ TTC CFType where
              20 => pure CFInt64
              21 => pure CFForeignObj
              22 => pure CFInteger
+             23 => do n <- fromBuf; a <- fromBuf; pure (CFUnion n a)
              _ => corrupt "CFType"
 
 export
