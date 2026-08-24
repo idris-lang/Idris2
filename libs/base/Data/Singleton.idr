@@ -1,5 +1,9 @@
 module Data.Singleton
 
+import Decidable.Equality
+
+%default total
+
 ||| The type containing only a particular value.
 ||| This is useful for calculating type-level information at runtime.
 public export
@@ -47,3 +51,7 @@ public export %inline
 export
 Show a => Show (Singleton {a} v) where
   showPrec p (Val v) = showCon p "Val" (showArg v)
+
+export
+DecEq (Singleton v) where
+  decEq (Val v) (Val v) = Yes Refl
