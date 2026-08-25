@@ -10,7 +10,7 @@ import Data.List.Elem
 ------------------------------------------------------------------------
 -- Quantifier types
 
-namespace Any
+namespace List
 
   ||| A proof that some element of a list satisfies some property
   |||
@@ -21,8 +21,6 @@ namespace Any
     Here  : {0 xs : List a} -> p x -> Any p (x :: xs)
     ||| A proof that the satisfying element is in the tail of the `List`
     There : {0 xs : List a} -> Any p xs -> Any p (x :: xs)
-
-namespace All
 
   ||| A proof that all elements of a list satisfy a property. It is a list of
   ||| proofs, corresponding element-wise to the `List`.
@@ -319,31 +317,34 @@ altAll (a::as) = Here <$> a <|> There <$> altAll as
 ------------------------------------------------------------------------
 -- Partitioning lists according to All
 
-||| Two lists, `xs` and `ys`, whose elements are interleaved in the list `xys`.
-public export
-data Interleaving : (xs, ys, xys : List a) -> Type where
-  Nil   : Interleaving [] [] []
-  Left  : Interleaving xs ys xys -> Interleaving (x :: xs) ys (x :: xys)
-  Right : Interleaving xs ys xys -> Interleaving xs (y :: ys) (y :: xys)
+namespace Interleaving
+  namespace List
+    ||| Two lists, `xs` and `ys`, whose elements are interleaved in the list `xys`.
+    public export
+    data Interleaving : (xs, ys, xys : List a) -> Type where
+      Nil   : Interleaving [] [] []
+      Left  : Interleaving xs ys xys -> Interleaving (x :: xs) ys (x :: xys)
+      Right : Interleaving xs ys xys -> Interleaving xs (y :: ys) (y :: xys)
 
-||| A record for storing the result of splitting a list `xys` according to some
-||| property `p`.
-||| The `prfs` and `contras` are related to the original list (`xys`) via
-||| `Interleaving`.
-|||
-||| @ xys the list which has been split
-||| @ p   the property used for the split
-public export
-record Split {a : Type} (p : a -> Type) (xys : List a) where
-  constructor MkSplit
-  {ayes, naws : List a}
-  {auto interleaving : Interleaving ayes naws xys}
-  ||| A proof that all elements in `ayes` satisfies the property used for the
-  ||| split.
-  prfs    : All p ayes
-  ||| A proof that all elements in `naws` do not satisfy the property used for
-  ||| the split.
-  contras : All (Not . p) naws
+namespace List
+  ||| A record for storing the result of splitting a list `xys` according to some
+  ||| property `p`.
+  ||| The `prfs` and `contras` are related to the original list (`xys`) via
+  ||| `Interleaving`.
+  |||
+  ||| @ xys the list which has been split
+  ||| @ p   the property used for the split
+  public export
+  record Split {a : Type} (p : a -> Type) (xys : List a) where
+    constructor MkSplit
+    {ayes, naws : List a}
+    {auto interleaving : Interleaving ayes naws xys}
+    ||| A proof that all elements in `ayes` satisfies the property used for the
+    ||| split.
+    prfs    : All p ayes
+    ||| A proof that all elements in `naws` do not satisfy the property used for
+    ||| the split.
+    contras : All (Not . p) naws
 
 ||| Split the list according to the given decidable property, putting the
 ||| resulting proofs and contras in an accumulator.

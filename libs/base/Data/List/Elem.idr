@@ -10,13 +10,14 @@ import Control.Function
 -- List membership proof
 --------------------------------------------------------------------------------
 
-||| A proof that some element is found in a list.
-public export
-data Elem : a -> List a -> Type where
-     ||| A proof that the element is at the head of the list
-     Here : Elem x (x :: xs)
-     ||| A proof that the element is in the tail of the list
-     There : Elem x xs -> Elem x (y :: xs)
+namespace List
+  ||| A proof that some element is found in a list.
+  public export
+  data Elem : a -> List a -> Type where
+       ||| A proof that the element is at the head of the list
+       Here : Elem x (x :: xs)
+       ||| A proof that the element is in the tail of the list
+       There : Elem x xs -> Elem x (y :: xs)
 
 export
 Uninhabited (Here {x} {xs} = There {x = x'} {y} {xs = xs'} e) where

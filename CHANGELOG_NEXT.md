@@ -87,7 +87,7 @@ should target this file (`CHANGELOG_NEXT`).
   external tools to insert links from documentation to source code.
 * Fixed `parseDouble` dropping "-" sign when whole part is "0"
   [#3804](https://github.com/idris-lang/Idris2/issues/3804),
-
++ Changed module level namespace of `Libraries.Data.List01.Quantifiers` from `All` to `List01`
 ### Building/Packaging changes
 
 * Fix parsing of capitalised package names containing hyphens.
@@ -129,3 +129,5 @@ should target this file (`CHANGELOG_NEXT`).
 * Removed `writeIORef1`, which unsafely allowed a linear value to become unrestricted.
 * Made `xs` and `ys` explicit arguments of `SplitRecPair` in `Data.Vect.Views`.
 * Implemented core interfaces for `Data.Singleton`
++ Renamed-spaced quantifiers for `List`, `Vect`, `SnocList`, `List01` and other predicates,
+  so that their most recent parent is named for the datatype and not the quantifier.

@@ -7,7 +7,7 @@ import Data.List.Lazy
 
 %default total
 
-namespace Any
+namespace List
 
   -- Note: it is crucial here that we mark `xs` as `Lazy`, otherwise Idris
   --  will happily use `Delay` in the return index and give us a badly-behaved

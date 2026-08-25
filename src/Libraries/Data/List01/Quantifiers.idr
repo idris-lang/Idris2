@@ -5,7 +5,7 @@ import Libraries.Data.List01
 
 %default total
 
-namespace All
+namespace List01
 
   ||| A proof that all elements of a list satisfy a property. It is a list of
   ||| proofs, corresponding element-wise to the `List`.

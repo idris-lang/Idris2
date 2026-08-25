@@ -30,11 +30,12 @@ import Data.Nat
 ------------------------------------------------------------------------
 -- Type
 
-||| Ensure that the list's length is the provided natural number
-public export
-data HasLength : Nat -> List a -> Type where
-  Z : HasLength Z []
-  S : HasLength n xs -> HasLength (S n) (x :: xs)
+namespace List
+  ||| Ensure that the list's length is the provided natural number
+  public export
+  data HasLength : Nat -> List a -> Type where
+    Z : HasLength Z []
+    S : HasLength n xs -> HasLength (S n) (x :: xs)
 
 ||| This specification corresponds to the length function
 export
@@ -156,4 +157,3 @@ natTerminating : (n : Nat) -> (0 p : HasLength n xs ) -> P xs
 natTerminating n p = case view n p of
   Z => PNil
   S n p => PCon (natTerminating n (map id p))
-

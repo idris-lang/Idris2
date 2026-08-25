@@ -18,16 +18,17 @@ import Decidable.Equality
 
 %default total
 
-public export
-data AtIndex : (idx : Fin n)
-            -> (xs  : Vect n type)
-            -> (x   : type)
-                   -> Type
-  where
-    Here : AtIndex FZ (x::xs) x
+namespace Vect
+  public export
+  data AtIndex : (idx : Fin n)
+              -> (xs  : Vect n type)
+              -> (x   : type)
+                     -> Type
+    where
+      Here : AtIndex FZ (x::xs) x
 
-    There : (later : AtIndex     rest      xs  x)
-                  -> AtIndex (FS rest) (y::xs) x
+      There : (later : AtIndex     rest      xs  x)
+                    -> AtIndex (FS rest) (y::xs) x
 
 namespace Check
   public export

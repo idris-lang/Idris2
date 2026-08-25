@@ -11,7 +11,7 @@ import Decidable.Equality
 ------------------------------------------------------------------------
 -- Quantifier types
 
-namespace Any
+namespace Vect
 
   ||| A proof that some element of a vector satisfies some property
   |||
@@ -22,8 +22,6 @@ namespace Any
     Here  : {0 xs : Vect n a} -> p x -> Any p (x :: xs)
     ||| A proof that the satsifying element is in the tail of the `Vect`
     There : {0 xs : Vect n a} -> Any p xs -> Any p (x :: xs)
-
-namespace All
 
   ||| A proof that all elements of a vector satisfy a property. It is a list of
   ||| proofs, corresponding element-wise to the `Vect`.

@@ -11,7 +11,7 @@ import Data.List.Quantifiers
 ------------------------------------------------------------------------
 -- Quanfitier types
 
-namespace Any
+namespace List1
 
   ||| A proof that some element of a list satisfies some property
   |||
@@ -22,8 +22,6 @@ namespace Any
     Here  : {0 xs : List a} -> p x -> Any p (x ::: xs)
     ||| A proof that the satisfying element is in the tail of the `List1`
     There : {0 xs : List a} -> Any p xs -> Any p (x ::: xs)
-
-namespace All
 
   ||| A proof that all elements of a list satisfy a property. It is a list of
   ||| proofs, corresponding element-wise to the `List1`.
@@ -289,4 +287,3 @@ decide dec (x :: xs) = case dec x of
   Right px => Right (Here px)
 
 -}
-

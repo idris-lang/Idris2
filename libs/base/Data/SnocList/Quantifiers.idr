@@ -10,7 +10,7 @@ import Data.SnocList.Elem
 ------------------------------------------------------------------------
 -- Types and basic properties
 
-namespace Any
+namespace SnocList
 
   ||| A proof that some element of a snoclist satisfies some property
   |||
@@ -21,8 +21,6 @@ namespace Any
     Here  : {0 xs : SnocList a} -> p x -> Any p (xs :< x)
     ||| A proof that there is an element the tail of the `SnocList` satisfying p
     There : {0 xs : SnocList a} -> Any p xs -> Any p (xs :< x)
-
-namespace All
 
   ||| A proof that all elements of a list satisfy a property. It is a list of
   ||| proofs, corresponding element-wise to the `List`.

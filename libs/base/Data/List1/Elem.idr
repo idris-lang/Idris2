@@ -12,28 +12,29 @@ import Control.Function
 -- List1 membership proof
 --------------------------------------------------------------------------------
 
-||| A proof that some element is found in a list.
-public export
-data Elem : a -> List1 a -> Type where
-     ||| A proof that the element is at the head of the list
-     Here : Elem x (x ::: xs)
-     ||| A proof that the element is in the tail of the list
-     There : Elem x xs -> Elem x (y ::: xs)
+namespace List1
+  ||| A proof that some element is found in a list.
+  public export
+  data Elem : a -> List1 a -> Type where
+       ||| A proof that the element is at the head of the list
+       Here : Elem x (x ::: xs)
+       ||| A proof that the element is in the tail of the list
+       There : Elem x xs -> Elem x (y ::: xs)
 
 export
-Uninhabited (List1.Elem.Here {x} {xs} = List1.Elem.There {x = x'} {y} {xs = xs'} e) where
+Uninhabited (List1.Here {x} {xs} = List1.There {x = x'} {y} {xs = xs'} e) where
   uninhabited Refl impossible
 
 export
-Uninhabited (List1.Elem.There {x} {y} {xs} e = List1.Elem.Here {x = x'} {xs = xs'}) where
+Uninhabited (List1.There {x} {y} {xs} e = List1.Here {x = x'} {xs = xs'}) where
   uninhabited Refl impossible
 
 export
-Injective (List1.Elem.There {x} {y} {xs}) where
+Injective (List1.There {x} {y} {xs}) where
   injective Refl = Refl
 
 export
-DecEq (List1.Elem.Elem x xs) where
+DecEq (List1.Elem x xs) where
   decEq Here Here = Yes Refl
   decEq (There this) (There that) = decEqCong $ decEq this that
   decEq Here (There later) = No absurd
@@ -52,7 +53,7 @@ neitherHereNorThere _   xnxs  (There xxs) = xnxs xxs
 
 ||| Check whether the given element is a member of the given list.
 public export
-isElem : DecEq a => (x : a) -> (xs : List1 a) -> Dec (List1.Elem.Elem x xs)
+isElem : DecEq a => (x : a) -> (xs : List1 a) -> Dec (List1.Elem x xs)
 isElem x (y ::: xs) with (decEq x y)
   isElem x (x ::: xs) | Yes Refl = Yes Here
   isElem x (y ::: xs) | No xny with (isElem x xs)
@@ -69,7 +70,7 @@ dropElem (x ::: ys) (There p) = x :: dropElem ys p
 
 ||| Erase the indices, returning the numeric position of the element
 public export
-elemToNat : Data.List1.Elem.Elem x xs -> Nat
+elemToNat : List1.Elem x xs -> Nat
 elemToNat  Here     = Z
 elemToNat (There p) = S (elemToNat p)
 
@@ -81,6 +82,6 @@ indexElem (S n) (_ ::: ys) = map (\(x ** p) => (x ** There p)) (indexElem n ys)
 
 ||| Lift the membership proof to a mapped list
 export
-elemMap : (0 f : a -> b) -> List1.Elem.Elem x xs -> List1.Elem.Elem (f x) (map f xs)
+elemMap : (0 f : a -> b) -> List1.Elem x xs -> List1.Elem (f x) (map f xs)
 elemMap f  Here      = Here
 elemMap f (There el) = There $ elemMap f el
