@@ -2,6 +2,7 @@ module Data.Maybe
 
 import Control.Function
 
+import Data.Laws
 import Data.Zippable
 
 %default total
@@ -116,3 +117,38 @@ maybeCong f = map (\eq => cong f eq)
 public export
 maybeCong2 : (f : a -> b -> c) -> Maybe (x = y) -> Maybe (v = w) -> Maybe (f x v = f y w)
 maybeCong2 f mxy mvw = (\xy, vw => cong2 f xy vw) <$> mxy <*> mvw
+
+--------------------------------------------------------------------------------
+-- Properties
+--------------------------------------------------------------------------------
+
+export
+functorIdentity : Functor.Identity Maybe
+functorIdentity Nothing = Refl
+functorIdentity (Just _) = Refl
+
+export
+functorComposition : Functor.Composition Maybe
+functorComposition Nothing _ _ = Refl
+functorComposition (Just _) _ _ = Refl
+
+export
+applicativeIdentity : Applicative.Identity Maybe
+applicativeIdentity Nothing = Refl
+applicativeIdentity (Just _) = Refl
+
+export
+applicativeHomomorphism : Applicative.Homomorphism Maybe
+applicativeHomomorphism _ _ = Refl
+
+export
+applicativeInterchange : Applicative.Interchange Maybe
+applicativeInterchange Nothing _ = Refl
+applicativeInterchange (Just _) _ = Refl
+
+export
+applicativeComposition : Applicative.Composition Maybe
+applicativeComposition Nothing _ _ = Refl
+applicativeComposition (Just _) Nothing _ = Refl
+applicativeComposition (Just _) (Just _) Nothing = Refl
+applicativeComposition (Just _) (Just _) (Just _) = Refl

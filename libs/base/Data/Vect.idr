@@ -1,6 +1,7 @@
 module Data.Vect
 
 import Data.DPair
+import Data.Laws
 import Data.List
 import Data.Nat
 import public Data.Fin
@@ -1023,3 +1024,37 @@ overLength n xs with (cmp m n)
   overLength {m}                m xs | CmpEQ     = Just (0 ** xs)
   overLength {m = plus n (S x)} n xs | (CmpGT x)
          = Just (S x ** rewrite plusCommutative (S x) n in xs)
+
+--------------------------------------------------------------------------------
+-- Properties
+--------------------------------------------------------------------------------
+
+export
+functorIdentity : Functor.Identity (Vect n)
+functorIdentity [] = Refl
+functorIdentity (x :: xs) = cong2 (::) Refl (functorIdentity xs)
+
+export
+functorComposition : Functor.Composition (Vect n)
+functorComposition [] _ _ = Refl
+functorComposition (x :: xs) f g = cong2 (::) Refl (functorComposition xs f g)
+
+export
+applicativeIdentity : Applicative.Identity (Vect n)
+applicativeIdentity [] = Refl
+applicativeIdentity (x :: xs) = cong2 (::) Refl (applicativeIdentity xs)
+
+export
+applicativeHomomorphism : Applicative.Homomorphism (Vect n)
+applicativeHomomorphism _ _ = Refl
+
+export
+applicativeInterchange : Applicative.Interchange (Vect n)
+applicativeInterchange [] x = Refl
+applicativeInterchange (g :: gs) x = cong (g x) (applicativeInterchange gs x)
+
+export
+applicativeComposition : Applicative.Composition (Vect n)
+applicativeComposition [] [] [] = Refl
+applicativeComposition (h :: hs) (g :: gs) (x :: xs) =
+  cong2 (::) Refl (applicativeComposition hs gs xs)

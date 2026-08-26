@@ -3,6 +3,7 @@ module Data.List
 import public Control.Function
 
 import Data.Nat
+import Data.Laws
 import Data.List1
 import Data.Fin
 import public Data.Zippable
@@ -1072,6 +1073,33 @@ dropFusion (S n) (S m) []     = Refl
 dropFusion (S n) (S m) (x::l) = rewrite plusAssociative n 1 m in
                                 rewrite plusCommutative n 1 in
                                 dropFusion (S n) m l
+
+export
+functorIdentity : Functor.Identity List
+functorIdentity [] = Refl
+functorIdentity (x :: xs) = cong2 (::) Refl (functorIdentity xs)
+
+export
+functorComposition : Functor.Composition List
+functorComposition [] _ _ = Refl
+functorComposition (x :: xs) f g = cong2 (::) Refl (functorComposition xs f g)
+
+export
+applicativeIdentity : Applicative.Identity List
+applicativeIdentity [] = Refl
+applicativeIdentity (x :: xs) = rewrite functorIdentity xs in reverseReverseOnto [x] xs
+
+export
+applicativeHomomorphism : Applicative.Homomorphism List
+applicativeHomomorphism _ _ = Refl
+
+export
+applicativeInterchange : Applicative.Interchange List
+applicativeInterchange [] _ = Refl
+applicativeInterchange (g :: gs) x = ?applicativeInterchange_rhs_1
+
+export
+applicativeComposition : Applicative.Composition List
 
 ||| Mapping a function over a list does not change the length of the list.
 export

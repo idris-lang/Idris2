@@ -1,6 +1,7 @@
 module Data.Either
 
 import public Control.Function
+import Data.Laws
 import Data.List1
 
 %default total
@@ -175,3 +176,34 @@ Injective Left where
 export
 Injective Right where
   injective Refl = Refl
+
+export
+functorIdentity : Functor.Identity (Either e)
+functorIdentity (Left _) = Refl
+functorIdentity (Right _) = Refl
+
+export
+functorComposition : Functor.Composition (Either e)
+functorComposition (Left _) _ _ = Refl
+functorComposition (Right _) _ _ = Refl
+
+export
+applicativeIdentity : Applicative.Identity (Either e)
+applicativeIdentity (Left _) = Refl
+applicativeIdentity (Right _) = Refl
+
+export
+applicativeHomomorphism : Applicative.Homomorphism (Either e)
+applicativeHomomorphism _ _ = Refl
+
+export
+applicativeInterchange : Applicative.Interchange (Either e)
+applicativeInterchange (Left _) _ = Refl
+applicativeInterchange (Right _) _ = Refl
+
+export
+applicativeComposition : Applicative.Composition (Either e)
+applicativeComposition (Left _) _ _ = Refl
+applicativeComposition (Right _) (Left _) _ = Refl
+applicativeComposition (Right _) (Right _) (Left _) = Refl
+applicativeComposition (Right _) (Right _) (Right _) = Refl

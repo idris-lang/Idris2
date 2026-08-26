@@ -3,6 +3,7 @@ module Data.SnocList
 
 import Data.List
 import Data.Fin
+import Data.Laws
 
 %default total
 
@@ -344,6 +345,24 @@ filterCast f (x::xs) = do
       _ | True  = rewrite fishAsSnocAppend [<x] (filter f xs) in Refl
 
 --- Functor map ---
+
+export
+functorIdentity : FunctorIdentity SnocList
+functorIdentity [<] = Refl
+functorIdentity (xs :< x) = cong2 (:<) (functorIdentity xs) Refl
+
+export
+functorComposition : FunctorComposition SnocList
+functorComposition [<] _ _ = Refl
+functorComposition (xs :< x) f g = cong2 (:<) (functorComposition xs f g) Refl
+
+export
+applicativeIdentity : ApplicativeIdentity SnocList
+applicativeIdentity [<] = Refl
+applicativeIdentity (sx :< x) = cong (:< x) (applicativeIdentity sx)
+
+export
+applicativeComposition : ApplicativeComposition SnocList
 
 export
 mapFusion : (g : b -> c) -> (f : a -> b) -> (sx : SnocList a) -> map g (map f sx) = map (g . f) sx

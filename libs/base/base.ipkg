@@ -1,7 +1,9 @@
 package base
 version = 0.8.0
 
-opts = "--ignore-missing-ipkg -Wno-shadowing"
+--opts = "--ignore-missing-ipkg -Wno-shadowing"
+
+depends = prelude
 
 modules = Control.App,
           Control.App.Console,
@@ -58,6 +60,7 @@ modules = Control.App,
           Data.IOArray.Prims,
           Data.IORef,
           Data.Integral,
+          Data.Laws,
           Data.List,
           Data.List.AtIndex,
           Data.List.Elem,
