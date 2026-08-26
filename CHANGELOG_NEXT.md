@@ -87,6 +87,7 @@ should target this file (`CHANGELOG_NEXT`).
   external tools to insert links from documentation to source code.
 * Fixed `parseDouble` dropping "-" sign when whole part is "0"
   [#3804](https://github.com/idris-lang/Idris2/issues/3804),
+* Do not insert `force` in front of an explicit `delay`.
 
 ### Building/Packaging changes
 

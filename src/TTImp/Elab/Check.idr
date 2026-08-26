@@ -784,7 +784,7 @@ checkExp : {vars : _} ->
            (got : Glued vars) -> (expected : Maybe (Glued vars)) ->
            Core (Term vars, Glued vars)
 checkExp rig elabinfo env fc tm got (Just exp)
-    = do vs <- convertWithLazy True fc elabinfo env got exp
+    = do vs <- convertWithLazy (withLazy tm) fc elabinfo env got exp
          case (constraints vs) of
               [] => case addLazy vs of
                          NoLazy => do logTerm "elab" 5 "Solved" tm
@@ -807,4 +807,9 @@ checkExp rig elabinfo env fc tm got (Just exp)
                             AddForce r => pure (TForce fc r tm, exp)
                             AddDelay r => do ty <- getTerm got
                                              pure (TDelay fc r ty tm, exp)
+    where
+      -- do not insert force in front of an explicit delay
+      withLazy : Term vars -> Bool
+      withLazy (TDelay fc1 lz ty arg) = False
+      withLazy _ = True
 checkExp rig elabinfo env fc tm got Nothing = pure (tm, got)
