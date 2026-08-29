@@ -653,15 +653,27 @@ mutual
           _ => fail "Invalid multiplicity (must be 0 or 1)"
 
   bindList : OriginDesc -> IndentInfo ->
-             Rule (List (RigCount, WithBounds PTerm, PTerm))
+             Rule (List (RigCount, WithBounds PTerm, PTerm, PiInfo PTerm))
   bindList fname indents
-      = forget <$> sepBy1 (decoratedSymbol fname ",")
-                          (do rig <- multiplicity fname
-                              pat <- bounds (simpleExpr fname indents)
-                              ty <- option
-                                       (PInfer (boundToFC fname pat))
-                                       (decoratedSymbol fname ":" *> opExpr pdef fname indents)
-                              pure (rig, pat, ty))
+      = forget <$> sepBy1 (decoratedSymbol fname ",") (explicitBind <|> implicitBind)
+    where
+      explicitBind : Rule (RigCount, WithBounds PTerm, PTerm, PiInfo PTerm)
+      explicitBind = do
+        rig <- multiplicity fname
+        pat <- bounds (simpleExpr fname indents)
+        ty <- option
+           (PInfer (boundToFC fname pat))
+           (decoratedSymbol fname ":" *> opExpr pdef fname indents)
+        pure (rig, pat, ty, Explicit)
+
+      implicitBind : Rule (RigCount, WithBounds PTerm, PTerm, PiInfo PTerm)
+      implicitBind = curly fname $ do
+        rig <- multiplicity fname
+        pat <- bounds (simpleExpr fname indents)
+        ty <- option
+           (PInfer (boundToFC fname pat))
+           (decoratedSymbol fname ":" *> opExpr pdef fname indents)
+        pure (rig, pat, ty, Implicit)
 
   ||| A list of names bound to the same type
   ||| BNF:
@@ -790,10 +802,10 @@ mutual
              (PLam fcCase top Explicit (PRef fcCase n) (PInfer fcCase) $
                  PCase (virtualiseFC fc) [] (PRef fcCase n) [alt]))
 
-       bindAll : List (RigCount, WithBounds PTerm, PTerm) -> PTerm -> PTerm
+       bindAll : List (RigCount, WithBounds PTerm, PTerm, PiInfo PTerm) -> PTerm -> PTerm
        bindAll [] scope = scope
-       bindAll ((rig, pat, ty) :: rest) scope
-           = PLam (boundToFC fname pat) rig Explicit pat.val ty
+       bindAll ((rig, pat, ty, icit) :: rest) scope
+           = PLam (boundToFC fname pat) rig icit pat.val ty
                   (bindAll rest scope)
 
        continueLam : Rule PTerm
