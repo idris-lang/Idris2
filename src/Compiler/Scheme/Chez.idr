@@ -193,9 +193,16 @@ cftySpec fc CFGCPtr = pure "void*"
 cftySpec fc CFBuffer = pure "u8*"
 cftySpec fc (CFFun s t) = pure "void*"
 cftySpec fc (CFIORes t) = cftySpec fc t
-cftySpec fc (CFStruct n t) = pure $ "(* " ++ fromString n ++ ")"
+cftySpec fc (CFArray n t) = do
+  inner <- cftySpec fc t
+  pure $ "(array n " ++ inner ++ ")"
+cftySpec fc (CFStruct n t) = pure $ fromString n
 cftySpec fc t = throw (GenericMsg fc ("Can't pass argument of type " ++ show t ++
                          " to foreign function"))
+
+cftySpecArg : FC -> CFType -> Core Builder
+cftySpecArg fc t@(CFStruct _ _) = (\x => "(& " ++ x ++ ")") <$> cftySpec fc t
+cftySpecArg fc t = cftySpec fc t
 
 locateLib : {auto c : Ref Ctxt Defs} -> String -> String -> Core String
 locateLib appdir clib
@@ -252,7 +259,7 @@ cCall fc cfn clib args ret collectSafe
                    then pure Nothing
                    else do put Loaded (clib :: loaded)
                            pure (Just clib)
-         argTypes <- traverse (cftySpec fc . snd) args
+         argTypes <- traverse (cftySpecArg fc . snd) args
          retType <- cftySpec fc ret
          let callConv : Builder = if collectSafe then " __collect_safe" else ""
          let call = "((foreign-procedure" ++ callConv ++ " " ++ showB cfn ++ " ("
@@ -290,7 +297,7 @@ cCall fc cfn clib args ret collectSafe
     callback n args (CFFun s t) = callback n (s :: args) t
     callback n args_rev retty
         = do let args = reverse args_rev
-             argTypes <- traverse (cftySpec fc) (filter notWorld args)
+             argTypes <- traverse (cftySpecArg fc) (filter notWorld args)
              retType <- cftySpec fc retty
              pure $
                  "(let ([c-code (foreign-callable #f " ++
