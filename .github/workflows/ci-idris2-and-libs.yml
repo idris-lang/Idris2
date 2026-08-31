@@ -33,6 +33,7 @@ on:
       - '.github/workflows/ci-lint.yml'
       - '.github/workflows/ci-sphinx.yml'
       - '.github/workflows/ci-super-linter.yml'
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.ref }}
