@@ -1,0 +1,5 @@
+1/1: Building Issue3851 (Issue3851.idr)
+Main>    x : Nat
+------------------------------
+res : ()
+Main> Bye for now!

@@ -87,6 +87,7 @@ should target this file (`CHANGELOG_NEXT`).
 * HTML files generated using `--mkdoc` now contain attributes, that allow
   external tools to insert links from documentation to source code.
 * Fix exponential time issue in pretty printer.
+* Fix insertion of implicit lambdas when expected type is a meta (#3851)
 * Fixed `parseDouble` dropping "-" sign when whole part is "0"
   [#3804](https://github.com/idris-lang/Idris2/issues/3804),
 
