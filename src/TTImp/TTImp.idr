@@ -236,15 +236,17 @@ mutual
        -- Flag means to use as a default if all else fails
        GlobalHint : Bool -> FnOpt' nm
        ExternFn : FnOpt' nm
-       -- Defined externally, list calling conventions
+       ||| Defined externally, list of calling conventions
        ForeignFn : List (RawImp' nm) -> FnOpt' nm
-       -- Mark for export to a foreign language, list calling conventions
+       ||| Mark for export to a foreign language, list of calling conventions
        ForeignExport : List (RawImp' nm) -> FnOpt' nm
-       -- assume safe to cancel arguments in unification
+       ||| Assume safe to cancel arguments in unification
        Invertible : FnOpt' nm
        Totality : TotalReq -> FnOpt' nm
        Macro : FnOpt' nm
        SpecArgs : List Name -> FnOpt' nm
+       ||| Raise a warning if the function is not reduced to identity
+       EnsureIdentity : FnOpt' nm
   %name FnOpt' fopt
 
   public export
@@ -280,6 +282,7 @@ mutual
     show (Totality PartialOK) = "partial"
     show Macro = "%macro"
     show (SpecArgs ns) = "%spec " ++ showSep " " (map show ns)
+    show EnsureIdentity = "%ensure_identity"
 
   export
   Eq FnOpt where
@@ -296,6 +299,7 @@ mutual
     (Totality tot_lhs) == (Totality tot_rhs) = tot_lhs == tot_rhs
     Macro == Macro = True
     (SpecArgs ns) == (SpecArgs ns') = ns == ns'
+    EnsureIdentity == EnsureIdentity = True
     _ == _ = False
 
   public export

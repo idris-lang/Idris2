@@ -422,6 +422,7 @@ mutual
   getPClauseLoc (MkWithClause fc _ _ _ _) = fc
   getPClauseLoc (MkImpossible fc _) = fc
 
+  ||| Standalone pragmas which apply independently of a specific function
   public export
   data Directive : Type where
        Hide : HidingDirective -> Directive
@@ -494,6 +495,7 @@ mutual
   defPass : Pass -> Bool
   defPass p = p == Single || p == AsDef
 
+  ||| Pragmas which apply to and are associated with a specific function
   public export
   PFnOpt : Type
   PFnOpt = PFnOpt' Name
