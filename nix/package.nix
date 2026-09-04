@@ -20,7 +20,7 @@ stdenv.mkDerivation rec {
 
   strictDeps = true;
   nativeBuildInputs = [ makeWrapper installShellFiles clang chez ]
-    ++ lib.optional stdenv.isDarwin [ zsh ]
+    ++ lib.optional stdenv.hostPlatform.isDarwin [ zsh ]
     ++ lib.optional (!bootstrap) [ idris2Bootstrap ];
   buildInputs = [ chez gmp support ];
 
@@ -37,7 +37,7 @@ stdenv.mkDerivation rec {
   '';
 
   makeFlags = [ "IDRIS2_SUPPORT_DIR=${supportLibrariesPath}" ]
-    ++ lib.optional stdenv.isDarwin "OS=";
+    ++ lib.optional stdenv.hostPlatform.isDarwin "OS=";
 
   # The name of the main executable of pkgs.chez is `scheme`
   buildFlags = [ "PREFIX=$(out)" ] ++
