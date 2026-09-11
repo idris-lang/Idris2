@@ -525,8 +525,8 @@ compileToSO prof chez appDirRel outSsAbs
          let build = "(parameterize ([optimize-level 3] "
                      ++ (if prof then "[compile-profile #t] "
                                 else "") ++
-                     "[compile-file-message #f]) (compile-program " ++
-                    show outSsAbs ++ "))"
+                     "[compile-file-message #f]) (compile-program \"" ++
+                    outSsAbs ++ "\"))"
          Right () <- coreLift $ writeFile tmpFileAbs build
             | Left err => throw (FileErr tmpFileAbs err)
          coreLift_ $ chmodRaw tmpFileAbs 0o755
