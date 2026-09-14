@@ -1,0 +1,14 @@
+000018(:protocol-version 2 1)
+0000dd(:output (:ok (:highlight-source ((((:filename "ideMode/ideMode025/case.lidr") (:start 0 0) (:end 0 3)) ((:name "foo") (:namespace "") (:decor :function) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
+000083(:output (:ok (:highlight-source ((((:filename "ideMode/ideMode025/case.lidr") (:start 0 4) (:end 0 5)) ((:decor :keyword)))))) 1)
+0000e6(:output (:ok (:highlight-source ((((:filename "ideMode/ideMode025/case.lidr") (:start 0 6) (:end 0 9)) ((:name "Nat") (:namespace "Prelude.Types") (:decor :type) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
+000085(:output (:ok (:highlight-source ((((:filename "ideMode/ideMode025/case.lidr") (:start 0 10) (:end 0 12)) ((:decor :keyword)))))) 1)
+0000e8(:output (:ok (:highlight-source ((((:filename "ideMode/ideMode025/case.lidr") (:start 0 13) (:end 0 16)) ((:name "Nat") (:namespace "Prelude.Types") (:decor :type) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
+0000e1(:output (:ok (:highlight-source ((((:filename "ideMode/ideMode025/case.lidr") (:start 1 0) (:end 1 3)) ((:name "foo") (:namespace "Main") (:decor :function) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
+0000d8(:output (:ok (:highlight-source ((((:filename "ideMode/ideMode025/case.lidr") (:start 1 4) (:end 1 5)) ((:name "x") (:namespace "") (:decor :bound) (:implicit :False) (:key "") (:doc-overview "") (:type "")))))) 1)
+000083(:output (:ok (:highlight-source ((((:filename "ideMode/ideMode025/case.lidr") (:start 1 6) (:end 1 7)) ((:decor :keyword)))))) 1)
+000084(:output (:ok (:highlight-source ((((:filename "ideMode/ideMode025/case.lidr") (:start 3 0) (:end 3 15)) ((:decor :comment)))))) 1)
+000015(:return (:ok ()) 1)
+000050(:return (:ok "> foo x = case _ of
+>              case_val => ?foo_rhs") 2)
+Alas the file is done, aborting
