@@ -34,6 +34,14 @@ idris2docs_venv
 
 /custom.mk
 
+# distributable
+/distribution-assets-chez
+/distribution-assets-racket
+idris2_distributable_chez
+idris2_distributable_chez_base64
+idris2_distributable_racket
+idris2_distributable_racket_base64
+
 # NixOS
 /result
 
