@@ -41,6 +41,7 @@ parameters (f : RawImp' nm -> RawImp' nm)
   mapFnOpt (Totality treq) = Totality treq
   mapFnOpt Macro = Macro
   mapFnOpt (SpecArgs ns) = SpecArgs ns
+  mapFnOpt EnsureIdentity = EnsureIdentity
 
   export
   mapImpData : ImpData' nm -> ImpData' nm

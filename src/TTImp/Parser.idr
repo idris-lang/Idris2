@@ -123,6 +123,8 @@ fnDirectOpt
          pure Deprecate
   <|> do pragma "extern"
          pure ExternFn
+  <|> do pragma "ensure_identity"
+         pure EnsureIdentity
 
 visOpt : Rule (Either Visibility FnOpt)
 visOpt

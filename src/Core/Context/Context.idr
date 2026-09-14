@@ -200,39 +200,51 @@ Show Clause where
   show (MkClause {vars} env lhs rhs)
       = show vars ++ ": " ++ show lhs ++ " = " ++ show rhs
 
+||| The different ways we can mark a definition
 public export
 data DefFlag
     = Inline
     | NoInline
     | ||| A definition has been marked as deprecated
       Deprecate
-    | Invertible -- assume safe to cancel arguments in unification
-    | Overloadable -- allow ad-hoc overloads
-    | TCInline -- always inline before totality checking
-         -- (in practice, this means it's reduced in 'normaliseHoles')
-         -- This means the function gets inlined when calculating the size
-         -- change graph, but otherwise not. It's only safe if the function
-         -- being inlined is terminating no matter what, and is really a bit
-         -- of a hack to make sure interface dictionaries are properly inlined
-         -- (otherwise they look potentially non terminating) so use with
-         -- care!
+    | ||| Assume safe to cancel arguments in unification
+      Invertible
+    | ||| Allow ad-hoc overloads
+      Overloadable
+    | ||| Always inline before totality checking
+      ||| (in practice, this means it is reduced in 'normaliseHoles')
+      |||
+      ||| This means the function gets inlined when calculating the size
+      ||| change graph, but otherwise not. It is only safe if the function
+      ||| being inlined is terminating no matter what, and is really a bit
+      ||| of a hack to make sure interface dictionaries are properly inlined
+      ||| (otherwise they look potentially non terminating) so use with
+      ||| care!
+      TCInline
     | SetTotal TotalReq
-    | BlockedHint -- a hint, but blocked for the moment (so don't use)
+    | ||| A hint, but blocked for the moment (so don't use)
+      BlockedHint
     | Macro
-    | PartialEval (List (Name, Nat)) -- Partially evaluate on completing defintion.
-         -- This means the definition is standing for a specialisation so we
-         -- should evaluate the RHS, with reduction limits on the given names,
-         -- and ensure the name has made progress in doing so (i.e. has reduced
-         -- at least once)
-    | AllGuarded -- safe to treat as a constructor for the purposes of
-         -- productivity checking. All clauses are guarded by constructors,
-         -- and there are no other function applications
-    | ConType ConInfo
-         -- Is it a special type of constructor, e.g. a nil or cons shaped
-         -- thing, that can be compiled specially?
-    | Identity Nat
-         -- Is it the identity function at runtime?
-         -- The nat represents which argument the function evaluates to
+    | ||| Partially evaluate on completing defintion.
+      |||
+      ||| This means the definition is standing for a specialisation so we
+      ||| should evaluate the RHS, with reduction limits on the given names,
+      ||| and ensure the name has made progress in doing so (i.e. has reduced
+      ||| at least once)
+      PartialEval (List (Name, Nat))
+    | ||| Safe to treat as a constructor for the purposes of
+      ||| productivity checking. All clauses are guarded by constructors,
+      ||| and there are no other function applications
+      AllGuarded
+    | ||| Is it a special type of constructor, e.g. a nil or cons shaped
+      ||| thing, that can be compiled specially?
+      ConType ConInfo
+    | ||| Is it the identity function at runtime?
+      ||| The nat represents which argument the function evaluates to
+      Identity Nat
+    | ||| Please let me know if we didn't reduce this function to the identity
+      ||| function; I was expecting it to reduce to that.
+      EnsureIdentity
 %name DefFlag dflag
 
 export
@@ -250,6 +262,7 @@ Eq DefFlag where
     (==) AllGuarded AllGuarded = True
     (==) (ConType x) (ConType y) = x == y
     (==) (Identity x) (Identity y) = x == y
+    (==) EnsureIdentity EnsureIdentity = True
     (==) _ _ = False
 
 export
@@ -267,6 +280,7 @@ Show DefFlag where
   show AllGuarded = "allguarded"
   show (ConType ci) = "contype " ++ show ci
   show (Identity x) = "identity " ++ show x
+  show EnsureIdentity = "ensure_identity"
 
 public export
 record SCCall where

@@ -290,6 +290,14 @@ pwarningRaw (Deprecated fc s fcAndName)
          pure . vsep $ catMaybes [ Just $ "Deprecation warning:" <++> pretty0 s
                                  , reAnnotate (const Pretty.UserDocString) <$> docs
                                  ]
+
+pwarningRaw (EnsureIdFailed fc nm pn)
+    = pure $ warning (code (pretty0 (sugarName nm))
+        <++> reflow "was explicitly annotated as reducing to the identity"
+        <++> reflow "function, but the compiler did not optimise it as such"
+        <++> reflow ("(transformation pass " ++ show pn ++ "/3)."))
+        <+> line <+> !(ploc fc)
+
 pwarningRaw (GenericWarn fc s)
     = pure $ vcat [pretty0 s, !(ploc fc)]
 
