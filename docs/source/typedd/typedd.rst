@@ -367,13 +367,11 @@ now uses a safer type for the number of shifts:
 In ``ArithCmd.idr``, update ``DivBy``, ``randoms``, and ``import Data.Bits``
 as above. Also add ``import Data.String`` for ``String.toLower``.
 
-In ``ArithCmd.idr``, update ``DivBy``, ``randoms``, ``import Data.Bits`` and
+In ``ArithCmdDo.idr``, update ``DivBy``, ``randoms``, ``import Data.Bits`` and
 ``import Data.String`` as above.  Also, since export rules are per-namespace
 now, rather than per-file, you need to export ``(>>=)`` from the namespaces
-``CommandDo`` and ``ConsoleDo``.
-
-In ``ArithCmdDo.idr``, since ``(>>=)`` is ``export``, ``Command`` and ``ConsoleIO``
-also have to be ``export``. Also, update ``randoms`` and ``import Data.Bits`` as above.
+``CommandDo`` and ``ConsoleDo``. ``Command`` and ``ConsoleIO``
+also have to be ``export``.
 
 In ``StreamFail.idr``, add a ``partial`` annotation to ``labelWith``.
 
