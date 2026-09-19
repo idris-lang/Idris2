@@ -47,6 +47,11 @@ ifneq (, $(findstring freebsd, $(MACHINE)))
 	LDFLAGS += -L$(shell /sbin/sysctl -n user.localbase)/lib
 endif
 
+ifneq (, $(findstring openbsd, $(MACHINE)))
+	CPPFLAGS += -I/usr/local/include
+	LDFLAGS += -L/usr/local/lib
+endif
+
 ifneq ($(OS),windows)
 	CFLAGS += -fPIC
 else ifneq (, $(findstring NT-6.1,$(shell uname)))
