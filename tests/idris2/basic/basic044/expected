@@ -96,13 +96,13 @@ LOG declare.def:3: Initially missing in Term.NF:
 Term> Bye for now!
 1/1: Building Vec (Vec.idr)
 LOG declare.type:1: Processing Vec.Vec
-LOG declare.def:2: Case tree for Vec.Vec: [0] ({arg:1} : (Data.Fin.Fin {arg:2}[1])) -> {arg:3}[1]
+LOG declare.def:2: Case tree for Vec.Vec: [0] ({arg:1} : (Data.Fin.Fin {arg:2}[0])) -> {arg:3}[2]
 LOG declare.type:1: Processing Vec.Nil
 LOG declare.def:2: Case tree for Vec.Nil: [0] (Prelude.Uninhabited.absurd {arg:3}[0] (Data.Fin.Fin Prelude.Types.Z) Data.Fin.Uninhabited implementation at Data.Fin:1)
 LOG declare.type:1: Processing Vec.(::)
-LOG declare.def:2: Case tree for Vec.(::): case {arg:4}[4] : (Data.Fin.Fin (Prelude.Types.S {arg:3}[0])) of
+LOG declare.def:2: Case tree for Vec.(::): case {arg:4}[0] : (Data.Fin.Fin (Prelude.Types.S {arg:3}[4])) of
  { Data.Fin.FZ {e:1} => [0] {arg:5}[3]
- | Data.Fin.FS {e:2} {e:3} => [1] ({arg:6}[5] {e:3}[1])
+ | Data.Fin.FS {e:2} {e:3} => [1] ({arg:6}[3] {e:3}[0])
  }
 LOG declare.type:1: Processing Vec.test
 LOG elab.ambiguous:5: Ambiguous elaboration at Vec:1:

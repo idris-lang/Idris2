@@ -17,6 +17,7 @@ import Data.List
 import Data.List1
 import Data.Vect
 import Data.Maybe
+import Data.SnocList
 
 %default covering
 

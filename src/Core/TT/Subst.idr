@@ -3,59 +3,62 @@ module Core.TT.Subst
 import Core.Name.Scoped
 import Core.TT.Var
 
-import Libraries.Data.List.SizeOf
+import Data.SnocList
+import Data.SnocList.Quantifiers
+
+import Libraries.Data.SnocList.SizeOf
 
 %default total
 
--- TODO replace by pointwise lifting: `Subst tm ds vars = All (\_. tm vars) ds`
 public export
-data Subst : Scoped -> Scope -> Scoped where
-  Nil : Subst tm Scope.empty vars
-  (::) : tm vars -> Subst tm ds vars -> Subst tm (d :: ds) vars
+-- TODO revisit order of ds and vars?
+-- TODO vars is constantly applied
+Subst : Scoped -> Scope -> Scoped
+Subst tm ds vars = All (\_ => tm vars) ds
 
-public export
-empty : Subst tm Scope.empty vars
-empty = []
+export
+cons : Subst tm ds vars -> tm vars -> Subst tm (v `cons` ds) vars
+cons [<] p = Lin :< p
+cons (ns :< s) p = cons ns {tm} p :< s
 
+namespace Subst
+  public export
+  empty : Subst tm Scope.empty vars
+  empty = [<]
 
-namespace Var
+  public export
+  bind : Subst tm ds vars -> tm vars -> Subst tm (Scope.bind ds v) vars
+  bind = (:<)
 
-  export
-  index : Subst tm ds vars -> Var ds -> tm vars
-  index [] (MkVar p) impossible
-  index (t :: _) (MkVar First) = t
-  index (_ :: ts) (MkVar (Later p)) = index ts (MkVar p)
-
--- TODO revisit order of `dropped` and `Subst`
 export
 findDrop :
-  (Var vars -> tm vars) ->
+  (Var outer -> tm outer) ->
   SizeOf dropped ->
-  Var (dropped ++ vars) ->
-  Subst tm dropped vars ->
-  tm vars
+  Var (Scope.addInner outer dropped) ->
+  Subst tm dropped outer ->
+  tm outer
 findDrop k s var sub = case locateVar s var of
-  Left var => index sub var
-  Right var => k var
+  Left var => k var
+  Right var => lookup sub var
 
 export
 find : Weaken tm =>
        (forall vars. Var vars -> tm vars) ->
-       SizeOf outer -> SizeOf dropped ->
-       Var (outer ++ (dropped ++ vars)) ->
-       Subst tm dropped vars ->
-       tm (outer ++ vars)
-find k outer dropped var sub = case locateVar outer var of
-  Left var => k (embed var)
-  Right var => weakenNs outer (findDrop k dropped var sub)
+       SizeOf dropped ->
+       SizeOf inner ->
+       Var (Scope.addInner (Scope.addInner outer dropped) inner) ->
+       Subst tm dropped outer ->
+       tm (Scope.addInner outer inner)
+find k dropped inner var sub = case locateVar inner var of
+  Left var => weakenNs inner (findDrop {tm} k dropped var sub)
+  Right var => k (embed var)
 
--- TODO rename `outer`
 public export
 0 Substitutable : Scoped -> Scoped -> Type
 Substitutable val tm
-  = {0 outer, dropped, vars : Scope} ->
-    SizeOf outer ->
+  = {0 outer, dropped, inner : Scope} ->
     SizeOf dropped ->
-    Subst val dropped vars ->
-    tm (outer ++ (dropped ++ vars)) ->
-    tm (outer ++ vars)
+    SizeOf inner ->
+    Subst val dropped outer ->
+    tm (Scope.addInner (Scope.addInner outer dropped) inner) ->
+    tm (Scope.addInner outer inner)

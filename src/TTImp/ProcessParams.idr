@@ -12,6 +12,8 @@ import TTImp.Elab
 import TTImp.Elab.Check
 import TTImp.TTImp
 
+import Data.SnocList
+
 %default covering
 
 extend : {extvs : _} ->
@@ -20,7 +22,7 @@ extend : {extvs : _} ->
          Term extvs ->
          (vars' ** (Thin vs vars', Env Term vars', NestedNames vars'))
 extend env p nest (Bind _ n b@(Pi fc c pi ty) sc)
-    = extend (b :: env) (Drop p) (weaken nest) sc
+    = extend (env :< b) (Drop p) (weaken nest) sc
 extend env p nest tm = (_ ** (p, env, nest))
 
 export
@@ -65,6 +67,6 @@ processParams {vars} {c} {m} {u} nest env fc ps ds
                Core (Name, (Maybe Name, List (Var vs), FC -> NameType -> Term vs))
     applyEnv {vs} env n
           = do n' <- resolveName n -- it'll be Resolved by expandAmbigName
-               pure (Resolved n', (Nothing, reverse (allVars env),
+               pure (Resolved n', (Nothing, VarSet.asList $ allVars env,
                         \fc, nt => applyToFull fc
                                (Ref fc nt (Resolved n')) env))

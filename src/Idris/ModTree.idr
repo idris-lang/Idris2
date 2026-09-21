@@ -48,7 +48,7 @@ record BuildMod where
 
 export
 Show BuildMod where
-  show t = buildFile t ++ " [" ++ showSep ", " (map show (imports t)) ++ "]"
+  show t = buildFile t ++ " [" ++ joinBy ", " (map show (imports t)) ++ "]"
 
 data AllMods : Type where
 
