@@ -1,0 +1,5 @@
+package errno003
+
+modules = Main
+main = Main
+executable = run

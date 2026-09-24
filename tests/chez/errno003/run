@@ -1,0 +1,5 @@
+. ../../testutils.sh
+
+rm -r ./dir* || true
+idris2 --build
+./build/exec/run
