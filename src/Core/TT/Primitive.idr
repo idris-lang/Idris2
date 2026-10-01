@@ -382,6 +382,7 @@ data PrimFn : Nat -> Type where
      DoubleTan : PrimFn 1
      DoubleASin : PrimFn 1
      DoubleACos : PrimFn 1
+     DoubleATan : PrimFn 1
      DoubleATan2 : PrimFn 2
      DoubleSqrt : PrimFn 1
      DoubleFloor : PrimFn 1
