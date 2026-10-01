@@ -90,6 +90,7 @@ should target this file (`CHANGELOG_NEXT`).
 * Fix insertion of implicit lambdas when expected type is a meta (#3851)
 * Fixed `parseDouble` dropping "-" sign when whole part is "0"
   [#3804](https://github.com/idris-lang/Idris2/issues/3804),
+* Add `atan2` primitive function.
 
 ### Building/Packaging changes
 

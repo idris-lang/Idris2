@@ -383,6 +383,7 @@ data PrimFn : Nat -> Type where
      DoubleASin : PrimFn 1
      DoubleACos : PrimFn 1
      DoubleATan : PrimFn 1
+     DoubleATan2 : PrimFn 2
      DoubleSqrt : PrimFn 1
      DoubleFloor : PrimFn 1
      DoubleCeiling : PrimFn 1
@@ -428,6 +429,7 @@ Show (PrimFn arity) where
   show DoubleASin = "op_doubleASin"
   show DoubleACos = "op_doubleACos"
   show DoubleATan = "op_doubleATan"
+  show DoubleATan2 = "op_doubleATan2"
   show DoubleSqrt = "op_doubleSqrt"
   show DoubleFloor = "op_doubleFloor"
   show DoubleCeiling = "op_doubleCeiling"
@@ -470,6 +472,7 @@ export
   show DoubleASin = "asin"
   show DoubleACos = "acos"
   show DoubleATan = "atan"
+  show DoubleATan2 = "atan2"
   show DoubleSqrt = "sqrt"
   show DoubleFloor = "floor"
   show DoubleCeiling = "ceiling"
@@ -522,6 +525,7 @@ prettyOp op@DoubleTan [v] = annotatedOp op <++> v
 prettyOp op@DoubleASin [v] = annotatedOp op <++> v
 prettyOp op@DoubleACos [v] = annotatedOp op <++> v
 prettyOp op@DoubleATan [v] = annotatedOp op <++> v
+prettyOp op@DoubleATan2 [v1,v2] = annotatedOp op <++> v1 <++> v2
 prettyOp op@DoubleSqrt [v] = annotatedOp op <++> v
 prettyOp op@DoubleFloor [v] = annotatedOp op <++> v
 prettyOp op@DoubleCeiling [v] = annotatedOp op <++> v
@@ -564,6 +568,7 @@ primFnEq DoubleTan DoubleTan = Just Refl
 primFnEq DoubleASin DoubleASin = Just Refl
 primFnEq DoubleACos DoubleACos = Just Refl
 primFnEq DoubleATan DoubleATan = Just Refl
+primFnEq DoubleATan2 DoubleATan2 = Just Refl
 primFnEq DoubleSqrt DoubleSqrt = Just Refl
 primFnEq DoubleFloor DoubleFloor = Just Refl
 primFnEq DoubleCeiling DoubleCeiling = Just Refl
@@ -627,9 +632,10 @@ primFnCmp f1 f2 = compare (tag f1) (tag f2)
     tag DoubleASin = 30
     tag DoubleACos = 31
     tag DoubleATan = 32
-    tag DoubleSqrt = 33
-    tag DoubleFloor = 34
-    tag DoubleCeiling = 35
-    tag (Cast _ _) = 36
-    tag BelieveMe = 37
-    tag Crash = 38
+    tag DoubleATan2 = 33
+    tag DoubleSqrt = 34
+    tag DoubleFloor = 35
+    tag DoubleCeiling = 36
+    tag (Cast _ _) = 37
+    tag BelieveMe = 38
+    tag Crash = 39
