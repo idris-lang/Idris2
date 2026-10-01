@@ -1039,8 +1039,8 @@ atan : Double -> Double
 atan x = prim__doubleATan x
 
 public export
-atan2 : Double -> Double
-atan2 x = prim__doubleATan2 x
+atan2 : Double -> Double -> Double
+atan2 x y = prim__doubleATan2 x y
 
 public export
 sinh : Double -> Double
