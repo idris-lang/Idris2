@@ -14,6 +14,7 @@ main = do
     put $ asin 1
     put $ acos 1
     put $ atan 1
+    put $ atan2 _ _
 
     put $ sqrt 2
 

@@ -603,6 +603,7 @@ getOp DoubleTan = doubleTan
 getOp DoubleASin = doubleASin
 getOp DoubleACos = doubleACos
 getOp DoubleATan = doubleATan
+getOp DoubleATan2 = doubleATan2
 getOp DoubleSqrt = doubleSqrt
 getOp DoubleFloor = doubleFloor
 getOp DoubleCeiling = doubleCeiling
@@ -650,6 +651,7 @@ opName DoubleTan = prim "doubleTan"
 opName DoubleASin = prim "doubleASin"
 opName DoubleACos = prim "doubleACos"
 opName DoubleATan = prim "doubleATan"
+opName DoubleATan2 = prim "doubleATan2"
 opName DoubleSqrt = prim "doubleSqrt"
 opName DoubleFloor = prim "doubleFloor"
 opName DoubleCeiling = prim "doubleCeiling"
@@ -718,6 +720,7 @@ allPrimitives =
      MkPrim DoubleASin doubleTy isTotal,
      MkPrim DoubleACos doubleTy isTotal,
      MkPrim DoubleATan doubleTy isTotal,
+     MkPrim DoubleATan2 doubleTy isTotal
      MkPrim DoubleSqrt doubleTy isTotal,
      MkPrim DoubleFloor doubleTy isTotal,
      MkPrim DoubleCeiling doubleTy isTotal] ++

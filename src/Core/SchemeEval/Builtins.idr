@@ -279,6 +279,7 @@ applyOp blk DoubleTan [x] = unaryOp blk "fltan" x
 applyOp blk DoubleASin [x] = unaryOp blk "flasin" x
 applyOp blk DoubleACos [x] = unaryOp blk "flacos" x
 applyOp blk DoubleATan [x] = unaryOp blk "flatan" x
+applyOp blk DoubleATan2 [x, y] = unaryOp blk "flatan" x y
 applyOp blk DoubleSqrt [x] = unaryOp blk "flsqrt" x
 applyOp blk DoubleFloor [x] = unaryOp blk "flfloor" x
 applyOp blk DoubleCeiling [x] = unaryOp blk "flceiling" x

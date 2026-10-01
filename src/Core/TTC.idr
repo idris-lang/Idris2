@@ -635,6 +635,7 @@ export
   toBuf DoubleASin = tag 25
   toBuf DoubleACos = tag 26
   toBuf DoubleATan = tag 27
+  toBuf DoubleATan2 = tag 28
   toBuf DoubleSqrt = tag 32
   toBuf DoubleFloor = tag 33
   toBuf DoubleCeiling = tag 34
@@ -666,6 +667,7 @@ export
                  25 => pure DoubleASin
                  26 => pure DoubleACos
                  27 => pure DoubleATan
+                 28 => pure DoubleATan2
                  32 => pure DoubleSqrt
                  33 => pure DoubleFloor
                  34 => pure DoubleCeiling
