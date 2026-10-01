@@ -461,11 +461,12 @@ doubleExp = doubleOp exp
 doubleLog : Vect 1 (NF vars) -> Maybe (NF vars)
 doubleLog = doubleOp log
 
+doubleBinOpAsConstant : (Double -> Double -> Double) -> Constant -> Constant -> Maybe Constant
+doubleBinOpAsConstant f (Db x) (Db y) = pure $ Db (f x y)
+doubleBinOpAsConstant f _ _ = Nothing
+
 doublePow : {vars : _ } -> Vect 2 (NF vars) -> Maybe (NF vars)
-doublePow = binOp pow'
-    where pow' : Constant -> Constant -> Maybe Constant
-          pow' (Db x) (Db y) = pure $ Db (pow x y)
-          pow' _ _ = Nothing
+doublePow = binOp $ doubleBinOpAsConstant pow
 
 doubleSin : Vect 1 (NF vars) -> Maybe (NF vars)
 doubleSin = doubleOp sin
@@ -486,7 +487,7 @@ doubleATan : Vect 1 (NF vars) -> Maybe (NF vars)
 doubleATan = doubleOp atan
 
 doubleATan2 : Vect 2 (NF vars) -> Maybe (NF vars)
-doubleATan2 = doubleOp atan2
+doubleATan2 = binOp $ doubleBinOpAsConstant atan2
 
 doubleSqrt : Vect 1 (NF vars) -> Maybe (NF vars)
 doubleSqrt = doubleOp sqrt
