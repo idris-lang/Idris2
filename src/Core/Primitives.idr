@@ -485,6 +485,9 @@ doubleACos = doubleOp acos
 doubleATan : Vect 1 (NF vars) -> Maybe (NF vars)
 doubleATan = doubleOp atan
 
+doubleATan2 : Vect 2 (NF vars) -> Maybe (NF vars)
+doubleATan2 = doubleOp atan2
+
 doubleSqrt : Vect 1 (NF vars) -> Maybe (NF vars)
 doubleSqrt = doubleOp sqrt
 
