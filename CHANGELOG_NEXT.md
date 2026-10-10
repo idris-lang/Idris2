@@ -40,7 +40,6 @@ should target this file (`CHANGELOG_NEXT`).
 
 ### Compiler changes
 
-* Fixed %transform rules application regardless of module load order
 * Fixed ill-typed program where a typed lambda would not have its type checked #3771
 * Fixed missing handling of dotted patterns See
   [#3669](https://github.com/idris-lang/Idris2/issues/3669),
@@ -102,6 +101,8 @@ should target this file (`CHANGELOG_NEXT`).
   Idris2, so the only change is that `%language Borrowing` will now error rather
   than be accepted but do nothing.
 * Check recursive calls to the left of binders in the termination checker (#3896).
+* Fixed %transform rules application regardless of module load order (#3868)
+* Added %transform rules for `concatMap` to avoid quadratic blowup (#3869)
 
 ### Building/Packaging changes
 
