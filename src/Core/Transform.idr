@@ -153,8 +153,29 @@ transLoop (S k) env tm
             then transLoop k env tm'
             else pure tm'
 
+-- A rule read from a TTC may name things whose modules were not loaded yet
+-- (the Prelude's own modules load in reverse import order); such a name stays
+-- a full name while elaborated terms carry ids, so the rule could never match.
+-- By the time a definition is elaborated every import is in: resolve once here.
+covering
+resolveTransforms : {auto c : Ref Ctxt Defs} -> Core ()
+resolveTransforms
+    = do defs <- get Ctxt
+         when (staleTransforms defs) $ do
+           rules <- traverse resolveRule (NameMap.toList (transforms defs))
+           update Ctxt { transforms := foldl add empty rules,
+                         staleTransforms := False }
+  where
+    resolveRule : (Name, List Transform) -> Core (Name, List Transform)
+    resolveRule (n, ts) = pure (!(toResolvedNames n), !(traverse toResolvedNames ts))
+
+    add : NameMap (List Transform) -> (Name, List Transform) -> NameMap (List Transform)
+    add acc (n, ts) = insert n (maybe ts (ts ++) (lookup n acc)) acc
+
 export
 covering
 applyTransforms : {auto c : Ref Ctxt Defs} ->
                   Env Term vars -> Term vars -> Core (Term vars)
-applyTransforms env tm = transLoop 5 env tm
+applyTransforms env tm
+    = do resolveTransforms
+         transLoop 5 env tm
