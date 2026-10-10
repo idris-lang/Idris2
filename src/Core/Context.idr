@@ -1022,6 +1022,9 @@ record Defs where
      -- ^ A mapping from names to transformation rules which update applications
      -- of that name
   saveTransforms : List (Name, Transform)
+  pendingTransforms : List (Name, Transform)
+     -- ^ rules read from TTCs, not yet resolved and not yet in 'transforms'
+     -- (resolveTransforms)
   namedirectives : NameMap (List String)
   ifaceHash : Int
   importHashes : List (Namespace, Int)
@@ -1096,6 +1099,7 @@ initDefs
            , saveAutoHints = []
            , transforms = empty
            , saveTransforms = []
+           , pendingTransforms = []
            , namedirectives = empty
            , ifaceHash = 5381
            , importHashes = []
@@ -1910,11 +1914,37 @@ export
 setOpenHints : {auto c : Ref Ctxt Defs} -> NameMap () -> Core ()
 setOpenHints hs = update Ctxt { openHints := hs }
 
+-- The latest rule for a function is tried first
+insertTransform : Name -> Transform ->
+                  NameMap (List Transform) -> NameMap (List Transform)
+insertTransform fn t ts = insert fn (maybe [t] (t ::) (lookup fn ts)) ts
+
+-- A rule read from a TTC is kept unresolved until a rule is used or added: it
+-- may name a function whose module was not loaded yet when its own module was
+-- read (the Prelude's modules load in reverse import order), and a name that
+-- cannot be resolved then would never match an elaborated term. Every reader
+-- of 'transforms' calls this first, so the map holds what resolving the rules
+-- at load time would have, in the same order.
+export
+resolveTransforms : {auto c : Ref Ctxt Defs} -> Core ()
+resolveTransforms
+    = do defs <- get Ctxt
+         case pendingTransforms defs of
+              [] => pure ()
+              ps => do put Ctxt ({ pendingTransforms := [] } defs)
+                       traverse_ add ps
+  where
+    add : (Name, Transform) -> Core ()
+    add (n, t)
+        = do n' <- toResolvedNames n
+             t' <- toResolvedNames t
+             update Ctxt { transforms $= insertTransform n' t' }
+
 export
 addTransform : {auto c : Ref Ctxt Defs} ->
                FC -> Transform -> Core ()
 addTransform fc t_in
-    = do defs <- get Ctxt
+    = do resolveTransforms
          let Just fn_in = getFnName t_in
              | Nothing =>
                   throw (GenericMsg fc "LHS of a transformation must be a function application")
@@ -1922,13 +1952,8 @@ addTransform fc t_in
          t <- toResolvedNames t_in
          fn_full <- toFullNames fn_in
          t_full <- toFullNames t_in
-         case lookup fn (transforms defs) of
-              Nothing =>
-                 put Ctxt ({ transforms $= insert fn [t],
-                             saveTransforms $= ((fn_full, t_full) ::) } defs)
-              Just ts =>
-                 put Ctxt ({ transforms $= insert fn (t :: ts),
-                             saveTransforms $= ((fn_full, t_full) ::) } defs)
+         update Ctxt { transforms $= insertTransform fn t,
+                       saveTransforms $= ((fn_full, t_full) ::) }
 
 export
 clearSavedHints : {auto c : Ref Ctxt Defs} -> Core ()

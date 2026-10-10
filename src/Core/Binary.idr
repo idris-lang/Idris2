@@ -422,19 +422,7 @@ updateCGDirectives cgs = update Ctxt { cgdirectives $= union cgs }
 export
 updateTransforms : {auto c : Ref Ctxt Defs} ->
                    List (Name, Transform) -> Core ()
-updateTransforms [] = pure ()
-updateTransforms ((n, t) :: ts)
-    = do addT !(toResolvedNames n) !(toResolvedNames t)
-         updateTransforms ts
-  where
-    addT : Name -> Transform -> Core ()
-    addT n t
-        = do defs <- get Ctxt
-             case lookup n (transforms defs) of
-                  Nothing =>
-                     put Ctxt ({ transforms $= insert n [t] } defs)
-                  Just ts =>
-                     put Ctxt ({ transforms $= insert n (t :: ts) } defs)
+updateTransforms ts = update Ctxt { pendingTransforms $= (++ ts) }
 
 export
 updateFExports : {auto c : Ref Ctxt Defs} ->

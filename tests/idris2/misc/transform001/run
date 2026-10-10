@@ -1,0 +1,6 @@
+. ../../../testutils.sh
+
+run Main.idr
+run Main2.idr
+run Main3.idr
+run Main4.idr
