@@ -1020,6 +1020,9 @@ record Defs where
      -- ^ A mapping from names to transformation rules which update applications
      -- of that name
   saveTransforms : List (Name, Transform)
+  staleTransforms : Bool
+     -- ^ rules were read from a TTC since the last resolution pass, so some
+     -- of their names may still be full names (Core.Transform.resolveTransforms)
   namedirectives : NameMap (List String)
   ifaceHash : Int
   importHashes : List (Namespace, Int)
@@ -1094,6 +1097,7 @@ initDefs
            , saveAutoHints = []
            , transforms = empty
            , saveTransforms = []
+           , staleTransforms = False
            , namedirectives = empty
            , ifaceHash = 5381
            , importHashes = []

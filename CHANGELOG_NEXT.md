@@ -38,6 +38,8 @@ should target this file (`CHANGELOG_NEXT`).
 
 ### Compiler changes
 
+* Added %transform rules for `concatMap` to avoid quadratic blowup
+* Fixed %transform rules application regardless of module load order 
 * Fixed ill-typed program where a typed lambda would not have its type checked #3771
 * Fixed missing handling of dotted patterns See
   [#3669](https://github.com/idris-lang/Idris2/issues/3669),
