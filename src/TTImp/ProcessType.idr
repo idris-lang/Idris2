@@ -88,37 +88,42 @@ initDef fc n env ty (_ :: opts) = initDef fc n env ty opts
 -- generalising partially evaluated definitions and (potentially) in interactive
 -- editing
 findInferrable : {auto c : Ref Ctxt Defs} ->
-                 ClosedNF -> Core NatSet
+                 Glued [<] -> Core NatSet
 findInferrable ty = fi 0 0 [] NatSet.empty ty
   where
+    spineGlued : {auto c : Ref Ctxt Defs} ->
+            {vars: _} ->
+            SpineEntry vars -> Core (Glued vars)
+    spineGlued e = pure $ asGlued !(value e)
+
     mutual
       -- Add to the inferrable arguments from the given type. An argument is
       -- inferrable if it's guarded by a constructor, or on its own
       findInf : NatSet -> List (Name, Nat) ->
-                NF [<] -> Core NatSet
+                Glued [<] -> Core NatSet
       findInf acc pos (VApp _ Bound n [<] _)
           = case lookup n pos of
                  Nothing => pure acc
                  Just p => if p `elem` acc then pure acc else pure (NatSet.insert p acc)
       findInf acc pos (VDCon _ _ _ _ args)
-          = do args' <- traverseSnocList spineVal args
+          = do args' <- traverseSnocList spineGlued args
                findInfs acc pos args'
       findInf acc pos (VTCon _ _ _ args)
-          = do args' <- traverseSnocList spineVal args
+          = do args' <- traverseSnocList spineGlued args
                findInfs acc pos args'
-      findInf acc pos (VDelayed _ _ t) = findInf acc pos !(expand t)
+      findInf acc pos (VDelayed _ _ t) = findInf acc pos (asGlued !(expand t))
       findInf acc _ _ = pure acc
 
-      findInfs : NatSet -> List (Name, Nat) -> SnocList ClosedNF -> Core NatSet
+      findInfs : NatSet -> List (Name, Nat) -> SnocList (Glued [<]) -> Core NatSet
       findInfs acc pos [<] = pure acc
       findInfs acc pos (ns :< n) = findInf !(findInfs acc pos ns) pos n
 
-    fi : Nat -> Int -> List (Name, Nat) -> NatSet -> ClosedNF -> Core NatSet
+    fi : Nat -> Int -> List (Name, Nat) -> NatSet -> Glued [<] -> Core NatSet
     fi pos i args acc (VBind fc x (Pi _ _ _ aty) sc)
         = do let argn = MN "inf" i
              sc' <- expand !(sc (pure (vRef fc Bound argn)))
-             acc' <- findInf acc args !(expand aty)
-             rest <- fi (1 + pos) (1 + i) ((argn, pos) :: args) acc' sc'
+             acc' <- findInf acc args (asGlued !(expand aty))
+             rest <- fi (1 + pos) (1 + i) ((argn, pos) :: args) acc' (asGlued sc')
              pure rest
     fi pos i args acc ret = findInf acc args ret
 
@@ -173,7 +178,7 @@ processType {vars} eopts nest env fc rig vis opts ty_raw
          let fullty = abstractFullEnvType tfc env ty
 
          (erased, dterased) <- findErased fullty
-         infargs <- findInferrable !(expand !(nf Env.empty fullty))
+         infargs <- findInferrable !(nf Env.empty fullty)
 
          ignore $ addDef (Resolved idx)
                 ({ eraseArgs := erased,
