@@ -10,6 +10,7 @@ import public Core.Name
 import        Core.Options
 import public Core.Options.Log
 import public Core.TT
+import public Core.WithData
 
 import Libraries.Utils.Binary
 import Libraries.Utils.Path
@@ -322,10 +323,11 @@ commitCtxt ctxt
 ||| @vis  Visibility, defaulting to private
 ||| @def  actual definition
 export
-newDef : (fc : FC) -> (n : Name) -> (rig : RigCount) -> (vars : Scope) ->
+newDef : {default NotBinding bind : BindingModifier} ->
+         (fc : FC) -> (n : Name) -> (rig : RigCount) -> (vars : Scope) ->
          (ty : ClosedTerm) -> (vis : WithDefault Visibility Private) -> (def : Def) -> GlobalDef
 newDef fc n rig vars ty vis def
-    = MkGlobalDef
+  = MkGlobalDef
         { location = fc
         , fullname = n
         , type = ty
@@ -349,6 +351,7 @@ newDef fc n rig vars ty vis def
         , namedcompexpr = Nothing
         , sizeChange = []
         , schemeExpr = Nothing
+        , bindingMode = bind
         }
 
 -- Rewrite rules, applied after type checking, for runtime code only
@@ -831,6 +834,8 @@ HasNames Error where
   full gam (OperatorBindingMismatch {print} fc expected actual (Right opName) rhs candidates)
       = OperatorBindingMismatch {print} fc expected actual
           <$> (Right <$> full gam opName) <*> pure rhs <*> pure candidates
+  full gam (BindingApplicationMismatch fc used bind others)
+      = BindingApplicationMismatch fc used <$> traverse (full gam) bind <*> traverse (full gam) others
 
   resolved gam (Fatal err) = Fatal <$> resolved gam err
   resolved _ (CantConvert fc gam rho s t)
@@ -930,7 +935,8 @@ HasNames Error where
   resolved gam (OperatorBindingMismatch {print} fc expected actual (Right opName) rhs candidates)
       = OperatorBindingMismatch {print} fc expected actual
           <$> (Right <$> resolved gam opName) <*> pure rhs <*> pure candidates
-
+  resolved gam (BindingApplicationMismatch fc used bind others)
+      = BindingApplicationMismatch fc used <$> traverse (resolved gam) bind <*> traverse (resolved gam) others
 export
 HasNames Totality where
   full gam (MkTotality t c) = pure $ MkTotality !(full gam t) !(full gam c)
@@ -1371,6 +1377,7 @@ addBuiltin n ty tot op
          , namedcompexpr = Nothing
          , sizeChange = []
          , schemeExpr = Nothing
+         , bindingMode = NotBinding
          }
 
 export

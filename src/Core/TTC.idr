@@ -9,11 +9,14 @@ import Core.Options
 
 import Data.IOArray
 import Data.List1
+import Data.List.Quantifiers
 import Data.Vect
+import Decidable.Equality
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
 import Libraries.Data.SparseMatrix
 import Libraries.Data.WithDefault
+import Libraries.Data.WithData
 
 import Libraries.Utils.Binary
 import Libraries.Utils.Scheme
@@ -75,6 +78,31 @@ TTC FC where
                      pure (MkVirtualFC f s e)
              _ => corrupt "FC"
 
+export
+TTC BindingModifier where
+  toBuf NotBinding = tag 0
+  toBuf Autobind = tag 1
+  toBuf Typebind = tag 2
+
+  fromBuf
+    = case !getTag of
+           0 => pure NotBinding
+           1 => pure Autobind
+           2 => pure Typebind
+           _ => corrupt "BindingModifier"
+
+export
+TTC a => TTC (BindingInfo a) where
+  toBuf (BindType name type) = tag 0 >> toBuf name >> toBuf type
+  toBuf (BindExpr name expr) = tag 1 >> toBuf name >> toBuf expr
+  toBuf (BindExplicitType name type expr) = tag 2 >> toBuf name >> toBuf expr
+
+  fromBuf
+    = case !getTag of
+           0 => BindType <$> fromBuf <*> fromBuf
+           1 => BindExpr <$> fromBuf <*> fromBuf
+           2 => BindExplicitType <$> fromBuf <*> fromBuf <*> fromBuf
+           _ => corrupt "BindingInfo"
 export
 TTC Name where
   -- for efficiency reasons we do not encode UserName separately
@@ -1152,6 +1180,7 @@ TTC GlobalDef where
                  toBuf (invertible gdef)
                  toBuf (noCycles gdef)
                  toBuf (sizeChange gdef)
+                 toBuf (bindingMode gdef)
 
   fromBuf
       = do cdef <- fromBuf
@@ -1174,12 +1203,13 @@ TTC GlobalDef where
                       inv <- fromBuf
                       c <- fromBuf
                       sc <- fromBuf
+                      bm <- fromBuf
                       pure (MkGlobalDef loc name ty eargs seargs specargs iargs
                                         mul vars vis
-                                        tot hatch fl refs refsR inv c True def cdef Nothing sc Nothing)
+                                        tot hatch fl refs refsR inv c True def cdef Nothing sc Nothing bm)
               else pure (MkGlobalDef loc name (Erased loc Placeholder) NatSet.empty NatSet.empty NatSet.empty NatSet.empty
                                      mul Scope.empty (specified Public) unchecked False [] refs refsR
-                                     False False True def cdef Nothing [] Nothing)
+                                     False False True def cdef Nothing [] Nothing NotBinding)
 
 export
 TTC Transform where
