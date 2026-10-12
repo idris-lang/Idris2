@@ -324,13 +324,6 @@ toVect (S k) (x :: xs)
          pure (x :: xs')
 toVect _ _ = Nothing
 
-public export
-fromList' : (xs : Vect len elem) -> (l : List elem) -> Vect (length l + len) elem
-fromList' ys [] = ys
-fromList' ys (x::xs) =
-  rewrite (plusSuccRightSucc (length xs) len) in
-  fromList' (x::ys) xs
-
 ||| Convert a list to a vector.
 |||
 ||| The length of the list should be statically known.
@@ -340,9 +333,15 @@ fromList' ys (x::xs) =
 ||| ```
 public export
 fromList : (xs : List elem) -> Vect (length xs) elem
-fromList l =
-  rewrite (sym $ plusZeroRightNeutral (length l)) in
-  reverse $ fromList' [] l
+fromList []      = []
+fromList (v::vs) = v :: fromList vs
+
+public export
+fromList' : (xs : Vect len elem) -> (l : List elem) -> Vect (length l + len) elem
+fromList' ys [] = ys
+fromList' ys (x::xs) =
+  rewrite (plusSuccRightSucc (length xs) len) in
+  fromList' (x::ys) xs
 
 --------------------------------------------------------------------------------
 -- Equality
