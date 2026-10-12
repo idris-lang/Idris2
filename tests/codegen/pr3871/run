@@ -1,0 +1,4 @@
+. ../../testutils.sh
+
+run Main.idr
+grep "DataC-45Vect-fromList" "build/exec/_tmpchez_app/_tmpchez.ss"
