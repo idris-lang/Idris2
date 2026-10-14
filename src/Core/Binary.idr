@@ -403,6 +403,9 @@ updatePrims p = update Ctxt { options->primnames $= updatePrimNames p }
 export
 updateForeignImpl : {auto c : Ref Ctxt Defs} -> List (Name, String) -> Core ()
 updateForeignImpl xs = update Ctxt { options->foreignImpl $= (xs ++) }
+updateForeignImpl xs =
+    update Ctxt { options->foreignImpl $= \ys =>
+                    foldr (\x, acc => if x `elem` acc then acc else x :: acc) ys xs }
 
 export
 updateNameDirectives : {auto c : Ref Ctxt Defs} ->
