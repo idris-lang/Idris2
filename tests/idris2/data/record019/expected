@@ -11,7 +11,7 @@ LOG declare.record.parameters:50: Decided to bind the following extra parameters
   {0 ys : ((Main.Vect a) n)}
 
 LOG declare.record.parameters:60: We elaborated Main.EtaProof in a non-empty local context.
-  Dropped: [b, a]
+  Dropped: [< a, b]
   Remaining type: (p : (Main.Product a[1] b[0])) -> Type
 
 LOG declare.record.parameters:30: Unelaborated type: (%pi RigW Explicit (Just p) Main.Product %type)

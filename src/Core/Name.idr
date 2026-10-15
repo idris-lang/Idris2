@@ -414,9 +414,9 @@ nameEq (Resolved x) (Resolved y) = L.maybeCong Resolved (L.maybeEq x y)
 nameEq _ _ = Nothing
 
 export
-namesEq : (xs, ys : List Name) -> Maybe (xs = ys)
-namesEq [] [] = Just Refl
-namesEq (x :: xs) (y :: ys) = L.maybeCong2 (::) (nameEq x y) (namesEq xs ys)
+namesEq : (xs, ys : SnocList Name) -> Maybe (xs = ys)
+namesEq [<] [<] = Just Refl
+namesEq (xs :< x) (ys :< y) = L.maybeCong2 (:<) (namesEq xs ys) (nameEq x y)
 namesEq _ _ = Nothing
 
 ||| Generate the next machine name

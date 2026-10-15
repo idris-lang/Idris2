@@ -2,14 +2,16 @@ module Core.Case.CaseTree
 
 import Core.TT
 
-import Data.List
+import Idris.Pretty.Annotations
+
 import Data.So
 import Data.String
-import Idris.Pretty.Annotations
 
 import Libraries.Data.NameMap
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Data.List.SizeOf
+import Libraries.Data.SnocList.SizeOf
+import Libraries.Data.SnocList.Extra
 
 %default covering
 
@@ -39,11 +41,10 @@ mutual
   data CaseAlt : Scoped where
        ||| Constructor for a data type; bind the arguments and subterms.
        ConCase : Name -> (tag : Int) -> (args : List Name) ->
-                 CaseTree (Scope.addInner vars args) -> CaseAlt vars
+                 CaseTree (Scope.ext vars args) -> CaseAlt vars
        ||| Lazy match for the Delay type use for codata types
        DelayCase : (ty : Name) -> (arg : Name) ->
-                   CaseTree (Scope.addInner vars [ty, arg]) -> CaseAlt vars
-                   -- TODO `arg` and `ty` should be swapped, as in Yaffle
+                   CaseTree (Scope.addInner vars [<ty, arg]) -> CaseAlt vars
        ||| Match against a literal
        ConstCase : Constant -> CaseTree vars -> CaseAlt vars
        ||| Catch-all case
@@ -101,8 +102,8 @@ public export
 data Pat : Type where
      PAs : FC -> Name -> Pat -> Pat
      PCon : FC -> Name -> (tag : Int) -> (arity : Nat) ->
-            List Pat -> Pat
-     PTyCon : FC -> Name -> (arity : Nat) -> List Pat -> Pat
+            SnocList Pat -> Pat
+     PTyCon : FC -> Name -> (arity : Nat) -> SnocList Pat -> Pat
      PConst : FC -> (c : Constant) -> Pat
      PArrow : FC -> (x : Name) -> Pat -> Pat -> Pat
      PDelay : FC -> LazyReason -> Pat -> Pat -> Pat
@@ -135,7 +136,7 @@ showCA : {vars : _} -> (indent : String) -> CaseAlt vars  -> String
 showCT indent (Case {name} idx prf ty alts)
   = "case " ++ show name ++ "[" ++ show idx ++ "] : " ++ show ty ++ " of"
   ++ "\n" ++ indent ++ " { "
-  ++ showSep ("\n" ++ indent ++ " | ")
+  ++ joinBy ("\n" ++ indent ++ " | ")
              (assert_total (map (showCA ("  " ++ indent)) alts))
   ++ "\n" ++ indent ++ " }"
 showCT indent (STerm i tm) = "[" ++ show i ++ "] " ++ show tm
@@ -143,7 +144,7 @@ showCT indent (Unmatched msg) = "Error: " ++ show msg
 showCT indent Impossible = "Impossible"
 
 showCA indent (ConCase n tag args sc)
-        = showSep " " (map show (n :: args)) ++ " => " ++
+        = joinBy " " (map show (n :: args)) ++ " => " ++
           showCT indent sc
 showCA indent (DelayCase _ arg sc)
         = "Delay " ++ show arg ++ " => " ++ showCT indent sc
@@ -201,9 +202,9 @@ export
 Pretty IdrisSyntax Pat where
   prettyPrec d (PAs _ n p) = pretty0 n <++> keyword "@" <+> parens (pretty p)
   prettyPrec d (PCon _ n _ _ args) =
-    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) args)
+    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) (toList args))
   prettyPrec d (PTyCon _ n _ args) =
-    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) args)
+    parenthesise (d > Open) $ hsep (pretty0 n :: map (prettyPrec App) (toList args))
   prettyPrec d (PConst _ c) = pretty c
   prettyPrec d (PArrow _ _ p q) =
     parenthesise (d > Open) $ pretty p <++> arrow <++> pretty q
@@ -212,39 +213,30 @@ Pretty IdrisSyntax Pat where
   prettyPrec d (PUnmatchable _ tm) = keyword "." <+> parens (byShow tm)
 
 mutual
-  insertCaseNames : SizeOf outer ->
-                    SizeOf ns ->
-                    CaseTree (outer ++ inner) ->
-                    CaseTree (outer ++ (ns ++ inner))
-  insertCaseNames outer ns (Case idx prf scTy alts)
-      = let MkNVar prf' = insertNVarNames outer ns (MkNVar prf) in
-            Case _ prf' (insertNames outer ns scTy)
-                (map (insertCaseAltNames outer ns) alts)
-  insertCaseNames outer ns (STerm i x) = STerm i (insertNames outer ns x)
+  insertCaseNames : GenWeakenable CaseTree
+  insertCaseNames mid inn (Case idx prf scTy alts)
+      = let MkNVar prf' = insertNVarNames mid inn (MkNVar prf) in
+            Case _ prf' (insertNames mid inn scTy)
+                (map (insertCaseAltNames mid inn) alts)
+  insertCaseNames mid inn (STerm i x) = STerm i (insertNames mid inn x)
   insertCaseNames _ _ (Unmatched msg) = Unmatched msg
   insertCaseNames _ _ Impossible = Impossible
 
-  insertCaseAltNames : SizeOf outer ->
-                       SizeOf ns ->
-                       CaseAlt (outer ++ inner) ->
-                       CaseAlt (outer ++ (ns ++ inner))
-  insertCaseAltNames p q (ConCase x tag args ct)
-      = ConCase x tag args
-           (rewrite appendAssociative args outer (ns ++ inner) in
-                    insertCaseNames (mkSizeOf args + p) q {inner}
-                        (rewrite sym (appendAssociative args outer inner) in
-                                 ct))
-  insertCaseAltNames outer ns (DelayCase tyn valn ct)
+  insertCaseAltNames : GenWeakenable CaseAlt
+  insertCaseAltNames mid inn (ConCase x tag args ct)
+      = ConCase x tag args (underBinderz CaseTree (insertCaseNames mid) inn (mkSizeOf args) ct)
+
+  insertCaseAltNames mid inn (DelayCase tyn valn ct)
       = DelayCase tyn valn
-                  (insertCaseNames (suc (suc outer)) ns ct)
-  insertCaseAltNames outer ns (ConstCase x ct)
-      = ConstCase x (insertCaseNames outer ns ct)
-  insertCaseAltNames outer ns (DefaultCase ct)
-      = DefaultCase (insertCaseNames outer ns ct)
+                  (insertCaseNames mid (suc (suc inn)) ct)
+  insertCaseAltNames mid inn (ConstCase x ct)
+      = ConstCase x (insertCaseNames mid inn ct)
+  insertCaseAltNames mid inn (DefaultCase ct)
+      = DefaultCase (insertCaseNames mid inn ct)
 
 export
 Weaken CaseTree where
-  weakenNs ns t = insertCaseNames zero ns t
+  weakenNs ns t = insertCaseNames ns zero t
 
 total
 getNames : (forall vs . NameMap Bool -> Term vs -> NameMap Bool) ->
@@ -284,14 +276,14 @@ export
 mkTerm : (vars : Scope) -> Pat -> Term vars
 mkTerm vars (PAs fc x y) = mkTerm vars y
 mkTerm vars (PCon fc x tag arity xs)
-    = apply fc (Ref fc (DataCon tag arity) x)
+    = applySpine fc (Ref fc (DataCon tag arity) x)
                (map (mkTerm vars) xs)
 mkTerm vars (PTyCon fc x arity xs)
-    = apply fc (Ref fc (TyCon arity) x)
+    = applySpine fc (Ref fc (TyCon arity) x)
                (map (mkTerm vars) xs)
 mkTerm vars (PConst fc c) = PrimVal fc c
 mkTerm vars (PArrow fc x s t)
-    = Bind fc x (Pi fc top Explicit (mkTerm vars s)) (mkTerm (x :: vars) t)
+    = Bind fc x (Pi fc top Explicit (mkTerm vars s)) (mkTerm (Scope.bind vars x) t)
 mkTerm vars (PDelay fc r ty p)
     = TDelay fc r (mkTerm vars ty) (mkTerm vars p)
 mkTerm vars (PLoc fc n)
