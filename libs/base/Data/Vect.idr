@@ -199,6 +199,29 @@ public export
 (++) []      ys = ys
 (++) (x::xs) ys = x :: xs ++ ys
 
+||| The empty vector is a right identity for append.
+export
+appendNilRightNeutral : forall m . (l : Vect m a) -> l ++ [] = (rewrite plusZeroRightNeutral m in l)
+appendNilRightNeutral [] = Refl
+appendNilRightNeutral {m = S m} (_ :: l) =
+  rewrite plusZeroRightNeutral m in
+  rewrite appendNilRightNeutral l in
+  Refl
+
+||| Appending vector is associative.
+export
+appendAssociative :
+  forall ll, lc, lr .
+  (l : Vect ll a) ->
+  (c : Vect lc a) ->
+  (r : Vect lr a) ->
+  l ++ (c ++ r) = (rewrite plusAssociative ll lc lr in (l ++ c) ++ r)
+appendAssociative [] _ _ = Refl
+appendAssociative {ll = S ll} (l0 :: l) c r =
+  rewrite plusAssociative ll lc lr in
+  rewrite appendAssociative l c r in
+  cong (l0 ::) Refl
+
 ||| Add an element at the end of the vector.
 ||| The main use case for it is to get the expected type signature
 ||| `Vect n a -> a -> Vect (S n) a` instead of
