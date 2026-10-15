@@ -10,6 +10,7 @@ import Core.TTC
 import Core.UnifyState
 
 import Data.String
+import Data.SortedSet
 
 import System.File
 
@@ -51,7 +52,7 @@ record TTCFile extra where
   pairnames : Maybe PairNames
   rewritenames : Maybe RewriteNames
   primnames : PrimNames
-  foreignImpl : List (Name, String)
+  foreignImpl : SortedSet (Name, String)
   namedirectives : List (Name, List String)
   cgdirectives : List (CG, String)
   transforms : List (Name, Transform)
@@ -105,7 +106,7 @@ HasNames e => HasNames (TTCFile e) where
                          !(fullPair gam pairnames)
                          !(fullRW gam rewritenames)
                          !(fullPrim gam primnames)
-                         !(traverse fullForeign foreignImpl)
+                         (SortedSet.fromList !(traverse fullForeign $ Prelude.toList foreignImpl))
                          !(full gam namedirectives)
                          cgdirectives
                          !(full gam trans)
@@ -153,7 +154,7 @@ HasNames e => HasNames (TTCFile e) where
                          !(resolvedPair gam pairnames)
                          !(resolvedRW gam rewritenames)
                          !(resolvedPrim gam primnames)
-                         !(traverse resolvedForeign foreignImpl)
+                         (SortedSet.fromList !(traverse resolvedForeign $ Prelude.toList foreignImpl))
                          !(resolved gam namedirectives)
                          cgdirectives
                          !(resolved gam trans)
@@ -209,7 +210,7 @@ writeTTCFile b file_in
            toBuf (pairnames file)
            toBuf (rewritenames file)
            toBuf (primnames file)
-           toBuf (foreignImpl file)
+           toBuf (Prelude.toList $ foreignImpl file)
            toBuf (namedirectives file)
            toBuf (cgdirectives file)
            toBuf (transforms file)
@@ -239,7 +240,7 @@ readTTCFile readall file as b
                                    0 (mkNamespace "") [] Nothing
                                    Nothing
                                    (MkPrimNs Nothing Nothing Nothing Nothing Nothing Nothing Nothing)
-                                   [] [] [] [] [] ex)
+                                   empty [] [] [] [] ex)
               else do
                  defs <- fromBuf
                  uholes <- fromBuf
@@ -251,7 +252,7 @@ readTTCFile readall file as b
                  pns <- fromBuf
                  rws <- fromBuf
                  prims <- fromBuf
-                 foreignImpl <- fromBuf
+                 let foreignImpl = SortedSet.fromList !(fromBuf)
                  nds <- fromBuf
                  cgds <- fromBuf
                  trans <- fromBuf
@@ -401,10 +402,9 @@ updatePrims : {auto c : Ref Ctxt Defs} -> PrimNames -> Core ()
 updatePrims p = update Ctxt { options->primnames $= updatePrimNames p }
 
 export
-updateForeignImpl : {auto c : Ref Ctxt Defs} -> List (Name, String) -> Core ()
+updateForeignImpl : {auto c : Ref Ctxt Defs} -> SortedSet (Name, String) -> Core ()
 updateForeignImpl xs =
-    update Ctxt { options->foreignImpl $= \ys =>
-                    foldr (\x, acc => if x `elem` acc then acc else x :: acc) ys xs }
+    update Ctxt { options->foreignImpl $= union xs }
 
 export
 updateNameDirectives : {auto c : Ref Ctxt Defs} ->
