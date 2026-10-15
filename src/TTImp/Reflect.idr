@@ -669,6 +669,7 @@ mutual
     reflect fc defs lhs env NoInline = getCon fc defs (reflectionttimp "NoInline")
     reflect fc defs lhs env Deprecate = getCon fc defs (reflectionttimp "Deprecate")
     reflect fc defs lhs env TCInline = getCon fc defs (reflectionttimp "TCInline")
+    reflect fc defs lhs env EnsureIdentity = getCon fc defs (reflectionttimp "EnsureIdentity")
     reflect fc defs lhs env (Hint x)
         = do x' <- reflect fc defs lhs env x
              appCon fc defs (reflectionttimp "Hint") [x']

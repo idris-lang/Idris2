@@ -1083,6 +1083,7 @@ TTC DefFlag where
   toBuf AllGuarded = tag 10
   toBuf (ConType ci) = do tag 11; toBuf ci
   toBuf (Identity x) = do tag 12; toBuf x
+  toBuf EnsureIdentity = tag 16
 
   fromBuf
       = case !getTag of
@@ -1099,6 +1100,7 @@ TTC DefFlag where
              12 => do x <- fromBuf; pure (Identity x)
              13 => pure NoInline
              15 => pure Deprecate
+             16 => pure EnsureIdentity
              _ => corrupt "DefFlag"
 
 export
