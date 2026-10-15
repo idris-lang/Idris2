@@ -15,6 +15,7 @@ import Core.TTC
 
 import Data.IOArray
 import Data.String as String
+import Data.SortedSet
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
 import Libraries.Data.WithDefault
@@ -247,7 +248,7 @@ addForeignImpl n
     = do defs <- get Ctxt
          Just def <- lookupCtxtExact n (gamma defs)        | Nothing => pure ()
          let Just (MkForeign cs atys retty) = compexpr def | _ => pure ()
-         let xs = map snd $ filter (\x => fst x == n) defs.options.foreignImpl
+         let xs = map snd $ filter (\x => fst x == n) $ Prelude.toList defs.options.foreignImpl
          setCompiled n (MkForeign (xs ++ cs) atys retty)
 
 -- Get the names of the functions we're exporting to the given back end, and
