@@ -208,7 +208,7 @@ appendNilRightNeutral {m = S m} (_ :: l) =
   rewrite appendNilRightNeutral l in
   Refl
 
-||| Appending vector is associative.
+||| Appending vectors is associative.
 export
 appendAssociative :
   forall ll, lc, lr .
