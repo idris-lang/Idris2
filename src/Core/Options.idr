@@ -78,6 +78,30 @@ Eq CG where
   _ == _ = False
 
 export
+Ord CG where
+  compare x y =
+    case compare (constrToInt x) (constrToInt y) of
+         EQ => case x of
+                    Other xx => case y of
+                                     Other yy => compare xx yy
+                                     _ => EQ
+                    _ => EQ
+         z => z
+
+    where
+      constrToInt : CG -> Int
+      constrToInt Chez = 1
+      constrToInt ChezSep = 2
+      constrToInt Racket = 3
+      constrToInt Gambit = 4
+      constrToInt Node = 5
+      constrToInt Javascript = 6
+      constrToInt RefC = 7
+      constrToInt VMCodeInterp = 8
+      constrToInt (Other _) = 9
+
+
+export
 Show CG where
   show Chez = "chez"
   show ChezSep = "chez-sep"

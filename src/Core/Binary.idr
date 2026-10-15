@@ -54,7 +54,7 @@ record TTCFile extra where
   primnames : PrimNames
   foreignImpl : SortedSet (Name, String)
   namedirectives : List (Name, List String)
-  cgdirectives : List (CG, String)
+  cgdirectives : SortedSet (CG, String)
   transforms : List (Name, Transform)
   foreignExports : List (Name, (List (String, String)))
   extraData : extra
@@ -212,7 +212,7 @@ writeTTCFile b file_in
            toBuf (primnames file)
            toBuf (Prelude.toList $ foreignImpl file)
            toBuf (namedirectives file)
-           toBuf (cgdirectives file)
+           toBuf (Prelude.toList $ cgdirectives file)
            toBuf (transforms file)
            toBuf (foreignExports file)
 
@@ -240,7 +240,7 @@ readTTCFile readall file as b
                                    0 (mkNamespace "") [] Nothing
                                    Nothing
                                    (MkPrimNs Nothing Nothing Nothing Nothing Nothing Nothing Nothing)
-                                   empty [] [] [] [] ex)
+                                   empty [] empty [] [] ex)
               else do
                  defs <- fromBuf
                  uholes <- fromBuf
@@ -254,7 +254,7 @@ readTTCFile readall file as b
                  prims <- fromBuf
                  let foreignImpl = SortedSet.fromList !(fromBuf)
                  nds <- fromBuf
-                 cgds <- fromBuf
+                 let cgds = SortedSet.fromList (!fromBuf)
                  trans <- fromBuf
                  fexp <- fromBuf
                  pure (MkTTCFile ver totalReq
@@ -416,8 +416,8 @@ updateNameDirectives ((t, ns) :: nds)
 
 export
 updateCGDirectives : {auto c : Ref Ctxt Defs} ->
-                     List (CG, String) -> Core ()
-updateCGDirectives cgs = update Ctxt { cgdirectives $= nub . (cgs ++) }
+                     SortedSet (CG, String) -> Core ()
+updateCGDirectives cgs = update Ctxt { cgdirectives $= union cgs }
 
 export
 updateTransforms : {auto c : Ref Ctxt Defs} ->
