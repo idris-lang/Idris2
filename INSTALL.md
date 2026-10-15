@@ -67,6 +67,10 @@ make sure you run `./configure --threads` to build multithreading support in.
 **NOTE**: On FreeBSD, OpenBSD and NetBSD you need to use `gmake` command instead
 of `make` in the following steps.
 
+**NOTE**: On OpenBSD the default datasize limit for the default login
+class is not enough to compile Idris2. Increase *datasize* in
+*login.conf* for you login class to 4096M
+
 **NOTE**: If you're running macOS on Apple Silicon (arm64) you will need to use
 Chez scheme version `10.0.0` or greater. Homebrew has been updated to ship Chez
 Scheme 10+ as of this writing. If you cannot install Chez Scheme 10+, install
