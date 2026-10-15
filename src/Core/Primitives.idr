@@ -461,11 +461,12 @@ doubleExp = doubleOp exp
 doubleLog : Vect 1 (NF vars) -> Maybe (NF vars)
 doubleLog = doubleOp log
 
+doubleBinOpAsConstant : (Double -> Double -> Double) -> Constant -> Constant -> Maybe Constant
+doubleBinOpAsConstant f (Db x) (Db y) = pure $ Db (f x y)
+doubleBinOpAsConstant f _ _ = Nothing
+
 doublePow : {vars : _ } -> Vect 2 (NF vars) -> Maybe (NF vars)
-doublePow = binOp pow'
-    where pow' : Constant -> Constant -> Maybe Constant
-          pow' (Db x) (Db y) = pure $ Db (pow x y)
-          pow' _ _ = Nothing
+doublePow = binOp $ doubleBinOpAsConstant pow
 
 doubleSin : Vect 1 (NF vars) -> Maybe (NF vars)
 doubleSin = doubleOp sin
@@ -484,6 +485,9 @@ doubleACos = doubleOp acos
 
 doubleATan : Vect 1 (NF vars) -> Maybe (NF vars)
 doubleATan = doubleOp atan
+
+doubleATan2 : Vect 2 (NF vars) -> Maybe (NF vars)
+doubleATan2 = binOp $ doubleBinOpAsConstant atan2
 
 doubleSqrt : Vect 1 (NF vars) -> Maybe (NF vars)
 doubleSqrt = doubleOp sqrt
@@ -603,6 +607,7 @@ getOp DoubleTan = doubleTan
 getOp DoubleASin = doubleASin
 getOp DoubleACos = doubleACos
 getOp DoubleATan = doubleATan
+getOp DoubleATan2 = doubleATan2
 getOp DoubleSqrt = doubleSqrt
 getOp DoubleFloor = doubleFloor
 getOp DoubleCeiling = doubleCeiling
@@ -650,6 +655,7 @@ opName DoubleTan = prim "doubleTan"
 opName DoubleASin = prim "doubleASin"
 opName DoubleACos = prim "doubleACos"
 opName DoubleATan = prim "doubleATan"
+opName DoubleATan2 = prim "doubleATan2"
 opName DoubleSqrt = prim "doubleSqrt"
 opName DoubleFloor = prim "doubleFloor"
 opName DoubleCeiling = prim "doubleCeiling"
@@ -718,6 +724,7 @@ allPrimitives =
      MkPrim DoubleASin doubleTy isTotal,
      MkPrim DoubleACos doubleTy isTotal,
      MkPrim DoubleATan doubleTy isTotal,
+     MkPrim DoubleATan2 doubleTy isTotal
      MkPrim DoubleSqrt doubleTy isTotal,
      MkPrim DoubleFloor doubleTy isTotal,
      MkPrim DoubleCeiling doubleTy isTotal] ++
