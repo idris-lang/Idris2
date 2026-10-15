@@ -106,7 +106,7 @@ functions that are appropriate for type checking and have an efficient version a
     plus Z y = y
     plus (S x) y = S $ plus x y
 
-    %transform "plus" plus j k = integerToNat (natToInteger j + natToInteger j)
+    %transform "plus" plus j k = integerToNat (natToInteger j + natToInteger k)
 
 ``%unbound_implicits``
 ----------------------
