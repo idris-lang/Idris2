@@ -433,6 +433,9 @@ implementation Foldable (Vect n) where
   null [] = True
   null _ = False
 
+  toList [] = []
+  toList (x :: xs) = x :: toList xs
+
   foldMap f = foldl (\acc, elem => acc <+> f elem) neutral
 
 --------------------------------------------------------------------------------
