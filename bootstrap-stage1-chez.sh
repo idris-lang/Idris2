@@ -28,6 +28,8 @@ echo '#!/bin/sh' >../build/exec/idris2
 echo "SCHEME=\"${SCHEME}\"" >>../build/exec/idris2
 cat ../bootstrap/idris2-boot.sh >>../build/exec/idris2
 chmod +x ../build/exec/idris2
-
+if [ "$OS" = windows ] || [ "$OS" = Windows_NT ]; then
+    install ../bootstrap/idris2.cmd ../build/exec/idris2.cmd
+fi
 install idris2_app/* ../build/exec/idris2_app
 echo 'bootstrap stage 1 complete'
