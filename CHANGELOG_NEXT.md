@@ -99,6 +99,7 @@ should target this file (`CHANGELOG_NEXT`).
 * Fix UTF-8 character handling in package description fields.
 * A project's data directory can now be specified with the `datadir` entry in
   an `ipkg` file.
+* Fix building on Windows with MSYS.
 
 ### Backend changes
 
