@@ -53,9 +53,9 @@ code. The requirements are:
   something more like `libgmp3-dev`. macOS ships with `clang` whereas `gcc` is
   more common for other \*nix distributions.
 
-On Windows, it has been reported that installing via `MSYS2` works
-[MSYS2](https://www.msys2.org/). On Windows older than Windows 8, you may need
-to set an environment variable `OLD_WIN=1` or modify it in `config.mk`.
+On Windows, [MSYS2](https://www.msys2.org/) is required. On Windows older
+than Windows 8, you may need to set an environment variable `OLD_WIN=1` or
+modify it in `config.mk`.
 
 On Raspberry Pi, you can bootstrap via Racket.
 
@@ -64,8 +64,8 @@ by setting the environment variable `IDRIS2_CG=racket` before running `make`.
 If you install Chez Scheme from source files, building it locally,
 make sure you run `./configure --threads` to build multithreading support in.
 
-**NOTE**: On FreeBSD, OpenBSD and NetBSD you need to use `gmake` command instead
-of `make` in the following steps.
+**NOTE**: On FreeBSD, OpenBSD and NetBSD you need to use the `gmake` command
+instead of `make` in the following steps.
 
 **NOTE**: If you're running macOS on Apple Silicon (arm64) you will need to use
 Chez scheme version `10.0.0` or greater. Homebrew has been updated to ship Chez
@@ -106,7 +106,11 @@ replace this with the executable for Chez Scheme on your system. This could be
 `scheme`, `chezscheme` or `chezscheme9.5` or something else, depending on your
 system and the Chez Scheme version.
 
-This builds an Idris 2 compiler from scheme code output from a working Idris 2
+On Windows, if bootstrapping from Chez Scheme gives an error about not being
+able to find `Program.boot`, use Racket instead. This is
+[a known issue with Chez Scheme on Windows](https://github.com/cisco/ChezScheme/issues/1078).
+
+This builds an Idris 2 compiler from Scheme code output from a working Idris 2
 compiler (which isn't necessarily up to date, but is up to date enough to
 build the current repository). It then rebuilds using the result, and runs
 the tests.
