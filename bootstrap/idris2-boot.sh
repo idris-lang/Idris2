@@ -9,7 +9,9 @@ fi
 
 if [ "$OS" = windows ] || [ "$OS" = Windows_NT ]; then
     DIR="$(dirname "$(readlink -f -- "$0" || cygpath -a -- "$0")")"
-    PATH="$DIR/idris2_app:$PATH"
+    # The PATH visible to MSYS programs (like sh) only works with Unix-style
+    # paths. In case we were called by a Windows-style path, we convert it:
+    PATH="$(cygpath -u "$DIR")/idris2_app:$PATH"
 elif [ "$(uname)" = Darwin ]; then
     DIR="$(zsh -c 'printf %s "$0:A:h"' "$0")"
 else

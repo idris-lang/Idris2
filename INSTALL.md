@@ -107,7 +107,8 @@ replace this with the executable for Chez Scheme on your system. This could be
 system and the Chez Scheme version.
 
 On Windows, if bootstrapping from Chez Scheme gives an error about not being
-able to find `Program.boot`, use Racket instead. This is
+able to find `Program.boot`, either move Chez Scheme to a path with no spaces
+or use Racket instead. This is
 [a known issue with Chez Scheme on Windows](https://github.com/cisco/ChezScheme/issues/1078).
 
 This builds an Idris 2 compiler from Scheme code output from a working Idris 2
