@@ -88,6 +88,7 @@ should target this file (`CHANGELOG_NEXT`).
   external tools to insert links from documentation to source code.
 * Fix exponential time issue in pretty printer.
 * Fix insertion of implicit lambdas when expected type is a meta (#3851)
+* Fix issue with slow auto-search if determining type is a non-public function (#3763)
 * Fixed `parseDouble` dropping "-" sign when whole part is "0"
   [#3804](https://github.com/idris-lang/Idris2/issues/3804),
 
