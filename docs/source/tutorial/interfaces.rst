@@ -225,8 +225,7 @@ Functors and Applicatives
 So far, we have seen single-parameter interfaces, where the parameter
 is of type ``Type``. In general, there can be any number of parameters
 (even zero), and the parameters can have *any* type. If the type
-of the parameter is not ``Type``, we need to give an explicit type
-declaration. For example, the ``Functor`` interface is defined in the
+of the parameter is not ``Type``, you can give an explicit type declaration rather than relying on compiler inference, where doing so also lets you explicitly control the quantity. Without an explicit type, the parameter defaults to quantity 0. For example, the ``Functor`` interface is defined in the
 prelude:
 
 .. code-block:: idris
