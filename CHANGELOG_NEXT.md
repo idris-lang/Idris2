@@ -137,3 +137,4 @@ should target this file (`CHANGELOG_NEXT`).
 * Made `xs` and `ys` explicit arguments of `SplitRecPair` in `Data.Vect.Views`.
 * Implemented core interfaces for `Data.Singleton`
 * `Data.Vect.fromList` was rewritten so that it is optimized away during codegen.
+* Reduced the fixities of `Data.Record` operators `:-:`, `:-` and `:+` to 0.
