@@ -7,9 +7,9 @@ import Data.Maybe
 %hide Data.List.Quantifiers.Any.Any
 %hide Data.List.Quantifiers.Any.any
 
-export infixr 9 :-:
-export infix 9 :-
-export infixr 9 :+
+export infixr 0 :-:
+export infix 0 :-
+export infixr 0 :+
 
 ||| A type with a string-label for it. Used in `Record`
 |||
@@ -69,7 +69,7 @@ Record = All LabelledValue
 export
 fromElems : {fs : _} -> All KeyVal.type fs -> Record fs
 fromElems {fs = []} [] = []
-fromElems {fs = (l :-: t :: xs)} (x :: zs) = (l :- x) :: fromElems zs
+fromElems {fs = ((l :-: t) :: xs)} (x :: zs) = (l :- x) :: fromElems zs
 
 ||| Obtain the tail of a list of predicates
 export
@@ -106,7 +106,7 @@ IndexInRange {fields = ((label :-: type) :: xs)} {ty} prf with (key == label)
 
 ||| Add a label and a value to a record
 export
-add : (0 str : String) -> (_ : ty) -> Record fields -> Record (str :-: ty :: fields)
+add : (0 str : String) -> (_ : ty) -> Record fields -> Record ((str :-: ty) :: fields)
 add str val xs = (str :- val) :: xs
 
 absurd0 : (0 _ : t) -> Uninhabited t => a
@@ -180,7 +180,7 @@ updateAt :
     (f : out -> out) ->
     Record fields -> Record fields
 updateAt 0 f [] = absurd0 inRange
-updateAt 0 f ((label :- val) :: y) {inRange = Refl} = label :- f val :: y
+updateAt 0 f ((label :- val) :: y) {inRange = Refl} = (label :- f val) :: y
 updateAt (S k) f [] = absurd0 inRange
 updateAt (S k) f (x :: y) = x :: updateAt k f y
 
