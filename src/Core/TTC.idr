@@ -172,7 +172,7 @@ export
     = case !getTag of
            0 => pure []
            _ => corrupt "Record"
-  fromBuf {fs = (str :-: v :: xs)} {ev = ba :: bs}
+  fromBuf {fs = ((str :-: v) :: xs)} {ev = ba :: bs}
     = case !getTag of
            1 => do val <- fromBuf @{ba}
                    tail <- the (Core (Record xs)) fromBuf
