@@ -6,11 +6,13 @@ import Core.Env
 import Core.Normalise
 import Core.Options
 import Core.Value
-
-import Libraries.Data.List.SizeOf
-import Libraries.Data.SparseMatrix
+import Core.Name.CompatibleVars
 
 import Data.String
+import Data.SnocList.Quantifiers
+
+import Libraries.Data.SnocList.SizeOf
+import Libraries.Data.SparseMatrix
 
 %default covering
 
@@ -78,7 +80,7 @@ mutual
   findSC {vars} defs env g pats (Bind fc n b sc)
        = pure $
             !(findSCbinder b) ++
-            !(findSC defs (b :: env) g (map weaken pats) sc)
+            !(findSC defs (Env.bind env b) g (map weaken pats) sc)
     where
       findSCbinder : Binder (Term vars) -> Core (List SCCall)
       findSCbinder (Let _ c val ty) = findSC defs env g pats val
@@ -175,16 +177,16 @@ mutual
   -- otherwise try to expand RHS meta
   sizeCompare fuel s@(Meta n _ i args) t = do
     Just gdef <- lookupCtxtExact (Resolved i) (gamma defs) | _ => pure Unknown
-    let (PMDef _ [] (STerm _ tm) _ _) = definition gdef | _ => pure Unknown
-    tm <- substMeta (embed tm) args zero Subst.empty
+    let (PMDef _ [<] (STerm _ tm) _ _) = definition gdef | _ => pure Unknown
+    tm <- substMeta (embed tm) args zero (Subst.empty {tm = Term})
     sizeCompare fuel tm t
     where
       substMeta : {0 drop, vs : _} ->
-                  Term (drop ++ vs) -> List (Term vs) ->
+                  Term (Scope.addInner vs drop) -> List (Term vs) ->
                   SizeOf drop -> SubstEnv drop vs ->
                   Core (Term vs)
       substMeta (Bind bfc n (Lam _ c e ty) sc) (a :: as) drop env
-          = substMeta sc as (suc drop) (a :: env)
+          = substMeta sc as (suc drop) (env :< a)
       substMeta (Bind bfc n (Let _ c val ty) sc) as drop env
           = substMeta (subst val sc) as drop env
       substMeta rhs [] drop env = pure (substs drop env rhs)

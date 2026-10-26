@@ -1,11 +1,10 @@
 module Compiler.ES.Codegen
 
-import Compiler.Common
 import Core.CompileExpr
 import Core.Directory
 import Core.Env
-import Data.String
-import Data.SortedMap
+
+import Compiler.Common
 import Compiler.ES.Ast
 import Compiler.ES.Doc
 import Compiler.ES.ToAst
@@ -13,13 +12,16 @@ import Compiler.ES.TailRec
 import Compiler.ES.State
 import Compiler.NoMangle
 import Protocol.Hex
-import Libraries.Data.String.Extra
 
 import Idris.Pretty.Annotations
 import Idris.Syntax
 import Idris.Doc.String
 
+import Data.String
+import Data.SortedMap
 import Data.Vect
+
+import Libraries.Data.String.Extra
 
 --------------------------------------------------------------------------------
 --          Utilities
@@ -834,6 +836,6 @@ compileToES c s cg tm ccTypes = do
 
   -- complete preamble, including content from additional
   -- support files (if any)
-  let pre = showSep "\n" $ static_preamble :: (values $ preamble st)
+  let pre = joinBy "\n" $ static_preamble :: (values $ preamble st)
 
   pure $ fastUnlines [pre,allDecls,main]

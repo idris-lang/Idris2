@@ -20,6 +20,8 @@ import TTImp.Unelab
 
 import Parser.Source
 
+import Data.String
+
 %default covering
 
 showInfo : (Name, Int, GlobalDef) -> Core ()
@@ -36,7 +38,7 @@ process : {auto c : Ref Ctxt Defs} ->
           {auto o : Ref ROpts REPLOpts} ->
           ImpREPL -> Core Bool
 process (Eval ttimp)
-    = do (tm, _) <- elabTerm 0 InExpr [] (MkNested []) Env.empty ttimp Nothing
+    = do (tm, _) <- elabTerm 0 InExpr [] (NestedNames.empty) Env.empty ttimp Nothing
          defs <- get Ctxt
          tmnf <- normalise defs Env.empty tm
          coreLift_ (printLn !(unelab Env.empty tmnf))
@@ -54,7 +56,7 @@ process (Check (IVar _ n))
              coreLift_ $ putStrLn $ show n ++ " : " ++
                                     show !(unelab Env.empty ty)
 process (Check ttimp)
-    = do (tm, gty) <- elabTerm 0 InExpr [] (MkNested []) Env.empty ttimp Nothing
+    = do (tm, gty) <- elabTerm 0 InExpr [] (NestedNames.empty) Env.empty ttimp Nothing
          defs <- get Ctxt
          tyh <- getTerm gty
          ty <- normaliseHoles defs Env.empty tyh
@@ -101,13 +103,13 @@ process (Missing n_in)
                              case isCovering tot of
                                   MissingCases cs =>
                                      coreLift_ (putStrLn (show fn ++ ":\n" ++
-                                                 showSep "\n" (map show cs)))
+                                                 joinBy "\n" (map show cs)))
                                   NonCoveringCall ns =>
                                      coreLift_ (putStrLn
                                          (show fn ++ ": Calls non covering function"
                                            ++ case ns of
                                                    [fn] => " " ++ show fn
-                                                   _ => "s: " ++ showSep ", " (map show ns)))
+                                                   _ => "s: " ++ joinBy ", " (map show ns)))
                                   _ => coreLift_ $ putStrLn (show fn ++ ": All cases covered"))
                         (map fst ts)
                        pure True

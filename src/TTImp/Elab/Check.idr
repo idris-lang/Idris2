@@ -18,9 +18,7 @@ import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 import Libraries.Data.UserNameMap
 import Libraries.Data.WithDefault
-
-import Libraries.Data.List.SizeOf
-
+import Libraries.Data.SnocList.SizeOf
 import Libraries.Data.VarSet
 
 %default covering
@@ -186,7 +184,7 @@ saveHole n = update EST { saveHoles $= insert n () }
 
 weakenedEState : {n, vars : _} ->
                  {auto e : Ref EST (EState vars)} ->
-                 Core (Ref EST (EState (n :: vars)))
+                 Core (Ref EST (EState (vars :< n)))
 weakenedEState {e}
     = do est <- get EST
          eref <- newRef EST $
@@ -199,7 +197,7 @@ weakenedEState {e}
          pure eref
   where
     wknTms : (Name, ImplBinding vs) ->
-             (Name, ImplBinding (n :: vs))
+             (Name, ImplBinding (vs :< n))
     wknTms (f, NameBinding fc c p x y)
         = (f, NameBinding fc c (map weaken p) (weaken x) (weaken y))
     wknTms (f, AsBinding c p x y z)
@@ -207,8 +205,8 @@ weakenedEState {e}
 
 strengthenedEState : {n, vars : _} ->
                      Ref Ctxt Defs ->
-                     Ref EST (EState (n :: vars)) ->
-                     FC -> Env Term (n :: vars) ->
+                     Ref EST (EState (Scope.bind vars n)) ->
+                     FC -> Env Term (Scope.bind vars n) ->
                      Core (EState vars)
 strengthenedEState {n} {vars} c e fc env
     = do est <- get EST
@@ -224,7 +222,7 @@ strengthenedEState {n} {vars} c e fc env
                 } est
 
   where
-    dropSub : Thin xs (y :: ys) -> Core (Thin xs ys)
+    dropSub : Thin xs (ys :< y) -> Core (Thin xs ys)
     dropSub (Drop sub) = pure sub
     dropSub _ = throw (InternalError "Badly formed weakened environment")
 
@@ -235,27 +233,27 @@ strengthenedEState {n} {vars} c e fc env
     -- never actualy *use* that hole - this process is only to ensure that the
     -- unbound implicit doesn't depend on any variables it doesn't have
     -- in scope.
-    removeArgVars : List (Term (n :: vs)) -> Maybe (List (Term vs))
-    removeArgVars [] = pure []
-    removeArgVars (Local fc r (S k) p :: args)
+    removeArgVars : SnocList (Term (Scope.bind vs n)) -> Maybe (SnocList (Term vs))
+    removeArgVars [<] = pure [<]
+    removeArgVars (args :< Local fc r (S k) p)
         = do args' <- removeArgVars args
-             pure (Local fc r _ (dropLater p) :: args')
-    removeArgVars (Local fc r Z p :: args)
+             pure (args' :< Local fc r _ (dropLater p))
+    removeArgVars (args :< Local fc r Z p)
         = removeArgVars args
-    removeArgVars (a :: args)
+    removeArgVars (args :< a)
         = do a' <- shrink a (Drop Refl)
              args' <- removeArgVars args
-             pure (a' :: args')
+             pure (args' :< a')
 
-    removeArg : Term (n :: vs) -> Maybe (Term vs)
+    removeArg : Term (vs :< n) -> Maybe (Term vs)
     removeArg tm
-        = case getFnArgs tm of
+        = case getFnArgsSpine tm of
                (f, args) =>
                    do args' <- removeArgVars args
                       f' <- shrink f (Drop Refl)
-                      pure (apply (getLoc f) f' args')
+                      pure (applySpine (getLoc f) f' args')
 
-    strTms : Defs -> (Name, ImplBinding (n :: vars)) ->
+    strTms : Defs -> (Name, ImplBinding (Scope.bind vars n)) ->
              Core (Name, ImplBinding vars)
     strTms defs (f, NameBinding fc c p x y)
         = do xnf <- normaliseHoles defs env x
@@ -282,8 +280,8 @@ export
 inScope : {n, vars : _} ->
           {auto c : Ref Ctxt Defs} ->
           {auto e : Ref EST (EState vars)} ->
-          FC -> Env Term (n :: vars) ->
-          (Ref EST (EState (n :: vars)) -> Core a) ->
+          FC -> Env Term (Scope.bind vars n) ->
+          (Ref EST (EState (Scope.bind vars n)) -> Core a) ->
           Core a
 inScope {c} {e} fc env elab
     = do e' <- weakenedEState
@@ -444,7 +442,7 @@ searchVar fc rig depth def env nest n ty
                                          else find x xs
 
     envHints : List Name -> Env Term vars ->
-               Core (vars' ** (Term (vars' ++ vars) -> Term vars, Env Term (vars' ++ vars)))
+               Core (vars' ** (Term (Scope.addInner vars vars') -> Term vars, Env Term (Scope.addInner vars vars')))
     envHints [] env = pure (Scope.empty ** (id, env))
     envHints (n :: ns) env
         = do (vs ** (f, env')) <- envHints ns env
@@ -460,9 +458,9 @@ searchVar fc rig depth def env nest n ty
              let binder = Let fc top (weakenNs (mkSizeOf vs) app)
                                      (weakenNs (mkSizeOf vs) tyenv)
              varn <- toFullNames n'
-             pure ((varn :: vs) **
+             pure ((Scope.bind vs varn) **
                     (\t => f (Bind fc varn binder t),
-                       binder :: env'))
+                       Env.bind env' binder))
 
 -- Elaboration info (passed to recursive calls)
 public export

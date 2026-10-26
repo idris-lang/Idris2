@@ -117,6 +117,7 @@
 module Compiler.ES.TailRec
 
 import Data.List1
+import Data.SnocList
 import Data.SortedSet
 import Data.SortedMap as M
 import Libraries.Data.Graph

@@ -2,7 +2,9 @@ module Core.Name.Namespace
 
 import Data.List
 import Data.String
+
 import Decidable.Equality
+
 import Libraries.Data.String.Extra
 import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Utils.Path
@@ -206,14 +208,9 @@ export
 DecEq Namespace where
   decEq (MkNS ms) (MkNS ns) = decEqCong (decEq ms ns)
 
--- TODO: move somewhere more appropriate
-export
-showSep : String -> List String -> String
-showSep sep = Libraries.Data.String.Extra.join sep
-
 export
 showNSWithSep : String -> Namespace -> String
-showNSWithSep sep (MkNS ns) = showSep sep (reverse ns)
+showNSWithSep sep (MkNS ns) = joinBy sep (reverse ns)
 
 export
 Show Namespace where

@@ -71,13 +71,6 @@ public export
 shrink : (n : Nat) -> (input : String) -> String
 shrink n str = dropLast n (drop n str)
 
-||| Concatenate the strings from a `Foldable` containing strings, separated by
-||| the given string.
-public export
-join : (sep : String) -> Foldable t => (xs : t String) -> String
-join sep xs = drop (length sep)
-                   (foldl (\acc, x => acc ++ sep ++ x) "" xs)
-
 ||| Get a character from a string if the string is long enough.
 public export
 index : (n : Nat) -> (input : String) -> Maybe Char
@@ -94,4 +87,11 @@ indent n x = replicate n ' ' ++ x
 ||| Indent each line of a given string by `n` spaces.
 public export
 indentLines : (n : Nat) -> String -> String
-indentLines n str = (join "\n") $ map (Extra.indent n) $ lines str
+indentLines n str = joinBy "\n" $ map (Extra.indent n) $ lines str
+
+-- Copied from libs/contrib/Data/String/Extra.idr
+-- TODO: move/reuse
+public export
+join : (sep : String) -> Foldable t => (xs : t String) -> String
+join sep xs = drop (length sep)
+                  (foldl (\acc, x => acc ++ sep ++ x) "" xs)
