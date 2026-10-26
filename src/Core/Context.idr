@@ -2011,10 +2011,11 @@ withExtendedNS : {auto c : Ref Ctxt Defs} ->
 withExtendedNS ns act
     = do defs <- get Ctxt
          let cns = currentNS defs
+         let nns = nestedNS defs
          put Ctxt ({ currentNS := cns <.> ns } defs)
          ma <- catch (Right <$> act) (pure . Left)
          defs <- get Ctxt
-         put Ctxt ({ currentNS := cns } defs)
+         put Ctxt ({ currentNS := cns, nestedNS := nns } defs)
          case ma of
            Left err => throw err
            Right a  => pure a

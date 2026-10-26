@@ -181,7 +181,7 @@ Add lbl ty x = MkWithData [ lbl :- ty ] x
 
 ||| Add value the payload, ignore the label since it's given by the type
 export
-(:+) : ty -> WithData ls a -> WithData (lbl :-: ty :: ls) a
+(:+) : ty -> WithData ls a -> WithData ((lbl :-: ty) :: ls) a
 val :+ x = MkWithData (add lbl val x.metadata) x.val
 
 export infixr 8 :++
@@ -212,7 +212,7 @@ interface HasDefault a | a where
 
 fromDefault : All (HasDefault . KeyVal.type) fs -> Record fs
 fromDefault [] = []
-fromDefault (_ :: y) = ? :- defValue :: fromDefault y
+fromDefault (_ :: y) = (? :- defValue) :: fromDefault y
 
 ||| Construct a payload filled with default values for its metadata
 export
@@ -227,7 +227,7 @@ Mk x y = MkWithData (fromElems x) y
 ||| Add a default value to an existing metadata record
 export
 AddDef :  (def : HasDefault ty) =>
-         WithData fl a -> WithData (lbl :-: ty :: fl) a
+         WithData fl a -> WithData ((lbl :-: ty) :: fl) a
 AddDef x = (defValue @{def}) :+ x
 
 ------------------------------------------------------------------------------------------------
