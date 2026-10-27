@@ -76,6 +76,10 @@ should target this file (`CHANGELOG_NEXT`).
 * Optimised the passing of local variables during compile-time normalisation.
 * Added `getFC` to elaborator reflection, exposing the macro call-site source
   location.
+* Added the pragma `%ensure_identity` which will raise a warning if a function
+  was not automatically optimised as the identity function by the compiler.
+* Added logging information when identity function detection fails, under:
+  `"compiler.identity" 10`
 * Normalize through private definitions when evaluating `%foreign` and
   `%foreign_impl` strings [#3790](https://github.com/idris-lang/Idris2/issues/3790)
   * Improve related error messages
