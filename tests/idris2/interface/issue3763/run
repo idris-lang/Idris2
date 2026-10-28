@@ -1,0 +1,4 @@
+. ../../../testutils.sh
+
+TIMEOUT=5
+check Issue3763.idr

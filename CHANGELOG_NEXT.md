@@ -88,8 +88,10 @@ should target this file (`CHANGELOG_NEXT`).
   external tools to insert links from documentation to source code.
 * Fix exponential time issue in pretty printer.
 * Fix insertion of implicit lambdas when expected type is a meta (#3851)
+* Fix issue with slow auto-search if determining type is a non-public function (#3763)
 * Fixed `parseDouble` dropping "-" sign when whole part is "0"
-  [#3804](https://github.com/idris-lang/Idris2/issues/3804),
+* Fixed namespace-record interaction where a record declared in a namespace
+  would make all its sibling private declarations visible in the parent namespace.
 * Fixed .ttc bloat caused by foreign_impl.
 
 ### Building/Packaging changes
@@ -134,4 +136,5 @@ should target this file (`CHANGELOG_NEXT`).
 * Removed `writeIORef1`, which unsafely allowed a linear value to become unrestricted.
 * Made `xs` and `ys` explicit arguments of `SplitRecPair` in `Data.Vect.Views`.
 * Implemented core interfaces for `Data.Singleton`
-* `Data.Vect.fromList` was rewritten so that it is optimized away during codegen.
+* `fromList` and `toList` for `Data.Vect` rewritten so that they are optimized away during codegen.
+* Reduced the fixities of `Data.Record` operators `:-:`, `:-` and `:+` to 0.
