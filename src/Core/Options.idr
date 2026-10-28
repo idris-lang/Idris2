@@ -80,7 +80,7 @@ Eq CG where
 export
 Ord CG where
   compare (Other x) (Other y) = compare x y
-  compare x y = compare (contrToInt x) (constrToInt y)
+  compare x y = compare (constrToInt x) (constrToInt y)
 
     where
       constrToInt : CG -> Int
