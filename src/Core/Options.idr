@@ -79,14 +79,8 @@ Eq CG where
 
 export
 Ord CG where
-  compare x y =
-    case compare (constrToInt x) (constrToInt y) of
-         EQ => case x of
-                    Other xx => case y of
-                                     Other yy => compare xx yy
-                                     _ => EQ
-                    _ => EQ
-         z => z
+  compare (Other x) (Other y) = compare x y
+  compare x y = compare (contrToInt x) (constrToInt y)
 
     where
       constrToInt : CG -> Int
