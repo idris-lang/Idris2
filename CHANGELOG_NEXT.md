@@ -139,3 +139,8 @@ should target this file (`CHANGELOG_NEXT`).
 * Implemented core interfaces for `Data.Singleton`
 * `fromList` and `toList` for `Data.Vect` rewritten so that they are optimized away during codegen.
 * Reduced the fixities of `Data.Record` operators `:-:`, `:-` and `:+` to 0.
+
+#### Contrib
+
+* Fixed wrong size computations of Data.Seq.
+
