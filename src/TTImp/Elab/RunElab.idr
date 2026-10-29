@@ -283,7 +283,9 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
       where
         unelabType : (Name, Int, ClosedTerm) -> Core (Name, RawImp)
         unelabType (n, _, ty)
-            = pure (n, map rawName !(unelabUniqueBinders Env.empty ty))
+            = do nty <- normaliseHoles defs Env.empty ty
+                 ity <- unelabUniqueBinders Env.empty nty
+                 pure (n, map rawName ity)
     elabCon defs "GetInfo" [n]
         = do n' <- evalClosure defs n
              res <- lookupNameInfo !(reify defs n') (gamma defs)
