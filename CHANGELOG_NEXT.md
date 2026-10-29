@@ -93,6 +93,7 @@ should target this file (`CHANGELOG_NEXT`).
 * Fixed namespace-record interaction where a record declared in a namespace
   would make all its sibling private declarations visible in the parent namespace.
 * Fixed .ttc bloat caused by foreign_impl.
+* Normalise holes in the result of `getType` in the elaborator script (#3855).
 
 ### Building/Packaging changes
 
