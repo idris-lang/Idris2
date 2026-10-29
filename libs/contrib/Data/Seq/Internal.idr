@@ -194,7 +194,7 @@ lookupDigit i (Three a b c) =
     then (i, a)
     else if i < sab
       then (i `minus` sa, b)
-      else ((i `minus` sa) `minus` sab, c)
+      else (i `minus` sab, c)
 lookupDigit i (Four a b c d) =
   let sa   = size a
       sab  = sa + size b
@@ -357,9 +357,9 @@ export
 snocTree : Sized e => FingerTree e -> (r : e) -> FingerTree e
 Empty `snocTree` a                       = Single a
 Single a `snocTree` b                    = deep (One a) Empty (One b)
-Deep s d1 st (One a) `snocTree` f        = Deep (s + size a) d1 st (Two a f)
-Deep s d1 st (Two a b) `snocTree` f      = Deep (s + size a) d1 st (Three a b f)
-Deep s d1 st (Three a b c) `snocTree` f  = Deep (s + size a) d1 st (Four a b c f)
+Deep s d1 st (One a) `snocTree` f        = Deep (s + size f) d1 st (Two a f)
+Deep s d1 st (Two a b) `snocTree` f      = Deep (s + size f) d1 st (Three a b f)
+Deep s d1 st (Three a b c) `snocTree` f  = Deep (s + size f) d1 st (Four a b c f)
 Deep s d1 st (Four a b c d) `snocTree` f = Deep (s + size f) d1 (st `snocTree` node3 a b c) (Two d f)
 
 
