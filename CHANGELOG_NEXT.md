@@ -90,10 +90,9 @@ should target this file (`CHANGELOG_NEXT`).
 * Fix insertion of implicit lambdas when expected type is a meta (#3851)
 * Fix issue with slow auto-search if determining type is a non-public function (#3763)
 * Fixed `parseDouble` dropping "-" sign when whole part is "0"
-  [#3804](https://github.com/idris-lang/Idris2/issues/3804),
 * Fixed namespace-record interaction where a record declared in a namespace
   would make all its sibling private declarations visible in the parent namespace.
-  ([#3870](https://github.com/idris-lang/Idris2/issues/3870))
+* Fixed .ttc bloat caused by foreign_impl.
 
 ### Building/Packaging changes
 

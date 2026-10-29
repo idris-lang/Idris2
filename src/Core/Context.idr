@@ -22,6 +22,8 @@ import Data.Either
 import Data.IOArray
 import Data.List1
 import Data.Nat
+import Data.String
+import Data.SortedSet
 import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
@@ -1030,7 +1032,7 @@ record Defs where
      -- ^ all imported filenames/namespaces, just to avoid loading something
      -- twice unnecessarily (this is a record of all the things we've
      -- called 'readFromTTC' with, in practice)
-  cgdirectives : List (CG, String)
+  cgdirectives : SortedSet (CG, String)
      -- ^ Code generator directives, which are free form text and thus to
      -- be interpreted however the specific code generator requires
   toCompileCase : List Name
@@ -1099,7 +1101,7 @@ initDefs
            , importHashes = []
            , imported = []
            , allImported = []
-           , cgdirectives = []
+           , cgdirectives = SortedSet.empty
            , toCompileCase = []
            , incData = []
            , allIncData = []
@@ -1981,10 +1983,8 @@ addDirective : {auto c : Ref Ctxt Defs} ->
 addDirective c str
     = do defs <- get Ctxt
          case getCG (options defs) c of
-              Nothing => -- warn, rather than fail, because the CG may exist
-                         -- but be unknown to this particular instance
-                         coreLift $ putStrLn $ "Unknown code generator " ++ c
-              Just cg => put Ctxt ({ cgdirectives $= ((cg, str) ::) } defs)
+              Nothing => put Ctxt ({ cgdirectives $= insert (Other (toLower c), str) } defs)
+              Just cg => put Ctxt ({ cgdirectives $= insert (cg, str) } defs)
 
 export
 getDirectives : {auto c : Ref Ctxt Defs} ->
@@ -1992,7 +1992,7 @@ getDirectives : {auto c : Ref Ctxt Defs} ->
 getDirectives cg
     = do defs <- get Ctxt
          pure $ defs.options.session.directives ++
-                 mapMaybe getDir (cgdirectives defs)
+                 mapMaybe getDir (Prelude.toList $ cgdirectives defs)
   where
     getDir : (CG, String) -> Maybe String
     getDir (x', str) = if cg == x' then Just str else Nothing
