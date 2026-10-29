@@ -117,6 +117,9 @@ insertGraph f g ch s
     let s_fg = lookupSet g s_f in
     insert f (insert g (insert ch s_fg) s_f) s
 
+Cast WorkList SCSet where
+  cast = foldl (\s, (f, g, ch) => insertGraph f g ch s) empty
+
 ------------------------------------------------------------------------
 -- Actual size-change computations
 
@@ -126,6 +129,11 @@ composeChange : Change {- f g -} -> Change {- g h -} -> Change {- f h -}
 composeChange
     -- We use the SizeChange monoid: Unknown is a 0, Same is a neutral
     = mult
+
+||| Check if a change is idempotent,
+||| i.e. if composeChange c c == c
+isIdempotent : Change {- f f -} -> Bool
+isIdempotent c = composeChange c c == c
 
 ||| Diagrammatic composition:
 ||| Given an (Graph f g) and an (Graph g h), compute an (Graph f h)
@@ -148,48 +156,42 @@ preCompose f ch1 s work _ h ch2
      else
        insert (f, h, ch) work
 
-||| Precompose a given Arg change & insert it in the worklist (unless it's already known)
-postCompose : (h : Name) -> Graph {- g h -} -> -- /!\ g bound later
-              SCSet ->
-              WorkList ->
-              (f : Name) -> (g : Name) -> Graph {- f g -} ->
-              WorkList
-postCompose h ch2 s work f _ ch1
-   = let ch : Graph {- f h -} = composeGraph ch1 ch2 in
-     if contains ch (lookupGraphs f h s) then
-       work
-     else
-       insert (f, h, ch) work
+||| Check if a graph contains a self-descending arc.
+||| i.e. there is an argument `n` with `a.change_{n,n} === Smaller`
+anySelfDesc : (a : Graph {- f f -}) -> Bool
+anySelfDesc = any selfDecArc . change
+  where
+    selfDecArc : (Nat, Vector1 SizeChange) -> Bool
+    selfDecArc (i, xs) = lookupOrd i xs == Just Smaller
 
 mutual
   addGraph : (f, g : Name) -> Graph {- f g -} ->
              WorkList ->
-             SCSet ->
-             SCSet
-  addGraph f g ch work s_in
-      = let s = insertGraph f g ch s_in
-            -- Now that (ch : Graph f g) has been added, we need to update
-            -- the graph with the paths it has extended i.e.
+             (s, h : SCSet) ->
+             Maybe ({- f : -} Name, Graph {- f f -})
+  addGraph f g ch work s h
+      = if f == g && not (anySelfDesc ch) && isIdempotent ch.change
+           then Just (f, ch)
+           else let s = insertGraph f g ch s
+                    -- Now that (ch : Graph f g) has been added, we need to update
+                    -- the graph with the paths it has extended i.e.
+                    -- the ones start in g
+                    after = selectDom g h
+                    work = foldl (preCompose f ch s) work after in
+                -- And then we need to close over all of these new paths too
+                transitiveClosure work s h
 
-            -- the ones start in g
-            after = selectDom g s
-            work_pre = foldl (preCompose f ch s) work after
-
-            -- and the ones ending in f
-            before = selectCod f s
-            work_post = foldl (postCompose g ch s) work_pre before in
-
-        -- And then we need to close over all of these new paths too
-        transitiveClosure work_post s
-
+  ||| Builds transitive closure with early termination if finds a non-terminating loop
+  ||| Otherwise, returns `Nothing`
   transitiveClosure : WorkList ->
-                      SCSet ->
-                      SCSet
-  transitiveClosure work s
-      = case pop work of
-             Nothing => s
-             Just ((f, g, ch), work) =>
-               addGraph f g ch work s
+                      (s, h : SCSet) ->
+                      Maybe ({- f : -} Name, Graph {- f f -})
+  transitiveClosure work s h
+      = do ((f, g, ch), work) <- pop work
+           addGraph f g ch work s h
+
+findNonTerminatingLoop : WorkList -> Maybe ({- f : -} Name,  Graph {- f f -})
+findNonTerminatingLoop work = transitiveClosure work initSCSet $ cast work
 
 -- find (potential) chain of calls to given function (inclusive)
 prefixCallSeq : NameMap (FC, Name) -> (g : Name) -> {- Exists \ f => -} CallSeq {- f g -}
@@ -203,35 +205,6 @@ prefixCallSeq pred g = go g []
             seq
           else
             go f ((l, g) :: seq)
-
--- returns `Just a` iff there is no self-decreasing arc,
--- i.e. there is no argument `n` with `a.change_{n,n} === Smaller`
-checkNonDesc : (a : Graph) -> Maybe Graph
-checkNonDesc a = if any selfDecArc a.change then Nothing else Just a
-  where
-    selfDecArc : (Nat, Vector1 SizeChange) -> Bool
-    selfDecArc (i, xs) = lookupOrd i xs == Just Smaller
-
-||| Finding non-terminating loops
-findLoops : SCSet ->
-            NameMap {- $ \ f => -} (Maybe (Graph {- f f -} ))
-findLoops s
-    = -- An `SCSet` is non-terminating iff it contains a size graph that is
-      -- idempotent, i.e. stable under self-composition,
-      let loops = filterEndos (\a => composeChange a.change a.change == a.change) s in
-      -- and has no self-decreasing arcs.
-      map (foldMap checkNonDesc) loops
-    where
-      filterEndos : (Graph -> Bool) -> SCSet -> NameMap (List Graph)
-      filterEndos p = mapWithKey (\f, m => filter p (Prelude.toList (lookupSet f m)))
-
-findNonTerminatingLoop : SCSet -> Maybe (Name, Graph)
-findNonTerminatingLoop s = findNonTerminating (findLoops s)
-    where
-      -- select first non-terminating loop
-      -- TODO: find smallest
-      findNonTerminating : NameMap (Maybe Graph) -> Maybe (Name, Graph)
-      findNonTerminating = foldlNames (\acc, g, m => map (g,) m <+> acc) empty
 
 ||| Steps in a call sequence leading to a loop are also problematic
 setPrefixTerminating : {auto c : Ref Ctxt Defs} ->
@@ -311,8 +284,7 @@ calcTerminating loc n
            | bad => pure bad
          Right (work, pred) <- initWork defs def
            | Left bad => pure bad
-         let s = transitiveClosure work initSCSet
-         let Nothing = findNonTerminatingLoop s
+         let Nothing = findNonTerminatingLoop work
            | Just (g, loop) =>
                ifThenElse (def.fullname == g)
                  (pure $ NotTerminating (RecPath loop.seq))
