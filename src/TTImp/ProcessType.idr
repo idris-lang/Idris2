@@ -150,7 +150,7 @@ processType {vars} eopts nest env fc rig vis opts ty_raw
          addNameLoc typeName.fc n
 
          log "declare.type" 1 $ "Processing " ++ show n
-         log "declare.type" 5 $ unwords ["Checking type decl:", show rig, show n, ":", show ty_raw]
+         log "declare.type" 5 $ unwords ["Checking type decl:", show rig, show n, ":", show ty_raw.val]
          idx <- resolveName n
 
          -- Check 'n' is undefined
