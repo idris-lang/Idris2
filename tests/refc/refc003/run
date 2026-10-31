@@ -1,4 +1,4 @@
 . ../../testutils.sh
 
-idris2 --cg refc -o refc003 Issue1191.idr
+idris2 -o refc003 Issue1191.idr
 $VALGRIND ./build/exec/refc003

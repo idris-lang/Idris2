@@ -1,3 +1,3 @@
 . ../../testutils.sh
 
-run --cg node Fix1037.idr
+run Fix1037.idr

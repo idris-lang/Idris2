@@ -17,4 +17,9 @@ raco exe idris2_app/idris2-boot.rkt
 mkdir -p ../build/exec
 mkdir -p ../build/exec/idris2_app
 install ../bootstrap/idris2-rktboot.sh ../build/exec/idris2
+if [ "$OS" = windows ] || [ "$OS" = Windows_NT ]; then
+    install ../bootstrap/idris2.cmd ../build/exec/idris2.cmd
+fi
 install idris2_app/* ../build/exec/idris2_app
+
+echo 'bootstrap stage 1 complete'

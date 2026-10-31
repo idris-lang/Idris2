@@ -41,7 +41,7 @@ let
   idrName = "idris2-${idris2Version}";
   libSuffix = "lib/${idrName}";
   libDirs = libs: lib.strings.makeSearchPath libSuffix libs;
-  drvAttrs = builtins.removeAttrs attrs [
+  drvAttrs = removeAttrs attrs [
     "ipkgName"
     "idrisLibraries"
   ];
@@ -95,9 +95,6 @@ let
         scheme_app="$(find ./build/exec -name '*_app')"
         if [ "$scheme_app" = ''' ]; then
           mv -- build/exec/* $out/bin/
-          chmod +x $out/bin/*
-          # ^ remove after Idris2 0.8.0 is released. will be superfluous:
-          # https://github.com/idris-lang/Idris2/pull/3189
         else
           bin_name="$(idris2 --dump-ipkg-json ${ipkgFileName} | jq -r '.executable')"
 

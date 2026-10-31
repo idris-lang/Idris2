@@ -16,6 +16,7 @@ import Core.Context
 import Data.Vect
 
 import Libraries.Data.SnocList.SizeOf
+import Libraries.Data.List.Extra
 
 %default covering
 
@@ -354,14 +355,6 @@ record Used (vars : Scope) where
 
 initUsed : {vars : _} -> Used vars
 initUsed {vars} = MkUsed (replicate (length vars) False)
-
--- TODO upstream
-lengthDistributesOverAppend
-  : (xs, ys : List a)
-  -> length (xs ++ ys) = length xs + length ys
-lengthDistributesOverAppend [] ys = Refl
-lengthDistributesOverAppend (x :: xs) ys =
-  cong S $ lengthDistributesOverAppend xs ys
 
 weakenUsed : {outer : _} -> Used vars -> Used (outer ++ vars)
 weakenUsed {outer} (MkUsed xs) =

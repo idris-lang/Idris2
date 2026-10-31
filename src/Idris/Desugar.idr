@@ -34,6 +34,7 @@ import Libraries.Utils.Shunting
 
 import Data.List.Views
 import Data.SortedMap
+import Data.SortedSet
 import Data.String
 
 -- Convert high level Idris declarations (PDecl from Idris.Syntax) into
@@ -1411,14 +1412,14 @@ mutual
                cs' <- traverse (desugar AnyExpr ps) cs
                pure [IPragma fc [] (\nest, env => do
                       defs <- get Ctxt
-                      calls <- traverse getFnString cs'
+                      let calls : List String = !(traverse getFnString cs')
                       [(n',_,gdef)] <- lookupCtxtName n (gamma defs)
                         | [] => throw (UndefinedName fc n)
                         | xs => throw (AmbiguousName fc (map fst xs))
                       let ForeignDef arity xs = gdef.definition
                         | _ => throw (GenericMsg fc "\{show n} is not a foreign definition")
 
-                      update Ctxt { options->foreignImpl $= (map (n',) calls ++) }
+                      update Ctxt { options->foreignImpl $= \xs => foldr SortedSet.insert xs (map (n',) calls) }
                     )]
   desugarDecl ps bt@(MkWithData _ $ PBuiltin type name) = pure [IBuiltin bt.fc type name]
 

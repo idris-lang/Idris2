@@ -39,6 +39,7 @@ Applicative (ST s) where
   pure = MkST . pure
   MkST f <*> MkST a = MkST $ f <*> a
 
+%inline
 export
 Monad (ST s) where
   MkST p >>= k

@@ -25,6 +25,7 @@ modules = A.A, A.AB, B.B, B.BA, Main
 -- executable =
 -- opts =
 sourcedir = "src/"
+-- datadir =
 -- builddir =
 -- outputdir =
 

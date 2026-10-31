@@ -1,0 +1,4 @@
+. ../../../testutils.sh
+
+idris2 Issue3851.idr < input
+

@@ -15,7 +15,7 @@ stdenv.mkDerivation rec {
 
   makeFlags = [
     "PREFIX=$(out)"
-  ] ++ lib.optional stdenv.isDarwin "OS=";
+  ] ++ lib.optional stdenv.hostPlatform.isDarwin "OS=";
 
   buildFlags = [ "support" ];
 

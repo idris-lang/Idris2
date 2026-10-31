@@ -1,0 +1,4 @@
+. ../../testutils.sh
+
+idris2 -o refc_stringcasts TestStringCasts.idr
+$VALGRIND ./build/exec/refc_stringcasts

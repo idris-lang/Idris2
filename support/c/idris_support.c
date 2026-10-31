@@ -20,7 +20,6 @@ int _argc;
 char **_argv;
 
 #ifdef _WIN32
-extern char **_environ;
 #include "windows/win_utils.h"
 #define environ _environ
 #elif defined(__APPLE__)

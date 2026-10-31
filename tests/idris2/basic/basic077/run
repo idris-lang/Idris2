@@ -1,0 +1,4 @@
+. ../../../testutils.sh
+
+check ImplicitLam.idr
+run MultiArg.idr

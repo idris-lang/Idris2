@@ -10,6 +10,7 @@ import Idris.Syntax.Pragmas
 import Data.List
 import Data.Maybe
 import Data.String
+import Data.SortedSet
 
 %default total
 
@@ -77,6 +78,24 @@ Eq CG where
   _ == _ = False
 
 export
+Ord CG where
+  compare (Other x) (Other y) = compare x y
+  compare x y = compare (constrToInt x) (constrToInt y)
+
+    where
+      constrToInt : CG -> Int
+      constrToInt Chez = 1
+      constrToInt ChezSep = 2
+      constrToInt Racket = 3
+      constrToInt Gambit = 4
+      constrToInt Node = 5
+      constrToInt Javascript = 6
+      constrToInt RefC = 7
+      constrToInt VMCodeInterp = 8
+      constrToInt (Other _) = 9
+
+
+export
 Show CG where
   show Chez = "chez"
   show ChezSep = "chez-sep"
@@ -132,6 +151,28 @@ record ElabDirectives where
   -- in addition to postfix (dot) projections
   -- default: yes
   prefixRecordProjections : Bool
+
+||| Options relevant after running a typechecking session
+public export
+record PostSession where
+  constructor MkPostSession
+  checkOnly : Bool
+  outputFile : Maybe String
+  execExpr : List String
+  runRepl : Maybe String
+
+export
+defaultPost : PostSession
+defaultPost = MkPostSession
+  { checkOnly = False
+  , outputFile = Nothing
+  , execExpr = []
+  , runRepl = Nothing
+  }
+
+-- tag for PostSession
+export
+data PostS : Type where
 
 public export
 record Session where
@@ -198,7 +239,7 @@ record Options where
   additionalCGs : List (String, CG)
   hashFn : Maybe String
   -- fullName and definition for %foreign_impl
-  foreignImpl : List (Name, String)
+  foreignImpl : SortedSet (Name, String)
 
 export
 availableCGs : Options -> List (String, CG)
@@ -272,7 +313,7 @@ defaults
          -- it to fail gracefully.
          pure $ MkOptions
            defaultDirs defaultPPrint defaultSession defaultElab Nothing Nothing
-           (MkPrimNs Nothing Nothing Nothing Nothing Nothing Nothing Nothing) [] [] Nothing []
+           (MkPrimNs Nothing Nothing Nothing Nothing Nothing Nothing Nothing) [] [] Nothing empty
 
 -- Reset the options which are set by source files
 export
@@ -280,13 +321,13 @@ clearNames : Options -> Options
 clearNames = { pairnames := Nothing,
                rewritenames := Nothing,
                primnames := MkPrimNs Nothing Nothing Nothing Nothing Nothing Nothing Nothing,
-               foreignImpl := [],
+               foreignImpl := empty,
                extensions := []
              }
 
 export
 addForeignImpl : (fullName : Name) -> (def : String) -> Options -> Options
-addForeignImpl fullName def = { foreignImpl $= ((fullName, def) ::) }
+addForeignImpl fullName def = { foreignImpl $= insert (fullName, def) }
 
 export
 setPair : (pairType : Name) -> (fstn : Name) -> (sndn : Name) ->

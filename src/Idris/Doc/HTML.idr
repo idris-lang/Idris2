@@ -66,6 +66,13 @@ addLink (Just n) rest = do
        , "</a>"
        ]
 
+makeFCAttributes : FC -> String
+makeFCAttributes (MkFC (PhysicalIdrSrc mi) start _) =
+  "data-src-mod=\"\{htmlEscape $ show mi}\" data-src-start=\"\{htmlEscape $ showPos start}\""
+makeFCAttributes (MkVirtualFC (PhysicalIdrSrc mi) start _) =
+  "data-src-mod=\"\{htmlEscape $ show mi}\" data-src-start=\"\{htmlEscape $ showPos start}\" data-fc-type=\"virtual\""
+makeFCAttributes fc = ""
+
 renderHtml : {auto c : Ref Ctxt Defs} ->
              SimpleDocTree IdrisDocAnn ->
              Core String
@@ -76,7 +83,7 @@ renderHtml (STText _ text) = pure $ htmlEscape text
 renderHtml (STLine _) = pure "<br>"
 renderHtml (STAnn Declarations rest)
   = pure $ "<dl class=\"decls\">" <+> !(renderHtml rest) <+> "</dl>"
-renderHtml (STAnn (Decl n) rest) = pure $ "<dt id=\"" ++ (htmlEscape $ show n) ++ "\"><code>" <+> !(renderHtml rest) <+> "</code></dt>"
+renderHtml (STAnn (Decl n fc) rest) = pure $ "<dt \{makeFCAttributes fc} id=\"" ++ (htmlEscape $ show n) ++ "\"><code>" <+> !(renderHtml rest) <+> "</code></dt>"
 renderHtml (STAnn DocStringBody rest)
   = pure $ "<dd>" <+> !(renderHtml rest) <+> "</dd>"
 renderHtml (STAnn UserDocString rest)

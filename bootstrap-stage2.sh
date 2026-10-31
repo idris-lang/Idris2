@@ -2,12 +2,14 @@
 
 set -e # exit on any error
 
-BOOTSTRAP_PREFIX=$PWD/bootstrap-build
+if [ "$OS" = windows ] || [ "$OS" = Windows_NT ]; then
+    BOOTSTRAP_PREFIX=$(cygpath -m "$PWD")/bootstrap-build
+else
+    BOOTSTRAP_PREFIX=$PWD/bootstrap-build
+fi
 
 IDRIS2_CG="${IDRIS2_CG-"chez"}"
 
-# BOOTSTRAP_PREFIX must be the "clean" build root, without cygpath -m
-# Otherwise, we get 'git: Bad address'
 echo "bootstrapping in: $BOOTSTRAP_PREFIX"
 export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-"${BOOTSTRAP_PREFIX}/lib"}"
 export DYLD_LIBRARY_PATH="${DYLD_LIBRARY_PATH:-"${BOOTSTRAP_PREFIX}/lib"}"

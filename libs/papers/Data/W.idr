@@ -11,6 +11,7 @@ import Data.Maybe
 
 namespace Finitary
 
+  public export
   data Fin : Type where
     AVoid : Fin
     AUnit : (nm : String) -> Fin
@@ -27,27 +28,31 @@ namespace Finitary
     fbb : Fin
     fbb = "foo" || "bar" || "baz"
 
+  public export
   record NamedUnit (nm : String) where
     constructor MkNamedUnit
 
+  public export
   Elem : Fin -> Type
   Elem AVoid = Void
   Elem (AUnit nm) = NamedUnit nm
   Elem (d || e) = Either (Elem d) (Elem e)
 
+  public export
   lookup : (d : Fin) -> String -> Maybe (Elem d)
   lookup AVoid s = Nothing
   lookup (AUnit nm) s = MkNamedUnit <$ guard (nm == s)
   lookup (d || e) s = Left <$> lookup d s <|> Right <$> lookup e s
 
   -- using a record to help the unifier
+  export
   record Shape (d : Fin) where
     constructor MkShape
     runShape : Elem d
 
   namespace Shape
 
-    export
+    public export
     fromString : {d : Fin} -> (nm : String) ->
                  IsJust (lookup d nm) => Shape d
     fromString {d} nm = MkShape (fromJust (lookup d nm))
@@ -57,21 +62,25 @@ namespace Finitary
     bar : Shape Examples.fbb
     bar = "bar"
 
+  public export
   record One (nm : String) (s : Type) where
     constructor MkOne
     runOne : s
 
+  public export
   Arr : Fin -> Type -> Type
   Arr AVoid r = ()
   Arr (AUnit nm) r = One nm r
   Arr (d || e) r = (Arr d r, Arr e r)
 
   export infixr 0 ~>
+  public export
   record (~>) (d : Fin) (r : Type) where
     constructor MkArr
     runArr : Arr d r
 
   export infix 5 .=
+  public export
   (.=) : (nm : String) -> s -> One nm s
   nm .= v = MkOne v
 
@@ -84,6 +93,7 @@ namespace Finitary
           , "baz" .= False
           )
 
+  public export
   lamArr : (d : Fin) -> (Elem d -> r) -> Arr d r
   lamArr AVoid f = ()
   lamArr (AUnit nm) f = MkOne (f MkNamedUnit)
@@ -92,6 +102,7 @@ namespace Finitary
   lam : {d : Fin} -> (Elem d -> r) -> (d ~> r)
   lam {d} = MkArr . lamArr d
 
+  public export
   appArr : (d : Fin) -> Arr d r -> (Elem d -> r)
   appArr AVoid f t = absurd t
   appArr (AUnit nm) f t = runOne f
@@ -99,6 +110,7 @@ namespace Finitary
   appArr (d || e) f (Right x) = appArr e (snd f) x
 
   export infixl 0 $$
+  public export
   ($$) : {d : Fin} -> (d ~> r) -> (Elem d -> r)
   MkArr f $$ x = appArr d f x
 
@@ -136,6 +148,7 @@ namespace Finitary
       cong2 MkPair (go d (\ t => eq (Left t)))
                    (go e (\ t => eq (Right t)))
 
+  public export
   PiArr : (d : Fin) -> (b : Arr d Type) -> Type
   PiArr AVoid b = ()
   PiArr (AUnit nm) b = One nm (runOne b)
@@ -236,6 +249,7 @@ namespace Finitary
     ih (AUnit nm) (MkOne ts) = MkOne (elim pred step ts)
     ih (d || e) (ts, us) = (ih d ts, ih e us)
 
+  public export
   cases : {d : Fin} -> {0 b : Shape d -> Type} ->
           PiArr d (lamArr d (b . MkShape)) -> (x : Shape d) -> b x
   cases f (MkShape x) = go (b . MkShape) f x where
@@ -291,6 +305,7 @@ namespace PartitionedSets
     parts : Fin
     elems : parts ~> Type
 
+  public export
   mkPSet : (d : Fin) -> Arr d Type -> PSet
   mkPSet d e = MkPSet d (MkArr e)
 
@@ -379,6 +394,7 @@ namespace PartitionedSets
            Pi p k -> ((x : Elem p) -> k $$ x)
     ($$) {p = MkPSet d (MkArr e)} {k = MkArr k} (MkPi b) = appArr d e k b
 
+  export
   data W : (sh : Type) -> (pos : sh -> PSet) -> Type where
     MkW : (s : sh) -> (k : pos s ~> W sh pos) -> W sh pos
 

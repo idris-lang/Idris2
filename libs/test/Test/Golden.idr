@@ -431,8 +431,8 @@ record TestPool where
   codegen : Codegen
   testCases : List String
 
-findTests : (String -> Bool) -> Codegen -> String -> String -> IO (List String)
-findTests pred codegen poolName dirName = do
+findTests : (String -> Bool) -> String -> IO (List String)
+findTests pred dirName = do
   Right names <- listDir dirName
     | Left e => die $ "failed to list " ++ dirName ++ ": " ++ show e
   let names = [n | n <- names, pred n]
@@ -462,7 +462,7 @@ testsInDir :
   {default Nothing codegen : Codegen} ->
   Lazy (IO TestPool)
 testsInDir dirName poolName = do
-  testNames <- findTests pred codegen poolName dirName
+  testNames <- findTests pred dirName
   when (length testNames == 0) $ die $ "no tests found in " ++ dirName
   pure $ MkTestPool poolName requirements codegen testNames
 

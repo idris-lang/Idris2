@@ -336,7 +336,7 @@ namespace Functor
 
     -- t should be a type constructor
     logMsg "derive.functor" 1 "Deriving Functor for \{showPrec App $ mapTTImp cleanup t}"
-    MkIsType f params cs <- isType t
+    MkIsFamily f params cs <- isFamily t
     logMsg "derive.functor.constructors" 1 $
       joinBy "\n" $ "" :: map (\ (n, ty) => "  \{showPrefix True $ dropNS n} : \{show $ mapTTImp cleanup ty}") cs
 

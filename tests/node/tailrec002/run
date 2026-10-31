@@ -1,4 +1,4 @@
 . ../../testutils.sh
 
-idris2 --cg node EvenOdd.idr -o app.js
+idris2 EvenOdd.idr -o app.js
 run Main.idr

@@ -1,5 +1,9 @@
 module Data.Singleton
 
+import Decidable.Equality
+
+%default total
+
 ||| The type containing only a particular value.
 ||| This is useful for calculating type-level information at runtime.
 public export
@@ -27,3 +31,27 @@ pure = Val
 public export
 (<*>) : Singleton f -> Singleton x -> Singleton (f x)
 Val f <*> Val x = Val (f x)
+
+public export %inline
+Eq (Singleton v) where
+  _ == _ = True
+
+public export %inline
+Ord (Singleton v) where
+  compare _ _ = EQ
+
+public export %inline
+Semigroup (Singleton v) where
+  x <+> _ = x
+
+public export %inline
+{v : a} -> Monoid (Singleton v) where
+  neutral = Val v
+
+export
+Show a => Show (Singleton {a} v) where
+  showPrec p (Val v) = showCon p "Val" (showArg v)
+
+export
+DecEq (Singleton v) where
+  decEq (Val v) (Val v) = Yes Refl

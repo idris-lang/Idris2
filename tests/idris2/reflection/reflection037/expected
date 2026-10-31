@@ -1,0 +1,7 @@
+1/1: Building Issue3892 (Issue3892.idr)
+Main> "[(Main.X, (a : Type) -> Type)]"
+Main> "[(Main.Y, (a : Type) -> Type)]"
+Main> "[(Main.Z', ({arg:1} : Type) -> Type)]"
+Main> "[(Main.f, ({arg:2} : Type) -> Type)]"
+Main> 
+Bye for now!

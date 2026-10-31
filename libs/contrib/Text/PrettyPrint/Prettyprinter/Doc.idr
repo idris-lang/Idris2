@@ -604,7 +604,7 @@ removeTrailingWhitespace = fromMaybe internalError . go (RecordedWithespace [] 0
 
 public export
 FittingPredicate : Type -> Type
-FittingPredicate ann = Int -> Int -> Maybe Int -> SimpleDocStream ann -> Bool
+FittingPredicate ann = Int -> Int -> Lazy (Maybe Int) -> SimpleDocStream ann -> Bool
 
 data LayoutPipeline ann = Nil | Cons Int (Doc ann) (LayoutPipeline ann) | UndoAnn (LayoutPipeline ann)
 
@@ -665,7 +665,7 @@ layoutWadlerLeijen fits pageWidth_ doc = best 0 0 (Cons 0 doc Nil)
     best nl cc (Cons i (Cat x y) ds) = assert_total $ best nl cc (Cons i x (Cons i y ds))
     best nl cc c@(Cons i (Nest j x) ds) = best nl cc $ assert_smaller c (Cons (i + j) x ds)
     best nl cc c@(Cons i (Union x y) ds) = let x' = best nl cc $ assert_smaller c (Cons i x ds)
-                                               y' = delay $ best nl cc $ assert_smaller c (Cons i y ds) in
+                                               y' : Lazy (SimpleDocStream ann) = delay $ best nl cc $ assert_smaller c (Cons i y ds) in
                                                selectNicer nl cc x' y'
     best nl cc c@(Cons i (Column f) ds) = best nl cc $ assert_smaller c (Cons i (f cc) ds)
     best nl cc c@(Cons i (WithPageWidth f) ds) = best nl cc $ assert_smaller c (Cons i (f pageWidth_) ds)
@@ -701,7 +701,7 @@ layoutSmart : LayoutOptions -> Doc ann -> SimpleDocStream ann
 layoutSmart (MkLayoutOptions pageWidth_@(AvailablePerLine lineLength ribbonFraction)) =
     layoutWadlerLeijen fits pageWidth_
   where
-    fits : Int -> Int -> Maybe Int -> SimpleDocStream ann -> Bool
+    fits : Int -> Int -> Lazy (Maybe Int) -> SimpleDocStream ann -> Bool
     fits lineIndent currentColumn initialIndentY sdoc = go availableWidth sdoc
       where
         availableWidth : Int

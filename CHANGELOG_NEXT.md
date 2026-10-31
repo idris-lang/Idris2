@@ -77,12 +77,34 @@ should target this file (`CHANGELOG_NEXT`).
 * Added `getFC` to elaborator reflection, exposing the macro call-site source
   location.
 * Added `GetDecEqConPairs` as an elaboration script, as a utility for automated derivation of decidable equality (in external repository `stefan-hoeck/idris2-elab-util`)
+* Normalize through private definitions when evaluating `%foreign` and
+  `%foreign_impl` strings [#3790](https://github.com/idris-lang/Idris2/issues/3790)
+  * Improve related error messages
+* Fix exponential time issue in totality checking with large data on the left hand side (#3696).
+* Allow implicit lambdas using the syntax `\ {x} => ...`.
+* Removed `Borrowing` as a language extension.  This was never implemented in
+  Idris2, so the only change is that `%language Borrowing` will now error rather
+  than be accepted but do nothing.
+* HTML files generated using `--mkdoc` now contain attributes, that allow
+  external tools to insert links from documentation to source code.
+* Fix exponential time issue in pretty printer.
+* Fix insertion of implicit lambdas when expected type is a meta (#3851)
+* Fix issue with slow auto-search if determining type is a non-public function (#3763)
+* Fixed `parseDouble` dropping "-" sign when whole part is "0"
+* Fixed namespace-record interaction where a record declared in a namespace
+  would make all its sibling private declarations visible in the parent namespace.
+* Fixed .ttc bloat caused by foreign_impl.
+* Normalise holes in the result of `getType` in the elaborator script (#3855).
 
 ### Building/Packaging changes
 
 * Fix parsing of capitalised package names containing hyphens.
 * Change `flake.nix` to point at `idris-community/idris2-mode` as the URL for
   `inputs.idris-emacs-src` (from the user fork `redfish64/idris2-mode`).
+* Fix UTF-8 character handling in package description fields.
+* A project's data directory can now be specified with the `datadir` entry in
+  an `ipkg` file.
+* Fix building on Windows with MSYS.
 
 ### Backend changes
 
@@ -100,12 +122,22 @@ should target this file (`CHANGELOG_NEXT`).
 * Fix headers for numeric negation.
 * Prefix RefC Idris values with `Idris2_` to prevent name collisions with third
   partly libraries.
+* Fixed casts from `String` failing to compile
+  ([#3812](https://github.com/idris-lang/Idris2/issues/3812)): the support
+  library exported the cast helpers as `idris2_cast_String_to_*` while the
+  generated code calls `idris2_cast_string_to_*`.
+* Fix missing FFI of Data.Buffer.
 
 ### Library changes
 
 #### Base
 
+* Added `emptyBuffer` to `Data.Buffer`
 * Added `rtrim` to `Data.String`.
 * Added `decToMaybe`, `maybeCong` and `maybeCong2` to `Data.Maybe`.
 * Added `maybeEq` to `Decidable.Equality`.
 * Removed `writeIORef1`, which unsafely allowed a linear value to become unrestricted.
+* Made `xs` and `ys` explicit arguments of `SplitRecPair` in `Data.Vect.Views`.
+* Implemented core interfaces for `Data.Singleton`
+* `fromList` and `toList` for `Data.Vect` rewritten so that they are optimized away during codegen.
+* Reduced the fixities of `Data.Record` operators `:-:`, `:-` and `:+` to 0.

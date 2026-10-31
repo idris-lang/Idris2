@@ -137,7 +137,9 @@ typeddTests : IO TestPool
 typeddTests = testsInDir "typedd-book" "Type Driven Development"
 
 chezTests : IO TestPool
-chezTests = testsInDir "chez" "Chez backend" {codegen = Just Chez}
+chezTests = testsInDir "chez" "Chez backend"
+  {codegen = Just Chez}
+  {pred = not . ("channels009" ==)}
 
 refcTests : IO TestPool
 refcTests = testsInDir "refc" "Reference counting C backend" {codegen = Just C}

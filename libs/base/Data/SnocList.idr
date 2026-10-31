@@ -156,6 +156,29 @@ findIndex p (xs :< x) = if p x
   then Just FZ
   else FS <$> findIndex p xs
 
+||| Find the leftmost element of the snoc-list (the element added first).
+|||
+||| This corresponds to the head of the list if the snoc-list were converted
+||| to a standard list.
+|||
+||| Examples:
+|||
+||| ```idris
+||| leftMost [<]
+||| -- Nothing
+|||
+||| leftMost [< 1]
+||| -- Just 1
+|||
+||| leftMost [< 1, 2, 3]
+||| -- Just 1
+||| ```
+export
+leftMost : SnocList a -> Maybe a
+leftMost [<]       = Nothing
+leftMost [<x]      = Just x
+leftMost (xs :< _) = leftMost xs
+
 ---------------------------
 -- Zippable --
 ---------------------------

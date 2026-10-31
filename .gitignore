@@ -53,6 +53,8 @@ idris2docs_venv
 .idea/
 # Zed editor
 .zed/
+# Gram editor
+.gram/
 
 # macOS
 .DS_Store

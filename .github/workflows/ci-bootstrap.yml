@@ -18,6 +18,7 @@ on:
     paths:
       - 'bootstrap/idris2_app/idris2.ss'
       - '.github/workflows/ci-bootstrap.yml'
+  workflow_dispatch:
 
 jobs:
 

@@ -255,7 +255,7 @@ fromInteger x = finFromInteger x {prf = lemma prf} where
 ||| This is essentially a composition of `mod` and `fromInteger`
 public export
 restrict : (n : Nat) -> Integer -> Fin (S n)
-restrict n val = let val' = assert_total (abs (mod val (cast (S n)))) in
+restrict n val = let val' = abs (mod val (cast (S n))) in
                      -- reasoning about primitives, so we need the
                      -- 'believe_me'. It's fine because val' must be
                      -- in the right range

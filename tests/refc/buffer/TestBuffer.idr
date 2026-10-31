@@ -8,16 +8,22 @@ put = (>>= putStrLn . show)
 
 main : IO ()
 main = do
-    Just buf <- newBuffer 37
+    Just buf <- newBuffer 60
         | Nothing => pure ()
 
     -- TODO: setByte is deprecated, remove once no longer in libs
     setByte buf 0 1
     setBits8 buf 1 2
     setBits16 buf 2 3
-    setBits16 buf 4 4
-    setInt buf 8 0x1122334455667788
-    setDouble buf 16 (sqrt 2)
+    setBits32 buf 4 4
+    setBits64 buf 8 5
+    setInt8 buf 16 (-2)
+    setInt16 buf 17 (-3)
+    setInt32 buf 19 (-4)
+    setInt64 buf 23 (-5)
+
+    setInt buf 31 0x1122334455667788
+    setDouble buf 39 (sqrt 2)
 
     let helloWorld = "Hello, world"
 
@@ -25,7 +31,7 @@ main = do
         | Nothing => pure ()
 
     setString helloWorldBuf 0 "Hello, world"
-    copyData helloWorldBuf 0 12 buf 24
+    copyData helloWorldBuf 0 12 buf 47
 
     put $ rawSize buf
 
@@ -34,9 +40,14 @@ main = do
     put $ getBits8 buf 1
     put $ getBits16 buf 2
     put $ getBits32 buf 4
-    put $ getInt buf 8
-    put $ getDouble buf 16
-    put $ getString buf 24 12
+    put $ getBits64 buf 8
+    put $ getInt8 buf 16
+    put $ getInt16 buf 17
+    put $ getInt32 buf 19
+    put $ getInt64 buf 23
+    put $ getInt buf 31
+    put $ getDouble buf 39
+    put $ getString buf 47 12
 
     put $ bufferData' buf
 
