@@ -65,7 +65,7 @@ data Elab : Type -> Type where
      ||| Elaborate a TTImp term to a concrete value
      Check : TTImp -> Elab expected
 
-    --  given a type constructor, get positions of parameters in type, and the pairs of data constructors that can have the same type.
+     |||  given a type constructor, get positions of parameters in type, and the pairs of data constructors that can have the same type.
      GetDecEqConPairs : a -> Elab (List Nat, List (String, String))
 
      ||| Quote a concrete expression back to a TTImp
@@ -105,7 +105,6 @@ data Elab : Type -> Type where
      GetFC : Elab FC
      ||| Check a group of top level declarations
      Declare : List Decl -> Elab ()
-
      ||| Read the contents of a file, if it is present
      ReadFile : LookupDir -> (path : String) -> Elab $ Maybe String
      ||| Writes to a file, replacing existing contents, if were present
