@@ -219,7 +219,7 @@ needsBuilding sourceFile ttcFile depFiles
          | Left err => throw (FileErr ttcFile err)
        pure True
 
-
+export
 buildMod : {auto c : Ref Ctxt Defs} ->
            {auto s : Ref Syn SyntaxInfo} ->
            {auto o : Ref ROpts REPLOpts} ->
