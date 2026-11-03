@@ -390,6 +390,9 @@ getFnName (MkTransform _ _ app _)
 -- onNames : (Context -> Name -> Core Name) ->
 --           (Context -> a    -> Core a)
 -- ?
+||| May have resolved names, which are integers, or fully explicit names which
+||| contain strings.  You may want to go between the two, which is what this
+||| interface provides.
 public export
 interface HasNames a where
   full : Context -> a -> Core a
@@ -721,6 +724,7 @@ HasNames Warning where
     = ShadowingGlobalDefs fc <$> traverseList1 (traversePair (traverseList1 (full gam))) xs
   full gam (IncompatibleVisibility fc x y n) = IncompatibleVisibility fc x y <$> full gam n
   full gam w@(ShadowingLocalBindings {}) = pure w
+  full gam w@(EnsureIdFailed {}) = pure w
   full gam (Deprecated fc x y) = Deprecated fc x <$> traverseOpt (traversePair (full gam)) y
   full gam (GenericWarn fc x) = pure (GenericWarn fc x)
 
@@ -730,6 +734,7 @@ HasNames Warning where
     = ShadowingGlobalDefs fc <$> traverseList1 (traversePair (traverseList1 (resolved gam))) xs
   resolved gam (IncompatibleVisibility fc x y n) = IncompatibleVisibility fc x y <$> resolved gam n
   resolved gam w@(ShadowingLocalBindings {}) = pure w
+  resolved gam w@(EnsureIdFailed {}) = pure w
   resolved gam (Deprecated fc x y) = Deprecated fc x <$> traverseOpt (traversePair (resolved gam)) y
   resolved gam (GenericWarn fc x) = pure (GenericWarn fc x)
 
