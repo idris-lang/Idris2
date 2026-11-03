@@ -95,6 +95,8 @@ findBindableNames arg env used (IAutoApp fc fn av)
     = findBindableNames False env used fn ++ findBindableNames True env used av
 findBindableNames arg env used (IWithApp fc fn av)
     = findBindableNames False env used fn ++ findBindableNames True env used av
+findBindableNames arg env used (IBindingApp fn bound scope)
+    = findBindableNames False env used bound.val.getBoundExpr
 findBindableNames arg env used (IAs fc _ _ nm@(UN (Basic n)) pat)
     = (nm, UN $ Basic $ genUniqueStr used n) :: findBindableNames arg env used pat
 findBindableNames arg env used (IAs fc _ _ n pat)
@@ -144,6 +146,11 @@ findBindableNamesQuot env used (IAutoApp fc x y)
     = findBindableNamesQuot env used ![x, y]
 findBindableNamesQuot env used (IWithApp fc x y)
     = findBindableNamesQuot env used ![x, y]
+findBindableNamesQuot env used (IBindingApp x bind z)
+    = case bind.val of
+           (BindType _ ty) => findBindableNamesQuot env used ![ty, z.val]
+           (BindExpr _ expr) => findBindableNamesQuot env used ![expr, z.val]
+           (BindExplicitType _ ty expr) => findBindableNamesQuot env used ![ty, expr, z.val]
 findBindableNamesQuot env used (IRewrite fc x y)
     = findBindableNamesQuot env used ![x, y]
 findBindableNamesQuot env used (ICoerced fc x)
@@ -474,7 +481,7 @@ mutual
 
   substLocDecl : FC -> ImpDecl -> ImpDecl
   substLocDecl fc' (IClaim (MkWithData _ $ MkIClaimData r vis opts td))
-      = IClaim (MkFCVal fc' $ MkIClaimData r vis opts (map (substLoc fc') (set "fc" fc' td)))
+      = IClaim (Mk [fc'] $ MkIClaimData r vis opts (map (substLoc fc') (set "fc" fc' td)))
   substLocDecl fc' (IDef fc n cs)
       = IDef fc' n (map (substLocClause fc') cs)
   substLocDecl fc' (IData fc vis mbtot d)

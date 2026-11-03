@@ -5,6 +5,7 @@ import Core.Env
 import Core.Normalise
 import Core.Reflect
 import Core.Value
+import Core.WithData
 
 import TTImp.TTImp
 import Libraries.Data.WithDefault
@@ -82,7 +83,6 @@ Reflect DotReason where
       = getCon fc defs (reflectionttimp "UnknownDot")
   reflect fc defs lhs env UnderAppliedCon
       = getCon fc defs (reflectionttimp "UnderAppliedCon")
-
 
 mutual
   export
@@ -259,6 +259,16 @@ mutual
     reify defs val = cantReify val "IFieldUpdate"
 
   export
+  Reify BindingModifier where
+    reify defs val@(NDCon _ n _ _ args)
+        = case (dropAllNS !(full (gamma defs) n), args) of
+               (UN (Basic "NotBinding"), _) => pure NotBinding
+               (UN (Basic "Typebind"), _) => pure Typebind
+               (UN (Basic "Autobind"), _) => pure Autobind
+               _ => cantReify val "BindingModifier"
+    reify defs val = cantReify val "BindingModifier"
+
+  export
   Reify AltType where
     reify defs val@(NDCon _ n _ _ args)
         = case (dropAllNS !(full (gamma defs) n), args) of
@@ -313,7 +323,7 @@ mutual
                     => do fc' <- reify defs !(evalClosure defs w)
                           name' <- the (Core (WithFC Name)) (reify defs !(evalClosure defs y))
                           term' <- reify defs !(evalClosure defs z)
-                          pure (Mk [fc', name'] term')
+                          pure (Mk [fc', AddDef name'] term')
                _ => cantReify val "ITy"
     reify defs val = cantReify val "ITy"
 
@@ -341,12 +351,12 @@ mutual
                           x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
                           z' <- reify defs !(evalClosure defs z)
-                          pure (MkImpData v' w' x' y' z')
+                          pure (MkImpData v' (MkDef w') x' y' z')
                (UN (Basic "MkLater"), [x,y,z])
                     => do x' <- reify defs !(evalClosure defs x)
                           y' <- reify defs !(evalClosure defs y)
                           z' <- reify defs !(evalClosure defs z)
-                          pure (MkImpLater x' y' z')
+                          pure (MkImpLater x' (MkDef y') z')
                _ => cantReify val "Data"
     reify defs val = cantReify val "Data"
 
@@ -360,7 +370,7 @@ mutual
                           info <- reify defs !(evalClosure defs x)
                           name <- reify defs !(evalClosure defs y)
                           type <- reify defs !(evalClosure defs z)
-                          pure (Mk [fc, rig, NoFC name] (MkPiBindData info type))
+                          pure (Mk [fc, rig, MkDef name] (MkPiBindData info type))
                _ => cantReify val "IField"
     reify defs val = cantReify val "IField"
 
@@ -375,8 +385,8 @@ mutual
                           opts <- reify defs !(evalClosure defs y)
                           conName <- reify defs !(evalClosure defs z)
                           fields <- reify defs !(evalClosure defs a)
-                          pure (Mk [fc] $ MkImpRecord (Mk [NoFC tyName] (map fromOldParams params))
-                                                      (Mk [NoFC conName, opts] fields))
+                          pure (Mk [fc] $ MkImpRecord (Mk [MkDef tyName] (map fromOldParams params))
+                                                      (Mk [MkDef conName, opts] fields))
                _ => cantReify val "Record"
     reify defs val = cantReify val "Record"
 
@@ -535,6 +545,8 @@ mutual
              f' <- reflect fc defs lhs env f
              a' <- reflect fc defs lhs env a
              appCon fc defs (reflectionttimp "IApp") [fc', f', a']
+    reflect fc defs lhs env (IBindingApp tfc f a)
+        = ?TODOReflect3
     reflect fc defs lhs env (IAutoApp tfc f a)
         = do fc' <- reflect fc defs lhs env tfc
              f' <- reflect fc defs lhs env f
@@ -690,12 +702,13 @@ mutual
     reflect fc defs lhs env (SpecArgs r)
         = do r' <- reflect fc defs lhs env r
              appCon fc defs (reflectionttimp "SpecArgs") [r']
+    reflect fc defs lhs env (Binding r) = ?add
 
   export
   Reflect ImpTy where
     reflect fc defs lhs env ty
         = do w' <- reflect fc defs lhs env ty.fc
-             x' <- reflect fc defs lhs env ty.tyName
+             x' <- reflect fc defs lhs env ty.tyName.drop
              z' <- reflect fc defs lhs env ty.val
              appCon fc defs (reflectionttimp "MkTy") [w', x', z']
 
@@ -713,14 +726,14 @@ mutual
   Reflect ImpData where
     reflect fc defs lhs env (MkImpData v w x y z)
         = do v' <- reflect fc defs lhs env v
-             w' <- reflect fc defs lhs env w
+             w' <- reflect fc defs lhs env w.val
              x' <- reflect fc defs lhs env x
              y' <- reflect fc defs lhs env y
              z' <- reflect fc defs lhs env z
              appCon fc defs (reflectionttimp "MkData") [v', w', x', y', z']
     reflect fc defs lhs env (MkImpLater x y z)
         = do x' <- reflect fc defs lhs env x
-             y' <- reflect fc defs lhs env y
+             y' <- reflect fc defs lhs env y.val
              z' <- reflect fc defs lhs env z
              appCon fc defs (reflectionttimp "MkLater") [x', y', z']
 
@@ -737,10 +750,10 @@ mutual
   Reflect ImpRecord where
     reflect fc defs lhs env r@(MkWithData _ $ MkImpRecord header body)
         = do v' <- reflect fc defs lhs env r.fc
-             w' <- reflect fc defs lhs env header.name.val
+             w' <- reflect fc defs lhs env header.tyName.val
              x' <- reflect fc defs lhs env (map toOldParams header.val)
              y' <- reflect fc defs lhs env body.opts
-             z' <- reflect fc defs lhs env body.name.val
+             z' <- reflect fc defs lhs env body.tyName.val
              a' <- reflect fc defs lhs env body.val
              appCon fc defs (reflectionttimp "MkRecord") [v', w', x', y', z', a']
 
