@@ -94,6 +94,7 @@ should target this file (`CHANGELOG_NEXT`).
   would make all its sibling private declarations visible in the parent namespace.
 * Fixed .ttc bloat caused by foreign_impl.
 * Normalise holes in the result of `getType` in the elaborator script (#3855).
+* Check recursive calls to the left of binders in the termination checker (#3896).
 
 ### Building/Packaging changes
 
