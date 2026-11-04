@@ -7,12 +7,17 @@ import Core.Reflect
 import Core.Unify
 import Core.Value
 
+import Data.List
+import Data.Maybe
+
 import Idris.Resugar
 import Idris.REPL.Opts
 import Idris.Pretty
 import Idris.Syntax
 
+import Libraries.Data.List.SizeOf
 import Libraries.Data.NameMap
+import Libraries.Data.NatSet
 import Libraries.Data.WithDefault
 import Libraries.Text.PrettyPrint.Prettyprinter.Doc -- for PageWidth
 import Libraries.Utils.Path
@@ -234,6 +239,49 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
                            (Just (glueBack defs env exp'))
              empty <- clearDefs defs
              nf empty env checktm
+    elabCon defs "GetDecEqConPairs" [_, x1]
+        = do
+            NTCon _ n _ _ <- evalClosure defs x1
+              | _ => failWith defs "not a type constructor"
+            Just (TCon arty params _ _ _ cons _) <- lookupDefExact n (gamma defs)
+              | _ => failWith defs "not a type constructor"
+            gdefs' <- traverse (\con => lookupCtxtExact con (gamma defs)) (fromMaybe [] cons)
+            let getNFArgs : NF [] -> Core (List (NF []))
+                getNFArgs (NBind fc _ (Pi _ _ _ _) sc) = do
+                    res <- sc defs (MkClosure defaultOpts [] [] (Erased fc Placeholder))
+                    getNFArgs res
+                getNFArgs (NTCon _ _ _ sp) = traverse (evalClosure defs) (toList (map snd sp))
+                getNFArgs x = pure []
+            let mkCon : GlobalDef -> Core (String, List (NF []))
+                mkCon condef = do
+                    let name : String = nameRoot condef.fullname
+                    nfcon <- nf defs [] condef.type
+                    args <- getNFArgs nfcon
+                    pure (name, args)
+            let gdefs : List GlobalDef = catMaybes gdefs'
+            cons : List (String, List (NF [])) <- traverse mkCon gdefs
+            let allPairs = [(x, y) | x <- cons, y <- cons, fst x /= fst y]
+                             ++ (map (\t => (t, t)) cons)
+            let validateNFArg : (NF [], NF []) -> Core Bool
+                validateNFArg (NPrimVal _ x, NPrimVal _ y) = pure $ x == y
+                validateNFArg (NDCon _ x _ _ xcls, NDCon _ y _ _ ycls) = case (x == y) of
+                    True => do
+                        xargs <- traverse (evalClosure defs) (map Builtin.snd xcls)
+                        yargs <- traverse (evalClosure defs) (map Builtin.snd ycls)
+                        res <- traverse validateNFArg (zip xargs yargs)
+                        pure $ and (map delay res)
+                    False => pure False
+                validateNFArg (_, _) = pure True
+            let validatePair : ((String, List (NF [])), (String, List (NF [])))
+                                  -> Core (Maybe (String, String))
+                validatePair ((nx, xargs), (ny, yargs)) =
+                    if (nx == ny)
+                    then pure (Just (nx, ny))
+                    else do
+                        res <- traverse validateNFArg (zip xargs yargs)
+                        if (and (map delay res)) then pure (Just (nx, ny)) else pure Nothing
+            vals <- Core.Core.traverse validatePair allPairs
+            scriptRet $ (toList params, catMaybes vals)
     elabCon defs "Quote" [exp, tm]
         = do tm' <- evalClosure defs tm
              defs <- get Ctxt
@@ -250,7 +298,6 @@ elabScript rig fc nest env script@(NDCon nfc nm t ar args) exp
              qp <- quotePi p
              qty <- quote empty env ty
              let env' = Lam fc' c qp qty :: env
-
              runsc <- elabScript rig fc (weaken nest) env'
                                  !(nf defs env' lamsc) Nothing -- (map weaken exp)
              nf empty env (Bind bfc x (Lam fc' c qp qty) !(quote empty env' runsc))

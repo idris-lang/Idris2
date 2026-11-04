@@ -79,6 +79,7 @@ should target this file (`CHANGELOG_NEXT`).
 * Optimised the passing of local variables during compile-time normalisation.
 * Added `getFC` to elaborator reflection, exposing the macro call-site source
   location.
+* Added `GetDecEqConPairs` as an elaboration script, as a utility for automated derivation of decidable equality (in external repository `stefan-hoeck/idris2-elab-util`)
 * Normalize through private definitions when evaluating `%foreign` and
   `%foreign_impl` strings [#3790](https://github.com/idris-lang/Idris2/issues/3790)
   * Improve related error messages
@@ -97,6 +98,9 @@ should target this file (`CHANGELOG_NEXT`).
   would make all its sibling private declarations visible in the parent namespace.
 * Fixed .ttc bloat caused by foreign_impl.
 * Normalise holes in the result of `getType` in the elaborator script (#3855).
+* Removed `Borrowing` as a language extension.  This was never implemented in
+  Idris2, so the only change is that `%language Borrowing` will now error rather
+  than be accepted but do nothing.
 * Check recursive calls to the left of binders in the termination checker (#3896).
 
 ### Building/Packaging changes
