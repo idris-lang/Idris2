@@ -157,4 +157,6 @@ export
 covering
 applyTransforms : {auto c : Ref Ctxt Defs} ->
                   Env Term vars -> Term vars -> Core (Term vars)
-applyTransforms env tm = transLoop 5 env tm
+applyTransforms env tm
+    = do resolveTransforms
+         transLoop 5 env tm
