@@ -512,6 +512,10 @@ processEdit (Refine upd line hole e)
          -- We grab the LHS it lives in as well as its type in that context.
          [(h, hidx, hgdef)] <- lookupCtxtName hole (gamma defs)
            | _ => pure $ EditError ("Could not find hole named" <++> pretty0 hole)
+         let loc = cast $ startLine $ toNonEmptyFC $ hgdef.location
+         when (loc /= line)
+            $ throw $ InternalError "lines \{show loc} and \{show line} don't match"
+
          let Hole args _ = definition hgdef
            | _ => pure $ EditError (pretty0 hole <++> "is not a refinable hole")
          let (lhsCtxt ** (env, htyInLhsCtxt)) = underPis (cast args) Env.empty (type hgdef)
@@ -601,7 +605,7 @@ processEdit (Refine upd line hole e)
                     pure $ show $ ifThenElse brack (addBracket replFC) id pcall
 
          if upd
-            then updateFile (proofSearch hole call (integerToNat (cast (line - 1))))
+            then updateFile (proofSearch hole call loc)
             else pure $ DisplayEdit (pretty0 call)
 
 processEdit (ExprSearch upd line name hints)
