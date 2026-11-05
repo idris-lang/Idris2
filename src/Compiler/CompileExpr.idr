@@ -28,6 +28,10 @@ data Args
     | EraseArgs Nat NatSet
     | Arity Nat
 
+countArgs : Term vars -> Nat
+countArgs (Bind _ _ (Lam {}) sc) = S (countArgs sc)
+countArgs _ = 0
+
 ||| Extract the number of arguments from a term, or return that it's
 ||| a newtype by a given argument position
 numArgs : Defs -> Term vars -> Core Args
@@ -44,10 +48,6 @@ numArgs defs (Ref _ _ n)
            ExternDef arity => pure (Arity arity)
            ForeignDef arity _ => pure (Arity arity)
            _ => pure (Arity 0)
-  where
-    countArgs : forall vars . Term vars -> Nat
-    countArgs (Bind _ _ (Lam {}) sc) = S (countArgs sc)
-    countArgs _ = 0
 numArgs _ tm = pure (Arity 0)
 
 weakenVar : Var ns -> Var (ns :< a)
@@ -555,6 +555,11 @@ mergeLambdas args (CLam fc x sc)
     = mergeLambdas (args :< x) sc
 mergeLambdas args exp = (args ** exp)
 
+mergeLambdasBounded : Nat -> (args : SnocList Name) -> CExp args -> (args' ** CExp args')
+mergeLambdasBounded (S n) args (CLam fc x sc)
+    = mergeLambdasBounded n (args :< x) sc
+mergeLambdasBounded _ args exp = (args ** exp)
+
 toCDef : {auto c : Ref Ctxt Defs} ->
          Name -> ClosedTerm -> NatSet -> Def ->
          Core CDef
@@ -564,7 +569,7 @@ toCDef n ty erased (Function fi _ tree _)
     = do log "compiler.newtype.world" 25 "toCDef Function ty: \{show ty}, n: \{show n}, erased: \{show erased}, tree: \{show tree}"
          s <- newRef NextMN 0
          t <- toCExp n tree
-         let (args ** comptree) = mergeLambdas [<] t
+         let (args ** comptree) = mergeLambdasBounded (countArgs tree) [<] t
          let (args' ** p) = fromNatSet erased args
          log "compiler.newtype.world" 25 "toCDef Function comptree \{show comptree}, p: \{show p}, is_ext: \{show $ (externalDecl fi)}"
          let lam = toLam (externalDecl fi) $
