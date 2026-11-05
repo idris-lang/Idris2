@@ -96,7 +96,7 @@ should target this file (`CHANGELOG_NEXT`).
 * Fixed namespace-record interaction where a record declared in a namespace
   would make all its sibling private declarations visible in the parent namespace.
 * Fixed .ttc bloat caused by foreign_impl.
-* Normalise holes in the result of `getType` in the elaborator script (#3855).
+* Normalise holes in the result of `getType` in the elaborator script (#3855, #3838).
 * Removed `Borrowing` as a language extension.  This was never implemented in
   Idris2, so the only change is that `%language Borrowing` will now error rather
   than be accepted but do nothing.
