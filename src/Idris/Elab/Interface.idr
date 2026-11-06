@@ -14,6 +14,8 @@ import TTImp.Elab.Check
 import TTImp.TTImp
 import TTImp.Utils
 
+import Data.SnocList
+
 import Libraries.Data.ANameMap
 import Libraries.Data.List.Extra
 import Libraries.Data.WithDefault
@@ -470,6 +472,6 @@ elabInterface {vars} ifc def_vis env nest constraints iname params dets mcon bod
                                                  meth_names
                                                  params) nconstraints
              log "elab.interface" 5 $ "Constraint hints from " ++ show constraints ++ ": " ++ show chints
-             List.traverse_ (processDecl [] nest env) (concatMap snd chints)
+             Core.Core.List.traverse_ (processDecl [] nest env) (concatMap snd chints)
              traverse_ (\n => do mn <- inCurrentNS n
                                  setFlag vfc mn TCInline) (map fst chints)

@@ -69,8 +69,8 @@ findTyName defs env n (Bind _ x b@(PVar _ c p ty) sc)
                  case tynf of
                       NTCon _ tyn _ _ => pure $ Just tyn
                       _ => pure Nothing
-         else findTyName defs (b :: env) n sc
-findTyName defs env n (Bind _ x b sc) = findTyName defs (b :: env) n sc
+         else findTyName defs (env :< b) n sc
+findTyName defs env n (Bind _ x b sc) = findTyName defs (Env.bind env b) n sc
 findTyName _ _ _ _ = pure Nothing
 
 getDefining : Term vars -> Maybe Name
@@ -264,7 +264,7 @@ mkCase {c} {u} fn orig lhs_raw
                -- be an erased name in a case block (which will be bound elsewhere
                -- once split and turned into a pattern)
                (lhs, _) <- elabTerm {c} {m} {u}
-                                    fn (InLHS erased) [] (MkNested [])
+                                    fn (InLHS erased) [] (NestedNames.empty)
                                     Env.empty (IBindHere (getFC lhs_raw) PATTERN lhs_raw)
                                     Nothing
                -- Revert all public back to false
