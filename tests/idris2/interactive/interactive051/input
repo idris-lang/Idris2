@@ -1,3 +1,4 @@
 :refine 3 hole1 Z
 :refine 4 hole2 S
 :refine 0 hole3 Z
+:refine 0 Nested.hole4 Z
