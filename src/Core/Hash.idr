@@ -259,6 +259,8 @@ Hashable CFType where
       h `hashWithSalt` 14 `hashWithSalt` a
     CFStruct n fs =>
       h `hashWithSalt` 15 `hashWithSalt` n `hashWithSalt` fs
+    CFArray n t =>
+      h `hashWithSalt` 99 `hashWithSalt` n `hashWithSalt` t
     CFUser n xs =>
       h `hashWithSalt` 16 `hashWithSalt` n `hashWithSalt` xs
     CFInt8 =>
