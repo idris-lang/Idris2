@@ -821,7 +821,11 @@ loadMainFile f
          Right res <- coreLift (readFile f)
             | Left err => do setSource ""
                              pure (ErrorLoadingFile f err)
-         errs <- logTime 1 "Build deps" $ buildDeps f
+         errs <- logTime 1 "Build deps" $ errors <$> buildDeps f
+         -- discard partial metadata and unification state
+         unless (null errs) $ do
+           put MD (initMetadata (PhysicalIdrSrc modIdent))
+           put UST initUState
          updateErrorLine errs
          setSource res
          resetProofState
