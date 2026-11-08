@@ -221,6 +221,7 @@ needsBuilding sourceFile ttcFile depFiles
 
 export
 buildMod : {auto c : Ref Ctxt Defs} ->
+           {auto m : Ref MD Metadata} ->
            {auto s : Ref Syn SyntaxInfo} ->
            {auto o : Ref ROpts REPLOpts} ->
            FC -> Nat -> Nat -> BuildMod ->
@@ -246,7 +247,7 @@ buildMod loc num len mod
         rebuild <- needsBuilding sourceFile ttcFile depFiles
 
         u <- newRef UST initUState
-        m <- newRef MD (initMetadata (PhysicalIdrSrc modNamespace))
+        put MD (initMetadata (PhysicalIdrSrc modNamespace))
         put Syn initSyntax
 
         errs <- ifThenElse (not rebuild) (pure []) $
@@ -265,6 +266,7 @@ buildMod loc num len mod
 
 export
 buildMods : {auto c : Ref Ctxt Defs} ->
+            {auto m : Ref MD Metadata} ->
             {auto s : Ref Syn SyntaxInfo} ->
             {auto o : Ref ROpts REPLOpts} ->
             FC -> Nat -> Nat -> List BuildMod ->
@@ -323,6 +325,7 @@ buildAll allFiles
     = do mods <- getAllBuildMods EmptyFC [] allFiles
          -- There'll be duplicates, so if something is already built, drop it
          let mods' = dropLater mods
+         m <- newRef MD (initMetadata (Virtual Interactive))
          buildMods EmptyFC 1 (length mods') mods'
   where
     dropLater : List BuildMod -> List BuildMod
