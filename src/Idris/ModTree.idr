@@ -223,14 +223,15 @@ public export
 record BuildDepsResult where
   constructor MkBuildDepsResult
   errors : List Error
-  ||| True when Ctxt, Syn, MD and UST describe the requested main file.
-  ||| On errors this state is partial: some declarations may be unavailable.
-  ||| False means the build did not retain main-file state.
+  ||| True when the Ctxt, Syn, MD and UST describe the requested main-file
+  ||| when errors spotted, this state is partial and some declarations may
+  ||| be unavailable it's False when the build did not retain main-file
+  ||| state (e.g, failed at deps)
   hasMainFileState : Bool
 
--- Dependencies use temporary unification state. Only the requested main
--- file uses the caller's reference, keeping fresh names and holes in sync
--- with the retained context. Metadata is shared, as in buildMods.
+||| dependencies use temporary unification state, and only the requested main
+||| file uses the caller's reference, keeping fresh names and holes in sync
+||| with the context
 MainFileState : Type
 MainFileState = (ModuleIdent, Ref UST UState)
 
@@ -322,10 +323,10 @@ buildMods : {auto c : Ref Ctxt Defs} ->
             Core (List Error)
 buildMods fc num len mods = errors <$> buildModsWith Nothing fc num len mods
 
-||| Build dependencies and load the main file, retaining its partial editor
-||| state on errors. Reset the context before loading a new file.
-||| A failure in a dependency leaves that dependency's context and metadata;
-||| hasMainFileState is False, so callers must not use it as main-file state.
+||| build dependencies and load the main file, retaining its partial editor
+||| state on errors. failure in a dependency leaves that dependency's context
+||| and metadata, and since hasMainFileState is False, callers must not use
+||| it as main-file state
 export
 buildDeps : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
@@ -342,7 +343,7 @@ buildDeps fname
          result <- buildModsWith (Just (modIdent, u)) EmptyFC 1 (length mods) mods
          case result.errors of
               [] => do -- On success, reload the main ttc in a clean context
-                       -- Discard first-pass unification state before reloading.
+                       -- Discard unification state before reloading
                        put UST ust
                        clearCtxt; addPrimitives
                        put MD (initMetadata (PhysicalIdrSrc modIdent))
