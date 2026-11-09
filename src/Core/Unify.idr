@@ -236,7 +236,7 @@ postpone loc mode logstr env x y
     checkDefined : Defs -> NF vars -> Core ()
     checkDefined defs (NApp _ (NRef _ n) _)
         = do Just _ <- lookupCtxtExact n (gamma defs)
-                  | _ => undefinedName loc n
+                  | _ => throw $ UndefinedName loc n
              pure ()
     checkDefined _ _ = pure ()
 

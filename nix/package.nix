@@ -20,8 +20,8 @@ stdenv.mkDerivation rec {
 
   strictDeps = true;
   nativeBuildInputs = [ makeWrapper installShellFiles clang chez ]
-    ++ lib.optional stdenv.hostPlatform.isDarwin [ zsh ]
-    ++ lib.optional (!bootstrap) [ idris2Bootstrap ];
+    ++ lib.optionals stdenv.hostPlatform.isDarwin [ zsh ]
+    ++ lib.optionals (!bootstrap) [ idris2Bootstrap ];
   buildInputs = [ chez gmp support ];
 
   # For bootstrap builds the Makefile will try to

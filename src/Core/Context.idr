@@ -22,6 +22,8 @@ import Data.Either
 import Data.IOArray
 import Data.List1
 import Data.Nat
+import Data.String
+import Data.SortedSet
 import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
@@ -1020,6 +1022,9 @@ record Defs where
      -- ^ A mapping from names to transformation rules which update applications
      -- of that name
   saveTransforms : List (Name, Transform)
+  pendingTransforms : List (Name, Transform)
+     -- ^ rules read from TTCs, not yet resolved and not yet in 'transforms'
+     -- (resolveTransforms)
   namedirectives : NameMap (List String)
   ifaceHash : Int
   importHashes : List (Namespace, Int)
@@ -1030,7 +1035,7 @@ record Defs where
      -- ^ all imported filenames/namespaces, just to avoid loading something
      -- twice unnecessarily (this is a record of all the things we've
      -- called 'readFromTTC' with, in practice)
-  cgdirectives : List (CG, String)
+  cgdirectives : SortedSet (CG, String)
      -- ^ Code generator directives, which are free form text and thus to
      -- be interpreted however the specific code generator requires
   toCompileCase : List Name
@@ -1094,12 +1099,13 @@ initDefs
            , saveAutoHints = []
            , transforms = empty
            , saveTransforms = []
+           , pendingTransforms = []
            , namedirectives = empty
            , ifaceHash = 5381
            , importHashes = []
            , imported = []
            , allImported = []
-           , cgdirectives = []
+           , cgdirectives = SortedSet.empty
            , toCompileCase = []
            , incData = []
            , allIncData = []
@@ -1908,11 +1914,37 @@ export
 setOpenHints : {auto c : Ref Ctxt Defs} -> NameMap () -> Core ()
 setOpenHints hs = update Ctxt { openHints := hs }
 
+-- The latest rule for a function is tried first
+insertTransform : Name -> Transform ->
+                  NameMap (List Transform) -> NameMap (List Transform)
+insertTransform fn t ts = insert fn (maybe [t] (t ::) (lookup fn ts)) ts
+
+-- A rule read from a TTC is kept unresolved until a rule is used or added: it
+-- may name a function whose module was not loaded yet when its own module was
+-- read (the Prelude's modules load in reverse import order), and a name that
+-- cannot be resolved then would never match an elaborated term. Every reader
+-- of 'transforms' calls this first, so the map holds what resolving the rules
+-- at load time would have, in the same order.
+export
+resolveTransforms : {auto c : Ref Ctxt Defs} -> Core ()
+resolveTransforms
+    = do defs <- get Ctxt
+         case pendingTransforms defs of
+              [] => pure ()
+              ps => do put Ctxt ({ pendingTransforms := [] } defs)
+                       traverse_ add ps
+  where
+    add : (Name, Transform) -> Core ()
+    add (n, t)
+        = do n' <- toResolvedNames n
+             t' <- toResolvedNames t
+             update Ctxt { transforms $= insertTransform n' t' }
+
 export
 addTransform : {auto c : Ref Ctxt Defs} ->
                FC -> Transform -> Core ()
 addTransform fc t_in
-    = do defs <- get Ctxt
+    = do resolveTransforms
          let Just fn_in = getFnName t_in
              | Nothing =>
                   throw (GenericMsg fc "LHS of a transformation must be a function application")
@@ -1920,13 +1952,8 @@ addTransform fc t_in
          t <- toResolvedNames t_in
          fn_full <- toFullNames fn_in
          t_full <- toFullNames t_in
-         case lookup fn (transforms defs) of
-              Nothing =>
-                 put Ctxt ({ transforms $= insert fn [t],
-                             saveTransforms $= ((fn_full, t_full) ::) } defs)
-              Just ts =>
-                 put Ctxt ({ transforms $= insert fn (t :: ts),
-                             saveTransforms $= ((fn_full, t_full) ::) } defs)
+         update Ctxt { transforms $= insertTransform fn t,
+                       saveTransforms $= ((fn_full, t_full) ::) }
 
 export
 clearSavedHints : {auto c : Ref Ctxt Defs} -> Core ()
@@ -1981,10 +2008,8 @@ addDirective : {auto c : Ref Ctxt Defs} ->
 addDirective c str
     = do defs <- get Ctxt
          case getCG (options defs) c of
-              Nothing => -- warn, rather than fail, because the CG may exist
-                         -- but be unknown to this particular instance
-                         coreLift $ putStrLn $ "Unknown code generator " ++ c
-              Just cg => put Ctxt ({ cgdirectives $= ((cg, str) ::) } defs)
+              Nothing => put Ctxt ({ cgdirectives $= insert (Other (toLower c), str) } defs)
+              Just cg => put Ctxt ({ cgdirectives $= insert (cg, str) } defs)
 
 export
 getDirectives : {auto c : Ref Ctxt Defs} ->
@@ -1992,7 +2017,7 @@ getDirectives : {auto c : Ref Ctxt Defs} ->
 getDirectives cg
     = do defs <- get Ctxt
          pure $ defs.options.session.directives ++
-                 mapMaybe getDir (cgdirectives defs)
+                 mapMaybe getDir (Prelude.toList $ cgdirectives defs)
   where
     getDir : (CG, String) -> Maybe String
     getDir (x', str) = if cg == x' then Just str else Nothing
@@ -2011,10 +2036,11 @@ withExtendedNS : {auto c : Ref Ctxt Defs} ->
 withExtendedNS ns act
     = do defs <- get Ctxt
          let cns = currentNS defs
+         let nns = nestedNS defs
          put Ctxt ({ currentNS := cns <.> ns } defs)
          ma <- catch (Right <$> act) (pure . Left)
          defs <- get Ctxt
-         put Ctxt ({ currentNS := cns } defs)
+         put Ctxt ({ currentNS := cns, nestedNS := nns } defs)
          case ma of
            Left err => throw err
            Right a  => pure a

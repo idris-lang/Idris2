@@ -219,27 +219,29 @@ needsBuilding sourceFile ttcFile depFiles
          | Left err => throw (FileErr ttcFile err)
        pure True
 
-
 public export
 record BuildDepsResult where
   constructor MkBuildDepsResult
   errors : List Error
-  ||| the caller's Ctxt, Syn, MD and UST describe the requested main file
-  ||| on errors this state is partial meaning some declarations may be unavailable
-  ||| False means that no main-file state was retained
+  ||| True when Ctxt, Syn, MD and UST describe the requested main file.
+  ||| On errors this state is partial: some declarations may be unavailable.
+  ||| False means the build did not retain main-file state.
   hasMainFileState : Bool
 
--- Use the caller's references only when processing the requested main file
+-- Dependencies use temporary unification state. Only the requested main
+-- file uses the caller's reference, keeping fresh names and holes in sync
+-- with the retained context. Metadata is shared, as in buildMods.
 MainFileState : Type
-MainFileState = (ModuleIdent, Ref UST UState, Ref MD Metadata)
+MainFileState = (ModuleIdent, Ref UST UState)
 
-buildMod : {auto c : Ref Ctxt Defs} ->
-           {auto s : Ref Syn SyntaxInfo} ->
-           {auto o : Ref ROpts REPLOpts} ->
-           Maybe MainFileState ->
-           FC -> Nat -> Nat -> BuildMod ->
-           Core BuildDepsResult
-buildMod mainState loc num len mod
+buildModWith : {auto c : Ref Ctxt Defs} ->
+               {auto m : Ref MD Metadata} ->
+               {auto s : Ref Syn SyntaxInfo} ->
+               {auto o : Ref ROpts REPLOpts} ->
+               Maybe MainFileState ->
+               FC -> Nat -> Nat -> BuildMod ->
+               Core BuildDepsResult
+buildModWith mainState loc num len mod
    = do clearCtxt; addPrimitives
         lazyActive True; setUnboundImplicits True
 
@@ -259,20 +261,18 @@ buildMod mainState loc num len mod
           ] ++ depFiles
         rebuild <- needsBuilding sourceFile ttcFile depFiles
 
-        let mainRefs : Maybe (Ref UST UState, Ref MD Metadata)
-            mainRefs = case mainState of
-                            Just (ns, u, m) =>
-                              if rebuild && ns == modNamespace
-                                 then Just (u, m)
-                                 else Nothing
-                            Nothing => Nothing
-        (u, m) <- case mainRefs of
-                       Just (u, m) => do put UST {ref = u} initUState
-                                         put MD {ref = m} (initMetadata (PhysicalIdrSrc modNamespace))
-                                         pure (u, m)
-                       Nothing => do u <- newRef UST initUState
-                                     m <- newRef MD (initMetadata (PhysicalIdrSrc modNamespace))
-                                     pure (u, m)
+        let mainRef : Maybe (Ref UST UState)
+            mainRef = case mainState of
+                           Just (ns, u) =>
+                             if rebuild && ns == modNamespace
+                                then Just u
+                                else Nothing
+                           Nothing => Nothing
+        u <- case mainRef of
+                  Just u => do put UST {ref = u} initUState
+                               pure u
+                  Nothing => newRef UST initUState
+        put MD (initMetadata (PhysicalIdrSrc modNamespace))
         put Syn initSyntax
 
         errs <- ifThenElse (not rebuild) (pure []) $
@@ -288,9 +288,19 @@ buildMod mainState loc num len mod
 
         ws <- emitWarningsAndErrors (if null errs then ferrs else errs)
         let errors = ws ++ if null errs then ferrs else ferrs ++ errs
-        pure (MkBuildDepsResult errors (isJust mainRefs))
+        pure (MkBuildDepsResult errors (isJust mainRef))
+
+export
+buildMod : {auto c : Ref Ctxt Defs} ->
+           {auto m : Ref MD Metadata} ->
+           {auto s : Ref Syn SyntaxInfo} ->
+           {auto o : Ref ROpts REPLOpts} ->
+           FC -> Nat -> Nat -> BuildMod ->
+           Core (List Error)
+buildMod fc num len mod = errors <$> buildModWith Nothing fc num len mod
 
 buildModsWith : {auto c : Ref Ctxt Defs} ->
+                {auto m : Ref MD Metadata} ->
                 {auto s : Ref Syn SyntaxInfo} ->
                 {auto o : Ref ROpts REPLOpts} ->
                 Maybe MainFileState ->
@@ -298,24 +308,24 @@ buildModsWith : {auto c : Ref Ctxt Defs} ->
                 Core BuildDepsResult
 buildModsWith mainState fc num len [] = pure (MkBuildDepsResult [] False)
 buildModsWith mainState fc num len (m :: ms)
-    = do result <- buildMod mainState fc num len m
+    = do result <- buildModWith mainState fc num len m
          case result.errors of
               [] => buildModsWith mainState fc (1 + num) len ms
               _ => pure result
 
 export
 buildMods : {auto c : Ref Ctxt Defs} ->
+            {auto m : Ref MD Metadata} ->
             {auto s : Ref Syn SyntaxInfo} ->
             {auto o : Ref ROpts REPLOpts} ->
             FC -> Nat -> Nat -> List BuildMod ->
             Core (List Error)
 buildMods fc num len mods = errors <$> buildModsWith Nothing fc num len mods
 
-||| build dependencies and load the main file, retaining its partial editor
-||| state on errors. result reports whether main-file state is available.
-||| the main file uses the caller's refs directly, so delayed elaborations
-||| also refer to the same state. Reset the context before loading a new
-||| file. if a dependency fails, we do not provide main-file state.
+||| Build dependencies and load the main file, retaining its partial editor
+||| state on errors. Reset the context before loading a new file.
+||| A failure in a dependency leaves that dependency's context and metadata;
+||| hasMainFileState is False, so callers must not use it as main-file state.
 export
 buildDeps : {auto c : Ref Ctxt Defs} ->
             {auto s : Ref Syn SyntaxInfo} ->
@@ -329,10 +339,10 @@ buildDeps fname
          modIdent <- ctxtPathToNS fname
          ust <- get UST
          log "import" 20 $ "Needs to rebuild: " ++ show mods
-         result <- buildModsWith (Just (modIdent, u, m)) EmptyFC 1 (length mods) mods
+         result <- buildModsWith (Just (modIdent, u)) EmptyFC 1 (length mods) mods
          case result.errors of
               [] => do -- On success, reload the main ttc in a clean context
-                       -- Discard first-pass unification state before reloading
+                       -- Discard first-pass unification state before reloading.
                        put UST ust
                        clearCtxt; addPrimitives
                        put MD (initMetadata (PhysicalIdrSrc modIdent))
@@ -367,6 +377,7 @@ buildAll allFiles
     = do mods <- getAllBuildMods EmptyFC [] allFiles
          -- There'll be duplicates, so if something is already built, drop it
          let mods' = dropLater mods
+         m <- newRef MD (initMetadata (Virtual Interactive))
          buildMods EmptyFC 1 (length mods') mods'
   where
     dropLater : List BuildMod -> List BuildMod

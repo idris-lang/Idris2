@@ -1,0 +1,12 @@
+1/1: Building Record (Record.idr)
+Error: While processing right hand side of D. Name Main.A.B is private.
+
+Record:11:5--11:6
+ 07 |   record C where
+ 08 |     constructor MkC
+ 09 |
+ 10 | D : Type
+ 11 | D = B  -- should fail
+          ^
+
+Suggestion: add an explicit export or public export modifier. By default, all names are private in namespace blocks.

@@ -17,8 +17,14 @@ else
     unset VALGRIND
 fi
 
+# set to number of seconds to enforce a timeout
+TIMEOUT=
 idris2_no_clean() {
-    $idris2 --no-banner --console-width 0 --no-color "$@"
+    if [ -z "$TIMEOUT" ]; then
+        $idris2 --no-banner --console-width 0 --no-color "$@"
+    else
+        timeout "$TIMEOUT" "$idris2" --no-banner --console-width 0 --no-color "$@"
+    fi
 }
 
 idris2() {

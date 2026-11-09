@@ -160,6 +160,7 @@ getBits64 buf offset
 -- There is no endianness indication (LE/BE) for Int8 since it is a single byte
 
 %foreign "scheme:blodwen-buffer-setint8"
+         "RefC:setBufferUInt8"
 prim__setInt8 : Buffer -> (offset : Int) -> (val : Int8) -> PrimIO ()
 
 export %inline
@@ -168,6 +169,7 @@ setInt8 buf offset val
     = primIO (prim__setInt8 buf offset val)
 
 %foreign "scheme:blodwen-buffer-getint8"
+         "RefC:getBufferByte"
 prim__getInt8 : Buffer -> (offset : Int) -> PrimIO Int8
 
 export %inline
@@ -186,6 +188,7 @@ setInt16 buf offset val
     = primIO (prim__setInt16 buf offset val)
 
 %foreign "scheme:blodwen-buffer-getint16"
+         "RefC:getBufferInt16LE"
 prim__getInt16 : Buffer -> (offset : Int) -> PrimIO Int16
 
 export %inline
@@ -215,6 +218,7 @@ getInt32 buf offset
     = primIO (prim__getInt32 buf offset)
 
 %foreign "scheme:blodwen-buffer-setint64"
+         "RefC:setBufferInt64LE"
 prim__setInt64 : Buffer -> (offset : Int) -> (val : Int64) -> PrimIO ()
 
 export %inline
@@ -223,6 +227,7 @@ setInt64 buf offset val
     = primIO (prim__setInt64 buf offset val)
 
 %foreign "scheme:blodwen-buffer-getint64"
+         "RefC:getBufferInt64LE"
 prim__getInt64 : Buffer -> (offset : Int) -> PrimIO Int64
 
 export %inline

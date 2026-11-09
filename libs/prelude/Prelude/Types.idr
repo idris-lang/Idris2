@@ -727,6 +727,11 @@ fastConcat : List String -> String
 
 %transform "fastConcat" concat {t = List} {a = String} = fastConcat
 
+-- The same for concatMap: Foldable List's foldMap is a left fold, so over a
+-- list the String and List monoids copy their accumulator at every step.
+%transform "fastConcatMap" concatMap {t = List} {m = String} f xs = fastConcat (map f xs)
+%transform "listConcatMap" concatMap {t = List} {m = List b} f xs = listBindOnto f [] xs
+
 ||| Check if something is a member of a list using a custom comparison.
 public export
 elemBy : Foldable t => (a -> a -> Bool) -> a -> t a -> Bool

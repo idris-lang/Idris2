@@ -76,13 +76,17 @@ mutual
            Term vars -> -- RHS
            Core (List SCCall)
   findSC {vars} defs env g pats (Bind fc n b sc)
-       = pure $
-            !(findSCbinder b) ++
-            !(findSC defs (b :: env) g (map weaken pats) sc)
+       = [| findSCbinder b ++ findSC defs (b :: env) g (map weaken pats) sc |]
     where
+      findSCPiInfo : PiInfo (Term vars) -> Core (List SCCall)
+      findSCPiInfo (DefImplicit def) = findSC defs env g pats def
+      findSCPiInfo _ = pure []
+
       findSCbinder : Binder (Term vars) -> Core (List SCCall)
-      findSCbinder (Let _ c val ty) = findSC defs env g pats val
-      findSCbinder b = pure [] -- only types, no need to look
+      findSCbinder (Let _ _ val ty) = [| findSC defs env g pats val ++ findSC defs env g pats ty |]
+      findSCbinder (Pi _ _ p ty) = [| findSCPiInfo p ++ findSC defs env g pats ty |]
+      findSCbinder (Lam _ _ p ty) = [| findSCPiInfo p ++ findSC defs env g pats ty |]
+      findSCbinder b = pure [] -- other binders shouldn't appear in the RHS of a definition
   -- If we're Guarded and find a Delay, continue with the argument as InDelay
   findSC defs env Guarded pats (TDelay _ _ _ tm)
       = findSC defs env InDelay pats tm
