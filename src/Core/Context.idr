@@ -11,11 +11,6 @@ import        Core.Options
 import public Core.Options.Log
 import public Core.TT
 
-import Libraries.Utils.Binary
-import Libraries.Utils.Path
-import Libraries.Utils.Scheme
-import Libraries.Text.PrettyPrint.Prettyprinter
-
 import Idris.Syntax.Pragmas
 
 import Data.Either
@@ -24,6 +19,14 @@ import Data.List1
 import Data.Nat
 import Data.String
 import Data.SortedSet
+
+import System.Clock
+import System.Directory
+
+import Libraries.Utils.Binary
+import Libraries.Utils.Path
+import Libraries.Utils.Scheme
+import Libraries.Text.PrettyPrint.Prettyprinter
 import Libraries.Data.IntMap
 import Libraries.Data.NameMap
 import Libraries.Data.NatSet
@@ -31,9 +34,6 @@ import Libraries.Data.StringMap
 import Libraries.Data.UserNameMap
 import Libraries.Data.WithDefault
 import Libraries.Text.Distance.Levenshtein
-
-import System.Clock
-import System.Directory
 
 %default covering
 
@@ -561,13 +561,13 @@ mutual
 
 export
 HasNames (Env Term vars) where
-  full gam [] = pure Env.empty
-  full gam (b :: bs)
-      = pure $ !(traverse (full gam) b) :: !(full gam bs)
+  full gam [<] = pure Env.empty
+  full gam (bs :< b)
+      = pure $ !(full gam bs) :< !(traverse (full gam) b)
 
-  resolved gam [] = pure Env.empty
-  resolved gam (b :: bs)
-      = pure $ !(traverse (resolved gam) b) :: !(resolved gam bs)
+  resolved gam [<] = pure Env.empty
+  resolved gam (bs :< b)
+      = pure $ !(resolved gam bs) :< !(traverse (resolved gam) b)
 
 export
 HasNames Clause where
@@ -1823,7 +1823,7 @@ setDetermining fc tyn args
              else getPos (1 + i) ns sc
     getPos _ [] _ = pure NatSet.empty
     getPos _ ns ty = throw (GenericMsg fc ("Unknown determining arguments: "
-                           ++ showSep ", " (map show ns)))
+                           ++ joinBy ", " (map show ns)))
 
 export
 setDetags : {auto c : Ref Ctxt Defs} ->

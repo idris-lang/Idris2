@@ -5,9 +5,11 @@ import Compiler.ANF
 import Core.CompileExpr
 import Core.TT
 
-import Libraries.Data.IntMap
 import Data.List
 import Data.Vect
+import Data.String
+
+import Libraries.Data.IntMap
 
 %default covering
 
@@ -73,21 +75,21 @@ Show VMInst where
   show (ASSIGN r v) = show r ++ " := " ++ show v
   show (MKCON r t args)
       = show r ++ " := MKCON " ++ show t ++ " (" ++
-                  showSep ", " (map show args) ++ ")"
+                  joinBy ", " (map show args) ++ ")"
   show (MKCLOSURE r n m args)
       = show r ++ " := MKCLOSURE " ++ show n ++ " " ++ show m ++ " (" ++
-                  showSep ", " (map show args) ++ ")"
+                  joinBy ", " (map show args) ++ ")"
   show (MKCONSTANT r c) = show r ++ " := MKCONSTANT " ++ show c
   show (APPLY r f a) = show r ++ " := " ++ show f ++ " @ " ++ show a
   show (CALL r t n args)
       = show r ++ " := " ++ (if t then "TAILCALL " else "CALL ") ++
-        show n ++ "(" ++ showSep ", " (map show args) ++ ")"
+        show n ++ "(" ++ joinBy ", " (map show args) ++ ")"
   show (OP r op args)
       = show r ++ " := " ++ "OP " ++
-        show op ++ "(" ++ showSep ", " (map show (toList args)) ++ ")"
+        show op ++ "(" ++ joinBy ", " (map show (toList args)) ++ ")"
   show (EXTPRIM r n args)
       = show r ++ " := " ++ "EXTPRIM " ++
-        show n ++ "(" ++ showSep ", " (map show args) ++ ")"
+        show n ++ "(" ++ joinBy ", " (map show args) ++ ")"
 
   show (CASE scr alts def)
       = "CASE " ++ show scr ++ " " ++ show alts ++ " {default: " ++ show def ++ "}"
