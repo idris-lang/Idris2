@@ -106,6 +106,7 @@ knownTopics = [
     ("elab.as", Nothing),
     ("elab.bindnames", Nothing),
     ("elab.binder", Nothing),
+    ("elab.bindApp", Just "Elaborating binding application"),
     ("elab.case", Nothing),
     ("elab.def.local", Nothing),
     ("elab.delay", Nothing),
