@@ -305,7 +305,8 @@ executeExpr :
 executeExpr c s tmpDir tm
     = do Just sh <- compileExpr False c s tmpDir tmpDir tm "_tmpchez"
             | Nothing => throw (InternalError "compileExpr returned Nothing")
-         coreLift_ $ system [sh]
+         0 <- coreLift $ system [sh] | status => throw (InternalError "ChezSep execution failed with exit code \{show status}")
+         pure ()
 
 ||| Codegen wrapper for Chez scheme implementation.
 export

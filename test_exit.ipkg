@@ -1,0 +1,3 @@
+package test_exit
+main = Main
+depends = base, prelude

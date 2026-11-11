@@ -219,13 +219,16 @@ stMain cgs opts
 
                post <- get PostS
                Continue <- catch (postOptions result post)
-                               (\err => emitError err *> pure Abort)
+                               (\err =>
+                                 -- Execution failed, exit with non-zero code
+                                 coreLift $ exitWith (ExitFailure 1)
+                               )
                 | Abort => do
                     -- exit with an error code if there was an error, otherwise
                     -- just exit
                      ropts <- get ROpts
                      showTimeRecord
-                     whenJust (errorLine ropts) $ \ _ =>
+                     whenJust (errorLine ropts)  $ \ _ =>
                        coreLift $ exitWith (ExitFailure 1)
                if ide || ideSocket then
                    if not ideSocket
@@ -247,15 +250,19 @@ stMain cgs opts
                      showTimeRecord
 
   where
+    extractExitCode : String -> Nat
+    extractExitCode msg = case Data.List.last' (String.words msg) of
+        Nothing => 1
+        Just lastWord => 1
 
-  quitWithError : {auto c : Ref Ctxt Defs} ->
+    quitWithError : {auto c : Ref Ctxt Defs} ->
                 {auto s : Ref Syn SyntaxInfo} ->
                 {auto o : Ref ROpts REPLOpts} ->
                 Error -> Core a
-  quitWithError err = do
-    doc <- display err
-    msg <- render doc
-    coreLift (die msg)
+    quitWithError err = do
+        doc <- display err
+        msg <- render doc
+        coreLift (die msg)
 
 allMain : Entrypoint -> Core ()
 allMain (Normal cgs opts) = stMain cgs opts
