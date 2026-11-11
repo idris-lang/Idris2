@@ -35,8 +35,14 @@ conflictMatch ((x, tm) :: ms) = conflictArgs x tm ms || conflictMatch ms
     clash (PrimVal {}) (Ref _ t _) = if isJust (isCon t) then Distinct else Incomparable
     clash (Ref _ t _) (TType {})   = if isJust (isCon t) then Distinct else Incomparable
     clash (TType {}) (Ref _ t _)   = if isJust (isCon t) then Distinct else Incomparable
+    clash (Ref _ t _) (Bind _ _ (Pi {}) _) = if isJust (isCon t) then Distinct else Incomparable
+    clash (Bind _ _ (Pi {}) _) (Ref _ t _) = if isJust (isCon t) then Distinct else Incomparable
     clash (TType {}) (PrimVal {})  = Distinct
     clash (PrimVal {}) (TType {})  = Distinct
+    clash (Bind _ _ (Pi {}) _) (PrimVal {}) = Distinct
+    clash (PrimVal {}) (Bind _ _ (Pi {}) _) = Distinct
+    clash (TType {}) (Bind _ _ (Pi {}) _) = Distinct
+    clash (Bind _ _ (Pi {}) _) (TType {}) = Distinct
     clash _ _ = Incomparable
 
     findN : Nat -> Term vars -> Bool
