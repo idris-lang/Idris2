@@ -106,6 +106,7 @@ should target this file (`CHANGELOG_NEXT`).
 * Added %transform rules for `concatMap` to avoid quadratic blowup (#3869)
 * Improved coverage checking to recognise impossible index equalities involving
   function types.
+* Fixed handling of `{}` patterns in impossible clauses.
 
 ### Building/Packaging changes
 

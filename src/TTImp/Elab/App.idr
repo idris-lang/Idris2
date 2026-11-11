@@ -565,7 +565,7 @@ mutual
   findNamed n = findAndDeleteBy $ (== n) . fst
 
   export
-  findBindAllExpPattern : List (Name, RawImp) -> Maybe RawImp
+  findBindAllExpPattern : List (Name, a) -> Maybe a
   findBindAllExpPattern = lookup (UN Underscore)
 
   isImplicitAs : RawImp -> Bool
@@ -575,6 +575,10 @@ mutual
   isBindAllExpPattern : Name -> Bool
   isBindAllExpPattern (UN Underscore) = True
   isBindAllExpPattern _ = False
+
+  export
+  filterBindAllExpPattern : List (Name, a) -> List (Name, a)
+  filterBindAllExpPattern = filter (not . isBindAllExpPattern . fst)
 
   -- Check an application of 'fntm', with type 'fnty' to the given list
   -- of explicit and implicit arguments.
@@ -624,7 +628,7 @@ mutual
            _ =>
              do defs <- get Ctxt
                 if all isImplicitAs (autoargs
-                                      ++ map snd (filter (not . isBindAllExpPattern . fst) namedargs))
+                                      ++ map snd (filterBindAllExpPattern namedargs))
                                                                     -- Only non-user implicit `as` bindings added by
                                                                     -- the compiler are allowed here
                    then -- We are done
