@@ -395,6 +395,9 @@ checkClause mult vis totreq hashit n opts nest env (ImpossibleClause fc lhs)
                (_, lhs) <- bindNames False lhs_raw
                setUnboundImplicits autoimp
 
+               -- Add `{}` to the lhs for bind all arguments
+               let lhs = INamedApp fc lhs (UN Underscore) (Implicit fc True)
+
                log "declare.def.clause.impossible" 5 $ "Checking " ++ show lhs
                logEnv "declare.def.clause.impossible" 5 "In env" env
                (lhstm, lhstyg) <-

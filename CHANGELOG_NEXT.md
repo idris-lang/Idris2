@@ -107,6 +107,7 @@ should target this file (`CHANGELOG_NEXT`).
 * Improved coverage checking to recognise impossible index equalities involving
   function types.
 * Fixed handling of `{}` patterns in impossible clauses.
+* Improved checking of impossible clauses with omitted arguments.
 
 ### Building/Packaging changes
 
