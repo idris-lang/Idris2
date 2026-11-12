@@ -291,12 +291,12 @@ substLets (Bind _ n (PLet _ c val ty) sc) = substLets (subst val sc)
 substLets (Bind fc n b sc) = Bind fc n b (substLets sc)
 substLets tm = tm
 
-combine : List ClauseUpdate -> List ClauseUpdate ->
+combine : Name -> List ClauseUpdate -> List ClauseUpdate ->
           SplitResult (List ClauseUpdate)
-combine [] [] = SplitFail NoValidSplit
-combine [] acc = OK (reverse acc)
-combine (Invalid :: xs) acc = combine xs acc
-combine (x :: xs) acc = combine xs (x :: acc)
+combine _ [] [] = SplitFail NoValidSplit
+combine _ [] acc = OK (reverse acc)
+combine n (Invalid :: xs) acc = SplitFail (CantSplitThis n "Can't find coverage split")
+combine n (x :: xs) acc = combine n xs (x :: acc)
 
 export
 getSplitsLHS : {auto c : Ref Ctxt Defs} ->
@@ -323,7 +323,7 @@ getSplitsLHS fc envlen lhs_in n
          cases <- traverse (mkCase idx rawlhs) trycases
          log "interaction.casesplit" 3 $ "Found cases: " ++ show cases
 
-         pure (combine cases [])
+         pure (combine n cases [])
 
 export
 getSplits : {auto c : Ref Ctxt Defs} ->
