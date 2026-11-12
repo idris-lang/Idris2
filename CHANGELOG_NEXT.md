@@ -108,6 +108,7 @@ should target this file (`CHANGELOG_NEXT`).
   function types.
 * Fixed handling of `{}` patterns in impossible clauses.
 * Improved checking of impossible clauses with omitted arguments.
+* Improved interactive case splitting by recognising uninhabited types.
 
 ### Building/Packaging changes
 

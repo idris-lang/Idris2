@@ -265,7 +265,7 @@ mkCase {c} {u} fn orig lhs_raw
                -- once split and turned into a pattern)
                (lhs, _) <- elabTerm {c} {m} {u}
                                     fn (InLHS erased) [] (MkNested [])
-                                    Env.empty (IBindHere (getFC lhs_raw) PATTERN lhs_raw)
+                                    Env.empty (IBindHere (getFC lhs_raw) COVERAGE lhs_raw)
                                     Nothing
                -- Revert all public back to false
                setAllPublic False
