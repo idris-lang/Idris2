@@ -42,102 +42,48 @@ import Libraries.Data.List.SizeOf
 
 %default covering
 
-mutual
-  mismatchNF : {auto c : Ref Ctxt Defs} ->
-               {vars : _} ->
-               Defs -> NF vars -> NF vars -> Core Bool
-  mismatchNF defs (NTCon _ xn _ xargs) (NTCon _ yn _ yargs)
-      = if xn /= yn
-           then pure True
-           else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
-  mismatchNF defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
-      = if xt /= yt
-           then pure True
-           else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
-  mismatchNF defs (NPrimVal _ xc) (NPrimVal _ yc) = pure (xc /= yc)
-  mismatchNF defs (NDelayed _ _ x) (NDelayed _ _ y) = mismatchNF defs x y
-  mismatchNF defs (NDelay _ _ _ x) (NDelay _ _ _ y)
-      = mismatchNF defs !(evalClosure defs x) !(evalClosure defs y)
-
-  -- NPrimVal is apart from NDCon, NTCon, NBind, and NType
-  mismatchNF defs (NPrimVal {}) (NDCon {}) = pure True
-  mismatchNF defs (NDCon {}) (NPrimVal {}) = pure True
-  mismatchNF defs (NPrimVal {}) (NBind {}) = pure True
-  mismatchNF defs (NBind {}) (NPrimVal {}) = pure True
-  mismatchNF defs (NPrimVal {}) (NTCon {}) = pure True
-  mismatchNF defs (NTCon {}) (NPrimVal {}) = pure True
-  mismatchNF defs (NPrimVal {}) (NType {}) = pure True
-  mismatchNF defs (NType {}) (NPrimVal {}) = pure True
-
--- NTCon is apart from NBind, and NType
-  mismatchNF defs (NTCon {}) (NBind {}) = pure True
-  mismatchNF defs (NBind {}) (NTCon {}) = pure True
-  mismatchNF defs (NTCon {}) (NType {}) = pure True
-  mismatchNF defs (NType {}) (NTCon {}) = pure True
-
--- NBind is apart from NType
-  mismatchNF defs (NBind {}) (NType {}) = pure True
-  mismatchNF defs (NType {}) (NBind {}) = pure True
-
-  mismatchNF _ _ _ = pure False
-
-  mismatch : {auto c : Ref Ctxt Defs} ->
-             {vars : _} ->
-             Defs -> (Closure vars, Closure vars) -> Core Bool
-  mismatch defs (x, y)
-      = mismatchNF defs !(evalClosure defs x) !(evalClosure defs y)
-
 -- If the terms have the same type constructor at the head, and one of
 -- the argument positions has different constructors at its head, then this
 -- is an impossible case, so return True
 export
 impossibleOK : {auto c : Ref Ctxt Defs} ->
                {vars : _} ->
-               Defs -> NF vars -> NF vars -> Core Bool
-impossibleOK defs (NTCon _ xn xa xargs) (NTCon _ yn ya yargs)
-    = if xn /= yn
-         then pure True
-         else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
--- If it's a data constructor, any mismatch will do
-impossibleOK defs (NDCon _ _ xt _ xargs) (NDCon _ _ yt _ yargs)
-    = if xt /= yt
-         then pure True
-         else anyM (mismatch defs) (zipWith (curry $ mapHom snd) xargs yargs)
-impossibleOK defs (NPrimVal _ x) (NPrimVal _ y) = pure (x /= y)
+               Defs -> NF vars -> NF vars -> Bool
+impossibleOK defs (NTCon _ xn _ _) (NTCon _ yn _ _) = xn /= yn
+impossibleOK defs (NDCon _ _ xt _ _) (NDCon _ _ yt _ _) = xt /= yt
+impossibleOK defs (NPrimVal _ x) (NPrimVal _ y) = x /= y
 
 -- NPrimVal is apart from NDCon, NTCon, NBind, and NType
-impossibleOK defs (NPrimVal {}) (NDCon {}) = pure True
-impossibleOK defs (NDCon {}) (NPrimVal {}) = pure True
-impossibleOK defs (NPrimVal {}) (NBind {}) = pure True
-impossibleOK defs (NBind {}) (NPrimVal {}) = pure True
-impossibleOK defs (NPrimVal {}) (NTCon {}) = pure True
-impossibleOK defs (NTCon {}) (NPrimVal {}) = pure True
-impossibleOK defs (NPrimVal {}) (NType {}) = pure True
-impossibleOK defs (NType {}) (NPrimVal {}) = pure True
+impossibleOK defs (NPrimVal {}) (NDCon {}) = True
+impossibleOK defs (NDCon {}) (NPrimVal {}) = True
+impossibleOK defs (NPrimVal {}) (NBind {}) = True
+impossibleOK defs (NBind {}) (NPrimVal {}) = True
+impossibleOK defs (NPrimVal {}) (NTCon {}) = True
+impossibleOK defs (NTCon {}) (NPrimVal {}) = True
+impossibleOK defs (NPrimVal {}) (NType {}) = True
+impossibleOK defs (NType {}) (NPrimVal {}) = True
 
 -- NTCon is apart from NBind, and NType
-impossibleOK defs (NTCon {}) (NBind {}) = pure True
-impossibleOK defs (NBind {}) (NTCon {}) = pure True
-impossibleOK defs (NTCon {}) (NType {}) = pure True
-impossibleOK defs (NType {}) (NTCon {}) = pure True
+impossibleOK defs (NTCon {}) (NBind {}) = True
+impossibleOK defs (NBind {}) (NTCon {}) = True
+impossibleOK defs (NTCon {}) (NType {}) = True
+impossibleOK defs (NType {}) (NTCon {}) = True
 
 -- NBind is apart from NType
-impossibleOK defs (NBind {}) (NType {}) = pure True
-impossibleOK defs (NType {}) (NBind {}) = pure True
+impossibleOK defs (NBind {}) (NType {}) = True
+impossibleOK defs (NType {}) (NBind {}) = True
 
-impossibleOK defs x y = pure False
+impossibleOK defs x y = False
 
 export
 impossibleErrOK : {auto c : Ref Ctxt Defs} ->
                   Defs -> Error -> Core Bool
 impossibleErrOK defs (CantConvert fc gam env l r)
     = do let defs = { gamma := gam } defs
-         impossibleOK defs !(nf defs env l)
-                           !(nf defs env r)
+         impossibleOK defs <$> nf defs env l <*> nf defs env r
 impossibleErrOK defs (CantSolveEq fc gam env l r)
     = do let defs = { gamma := gam } defs
-         impossibleOK defs !(nf defs env l)
-                           !(nf defs env r)
+         impossibleOK defs <$> nf defs env l <*> nf defs env r
 impossibleErrOK defs (CyclicMeta {}) = pure True
 impossibleErrOK defs (AllFailed errs)
     = allM (impossibleErrOK defs) (map snd errs)
