@@ -407,7 +407,7 @@ executeExpr :
 executeExpr c s tmpDir tm
     = do Just sh <- compileExpr c s tmpDir tmpDir tm "_tmpgambit"
            | Nothing => throw (InternalError "compileExpr returned Nothing")
-         coreLift_ $ system [sh] -- TODO: on windows, should add exe extension
+         0 <- coreLift $ system [sh] | status => throw (InternalError "Gambit execution failed with exit code \{show status}")
          pure ()
 
 export
