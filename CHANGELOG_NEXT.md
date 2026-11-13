@@ -104,6 +104,11 @@ should target this file (`CHANGELOG_NEXT`).
 * Check recursive calls to the left of binders in the termination checker (#3896).
 * Fixed %transform rules application regardless of module load order (#3868)
 * Added %transform rules for `concatMap` to avoid quadratic blowup (#3869)
+* Improved coverage checking to recognise impossible index equalities involving
+  function types.
+* Fixed handling of `{}` patterns in impossible clauses.
+* Improved checking of impossible clauses with omitted arguments.
+* Improved interactive case splitting by recognising uninhabited types.
 
 ### Building/Packaging changes
 

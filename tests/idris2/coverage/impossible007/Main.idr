@@ -1,0 +1,2 @@
+foo : Void -> ()
+foo {} impossible

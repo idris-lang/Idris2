@@ -265,7 +265,7 @@ mkCase {c} {u} fn orig lhs_raw
                -- once split and turned into a pattern)
                (lhs, _) <- elabTerm {c} {m} {u}
                                     fn (InLHS erased) [] (MkNested [])
-                                    Env.empty (IBindHere (getFC lhs_raw) PATTERN lhs_raw)
+                                    Env.empty (IBindHere (getFC lhs_raw) COVERAGE lhs_raw)
                                     Nothing
                -- Revert all public back to false
                setAllPublic False
@@ -280,14 +280,9 @@ mkCase {c} {u} fn orig lhs_raw
            (\err =>
                do put Ctxt defs
                   put UST ust
-                  case err of
-                       WhenUnifying _ gam env l r err
-                         => do let defs = { gamma := gam } defs
-                               if !(impossibleOK defs !(nf defs env l)
-                                                      !(nf defs env r))
-                                  then pure (Impossible lhs_raw)
-                                  else pure Invalid
-                       _ => pure Invalid)
+                  if !(impossibleErrOK defs err)
+                     then pure (Impossible lhs_raw)
+                     else pure Invalid)
 
 substLets : {vars : _} ->
             Term vars -> Term vars

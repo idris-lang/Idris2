@@ -95,12 +95,19 @@ mutual
                   processArgs con (App e.fc fn e')
                               !(sc defs (toClosure defaultOpts Env.empty e'))
                               [] autos named'
-            Nothing => -- Expected an explicit argument, but only implicits left
+            Nothing =>
+              case findBindAllExpPattern named of
+                Just e => -- Found a bind-all pattern: {}
+                  do e' <- mkTerm e.val (Just ty)
+                     processArgs con (App e.fc fn e')
+                                 !(sc defs (toClosure defaultOpts Env.empty e'))
+                                 [] autos named
+                Nothing => -- Expected an explicit argument, but only implicits left
                        do let False = con
                             | True => throw $ GenericMsg (getLoc fn) $
                                                 "Cannot match on a partially applied constructor: "
                                                 ++ show !(toFullNames fn)
-                          let True = null autos && null named
+                          let True = null autos && null (filterBindAllExpPattern named)
                             | False => badClause fn [] autos named -- unexpected arguments
                           pure fn
   processArgs con fn (NBind _ x (Pi _ _ Implicit ty) sc) exps autos named
@@ -137,11 +144,12 @@ mutual
                            processArgs con (App e.fc fn e')
                                        !(sc defs (toClosure defaultOpts Env.empty e'))
                                        exps [] named'
-  processArgs _ fn _ [] [] [] = pure fn
   processArgs _ fn _ (x :: _) autos named
      = throw $ GenericMsg x.fc "Too many arguments"
   processArgs _ fn _ exps autos named
-     = badClause fn exps autos named
+     = if null exps && null autos && null (filterBindAllExpPattern named)
+          then pure fn
+          else badClause fn exps autos named
 
   buildApp : {auto c : Ref Ctxt Defs} ->
              {auto s : Ref Syn SyntaxInfo} ->
