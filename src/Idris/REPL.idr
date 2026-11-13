@@ -506,12 +506,17 @@ processEdit (Intro upd line hole)
                    introd ::: [] => updateFile (proofSearch hole introd (integerToNat (cast (line - 1))))
                    _ => pure $ EditError "Don't know what to do"
             else pure $ MadeIntro introds
-processEdit (Refine upd line hole e)
+processEdit (Refine upd _ hole e)
     = do defs <- get Ctxt
          -- First we grab the hole's definition (and check it is not a solved hole)
          -- We grab the LHS it lives in as well as its type in that context.
          [(h, hidx, hgdef)] <- lookupCtxtName hole (gamma defs)
            | _ => pure $ EditError ("Could not find hole named" <++> pretty0 hole)
+         -- We compute the location of the file by using the FC of the name in context
+         -- We need to augment the index by 1 (hence the `S`) because file indexing
+         -- starts at 1, not at 0
+         let loc = S $ cast {to = Nat} $ startLine $ toNonEmptyFC $ hgdef.location
+
          let Hole args _ = definition hgdef
            | _ => pure $ EditError (pretty0 hole <++> "is not a refinable hole")
          let (lhsCtxt ** (env, htyInLhsCtxt)) = underPis (cast args) Env.empty (type hgdef)
@@ -601,7 +606,7 @@ processEdit (Refine upd line hole e)
                     pure $ show $ ifThenElse brack (addBracket replFC) id pcall
 
          if upd
-            then updateFile (proofSearch hole call (integerToNat (cast (line - 1))))
+            then updateFile (proofSearch hole call loc)
             else pure $ DisplayEdit (pretty0 call)
 
 processEdit (ExprSearch upd line name hints)
