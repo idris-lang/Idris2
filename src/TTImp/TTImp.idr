@@ -519,13 +519,17 @@ mutual
 export
 mkWithClause : FC -> RawImp' nm -> List1 (RigCount, RawImp' nm, Maybe (RigCount, Name)) ->
                List WithFlag -> List (ImpClause' nm) -> ImpClause' nm
-mkWithClause fc lhs ((rig, wval, prf) ::: []) flags cls
-  = WithClause fc lhs rig wval prf flags cls
-mkWithClause fc lhs ((rig, wval, prf) ::: wp :: wps) flags cls
-  = let vfc = virtualiseFC fc
-        arg = UN $ Basic "arg"
-     in WithClause fc lhs rig wval prf flags
-          [mkWithClause fc (IApp vfc lhs $ IBindVar vfc arg) (wp ::: wps) flags cls]
+mkWithClause fc lhs ws flags cls = unroll 0 lhs ws
+  where
+  unroll : Int -> RawImp' nm -> List1 (RigCount, RawImp' nm, Maybe (RigCount, Name)) ->
+           ImpClause' nm
+  unroll _ lhs ((rig, wval, prf) ::: [])
+    = WithClause fc lhs rig wval prf flags cls
+  unroll k lhs ((rig, wval, prf) ::: wp :: wps)
+    = let vfc = virtualiseFC fc
+          arg = MN "arg" k
+       in WithClause fc lhs rig wval prf flags
+            [unroll (k+1) (IApp vfc lhs $ IBindVar vfc arg) (wp ::: wps)]
 
 -- Extract the RawImp term from a FieldUpdate.
 export
