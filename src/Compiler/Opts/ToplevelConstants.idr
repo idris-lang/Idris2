@@ -69,7 +69,7 @@ data SortTag : Type where
 record SortST where
   constructor SST
   processed : SortedSet Name
-  nonconst  : SortedSet Name
+  eager     : SortedSet Name
   triples   : SnocList (Name, FC, NamedDef)
   map       : SortedMap Name (Name, FC, NamedDef)
   graph     : CallGraph
@@ -93,46 +93,66 @@ markProcessed n = do
 isProcessed : Ref SortTag SortST => Name -> Core Bool
 isProcessed n = map (contains n . processed) (get SortTag)
 
-checkCrash : Ref SortTag SortST => (Name, FC, NamedDef) -> Core ()
-checkCrash (n, _, MkNmError _) = update SortTag $ { nonconst $= insert n }
-checkCrash (n, _, MkNmFun args (NmCrash {})) = update SortTag $ { nonconst $= insert n }
-checkCrash (n, _, MkNmFun args (NmOp _ Crash _)) = update SortTag $ { nonconst $= insert n }
-checkCrash (n, _, def) = do
-  st <- get SortTag
-  when (any (flip contains st.nonconst) !(getCalls n)) $
-    put SortTag $ { nonconst $= insert n } st
+-- An expression that is already a value: evaluating it allocates at most
+-- a constructor cell or a closure. It runs no user code, so it can neither
+-- take long, nor crash, nor diverge, nor perform an effect.
+-- `eager` holds the constants already emitted as plain values: a reference
+-- to one of those is a variable reference.
+isValue : (eager : SortedSet Name) -> NamedCExp -> Bool
+isValue eager (NmPrimVal {})            = True
+isValue eager (NmErased {})             = True
+isValue eager (NmLam {})                = True
+isValue eager (NmDelay {})              = True
+isValue eager (NmRef {})                = True
+isValue eager (NmCon _ _ _ _ xs)        = all (assert_total $ isValue eager) xs
+isValue eager (NmApp _ (NmRef _ n) [])  = contains n eager
+isValue eager _                         = False
 
-sortDef : Ref SortTag SortST => Name -> Core ()
-sortDef n = do
+-- A zero-argument definition is evaluated when the program is loaded only
+-- if that costs nothing and cannot be observed: its body is a value and it
+-- is not part of a recursive group (so that everything it mentions has been
+-- defined before it). Every other zero-argument definition is evaluated at
+-- its first use and remembered (see `schDef` in `Compiler.Scheme.Common`).
+checkEager :  Ref SortTag SortST
+           => (recursiveFunctions : SortedSet Name)
+           -> (Name, FC, NamedDef)
+           -> Core ()
+checkEager rec (n, _, MkNmFun [] exp) = do
+  st <- get SortTag
+  when (not (contains n rec) && isValue st.eager exp) $
+    put SortTag $ { eager $= insert n } st
+checkEager _ _ = pure ()
+
+sortDef :  Ref SortTag SortST
+        => (recursiveFunctions : SortedSet Name)
+        -> Name
+        -> Core ()
+sortDef rec n = do
   False  <- isProcessed n | True => pure ()
   markProcessed n
   cs     <- getCalls n
-  traverse_ sortDef cs
+  traverse_ (sortDef rec) cs
   Just t <- getTriple n | Nothing => pure ()
   appendDef t
-  checkCrash t
+  checkEager rec t
 
-isConstant : (recursiveFunctions : SortedSet Name) -> (Name,FC,NamedDef) -> Bool
-isConstant rec (n, _, MkNmFun [] _) = not $ contains n rec
-isConstant _   _                  = False
-
+||| Sorts the definitions so that each comes after the ones it calls, and
+||| returns the names of the zero-argument definitions to be compiled to
+||| plain values, evaluated when the program is loaded.
 export
 sortDefs : List (Name, FC, NamedDef) -> Core (List (Name, FC, NamedDef), SortedSet Name)
 sortDefs ts =
   let graph  := callGraph ts
       rec    := recursiveFunctions graph
-      consts := map fst $ filter (isConstant rec) ts
       init   := SST {
                     processed = empty
-                  , nonconst  = empty
+                  , eager     = empty
                   , triples   = Lin
                   , map       = fromList (map (\t => (fst t, t)) ts)
                   , graph     = graph
                   }
    in do
      s       <- newRef SortTag init
-     traverse_ sortDef (map fst ts)
+     traverse_ (sortDef rec) (map fst ts)
      st <- get SortTag
-     let sorted = triples st <>> []
-     let consts = filter (not . flip contains (nonconst st)) consts
-     pure (sorted, fromList consts)
+     pure (triples st <>> [], eager st)

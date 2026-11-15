@@ -366,7 +366,7 @@ compileToSCM c tm outfile
          s <- newRef {t = List String} Structs []
          fgndefs <- traverse getFgnCall ndefs
          (sortedDefs, constants) <- sortDefs ndefs
-         compdefs <- traverse (getScheme constants (gambitPrim constants schLazy) gambitString schLazy) ndefs
+         compdefs <- traverse (getScheme constants (gambitPrim constants schLazy) gambitString schLazy) sortedDefs
          let code = concat (map snd fgndefs) ++ concat compdefs
          main <- schExp constants (gambitPrim constants schLazy) gambitString schLazy 0 ctm
          support <- readDataFile "gambit/support.scm"
