@@ -109,6 +109,7 @@ should target this file (`CHANGELOG_NEXT`).
 * Fixed handling of `{}` patterns in impossible clauses.
 * Improved checking of impossible clauses with omitted arguments.
 * Improved interactive case splitting by recognising uninhabited types.
+* Fixed interactive case splitting to reject invalid generated clauses (#1849).
 
 ### Building/Packaging changes
 
