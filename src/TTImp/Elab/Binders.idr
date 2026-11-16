@@ -83,15 +83,6 @@ checkPi rig elabinfo nest env fc rigf info n argTy retTy expTy
     getRig (InLHS _) = rig
     getRig _ = erased
 
-findLamRig : {auto c : Ref Ctxt Defs} ->
-             Maybe (Glued vars) -> Core RigCount
-findLamRig Nothing = pure top
-findLamRig (Just expty)
-    = do tynf <- getNF expty
-         case tynf of
-              NBind _ _ (Pi _ c _ _) sc => pure c
-              _ => pure top
-
 inferLambda : {vars : _} ->
               {auto c : Ref Ctxt Defs} ->
               {auto m : Ref MD Metadata} ->
@@ -107,11 +98,10 @@ inferLambda : {vars : _} ->
               (expTy : Maybe (Glued vars)) ->
               Core (Term vars, Glued vars)
 inferLambda rig elabinfo nest env fc rigl info n argTy scope expTy
-    = do rigb_in <- findLamRig expTy
-         let rigb = rigb_in `glb` rigl
+    = do let rigb = rigl
          u <- uniVar fc
          (tyv, tyt) <- check erased elabinfo nest env argTy (Just (gType fc u))
-         info' <- checkPiInfo rigl elabinfo nest env info (Just (gnf env tyv))
+         info' <- checkPiInfo rigb elabinfo nest env info (Just (gnf env tyv))
          let env' : Env Term (n :: _) = Lam fc rigb info' tyv :: env
          let nest' = weaken (dropName n nest)
          (scopev, scopet) <- inScope fc env' (\e' =>
