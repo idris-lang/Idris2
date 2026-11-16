@@ -1,0 +1,8 @@
+1/1: Building Issue3913 (Issue3913.idr)
+Error: While processing right hand side of X. a is not accessible in this context.
+
+Issue3913:2:14--2:15
+ 1 | X : (0 _ : Type) -> Type
+ 2 | X a = (0 _ : a) -> Type
+                  ^
+

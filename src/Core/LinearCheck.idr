@@ -376,7 +376,7 @@ mutual
            (valv, valt, vs) <- lcheck (rig |*| rigc) erase env val
            pure (Let fc rigc valv tyv, tyt, vs)
   lcheckBinder rig erase env (Pi fc c x ty)
-      = do (tyv, tyt, _) <- lcheck (rig |*| c) erase env ty
+      = do (tyv, tyt, _) <- lcheck rig erase env ty
            pure (Pi fc c x tyv, tyt, [])
   lcheckBinder rig erase env (PVar fc c p ty)
       = do (tyv, tyt, _) <- lcheck erased erase env ty
