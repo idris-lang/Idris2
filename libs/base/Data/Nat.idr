@@ -330,7 +330,7 @@ maximum Z m = m
 maximum (S n) Z = S n
 maximum (S n) (S m) = S (maximum n m)
 
-%transform "maximumNat" maximum n m = if m <= n then n else m
+%transform "maximumNat" maximum m n = if m <= n then n else m
 
 -- Proofs on S
 
