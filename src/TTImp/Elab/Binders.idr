@@ -167,9 +167,10 @@ checkLambda rig_in elabinfo nest env fc rigl info n argTy scope (Just expty_in)
                  do u <- uniVar fc'
                     (tyv, tyt) <- check erased elabinfo nest env
                                         argTy (Just (gType fc u))
-                    info' <- checkPiInfo rigl elabinfo nest env info (Just (gnf env tyv))
+                    -- If multiplicity is unknown, use the multiplicity from the expected type
+                    let rigb = if rigl == top then c else rigl
+                    info' <- checkPiInfo rigb elabinfo nest env info (Just (gnf env tyv))
                     let originalPiType = Bind fc bn (Pi fc' c info' pty) psc
-                    let rigb = rigl `glb` c
                     let env' : Env Term (n :: _) = Lam fc rigb info' tyv :: env
                     lambdaUnifyResult <- convert fc elabinfo env (gnf env tyv) (gnf env pty)
                     let nest' = weaken (dropName n nest)
