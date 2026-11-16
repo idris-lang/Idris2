@@ -206,6 +206,11 @@ isLTE (S k) (S j)
            No contra => No (contra . fromLteSucc)
            Yes prf => Yes (LTESucc prf)
 
+%transform "isLTENat" isLTE m n =
+  if m <= n
+     then Yes (believe_me m)
+     else No (\_ => idris_crash "isLTENat : no proof")
+
 public export
 isGTE : (m, n : Nat) -> Dec (GTE m n)
 isGTE m n = isLTE n m
@@ -274,6 +279,8 @@ lte Z        right     = True
 lte left     Z         = False
 lte (S left) (S right) = lte left right
 
+%transform "lteNat" lte m n = m <= n
+
 public export
 gte : Nat -> Nat -> Bool
 gte left right = lte right left
@@ -315,11 +322,15 @@ minimum Z m = Z
 minimum (S n) Z = Z
 minimum (S n) (S m) = S (minimum n m)
 
+%transform "minimumNat" minimum m n = if  m <= n then m else n
+
 public export
 maximum : Nat -> Nat -> Nat
 maximum Z m = m
 maximum (S n) Z = S n
 maximum (S n) (S m) = S (maximum n m)
+
+%transform "maximumNat" maximum n m = if m <= n then n else m
 
 -- Proofs on S
 
