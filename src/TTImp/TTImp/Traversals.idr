@@ -41,6 +41,7 @@ parameters (f : RawImp' nm -> RawImp' nm)
   mapFnOpt (Totality treq) = Totality treq
   mapFnOpt Macro = Macro
   mapFnOpt (SpecArgs ns) = SpecArgs ns
+  mapFnOpt (Binding b) = Binding b
 
   export
   mapImpData : ImpData' nm -> ImpData' nm
@@ -98,6 +99,7 @@ parameters (f : RawImp' nm -> RawImp' nm)
   mapTTImp (IAutoApp fc t u) = f $ IAutoApp fc (mapTTImp t) (mapTTImp u)
   mapTTImp (INamedApp fc t n u) = f $ INamedApp fc (mapTTImp t) n (mapTTImp u)
   mapTTImp (IWithApp fc t u) = f $ IWithApp fc (mapTTImp t) (mapTTImp u)
+  mapTTImp (IBindingApp fn b s) = assert_total $ f $ IBindingApp fn (map (map mapTTImp) b) (map mapTTImp s)
   mapTTImp (ISearch fc depth) = f $ ISearch fc depth
   mapTTImp (IAlternative fc alt ts) = f $ IAlternative fc (mapAltType alt) (assert_total map mapTTImp ts)
   mapTTImp (IRewrite fc t u) = f $ IRewrite fc (mapTTImp t) (mapTTImp u)
