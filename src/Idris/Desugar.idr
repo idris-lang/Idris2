@@ -265,7 +265,7 @@ bindBangs [] ns tm = tm
 bindBangs ((n, fc, btm) :: bs) ns tm
     = bindBangs bs ns
     $ bindFun fc ns btm
-    $ ILam EmptyFC top Explicit (Just n) (Implicit fc False) tm
+    $ ILam EmptyFC Nothing Explicit (Just n) (Implicit fc False) tm
 
 idiomise : FC -> Maybe Namespace -> Maybe Namespace -> RawImp -> RawImp
 idiomise fc dons mns (IAlternative afc u alts)
@@ -383,7 +383,7 @@ mutual
   desugarB side ps (PUpdate fc fs)
       = desugarB side ps
       $ let vfc = virtualiseFC fc in
-      PLam vfc top Explicit (PRef vfc (MN "rec" 0)) (PImplicit vfc)
+      PLam vfc Nothing Explicit (PRef vfc (MN "rec" 0)) (PImplicit vfc)
       $ PApp vfc (PUpdate fc fs) (PRef vfc (MN "rec" 0))
   desugarB side ps (PApp fc x y)
       = pure $ IApp fc !(desugarB side ps x) !(desugarB side ps y)
@@ -423,12 +423,12 @@ mutual
            case lookupName op.val.toName (prefixes syn) of
                 [] =>
                     desugarB side ps
-                        (PLam fc top Explicit (PRef fc (MN "arg" 0)) (PImplicit fc)
+                        (PLam fc Nothing Explicit (PRef fc (MN "arg" 0)) (PImplicit fc)
                             (POp fc (MkFCVal op.fc (NoBinder (PRef fc (MN "arg" 0)))) op arg))
                 (prec :: _) => desugarB side ps (PPrefixOp fc op arg)
   desugarB side ps (PSectionR fc arg op)
       = desugarB side ps
-          (PLam fc top Explicit (PRef fc (MN "arg" 0)) (PImplicit fc)
+          (PLam fc Nothing Explicit (PRef fc (MN "arg" 0)) (PImplicit fc)
               (POp fc (MkFCVal op.fc $ NoBinder arg) op (PRef fc (MN "arg" 0))))
   desugarB side ps (PSearch fc depth) = pure $ ISearch fc depth
   desugarB side ps (PPrimVal fc (BI x))
@@ -539,13 +539,13 @@ mutual
            pure $ IAlternative fc (UniqueDefault pval)
                   [apply (IVar opFC dpairname)
                       [Implicit vfc False,
-                       ILam nameFC top Explicit (Just n) (Implicit vfc False) r'],
+                       ILam nameFC (Just top) Explicit (Just n) (Implicit vfc False) r'],
                    pval]
   desugarB side ps (PDPair fc opFC (PRef namefc n@(UN _)) ty r)
       = do ty' <- desugarB side ps ty
            r' <- desugarB side ps r
            pure $ apply (IVar opFC dpairname)
-                        [ty', ILam namefc top Explicit (Just n) ty' r']
+                        [ty', ILam namefc (Just top) Explicit (Just n) ty' r']
   desugarB side ps (PDPair fc opFC l (PImplicit _) r)
       = do l' <- desugarB side ps l
            r' <- desugarB side ps r
@@ -593,7 +593,7 @@ mutual
       = do let vfc = virtualiseFC fc
            let var = PRef vfc (MN "paRoot" 0)
            desugarB side ps $
-             PLam fc top Explicit var (PImplicit vfc) $
+             PLam fc Nothing Explicit var (PImplicit vfc) $
                foldl (\r, (fc, proj) => PApp fc (PRef fc proj) r) var projs
   desugarB side ps (PWithUnambigNames fc ns rhs)
       = IWithUnambigNames fc ns <$> desugarB side ps rhs
@@ -779,7 +779,7 @@ mutual
                         (\ty => desugarDo side ps ns ty) ty
            rest' <- expandDo side ps' topfc ns rest
            pure $ bindFun fc ns exp'
-                $ ILam EmptyFC top Explicit (Just (MN "_" 0))
+                $ ILam EmptyFC Nothing Explicit (Just (MN "_" 0))
                           ty'
                           (ICase fc [] (IVar patFC (MN "_" 0))
                                (Implicit fc False)
@@ -839,20 +839,20 @@ mutual
       = do l' <- desugarTree side ps l
            body <- desugarTree side ps r
            pure $ PApp loc (PApp loc (PRef opFC op.toName) l')
-                      (PLam loc top Explicit pat l' body)
+                      (PLam loc Nothing Explicit pat l' body)
   -- (x := exp) =@ f x ==>> (=@) exp (\x : ? => f x)
   desugarTree side ps (Infix loc opFC (op, Just (BindExpr pat lhs)) l r)
       = do l' <- desugarTree side ps l
            body <- desugarTree side ps r
            pure $ PApp loc (PApp loc (PRef opFC op.toName) l')
-                      (PLam loc top Explicit pat (PInfer opFC) body)
+                      (PLam loc Nothing Explicit pat (PInfer opFC) body)
 
   -- (x : ty := exp) =@ f x ==>> (=@) exp (\x : ty => f x)
   desugarTree side ps (Infix loc opFC (op, Just (BindExplicitType pat ty expr)) l r)
       = do l' <- desugarTree side ps l
            body <- desugarTree side ps r
            pure $ PApp loc (PApp loc (PRef opFC op.toName) l')
-                      (PLam loc top Explicit pat ty body)
+                      (PLam loc Nothing Explicit pat ty body)
   desugarTree side ps (Infix loc opFC (op, Nothing) _ r)
       = throw $ InternalError "illegal fixity: Parsed as infix but no binding information"
 

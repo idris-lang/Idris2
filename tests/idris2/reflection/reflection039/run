@@ -1,0 +1,4 @@
+. ../../../testutils.sh
+
+# expected unification error
+check Issue3914.idr

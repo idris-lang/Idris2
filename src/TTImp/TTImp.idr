@@ -66,7 +66,8 @@ mutual
        IVar : FC -> nm -> RawImp' nm
        IPi : FC -> RigCount -> PiInfo (RawImp' nm) -> Maybe Name ->
              (argTy : RawImp' nm) -> (retTy : RawImp' nm) -> RawImp' nm
-       ILam : FC -> RigCount -> PiInfo (RawImp' nm) -> Maybe Name ->
+       ILam : FC -> Maybe RigCount -> -- Nothing means unknown, needs to be inferred
+              PiInfo (RawImp' nm) -> Maybe Name ->
               (argTy : RawImp' nm) -> (lamTy : RawImp' nm) -> RawImp' nm
        ILet : FC -> (lhsFC : FC) -> RigCount -> Name ->
               (nTy : RawImp' nm) -> (nVal : RawImp' nm) ->
@@ -161,7 +162,7 @@ mutual
          = "(%pi " ++ show c ++ " " ++ show p ++ " " ++
            showPrec App n ++ " " ++ show arg ++ " " ++ show ret ++ ")"
       show (ILam fc c p n arg sc)
-         = "(%lam " ++ show c ++ " " ++ show p ++ " " ++
+         = "(%lam " ++ showPrec App c ++ " " ++ show p ++ " " ++
            showPrec App n ++ " " ++ show arg ++ " " ++ show sc ++ ")"
       show (ILet fc lhsFC c n ty val sc)
          = "(%let " ++ show c ++ " " ++ " " ++ show n ++ " " ++ show ty ++

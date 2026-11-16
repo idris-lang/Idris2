@@ -108,7 +108,7 @@ mutual
                           mn' <- reify defs !(evalClosure defs mn)
                           aty' <- reify defs !(evalClosure defs aty)
                           lty' <- reify defs !(evalClosure defs lty)
-                          pure (ILam fc' c' p' mn' aty' lty')
+                          pure (ILam fc' (Just c') p' mn' aty' lty')
                (UN (Basic "ILet"), [fc, lhsFC, c, n, ty, val, sc])
                     => do fc' <- reify defs !(evalClosure defs fc)
                           lhsFC' <- reify defs !(evalClosure defs lhsFC)
@@ -496,7 +496,7 @@ mutual
              appCon fc defs (reflectionttimp "IPi") [fc', c', p', mn', aty', rty']
     reflect fc defs lhs env (ILam tfc c p mn aty rty)
         = do fc' <- reflect fc defs lhs env tfc
-             c' <- reflect fc defs lhs env c
+             c' <- reflect fc defs lhs env (fromMaybe top c)
              p' <- reflect fc defs lhs env p
              mn' <- reflect fc defs lhs env mn
              aty' <- reflect fc defs lhs env aty

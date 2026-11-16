@@ -93,12 +93,13 @@ inferLambda : {vars : _} ->
               RigCount -> ElabInfo ->
               NestedNames vars -> Env Term vars ->
               FC ->
-              RigCount -> PiInfo RawImp -> (n : Name) ->
+              Maybe RigCount -> PiInfo RawImp -> (n : Name) ->
               (argTy : RawImp) -> (scope : RawImp) ->
               (expTy : Maybe (Glued vars)) ->
               Core (Term vars, Glued vars)
 inferLambda rig elabinfo nest env fc rigl info n argTy scope expTy
-    = do let rigb = rigl
+    = do -- If the multiplicity is unknown, try to use the top
+         let rigb = fromMaybe top rigl
          u <- uniVar fc
          (tyv, tyt) <- check erased elabinfo nest env argTy (Just (gType fc u))
          info' <- checkPiInfo rigb elabinfo nest env info (Just (gnf env tyv))
@@ -146,7 +147,7 @@ checkLambda : {vars : _} ->
               RigCount -> ElabInfo ->
               NestedNames vars -> Env Term vars ->
               FC ->
-              RigCount -> PiInfo RawImp -> (n : Name) ->
+              Maybe RigCount -> PiInfo RawImp -> (n : Name) ->
               (argTy : RawImp) -> (scope : RawImp) ->
               (expTy : Maybe (Glued vars)) ->
               Core (Term vars, Glued vars)
@@ -168,7 +169,7 @@ checkLambda rig_in elabinfo nest env fc rigl info n argTy scope (Just expty_in)
                     (tyv, tyt) <- check erased elabinfo nest env
                                         argTy (Just (gType fc u))
                     -- If multiplicity is unknown, use the multiplicity from the expected type
-                    let rigb = if rigl == top then c else rigl
+                    let rigb = fromMaybe c rigl
                     info' <- checkPiInfo rigb elabinfo nest env info (Just (gnf env tyv))
                     let originalPiType = Bind fc bn (Pi fc' c info' pty) psc
                     let env' : Env Term (n :: _) = Lam fc rigb info' tyv :: env

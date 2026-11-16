@@ -130,9 +130,9 @@ mutual
   prettyPDo : PDo' KindedName -> Doc IdrisSyntax
   prettyPDo (DoExp _ tm) = pretty tm
   prettyPDo (DoBind _ _ n rig (Just ty) tm) =
-      prettyRig rig <+> pretty0 n <++> colon <++> pretty ty <++> keyword "<-" <++> pretty tm
+      maybe emptyDoc prettyRig rig <+> pretty0 n <++> colon <++> pretty ty <++> keyword "<-" <++> pretty tm
   prettyPDo (DoBind _ _ n rig Nothing tm) =
-      prettyRig rig <+> pretty0 n <++> keyword "<-" <++> pretty tm
+      maybe emptyDoc prettyRig rig <+> pretty0 n <++> keyword "<-" <++> pretty tm
   prettyPDo (DoBindPat _ l (Just ty) tm alts) =
       pretty l <++> colon <++> keyword "<-" <++> pretty tm <+> hang 4 (fillSep $ prettyAlt <$> alts)
   prettyPDo (DoBindPat _ l Nothing tm alts) =
@@ -244,19 +244,19 @@ mutual
           parenthesise (d > startPrec) $ group $
             backslash <+> prettyBindings ns <++> fatArrow <+> softline <+> pretty sc
       where
-      getLamNames : List (RigCount, IPTerm, IPTerm) ->
+      getLamNames : List (Maybe RigCount, IPTerm, IPTerm) ->
                     IPTerm ->
-                    (List (RigCount, IPTerm, IPTerm), IPTerm)
+                    (List (Maybe RigCount, IPTerm, IPTerm), IPTerm)
       getLamNames acc (PLam _ rig _ n ty sc) = getLamNames ((rig, n, ty) :: acc) sc
       getLamNames acc sc = (reverse acc, sc)
 
-      prettyBindings : List (RigCount, IPTerm, IPTerm) -> Doc IdrisSyntax
+      prettyBindings : List (Maybe RigCount, IPTerm, IPTerm) -> Doc IdrisSyntax
       prettyBindings [] = neutral
-      prettyBindings [(rig, n, (PImplicit _))] = prettyRig rig <+> pretty n
-      prettyBindings [(rig, n, ty)] = prettyRig rig <+> pretty n <++> colon <++> pretty ty
-      prettyBindings ((rig, n, (PImplicit _)) :: ns) = prettyRig rig <+> pretty n
+      prettyBindings [(rig, n, (PImplicit _))] = maybe emptyDoc prettyRig rig <+> pretty n
+      prettyBindings [(rig, n, ty)] = maybe emptyDoc prettyRig rig <+> pretty n <++> colon <++> pretty ty
+      prettyBindings ((rig, n, (PImplicit _)) :: ns) = maybe emptyDoc prettyRig rig <+> pretty n
                                               <+> comma <+> line <+> prettyBindings ns
-      prettyBindings ((rig, n, ty) :: ns) = prettyRig rig <+> pretty n <++> colon <++> pretty ty
+      prettyBindings ((rig, n, ty) :: ns) = maybe emptyDoc prettyRig rig <+> pretty n <++> colon <++> pretty ty
                                               <+> comma <+> line <+> prettyBindings ns
     prettyPrec d (PLet _ rig n (PImplicit _) val sc alts) =
       -- Hide uninformative lets

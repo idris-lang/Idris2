@@ -458,7 +458,7 @@ mutual
            let fc = MkFC fname here here
            let var = PRef fc (MN "__leftTupleSection" 0)
            ts <- bounds (nonEmptyTuple fname s indents var)
-           pure (PLam fc top Explicit var (PInfer fc) ts.val)
+           pure (PLam fc Nothing Explicit var (PInfer fc) ts.val)
 
   getInitRange : List (WithBounds PTerm) -> EmptyRule (PTerm, Maybe PTerm)
   getInitRange [x] = pure (x.val, Nothing)
@@ -536,7 +536,7 @@ mutual
       lams [] e = e
       lams ((fc, var) :: vars) e
         = let vfc = virtualiseFC fc in
-          PLam vfc top Explicit var (PInfer vfc) $ lams vars e
+          PLam vfc Nothing Explicit var (PInfer vfc) $ lams vars e
 
       buildOutput : FC -> (List (FC, PTerm), PTerm) -> PTerm
       buildOutput fc (vars, scope) = lams vars $ PPair fc e scope
@@ -644,31 +644,34 @@ mutual
     <|> withWarning "DEPRECATED: trailing lambda. Use a $ or parens"
         (lam fname indents)
 
+  multiplicityOpt : OriginDesc -> EmptyRule (Maybe RigCount)
+  multiplicityOpt fname
+      = optional $ do c <- decorate fname Keyword intLit
+                      the (EmptyRule RigCount) $ case c of
+                        0 => pure erased
+                        1 => pure linear
+                        _ => fail "Invalid multiplicity (must be 0 or 1)"
+
   multiplicity : OriginDesc -> EmptyRule RigCount
-  multiplicity fname
-      = case !(optional $ decorate fname Keyword intLit) of
-          (Just 0) => pure erased
-          (Just 1) => pure linear
-          Nothing => pure top
-          _ => fail "Invalid multiplicity (must be 0 or 1)"
+  multiplicity fname = fromMaybe top <$> multiplicityOpt fname
 
   bindList : OriginDesc -> IndentInfo ->
-             Rule (List (RigCount, WithBounds PTerm, PTerm, PiInfo PTerm))
+             Rule (List (Maybe RigCount, WithBounds PTerm, PTerm, PiInfo PTerm))
   bindList fname indents
       = forget <$> sepBy1 (decoratedSymbol fname ",") (explicitBind <|> implicitBind)
     where
-      explicitBind : Rule (RigCount, WithBounds PTerm, PTerm, PiInfo PTerm)
+      explicitBind : Rule (Maybe RigCount, WithBounds PTerm, PTerm, PiInfo PTerm)
       explicitBind = do
-        rig <- multiplicity fname
+        rig <- multiplicityOpt fname
         pat <- bounds (simpleExpr fname indents)
         ty <- option
            (PInfer (boundToFC fname pat))
            (decoratedSymbol fname ":" *> opExpr pdef fname indents)
         pure (rig, pat, ty, Explicit)
 
-      implicitBind : Rule (RigCount, WithBounds PTerm, PTerm, PiInfo PTerm)
+      implicitBind : Rule (Maybe RigCount, WithBounds PTerm, PTerm, PiInfo PTerm)
       implicitBind = curly fname $ do
-        rig <- multiplicity fname
+        rig <- multiplicityOpt fname
         pat <- bounds (simpleExpr fname indents)
         ty <- option
            (PInfer (boundToFC fname pat))
@@ -799,10 +802,10 @@ mutual
                  alt = (MkImpossible fc lhs.val)
                  fcCase = boundToFC fname lhs
                  n = MN "lcase" 0 in
-             (PLam fcCase top Explicit (PRef fcCase n) (PInfer fcCase) $
+             (PLam fcCase Nothing Explicit (PRef fcCase n) (PInfer fcCase) $
                  PCase (virtualiseFC fc) [] (PRef fcCase n) [alt]))
 
-       bindAll : List (RigCount, WithBounds PTerm, PTerm, PiInfo PTerm) -> PTerm -> PTerm
+       bindAll : List (Maybe RigCount, WithBounds PTerm, PTerm, PiInfo PTerm) -> PTerm -> PTerm
        bindAll [] scope = scope
        bindAll ((rig, pat, ty, icit) :: rest) scope
            = PLam (boundToFC fname pat) rig icit pat.val ty
@@ -823,7 +826,7 @@ mutual
             (let fc = boundToFC fname b
                  fcCase = virtualiseFC $ boundToFC fname endCase
                  n = MN "lcase" 0 in
-              PLam fcCase top Explicit (PRef fcCase n) (PInfer fcCase) $
+              PLam fcCase Nothing Explicit (PRef fcCase n) (PInfer fcCase) $
                 PCase (virtualiseFC fc) [] (PRef fcCase n) b.val)
 
   letBlock : OriginDesc -> IndentInfo -> Rule (WithBounds (Either LetBinder LetDecl))
@@ -978,7 +981,7 @@ mutual
 
   doAct : OriginDesc -> IndentInfo -> Rule (List PDo)
   doAct fname indents
-      = do b <- bounds (do rig <- multiplicity fname
+      = do b <- bounds (do rig <- multiplicityOpt fname
                            n <- bounds (name <|> UN Underscore <$ symbol "_")
                            -- If the name doesn't begin with a lower case letter, we should
                            -- treat this as a pattern, so fail

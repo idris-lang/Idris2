@@ -54,5 +54,5 @@ underLams fs = go fs [] where
   go : PTerm' nm -> List (PTerm' nm, Binder (PTerm' nm)) ->
        (List (PTerm' nm, Binder (PTerm' nm)), PTerm' nm)
   go (PBracketed fc f) = go f
-  go (PLam fc rig pinfo pat a sc) = go sc . ((pat, Lam fc rig pinfo a) ::)
+  go (PLam fc rig pinfo pat a sc) = go sc . ((pat, Lam fc (fromMaybe top rig) pinfo a) ::)
   go fs = (,fs)

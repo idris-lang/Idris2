@@ -226,13 +226,17 @@ mutual
            symbol ")"
            pure e
 
+
+  multiplicityOpt : EmptyRule (Maybe RigCount)
+  multiplicityOpt
+      = optional $ do c <- intLit
+                      the (EmptyRule RigCount) $ case c of
+                        0 => pure erased
+                        1 => pure linear
+                        _ => fail "Invalid multiplicity (must be 0 or 1)"
+
   multiplicity : EmptyRule RigCount
-  multiplicity
-      = case !(optional intLit) of
-          (Just 0) => pure erased
-          (Just 1) => pure linear
-          Nothing => pure top
-          _ => fail "Invalid multiplicity (must be 0 or 1)"
+  multiplicity = fromMaybe top <$> multiplicityOpt
 
   pibindAll : FC -> PiInfo RawImp -> List (WithRig $ WithMName RawImp) ->
               RawImp -> RawImp
@@ -241,10 +245,10 @@ mutual
            = IPi fc ty.rig p (map val ty.mName) ty.val (pibindAll fc p rest scope)
 
   bindList : OriginDesc -> FilePos -> IndentInfo ->
-             Rule (List (RigCount, Name, RawImp))
+             Rule (List (Maybe RigCount, Name, RawImp))
   bindList fname start indents
       = forget <$> sepBy1 (symbol ",")
-                          (do rig <- multiplicity
+                          (do rig <- multiplicityOpt
                               n <- userName
                               end <- location
                               ty <- option
@@ -340,7 +344,7 @@ mutual
            end <- location
            pure (bindAll (MkFC fname start end) binders scope)
      where
-       bindAll : FC -> List (RigCount, Name, RawImp) -> RawImp -> RawImp
+       bindAll : FC -> List (Maybe RigCount, Name, RawImp) -> RawImp -> RawImp
        bindAll fc [] scope = scope
        bindAll fc ((rig, n, ty) :: rest) scope
            = ILam fc rig Explicit (Just n) ty (bindAll fc rest scope)

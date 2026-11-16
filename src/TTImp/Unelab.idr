@@ -334,7 +334,7 @@ mutual
   unelabBinder umode nest fc env x (Lam fc' rig p ty) sctm sc scty
       = do (ty', _) <- unelabTy umode nest env ty
            p' <- unelabPi umode nest env p
-           pure (ILam fc rig p' (Just x) ty' sc,
+           pure (ILam fc (Just rig) p' (Just x) ty' sc,
                     gnf env (Bind fc x (Pi fc' rig p ty) scty))
   unelabBinder umode nest fc env x (Let fc' rig val ty) sctm sc scty
       = do (val', vty) <- unelabTy umode nest env val
