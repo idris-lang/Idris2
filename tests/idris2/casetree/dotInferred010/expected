@@ -1,0 +1,14 @@
+1/1: Building Issue2341Comment (Issue2341Comment.idr)
+Main> 0 Main.safe
+Arguments [{arg:1}, {arg:2}, {arg:3}, {arg:4}]
+Compile time tree: case {arg:4} of
+  Pi {e:1} {e:2} {e:3} {e:4} {e:5} {e:6} {e:7} => ?safe_rhs_3 [locals in scope: {arg:3}, {e:1}, {e:2}, {e:3}, {e:5}, {e:7}, {e:6}, {arg:2}, {arg:1}]
+  Dip {e:8} {e:9} {e:10} {e:11} {e:12} => ?safe_rhs_5 [locals in scope: {e:8}, {e:9}, {e:10}, {e:11}, {e:12}, {arg:3}, {arg:2}, {arg:1}]
+  Drop {e:13} {e:14} => ?safe_rhs_6 [locals in scope: {arg:1}, {e:13}, {arg:3}, {arg:2}]
+  One {e:15} => ?safe_rhs_7 [locals in scope: {arg:3}, {arg:2}, {arg:1}]
+Erasable args: [0, 1, 2]
+Inferrable args: [0, 1, 2]
+Refers to: Main.safe_rhs_7, Main.safe_rhs_6, Main.safe_rhs_5, Main.safe_rhs_3
+Flags: partial
+Main> 
+Bye for now!
