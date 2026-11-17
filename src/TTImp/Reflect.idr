@@ -108,7 +108,7 @@ mutual
                           mn' <- reify defs !(evalClosure defs mn)
                           aty' <- reify defs !(evalClosure defs aty)
                           lty' <- reify defs !(evalClosure defs lty)
-                          pure (ILam fc' (Just c') p' mn' aty' lty')
+                          pure (ILam fc' (toMaybe (c' /= top) c') p' mn' aty' lty')
                (UN (Basic "ILet"), [fc, lhsFC, c, n, ty, val, sc])
                     => do fc' <- reify defs !(evalClosure defs fc)
                           lhsFC' <- reify defs !(evalClosure defs lhsFC)
