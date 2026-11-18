@@ -334,7 +334,7 @@ minimumEqMinimum' (S m) (S n) with (lte m n) proof p
   _ | True  = cong S (trans (minimumEqMinimum' m n) (rewrite p in Refl))
   _ | False = cong S (trans (minimumEqMinimum' m n) (rewrite p in Refl))
 
-%transform "minimumNat" minimum m n = minimum' m n
+%transform "minimumNat" minimum = minimum'
 
 public export
 maximum : Nat -> Nat -> Nat
@@ -353,7 +353,7 @@ maximumEqMaximum' (S m) (S n) with (lte m n) proof p
   _ | True  = cong S (trans (maximumEqMaximum' m n) (rewrite p in Refl))
   _ | False = cong S (trans (maximumEqMaximum' m n) (rewrite p in Refl))
 
-%transform "maximumNat" maximum m n = maximum' m n
+%transform "maximumNat" maximum = maximum'
 
 -- Proofs on S
 
