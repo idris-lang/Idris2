@@ -206,11 +206,15 @@ isLTE (S k) (S j)
            No contra => No (contra . fromLteSucc)
            Yes prf => Yes (LTESucc prf)
 
-%transform "isLTENat" isLTE m n =
-  if natToInteger m <= natToInteger n
+%inline
+partial -- from idris_crash
+isLTE' : (m, n : Nat) -> Dec (LTE m n)
+isLTE' m n = if natToInteger m <= natToInteger n
      -- Since LTE is a "Nat-like" type, we can exploit the fact that it shares the same runtime representation to forge a proof.
      then Yes (believe_me m)
      else No (\_ => idris_crash "isLTENat : no proof")
+
+%transform "isLTENat" isLTE = isLTE'
 
 public export
 isGTE : (m, n : Nat) -> Dec (GTE m n)
@@ -280,7 +284,13 @@ lte Z        right     = True
 lte left     Z         = False
 lte (S left) (S right) = lte left right
 
-%transform "lteNat" lte m n = natToInteger m <= natToInteger n
+lte' : Nat -> Nat -> Bool
+lte' m n = natToInteger m <= natToInteger n
+
+-- lteEqLte' : (m, n : Nat) -> lte m n = lte' m n
+-- lteEqLte' m n  = believe_me $ Refl{x=(lte m n)}
+
+%transform "lteNat" lte = lte'
 
 public export
 gte : Nat -> Nat -> Bool
