@@ -156,9 +156,16 @@ interface Bifunctor f where
   mapSnd : (b -> d) -> f a b -> f a d
   mapSnd = bimap id
 
+||| The action of the `Bifunctor` on morphisms pertaining to both objects.
+||| Applies the same morphism to the first and second objects.
+|||
+||| ```idris example
+||| mapHom (\x => x + 1) (5, 10) == (6, 11)
+||| ```
+||| @ func the morphism to apply
 public export %tcinline
-mapHom : Bifunctor f => (a -> b) -> f a a -> f b b
-mapHom f = bimap f f
+mapHom : Bifunctor f => (func : a -> b) -> f a a -> f b b
+mapHom func = bimap func func
 
 namespace Bifunctor
 
@@ -169,16 +176,48 @@ namespace Bifunctor
     mapFst = map . mapFst
     mapSnd = map . mapSnd
 
+||| A functor with application, providing operations to embed
+||| pure expressions (`pure`) and sequence computations (`<*>`).
+||| Abstracts the notion of function application.
+||| @ f a parameterised type
 public export
 interface Functor f => Applicative f where
   constructor MkApplicative
+  ||| Lift a value into the structure.
+  ||| @ f the parameterised type
   pure : a -> f a
+
+  ||| Sequential application. Apply an `Applicative` of functions to
+  ||| a second `Applicative`.
+  |||
+  ||| ```idris example
+  ||| ((Just \x => x + 1) <*> Just 5) == Just 6
+  ||| ```
+  ||| @ f the parameterised type
   (<*>) : f (a -> b) -> f a -> f b
 
+||| Sequence actions, discarding the value of the second argument.
+|||
+||| ```idris example
+||| (Just 5 <* Just 10) == Just 5
+||| ```
+||| ```idris example
+||| (Just 2 <* Nothing) == Nothing
+||| ```
+||| @ f the parameterised type
 public export %tcinline
 (<*) : Applicative f => f a -> f b -> f a
 a <* b = map const a <*> b
 
+||| Sequence actions, discarding the value of the first argument.
+|||
+||| ```idris example
+||| (Just 5 *> Just 10) == Just 10
+||| ```
+||| ```idris example
+||| (Nothing *> Just 2) == Nothing
+||| ```
+||| @ f the parameterised type
 public export %tcinline
 (*>) : Applicative f => f a -> f b -> f b
 a *> b = map (const id) a <*> b
@@ -322,19 +361,25 @@ concatMap = foldMap
 
 namespace Bool.Lazy
   namespace Semigroup
+    ||| `Lazy Bool` is a semigroup with logical disjunction as an operation.
     public export
     [Any] Semigroup (Lazy Bool) where
       x <+> y = force x || y
 
+    ||| `Lazy Bool` is a semigroup with logical conjunction as an operation.
     public export
     [All] Semigroup (Lazy Bool) where
       x <+> y = force x && y
 
   namespace Monoid
+    ||| `Lazy Bool` is a monoid with logical disjunction as an operation and
+    ||| a delayed `False` as the neutral element.
     public export
     [Any] Monoid (Lazy Bool) using Semigroup.Any where
       neutral = delay False
 
+    ||| `Lazy Bool` is a monoid with logical conjunction as an operation and
+    ||| a delayed `True` as the neutral element.
     public export
     [All] Monoid (Lazy Bool) using Semigroup.All where
       neutral = delay True
@@ -355,19 +400,23 @@ or = force . concat @{Any}
 
 namespace Bool
   namespace Semigroup
+    ||| `Bool` is a semigroup with `||` as an operation.
     public export
     [Any] Semigroup Bool where
       x <+> y = x || delay y
 
+    ||| `Bool` is a semigroup with `&&` as an operation.
     public export
     [All] Semigroup Bool where
       x <+> y = x && delay y
 
   namespace Monoid
+    ||| `Bool` is a monoid with `||` as an operation and `False` as the neutral element.
     public export
     [Any] Monoid Bool using Bool.Semigroup.Any where
       neutral = False
 
+    ||| `Bool` is a monoid with `&&` as an operation and `True` as the neutral element.
     public export
     [All] Monoid Bool using Bool.Semigroup.All where
       neutral = True
@@ -386,19 +435,23 @@ all = foldMap @{%search} @{All}
 
 namespace Num
   namespace Semigroup
+    ||| `Num` types form a semigroup with addition as an operation.
     public export
     [Additive] Num a => Semigroup a where
       (<+>) = (+)
 
+    ||| `Num` types form a semigroup with multiplication as an operation.
     public export
     [Multiplicative] Num a => Semigroup a where
       (<+>) = (*)
 
   namespace Monoid
+    ||| `Num` types form a monoid with addition as an operation and `0` as the neutral element.
     public export
     [Additive] Num a => Monoid a using Semigroup.Additive where
       neutral = 0
 
+    ||| `Num` types form a monoid with multiplication as an operation and `1` as the neutral element.
     public export
     [Multiplicative] Num a => Monoid a using Semigroup.Multiplicative where
       neutral = 1
@@ -441,27 +494,40 @@ public export %tcinline
 for_ : Applicative f => Foldable t => t a -> (a -> f b) -> f ()
 for_ = flip traverse_
 
+||| `Applicative` structures over a `Semigroup` type form a semigroup
+||| by lifting the semigroup operation through the `Applicative` structure.
 public export
 [SemigroupApplicative] Applicative f => Semigroup a => Semigroup (f a) where
   x <+> y = [| x <+> y |]
 
+||| `Applicative` structures over a `Monoid` type form a monoid
+||| by lifting the monoid operation and the neutral element
+||| through the `Applicative` structure.
 public export
 [MonoidApplicative] Applicative f => Monoid a => Monoid (f a) using SemigroupApplicative where
   neutral = pure neutral
 
 namespace Lazy
+  ||| Lazy `Alternative` structures over an arbitrary type form a semigroup
+  ||| with `<|>` as an operation.
   public export
   [SemigroupAlternative] Alternative f => Semigroup (Lazy (f a)) where
     x <+> y = force x <|> y
 
+  ||| Lazy `Alternative` structures over an arbitrary type form a monoid
+  ||| with `<|>` as an operation and `empty` as the neutral element.
   public export
   [MonoidAlternative] Alternative f => Monoid (Lazy (f a)) using Lazy.SemigroupAlternative where
     neutral = delay empty
 
+||| `Alternative` structures over an arbitrary type form a semigroup
+||| with `<|>` as an operation.
 public export
 [SemigroupAlternative] Alternative f => Semigroup (f a) where
   x <+> y = x <|> delay y
 
+||| `Alternative` structures over an arbitrary type form a monoid
+||| with `<|>` as an operation and `empty` as the neutral element.
 public export
 [MonoidAlternative] Alternative f => Monoid (f a) using Interfaces.SemigroupAlternative where
   neutral = empty
@@ -511,11 +577,25 @@ namespace Foldable
 public export
 interface Bifoldable p where
   constructor MkBifoldable
-  bifoldr : (a -> acc -> acc) -> (b -> acc -> acc) -> acc -> p a b -> acc
+  ||| Successively combine elements of two different types in a parameterised type using the
+  ||| provided functions, starting with the element that is in the final position,
+  ||| i.e. the right-most position.
+  ||| @ f     The function used to fold elements of the first type into the accumulated result
+  ||| @ g     The function used to fold elements of the second type into the accumulated result
+  ||| @ init  The starting value the results are being combined into
+  ||| @ input The parameterised type
+  bifoldr : (f : a -> acc -> acc) -> (g : b -> acc -> acc) -> (init : acc) -> (input : p a b) -> acc
 
-  bifoldl : (acc -> a -> acc) -> (acc -> b -> acc) -> acc -> p a b -> acc
+  ||| The same as `bifoldr` but begins folding from the element at the initial
+  ||| position in the data structure parameterised by two types, i.e. the left-most position.
+  ||| @ f     The function used to fold elements of the first type into the accumulated result
+  ||| @ g     The function used to fold elements of the second type into the accumulated result
+  ||| @ init  The starting value the results are being combined into
+  ||| @ input The parameterised type
+  bifoldl : (f : acc -> a -> acc) -> (g : acc -> b -> acc) -> (init : acc) -> (input : p a b) -> acc
   bifoldl f g z t = bifoldr (flip (.) . flip f) (flip (.) . flip g) id t z
 
+  ||| Test whether the structure parameterised by two types is empty.
   binull : p a b -> Bool
   binull t = bifoldr {acc = Lazy Bool} (\ _,_ => False) (\ _,_ => False) True t
 
@@ -538,6 +618,9 @@ namespace Bifoldable
     bifoldl = foldl .: bifoldl
     binull fp = null fp || all binull fp
 
+||| Functors representing data structures that can be transformed to
+||| structures of the same shape by applying an `Applicative`
+||| action on each element from left to right.
 public export
 interface (Functor t, Foldable t) => Traversable t where
   constructor MkTraversable
@@ -555,6 +638,9 @@ sequence = traverse id
 for : Applicative f => Traversable t => t a -> (a -> f b) -> f (t b)
 for = flip traverse
 
+||| Bifunctors representing data structures that can be transformed to
+||| structures of the same shape by applying `Applicative` actions
+||| on each element from left to right.
 public export
 interface (Bifunctor p, Bifoldable p) => Bitraversable p where
   constructor MkBitraversable
