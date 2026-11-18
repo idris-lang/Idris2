@@ -91,10 +91,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
       - name: Install build dependencies
+        id: deps
         run: |
           sudo apt-get update
           sudo apt-get install -y chezscheme
           echo "$HOME/.idris2/bin" >> "$GITHUB_PATH"
+          echo "CHEZ_VERSION=$(scheme --version 2>&1)" >> "$GITHUB_OUTPUT"
 
       # Get our hands on the released version either by using the cache
       # or by rebuilding it if necessary.
@@ -103,7 +105,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: Idris2-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}
-          key: ${{ runner.os }}-idris2-bootstrapped-chez-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}
+          key: ${{ runner.os }}-idris2-bootstrapped-${{ env.IDRIS2_MINIMUM_COMPAT_VERSION }}-chez-${{ steps.deps.outputs.CHEZ_VERSION }}
       - name : Build previous version
         if: steps.previous-version-cache.outputs.cache-hit != 'true'
         run: |
