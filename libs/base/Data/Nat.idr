@@ -208,6 +208,7 @@ isLTE (S k) (S j)
 
 %transform "isLTENat" isLTE m n =
   if natToInteger m <= natToInteger n
+     -- Since LTE is a "Nat-like" type, we can exploit the fact that it shares the same runtime representation to forge a proof.
      then Yes (believe_me m)
      else No (\_ => idris_crash "isLTENat : no proof")
 
