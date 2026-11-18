@@ -323,15 +323,35 @@ minimum Z m = Z
 minimum (S n) Z = Z
 minimum (S n) (S m) = S (minimum n m)
 
-%transform "minimumNat" minimum m n = if lte m n then m else n
+minimum' : Nat -> Nat -> Nat
+minimum' m n = if lte m n then m else n
+
+minimumEqMinimum' : (m, n : Nat) -> minimum m n = minimum' m n
+minimumEqMinimum' Z _ = Refl
+minimumEqMinimum' (S _) Z = Refl
+minimumEqMinimum' (S m) (S n) with (lte m n) proof p
+  _ | True  = cong S (trans (minimumEqMinimum' m n) (rewrite p in Refl))
+  _ | False = cong S (trans (minimumEqMinimum' m n) (rewrite p in Refl))
+
+%transform "minimumNat" minimum m n = minimum' m n
 
 public export
 maximum : Nat -> Nat -> Nat
-maximum Z m = m
-maximum (S n) Z = S n
-maximum (S n) (S m) = S (maximum n m)
+maximum Z n = n
+maximum (S m) Z = S m
+maximum (S m) (S n) = S (maximum m n)
 
-%transform "maximumNat" maximum m n = if lte m n then n else m
+maximum' : Nat -> Nat -> Nat
+maximum' m n = if lte m n then n else m
+
+maximumEqMaximum' : (m, n : Nat) -> maximum m n = maximum' m n
+maximumEqMaximum' Z _ = Refl
+maximumEqMaximum' (S _) Z = Refl
+maximumEqMaximum' (S m) (S n) with (lte m n) proof p
+  _ | True  = cong S (trans (maximumEqMaximum' m n) (rewrite p in Refl))
+  _ | False = cong S (trans (maximumEqMaximum' m n) (rewrite p in Refl))
+
+%transform "maximumNat" maximum m n = maximum' m n
 
 -- Proofs on S
 
