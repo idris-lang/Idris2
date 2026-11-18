@@ -323,6 +323,7 @@ minimum Z m = Z
 minimum (S n) Z = Z
 minimum (S n) (S m) = S (minimum n m)
 
+%inline
 minimum' : Nat -> Nat -> Nat
 minimum' m n = if lte m n then m else n
 
@@ -341,6 +342,7 @@ maximum Z n = n
 maximum (S m) Z = S m
 maximum (S m) (S n) = S (maximum m n)
 
+%inline
 maximum' : Nat -> Nat -> Nat
 maximum' m n = if lte m n then n else m
 
