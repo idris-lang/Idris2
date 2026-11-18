@@ -23,7 +23,7 @@ import Data.Vect
 -- Drop any non-inf top level laziness annotations
 -- Remove all force and delay annotations which are nothing to do with
 -- coinduction meaning that all Delays left guard coinductive calls.
-dropLazy : Value f vars -> Core (Glued vars)
+dropLazy : {auto c : Ref Ctxt Defs} -> Value f vars -> Core (Glued vars)
 dropLazy val@(VDelayed _ r t)
     = case r of
            LInf => pure (asGlued val)
@@ -41,9 +41,9 @@ dropLazy val = pure (asGlued val)
 Substitutions : Type
 Substitutions = NameMap (SnocList (Glued [<]))
 
-scEq : Substitutions -> Value f [<] -> Value f' [<] -> Core Bool
+scEq : {auto c : Ref Ctxt Defs} -> Substitutions -> Value f [<] -> Value f' [<] -> Core Bool
 
-scEqSpine : Substitutions -> Spine [<] -> Spine [<] -> Core Bool
+scEqSpine : {auto c : Ref Ctxt Defs} -> Substitutions -> Spine [<] -> Spine [<] -> Core Bool
 scEqSpine _ [<] [<] = pure True
 scEqSpine substs (sp :< x) (sp' :< y)
     = do x' <- value x
@@ -57,7 +57,7 @@ scEqSpine _ _ _ = pure False
 -- only checking for size change equality so expect to just see type and
 -- data constructors
 -- TODO: size change for pattern matching on types
-scEq' : Substitutions -> Value f [<] -> Value f' [<] -> Core Bool
+scEq' : {auto c : Ref Ctxt Defs} -> Substitutions -> Value f [<] -> Value f' [<] -> Core Bool
 scEq' substs (VApp _ _ n sp _) (VApp _ _ n' sp' _)
     = if n == n'
          then scEqSpine substs sp sp'
@@ -452,15 +452,15 @@ mutual
           let eqs' = eqsc ++ eqs
           logC "totality.termination.sizechange" 10 $ do
             pat <- toFullNames !(quote [<] pat)
-            pure "findSCscope replaceInArgs for var=\{show !(toFullNames var)}, pat=\{show pat}"
-          logC "totality.termination.sizechange" 10 $ do
-            args <- traverse (\ (a, b) => pure (a, !(toFullNames !(quote [<] b)))) args
-            pure "findSCscope replaceInArgs for args=\{show args}"
+            pure "findSCscope addSubstitution for var=\{show !(toFullNames var)}, pat=\{show pat}"
           let substs' = maybe substs (\v => addSubstitution v pat substs) var
+          logC "totality.termination.sizechange" 50 $ do
+            args <- traverse (\ (a, b) => pure (a, !(toFullNames !(quote [<] b)))) args
+            pure "findSCscope canonicalise args=\{show args}"
           args'' <- traverse (\ (n, arg) => pure (n, !(canonicalise eqs' arg))) args
-          logC "totality.termination.sizechange" 10 $ do
+          logC "totality.termination.sizechange" 50 $ do
             args'' <- traverse (\ (a, b) => pure (a, !(toFullNames !(quote [<] b)))) args''
-            pure "findSCscope replaceInArgs for args''=\{show args''}"
+            pure "findSCscope canonicalised args=\{show args''}"
           logNF "totality.termination.sizechange" 10 "RHS var=\{show !(toFullNames var)}" [<] rhs
           logDepth $ findSC g eqs' args'' substs' rhs
   findSCscope g eqs args substs var fc pat (cargs :< (c, xn)) sc
@@ -559,7 +559,7 @@ mutual
              fn <- getFullName fn_in
              logC "totality.termination.sizechange" 10 $ do pure "Looking under \{show fn}"
              aSmaller <- resolved (gamma defs) (NS builtinNS (UN $ Basic "assert_smaller"))
-             logC "totality.termination.sizechange" 10 $
+             logC "totality.termination.sizechange" 20 $
                  do under <- traverse (\ (n, t) =>
                                 pure (n, !(toFullNames !(quote [<] t)))) pats
                     targs <- traverse (\t => toFullNames !(quote [<] t)) args
