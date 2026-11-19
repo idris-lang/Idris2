@@ -68,7 +68,7 @@ should target this file (`CHANGELOG_NEXT`).
   typically happens when a numeric literal or an ambiguous name appears in an
   `impossible` clause.
 * Do not inline `Core.sequence`, because it is recursively defined.
-* Fixed coverage checker issues (#1800, #1998, #2318, #2822, #3679).
+* Fixed coverage checker issues (#1800, #1998, #2318, #2539, #2822, #3679).
 * Fixed totality checking in namespace and mutual blocks (#2868, #3692).
 * Fixed incorrect argument multiplicity when using an as-pattern (#3687).
 * Type inspection now resugars primitive functions to more likely

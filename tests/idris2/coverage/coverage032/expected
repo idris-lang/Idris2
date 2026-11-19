@@ -1,0 +1,13 @@
+1/1: Building Issue2539 (Issue2539.idr)
+Error: mapMaybeListSpec is not covering.
+
+Issue2539:8:1--12:29
+ 08 | mapMaybeListSpec : (xs : List (Maybe s))
+ 09 |               -> (f : s -> s')
+ 10 |               -> (e : Maybe s)
+ 11 |               -> map f e `Elem` (mapMaybeList f xs)
+ 12 |               -> e `Elem` xs
+
+Missing cases:
+    mapMaybeListSpec (Just m :: e) arg (Just e) Here
+
