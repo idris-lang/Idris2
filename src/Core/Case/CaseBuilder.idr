@@ -1194,7 +1194,10 @@ mutual
       = do g <- altGroups gs
            log "compile.casetree" 50 $ "Making case with " ++ show !(toFullNames gs)
            log "compile.casetree" 50 $ "Makes " ++ show !(toFullNames g)
-           pure (TCase fc c _ el (resolveNames vars ty) g)
+           let fc' = case getLoc ty of
+                        EmptyFC => fc
+                        tyfc => tyfc
+           pure (TCase fc' c _ el (resolveNames vars ty) g)
     where
       mkScope : forall vars . (vs : SnocList Name) ->
                               (ms : SnocList RigCount) ->

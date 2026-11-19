@@ -4,6 +4,7 @@
 5
 2
 4
+char const idris2_constr_Builtin_Unit[];
 Idris2_Value *Main_insert
 (
     Idris2_Value * var_0
@@ -61,25 +62,25 @@ Idris2_Value *Main_insert
         }
         Idris2_Value * tmp_40 = NULL;                        // Prelude.EqOrd:121:3--121:6
         if (((Idris2_Constructor *)var_0)->tag == 0 /* Prelude.EqOrd.MkOrd */) {
-            Idris2_Value *var_8 = ((Idris2_Constructor*)var_0)->args[0];
-            Idris2_Value *var_9 = ((Idris2_Constructor*)var_0)->args[1];
-            Idris2_Value *var_10 = ((Idris2_Constructor*)var_0)->args[2];
-            Idris2_Value *var_11 = ((Idris2_Constructor*)var_0)->args[3];
-            Idris2_Value *var_12 = ((Idris2_Constructor*)var_0)->args[4];
-            Idris2_Value *var_13 = ((Idris2_Constructor*)var_0)->args[5];
-            Idris2_Value *var_14 = ((Idris2_Constructor*)var_0)->args[6];
-            Idris2_Value *var_15 = ((Idris2_Constructor*)var_0)->args[7];
-            idris2_newReference(var_10);
-            Idris2_Value * var_16 = idris2_apply_closure(var_10, idris2_newReference(var_1));
+            Idris2_Value *var_9 = ((Idris2_Constructor*)var_0)->args[0];
+            Idris2_Value *var_10 = ((Idris2_Constructor*)var_0)->args[1];
+            Idris2_Value *var_11 = ((Idris2_Constructor*)var_0)->args[2];
+            Idris2_Value *var_12 = ((Idris2_Constructor*)var_0)->args[3];
+            Idris2_Value *var_13 = ((Idris2_Constructor*)var_0)->args[4];
+            Idris2_Value *var_14 = ((Idris2_Constructor*)var_0)->args[5];
+            Idris2_Value *var_15 = ((Idris2_Constructor*)var_0)->args[6];
+            Idris2_Value *var_16 = ((Idris2_Constructor*)var_0)->args[7];
+            idris2_newReference(var_11);
+            Idris2_Value * var_17 = idris2_apply_closure(var_11, idris2_newReference(var_1));
                                                              // Prelude.EqOrd:121:3--121:6
             tmp_40 = idris2_apply_closure(var_17, idris2_newReference(var_6));
         }
-        Idris2_Value * var_19 = tmp_40;
-        Idris2_Value *tmp_41 = NULL;
-        int64_t tmp_42 = idris2_extractInt(var_19);
+        Idris2_Value * var_8 = tmp_40;                       // Main:8:25--9:64
+        Idris2_Value *tmp_41 = NULL;                         // Main:8:25--9:64
+        int64_t tmp_42 = idris2_extractInt(var_8);
         if (tmp_42 == UINT8_C(1)) {
-            idris2_removeReference(var_19);
-            Idris2_Value * var_17 = idris2_trampoline(Main_insert(var_0, var_1, var_5));
+            idris2_removeReference(var_8);
+            Idris2_Value * var_18 = idris2_trampoline(Main_insert(var_0, var_1, var_5));
                                                              // Main:8:42--8:46
              // constructor Main.Node                        // Main:8:42--8:46
             if (! constructor_39) {                          // Main:8:42--8:46
@@ -91,8 +92,8 @@ Idris2_Value *Main_insert
             constructor_39->args[2] = var_7;
             tmp_41 = (Idris2_Value*)constructor_39;
         } else if (tmp_42 == UINT8_C(0)) {
-            idris2_removeReference(var_19);
-            Idris2_Value * var_18 = idris2_trampoline(Main_insert(var_0, var_1, var_7));
+            idris2_removeReference(var_8);
+            Idris2_Value * var_19 = idris2_trampoline(Main_insert(var_0, var_1, var_7));
                                                              // Main:9:42--9:46
              // constructor Main.Node                        // Main:9:42--9:46
             if (! constructor_39) {                          // Main:9:42--9:46
@@ -101,7 +102,7 @@ Idris2_Value *Main_insert
             }                                                // Main:9:42--9:46
             constructor_39->args[0] = var_5;
             constructor_39->args[1] = var_6;
-            constructor_39->args[2] = var_18;
+            constructor_39->args[2] = var_19;
             tmp_41 = (Idris2_Value*)constructor_39;
         }
         tmp_35 = tmp_41;
