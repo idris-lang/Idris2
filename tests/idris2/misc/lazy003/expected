@@ -1,33 +1,32 @@
 1/1: Building DelayLam (DelayLam.idr)
 Main> Main.f1
-Arguments []
 Compile time tree: Delay (\x => x)
 Compiled: Delay Lazy (\x=> x)
 Refers to: Builtin.Unit
 Flags: covering
 Main> Main.f6
-Arguments []
 Compile time tree: Delay (\u1, {u2:1} => u1)
 Compiled: Delay Lazy (\u1=> \{u2:1}=> u1)
 Refers to: Builtin.Unit
 Flags: covering
 Main> Main.switch3
-Arguments [{arg:1}]
-Compile time tree: let f = Force (switch {arg:1}) in \{lamc:1} => let (x, (y, z)) = {lamc:1} in (f x, (f y, f z))
+Compile time tree: \{arg:1} => let f = Force (switch {arg:1}) in \{lamc:1} => let (x, (y, z)) = {lamc:1} in (f x, (f y, f z))
 Detaggable arg types: [1]
 Compiled: \ {arg:1} => let f = Force Lazy (Main.switch {arg:1}) in
 \{lamc:1}=> case {lamc:1} of
   { _builtin.CONS {tag = 1} [cons] {e:1} {e:2} => case {e:2} of  { _builtin.CONS {tag = 1} [cons] {e:3} {e:4} => _builtin.CONS {tag = 1} [cons] (f {e:1}) (_builtin.CONS {tag = 1} [cons] (f {e:3}) (f {e:4}))}
   }
-Refers to: Main.case block in switch3, Main.{_:1}, Main.switch, Builtin.Pair, Prelude.Types.Nat
+Refers to: Main.case block in switch3, Main.{_:1}, Main.switch, Builtin.Pair, Builtin.MkPair, Prelude.Types.Nat
 Refers to (runtime): _builtin.CONS, Main.switch
 Flags: covering
 Size change:
+  Builtin.MkPair:
+    l 0 1
+  r +----
+  0 |   <
+  1 |   <
   Main.switch:
     l 0
   r +--
   0 | =
-  Builtin.MkPair:
-    l
-  r +
 Main> Bye for now!
