@@ -1160,7 +1160,7 @@ mutual
            mix <- mixture fc fn phase ps err
            case mix of
              Nothing =>
-               do log "compile.casetree.intermediate" 25 "match: No clauses"
+               do log "compile.casetree.intermediate" 25 "match: No clauses in \{show fn}"
                   pure (TUnmatched fc "No clauses in \{show fn}")
              Just m =>
                do log "compile.casetree.intermediate" 25 $ "match: new case tree " ++ show !(toFullNames m)
@@ -1577,9 +1577,9 @@ makePMDef : {auto c : Ref Ctxt Defs} ->
 -- for the type, which we can use in coverage checking to ensure that one of
 -- the arguments has an empty type
 makePMDef fc ct phase fn ty []
-    = do log "compile.casetree.getpmdef" 20 "getPMDef: No clauses!"
+    = do log "compile.casetree.getpmdef" 20 "getPMDef: No clauses in \{show fn}!"
          defs <- get Ctxt
-         pure (!(getArgs 0 !(expand !(nf Env.empty ty))) ** (Unmatched fc "No clauses", []))
+         pure (!(getArgs 0 !(expand !(nf Env.empty ty))) ** (Unmatched fc "No clauses in \{show fn}", []))
   where
     getArgs : Int -> ClosedNF -> Core (SnocList Name)
     getArgs i (VBind fc x (Pi _ _ _ _) sc)
