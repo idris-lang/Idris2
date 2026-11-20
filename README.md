@@ -61,7 +61,6 @@ Finally, `pack` also makes it easy to download, and keep updated version of, [id
 
 - Multi-arch, multi-distro Docker [images](https://github.com/joshuanianji/idris-2-docker) for Idris 2
 - Official [images](https://github.com/stefan-hoeck/idris2-pack/pkgs/container/idris2-pack) for the Pack package manager
-- [alexhumphreys/idris2-dockerfile](https://github.com/alexhumphreys/idris2-dockerfile)
 - [mattpolzin/idris-docker](https://github.com/mattpolzin/idris-docker)
 
 ## Things still missing
