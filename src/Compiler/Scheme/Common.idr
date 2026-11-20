@@ -317,18 +317,25 @@ record LazyExprProc where
   constructor MkLazyExprProc
   processDelay : Builder -> Builder
   processForce : Builder -> Builder
+  ||| The delayed body of a top-level definition. What it builds is forced
+  ||| with `processForce`, like any other delayed value, and remembers its
+  ||| result: a top-level definition is never collected, so there is nothing
+  ||| to gain from computing it again.
+  processTopDelay : Builder -> Builder
 
 public export
 defaultLaziness : LazyExprProc
 defaultLaziness = MkLazyExprProc
   (\expr => "(lambda () " ++ expr ++ ")")
   (\expr => "(" ++ expr ++ ")")
+  (\expr => "(blodwen-lazy (lambda () " ++ expr ++ "))")
 
 public export
 weakMemoLaziness : LazyExprProc
 weakMemoLaziness = MkLazyExprProc
   (\expr => "(blodwen-delay-lazy (lambda () " ++ expr ++ "))")
   (\expr => "(blodwen-force-lazy " ++ expr ++ ")")
+  (\expr => "(blodwen-delay-lazy (lambda () " ++ expr ++ "))")
 
 parameters (constants : SortedSet Name)
            (schExtPrim : Nat -> ExtPrim -> List NamedCExp -> Core Builder)
@@ -574,8 +581,6 @@ parameters (constants : SortedSet Name)
         = schOp op !(schArgs i args)
     schExp i (NmExtPrim fc p args)
         = schExtPrim i (toPrim p) args
-    schExp i (NmForce _ _ (NmApp fc x@(NmRef {}) []))
-       = pure $ "(force " ++ !(schExp i x) ++ ")" -- Special version for memoized toplevel lazy definitions
     schExp i (NmForce fc lr t) = pure $ schLazy.processForce !(schExp i t)
     schExp i (NmDelay fc lr t) = pure $ schLazy.processDelay !(schExp i t)
     schExp i (NmConCase fc sc alts def)
@@ -665,15 +670,22 @@ parameters (constants : SortedSet Name)
   schDef : {auto c : Ref Ctxt Defs} ->
            Name -> NamedDef -> Core Builder
 
+  -- A top-level lazy definition: a delayed value like any other (so it can
+  -- be passed on unforced, and is forced the usual way) that remembers its
+  -- result. Building it runs no user code, so it is built when the program
+  -- is loaded, whether or not the name is in `constants`.
   schDef n (MkNmFun [] (NmDelay _ _ exp))
-    = pure $ "(define " ++ schName !(getFullName n) ++ "(delay "
-                     ++ !(schExp 0 exp) ++ "))\n" -- Special version for memoized toplevel lazy definitions
+     = do let val = schLazy.processTopDelay !(schExp 0 exp)
+          if contains n constants
+             then pure $ "(define " ++ schName !(getFullName n) ++ " " ++ val ++ ")\n"
+             else pure $ "(define " ++ schName !(getFullName n) ++ " (let ((val " ++ val ++ ")) (lambda () val)))\n"
 
   schDef n (MkNmFun [] exp)
      = if contains n constants
+          -- a value, built when the program is loaded
           then pure $ "(define " ++ schName !(getFullName n) ++ " " ++ !(schExp 0 exp) ++ ")\n"
-          else pure $ "(define " ++ schName !(getFullName n) ++ " (lambda () " ++ !(schExp 0 exp) ++ "))\n"
-
+          -- evaluated at the first use and remembered
+          else pure $ "(define " ++ schName !(getFullName n) ++ " (blodwen-lazy (lambda () " ++ !(schExp 0 exp) ++ ")))\n"
 
   schDef n (MkNmFun args exp)
      = pure $ "(define " ++ schName !(getFullName n) ++ " (lambda (" ++ schArglist args ++ ") "

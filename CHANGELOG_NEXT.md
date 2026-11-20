@@ -124,6 +124,19 @@ should target this file (`CHANGELOG_NEXT`).
 
 ### Backend changes
 
+#### Chez and Racket Backends
+
+* A top-level definition without arguments is no longer evaluated when the
+  program starts, unless it is already a value (constructors, functions and
+  literals). It is evaluated at its first use and the result is kept. Before, a
+  definition was either evaluated at start, used or not (so an unused costly,
+  crashing or non-terminating one cost time, crashed or hung the program), or
+  evaluated again at every use (when it could reach a crash, and always under
+  incremental compilation).
+* A top-level `Lazy` definition is an ordinary delayed value that keeps its
+  result. Passing one on unforced no longer crashes (Racket, incremental
+  compilation, and Chez with `lazy=weakMemo`).
+
 #### RefC Backend
 
 * Fixed an issue to do with `alligned_alloc` not existing on older MacOS

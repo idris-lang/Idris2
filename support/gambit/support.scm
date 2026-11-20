@@ -14,16 +14,22 @@
       (cons (vector-ref desc 2)
             (blodwen-read-args (vector-ref desc 3)))))
 
+;; A zero-argument top-level definition, evaluated at its first use.
+;; `f` is cleared only after `res` is set, so a second thread arriving
+;; meanwhile either evaluates `f` again (harmless: same value) or finds the
+;; result. A use from inside `f` itself runs `f` again, as a plain function
+;; would.
 (define blodwen-lazy
   (lambda (f)
-    (let ((evaluated #f) (res void))
+    (let ((res #f))
       (lambda ()
-        (if (not evaluated)
-            (begin (set! evaluated #t)
-                   (set! res (f))
-                   (set! f void))
-            (void))
-        res))))
+        (let ((g f))
+          (if g
+              (let ((v (g)))
+                (set! res v)
+                (set! f #f)
+                v)
+              res))))))
 
 (define (blodwen-delay-lazy f)
   f)

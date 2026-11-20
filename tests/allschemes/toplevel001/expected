@@ -1,0 +1,30 @@
+main starts
+shared:
+  [eval shared]
+5050
+5050
+viaPartial:
+  [eval viaPartial]
+7
+7
+nested:
+[4, 4]
+dependent:
+  [eval dependent]
+5051
+5051
+streams:
+[1, 1, 1]
+[0, 1, 0, 1]
+lazyC:
+  [eval lazyC]
+110
+110
+adder:
+  [eval adder]
+5051
+5052
+entry:
+  [eval viaLet]
+entry: 7!
+done

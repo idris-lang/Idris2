@@ -10,16 +10,12 @@
     [(i3nt ti3nt a6nt ta6nt tarm64nt) "windows"]
     [else "unknown"]))
 
-(define blodwen-lazy
-  (lambda (f)
-    (let ([evaluated #f] [res void])
-      (lambda ()
-        (if (not evaluated)
-            (begin (set! evaluated #t)
-                   (set! res (f))
-                   (set! f void))
-            (void))
-        res))))
+;; A zero-argument top-level definition, evaluated at its first use.
+;; A Chez promise is a procedure: applying it forces it, and it keeps its
+;; value. It is forced by application rather than with `force` so that it can
+;; be used wherever a delayed value is expected.
+(define (blodwen-lazy f)
+  (delay (f)))
 
 (define (blodwen-delay-lazy f)
   (weak-cons #!bwp f))
