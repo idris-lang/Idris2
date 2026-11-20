@@ -226,17 +226,17 @@ mutual
            symbol ")"
            pure e
 
-  multiplicity : EmptyRule (Maybe Integer)
-  multiplicity
-      = do c <- intLit
-           pure (Just c)
-    <|> pure Nothing
 
-  getMult : Maybe Integer -> EmptyRule RigCount
-  getMult (Just 0) = pure erased
-  getMult (Just 1) = pure linear
-  getMult Nothing = pure top
-  getMult _ = fatalError "Invalid multiplicity (must be 0 or 1)"
+  multiplicityOpt : EmptyRule (Maybe RigCount)
+  multiplicityOpt
+      = optional $ do c <- intLit
+                      the (EmptyRule RigCount) $ case c of
+                        0 => pure erased
+                        1 => pure linear
+                        _ => fail "Invalid multiplicity (must be 0 or 1)"
+
+  multiplicity : EmptyRule RigCount
+  multiplicity = fromMaybe top <$> multiplicityOpt
 
   pibindAll : FC -> PiInfo RawImp -> List (WithRig $ WithMName RawImp) ->
               RawImp -> RawImp
@@ -245,36 +245,33 @@ mutual
            = IPi fc ty.rig p (map val ty.mName) ty.val (pibindAll fc p rest scope)
 
   bindList : OriginDesc -> FilePos -> IndentInfo ->
-             Rule (List (RigCount, Name, RawImp))
+             Rule (List (Maybe RigCount, Name, RawImp))
   bindList fname start indents
       = forget <$> sepBy1 (symbol ",")
-                          (do rigc <- multiplicity
+                          (do rig <- multiplicityOpt
                               n <- userName
                               end <- location
                               ty <- option
                                        (Implicit (MkFC fname start end) False)
                                        (do symbol ":"
                                            appExpr fname indents)
-                              rig <- getMult rigc
                               pure (rig, n, ty))
 
 
   pibindListName : OriginDesc -> FilePos -> IndentInfo ->
                    Rule (List (WithRig $ WithName RawImp))
   pibindListName fname start indents
-       = do rigc <- multiplicity
+       = do rig <- multiplicity
             ns <- sepBy1 (symbol ",") (withFC userName)
             symbol ":"
             ty <- expr fname indents
             atEnd indents
-            rig <- getMult rigc
             pure (map (\n => Mk [rig, n] ty) (forget ns))
      <|> forget <$> sepBy1 (symbol ",")
-                           (do rigc <- multiplicity
+                           (do rig <- multiplicity
                                n <- withFC name
                                symbol ":"
                                ty <- expr fname indents
-                               rig <- getMult rigc
                                pure (Mk [rig, n] ty))
 
   pibindList : OriginDesc -> FilePos -> IndentInfo ->
@@ -347,7 +344,7 @@ mutual
            end <- location
            pure (bindAll (MkFC fname start end) binders scope)
      where
-       bindAll : FC -> List (RigCount, Name, RawImp) -> RawImp -> RawImp
+       bindAll : FC -> List (Maybe RigCount, Name, RawImp) -> RawImp -> RawImp
        bindAll fc [] scope = scope
        bindAll fc ((rig, n, ty) :: rest) scope
            = ILam fc rig Explicit (Just n) ty (bindAll fc rest scope)
@@ -356,8 +353,7 @@ mutual
   let_ fname indents
       = do start <- location
            keyword "let"
-           rigc <- multiplicity
-           rig <- getMult rigc
+           rig <- multiplicity
            n <- bounds name
            symbol "="
            commit
@@ -520,15 +516,14 @@ mutual
            let fc = MkFC fname start end
            pure (!(getFn lhs), PatClause fc lhs rhs)
     <|> do keyword "with"
-           m <- multiplicity
-           rig <- getMult m
+           rig <- multiplicity
            wstart <- location
            symbol "("
            wval <- expr fname indents
            symbol ")"
            prf <- optional $ do
                     keyword "proof"
-                    pure (!(getMult !multiplicity), !name)
+                    MkPair <$> multiplicity <*> name
            ws <- nonEmptyBlock (clause (S withArgs) fname)
            end <- location
            let fc = MkFC fname start end
@@ -733,11 +728,10 @@ topDecl fname indents
          visOpts <- many visOpt
          vis <- getVisibility Nothing visOpts
          let opts = mapMaybe getRight visOpts
-         m <- multiplicity
-         rig <- getMult m
+         rig <- multiplicity
          claim <- tyDecl fname indents
          end <- location
-         pure (IClaim (MkFCVal (MkFC fname start end) $ MkIClaimData  rig vis opts claim))
+         pure (IClaim (MkFCVal (MkFC fname start end) $ MkIClaimData rig vis opts claim))
   <|> recordDecl fname indents
   <|> directive fname indents
   <|> definition fname indents

@@ -36,7 +36,7 @@ parameters
     ty <- unelab env ty
     defs <- get Ctxt
     new_hole <- uniqueHoleName defs [] (nameRoot hole)
-    let iintrod = ILam replFC rig Explicit (Just x) ty (IHole replFC new_hole)
+    let iintrod = ILam replFC (Just rig) Explicit (Just x) ty (IHole replFC new_hole)
     pure iintrod
 
   introCon : Name -> Term lhsCtxt -> Core (List IRawImp)

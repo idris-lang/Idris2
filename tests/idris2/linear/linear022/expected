@@ -1,0 +1,8 @@
+1/1: Building Issue3914 (Issue3914.idr)
+Error: While processing right hand side of foo. Mismatch between: (1 _ : ()) -> Integer and (0 _ : ()) -> Integer.
+
+Issue3914:2:10--2:11
+ 1 | foo : (0 _ : Unit) -> Integer
+ 2 | foo = \1 x : Unit => 42
+              ^
+

@@ -92,7 +92,8 @@ mutual
 
        PPi : FC -> RigCount -> PiInfo (PTerm' nm) -> Maybe Name ->
              (argTy : PTerm' nm) -> (retTy : PTerm' nm) -> PTerm' nm
-       PLam : FC -> RigCount -> PiInfo (PTerm' nm) -> (pat : PTerm' nm) ->
+       PLam : FC -> Maybe RigCount -> -- Nothing means unknown, needs to be inferred
+              PiInfo (PTerm' nm) -> (pat : PTerm' nm) ->
               (argTy : PTerm' nm) -> (scope : PTerm' nm) -> PTerm' nm
        PLet : FC -> RigCount -> (pat : PTerm' nm) ->
               (nTy : PTerm' nm) -> (nVal : PTerm' nm) -> (scope : PTerm' nm) ->
@@ -237,7 +238,9 @@ mutual
   public export
   data PDo' : Type -> Type where
        DoExp : FC -> PTerm' nm -> PDo' nm
-       DoBind : FC -> (nameFC : FC) -> Name -> RigCount -> Maybe (PTerm' nm) -> PTerm' nm -> PDo' nm
+       DoBind : FC -> (nameFC : FC) -> Name ->
+                Maybe RigCount -> -- Nothing means unknown, needs to be inferred
+                Maybe (PTerm' nm) -> PTerm' nm -> PDo' nm
        DoBindPat : FC -> PTerm' nm -> Maybe (PTerm' nm) -> PTerm' nm -> List (PClause' nm) -> PDo' nm
        DoLet : FC -> (lhs : FC) -> Name -> RigCount -> PTerm' nm -> PTerm' nm -> PDo' nm
        DoLetPat : FC -> PTerm' nm -> PTerm' nm -> PTerm' nm -> List (PClause' nm) -> PDo' nm
@@ -801,8 +804,8 @@ parameters {0 nm : Type} (toName : nm -> Name)
   showAlt (MkImpossible _ lhs) = " | " ++ showPTerm lhs ++ " impossible;"
 
   showDo (DoExp _ tm) = showPTerm tm
-  showDo (DoBind _ _ n rig (Just ty) tm) = showCount rig ++ show n ++ " : " ++ showPTerm ty ++ " <- " ++ showPTerm tm
-  showDo (DoBind _ _ n rig _ tm) = showCount rig ++ show n ++ " <- " ++ showPTerm tm
+  showDo (DoBind _ _ n rig (Just ty) tm) = maybe "" showCount rig ++ show n ++ " : " ++ showPTerm ty ++ " <- " ++ showPTerm tm
+  showDo (DoBind _ _ n rig _ tm) = maybe "" showCount rig ++ show n ++ " <- " ++ showPTerm tm
   showDo (DoBindPat _ l (Just ty) tm alts)
       = showPTerm l ++ " : " ++ showPTerm ty ++ " <- " ++ showPTerm tm ++ concatMap showAlt alts
   showDo (DoBindPat _ l _ tm alts)
@@ -858,9 +861,9 @@ parameters {0 nm : Type} (toName : nm -> Name)
   showPTermPrec d (PPi _ rig (DefImplicit t) (Just n) arg ret)
         = "{default " ++ showPTermPrec App t ++ " " ++ showCount rig ++ showPrec d n ++ " : " ++ showPTermPrec d arg ++ "} -> " ++ showPTermPrec d ret
   showPTermPrec d (PLam _ rig _ n (PImplicit _) sc)
-        = "\\" ++ showCount rig ++ showPTermPrec d n ++ " => " ++ showPTermPrec d sc
+        = "\\" ++ maybe "" showCount rig ++ showPTermPrec d n ++ " => " ++ showPTermPrec d sc
   showPTermPrec d (PLam _ rig _ n ty sc)
-        = "\\" ++ showCount rig ++ showPTermPrec d n ++ " : " ++ showPTermPrec d ty ++ " => " ++ showPTermPrec d sc
+        = "\\" ++ maybe "" showCount rig ++ showPTermPrec d n ++ " : " ++ showPTermPrec d ty ++ " => " ++ showPTermPrec d sc
   showPTermPrec d (PLet _ rig n (PImplicit _) val sc alts)
         = "let " ++ showCount rig ++ showPTermPrec d n ++ " = " ++ showPTermPrec d val ++ " in " ++ showPTermPrec d sc
   showPTermPrec d (PLet _ rig n ty val sc alts)
@@ -1204,4 +1207,3 @@ Show PDeclNoFC where
   show (PRunElabDecl {}) = "PRunElabDecl"
   show (PDirective {}) = "PDirective"
   show (PBuiltin {}) = "PBuiltin"
-

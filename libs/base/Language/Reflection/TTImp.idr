@@ -39,7 +39,7 @@ mutual
        IPi : FC -> (mult : Count) -> (info : PiInfo TTImp) -> (binder : Maybe Name) ->
              (argTy : TTImp) -> (retTy : TTImp) -> TTImp
        ||| A lambda abstraction, of the form`\(mult binder : argTy) => retTy`, with implicitness determined by `info`
-       ILam : FC -> (mult : Count) -> (info : PiInfo TTImp) -> (binder : Maybe Name) ->
+       ILam : FC -> (mult : {- TODO: Maybe -} Count) -> (info : PiInfo TTImp) -> (binder : Maybe Name) ->
               (argTy : TTImp) -> (lamTy : TTImp) -> TTImp
        ||| A let binding, of the form `let mult var : nTy = nVal in scope`
        ILet : FC -> (lhsFC : FC) -> (mult : Count) -> (var : Name) ->

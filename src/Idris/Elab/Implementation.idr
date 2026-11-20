@@ -335,7 +335,7 @@ elabImplementation {vars} ifc vis opts_in pass env nest is cons iname ps named i
     mkLam : List (Name, RigCount, PiInfo RawImp) -> RawImp -> RawImp
     mkLam [] tm = tm
     mkLam ((x, c, p) :: xs) tm
-        = ILam EmptyFC c p (Just x) (Implicit vfc False) (mkLam xs tm)
+        = ILam EmptyFC (Just c) p (Just x) (Implicit vfc False) (mkLam xs tm)
 
     applyTo : RawImp -> List (Name, RigCount, PiInfo RawImp) -> RawImp
     applyTo tm [] = tm

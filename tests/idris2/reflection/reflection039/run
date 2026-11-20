@@ -1,0 +1,4 @@
+. ../../../testutils.sh
+
+# expected unification error after updating lambdas in reflection
+check Issue3914.idr
