@@ -63,7 +63,6 @@ Finally, `pack` also makes it easy to download, and keep updated version of, [id
 - Official [images](https://github.com/stefan-hoeck/idris2-pack/pkgs/container/idris2-pack) for the Pack package manager
 - [alexhumphreys/idris2-dockerfile](https://github.com/alexhumphreys/idris2-dockerfile)
 - [mattpolzin/idris-docker](https://github.com/mattpolzin/idris-docker)
-- [dgellow/idris-docker-image](https://github.com/dgellow/idris-docker-image)
 
 ## Things still missing
 
