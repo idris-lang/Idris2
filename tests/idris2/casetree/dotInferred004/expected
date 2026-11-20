@@ -1,0 +1,15 @@
+1/1: Building Main (Main.idr)
+Main> 0 Main.fromString
+Arguments [{arg:1}, {arg:2}]
+Compile time tree: case {arg:2} of
+  Refl {e:1} {e:2} => ()
+Detaggable arg types: [1]
+Refers to: Builtin.MkUnit
+Refers to (runtime): Builtin.MkUnit
+Flags: allguarded, covering
+Size change:
+  Builtin.MkUnit:
+    l
+  r +
+Main> 
+Bye for now!

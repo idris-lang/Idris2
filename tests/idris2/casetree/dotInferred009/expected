@@ -1,0 +1,29 @@
+1/1: Building Issue2341 (Issue2341.idr)
+Main> 0 Main.smallStep
+Arguments [{arg:1}, {arg:2}]
+Compile time tree: case {arg:2} of
+  True {e:1} {e:2} => ?smallStep_rhs_0 [locals in scope: {e:1}, {arg:1}]
+  False {e:3} {e:4} => ?smallStep_rhs_1 [locals in scope: {e:3}, {arg:1}]
+  If {e:5} {e:6} {e:7} {e:8} {e:9} {e:10} => ?smallStep_rhs_2 [locals in scope: {arg:1}, {e:10}, {e:9}, {e:8}, {e:6}]
+  Var {e:11} {e:12} {e:13} {e:14} => ?smallStep_rhs_3 [locals in scope: {arg:1}, {e:14}, {e:11}]
+  Abs {e:15} {e:16} {e:17} {e:18} {e:19} {e:20} => ?smallStep_rhs_4 [locals in scope: {e:17}, {e:19}, {e:20}, {e:18}, {e:15}, {arg:1}]
+  App {e:21} {e:22} {e:23} {e:24} {e:25} {e:26} => ?smallStep_rhs_5 [locals in scope: {arg:1}, {e:23}, {e:26}, {e:25}, {e:21}]
+  Unit {e:27} {e:28} => ?smallStep_rhs_6 [locals in scope: {e:27}, {arg:1}]
+  Seq {e:29} {e:30} {e:31} {e:32} {e:33} => ?smallStep_rhs_7 [locals in scope: {arg:1}, {e:33}, {e:32}, {e:30}]
+  Let {e:34} {e:35} {e:36} {e:37} {e:38} {e:39} {e:40} => ?smallStep_rhs_8 [locals in scope: {arg:1}, {e:36}, {e:40}, {e:39}, {e:38}, {e:34}]
+  Tuple {e:41} {e:42} {e:43} {e:44} {e:45} => ?smallStep_rhs_9 [locals in scope: {e:43}, {e:44}, {e:45}, {e:41}, {arg:1}]
+  Proj {e:46} {e:47} {e:48} {e:49} {e:50} {e:51} => ?smallStep_rhs_10 [locals in scope: {e:48}, {e:50}, {e:51}, {e:49}, {e:46}, {arg:1}]
+  Variant {e:52} {e:53} {e:54} {e:55} {e:56} {e:57} => ?smallStep_rhs_11 [locals in scope: {e:55}, {e:54}, {e:56}, {e:57}, {e:52}, {arg:1}]
+  Case {e:58} {e:59} {e:60} {e:61} {e:62} {e:63} => ?smallStep_rhs_12 [locals in scope: {arg:1}, {e:61}, {e:63}, {e:62}, {e:58}]
+  Fix {e:64} {e:65} {e:66} {e:67} => ?smallStep_rhs_13 [locals in scope: {arg:1}, {e:67}, {e:65}]
+  Nil {e:68} {e:69} {e:70} => ?smallStep_rhs_14 [locals in scope: {e:70}, {e:68}, {arg:1}]
+  Cons {e:71} {e:72} {e:73} {e:74} {e:75} => ?smallStep_rhs_15 [locals in scope: {e:73}, {e:75}, {e:74}, {e:71}, {arg:1}]
+  IsNil {e:76} {e:77} {e:78} {e:79} => ?smallStep_rhs_16 [locals in scope: {e:78}, {e:79}, {e:76}, {arg:1}]
+  Head {e:80} {e:81} {e:82} {e:83} => ?smallStep_rhs_17 [locals in scope: {arg:1}, {e:83}, {e:80}]
+  Tail {e:84} {e:85} {e:86} {e:87} => ?smallStep_rhs_18 [locals in scope: {e:86}, {e:87}, {e:84}, {arg:1}]
+  LitNat {e:88} {e:89} {e:90} => ?smallStep_rhs_19 [locals in scope: {e:90}, {e:88}, {arg:1}]
+Inferrable args: [0, 1]
+Refers to: Main.smallStep_rhs_9, Main.smallStep_rhs_8, Main.smallStep_rhs_7, Main.smallStep_rhs_6, Main.smallStep_rhs_5, Main.smallStep_rhs_4, Main.smallStep_rhs_3, Main.smallStep_rhs_2, Main.smallStep_rhs_19, Main.smallStep_rhs_18, Main.smallStep_rhs_17, Main.smallStep_rhs_16, Main.smallStep_rhs_15, Main.smallStep_rhs_14, Main.smallStep_rhs_13, Main.smallStep_rhs_12, Main.smallStep_rhs_11, Main.smallStep_rhs_10, Main.smallStep_rhs_1, Main.smallStep_rhs_0
+Flags: covering
+Main> 
+Bye for now!
