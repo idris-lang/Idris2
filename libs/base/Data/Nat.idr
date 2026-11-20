@@ -206,6 +206,16 @@ isLTE (S k) (S j)
            No contra => No (contra . fromLteSucc)
            Yes prf => Yes (LTESucc prf)
 
+%inline
+partial -- from idris_crash
+isLTE' : (m, n : Nat) -> Dec (LTE m n)
+isLTE' m n = if natToInteger m <= natToInteger n
+     -- Since LTE is a "Nat-like" type, we can exploit the fact that it shares the same runtime representation to forge a proof.
+     then Yes (believe_me m)
+     else No (\_ => idris_crash "isLTENat : no proof")
+
+%transform "isLTENat" isLTE = isLTE'
+
 public export
 isGTE : (m, n : Nat) -> Dec (GTE m n)
 isGTE m n = isLTE n m
@@ -274,6 +284,14 @@ lte Z        right     = True
 lte left     Z         = False
 lte (S left) (S right) = lte left right
 
+lte' : Nat -> Nat -> Bool
+lte' m n = natToInteger m <= natToInteger n
+
+-- lteEqLte' : (m, n : Nat) -> lte m n = lte' m n
+-- lteEqLte' m n  = believe_me $ Refl{x=(lte m n)}
+
+%transform "lteNat" lte = lte'
+
 public export
 gte : Nat -> Nat -> Bool
 gte left right = lte right left
@@ -315,11 +333,37 @@ minimum Z m = Z
 minimum (S n) Z = Z
 minimum (S n) (S m) = S (minimum n m)
 
+%inline
+minimum' : Nat -> Nat -> Nat
+minimum' m n = if lte m n then m else n
+
+minimumEqMinimum' : (m, n : Nat) -> minimum m n = minimum' m n
+minimumEqMinimum' Z _ = Refl
+minimumEqMinimum' (S _) Z = Refl
+minimumEqMinimum' (S m) (S n) with (lte m n) proof p
+  _ | True  = cong S (trans (minimumEqMinimum' m n) (rewrite p in Refl))
+  _ | False = cong S (trans (minimumEqMinimum' m n) (rewrite p in Refl))
+
+%transform "minimumNat" minimum = minimum'
+
 public export
 maximum : Nat -> Nat -> Nat
-maximum Z m = m
-maximum (S n) Z = S n
-maximum (S n) (S m) = S (maximum n m)
+maximum Z n = n
+maximum (S m) Z = S m
+maximum (S m) (S n) = S (maximum m n)
+
+%inline
+maximum' : Nat -> Nat -> Nat
+maximum' m n = if lte m n then n else m
+
+maximumEqMaximum' : (m, n : Nat) -> maximum m n = maximum' m n
+maximumEqMaximum' Z _ = Refl
+maximumEqMaximum' (S _) Z = Refl
+maximumEqMaximum' (S m) (S n) with (lte m n) proof p
+  _ | True  = cong S (trans (maximumEqMaximum' m n) (rewrite p in Refl))
+  _ | False = cong S (trans (maximumEqMaximum' m n) (rewrite p in Refl))
+
+%transform "maximumNat" maximum = maximum'
 
 -- Proofs on S
 

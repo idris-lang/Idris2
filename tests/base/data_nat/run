@@ -1,3 +1,4 @@
 . ../../testutils.sh
 
 check Properties.idr
+run Transform.idr
