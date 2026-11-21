@@ -55,7 +55,7 @@ Missing cases:
     fnc 0 _ _
 
 1/1: Building Issue3733 (Issue3733.idr)
-Warning: Issue3733:4:6--4:11:Cannot match on a partially applied constructor: (Main.MkX {imp:1})
+Warning: Issue3733:4:6--4:11:Cannot match on a partially applied constructor: (Main.MkX (RigW, {imp:1}))
 
 Issue3733:4:6--4:11
  1 | data X = MkX Int String
