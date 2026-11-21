@@ -197,7 +197,12 @@ exactlyOne {vars} fc env top target all
                              !(traverse normRes rs))
   where
     normRes : (Term vars, Defs, UState) -> Core (Term vars)
-    normRes (tm, defs, _) = normaliseHoles env tm
+    normRes (tm, defs, _) = do
+        parent <- get Ctxt
+        put Ctxt defs
+        res <- normaliseHoles env tm
+        put Ctxt parent
+        pure res
 
 -- We can only resolve things which are at unrestricted multiplicity. Expression
 -- search happens before linearity checking and we can't guarantee that just
