@@ -89,7 +89,7 @@ parameters (fn1 : Name) (idIdx : Nat)
         scopeEq args y var vs (CRHS tm)
             = cexpIdentity var (Just (y, vs)) const tm
         scopeEq args y var vs (CArg x sc)
-            = scopeEq (args :< x) y (weaken var) (MkVar First :: map weaken vs) sc
+            = scopeEq (args :< x) y (weaken var) (map weaken vs ++ [MkVar First]) sc
 
         altEq : CConAlt vars -> Bool
         altEq (MkConAlt y _ _ sc) = scopeEq [<] y var [] sc
