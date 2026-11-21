@@ -158,7 +158,6 @@ impossibleErrOK (CantSolveEq fc gam env l r)
                              !(expand !(nf env r))
          put Ctxt defs'
          pure res
-impossibleErrOK (BadDotPattern _ _ ErasedArg _ _) = pure True
 impossibleErrOK (CyclicMeta _ _ _ _) = pure True
 impossibleErrOK (AllFailed errs)
     = anyM impossibleErrOK (map snd errs)
