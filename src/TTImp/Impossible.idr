@@ -161,6 +161,9 @@ mutual
 
            gdefs <- lookupNameBy id n (gamma defs)
            [(n', i, gdef)] <- dropNoMatch !(traverseOpt expand mty) gdefs
+              | [] => if length gdefs == 0
+                        then undefinedName fc n
+                        else throw $ GenericMsg fc "\{show n} does not match expected type"
               | ts => ambiguousName fc n (map fst ts)
            tynf <- expand !(nf Env.empty (type gdef))
            -- #899 we need to make sure that type & data constructors are marked
