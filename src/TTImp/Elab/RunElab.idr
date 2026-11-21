@@ -156,7 +156,7 @@ elabScript rig fc nest env script@(VDCon nfc nm t ar args) exp
         -- fm : A -> B
         -- elab : A
         = do act <- elabScript rig fc nest env !(expandFull act) exp
-             fm <- expandFull fm
+             fm <- expand fm
              apply fc fm top (pure act)
     elabCon defs "Ap" [<_,_,actF,actX]
         -- actF : Elab (A -> B)
