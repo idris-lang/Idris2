@@ -7,7 +7,7 @@ Compiled: \ {arg:1}, {arg:2} => case {arg:1} of
   ; Main.Lim {tag = 2} {e:2} => Main.addord_lim {e:2} {arg:2}
   }
 Refers to: Main.addord_lim, Main.addord, Main.S
-Refers to (runtime): Main.addord_lim, Main.addord, Main.S
+Refers to (runtime): Main.addord_lim, Main.addord, Main.S, Main.O, Main.Lim
 Flags: total
 Size change:
   Main.S:

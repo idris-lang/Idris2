@@ -9,7 +9,7 @@ Compiled: \ {arg:2}, {arg:3} => case {arg:3} of
   ; Main.(::) {tag = 1} {e:1} {e:2} => _builtin.CONS {tag = 1} [cons] {e:1} (Main.idL {e:2} (Main.view {e:2}))
   }
 Refers to: Main.view, Main.idL, Prelude.Basics.Nil, Prelude.Basics.(::)
-Refers to (runtime): _builtin.CONS, _builtin.NIL, Main.view, Main.idL
+Refers to (runtime): _builtin.CONS, _builtin.NIL, Main.view, Main.idL, Main.Nil, Main.(::)
 Flags: covering
 Size change:
   Prelude.Basics.Nil:

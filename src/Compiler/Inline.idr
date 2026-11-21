@@ -572,8 +572,8 @@ mutual
 
   addRefsConAlts : NameMap Bool -> List (CConAlt vars) -> NameMap Bool
   addRefsConAlts ds [] = ds
-  addRefsConAlts ds (MkConAlt _ _ _ sc :: rest)
-      = addRefsConAlts (addRefsScope ds sc) rest
+  addRefsConAlts ds (MkConAlt n _ _ sc :: rest)
+      = addRefsConAlts (addRefsScope (insert n False ds) sc) rest
 
   addRefsConstAlts : NameMap Bool -> List (CConstAlt vars) -> NameMap Bool
   addRefsConstAlts ds [] = ds

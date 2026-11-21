@@ -16,7 +16,7 @@ Compiled: \ {arg:2}, {arg:3}, {arg:4} => case {arg:4} of
            }
   }
 Refers to: Main.mergeLim, Prelude.Basics.(::)
-Refers to (runtime): _builtin.CONS, Main.mergeLim
+Refers to (runtime): _builtin.CONS, _builtin.NIL, Main.mergeLim
 Flags: covering
 Size change:
   Prelude.Basics.(::):
@@ -53,7 +53,7 @@ Compiled: \ {arg:2}, {arg:3}, {arg:4} => case {arg:4} of
            }
   }
 Refers to: Main.mergeLim, Prelude.Basics.(::)
-Refers to (runtime): _builtin.CONS, Main.mergeLim
+Refers to (runtime): _builtin.CONS, _builtin.NIL, Main.mergeLim
 Flags: covering
 Size change:
   Prelude.Basics.(::):
