@@ -383,7 +383,7 @@ getMissing fc n ty ctree
     trimArgs : SnocList (ZeroOneOmega, ClosedTerm) -> ClosedNF ->
                List (ZeroOneOmega, ClosedTerm) -> Core (List (ZeroOneOmega, ClosedTerm))
     trimArgs acc (VBind _ n (Pi {}) sc) ((c, x) :: xs)
-        = trimArgs (acc :< (c, x)) !(expand !(sc (pure (VErased fc Placeholder)))) xs
+        = trimArgs (acc :< (c, x)) !(expand !(sc (nf Env.empty x))) xs
     trimArgs acc _ _ = pure $ toList acc
 
 -- For the given name, get the names it refers to which are not themselves
