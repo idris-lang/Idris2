@@ -119,7 +119,7 @@ conflict defs env nfty n
                 conflictNF (i + 1) t
                        !(expand !(sc (pure (vRef fc Bound x'))))
       conflictNF i nf (VApp _ Bound n [<] _)
-          = pure (Just [(n, !(quote env nf))])
+          = pure (Just [(n, !(quoteNF env nf))])
       conflictNF i (VDCon _ n t a args) (VDCon _ n' t' a' args')
           = if t == t'
                then conflictArgs i
