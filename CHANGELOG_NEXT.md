@@ -144,6 +144,14 @@ should target this file (`CHANGELOG_NEXT`).
   generated code calls `idris2_cast_string_to_*`.
 * Fix missing FFI of Data.Buffer.
 
+#### Chez Backend
+
+* `channelGetWithTimeout` now measures its timeout with the monotonic clock.
+  It used to count only the requested 10µs sleeps, which last much longer in
+  practice, so it waited several times the requested time (about 7x on Linux,
+  more on Windows). The `chez/channels009` test, turned off because it blocked
+  the Windows CI, is enabled again.
+
 ### Library changes
 
 #### Base

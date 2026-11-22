@@ -460,24 +460,31 @@
   '()))
 
 (define (blodwen-channel-get-with-timeout ty chan timeout)
-  ;; timeout is in milliseconds, convert to nanoseconds
+  ;; timeout is in milliseconds, convert to nanoseconds.
+  ;; The deadline is checked against the monotonic clock: a requested
+  ;; sleep usually lasts much longer than sleep-ns, so summing the
+  ;; requested sleeps would make the real timeout several times too long.
   (let* ([timeout-ns (* timeout 1000000)]
+         [deadline (add-duration (current-time 'time-monotonic)
+                                 (make-time 'time-duration
+                                            (mod timeout-ns 1000000000)
+                                            (div timeout-ns 1000000000)))]
          [sleep-ns 10000] ; 10 us step
          [sleep-time (make-time 'time-duration (mod sleep-ns 1000000000)
                                                 (div sleep-ns 1000000000))])
-    (let loop ([elapsed 0])
+    (let loop ()
       (if (mutex-acquire (channel-read-mut chan) #f)
           (let* ([val-box  (channel-val-box chan)]
                  [the-val  (unbox val-box)])
             (if (null? the-val)
-                (if (>= elapsed timeout-ns)
+                (if (time>=? (current-time 'time-monotonic) deadline)
                     (begin
                       (mutex-release (channel-read-mut chan))
                       '())
                     (begin
                       (mutex-release (channel-read-mut chan))
                       (sleep sleep-time)
-                      (loop (+ elapsed sleep-ns))))
+                      (loop)))
                 (let* ([read-box (channel-read-box chan)]
                        [read-cv  (channel-read-cv chan)])
                   (set-box! val-box '())
@@ -487,7 +494,7 @@
                   (box the-val))))
           (begin
             (sleep sleep-time)
-            (loop (+ elapsed sleep-ns)))))))
+            (loop))))))
 
 ;; Mutex
 
