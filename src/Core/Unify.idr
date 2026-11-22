@@ -1070,7 +1070,10 @@ mutual
                                           tmnf
                      let solveOrElsePostpone : Term newvars -> Core UnifyResult
                          solveOrElsePostpone stm = do
-                           mbResult <- solveHole fc mode env mname mref
+                           let errorFC = case getFn tm of
+                                           Meta _ (PV {}) _ _ => nfc
+                                           _ => fc
+                           mbResult <- solveHole errorFC mode env mname mref
                                                  args sp locs submv
                                                  tm stm tmnf
                            flip fromMaybe (pure <$> mbResult) $

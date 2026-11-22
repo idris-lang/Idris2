@@ -3,7 +3,7 @@ Written TTC
 Yaffle> Bye for now!
 Processing as TTImp
 Dot2:15:1--16:1:When elaborating left hand side of Main.half:
-Dot2:15:10--15:15:Pattern variable {P:n:1} unifies with ?{P:m:1}_[]
+Dot2:15:28--15:30:Pattern variable {P:n:1} unifies with ?{P:m:1}_[]
 Yaffle> Bye for now!
 Processing as TTImp
 Dot3:18:1--19:1:When elaborating left hand side of Main.addBaz3:
