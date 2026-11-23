@@ -1,0 +1,3 @@
+timed out: True
+waited at least 500 ms: True
+waited less than 2000 ms: True
