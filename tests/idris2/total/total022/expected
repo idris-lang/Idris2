@@ -10,7 +10,7 @@ Compiled: \ {arg:1}, {arg:2}, {arg:3}, {arg:4} => case {arg:1} of
            }
   }
 Refers to: Main.f, Prelude.Basics.List, Prelude.Basics.(::), Builtin.MkUnit, Builtin.(===), Prelude.Types.Nothing
-Refers to (runtime): _builtin.NOTHING, Main.f
+Refers to (runtime): _builtin.CONS, _builtin.JUST, _builtin.NIL, _builtin.NOTHING, Main.f
 Flags: total
 Size change:
   Builtin.MkUnit:

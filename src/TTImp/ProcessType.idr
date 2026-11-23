@@ -91,10 +91,8 @@ findInferrable : {auto c : Ref Ctxt Defs} ->
                  Glued [<] -> Core NatSet
 findInferrable ty = fi 0 0 [] NatSet.empty ty
   where
-    spineGlued : {auto c : Ref Ctxt Defs} ->
-            {vars: _} ->
-            SpineEntry vars -> Core (Glued vars)
-    spineGlued e = pure $ asGlued !(value e)
+    spineGlued : {vars: _} -> SpineEntry vars -> Core (Glued vars)
+    spineGlued e = pure $ asGlued !(spineVal e)
 
     mutual
       -- Add to the inferrable arguments from the given type. An argument is
