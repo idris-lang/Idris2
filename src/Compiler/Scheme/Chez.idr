@@ -531,7 +531,7 @@ compileToSO prof chez appDirRel outSsAbs
             | Left err => throw (FileErr tmpFileAbs err)
          coreLift_ $ chmodRaw tmpFileAbs 0o755
          0 <- coreLift $ system [chez, "--script", tmpFileAbs]
-            | status => throw (InternalError "Chez exited with return code \{show status}")
+            | status => throw (InternalError "Chez exited with return code \\{show status}")
          pure ()
 
 ||| Compile a TT expression to Chez Scheme using incremental module builds
@@ -659,7 +659,8 @@ executeExpr :
 executeExpr c s tmpDir tm
     = do Just sh <- compileExpr False c s tmpDir tmpDir tm "_tmpchez"
             | Nothing => throw (InternalError "compileExpr returned Nothing")
-         coreLift_ $ system [sh]
+         0 <- coreLift $ system [sh] | status => throw (InternalError "Chez execution failed with exit code \{show status}")
+         pure ()
 
 incCompile :
   Ref Ctxt Defs ->
@@ -700,7 +701,7 @@ incCompile c s sourceFile
                Right () <- coreLift $ writeFile tmpFileAbs build
                   | Left err => throw (FileErr tmpFileAbs err)
                0 <- coreLift $ system [chez, "--script", tmpFileAbs]
-                  | status => throw (InternalError "Chez exited with return code \{show status}")
+                  | status => throw (InternalError "Chez exited with return code \\{show status}")
                pure (Just (soFilename, mapMaybe fst fgndefs))
 
 ||| Codegen wrapper for Chez scheme implementation.

@@ -473,7 +473,8 @@ executeExpr :
 executeExpr c s tmpDir tm
     = do Just sh <- compileExpr False c s tmpDir tmpDir tm "_tmpracket"
             | Nothing => throw (InternalError "compileExpr returned Nothing")
-         coreLift_ $ system [sh]
+         0 <- coreLift $ system [sh] | status => throw (InternalError "Racket execution failed with exit code \{show status}")
+         pure ()
 
 export
 codegenRacket : Codegen
