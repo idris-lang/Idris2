@@ -460,15 +460,14 @@
   '()))
 
 (define (blodwen-channel-get-with-timeout ty chan timeout)
-  ;; timeout is in milliseconds, convert to nanoseconds.
-  ;; The deadline is checked against the monotonic clock: a requested
-  ;; sleep usually lasts much longer than sleep-ns, so summing the
-  ;; requested sleeps would make the real timeout several times too long.
-  (let* ([timeout-ns (* timeout 1000000)]
-         [deadline (add-duration (current-time 'time-monotonic)
-                                 (make-time 'time-duration
-                                            (mod timeout-ns 1000000000)
-                                            (div timeout-ns 1000000000)))]
+  ;; timeout is in milliseconds.
+  ;; The deadline is checked against (real-time), the real elapsed time in
+  ;; milliseconds: a requested sleep usually lasts much longer than sleep-ns,
+  ;; so summing the requested sleeps would make the timeout several times too
+  ;; long. (real-time) does not allocate, so polling cannot trigger a garbage
+  ;; collection, which would stall this thread for as long as another thread
+  ;; is blocked in a foreign call (e.g. usleep).
+  (let* ([deadline (+ (real-time) timeout)]
          [sleep-ns 10000] ; 10 us step
          [sleep-time (make-time 'time-duration (mod sleep-ns 1000000000)
                                                 (div sleep-ns 1000000000))])
@@ -477,7 +476,8 @@
           (let* ([val-box  (channel-val-box chan)]
                  [the-val  (unbox val-box)])
             (if (null? the-val)
-                (if (time>=? (current-time 'time-monotonic) deadline)
+                ;; real-time has 1 ms resolution: > ensures a full timeout
+                (if (> (real-time) deadline)
                     (begin
                       (mutex-release (channel-read-mut chan))
                       '())

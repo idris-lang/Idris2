@@ -146,11 +146,13 @@ should target this file (`CHANGELOG_NEXT`).
 
 #### Chez Backend
 
-* `channelGetWithTimeout` now measures its timeout with the monotonic clock.
-  It used to count only the requested 10µs sleeps, which last much longer in
-  practice, so it waited several times the requested time (about 7x on Linux,
-  more on Windows). The `chez/channels009` test, turned off because it blocked
-  the Windows CI, is enabled again.
+* `channelGetWithTimeout` now measures its timeout against the real elapsed
+  time. It used to count only the requested 10µs sleeps, which last much
+  longer in practice, so it waited several times the requested time (about 7x
+  on Linux). Its polling loop does not allocate, so it cannot trigger a
+  garbage collection that would stall it while another thread is blocked in a
+  foreign call such as `usleep`. The `chez/channels009` test, turned off
+  because it blocked the Windows CI, is enabled again.
 
 ### Library changes
 
