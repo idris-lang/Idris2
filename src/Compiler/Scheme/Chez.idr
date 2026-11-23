@@ -248,6 +248,7 @@ cCall fc cfn clib args CFBuffer _
     = throw (GenericMsg fc "Can't return Buffer from a foreign function")
 cCall fc cfn clib args ret collectSafe
     = do loaded <- get Loaded
+         when (clib == "") $ throw (GenericMsg fc "Invalid C foreign function declaration: a library name is required")
          lib <- if clib `elem` loaded
                    then pure Nothing
                    else do put Loaded (clib :: loaded)
