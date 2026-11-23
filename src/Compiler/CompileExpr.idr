@@ -380,6 +380,7 @@ getVars (S rest) = first :: map weakenVar (getVars rest)
 data NArgs : Type where
      User : Name -> List ClosedClosure -> NArgs
      Struct : String -> List (String, ClosedClosure) -> NArgs
+     Array : Int -> ClosedClosure -> NArgs
      NUnit : NArgs
      NPtr : NArgs
      NGCPtr : NArgs
@@ -427,6 +428,11 @@ getNArgs defs (NS _ (UN $ Basic "Struct")) [n, args]
     = do NPrimVal _ (Str n') <- evalClosure defs n
              | nf => throw (GenericMsg (getLoc nf) "Unknown name for struct")
          pure (Struct n' !(getFieldArgs defs args))
+getNArgs defs (NS _ (UN $ Basic "CArray")) [n, ty]
+    = do NPrimVal _ (I n') <- evalClosure defs n
+             | nf => throw (GenericMsg (getLoc nf) "Invalid size for array")
+         pure (Array n' ty)
+
 getNArgs defs n args = pure $ User n args
 
 -- The order of the arguments have a big effect on case-tree size
@@ -471,6 +477,10 @@ nfToCFType _ (NTCon fc n_in _ args) s
                                        tycf <- nfToCFType fc tynf False
                                        pure (n, tycf)) fs
                    pure (CFStruct n fs')
+              Array n t =>
+                do narg <- evalClosure defs t
+                   carg <- nfToCFType fc narg s
+                   pure $ CFArray n carg
               NUnit => pure CFUnit
               NPtr => pure CFPtr
               NGCPtr => pure CFGCPtr

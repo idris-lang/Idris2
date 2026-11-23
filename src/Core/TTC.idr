@@ -838,6 +838,7 @@ TTC CFType where
   toBuf (CFFun s t) = do tag 11; toBuf s; toBuf t
   toBuf (CFIORes t) = do tag 12; toBuf t
   toBuf (CFStruct n a) = do tag 13; toBuf n; toBuf a
+  toBuf (CFArray n a) = do tag 99; toBuf n; toBuf a
   toBuf (CFUser n a) = do tag 14; toBuf n; toBuf a
   toBuf CFGCPtr = tag 15
   toBuf CFBuffer = tag 16
