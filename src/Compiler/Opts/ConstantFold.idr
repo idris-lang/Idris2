@@ -5,8 +5,11 @@ import Core.Context.Log
 import Core.Primitives
 import Core.Evaluate.Value
 
+import Compiler.CaseOpts
+
 import Data.Vect
 import Data.SnocList
+import Data.SnocList.Quantifiers
 
 import Libraries.Data.List.SizeOf
 import Libraries.Data.SnocList.SizeOf
@@ -108,6 +111,27 @@ constFold rho e@(CRef fc x) = CRef fc x
 constFold rho (CLam fc x y)
   = CLam fc x $ constFold (wk (mkSizeOf (Scope.single x)) rho) y
 
+-- Forward let down
+--
+-- transform:
+--
+-- let sc (YesInline) = action
+-- in let eff (NotInline) = sc
+--   in body
+--
+-- into:
+--
+-- let eff (NotInline) = action
+-- in body[sc := eff]
+constFold rho (CLet fc x outerInl y (CLet fc' z innerInl (CLocal {idx = 0} _ _) body)) =
+  let swapped : CExp ((vars :< z) :< x) := shiftBinder {inner = Scope.empty} {args = [x]} z body
+      body' : CExp (vars :< z) := substs (suc zero) [<CLocal fc' First] swapped
+      merged : CExp vars := CLet fc' z (mergeInline outerInl innerInl) y body'
+  in constFold rho merged
+  where
+    mergeInline : InlineOk -> InlineOk -> InlineOk
+    mergeInline YesInline YesInline = YesInline
+    mergeInline _ _ = NotInline
 -- Expressions of the type `let x := y in x` can be introduced
 -- by the compiler when inlining monadic code (for instance, `io_bind`).
 -- They can be replaced by `y`.

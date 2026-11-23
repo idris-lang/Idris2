@@ -48,6 +48,7 @@ shiftVar nvar
       Right nvar => embed nvar
 
 mutual
+  export
   shiftBinder : {inner, args : _} ->
                 (new : Name) ->
                 CExp (((vars <>< args) :< old) ++ inner) ->
