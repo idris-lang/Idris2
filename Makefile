@@ -269,6 +269,75 @@ bootstrap-racket: support
 	$(SHELL) ./bootstrap-stage1-racket.sh
 	IDRIS2_CG="racket" $(SHELL) ./bootstrap-stage2.sh
 
+# create distributable
+distributable: distributable-bootstrap distributable-assets distributable-installer
+
+# do not use regular prefix in the distributed bootstrapped version
+distributable-bootstrap: distributable-bootstrap-chez distributable-bootstrap-racket
+
+distributable-bootstrap-chez:
+	PREFIX='unused' ${MAKE} -e bootstrap
+
+distributable-bootstrap-racket:
+	PREFIX='unused' ${MAKE} -e bootstrap-racket
+
+# create assets required for distribution and also modify them
+# this includes getting rid of shebangs
+distributable-assets: distributable-assets-chez distributable-assets-racket
+
+DISTRIBUTION_ASSETS_CHEZ_DIR="distribution-assets-chez"
+DISTRIBUTION_ASSETS_RACKET_DIR="distribution-assets-racket"
+
+distributable-assets-chez:
+	PREFIX="${PWD}/$(DISTRIBUTION_ASSETS_CHEZ_DIR)" ${MAKE} -e install
+	$(RM) "$(DISTRIBUTION_ASSETS_CHEZ_DIR)/bin/idris2"
+	cp "distribution/entry_asset" "$(DISTRIBUTION_ASSETS_CHEZ_DIR)/bin/idris2"
+
+	tail -n +2 "$(DISTRIBUTION_ASSETS_CHEZ_DIR)/bin/idris2_app/idris2.ss" > "$(DISTRIBUTION_ASSETS_CHEZ_DIR)/bin/idris2_app/idris2_temp.ss"
+	$(RM) "$(DISTRIBUTION_ASSETS_CHEZ_DIR)/bin/idris2_app/idris2.ss"
+	mv "$(DISTRIBUTION_ASSETS_CHEZ_DIR)/bin/idris2_app/idris2_temp.ss" "$(DISTRIBUTION_ASSETS_CHEZ_DIR)/bin/idris2_app/idris2.ss"
+
+	tail -n +2 "$(DISTRIBUTION_ASSETS_CHEZ_DIR)/bin/idris2_app/idris2.so" > "$(DISTRIBUTION_ASSETS_CHEZ_DIR)/bin/idris2_app/idris2_temp.so"
+	$(RM) "$(DISTRIBUTION_ASSETS_CHEZ_DIR)/bin/idris2_app/idris2.so"
+	mv "$(DISTRIBUTION_ASSETS_CHEZ_DIR)/bin/idris2_app/idris2_temp.so" "$(DISTRIBUTION_ASSETS_CHEZ_DIR)/bin/idris2_app/idris2.so"
+
+	$(RM) "$(DISTRIBUTION_ASSETS_CHEZ_DIR)/bin/idris2_app/idris2-boot.ss"
+	$(RM) "$(DISTRIBUTION_ASSETS_CHEZ_DIR)/bin/idris2_app/idris2-boot.so"
+
+	$(RM) "$(DISTRIBUTION_ASSETS_CHEZ_DIR)/bin/idris2_app/idris2.rkt"
+	$(RM) "$(DISTRIBUTION_ASSETS_CHEZ_DIR)/bin/idris2_app/idris2"
+	$(RM) "$(DISTRIBUTION_ASSETS_CHEZ_DIR)/bin/idris2_app/idris2-boot.rkt"
+	$(RM) "$(DISTRIBUTION_ASSETS_CHEZ_DIR)/bin/idris2_app/idris2-boot"
+
+	$(RM) "$(DISTRIBUTION_ASSETS_CHEZ_DIR)/bin/idris2_app/compileChez"
+
+	$(SCHEME) --version > "$(DISTRIBUTION_ASSETS_CHEZ_DIR)/bin/idris2_app/chez_version"
+
+distributable-assets-racket:
+	PREFIX="${PWD}/$(DISTRIBUTION_ASSETS_RACKET_DIR)" IDRIS2_CG="racket" ${MAKE} -e install
+
+	$(RM) "$(DISTRIBUTION_ASSETS_RACKET_DIR)/bin/idris2"
+	cp "distribution/entry_asset_racket" "$(DISTRIBUTION_ASSETS_RACKET_DIR)/bin/idris2"
+
+	$(RM) "$(DISTRIBUTION_ASSETS_RACKET_DIR)/bin/idris2_app/idris2-boot"
+	$(RM) "$(DISTRIBUTION_ASSETS_RACKET_DIR)/bin/idris2_app/idris2-boot.so"
+	$(RM) "$(DISTRIBUTION_ASSETS_RACKET_DIR)/bin/idris2_app/idris2-boot.rkt"
+	$(RM) "$(DISTRIBUTION_ASSETS_RACKET_DIR)/bin/idris2_app/idris2.ss"
+	$(RM) "$(DISTRIBUTION_ASSETS_RACKET_DIR)/bin/idris2_app/idris2.so"
+	$(RM) "$(DISTRIBUTION_ASSETS_RACKET_DIR)/bin/idris2_app/idris2-boot.ss"
+	$(RM) "$(DISTRIBUTION_ASSETS_RACKET_DIR)/bin/idris2_app/compileChez"
+	$(RM) "$(DISTRIBUTION_ASSETS_RACKET_DIR)/bin/idris2_app/idris2"
+	$(RACO) exe -o "$(DISTRIBUTION_ASSETS_RACKET_DIR)/bin/idris2_app/idris2" "$(DISTRIBUTION_ASSETS_RACKET_DIR)/bin/idris2_app/idris2.rkt"
+	$(RACO) distribute "$(DISTRIBUTION_ASSETS_RACKET_DIR)/bin/idris2_app/dist" "$(DISTRIBUTION_ASSETS_RACKET_DIR)/bin/idris2_app/idris2"
+	$(RM) "$(DISTRIBUTION_ASSETS_RACKET_DIR)/bin/idris2_app/idris2.rkt"
+	$(RM) "$(DISTRIBUTION_ASSETS_RACKET_DIR)/bin/idris2_app/idris2"
+
+distributable-installer:
+	FILE_NAME="idris2_distributable_chez" CURRENT_BUILD="$(DISTRIBUTION_ASSETS_CHEZ_DIR)" $(SH) distribution/make_distributable.sh
+	FILE_NAME="idris2_distributable_chez_base64" CURRENT_BUILD="$(DISTRIBUTION_ASSETS_CHEZ_DIR)" BASE64=1 $(SH) distribution/make_distributable.sh
+	FILE_NAME="idris2_distributable_racket" CURRENT_BUILD="$(DISTRIBUTION_ASSETS_RACKET_DIR)" RACKET=1 $(SH) distribution/make_distributable.sh
+	FILE_NAME="idris2_distributable_racket_base64" CURRENT_BUILD="$(DISTRIBUTION_ASSETS_RACKET_DIR)" RACKET=1 BASE64=1 $(SH) distribution/make_distributable.sh
+
 bootstrap-test:
 	$(MAKE) test INTERACTIVE='' IDRIS2_PREFIX=${IDRIS2_BOOT_PREFIX}
 
@@ -278,10 +347,17 @@ ci-windows-bootstrap-test:
 bootstrap-clean:
 	$(RM) -r bootstrap-build
 
+distributable-clean:
+	$(RM) -r $(DISTRIBUTION_ASSETS_CHEZ_DIR)
+	$(RM) -r $(DISTRIBUTION_ASSETS_RACKET_DIR)
+	$(RM) "idris2_distributable_chez"
+	$(RM) "idris2_distributable_chez_base64"
+	$(RM) "idris2_distributable_racket"
+	$(RM) "idris2_distributable_racket_base64"
 
 .PHONY: distclean
 
-distclean: clean bootstrap-clean
+distclean: clean bootstrap-clean distributable-clean
 	@find . -type f -name '*.ttc' -exec rm -f {} \;
 	@find . -type f -name '*.ttm' -exec rm -f {} \;
 	@find . -type f -name '*.ibc' -exec rm -f {} \;
