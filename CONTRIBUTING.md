@@ -22,7 +22,7 @@ capacity to review and accept contributions and we cannot commit to maintain
 any new features which are contributed.
 
 
-## General comments
+## General Comments
 
 Overall, when making a contribution, please try to make sure they follow the
 general philosophy of the Idris project, which can be summarised as follows:
@@ -33,7 +33,7 @@ general philosophy of the Idris project, which can be summarised as follows:
   properties of programs, but will not *require* them to do so.
 
 
-### Guidlines for Writing Issues
+### Guidelines for Writing Issues
 
 When writing an issue and describing the problem at hand, avoid linking to
 private channels of discussions such as Discord. Other contributors might not
@@ -42,7 +42,7 @@ find, or some people might not be able to use the service from their devices.
 Instead, write a clear summary of the situation so that anyone can
 understand what the issue is about without additional context.
 
-### Guidlines for Pull Requests
+### Guidelines for Pull Requests
 
 Many contributions will require accompanying tests and documentation updates.
 Bugfixes in particular should be accompanied by tests, to avoid future
@@ -73,14 +73,13 @@ could be any other knowledgable community member.
     with reviewing.
 * More tests, which test new features or, more importantly, existing features
   which are not exercised enough in the existing tests
-  - Note that the 'test' subdirectory is intended for testing the type checker
-    and compiler, not specifically for testing libraries. However, we do need
-    a better way of testing libraries! (More on this below)
+  - Note that the 'tests' subdirectory is used for testing the type checker,
+    compiler, and libraries.
 * Rewrites of existing features which demonstrably improve performance
 * Documentation, and improvements to documentation generation tools
 * Improvements to existing tool support, including:
   - Type-driven program synthesis
-  - :search and related REPL commands
+  - `:search` and related REPL commands
   - Interactive editing
 
 ## Things That Should Be Discussed via the Issue Tracker First
@@ -144,7 +143,7 @@ including contributions made by Autonomous Coding Agents that use 'Agentic
 Coding', will not be considered.
 
 
-## Other possible contributions
+## Other Possible Contributions
 
 There's plenty of other things that might be good ideas. If it isn't covered
 above, and you're in doubt as to whether it might be a good idea, please let us
@@ -158,7 +157,7 @@ Good places to discuss possible contributions are:
 * The issue tracker (in this case, please make your proposal as concrete as
   possible).
 
-## On performance
+## On Performance
 
 If you're editing the core system, or adding any features, please keep an
 eye on performance. In particular, check that the libraries build and tests
