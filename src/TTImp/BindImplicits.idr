@@ -167,7 +167,7 @@ addUsing uimpls tm
 export
 bindTypeNames : {auto c : Ref Ctxt Defs} ->
                 FC -> List (Maybe Name, RawImp) ->
-                List Name -> RawImp-> Core RawImp
+                List Name -> RawImp -> Core RawImp
 bindTypeNames fc uimpls env tm
     = if !isUnboundImplicits
              then do ns <- findUniqueBindableNames fc True env [] tm

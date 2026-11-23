@@ -97,7 +97,7 @@ addData vars vis tidx (MkData con datacons)
          log "declare.data.parameters" 20 $
             "Positions of parameters for datatype" ++ show tyName ++
             ": " ++ show paramPositions
-         let tydef = newDef con.fc tyName top vars con.val (specified vis)
+         let tydef = newDef {bind = con.bind} con.fc tyName top vars con.val (specified vis)
                             (TCon con.arity
                                   paramPositions
                                   allPos
@@ -116,7 +116,7 @@ addData vars vis tidx (MkData con datacons)
     addDataConstructors tag [] gam = pure gam
     addDataConstructors tag (con :: cs) gam
         = do let conName = con.name.val
-             let condef = newDef con.fc conName top vars con.val (specified $ conVisibility vis) (DCon tag con.arity Nothing)
+             let condef = newDef {bind = con.bind} con.fc conName top vars con.val (specified $ conVisibility vis) (DCon tag con.arity Nothing)
              -- Check 'n' is undefined
              Nothing <- lookupCtxtExact conName gam
                  | Just gdef => throw (AlreadyDefined con.fc conName)
