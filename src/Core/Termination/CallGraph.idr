@@ -403,17 +403,17 @@ mutual
               Core (List SCCall)
   findSCapp g eqs pats substs (VLocal fc _ _ sp)
       = do args <- traverseSnocList value sp
-           scs <- traverseSnocList (findSC g eqs pats substs) args
+           scs <- traverseSnocList (findSC Unguarded eqs pats substs) args
            pure (concat scs)
   findSCapp g eqs pats substs (VPrimOp _ _ sp)
-      = do scs <- traverse (findSC g eqs pats substs) (toList sp)
+      = do scs <- traverse (findSC Unguarded eqs pats substs) (toList sp)
            pure (concat scs)
   findSCapp g eqs pats substs (VApp fc Bound fn sp _)
       = do args <- traverseSnocList value sp
            logC "totality.termination.sizechange" 50 $ pure "findSCapp VApp Bound \{show !(toFullNames fn)}"
            for_ (toList args) $ \a =>
              logNF "totality.termination.sizechange" 50 "findSCapp VApp Bound arg" [<] a
-           scs <- traverseSnocList (findSC g eqs pats substs) args
+           scs <- traverseSnocList (findSC Unguarded eqs pats substs) args
            pure (concat scs)
   findSCapp g eqs pats substs (VApp fc Func fn sp _) = findSCAppFunc g eqs pats substs fc fn sp
   -- If we're InDelay and find a constructor (or a function call which is

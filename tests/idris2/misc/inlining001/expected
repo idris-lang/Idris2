@@ -18,12 +18,6 @@ Size change:
   Prelude.Types.Num implementation at Prelude.Types:1:
     l
   r +
-  Prelude.Types.S:
-    l
-  r +
-  Prelude.Types.Z:
-    l
-  r +
 Main> Main.forceNoInline
 Compile time tree: 10
 Compiled: 10
