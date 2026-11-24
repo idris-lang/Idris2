@@ -182,21 +182,34 @@ mutual
                     FC -> Name -> SnocList (Maybe Name, Name) ->
                     Env Term vars -> NF [<] ->
                     CaseScope vars -> Core IImpClause
-      unelabScope fc n args env _ (RHS _ tm)
+      unelabScope fc n args env _ (RHS fs tm)
           = do (tm', _) <- unelabTy' umode nest env tm
+               forced <- traverse (\ (MkVar v, t) =>
+                       do (t', _) <- unelabTy' umode nest env t
+                          pure (nameAt v, t')) fs
                let n' = MkKindedName (Just Bound) n n
-               pure (PatClause fc (applySpine (IVar fc n') args) tm')
+               pure (PatClause fc (applySpine forced (IVar fc n') args) tm')
         where
-          applySpine : IRawImp -> SnocList (Maybe Name, Name) -> IRawImp
-          applySpine fn [<] = fn
-          applySpine fn (args :< (Nothing, arg))
-              = let arg' = MkKindedName (Just Bound) arg arg in
-                    IApp fc (applySpine fn args) (IVar fc arg')
-          applySpine fn (args :< (Just n, arg))
-              = let arg' = MkKindedName (Just Bound) arg arg in
-                    case umode of
-                        ImplicitHoles => applySpine fn args
-                        _ => INamedApp fc (applySpine fn args) n (IVar fc arg')
+          patVar : List (Name, IRawImp) -> Name -> IRawImp
+          patVar forced arg
+              = case lookup arg forced of
+                     Just t =>
+                       IAs fc EmptyFC UseLeft arg
+                           (IMustUnify fc UserDotted t)
+                     Nothing =>
+                       IBindVar fc arg
+
+          applySpine : List (Name, IRawImp) ->
+                       IRawImp -> SnocList (Maybe Name, Name) -> IRawImp
+          applySpine forced fn [<] = fn
+          applySpine forced fn (args :< (Nothing, arg))
+              = IApp fc (applySpine forced fn args)
+                        (patVar forced arg)
+          applySpine forced fn (args :< (Just n, arg))
+              = case umode of
+                     ImplicitHoles => applySpine forced fn args
+                     _ => INamedApp fc (applySpine forced fn args) n
+                                       (patVar forced arg)
 
       unelabScope fc n args env (VBind _ v (Pi _ rig p ty) tsc) (Arg c x sc)
           = do p' <- the (Core (PiInfo (Term [<]))) $ case p of
@@ -230,8 +243,7 @@ mutual
                        PVar fc top Explicit (Erased fc Placeholder) :<
                        PVar fc erased Implicit (Erased fc Placeholder)
                (tm', _) <- unelabTy' umode nest env' tm
-               let a' = MkKindedName (Just Bound) a a
-               pure (PatClause fc (IDelay fc (IVar fc a')) tm')
+               pure (PatClause fc (IDelay fc (IBindVar fc a)) tm')
       unelabAlt (ConstCase fc c tm)
           = do (tm', _) <- unelabTy' umode nest env tm
                pure (PatClause fc (IPrimVal fc c) tm')

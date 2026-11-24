@@ -1,0 +1,6 @@
+1/1: Building ForcedAlias (ForcedAlias.idr)
+1/1: Building DelayCase (DelayCase.idr)
+LOG declare.type:1: Processing Main.forceDelay
+LOG declare.type:1: Processing Main.test
+LOG 1: forceDelay: (%lam RigW Explicit (Just {lamc:1}) (%delayed Int) (%case ({lamc:1} : (%delayed Int)) [(%delay ${e:1}) = Builtin.MkUnit]))
+LOG 1: delay case round-trip

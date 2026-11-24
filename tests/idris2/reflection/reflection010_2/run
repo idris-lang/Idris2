@@ -1,0 +1,4 @@
+. ../../../testutils.sh
+
+check ForcedAlias.idr
+check DelayCase.idr
