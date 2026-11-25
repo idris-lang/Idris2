@@ -2,3 +2,10 @@
 
 idris2 --codegen chez InlineCase.idr -o inline-case
 grep "define InlineCase-product" build/exec/inline-case_app/inline-case.ss
+grep "define InlineCase-product" build/exec/inline-case_app/inline-case.ss |
+  grep -o "(InlineCase-product " |
+  awk 'END { print NR }'
+printf 'abc\n' | build/exec/inline-case
+printf '\n'
+printf '\n' | build/exec/inline-case
+printf '\n'
