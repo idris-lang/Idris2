@@ -256,7 +256,7 @@ pwarningRaw (ParserWarning fc msg)
     = pure $ pretty0 msg <+> line <+> !(ploc fc)
 pwarningRaw (UnreachableClause fc env tm)
     = pure $ errorDesc (reflow "Unreachable clause:"
-        <++> code !(pshow env tm))
+        <++> code !(pshowNoNorm env tm))
         <+> line <+> !(ploc fc)
 pwarningRaw (ShadowingGlobalDefs fc ns)
     = pure $ vcat

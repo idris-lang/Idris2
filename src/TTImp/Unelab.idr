@@ -5,6 +5,7 @@ import Core.Env
 
 import TTImp.TTImp
 
+import Data.SnocList.Elem
 import Data.String
 import Data.Vect
 
@@ -21,21 +22,40 @@ import Libraries.Data.SnocList.SizeOf
 
 %default covering
 
-used : (idx : Nat) -> Term vars -> Bool
-used idx (Local _ _ var _) = idx == var
-used {vars} idx (Bind _ x b sc) = usedBinder b || used (1 + idx) sc
-  where
-    usedBinder : Binder (Term vars) -> Bool
-    usedBinder (Let _ _ val ty) = used idx val || used idx ty
-    usedBinder b = used idx (binderType b)
-used idx (Meta _ _ _ args) = any (used idx . snd) args
-used idx (App _ f _ a) = used idx f || used idx a
-used idx (As _ _ _ pat) = used idx pat
-used idx (TDelayed _ _ tm) = used idx tm
-used idx (TDelay _ _ _ tm) = used idx tm
-used idx (TForce _ _ tm) = used idx tm
-used idx (PrimOp _ _ args) = any (used idx) args
-used idx _ = False
+mutual
+  used : (idx : Nat) -> Term vars -> Bool
+  used idx (Local _ _ var _) = idx == var
+  used {vars} idx (Bind _ x b sc) = usedBinder b || used (1 + idx) sc
+    where
+      usedBinder : Binder (Term vars) -> Bool
+      usedBinder (Let _ _ val ty) = used idx val || used idx ty
+      usedBinder b = used idx (binderType b)
+  used idx (Meta _ _ _ args) = any (used idx . snd) args
+  used idx (App _ f _ a) = used idx f || used idx a
+  used idx (As _ _ _ pat) = used idx pat
+  used idx (Case _ _ _ sc scty alts)
+      = used idx sc || used idx scty || any (usedCaseAlt idx) alts
+  used idx (TDelayed _ _ tm) = used idx tm
+  used idx (TDelay _ _ _ tm) = used idx tm
+  used idx (TForce _ _ tm) = used idx tm
+  used idx (PrimOp _ _ args) = any (used idx) args
+  used idx _ = False
+
+  usedCaseScope : (idx : Nat) -> CaseScope vars -> Bool
+  usedCaseScope idx (RHS fs tm)
+      = any (\ (v, t) => idx == varIdx v || used idx t) fs || used idx tm
+  usedCaseScope idx (Arg _ _ sc)
+      = usedCaseScope (1 + idx) sc
+
+  usedCaseAlt : (idx : Nat) -> CaseAlt vars -> Bool
+  usedCaseAlt idx (ConCase _ _ _ sc)
+      = usedCaseScope idx sc
+  usedCaseAlt idx (DelayCase _ _ _ tm)
+      = used (2 + idx) tm
+  usedCaseAlt idx (ConstCase _ _ tm)
+      = used idx tm
+  usedCaseAlt idx (DefaultCase _ tm)
+      = used idx tm
 
 public export
 data UnelabMode
@@ -50,6 +70,31 @@ Eq UnelabMode where
    ImplicitHoles == ImplicitHoles = True
    NoImplicits == NoImplicits = True
    _ == _ = False
+
+caseBlockPats : {auto c : Ref Ctxt Defs} ->
+                Name -> Core (Maybe (Nat, List Clause))
+caseBlockPats n
+    = do fullName <- getFullName n
+         let NS _ (CaseBlock _ _) = fullName
+              | _ => pure Nothing
+         defs <- get Ctxt
+         Just glob <- lookupCtxtExact fullName (gamma defs)
+              | Nothing => pure Nothing
+         let Function _ treect _ (Just pats) = definition glob
+              | _ => pure Nothing
+         let Just argpos = findCaseArgPos treect
+              | Nothing => pure Nothing
+         pure $ Just (argpos, pats)
+      where
+        -- The compile-time definition is wrapped in lambdas. The first Case
+        -- selects the scrutinee by its de Bruijn index.
+        findCaseArgPos : Term vs -> Maybe Nat
+        findCaseArgPos (Bind _ _ (Lam {}) sc)
+            = findCaseArgPos sc
+        findCaseArgPos (Case _ _ _ (Local _ _ idx _) _ _)
+            = Just idx
+        findCaseArgPos _
+            = Nothing
 
 mutual
   dropParams : List (Name, Nat) -> (IRawImp, Glued vars) ->
@@ -67,6 +112,157 @@ mutual
       apply tm (Explicit fc a :: args) = apply (IApp fc tm a) args
       apply tm (Auto fc a :: args) = apply (IAutoApp fc tm a) args
       apply tm (Named fc n a :: args) = apply (INamedApp fc tm n a) args
+
+  ||| Unelaborate a call to a case expression as an inline case,
+  ||| using the original clauses stored in the case block definition.
+  unelabCase : {vars : _} ->
+               {auto c : Ref Ctxt Defs} ->
+               List (Name, Nat) ->
+               Env Term vars ->
+               Term vars ->
+               Core (Maybe IRawImp)
+  unelabCase nest env tm
+      = case getFnArgsSpine tm of
+             (Ref _ _ n, args) => do
+               Just (argpos, pats) <- caseBlockPats n
+                    | Nothing => pure Nothing
+               let Just nargs = clauseArity pats
+                    | _ => pure Nothing
+               if length args == nargs
+                  then mkCase pats argpos (map snd args)
+                  else pure Nothing
+             _ => pure Nothing
+    where
+      -- All clauses of a case block have the same LHS arity.
+      clauseArity : List Clause -> Maybe Nat
+      clauseArity []
+          = Nothing
+      clauseArity (MkClause _ lhs _ :: _)
+          = Just $ length $ snd $ getFnArgsSpine lhs
+
+      argVars : {0 vs : _} -> VarSet vs -> Term vs -> VarSet vs
+      argVars acc (As _ _ as pat)
+          = argVars (argVars acc as) pat
+      argVars acc (Local _ _ _ p)
+          = VarSet.insert (MkVar p) acc
+      argVars acc _
+          = acc
+
+      mkClause : FC -> Nat -> SnocList (Term vars) ->
+                 Clause -> Core (Maybe IImpClause)
+      mkClause fc argpos args (MkClause {vars = vs'} clauseEnv lhs rhs)
+          = do logTerm "unelab.case.clause" 20
+                       "Unelaborating clause" lhs
+
+               let patArgs = snd (getFnArgsSpine lhs)
+                   Just (_, pat) = map fst (indexElem argpos patArgs)
+                     | _ => pure Nothing
+                   substs = zip (map (argVars (VarSet.empty {vs = vs'}))
+                                     (map snd patArgs))
+                                args
+                   rhs' = substArgs (mkSizeOf vs') substs rhs
+
+               logTerm "unelab.case.clause" 20
+                       "Unelaborating LHS" pat
+               lhs' <- unelabTy Full nest clauseEnv pat
+
+               logTerm "unelab.case.clause" 20
+                       "Unelaborating RHS" rhs'
+               logEnv "unelab.case.clause" 20
+                      "In Env" clauseEnv
+
+               rhs'' <- unelabTy Full nest
+                                 (clauseEnv ++ env)
+                                 rhs'
+
+               pure $ Just $
+                 PatClause fc (fst lhs') (fst rhs'')
+           where
+             weakenSubsts : SnocList (VarSet vs, Term vs) ->
+                            SnocList (VarSet (vs :< x), Term (vs :< x))
+             weakenSubsts = map (bimap (weaken {tm = VarSet}) weaken)
+
+             mutual
+               substVars : SnocList (VarSet vs, Term vs) -> Term vs -> Term vs
+               substVars xs tm@(Local fc _ idx prf)
+                   = case find ((MkVar prf `VarSet.elem`) . fst) xs of
+                          Just (_, new) => new
+                          Nothing => tm
+               substVars xs (Meta fc n i args)
+                   = Meta fc n i (mapSnd @{Compose} (substVars xs) args)
+               substVars xs (Bind fc y b scope)
+                   = Bind fc y (map (substVars xs) b) (substVars (weakenSubsts xs) scope)
+               substVars xs (App fc fn r arg)
+                   = App fc (substVars xs fn) r (substVars xs arg)
+               substVars xs (As fc s as pat)
+                   = As fc s (substVars xs as) (substVars xs pat)
+               substVars xs (Case fc ct c sc scty alts)
+                   = Case fc ct c (substVars xs sc) (substVars xs scty)
+                          (map (substCaseAlt xs) alts)
+               substVars xs (TDelayed fc y z)
+                   = TDelayed fc y (substVars xs z)
+               substVars xs (TDelay fc y t z)
+                   = TDelay fc y (substVars xs t) (substVars xs z)
+               substVars xs (TForce fc r y)
+                   = TForce fc r (substVars xs y)
+               substVars xs (PrimOp fc fn args)
+                   = PrimOp fc fn (map (substVars xs) args)
+               substVars xs (Erased fc why)
+                   = Erased fc (map (substVars xs) why)
+               substVars xs tm = tm
+
+               substCaseScope : SnocList (VarSet vs, Term vs) ->
+                                CaseScope vs -> CaseScope vs
+               substCaseScope xs (RHS fs tm)
+                   = RHS (map (mapSnd (substVars xs)) fs) (substVars xs tm)
+               substCaseScope xs (Arg c x sc)
+                   = Arg c x (substCaseScope (weakenSubsts xs) sc)
+
+               substCaseAlt : SnocList (VarSet vs, Term vs) ->
+                              CaseAlt vs -> CaseAlt vs
+               substCaseAlt xs (ConCase fc n t sc)
+                   = ConCase fc n t (substCaseScope xs sc)
+               substCaseAlt xs (DelayCase fc ty arg rhs)
+                   = DelayCase fc ty arg (substVars (weakenSubsts (weakenSubsts xs)) rhs)
+               substCaseAlt xs (ConstCase fc c tm)
+                   = ConstCase fc c (substVars xs tm)
+               substCaseAlt xs (DefaultCase fc tm)
+                   = DefaultCase fc (substVars xs tm)
+
+             substArgs : SizeOf vs -> SnocList (VarSet vs, Term vars) ->
+                         Term vs -> Term (Scope.addInner vars vs)
+             substArgs p substs tm
+                 = let substs' =
+                         map (bimap (embed {tm = VarSet} {outer = vars})
+                                    (weakenNs p))
+                             substs
+                       tm' = embed tm
+                   in substVars substs' tm'
+
+      mkCase : List Clause -> Nat -> SnocList (Term vars) ->
+               Core (Maybe IRawImp)
+      mkCase pats argpos args
+          = do unless (null args) $
+                 log "unelab.case.clause" 20 $
+                   unwords $
+                     "Ignoring" :: map show (toList args)
+
+               let Just scrutinee = map fst (indexElem argpos args)
+                     | _ => pure Nothing
+                   fc = getLoc scrutinee
+
+               (scrutinee', _) <-
+                 unelabTy Full nest env scrutinee
+
+               Just clauses <-
+                 map sequence $
+                   traverse (mkClause fc argpos args) pats
+                 | _ => pure Nothing
+
+               pure $ Just $
+                 ICase fc [] scrutinee'
+                       (Implicit fc False)
+                       clauses
 
   -- Turn a term back into an unannotated TTImp. Returns the type of the
   -- unelaborated term so that we can work out where to put the implicit
@@ -153,6 +349,11 @@ mutual
       = do (fn', gfnty) <- unelabTy umode nest env fn
            (arg', gargty) <- unelabTy umode nest env arg
            fnty <- expand gfnty
+           Nothing <- the (Core (Maybe IRawImp)) $
+              case umode of
+                Full => unelabCase nest env tm
+                _ => pure Nothing
+             | Just caseTm => pure (caseTm, gErased fc)
            case fnty of
                 VBind _ x (Pi _ rig Explicit ty) sc
                   => do sc' <- sc (nf env arg)
@@ -175,9 +376,46 @@ mutual
   unelabTy' umode nest env (Case fc ty c sc scty alts)
       = do (sc', _) <- unelabTy' umode nest env sc
            (scty', _) <- unelabTy' umode nest env scty
-           alts' <- traverse unelabAlt alts
+           defaultPat <-
+             case umode of
+               -- This mode displays source-like terms, so recover the variable used
+               -- by a default pattern.
+               Full => do
+                 defaultName <-
+                   if any isDefault alts
+                     then case ty of
+                            -- A case block name lets us look up its
+                            -- original clauses.
+                            CaseBlock n => defaultPatternName n
+                            PatMatch => pure Nothing
+                     -- Without a default alternative there is no name to recover.
+                     else pure Nothing
+                 -- Use a unique recovered name, or an anonymous '_' when no such name is available.
+                 pure $ \fc => maybe (Implicit fc True) (IBindVar fc) defaultName
+               -- Keep the implicit-hole '?' representation
+               _ => pure $ \fc => Implicit fc False
+           alts' <- traverse (unelabAlt defaultPat) alts
            pure (ICase fc [] sc' scty' alts', gErased fc)
     where
+      defaultPatternName : Name -> Core (Maybe Name)
+      defaultPatternName n
+          = do Just (argpos, pats) <- caseBlockPats n
+                    | Nothing => pure Nothing
+               pure $ case nub (mapMaybe (clauseDefaultName argpos) pats) of
+                           [name] => Just name
+                           _ => Nothing
+        where
+          patternVar : {vars : _} -> Term vars -> Maybe Name
+          patternVar (As _ _ _ pat) = patternVar pat
+          patternVar (Local _ _ _ p) = Just (nameAt p)
+          patternVar _ = Nothing
+
+          clauseDefaultName : Nat -> Clause -> Maybe Name
+          clauseDefaultName argpos (MkClause _ lhs _)
+              = case map fst (indexElem argpos (snd (getFnArgsSpine lhs))) of
+                     Just (_, pat) => patternVar pat
+                     _ => Nothing
+
       unelabScope : {vars : _} ->
                     FC -> Name -> SnocList (Maybe Name, Name) ->
                     Env Term vars -> NF [<] ->
@@ -230,26 +468,26 @@ mutual
           = do let env' = env :< PVar fc top Explicit (Erased fc Placeholder)
                unelabScope fc n (args :< (Nothing, x)) env' (VErased fc Placeholder) sc
 
-      unelabAlt : CaseAlt vars -> Core IImpClause
-      unelabAlt (ConCase fc n t sc)
+      unelabAlt : (FC -> IRawImp) -> CaseAlt vars -> Core IImpClause
+      unelabAlt _ (ConCase fc n t sc)
           = do defs <- get Ctxt
                nty <- lookupTyExact n (gamma defs)
                let ty = case nty of
                              Nothing => Erased fc Placeholder
                              Just t => t
                unelabScope fc !(getFullName n) [<] env !(expand !(nf [<] ty)) sc
-      unelabAlt (DelayCase fc t a tm)
+      unelabAlt _ (DelayCase fc t a tm)
           = do let env' = env :<
                        PVar fc top Explicit (Erased fc Placeholder) :<
                        PVar fc erased Implicit (Erased fc Placeholder)
                (tm', _) <- unelabTy' umode nest env' tm
                pure (PatClause fc (IDelay fc (IBindVar fc a)) tm')
-      unelabAlt (ConstCase fc c tm)
+      unelabAlt _ (ConstCase fc c tm)
           = do (tm', _) <- unelabTy' umode nest env tm
                pure (PatClause fc (IPrimVal fc c) tm')
-      unelabAlt (DefaultCase fc tm)
+      unelabAlt defaultPat (DefaultCase fc tm)
           = do (tm', _) <- unelabTy' umode nest env tm
-               pure (PatClause fc (Implicit fc False) tm')
+               pure (PatClause fc (defaultPat fc) tm')
 
   unelabTy' umode nest env (TDelayed fc r tm)
       = do (tm', ty) <- unelabTy' umode nest env tm
@@ -320,6 +558,7 @@ mutual
       isDefImp : PiInfo t -> Bool
       isDefImp (DefImplicit _) = True
       isDefImp _ = False
+
   unelabBinder umode nest fc env x (PVar fc' rig _ ty) sctm sc scty
       = do (ty', _) <- unelabTy umode nest env ty
            pure (sc, !(nf env (Bind fc x (PVTy fc' rig ty) scty)))

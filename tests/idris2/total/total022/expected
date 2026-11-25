@@ -1,6 +1,6 @@
 1/1: Building Dot (Dot.idr)
 Main> Main.f
-Compile time tree: \{arg:1}, {arg:2}, {arg:3}, {arg:4} => case {arg:1} of { [] => case {arg:4} of { Nothing => () ; ? => let Just {e:1} = {arg:4} in let Refl = {e:1} in f {arg:3} {arg:2} {arg:3} Nothing } ; {e:2} :: {e:3} => case {arg:4} of { Nothing => f {e:3} {arg:2} {arg:3} Nothing ; ? => let Just {e:1} = {arg:4} in let Refl = {e:1} in f {arg:3} {arg:2} {arg:3} Nothing } ; ? => let Just {e:1} = {arg:4} in let Refl = {e:1} in f {arg:3} {arg:2} {arg:3} Nothing }
+Compile time tree: \{arg:1}, {arg:2}, {arg:3}, {arg:4} => case {arg:1} of { [] => case {arg:4} of { Nothing => () ; _ => let Just {e:1} = {arg:4} in let Refl = {e:1} in f {arg:3} {arg:2} {arg:3} Nothing } ; {e:2} :: {e:3} => case {arg:4} of { Nothing => f {e:3} {arg:2} {arg:3} Nothing ; _ => let Just {e:1} = {arg:4} in let Refl = {e:1} in f {arg:3} {arg:2} {arg:3} Nothing } ; _ => let Just {e:1} = {arg:4} in let Refl = {e:1} in f {arg:3} {arg:2} {arg:3} Nothing }
 Inferrable args: [0, 1, 2]
 Compiled: \ {arg:1}, {arg:2}, {arg:3}, {arg:4} => case {arg:1} of
   { _builtin.NIL {tag = 0} [nil] => case {arg:4} of  { _builtin.NOTHING {tag = 0} [nothing] => ___; _ => case {arg:4} of  { _builtin.JUST {tag = 1} [just] {e:1} => Main.f {arg:3} {arg:2} {arg:3} (_builtin.NOTHING {tag = 0} [nothing])}}
