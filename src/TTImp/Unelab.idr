@@ -2,6 +2,7 @@ module TTImp.Unelab
 
 import Core.Context.Log
 import Core.Env
+import Core.UnifyState
 
 import TTImp.TTImp
 
@@ -374,28 +375,43 @@ mutual
                          _ => pure (tm', ty)
                 _ => pure (tm', ty) -- Should never happen!
   unelabTy' umode nest env (Case fc ty c sc scty alts)
-      = do (sc', _) <- unelabTy' umode nest env sc
-           (scty', _) <- unelabTy' umode nest env scty
-           defaultPat <-
+      = do (defaultPat, restored) <-
              case umode of
-               -- This mode displays source-like terms, so recover the variable used
-               -- by a default pattern.
-               Full => do
-                 defaultName <-
-                   if any isDefault alts
-                     then case ty of
+                  Full => do
+                    -- Source-like output recovers default-pattern names and
+                    -- uses the original clauses of generated case blocks.
+                    (defaultName, restored) <-
+                      the (Core (Maybe Name, Maybe IRawImp)) $
+                        case ty of
                             -- A case block name lets us look up its
                             -- original clauses.
-                            CaseBlock n => defaultPatternName n
-                            PatMatch => pure Nothing
-                     -- Without a default alternative there is no name to recover.
-                     else pure Nothing
-                 -- Use a unique recovered name, or an anonymous '_' when no such name is available.
-                 pure $ \fc => maybe (Implicit fc True) (IBindVar fc) defaultName
-               -- Keep the implicit-hole '?' representation
-               _ => pure $ \fc => Implicit fc False
-           alts' <- traverse (unelabAlt defaultPat) alts
-           pure (ICase fc [] sc' scty' alts', gErased fc)
+                           CaseBlock n => do
+                             restored <-
+                               -- Rebuild the call so that unelabCase can recover
+                               -- source patterns instead of generated case variables.
+                               unelabCase nest env $
+                                 applyToFull fc (Ref fc Func n) env
+                             defaultName <-
+                               if any isDefault alts
+                                  then defaultPatternName n
+                                  -- Without a default alternative there is no name to recover.
+                                  else pure Nothing
+                             pure (defaultName, restored)
+                           PatMatch => pure (Nothing, Nothing)
+                    -- Use a unique recovered name, or an anonymous '_' when no such name is available.
+                    pure (\fc => maybe (Implicit fc True) (IBindVar fc) defaultName, restored)
+                  -- Keep the implicit-hole '?' representation
+                  _ => pure (\fc => Implicit fc False, Nothing)
+           case restored of
+                Just caseTm =>
+                  -- Original clauses preserve source names and nested patterns.
+                  pure (caseTm, gErased fc)
+                Nothing => do
+                  -- Without original clauses, display the core case tree.
+                  (sc', _) <- unelabTy' umode nest env sc
+                  (scty', _) <- unelabTy' umode nest env scty
+                  alts' <- traverse (unelabAlt defaultPat) alts
+                  pure (ICase fc [] sc' scty' alts', gErased fc)
     where
       defaultPatternName : Name -> Core (Maybe Name)
       defaultPatternName n
