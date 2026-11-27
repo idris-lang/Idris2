@@ -181,19 +181,25 @@ parameters {auto c : Ref Ctxt Defs} {auto u : Ref UST UState}
 ufail : FC -> String -> Core a
 ufail loc msg = throw (GenericMsg loc msg)
 
+export
+quoteError : {vars : _} ->
+             {auto c : Ref Ctxt Defs} ->
+             Env Term vars -> Value f vars -> Core (Term vars)
+quoteError env x = quoteHoles env !(expand x)
+
 convertError : {vars : _} ->
                {auto c : Ref Ctxt Defs} ->
                FC -> Env Term vars -> Value f vars -> Value f' vars -> Core a
 convertError loc env x y
     = do defs <- get Ctxt
-         throw (CantConvert loc (gamma defs) env !(quote env x) !(quote env y))
+         throw (CantConvert loc (gamma defs) env !(quoteError env x) !(quoteError env y))
 
 convertGluedError : {vars : _} ->
                     {auto c : Ref Ctxt Defs} ->
                     FC -> Env Term vars -> Glued vars -> Glued vars -> Core a
 convertGluedError loc env x y
     = do defs <- get Ctxt
-         throw (CantConvert loc (gamma defs) env !(quote env x) !(quote env y))
+         throw (CantConvert loc (gamma defs) env !(quoteError env x) !(quoteError env y))
 
 convertErrorS : {vars : _} ->
                 {auto c : Ref Ctxt Defs} ->
@@ -1691,8 +1697,8 @@ retry mode c
                                      pure cs)
                       (\err => do defs <- get Ctxt
                                   throw (WhenUnifying loc (gamma defs) env
-                                                      !(quote env x)
-                                                      !(quote env y) err))
+                                                      !(quoteError env x)
+                                                      !(quoteError env y) err))
 
 delayMeta : {vars : _} ->
             LazyReason -> Nat -> Term vars -> Term vars -> Term vars
@@ -1949,7 +1955,7 @@ checkDots
                               -- later
                               put UST ({ dotConstraints := [] } ust)
                               throw (BadDotPattern fc env reason
-                                      !(quote env x)
+                                      !(quoteError env x)
                                       !(quote env y))
                          _ => do put UST ({ dotConstraints := [] } ust)
                                  throw err)
