@@ -27,13 +27,17 @@ libc : (fn : String) -> String
 libc fn = "C:" ++ fn ++ ", libc 6"
 
 -- `sleep` and `usleep` need to be tied to `blodwen-[u]sleep` for threading
--- reasons (see support/racket/support.rkt)
+-- reasons: on Racket a blocking C call stops all threads (see
+-- support/racket/support.rkt), and on Chez it stops every other thread at its
+-- next garbage collection (see support/chez/support.ss).
 
 %foreign "scheme,racket:blodwen-sleep"
+         "scheme,chez:blodwen-sleep"
          supportC "idris2_sleep"
 prim__sleep : Int -> PrimIO ()
 
 %foreign "scheme,racket:blodwen-usleep"
+         "scheme,chez:blodwen-usleep"
          supportC "idris2_usleep"
 prim__usleep : Int -> PrimIO ()
 
@@ -197,7 +201,10 @@ unsetEnv var
    = do ok <- primIO $ prim__unsetEnv var
         pure $ ok == 0
 
-%foreign "C:idris2_system, libidris2_support, idris_system.h"
+-- On Chez, `blodwen-system` lets other threads keep running while the command
+-- runs (see `sleep` above).
+%foreign "scheme,chez:blodwen-system"
+         "C:idris2_system, libidris2_support, idris_system.h"
          supportNode "spawnSync"
 prim__system : String -> PrimIO Int
 

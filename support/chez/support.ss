@@ -538,6 +538,18 @@
         (micro (mod s 1000000)))
        (sleep (make-time 'time-duration (* 1000 micro) sec))))
 
+;; Chez's own `sleep` and `system` deactivate the calling thread while they
+;; wait, so other threads can still collect garbage. A plain C foreign call
+;; that blocks makes every other thread wait at its next collection until the
+;; call returns.
+;; The result matches `idris2_system`: the exit status, or -1 if the command
+;; did not exit normally (Chez reports a signal as its negated number).
+(define (blodwen-system cmd)
+  (let ([status (guard (e [#t -1]) (system cmd))])
+    (if (and (< status 0) (not (string=? (blodwen-os) "windows")))
+        -1
+        status)))
+
 (define (blodwen-clock-time-utc) (current-time 'time-utc))
 (define (blodwen-clock-time-monotonic) (current-time 'time-monotonic))
 (define (blodwen-clock-time-duration) (current-time 'time-duration))
