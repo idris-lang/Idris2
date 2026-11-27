@@ -13,7 +13,10 @@ prim__flush : FilePtr -> PrimIO Int
 %foreign supportC "idris2_popen"
          supportNode "popen"
 prim__popen : String -> String -> PrimIO FilePtr
-%foreign supportC "idris2_pclose"
+-- Waiting for a child process can take arbitrarily long, so these use
+-- `supportCSafe` to keep other threads running on Chez.
+%foreign supportCSafe "idris2_pclose"
+         supportC "idris2_pclose"
          supportNode "pclose"
 prim__pclose : FilePtr -> PrimIO Int
 
@@ -22,10 +25,12 @@ data Popen2Result : Type where [external]
 %foreign supportC "idris2_popen2"
 prim__popen2 : String -> PrimIO (Ptr Popen2Result)
 
-%foreign supportC "idris2_popen2WaitByPid"
+%foreign supportCSafe "idris2_popen2WaitByPid"
+         supportC "idris2_popen2WaitByPid"
 covering -- significantly non-total
 prim__popen2WaitByPid : Int -> PrimIO Int
-%foreign supportC "idris2_popen2WaitByHandler"
+%foreign supportCSafe "idris2_popen2WaitByHandler"
+         supportC "idris2_popen2WaitByHandler"
 covering -- significantly non-total
 prim__popen2WaitByHandler : AnyPtr -> PrimIO Int
 

@@ -157,3 +157,7 @@ should target this file (`CHANGELOG_NEXT`).
 * Implemented core interfaces for `Data.Singleton`
 * `fromList` and `toList` for `Data.Vect` rewritten so that they are optimized away during codegen.
 * Reduced the fixities of `Data.Record` operators `:-:`, `:-` and `:+` to 0.
+* On the Chez backend, `sleep`, `usleep`, `system`, `pclose` and `popen2Wait`
+  no longer stop other threads while they wait. They were plain C calls, and a
+  thread blocked in one made every other thread wait at its next garbage
+  collection until the call returned.
