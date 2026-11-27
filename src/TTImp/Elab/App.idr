@@ -233,7 +233,7 @@ mutual
            else do defs <- get Ctxt
                    nm <- genMVName x
                    empty <- clearDefs defs
-                   metaty <- quote env aty
+                   metaty <- quoteNF env aty
                    est <- get EST
                    lim <- getAutoImplicitLimit
                    metaval <- searchVar fc argRig lim (Resolved (defining est))
