@@ -238,6 +238,13 @@ parameters {auto c : Ref Ctxt Defs} (eflags : EvalFlags)
   tryAlt {vars} locs env (VTCon _ n a sp) (ConCase _ n' _ cscope) stuck
       = if n == n' then Just (evalCaseScope locs env (cast sp) cscope stuck)
            else Nothing
+  tryAlt {vars} locs env (VBind pfc x (Pi fc' r e aty) scty)
+         (ConCase _ (UN (Basic "->")) _ cscope) stuck
+      = Just (evalCaseScope {vars} locs env
+                [ MkSpineEntry fc' r (pure aty)
+                , MkSpineEntry fc' r
+                     (pure (VBind pfc x (Lam fc' r e aty) scty))
+                ] cscope stuck)
   tryAlt locs env (VDelay _ _ ty arg) (DelayCase _ ty' arg' rhs) stuck
       = Just (eval (locs :< pure ty :< pure arg) env rhs)
   tryAlt locs env (VPrimVal _ c) (ConstCase _ c' rhs) stuck

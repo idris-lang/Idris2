@@ -114,6 +114,11 @@ expand' mode@Full v@(VCase fc t r sc ty alts)
       if n == n' then do
           pure $ Just !(caseScope (map value sp) args scoped)
         else pure Nothing
+    tryAlt (VBind pfc x (Pi fc' r e aty) scty)
+           (VConCase _ (UN (Basic "->")) _ args scoped) =
+      pure $ Just !(caseScope [< pure aty
+                              , pure (VBind pfc x (Lam fc' r e aty) scty)]
+                              args scoped)
     tryAlt (VDelay _ _ ty arg) (VDelayCase _ ty' arg' rhs) =
         pure $ Just !(caseScope [<pure ty, pure arg] [<(top, ty'), (erased, arg')] rhs)
     tryAlt (VPrimVal _ c) (VConstCase _ c' rhs) =
